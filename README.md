@@ -1,7 +1,7 @@
 # QuRisk
 A scanner that will review encryption used in an environment and identify concerns for when quantum computers become stable.  This application will be developed in Python for easy scale and modifiations.
 
-#Plan and Roadmao
+# Plan and Roadmap
 This will start as a headless scanner and then we will add UI elements for easier use later on in development.
 
 ## First Objectives
@@ -10,7 +10,8 @@ This will start as a headless scanner and then we will add UI elements for easie
 * credible reports
 * a path to UI defined
 
-#Target Application elements
+# High Level Application Model
+```
 quantum-crypto-scanner/
 ├── scanner/              # Network + endpoint discovery
 │   ├── tls_scanner.py
@@ -34,7 +35,4 @@ quantum-crypto-scanner/
 ├── config.yaml
 ├── requirements.txt
 └── run_scan.py
-
-code block
-``\`
-
+```
