@@ -1,0 +1,49 @@
+{
+  "fingerprints": [
+    {
+      "host": "192.168.4.1",
+      "port": 80,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 303 See Other"
+    },
+    {
+      "host": "192.168.4.23",
+      "port": 8443,
+      "is_open": true,
+      "proto": "UNKNOWN",
+      "detail": "Open port, no banner (may require protocol-specific handshake)"
+    },
+    {
+      "host": "192.168.4.54",
+      "port": 80,
+      "is_open": true,
+      "proto": "UNKNOWN",
+      "detail": "Open port, no banner (may require protocol-specific handshake)"
+    },
+    {
+      "host": "192.168.4.21",
+      "port": 443,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 400 Bad Request"
+    },
+    {
+      "host": "192.168.4.21",
+      "port": 80,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 405 Method Not Allowed"
+    },
+    {
+      "host": "192.168.4.21",
+      "port": 8080,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 405 Method Not Allowed"
+    }
+  ],
+  "timeout": 4,
+  "workers": 200,
+  "_cached_at": 1771450838.660145
+}

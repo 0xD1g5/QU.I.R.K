@@ -5,12 +5,22 @@ assessment:
   timezone: "America/New_York"
 
 scan:
-  scan:
   timeout_seconds: 5
   concurrency: 200
-  ports_tls: [443, 8443, 9443,10443, 4433, 5001]
+  ports_tls: [443, 8443, 9443]
   include_sni: true
-  tls_enum_mode: fast   # or deep
+
+  tls_enum_mode: fast  # off|fast|deep
+
+  fingerprint_timeout_seconds: 2
+  fingerprint_concurrency: 200
+
+  tls_timeout_seconds: 5
+  tls_concurrency: 150
+
+  ssh_timeout_seconds: 5
+  ssh_concurrency: 100
+
 
 
 targets:
