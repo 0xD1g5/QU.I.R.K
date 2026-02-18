@@ -1,54 +1,39 @@
-# QuRisk Platform
-A scanner that will review encryption used in an environment and identify concerns for when quantum computers become stable.  This application will be developed in Python for easy scale and modifiations.
+# Quantum Crypto Scanner (qcscan)
 
-# Plan and Roadmap
-This will start as a headless scanner and then we will add UI elements for easier use later on in development.
+Agentless crypto discovery + quantum readiness reporting (MVP).
 
-## First Objectives
-* a working scanner
-* a repeatable data model
-* credible reports
-* a path to UI defined
+## What it does (v1)
+- Scans TLS endpoints (CIDRs and FQDNs)
+- Extracts certificate metadata (subject/issuer/SAN, sig algorithm, key type/size, validity)
+- Produces initial findings (TLS deprecations, expiring certs, quantum-transition flags)
+- Writes reports (JSON + Markdown) to ./output
+- Stores endpoint inventory in SQLite (./data/qcscan.sqlite)
 
-# High Level Application Model
+## Quick start
+```bash
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+python run_scan.py
 ```
-quantum-crypto-scanner/
-├── scanner/              # Network + endpoint discovery
-│   ├── tls_scanner.py
-│   ├── ssh_scanner.py
-│   ├── cert_parser.py
-│   └── collector.py
-├── engine/               # Normalization + risk logic
-│   ├── models.py
-│   ├── normalize.py
-│   ├── quantum_risk.py
-│   └── rules.yaml
-├── api/                  # Optional REST API (future UI)
-│   ├── main.py
-│   └── routes.py
-├── reports/              # Report generation
-│   ├── executive.py
-│   ├── technical.py
-│   └── templates/
-├── data/
-│   └── scanner.db        # SQLite for MVP (Postgres later)
-├── config.yaml
-├── requirements.txt
-└── run_scan.py
-```
-# Target Architecture
-```
-Discovery
-   ↓
-Scanning
-   ↓
-Crypto Posture Model
-   ↓
-Assessment Engine
-   ↓
-Outputs
-  • Readiness Score
-  • Transition Roadmap
-  • Migration Guidance
-  • Executive Narrative
-```
+
+## Configure targets
+Edit `config.yaml`:
+- Add CIDRs / FQDNs
+- Adjust ports and concurrency
+- Enable connectors later (AWS/Azure/AD CS stubs provided)
+
+## Output
+Reports are generated in `./output/`:
+- findings-<timestamp>.json
+- executive-summary-<timestamp>.md
+- technical-findings-<timestamp>.md
+
+## Notes
+- This MVP uses **agentless** TLS scanning with optional SNI.
+- Some endpoints may refuse connections or require client auth; those are logged as INFO scan errors.
+- Future increments: SSH scanning, cipher-suite enumeration, AWS/Azure/ADCS connectors, HTML/PDF reporting.
