@@ -6,6 +6,7 @@ from qcscan.assessment.readiness_score import compute_readiness_score
 from qcscan.assessment.transition_planner import build_transition_roadmap
 from qcscan.assessment.migration_advisor import recommend_migration_paths
 from qcscan.assessment.interpretation_engine import build_interpretation
+from qcscan.assessment.confidence import compute_confidence
 
 
 def _count_noninfo(findings: List[Dict]) -> Counter:
@@ -15,13 +16,12 @@ def _count_noninfo(findings: List[Dict]) -> Counter:
 def build_exec_markdown(cfg, endpoints, findings) -> str:
     now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
-    # v3.5 assessment brain outputs
     score = compute_readiness_score(cfg, endpoints, findings)
     roadmap = build_transition_roadmap(cfg, endpoints, findings)
     recs = recommend_migration_paths(findings)
     interp = build_interpretation(cfg, endpoints, findings, score)
+    conf = compute_confidence(cfg, endpoints)
 
-    # Findings overview (excluding INFO)
     sev_counts = _count_noninfo(findings)
     high_crit = sev_counts.get("HIGH", 0) + sev_counts.get("CRITICAL", 0)
 
@@ -39,14 +39,24 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}")
     lines.append("")
 
-    # Score headline
     lines.append("## Quantum Readiness Score")
     lines.append(f"**Score:** **{score.score}/100**  \n**Rating:** **{score.rating}**")
     lines.append("")
-    lines.append("### Score Breakdown (drivers)")
+    lines.append("### Score Drivers (Top)")
     if score.breakdown.drivers:
-        for label, pts in score.breakdown.drivers:
+        for label, pts in score.breakdown.drivers[:8]:
             lines.append(f"- {label} (**-{pts}**)")
+
+    lines.append("")
+    lines.append("## Confidence & Coverage (v3.7)")
+    lines.append(f"- **Confidence:** **{conf.get('confidence_rating')}** ({conf.get('confidence_score')}/100)")
+    lines.append(f"- **Coverage:** {conf.get('coverage_pct')}% (TLS+SSH successful / total in-scope endpoints)")
+    lines.append(f"- **TLS Enumeration Coverage:** {conf.get('tls_enum_coverage_pct')}% (TLS-success endpoints with capabilities captured)")
+    blockers = conf.get("blockers_top") or []
+    if blockers:
+        lines.append("- **Top visibility blockers:**")
+        for b in blockers[:5]:
+            lines.append(f"  - {b.get('category')}: {b.get('count')}")
 
     lines.append("")
     lines.append("## Discovery and Coverage")
@@ -56,7 +66,6 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append(f"- **Unknown open services detected:** {unknown_open}")
     lines.append("")
 
-    # Findings overview (exec relevant)
     lines.append("## Findings Overview (Executive-Relevant)")
     lines.append(f"- **High-impact items (CRITICAL + HIGH):** {high_crit}")
     for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
@@ -90,11 +99,9 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
         lines.append(f"  - Deliverable: {item.deliverable}")
         lines.append(f"  - Owner: {item.owner_hint} | Effort: {item.effort}")
 
-    # Migration guidance (top actionable recs)
     if recs:
         lines.append("")
         lines.append("## Recommended Migration Paths (Top Items)")
-        # show first 10 (sorted by severity-ish order already in findings)
         shown = 0
         for r in recs:
             if shown >= 10:

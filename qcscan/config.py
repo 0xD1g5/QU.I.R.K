@@ -18,10 +18,18 @@ class ScanCfg:
     ports_tls: List[int]
     include_sni: bool
 
-    # v3.6: TLS capability enumeration mode
-    # - "fast" (default): versions + small cipher sample
-    # - "deep": includes extra weak cipher probes (slower)
+    # v3.6: TLS enum mode: "off" | "fast" | "deep"
     tls_enum_mode: str = "fast"
+
+    # v3.7: phase-specific tuning (optional)
+    fingerprint_timeout_seconds: int | None = None
+    fingerprint_concurrency: int | None = None
+
+    tls_timeout_seconds: int | None = None
+    tls_concurrency: int | None = None
+
+    ssh_timeout_seconds: int | None = None
+    ssh_concurrency: int | None = None
 
 
 @dataclass
@@ -55,10 +63,16 @@ class AppConfig:
 
 
 def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
-    # Allow tls_enum_mode to be omitted from YAML safely.
     scan_raw = dict(raw["scan"])
-    if "tls_enum_mode" not in scan_raw:
-        scan_raw["tls_enum_mode"] = "fast"
+
+    # defaults for new fields
+    scan_raw.setdefault("tls_enum_mode", "fast")
+    scan_raw.setdefault("fingerprint_timeout_seconds", None)
+    scan_raw.setdefault("fingerprint_concurrency", None)
+    scan_raw.setdefault("tls_timeout_seconds", None)
+    scan_raw.setdefault("tls_concurrency", None)
+    scan_raw.setdefault("ssh_timeout_seconds", None)
+    scan_raw.setdefault("ssh_concurrency", None)
 
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
