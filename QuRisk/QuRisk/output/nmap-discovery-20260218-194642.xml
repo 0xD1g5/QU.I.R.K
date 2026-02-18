@@ -1,0 +1,906 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///C:/Program Files (x86)/Nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.98 scan initiated Wed Feb 18 14:46:43 2026 as: nmap -sT -n -Pn -&#45;open -p 22,80,443,4433,5001,8000,8080,8443,9443,10443 -&#45;max-retries 1 -&#45;host-timeout 10s -oX output\\nmap-discovery-20260218-194642.xml 192.168.4.0/24 -->
+<nmaprun scanner="nmap" args="nmap -sT -n -Pn -&#45;open -p 22,80,443,4433,5001,8000,8080,8443,9443,10443 -&#45;max-retries 1 -&#45;host-timeout 10s -oX output\\nmap-discovery-20260218-194642.xml 192.168.4.0/24" start="1771444003" startstr="Wed Feb 18 14:46:43 2026" version="7.98" xmloutputversion="1.05">
+<scaninfo type="connect" protocol="tcp" numservices="10" services="22,80,443,4433,5001,8000,8080,8443,9443,10443"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1771444003" endtime="1771444003"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.1" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="9">
+<extrareasons reason="conn-refused" count="9" proto="tcp" ports="22,443,4433,5001,8000,8080,8443,9443,10443"/>
+</extraports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
+</ports>
+<times srtt="5937" rttvar="5247" to="100000"/>
+</host>
+<host starttime="1771444003" endtime="1771444003"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.21" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="7">
+<extrareasons reason="conn-refused" count="7" proto="tcp" ports="22,4433,5001,8000,8443,9443,10443"/>
+</extraports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+</ports>
+<times srtt="133963" rttvar="74153" to="430575"/>
+</host>
+<host starttime="1771444003" endtime="1771444003"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.23" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="9">
+<extrareasons reason="conn-refused" count="9" proto="tcp" ports="22,80,443,4433,5001,8000,8080,9443,10443"/>
+</extraports>
+<port protocol="tcp" portid="8443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="https-alt" method="table" conf="3"/></port>
+</ports>
+<times srtt="10601" rttvar="5157" to="100000"/>
+</host>
+<host starttime="1771444003" endtime="1771444008"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.54" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="9">
+<extrareasons reason="no-response" count="9" proto="tcp" ports="22,443,4433,5001,8000,8080,8443,9443,10443"/>
+</extraports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
+</ports>
+<times srtt="21125" rttvar="21000" to="105125"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.102" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.103" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1310687" rttvar="1299062" to="6506935"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.104" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="839000" rttvar="839000" to="4195000"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.105" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1080250" rttvar="1111750" to="5527250"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.106" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1312140" rttvar="1282781" to="6443264"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.107" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1109875" rttvar="1171000" to="5793875"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.108" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1071125" rttvar="1093500" to="5445125"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.109" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1071125" rttvar="1093500" to="5445125"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.110" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1070250" rttvar="1093000" to="5442250"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.111" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1252093" rttvar="1183437" to="5985841"/>
+</host>
+<host starttime="1771444011" endtime="1771444021" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.112" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1252093" rttvar="1183437" to="5985841"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.113" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.114" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.115" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.116" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.117" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.118" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.119" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.120" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.121" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.122" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.123" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444012" endtime="1771444022" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.124" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="400000" rttvar="400000" to="2000000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.125" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="16000" rttvar="16000" to="100000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.126" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="16000" rttvar="16000" to="100000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.127" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="16000" rttvar="16000" to="100000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.129" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="196000" rttvar="196000" to="980000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.130" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="109009" rttvar="72512" to="399057"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.131" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="196000" rttvar="196000" to="980000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.132" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="196000" rttvar="196000" to="980000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.133" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.134" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="195000" rttvar="195000" to="975000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.135" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="195000" rttvar="195000" to="975000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.136" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="195000" rttvar="195000" to="975000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.137" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="195000" rttvar="195000" to="975000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.138" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="195000" rttvar="195000" to="975000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.139" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="16000" rttvar="16000" to="100000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.140" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="16000" rttvar="16000" to="100000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.141" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="195000" rttvar="195000" to="975000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.142" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="195000" rttvar="195000" to="975000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.143" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="194000" rttvar="194000" to="970000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.144" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.145" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.146" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.147" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.148" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.149" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.150" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.151" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.152" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.153" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.154" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.155" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.156" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.157" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.158" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.159" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.160" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="193000" rttvar="193000" to="965000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.161" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="192000" rttvar="192000" to="960000"/>
+</host>
+<host starttime="1771444014" endtime="1771444024" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.162" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="191000" rttvar="191000" to="955000"/>
+</host>
+<host starttime="1771444021" endtime="1771444032" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.163" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="514000" rttvar="514000" to="2570000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.165" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="235000" rttvar="235000" to="1175000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.166" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="234000" rttvar="234000" to="1170000"/>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.167" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="308000" rttvar="308000" to="1540000"/>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.168" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="308000" rttvar="308000" to="1540000"/>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.169" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="308000" rttvar="308000" to="1540000"/>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.170" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.171" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.172" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="293000" rttvar="293000" to="1465000"/>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.173" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.174" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.175" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.176" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.177" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.178" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.179" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.180" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.181" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.182" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.183" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.184" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.185" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.186" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.187" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="30000" rttvar="30000" to="150000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.188" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.189" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.190" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="29000" rttvar="29000" to="145000"/>
+</host>
+<host starttime="1771444015" endtime="1771444025" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.191" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="539000" rttvar="539000" to="2695000"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.192" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.194" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="418000" rttvar="418000" to="2090000"/>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.195" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="309000" rttvar="309000" to="1545000"/>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.196" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="200000" rttvar="200000" to="1000000"/>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.197" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="200000" rttvar="200000" to="1000000"/>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.198" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="200000" rttvar="200000" to="1000000"/>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.199" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="199000" rttvar="199000" to="995000"/>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.200" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="125000" rttvar="125000" to="625000"/>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.201" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444016" endtime="1771444026" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.202" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="21324" rttvar="25309" to="122560"/>
+</host>
+<host starttime="1771444017" endtime="1771444027" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.203" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.204" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2993000" rttvar="2000000" to="10000000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.205" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.206" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.207" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.208" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.209" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.210" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.211" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.212" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.213" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="593000" rttvar="593000" to="2965000"/>
+</host>
+<host starttime="1771444032" endtime="1771444042" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.214" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="592000" rttvar="592000" to="2960000"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.215" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2741625" rttvar="1550750" to="8944625"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.216" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2739625" rttvar="1554750" to="8958625"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.217" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2736343" rttvar="1559437" to="8974091"/>
+</host>
+<host starttime="1771444043" endtime="1771444053" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.218" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1252343" rttvar="1082312" to="5581591"/>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.219" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.220" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.221" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.222" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.223" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.224" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.225" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.226" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.227" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444033" endtime="1771444043" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.228" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.229" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2736343" rttvar="1559437" to="8974091"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.230" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2623812" rttvar="1720125" to="9504312"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.231" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2744359" rttvar="1556843" to="8971731"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.232" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2734281" rttvar="1551812" to="8941529"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.233" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2856671" rttvar="1396468" to="8442543"/>
+</host>
+<host starttime="1771444045" endtime="1771444055" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.234" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2990296" rttvar="1129218" to="7507168"/>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.235" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.236" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.237" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.238" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.239" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.240" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.241" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.242" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444034" endtime="1771444044" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.243" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<host starttime="1771444042" endtime="1771444052" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.244" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1606909" rttvar="1406773" to="7234001"/>
+</host>
+<host starttime="1771444041" endtime="1771444051" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.245" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1423078" rttvar="1353968" to="6838950"/>
+</host>
+<host starttime="1771444041" endtime="1771444051" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.246" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1422968" rttvar="1353812" to="6838216"/>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.247" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2967000" rttvar="2000000" to="10000000"/>
+</host>
+<host starttime="1771444039" endtime="1771444049" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.248" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2175450" rttvar="2129087" to="10000000"/>
+</host>
+<host starttime="1771444039" endtime="1771444049" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.249" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="1225625" rttvar="1215000" to="6085625"/>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.250" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2988000" rttvar="2000000" to="10000000"/>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.251" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2988000" rttvar="2000000" to="10000000"/>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.252" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2488000" rttvar="2000000" to="10000000"/>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.253" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2993000" rttvar="2000000" to="10000000"/>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.254" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<times srtt="2987000" rttvar="2000000" to="10000000"/>
+</host>
+<host starttime="1771444036" endtime="1771444046" timedout="true"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="192.168.4.255" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+</host>
+<runstats><finished time="1771444055" timestr="Wed Feb 18 14:47:35 2026" summary="Nmap done at Wed Feb 18 14:47:35 2026; 256 IP addresses (256 hosts up) scanned in 52.87 seconds" elapsed="52.87" exit="success"/><hosts up="256" down="0" total="256"/>
+</runstats>
+</nmaprun>

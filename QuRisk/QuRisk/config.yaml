@@ -1,0 +1,29 @@
+assessment:
+  name: "Quantum Crypto Readiness - Example"
+  data_classification: "confidential"   # public|internal|confidential|regulated
+  report_owner: "Security Team"
+  timezone: "America/New_York"
+
+scan:
+  scan:
+  timeout_seconds: 5
+  concurrency: 200
+  ports_tls: [443, 8443, 9443,10443, 4433, 5001]
+  include_sni: true
+  tls_enum_mode: fast   # or deep
+
+
+targets:
+  fqdns:
+  cidrs: []
+  include_ips: []
+  exclude_ips: []
+
+connectors:
+  enable_aws: false
+  enable_azure: false
+  enable_windows_adcs: false
+
+output:
+  directory: "output"
+  db_path: "data/qcscan.sqlite"
