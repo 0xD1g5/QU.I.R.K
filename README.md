@@ -1,4 +1,4 @@
-# QuRisk
+# QuRisk Platform
 A scanner that will review encryption used in an environment and identify concerns for when quantum computers become stable.  This application will be developed in Python for easy scale and modifiations.
 
 # Plan and Roadmap
@@ -35,4 +35,20 @@ quantum-crypto-scanner/
 ├── config.yaml
 ├── requirements.txt
 └── run_scan.py
+```
+# Target Architecture
+```
+Discovery
+   ↓
+Scanning
+   ↓
+Crypto Posture Model
+   ↓
+Assessment Engine
+   ↓
+Outputs
+  • Readiness Score
+  • Transition Roadmap
+  • Migration Guidance
+  • Executive Narrative
 ```
