@@ -1,0 +1,50 @@
+[
+  {
+    "severity": "MEDIUM",
+    "title": "Plaintext HTTP service detected",
+    "description": "HTTP service detected (HTTP/1.1 303 See Other).",
+    "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
+    "host": "192.168.4.1",
+    "port": 80
+  },
+  {
+    "severity": "MEDIUM",
+    "title": "Plaintext HTTP service detected",
+    "description": "HTTP service detected (HTTP/1.1 405 Method Not Allowed).",
+    "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
+    "host": "192.168.4.21",
+    "port": 80
+  },
+  {
+    "severity": "MEDIUM",
+    "title": "Plaintext HTTP service detected",
+    "description": "HTTP service detected (HTTP/1.1 400 Bad Request).",
+    "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
+    "host": "192.168.4.21",
+    "port": 443
+  },
+  {
+    "severity": "MEDIUM",
+    "title": "Plaintext HTTP service detected",
+    "description": "HTTP service detected (HTTP/1.1 405 Method Not Allowed).",
+    "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
+    "host": "192.168.4.21",
+    "port": 8080
+  },
+  {
+    "severity": "LOW",
+    "title": "Unknown service detected",
+    "description": "Open port, no banner (may require protocol-specific handshake)",
+    "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose.",
+    "host": "192.168.4.23",
+    "port": 8443
+  },
+  {
+    "severity": "LOW",
+    "title": "Unknown service detected",
+    "description": "Open port, no banner (may require protocol-specific handshake)",
+    "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose.",
+    "host": "192.168.4.54",
+    "port": 80
+  }
+]
