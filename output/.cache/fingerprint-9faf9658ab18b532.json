@@ -1,0 +1,42 @@
+{
+  "fingerprints": [
+    {
+      "host": "127.0.0.1",
+      "port": 8443,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 400 Bad Request"
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 443,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 400 Bad Request"
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 10443,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 400 Bad Request"
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 9443,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 400 Bad Request"
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 8000,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 200 OK"
+    }
+  ],
+  "timeout": 4,
+  "workers": 200,
+  "_cached_at": 1771527198.264961
+}

@@ -1,44 +1,47 @@
-# Quantum Crypto Readiness - Interactive
+# Test
 
 ## Executive Summary
-- **Generated:** 2026-02-18 21:40 UTC
-- **Owner:** Security Team
+- **Generated:** 2026-02-19 20:04 UTC
+- **Owner:** Digs
 - **Data classification:** confidential
 
 ## Quantum Readiness Score
-**Score:** **82/100**  
-**Rating:** **GOOD**
+**Score:** **55/100**  
+**Rating:** **MODERATE**
 
 ### Score Drivers (Top)
-- No successful TLS/SSH deep scans (visibility gap) (**-10**)
+- High severity items present (**-6**)
+- Weak/legacy cipher suites enabled (**-4**)
 - Moderate-long confidentiality requirement (7+ years) (**-3**)
-- Plaintext HTTP services detected (**-2**)
+- RSA-2048 widespread (quantum transition needed) (**-2**)
+- TLS 1.2 present (TLS 1.3 recommended) (**-2**)
 - Mixed exposure (internal + internet-facing) (**-2**)
+- Plaintext HTTP services detected (**-1**)
 - Unknown open services detected (**-1**)
 
 ## Confidence & Coverage (v3.7)
-- **Confidence:** **LOW** (58/100)
-- **Coverage:** 0.0% (TLS+SSH successful / total in-scope endpoints)
-- **TLS Enumeration Coverage:** 0% (TLS-success endpoints with capabilities captured)
+- **Confidence:** **MEDIUM** (78/100)
+- **Coverage:** 70.0% (TLS+SSH successful / total in-scope endpoints)
+- **TLS Enumeration Coverage:** 100.0% (TLS-success endpoints with capabilities captured)
 
 ## Discovery and Coverage
-- **TLS endpoints successfully scanned:** 0
-- **SSH endpoints successfully scanned:** 0
-- **Plaintext HTTP services detected:** 4
-- **Unknown open services detected:** 2
+- **TLS endpoints successfully scanned:** 6
+- **SSH endpoints successfully scanned:** 1
+- **Plaintext HTTP services detected:** 2
+- **Unknown open services detected:** 1
 
 ## Findings Overview (Executive-Relevant)
-- **High-impact items (CRITICAL + HIGH):** 0
+- **High-impact items (CRITICAL + HIGH):** 3
 - **CRITICAL:** 0
-- **HIGH:** 0
-- **MEDIUM:** 4
-- **LOW:** 2
+- **HIGH:** 3
+- **MEDIUM:** 0
+- **LOW:** 1
 
 ## Interpretation
-- Quantum Readiness Score is **82/100** (**GOOD**).
-- Top score drivers: No successful TLS/SSH deep scans (visibility gap) (-10); Moderate-long confidentiality requirement (7+ years) (-3); Plaintext HTTP services detected (-2).
-- No successful deep TLS/SSH handshakes were captured in this run; expand visibility (scope, segmentation allowances, and ports) to improve confidence.
-- High-impact items (CRITICAL+HIGH): **0**. Near-term hygiene accelerates crypto agility and reduces baseline risk.
+- Quantum Readiness Score is **55/100** (**MODERATE**).
+- Top score drivers: High severity items present (-6); Weak/legacy cipher suites enabled (-4); Moderate-long confidentiality requirement (7+ years) (-3).
+- Successfully profiled **6 TLS** and **1 SSH** endpoints in scope for cryptographic posture.
+- High-impact items (CRITICAL+HIGH): **3**. Near-term hygiene accelerates crypto agility and reduces baseline risk.
 
 ## Transition Roadmap
 
@@ -51,6 +54,9 @@
   - Owner: PKI/Identity + Service Owners | Effort: S
 
 ### Wave 2 — Modernization (6–24 months)
+- **Adopt TLS 1.3 at termination points and standardize modern configs** — TLS 1.3 reduces downgrade/config risk and simplifies crypto baselines.
+  - Deliverable: TLS 1.3 enablement plan; standard cipher policy; rollout checklist
+  - Owner: Network/LB + App Owners | Effort: M
 - **Centralize crypto where possible (termination/offload patterns)** — Centralization improves agility: fewer places to change algorithms, keys, and policies.
   - Deliverable: Approved termination architectures (LB/WAF/Gateway patterns) + exceptions process
   - Owner: Architecture + Platform | Effort: L
@@ -70,18 +76,14 @@
   - Owner: Security Program Mgmt | Effort: M
 
 ## Recommended Migration Paths (Top Items)
-- **Hygiene** — Migrate HTTP→HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable.
-  - Target: 192.168.4.1:80 | Severity: MEDIUM
-- **Hygiene** — Migrate HTTP→HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable.
-  - Target: 192.168.4.21:443 | Severity: MEDIUM
-- **Hygiene** — Migrate HTTP→HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable.
-  - Target: 192.168.4.21:80 | Severity: MEDIUM
-- **Hygiene** — Migrate HTTP→HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable.
-  - Target: 192.168.4.21:8080 | Severity: MEDIUM
 - **Modernization** — Fingerprint with a deeper probe or validate service ownership and purpose.
-  - Target: 192.168.4.23:8443 | Severity: LOW
-- **Modernization** — Fingerprint with a deeper probe or validate service ownership and purpose.
-  - Target: 192.168.4.54:80 | Severity: LOW
+  - Target: 127.0.0.1:5555 | Severity: LOW
+- **Hygiene** — Migrate HTTP→HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable.
+  - Target: 127.0.0.1:8444 | Severity: HIGH
+- **Hygiene** — Migrate HTTP→HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable.
+  - Target: 127.0.0.1:8000 | Severity: HIGH
+- **Modernization → PQC Preparation** — Stabilize on modern classical crypto baselines (TLS 1.3, standardized configs) and prepare for hybrid/PQC vendor upgrades. Prioritize long-lived sensitive data flows and trust anchors.
+  - Target: 127.0.0.1:2222 | Severity: HIGH
 
 ## Recommended Next Actions (30–60 days)
 1. Confirm ownership for TLS termination points and certificate authorities (internal and cloud).

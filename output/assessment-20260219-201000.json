@@ -8,44 +8,52 @@
     "crown_jewels": []
   },
   "confidence": {
-    "confidence_score": 58,
-    "confidence_rating": "LOW",
-    "coverage_pct": 0.0,
-    "tls_enum_coverage_pct": 0,
+    "confidence_score": 78,
+    "confidence_rating": "MEDIUM",
+    "coverage_pct": 70.0,
+    "tls_enum_coverage_pct": 100.0,
     "blockers_top": [],
     "counts": {
-      "endpoints_total": 6,
-      "tls_total": 0,
-      "tls_success": 0,
-      "ssh_total": 0,
-      "ssh_success": 0
+      "endpoints_total": 10,
+      "tls_total": 6,
+      "tls_success": 6,
+      "ssh_total": 1,
+      "ssh_success": 1
     }
   },
   "readiness_score": {
-    "score": 82,
+    "score": 73,
     "rating": "GOOD",
     "breakdown": {
-      "crypto_strength": 100,
-      "protocol_modernity": 100,
-      "exposure_surface": 35,
-      "hygiene": 100,
+      "crypto_strength": 52,
+      "protocol_modernity": 80,
+      "exposure_surface": 90,
+      "hygiene": 80,
       "agility_indicators": 95,
       "drivers": [
         [
-          "No successful TLS/SSH deep scans (visibility gap)",
-          10
+          "High severity items present",
+          4
         ],
         [
           "Moderate-long confidentiality requirement (7+ years)",
           3
         ],
         [
-          "Plaintext HTTP services detected",
+          "RSA-2048 widespread (quantum transition needed)",
+          2
+        ],
+        [
+          "TLS 1.2 present (TLS 1.3 recommended)",
           2
         ],
         [
           "Mixed exposure (internal + internet-facing)",
           2
+        ],
+        [
+          "Plaintext HTTP services detected",
+          1
         ],
         [
           "Unknown open services detected",
@@ -54,15 +62,17 @@
       ],
       "coverage": {
         "protocol_counts": {
-          "HTTP": 4,
-          "UNKNOWN": 2
+          "UNKNOWN": 1,
+          "HTTP": 2,
+          "TLS": 6,
+          "SSH": 1
         },
         "error_categories": {},
-        "tls_success": 0,
-        "ssh_success": 0,
-        "http_plain": 4,
-        "unknown_open": 2,
-        "endpoints_total": 6
+        "tls_success": 6,
+        "ssh_success": 1,
+        "http_plain": 2,
+        "unknown_open": 1,
+        "endpoints_total": 10
       },
       "context": {
         "data_types": [
@@ -94,6 +104,14 @@
       }
     ],
     "wave_2": [
+      {
+        "title": "Adopt TLS 1.3 at termination points and standardize modern configs",
+        "rationale": "TLS 1.3 reduces downgrade/config risk and simplifies crypto baselines.",
+        "deliverable": "TLS 1.3 enablement plan; standard cipher policy; rollout checklist",
+        "owner_hint": "Network/LB + App Owners",
+        "effort": "M",
+        "timeline": "6\u201324 months"
+      },
       {
         "title": "Centralize crypto where possible (termination/offload patterns)",
         "rationale": "Centralization improves agility: fewer places to change algorithms, keys, and policies.",
@@ -140,127 +158,89 @@
   },
   "migration_paths": [
     {
-      "host": "192.168.4.1",
-      "port": 80,
+      "host": "127.0.0.1",
+      "port": 5555,
       "severity": "MEDIUM",
-      "path": "Hygiene",
-      "recommendation": "Migrate HTTP\u2192HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable."
-    },
-    {
-      "host": "192.168.4.21",
-      "port": 443,
-      "severity": "MEDIUM",
-      "path": "Hygiene",
-      "recommendation": "Migrate HTTP\u2192HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable."
-    },
-    {
-      "host": "192.168.4.21",
-      "port": 80,
-      "severity": "MEDIUM",
-      "path": "Hygiene",
-      "recommendation": "Migrate HTTP\u2192HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable."
-    },
-    {
-      "host": "192.168.4.21",
-      "port": 8080,
-      "severity": "MEDIUM",
-      "path": "Hygiene",
-      "recommendation": "Migrate HTTP\u2192HTTPS. If legacy, front with TLS-terminating reverse proxy and enforce redirects + HSTS where applicable."
-    },
-    {
-      "host": "192.168.4.23",
-      "port": 8443,
-      "severity": "LOW",
       "path": "Modernization",
       "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose."
     },
     {
-      "host": "192.168.4.54",
-      "port": 80,
-      "severity": "LOW",
+      "host": "127.0.0.1",
+      "port": 8000,
+      "severity": "HIGH",
       "path": "Modernization",
-      "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose."
+      "recommendation": "A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry."
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 8444,
+      "severity": "HIGH",
+      "path": "Modernization",
+      "recommendation": "A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry."
     }
   ],
   "migration_waves": {
     "NOW": [],
-    "NEXT": [],
+    "NEXT": [
+      {
+        "severity": "HIGH",
+        "host": "127.0.0.1",
+        "port": 8000,
+        "title": "HTTP on TLS-designated port",
+        "recommendation": "A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry."
+      },
+      {
+        "severity": "HIGH",
+        "host": "127.0.0.1",
+        "port": 8444,
+        "title": "HTTP on TLS-designated port",
+        "recommendation": "A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry."
+      }
+    ],
     "LATER": [
       {
-        "severity": "MEDIUM",
-        "title": "Plaintext HTTP service detected",
-        "description": "HTTP service detected (HTTP/1.1 303 See Other).",
-        "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
-        "host": "192.168.4.1",
-        "port": 80
+        "severity": "INFO",
+        "host": "127.0.0.1",
+        "port": 2222,
+        "title": "SSH quantum planning advisory",
+        "recommendation": "Inventory SSH host keys and KEX algorithms; evaluate lifecycle and PQC readiness."
       },
       {
         "severity": "MEDIUM",
-        "title": "Plaintext HTTP service detected",
-        "description": "HTTP service detected (HTTP/1.1 400 Bad Request).",
-        "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
-        "host": "192.168.4.21",
-        "port": 443
-      },
-      {
-        "severity": "MEDIUM",
-        "title": "Plaintext HTTP service detected",
-        "description": "HTTP service detected (HTTP/1.1 405 Method Not Allowed).",
-        "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
-        "host": "192.168.4.21",
-        "port": 80
-      },
-      {
-        "severity": "MEDIUM",
-        "title": "Plaintext HTTP service detected",
-        "description": "HTTP service detected (HTTP/1.1 405 Method Not Allowed).",
-        "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
-        "host": "192.168.4.21",
-        "port": 8080
-      },
-      {
-        "severity": "LOW",
-        "title": "Unknown service detected",
-        "description": "Open port, no banner (may require protocol-specific handshake)",
-        "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose.",
-        "host": "192.168.4.23",
-        "port": 8443
-      },
-      {
-        "severity": "LOW",
-        "title": "Unknown service detected",
-        "description": "Open port, no banner (may require protocol-specific handshake)",
-        "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose.",
-        "host": "192.168.4.54",
-        "port": 80
+        "host": "127.0.0.1",
+        "port": 5555,
+        "title": "Unknown open service",
+        "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose."
       }
     ]
   },
   "run_stats": {
-    "started_utc": "2026-02-18T21:39:26.895055Z",
+    "started_utc": "2026-02-19T20:09:58.063711Z",
     "timings_sec": {
-      "discovery": 58.719,
-      "fingerprinting": 1.208,
-      "tls_scanning": 0.0,
-      "ssh_scanning": 0.0,
+      "discovery": 0.019,
+      "fingerprinting": 2.029,
+      "tls_scanning": 0.16,
+      "ssh_scanning": 0.004,
       "risk_engine": 0.0,
-      "db_persist": 0.009
+      "db_persist": 0.004
     },
     "profile": "standard",
     "discovery_mode": "nmap",
-    "cache_enabled": true,
+    "cache_enabled": false,
     "safe_mode": false,
     "rate_limit": 0.0,
     "counts": {
-      "targets_total": 6,
-      "tls_candidates": 0,
-      "ssh_candidates": 0,
-      "inventory_other": 6
+      "targets_total": 10,
+      "tls_candidates": 6,
+      "ssh_candidates": 1,
+      "inventory_other": 3
     },
-    "ended_utc": "2026-02-18T21:40:38.674290Z",
+    "ended_utc": "2026-02-19T20:10:00.288232Z",
     "protocol_counts": {
-      "HTTP": 4,
-      "UNKNOWN": 2
+      "UNKNOWN": 1,
+      "HTTP": 2,
+      "TLS": 6,
+      "SSH": 1
     },
     "error_categories": {}
   },

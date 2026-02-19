@@ -33,6 +33,8 @@ class CryptoEndpoint(Base):
     cert_not_after = Column(DateTime, nullable=True)
 
     scan_error = Column(Text, nullable=True)
+    tls_blocker_reason = Column(String(64), nullable=True)
+    service_detail = Column(Text, nullable=True)
 
     # ==========================
     # v3.6 TLS capability fields
@@ -40,6 +42,7 @@ class CryptoEndpoint(Base):
     tls_supported_versions = Column(Text, nullable=True)        # e.g. "TLSv1,TLSv1.2,TLSv1.3"
     tls_supported_ciphers_sample = Column(Text, nullable=True)  # pipe or comma delimited
     tls_weak_ciphers_present = Column(Boolean, default=False)
+    tls_legacy_suites_present = Column(Boolean, default=False)
     tls_pfs_supported = Column(Boolean, default=False)
     tls_enum_mode = Column(String(16), nullable=True)           # "fast" or "deep"
     tls_enum_notes = Column(Text, nullable=True)
