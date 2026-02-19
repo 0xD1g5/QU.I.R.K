@@ -1,0 +1,148 @@
+from __future__ import annotations
+
+from collections import Counter
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
+
+EVIDENCE_SCHEMA_VERSION = "1.0.0"
+
+_PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN")
+
+
+def _as_utc_naive(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _to_iso_z(dt: datetime) -> str:
+    return _as_utc_naive(dt).isoformat() + "Z"
+
+
+def _resolve_reference_utc(endpoints: Iterable[Any], reference_utc: Optional[datetime]) -> datetime:
+    if reference_utc is not None:
+        return _as_utc_naive(reference_utc)
+
+    latest: Optional[datetime] = None
+    for ep in endpoints:
+        scanned_at = getattr(ep, "scanned_at", None)
+        if not isinstance(scanned_at, datetime):
+            continue
+        v = _as_utc_naive(scanned_at)
+        if latest is None or v > latest:
+            latest = v
+
+    return latest if latest is not None else datetime(1970, 1, 1)
+
+
+def _finding_targets(findings: Iterable[Mapping[str, Any]], wanted_title: str) -> Set[Tuple[str, int]]:
+    out: Set[Tuple[str, int]] = set()
+    for f in findings:
+        if (f.get("title") or "") != wanted_title:
+            continue
+        host = str(f.get("host") or "")
+        port = int(f.get("port") or 0)
+        out.add((host, port))
+    return out
+
+
+def build_evidence_summary(
+    endpoints: Iterable[Any],
+    findings: Iterable[Mapping[str, Any]],
+    *,
+    expiring_days: int = 30,
+    reference_utc: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    endpoint_list = list(endpoints)
+    finding_list = list(findings)
+    ref_utc = _resolve_reference_utc(endpoint_list, reference_utc)
+    expiring_cutoff = ref_utc + timedelta(days=max(0, int(expiring_days)))
+
+    protocol_counts = {k: 0 for k in _PROTOCOL_KEYS}
+    cert_key_type_counts = {"RSA": 0, "ECDSA": 0}
+
+    certs_observed = 0
+    cert_expired_count = 0
+    cert_expiring_count = 0
+    cert_self_signed_count = 0
+
+    scan_error_count = 0
+    mtls_targets: Set[Tuple[str, int]] = set()
+
+    for ep in endpoint_list:
+        host = str(getattr(ep, "host", "") or "")
+        port = int(getattr(ep, "port", 0) or 0)
+
+        proto = str(getattr(ep, "protocol", "") or "").upper()
+        if proto in protocol_counts:
+            protocol_counts[proto] += 1
+
+        scan_error = getattr(ep, "scan_error", None)
+        if scan_error:
+            scan_error_count += 1
+
+        blocker = str(getattr(ep, "tls_blocker_reason", "") or "")
+        if blocker == "MTLS_REQUIRED":
+            mtls_targets.add((host, port))
+
+        key_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
+        if key_alg.startswith("RSA"):
+            cert_key_type_counts["RSA"] += 1
+        elif key_alg.startswith("ECDSA"):
+            cert_key_type_counts["ECDSA"] += 1
+
+        cert_not_after = getattr(ep, "cert_not_after", None)
+        if isinstance(cert_not_after, datetime):
+            certs_observed += 1
+            na = _as_utc_naive(cert_not_after)
+            if na < ref_utc:
+                cert_expired_count += 1
+            elif na <= expiring_cutoff:
+                cert_expiring_count += 1
+
+        subject = str(getattr(ep, "cert_subject", "") or "").strip()
+        issuer = str(getattr(ep, "cert_issuer", "") or "").strip()
+        if subject and issuer and subject == issuer:
+            cert_self_signed_count += 1
+
+    plaintext_http_targets = _finding_targets(finding_list, "Plaintext HTTP service detected")
+    http_on_tls_port_targets = _finding_targets(finding_list, "HTTP on TLS-designated port")
+    mtls_targets |= _finding_targets(finding_list, "mTLS required")
+
+    finding_severity_counter = Counter(str(f.get("severity") or "INFO").upper() for f in finding_list)
+    finding_severity_counts = {
+        "CRITICAL": finding_severity_counter.get("CRITICAL", 0),
+        "HIGH": finding_severity_counter.get("HIGH", 0),
+        "MEDIUM": finding_severity_counter.get("MEDIUM", 0),
+        "LOW": finding_severity_counter.get("LOW", 0),
+        "INFO": finding_severity_counter.get("INFO", 0),
+    }
+
+    total_endpoints = len(endpoint_list)
+    scan_error_rate = round((scan_error_count / total_endpoints), 4) if total_endpoints else 0.0
+
+    return {
+        "evidence_schema_version": EVIDENCE_SCHEMA_VERSION,
+        "reference_utc": _to_iso_z(ref_utc),
+        "expiring_within_days": max(0, int(expiring_days)),
+        "totals": {
+            "endpoints": total_endpoints,
+            "findings": len(finding_list),
+        },
+        "protocol_counts": protocol_counts,
+        "plaintext_http_count": len(plaintext_http_targets),
+        "http_on_tls_port_count": len(http_on_tls_port_targets),
+        "mtls_present_count": len(mtls_targets),
+        "cert_key_type_counts": cert_key_type_counts,
+        "certificate_observations": {
+            "certs_observed": certs_observed,
+            "expired_count": cert_expired_count,
+            "expiring_count": cert_expiring_count,
+            "self_signed_count": cert_self_signed_count,
+        },
+        "scan_error": {
+            "count": scan_error_count,
+            "rate": scan_error_rate,
+        },
+        "finding_severity_counts": finding_severity_counts,
+    }
