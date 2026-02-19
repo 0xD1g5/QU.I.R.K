@@ -193,6 +193,7 @@ def main():
     inventory_endpoints: List[CryptoEndpoint] = []
     tls_targets: List[Tuple[str, int]] = []
     ssh_targets: List[Tuple[str, int]] = []
+    classified_details: Dict[Tuple[str, int], str] = {}
 
     def _fp_task(host: str, port: int) -> Dict[str, Any]:
         if limiter:
@@ -233,6 +234,8 @@ def main():
         proto = r.get("proto")
         detail = r.get("detail")
         is_open = bool(r.get("is_open"))
+        key = (host, port)
+        classified_details[key] = detail or ""
 
         ep = CryptoEndpoint(
             host=host,
@@ -243,6 +246,7 @@ def main():
 
         if not is_open:
             ep.protocol = "CLOSED"
+            ep.service_detail = detail
             ep.scan_error = f"{proto}: {detail}"
             inventory_endpoints.append(ep)
             logger.v(f"⛔ CLOSED {host}:{port} ({detail})")
@@ -250,14 +254,12 @@ def main():
 
         if proto == "SSH":
             ssh_targets.append((host, port))
-            ep.protocol = "SSH"
-            ep.tls_version = detail
-            inventory_endpoints.append(ep)
             logger.v(f"🔑 SSH {host}:{port} ({detail})")
             continue
 
         if proto == "HTTP":
             ep.protocol = "HTTP"
+            ep.service_detail = detail
             ep.tls_version = detail
             inventory_endpoints.append(ep)
             logger.v(f"🌐 HTTP {host}:{port} ({detail})")
@@ -269,6 +271,7 @@ def main():
             continue
 
         ep.protocol = "UNKNOWN"
+        ep.service_detail = detail
         ep.tls_version = detail
         inventory_endpoints.append(ep)
         logger.v(f"❓ UNKNOWN {host}:{port} ({detail})")
@@ -303,6 +306,9 @@ def main():
                 logger=logger,
                 progress_cb=None
             )
+            for ep in tls_endpoints:
+                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+                ep.service_detail = classified_details.get(key, "")
 
     cfg.scan.timeout_seconds = base_timeout
     cfg.scan.concurrency = base_conc
@@ -325,6 +331,9 @@ def main():
                 logger=logger,
                 progress_cb=None
             )
+            for ep in ssh_endpoints:
+                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+                ep.service_detail = classified_details.get(key, "")
 
     cfg.scan.timeout_seconds = base_timeout
     cfg.scan.concurrency = base_conc

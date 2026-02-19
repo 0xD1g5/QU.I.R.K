@@ -32,9 +32,12 @@ def _ensure_sqlite_columns(db_path: str) -> None:
             "tls_supported_versions": "TEXT",
             "tls_supported_ciphers_sample": "TEXT",
             "tls_weak_ciphers_present": "BOOLEAN DEFAULT 0",
+            "tls_legacy_suites_present": "BOOLEAN DEFAULT 0",
             "tls_pfs_supported": "BOOLEAN DEFAULT 0",
             "tls_enum_mode": "TEXT",
             "tls_enum_notes": "TEXT",
+            "tls_blocker_reason": "TEXT",
+            "service_detail": "TEXT",
         }
 
         for name, ddl in desired.items():
