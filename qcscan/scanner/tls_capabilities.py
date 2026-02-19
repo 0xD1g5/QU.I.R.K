@@ -12,6 +12,7 @@ class TLSCapabilities:
     supported_versions: List[str]
     supported_ciphers_sample: List[str]
     weak_ciphers_present: bool
+    legacy_suites_present: bool
     pfs_supported: bool
     notes: str
 
@@ -95,8 +96,38 @@ def enumerate_tls_capabilities(
     supported_versions: List[str] = []
     supported_ciphers: List[str] = []
     weak_present = False
+    legacy_present = False
     pfs_supported = False
     notes_parts: List[str] = []
+
+    weak_markers = ("RC4", "3DES", "CBC3", "NULL", "EXPORT", "MD5")
+
+    def _is_pfs_cipher(cipher_name: str) -> bool:
+        upper = cipher_name.upper()
+        return "ECDHE" in upper or "DHE" in upper
+
+    def _is_weak_cipher(cipher_name: str) -> bool:
+        upper = cipher_name.upper()
+        return any(marker in upper for marker in weak_markers)
+
+    def _is_legacy_cipher(cipher_name: str) -> bool:
+        upper = cipher_name.upper()
+        if upper in {"AES128-SHA", "AES256-SHA"}:
+            return True
+        if "CBC" in upper and not _is_pfs_cipher(upper):
+            return True
+        return False
+
+    def _record_cipher(cipher_name: str) -> None:
+        nonlocal weak_present, legacy_present, pfs_supported
+        if cipher_name not in supported_ciphers:
+            supported_ciphers.append(cipher_name)
+        if _is_weak_cipher(cipher_name):
+            weak_present = True
+        if _is_legacy_cipher(cipher_name):
+            legacy_present = True
+        if _is_pfs_cipher(cipher_name):
+            pfs_supported = True
 
     # ---- Version support probing ----
     # Note: some Python/OpenSSL builds disable TLS1.0/1.1 entirely; that's fine.
@@ -119,6 +150,7 @@ def enumerate_tls_capabilities(
             supported_versions=[],
             supported_ciphers_sample=[],
             weak_ciphers_present=False,
+            legacy_suites_present=False,
             pfs_supported=False,
             notes="No successful constrained-version TLS handshakes (enumeration incomplete).",
         )
@@ -162,11 +194,7 @@ def enumerate_tls_capabilities(
             ciphers=c,
         )
         if ok and cip:
-            name = cip[0]
-            if name not in supported_ciphers:
-                supported_ciphers.append(name)
-            if name.startswith("ECDHE-"):
-                pfs_supported = True
+            _record_cipher(cip[0])
 
     # Probe legacy sample (fast)
     for c in sample_legacy:
@@ -177,17 +205,7 @@ def enumerate_tls_capabilities(
             ciphers=c,
         )
         if ok and cip:
-            name = cip[0]
-            if name not in supported_ciphers:
-                supported_ciphers.append(name)
-            # mark weak if 3DES or static RSA key exchange
-            if "3DES" in name or name.startswith("AES") or name.startswith("DES-") or "-SHA" in name and "GCM" not in name:
-                weak_present = True
-
-            # PFS signal: static RSA ciphers are typically no-PFS
-            if not name.startswith("ECDHE-"):
-                # doesn't negate pfs_supported; just indicates no-PFS is enabled
-                pass
+            _record_cipher(cip[0])
 
     # Deep mode: probe very weak families (if OpenSSL allows)
     if mode == "deep":
@@ -200,6 +218,8 @@ def enumerate_tls_capabilities(
             )
             if ok:
                 weak_present = True
+                if cip:
+                    _record_cipher(cip[0])
                 notes_parts.append(f"Very weak cipher accepted ({c})")
 
     # Notes
@@ -216,6 +236,7 @@ def enumerate_tls_capabilities(
         supported_versions=supported_versions,
         supported_ciphers_sample=supported_ciphers,
         weak_ciphers_present=bool(weak_present),
+        legacy_suites_present=bool(legacy_present),
         pfs_supported=bool(pfs_supported),
         notes="; ".join(notes_parts) if notes_parts else "OK",
     )

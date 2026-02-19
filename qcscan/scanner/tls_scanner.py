@@ -45,8 +45,12 @@ def _categorize_tls_error(e: Exception) -> str:
         return "NOT_TLS_ON_PORT"
     if "UNKNOWN_PROTOCOL" in msg or "unknown protocol" in msg:
         return "NOT_TLS_ON_PORT"
+    if "certificate required" in msg.lower():
+        return "MTLS_REQUIRED"
     if "handshake failure" in msg.lower():
-        return "TLS_HANDSHAKE_FAILURE"
+        if "certificate" in msg.lower():
+            return "MTLS_REQUIRED"
+        return "TLS_HANDSHAKE_FAILED"
     if "certificate verify failed" in msg.lower():
         return "CERT_VERIFY_FAILED"
     if "reset by peer" in msg.lower():
@@ -130,6 +134,7 @@ def scan_one(
         ep.tls_supported_versions = _as_csv(caps.supported_versions)
         ep.tls_supported_ciphers_sample = _as_csv(caps.supported_ciphers_sample)
         ep.tls_weak_ciphers_present = bool(caps.weak_ciphers_present)
+        ep.tls_legacy_suites_present = bool(caps.legacy_suites_present)
         ep.tls_pfs_supported = bool(caps.pfs_supported)
         ep.tls_enum_mode = mode
         ep.tls_enum_notes = caps.notes
@@ -137,11 +142,13 @@ def scan_one(
         if logger:
             logger.v(
                 f"✅ TLS {host}:{port} {ep.tls_version} "
-                f"versions=[{ep.tls_supported_versions}] weak={ep.tls_weak_ciphers_present} pfs={ep.tls_pfs_supported}"
+                f"versions=[{ep.tls_supported_versions}] weak={ep.tls_weak_ciphers_present} "
+                f"legacy={ep.tls_legacy_suites_present} pfs={ep.tls_pfs_supported}"
             )
 
     except Exception as e:
         cat = _categorize_tls_error(e)
+        ep.tls_blocker_reason = cat
         ep.scan_error = f"{cat}: {e}"
         if logger:
             logger.v(f"⚠️ TLS {host}:{port} {cat} ({e})")

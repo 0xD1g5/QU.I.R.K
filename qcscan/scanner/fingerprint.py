@@ -1,67 +1,188 @@
+from __future__ import annotations
+
+import ipaddress
 import socket
+import ssl
 from dataclasses import dataclass
 from typing import Optional
 
 
 @dataclass
-class FingerprintResult:
+class Fingerprint:
     is_open: bool
-    proto: str          # TLS | SSH | HTTP | UNKNOWN | CLOSED
-    detail: str         # banner/status/error/notes
+    proto: str            # "TLS", "SSH", "HTTP", "UNKNOWN", "CLOSED"
+    detail: str = ""      # banner or category like MTLS_REQUIRED / NOT_TLS_ON_PORT / TIMEOUT
 
 
-def _peek(sock: socket.socket, n: int = 64) -> bytes:
+def _is_ip(host: str) -> bool:
     try:
-        sock.settimeout(1.0)
-        return sock.recv(n)
+        ipaddress.ip_address(host)
+        return True
     except Exception:
-        return b""
+        return False
 
 
-def _looks_like_tls(data: bytes) -> bool:
-    # TLS record header commonly: 0x16 0x03 0x01/0x02/0x03/0x04...
-    return len(data) >= 3 and data[0] == 0x16 and data[1] == 0x03
+def _tcp_connect(host: str, port: int, timeout: int) -> socket.socket:
+    s = socket.create_connection((host, port), timeout=timeout)
+    s.settimeout(timeout)
+    return s
 
 
-def _looks_like_ssh(data: bytes) -> bool:
-    return data.startswith(b"SSH-")
-
-
-def fingerprint_service(host: str, port: int, timeout: int = 3) -> FingerprintResult:
+def _try_read_ssh_banner(s: socket.socket) -> Optional[str]:
     try:
-        with socket.create_connection((host, port), timeout=timeout) as sock:
-            # Step 1: passive peek (some services send banners)
-            data = _peek(sock, 128)
+        data = s.recv(64)
+        if data.startswith(b"SSH-"):
+            return data.decode("utf-8", errors="replace").strip()
+    except Exception:
+        return None
+    return None
 
-            if _looks_like_ssh(data):
-                banner = data.decode(errors="ignore").strip()
-                return FingerprintResult(True, "SSH", banner or "SSH banner detected")
 
-            # Step 2: quick HTTP probe (safe + common)
-            try:
-                sock.settimeout(1.5)
-                req = b"HEAD / HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n"
-                sock.sendall(req)
-                resp = _peek(sock, 128)
-                if resp.startswith(b"HTTP/"):
-                    status = resp.decode(errors="ignore").splitlines()[0].strip()
-                    return FingerprintResult(True, "HTTP", status or "HTTP detected")
-            except Exception:
-                pass
+def _tls_handshake(host: str, port: int, timeout: int, server_hostname: Optional[str]) -> tuple[bool, str]:
+    """
+    Attempt a TLS handshake without certificate validation.
+    Returns (success, detail_or_error_category).
+    """
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
 
-            # Step 3: TLS heuristic (some services reply only after ClientHello, but some speak first)
-            if _looks_like_tls(data):
-                return FingerprintResult(True, "TLS", "TLS record header observed")
-
-            # If nothing obvious: it's open, but unknown protocol or requires specific handshake
-            if data:
-                snippet = data[:80].decode(errors="ignore").strip()
-                return FingerprintResult(True, "UNKNOWN", f"Banner bytes: {snippet}")
-            return FingerprintResult(True, "UNKNOWN", "Open port, no banner (may require protocol-specific handshake)")
-
+    try:
+        raw = _tcp_connect(host, port, timeout)
+    except socket.timeout:
+        return False, "TIMEOUT"
     except ConnectionRefusedError:
-        return FingerprintResult(False, "CLOSED", "Connection refused")
-    except TimeoutError:
-        return FingerprintResult(False, "CLOSED", "Timeout (filtered or host down)")
-    except OSError as e:
-        return FingerprintResult(False, "CLOSED", f"OS error: {e}")
+        return False, "REFUSED"
+    except OSError:
+        return False, "UNREACHABLE"
+
+    try:
+        with raw:
+            with ctx.wrap_socket(raw, server_hostname=server_hostname) as ss:
+                try:
+                    v = ss.version() or "TLS"
+                except Exception:
+                    v = "TLS"
+                return True, v
+    except ssl.SSLError as e:
+        msg = str(e).lower()
+
+        # Strong indicators the peer is NOT speaking TLS
+        # (different OpenSSL builds phrase these differently across macOS/WSL/Windows)
+        not_tls_markers = [
+            "wrong version number",
+            "unknown protocol",
+            "http request",
+            "packet length too long",
+            "record layer failure",
+            "unexpected eof",
+        ]
+        if any(m in msg for m in not_tls_markers):
+            return False, "NOT_TLS_ON_PORT"
+
+        # mTLS / client-cert required
+        if "certificate required" in msg or ("tlsv1 alert" in msg and "certificate" in msg):
+            return False, "MTLS_REQUIRED"
+
+        if "alert handshake failure" in msg:
+            return False, "TLS_HANDSHAKE_FAILED"
+
+        return False, "TLS_HANDSHAKE_FAILED"
+    except socket.timeout:
+        return False, "TIMEOUT"
+    except Exception:
+        return False, "TLS_HANDSHAKE_FAILED"
+
+
+def _http_probe_plain(host: str, port: int, timeout: int) -> tuple[bool, str]:
+    """
+    Plain HTTP probe (NO TLS).
+    Returns (is_http, detail). Includes an HTTPS-port-rejection guard.
+    """
+    try:
+        s = _tcp_connect(host, port, timeout)
+    except socket.timeout:
+        return False, "TIMEOUT"
+    except Exception:
+        return False, "CONNECT_FAILED"
+
+    try:
+        with s:
+            req = b"GET / HTTP/1.0\r\nHost: localhost\r\nUser-Agent: qcscan\r\n\r\n"
+            s.sendall(req)
+            data = s.recv(512)
+
+            if not data.startswith(b"HTTP/"):
+                return False, "NO_HTTP_SIGNATURE"
+
+            # If this is an HTTPS listener, nginx often returns this message
+            lower = data.lower()
+            if b"plain http request was sent to https port" in lower:
+                return False, "HTTP_TO_HTTPS_PORT_REJECTED"
+
+            first_line = data.split(b"\r\n", 1)[0].decode("utf-8", errors="replace")
+            return True, first_line
+    except socket.timeout:
+        return False, "TIMEOUT"
+    except Exception:
+        return False, "HTTP_PROBE_FAILED"
+
+
+def fingerprint_service(host: str, port: int, timeout: int = 3) -> Fingerprint:
+    """
+    Protocol classifier v3.7.3
+
+    Order:
+      1) SSH banner (accurate, cheap)
+      2) TLS handshake (authoritative when success)
+      3) If TLS is NOT confirmed (NOT_TLS_ON_PORT OR TLS_HANDSHAKE_FAILED),
+         attempt a *safe* plaintext HTTP probe:
+            - If HTTP responds and is NOT "HTTPS port rejection", classify as HTTP.
+            - Otherwise classify as TLS-associated blocker (MTLS_REQUIRED/HANDSHAKE_FAILED)
+      4) Unknown open port
+    """
+    # Open check + SSH banner
+    try:
+        s = _tcp_connect(host, port, timeout)
+    except socket.timeout:
+        return Fingerprint(False, "CLOSED", "TIMEOUT")
+    except ConnectionRefusedError:
+        return Fingerprint(False, "CLOSED", "REFUSED")
+    except OSError:
+        return Fingerprint(False, "CLOSED", "UNREACHABLE")
+
+    with s:
+        banner = _try_read_ssh_banner(s)
+        if banner:
+            return Fingerprint(True, "SSH", banner)
+
+    # TLS check
+    server_hostname = None if _is_ip(host) else host
+    tls_ok, tls_detail = _tls_handshake(host, port, timeout, server_hostname=server_hostname)
+    if tls_ok:
+        return Fingerprint(True, "TLS", tls_detail)
+
+    # If mTLS required, keep it TLS-associated (don't probe HTTP)
+    if tls_detail == "MTLS_REQUIRED":
+        return Fingerprint(True, "TLS", "MTLS_REQUIRED")
+
+    # If TLS appears absent OR handshake failed, try safe HTTP probe
+    if tls_detail in {"NOT_TLS_ON_PORT", "TLS_HANDSHAKE_FAILED"}:
+        is_http, http_detail = _http_probe_plain(host, port, timeout)
+        if is_http:
+            return Fingerprint(True, "HTTP", http_detail)
+
+        # If HTTP probe indicates HTTPS rejection, that implies TLS listener
+        if http_detail == "HTTP_TO_HTTPS_PORT_REJECTED":
+            return Fingerprint(True, "TLS", "TLS_PRESENT_HTTP_REJECTED")
+
+        # Otherwise keep TLS-ish error category if we had one
+        if tls_detail == "TLS_HANDSHAKE_FAILED":
+            return Fingerprint(True, "TLS", "TLS_HANDSHAKE_FAILED")
+        return Fingerprint(True, "UNKNOWN", "OPEN_NOT_TLS")
+
+    # Timeouts or other failures: treat as TLS-associated blocker (conservative)
+    if tls_detail in {"TIMEOUT"}:
+        return Fingerprint(True, "TLS", "TIMEOUT")
+
+    return Fingerprint(True, "UNKNOWN", tls_detail)
