@@ -36,4 +36,4 @@ connectors:
 
 output:
   directory: "output"
-  db_path: "data/qcscan.sqlite"
+  db_path: "output/qcscan.sqlite"
