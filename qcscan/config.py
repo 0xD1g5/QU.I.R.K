@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 import yaml
 
 
@@ -18,18 +19,17 @@ class ScanCfg:
     ports_tls: List[int]
     include_sni: bool
 
-    # v3.6: TLS enum mode: "off" | "fast" | "deep"
-    tls_enum_mode: str = "fast"
+    # v3.x additions (optional in YAML)
+    tls_enum_mode: str = "fast"  # off|fast|deep
 
-    # v3.7: phase-specific tuning (optional)
-    fingerprint_timeout_seconds: int | None = None
-    fingerprint_concurrency: int | None = None
+    fingerprint_timeout_seconds: int = 2
+    fingerprint_concurrency: int = 200
 
-    tls_timeout_seconds: int | None = None
-    tls_concurrency: int | None = None
+    tls_timeout_seconds: int = 5
+    tls_concurrency: int = 150
 
-    ssh_timeout_seconds: int | None = None
-    ssh_concurrency: int | None = None
+    ssh_timeout_seconds: int = 5
+    ssh_concurrency: int = 100
 
 
 @dataclass
@@ -54,32 +54,42 @@ class OutputCfg:
 
 
 @dataclass
+class IntelligenceCfg:
+    intelligence_version: str = "3.9.0"
+    calibration_profile: str = "default"  # default|strict|lenient
+    calibration_overrides: Optional[Dict[str, Any]] = None
+
+
+@dataclass
 class AppConfig:
     assessment: AssessmentCfg
     scan: ScanCfg
     targets: TargetsCfg
     connectors: ConnectorsCfg
     output: OutputCfg
+    intelligence: IntelligenceCfg
 
 
 def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
-    scan_raw = dict(raw["scan"])
+    # Backward-compatible: if intelligence block missing, use defaults.
+    intel_raw = raw.get("intelligence", {}) or {}
+    overrides = intel_raw.get("calibration_overrides")
+    if overrides is None:
+        overrides = {}
 
-    # defaults for new fields
-    scan_raw.setdefault("tls_enum_mode", "fast")
-    scan_raw.setdefault("fingerprint_timeout_seconds", None)
-    scan_raw.setdefault("fingerprint_concurrency", None)
-    scan_raw.setdefault("tls_timeout_seconds", None)
-    scan_raw.setdefault("tls_concurrency", None)
-    scan_raw.setdefault("ssh_timeout_seconds", None)
-    scan_raw.setdefault("ssh_concurrency", None)
+    intelligence_cfg = IntelligenceCfg(
+        intelligence_version=intel_raw.get("intelligence_version", "3.9.0"),
+        calibration_profile=intel_raw.get("calibration_profile", "default"),
+        calibration_overrides=overrides,
+    )
 
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
-        scan=ScanCfg(**scan_raw),
+        scan=ScanCfg(**raw["scan"]),
         targets=TargetsCfg(**raw["targets"]),
         connectors=ConnectorsCfg(**raw["connectors"]),
         output=OutputCfg(**raw["output"]),
+        intelligence=intelligence_cfg,
     )
 
 

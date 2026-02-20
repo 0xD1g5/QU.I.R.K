@@ -14,10 +14,16 @@ from qcscan.assessment.migration_advisor import recommend_migration_paths
 from qcscan.assessment.operator_context import get_context
 from qcscan.assessment.confidence import compute_confidence
 
+# ✅ v3.9 Ticket 0: calibration support
+from qcscan.intelligence.calibration import get_calibration
 
-PLATFORM_VERSION = "3.8"
+
+PLATFORM_VERSION = "3.9"
 SCHEMA_VERSION = 2
-INTELLIGENCE_VERSION = "3.8.0"
+
+# When you start v3.9 officially, bump this:
+# INTELLIGENCE_VERSION = "3.9.0"
+INTELLIGENCE_VERSION = "3.9.0"
 
 
 def _utc_stamp() -> str:
@@ -221,9 +227,6 @@ def _score_from_evidence(ev: Dict[str, Any]) -> Dict[str, Any]:
     agility -= int(min(25, float(ev.get("unknown_service_ratio", 0.0)) * 25))
     agility -= int(min(25, float(ev.get("scan_error_rate", 0.0)) * 25))
 
-    # Modern TLS is conservative unless we have TLS facts; keep full score for now.
-    # (If you later add TLS posture facts to evidence, this bucket can become real.)
-
     subscores = {
         "hygiene": max(0, min(25, int(hygiene))),
         "modern_tls": max(0, min(25, int(modern_tls))),
@@ -314,7 +317,7 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
     lines.append(f"## Score\n- **Readiness Score:** **{score.get('total')} / 100**\n- **Confidence:** **{conf.get('confidence')} / 100**\n")
-    lines.append("## Why this score\n")
+    lines.append("## Top Drivers\n")
     for d in (drivers or []):
         lines.append(f"- {d}")
     if not drivers:
@@ -349,6 +352,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
 
     stamp = _utc_stamp()
     report_start = time.perf_counter()
+
+    # ✅ v3.9 Ticket 0: Resolve calibration (profile + overrides) and persist it for this run
+    calibration = get_calibration(cfg)
+    calibration_path = os.path.join(outdir, f"calibration-{stamp}.json")
+    _json_dump(calibration_path, calibration)
 
     # 1) Findings JSON (raw)
     findings_path = os.path.join(outdir, f"findings-{stamp}.json")
@@ -407,6 +415,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
         },
         "confidence": conf,
         "roadmap": roadmap,
+        # ✅ include calibration reference (non-breaking, helpful for audit)
+        "calibration": {
+            "profile": calibration.get("profile"),
+        },
     }
     intelligence_path = os.path.join(outdir, f"intelligence-{stamp}.json")
     _json_dump(intelligence_path, intelligence)
@@ -422,7 +434,6 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     # 5) Ensure reporting timing exists BEFORE writing run-stats file
     if run_stats is not None:
         run_stats.setdefault("timings_sec", {})
-        # If run_scan already timed "reporting", don't clobber it; otherwise set it.
         run_stats["timings_sec"].setdefault("reporting", round(time.perf_counter() - report_start, 3))
 
     stats_path = None
@@ -438,9 +449,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
 
     print(f"\n🔐 Readiness Score (v3.8): {score.get('total')}/100")
     print(f"🧪 Confidence (v3.8): {conf.get('confidence')}/100")
+    print(f"⚙️ Calibration profile: {calibration.get('profile')}")
     print(f"📦 Platform Version: {PLATFORM_VERSION} | Schema: {SCHEMA_VERSION} | Intelligence: {INTELLIGENCE_VERSION}")
 
     print("\n✅ Wrote reports:")
-    for p in [findings_path, assessment_path, stats_path, exec_path, tech_path, scorecard_path, roadmap_path, intelligence_path]:
+    for p in [findings_path, assessment_path, calibration_path, stats_path, exec_path, tech_path, scorecard_path, roadmap_path, intelligence_path]:
         if p:
             print(f"- {p}")
