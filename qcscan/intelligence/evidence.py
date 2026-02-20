@@ -60,6 +60,7 @@ def build_evidence_summary(
 
     protocol_counts = {k: 0 for k in _PROTOCOL_KEYS}
     cert_key_type_counts = {"RSA": 0, "ECDSA": 0}
+    tls_enum_success_count = 0
 
     certs_observed = 0
     cert_expired_count = 0
@@ -76,6 +77,8 @@ def build_evidence_summary(
         proto = str(getattr(ep, "protocol", "") or "").upper()
         if proto in protocol_counts:
             protocol_counts[proto] += 1
+        if proto == "TLS" and (getattr(ep, "tls_supported_versions", "") or ""):
+            tls_enum_success_count += 1
 
         scan_error = getattr(ep, "scan_error", None)
         if scan_error:
@@ -120,6 +123,8 @@ def build_evidence_summary(
 
     total_endpoints = len(endpoint_list)
     scan_error_rate = round((scan_error_count / total_endpoints), 4) if total_endpoints else 0.0
+    tls_total = protocol_counts["TLS"]
+    tls_enum_coverage_ratio = round((tls_enum_success_count / tls_total), 4) if tls_total else 1.0
 
     return {
         "evidence_schema_version": EVIDENCE_SCHEMA_VERSION,
@@ -144,5 +149,7 @@ def build_evidence_summary(
             "count": scan_error_count,
             "rate": scan_error_rate,
         },
+        "tls_enum_coverage_ratio": tls_enum_coverage_ratio,
+        "tls_enum_coverage_pct": round(tls_enum_coverage_ratio * 100.0, 2),
         "finding_severity_counts": finding_severity_counts,
     }

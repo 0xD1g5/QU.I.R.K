@@ -1,7 +1,7 @@
 assessment:
-  name: "Quantum Crypto Readiness - Example"
+  name: "Quantum Crypto Readiness - CLIENT NAME"
   data_classification: "confidential"   # public|internal|confidential|regulated
-  report_owner: "Security Team"
+  report_owner: "CLIENT NAME"
   timezone: "America/New_York"
 
 scan:

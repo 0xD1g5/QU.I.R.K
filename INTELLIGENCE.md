@@ -1,55 +1,33 @@
-# Intelligence Output Schema
+# Intelligence JSON Output
 
-This project uses a deterministic JSON shape for intelligence outputs.
+Each scan writes `intelligence-<timestamp>.json` in the configured output directory.
 
 ## Versioning
 
-- `schema_version` is required in every intelligence payload.
+- `intelligence_version`: schema/version marker for this file.
 - Current version: `1.0.0`.
-- Backward incompatible changes must bump the major version.
-- Additive, backward compatible changes must bump the minor version.
 
-## Top-level Structure
+## Top-level fields
 
-```json
-{
-  "schema_version": "1.0.0",
-  "generated_utc": "2026-02-19T20:00:00Z",
-  "score_inputs": {},
-  "score_result": {},
-  "confidence_result": {},
-  "roadmap": []
-}
-```
+- `intelligence_version`: string
+- `generated_utc`: UTC timestamp when the file was generated
+- `assessment`: metadata only
+  - `name`
+  - `report_owner`
+  - `data_classification`
+  - `timezone`
+- `evidence_summary`: normalized evidence from endpoints + findings
+  - protocol counts, plaintext HTTP counts, mTLS signals
+  - certificate observation counts (expired/expiring/self-signed, key type counts)
+  - scan error and TLS enum coverage metrics
+- `score_breakdown`: readiness score output
+  - `score`, `rating`, `subscores`, `drivers`
+- `confidence_factors`: confidence output
+  - `confidence_score`, `confidence_rating`, `factor_breakdown`
+- `roadmap`: phased roadmap output
+  - `roadmap_version`, `item_count`, `phase_counts`, `items`
 
-## Fields
+## Data safety
 
-- `score_inputs` (`ScoreInputs`)
-  - `total_endpoints` (int)
-  - `tls_success` (int)
-  - `ssh_success` (int)
-  - `http_plain` (int)
-  - `unknown_open` (int)
-  - `high_impact` (int)
-- `score_result` (`ScoreResult`)
-  - `score` (int)
-  - `rating` (str)
-  - `drivers` (array of `{label: str, points: int}`)
-- `confidence_result` (`ConfidenceResult`)
-  - `confidence_score` (int)
-  - `confidence_rating` (str)
-  - `coverage_pct` (float)
-  - `tls_enum_coverage_pct` (float)
-  - `blockers_top` (array of `{category: str, count: int}`)
-- `roadmap` (array of `RoadmapItem`)
-  - `wave` (str)
-  - `title` (str)
-  - `rationale` (str)
-  - `deliverable` (str)
-  - `owner_hint` (str)
-  - `effort` (str)
-
-## Determinism
-
-- `IntelligenceReport.to_json()` emits compact JSON with sorted keys.
-- List ordering is caller-controlled and preserved.
+- The intelligence JSON excludes raw certificate PEMs and secrets.
+- Output is summary-level and deterministic for identical inputs.

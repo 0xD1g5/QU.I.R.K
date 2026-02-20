@@ -13,6 +13,11 @@ from qcscan.assessment.operator_context import get_context
 from qcscan.assessment.confidence import compute_confidence
 
 
+# ✅ bump these as you evolve outputs
+PLATFORM_VERSION = "3.8"
+SCHEMA_VERSION = 2  # increment when output structure changes
+
+
 def write_reports(cfg, endpoints, findings, run_stats=None):
     outdir = cfg.output.directory
     os.makedirs(outdir, exist_ok=True)
@@ -26,14 +31,20 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     confidence = compute_confidence(cfg, endpoints)
 
     assessment = {
+        "platform_version": PLATFORM_VERSION,
+        "schema_version": SCHEMA_VERSION,
+
         "context": get_context(cfg),
         "confidence": confidence,
         "readiness_score": compute_readiness_score(cfg, endpoints, findings).to_dict(),
         "transition_roadmap": build_transition_roadmap(cfg, endpoints, findings).to_dict(),
         "migration_paths": recommend_migration_paths(findings),
         "migration_waves": categorize_waves(findings),
+
+        # v3.7+
         "run_stats": run_stats or {},
-        "notes": "v3.7 adds profiles, caching/resume, phase tuning, confidence engine, and run telemetry.",
+
+        "notes": "v3.7 adds profiles, caching/resume, phase tuning, confidence engine, and run telemetry. v3.8 tightens validation + versioned outputs.",
     }
     assess_path = os.path.join(outdir, f"assessment-{stamp}.json")
     with open(assess_path, "w", encoding="utf-8") as f:
@@ -50,12 +61,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
         f.write(tech_md)
 
     # run stats file
+    stats_path = None
     if run_stats:
         stats_path = os.path.join(outdir, f"run-stats-{stamp}.json")
         with open(stats_path, "w", encoding="utf-8") as f:
             json.dump(run_stats, f, indent=2)
-    else:
-        stats_path = None
 
     waves = categorize_waves(findings)
     print("\n📊 Migration Waves:")
@@ -65,6 +75,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     rs = assessment["readiness_score"]
     print(f"\n🔐 Quantum Readiness Score: {rs.get('score')}/100 ({rs.get('rating')})")
     print(f"🧪 Confidence: {confidence.get('confidence_rating')} ({confidence.get('confidence_score')}/100)")
+    print(f"📦 Platform Version: {assessment.get('platform_version')} | Schema: {assessment.get('schema_version')}")
 
     print("\n✅ Wrote reports:")
     print(f"- {json_path}")

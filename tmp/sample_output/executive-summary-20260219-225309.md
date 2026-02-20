@@ -1,61 +1,53 @@
-# Quantum Crypto Readiness - Interactive
+# Scorecard Sample Run
 
 ## Executive Summary
-- **Generated:** 2026-02-19 20:52 UTC
+- **Generated:** 2026-02-19 22:53 UTC
 - **Owner:** Security Team
-- **Data classification:** confidential
+- **Data classification:** internal
 
 ## Quantum Readiness Score
-**Score:** **73/100**  
-**Rating:** **GOOD**
+**Score:** **85/100**  
+**Rating:** **STRONG**
 
 ### Score Drivers (Top)
-- High severity items present (**-4**)
+- No successful TLS/SSH deep scans (visibility gap) (**-10**)
 - Moderate-long confidentiality requirement (7+ years) (**-3**)
-- RSA-2048 widespread (quantum transition needed) (**-2**)
-- TLS 1.2 present (TLS 1.3 recommended) (**-2**)
 - Mixed exposure (internal + internet-facing) (**-2**)
-- Plaintext HTTP services detected (**-1**)
-- Unknown open services detected (**-1**)
 
 ## Confidence & Coverage (v3.7)
-- **Confidence:** **MEDIUM** (78/100)
-- **Coverage:** 70.0% (TLS+SSH successful / total in-scope endpoints)
-- **TLS Enumeration Coverage:** 100.0% (TLS-success endpoints with capabilities captured)
+- **Confidence:** **LOW** (58/100)
+- **Coverage:** 0.0% (TLS+SSH successful / total in-scope endpoints)
+- **TLS Enumeration Coverage:** 0% (TLS-success endpoints with capabilities captured)
+- **Top visibility blockers:**
+  - CLOSED: 3
 
 ## Discovery and Coverage
-- **TLS endpoints successfully scanned:** 6
-- **SSH endpoints successfully scanned:** 1
-- **Plaintext HTTP services detected:** 2
-- **Unknown open services detected:** 1
+- **TLS endpoints successfully scanned:** 0
+- **SSH endpoints successfully scanned:** 0
+- **Plaintext HTTP services detected:** 0
+- **Unknown open services detected:** 0
 
 ## Findings Overview (Executive-Relevant)
-- **High-impact items (CRITICAL + HIGH):** 2
+- **High-impact items (CRITICAL + HIGH):** 0
 - **CRITICAL:** 0
-- **HIGH:** 2
-- **MEDIUM:** 1
+- **HIGH:** 0
+- **MEDIUM:** 0
 - **LOW:** 0
 
 ## Interpretation
-- Quantum Readiness Score is **73/100** (**GOOD**).
-- Top score drivers: High severity items present (-4); Moderate-long confidentiality requirement (7+ years) (-3); RSA-2048 widespread (quantum transition needed) (-2).
-- Successfully profiled **6 TLS** and **1 SSH** endpoints in scope for cryptographic posture.
-- High-impact items (CRITICAL+HIGH): **2**. Near-term hygiene accelerates crypto agility and reduces baseline risk.
+- Quantum Readiness Score is **85/100** (**STRONG**).
+- Top score drivers: No successful TLS/SSH deep scans (visibility gap) (-10); Moderate-long confidentiality requirement (7+ years) (-3); Mixed exposure (internal + internet-facing) (-2).
+- No successful deep TLS/SSH handshakes were captured in this run; expand visibility (scope, segmentation allowances, and ports) to improve confidence.
+- High-impact items (CRITICAL+HIGH): **0**. Near-term hygiene accelerates crypto agility and reduces baseline risk.
 
 ## Transition Roadmap
 
 ### Wave 1 — Hygiene (0–6 months)
-- **Eliminate plaintext HTTP where feasible (especially management interfaces)** — Plaintext endpoints undermine identity, session security, and governance.
-  - Deliverable: HTTP→HTTPS migration list; TLS termination pattern selection
-  - Owner: Infra + Platform Teams | Effort: M
 - **Certificate lifecycle hygiene and ownership validation** — Operational discipline reduces outages and enables future algorithm agility.
   - Deliverable: Inventory with owners; renewal SLAs; automation backlog (managed PKI/ACME where possible)
   - Owner: PKI/Identity + Service Owners | Effort: S
 
 ### Wave 2 — Modernization (6–24 months)
-- **Adopt TLS 1.3 at termination points and standardize modern configs** — TLS 1.3 reduces downgrade/config risk and simplifies crypto baselines.
-  - Deliverable: TLS 1.3 enablement plan; standard cipher policy; rollout checklist
-  - Owner: Network/LB + App Owners | Effort: M
 - **Centralize crypto where possible (termination/offload patterns)** — Centralization improves agility: fewer places to change algorithms, keys, and policies.
   - Deliverable: Approved termination architectures (LB/WAF/Gateway patterns) + exceptions process
   - Owner: Architecture + Platform | Effort: L
@@ -73,14 +65,6 @@
 - **Program governance (metrics, waves, and change management)** — PQC transition is a multi-year program; governance prevents stall-out.
   - Deliverable: Roadmap cadence; readiness KPI tracking; wave execution plan
   - Owner: Security Program Mgmt | Effort: M
-
-## Recommended Migration Paths (Top Items)
-- **Modernization** — Fingerprint with a deeper probe or validate service ownership and purpose.
-  - Target: 127.0.0.1:5555 | Severity: MEDIUM
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:8000 | Severity: HIGH
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:8444 | Severity: HIGH
 
 ## Recommended Next Actions (30–60 days)
 1. Confirm ownership for TLS termination points and certificate authorities (internal and cloud).
