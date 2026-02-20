@@ -1,44 +1,46 @@
-# Quantum Crypto Readiness - Interactive
+# Quantum Crypto Readiness - CLIENT NAME
 
 ## Executive Summary
-- **Generated:** 2026-02-20 01:25 UTC
-- **Owner:** Security Team
+- **Generated:** 2026-02-20 02:04 UTC
+- **Owner:** CLIENT NAME
 - **Data classification:** confidential
 
 ## Quantum Readiness Score
-**Score:** **83/100**  
+**Score:** **73/100**  
 **Rating:** **GOOD**
 
 ### Score Drivers (Top)
-- High severity items present (**-8**)
-- Plaintext HTTP services detected (**-3**)
+- High severity items present (**-4**)
 - Moderate-long confidentiality requirement (7+ years) (**-3**)
+- RSA-2048 widespread (quantum transition needed) (**-2**)
+- TLS 1.2 present (TLS 1.3 recommended) (**-2**)
 - Mixed exposure (internal + internet-facing) (**-2**)
+- Plaintext HTTP services detected (**-1**)
 - Unknown open services detected (**-1**)
 
 ## Confidence & Coverage (v3.7)
-- **Confidence:** **LOW** (58/100)
-- **Coverage:** 10.0% (TLS+SSH successful / total in-scope endpoints)
-- **TLS Enumeration Coverage:** 0% (TLS-success endpoints with capabilities captured)
+- **Confidence:** **MEDIUM** (78/100)
+- **Coverage:** 70.0% (TLS+SSH successful / total in-scope endpoints)
+- **TLS Enumeration Coverage:** 100.0% (TLS-success endpoints with capabilities captured)
 
 ## Discovery and Coverage
-- **TLS endpoints successfully scanned:** 0
+- **TLS endpoints successfully scanned:** 6
 - **SSH endpoints successfully scanned:** 1
-- **Plaintext HTTP services detected:** 8
+- **Plaintext HTTP services detected:** 2
 - **Unknown open services detected:** 1
 
 ## Findings Overview (Executive-Relevant)
-- **High-impact items (CRITICAL + HIGH):** 8
+- **High-impact items (CRITICAL + HIGH):** 2
 - **CRITICAL:** 0
-- **HIGH:** 8
+- **HIGH:** 2
 - **MEDIUM:** 1
 - **LOW:** 0
 
 ## Interpretation
-- Quantum Readiness Score is **83/100** (**GOOD**).
-- Top score drivers: High severity items present (-8); Plaintext HTTP services detected (-3); Moderate-long confidentiality requirement (7+ years) (-3).
-- Successfully profiled **0 TLS** and **1 SSH** endpoints in scope for cryptographic posture.
-- High-impact items (CRITICAL+HIGH): **8**. Near-term hygiene accelerates crypto agility and reduces baseline risk.
+- Quantum Readiness Score is **73/100** (**GOOD**).
+- Top score drivers: High severity items present (-4); Moderate-long confidentiality requirement (7+ years) (-3); RSA-2048 widespread (quantum transition needed) (-2).
+- Successfully profiled **6 TLS** and **1 SSH** endpoints in scope for cryptographic posture.
+- High-impact items (CRITICAL+HIGH): **2**. Near-term hygiene accelerates crypto agility and reduces baseline risk.
 
 ## Transition Roadmap
 
@@ -51,6 +53,9 @@
   - Owner: PKI/Identity + Service Owners | Effort: S
 
 ### Wave 2 — Modernization (6–24 months)
+- **Adopt TLS 1.3 at termination points and standardize modern configs** — TLS 1.3 reduces downgrade/config risk and simplifies crypto baselines.
+  - Deliverable: TLS 1.3 enablement plan; standard cipher policy; rollout checklist
+  - Owner: Network/LB + App Owners | Effort: M
 - **Centralize crypto where possible (termination/offload patterns)** — Centralization improves agility: fewer places to change algorithms, keys, and policies.
   - Deliverable: Approved termination architectures (LB/WAF/Gateway patterns) + exceptions process
   - Owner: Architecture + Platform | Effort: L
@@ -70,24 +75,12 @@
   - Owner: Security Program Mgmt | Effort: M
 
 ## Recommended Migration Paths (Top Items)
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:443 | Severity: HIGH
 - **Modernization** — Fingerprint with a deeper probe or validate service ownership and purpose.
   - Target: 127.0.0.1:5555 | Severity: MEDIUM
 - **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
   - Target: 127.0.0.1:8000 | Severity: HIGH
 - **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:8443 | Severity: HIGH
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
   - Target: 127.0.0.1:8444 | Severity: HIGH
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:9443 | Severity: HIGH
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:10443 | Severity: HIGH
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:11443 | Severity: HIGH
-- **Modernization** — A plaintext HTTP service responded on a port expected to be TLS/HTTPS. Correct service configuration (enable TLS) or update port policy/registry.
-  - Target: 127.0.0.1:12443 | Severity: HIGH
 
 ## Recommended Next Actions (30–60 days)
 1. Confirm ownership for TLS termination points and certificate authorities (internal and cloud).
