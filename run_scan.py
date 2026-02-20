@@ -103,7 +103,7 @@ def main():
     logger = Logger(verbose=args.verbose, use_tqdm=bool(args.progress))
 
     run_stats: Dict[str, Any] = {
-        "started_utc": datetime.utcnow().isoformat() + "Z",
+        "started_utc": datetime.now(timezone.utc).isoformat(),
         "timings_sec": {},
         "profile": args.profile,
         "discovery_mode": args.discovery,
@@ -363,7 +363,7 @@ def main():
         for k, v in err_counts.most_common(10):
             logger.info(f"      {k}: {v}")
 
-    run_stats["ended_utc"] = datetime.utcnow().isoformat() + "Z"
+    run_stats["ended_utc"] = datetime.now(timezone.utc).isoformat()
     run_stats["protocol_counts"] = dict(proto_counts)
     run_stats["error_categories"] = dict(err_counts)
 
