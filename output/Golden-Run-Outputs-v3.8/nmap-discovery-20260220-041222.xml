@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///opt/homebrew/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.98 scan initiated Thu Feb 19 23:12:22 2026 as: nmap -sT -n -Pn -&#45;open -p 22,80,443,2222,5555,8000,8080,8443,8444,9443,10443,11443,12443 -&#45;max-retries 1 -&#45;host-timeout 10s -oX output/nmap-discovery-20260220-041222.xml 127.0.0.1 -->
+<nmaprun scanner="nmap" args="nmap -sT -n -Pn -&#45;open -p 22,80,443,2222,5555,8000,8080,8443,8444,9443,10443,11443,12443 -&#45;max-retries 1 -&#45;host-timeout 10s -oX output/nmap-discovery-20260220-041222.xml 127.0.0.1" start="1771560742" startstr="Thu Feb 19 23:12:22 2026" version="7.98" xmloutputversion="1.05">
+<scaninfo type="connect" protocol="tcp" numservices="13" services="22,80,443,2222,5555,8000,8080,8443-8444,9443,10443,11443,12443"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1771560742" endtime="1771560742"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="127.0.0.1" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="3">
+<extrareasons reason="conn-refused" count="3" proto="tcp" ports="22,80,8080"/>
+</extraports>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
+<port protocol="tcp" portid="2222"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="EtherNetIP-1" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5555"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="freeciv" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8000"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http-alt" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="https-alt" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8444"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="pcsync-http" method="table" conf="3"/></port>
+<port protocol="tcp" portid="9443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="tungsten-https" method="table" conf="3"/></port>
+<port protocol="tcp" portid="10443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="cirrossp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="11443"><state state="open" reason="syn-ack" reason_ttl="0"/></port>
+<port protocol="tcp" portid="12443"><state state="open" reason="syn-ack" reason_ttl="0"/></port>
+</ports>
+<times srtt="88" rttvar="185" to="100000"/>
+</host>
+<runstats><finished time="1771560742" timestr="Thu Feb 19 23:12:22 2026" summary="Nmap done at Thu Feb 19 23:12:22 2026; 1 IP address (1 host up) scanned in 0.01 seconds" elapsed="0.01" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

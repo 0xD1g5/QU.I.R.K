@@ -16,28 +16,7 @@
     },
     {
       "host": "127.0.0.1",
-      "port": 8444,
-      "is_open": true,
-      "proto": "HTTP",
-      "detail": "HTTP/1.1 200 OK"
-    },
-    {
-      "host": "127.0.0.1",
-      "port": 8000,
-      "is_open": true,
-      "proto": "HTTP",
-      "detail": "HTTP/1.1 200 OK"
-    },
-    {
-      "host": "127.0.0.1",
       "port": 11443,
-      "is_open": true,
-      "proto": "TLS",
-      "detail": "TLSv1.3"
-    },
-    {
-      "host": "127.0.0.1",
-      "port": 10443,
       "is_open": true,
       "proto": "TLS",
       "detail": "TLSv1.3"
@@ -51,10 +30,17 @@
     },
     {
       "host": "127.0.0.1",
-      "port": 8443,
+      "port": 12443,
       "is_open": true,
       "proto": "TLS",
-      "detail": "TLSv1.2"
+      "detail": "TLSv1.3"
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 8444,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 200 OK"
     },
     {
       "host": "127.0.0.1",
@@ -65,13 +51,27 @@
     },
     {
       "host": "127.0.0.1",
-      "port": 12443,
+      "port": 10443,
       "is_open": true,
       "proto": "TLS",
       "detail": "TLSv1.3"
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 8000,
+      "is_open": true,
+      "proto": "HTTP",
+      "detail": "HTTP/1.1 200 OK"
+    },
+    {
+      "host": "127.0.0.1",
+      "port": 8443,
+      "is_open": true,
+      "proto": "TLS",
+      "detail": "TLSv1.2"
     }
   ],
   "timeout": 2,
   "workers": 150,
-  "_cached_at": 1771551826.6158211
+  "_cached_at": 1771560744.7281878
 }

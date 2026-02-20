@@ -1,7 +1,7 @@
 # Quantum Crypto Readiness - CLIENT NAME
 
 ## Executive Summary
-- **Generated:** 2026-02-20 02:04 UTC
+- **Generated:** 2026-02-20 04:12 UTC
 - **Owner:** CLIENT NAME
 - **Data classification:** confidential
 
