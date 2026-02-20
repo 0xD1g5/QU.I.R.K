@@ -1,0 +1,29 @@
+{
+  "started_utc": "2026-02-20T00:21:57.459291Z",
+  "timings_sec": {
+    "discovery": 0.0,
+    "fingerprinting": 0.005,
+    "tls_scanning": 0.0,
+    "ssh_scanning": 0.0,
+    "risk_engine": 0.0,
+    "db_persist": 0.002
+  },
+  "profile": "quick",
+  "discovery_mode": "builtin",
+  "cache_enabled": false,
+  "safe_mode": false,
+  "rate_limit": 0.0,
+  "counts": {
+    "targets_total": 3,
+    "tls_candidates": 0,
+    "ssh_candidates": 0,
+    "inventory_other": 3
+  },
+  "ended_utc": "2026-02-20T00:21:57.475795Z",
+  "protocol_counts": {
+    "CLOSED": 3
+  },
+  "error_categories": {
+    "CLOSED": 3
+  }
+}
