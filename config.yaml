@@ -37,3 +37,8 @@ connectors:
 output:
   directory: "output"
   db_path: "output/qcscan.db"
+
+intelligence:
+  intelligence_version: "3.9.0"
+  calibration_profile: "default"     # default|strict|lenient
+  calibration_overrides: {}

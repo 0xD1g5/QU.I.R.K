@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import List, Optional
 
 from qcscan.config import (
@@ -10,6 +9,7 @@ from qcscan.config import (
     TargetsCfg,
     ConnectorsCfg,
     OutputCfg,
+    IntelligenceCfg,
 )
 
 DEFAULT_TIMEZONE = "America/New_York"
@@ -56,7 +56,10 @@ def _prompt_list(text: str, default: Optional[List[str]] = None) -> List[str]:
 
 
 def _prompt_ports(text: str, default_ports: List[int]) -> List[int]:
-    raw = _prompt(f"{text} (comma-separated ints)", ",".join(str(p) for p in default_ports))
+    raw = _prompt(
+        f"{text} (comma-separated ints)",
+        ",".join(str(p) for p in default_ports),
+    )
     ports: List[int] = []
     for token in raw.split(","):
         token = token.strip()
@@ -78,7 +81,10 @@ def interactive_config() -> AppConfig:
 
     # Assessment
     name = _prompt("Assessment name", "Quantum Crypto Readiness - Interactive")
-    data_classification = _prompt("Data classification (public|internal|confidential|regulated)", "confidential")
+    data_classification = _prompt(
+        "Data classification (public|internal|confidential|regulated)",
+        "confidential",
+    )
     report_owner = _prompt("Report owner", "Security Team")
     timezone = _prompt("Timezone", DEFAULT_TIMEZONE)
 
@@ -98,7 +104,7 @@ def interactive_config() -> AppConfig:
     # Output
     print("\n📦 Output")
     out_dir = _prompt("Output directory", "output")
-    db_path = _prompt("SQLite DB path", "data/qcscan.sqlite")
+    db_path = _prompt("SQLite DB path", "output/qcscan.db")
 
     # Connectors (stubs for now)
     print("\n🔌 Connectors (stubs in v2)")
@@ -134,6 +140,7 @@ def interactive_config() -> AppConfig:
             directory=out_dir,
             db_path=db_path,
         ),
+        intelligence=IntelligenceCfg(),
     )
 
     print("\n✅ Config captured.\n")
