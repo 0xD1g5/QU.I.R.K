@@ -1,0 +1,33 @@
+assessment:
+  name: "Scorecard Sample Run"
+  data_classification: "internal"
+  report_owner: "Security Team"
+  timezone: "America/New_York"
+
+scan:
+  timeout_seconds: 1
+  concurrency: 20
+  ports_tls: [22, 443, 8443]
+  include_sni: false
+  tls_enum_mode: fast
+  fingerprint_timeout_seconds: 1
+  fingerprint_concurrency: 20
+  tls_timeout_seconds: 1
+  tls_concurrency: 10
+  ssh_timeout_seconds: 1
+  ssh_concurrency: 10
+
+targets:
+  fqdns: []
+  cidrs: []
+  include_ips: ["127.0.0.1"]
+  exclude_ips: []
+
+connectors:
+  enable_aws: false
+  enable_azure: false
+  enable_windows_adcs: false
+
+output:
+  directory: "tmp/sample_output"
+  db_path: "tmp/sample_output/sample.sqlite"
