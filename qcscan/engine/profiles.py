@@ -1,82 +1,129 @@
 from __future__ import annotations
 
+from typing import Any
+
+
 def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
     """
-    Apply opinionated defaults for scan behavior. Users can still override via config.yaml.
-    Profiles should change *defaults* only.
-
-    quick:
-      - faster: lower timeouts, higher concurrency, skip TLS enum
-    standard:
-      - balanced: tls_enum fast
-    deep:
-      - thorough: tls_enum deep, more conservative concurrency
-    safe_mode:
-      - reduce concurrency + add more timeouts (intended to avoid tripping IDS/fragile hosts)
+    Applies scan profile defaults to cfg.scan.
+    Works even when certain fields are None (unset in config).
     """
-    profile = (profile or "standard").lower()
+
     scan = cfg.scan
+    p = (profile or "standard").lower().strip()
 
-    # Ensure optional fields exist (config.py adds defaults, but be defensive)
-    if not hasattr(scan, "tls_enum_mode"):
-        scan.tls_enum_mode = "fast"
+    # -------------------------
+    # helpers
+    # -------------------------
+    def _get_int(v: Any, fallback: int) -> int:
+        """Return an int value, treating None / empty as fallback."""
+        if v is None:
+            return fallback
+        try:
+            return int(v)
+        except Exception:
+            return fallback
 
-    if not hasattr(scan, "fingerprint_timeout_seconds"):
-        scan.fingerprint_timeout_seconds = scan.timeout_seconds
-    if not hasattr(scan, "fingerprint_concurrency"):
-        scan.fingerprint_concurrency = max(20, min(200, scan.concurrency))
+    def _set_if_unset(field: str, value: int) -> None:
+        """
+        Sets scan.<field> if it is currently None (or missing).
+        This is important because None means "not explicitly set by user".
+        """
+        current = getattr(scan, field, None)
+        if current is None:
+            setattr(scan, field, int(value))
 
-    if not hasattr(scan, "tls_timeout_seconds"):
-        scan.tls_timeout_seconds = scan.timeout_seconds
-    if not hasattr(scan, "tls_concurrency"):
-        scan.tls_concurrency = scan.concurrency
+    def _set_if_default(field: str, value: int, default: int) -> None:
+        """
+        Sets scan.<field> if it is None OR equals the known default.
+        Useful when config uses baseline defaults but profile should override.
+        """
+        current = getattr(scan, field, None)
+        if current is None or current == default:
+            setattr(scan, field, int(value))
 
-    if not hasattr(scan, "ssh_timeout_seconds"):
-        scan.ssh_timeout_seconds = scan.timeout_seconds
-    if not hasattr(scan, "ssh_concurrency"):
-        scan.ssh_concurrency = max(20, min(scan.concurrency, 200))
+    # -------------------------
+    # establish baseline defaults (only if unset)
+    # -------------------------
+    _set_if_unset("timeout_seconds", 5)
+    _set_if_unset("concurrency", 200)
 
-    # ---- Apply profile defaults (only if user didn't already set explicit values) ----
-    # We'll treat "explicit" as: field exists in cfg and is not None.
-    def _set_if_default(attr: str, value):
-        # if config.py always sets these, we still allow profile to overwrite as baseline
-        setattr(scan, attr, value)
+    # Phase-specific defaults (these may be Optional[int] in your config)
+    _set_if_unset("fingerprint_timeout_seconds", 4)
+    _set_if_unset("fingerprint_concurrency", _get_int(getattr(scan, "concurrency", 200), 200))
 
-    if profile == "quick":
-        _set_if_default("fingerprint_timeout_seconds", max(1, min(scan.fingerprint_timeout_seconds, 2)))
-        _set_if_default("tls_timeout_seconds", max(2, min(scan.tls_timeout_seconds, 3)))
-        _set_if_default("ssh_timeout_seconds", max(2, min(scan.ssh_timeout_seconds, 3)))
+    _set_if_unset("tls_timeout_seconds", _get_int(getattr(scan, "timeout_seconds", 5), 5))
+    _set_if_unset("tls_concurrency", _get_int(getattr(scan, "concurrency", 200), 200))
 
-        _set_if_default("fingerprint_concurrency", max(50, scan.fingerprint_concurrency))
-        _set_if_default("tls_concurrency", max(100, scan.tls_concurrency))
-        _set_if_default("ssh_concurrency", max(50, scan.ssh_concurrency))
+    _set_if_unset("ssh_timeout_seconds", _get_int(getattr(scan, "timeout_seconds", 5), 5))
+    _set_if_unset("ssh_concurrency", _get_int(getattr(scan, "concurrency", 200), 200))
 
-        _set_if_default("tls_enum_mode", "off")
+    # Optional knobs
+    if getattr(scan, "fingerprint_timeout_seconds", None) is None:
+        scan.fingerprint_timeout_seconds = 4
 
-    elif profile == "deep":
-        _set_if_default("fingerprint_timeout_seconds", max(scan.fingerprint_timeout_seconds, 4))
-        _set_if_default("tls_timeout_seconds", max(scan.tls_timeout_seconds, 5))
-        _set_if_default("ssh_timeout_seconds", max(scan.ssh_timeout_seconds, 5))
+    # -------------------------
+    # profile presets
+    # -------------------------
+    # Note: we try to *not* clobber explicit user config.
+    # We only override if a field is None or set to a baseline default.
 
-        # conservative concurrency
-        _set_if_default("fingerprint_concurrency", min(scan.fingerprint_concurrency, 150))
-        _set_if_default("tls_concurrency", min(scan.tls_concurrency, 120))
-        _set_if_default("ssh_concurrency", min(scan.ssh_concurrency, 120))
+    # Use these to detect whether values are likely defaults.
+    base_timeout_default = 5
+    base_concurrency_default = 200
 
-        _set_if_default("tls_enum_mode", "deep")
+    if p == "quick":
+        # faster, less depth
+        _set_if_default("fingerprint_timeout_seconds", 3, default=4)
+        _set_if_default("fingerprint_concurrency", 300, default=base_concurrency_default)
+
+        _set_if_default("tls_timeout_seconds", 4, default=base_timeout_default)
+        _set_if_default("tls_concurrency", 250, default=base_concurrency_default)
+
+        _set_if_default("ssh_timeout_seconds", 4, default=base_timeout_default)
+        _set_if_default("ssh_concurrency", 200, default=base_concurrency_default)
+
+        # tls_enum_mode handled elsewhere; quick should effectively be OFF
+        if hasattr(scan, "tls_enum_mode") and (getattr(scan, "tls_enum_mode") is None):
+            scan.tls_enum_mode = "off"
+
+    elif p == "deep":
+        # slower, deeper enumeration
+        _set_if_default("fingerprint_timeout_seconds", 6, default=4)
+        _set_if_default("fingerprint_concurrency", 150, default=base_concurrency_default)
+
+        _set_if_default("tls_timeout_seconds", 10, default=base_timeout_default)
+        _set_if_default("tls_concurrency", 120, default=base_concurrency_default)
+
+        _set_if_default("ssh_timeout_seconds", 8, default=base_timeout_default)
+        _set_if_default("ssh_concurrency", 120, default=base_concurrency_default)
+
+        if hasattr(scan, "tls_enum_mode") and (getattr(scan, "tls_enum_mode") is None):
+            scan.tls_enum_mode = "deep"
 
     else:
         # standard
-        _set_if_default("tls_enum_mode", getattr(scan, "tls_enum_mode", "fast") or "fast")
-        if scan.tls_enum_mode == "off":
+        _set_if_default("fingerprint_timeout_seconds", 4, default=4)
+        _set_if_default("fingerprint_concurrency", 200, default=base_concurrency_default)
+
+        _set_if_default("tls_timeout_seconds", 6, default=base_timeout_default)
+        _set_if_default("tls_concurrency", 150, default=base_concurrency_default)
+
+        _set_if_default("ssh_timeout_seconds", 6, default=base_timeout_default)
+        _set_if_default("ssh_concurrency", 150, default=base_concurrency_default)
+
+        if hasattr(scan, "tls_enum_mode") and (getattr(scan, "tls_enum_mode") is None):
             scan.tls_enum_mode = "fast"
 
-    # ---- Safe mode overrides ----
+    # -------------------------
+    # safe-mode adjustments
+    # -------------------------
     if safe_mode:
-        scan.fingerprint_concurrency = max(10, min(scan.fingerprint_concurrency, 60))
-        scan.tls_concurrency = max(10, min(scan.tls_concurrency, 60))
-        scan.ssh_concurrency = max(10, min(scan.ssh_concurrency, 60))
+        # dial concurrency down and increase timeouts slightly
+        scan.fingerprint_concurrency = max(25, _get_int(getattr(scan, "fingerprint_concurrency", 100), 100) // 2)
+        scan.tls_concurrency = max(25, _get_int(getattr(scan, "tls_concurrency", 100), 100) // 2)
+        scan.ssh_concurrency = max(25, _get_int(getattr(scan, "ssh_concurrency", 100), 100) // 2)
 
-        scan.fingerprint_timeout_seconds = max(scan.fingerprint_timeout_seconds, 4)
-        scan.tls_timeout_seconds = max(scan.tls_timeout_seconds, 6)
-        scan.ssh_timeout_seconds = max(scan.ssh_timeout_seconds, 6)
+        scan.fingerprint_timeout_seconds = max(4, _get_int(getattr(scan, "fingerprint_timeout_seconds", 4), 4))
+        scan.tls_timeout_seconds = max(6, _get_int(getattr(scan, "tls_timeout_seconds", 6), 6))
+        scan.ssh_timeout_seconds = max(6, _get_int(getattr(scan, "ssh_timeout_seconds", 6), 6))
