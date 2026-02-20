@@ -7,7 +7,7 @@ assessment:
 scan:
   timeout_seconds: 5
   concurrency: 200
-  ports_tls: [443, 8443, 9443]
+  ports_tls: [443,8443,9443,10443,11443,12443,8444,8000,2222,5555]
   include_sni: true
 
   tls_enum_mode: fast  # off|fast|deep
@@ -25,7 +25,7 @@ scan:
 
 targets:
   fqdns:
-  cidrs: []
+  cidrs: [127.0.0.1]
   include_ips: []
   exclude_ips: []
 
@@ -36,4 +36,4 @@ connectors:
 
 output:
   directory: "output"
-  db_path: "output/qcscan.sqlite"
+  db_path: "output/qcscan.db"
