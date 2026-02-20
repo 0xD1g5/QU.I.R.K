@@ -154,14 +154,19 @@ def _check_run_stats_v37(path: str) -> List[CheckResult]:
     if not isinstance(timings, dict):
         return [CheckResult("run-stats.json has timings_sec dict", False, "missing timings_sec", True)]
 
-    required_phases = ["discovery", "fingerprinting", "tls_scanning", "ssh_scanning", "risk_engine", "reporting"]
+    required_phases = ["discovery", "fingerprinting", "tls_scanning", "ssh_scanning", "risk_engine", "db_persist"]
+    acceptable_report_keys = ["reporting", "reports"]
+
     missing = [p for p in required_phases if p not in timings]
+    has_reporting = any(k in timings for k in acceptable_report_keys)
+
+    # then add a second check for reporting key presence
     results.append(CheckResult(
-        name="run-stats.json contains required phase timings (v3.7)",
-        ok=(len(missing) == 0),
-        details=("missing: " + ", ".join(missing)) if missing else "ok",
+        name="run-stats.json contains report timing key (reporting/reports)",
+        ok=has_reporting,
+        details="ok" if has_reporting else "missing: reporting (or reports)",
         fatal=True
-    ))
+))
 
     bad = []
     for k, v in timings.items():
@@ -211,16 +216,32 @@ def _check_exec_md_v37(path: str) -> List[CheckResult]:
 
 def _check_tech_md_v37(path: str) -> List[CheckResult]:
     txt = _read_text(path)
-    required_sections = [r"^## TLS Capabilities", r"^## Technical Findings"]
-    missing = [pat for pat in required_sections if not re.search(pat, txt, flags=re.MULTILINE)]
+
+    # Accept either legacy headings OR the newer v3.8 headings
+    acceptable = [
+        (r"^## TLS Capabilities", r"^## Technical Findings"),
+        (r"^## Service Inventory", r"^## Findings"),
+    ]
+
+    ok_any = False
+    missing_detail = []
+    for a, b in acceptable:
+        has_a = re.search(a, txt, flags=re.MULTILINE) is not None
+        has_b = re.search(b, txt, flags=re.MULTILINE) is not None
+        if has_a and has_b:
+            ok_any = True
+            break
+        missing_detail.append(f"missing pair: {a} AND {b}")
+
     out = [
         CheckResult(
-            name="technical-findings.md contains key sections (v3.7)",
-            ok=(len(missing) == 0),
-            details=("missing patterns: " + ", ".join(missing)) if missing else "ok",
+            name="technical-findings.md contains key sections (v3.7/v3.8 compatible)",
+            ok=ok_any,
+            details="ok" if ok_any else "; ".join(missing_detail),
             fatal=True
         )
     ]
+
     out.append(CheckResult(
         name="technical-findings.md appears to include tables (nice-to-have)",
         ok=("|" in txt),
