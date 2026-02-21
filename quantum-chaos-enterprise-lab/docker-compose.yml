@@ -94,7 +94,12 @@ services:
   # =========================
   unknown-port:
     image: alpine
-    command: ["sh", "-c", "apk add --no-cache busybox-extras >/dev/null && while true; do nc -l -p 5555 -e echo CHAOS; done"]
+    command:
+      [
+        "sh",
+        "-c",
+        "apk add --no-cache busybox-extras >/dev/null && while true; do nc -l -p 5555 -e echo CHAOS; done"
+      ]
     ports:
       - "5555:5555"
 
@@ -113,7 +118,6 @@ services:
   # =========================
   # PHASE A1 — SERVICE INVENTORY EXPANSION (profile: phaseA)
   # =========================
-
   tls-altport:
     image: nginx:stable
     profiles: ["phaseA"]
@@ -134,7 +138,12 @@ services:
   unknown-port-2:
     image: alpine
     profiles: ["phaseA"]
-    command: ["sh", "-c", "apk add --no-cache busybox-extras >/dev/null && while true; do nc -l -p 5556 -e echo CHAOS2; done"]
+    command:
+      [
+        "sh",
+        "-c",
+        "apk add --no-cache busybox-extras >/dev/null && while true; do nc -l -p 5556 -e echo CHAOS2; done"
+      ]
     ports:
       - "5556:5556"
 
@@ -163,7 +172,6 @@ services:
   # =========================
   # PHASE A2 — TLS CHAIN SCENARIOS (profile: phaseA)
   # =========================
-
   tls-missing-intermediate:
     image: nginx:stable
     profiles: ["phaseA"]
@@ -194,7 +202,6 @@ services:
   # =========================
   # PHASE A3 — INGRESS / SNI (multi-vhost behind one TLS port) (profile: phaseA)
   # =========================
-
   ingress-sni:
     image: nginx:stable
     profiles: ["phaseA"]
@@ -211,8 +218,6 @@ services:
   # =========================
   # PHASE B — CLOUD SIMULATORS (profile: cloud)
   # =========================
-
-  # --- AWS emulator: LocalStack (gateway) ---
   localstack:
     image: localstack/localstack:latest
     profiles: ["cloud"]
@@ -224,7 +229,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
-  # TLS front for LocalStack gateway (host 24566 -> nginx 443 -> localstack:4566)
   localstack-tls:
     image: nginx:stable
     profiles: ["cloud"]
@@ -242,18 +246,15 @@ services:
         events {}
         http {
           upstream localstack_upstream { server localstack:4566; }
-          server {
-            listen 443 ssl default_server;
-            ssl_reject_handshake on;
-          }
+          server { listen 443 ssl default_server; ssl_reject_handshake on; }
           server {
             listen 443 ssl;
             server_name aws.chaos.local;
+
             ssl_certificate     /etc/nginx/certs/modern.crt;
             ssl_certificate_key /etc/nginx/certs/modern.key;
-            location = /__tls_ok {
-              return 200 "OK\n";
-            }
+
+            location = /__tls_ok { return 200 "OK\n"; }
             location / {
               proxy_pass http://localstack_upstream;
               proxy_set_header Host $$host;
@@ -265,7 +266,6 @@ services:
         EOF
         nginx -g 'daemon off;'
 
-  # --- Azure emulator: Azurite ---
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     profiles: ["cloud"]
@@ -275,7 +275,6 @@ services:
       - "10001"
       - "10002"
 
-  # TLS fronts for Azurite endpoints (host 21000/21001/21002 -> nginx 443 -> azurite:10000/10001/10002)
   azurite-blob-tls:
     image: nginx:stable
     profiles: ["cloud"]
@@ -293,18 +292,15 @@ services:
         events {}
         http {
           upstream az_blob { server azurite:10000; }
-          server {
-            listen 443 ssl default_server;
-            ssl_reject_handshake on;
-          }
+          server { listen 443 ssl default_server; ssl_reject_handshake on; }
           server {
             listen 443 ssl;
             server_name blob.chaos.local;
+
             ssl_certificate     /etc/nginx/certs/modern.crt;
             ssl_certificate_key /etc/nginx/certs/modern.key;
-            location = /__tls_ok {
-              return 200 "OK\n";
-            }
+
+            location = /__tls_ok { return 200 "OK\n"; }
             location / {
               proxy_pass http://az_blob;
               proxy_set_header Host $$host;
@@ -333,18 +329,15 @@ services:
         events {}
         http {
           upstream az_queue { server azurite:10001; }
-          server {
-            listen 443 ssl default_server;
-            ssl_reject_handshake on;
-          }
+          server { listen 443 ssl default_server; ssl_reject_handshake on; }
           server {
             listen 443 ssl;
             server_name queue.chaos.local;
+
             ssl_certificate     /etc/nginx/certs/modern.crt;
             ssl_certificate_key /etc/nginx/certs/modern.key;
-            location = /__tls_ok {
-              return 200 "OK\n";
-            }
+
+            location = /__tls_ok { return 200 "OK\n"; }
             location / {
               proxy_pass http://az_queue;
               proxy_set_header Host $$host;
@@ -373,18 +366,15 @@ services:
         events {}
         http {
           upstream az_table { server azurite:10002; }
-          server {
-            listen 443 ssl default_server;
-            ssl_reject_handshake on;
-          }
+          server { listen 443 ssl default_server; ssl_reject_handshake on; }
           server {
             listen 443 ssl;
             server_name table.chaos.local;
+
             ssl_certificate     /etc/nginx/certs/modern.crt;
             ssl_certificate_key /etc/nginx/certs/modern.key;
-            location = /__tls_ok {
-              return 200 "OK\n";
-            }
+
+            location = /__tls_ok { return 200 "OK\n"; }
             location / {
               proxy_pass http://az_table;
               proxy_set_header Host $$host;
@@ -399,7 +389,6 @@ services:
   # =========================
   # IDENTITY STACK (profile: identity)
   # =========================
-
   id-postgres:
     image: postgres:16
     profiles: ["identity"]
@@ -488,15 +477,13 @@ services:
     volumes:
       - ./nginx/identity/mtls/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
-      # We'll mount step-ca root so nginx can trust it (see note below)
       - stepca_data:/home/step:ro
     ports:
       - "16443:443"
-  
+
   # =========================
   # PHASE C — PKI / step-ca ISSUED mTLS (profile: pki)
   # =========================
-
   mtls-stepca-gateway:
     image: nginx:stable
     profiles: ["pki"]
@@ -512,11 +499,7 @@ services:
         events {}
         http {
           upstream whoami_upstream { server whoami:80; }
-
-          server {
-            listen 443 ssl default_server;
-            ssl_reject_handshake on;
-          }
+          server { listen 443 ssl default_server; ssl_reject_handshake on; }
 
           server {
             listen 443 ssl;
@@ -528,9 +511,7 @@ services:
             ssl_client_certificate /etc/nginx/stepca/root_ca.crt;
             ssl_verify_client on;
 
-            location = /__tls_ok {
-              return 200 "OK\n";
-            }
+            location = /__tls_ok { return 200 "OK\n"; }
 
             location / {
               proxy_pass http://whoami_upstream;
@@ -541,6 +522,7 @@ services:
         }
         EOF
         nginx -g 'daemon off;'
+
 volumes:
   id_postgres_data:
   stepca_data:
