@@ -1,3 +1,7 @@
+Absolutely — here’s a single “Build Guide + Operator’s Manual” you can drop into your repo as:
+
+quantum-chaos-enterprise-lab/CHAOS_LAB_BUILD_AND_OPERATIONS.md
+
 ⸻
 
 Chaos Lab Build Guide & Operator’s Manual

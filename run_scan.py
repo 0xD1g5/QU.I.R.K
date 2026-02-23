@@ -85,6 +85,10 @@ def main():
 
     # v3.7: profiles + caching + safety
     parser.add_argument("--profile", choices=["quick", "standard", "deep"], default="standard", help="Scan profile")
+    parser.add_argument("--score-profile",
+        choices=["lenient", "balanced", "strict"],
+        default=None,
+        help="Scoring calibration profile (lenient|balanced|strict). Does NOT affect scan behavior.",)
     parser.add_argument("--safe-mode", action="store_true", help="Reduce concurrency and increase timeouts")
     parser.add_argument("--rate-limit", type=float, default=0.0, help="Targets/sec limiter (0 = off)")
 
@@ -106,6 +110,7 @@ def main():
         "started_utc": datetime.now(timezone.utc).isoformat(),
         "timings_sec": {},
         "profile": args.profile,
+        "score_profile": args.score_profile or "balanced",
         "discovery_mode": args.discovery,
         "cache_enabled": bool(args.cache),
         "safe_mode": bool(args.safe_mode),
@@ -122,6 +127,16 @@ def main():
 
     # Apply profile defaults (v3.7)
     apply_profile(cfg, args.profile, safe_mode=args.safe_mode)
+    # Score profile (calibration) — independent from scan profile
+    if getattr(args, "score_profile", None):
+        if getattr(cfg, "intelligence", None) is None:
+            try:
+                from qcscan.config import IntelligenceCfg
+                cfg.intelligence = IntelligenceCfg()  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        if getattr(cfg, "intelligence", None) is not None:
+            cfg.intelligence.profile = args.score_profile  # type: ignore[attr-defined]
 
     # v3.5.1 context prompts (only in interactive mode)
     if not used_config_file:
