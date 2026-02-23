@@ -21,8 +21,6 @@ scan:
   ssh_timeout_seconds: 5
   ssh_concurrency: 100
 
-
-
 targets:
   fqdns:
   cidrs: [127.0.0.1]
@@ -40,5 +38,5 @@ output:
 
 intelligence:
   intelligence_version: "3.9.0"
-  calibration_profile: "default"     # default|strict|lenient
+  profile: "balanced"        # lenient|balanced|strict
   calibration_overrides: {}

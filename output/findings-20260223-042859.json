@@ -1,0 +1,9 @@
+[
+  {
+    "host": "127.0.0.1",
+    "port": 8000,
+    "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
+    "severity": "HIGH",
+    "title": "Plaintext HTTP service detected"
+  }
+]

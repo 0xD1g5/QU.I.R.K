@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from qcscan.intelligence import evidence
 from qcscan.reports.executive import build_exec_markdown
 from qcscan.reports.technical import build_tech_markdown
 from qcscan.engine.migration_planner import categorize_waves
@@ -13,6 +14,7 @@ from qcscan.assessment.transition_planner import build_transition_roadmap
 from qcscan.assessment.migration_advisor import recommend_migration_paths
 from qcscan.assessment.operator_context import get_context
 from qcscan.assessment.confidence import compute_confidence
+from qcscan.intelligence.driver_text import polish_drivers
 
 # ✅ v3.9 Ticket 0: calibration support
 from qcscan.intelligence.calibration import get_calibration
@@ -33,6 +35,195 @@ def _utc_stamp() -> str:
 def _json_dump(path: str, obj: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2, sort_keys=True, default=str)
+
+
+# === v3.9 Ticket 2: Delta vs last run helpers ===
+def _json_load(path: str) -> Any:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _list_intelligence_files(outdir: str) -> List[str]:
+    """Return intelligence-*.json files sorted newest-first by filename stamp."""
+    try:
+        names = [n for n in os.listdir(outdir) if n.startswith("intelligence-") and n.endswith(".json")]
+    except FileNotFoundError:
+        return []
+    # Filenames are `intelligence-YYYYMMDD-HHMMSS.json` so lexicographic sort works
+    names.sort(reverse=True)
+    return [os.path.join(outdir, n) for n in names]
+
+
+def _find_previous_intelligence(outdir: str, current_path: str) -> Optional[str]:
+    current_abs = os.path.abspath(current_path)
+    for p in _list_intelligence_files(outdir):
+        if os.path.abspath(p) != current_abs:
+            return p
+    return None
+
+
+def _safe_get(d: Any, *path: str, default: Any = None) -> Any:
+    cur = d
+    for k in path:
+        if not isinstance(cur, dict) or k not in cur:
+            return default
+        cur = cur[k]
+    return cur
+
+
+def _as_set_str(xs: Any) -> set:
+    if not xs:
+        return set()
+    return {str(x).strip() for x in xs if str(x).strip()}
+
+
+def _roadmap_now_titles(intel: Dict[str, Any]) -> set:
+    items = _safe_get(intel, "roadmap", default=[]) or []
+    if not isinstance(items, list):
+        return set()
+    out = set()
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        if str(it.get("timeframe", "")).upper() == "NOW":
+            title = str(it.get("title", "")).strip()
+            if title:
+                out.add(title)
+    return out
+
+
+def _delta_from_intelligence(prev: Dict[str, Any], curr: Dict[str, Any]) -> Dict[str, Any]:
+    prev_score = int(_safe_get(prev, "score", "total", default=0) or 0)
+    curr_score = int(_safe_get(curr, "score", "total", default=0) or 0)
+
+    prev_conf = int(_safe_get(prev, "confidence", "confidence", default=0) or 0)
+    curr_conf = int(_safe_get(curr, "confidence", "confidence", default=0) or 0)
+
+    prev_drivers = _as_set_str(_safe_get(prev, "score", "drivers", default=[]))
+    curr_drivers = _as_set_str(_safe_get(curr, "score", "drivers", default=[]))
+
+    prev_now = _roadmap_now_titles(prev)
+    curr_now = _roadmap_now_titles(curr)
+
+    # A small, stable evidence delta surface (keep minimal to avoid noise)
+    prev_ev = _safe_get(prev, "evidence_summary", default={}) or {}
+    curr_ev = _safe_get(curr, "evidence_summary", default={}) or {}
+
+    def ev_int(k: str) -> int:
+        return int(curr_ev.get(k, 0) or 0) - int(prev_ev.get(k, 0) or 0)
+
+    def ev_float(k: str) -> float:
+        return round(float(curr_ev.get(k, 0.0) or 0.0) - float(prev_ev.get(k, 0.0) or 0.0), 4)
+
+    evidence_deltas = {
+        "endpoint_count": ev_int("endpoint_count"),
+        "finding_count": ev_int("finding_count"),
+        "plaintext_http_count": ev_int("plaintext_http_count"),
+        "http_on_tls_port_count": ev_int("http_on_tls_port_count"),
+        "expired_cert_count": ev_int("expired_cert_count"),
+        "expiring_cert_count": ev_int("expiring_cert_count"),
+        "self_signed_cert_count": ev_int("self_signed_cert_count"),
+        "scan_error_rate": ev_float("scan_error_rate"),
+        "unknown_service_ratio": ev_float("unknown_service_ratio"),
+    }
+
+    return {
+        "delta_version": "3.9.0",
+        "baseline": {
+            "intelligence_version": str(prev.get("intelligence_version", "")),
+        },
+        "current": {
+            "intelligence_version": str(curr.get("intelligence_version", "")),
+        },
+        "score": {
+            "previous": prev_score,
+            "current": curr_score,
+            "delta": curr_score - prev_score,
+        },
+        "confidence": {
+            "previous": prev_conf,
+            "current": curr_conf,
+            "delta": curr_conf - prev_conf,
+        },
+        "drivers": {
+            "added": sorted(list(curr_drivers - prev_drivers)),
+            "removed": sorted(list(prev_drivers - curr_drivers)),
+        },
+        "roadmap_now": {
+            "added": sorted(list(curr_now - prev_now)),
+            "removed": sorted(list(prev_now - curr_now)),
+        },
+        "evidence_deltas": evidence_deltas,
+    }
+
+
+def _delta_markdown(cfg, delta: Dict[str, Any]) -> str:
+    s = delta.get("score", {}) or {}
+    c = delta.get("confidence", {}) or {}
+
+    def fmt_delta(x: int) -> str:
+        return f"+{x}" if x > 0 else str(x)
+
+    lines: List[str] = []
+    lines.append("# Quantum Crypto Readiness — Change Since Last Run\n")
+    lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
+    lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
+
+    lines.append("## Score movement\n")
+    lines.append(
+        f"- **Readiness Score:** {s.get('previous')} → **{s.get('current')}** ({fmt_delta(int(s.get('delta', 0) or 0))})"
+    )
+    lines.append(
+        f"- **Confidence:** {c.get('previous')} → **{c.get('current')}** ({fmt_delta(int(c.get('delta', 0) or 0))})\n"
+    )
+
+    drivers = delta.get("drivers", {}) or {}
+    added = drivers.get("added", []) or []
+    removed = drivers.get("removed", []) or []
+
+    lines.append("## Driver changes\n")
+    if added:
+        lines.append("**New drivers:**")
+        for d in added[:10]:
+            lines.append(f"- {d}")
+    else:
+        lines.append("- No new drivers detected.")
+
+    if removed:
+        lines.append("\n**Resolved drivers:**")
+        for d in removed[:10]:
+            lines.append(f"- {d}")
+
+    now = delta.get("roadmap_now", {}) or {}
+    now_added = now.get("added", []) or []
+    now_removed = now.get("removed", []) or []
+
+    lines.append("\n## Roadmap (NOW) changes\n")
+    if now_added:
+        lines.append("**Added NOW items:**")
+        for t in now_added[:10]:
+            lines.append(f"- {t}")
+    else:
+        lines.append("- No new NOW roadmap items.")
+
+    if now_removed:
+        lines.append("\n**Removed NOW items:**")
+        for t in now_removed[:10]:
+            lines.append(f"- {t}")
+
+    evd = delta.get("evidence_deltas", {}) or {}
+    # Keep this compact; only show non-zero deltas
+    changed = [(k, v) for k, v in evd.items() if v not in (0, 0.0)]
+    if changed:
+        lines.append("\n## Evidence deltas (high-level)\n")
+        for k, v in changed:
+            if isinstance(v, float):
+                sign = "+" if v > 0 else ""
+                lines.append(f"- {k}: {sign}{v}")
+            else:
+                lines.append(f"- {k}: {fmt_delta(int(v))}")
+
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _count_findings(findings: List[Dict[str, Any]], title_contains: str) -> int:
@@ -351,10 +542,38 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     os.makedirs(outdir, exist_ok=True)
 
     stamp = _utc_stamp()
+    # Resolve score calibration profile (v3.9)
+    score_profile = None
+    if getattr(cfg, "intelligence", None) is not None:
+        # New key
+        score_profile = getattr(cfg.intelligence, "profile", None)
+        if not score_profile:
+            # Backward compatibility (older configs)
+            score_profile = getattr(cfg.intelligence, "calibration_profile", None)
+
+    score_profile = str(score_profile or "balanced").strip().lower()
+    if score_profile == "default":
+        score_profile = "balanced"
+    if score_profile not in ("lenient", "balanced", "strict"):
+        score_profile = "balanced"
+
     report_start = time.perf_counter()
 
     # ✅ v3.9 Ticket 0: Resolve calibration (profile + overrides) and persist it for this run
     calibration = get_calibration(cfg)
+
+    # Enforce resolved score_profile from CLI/config (authoritative)
+    if not isinstance(calibration, dict):
+        calibration = {}
+
+    enforced_profile = str(score_profile or "balanced").strip().lower()
+    if enforced_profile == "default":
+        enforced_profile = "balanced"
+    if enforced_profile not in ("lenient", "balanced", "strict"):
+        enforced_profile = "balanced"
+
+    calibration["profile"] = enforced_profile
+
     calibration_path = os.path.join(outdir, f"calibration-{stamp}.json")
     _json_dump(calibration_path, calibration)
 
@@ -396,8 +615,12 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     # 4) v3.8 Intelligence outputs
     evidence = _normalize_evidence(endpoints, findings)
     score = _score_from_evidence(evidence)
+
+    raw_drivers = score.get("drivers") or []
+    drivers = polish_drivers(evidence, raw_drivers)
+
     conf = _confidence_from_evidence(evidence)
-    roadmap = _roadmap_from_evidence(evidence, score.get("drivers", []))
+    roadmap = _roadmap_from_evidence(evidence, raw_drivers)
 
     intelligence = {
         "intelligence_version": INTELLIGENCE_VERSION,
@@ -411,7 +634,8 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
         "score": {
             "total": score.get("total"),
             "subscores": score.get("subscores"),
-            "drivers": score.get("drivers"),
+            "drivers": drivers,
+            "raw_drivers": raw_drivers,
         },
         "confidence": conf,
         "roadmap": roadmap,
@@ -423,9 +647,31 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     intelligence_path = os.path.join(outdir, f"intelligence-{stamp}.json")
     _json_dump(intelligence_path, intelligence)
 
+    # ✅ v3.9 Ticket 2: Delta vs previous run (if available)
+    delta_path = None
+    delta_md_path = None
+    try:
+        prev_path = _find_previous_intelligence(outdir, intelligence_path)
+        if prev_path:
+            prev_intel = _json_load(prev_path)
+            curr_intel = intelligence
+            delta = _delta_from_intelligence(prev_intel, curr_intel)
+
+            delta_path = os.path.join(outdir, f"delta-{stamp}.json")
+            _json_dump(delta_path, delta)
+
+            delta_md_path = os.path.join(outdir, f"delta-{stamp}.md")
+            with open(delta_md_path, "w", encoding="utf-8") as f:
+                f.write(_delta_markdown(cfg, delta))
+        else:
+            print("ℹ️ No prior intelligence baseline found; skipping delta output.")
+    except Exception as e:
+        # Delta should never break the run; keep it best-effort.
+        print(f"⚠️ Delta generation failed (non-fatal): {e}")
+
     scorecard_path = os.path.join(outdir, f"scorecard-{stamp}.md")
     with open(scorecard_path, "w", encoding="utf-8") as f:
-        f.write(_scorecard_markdown(cfg, score, conf, score.get("drivers", []), roadmap))
+        f.write(_scorecard_markdown(cfg, score, conf, drivers, roadmap))
 
     roadmap_path = os.path.join(outdir, f"roadmap-{stamp}.md")
     with open(roadmap_path, "w", encoding="utf-8") as f:
@@ -453,6 +699,6 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     print(f"📦 Platform Version: {PLATFORM_VERSION} | Schema: {SCHEMA_VERSION} | Intelligence: {INTELLIGENCE_VERSION}")
 
     print("\n✅ Wrote reports:")
-    for p in [findings_path, assessment_path, calibration_path, stats_path, exec_path, tech_path, scorecard_path, roadmap_path, intelligence_path]:
+    for p in [findings_path, assessment_path, calibration_path, stats_path, exec_path, tech_path, scorecard_path, roadmap_path, intelligence_path, delta_path, delta_md_path]:
         if p:
             print(f"- {p}")

@@ -1,0 +1,45 @@
+{
+  "intelligence_version": "3.9.0",
+  "profile": "strict",
+  "resolved": {
+    "confidence": {
+      "penalties": {
+        "low_coverage": 25,
+        "low_tls_enum_coverage": 15,
+        "scan_errors": 20,
+        "unknown_ratio": 15
+      },
+      "start": 100,
+      "thresholds": {
+        "max_scan_error_rate_pct": 10,
+        "max_unknown_ratio_pct": 10,
+        "min_success_coverage_pct": 80,
+        "min_tls_enum_coverage_pct": 40
+      }
+    },
+    "roadmap": {
+      "max_items": 12,
+      "thresholds": {
+        "expiring_trigger": 1,
+        "plaintext_http_trigger": 1,
+        "tls13_low_coverage_pct": 50,
+        "unknown_services_trigger": 1
+      }
+    },
+    "scoring": {
+      "subscore_max": 25,
+      "thresholds": {
+        "expiring_days": 30,
+        "scan_error_rate_warn_pct": 15,
+        "tls13_good_coverage_pct": 70,
+        "unknown_ratio_warn_pct": 10
+      },
+      "weights": {
+        "agility_signals": 25,
+        "hygiene": 25,
+        "identity_trust": 25,
+        "modern_tls": 25
+      }
+    }
+  }
+}

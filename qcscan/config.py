@@ -55,8 +55,14 @@ class OutputCfg:
 
 @dataclass
 class IntelligenceCfg:
+    # Intelligence/scoring layer versioning
     intelligence_version: str = "3.9.0"
-    calibration_profile: str = "default"  # default|strict|lenient
+
+    # Score calibration profile used by scoring/reporting.
+    # Supported: lenient|balanced|strict
+    profile: str = "balanced"
+
+    # Optional per-weight overrides (advanced tuning)
     calibration_overrides: Optional[Dict[str, Any]] = None
 
 
@@ -73,13 +79,35 @@ class AppConfig:
 def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     # Backward-compatible: if intelligence block missing, use defaults.
     intel_raw = raw.get("intelligence", {}) or {}
+
+    # Advanced overrides are optional
     overrides = intel_raw.get("calibration_overrides")
     if overrides is None:
         overrides = {}
 
+    # New key: intelligence.profile (lenient|balanced|strict)
+    profile = intel_raw.get("profile")
+
+    # Legacy key: intelligence.calibration_profile (default|lenient|strict)
+    if not profile:
+        legacy = str(intel_raw.get("calibration_profile", "default") or "default").strip().lower()
+        if legacy == "default":
+            profile = "balanced"
+        elif legacy in ("lenient", "strict"):
+            profile = legacy
+        elif legacy == "balanced":
+            profile = "balanced"
+        else:
+            profile = "balanced"
+
+    # Normalize profile
+    profile = str(profile or "balanced").strip().lower()
+    if profile not in ("lenient", "balanced", "strict"):
+        profile = "balanced"
+
     intelligence_cfg = IntelligenceCfg(
-        intelligence_version=intel_raw.get("intelligence_version", "3.9.0"),
-        calibration_profile=intel_raw.get("calibration_profile", "default"),
+        intelligence_version=str(intel_raw.get("intelligence_version", "3.9.0") or "3.9.0"),
+        profile=profile,
         calibration_overrides=overrides,
     )
 

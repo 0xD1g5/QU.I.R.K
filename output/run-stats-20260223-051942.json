@@ -1,0 +1,30 @@
+{
+  "cache_enabled": false,
+  "counts": {
+    "inventory_other": 1,
+    "ssh_candidates": 0,
+    "targets_total": 5,
+    "tls_candidates": 4
+  },
+  "discovery_mode": "nmap",
+  "ended_utc": "2026-02-23T05:19:42.947105+00:00",
+  "error_categories": {},
+  "profile": "standard",
+  "protocol_counts": {
+    "HTTP": 1,
+    "TLS": 4
+  },
+  "rate_limit": 0.0,
+  "safe_mode": false,
+  "score_profile": "strict",
+  "started_utc": "2026-02-23T05:19:28.908965+00:00",
+  "timings_sec": {
+    "db_persist": 0.004,
+    "discovery": 0.032,
+    "fingerprinting": 2.029,
+    "reporting": 0.002,
+    "risk_engine": 0.0,
+    "ssh_scanning": 0.0,
+    "tls_scanning": 0.115
+  }
+}
