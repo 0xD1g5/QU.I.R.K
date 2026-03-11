@@ -1,0 +1,13 @@
+{
+  "technique_id": "AML-T0005",
+  "technique_name": "LLM Meta Prompt Extraction",
+  "sub_technique": "",
+  "tactic": "ML Attack Staging",
+  "target_service": "QL-Assist",
+  "delivery": "pre-recorded",
+  "phase_duration_seconds": 300,
+  "act": 1,
+  "pause_after_line": 20,
+  "recording_file": "recordings/phase_2_fingerprint.cast",
+  "terminal_dimensions": { "cols": 120, "rows": 40 }
+}

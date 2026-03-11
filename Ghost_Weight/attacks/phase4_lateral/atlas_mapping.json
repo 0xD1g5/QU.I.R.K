@@ -1,0 +1,13 @@
+{
+  "technique_id": "AML-T0043",
+  "technique_name": "Craft Adversarial Data — Agent Hijacking",
+  "sub_technique": "",
+  "tactic": "Lateral Movement",
+  "target_service": "QL-DocuIntel → QL-FraudSentinel",
+  "delivery": "pre-recorded",
+  "phase_duration_seconds": 360,
+  "act": 2,
+  "pause_after_line": 16,
+  "recording_file": "recordings/phase_4_lateral.cast",
+  "terminal_dimensions": { "cols": 120, "rows": 40 }
+}

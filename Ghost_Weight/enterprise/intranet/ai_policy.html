@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Governance Policy — QFL Intranet</title>
+<style>
+  :root { --navy:#002C5C; --blue:#0076BD; --cyan:#0099D7; --gray:#4D4D4F; --silver:#BBC5CC; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Arial,sans-serif; background:#f4f6f8; color:var(--gray); }
+  header { background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%); padding:0 2rem; display:flex; align-items:center; justify-content:space-between; height:64px; }
+  header .logo { color:#fff; font-size:1.4rem; font-weight:700; } header .logo span { color:var(--cyan); }
+  header nav a { color:rgba(255,255,255,.85); text-decoration:none; margin-left:2rem; font-size:.9rem; }
+  .banner { background:var(--navy); color:rgba(255,255,255,.6); text-align:center; padding:6px; font-size:.78rem; }
+  .banner strong { color:var(--cyan); }
+  main { max-width:860px; margin:2rem auto; padding:0 1.5rem; }
+  .doc-header { background:#fff; border-radius:8px; padding:1.75rem; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:1.5rem; border-top:4px solid var(--navy); }
+  .doc-header h1 { color:var(--navy); font-size:1.5rem; }
+  .doc-header .meta { font-size:.82rem; color:var(--silver); margin-top:.5rem; }
+  section { background:#fff; border-radius:8px; padding:1.75rem; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:1.2rem; }
+  section h2 { color:var(--navy); font-size:1.05rem; margin-bottom:.75rem; padding-bottom:.4rem; border-bottom:1px solid #eee; }
+  section p, section li { font-size:.9rem; line-height:1.7; margin-bottom:.5rem; }
+  section ul { padding-left:1.5rem; }
+  footer { background:var(--navy); color:rgba(255,255,255,.4); text-align:center; padding:1.5rem; font-size:.78rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<div class="banner">INTERNAL USE ONLY — <strong>QuantumLedger Financial Intranet</strong></div>
+<header>
+  <div class="logo">Quantum<span>Ledger</span> Financial</div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="ai_services.html">AI Services</a>
+    <a href="ai_policy.html">AI Policy</a>
+    <a href="org_chart.html">Org Chart</a>
+  </nav>
+</header>
+<main>
+  <div class="doc-header">
+    <h1>QFL AI Governance Policy</h1>
+    <div class="meta">Document ID: QFL-POL-AI-2024-003 | Version: 1.2 | Owner: AI Operations | Last Review: November 2024</div>
+  </div>
+
+  <section>
+    <h2>1. Purpose</h2>
+    <p>This policy governs the use of AI-powered internal services at QuantumLedger Financial. It establishes acceptable use standards, data handling requirements, and monitoring obligations for all AI systems including QL-Assist, QL-DocuIntel, and QL-FraudSentinel.</p>
+  </section>
+
+  <section>
+    <h2>2. Scope</h2>
+    <p>Applies to all employees, contractors, and third parties with access to QFL internal AI services. The following systems are in scope:</p>
+    <ul>
+      <li>QL-Assist (AI analyst assistant, Port 8001)</li>
+      <li>QL-DocuIntel (Document analysis pipeline, Port 8002)</li>
+      <li>QL-FraudSentinel (Fraud detection and scoring, Port 8003)</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. Acceptable Use</h2>
+    <ul>
+      <li>AI services may be used only for authorized QFL business purposes</li>
+      <li>Analysts may submit documents to QL-DocuIntel for review; all documents must be legitimate business records</li>
+      <li>QL-FraudSentinel risk scores may be reviewed by authorized analysts; manual overrides require supervisor approval</li>
+      <li>QL-Assist may retrieve and summarize internal documents on behalf of authorized analysts</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Security and Monitoring</h2>
+    <p>All AI service interactions are logged to the QFL SIEM. The following are monitored:</p>
+    <ul>
+      <li>Session identifiers and user IDs on all requests</li>
+      <li>Document ingestion events (filename, chunk count)</li>
+      <li>Fraud scoring decisions (transaction ID, risk score, recommendation)</li>
+      <li>Alert actions (create, suppress) with responsible party attribution</li>
+    </ul>
+    <p><strong>Note:</strong> LLM completions are partially logged (first 500 characters). Full completion logging is under review pending privacy assessment.</p>
+  </section>
+
+  <section>
+    <h2>5. Data Classification</h2>
+    <ul>
+      <li>Documents submitted to QL-DocuIntel are classified CONFIDENTIAL</li>
+      <li>Transaction data in QL-FraudSentinel is classified RESTRICTED</li>
+      <li>QL-Assist conversation logs are classified CONFIDENTIAL</li>
+      <li>Do not submit documents classified above RESTRICTED to any AI service</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. Incident Reporting</h2>
+    <p>Report any suspected AI system anomalies, unexpected outputs, or policy violations immediately to:</p>
+    <ul>
+      <li>SOC: soc.monitor@quantumledger.com</li>
+      <li>AI Operations: ai.admin@quantumledger.com</li>
+      <li>Supervisor escalation for any risk score overrides</li>
+    </ul>
+  </section>
+</main>
+<footer>© 2024 QuantumLedger Financial. Confidential. For authorized internal use only.</footer>
+</body>
+</html>

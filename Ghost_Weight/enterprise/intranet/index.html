@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QFL Intranet — QuantumLedger Financial</title>
+<style>
+  :root {
+    --navy: #002C5C;
+    --blue: #0076BD;
+    --cyan: #0099D7;
+    --gray: #4D4D4F;
+    --silver: #BBC5CC;
+    --green: #7EC352;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f8; color: var(--gray); }
+  header { background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  header .logo { color: #fff; font-size: 1.4rem; font-weight: 700; letter-spacing: 0.04em; }
+  header .logo span { color: var(--cyan); }
+  header nav a { color: rgba(255,255,255,0.85); text-decoration: none; margin-left: 2rem; font-size: 0.9rem; }
+  header nav a:hover { color: var(--cyan); }
+  .banner { background: var(--navy); color: rgba(255,255,255,0.6); text-align: center; padding: 6px; font-size: 0.78rem; }
+  .banner strong { color: var(--cyan); }
+  main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+  .welcome { background: #fff; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 1.5rem; border-left: 4px solid var(--cyan); }
+  .welcome h1 { color: var(--navy); font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .welcome p { font-size: 0.95rem; color: var(--gray); line-height: 1.6; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
+  .card { background: #fff; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); transition: box-shadow 0.2s; border-top: 3px solid var(--blue); }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,118,189,0.15); }
+  .card .icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
+  .card h3 { color: var(--navy); font-size: 1rem; margin-bottom: 0.4rem; }
+  .card p { font-size: 0.85rem; color: var(--silver); line-height: 1.5; }
+  .card a { display: inline-block; margin-top: 0.75rem; color: var(--blue); text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+  .card a:hover { color: var(--cyan); }
+  .alert-bar { background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #795548; }
+  footer { background: var(--navy); color: rgba(255,255,255,0.4); text-align: center; padding: 1.5rem; font-size: 0.78rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+<div class="banner">INTERNAL USE ONLY — <strong>QuantumLedger Financial Intranet</strong> — Authorized Personnel Only</div>
+<header>
+  <div class="logo">Quantum<span>Ledger</span> Financial</div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="ai_services.html">AI Services</a>
+    <a href="ai_policy.html">AI Policy</a>
+    <a href="org_chart.html">Org Chart</a>
+    <a href="#">IT Help Desk</a>
+  </nav>
+</header>
+<main>
+  <div class="alert-bar">
+    📢 <strong>Notice:</strong> QL-Assist v2.1 is now available. Analysts are encouraged to use the new document analysis workflow. See <a href="ai_services.html">AI Services</a> for details.
+  </div>
+  <div class="welcome">
+    <h1>Welcome to the QFL Employee Portal</h1>
+    <p>This portal provides access to internal tools, policies, and resources for QuantumLedger Financial employees. Use the navigation above to access AI services, review company policy, or find team contacts.</p>
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <div class="icon">🤖</div>
+      <h3>AI Services Directory</h3>
+      <p>Access QL-Assist, QL-DocuIntel, and QL-FraudSentinel — our internal AI-powered analyst tools.</p>
+      <a href="ai_services.html">View Services →</a>
+    </div>
+    <div class="card">
+      <div class="icon">📋</div>
+      <h3>AI Governance Policy</h3>
+      <p>Review the QFL AI Use Policy, acceptable use guidelines, and data handling requirements.</p>
+      <a href="ai_policy.html">Read Policy →</a>
+    </div>
+    <div class="card">
+      <div class="icon">👥</div>
+      <h3>Team Directory</h3>
+      <p>Find contacts for the AI Operations team, Fraud Intelligence unit, and SOC analysts.</p>
+      <a href="org_chart.html">View Org Chart →</a>
+    </div>
+    <div class="card">
+      <div class="icon">🔒</div>
+      <h3>Security Reporting</h3>
+      <p>Report security incidents, suspicious activity, or AI system anomalies to the SOC.</p>
+      <a href="mailto:soc.monitor@quantumledger.com">Report Incident →</a>
+    </div>
+  </div>
+</main>
+<footer>
+  © 2024 QuantumLedger Financial. Confidential. For authorized internal use only.<br>
+  IT Help Desk: it-support@quantumledger.com | Security: soc.monitor@quantumledger.com
+</footer>
+</body>
+</html>
