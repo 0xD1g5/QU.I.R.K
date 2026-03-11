@@ -1,0 +1,13 @@
+{
+  "technique_id": "AML-T0048",
+  "technique_name": "Erroneous Recommendations — Objective Hijacking",
+  "sub_technique": "",
+  "tactic": "Impact",
+  "target_service": "QL-FraudSentinel",
+  "delivery": "live",
+  "phase_duration_seconds": 600,
+  "act": 3,
+  "pause_after_line": null,
+  "recording_file": null,
+  "terminal_dimensions": { "cols": 120, "rows": 40 }
+}

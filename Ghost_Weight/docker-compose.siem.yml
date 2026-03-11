@@ -1,0 +1,72 @@
+version: "3.8"
+
+# ─── Operation Ghost Wait — SIEM Stack (OpenSearch + OpenDashboards) ────────
+# Run alongside base stack:
+#   docker compose -f docker-compose.yml -f docker-compose.siem.yml up -d
+#
+# ARM64 (Mac M4): opensearchproject images have native ARM64 support.
+# Pin both services to the same minor version (2.11.0) — mismatch causes startup failure.
+# Memory constraint: OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m keeps it under 1GB on Mac M4.
+# ────────────────────────────────────────────────────────────────────────────
+
+networks:
+  qfl-range:
+    external: true
+
+volumes:
+  opensearch-data:
+    driver: local
+
+services:
+
+  # ── OpenSearch — Log Index + Search API (internal) ──
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: opensearch
+    networks:
+      - qfl-range
+    ports:
+      - "9200:9200"   # Exposed for bootstrap scripts and health checks
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
+      - plugins.security.disabled=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD:-admin}
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -E '\"status\":\"(green|yellow)\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 60s
+    restart: unless-stopped
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  # ── OpenDashboards — SIEM UI (Blue Team view) ──
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.11.0
+    container_name: opensearch-dashboards
+    networks:
+      - qfl-range
+    ports:
+      - "5601:5601"   # SIEM UI — exposed to host
+    environment:
+      - OPENSEARCH_HOSTS=http://opensearch:9200
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q '\"state\":\"green\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped

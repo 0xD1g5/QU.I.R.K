@@ -1,0 +1,13 @@
+{
+  "technique_id": "AML-T0040",
+  "technique_name": "ML Supply Chain Compromise — Training Data Poisoning",
+  "sub_technique": "",
+  "tactic": "ML Attack Staging",
+  "target_service": "QL-FraudSentinel",
+  "delivery": "pre-recorded",
+  "phase_duration_seconds": 420,
+  "act": 2,
+  "pause_after_line": 22,
+  "recording_file": "recordings/phase_5_memory.cast",
+  "terminal_dimensions": { "cols": 120, "rows": 40 }
+}

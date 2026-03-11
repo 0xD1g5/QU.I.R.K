@@ -1,0 +1,3 @@
+analyst.chen@quantumledger.com|{SHA512-CRYPT}$6$rounds=500000$QFLdemopassword123$placeholder_hash_for_demo
+soc.monitor@quantumledger.com|{SHA512-CRYPT}$6$rounds=500000$QFLdemopassword123$placeholder_hash_for_demo
+ai.admin@quantumledger.com|{SHA512-CRYPT}$6$rounds=500000$QFLdemopassword123$placeholder_hash_for_demo

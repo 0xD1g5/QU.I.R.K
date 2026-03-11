@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Services Directory — QFL Intranet</title>
+<style>
+  :root { --navy:#002C5C; --blue:#0076BD; --cyan:#0099D7; --gray:#4D4D4F; --silver:#BBC5CC; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Arial,sans-serif; background:#f4f6f8; color:var(--gray); }
+  header { background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%); padding:0 2rem; display:flex; align-items:center; justify-content:space-between; height:64px; }
+  header .logo { color:#fff; font-size:1.4rem; font-weight:700; } header .logo span { color:var(--cyan); }
+  header nav a { color:rgba(255,255,255,.85); text-decoration:none; margin-left:2rem; font-size:.9rem; }
+  .banner { background:var(--navy); color:rgba(255,255,255,.6); text-align:center; padding:6px; font-size:.78rem; }
+  .banner strong { color:var(--cyan); }
+  main { max-width:1000px; margin:2rem auto; padding:0 1.5rem; }
+  h1 { color:var(--navy); font-size:1.6rem; margin-bottom:.5rem; }
+  .subtitle { color:var(--silver); font-size:.9rem; margin-bottom:2rem; }
+  .service-card { background:#fff; border-radius:8px; padding:1.75rem; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:1.5rem; border-left:4px solid var(--cyan); }
+  .service-card h2 { color:var(--navy); font-size:1.2rem; margin-bottom:.3rem; }
+  .service-card .badge { display:inline-block; background:var(--navy); color:#fff; font-size:.7rem; padding:2px 8px; border-radius:4px; margin-left:.5rem; vertical-align:middle; }
+  .service-card .endpoint { font-family:monospace; background:#f0f4f8; padding:4px 8px; border-radius:4px; font-size:.85rem; color:var(--blue); }
+  .service-card p { font-size:.9rem; line-height:1.6; margin:.75rem 0; }
+  .service-card .detail-row { display:flex; gap:2rem; margin-top:.75rem; font-size:.83rem; }
+  .service-card .detail-row span { color:var(--silver); }
+  .service-card .detail-row strong { color:var(--gray); }
+  footer { background:var(--navy); color:rgba(255,255,255,.4); text-align:center; padding:1.5rem; font-size:.78rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<div class="banner">INTERNAL USE ONLY — <strong>QuantumLedger Financial Intranet</strong></div>
+<header>
+  <div class="logo">Quantum<span>Ledger</span> Financial</div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="ai_services.html">AI Services</a>
+    <a href="ai_policy.html">AI Policy</a>
+    <a href="org_chart.html">Org Chart</a>
+  </nav>
+</header>
+<main>
+  <h1>AI Services Directory</h1>
+  <div class="subtitle">Internal AI-powered tools for QFL analysts. All services require ANALYST_TIER2 session scope.</div>
+
+  <div class="service-card">
+    <h2>QL-Assist <span class="badge">PRODUCTION</span></h2>
+    <div class="endpoint">http://ql-assist:8001</div>
+    <p>AI-powered analyst assistant for case research, document retrieval, and transaction review guidance. Uses the internal LLM backend with full access to CMS, QL-DocuIntel, and QL-FraudSentinel. Supports multi-turn conversation for complex case analysis.</p>
+    <div class="detail-row">
+      <div><span>Version:</span> <strong>2.1</strong></div>
+      <div><span>Model:</span> <strong>llama3.2:3b</strong></div>
+      <div><span>Auth:</span> <strong>ANALYST_TIER2</strong></div>
+      <div><span>Contact:</span> <strong>ai.admin@quantumledger.com</strong></div>
+    </div>
+    <div class="detail-row" style="margin-top:.5rem">
+      <div><span>Endpoints:</span> <strong>/chat, /admin, /api/schema</strong></div>
+      <div><span>API Key:</span> <strong>qfl-internal-assist-v2</strong></div>
+    </div>
+  </div>
+
+  <div class="service-card">
+    <h2>QL-DocuIntel <span class="badge">PRODUCTION</span></h2>
+    <div class="endpoint">http://ql-docuintel:8002</div>
+    <p>Document ingestion and intelligent analysis pipeline. Upload KYC, AML, and case documents for AI-assisted review. Supports PDF and TXT. Integrates with QL-FraudSentinel for automated risk score updates following document review conclusions.</p>
+    <div class="detail-row">
+      <div><span>Version:</span> <strong>1.4</strong></div>
+      <div><span>Vector Store:</span> <strong>ChromaDB</strong></div>
+      <div><span>Embedding:</span> <strong>all-MiniLM-L6-v2</strong></div>
+    </div>
+    <div class="detail-row" style="margin-top:.5rem">
+      <div><span>Endpoints:</span> <strong>/ingest, /analyze, /risk_score/write, /alert/suppress, /agent/message</strong></div>
+    </div>
+  </div>
+
+  <div class="service-card">
+    <h2>QL-FraudSentinel <span class="badge">PRODUCTION</span></h2>
+    <div class="endpoint">http://ql-fraudsentinel:8003</div>
+    <p>AI-driven fraud detection and transaction risk scoring. Uses a persistent memory store of learned fraud patterns for context-aware scoring. All scoring decisions logged to the SIEM. Integrates with QL-DocuIntel via inter-agent messaging for coordinated case management.</p>
+    <div class="detail-row">
+      <div><span>Version:</span> <strong>3.0</strong></div>
+      <div><span>Memory Backend:</span> <strong>ChromaDB (persistent)</strong></div>
+      <div><span>Score Range:</span> <strong>0–100</strong></div>
+    </div>
+    <div class="detail-row" style="margin-top:.5rem">
+      <div><span>Endpoints:</span> <strong>/score, /memory, /alert, /agent/message</strong></div>
+    </div>
+  </div>
+</main>
+<footer>© 2024 QuantumLedger Financial. Confidential. For authorized internal use only.</footer>
+</body>
+</html>
