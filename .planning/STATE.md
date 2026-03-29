@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 context gathered (discuss mode)
-last_updated: "2026-03-29T02:58:38.078Z"
-last_activity: 2026-03-28 — Roadmap and requirements created
+status: executing
+stopped_at: Completed 01-foundation-fixes plan 01 (scoring-fixes)
+last_updated: "2026-03-29T19:05:14.550Z"
+last_activity: 2026-03-29
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 0
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 1 — Foundation Fixes
+**Current focus:** Phase 01 — foundation-fixes
 
 ## Current Position
 
-Phase: 1 of 7 (Foundation Fixes)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-28 — Roadmap and requirements created
+Phase: 01 (foundation-fixes) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-foundation-fixes P01 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - Init: ssh-audit over raw paramiko (JSON output, full algorithm enum maps to CBOM)
 - Init: cyclonedx-python-lib for CBOM (only Python SDK with full CycloneDX 1.4+ CBOM schema)
 - Init: SaaS deferred — prove value with CLI+dashboard first
+- [Phase 01-foundation-fixes]: Removed assessment-TIMESTAMP.json output from writer.py — assessment layer deprecated, single scoring path through intelligence/scoring.py
+- [Phase 01-foundation-fixes]: cert_pubkey_alg is canonical CryptoEndpoint field — checked first in _extract_cert_key_type before legacy fallbacks
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T02:58:38.069Z
-Stopped at: Phase 1 context gathered (discuss mode)
-Resume file: .planning/phases/01-foundation-fixes/01-CONTEXT.md
+Last session: 2026-03-29T19:05:14.547Z
+Stopped at: Completed 01-foundation-fixes plan 01 (scoring-fixes)
+Resume file: None
