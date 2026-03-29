@@ -52,3 +52,11 @@ class CryptoEndpoint(Base):
     # v4.0 SSH audit fields
     # ==========================
     ssh_audit_json = Column(Text, nullable=True)  # Full ssh-audit JSON output
+
+    # ==========================
+    # v4.0 Phase 3 scanner fields
+    # ==========================
+    jwt_scan_json = Column(Text, nullable=True)        # Full JWKS key entry JSON
+    container_scan_json = Column(Text, nullable=True)   # Full syft artifact JSON
+    source_scan_json = Column(Text, nullable=True)      # Full semgrep finding JSON
+    cloud_scan_json = Column(Text, nullable=True)       # Full cloud resource metadata JSON
