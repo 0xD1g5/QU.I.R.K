@@ -4,27 +4,27 @@ from datetime import datetime, timezone
 from collections import Counter
 from typing import List, Tuple, Dict, Any, Optional
 
-from qcscan.config import load_config
-from qcscan.interactive import interactive_config
-from qcscan.db import init_db, get_session
-from qcscan.models import CryptoEndpoint
+from quirk.config import load_config
+from quirk.interactive import interactive_config
+from quirk.db import init_db, get_session
+from quirk.models import CryptoEndpoint
 
-from qcscan.logging_util import Logger
-from qcscan.scanner.target_expander import expand_targets
-from qcscan.scanner.fingerprint import fingerprint_service
-from qcscan.scanner.tls_scanner import scan_tls_targets
-from qcscan.scanner.ssh_scanner import scan_ssh_targets
+from quirk.logging_util import Logger
+from quirk.scanner.target_expander import expand_targets
+from quirk.scanner.fingerprint import fingerprint_service
+from quirk.scanner.tls_scanner import scan_tls_targets
+from quirk.scanner.ssh_scanner import scan_ssh_targets
 
-from qcscan.discovery.nmap_provider import run_nmap_discovery
-from qcscan.discovery.nmap_parser import to_targets as nmap_to_targets
+from quirk.discovery.nmap_provider import run_nmap_discovery
+from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
-from qcscan.assessment.operator_context import prompt_for_context, attach_context
-from qcscan.engine.risk_engine import evaluate_endpoints
-from qcscan.reports.writer import write_reports
+from quirk.assessment.operator_context import prompt_for_context, attach_context
+from quirk.engine.risk_engine import evaluate_endpoints
+from quirk.reports.writer import write_reports
 
-from qcscan.engine.profiles import apply_profile
-from qcscan.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets
-from qcscan.engine.rate_limiter import TokenBucket
+from quirk.engine.profiles import apply_profile
+from quirk.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets
+from quirk.engine.rate_limiter import TokenBucket
 
 
 def _error_category(desc: str) -> str:
@@ -72,7 +72,7 @@ def _phase_timer(run_stats: Dict[str, Any], name: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Quantum Crypto Scanner (qcscan)")
+    parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--config", help="Path to config.yaml (skip prompts)")
     parser.add_argument("--verbose", action="store_true", help="Verbose output during scan")
     parser.add_argument("--progress", action="store_true", help="Show progress bars during scan")
@@ -131,7 +131,7 @@ def main():
     if getattr(args, "score_profile", None):
         if getattr(cfg, "intelligence", None) is None:
             try:
-                from qcscan.config import IntelligenceCfg
+                from quirk.config import IntelligenceCfg
                 cfg.intelligence = IntelligenceCfg()  # type: ignore[attr-defined]
             except Exception:
                 pass

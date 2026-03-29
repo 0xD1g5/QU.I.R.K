@@ -34,7 +34,7 @@ connectors:
 
 output:
   directory: "output"
-  db_path: "output/qcscan.db"
+  db_path: "output/quirk.db"
 
 intelligence:
   intelligence_version: "3.9.0"
