@@ -1,3 +1,4 @@
+import json
 import socket
 import ssl
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,6 +12,27 @@ from cryptography.hazmat.backends import default_backend
 from qcscan.models import CryptoEndpoint
 from qcscan.logging_util import Logger
 from qcscan.scanner.tls_capabilities import enumerate_tls_capabilities
+
+# ---------------------------------------------------------------------------
+# sslyze optional import
+# ---------------------------------------------------------------------------
+try:
+    from sslyze import (
+        Scanner as SslyzeScanner,
+        ServerScanRequest,
+        ServerNetworkLocation,
+        ScanCommand,
+        ServerNetworkConfiguration,
+        ScanCommandAttemptStatusEnum,
+        ServerScanStatusEnum,
+    )
+    import sslyze as _sslyze_module
+    SSLYZE_AVAILABLE = True
+except ImportError:
+    SSLYZE_AVAILABLE = False
+
+# Warn once per process when sslyze is absent
+_sslyze_warned = False
 
 
 def _pubkey_info(pubkey):
@@ -62,7 +84,249 @@ def _as_csv(items: List[str]) -> str:
     return ",".join([x for x in items if x])
 
 
-def scan_one(
+# ---------------------------------------------------------------------------
+# sslyze primary scanner
+# ---------------------------------------------------------------------------
+
+# Protocol label map: scan_result attribute → (display_name, version_priority)
+# Higher priority = more preferred; used to pick ep.tls_version
+_PROTO_MAP = [
+    ("tls_1_3_cipher_suites", "TLSv1.3", 4),
+    ("tls_1_2_cipher_suites", "TLSv1.2", 3),
+    ("tls_1_1_cipher_suites", "TLSv1.1", 2),
+    ("tls_1_0_cipher_suites", "TLSv1", 1),
+    ("ssl_3_0_cipher_suites", "SSLv3", 0),
+    ("ssl_2_0_cipher_suites", "SSLv2", -1),
+]
+
+
+def _scan_one_sslyze(
+    host: str,
+    port: int,
+    timeout: int,
+    include_sni: bool,
+    logger: Optional[Logger] = None,
+) -> Optional[CryptoEndpoint]:
+    """
+    Attempt TLS scan using sslyze.  Returns a populated CryptoEndpoint on success,
+    or None if sslyze fails/is unavailable (triggers fallback to _scan_one_fallback).
+    """
+    global _sslyze_warned
+
+    if not SSLYZE_AVAILABLE:
+        if not _sslyze_warned:
+            if logger:
+                logger.v("sslyze not installed — falling back to ssl+cryptography scanner")
+            _sslyze_warned = True
+        return None
+
+    try:
+        # Determine SNI hostname
+        is_ip = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(host)
+            is_ip = True
+        except ValueError:
+            pass
+
+        sni_hostname = host if (include_sni and not is_ip) else None
+
+        scan_request = ServerScanRequest(
+            server_location=ServerNetworkLocation(hostname=host, port=port),
+            network_configuration=ServerNetworkConfiguration(
+                tls_server_name_indication=sni_hostname,
+                network_timeout=timeout,
+            ),
+            scan_commands={
+                ScanCommand.CERTIFICATE_INFO,
+                ScanCommand.SSL_2_0_CIPHER_SUITES,
+                ScanCommand.SSL_3_0_CIPHER_SUITES,
+                ScanCommand.TLS_1_0_CIPHER_SUITES,
+                ScanCommand.TLS_1_1_CIPHER_SUITES,
+                ScanCommand.TLS_1_2_CIPHER_SUITES,
+                ScanCommand.TLS_1_3_CIPHER_SUITES,
+                ScanCommand.ELLIPTIC_CURVES,
+            },
+        )
+
+        scanner = SslyzeScanner(per_server_concurrent_connections_limit=2)
+        scanner.queue_scans([scan_request])
+        results = list(scanner.get_results())
+        if not results:
+            return None
+
+        server_result = results[0]
+        if server_result.scan_status != ServerScanStatusEnum.COMPLETED:
+            if logger:
+                logger.v(f"sslyze ERROR_NO_CONNECTIVITY for {host}:{port} — using fallback")
+            return None
+
+        scan = server_result.scan_result
+
+        ep = CryptoEndpoint(
+            host=host,
+            port=port,
+            protocol="TLS",
+            scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            sni_used=bool(include_sni and not is_ip),
+        )
+
+        # ----------------------------------------------------------------
+        # Certificate info
+        # ----------------------------------------------------------------
+        cert_attempt = scan.certificate_info
+        if cert_attempt.status == ScanCommandAttemptStatusEnum.COMPLETED:
+            deployment = cert_attempt.result.certificate_deployments[0]
+            leaf = deployment.received_certificate_chain[0]
+
+            ep.cert_subject = leaf.subject.rfc4514_string()
+            ep.cert_issuer = leaf.issuer.rfc4514_string()
+            ep.cert_sans = _extract_sans(leaf)
+            ep.cert_sig_alg = (
+                leaf.signature_hash_algorithm.name
+                if leaf.signature_hash_algorithm
+                else "unknown"
+            )
+
+            pubkey = leaf.public_key()
+            alg, size = _pubkey_info(pubkey)
+            ep.cert_pubkey_alg = alg
+            ep.cert_pubkey_size = size
+
+            # Date handling — use _utc variant when available
+            if hasattr(leaf, "not_valid_before_utc") and hasattr(leaf, "not_valid_after_utc"):
+                nb = leaf.not_valid_before_utc
+                na = leaf.not_valid_after_utc
+            else:
+                nb = leaf.not_valid_before
+                na = leaf.not_valid_after
+            ep.cert_not_before = nb.replace(tzinfo=None)
+            ep.cert_not_after = na.replace(tzinfo=None)
+
+            chain_depth = len(deployment.received_certificate_chain)
+            chain_verified = deployment.verified_certificate_chain is not None
+        else:
+            chain_depth = 0
+            chain_verified = False
+
+        # ----------------------------------------------------------------
+        # Cipher suites per protocol
+        # ----------------------------------------------------------------
+        accepted_by_version: dict = {}
+        ssl_versions_with_suites = set()
+        legacy_versions_with_suites = set()  # TLS 1.0/1.1
+
+        highest_version: Optional[str] = None
+        highest_priority = -999
+
+        all_accepted_ciphers: List[str] = []
+        pfs_supported = False
+        weak_present = False
+        legacy_suites = False
+
+        def _is_pfs(name: str) -> bool:
+            upper = name.upper()
+            return "ECDHE" in upper or "DHE" in upper
+
+        weak_markers = ("RC4", "3DES", "CBC3", "NULL", "EXPORT", "MD5")
+
+        def _is_weak(name: str) -> bool:
+            upper = name.upper()
+            return any(m in upper for m in weak_markers)
+
+        def _is_legacy_suite(name: str) -> bool:
+            upper = name.upper()
+            if upper in {"AES128-SHA", "AES256-SHA"}:
+                return True
+            if "CBC" in upper and not _is_pfs(upper):
+                return True
+            return False
+
+        for attr, version_label, priority in _PROTO_MAP:
+            attempt = getattr(scan, attr, None)
+            if attempt is None:
+                continue
+            if attempt.status != ScanCommandAttemptStatusEnum.COMPLETED:
+                continue
+            names = [s.cipher_suite.name for s in attempt.result.accepted_cipher_suites]
+            if names:
+                accepted_by_version[version_label] = names
+                all_accepted_ciphers.extend(names)
+
+                if version_label in ("SSLv2", "SSLv3"):
+                    ssl_versions_with_suites.add(version_label)
+                elif version_label in ("TLSv1", "TLSv1.1"):
+                    legacy_versions_with_suites.add(version_label)
+
+                if priority > highest_priority:
+                    highest_priority = priority
+                    highest_version = version_label
+
+                for cipher_name in names:
+                    if _is_pfs(cipher_name):
+                        pfs_supported = True
+                    if _is_weak(cipher_name):
+                        weak_present = True
+                    if _is_legacy_suite(cipher_name):
+                        legacy_suites = True
+
+        ep.tls_version = highest_version
+        ep.cipher_suite = (
+            accepted_by_version[highest_version][0] if highest_version else None
+        )
+        ep.tls_supported_versions = ",".join(
+            label for _, label, _ in sorted(_PROTO_MAP, key=lambda x: -x[2])
+            if label in accepted_by_version
+        )
+        ep.tls_supported_ciphers_sample = ",".join(all_accepted_ciphers[:10])
+        ep.tls_weak_ciphers_present = bool(ssl_versions_with_suites) or weak_present
+        ep.tls_legacy_suites_present = bool(legacy_versions_with_suites) or legacy_suites
+        ep.tls_pfs_supported = pfs_supported
+        ep.tls_enum_mode = "sslyze"
+
+        # ----------------------------------------------------------------
+        # Elliptic curves
+        # ----------------------------------------------------------------
+        curve_names: List[str] = []
+        ec_attempt = getattr(scan, "elliptic_curves", None)
+        if ec_attempt is not None and ec_attempt.status == ScanCommandAttemptStatusEnum.COMPLETED:
+            curve_names = [c.name for c in ec_attempt.result.supported_curves]
+
+        # ----------------------------------------------------------------
+        # tls_capabilities_json
+        # ----------------------------------------------------------------
+        sslyze_version = getattr(_sslyze_module, "__version__", "unknown")
+        caps = {
+            "source": "sslyze",
+            "sslyze_version": sslyze_version,
+            "accepted_by_version": accepted_by_version,
+            "chain_depth": chain_depth,
+            "chain_verified": chain_verified,
+            "elliptic_curves": curve_names,
+        }
+        ep.tls_capabilities_json = json.dumps(caps)
+
+        if logger:
+            logger.v(
+                f"sslyze TLS {host}:{port} version={ep.tls_version} "
+                f"versions=[{ep.tls_supported_versions}] weak={ep.tls_weak_ciphers_present} "
+                f"pfs={ep.tls_pfs_supported}"
+            )
+
+        return ep
+
+    except Exception as e:
+        if logger:
+            logger.v(f"sslyze exception for {host}:{port}: {e} — using fallback")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Fallback scanner (original scan_one, renamed)
+# ---------------------------------------------------------------------------
+
+def _scan_one_fallback(
     host: str,
     port: int,
     timeout: int,
@@ -141,7 +405,7 @@ def scan_one(
 
         if logger:
             logger.v(
-                f"✅ TLS {host}:{port} {ep.tls_version} "
+                f"TLS {host}:{port} {ep.tls_version} "
                 f"versions=[{ep.tls_supported_versions}] weak={ep.tls_weak_ciphers_present} "
                 f"legacy={ep.tls_legacy_suites_present} pfs={ep.tls_pfs_supported}"
             )
@@ -151,9 +415,38 @@ def scan_one(
         ep.tls_blocker_reason = cat
         ep.scan_error = f"{cat}: {e}"
         if logger:
-            logger.v(f"⚠️ TLS {host}:{port} {cat} ({e})")
+            logger.v(f"TLS {host}:{port} {cat} ({e})")
 
     return ep
+
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
+def scan_one(
+    host: str,
+    port: int,
+    timeout: int,
+    include_sni: bool,
+    logger: Optional[Logger] = None,
+    tls_enum_mode: str = "fast",
+) -> CryptoEndpoint:
+    """
+    Primary TLS scan entry point.
+
+    Tries sslyze first (if installed).  If sslyze is unavailable or fails for
+    this target, falls back to the ssl+cryptography scanner (_scan_one_fallback).
+    """
+    if SSLYZE_AVAILABLE:
+        try:
+            ep = _scan_one_sslyze(host, port, timeout, include_sni, logger)
+            if ep is not None:
+                return ep
+        except Exception as e:
+            if logger:
+                logger.v(f"sslyze failed for {host}:{port}, falling back: {e}")
+    return _scan_one_fallback(host, port, timeout, include_sni, logger, tls_enum_mode)
 
 
 def scan_tls_targets(

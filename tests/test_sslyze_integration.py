@@ -120,8 +120,8 @@ def _make_sslyze_mock_modules():
     sslyze_mod.ServerNetworkConfiguration = MagicMock()
     sslyze_mod.ServerScanRequest = MagicMock()
 
-    # Scanner class
-    sslyze_mod.Scanner = MagicMock
+    # Scanner class — use a MagicMock instance so .return_value can be configured per test
+    sslyze_mod.Scanner = MagicMock()
 
     return sslyze_mod, _ScanCommandAttemptStatusEnum, _ServerScanStatusEnum
 
