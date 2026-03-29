@@ -73,9 +73,9 @@ Plans:
   3. Running the source code scanner against a Git repository returns algorithm usage findings with file and line references
   4. The AWS connector returns ACM certificates, KMS key specs, and CloudFront/ELB TLS policies for a configured AWS account
   5. The Azure connector returns Key Vault key types and App Gateway TLS policies for a configured Azure subscription
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 Plans:
-- [ ] 03-01-PLAN.md — Foundation: schema columns, config extension, dependencies, test scaffolds (SCAN-03..07)
+- [x] 03-01-PLAN.md — Foundation: schema columns, config extension, dependencies, test scaffolds (SCAN-03..07)
 - [ ] 03-02-PLAN.md — JWT scanner, container scanner, source code scanner (SCAN-03, SCAN-04, SCAN-05)
 - [ ] 03-03-PLAN.md — AWS connector, Azure connector (SCAN-06, SCAN-07)
 - [ ] 03-04-PLAN.md — CBOM classifier/builder extension, run_scan.py integration (all)
@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. Foundation Fixes | 0/4 | Planning complete | - |
 | 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
-| 3. Scanner Coverage | 0/4 | Planning complete | - |
+| 3. Scanner Coverage | 1/4 | In Progress|  |
 | 4. Chaos Lab Expansion | 0/TBD | Not started | - |
 | 5. Web Dashboard | 0/TBD | Not started | - |
 | 6. Documentation | 0/TBD | Not started | - |
