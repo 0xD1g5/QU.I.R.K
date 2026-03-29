@@ -14,6 +14,11 @@ from quirk.scanner.target_expander import expand_targets
 from quirk.scanner.fingerprint import fingerprint_service
 from quirk.scanner.tls_scanner import scan_tls_targets
 from quirk.scanner.ssh_scanner import scan_ssh_targets
+from quirk.scanner.jwt_scanner import scan_jwt_targets
+from quirk.scanner.container_scanner import scan_container_targets
+from quirk.scanner.source_scanner import scan_source_targets
+from quirk.scanner.aws_connector import scan_aws_targets
+from quirk.scanner.azure_connector import scan_azure_targets
 
 from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
@@ -353,7 +358,69 @@ def main():
     cfg.scan.timeout_seconds = base_timeout
     cfg.scan.concurrency = base_conc
 
-    endpoints = inventory_endpoints + tls_endpoints + ssh_endpoints
+    # ==============================
+    # JWT scan phase
+    # ==============================
+    jwt_endpoints = []
+    with _phase_timer(run_stats, "jwt_scanning"):
+        if cfg.connectors.enable_jwt and cfg.connectors.jwt_targets:
+            jwt_endpoints = scan_jwt_targets(
+                cfg.connectors.jwt_targets,
+                timeout=cfg.scan.timeout_seconds,
+                logger=logger,
+            )
+
+    # ==============================
+    # Container scan phase
+    # ==============================
+    container_endpoints = []
+    with _phase_timer(run_stats, "container_scanning"):
+        if cfg.connectors.enable_container and cfg.connectors.container_targets:
+            container_endpoints = scan_container_targets(
+                cfg.connectors.container_targets,
+                timeout=cfg.scan.timeout_seconds,
+                logger=logger,
+            )
+
+    # ==============================
+    # Source code scan phase
+    # ==============================
+    source_endpoints = []
+    with _phase_timer(run_stats, "source_scanning"):
+        if cfg.connectors.enable_source and cfg.connectors.source_targets:
+            source_endpoints = scan_source_targets(
+                cfg.connectors.source_targets,
+                timeout=cfg.scan.timeout_seconds,
+                logger=logger,
+            )
+
+    # ==============================
+    # AWS cloud connector phase
+    # ==============================
+    aws_endpoints = []
+    with _phase_timer(run_stats, "aws_scanning"):
+        if cfg.connectors.enable_aws:
+            aws_endpoints = scan_aws_targets(
+                region=cfg.connectors.aws_region,
+                profile=cfg.connectors.aws_profile,
+                logger=logger,
+            )
+
+    # ==============================
+    # Azure cloud connector phase
+    # ==============================
+    azure_endpoints = []
+    with _phase_timer(run_stats, "azure_scanning"):
+        if cfg.connectors.enable_azure:
+            azure_endpoints = scan_azure_targets(
+                subscription_id=cfg.connectors.azure_subscription_id or "",
+                keyvault_urls=cfg.connectors.azure_keyvault_urls,
+                logger=logger,
+            )
+
+    endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
+                 + jwt_endpoints + container_endpoints + source_endpoints
+                 + aws_endpoints + azure_endpoints)
 
     # ==============================
     # Findings + persistence + reports
