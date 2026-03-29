@@ -41,7 +41,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Running a 100-host SSH scan completes meaningfully faster than sequential and does not drop results
   5. A TLS scan against a target returns cipher suite details, certificate chain, and protocol version sourced from sslyze
   6. An SSH scan returns KEX algorithms, host key types, and MAC algorithms — not just the banner string
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 01-PLAN-scoring-fixes.md — Consolidate scoring to single intelligence path, fix cert_pubkey_alg extraction bug
+- [ ] 02-PLAN-ssh-scanner.md — Replace sequential SSH scanner with threaded ssh-audit integration
+- [ ] 03-PLAN-sslyze-integration.md — Integrate sslyze as primary TLS scanner with existing code as fallback
+- [ ] 04-PLAN-package-rename.md — Rename qcscan to quirk across codebase, create pyproject.toml
 
 ### Phase 2: CBOM Pipeline
 **Goal**: Every scan run produces a standards-compliant Cryptographic Bill of Materials as a first-class output artifact
@@ -118,11 +123,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Fixes | 0/TBD | Not started | - |
+| 1. Foundation Fixes | 0/4 | Planning complete | - |
 | 2. CBOM Pipeline | 0/TBD | Not started | - |
 | 3. Scanner Coverage | 0/TBD | Not started | - |
 | 4. Chaos Lab Expansion | 0/TBD | Not started | - |
