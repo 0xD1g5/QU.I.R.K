@@ -12,6 +12,7 @@ from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
+from quirk.cbom import build_cbom, write_cbom_files
 
 
 PLATFORM_VERSION = "3.9"
@@ -211,6 +212,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
         stats_path = os.path.join(outdir, f"run-stats-{stamp}.json")
         _json_dump(stats_path, run_stats)
 
+    # 5) CBOM artifacts
+    cbom = build_cbom(endpoints)
+    cbom_json_path, cbom_xml_path = write_cbom_files(cbom, outdir, stamp)
+
     # Console summary
     waves = categorize_waves(findings)
     print("\n📊 Migration Waves:")
@@ -222,6 +227,6 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     print(f"📦 Platform Version: {PLATFORM_VERSION} | Schema: {SCHEMA_VERSION} | Intelligence: {INTELLIGENCE_VERSION}")
 
     print("\n✅ Wrote reports:")
-    for p in [findings_path, stats_path, exec_path, tech_path, scorecard_path, roadmap_path, intelligence_path]:
+    for p in [findings_path, stats_path, exec_path, tech_path, scorecard_path, roadmap_path, intelligence_path, cbom_json_path, cbom_xml_path]:
         if p:
             print(f"- {p}")
