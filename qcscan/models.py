@@ -46,3 +46,8 @@ class CryptoEndpoint(Base):
     tls_pfs_supported = Column(Boolean, default=False)
     tls_enum_mode = Column(String(16), nullable=True)           # "fast" or "deep"
     tls_enum_notes = Column(Text, nullable=True)
+
+    # ==========================
+    # v4.0 SSH audit fields
+    # ==========================
+    ssh_audit_json = Column(Text, nullable=True)  # Full ssh-audit JSON output
