@@ -225,3 +225,35 @@ def test_quantum_safety_enum():
     assert quantum_safety_label(3) == "quantum-safe"
     assert quantum_safety_label(5) == "quantum-safe"
     assert quantum_safety_label(None) == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# JWT / JOSE algorithms (RFC 7518)
+# ---------------------------------------------------------------------------
+
+def test_jwt_rs256():
+    primitive, nist, classical = classify_algorithm("RS256")
+    assert primitive == CryptoPrimitive.SIGNATURE
+    assert nist == 0
+    assert classical == 112
+
+
+def test_jwt_es256():
+    primitive, nist, classical = classify_algorithm("ES256")
+    assert primitive == CryptoPrimitive.SIGNATURE
+    assert nist == 0
+    assert classical == 128
+
+
+def test_jwt_hs256():
+    primitive, nist, classical = classify_algorithm("HS256")
+    assert primitive == CryptoPrimitive.MAC
+    assert nist == 0
+    assert classical == 128
+
+
+def test_jwt_alg_none():
+    primitive, nist, classical = classify_algorithm("none")
+    assert primitive == CryptoPrimitive.UNKNOWN
+    assert nist == 0
+    assert classical == 0
