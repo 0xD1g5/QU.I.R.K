@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
-- [ ] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure)
+- [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
 - [ ] **Phase 4: Chaos Lab Expansion** - Add jwt, registry, source, storage, ssh-weak, and ldaps lab profiles
 - [ ] **Phase 5: Web Dashboard** - FastAPI + React dashboard with findings viewer, CBOM viewer, and PDF report export
 - [ ] **Phase 6: Documentation** - Getting Started, installation, configuration, connector guides, report and CBOM interpretation
@@ -73,12 +73,12 @@ Plans:
   3. Running the source code scanner against a Git repository returns algorithm usage findings with file and line references
   4. The AWS connector returns ACM certificates, KMS key specs, and CloudFront/ELB TLS policies for a configured AWS account
   5. The Azure connector returns Key Vault key types and App Gateway TLS policies for a configured Azure subscription
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 Plans:
 - [x] 03-01-PLAN.md — Foundation: schema columns, config extension, dependencies, test scaffolds (SCAN-03..07)
 - [x] 03-02-PLAN.md — JWT scanner, container scanner, source code scanner (SCAN-03, SCAN-04, SCAN-05)
 - [x] 03-03-PLAN.md — AWS connector, Azure connector (SCAN-06, SCAN-07)
-- [ ] 03-04-PLAN.md — CBOM classifier/builder extension, run_scan.py integration (all)
+- [x] 03-04-PLAN.md — CBOM classifier/builder extension, run_scan.py integration (all)
 
 ### Phase 4: Chaos Lab Expansion
 **Goal**: Every new scanner type has a purpose-built, Docker-based target that produces known, reproducible findings for validation
@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. Foundation Fixes | 0/4 | Planning complete | - |
 | 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
-| 3. Scanner Coverage | 3/4 | In Progress|  |
+| 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
 | 4. Chaos Lab Expansion | 0/TBD | Not started | - |
 | 5. Web Dashboard | 0/TBD | Not started | - |
 | 6. Documentation | 0/TBD | Not started | - |

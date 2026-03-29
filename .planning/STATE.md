@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-scanner-coverage-03-03-PLAN.md
-last_updated: "2026-03-29T23:39:27.535Z"
+status: verifying
+stopped_at: Completed 03-scanner-coverage-03-04-PLAN.md
+last_updated: "2026-03-29T23:45:21.069Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 10
+  completed_plans: 11
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: 03 (scanner-coverage) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-scanner-coverage P01 | 5 | 2 tasks | 7 files |
 | Phase 03-scanner-coverage P02 | 2 | 2 tasks | 3 files |
 | Phase 03-scanner-coverage P03 | 2 | 2 tasks | 2 files |
+| Phase 03-scanner-coverage P04 | 10 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 03-scanner-coverage]: JWKS_PATHS probes three paths in order; OIDC discovery follows jwks_uri; RSA bits = modulus byte-length * 8; EC bits from crv lookup
 - [Phase 03-scanner-coverage]: scan_aws_targets calls _scan_acm last so assert_called_with('list_certificates') passes — test checks most recent get_paginator call
 - [Phase 03-scanner-coverage]: azure-mgmt-network imported inside _scan_app_gateways to keep it optional without affecting AZURE_AVAILABLE flag
+- [Phase 03-scanner-coverage]: JWT algorithm entries map to (SIGNATURE/MAC, 0, bits) per RFC 7518; alg:none maps to (UNKNOWN, 0, 0) as critical vulnerability marker
+- [Phase 03-scanner-coverage]: CBOM builder Pass 3 uses explicit elif for JWT/CONTAINER/SOURCE/AWS/AZURE to prevent TLS fallthrough (pitfall 6)
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T23:39:27.533Z
-Stopped at: Completed 03-scanner-coverage-03-03-PLAN.md
+Last session: 2026-03-29T23:45:21.067Z
+Stopped at: Completed 03-scanner-coverage-03-04-PLAN.md
 Resume file: None
