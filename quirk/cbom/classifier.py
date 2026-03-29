@@ -114,6 +114,23 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "sha-384": (CryptoPrimitive.HASH, 2, 192),
     "sha-512": (CryptoPrimitive.HASH, 2, 256),
     # ------------------------------------------------------------------
+    # JWT / JOSE algorithms (RFC 7518)
+    # ------------------------------------------------------------------
+    "rs256": (CryptoPrimitive.SIGNATURE, 0, 112),   # RSA PKCS1 + SHA-256
+    "rs384": (CryptoPrimitive.SIGNATURE, 0, 112),   # RSA PKCS1 + SHA-384
+    "rs512": (CryptoPrimitive.SIGNATURE, 0, 112),   # RSA PKCS1 + SHA-512
+    "es256": (CryptoPrimitive.SIGNATURE, 0, 128),   # ECDSA P-256
+    "es384": (CryptoPrimitive.SIGNATURE, 0, 192),   # ECDSA P-384
+    "es512": (CryptoPrimitive.SIGNATURE, 0, 256),   # ECDSA P-521
+    "hs256": (CryptoPrimitive.MAC, 0, 128),         # HMAC-SHA256
+    "hs384": (CryptoPrimitive.MAC, 0, 192),         # HMAC-SHA384
+    "hs512": (CryptoPrimitive.MAC, 0, 256),         # HMAC-SHA512
+    "ps256": (CryptoPrimitive.SIGNATURE, 0, 112),   # RSA-PSS + SHA-256
+    "ps384": (CryptoPrimitive.SIGNATURE, 0, 112),   # RSA-PSS + SHA-384
+    "ps512": (CryptoPrimitive.SIGNATURE, 0, 112),   # RSA-PSS + SHA-512
+    "eddsa": (CryptoPrimitive.SIGNATURE, 0, 128),   # EdDSA (Ed25519/Ed448)
+    "none": (CryptoPrimitive.UNKNOWN, 0, 0),        # alg:none — critical vulnerability
+    # ------------------------------------------------------------------
     # NIST PQC standards (FIPS 203 / 204 / 205)
     # ------------------------------------------------------------------
     "ml-kem-512": (CryptoPrimitive.KEM, 1, 128),

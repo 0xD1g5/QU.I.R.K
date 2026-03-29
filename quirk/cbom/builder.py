@@ -34,6 +34,43 @@ from cyclonedx.model.crypto import (
 from quirk.cbom.classifier import classify_algorithm
 from quirk.models import CryptoEndpoint
 
+
+# ---------------------------------------------------------------------------
+# New-protocol helper functions
+# ---------------------------------------------------------------------------
+
+def _extract_algo_from_rule_id(rule_id: str | None) -> str | None:
+    """Extract algorithm name hint from semgrep rule_id.
+
+    E.g., 'python.cryptography.security.insecure-hash-algorithms-md5' -> 'MD5'
+    """
+    if not rule_id:
+        return None
+    rule_lower = rule_id.lower()
+    # Map known algorithm names found in semgrep crypto rules
+    algo_hints = {
+        "md5": "MD5", "sha1": "SHA-1", "des": "3DES", "rc4": "RC4",
+        "blowfish": "Blowfish", "md4": "MD4", "sha-1": "SHA-1",
+        "rsa": "RSA", "dsa": "DSA", "aes": "AES-256-GCM",
+    }
+    for fragment, canonical in algo_hints.items():
+        if fragment in rule_lower:
+            return canonical
+    return None
+
+
+def _normalize_cloud_key_spec(key_spec: str) -> str | None:
+    """Normalize AWS KMS KeySpec or Azure key_type to algorithm name."""
+    spec_upper = (key_spec or "").upper().replace("-", "_")
+    mapping = {
+        "RSA_2048": "RSA", "RSA_3072": "RSA", "RSA_4096": "RSA",
+        "ECC_NIST_P256": "ECDSA", "ECC_NIST_P384": "ECDSA", "ECC_NIST_P521": "ECDSA",
+        "ECC_SECG_P256K1": "ECDSA", "SYMMETRIC_DEFAULT": "AES-256-GCM",
+        "RSA": "RSA", "RSA_HSM": "RSA", "EC": "ECDSA", "EC_HSM": "ECDSA",
+        "OCT": "AES-256-GCM", "OCT_HSM": "AES-256-GCM",
+    }
+    return mapping.get(spec_upper)
+
 # Tool version — duplicated here to avoid circular imports with quirk.reports.writer
 PLATFORM_VERSION = "3.9"
 
@@ -271,10 +308,47 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # Pass 1 — Algorithm components                                        #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        is_ssh = ep.protocol == "SSH"
+        if ep.protocol == "SSH":
+            # SSH: parse ssh_audit_json
+            ssh_data = _extract_ssh_algorithms(ep.ssh_audit_json)
+            for section in ("kex", "key", "enc", "mac"):
+                for entry in ssh_data.get(section, []):
+                    alg = entry.get("algorithm")
+                    if alg:
+                        keysize = entry.get("keysize")
+                        _register_algorithm(alg, algo_registry, key_size=keysize)
 
-        if not is_ssh:
-            # TLS: decompose cipher suite
+        elif ep.protocol == "JWT":
+            # JWT: cert_pubkey_alg holds algorithm (RS256, ES256, etc.)
+            if ep.cert_pubkey_alg:
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol == "CONTAINER":
+            # Container: cipher_suite=library_name, tls_version=library_version
+            # No algorithm to register — library presence is the finding.
+            pass
+
+        elif ep.protocol == "SOURCE":
+            # Source: cipher_suite=semgrep rule_id, extract algorithm hint
+            algo_hint = _extract_algo_from_rule_id(ep.cipher_suite)
+            if algo_hint:
+                _register_algorithm(algo_hint, algo_registry)
+
+        elif ep.protocol in ("AWS", "AZURE"):
+            # Cloud: parse cloud_scan_json for algorithm/key spec
+            cloud_data = json.loads(ep.cloud_scan_json or "{}")
+            key_spec = cloud_data.get("KeySpec") or cloud_data.get("KeyAlgorithm") or cloud_data.get("key_type")
+            if key_spec:
+                normalized = _normalize_cloud_key_spec(key_spec)
+                if normalized:
+                    key_size = cloud_data.get("key_size") or ep.cert_pubkey_size
+                    _register_algorithm(normalized, algo_registry, key_size=key_size)
+            # Also register cert_pubkey_alg if set (ACM certs)
+            if ep.cert_pubkey_alg:
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        else:
+            # TLS (default for backwards compatibility with existing protocol values)
             if ep.cipher_suite and ep.cipher_suite.upper() not in ("SSH", ""):
                 for algo_name in _decompose_cipher_suite(ep.cipher_suite):
                     _register_algorithm(algo_name, algo_registry)
@@ -290,21 +364,11 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             if ep.cert_sig_alg:
                 _register_algorithm(ep.cert_sig_alg, algo_registry)
 
-        else:
-            # SSH: parse ssh_audit_json
-            ssh_data = _extract_ssh_algorithms(ep.ssh_audit_json)
-            for section in ("kex", "key", "enc", "mac"):
-                for entry in ssh_data.get(section, []):
-                    alg = entry.get("algorithm")
-                    if alg:
-                        keysize = entry.get("keysize")
-                        _register_algorithm(alg, algo_registry, key_size=keysize)
-
     # ------------------------------------------------------------------ #
     # Pass 2 — Certificate components                                      #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        if ep.protocol == "SSH":
+        if ep.protocol in ("SSH", "CONTAINER", "SOURCE"):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -347,9 +411,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # Pass 3 — Protocol components                                         #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        is_ssh = ep.protocol == "SSH"
-
-        if is_ssh:
+        if ep.protocol == "SSH":
             proto_bom_ref = f"crypto/protocol/ssh/{ep.host}:{ep.port}"
 
             # Reference KEX algorithm components as cipher suites
@@ -383,7 +445,15 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                     ),
                 ),
             )
+            protocol_components.append(proto_component)
+
+        elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE"):
+            # These are not TLS/SSH network protocols — no ProtocolProperties component.
+            # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
+            continue
+
         else:
+            # TLS (default)
             proto_bom_ref = f"crypto/protocol/tls/{ep.host}:{ep.port}"
 
             # Build algorithm refs from cipher suite decomposition
@@ -420,8 +490,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                     ),
                 ),
             )
-
-        protocol_components.append(proto_component)
+            protocol_components.append(proto_component)
 
     # ------------------------------------------------------------------ #
     # Assemble Bom                                                         #

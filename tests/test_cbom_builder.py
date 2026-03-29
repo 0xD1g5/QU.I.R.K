@@ -341,7 +341,7 @@ def test_jwt_endpoint_creates_algorithm_component():
                         cert_pubkey_alg="RS256", cert_pubkey_size=2048,
                         jwt_scan_json='{"kty":"RSA","alg":"RS256"}')
     bom = build_cbom([ep])
-    algo_names = {c.name for c in bom.components if "algorithm" in (c.bom_ref or "")}
+    algo_names = {c.name for c in bom.components if "algorithm" in str(c.bom_ref)}
     assert "RS256" in algo_names
 
 
@@ -351,7 +351,7 @@ def test_container_endpoint_no_tls_fallthrough():
                         cipher_suite="openssl", tls_version="3.0.2",
                         container_scan_json='{"name":"openssl"}')
     bom = build_cbom([ep])
-    proto_names = [c.name for c in bom.components if "protocol" in (c.bom_ref or "")]
+    proto_names = [c.name for c in bom.components if "protocol" in str(c.bom_ref)]
     # No protocol component should be created for CONTAINER
     assert len(proto_names) == 0
 
@@ -362,7 +362,7 @@ def test_source_endpoint_extracts_algo_hint():
                         cipher_suite="python.cryptography.security.insecure-hash-algorithms-md5",
                         source_scan_json='{}')
     bom = build_cbom([ep])
-    algo_names = {c.name.lower() for c in bom.components if "algorithm" in (c.bom_ref or "")}
+    algo_names = {c.name.lower() for c in bom.components if "algorithm" in str(c.bom_ref)}
     assert "md5" in algo_names
 
 
@@ -372,7 +372,7 @@ def test_aws_endpoint_registers_algorithm():
                         cert_pubkey_alg="RSA_2048",
                         cloud_scan_json='{"KeySpec":"RSA_2048","Arn":"arn:aws:kms:us-east-1:123:key/abc"}')
     bom = build_cbom([ep])
-    algo_names = {c.name.lower() for c in bom.components if "algorithm" in (c.bom_ref or "")}
+    algo_names = {c.name.lower() for c in bom.components if "algorithm" in str(c.bom_ref)}
     assert "rsa" in algo_names or "rsa_2048" in algo_names
 
 
@@ -382,5 +382,5 @@ def test_azure_endpoint_no_tls_protocol():
                         cert_pubkey_alg="RSA",
                         cloud_scan_json='{"key_type":"RSA","key_size":2048}')
     bom = build_cbom([ep])
-    proto_names = [c.name for c in bom.components if "protocol:tls" in (c.bom_ref or "")]
+    proto_names = [c.name for c in bom.components if "protocol:tls" in str(c.bom_ref)]
     assert len(proto_names) == 0
