@@ -21,7 +21,7 @@ branding and packaging that makes it look like a product worth paying for (Phase
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners
-- [ ] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts
+- [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [ ] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure)
 - [ ] **Phase 4: Chaos Lab Expansion** - Add jwt, registry, source, storage, ssh-weak, and ldaps lab profiles
 - [ ] **Phase 5: Web Dashboard** - FastAPI + React dashboard with findings viewer, CBOM viewer, and PDF report export
@@ -57,11 +57,11 @@ Plans:
   2. Every algorithm found by any scanner (TLS, SSH, cert key type) appears as a named component in the CBOM
   3. Each CBOM component carries a quantum-safety classification (quantum-safe / quantum-vulnerable / hybrid / unknown) sourced from the NIST PQC catalog
   4. The CBOM validates against the CycloneDX 1.4+ schema without errors
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 02-01-PLAN.md — Algorithm classifier with NIST PQC quantum-safety lookup table (CBOM-02, CBOM-03)
-- [ ] 02-02-PLAN.md — CBOM builder converting CryptoEndpoints to deduplicated CycloneDX Bom (CBOM-01, CBOM-02)
-- [ ] 02-03-PLAN.md — CBOM writer (JSON+XML serialization) and integration into write_reports() (CBOM-01, CBOM-04)
+- [x] 02-02-PLAN.md — CBOM builder converting CryptoEndpoints to deduplicated CycloneDX Bom (CBOM-01, CBOM-02)
+- [x] 02-03-PLAN.md — CBOM writer (JSON+XML serialization) and integration into write_reports() (CBOM-01, CBOM-04)
 
 ### Phase 3: Scanner Coverage
 **Goal**: QU.I.R.K. discovers cryptographic material across every major attack surface — APIs, containers, source code, and cloud key management
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation Fixes | 0/4 | Planning complete | - |
-| 2. CBOM Pipeline | 1/3 | In Progress|  |
+| 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
 | 3. Scanner Coverage | 0/TBD | Not started | - |
 | 4. Chaos Lab Expansion | 0/TBD | Not started | - |
 | 5. Web Dashboard | 0/TBD | Not started | - |

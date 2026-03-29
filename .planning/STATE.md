@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-cbom-pipeline/02-01-PLAN.md
-last_updated: "2026-03-29T21:18:31.694Z"
+stopped_at: Completed 02-cbom-pipeline/02-03-PLAN.md
+last_updated: "2026-03-29T21:30:38.630Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 5
+  completed_plans: 7
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 02 (cbom-pipeline) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-29
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation-fixes P03 | 262 | 2 tasks | 3 files |
 | Phase 01-foundation-fixes P04 | 3 | 2 tasks | 52 files |
 | Phase 02-cbom-pipeline P01 | 2 | 2 tasks | 4 files |
+| Phase 02-cbom-pipeline P03 | 3 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 02-cbom-pipeline]: classify_algorithm returns 3-tuple (CryptoPrimitive, nist_level, classical_level) — single call carries both quantum and classical security bit-strength
 - [Phase 02-cbom-pipeline]: SHA-256 nist_level=0 (quantum-vulnerable via Grover halving); SHA-384 nist_level=2 — different levels reflect post-quantum effective security
 - [Phase 02-cbom-pipeline]: SSH vendor suffix stripping (@openssh.com, @libssh.org) and fuzzy hyphen-insertion fallback normalize algorithm names before lookup
+- [Phase 02-cbom-pipeline]: JsonV1Dot6/XmlV1Dot6 for CycloneDX 1.6 serialization — write_cbom_files() produces cbom-{stamp}.cdx.json and cbom-{stamp}.cdx.xml
+- [Phase 02-cbom-pipeline]: CBOM step placed after run_stats (step 4) in write_reports() so timing stats exclude CBOM generation
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T21:18:31.692Z
-Stopped at: Completed 02-cbom-pipeline/02-01-PLAN.md
+Last session: 2026-03-29T21:30:38.628Z
+Stopped at: Completed 02-cbom-pipeline/02-03-PLAN.md
 Resume file: None
