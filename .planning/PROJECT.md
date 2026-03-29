@@ -29,16 +29,18 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ SQLite persistence — existing
 - ✓ Scan profiles (quick/standard/deep) with caching and rate limiting — existing
 - ✓ Docker-based chaos lab for scanner validation — existing
+- ✓ Package renamed QuRisk → QU.I.R.K. / quirk (qcscan/ → quirk/) — Phase 1
+- ✓ sslyze integration — primary TLS scanner with fallback (tls_capabilities_json) — Phase 1
+- ✓ ssh-audit integration — threaded SSH scanner with full KEX/hostkey/MAC enumeration — Phase 1
+- ✓ Single scoring path through intelligence/scoring.py (assessment/ imports removed) — Phase 1
+- ✓ cert_pubkey_alg correctly extracted as first probe in _extract_cert_key_type() — Phase 1
 
 ### Active
 
 **Product Identity & Branding**
-- [ ] Rename codebase and all references from QuRisk → QU.I.R.K. / quirk
-- [ ] Define visual identity (name, palette, logo mark for reports/UI)
+- [ ] Define visual identity (palette, logo mark for reports/UI)
 
 **Scanner Coverage Expansion**
-- [ ] sslyze integration — replace/augment TLS capability enum with Python-native deep scanner
-- [ ] ssh-audit integration — replace banner-only SSH scan with full KEX/hostkey/MAC enumeration
 - [ ] API/JWT scanner — REST endpoint discovery, JWKS fetch, JWT algorithm and key-size classification
 - [ ] Container/binary scanner — Syft + Trivy subprocess wrapper for crypto library inventory
 - [ ] Source code scanner — CBOMkit Hyperion / PQCA Sonar integration for code-level crypto detection
@@ -52,9 +54,8 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - [ ] CBOM viewer in web dashboard
 
 **Scoring Consolidation**
-- [ ] Deprecate duplicate scoring systems (assessment/readiness_score.py + intelligence/scoring.py)
-- [ ] Single authoritative scoring path through writer.py evidence model
-- [ ] Fix cert_pubkey_alg field propagation (writer.py _extract_cert_key_type mismatch)
+- ✓ Duplicate scoring systems removed — single path through intelligence/scoring.py — Phase 1
+- ✓ cert_pubkey_alg field propagation fixed — Phase 1
 
 **Web Dashboard (FastAPI + React + shadcn/ui)**
 - [ ] FastAPI API layer serving scanner results and managing scan jobs
