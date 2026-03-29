@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-foundation-fixes plan 01 (scoring-fixes)
-last_updated: "2026-03-29T19:05:14.550Z"
+stopped_at: Completed 01-foundation-fixes/02-PLAN-ssh-scanner.md
+last_updated: "2026-03-29T19:05:59.945Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 0
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 01 (foundation-fixes) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-03-29
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-foundation-fixes P01 | 3 | 2 tasks | 3 files |
+| Phase 01-foundation-fixes P02 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,7 @@ Recent decisions affecting current work:
 - Init: SaaS deferred — prove value with CLI+dashboard first
 - [Phase 01-foundation-fixes]: Removed assessment-TIMESTAMP.json output from writer.py — assessment layer deprecated, single scoring path through intelligence/scoring.py
 - [Phase 01-foundation-fixes]: cert_pubkey_alg is canonical CryptoEndpoint field — checked first in _extract_cert_key_type before legacy fallbacks
+- [Phase 01-foundation-fixes]: D-04/D-05/D-06/D-07: ssh-audit subprocess with JSON output in ssh_audit_json column; tls_version field no longer misused; ThreadPoolExecutor for concurrency
 
 ### Pending Todos
 
@@ -79,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T19:05:14.547Z
-Stopped at: Completed 01-foundation-fixes plan 01 (scoring-fixes)
+Last session: 2026-03-29T19:05:59.943Z
+Stopped at: Completed 01-foundation-fixes/02-PLAN-ssh-scanner.md
 Resume file: None

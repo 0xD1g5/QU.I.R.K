@@ -107,9 +107,9 @@ intelligence layer, SQLite persistence, scan profiles, chaos lab — all operati
 | CORE-01 | Phase 1 | Complete |
 | CORE-02 | Phase 1 | Complete |
 | CORE-03 | Phase 1 | Pending |
-| CORE-04 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Complete |
 | SCAN-01 | Phase 1 | Pending |
-| SCAN-02 | Phase 1 | Pending |
+| SCAN-02 | Phase 1 | Complete |
 | CBOM-01 | Phase 2 | Pending |
 | CBOM-02 | Phase 2 | Pending |
 | CBOM-03 | Phase 2 | Pending |
