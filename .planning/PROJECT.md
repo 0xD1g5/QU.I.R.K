@@ -41,11 +41,11 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - [ ] Define visual identity (palette, logo mark for reports/UI)
 
 **Scanner Coverage Expansion**
-- [ ] API/JWT scanner — REST endpoint discovery, JWKS fetch, JWT algorithm and key-size classification
-- [ ] Container/binary scanner — Syft + Trivy subprocess wrapper for crypto library inventory
-- [ ] Source code scanner — CBOMkit Hyperion / PQCA Sonar integration for code-level crypto detection
-- [ ] Cloud connector (AWS) — ACM, KMS, CloudFront, ELB/ALB via boto3
-- [ ] Cloud connector (Azure) — Key Vault, App Gateway via azure-sdk-for-python
+- ✓ API/JWT scanner — REST endpoint discovery, JWKS fetch, JWT algorithm and key-size classification — Phase 3
+- ✓ Container/binary scanner — Syft subprocess wrapper with 23-entry CRYPTO_LIB_ALLOWLIST — Phase 3
+- ✓ Source code scanner — semgrep p/cryptography ruleset, file:line service_detail format — Phase 3
+- ✓ Cloud connector (AWS) — ACM, KMS, CloudFront, ELBv2 via boto3, KMS_KEY_SPEC_MAP (13 entries) — Phase 3
+- ✓ Cloud connector (Azure) — Key Vault + App Gateway via azure-sdk-for-python — Phase 3
 
 **CBOM Pipeline**
 - ✓ cyclonedx-python-lib integration — map all scan results to CycloneDX CBOM components — Phase 2
@@ -143,7 +143,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | — Pending |
 
 ---
-*Last updated: 2026-03-29 after Phase 2 completion — CBOM pipeline complete*
+*Last updated: 2026-03-29 after Phase 3 completion — scanner coverage expanded from 2 → 7 surfaces (SSH, TLS, JWT/JWKS, container, source code, AWS, Azure); all 5 new scanners wired into CBOM pipeline; 139 tests passing*
 
 ## Evolution
 
