@@ -48,9 +48,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - [ ] Cloud connector (Azure) — Key Vault, App Gateway via azure-sdk-for-python
 
 **CBOM Pipeline**
-- [ ] cyclonedx-python-lib integration — map all scan results to CycloneDX CBOM components
-- [ ] Quantum-safety classification per algorithm (NIST PQC catalog enrichment)
-- [ ] CBOM as first-class output artifact (JSON + XML) per scan run
+- ✓ cyclonedx-python-lib integration — map all scan results to CycloneDX CBOM components — Phase 2
+- ✓ Quantum-safety classification per algorithm (NIST PQC catalog enrichment) — Phase 2
+- ✓ CBOM as first-class output artifact (JSON + XML) per scan run — Phase 2
 - [ ] CBOM viewer in web dashboard
 
 **Scoring Consolidation**
@@ -143,7 +143,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | — Pending |
 
 ---
-*Last updated: 2026-03-28 after initial project initialization*
+*Last updated: 2026-03-29 after Phase 2 completion — CBOM pipeline complete*
 
 ## Evolution
 
