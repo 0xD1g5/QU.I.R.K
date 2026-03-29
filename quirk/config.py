@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import yaml
@@ -45,6 +45,20 @@ class ConnectorsCfg:
     enable_aws: bool
     enable_azure: bool
     enable_windows_adcs: bool
+    # Phase 3 scanner enable flags (per D-04)
+    enable_jwt: bool = False
+    enable_container: bool = False
+    enable_source: bool = False
+    # AWS connector config (per D-15)
+    aws_region: str = "us-east-1"
+    aws_profile: Optional[str] = None
+    # Azure connector config (per D-16)
+    azure_subscription_id: Optional[str] = None
+    azure_keyvault_urls: list = field(default_factory=list)
+    # Scanner target lists (per D-05)
+    jwt_targets: list = field(default_factory=list)
+    container_targets: list = field(default_factory=list)
+    source_targets: list = field(default_factory=list)
 
 
 @dataclass
