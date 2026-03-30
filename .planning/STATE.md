@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-30T11:16:19.390Z"
-last_activity: 2026-03-29
+status: executing
+stopped_at: Completed 04-02-PLAN.md (registry profile)
+last_updated: "2026-03-30T17:30:36.375Z"
+last_activity: 2026-03-30
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 11
+  total_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 03 — scanner-coverage
+**Current focus:** Phase 04 — chaos-lab-expansion
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-03-29
+Phase: 04 (chaos-lab-expansion) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-03-30
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-scanner-coverage P02 | 2 | 2 tasks | 3 files |
 | Phase 03-scanner-coverage P03 | 2 | 2 tasks | 2 files |
 | Phase 03-scanner-coverage P04 | 10 | 2 tasks | 5 files |
+| Phase 04-chaos-lab-expansion P02 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase 03-scanner-coverage]: azure-mgmt-network imported inside _scan_app_gateways to keep it optional without affecting AZURE_AVAILABLE flag
 - [Phase 03-scanner-coverage]: JWT algorithm entries map to (SIGNATURE/MAC, 0, bits) per RFC 7518; alg:none maps to (UNKNOWN, 0, 0) as critical vulnerability marker
 - [Phase 03-scanner-coverage]: CBOM builder Pass 3 uses explicit elif for JWT/CONTAINER/SOURCE/AWS/AZURE to prevent TLS fallthrough (pitfall 6)
+- [Phase 04-chaos-lab-expansion]: apt 'openssl' is the CRYPTO_LIB_ALLOWLIST exact match in image-old-libssl; 'libssl1.0.0' also installed but not in frozenset
+- [Phase 04-chaos-lab-expansion]: registry-seed uses docker:24-dind + socket mount; seed.sh uses registry:5000 (compose network hostname) not localhost:20005
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T11:16:19.381Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-chaos-lab-expansion/04-CONTEXT.md
+Last session: 2026-03-30T17:30:36.373Z
+Stopped at: Completed 04-02-PLAN.md (registry profile)
+Resume file: None
