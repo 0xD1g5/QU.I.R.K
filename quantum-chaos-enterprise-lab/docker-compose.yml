@@ -594,7 +594,54 @@ services:
       DOCKER_HOST: unix:///var/run/docker.sock
     command: ["/bin/sh", "/registry-build/seed.sh"]
 
+  # =========================
+  # PHASE 4 — SOURCE PROFILE (profile: source)
+  # LAB-03: Gitea + seeded repos with crypto anti-patterns
+  # Port: 20006 (safe range — no conflicts)
+  # =========================
+  gitea:
+    image: gitea/gitea:1.21
+    profiles: ["source"]
+    environment:
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__database__PATH: /data/gitea/gitea.db
+      GITEA__server__ROOT_URL: "http://gitea:3000/"
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__admin__DISABLE_REGULAR_ORG_CREATION: "false"
+      GITEA__log__LEVEL: "warn"
+    volumes:
+      - gitea_data:/data
+    ports:
+      - "20006:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    command: >
+      bash -c "
+        /usr/local/bin/gitea web &
+        sleep 10 &&
+        gitea admin user create --admin --username admin --password admin123 --email admin@chaos.local --must-change-password false 2>/dev/null || true &&
+        wait
+      "
+
+  gitea-seed:
+    image: alpine:3.19
+    profiles: ["source"]
+    restart: "no"
+    depends_on:
+      gitea:
+        condition: service_healthy
+    volumes:
+      - ./source/seed.sh:/seed.sh:ro
+    command: >
+      sh -c "apk add --no-cache curl git > /dev/null 2>&1 && sh /seed.sh"
+
 volumes:
   id_postgres_data:
   stepca_data:
   registry_data:
+  gitea_data:
