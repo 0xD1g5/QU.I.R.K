@@ -135,6 +135,17 @@ Plans:
   4. A new user who has never seen the tool can reach a completed, exportable scan from zero within 10 minutes of running the install command
 **Plans**: TBD
 
+## Backlog (Future Enhancements)
+
+Ideas captured during planning — not in scope for v1, but not lost.
+
+| ID | Enhancement | Origin | Notes |
+|----|-------------|--------|-------|
+| BACK-01 | Dashboard UI config panel for algorithm vulnerability thresholds | Phase 5 discuss | Allow users to override quantum-safety classifications per algorithm (e.g., mark RSA-4096 as "org-approved") without editing config.yaml. v1 ships config.yaml overrides only; this is the UI surface for the same feature. Target: v2 or Phase 7 polish. |
+| BACK-02 | Multi-scan navigation in dashboard | Phase 5 discuss | Scan selector dropdown to browse and compare historical scan sessions. API is shaped for this (latest scan returns scan_id, future endpoint accepts ?scan_id= param). Target: v2. |
+
+---
+
 ## Progress
 
 **Execution Order:**
