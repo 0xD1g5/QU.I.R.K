@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-03-30
+revised: 2026-03-30
 ---
 
 # Phase 5 — UI Design Contract
@@ -30,6 +31,8 @@ Source: CONTEXT.md D-05, REQUIREMENTS.md UI-02
 cd src/dashboard && npx shadcn init
 ```
 Select: Style = New York, Base color = Zinc, CSS variables = Yes.
+
+**Planner note:** `npx shadcn init` must be the first implementation task in this phase before any component is installed.
 
 ---
 
@@ -59,16 +62,18 @@ Exceptions:
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
-| Label | 12px | 500 (medium) | 1.4 |
+| Label | 12px | 600 (semibold) | 1.4 |
 | Heading | 20px | 600 (semibold) | 1.2 |
 | Display | 28px | 600 (semibold) | 1.1 |
 
 Notes:
 - Body (14px/400) used for: table cells, finding descriptions, CBOM viewer text, sidebar nav items
-- Label (12px/500) used for: badges, severity chips, column headers, metadata tags, confidence text
+- Label (12px/600) used for: badges, severity chips, column headers, metadata tags, confidence text
 - Heading (20px/600) used for: section titles ("Executive Summary", "Findings", "CBOM Viewer")
 - Display (28px/600) used for: overall readiness score number, page title in print view
-- Monospace exception: algorithm names in CBOM table and finding detail use `font-mono` at 13px/400 (shadcn default mono stack)
+- Monospace exception: algorithm names in CBOM table and finding detail use `font-mono` at 12px/400 (shadcn default mono stack — distinguished by font-family, not a separate size token)
+
+Font weight scale: 400 (Body, Monospace) and 600 (Label, Heading, Display) — two weights only.
 
 ---
 
@@ -119,6 +124,7 @@ Source: CONTEXT.md D-13/D-14 (quantum-safety node colors), REQUIREMENTS.md UI-02
 - Sections: Executive Summary | Findings | Certificates | CBOM Viewer | Migration Roadmap
 - Active item: accent underline + text at full opacity; inactive: muted text (Zinc 400)
 - Sidebar collapses to icon-only (48px) on viewport < 1024px wide
+- Collapsed sidebar: each icon button renders a shadcn `Tooltip` (from component inventory) with the section label on hover and focus; each icon button carries `aria-label` matching its section name (e.g. `aria-label="Findings"`)
 
 ### Main Content Area
 - Width: `calc(100vw - 240px)` on desktop; full width on mobile
@@ -148,7 +154,7 @@ All components sourced from shadcn/ui (Radix-based) unless stated. Install via `
 | Select | `select` | Severity filter dropdown, sort-by dropdown |
 | Separator | `separator` | Section dividers in sidebar and print layout |
 | Skeleton | `skeleton` | Loading placeholders for gauge area and table |
-| Tooltip | `tooltip` | Score gauge hover details, node hover in Cytoscape graphs |
+| Tooltip | `tooltip` | Score gauge hover details, node hover in Cytoscape graphs, collapsed sidebar icon labels |
 | Sheet | `sheet` | Finding detail slide-out panel (expandable row) |
 | Progress | `progress` | Confidence bar |
 | Chart | `chart` | Severity breakdown bar chart (Recharts wrapper) |
@@ -172,7 +178,7 @@ Source: CONTEXT.md D-10 (TanStack Table), D-12/D-14 (Cytoscape.js), D-08 (shadcn
 - 5 arc gauges in a horizontal row: Overall Readiness (larger, center) + 4 sub-scores (Hygiene, Modern TLS, Identity, Agility)
 - Overall gauge: 160px diameter, accent ring stroke, score number in Display type (28px/600)
 - Sub-gauges: 120px diameter, neutral Zinc 600 ring stroke (unfilled), colored fill by score range: ≥80 Green 500 / 50–79 Amber 500 / <50 Red 600
-- Gauge labels: Label type (12px/500), below each gauge
+- Gauge labels: Label type (12px/600), below each gauge
 - Confidence badge: inline next to Overall score label — pill shape, text matches quantum-safety label palette
 - On hover: Tooltip showing raw score value and driver count
 
@@ -215,7 +221,7 @@ Source: CONTEXT.md D-10 (TanStack Table), D-12/D-14 (Cytoscape.js), D-08 (shadcn
 - Source Systems column: comma-separated host:port or file paths, truncated at 3 with "+N more" overflow text
 - Quantum Safety: Badge with semantic colors
 - Sortable by all columns; filterable by Type and Quantum Safety
-- Algorithm names: `font-mono` 13px
+- Algorithm names: `font-mono` 12px/400
 
 **Graph Tab**
 - Cytoscape.js canvas, fills remaining viewport height (min 400px)
@@ -292,6 +298,7 @@ Source: CONTEXT.md D-18/D-19 (PDF export flow), REQUIREMENTS.md UI-04 (PDF as co
 - ARIA: Cytoscape canvas gets `role="img"` and `aria-label` describing the graph content
 - Table: `<th scope="col">` on all column headers; sortable columns include `aria-sort` attribute
 - Minimum contrast ratio: 4.5:1 for all body text on its background (WCAG AA)
+- Collapsed sidebar icon buttons: each carries `aria-label` matching the section name; shadcn Tooltip provides visible label on hover/focus
 
 ---
 
@@ -303,6 +310,8 @@ Source: CONTEXT.md D-18/D-19 (PDF export flow), REQUIREMENTS.md UI-04 (PDF as co
 | npm (not shadcn registry) | cytoscape, cytoscape-cose-bilkent, @tanstack/react-table | npm provenance — standard due diligence; no shadcn registry vetting applicable |
 
 Third-party shadcn registry blocks: none declared. No registry vetting gate required.
+
+Planner note: shadcn is not yet initialized. The first implementation task must be `npx shadcn init` (run from `src/dashboard/`, Style = New York, Base color = Zinc, CSS variables = Yes) before any `npx shadcn add` commands.
 
 Source: CONTEXT.md D-05 (shadcn/ui confirmed), D-10 (TanStack Table), D-12/D-14 (Cytoscape.js)
 
