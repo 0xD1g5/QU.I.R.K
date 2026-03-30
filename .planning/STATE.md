@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-03-PLAN.md (source profile - Gitea + crypto anti-patterns)
-last_updated: "2026-03-30T18:40:02.074Z"
+stopped_at: Completed 04-04-PLAN.md (storage profile - LocalStack KMS + Vault + postgres-pgcrypto)
+last_updated: "2026-03-30T18:50:01.027Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 12
-  completed_plans: 14
+  completed_plans: 15
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 04 (chaos-lab-expansion) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-03-30
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-scanner-coverage P04 | 10 | 2 tasks | 5 files |
 | Phase 04-chaos-lab-expansion P02 | 15 | 2 tasks | 5 files |
 | Phase 04-chaos-lab-expansion P03 | 5 | 2 tasks | 2 files |
+| Phase 04 P04 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 04-chaos-lab-expansion]: apt 'openssl' is the CRYPTO_LIB_ALLOWLIST exact match in image-old-libssl; 'libssl1.0.0' also installed but not in frozenset
 - [Phase 04-chaos-lab-expansion]: registry-seed uses docker:24-dind + socket mount; seed.sh uses registry:5000 (compose network hostname) not localhost:20005
 - [Phase 04-chaos-lab-expansion]: Gitea admin user created via entrypoint bash -c with INSTALL_LOCK=true; gitea-seed waits on service_healthy with start_period: 30s; seed.sh uses printf + base64 tr -d newlines for alpine sh file encoding
+- [Phase 04]: RSA_1024 KMS key spec not supported by LocalStack free tier — second RSA_2048 with rsa-1024-fallback description used; KMS_KEY_SPEC_MAP has no RSA_1024 entry so scanner behavior unchanged
+- [Phase 04]: Storage profile uses dedicated LocalStack instance (port 20007, SERVICES=kms) independent of cloud profile LocalStack (port 24566, SERVICES=s3,sts,iam)
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T18:40:02.072Z
-Stopped at: Completed 04-03-PLAN.md (source profile - Gitea + crypto anti-patterns)
+Last session: 2026-03-30T18:50:01.024Z
+Stopped at: Completed 04-04-PLAN.md (storage profile - LocalStack KMS + Vault + postgres-pgcrypto)
 Resume file: None

@@ -122,7 +122,7 @@ intelligence layer, SQLite persistence, scan profiles, chaos lab — all operati
 | LAB-01 | Phase 4 | Pending |
 | LAB-02 | Phase 4 | Complete |
 | LAB-03 | Phase 4 | Complete |
-| LAB-04 | Phase 4 | Pending |
+| LAB-04 | Phase 4 | Complete |
 | LAB-05 | Phase 4 | Pending |
 | LAB-06 | Phase 4 | Pending |
 | UI-01 | Phase 5 | Pending |
