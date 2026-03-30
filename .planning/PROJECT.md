@@ -143,7 +143,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | — Pending |
 
 ---
-*Last updated: 2026-03-29 after Phase 3 completion — scanner coverage expanded from 2 → 7 surfaces (SSH, TLS, JWT/JWKS, container, source code, AWS, Azure); all 5 new scanners wired into CBOM pipeline; 139 tests passing*
+*Last updated: 2026-03-30 after Phase 4 completion — chaos lab expanded with 6 new Docker Compose profiles (jwt, registry, source, storage, ssh-weak, ldaps) providing live scanner targets for all 7 SCAN surfaces; 139 tests passing*
 
 ## Evolution
 
