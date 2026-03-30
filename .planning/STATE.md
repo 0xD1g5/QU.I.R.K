@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-02-PLAN.md (registry profile)
-last_updated: "2026-03-30T17:30:36.375Z"
+stopped_at: Completed 04-03-PLAN.md (source profile - Gitea + crypto anti-patterns)
+last_updated: "2026-03-30T18:40:02.074Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 12
-  completed_plans: 13
+  completed_plans: 14
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 04 (chaos-lab-expansion) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-03-30
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-scanner-coverage P03 | 2 | 2 tasks | 2 files |
 | Phase 03-scanner-coverage P04 | 10 | 2 tasks | 5 files |
 | Phase 04-chaos-lab-expansion P02 | 15 | 2 tasks | 5 files |
+| Phase 04-chaos-lab-expansion P03 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,7 @@ Recent decisions affecting current work:
 - [Phase 03-scanner-coverage]: CBOM builder Pass 3 uses explicit elif for JWT/CONTAINER/SOURCE/AWS/AZURE to prevent TLS fallthrough (pitfall 6)
 - [Phase 04-chaos-lab-expansion]: apt 'openssl' is the CRYPTO_LIB_ALLOWLIST exact match in image-old-libssl; 'libssl1.0.0' also installed but not in frozenset
 - [Phase 04-chaos-lab-expansion]: registry-seed uses docker:24-dind + socket mount; seed.sh uses registry:5000 (compose network hostname) not localhost:20005
+- [Phase 04-chaos-lab-expansion]: Gitea admin user created via entrypoint bash -c with INSTALL_LOCK=true; gitea-seed waits on service_healthy with start_period: 30s; seed.sh uses printf + base64 tr -d newlines for alpine sh file encoding
 
 ### Pending Todos
 
@@ -108,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T17:30:36.373Z
-Stopped at: Completed 04-02-PLAN.md (registry profile)
+Last session: 2026-03-30T18:40:02.072Z
+Stopped at: Completed 04-03-PLAN.md (source profile - Gitea + crypto anti-patterns)
 Resume file: None
