@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
-- [ ] **Phase 4: Chaos Lab Expansion** - Add jwt, registry, source, storage, ssh-weak, and ldaps lab profiles
+- [x] **Phase 4: Chaos Lab Expansion** - Add jwt, registry, source, storage, ssh-weak, and ldaps lab profiles (completed 2026-03-30)
 - [ ] **Phase 5: Web Dashboard** - FastAPI + React dashboard with findings viewer, CBOM viewer, and PDF report export
 - [ ] **Phase 6: Documentation** - Getting Started, installation, configuration, connector guides, report and CBOM interpretation
 - [ ] **Phase 7: Polish and Packaging** - Visual identity, CLI UX, professional report templates, pip-installable distribution
@@ -91,13 +91,13 @@ Plans:
   4. `docker compose --profile storage up` starts LocalStack, Vault, and postgres-encrypted; the AWS connector and storage targets respond to scan queries
   5. The ssh-weak service starts and the SSH scanner returns weak KEX/hostkey/MAC findings against it
   6. The ldaps service starts on port 636 and sslyze returns TLS findings against it
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
 - [x] 04-01-PLAN.md — jwt profile: 4 FastAPI JWT microservices (RS256, HS256-weak, RSA1024, alg:none) on ports 20001-20004 (LAB-01)
 - [x] 04-02-PLAN.md — registry profile: Docker Registry v2 + 3 test images with old crypto libs + seed (LAB-02)
 - [x] 04-03-PLAN.md — source profile: Gitea + seed script with 4 anti-pattern categories across 3 repos (LAB-03)
 - [x] 04-04-PLAN.md — storage profile: LocalStack KMS + HashiCorp Vault + postgres-pgcrypto + seed scripts (LAB-04)
-- [ ] 04-05-PLAN.md — ssh-weak + ldaps profiles + expected_results_v3.md update (LAB-05, LAB-06)
+- [x] 04-05-PLAN.md — ssh-weak + ldaps profiles + expected_results_v3.md update (LAB-05, LAB-06)
 
 ### Phase 5: Web Dashboard
 **Goal**: Scan results are accessible through a local web dashboard that produces a professional PDF report a consultant can hand directly to a client
@@ -145,7 +145,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Foundation Fixes | 0/4 | Planning complete | - |
 | 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
 | 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
-| 4. Chaos Lab Expansion | 4/5 | In Progress|  |
+| 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
 | 5. Web Dashboard | 0/TBD | Not started | - |
 | 6. Documentation | 0/TBD | Not started | - |
 | 7. Polish and Packaging | 0/TBD | Not started | - |

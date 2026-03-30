@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-04-PLAN.md (storage profile - LocalStack KMS + Vault + postgres-pgcrypto)
-last_updated: "2026-03-30T18:50:01.027Z"
+stopped_at: Completed 04-05-PLAN.md (ssh-weak + ldaps profiles + Phase 4 expected results)
+last_updated: "2026-03-30T18:57:54.595Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 04 (chaos-lab-expansion) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-03-30
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-chaos-lab-expansion P02 | 15 | 2 tasks | 5 files |
 | Phase 04-chaos-lab-expansion P03 | 5 | 2 tasks | 2 files |
 | Phase 04 P04 | 3 | 2 tasks | 4 files |
+| Phase 04-chaos-lab-expansion P05 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,8 @@ Recent decisions affecting current work:
 - [Phase 04-chaos-lab-expansion]: Gitea admin user created via entrypoint bash -c with INSTALL_LOCK=true; gitea-seed waits on service_healthy with start_period: 30s; seed.sh uses printf + base64 tr -d newlines for alpine sh file encoding
 - [Phase 04]: RSA_1024 KMS key spec not supported by LocalStack free tier — second RSA_2048 with rsa-1024-fallback description used; KMS_KEY_SPEC_MAP has no RSA_1024 entry so scanner behavior unchanged
 - [Phase 04]: Storage profile uses dedicated LocalStack instance (port 20007, SERVICES=kms) independent of cloud profile LocalStack (port 24566, SERVICES=s3,sts,iam)
+- [Phase 04-chaos-lab-expansion]: ubuntu:18.04 for ssh-weak (OpenSSH 7.6p1 supports legacy algorithms removed in later versions); port 20022 avoids conflict with ssh-alt on 2222
+- [Phase 04-chaos-lab-expansion]: Port 636 for ldaps (standard LDAPS port required by sslyze); osixia/openldap cert mount path /container/service/slapd/assets/certs/ per image convention; LDAP_TLS_VERIFY_CLIENT=never for lab use
 
 ### Pending Todos
 
@@ -113,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T18:50:01.024Z
-Stopped at: Completed 04-04-PLAN.md (storage profile - LocalStack KMS + Vault + postgres-pgcrypto)
+Last session: 2026-03-30T18:57:54.592Z
+Stopped at: Completed 04-05-PLAN.md (ssh-weak + ldaps profiles + Phase 4 expected results)
 Resume file: None
