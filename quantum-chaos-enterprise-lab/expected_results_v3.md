@@ -108,3 +108,113 @@ Ingress listener:
 - `curl -k --resolve blob.chaos.local:21000:127.0.0.1 https://blob.chaos.local:21000/__tls_ok`
 - `curl -k --resolve queue.chaos.local:21001:127.0.0.1 https://queue.chaos.local:21001/__tls_ok`
 - `curl -k --resolve table.chaos.local:21002:127.0.0.1 https://table.chaos.local:21002/__tls_ok`
+
+
+
+## Phase 4 — JWT Profile (profile: jwt)
+
+| Port | Service | Algorithm | Expected Finding | Key Size | Notes |
+|-----:|---------|-----------|-----------------|----------|-------|
+| 20001 | jwt-rs256 | RS256 (RSA) | WEAK_QUANTUM (quantum-vulnerable asymmetric) | 2048-bit | RS256 is classically safe but quantum-vulnerable; scanner should return RSA finding |
+| 20002 | jwt-hs256 | HS256 (HMAC-SHA256) | WEAK_KEY_SIZE | 128-bit | 16-byte HMAC key — below minimum 256-bit; scanner flags short symmetric key |
+| 20003 | jwt-rsa1024 | RS256 (RSA) | WEAK_KEY_SIZE + WEAK_QUANTUM | 1024-bit | RSA-1024 is classically weak and quantum-vulnerable; scanner flags key size |
+| 20004 | jwt-algnone | none | CRITICAL_NO_SIGNATURE | 0 | alg:none = no signature verification; scanner classifies as UNKNOWN/critical |
+
+**Scanner validation command:**
+```
+quirk scan --targets http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004
+```
+**Expected:** JWT scanner returns >= 2 weak-algorithm findings (HS256-weak + RSA-1024 + alg:none = 3 findings).
+
+
+
+## Phase 4 — Registry Profile (profile: registry)
+
+| Image | Package | Version | Expected Finding | Notes |
+|-------|---------|---------|-----------------|-------|
+| image-old-libssl | openssl | 1.0.2n (ubuntu:18.04) | OUTDATED_CRYPTO_LIB | Syft detects openssl in allowlist |
+| image-old-libssl | libssl1.0.0 | 1.0.2n | OUTDATED_CRYPTO_LIB | Additional libssl package |
+| image-old-pycrypto | cryptography | 2.9.2 | OUTDATED_CRYPTO_LIB | Syft detects Python cryptography package |
+| image-old-pycrypto | pyopenssl | 19.1.0 | OUTDATED_CRYPTO_LIB | Syft detects pyOpenSSL package |
+| image-mixed | openssl | 1.0.2n | OUTDATED_CRYPTO_LIB | Combined old libssl + old pycrypto |
+| image-mixed | cryptography | 2.9.2 | OUTDATED_CRYPTO_LIB | Combined finding |
+
+**Scanner validation command:**
+```
+quirk scan --container localhost:20005/image-old-pycrypto localhost:20005/image-old-libssl localhost:20005/image-mixed
+```
+**Expected:** Container scanner returns at least 4 crypto library findings (cryptography, pyopenssl, openssl per image).
+
+
+
+## Phase 4 — Source Profile (profile: source)
+
+| Repo | File | Anti-Pattern Category | semgrep Rule Match | Notes |
+|------|------|-----------------------|-------------------|-------|
+| crypto-antipatterns-python | crypto/weak_algorithms.py | Weak algorithm (MD5/DES/RC4/ECB) | python.cryptography.security.insecure-cipher* | MD5, DES, RC4, ECB mode |
+| crypto-antipatterns-python | secrets/hardcoded_keys.py | Hardcoded keys/secrets | secrets.* | RSA key + AES key + API secret literal |
+| crypto-antipatterns-python | crypto/weak_random.py | Weak random / custom crypto | python.lang.security.insecure-random | random.random() for security |
+| crypto-antipatterns-python | crypto/deprecated_protocols.py | Deprecated protocol usage | python.cryptography.security.ssl* | TLS 1.0 pinning |
+| crypto-antipatterns-go | main.go | Weak algorithm (MD5/DES/RC4) | go.crypto.security.* | crypto/md5, crypto/des, crypto/rc4, math/rand |
+| crypto-antipatterns-java | src/CryptoAntiPatterns.java | Weak algorithm + hardcoded | java.security.* | MessageDigest MD5, DES cipher, hardcoded key |
+
+**Scanner validation command:**
+```
+git clone http://localhost:20006/admin/crypto-antipatterns-python && cd crypto-antipatterns-python && semgrep --config p/cryptography .
+```
+**Expected:** At least 1 finding per anti-pattern category (hardcoded keys, weak algorithm, weak random, deprecated protocol).
+
+
+
+## Phase 4 — Storage Profile (profile: storage)
+
+| Service | Port | Resource | Expected Finding | Notes |
+|---------|------|---------|-----------------|-------|
+| LocalStack KMS | 20007 | SYMMETRIC_DEFAULT key | AES_256 (quantum-vulnerable via Grover) | KMS key spec maps to AES-256 |
+| LocalStack KMS | 20007 | RSA_2048 key | RSA_2048 (quantum-vulnerable) | RSA signing key |
+| LocalStack KMS | 20007 | ECC_NIST_P256 key | ECC_P256 (quantum-vulnerable) | ECDSA signing key |
+| Vault | 20009 | transit/keys/rsa-2048 | RSA_2048 (quantum-vulnerable) | Vault transit engine key |
+| Vault | 20009 | transit/keys/rsa-1024 | RSA_1024 (weak + quantum-vulnerable) | Weak RSA key size |
+| Vault | 20009 | transit/keys/aes256 | AES_256 (quantum-vulnerable via Grover) | Symmetric key |
+| postgres-pgcrypto | 20010 | encrypted_demo table | pgp_sym_encrypt (weak passphrase) | MD5 salt = finding |
+
+**Scanner validation command:**
+```
+quirk scan --cloud aws --endpoint http://localhost:20007
+```
+**Expected:** AWS connector returns >= 3 KMS keys with key spec classifications.
+
+
+
+## Phase 4 — SSH-Weak Profile (profile: ssh-weak)
+
+| Port | Service | Algorithm Class | Expected ssh-audit Finding | Severity |
+|-----:|---------|----------------|---------------------------|----------|
+| 20022 | ssh-weak | KEX | diffie-hellman-group1-sha1 | CRITICAL |
+| 20022 | ssh-weak | KEX | diffie-hellman-group14-sha1 | WARNING |
+| 20022 | ssh-weak | KEX | diffie-hellman-group-exchange-sha1 | WARNING |
+| 20022 | ssh-weak | HostKey | ssh-dss | CRITICAL |
+| 20022 | ssh-weak | MAC | hmac-md5 | CRITICAL |
+| 20022 | ssh-weak | MAC | hmac-sha1 | WARNING |
+
+**Scanner validation command:**
+```
+docker compose --profile ssh-weak up -d && sleep 5 && ssh-audit localhost:20022
+```
+**Expected:** ssh-audit returns >= 3 critical/warning findings for KEX (group1-sha1), hostkey (ssh-dss), and MAC (hmac-md5).
+
+
+
+## Phase 4 — LDAPS Profile (profile: ldaps)
+
+| Port | Service | Expected TLS Finding | Notes |
+|-----:|---------|---------------------|-------|
+| 636 | ldaps | TLS certificate chain | sslyze returns cert chain for modern.crt (self-signed lab cert) |
+| 636 | ldaps | CERT_SELFSIGNED | modern.crt is self-signed lab cert — sslyze detects untrusted issuer |
+| 636 | ldaps | Protocol support | TLS 1.2/1.3 depending on OpenLDAP version |
+
+**Scanner validation command:**
+```
+docker compose --profile ldaps up -d && sleep 5 && sslyze --targets localhost:636
+```
+**Expected:** sslyze returns TLS certificate chain findings including self-signed cert detection.
