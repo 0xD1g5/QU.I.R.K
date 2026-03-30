@@ -560,6 +560,41 @@ services:
       - "20004:8000"
     restart: unless-stopped
 
+  # =========================
+  # PHASE 4 — REGISTRY PROFILE (profile: registry)
+  # LAB-02: Docker Registry v2 + 3 test images with old crypto libraries
+  # Port: 20005 (safe range — no conflicts with existing lab)
+  # =========================
+  registry:
+    image: registry:2
+    profiles: ["registry"]
+    ports:
+      - "20005:5000"
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+    volumes:
+      - registry_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/v2/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  registry-seed:
+    image: docker:24-dind
+    profiles: ["registry"]
+    restart: "no"
+    depends_on:
+      registry:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./registry:/registry-build:ro
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    command: ["/bin/sh", "/registry-build/seed.sh"]
+
 volumes:
   id_postgres_data:
   stepca_data:
+  registry_data:
