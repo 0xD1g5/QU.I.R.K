@@ -523,6 +523,43 @@ services:
         EOF
         nginx -g 'daemon off;'
 
+  # =========================
+  # PHASE 4 — JWT PROFILE (profile: jwt)
+  # LAB-01: 4 JWT microservices with known weak algorithm configs
+  # Ports: 20001-20004 (safe range — no conflicts with existing lab)
+  # =========================
+  jwt-rs256:
+    build:
+      context: ./jwt/rs256
+    profiles: ["jwt"]
+    ports:
+      - "20001:8000"
+    restart: unless-stopped
+
+  jwt-hs256:
+    build:
+      context: ./jwt/hs256
+    profiles: ["jwt"]
+    ports:
+      - "20002:8000"
+    restart: unless-stopped
+
+  jwt-rsa1024:
+    build:
+      context: ./jwt/rsa1024
+    profiles: ["jwt"]
+    ports:
+      - "20003:8000"
+    restart: unless-stopped
+
+  jwt-algnone:
+    build:
+      context: ./jwt/algnone
+    profiles: ["jwt"]
+    ports:
+      - "20004:8000"
+    restart: unless-stopped
+
 volumes:
   id_postgres_data:
   stepca_data:
