@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-30T11:20:09.671Z",
+  "phase": "04",
+  "phase_name": "chaos-lab-expansion",
+  "phase_dir": ".planning/phases/04-chaos-lab-expansion",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Phase 4 discuss — gather context via adaptive questioning", "status": "done", "commit": "01002ba"},
+    {"id": 2, "name": "STATE.md updated to record phase 4 context session", "status": "done", "commit": "eb69279"}
+  ],
+  "remaining_tasks": [
+    {"id": 3, "name": "Research phase 4 (gsd:research-phase)", "status": "not_started"},
+    {"id": 4, "name": "Plan phase 4 — create PLAN.md(s) for six lab profiles", "status": "not_started"},
+    {"id": 5, "name": "Execute phase 4 plans", "status": "not_started"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "JWT: 4 separate microservice containers (RS256, HS256-weak, RSA1024, alg:none), each with JWKS + /token endpoint", "rationale": "Scanner needs distinct per-algorithm JWKS discovery; one-per-container keeps them fully isolated", "phase": "04"},
+    {"decision": "Registry: 3 custom Dockerfiles with old crypto libs (old-libssl, old-pycrypto, mixed)", "rationale": "Controlled, documented expected findings vs pulling old base images", "phase": "04"},
+    {"decision": "Source: Gitea with init script seeding 4 anti-pattern categories (hardcoded keys, weak algo, weak random, deprecated protocols)", "rationale": "API-based seeding on startup — no pre-baked volume needed", "phase": "04"},
+    {"decision": "Storage: new profile with LocalStack KMS-only + Vault dev mode + postgres/pgcrypto", "rationale": "Independent of existing cloud profile; Vault sidecar writes transit keys on startup", "phase": "04"},
+    {"decision": "ssh-weak: custom Dockerfile with explicit weak KEX/hostkey/MAC in sshd_config", "rationale": "Env-var overrides cannot reliably replace sshd_config in linuxserver image", "phase": "04"},
+    {"decision": "LDAPS: new ldaps profile with independent osixia/openldap on port 636 (LDAP_TLS=true)", "rationale": "Existing identity profile openldap (plain LDAP port 13890) untouched", "phase": "04"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd:plan-phase to create the phase 4 PLAN.md(s) — context is complete in 04-CONTEXT.md, all six lab profile decisions are locked",
+  "context_notes": "Phase 3 (scanner-coverage) fully verified. Phase 4 discussion complete — all six Docker Compose profiles (jwt, registry, source, storage, ssh-weak, ldaps) have design decisions locked in 04-CONTEXT.md. No code written yet for phase 4. The canonical refs in CONTEXT.md point to the existing compose file and phase 3 scanner files that new lab profiles must validate. JWT language/framework is Claude's discretion at plan/exec time."
+}
