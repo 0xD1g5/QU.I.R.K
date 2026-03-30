@@ -1,0 +1,23 @@
+# /etc/ssh/sshd_config for ssh-weak container (ubuntu:18.04 / OpenSSH 7.6p1)
+# Deliberately weak configuration for scanner validation (LAB-05)
+
+Port 22
+Protocol 2
+
+# Weak host key types — ssh-audit flags ssh-dss as critical
+HostKey /etc/ssh/ssh_host_dsa_key
+HostKey /etc/ssh/ssh_host_rsa_key
+
+# Weak KEX algorithms — group1-sha1 and group14-sha1 are critical findings
+KexAlgorithms diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1
+
+# Weak host key algorithms — ssh-dss is deprecated/critical
+HostKeyAlgorithms ssh-dss,ssh-rsa
+
+# Weak MAC algorithms — hmac-md5 and hmac-sha1 are flagged findings
+MACs hmac-md5,hmac-sha1,umac-64@openssh.com
+
+PasswordAuthentication yes
+PermitRootLogin yes
+PermitEmptyPasswords yes
+UsePAM no
