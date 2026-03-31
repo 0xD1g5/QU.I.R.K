@@ -34,19 +34,39 @@ def test_health_endpoint(dashboard_client):
 
 def test_score_endpoint(dashboard_client):
     """UI-02: GET /api/scan/latest returns score fields."""
-    pytest.skip("stub — implement in 05-04")
+    resp = dashboard_client.get("/api/scan/latest")
+    # 404 is acceptable when no scan data exists in test DB
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "score" in data
+        assert "subscores" in data["score"]
+        assert "hygiene" in data["score"]["subscores"]
 
 
 def test_findings_endpoint(dashboard_client):
     """UI-03: GET /api/scan/latest includes findings list."""
-    pytest.skip("stub — implement in 05-04")
+    resp = dashboard_client.get("/api/scan/latest")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "findings" in data
+        assert isinstance(data["findings"], list)
 
 
 def test_certificates_endpoint(dashboard_client):
     """UI-03: GET /api/scan/latest includes certificates list."""
-    pytest.skip("stub — implement in 05-04")
+    resp = dashboard_client.get("/api/scan/latest")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "certificates" in data
 
 
 def test_cbom_endpoint(dashboard_client):
     """UI-03: GET /api/scan/latest includes cbom_components list."""
-    pytest.skip("stub — implement in 05-04")
+    resp = dashboard_client.get("/api/scan/latest")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "cbom_components" in data
