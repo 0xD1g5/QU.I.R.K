@@ -11,7 +11,9 @@ docker compose -p chaoslab -f docker-compose.yml \
 
 ## Documentation
 
-- See **CHAOS_LAB_BUILD_AND_OPERATIONS.md** for the full build guide + operator manual.
+The complete operator guide is at **[docs/chaos-lab.md](../docs/chaos-lab.md)** — covers all profiles including Phase 4 additions (jwt, registry, source, storage, ssh-weak, ldaps).
+
+> **Historical artifact:** `CHAOS_LAB_BUILD_AND_OPERATIONS_text_only.md` in this directory is retained for reference but is no longer updated. The `docs/chaos-lab.md` guide is the authoritative reference.
 
 
 ## Phase C (mTLS + step-ca)
