@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 context gathered (discuss mode)
-last_updated: "2026-03-30T22:52:34.035Z"
-last_activity: 2026-03-30
+stopped_at: Completed 05-web-dashboard-01-PLAN.md
+last_updated: "2026-03-31T02:46:32.586Z"
+last_activity: 2026-03-31
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 12
-  completed_plans: 16
+  total_plans: 18
+  completed_plans: 17
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 04 — chaos-lab-expansion
+**Current focus:** Phase 05 — web-dashboard
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (web-dashboard) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-03-30
+Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-chaos-lab-expansion P03 | 5 | 2 tasks | 2 files |
 | Phase 04 P04 | 3 | 2 tasks | 4 files |
 | Phase 04-chaos-lab-expansion P05 | 3 | 2 tasks | 4 files |
+| Phase 05-web-dashboard P01 | 93 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Storage profile uses dedicated LocalStack instance (port 20007, SERVICES=kms) independent of cloud profile LocalStack (port 24566, SERVICES=s3,sts,iam)
 - [Phase 04-chaos-lab-expansion]: ubuntu:18.04 for ssh-weak (OpenSSH 7.6p1 supports legacy algorithms removed in later versions); port 20022 avoids conflict with ssh-alt on 2222
 - [Phase 04-chaos-lab-expansion]: Port 636 for ldaps (standard LDAPS port required by sslyze); osixia/openldap cert mount path /container/service/slapd/assets/certs/ per image convention; LDAP_TLS_VERIFY_CLIENT=never for lab use
+- [Phase 05-web-dashboard]: httpx excluded from dashboard optional group — already in main deps; avoids version conflict
+- [Phase 05-web-dashboard]: deferred import in conftest.py dashboard_client fixture — try/except ImportError so stubs skip cleanly before quirk.dashboard exists
+- [Phase 05-web-dashboard]: FastAPI/uvicorn/playwright in optional dashboard group — keeps CLI-only installs free of dashboard deps
 
 ### Pending Todos
 
@@ -116,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T22:52:34.026Z
-Stopped at: Phase 5 context gathered (discuss mode)
-Resume file: .planning/phases/05-web-dashboard/05-CONTEXT.md
+Last session: 2026-03-31T02:46:32.584Z
+Stopped at: Completed 05-web-dashboard-01-PLAN.md
+Resume file: None

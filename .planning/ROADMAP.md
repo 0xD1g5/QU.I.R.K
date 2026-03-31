@@ -110,7 +110,7 @@ Plans:
   4. Clicking "Export PDF" produces a PDF file that renders correctly and contains the full scan summary, findings, and CBOM reference
 **Plans**: 6 plans
 Plans:
-- [ ] 05-01-PLAN.md — Wave 0 test scaffolds and backend Python dependencies
+- [x] 05-01-PLAN.md — Wave 0 test scaffolds and backend Python dependencies
 - [ ] 05-02-PLAN.md — FastAPI backend skeleton, health endpoint, Pydantic schemas, quirk serve CLI
 - [ ] 05-03-PLAN.md — React frontend scaffold: Vite + shadcn/ui, ThemeProvider, Sidebar, TypeScript types
 - [ ] 05-04-PLAN.md — GET /api/scan/latest endpoint, Executive, Findings, and Certificates pages
@@ -166,6 +166,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
 | 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
 | 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
-| 5. Web Dashboard | 0/TBD | Not started | - |
+| 5. Web Dashboard | 1/6 | In Progress|  |
 | 6. Documentation | 0/TBD | Not started | - |
 | 7. Polish and Packaging | 0/TBD | Not started | - |
