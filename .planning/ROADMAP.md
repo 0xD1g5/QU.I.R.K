@@ -134,7 +134,7 @@ Plans:
 - [x] 06-01-PLAN.md — README.md replacement + Getting Started guide + Installation guide (DOC-01, DOC-02)
 - [x] 06-02-PLAN.md — Configuration reference: all config.yaml keys + CLI flags (DOC-03)
 - [x] 06-03-PLAN.md — Connector guides: AWS, Azure, Docker, Git with credential templates (DOC-04)
-- [ ] 06-04-PLAN.md — Report interpretation guide: score tables + severity tiers + Client Conversation sideboxes (DOC-05)
+- [x] 06-04-PLAN.md — Report interpretation guide: score tables + severity tiers + Client Conversation sideboxes (DOC-05)
 - [ ] 06-05-PLAN.md — CBOM guide: what/how/cite — compliance evidence language (DOC-06)
 - [ ] 06-06-PLAN.md — Chaos lab operator guide: all 10 profiles + port matrix + lab README update (DOC-07)
 
@@ -178,5 +178,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
 | 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
 | 5. Web Dashboard | 6/6 | Complete   | 2026-03-31 |
-| 6. Documentation | 3/6 | In Progress|  |
+| 6. Documentation | 4/6 | In Progress|  |
 | 7. Polish and Packaging | 0/TBD | Not started | - |
