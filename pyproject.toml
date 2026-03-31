@@ -20,6 +20,14 @@ dependencies = [
     "azure-mgmt-network>=30.2.0",
 ]
 
+[project.optional-dependencies]
+dashboard = [
+    "fastapi>=0.128.8",
+    "uvicorn[standard]>=0.39.0",
+    "python-multipart>=0.0.20",
+    "playwright>=1.58.0",
+]
+
 [project.scripts]
 quirk = "run_scan:main"
 
