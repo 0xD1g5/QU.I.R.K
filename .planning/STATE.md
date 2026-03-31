@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
-status: executing
-stopped_at: Completed 06-05-PLAN.md
-last_updated: "2026-03-31T22:04:28.104Z"
+status: verifying
+stopped_at: Completed 06-06-PLAN.md
+last_updated: "2026-03-31T22:09:01.500Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 24
-  completed_plans: 27
+  completed_plans: 28
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: 06 (documentation) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-31
 
 Progress: [░░░░░░░░░░] 0%
@@ -75,6 +75,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-documentation P03 | 12 | 2 tasks | 4 files |
 | Phase 06-documentation P04 | 6 | 1 tasks | 1 files |
 | Phase 06-documentation P05 | 2 | 1 tasks | 1 files |
+| Phase 06-documentation P06 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,8 @@ Recent decisions affecting current work:
 - [Phase 06-documentation]: Report interpretation guide score band thresholds sourced verbatim from scoring.py _rating(): EXCELLENT>=85, GOOD>=70, MODERATE>=55, FAIR>=35, POOR<35
 - [Phase 06-documentation]: Three-section CBOM guide structure per D-10: compliance-officer / technical pipeline / audit evidence — matches three distinct reader audiences
 - [Phase 06-documentation]: alg:none documented as quantum-vulnerable (nist_level=0) with explicit callout that actual risk is authentication bypass — prevents consultant mischaracterization
+- [Phase 06-documentation]: Vault port is 20009 (not 20008 as in CONTEXT.md D-14) — docker-compose.yml is the ground truth per RESEARCH.md Pitfall 4
+- [Phase 06-documentation]: docs/chaos-lab.md is authoritative chaos lab operator guide; CHAOS_LAB_BUILD_AND_OPERATIONS_text_only.md retained as historical artifact per D-15
 
 ### Pending Todos
 
@@ -145,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T22:04:28.102Z
-Stopped at: Completed 06-05-PLAN.md
+Last session: 2026-03-31T22:09:01.498Z
+Stopped at: Completed 06-06-PLAN.md
 Resume file: None

@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
 - [x] **Phase 4: Chaos Lab Expansion** - Add jwt, registry, source, storage, ssh-weak, and ldaps lab profiles (completed 2026-03-30)
 - [x] **Phase 5: Web Dashboard** - FastAPI + React dashboard with findings viewer, CBOM viewer, and PDF report export (completed 2026-03-31)
-- [ ] **Phase 6: Documentation** - Getting Started, installation, configuration, connector guides, report and CBOM interpretation
+- [x] **Phase 6: Documentation** - Getting Started, installation, configuration, connector guides, report and CBOM interpretation (completed 2026-03-31)
 - [ ] **Phase 7: Polish and Packaging** - Visual identity, CLI UX, professional report templates, pip-installable distribution
 
 ## Phase Details
@@ -136,7 +136,7 @@ Plans:
 - [x] 06-03-PLAN.md — Connector guides: AWS, Azure, Docker, Git with credential templates (DOC-04)
 - [x] 06-04-PLAN.md — Report interpretation guide: score tables + severity tiers + Client Conversation sideboxes (DOC-05)
 - [x] 06-05-PLAN.md — CBOM guide: what/how/cite — compliance evidence language (DOC-06)
-- [ ] 06-06-PLAN.md — Chaos lab operator guide: all 10 profiles + port matrix + lab README update (DOC-07)
+- [x] 06-06-PLAN.md — Chaos lab operator guide: all 10 profiles + port matrix + lab README update (DOC-07)
 
 ### Phase 7: Polish and Packaging
 **Goal**: QU.I.R.K. is installable in one command, presents a coherent visual identity, and produces reports that look like a commercial security product
@@ -178,5 +178,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
 | 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
 | 5. Web Dashboard | 6/6 | Complete   | 2026-03-31 |
-| 6. Documentation | 5/6 | In Progress|  |
+| 6. Documentation | 6/6 | Complete   | 2026-03-31 |
 | 7. Polish and Packaging | 0/TBD | Not started | - |
