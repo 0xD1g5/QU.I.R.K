@@ -72,15 +72,14 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - [ ] Container scanning requirements (Docker socket access, registry credentials)
 - [ ] Source code scanning requirements (git access, language runtimes)
 
-**Documentation**
-- [ ] Getting Started guide — zero-to-first-scan in under 10 minutes
-- [ ] Installation guide (macOS, Linux, Windows via WSL)
-- [ ] Configuration reference (all config.yaml options)
-- [ ] Scan profile guide (quick / standard / deep — when to use each)
-- [ ] Connector setup guides (AWS, Azure, Docker, Git)
-- [ ] Report interpretation guide — what each score/finding means, what to tell the client
-- [ ] Chaos lab operator guide (already started, needs update for new profiles)
-- [ ] CBOM guide — what it is, how to use it for compliance evidence
+**Documentation** — Validated in Phase 6
+- ✓ Getting Started guide — zero-to-first-scan in under 10 minutes — Phase 6
+- ✓ Installation guide (macOS, Linux, Windows via WSL) — Phase 6
+- ✓ Configuration reference (all config.yaml options + 16 CLI flags) — Phase 6
+- ✓ Connector setup guides (AWS, Azure, Docker, Git) with least-privilege credential templates — Phase 6
+- ✓ Report interpretation guide — score bands, severity tiers, Client Conversation sideboxes — Phase 6
+- ✓ Chaos lab operator guide — all 10 profiles, 38-port reference table — Phase 6
+- ✓ CBOM guide — three sections: compliance officers, technical readers, auditors — Phase 6
 
 **Chaos Lab Expansion**
 - [ ] `jwt` profile — 4 JWT API services (RS256, HS256-weak, RSA1024, alg:none) + JWKS server
@@ -143,7 +142,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | — Pending |
 
 ---
-*Last updated: 2026-03-30 after Phase 4 completion — chaos lab expanded with 6 new Docker Compose profiles (jwt, registry, source, storage, ssh-weak, ldaps) providing live scanner targets for all 7 SCAN surfaces; 139 tests passing*
+*Last updated: 2026-03-31 after Phase 6 completion — full documentation suite written (README, getting-started, installation, configuration reference, 4 connector guides, report interpretation guide, CBOM guide, chaos lab operator guide); all DOC-01–DOC-07 requirements validated; 148 tests passing*
 
 ## Evolution
 
