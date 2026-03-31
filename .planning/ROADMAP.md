@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
 - [x] **Phase 4: Chaos Lab Expansion** - Add jwt, registry, source, storage, ssh-weak, and ldaps lab profiles (completed 2026-03-30)
-- [ ] **Phase 5: Web Dashboard** - FastAPI + React dashboard with findings viewer, CBOM viewer, and PDF report export
+- [x] **Phase 5: Web Dashboard** - FastAPI + React dashboard with findings viewer, CBOM viewer, and PDF report export (completed 2026-03-31)
 - [ ] **Phase 6: Documentation** - Getting Started, installation, configuration, connector guides, report and CBOM interpretation
 - [ ] **Phase 7: Polish and Packaging** - Visual identity, CLI UX, professional report templates, pip-installable distribution
 
@@ -114,7 +114,7 @@ Plans:
 - [x] 05-02-PLAN.md — FastAPI backend skeleton, health endpoint, Pydantic schemas, quirk serve CLI
 - [x] 05-03-PLAN.md — React frontend scaffold: Vite + shadcn/ui, ThemeProvider, Sidebar, TypeScript types
 - [x] 05-04-PLAN.md — GET /api/scan/latest endpoint, Executive, Findings, and Certificates pages
-- [ ] 05-05-PLAN.md — CBOM Viewer (Table + Graph tabs), Migration Roadmap Cytoscape DAG, App.tsx wiring
+- [x] 05-05-PLAN.md — CBOM Viewer (Table + Graph tabs), Migration Roadmap Cytoscape DAG, App.tsx wiring
 - [x] 05-06-PLAN.md — PDF export backend (Playwright), /print React page, App.tsx /print route
 **UI hint**: yes
 
@@ -166,6 +166,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
 | 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
 | 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
-| 5. Web Dashboard | 4/6 | In Progress|  |
+| 5. Web Dashboard | 6/6 | Complete   | 2026-03-31 |
 | 6. Documentation | 0/TBD | Not started | - |
 | 7. Polish and Packaging | 0/TBD | Not started | - |

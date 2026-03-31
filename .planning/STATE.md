@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-web-dashboard-04-PLAN.md
-last_updated: "2026-03-31T11:30:36.316Z"
+stopped_at: Completed 05-web-dashboard-05-PLAN.md
+last_updated: "2026-03-31T11:35:06.502Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 18
-  completed_plans: 21
+  completed_plans: 22
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 05 (web-dashboard) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-03-31
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05-web-dashboard P01 | 93 | 2 tasks | 4 files |
 | Phase 05-web-dashboard P06 | 3 | 2 tasks | 6 files |
 | Phase 05-web-dashboard P04 | 6 | 3 tasks | 9 files |
+| Phase 05-web-dashboard P05 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,8 @@ Recent decisions affecting current work:
 - [Phase 05-web-dashboard]: json.dumps() used for PDF error serialization — Playwright error messages contain control chars that break f-string JSON
 - [Phase 05-web-dashboard]: conftest.py uses sqlite:///file::memory:?cache=shared&uri=true so in-memory DB is accessible from FastAPI sync route worker threads — plain :memory: creates separate per-connection DB
 - [Phase 05-web-dashboard]: Findings derived at API layer from CryptoEndpoint columns — no separate findings table needed for v1
+- [Phase 05-web-dashboard]: cytoscape-extensions.d.ts declares ambient module types for cose-bilkent and dagre — no @types packages available, ambient declaration is the TypeScript solution
+- [Phase 05-web-dashboard]: CBOM graph uses breadthfirst for <15 nodes, cose-bilkent for >=15 — balances layout quality vs compute cost for typical vs large CBOM inventories
 
 ### Pending Todos
 
@@ -126,6 +129,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T11:30:36.314Z
-Stopped at: Completed 05-web-dashboard-04-PLAN.md
+Last session: 2026-03-31T11:35:06.500Z
+Stopped at: Completed 05-web-dashboard-05-PLAN.md
 Resume file: None
