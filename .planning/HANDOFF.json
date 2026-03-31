@@ -1,49 +1,46 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-30T21:30:07Z",
+  "timestamp": "2026-03-31T02:38:56.182Z",
   "phase": "05",
   "phase_name": "web-dashboard",
   "phase_dir": ".planning/phases/05-web-dashboard",
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 6,
   "status": "paused",
-  "completed_tasks": [
-    {"id": "04-01", "name": "JWT Docker Compose profile (4 FastAPI services)", "status": "done", "commit": "411f197"},
-    {"id": "04-02", "name": "Docker Registry v2 + old-crypto test images", "status": "done", "commit": "bee592b"},
-    {"id": "04-03", "name": "Gitea source profile + crypto anti-pattern repos", "status": "done", "commit": "0f52993"},
-    {"id": "04-04", "name": "LocalStack KMS + Vault + postgres-pgcrypto storage", "status": "done", "commit": "22bd20a"},
-    {"id": "04-05", "name": "ssh-weak + ldaps profiles + expected_results_v3.md", "status": "done", "commit": "559c363"}
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {"id": 1, "name": "Wave 0 — Test scaffolds + install backend deps (Plan 01)", "status": "not_started"},
+    {"id": 2, "name": "Wave 1a — FastAPI backend skeleton: app, health, serve CLI, Pydantic schemas (Plan 02)", "status": "not_started"},
+    {"id": 3, "name": "Wave 1b — React/TS frontend scaffold: Vite, Tailwind, shadcn/ui, sidebar, API types (Plan 03)", "status": "not_started"},
+    {"id": 4, "name": "Wave 2 — PDF export route + /print page (Plan 06)", "status": "not_started"},
+    {"id": 5, "name": "Wave 3 — API data routes (scan/latest, findings, certs, cbom) + executive/findings/certs pages (Plan 04)", "status": "not_started"},
+    {"id": 6, "name": "Wave 4 — CBOM table+graph page + migration roadmap Cytoscape.js page (Plan 05)", "status": "not_started"}
   ],
-  "remaining_tasks": [],
   "blockers": [],
-  "human_actions_pending": [
-    {
-      "action": "Run docker compose --profile jwt up -d and smoke-test JWKS endpoints on ports 20001-20004",
-      "context": "JWT scanner needs live containers to validate weak-algorithm detection; UAT items #1-2 in 04-HUMAN-UAT.md",
-      "blocking": false
-    },
-    {
-      "action": "Run docker compose --profile registry up -d and verify /v2/_catalog returns 3 images",
-      "context": "Registry seed takes 2-5 min; requires Docker socket for DinD; UAT item #3",
-      "blocking": false
-    },
-    {
-      "action": "Run docker compose --profile ssh-weak up -d and run ssh-audit localhost:20022",
-      "context": "Verify group1-sha1/ssh-dss/hmac-md5 reported as CRITICAL; UAT item #4",
-      "blocking": false
-    },
-    {
-      "action": "Run docker compose --profile ldaps up -d and run sslyze --targets localhost:636",
-      "context": "Verify TLS findings on standard LDAPS port; UAT item #5",
-      "blocking": false
-    }
-  ],
+  "human_actions_pending": [],
   "decisions": [
-    {"decision": "Phase 4 complete — 5/5 plans done, 6/6 requirements satisfied", "rationale": "All lab profiles implemented and wired; REQUIREMENTS.md traceability fully up-to-date", "phase": "04"},
-    {"decision": "Human UAT items are runtime-only (require Docker daemon)", "rationale": "All code/config verified statically; runtime tests need live containers", "phase": "04"}
+    {"decision": "Frontend: React + TypeScript + Vite + Tailwind CSS + shadcn/ui", "rationale": "Agreed in discussion session — lightweight, matches existing tooling", "phase": "05"},
+    {"decision": "PDF export via Playwright headless print with graceful 503 fallback", "rationale": "Avoids wkhtmltopdf dependency; Python ecosystem fit", "phase": "05"},
+    {"decision": "Plans 02 + 03 execute in parallel (Wave 1) — independent work streams", "rationale": "Python backend vs JS frontend have no shared files at scaffold stage", "phase": "05"},
+    {"decision": "CBOM visualization with Cytoscape.js bipartite graph", "rationale": "Defined in UI-SPEC; algorithm→system relationship mapping", "phase": "05"}
   ],
-  "uncommitted_files": [],
-  "next_action": "Plan Phase 5 (web-dashboard): /gsd:plan-phase 5",
-  "context_notes": "Phase 4 chaos lab expansion is fully complete. All 6 Docker Compose profiles (jwt, registry, source, storage, ssh-weak, ldaps) are implemented and wired. 139 tests passing, no regressions. Human UAT items are non-blocking Docker runtime smoke tests. Ready to move to Phase 5 web dashboard."
+  "uncommitted_files": [
+    ".planning/STATE.md",
+    ".planning/config.json",
+    "tests/test_cert_pubkey_fix.py",
+    "tests/test_intelligence_confidence.py",
+    "tests/test_intelligence_evidence.py",
+    "tests/test_intelligence_roadmap.py",
+    "tests/test_intelligence_schema.py",
+    "tests/test_intelligence_scoring.py",
+    "tests/test_reports_scorecard.py",
+    "tests/test_scoring_consolidation.py",
+    "tests/test_ssh_scanner.py",
+    "tests/test_sslyze_integration.py",
+    ".planning/phases/03-scanner-coverage/03-02-SUMMARY.md",
+    ".planning/phases/04-chaos-lab-expansion/04-03-SUMMARY.md"
+  ],
+  "next_action": "Run /gsd:execute-phase to begin Phase 05 execution — starts at Wave 0 (Plan 01: test scaffolds + deps), then waves 1-4 in order",
+  "context_notes": "Full planning cycle for Phase 05 completed this session. Phase 04 also completed this session. All 6 plans are written, checker-reviewed, and wave-ordered correctly. STATE.md says 'stopped_at: Phase 5 UI-SPEC approved' — update to 'executing' when execution begins."
 }
