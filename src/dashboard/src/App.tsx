@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Sidebar } from "@/components/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { PrintPage } from "@/pages/print"
 
 // Placeholder pages — replaced in 05-04 and 05-05
 function Placeholder({ title }: { title: string }) {
@@ -28,7 +29,7 @@ export default function App() {
                   <Route path="/certificates" element={<Placeholder title="Certificates" />} />
                   <Route path="/cbom" element={<Placeholder title="CBOM Viewer" />} />
                   <Route path="/roadmap" element={<Placeholder title="Migration Roadmap" />} />
-                  <Route path="/print" element={<Placeholder title="Print" />} />
+                  <Route path="/print" element={<PrintPage />} />
                 </Routes>
               </div>
             </main>
