@@ -3,8 +3,11 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Sidebar } from "@/components/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { PrintPage } from "@/pages/print"
+import { ExecutivePage } from "@/pages/executive"
+import { FindingsPage } from "@/pages/findings"
+import { CertificatesPage } from "@/pages/certificates"
 
-// Placeholder pages — replaced in 05-04 and 05-05
+// Placeholder for pages not yet implemented (05-05)
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="flex items-center justify-center h-full">
@@ -24,9 +27,9 @@ export default function App() {
             <main className="flex-1 ml-12 lg:ml-60 min-h-screen overflow-auto">
               <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-6">
                 <Routes>
-                  <Route path="/" element={<Placeholder title="Executive Summary" />} />
-                  <Route path="/findings" element={<Placeholder title="Findings" />} />
-                  <Route path="/certificates" element={<Placeholder title="Certificates" />} />
+                  <Route path="/" element={<ExecutivePage />} />
+                  <Route path="/findings" element={<FindingsPage />} />
+                  <Route path="/certificates" element={<CertificatesPage />} />
                   <Route path="/cbom" element={<Placeholder title="CBOM Viewer" />} />
                   <Route path="/roadmap" element={<Placeholder title="Migration Roadmap" />} />
                   <Route path="/print" element={<PrintPage />} />
