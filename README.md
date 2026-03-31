@@ -1,39 +1,51 @@
-# Quantum Crypto Scanner (qcscan)
+# QU.I.R.K.
 
-Agentless crypto discovery + quantum readiness reporting (MVP).
+**Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
-## What it does (v1)
-- Scans TLS endpoints (CIDRs and FQDNs)
-- Extracts certificate metadata (subject/issuer/SAN, sig algorithm, key type/size, validity)
-- Produces initial findings (TLS deprecations, expiring certs, quantum-transition flags)
-- Writes reports (JSON + Markdown) to ./output
-- Stores endpoint inventory in SQLite (./data/qcscan.sqlite)
+QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endpoints, SSH services, JWT-issuing APIs, container images, Git repositories, AWS cloud resources, and Azure cloud resources. It produces a Cryptography Bill of Materials (CBOM) in CycloneDX JSON and XML, computes a quantum-readiness score (0–100), and generates a professional PDF report a consultant can hand directly to a client.
 
-## Quick start
+## Quick Start
+
 ```bash
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-pip install -r requirements.txt
-python run_scan.py
+git clone <repo-url>
+cd quirk
+python -m venv .venv && source .venv/bin/activate
+pip install -e '.[dashboard]'
+playwright install chromium
+quirk --help
 ```
 
-## Configure targets
-Edit `config.yaml`:
-- Add CIDRs / FQDNs
-- Adjust ports and concurrency
-- Enable connectors later (AWS/Azure/AD CS stubs provided)
+Then follow the [Getting Started guide](docs/getting-started.md) to run your first scan in under 10 minutes.
 
-## Output
-Reports are generated in `./output/`:
-- findings-<timestamp>.json
-- executive-summary-<timestamp>.md
-- technical-findings-<timestamp>.md
+## Documentation
 
-## Notes
-- This MVP uses **agentless** TLS scanning with optional SNI.
-- Some endpoints may refuse connections or require client auth; those are logged as INFO scan errors.
-- Future increments: SSH scanning, cipher-suite enumeration, AWS/Azure/ADCS connectors, HTML/PDF reporting.
+| Guide | Description |
+|-------|-------------|
+| [Getting Started](docs/getting-started.md) | Zero to first scan in under 10 minutes |
+| [Installation](docs/installation.md) | System requirements, macOS, Linux, Windows WSL |
+| [Configuration Reference](docs/configuration.md) | All config.yaml options and CLI flags |
+| [Connector Guides](docs/connectors/) | AWS, Azure, Docker, Git setup with credential templates |
+| [Report Interpretation](docs/report-interpretation.md) | What every score and finding means, client conversation guide |
+| [CBOM Guide](docs/cbom-guide.md) | What a CBOM is and how to cite it as compliance evidence |
+| [Chaos Lab Operator Guide](docs/chaos-lab.md) | Lab profiles, port matrix, expected findings |
+
+## What QU.I.R.K. Scans
+
+- **TLS/HTTPS endpoints** — certificate metadata, cipher suites, TLS version, chain trust
+- **SSH services** — host key algorithms, KEX algorithms, MAC algorithms, cipher suites
+- **JWT-issuing APIs** — algorithm discovery via JWKS and OIDC endpoints
+- **Docker container images** — crypto libraries detected via Syft SBOM analysis
+- **Git repositories / source code** — cryptographic API usage via Semgrep analysis
+- **AWS** — ACM certificates, KMS key specs, CloudFront distributions, ELBv2 listeners
+- **Azure** — Key Vault keys and certificates, Application Gateway TLS policies
+
+## Output Artifacts
+
+- **Quantum-readiness score** (0–100) — overall score with four subscores: Hygiene, Modern TLS, Identity, Agility
+- **CBOM** in CycloneDX JSON + XML — inventory of all discovered cryptographic components
+- **Web dashboard** at `http://localhost:8512` — interactive findings browser and CBOM graph
+- **PDF report** — client-ready export from the dashboard
+
+## License
+
+Proprietary. All rights reserved.
