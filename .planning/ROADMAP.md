@@ -113,7 +113,7 @@ Plans:
 - [x] 05-01-PLAN.md — Wave 0 test scaffolds and backend Python dependencies
 - [x] 05-02-PLAN.md — FastAPI backend skeleton, health endpoint, Pydantic schemas, quirk serve CLI
 - [x] 05-03-PLAN.md — React frontend scaffold: Vite + shadcn/ui, ThemeProvider, Sidebar, TypeScript types
-- [ ] 05-04-PLAN.md — GET /api/scan/latest endpoint, Executive, Findings, and Certificates pages
+- [x] 05-04-PLAN.md — GET /api/scan/latest endpoint, Executive, Findings, and Certificates pages
 - [ ] 05-05-PLAN.md — CBOM Viewer (Table + Graph tabs), Migration Roadmap Cytoscape DAG, App.tsx wiring
 - [x] 05-06-PLAN.md — PDF export backend (Playwright), /print React page, App.tsx /print route
 **UI hint**: yes
