@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-03-31T21:50:05.302Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-03-31T21:55:40.297Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 24
-  completed_plans: 24
+  completed_plans: 25
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 06 (documentation) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-03-31
 
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05-web-dashboard P05 | 3 | 2 tasks | 4 files |
 | Phase 06-documentation P01 | 12 | 2 tasks | 3 files |
 | Phase 06-documentation P02 | 2 | 1 tasks | 1 files |
+| Phase 06-documentation P03 | 12 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,9 @@ Recent decisions affecting current work:
 - [Phase 06-documentation]: docs/ directory at repo root with plain Markdown per D-03 — no build step, GitHub-compatible relative links
 - [Phase 06-documentation]: All config.yaml keys documented with type, default, and description — verified against config.yaml and ConnectorsCfg dataclass
 - [Phase 06-documentation]: Scan profiles (quick/standard/deep) and score profiles (lenient/balanced/strict) documented with use-case guidance in docs/configuration.md
+- [Phase 06-documentation]: IAM policy JSON derived from exact boto3 calls in aws_connector.py — 7 actions across 4 services (ACM, KMS, CloudFront, ELBv2), no wildcards, no write access
+- [Phase 06-documentation]: Azure RBAC uses Reader + Key Vault Reader built-in roles at subscription scope — no custom role definition needed
+- [Phase 06-documentation]: Docker guide documents full CRYPTO_LIB_ALLOWLIST; Git guide documents p/cryptography anti-pattern table (WEAK_ALGORITHM, HARDCODED_KEY, WEAK_RANDOM, DEPRECATED_PROTOCOL)
 
 ### Pending Todos
 
@@ -135,6 +139,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-31T21:50:05.300Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-03-31T21:55:40.293Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
