@@ -131,7 +131,7 @@ Plans:
   6. The chaos lab operator guide documents all profiles including the six added in Phase 4
 **Plans**: 6 plans
 Plans:
-- [ ] 06-01-PLAN.md — README.md replacement + Getting Started guide + Installation guide (DOC-01, DOC-02)
+- [x] 06-01-PLAN.md — README.md replacement + Getting Started guide + Installation guide (DOC-01, DOC-02)
 - [ ] 06-02-PLAN.md — Configuration reference: all config.yaml keys + CLI flags (DOC-03)
 - [ ] 06-03-PLAN.md — Connector guides: AWS, Azure, Docker, Git with credential templates (DOC-04)
 - [ ] 06-04-PLAN.md — Report interpretation guide: score tables + severity tiers + Client Conversation sideboxes (DOC-05)
@@ -178,5 +178,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
 | 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
 | 5. Web Dashboard | 6/6 | Complete   | 2026-03-31 |
-| 6. Documentation | 0/6 | Planning complete | - |
+| 6. Documentation | 1/6 | In Progress|  |
 | 7. Polish and Packaging | 0/TBD | Not started | - |
