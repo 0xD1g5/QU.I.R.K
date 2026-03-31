@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from quirk.dashboard.api.routes import health
+from quirk.dashboard.api.routes import health, pdf
 
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
 
     # 1. API routes
     application.include_router(health.router, prefix="/api")
+    application.include_router(pdf.router, prefix="/api")
 
     # 2. /assets static mount (CSS, JS, fonts from Vite build)
     assets_dir = os.path.join(_STATIC_DIR, "assets")
