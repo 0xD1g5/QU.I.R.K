@@ -108,7 +108,14 @@ Plans:
   2. The dashboard displays an executive summary with quantum-readiness score gauges and severity breakdown for the most recent scan
   3. A findings table, certificate inventory, and CBOM viewer are all navigable from the dashboard
   4. Clicking "Export PDF" produces a PDF file that renders correctly and contains the full scan summary, findings, and CBOM reference
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 05-01-PLAN.md — Wave 0 test scaffolds and backend Python dependencies
+- [ ] 05-02-PLAN.md — FastAPI backend skeleton, health endpoint, Pydantic schemas, quirk serve CLI
+- [ ] 05-03-PLAN.md — React frontend scaffold: Vite + shadcn/ui, ThemeProvider, Sidebar, TypeScript types
+- [ ] 05-04-PLAN.md — GET /api/scan/latest endpoint, Executive, Findings, and Certificates pages
+- [ ] 05-05-PLAN.md — CBOM Viewer (Table + Graph tabs), Migration Roadmap Cytoscape DAG, App.tsx wiring
+- [ ] 05-06-PLAN.md — PDF export backend (Playwright), /print React page, App.tsx /print route
 **UI hint**: yes
 
 ### Phase 6: Documentation
