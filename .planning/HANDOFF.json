@@ -1,46 +1,52 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-31T02:38:56.182Z",
+  "timestamp": "2026-03-31T11:42:35.950Z",
   "phase": "05",
   "phase_name": "web-dashboard",
   "phase_dir": ".planning/phases/05-web-dashboard",
-  "plan": 0,
-  "task": 0,
+  "plan": 6,
+  "task": "complete",
   "total_tasks": 6,
-  "status": "paused",
-  "completed_tasks": [],
+  "status": "awaiting_human_uat",
+  "completed_tasks": [
+    {"id": 1, "name": "Test scaffolding (conftest.py, test_dashboard_api.py, test_pdf_export.py)", "status": "done", "commit": "see phase commits"},
+    {"id": 2, "name": "FastAPI backend + quirk serve CLI (app.py, server.py, deps.py, schemas.py)", "status": "done", "commit": "see phase commits"},
+    {"id": 3, "name": "React frontend scaffold + dark mode (ThemeProvider, sidebar, Tailwind)", "status": "done", "commit": "see phase commits"},
+    {"id": 4, "name": "Scan API + Executive/Findings/Certificates pages", "status": "done", "commit": "see phase commits"},
+    {"id": 5, "name": "CBOM Viewer (Table + Cytoscape bipartite graph) + Migration Roadmap DAG", "status": "done", "commit": "db1ac55"},
+    {"id": 6, "name": "PDF export Playwright + PrintPage + useScanData hook", "status": "done", "commit": "bbc239f"}
+  ],
   "remaining_tasks": [
-    {"id": 1, "name": "Wave 0 — Test scaffolds + install backend deps (Plan 01)", "status": "not_started"},
-    {"id": 2, "name": "Wave 1a — FastAPI backend skeleton: app, health, serve CLI, Pydantic schemas (Plan 02)", "status": "not_started"},
-    {"id": 3, "name": "Wave 1b — React/TS frontend scaffold: Vite, Tailwind, shadcn/ui, sidebar, API types (Plan 03)", "status": "not_started"},
-    {"id": 4, "name": "Wave 2 — PDF export route + /print page (Plan 06)", "status": "not_started"},
-    {"id": 5, "name": "Wave 3 — API data routes (scan/latest, findings, certs, cbom) + executive/findings/certs pages (Plan 04)", "status": "not_started"},
-    {"id": 6, "name": "Wave 4 — CBOM table+graph page + migration roadmap Cytoscape.js page (Plan 05)", "status": "not_started"}
+    {"id": "uat-1", "name": "Human UAT: theme toggle persistence", "status": "pending"},
+    {"id": "uat-2", "name": "Human UAT: sidebar collapse on mobile/narrow viewport", "status": "pending"},
+    {"id": "uat-3", "name": "Human UAT: Cytoscape CBOM bipartite graph renders", "status": "pending"},
+    {"id": "uat-4", "name": "Human UAT: Cytoscape Migration Roadmap DAG renders", "status": "pending"},
+    {"id": "uat-5", "name": "Human UAT: PDF export end-to-end download", "status": "pending"}
   ],
   "blockers": [],
-  "human_actions_pending": [],
+  "human_actions_pending": [
+    {
+      "action": "Run `quirk serve --port 8512` and manually test all 5 items in 05-HUMAN-UAT.md",
+      "context": "Machine verification passed 9/9. These 5 tests require a browser to validate visual/interactive behavior.",
+      "blocking": true
+    }
+  ],
   "decisions": [
-    {"decision": "Frontend: React + TypeScript + Vite + Tailwind CSS + shadcn/ui", "rationale": "Agreed in discussion session — lightweight, matches existing tooling", "phase": "05"},
-    {"decision": "PDF export via Playwright headless print with graceful 503 fallback", "rationale": "Avoids wkhtmltopdf dependency; Python ecosystem fit", "phase": "05"},
-    {"decision": "Plans 02 + 03 execute in parallel (Wave 1) — independent work streams", "rationale": "Python backend vs JS frontend have no shared files at scaffold stage", "phase": "05"},
-    {"decision": "CBOM visualization with Cytoscape.js bipartite graph", "rationale": "Defined in UI-SPEC; algorithm→system relationship mapping", "phase": "05"}
+    {"decision": "sync_playwright imported at module level", "rationale": "enables mock.patch for graceful-degradation test", "phase": "05-06"},
+    {"decision": "json.dumps() for PDF error serialization", "rationale": "Playwright error strings contain control chars that break hand-rolled JSON", "phase": "05-06"},
+    {"decision": "useScanData hook created in Wave 2 (05-06)", "rationale": "print.tsx needed it before 05-04 Wave 3 ran", "phase": "05-06"},
+    {"decision": "Cytoscape cose-bilkent for CBOM, dagre for Roadmap", "rationale": "cose-bilkent handles bipartite layout; dagre handles DAG directed flow", "phase": "05-05"}
   ],
   "uncommitted_files": [
-    ".planning/STATE.md",
+    "quirk/dashboard/static/assets/index-B-vrigwq.js",
+    "quirk/dashboard/static/assets/index-CTjd5Yb6.css",
+    "quirk/dashboard/static/index.html",
+    "src/dashboard/src/App.css",
+    "src/dashboard/src/assets/",
     ".planning/config.json",
-    "tests/test_cert_pubkey_fix.py",
-    "tests/test_intelligence_confidence.py",
-    "tests/test_intelligence_evidence.py",
-    "tests/test_intelligence_roadmap.py",
-    "tests/test_intelligence_schema.py",
-    "tests/test_intelligence_scoring.py",
-    "tests/test_reports_scorecard.py",
-    "tests/test_scoring_consolidation.py",
-    "tests/test_ssh_scanner.py",
-    "tests/test_sslyze_integration.py",
     ".planning/phases/03-scanner-coverage/03-02-SUMMARY.md",
     ".planning/phases/04-chaos-lab-expansion/04-03-SUMMARY.md"
   ],
-  "next_action": "Run /gsd:execute-phase to begin Phase 05 execution — starts at Wave 0 (Plan 01: test scaffolds + deps), then waves 1-4 in order",
-  "context_notes": "Full planning cycle for Phase 05 completed this session. Phase 04 also completed this session. All 6 plans are written, checker-reviewed, and wave-ordered correctly. STATE.md says 'stopped_at: Phase 5 UI-SPEC approved' — update to 'executing' when execution begins."
+  "next_action": "Run `quirk serve --port 8512`, open browser, complete 5 UAT tests in 05-HUMAN-UAT.md, then /gsd:ship",
+  "context_notes": "Phase 05 fully code-complete and machine-verified (9/9). Ghost_Weight directory deletions in git status are a separate cleanup (likely a subtree removal), unrelated to Phase 05 work."
 }
