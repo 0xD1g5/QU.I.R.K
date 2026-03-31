@@ -77,6 +77,35 @@ def _phase_timer(run_stats: Dict[str, Any], name: str):
 
 
 def main():
+    # --- serve subcommand: intercept before scan argparse to avoid conflicts ---
+    import sys as _sys
+    if len(_sys.argv) > 1 and _sys.argv[1] == "serve":
+        serve_parser = argparse.ArgumentParser(
+            prog="quirk serve",
+            description="Start the QU.I.R.K. web dashboard",
+        )
+        serve_parser.add_argument(
+            "--port",
+            type=int,
+            default=8512,
+            help="Port to serve on (default: 8512)",
+        )
+        serve_parser.add_argument(
+            "--host",
+            default="127.0.0.1",
+            help="Host to bind (default: 127.0.0.1)",
+        )
+        serve_parser.add_argument(
+            "--no-open",
+            action="store_true",
+            default=False,
+            help="Do not automatically open the browser",
+        )
+        serve_args = serve_parser.parse_args(_sys.argv[2:])
+        from quirk.dashboard.server import serve as _serve
+        _serve(port=serve_args.port, host=serve_args.host, no_open=serve_args.no_open)
+        return
+
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--config", help="Path to config.yaml (skip prompts)")
     parser.add_argument("--verbose", action="store_true", help="Verbose output during scan")
