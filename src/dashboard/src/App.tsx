@@ -6,15 +6,9 @@ import { PrintPage } from "@/pages/print"
 import { ExecutivePage } from "@/pages/executive"
 import { FindingsPage } from "@/pages/findings"
 import { CertificatesPage } from "@/pages/certificates"
+import { CbomPage } from "@/pages/cbom"
+import { RoadmapPage } from "@/pages/roadmap"
 
-// Placeholder for pages not yet implemented (05-05)
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-muted-foreground text-sm">{title} — coming soon</p>
-    </div>
-  )
-}
 
 export default function App() {
   return (
@@ -30,8 +24,8 @@ export default function App() {
                   <Route path="/" element={<ExecutivePage />} />
                   <Route path="/findings" element={<FindingsPage />} />
                   <Route path="/certificates" element={<CertificatesPage />} />
-                  <Route path="/cbom" element={<Placeholder title="CBOM Viewer" />} />
-                  <Route path="/roadmap" element={<Placeholder title="Migration Roadmap" />} />
+                  <Route path="/cbom" element={<CbomPage />} />
+                  <Route path="/roadmap" element={<RoadmapPage />} />
                   <Route path="/print" element={<PrintPage />} />
                 </Routes>
               </div>
