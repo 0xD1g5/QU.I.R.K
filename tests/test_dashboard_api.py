@@ -1,22 +1,35 @@
 """Dashboard API tests — Wave 0 stubs (RED state).
 Test IDs match .planning/phases/05-web-dashboard/05-VALIDATION.md verification map.
 """
+import subprocess
+import sys
 import pytest
 
 
 def test_serve_command():
-    """UI-01: quirk serve subcommand exists in run_scan.py or pyproject.toml scripts."""
-    pytest.skip("stub — implement in 05-02")
+    """UI-01: quirk serve subcommand exists in run_scan.py and exits 0 for --help."""
+    result = subprocess.run(
+        [sys.executable, "run_scan.py", "serve", "--help"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "--port" in result.stdout
+    assert "--host" in result.stdout
+    assert "--no-open" in result.stdout
 
 
 def test_dashboard_loads(dashboard_client):
-    """UI-01: GET / returns 200 (SPA index.html served)."""
-    pytest.skip("stub — implement in 05-02")
+    """UI-01: GET / returns 200 (SPA index.html or placeholder served)."""
+    response = dashboard_client.get("/")
+    assert response.status_code == 200
 
 
 def test_health_endpoint(dashboard_client):
     """UI-01: GET /api/health returns {status: ok}."""
-    pytest.skip("stub — implement in 05-02")
+    response = dashboard_client.get("/api/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
 
 
 def test_score_endpoint(dashboard_client):
