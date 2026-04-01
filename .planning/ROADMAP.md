@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Chaos Lab Expansion** - Add jwt, registry, source, storage, ssh-weak, and ldaps lab profiles (completed 2026-03-30)
 - [x] **Phase 5: Web Dashboard** - FastAPI + React dashboard with findings viewer, CBOM viewer, and PDF report export (completed 2026-03-31)
 - [x] **Phase 6: Documentation** - Getting Started, installation, configuration, connector guides, report and CBOM interpretation (completed 2026-03-31)
-- [ ] **Phase 7: Polish and Packaging** - Visual identity, CLI UX, professional report templates, pip-installable distribution
+- [x] **Phase 7: Polish and Packaging** - Visual identity, CLI UX, professional report templates, pip-installable distribution (completed 2026-04-01)
 
 ## Phase Details
 
@@ -147,11 +147,11 @@ Plans:
   2. All CLI output uses consistent formatting with rich progress indicators; `quirk --version` returns the current version
   3. HTML and PDF reports use the QU.I.R.K. visual identity (color palette, logo mark, report headers) — indistinguishable in quality from a commercial tool
   4. A new user who has never seen the tool can reach a completed, exportable scan from zero within 10 minutes of running the install command
-**Plans:** 3/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
 - [x] 07-01-PLAN.md — Wave 0: test scaffolds, Jinja2 + rich dependency installation
 - [x] 07-02-PLAN.md — CLI UX overhaul: --version, startup banner, rich scan summary (BRAND-02)
-- [ ] 07-03-PLAN.md — HTML/PDF report templates: Jinja2 renderer + write_reports() wiring (BRAND-03)
+- [x] 07-03-PLAN.md — HTML/PDF report templates: Jinja2 renderer + write_reports() wiring (BRAND-03)
 - [x] 07-04-PLAN.md — Dashboard branding pass: favicon, page title, sidebar wordmark (BRAND-01)
 - [x] 07-05-PLAN.md — Packaging: version 4.0.0, quirk init, GitHub install path (BRAND-04)
 
@@ -185,4 +185,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
 | 5. Web Dashboard | 6/6 | Complete   | 2026-03-31 |
 | 6. Documentation | 6/6 | Complete   | 2026-03-31 |
-| 7. Polish and Packaging | 3/5 | In Progress|  |
+| 7. Polish and Packaging | 5/5 | Complete   | 2026-04-01 |
