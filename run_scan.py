@@ -31,6 +31,9 @@ from quirk.engine.profiles import apply_profile
 from quirk.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets
 from quirk.engine.rate_limiter import TokenBucket
 
+from quirk import __version__
+from quirk.cli.banner import print_banner
+
 
 def _error_category(desc: str) -> str:
     if not desc:
@@ -77,8 +80,24 @@ def _phase_timer(run_stats: Dict[str, Any], name: str):
 
 
 def main():
-    # --- serve subcommand: intercept before scan argparse to avoid conflicts ---
+    # --- init subcommand: intercept before scan argparse ---
     import sys as _sys
+    if len(_sys.argv) > 1 and _sys.argv[1] == "init":
+        init_parser = argparse.ArgumentParser(
+            prog="quirk init",
+            description="Generate a starter config.yaml",
+        )
+        init_parser.add_argument(
+            "--output",
+            default="config.yaml",
+            help="Output path for generated config.yaml (default: ./config.yaml)",
+        )
+        init_args = init_parser.parse_args(_sys.argv[2:])
+        from quirk.cli.init_cmd import run_init
+        run_init(init_args.output)
+        return
+
+    # --- serve subcommand: intercept before scan argparse to avoid conflicts ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "serve":
         serve_parser = argparse.ArgumentParser(
             prog="quirk serve",
@@ -102,11 +121,14 @@ def main():
             help="Do not automatically open the browser",
         )
         serve_args = serve_parser.parse_args(_sys.argv[2:])
+        print_banner(__version__, quiet=False)
         from quirk.dashboard.server import serve as _serve
         _serve(port=serve_args.port, host=serve_args.host, no_open=serve_args.no_open)
         return
 
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
+    parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
+    parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
     parser.add_argument("--config", help="Path to config.yaml (skip prompts)")
     parser.add_argument("--verbose", action="store_true", help="Verbose output during scan")
     parser.add_argument("--progress", action="store_true", help="Show progress bars during scan")
@@ -133,10 +155,11 @@ def main():
 
     args = parser.parse_args()
 
-    tqdm = None
-    if args.progress:
-        from tqdm import tqdm as _tqdm  # type: ignore
-        tqdm = _tqdm
+    quiet = getattr(args, "quiet", False)
+    print_banner(__version__, quiet=quiet)
+
+    # rich Progress used throughout; tqdm removed (D-04)
+    tqdm = None  # kept for any residual references during transition
 
     logger = Logger(verbose=args.verbose, use_tqdm=bool(args.progress))
 
