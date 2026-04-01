@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-02-PLAN.md — CLI banner, --version/--quiet, rich summary table
-last_updated: "2026-04-01T01:41:11.111Z"
+stopped_at: Completed 07-05-PLAN.md — version bump to 4.0.0, quirk init command, config_template.yaml
+last_updated: "2026-04-01T01:45:26.194Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 29
-  completed_plans: 30
+  completed_plans: 31
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 07 (polish-and-packaging) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-04-01
 
@@ -78,6 +78,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-documentation P06 | 8 | 2 tasks | 2 files |
 | Phase 07 P01 | 109 | 2 tasks | 7 files |
 | Phase 07 P02 | 12 | 2 tasks | 5 files |
+| Phase 07 P05 | 8 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,9 @@ Recent decisions affecting current work:
 - [Phase 07]: Wave 0 TDD scaffold: 10 RED stubs define full Phase 7 implementation contract; 7 behaviors already GREEN
 - [Phase 07]: init subcommand intercept placed before serve intercept — mirrors serve pattern exactly
 - [Phase 07]: tqdm=None retained after import removal to preserve residual references during transition (D-04)
+- [Phase 07]: importlib.resources.files('quirk').joinpath('config_template.yaml') used for template lookup in run_init() — works after pip install with os.path fallback for dev
+- [Phase 07]: quirk init defaults to 127.0.0.1 target and warns (not errors) on overwrite — idempotent for automation
+- [Phase 07]: docs/getting-started.md primary install changed to git+https GitHub URL; PyPI coming-soon note removed
 
 ### Pending Todos
 
@@ -154,6 +158,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-01T01:41:11.108Z
-Stopped at: Completed 07-02-PLAN.md — CLI banner, --version/--quiet, rich summary table
+Last session: 2026-04-01T01:45:26.192Z
+Stopped at: Completed 07-05-PLAN.md — version bump to 4.0.0, quirk init command, config_template.yaml
 Resume file: None
