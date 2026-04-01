@@ -17,6 +17,7 @@ from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.cbom import build_cbom, write_cbom_files
+from quirk.reports.html_renderer import render_html_report, render_pdf_report
 
 
 PLATFORM_VERSION = "4.0"
@@ -206,6 +207,23 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     with open(roadmap_path, "w", encoding="utf-8") as f:
         f.write(_roadmap_markdown(roadmap_items))
 
+    # 3b) Standalone HTML report (D-08) + PDF via Playwright (D-11)
+    html_path = os.path.join(outdir, f"report-{stamp}.html")
+    render_html_report(
+        path=html_path,
+        cfg=cfg,
+        endpoints=endpoints,
+        findings=findings,
+        score=score,
+        conf=conf,
+        roadmap_items=roadmap_items,
+    )
+
+    pdf_path = os.path.join(outdir, f"report-{stamp}.pdf")
+    pdf_ok = render_pdf_report(html_path=html_path, pdf_path=pdf_path)
+    if not pdf_ok:
+        pdf_path = None  # Playwright unavailable — HTML report still written
+
     # 4) Ensure reporting timing exists BEFORE writing run-stats file
     if run_stats is not None:
         run_stats.setdefault("timings_sec", {})
@@ -258,6 +276,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
         findings_path, stats_path, exec_path, tech_path,
         scorecard_path, roadmap_path, intelligence_path,
         cbom_json_path, cbom_xml_path,
+        html_path, pdf_path,
     ] if p]
     _console.print(f"\n[bold #3b9dff]Output files ({len(output_files)}):[/]")
     for p in output_files:
