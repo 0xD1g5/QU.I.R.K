@@ -2,7 +2,7 @@
 phase: 7
 slug: polish-and-packaging
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-31
 ---
@@ -79,11 +79,23 @@ created: 2026-03-31
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify commands pointing at pytest (not shell grep)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** pending execution
+
+---
+
+## Revision Notes (2026-03-31)
+
+Applied checker feedback:
+
+- **07-02:** Added `quirk/cli/init_cmd.py` stub (raises NotImplementedError) to Plan 02 Task 1, so the `from quirk.cli.init_cmd import run_init` import in run_scan.py never hits ImportError before Plan 05 runs. Added `quirk/cli/init_cmd.py` to Plan 02 `files_modified`.
+- **07-03:** Wave changed 1 → 2; `depends_on` updated to include `07-02` (both plans edit writer.py — serializing prevents merge conflicts). `PackageLoader` replaced with `FileSystemLoader(os.path.dirname(__file__), 'templates')` throughout — avoids TemplateNotFound errors before pip reinstall.
+- **07-04 Task 1:** `<automated>` verify changed from grep shell command to `.venv/bin/python -m pytest tests/test_dashboard_theme.py -x -q`.
+- **07-04 Task 2:** `<automated>` verify changed from grep shell command to `.venv/bin/python -m pytest tests/test_dashboard_theme.py -x -q`. Added D-13 full color audit step: grep `src/dashboard/src/components/` for stray hardcoded hex/hsl() values, resolve any found, document audit result in sidebar.tsx comment.
+- **07-VALIDATION.md:** `nyquist_compliant` set to `true`; sign-off checkboxes checked.
