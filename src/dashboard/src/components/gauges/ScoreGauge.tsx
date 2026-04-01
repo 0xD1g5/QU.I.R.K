@@ -7,9 +7,9 @@ interface ScoreGaugeProps {
 }
 
 function _gaugeColor(score: number): string {
-  if (score >= 80) return "hsl(142 71% 45%)"   // Green 500 — quantum-safe
-  if (score >= 50) return "hsl(38 92% 50%)"    // Amber 500 — at risk
-  return "hsl(0 72% 51%)"                       // Red 600 — vulnerable
+  if (score >= 80) return "hsl(var(--quantum-safe))"   // Green 500 — quantum-safe
+  if (score >= 50) return "hsl(var(--quantum-at-risk))"    // Amber 500 — at risk
+  return "hsl(var(--quantum-vulnerable))"                       // Red 600 — vulnerable
 }
 
 export function ScoreGauge({ score, label, size = 120, strokeColor, isOverall = false }: ScoreGaugeProps) {
@@ -37,7 +37,7 @@ export function ScoreGauge({ score, label, size = 120, strokeColor, isOverall = 
   void endX
   void endY
 
-  const color = strokeColor ?? (isOverall ? "hsl(210 100% 56%)" : _gaugeColor(score))
+  const color = strokeColor ?? (isOverall ? "hsl(var(--accent))" : _gaugeColor(score))
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -47,7 +47,7 @@ export function ScoreGauge({ score, label, size = 120, strokeColor, isOverall = 
           <path
             d={`M ${startX} ${startY} A ${radius} ${radius} 0 0 1 ${endX} ${endY}`}
             fill="none"
-            stroke="hsl(240 6% 17%)"
+            stroke="hsl(var(--border))"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
           />

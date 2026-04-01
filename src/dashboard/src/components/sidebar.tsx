@@ -1,3 +1,6 @@
+// D-13 color audit (Phase 7): all component color tokens verified to use CSS variables.
+// Hardcoded values found and resolved: ScoreGauge.tsx hsl() literals -> hsl(var(--token)) CSS variable refs;
+// chart.tsx #ccc/#fff are CSS attribute selectors targeting Recharts internals (intentional one-off).
 import { Link, useLocation } from "react-router-dom"
 import {
   LayoutDashboard,
@@ -32,11 +35,13 @@ export function Sidebar() {
       )}
     >
       {/* Logo / title */}
-      <div className="flex items-center gap-3 px-3 lg:px-5 py-5 border-b border-border">
-        <span className="text-accent font-semibold text-sm hidden lg:block tracking-wide">
+      <div className="flex items-center gap-2 px-3 lg:px-5 py-4 border-b border-border">
+        {/* Full wordmark on wide sidebar */}
+        <span className="text-accent font-black text-base hidden lg:block tracking-widest font-mono leading-none">
           QU.I.R.K.
         </span>
-        <span className="text-accent font-semibold text-sm lg:hidden">Q</span>
+        {/* Monogram on narrow sidebar */}
+        <span className="text-accent font-black text-lg lg:hidden font-mono leading-none">Q</span>
       </div>
 
       {/* Navigation */}
