@@ -4,6 +4,10 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text as RichText
+
 from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
 from quirk.engine.migration_planner import categorize_waves
@@ -216,17 +220,45 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
     cbom = build_cbom(endpoints)
     cbom_json_path, cbom_xml_path = write_cbom_files(cbom, outdir, stamp)
 
-    # Console summary
+    # Rich scan summary table (D-05)
+    _console = Console()
+
+    # Migration waves summary (kept as before, but using rich)
     waves = categorize_waves(findings)
-    print("\n📊 Migration Waves:")
+    wave_table = Table(title="Migration Waves", show_header=True, header_style="bold #3b9dff")
+    wave_table.add_column("Wave", style="bold cyan")
+    wave_table.add_column("Findings", justify="right")
     for wave, items in waves.items():
-        print(f"  {wave}: {len(items)} findings")
+        wave_table.add_row(str(wave), str(len(items)))
+    _console.print(wave_table)
 
-    print(f"\n🔐 Readiness Score (v3.9): {score.get('total')}/100")
-    print(f"🧪 Confidence (v3.9): {conf.get('confidence')}/100")
-    print(f"📦 Platform Version: {PLATFORM_VERSION} | Schema: {SCHEMA_VERSION} | Intelligence: {INTELLIGENCE_VERSION}")
+    # Scan summary table
+    summary_table = Table(title="[bold #3b9dff]QU.I.R.K. Scan Summary[/]", show_header=True, header_style="bold")
+    summary_table.add_column("Metric", style="bold cyan", min_width=24)
+    summary_table.add_column("Value", justify="right", min_width=16)
 
-    print("\n✅ Wrote reports:")
-    for p in [findings_path, stats_path, exec_path, tech_path, scorecard_path, roadmap_path, intelligence_path, cbom_json_path, cbom_xml_path]:
-        if p:
-            print(f"- {p}")
+    hosts_count = len(set(getattr(ep, "host", None) or getattr(ep, "target", "") for ep in (endpoints or [])))
+    crit_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "CRITICAL")
+    high_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "HIGH")
+    medium_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "MEDIUM")
+    total_score = score.get("total", 0)
+    total_conf = conf.get("confidence", 0)
+
+    summary_table.add_row("Hosts scanned", str(hosts_count))
+    summary_table.add_row("CRITICAL findings", f"[red]{crit_count}[/red]" if crit_count else "0")
+    summary_table.add_row("HIGH findings", f"[orange1]{high_count}[/orange1]" if high_count else "0")
+    summary_table.add_row("MEDIUM findings", f"[yellow]{medium_count}[/yellow]" if medium_count else "0")
+    summary_table.add_row("Readiness score", f"[bold]{total_score}/100[/bold]")
+    summary_table.add_row("Confidence", f"{total_conf}/100")
+    summary_table.add_row("Platform version", PLATFORM_VERSION)
+    _console.print(summary_table)
+
+    # Output files list
+    output_files = [p for p in [
+        findings_path, stats_path, exec_path, tech_path,
+        scorecard_path, roadmap_path, intelligence_path,
+        cbom_json_path, cbom_xml_path,
+    ] if p]
+    _console.print(f"\n[bold #3b9dff]Output files ({len(output_files)}):[/]")
+    for p in output_files:
+        _console.print(f"  [dim]{p}[/dim]")
