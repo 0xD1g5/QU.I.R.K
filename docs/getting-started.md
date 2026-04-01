@@ -16,19 +16,18 @@ Before you begin:
 
 ## 1. Install
 
+Install directly from GitHub (no clone required):
+
 ```bash
-git clone <repo-url>
-cd quirk
-python -m venv .venv && source .venv/bin/activate
-pip install -e '.[dashboard]'
-playwright install chromium   # Required for PDF export — one-time step
+pip install 'git+https://github.com/[owner]/quirk.git'
 ```
 
-> **Note (coming in v4.0):** Once published to PyPI, the install will be:
-> ```
-> pip install 'quirk[dashboard]'
-> ```
-> For now, use the git clone path above.
+For dashboard support (PDF export, web UI):
+
+```bash
+pip install 'git+https://github.com/[owner]/quirk.git[dashboard]'
+playwright install chromium   # Required for PDF export — one-time step
+```
 
 Verify the install:
 
@@ -38,27 +37,40 @@ quirk --help
 
 ---
 
-## 2. First Scan
+## Quick Start
 
-Create a `config.yaml` in your working directory:
+After installation, generate a starter configuration:
 
-```yaml
-assessment:
-  name: "First Scan"
-  data_classification: "internal"
-  report_owner: "My Org"
-  timezone: "America/New_York"
-targets:
-  cidrs: [127.0.0.1]
+```bash
+quirk init
 ```
 
-Run the scan:
+This creates `config.yaml` in the current directory with sensible defaults.
+Edit the `targets` section with your network, then run:
+
+```bash
+quirk scan --config config.yaml
+```
+
+Your reports will appear in `./quirk-output/`.
+
+---
+
+## 2. First Scan
+
+Generate a config file and edit it for your environment:
+
+```bash
+quirk init
+```
+
+This creates `config.yaml` pre-populated with the `127.0.0.1` loopback target. Edit the `targets` section to point at your network, then run:
 
 ```bash
 quirk --config config.yaml
 ```
 
-QU.I.R.K. will probe `127.0.0.1` for TLS and SSH services. For a single host this completes in under 30 seconds. Results are written to `./output/`.
+QU.I.R.K. will probe the configured targets for TLS and SSH services. For a single host this completes in under 30 seconds. Results are written to `./quirk-output/`.
 
 ---
 
