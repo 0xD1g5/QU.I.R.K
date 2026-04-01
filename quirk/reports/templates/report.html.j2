@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QU.I.R.K. — {{ org_name }} Quantum Readiness Report</title>
+  <style>
+    /* === QU.I.R.K. Report Stylesheet — all CSS embedded, no external refs === */
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: #2a2a3a;
+      --accent: #3b9dff;
+      --text: #e8e8f0;
+      --text-muted: #8888aa;
+      --critical: #e53935;
+      --high: #f57c00;
+      --medium: #f9a825;
+      --low: #5c9cff;
+      --info: #666688;
+      --green: #4caf50;
+      --amber: #f9a825;
+      --red: #e53935;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 0;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    .report-header {
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+      padding: 24px 40px;
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+    }
+    .wordmark {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .report-meta {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .report-body { max-width: 1100px; margin: 0 auto; padding: 40px; }
+    section { margin-bottom: 56px; }
+    h1 { font-size: 22px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 24px; }
+    h2 { font-size: 17px; color: var(--text); margin: 24px 0 12px; }
+    h3 { font-size: 14px; color: var(--text-muted); margin: 16px 0 8px; }
+    .score-card {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--surface);
+      border: 2px solid {{ score_color }};
+      border-radius: 8px;
+      padding: 24px 40px;
+      margin-bottom: 24px;
+    }
+    .score-value { font-size: 56px; font-weight: 900; color: {{ score_color }}; line-height: 1; }
+    .score-band { font-size: 16px; color: {{ score_color }}; margin-top: 4px; letter-spacing: 0.1em; }
+    .score-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .sev-grid { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
+    .sev-badge {
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      min-width: 80px;
+      text-align: center;
+    }
+    .sev-CRITICAL { background: var(--critical); color: #fff; }
+    .sev-HIGH { background: var(--high); color: #fff; }
+    .sev-MEDIUM { background: var(--medium); color: #111; }
+    .sev-LOW { background: var(--low); color: #fff; }
+    .sev-INFO { background: var(--info); color: #ddd; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+    th {
+      background: var(--surface2);
+      color: var(--accent);
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    .sev-cell { font-weight: bold; font-size: 11px; padding: 2px 6px; border-radius: 3px; }
+    .roadmap-phase { margin: 16px 0; }
+    .roadmap-phase h3 { color: var(--accent); text-transform: uppercase; font-size: 13px; letter-spacing: 0.1em; }
+    .roadmap-item {
+      background: var(--surface);
+      border-left: 3px solid var(--accent);
+      padding: 10px 16px;
+      margin: 8px 0;
+      border-radius: 0 4px 4px 0;
+    }
+    .roadmap-item strong { color: var(--text); }
+    .roadmap-item span { color: var(--text-muted); font-size: 12px; }
+    .drivers-list { list-style: none; }
+    .drivers-list li::before { content: "▸ "; color: var(--accent); }
+    .drivers-list li { padding: 3px 0; color: var(--text-muted); font-size: 13px; }
+    .meta-table td:first-child { color: var(--text-muted); width: 180px; }
+    .meta-table td:last-child { color: var(--text); }
+    .footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 16px 40px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="report-header">
+  <span class="wordmark">QU.I.R.K.</span>
+  <span class="report-meta">Quantum Readiness Report &nbsp;|&nbsp; {{ org_name }} &nbsp;|&nbsp; {{ generated_at }}</span>
+</header>
+
+<div class="report-body">
+
+  <!-- ===== EXECUTIVE SUMMARY ===== -->
+  <section id="executive-summary">
+    <h1>Executive Summary</h1>
+
+    <table class="meta-table" style="width:auto;margin-bottom:24px;">
+      <tr><td>Organization</td><td>{{ org_name }}</td></tr>
+      <tr><td>Report owner</td><td>{{ report_owner }}</td></tr>
+      <tr><td>Data classification</td><td>{{ data_classification }}</td></tr>
+      <tr><td>Generated</td><td>{{ generated_at }}</td></tr>
+    </table>
+
+    <h2>Quantum Readiness Score</h2>
+    <div class="score-card">
+      <div class="score-value">{{ total_score }}</div>
+      <div class="score-band">{{ score_band }}</div>
+      <div class="score-label">/ 100 &nbsp;|&nbsp; Confidence: {{ confidence }}/100</div>
+    </div>
+
+    <h2>Findings Breakdown</h2>
+    <div class="sev-grid">
+      {% for sev in ['CRITICAL','HIGH','MEDIUM','LOW','INFO'] %}
+        {% if sev_counts.get(sev, 0) > 0 %}
+        <div class="sev-badge sev-{{ sev }}">{{ sev }}: {{ sev_counts.get(sev, 0) }}</div>
+        {% endif %}
+      {% endfor %}
+      {% if not sev_counts %}
+      <span style="color:var(--text-muted)">No findings</span>
+      {% endif %}
+    </div>
+
+    {% if drivers %}
+    <h2>Score Drivers</h2>
+    <ul class="drivers-list">
+      {% for d in drivers %}<li>{{ d }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if findings %}
+    <h2>Top Findings</h2>
+    <table>
+      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Description</th></tr></thead>
+      <tbody>
+      {% for f in findings[:10] %}
+      <tr>
+        <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
+        <td>{{ f.get('title','') }}</td>
+        <td>{{ f.get('host','') }}{% if f.get('port') %}:{{ f.get('port') }}{% endif %}</td>
+        <td>{{ f.get('description','')[:120] }}{% if f.get('description','')|length > 120 %}…{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Transition Roadmap</h2>
+    {% for phase_label, items in [('NOW', roadmap_now), ('NEXT', roadmap_next), ('LATER', roadmap_later)] %}
+    {% if items %}
+    <div class="roadmap-phase">
+      <h3>{{ phase_label }}</h3>
+      {% for item in items %}
+      <div class="roadmap-item">
+        <strong>{{ item.get('title','') }}</strong><br>
+        <span>{{ item.get('why','') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </section>
+
+  <!-- ===== TECHNICAL APPENDIX ===== -->
+  <section id="technical-appendix">
+    <h1>Technical Appendix</h1>
+
+    <h2>All Findings</h2>
+    {% if findings %}
+    <table>
+      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Recommendation</th></tr></thead>
+      <tbody>
+      {% for f in findings %}
+      <tr>
+        <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
+        <td>{{ f.get('title','') }}</td>
+        <td>{{ f.get('host','') }}</td>
+        <td>{{ f.get('port','') }}</td>
+        <td>{{ f.get('recommendation','')[:160] }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-muted)">No findings recorded for this scan.</p>
+    {% endif %}
+
+    <h2>Endpoint Inventory</h2>
+    {% if endpoints %}
+    <table>
+      <thead><tr><th>Host</th><th>Port</th><th>Protocol</th><th>TLS Version</th><th>Cipher Suite</th><th>Cert Key</th></tr></thead>
+      <tbody>
+      {% for ep in endpoints %}
+      <tr>
+        <td>{{ ep.host }}</td>
+        <td>{{ ep.port }}</td>
+        <td>{{ ep.protocol or '' }}</td>
+        <td>{{ ep.tls_version or '' }}</td>
+        <td>{{ ep.cipher_suite or '' }}</td>
+        <td>{{ ep.cert_pubkey_alg or '' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-muted)">No endpoints recorded for this scan.</p>
+    {% endif %}
+  </section>
+
+</div><!-- /report-body -->
+
+<footer class="footer">
+  Generated by <strong>QU.I.R.K.</strong> Quantum Infrastructure Readiness Kit &nbsp;|&nbsp; {{ generated_at }}
+</footer>
+
+</body>
+</html>
