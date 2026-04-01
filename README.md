@@ -1,4 +1,4 @@
-# QU.I.R.K.
+# QU.I.R.K. — v4.0.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -28,6 +28,8 @@ Then follow the [Getting Started guide](docs/getting-started.md) to run your fir
 | [Report Interpretation](docs/report-interpretation.md) | What every score and finding means, client conversation guide |
 | [CBOM Guide](docs/cbom-guide.md) | What a CBOM is and how to cite it as compliance evidence |
 | [Chaos Lab Operator Guide](docs/chaos-lab.md) | Lab profiles, port matrix, expected findings |
+| [Intelligence Schema](docs/intelligence-schema.md) | `intelligence-*.json` output format reference |
+| [UAT Test Series](docs/UAT-SERIES.md) | Full user acceptance testing guide — CLI, lab, dashboard |
 
 ## What QU.I.R.K. Scans
 
