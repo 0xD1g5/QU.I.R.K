@@ -19,9 +19,9 @@ from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.cbom import build_cbom, write_cbom_files
 
 
-PLATFORM_VERSION = "3.9"
+PLATFORM_VERSION = "4.0"
 SCHEMA_VERSION = 2
-INTELLIGENCE_VERSION = "3.9.0"
+INTELLIGENCE_VERSION = "4.0.0"
 
 
 def _utc_stamp() -> str:
