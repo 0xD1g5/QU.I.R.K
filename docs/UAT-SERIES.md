@@ -1,8 +1,9 @@
-# QU.I.R.K. — UAT Test Series
+# QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.0.0
-**Last Updated:** 2026-03-31
+**Last Updated:** 2026-04-02
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
+**Gate Status:** This document is the **release gate** for QU.I.R.K. v4.0. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
 ---
 
@@ -383,6 +384,44 @@ Pass Criteria: Specific measurable condition(s)
 - Second scan completes faster than first
 - `run-stats-*.json` for second run shows lower discovery time
 - Results are equivalent between runs
+
+---
+
+### UAT-3-09: Quiet Mode — Banner Suppression
+
+**Prerequisites:** Lab running with core services.
+
+**Steps:**
+1. Run: `quirk --quiet --config config.yaml`
+2. Observe terminal output during scan
+3. Wait for scan to complete
+
+**Expected:** Startup banner is suppressed, but the rich scan summary table still appears at completion.
+
+**Pass Criteria:**
+- No `QU.I.R.K.` ASCII art or banner text visible at startup
+- Scan summary table (protocol counts, timing) is still printed
+- Scan completes normally with exit code 0
+- Output files generated as usual
+
+---
+
+### UAT-3-10: Rate Limiting
+
+**Prerequisites:** Lab running with core services. Config file targeting at least 5 ports.
+
+**Steps:**
+1. Run unlimited: `quirk --config config.yaml` and record `run-stats-*.json` total time
+2. Run rate-limited: `quirk --config config.yaml --rate-limit 2` and record total time
+3. Compare fingerprinting phase duration between runs
+
+**Expected:** Rate-limited scan is noticeably slower due to throttled target/second rate.
+
+**Pass Criteria:**
+- Both scans complete without error
+- Rate-limited `run-stats-*.json` shows `rate_limit: 2.0`
+- Fingerprinting phase in rate-limited run takes longer than unlimited
+- Same number of findings produced by both runs
 
 ---
 
@@ -847,6 +886,91 @@ All of these services show status `Up` or `running`:
 - `RSA_2048` key classified as quantum-vulnerable
 - `ECC_NIST_P256` key classified as quantum-vulnerable
 - `SYMMETRIC_DEFAULT` (AES-256) key classified
+
+---
+
+### UAT-5-17: LDAPS Profile Scan via CLI (Port 636)
+
+**Prerequisites:** `sslyze` installed.
+
+**Steps:**
+1. Start LDAPS: `cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile ldaps" ./lab.sh up && sleep 10`
+2. Verify service: `openssl s_client -connect 127.0.0.1:636 2>&1 | grep "Protocol"`
+3. Create `lab-ldaps.yaml` with TLS ports including 636:
+   ```yaml
+   assessment:
+     name: "LDAPS Test"
+     data_classification: "internal"
+     report_owner: "Lab"
+     timezone: "UTC"
+   targets:
+     ips: ["127.0.0.1"]
+   scan:
+     ports_tls: [636]
+     timeout: 10
+     max_workers: 5
+   output:
+     directory: "./output-ldaps"
+     db_path: "./output-ldaps/quirk.db"
+   ```
+4. Run: `quirk --config lab-ldaps.yaml`
+5. Review findings in `output-ldaps/`
+
+**Expected:** sslyze scans LDAPS on port 636 and returns TLS certificate findings.
+
+**Pass Criteria:**
+- TLS handshake succeeds on port 636
+- Certificate findings include self-signed lab cert detection
+- Protocol support (TLS 1.2/1.3) documented in findings
+- CBOM includes algorithms from the LDAPS TLS negotiation
+- No scan errors for port 636
+
+---
+
+### UAT-5-18: Storage Profile — Vault Transit Keys
+
+**Prerequisites:** Storage profile running (`docker compose --profile storage up -d`), Vault healthy on port 20009.
+
+**Steps:**
+1. Verify Vault is running: `curl -s http://localhost:20009/v1/sys/health | python3 -m json.tool`
+2. Verify seeded keys exist:
+   ```bash
+   curl -s -H "X-Vault-Token: root" http://localhost:20009/v1/transit/keys/rsa-2048 | python3 -m json.tool | head -10
+   curl -s -H "X-Vault-Token: root" http://localhost:20009/v1/transit/keys/rsa-1024 | python3 -m json.tool | head -10
+   curl -s -H "X-Vault-Token: root" http://localhost:20009/v1/transit/keys/aes256 | python3 -m json.tool | head -10
+   ```
+3. Run QUIRK scan with storage config (same as UAT-5-16 but include Vault endpoint)
+4. Review findings and CBOM output
+
+**Expected:** Vault transit keys are enumerated with their cryptographic properties.
+
+**Pass Criteria:**
+- `rsa-2048` key detected and classified as quantum-vulnerable
+- `rsa-1024` key detected and flagged as both weak key size AND quantum-vulnerable
+- `aes256` key detected and classified (quantum-vulnerable via Grover)
+- All three keys appear as components in the CBOM output
+
+---
+
+### UAT-5-19: Storage Profile — PostgreSQL pgcrypto Reachability
+
+**Prerequisites:** Storage profile running (`docker compose --profile storage up -d`).
+
+**Steps:**
+1. Verify PostgreSQL is running: `pg_isready -h 127.0.0.1 -p 20010 -U pglab` (or `docker compose exec postgres-pgcrypto pg_isready`)
+2. Verify pgcrypto data exists:
+   ```bash
+   docker compose exec postgres-pgcrypto psql -U pglab -d pgcrypto_lab -c "SELECT count(*) FROM encrypted_demo;"
+   ```
+3. Confirm the `encrypted_demo` table uses `pgp_sym_encrypt` with a weak passphrase
+
+**Expected:** PostgreSQL pgcrypto service is reachable and contains seeded encrypted data.
+
+**Pass Criteria:**
+- Port 20010 responds to PostgreSQL connections
+- `encrypted_demo` table exists with encrypted rows
+- `pgp_sym_encrypt` function was used (visible in table schema or seed script)
+- Service is a valid scan target for future database-level crypto detection (BACK-12)
 
 ---
 
@@ -1435,6 +1559,237 @@ Each finding object contains:
 
 ---
 
+### UAT-7-22: Dark/Light Theme Toggle
+
+**Steps:**
+1. Open dashboard at `http://127.0.0.1:8512`
+2. Locate the dark/light mode toggle button at the bottom of the sidebar
+3. Click the toggle to switch from dark to light mode
+4. Observe all page elements (cards, charts, tables, sidebar) change to light theme
+5. Refresh the page (F5 / Cmd+R)
+6. Check that light mode persists after refresh
+7. Open DevTools → Application → Local Storage → check `quirk-ui-theme` key
+8. Click toggle again to return to dark mode
+
+**Expected:** Theme toggles instantly between dark and light; preference persists across page reload.
+
+**Pass Criteria:**
+- Clicking toggle switches theme instantly (no flash of wrong theme)
+- All page elements update: sidebar, cards, charts, tables, badges
+- `localStorage` key `quirk-ui-theme` stores `"light"` or `"dark"`
+- Theme persists after full page reload
+- Both themes are visually coherent (no invisible text, unreadable badges, or broken contrast)
+
+---
+
+### UAT-7-23: Sidebar Responsive Collapse
+
+**Steps:**
+1. Open dashboard at full desktop width (≥ 1024px)
+2. Confirm sidebar shows full 240px width with text labels and QU.I.R.K. wordmark
+3. Slowly resize browser window to below 1024px width
+4. Observe sidebar collapse to 48px icon-only mode
+5. Verify QU.I.R.K. wordmark changes to "Q" monogram
+6. Click each navigation icon — verify navigation still works
+7. Hover over a nav icon — verify tooltip shows page name
+8. Resize back above 1024px — verify sidebar expands to full width with labels
+
+**Expected:** Sidebar responsively collapses and expands at the 1024px breakpoint.
+
+**Pass Criteria:**
+- Above 1024px: sidebar shows 240px with full text labels
+- Below 1024px: sidebar collapses to 48px icon-only
+- Wordmark transitions to monogram on collapse
+- All navigation icons remain clickable and route correctly
+- Tooltips appear on hover in collapsed state
+- Transition is smooth (no layout jumps or flicker)
+
+---
+
+### UAT-7-24: Findings Page — Pagination
+
+**Prerequisites:** Scan producing more than 25 findings (full lab scan should produce 30+).
+
+**Steps:**
+1. Navigate to Findings page
+2. Count visible rows in the table
+3. Look for pagination controls at the bottom of the table
+4. Click "Next page" or page 2
+5. Observe new rows load
+6. Click "Previous page" or page 1
+7. Verify original rows return
+
+**Expected:** Table paginates at 25 rows per page with working navigation controls.
+
+**Pass Criteria:**
+- First page shows exactly 25 rows (or fewer if total < 25)
+- Pagination controls visible (page numbers, next/prev buttons)
+- Navigating to page 2 shows remaining findings
+- Row count indicator shows "Showing X–Y of Z findings"
+- Applying a filter respects pagination (re-paginates filtered results)
+
+---
+
+### UAT-7-25: CBOM Page — Algorithm Search
+
+**Steps:**
+1. Navigate to CBOM page → Table tab
+2. Note total row count
+3. Type `AES` in the algorithm search box
+4. Observe table filtering in real-time
+5. Clear the search box
+6. Verify all rows return
+
+**Expected:** Search filters the CBOM algorithm table by algorithm name.
+
+**Pass Criteria:**
+- Typing filters rows to only those containing the search term
+- Filter is case-insensitive (`aes` matches `AES-256-GCM`)
+- Clearing search restores full table
+- No results shows empty state (not a crash)
+
+---
+
+### UAT-7-26: CBOM Page — Quantum Safety Filter
+
+**Steps:**
+1. Navigate to CBOM page → Table tab
+2. Locate the Quantum Safety dropdown/filter
+3. Select "Vulnerable"
+4. Observe table shows only quantum-vulnerable algorithms
+5. Select "Safe" (if any safe algorithms exist)
+6. Clear filter to show all
+
+**Expected:** Dropdown filters CBOM table by quantum-safety classification.
+
+**Pass Criteria:**
+- Selecting "Vulnerable" shows only red-badged algorithms (RSA, ECDSA, etc.)
+- Selecting "Safe" shows only green-badged algorithms (if any)
+- Clearing filter restores all rows
+- Filter and search combine correctly (both applied simultaneously)
+
+---
+
+### UAT-7-27: CBOM Graph — Node Interaction
+
+**Steps:**
+1. Navigate to CBOM page → Graph tab
+2. Wait for Cytoscape.js graph to render
+3. Click an algorithm node (e.g., `AES-256-GCM`)
+4. Observe detail panel on right side
+5. Click a source system node (e.g., `127.0.0.1:443`)
+6. Observe detail panel update
+
+**Expected:** Clicking nodes shows contextual information in a detail panel.
+
+**Pass Criteria:**
+- Algorithm node click shows: algorithm name, quantum-safety classification, connected source systems
+- Source system node click shows: host:port or file path, connected algorithms
+- Panel updates when clicking different nodes
+- Node colors match quantum-safety: green (Safe), amber (At Risk), red (Vulnerable)
+
+---
+
+### UAT-7-28: CBOM Graph — Zoom Controls
+
+**Steps:**
+1. On CBOM Graph tab, locate zoom controls (In/Out/Fit buttons)
+2. Click "Zoom In" — verify graph zooms in
+3. Click "Zoom Out" — verify graph zooms out
+4. Pan the graph by click-dragging the background
+5. Click "Fit to Viewport" — verify graph auto-scales to show all nodes
+6. Use mouse scroll wheel — verify zoom works
+
+**Expected:** All zoom and pan controls function correctly.
+
+**Pass Criteria:**
+- Zoom in/out buttons change zoom level visibly
+- "Fit to Viewport" shows all nodes within visible area
+- Mouse scroll wheel zooms
+- Click-drag on background pans the view
+- No nodes disappear off-screen permanently
+
+---
+
+### UAT-7-29: Roadmap — Node Drag
+
+**Steps:**
+1. Navigate to Roadmap page
+2. Click and drag a node to a new position
+3. Observe edges (arrows) follow the node
+4. Release the node
+5. Verify edges remain connected
+
+**Expected:** DAG nodes are draggable for manual repositioning; edges follow.
+
+**Pass Criteria:**
+- Node moves smoothly during drag
+- All connected edges update position in real-time
+- Node stays in new position after release
+- Other nodes not affected by the drag
+- Layout does not reset on node release
+
+---
+
+### UAT-7-30: Print View
+
+**Steps:**
+1. Navigate directly to `http://127.0.0.1:8512/print`
+2. Observe the page layout
+
+**Expected:** Print-optimized single-column layout with no interactive elements.
+
+**Pass Criteria:**
+- No sidebar visible
+- No interactive controls (no filters, no toggle buttons)
+- Full-width single-column layout
+- CSS page breaks between major sections
+- Content includes: score summary, findings, certificates, CBOM reference
+- Background colors and borders render (print background styling enabled)
+
+---
+
+### UAT-7-31: Dashboard Page Title and Branding
+
+**Steps:**
+1. Open dashboard at `http://127.0.0.1:8512`
+2. Check browser tab title
+3. Check sidebar header for QU.I.R.K. wordmark
+4. Check favicon in browser tab
+
+**Expected:** Professional branding visible throughout.
+
+**Pass Criteria:**
+- Browser tab title shows `QU.I.R.K. — Quantum Readiness Dashboard` or similar branded title
+- Sidebar displays bold monospace electric-blue QU.I.R.K. wordmark
+- Favicon shows electric-blue "Q" (not browser default icon)
+- No JS console errors on page load
+
+---
+
+### UAT-7-32: No JavaScript Console Errors — All Pages
+
+**Steps:**
+1. Open browser DevTools (F12) → Console tab
+2. Clear console
+3. Navigate to Executive page (`/`) — check for errors
+4. Navigate to Findings page (`/findings`) — check for errors
+5. Navigate to Certificates page (`/certificates`) — check for errors
+6. Navigate to CBOM page (`/cbom`) — switch between Table and Graph tabs — check for errors
+7. Navigate to Roadmap page (`/roadmap`) — check for errors
+8. Navigate to Print view (`/print`) — check for errors
+
+**Expected:** Zero JavaScript errors across all pages.
+
+**Pass Criteria:**
+- No red `Error` entries in console on any page
+- No unhandled promise rejections
+- No `TypeError` or `ReferenceError` entries
+- Warnings are acceptable (yellow) but errors (red) are not
+- API requests all return 200 (check Network tab)
+
+---
+
 ---
 
 # Series 8: Scoring & Intelligence
@@ -1644,6 +1999,89 @@ Each finding object contains:
 - File opens in browser without JavaScript errors
 - Contains score, findings table, and certificate inventory
 - Fully self-contained (no external CDN dependencies)
+
+---
+
+### UAT-9-06: HTML Report — Visual Quality
+
+**Prerequisites:** Completed scan with multiple finding types.
+
+**Steps:**
+1. Open `output/report-*.html` in Chrome or Firefox
+2. Check dark-mode background renders
+3. Verify score card section at the top
+4. Scroll to Executive Summary section
+5. Scroll to Technical Appendix / Findings section
+6. Check for broken CSS (unstyled elements, missing fonts, layout breaks)
+7. Resize browser to mobile width and check responsiveness
+
+**Expected:** Professional, dark-themed HTML report with clean layout and all sections populated.
+
+**Pass Criteria:**
+- Dark-mode background (Zinc palette) renders correctly
+- Score card with numeric score and label visible at top
+- Executive Summary section with key metrics
+- Technical Appendix with per-endpoint findings
+- No broken images, missing fonts, or unstyled raw HTML elements
+- No horizontal scroll overflow
+- Print to PDF from browser produces clean output
+
+---
+
+### UAT-9-07: CBOM JSON — Cross-Scanner Algorithm Coverage
+
+**Prerequisites:** Completed scan that exercised TLS, SSH, and JWT scanners (core + jwt + ssh-weak profiles).
+
+**Steps:**
+1. Open `output/cbom-*.json`
+2. Parse and extract all component algorithm names:
+   ```bash
+   python3 -c "
+   import json
+   cbom = json.load(open('output/cbom-TIMESTAMP.json'))
+   components = cbom.get('components', [])
+   for c in components:
+       print(c.get('name', 'unnamed'), '-', c.get('type', 'unknown'))
+   "
+   ```
+3. Verify algorithms from each scanner type are present
+
+**Expected:** CBOM contains algorithms discovered by all active scanners.
+
+**Pass Criteria:**
+- TLS algorithms present (e.g., AES-256-GCM, ECDHE, RSA from cipher suites)
+- SSH algorithms present (e.g., diffie-hellman-group14-sha256, ssh-ed25519, hmac-sha2-256)
+- JWT algorithms present (e.g., RS256, HS256) when JWT scanner was active
+- Each component has `quantum-safety` classification
+- Total component count ≥ 10 for a full lab scan
+- No duplicate components (same algorithm not listed twice)
+
+---
+
+### UAT-9-08: CBOM XML — Schema Validation
+
+**Prerequisites:** Completed scan producing CBOM XML output.
+
+**Steps:**
+1. Locate CBOM XML: `ls output/cbom-*.xml`
+2. Validate XML is well-formed:
+   ```bash
+   python3 -c "import xml.etree.ElementTree as ET; ET.parse('output/cbom-TIMESTAMP.xml'); print('XML well-formed')"
+   ```
+3. Validate against CycloneDX schema (if `xmllint` available):
+   ```bash
+   xmllint --noout output/cbom-TIMESTAMP.xml && echo "Valid XML"
+   ```
+4. Check root element is a CycloneDX BOM
+
+**Expected:** CBOM XML is well-formed and follows CycloneDX structure.
+
+**Pass Criteria:**
+- XML parses without errors
+- Root element is `<bom>` with CycloneDX namespace
+- `<components>` section contains algorithm entries
+- Each component has `<name>`, `<type>` attributes
+- File size > 1KB (not empty or stub)
 
 ---
 
@@ -1922,6 +2360,80 @@ Each finding object contains:
 - Port 9443 shows as CLOSED or absent in second scan
 - Score may improve slightly (one less critical finding)
 - Run stats show fewer scanned endpoints
+
+---
+
+---
+
+# Series 12: Release Gate — Sign-Off Checklist
+
+This checklist is the formal gating mechanism for QU.I.R.K. v4.0. **All categories must meet their minimum pass threshold** before any backlog or roadmap items may proceed. A category is blocked if any CRITICAL test within it fails.
+
+## Gate Rules
+
+1. **100% pass required** for Series 1 (Installation), Series 11 (E2E), and all tests marked CRITICAL
+2. **90% pass required** for Series 3–6 (CLI, Lab, Findings) and Series 8–9 (Scoring, Reports)
+3. **85% pass required** for Series 7 (Dashboard UI) and Series 10 (Edge Cases)
+4. **SKIP** is acceptable only with documented justification (e.g., `nmap` not installed → UAT-3-07 may SKIP)
+5. **FAIL** on any CRITICAL test blocks the gate regardless of overall pass rate
+
+## Sign-Off Table
+
+| Series | Category | Total Tests | Pass | Fail | Skip | Pass Rate | Gate Met? | Tester |
+|--------|----------|-------------|------|------|------|-----------|-----------|--------|
+| 1 | Installation & Setup | 6 | | | | | ☐ | |
+| 2 | CLI — Interactive Mode | 4 | | | | | ☐ | |
+| 3 | CLI — Config-File Mode | 10 | | | | | ☐ | |
+| 4 | Lab — Core Services | 11 | | | | | ☐ | |
+| 5 | Lab — Extended Profiles | 19 | | | | | ☐ | |
+| 6 | Cryptographic Findings | 13 | | | | | ☐ | |
+| 7 | Web Dashboard UI | 32 | | | | | ☐ | |
+| 8 | Scoring & Intelligence | 6 | | | | | ☐ | |
+| 9 | Report Generation | 8 | | | | | ☐ | |
+| 10 | Edge Cases & Errors | 10 | | | | | ☐ | |
+| 11 | End-to-End Workflow | 4 | | | | | ☐ | |
+| **TOTAL** | | **123** | | | | | | |
+
+## Critical Tests (Must Pass — No Exceptions)
+
+These tests validate core functionality. Any failure here blocks the release gate.
+
+| ID | Test Name | Series | Rationale |
+|----|-----------|--------|-----------|
+| UAT-1-01 | Package Installation | 1 | Cannot proceed if install fails |
+| UAT-1-02 | Version Flag | 1 | Basic CLI health |
+| UAT-1-05 | Dashboard Server Startup | 1 | Dashboard must start |
+| UAT-3-01 | Scan with Config File | 3 | Core scanning workflow |
+| UAT-4-01 | Lab Health Check — All Core Services | 4 | Lab must be operational |
+| UAT-4-11 | Full Core Lab Scan | 4 | End-to-end core scan |
+| UAT-5-10 | Full JWT Lab Scan | 5 | JWT scanner validation |
+| UAT-5-12 | Weak SSH Scan | 5 | SSH scanner validation |
+| UAT-6-01 | Findings Output — JSON Structure | 6 | Output format correctness |
+| UAT-6-11 | CBOM JSON Structure | 6 | CBOM deliverable correctness |
+| UAT-7-01 | Dashboard Loads | 7 | Dashboard must render |
+| UAT-7-03 | Executive Page — Score Gauge | 7 | Core dashboard feature |
+| UAT-7-06 | Findings Page — Table Renders | 7 | Core dashboard feature |
+| UAT-7-17 | PDF Export — Generate Report | 7 | Consulting deliverable |
+| UAT-9-01 | All Output Files Generated | 9 | Complete output artifact set |
+| UAT-11-01 | Complete Workflow — Lab to Dashboard | 11 | Full E2E validation |
+| UAT-11-03 | CLI to Dashboard Handoff | 11 | Score consistency |
+
+## Final Approval
+
+| Role | Name | Date | Signature |
+|------|------|------|-----------|
+| Tester | | | |
+| Reviewer | | | |
+| Approver | | | |
+
+**Gate Decision:** ☐ PASS — All categories meet thresholds, all critical tests pass
+**Gate Decision:** ☐ FAIL — Blocked items listed below with remediation plan
+
+**Blocking Issues (if FAIL):**
+
+| ID | Test | Issue Description | Remediation | Owner | Target Date |
+|----|------|-------------------|-------------|-------|-------------|
+| | | | | | |
 
 ---
 
