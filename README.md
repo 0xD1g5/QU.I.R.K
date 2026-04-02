@@ -7,8 +7,8 @@ QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endp
 ## Quick Start
 
 ```bash
-git clone <repo-url>
-cd quirk
+git clone https://github.com/0xD1g5/QU.I.R.K.
+cd QU.I.R.K.
 python -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
