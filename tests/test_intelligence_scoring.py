@@ -1,6 +1,6 @@
 import unittest
 
-from qcscan.intelligence.scoring import compute_readiness_score
+from quirk.intelligence.scoring import compute_readiness_score
 
 
 def _base_evidence() -> dict:

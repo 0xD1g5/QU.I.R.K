@@ -55,7 +55,7 @@ export interface RoadmapNode {
   title: string
   timeframe: string
   why?: string
-  phase?: string
+  phase: string
 }
 
 export interface RoadmapEdge {

@@ -1,7 +1,7 @@
 import unittest
 
-from qcscan.intelligence.confidence import compute_confidence
-from qcscan.intelligence.scoring import compute_readiness_score
+from quirk.intelligence.confidence import compute_confidence
+from quirk.intelligence.scoring import compute_readiness_score
 
 
 def _evidence() -> dict:

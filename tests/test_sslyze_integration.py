@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 import pytest
 
-from qcscan.models import CryptoEndpoint
+from quirk.models import CryptoEndpoint
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +192,7 @@ class TestSslyzeAvailableSuccess:
         import importlib
         # Inject mock sslyze before importing tls_scanner
         with patch.dict(sys.modules, {"sslyze": sslyze_mod}):
-            import qcscan.scanner.tls_scanner as tls_mod
+            import quirk.scanner.tls_scanner as tls_mod
             importlib.reload(tls_mod)
             # Force SSLYZE_AVAILABLE=True
             tls_mod.SSLYZE_AVAILABLE = True
@@ -218,7 +218,7 @@ class TestSslyzeAvailableSuccess:
 
         import importlib
         with patch.dict(sys.modules, {"sslyze": sslyze_mod}):
-            import qcscan.scanner.tls_scanner as tls_mod
+            import quirk.scanner.tls_scanner as tls_mod
             importlib.reload(tls_mod)
             tls_mod.SSLYZE_AVAILABLE = True
             ep = tls_mod._scan_one_sslyze("example.com", 443, 10, True, None)
@@ -239,7 +239,7 @@ class TestSslyzeNotInstalled:
         import importlib
         # Remove sslyze from sys.modules to simulate it not being installed
         with patch.dict(sys.modules, {"sslyze": None}):
-            import qcscan.scanner.tls_scanner as tls_mod
+            import quirk.scanner.tls_scanner as tls_mod
             importlib.reload(tls_mod)
 
         # After reload with sslyze=None, SSLYZE_AVAILABLE should be False
@@ -248,7 +248,7 @@ class TestSslyzeNotInstalled:
     def test_scan_one_calls_fallback_when_sslyze_unavailable(self):
         """scan_one routes to _scan_one_fallback when SSLYZE_AVAILABLE=False."""
         import importlib
-        import qcscan.scanner.tls_scanner as tls_mod
+        import quirk.scanner.tls_scanner as tls_mod
         importlib.reload(tls_mod)
         tls_mod.SSLYZE_AVAILABLE = False
 
@@ -281,7 +281,7 @@ class TestSslyzeErrorFallback:
 
         import importlib
         with patch.dict(sys.modules, {"sslyze": sslyze_mod}):
-            import qcscan.scanner.tls_scanner as tls_mod
+            import quirk.scanner.tls_scanner as tls_mod
             importlib.reload(tls_mod)
             tls_mod.SSLYZE_AVAILABLE = True
             ep = tls_mod._scan_one_sslyze("example.com", 443, 10, True, None)
@@ -291,7 +291,7 @@ class TestSslyzeErrorFallback:
     def test_scan_one_calls_fallback_after_sslyze_error(self):
         """scan_one uses fallback when _scan_one_sslyze returns None."""
         import importlib
-        import qcscan.scanner.tls_scanner as tls_mod
+        import quirk.scanner.tls_scanner as tls_mod
         importlib.reload(tls_mod)
         tls_mod.SSLYZE_AVAILABLE = True
 
@@ -362,7 +362,7 @@ class TestSslyzeMapsCertFields:
 
         import importlib
         with patch.dict(sys.modules, {"sslyze": sslyze_mod}):
-            import qcscan.scanner.tls_scanner as tls_mod
+            import quirk.scanner.tls_scanner as tls_mod
             importlib.reload(tls_mod)
             tls_mod.SSLYZE_AVAILABLE = True
             ep = tls_mod._scan_one_sslyze("test.example.com", 443, 10, True, None)
@@ -386,7 +386,7 @@ class TestSslyzeMapsCertFields:
 
         import importlib
         with patch.dict(sys.modules, {"sslyze": sslyze_mod}):
-            import qcscan.scanner.tls_scanner as tls_mod
+            import quirk.scanner.tls_scanner as tls_mod
             importlib.reload(tls_mod)
             tls_mod.SSLYZE_AVAILABLE = True
             ep = tls_mod._scan_one_sslyze("test.example.com", 443, 10, True, None)
@@ -446,7 +446,7 @@ class TestTlsCapabilitiesJsonStructure:
 
         import importlib
         with patch.dict(sys.modules, {"sslyze": sslyze_mod}):
-            import qcscan.scanner.tls_scanner as tls_mod
+            import quirk.scanner.tls_scanner as tls_mod
             importlib.reload(tls_mod)
             tls_mod.SSLYZE_AVAILABLE = True
             ep = tls_mod._scan_one_sslyze("example.com", 443, 10, True, None)
@@ -474,21 +474,21 @@ class TestFallbackFunctionExists:
 
     def test_fallback_function_exists(self):
         import importlib
-        import qcscan.scanner.tls_scanner as tls_mod
+        import quirk.scanner.tls_scanner as tls_mod
         importlib.reload(tls_mod)
         assert hasattr(tls_mod, "_scan_one_fallback"), "_scan_one_fallback must be defined"
         assert callable(tls_mod._scan_one_fallback)
 
     def test_sslyze_function_exists(self):
         import importlib
-        import qcscan.scanner.tls_scanner as tls_mod
+        import quirk.scanner.tls_scanner as tls_mod
         importlib.reload(tls_mod)
         assert hasattr(tls_mod, "_scan_one_sslyze"), "_scan_one_sslyze must be defined"
         assert callable(tls_mod._scan_one_sslyze)
 
     def test_sslyze_available_flag_exists(self):
         import importlib
-        import qcscan.scanner.tls_scanner as tls_mod
+        import quirk.scanner.tls_scanner as tls_mod
         importlib.reload(tls_mod)
         assert hasattr(tls_mod, "SSLYZE_AVAILABLE"), "SSLYZE_AVAILABLE must be defined"
         assert isinstance(tls_mod.SSLYZE_AVAILABLE, bool)

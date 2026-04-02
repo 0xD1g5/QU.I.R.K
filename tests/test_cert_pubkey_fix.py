@@ -1,5 +1,5 @@
 """
-Tests for the cert_pubkey_alg fix in qcscan.reports.writer._extract_cert_key_type.
+Tests for the cert_pubkey_alg fix in quirk.reports.writer._extract_cert_key_type.
 
 These tests verify that _extract_cert_key_type checks cert_pubkey_alg
 (the canonical CryptoEndpoint field) FIRST, before any fallback attributes.
@@ -9,7 +9,7 @@ RED phase: tests fail until writer.py is fixed.
 import types
 import unittest
 
-from qcscan.reports.writer import _extract_cert_key_type
+from quirk.reports.writer import _extract_cert_key_type
 
 
 class CertPubkeyAlgExtractionTests(unittest.TestCase):

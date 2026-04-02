@@ -10,8 +10,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from qcscan.models import CryptoEndpoint
-from qcscan.scanner.ssh_scanner import scan_ssh_one, scan_ssh_targets
+from quirk.models import CryptoEndpoint
+from quirk.scanner.ssh_scanner import scan_ssh_one, scan_ssh_targets
 
 
 # ---------------------------------------------------------------------------
@@ -59,8 +59,8 @@ def _make_cfg(concurrency=4, timeout=5):
 class TestScanSshOneWithSshAudit(unittest.TestCase):
     """ssh-audit is available and returns valid JSON."""
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run")
     def test_ssh_audit_json_populated(self, mock_run, mock_which):
         """CryptoEndpoint.ssh_audit_json is set to the JSON string from ssh-audit."""
         mock_run.return_value = MagicMock(
@@ -74,8 +74,8 @@ class TestScanSshOneWithSshAudit(unittest.TestCase):
         parsed = json.loads(ep.ssh_audit_json)
         self.assertEqual(parsed["banner"]["raw"], "SSH-2.0-OpenSSH_8.9p1")
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run")
     def test_tls_version_not_set(self, mock_run, mock_which):
         """tls_version must NOT be set for SSH endpoints (D-06)."""
         mock_run.return_value = MagicMock(
@@ -87,8 +87,8 @@ class TestScanSshOneWithSshAudit(unittest.TestCase):
 
         self.assertIsNone(ep.tls_version, "tls_version must not be used for SSH data (D-06)")
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run")
     def test_cipher_suite_ssh_marker(self, mock_run, mock_which):
         """cipher_suite is set to 'SSH' as per D-06 marker."""
         mock_run.return_value = MagicMock(
@@ -100,8 +100,8 @@ class TestScanSshOneWithSshAudit(unittest.TestCase):
 
         self.assertEqual(ep.cipher_suite, "SSH", "cipher_suite must be 'SSH' marker for SSH endpoints")
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run")
     def test_banner_stored_in_service_detail(self, mock_run, mock_which):
         """Banner from ssh-audit JSON is stored in service_detail, not tls_version."""
         mock_run.return_value = MagicMock(
@@ -113,8 +113,8 @@ class TestScanSshOneWithSshAudit(unittest.TestCase):
 
         self.assertIn("SSH-2.0-OpenSSH_8.9p1", ep.service_detail or "")
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run")
     def test_protocol_is_ssh(self, mock_run, mock_which):
         """protocol field is set to 'SSH'."""
         mock_run.return_value = MagicMock(
@@ -130,8 +130,8 @@ class TestScanSshOneWithSshAudit(unittest.TestCase):
 class TestScanSshOneWithoutSshAudit(unittest.TestCase):
     """ssh-audit is NOT available — fallback to socket banner grab."""
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value=None)
-    @patch("qcscan.scanner.ssh_scanner.socket.create_connection")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value=None)
+    @patch("quirk.scanner.ssh_scanner.socket.create_connection")
     def test_banner_fallback_works(self, mock_conn, mock_which):
         """When ssh-audit is absent, banner is captured via socket."""
         mock_sock = MagicMock()
@@ -146,8 +146,8 @@ class TestScanSshOneWithoutSshAudit(unittest.TestCase):
         # Banner should be stored somewhere (service_detail)
         self.assertIsNotNone(ep.service_detail)
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value=None)
-    @patch("qcscan.scanner.ssh_scanner.socket.create_connection")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value=None)
+    @patch("quirk.scanner.ssh_scanner.socket.create_connection")
     def test_tls_version_not_set_in_fallback(self, mock_conn, mock_which):
         """tls_version is NOT set even in fallback mode (D-06)."""
         mock_sock = MagicMock()
@@ -164,9 +164,9 @@ class TestScanSshOneWithoutSshAudit(unittest.TestCase):
 class TestScanSshOneSshAuditTimeout(unittest.TestCase):
     """ssh-audit subprocess raises TimeoutExpired — fallback to banner."""
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="ssh-audit", timeout=10))
-    @patch("qcscan.scanner.ssh_scanner.socket.create_connection")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="ssh-audit", timeout=10))
+    @patch("quirk.scanner.ssh_scanner.socket.create_connection")
     def test_no_crash_on_timeout(self, mock_conn, mock_run, mock_which):
         """TimeoutExpired from ssh-audit does not crash; fallback runs cleanly."""
         mock_sock = MagicMock()
@@ -181,9 +181,9 @@ class TestScanSshOneSshAuditTimeout(unittest.TestCase):
         self.assertIsInstance(ep, CryptoEndpoint)
         self.assertIsNone(ep.ssh_audit_json)
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="ssh-audit", timeout=10))
-    @patch("qcscan.scanner.ssh_scanner.socket.create_connection")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="ssh-audit", timeout=10))
+    @patch("quirk.scanner.ssh_scanner.socket.create_connection")
     def test_tls_version_not_set_on_timeout(self, mock_conn, mock_run, mock_which):
         """tls_version is NOT set even after ssh-audit timeout + banner fallback."""
         mock_sock = MagicMock()
@@ -200,8 +200,8 @@ class TestScanSshOneSshAuditTimeout(unittest.TestCase):
 class TestScanSshOneDoesNotSetTlsVersion(unittest.TestCase):
     """Comprehensive check: tls_version is never set by scan_ssh_one."""
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
-    @patch("qcscan.scanner.ssh_scanner.subprocess.run")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value="/usr/local/bin/ssh-audit")
+    @patch("quirk.scanner.ssh_scanner.subprocess.run")
     def test_tls_version_never_set(self, mock_run, mock_which):
         mock_run.return_value = MagicMock(stdout=json.dumps(SSH_AUDIT_JSON), returncode=0)
 
@@ -209,8 +209,8 @@ class TestScanSshOneDoesNotSetTlsVersion(unittest.TestCase):
 
         self.assertIsNone(ep.tls_version)
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value=None)
-    @patch("qcscan.scanner.ssh_scanner.socket.create_connection")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value=None)
+    @patch("quirk.scanner.ssh_scanner.socket.create_connection")
     def test_tls_version_never_set_fallback(self, mock_conn, mock_which):
         mock_sock = MagicMock()
         mock_sock.__enter__ = MagicMock(return_value=mock_sock)
@@ -226,8 +226,8 @@ class TestScanSshOneDoesNotSetTlsVersion(unittest.TestCase):
 class TestScanSshOneCipherSuiteSsh(unittest.TestCase):
     """cipher_suite is always 'SSH' for SSH endpoints (D-06)."""
 
-    @patch("qcscan.scanner.ssh_scanner.shutil.which", return_value=None)
-    @patch("qcscan.scanner.ssh_scanner.socket.create_connection")
+    @patch("quirk.scanner.ssh_scanner.shutil.which", return_value=None)
+    @patch("quirk.scanner.ssh_scanner.socket.create_connection")
     def test_cipher_suite_ssh_in_fallback(self, mock_conn, mock_which):
         mock_sock = MagicMock()
         mock_sock.__enter__ = MagicMock(return_value=mock_sock)
@@ -253,7 +253,7 @@ class TestScanSshTargetsUsesThreadPool(unittest.TestCase):
         targets = [("10.0.0." + str(i), 22) for i in range(1, 6)]
         cfg = _make_cfg(concurrency=4, timeout=5)
 
-        with patch("qcscan.scanner.ssh_scanner.scan_ssh_one") as mock_one:
+        with patch("quirk.scanner.ssh_scanner.scan_ssh_one") as mock_one:
             mock_one.side_effect = lambda host, port, timeout, logger=None: CryptoEndpoint(
                 host=host, port=port, protocol="SSH", cipher_suite="SSH"
             )
@@ -267,7 +267,7 @@ class TestScanSshTargetsUsesThreadPool(unittest.TestCase):
         targets = [("10.0.0.1", 22), ("10.0.0.2", 22)]
         cfg = _make_cfg()
 
-        with patch("qcscan.scanner.ssh_scanner.scan_ssh_one") as mock_one:
+        with patch("quirk.scanner.ssh_scanner.scan_ssh_one") as mock_one:
             mock_one.side_effect = lambda host, port, timeout, logger=None: CryptoEndpoint(
                 host=host, port=port, protocol="SSH", cipher_suite="SSH"
             )
@@ -283,7 +283,7 @@ class TestScanSshTargetsUsesThreadPool(unittest.TestCase):
         cfg = _make_cfg()
         progress_calls = []
 
-        with patch("qcscan.scanner.ssh_scanner.scan_ssh_one") as mock_one:
+        with patch("quirk.scanner.ssh_scanner.scan_ssh_one") as mock_one:
             mock_one.side_effect = lambda host, port, timeout, logger=None: CryptoEndpoint(
                 host=host, port=port, protocol="SSH", cipher_suite="SSH"
             )
@@ -303,7 +303,7 @@ class TestScanSshTargetsUsesThreadPool(unittest.TestCase):
         targets = [("10.0.0.1", 22), ("10.0.0.2", 22)]
         cfg = _make_cfg(concurrency=2)
 
-        with patch("qcscan.scanner.ssh_scanner.ThreadPoolExecutor") as mock_executor_cls:
+        with patch("quirk.scanner.ssh_scanner.ThreadPoolExecutor") as mock_executor_cls:
             # Set up the mock context manager
             mock_executor = MagicMock()
             mock_executor.__enter__ = MagicMock(return_value=mock_executor)
@@ -317,7 +317,7 @@ class TestScanSshTargetsUsesThreadPool(unittest.TestCase):
 
             mock_executor.submit.side_effect = [mock_future1, mock_future2]
 
-            with patch("qcscan.scanner.ssh_scanner.as_completed", return_value=[mock_future1, mock_future2]):
+            with patch("quirk.scanner.ssh_scanner.as_completed", return_value=[mock_future1, mock_future2]):
                 scan_ssh_targets(cfg, targets)
 
             mock_executor_cls.assert_called_once_with(max_workers=2)

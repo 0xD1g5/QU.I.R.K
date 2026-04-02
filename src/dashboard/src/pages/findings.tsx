@@ -72,6 +72,7 @@ export function FindingsPage() {
     { accessorKey: "source", header: "Source" },
   ]
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table returns non-memoizable functions; known React Compiler limitation
   const table = useReactTable({
     data: findings,
     columns,

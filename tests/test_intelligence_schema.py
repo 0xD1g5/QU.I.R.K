@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from qcscan.intelligence.schema import (
+from quirk.intelligence.schema import (
     SCHEMA_VERSION,
     ConfidenceResult,
     IntelligenceReport,
