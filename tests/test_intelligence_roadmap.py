@@ -1,6 +1,6 @@
 import unittest
 
-from qcscan.intelligence.roadmap import build_phased_roadmap
+from quirk.intelligence.roadmap import build_phased_roadmap
 
 
 def _evidence() -> dict:

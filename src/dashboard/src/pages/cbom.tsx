@@ -12,7 +12,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react"
+import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
 // Register Cytoscape layout extension once
 try {
@@ -128,14 +128,36 @@ function CbomTable({ components }: { components: CbomComponent[] }) {
 
 // ── Graph Tab ──────────────────────────────────────────────────────────────
 
+type NodeDetail =
+  | { nodeType: "algorithm"; id: string; label: string; qs: string; keySize: number | null; type: string; systems: string[] }
+  | { nodeType: "system"; id: string; label: string; algorithms: string[] }
+
 function CbomGraph({ components }: { components: CbomComponent[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<cytoscape.Core | null>(null)
+  const [selected, setSelected] = useState<NodeDetail | null>(null)
+
+  // Build lookup maps for click handler
+  const algBySystem = useMemo(() => {
+    const m: Record<string, string[]> = {}
+    for (const comp of components) {
+      for (const sys of comp.source_systems) {
+        if (!m[sys]) m[sys] = []
+        m[sys].push(comp.algorithm)
+      }
+    }
+    return m
+  }, [components])
+
+  const compByAlg = useMemo(() => {
+    const m: Record<string, CbomComponent> = {}
+    for (const comp of components) m[comp.algorithm] = comp
+    return m
+  }, [components])
 
   useEffect(() => {
     if (!containerRef.current || !components.length) return
 
-    // Build bipartite graph: algorithm nodes + system nodes, edges = usage
     const elements: cytoscape.ElementDefinition[] = []
     const systemsSeen = new Set<string>()
 
@@ -158,7 +180,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
               id: `sys-${sys}`,
               label: sys,
               nodeType: "system",
-              color: "hsl(240 6% 25%)",
+              color: "hsl(220 13% 28%)",
             },
             group: "nodes",
           })
@@ -176,8 +198,8 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
     }
 
     const layout = components.length < 15
-      ? { name: "breadthfirst", roots: components.map((c) => `alg-${c.algorithm}`), directed: false }
-      : { name: "cose-bilkent", animate: false, randomize: true, nodeRepulsion: 8000 }
+      ? { name: "breadthfirst", roots: components.map((c) => `alg-${c.algorithm}`), directed: false, spacingFactor: 1.6 }
+      : { name: "cose-bilkent", animate: false, randomize: true, nodeRepulsion: 10000 }
 
     cyRef.current = cytoscape({
       container: containerRef.current,
@@ -188,16 +210,17 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
           style: {
             "background-color": "data(color)",
             "label": "data(label)",
-            "font-size": 11,
+            "font-size": 12,
             "font-family": "monospace",
             "color": "#fff",
             "text-valign": "center",
             "text-halign": "center",
-            "text-wrap": "ellipsis",
-            "text-max-width": "80px",
-            "width": 80,
-            "height": 80,
+            "text-wrap": "wrap",
+            "text-max-width": "90px",
+            "width": 90,
+            "height": 90,
             "shape": "ellipse",
+            "border-width": 0,
           },
         },
         {
@@ -205,24 +228,41 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
           style: {
             "background-color": "data(color)",
             "label": "data(label)",
-            "font-size": 10,
-            "color": "hsl(240 5% 65%)",
-            "text-valign": "bottom",
+            "font-size": 11,
+            "color": "hsl(220 13% 85%)",
+            "text-valign": "center",
             "text-halign": "center",
-            "text-wrap": "ellipsis",
-            "text-max-width": "90px",
-            "width": 60,
-            "height": 30,
+            "text-wrap": "wrap",
+            "text-max-width": "110px",
+            "width": 120,
+            "height": 36,
             "shape": "roundrectangle",
+            "border-width": 1,
+            "border-color": "hsl(220 13% 45%)",
+          },
+        },
+        {
+          selector: "node:selected",
+          style: {
+            "border-width": 3,
+            "border-color": "hsl(210 100% 60%)",
           },
         },
         {
           selector: "edge",
           style: {
             "width": 1.5,
-            "line-color": "hsl(240 6% 30%)",
-            "opacity": 0.7,
+            "line-color": "hsl(240 6% 38%)",
+            "opacity": 0.8,
             "curve-style": "bezier",
+          },
+        },
+        {
+          selector: "edge.highlighted",
+          style: {
+            "line-color": "hsl(210 100% 60%)",
+            "opacity": 1,
+            "width": 2.5,
           },
         },
       ],
@@ -232,11 +272,49 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
       boxSelectionEnabled: false,
     })
 
+    // Click handler — show detail panel
+    cyRef.current.on("tap", "node", (evt) => {
+      const node = evt.target
+      const d = node.data()
+
+      // Highlight connected edges
+      cyRef.current?.edges().removeClass("highlighted")
+      node.connectedEdges().addClass("highlighted")
+
+      if (d.nodeType === "algorithm") {
+        const comp = compByAlg[d.label]
+        setSelected({
+          nodeType: "algorithm",
+          id: d.id,
+          label: d.label,
+          qs: comp?.quantum_safety ?? d.qs ?? "Unknown",
+          keySize: comp?.key_size ?? null,
+          type: comp?.type ?? "—",
+          systems: comp?.source_systems ?? [],
+        })
+      } else {
+        setSelected({
+          nodeType: "system",
+          id: d.id,
+          label: d.label,
+          algorithms: algBySystem[d.label] ?? [],
+        })
+      }
+    })
+
+    // Click on background — deselect
+    cyRef.current.on("tap", (evt) => {
+      if (evt.target === cyRef.current) {
+        cyRef.current?.edges().removeClass("highlighted")
+        setSelected(null)
+      }
+    })
+
     return () => {
       cyRef.current?.destroy()
       cyRef.current = null
     }
-  }, [components])
+  }, [components, compByAlg, algBySystem])
 
   if (!components.length) {
     return (
@@ -248,7 +326,23 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
 
   return (
     <div className="relative">
-      {/* Zoom controls */}
+      {/* Legend — top-left overlay */}
+      <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 text-xs bg-background/90 border border-border rounded px-2 py-1.5 backdrop-blur-sm">
+        <span className="text-muted-foreground font-medium mb-0.5">Algorithm</span>
+        {Object.entries(QS_NODE_COLOR).map(([label, color]) => (
+          <span key={label} className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-full" style={{ background: color }} />
+            {label}
+          </span>
+        ))}
+        <span className="text-muted-foreground font-medium mt-1 mb-0.5">System</span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-2.5 rounded" style={{ background: "hsl(220 13% 45%)" }} />
+          Host:Port
+        </span>
+      </div>
+
+      {/* Zoom controls — top-right */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
         <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.2)} aria-label="Zoom in">
           <ZoomIn className="h-3 w-3" />
@@ -260,12 +354,60 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
           <Maximize2 className="h-3 w-3" />
         </Button>
       </div>
+
+      {/* Detail panel — bottom-right overlay, always inside graph bounds */}
+      {selected && (
+        <div
+          className="absolute bottom-8 right-3 z-20 w-60 rounded-lg border border-border bg-background/95 p-3 text-sm space-y-2 backdrop-blur-sm shadow-lg"
+          style={{ maxHeight: "60%", overflowY: "auto" }}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <span className="font-semibold font-mono text-xs break-all leading-snug">{selected.label}</span>
+            <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0 -mt-0.5" onClick={() => setSelected(null)} aria-label="Close">
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {selected.nodeType === "algorithm" && (
+            <>
+              <div className="flex items-center gap-2">
+                <Badge className={`${QS_BADGE[selected.qs] ?? ""} text-xs`}>{selected.qs}</Badge>
+                <span className="text-xs text-muted-foreground capitalize">{selected.type}</span>
+                {selected.keySize && <span className="text-xs text-muted-foreground">{selected.keySize}b</span>}
+              </div>
+              <div className="space-y-0.5">
+                <div className="text-xs text-muted-foreground">On {selected.systems.length} system{selected.systems.length !== 1 ? "s" : ""}</div>
+                {selected.systems.map((s) => (
+                  <div key={s} className="font-mono text-xs text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded">{s}</div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {selected.nodeType === "system" && (
+            <ul className="space-y-1">
+              {selected.algorithms.map((alg) => {
+                const comp = compByAlg[alg]
+                return (
+                  <li key={alg} className="flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: QS_NODE_COLOR[comp?.quantum_safety ?? "Unknown"] ?? QS_NODE_COLOR.Unknown }} />
+                    <span className="font-mono text-xs">{alg}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div
         ref={containerRef}
         role="img"
-        aria-label="CBOM algorithm-to-system bipartite graph. Algorithm nodes colored by quantum safety: green = safe, amber = at risk, red = vulnerable."
-        style={{ width: "100%", height: "calc(100vh - 260px)", minHeight: 400, background: "hsl(240 10% 4%)", borderRadius: 8 }}
+        aria-label="CBOM algorithm-to-system bipartite graph. Click a node to inspect."
+        className="rounded-lg border border-border bg-card"
+        style={{ width: "100%", height: "calc(100vh - 260px)", minHeight: 400 }}
       />
+      <p className="text-xs text-muted-foreground mt-1.5 text-center">Click any node to inspect · Scroll to zoom · Drag to pan</p>
     </div>
   )
 }

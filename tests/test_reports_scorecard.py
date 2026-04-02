@@ -3,7 +3,7 @@ from datetime import datetime
 from types import SimpleNamespace
 import unittest
 
-from qcscan.reports.scorecard import build_scorecard_markdown
+from quirk.reports.scorecard import build_scorecard_markdown
 
 
 @dataclass
