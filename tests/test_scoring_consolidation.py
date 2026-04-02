@@ -2,9 +2,9 @@
 Tests confirming single scoring path through intelligence/scoring.py in writer.py.
 
 These tests use ast/inspect to verify import sources in writer.py:
-- writer.py MUST import compute_readiness_score from qcscan.intelligence.scoring
-- writer.py MUST NOT import from qcscan.assessment.readiness_score
-- writer.py MUST import build_evidence_summary from qcscan.intelligence.evidence
+- writer.py MUST import compute_readiness_score from quirk.intelligence.scoring
+- writer.py MUST NOT import from quirk.assessment.readiness_score
+- writer.py MUST import build_evidence_summary from quirk.intelligence.evidence
 
 RED phase: tests fail until writer.py imports are consolidated.
 """
@@ -15,7 +15,7 @@ import unittest
 
 
 def _get_writer_source() -> str:
-    writer_path = pathlib.Path(__file__).parent.parent / "qcscan" / "reports" / "writer.py"
+    writer_path = pathlib.Path(__file__).parent.parent / "quirk" / "reports" / "writer.py"
     return writer_path.read_text(encoding="utf-8")
 
 
@@ -37,52 +37,52 @@ class ScoringConsolidationImportTests(unittest.TestCase):
         self.imports = _collect_imports(self.source)
 
     def test_no_assessment_readiness_import(self) -> None:
-        """writer.py must NOT import from qcscan.assessment.readiness_score."""
+        """writer.py must NOT import from quirk.assessment.readiness_score."""
         for module, names in self.imports:
             self.assertNotEqual(
                 module,
-                "qcscan.assessment.readiness_score",
-                f"Found forbidden import 'from qcscan.assessment.readiness_score import {names}' in writer.py",
+                "quirk.assessment.readiness_score",
+                f"Found forbidden import 'from quirk.assessment.readiness_score import {names}' in writer.py",
             )
 
     def test_no_assessment_transition_planner_import(self) -> None:
-        """writer.py must NOT import from qcscan.assessment.transition_planner."""
+        """writer.py must NOT import from quirk.assessment.transition_planner."""
         for module, names in self.imports:
             self.assertNotEqual(
                 module,
-                "qcscan.assessment.transition_planner",
-                f"Found forbidden import 'from qcscan.assessment.transition_planner import {names}' in writer.py",
+                "quirk.assessment.transition_planner",
+                f"Found forbidden import 'from quirk.assessment.transition_planner import {names}' in writer.py",
             )
 
     def test_no_assessment_confidence_import(self) -> None:
-        """writer.py must NOT import from qcscan.assessment.confidence."""
+        """writer.py must NOT import from quirk.assessment.confidence."""
         for module, names in self.imports:
             self.assertNotEqual(
                 module,
-                "qcscan.assessment.confidence",
-                f"Found forbidden import 'from qcscan.assessment.confidence import {names}' in writer.py",
+                "quirk.assessment.confidence",
+                f"Found forbidden import 'from quirk.assessment.confidence import {names}' in writer.py",
             )
 
     def test_scoring_uses_intelligence_module(self) -> None:
-        """writer.py must import compute_readiness_score from qcscan.intelligence.scoring."""
+        """writer.py must import compute_readiness_score from quirk.intelligence.scoring."""
         found = any(
-            module == "qcscan.intelligence.scoring" and "compute_readiness_score" in names
+            module == "quirk.intelligence.scoring" and "compute_readiness_score" in names
             for module, names in self.imports
         )
         self.assertTrue(
             found,
-            "Expected 'from qcscan.intelligence.scoring import compute_readiness_score' in writer.py",
+            "Expected 'from quirk.intelligence.scoring import compute_readiness_score' in writer.py",
         )
 
     def test_uses_build_evidence_summary(self) -> None:
-        """writer.py must import build_evidence_summary from qcscan.intelligence.evidence."""
+        """writer.py must import build_evidence_summary from quirk.intelligence.evidence."""
         found = any(
-            module == "qcscan.intelligence.evidence" and "build_evidence_summary" in names
+            module == "quirk.intelligence.evidence" and "build_evidence_summary" in names
             for module, names in self.imports
         )
         self.assertTrue(
             found,
-            "Expected 'from qcscan.intelligence.evidence import build_evidence_summary' in writer.py",
+            "Expected 'from quirk.intelligence.evidence import build_evidence_summary' in writer.py",
         )
 
     def test_no_score_from_evidence_function(self) -> None:

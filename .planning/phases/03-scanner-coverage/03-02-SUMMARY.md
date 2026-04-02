@@ -106,3 +106,13 @@ None - no external service configuration required. httpx, syft, and semgrep are 
 ---
 *Phase: 03-scanner-coverage*
 *Completed: 2026-03-29*
+
+## Self-Check: PASSED
+
+- quirk/scanner/jwt_scanner.py — FOUND
+- quirk/scanner/container_scanner.py — FOUND
+- quirk/scanner/source_scanner.py — FOUND
+- .planning/phases/03-scanner-coverage/03-02-SUMMARY.md — FOUND
+- Commit da55bad (jwt_scanner) — FOUND
+- Commit 7a96f66 (container + source scanners) — FOUND
+- 14/14 tests pass across test_jwt_scanner.py, test_container_scanner.py, test_source_scanner.py

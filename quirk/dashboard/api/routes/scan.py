@@ -165,14 +165,30 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
 
 def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     """Build CBOM components from endpoints by aggregating algorithm usage."""
-    from quirk.cbom.classifier import quantum_safety_label
+    from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
+
+    # Map internal classifier labels to frontend display values
+    _QS_DISPLAY = {
+        "quantum-safe": "Safe",
+        "quantum-vulnerable": "Vulnerable",
+        "hybrid": "At Risk",
+        "unknown": "Unknown",
+    }
+
+    def _qs_for_alg(alg: str) -> str:
+        try:
+            _, nist_level, _ = classify_algorithm(alg)
+            raw = quantum_safety_label(nist_level)
+        except Exception:
+            raw = "unknown"
+        return _QS_DISPLAY.get(raw, "Unknown")
 
     algo_map: dict[str, dict] = {}  # algorithm -> {quantum_safety, source_systems: set}
 
     for ep in endpoints:
         if ep.cert_pubkey_alg:
             alg = ep.cert_pubkey_alg
-            qs = quantum_safety_label(alg)
+            qs = _qs_for_alg(alg)
             if alg not in algo_map:
                 algo_map[alg] = {"quantum_safety": qs, "key_size": ep.cert_pubkey_size, "type": "signature", "sources": set()}
             algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
@@ -191,7 +207,7 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
                 data = json.loads(json_col)
                 alg_field = data.get("algorithm") or data.get("alg")
                 if alg_field:
-                    qs = quantum_safety_label(str(alg_field))
+                    qs = _qs_for_alg(str(alg_field))
                     if alg_field not in algo_map:
                         algo_map[alg_field] = {"quantum_safety": qs, "key_size": None, "type": "signature", "sources": set()}
                     algo_map[alg_field]["sources"].add(f"{ep.host}:{ep.port}")
@@ -210,45 +226,41 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     ]
 
 
-def _derive_roadmap(evidence: dict) -> RoadmapData:
+def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
     """Build migration roadmap graph from build_phased_roadmap()."""
     try:
         from quirk.intelligence.roadmap import build_phased_roadmap
-        roadmap = build_phased_roadmap(evidence)
+        roadmap = build_phased_roadmap(evidence, scoring)
     except Exception:
         return RoadmapData(nodes=[], edges=[])
 
     nodes: list[RoadmapNode] = []
     edges: list[RoadmapEdge] = []
 
-    # build_phased_roadmap returns {"phases": {"NOW": [...], "NEXT": [...], "LATER": [...]}, ...}
-    phases = roadmap.get("phases", {}) if isinstance(roadmap, dict) else {}
+    # build_phased_roadmap returns {"items": [...each with "phase"/"title"/"why"/"timeframe"...], ...}
+    items_list = roadmap.get("items", []) if isinstance(roadmap, dict) else []
     timeframe_map = {"NOW": "0-30 days", "NEXT": "31-90 days", "LATER": "90+ days"}
 
-    for phase_key, items in phases.items():
-        if not isinstance(items, list):
+    for item in items_list:
+        if not isinstance(item, dict):
             continue
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            title = str(item.get("title", ""))
-            node_id = f"{phase_key}-{title[:20].replace(' ', '-').lower()}"
-            nodes.append(RoadmapNode(
-                id=node_id,
-                title=title,
-                timeframe=timeframe_map.get(phase_key, phase_key),
-                why=str(item.get("why", "")),
-                phase=phase_key,
-            ))
+        phase_key = str(item.get("phase", "NOW"))
+        title = str(item.get("title", ""))
+        node_id = f"{phase_key}-{title[:20].replace(' ', '-').lower()}"
+        nodes.append(RoadmapNode(
+            id=node_id,
+            title=title,
+            timeframe=item.get("timeframe") or timeframe_map.get(phase_key, phase_key),
+            why=str(item.get("why", "")),
+            phase=phase_key,
+        ))
 
-    # Add phase-to-phase ordering edges
-    phase_keys = [k for k in ["NOW", "NEXT", "LATER"] if k in phases and phases[k]]
-    for i in range(len(phase_keys) - 1):
-        src_items = [n for n in nodes if n.phase == phase_keys[i]]
-        tgt_items = [n for n in nodes if n.phase == phase_keys[i + 1]]
-        for src in src_items[:1]:  # connect first item in each phase as representative
-            for tgt in tgt_items[:1]:
-                edges.append(RoadmapEdge(source=src.id, target=tgt.id, reason="Phase dependency"))
+    # Add phase-to-phase ordering edges (connect last NOW → first NEXT, last NEXT → first LATER)
+    for phase_a, phase_b in [("NOW", "NEXT"), ("NEXT", "LATER")]:
+        src_items = [n for n in nodes if n.phase == phase_a]
+        tgt_items = [n for n in nodes if n.phase == phase_b]
+        if src_items and tgt_items:
+            edges.append(RoadmapEdge(source=src_items[-1].id, target=tgt_items[0].id, reason="Phase dependency"))
 
     return RoadmapData(nodes=nodes, edges=edges)
 
@@ -279,10 +291,13 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
     if not endpoints:
         raise HTTPException(status_code=404, detail="No endpoints found for latest scan.")
 
+    # Derive findings first — needed by evidence summary
+    findings = _derive_findings(endpoints)
+
     # Build evidence summary for intelligence functions
     try:
         from quirk.intelligence.evidence import build_evidence_summary
-        evidence = build_evidence_summary(endpoints)
+        evidence = build_evidence_summary(endpoints, [f.model_dump() for f in findings])
     except Exception:
         evidence = {}
 
@@ -317,8 +332,7 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
         confidence_rating=confidence_raw.get("confidence_rating", "NO_DATA"),
     )
 
-    # Derive data for all views
-    findings = _derive_findings(endpoints)
+    # Derive remaining views
     certificates = [
         CertItem(
             host=ep.host,
@@ -337,7 +351,7 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
     certificates.sort(key=lambda c: c.cert_not_after or datetime.max.replace(tzinfo=timezone.utc))
 
     cbom_components = _derive_cbom(endpoints)
-    roadmap = _derive_roadmap(evidence)
+    roadmap = _derive_roadmap(evidence, score_raw)
 
     scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
 
