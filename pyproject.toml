@@ -9,6 +9,10 @@ description = "QU.I.R.K. -- Quantum Infrastructure Readiness Kit"
 requires-python = ">=3.10"
 license = {text = "Proprietary"}
 dependencies = [
+    "PyYAML>=6.0",
+    "cryptography>=44.0",
+    "SQLAlchemy>=2.0",
+    "tqdm>=4.67",
     "cyclonedx-python-lib>=11.7.0,<12",
     "httpx>=0.28.0",
     "jinja2>=3.1.0",
@@ -35,6 +39,9 @@ quirk = "run_scan:main"
 
 [tool.setuptools.packages.find]
 include = ["quirk*"]
+
+[tool.setuptools]
+py-modules = ["run_scan"]
 
 [tool.setuptools.package-data]
 quirk = ["reports/templates/*.j2", "config_template.yaml"]

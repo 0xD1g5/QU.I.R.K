@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import unittest
 
-from qcscan.intelligence.evidence import build_evidence_summary
+from quirk.intelligence.evidence import build_evidence_summary
 
 
 @dataclass

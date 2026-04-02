@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 
 
@@ -22,7 +22,7 @@ def _service_detail(ep) -> str:
 
 
 def build_tech_markdown(cfg, endpoints, findings) -> str:
-    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     lines: List[str] = []
     lines.append(f"# Technical Findings — {cfg.assessment.name}")

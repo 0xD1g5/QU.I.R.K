@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 
 from quirk.assessment.readiness_score import compute_readiness_score
@@ -14,7 +14,7 @@ def _count_noninfo(findings: List[Dict]) -> Counter:
 
 
 def build_exec_markdown(cfg, endpoints, findings) -> str:
-    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     score = compute_readiness_score(cfg, endpoints, findings)
     roadmap = build_transition_roadmap(cfg, endpoints, findings)

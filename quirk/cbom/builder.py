@@ -19,6 +19,7 @@ from typing import Optional
 from cyclonedx.model.bom import Bom, BomMetaData
 from cyclonedx.model.bom_ref import BomRef
 from cyclonedx.model.component import Component, ComponentType
+from cyclonedx.model.dependency import Dependency
 from cyclonedx.model.crypto import (
     AlgorithmProperties,
     CertificateProperties,
@@ -499,16 +500,23 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
         list(algo_registry.values()) + cert_components + protocol_components
     )
 
+    root_component = Component(
+        name="QU.I.R.K.",
+        type=ComponentType.APPLICATION,
+        version=PLATFORM_VERSION,
+    )
+
     metadata = BomMetaData(
         timestamp=datetime.now(timezone.utc),
-        component=Component(
-            name="QU.I.R.K.",
-            type=ComponentType.APPLICATION,
-            version=PLATFORM_VERSION,
-        ),
+        component=root_component,
     )
+
+    # Build dependency graph: root component depends on all crypto components
+    child_deps = [Dependency(ref=c.bom_ref) for c in all_components]
+    root_dep = Dependency(ref=root_component.bom_ref, dependencies=child_deps)
 
     return Bom(
         components=all_components,
         metadata=metadata,
+        dependencies=[root_dep],
     )
