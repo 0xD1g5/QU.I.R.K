@@ -19,6 +19,12 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "agility_has_ecdsa_bonus": 4.0,
 }
 
+PROFILE_MULTIPLIERS: Dict[str, Dict[str, float]] = {
+    "strict":   {"agility_": 1.4, "identity_": 1.4},
+    "balanced": {"agility_": 1.0, "identity_": 1.0},
+    "lenient":  {"agility_": 0.7, "identity_": 0.7},
+}
+
 
 def _as_int(v: Any) -> int:
     try:
@@ -70,9 +76,17 @@ def _apply_weighted_impacts(
 def compute_readiness_score(
     evidence: Mapping[str, Any],
     *,
+    profile: str | None = None,
     weights: Mapping[str, float] | None = None,
 ) -> Dict[str, Any]:
     w = dict(SCORE_WEIGHTS)
+    prof = str(profile or "balanced").lower()
+    if prof not in PROFILE_MULTIPLIERS:
+        prof = "balanced"
+    for prefix, factor in PROFILE_MULTIPLIERS[prof].items():
+        for key in list(w):
+            if key.startswith(prefix):
+                w[key] = w[key] * factor
     if weights:
         for k, v in weights.items():
             w[k] = _as_float(v)
