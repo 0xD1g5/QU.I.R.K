@@ -278,7 +278,7 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
     if latest_ts is None:
         raise HTTPException(
             status_code=404,
-            detail="No scan results found. Run your first scan: quirk scan --target <host>",
+            detail="No scan results found. Run your first scan: quirk --config config.yaml",
         )
 
     # Load all endpoints from that scan session
