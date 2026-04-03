@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-04-03T16:50:28.767Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-04-03T16:54:34.118Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 36
-  completed_plans: 38
+  completed_plans: 39
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 09 (scoring-consolidation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -86,6 +86,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 08 P03 | 3 | 2 tasks | 8 files |
 | Phase 08-legacy-debt-cleanup P04 | 85 | 2 tasks | 2 files |
 | Phase 09-scoring-consolidation P01 | 2 | 2 tasks | 3 files |
+| Phase 09-scoring-consolidation P02 | 12 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,7 @@ Recent decisions affecting current work:
 - [Phase 08-legacy-debt-cleanup]: _latest_intelligence() and _previous_intelligence() sort by st_mtime not filename to handle same-second-timestamp edge cases
 - [Phase 09-scoring-consolidation]: D-05/D-06: PROFILE_MULTIPLIERS applies agility_/identity_ prefix multipliers before weights= override; profile= falls back to balanced on unknown names
 - [Phase 09-scoring-consolidation]: Wave 0 expectedFailure stubs in ExecutiveConsolidationTests define executive.py migration contract for Plan 02
+- [Phase 09-scoring-consolidation]: executive.py imports ONLY from intelligence/ plus migration_advisor; profile+weights wired at both call sites; calibration block added to intelligence JSON
 
 ### Pending Todos
 
@@ -178,6 +180,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T16:50:28.763Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-04-03T16:54:34.115Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
