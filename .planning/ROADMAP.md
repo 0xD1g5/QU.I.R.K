@@ -65,10 +65,12 @@ Plans:
   3. `quirk/assessment/readiness_score.py`, `quirk/assessment/confidence.py`, and `quirk/assessment/transition_planner.py` are either removed or clearly designated as deprecated aliases pointing to the intelligence layer
   4. Setting `profile: strict` in config produces measurably different score weights than `profile: lenient` on the same scan data
   5. `calibration_overrides` set in config are applied to the scoring engine weights at runtime
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (promote with /gsd:discuss-phase 9 when ready)
+- [ ] 09-01-PLAN.md — Profile weight multipliers + Wave 0 test scaffolds (SC-04, SC-05)
+- [ ] 09-02-PLAN.md — Refactor executive.py to intelligence call sequence + wire calibration (SC-01, SC-02, SC-05)
+- [ ] 09-03-PLAN.md — Delete assessment compute modules + documentation update (SC-03)
 
 ### Phase 1: Foundation Fixes
 **Goal**: The scanner codebase is correct, consistent, and renamed — producing accurate data with deep TLS and SSH algorithm enumeration
