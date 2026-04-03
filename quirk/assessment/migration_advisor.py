@@ -20,8 +20,8 @@ def recommend_migration_paths(findings: List[Dict]) -> List[Dict]:
         if sev == "INFO":
             continue
 
-        # Deprecated TLS
-        if "deprecated tls" in title:
+        # Legacy TLS
+        if "legacy tls" in title:
             recs.append({
                 "host": host,
                 "port": port,
@@ -42,8 +42,8 @@ def recommend_migration_paths(findings: List[Dict]) -> List[Dict]:
             })
             continue
 
-        # Quantum transition (public key)
-        if "quantum" in title or "public key" in title:
+        # Quantum transition
+        if "quantum" in title:
             recs.append({
                 "host": host,
                 "port": port,

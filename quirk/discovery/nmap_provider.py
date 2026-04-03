@@ -2,7 +2,7 @@
 
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.logging_util import Logger
@@ -47,7 +47,7 @@ def run_nmap_discovery(
         return []
 
     os.makedirs(output_dir, exist_ok=True)
-    stamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     xml_path = os.path.join(output_dir, f"nmap-discovery-{stamp}.xml")
 
     ports_csv = ",".join(str(p) for p in sorted(set(ports))) if ports else "22,80,443,8443,9443,10443,5001"
