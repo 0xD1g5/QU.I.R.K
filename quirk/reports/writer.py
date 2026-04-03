@@ -112,7 +112,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
 
     # 3) Intelligence outputs — single authoritative scoring path
     evidence = build_evidence_summary(endpoints, findings)
-    score_raw = compute_readiness_score(evidence)
+    score_raw = compute_readiness_score(
+        evidence,
+        profile=cfg.intelligence.profile,
+        weights=cfg.intelligence.calibration_overrides or None,
+    )
     conf_raw = compute_confidence(evidence)
     roadmap_raw = build_phased_roadmap(evidence, score_raw)
 
@@ -145,6 +149,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
         },
         "confidence": conf,
         "roadmap": roadmap_raw,
+        "calibration": {
+            "profile": cfg.intelligence.profile,
+            "overrides_applied": bool(cfg.intelligence.calibration_overrides),
+        },
     }
     intelligence_path = os.path.join(outdir, f"intelligence-{stamp}.json")
     _json_dump(intelligence_path, intelligence)
