@@ -21,7 +21,7 @@ branding and packaging that makes it look like a product worth paying for (Phase
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 8: Legacy Debt Cleanup** - Fix show-stopper bugs, dead code, broken CLI, and label/intent drift surfaced by codebase audit (completed 2026-04-03)
-- [ ] **Phase 9: Scoring Consolidation** - Eliminate dual scoring systems, make calibration profile functional, single authoritative score path
+- [x] **Phase 9: Scoring Consolidation** - Eliminate dual scoring systems, make calibration profile functional, single authoritative score path (completed 2026-04-03)
 - [x] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners (completed 2026-03-29)
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
@@ -65,12 +65,12 @@ Plans:
   3. `quirk/assessment/readiness_score.py`, `quirk/assessment/confidence.py`, and `quirk/assessment/transition_planner.py` are either removed or clearly designated as deprecated aliases pointing to the intelligence layer
   4. Setting `profile: strict` in config produces measurably different score weights than `profile: lenient` on the same scan data
   5. `calibration_overrides` set in config are applied to the scoring engine weights at runtime
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 09-01-PLAN.md — Profile weight multipliers + Wave 0 test scaffolds (SC-04, SC-05)
 - [x] 09-02-PLAN.md — Refactor executive.py to intelligence call sequence + wire calibration (SC-01, SC-02, SC-05)
-- [ ] 09-03-PLAN.md — Delete assessment compute modules + documentation update (SC-03)
+- [x] 09-03-PLAN.md — Delete assessment compute modules + documentation update (SC-03)
 
 ### Phase 1: Foundation Fixes
 **Goal**: The scanner codebase is correct, consistent, and renamed — producing accurate data with deep TLS and SSH algorithm enumeration
@@ -273,7 +273,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 8. Legacy Debt Cleanup | 4/4 | Complete   | 2026-04-03 |
-| 9. Scoring Consolidation | 2/3 | In Progress|  |
+| 9. Scoring Consolidation | 3/3 | Complete   | 2026-04-03 |
 | 1. Foundation Fixes | 4/4 | Complete | 2026-03-29 |
 | 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
 | 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
