@@ -158,9 +158,6 @@ def main():
     quiet = getattr(args, "quiet", False)
     print_banner(__version__, quiet=quiet)
 
-    # rich Progress used throughout; tqdm removed (D-04)
-    tqdm = None  # kept for any residual references during transition
-
     logger = Logger(verbose=args.verbose, use_tqdm=bool(args.progress))
 
     run_stats: Dict[str, Any] = {
@@ -280,10 +277,6 @@ def main():
             fp_results = fp_cached.get("fingerprints", [])
         else:
             logger.stamp(f"Fingerprinting {len(targets)} targets... (workers={fp_conc}, timeout={fp_timeout}s)")
-            if tqdm:
-                bar = tqdm(total=len(targets), desc="Fingerprinting", unit="target")
-            else:
-                bar = None
 
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -291,10 +284,6 @@ def main():
                 futs = [ex.submit(_fp_task, h, p) for h, p in targets]
                 for f in as_completed(futs):
                     fp_results.append(f.result())
-                    if bar:
-                        bar.update(1)
-            if bar:
-                bar.close()
 
             if args.cache:
                 save_cache(cfg.output.directory, fp_key, {"fingerprints": fp_results, "timeout": fp_timeout, "workers": fp_conc})
@@ -370,20 +359,21 @@ def main():
     cfg.scan.concurrency = tls_conc
 
     tls_endpoints = []
-    with _phase_timer(run_stats, "tls_scanning"):
-        if tls_targets:
-            tls_endpoints = scan_tls_targets(
-                cfg,
-                tls_targets,
-                logger=logger,
-                progress_cb=None
-            )
-            for ep in tls_endpoints:
-                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                ep.service_detail = classified_details.get(key, "")
-
-    cfg.scan.timeout_seconds = base_timeout
-    cfg.scan.concurrency = base_conc
+    try:
+        with _phase_timer(run_stats, "tls_scanning"):
+            if tls_targets:
+                tls_endpoints = scan_tls_targets(
+                    cfg,
+                    tls_targets,
+                    logger=logger,
+                    progress_cb=None
+                )
+                for ep in tls_endpoints:
+                    key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+                    ep.service_detail = classified_details.get(key, "")
+    finally:
+        cfg.scan.timeout_seconds = base_timeout
+        cfg.scan.concurrency = base_conc
 
     # ==============================
     # SSH scan phase (phase-tuned)
@@ -395,20 +385,21 @@ def main():
     cfg.scan.concurrency = ssh_conc
 
     ssh_endpoints = []
-    with _phase_timer(run_stats, "ssh_scanning"):
-        if ssh_targets:
-            ssh_endpoints = scan_ssh_targets(
-                cfg,
-                ssh_targets,
-                logger=logger,
-                progress_cb=None
-            )
-            for ep in ssh_endpoints:
-                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                ep.service_detail = classified_details.get(key, "")
-
-    cfg.scan.timeout_seconds = base_timeout
-    cfg.scan.concurrency = base_conc
+    try:
+        with _phase_timer(run_stats, "ssh_scanning"):
+            if ssh_targets:
+                ssh_endpoints = scan_ssh_targets(
+                    cfg,
+                    ssh_targets,
+                    logger=logger,
+                    progress_cb=None
+                )
+                for ep in ssh_endpoints:
+                    key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+                    ep.service_detail = classified_details.get(key, "")
+    finally:
+        cfg.scan.timeout_seconds = base_timeout
+        cfg.scan.concurrency = base_conc
 
     # ==============================
     # JWT scan phase

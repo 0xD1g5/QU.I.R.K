@@ -2,7 +2,7 @@ import json
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 from rich.table import Table
@@ -34,11 +34,6 @@ def _json_dump(path: str, obj: Any) -> None:
         json.dump(obj, f, indent=2, sort_keys=True, default=str)
 
 
-def _count_findings(findings: List[Dict[str, Any]], title_contains: str) -> int:
-    t = title_contains.lower()
-    return sum(1 for f in (findings or []) if t in str(f.get("title", "")).lower())
-
-
 def _extract_cert_key_type(ep: Any) -> Optional[str]:
     # cert_pubkey_alg is the canonical field on CryptoEndpoint
     v = getattr(ep, "cert_pubkey_alg", None)
@@ -55,51 +50,6 @@ def _extract_cert_key_type(ep: Any) -> Optional[str]:
             if cert.get(k):
                 return str(cert.get(k)).upper()
     return None
-
-
-def _extract_cert_dates(ep: Any) -> Tuple[Optional[datetime], Optional[datetime]]:
-    nb = getattr(ep, "cert_not_before", None)
-    na = getattr(ep, "cert_not_after", None)
-
-    def _to_dt(x):
-        if x is None:
-            return None
-        if isinstance(x, datetime):
-            return x
-        try:
-            return datetime.fromisoformat(str(x))
-        except Exception:
-            return None
-
-    return _to_dt(nb), _to_dt(na)
-
-
-def _is_self_signed(ep: Any) -> Optional[bool]:
-    v = getattr(ep, "cert_self_signed", None)
-    if isinstance(v, bool):
-        return v
-
-    subj = getattr(ep, "cert_subject", None)
-    issuer = getattr(ep, "cert_issuer", None)
-    if subj and issuer:
-        return str(subj) == str(issuer)
-
-    cert = getattr(ep, "cert", None)
-    if isinstance(cert, dict):
-        subj = cert.get("subject")
-        issuer = cert.get("issuer")
-        if subj and issuer:
-            return str(subj) == str(issuer)
-
-    return None
-
-
-def _mtls_present(ep: Any) -> bool:
-    for attr in ("mtls", "mtls_present", "client_auth", "requires_client_cert"):
-        v = getattr(ep, attr, None)
-        if isinstance(v, bool):
-            return v
-    return False
 
 
 def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], drivers: List[str], roadmap: List[Dict[str, Any]]) -> str:
