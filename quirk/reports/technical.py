@@ -43,10 +43,10 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
             )
         lines.append("")
 
-    # === TLS Capabilities (v3.6) ===
+    # === TLS Capabilities ===
     tls_eps = [e for e in endpoints if getattr(e, "protocol", "") == "TLS" and not getattr(e, "scan_error", None)]
     if tls_eps:
-        lines.append("## TLS Capabilities (v3.6)")
+        lines.append("## TLS Capabilities")
         lines.append("")
         lines.append("| Host | Port | Negotiated TLS | Supported Versions | Weak Ciphers Present | Legacy Suites Present | PFS | Cipher Sample | Notes |")
         lines.append("|---|---:|---|---|---|---|---|---|---|")
