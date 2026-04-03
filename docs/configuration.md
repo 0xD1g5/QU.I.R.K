@@ -173,6 +173,25 @@ Controls the quantum-readiness scoring calibration and version metadata.
 - `balanced` — Default. Production-calibrated weights designed for typical enterprise networks.
 - `strict` — Increases penalty weights. Use in high-compliance environments (FedRAMP, CNSA 2.0) where the client must demonstrate a tighter posture.
 
+#### How Score Profiles Work
+
+Score profiles adjust the weight of **crypto-agility** and **identity/certificate** scoring categories. Hygiene and TLS modernization weights are unchanged across all profiles.
+
+| Profile | Agility Weight | Identity Weight | Use Case |
+|---------|---------------|-----------------|----------|
+| `strict` | 1.4x base | 1.4x base | Post-quantum readiness assessment — amplifies crypto-agility and certificate hygiene penalties |
+| `balanced` | 1.0x (default) | 1.0x (default) | General-purpose assessment |
+| `lenient` | 0.7x base | 0.7x base | Status-quo baseline — reduces agility and identity penalties for organizations not yet planning PQC migration |
+
+Setting `calibration_overrides` in the intelligence section allows fine-grained per-weight adjustments that override profile defaults. For example:
+
+```yaml
+intelligence:
+  profile: strict
+  calibration_overrides:
+    agility_rsa_only_penalty: 4.0  # Override strict's amplified RSA penalty
+```
+
 ```yaml
 intelligence:
   intelligence_version: "3.9.0"
