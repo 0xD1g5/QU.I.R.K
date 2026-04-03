@@ -56,6 +56,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 **Scoring Consolidation**
 - ✓ Duplicate scoring systems removed — single path through intelligence/scoring.py — Phase 1
 - ✓ cert_pubkey_alg field propagation fixed — Phase 1
+- ✓ Profile-based weight multipliers (strict/balanced/lenient) in compute_readiness_score() — Phase 9
+- ✓ executive.py refactored to intelligence/ call sequence; NOW/NEXT/LATER roadmap — Phase 9
+- ✓ Four deprecated assessment compute modules deleted; zero live imports remain — Phase 9
 
 **Web Dashboard (FastAPI + React + shadcn/ui)**
 - [ ] FastAPI API layer serving scanner results and managing scan jobs
