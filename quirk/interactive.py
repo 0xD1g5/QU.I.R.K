@@ -106,11 +106,27 @@ def interactive_config() -> AppConfig:
     out_dir = _prompt("Output directory", "output")
     db_path = _prompt("SQLite DB path", "output/quirk.db")
 
-    # Connectors (stubs for now)
-    print("\n🔌 Connectors (stubs in v2)")
-    enable_aws = _prompt_bool("Enable AWS connector (stub)", False)
-    enable_azure = _prompt_bool("Enable Azure connector (stub)", False)
-    enable_windows_adcs = _prompt_bool("Enable Windows AD CS connector (stub)", False)
+    # Cloud Connectors
+    print("\n🔌 Cloud Connectors")
+    enable_aws = _prompt_bool("Enable AWS connector", False)
+    enable_azure = _prompt_bool("Enable Azure connector", False)
+
+    # Phase 3 scanners
+    print("\n🔍 Additional Scanners")
+    enable_jwt = _prompt_bool("Enable JWT/API endpoint scanning", False)
+    jwt_targets: List[str] = []
+    if enable_jwt:
+        jwt_targets = _prompt_list("JWT endpoint URLs (e.g., https://api.example.com)")
+
+    enable_container = _prompt_bool("Enable container image scanning", False)
+    container_targets: List[str] = []
+    if enable_container:
+        container_targets = _prompt_list("Container image references (e.g., nginx:latest)")
+
+    enable_source = _prompt_bool("Enable source code scanning", False)
+    source_targets: List[str] = []
+    if enable_source:
+        source_targets = _prompt_list("Source code paths or Git URLs")
 
     cfg = AppConfig(
         assessment=AssessmentCfg(
@@ -134,7 +150,12 @@ def interactive_config() -> AppConfig:
         connectors=ConnectorsCfg(
             enable_aws=enable_aws,
             enable_azure=enable_azure,
-            enable_windows_adcs=enable_windows_adcs,
+            enable_jwt=enable_jwt,
+            jwt_targets=jwt_targets,
+            enable_container=enable_container,
+            container_targets=container_targets,
+            enable_source=enable_source,
+            source_targets=source_targets,
         ),
         output=OutputCfg(
             directory=out_dir,
