@@ -58,4 +58,3 @@ connectors:
   container_targets: []
   enable_source: false
   source_targets: []
-  enable_windows_adcs: false
