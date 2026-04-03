@@ -44,7 +44,6 @@ class TargetsCfg:
 class ConnectorsCfg:
     enable_aws: bool
     enable_azure: bool
-    enable_windows_adcs: bool
     # Phase 3 scanner enable flags (per D-04)
     enable_jwt: bool = False
     enable_container: bool = False
@@ -129,7 +128,9 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         assessment=AssessmentCfg(**raw["assessment"]),
         scan=ScanCfg(**raw["scan"]),
         targets=TargetsCfg(**raw["targets"]),
-        connectors=ConnectorsCfg(**raw["connectors"]),
+        connectors=ConnectorsCfg(
+            **{k: v for k, v in (raw.get("connectors") or {}).items() if k != "enable_windows_adcs"}
+        ),
         output=OutputCfg(**raw["output"]),
         intelligence=intelligence_cfg,
     )
