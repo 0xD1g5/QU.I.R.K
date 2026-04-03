@@ -112,7 +112,7 @@ intelligence layer, SQLite persistence, scan profiles, chaos lab — all operati
 | SCAN-02 | Phase 1 | Complete |
 | CBOM-01 | Phase 2 | Complete |
 | CBOM-02 | Phase 2 | Complete |
-| CBOM-03 | Phase 2 | Complete |
+| CBOM-03 | Phase 10 | Pending |
 | CBOM-04 | Phase 2 | Complete |
 | SCAN-03 | Phase 3 | Complete |
 | SCAN-04 | Phase 3 | Complete |
@@ -125,9 +125,9 @@ intelligence layer, SQLite persistence, scan profiles, chaos lab — all operati
 | LAB-04 | Phase 4 | Complete |
 | LAB-05 | Phase 4 | Complete |
 | LAB-06 | Phase 4 | Complete |
-| UI-01 | Phase 5 | Complete |
+| UI-01 | Phase 10 | Pending |
 | UI-02 | Phase 5 | Complete |
-| UI-03 | Phase 5 | Complete |
+| UI-03 | Phase 10 | Pending |
 | UI-04 | Phase 5 | Complete |
 | DOC-01 | Phase 6 | Complete |
 | DOC-02 | Phase 6 | Complete |
@@ -139,6 +139,6 @@ intelligence layer, SQLite persistence, scan profiles, chaos lab — all operati
 | BRAND-01 | Phase 7 | Complete |
 | BRAND-02 | Phase 7 | Complete |
 | BRAND-03 | Phase 7 | Complete |
-| BRAND-04 | Phase 7 | Complete |
+| BRAND-04 | Phase 10 | Pending |
 
-**Coverage:** 36/36 v1 requirements mapped. No orphans.
+**Coverage:** 36/36 v1 requirements mapped. No orphans. 4 requirements reassigned to Phase 10 (gap closure).

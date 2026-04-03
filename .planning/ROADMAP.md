@@ -22,6 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 8: Legacy Debt Cleanup** - Fix show-stopper bugs, dead code, broken CLI, and label/intent drift surfaced by codebase audit (completed 2026-04-03)
 - [x] **Phase 9: Scoring Consolidation** - Eliminate dual scoring systems, make calibration profile functional, single authoritative score path (completed 2026-04-03)
+- [ ] **Phase 10: v3.9 Gap Closure** - Fix quantum safety label type mismatch, package dashboard static assets for pip distribution, add intelligence config block to template
 - [x] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners (completed 2026-03-29)
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
@@ -71,6 +72,19 @@ Plans:
 - [x] 09-01-PLAN.md — Profile weight multipliers + Wave 0 test scaffolds (SC-04, SC-05)
 - [x] 09-02-PLAN.md — Refactor executive.py to intelligence call sequence + wire calibration (SC-01, SC-02, SC-05)
 - [x] 09-03-PLAN.md — Delete assessment compute modules + documentation update (SC-03)
+
+### Phase 10: v3.9 Gap Closure
+**Goal**: All three issues identified by the v3.9 milestone audit are resolved — quantum safety labels are semantically correct in the dashboard, the pip-installed package includes the React bundle, and users who run `quirk init` can discover the intelligence profile knob from the generated template
+**Depends on**: Phase 9
+**Requirements**: CBOM-03, UI-01, UI-03, BRAND-04
+**Gap Closure**: Closes MISMATCH-01, PACKAGE-01, MISSING-01 from v3.9-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. The dashboard certificate inventory and findings table show correct quantum safety labels — RSA/DSA/DH certificates show `quantum-vulnerable`, not `quantum-safe`
+  2. `pip install --no-editable .` followed by `quirk serve` loads the dashboard without 404 errors on UI routes
+  3. `quirk init` generates a `config.yaml` with a commented `intelligence:` block showing the `profile:` knob
+
+Plans:
+- [ ] 10-01-PLAN.md — Fix quantum_safety_label() type mismatch (scan.py 143, 379), add pyproject.toml package-data, add intelligence block to config_template.yaml (CBOM-03, UI-01, UI-03, BRAND-04)
 
 ### Phase 1: Foundation Fixes
 **Goal**: The scanner codebase is correct, consistent, and renamed — producing accurate data with deep TLS and SSH algorithm enumeration
