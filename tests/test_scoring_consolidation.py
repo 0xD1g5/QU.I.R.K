@@ -182,5 +182,33 @@ class ExecutiveConsolidationTests(unittest.TestCase):
         self.assertNotIn("wave_3", self.source, "Deprecated 'wave_3' attribute found in executive.py")
 
 
+class AssessmentDeletionTests(unittest.TestCase):
+    """Guard tests ensuring deleted assessment modules stay deleted."""
+
+    def test_readiness_score_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "readiness_score.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_confidence_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "confidence.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_transition_planner_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "transition_planner.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_interpretation_engine_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "interpretation_engine.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_operator_context_preserved(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "operator_context.py"
+        self.assertTrue(p.exists(), f"{p} must be preserved (used by run_scan.py)")
+
+    def test_migration_advisor_preserved(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "migration_advisor.py"
+        self.assertTrue(p.exists(), f"{p} must be preserved (used by executive.py)")
+
+
 if __name__ == "__main__":
     unittest.main()
