@@ -47,10 +47,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (promote with /gsd:discuss-phase 8 when ready)
+- [ ] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
+- [ ] 08-02-PLAN.md — Fix interactive mode labels, remove ADCS, add Phase 3 scanner prompts (D-03, D-04, D-05)
+- [ ] 08-03-PLAN.md — Delete dead code, fix migration_advisor, cfg.scan try/finally, datetime, tqdm (D-09..D-13, D-15, D-17, D-19..D-21)
+- [ ] 08-04-PLAN.md — Fix validate.py artifact checks + integration test (D-01, D-02)
 
 ### Phase 9: Scoring Consolidation
 **Goal**: QUIRK produces one readiness score, one confidence value, and one roadmap per scan — sourced from a single authoritative code path — so a client cannot see two different numbers by reading different output artifacts
