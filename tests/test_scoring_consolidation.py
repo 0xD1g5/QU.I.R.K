@@ -108,17 +108,12 @@ def _get_executive_source() -> str:
 
 
 class ExecutiveConsolidationTests(unittest.TestCase):
-    """Wave 0 RED stubs for executive.py migration (Plan 02).
-
-    Each test is marked expectedFailure because executive.py still imports from
-    quirk.assessment.*. These decorators are removed in Plan 02 after migration.
-    """
+    """Tests confirming executive.py migration to intelligence call sequence (Plan 02)."""
 
     def setUp(self) -> None:
         self.source = _get_executive_source()
         self.imports = _collect_imports(self.source)
 
-    @unittest.expectedFailure
     def test_executive_no_assessment_readiness_import(self) -> None:
         """executive.py must NOT import from quirk.assessment.readiness_score."""
         for module, names in self.imports:
@@ -128,7 +123,6 @@ class ExecutiveConsolidationTests(unittest.TestCase):
                 f"Found forbidden import 'from quirk.assessment.readiness_score import {names}' in executive.py",
             )
 
-    @unittest.expectedFailure
     def test_executive_no_assessment_confidence_import(self) -> None:
         """executive.py must NOT import from quirk.assessment.confidence."""
         for module, names in self.imports:
@@ -138,7 +132,6 @@ class ExecutiveConsolidationTests(unittest.TestCase):
                 f"Found forbidden import 'from quirk.assessment.confidence import {names}' in executive.py",
             )
 
-    @unittest.expectedFailure
     def test_executive_no_assessment_transition_planner_import(self) -> None:
         """executive.py must NOT import from quirk.assessment.transition_planner."""
         for module, names in self.imports:
@@ -148,7 +141,6 @@ class ExecutiveConsolidationTests(unittest.TestCase):
                 f"Found forbidden import 'from quirk.assessment.transition_planner import {names}' in executive.py",
             )
 
-    @unittest.expectedFailure
     def test_executive_no_assessment_interpretation_import(self) -> None:
         """executive.py must NOT import from quirk.assessment.interpretation_engine."""
         for module, names in self.imports:
@@ -158,7 +150,6 @@ class ExecutiveConsolidationTests(unittest.TestCase):
                 f"Found forbidden import 'from quirk.assessment.interpretation_engine import {names}' in executive.py",
             )
 
-    @unittest.expectedFailure
     def test_executive_uses_intelligence_scoring(self) -> None:
         """executive.py must import compute_readiness_score from quirk.intelligence.scoring."""
         found = any(
@@ -170,7 +161,6 @@ class ExecutiveConsolidationTests(unittest.TestCase):
             "Expected 'from quirk.intelligence.scoring import compute_readiness_score' in executive.py",
         )
 
-    @unittest.expectedFailure
     def test_executive_uses_intelligence_evidence(self) -> None:
         """executive.py must import build_evidence_summary from quirk.intelligence.evidence."""
         found = any(
@@ -182,7 +172,6 @@ class ExecutiveConsolidationTests(unittest.TestCase):
             "Expected 'from quirk.intelligence.evidence import build_evidence_summary' in executive.py",
         )
 
-    @unittest.expectedFailure
     def test_executive_uses_now_next_later_roadmap(self) -> None:
         """executive.py roadmap must use NOW/NEXT/LATER labels, not wave_1/wave_2/wave_3."""
         self.assertIn("NOW", self.source, "Expected 'NOW' label in executive.py roadmap output")
