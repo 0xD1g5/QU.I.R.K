@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
-status: executing
-stopped_at: Completed 08-03-PLAN.md — dead code deletion and code quality fixes
-last_updated: "2026-04-03T04:21:39.840Z"
+status: verifying
+stopped_at: Completed 08-04-PLAN.md — validate.py artifact fix and integration test
+last_updated: "2026-04-03T04:24:47.573Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 33
-  completed_plans: 36
+  completed_plans: 37
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: 08 (legacy-debt-cleanup) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -84,6 +84,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 08-legacy-debt-cleanup P02 | 5 | 2 tasks | 3 files |
 | Phase 08 P01 | 115 | 2 tasks | 8 files |
 | Phase 08 P03 | 3 | 2 tasks | 8 files |
+| Phase 08-legacy-debt-cleanup P04 | 85 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,9 @@ Recent decisions affecting current work:
 - [Phase 08-legacy-debt-cleanup]: D-15: migration_advisor 'deprecated tls' -> 'legacy tls' to match actual risk_engine finding title; removed dead 'public key' pattern
 - [Phase 08-legacy-debt-cleanup]: D-17: cfg.scan mutations in TLS and SSH phases wrapped in try/finally for safe config restore on exception
 - [Phase 08-legacy-debt-cleanup]: D-13/D-20/D-21: Removed 4 dead writer.py functions, replaced utcnow() with timezone.utc, eliminated tqdm dead branch
+- [Phase 08-legacy-debt-cleanup]: validate.py expected_files now mirrors actual writer.py output: findings, executive-summary, technical-findings, scorecard, roadmap, run-stats, cbom .cdx.json, cbom .cdx.xml
+- [Phase 08-legacy-debt-cleanup]: _validate_calibration() and _validate_delta() removed — dead code for artifacts that writer.py never produces
+- [Phase 08-legacy-debt-cleanup]: _latest_intelligence() and _previous_intelligence() sort by st_mtime not filename to handle same-second-timestamp edge cases
 
 ### Pending Todos
 
@@ -171,6 +175,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T04:21:39.837Z
-Stopped at: Completed 08-03-PLAN.md — dead code deletion and code quality fixes
+Last session: 2026-04-03T04:24:47.570Z
+Stopped at: Completed 08-04-PLAN.md — validate.py artifact fix and integration test
 Resume file: None
