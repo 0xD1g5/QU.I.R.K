@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 8 context gathered (discuss mode)
-last_updated: "2026-04-03T03:54:23.624Z"
-last_activity: 2026-04-01
+status: executing
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-04-03T04:18:37.972Z"
+last_activity: 2026-04-03
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 29
-  completed_plans: 33
+  total_plans: 33
+  completed_plans: 34
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 07 — polish-and-packaging
+**Current focus:** Phase 08 — legacy-debt-cleanup
 
 ## Current Position
 
-Phase: 07 (polish-and-packaging) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-04-01
+Phase: 08 (legacy-debt-cleanup) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -81,6 +81,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 07 P05 | 8 | 2 tasks | 6 files |
 | Phase 07-polish-and-packaging P04 | 20 | 3 tasks | 6 files |
 | Phase 07 P03 | 128 | 2 tasks | 3 files |
+| Phase 08-legacy-debt-cleanup P02 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,7 @@ Recent decisions affecting current work:
 - [Phase 07-polish-and-packaging]: Use path-based SVG primitives for favicon (no text/font elements) to ensure cross-browser compatibility
 - [Phase 07-polish-and-packaging]: FileSystemLoader with os.path.dirname(__file__) used for Jinja2 template loading — no pip reinstall needed during development
 - [Phase 07-polish-and-packaging]: render_pdf_report() returns bool; pdf_path=None in write_reports() when Playwright unavailable — graceful degradation for HTML-only installs
+- [Phase 08-legacy-debt-cleanup]: Backward compat for enable_windows_adcs: dict comprehension exclude in config_from_dict rather than pop() — avoids mutating caller dict
 
 ### Pending Todos
 
@@ -163,6 +165,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T03:54:23.621Z
-Stopped at: Phase 8 context gathered (discuss mode)
-Resume file: .planning/phases/08-legacy-debt-cleanup/08-CONTEXT.md
+Last session: 2026-04-03T04:18:37.969Z
+Stopped at: Completed 08-02-PLAN.md
+Resume file: None
