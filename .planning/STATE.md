@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-04-03T04:19:38.532Z"
+stopped_at: Completed 08-03-PLAN.md — dead code deletion and code quality fixes
+last_updated: "2026-04-03T04:21:39.840Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 33
-  completed_plans: 35
+  completed_plans: 36
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 08 (legacy-debt-cleanup) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -83,6 +83,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 07 P03 | 128 | 2 tasks | 3 files |
 | Phase 08-legacy-debt-cleanup P02 | 5 | 2 tasks | 3 files |
 | Phase 08 P01 | 115 | 2 tasks | 8 files |
+| Phase 08 P03 | 3 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,9 @@ Recent decisions affecting current work:
 - [Phase 07-polish-and-packaging]: render_pdf_report() returns bool; pdf_path=None in write_reports() when Playwright unavailable — graceful degradation for HTML-only installs
 - [Phase 08-legacy-debt-cleanup]: Backward compat for enable_windows_adcs: dict comprehension exclude in config_from_dict rather than pop() — avoids mutating caller dict
 - [Phase 08]: config_template.yaml uses flat connectors block matching ConnectorsCfg field names exactly; documentation URL changed from [owner] placeholder to relative path ./docs/configuration.md
+- [Phase 08-legacy-debt-cleanup]: D-15: migration_advisor 'deprecated tls' -> 'legacy tls' to match actual risk_engine finding title; removed dead 'public key' pattern
+- [Phase 08-legacy-debt-cleanup]: D-17: cfg.scan mutations in TLS and SSH phases wrapped in try/finally for safe config restore on exception
+- [Phase 08-legacy-debt-cleanup]: D-13/D-20/D-21: Removed 4 dead writer.py functions, replaced utcnow() with timezone.utc, eliminated tqdm dead branch
 
 ### Pending Todos
 
@@ -167,6 +171,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T04:19:38.529Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-04-03T04:21:39.837Z
+Stopped at: Completed 08-03-PLAN.md — dead code deletion and code quality fixes
 Resume file: None
