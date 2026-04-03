@@ -42,4 +42,4 @@ def run_init(output_path: str) -> None:
     shutil.copy2(template_path, output_path)
     _info(f"Config file created: {output_path}")
     _info("Edit the [bold]targets[/bold] section, then run:")
-    _info(f"  [dim]quirk scan --config {output_path}[/dim]")
+    _info(f"  [dim]quirk --config {output_path}[/dim]")

@@ -49,7 +49,7 @@ This creates `config.yaml` in the current directory with sensible defaults.
 Edit the `targets` section with your network, then run:
 
 ```bash
-quirk scan --config config.yaml
+quirk --config config.yaml
 ```
 
 Your reports will appear in `./quirk-output/`.

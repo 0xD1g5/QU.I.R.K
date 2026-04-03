@@ -48,7 +48,7 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
             lines.append(f"- {label} (**-{pts}**)")
 
     lines.append("")
-    lines.append("## Confidence & Coverage (v3.7)")
+    lines.append("## Confidence & Coverage")
     lines.append(f"- **Confidence:** **{conf.get('confidence_rating')}** ({conf.get('confidence_score')}/100)")
     lines.append(f"- **Coverage:** {conf.get('coverage_pct')}% (TLS+SSH successful / total in-scope endpoints)")
     lines.append(f"- **TLS Enumeration Coverage:** {conf.get('tls_enum_coverage_pct')}% (TLS-success endpoints with capabilities captured)")
