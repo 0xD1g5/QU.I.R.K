@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-04-03T04:18:37.972Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-04-03T04:19:38.532Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 33
-  completed_plans: 34
+  completed_plans: 35
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 08 (legacy-debt-cleanup) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -82,6 +82,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 07-polish-and-packaging P04 | 20 | 3 tasks | 6 files |
 | Phase 07 P03 | 128 | 2 tasks | 3 files |
 | Phase 08-legacy-debt-cleanup P02 | 5 | 2 tasks | 3 files |
+| Phase 08 P01 | 115 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -153,6 +154,7 @@ Recent decisions affecting current work:
 - [Phase 07-polish-and-packaging]: FileSystemLoader with os.path.dirname(__file__) used for Jinja2 template loading — no pip reinstall needed during development
 - [Phase 07-polish-and-packaging]: render_pdf_report() returns bool; pdf_path=None in write_reports() when Playwright unavailable — graceful degradation for HTML-only installs
 - [Phase 08-legacy-debt-cleanup]: Backward compat for enable_windows_adcs: dict comprehension exclude in config_from_dict rather than pop() — avoids mutating caller dict
+- [Phase 08]: config_template.yaml uses flat connectors block matching ConnectorsCfg field names exactly; documentation URL changed from [owner] placeholder to relative path ./docs/configuration.md
 
 ### Pending Todos
 
@@ -165,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T04:18:37.969Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-04-03T04:19:38.529Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None

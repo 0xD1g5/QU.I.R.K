@@ -47,10 +47,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
-- [ ] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
+- [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
 - [x] 08-02-PLAN.md — Fix interactive mode labels, remove ADCS, add Phase 3 scanner prompts (D-03, D-04, D-05)
 - [ ] 08-03-PLAN.md — Delete dead code, fix migration_advisor, cfg.scan try/finally, datetime, tqdm (D-09..D-13, D-15, D-17, D-19..D-21)
 - [ ] 08-04-PLAN.md — Fix validate.py artifact checks + integration test (D-01, D-02)
@@ -270,7 +270,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. Legacy Debt Cleanup | 1/4 | In Progress|  |
+| 8. Legacy Debt Cleanup | 2/4 | In Progress|  |
 | 9. Scoring Consolidation | 0/0 | Not started | - |
 | 1. Foundation Fixes | 4/4 | Complete | 2026-03-29 |
 | 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
