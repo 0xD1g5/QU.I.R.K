@@ -58,3 +58,13 @@ connectors:
   container_targets: []
   enable_source: false
   source_targets: []
+
+# -- Intelligence / scoring profile -----------------------------------------
+# Adjust how the quantum-readiness score weights agility and identity signals.
+# intelligence:
+#   profile: balanced        # strict | balanced | lenient
+#                            #   strict  — 1.4x agility + identity weights (conservative posture)
+#                            #   balanced — default (1.0x multipliers)
+#                            #   lenient  — 0.7x agility + identity weights (relaxed posture)
+#   # calibration_overrides: # Fine-tune individual weight keys (advanced)
+#   #   agility_high_impact_ratio: 14.0

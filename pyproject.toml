@@ -44,4 +44,4 @@ include = ["quirk*"]
 py-modules = ["run_scan"]
 
 [tool.setuptools.package-data]
-quirk = ["reports/templates/*.j2", "config_template.yaml"]
+quirk = ["reports/templates/*.j2", "config_template.yaml", "dashboard/static/**/*"]
