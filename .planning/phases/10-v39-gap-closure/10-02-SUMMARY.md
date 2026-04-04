@@ -105,3 +105,12 @@ None — all changes are functional (glob is real, YAML block is real content, t
 ---
 *Phase: 10-v39-gap-closure*
 *Completed: 2026-04-03*
+
+## Self-Check: PASSED
+
+- FOUND: tests/test_gap_closure_packaging.py
+- FOUND: pyproject.toml (with dashboard/static/**/* glob)
+- FOUND: quirk/config_template.yaml (with intelligence: block)
+- FOUND: .planning/phases/10-v39-gap-closure/10-02-SUMMARY.md
+- FOUND commit: ec7d089 (TDD RED tests)
+- FOUND commit: 0af7417 (GREEN fixes)
