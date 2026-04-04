@@ -62,6 +62,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ MISMATCH-01 fixed: quantum_safety_label() type confusion resolved in dashboard API — Phase 10
 - ✓ PACKAGE-01 fixed: dashboard static assets included in pip wheel (pyproject.toml) — Phase 10
 - ✓ MISSING-01 fixed: intelligence config block documented in config_template.yaml — Phase 10
+- ✓ GAP-INT-01 fixed: deps.py default db_path aligned with config_template.yaml (./quirk.db) — Phase 11
+- ✓ GAP-INT-02 fixed: server.py sets QUIRK_SERVE_PORT env var before uvicorn.run() — Phase 11
+- ✓ GAP-INT-03 fixed: _derive_cbom() parses ssh_audit_json; SSH endpoints produce CBOM entries — Phase 11
 
 **Web Dashboard (FastAPI + React + shadcn/ui)**
 - [ ] FastAPI API layer serving scanner results and managing scan jobs
@@ -148,7 +151,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | — Pending |
 
 ---
-*Last updated: 2026-04-03 after Phase 10 completion — v3.9 gap closure complete; MISMATCH-01, PACKAGE-01, MISSING-01 all resolved; 7 new regression tests passing*
+*Last updated: 2026-04-04 after Phase 11 completion — dashboard wiring fixes complete; GAP-INT-01, GAP-INT-02, GAP-INT-03 all resolved; all 5 Phase 11 wiring tests passing, 199-test suite green*
 
 ## Evolution
 
