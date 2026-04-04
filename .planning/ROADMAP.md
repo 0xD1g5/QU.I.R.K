@@ -100,7 +100,7 @@ Plans:
   3. An SSH-only scan shows algorithm components in the dashboard CBOM viewer tab (not an empty list)
 
 Plans:
-- [ ] 11-01-PLAN.md — Fix db_path default mismatch and QUIRK_SERVE_PORT propagation (GAP-INT-01, GAP-INT-02)
+- [x] 11-01-PLAN.md — Fix db_path default mismatch and QUIRK_SERVE_PORT propagation (GAP-INT-01, GAP-INT-02)
 - [ ] 11-02-PLAN.md — Parse ssh_audit_json in _derive_cbom() for dashboard CBOM viewer (GAP-INT-03)
 
 ### Phase 1: Foundation Fixes
@@ -114,7 +114,7 @@ Plans:
   4. Running a 100-host SSH scan completes meaningfully faster than sequential and does not drop results
   5. A TLS scan against a target returns cipher suite details, certificate chain, and protocol version sourced from sslyze
   6. An SSH scan returns KEX algorithms, host key types, and MAC algorithms — not just the banner string
-**Plans:** 4 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 01-PLAN-scoring-fixes.md — Consolidate scoring to single intelligence path, fix cert_pubkey_alg extraction bug
 - [ ] 02-PLAN-ssh-scanner.md — Replace sequential SSH scanner with threaded ssh-audit integration

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: Gap Closure
-status: verifying
-stopped_at: Completed 10-02-PLAN.md (PACKAGE-01 and MISSING-01 gap closure)
-last_updated: "2026-04-04T03:33:44.210Z"
+status: executing
+stopped_at: Completed 11-01-PLAN.md (GAP-INT-01 and GAP-INT-02 dashboard wiring fixes)
+last_updated: "2026-04-04T12:32:48.831Z"
 last_activity: 2026-04-04
 progress:
-  total_phases: 12
+  total_phases: 13
   completed_phases: 9
-  total_plans: 38
-  completed_plans: 42
+  total_plans: 40
+  completed_plans: 43
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 10 — v39-gap-closure
+**Current focus:** Phase 11 — dashboard-wiring-fixes
 
 ## Current Position
 
-Phase: 10
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 11 (dashboard-wiring-fixes) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
@@ -90,6 +90,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 09-scoring-consolidation PP03 | 8 | 2 tasks | 5 files |
 | Phase 10-v39-gap-closure P01 | 89 | 2 tasks | 2 files |
 | Phase 10-v39-gap-closure P02 | 4 | 3 tasks | 3 files |
+| Phase 11-dashboard-wiring-fixes P01 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -177,6 +178,8 @@ Recent decisions affecting current work:
 - [Phase 10-v39-gap-closure]: Two-step classify_algorithm(alg) -> quantum_safety_label(nist_level) enforced at all call sites — no direct string-to-label shortcut
 - [Phase 10-v39-gap-closure]: dashboard/static/**/* glob in pyproject.toml is relative to quirk/ package root — setuptools >= 68 resolves it recursively to include React bundle
 - [Phase 10-v39-gap-closure]: Intelligence block in config_template.yaml is fully commented — pure discoverability for quirk init users with zero runtime impact
+- [Phase 11-dashboard-wiring-fixes]: sys.modules patch used instead of patch('uvicorn.run') — uvicorn is lazily imported inside serve() and not installed in test env; sys.modules injection intercepts the import cleanly
+- [Phase 11-dashboard-wiring-fixes]: SSH CBOM tests left RED intentionally — they define the Plan 02 implementation contract for ssh_audit_json parsing
 
 ### Pending Todos
 
@@ -189,6 +192,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T03:29:47.578Z
-Stopped at: Completed 10-02-PLAN.md (PACKAGE-01 and MISSING-01 gap closure)
+Last session: 2026-04-04T12:32:48.828Z
+Stopped at: Completed 11-01-PLAN.md (GAP-INT-01 and GAP-INT-02 dashboard wiring fixes)
 Resume file: None
