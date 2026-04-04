@@ -27,6 +27,14 @@ from quirk.models import CryptoEndpoint
 
 router = APIRouter()
 
+# Map classifier raw labels to frontend display values
+_QS_DISPLAY = {
+    "quantum-safe": "Safe",
+    "quantum-vulnerable": "Vulnerable",
+    "hybrid": "At Risk",
+    "unknown": "Unknown",
+}
+
 
 def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     """Synthesize findings from CryptoEndpoint rows.
@@ -139,8 +147,9 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
         # Quantum-vulnerable algorithm (non-RSA)
         if ep.cert_pubkey_alg and not ep.cert_pubkey_alg.upper().startswith("RSA"):
             try:
-                from quirk.cbom.classifier import quantum_safety_label
-                qs = quantum_safety_label(ep.cert_pubkey_alg)
+                from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
+                _, nist_level, _ = classify_algorithm(ep.cert_pubkey_alg)
+                qs = _QS_DISPLAY.get(quantum_safety_label(nist_level), "Unknown")
                 if qs in ("Vulnerable", "At Risk"):
                     findings.append(FindingItem(
                         id=ep.id,
@@ -166,14 +175,6 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
 def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     """Build CBOM components from endpoints by aggregating algorithm usage."""
     from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
-
-    # Map internal classifier labels to frontend display values
-    _QS_DISPLAY = {
-        "quantum-safe": "Safe",
-        "quantum-vulnerable": "Vulnerable",
-        "hybrid": "At Risk",
-        "unknown": "Unknown",
-    }
 
     def _qs_for_alg(alg: str) -> str:
         try:
@@ -375,7 +376,9 @@ def _cert_quantum_safety(algorithm: Optional[str]) -> Optional[str]:
     if not algorithm:
         return None
     try:
-        from quirk.cbom.classifier import quantum_safety_label
-        return quantum_safety_label(algorithm)
+        from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
+        _, nist_level, _ = classify_algorithm(algorithm)
+        raw = quantum_safety_label(nist_level)
+        return _QS_DISPLAY.get(raw, "Unknown")
     except Exception:
         return "Unknown"
