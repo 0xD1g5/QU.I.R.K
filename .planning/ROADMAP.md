@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 8: Legacy Debt Cleanup** - Fix show-stopper bugs, dead code, broken CLI, and label/intent drift surfaced by codebase audit (completed 2026-04-03)
 - [x] **Phase 9: Scoring Consolidation** - Eliminate dual scoring systems, make calibration profile functional, single authoritative score path (completed 2026-04-03)
-- [ ] **Phase 10: v3.9 Gap Closure** - Fix quantum safety label type mismatch, package dashboard static assets for pip distribution, add intelligence config block to template
+- [x] **Phase 10: v3.9 Gap Closure** - Fix quantum safety label type mismatch, package dashboard static assets for pip distribution, add intelligence config block to template (completed 2026-04-04)
 - [x] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners (completed 2026-03-29)
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
@@ -83,10 +83,10 @@ Plans:
   2. `pip install --no-editable .` followed by `quirk serve` loads the dashboard without 404 errors on UI routes
   3. `quirk init` generates a `config.yaml` with a commented `intelligence:` block showing the `profile:` knob
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 10-01-PLAN.md — Fix MISMATCH-01: quantum_safety_label() type confusion in scan.py _derive_findings and _cert_quantum_safety (CBOM-03, UI-03)
-- [ ] 10-02-PLAN.md — Fix PACKAGE-01 + MISSING-01: add dashboard/static glob to pyproject.toml, add intelligence config block to template (UI-01, BRAND-04)
+- [x] 10-02-PLAN.md — Fix PACKAGE-01 + MISSING-01: add dashboard/static glob to pyproject.toml, add intelligence config block to template (UI-01, BRAND-04)
 
 ### Phase 1: Foundation Fixes
 **Goal**: The scanner codebase is correct, consistent, and renamed — producing accurate data with deep TLS and SSH algorithm enumeration
