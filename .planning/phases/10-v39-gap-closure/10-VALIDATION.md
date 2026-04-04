@@ -38,9 +38,11 @@ created: 2026-04-03
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 10-01-01 | 01 | 1 | CBOM-03 | unit | `python -m pytest tests/test_scan.py -k "quantum_safety" -x -q` | ✅ | ⬜ pending |
-| 10-01-02 | 01 | 1 | UI-01, UI-03 | integration | `python -m pytest tests/test_packaging.py -x -q` | ✅ W0 | ⬜ pending |
-| 10-01-03 | 01 | 2 | BRAND-04 | unit | `python -m pytest tests/test_cli_init.py -x -q` | ✅ | ⬜ pending |
+| 10-01-01 | 01 | 1 | CBOM-03, UI-03 | unit | `python -m pytest tests/test_gap_closure.py -x -q` | ✅ | ⬜ pending |
+| 10-01-02 | 01 | 1 | CBOM-03, UI-03 | unit | `python -m pytest tests/test_gap_closure.py -x -q && python -m pytest tests/test_dashboard_api.py -x -q` | ✅ | ⬜ pending |
+| 10-02-01 | 02 | 1 | UI-01, BRAND-04 | unit | `python -m pytest tests/test_gap_closure_packaging.py -x -q` | ✅ | ⬜ pending |
+| 10-02-02 | 02 | 1 | UI-01, BRAND-04 | unit | `python -m pytest tests/test_gap_closure_packaging.py -x -q && python -m pytest tests/test_packaging.py -x -q` | ✅ | ⬜ pending |
+| 10-02-03 | 02 | 1 | BRAND-04 | docs | `grep -q "intelligence" docs/configuration.md` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,9 +50,9 @@ created: 2026-04-03
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_packaging.py` — stub for pip wheel smoke test (PACKAGE-01 / UI-01, UI-03)
+- None — all test files are created by TDD tasks within the plans themselves.
 
-*Existing infrastructure covers quantum_safety_label and cli_init tests.*
+*Existing infrastructure covers dashboard_api and cli_init tests.*
 
 ---
 
