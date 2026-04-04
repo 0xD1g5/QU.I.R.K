@@ -59,6 +59,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Profile-based weight multipliers (strict/balanced/lenient) in compute_readiness_score() — Phase 9
 - ✓ executive.py refactored to intelligence/ call sequence; NOW/NEXT/LATER roadmap — Phase 9
 - ✓ Four deprecated assessment compute modules deleted; zero live imports remain — Phase 9
+- ✓ MISMATCH-01 fixed: quantum_safety_label() type confusion resolved in dashboard API — Phase 10
+- ✓ PACKAGE-01 fixed: dashboard static assets included in pip wheel (pyproject.toml) — Phase 10
+- ✓ MISSING-01 fixed: intelligence config block documented in config_template.yaml — Phase 10
 
 **Web Dashboard (FastAPI + React + shadcn/ui)**
 - [ ] FastAPI API layer serving scanner results and managing scan jobs
@@ -145,7 +148,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | — Pending |
 
 ---
-*Last updated: 2026-03-31 after Phase 6 completion — full documentation suite written (README, getting-started, installation, configuration reference, 4 connector guides, report interpretation guide, CBOM guide, chaos lab operator guide); all DOC-01–DOC-07 requirements validated; 148 tests passing*
+*Last updated: 2026-04-03 after Phase 10 completion — v3.9 gap closure complete; MISMATCH-01, PACKAGE-01, MISSING-01 all resolved; 7 new regression tests passing*
 
 ## Evolution
 
