@@ -11,7 +11,7 @@ from quirk.db import get_engine
 
 def _default_db_path() -> str:
     """Resolve default SQLite path — same logic as run_scan.py."""
-    return os.environ.get("QUIRK_DB_PATH", "data/quirk.db")
+    return os.environ.get("QUIRK_DB_PATH", "./quirk.db")
 
 
 def get_db() -> Generator[Session, None, None]:
