@@ -83,8 +83,10 @@ Plans:
   2. `pip install --no-editable .` followed by `quirk serve` loads the dashboard without 404 errors on UI routes
   3. `quirk init` generates a `config.yaml` with a commented `intelligence:` block showing the `profile:` knob
 
+**Plans:** 2 plans
 Plans:
-- [ ] 10-01-PLAN.md — Fix quantum_safety_label() type mismatch (scan.py 143, 379), add pyproject.toml package-data, add intelligence block to config_template.yaml (CBOM-03, UI-01, UI-03, BRAND-04)
+- [ ] 10-01-PLAN.md — Fix MISMATCH-01: quantum_safety_label() type confusion in scan.py _derive_findings and _cert_quantum_safety (CBOM-03, UI-03)
+- [ ] 10-02-PLAN.md — Fix PACKAGE-01 + MISSING-01: add dashboard/static glob to pyproject.toml, add intelligence config block to template (UI-01, BRAND-04)
 
 ### Phase 1: Foundation Fixes
 **Goal**: The scanner codebase is correct, consistent, and renamed — producing accurate data with deep TLS and SSH algorithm enumeration
