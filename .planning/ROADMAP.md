@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Legacy Debt Cleanup** - Fix show-stopper bugs, dead code, broken CLI, and label/intent drift surfaced by codebase audit (completed 2026-04-03)
 - [x] **Phase 9: Scoring Consolidation** - Eliminate dual scoring systems, make calibration profile functional, single authoritative score path (completed 2026-04-03)
 - [x] **Phase 10: v3.9 Gap Closure** - Fix quantum safety label type mismatch, package dashboard static assets for pip distribution, add intelligence config block to template (completed 2026-04-04)
-- [ ] **Phase 11: Dashboard Wiring Fixes** - Close three integration gaps found by milestone audit: db_path default mismatch, QUIRK_SERVE_PORT not propagated to PDF exporter, SSH algorithms absent from dashboard CBOM viewer
+- [x] **Phase 11: Dashboard Wiring Fixes** - Close three integration gaps found by milestone audit: db_path default mismatch, QUIRK_SERVE_PORT not propagated to PDF exporter, SSH algorithms absent from dashboard CBOM viewer (completed 2026-04-04)
 - [x] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners (completed 2026-03-29)
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
@@ -101,7 +101,7 @@ Plans:
 
 Plans:
 - [x] 11-01-PLAN.md — Fix db_path default mismatch and QUIRK_SERVE_PORT propagation (GAP-INT-01, GAP-INT-02)
-- [ ] 11-02-PLAN.md — Parse ssh_audit_json in _derive_cbom() for dashboard CBOM viewer (GAP-INT-03)
+- [x] 11-02-PLAN.md — Parse ssh_audit_json in _derive_cbom() for dashboard CBOM viewer (GAP-INT-03)
 
 ### Phase 1: Foundation Fixes
 **Goal**: The scanner codebase is correct, consistent, and renamed — producing accurate data with deep TLS and SSH algorithm enumeration
@@ -114,7 +114,7 @@ Plans:
   4. Running a 100-host SSH scan completes meaningfully faster than sequential and does not drop results
   5. A TLS scan against a target returns cipher suite details, certificate chain, and protocol version sourced from sslyze
   6. An SSH scan returns KEX algorithms, host key types, and MAC algorithms — not just the banner string
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 01-PLAN-scoring-fixes.md — Consolidate scoring to single intelligence path, fix cert_pubkey_alg extraction bug
 - [ ] 02-PLAN-ssh-scanner.md — Replace sequential SSH scanner with threaded ssh-audit integration
