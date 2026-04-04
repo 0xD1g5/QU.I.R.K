@@ -23,6 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Legacy Debt Cleanup** - Fix show-stopper bugs, dead code, broken CLI, and label/intent drift surfaced by codebase audit (completed 2026-04-03)
 - [x] **Phase 9: Scoring Consolidation** - Eliminate dual scoring systems, make calibration profile functional, single authoritative score path (completed 2026-04-03)
 - [x] **Phase 10: v3.9 Gap Closure** - Fix quantum safety label type mismatch, package dashboard static assets for pip distribution, add intelligence config block to template (completed 2026-04-04)
+- [ ] **Phase 11: Dashboard Wiring Fixes** - Close three integration gaps found by milestone audit: db_path default mismatch, QUIRK_SERVE_PORT not propagated to PDF exporter, SSH algorithms absent from dashboard CBOM viewer
 - [x] **Phase 1: Foundation Fixes** - Consolidate scoring, fix data bugs, rename to QU.I.R.K., upgrade SSH and TLS scanners (completed 2026-03-29)
 - [x] **Phase 2: CBOM Pipeline** - Integrate cyclonedx, map algorithms, enrich with NIST PQC classification, produce CBOM artifacts (completed 2026-03-29)
 - [x] **Phase 3: Scanner Coverage** - Add JWT/API, container/binary, source code, and cloud connectors (AWS + Azure) (completed 2026-03-29)
@@ -87,6 +88,20 @@ Plans:
 Plans:
 - [x] 10-01-PLAN.md — Fix MISMATCH-01: quantum_safety_label() type confusion in scan.py _derive_findings and _cert_quantum_safety (CBOM-03, UI-03)
 - [x] 10-02-PLAN.md — Fix PACKAGE-01 + MISSING-01: add dashboard/static glob to pyproject.toml, add intelligence config block to template (UI-01, BRAND-04)
+
+### Phase 11: Dashboard Wiring Fixes
+**Goal**: The default install→scan→serve E2E flow completes without errors — a fresh user who runs `quirk init`, scans, and serves sees their data in the dashboard; PDF export works at any port; SSH algorithms appear in the CBOM viewer tab
+**Depends on**: Phase 10
+**Requirements**: UI-01, UI-03, UI-04
+**Gap Closure**: Closes GAP-INT-01, GAP-INT-02, GAP-INT-03 from v3.9-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. `quirk init` → edit config → `quirk --config config.yaml` → `quirk serve` → `/api/scan/latest` returns scan data (not 404) with default config and no env var overrides
+  2. `quirk serve --port 9000` → PDF export button produces a valid PDF targeting port 9000, not port 8512
+  3. An SSH-only scan shows algorithm components in the dashboard CBOM viewer tab (not an empty list)
+
+Plans:
+- [ ] 11-01-PLAN.md — Fix db_path default mismatch and QUIRK_SERVE_PORT propagation (GAP-INT-01, GAP-INT-02)
+- [ ] 11-02-PLAN.md — Parse ssh_audit_json in _derive_cbom() for dashboard CBOM viewer (GAP-INT-03)
 
 ### Phase 1: Foundation Fixes
 **Goal**: The scanner codebase is correct, consistent, and renamed — producing accurate data with deep TLS and SSH algorithm enumeration
