@@ -200,6 +200,28 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
                 algo_map[alg] = {"quantum_safety": "Unknown", "key_size": None, "type": "protocol", "sources": set()}
             algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
 
+        # Parse SSH audit JSON for algorithm inventory
+        if ep.ssh_audit_json:
+            try:
+                ssh_data = json.loads(ep.ssh_audit_json)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                ssh_data = {}
+            _SSH_TYPE = {"kex": "key-exchange", "key": "signature", "enc": "cipher", "mac": "hash"}
+            for section, alg_type in _SSH_TYPE.items():
+                for entry in ssh_data.get(section, []):
+                    alg = entry.get("algorithm") if isinstance(entry, dict) else None
+                    if not alg:
+                        continue
+                    qs = _qs_for_alg(alg)
+                    if alg not in algo_map:
+                        algo_map[alg] = {
+                            "quantum_safety": qs,
+                            "key_size": entry.get("keysize"),
+                            "type": alg_type,
+                            "sources": set(),
+                        }
+                    algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
+
         # Parse JWT/cloud/container scan JSON for algorithms
         for json_col in (ep.jwt_scan_json, ep.cloud_scan_json):
             if not json_col:
