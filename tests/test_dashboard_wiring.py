@@ -55,9 +55,10 @@ def test_server_sets_quirk_serve_port():
     """serve() sets os.environ['QUIRK_SERVE_PORT'] to str(port) before uvicorn.run().
 
     Verifies GAP-INT-02: the PDF exporter can read the correct port from the env var.
-    The test mocks uvicorn.run so the server never actually starts; it checks that
-    the env var is already set at the moment uvicorn.run() would be called.
+    The test injects a mock uvicorn module into sys.modules so the server never actually
+    starts; it checks that the env var is already set at the moment uvicorn.run() is called.
     """
+    import sys
     from quirk.dashboard.server import serve
 
     captured_port_in_env: list[str] = []
@@ -65,10 +66,13 @@ def test_server_sets_quirk_serve_port():
     def _check_env_and_stop(*args, **kwargs):
         # Read the env var value at the moment uvicorn.run() is called
         captured_port_in_env.append(os.environ.get("QUIRK_SERVE_PORT", "__NOT_SET__"))
-        # Raise to prevent uvicorn from actually starting
         raise SystemExit(0)
 
-    with unittest.mock.patch("uvicorn.run", side_effect=_check_env_and_stop):
+    mock_uvicorn = unittest.mock.MagicMock()
+    mock_uvicorn.run.side_effect = _check_env_and_stop
+
+    # Inject mock into sys.modules so 'import uvicorn' inside serve() gets our mock
+    with unittest.mock.patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
         with pytest.raises(SystemExit):
             serve(port=9999, no_open=True)
 
