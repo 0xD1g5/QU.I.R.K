@@ -73,19 +73,12 @@ MINIMAL_INPUTS = [
 class TestTimezoneAutoDetected(unittest.TestCase):
     """INTER-01: interactive_config() auto-detects timezone; no input() call for timezone."""
 
-    @unittest.expectedFailure
     def test_timezone_auto_detected(self):
         """cfg.assessment.timezone must be a non-empty auto-detected string.
 
-        The mock side_effect uses MINIMAL_INPUTS (new prompt order).  If the current
-        implementation prompts for timezone, the mock will run out of inputs or
-        consume the wrong value, causing an assertion failure or StopIteration.
-
-        RED against current interactive.py because:
-          - Current code calls _prompt("Timezone", DEFAULT_TIMEZONE) which consumes
-            an input() call that is not in MINIMAL_INPUTS.
-          - interactive_config() returns AppConfig, not a tuple — so the unpack
-            `cfg, profile = interactive_config()` will also raise ValueError.
+        The mock side_effect uses MINIMAL_INPUTS (new prompt order).
+        Timezone must be auto-detected — no input() call for timezone.
+        Return type is tuple[AppConfig, str] per D-07.
         """
         inputs = list(MINIMAL_INPUTS)
         with patch("builtins.input", side_effect=inputs):
@@ -125,13 +118,10 @@ class TestTimezoneAutoDetected(unittest.TestCase):
 class TestNoSniPrompt(unittest.TestCase):
     """INTER-02: interactive_config() does not prompt for SNI; returns include_sni=True."""
 
-    @unittest.expectedFailure
     def test_no_sni_prompt(self):
         """cfg.scan.include_sni must be True without any prompt.
 
-        RED against current interactive.py because:
-          - Current code calls _prompt_bool("Use SNI for FQDN targets", True).
-          - Return type is AppConfig, not tuple — unpack raises ValueError.
+        SNI is hardcoded True per D-02. Return type is tuple[AppConfig, str].
         """
         inputs = list(MINIMAL_INPUTS)
         with patch("builtins.input", side_effect=inputs):
@@ -165,12 +155,10 @@ class TestNoSniPrompt(unittest.TestCase):
 class TestNoAdcsPrompt(unittest.TestCase):
     """INTER-03: interactive_config() does not prompt for Windows ADCS."""
 
-    @unittest.expectedFailure
     def test_no_adcs_prompt(self):
         """No input() call should mention ADCS, adcs, or windows_adcs.
 
-        RED against current interactive.py because return type is wrong (tuple unpack fails).
-        The ADCS check is a secondary assertion; the primary failure is the return type.
+        ADCS feature removed per D-04/INTER-03.
         """
         inputs = list(MINIMAL_INPUTS)
         with patch("builtins.input", side_effect=inputs) as mock_input:
@@ -199,14 +187,11 @@ class TestNoAdcsPrompt(unittest.TestCase):
 class TestConnectorLabelsNoStub(unittest.TestCase):
     """INTER-04: Connector section labels AWS/Azure without '(stub)'; shows credential warnings."""
 
-    @unittest.expectedFailure
     def test_connector_labels_no_stub(self):
         """No print() call should contain '(stub)'; AWS and Azure credential warnings shown.
 
-        RED against current interactive.py because return type is wrong (tuple unpack fails).
-
         When AWS is enabled (answer 'y'), the code must print text containing
-        'AWS_ACCESS_KEY_ID' (per D-14).  Similarly for Azure with 'AZURE_CLIENT_ID'.
+        'AWS_ACCESS_KEY_ID' (per D-14). Similarly for Azure with 'AZURE_CLIENT_ID'.
         """
         # Enable both AWS and Azure by answering "y" at positions 8 and 9
         inputs = list(MINIMAL_INPUTS)
@@ -253,14 +238,10 @@ class TestConnectorLabelsNoStub(unittest.TestCase):
 class TestScannerEnables(unittest.TestCase):
     """INTER-05: JWT, container, and source scanner prompts exist and wire config correctly."""
 
-    @unittest.expectedFailure
     def test_scanner_enables(self):
         """Enable JWT, container, and source scanners; verify config fields populated.
 
-        RED against current interactive.py because return type is wrong (tuple unpack fails).
-
-        Note: prompt order in the current code differs from the new order (D-15), so the
-        side_effect list positions reflect the NEW order where scanners appear at indices 5-7.
+        Prompt order per D-15: scanners appear at positions 5-7 in MINIMAL_INPUTS.
         """
         inputs = list(MINIMAL_INPUTS)
         inputs[5] = "y"                          # enable JWT
@@ -303,13 +284,10 @@ class TestScannerEnables(unittest.TestCase):
 class TestProfileSelection(unittest.TestCase):
     """INTER-06: Profile selection menu returns correct profile string in tuple."""
 
-    @unittest.expectedFailure
     def test_profile_selection(self):
         """Selecting profile '3' (deep) returns profile=='deep'; empty string returns 'standard'.
 
-        RED against current interactive.py because:
-          - No profile selection menu exists.
-          - Return type is AppConfig, not tuple — unpack raises ValueError.
+        Profile selection menu implemented per D-05/D-06. Return type is tuple[AppConfig, str].
         """
         # Test: answer "3" for deep profile
         inputs_deep = list(MINIMAL_INPUTS)
@@ -344,14 +322,10 @@ class TestProfileSelection(unittest.TestCase):
 class TestConsultingPorts(unittest.TestCase):
     """INTER-07: ports_tls contains all 17 consulting-grade ports; no ports prompt issued."""
 
-    @unittest.expectedFailure
     def test_consulting_ports(self):
         """cfg.scan.ports_tls must equal the exact 17-port consulting set from D-03.
 
-        RED against current interactive.py because:
-          - Current code prompts for TLS ports.
-          - The default list is only 6 ports (not 17).
-          - Return type is wrong (tuple unpack fails).
+        Consulting-grade ports hardcoded per D-03. No prompt issued for ports.
         """
         EXPECTED_PORTS = {
             443, 8443, 9443, 10443, 4433, 5001,  # original list
@@ -386,13 +360,10 @@ class TestConsultingPorts(unittest.TestCase):
 class TestPromptOrder(unittest.TestCase):
     """INTER-08: Prompts appear in targets-first order per D-15."""
 
-    @unittest.expectedFailure
     def test_prompt_order(self):
         """Verify target prompts appear before profile/scanner prompts, output before metadata.
 
-        RED against current interactive.py because:
-          - Current code asks metadata (name, classification, owner, timezone) BEFORE targets.
-          - Return type is wrong (tuple unpack fails).
+        Prompt order per D-15: Targets -> Scan opts -> Scanners -> Connectors -> Output -> Metadata.
         """
         # Capture all input() call prompt strings in order
         prompt_texts: list[str] = []
@@ -469,12 +440,10 @@ class TestPromptOrder(unittest.TestCase):
 class TestNoAdcsInConfig(unittest.TestCase):
     """INTER-09: Generated config dict has no enable_windows_adcs field anywhere."""
 
-    @unittest.expectedFailure
     def test_no_adcs_in_config(self):
         """dataclasses.asdict(cfg) must not contain 'enable_windows_adcs' key at any level.
 
-        RED against current interactive.py because return type is wrong (tuple unpack fails).
-        The ADCS field check is a secondary assertion.
+        Dead ADCS field removed per D-04/INTER-09.
         """
         import dataclasses
 
@@ -499,20 +468,15 @@ class TestNoAdcsInConfig(unittest.TestCase):
 class TestDataClassificationUnified(unittest.TestCase):
     """INTER-10: Single classification prompt populates data_classification AND data_types."""
 
-    @unittest.expectedFailure
     def test_data_classification_unified(self):
         """Classification choice sets cfg.assessment.data_classification and get_context data_types.
 
         Tests three mappings from D-11:
-          - "4" → data_classification="regulated", data_types=["PCI", "PHI"]
-          - "1" → data_classification="public", data_types=["PUBLIC"]
-          - "3" → data_classification="confidential", data_types=["FINANCIAL", "TRADE"]
+          - "4" -> data_classification="regulated", data_types=["PCI", "PHI"]
+          - "1" -> data_classification="public", data_types=["PUBLIC"]
+          - "3" -> data_classification="confidential", data_types=["FINANCIAL", "TRADE"]
 
-        RED against current interactive.py because:
-          - Current code uses a free-text prompt (not a numbered menu).
-          - Return type is AppConfig, not tuple — unpack raises ValueError.
-          - data_types is populated separately via prompt_for_context() which is NOT
-            called in these tests (no inputs provided for it).
+        Single unified prompt per D-10/D-11 sets both config fields.
         """
         from quirk.assessment.operator_context import get_context
 
