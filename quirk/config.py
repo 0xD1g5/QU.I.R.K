@@ -69,7 +69,7 @@ class OutputCfg:
 @dataclass
 class IntelligenceCfg:
     # Intelligence/scoring layer versioning
-    intelligence_version: str = "4.0.0"
+    intelligence_version: str = "4.1.0"
 
     # Score calibration profile used by scoring/reporting.
     # Supported: lenient|balanced|strict
@@ -119,7 +119,7 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         profile = "balanced"
 
     intelligence_cfg = IntelligenceCfg(
-        intelligence_version=str(intel_raw.get("intelligence_version", "4.0.0") or "4.0.0"),
+        intelligence_version=str(intel_raw.get("intelligence_version", "4.1.0") or "4.1.0"),
         profile=profile,
         calibration_overrides=overrides,
     )

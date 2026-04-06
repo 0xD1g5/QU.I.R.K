@@ -73,7 +73,7 @@ def _normalize_cloud_key_spec(key_spec: str) -> str | None:
     return mapping.get(spec_upper)
 
 # Tool version — duplicated here to avoid circular imports with quirk.reports.writer
-PLATFORM_VERSION = "4.0"
+PLATFORM_VERSION = "4.1.0"
 
 # ---------------------------------------------------------------------------
 # Cipher suite decomposition
