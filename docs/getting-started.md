@@ -16,16 +16,18 @@ Before you begin:
 
 ## 1. Install
 
-Install directly from GitHub (no clone required):
+Clone the repository and install in editable mode:
 
 ```bash
-pip install 'git+https://github.com/[owner]/quirk.git'
+git clone <your-repo-url>
+cd quirk
+pip install -e .
 ```
 
 For dashboard support (PDF export, web UI):
 
 ```bash
-pip install 'git+https://github.com/[owner]/quirk.git[dashboard]'
+pip install -e '.[dashboard]'
 playwright install chromium   # Required for PDF export — one-time step
 ```
 
