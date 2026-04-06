@@ -23,7 +23,7 @@ from quirk.scanner.azure_connector import scan_azure_targets
 from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
-from quirk.assessment.operator_context import prompt_for_context, attach_context
+from quirk.assessment.operator_context import attach_context
 from quirk.engine.risk_engine import evaluate_endpoints
 from quirk.reports.writer import write_reports
 
@@ -172,15 +172,16 @@ def main():
     }
 
     used_config_file = False
+    scan_profile = args.profile
     if args.config:
         logger.info(f"🧾 Loading config from: {args.config}")
         cfg = load_config(args.config)
         used_config_file = True
     else:
-        cfg = interactive_config()
+        cfg, scan_profile = interactive_config()
 
     # Apply profile defaults (v3.7)
-    apply_profile(cfg, args.profile, safe_mode=args.safe_mode)
+    apply_profile(cfg, scan_profile, safe_mode=args.safe_mode)
     # Score profile (calibration) — independent from scan profile
     if getattr(args, "score_profile", None):
         if getattr(cfg, "intelligence", None) is None:
@@ -191,11 +192,6 @@ def main():
                 pass
         if getattr(cfg, "intelligence", None) is not None:
             cfg.intelligence.profile = args.score_profile  # type: ignore[attr-defined]
-
-    # v3.5.1 context prompts (only in interactive mode)
-    if not used_config_file:
-        ctx = prompt_for_context()
-        attach_context(cfg, ctx)
 
     init_db(cfg.output.db_path)
 
