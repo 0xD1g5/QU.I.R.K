@@ -48,7 +48,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The Getting Started guide, config template comments, and `quirk init` output all instruct users to run `quirk --config config.yaml`, not `quirk scan --config config.yaml`
   3. `quirk init` generates a `config.yaml` with no `[owner]` placeholder — the documentation URL is either real or omitted
   4. `quirk --version`, CBOM metadata stamps, report section headers, and `writer.py` constants all show the same `4.x` version string
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
+- [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
 
 ### Phase 13: Interactive Mode Overhaul
 **Goal**: Interactive mode guides a consultant to a correctly configured scan without surfacing broken prompts, missing scanner options, or confusing implementation details
@@ -60,7 +63,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A user can enable the JWT, container, and source scanners from interactive mode and provide their respective targets
   4. Interactive mode presents a single profile selection question (quick/standard/deep) instead of raw `timeout_seconds` and `concurrency` fields
   5. The generated config contains no `enable_windows_adcs` field and presents data classification as a single coherent prompt
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
+- [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
 
 ### Phase 14: Scoring & Intelligence Correctness
 **Goal**: The readiness score a consultant presents to a client is accurate, profile-aware, and identical whether viewed from the CLI report or the dashboard
@@ -71,7 +77,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `validate_run()` passes after every normal scan — no permanent validation failure caused by checking for artifacts that `write_reports()` never produces
   3. Legacy TLS migration recommendations appear in the `migration_advisor` output when `risk_engine.py` produces matching findings
   4. The readiness score shown in the dashboard matches the score in the CLI executive summary for the same scan when a non-default profile is configured
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
+- [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
 
 ### Phase 15: Code Hygiene
 **Goal**: The codebase contains no dead code that misleads contributors, no unsafe config mutation that corrupts multi-phase scans, and no stale phase records that misrepresent test coverage
@@ -82,7 +91,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. If an exception occurs mid-scan, `cfg.scan.timeout_seconds` and `cfg.scan.concurrency` are restored to their pre-scan values before the next phase executes
   3. `quirk/reports/scorecard.py` does not exist; the only scorecard implementation is the inline `_scorecard_markdown()` in `writer.py`
   4. All 11 Nyquist VALIDATION.md files accurately reflect phase completion status — no file reads `nyquist_compliant: false` for a phase whose tests are passing GREEN
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
+- [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
 
 ---
 
