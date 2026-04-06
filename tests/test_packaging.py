@@ -10,10 +10,10 @@ def test_run_scan_importable():
     assert len(__version__) > 0
 
 
-def test_version_is_4_0_0():
-    """__version__ must be bumped to 4.0.0 for Phase 7."""
+def test_version_is_4_1_0():
+    """__version__ must be bumped to 4.1.0 for Phase 12 CLI correctness."""
     from quirk import __version__
-    assert __version__ == "4.0.0", f"Expected 4.0.0, got {__version__!r}"
+    assert __version__ == "4.1.0", f"Expected 4.1.0, got {__version__!r}"
 
 
 def test_package_data_templates():
