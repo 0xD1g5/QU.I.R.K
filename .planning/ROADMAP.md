@@ -3,6 +3,7 @@
 ## Milestones
 
 - ✅ **v3.9 Gap Closure** — Phases 1–11, 40 plans (shipped 2026-04-04) → `.planning/milestones/v3.9-ROADMAP.md`
+- **v4.1 Foundation Polish** — Phases 12–15 (active)
 
 ## Phases
 
@@ -29,7 +30,61 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
+**v4.1 Foundation Polish (Phases 12–15) — ACTIVE**
+
+- [ ] **Phase 12: CLI Correctness** - Fix generated config field names, missing `quirk scan` subcommand, `[owner]` placeholder, and version number conflicts
+- [ ] **Phase 13: Interactive Mode Overhaul** - Auto-detect timezone, remove stub prompts, fix connector labels, surface live scanners, add profile selection, expand port defaults, reorder prompts
+- [ ] **Phase 14: Scoring & Intelligence Correctness** - Wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard
+- [ ] **Phase 15: Code Hygiene** - Remove legacy connector stubs, add cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files
+
 ## Phase Details
+
+### Phase 12: CLI Correctness
+**Goal**: A new user who runs `quirk init`, follows the Getting Started guide, and executes their first scan encounters zero crashes, wrong commands, or inconsistent version strings
+**Depends on**: Nothing (standalone correctness fixes)
+**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04
+**Success Criteria** (what must be TRUE):
+  1. `quirk init` generates a `config.yaml` where every field name matches the actual `ConnectorsCfg` and `ScanCfg` dataclass attributes — no `TypeError` on first run
+  2. The Getting Started guide, config template comments, and `quirk init` output all instruct users to run `quirk --config config.yaml`, not `quirk scan --config config.yaml`
+  3. `quirk init` generates a `config.yaml` with no `[owner]` placeholder — the documentation URL is either real or omitted
+  4. `quirk --version`, CBOM metadata stamps, report section headers, and `writer.py` constants all show the same `4.x` version string
+**Plans**: TBD
+
+### Phase 13: Interactive Mode Overhaul
+**Goal**: Interactive mode guides a consultant to a correctly configured scan without surfacing broken prompts, missing scanner options, or confusing implementation details
+**Depends on**: Phase 12
+**Requirements**: INTER-01, INTER-02, INTER-03, INTER-04, INTER-05, INTER-06, INTER-07, INTER-08, INTER-09, INTER-10
+**Success Criteria** (what must be TRUE):
+  1. Running `quirk` in interactive mode never asks the user for timezone, SNI setting, or Windows ADCS — these are auto-detected or removed
+  2. Interactive mode labels AWS and Azure as fully implemented connectors with credential requirement warnings; no connector is labeled "(stub)"
+  3. A user can enable the JWT, container, and source scanners from interactive mode and provide their respective targets
+  4. Interactive mode presents a single profile selection question (quick/standard/deep) instead of raw `timeout_seconds` and `concurrency` fields
+  5. The generated config contains no `enable_windows_adcs` field and presents data classification as a single coherent prompt
+**Plans**: TBD
+
+### Phase 14: Scoring & Intelligence Correctness
+**Goal**: The readiness score a consultant presents to a client is accurate, profile-aware, and identical whether viewed from the CLI report or the dashboard
+**Depends on**: Phase 12
+**Requirements**: SCORE-01, SCORE-02, SCORE-03, SCORE-04
+**Success Criteria** (what must be TRUE):
+  1. Setting `profile: strict` in config produces measurably higher score weights on agility and identity subscores than `profile: lenient` on the same scan data
+  2. `validate_run()` passes after every normal scan — no permanent validation failure caused by checking for artifacts that `write_reports()` never produces
+  3. Legacy TLS migration recommendations appear in the `migration_advisor` output when `risk_engine.py` produces matching findings
+  4. The readiness score shown in the dashboard matches the score in the CLI executive summary for the same scan when a non-default profile is configured
+**Plans**: TBD
+
+### Phase 15: Code Hygiene
+**Goal**: The codebase contains no dead code that misleads contributors, no unsafe config mutation that corrupts multi-phase scans, and no stale phase records that misrepresent test coverage
+**Depends on**: Phase 12
+**Requirements**: HYGN-01, HYGN-02, HYGN-03, HYGN-04
+**Success Criteria** (what must be TRUE):
+  1. `quirk/connectors/` directory and all three stub files (`aws_stub.py`, `azure_stub.py`, `windows_adcs_stub.py`) are absent from the repo — zero broken imports result
+  2. If an exception occurs mid-scan, `cfg.scan.timeout_seconds` and `cfg.scan.concurrency` are restored to their pre-scan values before the next phase executes
+  3. `quirk/reports/scorecard.py` does not exist; the only scorecard implementation is the inline `_scorecard_markdown()` in `writer.py`
+  4. All 11 Nyquist VALIDATION.md files accurately reflect phase completion status — no file reads `nyquist_compliant: false` for a phase whose tests are passing GREEN
+**Plans**: TBD
+
+---
 
 ### Phase 8: Legacy Debt Cleanup
 **Goal**: Every show-stopper bug, dead code artifact, and label/intent inconsistency surfaced by the codebase audit is resolved — the tool works correctly for new users out of the box and produces internally consistent output
@@ -299,16 +354,22 @@ Ideas captured during planning — not in scope for v1, but not lost.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. Legacy Debt Cleanup | 4/4 | Complete   | 2026-04-03 |
-| 9. Scoring Consolidation | 3/3 | Complete   | 2026-04-03 |
+| 8. Legacy Debt Cleanup | 4/4 | Complete | 2026-04-03 |
+| 9. Scoring Consolidation | 3/3 | Complete | 2026-04-03 |
 | 1. Foundation Fixes | 4/4 | Complete | 2026-03-29 |
-| 2. CBOM Pipeline | 3/3 | Complete   | 2026-03-29 |
-| 3. Scanner Coverage | 4/4 | Complete   | 2026-03-29 |
-| 4. Chaos Lab Expansion | 5/5 | Complete   | 2026-03-30 |
-| 5. Web Dashboard | 6/6 | Complete   | 2026-03-31 |
-| 6. Documentation | 6/6 | Complete   | 2026-03-31 |
-| 7. Polish and Packaging | 5/5 | Complete   | 2026-04-01 |
+| 2. CBOM Pipeline | 3/3 | Complete | 2026-03-29 |
+| 3. Scanner Coverage | 4/4 | Complete | 2026-03-29 |
+| 4. Chaos Lab Expansion | 5/5 | Complete | 2026-03-30 |
+| 5. Web Dashboard | 6/6 | Complete | 2026-03-31 |
+| 6. Documentation | 6/6 | Complete | 2026-03-31 |
+| 7. Polish and Packaging | 5/5 | Complete | 2026-04-01 |
+| 10. v3.9 Gap Closure | 2/2 | Complete | 2026-04-04 |
+| 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
+| 12. CLI Correctness | 0/TBD | Not started | - |
+| 13. Interactive Mode Overhaul | 0/TBD | Not started | - |
+| 14. Scoring & Intelligence Correctness | 0/TBD | Not started | - |
+| 15. Code Hygiene | 0/TBD | Not started | - |

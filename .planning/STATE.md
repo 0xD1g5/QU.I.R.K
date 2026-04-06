@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: Foundation Polish
 status: active
-stopped_at: Milestone v4.1 started — defining requirements
+stopped_at: Roadmap created — Phase 12 ready for planning
 last_updated: "2026-04-06T00:00:00.000Z"
 last_activity: 2026-04-06
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-28)
+See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.1 Foundation Polish — CLI correctness, interactive mode, scoring accuracy, code hygiene
+**Current focus:** v4.1 Foundation Polish — Phase 12 (CLI Correctness) is next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 12 — CLI Correctness
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-06 — Milestone v4.1 started
+Status: Roadmap defined, ready for phase planning
+Last activity: 2026-04-06 — v4.1 roadmap created (Phases 12–15)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -189,11 +189,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 5 (Web Dashboard) depends on Phase 2 (CBOM Pipeline) not Phase 4 — parallel path possible after Phase 2 ships
-- SCAN-01/SCAN-02 placed in Phase 1 (not Phase 3) because they are foundation scanner replacements, not net-new surface coverage
+- Phase 13 and Phase 14 both depend on Phase 12 (CLI Correctness) — correctness baseline must be solid before expanding interactive mode or wiring scoring
+- Phase 15 (Code Hygiene) is independent of 13 and 14 but logically follows Phase 12 to avoid removing files that correctness fixes might touch
 
 ## Session Continuity
 
-Last session: 2026-04-05T00:00:00.000Z
-Stopped at: Session resumed — proceeding to /gsd:new-milestone for v4.1+ scope definition
+Last session: 2026-04-06T00:00:00.000Z
+Stopped at: v4.1 roadmap created — Phase 12 CLI Correctness is next; run /gsd:plan-phase 12
 Resume file: None

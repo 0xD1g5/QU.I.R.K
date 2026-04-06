@@ -89,34 +89,34 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| CLI-04 | — | Pending |
-| INTER-01 | — | Pending |
-| INTER-02 | — | Pending |
-| INTER-03 | — | Pending |
-| INTER-04 | — | Pending |
-| INTER-05 | — | Pending |
-| INTER-06 | — | Pending |
-| INTER-07 | — | Pending |
-| INTER-08 | — | Pending |
-| INTER-09 | — | Pending |
-| INTER-10 | — | Pending |
-| SCORE-01 | — | Pending |
-| SCORE-02 | — | Pending |
-| SCORE-03 | — | Pending |
-| SCORE-04 | — | Pending |
-| HYGN-01 | — | Pending |
-| HYGN-02 | — | Pending |
-| HYGN-03 | — | Pending |
-| HYGN-04 | — | Pending |
+| CLI-01 | Phase 12 | Pending |
+| CLI-02 | Phase 12 | Pending |
+| CLI-03 | Phase 12 | Pending |
+| CLI-04 | Phase 12 | Pending |
+| INTER-01 | Phase 13 | Pending |
+| INTER-02 | Phase 13 | Pending |
+| INTER-03 | Phase 13 | Pending |
+| INTER-04 | Phase 13 | Pending |
+| INTER-05 | Phase 13 | Pending |
+| INTER-06 | Phase 13 | Pending |
+| INTER-07 | Phase 13 | Pending |
+| INTER-08 | Phase 13 | Pending |
+| INTER-09 | Phase 13 | Pending |
+| INTER-10 | Phase 13 | Pending |
+| SCORE-01 | Phase 14 | Pending |
+| SCORE-02 | Phase 14 | Pending |
+| SCORE-03 | Phase 14 | Pending |
+| SCORE-04 | Phase 14 | Pending |
+| HYGN-01 | Phase 15 | Pending |
+| HYGN-02 | Phase 15 | Pending |
+| HYGN-03 | Phase 15 | Pending |
+| HYGN-04 | Phase 15 | Pending |
 
 **Coverage:**
 - v4.1 requirements: 22 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-06*
-*Last updated: 2026-04-06 after initial definition*
+*Last updated: 2026-04-06 — traceability table populated after roadmap creation*
