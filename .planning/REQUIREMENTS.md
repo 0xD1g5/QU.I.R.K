@@ -10,10 +10,10 @@ No new user-visible features — exclusively closes P0/P1 correctness and trust 
 
 ### CLI Correctness
 
-- [ ] **CLI-01**: User's generated config has correct field names after `quirk init` (no startup crashes on first run) — BACK-40
-- [ ] **CLI-02**: User can run `quirk scan` to initiate a scan from the CLI — BACK-41
-- [ ] **CLI-03**: User's generated config contains no `[owner]` placeholder after `quirk init` — BACK-47
-- [ ] **CLI-04**: User sees consistent version number (4.x) across CLI output, reports, and CBOM stamps — BACK-48
+- [x] **CLI-01**: User's generated config has correct field names after `quirk init` (no startup crashes on first run) — BACK-40
+- [x] **CLI-02**: User can run `quirk scan` to initiate a scan from the CLI — BACK-41
+- [x] **CLI-03**: User's generated config contains no `[owner]` placeholder after `quirk init` — BACK-47
+- [x] **CLI-04**: User sees consistent version number (4.x) across CLI output, reports, and CBOM stamps — BACK-48
 
 ### Interactive Mode
 
@@ -89,10 +89,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-01 | Phase 12 | Pending |
-| CLI-02 | Phase 12 | Pending |
-| CLI-03 | Phase 12 | Pending |
-| CLI-04 | Phase 12 | Pending |
+| CLI-01 | Phase 12 | Complete |
+| CLI-02 | Phase 12 | Complete |
+| CLI-03 | Phase 12 | Complete |
+| CLI-04 | Phase 12 | Complete |
 | INTER-01 | Phase 13 | Pending |
 | INTER-02 | Phase 13 | Pending |
 | INTER-03 | Phase 13 | Pending |

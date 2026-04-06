@@ -50,7 +50,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `quirk --version`, CBOM metadata stamps, report section headers, and `writer.py` constants all show the same `4.x` version string
 **Plans**: 2 plans
 Plans:
-- [ ] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
+- [x] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
 - [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
 
 ### Phase 13: Interactive Mode Overhaul
@@ -113,7 +113,7 @@ Plans:
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 4/4 plans complete
+**Plans:** 1/2 plans executed
 
 Plans:
 - [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
@@ -381,7 +381,7 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 7. Polish and Packaging | 5/5 | Complete | 2026-04-01 |
 | 10. v3.9 Gap Closure | 2/2 | Complete | 2026-04-04 |
 | 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
-| 12. CLI Correctness | 0/TBD | Not started | - |
+| 12. CLI Correctness | 1/2 | In Progress|  |
 | 13. Interactive Mode Overhaul | 0/TBD | Not started | - |
 | 14. Scoring & Intelligence Correctness | 0/TBD | Not started | - |
 | 15. Code Hygiene | 0/TBD | Not started | - |
