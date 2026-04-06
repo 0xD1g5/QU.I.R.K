@@ -65,8 +65,8 @@ Plans:
   5. The generated config contains no `enable_windows_adcs` field and presents data classification as a single coherent prompt
 **Plans**: 2 plans
 Plans:
-- [x] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
-- [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
+- [ ] 13-01-PLAN.md — TDD test scaffold (RED tests for all 10 interactive mode requirements)
+- [ ] 13-02-PLAN.md — Rewrite interactive_config() with new prompt sequence, profile selection, and run_scan.py call site update
 
 ### Phase 14: Scoring & Intelligence Correctness
 **Goal**: The readiness score a consultant presents to a client is accurate, profile-aware, and identical whether viewed from the CLI report or the dashboard
