@@ -121,3 +121,14 @@ None.
 ---
 *Phase: 12-cli-correctness*
 *Completed: 2026-04-06*
+
+## Self-Check: PASSED
+
+- quirk/__init__.py: FOUND
+- quirk/reports/writer.py: FOUND
+- quirk/cbom/builder.py: FOUND
+- quirk/config.py: FOUND
+- docs/getting-started.md: FOUND
+- .planning/phases/12-cli-correctness/12-02-SUMMARY.md: FOUND
+- Commit 43d3f34 (version bump): FOUND
+- Commit 53db75a (getting-started.md + test fix): FOUND
