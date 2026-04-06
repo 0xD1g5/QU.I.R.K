@@ -20,9 +20,9 @@ from quirk.cbom import build_cbom, write_cbom_files
 from quirk.reports.html_renderer import render_html_report, render_pdf_report
 
 
-PLATFORM_VERSION = "4.0"
+PLATFORM_VERSION = "4.1.0"
 SCHEMA_VERSION = 2
-INTELLIGENCE_VERSION = "4.0.0"
+INTELLIGENCE_VERSION = "4.1.0"
 
 
 def _utc_stamp() -> str:
