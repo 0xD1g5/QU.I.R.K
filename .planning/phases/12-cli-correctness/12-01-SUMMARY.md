@@ -109,3 +109,10 @@ None - no external service configuration required.
 ---
 *Phase: 12-cli-correctness*
 *Completed: 2026-04-06*
+
+## Self-Check: PASSED
+
+- tests/test_cli_correctness.py: FOUND
+- .planning/phases/12-cli-correctness/12-01-SUMMARY.md: FOUND
+- Commit a29d6fa (test scaffold): FOUND
+- Commit 5cf1df2 (metadata): FOUND
