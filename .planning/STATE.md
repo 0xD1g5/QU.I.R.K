@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: Gap Closure
-status: executing
-stopped_at: Completed 12-cli-correctness Plan 01 (12-01-PLAN.md)
-last_updated: "2026-04-06T12:26:20.806Z"
+status: verifying
+stopped_at: Completed 12-cli-correctness Plan 02 (12-02-PLAN.md)
+last_updated: "2026-04-06T12:29:40.182Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 15
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 42
-  completed_plans: 45
+  completed_plans: 46
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-06)
 
 Phase: 12 (cli-correctness) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-06
 
 Progress: [░░░░░░░░░░] 0%
@@ -93,6 +93,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 11-dashboard-wiring-fixes P01 | 2 | 2 tasks | 3 files |
 | Phase 11 P02 | 3 | 1 tasks | 1 files |
 | Phase 12-cli-correctness P01 | 2 | 1 tasks | 1 files |
+| Phase 12 P02 | 2 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -185,6 +186,9 @@ Recent decisions affecting current work:
 - [Phase 11-dashboard-wiring-fixes]: _SSH_TYPE dict defined inline in _derive_cbom() for-ep loop — self-contained, no shared state; _qs_for_alg() handles @openssh.com vendor suffixes via except Exception guard; json.loads wrapped in (JSONDecodeError, TypeError, ValueError) matching builder.py exactly
 - [Phase 12-cli-correctness]: test_config_default_version uses pathlib source inspection (not import) to assert the fallback string in config_from_dict — catches exact value before any module reload
 - [Phase 12-cli-correctness]: Phase 12 TDD contract: 3 RED tests (version, config fallback, owner placeholder) define Plan 02 implementation targets; 3 GREEN tests guard existing correctness (template alignment, no quirk scan refs, load_config)
+- [Phase 12-cli-correctness]: Version strings updated individually in each file (no shared import) — circular import avoidance intentional per RESEARCH.md D-01
+- [Phase 12-cli-correctness]: getting-started.md uses <your-repo-url> generic placeholder per D-06 — no specific GitHub handle hardcoded
+- [Phase 12-cli-correctness]: test_packaging.py stale 4.0.0 assertion updated to 4.1.0 as Rule 1 auto-fix — version bump is the intended change
 
 ### Pending Todos
 
@@ -197,6 +201,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T12:26:20.803Z
-Stopped at: Completed 12-cli-correctness Plan 01 (12-01-PLAN.md)
+Last session: 2026-04-06T12:29:40.179Z
+Stopped at: Completed 12-cli-correctness Plan 02 (12-02-PLAN.md)
 Resume file: None

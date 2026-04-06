@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **v4.1 Foundation Polish (Phases 12–15) — ACTIVE**
 
-- [ ] **Phase 12: CLI Correctness** - Fix generated config field names, missing `quirk scan` subcommand, `[owner]` placeholder, and version number conflicts
+- [x] **Phase 12: CLI Correctness** - Fix generated config field names, missing `quirk scan` subcommand, `[owner]` placeholder, and version number conflicts (completed 2026-04-06)
 - [ ] **Phase 13: Interactive Mode Overhaul** - Auto-detect timezone, remove stub prompts, fix connector labels, surface live scanners, add profile selection, expand port defaults, reorder prompts
 - [ ] **Phase 14: Scoring & Intelligence Correctness** - Wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard
 - [ ] **Phase 15: Code Hygiene** - Remove legacy connector stubs, add cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files
@@ -51,7 +51,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 Plans:
 - [x] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
-- [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
+- [x] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
 
 ### Phase 13: Interactive Mode Overhaul
 **Goal**: Interactive mode guides a consultant to a correctly configured scan without surfacing broken prompts, missing scanner options, or confusing implementation details
@@ -65,7 +65,7 @@ Plans:
   5. The generated config contains no `enable_windows_adcs` field and presents data classification as a single coherent prompt
 **Plans**: 2 plans
 Plans:
-- [ ] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
+- [x] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
 - [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
 
 ### Phase 14: Scoring & Intelligence Correctness
@@ -113,7 +113,7 @@ Plans:
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
@@ -381,7 +381,7 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 7. Polish and Packaging | 5/5 | Complete | 2026-04-01 |
 | 10. v3.9 Gap Closure | 2/2 | Complete | 2026-04-04 |
 | 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
-| 12. CLI Correctness | 1/2 | In Progress|  |
+| 12. CLI Correctness | 2/2 | Complete   | 2026-04-06 |
 | 13. Interactive Mode Overhaul | 0/TBD | Not started | - |
 | 14. Scoring & Intelligence Correctness | 0/TBD | Not started | - |
 | 15. Code Hygiene | 0/TBD | Not started | - |
