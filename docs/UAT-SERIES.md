@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.0.0
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-04-06
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.0. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -210,20 +210,119 @@ Pass Criteria: Specific measurable condition(s)
 
 ---
 
-### UAT-2-04: Interactive Wizard — Port Range Specification
+### UAT-2-04: Interactive Wizard — No Auto-Derivable Prompts
 
-**Prerequisites:** Lab running.
+> Updated Phase 13 (2026-04-06): timezone, SNI, and ADCS are now auto-detected or hardcoded. Port range prompt removed — consulting set applied automatically.
+
+**Prerequisites:** QuRisk installed.
 
 **Steps:**
-1. Run: `quirk`
-2. When prompted for targets: `127.0.0.1`
-3. When prompted for ports: `443,8443,8000,2222`
+1. Run: `quirk` (no arguments) and step through the interactive wizard.
+2. Observe every prompt that appears from start to finish.
 
-**Expected:** Only the specified ports are scanned.
+**Expected:** The wizard never asks for timezone, SNI inclusion, Windows ADCS, or TLS ports. These are now internally derived.
 
 **Pass Criteria:**
-- Scan touches exactly the specified ports
-- `run-stats-*.json` reflects the target port count
+- No prompt containing "timezone" or "time zone" appears
+- No prompt containing "SNI" or "server name indication" appears
+- No prompt containing "ADCS" or "windows_adcs" appears
+- No prompt asking to specify or customize TLS ports appears
+
+---
+
+### UAT-2-05: Interactive Wizard — Targets-First Prompt Order
+
+> Added Phase 13 (2026-04-06): prompt order resequenced to targets-first.
+
+**Prerequisites:** QuRisk installed.
+
+**Steps:**
+1. Run: `quirk` and begin the interactive wizard.
+2. Note which category of question appears first.
+
+**Expected:** The first questions ask for scan targets (IP ranges, hostnames, domains). Metadata questions (org name, data classification, output format) appear later in the sequence.
+
+**Pass Criteria:**
+- First interactive prompt is about targets/hosts/IPs
+- Org name / assessment metadata prompts appear after scanner and connector options
+- No metadata question appears before at least one target-related question
+
+---
+
+### UAT-2-06: Interactive Wizard — Scan Profile Selection Menu
+
+> Added Phase 13 (2026-04-06): numbered profile menu replaces free-text input.
+
+**Prerequisites:** QuRisk installed.
+
+**Steps:**
+1. Run: `quirk` and progress through the wizard until the profile selection step.
+2. Enter a number (e.g. `2`) to select a profile.
+
+**Expected:** A numbered menu appears listing scan profiles (e.g. Quick, Standard, Deep). Entering the corresponding number selects the profile without free-text parsing.
+
+**Pass Criteria:**
+- A numbered list of profiles is displayed
+- Entering `1`, `2`, or `3` selects the profile without error
+- Selected profile is reflected in scan behavior or output metadata
+
+---
+
+### UAT-2-07: Interactive Wizard — Data Classification Menu
+
+> Added Phase 13 (2026-04-06): unified 4-tier numbered menu for data classification.
+
+**Prerequisites:** QuRisk installed.
+
+**Steps:**
+1. Run: `quirk` and reach the data classification step.
+2. Enter a number to select a tier.
+
+**Expected:** A numbered menu appears with at least 3 tiers (e.g. Public, Internal/Confidential, Regulated, Sensitive/Restricted). Selecting a number maps to the correct `data_classification` and `data_types` fields.
+
+**Pass Criteria:**
+- Numbered menu with classification tiers is displayed
+- Entering a number (not a text label) completes the selection
+- No free-text classification input required
+
+---
+
+### UAT-2-08: Interactive Wizard — Connector Labels and Credential Warnings
+
+> Added Phase 13 (2026-04-06): stub labels removed; credential warnings added.
+
+**Prerequisites:** QuRisk installed.
+
+**Steps:**
+1. Run: `quirk` and reach the connector enable step.
+2. Enable the AWS connector (or Azure).
+3. Observe the label shown for the connector option and any messages printed after enabling.
+
+**Expected:** The connector option does not contain "(stub)" in its label. After enabling, a credential warning message is printed reminding you to configure the relevant environment variable (e.g. `AWS_ACCESS_KEY_ID`).
+
+**Pass Criteria:**
+- No `(stub)` text appears in any connector option label
+- Enabling AWS connector prints a message referencing `AWS_ACCESS_KEY_ID` or similar
+- Enabling Azure connector prints a message referencing `AZURE_CLIENT_ID` or similar
+
+---
+
+### UAT-2-09: Interactive Wizard — Consulting TLS Port Set Applied
+
+> Added Phase 13 (2026-04-06): 17-port consulting set hardcoded, no port prompt.
+
+**Prerequisites:** Lab running with core services.
+
+**Steps:**
+1. Run `quirk`, complete the interactive wizard with `127.0.0.1` as target.
+2. After the scan, inspect `output/run-stats-*.json` or the findings output for the port list used.
+
+**Expected:** The scan uses the consulting-grade 17-port TLS set including non-standard ports such as 636 (LDAPS), 6443 (Kubernetes API), 8200 (Vault), and database ports (5432, 3306, 1433). No port selection prompt appears during the wizard.
+
+**Pass Criteria:**
+- Port 636, 6443, 8200 present in the scanned port set (check run-stats or findings)
+- Port 443 and 8443 present
+- No prompt asking the user to specify ports appeared during the wizard
 
 ---
 
