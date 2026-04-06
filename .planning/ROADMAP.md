@@ -381,7 +381,7 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 7. Polish and Packaging | 5/5 | Complete | 2026-04-01 |
 | 10. v3.9 Gap Closure | 2/2 | Complete | 2026-04-04 |
 | 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
-| 12. CLI Correctness | 2/2 | Complete   | 2026-04-06 |
+| 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
 | 13. Interactive Mode Overhaul | 0/TBD | Not started | - |
 | 14. Scoring & Intelligence Correctness | 0/TBD | Not started | - |
 | 15. Code Hygiene | 0/TBD | Not started | - |
