@@ -52,14 +52,29 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Profile-based weight multipliers (strict/balanced/lenient) in compute_readiness_score() — Phase 9
 - ✓ E2E dashboard flow — db_path, port propagation, SSH CBOM entries all wired correctly — Phase 11
 
+## Current Milestone: v4.1 Foundation Polish
+
+**Goal:** Make v4.0.0 trustworthy enough that new scanner output is credible — exclusively closes P0/P1 correctness and trust gaps before any scanner expansion.
+
+**Target features:**
+- CLI Correctness: fix wrong config field names, missing `quirk scan` subcommand, `[owner]` placeholder in generated configs, version number conflicts in client-facing output (BACK-40, 41, 47, 48)
+- Interactive Mode Overhaul: auto-detect timezone, remove stub prompts, fix AWS/Azure labels, surface JWT/container/source scanners, scan profile selection, port list expansion, prompt reordering (BACK-27–33, 36, 38, 39)
+- Scoring & Intelligence Correctness: calibration profiles actually applied, validate.py fixed, migration_advisor matching fixed, dashboard profile propagation wired (BACK-43, 44, 46, 60)
+- Code Hygiene: remove legacy connector stubs, cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files (BACK-37, 45, 61, 62)
+
 ### Active
 
-**Next milestone TBD — run `/gsd:new-milestone` to define v4.1+ scope**
+**v4.1 Foundation Polish**
+- [ ] CLI Correctness — wrong config field names crash first-run (BACK-40); `quirk scan` subcommand missing (BACK-41); `[owner]` placeholder in generated config (BACK-47); version number conflicts in client output (BACK-48)
+- [ ] Interactive Mode — auto-detect timezone (BACK-27); remove SNI prompt (BACK-28); remove ADCS stub prompt (BACK-29); fix AWS/Azure labels + credential warnings (BACK-38); surface JWT/container/source scanners (BACK-32); scan profile selection replaces raw timeout/concurrency prompts (BACK-30); expand TLS port defaults (BACK-33); reorder prompts targets-first (BACK-36); remove `enable_windows_adcs` dead field (BACK-39); consolidate data_classification prompts (BACK-31)
+- [ ] Scoring Correctness — calibration profile actually applied in compute_readiness_score() (BACK-43); validate.py artifact list fixed (BACK-44); migration_advisor pattern matching fixed (BACK-46); dashboard profile kwarg wired (BACK-60)
+- [ ] Code Hygiene — remove legacy connector stub directory (BACK-37); cfg.scan mutation wrapped in try/finally (BACK-45); delete orphaned scorecard.py (BACK-61); update 9 stale + 2 missing Nyquist VALIDATION.md files (BACK-62)
 
-**Known Tech Debt (from v3.9 audit)**
-- [ ] Dashboard scoring profile propagation — `scan.py:330` always uses `balanced`; scan-time profile not stored (BACK-60)
-- [ ] Delete/align orphaned `scorecard.py` module — never called in production (BACK-61)
-- [ ] Update Nyquist VALIDATION.md files post-execution — 9 stale, 2 missing (BACK-62)
+**v4.2+ Scanner Expansion (Future Milestones)**
+- Identity Crypto (v4.2): Kerberos etype enumeration, SAML/OAuth metadata, DNSSEC
+- Data at Rest (v4.3): DB encryption, S3/Blob/GCS audit, K8s secrets, Vault connector
+- Data in Motion (v4.4): Email SMTP/IMAP/POP3, message brokers (Kafka, RabbitMQ, Redis)
+- API Depth (v4.5): OpenAPI spec analysis, Bearer token interception, active REST probing
 
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
@@ -116,7 +131,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg not passed to dashboard | Dashboard scan.py:330 calls compute_readiness_score without profile= | ⚠ Revisit — dashboard always uses balanced; BACK-60 tracked |
 
 ---
-*Last updated: 2026-04-04 after v3.9 milestone completion — all 36 requirements satisfied; v4.0.0 shipped; 199 tests green*
+*Last updated: 2026-04-06 after v4.1 milestone start — Foundation Polish scope defined; 22 BACK items across 4 phases*
 
 ## Evolution
 

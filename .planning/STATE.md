@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.9
-milestone_name: Gap Closure
-status: verifying
-stopped_at: Completed 11-02-PLAN.md (GAP-INT-03 SSH CBOM parsing in _derive_cbom)
-last_updated: "2026-04-04T14:27:04.814Z"
-last_activity: 2026-04-04
+milestone: v4.1
+milestone_name: Foundation Polish
+status: active
+stopped_at: Milestone v4.1 started — defining requirements
+last_updated: "2026-04-06T00:00:00.000Z"
+last_activity: 2026-04-06
 progress:
-  total_phases: 13
-  completed_phases: 10
-  total_plans: 40
-  completed_plans: 44
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 11 — dashboard-wiring-fixes
+**Current focus:** v4.1 Foundation Polish — CLI correctness, interactive mode, scoring accuracy, code hygiene
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-04
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-06 — Milestone v4.1 started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -194,6 +194,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T12:35:10.536Z
-Stopped at: Completed 11-02-PLAN.md (GAP-INT-03 SSH CBOM parsing in _derive_cbom)
+Last session: 2026-04-05T00:00:00.000Z
+Stopped at: Session resumed — proceeding to /gsd:new-milestone for v4.1+ scope definition
 Resume file: None
