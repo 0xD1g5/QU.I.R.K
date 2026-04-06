@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.1
-milestone_name: Foundation Polish
-status: active
-stopped_at: Roadmap created — Phase 12 ready for planning
-last_updated: "2026-04-06T00:00:00.000Z"
-last_activity: 2026-04-06
+milestone: v3.9
+milestone_name: Gap Closure
+status: planning
+stopped_at: Phase 12 context gathered (discuss mode)
+last_updated: "2026-04-06T11:59:31.204Z"
+last_activity: 2026-04-06 — v4.1 roadmap created (Phases 12–15)
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 15
+  completed_phases: 10
+  total_plans: 40
+  completed_plans: 44
   percent: 0
 ---
 
@@ -194,6 +194,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T00:00:00.000Z
-Stopped at: v4.1 roadmap created — Phase 12 CLI Correctness is next; run /gsd:plan-phase 12
-Resume file: None
+Last session: 2026-04-06T11:59:31.192Z
+Stopped at: Phase 12 context gathered (discuss mode)
+Resume file: .planning/phases/12-cli-correctness/12-CONTEXT.md
