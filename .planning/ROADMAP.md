@@ -79,8 +79,9 @@ Plans:
   4. The readiness score shown in the dashboard matches the score in the CLI executive summary for the same scan when a non-default profile is configured
 **Plans**: 2 plans
 Plans:
-- [ ] 12-01-PLAN.md — TDD test scaffold (RED tests for all CLI correctness requirements)
-- [ ] 12-02-PLAN.md — Version bump to 4.1.0 + Getting Started install fix
+- [ ] 14-01-PLAN.md — RED test scaffold (failing tests for SCORE-01 through SCORE-04)
+- [ ] 14-02-PLAN.md — GREEN fixes (validate.py cleanup, dashboard profile propagation)
+
 
 ### Phase 15: Code Hygiene
 **Goal**: The codebase contains no dead code that misleads contributors, no unsafe config mutation that corrupts multi-phase scans, and no stale phase records that misrepresent test coverage
