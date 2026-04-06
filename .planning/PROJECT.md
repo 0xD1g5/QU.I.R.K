@@ -131,7 +131,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg not passed to dashboard | Dashboard scan.py:330 calls compute_readiness_score without profile= | ⚠ Revisit — dashboard always uses balanced; BACK-60 tracked |
 
 ---
-*Last updated: 2026-04-06 after v4.1 milestone start — Foundation Polish scope defined; 22 BACK items across 4 phases*
+*Last updated: 2026-04-06 — Phase 12 complete: CLI correctness — version strings unified at 4.1.0 across all locations, Getting Started docs corrected, 205 tests passing*
 
 ## Evolution
 
