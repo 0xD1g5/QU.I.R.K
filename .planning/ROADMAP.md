@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **v4.1 Foundation Polish (Phases 12–15) — ACTIVE**
 
 - [x] **Phase 12: CLI Correctness** - Fix generated config field names, missing `quirk scan` subcommand, `[owner]` placeholder, and version number conflicts (completed 2026-04-06)
-- [ ] **Phase 13: Interactive Mode Overhaul** - Auto-detect timezone, remove stub prompts, fix connector labels, surface live scanners, add profile selection, expand port defaults, reorder prompts
+- [x] **Phase 13: Interactive Mode Overhaul** - Auto-detect timezone, remove stub prompts, fix connector labels, surface live scanners, add profile selection, expand port defaults, reorder prompts (completed 2026-04-06)
 - [ ] **Phase 14: Scoring & Intelligence Correctness** - Wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard
 - [ ] **Phase 15: Code Hygiene** - Remove legacy connector stubs, add cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files
 
@@ -66,7 +66,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 13-01-PLAN.md — TDD test scaffold (RED tests for all 10 interactive mode requirements)
-- [ ] 13-02-PLAN.md — Rewrite interactive_config() with new prompt sequence, profile selection, and run_scan.py call site update
+- [x] 13-02-PLAN.md — Rewrite interactive_config() with new prompt sequence, profile selection, and run_scan.py call site update
 
 ### Phase 14: Scoring & Intelligence Correctness
 **Goal**: The readiness score a consultant presents to a client is accurate, profile-aware, and identical whether viewed from the CLI report or the dashboard
@@ -113,7 +113,7 @@ Plans:
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
@@ -382,6 +382,6 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 10. v3.9 Gap Closure | 2/2 | Complete | 2026-04-04 |
 | 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
 | 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
-| 13. Interactive Mode Overhaul | 1/2 | In Progress|  |
+| 13. Interactive Mode Overhaul | 2/2 | Complete   | 2026-04-06 |
 | 14. Scoring & Intelligence Correctness | 0/TBD | Not started | - |
 | 15. Code Hygiene | 0/TBD | Not started | - |
