@@ -17,16 +17,16 @@ No new user-visible features — exclusively closes P0/P1 correctness and trust 
 
 ### Interactive Mode
 
-- [ ] **INTER-01**: Interactive mode detects local timezone automatically without prompting — BACK-27
-- [ ] **INTER-02**: Interactive mode does not prompt for SNI (hardcoded True for FQDN targets) — BACK-28
-- [ ] **INTER-03**: Interactive mode does not prompt for Windows ADCS (non-functional feature removed) — BACK-29
-- [ ] **INTER-04**: Interactive mode correctly labels AWS and Azure as implemented connectors with credential requirement warnings — BACK-38
-- [ ] **INTER-05**: User can enable JWT, container, and source scanners from interactive mode — BACK-32
-- [ ] **INTER-06**: Interactive mode offers scan profile selection (quick/standard/deep) instead of raw timeout/concurrency fields — BACK-30
-- [ ] **INTER-07**: Interactive mode uses a consulting-grade TLS port default list (LDAPS 636/3269, IMAPS 993, POP3S 995, SMTPS 465, K8s 6443, Docker TLS 2376, DB ports 5432/3306/1433, Vault 8200) without prompting — BACK-33
-- [ ] **INTER-08**: Interactive mode presents prompts in targets-first order (targets → options → output → metadata) — BACK-36
-- [ ] **INTER-09**: `enable_windows_adcs` dead field removed from interactive mode and generated configs — BACK-39
-- [ ] **INTER-10**: Interactive mode presents a single coherent data classification prompt (consolidates overlapping `data_classification` and `data_types` prompts) — BACK-31
+- [x] **INTER-01**: Interactive mode detects local timezone automatically without prompting — BACK-27
+- [x] **INTER-02**: Interactive mode does not prompt for SNI (hardcoded True for FQDN targets) — BACK-28
+- [x] **INTER-03**: Interactive mode does not prompt for Windows ADCS (non-functional feature removed) — BACK-29
+- [x] **INTER-04**: Interactive mode correctly labels AWS and Azure as implemented connectors with credential requirement warnings — BACK-38
+- [x] **INTER-05**: User can enable JWT, container, and source scanners from interactive mode — BACK-32
+- [x] **INTER-06**: Interactive mode offers scan profile selection (quick/standard/deep) instead of raw timeout/concurrency fields — BACK-30
+- [x] **INTER-07**: Interactive mode uses a consulting-grade TLS port default list (LDAPS 636/3269, IMAPS 993, POP3S 995, SMTPS 465, K8s 6443, Docker TLS 2376, DB ports 5432/3306/1433, Vault 8200) without prompting — BACK-33
+- [x] **INTER-08**: Interactive mode presents prompts in targets-first order (targets → options → output → metadata) — BACK-36
+- [x] **INTER-09**: `enable_windows_adcs` dead field removed from interactive mode and generated configs — BACK-39
+- [x] **INTER-10**: Interactive mode presents a single coherent data classification prompt (consolidates overlapping `data_classification` and `data_types` prompts) — BACK-31
 
 ### Scoring Correctness
 
@@ -93,16 +93,16 @@ Which phases cover which requirements. Populated during roadmap creation.
 | CLI-02 | Phase 12 | Complete |
 | CLI-03 | Phase 12 | Complete |
 | CLI-04 | Phase 12 | Complete |
-| INTER-01 | Phase 13 | Pending |
-| INTER-02 | Phase 13 | Pending |
-| INTER-03 | Phase 13 | Pending |
-| INTER-04 | Phase 13 | Pending |
-| INTER-05 | Phase 13 | Pending |
-| INTER-06 | Phase 13 | Pending |
-| INTER-07 | Phase 13 | Pending |
-| INTER-08 | Phase 13 | Pending |
-| INTER-09 | Phase 13 | Pending |
-| INTER-10 | Phase 13 | Pending |
+| INTER-01 | Phase 13 | Complete |
+| INTER-02 | Phase 13 | Complete |
+| INTER-03 | Phase 13 | Complete |
+| INTER-04 | Phase 13 | Complete |
+| INTER-05 | Phase 13 | Complete |
+| INTER-06 | Phase 13 | Complete |
+| INTER-07 | Phase 13 | Complete |
+| INTER-08 | Phase 13 | Complete |
+| INTER-09 | Phase 13 | Complete |
+| INTER-10 | Phase 13 | Complete |
 | SCORE-01 | Phase 14 | Pending |
 | SCORE-02 | Phase 14 | Pending |
 | SCORE-03 | Phase 14 | Pending |

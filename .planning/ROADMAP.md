@@ -65,7 +65,7 @@ Plans:
   5. The generated config contains no `enable_windows_adcs` field and presents data classification as a single coherent prompt
 **Plans**: 2 plans
 Plans:
-- [ ] 13-01-PLAN.md — TDD test scaffold (RED tests for all 10 interactive mode requirements)
+- [x] 13-01-PLAN.md — TDD test scaffold (RED tests for all 10 interactive mode requirements)
 - [ ] 13-02-PLAN.md — Rewrite interactive_config() with new prompt sequence, profile selection, and run_scan.py call site update
 
 ### Phase 14: Scoring & Intelligence Correctness
@@ -113,7 +113,7 @@ Plans:
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 2/2 plans complete
+**Plans:** 1/2 plans executed
 
 Plans:
 - [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
@@ -382,6 +382,6 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 10. v3.9 Gap Closure | 2/2 | Complete | 2026-04-04 |
 | 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
 | 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
-| 13. Interactive Mode Overhaul | 0/TBD | Not started | - |
+| 13. Interactive Mode Overhaul | 1/2 | In Progress|  |
 | 14. Scoring & Intelligence Correctness | 0/TBD | Not started | - |
 | 15. Code Hygiene | 0/TBD | Not started | - |
