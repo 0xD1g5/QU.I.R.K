@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 12: CLI Correctness** - Fix generated config field names, missing `quirk scan` subcommand, `[owner]` placeholder, and version number conflicts (completed 2026-04-06)
 - [x] **Phase 13: Interactive Mode Overhaul** - Auto-detect timezone, remove stub prompts, fix connector labels, surface live scanners, add profile selection, expand port defaults, reorder prompts (completed 2026-04-06)
-- [ ] **Phase 14: Scoring & Intelligence Correctness** - Wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard
+- [x] **Phase 14: Scoring & Intelligence Correctness** - Wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard (completed 2026-04-07)
 - [ ] **Phase 15: Code Hygiene** - Remove legacy connector stubs, add cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files
 
 ## Phase Details
@@ -80,7 +80,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 14-01-PLAN.md — RED test scaffold (failing tests for SCORE-01 through SCORE-04)
-- [ ] 14-02-PLAN.md — GREEN fixes (validate.py cleanup, dashboard profile propagation)
+- [x] 14-02-PLAN.md — GREEN fixes (validate.py cleanup, dashboard profile propagation)
 
 
 ### Phase 15: Code Hygiene
@@ -114,7 +114,7 @@ Plans:
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
@@ -385,5 +385,5 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
 | 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
 | 13. Interactive Mode Overhaul | 2/2 | Complete    | 2026-04-06 |
-| 14. Scoring & Intelligence Correctness | 1/2 | In Progress|  |
+| 14. Scoring & Intelligence Correctness | 2/2 | Complete   | 2026-04-07 |
 | 15. Code Hygiene | 0/TBD | Not started | - |

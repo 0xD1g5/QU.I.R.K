@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: Gap Closure
-status: executing
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-04-07T00:10:22.094Z"
+status: verifying
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-04-07T00:13:41.312Z"
 last_activity: 2026-04-07
 progress:
   total_phases: 16
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 46
-  completed_plans: 49
+  completed_plans: 50
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-06)
 
 Phase: 14 (scoring-intelligence-correctness) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-07
 
 Progress: [░░░░░░░░░░] 0%
@@ -97,6 +97,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 13-interactive-mode-overhaul P01 | 8 | 1 tasks | 1 files |
 | Phase 13-interactive-mode-overhaul PP02 | 3 | 2 tasks | 3 files |
 | Phase 14-scoring-intelligence-correctness P01 | 2 | 1 tasks | 1 files |
+| Phase 14-scoring-intelligence-correctness P02 | 5 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -198,6 +199,8 @@ Recent decisions affecting current work:
 - [Phase Phase 13-interactive-mode-overhaul]: scan_profile default initialized from args.profile before if/else to avoid dangling reference (D-08)
 - [Phase Phase 13-interactive-mode-overhaul]: @unittest.expectedFailure removed from all 10 interactive mode tests after Plan 02 makes them GREEN
 - [Phase 14-scoring-intelligence-correctness]: SCORE-01/SCORE-03 tests pass immediately as regression guards; SCORE-02/SCORE-04 tests confirm bugs exist with inspect.signature and inspect.getsource assertions
+- [Phase 14-scoring-intelligence-correctness]: validate_run now accepts only output_dir: Path — dead require_delta_if_baseline parameter removed from signature and main() argparse
+- [Phase 14-scoring-intelligence-correctness]: Dashboard reads calibration.profile (not assessment.profile) from latest intelligence JSON at request time; profile=None fallback to balanced on I/O error
 
 ### Pending Todos
 
@@ -210,6 +213,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T00:10:22.091Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-04-07T00:13:41.308Z
+Stopped at: Completed 14-02-PLAN.md
 Resume file: None
