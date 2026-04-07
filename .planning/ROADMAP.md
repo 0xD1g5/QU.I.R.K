@@ -79,7 +79,7 @@ Plans:
   4. The readiness score shown in the dashboard matches the score in the CLI executive summary for the same scan when a non-default profile is configured
 **Plans**: 2 plans
 Plans:
-- [ ] 14-01-PLAN.md — RED test scaffold (failing tests for SCORE-01 through SCORE-04)
+- [x] 14-01-PLAN.md — RED test scaffold (failing tests for SCORE-01 through SCORE-04)
 - [ ] 14-02-PLAN.md — GREEN fixes (validate.py cleanup, dashboard profile propagation)
 
 
@@ -114,7 +114,7 @@ Plans:
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 2/2 plans complete
+**Plans:** 1/2 plans executed
 
 Plans:
 - [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
@@ -385,5 +385,5 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
 | 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
 | 13. Interactive Mode Overhaul | 2/2 | Complete    | 2026-04-06 |
-| 14. Scoring & Intelligence Correctness | 0/TBD | Not started | - |
+| 14. Scoring & Intelligence Correctness | 1/2 | In Progress|  |
 | 15. Code Hygiene | 0/TBD | Not started | - |

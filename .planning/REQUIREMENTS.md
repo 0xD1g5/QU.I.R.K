@@ -30,10 +30,10 @@ No new user-visible features — exclusively closes P0/P1 correctness and trust 
 
 ### Scoring Correctness
 
-- [ ] **SCORE-01**: Calibration profile (`lenient/balanced/strict`) is applied to weight multipliers in `compute_readiness_score()` — BACK-43
-- [ ] **SCORE-02**: `validate.py` checks for artifacts that `write_reports()` actually produces (no permanent validation failure on every scan) — BACK-44
-- [ ] **SCORE-03**: `migration_advisor.py` finding pattern strings match `risk_engine.py` finding titles so legacy TLS migration recommendations surface correctly — BACK-46
-- [ ] **SCORE-04**: Dashboard passes the scan-time profile kwarg to `compute_readiness_score()` so dashboard and CLI report scores match — BACK-60
+- [x] **SCORE-01**: Calibration profile (`lenient/balanced/strict`) is applied to weight multipliers in `compute_readiness_score()` — BACK-43
+- [x] **SCORE-02**: `validate.py` checks for artifacts that `write_reports()` actually produces (no permanent validation failure on every scan) — BACK-44
+- [x] **SCORE-03**: `migration_advisor.py` finding pattern strings match `risk_engine.py` finding titles so legacy TLS migration recommendations surface correctly — BACK-46
+- [x] **SCORE-04**: Dashboard passes the scan-time profile kwarg to `compute_readiness_score()` so dashboard and CLI report scores match — BACK-60
 
 ### Code Hygiene
 
@@ -103,10 +103,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | INTER-08 | Phase 13 | Complete |
 | INTER-09 | Phase 13 | Complete |
 | INTER-10 | Phase 13 | Complete |
-| SCORE-01 | Phase 14 | Pending |
-| SCORE-02 | Phase 14 | Pending |
-| SCORE-03 | Phase 14 | Pending |
-| SCORE-04 | Phase 14 | Pending |
+| SCORE-01 | Phase 14 | Complete |
+| SCORE-02 | Phase 14 | Complete |
+| SCORE-03 | Phase 14 | Complete |
+| SCORE-04 | Phase 14 | Complete |
 | HYGN-01 | Phase 15 | Pending |
 | HYGN-02 | Phase 15 | Pending |
 | HYGN-03 | Phase 15 | Pending |
