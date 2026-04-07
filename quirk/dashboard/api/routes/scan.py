@@ -324,10 +324,25 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
     except Exception:
         evidence = {}
 
+    # Read scan-time profile from intelligence JSON (SCORE-04)
+    stored_profile = None
+    try:
+        import os as _os
+        from pathlib import Path as _Path
+        from quirk.validate import _latest_intelligence
+        import json as _json
+        _output_dir = _Path(_os.environ.get("QUIRK_OUTPUT_DIR", "./quirk-output"))
+        _intel_path = _latest_intelligence(_output_dir)
+        if _intel_path:
+            _intel_data = _json.loads(_intel_path.read_text(encoding="utf-8"))
+            stored_profile = _intel_data.get("calibration", {}).get("profile")
+    except Exception:
+        pass  # fall back to balanced default via profile=None
+
     # Compute score and confidence
     try:
         from quirk.intelligence.scoring import compute_readiness_score
-        score_raw = compute_readiness_score(evidence)
+        score_raw = compute_readiness_score(evidence, profile=stored_profile)
     except Exception:
         score_raw = {"score": 0, "rating": "POOR", "subscores": {}, "drivers": []}
 
