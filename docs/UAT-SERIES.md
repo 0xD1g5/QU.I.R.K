@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 4.0.0
-**Last Updated:** 2026-04-06
+**Version:** 4.1.0
+**Last Updated:** 2026-04-07
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.0. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1996,6 +1996,46 @@ Each finding object contains:
 - NOW items reference specific finding types (e.g., "2 plaintext HTTP endpoints")
 - Why text references actual scan data (not generic placeholder)
 - Remediation steps are specific to findings
+
+---
+
+### UAT-8-07: Score Profile Consistency — CLI vs Dashboard
+
+> Added Phase 14 (2026-04-07): dashboard now reads stored calibration profile from intelligence JSON.
+
+**Prerequisites:** Completed scan run with a non-default score profile (e.g., `--score-profile strict`).
+
+**Steps:**
+1. Run: `quirk --config config.yaml --score-profile strict`
+2. Note score from `output/scorecard-*.md`
+3. Start dashboard: `quirk serve`
+4. Open `http://127.0.0.1:8512` and view the score gauge on the Executive Summary page
+
+**Expected:** Dashboard score matches the CLI scorecard score exactly, not a recalculated balanced-profile score.
+
+**Pass Criteria:**
+- Dashboard score gauge value equals score in `scorecard-*.md`
+- Running the same scan again with `--score-profile balanced` and refreshing the dashboard shows a *different* score
+- Dashboard score does not silently default to balanced when strict or lenient was used
+
+---
+
+### UAT-8-08: validate.py — Clean Output Directory Validation
+
+> Added Phase 14 (2026-04-07): validate_run signature simplified — dead require_delta_if_baseline parameter removed.
+
+**Prerequisites:** Completed scan with all expected output files present.
+
+**Steps:**
+1. Run: `python3 -c "from quirk.validate import validate_run; from pathlib import Path; r = validate_run(Path('output')); print(r)"`
+2. Run: `quirk --help` and confirm no `--no-require-delta` flag appears
+
+**Expected:** `validate_run` accepts only `output_dir` with no extra parameters. CLI has no dead delta flag.
+
+**Pass Criteria:**
+- `validate_run(Path('output'))` returns a `ValidationResult` without error
+- `quirk --help` output contains no `--no-require-delta` or `--require-delta` flags
+- Passing a second positional argument to `validate_run` raises `TypeError` (no dead parameter to silently absorb it)
 
 ---
 
