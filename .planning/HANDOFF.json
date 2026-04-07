@@ -1,39 +1,40 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-06T16:58:15.419Z",
-  "phase": "13",
-  "phase_name": "interactive-mode-overhaul",
-  "phase_dir": ".planning/phases/13-interactive-mode-overhaul",
+  "timestamp": "2026-04-07T00:19:03.131Z",
+  "phase": "14",
+  "phase_name": "scoring-intelligence-correctness",
+  "phase_dir": ".planning/phases/14-scoring-intelligence-correctness",
   "plan": 2,
-  "task": 2,
-  "total_tasks": 2,
-  "status": "paused",
+  "task": 3,
+  "total_tasks": 4,
+  "status": "phase_complete",
   "completed_tasks": [
-    {"id": 1, "name": "RED TDD scaffold — INTER-01 through INTER-10", "status": "done", "commit": "f7c29e9"},
-    {"id": 2, "name": "Implement interactive_config() overhaul + run_scan.py update", "status": "done", "commit": "0550cca"},
-    {"id": 3, "name": "Docs: complete phase 13 execution summary + UAT-SERIES.md Series 2 update", "status": "done", "commit": "c10b0ae"}
+    {"id": 1, "name": "RED test scaffold (SCORE-01–04)", "status": "done", "commit": "6b90692"},
+    {"id": 2, "name": "Remove dead require_delta_if_baseline from validate_run", "status": "done", "commit": "a5e160c"},
+    {"id": 3, "name": "Wire scan-time profile into dashboard compute_readiness_score", "status": "done", "commit": "5a57eb1"},
+    {"id": 4, "name": "Phase 14 docs/verification", "status": "done", "commit": "aa329ab"}
   ],
-  "remaining_tasks": [
-    {"id": 4, "name": "Manual UAT: 6 interactive-mode smoke tests in 13-UAT.md", "status": "not_started"},
-    {"id": 5, "name": "Commit outstanding files: banner.py (raw-string fix), 12-01-SUMMARY.md (minor), 13-UAT.md (new)", "status": "not_started"}
-  ],
+  "remaining_tasks": [],
   "blockers": [],
-  "human_actions_pending": [
+  "human_actions_pending": [],
+  "decisions": [
     {
-      "action": "Run manual UAT tests in .planning/phases/13-interactive-mode-overhaul/13-UAT.md (6 tests)",
-      "context": "Automated verification passed 8/8 and all 215 tests green. Manual UAT verifies the live interactive mode UX — cannot be automated. Tests cover: no timezone/SNI/ADCS prompts, targets-first order, profile menu, data classification menu, connector labels without (stub), consulting port set.",
-      "blocking": false
+      "decision": "SCORE-01/SCORE-03 tests written as regression guards (already passing); SCORE-02/SCORE-04 confirmed broken with inspect.signature/getsource assertions",
+      "rationale": "TDD RED scaffold validates both that existing correct behavior is preserved and that the two bugs are real",
+      "phase": "14"
+    },
+    {
+      "decision": "Dashboard reads calibration.profile (not assessment.profile) from latest intelligence JSON",
+      "rationale": "intelligence JSON stores calibration block; assessment block doesn't exist in current schema — Research Pitfall 2 identified this",
+      "phase": "14"
+    },
+    {
+      "decision": "validate_run signature simplified to output_dir: Path only",
+      "rationale": "require_delta_if_baseline was dead code — logic had been removed but parameter remained in signature and argparse",
+      "phase": "14"
     }
   ],
-  "decisions": [
-    {"decision": "Dead code (DEFAULT_TIMEZONE, _prompt_ports()) left in interactive.py intentionally", "rationale": "Explicitly scoped to Phase 15 cleanup per plan Pitfall 4 guidance", "phase": "13"},
-    {"decision": "banner.py converted to raw strings (r\"...\") for ASCII art", "rationale": "Backslashes in art strings were being interpreted as Python escape sequences (\\n, \\t, \\b) causing rendering artifacts", "phase": "13"}
-  ],
-  "uncommitted_files": [
-    "quirk/cli/banner.py — raw-string fix for ASCII art escape sequences (cosmetic, non-breaking)",
-    ".planning/phases/12-cli-correctness/12-01-SUMMARY.md — minor doc edit",
-    ".planning/phases/13-interactive-mode-overhaul/13-UAT.md — newly created UAT file, pending manual testing"
-  ],
-  "next_action": "Run /gsd:verify-work on phase 13 to do the manual UAT, or start /gsd:discuss-phase for phase 14 (Scoring & Intelligence Correctness)",
-  "context_notes": "Phase 13 is functionally COMPLETE — verification passed, all automated tests green (215). Outstanding items are cosmetic (banner.py raw-string fix) and a pending manual UAT. Phase 14 is next: wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard."
+  "uncommitted_files": [],
+  "next_action": "Plan Phase 15 (code-hygiene): run /gsd:plan-phase 15 — /clear first for fresh context window",
+  "context_notes": "Phase 14 fully complete: 2 plans, 4 tasks, 223 tests passing (215 original + 8 new SCORE tests). Verification passed 4/4 must-haves. ROADMAP and STATE advanced to Phase 15. No blockers. Clean state."
 }
