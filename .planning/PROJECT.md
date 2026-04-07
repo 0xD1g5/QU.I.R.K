@@ -67,7 +67,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 **v4.1 Foundation Polish**
 - [ ] CLI Correctness — wrong config field names crash first-run (BACK-40); `quirk scan` subcommand missing (BACK-41); `[owner]` placeholder in generated config (BACK-47); version number conflicts in client output (BACK-48)
 - [ ] Interactive Mode — auto-detect timezone (BACK-27); remove SNI prompt (BACK-28); remove ADCS stub prompt (BACK-29); fix AWS/Azure labels + credential warnings (BACK-38); surface JWT/container/source scanners (BACK-32); scan profile selection replaces raw timeout/concurrency prompts (BACK-30); expand TLS port defaults (BACK-33); reorder prompts targets-first (BACK-36); remove `enable_windows_adcs` dead field (BACK-39); consolidate data_classification prompts (BACK-31)
-- [ ] Scoring Correctness — calibration profile actually applied in compute_readiness_score() (BACK-43); validate.py artifact list fixed (BACK-44); migration_advisor pattern matching fixed (BACK-46); dashboard profile kwarg wired (BACK-60)
+- ✓ Scoring Correctness — calibration profile actually applied in compute_readiness_score() (BACK-43); validate.py artifact list fixed (BACK-44); migration_advisor pattern matching fixed (BACK-46); dashboard profile kwarg wired (BACK-60) — Validated in Phase 14: scoring-intelligence-correctness
 - [ ] Code Hygiene — remove legacy connector stub directory (BACK-37); cfg.scan mutation wrapped in try/finally (BACK-45); delete orphaned scorecard.py (BACK-61); update 9 stale + 2 missing Nyquist VALIDATION.md files (BACK-62)
 
 **v4.2+ Scanner Expansion (Future Milestones)**
@@ -105,8 +105,8 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
 - **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 199 tests passing (pytest); VALIDATION.md Nyquist files stale (BACK-62)
-- **Known tech debt**: Dashboard scoring profile gap (BACK-60), orphaned scorecard.py (BACK-61), Nyquist files (BACK-62)
+- **Test coverage**: 223 tests passing (pytest); VALIDATION.md Nyquist files stale (BACK-62)
+- **Known tech debt**: Orphaned scorecard.py (BACK-61), Nyquist files (BACK-62)
 
 ## Constraints
 
