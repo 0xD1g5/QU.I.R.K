@@ -102,7 +102,7 @@ def _validate_intelligence(intel: Dict[str, Any], errors: List[str], warnings: L
         errors.append("intelligence.roadmap must be a list")
 
 
-def validate_run(output_dir: Path, require_delta_if_baseline: bool = True) -> ValidationResult:
+def validate_run(output_dir: Path) -> ValidationResult:
     errors: List[str] = []
     warnings: List[str] = []
 
@@ -138,10 +138,9 @@ def validate_run(output_dir: Path, require_delta_if_baseline: bool = True) -> Va
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default="output")
-    parser.add_argument("--no-require-delta", action="store_true")
     args = parser.parse_args(argv)
 
-    res = validate_run(Path(args.output_dir), not args.no_require_delta)
+    res = validate_run(Path(args.output_dir))
 
     print("✅ Validation PASSED" if res.ok else "❌ Validation FAILED")
 
