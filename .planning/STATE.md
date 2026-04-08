@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.1
-milestone_name: Gap Closure
-status: executing
-stopped_at: Completed 16-01-PLAN.md (RED TDD scaffold for CLI-04 and SCORE-04)
-last_updated: "2026-04-08T03:15:23.922Z"
+milestone: v4.2
+milestone_name: Scanner Expansion
+status: milestone_complete
+stopped_at: v4.1 Foundation Polish milestone archived — ready for v4.2 planning
+last_updated: "2026-04-08T00:00:00.000Z"
 last_activity: 2026-04-08
 progress:
-  total_phases: 9
-  completed_phases: 7
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -18,19 +18,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-06)
+See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 16 — v4-1-gap-closure
+**Current focus:** Planning v4.2 Scanner Expansion — next milestone after v4.1 archived
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
-Status: Ready to execute
+Phase: —
+Plan: —
+Status: Milestone complete — v4.1 Foundation Polish archived
 Last activity: 2026-04-08
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100% — v4.1 complete
 
 ## Performance Metrics
 

@@ -52,30 +52,36 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Profile-based weight multipliers (strict/balanced/lenient) in compute_readiness_score() — Phase 9
 - ✓ E2E dashboard flow — db_path, port propagation, SSH CBOM entries all wired correctly — Phase 11
 
-## Current Milestone: v4.1 Foundation Polish
+**v4.1 Foundation Polish (Phases 12–16)**
+- ✓ CLI correctness — correct config field names, `quirk --config` command, no `[owner]` placeholder — Phase 12
+- ✓ v4.1.0 version string consistent across CLI, reports, CBOM, pyproject.toml — Phase 12, 16
+- ✓ Interactive mode rewritten — auto-TZ, profile selection, 17-port consulting defaults, scanner surfacing, targets-first order — Phase 13
+- ✓ Calibration profiles (strict/balanced/lenient) applied end-to-end in scoring and dashboard — Phase 14
+- ✓ validate.py and migration_advisor corrected — no false validation failures — Phase 14
+- ✓ Dead code eliminated — legacy connector stubs, orphaned scorecard.py, SSH cfg.scan guard fixed — Phase 15
+- ✓ All 16 Nyquist VALIDATION.md files up to date — Phase 15, 16
+- ✓ Flow C (interactive wizard → scan → dashboard with correct profile) fully wired — Phase 16
 
-**Goal:** Make v4.0.0 trustworthy enough that new scanner output is credible — exclusively closes P0/P1 correctness and trust gaps before any scanner expansion.
+## Next Milestone: v4.2 Scanner Expansion
 
-**Target features:**
-- CLI Correctness: fix wrong config field names, missing `quirk scan` subcommand, `[owner]` placeholder in generated configs, version number conflicts in client-facing output (BACK-40, 41, 47, 48)
-- Interactive Mode Overhaul: auto-detect timezone, remove stub prompts, fix AWS/Azure labels, surface JWT/container/source scanners, scan profile selection, port list expansion, prompt reordering (BACK-27–33, 36, 38, 39)
-- Scoring & Intelligence Correctness: calibration profiles actually applied, validate.py fixed, migration_advisor matching fixed, dashboard profile propagation wired (BACK-43, 44, 46, 60)
-- Code Hygiene: remove legacy connector stubs, cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files (BACK-37, 45, 61, 62)
+**Goal:** Expand cryptographic inventory surface to cover identity protocols, data-at-rest encryption, and in-motion messaging — each adding a new scanner module with chaos lab coverage.
 
 ### Active
 
-**v4.1 Foundation Polish**
-- [ ] CLI Correctness — wrong config field names crash first-run (BACK-40); `quirk scan` subcommand missing (BACK-41); `[owner]` placeholder in generated config (BACK-47); version number conflicts in client output (BACK-48)
-- [ ] Interactive Mode — auto-detect timezone (BACK-27); remove SNI prompt (BACK-28); remove ADCS stub prompt (BACK-29); fix AWS/Azure labels + credential warnings (BACK-38); surface JWT/container/source scanners (BACK-32); scan profile selection replaces raw timeout/concurrency prompts (BACK-30); expand TLS port defaults (BACK-33); reorder prompts targets-first (BACK-36); remove `enable_windows_adcs` dead field (BACK-39); consolidate data_classification prompts (BACK-31)
-- ✓ Scoring Correctness — calibration profile actually applied in compute_readiness_score() (BACK-43); validate.py artifact list fixed (BACK-44); migration_advisor pattern matching fixed (BACK-46); dashboard profile kwarg wired (BACK-60) — Validated in Phase 14: scoring-intelligence-correctness
-- ✓ Code Hygiene — cfg.scan SSH mutation moved inside try/finally (BACK-45); scorecard.py + its test deleted (BACK-61); 11 stale + 2 missing VALIDATION.md files updated to nyquist_compliant: true (BACK-62); regression test guards connectors/ absence (BACK-37) — Validated in Phase 15: code-hygiene
-- ✓ v4.1 Gap Closure — pyproject.toml version = "4.1.0" so `pip show quirk` returns 4.1.0 (CLI-04); interactive.py output dir defaults to "quirk-output" aligning with dashboard discovery path (SCORE-04) — Validated in Phase 16: v4-1-gap-closure
+**v4.2 Identity Crypto (Planned)**
+- [ ] Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC)
+- [ ] SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata endpoints
+- [ ] DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython
 
-**v4.2+ Scanner Expansion (Future Milestones)**
-- Identity Crypto (v4.2): Kerberos etype enumeration, SAML/OAuth metadata, DNSSEC
-- Data at Rest (v4.3): DB encryption, S3/Blob/GCS audit, K8s secrets, Vault connector
-- Data in Motion (v4.4): Email SMTP/IMAP/POP3, message brokers (Kafka, RabbitMQ, Redis)
-- API Depth (v4.5): OpenAPI spec analysis, Bearer token interception, active REST probing
+**v4.3 Data at Rest (Planned)**
+- [ ] Database encryption detection — PostgreSQL, MySQL, RDS encryption settings
+- [ ] Object storage audit — S3/Blob/GCS encryption-at-rest configuration
+- [ ] Kubernetes secrets inspection — etcd EncryptionConfiguration, secret types
+- [ ] HashiCorp Vault connector — transit keys, PKI mounts, auth method audit
+
+**v4.4 Data in Motion (Planned)**
+- [ ] Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 via sslyze handoff
+- [ ] Message broker TLS — Kafka, RabbitMQ, Redis, AMQP connection audit
 
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
@@ -129,10 +135,10 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Consulting deliverable model | Tool enables billable services; lower GTM friction than SaaS | ✓ Good — CLI + local dashboard is the right v1 model; zero infra cost |
 | SaaS on roadmap (not v1) | Avoid premature infrastructure; prove value with CLI first | ✓ Good — SaaS remains future milestone; v4.0 ships without it |
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | ✓ Good — rename complete (Phase 1+7); zero stale references in live codebase |
-| Intelligence profile kwarg not passed to dashboard | Dashboard scan.py:330 calls compute_readiness_score without profile= | ⚠ Revisit — dashboard always uses balanced; BACK-60 tracked |
+| Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
 
 ---
-*Last updated: 2026-04-08 — Phase 15 complete: code hygiene — SSH cfg.scan guard fixed, scorecard.py deleted, 13 VALIDATION.md files brought to nyquist_compliant: true, 229 tests passing. v4.1 Foundation Polish milestone complete.*
+*Last updated: 2026-04-08 after v4.1 milestone — v4.1 Foundation Polish complete: 5 phases, 10 plans, 22 requirements satisfied. 233 tests passing. All v4.1 correctness gaps closed. Ready for v4.2 Scanner Expansion.*
 
 ## Evolution
 

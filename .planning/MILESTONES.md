@@ -1,5 +1,31 @@
 # Milestones
 
+## v4.1 Foundation Polish (Shipped: 2026-04-08)
+
+**Phases completed:** 9 phases, 17 plans, 29 tasks
+
+**Key accomplishments:**
+
+- 1. [Rule 1 - Bug] Cleaned stale version tag in code comment
+- Removed enable_windows_adcs from ConnectorsCfg and interactive.py; added JWT/container/source scanner prompts with correct AWS/Azure labels
+- One-liner:
+- One-liner:
+- PROFILE_MULTIPLIERS constant (strict=1.4x, balanced=1.0x, lenient=0.7x) added to compute_readiness_score() with prefix-based agility/identity weight scaling, plus 7 Wave 0 expectedFailure stubs for executive.py migration
+- executive.py fully migrated from assessment/ imports to intelligence call sequence with ported _build_interpretation(), NOW/NEXT/LATER roadmap, and profile+calibration wired at both call sites
+- One-liner:
+- TDD RED scaffold establishing the Phase 12 contract: 3 failing tests prove version inconsistency (4.0.0 vs 4.1.0), stale config fallback, and [owner] placeholder; 3 passing tests guard already-clean areas (config template, no quirk scan refs, load_config integrity)
+- Version bump to 4.1.0 across all 5 canonical locations and dev-install workflow replacing [owner] placeholder in Getting Started guide — all 6 Phase 12 contract tests GREEN, 205 total tests passing
+- 10 RED expectedFailure tests in tests/test_interactive_mode.py defining the complete Plan 02 implementation contract for interactive_config() overhaul
+- Rewrote interactive_config() implementing all 10 INTER requirements with auto-detected timezone, hardcoded consulting-grade TLS ports and SNI, targets-first prompt order, profile selection menu, unified 4-tier data classification menu, and AWS/Azure credential warnings; updated run_scan.py to unpack tuple return and remove deprecated prompt_for_context() call.
+- 7-test RED scaffold covering SCORE-01 through SCORE-04: profile multipliers verified, validate.py dead param caught, migration advisor regression-guarded, dashboard profile gap exposed
+- SCORE-02 and SCORE-04 made GREEN: dead validate_run parameter removed and dashboard now reads calibration.profile from intelligence JSON to produce profile-aware readiness scores
+- 7-test Wave 0 scaffold asserting quirk/connectors/ absent (GREEN), cfg.scan SSH mutation guard structure (RED), scorecard.py absent (RED), and all 14 phase VALIDATION.md files nyquist_compliant (RED)
+- Deleted orphaned scorecard.py and co-deleted its test, moved SSH cfg.scan mutations inside try block for correct finally-guard semantics, and updated all 14 completed phase VALIDATION.md files to nyquist_compliant: true (11 updated, 2 created) — turning all 7 test_hygiene.py tests GREEN
+- 4-test RED TDD scaffold proves CLI-04 (pyproject.toml manifest version = 4.0.0) and SCORE-04 (interactive.py output dir defaults to "output" not "quirk-output") gaps exist before Plan 02 fixes
+- pyproject.toml bumped to 4.1.0 and interactive.py output defaults corrected to "quirk-output", turning all 4 RED TDD tests GREEN and closing CLI-04 and SCORE-04 milestone gaps
+
+---
+
 ## v3.9 Gap Closure (Shipped: 2026-04-04)
 
 **Phases completed:** 13 phases, 40 plans, 75 tasks
