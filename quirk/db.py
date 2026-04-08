@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from typing import Iterator, Optional
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect as sa_inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
@@ -35,6 +35,28 @@ def get_engine(db_path: str) -> Engine:
     )
 
 
+_IDENTITY_COLUMNS = [
+    "kerberos_scan_json",
+    "saml_scan_json",
+    "dnssec_scan_json",
+]
+
+
+def _ensure_identity_columns(engine) -> None:
+    """Add identity scanner JSON columns to crypto_endpoints if absent (idempotent).
+
+    Uses SQLAlchemy inspector to check existing columns before ALTER TABLE.
+    Called from init_db() after create_all(). Per D-01: inspector-first,
+    no exception-for-control-flow.
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    with engine.connect() as conn:
+        for col in _IDENTITY_COLUMNS:
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
+        conn.commit()
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -52,6 +74,7 @@ def init_db(db_path: str) -> Engine:
 
     # Create schema
     Base.metadata.create_all(engine)
+    _ensure_identity_columns(engine)  # v4.2: add identity columns if missing
     return engine
 
 
