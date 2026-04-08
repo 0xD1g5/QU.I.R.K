@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.1.0
-**Last Updated:** 2026-04-08
+**Last Updated:** 2026-04-08 (Phase 17: identity infrastructure added UAT-1-07, UAT-1-08)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.1. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -148,6 +148,48 @@ Pass Criteria: Specific measurable condition(s)
 **Pass Criteria:**
 - HTTP 200 on port 9000
 - Exit code 0 for curl
+
+---
+
+### UAT-1-07: Identity Extras Group — Installation
+
+**Prerequisites:** Python 3.11+ virtual environment, quirk installed without extras.
+
+**Steps:**
+1. Run: `pip install -e ".[identity]"`
+2. Verify impacket is installed: `python -c "import impacket; print(impacket.__version__)"`
+3. Verify dnspython is installed: `python -c "import dns.dnssec; print('dnssec ok')"`
+4. Verify lxml is installed: `python -c "import lxml.etree; print('lxml ok')"`
+5. Verify defusedxml is installed: `python -c "import defusedxml; print('defusedxml ok')"`
+6. Verify signxml is installed: `python -c "import signxml; print('signxml ok')"`
+
+**Expected:** All identity scanner dependencies install without conflicts.
+
+**Pass Criteria:**
+- `pip install -e ".[identity]"` exits code 0
+- All five imports succeed without error
+- No `ImportError` or dependency conflict in pip output
+- Core quirk functionality still works: `quirk --help` exits 0
+
+---
+
+### UAT-1-08: Config Template — Identity Connectors Section
+
+**Prerequisites:** QuRisk installed.
+
+**Steps:**
+1. Run: `quirk init --output /tmp/quirk-identity-test.yaml`
+2. Inspect the connectors section: `cat /tmp/quirk-identity-test.yaml`
+3. Confirm identity fields are commented out
+
+**Expected:** Generated config contains commented identity fields inside the `connectors:` block.
+
+**Pass Criteria:**
+- `config.yaml` connectors block contains commented `# enable_kerberos: false`
+- `config.yaml` connectors block contains commented `# enable_saml: false`
+- `config.yaml` connectors block contains commented `# enable_dnssec: false`
+- Only ONE `connectors:` key at column 0 (no duplicate top-level key)
+- File is valid YAML: `python -c "import yaml; yaml.safe_load(open('/tmp/quirk-identity-test.yaml'))"`
 
 ---
 
@@ -2634,3 +2676,5 @@ These tests validate core functionality. Any failure here blocks the release gat
 | JWT findings missing | JWKS endpoint not reachable | Check jwt profile containers are up |
 | Source scan empty | semgrep not installed | `pip install semgrep` |
 | Container scan empty | syft not installed or no images | Install syft, ensure registry profile is up |
+| Kerberos/SAML/DNSSEC scan empty | identity extras not installed | `pip install quirk[identity]` |
+| enable_kerberos: unknown field error | Old quirk installation (pre-v4.2) | Upgrade quirk to v4.2+ |
