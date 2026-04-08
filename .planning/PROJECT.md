@@ -68,7 +68,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - [ ] CLI Correctness — wrong config field names crash first-run (BACK-40); `quirk scan` subcommand missing (BACK-41); `[owner]` placeholder in generated config (BACK-47); version number conflicts in client output (BACK-48)
 - [ ] Interactive Mode — auto-detect timezone (BACK-27); remove SNI prompt (BACK-28); remove ADCS stub prompt (BACK-29); fix AWS/Azure labels + credential warnings (BACK-38); surface JWT/container/source scanners (BACK-32); scan profile selection replaces raw timeout/concurrency prompts (BACK-30); expand TLS port defaults (BACK-33); reorder prompts targets-first (BACK-36); remove `enable_windows_adcs` dead field (BACK-39); consolidate data_classification prompts (BACK-31)
 - ✓ Scoring Correctness — calibration profile actually applied in compute_readiness_score() (BACK-43); validate.py artifact list fixed (BACK-44); migration_advisor pattern matching fixed (BACK-46); dashboard profile kwarg wired (BACK-60) — Validated in Phase 14: scoring-intelligence-correctness
-- [ ] Code Hygiene — remove legacy connector stub directory (BACK-37); cfg.scan mutation wrapped in try/finally (BACK-45); delete orphaned scorecard.py (BACK-61); update 9 stale + 2 missing Nyquist VALIDATION.md files (BACK-62)
+- ✓ Code Hygiene — cfg.scan SSH mutation moved inside try/finally (BACK-45); scorecard.py + its test deleted (BACK-61); 11 stale + 2 missing VALIDATION.md files updated to nyquist_compliant: true (BACK-62); regression test guards connectors/ absence (BACK-37) — Validated in Phase 15: code-hygiene
 
 **v4.2+ Scanner Expansion (Future Milestones)**
 - Identity Crypto (v4.2): Kerberos etype enumeration, SAML/OAuth metadata, DNSSEC
@@ -131,7 +131,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg not passed to dashboard | Dashboard scan.py:330 calls compute_readiness_score without profile= | ⚠ Revisit — dashboard always uses balanced; BACK-60 tracked |
 
 ---
-*Last updated: 2026-04-06 — Phase 13 complete: interactive mode overhaul — eliminated all internally-derivable prompts (timezone, SNI, ADCS), added consultant-grade defaults (17-port set, data classification tiers, AWS/Azure connector labels), full scanner wiring via tuple return, 215 tests passing*
+*Last updated: 2026-04-08 — Phase 15 complete: code hygiene — SSH cfg.scan guard fixed, scorecard.py deleted, 13 VALIDATION.md files brought to nyquist_compliant: true, 229 tests passing. v4.1 Foundation Polish milestone complete.*
 
 ## Evolution
 
