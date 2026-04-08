@@ -58,6 +58,16 @@ connectors:
   container_targets: []
   enable_source: false
   source_targets: []
+  # -- Identity connectors (optional, requires: pip install quirk[identity]) --
+  # enable_kerberos: false
+  # kerberos_targets:
+  #   - "kdc.example.com"       # KDC hostname or IP (port 88, TCP with UDP fallback)
+  # enable_saml: false
+  # saml_targets:
+  #   - "https://idp.example.com/metadata.xml"  # SAML IdP metadata URL
+  # enable_dnssec: false
+  # dnssec_targets:
+  #   - "example.com"           # Domain name for DNSKEY / DS record queries
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
