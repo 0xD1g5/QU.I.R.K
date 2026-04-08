@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: Identity Crypto
-status: executing
-stopped_at: Completed 17-01-PLAN.md (RED scaffold)
-last_updated: "2026-04-08T13:15:03.593Z"
+status: verifying
+stopped_at: Completed 17-02-PLAN.md (identity infrastructure implementation)
+last_updated: "2026-04-08T13:19:10.611Z"
 last_activity: 2026-04-08
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 Phase: 17 (identity-infrastructure) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-08
 
 Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 
 *Updated after each plan completion*
 | Phase 17-identity-infrastructure P01 | 5 | 1 tasks | 1 files |
+| Phase 17-identity-infrastructure P02 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [v4.2 research]: Direct authoritative NS query required for DNSSEC -- system resolver strips DO bit and DNSKEY records
 - [v4.2 research]: SAML_NS namespace constant required for all lxml XPath -- silent empty results without it (Pitfall 3)
 - [Phase 17-identity-infrastructure]: Table name in RED scaffold is crypto_endpoints (not scan_results) -- CryptoEndpoint is the actual ORM model
+- [Phase 17-identity-infrastructure]: Table name in _ensure_identity_columns is crypto_endpoints (not scan_results) -- CryptoEndpoint is the actual ORM model
+- [Phase 17-identity-infrastructure]: impacket placed in [identity] extras group only -- not in core dependencies to avoid pyOpenSSL transitive conflict risk
+- [Phase 17-identity-infrastructure]: All 6 identity ConnectorsCfg fields have safe defaults so v4.1 config.yaml loads without error via config_from_dict()
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T13:15:03.591Z
-Stopped at: Completed 17-01-PLAN.md (RED scaffold)
+Last session: 2026-04-08T13:19:10.609Z
+Stopped at: Completed 17-02-PLAN.md (identity infrastructure implementation)
 Resume file: None
