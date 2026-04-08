@@ -162,8 +162,8 @@ def interactive_config() -> tuple[AppConfig, str]:
 
     # --- 5. Output ---
     print("\nOutput")
-    out_dir = _prompt("Output directory", "output")
-    db_path = _prompt("SQLite DB path", "output/quirk.db")
+    out_dir = _prompt("Output directory", "quirk-output")
+    db_path = _prompt("SQLite DB path", "quirk-output/quirk.db")
 
     # --- 6. Metadata (D-01 auto-detect timezone, D-10/D-11 unified classification) ---
     print("\nAssessment Metadata")
