@@ -377,11 +377,10 @@ def main():
     ssh_timeout = _get_scan_int(cfg, "ssh_timeout_seconds", cfg.scan.timeout_seconds)
     ssh_conc = _get_scan_int(cfg, "ssh_concurrency", cfg.scan.concurrency)
 
-    cfg.scan.timeout_seconds = ssh_timeout
-    cfg.scan.concurrency = ssh_conc
-
     ssh_endpoints = []
     try:
+        cfg.scan.timeout_seconds = ssh_timeout
+        cfg.scan.concurrency = ssh_conc
         with _phase_timer(run_stats, "ssh_scanning"):
             if ssh_targets:
                 ssh_endpoints = scan_ssh_targets(
