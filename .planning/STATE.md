@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.9
+milestone: v4.1
 milestone_name: Gap Closure
-status: verifying
-stopped_at: Completed 15-02-PLAN.md (code hygiene implementation)
-last_updated: "2026-04-08T02:33:04.968Z"
+status: executing
+stopped_at: Completed 16-01-PLAN.md (RED TDD scaffold for CLI-04 and SCORE-04)
+last_updated: "2026-04-08T03:09:00.504Z"
 last_activity: 2026-04-08
 progress:
-  total_phases: 17
-  completed_phases: 14
-  total_plans: 48
-  completed_plans: 52
+  total_phases: 9
+  completed_phases: 6
+  total_plans: 17
+  completed_plans: 16
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 15 — code-hygiene
+**Current focus:** Phase 16 — v4-1-gap-closure
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 16 (v4-1-gap-closure) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-08
 
 Progress: [░░░░░░░░░░] 0%
@@ -100,6 +100,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 14-scoring-intelligence-correctness P02 | 5 | 3 tasks | 2 files |
 | Phase 15-code-hygiene P01 | 2 | 1 tasks | 1 files |
 | Phase 15 P02 | 3 | 2 tasks | 15 files |
+| Phase 16-v4-1-gap-closure P01 | 1 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -207,6 +208,8 @@ Recent decisions affecting current work:
 - [Phase 15-code-hygiene]: HYGN-04 test covers all 14 completed phases (not 11 in REQUIREMENTS.md) — phases 12-14 added after requirement was written
 - [Phase 15]: git rm used for co-deletion of scorecard.py + test to prevent ImportError at test collection time
 - [Phase 15]: SSH cfg.scan mutations moved to first lines inside try block — finally always restores base_timeout/base_conc unconditionally
+- [Phase 16-v4-1-gap-closure]: Use importlib.metadata.version('quirk') not quirk.__version__ for CLI-04 RED test — module attribute already returns 4.1.0 but installed egg-info reflects pyproject.toml version 4.0.0
+- [Phase 16-v4-1-gap-closure]: Source-text inspection via pathlib.Path().read_text() chosen for SCORE-04 RED test — asserts specific _prompt() default string directly without mock complexity
 
 ### Pending Todos
 
@@ -219,6 +222,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T02:30:07.449Z
-Stopped at: Completed 15-02-PLAN.md (code hygiene implementation)
+Last session: 2026-04-08T03:09:00.501Z
+Stopped at: Completed 16-01-PLAN.md (RED TDD scaffold for CLI-04 and SCORE-04)
 Resume file: None
