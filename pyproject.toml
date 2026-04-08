@@ -33,6 +33,13 @@ dashboard = [
     "python-multipart>=0.0.20",
     "playwright>=1.58.0",
 ]
+identity = [
+    "impacket>=0.13.0,<0.14",
+    "dnspython[dnssec]>=2.8.0",
+    "lxml>=6.0",
+    "defusedxml>=0.7.1",
+    "signxml>=4.4.0",
+]
 
 [project.scripts]
 quirk = "run_scan:main"

@@ -58,6 +58,14 @@ class ConnectorsCfg:
     jwt_targets: list = field(default_factory=list)
     container_targets: list = field(default_factory=list)
     source_targets: list = field(default_factory=list)
+    # Identity connector enable flags (v4.2, per D-04)
+    enable_kerberos: bool = False
+    enable_saml: bool = False
+    enable_dnssec: bool = False
+    # Identity connector target lists (v4.2, per D-05)
+    kerberos_targets: list = field(default_factory=list)
+    saml_targets: list = field(default_factory=list)
+    dnssec_targets: list = field(default_factory=list)
 
 
 @dataclass
