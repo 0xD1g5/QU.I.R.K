@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: Gap Closure
-status: executing
-stopped_at: Completed 15-01-PLAN.md (Wave 0 TDD scaffold for code hygiene)
-last_updated: "2026-04-08T02:24:58.082Z"
+status: verifying
+stopped_at: Completed 15-02-PLAN.md (code hygiene implementation)
+last_updated: "2026-04-08T02:30:07.453Z"
 last_activity: 2026-04-08
 progress:
   total_phases: 17
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 48
-  completed_plans: 51
+  completed_plans: 52
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-06)
 
 Phase: 15 (code-hygiene) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-08
 
 Progress: [░░░░░░░░░░] 0%
@@ -99,6 +99,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 14-scoring-intelligence-correctness P01 | 2 | 1 tasks | 1 files |
 | Phase 14-scoring-intelligence-correctness P02 | 5 | 3 tasks | 2 files |
 | Phase 15-code-hygiene P01 | 2 | 1 tasks | 1 files |
+| Phase 15 P02 | 3 | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -204,6 +205,8 @@ Recent decisions affecting current work:
 - [Phase 14-scoring-intelligence-correctness]: Dashboard reads calibration.profile (not assessment.profile) from latest intelligence JSON at request time; profile=None fallback to balanced on I/O error
 - [Phase 15-code-hygiene]: HYGN-02 SSH test uses inspect.getsource structural assertion to detect mutations precede try block — matches Phase 14 pattern
 - [Phase 15-code-hygiene]: HYGN-04 test covers all 14 completed phases (not 11 in REQUIREMENTS.md) — phases 12-14 added after requirement was written
+- [Phase 15]: git rm used for co-deletion of scorecard.py + test to prevent ImportError at test collection time
+- [Phase 15]: SSH cfg.scan mutations moved to first lines inside try block — finally always restores base_timeout/base_conc unconditionally
 
 ### Pending Todos
 
@@ -216,6 +219,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T02:24:58.078Z
-Stopped at: Completed 15-01-PLAN.md (Wave 0 TDD scaffold for code hygiene)
+Last session: 2026-04-08T02:30:07.449Z
+Stopped at: Completed 15-02-PLAN.md (code hygiene implementation)
 Resume file: None

@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 12: CLI Correctness** - Fix generated config field names, missing `quirk scan` subcommand, `[owner]` placeholder, and version number conflicts (completed 2026-04-06)
 - [x] **Phase 13: Interactive Mode Overhaul** - Auto-detect timezone, remove stub prompts, fix connector labels, surface live scanners, add profile selection, expand port defaults, reorder prompts (completed 2026-04-06)
 - [x] **Phase 14: Scoring & Intelligence Correctness** - Wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard (completed 2026-04-07)
-- [ ] **Phase 15: Code Hygiene** - Remove legacy connector stubs, add cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files
+- [x] **Phase 15: Code Hygiene** - Remove legacy connector stubs, add cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files (completed 2026-04-08)
 
 ## Phase Details
 
@@ -92,10 +92,10 @@ Plans:
   2. If an exception occurs mid-scan, `cfg.scan.timeout_seconds` and `cfg.scan.concurrency` are restored to their pre-scan values before the next phase executes
   3. `quirk/reports/scorecard.py` does not exist; the only scorecard implementation is the inline `_scorecard_markdown()` in `writer.py`
   4. All 11 Nyquist VALIDATION.md files accurately reflect phase completion status — no file reads `nyquist_compliant: false` for a phase whose tests are passing GREEN
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 15-01-PLAN.md — TDD test scaffold (RED tests for HYGN-01, HYGN-02, HYGN-03, HYGN-04)
-- [ ] 15-02-PLAN.md — Delete scorecard.py, fix SSH cfg.scan guard, update 13 VALIDATION.md files
+- [x] 15-02-PLAN.md — Delete scorecard.py, fix SSH cfg.scan guard, update 13 VALIDATION.md files
 
 ---
 
@@ -386,4 +386,4 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
 | 13. Interactive Mode Overhaul | 2/2 | Complete    | 2026-04-06 |
 | 14. Scoring & Intelligence Correctness | 2/2 | Complete    | 2026-04-07 |
-| 15. Code Hygiene | 1/2 | In Progress|  |
+| 15. Code Hygiene | 2/2 | Complete   | 2026-04-08 |
