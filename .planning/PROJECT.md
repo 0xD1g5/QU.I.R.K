@@ -121,8 +121,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
 - **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 233 tests passing (pytest); all Nyquist VALIDATION.md files up to date
+- **Test coverage**: 239 tests passing (pytest); all Nyquist VALIDATION.md files up to date
 - **Known tech debt**: None — all v4.1 tech debt resolved (Phases 15–16)
+- **Phase 17 complete** (2026-04-08): Identity infrastructure — schema columns, config flags, pyproject extras group for Kerberos/SAML/DNSSEC scanners
 
 ## Constraints
 
@@ -147,7 +148,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
 
 ---
-*Last updated: 2026-04-08 after v4.2 milestone start — v4.2 Identity Crypto milestone initialized. Scope: Kerberos/SAML/DNSSEC scanners, chaos lab coverage for all 3, new Identity dashboard tab.*
+*Last updated: 2026-04-08 after Phase 17 (Identity Infrastructure) complete — schema columns, config flags, and [identity] extras group in place. Phases 18–20 can now build scanner modules on this plumbing.*
 
 ## Evolution
 
