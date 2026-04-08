@@ -1,34 +1,93 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-08T03:44:04.731Z",
-  "phase": null,
-  "phase_name": "milestone-boundary",
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
-  "status": "milestone_complete",
+  "timestamp": "2026-04-08T14:23:09.728Z",
+  "phase": "18",
+  "phase_name": "DNSSEC Scanner",
+  "phase_dir": ".planning/phases/18-dnssec-scanner",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Verify v4.1 readiness — 5 phases, 10 plans, 22/22 requirements", "status": "done", "commit": "0dca36f"},
-    {"id": 2, "name": "Run gsd-tools milestone complete v4.1 — archive roadmap, requirements, audit", "status": "done", "commit": "0dca36f"},
-    {"id": 3, "name": "Reorganize ROADMAP.md — v4.1 collapsed to <details> block, v4.2 placeholder added", "status": "done", "commit": "0dca36f"},
-    {"id": 4, "name": "Delete REQUIREMENTS.md — archived to milestones/v4.1-REQUIREMENTS.md", "status": "done", "commit": "fd32243"},
-    {"id": 5, "name": "Full PROJECT.md evolution review — v4.1 validated, v4.2 active, Key Decisions updated", "status": "done", "commit": "0dca36f"},
-    {"id": 6, "name": "STATE.md updated — milestone v4.2 Scanner Expansion, status milestone_complete", "status": "done", "commit": "0dca36f"},
-    {"id": 7, "name": "RETROSPECTIVE.md — v4.1 section appended, cross-milestone trends updated", "status": "done", "commit": "6e02039"},
-    {"id": 8, "name": "Git tag v4.1 created and pushed to origin", "status": "done", "commit": "fd32243"}
+    {
+      "id": 1,
+      "name": "discuss-phase 18 — 7 gray areas, CONTEXT.md written",
+      "status": "done",
+      "commit": "4320f73"
+    }
   ],
-  "remaining_tasks": [],
+  "remaining_tasks": [
+    {
+      "id": 2,
+      "name": "plan-phase 18 (18-01-PLAN.md — TDD test scaffold)",
+      "status": "not_started"
+    },
+    {
+      "id": 3,
+      "name": "plan-phase 18 (18-02-PLAN.md — dnspython scanner, RFC 8624 classifier, CBOM integration, BIND9 chaos lab)",
+      "status": "not_started"
+    },
+    {
+      "id": 4,
+      "name": "execute-phase 18",
+      "status": "not_started"
+    }
+  ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
     {
-      "decision": "Phase directories 12–16 kept in .planning/phases/ (not moved to milestones/)",
-      "rationale": "User selected Skip — use /gsd:cleanup later to archive retroactively",
-      "phase": "milestone-boundary"
+      "decision": "One CryptoEndpoint per DNSKEY record (not per domain)",
+      "rationale": "Finest CBOM granularity, matches JWT scanner pattern",
+      "phase": "18"
+    },
+    {
+      "decision": "3-tier severity map: CRITICAL (deprecated algs), HIGH (RSA-based quantum-vulnerable), Safe (ECDSA/EdDSA)",
+      "rationale": "RSASHA256/512 are HIGH for quantum-readiness angle; ECDSAP256/384/ED25519/ED448 produce no finding",
+      "phase": "18"
+    },
+    {
+      "decision": "NSEC zone-enumeration exposure = MEDIUM severity",
+      "rationale": "Operational info-disclosure risk, not a cryptographic weakness",
+      "phase": "18"
+    },
+    {
+      "decision": "SHA-1 DS digest = MEDIUM severity",
+      "rationale": "RFC 8624 deprecates it; requires second-preimage for exploitation",
+      "phase": "18"
+    },
+    {
+      "decision": "4 BIND9 zones: weak.chaos.local (RSASHA1+NSEC), safe.chaos.local (ECDSAP256+NSEC3), broken.chaos.local (DS mismatch), unsigned.chaos.local",
+      "rationale": "Full requirement coverage for all 7 DNSSEC requirements in one BIND9 container",
+      "phase": "18"
+    },
+    {
+      "decision": "Pre-signed zone files baked into Docker image; dedicated `dnssec` profile",
+      "rationale": "Deterministic key tags for CI; lightweight profile matches success criteria 5 wording",
+      "phase": "18"
+    },
+    {
+      "decision": "Retry once then skip on DNS failure; auto-resolve authoritative NS from domain; UDP→TCP fallback",
+      "rationale": "Standard DNS transport behavior; dnspython handles TC bit natively",
+      "phase": "18"
+    },
+    {
+      "decision": "scan_dnssec_targets(targets, timeout=10, logger) — matches JWT scanner signature exactly",
+      "rationale": "Consistent API across all scanner modules",
+      "phase": "18"
+    },
+    {
+      "decision": "cert_pubkey_alg field used for DNSSEC algorithm in CBOM builder branch",
+      "rationale": "Mirrors JWT pattern; simple _register_algorithm() call",
+      "phase": "18"
+    },
+    {
+      "decision": "Sequential domain scanning (no threading); 5s per-query timeout",
+      "rationale": "DNS is fast enough; can add threading later if needed",
+      "phase": "18"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Run /gsd:new-milestone to start v4.2 Scanner Expansion — questioning → research → requirements → roadmap",
-  "context_notes": "v4.1 Foundation Polish milestone fully archived. All 22 requirements satisfied. 233 tests passing. Zero known tech debt. REQUIREMENTS.md deleted (fresh for v4.2). v4.2 target: Identity Crypto (Kerberos, SAML/OAuth, DNSSEC) → Data at Rest → Data in Motion. Start with /gsd:new-milestone in a fresh context window."
+  "next_action": "Run /gsd:plan-phase 18 (after /clear for fresh context). CONTEXT.md is complete with all decisions.",
+  "context_notes": "Phase 17 (identity infrastructure) is fully complete and verified. Phase 18 discuss-phase just finished — 7 gray areas covered. GSD settings updated: research_before_questions = true. Clean pause point — no in-flight code changes."
 }
