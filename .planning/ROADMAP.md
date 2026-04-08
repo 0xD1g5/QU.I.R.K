@@ -128,7 +128,7 @@ Plans:
   8. Version strings are consistent: `__version__`, CBOM `PLATFORM_VERSION`, `INTELLIGENCE_VERSION`, config default, and report section headers all agree
   9. `data/qcscan-legacy.sqlite` removed; `datetime.utcnow()` calls replaced; `quirk init` URL placeholder substituted
   10. `quirk/engine/rules.py` empty file removed; tqdm dead branch and dead assignment cleaned from `run_scan.py`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md — Fix config template field names, subcommand references, and version string alignment (D-06, D-07, D-08, D-18)
