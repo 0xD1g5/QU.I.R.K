@@ -1,9 +1,9 @@
 ---
 phase: 4
 slug: chaos-lab-expansion
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-30
 ---
 
@@ -74,10 +74,10 @@ created: 2026-03-30
 
 ## Validation Sign-Off
 
-- [ ] All 6 lab profiles start cleanly with `docker compose --profile <name> up -d`
-- [ ] All 6 profile smoke tests return expected findings
-- [ ] `expected_results_v3.md` updated with new profile findings
-- [ ] No port conflicts with existing lab ports
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All 6 lab profiles start cleanly with `docker compose --profile <name> up -d`
+- [x] All 6 profile smoke tests return expected findings
+- [x] `expected_results_v3.md` updated with new profile findings
+- [x] No port conflicts with existing lab ports
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** complete
