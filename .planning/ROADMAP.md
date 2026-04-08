@@ -52,6 +52,79 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 20: Kerberos Scanner** - impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab
 - [ ] **Phase 21: Identity Surface** - Intelligence layer counters, FastAPI IdentityFinding model, React Identity tab, findings table filter
 
+### Phase 17: Identity Infrastructure
+**Goal**: The codebase is structurally ready to receive three new identity scanners — schema columns exist and are idempotent, optional dependency group is declared, and config flags are wired
+**Depends on**: Phase 16
+**Requirements**: INFRA-01, INFRA-02, INFRA-03
+**Success Criteria** (what must be TRUE):
+  1. Running quirk against a v4.1 quirk.db does not raise any migration error — the three new nullable columns are added idempotently on startup
+  2. `pip install quirk[identity]` resolves and installs impacket, dnspython[dnssec], lxml, defusedxml, and signxml without dependency conflicts
+  3. A config.yaml with `enable_kerberos: true`, `enable_saml: true`, and `enable_dnssec: true` loads without validation errors; `quirk init` generates a template with these fields commented out
+**Plans**: 2 plans
+Plans:
+- [ ] 17-01-PLAN.md — TDD test scaffold (RED tests for INFRA-01, INFRA-02, INFRA-03)
+- [ ] 17-02-PLAN.md — Schema migration guard, ConnectorsCfg fields, pyproject.toml [identity] extras group
+
+### Phase 18: DNSSEC Scanner
+**Goal**: QU.I.R.K. can audit the DNSSEC posture of any domain — detecting unsigned zones, weak signing algorithms, NSEC zone enumeration exposure, and broken DS chains — with results in the CBOM
+**Depends on**: Phase 17
+**Requirements**: DNSSEC-01, DNSSEC-02, DNSSEC-03, DNSSEC-04, DNSSEC-05, DNSSEC-06, DNSSEC-07
+**Success Criteria** (what must be TRUE):
+  1. Scanning the BIND9 chaos lab RSASHA1-signed zone produces a CRITICAL finding for the weak algorithm and the finding appears in the CBOM output
+  2. Scanning a domain with no DNSSEC produces a HIGH finding for unsigned zone; scanning a ECDSAP256SHA256 zone produces no algorithm severity finding
+  3. NSEC record type detected and flagged as zone-enumerable exposure; DS broken chain (mismatched key tags) flagged as HIGH
+  4. DNSSEC results appear in `dnssec_scan_json` in the database and produce `protocol="DNSSEC"` CryptoEndpoint rows
+  5. `docker compose --profile dnssec up` starts the BIND9 container and the scanner successfully validates against it
+**Plans**: 2 plans
+Plans:
+- [ ] 18-01-PLAN.md — TDD test scaffold (RED tests for DNSSEC-01 through DNSSEC-07)
+- [ ] 18-02-PLAN.md — dnspython scanner, RFC 8624 classifier, CBOM integration, BIND9 chaos lab
+
+### Phase 19: SAML/OIDC Scanner
+**Goal**: QU.I.R.K. can audit SAML IdP metadata and OIDC discovery endpoints — detecting weak signing certificates and deprecated algorithm declarations — with results in the CBOM
+**Depends on**: Phase 17
+**Requirements**: SAML-01, SAML-02, SAML-03, SAML-04, SAML-05, SAML-06
+**Success Criteria** (what must be TRUE):
+  1. Scanning the SimpleSAMLphp chaos lab IdP produces a CRITICAL finding for the RSA-1024 signing certificate
+  2. `<KeyDescriptor use="encryption">` certs parsed separately from signing certs with distinct findings; OIDC `id_token_signing_alg_values_supported` enumerated when endpoint is reachable
+  3. RSA < 2048-bit signing keys flagged CRITICAL; SHA-1 algorithm URIs flagged HIGH
+  4. SAML results appear in `saml_scan_json` in the database and produce `protocol="SAML"` CryptoEndpoint rows
+  5. `docker compose --profile saml up` starts SimpleSAMLphp and the scanner successfully validates against it
+**Plans**: 2 plans
+Plans:
+- [ ] 19-01-PLAN.md — TDD test scaffold (RED tests for SAML-01 through SAML-06)
+- [ ] 19-02-PLAN.md — lxml metadata parser, OIDC discovery, classifier extension, SimpleSAMLphp chaos lab
+
+### Phase 20: Kerberos Scanner
+**Goal**: QU.I.R.K. can enumerate Kerberos encryption types from a KDC using an unauthenticated AS-REQ probe — detecting RC4 and DES etypes that represent classical and quantum cryptographic risk
+**Depends on**: Phase 17
+**Requirements**: KERB-01, KERB-02, KERB-03, KERB-04, KERB-05
+**Success Criteria** (what must be TRUE):
+  1. Scanning the Samba DC chaos lab produces a HIGH finding for RC4-HMAC (etype 23) without requiring any credentials
+  2. DES etypes (1, 2, 3) are classified CRITICAL when present; AES-256 (etypes 18, 20) classified quantum-safe; UDP/88 blocked → TCP fallback or graceful `kerberos-unreachable` record
+  3. Anonymous LDAP bind attempt on port 389 gracefully degrades (no crash, logged as skipped) if unreachable or auth required
+  4. Kerberos results appear in `kerberos_scan_json` in the database and produce `protocol="KERBEROS"` CryptoEndpoint rows
+  5. `docker compose --profile kerberos up` starts the Samba DC with `start_period: 90s` healthcheck; scanner probes port 88 successfully
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — TDD test scaffold (RED tests for KERB-01 through KERB-05)
+- [ ] 20-02-PLAN.md — impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab
+
+### Phase 21: Identity Surface
+**Goal**: Identity protocol findings from all three scanners are surfaced in the quantum-readiness score, the dashboard Identity tab, and the findings table — giving consultants a complete view of the identity crypto attack surface
+**Depends on**: Phase 18, Phase 19, Phase 20
+**Requirements**: IDENT-01, IDENT-02, IDENT-03, IDENT-04
+**Success Criteria** (what must be TRUE):
+  1. A scan with RC4 Kerberos etypes, a weak SAML signing cert, and a DNSSEC RSASHA1 algorithm produces a lower readiness score than the same scan with only quantum-safe findings
+  2. The dashboard displays an Identity tab with per-protocol summary cards showing finding counts for Kerberos, SAML/OIDC, and DNSSEC
+  3. The findings table includes identity protocol rows and can be filtered to show only Kerberos, SAML, or DNSSEC findings
+  4. `GET /api/scan/latest` returns an `identity_findings` array with `IdentityFinding` Pydantic objects for all three protocols
+**Plans**: 2 plans
+Plans:
+- [ ] 21-01-PLAN.md — TDD test scaffold (RED tests for IDENT-01 through IDENT-04) + FastAPI IdentityFinding model
+- [ ] 21-02-PLAN.md — evidence.py counters, scoring integration, React Identity tab
+**UI hint**: yes
+
 ## Phase Details
 
 <details>
@@ -129,6 +202,7 @@ Plans:
 - [x] 16-02-PLAN.md — GREEN fixes (pyproject.toml version bump + interactive.py output dir default)
 
 </details>
+
 
 ---
 
@@ -396,67 +470,6 @@ Ideas captured during planning — not in scope for v1, but not lost.
 | BACK-62 | Update Nyquist VALIDATION.md files post-execution | P3 | 9 phases have VALIDATION.md with `nyquist_compliant: false` and `wave_0_complete: false` — these are stale (created at planning time, never updated after tests passed GREEN). Phases 02 and 08 have no VALIDATION.md at all. All phase verifications passed — the files just weren't updated. Run `/gsd:validate-phase N` for each phase to generate accurate Nyquist coverage records. Source: v3.9 milestone audit Nyquist section. |
 | BACK-63 | Score transparency in executive reports | Medium | Add a scoring methodology section to the executive summary explaining: how profile weights (strict/balanced/lenient) affect the score, what subscores contributed most, and what score ranges map to readiness levels (high/medium/low). User wants to review Phase 14 output first — score drivers are already present in the executive summary — before deciding if additional methodology explanation is needed. Phase dir: `.planning/phases/999.56-score-transparency-executive-reports/` |
 | BACK-64 | Authenticated scan mode — optional credential store for deeper probing | Platform / v4.5+ | Add a first-class optional credential model to config.yaml (env-var substitution, no plaintext, per-target mapping) enabling scanners to attempt deeper authenticated probing when credentials are available, with graceful fallback to unauthenticated when not. Scanners that benefit: Kerberos (LDAP bind → `msDS-SupportedEncryptionTypes` per-account etype bitmap), SSH (key-based login → sshd_config host crypto inspection), JWT/API (OAuth client creds → token endpoint scanning). DNSSEC and TLS have no meaningful authenticated path. SAML assertion-level inspection deferred to SaaS milestone (requires SP context). Requires a credential security review as a gate — credential storage is a platform concern, not a per-scanner concern. Design once, all scanners adopt uniformly. Natural home: v4.5 or pre-SaaS milestone. Related: KERB-ADV-01 in REQUIREMENTS.md Future Requirements. Phase dir: `.planning/phases/999.57-authenticated-scan-mode/` |
-
-
-### Phase 17: Identity Infrastructure
-**Goal**: The codebase is ready to receive all three identity scanners — schema is extended, config flags exist, and the [identity] extras group is declared so any of the three scanner phases can land without further schema work
-**Depends on**: Phase 16
-**Requirements**: INFRA-01, INFRA-02, INFRA-03
-**Success Criteria** (what must be TRUE):
-  1. Running quirk against a v4.1 quirk.db does not raise any migration error -- the three new nullable columns are added idempotently on startup
-  2. pip install quirk[identity] resolves and installs impacket, dnspython[dnssec], lxml, defusedxml, and signxml without dependency conflicts
-  3. A config.yaml with enable_kerberos:true, enable_saml:true, and enable_dnssec:true loads without validation errors
-**Plans**: TBD
-
-### Phase 18: DNSSEC Scanner
-**Goal**: QU.I.R.K. can audit the DNSSEC posture of any domain — detecting unsigned zones, weak signing algorithms, NSEC zone enumeration exposure, and broken DS chains — with results in the CBOM
-**Depends on**: Phase 17
-**Requirements**: DNSSEC-01, DNSSEC-02, DNSSEC-03, DNSSEC-04, DNSSEC-05, DNSSEC-06, DNSSEC-07
-**Success Criteria** (what must be TRUE):
-  1. Scanning the BIND9 chaos lab RSASHA1-signed zone produces a CRITICAL finding for the weak algorithm and the finding appears in the CBOM output
-  2. Scanning a domain with no DNSSEC produces a HIGH finding for unsigned zone
-  3. Scanning the BIND9 chaos lab ECDSAP256SHA256 zone produces no algorithm severity finding (clean zone passes)
-  4. DNSSEC results appear in dnssec_scan_json in the database and produce protocol=DNSSEC CryptoEndpoint rows
-  5. docker compose --profile dnssec up starts the BIND9 container and dig @localhost DNSKEY returns the expected zone signing keys
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 19: SAML/OIDC Scanner
-**Goal**: QU.I.R.K. can audit SAML IdP metadata and OIDC discovery endpoints — detecting weak signing certificates and deprecated algorithm declarations — with results in the CBOM
-**Depends on**: Phase 17
-**Requirements**: SAML-01, SAML-02, SAML-03, SAML-04, SAML-05, SAML-06
-**Success Criteria** (what must be TRUE):
-  1. Scanning the SimpleSAMLphp chaos lab IdP produces a CRITICAL finding for the RSA-1024 signing certificate
-  2. Scanning an OIDC discovery endpoint returns the supported signing algorithms and flags any SHA-1 or weak-key entries
-  3. SAML scanning handles Azure AD and Okta metadata correctly -- certificates with no use= attribute are parsed as both signing and encryption
-  4. SAML results appear in saml_scan_json in the database and produce protocol=SAML CryptoEndpoint rows
-  5. docker compose --profile saml up starts SimpleSAMLphp and the metadata endpoint returns valid SAML XML
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 20: Kerberos Scanner
-**Goal**: QU.I.R.K. can enumerate Kerberos encryption types from a KDC using an unauthenticated AS-REQ probe — detecting RC4 and DES etypes that represent classical and quantum cryptographic risk
-**Depends on**: Phase 17
-**Requirements**: KERB-01, KERB-02, KERB-03, KERB-04, KERB-05
-**Success Criteria** (what must be TRUE):
-  1. Scanning the Samba DC chaos lab produces a HIGH finding for RC4-HMAC (etype 23) without requiring any credentials
-  2. DES etypes (1, 2, 3) are classified as CRITICAL when present; AES-256 (etype 18) is classified as quantum-safe
-  3. Scanner completes cleanly when UDP/88 is blocked -- TCP fallback succeeds or records kerberos-unreachable gracefully
-  4. Kerberos results appear in kerberos_scan_json in the database and produce protocol=KERBEROS CryptoEndpoint rows
-  5. docker compose --profile kerberos up starts the Samba DC and the scanner successfully probes port 88 after the 90-second healthcheck passes
-**Plans**: TBD
-
-### Phase 21: Identity Surface
-**Goal**: Identity protocol findings from all three scanners are surfaced in the quantum-readiness score, the dashboard Identity tab, and the findings table — giving consultants a complete view of the identity crypto attack surface
-**Depends on**: Phase 18, Phase 19, Phase 20
-**Requirements**: IDENT-01, IDENT-02, IDENT-03, IDENT-04
-**Success Criteria** (what must be TRUE):
-  1. A scan that finds RC4 Kerberos etypes, a weak SAML signing cert, and a DNSSEC RSASHA1 algorithm produces a lower readiness score than the same scan with only quantum-safe findings
-  2. The dashboard displays an Identity tab with per-protocol summary cards showing finding counts for Kerberos, SAML/OIDC, and DNSSEC
-  3. The findings table includes identity protocol rows and can be filtered to show only Kerberos, SAML, or DNSSEC findings
-  4. GET /api/scan/latest returns an identity_findings array with typed IdentityFinding objects for all three protocols
-**Plans**: TBD
-**UI hint**: yes
 
 ---
 
