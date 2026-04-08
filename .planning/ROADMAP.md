@@ -496,7 +496,7 @@ v3.9 phases complete. v4.1 complete. v4.2 executes: 17 -> 18 -> 19 -> 20 -> 21
 | 14. Scoring & Intelligence Correctness | v4.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Code Hygiene | v4.1 | 2/2 | Complete | 2026-04-08 |
 | 16. v4.1 Gap Closure | v4.1 | 2/2 | Complete | 2026-04-08 |
-| 17. Identity Infrastructure | v4.2 | 2/2 | Complete   | 2026-04-08 |
+| 17. Identity Infrastructure | v4.2 | 2/2 | Complete    | 2026-04-08 |
 | 18. DNSSEC Scanner | v4.2 | 0/TBD | Not started | - |
 | 19. SAML/OIDC Scanner | v4.2 | 0/TBD | Not started | - |
 | 20. Kerberos Scanner | v4.2 | 0/TBD | Not started | - |
