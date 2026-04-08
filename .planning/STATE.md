@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: Identity Crypto
-status: planning
-stopped_at: Phase 17 context gathered (discuss mode)
-last_updated: "2026-04-08T12:53:13.000Z"
-last_activity: 2026-04-08 — v4.2 roadmap created; 5 phases defined (17-21)
+status: executing
+stopped_at: Completed 17-01-PLAN.md (RED scaffold)
+last_updated: "2026-04-08T13:15:03.593Z"
+last_activity: 2026-04-08
 progress:
   total_phases: 9
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.2 Identity Crypto — Phase 17: Identity Infrastructure
+**Current focus:** Phase 17 — identity-infrastructure
 
 ## Current Position
 
-Phase: 17 of 21 (Identity Infrastructure)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-04-08 — v4.2 roadmap created; 5 phases defined (17-21)
+Phase: 17 (identity-infrastructure) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-08
 
 Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 17-identity-infrastructure P01 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,7 @@ Recent decisions affecting current work:
 - [v4.2 research]: DNSSEC first, SAML second, Kerberos third -- validates classifier extension pattern cheaply before raw socket work
 - [v4.2 research]: Direct authoritative NS query required for DNSSEC -- system resolver strips DO bit and DNSKEY records
 - [v4.2 research]: SAML_NS namespace constant required for all lxml XPath -- silent empty results without it (Pitfall 3)
+- [Phase 17-identity-infrastructure]: Table name in RED scaffold is crypto_endpoints (not scan_results) -- CryptoEndpoint is the actual ORM model
 
 ### Pending Todos
 
@@ -78,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T12:53:12.989Z
-Stopped at: Phase 17 context gathered (discuss mode)
-Resume file: .planning/phases/17-identity-infrastructure/17-CONTEXT.md
+Last session: 2026-04-08T13:15:03.591Z
+Stopped at: Completed 17-01-PLAN.md (RED scaffold)
+Resume file: None

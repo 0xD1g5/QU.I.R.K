@@ -62,7 +62,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A config.yaml with `enable_kerberos: true`, `enable_saml: true`, and `enable_dnssec: true` loads without validation errors; `quirk init` generates a template with these fields commented out
 **Plans**: 2 plans
 Plans:
-- [ ] 17-01-PLAN.md — TDD test scaffold (RED tests for INFRA-01, INFRA-02, INFRA-03)
+- [x] 17-01-PLAN.md — TDD test scaffold (RED tests for INFRA-01, INFRA-02, INFRA-03)
 - [ ] 17-02-PLAN.md — Schema migration guard, ConnectorsCfg fields, pyproject.toml [identity] extras group
 
 ### Phase 18: DNSSEC Scanner
@@ -496,7 +496,7 @@ v3.9 phases complete. v4.1 complete. v4.2 executes: 17 -> 18 -> 19 -> 20 -> 21
 | 14. Scoring & Intelligence Correctness | v4.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Code Hygiene | v4.1 | 2/2 | Complete | 2026-04-08 |
 | 16. v4.1 Gap Closure | v4.1 | 2/2 | Complete | 2026-04-08 |
-| 17. Identity Infrastructure | v4.2 | 0/TBD | Not started | - |
+| 17. Identity Infrastructure | v4.2 | 1/2 | In Progress|  |
 | 18. DNSSEC Scanner | v4.2 | 0/TBD | Not started | - |
 | 19. SAML/OIDC Scanner | v4.2 | 0/TBD | Not started | - |
 | 20. Kerberos Scanner | v4.2 | 0/TBD | Not started | - |

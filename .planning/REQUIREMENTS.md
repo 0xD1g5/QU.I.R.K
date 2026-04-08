@@ -9,9 +9,9 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: SQLite schema gains `kerberos_scan_json`, `saml_scan_json`, `dnssec_scan_json` nullable columns with idempotent `ALTER TABLE ADD COLUMN` guard in `db.py` startup
-- [ ] **INFRA-02**: `ConnectorsCfg` gains `enable_kerberos`, `enable_saml`, `enable_dnssec` flags and corresponding target list fields wired to `config.yaml`
-- [ ] **INFRA-03**: `pyproject.toml` gains `[identity]` optional extras group declaring `impacket>=0.13.0,<0.14`, `dnspython[dnssec]>=2.8.0`, `lxml>=6.0`, `defusedxml>=0.7.1`, `signxml>=4.4.0`
+- [x] **INFRA-01**: SQLite schema gains `kerberos_scan_json`, `saml_scan_json`, `dnssec_scan_json` nullable columns with idempotent `ALTER TABLE ADD COLUMN` guard in `db.py` startup
+- [x] **INFRA-02**: `ConnectorsCfg` gains `enable_kerberos`, `enable_saml`, `enable_dnssec` flags and corresponding target list fields wired to `config.yaml`
+- [x] **INFRA-03**: `pyproject.toml` gains `[identity]` optional extras group declaring `impacket>=0.13.0,<0.14`, `dnspython[dnssec]>=2.8.0`, `lxml>=6.0`, `defusedxml>=0.7.1`, `signxml>=4.4.0`
 
 ### DNSSEC
 
@@ -93,9 +93,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 17 | Pending |
-| INFRA-02 | Phase 17 | Pending |
-| INFRA-03 | Phase 17 | Pending |
+| INFRA-01 | Phase 17 | Complete |
+| INFRA-02 | Phase 17 | Complete |
+| INFRA-03 | Phase 17 | Complete |
 | DNSSEC-01 | Phase 18 | Pending |
 | DNSSEC-02 | Phase 18 | Pending |
 | DNSSEC-03 | Phase 18 | Pending |
