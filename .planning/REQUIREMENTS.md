@@ -37,10 +37,10 @@ No new user-visible features — exclusively closes P0/P1 correctness and trust 
 
 ### Code Hygiene
 
-- [ ] **HYGN-01**: Legacy `quirk/connectors/` stub directory (`aws_stub.py`, `azure_stub.py`, `windows_adcs_stub.py`) removed from codebase — BACK-37
-- [ ] **HYGN-02**: `cfg.scan` `timeout_seconds` and `concurrency` mutations in `run_scan.py` wrapped in `try/finally` for safe config restore on exception — BACK-45
-- [ ] **HYGN-03**: Orphaned `quirk/reports/scorecard.py` deleted (never called in production) — BACK-61
-- [ ] **HYGN-04**: All 11 Nyquist VALIDATION.md files (9 stale + 2 missing) updated to reflect actual phase completion status — BACK-62
+- [x] **HYGN-01**: Legacy `quirk/connectors/` stub directory (`aws_stub.py`, `azure_stub.py`, `windows_adcs_stub.py`) removed from codebase — BACK-37
+- [x] **HYGN-02**: `cfg.scan` `timeout_seconds` and `concurrency` mutations in `run_scan.py` wrapped in `try/finally` for safe config restore on exception — BACK-45
+- [x] **HYGN-03**: Orphaned `quirk/reports/scorecard.py` deleted (never called in production) — BACK-61
+- [x] **HYGN-04**: All 11 Nyquist VALIDATION.md files (9 stale + 2 missing) updated to reflect actual phase completion status — BACK-62
 
 ## Future Requirements
 
@@ -107,10 +107,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SCORE-02 | Phase 14 | Complete |
 | SCORE-03 | Phase 14 | Complete |
 | SCORE-04 | Phase 14 | Complete |
-| HYGN-01 | Phase 15 | Pending |
-| HYGN-02 | Phase 15 | Pending |
-| HYGN-03 | Phase 15 | Pending |
-| HYGN-04 | Phase 15 | Pending |
+| HYGN-01 | Phase 15 | Complete |
+| HYGN-02 | Phase 15 | Complete |
+| HYGN-03 | Phase 15 | Complete |
+| HYGN-04 | Phase 15 | Complete |
 
 **Coverage:**
 - v4.1 requirements: 22 total

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.9
 milestone_name: Gap Closure
-status: verifying
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-04-07T00:16:30.525Z"
-last_activity: 2026-04-07
+status: executing
+stopped_at: Completed 15-01-PLAN.md (Wave 0 TDD scaffold for code hygiene)
+last_updated: "2026-04-08T02:24:58.082Z"
+last_activity: 2026-04-08
 progress:
-  total_phases: 16
+  total_phases: 17
   completed_phases: 13
-  total_plans: 46
-  completed_plans: 50
+  total_plans: 48
+  completed_plans: 51
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 14 — scoring-intelligence-correctness
+**Current focus:** Phase 15 — code-hygiene
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-07
+Phase: 15 (code-hygiene) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-08
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -98,6 +98,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 13-interactive-mode-overhaul PP02 | 3 | 2 tasks | 3 files |
 | Phase 14-scoring-intelligence-correctness P01 | 2 | 1 tasks | 1 files |
 | Phase 14-scoring-intelligence-correctness P02 | 5 | 3 tasks | 2 files |
+| Phase 15-code-hygiene P01 | 2 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -201,6 +202,8 @@ Recent decisions affecting current work:
 - [Phase 14-scoring-intelligence-correctness]: SCORE-01/SCORE-03 tests pass immediately as regression guards; SCORE-02/SCORE-04 tests confirm bugs exist with inspect.signature and inspect.getsource assertions
 - [Phase 14-scoring-intelligence-correctness]: validate_run now accepts only output_dir: Path — dead require_delta_if_baseline parameter removed from signature and main() argparse
 - [Phase 14-scoring-intelligence-correctness]: Dashboard reads calibration.profile (not assessment.profile) from latest intelligence JSON at request time; profile=None fallback to balanced on I/O error
+- [Phase 15-code-hygiene]: HYGN-02 SSH test uses inspect.getsource structural assertion to detect mutations precede try block — matches Phase 14 pattern
+- [Phase 15-code-hygiene]: HYGN-04 test covers all 14 completed phases (not 11 in REQUIREMENTS.md) — phases 12-14 added after requirement was written
 
 ### Pending Todos
 
@@ -213,6 +216,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-07T00:13:41.308Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-04-08T02:24:58.078Z
+Stopped at: Completed 15-01-PLAN.md (Wave 0 TDD scaffold for code hygiene)
 Resume file: None

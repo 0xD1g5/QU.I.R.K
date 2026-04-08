@@ -92,9 +92,9 @@ Plans:
   2. If an exception occurs mid-scan, `cfg.scan.timeout_seconds` and `cfg.scan.concurrency` are restored to their pre-scan values before the next phase executes
   3. `quirk/reports/scorecard.py` does not exist; the only scorecard implementation is the inline `_scorecard_markdown()` in `writer.py`
   4. All 11 Nyquist VALIDATION.md files accurately reflect phase completion status — no file reads `nyquist_compliant: false` for a phase whose tests are passing GREEN
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 15-01-PLAN.md — TDD test scaffold (RED tests for HYGN-01, HYGN-02, HYGN-03, HYGN-04)
+- [x] 15-01-PLAN.md — TDD test scaffold (RED tests for HYGN-01, HYGN-02, HYGN-03, HYGN-04)
 - [ ] 15-02-PLAN.md — Delete scorecard.py, fix SSH cfg.scan guard, update 13 VALIDATION.md files
 
 ---
@@ -386,4 +386,4 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
 | 13. Interactive Mode Overhaul | 2/2 | Complete    | 2026-04-06 |
 | 14. Scoring & Intelligence Correctness | 2/2 | Complete    | 2026-04-07 |
-| 15. Code Hygiene | 0/TBD | Not started | - |
+| 15. Code Hygiene | 1/2 | In Progress|  |
