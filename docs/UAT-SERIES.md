@@ -1,9 +1,9 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.1.0
-**Last Updated:** 2026-04-07
+**Last Updated:** 2026-04-08
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
-**Gate Status:** This document is the **release gate** for QU.I.R.K. v4.0. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
+**Gate Status:** This document is the **release gate** for QU.I.R.K. v4.1. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
 ---
 
@@ -74,7 +74,7 @@ Pass Criteria: Specific measurable condition(s)
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `quirk 4.0.0` or `QU.I.R.K. v4.0.0`
+- Output matches format: `quirk 4.1.0` or `QU.I.R.K. v4.1.0`
 - Exit code 0
 
 ---
@@ -188,8 +188,8 @@ Pass Criteria: Specific measurable condition(s)
 
 **Pass Criteria:**
 - At least one finding generated
-- `output/findings-*.json` file created
-- `output/quirk.db` exists and is non-empty
+- `quirk-output/findings-*.json` file created
+- `quirk-output/quirk.db` exists and is non-empty
 - Progress bar or status shown during scan
 
 ---
@@ -2124,7 +2124,7 @@ Each finding object contains:
 
 ### UAT-9-05: HTML Report Generation (Phase 7 Feature)
 
-**Prerequisites:** QuRisk 4.0.0 with HTML report feature. Completed scan.
+**Prerequisites:** QU.I.R.K. 4.1.0 with HTML report feature. Completed scan.
 
 **Steps:**
 1. Run scan: `quirk --config config.yaml`
