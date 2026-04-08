@@ -36,7 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 13: Interactive Mode Overhaul** - Auto-detect timezone, remove stub prompts, fix connector labels, surface live scanners, add profile selection, expand port defaults, reorder prompts (completed 2026-04-06)
 - [x] **Phase 14: Scoring & Intelligence Correctness** - Wire calibration profile into scoring, fix validate.py artifact list, fix migration_advisor patterns, propagate profile to dashboard (completed 2026-04-07)
 - [x] **Phase 15: Code Hygiene** - Remove legacy connector stubs, add cfg.scan mutation guard, delete orphaned scorecard.py, update 11 Nyquist VALIDATION.md files (completed 2026-04-08)
-- [ ] **Phase 16: v4.1 Gap Closure** - Fix pyproject.toml version mismatch (CLI-04) and interactive mode output dir default mismatch (SCORE-04) — closes both audit gaps to unblock milestone completion
+- [x] **Phase 16: v4.1 Gap Closure** - Fix pyproject.toml version mismatch (CLI-04) and interactive mode output dir default mismatch (SCORE-04) — closes both audit gaps to unblock milestone completion (completed 2026-04-08)
 
 ## Phase Details
 
@@ -109,7 +109,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 16-01-PLAN.md — TDD test scaffold (RED tests for CLI-04 manifest version and SCORE-04 output dir alignment)
-- [ ] 16-02-PLAN.md — GREEN fixes (pyproject.toml version bump + interactive.py output dir default)
+- [x] 16-02-PLAN.md — GREEN fixes (pyproject.toml version bump + interactive.py output dir default)
 
 ---
 
