@@ -13,7 +13,7 @@ No new user-visible features — exclusively closes P0/P1 correctness and trust 
 - [x] **CLI-01**: User's generated config has correct field names after `quirk init` (no startup crashes on first run) — BACK-40
 - [x] **CLI-02**: User can run `quirk scan` to initiate a scan from the CLI — BACK-41
 - [x] **CLI-03**: User's generated config contains no `[owner]` placeholder after `quirk init` — BACK-47
-- [x] **CLI-04**: User sees consistent version number (4.x) across CLI output, reports, and CBOM stamps — BACK-48
+- [ ] **CLI-04**: User sees consistent version number (4.x) across CLI output, reports, and CBOM stamps — BACK-48
 
 ### Interactive Mode
 
@@ -33,7 +33,7 @@ No new user-visible features — exclusively closes P0/P1 correctness and trust 
 - [x] **SCORE-01**: Calibration profile (`lenient/balanced/strict`) is applied to weight multipliers in `compute_readiness_score()` — BACK-43
 - [x] **SCORE-02**: `validate.py` checks for artifacts that `write_reports()` actually produces (no permanent validation failure on every scan) — BACK-44
 - [x] **SCORE-03**: `migration_advisor.py` finding pattern strings match `risk_engine.py` finding titles so legacy TLS migration recommendations surface correctly — BACK-46
-- [x] **SCORE-04**: Dashboard passes the scan-time profile kwarg to `compute_readiness_score()` so dashboard and CLI report scores match — BACK-60
+- [ ] **SCORE-04**: Dashboard passes the scan-time profile kwarg to `compute_readiness_score()` so dashboard and CLI report scores match — BACK-60
 
 ### Code Hygiene
 
@@ -92,7 +92,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | CLI-01 | Phase 12 | Complete |
 | CLI-02 | Phase 12 | Complete |
 | CLI-03 | Phase 12 | Complete |
-| CLI-04 | Phase 12 | Complete |
+| CLI-04 | Phase 16 | Pending |
 | INTER-01 | Phase 13 | Complete |
 | INTER-02 | Phase 13 | Complete |
 | INTER-03 | Phase 13 | Complete |
@@ -106,7 +106,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SCORE-01 | Phase 14 | Complete |
 | SCORE-02 | Phase 14 | Complete |
 | SCORE-03 | Phase 14 | Complete |
-| SCORE-04 | Phase 14 | Complete |
+| SCORE-04 | Phase 16 | Pending |
 | HYGN-01 | Phase 15 | Complete |
 | HYGN-02 | Phase 15 | Complete |
 | HYGN-03 | Phase 15 | Complete |
@@ -115,6 +115,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 **Coverage:**
 - v4.1 requirements: 22 total
 - Mapped to phases: 22
+- Pending (gap closure): 2 (CLI-04, SCORE-04 → Phase 16)
 - Unmapped: 0 ✓
 
 ---
