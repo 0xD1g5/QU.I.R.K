@@ -4,7 +4,7 @@
 
 - ✅ **v3.9 Gap Closure** — Phases 1–11, 40 plans (shipped 2026-04-04) → `.planning/milestones/v3.9-ROADMAP.md`
 - ✅ **v4.1 Foundation Polish** — Phases 12–16, 10 plans (shipped 2026-04-08) → `.planning/milestones/v4.1-ROADMAP.md`
-- 📋 **v4.2 Scanner Expansion** — Planned (Identity Crypto: Kerberos, SAML/OAuth, DNSSEC)
+- 🚧 **v4.2 Identity Crypto** — Phases 17–21 (in progress)
 
 ## Phases
 
@@ -42,11 +42,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
-### 📋 v4.2 Scanner Expansion (Planned)
+### 🚧 v4.2 Identity Crypto (In Progress)
 
-- [ ] Phase 17: Identity Crypto — Kerberos etype enumeration, SAML/OAuth metadata scanning, DNSSEC algorithm audit
-- [ ] Phase 18: Data at Rest — DB encryption detection, S3/Blob/GCS audit, K8s secrets, Vault connector
-- [ ] Phase 19: Data in Motion — Email SMTP/IMAP/POP3, message broker TLS (Kafka, RabbitMQ, Redis)
+**Milestone Goal:** Expand cryptographic inventory to cover identity protocols — Kerberos, SAML/OIDC, and DNSSEC — each with a scanner module, CBOM integration, chaos lab profile, and a dedicated Identity tab in the dashboard.
+
+- [ ] **Phase 17: Identity Infrastructure** - Schema columns, migration guard, [identity] extras group, and config flags for all three new scanners
+- [ ] **Phase 18: DNSSEC Scanner** - dnspython scanner, RFC 8624/9905 algorithm classification, CBOM integration, BIND9 chaos lab
+- [ ] **Phase 19: SAML/OIDC Scanner** - lxml metadata parser, OIDC discovery, classifier extension, SimpleSAMLphp chaos lab
+- [ ] **Phase 20: Kerberos Scanner** - impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab
+- [ ] **Phase 21: Identity Surface** - Intelligence layer counters, FastAPI IdentityFinding model, React Identity tab, findings table filter
 
 ## Phase Details
 
@@ -392,27 +396,94 @@ Ideas captured during planning — not in scope for v1, but not lost.
 | BACK-62 | Update Nyquist VALIDATION.md files post-execution | P3 | 9 phases have VALIDATION.md with `nyquist_compliant: false` and `wave_0_complete: false` — these are stale (created at planning time, never updated after tests passed GREEN). Phases 02 and 08 have no VALIDATION.md at all. All phase verifications passed — the files just weren't updated. Run `/gsd:validate-phase N` for each phase to generate accurate Nyquist coverage records. Source: v3.9 milestone audit Nyquist section. |
 | BACK-63 | Score transparency in executive reports | Medium | Add a scoring methodology section to the executive summary explaining: how profile weights (strict/balanced/lenient) affect the score, what subscores contributed most, and what score ranges map to readiness levels (high/medium/low). User wants to review Phase 14 output first — score drivers are already present in the executive summary — before deciding if additional methodology explanation is needed. Phase dir: `.planning/phases/999.56-score-transparency-executive-reports/` |
 
+
+### Phase 17: Identity Infrastructure
+**Goal**: The codebase is ready to receive all three identity scanners — schema is extended, config flags exist, and the [identity] extras group is declared so any of the three scanner phases can land without further schema work
+**Depends on**: Phase 16
+**Requirements**: INFRA-01, INFRA-02, INFRA-03
+**Success Criteria** (what must be TRUE):
+  1. Running quirk against a v4.1 quirk.db does not raise any migration error -- the three new nullable columns are added idempotently on startup
+  2. pip install quirk[identity] resolves and installs impacket, dnspython[dnssec], lxml, defusedxml, and signxml without dependency conflicts
+  3. A config.yaml with enable_kerberos:true, enable_saml:true, and enable_dnssec:true loads without validation errors
+**Plans**: TBD
+
+### Phase 18: DNSSEC Scanner
+**Goal**: QU.I.R.K. can audit the DNSSEC posture of any domain — detecting unsigned zones, weak signing algorithms, NSEC zone enumeration exposure, and broken DS chains — with results in the CBOM
+**Depends on**: Phase 17
+**Requirements**: DNSSEC-01, DNSSEC-02, DNSSEC-03, DNSSEC-04, DNSSEC-05, DNSSEC-06, DNSSEC-07
+**Success Criteria** (what must be TRUE):
+  1. Scanning the BIND9 chaos lab RSASHA1-signed zone produces a CRITICAL finding for the weak algorithm and the finding appears in the CBOM output
+  2. Scanning a domain with no DNSSEC produces a HIGH finding for unsigned zone
+  3. Scanning the BIND9 chaos lab ECDSAP256SHA256 zone produces no algorithm severity finding (clean zone passes)
+  4. DNSSEC results appear in dnssec_scan_json in the database and produce protocol=DNSSEC CryptoEndpoint rows
+  5. docker compose --profile dnssec up starts the BIND9 container and dig @localhost DNSKEY returns the expected zone signing keys
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 19: SAML/OIDC Scanner
+**Goal**: QU.I.R.K. can audit SAML IdP metadata and OIDC discovery endpoints — detecting weak signing certificates and deprecated algorithm declarations — with results in the CBOM
+**Depends on**: Phase 17
+**Requirements**: SAML-01, SAML-02, SAML-03, SAML-04, SAML-05, SAML-06
+**Success Criteria** (what must be TRUE):
+  1. Scanning the SimpleSAMLphp chaos lab IdP produces a CRITICAL finding for the RSA-1024 signing certificate
+  2. Scanning an OIDC discovery endpoint returns the supported signing algorithms and flags any SHA-1 or weak-key entries
+  3. SAML scanning handles Azure AD and Okta metadata correctly -- certificates with no use= attribute are parsed as both signing and encryption
+  4. SAML results appear in saml_scan_json in the database and produce protocol=SAML CryptoEndpoint rows
+  5. docker compose --profile saml up starts SimpleSAMLphp and the metadata endpoint returns valid SAML XML
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 20: Kerberos Scanner
+**Goal**: QU.I.R.K. can enumerate Kerberos encryption types from a KDC using an unauthenticated AS-REQ probe — detecting RC4 and DES etypes that represent classical and quantum cryptographic risk
+**Depends on**: Phase 17
+**Requirements**: KERB-01, KERB-02, KERB-03, KERB-04, KERB-05
+**Success Criteria** (what must be TRUE):
+  1. Scanning the Samba DC chaos lab produces a HIGH finding for RC4-HMAC (etype 23) without requiring any credentials
+  2. DES etypes (1, 2, 3) are classified as CRITICAL when present; AES-256 (etype 18) is classified as quantum-safe
+  3. Scanner completes cleanly when UDP/88 is blocked -- TCP fallback succeeds or records kerberos-unreachable gracefully
+  4. Kerberos results appear in kerberos_scan_json in the database and produce protocol=KERBEROS CryptoEndpoint rows
+  5. docker compose --profile kerberos up starts the Samba DC and the scanner successfully probes port 88 after the 90-second healthcheck passes
+**Plans**: TBD
+
+### Phase 21: Identity Surface
+**Goal**: Identity protocol findings from all three scanners are surfaced in the quantum-readiness score, the dashboard Identity tab, and the findings table — giving consultants a complete view of the identity crypto attack surface
+**Depends on**: Phase 18, Phase 19, Phase 20
+**Requirements**: IDENT-01, IDENT-02, IDENT-03, IDENT-04
+**Success Criteria** (what must be TRUE):
+  1. A scan that finds RC4 Kerberos etypes, a weak SAML signing cert, and a DNSSEC RSASHA1 algorithm produces a lower readiness score than the same scan with only quantum-safe findings
+  2. The dashboard displays an Identity tab with per-protocol summary cards showing finding counts for Kerberos, SAML/OIDC, and DNSSEC
+  3. The findings table includes identity protocol rows and can be filtered to show only Kerberos, SAML, or DNSSEC findings
+  4. GET /api/scan/latest returns an identity_findings array with typed IdentityFinding objects for all three protocols
+**Plans**: TBD
+**UI hint**: yes
+
 ---
 
 ## Progress
 
 **Execution Order:**
-v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
+v3.9 phases complete. v4.1 complete. v4.2 executes: 17 -> 18 -> 19 -> 20 -> 21
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 8. Legacy Debt Cleanup | 4/4 | Complete | 2026-04-03 |
-| 9. Scoring Consolidation | 3/3 | Complete | 2026-04-03 |
-| 1. Foundation Fixes | 4/4 | Complete | 2026-03-29 |
-| 2. CBOM Pipeline | 3/3 | Complete | 2026-03-29 |
-| 3. Scanner Coverage | 4/4 | Complete | 2026-03-29 |
-| 4. Chaos Lab Expansion | 5/5 | Complete | 2026-03-30 |
-| 5. Web Dashboard | 6/6 | Complete | 2026-03-31 |
-| 6. Documentation | 6/6 | Complete | 2026-03-31 |
-| 7. Polish and Packaging | 5/5 | Complete | 2026-04-01 |
-| 10. v3.9 Gap Closure | 2/2 | Complete | 2026-04-04 |
-| 11. Dashboard Wiring Fixes | 2/2 | Complete | 2026-04-04 |
-| 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
-| 13. Interactive Mode Overhaul | 2/2 | Complete    | 2026-04-06 |
-| 14. Scoring & Intelligence Correctness | 2/2 | Complete    | 2026-04-07 |
-| 15. Code Hygiene | 2/2 | Complete    | 2026-04-08 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation Fixes | v3.9 | 4/4 | Complete | 2026-03-29 |
+| 2. CBOM Pipeline | v3.9 | 3/3 | Complete | 2026-03-29 |
+| 3. Scanner Coverage | v3.9 | 4/4 | Complete | 2026-03-29 |
+| 4. Chaos Lab Expansion | v3.9 | 5/5 | Complete | 2026-03-30 |
+| 5. Web Dashboard | v3.9 | 6/6 | Complete | 2026-03-31 |
+| 6. Documentation | v3.9 | 6/6 | Complete | 2026-03-31 |
+| 7. Polish and Packaging | v3.9 | 5/5 | Complete | 2026-04-01 |
+| 8. Legacy Debt Cleanup | v3.9 | 4/4 | Complete | 2026-04-03 |
+| 9. Scoring Consolidation | v3.9 | 3/3 | Complete | 2026-04-03 |
+| 10. v3.9 Gap Closure | v3.9 | 2/2 | Complete | 2026-04-04 |
+| 11. Dashboard Wiring Fixes | v3.9 | 2/2 | Complete | 2026-04-04 |
+| 12. CLI Correctness | v4.1 | 2/2 | Complete | 2026-04-06 |
+| 13. Interactive Mode Overhaul | v4.1 | 2/2 | Complete | 2026-04-06 |
+| 14. Scoring & Intelligence Correctness | v4.1 | 2/2 | Complete | 2026-04-07 |
+| 15. Code Hygiene | v4.1 | 2/2 | Complete | 2026-04-08 |
+| 16. v4.1 Gap Closure | v4.1 | 2/2 | Complete | 2026-04-08 |
+| 17. Identity Infrastructure | v4.2 | 0/TBD | Not started | - |
+| 18. DNSSEC Scanner | v4.2 | 0/TBD | Not started | - |
+| 19. SAML/OIDC Scanner | v4.2 | 0/TBD | Not started | - |
+| 20. Kerberos Scanner | v4.2 | 0/TBD | Not started | - |
+| 21. Identity Surface | v4.2 | 0/TBD | Not started | - |
