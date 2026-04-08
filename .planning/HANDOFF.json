@@ -1,40 +1,34 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-07T00:19:03.131Z",
-  "phase": "14",
-  "phase_name": "scoring-intelligence-correctness",
-  "phase_dir": ".planning/phases/14-scoring-intelligence-correctness",
-  "plan": 2,
-  "task": 3,
-  "total_tasks": 4,
-  "status": "phase_complete",
+  "timestamp": "2026-04-08T03:44:04.731Z",
+  "phase": null,
+  "phase_name": "milestone-boundary",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "milestone_complete",
   "completed_tasks": [
-    {"id": 1, "name": "RED test scaffold (SCORE-01–04)", "status": "done", "commit": "6b90692"},
-    {"id": 2, "name": "Remove dead require_delta_if_baseline from validate_run", "status": "done", "commit": "a5e160c"},
-    {"id": 3, "name": "Wire scan-time profile into dashboard compute_readiness_score", "status": "done", "commit": "5a57eb1"},
-    {"id": 4, "name": "Phase 14 docs/verification", "status": "done", "commit": "aa329ab"}
+    {"id": 1, "name": "Verify v4.1 readiness — 5 phases, 10 plans, 22/22 requirements", "status": "done", "commit": "0dca36f"},
+    {"id": 2, "name": "Run gsd-tools milestone complete v4.1 — archive roadmap, requirements, audit", "status": "done", "commit": "0dca36f"},
+    {"id": 3, "name": "Reorganize ROADMAP.md — v4.1 collapsed to <details> block, v4.2 placeholder added", "status": "done", "commit": "0dca36f"},
+    {"id": 4, "name": "Delete REQUIREMENTS.md — archived to milestones/v4.1-REQUIREMENTS.md", "status": "done", "commit": "fd32243"},
+    {"id": 5, "name": "Full PROJECT.md evolution review — v4.1 validated, v4.2 active, Key Decisions updated", "status": "done", "commit": "0dca36f"},
+    {"id": 6, "name": "STATE.md updated — milestone v4.2 Scanner Expansion, status milestone_complete", "status": "done", "commit": "0dca36f"},
+    {"id": 7, "name": "RETROSPECTIVE.md — v4.1 section appended, cross-milestone trends updated", "status": "done", "commit": "6e02039"},
+    {"id": 8, "name": "Git tag v4.1 created and pushed to origin", "status": "done", "commit": "fd32243"}
   ],
   "remaining_tasks": [],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
     {
-      "decision": "SCORE-01/SCORE-03 tests written as regression guards (already passing); SCORE-02/SCORE-04 confirmed broken with inspect.signature/getsource assertions",
-      "rationale": "TDD RED scaffold validates both that existing correct behavior is preserved and that the two bugs are real",
-      "phase": "14"
-    },
-    {
-      "decision": "Dashboard reads calibration.profile (not assessment.profile) from latest intelligence JSON",
-      "rationale": "intelligence JSON stores calibration block; assessment block doesn't exist in current schema — Research Pitfall 2 identified this",
-      "phase": "14"
-    },
-    {
-      "decision": "validate_run signature simplified to output_dir: Path only",
-      "rationale": "require_delta_if_baseline was dead code — logic had been removed but parameter remained in signature and argparse",
-      "phase": "14"
+      "decision": "Phase directories 12–16 kept in .planning/phases/ (not moved to milestones/)",
+      "rationale": "User selected Skip — use /gsd:cleanup later to archive retroactively",
+      "phase": "milestone-boundary"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Plan Phase 15 (code-hygiene): run /gsd:plan-phase 15 — /clear first for fresh context window",
-  "context_notes": "Phase 14 fully complete: 2 plans, 4 tasks, 223 tests passing (215 original + 8 new SCORE tests). Verification passed 4/4 must-haves. ROADMAP and STATE advanced to Phase 15. No blockers. Clean state."
+  "next_action": "Run /gsd:new-milestone to start v4.2 Scanner Expansion — questioning → research → requirements → roadmap",
+  "context_notes": "v4.1 Foundation Polish milestone fully archived. All 22 requirements satisfied. 233 tests passing. Zero known tech debt. REQUIREMENTS.md deleted (fresh for v4.2). v4.2 target: Identity Crypto (Kerberos, SAML/OAuth, DNSSEC) → Data at Rest → Data in Motion. Start with /gsd:new-milestone in a fresh context window."
 }
