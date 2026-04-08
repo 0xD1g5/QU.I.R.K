@@ -60,3 +60,10 @@ class CryptoEndpoint(Base):
     container_scan_json = Column(Text, nullable=True)   # Full syft artifact JSON
     source_scan_json = Column(Text, nullable=True)      # Full semgrep finding JSON
     cloud_scan_json = Column(Text, nullable=True)       # Full cloud resource metadata JSON
+
+    # ==========================
+    # v4.2 Identity scanner fields
+    # ==========================
+    kerberos_scan_json = Column(Text, nullable=True)  # Full Kerberos scan JSON
+    saml_scan_json = Column(Text, nullable=True)       # Full SAML scan JSON
+    dnssec_scan_json = Column(Text, nullable=True)     # Full DNSSEC scan JSON
