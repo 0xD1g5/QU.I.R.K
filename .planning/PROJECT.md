@@ -69,6 +69,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - [ ] Interactive Mode — auto-detect timezone (BACK-27); remove SNI prompt (BACK-28); remove ADCS stub prompt (BACK-29); fix AWS/Azure labels + credential warnings (BACK-38); surface JWT/container/source scanners (BACK-32); scan profile selection replaces raw timeout/concurrency prompts (BACK-30); expand TLS port defaults (BACK-33); reorder prompts targets-first (BACK-36); remove `enable_windows_adcs` dead field (BACK-39); consolidate data_classification prompts (BACK-31)
 - ✓ Scoring Correctness — calibration profile actually applied in compute_readiness_score() (BACK-43); validate.py artifact list fixed (BACK-44); migration_advisor pattern matching fixed (BACK-46); dashboard profile kwarg wired (BACK-60) — Validated in Phase 14: scoring-intelligence-correctness
 - ✓ Code Hygiene — cfg.scan SSH mutation moved inside try/finally (BACK-45); scorecard.py + its test deleted (BACK-61); 11 stale + 2 missing VALIDATION.md files updated to nyquist_compliant: true (BACK-62); regression test guards connectors/ absence (BACK-37) — Validated in Phase 15: code-hygiene
+- ✓ v4.1 Gap Closure — pyproject.toml version = "4.1.0" so `pip show quirk` returns 4.1.0 (CLI-04); interactive.py output dir defaults to "quirk-output" aligning with dashboard discovery path (SCORE-04) — Validated in Phase 16: v4-1-gap-closure
 
 **v4.2+ Scanner Expansion (Future Milestones)**
 - Identity Crypto (v4.2): Kerberos etype enumeration, SAML/OAuth metadata, DNSSEC
@@ -96,7 +97,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.0.0 — fully shipped (v3.9 Gap Closure milestone complete 2026-04-04)
+- **Current version**: v4.1.0 — fully shipped (v4.1 Foundation Polish milestone complete 2026-04-08)
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
@@ -105,8 +106,8 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
 - **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 223 tests passing (pytest); VALIDATION.md Nyquist files stale (BACK-62)
-- **Known tech debt**: Orphaned scorecard.py (BACK-61), Nyquist files (BACK-62)
+- **Test coverage**: 233 tests passing (pytest); all Nyquist VALIDATION.md files up to date
+- **Known tech debt**: None — all v4.1 tech debt resolved (Phases 15–16)
 
 ## Constraints
 
