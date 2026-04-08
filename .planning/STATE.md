@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
 milestone: v4.2
-milestone_name: Scanner Expansion
-status: milestone_complete
-stopped_at: v4.1 Foundation Polish milestone archived — ready for v4.2 planning
+milestone_name: Identity Crypto
+status: defining_requirements
+stopped_at: ~
 last_updated: "2026-04-08T00:00:00.000Z"
 last_activity: 2026-04-08
 progress:
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Planning v4.2 Scanner Expansion — next milestone after v4.1 archived
+**Current focus:** v4.2 Identity Crypto — defining requirements
 
 ## Current Position
 
-Phase: —
+Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone complete — v4.1 Foundation Polish archived
-Last activity: 2026-04-08
+Status: Defining requirements
+Last activity: 2026-04-08 — Milestone v4.2 started
 
 Progress: [██████████] 100% — v4.1 complete
 

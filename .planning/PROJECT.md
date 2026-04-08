@@ -62,16 +62,25 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ All 16 Nyquist VALIDATION.md files up to date — Phase 15, 16
 - ✓ Flow C (interactive wizard → scan → dashboard with correct profile) fully wired — Phase 16
 
-## Next Milestone: v4.2 Scanner Expansion
+## Current Milestone: v4.2 Identity Crypto
 
-**Goal:** Expand cryptographic inventory surface to cover identity protocols, data-at-rest encryption, and in-motion messaging — each adding a new scanner module with chaos lab coverage.
+**Goal:** Expand QU.I.R.K.'s cryptographic inventory surface to cover identity protocols — Kerberos, SAML/OAuth, and DNSSEC — each with a new scanner module, CBOM integration, chaos lab profile, and a dedicated Identity tab in the dashboard.
+
+**Target features:**
+- Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC)
+- SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata/discovery endpoints
+- DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython, detecting weak signing algorithms
+- Chaos lab profiles for all 3 scanner types
+- New Identity tab in dashboard (Kerberos/SAML/DNSSEC findings alongside TLS/SSH)
 
 ### Active
 
-**v4.2 Identity Crypto (Planned)**
+**v4.2 Identity Crypto**
 - [ ] Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC)
 - [ ] SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata endpoints
 - [ ] DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython
+- [ ] Chaos lab profiles for all 3 identity scanner types
+- [ ] New Identity tab in dashboard
 
 **v4.3 Data at Rest (Planned)**
 - [ ] Database encryption detection — PostgreSQL, MySQL, RDS encryption settings
@@ -138,7 +147,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
 
 ---
-*Last updated: 2026-04-08 after v4.1 milestone — v4.1 Foundation Polish complete: 5 phases, 10 plans, 22 requirements satisfied. 233 tests passing. All v4.1 correctness gaps closed. Ready for v4.2 Scanner Expansion.*
+*Last updated: 2026-04-08 after v4.2 milestone start — v4.2 Identity Crypto milestone initialized. Scope: Kerberos/SAML/DNSSEC scanners, chaos lab coverage for all 3, new Identity dashboard tab.*
 
 ## Evolution
 
