@@ -55,6 +55,52 @@
 
 ---
 
+## Milestone: v4.1 — Foundation Polish
+
+**Shipped:** 2026-04-08
+**Phases:** 5 (12–16) | **Plans:** 10 | **Files changed:** 80 (+10,261 / -638)
+
+### What Was Built
+
+- **CLI correctness sweep:** Fixed generated config field names, replaced `[owner]` placeholder with dev-install workflow, bumped all 5 version string locations to 4.1.0 including pyproject.toml (caught by gap-closure phase)
+- **Interactive mode rewrite:** Fully replaced interactive_config() — auto-detected timezone, hardcoded 17-port consulting TLS defaults, profile selection menu (quick/standard/deep), JWT/container/source scanner prompts, targets-first prompt order, unified data classification menu
+- **Scoring end-to-end correctness:** Calibration profile (strict/balanced/lenient) now correctly applied in compute_readiness_score(); dashboard reads calibration.profile from intelligence JSON; validate.py no longer flags non-existent artifacts; migration_advisor pattern strings now match risk_engine finding titles
+- **Dead code elimination:** Legacy connector stubs (aws_stub.py, azure_stub.py, windows_adcs_stub.py) deleted; orphaned scorecard.py + test removed; SSH cfg.scan mutations moved inside try block; 14 VALIDATION.md files updated to nyquist_compliant: true
+- **Flow C closure (Phase 16):** Two one-line fixes that audit found — pyproject.toml version and interactive.py output dir default — closed the E2E gap from interactive wizard to dashboard profile display
+
+### What Worked
+
+- **Audit-then-gap-closure pattern established in v3.9 paid off immediately.** The v4.1 audit found CLI-04 and SCORE-04 as two precise, actionable gaps (not ambiguous issues). Phase 16 closed both in a single plan with 4 targeted edits. The pattern of audit → gap-closure phase → milestone close is now validated across two milestones.
+- **TDD RED-first discipline caught real bugs.** Every plan pair (N-01 scaffold, N-02 implementation) proved the bug existed before fixing it. Phase 16 specifically used importlib.metadata.version() inspection to distinguish the installed egg-info version from the runtime __version__ — a gap that code inspection alone would have missed.
+- **Phase 15 (VALIDATION.md hygiene)** closing 14 stale files in a single plan means the next milestone starts with an accurate Nyquist baseline — the v3.9 retrospective specifically called this out as debt. Fixed and won't compound.
+
+### What Was Inefficient
+
+- **Two SUMMARY.md files missing `one_liner` frontmatter:** The `summary-extract` CLI returned empty for all 10 SUMMARY.md files — the field isn't being written by the execute-phase workflow. This means MILESTONES.md auto-generation falls back to verbose description strings rather than crisp one-liners. The frontmatter contract needs enforcement at plan-complete time.
+- **Interactive mode tech debt (DEFAULT_TIMEZONE, _prompt_ports) deferred twice:** Deferred in Phase 13 to Phase 15; Phase 15 didn't address. Zero runtime impact but the dead code accumulates. These should have been deleted in Phase 15 alongside the scorecard cleanup — they're adjacent hygiene items.
+- **Phase 16 could have been avoided:** CLI-04 (pyproject.toml version) and SCORE-04 (output dir default) were both identified by the milestone audit, meaning they slipped through all 4 phases of verification. Had test_packaging.py included `importlib.metadata.version()` verification from Phase 12, CLI-04 would have been caught immediately.
+
+### Patterns Established
+
+- **Two-edit gap-closure pattern:** A gap-closure phase targeting only 2 files with 2 targeted edits is valid and fast — avoid over-engineering the fix just because it has a phase to itself
+- **importlib.metadata.version() vs __version__:** When testing package version consistency, inspect the installed package manifest (importlib.metadata) not just the module attribute — they can diverge with editable installs if pyproject.toml isn't updated
+- **output dir alignment as integration contract:** Dashboard QUIRK_OUTPUT_DIR default and interactive_config() output dir default are a cross-component contract — both must agree for E2E profile passthrough to work; this should be a formal integration test
+
+### Key Lessons
+
+1. **GAP-closure phases scale down cleanly.** v4.1's gap-closure was 2 files / 4 lines vs v3.9's 3-defect Phase 11. The same planning structure (audit → gap-closure → milestone close) works at both scales — don't skip it for "small" gaps.
+2. **Version consistency needs manifest-level verification.** Runtime __version__ and installed package version (importlib.metadata) are independent until pip install -e . is run. Test both, not just the module attribute.
+3. **Deferred dead code has a shelf life.** DEFAULT_TIMEZONE and _prompt_ports() were deferred twice before this retrospective. They should have been deleted in Phase 15 — dead code that survives two milestones becomes permanent fixture.
+4. **SUMMARY.md `one_liner` field needs enforced.** Auto-extraction from SUMMARY.md frontmatter is only useful if the field is actually populated. This is a workflow enforcement gap, not a content gap.
+
+### Cost Observations
+
+- Model mix: Sonnet 4.6 primary throughout milestone
+- Sessions: Intensive 2-day execution (2026-04-06 → 2026-04-08)
+- Notable: Correctness-only milestone with no new features — lowest code churn of any milestone; highest precision (22/22 requirements satisfied, 2/2 audit gaps closed)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -62,14 +108,18 @@
 | Milestone | Phases | Plans | Key Change |
 |-----------|--------|-------|------------|
 | v3.9 Gap Closure | 11 | 40+ | First milestone to use audit-milestone + integration checker gate before close; established BACK-xx backlog and milestones/ archival patterns |
+| v4.1 Foundation Polish | 5 | 10 | Correctness-only milestone — no new features; 22/22 requirements satisfied; audit-gap-closure pattern validated at small scale |
 
 ### Cumulative Quality
 
 | Milestone | Tests | Notes |
 |-----------|-------|-------|
 | v3.9 | 199 | 199 tests green at ship; 9 stale Nyquist VALIDATION.md files (BACK-62) |
+| v4.1 | 233 | 233 tests green at ship; all 14 VALIDATION.md files updated to nyquist_compliant: true; zero known tech debt |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Schedule gap-closure phases explicitly at the end of milestones — defects found late deserve first-class planning treatment, not inline patches
 2. Integration audit (`gsd:audit-milestone`) must run before `gsd:complete-milestone` — phase-level verification alone is insufficient to confirm cross-phase wiring is correct
+3. Test package manifest version (importlib.metadata) separately from runtime __version__ — editable installs can make them diverge invisibly
+4. Dead code deferred across two milestones becomes permanent — enforce dead code deletion in the phase that discovers it, not later
