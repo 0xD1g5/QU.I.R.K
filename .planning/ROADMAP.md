@@ -386,4 +386,4 @@ v3.9 phases complete. v4.1 executes: 12 -> 13 -> 14 -> 15
 | 12. CLI Correctness | 2/2 | Complete    | 2026-04-06 |
 | 13. Interactive Mode Overhaul | 2/2 | Complete    | 2026-04-06 |
 | 14. Scoring & Intelligence Correctness | 2/2 | Complete    | 2026-04-07 |
-| 15. Code Hygiene | 2/2 | Complete   | 2026-04-08 |
+| 15. Code Hygiene | 2/2 | Complete    | 2026-04-08 |
