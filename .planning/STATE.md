@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: Identity Crypto
-status: executing
-stopped_at: Completed 20-01-PLAN.md (kerberos scanner RED scaffold)
-last_updated: "2026-04-09T12:44:09.983Z"
+status: verifying
+stopped_at: Completed 20-02-PLAN.md (kerberos scanner GREEN implementation)
+last_updated: "2026-04-09T12:51:44.066Z"
 last_activity: 2026-04-09
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 Phase: 20 (kerberos-scanner) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-09
 
 Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 | Phase 19 P01 | 4 | 2 tasks | 2 files |
 | Phase 19-saml-oidc-scanner P02 | 3 | 2 tasks | 7 files |
 | Phase 20-kerberos-scanner P01 | 3 | 2 tasks | 2 files |
+| Phase 20-kerberos-scanner P02 | 5 | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase 19-saml-oidc-scanner]: classifier.py rs256/es256/eddsa entries reused from JWT section — only sha1 short-form added for SAML SHA-1 URI findings
 - [Phase 20-kerberos-scanner]: Functional RED tests patch IMPACKET_AVAILABLE=True -- impacket not installed in dev env, stub must be reachable
 - [Phase 20-kerberos-scanner]: _derive_realm IPv4 detection added: 4-part all-numeric splits return full address, not last 2 octets
+- [Phase 20-kerberos-scanner]: Test isolation: patch.object on _probe_kdc/_probe_ldap_anon internal functions rather than raw impacket mocks -- works with or without impacket installed
+- [Phase 20-kerberos-scanner]: kerberos_scan_json includes ldap_status at top level AND nested under ldap key for compatibility
+- [Phase 20-kerberos-scanner]: No-preauth case (empty etype list from AS-REP) produces kerberos-no-preauth placeholder endpoint rather than empty list
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-09T12:44:09.981Z
-Stopped at: Completed 20-01-PLAN.md (kerberos scanner RED scaffold)
+Last session: 2026-04-09T12:51:44.063Z
+Stopped at: Completed 20-02-PLAN.md (kerberos scanner GREEN implementation)
 Resume file: None

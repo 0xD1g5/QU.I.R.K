@@ -108,7 +108,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 20-01-PLAN.md — TDD test scaffold (RED tests for KERB-01 through KERB-05)
-- [ ] 20-02-PLAN.md — impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab
+- [x] 20-02-PLAN.md — impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab
 
 ### Phase 21: Identity Surface
 **Goal**: Identity protocol findings from all three scanners are surfaced in the quantum-readiness score, the dashboard Identity tab, and the findings table — giving consultants a complete view of the identity crypto attack surface
@@ -502,5 +502,5 @@ v3.9 phases complete. v4.1 complete. v4.2 executes: 17 -> 18 -> 19 -> 20 -> 21
 | 17. Identity Infrastructure | v4.2 | 2/2 | Complete    | 2026-04-08 |
 | 18. DNSSEC Scanner | v4.2 | 2/2 | Complete    | 2026-04-09 |
 | 19. SAML/OIDC Scanner | v4.2 | 2/2 | Complete    | 2026-04-09 |
-| 20. Kerberos Scanner | v4.2 | 1/2 | In Progress|  |
+| 20. Kerberos Scanner | v4.2 | 2/2 | Complete   | 2026-04-09 |
 | 21. Identity Surface | v4.2 | 0/TBD | Not started | - |
