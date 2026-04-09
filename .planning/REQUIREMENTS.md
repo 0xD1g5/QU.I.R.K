@@ -15,13 +15,13 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 
 ### DNSSEC
 
-- [ ] **DNSSEC-01**: Scanner queries `DNSKEY` and `DS` records via dnspython with `DO` bit set against authoritative nameservers directly (not system resolver)
-- [ ] **DNSSEC-02**: Algorithm classification per RFC 8624 / RFC 9905 — RSASHA1 (alg 5) and RSASHA1-NSEC3-SHA1 (alg 7) flagged as CRITICAL
-- [ ] **DNSSEC-03**: Unsigned zone (missing DNSSEC) detected and flagged as HIGH severity
-- [ ] **DNSSEC-04**: Results stored in `dnssec_scan_json` with `protocol="DNSSEC"` CryptoEndpoints; `DNSSEC_ALG_MAP` added to classifier; `build_cbom()` gains DNSSEC `elif` branches
-- [ ] **DNSSEC-05**: NSEC vs NSEC3 record type detected; NSEC flagged as zone-enumerable exposure
-- [ ] **DNSSEC-06**: DS broken chain detection — mismatched key tags between DS and DNSKEY records flagged as HIGH
-- [ ] **DNSSEC-07**: Chaos lab gains BIND9 `dnssec` Docker Compose profile with RSASHA1-signed zone and ECDSAP256SHA256 zone for scanner validation
+- [x] **DNSSEC-01**: Scanner queries `DNSKEY` and `DS` records via dnspython with `DO` bit set against authoritative nameservers directly (not system resolver)
+- [x] **DNSSEC-02**: Algorithm classification per RFC 8624 / RFC 9905 — RSASHA1 (alg 5) and RSASHA1-NSEC3-SHA1 (alg 7) flagged as CRITICAL
+- [x] **DNSSEC-03**: Unsigned zone (missing DNSSEC) detected and flagged as HIGH severity
+- [x] **DNSSEC-04**: Results stored in `dnssec_scan_json` with `protocol="DNSSEC"` CryptoEndpoints; `DNSSEC_ALG_MAP` added to classifier; `build_cbom()` gains DNSSEC `elif` branches
+- [x] **DNSSEC-05**: NSEC vs NSEC3 record type detected; NSEC flagged as zone-enumerable exposure
+- [x] **DNSSEC-06**: DS broken chain detection — mismatched key tags between DS and DNSKEY records flagged as HIGH
+- [x] **DNSSEC-07**: Chaos lab gains BIND9 `dnssec` Docker Compose profile with RSASHA1-signed zone and ECDSAP256SHA256 zone for scanner validation
 
 ### SAML
 
@@ -96,13 +96,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-01 | Phase 17 | Complete |
 | INFRA-02 | Phase 17 | Complete |
 | INFRA-03 | Phase 17 | Complete |
-| DNSSEC-01 | Phase 18 | Pending |
-| DNSSEC-02 | Phase 18 | Pending |
-| DNSSEC-03 | Phase 18 | Pending |
-| DNSSEC-04 | Phase 18 | Pending |
-| DNSSEC-05 | Phase 18 | Pending |
-| DNSSEC-06 | Phase 18 | Pending |
-| DNSSEC-07 | Phase 18 | Pending |
+| DNSSEC-01 | Phase 18 | Complete |
+| DNSSEC-02 | Phase 18 | Complete |
+| DNSSEC-03 | Phase 18 | Complete |
+| DNSSEC-04 | Phase 18 | Complete |
+| DNSSEC-05 | Phase 18 | Complete |
+| DNSSEC-06 | Phase 18 | Complete |
+| DNSSEC-07 | Phase 18 | Complete |
 | SAML-01 | Phase 19 | Pending |
 | SAML-02 | Phase 19 | Pending |
 | SAML-03 | Phase 19 | Pending |

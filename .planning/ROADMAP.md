@@ -77,7 +77,7 @@ Plans:
   5. `docker compose --profile dnssec up` starts the BIND9 container and the scanner successfully validates against it
 **Plans**: 2 plans
 Plans:
-- [ ] 18-01-PLAN.md — TDD test scaffold (RED tests for DNSSEC-01 through DNSSEC-07)
+- [x] 18-01-PLAN.md — TDD test scaffold (RED tests for DNSSEC-01 through DNSSEC-07)
 - [ ] 18-02-PLAN.md — dnspython scanner, RFC 8624 classifier, CBOM integration, BIND9 chaos lab
 
 ### Phase 19: SAML/OIDC Scanner
@@ -497,7 +497,7 @@ v3.9 phases complete. v4.1 complete. v4.2 executes: 17 -> 18 -> 19 -> 20 -> 21
 | 15. Code Hygiene | v4.1 | 2/2 | Complete | 2026-04-08 |
 | 16. v4.1 Gap Closure | v4.1 | 2/2 | Complete | 2026-04-08 |
 | 17. Identity Infrastructure | v4.2 | 2/2 | Complete    | 2026-04-08 |
-| 18. DNSSEC Scanner | v4.2 | 0/TBD | Not started | - |
+| 18. DNSSEC Scanner | v4.2 | 1/2 | In Progress|  |
 | 19. SAML/OIDC Scanner | v4.2 | 0/TBD | Not started | - |
 | 20. Kerberos Scanner | v4.2 | 0/TBD | Not started | - |
 | 21. Identity Surface | v4.2 | 0/TBD | Not started | - |
