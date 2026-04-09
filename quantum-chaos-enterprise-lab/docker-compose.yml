@@ -761,6 +761,22 @@ services:
       - "636:636"
     restart: unless-stopped
 
+  # ── DNSSEC Chaos Lab (profile: dnssec) ──────────────────
+  bind9-dnssec:
+    build:
+      context: ./bind9
+      dockerfile: Dockerfile
+    profiles: ["dnssec"]
+    ports:
+      - "15353:53/udp"
+      - "15353:53/tcp"
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "weak.chaos.local", "SOA"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
 volumes:
   id_postgres_data:
   stepca_data:

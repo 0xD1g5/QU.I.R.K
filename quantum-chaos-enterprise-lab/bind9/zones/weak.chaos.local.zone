@@ -1,0 +1,44 @@
+; weak.chaos.local — RSASHA1 (algorithm 5) signed zone with NSEC records
+; DNSSEC-02: RSASHA1 algorithm must produce CRITICAL finding
+; DNSSEC-05: NSEC records must produce nsec-exposure finding
+; NOTE: These are hardcoded test records for chaos lab use.
+; In production, generate with: dnssec-keygen -a RSASHA1 -b 2048 -f KSK weak.chaos.local
+;                                dnssec-signzone -o weak.chaos.local weak.chaos.local.zone
+$TTL 300
+$ORIGIN weak.chaos.local.
+
+@ IN SOA ns1.weak.chaos.local. admin.weak.chaos.local. (
+    2024010101 ; serial
+    3600       ; refresh
+    900        ; retry
+    604800     ; expire
+    300        ; minimum
+)
+
+@ IN NS ns1.weak.chaos.local.
+
+ns1 IN A 127.0.0.1
+@ IN A 127.0.0.1
+
+; DNSKEY — KSK (flags=257), algorithm 5 (RSASHA1), 2048-bit
+; This key material is synthetic for chaos lab testing
+@ IN DNSKEY 257 3 5 (
+    AwEAAb/UqORoVrjNiMqt6PaujxFnN8dFN2Q3GdSmBHZ2J1E3B+KgfNjl
+    Oc4rNmQdlT7QMkLMpjy7bqOoKpgv3D8p5k1l9vOHXbE4rPkmz0qT3M5n
+    C2u2sUQHG5qJzYzkmX1Y4S4g3B7mOKQvAeNhJ7UiLO2lJWb9fV8q3M7Q
+    wJXqVYCaDl7fJGnHpvqX5yM4gL3Mh2YzPcJkONtVsrDU9rMcNqBkE5Y4
+    T6h8FXOmHbP1Kj9VNY2eIk3u7gFBZ+OlX6vWc8LjmNrDSk1oTp7fRqB/
+    sY3n6JXMkQzWPlOaHuE9VfR5Bi4cLgZYNiK7J2mXpO5vCe8dKJfVTrWw
+    K5aMnDpQb1h3Yc2jEoRlFU9sZOi7vJkM3XqBfWcLeTp9HNYzDmQoSgPl
+    AUrVk5T8JBzMxNpQFd7RoWCI4CfYKe2blJ3U6M/mLqR0WDfZ5KcHxQ==
+) ; key tag = 28456
+
+; RRSIG for DNSKEY (synthetic)
+@ IN RRSIG DNSKEY 5 2 300 (
+    20991231000000 20240101000000 28456 weak.chaos.local.
+    AbCdEfGhIjKlMnOpQrStUvWxYz0123456789AbCdEfGhIjKlMnOpQrSt
+    UvWxYz0123456789AbCdEfGhIjKlMnOpQrStUvWxYz012345678==
+)
+
+; NSEC record for zone enumeration exposure
+@ IN NSEC ns1.weak.chaos.local. A NS SOA RRSIG NSEC DNSKEY
