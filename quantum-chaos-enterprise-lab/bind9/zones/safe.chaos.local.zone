@@ -1,0 +1,43 @@
+; safe.chaos.local — ECDSAP256SHA256 (algorithm 13) signed zone with NSEC3 records
+; Clean baseline — modern algorithm, zone enumeration protected by NSEC3
+; NOTE: These are hardcoded test records for chaos lab use.
+; In production, generate with: dnssec-keygen -a ECDSAP256SHA256 -f KSK safe.chaos.local
+;                                dnssec-signzone -o safe.chaos.local -3 <salt> safe.chaos.local.zone
+$TTL 300
+$ORIGIN safe.chaos.local.
+
+@ IN SOA ns1.safe.chaos.local. admin.safe.chaos.local. (
+    2024010101 ; serial
+    3600       ; refresh
+    900        ; retry
+    604800     ; expire
+    300        ; minimum
+)
+
+@ IN NS ns1.safe.chaos.local.
+
+ns1 IN A 127.0.0.1
+@ IN A 127.0.0.1
+
+; DNSKEY — KSK (flags=257), algorithm 13 (ECDSAP256SHA256)
+; This key material is synthetic for chaos lab testing
+@ IN DNSKEY 257 3 13 (
+    mdsswUyr3DPW132mOi8V9xESWE8jTo0dxCjjnopKl+GqJxpVXckHAeF+
+    KkxLppIr0KRl8I1CQNZ6TzDz4R5h5g==
+) ; key tag = 31415
+
+; ZSK (flags=256), algorithm 13 (ECDSAP256SHA256)
+@ IN DNSKEY 256 3 13 (
+    oJMRESz5E4gYzS/q6XDrvU1qMPYIjCWzJaOau8XNEZeqCYKD5ar0IRd5
+    AbHwhUVcqKECBBgEEQ4X2Jn4kT+Z9A==
+) ; key tag = 54321
+
+; RRSIG for DNSKEY (synthetic)
+@ IN RRSIG DNSKEY 13 2 300 (
+    20991231000000 20240101000000 31415 safe.chaos.local.
+    AbCdEfGhIjKlMnOpQrStUvWxYz0123456789AbCdEfGhIjKl
+    MnOpQrStUvWxYz0123456789AbCd==
+)
+
+; NSEC3PARAM — NSEC3 in use (no zone enumeration exposure)
+@ IN NSEC3PARAM 1 0 10 AABBCCDD
