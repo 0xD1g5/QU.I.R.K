@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: Identity Crypto
 status: executing
-stopped_at: Completed 18-01-PLAN.md (DNSSEC TDD RED scaffold)
-last_updated: "2026-04-09T02:39:22.149Z"
-last_activity: 2026-04-09 -- Phase 18 execution started
+stopped_at: Completed 18-02-PLAN.md (DNSSEC full implementation)
+last_updated: "2026-04-09T02:48:30.743Z"
+last_activity: 2026-04-09
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 18 (dnssec-scanner) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 18
-Last activity: 2026-04-09 -- Phase 18 execution started
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-09
 
 Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 | Phase 17-identity-infrastructure P01 | 5 | 1 tasks | 1 files |
 | Phase 17-identity-infrastructure P02 | 2min | 2 tasks | 5 files |
 | Phase 18-dnssec-scanner P01 | 160 | 2 tasks | 2 files |
+| Phase 18-dnssec-scanner P02 | 6 | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,9 @@ Recent decisions affecting current work:
 - [Phase 17-identity-infrastructure]: impacket placed in [identity] extras group only -- not in core dependencies to avoid pyOpenSSL transitive conflict risk
 - [Phase 17-identity-infrastructure]: All 6 identity ConnectorsCfg fields have safe defaults so v4.1 config.yaml loads without error via config_from_dict()
 - [Phase 18-dnssec-scanner]: DNSSEC_ALG_MAP placed in dnssec_scanner.py for scanner self-containment per RFC 8624/9905 3-tier (CRITICAL/HIGH/SAFE)
+- [Phase 18-dnssec-scanner]: udp_with_fallback isinstance check handles real dnspython tuple vs test mock direct-return without breaking either
+- [Phase 18-dnssec-scanner]: CryptoPrimitive.PKE for RSA DNSSEC algorithms, SIGNATURE for DSA/ECDSA — CryptoPrimitive.RSA does not exist in cyclonedx
+- [Phase 18-dnssec-scanner]: Synthetic DNSSEC finding types (NONE/NSEC/DS-MISMATCH/SHA1-DS) excluded from CBOM algorithm registration
 
 ### Pending Todos
 
@@ -86,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-09T02:39:22.147Z
-Stopped at: Completed 18-01-PLAN.md (DNSSEC TDD RED scaffold)
+Last session: 2026-04-09T02:48:30.740Z
+Stopped at: Completed 18-02-PLAN.md (DNSSEC full implementation)
 Resume file: None
