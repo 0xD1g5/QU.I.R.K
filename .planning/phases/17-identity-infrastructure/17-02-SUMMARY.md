@@ -133,3 +133,17 @@ None - no external service configuration required.
 ---
 *Phase: 17-identity-infrastructure*
 *Completed: 2026-04-08*
+
+## Self-Check: PASSED
+
+- FOUND: quirk/models.py (kerberos_scan_json, saml_scan_json, dnssec_scan_json columns added)
+- FOUND: quirk/db.py (_ensure_identity_columns function, inspector-first, crypto_endpoints table)
+- FOUND: quirk/config.py (6 identity fields in ConnectorsCfg)
+- FOUND: quirk/config_template.yaml (commented identity section inside connectors block)
+- FOUND: pyproject.toml ([identity] extras group with 5 packages)
+- FOUND: .planning/phases/17-identity-infrastructure/17-02-SUMMARY.md
+- FOUND: commit 2d71caf (Task 1: models.py + db.py)
+- FOUND: commit 4970deb (Task 2: config.py + config_template.yaml + pyproject.toml)
+- FOUND: commit d7e8700 (docs: plan metadata)
+- 6 tests PASS (GREEN: all INFRA-01/02/03 tests)
+- 239 total tests PASS (no regressions)

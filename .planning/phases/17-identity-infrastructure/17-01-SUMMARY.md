@@ -108,3 +108,12 @@ None - no external service configuration required.
 ---
 *Phase: 17-identity-infrastructure*
 *Completed: 2026-04-08*
+
+## Self-Check: PASSED
+
+- FOUND: tests/test_identity_infra.py
+- FOUND: .planning/phases/17-identity-infrastructure/17-01-SUMMARY.md
+- FOUND: commit afe434f (task)
+- FOUND: commit ac52f31 (docs)
+- 6 tests FAIL (RED state confirmed)
+- 233 pre-existing tests PASS (no regressions)
