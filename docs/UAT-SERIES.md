@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.1.0
-**Last Updated:** 2026-04-08 (Phase 17: identity infrastructure added UAT-1-07, UAT-1-08)
+**Last Updated:** 2026-04-08 (Phase 18: DNSSEC scanner added UAT-5-20)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.1. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1112,6 +1112,47 @@ All of these services show status `Up` or `running`:
 - `encrypted_demo` table exists with encrypted rows
 - `pgp_sym_encrypt` function was used (visible in table schema or seed script)
 - Service is a valid scan target for future database-level crypto detection (BACK-12)
+
+---
+
+### UAT-5-20: DNSSEC Profile — Chaos Lab Zones
+
+**Prerequisites:** Phase 18 DNSSEC scanner implemented. Docker available. `dnspython` installed.
+
+**Steps:**
+1. Start the DNSSEC chaos lab:
+   ```bash
+   cd quantum-chaos-enterprise-lab
+   docker compose --profile dnssec up -d
+   sleep 15
+   ```
+2. Verify BIND9 is serving zones:
+   ```bash
+   dig @127.0.0.1 -p 15353 weak.chaos.local SOA
+   dig @127.0.0.1 -p 15353 weak.chaos.local DNSKEY
+   dig @127.0.0.1 -p 15353 unsigned.chaos.local SOA
+   ```
+3. Run integration scan:
+   ```bash
+   QUIRK_INTEGRATION_TESTS=1 python3 -m pytest tests/test_dnssec_scanner.py -k "integration" -v
+   ```
+4. Tear down:
+   ```bash
+   docker compose --profile dnssec down
+   ```
+
+**Expected:** BIND9 serves all 4 zones. Integration test passes with all required findings.
+
+**Pass Criteria:**
+- `docker compose --profile dnssec ps` shows `bind9-dnssec` with `Up` status
+- `dig @127.0.0.1 -p 15353 weak.chaos.local DNSKEY` returns DNSKEY RRs with algorithm 5 (RSASHA1)
+- `dig @127.0.0.1 -p 15353 unsigned.chaos.local DNSKEY` returns NOERROR with no DNSKEY in answer
+- Integration test `test_chaos_lab_integration` passes:
+  - `RSASHA1` in algorithm names (weak.chaos.local)
+  - `ECDSAP256SHA256` in algorithm names (safe.chaos.local)
+  - `ds-chain-broken` in service details (broken.chaos.local)
+  - `unsigned-zone` in service details (unsigned.chaos.local)
+- No test failures
 
 ---
 
