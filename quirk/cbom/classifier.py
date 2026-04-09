@@ -164,6 +164,16 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "sha1":   (CryptoPrimitive.HASH, None, None),        # SHA-1 deprecated — quantum-vulnerable hash
     # Note: OIDC JWT algorithm names (rs256, ps256, es256, eddsa, etc.) already present
     # in the JWT/JOSE section above — SAML/OIDC reuse the same algorithm strings
+    # ------------------------------------------------------------------
+    # Kerberos encryption types (RFC 4120 / RFC 3962 / RFC 8009)
+    # ------------------------------------------------------------------
+    "des-cbc-crc":                (CryptoPrimitive.BLOCK_CIPHER, None, None),   # etype 1 -- deprecated
+    "des-cbc-md4":                (CryptoPrimitive.BLOCK_CIPHER, None, None),   # etype 2 -- deprecated
+    "des-cbc-md5":                (CryptoPrimitive.BLOCK_CIPHER, None, None),   # etype 3 -- deprecated
+    "aes128-cts-hmac-sha1-96":    (CryptoPrimitive.BLOCK_CIPHER, 0, 128),       # etype 17 -- quantum-vulnerable (Grover)
+    "aes256-cts-hmac-sha1-96":    (CryptoPrimitive.BLOCK_CIPHER, 1, 256),       # etype 18 -- quantum-safe
+    "aes256-cts-hmac-sha384-192": (CryptoPrimitive.BLOCK_CIPHER, 1, 256),       # etype 20 -- quantum-safe (RFC 8009)
+    "rc4-hmac":                   (CryptoPrimitive.BLOCK_CIPHER, 0, 128),       # etype 23 -- quantum-vulnerable
 }
 
 _FALLBACK = (CryptoPrimitive.UNKNOWN, None, None)
