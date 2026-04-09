@@ -63,36 +63,176 @@ def _build_as_req(client_name, server_name, realm: str):
     """Build an unauthenticated AS-REQ advertising all known etypes.
 
     Returns an AS_REQ ASN.1 object ready for encoding and transmission.
-    Raises NotImplementedError until Plan 02 implements this function.
+    Per D-01, D-03: advertises ALL_ETYPES so the KDC returns its full support list.
     """
-    raise NotImplementedError("stub")
+    as_req = AS_REQ()
+    as_req['pvno'] = 5
+    as_req['msg-type'] = int(constants.ApplicationTagNumbers.AS_REQ.value)
+
+    req_body = as_req['req-body']
+    req_body['kdc-options'] = constants.KDCOptions(
+        constants.KDCOptions.forwardable
+    )
+    seq_set(req_body, 'sname', server_name.components_to_asn1)
+    seq_set(req_body, 'cname', client_name.components_to_asn1)
+    req_body['realm'] = realm
+    req_body['till'] = KerberosTime.to_asn1(
+        datetime(2037, 12, 31, 0, 0, tzinfo=timezone.utc)
+    )
+    req_body['nonce'] = random.getrandbits(31)
+    seq_set_iter(req_body, 'etype', ALL_ETYPES)
+    return as_req
 
 
 def _probe_kdc(host: str, realm: str, timeout: int) -> list:
     """Probe a KDC over TCP and parse etypes from PA-ETYPE-INFO2 in KDC_ERR_PREAUTH_REQUIRED.
 
     Returns list of etype integers advertised by the KDC.
-    Raises NotImplementedError until Plan 02 implements this function.
+    Returns [] if KDC returns AS-REP (no preauth required -- unexpected).
+    Raises on non-preauth errors or connection failures.
+    Per Pitfall 3: handles both PA_ETYPE_INFO2 (type 19) and PA_ETYPE_INFO (type 11).
     """
-    raise NotImplementedError("stub")
+    client_name = Principal("nobody", type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+    server_name = Principal(
+        f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
+    )
+    as_req = _build_as_req(client_name, server_name, realm)
+    message = encoder.encode(as_req)
+
+    try:
+        _r = sendReceive(message, realm, host)
+        return []  # Unexpected AS-REP without preauth
+    except KerberosError as e:
+        code = e.getErrorCode()
+        if code != constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value:
+            raise
+        error_pkt = e.getErrorPacket()
+        method_data_raw = bytes(error_pkt['e-data'])
+        method_data = decoder.decode(method_data_raw, asn1Spec=MethodData())[0]
+        etypes = []
+        for method in method_data:
+            ptype = int(method['padata-type'])
+            # Handle both PA_ETYPE_INFO2 (type 19) and PA_ETYPE_INFO (type 11)
+            if ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO2.value):
+                info2 = decoder.decode(
+                    bytes(method['padata-value']),
+                    asn1Spec=ETYPE_INFO2()
+                )[0]
+                for entry in info2:
+                    etypes.append(int(entry['etype']))
+            elif ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO.value):
+                info1 = decoder.decode(
+                    bytes(method['padata-value']),
+                    asn1Spec=ETYPE_INFO()
+                )[0]
+                for entry in info1:
+                    etypes.append(int(entry['etype']))
+        return etypes
 
 
 def _probe_kdc_udp(host: str, realm: str, timeout: int) -> list:
     """UDP fallback for KDC probing.
 
+    Sends raw AS-REQ bytes (no length prefix) to port 88 via UDP.
     Returns list of etype integers advertised by the KDC via UDP transport.
-    Raises NotImplementedError until Plan 02 implements this function.
+    Returns empty list on any failure (errors are swallowed -- UDP is best-effort fallback).
+    Per Pitfall 1: UDP does NOT use the 4-byte length prefix (only TCP does).
     """
-    raise NotImplementedError("stub")
+    client_name = Principal("nobody", type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+    server_name = Principal(
+        f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
+    )
+    as_req = _build_as_req(client_name, server_name, realm)
+    message = encoder.encode(as_req)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(timeout)
+    try:
+        sock.sendto(message, (host, 88))
+        data, _ = sock.recvfrom(65535)
+        # Try to decode as KRB_ERROR
+        krb_error = decoder.decode(data, asn1Spec=KRB_ERROR())[0]
+        error_code = int(krb_error['error-code'])
+        if error_code != constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value:
+            return []
+        method_data_raw = bytes(krb_error['e-data'])
+        method_data = decoder.decode(method_data_raw, asn1Spec=MethodData())[0]
+        etypes = []
+        for method in method_data:
+            ptype = int(method['padata-type'])
+            if ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO2.value):
+                info2 = decoder.decode(
+                    bytes(method['padata-value']),
+                    asn1Spec=ETYPE_INFO2()
+                )[0]
+                for entry in info2:
+                    etypes.append(int(entry['etype']))
+            elif ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO.value):
+                info1 = decoder.decode(
+                    bytes(method['padata-value']),
+                    asn1Spec=ETYPE_INFO()
+                )[0]
+                for entry in info1:
+                    etypes.append(int(entry['etype']))
+        return etypes
+    except Exception:
+        return []
+    finally:
+        sock.close()
 
 
 def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
     """Attempt anonymous LDAP bind on port 389 to read msDS-SupportedEncryptionTypes.
 
-    Returns dict with ldap_status and optional enc_types fields.
-    Raises NotImplementedError until Plan 02 implements this function.
+    Returns dict with 'ldap_status' key. Always succeeds (never raises).
+    Per KERB-03: gracefully degrades if unreachable or auth required.
     """
-    raise NotImplementedError("stub")
+    try:
+        import ldap3
+        server = ldap3.Server(host, port=389, connect_timeout=timeout)
+        conn = ldap3.Connection(
+            server, authentication=ldap3.ANONYMOUS, receive_timeout=timeout
+        )
+        if not conn.bind():
+            return {
+                "ldap_status": "anonymous-bind-rejected",
+                "ldap_error": str(conn.last_error),
+            }
+
+        # Try to read defaultNamingContext
+        conn.search('', '(objectClass=*)', attributes=['defaultNamingContext'])
+        base_dn = ""
+        if conn.entries:
+            entry = conn.entries[0]
+            if hasattr(entry, 'defaultNamingContext'):
+                base_dn = str(entry.defaultNamingContext.value)
+
+        if base_dn:
+            conn.search(
+                base_dn,
+                '(objectClass=domain)',
+                attributes=['msDS-SupportedEncryptionTypes'],
+            )
+            if conn.entries:
+                enc_types_val = None
+                if 'msDS-SupportedEncryptionTypes' in conn.entries[0]:
+                    enc_types_val = conn.entries[0]['msDS-SupportedEncryptionTypes'].value
+                return {
+                    "ldap_status": "ok",
+                    "msDS-SupportedEncryptionTypes": enc_types_val,
+                }
+
+        return {"ldap_status": "ok", "msDS-SupportedEncryptionTypes": None}
+    except ImportError:
+        if logger:
+            logger.warning("ldap3 not available; skipping LDAP probe for %s", host)
+        return {"ldap_status": "skipped", "ldap_error": "ldap3 not installed"}
+    except Exception as exc:
+        if logger:
+            logger.warning(
+                "Kerberos LDAP probe failed for %s: %s (skipped)", host, exc
+            )
+        return {"ldap_status": "skipped", "ldap_error": str(exc)}
 
 
 def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None) -> list:
@@ -107,4 +247,91 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None) -> list
         if logger:
             logger.warning("impacket not installed -- Kerberos scanning disabled")
         return []
-    raise NotImplementedError("stub")
+
+    results = []
+    for target in targets:
+        realm = _derive_realm(target)
+        etypes = []
+        tcp_error = None
+
+        # TCP primary (per D-01, sendReceive uses TCP)
+        try:
+            etypes = _probe_kdc(target, realm, timeout)
+        except Exception as exc:
+            tcp_error = exc
+            # UDP fallback on any TCP failure
+            try:
+                etypes = _probe_kdc_udp(target, realm, timeout)
+            except Exception:
+                etypes = None  # Both paths failed
+
+        # Graceful failure: both TCP and UDP failed
+        if etypes is None:
+            unreachable_ep = CryptoEndpoint(
+                host=target,
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg="kerberos-unreachable",
+                service_detail="kerberos-unreachable",
+                scanned_at=datetime.now(timezone.utc),
+            )
+            ldap_result = _probe_ldap_anon(target, timeout, logger)
+            scan_json = json.dumps({
+                "realm": realm,
+                "etypes": [],
+                "etype_details": [],
+                "ldap": ldap_result,
+                "ldap_status": ldap_result.get("ldap_status", "skipped"),
+            })
+            unreachable_ep.kerberos_scan_json = scan_json
+            results.append(unreachable_ep)
+            continue
+
+        # Build per-etype CryptoEndpoints
+        target_endpoints = []
+        etype_details = []
+        for etype in etypes:
+            name, severity = KERBEROS_ETYPE_MAP.get(
+                etype, (f"unknown-etype-{etype}", "MEDIUM")
+            )
+            etype_details.append({"etype": etype, "name": name, "severity": severity})
+            ep = CryptoEndpoint(
+                host=target,
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg=name,
+                service_detail=f"etype:{etype}:{name}:{severity}",
+                scanned_at=datetime.now(timezone.utc),
+            )
+            target_endpoints.append(ep)
+
+        # LDAP probe (KERB-03: always runs, never aborts scan on failure)
+        ldap_result = _probe_ldap_anon(target, timeout, logger)
+
+        # Build kerberos_scan_json and attach to the first endpoint for this target
+        scan_json = json.dumps({
+            "realm": realm,
+            "etypes": etypes,
+            "etype_details": etype_details,
+            "ldap": ldap_result,
+            "ldap_status": ldap_result.get("ldap_status", "skipped"),
+        })
+
+        if target_endpoints:
+            target_endpoints[0].kerberos_scan_json = scan_json
+        else:
+            # No etypes discovered (AS-REP without preauth) -- create a placeholder
+            placeholder = CryptoEndpoint(
+                host=target,
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg=None,
+                service_detail="kerberos-no-preauth",
+                scanned_at=datetime.now(timezone.utc),
+            )
+            placeholder.kerberos_scan_json = scan_json
+            target_endpoints.append(placeholder)
+
+        results.extend(target_endpoints)
+
+    return results

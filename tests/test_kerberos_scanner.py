@@ -82,185 +82,275 @@ def test_derive_realm_single_label():
 
 
 # ---------------------------------------------------------------------------
-# Section 3: Mock helper constructors (for functional tests)
+# Section 3: Mock helper utilities (for functional tests)
 # ---------------------------------------------------------------------------
 
-def _mock_etype_info2_padata(etypes: list):
-    """Create a mock METHOD_DATA containing PA-ETYPE-INFO2 with given etype list.
-
-    Returns bytes that decoder.decode can parse, or a MagicMock that
-    simulates the decoded structure.
-    """
-    # Build mock padata entry
-    padata = MagicMock()
-    padata.__getitem__ = MagicMock(side_effect=lambda k: {
-        'padata-type': 19,  # PA_ETYPE_INFO2
-        'padata-value': b'mock',
+def _make_mock_padata_entry(ptype, pvalue_bytes=b'mock'):
+    """Create a mock padata entry with given type and value bytes."""
+    entry = MagicMock()
+    entry.__getitem__ = MagicMock(side_effect=lambda k: {
+        'padata-type': ptype,
+        'padata-value': pvalue_bytes,
     }[k])
-    return padata
+    return entry
 
 
-def _mock_kerberos_error(error_code: int, etypes: list):
-    """Create a mock KerberosError with given error code and etype list in e-data.
+def _make_mock_etype_info2_entry(etype_int):
+    """Create a mock ETYPE_INFO2 entry with a single etype."""
+    entry = MagicMock()
+    entry.__getitem__ = MagicMock(side_effect=lambda k: etype_int if k == 'etype' else None)
+    return entry
 
-    Used by tests to simulate KDC_ERR_PREAUTH_REQUIRED response.
-    """
-    error = MagicMock()
-    error.getErrorCode.return_value = error_code
-    error_pkt = MagicMock()
-    error.getErrorPacket.return_value = error_pkt
-    return error
+
+def _patch_probe_kdc(kmod, etypes):
+    """Return a context manager that patches _probe_kdc to return given etypes."""
+    return patch.object(kmod, '_probe_kdc', return_value=etypes)
+
+
+def _patch_probe_kdc_raises(kmod, exc):
+    """Return a context manager that patches _probe_kdc to raise given exception."""
+    return patch.object(kmod, '_probe_kdc', side_effect=exc)
+
+
+def _patch_probe_kdc_udp(kmod, etypes):
+    """Return a context manager that patches _probe_kdc_udp to return given etypes."""
+    return patch.object(kmod, '_probe_kdc_udp', return_value=etypes)
+
+
+def _patch_probe_ldap(kmod, result):
+    """Return a context manager that patches _probe_ldap_anon to return given dict."""
+    return patch.object(kmod, '_probe_ldap_anon', return_value=result)
 
 
 # ---------------------------------------------------------------------------
-# Section 4: KERB-01 AS-REQ Probe tests (FAIL -- NotImplementedError expected)
+# Section 4: KERB-01 AS-REQ Probe tests (GREEN -- real behavior)
 # ---------------------------------------------------------------------------
 
 def test_as_req_probe_returns_etypes():
     """KERB-01: AS-REQ probe returns etypes from PA-ETYPE-INFO2.
 
-    RED test -- scan_kerberos_targets raises NotImplementedError until Plan 02.
-    Patches IMPACKET_AVAILABLE=True to exercise the stub code path.
+    Mocks _probe_kdc to return [18, 23]; verifies scan_kerberos_targets produces
+    CryptoEndpoints with protocol=KERBEROS and correct cert_pubkey_alg values.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["localhost"], timeout=5)
+    ldap_ok = {"ldap_status": "ok", "msDS-SupportedEncryptionTypes": None}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [18, 23]), \
+         _patch_probe_ldap(kmod, ldap_ok):
+        results = scan_kerberos_targets(["localhost"], timeout=5)
+    assert len(results) == 2
+    alg_names = {ep.cert_pubkey_alg for ep in results}
+    assert "aes256-cts-hmac-sha1-96" in alg_names
+    assert "rc4-hmac" in alg_names
+    for ep in results:
+        assert ep.protocol == "KERBEROS"
+        assert ep.port == 88
 
 
 def test_as_req_tcp_primary():
-    """KERB-01: TCP is used as primary transport (sendReceive/socket called over port 88).
+    """KERB-01: TCP (_probe_kdc) is used as primary transport before UDP fallback.
 
-    RED test -- scan_kerberos_targets raises NotImplementedError until Plan 02.
+    Verifies _probe_kdc is called and its result is used when no exception occurs.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    ldap_ok = {"ldap_status": "skipped"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [23]) as mock_tcp, \
+         _patch_probe_kdc_udp(kmod, []) as mock_udp, \
+         _patch_probe_ldap(kmod, ldap_ok):
+        results = scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    mock_tcp.assert_called_once()
+    mock_udp.assert_not_called()
+    assert any(ep.cert_pubkey_alg == "rc4-hmac" for ep in results)
 
 
 def test_as_req_udp_fallback():
     """KERB-01: When TCP fails (socket.error), UDP fallback is attempted.
 
-    RED test -- scanner must attempt UDP when TCP sendReceive raises socket.error.
-    Currently raises NotImplementedError until Plan 02.
+    _probe_kdc raises socket.error; _probe_kdc_udp is then called and its
+    etypes are used.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["10.0.0.1"], timeout=5)
+    ldap_ok = {"ldap_status": "skipped"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc_raises(kmod, OSError("Connection refused")) as mock_tcp, \
+         _patch_probe_kdc_udp(kmod, [23]) as mock_udp, \
+         _patch_probe_ldap(kmod, ldap_ok):
+        results = scan_kerberos_targets(["10.0.0.1"], timeout=5)
+    mock_tcp.assert_called_once()
+    mock_udp.assert_called_once()
+    assert any(ep.cert_pubkey_alg == "rc4-hmac" for ep in results)
 
 
 def test_as_req_both_fail_graceful():
-    """KERB-01: When both TCP and UDP fail, returns CryptoEndpoint with service_detail='kerberos-unreachable'.
-
-    RED test -- raises NotImplementedError until Plan 02 implements graceful failure.
+    """KERB-01: When both TCP and UDP fail, returns CryptoEndpoint with
+    service_detail='kerberos-unreachable' instead of raising an exception.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["unreachable.host"], timeout=1)
+    ldap_skip = {"ldap_status": "skipped"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc_raises(kmod, OSError("TCP timeout")), \
+         _patch_probe_kdc_udp(kmod, None) as mock_udp_fail, \
+         _patch_probe_ldap(kmod, ldap_skip):
+        # UDP returning None simulates both failing -- override to raise too
+        with patch.object(kmod, '_probe_kdc_udp', side_effect=OSError("UDP timeout")):
+            results = scan_kerberos_targets(["unreachable.host"], timeout=1)
+    assert len(results) == 1
+    assert results[0].service_detail == "kerberos-unreachable"
+    assert results[0].cert_pubkey_alg == "kerberos-unreachable"
+    assert results[0].protocol == "KERBEROS"
+    assert results[0].port == 88
 
 
 def test_as_req_no_preauth_response():
-    """KERB-01: If KDC returns AS-REP (no preauth required -- unexpected), returns empty list for target.
-
-    RED test -- raises NotImplementedError until Plan 02.
+    """KERB-01: If KDC returns AS-REP (no preauth required -- unexpected),
+    scan_kerberos_targets returns a placeholder endpoint with no etype endpoints.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["no-preauth.corp.local"], timeout=5)
+    ldap_skip = {"ldap_status": "skipped"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, []), \
+         _patch_probe_ldap(kmod, ldap_skip):
+        results = scan_kerberos_targets(["no-preauth.corp.local"], timeout=5)
+    # Expect one placeholder endpoint (no preauth)
+    assert len(results) == 1
+    assert results[0].service_detail == "kerberos-no-preauth"
 
 
 # ---------------------------------------------------------------------------
-# Section 5: KERB-02 Etype Classification tests (FAIL -- NotImplementedError expected)
+# Section 5: KERB-02 Etype Classification tests (GREEN -- real behavior)
 # ---------------------------------------------------------------------------
 
 def test_etype_classifier_produces_endpoints():
-    """KERB-02: For each etype returned by probe, a CryptoEndpoint is produced with cert_pubkey_alg set.
-
-    RED test -- raises NotImplementedError until Plan 02.
+    """KERB-02: For each etype returned by probe, a CryptoEndpoint is produced
+    with cert_pubkey_alg set to the etype name.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    ldap_skip = {"ldap_status": "skipped"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [18, 23, 1]), \
+         _patch_probe_ldap(kmod, ldap_skip):
+        results = scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    assert len(results) == 3
+    alg_names = {ep.cert_pubkey_alg for ep in results}
+    assert "aes256-cts-hmac-sha1-96" in alg_names
+    assert "rc4-hmac" in alg_names
+    assert "des-cbc-crc" in alg_names
 
 
 def test_etype_unknown_gets_medium():
-    """KERB-02 / D-12: An etype not in KERBEROS_ETYPE_MAP (e.g., 99) produces severity='MEDIUM'.
-
-    RED test -- raises NotImplementedError until Plan 02 implements classification logic.
+    """KERB-02 / D-12: An etype not in KERBEROS_ETYPE_MAP (e.g., 99) produces
+    a CryptoEndpoint with service_detail containing 'MEDIUM'.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    ldap_skip = {"ldap_status": "skipped"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [99]), \
+         _patch_probe_ldap(kmod, ldap_skip):
+        results = scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    assert len(results) == 1
+    assert "MEDIUM" in results[0].service_detail
+    assert results[0].cert_pubkey_alg == "unknown-etype-99"
 
 
 # ---------------------------------------------------------------------------
-# Section 6: KERB-03 LDAP Probe tests (FAIL -- NotImplementedError expected)
+# Section 6: KERB-03 LDAP Probe tests (GREEN -- real behavior)
 # ---------------------------------------------------------------------------
 
 def test_ldap_graceful_degrade():
-    """KERB-03: When LDAP port 389 is unreachable, scanner logs warning and continues without crashing.
-
-    RED test -- raises NotImplementedError until Plan 02 implements LDAP probing.
+    """KERB-03: When LDAP port 389 is unreachable, scanner logs warning and
+    continues without crashing -- etype results are still returned.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["no-ldap.corp.local"], timeout=1)
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [23]):
+        # Patch the actual _probe_ldap_anon to simulate connection failure
+        with patch.object(kmod, '_probe_ldap_anon',
+                          return_value={"ldap_status": "skipped", "ldap_error": "Connection refused"}):
+            results = scan_kerberos_targets(["no-ldap.corp.local"], timeout=1)
+    assert len(results) >= 1
+    assert any(ep.cert_pubkey_alg == "rc4-hmac" for ep in results)
+    # Verify kerberos_scan_json captures LDAP skip
+    scan_data = json.loads(results[0].kerberos_scan_json)
+    assert scan_data["ldap_status"] == "skipped"
 
 
 def test_ldap_anonymous_bind_rejected():
-    """KERB-03: When LDAP returns auth error (anonymous bind rejected), scanner logs and continues.
-
-    RED test -- raises NotImplementedError until Plan 02.
+    """KERB-03: When LDAP returns auth error (anonymous bind rejected), scanner
+    logs and continues -- kerberos_scan_json captures the rejection.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["auth-reject.corp.local"], timeout=5)
+    rejected = {"ldap_status": "anonymous-bind-rejected", "ldap_error": "ANONYMOUS_AUTH_REJECTED"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [23]), \
+         _patch_probe_ldap(kmod, rejected):
+        results = scan_kerberos_targets(["auth-reject.corp.local"], timeout=5)
+    assert len(results) >= 1
+    scan_data = json.loads(results[0].kerberos_scan_json)
+    assert scan_data["ldap"]["ldap_status"] == "anonymous-bind-rejected"
 
 
 def test_ldap_success_reads_enc_types():
-    """KERB-03: When anonymous LDAP bind succeeds and msDS-SupportedEncryptionTypes is readable,
-    value is included in kerberos_scan_json.
-
-    RED test -- raises NotImplementedError until Plan 02.
+    """KERB-03: When anonymous LDAP bind succeeds and msDS-SupportedEncryptionTypes
+    is readable, value is included in kerberos_scan_json.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["ldap-ok.corp.local"], timeout=5)
+    ldap_ok = {
+        "ldap_status": "ok",
+        "msDS-SupportedEncryptionTypes": 28,
+    }
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [18, 23]), \
+         _patch_probe_ldap(kmod, ldap_ok):
+        results = scan_kerberos_targets(["ldap-ok.corp.local"], timeout=5)
+    assert len(results) >= 1
+    scan_data = json.loads(results[0].kerberos_scan_json)
+    assert scan_data["ldap"]["ldap_status"] == "ok"
+    assert scan_data["ldap"]["msDS-SupportedEncryptionTypes"] == 28
 
 
 # ---------------------------------------------------------------------------
-# Section 7: KERB-04 Database/CBOM Integration tests (FAIL -- NotImplementedError expected)
+# Section 7: KERB-04 Database/CBOM Integration tests (GREEN -- real behavior)
 # ---------------------------------------------------------------------------
 
 def test_kerberos_db_row():
-    """KERB-04: Each returned CryptoEndpoint has protocol='KERBEROS', port=88, and kerberos_scan_json populated.
-
-    RED test -- raises NotImplementedError until Plan 02.
+    """KERB-04: Each returned CryptoEndpoint has protocol='KERBEROS', port=88,
+    and the first endpoint for each target has kerberos_scan_json populated.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    ldap_ok = {"ldap_status": "ok", "msDS-SupportedEncryptionTypes": None}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [23]), \
+         _patch_probe_ldap(kmod, ldap_ok):
+        results = scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    assert len(results) == 1
+    ep = results[0]
+    assert ep.protocol == "KERBEROS"
+    assert ep.port == 88
+    assert ep.kerberos_scan_json is not None
+    # Verify valid JSON
+    scan_data = json.loads(ep.kerberos_scan_json)
+    assert isinstance(scan_data, dict)
 
 
 def test_kerberos_scan_json_structure():
-    """KERB-04: kerberos_scan_json field is valid JSON containing at minimum: realm, etypes, ldap_status.
-
-    RED test -- raises NotImplementedError until Plan 02.
+    """KERB-04: kerberos_scan_json field is valid JSON containing at minimum:
+    realm, etypes, ldap keys.
     """
     import quirk.scanner.kerberos_scanner as kmod
-    with patch.object(kmod, "IMPACKET_AVAILABLE", True):
-        with pytest.raises(NotImplementedError, match="stub"):
-            scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    ldap_ok = {"ldap_status": "ok", "msDS-SupportedEncryptionTypes": None}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [23, 18]), \
+         _patch_probe_ldap(kmod, ldap_ok):
+        results = scan_kerberos_targets(["dc01.corp.local"], timeout=5)
+    assert len(results) >= 1
+    scan_data = json.loads(results[0].kerberos_scan_json)
+    assert "realm" in scan_data, "kerberos_scan_json must contain 'realm' key"
+    assert "etypes" in scan_data, "kerberos_scan_json must contain 'etypes' key"
+    assert "ldap" in scan_data, "kerberos_scan_json must contain 'ldap' key"
+    assert "ldap_status" in scan_data, "kerberos_scan_json must contain 'ldap_status' key"
+    assert scan_data["realm"] == "CORP.LOCAL"
+    assert 23 in scan_data["etypes"]
 
 
 # ---------------------------------------------------------------------------
