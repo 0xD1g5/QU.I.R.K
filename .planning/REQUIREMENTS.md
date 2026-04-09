@@ -25,12 +25,12 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 
 ### SAML
 
-- [ ] **SAML-01**: Scanner fetches and parses SAML IdP metadata XML for signing and encryption certificate key type, size, and expiry using lxml with explicit `SAML_NS` namespace constant
-- [ ] **SAML-02**: Scanner parses `<KeyDescriptor use="encryption">` certs separately from signing certs, extracting key size findings for each
-- [ ] **SAML-03**: Scanner parses OIDC discovery endpoint for `id_token_signing_alg_values_supported` and `request_object_signing_alg_values_supported`
-- [ ] **SAML-04**: RSA < 2048-bit signing keys flagged as CRITICAL; SHA-1 algorithm URIs flagged as HIGH
-- [ ] **SAML-05**: Results stored in `saml_scan_json` with `protocol="SAML"` CryptoEndpoints; classifier updated with SAML algorithm URI strings; `build_cbom()` gains SAML `elif` branches
-- [ ] **SAML-06**: Chaos lab gains SimpleSAMLphp `saml` Docker Compose profile with RSA-1024 weak signing cert for scanner validation
+- [x] **SAML-01**: Scanner fetches and parses SAML IdP metadata XML for signing and encryption certificate key type, size, and expiry using lxml with explicit `SAML_NS` namespace constant
+- [x] **SAML-02**: Scanner parses `<KeyDescriptor use="encryption">` certs separately from signing certs, extracting key size findings for each
+- [x] **SAML-03**: Scanner parses OIDC discovery endpoint for `id_token_signing_alg_values_supported` and `request_object_signing_alg_values_supported`
+- [x] **SAML-04**: RSA < 2048-bit signing keys flagged as CRITICAL; SHA-1 algorithm URIs flagged as HIGH
+- [x] **SAML-05**: Results stored in `saml_scan_json` with `protocol="SAML"` CryptoEndpoints; classifier updated with SAML algorithm URI strings; `build_cbom()` gains SAML `elif` branches
+- [x] **SAML-06**: Chaos lab gains SimpleSAMLphp `saml` Docker Compose profile with RSA-1024 weak signing cert for scanner validation
 
 ### Kerberos
 
@@ -103,12 +103,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DNSSEC-05 | Phase 18 | Complete |
 | DNSSEC-06 | Phase 18 | Complete |
 | DNSSEC-07 | Phase 18 | Complete |
-| SAML-01 | Phase 19 | Pending |
-| SAML-02 | Phase 19 | Pending |
-| SAML-03 | Phase 19 | Pending |
-| SAML-04 | Phase 19 | Pending |
-| SAML-05 | Phase 19 | Pending |
-| SAML-06 | Phase 19 | Pending |
+| SAML-01 | Phase 19 | Complete |
+| SAML-02 | Phase 19 | Complete |
+| SAML-03 | Phase 19 | Complete |
+| SAML-04 | Phase 19 | Complete |
+| SAML-05 | Phase 19 | Complete |
+| SAML-06 | Phase 19 | Complete |
 | KERB-01 | Phase 20 | Pending |
 | KERB-02 | Phase 20 | Pending |
 | KERB-03 | Phase 20 | Pending |
