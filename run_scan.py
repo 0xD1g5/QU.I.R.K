@@ -469,9 +469,22 @@ def main():
             main_logger.info("DNSSEC scan: %d endpoints from %d targets",
                              len(dnssec_endpoints), len(cfg.connectors.dnssec_targets))
 
+    # ── SAML/OIDC scanning ────────────────────────────────────
+    saml_endpoints = []
+    with _phase_timer(run_stats, "saml_scanning"):
+        if cfg.connectors.enable_saml and cfg.connectors.saml_targets:
+            from quirk.scanner.saml_scanner import scan_saml_targets
+            saml_endpoints = scan_saml_targets(
+                targets=cfg.connectors.saml_targets,
+                timeout=getattr(cfg.connectors, "saml_timeout", 10),
+                logger=main_logger,
+            )
+            main_logger.info("SAML scan: %d endpoints from %d targets",
+                             len(saml_endpoints), len(cfg.connectors.saml_targets))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
-                 + aws_endpoints + azure_endpoints + dnssec_endpoints)
+                 + aws_endpoints + azure_endpoints + dnssec_endpoints + saml_endpoints)
 
     # ==============================
     # Findings + persistence + reports
