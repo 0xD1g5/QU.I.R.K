@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 4.1.0
-**Last Updated:** 2026-04-09 (Phase 19: SAML/OIDC scanner added UAT-5-21)
+**Version:** 4.2.0
+**Last Updated:** 2026-04-09 (Phase 20: Kerberos scanner added UAT-5-22)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.1. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1189,6 +1189,45 @@ All of these services show status `Up` or `running`:
 - Integration test `test_chaos_lab_integration` passes:
   - At least one `CryptoEndpoint` returned
   - `cert_pubkey_size=1024` present in results (RSA-1024 weak cert detected)
+- No test failures
+
+---
+
+### UAT-5-22: Kerberos Profile — Chaos Lab Samba DC
+
+**Prerequisites:** Phase 20 Kerberos scanner implemented. Docker available. `impacket` installed (`pip install -e ".[identity]"`).
+
+**Steps:**
+1. Start the Kerberos chaos lab:
+   ```bash
+   cd quantum-chaos-enterprise-lab
+   docker compose --profile kerberos up -d
+   sleep 90
+   ```
+2. Verify Samba DC is running and serving Kerberos:
+   ```bash
+   docker compose --profile kerberos ps
+   docker exec quantum-chaos-enterprise-lab-samba-dc-1 smbclient -L localhost -N 2>/dev/null | grep QUIRK
+   ```
+3. Run integration scan:
+   ```bash
+   QUIRK_KERBEROS_INTEGRATION=1 python3 -m pytest tests/test_kerberos_scanner.py -k "samba_dc_integration" -v
+   ```
+4. Tear down:
+   ```bash
+   docker compose --profile kerberos down
+   ```
+
+**Expected:** Samba DC serves Kerberos on port 88 with RC4-HMAC enabled. Integration test detects `rc4-hmac` in etype results.
+
+**Pass Criteria:**
+- `docker compose --profile kerberos ps` shows `samba-dc` with `Up (healthy)` status
+- `smbclient -L localhost -N` returns output containing `QUIRK`
+- Integration test `test_samba_dc_integration` passes:
+  - At least one `CryptoEndpoint` returned
+  - `rc4-hmac` present in result etype names (RC4-HMAC enabled)
+  - All endpoints have `protocol="KERBEROS"` and `port=88`
+  - `kerberos_scan_json` is valid JSON with `realm`, `etypes`, `ldap_status` keys
 - No test failures
 
 ---
