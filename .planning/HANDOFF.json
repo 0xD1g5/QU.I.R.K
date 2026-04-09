@@ -1,93 +1,30 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-08T14:23:09.728Z",
-  "phase": "18",
-  "phase_name": "DNSSEC Scanner",
-  "phase_dir": ".planning/phases/18-dnssec-scanner",
-  "plan": 0,
+  "timestamp": "2026-04-09T04:05:32.165Z",
+  "phase": "19",
+  "phase_name": "saml-oidc-scanner",
+  "phase_dir": ".planning/phases/19-saml-oidc-scanner",
+  "plan": 1,
   "task": 0,
-  "total_tasks": 0,
+  "total_tasks": 4,
   "status": "paused",
-  "completed_tasks": [
-    {
-      "id": 1,
-      "name": "discuss-phase 18 — 7 gray areas, CONTEXT.md written",
-      "status": "done",
-      "commit": "4320f73"
-    }
-  ],
+  "completed_tasks": [],
   "remaining_tasks": [
-    {
-      "id": 2,
-      "name": "plan-phase 18 (18-01-PLAN.md — TDD test scaffold)",
-      "status": "not_started"
-    },
-    {
-      "id": 3,
-      "name": "plan-phase 18 (18-02-PLAN.md — dnspython scanner, RFC 8624 classifier, CBOM integration, BIND9 chaos lab)",
-      "status": "not_started"
-    },
-    {
-      "id": 4,
-      "name": "execute-phase 18",
-      "status": "not_started"
-    }
+    {"id": 1, "name": "Plan 01 Task 1: Create saml_scanner.py stub module", "status": "not_started"},
+    {"id": 2, "name": "Plan 01 Task 2: Create RED test scaffold (tests/test_saml_scanner.py)", "status": "not_started"},
+    {"id": 3, "name": "Plan 02 Task 1-N: Implement full SAML/OIDC scanner (GREEN)", "status": "not_started"},
+    {"id": 4, "name": "Plan 02: Chaos lab, CBOM integration, run_scan.py wiring", "status": "not_started"}
   ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {
-      "decision": "One CryptoEndpoint per DNSKEY record (not per domain)",
-      "rationale": "Finest CBOM granularity, matches JWT scanner pattern",
-      "phase": "18"
-    },
-    {
-      "decision": "3-tier severity map: CRITICAL (deprecated algs), HIGH (RSA-based quantum-vulnerable), Safe (ECDSA/EdDSA)",
-      "rationale": "RSASHA256/512 are HIGH for quantum-readiness angle; ECDSAP256/384/ED25519/ED448 produce no finding",
-      "phase": "18"
-    },
-    {
-      "decision": "NSEC zone-enumeration exposure = MEDIUM severity",
-      "rationale": "Operational info-disclosure risk, not a cryptographic weakness",
-      "phase": "18"
-    },
-    {
-      "decision": "SHA-1 DS digest = MEDIUM severity",
-      "rationale": "RFC 8624 deprecates it; requires second-preimage for exploitation",
-      "phase": "18"
-    },
-    {
-      "decision": "4 BIND9 zones: weak.chaos.local (RSASHA1+NSEC), safe.chaos.local (ECDSAP256+NSEC3), broken.chaos.local (DS mismatch), unsigned.chaos.local",
-      "rationale": "Full requirement coverage for all 7 DNSSEC requirements in one BIND9 container",
-      "phase": "18"
-    },
-    {
-      "decision": "Pre-signed zone files baked into Docker image; dedicated `dnssec` profile",
-      "rationale": "Deterministic key tags for CI; lightweight profile matches success criteria 5 wording",
-      "phase": "18"
-    },
-    {
-      "decision": "Retry once then skip on DNS failure; auto-resolve authoritative NS from domain; UDP→TCP fallback",
-      "rationale": "Standard DNS transport behavior; dnspython handles TC bit natively",
-      "phase": "18"
-    },
-    {
-      "decision": "scan_dnssec_targets(targets, timeout=10, logger) — matches JWT scanner signature exactly",
-      "rationale": "Consistent API across all scanner modules",
-      "phase": "18"
-    },
-    {
-      "decision": "cert_pubkey_alg field used for DNSSEC algorithm in CBOM builder branch",
-      "rationale": "Mirrors JWT pattern; simple _register_algorithm() call",
-      "phase": "18"
-    },
-    {
-      "decision": "Sequential domain scanning (no threading); 5s per-query timeout",
-      "rationale": "DNS is fast enough; can add threading later if needed",
-      "phase": "18"
-    }
+    {"decision": "Use defusedxml.lxml for safe XML parsing (not stdlib ET)", "rationale": "Prevents XML bomb / XXE attacks on untrusted IdP metadata", "phase": "19"},
+    {"decision": "lxml behind import guard (LXML_AVAILABLE flag)", "rationale": "Allows scanner module to import cleanly when lxml unavailable, consistent with DNSSEC/JWT scanner pattern", "phase": "19"},
+    {"decision": "TDD RED-GREEN split across two plans (01=stub+tests, 02=implementation)", "rationale": "Phase 18 DNSSEC used same pattern successfully; ensures test contract written before implementation", "phase": "19"},
+    {"decision": "SimpleSAMLphp with RSA-1024 cert for chaos lab (docker --profile saml)", "rationale": "Deliberately weak cert gives CRITICAL finding to validate severity classification E2E", "phase": "19"},
+    {"decision": "OIDC discovery: only enumerate signing algs, map RS*/PS* to HIGH severity", "rationale": "RSA-based JWT signing is quantum-vulnerable; ECDSA/EdDSA is PQC-safe so no severity", "phase": "19"}
   ],
   "uncommitted_files": [],
-  "next_action": "Run /gsd:plan-phase 18 (after /clear for fresh context). CONTEXT.md is complete with all decisions.",
-  "context_notes": "Phase 17 (identity infrastructure) is fully complete and verified. Phase 18 discuss-phase just finished — 7 gray areas covered. GSD settings updated: research_before_questions = true. Clean pause point — no in-flight code changes."
+  "next_action": "Run /gsd:execute-phase on phase 19 to start Plan 01: create saml_scanner.py stub and RED test scaffold, then Plan 02: full implementation",
+  "context_notes": "Phase 19 is 100% planned and researched — CONTEXT.md, RESEARCH.md, VALIDATION.md, and both PLANs are committed. No code has been written yet. This is the cleanest possible resume point: begin execution from scratch with /gsd:execute-phase."
 }
