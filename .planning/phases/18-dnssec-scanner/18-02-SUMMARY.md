@@ -151,3 +151,19 @@ Note: Chaos lab zone files use hardcoded DNSKEY/RRSIG records rather than signed
 ---
 *Phase: 18-dnssec-scanner*
 *Completed: 2026-04-08*
+
+## Self-Check: PASSED
+
+All files present. All commits verified.
+
+- FOUND: quirk/scanner/dnssec_scanner.py
+- FOUND: quirk/cbom/builder.py
+- FOUND: quirk/cbom/classifier.py
+- FOUND: run_scan.py
+- FOUND: quantum-chaos-enterprise-lab/bind9/Dockerfile
+- FOUND: quantum-chaos-enterprise-lab/bind9/zones/weak.chaos.local.zone
+- FOUND: quantum-chaos-enterprise-lab/bind9/zones/unsigned.chaos.local.zone
+- FOUND: bb68155 feat(18-02): implement full DNSSEC scanner replacing all stubs
+- FOUND: a85f43e feat(18-02): wire DNSSEC into CBOM, classifier, and run_scan.py
+- FOUND: e1afd4e feat(18-02): add BIND9 chaos lab with 4 pre-signed zones
+- FOUND: d0271d0 docs(18-02): complete DNSSEC scanner implementation plan
