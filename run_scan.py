@@ -19,6 +19,7 @@ from quirk.scanner.container_scanner import scan_container_targets
 from quirk.scanner.source_scanner import scan_source_targets
 from quirk.scanner.aws_connector import scan_aws_targets
 from quirk.scanner.azure_connector import scan_azure_targets
+from quirk.scanner.dnssec_scanner import scan_dnssec_targets
 
 from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
@@ -456,9 +457,21 @@ def main():
                 logger=logger,
             )
 
+    # ── DNSSEC scanning ─────────────────────────────────────
+    dnssec_endpoints = []
+    with _phase_timer(run_stats, "dnssec_scanning"):
+        if cfg.connectors.enable_dnssec and cfg.connectors.dnssec_targets:
+            dnssec_endpoints = scan_dnssec_targets(
+                targets=cfg.connectors.dnssec_targets,
+                timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
+                logger=main_logger,
+            )
+            main_logger.info("DNSSEC scan: %d endpoints from %d targets",
+                             len(dnssec_endpoints), len(cfg.connectors.dnssec_targets))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
-                 + aws_endpoints + azure_endpoints)
+                 + aws_endpoints + azure_endpoints + dnssec_endpoints)
 
     # ==============================
     # Findings + persistence + reports
