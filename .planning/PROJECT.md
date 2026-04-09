@@ -78,8 +78,8 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 **v4.2 Identity Crypto**
 - [ ] Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC)
 - [ ] SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata endpoints
-- [ ] DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython
-- [ ] Chaos lab profiles for all 3 identity scanner types
+- ✓ DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython, RFC 8624/9905 3-tier classification — Phase 18
+- ✓ BIND9 chaos lab profile (dnssec) — 4 zones (weak/safe/broken/unsigned) on port 15353 — Phase 18
 - [ ] New Identity tab in dashboard
 
 **v4.3 Data at Rest (Planned)**
@@ -124,6 +124,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Test coverage**: 239 tests passing (pytest); all Nyquist VALIDATION.md files up to date
 - **Known tech debt**: None — all v4.1 tech debt resolved (Phases 15–16)
 - **Phase 17 complete** (2026-04-08): Identity infrastructure — schema columns, config flags, pyproject extras group for Kerberos/SAML/DNSSEC scanners
+- **Phase 18 complete** (2026-04-09): DNSSEC scanner — full implementation with RFC 8624/9905 classification, CBOM integration, BIND9 chaos lab; 15 tests pass, 239 regressions clean
 
 ## Constraints
 
