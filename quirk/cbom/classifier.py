@@ -144,6 +144,19 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "slh-dsa-256": (CryptoPrimitive.SIGNATURE, 5, 256),
     "sntrup761x25519": (CryptoPrimitive.KEM, 3, 128),
     "ml-kem-768+x25519": (CryptoPrimitive.KEM, 3, 192),
+    # ------------------------------------------------------------------
+    # DNSSEC algorithms (RFC 8624 / RFC 9905)
+    # ------------------------------------------------------------------
+    "rsamd5":             (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 1 — MUST NOT
+    "rsasha1":            (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 5 — MUST NOT
+    "dsa-nsec3-sha1":     (CryptoPrimitive.SIGNATURE, None, None),  # DNSSEC alg 6 — MUST NOT
+    "rsasha1-nsec3-sha1": (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 7 — MUST NOT
+    "rsasha256":          (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 8 — quantum-vulnerable
+    "rsasha512":          (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 10 — quantum-vulnerable
+    "ecc-gost":           (CryptoPrimitive.SIGNATURE, None, None),  # DNSSEC alg 12 — MUST NOT
+    "ecdsap256sha256":    (CryptoPrimitive.SIGNATURE, 1, 128),      # DNSSEC alg 13
+    "ecdsap384sha384":    (CryptoPrimitive.SIGNATURE, 3, 192),      # DNSSEC alg 14
+    # Note: "dsa", "ed25519", "ed448" already present above
 }
 
 _FALLBACK = (CryptoPrimitive.UNKNOWN, None, None)
