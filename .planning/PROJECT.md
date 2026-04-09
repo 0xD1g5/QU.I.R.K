@@ -76,7 +76,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 ### Active
 
 **v4.2 Identity Crypto**
-- [ ] Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC)
+- ✓ Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC) — Phase 20
 - [ ] SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata endpoints
 - ✓ DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython, RFC 8624/9905 3-tier classification — Phase 18
 - ✓ BIND9 chaos lab profile (dnssec) — 4 zones (weak/safe/broken/unsigned) on port 15353 — Phase 18
@@ -126,6 +126,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Phase 17 complete** (2026-04-08): Identity infrastructure — schema columns, config flags, pyproject extras group for Kerberos/SAML/DNSSEC scanners
 - **Phase 18 complete** (2026-04-09): DNSSEC scanner — full implementation with RFC 8624/9905 classification, CBOM integration, BIND9 chaos lab; 15 tests pass, 239 regressions clean
 - **Phase 19 complete** (2026-04-09): SAML/OIDC scanner — defusedxml XXE-safe metadata parsing, RSA/ECDSA cert extraction, SHA-1 deprecation scoring, OIDC discovery enumeration, CBOM integration, SimpleSAMLphp chaos lab with RSA-1024 cert; 25 tests pass, 254 regressions clean
+- **Phase 20 complete** (2026-04-09): Kerberos scanner — AS-REQ probe with TCP/UDP fallback, 7-etype severity map (RC4-HMAC CRITICAL, AES-256 SAFE), LDAP graceful degradation, CBOM integration, Samba DC chaos lab (QUIRK.LAB realm, RC4 enabled); 23 tests pass (1 integration skipped pending Docker)
 
 ## Constraints
 
@@ -150,7 +151,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
 
 ---
-*Last updated: 2026-04-09 after Phase 19 (SAML/OIDC Scanner) complete — SAML metadata and OIDC discovery scanning operational with defusedxml XXE protection, full CBOM wiring, and SimpleSAMLphp chaos lab. Phase 20 (Kerberos scanner) is next.*
+*Last updated: 2026-04-09 after Phase 20 (Kerberos Scanner) complete — Kerberos AS-REQ etype enumeration operational with TCP/UDP fallback, full CBOM wiring, and Samba DC chaos lab. Phase 21 (identity-surface) is next.*
 
 ## Evolution
 
