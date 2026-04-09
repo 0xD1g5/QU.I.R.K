@@ -136,6 +136,24 @@ None — all plan stubs replaced with working implementations.
 
 ## User Setup Required
 
+## Self-Check: PASSED
+
+| Item | Status |
+|------|--------|
+| quirk/scanner/saml_scanner.py | FOUND |
+| quirk/cbom/builder.py | FOUND |
+| quirk/cbom/classifier.py | FOUND |
+| run_scan.py | FOUND |
+| quantum-chaos-enterprise-lab/docker-compose.yml | FOUND |
+| quantum-chaos-enterprise-lab/simplesamlphp/cert/server.crt | FOUND |
+| quantum-chaos-enterprise-lab/simplesamlphp/cert/server.key | FOUND |
+| Commit 419b3c3 (Task 1: saml_scanner.py full implementation) | FOUND |
+| Commit fef094e (Task 2: CBOM + chaos lab) | FOUND |
+| Commit dbcf3e9 (SUMMARY.md + STATE.md + ROADMAP.md) | FOUND |
+| All 25 SAML tests PASS | VERIFIED |
+
+## User Setup Required
+
 To run the SimpleSAMLphp chaos lab integration test:
 ```bash
 cd quantum-chaos-enterprise-lab
