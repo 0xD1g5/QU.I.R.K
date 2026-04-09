@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.1.0
-**Last Updated:** 2026-04-08 (Phase 18: DNSSEC scanner added UAT-5-20)
+**Last Updated:** 2026-04-09 (Phase 19: SAML/OIDC scanner added UAT-5-21)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.1. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1152,6 +1152,43 @@ All of these services show status `Up` or `running`:
   - `ECDSAP256SHA256` in algorithm names (safe.chaos.local)
   - `ds-chain-broken` in service details (broken.chaos.local)
   - `unsigned-zone` in service details (unsigned.chaos.local)
+- No test failures
+
+---
+
+### UAT-5-21: SAML/OIDC Profile — Chaos Lab SimpleSAMLphp
+
+**Prerequisites:** Phase 19 SAML/OIDC scanner implemented. Docker available. `lxml` installed (`pip install lxml`).
+
+**Steps:**
+1. Start the SAML chaos lab:
+   ```bash
+   cd quantum-chaos-enterprise-lab
+   docker compose --profile saml up -d
+   sleep 20
+   ```
+2. Verify SimpleSAMLphp is serving the IdP metadata:
+   ```bash
+   curl -sf "http://localhost:8080/simplesaml/" | head -5
+   curl -sf "http://localhost:8080/simplesaml/saml2/idp/metadata.php" | grep -o 'use="signing"'
+   ```
+3. Run integration scan:
+   ```bash
+   QUIRK_INTEGRATION_TESTS=1 python3 -m pytest tests/test_saml_scanner.py -k "chaos_lab" -v
+   ```
+4. Tear down:
+   ```bash
+   docker compose --profile saml down
+   ```
+
+**Expected:** SimpleSAMLphp serves IdP metadata with RSA-1024 signing cert. Integration test detects cert_pubkey_size=1024.
+
+**Pass Criteria:**
+- `docker compose --profile saml ps` shows `simplesamlphp` with `Up` status
+- `curl http://localhost:8080/simplesaml/saml2/idp/metadata.php` returns XML with `<md:KeyDescriptor use="signing">`
+- Integration test `test_chaos_lab_integration` passes:
+  - At least one `CryptoEndpoint` returned
+  - `cert_pubkey_size=1024` present in results (RSA-1024 weak cert detected)
 - No test failures
 
 ---
