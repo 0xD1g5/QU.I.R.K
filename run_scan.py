@@ -482,9 +482,23 @@ def main():
             main_logger.info("SAML scan: %d endpoints from %d targets",
                              len(saml_endpoints), len(cfg.connectors.saml_targets))
 
+    # ── Kerberos scanning ────────────────────────────────────
+    kerberos_endpoints = []
+    with _phase_timer(run_stats, "kerberos_scanning"):
+        if cfg.connectors.enable_kerberos and cfg.connectors.kerberos_targets:
+            from quirk.scanner.kerberos_scanner import scan_kerberos_targets
+            kerberos_endpoints = scan_kerberos_targets(
+                targets=cfg.connectors.kerberos_targets,
+                timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
+                logger=main_logger,
+            )
+            main_logger.info("Kerberos scan: %d endpoints from %d targets",
+                             len(kerberos_endpoints), len(cfg.connectors.kerberos_targets))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
-                 + aws_endpoints + azure_endpoints + dnssec_endpoints + saml_endpoints)
+                 + aws_endpoints + azure_endpoints + dnssec_endpoints
+                 + saml_endpoints + kerberos_endpoints)
 
     # ==============================
     # Findings + persistence + reports
