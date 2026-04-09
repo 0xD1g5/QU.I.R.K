@@ -34,11 +34,11 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 
 ### Kerberos
 
-- [ ] **KERB-01**: Scanner sends unauthenticated AS-REQ to port 88 (TCP with UDP fallback) and parses PA-ETYPE-INFO2 from `KDC_ERR_PREAUTH_REQUIRED` response — no credentials required
-- [ ] **KERB-02**: RC4-HMAC (etype 23) flagged as HIGH; DES etypes (1, 2, 3) flagged as CRITICAL; AES-256 (etype 18/20) classified as quantum-safe
-- [ ] **KERB-03**: Scanner attempts anonymous LDAP bind on port 389 to read `msDS-SupportedEncryptionTypes` attribute; gracefully degrades if unreachable or auth required
-- [ ] **KERB-04**: Results stored in `kerberos_scan_json` with `protocol="KERBEROS"` CryptoEndpoints; classifier gains Kerberos etype entries; `build_cbom()` gains KERBEROS `elif` branches
-- [ ] **KERB-05**: Chaos lab gains Samba DC `kerberos` Docker Compose profile with RC4-enabled realm and `start_period: 90s` healthcheck
+- [x] **KERB-01**: Scanner sends unauthenticated AS-REQ to port 88 (TCP with UDP fallback) and parses PA-ETYPE-INFO2 from `KDC_ERR_PREAUTH_REQUIRED` response — no credentials required
+- [x] **KERB-02**: RC4-HMAC (etype 23) flagged as HIGH; DES etypes (1, 2, 3) flagged as CRITICAL; AES-256 (etype 18/20) classified as quantum-safe
+- [x] **KERB-03**: Scanner attempts anonymous LDAP bind on port 389 to read `msDS-SupportedEncryptionTypes` attribute; gracefully degrades if unreachable or auth required
+- [x] **KERB-04**: Results stored in `kerberos_scan_json` with `protocol="KERBEROS"` CryptoEndpoints; classifier gains Kerberos etype entries; `build_cbom()` gains KERBEROS `elif` branches
+- [x] **KERB-05**: Chaos lab gains Samba DC `kerberos` Docker Compose profile with RC4-enabled realm and `start_period: 90s` healthcheck
 
 ### Identity Surface
 
@@ -109,11 +109,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAML-04 | Phase 19 | Complete |
 | SAML-05 | Phase 19 | Complete |
 | SAML-06 | Phase 19 | Complete |
-| KERB-01 | Phase 20 | Pending |
-| KERB-02 | Phase 20 | Pending |
-| KERB-03 | Phase 20 | Pending |
-| KERB-04 | Phase 20 | Pending |
-| KERB-05 | Phase 20 | Pending |
+| KERB-01 | Phase 20 | Complete |
+| KERB-02 | Phase 20 | Complete |
+| KERB-03 | Phase 20 | Complete |
+| KERB-04 | Phase 20 | Complete |
+| KERB-05 | Phase 20 | Complete |
 | IDENT-01 | Phase 21 | Pending |
 | IDENT-02 | Phase 21 | Pending |
 | IDENT-03 | Phase 21 | Pending |

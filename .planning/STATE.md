@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: Identity Crypto
-status: verifying
-stopped_at: Phase 20 context gathered (discuss mode)
-last_updated: "2026-04-09T11:57:50.549Z"
+status: executing
+stopped_at: Completed 20-01-PLAN.md (kerberos scanner RED scaffold)
+last_updated: "2026-04-09T12:44:09.983Z"
 last_activity: 2026-04-09
 progress:
   total_phases: 9
   completed_phases: 7
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 16
+  completed_plans: 15
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 18 — dnssec-scanner
+**Current focus:** Phase 20 — kerberos-scanner
 
 ## Current Position
 
-Phase: 20
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 20 (kerberos-scanner) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-09
 
 Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 | Phase 18-dnssec-scanner P02 | 6 | 3 tasks | 9 files |
 | Phase 19 P01 | 4 | 2 tasks | 2 files |
 | Phase 19-saml-oidc-scanner P02 | 3 | 2 tasks | 7 files |
+| Phase 20-kerberos-scanner P01 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 19]: SAML_NS declared as module-level dict constant (md/ds/alg/mdui) — required for lxml XPath calls to produce non-empty results
 - [Phase 19-saml-oidc-scanner]: lxml ElementPath does not support not(@use) predicate — filter KeyDescriptor elements in Python instead of XPath
 - [Phase 19-saml-oidc-scanner]: classifier.py rs256/es256/eddsa entries reused from JWT section — only sha1 short-form added for SAML SHA-1 URI findings
+- [Phase 20-kerberos-scanner]: Functional RED tests patch IMPACKET_AVAILABLE=True -- impacket not installed in dev env, stub must be reachable
+- [Phase 20-kerberos-scanner]: _derive_realm IPv4 detection added: 4-part all-numeric splits return full address, not last 2 octets
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-09T11:57:50.546Z
-Stopped at: Phase 20 context gathered (discuss mode)
-Resume file: .planning/phases/20-kerberos-scanner/20-CONTEXT.md
+Last session: 2026-04-09T12:44:09.981Z
+Stopped at: Completed 20-01-PLAN.md (kerberos scanner RED scaffold)
+Resume file: None
