@@ -95,7 +95,8 @@ def _is_sha1_uri(uri: str) -> bool:
 
     Checks for 'sha1' or 'sha-1' (case-insensitive) anywhere in the URI string.
     """
-    raise NotImplementedError("Plan 02 implements")
+    lower = uri.lower()
+    return any(ind in lower for ind in SHA1_INDICATORS)
 
 
 def _parse_oidc_discovery(json_bytes: bytes, target_url: str) -> "tuple[list, dict]":
@@ -119,4 +120,12 @@ def _classify_key_severity(key_alg: str, key_bits: "int | None") -> "str | None"
 
     Returns severity string or None (no finding).
     """
-    raise NotImplementedError("Plan 02 implements")
+    alg_upper = key_alg.upper() if key_alg else ""
+    if alg_upper == "RSA":
+        if key_bits is None:
+            return "HIGH"
+        if key_bits < 2048:
+            return "CRITICAL"
+        return "HIGH"
+    # ECDSA, EdDSA, EC — quantum-safe or out of scope for key-size findings
+    return None
