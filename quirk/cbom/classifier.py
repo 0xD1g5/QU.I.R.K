@@ -157,6 +157,13 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "ecdsap256sha256":    (CryptoPrimitive.SIGNATURE, 1, 128),      # DNSSEC alg 13
     "ecdsap384sha384":    (CryptoPrimitive.SIGNATURE, 3, 192),      # DNSSEC alg 14
     # Note: "dsa", "ed25519", "ed448" already present above
+    # ------------------------------------------------------------------
+    # SAML / OIDC algorithm identifiers
+    # ------------------------------------------------------------------
+    # SAML XML algorithm URI shortened form (cert_pubkey_alg="SHA1" for SHA-1 URI findings)
+    "sha1":   (CryptoPrimitive.HASH, None, None),        # SHA-1 deprecated — quantum-vulnerable hash
+    # Note: OIDC JWT algorithm names (rs256, ps256, es256, eddsa, etc.) already present
+    # in the JWT/JOSE section above — SAML/OIDC reuse the same algorithm strings
 }
 
 _FALLBACK = (CryptoPrimitive.UNKNOWN, None, None)
