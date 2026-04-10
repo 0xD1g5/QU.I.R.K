@@ -74,6 +74,21 @@ class CbomComponent(BaseModel):
     source_systems: List[str] = []    # ["host:port", "file/path.py", ...]
 
 
+# ---- Identity Findings ----
+
+class IdentityFinding(BaseModel):
+    host: str
+    port: int
+    severity: str            # CRITICAL / HIGH / MEDIUM / LOW / INFO
+    title: str
+    protocol: Optional[str] = None    # KERBEROS / SAML / DNSSEC
+    description: Optional[str] = None
+    remediation: Optional[str] = None
+    quantum_risk: Optional[str] = None
+    source: Optional[str] = None
+    algorithm: str           # e.g. "rc4-hmac", "RSA-1024", "RSASHA1"
+
+
 # ---- Roadmap ----
 
 class RoadmapEdge(BaseModel):
@@ -112,3 +127,4 @@ class ScanLatestResponse(BaseModel):
     certificates: List[CertItem]
     cbom_components: List[CbomComponent]
     roadmap: RoadmapData
+    identity_findings: List[IdentityFinding] = []
