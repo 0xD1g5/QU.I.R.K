@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: Identity Crypto
-status: verifying
-stopped_at: Phase 21 context gathered (discuss mode)
-last_updated: "2026-04-09T23:55:55.004Z"
-last_activity: 2026-04-09
+status: executing
+stopped_at: Completed 21-identity-surface 21-01-PLAN.md
+last_updated: "2026-04-10T11:37:16.599Z"
+last_activity: 2026-04-10
 progress:
   total_phases: 9
   completed_phases: 8
-  total_plans: 16
-  completed_plans: 16
+  total_plans: 18
+  completed_plans: 17
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 20 — kerberos-scanner
+**Current focus:** Phase 21 — identity-surface
 
 ## Current Position
 
-Phase: 21
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-09
+Phase: 21 (identity-surface) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-10
 
 Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
 | Phase 19-saml-oidc-scanner P02 | 3 | 2 tasks | 7 files |
 | Phase 20-kerberos-scanner P01 | 3 | 2 tasks | 2 files |
 | Phase 20-kerberos-scanner P02 | 5 | 3 tasks | 9 files |
+| Phase 21-identity-surface P01 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - [Phase 20-kerberos-scanner]: Test isolation: patch.object on _probe_kdc/_probe_ldap_anon internal functions rather than raw impacket mocks -- works with or without impacket installed
 - [Phase 20-kerberos-scanner]: kerberos_scan_json includes ldap_status at top level AND nested under ldap key for compatibility
 - [Phase 20-kerberos-scanner]: No-preauth case (empty etype list from AS-REP) produces kerberos-no-preauth placeholder endpoint rather than empty list
+- [Phase 21-identity-surface]: IdentityFinding.algorithm is non-Optional str — every identity finding must name the weak algorithm
+- [Phase 21-identity-surface]: ScanLatestResponse.identity_findings defaults to [] for backward compatibility with existing API responses
+- [Phase 21-identity-surface]: Derivation tests use skipUnless(_HAS_DERIVE) pattern to SKIP gracefully until Plan 02 implements _derive_identity_findings
 
 ### Pending Todos
 
@@ -103,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-09T23:55:54.994Z
-Stopped at: Phase 21 context gathered (discuss mode)
-Resume file: .planning/phases/21-identity-surface/21-CONTEXT.md
+Last session: 2026-04-10T11:37:16.596Z
+Stopped at: Completed 21-identity-surface 21-01-PLAN.md
+Resume file: None

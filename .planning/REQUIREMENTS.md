@@ -42,10 +42,10 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 
 ### Identity Surface
 
-- [ ] **IDENT-01**: `evidence.py` gains `identity_weak_etype_count`, `saml_weak_signing_count`, `dnssec_weak_algo_count` counters; `scoring.py` incorporates identity evidence into readiness score
-- [ ] **IDENT-02**: FastAPI gains `IdentityFinding` Pydantic model and `identity_findings` array in `GET /api/scan/latest` response
-- [ ] **IDENT-03**: React dashboard gains Identity tab with per-protocol summary cards (Kerberos/SAML/DNSSEC) and severity-color-coded findings list
-- [ ] **IDENT-04**: Existing findings table includes identity protocol findings with protocol column filter
+- [x] **IDENT-01**: `evidence.py` gains `identity_weak_etype_count`, `saml_weak_signing_count`, `dnssec_weak_algo_count` counters; `scoring.py` incorporates identity evidence into readiness score
+- [x] **IDENT-02**: FastAPI gains `IdentityFinding` Pydantic model and `identity_findings` array in `GET /api/scan/latest` response
+- [x] **IDENT-03**: React dashboard gains Identity tab with per-protocol summary cards (Kerberos/SAML/DNSSEC) and severity-color-coded findings list
+- [x] **IDENT-04**: Existing findings table includes identity protocol findings with protocol column filter
 
 ## Future Requirements
 
@@ -114,10 +114,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | KERB-03 | Phase 20 | Complete |
 | KERB-04 | Phase 20 | Complete |
 | KERB-05 | Phase 20 | Complete |
-| IDENT-01 | Phase 21 | Pending |
-| IDENT-02 | Phase 21 | Pending |
-| IDENT-03 | Phase 21 | Pending |
-| IDENT-04 | Phase 21 | Pending |
+| IDENT-01 | Phase 21 | Complete |
+| IDENT-02 | Phase 21 | Complete |
+| IDENT-03 | Phase 21 | Complete |
+| IDENT-04 | Phase 21 | Complete |
 
 **Coverage:**
 - v4.2 requirements: 24 total
