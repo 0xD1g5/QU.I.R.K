@@ -77,7 +77,7 @@ class OutputCfg:
 @dataclass
 class IntelligenceCfg:
     # Intelligence/scoring layer versioning
-    intelligence_version: str = "4.1.0"
+    intelligence_version: str = "4.2.0"
 
     # Score calibration profile used by scoring/reporting.
     # Supported: lenient|balanced|strict
@@ -95,6 +95,21 @@ class AppConfig:
     connectors: ConnectorsCfg
     output: OutputCfg
     intelligence: IntelligenceCfg
+
+
+def _as_str_list(v: Any) -> List[str]:
+    """Coerce a YAML value to List[str] — wraps a bare scalar in a list.
+
+    Protects against a config.yaml that has `include_ips: 127.0.0.1` (scalar)
+    instead of the correct `include_ips: ["127.0.0.1"]` (list).  Without this,
+    Python's for-loop iterates the string character-by-character, producing
+    single '.' values that crash socket.create_connection with an IDNA error.
+    """
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return [str(x) for x in v]
+    return [str(v)]
 
 
 def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
@@ -127,15 +142,23 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         profile = "balanced"
 
     intelligence_cfg = IntelligenceCfg(
-        intelligence_version=str(intel_raw.get("intelligence_version", "4.1.0") or "4.1.0"),
+        intelligence_version=str(intel_raw.get("intelligence_version", "4.2.0") or "4.2.0"),
         profile=profile,
         calibration_overrides=overrides,
+    )
+
+    targets_raw = raw.get("targets") or {}
+    targets = TargetsCfg(
+        fqdns=_as_str_list(targets_raw.get("fqdns")),
+        cidrs=_as_str_list(targets_raw.get("cidrs")),
+        include_ips=_as_str_list(targets_raw.get("include_ips")),
+        exclude_ips=_as_str_list(targets_raw.get("exclude_ips")),
     )
 
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
         scan=ScanCfg(**raw["scan"]),
-        targets=TargetsCfg(**raw["targets"]),
+        targets=targets,
         connectors=ConnectorsCfg(
             **{k: v for k, v in (raw.get("connectors") or {}).items() if k != "enable_windows_adcs"}
         ),
