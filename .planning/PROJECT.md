@@ -80,7 +80,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - [ ] SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata endpoints
 - ✓ DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython, RFC 8624/9905 3-tier classification — Phase 18
 - ✓ BIND9 chaos lab profile (dnssec) — 4 zones (weak/safe/broken/unsigned) on port 15353 — Phase 18
-- [ ] New Identity tab in dashboard
+- ✓ New Identity tab in dashboard — protocol cards (Kerberos/SAML/DNSSEC), findings table, protocol filter on Findings page, identity_findings[] in API — Phase 21
 
 **v4.3 Data at Rest (Planned)**
 - [ ] Database encryption detection — PostgreSQL, MySQL, RDS encryption settings
@@ -151,7 +151,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
 
 ---
-*Last updated: 2026-04-09 after Phase 20 (Kerberos Scanner) complete — Kerberos AS-REQ etype enumeration operational with TCP/UDP fallback, full CBOM wiring, and Samba DC chaos lab. Phase 21 (identity-surface) is next.*
+*Last updated: 2026-04-10 after Phase 21 (Identity Surface) complete — identity protocol crypto posture (Kerberos/SAML/DNSSEC) exposed in the dashboard with dedicated Identity tab, evidence counters in scoring, and identity_findings[] in the API. SAML scanner module (IDENT-01 partial) remains the only open v4.2 item.*
 
 ## Evolution
 
