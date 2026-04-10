@@ -39,7 +39,7 @@ def test_version_consistency():
     from quirk.cbom.builder import PLATFORM_VERSION as CBOM_VERSION
     from quirk.config import IntelligenceCfg
 
-    TARGET = "4.1.0"
+    TARGET = "4.2.0"
     assert quirk.__version__ == TARGET, (
         f"quirk.__version__ is {quirk.__version__!r}, expected {TARGET!r}"
     )
@@ -73,13 +73,13 @@ def test_config_default_version():
     """
     config_path = pathlib.Path(__file__).parent.parent / "quirk" / "config.py"
     source = config_path.read_text(encoding="utf-8")
-    # The line reads: intel_raw.get("intelligence_version", "4.1.0")
-    assert '"4.1.0"' in source or "'4.1.0'" in source, (
+    # The line reads: intel_raw.get("intelligence_version", "4.2.0")
+    assert '"4.2.0"' in source or "'4.1.0'" in source, (
         "quirk/config.py does not contain '4.1.0' — "
         "the intelligence_version fallback in config_from_dict must be updated"
     )
     # More precise: the get() call default must be 4.1.0 (not just appear elsewhere)
-    assert 'get("intelligence_version", "4.1.0")' in source or (
+    assert 'get("intelligence_version", "4.2.0")' in source or (
         "get('intelligence_version', '4.1.0')" in source
     ), (
         "config_from_dict fallback for intelligence_version is not '4.1.0'; "
