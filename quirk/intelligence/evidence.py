@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
 EVIDENCE_SCHEMA_VERSION = "1.0.0"
 
-_PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN")
+_PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
@@ -70,6 +70,10 @@ def build_evidence_summary(
     scan_error_count = 0
     mtls_targets: Set[Tuple[str, int]] = set()
 
+    identity_weak_etype_count = 0
+    saml_weak_signing_count = 0
+    dnssec_weak_algo_count = 0
+
     for ep in endpoint_list:
         host = str(getattr(ep, "host", "") or "")
         port = int(getattr(ep, "port", 0) or 0)
@@ -107,6 +111,32 @@ def build_evidence_summary(
         issuer = str(getattr(ep, "cert_issuer", "") or "").strip()
         if subject and issuer and subject == issuer:
             cert_self_signed_count += 1
+
+        # Identity protocol counters (IDENT-01)
+        if proto == "KERBEROS":
+            sd = str(getattr(ep, "service_detail", "") or "")
+            # service_detail format: "etype:{id}:{name}:{severity}"
+            parts = sd.split(":")
+            if len(parts) >= 4 and parts[-1] in ("CRITICAL", "HIGH"):
+                identity_weak_etype_count += 1
+
+        elif proto == "SAML":
+            _saml_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
+            _saml_size = getattr(ep, "cert_pubkey_size", None)
+            if _saml_alg == "SHA1":
+                saml_weak_signing_count += 1
+            elif _saml_size is not None and isinstance(_saml_size, int) and _saml_size < 2048:
+                saml_weak_signing_count += 1
+
+        elif proto == "DNSSEC":
+            _dnssec_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
+            # Weak algorithms per RFC 8624/9905 plus unsigned/broken zone indicators
+            _DNSSEC_WEAK_ALGS = {"RSASHA1", "RSASHA1-NSEC3-SHA1", "RSAMD5", "DSA", "DSA-NSEC3-SHA1", "SHA1-DS"}
+            if _dnssec_alg in _DNSSEC_WEAK_ALGS:
+                dnssec_weak_algo_count += 1
+            elif _dnssec_alg == "NONE":
+                # Unsigned zone — no algorithm weakness but high security concern
+                dnssec_weak_algo_count += 1
 
     plaintext_http_targets = _finding_targets(finding_list, "Plaintext HTTP service detected")
     http_on_tls_port_targets = _finding_targets(finding_list, "HTTP on TLS-designated port")
@@ -152,4 +182,7 @@ def build_evidence_summary(
         "tls_enum_coverage_ratio": tls_enum_coverage_ratio,
         "tls_enum_coverage_pct": round(tls_enum_coverage_ratio * 100.0, 2),
         "finding_severity_counts": finding_severity_counts,
+        "identity_weak_etype_count": identity_weak_etype_count,
+        "saml_weak_signing_count": saml_weak_signing_count,
+        "dnssec_weak_algo_count": dnssec_weak_algo_count,
     }
