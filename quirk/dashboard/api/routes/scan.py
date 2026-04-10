@@ -15,6 +15,7 @@ from quirk.dashboard.api.schemas import (
     CertItem,
     ConfidenceData,
     FindingItem,
+    IdentityFinding,
     RoadmapData,
     RoadmapEdge,
     RoadmapNode,
@@ -172,6 +173,134 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     return findings
 
 
+def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityFinding]:
+    """Synthesize identity protocol findings from KERBEROS/SAML/DNSSEC endpoints.
+
+    Per D-06: single derivation function returns IdentityFinding list.
+    Per D-07: results are exposed as identity_findings AND converted to FindingItem
+    for the main findings list.
+    """
+    results: list[IdentityFinding] = []
+
+    for ep in endpoints:
+        proto = (ep.protocol or "").upper()
+
+        if proto == "KERBEROS":
+            sd = ep.service_detail or ""
+            # service_detail format: "etype:{id}:{name}:{severity}"
+            parts = sd.split(":")
+            if len(parts) >= 4 and parts[0] == "etype":
+                etype_id = parts[1]
+                name = parts[2]
+                severity = parts[3]
+                if severity in ("CRITICAL", "HIGH"):
+                    results.append(IdentityFinding(
+                        host=ep.host,
+                        port=ep.port,
+                        severity=severity,
+                        title=f"Kerberos weak etype: {name}",
+                        protocol="KERBEROS",
+                        description=(
+                            f"KDC accepts etype {etype_id} ({name}) which is classified as {severity}. "
+                            f"RC4 and DES etypes are cryptographically weak and quantum-vulnerable."
+                        ),
+                        remediation=(
+                            "Disable RC4-HMAC and DES etypes in KDC configuration. "
+                            "Enforce AES-256 (etype 18/20) as minimum."
+                        ),
+                        quantum_risk="Vulnerable",
+                        source="kerberos",
+                        algorithm=name,
+                    ))
+
+        elif proto == "SAML":
+            alg = (ep.cert_pubkey_alg or "").upper()
+            size = ep.cert_pubkey_size
+            sd = ep.service_detail or ""
+
+            if alg == "SHA1":
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity="HIGH",
+                    title="SHA-1 algorithm URI detected in SAML metadata",
+                    protocol="SAML",
+                    description=(
+                        "SAML metadata references SHA-1 signing algorithm. "
+                        "SHA-1 is collision-vulnerable since 2017 (SHAttered attack)."
+                    ),
+                    remediation="Update IdP to use SHA-256 or SHA-384 signature algorithms.",
+                    quantum_risk="Vulnerable",
+                    source="saml",
+                    algorithm="SHA1",
+                ))
+            elif size is not None and isinstance(size, int) and size < 2048:
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity="CRITICAL",
+                    title=f"Weak SAML signing certificate: {alg}-{size}",
+                    protocol="SAML",
+                    description=(
+                        f"SAML signing certificate uses {size}-bit {alg} key, "
+                        f"below the 2048-bit minimum for RSA."
+                    ),
+                    remediation=(
+                        "Replace IdP signing certificate with RSA-2048 minimum "
+                        "or switch to ECDSA P-256."
+                    ),
+                    quantum_risk="Vulnerable",
+                    source="saml",
+                    algorithm=f"{alg}-{size}" if size else alg,
+                ))
+
+        elif proto == "DNSSEC":
+            alg = (ep.cert_pubkey_alg or "").upper()
+            sd = ep.service_detail or ""
+
+            _DNSSEC_WEAK_MAP = {
+                "RSASHA1": ("CRITICAL", "RSASHA1 (algorithm 5) uses SHA-1 which is collision-vulnerable"),
+                "RSASHA1-NSEC3-SHA1": ("CRITICAL", "RSASHA1-NSEC3-SHA1 (algorithm 7) uses SHA-1"),
+                "RSAMD5": ("CRITICAL", "RSAMD5 (algorithm 1) uses MD5 which is broken"),
+                "DSA": ("CRITICAL", "DSA (algorithm 3) is deprecated by NIST"),
+                "DSA-NSEC3-SHA1": ("CRITICAL", "DSA-NSEC3-SHA1 (algorithm 6) is deprecated"),
+                "NONE": ("HIGH", "Zone has no DNSSEC signing — DNS responses are unauthenticated"),
+                "SHA1-DS": ("HIGH", "DS record uses SHA-1 digest — vulnerable to collision attacks"),
+                "DS-MISMATCH": ("HIGH", "DS record key tag does not match any DNSKEY — broken chain of trust"),
+                "NSEC": ("MEDIUM", "Zone uses NSEC records — enables zone enumeration by walking"),
+            }
+
+            if alg in _DNSSEC_WEAK_MAP:
+                severity, desc = _DNSSEC_WEAK_MAP[alg]
+                if alg == "NONE":
+                    remediation = "Deploy DNSSEC signing with a strong algorithm."
+                elif alg == "SHA1-DS":
+                    remediation = "Replace SHA-1 DS digest with SHA-256 (digest type 2)."
+                elif alg == "DS-MISMATCH":
+                    remediation = "Verify DS records match published DNSKEYs."
+                elif severity == "CRITICAL":
+                    remediation = "Migrate to ECDSAP256SHA256 (algorithm 13) or Ed25519 (algorithm 15) per RFC 8624."
+                else:
+                    remediation = "Consider using NSEC3 with opt-out to prevent zone walking."
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity=severity,
+                    title=f"DNSSEC: {alg.replace('-', ' ').replace('_', ' ')}",
+                    protocol="DNSSEC",
+                    description=desc,
+                    remediation=remediation,
+                    quantum_risk="Vulnerable" if severity == "CRITICAL" else None,
+                    source="dnssec",
+                    algorithm=ep.cert_pubkey_alg or alg,  # preserve original case
+                ))
+
+    # Sort by severity
+    _severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    results.sort(key=lambda f: _severity_order.get(f.severity, 99))
+    return results
+
+
 def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     """Build CBOM components from endpoints by aggregating algorithm usage."""
     from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
@@ -317,6 +446,23 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
     # Derive findings first — needed by evidence summary
     findings = _derive_findings(endpoints)
 
+    # Derive identity findings (IDENT-02 + IDENT-04)
+    identity_findings = _derive_identity_findings(endpoints)
+
+    # Per D-07: append identity findings as FindingItem to main findings list
+    for idf in identity_findings:
+        findings.append(FindingItem(
+            host=idf.host,
+            port=idf.port,
+            severity=idf.severity,
+            title=idf.title,
+            protocol=idf.protocol,
+            description=idf.description,
+            remediation=idf.remediation,
+            quantum_risk=idf.quantum_risk,
+            source=idf.source,
+        ))
+
     # Build evidence summary for intelligence functions
     try:
         from quirk.intelligence.evidence import build_evidence_summary
@@ -406,6 +552,7 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
         certificates=certificates,
         cbom_components=cbom_components,
         roadmap=roadmap,
+        identity_findings=identity_findings,
     )
 
 
