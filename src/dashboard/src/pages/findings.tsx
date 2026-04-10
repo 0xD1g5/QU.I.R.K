@@ -33,13 +33,20 @@ export function FindingsPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: "severity", desc: false }])
   const [globalFilter, setGlobalFilter] = useState("")
   const [severityFilter, setSeverityFilter] = useState("ALL")
+  const [protocolFilter, setProtocolFilter] = useState("ALL")
   const [selectedFinding, setSelectedFinding] = useState<FindingItem | null>(null)
 
   const findings = useMemo(() => {
     if (!data?.findings) return []
-    if (severityFilter === "ALL") return data.findings
-    return data.findings.filter((f) => f.severity === severityFilter)
-  }, [data, severityFilter])
+    let filtered = data.findings
+    if (severityFilter !== "ALL") {
+      filtered = filtered.filter((f) => f.severity === severityFilter)
+    }
+    if (protocolFilter !== "ALL") {
+      filtered = filtered.filter((f) => f.protocol === protocolFilter)
+    }
+    return filtered
+  }, [data, severityFilter, protocolFilter])
 
   const columns: ColumnDef<FindingItem>[] = [
     {
@@ -112,6 +119,17 @@ export function FindingsPage() {
             <SelectItem value="ALL">All Severities</SelectItem>
             {["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"].map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={protocolFilter} onValueChange={setProtocolFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Protocol" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Protocols</SelectItem>
+            {["TLS", "SSH", "HTTP", "KERBEROS", "SAML", "DNSSEC"].map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
             ))}
           </SelectContent>
         </Select>
