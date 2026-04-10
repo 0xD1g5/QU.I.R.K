@@ -22,18 +22,18 @@ class TestV41GapClosure(unittest.TestCase):
         not the module __version__ attribute.
         """
         version = importlib.metadata.version("quirk")
-        assert version == "4.1.0", (
+        assert version == "4.2.0", (
             f"importlib.metadata.version('quirk') = {version!r}; "
             f"expected '4.1.0' -- bump pyproject.toml version field and reinstall"
         )
 
     def test_pyproject_version_field_is_4_1_0(self):
-        """pyproject.toml must contain 'version = "4.1.0"'.
+        """pyproject.toml must contain 'version = "4.2.0"'.
 
         RED because: pyproject.toml line 7 literally says version = "4.0.0".
         """
         source = pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
-        assert 'version = "4.1.0"' in source, (
+        assert 'version = "4.2.0"' in source, (
             "pyproject.toml does not contain 'version = \"4.1.0\"' -- "
             "current value is '4.0.0'"
         )
