@@ -117,6 +117,16 @@ None. All three test classes have correct import targets. The derivation tests a
 - Derivation tests SKIP: `_derive_identity_findings` in `quirk/dashboard/api/routes/scan.py` needed to turn SKIP into GREEN
 - No blockers for Plan 02 execution
 
+## Self-Check: PASSED
+
+- FOUND: tests/test_identity_surface.py
+- FOUND: quirk/dashboard/api/schemas.py (IdentityFinding model + identity_findings field)
+- FOUND: src/dashboard/src/types/api.ts (IdentityFinding interface + identity_findings field)
+- FOUND: .planning/phases/21-identity-surface/21-01-SUMMARY.md
+- FOUND commit 974268d (test: RED scaffold)
+- FOUND commit d674769 (feat: IdentityFinding model)
+- Test state: 9 FAILED (RED), 3 PASSED, 5 SKIPPED — as designed
+
 ---
 *Phase: 21-identity-surface*
 *Completed: 2026-04-10*
