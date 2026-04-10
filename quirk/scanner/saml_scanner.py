@@ -3,10 +3,21 @@ extracts signing/encryption certificates and algorithm declarations."""
 
 try:
     import lxml.etree as ET
-    import defusedxml.lxml as defused_ET
+    import defusedxml.lxml as _defused_lxml_ET
+    def _safe_ET_fromstring(xml_bytes):  # noqa: E306
+        return _defused_lxml_ET.fromstring(xml_bytes)
     LXML_AVAILABLE = True
 except ImportError:
-    LXML_AVAILABLE = False
+    ET = None  # type: ignore[assignment]
+    try:
+        import defusedxml.ElementTree as _defused_stdlib_ET
+        def _safe_ET_fromstring(xml_bytes):  # noqa: E306
+            return _defused_stdlib_ET.fromstring(xml_bytes)
+        LXML_AVAILABLE = True
+    except ImportError:
+        def _safe_ET_fromstring(xml_bytes):  # noqa: E306
+            raise RuntimeError("defusedxml is not installed — SAML parsing unavailable")
+        LXML_AVAILABLE = False
 
 import base64
 import json
@@ -146,7 +157,7 @@ def _parse_saml_metadata(xml_bytes: bytes, target_url: str) -> "tuple[list, dict
     and scan_dict is the D-17 JSON structure dict for saml_scan_json (D-02, D-05).
     Uses defusedxml.lxml.fromstring() for XXE-safe parsing.
     """
-    root = defused_ET.fromstring(xml_bytes)
+    root = _safe_ET_fromstring(xml_bytes)
 
     # Extract entityID — handle both EntityDescriptor root and EntitiesDescriptor wrapper
     entity_id = root.get("entityID", "")
