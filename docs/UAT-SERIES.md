@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-09 (Phase 20: Kerberos scanner added UAT-5-22)
+**Last Updated:** 2026-04-10 (Phase 21: Identity Surface — added UAT-7-33–7-37, UAT-8-09–8-11)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.1. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -2032,10 +2032,11 @@ Each finding object contains:
 2. Clear console
 3. Navigate to Executive page (`/`) — check for errors
 4. Navigate to Findings page (`/findings`) — check for errors
-5. Navigate to Certificates page (`/certificates`) — check for errors
-6. Navigate to CBOM page (`/cbom`) — switch between Table and Graph tabs — check for errors
-7. Navigate to Roadmap page (`/roadmap`) — check for errors
-8. Navigate to Print view (`/print`) — check for errors
+5. Navigate to Identity page (`/identity`) — check for errors
+6. Navigate to Certificates page (`/certificates`) — check for errors
+7. Navigate to CBOM page (`/cbom`) — switch between Table and Graph tabs — check for errors
+8. Navigate to Roadmap page (`/roadmap`) — check for errors
+9. Navigate to Print view (`/print`) — check for errors
 
 **Expected:** Zero JavaScript errors across all pages.
 
@@ -2045,6 +2046,125 @@ Each finding object contains:
 - No `TypeError` or `ReferenceError` entries
 - Warnings are acceptable (yellow) but errors (red) are not
 - API requests all return 200 (check Network tab)
+- `/identity` page loads without errors even when no identity scan data is present
+
+### UAT-7-33: Identity Page — Navigation and Load
+
+> Added Phase 21 (2026-04-10): Identity Surface feature — new `/identity` dashboard page.
+
+**Prerequisites:** Dashboard running (`quirk serve` or `python run_scan.py serve`).
+
+**Steps:**
+1. Start dashboard and navigate to `http://localhost:8765`
+2. Look for "Identity" item in the sidebar (between Findings and Certificates)
+3. Click the Identity sidebar item
+4. Observe page load at `/identity`
+5. Check browser URL bar confirms `/identity` route
+
+**Expected:** Identity page accessible via sidebar with Fingerprint icon.
+
+**Pass Criteria:**
+- Sidebar shows "Identity" nav item with a Fingerprint icon
+- Clicking navigates to `/identity` without a full page reload (SPA routing)
+- Page title or heading reads "Identity Protocols"
+- No 404 or blank screen
+
+---
+
+### UAT-7-34: Identity Page — Protocol Summary Cards (No Scan Data)
+
+> Added Phase 21 (2026-04-10): Identity Surface feature.
+
+**Prerequisites:** Dashboard running. No scan required (tests empty state).
+
+**Steps:**
+1. Navigate to `http://localhost:8765/identity`
+2. Observe the three protocol summary cards at the top of the page
+3. Note the status badge on each card
+
+**Expected:** Three cards rendered: Kerberos, SAML/OIDC, DNSSEC — each showing "Not Scanned" empty state.
+
+**Pass Criteria:**
+- Three cards visible: "Kerberos", "SAML/OIDC", "DNSSEC"
+- Each card shows a "Not Scanned" or neutral status badge (not an error)
+- No JavaScript errors in console
+- Cards do not crash when `identity_findings` array is empty or absent from API response
+
+---
+
+### UAT-7-35: Identity Page — Protocol Summary Cards (With Scan Data)
+
+> Added Phase 21 (2026-04-10): Identity Surface feature.
+
+**Prerequisites:** Full lab scan completed including Kerberos (port 88), SAML (port 8080 SimpleSAMLphp), and DNSSEC chaos lab zones. Use chaos lab profile.
+
+**Steps:**
+1. Run: `python run_scan.py --config labs/quirk-chaos.yaml` (or equivalent full lab scan)
+2. Navigate to `http://localhost:8765/identity`
+3. Observe the three protocol summary cards
+4. Check each card's status badge and finding count
+5. Click a finding row in the findings table below the cards
+
+**Expected:** Cards show per-protocol finding counts and severity. Clicking a row opens a detail Sheet.
+
+**Pass Criteria:**
+- At least one card shows a non-zero finding count (Kerberos or DNSSEC expected from chaos lab)
+- Card status badge reflects highest severity finding for that protocol (e.g., "Critical", "High")
+- "Safe" badge shown if no issues detected for a protocol
+- Findings table below cards lists identity findings with Severity, Protocol, Host, Algorithm columns
+- Clicking a row opens a slide-out detail Sheet showing finding description and recommendation
+- Table shows "No identity protocol findings" empty state if API returns no identity data
+
+---
+
+### UAT-7-36: Identity Page — API Response Shape
+
+> Added Phase 21 (2026-04-10): Identity Surface feature — `identity_findings[]` added to `/api/scan/latest`.
+
+**Prerequisites:** Completed scan.
+
+**Steps:**
+1. Open browser DevTools → Network tab
+2. Navigate to `/identity` page
+3. Find the `GET /api/scan/latest` request
+4. Inspect the response JSON
+
+**Expected:** `GET /api/scan/latest` response includes an `identity_findings` array.
+
+**Pass Criteria:**
+- Response JSON contains key `identity_findings`
+- `identity_findings` is an array (empty array `[]` is valid if no identity issues found)
+- Each element has: `id`, `severity`, `protocol`, `host`, `algorithm`, `description`, `recommendation`
+- Identity findings also appear in the main `findings` array (deduplication optional)
+- No `500` error on the endpoint when identity data is absent
+
+---
+
+### UAT-7-37: Findings Page — Protocol Filter
+
+> Added Phase 21 (2026-04-10): Identity Surface feature — protocol dropdown added to Findings page.
+
+**Prerequisites:** Full lab scan completed (multi-protocol findings present).
+
+**Steps:**
+1. Navigate to `http://localhost:8765/findings`
+2. Locate the Protocol dropdown filter (near the Severity filter)
+3. Note default selection ("All Protocols" or equivalent)
+4. Select "KERBEROS" from the dropdown
+5. Observe table updates
+6. Select "TLS" from the dropdown
+7. Select "All Protocols" to reset
+
+**Expected:** Protocol dropdown filters the findings table by protocol type.
+
+**Pass Criteria:**
+- Protocol dropdown visible on Findings page alongside existing Severity filter
+- Default shows all findings ("All Protocols")
+- Selecting "KERBEROS" shows only Kerberos findings (or empty state if none)
+- Selecting "TLS" shows only TLS findings
+- Options include: ALL / TLS / SSH / HTTP / KERBEROS / SAML / DNSSEC
+- Filter combines with Severity filter (both applied simultaneously)
+- Selecting "All Protocols" restores full findings list
 
 ---
 
@@ -2195,6 +2315,93 @@ Each finding object contains:
 - `validate_run(Path('output'))` returns a `ValidationResult` without error
 - `quirk --help` output contains no `--no-require-delta` or `--require-delta` flags
 - Passing a second positional argument to `validate_run` raises `TypeError` (no dead parameter to silently absorb it)
+
+### UAT-8-09: Identity Scoring — Kerberos Weak Etype Penalty
+
+> Added Phase 21 (2026-04-10): Kerberos RC4/DES etype detection wired into scoring.
+
+**Prerequisites:** Chaos lab running with Kerberos service (Samba DC, port 88). Full lab scan completed.
+
+**Steps:**
+1. Run full lab scan: `python run_scan.py --config labs/quirk-chaos.yaml`
+2. Inspect `output/intelligence-*.json`:
+   ```bash
+   python3 -c "
+   import json, glob
+   d = json.load(open(sorted(glob.glob('output/intelligence-*.json'))[-1]))
+   ev = d.get('evidence', {})
+   print('identity_weak_etype_count:', ev.get('identity_weak_etype_count', 'KEY MISSING'))
+   print('identity_kerberos_weak_etype_ratio:', ev.get('identity_kerberos_weak_etype_ratio', 'KEY MISSING'))
+   "
+   ```
+3. Check score is lower than a baseline scan with no Kerberos service
+
+**Expected:** RC4/DES Kerberos etypes are counted as evidence and reduce the quantum-readiness score.
+
+**Pass Criteria:**
+- `identity_weak_etype_count` key present in evidence summary (≥ 0)
+- `identity_kerberos_weak_etype_ratio` key present in evidence summary
+- When Kerberos weak etypes are detected, score is penalized (lower than no-identity scan)
+- `SCORE_WEIGHTS` entry `identity_kerberos_weak_etype_ratio` present in scoring module
+
+---
+
+### UAT-8-10: Identity Scoring — SAML Weak Signing Certificate Penalty
+
+> Added Phase 21 (2026-04-10): SAML weak signing cert detection wired into scoring.
+
+**Prerequisites:** Chaos lab running with SAML service (SimpleSAMLphp). Full lab scan completed.
+
+**Steps:**
+1. Run full lab scan with SAML profile included
+2. Inspect `output/intelligence-*.json`:
+   ```bash
+   python3 -c "
+   import json, glob
+   d = json.load(open(sorted(glob.glob('output/intelligence-*.json'))[-1]))
+   ev = d.get('evidence', {})
+   print('saml_weak_signing_count:', ev.get('saml_weak_signing_count', 'KEY MISSING'))
+   print('identity_saml_weak_signing_ratio:', ev.get('identity_saml_weak_signing_ratio', 'KEY MISSING'))
+   "
+   ```
+
+**Expected:** SAML signing certificates with weak keys are counted as evidence and reduce score.
+
+**Pass Criteria:**
+- `saml_weak_signing_count` key present in evidence summary (≥ 0)
+- `identity_saml_weak_signing_ratio` key present in evidence summary
+- Score is penalized when SAML weak signing certs are detected
+- `SCORE_WEIGHTS` entry `identity_saml_weak_signing_ratio` present in scoring module
+
+---
+
+### UAT-8-11: Identity Scoring — DNSSEC Weak Algorithm Penalty
+
+> Added Phase 21 (2026-04-10): DNSSEC RSASHA1/DSA algorithm detection wired into scoring.
+
+**Prerequisites:** Chaos lab running with DNSSEC zones configured. Full lab scan completed.
+
+**Steps:**
+1. Run full lab scan with DNSSEC profile included
+2. Inspect `output/intelligence-*.json`:
+   ```bash
+   python3 -c "
+   import json, glob
+   d = json.load(open(sorted(glob.glob('output/intelligence-*.json'))[-1]))
+   ev = d.get('evidence', {})
+   print('dnssec_weak_algo_count:', ev.get('dnssec_weak_algo_count', 'KEY MISSING'))
+   print('identity_dnssec_weak_algo_ratio:', ev.get('identity_dnssec_weak_algo_ratio', 'KEY MISSING'))
+   "
+   ```
+
+**Expected:** DNSSEC zones using RSASHA1, RSAMD5, or DSA are counted as evidence and reduce score.
+
+**Pass Criteria:**
+- `dnssec_weak_algo_count` key present in evidence summary (≥ 0)
+- `identity_dnssec_weak_algo_ratio` key present in evidence summary
+- Score is penalized when weak DNSSEC algorithms are detected
+- `SCORE_WEIGHTS` entry `identity_dnssec_weak_algo_ratio` present in scoring module
+- Chaos lab DNSSEC zone with RSASHA1 produces `dnssec_weak_algo_count >= 1`
 
 ---
 
