@@ -8,6 +8,7 @@ import {
   Shield,
   Database,
   GitBranch,
+  Fingerprint,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -16,6 +17,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },
   { path: "/findings", label: "Findings", Icon: AlertTriangle },
+  { path: "/identity", label: "Identity", Icon: Fingerprint },
   { path: "/certificates", label: "Certificates", Icon: Shield },
   { path: "/cbom", label: "CBOM Viewer", Icon: Database },
   { path: "/roadmap", label: "Migration Roadmap", Icon: GitBranch },
