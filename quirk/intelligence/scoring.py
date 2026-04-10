@@ -13,6 +13,9 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "identity_expiring_ratio": 7.0,
     "identity_self_signed_ratio": 9.0,
     "identity_mtls_ratio_bonus": 6.0,
+    "identity_kerberos_weak_etype_ratio": 10.0,
+    "identity_saml_weak_signing_ratio": 8.0,
+    "identity_dnssec_weak_algo_ratio": 8.0,
     "agility_high_impact_ratio": 14.0,
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
@@ -118,6 +121,10 @@ def compute_readiness_score(
     rsa_count = max(0, _as_int(cert_keys.get("RSA", 0)))
     ecdsa_count = max(0, _as_int(cert_keys.get("ECDSA", 0)))
 
+    kerberos_weak_count = max(0, _as_int(evidence.get("identity_weak_etype_count", 0)))
+    saml_weak_count = max(0, _as_int(evidence.get("saml_weak_signing_count", 0)))
+    dnssec_weak_count = max(0, _as_int(evidence.get("dnssec_weak_algo_count", 0)))
+
     hygiene_impacts: List[Tuple[str, float]] = [
         ("Plaintext HTTP exposure", -_ratio(plaintext_http_count, denom) * w["hygiene_plaintext_http_ratio"]),
         ("HTTP on TLS-designated ports", -_ratio(http_on_tls_count, denom) * w["hygiene_http_on_tls_ratio"]),
@@ -137,6 +144,9 @@ def compute_readiness_score(
         ("Expiring certificates", -_ratio(expiring_count, denom) * w["identity_expiring_ratio"]),
         ("Self-signed certificates", -_ratio(self_signed_count, denom) * w["identity_self_signed_ratio"]),
         ("mTLS enforcement signals", _ratio(mtls_present_count, denom) * w["identity_mtls_ratio_bonus"]),
+        ("RC4/DES Kerberos etypes detected", -_ratio(kerberos_weak_count, denom) * w["identity_kerberos_weak_etype_ratio"]),
+        ("Weak SAML signing key", -_ratio(saml_weak_count, denom) * w["identity_saml_weak_signing_ratio"]),
+        ("Weak DNSSEC signing algorithm", -_ratio(dnssec_weak_count, denom) * w["identity_dnssec_weak_algo_ratio"]),
     ]
     identity_trust_score, identity_trust_drivers = _apply_weighted_impacts(identity_trust_impacts)
 
