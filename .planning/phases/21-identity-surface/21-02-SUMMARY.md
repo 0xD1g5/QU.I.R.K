@@ -141,3 +141,18 @@ None - no external service configuration required.
 ---
 *Phase: 21-identity-surface*
 *Completed: 2026-04-10*
+
+## Self-Check: PASSED
+
+- FOUND: quirk/intelligence/evidence.py
+- FOUND: quirk/intelligence/scoring.py
+- FOUND: quirk/dashboard/api/routes/scan.py
+- FOUND: src/dashboard/src/pages/identity.tsx
+- FOUND: src/dashboard/src/pages/findings.tsx
+- FOUND: src/dashboard/src/components/sidebar.tsx
+- FOUND: src/dashboard/src/App.tsx
+- FOUND: .planning/phases/21-identity-surface/21-02-SUMMARY.md
+- FOUND commit 9577b09 (Task 1: evidence counters + scoring)
+- FOUND commit df16f0f (Task 2: _derive_identity_findings + API wiring)
+- FOUND commit 861b0cf (Task 3: React Identity tab + findings protocol filter)
+- Task 4: Human verification approved, UAT-7-33 through UAT-7-37 and UAT-8-09 through UAT-8-11 in docs/UAT-SERIES.md
