@@ -76,6 +76,19 @@ export interface ScanMeta {
   total_findings: number
 }
 
+export interface IdentityFinding {
+  host: string
+  port: number
+  severity: string
+  title: string
+  protocol?: string
+  description?: string
+  remediation?: string
+  quantum_risk?: string
+  source?: string
+  algorithm: string
+}
+
 export interface ScanLatestResponse {
   meta: ScanMeta
   score: ScoreData
@@ -84,4 +97,5 @@ export interface ScanLatestResponse {
   certificates: CertItem[]
   cbom_components: CbomComponent[]
   roadmap: RoadmapData
+  identity_findings: IdentityFinding[]
 }
