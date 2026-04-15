@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+import json
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
 
 
 _SEVERITY_RANK = {"INFO": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
@@ -24,6 +26,19 @@ def _has_legacy_tls_versions(ep: Any) -> bool:
         return False
     versions = {v.strip() for v in supported.split(",") if v.strip()}
     return bool({"TLSv1", "TLSv1.1"} & versions)
+
+
+def _chain_verified(ep: Any) -> Optional[bool]:
+    """Parse chain_verified from tls_capabilities_json blob; returns None if absent."""
+    caps_raw = getattr(ep, "tls_capabilities_json", None)
+    if not caps_raw:
+        return None
+    try:
+        caps = json.loads(caps_raw)
+        val = caps.get("chain_verified")
+        return bool(val) if val is not None else None
+    except Exception:
+        return None
 
 
 def _normalize_finding(f: Dict[str, Any]) -> Dict[str, Any]:
@@ -188,6 +203,116 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     "title": "Legacy TLS versions allowed (TLS 1.0/1.1)",
                     "recommendation": "Disable TLS 1.0/1.1 and standardize on TLS 1.2+ (prefer TLS 1.3).",
                 })
+
+            # BUG-01: Legacy cipher suites (non-AEAD, non-PFS)
+            if getattr(e, "tls_legacy_suites_present", False):
+                findings.append({
+                    "severity": "LOW",
+                    "host": host,
+                    "port": port,
+                    "title": "Legacy TLS cipher suites accepted",
+                    "recommendation": (
+                        "Disable legacy cipher suites (e.g. AES128-SHA, AES256-SHA) and require "
+                        "AEAD suites with forward secrecy (AES-GCM, ChaCha20-Poly1305)."
+                    ),
+                })
+
+            # BUG-02: Certificate expiry
+            cert_not_after = getattr(e, "cert_not_after", None)
+            if isinstance(cert_not_after, datetime):
+                now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+                # cert_not_after is stored as naive UTC (tzinfo stripped at scan time)
+                na = cert_not_after if cert_not_after.tzinfo is None else cert_not_after.astimezone(timezone.utc).replace(tzinfo=None)
+                if na < now_naive:
+                    findings.append({
+                        "severity": "HIGH",
+                        "host": host,
+                        "port": port,
+                        "title": "TLS certificate expired",
+                        "recommendation": (
+                            f"Certificate expired {na.date()}. Renew immediately — expired certs "
+                            "cause trust failures and may block legitimate clients."
+                        ),
+                    })
+                elif na < now_naive + timedelta(days=30):
+                    findings.append({
+                        "severity": "MEDIUM",
+                        "host": host,
+                        "port": port,
+                        "title": "TLS certificate expiring within 30 days",
+                        "recommendation": (
+                            f"Certificate expires {na.date()}. Schedule renewal before expiry "
+                            "to avoid service disruption."
+                        ),
+                    })
+
+            # BUG-03: Self-signed or chain-unverified certificate
+            cert_issuer = (getattr(e, "cert_issuer", "") or "").strip()
+            cert_subject = (getattr(e, "cert_subject", "") or "").strip()
+            cv = _chain_verified(e)
+            if (cert_issuer and cert_subject and cert_issuer == cert_subject) or cv is False:
+                findings.append({
+                    "severity": "MEDIUM",
+                    "host": host,
+                    "port": port,
+                    "title": "Self-signed or untrusted TLS certificate",
+                    "recommendation": (
+                        "Replace with a certificate issued by a trusted CA. Self-signed certs "
+                        "cannot establish a verifiable chain of trust for external clients."
+                    ),
+                })
+
+            # BUG-04: Quantum-vulnerable TLS certificate key algorithm
+            cert_pubkey_alg = (getattr(e, "cert_pubkey_alg", "") or "").strip().upper()
+            cert_pubkey_size = getattr(e, "cert_pubkey_size", None)
+            if cert_pubkey_alg == "RSA":
+                if cert_pubkey_size is not None and cert_pubkey_size < 2048:
+                    findings.append({
+                        "severity": "HIGH",
+                        "host": host,
+                        "port": port,
+                        "title": "TLS certificate uses undersized RSA key",
+                        "recommendation": (
+                            f"RSA-{cert_pubkey_size} is below the 2048-bit classical minimum and "
+                            "is quantum-vulnerable. Migrate to RSA-2048+ or ECDSA P-256, then "
+                            "plan post-quantum migration to NIST PQC algorithms."
+                        ),
+                    })
+                else:
+                    findings.append({
+                        "severity": "MEDIUM",
+                        "host": host,
+                        "port": port,
+                        "title": "TLS certificate uses quantum-vulnerable RSA key",
+                        "recommendation": (
+                            "RSA is broken by Shor's algorithm on a cryptographically relevant "
+                            "quantum computer. Plan migration to NIST-approved PQC algorithms "
+                            "(ML-KEM / CRYSTALS-Kyber for key exchange, ML-DSA / Dilithium for signatures)."
+                        ),
+                    })
+            elif cert_pubkey_alg == "ECDSA":
+                if cert_pubkey_size is not None and cert_pubkey_size < 256:
+                    findings.append({
+                        "severity": "HIGH",
+                        "host": host,
+                        "port": port,
+                        "title": "TLS certificate uses undersized ECDSA key",
+                        "recommendation": (
+                            f"ECDSA-{cert_pubkey_size} is below the P-256 classical minimum and "
+                            "is quantum-vulnerable. Migrate to P-256+ and plan post-quantum migration."
+                        ),
+                    })
+                else:
+                    findings.append({
+                        "severity": "MEDIUM",
+                        "host": host,
+                        "port": port,
+                        "title": "TLS certificate uses quantum-vulnerable ECDSA key",
+                        "recommendation": (
+                            "ECDSA is broken by Shor's algorithm on a cryptographically relevant "
+                            "quantum computer. Plan migration to NIST-approved PQC algorithms."
+                        ),
+                    })
 
         if proto == "SSH":
             findings.append({

@@ -38,3 +38,54 @@ def test_pyproject_has_rich():
     root = os.path.join(os.path.dirname(__file__), "..")
     pyproject = open(os.path.join(root, "pyproject.toml")).read()
     assert "rich" in pyproject.lower(), "rich not found in pyproject.toml dependencies"
+
+
+# ---------------------------------------------------------------------------
+# BACK-76: identity deps promoted to core (except impacket)
+# ---------------------------------------------------------------------------
+
+def _core_deps_section():
+    """Return just the [project] dependencies list text (before optional-dependencies)."""
+    root = os.path.join(os.path.dirname(__file__), "..")
+    pyproject = open(os.path.join(root, "pyproject.toml")).read()
+    # Slice from 'dependencies = [' up to ']' before '[project.optional-dependencies]'
+    start = pyproject.index("dependencies = [")
+    end = pyproject.index("[project.optional-dependencies]")
+    return pyproject[start:end]
+
+
+def test_dnspython_in_core_deps():
+    """dnspython[dnssec] must be in core deps so DNSSEC scanning works without extras."""
+    assert "dnspython" in _core_deps_section(), "dnspython not found in core dependencies"
+
+
+def test_lxml_in_core_deps():
+    """lxml must be in core deps so SAML scanning works without extras."""
+    assert "lxml" in _core_deps_section(), "lxml not found in core dependencies"
+
+
+def test_defusedxml_in_core_deps():
+    """defusedxml must be in core deps (required by SAML scanner for XXE safety)."""
+    assert "defusedxml" in _core_deps_section(), "defusedxml not found in core dependencies"
+
+
+def test_signxml_in_core_deps():
+    """signxml must be in core deps so SAML signature verification works without extras."""
+    assert "signxml" in _core_deps_section(), "signxml not found in core dependencies"
+
+
+def test_impacket_not_in_core_deps():
+    """impacket must remain in [identity] extras — pyOpenSSL transitive conflict risk."""
+    core = _core_deps_section()
+    assert "impacket" not in core, (
+        "impacket must stay in [identity] extras, not core — "
+        "it has a pyOpenSSL transitive conflict risk"
+    )
+
+
+def test_identity_scanners_importable_without_impacket():
+    """DNSSEC, SAML, and OIDC scanner modules must import cleanly (core deps cover them)."""
+    from quirk.scanner.dnssec_scanner import scan_dnssec_targets, DNSPYTHON_AVAILABLE
+    from quirk.scanner.saml_scanner import scan_saml_targets, LXML_AVAILABLE
+    assert DNSPYTHON_AVAILABLE, "dnspython[dnssec] should be available (now a core dep)"
+    assert LXML_AVAILABLE, "lxml should be available (now a core dep)"
