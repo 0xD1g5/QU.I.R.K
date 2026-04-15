@@ -24,6 +24,10 @@ dependencies = [
     "azure-keyvault-certificates>=4.10.0",
     "azure-keyvault-keys>=4.11.0",
     "azure-mgmt-network>=30.2.0",
+    "dnspython[dnssec]>=2.8.0",
+    "lxml>=6.0",
+    "defusedxml>=0.7.1",
+    "signxml>=4.4.0",
 ]
 
 [project.optional-dependencies]
@@ -35,10 +39,6 @@ dashboard = [
 ]
 identity = [
     "impacket>=0.13.0,<0.14",
-    "dnspython[dnssec]>=2.8.0",
-    "lxml>=6.0",
-    "defusedxml>=0.7.1",
-    "signxml>=4.4.0",
 ]
 
 [project.scripts]

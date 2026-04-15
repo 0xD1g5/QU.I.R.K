@@ -1,11 +1,19 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-10 (Phase 21: Identity Surface — added UAT-7-33–7-37, UAT-8-09–8-11)
+**Last Updated:** 2026-04-14 (BACK-74: TLS risk engine findings; BACK-76: identity deps promoted to core)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
-**Gate Status:** This document is the **release gate** for QU.I.R.K. v4.1. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
+**Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
 ---
+
+## Testing Session
+
+**Session Date:** __________  **Tester:** __________  **Version Under Test:** __________
+**Environment:** __________  **Notes:**
+
+---
+
 
 ## How to Use This Document
 
@@ -20,7 +28,12 @@ Expected: What success looks like
 Pass Criteria: Specific measurable condition(s)
 ```
 
-**Status tracking:** Mark each test as `PASS`, `FAIL`, or `SKIP` with date and tester initials.
+**Status tracking:** After each test, check the result:
+- `- [x] PASS` — Test passed all criteria
+- `- [x] FAIL` — Test failed; document details in **Notes:**
+- `- [x] SKIP` — Test skipped; document reason in **Notes:**
+
+Fill in **Date:** and **Tester:** fields with today's date and your initials.
 
 ---
 
@@ -62,6 +75,10 @@ Pass Criteria: Specific measurable condition(s)
 - Output includes `--config`, `--profile`, `--score-profile`, `--verbose` flags
 - No `ModuleNotFoundError` or `ImportError` in output
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-1-02: Version Flag
@@ -74,8 +91,12 @@ Pass Criteria: Specific measurable condition(s)
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `quirk 4.1.0` or `QU.I.R.K. v4.1.0`
+- Output matches format: `quirk 4.2.0` or `QU.I.R.K. v4.2.0`
 - Exit code 0
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -97,6 +118,10 @@ Pass Criteria: Specific measurable condition(s)
 - File contains commented examples with format explanation
 - No error output
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-1-04: `quirk init` — Config at Custom Path
@@ -114,11 +139,15 @@ Pass Criteria: Specific measurable condition(s)
 - File is valid YAML
 - Exit code 0
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-1-05: Dashboard Server Startup
 
-**Prerequisites:** QuRisk installed with dashboard extras, at least one completed scan in `output/quirk.db`.
+**Prerequisites:** QuRisk installed with dashboard extras, at least one completed scan. If you ran the interactive wizard (Series 2), set `export QUIRK_DB_PATH=quirk-output/quirk.db` before starting the server; config-file scans write to `./quirk.db` by default.
 
 **Steps:**
 1. Run: `quirk serve --no-open`
@@ -131,6 +160,10 @@ Pass Criteria: Specific measurable condition(s)
 - Health endpoint returns HTTP 200
 - Response body contains `{"status": "ok"}` or similar
 - Server startup log shows `Uvicorn running on http://127.0.0.1:8512`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -149,27 +182,39 @@ Pass Criteria: Specific measurable condition(s)
 - HTTP 200 on port 9000
 - Exit code 0 for curl
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
-### UAT-1-07: Identity Extras Group — Installation
+### UAT-1-07: Identity Extras Group — Core Deps and Kerberos Extras
 
-**Prerequisites:** Python 3.11+ virtual environment, quirk installed without extras.
+**Prerequisites:** Python 3.11+ virtual environment. `pip install -e "."` (no extras).
 
 **Steps:**
-1. Run: `pip install -e ".[identity]"`
-2. Verify impacket is installed: `python -c "import impacket; print(impacket.__version__)"`
-3. Verify dnspython is installed: `python -c "import dns.dnssec; print('dnssec ok')"`
-4. Verify lxml is installed: `python -c "import lxml.etree; print('lxml ok')"`
-5. Verify defusedxml is installed: `python -c "import defusedxml; print('defusedxml ok')"`
-6. Verify signxml is installed: `python -c "import signxml; print('signxml ok')"`
+1. Verify DNSSEC/SAML/OIDC deps are available in a plain install (now core deps):
+   - `python -c "import dns.dnssec; print('dnssec ok')"`
+   - `python -c "import lxml.etree; print('lxml ok')"`
+   - `python -c "import defusedxml; print('defusedxml ok')"`
+   - `python -c "import signxml; print('signxml ok')"`
+2. Verify DNSSEC and SAML scanners report available (not degraded):
+   - `python -c "from quirk.scanner.dnssec_scanner import DNSPYTHON_AVAILABLE; assert DNSPYTHON_AVAILABLE"`
+   - `python -c "from quirk.scanner.saml_scanner import LXML_AVAILABLE; assert LXML_AVAILABLE"`
+3. Install Kerberos extras: `pip install -e ".[identity]"`
+4. Verify impacket is now available: `python -c "import impacket; print(impacket.__version__)"`
 
-**Expected:** All identity scanner dependencies install without conflicts.
+**Expected:** DNSSEC/SAML/OIDC scanning works without any extras. Kerberos scanning requires `[identity]`.
 
 **Pass Criteria:**
-- `pip install -e ".[identity]"` exits code 0
-- All five imports succeed without error
-- No `ImportError` or dependency conflict in pip output
-- Core quirk functionality still works: `quirk --help` exits 0
+- Steps 1–2 all succeed on plain `pip install -e "."` with no extras (no `ImportError`)
+- `DNSPYTHON_AVAILABLE` and `LXML_AVAILABLE` are both `True`
+- `pip install -e ".[identity]"` exits code 0 and impacket imports cleanly
+- `quirk --help` exits 0 at each stage
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -190,6 +235,10 @@ Pass Criteria: Specific measurable condition(s)
 - `config.yaml` connectors block contains commented `# enable_dnssec: false`
 - Only ONE `connectors:` key at column 0 (no duplicate top-level key)
 - File is valid YAML: `python -c "import yaml; yaml.safe_load(open('/tmp/quirk-identity-test.yaml'))"`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -214,6 +263,10 @@ Pass Criteria: Specific measurable condition(s)
 - First prompt asks for target hosts/IPs
 - No crash before first prompt
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-2-02: Interactive Wizard — Single Target
@@ -234,6 +287,10 @@ Pass Criteria: Specific measurable condition(s)
 - `quirk-output/quirk.db` exists and is non-empty
 - Progress bar or status shown during scan
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-2-03: Interactive Wizard — Multiple Targets
@@ -249,6 +306,10 @@ Pass Criteria: Specific measurable condition(s)
 **Pass Criteria:**
 - Scan output includes results for both hosts
 - No error about invalid target format
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -270,6 +331,10 @@ Pass Criteria: Specific measurable condition(s)
 - No prompt containing "ADCS" or "windows_adcs" appears
 - No prompt asking to specify or customize TLS ports appears
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-2-05: Interactive Wizard — Targets-First Prompt Order
@@ -288,6 +353,10 @@ Pass Criteria: Specific measurable condition(s)
 - First interactive prompt is about targets/hosts/IPs
 - Org name / assessment metadata prompts appear after scanner and connector options
 - No metadata question appears before at least one target-related question
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -308,6 +377,10 @@ Pass Criteria: Specific measurable condition(s)
 - Entering `1`, `2`, or `3` selects the profile without error
 - Selected profile is reflected in scan behavior or output metadata
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-2-07: Interactive Wizard — Data Classification Menu
@@ -326,6 +399,10 @@ Pass Criteria: Specific measurable condition(s)
 - Numbered menu with classification tiers is displayed
 - Entering a number (not a text label) completes the selection
 - No free-text classification input required
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -347,6 +424,10 @@ Pass Criteria: Specific measurable condition(s)
 - Enabling AWS connector prints a message referencing `AWS_ACCESS_KEY_ID` or similar
 - Enabling Azure connector prints a message referencing `AZURE_CLIENT_ID` or similar
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-2-09: Interactive Wizard — Consulting TLS Port Set Applied
@@ -366,6 +447,10 @@ Pass Criteria: Specific measurable condition(s)
 - Port 443 and 8443 present
 - No prompt asking the user to specify ports appeared during the wizard
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ---
@@ -376,16 +461,22 @@ Pass Criteria: Specific measurable condition(s)
 
 ### UAT-3-01: Scan with Config File — Minimal
 
-**Prerequisites:** Lab running with core services. Config file created via `quirk init`.
+**Prerequisites:** Lab running with core services.
 
 **Steps:**
-1. Edit `config.yaml`:
+1. Generate a config: `quirk init`
+2. Edit `config.yaml` — update the `targets` and `scan` sections:
    ```yaml
    targets:
-     - host: 127.0.0.1
-       ports: [443, 8443, 8000, 2222]
+     include_ips:
+       - "127.0.0.1"
+     fqdns: []
+     cidrs: []
+     exclude_ips: []
+   scan:
+     ports_tls: [443, 8443, 8000, 2222]
    ```
-2. Run: `quirk --config config.yaml`
+3. Run: `quirk --config config.yaml`
 
 **Expected:** Scan runs using config file targets, bypassing interactive prompts.
 
@@ -394,6 +485,10 @@ Pass Criteria: Specific measurable condition(s)
 - Scan starts immediately
 - Findings generated for specified ports
 - Exit code 0
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -416,11 +511,15 @@ Pass Criteria: Specific measurable condition(s)
 - Quick scan `run-stats` shows `tls_enum_mode: off` or `fast`
 - Deep scan output has more cipher suite details in findings
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-3-03: Score Profile — Strict vs Balanced vs Lenient
 
-**Prerequisites:** Lab running, completed scan in `output/quirk.db`.
+**Prerequisites:** Lab running, completed scan. DB at `./quirk.db` (config-file mode) or `quirk-output/quirk.db` (interactive mode).
 
 **Steps:**
 1. Run: `quirk --config config.yaml --score-profile strict`
@@ -436,6 +535,10 @@ Pass Criteria: Specific measurable condition(s)
 - `score_strict <= score_balanced <= score_lenient`
 - All three `scorecard-*.md` files contain the score profile name
 - No error output for any profile
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -453,6 +556,10 @@ Pass Criteria: Specific measurable condition(s)
 - Each scanned endpoint produces a log line
 - TLS handshake results visible per port
 - Output is noticeably more verbose than without `--verbose`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -472,6 +579,10 @@ Pass Criteria: Specific measurable condition(s)
 - Bar disappears or completes cleanly at scan end
 - Summary table printed after scan completes
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-3-06: Safe Mode
@@ -488,6 +599,10 @@ Pass Criteria: Specific measurable condition(s)
 - Scan completes successfully
 - `run-stats-*.json` documents that safe mode was used or concurrency is reduced
 - No timeout errors that would appear in standard mode
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -506,6 +621,10 @@ Pass Criteria: Specific measurable condition(s)
 - Discovered ports include at least 443, 8443, 8000, 2222
 - `run-stats-*.json` shows `discovery_mode: nmap`
 - No crash if nmap is installed
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -526,6 +645,10 @@ Pass Criteria: Specific measurable condition(s)
 - `run-stats-*.json` for second run shows lower discovery time
 - Results are equivalent between runs
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-3-09: Quiet Mode — Banner Suppression
@@ -545,6 +668,10 @@ Pass Criteria: Specific measurable condition(s)
 - Scan completes normally with exit code 0
 - Output files generated as usual
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-3-10: Rate Limiting
@@ -563,6 +690,10 @@ Pass Criteria: Specific measurable condition(s)
 - Rate-limited `run-stats-*.json` shows `rate_limit: 2.0`
 - Fingerprinting phase in rate-limited run takes longer than unlimited
 - Same number of findings produced by both runs
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -614,6 +745,10 @@ All of these services show status `Up` or `running`:
 - `openssl` output shows `Protocol : TLSv1.3`
 - curl returns HTTP response (not connection refused)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-4-03: Legacy TLS Service (Port 8443)
@@ -628,6 +763,10 @@ All of these services show status `Up` or `running`:
 - TLS 1.2 handshake succeeds
 - Port responds to TLS connections
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-4-04: Expired Certificate (Port 9443)
@@ -641,6 +780,10 @@ All of these services show status `Up` or `running`:
 - `notAfter` date is before today's date (2026-03-31)
 - `verify error:num=10` (certificate has expired) visible, OR cert is within 30 days of expiry
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-4-05: Self-Signed Certificate (Port 10443)
@@ -653,6 +796,10 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - `verify error:num=18` (self-signed certificate) OR
 - `verify error:num=19` (self-signed certificate in chain)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -668,6 +815,10 @@ All of these services show status `Up` or `running`:
 - curl exits with non-zero code OR returns `400 No required SSL certificate was sent`
 - Port is reachable (not connection refused — service is up)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-4-07: HTTP on TLS-like Port (Port 8444)
@@ -681,6 +832,10 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - HTTP curl returns HTTP 200 response
 - HTTPS curl fails with SSL error
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -696,6 +851,10 @@ All of these services show status `Up` or `running`:
 - HTTP 200 or 301 returned
 - No TLS involved
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-4-09: SSH Alt Port (Port 2222)
@@ -709,6 +868,10 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - ssh-keyscan returns at least one host key line
 - Port is open and responding to SSH banner
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -724,21 +887,31 @@ All of these services show status `Up` or `running`:
 - Port 5555 is open
 - No HTTP or TLS protocol recognized
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-4-11: Full Core Lab Scan via QuRisk CLI
 
 **Steps:**
-1. Create `lab-core.yaml`:
+1. Run `quirk init --output lab-core.yaml`, then edit the `targets`, `scan`, and `output` sections:
    ```yaml
    targets:
-     - host: 127.0.0.1
-       ports: [443, 8443, 9443, 10443, 11443, 12443, 8444, 8000, 2222, 5555]
+     include_ips:
+       - "127.0.0.1"
+     fqdns: []
+     cidrs: []
+     exclude_ips: []
+   scan:
+     ports_tls: [443, 8443, 9443, 10443, 11443, 12443, 8444, 8000, 2222, 5555]
    output:
-     directory: output/lab-core
+     directory: "./lab-core"
+     db_path: "./lab-core/quirk.db"
    ```
 2. Run: `quirk --config lab-core.yaml --profile standard`
-3. Check `output/lab-core/findings-*.json`
+3. Check `./lab-core/findings-*.json`
 
 **Expected:** All 10 core services scanned and classified correctly.
 
@@ -753,6 +926,10 @@ All of these services show status `Up` or `running`:
 - Port 2222 → protocol: `SSH`
 - Port 5555 → protocol: `UNKNOWN`
 - Total findings count ≥ 5
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -775,6 +952,10 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - Services on ports 13443, 14443, 15443, 15001, 18000, 5556, 15432, 16379, 15672, 24443 show `Up`
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-02: Weak TLS Chain — Missing Intermediate (Port 13443)
@@ -788,6 +969,10 @@ All of these services show status `Up` or `running`:
 - `verify error:num=2` (unable to get issuer certificate) or similar chain error
 - Connection still establishes (TLS is present, chain is incomplete)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-03: Weak RSA-1024 Key (Port 14443)
@@ -800,6 +985,10 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - Output shows `Public-Key: (1024 bit)`
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-04: SHA-1 Signed Certificate (Port 15443)
@@ -811,6 +1000,10 @@ All of these services show status `Up` or `running`:
 
 **Pass Criteria:**
 - Output shows `sha1WithRSAEncryption` or similar SHA-1 algorithm
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -827,6 +1020,10 @@ All of these services show status `Up` or `running`:
 - `curl -s http://127.0.0.1:20001/.well-known/jwks.json` → returns JSON with keys
 - Ports 20001, 20002, 20003, 20004 all respond to curl
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-06: JWT — RS256 (Good) Service (Port 20001)
@@ -841,6 +1038,10 @@ All of these services show status `Up` or `running`:
 - `kty` is `RSA`
 - Key modulus length (base64url `n`) decodes to ≥ 2048 bits
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-07: JWT — HS256 (Symmetric Weak) Service (Port 20002)
@@ -853,6 +1054,10 @@ All of these services show status `Up` or `running`:
 **Pass Criteria:**
 - `alg` field shows `HS256`
 - OR JWT scanner detects symmetric key usage (no public key in JWKS)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -867,6 +1072,10 @@ All of these services show status `Up` or `running`:
 - RSA modulus length decodes to 1024 bits
 - QuRisk JWT scanner flags this as weak key size
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-09: JWT — Algorithm None (Port 20004)
@@ -880,16 +1089,25 @@ All of these services show status `Up` or `running`:
 - Response indicates `alg: none` usage or scanner classifies as `CRITICAL_NO_SIGNATURE`
 - QuRisk flags this as a critical finding
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-10: Full JWT Lab Scan
 
 **Steps:**
-1. Create `lab-jwt.yaml`:
+1. Run `quirk init --output lab-jwt.yaml`, then edit the `targets` and `scan` sections:
    ```yaml
    targets:
-     - host: 127.0.0.1
-       ports: [20001, 20002, 20003, 20004]
+     include_ips:
+       - "127.0.0.1"
+     fqdns: []
+     cidrs: []
+     exclude_ips: []
+   scan:
+     ports_tls: [20001, 20002, 20003, 20004]
    ```
 2. Run: `quirk --config lab-jwt.yaml`
 3. Check findings for JWT-specific results
@@ -901,6 +1119,10 @@ All of these services show status `Up` or `running`:
 - Findings include HS256 symmetric key finding
 - Findings include RSA-1024 weak key finding
 - Total JWT-related findings ≥ 3
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -918,19 +1140,28 @@ All of these services show status `Up` or `running`:
 - MAC: `hmac-md5` flagged as CRITICAL
 - Total critical+warning findings ≥ 3
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-12: Weak SSH Scan via QuRisk CLI
 
 **Steps:**
-1. Create `lab-ssh-weak.yaml`:
+1. Run `quirk init --output lab-ssh-weak.yaml`, then edit the `targets` and `scan` sections:
    ```yaml
    targets:
-     - host: 127.0.0.1
-       ports: [20022]
+     include_ips:
+       - "127.0.0.1"
+     fqdns: []
+     cidrs: []
+     exclude_ips: []
+   scan:
+     ports_tls: [20022]
    ```
 2. Run: `quirk --config lab-ssh-weak.yaml --verbose`
-3. Review `output/findings-*.json` for SSH findings
+3. Review `./quirk-output/findings-*.json` for SSH findings
 
 **Expected:** QuRisk captures and surfaces weak SSH algorithm findings.
 
@@ -939,6 +1170,10 @@ All of these services show status `Up` or `running`:
 - Finding for `ssh-dss` host key present
 - Finding for `hmac-md5` MAC present
 - All findings have quantum vulnerability assessment
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -955,6 +1190,10 @@ All of these services show status `Up` or `running`:
 - Port 15449 responds to HTTPS
 - TLS certificate has Keycloak-related subject
 - TLS version ≥ 1.2
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -981,6 +1220,10 @@ All of these services show status `Up` or `running`:
 - Finding for `pyopenssl 19.1.0` in `image-old-pycrypto`
 - Total container crypto findings ≥ 4
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-15: Source Code Scan (Profile: source)
@@ -1005,6 +1248,10 @@ All of these services show status `Up` or `running`:
 - Deprecated protocol (TLS 1.0 pinning) detected
 - Total source findings ≥ 4 across both repos
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-16: Cloud KMS Scan — LocalStack (Profile: storage)
@@ -1028,6 +1275,10 @@ All of these services show status `Up` or `running`:
 - `ECC_NIST_P256` key classified as quantum-vulnerable
 - `SYMMETRIC_DEFAULT` (AES-256) key classified
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-17: LDAPS Profile Scan via CLI (Port 636)
@@ -1037,7 +1288,7 @@ All of these services show status `Up` or `running`:
 **Steps:**
 1. Start LDAPS: `cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile ldaps" ./lab.sh up && sleep 10`
 2. Verify service: `openssl s_client -connect 127.0.0.1:636 2>&1 | grep "Protocol"`
-3. Create `lab-ldaps.yaml` with TLS ports including 636:
+3. Run `quirk init --output lab-ldaps.yaml`, then edit the `assessment`, `targets`, `scan`, and `output` sections:
    ```yaml
    assessment:
      name: "LDAPS Test"
@@ -1045,11 +1296,15 @@ All of these services show status `Up` or `running`:
      report_owner: "Lab"
      timezone: "UTC"
    targets:
-     ips: ["127.0.0.1"]
+     include_ips:
+       - "127.0.0.1"
+     fqdns: []
+     cidrs: []
+     exclude_ips: []
    scan:
      ports_tls: [636]
-     timeout: 10
-     max_workers: 5
+     timeout_seconds: 10
+     concurrency: 5
    output:
      directory: "./output-ldaps"
      db_path: "./output-ldaps/quirk.db"
@@ -1065,6 +1320,10 @@ All of these services show status `Up` or `running`:
 - Protocol support (TLS 1.2/1.3) documented in findings
 - CBOM includes algorithms from the LDAPS TLS negotiation
 - No scan errors for port 636
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1091,6 +1350,10 @@ All of these services show status `Up` or `running`:
 - `aes256` key detected and classified (quantum-vulnerable via Grover)
 - All three keys appear as components in the CBOM output
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-19: Storage Profile — PostgreSQL pgcrypto Reachability
@@ -1112,6 +1375,10 @@ All of these services show status `Up` or `running`:
 - `encrypted_demo` table exists with encrypted rows
 - `pgp_sym_encrypt` function was used (visible in table schema or seed script)
 - Service is a valid scan target for future database-level crypto detection (BACK-12)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1154,6 +1421,10 @@ All of these services show status `Up` or `running`:
   - `unsigned-zone` in service details (unsigned.chaos.local)
 - No test failures
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-5-21: SAML/OIDC Profile — Chaos Lab SimpleSAMLphp
@@ -1190,6 +1461,10 @@ All of these services show status `Up` or `running`:
   - At least one `CryptoEndpoint` returned
   - `cert_pubkey_size=1024` present in results (RSA-1024 weak cert detected)
 - No test failures
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1229,6 +1504,10 @@ All of these services show status `Up` or `running`:
   - All endpoints have `protocol="KERBEROS"` and `port=88`
   - `kerberos_scan_json` is valid JSON with `realm`, `etypes`, `ldap_status` keys
 - No test failures
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1276,6 +1555,10 @@ Each finding object contains:
 - Finding severity is MEDIUM or HIGH
 - `quantum_risk: quantum-vulnerable` for RSA key exchange
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-6-03: Certificate Expiry Detection
@@ -1286,13 +1569,17 @@ Each finding object contains:
 1. Check findings for port 9443: `cat output/findings-*.json | python3 -m json.tool | grep -A5 '"port": 9443'`
 2. Review certificate fields: expiry date, days remaining
 
-**Expected:** Finding indicates certificate is expired.
+**Expected:** Risk engine emits a HIGH finding for the expired certificate.
 
 **Pass Criteria:**
-- Finding severity is HIGH or CRITICAL
+- Finding title is `"TLS certificate expired"` with severity `HIGH`
 - `cert_not_after` is in the past relative to scan date
-- Finding type references `CERT_EXPIRED` or similar
-- Days remaining is negative
+- Finding recommendation includes the expiry date
+- No `"TLS certificate expiring within 30 days"` finding also present (expired wins)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1301,15 +1588,19 @@ Each finding object contains:
 **Prerequisites:** Lab core running (port 10443 = self-signed). Completed scan.
 
 **Steps:**
-1. Check findings for port 10443
-2. Look for self-signed indicator in cert data
+1. Check findings for port 10443: `cat output/findings-*.json | python3 -m json.tool | grep -A5 '"port": 10443'`
+2. Verify cert_issuer and cert_subject are equal in scan data
 
-**Expected:** Finding identifies self-signed certificate.
+**Expected:** Risk engine emits a MEDIUM finding for the self-signed certificate.
 
 **Pass Criteria:**
-- Finding type references `CERT_SELFSIGNED` or `SELF_SIGNED`
-- `cert_issuer` equals `cert_subject` in the scan data
-- Finding severity is MEDIUM or HIGH
+- Finding title is `"Self-signed or untrusted TLS certificate"` with severity `MEDIUM`
+- `cert_issuer` equals `cert_subject` in the underlying scan data
+- Finding recommendation references replacing with a CA-issued certificate
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1328,6 +1619,10 @@ Each finding object contains:
 - Condition includes `MTLS_REQUIRED` or `TLS_HANDSHAKE_FAILED`
 - Service correctly identified as TLS, not misclassified as HTTP
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-6-06: Plaintext HTTP Finding — Severity Check
@@ -1344,6 +1639,10 @@ Each finding object contains:
 - Finding type: `PLAINTEXT_HTTP` or `HTTP_EXPOSURE`
 - Severity: HIGH or CRITICAL
 - Finding includes remediation guidance
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1362,6 +1661,10 @@ Each finding object contains:
 - Finding type references `HTTP_ON_TLS_LIKE_PORT`
 - Severity: HIGH
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-6-08: Quantum Safety Classification — SSH Algorithms
@@ -1379,6 +1682,10 @@ Each finding object contains:
 - RSA host key classified as `quantum-vulnerable`
 - ECDSA algorithms classified as `quantum-vulnerable`
 - Each algorithm has NIST quantum level in the finding
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1399,6 +1706,10 @@ Each finding object contains:
 - `## Recommended Actions (Next 30 Days)` section
 - `## Recommended Actions (Next 60 Days)` section
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-6-10: Roadmap Output — Migration Phases
@@ -1417,6 +1728,10 @@ Each finding object contains:
 - `## LATER (90+ days)` section present with ≥ 1 item
 - Each item has `Why:` evidence description
 - Each item has an `Owner:` placeholder
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1438,6 +1753,10 @@ Each finding object contains:
   - At least one algorithm component (e.g., AES-256-GCM, RSA)
 - CBOM has a `serialNumber` BOM-ref
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-6-12: CBOM XML Validity
@@ -1452,6 +1771,10 @@ Each finding object contains:
 **Pass Criteria:**
 - No XML parse error
 - Root element is CycloneDX namespace element
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1471,6 +1794,53 @@ Each finding object contains:
 - `roadmap` contains NOW/NEXT/LATER items
 - `evidence` contains finding counts
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-6-14: Risk Engine — Legacy Cipher Suite Finding
+
+**Prerequisites:** Lab core running (port 8443 = legacy TLS). Completed scan with `--profile deep` (sslyze required for `tls_legacy_suites_present` detection).
+
+**Steps:**
+1. Run scan with deep profile: `quirk --config lab-core.yaml --profile deep`
+2. Check findings for port 8443: `cat output/findings-*.json | python3 -m json.tool | grep -A8 '"port": 8443'`
+
+**Expected:** Risk engine emits a LOW finding for legacy cipher suites in addition to the legacy TLS version finding.
+
+**Pass Criteria:**
+- Finding title `"Legacy TLS cipher suites accepted"` present with severity `LOW`
+- Finding recommendation references AEAD suites and forward secrecy
+- Finding is distinct from (and may co-exist with) `"Legacy TLS versions allowed (TLS 1.0/1.1)"`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-6-15: Risk Engine — Quantum-Vulnerable RSA Key Finding
+
+**Prerequisites:** Lab phaseA running (port 14443 = RSA-1024 key). Completed scan.
+
+**Steps:**
+1. Start phaseA: `docker compose --profile phaseA up -d && sleep 10`
+2. Run scan covering port 14443
+3. Check findings: `cat output/findings-*.json | python3 -m json.tool | grep -A8 '"port": 14443'`
+
+**Expected:** Risk engine emits a HIGH finding for the undersized RSA key (classical minimum violation + quantum vulnerability).
+
+**Pass Criteria:**
+- Finding title `"TLS certificate uses undersized RSA key"` with severity `HIGH`
+- Finding recommendation references RSA-1024, the 2048-bit classical minimum, and PQC migration
+- No separate `"TLS certificate uses quantum-vulnerable RSA key"` (MEDIUM) also present — undersized finding subsumes it
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ---
@@ -1478,7 +1848,7 @@ Each finding object contains:
 # Series 7: Web Dashboard — UI Testing
 
 **Prerequisites for all Series 7 tests:**
-1. Completed scan producing findings in `output/quirk.db`
+1. Completed scan producing findings in `./quirk.db` (or `quirk-output/quirk.db` if using interactive mode)
 2. Dashboard running: `quirk serve --no-open`
 3. Open browser to `http://127.0.0.1:8512`
 
@@ -1498,6 +1868,10 @@ Each finding object contains:
 - No JavaScript console errors (check DevTools)
 - No blank white screen
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-02: Dashboard — Favicon
@@ -1511,6 +1885,10 @@ Each finding object contains:
 **Pass Criteria:**
 - Favicon appears in browser tab (not browser default icon)
 - Page title is `QU.I.R.K.` or similar branded title
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1528,6 +1906,10 @@ Each finding object contains:
 - Score color-coded (green = good, red = poor)
 - Confidence badge present with value
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-04: Executive Page — Severity Chart
@@ -1541,6 +1923,10 @@ Each finding object contains:
 - Chart renders with at least 2 severity levels
 - Severity counts match findings in `output/findings-*.json`
 - Chart is interactive (hover shows count)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1556,6 +1942,10 @@ Each finding object contains:
 - Each card shows the subscore value
 - Each card has a brief description
 - Cards total ≤ 100
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1573,6 +1963,10 @@ Each finding object contains:
 - Row count matches `output/findings-*.json` count
 - Severity badges color-coded correctly
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-07: Findings Page — Sorting
@@ -1589,6 +1983,10 @@ Each finding object contains:
 - Second click: sorted descending (CRITICAL → INFO)
 - Sort indicator (arrow) visible on column header
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-08: Findings Page — Filtering
@@ -1604,6 +2002,10 @@ Each finding object contains:
 - Only rows with CRITICAL severity shown
 - Row count decreases when filter applied
 - Clearing filter restores all rows
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1622,6 +2024,10 @@ Each finding object contains:
 - Quantum risk assessment visible
 - Panel closes when clicking outside or X button
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-10: Certificates Page — Inventory Table
@@ -1636,6 +2042,10 @@ Each finding object contains:
 - Columns: Subject, Issuer, Expiry, Algorithm, Quantum Safety
 - Expired certificates shown with visual indicator (red date)
 - Self-signed certs flagged
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1653,6 +2063,10 @@ Each finding object contains:
 - Badge colors differentiate safety levels
 - Badge tooltip or description available
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-12: Certificates Page — Expiry Sorting
@@ -1667,6 +2081,10 @@ Each finding object contains:
 - Expired cert (port 9443) appears in the correct sort position
 - Near-expiry certs show days remaining
 - Date format is human-readable
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1683,6 +2101,10 @@ Each finding object contains:
 - Quantum safety badge per algorithm
 - Primitive type visible (e.g., KEY_AGREEMENT, ASYMMETRIC, SYMMETRIC)
 - NIST PQC level displayed where available
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1702,6 +2124,10 @@ Each finding object contains:
 - Clicking a node shows details panel or tooltip
 - At least 3 connected nodes visible
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-15: Roadmap Page — DAG Visualization
@@ -1718,6 +2144,10 @@ Each finding object contains:
 - Clicking a node shows detail panel with `Why:` text and owner placeholder
 - Dependencies shown as directed edges
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-16: Roadmap Page — Node Detail Panel
@@ -1733,6 +2163,10 @@ Each finding object contains:
 - `Why:` evidence text visible
 - Owner placeholder shown
 - Dependency list shown (if any)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1753,6 +2187,10 @@ Each finding object contains:
 - PDF is A4 format
 - No error toast or error message
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-18: PDF Export — API Endpoint Direct Test
@@ -1767,6 +2205,10 @@ Each finding object contains:
 - `file` command reports `PDF document`
 - File size > 50KB (not empty or truncated)
 - HTTP 200 from the API endpoint
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1783,6 +2225,10 @@ Each finding object contains:
 - `score` is numeric
 - Response time < 3 seconds
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-20: Dashboard — SPA Routing
@@ -1797,6 +2243,10 @@ Each finding object contains:
 - Page renders correctly (not 404)
 - Same content as navigating via sidebar
 - URL stays at `/findings`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1814,6 +2264,10 @@ Each finding object contains:
 - No hardcoded `#hex` colors in inline styles on major components
 - Electric-blue (`#00D8FF` or design system equivalent) used for accents
 - Dark background palette consistent across all pages
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1837,6 +2291,10 @@ Each finding object contains:
 - `localStorage` key `quirk-ui-theme` stores `"light"` or `"dark"`
 - Theme persists after full page reload
 - Both themes are visually coherent (no invisible text, unreadable badges, or broken contrast)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1862,6 +2320,10 @@ Each finding object contains:
 - Tooltips appear on hover in collapsed state
 - Transition is smooth (no layout jumps or flicker)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-24: Findings Page — Pagination
@@ -1886,6 +2348,10 @@ Each finding object contains:
 - Row count indicator shows "Showing X–Y of Z findings"
 - Applying a filter respects pagination (re-paginates filtered results)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-25: CBOM Page — Algorithm Search
@@ -1905,6 +2371,10 @@ Each finding object contains:
 - Filter is case-insensitive (`aes` matches `AES-256-GCM`)
 - Clearing search restores full table
 - No results shows empty state (not a crash)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1926,6 +2396,10 @@ Each finding object contains:
 - Clearing filter restores all rows
 - Filter and search combine correctly (both applied simultaneously)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-27: CBOM Graph — Node Interaction
@@ -1945,6 +2419,10 @@ Each finding object contains:
 - Source system node click shows: host:port or file path, connected algorithms
 - Panel updates when clicking different nodes
 - Node colors match quantum-safety: green (Safe), amber (At Risk), red (Vulnerable)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -1967,6 +2445,10 @@ Each finding object contains:
 - Click-drag on background pans the view
 - No nodes disappear off-screen permanently
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-29: Roadmap — Node Drag
@@ -1987,6 +2469,10 @@ Each finding object contains:
 - Other nodes not affected by the drag
 - Layout does not reset on node release
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-30: Print View
@@ -2005,6 +2491,10 @@ Each finding object contains:
 - Content includes: score summary, findings, certificates, CBOM reference
 - Background colors and borders render (print background styling enabled)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-31: Dashboard Page Title and Branding
@@ -2022,6 +2512,10 @@ Each finding object contains:
 - Sidebar displays bold monospace electric-blue QU.I.R.K. wordmark
 - Favicon shows electric-blue "Q" (not browser default icon)
 - No JS console errors on page load
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2048,6 +2542,10 @@ Each finding object contains:
 - API requests all return 200 (check Network tab)
 - `/identity` page loads without errors even when no identity scan data is present
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ### UAT-7-33: Identity Page — Navigation and Load
 
 > Added Phase 21 (2026-04-10): Identity Surface feature — new `/identity` dashboard page.
@@ -2055,7 +2553,7 @@ Each finding object contains:
 **Prerequisites:** Dashboard running (`quirk serve` or `python run_scan.py serve`).
 
 **Steps:**
-1. Start dashboard and navigate to `http://localhost:8765`
+1. Start dashboard and navigate to `http://127.0.0.1:8512`
 2. Look for "Identity" item in the sidebar (between Findings and Certificates)
 3. Click the Identity sidebar item
 4. Observe page load at `/identity`
@@ -2069,6 +2567,10 @@ Each finding object contains:
 - Page title or heading reads "Identity Protocols"
 - No 404 or blank screen
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-34: Identity Page — Protocol Summary Cards (No Scan Data)
@@ -2078,7 +2580,7 @@ Each finding object contains:
 **Prerequisites:** Dashboard running. No scan required (tests empty state).
 
 **Steps:**
-1. Navigate to `http://localhost:8765/identity`
+1. Navigate to `http://127.0.0.1:8512/identity`
 2. Observe the three protocol summary cards at the top of the page
 3. Note the status badge on each card
 
@@ -2090,6 +2592,10 @@ Each finding object contains:
 - No JavaScript errors in console
 - Cards do not crash when `identity_findings` array is empty or absent from API response
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-35: Identity Page — Protocol Summary Cards (With Scan Data)
@@ -2100,7 +2606,7 @@ Each finding object contains:
 
 **Steps:**
 1. Run: `python run_scan.py --config labs/quirk-chaos.yaml` (or equivalent full lab scan)
-2. Navigate to `http://localhost:8765/identity`
+2. Navigate to `http://127.0.0.1:8512/identity`
 3. Observe the three protocol summary cards
 4. Check each card's status badge and finding count
 5. Click a finding row in the findings table below the cards
@@ -2114,6 +2620,10 @@ Each finding object contains:
 - Findings table below cards lists identity findings with Severity, Protocol, Host, Algorithm columns
 - Clicking a row opens a slide-out detail Sheet showing finding description and recommendation
 - Table shows "No identity protocol findings" empty state if API returns no identity data
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2138,6 +2648,10 @@ Each finding object contains:
 - Identity findings also appear in the main `findings` array (deduplication optional)
 - No `500` error on the endpoint when identity data is absent
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-7-37: Findings Page — Protocol Filter
@@ -2147,7 +2661,7 @@ Each finding object contains:
 **Prerequisites:** Full lab scan completed (multi-protocol findings present).
 
 **Steps:**
-1. Navigate to `http://localhost:8765/findings`
+1. Navigate to `http://127.0.0.1:8512/findings`
 2. Locate the Protocol dropdown filter (near the Severity filter)
 3. Note default selection ("All Protocols" or equivalent)
 4. Select "KERBEROS" from the dropdown
@@ -2165,6 +2679,10 @@ Each finding object contains:
 - Options include: ALL / TLS / SSH / HTTP / KERBEROS / SAML / DNSSEC
 - Filter combines with Severity filter (both applied simultaneously)
 - Selecting "All Protocols" restores full findings list
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2193,6 +2711,10 @@ Each finding object contains:
   - 35–54 → FAIR
   - 0–34 → POOR
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-8-02: Confidence Score — Low Coverage Scenario
@@ -2210,6 +2732,10 @@ Each finding object contains:
 - Confidence is lower than a full lab scan
 - If scan error rate > 50%, confidence < 60
 - Confidence score in output JSON
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2229,6 +2755,10 @@ Each finding object contains:
 - `score_scan2 < score_scan1`
 - Score difference ≥ 5 points (HTTP exposure is penalized up to 18 pts)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-8-04: Hygiene Subscore — Plaintext Ratio
@@ -2245,6 +2775,10 @@ Each finding object contains:
 - Hygiene subscore < 25 when ≥ 1 plaintext HTTP endpoint exists
 - Subscore decreases proportionally to number of HTTP endpoints
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-8-05: mTLS Bonus — Identity Trust Subscore
@@ -2259,6 +2793,10 @@ Each finding object contains:
 **Pass Criteria:**
 - Identity Trust subscore is higher when mTLS endpoint is scanned
 - mTLS bonus noted in scorecard or intelligence JSON
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2275,6 +2813,10 @@ Each finding object contains:
 - NOW items reference specific finding types (e.g., "2 plaintext HTTP endpoints")
 - Why text references actual scan data (not generic placeholder)
 - Remediation steps are specific to findings
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2297,6 +2839,10 @@ Each finding object contains:
 - Running the same scan again with `--score-profile balanced` and refreshing the dashboard shows a *different* score
 - Dashboard score does not silently default to balanced when strict or lenient was used
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-8-08: validate.py — Clean Output Directory Validation
@@ -2315,6 +2861,10 @@ Each finding object contains:
 - `validate_run(Path('output'))` returns a `ValidationResult` without error
 - `quirk --help` output contains no `--no-require-delta` or `--require-delta` flags
 - Passing a second positional argument to `validate_run` raises `TypeError` (no dead parameter to silently absorb it)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ### UAT-8-09: Identity Scoring — Kerberos Weak Etype Penalty
 
@@ -2344,6 +2894,10 @@ Each finding object contains:
 - When Kerberos weak etypes are detected, score is penalized (lower than no-identity scan)
 - `SCORE_WEIGHTS` entry `identity_kerberos_weak_etype_ratio` present in scoring module
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-8-10: Identity Scoring — SAML Weak Signing Certificate Penalty
@@ -2372,6 +2926,10 @@ Each finding object contains:
 - `identity_saml_weak_signing_ratio` key present in evidence summary
 - Score is penalized when SAML weak signing certs are detected
 - `SCORE_WEIGHTS` entry `identity_saml_weak_signing_ratio` present in scoring module
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2403,6 +2961,10 @@ Each finding object contains:
 - `SCORE_WEIGHTS` entry `identity_dnssec_weak_algo_ratio` present in scoring module
 - Chaos lab DNSSEC zone with RSASHA1 produces `dnssec_weak_algo_count >= 1`
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ---
@@ -2432,6 +2994,10 @@ Each finding object contains:
 - `run-stats-{stamp}.json` ✓
 - `quirk.db` ✓
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-9-02: Executive Summary — Structure
@@ -2450,6 +3016,10 @@ Each finding object contains:
 - Contains recommended next steps
 - Does not contain raw JSON or technical jargon
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-9-03: Technical Findings — Per-Endpoint Detail
@@ -2466,6 +3036,10 @@ Each finding object contains:
 - Cipher suite details present for TLS findings
 - Certificate expiry dates present for cert findings
 - Algorithm quantum assessment present
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2486,11 +3060,15 @@ Each finding object contains:
 - `endpoint_count` matches actual scanned endpoints
 - `profile` field matches used profile
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-9-05: HTML Report Generation (Phase 7 Feature)
 
-**Prerequisites:** QU.I.R.K. 4.1.0 with HTML report feature. Completed scan.
+**Prerequisites:** QU.I.R.K. 4.2.0 with HTML report feature. Completed scan.
 
 **Steps:**
 1. Run scan: `quirk --config config.yaml`
@@ -2504,6 +3082,10 @@ Each finding object contains:
 - File opens in browser without JavaScript errors
 - Contains score, findings table, and certificate inventory
 - Fully self-contained (no external CDN dependencies)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2530,6 +3112,10 @@ Each finding object contains:
 - No broken images, missing fonts, or unstyled raw HTML elements
 - No horizontal scroll overflow
 - Print to PDF from browser produces clean output
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2561,6 +3147,10 @@ Each finding object contains:
 - Total component count ≥ 10 for a full lab scan
 - No duplicate components (same algorithm not listed twice)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-9-08: CBOM XML — Schema Validation
@@ -2588,6 +3178,10 @@ Each finding object contains:
 - Each component has `<name>`, `<type>` attributes
 - File size > 1KB (not empty or stub)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ---
@@ -2601,12 +3195,18 @@ Each finding object contains:
 **Prerequisites:** Lab stopped (`docker compose down`).
 
 **Steps:**
-1. Create config with unreachable targets:
+1. Create `config.yaml` with unreachable targets:
    ```yaml
    targets:
-     - host: 127.0.0.1
-       ports: [443, 8443, 8000]
+     include_ips:
+       - "127.0.0.1"
+     fqdns: []
+     cidrs: []
+     exclude_ips: []
+   scan:
+     ports_tls: [443, 8443, 8000]
    ```
+   (Fill remaining required sections from `quirk init` output.)
 2. Run: `quirk --config config.yaml`
 
 **Expected:** Scan completes with all endpoints marked as errors; does not crash.
@@ -2616,6 +3216,10 @@ Each finding object contains:
 - All findings show `scan_error` set
 - Scorecard still generated (low confidence score)
 - No uncaught Python exception traceback
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2630,6 +3234,10 @@ Each finding object contains:
 - Error message names the missing file path
 - Exit code is non-zero
 - No Python traceback exposed to user
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2650,6 +3258,10 @@ Each finding object contains:
 - Line number of error indicated if possible
 - Exit code non-zero
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-10-04: Mixed Reachable/Unreachable Targets
@@ -2657,13 +3269,19 @@ Each finding object contains:
 **Prerequisites:** Lab running core services.
 
 **Steps:**
-1. Create config with mix of live and dead ports:
+1. Create `config.yaml` with mix of live and dead ports:
    ```yaml
    targets:
-     - host: 127.0.0.1
-       ports: [443, 9999, 8000, 1234]
+     include_ips:
+       - "127.0.0.1"
+     fqdns: []
+     cidrs: []
+     exclude_ips: []
+   scan:
+     ports_tls: [443, 9999, 8000, 1234]
    ```
-2. Run scan
+   (Fill remaining required sections from `quirk init` output.)
+2. Run scan: `quirk --config config.yaml`
 
 **Expected:** Reachable ports scanned normally; unreachable ports recorded as errors; scan completes.
 
@@ -2672,6 +3290,10 @@ Each finding object contains:
 - Port 9999 and 1234 show as CLOSED or scan_error
 - Scan does not hang or crash
 - Run stats reflect actual reachable vs. error count
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2691,6 +3313,10 @@ Each finding object contains:
 - No errors caused by rate limiting itself
 - `run-stats` shows longer duration
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-10-06: Concurrent Scan Safety — No Race Conditions
@@ -2707,7 +3333,11 @@ Each finding object contains:
 **Pass Criteria:**
 - Number of findings in JSON matches number of scanned endpoints (no duplicates)
 - No Python `RuntimeError` or threading errors in output
-- SQLite database is not corrupted: `sqlite3 output/quirk.db "PRAGMA integrity_check"`
+- SQLite database is not corrupted: `sqlite3 ./quirk.db "PRAGMA integrity_check"`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2718,7 +3348,7 @@ Each finding object contains:
 **Steps:**
 1. Run first scan
 2. Run second scan (same targets)
-3. Open database: `sqlite3 output/quirk.db "SELECT COUNT(*) FROM crypto_endpoints"`
+3. Open database: `sqlite3 ./quirk.db "SELECT COUNT(*) FROM crypto_endpoints"`
 
 **Expected:** Both scans are persisted with timestamps.
 
@@ -2727,14 +3357,18 @@ Each finding object contains:
 - Timestamps differ between runs
 - `scanned_at` field distinguishes runs
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-10-08: Dashboard — No Scan Data State
 
-**Prerequisites:** Empty or absent `output/quirk.db`.
+**Prerequisites:** Empty or absent `./quirk.db`.
 
 **Steps:**
-1. Move database: `mv output/quirk.db /tmp/`
+1. Move database: `mv ./quirk.db /tmp/`
 2. Start dashboard: `quirk serve --no-open`
 3. Navigate to `http://127.0.0.1:8512`
 
@@ -2744,6 +3378,10 @@ Each finding object contains:
 - Dashboard loads (not 500 error)
 - Empty state message displayed (e.g., "No scan data yet — run `quirk` to begin")
 - No JavaScript runtime errors in console
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2764,6 +3402,10 @@ Each finding object contains:
 - Warning logged indicating ssh-audit fallback
 - Restore: `sudo mv /tmp/ssh-audit-bak $(dirname $(which python))/ssh-audit`
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-10-10: sslyze Not Installed — Graceful Degradation
@@ -2781,6 +3423,34 @@ Each finding object contains:
 - Warning logged about sslyze unavailability
 - Basic TLS data (version, cert) still captured
 - `tls_enum_mode` reflected as `fast` or `off` in run-stats
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-10-11: Kerberos Scan Without impacket — Console Warning
+
+**Prerequisites:** quirk installed without `[identity]` extras (`pip install -e "."`). Config with `enable_kerberos: true` and a Kerberos target.
+
+**Steps:**
+1. Ensure impacket is NOT installed: `python -c "import impacket" 2>&1` (should error)
+2. Run a scan with a Kerberos target configured: `quirk --config kerberos-config.yaml`
+3. Capture stderr output
+
+**Expected:** Scan continues without crash; a visible console message tells the user how to install Kerberos support.
+
+**Pass Criteria:**
+- No unhandled exception or crash
+- Stderr contains `[QUIRK] Kerberos scanning requires the identity extras:`
+- Stderr contains `pip install quirk[identity]`
+- Non-Kerberos scan results (TLS, SSH, etc.) are still produced normally
+- DNSSEC and SAML scan (if configured) still run successfully — those deps are now core
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2812,6 +3482,10 @@ Each finding object contains:
 - PDF export succeeds
 - Score reflects lab environment (should be POOR or FAIR given all the intentional vulnerabilities)
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-11-02: Multi-Profile Lab Run — Progressive Discovery
@@ -2832,6 +3506,10 @@ Each finding object contains:
 - CBOM grows with each scan (more algorithms discovered)
 - Dashboard reflects latest scan on each page refresh
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ### UAT-11-03: CLI to Dashboard Handoff — Report Consistency
@@ -2848,6 +3526,10 @@ Each finding object contains:
 - Score in `scorecard-*.md` matches score in dashboard gauge
 - Finding count in `findings-*.json` matches dashboard findings table count
 - Certificate count matches across CLI and UI
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
@@ -2866,13 +3548,17 @@ Each finding object contains:
 - Score may improve slightly (one less critical finding)
 - Run stats show fewer scanned endpoints
 
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
 ---
 
 ---
 
 # Series 12: Release Gate — Sign-Off Checklist
 
-This checklist is the formal gating mechanism for QU.I.R.K. v4.0. **All categories must meet their minimum pass threshold** before any backlog or roadmap items may proceed. A category is blocked if any CRITICAL test within it fails.
+This checklist is the formal gating mechanism for QU.I.R.K. v4.2. **All categories must meet their minimum pass threshold** before any backlog or roadmap items may proceed. A category is blocked if any CRITICAL test within it fails.
 
 ## Gate Rules
 
@@ -2886,18 +3572,18 @@ This checklist is the formal gating mechanism for QU.I.R.K. v4.0. **All categori
 
 | Series | Category | Total Tests | Pass | Fail | Skip | Pass Rate | Gate Met? | Tester |
 |--------|----------|-------------|------|------|------|-----------|-----------|--------|
-| 1 | Installation & Setup | 6 | | | | | ☐ | |
-| 2 | CLI — Interactive Mode | 4 | | | | | ☐ | |
+| 1 | Installation & Setup | 8 | | | | | ☐ | |
+| 2 | CLI — Interactive Mode | 9 | | | | | ☐ | |
 | 3 | CLI — Config-File Mode | 10 | | | | | ☐ | |
 | 4 | Lab — Core Services | 11 | | | | | ☐ | |
-| 5 | Lab — Extended Profiles | 19 | | | | | ☐ | |
-| 6 | Cryptographic Findings | 13 | | | | | ☐ | |
-| 7 | Web Dashboard UI | 32 | | | | | ☐ | |
-| 8 | Scoring & Intelligence | 6 | | | | | ☐ | |
+| 5 | Lab — Extended Profiles | 22 | | | | | ☐ | |
+| 6 | Cryptographic Findings | 15 | | | | | ☐ | |
+| 7 | Web Dashboard UI | 37 | | | | | ☐ | |
+| 8 | Scoring & Intelligence | 11 | | | | | ☐ | |
 | 9 | Report Generation | 8 | | | | | ☐ | |
-| 10 | Edge Cases & Errors | 10 | | | | | ☐ | |
+| 10 | Edge Cases & Errors | 11 | | | | | ☐ | |
 | 11 | End-to-End Workflow | 4 | | | | | ☐ | |
-| **TOTAL** | | **123** | | | | | | |
+| **TOTAL** | | **146** | | | | | | |
 
 ## Critical Tests (Must Pass — No Exceptions)
 
