@@ -339,6 +339,8 @@ def main():
         "tls_candidates": len(tls_targets),
         "ssh_candidates": len(ssh_targets),
         "inventory_other": len(inventory_endpoints),
+        "hosts_scanned": sorted({h for h, _ in targets}),
+        "ports_scanned": sorted({p for _, p in targets}),
     }
 
     logger.stamp(f"TLS candidates: {len(tls_targets)} | SSH candidates: {len(ssh_targets)} | Other inventory: {len(inventory_endpoints)}")
