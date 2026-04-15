@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-14 (BACK-74: TLS risk engine findings; BACK-76: identity deps promoted to core)
+**Last Updated:** 2026-04-15 (Phase 22: v4.2 gap closure — DNSSEC-04 NameError fix, SAML-05/KERB-04 CBOM isolation)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -2960,6 +2960,113 @@ Each finding object contains:
 - Score is penalized when weak DNSSEC algorithms are detected
 - `SCORE_WEIGHTS` entry `identity_dnssec_weak_algo_ratio` present in scoring module
 - Chaos lab DNSSEC zone with RSASHA1 produces `dnssec_weak_algo_count >= 1`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-8-12: Identity Scan — No NameError on Invocation (DNSSEC-04)
+
+> Added Phase 22 (2026-04-15): Confirmed `main_logger` NameError fixed in run_scan.py identity scanner blocks.
+
+**Prerequisites:** Chaos lab running with identity profile configured (`enable_dnssec: true`, `enable_saml: true`, `enable_kerberos: true` in config). `quirk[identity]` extras installed.
+
+**Steps:**
+1. Run a full scan with identity scanners enabled:
+   ```bash
+   python run_scan.py --config config.yaml
+   ```
+2. Confirm no `NameError: name 'main_logger' is not defined` in scan output or logs
+3. Confirm DNSSEC, SAML, and Kerberos scanner blocks each produce output in `findings-*.json`
+
+**Expected:** Identity scanners complete without crashing. All three scanner blocks log their results.
+
+**Pass Criteria:**
+- No `NameError` exception in scan output
+- DNSSEC findings present in `findings-*.json` (or `dnssec_scan_json` column in DB)
+- SAML findings present in `findings-*.json` (or `saml_scan_json` column in DB)
+- Kerberos findings present in `findings-*.json` (or `kerberos_scan_json` column in DB)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-8-13: CBOM — SAML Endpoints Produce Only Algorithm Components (SAML-05)
+
+> Added Phase 22 (2026-04-15): Confirmed CBOM builder Pass 2/Pass 3 skip lists include SAML.
+
+**Prerequisites:** Completed scan with SAML scanner enabled and at least one SAML IdP reachable.
+
+**Steps:**
+1. Run full scan with SAML profile enabled
+2. Inspect the generated CBOM JSON:
+   ```bash
+   python3 -c "
+   import json, glob
+   cbom = json.load(open(sorted(glob.glob('output/cbom-*.json'))[-1]))
+   comps = cbom.get('components', [])
+   saml_types = [(c.get('name',''), c.get('type','')) for c in comps
+                 if 'saml' in c.get('name','').lower() or 'saml' in str(c.get('tags','')).lower()]
+   print('SAML-tagged components:')
+   for name, t in saml_types:
+       print(f'  type={t} name={name}')
+   protocol_comps = [c for c in comps if c.get('type') == 'protocol']
+   cert_comps = [c for c in comps if c.get('type') == 'certificate']
+   print(f'Total protocol components: {len(protocol_comps)}')
+   print(f'Total certificate components: {len(cert_comps)}')
+   "
+   ```
+
+**Expected:** No `crypto/protocol/tls/` or `crypto/certificate/` components sourced from SAML endpoints. SAML appears only as algorithm components in the CBOM.
+
+**Pass Criteria:**
+- Zero CBOM components of type `protocol` with SAML origin
+- Zero CBOM components of type `certificate` with SAML origin
+- SAML weak signing algorithm (SHA-1 or RSA < 2048) appears as an `algorithm` component if detected
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-8-14: CBOM — Kerberos Endpoints Produce Only Algorithm Components (KERB-04)
+
+> Added Phase 22 (2026-04-15): Confirmed CBOM builder Pass 2/Pass 3 skip lists include KERBEROS.
+
+**Prerequisites:** Completed scan with Kerberos scanner enabled and at least one KDC reachable.
+
+**Steps:**
+1. Run full scan with Kerberos profile enabled
+2. Inspect the generated CBOM JSON:
+   ```bash
+   python3 -c "
+   import json, glob
+   cbom = json.load(open(sorted(glob.glob('output/cbom-*.json'))[-1]))
+   comps = cbom.get('components', [])
+   kerb_types = [(c.get('name',''), c.get('type','')) for c in comps
+                 if 'kerberos' in c.get('name','').lower() or 'kerb' in str(c.get('tags','')).lower()]
+   print('Kerberos-tagged components:')
+   for name, t in kerb_types:
+       print(f'  type={t} name={name}')
+   protocol_comps = [c for c in comps if c.get('type') == 'protocol']
+   cert_comps = [c for c in comps if c.get('type') == 'certificate']
+   print(f'Total protocol components: {len(protocol_comps)}')
+   print(f'Total certificate components: {len(cert_comps)}')
+   "
+   ```
+
+**Expected:** No `crypto/protocol/tls/` or `crypto/certificate/` components sourced from Kerberos endpoints. Kerberos appears only as algorithm components in the CBOM.
+
+**Pass Criteria:**
+- Zero CBOM components of type `protocol` with Kerberos origin
+- Zero CBOM components of type `certificate` with Kerberos origin
+- RC4/DES etype names appear as `algorithm` components if detected
+- `kerberos-unreachable` synthetic findings do NOT appear as algorithm components
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
