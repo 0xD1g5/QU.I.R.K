@@ -386,7 +386,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # Pass 2 — Certificate components                                      #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        if ep.protocol in ("SSH", "CONTAINER", "SOURCE"):
+        if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML"):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -465,7 +465,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             )
             protocol_components.append(proto_component)
 
-        elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE", "DNSSEC"):
+        elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE", "DNSSEC", "SAML", "KERBEROS"):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             continue

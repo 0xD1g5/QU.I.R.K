@@ -464,10 +464,10 @@ def main():
             dnssec_endpoints = scan_dnssec_targets(
                 targets=cfg.connectors.dnssec_targets,
                 timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
-                logger=main_logger,
+                logger=logger,
             )
-            main_logger.info("DNSSEC scan: %d endpoints from %d targets",
-                             len(dnssec_endpoints), len(cfg.connectors.dnssec_targets))
+            logger.info("DNSSEC scan: %d endpoints from %d targets",
+                        len(dnssec_endpoints), len(cfg.connectors.dnssec_targets))
 
     # ── SAML/OIDC scanning ────────────────────────────────────
     saml_endpoints = []
@@ -477,10 +477,10 @@ def main():
             saml_endpoints = scan_saml_targets(
                 targets=cfg.connectors.saml_targets,
                 timeout=getattr(cfg.connectors, "saml_timeout", 10),
-                logger=main_logger,
+                logger=logger,
             )
-            main_logger.info("SAML scan: %d endpoints from %d targets",
-                             len(saml_endpoints), len(cfg.connectors.saml_targets))
+            logger.info("SAML scan: %d endpoints from %d targets",
+                        len(saml_endpoints), len(cfg.connectors.saml_targets))
 
     # ── Kerberos scanning ────────────────────────────────────
     kerberos_endpoints = []
@@ -490,10 +490,10 @@ def main():
             kerberos_endpoints = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
                 timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
-                logger=main_logger,
+                logger=logger,
             )
-            main_logger.info("Kerberos scan: %d endpoints from %d targets",
-                             len(kerberos_endpoints), len(cfg.connectors.kerberos_targets))
+            logger.info("Kerberos scan: %d endpoints from %d targets",
+                        len(kerberos_endpoints), len(cfg.connectors.kerberos_targets))
 
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
