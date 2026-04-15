@@ -69,6 +69,34 @@ def _ssh_endpoint(**overrides):
     return CryptoEndpoint(**defaults)
 
 
+def _saml_endpoint(**overrides):
+    """Create a SAML CryptoEndpoint with sensible defaults."""
+    defaults = dict(
+        host="idp.example.com", port=443, protocol="SAML",
+        tls_version=None, cipher_suite=None,
+        cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+        cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        cert_not_before=None, cert_not_after=None,
+        tls_capabilities_json=None, ssh_audit_json=None,
+    )
+    defaults.update(overrides)
+    return CryptoEndpoint(**defaults)
+
+
+def _kerberos_endpoint(**overrides):
+    """Create a Kerberos CryptoEndpoint with sensible defaults."""
+    defaults = dict(
+        host="dc.example.com", port=88, protocol="KERBEROS",
+        tls_version=None, cipher_suite=None,
+        cert_pubkey_alg="rc4-hmac", cert_pubkey_size=None,
+        cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        cert_not_before=None, cert_not_after=None,
+        tls_capabilities_json=None, ssh_audit_json=None,
+    )
+    defaults.update(overrides)
+    return CryptoEndpoint(**defaults)
+
+
 def _component_names(bom: Bom) -> list[str]:
     """Return sorted list of component names from a Bom."""
     return sorted(c.name for c in bom.components)
@@ -384,3 +412,67 @@ def test_azure_endpoint_no_tls_protocol():
     bom = build_cbom([ep])
     proto_names = [c.name for c in bom.components if "protocol:tls" in str(c.bom_ref)]
     assert len(proto_names) == 0
+
+
+# ---------------------------------------------------------------------------
+# SAML protocol tests (Phase 22 gap closure — SAML-05)
+# ---------------------------------------------------------------------------
+
+def test_saml_endpoint_algorithm_registered():
+    """SAML endpoint registers algorithm component from cert_pubkey_alg."""
+    ep = _saml_endpoint(cert_pubkey_alg="RSA", cert_pubkey_size=2048)
+    bom = build_cbom([ep])
+    algo_refs = [c.bom_ref for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert any("rsa" in str(ref) for ref in algo_refs), f"RSA algorithm not found in {algo_refs}"
+
+
+def test_saml_endpoint_no_tls_protocol():
+    """SAML endpoint must NOT produce a TLS protocol component."""
+    ep = _saml_endpoint()
+    bom = build_cbom([ep])
+    tls_protos = [c for c in bom.components if str(c.bom_ref).startswith("crypto/protocol/tls/")]
+    assert tls_protos == [], f"Spurious TLS protocol components for SAML: {[str(c.bom_ref) for c in tls_protos]}"
+
+
+def test_saml_endpoint_no_certificate():
+    """SAML SHA1 finding must NOT produce a certificate component (no cert metadata)."""
+    ep = _saml_endpoint(cert_pubkey_alg="SHA1", cert_pubkey_size=None)
+    bom = build_cbom([ep])
+    cert_comps = [c for c in bom.components if str(c.bom_ref).startswith("crypto/certificate/")]
+    assert cert_comps == [], f"Spurious certificate components for SAML: {[str(c.bom_ref) for c in cert_comps]}"
+
+
+# ---------------------------------------------------------------------------
+# Kerberos protocol tests (Phase 22 gap closure — KERB-04)
+# ---------------------------------------------------------------------------
+
+def test_kerberos_endpoint_algorithm_registered():
+    """Kerberos endpoint registers algorithm component from etype name."""
+    ep = _kerberos_endpoint(cert_pubkey_alg="rc4-hmac")
+    bom = build_cbom([ep])
+    algo_refs = [str(c.bom_ref) for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert any("rc4-hmac" in ref for ref in algo_refs), f"rc4-hmac algorithm not found in {algo_refs}"
+
+
+def test_kerberos_endpoint_no_tls_protocol():
+    """Kerberos endpoint must NOT produce a TLS protocol component."""
+    ep = _kerberos_endpoint()
+    bom = build_cbom([ep])
+    tls_protos = [c for c in bom.components if str(c.bom_ref).startswith("crypto/protocol/tls/")]
+    assert tls_protos == [], f"Spurious TLS protocol components for Kerberos: {[str(c.bom_ref) for c in tls_protos]}"
+
+
+def test_kerberos_endpoint_no_certificate():
+    """Kerberos etype endpoint must NOT produce a certificate component."""
+    ep = _kerberos_endpoint(cert_pubkey_alg="rc4-hmac")
+    bom = build_cbom([ep])
+    cert_comps = [c for c in bom.components if str(c.bom_ref).startswith("crypto/certificate/")]
+    assert cert_comps == [], f"Spurious certificate components for Kerberos: {[str(c.bom_ref) for c in cert_comps]}"
+
+
+def test_kerberos_unreachable_excluded():
+    """Kerberos 'kerberos-unreachable' synthetic finding must NOT register an algorithm."""
+    ep = _kerberos_endpoint(cert_pubkey_alg="kerberos-unreachable")
+    bom = build_cbom([ep])
+    algo_refs = [str(c.bom_ref) for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert algo_refs == [], f"kerberos-unreachable should not register algorithm: {algo_refs}"
