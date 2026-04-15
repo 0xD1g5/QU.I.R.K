@@ -138,7 +138,7 @@ Plans:
   4. Full test suite passes: 348+ tests, 0 failures
 **Plans**: 1 plan
 Plans:
-- [ ] 22-01-PLAN.md — Fix main_logger → logger in run_scan.py (6 occurrences) + add SAML/KERBEROS to builder.py Pass 3 skip list
+- [ ] 22-01-PLAN.md — Fix main_logger -> logger in run_scan.py (6 occurrences) + add SAML/KERBEROS to builder.py Pass 2+3 skip lists + 7 new CBOM tests
 
 ## Phase Details
 
