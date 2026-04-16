@@ -1,26 +1,51 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-15T02:59:36.239Z",
-  "phase": "22",
-  "phase_name": "v4.2 Identity Crypto Gap Closure",
-  "phase_dir": ".planning/phases/22-v42-gap-closure",
-  "plan": 1,
-  "task": 0,
-  "total_tasks": 2,
+  "timestamp": "2026-04-16T02:44:28.613Z",
+  "phase": null,
+  "phase_name": "UAT / Chaos Lab Bug Fixes",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
   "status": "paused",
-  "completed_tasks": [],
+  "completed_tasks": [
+    {"id": 1, "name": "Fix docker-compose.yml: whoami cross-profile depends_on", "status": "done"},
+    {"id": 2, "name": "Fix interactive.py: add phaseA lab ports to CONSULTING_TLS_PORTS", "status": "done"},
+    {"id": 3, "name": "Fix registry/seed.sh: use localhost:20005 for docker push (not registry:5000)", "status": "done"},
+    {"id": 4, "name": "Fix image-old-pycrypto/Dockerfile: add gcc/libffi-dev + setuptools + --no-build-isolation", "status": "done"},
+    {"id": 5, "name": "Fix image-mixed/Dockerfile: add gcc/libffi-dev + python3 -m pip + --no-build-isolation", "status": "in_progress", "progress": "Edit applied but not yet confirmed working — seed still failing"}
+  ],
   "remaining_tasks": [
-    {"id": 1, "name": "Fix main_logger NameError in run_scan.py + add SAML/KERBEROS to builder.py skip lists", "status": "not_started"},
-    {"id": 2, "name": "Add CBOM builder tests for SAML and Kerberos identity protocol endpoints", "status": "not_started"}
+    {"id": 6, "name": "Confirm image-mixed builds and all 3 images appear in registry catalog", "status": "not_started"},
+    {"id": 7, "name": "Run quirk --config lab-registry.yaml and verify >=4 container crypto findings", "status": "not_started"},
+    {"id": 8, "name": "Backlog: make enable_aws/enable_azure/include_sni optional in dataclasses (default=False/True)", "status": "not_started"}
   ],
-  "blockers": [],
-  "human_actions_pending": [],
+  "blockers": [
+    {
+      "description": "image-mixed Dockerfile still failing to build — ubuntu:18.04 python3 pip issues with old cryptography package",
+      "type": "technical",
+      "workaround": "Latest fix uses python3 -m pip + wheel + setuptools + --no-build-isolation — not yet confirmed"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Run: docker compose --profile registry down && docker compose --profile registry up -d && docker logs -f quantum-chaos-enterprise-lab-registry-seed-1",
+      "context": "Verify image-mixed builds successfully and all 3 images appear in registry catalog",
+      "blocking": true
+    }
+  ],
   "decisions": [
-    {"decision": "Skipped research", "rationale": "Gap closure phase — audit already identified exact file locations and fixes (run_scan.py:467-495 main_logger, builder.py Pass 2/3 skip lists)", "phase": "22"},
-    {"decision": "Continued without CONTEXT.md", "rationale": "Phase scope fully defined by v4.2 audit findings (DNSSEC-04, SAML-05, KERB-04)", "phase": "22"},
-    {"decision": "Plan covers 3 bugs not 2", "rationale": "Planner discovered Pass 2 (certificate) skip list also needs SAML/KERBEROS in addition to Pass 3 (TLS protocol). Both builder.py paths must be patched.", "phase": "22"}
+    {"decision": "Use localhost:20005 (not registry:5000) as push target in seed.sh", "rationale": "docker push runs via host Docker socket — registry:5000 is only resolvable within Compose network", "phase": "UAT"},
+    {"decision": "Use python3 -m pip instead of pip3 wrapper on ubuntu:18.04", "rationale": "pip3 shim bypasses pip upgrades; -m pip uses the freshly upgraded version", "phase": "UAT"},
+    {"decision": "Added phaseA lab ports to CONSULTING_TLS_PORTS (11443,12443,13443,14443,15001,15443,24443,15432,16379,15672)", "rationale": "PhaseA services on non-standard ports were invisible to scanner", "phase": "UAT"}
   ],
-  "uncommitted_files": [],
-  "next_action": "Run /gsd-execute-phase 22 in a fresh context window. Plan is verified, committed at 223a25e. Two tasks: (1) 6x main_logger->logger rename + Pass 2/3 skip list additions, (2) 7 new CBOM tests.",
-  "context_notes": "Phase 22 planning is 100% complete. Plan 22-01 committed. No blockers. Ready to execute immediately. Note: pre-existing uncommitted files in git status (dashboard changes, cert files, etc.) are from earlier sessions and unrelated to Phase 22."
+  "uncommitted_files": [
+    "quantum-chaos-enterprise-lab/docker-compose.yml",
+    "quantum-chaos-enterprise-lab/registry/seed.sh",
+    "quantum-chaos-enterprise-lab/registry/image-old-pycrypto/Dockerfile",
+    "quantum-chaos-enterprise-lab/registry/image-mixed/Dockerfile",
+    "quirk/interactive.py"
+  ],
+  "next_action": "Check if image-mixed seed succeeded: curl -s http://127.0.0.1:20005/v2/_catalog — should show 3 repos. If not, check docker logs for seed container and fix remaining build error.",
+  "context_notes": "Working through UAT test cases for the chaos lab. PhaseA scan fix and registry seed fixes are the active work. The image-mixed Dockerfile has been the hardest — ubuntu:18.04 + Python 3.6 + old cryptography package is a painful combination. Latest attempt uses python3 -m pip + setuptools + wheel + --no-build-isolation. Still unconfirmed."
 }
