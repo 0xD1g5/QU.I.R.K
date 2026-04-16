@@ -184,18 +184,24 @@ services:
   tls-rsa1024:
     image: nginx:stable
     profiles: ["phaseA"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
     volumes:
       - ./nginx/phaseA/tls-rsa1024/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs/scenarios:/etc/nginx/scenarios:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
     ports:
       - "14443:443"
 
   tls-sha1:
     image: nginx:stable
     profiles: ["phaseA"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
     volumes:
       - ./nginx/phaseA/tls-sha1/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs/scenarios:/etc/nginx/scenarios:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
     ports:
       - "15443:443"
 
@@ -219,7 +225,7 @@ services:
   # PHASE B — CLOUD SIMULATORS (profile: cloud)
   # =========================
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3
     profiles: ["cloud"]
     environment:
       - SERVICES=s3,sts,iam
@@ -464,7 +470,7 @@ services:
 
   whoami:
     image: traefik/whoami:v1.10.1
-    profiles: ["identity"]
+    profiles: ["identity", "phaseA"]
     expose:
       - "80"
 
@@ -647,7 +653,7 @@ services:
   # INDEPENDENT of existing cloud profile (different LocalStack instance, SERVICES=kms only)
   # =========================
   localstack-kms:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3
     profiles: ["storage"]
     environment:
       - SERVICES=kms
