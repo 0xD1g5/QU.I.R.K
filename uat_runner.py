@@ -18,8 +18,10 @@ import argparse
 
 ROOT        = Path(__file__).parent
 QUIRK_BIN   = str(ROOT / '.venv/bin/quirk')
+VENV_PYTHON = str(ROOT / '.venv/bin/python')
 EXISTING    = ROOT / 'quirk-output'
-LATEST_TS   = '20260414-011448'
+_ts_files   = sorted(EXISTING.glob('intelligence-*.json'))
+LATEST_TS   = _ts_files[-1].stem.replace('intelligence-', '') if _ts_files else '20260414-011448'
 LOG_FILE    = ROOT / 'uat-auto-results.json'
 EXCEL_FILE  = ROOT / 'docs/QUIRK_UAT_Populated.xlsx'
 
@@ -186,7 +188,7 @@ def run_series_1():
     t = time.time()
     checks = {}
     for pkg in ['impacket', 'dns.dnssec', 'lxml.etree', 'defusedxml', 'signxml']:
-        out, err, code = run_cmd([sys.executable, '-c', f'import {pkg}; print("ok")'], timeout=10)
+        out, err, code = run_cmd([VENV_PYTHON, '-c', f'import {pkg}; print("ok")'], timeout=10)
         checks[pkg] = code == 0
     all_ok = all(checks.values())
     status = 'PASS' if all_ok else 'FAIL'
