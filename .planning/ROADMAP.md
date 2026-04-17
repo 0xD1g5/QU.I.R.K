@@ -149,7 +149,9 @@ Plans:
   1. `builder.py` Pass 2 cert skip list includes `"DNSSEC"` — no hollow `CertificateProperties` generated for DNSKEY algorithm records
   2. A CBOM generated from a scan with DNSSEC findings contains zero `crypto/certificate/` components for DNSSEC endpoints
   3. Full test suite passes with no regressions
-**Plans**: 0 plans
+**Plans**: 1 plan
+Plans:
+- [ ] 23-01-PLAN.md — TDD: 3 DNSSEC regression tests (RED) + add "DNSSEC" to Pass 2 cert skip tuple (GREEN)
 
 ## Phase Details
 
