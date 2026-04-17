@@ -128,3 +128,9 @@ class ScanLatestResponse(BaseModel):
     cbom_components: List[CbomComponent]
     roadmap: RoadmapData
     identity_findings: List[IdentityFinding] = []
+
+
+class ScanSession(BaseModel):
+    scan_id: str          # ISO timestamp string (matches ScanMeta.scan_id)
+    scanned_at: datetime
+    total_endpoints: int

@@ -120,6 +120,7 @@ Install only what you need:
 | Capability | Install command |
 |------------|----------------|
 | Web dashboard + PDF export | `pip install -e '.[dashboard]'` (included in Quick Start) |
+| Identity surface scanners (Kerberos, SAML/OIDC, DNSSEC) | `pip install -e '.[identity]'` — installs `impacket`, `lxml`, `signxml`, `dnspython[dnssec]` |
 | Container scanning | `pip install syft` (requires Syft CLI on PATH) |
 | Source code scanning | `pip install semgrep` |
 | AWS connector | Included in base install (boto3 is a core dependency) |
