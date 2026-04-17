@@ -35,11 +35,14 @@ _DATA_CLASS_MAP = {
 
 
 def _prompt(text: str, default: Optional[str] = None) -> str:
-    if default is None or default == "":
-        val = input(f"{text}: ").strip()
-        return val
-    val = input(f"{text} [{default}]: ").strip()
-    return val if val else default
+    try:
+        if default is None or default == "":
+            val = input(f"{text}: ").strip()
+            return val
+        val = input(f"{text} [{default}]: ").strip()
+        return val if val else default
+    except EOFError:
+        return default or ""
 
 
 def _prompt_int(text: str, default: int, minv: int = 1, maxv: int = 100000) -> int:

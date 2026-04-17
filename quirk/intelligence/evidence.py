@@ -185,4 +185,7 @@ def build_evidence_summary(
         "identity_weak_etype_count": identity_weak_etype_count,
         "saml_weak_signing_count": saml_weak_signing_count,
         "dnssec_weak_algo_count": dnssec_weak_algo_count,
+        "identity_kerberos_weak_etype_ratio": round(identity_weak_etype_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "identity_saml_weak_signing_ratio": round(saml_weak_signing_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "identity_dnssec_weak_algo_ratio": round(dnssec_weak_algo_count / total_endpoints, 4) if total_endpoints else 0.0,
     }
