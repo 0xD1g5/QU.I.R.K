@@ -18,7 +18,7 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 - [x] **DNSSEC-01**: Scanner queries `DNSKEY` and `DS` records via dnspython with `DO` bit set against authoritative nameservers directly (not system resolver)
 - [x] **DNSSEC-02**: Algorithm classification per RFC 8624 / RFC 9905 — RSASHA1 (alg 5) and RSASHA1-NSEC3-SHA1 (alg 7) flagged as CRITICAL
 - [x] **DNSSEC-03**: Unsigned zone (missing DNSSEC) detected and flagged as HIGH severity
-- [ ] **DNSSEC-04**: Results stored in `dnssec_scan_json` with `protocol="DNSSEC"` CryptoEndpoints; `DNSSEC_ALG_MAP` added to classifier; `build_cbom()` gains DNSSEC `elif` branches
+- [ ] **DNSSEC-04**: Results stored in `dnssec_scan_json` with `protocol="DNSSEC"` CryptoEndpoints; `DNSSEC_ALG_MAP` added to classifier; `build_cbom()` gains DNSSEC `elif` branches; DNSSEC added to Pass 2 cert skip list
 - [x] **DNSSEC-05**: NSEC vs NSEC3 record type detected; NSEC flagged as zone-enumerable exposure
 - [x] **DNSSEC-06**: DS broken chain detection — mismatched key tags between DS and DNSKEY records flagged as HIGH
 - [x] **DNSSEC-07**: Chaos lab gains BIND9 `dnssec` Docker Compose profile with RSASHA1-signed zone and ECDSAP256SHA256 zone for scanner validation
@@ -29,7 +29,7 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 - [x] **SAML-02**: Scanner parses `<KeyDescriptor use="encryption">` certs separately from signing certs, extracting key size findings for each
 - [x] **SAML-03**: Scanner parses OIDC discovery endpoint for `id_token_signing_alg_values_supported` and `request_object_signing_alg_values_supported`
 - [x] **SAML-04**: RSA < 2048-bit signing keys flagged as CRITICAL; SHA-1 algorithm URIs flagged as HIGH
-- [ ] **SAML-05**: Results stored in `saml_scan_json` with `protocol="SAML"` CryptoEndpoints; classifier updated with SAML algorithm URI strings; `build_cbom()` gains SAML `elif` branches
+- [x] **SAML-05**: Results stored in `saml_scan_json` with `protocol="SAML"` CryptoEndpoints; classifier updated with SAML algorithm URI strings; `build_cbom()` gains SAML `elif` branches
 - [x] **SAML-06**: Chaos lab gains SimpleSAMLphp `saml` Docker Compose profile with RSA-1024 weak signing cert for scanner validation
 
 ### Kerberos
@@ -37,7 +37,7 @@ Requirements for the v4.2 Identity Crypto milestone. Each maps to roadmap phases
 - [x] **KERB-01**: Scanner sends unauthenticated AS-REQ to port 88 (TCP with UDP fallback) and parses PA-ETYPE-INFO2 from `KDC_ERR_PREAUTH_REQUIRED` response — no credentials required
 - [x] **KERB-02**: RC4-HMAC (etype 23) flagged as HIGH; DES etypes (1, 2, 3) flagged as CRITICAL; AES-256 (etype 18/20) classified as quantum-safe
 - [x] **KERB-03**: Scanner attempts anonymous LDAP bind on port 389 to read `msDS-SupportedEncryptionTypes` attribute; gracefully degrades if unreachable or auth required
-- [ ] **KERB-04**: Results stored in `kerberos_scan_json` with `protocol="KERBEROS"` CryptoEndpoints; classifier gains Kerberos etype entries; `build_cbom()` gains KERBEROS `elif` branches
+- [x] **KERB-04**: Results stored in `kerberos_scan_json` with `protocol="KERBEROS"` CryptoEndpoints; classifier gains Kerberos etype entries; `build_cbom()` gains KERBEROS `elif` branches
 - [x] **KERB-05**: Chaos lab gains Samba DC `kerberos` Docker Compose profile with RC4-enabled realm and `start_period: 90s` healthcheck
 
 ### Identity Surface
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DNSSEC-01 | Phase 18 | Complete |
 | DNSSEC-02 | Phase 18 | Complete |
 | DNSSEC-03 | Phase 18 | Complete |
-| DNSSEC-04 | Phase 22 | Pending |
+| DNSSEC-04 | Phase 23 | Pending |
 | DNSSEC-05 | Phase 18 | Complete |
 | DNSSEC-06 | Phase 18 | Complete |
 | DNSSEC-07 | Phase 18 | Complete |
@@ -107,12 +107,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAML-02 | Phase 19 | Complete |
 | SAML-03 | Phase 19 | Complete |
 | SAML-04 | Phase 19 | Complete |
-| SAML-05 | Phase 22 | Pending |
+| SAML-05 | Phase 22 | Complete |
 | SAML-06 | Phase 19 | Complete |
 | KERB-01 | Phase 20 | Complete |
 | KERB-02 | Phase 20 | Complete |
 | KERB-03 | Phase 20 | Complete |
-| KERB-04 | Phase 22 | Pending |
+| KERB-04 | Phase 22 | Complete |
 | KERB-05 | Phase 20 | Complete |
 | IDENT-01 | Phase 21 | Complete |
 | IDENT-02 | Phase 21 | Complete |
@@ -123,8 +123,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v4.2 requirements: 25 total
 - Mapped to phases: 25
 - Unmapped: 0 ✓
-- Pending (audit gaps): DNSSEC-04, SAML-05, KERB-04 → Phase 22
+- Pending (audit gaps): DNSSEC-04 → Phase 23
 
 ---
 *Requirements defined: 2026-04-08*
-*Last updated: 2026-04-14 — reset DNSSEC-04, SAML-05, KERB-04 to Pending after v4.2 milestone audit; assigned to Phase 22 gap closure*
+*Last updated: 2026-04-16 — SAML-05, KERB-04 marked Complete (verified by audit); DNSSEC-04 reassigned to Phase 23 gap closure (CBOM skip list fix)*

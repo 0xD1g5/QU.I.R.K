@@ -140,6 +140,17 @@ Plans:
 Plans:
 - [ ] 22-01-PLAN.md — Fix main_logger -> logger in run_scan.py (6 occurrences) + add SAML/KERBEROS to builder.py Pass 2+3 skip lists + 7 new CBOM tests
 
+### Phase 23: DNSSEC CBOM Skip List Fix
+**Goal**: DNSSEC endpoints no longer generate hollow X.509 CertificateProperties components in the CycloneDX CBOM — the DNSSEC Config → Scanner → DB → CBOM → Report flow completes cleanly
+**Depends on**: Phase 22
+**Requirements**: DNSSEC-04
+**Gap Closure:** Closes remaining gap from v4.2 milestone audit (2026-04-16)
+**Success Criteria** (what must be TRUE):
+  1. `builder.py` Pass 2 cert skip list includes `"DNSSEC"` — no hollow `CertificateProperties` generated for DNSKEY algorithm records
+  2. A CBOM generated from a scan with DNSSEC findings contains zero `crypto/certificate/` components for DNSSEC endpoints
+  3. Full test suite passes with no regressions
+**Plans**: 0 plans
+
 ## Phase Details
 
 <details>
