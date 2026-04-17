@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -21,6 +21,7 @@ from quirk.dashboard.api.schemas import (
     RoadmapNode,
     ScanLatestResponse,
     ScanMeta,
+    ScanSession,
     ScoreData,
     SubScores,
 )
@@ -417,28 +418,79 @@ def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
     return RoadmapData(nodes=nodes, edges=edges)
 
 
-@router.get("/scan/latest", response_model=ScanLatestResponse)
-def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
-    """GET /api/scan/latest — returns the most recent scan session's full results.
+@router.get("/scans", response_model=List[ScanSession])
+def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
+    """GET /api/scans — returns the last 10 distinct scan sessions, newest first.
 
-    scan_id is derived from MAX(scanned_at) — no separate session table needed.
-    The response is shaped for future multi-scan navigation: scan_id field present,
-    future endpoint can accept ?scan_id= param without breaking this response shape.
+    Groups by second-truncated timestamp because each CryptoEndpoint row is
+    written with its own microsecond-precision scanned_at. Grouping by the raw
+    value produces one row per endpoint rather than one per scan session.
     """
-    # Find the most recent scan timestamp
-    latest_ts = db.query(func.max(CryptoEndpoint.scanned_at)).scalar()
-    if latest_ts is None:
-        raise HTTPException(
-            status_code=404,
-            detail="No scan results found. Run your first scan: quirk --config config.yaml",
-        )
-
-    # Load all endpoints from that scan session
-    endpoints: list[CryptoEndpoint] = (
-        db.query(CryptoEndpoint)
-        .filter(CryptoEndpoint.scanned_at == latest_ts)
+    ts_sec = func.strftime("%Y-%m-%d %H:%M:%S", CryptoEndpoint.scanned_at).label("ts_sec")
+    rows = (
+        db.query(ts_sec, func.count(CryptoEndpoint.id).label("cnt"))
+        .group_by("ts_sec")
+        .order_by(ts_sec.desc())
+        .limit(10)
         .all()
     )
+    return [
+        ScanSession(
+            scan_id=ts_str,
+            scanned_at=datetime.fromisoformat(ts_str),
+            total_endpoints=cnt,
+        )
+        for ts_str, cnt in rows
+    ]
+
+
+@router.get("/scan/latest", response_model=ScanLatestResponse)
+def get_latest_scan(
+    scan_id: Optional[str] = Query(default=None, description="ISO timestamp scan_id to load; omit for latest"),
+    db: Session = Depends(get_db),
+) -> ScanLatestResponse:
+    """GET /api/scan/latest — returns a scan session's full results.
+
+    Without ?scan_id=: returns the most recent scan (MAX scanned_at).
+    With ?scan_id=<ISO timestamp>: returns that specific scan session.
+    """
+    if scan_id is not None:
+        try:
+            target_ts = datetime.fromisoformat(scan_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid scan_id format: {scan_id!r}")
+        endpoints: list[CryptoEndpoint] = (
+            db.query(CryptoEndpoint)
+            .filter(
+                CryptoEndpoint.scanned_at >= target_ts,
+                CryptoEndpoint.scanned_at < target_ts + timedelta(seconds=1),
+            )
+            .all()
+        )
+        if not endpoints:
+            raise HTTPException(status_code=404, detail=f"No scan found with scan_id={scan_id!r}")
+        latest_ts = target_ts
+    else:
+        # Derive the latest scan second from MAX, then load all endpoints in that second.
+        # Cannot use MAX + exact equality because each endpoint row gets its own
+        # microsecond-precision scanned_at; a range window captures the full session.
+        latest_ts_str = db.query(
+            func.strftime("%Y-%m-%d %H:%M:%S", func.max(CryptoEndpoint.scanned_at))
+        ).scalar()
+        if latest_ts_str is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No scan results found. Run your first scan: quirk --config config.yaml",
+            )
+        latest_ts = datetime.fromisoformat(latest_ts_str)
+        endpoints: list[CryptoEndpoint] = (
+            db.query(CryptoEndpoint)
+            .filter(
+                CryptoEndpoint.scanned_at >= latest_ts,
+                CryptoEndpoint.scanned_at < latest_ts + timedelta(seconds=1),
+            )
+            .all()
+        )
 
     if not endpoints:
         raise HTTPException(status_code=404, detail="No endpoints found for latest scan.")

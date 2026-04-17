@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ModeToggle } from "@/components/mode-toggle"
+import { ScanSelector } from "@/components/ScanSelector"
 
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },
@@ -76,6 +77,9 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* Scan history selector — only shown when >1 scan exists */}
+      <ScanSelector />
 
       {/* Theme toggle at bottom */}
       <div className="px-2 py-4 border-t border-border">

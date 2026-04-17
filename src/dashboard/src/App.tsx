@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
+import { ScanProvider } from "@/context/ScanContext"
 import { Sidebar } from "@/components/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { PrintPage } from "@/pages/print"
@@ -14,6 +15,7 @@ import { RoadmapPage } from "@/pages/roadmap"
 export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="quirk-ui-theme">
+      <ScanProvider>
       <TooltipProvider>
         <BrowserRouter>
           <div className="flex min-h-screen bg-background text-foreground">
@@ -35,6 +37,7 @@ export default function App() {
           </div>
         </BrowserRouter>
       </TooltipProvider>
+      </ScanProvider>
     </ThemeProvider>
   )
 }

@@ -89,6 +89,12 @@ export interface IdentityFinding {
   algorithm: string
 }
 
+export interface ScanSession {
+  scan_id: string
+  scanned_at: string
+  total_endpoints: number
+}
+
 export interface ScanLatestResponse {
   meta: ScanMeta
   score: ScoreData
