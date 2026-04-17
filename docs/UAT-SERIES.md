@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-15 (Phase 22: v4.2 gap closure — DNSSEC-04 NameError fix, SAML-05/KERB-04 CBOM isolation)
+**Last Updated:** 2026-04-16 (UAT runner fixes: venv Python for import checks, EOFError handling in interactive wizard, identity ratio keys emitted to evidence_summary, LATEST_TS auto-detect — 78/82 PASS, 0 FAIL, 4 SKIP dashboard)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
