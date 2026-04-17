@@ -6,8 +6,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "QU.I.R.K. v4.2.0",
-    "elapsed": 0.66,
-    "timestamp": "2026-04-16T22:49:30.639650"
+    "elapsed": 0.36,
+    "timestamp": "2026-04-16T22:54:50.945933"
   },
   {
     "id": "UAT-1-03",
@@ -17,7 +17,7 @@
     "notes": "",
     "actual": "config.yaml created",
     "elapsed": 0.37,
-    "timestamp": "2026-04-16T22:49:31.008523"
+    "timestamp": "2026-04-16T22:54:51.314844"
   },
   {
     "id": "UAT-1-04",
@@ -26,8 +26,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 0.72,
-    "timestamp": "2026-04-16T22:49:31.730414"
+    "elapsed": 0.69,
+    "timestamp": "2026-04-16T22:54:52.002759"
   },
   {
     "id": "UAT-1-07",
@@ -36,8 +36,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "{'impacket': True, 'dns.dnssec': True, 'lxml.etree': True, 'defusedxml': True, 'signxml': True}",
-    "elapsed": 0.22,
-    "timestamp": "2026-04-16T22:49:31.954562"
+    "elapsed": 0.21,
+    "timestamp": "2026-04-16T22:54:52.213444"
   },
   {
     "id": "UAT-2-02",
@@ -45,9 +45,9 @@
     "category": "CLI - Interactive Mode",
     "status": "PASS",
     "notes": "Scan ran, 1 findings file(s)",
-    "actual": "out_files=['findings-20260417-024934.json']",
-    "elapsed": 3.59,
-    "timestamp": "2026-04-16T22:49:35.547816"
+    "actual": "out_files=['findings-20260417-025454.json']",
+    "elapsed": 2.84,
+    "timestamp": "2026-04-16T22:54:55.055898"
   },
   {
     "id": "UAT-2-03",
@@ -55,9 +55,9 @@
     "category": "CLI - Interactive Mode",
     "status": "PASS",
     "notes": "Multi-target scan ran, 1 file(s)",
-    "actual": "files=['findings-20260417-024937.json']",
-    "elapsed": 2.87,
-    "timestamp": "2026-04-16T22:49:38.416021"
+    "actual": "files=['findings-20260417-025457.json']",
+    "elapsed": 2.83,
+    "timestamp": "2026-04-16T22:54:57.885655"
   },
   {
     "id": "UAT-3-01",
@@ -65,9 +65,9 @@
     "category": "CLI - Config-File Mode",
     "status": "PASS",
     "notes": "",
-    "actual": "code=0, findings=['findings-20260417-024941.json']",
-    "elapsed": 3.86,
-    "timestamp": "2026-04-16T22:49:42.278446"
+    "actual": "code=0, findings=['findings-20260417-025501.json']",
+    "elapsed": 3.83,
+    "timestamp": "2026-04-16T22:55:01.714436"
   },
   {
     "id": "UAT-3-02",
@@ -76,8 +76,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "{'quick': {'code': 0, 'stats': True}, 'standard': {'code': 0, 'stats': True}, 'deep': {'code': 0, 'stats': True}}",
-    "elapsed": 11.59,
-    "timestamp": "2026-04-16T22:49:53.866354"
+    "elapsed": 11.48,
+    "timestamp": "2026-04-16T22:55:13.192508"
   },
   {
     "id": "UAT-3-03",
@@ -86,8 +86,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "{'strict': 75, 'balanced': 78, 'lenient': 80}",
-    "elapsed": 11.57,
-    "timestamp": "2026-04-16T22:50:05.437437"
+    "elapsed": 11.52,
+    "timestamp": "2026-04-16T22:55:24.707870"
   },
   {
     "id": "UAT-3-04",
@@ -96,8 +96,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 3.86,
-    "timestamp": "2026-04-16T22:50:09.295872"
+    "elapsed": 3.85,
+    "timestamp": "2026-04-16T22:55:28.562055"
   },
   {
     "id": "UAT-3-05",
@@ -107,7 +107,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 3.87,
-    "timestamp": "2026-04-16T22:50:13.164294"
+    "timestamp": "2026-04-16T22:55:32.435725"
   },
   {
     "id": "UAT-3-06",
@@ -116,8 +116,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 4.86,
-    "timestamp": "2026-04-16T22:50:18.025351"
+    "elapsed": 4.83,
+    "timestamp": "2026-04-16T22:55:37.266359"
   },
   {
     "id": "UAT-3-07",
@@ -126,18 +126,18 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 3.89,
-    "timestamp": "2026-04-16T22:50:21.918177"
+    "elapsed": 3.95,
+    "timestamp": "2026-04-16T22:55:41.220820"
   },
   {
     "id": "UAT-3-08",
     "name": "Cache Mode",
     "category": "CLI - Config-File Mode",
     "status": "PASS",
-    "notes": "run1=3.8s run2=3.9s",
+    "notes": "run1=3.9s run2=3.9s",
     "actual": "",
-    "elapsed": 7.7,
-    "timestamp": "2026-04-16T22:50:29.615199"
+    "elapsed": 7.77,
+    "timestamp": "2026-04-16T22:55:48.987091"
   },
   {
     "id": "UAT-3-09",
@@ -146,8 +146,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 3.84,
-    "timestamp": "2026-04-16T22:50:33.453541"
+    "elapsed": 3.97,
+    "timestamp": "2026-04-16T22:55:52.956351"
   },
   {
     "id": "UAT-3-10",
@@ -156,8 +156,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "rate_limit=2.0",
-    "elapsed": 3.82,
-    "timestamp": "2026-04-16T22:50:37.273988"
+    "elapsed": 3.83,
+    "timestamp": "2026-04-16T22:55:56.784451"
   },
   {
     "id": "UAT-4-01",
@@ -167,7 +167,7 @@
     "notes": "",
     "actual": "{443: True, 8443: True, 9443: True, 10443: True, 11443: True, 8444: True, 8000: True, 2222: True, 5555: True}",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276158"
+    "timestamp": "2026-04-16T22:55:56.786729"
   },
   {
     "id": "UAT-4-02",
@@ -177,7 +177,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276238"
+    "timestamp": "2026-04-16T22:55:56.786804"
   },
   {
     "id": "UAT-4-03",
@@ -187,7 +187,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276315"
+    "timestamp": "2026-04-16T22:55:56.786867"
   },
   {
     "id": "UAT-4-04",
@@ -197,7 +197,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276373"
+    "timestamp": "2026-04-16T22:55:56.786938"
   },
   {
     "id": "UAT-4-05",
@@ -207,7 +207,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276436"
+    "timestamp": "2026-04-16T22:55:56.787000"
   },
   {
     "id": "UAT-4-06",
@@ -217,7 +217,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276493"
+    "timestamp": "2026-04-16T22:55:56.787055"
   },
   {
     "id": "UAT-4-07",
@@ -227,7 +227,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276543"
+    "timestamp": "2026-04-16T22:55:56.787115"
   },
   {
     "id": "UAT-4-08",
@@ -237,7 +237,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276608"
+    "timestamp": "2026-04-16T22:55:56.787175"
   },
   {
     "id": "UAT-4-09",
@@ -247,7 +247,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276711"
+    "timestamp": "2026-04-16T22:55:56.787236"
   },
   {
     "id": "UAT-4-10",
@@ -257,7 +257,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:37.276800"
+    "timestamp": "2026-04-16T22:55:56.787326"
   },
   {
     "id": "UAT-4-11",
@@ -266,8 +266,8 @@
     "status": "PASS",
     "notes": "10 DB rows, ports covered=[443, 2222, 8000, 8443, 8444, 9443, 10443, 11443]",
     "actual": "",
-    "elapsed": 5.86,
-    "timestamp": "2026-04-16T22:50:43.136328"
+    "elapsed": 5.87,
+    "timestamp": "2026-04-16T22:56:02.659385"
   },
   {
     "id": "UAT-5-01",
@@ -277,7 +277,7 @@
     "notes": "Container group check \u2014 see UAT-4-01",
     "actual": "",
     "elapsed": 0,
-    "timestamp": "2026-04-16T22:50:43.136362"
+    "timestamp": "2026-04-16T22:56:02.659430"
   },
   {
     "id": "UAT-5-02",
@@ -287,7 +287,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.136583"
+    "timestamp": "2026-04-16T22:56:02.659642"
   },
   {
     "id": "UAT-5-03",
@@ -297,7 +297,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.136704"
+    "timestamp": "2026-04-16T22:56:02.659740"
   },
   {
     "id": "UAT-5-04",
@@ -307,7 +307,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.136809"
+    "timestamp": "2026-04-16T22:56:02.659830"
   },
   {
     "id": "UAT-5-05",
@@ -317,7 +317,7 @@
     "notes": "Container group check \u2014 see UAT-4-01",
     "actual": "",
     "elapsed": 0,
-    "timestamp": "2026-04-16T22:50:43.136811"
+    "timestamp": "2026-04-16T22:56:02.659833"
   },
   {
     "id": "UAT-5-06",
@@ -327,7 +327,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.136908"
+    "timestamp": "2026-04-16T22:56:02.659899"
   },
   {
     "id": "UAT-5-07",
@@ -337,7 +337,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.136999"
+    "timestamp": "2026-04-16T22:56:02.659965"
   },
   {
     "id": "UAT-5-08",
@@ -347,7 +347,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.137110"
+    "timestamp": "2026-04-16T22:56:02.660036"
   },
   {
     "id": "UAT-5-09",
@@ -357,7 +357,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.137221"
+    "timestamp": "2026-04-16T22:56:02.660107"
   },
   {
     "id": "UAT-5-11",
@@ -367,7 +367,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.137294"
+    "timestamp": "2026-04-16T22:56:02.660173"
   },
   {
     "id": "UAT-5-13",
@@ -377,7 +377,7 @@
     "notes": "",
     "actual": "open=True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:43.137386"
+    "timestamp": "2026-04-16T22:56:02.660235"
   },
   {
     "id": "UAT-5-10",
@@ -386,8 +386,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 5.83,
-    "timestamp": "2026-04-16T22:50:48.963087"
+    "elapsed": 5.76,
+    "timestamp": "2026-04-16T22:56:08.421526"
   },
   {
     "id": "UAT-5-12",
@@ -396,8 +396,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 0.7,
-    "timestamp": "2026-04-16T22:50:49.660675"
+    "elapsed": 0.73,
+    "timestamp": "2026-04-16T22:56:09.154814"
   },
   {
     "id": "UAT-6-01",
@@ -407,7 +407,7 @@
     "notes": "",
     "actual": "['host', 'port', 'recommendation', 'severity', 'title']",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661294"
+    "timestamp": "2026-04-16T22:56:09.155186"
   },
   {
     "id": "UAT-6-02",
@@ -417,7 +417,7 @@
     "notes": "",
     "actual": "cipher=ECDHE-RSA-AES256-GCM-SHA384, tls=TLSv1.2",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661542"
+    "timestamp": "2026-04-16T22:56:09.155444"
   },
   {
     "id": "UAT-6-03",
@@ -427,7 +427,7 @@
     "notes": "",
     "actual": "cert_not_after=2026-02-20 15:17:33.000000",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661655"
+    "timestamp": "2026-04-16T22:56:09.155556"
   },
   {
     "id": "UAT-6-04",
@@ -437,7 +437,7 @@
     "notes": "",
     "actual": "issuer==CN=selfsigned.chaos.local,OU=SelfSigned,O=ChaosLab,L=Lab,ST=NY,C=US: True",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661754"
+    "timestamp": "2026-04-16T22:56:09.155649"
   },
   {
     "id": "UAT-6-05",
@@ -447,7 +447,7 @@
     "notes": "",
     "actual": "protocol=TLS, tls_blocker=None",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661857"
+    "timestamp": "2026-04-16T22:56:09.155737"
   },
   {
     "id": "UAT-6-06",
@@ -457,7 +457,7 @@
     "notes": "1 finding(s) for port 8000",
     "actual": "severity=HIGH",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661906"
+    "timestamp": "2026-04-16T22:56:09.155786"
   },
   {
     "id": "UAT-6-07",
@@ -467,7 +467,7 @@
     "notes": "1 finding(s) for port 8444",
     "actual": "severity=HIGH",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661911"
+    "timestamp": "2026-04-16T22:56:09.155791"
   },
   {
     "id": "UAT-6-08",
@@ -477,7 +477,7 @@
     "notes": "1 finding(s) for port 2222",
     "actual": "severity=INFO",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.661914"
+    "timestamp": "2026-04-16T22:56:09.155794"
   },
   {
     "id": "UAT-6-09",
@@ -487,7 +487,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.662201"
+    "timestamp": "2026-04-16T22:56:09.155904"
   },
   {
     "id": "UAT-6-10",
@@ -497,7 +497,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.662419"
+    "timestamp": "2026-04-16T22:56:09.155993"
   },
   {
     "id": "UAT-6-11",
@@ -507,7 +507,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.663422"
+    "timestamp": "2026-04-16T22:56:09.156067"
   },
   {
     "id": "UAT-6-12",
@@ -517,7 +517,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.663804"
+    "timestamp": "2026-04-16T22:56:09.156283"
   },
   {
     "id": "UAT-6-13",
@@ -527,27 +527,27 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.664048"
+    "timestamp": "2026-04-16T22:56:09.156342"
   },
   {
     "id": "UAT-7-18",
-    "name": "Dashboard API test",
+    "name": "PDF Export \u2014 API Endpoint Direct Test",
     "category": "Web Dashboard UI",
-    "status": "SKIP",
-    "notes": "--no-dashboard flag",
+    "status": "PASS",
+    "notes": "",
     "actual": "",
-    "elapsed": 0,
-    "timestamp": "2026-04-16T22:50:49.664073"
+    "elapsed": 0.88,
+    "timestamp": "2026-04-16T22:56:10.561995"
   },
   {
     "id": "UAT-7-19",
-    "name": "Dashboard API test",
+    "name": "Dashboard \u2014 API Latest Scan Endpoint",
     "category": "Web Dashboard UI",
-    "status": "SKIP",
-    "notes": "--no-dashboard flag",
+    "status": "PASS",
+    "notes": "",
     "actual": "",
-    "elapsed": 0,
-    "timestamp": "2026-04-16T22:50:49.664076"
+    "elapsed": 0.01,
+    "timestamp": "2026-04-16T22:56:10.568398"
   },
   {
     "id": "UAT-8-01",
@@ -557,7 +557,7 @@
     "notes": "",
     "actual": "score=75",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.664184"
+    "timestamp": "2026-04-16T22:56:10.803372"
   },
   {
     "id": "UAT-8-02",
@@ -567,7 +567,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:50:49.664222"
+    "timestamp": "2026-04-16T22:56:10.803556"
   },
   {
     "id": "UAT-8-03",
@@ -576,8 +576,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "{'tls_only': 78, 'tls_plus_http': 72}",
-    "elapsed": 11.63,
-    "timestamp": "2026-04-16T22:51:01.294083"
+    "elapsed": 11.75,
+    "timestamp": "2026-04-16T22:56:22.552351"
   },
   {
     "id": "UAT-8-06",
@@ -587,7 +587,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.294213"
+    "timestamp": "2026-04-16T22:56:22.552670"
   },
   {
     "id": "UAT-8-08",
@@ -596,8 +596,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "ValidationResult(ok=False, errors=['intelligence.roadmap must be a list'], warnings=[])\n",
-    "elapsed": 0.38,
-    "timestamp": "2026-04-16T22:51:01.676234"
+    "elapsed": 0.41,
+    "timestamp": "2026-04-16T22:56:22.961085"
   },
   {
     "id": "UAT-8-09",
@@ -607,7 +607,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.676484"
+    "timestamp": "2026-04-16T22:56:22.962093"
   },
   {
     "id": "UAT-8-10",
@@ -617,7 +617,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.676573"
+    "timestamp": "2026-04-16T22:56:22.962179"
   },
   {
     "id": "UAT-8-11",
@@ -627,7 +627,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.676638"
+    "timestamp": "2026-04-16T22:56:22.962243"
   },
   {
     "id": "UAT-9-01",
@@ -637,7 +637,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.677148"
+    "timestamp": "2026-04-16T22:56:22.962748"
   },
   {
     "id": "UAT-9-02",
@@ -647,7 +647,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.677934"
+    "timestamp": "2026-04-16T22:56:22.962997"
   },
   {
     "id": "UAT-9-03",
@@ -657,7 +657,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.678176"
+    "timestamp": "2026-04-16T22:56:22.963185"
   },
   {
     "id": "UAT-9-04",
@@ -667,7 +667,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.678351"
+    "timestamp": "2026-04-16T22:56:22.963387"
   },
   {
     "id": "UAT-9-05",
@@ -677,7 +677,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.678441"
+    "timestamp": "2026-04-16T22:56:22.963603"
   },
   {
     "id": "UAT-9-07",
@@ -687,7 +687,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.678530"
+    "timestamp": "2026-04-16T22:56:22.963809"
   },
   {
     "id": "UAT-9-08",
@@ -697,7 +697,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:01.678751"
+    "timestamp": "2026-04-16T22:56:22.964147"
   },
   {
     "id": "UAT-10-01",
@@ -706,8 +706,8 @@
     "status": "PASS",
     "notes": "Graceful exit. code=0, files=4",
     "actual": "files=4",
-    "elapsed": 2.72,
-    "timestamp": "2026-04-16T22:51:04.397005"
+    "elapsed": 2.8,
+    "timestamp": "2026-04-16T22:56:25.764353"
   },
   {
     "id": "UAT-10-02",
@@ -715,9 +715,9 @@
     "category": "Edge Cases & Error Handling",
     "status": "PASS",
     "notes": "",
-    "actual": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 QU.I.R.K.  v4.2.0 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502      @__          \\-^-/          |||           ((_           /777            \u2502\n\u2502     (o o)         (o o)         (o o",
-    "elapsed": 0.34,
-    "timestamp": "2026-04-16T22:51:04.740319"
+    "actual": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 QU.I.R.K.  v4.2.0 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502      QQQQQQQQQ     UUUUUUUU     UUUUUUUUIIIIIIIIIIRRRRRRRRRRRRRRRRR          \u2502\n\u2502 KKKKKKKKK    KKKKKKK                ",
+    "elapsed": 0.36,
+    "timestamp": "2026-04-16T22:56:26.125993"
   },
   {
     "id": "UAT-10-03",
@@ -727,7 +727,7 @@
     "notes": "",
     "actual": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 QU.I.R.K.  v4.2.0 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502       ___           ___                       ___           ___              \u2502\n\u2502      /\\  \\         /\\__\\          __",
     "elapsed": 0.36,
-    "timestamp": "2026-04-16T22:51:05.098145"
+    "timestamp": "2026-04-16T22:56:26.486505"
   },
   {
     "id": "UAT-10-04",
@@ -736,8 +736,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 3.89,
-    "timestamp": "2026-04-16T22:51:08.987523"
+    "elapsed": 3.87,
+    "timestamp": "2026-04-16T22:56:30.351815"
   },
   {
     "id": "UAT-10-05",
@@ -746,8 +746,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 4.82,
-    "timestamp": "2026-04-16T22:51:13.812353"
+    "elapsed": 4.94,
+    "timestamp": "2026-04-16T22:56:35.296771"
   },
   {
     "id": "UAT-10-06",
@@ -756,8 +756,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 3.86,
-    "timestamp": "2026-04-16T22:51:17.672305"
+    "elapsed": 3.95,
+    "timestamp": "2026-04-16T22:56:39.243215"
   },
   {
     "id": "UAT-10-07",
@@ -766,8 +766,8 @@
     "status": "PASS",
     "notes": "2 distinct scan timestamps",
     "actual": "",
-    "elapsed": 7.72,
-    "timestamp": "2026-04-16T22:51:25.396188"
+    "elapsed": 7.68,
+    "timestamp": "2026-04-16T22:56:46.922997"
   },
   {
     "id": "UAT-10-09",
@@ -776,8 +776,8 @@
     "status": "PASS",
     "notes": "ssh-audit not installed \u2014 no crash observed. code=0",
     "actual": "",
-    "elapsed": 0.81,
-    "timestamp": "2026-04-16T22:51:26.208898"
+    "elapsed": 0.69,
+    "timestamp": "2026-04-16T22:56:47.613751"
   },
   {
     "id": "UAT-10-10",
@@ -786,8 +786,8 @@
     "status": "PASS",
     "notes": "",
     "actual": "",
-    "elapsed": 3.91,
-    "timestamp": "2026-04-16T22:51:30.114517"
+    "elapsed": 3.86,
+    "timestamp": "2026-04-16T22:56:51.469736"
   },
   {
     "id": "UAT-11-01",
@@ -797,7 +797,7 @@
     "notes": "",
     "actual": "12 files generated",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:30.114647"
+    "timestamp": "2026-04-16T22:56:51.469874"
   },
   {
     "id": "UAT-11-03",
@@ -807,7 +807,7 @@
     "notes": "",
     "actual": "",
     "elapsed": 0.0,
-    "timestamp": "2026-04-16T22:51:30.115588"
+    "timestamp": "2026-04-16T22:56:51.470394"
   },
   {
     "id": "UAT-11-04",
@@ -816,7 +816,7 @@
     "status": "PASS",
     "notes": "",
     "actual": "2 runs",
-    "elapsed": 7.63,
-    "timestamp": "2026-04-16T22:51:37.746135"
+    "elapsed": 7.69,
+    "timestamp": "2026-04-16T22:56:59.164512"
   }
 ]
