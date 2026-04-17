@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import type { ScanLatestResponse } from "@/types/api"
+import { useSelectedScan } from "@/context/ScanContext"
 
 interface UseScanDataResult {
   data: ScanLatestResponse | null
@@ -8,6 +9,7 @@ interface UseScanDataResult {
 }
 
 export function useScanData(): UseScanDataResult {
+  const { selectedScanId } = useSelectedScan()
   const [data, setData] = useState<ScanLatestResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +21,10 @@ export function useScanData(): UseScanDataResult {
       try {
         setLoading(true)
         setError(null)
-        const resp = await fetch("/api/scan/latest")
+        const url = selectedScanId
+          ? `/api/scan/latest?scan_id=${encodeURIComponent(selectedScanId)}`
+          : "/api/scan/latest"
+        const resp = await fetch(url)
         if (!resp.ok) {
           if (resp.status === 404) {
             setError("No scan data available. Run a scan first: quirk scan <target>")
@@ -47,7 +52,7 @@ export function useScanData(): UseScanDataResult {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [selectedScanId])
 
   return { data, loading, error }
 }

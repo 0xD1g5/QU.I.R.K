@@ -20,6 +20,7 @@ Usage: ./lab.sh <command> [options]
 
 Commands:
   up              Start the lab (docker compose up -d)
+  all             Start ALL profiles at once — every service, every vulnerability
   down            Stop the lab (docker compose down)
   reset           Down + remove volumes + start fresh (down -v + up -d)
   status          Show running containers/ports for this lab project
@@ -56,6 +57,17 @@ case "${cmd}" in
     echo "🚀 Starting lab: project=${PROJECT_NAME} file=${COMPOSE_FILE} profiles='${PROFILE_ARGS}'"
     compose up -d
     echo "✅ Lab started."
+    compose ps
+    ;;
+  all)
+    ALL_PROFILES="--profile phaseA --profile cloud --profile identity --profile pki \
+      --profile jwt --profile registry --profile source --profile storage \
+      --profile ssh-weak --profile ldaps --profile dnssec --profile saml \
+      --profile kerberos"
+    echo "🔥 Starting ALL profiles: project=${PROJECT_NAME} file=${COMPOSE_FILE}"
+    echo "   Profiles: phaseA cloud identity pki jwt registry source storage ssh-weak ldaps dnssec saml kerberos"
+    PROFILE_ARGS="${ALL_PROFILES}" compose up -d
+    echo "✅ Full chaos lab started."
     compose ps
     ;;
   down)

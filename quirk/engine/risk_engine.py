@@ -7,6 +7,111 @@ from typing import Any, Dict, List, Optional, Tuple
 
 _SEVERITY_RANK = {"INFO": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 
+# (version_prefix, severity, eol_label)
+_OPENSSL_EOL: List[Tuple[str, str, str]] = [
+    ("0.", "CRITICAL", "OpenSSL 0.x"),
+    ("1.0.", "CRITICAL", "OpenSSL 1.0.x (EOL Dec 2019)"),
+    ("1.1.", "HIGH", "OpenSSL 1.1.x (EOL Sep 2023)"),
+    ("3.0.", "HIGH", "OpenSSL 3.0.x (EOL Apr 2026)"),
+    ("3.1.", "HIGH", "OpenSSL 3.1.x (EOL Mar 2025)"),
+]
+
+_OPENSSL_NAMES = frozenset({"openssl", "libssl", "libssl1.1", "libssl3", "libcrypto", "libcrypto3"})
+
+
+def _pkg_major(version: str) -> Optional[int]:
+    try:
+        return int(version.split(".")[0])
+    except (ValueError, IndexError, AttributeError):
+        return None
+
+
+def _evaluate_container_package(
+    host: str, port: int, pkg_name: str, pkg_version: str
+) -> Optional[Dict[str, Any]]:
+    name = pkg_name.lower()
+    version = pkg_version or ""
+
+    if name in _OPENSSL_NAMES:
+        for prefix, sev, label in _OPENSSL_EOL:
+            if version.startswith(prefix):
+                return {
+                    "severity": sev,
+                    "host": host,
+                    "port": port,
+                    "title": f"End-of-life {label} in container image",
+                    "recommendation": (
+                        f"{label} has reached end-of-life and no longer receives security patches. "
+                        "Update the base image to a supported distribution with a current OpenSSL version."
+                    ),
+                }
+        return {
+            "severity": "LOW",
+            "host": host,
+            "port": port,
+            "title": f"Container image uses quantum-vulnerable crypto library ({name}@{version})",
+            "recommendation": (
+                "Plan migration to post-quantum cryptography when NIST PQC standards are adopted upstream."
+            ),
+        }
+
+    if name == "cryptography":
+        major = _pkg_major(version)
+        if major is not None and major < 3:
+            return {
+                "severity": "HIGH",
+                "host": host,
+                "port": port,
+                "title": f"Severely outdated Python cryptography package ({version}) in container image",
+                "recommendation": (
+                    f"cryptography {version} is over 4 years old with multiple known CVEs. "
+                    "Update to the latest version and rebuild the container image."
+                ),
+            }
+        if major is not None and major < 41:
+            return {
+                "severity": "MEDIUM",
+                "host": host,
+                "port": port,
+                "title": f"Outdated Python cryptography package ({version}) in container image",
+                "recommendation": (
+                    f"cryptography {version} may have unpatched vulnerabilities. "
+                    "Update to the latest version and rebuild the container image."
+                ),
+            }
+
+    if name == "pyopenssl":
+        major = _pkg_major(version)
+        if major is not None and major < 20:
+            return {
+                "severity": "MEDIUM",
+                "host": host,
+                "port": port,
+                "title": f"Outdated pyOpenSSL package ({version}) in container image",
+                "recommendation": (
+                    f"pyOpenSSL {version} may have known vulnerabilities. "
+                    "Update to the latest version."
+                ),
+            }
+
+    if name in {"libgcrypt20", "libgcrypt"}:
+        if version.startswith("1.8."):
+            return {
+                "severity": "MEDIUM",
+                "host": host,
+                "port": port,
+                "title": f"Outdated libgcrypt ({version}) in container image",
+                "recommendation": "libgcrypt 1.8.x is outdated. Update the base image.",
+            }
+
+    return {
+        "severity": "LOW",
+        "host": host,
+        "port": port,
+        "title": f"Container image contains crypto library ({name}@{version})",
+        "recommendation": "Review cryptographic library inventory and plan lifecycle management.",
+    }
+
 
 def _error_category(desc: str) -> str:
     if not desc:
@@ -322,6 +427,13 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 "title": "SSH quantum planning advisory",
                 "recommendation": "Inventory SSH host keys and KEX algorithms; evaluate lifecycle and PQC readiness.",
             })
+
+        if proto == "CONTAINER":
+            pkg_name = (getattr(e, "cipher_suite", "") or "").strip()
+            pkg_version = (getattr(e, "tls_version", "") or "").strip()
+            finding = _evaluate_container_package(host, port, pkg_name, pkg_version)
+            if finding:
+                findings.append(finding)
 
         if proto == "UNKNOWN":
             findings.append({
