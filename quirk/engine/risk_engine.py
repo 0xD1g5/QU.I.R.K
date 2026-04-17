@@ -16,7 +16,7 @@ _OPENSSL_EOL: List[Tuple[str, str, str]] = [
     ("3.1.", "HIGH", "OpenSSL 3.1.x (EOL Mar 2025)"),
 ]
 
-_OPENSSL_NAMES = frozenset({"openssl", "libssl", "libssl1.1", "libssl3", "libcrypto", "libcrypto3"})
+_OPENSSL_NAMES = frozenset({"openssl", "libssl", "libssl1.0", "libssl1.0.0", "libssl1.1", "libssl3", "libcrypto", "libcrypto3"})
 
 
 def _pkg_major(version: str) -> Optional[int]:

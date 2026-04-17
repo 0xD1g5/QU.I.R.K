@@ -1215,14 +1215,14 @@ All of these services show status `Up` or `running`:
 **Expected:** Syft detects outdated crypto libraries in all three seeded images.
 
 **Pass Criteria:**
-- Finding for `openssl 1.0.2n` in `image-old-libssl`
-- Finding for `cryptography 2.9.2` in `image-old-pycrypto`
-- Finding for `pyopenssl 19.1.0` in `image-old-pycrypto`
+- CRITICAL finding for `OpenSSL 1.0.x (EOL Dec 2019)` in `image-old-libssl` (from `libssl1.0.0` pkg)
+- HIGH finding for `cryptography 2.9.2` (severely outdated) in `image-old-pycrypto`
+- MEDIUM finding for `pyopenssl 19.1.0` in `image-old-pycrypto`
 - Total container crypto findings ≥ 4
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________  
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-04-17  **Tester:** Digs  
+**Notes:** libssl1.0.0 (1.0.2n) added to CRYPTO_LIB_ALLOWLIST and _OPENSSL_NAMES — now produces CRITICAL finding. image-old-libssl yields 2 findings (1.0.x CRITICAL + 1.1.x HIGH). Total 11 container findings.
 
 ---
 

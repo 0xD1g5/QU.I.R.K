@@ -24,12 +24,6 @@ CONSULTING_TLS_PORTS = [
     6443, 2376,
     5432, 3306, 1433,
     8200,
-    # chaos lab — core (non-standard TLS ports)
-    11443, 12443,
-    # chaos lab — phaseA (TLS chain scenarios + SNI ingress + alt-port)
-    13443, 14443, 15001, 15443, 24443,
-    # chaos lab — phaseA (service inventory: postgres, redis, rabbitmq)
-    15432, 16379, 15672,
 ]
 
 _DATA_CLASS_MAP = {
