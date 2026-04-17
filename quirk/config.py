@@ -17,7 +17,7 @@ class ScanCfg:
     timeout_seconds: int
     concurrency: int
     ports_tls: List[int]
-    include_sni: bool
+    include_sni: bool = True
 
     # v3.x additions (optional in YAML)
     tls_enum_mode: str = "fast"  # off|fast|deep
@@ -42,8 +42,8 @@ class TargetsCfg:
 
 @dataclass
 class ConnectorsCfg:
-    enable_aws: bool
-    enable_azure: bool
+    enable_aws: bool = False
+    enable_azure: bool = False
     # Phase 3 scanner enable flags (per D-04)
     enable_jwt: bool = False
     enable_container: bool = False
