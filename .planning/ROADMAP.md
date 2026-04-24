@@ -166,8 +166,10 @@ Plans:
   2. `dnssec_scanner.py`, `saml_scanner.py`, and `kerberos_scanner.py` each accept and stamp endpoints with the shared `session_start` instead of calling `datetime.now()` internally at endpoint construction time
   3. Tests demonstrate that a simulated scan with delayed Kerberos targets still returns DNSSEC and SAML endpoints in `GET /api/scan/latest` scan-window — none excluded by timestamp skew
   4. Full test suite passes with no regressions
-**Plans**: 0 plans
+**Plans**: 2 plans
 Plans:
+- [ ] 24-01-PLAN.md — TDD RED: session_start acceptance tests for 3 identity scanners + ISSUE-3 API regression test
+- [ ] 24-02-PLAN.md — TDD GREEN: Add session_start parameter to scanners + wire in run_scan.py
 
 ### Phase 25: Identity Findings Accuracy
 **Goal**: OIDC RS256 endpoints appear correctly in the Identity tab (not mislabeled as TLS-sourced in the Findings tab), and `ldap3` is installable via `pip install quirk[identity]` enabling Kerberos LDAP enumeration
