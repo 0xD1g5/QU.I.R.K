@@ -46,13 +46,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Milestone Goal:** Expand cryptographic inventory to cover identity protocols — Kerberos, SAML/OIDC, and DNSSEC — each with a scanner module, CBOM integration, chaos lab profile, and a dedicated Identity tab in the dashboard.
 
-- [ ] **Phase 17: Identity Infrastructure** - Schema columns, migration guard, [identity] extras group, and config flags for all three new scanners
-- [ ] **Phase 18: DNSSEC Scanner** - dnspython scanner, RFC 8624/9905 algorithm classification, CBOM integration, BIND9 chaos lab
-- [ ] **Phase 19: SAML/OIDC Scanner** - lxml metadata parser, OIDC discovery, classifier extension, SimpleSAMLphp chaos lab
-- [ ] **Phase 20: Kerberos Scanner** - impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab
-- [ ] **Phase 21: Identity Surface** - Intelligence layer counters, FastAPI IdentityFinding model, React Identity tab, findings table filter
-- [ ] **Phase 22: v4.2 Identity Crypto Gap Closure** - Fix main_logger NameError in run_scan.py and SAML/KERBEROS Pass 3 skip list omission in builder.py — closes DNSSEC-04, SAML-05, KERB-04
-- [ ] **Phase 23: DNSSEC CBOM Skip List Fix** - DNSSEC added to Pass 2 cert skip list, eliminating hollow X.509 CertificateProperties in CBOM output — closes DNSSEC-04 CBOM gap
+- [x] **Phase 17: Identity Infrastructure** - Schema columns, migration guard, [identity] extras group, and config flags for all three new scanners (completed 2026-04-08)
+- [x] **Phase 18: DNSSEC Scanner** - dnspython scanner, RFC 8624/9905 algorithm classification, CBOM integration, BIND9 chaos lab (completed 2026-04-08)
+- [x] **Phase 19: SAML/OIDC Scanner** - lxml metadata parser, OIDC discovery, classifier extension, SimpleSAMLphp chaos lab (completed 2026-04-09)
+- [x] **Phase 20: Kerberos Scanner** - impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab (completed 2026-04-09)
+- [x] **Phase 21: Identity Surface** - Intelligence layer counters, FastAPI IdentityFinding model, React Identity tab, findings table filter (completed 2026-04-10)
+- [ ] **Phase 22: v4.2 Identity Crypto Gap Closure** - Fix main_logger NameError in run_scan.py and SAML/KERBEROS Pass 3 skip list omission in builder.py — closes DNSSEC-04, SAML-05, KERB-04 [human verification pending]
+- [x] **Phase 23: DNSSEC CBOM Skip List Fix** - DNSSEC added to Pass 2 cert skip list, eliminating hollow X.509 CertificateProperties in CBOM output — closes DNSSEC-04 CBOM gap (completed 2026-04-24)
 - [ ] **Phase 24: Scan-Session Timestamp Isolation** - Pass shared session_start from run_scan.py into all identity scanners to fix scan-window timing defect — closes ISSUE-3
 - [ ] **Phase 25: Identity Findings Accuracy** - Add RS-family branch to _derive_identity_findings() for OIDC RS256 and add ldap3 to [identity] extras — closes NEW-ISSUE-1, ISSUE-2
 
