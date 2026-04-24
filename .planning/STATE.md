@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v4.3
 milestone_name: Data at Rest
-status: planned
-stopped_at: Phase 25 / requirements defined
-last_updated: "2026-04-24T00:00:00.000Z"
+status: planning
+stopped_at: Phase 25 context gathered
+last_updated: "2026-04-24T22:16:05.842Z"
 last_activity: 2026-04-24 — Roadmap created; Phases 25–31 defined
 progress:
-  total_phases: 7
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 10
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -136,6 +136,6 @@ Items acknowledged and deferred at v4.2 milestone close on 2026-04-24 (carried t
 
 ## Session Continuity
 
-Last session: 2026-04-24
-Stopped at: v4.3 roadmap created — Phases 25–31 defined
-Resume file: /gsd-plan-phase 25
+Last session: --stopped-at
+Stopped at: Phase 25 context gathered
+Resume file: --resume-file
