@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-16 (UAT runner fixes: venv Python for import checks, EOFError handling in interactive wizard, identity ratio keys emitted to evidence_summary, LATEST_TS auto-detect, all dashboard API tests passing — 80/82 PASS, 0 FAIL, 2 SKIP informational)
+**Last Updated:** 2026-04-24 (Phase 23: added UAT-8-15 for DNSSEC CBOM certificate skip list fix — DNSSEC-04 closed)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -3067,6 +3067,45 @@ Each finding object contains:
 - Zero CBOM components of type `certificate` with Kerberos origin
 - RC4/DES etype names appear as `algorithm` components if detected
 - `kerberos-unreachable` synthetic findings do NOT appear as algorithm components
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-8-15: CBOM — DNSSEC Endpoints Produce Only Algorithm Components (DNSSEC-04)
+
+> Added Phase 23 (2026-04-24): Added `"DNSSEC"` to Pass 2 certificate skip tuple in `builder.py` line 389. DNSSEC endpoints no longer produce hollow `CertificateProperties` components.
+
+**Prerequisites:** Completed scan with DNSSEC scanner enabled and at least one zone with DNSKEY records reachable.
+
+**Steps:**
+1. Run full scan with DNSSEC profile enabled
+2. Inspect the generated CBOM JSON:
+   ```bash
+   python3 -c "
+   import json, glob
+   cbom = json.load(open(sorted(glob.glob('output/cbom-*.json'))[-1]))
+   comps = cbom.get('components', [])
+   dnssec_refs = [(str(c.get('bom-ref','')), c.get('type','')) for c in comps
+                  if 'dnssec' in str(c.get('bom-ref','')).lower() or ':53' in str(c.get('bom-ref',''))]
+   print('DNSSEC-related components:')
+   for ref, t in dnssec_refs:
+       print(f'  type={t} bom_ref={ref}')
+   cert_comps = [c for c in comps if str(c.get('bom-ref','')).startswith('crypto/certificate/')]
+   print(f'Total certificate components: {len(cert_comps)}')
+   dnssec_certs = [c for c in cert_comps if ':53' in str(c.get('bom-ref',''))]
+   print(f'DNSSEC certificate components: {len(dnssec_certs)} (expected 0)')
+   "
+   ```
+
+**Expected:** No `crypto/certificate/` components sourced from DNSSEC endpoints. DNSSEC appears only as algorithm components (e.g., `crypto/algorithm/ecdsap256sha256`) in the CBOM.
+
+**Pass Criteria:**
+- Zero CBOM components with `bom_ref` starting with `crypto/certificate/` for DNSSEC hosts (port 53)
+- DNSKEY algorithm names (e.g., ECDSAP256SHA256, RSASHA256) appear as `algorithm` components
+- No spurious `crypto/protocol/tls/` components for DNSSEC endpoints (Pass 3 already correct)
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
