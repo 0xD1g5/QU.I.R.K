@@ -1,5 +1,5 @@
 ---
-status: partial
+status: resolved
 phase: 24-scan-session-timestamp
 source: [24-VERIFICATION.md]
 started: 2026-04-24T00:00:00Z
@@ -8,7 +8,7 @@ updated: 2026-04-24T00:00:00Z
 
 ## Current Test
 
-[awaiting human decision]
+Approved by user — intentional failure accepted as documented known limitation.
 
 ## Tests
 
@@ -19,14 +19,14 @@ updated: 2026-04-24T00:00:00Z
 The root-cause fix (shared `session_start` in all 3 identity scanners + `run_scan.py`) prevents mismatched timestamps in production. The query itself is unchanged.
 
 expected: Confirm the continued failure is acceptable as a documented known limitation, OR mark the test `@pytest.mark.xfail(reason="ISSUE-3: scan-window query layer not fixed in phase 24")` to make intent explicit in the test suite.
-result: [pending]
+result: approved — intentional failure accepted. Query-layer gap documented as future scope.
 
 ## Summary
 
 total: 1
-passed: 0
+passed: 1
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
