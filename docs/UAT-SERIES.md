@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-24 (Phase 23: added UAT-8-15 for DNSSEC CBOM certificate skip list fix — DNSSEC-04 closed)
+**Last Updated:** 2026-04-24 (Phase 24: added UAT-8-16 for scan-session timestamp isolation — ISSUE-3 root cause fix; all 3 identity scanners share one session_start timestamp)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -3112,6 +3112,44 @@ Each finding object contains:
 **Notes:**
 
 ---
+
+### UAT-8-16: Identity Scanners — Shared Session Timestamp (ISSUE-3 fix, Phase 24)
+
+> Added Phase 24 (2026-04-24): All 3 identity scanners (DNSSEC, SAML, Kerberos) now accept `session_start=None` and `run_scan.py` passes one shared `datetime.now(timezone.utc)` to all 3. Endpoints from a scan session share one `scanned_at`, eliminating scan-window exclusion.
+
+**Prerequisites:** Full scan with DNSSEC, SAML, and Kerberos targets configured and reachable.
+
+**Steps:**
+1. Run a full scan: `quirk scan --config <config-with-all-3-identity-scanners>`
+2. Query the scan-latest API endpoint:
+   ```bash
+   curl -s http://localhost:7420/api/scan/latest | python3 -c "
+   import json, sys
+   data = json.load(sys.stdin)
+   protocols = {f['protocol'] for f in data.get('identity_findings', [])}
+   print('Identity protocols found:', protocols)
+   "
+   ```
+3. Alternatively, verify directly in SQLite:
+   ```bash
+   python3 -c "
+   import sqlite3
+   db = sqlite3.connect('quirk.db')
+   rows = db.execute(\"SELECT protocol, scanned_at FROM crypto_endpoints WHERE protocol IN ('DNSSEC','SAML','KERBEROS') ORDER BY scanned_at DESC LIMIT 10\").fetchall()
+   for r in rows: print(r)
+   "
+   ```
+
+**Expected:** All 3 identity protocols appear in `identity_findings`. DNSSEC and SAML `scanned_at` timestamps match Kerberos — no spread greater than 1 second between protocols from the same scan session.
+
+**Pass Criteria:**
+- `DNSSEC`, `SAML`, and `KERBEROS` all present in `/api/scan/latest` `identity_findings`
+- All 3 protocols' `scanned_at` values in SQLite are within 1 second of each other for the same scan run
+- No identity protocol is silently excluded from scan results due to timestamp mismatch
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
