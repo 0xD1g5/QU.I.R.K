@@ -4,7 +4,8 @@
 
 - ✅ **v3.9 Gap Closure** — Phases 1–11, 40 plans (shipped 2026-04-04) → `.planning/milestones/v3.9-ROADMAP.md`
 - ✅ **v4.1 Foundation Polish** — Phases 12–16, 10 plans (shipped 2026-04-08) → `.planning/milestones/v4.1-ROADMAP.md`
-- 🚧 **v4.2 Identity Crypto** — Phases 17–21 (in progress)
+- ✅ **v4.2 Identity Crypto** — Phases 17–24, 14 plans (shipped 2026-04-24) → `.planning/milestones/v4.2-ROADMAP.md`
+- 📋 **v4.3 Data at Rest** — Phase 25+ (planned)
 
 ## Phases
 
@@ -42,19 +43,25 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
-### 🚧 v4.2 Identity Crypto (In Progress)
+<details>
+<summary>✅ v4.2 Identity Crypto (Phases 17–24) — SHIPPED 2026-04-24</summary>
 
 **Milestone Goal:** Expand cryptographic inventory to cover identity protocols — Kerberos, SAML/OIDC, and DNSSEC — each with a scanner module, CBOM integration, chaos lab profile, and a dedicated Identity tab in the dashboard.
 
 - [x] **Phase 17: Identity Infrastructure** - Schema columns, migration guard, [identity] extras group, and config flags for all three new scanners (completed 2026-04-08)
-- [x] **Phase 18: DNSSEC Scanner** - dnspython scanner, RFC 8624/9905 algorithm classification, CBOM integration, BIND9 chaos lab (completed 2026-04-08)
+- [x] **Phase 18: DNSSEC Scanner** - dnspython scanner, RFC 8624/9905 algorithm classification, CBOM integration, BIND9 chaos lab (completed 2026-04-09)
 - [x] **Phase 19: SAML/OIDC Scanner** - lxml metadata parser, OIDC discovery, classifier extension, SimpleSAMLphp chaos lab (completed 2026-04-09)
 - [x] **Phase 20: Kerberos Scanner** - impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab (completed 2026-04-09)
 - [x] **Phase 21: Identity Surface** - Intelligence layer counters, FastAPI IdentityFinding model, React Identity tab, findings table filter (completed 2026-04-10)
-- [ ] **Phase 22: v4.2 Identity Crypto Gap Closure** - Fix main_logger NameError in run_scan.py and SAML/KERBEROS Pass 3 skip list omission in builder.py — closes DNSSEC-04, SAML-05, KERB-04 [human verification pending]
+- [x] **Phase 22: v4.2 Identity Crypto Gap Closure** - Fix main_logger NameError in run_scan.py and SAML/KERBEROS Pass 2+3 skip list omissions in builder.py — closes DNSSEC-04, SAML-05, KERB-04 (completed 2026-04-16)
 - [x] **Phase 23: DNSSEC CBOM Skip List Fix** - DNSSEC added to Pass 2 cert skip list, eliminating hollow X.509 CertificateProperties in CBOM output — closes DNSSEC-04 CBOM gap (completed 2026-04-24)
-- [ ] **Phase 24: Scan-Session Timestamp Isolation** - Pass shared session_start from run_scan.py into all identity scanners to fix scan-window timing defect — closes ISSUE-3
-- [ ] **Phase 25: Identity Findings Accuracy** - Add RS-family branch to _derive_identity_findings() for OIDC RS256 and add ldap3 to [identity] extras — closes NEW-ISSUE-1, ISSUE-2
+- [x] **Phase 24: Scan-Session Timestamp Isolation** - Shared session_start wired from run_scan.py into all 3 identity scanners, eliminating ISSUE-3 scan-window timing defect (completed 2026-04-24)
+
+**Phase 25 deferred to v4.3:** Identity Findings Accuracy — RS-family branch for OIDC RS256 in _derive_identity_findings() + ldap3 to [identity] extras (closes NEW-ISSUE-1, ISSUE-2)
+
+</details>
+
+### 📋 v4.3 Data at Rest (Planned)
 
 ### Phase 17: Identity Infrastructure
 **Goal**: The codebase is structurally ready to receive three new identity scanners — schema columns exist and are idempotent, optional dependency group is declared, and config flags are wired
@@ -556,7 +563,7 @@ Ideas captured during planning — not in scope for v1, but not lost.
 ## Progress
 
 **Execution Order:**
-v3.9 phases complete. v4.1 complete. v4.2 executes: 17 -> 18 -> 19 -> 20 -> 21
+v3.9 complete. v4.1 complete. v4.2 complete. v4.3 next: 25 -> ...
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -576,8 +583,12 @@ v3.9 phases complete. v4.1 complete. v4.2 executes: 17 -> 18 -> 19 -> 20 -> 21
 | 14. Scoring & Intelligence Correctness | v4.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Code Hygiene | v4.1 | 2/2 | Complete | 2026-04-08 |
 | 16. v4.1 Gap Closure | v4.1 | 2/2 | Complete | 2026-04-08 |
-| 17. Identity Infrastructure | v4.2 | 2/2 | Complete    | 2026-04-08 |
-| 18. DNSSEC Scanner | v4.2 | 2/2 | Complete    | 2026-04-09 |
-| 19. SAML/OIDC Scanner | v4.2 | 2/2 | Complete    | 2026-04-09 |
-| 20. Kerberos Scanner | v4.2 | 2/2 | Complete    | 2026-04-09 |
-| 21. Identity Surface | v4.2 | 2/2 | Complete    | 2026-04-10 |
+| 17. Identity Infrastructure | v4.2 | 2/2 | Complete | 2026-04-08 |
+| 18. DNSSEC Scanner | v4.2 | 2/2 | Complete | 2026-04-09 |
+| 19. SAML/OIDC Scanner | v4.2 | 2/2 | Complete | 2026-04-09 |
+| 20. Kerberos Scanner | v4.2 | 2/2 | Complete | 2026-04-09 |
+| 21. Identity Surface | v4.2 | 2/2 | Complete | 2026-04-10 |
+| 22. v4.2 Gap Closure | v4.2 | 1/1 | Complete | 2026-04-16 |
+| 23. DNSSEC CBOM Skip Fix | v4.2 | 1/1 | Complete | 2026-04-24 |
+| 24. Scan-Session Timestamp Isolation | v4.2 | 2/2 | Complete | 2026-04-24 |
+| 25. Identity Findings Accuracy | v4.3 | 0/0 | Planned | — |

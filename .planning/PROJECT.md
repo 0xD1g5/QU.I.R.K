@@ -62,27 +62,26 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ All 16 Nyquist VALIDATION.md files up to date — Phase 15, 16
 - ✓ Flow C (interactive wizard → scan → dashboard with correct profile) fully wired — Phase 16
 
-## Current Milestone: v4.2 Identity Crypto
+**v4.2 Identity Crypto (Phases 17–24)**
+- ✓ SQLite schema gains kerberos_scan_json, saml_scan_json, dnssec_scan_json columns; [identity] extras group in pyproject.toml — Phase 17
+- ✓ DNSSEC scanner — dnspython authoritative NS query, DO-bit, RFC 8624/9905 3-tier classification (CRITICAL/HIGH/SAFE), NSEC/DS-chain detection, CBOM integration — Phase 18
+- ✓ BIND9 chaos lab profile — 4 pre-signed DNSSEC zones (RSASHA1-weak, ECDSAP256SHA256-safe, broken-chain, unsigned) — Phase 18
+- ✓ SAML/OIDC scanner — defusedxml XXE-safe parsing, RSA-1024/2048 cert extraction, SHA-1 URI detection, OIDC discovery, CBOM integration — Phase 19
+- ✓ SimpleSAMLphp chaos lab profile — RSA-1024 signing cert for scanner validation — Phase 19
+- ✓ Kerberos scanner — impacket AS-REQ unauthenticated probe, 7-etype severity map (RC4 HIGH, DES CRITICAL, AES-256 SAFE), LDAP graceful degradation, CBOM integration — Phase 20
+- ✓ Samba DC chaos lab profile — QUIRK.LAB realm with RC4 enabled, start_period 90s healthcheck — Phase 20
+- ✓ Identity surface — evidence.py counters (identity_weak_etype_count, saml_weak_signing_count, dnssec_weak_algo_count) wired into scoring; FastAPI IdentityFinding model; identity_findings[] in /api/scan/latest; React Identity tab — Phase 21
+- ✓ Identity CBOM pass 2+3 skip lists — no spurious X.509 CertificateProperties or TLS protocol components for SAML/Kerberos/DNSSEC endpoints — Phase 22-23
+- ✓ Scan-session timestamp isolation — shared session_start from run_scan.py into all 3 identity scanners; ISSUE-3 scan-window timing defect eliminated — Phase 24
 
-**Goal:** Expand QU.I.R.K.'s cryptographic inventory surface to cover identity protocols — Kerberos, SAML/OAuth, and DNSSEC — each with a new scanner module, CBOM integration, chaos lab profile, and a dedicated Identity tab in the dashboard.
+## Current Milestone: v4.3 Data at Rest
 
-**Target features:**
-- Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC)
-- SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata/discovery endpoints
-- DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython, detecting weak signing algorithms
-- Chaos lab profiles for all 3 scanner types
-- New Identity tab in dashboard (Kerberos/SAML/DNSSEC findings alongside TLS/SSH)
+**Goal:** Expand QU.I.R.K.'s cryptographic inventory to cover data-at-rest encryption — database encryption settings, object storage policies, Kubernetes secrets, and HashiCorp Vault transit keys. First milestone to include Phase 25 (Identity Findings Accuracy) carried from v4.2.
 
 ### Active
 
-**v4.2 Identity Crypto**
-- ✓ Kerberos etype enumeration — AS-REQ probe, RC4/AES etype detection, chaos lab (Samba DC) — Phase 20
-- [ ] SAML/OAuth metadata scanning — signing cert key type, algorithm declarations from metadata endpoints
-- ✓ DNSSEC algorithm audit — DNSKEY/DS record analysis via dnspython, RFC 8624/9905 3-tier classification — Phase 18
-- ✓ BIND9 chaos lab profile (dnssec) — 4 zones (weak/safe/broken/unsigned) on port 15353 — Phase 18
-- ✓ New Identity tab in dashboard — protocol cards (Kerberos/SAML/DNSSEC), findings table, protocol filter on Findings page, identity_findings[] in API — Phase 21
-
-**v4.3 Data at Rest (Planned)**
+**v4.3 Data at Rest (Phases 25+)**
+- [ ] Identity Findings Accuracy (Phase 25 — carried from v4.2) — RS-family branch in _derive_identity_findings() for OIDC RS256; ldap3 added to [identity] extras
 - [ ] Database encryption detection — PostgreSQL, MySQL, RDS encryption settings
 - [ ] Object storage audit — S3/Blob/GCS encryption-at-rest configuration
 - [ ] Kubernetes secrets inspection — etcd EncryptionConfiguration, secret types
@@ -112,22 +111,18 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.1.0 — fully shipped (v4.1 Foundation Polish milestone complete 2026-04-08)
+- **Current version**: v4.2.0 — shipped 2026-04-24 (v4.2 Identity Crypto milestone complete)
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
-- **Chaos lab**: Docker Compose, 10 profiles (core + 6 Phase 4 additions: jwt/registry/source/storage/ssh-weak/ldaps)
+- **Chaos lab**: Docker Compose, 13 profiles (core + 6 Phase 4 additions + 3 v4.2 identity: dnssec/saml/kerberos)
 - **Business model**: Consulting deliverable — tool enables billable assessments
 - **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
-- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 239 tests passing (pytest); all Nyquist VALIDATION.md files up to date
-- **Known tech debt**: None — all v4.1 tech debt resolved (Phases 15–16)
-- **Phase 17 complete** (2026-04-08): Identity infrastructure — schema columns, config flags, pyproject extras group for Kerberos/SAML/DNSSEC scanners
-- **Phase 18 complete** (2026-04-09): DNSSEC scanner — full implementation with RFC 8624/9905 classification, CBOM integration, BIND9 chaos lab; 15 tests pass, 239 regressions clean
-- **Phase 19 complete** (2026-04-09): SAML/OIDC scanner — defusedxml XXE-safe metadata parsing, RSA/ECDSA cert extraction, SHA-1 deprecation scoring, OIDC discovery enumeration, CBOM integration, SimpleSAMLphp chaos lab with RSA-1024 cert; 25 tests pass, 254 regressions clean
-- **Phase 20 complete** (2026-04-09): Kerberos scanner — AS-REQ probe with TCP/UDP fallback, 7-etype severity map (RC4-HMAC CRITICAL, AES-256 SAFE), LDAP graceful degradation, CBOM integration, Samba DC chaos lab (QUIRK.LAB realm, RC4 enabled); 23 tests pass (1 integration skipped pending Docker)
-- **Phase 24 complete** (2026-04-24): Scan-session timestamp isolation — `session_start=None` added to all 3 identity scanner entry points; `run_scan.py` creates one shared timestamp before DNSSEC/SAML/Kerberos blocks and passes it to all 3. ISSUE-3 root cause eliminated. 3 TDD RED→GREEN tests confirm the fix; 352 tests pass, zero regressions.
+- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, identity protocol scanning (Kerberos/SAML/DNSSEC), chaos lab for client-side scanner validation, polished HTML/PDF reports
+- **Test coverage**: 352 tests passing (pytest); all Nyquist VALIDATION.md files up to date
+- **Known tech debt**: ISSUE-2 (ldap3 absent from pyproject.toml — KERB-03 LDAP always inerts), NEW-ISSUE-1 (OIDC RS256 findings mislabeled as TLS-sourced) — both Phase 25 targets in v4.3
+- **v4.2 milestone shipped** (2026-04-24): 8 phases (17–24), 14 plans — full identity protocol surface: DNSSEC + SAML/OIDC + Kerberos scanners, 3 chaos lab profiles, Identity tab in dashboard, CBOM integration, scan-session timestamp isolation
 
 ## Constraints
 
@@ -150,9 +145,14 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | SaaS on roadmap (not v1) | Avoid premature infrastructure; prove value with CLI first | ✓ Good — SaaS remains future milestone; v4.0 ships without it |
 | Rename QuRisk → QU.I.R.K. | Brand identity aligned with product scope and market positioning | ✓ Good — rename complete (Phase 1+7); zero stale references in live codebase |
 | Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
+| Direct authoritative NS query for DNSSEC | System resolver strips DO bit and DNSKEY records — must query NS directly via dnspython | ✓ Good — scanner correctly retrieves DNSSEC records; authoritative query is the only reliable path |
+| impacket in [identity] extras only | pyOpenSSL transitive conflict risk prevents placing impacket in core deps | ✓ Good — identity extras group keeps core install lightweight; consultants opt in with pip install quirk[identity] |
+| SAML_NS dict constant required | lxml XPath produces empty results without explicit namespace dict — silent failure without it | ✓ Good — SAML_NS as module-level constant is the correct lxml pattern; discovered during RED test debugging |
+| Shared session_start from run_scan.py | Per-scanner datetime.now() at endpoint creation time caused scan-window timing to exclude early-stamped identity endpoints | ✓ Good — ISSUE-3 eliminated; all identity endpoints from one scan share one scanned_at timestamp |
+| ldap3 deferred to Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; KERB-03 LDAP path always degrades gracefully | ⚠ Revisit — fix is one dependency line in v4.3 Phase 25; LDAP enumeration inert until then |
 
 ---
-*Last updated: 2026-04-24 after Phase 24 (Scan-Session Timestamp Isolation) complete — added `session_start=None` to all 3 identity scanner entry points (DNSSEC, SAML, Kerberos) and wired a shared timestamp from `run_scan.py`. ISSUE-3 root cause eliminated: all identity endpoints from a scan session now share one `scanned_at` timestamp, preventing the 1-second scan-window query from excluding early-stamped protocols. Requirements KERB-04, SAML-05, DNSSEC-04, IDENT-02, IDENT-03 validated. v4.2 Identity Crypto milestone complete.*
+*Last updated: 2026-04-24 after v4.2 Identity Crypto milestone complete — 8 phases (17–24), 14 plans, 352 tests. Three identity protocol scanners (DNSSEC/SAML/Kerberos) shipped with chaos labs and dashboard Identity tab. All 25 v4.2 requirements validated at code level. ISSUE-2 (ldap3) and NEW-ISSUE-1 (OIDC RS256 routing) deferred to Phase 25 in v4.3. Next milestone: v4.3 Data at Rest.*
 
 ## Evolution
 

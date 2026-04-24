@@ -101,6 +101,53 @@
 
 ---
 
+## Milestone: v4.2 — Identity Crypto
+
+**Shipped:** 2026-04-24
+**Phases:** 8 (17–24; Phase 25 deferred) | **Plans:** 14 | **Tests at ship:** 352
+
+### What Was Built
+
+- **Three identity protocol scanners:** DNSSEC (RFC 8624/9905 3-tier classification via dnspython authoritative query), SAML/OIDC (defusedxml XXE-safe lxml parsing, RSA-1024/SHA-1 detection, OIDC discovery), Kerberos (impacket AS-REQ unauthenticated probe, 7-etype severity map) — the first major scanner expansion since Phase 3
+- **Three Docker chaos lab profiles:** BIND9 with 4 pre-signed DNSSEC zones, SimpleSAMLphp with RSA-1024 signing cert, Samba DC with RC4-enabled realm — complete testbeds for all three identity scanners
+- **Full identity CBOM pipeline:** all three protocols produce CycloneDX components; Pass 2/3 skip lists prevent hollow X.509 artifacts; DNSSEC required a separate gap-closure phase (23) to add it to Pass 2 cert skip list
+- **Identity surface in dashboard:** React Identity tab with per-protocol summary cards, FastAPI IdentityFinding Pydantic model, identity_findings[] in /api/scan/latest, Findings table protocol filter — identity findings fully wired end-to-end
+- **Three-phase gap closure sweep:** Phase 22 (NameError + CBOM skip lists), Phase 23 (DNSSEC Pass 2 certificate skip), Phase 24 (scan-window timing ISSUE-3 HIGH) — milestone audit found 4 gaps; all severity HIGH and above closed before ship
+
+### What Worked
+
+- **Audit-at-v3 pattern proved its value.** The v3 milestone audit after Phase 23 completion found ISSUE-3 (HIGH scan-window timing defect) that would have been invisible in production — Kerberos timeouts silently excluding DNSSEC/SAML endpoints from the API response. Without the audit, the Identity tab would have appeared empty under realistic network conditions.
+- **TDD RED-first caught domain-specific edge cases.** The SAML_NS constant requirement (lxml XPath returns empty without explicit namespace dict) and the kerberos _derive_realm IPv4 detection gap were both caught by RED tests before implementation, not after. The discipline of writing failing assertions first surfaces silent bugs that code review misses.
+- **Impacket isolation decision paid off.** Keeping impacket in [identity] extras only (not core deps) prevented a pyOpenSSL transitive conflict from blocking all users. The KERB-03 graceful-degradation path means the scanner always works; ldap3 absence is a capability gap, not a crash.
+- **Gap-closure phases scale to single-file fixes.** Phase 23 was a one-line addition to a skip tuple (`"DNSSEC"` to builder.py Pass 2). Phase 24 was a two-line change (session_start wired from run_scan.py). These tiny fixes still got their own planned phases with TDD scaffolds — that rigor confirmed the fix was correct and protected against regressions.
+
+### What Was Inefficient
+
+- **DNSSEC-04 required three gap-closure phases to fully close.** The CBOM skip list was initially missed in Phase 22 (which handled SAML/Kerberos but not DNSSEC), caught in Phase 23, then the scan-window timing defect was found in Phase 24. A more complete Phase 22 spec would have covered all three protocols equally — the gap existed because DNSSEC was structurally different (no X.509 cert components at all) and wasn't treated the same way in the builder audit.
+- **Phase 25 deferred at ship.** ISSUE-2 (ldap3) and NEW-ISSUE-1 (OIDC RS256 identity routing) were identified by the v3 audit but not closed before milestone. Both are small fixes (one dependency line + one if-branch in scan.py). They should have been Phase 25 candidates from the audit's first pass, not discovered at v3.
+- **expected_results_v3.md missing identity chaos lab entries.** CLAUDE.md explicitly requires updating expected_results.md when detection logic changes. This was flagged as NEW-ISSUE-3 in the audit but not fixed during the milestone. One of the clearest CLAUDE.md rule violations in this milestone's execution.
+
+### Patterns Established
+
+- **Per-protocol CBOM elif branches + skip lists:** Each new protocol scanner requires both an addition to builder.py (elif branch for algorithm registration) AND an entry in the Pass 2 cert skip tuple AND the Pass 3 protocol-component skip tuple. Checklist item for all future identity-class scanners.
+- **Shared session_start as scan session contract:** All scanners that run sequentially from run_scan.py must accept a `session_start` parameter and use it rather than calling `datetime.now()` internally. This is now an established interface contract — future scanners should follow it from Phase 1, not as a gap closure.
+- **Direct authoritative NS query for DNSSEC:** System resolver always strips the DO bit. Any DNSSEC scanner must use `dns.resolver.resolve()` against the authoritative NS directly, not the system stub resolver. Documented once here so the next DNSSEC-adjacent feature doesn't rediscover it.
+
+### Key Lessons
+
+1. **The scan-window query is a systemic integration test.** GET /api/scan/latest's 1-second window around MAX(scanned_at) is fragile by design — any sequential scanner that can timeout will skew the anchor. The shared session_start pattern (Phase 24) fixes this, but the API query itself should be reviewed for future scanner additions.
+2. **CBOM skip list coverage must be audited symmetrically.** Phase 22 added SAML + KERBEROS to skip lists but missed DNSSEC (different shape — no X.509 components, needs a different skip path). Future builder.py changes should audit all 3 identity protocols plus TLS/SSH in the same pass.
+3. **expected_results.md updates are not optional.** CLAUDE.md makes this an explicit requirement when detection logic changes. All three identity chaos lab profiles (bind9-dnssec, simplesamlphp, samba-dc) are missing entries. This compounds: the longer it's deferred, the harder it is to write accurate expected results from memory.
+4. **Graceful degradation must be installable too.** KERB-03's ldap3 path gracefully degrades — but graceful degradation is only useful if the happy path is achievable. A dependency that can never be installed (ldap3 absent from pyproject.toml) is not a graceful degradation; it's a permanently broken feature. The fix is trivial (one line); the lesson is to verify every import-guarded dependency exists in some installable group.
+
+### Cost Observations
+
+- Model mix: Sonnet 4.6 primary throughout milestone
+- Sessions: Extended execution across 2026-04-08 → 2026-04-24 (16 days including research and gap-closure cycles)
+- Notable: Three gap-closure phases after primary feature work — audit-driven rigor caught ISSUE-3 HIGH that would have caused silent data loss in the Identity tab under realistic conditions; cost justified by correctness guarantee
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -109,6 +156,7 @@
 |-----------|--------|-------|------------|
 | v3.9 Gap Closure | 11 | 40+ | First milestone to use audit-milestone + integration checker gate before close; established BACK-xx backlog and milestones/ archival patterns |
 | v4.1 Foundation Polish | 5 | 10 | Correctness-only milestone — no new features; 22/22 requirements satisfied; audit-gap-closure pattern validated at small scale |
+| v4.2 Identity Crypto | 8 | 14 | First major scanner expansion since v3.9; 3-phase gap closure sweep; shared session_start contract established; audit caught HIGH-severity ISSUE-3 before ship |
 
 ### Cumulative Quality
 
@@ -116,6 +164,7 @@
 |-----------|-------|-------|
 | v3.9 | 199 | 199 tests green at ship; 9 stale Nyquist VALIDATION.md files (BACK-62) |
 | v4.1 | 233 | 233 tests green at ship; all 14 VALIDATION.md files updated to nyquist_compliant: true; zero known tech debt |
+| v4.2 | 352 | 352 tests green at ship; 7/7 Nyquist VALIDATION.md files compliant; 2 MEDIUM gaps deferred (Phase 25 in v4.3) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -123,3 +172,5 @@
 2. Integration audit (`gsd:audit-milestone`) must run before `gsd:complete-milestone` — phase-level verification alone is insufficient to confirm cross-phase wiring is correct
 3. Test package manifest version (importlib.metadata) separately from runtime __version__ — editable installs can make them diverge invisibly
 4. Dead code deferred across two milestones becomes permanent — enforce dead code deletion in the phase that discovers it, not later
+5. Every import-guarded optional dependency must exist in an installable extras group — graceful degradation is only meaningful if the non-degraded path is reachable
+6. Shared session_start is an integration contract, not a fix — future scanners added to run_scan.py must accept and use it from Phase 1

@@ -18,19 +18,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-08)
+See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase --phase — 24
+**Current focus:** v4.3 Data at Rest — next milestone (start with /gsd-new-milestone)
 
 ## Current Position
 
-Phase: 24
+Phase: —
 Plan: Not started
-Status: Milestone complete
+Status: v4.2 milestone shipped; planning v4.3
 Last activity: 2026-04-24
 
-Progress: [░░░░░░░░░░] 0% (v4.2) — v4.1 complete
+Progress: [██████████] v4.2 SHIPPED — v4.3 planning next
 
 ## Performance Metrics
 
@@ -108,8 +108,29 @@ None yet.
 - Phase 19 (SAML): confirm whether SimpleSAMLphp emits alg:SigningMethod elements -- fallback to cert key inspection must be primary path
 - Phase 20 (Kerberos): smblds/smblds etype configuration via samba-tool for RC4-only realm is MEDIUM confidence -- fallback image itherz/samba-ad-dc documented in research
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-04-24:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Phase 04: 04-HUMAN-UAT.md (5 pending scenarios) | partial — Docker chaos lab tests, pre-v3.9 carry-over |
+| uat_gap | Phase 05: 05-HUMAN-UAT.md (5 pending scenarios) | partial — Dashboard UI tests, pre-v3.9 carry-over |
+| uat_gap | Phase 07: 07-HUMAN-UAT.md (4 pending scenarios) | partial — Packaging tests, pre-v3.9 carry-over |
+| uat_gap | Phase 13: 13-UAT.md (6 pending scenarios) | testing — Interactive mode, pre-v4.1 carry-over |
+| verification_gap | Phase 04: 04-VERIFICATION.md | human_needed — pre-v3.9 carry-over |
+| verification_gap | Phase 07: 07-VERIFICATION.md | human_needed — pre-v3.9 carry-over |
+| verification_gap | Phase 22: 22-VERIFICATION.md | human_needed — E2E live identity scan (requires Docker) |
+| verification_gap | Phase 24: 24-VERIFICATION.md | human_needed — intentionally accepted (0 pending scenarios) |
+| seed | SEED-001-backlog-rollout-phase-plan | dormant |
+| milestone_gap | ISSUE-2: ldap3 absent from pyproject.toml (KERB-03 LDAP always inert) | MEDIUM — Phase 25 target |
+| milestone_gap | NEW-ISSUE-1: OIDC RS256 findings mislabeled as TLS-sourced | MEDIUM — Phase 25 target |
+| milestone_gap | NEW-ISSUE-3: expected_results_v3.md missing identity chaos lab entries | LOW — Phase 25 target |
+
+Known deferred items at close: 12 (see above)
+
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Phase 24 planned — 2 plans (01 RED, 02 GREEN), verification passed, ready to execute
-Resume file: .planning/phases/24-scan-session-timestamp/
+Stopped at: v4.2 Identity Crypto milestone complete — archived, tagged v4.2
+Resume file: /gsd-new-milestone for v4.3 planning

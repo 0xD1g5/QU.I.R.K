@@ -1,5 +1,28 @@
 # Milestones
 
+## v4.2 Identity Crypto (Shipped: 2026-04-24)
+
+**Phases completed:** 8 phases (17–24), 14 plans, 352 tests passing
+
+**Key accomplishments:**
+
+1. Three new identity protocol scanners — DNSSEC (RFC 8624/9905 algorithm classification), SAML/OIDC (defusedxml XXE-safe metadata parsing), and Kerberos (impacket AS-REQ unauthenticated probe) — expanding QU.I.R.K.'s cryptographic surface to identity protocols
+2. Three Docker Compose chaos lab profiles — BIND9 with 4 DNSSEC zones, SimpleSAMLphp with RSA-1024 signing cert, Samba DC with RC4-enabled realm — providing testbeds for all three identity scanners
+3. Full identity CBOM pipeline — all three protocols produce CycloneDX components via dedicated elif branches; Pass 2/3 skip lists prevent hollow X.509 artifacts for non-certificate identity records
+4. Identity surface in dashboard — React Identity tab with per-protocol summary cards (Kerberos/SAML/DNSSEC), FastAPI IdentityFinding model and identity_findings array in /api/scan/latest, Findings table protocol column filter
+5. Intelligence layer extended — identity_weak_etype_count, saml_weak_signing_count, dnssec_weak_algo_count counters in evidence.py wired into compute_readiness_score()
+6. Scan-session timestamp isolation (Phase 24) — ISSUE-3 HIGH gap eliminated: shared session_start from run_scan.py passed into all 3 identity scanners; scan-window query no longer silently excludes early-stamped endpoints
+
+**Archived:** `.planning/milestones/v4.2-ROADMAP.md`, `.planning/milestones/v4.2-REQUIREMENTS.md`
+
+**Known deferred items at close:** 12 (see STATE.md Deferred Items)
+- ISSUE-2 (MEDIUM): ldap3 absent from pyproject.toml → Phase 25 in v4.3
+- NEW-ISSUE-1 (MEDIUM): OIDC RS256 findings mislabeled as TLS-sourced → Phase 25 in v4.3
+- NEW-ISSUE-3 (LOW): expected_results_v3.md missing identity chaos lab entries → Phase 25 in v4.3
+- Pre-existing carry-over UAT/verification gaps from v3.9/v4.1 (acknowledged, non-blocking)
+
+---
+
 ## v4.1 Foundation Polish (Shipped: 2026-04-08)
 
 **Phases completed:** 9 phases, 17 plans, 29 tasks
