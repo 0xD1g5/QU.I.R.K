@@ -263,7 +263,7 @@ def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityF
                     source="saml",
                     algorithm="SHA1",
                 ))
-            elif size is not None and isinstance(size, int) and size < 2048:
+            elif alg not in OIDC_ALG_SEVERITY and size is not None and isinstance(size, int) and size < 2048:
                 results.append(IdentityFinding(
                     host=ep.host,
                     port=ep.port,
@@ -472,6 +472,16 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
     ]
 
 
+def _cert_expiry_key(c: "CertItem") -> datetime:
+    """Return a timezone-aware datetime for sorting; normalises naive datetimes to UTC."""
+    dt = c.cert_not_after
+    if dt is None:
+        return datetime.max.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 @router.get("/scan/latest", response_model=ScanLatestResponse)
 def get_latest_scan(
     scan_id: Optional[str] = Query(default=None, description="ISO timestamp scan_id to load; omit for latest"),
@@ -612,7 +622,7 @@ def get_latest_scan(
         if ep.protocol and ep.protocol.upper() == "TLS"
     ]
     # Sort certificates by expiry ascending (soonest first, per UI-SPEC)
-    certificates.sort(key=lambda c: c.cert_not_after or datetime.max.replace(tzinfo=timezone.utc))
+    certificates.sort(key=_cert_expiry_key)
 
     cbom_components = _derive_cbom(endpoints)
     roadmap = _derive_roadmap(evidence, score_raw)
