@@ -1,10 +1,11 @@
 ---
 phase: 15
 slug: code-hygiene
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-07
+updated: 2026-04-24
 ---
 
 # Phase 15 — Validation Strategy
@@ -38,11 +39,11 @@ created: 2026-04-07
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 15-01-01 | 01 | 0 | HYGN-01/02/03/04 | unit | `python -m pytest tests/test_hygiene.py -x -q` | ❌ W0 | ⬜ pending |
-| 15-02-01 | 02 | 1 | HYGN-01 | unit | `python -m pytest tests/test_hygiene.py::test_connectors_stub_absent -x -q` | ✅ W0 | ⬜ pending |
-| 15-02-02 | 02 | 1 | HYGN-02 | unit | `python -m pytest tests/test_hygiene.py::test_cfg_scan_restored_on_exception -x -q` | ✅ W0 | ⬜ pending |
-| 15-02-03 | 02 | 1 | HYGN-03 | unit | `python -m pytest tests/test_hygiene.py::test_scorecard_py_absent -x -q` | ✅ W0 | ⬜ pending |
-| 15-02-04 | 02 | 1 | HYGN-04 | manual+grep | `grep -r "nyquist_compliant: false" .planning/phases/ \| wc -l` → 0 | N/A | ⬜ pending |
+| 15-01-01 | 01 | 0 | HYGN-01/02/03/04 | unit | `python -m pytest tests/test_hygiene.py -x -q` | ✅ | ✅ green |
+| 15-02-01 | 02 | 1 | HYGN-01 | unit | `python -m pytest tests/test_hygiene.py::test_connectors_stub_absent -x -q` | ✅ | ✅ green |
+| 15-02-02 | 02 | 1 | HYGN-02 | unit | `python -m pytest tests/test_hygiene.py::test_cfg_scan_restored_on_exception -x -q` | ✅ | ✅ green |
+| 15-02-03 | 02 | 1 | HYGN-03 | unit | `python -m pytest tests/test_hygiene.py::test_scorecard_py_absent -x -q` | ✅ | ✅ green |
+| 15-02-04 | 02 | 1 | HYGN-04 | manual+grep | `grep -r "nyquist_compliant: false" .planning/phases/ \| wc -l` → 0 | N/A | ✅ manual |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -50,7 +51,7 @@ created: 2026-04-07
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_hygiene.py` — RED stubs for HYGN-01, HYGN-02, HYGN-03, HYGN-04
+- [x] `tests/test_hygiene.py` — RED stubs for HYGN-01, HYGN-02, HYGN-03, HYGN-04
 
 *Existing infrastructure covers test runner; only new test file needed.*
 
@@ -66,11 +67,21 @@ created: 2026-04-07
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-24
+
+---
+
+## Validation Audit 2026-04-24
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 4 (all tasks green) |
+| Escalated | 0 |
+| Manual-only | 1 (HYGN-04 grep audit) |

@@ -1,10 +1,11 @@
 ---
 phase: 19
 slug: saml-oidc-scanner
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-08
+updated: 2026-04-24
 ---
 
 # Phase 19 — Validation Strategy
@@ -38,17 +39,17 @@ created: 2026-04-08
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 19-01-01 | 01 | 1 | SAML-01 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "signing_cert" -x` | ❌ W0 | ⬜ pending |
-| 19-01-02 | 01 | 1 | SAML-02 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "encryption_cert" -x` | ❌ W0 | ⬜ pending |
-| 19-01-03 | 01 | 1 | SAML-03 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "oidc" -x` | ❌ W0 | ⬜ pending |
-| 19-01-04 | 01 | 1 | SAML-04 | unit (pure) | `pytest tests/test_saml_scanner.py -k "severity or sha1" -x` | ❌ W0 | ⬜ pending |
-| 19-01-05 | 01 | 1 | SAML-05 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "cbom or protocol or json" -x` | ❌ W0 | ⬜ pending |
-| 19-01-06 | 01 | 1 | SAML-06 | integration (skipif) | `QUIRK_INTEGRATION_TESTS=1 pytest tests/test_saml_scanner.py -k "chaos_lab" -x` | ❌ W0 | ⬜ pending |
-| 19-02-01 | 02 | 2 | SAML-01,02 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "signing_cert or encryption_cert" -x` | ❌ W0 | ⬜ pending |
-| 19-02-02 | 02 | 2 | SAML-03 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "oidc" -x` | ❌ W0 | ⬜ pending |
-| 19-02-03 | 02 | 2 | SAML-04 | unit (pure) | `pytest tests/test_saml_scanner.py -k "severity or sha1" -x` | ❌ W0 | ⬜ pending |
-| 19-02-04 | 02 | 2 | SAML-05 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "cbom or protocol or json" -x` | ❌ W0 | ⬜ pending |
-| 19-02-05 | 02 | 2 | SAML-06 | integration (skipif) | `QUIRK_INTEGRATION_TESTS=1 pytest tests/test_saml_scanner.py -k "chaos_lab" -x` | ❌ W0 | ⬜ pending |
+| 19-01-01 | 01 | 1 | SAML-01 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "signing_cert" -x` | ✅ | ✅ green |
+| 19-01-02 | 01 | 1 | SAML-02 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "encryption_cert" -x` | ✅ | ✅ green |
+| 19-01-03 | 01 | 1 | SAML-03 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "oidc" -x` | ✅ | ✅ green |
+| 19-01-04 | 01 | 1 | SAML-04 | unit (pure) | `pytest tests/test_saml_scanner.py -k "severity or sha1" -x` | ✅ | ✅ green |
+| 19-01-05 | 01 | 1 | SAML-05 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "cbom or protocol or json" -x` | ✅ | ✅ green |
+| 19-01-06 | 01 | 1 | SAML-06 | integration (skipif) | `QUIRK_INTEGRATION_TESTS=1 pytest tests/test_saml_scanner.py -k "chaos_lab" -x` | ✅ | ✅ manual |
+| 19-02-01 | 02 | 2 | SAML-01,02 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "signing_cert or encryption_cert" -x` | ✅ | ✅ green |
+| 19-02-02 | 02 | 2 | SAML-03 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "oidc" -x` | ✅ | ✅ green |
+| 19-02-03 | 02 | 2 | SAML-04 | unit (pure) | `pytest tests/test_saml_scanner.py -k "severity or sha1" -x` | ✅ | ✅ green |
+| 19-02-04 | 02 | 2 | SAML-05 | unit (mocked) | `pytest tests/test_saml_scanner.py -k "cbom or protocol or json" -x` | ✅ | ✅ green |
+| 19-02-05 | 02 | 2 | SAML-06 | integration (skipif) | `QUIRK_INTEGRATION_TESTS=1 pytest tests/test_saml_scanner.py -k "chaos_lab" -x` | ✅ | ✅ manual |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -56,8 +57,8 @@ created: 2026-04-08
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_saml_scanner.py` — RED test scaffold covering SAML-01 through SAML-06 (all tests must fail at start of Plan 02)
-- [ ] `quirk/scanner/saml_scanner.py` — stub module with `LXML_AVAILABLE` import guard and empty function signatures
+- [x] `tests/test_saml_scanner.py` — RED test scaffold covering SAML-01 through SAML-06 (all tests must fail at start of Plan 02)
+- [x] `quirk/scanner/saml_scanner.py` — stub module with `LXML_AVAILABLE` import guard and empty function signatures
 
 *Plan 01 creates both files. Plan 02 makes tests go GREEN.*
 
@@ -74,11 +75,21 @@ created: 2026-04-08
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-24
+
+---
+
+## Validation Audit 2026-04-24
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 9 unit tasks green |
+| Escalated | 0 |
+| Manual-only | 2 (SAML-06 SimpleSAMLphp chaos lab — requires Docker) |

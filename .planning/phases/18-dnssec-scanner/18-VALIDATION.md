@@ -1,10 +1,11 @@
 ---
 phase: 18
 slug: dnssec-scanner
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-08
+updated: 2026-04-24
 ---
 
 # Phase 18 — Validation Strategy
@@ -38,18 +39,18 @@ created: 2026-04-08
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 18-01-01 | 01 | 1 | DNSSEC-01 | unit (mocked) | `pytest tests/test_dnssec_scanner.py::test_dnskey_query_do_bit -x` | ❌ Wave 0 | ⬜ pending |
-| 18-01-02 | 01 | 1 | DNSSEC-02 | unit | `pytest tests/test_dnssec_scanner.py::test_algorithm_classification -x` | ❌ Wave 0 | ⬜ pending |
-| 18-01-03 | 01 | 1 | DNSSEC-03 | unit (mocked) | `pytest tests/test_dnssec_scanner.py::test_unsigned_zone -x` | ❌ Wave 0 | ⬜ pending |
-| 18-01-04 | 01 | 1 | DNSSEC-04 | unit | `pytest tests/test_dnssec_scanner.py::test_cbom_integration -x` | ❌ Wave 0 | ⬜ pending |
-| 18-01-05 | 01 | 1 | DNSSEC-05 | unit (mocked) | `pytest tests/test_dnssec_scanner.py::test_nsec_detection -x` | ❌ Wave 0 | ⬜ pending |
-| 18-01-06 | 01 | 1 | DNSSEC-06 | unit | `pytest tests/test_dnssec_scanner.py::test_ds_chain_broken -x` | ❌ Wave 0 | ⬜ pending |
-| 18-01-07 | 01 | 1 | DNSSEC-07 | integration | `pytest tests/test_dnssec_scanner.py::test_chaos_lab -x -m integration` | ❌ Wave 0 | ⬜ pending |
-| 18-02-01 | 02 | 2 | DNSSEC-01 | unit | `pytest tests/test_dnssec_scanner.py -x -q` | ✅ after W1 | ⬜ pending |
-| 18-02-02 | 02 | 2 | DNSSEC-02 | unit | `pytest tests/test_dnssec_scanner.py::test_algorithm_classification -x` | ✅ after W1 | ⬜ pending |
-| 18-02-03 | 02 | 2 | DNSSEC-03–06 | unit | `pytest tests/test_dnssec_scanner.py -x -q` | ✅ after W1 | ⬜ pending |
-| 18-02-04 | 02 | 2 | DNSSEC-04 | unit | `pytest tests/test_dnssec_scanner.py::test_cbom_integration -x` | ✅ after W1 | ⬜ pending |
-| 18-02-05 | 02 | 2 | DNSSEC-07 | integration | `pytest tests/test_dnssec_scanner.py::test_chaos_lab -x -m integration` | ✅ after W1 | ⬜ pending |
+| 18-01-01 | 01 | 1 | DNSSEC-01 | unit (mocked) | `pytest tests/test_dnssec_scanner.py::test_dnskey_query_do_bit -x` | ✅ | ✅ green |
+| 18-01-02 | 01 | 1 | DNSSEC-02 | unit | `pytest tests/test_dnssec_scanner.py::test_algorithm_classification -x` | ✅ | ✅ green |
+| 18-01-03 | 01 | 1 | DNSSEC-03 | unit (mocked) | `pytest tests/test_dnssec_scanner.py::test_unsigned_zone -x` | ✅ | ✅ green |
+| 18-01-04 | 01 | 1 | DNSSEC-04 | unit | `pytest tests/test_dnssec_scanner.py::test_cbom_integration -x` | ✅ | ✅ green |
+| 18-01-05 | 01 | 1 | DNSSEC-05 | unit (mocked) | `pytest tests/test_dnssec_scanner.py::test_nsec_detection -x` | ✅ | ✅ green |
+| 18-01-06 | 01 | 1 | DNSSEC-06 | unit | `pytest tests/test_dnssec_scanner.py::test_ds_chain_broken -x` | ✅ | ✅ green |
+| 18-01-07 | 01 | 1 | DNSSEC-07 | integration | `pytest tests/test_dnssec_scanner.py::test_chaos_lab -x -m integration` | ✅ | ✅ manual |
+| 18-02-01 | 02 | 2 | DNSSEC-01 | unit | `pytest tests/test_dnssec_scanner.py -x -q` | ✅ | ✅ green |
+| 18-02-02 | 02 | 2 | DNSSEC-02 | unit | `pytest tests/test_dnssec_scanner.py::test_algorithm_classification -x` | ✅ | ✅ green |
+| 18-02-03 | 02 | 2 | DNSSEC-03–06 | unit | `pytest tests/test_dnssec_scanner.py -x -q` | ✅ | ✅ green |
+| 18-02-04 | 02 | 2 | DNSSEC-04 | unit | `pytest tests/test_dnssec_scanner.py::test_cbom_integration -x` | ✅ | ✅ green |
+| 18-02-05 | 02 | 2 | DNSSEC-07 | integration | `pytest tests/test_dnssec_scanner.py::test_chaos_lab -x -m integration` | ✅ | ✅ manual |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -57,8 +58,8 @@ created: 2026-04-08
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_dnssec_scanner.py` — RED scaffold covering all 7 requirements (Plan 01 creates this)
-- [ ] `quirk/scanner/dnssec_scanner.py` — stub module with `DNSPYTHON_AVAILABLE` guard (Plan 02 implements, stub needed for Plan 01 imports to resolve)
+- [x] `tests/test_dnssec_scanner.py` — RED scaffold covering all 7 requirements (Plan 01 creates this)
+- [x] `quirk/scanner/dnssec_scanner.py` — stub module with `DNSPYTHON_AVAILABLE` guard (Plan 02 implements, stub needed for Plan 01 imports to resolve)
 
 *Wave 0 is Plan 01 itself — it creates the RED test file that all Plan 02 tasks turn GREEN.*
 
@@ -91,11 +92,21 @@ Integration tests (`@pytest.mark.integration`) skip unless `QUIRK_INTEGRATION_TE
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-24
+
+---
+
+## Validation Audit 2026-04-24
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 10 unit tasks green |
+| Escalated | 0 |
+| Manual-only | 2 (DNSSEC-07 chaos lab — requires Docker + BIND9) |

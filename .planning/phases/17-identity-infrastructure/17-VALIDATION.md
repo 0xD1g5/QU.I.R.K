@@ -1,10 +1,11 @@
 ---
 phase: 17
 slug: identity-infrastructure
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-08
+updated: 2026-04-24
 ---
 
 # Phase 17 — Validation Strategy
@@ -38,12 +39,12 @@ created: 2026-04-08
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 17-01-01 | 01 | 0 | INFRA-01 | unit (RED) | `python -m pytest tests/test_identity_infra.py::test_migration_idempotent -x -q` | ❌ W0 | ⬜ pending |
-| 17-01-02 | 01 | 0 | INFRA-02 | unit (RED) | `python -m pytest tests/test_identity_infra.py::test_connectors_cfg_identity_fields -x -q` | ❌ W0 | ⬜ pending |
-| 17-01-03 | 01 | 0 | INFRA-03 | integration (RED) | `python -m pytest tests/test_identity_infra.py::test_identity_extras_declared -x -q` | ❌ W0 | ⬜ pending |
-| 17-02-01 | 02 | 1 | INFRA-01 | unit (GREEN) | `python -m pytest tests/test_identity_infra.py::test_migration_idempotent -x -q` | ✅ | ⬜ pending |
-| 17-02-02 | 02 | 1 | INFRA-02 | unit (GREEN) | `python -m pytest tests/test_identity_infra.py::test_connectors_cfg_identity_fields -x -q` | ✅ | ⬜ pending |
-| 17-02-03 | 02 | 1 | INFRA-03 | integration (GREEN) | `python -m pytest tests/test_identity_infra.py::test_identity_extras_declared -x -q` | ✅ | ⬜ pending |
+| 17-01-01 | 01 | 0 | INFRA-01 | unit (RED) | `python -m pytest tests/test_identity_infra.py::test_migration_idempotent -x -q` | ✅ | ✅ green |
+| 17-01-02 | 01 | 0 | INFRA-02 | unit (RED) | `python -m pytest tests/test_identity_infra.py::test_connectors_cfg_identity_fields -x -q` | ✅ | ✅ green |
+| 17-01-03 | 01 | 0 | INFRA-03 | integration (RED) | `python -m pytest tests/test_identity_infra.py::test_identity_extras_declared -x -q` | ✅ | ✅ green |
+| 17-02-01 | 02 | 1 | INFRA-01 | unit (GREEN) | `python -m pytest tests/test_identity_infra.py::test_migration_idempotent -x -q` | ✅ | ✅ green |
+| 17-02-02 | 02 | 1 | INFRA-02 | unit (GREEN) | `python -m pytest tests/test_identity_infra.py::test_connectors_cfg_identity_fields -x -q` | ✅ | ✅ green |
+| 17-02-03 | 02 | 1 | INFRA-03 | integration (GREEN) | `python -m pytest tests/test_identity_infra.py::test_identity_extras_declared -x -q` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,7 +52,7 @@ created: 2026-04-08
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_identity_infra.py` — RED test stubs for INFRA-01, INFRA-02, INFRA-03
+- [x] `tests/test_identity_infra.py` — RED test stubs for INFRA-01, INFRA-02, INFRA-03
 
 *Existing infrastructure covers pytest; only the new test file is needed.*
 
@@ -68,11 +69,21 @@ created: 2026-04-08
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-24
+
+---
+
+## Validation Audit 2026-04-24
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 6 (all tasks green) |
+| Escalated | 0 |
+| Manual-only | 2 (quirk init stdout check, pip install check) |
