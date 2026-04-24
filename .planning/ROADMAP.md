@@ -151,7 +151,7 @@ Plans:
   3. Full test suite passes with no regressions
 **Plans**: 1 plan
 Plans:
-- [ ] 23-01-PLAN.md — TDD: 3 DNSSEC regression tests (RED) + add "DNSSEC" to Pass 2 cert skip tuple (GREEN)
+- [x] 23-01-PLAN.md — TDD: 3 DNSSEC regression tests (RED) + add "DNSSEC" to Pass 2 cert skip tuple (GREEN)
 
 ## Phase Details
 
