@@ -127,6 +127,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Phase 18 complete** (2026-04-09): DNSSEC scanner — full implementation with RFC 8624/9905 classification, CBOM integration, BIND9 chaos lab; 15 tests pass, 239 regressions clean
 - **Phase 19 complete** (2026-04-09): SAML/OIDC scanner — defusedxml XXE-safe metadata parsing, RSA/ECDSA cert extraction, SHA-1 deprecation scoring, OIDC discovery enumeration, CBOM integration, SimpleSAMLphp chaos lab with RSA-1024 cert; 25 tests pass, 254 regressions clean
 - **Phase 20 complete** (2026-04-09): Kerberos scanner — AS-REQ probe with TCP/UDP fallback, 7-etype severity map (RC4-HMAC CRITICAL, AES-256 SAFE), LDAP graceful degradation, CBOM integration, Samba DC chaos lab (QUIRK.LAB realm, RC4 enabled); 23 tests pass (1 integration skipped pending Docker)
+- **Phase 24 complete** (2026-04-24): Scan-session timestamp isolation — `session_start=None` added to all 3 identity scanner entry points; `run_scan.py` creates one shared timestamp before DNSSEC/SAML/Kerberos blocks and passes it to all 3. ISSUE-3 root cause eliminated. 3 TDD RED→GREEN tests confirm the fix; 352 tests pass, zero regressions.
 
 ## Constraints
 
@@ -151,7 +152,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
 
 ---
-*Last updated: 2026-04-24 after Phase 23 (DNSSEC CBOM Skip Fix) complete — added "DNSSEC" to Pass 2 certificate skip tuple in CBOM builder, closing DNSSEC-04. SAML scanner module (IDENT-01 partial) remains the only open v4.2 item.*
+*Last updated: 2026-04-24 after Phase 24 (Scan-Session Timestamp Isolation) complete — added `session_start=None` to all 3 identity scanner entry points (DNSSEC, SAML, Kerberos) and wired a shared timestamp from `run_scan.py`. ISSUE-3 root cause eliminated: all identity endpoints from a scan session now share one `scanned_at` timestamp, preventing the 1-second scan-window query from excluding early-stamped protocols. Requirements KERB-04, SAML-05, DNSSEC-04, IDENT-02, IDENT-03 validated. v4.2 Identity Crypto milestone complete.*
 
 ## Evolution
 
