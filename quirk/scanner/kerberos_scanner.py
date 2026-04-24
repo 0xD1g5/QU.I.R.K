@@ -235,7 +235,7 @@ def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
         return {"ldap_status": "skipped", "ldap_error": str(exc)}
 
 
-def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None) -> list:
+def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session_start=None) -> list:
     """Scan Kerberos KDCs for supported encryption types via unauthenticated AS-REQ probe.
 
     Entry point for the Kerberos scanner. Returns list[CryptoEndpoint] -- one endpoint
@@ -255,6 +255,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None) -> list
             logger.warning("impacket not installed -- Kerberos scanning disabled")
         return []
 
+    now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
     results = []
     for target in targets:
         realm = _derive_realm(target)
@@ -280,7 +281,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None) -> list
                 protocol="KERBEROS",
                 cert_pubkey_alg="kerberos-unreachable",
                 service_detail="kerberos-unreachable",
-                scanned_at=datetime.now(timezone.utc),
+                scanned_at=now,
             )
             ldap_result = _probe_ldap_anon(target, timeout, logger)
             scan_json = json.dumps({
@@ -308,7 +309,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None) -> list
                 protocol="KERBEROS",
                 cert_pubkey_alg=name,
                 service_detail=f"etype:{etype}:{name}:{severity}",
-                scanned_at=datetime.now(timezone.utc),
+                scanned_at=now,
             )
             target_endpoints.append(ep)
 
@@ -334,7 +335,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None) -> list
                 protocol="KERBEROS",
                 cert_pubkey_alg=None,
                 service_detail="kerberos-no-preauth",
-                scanned_at=datetime.now(timezone.utc),
+                scanned_at=now,
             )
             placeholder.kerberos_scan_json = scan_json
             target_endpoints.append(placeholder)
