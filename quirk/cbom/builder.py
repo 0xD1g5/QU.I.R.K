@@ -93,8 +93,8 @@ _KEX_MAP: dict[str, str] = {
 _ENC_MAP: dict[str, str] = {
     "AES_256_GCM": "AES-256-GCM",
     "AES_128_GCM": "AES-128-GCM",
-    "AES_256_CCM": "AES-256-GCM",
-    "AES_128_CCM": "AES-128-GCM",
+    "AES_256_CCM": "AES-256-CCM",
+    "AES_128_CCM": "AES-128-CCM",
     "AES_256_CBC": "AES-256-CBC",
     "AES_128_CBC": "AES-128-CBC",
     "CHACHA20_POLY1305": "ChaCha20-Poly1305",
