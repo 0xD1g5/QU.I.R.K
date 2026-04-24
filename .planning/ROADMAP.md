@@ -196,10 +196,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. `_derive_identity_findings()` in `scan.py` produces `IdentityFinding(source="saml")` objects for OIDC endpoints with RS-family algorithms (RS256, RS384, RS512) using severity from `OIDC_ALG_SEVERITY`
   2. OIDC RS256 endpoints no longer appear in the Findings tab as TLS-sourced; they appear in the Identity tab under SAML/OIDC
-  3. `pyproject.toml` `[identity]` extras group includes `ldap3>=3.4`; `pip install quirk[identity]` resolves ldap3 without conflicts
+  3. `pyproject.toml` `[identity]` extras group includes `ldap3>=2.9.1`; `pip install quirk[identity]` resolves ldap3 without conflicts
   4. Full test suite passes with no regressions
-**Plans**: 0 plans
+**Plans**: 3 plans
 Plans:
+- [ ] 25-01-PLAN.md — TDD RED: failing tests for SAML-04, IDENT-02, IDENT-03, KERB-03
+- [ ] 25-02-PLAN.md — TDD GREEN: RS-family check in _derive_identity_findings(), TLS-bleed guard, ldap3 dep
+- [ ] 25-03-PLAN.md — Doc: identity chaos lab expected results for DNSSEC, SAML/OIDC, Kerberos
 
 ### Phase 26: GCP Connector
 **Goal**: QU.I.R.K. can enumerate Google Cloud Platform cryptographic posture — Cloud KMS key specs, Cloud SQL TLS enforcement, and GCS bucket encryption — using Application Default Credentials, with GCS bucket data passed forward for object storage audit reuse
