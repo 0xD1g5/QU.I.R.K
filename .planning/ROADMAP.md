@@ -168,8 +168,8 @@ Plans:
   4. Full test suite passes with no regressions
 **Plans**: 2 plans
 Plans:
-- [ ] 24-01-PLAN.md — TDD RED: session_start acceptance tests for 3 identity scanners + ISSUE-3 API regression test
-- [ ] 24-02-PLAN.md — TDD GREEN: Add session_start parameter to scanners + wire in run_scan.py
+- [x] 24-01-PLAN.md — TDD RED: session_start acceptance tests for 3 identity scanners + ISSUE-3 API regression test
+- [x] 24-02-PLAN.md — TDD GREEN: Add session_start parameter to scanners + wire in run_scan.py
 
 ### Phase 25: Identity Findings Accuracy
 **Goal**: OIDC RS256 endpoints appear correctly in the Identity tab (not mislabeled as TLS-sourced in the Findings tab), and `ldap3` is installable via `pip install quirk[identity]` enabling Kerberos LDAP enumeration
