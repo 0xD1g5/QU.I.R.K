@@ -1,10 +1,11 @@
 ---
 phase: 23
 slug: dnssec-cbom-skip-fix
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-16
+updated: 2026-04-24
 ---
 
 # Phase 23 — Validation Strategy
@@ -38,9 +39,9 @@ created: 2026-04-16
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 23-01-01 | 01 | 1 | DNSSEC-04 | — | N/A | unit | `python -m pytest tests/test_cbom_builder.py::test_dnssec_endpoint_algorithm_registered -x` | ❌ W0 | ⬜ pending |
-| 23-01-02 | 01 | 1 | DNSSEC-04 | — | N/A | unit | `python -m pytest tests/test_cbom_builder.py::test_dnssec_endpoint_no_tls_protocol -x` | ❌ W0 | ⬜ pending |
-| 23-01-03 | 01 | 1 | DNSSEC-04 | — | N/A | unit | `python -m pytest tests/test_cbom_builder.py::test_dnssec_endpoint_no_certificate -x` | ❌ W0 (RED test) | ⬜ pending |
+| 23-01-01 | 01 | 1 | DNSSEC-04 | — | DNSSEC algorithm registered in CBOM Pass 1 | unit | `python -m pytest tests/test_cbom_builder.py::test_dnssec_endpoint_algorithm_registered -x` | ✅ | ✅ green |
+| 23-01-02 | 01 | 1 | DNSSEC-04 | — | No spurious TLS protocol for DNSSEC | unit | `python -m pytest tests/test_cbom_builder.py::test_dnssec_endpoint_no_tls_protocol -x` | ✅ | ✅ green |
+| 23-01-03 | 01 | 1 | DNSSEC-04 | — | No spurious certificate for DNSSEC (Pass 2 skip) | unit | `python -m pytest tests/test_cbom_builder.py::test_dnssec_endpoint_no_certificate -x` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,7 +49,7 @@ created: 2026-04-16
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_cbom_builder.py` — add `_dnssec_endpoint()` fixture + 3 DNSSEC test cases (2 immediately GREEN for Pass 1/Pass 3 correctness, 1 RED for Pass 2 skip list gap)
+- [x] `tests/test_cbom_builder.py` — added `_dnssec_endpoint()` fixture + 3 DNSSEC test cases (2 immediately GREEN for Pass 1/Pass 3 correctness, 1 RED→GREEN for Pass 2 skip list gap)
 
 *Existing test infrastructure covers all other phase requirements.*
 
@@ -62,11 +63,23 @@ created: 2026-04-16
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-24
+
+---
+
+## Validation Audit 2026-04-24
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Manual-only | 0 |
+| Total automated | 3 |
