@@ -200,9 +200,9 @@ Plans:
   4. Full test suite passes with no regressions
 **Plans**: 3 plans
 Plans:
-- [ ] 25-01-PLAN.md — TDD RED: failing tests for SAML-04, IDENT-02, IDENT-03, KERB-03
-- [ ] 25-02-PLAN.md — TDD GREEN: RS-family check in _derive_identity_findings(), TLS-bleed guard, ldap3 dep
-- [ ] 25-03-PLAN.md — Doc: identity chaos lab expected results for DNSSEC, SAML/OIDC, Kerberos
+- [x] 25-01-PLAN.md — TDD RED: failing tests for SAML-04, IDENT-02, IDENT-03, KERB-03
+- [x] 25-02-PLAN.md — TDD GREEN: RS-family check in _derive_identity_findings(), TLS-bleed guard, ldap3 dep
+- [x] 25-03-PLAN.md — Doc: identity chaos lab expected results for DNSSEC, SAML/OIDC, Kerberos
 
 ### Phase 26: GCP Connector
 **Goal**: QU.I.R.K. can enumerate Google Cloud Platform cryptographic posture — Cloud KMS key specs, Cloud SQL TLS enforcement, and GCS bucket encryption — using Application Default Credentials, with GCS bucket data passed forward for object storage audit reuse
@@ -681,7 +681,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 22. v4.2 Gap Closure | v4.2 | 1/1 | Complete | 2026-04-16 |
 | 23. DNSSEC CBOM Skip Fix | v4.2 | 1/1 | Complete | 2026-04-24 |
 | 24. Scan-Session Timestamp Isolation | v4.2 | 2/2 | Complete | 2026-04-24 |
-| 25. Identity Findings Accuracy | v4.3 | 0/0 | Planned | — |
+| 25. Identity Findings Accuracy | v4.3 | 3/3 | Complete    | 2026-04-24 |
 | 26. GCP Connector | v4.3 | 0/0 | Planned | — |
 | 27. Database Encryption Detection | v4.3 | 0/0 | Planned | — |
 | 28. Object Storage Audit | v4.3 | 0/0 | Planned | — |
