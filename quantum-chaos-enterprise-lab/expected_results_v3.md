@@ -218,3 +218,50 @@ docker compose --profile ssh-weak up -d && sleep 5 && ssh-audit localhost:20022
 docker compose --profile ldaps up -d && sleep 5 && sslyze --targets localhost:636
 ```
 **Expected:** sslyze returns TLS certificate chain findings including self-signed cert detection.
+
+
+
+## Phase 25 — DNSSEC Profile (profile: bind9)
+
+| Zone | Algorithm | Algorithm ID | Expected Finding | Severity |
+|------|-----------|-------------|-----------------|----------|
+| weak.example.com | RSASHA1 | 5 | DNSSEC weak signing algorithm (SHA-1 collision-vulnerable) | CRITICAL |
+| weak.example.com | RSASHA1-NSEC3-SHA1 | 7 | DNSSEC weak signing algorithm (SHA-1) | CRITICAL |
+| unsigned.example.com | NONE | — | Unsigned zone — DNS responses are unauthenticated | HIGH |
+| nsec.example.com | ECDSAP256SHA256 | 13 | NSEC zone enumeration exposure | MEDIUM |
+
+**Scanner validation command:**
+```
+docker compose --profile bind9 up -d && sleep 5 && quirk scan --targets weak.example.com unsigned.example.com nsec.example.com
+```
+**Expected:** DNSSEC scanner returns >= 1 CRITICAL finding (RSASHA1) for weak.example.com, 1 HIGH finding (unsigned zone) for unsigned.example.com, and 1 MEDIUM finding (NSEC) for nsec.example.com. ECDSAP256SHA256 zones produce no algorithm severity finding.
+
+
+
+## Phase 25 — SAML/OIDC Profile (profile: simpla-samlphp)
+
+| Port | Service | Certificate | Expected Finding | Severity |
+|-----:|---------|-------------|-----------------|----------|
+| 8880 | simpla-samlphp | RSA-1024 signing cert | Weak SAML signing certificate: RSA-1024 | CRITICAL |
+| 8880 | simpla-samlphp | SHA-1 algorithm URI | SHA-1 algorithm URI detected in SAML metadata | HIGH |
+
+**Scanner validation command:**
+```
+docker compose --profile simpla-samlphp up -d && sleep 10 && quirk scan --targets http://localhost:8880/simplesaml/saml2/idp/metadata.php
+```
+**Expected:** SAML scanner returns 1 CRITICAL finding for RSA-1024 signing certificate and optionally 1 HIGH finding if SHA-1 algorithm URI is present in metadata. Findings appear in the Identity tab (source="saml"), not the Findings tab.
+
+
+
+## Phase 25 — Kerberos Profile (profile: samba-dc)
+
+| Port | Service | Etype ID | Etype Name | Expected Finding | Severity |
+|-----:|---------|---------|-----------|-----------------|----------|
+| 88 | samba-dc | 23 | rc4-hmac | Kerberos weak etype: rc4-hmac | HIGH |
+| 88 | samba-dc | 17 | aes128-cts-hmac-sha1-96 | Kerberos weak etype: aes128-cts-hmac-sha1-96 | HIGH |
+
+**Scanner validation command:**
+```
+docker compose --profile samba-dc up -d && sleep 15 && quirk scan --targets localhost:88
+```
+**Expected:** Kerberos scanner returns >= 1 HIGH finding for RC4-HMAC (etype 23). AES-256 (etype 18/20) produces no weakness finding. Findings appear in the Identity tab (source="kerberos").
