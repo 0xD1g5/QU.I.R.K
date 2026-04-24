@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-24 (Phase 24: added UAT-8-16 for scan-session timestamp isolation — ISSUE-3 root cause fix; all 3 identity scanners share one session_start timestamp)
+**Last Updated:** 2026-04-24 (Phase 25: updated UAT-1-07 to include ldap3>=2.9.1 check; added UAT-5-23 for OIDC RS-family identity accuracy and TLS-bleed fix — RS256/RS384 endpoints now route to Identity tab, not TLS Findings)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -203,13 +203,15 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
    - `python -c "from quirk.scanner.saml_scanner import LXML_AVAILABLE; assert LXML_AVAILABLE"`
 3. Install Kerberos extras: `pip install -e ".[identity]"`
 4. Verify impacket is now available: `python -c "import impacket; print(impacket.__version__)"`
+5. Verify ldap3>=2.9.1 is now available (Phase 25 — KERB-03): `python -c "import ldap3; print(ldap3.__version__)"`
 
-**Expected:** DNSSEC/SAML/OIDC scanning works without any extras. Kerberos scanning requires `[identity]`.
+**Expected:** DNSSEC/SAML/OIDC scanning works without any extras. Kerberos scanning requires `[identity]`. ldap3>=2.9.1 is installed alongside impacket.
 
 **Pass Criteria:**
 - Steps 1–2 all succeed on plain `pip install -e "."` with no extras (no `ImportError`)
 - `DNSPYTHON_AVAILABLE` and `LXML_AVAILABLE` are both `True`
 - `pip install -e ".[identity]"` exits code 0 and impacket imports cleanly
+- `python -c "import ldap3"` succeeds after [identity] install (ldap3>=2.9.1 present)
 - `quirk --help` exits 0 at each stage
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
@@ -1507,6 +1509,38 @@ All of these services show status `Up` or `running`:
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-5-23: OIDC RS-Family Identity Accuracy — Tab Routing and TLS-Bleed Fix
+
+> Added Phase 25 (2026-04-24): SAML-04/IDENT-02/IDENT-03 fixes — RS256/RS384 OIDC endpoints now route to Identity tab (source="saml"); TLS-bleed guard prevents SAML/OIDC endpoints from appearing in TLS Findings tab.
+
+**Prerequisites:** Phase 25 complete. Dashboard running (`quirk serve`). A scan with SAML/OIDC endpoint data available (simpla-samlphp chaos lab or any real SAML IdP scan).
+
+**Steps:**
+1. Run a scan against a SAML/OIDC endpoint (e.g., simpla-samlphp chaos lab):
+   ```bash
+   docker compose --profile simpla-samlphp up -d && sleep 10
+   quirk scan --targets http://localhost:8880/simplesaml/saml2/idp/metadata.php
+   ```
+2. Open the dashboard: `quirk serve` → `http://127.0.0.1:8512`
+3. Navigate to the **Identity** tab — inspect findings for SAML/OIDC entries
+4. Navigate to the **Findings** tab — confirm the same SAML/OIDC endpoints are NOT listed there
+5. Via API: `curl -s http://127.0.0.1:8512/api/scan/latest | python3 -m json.tool | grep -A5 '"source"'`
+
+**Expected:** RS256/RS384 OIDC findings appear in the Identity tab with `source="saml"` and `severity="HIGH"`. The TLS Findings tab shows zero entries for those same SAML/OIDC endpoints (TLS-bleed eliminated).
+
+**Pass Criteria:**
+- Identity tab shows at least one finding with `protocol="SAML"` and `source="saml"` for any RS-family OIDC/SAML scan
+- Findings tab (TLS) shows zero findings with `host` matching the SAML/OIDC scan target
+- API response: `identity_findings` array contains entry with `"algorithm": "RS256"` (or RS384/RS512) and `"severity": "HIGH"`
+- API response: `findings` array contains zero entries with `"source": "tls"` and `"protocol": "SAML"`
+- `python -m pytest tests/test_identity_findings_accuracy.py -v` → 4 PASSED
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
 **Notes:**
 
 ---
