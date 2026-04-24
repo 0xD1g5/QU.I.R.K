@@ -141,7 +141,8 @@ class TestIdentityFindingsAccuracy(unittest.TestCase):
 
         FAILS RED because pyproject.toml currently has only impacket in [identity].
         """
-        source = pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
+        _REPO_ROOT = pathlib.Path(__file__).parent.parent
+        source = (_REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
         self.assertIn(
             '"ldap3>=2.9.1"',
             source,
