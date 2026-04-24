@@ -161,7 +161,7 @@ def _detect_nsec_type(domain: str, ns_ip: str, timeout: int):
         return None
 
 
-def _scan_domain(domain: str, timeout: int, logger) -> list:
+def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
     """Scan a single domain for DNSSEC posture.
 
     Returns list of CryptoEndpoint objects for this domain.
@@ -185,7 +185,7 @@ def _scan_domain(domain: str, timeout: int, logger) -> list:
                 dnskey_rrset = rrset
                 break
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
 
     # Unsigned zone — no DNSKEY
     if dnskey_rrset is None:
@@ -302,7 +302,7 @@ def _scan_domain(domain: str, timeout: int, logger) -> list:
     return endpoints
 
 
-def scan_dnssec_targets(targets: list, timeout: int = 10, logger=None) -> list:
+def scan_dnssec_targets(targets: list, timeout: int = 10, logger=None, session_start=None) -> list:
     """Scan DNSSEC posture for a list of domain targets.
 
     Returns list of CryptoEndpoint objects — one per DNSKEY record found, plus
@@ -318,7 +318,7 @@ def scan_dnssec_targets(targets: list, timeout: int = 10, logger=None) -> list:
     results = []
     for domain in targets:
         try:
-            results.extend(_scan_domain(domain, timeout, logger))
+            results.extend(_scan_domain(domain, timeout, logger, session_start=session_start))
         except Exception as exc:
             if logger:
                 logger.warning("DNSSEC scan failed for %s: %s", domain, exc)

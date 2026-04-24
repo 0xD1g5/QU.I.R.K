@@ -528,8 +528,9 @@ def test_dnssec_session_start_stamps_all_endpoints():
 
     # Reuse the RSASHA1 mock setup from test_rsasha1_produces_critical_finding
     ns_answer = MagicMock()
-    ns_answer.__iter__ = MagicMock(return_value=iter(["198.51.100.1"]))
-    ns_answer.__len__ = MagicMock(return_value=1)
+    ns_answer.__iter__ = MagicMock(return_value=iter([_mock_ns_answer()]))
+    a_answer = MagicMock()
+    a_answer.__iter__ = MagicMock(return_value=iter([_mock_a_answer("198.51.100.1")]))
 
     dnskey_rdata = _mock_dnskey(algorithm=5, flags=257)
     dnskey_rrset = _mock_rrset(48, [dnskey_rdata])  # 48 = DNSKEY
@@ -538,6 +539,8 @@ def test_dnssec_session_start_stamps_all_endpoints():
     def resolve_side_effect(domain, rdtype, **kwargs):
         if rdtype == "NS":
             return ns_answer
+        if rdtype == "A":
+            return a_answer
         raise Exception(f"Unexpected resolve: {rdtype}")
 
     with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve", side_effect=resolve_side_effect), \
