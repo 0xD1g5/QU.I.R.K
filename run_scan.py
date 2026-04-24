@@ -459,6 +459,9 @@ def main():
                 logger=logger,
             )
 
+    # ── Shared identity-scan session timestamp (ISSUE-3 fix) ──
+    session_start = datetime.now(timezone.utc)
+
     # ── DNSSEC scanning ─────────────────────────────────────
     dnssec_endpoints = []
     with _phase_timer(run_stats, "dnssec_scanning"):
@@ -467,6 +470,7 @@ def main():
                 targets=cfg.connectors.dnssec_targets,
                 timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
                 logger=logger,
+                session_start=session_start,
             )
             logger.info("DNSSEC scan: %d endpoints from %d targets",
                         len(dnssec_endpoints), len(cfg.connectors.dnssec_targets))
@@ -480,6 +484,7 @@ def main():
                 targets=cfg.connectors.saml_targets,
                 timeout=getattr(cfg.connectors, "saml_timeout", 10),
                 logger=logger,
+                session_start=session_start,
             )
             logger.info("SAML scan: %d endpoints from %d targets",
                         len(saml_endpoints), len(cfg.connectors.saml_targets))
@@ -493,6 +498,7 @@ def main():
                 targets=cfg.connectors.kerberos_targets,
                 timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
                 logger=logger,
+                session_start=session_start,
             )
             logger.info("Kerberos scan: %d endpoints from %d targets",
                         len(kerberos_endpoints), len(cfg.connectors.kerberos_targets))
