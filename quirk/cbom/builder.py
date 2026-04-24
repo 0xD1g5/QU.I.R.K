@@ -337,7 +337,10 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
 
         elif ep.protocol in ("AWS", "AZURE"):
             # Cloud: parse cloud_scan_json for algorithm/key spec
-            cloud_data = json.loads(ep.cloud_scan_json or "{}")
+            try:
+                cloud_data = json.loads(ep.cloud_scan_json or "{}")
+            except (json.JSONDecodeError, TypeError, ValueError):
+                cloud_data = {}
             key_spec = cloud_data.get("KeySpec") or cloud_data.get("KeyAlgorithm") or cloud_data.get("key_type")
             if key_spec:
                 normalized = _normalize_cloud_key_spec(key_spec)
