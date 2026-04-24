@@ -81,7 +81,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 ### Active
 
 **v4.3 Data at Rest (Phases 25+)**
-- [ ] Identity Findings Accuracy (Phase 25 — carried from v4.2) — RS-family branch in _derive_identity_findings() for OIDC RS256; ldap3 added to [identity] extras
+- ✓ Identity Findings Accuracy (Phase 25) — RS-family OIDC check in _derive_identity_findings(), TLS-bleed guard in _derive_findings(), ldap3>=2.9.1 in [identity] extras, chaos lab expected results — Validated in Phase 25
 - [ ] Database encryption detection — PostgreSQL, MySQL, RDS encryption settings
 - [ ] Object storage audit — S3 (SSE-S3/SSE-KMS), Azure Blob (CMK/platform key), GCS bucket encryption policies
 - [ ] Kubernetes secrets inspection — etcd EncryptionConfiguration, secret types
@@ -113,7 +113,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.2.0 — shipped 2026-04-24 (v4.2 Identity Crypto milestone complete)
+- **Current version**: v4.2.0 — Phase 25 (identity findings accuracy) complete 2026-04-24; v4.3 Data at Rest in progress
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
