@@ -76,16 +76,18 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Current Milestone: v4.3 Data at Rest
 
-**Goal:** Expand QU.I.R.K.'s cryptographic inventory to cover data-at-rest encryption — database encryption settings, object storage policies, Kubernetes secrets, and HashiCorp Vault transit keys. First milestone to include Phase 25 (Identity Findings Accuracy) carried from v4.2.
+**Goal:** Expand QU.I.R.K.'s cryptographic inventory to cover data-at-rest encryption and cloud coverage depth — database encryption settings, object storage policies, Kubernetes secrets, HashiCorp Vault transit keys, GCP connector, and cross-session trend analysis for delta reporting. First milestone to include Phase 25 (Identity Findings Accuracy) carried from v4.2.
 
 ### Active
 
 **v4.3 Data at Rest (Phases 25+)**
 - [ ] Identity Findings Accuracy (Phase 25 — carried from v4.2) — RS-family branch in _derive_identity_findings() for OIDC RS256; ldap3 added to [identity] extras
 - [ ] Database encryption detection — PostgreSQL, MySQL, RDS encryption settings
-- [ ] Object storage audit — S3/Blob/GCS encryption-at-rest configuration
+- [ ] Object storage audit — S3 (SSE-S3/SSE-KMS), Azure Blob (CMK/platform key), GCS bucket encryption policies
 - [ ] Kubernetes secrets inspection — etcd EncryptionConfiguration, secret types
 - [ ] HashiCorp Vault connector — transit keys, PKI mounts, auth method audit
+- [ ] GCP connector — Cloud KMS key specs, Cloud SQL TLS config, GCS bucket encryption (BACK-14)
+- [ ] Trend analysis across scan sessions — score delta, new/resolved findings, degraded host tracking (BACK-21)
 
 **v4.4 Data in Motion (Planned)**
 - [ ] Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 via sslyze handoff
@@ -152,7 +154,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | ldap3 deferred to Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; KERB-03 LDAP path always degrades gracefully | ⚠ Revisit — fix is one dependency line in v4.3 Phase 25; LDAP enumeration inert until then |
 
 ---
-*Last updated: 2026-04-24 after v4.2 Identity Crypto milestone complete — 8 phases (17–24), 14 plans, 352 tests. Three identity protocol scanners (DNSSEC/SAML/Kerberos) shipped with chaos labs and dashboard Identity tab. All 25 v4.2 requirements validated at code level. ISSUE-2 (ldap3) and NEW-ISSUE-1 (OIDC RS256 routing) deferred to Phase 25 in v4.3. Next milestone: v4.3 Data at Rest.*
+*Last updated: 2026-04-24 after v4.3 Data at Rest milestone started — 7 features scoped: Phase 25 identity carry-over, database encryption, object storage, K8s secrets, HashiCorp Vault, GCP connector (BACK-14), trend analysis (BACK-21).*
 
 ## Evolution
 

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.2
-milestone_name: Identity Crypto
-status: milestone_complete
-stopped_at: Phase 24 planned — 2 plans (01 RED, 02 GREEN), verification passed, ready to execute
-last_updated: "2026-04-24T19:28:16.026Z"
-last_activity: 2026-04-24 -- Phase --phase execution started
+milestone: v4.3
+milestone_name: Data at Rest
+status: defining_requirements
+stopped_at: —
+last_updated: "2026-04-24T00:00:00.000Z"
+last_activity: 2026-04-24 — Milestone v4.3 started
 progress:
-  total_phases: 5
-  completed_phases: 6
-  total_plans: 10
-  completed_plans: 10
-  percent: 120
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.3 Data at Rest — next milestone (start with /gsd-new-milestone)
+**Current focus:** v4.3 Data at Rest — defining requirements
 
 ## Current Position
 
-Phase: —
-Plan: Not started
-Status: v4.2 milestone shipped; planning v4.3
-Last activity: 2026-04-24
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-24 — Milestone v4.3 started
 
 Progress: [██████████] v4.2 SHIPPED — v4.3 planning next
 
