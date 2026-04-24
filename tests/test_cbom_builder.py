@@ -476,3 +476,50 @@ def test_kerberos_unreachable_excluded():
     bom = build_cbom([ep])
     algo_refs = [str(c.bom_ref) for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
     assert algo_refs == [], f"kerberos-unreachable should not register algorithm: {algo_refs}"
+
+
+# ---------------------------------------------------------------------------
+# DNSSEC protocol tests (Phase 23 gap closure — DNSSEC-04)
+# ---------------------------------------------------------------------------
+
+def _dnssec_endpoint(**overrides):
+    """Create a DNSSEC CryptoEndpoint with sensible defaults."""
+    defaults = dict(
+        host="example.com", port=53, protocol="DNSSEC",
+        tls_version=None, cipher_suite=None,
+        cert_pubkey_alg="ECDSAP256SHA256", cert_pubkey_size=256,
+        cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        cert_not_before=None, cert_not_after=None,
+        tls_capabilities_json=None, ssh_audit_json=None,
+    )
+    defaults.update(overrides)
+    return CryptoEndpoint(**defaults)
+
+
+def test_dnssec_endpoint_algorithm_registered():
+    """DNSSEC endpoint registers algorithm component from cert_pubkey_alg."""
+    ep = _dnssec_endpoint(cert_pubkey_alg="ECDSAP256SHA256", cert_pubkey_size=256)
+    bom = build_cbom([ep])
+    algo_refs = [c.bom_ref for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert any("ecdsap256sha256" in str(ref) for ref in algo_refs), \
+        f"ECDSAP256SHA256 algorithm not found in {algo_refs}"
+
+
+def test_dnssec_endpoint_no_tls_protocol():
+    """DNSSEC endpoint must NOT produce a TLS protocol component."""
+    ep = _dnssec_endpoint()
+    bom = build_cbom([ep])
+    tls_protos = [c for c in bom.components
+                  if str(c.bom_ref).startswith("crypto/protocol/tls/")]
+    assert tls_protos == [], \
+        f"Spurious TLS protocol components for DNSSEC: {[str(c.bom_ref) for c in tls_protos]}"
+
+
+def test_dnssec_endpoint_no_certificate():
+    """DNSSEC endpoint must NOT produce a certificate component (DNSKEY is not an X.509 cert)."""
+    ep = _dnssec_endpoint(cert_pubkey_alg="ECDSAP256SHA256", cert_pubkey_size=256)
+    bom = build_cbom([ep])
+    cert_comps = [c for c in bom.components
+                  if str(c.bom_ref).startswith("crypto/certificate/")]
+    assert cert_comps == [], \
+        f"Spurious certificate components for DNSSEC: {[str(c.bom_ref) for c in cert_comps]}"
