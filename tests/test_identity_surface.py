@@ -457,5 +457,111 @@ class IdentityDerivationTests(unittest.TestCase):
         )
 
 
+# ===========================================================================
+# Class 5: ISSUE-3 Scan-Window Regression Test
+# ===========================================================================
+
+class Issue3ScanWindowRegressionTest(unittest.TestCase):
+    """ISSUE-3: Verify GET /api/scan/latest returns all 3 identity protocols
+    even when Kerberos endpoints have a later scanned_at than DNSSEC/SAML.
+
+    This test simulates the production failure mode:
+    - DNSSEC + SAML endpoints stamped at T (early)
+    - Kerberos endpoints stamped at T+30s (late, simulating timeout delay)
+    - GET /api/scan/latest should return findings from all 3 protocols
+
+    Before the fix: scan-window query anchors on MAX(scanned_at) = T+30s,
+    and the 1-second window [T+30, T+31) excludes DNSSEC/SAML at T.
+    """
+
+    def test_issue3_scan_window_returns_all_identity_protocols(self):
+        """ISSUE-3 regression: all 3 identity protocols visible in /api/scan/latest."""
+        try:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from quirk.dashboard.api.app import create_app
+            from quirk.dashboard.api.deps import get_db
+            from quirk.models import Base, CryptoEndpoint
+            from fastapi.testclient import TestClient
+            from datetime import datetime, timedelta
+        except ImportError:
+            self.skipTest("Dashboard dependencies not available")
+
+        # In-memory SQLite (mirrors conftest.py pattern)
+        engine = create_engine(
+            "sqlite:///file::memory:?cache=shared&uri=true",
+            connect_args={"check_same_thread": False},
+        )
+        Base.metadata.create_all(engine)
+        TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+        def override_get_db():
+            db = TestingSession()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app = create_app()
+        app.dependency_overrides[get_db] = override_get_db
+        client = TestClient(app)
+
+        # Timestamps simulating the ISSUE-3 failure mode
+        early_ts = datetime(2026, 1, 15, 12, 0, 0)      # DNSSEC + SAML
+        late_ts = datetime(2026, 1, 15, 12, 0, 30)       # Kerberos (30s later)
+
+        # Insert endpoints into DB
+        db = TestingSession()
+        try:
+            # DNSSEC endpoint (early)
+            db.add(CryptoEndpoint(
+                host="example.com",
+                port=53,
+                protocol="DNSSEC",
+                cert_pubkey_alg="RSASHA1",
+                service_detail="dnskey:tag=12345:role=ZSK",
+                scanned_at=early_ts,
+            ))
+            # SAML endpoint (early)
+            db.add(CryptoEndpoint(
+                host="idp.example.com",
+                port=443,
+                protocol="SAML",
+                cert_pubkey_alg="RSA",
+                cert_pubkey_size=1024,
+                service_detail="https://idp.example.com|use=signing|serial=ABC",
+                scanned_at=early_ts,
+            ))
+            # Kerberos endpoint (late — simulates timeout delay)
+            db.add(CryptoEndpoint(
+                host="dc.example.com",
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg="rc4-hmac",
+                service_detail="etype:23:rc4-hmac:HIGH",
+                scanned_at=late_ts,
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        # Call the API
+        resp = client.get("/api/scan/latest")
+        self.assertEqual(resp.status_code, 200, f"Expected 200, got {resp.status_code}: {resp.text}")
+
+        data = resp.json()
+
+        # Extract protocols from identity_findings
+        identity_protocols = {f["protocol"] for f in data.get("identity_findings", [])}
+
+        # Assert all 3 protocols present — this is the core ISSUE-3 assertion
+        self.assertIn("KERBEROS", identity_protocols,
+                       f"KERBEROS missing from identity_findings protocols: {identity_protocols}")
+        self.assertIn("SAML", identity_protocols,
+                       f"SAML missing from identity_findings protocols: {identity_protocols}")
+        self.assertIn("DNSSEC", identity_protocols,
+                       f"DNSSEC missing from identity_findings protocols: {identity_protocols}")
+
+
 if __name__ == "__main__":
     unittest.main()

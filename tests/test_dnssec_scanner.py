@@ -510,3 +510,43 @@ def test_chaos_lab_integration():
         f"broken.chaos.local must produce ds-chain-broken; got service_details={service_details}"
     assert "unsigned-zone" in service_details, \
         f"unsigned.chaos.local must produce unsigned-zone; got service_details={service_details}"
+
+
+# ---------------------------------------------------------------------------
+# DNSSEC-04 / ISSUE-3: session_start parameter acceptance
+# ---------------------------------------------------------------------------
+
+def test_dnssec_session_start_stamps_all_endpoints():
+    """ISSUE-3: scan_dnssec_targets(session_start=<fixed_dt>) stamps all endpoints with that time.
+
+    RED: scan_dnssec_targets does not accept session_start yet — TypeError expected.
+    """
+    from datetime import datetime, timezone
+
+    fixed_dt = datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    expected_naive = datetime(2026, 1, 15, 12, 0, 0)  # tzinfo stripped
+
+    # Reuse the RSASHA1 mock setup from test_rsasha1_produces_critical_finding
+    ns_answer = MagicMock()
+    ns_answer.__iter__ = MagicMock(return_value=iter(["198.51.100.1"]))
+    ns_answer.__len__ = MagicMock(return_value=1)
+
+    dnskey_rdata = _mock_dnskey(algorithm=5, flags=257)
+    dnskey_rrset = _mock_rrset(48, [dnskey_rdata])  # 48 = DNSKEY
+    mock_response = _mock_dns_response(answer_rrsets=[dnskey_rrset])
+
+    def resolve_side_effect(domain, rdtype, **kwargs):
+        if rdtype == "NS":
+            return ns_answer
+        raise Exception(f"Unexpected resolve: {rdtype}")
+
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve", side_effect=resolve_side_effect), \
+         patch("quirk.scanner.dnssec_scanner.dns.query.udp_with_fallback", return_value=mock_response), \
+         patch("quirk.scanner.dnssec_scanner.dns.dnssec.key_id", return_value=99001), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        result = scan_dnssec_targets(["weak.example.com"], session_start=fixed_dt)
+
+    assert len(result) > 0, "Expected at least one endpoint"
+    for ep in result:
+        assert ep.scanned_at == expected_naive, \
+            f"Expected scanned_at={expected_naive!r}, got {ep.scanned_at!r}"
