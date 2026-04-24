@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v4.3
 milestone_name: Data at Rest
-status: defining_requirements
-stopped_at: —
+status: planned
+stopped_at: Phase 25 / requirements defined
 last_updated: "2026-04-24T00:00:00.000Z"
-last_activity: 2026-04-24 — Milestone v4.3 started
+last_activity: 2026-04-24 — Roadmap created; Phases 25–31 defined
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.3 Data at Rest — defining requirements
+**Current focus:** v4.3 Data at Rest — Phase 25 planned / requirements defined
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 25 (Identity Findings Accuracy) — planned, not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-24 — Milestone v4.3 started
+Status: Ready to plan Phase 25
+Last activity: 2026-04-24 — Roadmap created; Phases 25–31 defined
 
-Progress: [██████████] v4.2 SHIPPED — v4.3 planning next
+Progress: [░░░░░░░░░░] 0/7 phases complete (v4.3)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4 (v4.2)
+- Total plans completed: 4 (v4.2 last milestone phases)
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -97,20 +97,29 @@ Recent decisions affecting current work:
 - [Phase 21-identity-surface]: ScanLatestResponse.identity_findings defaults to [] for backward compatibility with existing API responses
 - [Phase 21-identity-surface]: Derivation tests use skipUnless(_HAS_DERIVE) pattern to SKIP gracefully until Plan 02 implements _derive_identity_findings
 - [Phase 21-identity-surface]: Human verification approved (UAT deferred) — UAT-7-33 through UAT-7-37 and UAT-8-09 through UAT-8-11 added to docs/UAT-SERIES.md for testing after next phase
+- [v4.3 roadmap]: GCP connector (Phase 26) must precede object storage audit (Phase 28) — GCS bucket enumeration done in Phase 26 is consumed by Phase 28 to prevent double API calls
+- [v4.3 roadmap]: Phase 27 (Database Encryption) is CRITICAL PATH — dat_scan_json column and _ensure_v43_columns() are shared dependencies for Phases 28, 29, 30; must complete before any of them begin
+- [v4.3 roadmap]: dar_ subscore prefix introduced as 5th prefix in scoring.py (parallel to identity_), not as extension of identity_trust — keeps surface scoring separable for future per-surface dashboard breakdowns
+- [v4.3 roadmap]: Trend analysis (Phase 31) uses scanned_at-based session grouping from existing list_scans() — no new SQLite table needed
+- [v4.3 roadmap]: GCP libs (google-cloud-kms, google-cloud-storage), hvac, kubernetes in [cloud] extras; psycopg2-binary and PyMySQL in [db] extras; ldap3 one-liner addition to [identity] extras
+- [v4.3 roadmap]: DefaultCredentialsError fires at API call time (not import time) — GCP_AVAILABLE flag alone does not protect against it; must catch explicitly in gcp_connector.py
+- [v4.3 roadmap]: S3 list_buckets is NOT paginated — get_paginator('list_buckets') raises OperationNotPageableError; use ThreadPoolExecutor(max_workers=10) for per-bucket encryption calls
+- [v4.3 roadmap]: etcd EncryptionConfiguration is NOT a queryable K8s API resource — use managed cluster APIs (EKS/GKE/AKS) or kube-apiserver pod spec; K8S-03 encryption-config-inaccessible finding is required
+- [v4.3 roadmap]: VAULT_TRANSIT_KEY_MAP similar to KMS_KEY_SPEC_MAP; ml-dsa/slh-dsa key types are positive PQC findings; Vault token via VAULT_TOKEN env var or config
+- [v4.3 roadmap]: NULL collision with v4.2-era scan sessions in trend analysis is expected behavior — document, do not fix; first post-v4.3 trend will show all DAR findings as "new"
+- [v4.3 roadmap]: ISSUE-2 and ISSUE-3 patterns must be treated as structural requirements on every scanner phase — pyproject.toml diff is a required PLAN.md deliverable; session_start parameter is mandatory for all new scanners
 
 ### Pending Todos
 
-None yet.
+- Plan Phase 25 first; run /gsd-plan-phase 25
 
 ### Blockers/Concerns
 
-- Phase 20 (Kerberos): impacket bare AS-REQ exact call sequence should be verified against 0.13.0 source before implementation -- STACK.md covers behavior but not exact field sequence
-- Phase 19 (SAML): confirm whether SimpleSAMLphp emits alg:SigningMethod elements -- fallback to cert key inspection must be primary path
-- Phase 20 (Kerberos): smblds/smblds etype configuration via samba-tool for RC4-only realm is MEDIUM confidence -- fallback image itherz/samba-ad-dc documented in research
+None at roadmap creation time. Structural risks documented in research/SUMMARY.md Critical Pitfalls.
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-04-24:
+Items acknowledged and deferred at v4.2 milestone close on 2026-04-24 (carried to v4.3):
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -123,14 +132,10 @@ Items acknowledged and deferred at milestone close on 2026-04-24:
 | verification_gap | Phase 22: 22-VERIFICATION.md | human_needed — E2E live identity scan (requires Docker) |
 | verification_gap | Phase 24: 24-VERIFICATION.md | human_needed — intentionally accepted (0 pending scenarios) |
 | seed | SEED-001-backlog-rollout-phase-plan | dormant |
-| milestone_gap | ISSUE-2: ldap3 absent from pyproject.toml (KERB-03 LDAP always inert) | MEDIUM — Phase 25 target |
-| milestone_gap | NEW-ISSUE-1: OIDC RS256 findings mislabeled as TLS-sourced | MEDIUM — Phase 25 target |
 | milestone_gap | NEW-ISSUE-3: expected_results_v3.md missing identity chaos lab entries | LOW — Phase 25 target |
-
-Known deferred items at close: 12 (see above)
 
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: v4.2 Identity Crypto milestone complete — archived, tagged v4.2
-Resume file: /gsd-new-milestone for v4.3 planning
+Stopped at: v4.3 roadmap created — Phases 25–31 defined
+Resume file: /gsd-plan-phase 25

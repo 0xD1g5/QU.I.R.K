@@ -5,7 +5,7 @@
 - ✅ **v3.9 Gap Closure** — Phases 1–11, 40 plans (shipped 2026-04-04) → `.planning/milestones/v3.9-ROADMAP.md`
 - ✅ **v4.1 Foundation Polish** — Phases 12–16, 10 plans (shipped 2026-04-08) → `.planning/milestones/v4.1-ROADMAP.md`
 - ✅ **v4.2 Identity Crypto** — Phases 17–24, 14 plans (shipped 2026-04-24) → `.planning/milestones/v4.2-ROADMAP.md`
-- 📋 **v4.3 Data at Rest** — Phase 25+ (planned)
+- 📋 **v4.3 Data at Rest** — Phases 25–31 (active)
 
 ## Phases
 
@@ -61,7 +61,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
-### 📋 v4.3 Data at Rest (Planned)
+### 📋 v4.3 Data at Rest (Active)
+
+**Milestone Goal:** Expand cryptographic inventory to cover data-at-rest encryption and cloud coverage depth — database encryption, object storage policies, Kubernetes secrets, HashiCorp Vault transit keys, GCP connector, and cross-session trend analysis. Phase 25 carries over identity accuracy fixes from v4.2.
+
+- [ ] **Phase 25: Identity Findings Accuracy** - OIDC RS256 routing fix + ldap3 to [identity] extras; closes NEW-ISSUE-1 and ISSUE-2 from v4.2 audit
+- [ ] **Phase 26: GCP Connector** - Cloud KMS key specs, Cloud SQL TLS enforcement, GCS bucket encryption; ADC credentials; GCS data passed to Phase 28
+- [ ] **Phase 27: Database Encryption Detection** - PostgreSQL pg_stat_ssl, MySQL SSL status, RDS StorageEncrypted/StorageEncryptionType; installs dat_scan_json column and dar_ scoring infrastructure (CRITICAL PATH)
+- [ ] **Phase 28: Object Storage Audit** - S3 SSE-S3/SSE-KMS/CMK, Azure Blob CMK/platform-managed, GCS CMEK via Phase 26 data; ThreadPoolExecutor S3 enumeration
+- [ ] **Phase 29: Kubernetes Secrets Inspection** - EKS/GKE/AKS managed cluster encryption APIs; kube-apiserver pod spec; secret type count; encryption-config-inaccessible finding
+- [ ] **Phase 30: HashiCorp Vault Connector** - Transit key type map (incl. ml-dsa/slh-dsa PQC positive), PKI mount CA cert, auth method list; hvac in [cloud] extras
+- [ ] **Phase 31: Trend Analysis** - Score delta + new/resolved findings via scanned_at grouping; GET /api/trends; React Trends tab; no new SQLite table
 
 ### Phase 17: Identity Infrastructure
 **Goal**: The codebase is structurally ready to receive three new identity scanners — schema columns exist and are idempotent, optional dependency group is declared, and config flags are wired
@@ -190,6 +200,83 @@ Plans:
   4. Full test suite passes with no regressions
 **Plans**: 0 plans
 Plans:
+
+### Phase 26: GCP Connector
+**Goal**: QU.I.R.K. can enumerate Google Cloud Platform cryptographic posture — Cloud KMS key specs, Cloud SQL TLS enforcement, and GCS bucket encryption — using Application Default Credentials, with GCS bucket data passed forward for object storage audit reuse
+**Depends on**: Phase 25
+**Requirements**: GCP-01, GCP-02, GCP-03
+**Success Criteria** (what must be TRUE):
+  1. Scanning a GCP project with Cloud KMS keys returns key specs (RSA-2048/4096, ECDSA P-256/P-384, AES-256, HMAC-SHA256, external/HSM variants) with quantum-safety classification in the CBOM output
+  2. A Cloud SQL instance with TLS enforcement disabled produces a HIGH finding; an instance with require_ssl=true produces no TLS finding
+  3. GCS bucket enumeration returns per-bucket encryption type (CMEK with customer key vs Google-managed key); this data is stored and made available to Phase 28 without re-fetching
+  4. When GCP credentials are absent at runtime, scanner catches DefaultCredentialsError and emits a gcp-credentials-unavailable scan_error finding rather than crashing
+  5. google-cloud-kms and google-cloud-storage are declared in [cloud] extras; pip install quirk[cloud] resolves without grpcio/protobuf conflict
+**Plans**: 0 plans
+Plans:
+
+### Phase 27: Database Encryption Detection
+**Goal**: QU.I.R.K. can detect encryption-at-rest posture for PostgreSQL, MySQL/MariaDB, and RDS instances — establishing the dat_scan_json column and dar_ scoring infrastructure that all subsequent data-at-rest scanner phases depend on
+**Depends on**: Phase 25
+**Requirements**: DB-01, DB-02, DB-03
+**Success Criteria** (what must be TRUE):
+  1. _ensure_v43_columns() in db.py idempotently adds dat_scan_json TEXT to crypto_endpoints — running against a v4.2 quirk.db does not raise any migration error
+  2. RDS scanner detects StorageEncrypted flag and StorageEncryptionType (none / sse-rds / sse-kms) via the existing boto3 session; AWS-managed key vs CMK is distinguished in findings
+  3. PostgreSQL scanner detects privilege level before querying pg_stat_ssl — when pg_read_all_stats role is absent, emits insufficient-privilege scan_error rather than a false "SSL enabled" result
+  4. MySQL/MariaDB scanner reports SSL session status and emits a finding with the negotiated cipher when SSL is disabled or weak
+  5. dar_ prefix evidence counters appear in evidence.py and flow into scoring.py as a 5th subscore prefix; psycopg2-binary and PyMySQL are declared in [db] extras
+**Plans**: 0 plans
+Plans:
+
+### Phase 28: Object Storage Audit
+**Goal**: QU.I.R.K. can determine per-bucket encryption policy for S3, Azure Blob, and GCS — consuming GCS enumeration data from Phase 26 rather than re-fetching, with parallel S3 probing via ThreadPoolExecutor
+**Depends on**: Phase 26, Phase 27
+**Requirements**: STOR-01, STOR-02, STOR-03
+**Success Criteria** (what must be TRUE):
+  1. S3 audit returns per-bucket encryption policy (SSE-S3, SSE-KMS with CMK vs AWS-managed key, or unencrypted) across all buckets using ThreadPoolExecutor(max_workers=10) — no OperationNotPageableError from attempting to paginate list_buckets
+  2. Azure Blob audit returns per-container encryption configuration (platform-managed key vs customer-managed CMK) for a configured Azure subscription
+  3. GCS bucket encryption audit reuses Phase 26 connector output — scanner logs confirm zero duplicate storage.buckets.list API calls in a single scan run
+  4. Unencrypted S3 buckets produce HIGH findings; SSE-KMS with AWS-managed key produces MEDIUM; SSE-KMS with CMK produces no finding
+  5. All object storage findings are stored in dat_scan_json and produce protocol="STORAGE" CryptoEndpoint rows; results appear in the CBOM
+**Plans**: 0 plans
+Plans:
+
+### Phase 29: Kubernetes Secrets Inspection
+**Goal**: QU.I.R.K. can detect etcd encryption status and enumerate secret types on managed Kubernetes clusters — using managed cloud APIs without requiring direct etcd access or agent installation on cluster nodes
+**Depends on**: Phase 27
+**Requirements**: K8S-01, K8S-02, K8S-03
+**Success Criteria** (what must be TRUE):
+  1. EKS encryptionConfig API, GKE databaseEncryption.state API, and AKS Key Vault integration API each return etcd encryption status when valid cluster credentials are configured — three distinct API call paths returning a consistent encryption finding schema
+  2. Secret type count enumeration returns Opaque, kubernetes.io/tls, kubernetes.io/dockerconfigjson, and other types for a configured cluster namespace without reading any secret values
+  3. When etcd encryption state cannot be determined via available managed-cluster APIs, scanner emits an explicit encryption-config-inaccessible finding with remediation guidance — never silently skips
+  4. kubernetes>=35.0.0 is declared in [cloud] extras; RBAC 403 errors are caught and produce insufficient-rbac-privileges findings rather than unhandled exceptions
+**Plans**: 0 plans
+Plans:
+
+### Phase 30: HashiCorp Vault Connector
+**Goal**: QU.I.R.K. can enumerate HashiCorp Vault cryptographic posture — transit key types (including PQC key types as positive findings), PKI mount CA certificate algorithm, and auth method risk assessment
+**Depends on**: Phase 27
+**Requirements**: VAULT-01, VAULT-02, VAULT-03
+**Success Criteria** (what must be TRUE):
+  1. Vault transit key enumeration returns key types with quantum-safety classification via VAULT_TRANSIT_KEY_MAP; ml-dsa and slh-dsa key types produce positive quantum-safe findings in the CBOM
+  2. PKI mount CA certificate extraction detects RSA signing keys below 4096 bits or SHA-1 signing algorithms and produces HIGH findings
+  3. Active auth method list flags higher-risk methods (token, LDAP root bind) with remediation guidance; token is sourced from VAULT_TOKEN env var or config
+  4. hvac>=2.4.0 is declared in [cloud] extras; connection errors (invalid token, unreachable Vault) produce scan_error findings rather than unhandled exceptions
+  5. All Vault findings are stored in dat_scan_json and produce protocol="VAULT" CryptoEndpoint rows
+**Plans**: 0 plans
+Plans:
+
+### Phase 31: Trend Analysis
+**Goal**: The intelligence layer can compare the current scan session against the most recent previous session — surfacing score delta, net-new findings, and resolved findings — with results in the dashboard and reports
+**Depends on**: Phase 27, Phase 28, Phase 29, Phase 30
+**Requirements**: TREND-01, TREND-02, TREND-03, TREND-04
+**Success Criteria** (what must be TRUE):
+  1. compute_trend_report() in intelligence/trends.py returns a score delta between the two most recent distinct scan sessions using scanned_at-based grouping from list_scans() — no new SQLite table is required
+  2. Trend report identifies net-new findings (present in current scan, absent in previous) with counts by severity
+  3. Trend report identifies resolved findings (present in previous scan, absent in current) with counts by severity
+  4. GET /api/trends returns trend data that the dashboard Trends tab surfaces: readiness score delta and new/resolved finding counts for the two most recent sessions; NULL collision with v4.2-era scan sessions is documented as expected behavior, not treated as a bug
+**Plans**: 0 plans
+Plans:
+**UI hint**: yes
 
 ## Phase Details
 
@@ -563,7 +650,7 @@ Ideas captured during planning — not in scope for v1, but not lost.
 ## Progress
 
 **Execution Order:**
-v3.9 complete. v4.1 complete. v4.2 complete. v4.3 next: 25 -> ...
+v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/29/30 (parallel) -> 31
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -592,3 +679,9 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 next: 25 -> ...
 | 23. DNSSEC CBOM Skip Fix | v4.2 | 1/1 | Complete | 2026-04-24 |
 | 24. Scan-Session Timestamp Isolation | v4.2 | 2/2 | Complete | 2026-04-24 |
 | 25. Identity Findings Accuracy | v4.3 | 0/0 | Planned | — |
+| 26. GCP Connector | v4.3 | 0/0 | Planned | — |
+| 27. Database Encryption Detection | v4.3 | 0/0 | Planned | — |
+| 28. Object Storage Audit | v4.3 | 0/0 | Planned | — |
+| 29. Kubernetes Secrets Inspection | v4.3 | 0/0 | Planned | — |
+| 30. HashiCorp Vault Connector | v4.3 | 0/0 | Planned | — |
+| 31. Trend Analysis | v4.3 | 0/0 | Planned | — |
