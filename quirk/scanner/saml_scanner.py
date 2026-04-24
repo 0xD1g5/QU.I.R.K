@@ -150,7 +150,7 @@ def _classify_key_severity(key_alg: str, key_bits: "int | None") -> "str | None"
     return None
 
 
-def _parse_saml_metadata(xml_bytes: bytes, target_url: str) -> "tuple[list, dict]":
+def _parse_saml_metadata(xml_bytes: bytes, target_url: str, now=None) -> "tuple[list, dict]":
     """Parse a SAML EntityDescriptor XML document.
 
     Returns (endpoints, scan_dict) where endpoints is a list of CryptoEndpoint objects
@@ -181,7 +181,8 @@ def _parse_saml_metadata(xml_bytes: bytes, target_url: str) -> "tuple[list, dict
         "errors": [],
     }
     endpoints = []
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if now is None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # ── Signing certs (SAML-01) ──────────────────────────────
     # Find explicit signing certs
@@ -296,7 +297,7 @@ def _parse_saml_metadata(xml_bytes: bytes, target_url: str) -> "tuple[list, dict
     return endpoints, scan_dict
 
 
-def _parse_oidc_discovery(json_bytes: bytes, target_url: str) -> "tuple[list, dict]":
+def _parse_oidc_discovery(json_bytes: bytes, target_url: str, now=None) -> "tuple[list, dict]":
     """Parse an OIDC discovery document (RFC 8414 / OpenID Connect Discovery).
 
     Enumerates id_token_signing_alg_values_supported and
@@ -322,7 +323,8 @@ def _parse_oidc_discovery(json_bytes: bytes, target_url: str) -> "tuple[list, di
         "errors": [],
     }
     endpoints = []
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if now is None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Enumerate id_token_signing_alg_values_supported per Pitfall 6
     for alg in id_token_algs:
@@ -364,7 +366,7 @@ def _parse_oidc_discovery(json_bytes: bytes, target_url: str) -> "tuple[list, di
     return endpoints, scan_dict
 
 
-def scan_saml_targets(targets: list, timeout: int = 10, logger=None) -> list:
+def scan_saml_targets(targets: list, timeout: int = 10, logger=None, session_start=None) -> list:
     """Scan SAML IdP metadata and OIDC discovery endpoints.
 
     Returns list of CryptoEndpoint objects.
@@ -375,6 +377,7 @@ def scan_saml_targets(targets: list, timeout: int = 10, logger=None) -> list:
             logger.warning("lxml not installed — SAML scanning disabled")
         return []
 
+    now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
     log = logger or logging.getLogger(__name__)
     all_endpoints = []
 
@@ -388,13 +391,13 @@ def scan_saml_targets(targets: list, timeout: int = 10, logger=None) -> list:
 
         if target_type == "oidc":
             try:
-                endpoints, _scan_dict = _parse_oidc_discovery(content, target_url)
+                endpoints, _scan_dict = _parse_oidc_discovery(content, target_url, now=now)
                 all_endpoints.extend(endpoints)
             except Exception as exc:
                 log.warning("SAML: OIDC parse failed for %s: %s", target_url, exc)
         else:
             try:
-                endpoints, _scan_dict = _parse_saml_metadata(content, target_url)
+                endpoints, _scan_dict = _parse_saml_metadata(content, target_url, now=now)
                 all_endpoints.extend(endpoints)
             except Exception as exc:
                 log.warning("SAML: metadata parse failed for %s: %s", target_url, exc)
