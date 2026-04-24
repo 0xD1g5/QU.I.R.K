@@ -1,40 +1,17 @@
 # Project Research Summary
 
-**Project:** QU.I.R.K. v4.2 — Identity Crypto Milestone
-**Domain:** Identity protocol cryptographic inventory (Kerberos, SAML/OAuth, DNSSEC)
-**Researched:** 2026-04-08
-**Confidence:** HIGH (stack + architecture verified from source; MEDIUM on chaos lab container specifics)
-
----
+**Project:** QU.I.R.K. v4.3 — Data at Rest Milestone
+**Domain:** Cryptographic inventory expansion — cloud KMS, database encryption, object storage, Kubernetes secrets, HashiCorp Vault, trend analysis
+**Researched:** 2026-04-24
+**Confidence:** HIGH
 
 ## Executive Summary
 
-The v4.2 Identity Crypto milestone extends QU.I.R.K.'s agentless scanning model to three new
-protocol families: Kerberos etype enumeration, SAML/OIDC metadata parsing, and DNSSEC algorithm
-auditing. All three scanners follow the same CryptoEndpoint → SQLite → CBOM pipeline that governs
-TLS/SSH/JWT scanners in v4.1. The correct integration pattern is well-understood from codebase
-inspection: write a JSON blob column per scanner, set a new `protocol=` string constant, add
-elif branches in `build_cbom()`, and register new algorithm entries in `classifier.py`. Because
-this pattern is additive and proven, the core architectural risk is low — but there are
-significant protocol-specific implementation traps that must be addressed at design time, not
-discovered during testing.
+QU.I.R.K. v4.3 extends the existing cryptographic scanner with six new data-at-rest surfaces: a GCP connector (Cloud KMS + Cloud SQL + GCS), database encryption detection (RDS + self-hosted PostgreSQL/MySQL), object storage audit (S3 + Azure Blob + GCS), Kubernetes secrets inspection (etcd EncryptionConfiguration), a HashiCorp Vault connector (transit keys + PKI + auth), and cross-session trend analysis. All six surfaces integrate through the same scanner contract already established by `aws_connector.py` and `azure_connector.py`, meaning the architecture is well-understood and low-risk. The primary unknown is not the architecture — it is operational: privilege requirements for database probing, GCP ADC runtime failures, and K8s RBAC restrictions are all failure modes that do not surface in unit tests but break in real consultant engagements.
 
-The most important resolved conflict in this synthesis concerns library choice and build order.
-**impacket** (not pyasn1) is the correct Kerberos library: its `kerberosv5.py` handles
-`KDC_ERR_PREAUTH_REQUIRED` without raising, giving clean access to `PA-ETYPE-INFO2` without
-credential material. However, impacket's pyOpenSSL transitive dependency creates a version
-conflict risk that must be contained by installing impacket in a new `[identity]` optional extras
-group, separate from core deps. On **build order**, PITFALLS research overrides ARCHITECTURE's
-suggested Kerberos-first order: DNSSEC should come before Kerberos because it validates the
-classifier extension pattern cheaply (pure DNS queries, no socket work, no ASN.1) before the
-project commits to the raw Kerberos TCP/UDP probe path. SAML sits between them in complexity.
+The recommended approach groups the six surfaces into seven phases (25–31), ordered strictly by dependency. Phase 27 (database encryption) is the critical path: it introduces the `dat_scan_json` column and `_ensure_v43_columns()` migration that every subsequent non-cloud scanner depends on. GCP and object storage share GCS bucket enumeration and must be developed together or in sequence to prevent double-enumeration. Trend analysis comes last and is purely additive — it reads existing `CryptoEndpoint` rows and requires no schema change beyond what Phase 27 already delivers. The stack delta is 7 net-new optional dependencies across 3 new extras groups (`[cloud]`, `[db]`, `[identity]` extension); zero core dependencies change.
 
-The key consulting finding this milestone enables is stark: **all current DNSSEC signing
-algorithms are quantum-vulnerable** via Shor's algorithm, and RC4-HMAC Kerberos etypes remain
-common in legacy Windows domains. These findings are high-value, have no equivalent in the
-existing TLS/SSH/JWT scanners, and map directly to billable remediation work. The implementation
-work is bounded and well-specified; the chaos lab infrastructure is the highest-complexity
-deliverable due to container startup timing and DNSSEC zone signing configuration requirements.
+The two highest risks for v4.3 are exact repeats of v4.2 defects: ISSUE-2 (dependency declared in scanner module but missing from pyproject.toml) and ISSUE-3 (scanner calling `datetime.now()` instead of receiving `session_start`). Both must be treated as structural requirements on every scanner phase, not afterthoughts. A third new risk class — GCP ADC runtime exception (`DefaultCredentialsError`) — requires explicit exception handling in the GCP connector because it is a runtime auth failure, not an import failure, and therefore bypasses the `GCP_AVAILABLE` flag pattern used for all other SDKs.
 
 ---
 
@@ -42,348 +19,164 @@ deliverable due to container startup timing and DNSSEC zone signing configuratio
 
 ### Recommended Stack
 
-The existing QU.I.R.K. stack (sslyze, cyclonedx-python-lib, httpx, cryptography, PyJWT) needs
-only five new dependencies, all pip-installable with no system binaries required. These are
-grouped into a single `[identity]` optional extras group to isolate impacket's pyOpenSSL
-transitive pull from core deps.
+The v4.3 stack delta is minimal and well-justified. All 7 net-new libraries are pip-installable with stable GA releases, and all go into optional extras groups — zero changes to the core install. GCP libraries (`google-cloud-kms>=3.12.0`, `google-cloud-storage>=3.10.1`) pull `grpcio` and `protobuf` transitively and carry a known `protobuf 6.x` conflict with `grpcio-status` — this is the single hardest install constraint and mandates they stay in `[cloud]` extras. `hvac>=2.4.0` (Vault) and `kubernetes>=35.0.0` also belong in `[cloud]` for the same reason: they are heavy, optional, and credential-gated. `psycopg2-binary>=2.9.12` and `PyMySQL>=1.1.2` go into the new `[db]` extras group. `ldap3>=2.9.1` is the Phase 25 carry-over fix — a one-liner addition to the existing `[identity]` group.
 
-**New dependencies in `[identity]` extras:**
-- `impacket>=0.13.0,<0.14` — raw Kerberos AS-REQ/ETYPE-INFO2 wire protocol; the only Python
-  library that implements this without requiring a host krb5 installation; pin `<0.14` to avoid
-  surprise breaking changes
-- `dnspython[dnssec]>=2.8.0` — DNSKEY/DS record queries with Algorithm enum; zero new
-  transitive deps because `cryptography` is already in the core stack
-- `lxml>=6.0` — SAML metadata XML parsing with correct namespace support; ships binary wheels
-  for Python 3.10-3.14 on all target platforms
-- `defusedxml>=0.7.1` — XXE/XML bomb guard for untrusted SAML metadata; already transitively
-  present in the venv but must be declared explicitly for a security tool
-- `signxml>=4.4.0` — XMLDSig algorithm inspection; pure Python (no xmlsec1 binary); latest
-  release March 2026
+**Core technologies (net-new):**
+- `google-cloud-kms>=3.12.0` + `google-cloud-storage>=3.10.1`: GCP KMS and GCS enumeration — first-party typed clients, shared ADC credential, goes in `[cloud]` extras to avoid grpcio landmine
+- `azure-mgmt-storage>=21.2.0`: Azure Blob encryption audit — mirrors `azure-mgmt-network` already in stack; `DefaultAzureCredential` reused; placement in `[cloud]` vs core is an open decision (see Gaps)
+- `hvac>=2.4.0`: HashiCorp Vault connector — only maintained Python Vault client, `requests` is already transitive, goes in `[cloud]`
+- `kubernetes>=35.0.0`: K8s secrets inspection — official OpenAPI-generated client, tracks K8s 1.32, goes in `[cloud]`; 25MB+ weight reinforces extras placement
+- `psycopg2-binary>=2.9.12`: PostgreSQL encryption probe — self-contained binary wheel, no system deps, goes in `[db]`
+- `PyMySQL>=1.1.2`: MySQL encryption probe — pure Python, MIT license, goes in `[db]`
+- `ldap3>=2.9.1`: Phase 25 KERB-03 LDAP path — pure Python, one-liner addition to `[identity]`
 
-**Conflict resolution — impacket:** impacket 0.13.0 relaxed its pyOpenSSL pin (was `==`, now
-`>=`). The conflict risk is MEDIUM, not LOW, because pyOpenSSL>=25.0.0 requires
-cryptography>=46.0.0 while the existing stack requires only >=44.0. The `[identity]` extras
-group isolates this. If a future upgrade requires `cryptography>=46.0` in core deps anyway, the
-conflict disappears — the cryptography project maintains backward API compatibility.
+**K8s critical finding:** `EncryptionConfiguration` is NOT a Kubernetes API resource. The only agentless detection path is inspecting the kube-apiserver pod spec in `kube-system` for the `--encryption-provider-config` flag. Managed clusters (EKS, GKE, AKS) each expose this through their own cloud API (`describe_cluster`, `get_cluster`, `ManagedCluster`) — three distinct API call paths, not one.
 
-**Library choice overruled — Kerberos:** FEATURES.md suggested pyasn1 for AS-REQ construction.
-STACK.md wins: impacket's `kerberosv5.py` already encodes the correct PDU, handles TCP framing,
-and parses ETYPE-INFO2. Building AS-REQ from scratch with pyasn1 is 200+ lines of fragile ASN.1
-work for zero gain.
+**RDS precision finding:** The 2025 Aurora field `StorageEncryptionType` (`none`/`sse-rds`/`sse-kms`) is more precise than the older `StorageEncrypted` boolean. Both should be read: `StorageEncrypted=True` with `StorageEncryptionType=sse-rds` means AWS-owned key (weaker posture than CMK).
 
-**What NOT to use:**
-- `pysaml2` or `python3-saml` — both require the `xmlsec1` system binary, violating QU.I.R.K.'s
-  pip-only constraint
-- `python-gssapi` or `krb5` C bindings — require a working host Kerberos installation
-  (krb5.conf, realm config); impacket speaks raw Kerberos over TCP with no host krb5 required
-- `impacket` in core deps — must stay in `[identity]` extras to contain pyOpenSSL conflict risk
-
-**Chaos lab Docker images (confirmed available):**
-- Kerberos KDC: `smblds/smblds` (purpose-built CI image, KDC on port 88, minimal footprint)
-- SAML IdP: `kenchan0130/simplesamlphp` (PHP8 Apache, SAML 2.0 IdP, metadata at
-  `/simplesaml/saml2/idp/metadata.php`)
-- DNSSEC authoritative: `internetsystemsconsortium/bind9:9.20` (official ISC image, supports
-  `dnssec-policy` for inline zone signing with configurable algorithms)
+**Vault PQC positive finding:** HashiCorp Vault transit engine supports `ml-dsa` and `slh-dsa` key types (experimental PQC). These are surfaceable as positive findings in QU.I.R.K.'s CBOM — orgs already using these are ahead on post-quantum readiness.
 
 ---
 
 ### Expected Features
 
-All three scanners operate in read-only agentless mode — no credentials, no agents, no active
-exploitation. Each scanner targets a distinct network port and protocol family.
+All 6 surfaces have clear table-stakes definitions confirmed against official docs. The feature prioritization matrix assigns P1 to the highest-value, lowest-complexity items.
 
-**Must have (table stakes for v4.2):**
-- Kerberos: AS-REQ probe to port 88 (TCP + UDP fallback), parse PA-ETYPE-INFO2 from
-  `KDC_ERR_PREAUTH_REQUIRED`, classify RC4-HMAC (etype 23) as HIGH and DES etypes (1,2,3) as
-  CRITICAL, store `kerberos_scan_json`, emit `protocol="KERBEROS"` CryptoEndpoints
-- SAML: HTTP fetch of IdP metadata XML, lxml parse of `<md:KeyDescriptor>` (signing and
-  both-use certs), extract X.509 cert key type/size/expiry via DER decode, parse
-  `<alg:SigningMethod>` URI, flag SHA-1 signing as HIGH, flag RSA < 2048-bit as CRITICAL, store
-  `saml_scan_json`
-- OIDC: parse `id_token_signing_alg_values_supported` from `/.well-known/openid-configuration`
-  (complement to existing `jwt_scanner.py`, not a replacement)
-- DNSSEC: `dns.resolver.resolve(domain, 'DNSKEY')` + `resolve(domain, 'DS')` via dnspython with
-  DO bit, classify algorithms per RFC 8624 / RFC 9905 (2025), flag RSASHA1 (alg 5) and
-  RSASHA1-NSEC3-SHA1 (alg 7) as CRITICAL MUST NOT, flag missing DNSSEC as HIGH, store
-  `dnssec_scan_json`
-- CBOM pipeline: new `_ALGORITHM_TABLE` entries for all 11 new algorithm keys; KERBEROS/SAML/
-  DNSSEC elif branches in `build_cbom()` Pass 1 (algorithms) and Pass 3 (protocol components)
-- Chaos lab: Samba DC with RC4-only etype config, SimpleSAMLphp with weak RSA-1024 signing cert,
-  BIND9 with RSASHA1-signed zone and clean ECDSAP256SHA256 zone
-- Dashboard: Identity tab with per-protocol summary cards and findings list
+**Must have (P1 — ships in v4.3 core):**
+- GCP Cloud KMS key enumeration + algorithm map + GCS CMEK detection — shares GCS work with object storage audit
+- AWS RDS `StorageEncrypted` + `StorageEncryptionType` (2025 field) + `KmsKeyId` detection
+- S3 encryption policy (SSE-S3 vs SSE-KMS vs CMK) + public access block (4 boolean flags)
+- EKS `encryptionConfig` + GKE `databaseEncryption.state` + kube-apiserver pod spec inspection
+- HashiCorp Vault transit key enumeration + type map + PKI CA cert extraction + auth method list
+- Trend analysis: `ScanSession` table + score delta + new/resolved findings diff + HTML/PDF delta section
 
-**Should have (adds consulting differentiation, targeted for v4.2.x post-validation):**
-- SAML encryption `<KeyDescriptor use="encryption">` cert extraction
-- DNSSEC NSEC vs NSEC3 detection (zone enumeration exposure surface)
-- DS broken chain detection (mismatched key tags between DS and DNSKEY records)
-- OIDC `request_object_signing_alg_values_supported` parsing
+**Should have (P2 — ships if time permits, else v4.3.x):**
+- K8s secret type count (self-managed clusters) — requires `list secrets` RBAC
+- Azure Blob `key_source` detection (CMK vs platform-managed)
+- S3 Object Lock / MFA Delete status
+- Vault transit `exportable` flag detection
+- Trend analysis dashboard delta badge
 
-**Defer to v5+:**
-- Post-quantum DNSSEC algorithm support (ML-DSA IANA numbers not yet registered; IETF draft as
-  of 2026)
-- SAML assertion signature validation (requires SP context; SaaS model)
-- Kerberos account-level etype probing via LDAP `msDS-SupportedEncryptionTypes` (requires LDAP
-  auth dependency; breaks agentless constraint)
-- DNSKEY rollover monitoring (continuous monitoring; SaaS feature)
+**Defer (P3 / v4.4+):**
+- Azure SQL TDE detection, PostgreSQL pg_tde extension, AKS CMK encryption, BigQuery CMEK audit, multi-session trend chart, Vault Enterprise namespaces, Oracle DB encryption (explicitly out of scope v4.3)
 
-**Key quantum-safety insight:** Kerberos etype findings are primarily classical-risk findings
-(RC4/DES are brute-forceable), not PQC-migration findings — AES-128/AES-256 session keys are
-Grover-resistant. DNSSEC and SAML findings are true PQC-migration findings — all current DNSSEC
-signing algorithms and all RSA/ECDSA SAML signing algorithms are Shor-vulnerable. This
-distinction is important for the dashboard severity framing and report copy.
+**Important scope constraint:** GCP connector and object storage audit MUST share GCS bucket enumeration. Enumerating GCS twice is wasteful and violates session consistency. Phase 26 enumerates; Phase 28 consumes that data.
 
 ---
 
 ### Architecture Approach
 
-The v4.2 identity scanners are purely additive changes to the existing architecture. The data
-flow is identical to every scanner in v4.1: scanner module writes CryptoEndpoint rows with a
-unique `protocol=` string and a `*_scan_json` blob column; `build_cbom()` dispatches on
-`ep.protocol` to extract algorithm components; `compute_readiness_score()` consumes the evidence
-dict; the dashboard API serializes `identity_findings` in the scan response. No structural
-changes to the pipeline are required — only extensions.
+All six new surfaces follow the scanner contract established by `aws_connector.py`: one public `scan_X_targets(...) -> List[CryptoEndpoint]` function per module, optional SDK import guard at module level, `protocol` string discriminator on the endpoint, raw detail in a JSON blob column. GCP reuses the existing `cloud_scan_json` column (protocol `"GCP"`, same as AWS/Azure). The four non-cloud surfaces (DATABASE, STORAGE, K8S, VAULT) share a new `dat_scan_json` TEXT column added by `_ensure_v43_columns()` in Phase 27 — this column is the critical-path dependency for Phases 28, 29, and 30. Trend analysis (`intelligence/trends.py`) is a pure read concern over existing `CryptoEndpoint` rows; it requires no new table, using the `scanned_at`-based session grouping already used by `list_scans()`. The evidence-to-scoring pipeline adds a `dar_` subscore prefix following the `identity_` prefix pattern established in v4.2.
 
-**Major components and modification types:**
+**Major components (7 new files):**
+1. `quirk/scanner/gcp_connector.py` — Cloud KMS, Cloud SQL TLS, GCS encryption enumeration
+2. `quirk/scanner/db_scanner.py` — PostgreSQL/MySQL/RDS encryption-at-rest detection
+3. `quirk/scanner/object_storage_scanner.py` — S3/Azure Blob/GCS bucket encryption policies
+4. `quirk/scanner/k8s_scanner.py` — etcd EncryptionConfiguration + secret type inventory
+5. `quirk/scanner/vault_connector.py` — Vault transit keys, PKI mounts, auth method audit
+6. `quirk/intelligence/trends.py` — cross-session delta computation
+7. `quirk/dashboard/api/routes/trends.py` — `GET /api/trends` FastAPI route
 
-1. `quirk/scanner/kerberos_scanner.py` — NEW; AS-REQ probe via impacket.krb5.asn1, ETYPE-INFO2
-   parse, TCP/UDP fallback logic
-2. `quirk/scanner/saml_scanner.py` — NEW; httpx fetch + lxml/defusedxml parse + DER cert
-   extraction; OIDC discovery JSON path separate from SAML XML path
-3. `quirk/scanner/dnssec_scanner.py` — NEW; dnspython with DO bit, direct authoritative NS
-   query, DNSKEY/DS classification per RFC 8624
-4. `quirk/models.py` — MODIFY; three new nullable Text columns with additive migration guard
-5. `quirk/config.py` — MODIFY; `enable_kerberos/saml/dnssec` flags + target lists in
-   `ConnectorsCfg`
-6. `quirk/cbom/classifier.py` — MODIFY; Kerberos etype strings + DNSSEC IANA algorithm number
-   mapping table (`DNSSEC_ALG_MAP`)
-7. `quirk/cbom/builder.py` — MODIFY; KERBEROS/SAML/DNSSEC elif branches in Pass 1 + Pass 3
-8. `quirk/intelligence/evidence.py` + `scoring.py` — MODIFY; identity protocol counters and
-   optional sub-score weights
-9. `quirk/dashboard/api/routes/scan.py` + `schemas.py` — MODIFY; `IdentityFinding` model +
-   `identity_findings` in `ScanLatestResponse`
-10. `quantum-chaos-enterprise-lab/docker-compose.yml` — MODIFY; three new profiles
+**Extended files (11 files, additive changes only):** `quirk/models.py`, `quirk/db.py`, `quirk/config.py`, `quirk/intelligence/evidence.py`, `quirk/intelligence/scoring.py`, `quirk/cbom/builder.py`, `quirk/cbom/classifier.py`, `quirk/dashboard/api/schemas.py`, `quirk/dashboard/api/routes/scan.py`, `quirk/dashboard/api/app.py`, `run_scan.py`.
 
-**Protocol string convention (new values):** `KERBEROS`, `SAML`, `DNSSEC` — these map to
-`ProtocolPropertiesType.OTHER` in CycloneDX 1.6 (no native identity protocol type defined).
-
-**One CryptoEndpoint row per target** (not per algorithm) — the SSH scanner is the canonical
-model. Algorithm detail lives in the `*_scan_json` blob.
+**Breaking API decision:** `dar_` weights must be added as a 5th subscore prefix in `scoring.py` (parallel to `identity_`), NOT by extending the existing `identity_trust` subscore. This keeps surface scoring separable for future per-surface dashboard breakdowns and profile multiplier targeting.
 
 ---
 
 ### Critical Pitfalls
 
-1. **Kerberos probe sends credential material** — calling `getKerberosTGT()` without credentials
-   returns `KDC_ERR_C_PRINCIPAL_UNKNOWN` before etype data is transmitted. Use raw
-   `impacket.krb5.asn1` AS-REQ construction with no preauthentication data; the correct response
-   is `KDC_ERR_PREAUTH_REQUIRED` (error code 25) containing `PA-ETYPE-INFO2`. This must be a
-   design requirement, not discovered during chaos lab testing.
+1. **ISSUE-2 repeat — dependency declared nowhere** — Every new connector (hvac, kubernetes, google-cloud-kms, psycopg2-binary, PyMySQL) must be added to pyproject.toml in the same commit as the scanner module. Treat pyproject.toml diff as a required PLAN.md deliverable. Write a test that checks `importlib.util.find_spec()` for each library under the expected extras configuration.
 
-2. **Kerberos UDP/88 silently blocked** — enterprise firewalls block UDP/88 to force TCP. A
-   UDP-only scanner returns empty results indistinguishable from "no KDC present." Implement
-   TCP/88 fallback with explicit timeout; record `kerberos-unreachable` in `scan_error` when
-   both transports fail.
+2. **ISSUE-3 repeat — session timestamp drift** — Every scanner function must accept `session_start: Optional[datetime]` and propagate it to `scanned_at` on all `CryptoEndpoint` instances. Scanners with network latency (Vault token refresh, GCP API rate limits, DB connection timeouts) are highest risk.
 
-3. **SAML namespace XPath silently returns empty** — lxml's `xpath()` / `findall()` ignores
-   namespace prefixes without an explicit `nsmap` argument. Define `SAML_NS` as a module
-   constant and pass it to every query. Real-world Azure AD and Okta metadata use `md:` and
-   `ds:` prefixes; test fixtures that work with SimpleSAMLphp often break on these.
+3. **GCP ADC runtime exception — new failure class** — `DefaultCredentialsError` fires at API call time, not import time. The `GCP_AVAILABLE` flag alone does not protect against it. Must catch `google.auth.exceptions.DefaultCredentialsError` and `google.auth.exceptions.TransportError` explicitly with actionable log messages.
 
-4. **SAML `<KeyDescriptor>` without `use` attribute** — Azure AD and Okta frequently omit `use`
-   on the primary signing key (means "both signing and encryption"). Hard-coding
-   `[@use='signing']` in XPath misses these entirely. Parse three categories: signing,
-   encryption, and no-use (both).
+4. **GCP grpcio/protobuf transitive conflict** — GCP client libraries pull `grpcio` and `protobuf`; a known open issue blocks `protobuf>=6.x` with `grpcio-status`. GCP libraries must stay in `[cloud]` extras only. Run `pip check` in CI after `pip install quirk[cloud]`.
 
-5. **SAML certificate DER vs PEM** — `ds:X509Certificate` stores raw base64 (no PEM headers).
-   Never construct PEM by string concatenation; use `x509.load_der_x509_certificate(
-   base64.b64decode(raw_b64))` — DER parsing avoids line-break format issues entirely.
+5. **PostgreSQL pg_stat_ssl false-positive** — Querying `pg_stat_ssl` without `pg_read_all_stats` role returns only the scanner's own connection row (always SSL), producing a false "SSL enabled" result. Detect privilege level before querying; emit `insufficient-privilege` scan_error if absent.
 
-6. **DNSSEC `[dnssec]` extra not installed** — `pip install dnspython` without the extras gives
-   base library that imports cleanly but raises `ImportError` at runtime inside `dns.dnssec`
-   function bodies. Declare `dnspython[dnssec]` (not `dnspython`) in pyproject.toml; add an
-   `DNSPYTHON_AVAILABLE` guard with a CI test that verifies it is True.
+6. **S3 `list_buckets` is not paginated** — `get_paginator('list_buckets')` raises `OperationNotPageableError`. Per-bucket encryption calls must use `ThreadPoolExecutor(max_workers=10)` with the existing `TokenBucket` rate limiter.
 
-7. **DNSSEC system resolver strips DO bit** — corporate and containerized resolvers often strip
-   DNSKEY/RRSIG records. Query authoritative NS records directly: resolve the zone's NS records
-   first, then set `resolver.nameservers` to those IPs and `resolver.use_edns(edns=0,
-   ednsflags=dns.flags.DO)`. Never use the system resolver for DNSKEY queries.
-
-8. **DNSSEC algorithm numbers not in `_ALGORITHM_TABLE`** — DNSSEC uses IANA integer keys (5, 7,
-   8, 13); the existing classifier uses string keys. Add `DNSSEC_ALG_MAP` integer → canonical
-   name translation in the scanner (or classifier) before calling `classify_algorithm()`.
-
-9. **SQLite additive column migration** — `create_all()` does not add columns to existing
-   tables. New `*_scan_json` columns must be declared `nullable=True` and added via an
-   idempotent `ALTER TABLE ADD COLUMN` guard in `db.py` startup (check `PRAGMA table_info`
-   first). Test against a `quirk.db` created by v4.1.
-
-10. **CBOM builder `else` treats unknown protocols as TLS** — if `build_cbom()` is not updated,
-    KERBEROS/SAML/DNSSEC endpoints enter the TLS branch and produce garbage cipher-suite
-    decomposition. Add explicit elif branches in the same phase as each scanner. Log a warning on
-    unrecognized protocol values rather than silently falling through.
-
-11. **Samba DC container takes 60–90 seconds to provision** — `samba-tool domain provision` runs
-    after container start; the chaos lab test runner hits port 88 before KDC is ready. Add a
-    healthcheck with `start_period: 90s` and require `depends_on: condition: service_healthy`.
-
-12. **BIND9 chaos lab serves unsigned zone by default** — DNSSEC is not automatic in BIND9.
-    Use `dnssec-policy` block in `named.conf` (BIND 9.16+) with an RSASHA1 policy for the weak
-    test zone. Verify with `dig @localhost DNSKEY chaos.local` before claiming chaos lab is ready.
+7. **Trend analysis NULL collision with v4.2-era scan data** — Pre-v4.3 scan rows lack `dat_scan_json`. Trend queries across v4.2-era data must limit comparison to fields present in both sessions. Every DAR finding will appear as "new" in the first post-v4.3 trend comparison — correct behavior, must be documented.
 
 ---
 
 ## Implications for Roadmap
 
-Based on combined research, the recommended build order is **DNSSEC first, SAML second,
-Kerberos third**, with a shared infrastructure phase before all scanners and a shared surface
-phase after all scanners. PITFALLS research overrides ARCHITECTURE's suggested Kerberos-first
-order: DNSSEC is the simplest scanner (pure DNS queries, no custom socket work), validating the
-classifier extension pattern and CBOM pipeline integration cheaply before the project commits to
-Kerberos raw socket / ASN.1 work.
+Phases 25–31. Build order is driven by the `dat_scan_json` column dependency and the GCS sharing constraint.
 
-### Phase 1: Infrastructure — Schema, Config, Migration Guard
+### Phase 25: Identity Accuracy (carry-over from v4.2)
 
-**Rationale:** All three scanners depend on models.py columns and config.py flags. This phase
-unblocks all downstream work and is low-risk, with no new libraries needed.
+**Rationale:** Deferred from v4.2; no v4.3 DAR dependencies; clears the backlog before adding new scope.
+**Delivers:** `ldap3>=2.9.1` in `[identity]` extras; LDAP degradation path in Kerberos scanner; OIDC RS256 token validation.
+**Addresses:** ISSUE-2 carry-over from v4.2 milestone audit.
+**Avoids:** ISSUE-2 repeat — pyproject.toml and scanner module committed atomically.
 
-**Delivers:** Three new nullable Text columns (`kerberos_scan_json`, `saml_scan_json`,
-`dnssec_scan_json`) with idempotent `ALTER TABLE ADD COLUMN` guard in `db.py`; `enable_kerberos/
-saml/dnssec` flags and target list fields in `ConnectorsCfg`; `[identity]` extras group in
-`pyproject.toml` with all five new dependencies declared.
+### Phase 26: GCP Connector
 
-**Pitfall addressed:** SQLite additive migration (Pitfall 9) — must be tested against a v4.1
-`quirk.db` fixture before any scanner work begins.
+**Rationale:** GCP reuses `cloud_scan_json` (no schema change needed), so it has no dependency on Phase 27. GCS enumeration done here is passed forward to Phase 28 — Phase 26 must precede Phase 28.
+**Delivers:** `gcp_connector.py` with Cloud KMS enumeration + `GCP_ALGORITHM_MAP`, Cloud SQL TLS mode, GCS CMEK. `google-cloud-kms` and `google-cloud-storage` in `[cloud]` extras. `azure-mgmt-storage` placement decision.
+**Addresses:** GCP KMS P1, GCS CMEK P1, Cloud SQL TLS P1.
+**Avoids:** GCP ADC `DefaultCredentialsError` uncaught; grpcio/protobuf conflict; ISSUE-2 and ISSUE-3 repeats.
 
-**Research flag:** Standard pattern — no per-phase research needed.
+### Phase 27: Database Encryption Detection (CRITICAL PATH)
 
----
+**Rationale:** Introduces `dat_scan_json` column and `_ensure_v43_columns()`. Phases 28, 29, 30 all depend on this column. Establishes `dar_` subscore prefix. Must come before all non-cloud DAR scanner phases.
+**Delivers:** `db_scanner.py` with RDS `StorageEncrypted`/`StorageEncryptionType`/`KmsKeyId`; `rds.force_ssl` parameter group check; PostgreSQL `pg_stat_ssl` probe; MySQL `have_ssl` + `require_secure_transport`. `psycopg2-binary` and `PyMySQL` in `[db]` extras. `dat_scan_json` column + migration.
+**Addresses:** AWS RDS P1; PostgreSQL/MySQL self-hosted P2.
+**Avoids:** `pg_stat_ssl` false-positive (privilege detection first); ISSUE-2 and ISSUE-3 repeats.
 
-### Phase 2: DNSSEC Scanner + Classifier + CBOM Integration
+### Phase 28: Object Storage Audit
 
-**Rationale:** DNSSEC is the simplest scanner: pure DNS queries over UDP/TCP using dnspython,
-no custom socket construction, no ASN.1, no XML parsing. It validates the full
-scanner → CryptoEndpoint → CBOM pipeline for identity protocols before tackling harder
-scanners. The DNSSEC_ALG_MAP integer → classifier key translation establishes the pattern that
-Kerberos etype mapping will follow.
+**Rationale:** Depends on `dat_scan_json` from Phase 27. Receives GCS bucket data from Phase 26 (not re-enumerated).
+**Delivers:** `object_storage_scanner.py` with S3 SSE-S3/SSE-KMS/CMK + public access block + Object Lock; Azure Blob `key_source`; GCS CMEK via shared Phase 26 data.
+**Addresses:** S3 encryption P1, S3 public access P1, Azure Blob P2.
+**Avoids:** `list_buckets` paginator error; sequential per-bucket loop (ThreadPoolExecutor from day one); ISSUE-3 repeat.
 
-**Delivers:** `quirk/scanner/dnssec_scanner.py` with DO-bit resolver, DNSKEY/DS classification
-per RFC 8624/RFC 9905, unsigned-zone detection; `DNSSEC_ALG_MAP` in classifier; DNSSEC elif
-branches in `build_cbom()` Pass 1 and Pass 3; BIND9 chaos lab profile (`dnssec` Docker Compose
-profile) with RSASHA1-signed zone and clean ECDSAP256SHA256 zone.
+### Phase 29: Kubernetes Secrets Inspection
 
-**Features addressed:** All DNSSEC table stakes; RFC 9905 RSASHA1 MUST-NOT finding; SHA-1 DS
-digest detection; unsigned zone HIGH finding.
+**Rationale:** Depends on `dat_scan_json` from Phase 27. Independent of Phases 26/28. Can be developed in parallel with Phase 28 post-Phase 27.
+**Delivers:** `k8s_scanner.py` with EKS `encryptionConfig`; GKE `databaseEncryption.state`; kube-apiserver pod spec inspection; secret type count. `kubernetes>=35.0.0` in `[cloud]` extras.
+**Addresses:** EKS/GKE etcd encryption P1; K8s secret type count P2.
+**Avoids:** K8s EncryptionConfiguration API misconception (pod spec, not API resource); K8s RBAC 403 silent failure; `secret.data` decoded values never logged.
 
-**Pitfalls addressed:** Pitfalls 5 (dnssec extra), 6 (DO-bit resolver), 7 (algorithm number
-mapping), 10 (CBOM builder elif), 12 (BIND9 unsigned zone default).
+### Phase 30: HashiCorp Vault Connector
 
-**Research flag:** Standard patterns — RFC 8624/RFC 9905 tables are authoritative, dnspython
-API is well-documented. No per-phase research needed.
+**Rationale:** Depends on `dat_scan_json` from Phase 27. No dependency on Phases 28 or 29.
+**Delivers:** `vault_connector.py` with transit key enumeration + `VAULT_TRANSIT_KEY_MAP`; PKI CA cert extraction; auth method list; `ml-dsa`/`slh-dsa` PQC positive finding. `hvac>=2.4.0` in `[cloud]` extras.
+**Addresses:** Vault transit P1, Vault PKI P1, auth method list P2, PQC positive finding.
+**Avoids:** Vault key type mapping error (must be `"RSA"` not `"rsa-2048"`); KV v1/v2 auto-detection failure; `keys[version]` timestamp confusion as `cert_pubkey_size`.
 
----
+### Phase 31: Trend Analysis
 
-### Phase 3: SAML/OIDC Scanner + CBOM Integration
-
-**Rationale:** SAML sits at medium complexity: XML namespace handling adds implementation risk
-but the underlying technology (httpx + lxml + cryptography) is already in the stack. OIDC
-discovery piggybacks on existing `jwt_scanner.py` infrastructure. Building SAML after DNSSEC
-means the classifier extension pattern and CBOM pipeline are already proven.
-
-**Delivers:** `quirk/scanner/saml_scanner.py` with SAML XML path (lxml + defusedxml, SAML_NS
-constant, DER cert extraction) and OIDC JSON path (separate code paths); SAML elif in
-`build_cbom()` Pass 1 + Pass 2 (certificate components reuse existing cert logic) + Pass 3;
-SimpleSAMLphp chaos lab profile (`saml` Docker Compose profile) with RSA-1024 weak signing cert.
-
-**Features addressed:** All SAML/OIDC table stakes; SHA-1 algorithm detection; RSA key size
-classification; OIDC `id_token_signing_alg_values_supported` parsing.
-
-**Pitfalls addressed:** Pitfalls 3 (namespace XPath), 4 (missing use= attribute), 8 (DER cert
-parsing), 13 (Keycloak/SimpleSAMLphp startup timing).
-
-**Research flag:** The SAML `<alg:SigningMethod>` declaration parsing and SAML Metadata
-Algorithm Support profile (OASIS) is moderately niche — may benefit from a brief targeted
-research pass to confirm edge cases for `<md:Extensions>` attribute variant handling.
-
----
-
-### Phase 4: Kerberos Scanner + CBOM Integration
-
-**Rationale:** Kerberos is the most complex scanner because it requires raw TCP/UDP socket work,
-impacket ASN.1 construction, and careful handling of the KDC error response path. Building it
-last means the CBOM pipeline integration is proven on two simpler scanners first, and the
-`[identity]` extras group is already installed and tested.
-
-**Delivers:** `quirk/scanner/kerberos_scanner.py` using `impacket.krb5.asn1` for bare AS-REQ
-with no preauthentication, TCP/88 fallback when UDP/88 times out, ETYPE-INFO2 extraction from
-`KDC_ERR_PREAUTH_REQUIRED` error response, RC4/DES/AES classification; KERBEROS elif in
-`build_cbom()` Pass 1 and Pass 3; Samba DC chaos lab profile (`kerberos` Docker Compose profile)
-with RC4-enabled etype config and healthcheck with `start_period: 90s`.
-
-**Features addressed:** All Kerberos table stakes; RC4-HMAC CRITICAL finding; DES etype
-detection; AES-only PASS state.
-
-**Pitfalls addressed:** Pitfalls 1 (AS-REQ must not use credentials), 2 (UDP/88 fallback), 10
-(CBOM builder elif for KERBEROS), 11 (Samba DC startup race).
-
-**Research flag:** impacket's `kerberosv5.py` wire protocol behavior for bare AS-REQ
-construction should be verified against the actual source before implementation begins. The
-STACK.md research covers this but the specific ASN.1 field sequence for a no-preauth AS-REQ is
-worth a targeted code review to avoid Pitfall 1.
-
----
-
-### Phase 5: Intelligence Layer + Dashboard Identity Tab
-
-**Rationale:** Requires all three scanners to exist and produce data. The intelligence layer
-additions (evidence counters, scoring weights) and the React Identity tab surface findings that
-need real scanner output to validate.
-
-**Delivers:** `identity_weak_etype_count`, `saml_weak_signing_count`, `dnssec_weak_algo_count`
-counters in `evidence.py`; optional identity sub-score weights in `scoring.py`; `IdentityFinding`
-Pydantic model in `schemas.py`; `identity_findings` section in `GET /api/scan/latest` response;
-React `<IdentityTab>` with per-protocol summary cards and findings list (KERBEROS=orange,
-SAML/OIDC=purple, DNSSEC=teal badge colors).
-
-**Features addressed:** Identity dashboard tab; all severity findings surfaced in UI; protocol
-filter in findings table.
-
-**Research flag:** Standard patterns — mirrors existing TLS/SSH tab structure. No per-phase
-research needed.
+**Rationale:** Must come last — requires scan data from all scanner phases. Purely additive read-side feature; no schema change needed.
+**Delivers:** `quirk/intelligence/trends.py` with `compute_trend_report()`; `GET /api/trends` route; HTML/PDF delta section; React Trends tab (score delta badge minimum viable).
+**Addresses:** Trend score delta P1, new/resolved findings diff P2, dashboard delta badge P2.
+**Avoids:** NULL collision with v4.2-era data (document expected behavior); timestamp drift breaking session grouping; write-time delta computation (compute at query time only).
 
 ---
 
 ### Phase Ordering Rationale
 
-- **DNSSEC first** validates the classifier integer-key extension pattern (DNSSEC_ALG_MAP) and
-  the CBOM builder elif pattern cheaply, before any raw socket work
-- **SAML second** adds XML parsing complexity while reusing proven stack components (httpx,
-  cryptography); cert extraction uses the existing `cert_pubkey_alg`/`cert_pubkey_size` field
-  path without new schema work
-- **Kerberos third** isolates the highest-risk implementation (impacket AS-REQ wire construction,
-  TCP/UDP fallback, pyOpenSSL conflict) to a phase where CBOM integration is already proven
-- **Dashboard last** is the correct sequence because identity_findings data must exist before
-  the tab can be validated; chaos lab profiles can be built in parallel with the dashboard phase
-  (they are test infrastructure, not a production dependency)
+- Phase 25 first: carry-over with no DAR dependency; clears backlog before adding new scope.
+- Phase 26 before Phase 28: GCP connector enumerates GCS buckets; object storage audit reuses that data. Reversing the order means double-enumeration or re-architecture.
+- Phase 27 before Phases 28/29/30: `dat_scan_json` column and `_ensure_v43_columns()` are shared infrastructure. Phases 28, 29, 30 are independent of each other once Phase 27 completes — parallel development is possible.
+- Phase 31 last: trend analysis on zero or partial data is meaningless; all scanner surfaces must produce at least one scan session before trend output is useful.
 
 ---
 
 ### Research Flags
 
-**Needs targeted research before implementation:**
-- Phase 4 (Kerberos): Verify the specific impacket.krb5.asn1 field sequence for a bare AS-REQ
-  (no ENC-TIMESTAMP padata, no preauth data present) — the STACK.md research covers the
-  behavior but not the exact call sequence. A 30-minute code review of impacket's
-  `GetNPUsers.py` vs `kerberosv5.py` will confirm the correct construction pattern.
-- Phase 3 (SAML): The SAML Metadata Algorithm Support extension (`<alg:SigningMethod>` under
-  `<md:Extensions>`) is used by some IdPs but not all; confirm whether the chaos lab
-  SimpleSAMLphp image emits these elements or whether algorithm discovery must fall back to the
-  signing certificate key inspection path.
+**No phases require a `/gsd-research-phase` call.** All patterns, library APIs, integration shapes, and pitfall mitigations are fully specified at HIGH confidence across the four research files.
 
-**Standard patterns (skip research-phase):**
-- Phase 1 (Infrastructure): additive SQLite column pattern already documented in codebase
-- Phase 2 (DNSSEC): RFC 8624/RFC 9905 tables are static; dnspython API is stable
-- Phase 5 (Dashboard): mirrors existing tab structure with well-established React + FastAPI
-  patterns
+**All phases use standard patterns:**
+- Phase 25: one-liner ldap3 addition to existing extras group
+- Phase 26: mirrors aws_connector.py exactly; library APIs confirmed
+- Phase 27: existing boto3 session; pg_stat_ssl and MySQL queries documented
+- Phase 28: S3/Blob/GCS APIs standard; ThreadPoolExecutor pattern established
+- Phase 29: K8s pod spec inspection path fully documented in official K8s docs
+- Phase 30: hvac API shape confirmed; VAULT_TRANSIT_KEY_MAP fully specified
+- Phase 31: session grouping uses existing `list_scans()` pattern; no new DB patterns
 
 ---
 
@@ -391,34 +184,22 @@ research needed.
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All library versions confirmed via PyPI; impacket pyOpenSSL conflict history reviewed via GitHub issues; binary wheel availability confirmed for target platforms |
-| Features | HIGH | Authoritative sources: RFC 6649 (DES), RFC 8429 (RC4), RFC 8624 / RFC 9905 (DNSSEC), OASIS SAML specs, IANA Kerberos/DNSSEC registries; MIT Kerberos docs |
-| Architecture | HIGH | Based on direct codebase inspection of v4.1; all pattern references (SSH scanner, JWT scanner, build_cbom dispatch) verified against existing code |
-| Pitfalls | HIGH (protocol behavior) / MEDIUM (chaos lab containers) | Protocol pitfalls verified against source code and RFC behavior; chaos lab container startup timing is empirical, MEDIUM confidence on exact `start_period` values |
+| Stack | HIGH | All 7 library versions verified via PyPI as of 2026-04-24; grpcio/protobuf conflict is a known open issue with documented workaround |
+| Features | HIGH | GCP/AWS/Azure/K8s/Vault official docs verified; codebase patterns confirmed via direct code analysis |
+| Architecture | HIGH | Based on direct codebase analysis; all integration points specified with file names and function signatures |
+| Pitfalls | HIGH | ISSUE-2 and ISSUE-3 patterns derived from v4.2 milestone audit; GCP ADC, pg_stat_ssl, K8s RBAC, S3 pagination pitfalls confirmed against official library docs |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **impacket bare AS-REQ exact call sequence:** STACK.md confirms behavioral correctness but
-  the precise `impacket.krb5.asn1` API call for a no-preauth AS-REQ should be verified against
-  the latest 0.13.0 source before writing the scanner. Gap is small; resolve during Phase 4
-  design.
+- **`azure-mgmt-storage` placement:** `azure-mgmt-network` is currently in core deps. If `azure-mgmt-storage` joins it in core, placement is consistent but adds mgmt-plane weight to all installs. If moved to `[cloud]`, more principled but inconsistent with `azure-mgmt-network`. Decide in Phase 26/28 PLAN.md and document as a key decision in PROJECT.md.
 
-- **smblds/smblds etype configuration:** The chaos lab recommends `smblds/smblds` with a custom
-  entrypoint to provision RC4-only and AES-only realms. The exact `samba-tool` commands and
-  `smb.conf` options needed to restrict etypes to RC4 at provision time are MEDIUM confidence.
-  Test during Phase 4 chaos lab setup; fallback image `itherz/samba-ad-dc` is documented.
+- **GCS sharing implementation mechanism:** `gcp_connector.py` and `object_storage_scanner.py` must share GCS bucket enumeration results. Whether this is a shared return value, a cached singleton, or explicit pass-through in `run_scan.py` is unspecified. Needs design decision before Phase 28 begins.
 
-- **SAML `<alg:SigningMethod>` presence in practice:** Some real-world IdPs (especially older
-  ADFS deployments) do not include `<md:Extensions>` / `<alg:SigningMethod>` in metadata. The
-  fallback path (extract algorithm from the signing cert's public key) must be primary, not a
-  fallback. Confirm this during Phase 3 design.
+- **`ScanSession` table vs. `scanned_at`-based grouping:** FEATURES.md calls for a new `ScanSession` table; ARCHITECTURE.md concludes no new table is needed (use existing `scanned_at` grouping). The no-new-table approach is stronger and should be adopted for Phase 31, confirmed in the Phase 31 PLAN.md.
 
-- **Post-quantum DNSSEC:** IETF drafts for ML-DSA DNSSEC algorithm numbers exist but are not
-  finalized as of 2026. The classifier correctly represents all current DNSSEC algorithms as
-  quantum-vulnerable (nist_level=0). This is accurate; no action needed until IANA registers
-  PQC algorithm numbers.
+- **React Trends tab scope:** Minimum viable (score delta badge) vs. full Trends tab with sparklines. Phase 31 planning should define which deliverable is in scope.
 
 ---
 
@@ -426,36 +207,32 @@ research needed.
 
 ### Primary (HIGH confidence)
 
-- [impacket fortra/impacket kerberosv5.py](https://github.com/fortra/impacket/blob/master/impacket/krb5/kerberosv5.py) — ETYPE_INFO2 extraction from KDC_ERR_PREAUTH_REQUIRED; sendReceive non-raise behavior
-- [impacket fortra/impacket constants.py](https://github.com/fortra/impacket/blob/master/impacket/krb5/constants.py) — EncryptionTypes enum values (RC4=23, AES128=17, AES256=18)
-- [RFC 8624](https://datatracker.ietf.org/doc/html/rfc8624) — DNSSEC algorithm implementation requirements and MUST NOT use designations
-- [RFC 9905](https://datatracker.ietf.org/doc/html/rfc9905) — 2025 update; RSASHA1 (alg 5) and RSASHA1-NSEC3-SHA1 (alg 7) elevated to MUST NOT
-- [IANA DNSSEC Algorithm Numbers registry](https://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.xml) — authoritative algorithm number table
-- [IANA Kerberos Encryption Type Numbers](https://www.iana.org/assignments/kerberos-parameters/kerberos-parameters.xhtml) — etype integer table
-- [MIT Kerberos docs — encryption types](https://web.mit.edu/kerberos/krb5-latest/doc/admin/enctypes.html) — etype deprecation and RFC references
-- [dnspython GitHub dns/dnssec.py](https://github.com/rthalley/dnspython/blob/main/dns/dnssec.py) — Algorithm enum values confirmed (RSASHA1=5, ECDSAP256SHA256=13, ED25519=15)
-- [dnspython PyPI](https://pypi.org/project/dnspython/) — version 2.8.0 confirmed September 2025
-- [impacket PyPI](https://pypi.org/project/impacket/) — version 0.13.0 confirmed October 2025
-- [signxml PyPI](https://pypi.org/project/signxml/) — version 4.4.0 confirmed March 2026
-- [lxml PyPI](https://pypi.org/project/lxml/) — version 6.0.2 confirmed; Python 3.8-3.14 wheels
-- [defusedxml PyPI](https://pypi.org/project/defusedxml/) — version 0.7.1 stable since 2021
+- `google-cloud-kms` PyPI (v3.12.0, 2026-03-26), `google-cloud-storage` PyPI (v3.10.1, 2026-03-23)
+- Google Cloud KMS Python docs — `KeyManagementServiceClient`, `CryptoKeyVersion.algorithm` enum
+- `hvac` PyPI (v2.4.0, 2025-10-30) + python-hvac.org — transit/PKI/sys API shape
+- `kubernetes` PyPI (v35.0.0, 2026-01-16) — K8s 1.32 target
+- kubernetes.io — EncryptionConfiguration is not a queryable API resource; pod spec inspection is canonical
+- `psycopg2-binary` PyPI (v2.9.12, 2026-04-20), `PyMySQL` PyPI (v1.1.2, 2025-08-24)
+- `ldap3` PyPI — v2.9.1 stable; v2.10.2rc4 pre-release only
+- boto3 RDS `describe_db_instances` docs — `StorageEncrypted`, `StorageEncryptionType` (2025 Aurora field), `KmsKeyId`
+- google-auth exceptions docs — `DefaultCredentialsError`, `TransportError` types
+- googleapis/google-cloud-python issue #13874 — grpcio-status protobuf 6.x conflict (open as of 2025)
+- QUIRK v4.2 Milestone Audit Report (`.planning/v4.2-MILESTONE-AUDIT.md`) — ISSUE-2, ISSUE-3 root cause
+- Direct codebase analysis: `quirk/scanner/aws_connector.py`, `azure_connector.py`, `kerberos_scanner.py`, `quirk/models.py`, `quirk/db.py`, `quirk/intelligence/evidence.py`, `scoring.py`, `quirk/cbom/builder.py`, `classifier.py`, `quirk/dashboard/api/routes/scan.py`, `quirk/config.py`, `pyproject.toml`
 
 ### Secondary (MEDIUM confidence)
 
-- [kenchan0130/simplesamlphp Docker Hub](https://hub.docker.com/r/kenchan0130/simplesamlphp/) — SAML IdP chaos lab image; metadata endpoint location confirmed
-- [internetsystemsconsortium/bind9 Docker Hub](https://hub.docker.com/r/internetsystemsconsortium/bind9) — official ISC BIND9 9.20 image confirmed
-- [smblds/smblds Docker Hub](https://hub.docker.com/r/smblds/smblds) — Samba lightweight DS image confirmed; etype provision commands not verified
-- [impacket pyOpenSSL conflict PR #1939](https://github.com/fortra/impacket/pull/1939) — 0.13.0 relaxed pyOpenSSL pin confirmed
-- [SimpleSAMLphp issue #999](https://github.com/simplesamlphp/simplesamlphp/issues/999) — PEM header crash from raw base64 without newlines confirmed
+- PostgreSQL docs — `pg_read_all_stats` role requirement for cross-session `pg_stat_ssl` visibility
+- AWS S3 boto3 docs — `s3:GetEncryptionConfiguration`; `list_buckets` not paginated
+- HashiCorp Vault Transit API docs — `keys` object Unix timestamps; `type` field values; KV v1/v2 coexistence
+- Kubernetes secrets RBAC docs — `list` vs `get`; namespace scope restrictions
 
 ### Tertiary (LOW confidence)
 
-- SAML `<alg:SigningMethod>` adoption in real-world ADFS/Azure AD metadata — assumed sparse;
-  cert-based fallback should be primary extraction path (needs validation in Phase 3)
-- smblds/smblds etype configuration via `samba-tool` and smb.conf for RC4-only realm — needs
-  validation during Phase 4 chaos lab setup
+- `azure-mgmt-storage>=21.2.0` version — confirmed approximately March 2026 via WebSearch; exact PyPI release date not verified
+- GCP Cloud SQL TLS field — `ssl_mode` via `sqladmin_v1beta4` Discovery API; not independently verified in STACK.md (STACK.md covers KMS/GCS only)
 
 ---
 
-*Research completed: 2026-04-08*
+*Research completed: 2026-04-24*
 *Ready for roadmap: yes*
