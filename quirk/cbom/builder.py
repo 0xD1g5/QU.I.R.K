@@ -48,13 +48,17 @@ def _extract_algo_from_rule_id(rule_id: str | None) -> str | None:
     if not rule_id:
         return None
     rule_lower = rule_id.lower()
-    # Map known algorithm names found in semgrep crypto rules
-    algo_hints = {
-        "md5": "MD5", "sha1": "SHA-1", "des": "3DES", "rc4": "RC4",
-        "blowfish": "Blowfish", "md4": "MD4", "sha-1": "SHA-1",
-        "rsa": "RSA", "dsa": "DSA", "aes": "AES-256-GCM",
-    }
-    for fragment, canonical in algo_hints.items():
+    # Map known algorithm names found in semgrep crypto rules.
+    # Ordered list — longer/more-specific patterns checked first to avoid
+    # false positives (e.g. "ecdsa" must match before "dsa", "3des" before "des").
+    algo_hints = [
+        ("ecdsa", "ECDSA"), ("sha-1", "SHA-1"), ("sha1", "SHA-1"),
+        ("blowfish", "Blowfish"), ("3des", "3DES"),
+        ("md5", "MD5"), ("md4", "MD4"), ("rc4", "RC4"),
+        ("rsa", "RSA"), ("dsa", "DSA"), ("des", "3DES"),
+        ("aes", "AES-256-GCM"),
+    ]
+    for fragment, canonical in algo_hints:
         if fragment in rule_lower:
             return canonical
     return None
