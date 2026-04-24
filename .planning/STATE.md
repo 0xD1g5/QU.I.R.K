@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.3
 milestone_name: Data at Rest
-status: planning
+status: executing
 stopped_at: Phase 25 context gathered
-last_updated: "2026-04-24T22:16:05.842Z"
-last_activity: 2026-04-24 — Roadmap created; Phases 25–31 defined
+last_updated: "2026-04-24T22:45:00.814Z"
+last_activity: 2026-04-24 -- Phase 25 execution started
 progress:
   total_phases: 5
   completed_phases: 5
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.3 Data at Rest — Phase 25 planned / requirements defined
+**Current focus:** Phase 25 — identity-findings-accuracy
 
 ## Current Position
 
-Phase: 25 (Identity Findings Accuracy) — planned, not started
-Plan: —
-Status: Ready to plan Phase 25
-Last activity: 2026-04-24 — Roadmap created; Phases 25–31 defined
+Phase: 25 (identity-findings-accuracy) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 25
+Last activity: 2026-04-24 -- Phase 25 execution started
 
 Progress: [░░░░░░░░░░] 0/7 phases complete (v4.3)
 
