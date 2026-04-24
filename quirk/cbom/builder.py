@@ -386,7 +386,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # Pass 2 — Certificate components                                      #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML"):
+        if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC"):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
