@@ -26,6 +26,7 @@ from quirk.dashboard.api.schemas import (
     SubScores,
 )
 from quirk.models import CryptoEndpoint
+from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 
 router = APIRouter()
 
@@ -48,6 +49,12 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     findings: list[FindingItem] = []
 
     for ep in endpoints:
+        # D-03: skip identity protocol endpoints — handled exclusively by
+        # _derive_identity_findings(); none of the TLS checks apply to them.
+        proto = (ep.protocol or "").upper()
+        if proto in {"KERBEROS", "SAML", "DNSSEC"}:
+            continue
+
         # Unencrypted HTTP
         if ep.protocol and ep.protocol.upper() == "HTTP":
             findings.append(FindingItem(
@@ -219,7 +226,28 @@ def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityF
             size = ep.cert_pubkey_size
             sd = ep.service_detail or ""
 
-            if alg == "SHA1":
+            # RS-family OIDC check (D-01, D-02) — runs before SHA-1 check (highest specificity)
+            severity = OIDC_ALG_SEVERITY.get(alg)
+            if severity is not None:
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity=severity,
+                    title=f"OIDC RS-family algorithm: {alg}",
+                    protocol="SAML",
+                    description=(
+                        f"OIDC endpoint uses {alg} which relies on RSA. "
+                        f"RSA is quantum-vulnerable and will be broken by Shor's algorithm."
+                    ),
+                    remediation=(
+                        "Migrate OIDC token signing to ECDSA (ES256/ES384) or EdDSA "
+                        "per NIST PQC roadmap recommendations."
+                    ),
+                    quantum_risk="Vulnerable",
+                    source="saml",
+                    algorithm=alg,
+                ))
+            elif alg == "SHA1":
                 results.append(IdentityFinding(
                     host=ep.host,
                     port=ep.port,
