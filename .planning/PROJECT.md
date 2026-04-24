@@ -151,7 +151,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Intelligence profile kwarg wired to dashboard | Dashboard reads calibration.profile from intelligence JSON at request time (Phase 14 fix) | ✓ Good — dashboard profile now matches CLI report for same scan; interactive users get correct profile via quirk-output dir alignment (Phase 16) |
 
 ---
-*Last updated: 2026-04-10 after Phase 21 (Identity Surface) complete — identity protocol crypto posture (Kerberos/SAML/DNSSEC) exposed in the dashboard with dedicated Identity tab, evidence counters in scoring, and identity_findings[] in the API. SAML scanner module (IDENT-01 partial) remains the only open v4.2 item.*
+*Last updated: 2026-04-24 after Phase 23 (DNSSEC CBOM Skip Fix) complete — added "DNSSEC" to Pass 2 certificate skip tuple in CBOM builder, closing DNSSEC-04. SAML scanner module (IDENT-01 partial) remains the only open v4.2 item.*
 
 ## Evolution
 
