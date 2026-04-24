@@ -388,3 +388,27 @@ def test_chaos_lab_integration():
     key_sizes = [ep.cert_pubkey_size for ep in result]
     assert 1024 in key_sizes, \
         f"Expected RSA-1024 cert in chaos lab results; got cert_pubkey_sizes={key_sizes}"
+
+
+# ---------------------------------------------------------------------------
+# SAML-05 / ISSUE-3: session_start parameter acceptance
+# ---------------------------------------------------------------------------
+
+def test_saml_session_start_stamps_all_endpoints():
+    """ISSUE-3: scan_saml_targets(session_start=<fixed_dt>) stamps all endpoints with that time.
+
+    RED: scan_saml_targets does not accept session_start yet — TypeError expected.
+    """
+    from datetime import datetime, timezone
+
+    fixed_dt = datetime(2026, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    expected_naive = datetime(2026, 1, 15, 12, 0, 0)  # tzinfo stripped
+
+    with patch("quirk.scanner.saml_scanner.LXML_AVAILABLE", True), \
+         patch("quirk.scanner.saml_scanner._fetch_metadata", return_value=SAMPLE_SAML_METADATA_XML):
+        result = scan_saml_targets(["https://idp.chaos.local/metadata"], session_start=fixed_dt)
+
+    assert len(result) > 0, "Expected at least one endpoint"
+    for ep in result:
+        assert ep.scanned_at == expected_naive, \
+            f"Expected scanned_at={expected_naive!r}, got {ep.scanned_at!r}"
