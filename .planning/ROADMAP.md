@@ -52,6 +52,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 20: Kerberos Scanner** - impacket AS-REQ probe, LDAP etype bitmap, classifier extension, Samba DC chaos lab
 - [ ] **Phase 21: Identity Surface** - Intelligence layer counters, FastAPI IdentityFinding model, React Identity tab, findings table filter
 - [ ] **Phase 22: v4.2 Identity Crypto Gap Closure** - Fix main_logger NameError in run_scan.py and SAML/KERBEROS Pass 3 skip list omission in builder.py — closes DNSSEC-04, SAML-05, KERB-04
+- [ ] **Phase 23: DNSSEC CBOM Skip List Fix** - DNSSEC added to Pass 2 cert skip list, eliminating hollow X.509 CertificateProperties in CBOM output — closes DNSSEC-04 CBOM gap
+- [ ] **Phase 24: Scan-Session Timestamp Isolation** - Pass shared session_start from run_scan.py into all identity scanners to fix scan-window timing defect — closes ISSUE-3
+- [ ] **Phase 25: Identity Findings Accuracy** - Add RS-family branch to _derive_identity_findings() for OIDC RS256 and add ldap3 to [identity] extras — closes NEW-ISSUE-1, ISSUE-2
 
 ### Phase 17: Identity Infrastructure
 **Goal**: The codebase is structurally ready to receive three new identity scanners — schema columns exist and are idempotent, optional dependency group is declared, and config flags are wired
@@ -152,6 +155,32 @@ Plans:
 **Plans**: 1 plan
 Plans:
 - [x] 23-01-PLAN.md — TDD: 3 DNSSEC regression tests (RED) + add "DNSSEC" to Pass 2 cert skip tuple (GREEN)
+
+### Phase 24: Scan-Session Timestamp Isolation
+**Goal**: DNSSEC and SAML endpoints are never silently excluded from `GET /api/scan/latest` — a shared `session_start` timestamp passed from `run_scan.py` into each identity scanner ensures all endpoints share a single reference time regardless of sequential scan duration
+**Depends on**: Phase 23
+**Requirements**: KERB-04, SAML-05, DNSSEC-04, IDENT-02, IDENT-03
+**Gap Closure:** Closes ISSUE-3 from v4.2 milestone audit (2026-04-24) — scan-window timing defect
+**Success Criteria** (what must be TRUE):
+  1. `run_scan.py` creates a single `session_start = datetime.now(timezone.utc)` before invoking any identity scanner and passes it as a parameter to each
+  2. `dnssec_scanner.py`, `saml_scanner.py`, and `kerberos_scanner.py` each accept and stamp endpoints with the shared `session_start` instead of calling `datetime.now()` internally at endpoint construction time
+  3. Tests demonstrate that a simulated scan with delayed Kerberos targets still returns DNSSEC and SAML endpoints in `GET /api/scan/latest` scan-window — none excluded by timestamp skew
+  4. Full test suite passes with no regressions
+**Plans**: 0 plans
+Plans:
+
+### Phase 25: Identity Findings Accuracy
+**Goal**: OIDC RS256 endpoints appear correctly in the Identity tab (not mislabeled as TLS-sourced in the Findings tab), and `ldap3` is installable via `pip install quirk[identity]` enabling Kerberos LDAP enumeration
+**Depends on**: Phase 23
+**Requirements**: SAML-04, IDENT-02, IDENT-03, KERB-03, INFRA-03
+**Gap Closure:** Closes NEW-ISSUE-1 and ISSUE-2 from v4.2 milestone audit (2026-04-24)
+**Success Criteria** (what must be TRUE):
+  1. `_derive_identity_findings()` in `scan.py` produces `IdentityFinding(source="saml")` objects for OIDC endpoints with RS-family algorithms (RS256, RS384, RS512) using severity from `OIDC_ALG_SEVERITY`
+  2. OIDC RS256 endpoints no longer appear in the Findings tab as TLS-sourced; they appear in the Identity tab under SAML/OIDC
+  3. `pyproject.toml` `[identity]` extras group includes `ldap3>=3.4`; `pip install quirk[identity]` resolves ldap3 without conflicts
+  4. Full test suite passes with no regressions
+**Plans**: 0 plans
+Plans:
 
 ## Phase Details
 
