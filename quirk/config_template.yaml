@@ -71,6 +71,16 @@ connectors:
   # -- GCP connector (optional, requires: pip install quirk[cloud]) --
   # enable_gcp: false
   # gcp_project_id: "my-gcp-project"
+  # -- Database connector (optional, requires: pip install quirk[db]) --
+  # enable_db: false
+  # pg_targets:
+  #   - "localhost:5432"       # host:port of PostgreSQL instance
+  # pg_scanner_user: "quirk_scanner"
+  # pg_scanner_password: ""
+  # mysql_targets:
+  #   - "localhost:3306"       # host:port of MySQL/MariaDB instance
+  # mysql_scanner_user: "quirk_scanner"
+  # mysql_scanner_password: ""
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.

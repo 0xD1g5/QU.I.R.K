@@ -72,3 +72,8 @@ class CryptoEndpoint(Base):
     # v4.3 GCP connector fields
     # ==========================
     gcs_scan_json = Column(Text, nullable=True)        # GCS bucket list JSON (Phase 28 hand-off)
+
+    # ==========================
+    # v4.3 Data-at-Rest fields
+    # ==========================
+    dat_scan_json = Column(Text, nullable=True)  # Universal DAR scan result JSON (Phase 27+)

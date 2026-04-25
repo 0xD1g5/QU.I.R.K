@@ -69,6 +69,14 @@ class ConnectorsCfg:
     # GCP connector config (v4.3, Phase 26, per D-06)
     enable_gcp: bool = False
     gcp_project_id: Optional[str] = None
+    # DB connector config (v4.3, Phase 27, per D-03)
+    enable_db: bool = False
+    pg_targets: list = field(default_factory=list)
+    pg_scanner_user: Optional[str] = None
+    pg_scanner_password: Optional[str] = None
+    mysql_targets: list = field(default_factory=list)
+    mysql_scanner_user: Optional[str] = None
+    mysql_scanner_password: Optional[str] = None
 
 
 @dataclass
