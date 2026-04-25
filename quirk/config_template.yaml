@@ -68,6 +68,9 @@ connectors:
   # enable_dnssec: false
   # dnssec_targets:
   #   - "example.com"           # Domain name for DNSKEY / DS record queries
+  # -- GCP connector (optional, requires: pip install quirk[cloud]) --
+  # enable_gcp: false
+  # gcp_project_id: "my-gcp-project"
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
