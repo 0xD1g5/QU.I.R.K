@@ -84,7 +84,7 @@ def _ensure_gcp_columns(engine) -> None:
         conn.commit()
 
 
-_V43_COLUMNS = ["dat_scan_json"]
+_V43_COLUMNS = ["dat_scan_json", "severity"]
 
 
 def _ensure_v43_columns(engine) -> None:
