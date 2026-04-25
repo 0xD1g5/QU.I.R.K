@@ -139,6 +139,6 @@ Items acknowledged and deferred at v4.2 milestone close on 2026-04-24 (carried t
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 27 context gathered
-Resume file: --resume-file
+Last session: 2026-04-25
+Stopped at: Phase 27 complete — code review fixes applied; UAT testing started (Test 1 awaiting user)
+Resume file: .planning/phases/27-database-encryption-detection/27-UAT.md

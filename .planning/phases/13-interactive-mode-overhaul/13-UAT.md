@@ -1,9 +1,10 @@
 ---
-status: testing
+status: deferred
 phase: 13-interactive-mode-overhaul
 source: [13-01-SUMMARY.md, 13-02-SUMMARY.md]
 started: 2026-04-06T00:00:00Z
-updated: 2026-04-06T00:00:00Z
+updated: 2026-04-25T00:00:00Z
+deferred_reason: Not blocking next phase. Tests captured in docs/UAT-SERIES.md as UAT-2-04 through UAT-2-09.
 ---
 
 ## Current Test
