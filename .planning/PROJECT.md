@@ -82,11 +82,11 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 **v4.3 Data at Rest (Phases 25+)**
 - ✓ Identity Findings Accuracy (Phase 25) — RS-family OIDC check in _derive_identity_findings(), TLS-bleed guard in _derive_findings(), ldap3>=2.9.1 in [identity] extras, chaos lab expected results — Validated in Phase 25
+- ✓ GCP connector — Cloud KMS (47-entry algorithm map including PQC), Cloud SQL TLS enforcement, GCS CMEK detection; `[cloud]` extras group; gcs_scan_json ORM column; CBOM Pass 1/2/3 integration — Validated in Phase 26
 - [ ] Database encryption detection — PostgreSQL, MySQL, RDS encryption settings
 - [ ] Object storage audit — S3 (SSE-S3/SSE-KMS), Azure Blob (CMK/platform key), GCS bucket encryption policies
 - [ ] Kubernetes secrets inspection — etcd EncryptionConfiguration, secret types
 - [ ] HashiCorp Vault connector — transit keys, PKI mounts, auth method audit
-- [ ] GCP connector — Cloud KMS key specs, Cloud SQL TLS config, GCS bucket encryption (BACK-14)
 - [ ] Trend analysis across scan sessions — score delta, new/resolved findings, degraded host tracking (BACK-21)
 
 **v4.4 Data in Motion (Planned)**
@@ -113,7 +113,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.2.0 — Phase 25 (identity findings accuracy) complete 2026-04-24; v4.3 Data at Rest in progress
+- **Current version**: v4.2.0 — Phase 26 (GCP connector) complete 2026-04-25; v4.3 Data at Rest in progress
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
@@ -154,7 +154,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | ldap3 deferred to Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; KERB-03 LDAP path always degrades gracefully | ⚠ Revisit — fix is one dependency line in v4.3 Phase 25; LDAP enumeration inert until then |
 
 ---
-*Last updated: 2026-04-24 after v4.3 Data at Rest milestone started — 7 features scoped: Phase 25 identity carry-over, database encryption, object storage, K8s secrets, HashiCorp Vault, GCP connector (BACK-14), trend analysis (BACK-21).*
+*Last updated: 2026-04-25 — Phase 26 (GCP connector) complete; v4.3 continues with database encryption, object storage, K8s secrets, HashiCorp Vault, trend analysis (BACK-21).*
 
 ## Evolution
 
