@@ -45,6 +45,10 @@ cloud = [
     "google-api-python-client>=2.0.0",
     "google-auth>=2.36.0",
 ]
+db = [
+    "psycopg2-binary>=2.9.0",
+    "PyMySQL>=1.1.0",
+]
 
 [project.scripts]
 quirk = "run_scan:main"
