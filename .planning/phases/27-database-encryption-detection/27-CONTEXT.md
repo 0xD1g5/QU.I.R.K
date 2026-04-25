@@ -110,7 +110,9 @@ No dashboard UI changes in Phase 27 — DB findings flow through the existing Fi
   block in `run_scan.py` — no new phase timer needed. When `enable_aws` is true, `_scan_rds_encryption`
   runs as an additional call within `scan_aws_targets` (or as a direct call in the AWS block).
   PostgreSQL/MySQL get their own `db_scanning` phase timer block, positioned after the GCP
-  block and before `session_start`.
+  block and **after** the `session_start = datetime.now(timezone.utc)` assignment (line ~475).
+  Note: the block must come after session_start is assigned since it passes session_start
+  to both scan functions — placing it before session_start would cause a NameError.
 
 ### ISSUE-2/ISSUE-3 Structural Requirements
 
@@ -166,7 +168,7 @@ No dashboard UI changes in Phase 27 — DB findings flow through the existing Fi
 
 ### run_scan.py Integration
 - `run_scan.py` lines 438-521 — existing connector phase blocks and `session_start` placement;
-  add `db_scanning` block before `session_start` assignment (D-10)
+  add `db_scanning` block **after** `session_start` assignment and before DNSSEC block (D-10 corrected)
 
 ### Dependency Structure
 - `pyproject.toml` — `[project.optional-dependencies]` section; `[db]` group goes after `[cloud]` (D-11)

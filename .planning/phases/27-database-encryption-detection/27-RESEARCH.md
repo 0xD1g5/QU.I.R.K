@@ -866,22 +866,13 @@ Step 2.6: SKIPPED — this is a greenfield feature phase, not a rename/refactor/
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **dar_ subscore max score impact**
-   - What we know: Current 4 subscores each have cap=25, total max=100. Adding dar_ as 5th subscore adds max 25.
-   - What's unclear: Whether existing scoring tests assert total <= 100 or use specific bounds.
-   - Recommendation: Check `tests/test_intelligence_scoring.py` for upper-bound assertions before implementing; may need to adjust score_cap or document new max.
+1. **dar_ subscore max score impact** — **(RESOLVED)** Plan 01 Task 2 updates `assertLessEqual(result["score"], 125)` in `tests/test_intelligence_scoring.py`. The new max of 125 (5 subscores × cap=25) is documented as expected behavior. No score_cap config change is needed.
 
-2. **Session_start for db_scanning block timing**
-   - What we know: CONTEXT.md D-10 says "after GCP block, before session_start". But D-12 says db scanners MUST accept session_start.
-   - What's unclear: The wording "before session_start" in D-10 likely means "before the old position of session_start" which is being moved. The db_scanning block must come AFTER session_start is assigned.
-   - Recommendation: Position db_scanning block AFTER `session_start = datetime.now(timezone.utc)` (line 475). Verify with planner.
+2. **Session_start for db_scanning block timing** — **(RESOLVED)** The `db_scanning` block is placed AFTER `session_start = datetime.now(timezone.utc)` (line 475), not before it. D-10's phrase "before session_start" was a wording error — placing the block before that assignment is impossible since the block passes `session_start=session_start` to both scan functions. D-10 in CONTEXT.md has been corrected to read "after `session_start` assignment". See Plan 04 Task 1.
 
-3. **RDS scan_aws_targets signature for session_start**
-   - What we know: D-01 says RDS detection is inside existing `aws_scanning` block (no new block). D-12 says all new scanners accept session_start.
-   - What's unclear: `_scan_rds_encryption(session, logger)` is an internal helper; it does not need session_start since it uses `datetime.now()` internally. The mandate is for PUBLIC scanner functions (scan_pg_targets, scan_mysql_targets).
-   - Recommendation: `_scan_rds_encryption(session, logger)` does NOT need session_start. Only public-facing `scan_*_targets` functions require it per ISSUE-3 pattern.
+3. **RDS scan_aws_targets signature for session_start** — **(RESOLVED)** `_scan_rds_encryption(session, logger)` does NOT need a `session_start` parameter. It is an internal helper; D-12's session_start mandate applies only to public-facing `scan_*_targets` functions (`scan_pg_targets`, `scan_mysql_targets`). RDS timestamps use `datetime.now(timezone.utc).replace(tzinfo=None)` directly. See Plan 02 Task 2.
 
 ---
 
