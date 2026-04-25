@@ -152,6 +152,13 @@ def scan_pg_targets(
         except Exception as exc:
             if logger:
                 logger.v(f"PostgreSQL scan error for {ep_host}: {exc}")
+            results.append(CryptoEndpoint(
+                host=ep_host,
+                port=port,
+                protocol="POSTGRESQL",
+                scan_error=f"connection-error: {type(exc).__name__}",
+                scanned_at=now,
+            ))
 
     return results
 
@@ -237,5 +244,12 @@ def scan_mysql_targets(
         except Exception as exc:
             if logger:
                 logger.v(f"MySQL scan error for {ep_host}: {exc}")
+            results.append(CryptoEndpoint(
+                host=ep_host,
+                port=port,
+                protocol="MYSQL",
+                scan_error=f"connection-error: {type(exc).__name__}",
+                scanned_at=now,
+            ))
 
     return results
