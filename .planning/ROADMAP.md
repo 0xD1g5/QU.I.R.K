@@ -214,8 +214,11 @@ Plans:
   3. GCS bucket enumeration returns per-bucket encryption type (CMEK with customer key vs Google-managed key); this data is stored and made available to Phase 28 without re-fetching
   4. When GCP credentials are absent at runtime, scanner catches DefaultCredentialsError and emits a gcp-credentials-unavailable scan_error finding rather than crashing
   5. google-cloud-kms and google-cloud-storage are declared in [cloud] extras; pip install quirk[cloud] resolves without grpcio/protobuf conflict
-**Plans**: 0 plans
+**Plans**: 3 plans
 Plans:
+- [ ] 26-01-PLAN.md — Infrastructure: [cloud] extras, config fields, ORM column, DB migration, test scaffold
+- [ ] 26-02-PLAN.md — Core GCP connector: Cloud KMS, Cloud SQL, GCS scanning
+- [ ] 26-03-PLAN.md — Integration wiring: run_scan.py and CBOM builder extension
 
 ### Phase 27: Database Encryption Detection
 **Goal**: QU.I.R.K. can detect encryption-at-rest posture for PostgreSQL, MySQL/MariaDB, and RDS instances — establishing the dat_scan_json column and dar_ scoring infrastructure that all subsequent data-at-rest scanner phases depend on
