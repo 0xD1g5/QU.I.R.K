@@ -818,6 +818,33 @@ services:
       retries: 12
       start_period: 90s
 
+  # =========================
+  # PHASE 27 — DATABASE SSL DETECTION (profile: database)
+  # =========================
+  postgres-ssl-off:
+    image: postgres:15
+    profiles: ["database"]
+    environment:
+      POSTGRES_DB: quirk_db
+      POSTGRES_USER: quirk_scanner
+      POSTGRES_PASSWORD: quirk_scanner
+    command: postgres -c ssl=off
+    ports:
+      - "25432:5432"
+
+  mysql-ssl-off:
+    image: mysql:8
+    profiles: ["database"]
+    environment:
+      MYSQL_DATABASE: quirk_db
+      MYSQL_USER: quirk_scanner
+      MYSQL_PASSWORD: quirk_scanner
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD: "root"
+    command: --skip-ssl
+    ports:
+      - "23306:3306"
+
 volumes:
   id_postgres_data:
   stepca_data:
