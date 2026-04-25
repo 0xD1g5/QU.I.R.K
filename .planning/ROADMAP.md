@@ -230,8 +230,12 @@ Plans:
   3. PostgreSQL scanner detects privilege level before querying pg_stat_ssl — when pg_read_all_stats role is absent, emits insufficient-privilege scan_error rather than a false "SSL enabled" result
   4. MySQL/MariaDB scanner reports SSL session status and emits a finding with the negotiated cipher when SSL is disabled or weak
   5. dar_ prefix evidence counters appear in evidence.py and flow into scoring.py as a 5th subscore prefix; psycopg2-binary and PyMySQL are declared in [db] extras
-**Plans**: 0 plans
+**Plans**: 4 plans
 Plans:
+- [ ] 27-01-PLAN.md — RED scaffold: pyproject.toml [db] extras, ConnectorsCfg fields, models.py dat_scan_json, db.py _ensure_v43_columns, 14 failing tests
+- [ ] 27-02-PLAN.md — GREEN: quirk/scanner/db_connector.py (PostgreSQL + MySQL scanners), aws_connector.py _scan_rds_encryption
+- [ ] 27-03-PLAN.md — dar_ scoring infrastructure: evidence.py counters, scoring.py 5th subscore prefix (parallel with Plan 02)
+- [ ] 27-04-PLAN.md — Integration wiring: run_scan.py db_scanning block, CBOM skip lists, chaos lab database profile
 
 ### Phase 28: Object Storage Audit
 **Goal**: QU.I.R.K. can determine per-bucket encryption policy for S3, Azure Blob, and GCS — consuming GCS enumeration data from Phase 26 rather than re-fetching, with parallel S3 probing via ThreadPoolExecutor
