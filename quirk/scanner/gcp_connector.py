@@ -170,6 +170,15 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
                                         algorithm, (algorithm or "UNKNOWN", None)
                                     )
 
+                                    # Skip keys with unspecified/unrecognised algorithm
+                                    if alg_name == "UNKNOWN":
+                                        if logger:
+                                            logger.v(
+                                                f"Cloud KMS key {key_name} has unspecified"
+                                                " algorithm -- skipped"
+                                            )
+                                        continue
+
                                     # Protection level
                                     protection_level_raw = primary.get("protectionLevel", "SOFTWARE")
                                     protection_level = _PROTECTION_LEVEL_MAP.get(
