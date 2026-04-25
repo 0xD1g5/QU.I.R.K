@@ -407,6 +407,11 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             if ep.cert_pubkey_alg and ep.cert_pubkey_alg != "kerberos-unreachable":
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
+        elif ep.protocol in ("POSTGRESQL", "MYSQL", "RDS"):
+            # DB config findings — no key material to catalog.
+            # Security signal is in service_detail; CBOM algorithm catalog not applicable.
+            pass
+
         else:
             # TLS (default for backwards compatibility with existing protocol values)
             if ep.cipher_suite and ep.cipher_suite.upper() not in ("SSH", ""):
@@ -429,7 +434,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # ------------------------------------------------------------------ #
     for ep in endpoints:
         if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC",
-                           "GCP", "CLOUD_SQL"):
+                           "GCP", "CLOUD_SQL", "POSTGRESQL", "MYSQL", "RDS"):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -509,7 +514,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             protocol_components.append(proto_component)
 
         elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL",
-                             "DNSSEC", "SAML", "KERBEROS"):
+                             "DNSSEC", "SAML", "KERBEROS", "POSTGRESQL", "MYSQL", "RDS"):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             continue
