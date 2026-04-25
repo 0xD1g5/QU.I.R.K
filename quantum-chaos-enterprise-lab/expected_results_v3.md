@@ -264,4 +264,30 @@ docker compose --profile simpla-samlphp up -d && sleep 10 && quirk scan --target
 ```
 docker compose --profile samba-dc up -d && sleep 15 && quirk scan --targets localhost:88
 ```
+
+
+
+## Phase 27 — Database SSL Detection (profile: database)
+
+Start chaos lab: `docker compose --profile database up -d`
+
+### postgres-ssl-off (port 25432)
+
+**Target:** `localhost:25432`
+**Expected finding:** HIGH `DB_POSTGRESQL_SSL_OFF`
+**service_detail:** `PostgreSQL/ssl-off`
+**Protocol:** `POSTGRESQL`
+
+When `SHOW ssl` returns `'off'`, the scanner must emit a HIGH finding immediately
+without attempting further pg_stat_ssl queries.
+
+### mysql-ssl-off (port 23306)
+
+**Target:** `localhost:23306`
+**Expected finding:** HIGH `DB_MYSQL_SSL_OFF`
+**service_detail:** `MySQL/ssl-off`
+**Protocol:** `MYSQL`
+
+When `SHOW STATUS LIKE 'Ssl_cipher'` returns an empty cipher value, the scanner
+must emit a HIGH finding indicating SSL is globally disabled on this MySQL instance.
 **Expected:** Kerberos scanner returns >= 1 HIGH finding for RC4-HMAC (etype 23). AES-256 (etype 18/20) produces no weakness finding. Findings appear in the Identity tab (source="kerberos").
