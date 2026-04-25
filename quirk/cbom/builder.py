@@ -65,7 +65,7 @@ def _extract_algo_from_rule_id(rule_id: str | None) -> str | None:
 
 
 def _normalize_cloud_key_spec(key_spec: str) -> str | None:
-    """Normalize AWS KMS KeySpec or Azure key_type to algorithm name."""
+    """Normalize AWS KMS KeySpec, Azure key_type, or GCP algorithm string to algorithm name."""
     spec_upper = (key_spec or "").upper().replace("-", "_")
     mapping = {
         "RSA_2048": "RSA", "RSA_3072": "RSA", "RSA_4096": "RSA",
@@ -73,6 +73,35 @@ def _normalize_cloud_key_spec(key_spec: str) -> str | None:
         "ECC_SECG_P256K1": "ECDSA", "SYMMETRIC_DEFAULT": "AES-256-GCM",
         "RSA": "RSA", "RSA_HSM": "RSA", "EC": "ECDSA", "EC_HSM": "ECDSA",
         "OCT": "AES-256-GCM", "OCT_HSM": "AES-256-GCM",
+        # GCP Cloud KMS algorithm strings (Phase 26)
+        "RSA_SIGN_PKCS1_2048_SHA256": "RSA", "RSA_SIGN_PKCS1_3072_SHA256": "RSA",
+        "RSA_SIGN_PKCS1_4096_SHA256": "RSA", "RSA_SIGN_PKCS1_4096_SHA512": "RSA",
+        "RSA_SIGN_PSS_2048_SHA256": "RSA", "RSA_SIGN_PSS_3072_SHA256": "RSA",
+        "RSA_SIGN_PSS_4096_SHA256": "RSA", "RSA_SIGN_PSS_4096_SHA512": "RSA",
+        "RSA_SIGN_RAW_PKCS1_2048": "RSA", "RSA_SIGN_RAW_PKCS1_3072": "RSA",
+        "RSA_SIGN_RAW_PKCS1_4096": "RSA",
+        "RSA_DECRYPT_OAEP_2048_SHA256": "RSA", "RSA_DECRYPT_OAEP_3072_SHA256": "RSA",
+        "RSA_DECRYPT_OAEP_4096_SHA256": "RSA", "RSA_DECRYPT_OAEP_4096_SHA512": "RSA",
+        "RSA_DECRYPT_OAEP_2048_SHA1": "RSA", "RSA_DECRYPT_OAEP_3072_SHA1": "RSA",
+        "RSA_DECRYPT_OAEP_4096_SHA1": "RSA",
+        "EC_SIGN_P256_SHA256": "ECDSA", "EC_SIGN_P384_SHA384": "ECDSA",
+        "EC_SIGN_SECP256K1_SHA256": "ECDSA", "EC_SIGN_ED25519": "EdDSA",
+        "GOOGLE_SYMMETRIC_ENCRYPTION": "AES-256-GCM",
+        "AES_128_GCM": "AES-128-GCM", "AES_256_GCM": "AES-256-GCM",
+        "AES_128_CBC": "AES-128-CBC", "AES_256_CBC": "AES-256-CBC",
+        "AES_128_CTR": "AES-128-CTR", "AES_256_CTR": "AES-256-CTR",
+        "HMAC_SHA256": "HMAC", "HMAC_SHA1": "HMAC", "HMAC_SHA384": "HMAC",
+        "HMAC_SHA512": "HMAC", "HMAC_SHA224": "HMAC",
+        "EXTERNAL_SYMMETRIC_ENCRYPTION": "AES-256-GCM",
+        "ML_KEM_768": "ml-kem-768", "ML_KEM_1024": "ml-kem-1024",
+        "KEM_XWING": "ml-kem-768",
+        "PQ_SIGN_ML_DSA_44": "ml-dsa-44", "PQ_SIGN_ML_DSA_65": "ml-dsa-65",
+        "PQ_SIGN_ML_DSA_87": "ml-dsa-87",
+        "PQ_SIGN_SLH_DSA_SHA2_128S": "slh-dsa-128",
+        "PQ_SIGN_HASH_SLH_DSA_SHA2_128S_SHA256": "slh-dsa-128",
+        "PQ_SIGN_ML_DSA_44_EXTERNAL_MU": "ml-dsa-44",
+        "PQ_SIGN_ML_DSA_65_EXTERNAL_MU": "ml-dsa-65",
+        "PQ_SIGN_ML_DSA_87_EXTERNAL_MU": "ml-dsa-87",
     }
     return mapping.get(spec_upper)
 
@@ -339,19 +368,25 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             if algo_hint:
                 _register_algorithm(algo_hint, algo_registry)
 
-        elif ep.protocol in ("AWS", "AZURE"):
+        elif ep.protocol in ("AWS", "AZURE", "GCP"):
             # Cloud: parse cloud_scan_json for algorithm/key spec
             try:
                 cloud_data = json.loads(ep.cloud_scan_json or "{}")
             except (json.JSONDecodeError, TypeError, ValueError):
                 cloud_data = {}
-            key_spec = cloud_data.get("KeySpec") or cloud_data.get("KeyAlgorithm") or cloud_data.get("key_type")
+            key_spec = (cloud_data.get("KeySpec") or cloud_data.get("KeyAlgorithm")
+                        or cloud_data.get("key_type") or cloud_data.get("gcp_algorithm"))
             if key_spec:
                 normalized = _normalize_cloud_key_spec(key_spec)
                 if normalized:
                     key_size = cloud_data.get("key_size") or ep.cert_pubkey_size
                     _register_algorithm(normalized, algo_registry, key_size=key_size)
-            # Also register cert_pubkey_alg if set (ACM certs)
+            # Also register cert_pubkey_alg if set (ACM certs, GCS-SUMMARY sentinel is skipped via falsy check)
+            if ep.cert_pubkey_alg and ep.cert_pubkey_alg not in ("GCS-SUMMARY",):
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol == "CLOUD_SQL":
+            # Cloud SQL TLS finding -- cert_pubkey_alg holds severity level (HIGH/MEDIUM)
             if ep.cert_pubkey_alg:
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
@@ -393,7 +428,8 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # Pass 2 — Certificate components                                      #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC"):
+        if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC",
+                           "GCP", "CLOUD_SQL"):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -472,7 +508,8 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             )
             protocol_components.append(proto_component)
 
-        elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE", "DNSSEC", "SAML", "KERBEROS"):
+        elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL",
+                             "DNSSEC", "SAML", "KERBEROS"):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             continue
