@@ -290,4 +290,4 @@ without attempting further pg_stat_ssl queries.
 
 When `SHOW STATUS LIKE 'Ssl_cipher'` returns an empty cipher value, the scanner
 must emit a HIGH finding indicating SSL is globally disabled on this MySQL instance.
-**Expected:** Kerberos scanner returns >= 1 HIGH finding for RC4-HMAC (etype 23). AES-256 (etype 18/20) produces no weakness finding. Findings appear in the Identity tab (source="kerberos").
+**Expected:** DB scanner returns 1 HIGH finding (`DB_MYSQL_SSL_OFF`) for `localhost:23306`.
