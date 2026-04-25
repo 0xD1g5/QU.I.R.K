@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.2.0
-**Last Updated:** 2026-04-24 (Phase 25: updated UAT-1-07 to include ldap3>=2.9.1 check; added UAT-5-23 for OIDC RS-family identity accuracy and TLS-bleed fix — RS256/RS384 endpoints now route to Identity tab, not TLS Findings)
+**Last Updated:** 2026-04-25 (Phase 26: added UAT-5-24 for GCP connector — Cloud KMS/Cloud SQL/GCS scanning behind enable_gcp guard; 47-entry KMS algorithm map including PQC types)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1544,6 +1544,39 @@ All of these services show status `Up` or `running`:
 **Notes:**
 
 ---
+
+### UAT-5-24: GCP Connector — Cloud KMS, Cloud SQL, GCS Scanning
+
+> Added Phase 26 (2026-04-25): GCP-01/GCP-02/GCP-03 — Cloud KMS key enumeration (47-entry algorithm map including PQC), Cloud SQL TLS enforcement detection, GCS bucket encryption classification. Connector runs behind `enable_gcp` guard with graceful degradation when SDK not installed.
+
+**Prerequisites:** Phase 26 complete. GCP project accessible with Application Default Credentials (`gcloud auth application-default login`), or mock test via unit tests.
+
+**Steps (unit test path — no real GCP credentials required):**
+1. Run the GCP connector test suite:
+   ```bash
+   python -m pytest tests/test_cloud_connectors.py -v
+   ```
+2. Confirm all 15 tests pass (6 AWS/Azure + 9 GCP — no skips).
+
+**Steps (live GCP path — requires GCP project and ADC):**
+1. Configure `enable_gcp: true` and `gcp_project_id: <your-project>` in `config.yaml`
+2. Run a scan: `quirk --config config.yaml`
+3. Inspect results: `python -m pytest` to confirm DB migration idempotency
+4. Check CBOM output: `cat output/cbom-*.json | python3 -m json.tool | grep -i "gcp\|cloud_kms\|cloud_sql"`
+
+**Expected (unit test path):**
+- 15/15 tests pass: `_ensure_gcp_columns()` idempotent; KMS/Cloud SQL/GCS scan functions return expected `CryptoEndpoint` shapes; `DefaultCredentialsError` produces scan_error endpoint, not crash; `GCP_AVAILABLE=False` returns empty list.
+
+**Pass Criteria:**
+- `python -m pytest tests/test_cloud_connectors.py` → 15 passed, 0 skipped, 0 failed
+- `pip install quirk[cloud]` resolves without grpcio dependency
+- `quirk/scanner/gcp_connector.py` exists with `GCP_KMS_ALGORITHM_MAP` containing 47 entries
+- `GCP_AVAILABLE` flag is `False` when `google-api-python-client` is not installed
+- CBOM output (live path): Cloud KMS entries appear with correct algorithm names from `GCP_KMS_ALGORITHM_MAP`; Cloud SQL HIGH findings for unencrypted/SSL_MODE_UNSPECIFIED instances; GCS-SUMMARY sentinel endpoint present with `gcs_scan_json` populated
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
 
 ---
 
