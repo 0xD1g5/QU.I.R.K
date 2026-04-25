@@ -247,8 +247,11 @@ Plans:
   3. GCS bucket encryption audit reuses Phase 26 connector output — scanner logs confirm zero duplicate storage.buckets.list API calls in a single scan run
   4. Unencrypted S3 buckets produce HIGH findings; SSE-KMS with AWS-managed key produces MEDIUM; SSE-KMS with CMK produces no finding
   5. All object storage findings are stored in dat_scan_json and produce protocol="STORAGE" CryptoEndpoint rows; results appear in the CBOM
-**Plans**: 0 plans
+**Plans**: 3 plans
 Plans:
+- [ ] 28-01-PLAN.md — RED scaffold: pyproject [cloud] extras, ConnectorsCfg fields, 5 RED test files
+- [ ] 28-02-PLAN.md — GREEN: _scan_s3_encryption, _scan_blob_encryption, run_scan.py wiring
+- [ ] 28-03-PLAN.md — Evidence/scoring/CBOM extensions, MinIO chaos lab, docs/UAT updates
 
 ### Phase 29: Kubernetes Secrets Inspection
 **Goal**: QU.I.R.K. can detect etcd encryption status and enumerate secret types on managed Kubernetes clusters — using managed cloud APIs without requiring direct etcd access or agent installation on cluster nodes
