@@ -84,6 +84,25 @@ def _ensure_gcp_columns(engine) -> None:
         conn.commit()
 
 
+_V43_COLUMNS = ["dat_scan_json"]
+
+
+def _ensure_v43_columns(engine) -> None:
+    """Add v4.3 data-at-rest JSON column if absent (idempotent).
+
+    Called from init_db() after _ensure_gcp_columns(). Phases 28-30 write to
+    dat_scan_json; no new columns needed for subsequent phases.
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    with engine.connect() as conn:
+        for col in _V43_COLUMNS:
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
+        conn.commit()
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -103,6 +122,7 @@ def init_db(db_path: str) -> Engine:
     Base.metadata.create_all(engine)
     _ensure_identity_columns(engine)  # v4.2: add identity columns if missing
     _ensure_gcp_columns(engine)  # v4.3: add GCP columns if missing
+    _ensure_v43_columns(engine)  # v4.3: add data-at-rest columns if missing
     return engine
 
 
