@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
 EVIDENCE_SCHEMA_VERSION = "1.0.0"
 
-_PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC")
+_PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC", "POSTGRESQL", "MYSQL", "RDS")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
@@ -48,13 +48,13 @@ def _finding_targets(findings: Iterable[Mapping[str, Any]], wanted_title: str) -
 
 def build_evidence_summary(
     endpoints: Iterable[Any],
-    findings: Iterable[Mapping[str, Any]],
+    findings: Optional[Iterable[Mapping[str, Any]]] = None,
     *,
     expiring_days: int = 30,
     reference_utc: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     endpoint_list = list(endpoints)
-    finding_list = list(findings)
+    finding_list = list(findings) if findings is not None else []
     ref_utc = _resolve_reference_utc(endpoint_list, reference_utc)
     expiring_cutoff = ref_utc + timedelta(days=max(0, int(expiring_days)))
 
@@ -73,6 +73,10 @@ def build_evidence_summary(
     identity_weak_etype_count = 0
     saml_weak_signing_count = 0
     dnssec_weak_algo_count = 0
+
+    # DAR protocol counters (Phase 27+)
+    dar_db_plaintext_count = 0    # PG ssl=off + MySQL SSL disabled
+    dar_db_weak_ssl_count = 0     # MySQL weak cipher
 
     for ep in endpoint_list:
         host = str(getattr(ep, "host", "") or "")
@@ -138,6 +142,21 @@ def build_evidence_summary(
                 # Unsigned zone — no algorithm weakness but high security concern
                 dnssec_weak_algo_count += 1
 
+        elif proto == "POSTGRESQL":
+            if getattr(ep, "scan_error", None) == "insufficient-privilege":
+                pass  # privilege gap — not a confirmed vulnerability
+            else:
+                sd = str(getattr(ep, "service_detail", "") or "")
+                if "ssl-off" in sd:
+                    dar_db_plaintext_count += 1
+
+        elif proto == "MYSQL":
+            sd = str(getattr(ep, "service_detail", "") or "")
+            if "ssl-off" in sd:
+                dar_db_plaintext_count += 1
+            elif "-weak" in sd:
+                dar_db_weak_ssl_count += 1
+
     plaintext_http_targets = _finding_targets(finding_list, "Plaintext HTTP service detected")
     http_on_tls_port_targets = _finding_targets(finding_list, "HTTP on TLS-designated port")
     mtls_targets |= _finding_targets(finding_list, "mTLS required")
@@ -188,4 +207,8 @@ def build_evidence_summary(
         "identity_kerberos_weak_etype_ratio": round(identity_weak_etype_count / total_endpoints, 4) if total_endpoints else 0.0,
         "identity_saml_weak_signing_ratio": round(saml_weak_signing_count / total_endpoints, 4) if total_endpoints else 0.0,
         "identity_dnssec_weak_algo_ratio": round(dnssec_weak_algo_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "dar_db_plaintext_count": dar_db_plaintext_count,
+        "dar_db_weak_ssl_count": dar_db_weak_ssl_count,
+        "dar_db_plaintext_ratio": round(dar_db_plaintext_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "dar_db_weak_ssl_ratio": round(dar_db_weak_ssl_count / total_endpoints, 4) if total_endpoints else 0.0,
     }
