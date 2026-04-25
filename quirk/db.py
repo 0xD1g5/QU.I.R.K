@@ -84,22 +84,25 @@ def _ensure_gcp_columns(engine) -> None:
         conn.commit()
 
 
-_V43_COLUMNS = ["dat_scan_json", "severity"]
+_V43_COLUMN_DDLS = {
+    "dat_scan_json": "TEXT",
+    "severity": "VARCHAR(16)",
+}
 
 
 def _ensure_v43_columns(engine) -> None:
-    """Add v4.3 data-at-rest JSON column if absent (idempotent).
+    """Add v4.3 data-at-rest columns (dat_scan_json TEXT, severity VARCHAR(16)) if absent.
 
     Called from init_db() after _ensure_gcp_columns(). Phases 28-30 write to
     dat_scan_json; no new columns needed for subsequent phases.
     """
     existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
     with engine.connect() as conn:
-        for col in _V43_COLUMNS:
+        for col, col_type in _V43_COLUMN_DDLS.items():
             if not _SAFE_COL_RE.match(col):
                 raise ValueError(f"Unsafe column name in migration: {col!r}")
             if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
         conn.commit()
 
 
