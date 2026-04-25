@@ -30,8 +30,10 @@ class ReadinessScoringTests(unittest.TestCase):
         self.assertIn("subscores", result)
         self.assertIn("drivers", result)
         self.assertEqual(set(result["subscores"].keys()), {"hygiene", "modern_tls", "identity_trust", "agility_signals", "data_at_rest"})
+        MAX_SUBSCORE = 25  # per _apply_weighted_impacts cap
+        NUM_SUBSCORES = 5  # hygiene, modern_tls, identity_trust, agility_signals, data_at_rest
         self.assertGreaterEqual(result["score"], 0)
-        self.assertLessEqual(result["score"], 125)  # max 5 subscores x 25 cap each after Phase 27 dar_ added
+        self.assertLessEqual(result["score"], MAX_SUBSCORE * NUM_SUBSCORES)
         self.assertLessEqual(len(result["drivers"]), 5)
 
     def test_risky_evidence_scores_lower(self) -> None:
