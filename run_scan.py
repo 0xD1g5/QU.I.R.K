@@ -474,6 +474,30 @@ def main():
     # ── Shared identity-scan session timestamp (ISSUE-3 fix) ──
     session_start = datetime.now(timezone.utc)
 
+    # ==============================
+    # DB connector phase (PostgreSQL / MySQL) — Phase 27
+    # ==============================
+    db_endpoints = []
+    with _phase_timer(run_stats, "db_scanning"):
+        if cfg.connectors.enable_db:
+            from quirk.scanner.db_connector import scan_pg_targets, scan_mysql_targets
+            if cfg.connectors.pg_targets:
+                db_endpoints.extend(scan_pg_targets(
+                    targets=cfg.connectors.pg_targets,
+                    user=cfg.connectors.pg_scanner_user,
+                    password=cfg.connectors.pg_scanner_password,
+                    logger=logger,
+                    session_start=session_start,
+                ))
+            if cfg.connectors.mysql_targets:
+                db_endpoints.extend(scan_mysql_targets(
+                    targets=cfg.connectors.mysql_targets,
+                    user=cfg.connectors.mysql_scanner_user,
+                    password=cfg.connectors.mysql_scanner_password,
+                    logger=logger,
+                    session_start=session_start,
+                ))
+
     # ── DNSSEC scanning ─────────────────────────────────────
     dnssec_endpoints = []
     with _phase_timer(run_stats, "dnssec_scanning"):
@@ -518,6 +542,7 @@ def main():
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + aws_endpoints + azure_endpoints + gcp_endpoints
+                 + db_endpoints
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints)
 
     # ==============================
