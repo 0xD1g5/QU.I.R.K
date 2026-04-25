@@ -1,4 +1,5 @@
 import os
+import re
 from contextlib import contextmanager
 from typing import Iterator, Optional
 
@@ -7,6 +8,9 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from quirk.models import Base  # Declarative Base from quirk/models.py
+
+# Allowlist pattern for migration column names — prevents SQL injection via column interpolation.
+_SAFE_COL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
 def _ensure_parent_dir(path: str) -> None:
@@ -52,6 +56,8 @@ def _ensure_identity_columns(engine) -> None:
     existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
     with engine.connect() as conn:
         for col in _IDENTITY_COLUMNS:
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
         conn.commit()
@@ -71,6 +77,8 @@ def _ensure_gcp_columns(engine) -> None:
     existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
     with engine.connect() as conn:
         for col in _GCP_COLUMNS:
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
         conn.commit()
