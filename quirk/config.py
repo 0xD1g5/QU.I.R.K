@@ -1,3 +1,4 @@
+import dataclasses
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -123,6 +124,9 @@ def _as_str_list(v: Any) -> List[str]:
     return [str(v)]
 
 
+_KNOWN_CONNECTOR_KEYS = {f.name for f in dataclasses.fields(ConnectorsCfg)}
+
+
 def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     # Backward-compatible: if intelligence block missing, use defaults.
     intel_raw = raw.get("intelligence", {}) or {}
@@ -171,7 +175,8 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         scan=ScanCfg(**raw["scan"]),
         targets=targets,
         connectors=ConnectorsCfg(
-            **{k: v for k, v in (raw.get("connectors") or {}).items() if k != "enable_windows_adcs"}
+            **{k: v for k, v in (raw.get("connectors") or {}).items()
+               if k in _KNOWN_CONNECTOR_KEYS}
         ),
         output=OutputCfg(**raw["output"]),
         intelligence=intelligence_cfg,
