@@ -16,6 +16,8 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "identity_kerberos_weak_etype_ratio": 10.0,
     "identity_saml_weak_signing_ratio": 8.0,
     "identity_dnssec_weak_algo_ratio": 8.0,
+    "dar_db_plaintext_ratio": 12.0,
+    "dar_db_weak_ssl_ratio": 6.0,
     "agility_high_impact_ratio": 14.0,
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
@@ -23,9 +25,9 @@ SCORE_WEIGHTS: Dict[str, float] = {
 }
 
 PROFILE_MULTIPLIERS: Dict[str, Dict[str, float]] = {
-    "strict":   {"agility_": 1.4, "identity_": 1.4},
-    "balanced": {"agility_": 1.0, "identity_": 1.0},
-    "lenient":  {"agility_": 0.7, "identity_": 0.7},
+    "strict":   {"agility_": 1.4, "identity_": 1.4, "dar_": 1.4},
+    "balanced": {"agility_": 1.0, "identity_": 1.0, "dar_": 1.0},
+    "lenient":  {"agility_": 0.7, "identity_": 0.7, "dar_": 0.7},
 }
 
 
@@ -124,6 +126,8 @@ def compute_readiness_score(
     kerberos_weak_count = max(0, _as_int(evidence.get("identity_weak_etype_count", 0)))
     saml_weak_count = max(0, _as_int(evidence.get("saml_weak_signing_count", 0)))
     dnssec_weak_count = max(0, _as_int(evidence.get("dnssec_weak_algo_count", 0)))
+    dar_db_plaintext = max(0, _as_int(evidence.get("dar_db_plaintext_count", 0)))
+    dar_db_weak_ssl = max(0, _as_int(evidence.get("dar_db_weak_ssl_count", 0)))
 
     hygiene_impacts: List[Tuple[str, float]] = [
         ("Plaintext HTTP exposure", -_ratio(plaintext_http_count, denom) * w["hygiene_plaintext_http_ratio"]),
@@ -161,11 +165,17 @@ def compute_readiness_score(
 
     agility_score, agility_drivers = _apply_weighted_impacts(agility_impacts)
 
-    total_score = int(hygiene_score + modern_tls_score + identity_trust_score + agility_score)
+    dar_impacts: List[Tuple[str, float]] = [
+        ("Database plaintext connections", -_ratio(dar_db_plaintext, denom) * w["dar_db_plaintext_ratio"]),
+        ("Database weak SSL configuration", -_ratio(dar_db_weak_ssl, denom) * w["dar_db_weak_ssl_ratio"]),
+    ]
+    dar_score, dar_drivers = _apply_weighted_impacts(dar_impacts)
+
+    total_score = int(hygiene_score + modern_tls_score + identity_trust_score + agility_score + dar_score)
     rating = _rating(total_score)
 
     all_drivers: List[Tuple[str, int]] = (
-        hygiene_drivers + modern_tls_drivers + identity_trust_drivers + agility_drivers
+        hygiene_drivers + modern_tls_drivers + identity_trust_drivers + agility_drivers + dar_drivers
     )
     all_drivers_sorted = sorted(all_drivers, key=lambda x: (-abs(x[1]), x[0]))
     top_drivers = [{"reason": reason, "points": points} for reason, points in all_drivers_sorted[:5]]
@@ -178,6 +188,7 @@ def compute_readiness_score(
             "modern_tls": modern_tls_score,
             "identity_trust": identity_trust_score,
             "agility_signals": agility_score,
+            "data_at_rest": dar_score,
         },
         "drivers": top_drivers,
     }
