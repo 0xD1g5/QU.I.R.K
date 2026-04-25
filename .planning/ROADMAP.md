@@ -232,10 +232,10 @@ Plans:
   5. dar_ prefix evidence counters appear in evidence.py and flow into scoring.py as a 5th subscore prefix; psycopg2-binary and PyMySQL are declared in [db] extras
 **Plans**: 4 plans
 Plans:
-- [ ] 27-01-PLAN.md — RED scaffold: pyproject.toml [db] extras, ConnectorsCfg fields, models.py dat_scan_json, db.py _ensure_v43_columns, 14 failing tests
-- [ ] 27-02-PLAN.md — GREEN: quirk/scanner/db_connector.py (PostgreSQL + MySQL scanners), aws_connector.py _scan_rds_encryption
-- [ ] 27-03-PLAN.md — dar_ scoring infrastructure: evidence.py counters, scoring.py 5th subscore prefix (parallel with Plan 02)
-- [ ] 27-04-PLAN.md — Integration wiring: run_scan.py db_scanning block, CBOM skip lists, chaos lab database profile
+- [x] 27-01-PLAN.md — RED scaffold: pyproject.toml [db] extras, ConnectorsCfg fields, models.py dat_scan_json, db.py _ensure_v43_columns, 14 failing tests
+- [x] 27-02-PLAN.md — GREEN: quirk/scanner/db_connector.py (PostgreSQL + MySQL scanners), aws_connector.py _scan_rds_encryption
+- [x] 27-03-PLAN.md — dar_ scoring infrastructure: evidence.py counters, scoring.py 5th subscore prefix (parallel with Plan 02)
+- [x] 27-04-PLAN.md — Integration wiring: run_scan.py db_scanning block, CBOM skip lists, chaos lab database profile
 
 ### Phase 28: Object Storage Audit
 **Goal**: QU.I.R.K. can determine per-bucket encryption policy for S3, Azure Blob, and GCS — consuming GCS enumeration data from Phase 26 rather than re-fetching, with parallel S3 probing via ThreadPoolExecutor
@@ -690,7 +690,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 24. Scan-Session Timestamp Isolation | v4.2 | 2/2 | Complete | 2026-04-24 |
 | 25. Identity Findings Accuracy | v4.3 | 3/3 | Complete    | 2026-04-24 |
 | 26. GCP Connector | v4.3 | 3/3 | Complete    | 2026-04-25 |
-| 27. Database Encryption Detection | v4.3 | 0/0 | Planned | — |
+| 27. Database Encryption Detection | v4.3 | 4/4 | Complete    | 2026-04-25 |
 | 28. Object Storage Audit | v4.3 | 0/0 | Planned | — |
 | 29. Kubernetes Secrets Inspection | v4.3 | 0/0 | Planned | — |
 | 30. HashiCorp Vault Connector | v4.3 | 0/0 | Planned | — |
