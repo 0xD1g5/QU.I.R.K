@@ -7,6 +7,7 @@ Degrades gracefully when boto3 is not installed.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
@@ -68,6 +69,62 @@ def _scan_acm(session, logger) -> List[CryptoEndpoint]:
     except Exception as exc:
         if logger:
             logger.v(f"ACM scan error: {exc}")
+    return results
+
+
+def _scan_rds_encryption(session, logger) -> List[CryptoEndpoint]:
+    """Detect RDS instance encryption-at-rest posture (DB-03).
+
+    Derives service_detail from StorageEncrypted + KmsKeyId fields
+    (NOT StorageEncryptionType -- that field does not exist in the boto3 API):
+      RDS/none         -- StorageEncrypted == False -> HIGH finding
+      RDS/sse-rds      -- StorageEncrypted True, KmsKeyId absent/empty
+      RDS/sse-kms-aws  -- StorageEncrypted True, KmsKeyId with alias/aws/ pattern
+      RDS/sse-kms-cmk  -- StorageEncrypted True, KmsKeyId present (customer-managed)
+    """
+    results: List[CryptoEndpoint] = []
+    try:
+        client = session.client("rds")
+        paginator = client.get_paginator("describe_db_instances")
+        for page in paginator.paginate():
+            for db in page.get("DBInstances", []):
+                db_id = db.get("DBInstanceIdentifier", "unknown")
+                db_arn = db.get("DBInstanceArn", db_id)
+                try:
+                    encrypted = db.get("StorageEncrypted", False)
+                    kms_key = str(db.get("KmsKeyId") or "").strip()
+
+                    if not encrypted:
+                        service_detail = "RDS/none"
+                        severity = "HIGH"
+                    elif not kms_key:
+                        service_detail = "RDS/sse-rds"
+                        severity = None
+                    elif "alias/aws/" in kms_key:
+                        service_detail = "RDS/sse-kms-aws"
+                        severity = None
+                    else:
+                        service_detail = "RDS/sse-kms-cmk"
+                        severity = None
+
+                    ep = CryptoEndpoint(
+                        host=db_arn,
+                        port=5432,  # placeholder -- RDS port varies by engine
+                        protocol="RDS",
+                        service_detail=service_detail,
+                        scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    )
+                    if severity:
+                        ep.severity = severity
+                    results.append(ep)
+
+                except Exception as exc:
+                    if logger:
+                        logger.v(f"RDS instance scan error for {db_id}: {exc}")
+
+    except Exception as exc:
+        if logger:
+            logger.v(f"RDS scan error: {exc}")
     return results
 
 
@@ -199,4 +256,5 @@ def scan_aws_targets(
     results.extend(_scan_cloudfront(session, logger))
     results.extend(_scan_elbv2(session, logger))
     results.extend(_scan_acm(session, logger))
+    results.extend(_scan_rds_encryption(session, logger))
     return results
