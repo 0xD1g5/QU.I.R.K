@@ -19,6 +19,7 @@ from quirk.scanner.container_scanner import scan_container_targets
 from quirk.scanner.source_scanner import scan_source_targets
 from quirk.scanner.aws_connector import scan_aws_targets
 from quirk.scanner.azure_connector import scan_azure_targets
+from quirk.scanner.gcp_connector import scan_gcp_targets
 from quirk.scanner.dnssec_scanner import scan_dnssec_targets
 
 from quirk.discovery.nmap_provider import run_nmap_discovery
@@ -459,6 +460,17 @@ def main():
                 logger=logger,
             )
 
+    # ==============================
+    # GCP cloud connector phase
+    # ==============================
+    gcp_endpoints = []
+    with _phase_timer(run_stats, "gcp_scanning"):
+        if cfg.connectors.enable_gcp:
+            gcp_endpoints = scan_gcp_targets(
+                project_id=cfg.connectors.gcp_project_id or "",
+                logger=logger,
+            )
+
     # ── Shared identity-scan session timestamp (ISSUE-3 fix) ──
     session_start = datetime.now(timezone.utc)
 
@@ -505,8 +517,8 @@ def main():
 
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
-                 + aws_endpoints + azure_endpoints + dnssec_endpoints
-                 + saml_endpoints + kerberos_endpoints)
+                 + aws_endpoints + azure_endpoints + gcp_endpoints
+                 + dnssec_endpoints + saml_endpoints + kerberos_endpoints)
 
     # ==============================
     # Findings + persistence + reports
