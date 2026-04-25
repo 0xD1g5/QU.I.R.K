@@ -208,6 +208,11 @@ def scan_mysql_targets(
             )
             with conn:
                 with conn.cursor() as cur:
+                    # NOTE: With ssl_disabled=True the scanner's own Ssl_cipher is always empty.
+                    # The meaningful signal here is whether the server accepted a plaintext connection
+                    # at all. Servers with require_secure_transport=ON will reject this connection
+                    # (falling into the except block). The weak/strong cipher branches apply only
+                    # if ssl_disabled is changed to False in a future revision.
                     cur.execute("SHOW STATUS LIKE 'Ssl_cipher'")
                     row = cur.fetchone()
                     # row is tuple: ('Ssl_cipher', 'value') or None
