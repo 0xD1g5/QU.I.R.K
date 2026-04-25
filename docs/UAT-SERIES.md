@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 4.2.0
-**Last Updated:** 2026-04-25 (Phase 26: added UAT-5-24 for GCP connector — Cloud KMS/Cloud SQL/GCS scanning behind enable_gcp guard; 47-entry KMS algorithm map including PQC types)
+**Version:** 4.3.0
+**Last Updated:** 2026-04-25 (Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1573,6 +1573,55 @@ All of these services show status `Up` or `running`:
 - `quirk/scanner/gcp_connector.py` exists with `GCP_KMS_ALGORITHM_MAP` containing 47 entries
 - `GCP_AVAILABLE` flag is `False` when `google-api-python-client` is not installed
 - CBOM output (live path): Cloud KMS entries appear with correct algorithm names from `GCP_KMS_ALGORITHM_MAP`; Cloud SQL HIGH findings for unencrypted/SSL_MODE_UNSPECIFIED instances; GCS-SUMMARY sentinel endpoint present with `gcs_scan_json` populated
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-5-25: Database Connector — PostgreSQL/MySQL SSL and RDS Encryption Scanning
+
+> Added Phase 27 (2026-04-25): DB-01/DB-02/DB-03 — PostgreSQL 3-tier SSL enforcement probe (pg_has_role), MySQL Ssl_cipher severity ladder, AWS RDS StorageEncrypted+KmsKeyId classification. Connector runs behind `enable_db` guard with graceful degradation when psycopg2-binary/PyMySQL not installed.
+
+**Prerequisites:** Phase 27 complete. Optional: Docker chaos lab database profile for live path.
+
+**Steps (unit test path — no real DB connections required):**
+1. Run the DB connector test suite:
+   ```bash
+   python -m pytest tests/test_db_connector.py -v
+   ```
+2. Confirm all 14 tests pass (2 schema + 5 PostgreSQL + 4 MySQL + 3 RDS — no skips).
+
+**Steps (live DB path — requires Docker chaos lab):**
+1. Start the database profile:
+   ```bash
+   docker compose --profile database up -d
+   ```
+2. Configure `config.yaml`:
+   ```yaml
+   enable_db: true
+   pg_targets:
+     - "localhost:25432"
+   mysql_targets:
+     - "localhost:23306"
+   pg_scanner_user: "quirk_scanner"
+   pg_scanner_password: "quirk_scanner"
+   mysql_scanner_user: "quirk_scanner"
+   mysql_scanner_password: "quirk_scanner"
+   ```
+3. Run a scan: `quirk --config config.yaml`
+4. Check findings: HIGH `PostgreSQL/ssl-off` and `MySQL/ssl-off` findings present; `data_at_rest` subscore in readiness score; no POSTGRESQL/MYSQL entries in CBOM algorithm catalog.
+
+**Expected (unit test path):**
+- 14/14 tests pass: `_ensure_v43_columns()` idempotent; `scan_pg_targets` returns `[]` when `PSYCOPG2_AVAILABLE=False`; PostgreSQL ssl-off → HIGH; `scan_error='insufficient-privilege'` → INFO; MySQL ssl-off → HIGH; weak cipher → MEDIUM; strong cipher → no HIGH/MEDIUM; RDS unencrypted → HIGH `RDS/none`; RDS SSE-RDS/CMK → correct service_detail.
+
+**Pass Criteria:**
+- `python -m pytest tests/test_db_connector.py` → 14 passed, 0 skipped, 0 failed
+- `pip install quirk[db]` resolves `psycopg2-binary>=2.9.0` and `PyMySQL>=1.1.0`
+- `quirk/scanner/db_connector.py` exists with `PSYCOPG2_AVAILABLE` and `PYMYSQL_AVAILABLE` module-level flags
+- `compute_readiness_score({})` returns `subscores` dict containing `"data_at_rest"` key
+- Live path: HIGH `PostgreSQL/ssl-off` and `MySQL/ssl-off` findings visible in scan output; `data_at_rest` subscore reflects penalisation; CBOM output contains no POSTGRESQL/MYSQL entries in algorithm catalog
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
