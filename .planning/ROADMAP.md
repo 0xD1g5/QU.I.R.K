@@ -216,9 +216,9 @@ Plans:
   5. google-cloud-kms and google-cloud-storage are declared in [cloud] extras; pip install quirk[cloud] resolves without grpcio/protobuf conflict
 **Plans**: 3 plans
 Plans:
-- [ ] 26-01-PLAN.md — Infrastructure: [cloud] extras, config fields, ORM column, DB migration, test scaffold
-- [ ] 26-02-PLAN.md — Core GCP connector: Cloud KMS, Cloud SQL, GCS scanning
-- [ ] 26-03-PLAN.md — Integration wiring: run_scan.py and CBOM builder extension
+- [x] 26-01-PLAN.md — Infrastructure: [cloud] extras, config fields, ORM column, DB migration, test scaffold
+- [x] 26-02-PLAN.md — Core GCP connector: Cloud KMS, Cloud SQL, GCS scanning
+- [x] 26-03-PLAN.md — Integration wiring: run_scan.py and CBOM builder extension
 
 ### Phase 27: Database Encryption Detection
 **Goal**: QU.I.R.K. can detect encryption-at-rest posture for PostgreSQL, MySQL/MariaDB, and RDS instances — establishing the dat_scan_json column and dar_ scoring infrastructure that all subsequent data-at-rest scanner phases depend on
@@ -685,7 +685,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 23. DNSSEC CBOM Skip Fix | v4.2 | 1/1 | Complete | 2026-04-24 |
 | 24. Scan-Session Timestamp Isolation | v4.2 | 2/2 | Complete | 2026-04-24 |
 | 25. Identity Findings Accuracy | v4.3 | 3/3 | Complete    | 2026-04-24 |
-| 26. GCP Connector | v4.3 | 0/0 | Planned | — |
+| 26. GCP Connector | v4.3 | 3/3 | Complete    | 2026-04-25 |
 | 27. Database Encryption Detection | v4.3 | 0/0 | Planned | — |
 | 28. Object Storage Audit | v4.3 | 0/0 | Planned | — |
 | 29. Kubernetes Secrets Inspection | v4.3 | 0/0 | Planned | — |
