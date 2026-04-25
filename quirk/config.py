@@ -66,6 +66,9 @@ class ConnectorsCfg:
     kerberos_targets: list = field(default_factory=list)
     saml_targets: list = field(default_factory=list)
     dnssec_targets: list = field(default_factory=list)
+    # GCP connector config (v4.3, Phase 26, per D-06)
+    enable_gcp: bool = False
+    gcp_project_id: Optional[str] = None
 
 
 @dataclass
