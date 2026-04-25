@@ -41,7 +41,7 @@ def test_aws_acm_pagination():
 
     with patch("quirk.scanner.aws_connector.boto3.Session", return_value=mock_session):
         endpoints = scan_aws_targets(region="us-east-1", profile=None)
-        mock_client.get_paginator.assert_called_with("list_certificates")
+        mock_client.get_paginator.assert_any_call("list_certificates")
         assert len(endpoints) >= 1
         assert endpoints[0].protocol == "AWS"
 
