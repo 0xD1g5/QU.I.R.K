@@ -157,6 +157,12 @@ def build_evidence_summary(
             elif "-weak" in sd:
                 dar_db_weak_ssl_count += 1
 
+        elif proto == "RDS":
+            sd = str(getattr(ep, "service_detail", "") or "")
+            if "RDS/none" in sd:
+                dar_db_plaintext_count += 1
+            # RDS/sse-rds and RDS/sse-kms-* are positive posture — no penalty
+
     plaintext_http_targets = _finding_targets(finding_list, "Plaintext HTTP service detected")
     http_on_tls_port_targets = _finding_targets(finding_list, "HTTP on TLS-designated port")
     mtls_targets |= _finding_targets(finding_list, "mTLS required")
