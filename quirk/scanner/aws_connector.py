@@ -107,9 +107,10 @@ def _scan_rds_encryption(session, logger) -> List[CryptoEndpoint]:
                         service_detail = "RDS/sse-kms-cmk"
                         severity = None
 
+                    db_port = int((db.get("Endpoint") or {}).get("Port") or 5432)
                     ep = CryptoEndpoint(
                         host=db_arn,
-                        port=5432,  # placeholder -- RDS port varies by engine
+                        port=db_port,
                         protocol="RDS",
                         service_detail=service_detail,
                         scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
