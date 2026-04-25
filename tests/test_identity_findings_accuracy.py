@@ -150,5 +150,66 @@ class TestIdentityFindingsAccuracy(unittest.TestCase):
         )
 
 
+    # --- Test 4: 25-03-01 / INFRA-03 — chaos lab oracle sections ---
+
+    def test_chaos_lab_expected_results_phase25(self) -> None:
+        """INFRA-03 / 25-03-01: expected_results_v3.md must contain all three Phase 25
+        identity chaos lab oracle sections with the required algorithm marker strings.
+
+        Verifies:
+        - '## Phase 25 — DNSSEC Profile' section is present (with RSASHA1 marker)
+        - '## Phase 25 — SAML/OIDC Profile' section is present (with RSA-1024 marker)
+        - '## Phase 25 — Kerberos Profile' section is present (with rc4-hmac marker)
+        - Exactly 3 '## Phase 25' headings exist in the file
+        """
+        _REPO_ROOT = pathlib.Path(__file__).parent.parent
+        oracle_path = _REPO_ROOT / "quantum-chaos-enterprise-lab" / "expected_results_v3.md"
+        content = oracle_path.read_text(encoding="utf-8")
+
+        # DNSSEC section
+        self.assertIn(
+            "## Phase 25 — DNSSEC Profile",
+            content,
+            "expected_results_v3.md missing '## Phase 25 — DNSSEC Profile' section",
+        )
+        self.assertIn(
+            "RSASHA1",
+            content,
+            "expected_results_v3.md DNSSEC section missing 'RSASHA1' algorithm marker",
+        )
+
+        # SAML/OIDC section
+        self.assertIn(
+            "## Phase 25 — SAML/OIDC Profile",
+            content,
+            "expected_results_v3.md missing '## Phase 25 — SAML/OIDC Profile' section",
+        )
+        self.assertIn(
+            "RSA-1024",
+            content,
+            "expected_results_v3.md SAML/OIDC section missing 'RSA-1024' marker",
+        )
+
+        # Kerberos section
+        self.assertIn(
+            "## Phase 25 — Kerberos Profile",
+            content,
+            "expected_results_v3.md missing '## Phase 25 — Kerberos Profile' section",
+        )
+        self.assertIn(
+            "rc4-hmac",
+            content,
+            "expected_results_v3.md Kerberos section missing 'rc4-hmac' etype marker",
+        )
+
+        # Exactly 3 Phase 25 headings
+        phase25_headings = [line for line in content.splitlines() if "## Phase 25" in line]
+        self.assertEqual(
+            len(phase25_headings),
+            3,
+            f"Expected exactly 3 '## Phase 25' headings, found {len(phase25_headings)}: {phase25_headings}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
