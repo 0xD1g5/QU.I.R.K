@@ -219,6 +219,14 @@ def test_gcp_kms_algorithm_mapping():
     assert len(gcp_eps) >= 1
     assert gcp_eps[0].cert_pubkey_alg == "RSA"
     assert gcp_eps[0].cert_pubkey_size == 2048
+    # Confirm pagination terminated at every KMS level (list_next called once and returned None).
+    # Guards against future pagination paths auto-creating truthy MagicMock and looping.
+    (mock_service.projects.return_value.locations.return_value
+     .list_next.assert_called_once())
+    (mock_service.projects.return_value.locations.return_value
+     .keyRings.return_value.list_next.assert_called_once())
+    (mock_service.projects.return_value.locations.return_value
+     .keyRings.return_value.cryptoKeys.return_value.list_next.assert_called_once())
 
 
 @pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
