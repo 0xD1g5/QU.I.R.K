@@ -386,9 +386,9 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
         elif ep.protocol == "CLOUD_SQL":
-            # Cloud SQL TLS finding -- cert_pubkey_alg holds severity level (HIGH/MEDIUM)
-            if ep.cert_pubkey_alg:
-                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+            # Cloud SQL findings encode severity (HIGH/MEDIUM), not algorithm names.
+            # Skip algorithm registration — finding detail is in cloud_scan_json.
+            pass
 
         elif ep.protocol == "DNSSEC":
             # DNSSEC: cert_pubkey_alg holds the DNSKEY algorithm name
