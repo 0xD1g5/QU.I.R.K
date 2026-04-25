@@ -77,3 +77,4 @@ class CryptoEndpoint(Base):
     # v4.3 Data-at-Rest fields
     # ==========================
     dat_scan_json = Column(Text, nullable=True)  # Universal DAR scan result JSON (Phase 27+)
+    severity = Column(String(16), nullable=True)  # Finding severity: HIGH, MEDIUM, LOW, INFO
