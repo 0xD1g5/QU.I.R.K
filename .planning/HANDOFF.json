@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-25T03:48:54.449Z",
+  "phase": "26",
+  "phase_name": "gcp-connector",
+  "phase_dir": ".planning/phases/26-gcp-connector",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 5,
+  "status": "paused",
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {"id": 1, "name": "Plan 01 Task 1: [cloud] extras, config fields, ORM column, DB migration", "status": "not_started"},
+    {"id": 2, "name": "Plan 01 Task 2: Wave 0 test scaffold (tests/test_cloud_connectors.py)", "status": "not_started"},
+    {"id": 3, "name": "Plan 02 Task 1: quirk/scanner/gcp_connector.py (full connector)", "status": "not_started"},
+    {"id": 4, "name": "Plan 03 Task 1: run_scan.py wiring (import + phase block + aggregation)", "status": "not_started"},
+    {"id": 5, "name": "Plan 03 Task 2: cbom/builder.py Pass 1/2/3 extension for GCP and CLOUD_SQL", "status": "not_started"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "Use google-api-python-client, NOT google-cloud-kms or google-cloud-storage",
+      "rationale": "google-cloud-kms requires grpcio which is not installed and conflicts with the existing venv. google-api-python-client uses bundled discovery docs (all three: cloudkms.v1.json, sqladmin.v1.json, storage.v1.json) and has no grpcio dependency.",
+      "phase": "26"
+    },
+    {
+      "decision": "session_start parameter on scan_gcp_targets() is discretionary for Phase 26",
+      "rationale": "STATE.md ISSUE-3 says session_start is mandatory for all new scanners, but CONTEXT.md Claude's Discretion says follow aws_connector.py style (which omits it). Plan checker flagged as non-blocking; planner chose to follow existing connector convention. May need revisiting for Phase 31 trend analysis.",
+      "phase": "26"
+    },
+    {
+      "decision": "gcs_scan_json goes in BOTH models.py ORM body AND _ensure_gcp_columns() ALTER TABLE",
+      "rationale": "Research open question resolved: ORM declaration in models.py for consistency with cloud_scan_json; migration guard in db.py for backward-compatible upgrade from v4.2.",
+      "phase": "26"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd-execute-phase 26 (start fresh context with /clear first). Plan 01 Wave 1 runs first.",
+  "context_notes": "Planning session only — no code was written. All 3 plans were verified by gsd-plan-checker (12/12 dimensions passed). The library choice contradiction in STATE.md vs CONTEXT.md was resolved: CONTEXT.md D-02 is correct (google-api-python-client). PQC algorithms (ML_KEM, ML_DSA, SLH_DSA) now exist in GCP KMS and map to existing classifier.py entries — no classifier changes needed."
+}
