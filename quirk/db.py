@@ -57,6 +57,25 @@ def _ensure_identity_columns(engine) -> None:
         conn.commit()
 
 
+_GCP_COLUMNS = [
+    "gcs_scan_json",
+]
+
+
+def _ensure_gcp_columns(engine) -> None:
+    """Add GCP scanner JSON column to crypto_endpoints if absent (idempotent).
+
+    Uses SQLAlchemy inspector to check existing columns before ALTER TABLE.
+    Called from init_db() after _ensure_identity_columns().
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    with engine.connect() as conn:
+        for col in _GCP_COLUMNS:
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
+        conn.commit()
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -75,6 +94,7 @@ def init_db(db_path: str) -> Engine:
     # Create schema
     Base.metadata.create_all(engine)
     _ensure_identity_columns(engine)  # v4.2: add identity columns if missing
+    _ensure_gcp_columns(engine)  # v4.3: add GCP columns if missing
     return engine
 
 
