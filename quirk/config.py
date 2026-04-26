@@ -82,6 +82,15 @@ class ConnectorsCfg:
     enable_s3: bool = False
     enable_blob: bool = False
     aws_endpoint_url: Optional[str] = None  # MinIO/LocalStack S3 endpoint override
+    # K8S connector config (v4.3, Phase 29)
+    enable_k8s: bool = False
+    k8s_provider: Optional[str] = None    # "eks" | "gke" | "aks"
+    k8s_cluster_name: Optional[str] = None
+    k8s_namespace: str = "default"
+    k8s_kubeconfig: Optional[str] = None
+    k8s_context: Optional[str] = None
+    gke_clusters: list = field(default_factory=list)   # [{name, location}]
+    aks_clusters: list = field(default_factory=list)   # [{name, resource_group}]
 
 
 @dataclass
