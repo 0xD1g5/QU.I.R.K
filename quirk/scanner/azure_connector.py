@@ -7,6 +7,7 @@ Degrades gracefully when azure SDK is not installed.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
@@ -113,6 +114,115 @@ def _scan_app_gateways(credential, subscription_id: str, logger) -> List[CryptoE
     except Exception as exc:
         if logger:
             logger.v(f"App Gateway scan error: {exc}")
+    return results
+
+
+def _scan_blob_encryption(
+    credential,
+    subscription_id: str,
+    logger,
+    session_start=None,
+) -> List[CryptoEndpoint]:
+    """Detect Azure Blob container encryption posture (STOR-02).
+
+    Azure encryption is at the storage account level, not per-container. This function
+    enumerates every storage account in the subscription, reads encryption.key_source from
+    the account, and creates one CryptoEndpoint per container with the parent account's
+    encryption setting applied.
+
+    keySource ladder per D-07 (lowercased comparison):
+      "microsoft.keyvault" → BLOB/cmk (no severity)
+      "microsoft.storage" / absent / null → MEDIUM/BLOB/platform-managed
+
+    Uses inline import for azure-mgmt-storage (function-body scope, ImportError-guarded)
+    following the _scan_app_gateways pattern. azure-mgmt-storage is in [cloud] extras only.
+
+    Args:
+        credential: DefaultAzureCredential (or MagicMock in tests).
+        subscription_id: Azure subscription UUID.
+        logger: optional logger with .v() method.
+        session_start: timezone-aware datetime; falls back to now() when absent (ISSUE-3).
+    """
+    results: List[CryptoEndpoint] = []
+    if not AZURE_AVAILABLE:
+        if logger:
+            logger.v("azure SDK not installed — Azure Blob scanning unavailable")
+        return results
+
+    ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+
+    try:
+        from azure.mgmt.storage import StorageManagementClient  # type: ignore[import-untyped]
+    except ImportError:
+        if logger:
+            logger.v("azure-mgmt-storage not installed — Azure Blob scanning unavailable")
+        return results
+
+    try:
+        client = StorageManagementClient(credential, subscription_id)
+        for account in client.storage_accounts.list():
+            account_name = getattr(account, "name", None) or "unknown"
+            try:
+                enc = getattr(account, "encryption", None)
+                if enc is None:
+                    key_source_raw = ""
+                else:
+                    key_source_raw = str(getattr(enc, "key_source", "") or "")
+                key_source = key_source_raw.lower()
+
+                if key_source == "microsoft.keyvault":
+                    service_detail = "BLOB/cmk"
+                    severity = None
+                else:
+                    # microsoft.storage / "" / absent → platform-managed (MEDIUM)
+                    service_detail = "BLOB/platform-managed"
+                    severity = "MEDIUM"
+
+                # Extract resource group from ARM resource ID per Pitfall 2:
+                # /subscriptions/{sub}/resourceGroups/{rg}/providers/...
+                account_id = getattr(account, "id", "") or ""
+                try:
+                    rg = account_id.split("/resourceGroups/")[1].split("/")[0]
+                except (IndexError, AttributeError):
+                    if logger:
+                        logger.v(f"Azure Blob: cannot parse resource group from {account_id}")
+                    continue
+
+                # Enumerate containers — one CryptoEndpoint per container
+                try:
+                    containers = list(client.blob_containers.list(
+                        resource_group_name=rg,
+                        account_name=account_name,
+                    ))
+                except Exception as exc:
+                    if logger:
+                        logger.v(f"Azure Blob list containers error for {account_name}: {exc}")
+                    continue
+
+                for container in containers:
+                    container_name = getattr(container, "name", "") or "default"
+                    container_id = getattr(container, "id", "") or f"{account_id}/blobServices/default/containers/{container_name}"
+                    ep = CryptoEndpoint(
+                        host=container_id,
+                        port=0,
+                        protocol="AZURE_BLOB",
+                        service_detail=service_detail,
+                        dat_scan_json=json.dumps({
+                            "account": account_name,
+                            "container": container_name,
+                            "key_source": key_source_raw or "absent",
+                        }, default=str),
+                        scanned_at=ts,
+                    )
+                    if severity:
+                        ep.severity = severity
+                    results.append(ep)
+            except Exception as exc:
+                if logger:
+                    logger.v(f"Azure Blob account scan error for {account_name}: {exc}")
+    except Exception as exc:
+        if logger:
+            logger.v(f"Azure Blob scan error: {exc}")
     return results
 
 
