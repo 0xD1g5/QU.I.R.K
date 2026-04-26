@@ -129,6 +129,115 @@ def _scan_rds_encryption(session, logger) -> List[CryptoEndpoint]:
     return results
 
 
+def _scan_s3_encryption(
+    session,
+    logger,
+    session_start=None,
+    endpoint_url=None,
+) -> List[CryptoEndpoint]:
+    """Detect S3 bucket encryption posture per bucket (STOR-01).
+
+    Per D-06 severity ladder:
+      ServerSideEncryptionConfigurationNotFoundError → HIGH/S3/unencrypted
+      Empty Rules / SSEAlgorithm 'none'              → HIGH/S3/unencrypted
+      SSEAlgorithm 'AES256'                          → S3/sse-s3 (no severity)
+      SSEAlgorithm 'aws:kms' + alias/aws/s3 or absent KeyID → MEDIUM/S3/sse-kms-aws
+      SSEAlgorithm 'aws:kms' + customer KeyID        → S3/sse-kms-cmk (no severity)
+
+    Uses ThreadPoolExecutor(max_workers=10) per D-06. list_buckets is NOT a paginator
+    (raises OperationNotPageableError); call it directly. ServerSideEncryptionConfiguration-
+    NotFoundError is NOT a scan error — it IS the unencrypted detection path.
+
+    Args:
+        session: boto3 Session (or MagicMock in tests).
+        logger: optional logger with .v() method.
+        session_start: timezone-aware datetime; falls back to now() when absent (ISSUE-3).
+        endpoint_url: optional MinIO/LocalStack endpoint override (D-08, Phase 28 chaos lab).
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from botocore.exceptions import ClientError
+
+    if not BOTO3_AVAILABLE:
+        if logger:
+            logger.v("boto3 not installed — S3 scanning unavailable")
+        return []
+
+    results: List[CryptoEndpoint] = []
+    ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+
+    try:
+        client_kwargs = {}
+        if endpoint_url:
+            client_kwargs["endpoint_url"] = endpoint_url
+        client = session.client("s3", **client_kwargs)
+
+        # list_buckets is NOT a paginator — calling get_paginator() raises OperationNotPageableError.
+        buckets = client.list_buckets().get("Buckets", []) or []
+
+        def _classify(bucket_name: str):
+            """Returns dict {service_detail, severity} or None to skip the bucket."""
+            try:
+                resp = client.get_bucket_encryption(Bucket=bucket_name)
+                rules = (resp.get("ServerSideEncryptionConfiguration", {}) or {}).get("Rules", []) or []
+                if not rules:
+                    return {"service_detail": "S3/unencrypted", "severity": "HIGH"}
+                rule = rules[0].get("ApplyServerSideEncryptionByDefault", {}) or {}
+                algo = str(rule.get("SSEAlgorithm", "") or "").strip()
+                kms_key = str(rule.get("KMSMasterKeyID") or "").strip()
+                if algo == "AES256":
+                    return {"service_detail": "S3/sse-s3", "severity": None}
+                if algo == "aws:kms":
+                    if not kms_key or "alias/aws/s3" in kms_key:
+                        return {"service_detail": "S3/sse-kms-aws", "severity": "MEDIUM"}
+                    return {"service_detail": "S3/sse-kms-cmk", "severity": None}
+                # SSEAlgorithm "none" or unknown → unencrypted
+                return {"service_detail": "S3/unencrypted", "severity": "HIGH"}
+            except ClientError as exc:
+                code = (exc.response or {}).get("Error", {}).get("Code", "") if hasattr(exc, "response") else ""
+                if code == "ServerSideEncryptionConfigurationNotFoundError":
+                    # Detection path — NOT a scan error
+                    return {"service_detail": "S3/unencrypted", "severity": "HIGH"}
+                if logger:
+                    logger.v(f"S3 get_bucket_encryption error for {bucket_name}: {exc}")
+                return None
+            except Exception as exc:
+                if logger:
+                    logger.v(f"S3 get_bucket_encryption error for {bucket_name}: {exc}")
+                return None
+
+        def _build_endpoint(bucket):
+            name = bucket.get("Name", "") if isinstance(bucket, dict) else ""
+            if not name:
+                return None
+            classification = _classify(name)
+            if classification is None:
+                return None
+            ep = CryptoEndpoint(
+                host=f"arn:aws:s3:::{name}",
+                port=0,
+                protocol="S3",
+                service_detail=classification["service_detail"],
+                dat_scan_json=json.dumps(
+                    {"bucket": name, **classification}, default=str
+                ),
+                scanned_at=ts,
+            )
+            if classification["severity"]:
+                ep.severity = classification["severity"]
+            return ep
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            for ep in executor.map(_build_endpoint, buckets):
+                if ep is not None:
+                    results.append(ep)
+
+    except Exception as exc:
+        if logger:
+            logger.v(f"S3 scan error: {exc}")
+
+    return results
+
+
 def _scan_kms(session, logger) -> List[CryptoEndpoint]:
     """Enumerate KMS keys and map their KeySpec to algorithm/size."""
     results: List[CryptoEndpoint] = []
