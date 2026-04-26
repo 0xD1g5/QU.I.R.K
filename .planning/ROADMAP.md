@@ -281,7 +281,7 @@ Plans:
   5. All Vault findings are stored in dat_scan_json and produce protocol="VAULT" CryptoEndpoint rows
 **Plans**: 3 plans
 Plans:
-- [ ] 30-01-PLAN.md — RED scaffold: pyproject.toml + ConnectorsCfg + failing tests for vault_connector and DAR scoring
+- [x] 30-01-PLAN.md — RED scaffold: pyproject.toml + ConnectorsCfg + failing tests for vault_connector and DAR scoring
 - [ ] 30-02-PLAN.md — GREEN scanner: implement vault_connector.py (transit + PKI + auth) and wire into run_scan.py
 - [ ] 30-03-PLAN.md — Intelligence + CBOM + chaos lab seed + UAT-SERIES.md updates
 
@@ -703,5 +703,5 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 27. Database Encryption Detection | v4.3 | 4/4 | Complete    | 2026-04-25 |
 | 28. Object Storage Audit | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
-| 30. HashiCorp Vault Connector | v4.3 | 0/0 | Planned | — |
+| 30. HashiCorp Vault Connector | v4.3 | 1/3 | In Progress|  |
 | 31. Trend Analysis | v4.3 | 0/0 | Planned | — |
