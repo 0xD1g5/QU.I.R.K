@@ -44,7 +44,10 @@ identity = [
 cloud = [
     "google-api-python-client>=2.0.0",
     "google-auth>=2.36.0",
-    "azure-mgmt-storage>=21.0.0",  # Phase 28: Azure Blob encryption audit (STOR-02)
+    "azure-mgmt-storage>=21.0.0",      # Phase 28: Azure Blob encryption audit (STOR-02)
+    "kubernetes>=35.0.0",              # Phase 29: Kubernetes secrets inspection (K8S-01, K8S-02)
+    "google-cloud-container>=2.0.0",   # Phase 29: GKE databaseEncryption.state (K8S-01)
+    "azure-mgmt-containerservice>=35.0.0",  # Phase 29: AKS Key Vault KMS detection (K8S-01)
 ]
 db = [
     "psycopg2-binary>=2.9.0",

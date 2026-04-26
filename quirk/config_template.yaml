@@ -85,6 +85,15 @@ connectors:
   # enable_s3: false
   # aws_endpoint_url: null            # override for MinIO/LocalStack testing
   # enable_blob: false
+  # -- Kubernetes secrets inspection (optional, requires: pip install quirk[cloud]) --
+  # enable_k8s: false
+  # k8s_provider: ""              # "eks" | "gke" | "aks"
+  # k8s_cluster_name: ""          # name of the managed cluster (single)
+  # k8s_namespace: "default"      # namespace for secret type enumeration (K8S-02)
+  # k8s_kubeconfig: ""            # path to kubeconfig (defaults to ~/.kube/config)
+  # k8s_context: ""               # kubeconfig context (optional)
+  # gke_clusters: []              # [{name: my-gke, location: us-central1}]
+  # aks_clusters: []              # [{name: my-aks, resource_group: rg}]
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
