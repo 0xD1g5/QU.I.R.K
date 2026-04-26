@@ -86,7 +86,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Database encryption detection — PostgreSQL 3-tier SSL probe (pg_has_role), MySQL Ssl_cipher scanner, RDS StorageEncrypted+KmsKeyId; `[db]` extras group; `dat_scan_json` ORM column; `dar_` evidence counters + `data_at_rest` as 5th subscore; CBOM Pass 1/2/3 integration; Docker chaos lab database profile (25432/23306) — Validated in Phase 27
 - ✓ Object storage audit — S3 severity ladder (HIGH/MEDIUM/None via ThreadPoolExecutor), Azure Blob keySource ladder (CMK/platform-managed), GCS sentinel reuse (zero duplicate API calls); dar_storage_* evidence counters + SCORE_WEIGHTS (12.0/4.0); CBOM Pass 1/2/3 skip-lists; MinIO chaos lab (storage-s3 profile); UAT-28-01/02/03 — Validated in Phase 28
 - ✓ Kubernetes secrets inspection — EKS/GKE/AKS managed encryption APIs, secret type enumeration, RBAC-403 degradation, K8S-03 inaccessible-finding invariant; dar_k8s_* evidence counters + CBOM integration — Validated in Phase 29
-- [ ] HashiCorp Vault connector — transit keys, PKI mounts, auth method audit
+- ✓ HashiCorp Vault connector — transit keys (VAULT-01 + PQC), PKI root+intermediate CA (VAULT-02), auth method risk tiering (VAULT-03); dar_vault_weak_count HIGH-only counter; CBOM Pass 1 algorithm registration, Pass 2+3 skip; dedicated --profile vault chaos lab (port 28200); conftest.py SHA-1 shim for cryptography 46.x — Validated in Phase 30
 - [ ] Trend analysis across scan sessions — score delta, new/resolved findings, degraded host tracking (BACK-21)
 
 **v4.4 Data in Motion (Planned)**
@@ -113,7 +113,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.3.0 — Phase 29 (Kubernetes secrets inspection) complete 2026-04-26; v4.3 Data at Rest continues with Vault connector, trend analysis
+- **Current version**: v4.3.0 — Phase 30 (HashiCorp Vault connector) complete 2026-04-26; v4.3 Data at Rest continues with Phase 31 trend analysis
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
@@ -122,7 +122,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
 - **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, identity protocol scanning (Kerberos/SAML/DNSSEC), object storage encryption auditing (S3/Azure Blob/GCS), chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 418 tests passing (pytest); all Nyquist VALIDATION.md files up to date
+- **Test coverage**: 482 tests passing (pytest); all Nyquist VALIDATION.md files up to date
 - **Known tech debt**: ISSUE-2 (ldap3 absent from pyproject.toml — KERB-03 LDAP always inerts), NEW-ISSUE-1 (OIDC RS256 findings mislabeled as TLS-sourced) — both Phase 25 targets in v4.3
 - **v4.2 milestone shipped** (2026-04-24): 8 phases (17–24), 14 plans — full identity protocol surface: DNSSEC + SAML/OIDC + Kerberos scanners, 3 chaos lab profiles, Identity tab in dashboard, CBOM integration, scan-session timestamp isolation
 
