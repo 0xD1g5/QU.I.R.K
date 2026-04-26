@@ -283,7 +283,7 @@ Plans:
 Plans:
 - [x] 30-01-PLAN.md — RED scaffold: pyproject.toml + ConnectorsCfg + failing tests for vault_connector and DAR scoring
 - [x] 30-02-PLAN.md — GREEN scanner: implement vault_connector.py (transit + PKI + auth) and wire into run_scan.py
-- [ ] 30-03-PLAN.md — Intelligence + CBOM + chaos lab seed + UAT-SERIES.md updates
+- [x] 30-03-PLAN.md — Intelligence + CBOM + chaos lab seed + UAT-SERIES.md updates
 
 ### Phase 31: Trend Analysis
 **Goal**: The intelligence layer can compare the current scan session against the most recent previous session — surfacing score delta, net-new findings, and resolved findings — with results in the dashboard and reports
@@ -703,5 +703,5 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 27. Database Encryption Detection | v4.3 | 4/4 | Complete    | 2026-04-25 |
 | 28. Object Storage Audit | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
-| 30. HashiCorp Vault Connector | v4.3 | 2/3 | In Progress|  |
+| 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete   | 2026-04-26 |
 | 31. Trend Analysis | v4.3 | 0/0 | Planned | — |
