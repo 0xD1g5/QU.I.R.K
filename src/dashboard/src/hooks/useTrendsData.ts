@@ -21,7 +21,9 @@ export function useTrendsData(): UseTrendsDataResult {
         setError(null)
         const resp = await fetch("/api/trends")
         if (!resp.ok) {
-          setError(`API error: ${resp.status} ${resp.statusText}`)
+          if (!cancelled) {
+            setError(`API error: ${resp.status} ${resp.statusText}`)
+          }
           return
         }
         const json: TrendReport = await resp.json()
