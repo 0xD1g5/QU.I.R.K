@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-25 (Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
+**Last Updated:** 2026-04-25 (Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1622,6 +1622,128 @@ All of these services show status `Up` or `running`:
 - `quirk/scanner/db_connector.py` exists with `PSYCOPG2_AVAILABLE` and `PYMYSQL_AVAILABLE` module-level flags
 - `compute_readiness_score({})` returns `subscores` dict containing `"data_at_rest"` key
 - Live path: HIGH `PostgreSQL/ssl-off` and `MySQL/ssl-off` findings visible in scan output; `data_at_rest` subscore reflects penalisation; CBOM output contains no POSTGRESQL/MYSQL entries in algorithm catalog
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+## Phase 28: Object Storage Audit (UAT-28-XX)
+
+---
+
+### UAT-28-01: S3 Chaos Lab End-to-End — MinIO Bucket Encryption Scan
+
+> Added Phase 28 (2026-04-25): STOR-01 — validate `_scan_s3_encryption` against MinIO chaos lab buckets. Tests S3 severity ladder (HIGH unencrypted, no finding SSE-S3) and dar_storage_* evidence counters.
+
+**Prerequisites:** Docker installed; `quantum-chaos-enterprise-lab/storage/minio-seed.sh` present; Phase 28 complete.
+
+**Steps:**
+1. Start the MinIO storage-s3 profile:
+   ```bash
+   cd quantum-chaos-enterprise-lab && docker compose --profile storage-s3 up -d
+   ```
+2. Wait ~10 seconds for healthcheck + seed to complete.
+3. Configure a test `config.yaml`:
+   ```yaml
+   connectors:
+     enable_s3: true
+     aws_region: us-east-1
+     aws_endpoint_url: http://localhost:29000
+   ```
+4. Set MinIO test credentials:
+   ```bash
+   export AWS_ACCESS_KEY_ID=minioadmin
+   export AWS_SECRET_ACCESS_KEY=minioadmin
+   ```
+5. Run `quirk --config test_lab.yaml`
+6. Inspect output for `protocol=S3` rows.
+
+**Expected:**
+- Exactly 2 `protocol=S3` CryptoEndpoint rows produced (one per bucket)
+- `arn:aws:s3:::encrypted-bucket` → `service_detail=S3/sse-s3`, no severity
+- `arn:aws:s3:::unencrypted-bucket` → `service_detail=S3/unencrypted`, `severity=HIGH`
+- No `OperationNotPageableError` in scan logs
+- Evidence summary: `dar_storage_unencrypted_count == 1`
+- Readiness score `drivers` list includes `Object storage unencrypted`
+
+**Pass Criteria:**
+- `python -m pytest tests/test_s3_encryption.py` → 10 passed
+- `python -m pytest tests/test_dar_storage_scoring.py` → 9 passed
+- Live path: 2 S3 rows in DB; HIGH finding for unencrypted-bucket; dar_storage_unencrypted_count == 1 in evidence
+
+**Teardown:** `docker compose --profile storage-s3 down -v`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-28-02: Azure Blob Live Subscription — Per-Container Encryption Classification
+
+> Added Phase 28 (2026-04-25): STOR-02 — validate `_scan_blob_encryption` against a real Azure subscription. Tests BLOB/platform-managed (MEDIUM) and BLOB/cmk (no finding) key source ladder.
+
+**Prerequisites:** `pip install quirk[cloud]` (installs `azure-mgmt-storage`); Azure CLI logged in (`az login`); subscription with at least 2 storage accounts (one platform-managed, one CMK).
+
+**Steps:**
+1. Configure `azure_uat.yaml`:
+   ```yaml
+   connectors:
+     enable_blob: true
+     azure_subscription_id: <real-uuid>
+   ```
+2. Run `quirk --config azure_uat.yaml`
+3. Inspect output for `protocol=AZURE_BLOB` rows.
+
+**Expected:**
+- One CryptoEndpoint row per blob container across all storage accounts in the subscription
+- Platform-managed accounts produce `service_detail=BLOB/platform-managed` with `severity=MEDIUM`
+- CMK accounts produce `service_detail=BLOB/cmk` with no severity
+- `dar_storage_aws_managed_count` reflects the platform-managed container count
+- No exception traceback in logs
+
+**Pass Criteria:**
+- `python -m pytest tests/test_azure_blob.py` → 7 passed
+- Live path: BLOB/platform-managed rows present with MEDIUM severity; BLOB/cmk rows present with no severity; dar_storage_aws_managed_count > 0 for platform-managed accounts
+
+**Note:** Manual-only — requires live Azure subscription; not run in unit tests.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-28-03: GCS Reuse — Zero Duplicate storage.buckets.list API Call Invariant
+
+> Added Phase 28 (2026-04-25): STOR-03 — verify Phase 28 does NOT issue duplicate `storage.buckets.list` calls. Phase 26 GCS data is reused via the GCS-SUMMARY sentinel endpoint.
+
+**Prerequisites:** `pip install quirk[cloud]`; GCP project with at least one bucket; ADC configured (`gcloud auth application-default login`).
+
+**Steps:**
+1. Configure `gcp_uat.yaml`:
+   ```yaml
+   connectors:
+     enable_gcp: true
+     gcp_project_id: <real-project>
+   ```
+2. Run with verbose logging: `quirk --config gcp_uat.yaml --verbose`
+3. Inspect logs for `gcs_scanning` and `gcs_storage_reuse` phase block timings.
+4. Check audit log (or `--verbose` scan output) for `storage.buckets.list` API call count.
+
+**Expected:**
+- `gcs_scanning` phase block runs (Phase 26 data collection)
+- `gcs_storage_reuse` phase block runs (Phase 28 sentinel read) — confirms helper invoked
+- Total `storage.buckets.list` calls observable in the scan run = 1 (only the Phase 26 call), not 2
+- Per-bucket GCS rows from Phase 26 still appear in DB
+
+**Pass Criteria:**
+- `python -m pytest tests/test_gcs_reuse.py` → 5 passed
+- Live path: `gcs_storage_reuse` timing block present in scan output; no second `storage.buckets.list` call; Phase 26 per-bucket rows intact in DB
+
+**Note:** Manual-only — requires live GCP project for API call verification.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
