@@ -290,7 +290,7 @@ def _enumerate_secret_types(
             host=host_id,
             port=0,
             protocol="KUBERNETES",
-            service_detail="K8S-SECRETS/types-enumerated",
+            service_detail="secret-types-summary",
             dat_scan_json=json.dumps(
                 {"namespace": namespace, "secret_type_counts": type_counts},
                 default=str,
