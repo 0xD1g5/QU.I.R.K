@@ -294,8 +294,12 @@ Plans:
   2. Trend report identifies net-new findings (present in current scan, absent in previous) with counts by severity
   3. Trend report identifies resolved findings (present in previous scan, absent in current) with counts by severity
   4. GET /api/trends returns trend data that the dashboard Trends tab surfaces: readiness score delta and new/resolved finding counts for the two most recent sessions; NULL collision with v4.2-era scan sessions is documented as expected behavior, not treated as a bug
-**Plans**: 0 plans
+**Plans**: 4 plans
 Plans:
+- [ ] 31-01-PLAN.md — RED scaffold: failing unit tests for compute_trend_report() and integration tests for GET /api/trends
+- [ ] 31-02-PLAN.md — GREEN intelligence + API: implement compute_trend_report() and the /api/trends FastAPI route
+- [ ] 31-03-PLAN.md — React frontend: TrendsPage, useTrendsData hook, /trends route, sidebar nav entry
+- [ ] 31-04-PLAN.md — Documentation + UAT-SERIES.md update + Obsidian vault sync
 **UI hint**: yes
 
 ## Phase Details
