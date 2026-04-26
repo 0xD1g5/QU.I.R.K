@@ -60,13 +60,16 @@ connectors:
   enable_k8s: true
   k8s_provider: aks
   aks_clusters:
-    - subscription_id: <azure-subscription-uuid>
-      resource_group: my-rg
+    - resource_group: my-rg
       name: my-aks-cluster
   k8s_namespace: default
   k8s_kubeconfig: ~/.kube/config
   k8s_context: my-aks-context
 ```
+
+> **Note:** The `subscription_id` key is not supported per-cluster entry — only the top-level
+> `azure_subscription_id` parameter is used for all AKS clusters. Multi-subscription AKS
+> scanning requires separate scan runs with different `azure_subscription_id` values.
 
 ## Expected Scan Output
 
