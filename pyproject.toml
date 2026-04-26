@@ -44,6 +44,7 @@ identity = [
 cloud = [
     "google-api-python-client>=2.0.0",
     "google-auth>=2.36.0",
+    "azure-mgmt-storage>=21.0.0",  # Phase 28: Azure Blob encryption audit (STOR-02)
 ]
 db = [
     "psycopg2-binary>=2.9.0",

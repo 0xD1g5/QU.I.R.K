@@ -78,6 +78,10 @@ class ConnectorsCfg:
     mysql_targets: list = field(default_factory=list)
     mysql_scanner_user: Optional[str] = None
     mysql_scanner_password: Optional[str] = None
+    # Object storage connector config (v4.3, Phase 28, per D-04)
+    enable_s3: bool = False
+    enable_blob: bool = False
+    aws_endpoint_url: Optional[str] = None  # MinIO/LocalStack S3 endpoint override
 
 
 @dataclass
