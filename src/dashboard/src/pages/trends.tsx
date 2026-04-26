@@ -71,7 +71,9 @@ function SampleTable({ items }: { items: SampleFinding[] }) {
 
 function formatTs(iso: string | null): string {
   if (!iso) return "—"
-  return new Date(iso).toLocaleString()
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return "—"
+  return d.toLocaleString()
 }
 
 export function TrendsPage() {
