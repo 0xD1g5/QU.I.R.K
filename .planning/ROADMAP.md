@@ -275,8 +275,11 @@ Plans:
   3. Active auth method list flags higher-risk methods (token, LDAP root bind) with remediation guidance; token is sourced from VAULT_TOKEN env var or config
   4. hvac>=2.4.0 is declared in [cloud] extras; connection errors (invalid token, unreachable Vault) produce scan_error findings rather than unhandled exceptions
   5. All Vault findings are stored in dat_scan_json and produce protocol="VAULT" CryptoEndpoint rows
-**Plans**: 0 plans
+**Plans**: 3 plans
 Plans:
+- [ ] 30-01-PLAN.md — RED scaffold: pyproject.toml + ConnectorsCfg + failing tests for vault_connector and DAR scoring
+- [ ] 30-02-PLAN.md — GREEN scanner: implement vault_connector.py (transit + PKI + auth) and wire into run_scan.py
+- [ ] 30-03-PLAN.md — Intelligence + CBOM + chaos lab seed + UAT-SERIES.md updates
 
 ### Phase 31: Trend Analysis
 **Goal**: The intelligence layer can compare the current scan session against the most recent previous session — surfacing score delta, net-new findings, and resolved findings — with results in the dashboard and reports
