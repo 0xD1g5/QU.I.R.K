@@ -206,25 +206,30 @@ def _scan_s3_encryption(
                 return None
 
         def _build_endpoint(bucket):
-            name = bucket.get("Name", "") if isinstance(bucket, dict) else ""
-            if not name:
+            try:
+                name = bucket.get("Name", "") if isinstance(bucket, dict) else ""
+                if not name:
+                    return None
+                classification = _classify(name)
+                if classification is None:
+                    return None
+                ep = CryptoEndpoint(
+                    host=f"arn:aws:s3:::{name}",
+                    port=0,
+                    protocol="S3",
+                    service_detail=classification["service_detail"],
+                    dat_scan_json=json.dumps(
+                        {"bucket": name, **classification}, default=str
+                    ),
+                    scanned_at=ts,
+                )
+                if classification["severity"]:
+                    ep.severity = classification["severity"]
+                return ep
+            except Exception as exc:
+                if logger:
+                    logger.v(f"S3 endpoint build error for bucket {bucket!r}: {exc}")
                 return None
-            classification = _classify(name)
-            if classification is None:
-                return None
-            ep = CryptoEndpoint(
-                host=f"arn:aws:s3:::{name}",
-                port=0,
-                protocol="S3",
-                service_detail=classification["service_detail"],
-                dat_scan_json=json.dumps(
-                    {"bucket": name, **classification}, default=str
-                ),
-                scanned_at=ts,
-            )
-            if classification["severity"]:
-                ep.severity = classification["severity"]
-            return ep
 
         with ThreadPoolExecutor(max_workers=10) as executor:
             for ep in executor.map(_build_endpoint, buckets):
