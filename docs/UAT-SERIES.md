@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-25 (Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
+**Last Updated:** 2026-04-26 (Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1744,6 +1744,136 @@ All of these services show status `Up` or `running`:
 - Live path: `gcs_storage_reuse` timing block present in scan output; no second `storage.buckets.list` call; Phase 26 per-bucket rows intact in DB
 
 **Note:** Manual-only — requires live GCP project for API call verification.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+## Phase 29: Kubernetes Secrets Inspection (UAT-29-XX)
+
+---
+
+### UAT-29-01: EKS Encryption + Secret-Type Enumeration
+
+> Added Phase 29 (2026-04-26): K8S-01/K8S-02 — validate `_scan_eks_encryption` and `_enumerate_secret_types` against a live AWS EKS cluster. Tests encryptionConfig severity ladder (HIGH unencrypted, no severity with keyArn) and secret-type counter invariant (type counts only, never secret values).
+
+**Prerequisites:** `pip install quirk[cloud]`; AWS CLI logged in (`aws configure`); EKS cluster
+with `aws eks update-kubeconfig --name <cluster>` already run; `kubectl get pods -n default` works.
+
+**Steps:**
+1. Configure `eks_uat.yaml`:
+   ```yaml
+   connectors:
+     enable_k8s: true
+     k8s_provider: eks
+     k8s_cluster_name: <cluster>
+     aws_region: <region>
+     k8s_namespace: default
+   ```
+2. Run `quirk --config eks_uat.yaml`
+3. Inspect output for `protocol=KUBERNETES` rows.
+
+**Expected:**
+- One `aws://eks/<cluster>` row with `service_detail` of `EKS/encrypted` OR `EKS/unencrypted` depending on cluster encryptionConfig
+- If encryptionConfig is empty/absent: `service_detail=EKS/unencrypted` and `severity=HIGH`
+- One `<cluster>/secrets` row with `service_detail=secret-types-summary` and `dat_scan_json` containing type counts (Opaque, kubernetes.io/tls, etc.)
+- `dat_scan_json` for the secrets row contains NO secret values — only counts
+- `dar_k8s_unencrypted_count` matches expected count in evidence summary
+- No `OperationNotPageableError` and no `AttributeError` in scan logs
+
+**Pass Criteria:**
+- `python -m pytest tests/test_k8s_connector.py` — 15 passed
+- `python -m pytest tests/test_dar_k8s_scoring.py` — 12 passed
+- Live path: one `aws://eks/<cluster>` KUBERNETES row in DB; `service_detail` reflects actual encryptionConfig; secret-types-summary row contains type counts only
+
+**Note:** Manual-only — requires live AWS EKS cluster.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-29-02: GKE Encryption + Secret-Type Enumeration
+
+> Added Phase 29 (2026-04-26): K8S-01 GKE path — validate `_scan_gke_encryption` and `_enumerate_secret_types` against a live Google Cloud GKE cluster. Tests databaseEncryption.state numeric comparison (== 2 encrypted, != 2 unencrypted).
+
+**Prerequisites:** `pip install quirk[cloud]`; `gcloud auth application-default login`;
+`gcloud container clusters get-credentials <cluster> --region <region> --project <project>` already run.
+
+**Steps:**
+1. Configure `gke_uat.yaml`:
+   ```yaml
+   connectors:
+     enable_k8s: true
+     k8s_provider: gke
+     gke_clusters:
+       - project: my-gcp-project
+         location: us-central1
+         name: my-gke-cluster
+     k8s_namespace: default
+   ```
+2. Run `quirk --config gke_uat.yaml`
+3. Inspect output for `protocol=KUBERNETES` rows.
+
+**Expected:**
+- One `gcp://gke/.../<cluster>` row with `service_detail=GKE/encrypted` (databaseEncryption.state == 2) or `GKE/unencrypted` (databaseEncryption.state != 2)
+- State == 2: no severity; state != 2: `severity=HIGH`
+- One `secret-types-summary` row with type counts in `dat_scan_json`
+- `dar_k8s_unencrypted_count` correctly reflects the cluster's encryption state
+- Per Pitfall 2 in 29-RESEARCH.md: state must be checked numerically (`== 2`), not by string label
+
+**Pass Criteria:**
+- `python -m pytest tests/test_k8s_connector.py` — 15 passed (K8S-01 GKE tests pass)
+- Live path: one GKE KUBERNETES row; `service_detail` matches actual databaseEncryption.state; no AttributeError
+
+**Note:** Manual-only — requires live GKE cluster.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-29-03: AKS Encryption + RBAC Degradation
+
+> Added Phase 29 (2026-04-26): K8S-01 AKS path + K8S-03 RBAC-403 degradation — validate `_scan_aks_encryption` against a live Azure AKS cluster and exercise the graceful RBAC-403 path via a limited-permission service principal.
+
+**Prerequisites:** `pip install quirk[cloud]`; Azure CLI logged in (`az login`); AKS cluster available; service principal with limited permissions prepared for the RBAC-403 test leg.
+
+**Steps:**
+1. Configure `aks_uat.yaml`:
+   ```yaml
+   connectors:
+     enable_k8s: true
+     k8s_provider: aks
+     aks_clusters:
+       - subscription_id: <azure-subscription-uuid>
+         resource_group: my-rg
+         name: my-aks-cluster
+     k8s_namespace: default
+   ```
+2. Run `quirk --config aks_uat.yaml` with full credentials.
+3. Re-run with a service principal that has no `secrets/list` permission in the namespace to exercise the RBAC-403 path.
+
+**Expected (full credentials run):**
+- One `azure://aks/.../<cluster>` row with `service_detail=AKS/kv-kms` if Key Vault KMS enabled, or `AKS/platform-managed` with `severity=MEDIUM` otherwise
+- Three nested getattr defenses produce a finding even on AKS clusters with no `securityProfile` field (Pitfall 4 in 29-RESEARCH.md)
+- No `AttributeError` in logs
+
+**Expected (limited-permission run):**
+- One `secret-types-summary` row replaced by `service_detail=rbac-403` with `severity=MEDIUM`
+- `dar_k8s_inaccessible_count` increments by 1
+- No unhandled exception traceback in logs (graceful K8S-03 degradation)
+
+**Pass Criteria:**
+- `python -m pytest tests/test_k8s_connector.py` — 15 passed (K8S-01 AKS + K8S-02 RBAC-403 tests pass)
+- Live path (full creds): AKS/kv-kms or AKS/platform-managed row present; no exception
+- Live path (limited creds): rbac-403 row present; dar_k8s_inaccessible_count == 1; no traceback
+
+**Note:** Manual-only — requires live Azure AKS cluster and ability to provision a limited-permission service principal.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
