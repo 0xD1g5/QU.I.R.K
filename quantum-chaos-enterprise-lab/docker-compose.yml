@@ -845,6 +845,39 @@ services:
     ports:
       - "23306:3306"
 
+  # ===========================================================================================
+  # PHASE 28 — OBJECT STORAGE PROFILE (profile: storage-s3)
+  # MinIO S3-compatible local server for STOR-01 validation. Distinct from "storage" profile
+  # (which already serves vault/localstack-kms/pgcrypto from earlier phases).
+  # ===========================================================================================
+  minio:
+    image: minio/minio:latest
+    profiles: ["storage-s3"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "29000:9000"
+      - "29001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  minio-seed:
+    image: minio/mc:latest
+    profiles: ["storage-s3"]
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./storage/minio-seed.sh:/minio-seed.sh:ro
+    entrypoint: ["/bin/sh", "/minio-seed.sh"]
+
 volumes:
   id_postgres_data:
   stepca_data:
