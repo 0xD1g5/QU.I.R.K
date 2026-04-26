@@ -54,9 +54,9 @@ Exceptions: Nav touch targets use `min-h-[44px]` per existing `sidebar.tsx` acce
 | Body | 14px (text-sm) | 400 (regular) | 1.5 |
 | Label / table header | 12px (text-xs) | 600 (semibold) | 1.4 |
 | Section heading | 20px | 600 (semibold) | 1.2 |
-| Display / score number | 28px | 700 (bold) | 1.1 |
+| Display / score number | 28px | 600 (semibold) | 1.1 |
 
-Source: `findings.tsx` establishes `text-sm` body, `text-xs font-semibold` for table headers, and `fontSize: 20, fontWeight: 600` for page titles. The score delta number uses 28px to match the executive summary score gauge visual weight.
+Source: `findings.tsx` establishes `text-sm` body, `text-xs font-semibold` for table headers, and `fontSize: 20, fontWeight: 600` for page titles. The score delta number uses 28px to provide sufficient differentiation from section headings at 20px without requiring a separate weight.
 
 ---
 
@@ -130,7 +130,7 @@ The `/trends` page follows the exact established pattern from `findings.tsx` and
 ```
 CardTitle: "Readiness Score"
 CardContent:
-  Previous score (muted) → Current score (foreground, 28px bold) → delta badge
+  Previous score (muted) → Current score (foreground, 28px semibold) → delta badge
 ```
 
 **New / Resolved finding cards internal layout:**
