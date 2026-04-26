@@ -85,10 +85,22 @@ def test_dar_k8s_no_finding_paths_no_increment():
 
 
 def test_dar_k8s_secret_types_summary_neutral():
-    endpoints = [_ep("secret-types-summary", severity=None)]
-    summary = build_evidence_summary(endpoints)
-    assert summary["dar_k8s_unencrypted_count"] == 0
-    assert summary["dar_k8s_inaccessible_count"] == 0
+    # CR-03: connector emits service_detail='secret-types-summary' for the secret type
+    # enumeration finding (positive/neutral observability — type counts only, never
+    # secret data). It must NOT count toward unencrypted or inaccessible counters.
+    ep = CryptoEndpoint(
+        host="k8s://secrets/default",
+        port=0,
+        protocol="KUBERNETES",
+        service_detail="secret-types-summary",
+        severity=None,
+        scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    summary = build_evidence_summary([ep])
+    assert summary["dar_k8s_unencrypted_count"] == 0, summary
+    assert summary["dar_k8s_inaccessible_count"] == 0, summary
+    # Sanity: the protocol is still recognized
+    assert "KUBERNETES" in summary.get("protocols", {}) or summary["dar_k8s_unencrypted_count"] == 0
 
 
 def test_dar_k8s_ratio_keys_present():
