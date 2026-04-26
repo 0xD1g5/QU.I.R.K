@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-26 (Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional)
+**Last Updated:** 2026-04-26 (Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.3. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -3836,6 +3836,64 @@ Each finding object contains:
 ---
 
 # Series 10: Edge Cases & Error Handling
+
+---
+
+### UAT-9-09: Trend Report — Score Delta + New/Resolved Counts (Phase 31)
+
+> Added Phase 31 (2026-04-26): Validates TREND-01/02/03 — compute_trend_report() correctly identifies score delta and per-severity new/resolved finding counts between the two most recent distinct scan sessions, via (host, port, protocol, severity) match key.
+
+**Prerequisites:** SQLite DB with at least 2 distinct scan sessions completed (run quirk twice against any chaos lab profile, with at least 1 second between runs).
+
+**Steps:**
+1. Confirm DB has ≥2 distinct sessions: open quirk-output/*.sqlite and run `SELECT DISTINCT strftime('%Y-%m-%d %H:%M:%S', scanned_at) FROM crypto_endpoint WHERE scanned_at IS NOT NULL ORDER BY scanned_at DESC LIMIT 5;` — expect ≥2 rows.
+2. Start the dashboard backend: `quirk serve` (or `uvicorn quirk.dashboard.api.app:app`).
+3. `curl -s http://localhost:8000/api/trends | jq .` — capture response.
+
+**Expected:**
+- HTTP 200 with the documented schema: sessions, score_delta, new_finding_counts, resolved_finding_counts, scan_errors_new_count, scan_errors_resolved_count, new_findings_sample, resolved_findings_sample.
+- sessions.previous_ts is non-null when ≥2 sessions exist; score_delta is a non-null integer (positive, negative, or zero).
+- new_finding_counts and resolved_finding_counts each contain exactly the keys high, medium, low with non-negative integer values.
+- Sample arrays are length-capped at 5.
+
+**Pass Criteria:**
+- `python -m pytest tests/test_intelligence_trends.py tests/test_dashboard_trends.py -q` is green
+- Response schema matches docs/intelligence-schema.md TrendReport block
+- Sample arrays do not contain INFO-severity rows (D-05 — INFO is excluded from buckets)
+- scan_errors_new_count and scan_errors_resolved_count are reported separately from the severity buckets (D-04 — scan_error rows excluded from finding delta)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
+
+---
+
+### UAT-9-10: Trends Tab — Baseline Empty State (Phase 31)
+
+> Added Phase 31 (2026-04-26): Validates TREND-04 + D-06 — when fewer than 2 distinct scan sessions exist, /trends renders the 'Baseline scan recorded' empty state and score_delta is null (NOT zero). NULL scanned_at rows from v4.2-era data are excluded from session counting (D-13).
+
+**Prerequisites:** Either an empty SQLite DB OR a DB with exactly 1 distinct non-NULL scanned_at session.
+
+**Steps:**
+1. Confirm session count: `SELECT COUNT(DISTINCT strftime('%Y-%m-%d %H:%M:%S', scanned_at)) FROM crypto_endpoint WHERE scanned_at IS NOT NULL;` — expect 0 or 1.
+2. Open the dashboard at http://localhost:8000, click the "Trends" tab in the sidebar.
+3. Confirm the rendered state matches the UI-SPEC empty state copy: "Baseline scan recorded".
+4. Hit `GET /api/trends` directly via curl and inspect the response.
+
+**Expected:**
+- Sidebar shows a Trends nav entry with the TrendingUp lucide icon.
+- /trends page renders the baseline empty state — NO score delta card, NO new/resolved counts, just the empty-state messaging from 31-UI-SPEC.md.
+- API response: score_delta is null (JSON null, not 0); sessions.previous_ts is null; new_finding_counts / resolved_finding_counts / sample arrays are zeroed/empty.
+
+**Pass Criteria:**
+- Trends nav entry visible and active-state styling matches other nav entries
+- Empty-state component rendered (no score delta card)
+- score_delta is JSON null in API response (verify with `jq '.score_delta'` returning null, not 0)
+- A row with scanned_at IS NULL (manually inserted v4.2-era simulation) does NOT count toward the session total — /trends still shows the empty state if that NULL row is the only data
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________  
+**Notes:**
 
 ---
 
