@@ -902,7 +902,7 @@ elif proto == "KUBERNETES":
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **EKS path in aws_connector.py vs k8s_connector.py**
    - What we know: EKS etcd detection uses boto3, not the kubernetes Python client. The boto3
