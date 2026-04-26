@@ -100,11 +100,11 @@ enforces this with the assertion-based test `test_secret_type_enumeration_never_
 
 ### Inaccessible / RBAC-degraded findings (K8S-03)
 
-| host                       | service_detail                       | severity |
-|----------------------------|--------------------------------------|----------|
-| `<cluster-host>`           | `encryption-config-inaccessible`     | `MEDIUM` |
-| `<cluster-host>/secrets`   | `rbac-403`                           | `MEDIUM` |
-| `<cluster-host>`           | `sdk-unavailable`                    | `MEDIUM` |
+| host                       | scan_error / service_detail                                                    | severity |
+|----------------------------|--------------------------------------------------------------------------------|----------|
+| `<cluster-host>`           | `scan_error=encryption-config-inaccessible`                                    | `MEDIUM` |
+| `<cluster-host>/secrets`   | `scan_error=insufficient-rbac-privileges`; `service_detail` contains remediation text | `MEDIUM` |
+| `<cluster-host>`           | `scan_error=sdk-unavailable`                                                   | `MEDIUM` |
 
 The `encryption-config-inaccessible` finding is mandatory whenever the cluster's encryption
 state cannot be determined — the scanner never silently skips a configured cluster (Phase 29
