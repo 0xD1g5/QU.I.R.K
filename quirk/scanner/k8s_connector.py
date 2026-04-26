@@ -290,7 +290,7 @@ def _enumerate_secret_types(
             host=host_id,
             port=0,
             protocol="KUBERNETES",
-            service_detail="K8S-SECRETS/types-enumerated",
+            service_detail="secret-types-summary",
             dat_scan_json=json.dumps(
                 {"namespace": namespace, "secret_type_counts": type_counts},
                 default=str,
@@ -457,6 +457,38 @@ def scan_k8s_targets(
                 credential = None
                 if logger:
                     logger.v(f"Azure credential unavailable: {exc}")
+                # CR-02 (Phase 29 gap closure): K8S-03 invariant requires an explicit
+                # inaccessible finding for every configured AKS cluster when
+                # DefaultAzureCredential cannot be constructed. Without this, a credential
+                # failure silently drops the AKS scan even though clusters were configured.
+                reason = (
+                    f"Azure credential unavailable: {exc}. "
+                    "Configure az login, managed identity, or env vars per "
+                    "DefaultAzureCredential chain."
+                )
+                cfg_items = aks_clusters or []
+                if cfg_items:
+                    for cfg_item in cfg_items:
+                        cn = (
+                            (cfg_item or {}).get("name")
+                            if isinstance(cfg_item, dict)
+                            else None
+                        ) or cluster_name or "aks"
+                        results.append(_emit_inaccessible_finding(
+                            provider="aks",
+                            cluster_name=cn,
+                            reason=reason,
+                            session_start=session_start,
+                        ))
+                else:
+                    # No configured aks_clusters list — still emit one finding so the
+                    # K8S-03 invariant holds for the AKS provider invocation.
+                    results.append(_emit_inaccessible_finding(
+                        provider="aks",
+                        cluster_name=cluster_name or "aks",
+                        reason=reason,
+                        session_start=session_start,
+                    ))
             if credential is not None:
                 results.extend(_scan_aks_encryption(
                     credential=credential,
