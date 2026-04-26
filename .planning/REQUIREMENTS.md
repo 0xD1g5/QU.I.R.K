@@ -50,10 +50,10 @@ These close NEW-ISSUE-1 (OIDC RS256 mislabeled as TLS-sourced) and ISSUE-2 (ldap
 
 ### Trend Analysis
 
-- [ ] **TREND-01**: Intelligence layer computes a readiness score delta between the current scan session and the most recent previous scan session, using the existing `scanned_at` grouping from `list_scans()`
-- [ ] **TREND-02**: Trend report identifies net-new findings — endpoints or algorithm findings present in the current scan but absent in the previous scan — with counts by severity
-- [ ] **TREND-03**: Trend report identifies resolved findings — endpoints or algorithm findings present in the previous scan but absent in the current — with counts by severity
-- [ ] **TREND-04**: Dashboard surfaces trend data: readiness score delta and new/resolved finding counts for the two most recent scan sessions
+- [x] **TREND-01**: Intelligence layer computes a readiness score delta between the current scan session and the most recent previous scan session, using the existing `scanned_at` grouping from `list_scans()`
+- [x] **TREND-02**: Trend report identifies net-new findings — endpoints or algorithm findings present in the current scan but absent in the previous scan — with counts by severity
+- [x] **TREND-03**: Trend report identifies resolved findings — endpoints or algorithm findings present in the previous scan but absent in the current — with counts by severity
+- [x] **TREND-04**: Dashboard surfaces trend data: readiness score delta and new/resolved finding counts for the two most recent scan sessions
 
 ## Future Requirements
 
