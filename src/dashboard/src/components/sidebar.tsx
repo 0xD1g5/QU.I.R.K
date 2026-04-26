@@ -9,6 +9,7 @@ import {
   Database,
   GitBranch,
   Fingerprint,
+  TrendingUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { path: "/certificates", label: "Certificates", Icon: Shield },
   { path: "/cbom", label: "CBOM Viewer", Icon: Database },
   { path: "/roadmap", label: "Migration Roadmap", Icon: GitBranch },
+  { path: "/trends", label: "Trends", Icon: TrendingUp },
 ]
 
 export function Sidebar() {
