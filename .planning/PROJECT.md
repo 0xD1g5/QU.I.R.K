@@ -87,7 +87,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Object storage audit — S3 severity ladder (HIGH/MEDIUM/None via ThreadPoolExecutor), Azure Blob keySource ladder (CMK/platform-managed), GCS sentinel reuse (zero duplicate API calls); dar_storage_* evidence counters + SCORE_WEIGHTS (12.0/4.0); CBOM Pass 1/2/3 skip-lists; MinIO chaos lab (storage-s3 profile); UAT-28-01/02/03 — Validated in Phase 28
 - ✓ Kubernetes secrets inspection — EKS/GKE/AKS managed encryption APIs, secret type enumeration, RBAC-403 degradation, K8S-03 inaccessible-finding invariant; dar_k8s_* evidence counters + CBOM integration — Validated in Phase 29
 - ✓ HashiCorp Vault connector — transit keys (VAULT-01 + PQC), PKI root+intermediate CA (VAULT-02), auth method risk tiering (VAULT-03); dar_vault_weak_count HIGH-only counter; CBOM Pass 1 algorithm registration, Pass 2+3 skip; dedicated --profile vault chaos lab (port 28200); conftest.py SHA-1 shim for cryptography 46.x — Validated in Phase 30
-- [ ] Trend analysis across scan sessions — score delta, new/resolved findings, degraded host tracking (BACK-21)
+- ✓ Trend analysis across scan sessions — score delta (D-01 match key), net-new/resolved findings by severity, scan error delta, React /trends dashboard page, UAT-9-09/10 — Validated in Phase 31
 
 **v4.4 Data in Motion (Planned)**
 - [ ] Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 via sslyze handoff
@@ -113,7 +113,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.3.0 — Phase 30 (HashiCorp Vault connector) complete 2026-04-26; v4.3 Data at Rest continues with Phase 31 trend analysis
+- **Current version**: v4.3.0 — Phase 31 (Trend Analysis) complete 2026-04-26; v4.3 Data at Rest milestone complete
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
@@ -154,7 +154,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | ldap3 deferred to Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; KERB-03 LDAP path always degrades gracefully | ⚠ Revisit — fix is one dependency line in v4.3 Phase 25; LDAP enumeration inert until then |
 
 ---
-*Last updated: 2026-04-26 — Phase 29 (Kubernetes secrets inspection) complete; v4.3 continues with HashiCorp Vault connector (Phase 30) and trend analysis (Phase 31).*
+*Last updated: 2026-04-26 — Phase 31 (Trend Analysis) complete; v4.3 Data at Rest milestone fully delivered.*
 
 ## Evolution
 
