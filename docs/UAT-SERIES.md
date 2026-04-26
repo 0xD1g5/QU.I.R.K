@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-26 (Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
+**Last Updated:** 2026-04-26 (Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.3. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1874,6 +1874,103 @@ with `aws eks update-kubeconfig --name <cluster>` already run; `kubectl get pods
 - Live path (limited creds): KUBERNETES row with `scan_error=insufficient-rbac-privileges` present; `dar_k8s_inaccessible_count == 1`; no traceback
 
 **Note:** Manual-only — requires live Azure AKS cluster and ability to provision a limited-permission service principal.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+## Phase 30: HashiCorp Vault Connector (UAT-30-XX)
+
+### UAT-30-01: Vault Chaos Lab End-to-End — Transit + PKI + Auth Findings
+
+> Added Phase 30 (2026-04-26): Validates VAULT-01/02/03 against the dedicated `--profile vault`
+> Docker chaos lab. Confirms all 5 expected findings (transit classification, exportable
+> MEDIUM, PKI HIGH, token HIGH, userpass MEDIUM) are emitted.
+
+**Prerequisites:** `pip install quirk[cloud]`; Docker available.
+
+**Steps:**
+1. `cd quantum-chaos-enterprise-lab && docker compose --profile vault up -d`
+2. Wait for `vault-30-seed` to exit successfully (`docker compose --profile vault ps`)
+3. Configure `vault_uat.yaml` with `enable_vault: true`, `vault_addr: http://localhost:28200`,
+   `vault_token: root`
+4. Run `quirk --config vault_uat.yaml`
+5. Confirm CryptoEndpoint rows match `labs/vault/expected_results.md`
+6. `docker compose --profile vault down -v`
+
+**Expected:**
+- 5 `protocol="VAULT"` rows produced (1 classification, 1 MEDIUM transit, 1 HIGH PKI,
+  1 HIGH token auth, 1 MEDIUM userpass auth)
+- `dar_vault_weak_count == 2` (HIGH-only)
+- `data_at_rest` subscore reduced
+- CBOM contains `RSA-2048` algorithm registration from transit key
+
+**Pass Criteria:**
+- `python -m pytest tests/test_vault_connector.py tests/test_dar_vault_scoring.py -q` — all pass
+- Live chaos lab: 5 vault rows present in `quirk-output/scan-results.json`
+- `dar_vault_weak_count` in evidence summary equals 2
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-30-02: Vault PKI Root + Intermediate CA Detection
+
+> Added Phase 30 (2026-04-26): VAULT-02 — exercises D-03 (root + intermediate CA each emit a
+> separate endpoint) and D-04 (intermediate-failure swallowed silently).
+
+**Prerequisites:** Live HashiCorp Vault instance with PKI mount that has both a root CA and
+generated intermediate (or use chaos lab and `vault write pki_int/intermediate/generate/internal ...`
+manually).
+
+**Steps:**
+1. With chaos lab running: `docker exec -it $(docker compose --profile vault ps -q vault-30) sh`
+2. `vault secrets enable -path=pki_int pki && vault write pki_int/root/generate/internal common_name="intermediate.local" key_type=rsa key_bits=4096 ttl=8760h`
+3. Re-run `quirk --config vault_uat.yaml`
+4. Confirm an additional `service_detail="PKI/pki_int"` row OR a `:intermediate-1` row emerges
+
+**Expected:**
+- For each PKI mount with a chain configured, the scanner emits `PKI/<mount>` (root) AND one
+  or more `PKI/<mount>:intermediate-N` endpoints
+- For PKI mounts with NO intermediate, `read_ca_certificate_chain` raises and the scanner
+  silently returns the root endpoint only (D-04)
+
+**Pass Criteria:**
+- No exception traceback in scanner logs even when intermediate is absent
+- Both root and intermediate rows present when a chain exists
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-30-03: Vault Auth Method Risk Tiering
+
+> Added Phase 30 (2026-04-26): VAULT-03 — confirms D-05 (token always HIGH unconditional even
+> when AppRole/Kubernetes/OIDC are present) and D-06 (AUTH_RISK_MAP tiers).
+
+**Prerequisites:** Chaos lab running.
+
+**Steps:**
+1. With chaos lab running: `docker exec -it $(docker compose --profile vault ps -q vault-30) sh`
+2. `vault auth enable approle && vault auth enable kubernetes` (positive-posture methods)
+3. Re-run `quirk --config vault_uat.yaml`
+4. Inspect emitted vault auth rows
+
+**Expected:**
+- `auth/token` row with `severity=HIGH` is STILL emitted (D-05 — even though approle is also
+  enabled, token is unconditional)
+- `auth/userpass` row with `severity=MEDIUM`
+- NO row for `auth/approle` or `auth/kubernetes` (D-06 — positive posture)
+
+**Pass Criteria:**
+- Vault auth row count: exactly 2 (token HIGH + userpass MEDIUM)
+- No row produced for approle or kubernetes
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
