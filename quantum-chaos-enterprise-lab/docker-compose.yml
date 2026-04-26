@@ -716,6 +716,45 @@ services:
       VAULT_DEV_ROOT_TOKEN_ID: "root"
     entrypoint: ["/bin/sh", "/vault-seed.sh"]
 
+  # =========================
+  # PHASE 30 — HASHICORP VAULT PROFILE (profile: vault)
+  # LAB-30: Dedicated Vault dev server with seed scenarios for VAULT-01/02/03
+  # Port: 28200 (safe range — does NOT collide with existing storage/vault at 20009)
+  # Image: hashicorp/vault:1.17 (latest stable as of 2026-04)
+  # =========================
+  vault-30:
+    image: hashicorp/vault:1.17
+    profiles: ["vault"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    ports:
+      - "28200:8200"
+    cap_add:
+      - IPC_LOCK
+    command: ["vault", "server", "-dev"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  vault-30-seed:
+    image: hashicorp/vault:1.17
+    profiles: ["vault"]
+    restart: "no"
+    depends_on:
+      vault-30:
+        condition: service_healthy
+    volumes:
+      - ./vault/seed.sh:/seed.sh:ro
+    environment:
+      VAULT_ADDR: "http://vault-30:8200"
+      VAULT_TOKEN: "root"
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+    entrypoint: ["/bin/sh", "/seed.sh"]
+
   postgres-pgcrypto:
     image: postgres:16
     profiles: ["storage"]
