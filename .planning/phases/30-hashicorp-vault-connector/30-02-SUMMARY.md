@@ -162,6 +162,18 @@ Plan 30-03 can proceed immediately. The scanner output is ready:
 - `run_scan.py` aggregates `vault_endpoints` into the `endpoints` tuple (feeds `evaluate_endpoints`, DB persistence, CBOM builder)
 - Plan 30-03 needs: `dar_vault_weak_count` counter in evidence.py, `dar_vault_weak_ratio` in scoring.py, CBOM Pass-2/3 "VAULT" skip-list entries, chaos lab vault profile, docs
 
+## Self-Check: PASSED
+
+- [x] `quirk/scanner/vault_connector.py` exists (466 lines)
+- [x] `run_scan.py` has vault_scanning block and + vault_endpoints in aggregation
+- [x] `tests/conftest.py` has SHA1 cert shim
+- [x] `.planning/phases/30-hashicorp-vault-connector/30-02-SUMMARY.md` exists
+- [x] Commit `9ba4227` (Task 1) verified in git log
+- [x] Commit `c55ad6e` (Task 2) verified in git log
+- [x] Commit `da30747` (SUMMARY.md) verified in git log
+- [x] All 22 vault_connector tests pass (22 passed in 2.25s)
+- [x] No new regressions (468 existing tests pass, 3 pre-existing failures unchanged)
+
 ---
 *Phase: 30-hashicorp-vault-connector*
 *Completed: 2026-04-26*
