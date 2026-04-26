@@ -81,6 +81,35 @@ def _phase_timer(run_stats: Dict[str, Any], name: str):
     return _T()
 
 
+def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
+    """Read gcs_scan_json from the GCS-SUMMARY sentinel produced by Phase 26 (STOR-03).
+
+    STOR-03 invariant: this function makes ZERO new GCS API calls. Phase 26 already wrote
+    per-bucket CryptoEndpoint rows into gcp_endpoints; this helper only consumes the
+    sentinel's gcs_scan_json blob to confirm the data hand-off works. No new endpoints are
+    created here — the per-bucket rows are already present.
+
+    Returns [] always. Future phases may extend this to derive additional findings from the
+    sentinel JSON without making new API calls.
+    """
+    import json as _json
+    sentinel = next(
+        (ep for ep in (gcp_endpoints or []) if getattr(ep, "cert_pubkey_alg", "") == "GCS-SUMMARY"),
+        None,
+    )
+    if sentinel is None:
+        return []
+    raw = getattr(sentinel, "gcs_scan_json", None)
+    if not raw:
+        return []
+    try:
+        _json.loads(raw)  # validate JSON (informational; result not used)
+    except (ValueError, TypeError):
+        return []
+    # STOR-03 satisfied: Phase 26's per-bucket rows already in gcp_endpoints; no API call here.
+    return []
+
+
 def main():
     # --- init subcommand: intercept before scan argparse ---
     import sys as _sys
@@ -498,6 +527,58 @@ def main():
                     session_start=session_start,
                 ))
 
+    # ==============================
+    # S3 object storage encryption (Phase 28, STOR-01)
+    # ==============================
+    s3_endpoints = []
+    with _phase_timer(run_stats, "s3_scanning"):
+        if cfg.connectors.enable_s3:
+            from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
+            if not BOTO3_AVAILABLE:
+                logger.v("boto3 not installed — S3 scanning skipped")
+            else:
+                import boto3
+                s3_session = boto3.Session(
+                    region_name=cfg.connectors.aws_region,
+                    profile_name=cfg.connectors.aws_profile,
+                )
+                s3_endpoints = _scan_s3_encryption(
+                    session=s3_session,
+                    logger=logger,
+                    session_start=session_start,
+                    endpoint_url=cfg.connectors.aws_endpoint_url or None,
+                )
+                logger.info("S3 scan: %d bucket endpoints", len(s3_endpoints))
+
+    # ==============================
+    # Azure Blob container encryption (Phase 28, STOR-02)
+    # ==============================
+    blob_endpoints = []
+    with _phase_timer(run_stats, "blob_scanning"):
+        if cfg.connectors.enable_blob:
+            from quirk.scanner.azure_connector import _scan_blob_encryption, AZURE_AVAILABLE, DefaultAzureCredential
+            if not AZURE_AVAILABLE:
+                logger.v("azure SDK not installed — Azure Blob scanning skipped")
+            elif not (cfg.connectors.azure_subscription_id or "").strip():
+                logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
+            else:
+                blob_endpoints = _scan_blob_encryption(
+                    credential=DefaultAzureCredential(),
+                    subscription_id=cfg.connectors.azure_subscription_id,
+                    logger=logger,
+                    session_start=session_start,
+                )
+                logger.info("Azure Blob scan: %d container endpoints", len(blob_endpoints))
+
+    # ==============================
+    # GCS bucket encryption re-use (Phase 28, STOR-03 — zero API call invariant)
+    # ==============================
+    gcs_storage_endpoints = []
+    with _phase_timer(run_stats, "gcs_storage_reuse"):
+        gcs_storage_endpoints = _process_gcs_storage_encryption(gcp_endpoints, logger=logger)
+        if gcs_storage_endpoints:
+            logger.info("GCS storage re-use: %d derived endpoints", len(gcs_storage_endpoints))
+
     # ── DNSSEC scanning ─────────────────────────────────────
     dnssec_endpoints = []
     with _phase_timer(run_stats, "dnssec_scanning"):
@@ -543,6 +624,7 @@ def main():
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + aws_endpoints + azure_endpoints + gcp_endpoints
                  + db_endpoints
+                 + s3_endpoints + blob_endpoints + gcs_storage_endpoints
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints)
 
     # ==============================
