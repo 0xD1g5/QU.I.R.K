@@ -10,6 +10,7 @@ import { IdentityPage } from "@/pages/identity"
 import { CertificatesPage } from "@/pages/certificates"
 import { CbomPage } from "@/pages/cbom"
 import { RoadmapPage } from "@/pages/roadmap"
+import { TrendsPage } from "@/pages/trends"
 
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
                   <Route path="/certificates" element={<CertificatesPage />} />
                   <Route path="/cbom" element={<CbomPage />} />
                   <Route path="/roadmap" element={<RoadmapPage />} />
+                  <Route path="/trends" element={<TrendsPage />} />
                   <Route path="/print" element={<PrintPage />} />
                 </Routes>
               </div>
