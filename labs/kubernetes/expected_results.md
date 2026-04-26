@@ -42,13 +42,16 @@ connectors:
   enable_k8s: true
   k8s_provider: gke
   gke_clusters:
-    - project: my-gcp-project
-      location: us-central1
+    - location: us-central1
       name: my-gke-cluster
   k8s_namespace: default
   k8s_kubeconfig: ~/.kube/config
   k8s_context: gke_my-gcp-project_us-central1_my-gke-cluster
 ```
+
+> **Note:** The `project` key is not supported per-cluster entry — only the top-level
+> `gcp_project_id` parameter is used to identify the GCP project for all GKE clusters.
+> Multi-project GKE scanning requires separate scan runs with different `gcp_project_id` values.
 
 ### AKS (Azure)
 
@@ -108,7 +111,7 @@ Plan 02 enforces this invariant).
 
 Evidence summary additions:
 - `dar_k8s_unencrypted_count`: count of `EKS/unencrypted` + `GKE/unencrypted` rows
-- `dar_k8s_inaccessible_count`: count of `AKS/platform-managed` + `encryption-config-inaccessible` + `rbac-403` rows
+- `dar_k8s_inaccessible_count`: count of `AKS/platform-managed` rows + rows with `scan_error=encryption-config-inaccessible` + rows with `scan_error=insufficient-rbac-privileges`
 - `dar_k8s_unencrypted_ratio`: count / total endpoints
 - `dar_k8s_inaccessible_ratio`: count / total endpoints
 
