@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-26T11:02:48.952Z",
+  "phase": "28",
+  "phase_name": "object-storage-audit",
+  "phase_dir": ".planning/phases/28-object-storage-audit",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "complete",
+  "completed_tasks": [
+    {"id": 1, "name": "28-01: RED scaffold (config, deps, test stubs)", "status": "done", "commit": "45b50e9"},
+    {"id": 2, "name": "28-02: GREEN pass (S3, Azure Blob, GCS implementations)", "status": "done", "commit": "3660e5a"},
+    {"id": 3, "name": "28-03: Integration (evidence, scoring, CBOM, chaos lab)", "status": "done", "commit": "f92e789"},
+    {"id": 4, "name": "Code review fixes (CR-01 f-strings, WR-01 exception guard)", "status": "done", "commit": "3660e5a"},
+    {"id": 5, "name": "Verification (8/9 automated checks passed)", "status": "done", "commit": "f92e789"},
+    {"id": 6, "name": "docs(phase-28): evolve PROJECT.md", "status": "done", "commit": "7f631ed"}
+  ],
+  "remaining_tasks": [],
+  "blockers": [],
+  "human_actions_pending": [
+    {
+      "action": "UAT-28-01: S3 MinIO chaos lab end-to-end",
+      "context": "Boot docker compose --profile storage-s3 up -d in quantum-chaos-enterprise-lab; configure test config.yaml with enable_s3:true, aws_endpoint_url:http://localhost:29000; run quirk; verify 2 S3 rows and dar_storage_unencrypted_count==1",
+      "blocking": false
+    },
+    {
+      "action": "UAT-28-02: Azure Blob live subscription scan",
+      "context": "Requires real Azure subscription with 2+ storage accounts; pip install quirk[cloud]; configure enable_blob:true + azure_subscription_id; run quirk",
+      "blocking": false
+    },
+    {
+      "action": "UAT-28-03: GCS reuse zero-API-call invariant at runtime",
+      "context": "Requires live GCP project with ADC configured; run quirk with enable_gcp:true; confirm storage.buckets.list call count == 1 (Phase 26 only)",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "protocol='S3' and protocol='AZURE_BLOB' used instead of ROADMAP SC-5 protocol='STORAGE'",
+      "rationale": "Locked design decisions D-05/D-06 in 28-CONTEXT.md supersede the draft ROADMAP text; more specific protocol values are functionally correct",
+      "phase": "28"
+    },
+    {
+      "decision": "_process_gcs_storage_encryption returns [] by design",
+      "rationale": "GCS bucket rows already exist in gcp_endpoints from Phase 26; zero-API-call invariant is the intent; Phase 28 reuses without re-fetching",
+      "phase": "28"
+    }
+  ],
+  "uncommitted_files": [
+    ".planning/phases/28-object-storage-audit/28-PATTERNS.md",
+    "quantum-chaos-enterprise-lab/certs/mtls.crt",
+    "quantum-chaos-enterprise-lab/certs/mtls.csr",
+    "quantum-chaos-enterprise-lab/certs/mtls.ext",
+    "quantum-chaos-enterprise-lab/certs/mtls.key",
+    "quantum-chaos-enterprise-lab/certs/scenarios/",
+    "quirk-output/",
+    ".clone/"
+  ],
+  "next_action": "Run /gsd-plan-phase 29 to plan Phase 29 (Kubernetes Secrets Inspection). Phase 30 (HashiCorp Vault) is also eligible as it only depends on Phase 27.",
+  "context_notes": "Phase 28 is fully complete. All 3 plans executed, code review applied, verification passed (8/9 automated; 1 unit-only due to GCS zero-API invariant needing runtime confirmation). 3 human UAT items are non-blocking — they require live cloud infra. The v4.3 milestone has phases 25-28 complete (25, 26, 27, 28 done). Phases 29, 30, 31 remain. Phase 29 and 30 can proceed in parallel (both depend only on 27). Phase 31 needs 27+28+29+30."
+}
