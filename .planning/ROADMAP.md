@@ -249,7 +249,7 @@ Plans:
   5. All object storage findings are stored in dat_scan_json and produce protocol="STORAGE" CryptoEndpoint rows; results appear in the CBOM
 **Plans**: 3 plans
 Plans:
-- [ ] 28-01-PLAN.md — RED scaffold: pyproject [cloud] extras, ConnectorsCfg fields, 5 RED test files
+- [x] 28-01-PLAN.md — RED scaffold: pyproject [cloud] extras, ConnectorsCfg fields, 5 RED test files
 - [ ] 28-02-PLAN.md — GREEN: _scan_s3_encryption, _scan_blob_encryption, run_scan.py wiring
 - [ ] 28-03-PLAN.md — Evidence/scoring/CBOM extensions, MinIO chaos lab, docs/UAT updates
 
