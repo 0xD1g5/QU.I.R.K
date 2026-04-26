@@ -128,7 +128,7 @@ export function TrendsPage() {
             <CardTitle>New Findings</CardTitle>
           </CardHeader>
           <CardContent className="flex gap-3 text-sm">
-            <Badge className={SEVERITY_STYLES.HIGH}>HIGH {data.new_high}</Badge>
+            <Badge className={SEVERITY_STYLES.CRITICAL}>CRITICAL/HIGH {data.new_high}</Badge>
             <Badge className={SEVERITY_STYLES.MEDIUM}>MEDIUM {data.new_medium}</Badge>
             <Badge className={SEVERITY_STYLES.LOW}>LOW {data.new_low}</Badge>
           </CardContent>
@@ -139,7 +139,7 @@ export function TrendsPage() {
             <CardTitle>Resolved Findings</CardTitle>
           </CardHeader>
           <CardContent className="flex gap-3 text-sm">
-            <Badge className={SEVERITY_STYLES.HIGH}>HIGH {data.resolved_high}</Badge>
+            <Badge className={SEVERITY_STYLES.CRITICAL}>CRITICAL/HIGH {data.resolved_high}</Badge>
             <Badge className={SEVERITY_STYLES.MEDIUM}>MEDIUM {data.resolved_medium}</Badge>
             <Badge className={SEVERITY_STYLES.LOW}>LOW {data.resolved_low}</Badge>
           </CardContent>
