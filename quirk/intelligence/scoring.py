@@ -18,6 +18,8 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "identity_dnssec_weak_algo_ratio": 8.0,
     "dar_db_plaintext_ratio": 12.0,
     "dar_db_weak_ssl_ratio": 6.0,
+    "dar_storage_unencrypted_ratio": 12.0,   # Phase 28 D-10 — same weight as plaintext DB
+    "dar_storage_aws_managed_ratio": 4.0,    # Phase 28 D-10 — compliance gap, not active weakness
     "agility_high_impact_ratio": 14.0,
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
@@ -128,6 +130,8 @@ def compute_readiness_score(
     dnssec_weak_count = max(0, _as_int(evidence.get("dnssec_weak_algo_count", 0)))
     dar_db_plaintext = max(0, _as_int(evidence.get("dar_db_plaintext_count", 0)))
     dar_db_weak_ssl = max(0, _as_int(evidence.get("dar_db_weak_ssl_count", 0)))
+    dar_storage_unencrypted = max(0, _as_int(evidence.get("dar_storage_unencrypted_count", 0)))
+    dar_storage_aws_managed = max(0, _as_int(evidence.get("dar_storage_aws_managed_count", 0)))
 
     hygiene_impacts: List[Tuple[str, float]] = [
         ("Plaintext HTTP exposure", -_ratio(plaintext_http_count, denom) * w["hygiene_plaintext_http_ratio"]),
@@ -168,6 +172,8 @@ def compute_readiness_score(
     dar_impacts: List[Tuple[str, float]] = [
         ("Database plaintext connections", -_ratio(dar_db_plaintext, denom) * w["dar_db_plaintext_ratio"]),
         ("Database weak SSL configuration", -_ratio(dar_db_weak_ssl, denom) * w["dar_db_weak_ssl_ratio"]),
+        ("Object storage unencrypted", -_ratio(dar_storage_unencrypted, denom) * w["dar_storage_unencrypted_ratio"]),
+        ("Object storage platform-managed keys", -_ratio(dar_storage_aws_managed, denom) * w["dar_storage_aws_managed_ratio"]),
     ]
     dar_score, dar_drivers = _apply_weighted_impacts(dar_impacts)
 
