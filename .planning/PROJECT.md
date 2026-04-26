@@ -84,7 +84,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Identity Findings Accuracy (Phase 25) — RS-family OIDC check in _derive_identity_findings(), TLS-bleed guard in _derive_findings(), ldap3>=2.9.1 in [identity] extras, chaos lab expected results — Validated in Phase 25
 - ✓ GCP connector — Cloud KMS (47-entry algorithm map including PQC), Cloud SQL TLS enforcement, GCS CMEK detection; `[cloud]` extras group; gcs_scan_json ORM column; CBOM Pass 1/2/3 integration — Validated in Phase 26
 - ✓ Database encryption detection — PostgreSQL 3-tier SSL probe (pg_has_role), MySQL Ssl_cipher scanner, RDS StorageEncrypted+KmsKeyId; `[db]` extras group; `dat_scan_json` ORM column; `dar_` evidence counters + `data_at_rest` as 5th subscore; CBOM Pass 1/2/3 integration; Docker chaos lab database profile (25432/23306) — Validated in Phase 27
-- [ ] Object storage audit — S3 (SSE-S3/SSE-KMS), Azure Blob (CMK/platform key), GCS bucket encryption policies
+- ✓ Object storage audit — S3 severity ladder (HIGH/MEDIUM/None via ThreadPoolExecutor), Azure Blob keySource ladder (CMK/platform-managed), GCS sentinel reuse (zero duplicate API calls); dar_storage_* evidence counters + SCORE_WEIGHTS (12.0/4.0); CBOM Pass 1/2/3 skip-lists; MinIO chaos lab (storage-s3 profile); UAT-28-01/02/03 — Validated in Phase 28
 - [ ] Kubernetes secrets inspection — etcd EncryptionConfiguration, secret types
 - [ ] HashiCorp Vault connector — transit keys, PKI mounts, auth method audit
 - [ ] Trend analysis across scan sessions — score delta, new/resolved findings, degraded host tracking (BACK-21)
@@ -113,16 +113,16 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.3.0 — Phase 27 (database encryption detection) complete 2026-04-25; v4.3 Data at Rest continues with object storage, K8s secrets, Vault, trend analysis
+- **Current version**: v4.3.0 — Phase 28 (object storage audit) complete 2026-04-26; v4.3 Data at Rest continues with K8s secrets, Vault, trend analysis
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
-- **Chaos lab**: Docker Compose, 13 profiles (core + 6 Phase 4 additions + 3 v4.2 identity: dnssec/saml/kerberos)
+- **Chaos lab**: Docker Compose, 14 profiles (core + 6 Phase 4 additions + 3 v4.2 identity: dnssec/saml/kerberos + storage-s3 Phase 28)
 - **Business model**: Consulting deliverable — tool enables billable assessments
 - **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
-- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, identity protocol scanning (Kerberos/SAML/DNSSEC), chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 352 tests passing (pytest); all Nyquist VALIDATION.md files up to date
+- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, identity protocol scanning (Kerberos/SAML/DNSSEC), object storage encryption auditing (S3/Azure Blob/GCS), chaos lab for client-side scanner validation, polished HTML/PDF reports
+- **Test coverage**: 418 tests passing (pytest); all Nyquist VALIDATION.md files up to date
 - **Known tech debt**: ISSUE-2 (ldap3 absent from pyproject.toml — KERB-03 LDAP always inerts), NEW-ISSUE-1 (OIDC RS256 findings mislabeled as TLS-sourced) — both Phase 25 targets in v4.3
 - **v4.2 milestone shipped** (2026-04-24): 8 phases (17–24), 14 plans — full identity protocol surface: DNSSEC + SAML/OIDC + Kerberos scanners, 3 chaos lab profiles, Identity tab in dashboard, CBOM integration, scan-session timestamp isolation
 
