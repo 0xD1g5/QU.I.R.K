@@ -251,7 +251,7 @@ Plans:
 Plans:
 - [x] 28-01-PLAN.md — RED scaffold: pyproject [cloud] extras, ConnectorsCfg fields, 5 RED test files
 - [x] 28-02-PLAN.md — GREEN: _scan_s3_encryption, _scan_blob_encryption, run_scan.py wiring
-- [ ] 28-03-PLAN.md — Evidence/scoring/CBOM extensions, MinIO chaos lab, docs/UAT updates
+- [x] 28-03-PLAN.md — Evidence/scoring/CBOM extensions, MinIO chaos lab, docs/UAT updates
 
 ### Phase 29: Kubernetes Secrets Inspection
 **Goal**: QU.I.R.K. can detect etcd encryption status and enumerate secret types on managed Kubernetes clusters — using managed cloud APIs without requiring direct etcd access or agent installation on cluster nodes
