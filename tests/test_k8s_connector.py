@@ -262,7 +262,7 @@ def test_secret_type_counts_basic():
     ep = _enumerate_secret_types(mock_v1, namespace="default", logger=None)
     assert ep is not None
     assert ep.protocol == "KUBERNETES"
-    assert ep.service_detail == "K8S-SECRETS/types-enumerated"
+    assert ep.service_detail == "secret-types-summary"
     payload = json.loads(ep.dat_scan_json)
     counts = payload["secret_type_counts"]
     assert counts["Opaque"] == 2
