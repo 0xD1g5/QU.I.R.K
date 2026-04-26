@@ -1,182 +1,130 @@
 ---
 phase: 29-kubernetes-secrets-inspection
-verified: 2026-04-26T18:00:00Z
-status: gaps_found
-score: 3/4 roadmap success criteria verified (SC-1 and SC-4 partial; see gaps)
+verified: 2026-04-26T14:00:00Z
+status: passed
+score: 7/7 must-haves verified
 overrides_applied: 0
-gaps:
-  - truth: "When etcd encryption state cannot be determined, scanner emits explicit encryption-config-inaccessible finding — never silently skips (K8S-03 invariant)"
-    status: partial
-    reason: "AKS credential failure silently drops the AKS cluster without emitting inaccessible finding — K8S-03 invariant violated for AKS DefaultAzureCredential exceptions. Confirmed in codebase: k8s_connector.py lines 453-467 set credential=None and skip _scan_aks_encryption without calling _emit_inaccessible_finding for each configured AKS cluster."
-    artifacts:
-      - path: "quirk/scanner/k8s_connector.py"
-        issue: "Lines 453-467: except block sets credential=None and skips scan; no inaccessible finding emitted for configured aks_clusters. The final safety net at line 495 does not fire if another provider (GKE) or secret enum produces results."
-    missing:
-      - "Emit _emit_inaccessible_finding for each cfg_item in aks_clusters when DefaultAzureCredential raises"
-
-  - truth: "RBAC 403 errors produce insufficient-rbac-privileges findings that are counted in dar_k8s_inaccessible_count"
-    status: failed
-    reason: "CR-01 confirmed: evidence.py KUBERNETES branch checks 'rbac-403' in service_detail, but the live connector emits scan_error='insufficient-rbac-privileges' with service_detail='Remediation: RBAC role requires...' — substring 'rbac-403' never appears in service_detail. dar_k8s_inaccessible_count is 0 for RBAC 403 findings. Test test_dar_k8s_inaccessible_count_rbac_403 passes against synthetic endpoint with service_detail='rbac-403', NOT the string the real connector emits — false-green coverage."
-    artifacts:
-      - path: "quirk/intelligence/evidence.py"
-        issue: "Line 196: checks 'rbac-403' in sd (service_detail only) but connector emits scan_error='insufficient-rbac-privileges'. Evidence counter never increments for live RBAC 403 findings."
-      - path: "tests/test_dar_k8s_scoring.py"
-        issue: "Line 75: test_dar_k8s_inaccessible_count_rbac_403 creates endpoint with service_detail='rbac-403' — a string the connector never emits. Test is a false-green."
-    missing:
-      - "Add scan_error check to evidence.py KUBERNETES elif: also check scan_err == 'insufficient-rbac-privileges'"
-      - "Update test_dar_k8s_inaccessible_count_rbac_403 to use the connector's actual service_detail string, or set scan_error='insufficient-rbac-privileges'"
-
-  - truth: "service_detail emitted by secret type enumeration matches documented and user-visible value in UAT-SERIES.md and labs/kubernetes/expected_results.md"
-    status: failed
-    reason: "CR-03 confirmed: _enumerate_secret_types emits service_detail='K8S-SECRETS/types-enumerated' but UAT-SERIES.md (lines 1781, 1789, 1824, 1867) and labs/kubernetes/expected_results.md (line 90) document 'secret-types-summary'. Live UAT assertions will fail. The test test_dar_k8s_secret_types_summary_neutral uses service_detail='secret-types-summary' (non-matching) and passes only because neither counter checks that string — false-green."
-    artifacts:
-      - path: "quirk/scanner/k8s_connector.py"
-        issue: "Line 293: service_detail='K8S-SECRETS/types-enumerated'"
-      - path: "docs/UAT-SERIES.md"
-        issue: "Lines 1781, 1789, 1824, 1867: documents 'secret-types-summary' as expected service_detail"
-      - path: "labs/kubernetes/expected_results.md"
-        issue: "Line 90: documents 'secret-types-summary' as expected service_detail"
-      - path: "tests/test_dar_k8s_scoring.py"
-        issue: "Line 75: uses 'secret-types-summary' (not what connector emits) in neutrality test — false-green"
-    missing:
-      - "Either update k8s_connector.py line 293 to emit service_detail='secret-types-summary' (and update test_k8s_connector.py line 265 to match), or update all docs to 'K8S-SECRETS/types-enumerated'"
-human_verification:
-  - test: "Live EKS cluster etcd encryption detection"
-    expected: "One aws://eks/<cluster> row with service_detail EKS/encrypted or EKS/unencrypted depending on encryptionConfig; one secret-types-summary row with type counts"
-    why_human: "Requires live AWS EKS cluster with valid credentials — cannot be verified programmatically"
-  - test: "Live GKE cluster databaseEncryption.state detection"
-    expected: "One gcp://gke/... row with service_detail GKE/encrypted (state==2) or GKE/unencrypted (state!=2)"
-    why_human: "Requires live GKE cluster with GCP ADC configured"
-  - test: "Live AKS cluster Key Vault KMS detection"
-    expected: "One azure://aks/... row with AKS/kv-kms (no severity) or AKS/platform-managed (MEDIUM)"
-    why_human: "Requires live Azure subscription with AKS cluster"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 3/4 roadmap success criteria (2 partial/blocker)
+  gaps_closed:
+    - "CR-01: evidence.py KUBERNETES elif now checks scan_err == 'insufficient-rbac-privileges'; dar_k8s_inaccessible_count fires for live RBAC 403 findings"
+    - "CR-02: AKS DefaultAzureCredential() failure path now emits per-cluster inaccessible findings; K8S-03 invariant restored"
+    - "CR-03: _enumerate_secret_types now emits service_detail='secret-types-summary'; false-green tests replaced with live-shape fixtures"
+  gaps_remaining: []
+  regressions: []
 ---
 
-# Phase 29: Kubernetes Secrets Inspection Verification Report
+# Phase 29: Kubernetes Secrets Inspection — Verification Report
 
 **Phase Goal:** QU.I.R.K. can detect etcd encryption status and enumerate secret types on managed Kubernetes clusters — using managed cloud APIs without requiring direct etcd access or agent installation on cluster nodes
-**Verified:** 2026-04-26T18:00:00Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-04-26T14:00:00Z
+**Status:** PASSED
+**Re-verification:** Yes — after gap closure by plan 29-04 (CR-01/CR-02/CR-03)
 
 ## Goal Achievement
 
-### Observable Truths (from ROADMAP Success Criteria)
+### Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| SC-1 | EKS/GKE/AKS managed cluster encryption APIs each return etcd encryption status via distinct API paths with consistent schema | VERIFIED (with WARNING) | k8s_connector.py 506 lines, _scan_gke_encryption and _scan_aks_encryption wired; _scan_eks_encryption in aws_connector.py; all 15 tests pass. WARNING: AKS credential failure drops silently (CR-02) |
-| SC-2 | Secret type count enumeration returns types without reading any secret values | VERIFIED | _enumerate_secret_types accesses only s.type; test_secret_type_enumeration_never_reads_data uses property sentinel raising AssertionError on .data access — passes |
-| SC-3 | Scanner emits explicit encryption-config-inaccessible finding when etcd state cannot be determined — never silently skips | PARTIAL — BLOCKER | Unknown-provider and K8S_AVAILABLE=False paths emit correctly; but AKS DefaultAzureCredential failure silently drops the AKS scan without emitting inaccessible finding (CR-02 confirmed) |
-| SC-4 | kubernetes>=35.0.0 in [cloud] extras; RBAC 403 caught and produces insufficient-rbac-privileges finding | PARTIAL — BLOCKER | kubernetes>=35.0.0 in pyproject.toml VERIFIED; RBAC 403 scan_error emitted correctly by connector VERIFIED; but dar_k8s_inaccessible_count never increments for this finding (CR-01 mismatch confirmed by running actual Python) |
+| 1 | K8S-01: EKS encryption status detected via AWS boto3 paginator + describe_cluster encryptionConfig ladder; no direct etcd access | ✓ VERIFIED | `_scan_eks_encryption` at `quirk/scanner/aws_connector.py:132`; paginator + describe_cluster pattern confirmed; 3 EKS tests pass (empty config HIGH, absent key HIGH, keyArn+secrets no-severity) |
+| 2 | K8S-01: GKE encryption detected via `databaseEncryption.current_state` int comparison (state==2 encrypted, other unencrypted) | ✓ VERIFIED | `_scan_gke_encryption` at `k8s_connector.py:96`; `int(db_enc.current_state) == 2` at line 133; 2 GKE tests pass |
+| 3 | K8S-01: AKS encryption detected via three nested getattr defenses on `security_profile.azure_key_vault_kms.enabled`; CR-02 fix: DefaultAzureCredential failure emits per-cluster inaccessible finding | ✓ VERIFIED | `_scan_aks_encryption` at `k8s_connector.py:175`; getattr chain at lines 220-222; CR-02 except block at lines 456-491 confirmed; 3 AKS happy-path tests + 2 CR-02 regression tests pass |
+| 4 | K8S-02: `_enumerate_secret_types` accesses only `s.type` (never `s.data`); emits `service_detail='secret-types-summary'`; RBAC 403 → `scan_error='insufficient-rbac-privileges'` | ✓ VERIFIED | Line 293: `service_detail="secret-types-summary"`; 0 executable occurrences of `secret.data` in `quirk/scanner/k8s_connector.py`; line 310: `scan_error="insufficient-rbac-privileges"`; 3 K8S-02 tests pass including sentinel test |
+| 5 | K8S-03: Never silently skips — emits `encryption-config-inaccessible` on unknown provider, SDK absent, GKE SDK absent, AKS SDK absent, AKS credential failure (per cluster), and final safety net | ✓ VERIFIED | `_emit_inaccessible_finding` called at 7 sites in `scan_k8s_targets`; K8S-03 path-A (line 392), path-B (line 407); GKE SDK absent (422); AKS SDK absent (443); AKS credential-failure loop (477) + fallback (486); safety net (528) |
+| 6 | RBAC 403 findings correctly increment `dar_k8s_inaccessible_count` via scan_error field check (CR-01 fix) | ✓ VERIFIED | `evidence.py:191`: `scan_err = str(getattr(ep, "scan_error", "") or "")`; `evidence.py:195`: `scan_err == "insufficient-rbac-privileges"` check; live-shape test `test_dar_k8s_inaccessible_count_rbac_403` passes with `scan_error="insufficient-rbac-privileges"` fixture |
+| 7 | All 69 tests pass: K8S connector (17), dar_k8s scoring (12), intelligence evidence, intelligence scoring, CBOM | ✓ VERIFIED | `python -m pytest tests/test_k8s_connector.py tests/test_dar_k8s_scoring.py tests/test_intelligence_evidence.py tests/test_intelligence_scoring.py tests/test_cbom_builder.py -x -q` → **69 passed in 0.58s** |
 
-**Score:** 2/4 truths fully verified; 2 PARTIAL (blocker gaps confirmed by code execution)
-
-### Requirement Coverage
-
-| Requirement | Description | Status | Evidence |
-|-------------|-------------|--------|----------|
-| K8S-01 | EKS/GKE/AKS encryption detection via managed APIs | PARTIAL | Three API paths implemented and tested; AKS silent drop on credential failure violates coverage for that path |
-| K8S-02 | Secret type count enumeration, no secret values read | VERIFIED | _enumerate_secret_types confirmed; sentinel test passes |
-| K8S-03 | Explicit encryption-config-inaccessible finding when state unknowable | PARTIAL | Unknown provider and SDK-absent paths correct; AKS credential failure path is a gap |
-
-All three requirement IDs (K8S-01, K8S-02, K8S-03) declared across Plans 01/02/03 — all map to REQUIREMENTS.md Phase 29 row. No orphaned requirements found.
+**Score:** 7/7 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `quirk/scanner/k8s_connector.py` | GKE+AKS encryption, secret enum, K8S-03 inaccessible | VERIFIED (506 lines) | Triple import guards; all functions present; no s.data access |
-| `quirk/scanner/aws_connector.py` | `_scan_eks_encryption` present | VERIFIED | Lines 132-198; paginator pattern; session_start threaded; protocol=KUBERNETES |
-| `run_scan.py` | `k8s_scanning` block gated on enable_k8s | VERIFIED | Lines 573-612; calls scan_k8s_targets and _scan_eks_encryption; aggregates k8s_endpoints |
-| `quirk/config.py` | ConnectorsCfg with 8 K8S fields | VERIFIED | Lines 85-93; enable_k8s, k8s_provider, k8s_cluster_name, k8s_namespace, k8s_kubeconfig, k8s_context, gke_clusters, aks_clusters; ConnectorsCfg() instantiates cleanly |
-| `quirk/config_template.yaml` | Commented K8S section | VERIFIED | Contains commented K8S section with section header |
-| `pyproject.toml` | kubernetes>=35.0.0, google-cloud-container>=2.0.0, azure-mgmt-containerservice>=35.0.0 in [cloud] | VERIFIED | All three entries confirmed present |
-| `quirk/intelligence/evidence.py` | _PROTOCOL_KEYS includes KUBERNETES; dar_k8s_* counters | VERIFIED (partially broken) | KUBERNETES in _PROTOCOL_KEYS; counters initialized; KUBERNETES elif block present; but rbac-403 check targets wrong field (CR-01) |
-| `quirk/intelligence/scoring.py` | dar_k8s_unencrypted_ratio: 10.0, dar_k8s_inaccessible_ratio: 4.0 in SCORE_WEIGHTS; Kubernetes etcd impacts in dar_impacts | VERIFIED | SCORE_WEIGHTS confirmed; 6-entry dar_impacts confirmed; extraction variables present |
-| `quirk/cbom/builder.py` | Pass 1/2/3 skip-lists include KUBERNETES | VERIFIED | All three pass locations confirmed with grep; no KUBERNETES rows produce CBOM components |
-| `tests/test_k8s_connector.py` | 15 tests, all GREEN | VERIFIED | 377 lines; 15 tests; all pass |
-| `tests/test_dar_k8s_scoring.py` | 12 tests, all GREEN (with false-greens noted) | VERIFIED (with false-greens) | 112 lines; 12 tests pass; BUT test_dar_k8s_inaccessible_count_rbac_403 and test_dar_k8s_secret_types_summary_neutral are false-greens |
-| `labs/kubernetes/expected_results.md` | ≥40 lines, Limitations section, UAT-29-XX refs | VERIFIED | 145 lines; explicit no-Docker-chaos-lab section; UAT-29-01/02/03 referenced |
-| `docs/UAT-SERIES.md` | UAT-29-01/02/03 cases, Last Updated: 2026-04-26 | VERIFIED | 4 matches for UAT-29-0x; Last Updated confirmed; 3 full UAT cases present |
+| `quirk/scanner/k8s_connector.py` | Triple import guards + GKE/AKS sub-scanners + secret enum + K8S-03 helper + scan_k8s_targets | ✓ VERIFIED | 539 lines; `K8S_AVAILABLE`, `GKE_AVAILABLE`, `AKS_AVAILABLE` module-level; `service_detail="secret-types-summary"` at line 293; CR-02 loop at lines 469-491 |
+| `quirk/scanner/aws_connector.py` | `_scan_eks_encryption` with paginator + severity ladder + protocol="KUBERNETES" | ✓ VERIFIED | `def _scan_eks_encryption` at line 132; `protocol="KUBERNETES"` in CryptoEndpoint construction; `EKS/unencrypted` and `EKS/encrypted:` patterns present |
+| `run_scan.py` | `k8s_scanning` phase block gated on `enable_k8s`; `scan_k8s_targets` call; EKS sub-call; `k8s_endpoints` aggregated | ✓ VERIFIED | Lines 577-612: `k8s_scanning` timer block; `enable_k8s` gate; `scan_k8s_targets`; `_scan_eks_encryption` for EKS provider; line 669: `+ k8s_endpoints` in aggregation |
+| `quirk/intelligence/evidence.py` | `"KUBERNETES"` in `_PROTOCOL_KEYS`; `dar_k8s_unencrypted_count`/`dar_k8s_inaccessible_count` initialized; KUBERNETES elif with `scan_err` check (CR-01); 4 return dict keys | ✓ VERIFIED | Line 10: `"KUBERNETES"` in tuple; lines 87-88: counters; line 191: `scan_err` extraction; line 195: `scan_err == "insufficient-rbac-privileges"`; lines 265-268: all 4 return dict keys |
+| `quirk/intelligence/scoring.py` | `dar_k8s_unencrypted_ratio: 10.0`, `dar_k8s_inaccessible_ratio: 4.0` in `SCORE_WEIGHTS`; `dar_k8s_*` extraction variables; Kubernetes etcd impacts in `dar_impacts` | ✓ VERIFIED | Lines 23-25: both weights; lines 182-183: `"Kubernetes etcd unencrypted"` and `"Kubernetes etcd encryption inaccessible"` impacts |
+| `quirk/cbom/builder.py` | `"KUBERNETES"` in Pass 1/2/3 skip-lists | ✓ VERIFIED | Line 410 (Pass 1 elif); line 438 (Pass 2 skip tuple); line 519 (Pass 3 elif) |
+| `tests/test_k8s_connector.py` | 17 tests: K8S-01 (3 EKS + 2 GKE + 3 AKS) + K8S-02 (3) + K8S-03 (2) + ISSUE-2/ISSUE-3 (2) + CR-02 regression (2) | ✓ VERIFIED | 17 tests collected; `test_aks_credential_failure_emits_inaccessible_per_cluster` and `test_aks_credential_failure_no_clusters_still_emits_one_inaccessible` present; all pass |
+| `tests/test_dar_k8s_scoring.py` | 12 tests; live-shape RBAC 403 fixture; live-shape secret-types-summary neutrality test | ✓ VERIFIED | 12 tests; `scan_error="insufficient-rbac-privileges"` at line 69 (real connector shape); `host="k8s://secrets/default"` in neutrality test (pinned production shape); old false-greens eliminated |
+| `labs/kubernetes/expected_results.md` | ≥40 lines; no Docker chaos lab note; UAT-29-01/02/03 references; Limitations section | ✓ VERIFIED | 145 lines; "No Docker chaos lab" section; UAT-29-01/02/03 referenced; Limitations section present |
+| `docs/UAT-SERIES.md` | UAT-29-01/02/03 cases; `**Last Updated:** 2026-04-26` | ✓ VERIFIED | 4 matches for UAT-29-0{1,2,3}; header shows `**Last Updated:** 2026-04-26 (Phase 29: added UAT-29-01/02/03 ...)` |
+| `pyproject.toml` | `kubernetes>=35.0.0`, `google-cloud-container>=2.0.0`, `azure-mgmt-containerservice>=35.0.0` in `[cloud]` | ✓ VERIFIED | Lines 48-50 confirmed |
+| `quirk/config.py` | 8 K8S fields in `ConnectorsCfg` with safe defaults | ✓ VERIFIED | Lines 86-93; `ConnectorsCfg()` instantiates without error (`python -c "..."` confirmed) |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `run_scan.py` | `scan_k8s_targets` | `with _phase_timer(run_stats, 'k8s_scanning')` | WIRED | Lines 577-612 confirmed |
-| `run_scan.py` | `_scan_eks_encryption` | `if k8s_provider == 'eks'` inside k8s_scanning | WIRED | Lines 596-609 confirmed |
-| `k8s_connector.scan_k8s_targets` | `encryption-config-inaccessible` | `_emit_inaccessible_finding` | WIRED (incomplete) | Unknown-provider and K8S_AVAILABLE=False paths wired; AKS credential failure path is NOT wired |
-| `k8s_connector._enumerate_secret_types` | ApiException status==403 | `getattr(exc, 'status', None) == 403` | WIRED | Line 305; duck-typed |
-| `evidence.py KUBERNETES elif` | `dar_k8s_inaccessible_count` | `'rbac-403' in sd` | BROKEN | Checks service_detail substring; connector emits scan_error field — mismatch confirmed by execution |
-| `k8s_endpoints` aggregation | `endpoints` master list in run_scan.py | `+ k8s_endpoints` | WIRED | Line 669 confirmed |
+| `run_scan.py` | `scan_k8s_targets` | `k8s_scanning` phase timer + `enable_k8s` gate | ✓ WIRED | Line 580: `k8s_endpoints = scan_k8s_targets(...)` with all 10 params |
+| `run_scan.py` | `_scan_eks_encryption` | `k8s_provider == "eks"` branch + boto3 session | ✓ WIRED | Lines 597-609: boto3 session; `k8s_endpoints.extend(_scan_eks_encryption(...))` |
+| `run_scan.py` | `k8s_endpoints` → `endpoints` master list | `+ k8s_endpoints` in final concatenation | ✓ WIRED | Line 669 confirmed |
+| `k8s_connector.scan_k8s_targets` | `_emit_inaccessible_finding` | 7 call sites: unsupported provider, K8S absent, GKE absent, AKS absent, AKS credential failure loop, AKS credential failure fallback, final safety net | ✓ WIRED | All 7 sites confirmed in file |
+| `k8s_connector._enumerate_secret_types` | `scan_error='insufficient-rbac-privileges'` | `except Exception` with `getattr(exc, "status", None) == 403` | ✓ WIRED | Lines 304-316 |
+| `evidence.py KUBERNETES elif` | `dar_k8s_inaccessible_count` | CR-01: `scan_err == "insufficient-rbac-privileges"` OR `scan_err == "encryption-config-inaccessible"` OR service_detail substring checks | ✓ WIRED | Lines 195-199: both scan_error checks + service_detail fallbacks |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|--------------------|--------|
-| `_scan_gke_encryption` | `cluster.database_encryption.current_state` | GKE ClusterManagerClient.get_cluster() | Mocked in tests; live requires GKE | VERIFIED (test path) |
-| `_scan_aks_encryption` | `cluster.security_profile.azure_key_vault_kms.enabled` | ContainerServiceClient.managed_clusters.get() | Mocked in tests | VERIFIED (test path) |
-| `_enumerate_secret_types` | `s.type` (never s.data) | k8s_client.CoreV1Api.list_namespaced_secret() | Mocked in tests | VERIFIED (test path) |
-| `evidence.py dar_k8s_inaccessible_count` | RBAC 403 path via service_detail | `_enumerate_secret_types` scan_error output | DISCONNECTED — wrong field checked | HOLLOW — rbac-403 path data does not flow |
+| `evidence.py:build_evidence_summary` | `dar_k8s_unencrypted_count` | `ep.service_detail` substring `/unencrypted` from KUBERNETES endpoints | Yes — pattern matches EKS/GKE live values | ✓ FLOWING |
+| `evidence.py:build_evidence_summary` | `dar_k8s_inaccessible_count` | `ep.scan_error` field (CR-01 fix) + service_detail substrings | Yes — live connector shape now triggers counter | ✓ FLOWING |
+| `scoring.py:compute_readiness_score` | `dar_k8s_unencrypted`, `dar_k8s_inaccessible` | `evidence.get("dar_k8s_unencrypted_count")`, `evidence.get("dar_k8s_inaccessible_count")` | Yes — passes through from evidence dict | ✓ FLOWING |
+| `k8s_connector._enumerate_secret_types` | `type_counts` | `Counter(s.type or "Opaque" for s in secrets.items)` | Yes — only `s.type` accessed; property sentinel test confirms `s.data` never touched | ✓ FLOWING |
 
 ### Behavioral Spot-Checks
 
-| Behavior | Command/Method | Result | Status |
-|----------|---------------|--------|--------|
-| All 15 K8S connector tests pass | `python -m pytest tests/test_k8s_connector.py` | 15 passed in 0.25s | PASS |
-| All 12 dar_k8s scoring tests pass | `python -m pytest tests/test_dar_k8s_scoring.py` | 12 passed | PASS (2 are false-greens) |
-| CBOM regression tests pass | `python -m pytest tests/test_cbom_builder.py tests/test_intelligence_evidence.py tests/test_intelligence_scoring.py` | 40 passed | PASS |
-| ConnectorsCfg instantiates with defaults | `python -c "from quirk.config import ConnectorsCfg; ConnectorsCfg()"` | OK | PASS |
-| CR-01: rbac-403 counter for live connector output | `build_evidence_summary([ep_with_scan_error])` | dar_k8s_inaccessible_count=0 | FAIL — confirmed blocker |
-| CR-03: service_detail mismatch | `_enumerate_secret_types(...).service_detail` | "K8S-SECRETS/types-enumerated" | FAIL — confirmed mismatch with docs |
-| CR-02: AKS credential failure inaccessible finding | Code inspection lines 453-467 | No _emit_inaccessible_finding call in except block | FAIL — confirmed blocker |
+| Behavior | Command | Result | Status |
+|----------|---------|--------|--------|
+| All 69 tests pass (full suite) | `python -m pytest tests/test_k8s_connector.py tests/test_dar_k8s_scoring.py tests/test_intelligence_evidence.py tests/test_intelligence_scoring.py tests/test_cbom_builder.py -x -q` | **69 passed in 0.58s** | ✓ PASS |
+| `_enumerate_secret_types` emits correct service_detail | `grep -n 'service_detail="secret-types-summary"' quirk/scanner/k8s_connector.py` | Line 293 match | ✓ PASS |
+| Old string retired from source and test files | `grep -r "K8S-SECRETS/types-enumerated" quirk/ tests/` | 0 matches | ✓ PASS |
+| RBAC 403 increments inaccessible counter | `test_dar_k8s_inaccessible_count_rbac_403` with live `scan_error="insufficient-rbac-privileges"` fixture | PASS | ✓ PASS |
+| AKS credential failure emits 2 inaccessible findings for 2 clusters | `test_aks_credential_failure_emits_inaccessible_per_cluster` | PASS | ✓ PASS |
+| AKS credential failure with empty aks_clusters still emits 1 finding | `test_aks_credential_failure_no_clusters_still_emits_one_inaccessible` | PASS | ✓ PASS |
+| `ConnectorsCfg()` instantiates with K8S defaults | `python -c "from quirk.config import ConnectorsCfg; c = ConnectorsCfg(); assert c.enable_k8s is False; assert c.gke_clusters == []"` | OK | ✓ PASS |
+| `python -m compileall quirk/` | Clean compile | 0 errors | ✓ PASS |
+
+### Requirements Coverage
+
+| Requirement | Source Plan | Description | Status | Evidence |
+|-------------|------------|-------------|--------|----------|
+| K8S-01 | 29-01, 29-02 | Scanner detects etcd encryption on EKS/GKE/AKS via managed cluster APIs; no direct etcd access | ✓ SATISFIED | `_scan_eks_encryption` (boto3), `_scan_gke_encryption` (GKE databaseEncryption.state), `_scan_aks_encryption` (AKS Key Vault KMS); 8 provider tests cover all three paths; CR-02 closes AKS credential failure gap |
+| K8S-02 | 29-01, 29-02, 29-04 | Scanner enumerates K8S secret type counts without reading secret values | ✓ SATISFIED | `_enumerate_secret_types` accesses only `s.type`; `service_detail="secret-types-summary"` (CR-03 aligned to docs); sentinel test confirms invariant; 3 K8S-02 tests pass |
+| K8S-03 | 29-01, 29-02, 29-04 | Explicit `encryption-config-inaccessible` finding emitted when etcd state unknowable | ✓ SATISFIED | `_emit_inaccessible_finding` at 7 call sites; all paths covered including AKS credential failure (CR-02); `test_unknown_provider_produces_inaccessible_finding` and `test_sdk_unavailable_produces_inaccessible_finding` pass; 2 AKS regression tests added |
+
+No orphaned requirements. K8S-01/02/03 are the only Phase 29 requirements in REQUIREMENTS.md (traceability table confirmed). All three declared across Plans 01/02/03/04 and all satisfied.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `tests/test_dar_k8s_scoring.py` | 75 | `service_detail="rbac-403"` — synthetic string that connector never emits | WARNING | False-green test: test_dar_k8s_inaccessible_count_rbac_403 passes against a fixture that does not match live connector output |
-| `tests/test_dar_k8s_scoring.py` | 75 | `service_detail="secret-types-summary"` in neutrality test | WARNING | False-green test: connector emits "K8S-SECRETS/types-enumerated"; test passes for wrong reason (neither counter matches either string) |
-| `quirk/scanner/k8s_connector.py` | 366-367 | `gke_clusters: list = None, aks_clusters: list = None` | INFO | Type annotation mismatch; not a runtime error; mypy would reject |
-| `docs/UAT-SERIES.md` | 1781, 1789, 1824, 1867 | References `secret-types-summary` as expected service_detail | BLOCKER | Live UAT will fail when querying DB for this string |
-| `labs/kubernetes/expected_results.md` | 90 | References `secret-types-summary` | BLOCKER | Documentation contract broken with implementation |
+| None | — | No TODOs, FIXME, placeholder returns, or hardcoded empty values in source files | — | — |
+
+Anti-pattern scan performed on: `quirk/scanner/k8s_connector.py`, `quirk/scanner/aws_connector.py` (EKS function), `quirk/intelligence/evidence.py`, `quirk/intelligence/scoring.py`, `quirk/cbom/builder.py`, `run_scan.py` (k8s block), `tests/test_k8s_connector.py`, `tests/test_dar_k8s_scoring.py`.
+
+The `return []` patterns in `_scan_gke_encryption` (GKE SDK absent guard) and `_scan_aks_encryption` (AKS SDK absent guard) are intentional guards — the outer `scan_k8s_targets` wraps these with K8S-03 inaccessible-finding emission. Not stubs.
 
 ### Human Verification Required
 
-#### 1. Live EKS Encryption Detection (UAT-29-01)
-
-**Test:** Configure `enable_k8s: true`, `k8s_provider: eks`, valid `aws_region`, run `quirk`
-**Expected:** One `aws://eks/<cluster>` row with `service_detail=EKS/unencrypted` (severity HIGH) or `EKS/encrypted:<keyArn>` (no severity); one `K8S-SECRETS/types-enumerated` row (note: docs say `secret-types-summary` — resolve CR-03 first)
-**Why human:** Requires live AWS EKS cluster with credentials
-
-#### 2. Live GKE Encryption Detection (UAT-29-02)
-
-**Test:** Configure `enable_k8s: true`, `k8s_provider: gke`, `gke_clusters: [{name, location}]`, GCP ADC, run `quirk`
-**Expected:** One `gcp://gke/.../<cluster>` row with `GKE/encrypted:<key>` (state==2) or `GKE/unencrypted` (HIGH)
-**Why human:** Requires live GKE cluster
-
-#### 3. Live AKS Encryption Detection (UAT-29-03)
-
-**Test:** Configure `enable_k8s: true`, `k8s_provider: aks`, `aks_clusters: [{name, resource_group}]`, Azure login, run `quirk`
-**Expected:** One `azure://aks/.../<cluster>` row with `AKS/kv-kms` (no severity) or `AKS/platform-managed` (MEDIUM)
-**Why human:** Requires live Azure AKS cluster
+Live cluster UAT (EKS/GKE/AKS) is documented in UAT-29-01/02/03 in `docs/UAT-SERIES.md` and `labs/kubernetes/expected_results.md` and is explicitly flagged "manual-only" (requires real cloud credentials). These are correctly deferred as live-cluster tests — not blockers for phase verification. All programmatically verifiable must-haves are confirmed VERIFIED.
 
 ### Gaps Summary
 
-Three blockers were confirmed by running actual Python code against the codebase — not inferred from static analysis alone.
+No gaps. Phase 29 goal is achieved.
 
-**CR-01 (BLOCKER):** The `dar_k8s_inaccessible_count` evidence counter never fires for real RBAC 403 findings. The connector emits `scan_error="insufficient-rbac-privileges"` with a human-readable `service_detail`, but the counter only checks `"rbac-403" in service_detail`. Running `build_evidence_summary([ep])` with a connector-shaped endpoint confirms the count stays at 0. The scoring test that covers this is a false-green using a synthetic fixture. Fix: check `scan_error == "insufficient-rbac-privileges"` in addition to (or instead of) the service_detail substring.
+All three BLOCKER gaps from the prior verification run are confirmed closed by plan 29-04:
 
-**CR-02 (BLOCKER):** The K8S-03 invariant ("never silently skips") is violated on the AKS path when `DefaultAzureCredential()` raises. Code inspection of lines 453-467 of k8s_connector.py confirms: the except block sets `credential = None` and emits a log message only. No `_emit_inaccessible_finding` call is made for the configured AKS clusters. If GKE or secret enumeration produces results, the final safety net at line 495 does not fire. Fix: emit inaccessible finding per AKS cluster in the credential except block.
+**CR-01 (closed):** `evidence.py` KUBERNETES elif at line 191 now extracts `scan_err = str(getattr(ep, "scan_error", "") or "")` and checks `scan_err == "insufficient-rbac-privileges"` (line 195) alongside `scan_err == "encryption-config-inaccessible"`. The `dar_k8s_inaccessible_count` counter now fires correctly for live RBAC 403 findings. The false-green test `test_dar_k8s_inaccessible_count_rbac_403` is replaced with a live-shape fixture using `scan_error="insufficient-rbac-privileges"`.
 
-**CR-03 (BLOCKER):** `_enumerate_secret_types` emits `service_detail="K8S-SECRETS/types-enumerated"` but UAT-SERIES.md and labs/kubernetes/expected_results.md document `"secret-types-summary"` as the expected string. The connector test (test_k8s_connector.py line 265) correctly asserts the code's actual value; the scoring test (test_dar_k8s_scoring.py line 75) tests the documented value — so two tests test two different strings, both pass, and neither exposes the break. Live UAT query against the database will not find `secret-types-summary` rows. Fix: align connector and documentation on one string (prefer changing connector to match documented value).
+**CR-02 (closed):** AKS `DefaultAzureCredential()` except block at lines 456-491 now loops over `aks_clusters` and calls `_emit_inaccessible_finding` once per configured cluster (with a single fallback when the list is empty). K8S-03 invariant is fully restored on the AKS credential-failure path. Two regression tests confirm: `test_aks_credential_failure_emits_inaccessible_per_cluster` (2 clusters → 2 findings) and `test_aks_credential_failure_no_clusters_still_emits_one_inaccessible`.
 
-These three gaps are rooted in two files (`evidence.py` and `k8s_connector.py`) and two documentation files (`UAT-SERIES.md`, `labs/kubernetes/expected_results.md`). CR-03 is a documentation-code contract break with a straightforward one-line fix to the connector. CR-01 is a one-line fix to evidence.py. CR-02 requires adding an emit loop in the AKS except block.
-
-The core scanner functionality (EKS/GKE/AKS encryption detection ladder, secret enumeration without reading secret values, CBOM skip-list, intelligence score wiring) is present and structurally sound. The gaps are at the correctness boundary (counter mismatch, AKS K8S-03 invariant hole, doc/code contract break) rather than missing features.
+**CR-03 (closed):** `_enumerate_secret_types` at line 293 now emits `service_detail="secret-types-summary"`. The string `K8S-SECRETS/types-enumerated` is absent from all files under `quirk/` and `tests/` (0 matches). The connector test assertion (`test_secret_type_counts_basic` line 265) and the docs (UAT-SERIES.md, expected_results.md) are now aligned on one canonical value.
 
 ---
 
-_Verified: 2026-04-26T18:00:00Z_
+_Verified: 2026-04-26T14:00:00Z_
 _Verifier: Claude (gsd-verifier)_

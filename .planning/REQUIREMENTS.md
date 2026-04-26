@@ -38,9 +38,9 @@ These close NEW-ISSUE-1 (OIDC RS256 mislabeled as TLS-sourced) and ISSUE-2 (ldap
 
 ### Kubernetes Secrets
 
-- [ ] **K8S-01**: Scanner can detect etcd encryption status on managed clusters (EKS `encryptionConfig`, GKE `databaseEncryption.state`, AKS Key Vault integration) via managed cluster APIs without requiring direct etcd access
-- [ ] **K8S-02**: Scanner can enumerate Kubernetes Secret type counts (Opaque, `kubernetes.io/tls`, `kubernetes.io/dockerconfigjson`, etc.) for a configured cluster without reading any secret values
-- [ ] **K8S-03**: Scanner emits an explicit `encryption-config-inaccessible` finding with remediation guidance when etcd encryption state cannot be determined via available managed-cluster APIs
+- [x] **K8S-01**: Scanner can detect etcd encryption status on managed clusters (EKS `encryptionConfig`, GKE `databaseEncryption.state`, AKS Key Vault integration) via managed cluster APIs without requiring direct etcd access
+- [x] **K8S-02**: Scanner can enumerate Kubernetes Secret type counts (Opaque, `kubernetes.io/tls`, `kubernetes.io/dockerconfigjson`, etc.) for a configured cluster without reading any secret values
+- [x] **K8S-03**: Scanner emits an explicit `encryption-config-inaccessible` finding with remediation guidance when etcd encryption state cannot be determined via available managed-cluster APIs
 
 ### HashiCorp Vault
 
