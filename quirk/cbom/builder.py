@@ -435,7 +435,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     for ep in endpoints:
         if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC",
                            "GCP", "CLOUD_SQL", "POSTGRESQL", "MYSQL", "RDS",
-                           "S3", "AZURE_BLOB", "KUBERNETES"):
+                           "S3", "AZURE_BLOB", "KUBERNETES", "VAULT"):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -516,7 +516,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
 
         elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL",
                              "DNSSEC", "SAML", "KERBEROS", "POSTGRESQL", "MYSQL", "RDS",
-                             "S3", "AZURE_BLOB", "KUBERNETES"):
+                             "S3", "AZURE_BLOB", "KUBERNETES", "VAULT"):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             continue
