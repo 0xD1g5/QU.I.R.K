@@ -91,6 +91,12 @@ class ConnectorsCfg:
     k8s_context: Optional[str] = None
     gke_clusters: list = field(default_factory=list)   # [{name, location}]
     aks_clusters: list = field(default_factory=list)   # [{name, resource_group}]
+    # Vault connector config (v4.3, Phase 30, per D-10)
+    enable_vault: bool = False
+    vault_addr: Optional[str] = None        # e.g. "http://localhost:8200"
+    vault_token: Optional[str] = None       # if None, falls back to VAULT_TOKEN env var
+    vault_transit_mount: str = "transit"    # default transit mount path (D-10)
+    vault_tls_verify: bool = True           # passed to hvac.Client(verify=...) — D-09
 
 
 @dataclass
