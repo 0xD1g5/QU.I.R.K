@@ -375,3 +375,74 @@ def test_session_start_stamped_on_endpoints():
     assert ep.scanned_at.month == 4
     assert ep.scanned_at.day == 26
     assert ep.scanned_at.hour == 12
+
+
+# ---------------------------------------------------------------------------
+# CR-02 regression: AKS credential failure must emit per-cluster inaccessible
+# ---------------------------------------------------------------------------
+
+def test_aks_credential_failure_emits_inaccessible_per_cluster():
+    """CR-02: K8S-03 invariant — DefaultAzureCredential() raise must emit one
+    inaccessible finding per configured aks_clusters entry (not silently drop)."""
+    with patch("quirk.scanner.k8s_connector.AKS_AVAILABLE", True):
+        from quirk.scanner.k8s_connector import scan_k8s_targets
+        with patch(
+            "azure.identity.DefaultAzureCredential",
+            create=True,
+            side_effect=RuntimeError("no credentials configured"),
+        ):
+            results = scan_k8s_targets(
+                provider="aks",
+                cluster_name="",
+                namespace="default",
+                azure_subscription_id="sub-1",
+                aks_clusters=[
+                    {"name": "aks-prod", "resource_group": "rg-prod"},
+                    {"name": "aks-dev", "resource_group": "rg-dev"},
+                ],
+                logger=None,
+            )
+    # Filter to inaccessible findings emitted by our credential-failure branch
+    inaccessible = [
+        ep for ep in results
+        if getattr(ep, "scan_error", None) == "encryption-config-inaccessible"
+    ]
+    # Two configured clusters → two inaccessible findings (final safety net does
+    # not double up because we already populated results in the except branch).
+    assert len(inaccessible) == 2, (
+        f"Expected 2 inaccessible findings (one per configured cluster); got "
+        f"{len(inaccessible)}: {[ep.host for ep in results]}"
+    )
+    hosts = {ep.host for ep in inaccessible}
+    assert any("aks-prod" in h for h in hosts), hosts
+    assert any("aks-dev" in h for h in hosts), hosts
+    for ep in inaccessible:
+        assert ep.protocol == "KUBERNETES"
+        assert "Azure credential unavailable" in (ep.service_detail or "")
+
+
+def test_aks_credential_failure_no_clusters_still_emits_one_inaccessible():
+    """CR-02 corollary: aks_clusters=[] with provider='aks' and credential failure must
+    still emit at least one inaccessible finding (K8S-03 invariant)."""
+    with patch("quirk.scanner.k8s_connector.AKS_AVAILABLE", True):
+        from quirk.scanner.k8s_connector import scan_k8s_targets
+        with patch(
+            "azure.identity.DefaultAzureCredential",
+            create=True,
+            side_effect=RuntimeError("no credentials"),
+        ):
+            results = scan_k8s_targets(
+                provider="aks",
+                cluster_name="",
+                namespace="default",
+                aks_clusters=[],
+                logger=None,
+            )
+    inaccessible = [
+        ep for ep in results
+        if getattr(ep, "scan_error", None) == "encryption-config-inaccessible"
+    ]
+    assert len(inaccessible) >= 1, (
+        f"K8S-03 invariant violated: empty aks_clusters + credential failure produced "
+        f"no inaccessible finding. results={results}"
+    )
