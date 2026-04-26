@@ -1864,14 +1864,14 @@ with `aws eks update-kubeconfig --name <cluster>` already run; `kubectl get pods
 - No `AttributeError` in logs
 
 **Expected (limited-permission run):**
-- One `secret-types-summary` row replaced by `service_detail=rbac-403` with `severity=MEDIUM`
+- One KUBERNETES row with `scan_error=insufficient-rbac-privileges` and `service_detail` containing `"Remediation: RBAC role requires get,list on secrets in namespace 'default'"`
 - `dar_k8s_inaccessible_count` increments by 1
 - No unhandled exception traceback in logs (graceful K8S-03 degradation)
 
 **Pass Criteria:**
 - `python -m pytest tests/test_k8s_connector.py` — 15 passed (K8S-01 AKS + K8S-02 RBAC-403 tests pass)
 - Live path (full creds): AKS/kv-kms or AKS/platform-managed row present; no exception
-- Live path (limited creds): rbac-403 row present; dar_k8s_inaccessible_count == 1; no traceback
+- Live path (limited creds): KUBERNETES row with `scan_error=insufficient-rbac-privileges` present; `dar_k8s_inaccessible_count == 1`; no traceback
 
 **Note:** Manual-only — requires live Azure AKS cluster and ability to provision a limited-permission service principal.
 
