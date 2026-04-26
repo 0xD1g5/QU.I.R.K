@@ -81,6 +81,10 @@ connectors:
   #   - "localhost:3306"       # host:port of MySQL/MariaDB instance
   # mysql_scanner_user: "quirk_scanner"
   # mysql_scanner_password: ""
+  # -- Object storage connectors (optional, requires: pip install quirk[cloud]) --
+  # enable_s3: false
+  # aws_endpoint_url: null            # override for MinIO/LocalStack testing
+  # enable_blob: false
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
