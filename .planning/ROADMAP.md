@@ -262,8 +262,11 @@ Plans:
   2. Secret type count enumeration returns Opaque, kubernetes.io/tls, kubernetes.io/dockerconfigjson, and other types for a configured cluster namespace without reading any secret values
   3. When etcd encryption state cannot be determined via available managed-cluster APIs, scanner emits an explicit encryption-config-inaccessible finding with remediation guidance — never silently skips
   4. kubernetes>=35.0.0 is declared in [cloud] extras; RBAC 403 errors are caught and produce insufficient-rbac-privileges findings rather than unhandled exceptions
-**Plans**: 0 plans
+**Plans**: 3 plans
 Plans:
+- [ ] 29-01-PLAN.md — RED scaffold: pyproject.toml + ConnectorsCfg + failing tests for k8s_connector and ISSUE-2/3 invariants
+- [ ] 29-02-PLAN.md — GREEN implementation: k8s_connector.py (GKE+AKS+secret enum) + EKS in aws_connector.py + run_scan.py wiring
+- [ ] 29-03-PLAN.md — Intelligence + CBOM + dar_k8s tests + lab docs + UAT-SERIES.md updates
 
 ### Phase 30: HashiCorp Vault Connector
 **Goal**: QU.I.R.K. can enumerate HashiCorp Vault cryptographic posture — transit key types (including PQC key types as positive findings), PKI mount CA certificate algorithm, and auth method risk assessment
