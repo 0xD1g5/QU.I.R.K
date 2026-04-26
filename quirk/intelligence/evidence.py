@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 EVIDENCE_SCHEMA_VERSION = "1.0.0"
 
 _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
-                  "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB")
+                  "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
@@ -82,6 +82,10 @@ def build_evidence_summary(
     # Object storage DAR counters (Phase 28, per D-09)
     dar_storage_unencrypted_count = 0   # S3/unencrypted (HIGH)
     dar_storage_aws_managed_count = 0   # S3/sse-kms-aws + BLOB/platform-managed (MEDIUM)
+
+    # Kubernetes DAR counters (Phase 29)
+    dar_k8s_unencrypted_count = 0       # EKS/GKE/AKS unencrypted clusters (HIGH)
+    dar_k8s_inaccessible_count = 0      # AKS/platform-managed, encryption-config-inaccessible, rbac-403 (MEDIUM)
 
     for ep in endpoint_list:
         host = str(getattr(ep, "host", "") or "")
@@ -182,6 +186,19 @@ def build_evidence_summary(
                 dar_storage_aws_managed_count += 1
             # BLOB/cmk is positive posture — no penalty
 
+        elif proto == "KUBERNETES":
+            sd = str(getattr(ep, "service_detail", "") or "")
+            if "/unencrypted" in sd:
+                # Matches "EKS/unencrypted" and "GKE/unencrypted" (HIGH severity)
+                dar_k8s_unencrypted_count += 1
+            elif ("encryption-config-inaccessible" in sd
+                  or "/platform-managed" in sd
+                  or "rbac-403" in sd):
+                # Phase 29 Plan 02 produces these as MEDIUM severity (K8S-03 inaccessible path,
+                # AKS platform-managed default, RBAC denial degradation)
+                dar_k8s_inaccessible_count += 1
+            # EKS/encrypted, GKE/encrypted, AKS/kv-kms, secret-types-summary are positive/neutral
+
     plaintext_http_targets = _finding_targets(finding_list, "Plaintext HTTP service detected")
     http_on_tls_port_targets = _finding_targets(finding_list, "HTTP on TLS-designated port")
     mtls_targets |= _finding_targets(finding_list, "mTLS required")
@@ -240,4 +257,8 @@ def build_evidence_summary(
         "dar_storage_aws_managed_count": dar_storage_aws_managed_count,
         "dar_storage_unencrypted_ratio": round(dar_storage_unencrypted_count / total_endpoints, 4) if total_endpoints else 0.0,
         "dar_storage_aws_managed_ratio": round(dar_storage_aws_managed_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "dar_k8s_unencrypted_count": dar_k8s_unencrypted_count,
+        "dar_k8s_inaccessible_count": dar_k8s_inaccessible_count,
+        "dar_k8s_unencrypted_ratio": round(dar_k8s_unencrypted_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "dar_k8s_inaccessible_ratio": round(dar_k8s_inaccessible_count / total_endpoints, 4) if total_endpoints else 0.0,
     }
