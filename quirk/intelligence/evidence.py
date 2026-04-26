@@ -195,12 +195,11 @@ def build_evidence_summary(
             elif (scan_err == "insufficient-rbac-privileges"
                   or scan_err == "encryption-config-inaccessible"
                   or "encryption-config-inaccessible" in sd
-                  or "/platform-managed" in sd
-                  or "rbac-403" in sd):
+                  or "/platform-managed" in sd):
                 # Phase 29: connector emits scan_error='insufficient-rbac-privileges' for
-                # RBAC 403 (CR-01) and scan_error='encryption-config-inaccessible' via
-                # _emit_inaccessible_finding (K8S-03 path). Service-detail substrings preserved
-                # for the AKS platform-managed and synthetic-fixture cases.
+                # RBAC 403 (K8S-03 path) and scan_error='encryption-config-inaccessible' via
+                # _emit_inaccessible_finding (K8S-03 path). Service-detail substring
+                # '/platform-managed' matches the AKS platform-managed case.
                 dar_k8s_inaccessible_count += 1
             # EKS/encrypted, GKE/encrypted, AKS/kv-kms, secret-types-summary are positive/neutral
 
