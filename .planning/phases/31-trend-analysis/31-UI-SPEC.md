@@ -1,10 +1,11 @@
 ---
 phase: 31
 slug: trend-analysis
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york / zinc / dark-first"
 created: 2026-04-26
+reviewed_at: 2026-04-26
 ---
 
 # Phase 31 — UI Design Contract
