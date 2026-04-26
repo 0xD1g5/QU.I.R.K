@@ -548,7 +548,7 @@ def main():
                     session_start=session_start,
                     endpoint_url=cfg.connectors.aws_endpoint_url or None,
                 )
-                logger.info("S3 scan: %d bucket endpoints", len(s3_endpoints))
+                logger.info(f"S3 scan: {len(s3_endpoints)} bucket endpoints")
 
     # ==============================
     # Azure Blob container encryption (Phase 28, STOR-02)
@@ -568,7 +568,7 @@ def main():
                     logger=logger,
                     session_start=session_start,
                 )
-                logger.info("Azure Blob scan: %d container endpoints", len(blob_endpoints))
+                logger.info(f"Azure Blob scan: {len(blob_endpoints)} container endpoints")
 
     # ==============================
     # GCS bucket encryption re-use (Phase 28, STOR-03 — zero API call invariant)
@@ -577,7 +577,7 @@ def main():
     with _phase_timer(run_stats, "gcs_storage_reuse"):
         gcs_storage_endpoints = _process_gcs_storage_encryption(gcp_endpoints, logger=logger)
         if gcs_storage_endpoints:
-            logger.info("GCS storage re-use: %d derived endpoints", len(gcs_storage_endpoints))
+            logger.info(f"GCS storage re-use: {len(gcs_storage_endpoints)} derived endpoints")
 
     # ── DNSSEC scanning ─────────────────────────────────────
     dnssec_endpoints = []
