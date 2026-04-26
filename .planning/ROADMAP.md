@@ -299,7 +299,7 @@ Plans:
 - [x] 31-01-PLAN.md — RED scaffold: failing unit tests for compute_trend_report() and integration tests for GET /api/trends
 - [x] 31-02-PLAN.md — GREEN intelligence + API: implement compute_trend_report() and the /api/trends FastAPI route
 - [x] 31-03-PLAN.md — React frontend: TrendsPage, useTrendsData hook, /trends route, sidebar nav entry
-- [ ] 31-04-PLAN.md — Documentation + UAT-SERIES.md update + Obsidian vault sync
+- [x] 31-04-PLAN.md — Documentation + UAT-SERIES.md update + Obsidian vault sync
 **UI hint**: yes
 
 ## Phase Details
@@ -708,4 +708,4 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 28. Object Storage Audit | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
 | 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete    | 2026-04-26 |
-| 31. Trend Analysis | v4.3 | 3/4 | In Progress|  |
+| 31. Trend Analysis | v4.3 | 4/4 | Complete   | 2026-04-26 |
