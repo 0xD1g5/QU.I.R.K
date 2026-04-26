@@ -188,14 +188,19 @@ def build_evidence_summary(
 
         elif proto == "KUBERNETES":
             sd = str(getattr(ep, "service_detail", "") or "")
+            scan_err = str(getattr(ep, "scan_error", "") or "")
             if "/unencrypted" in sd:
                 # Matches "EKS/unencrypted" and "GKE/unencrypted" (HIGH severity)
                 dar_k8s_unencrypted_count += 1
-            elif ("encryption-config-inaccessible" in sd
+            elif (scan_err == "insufficient-rbac-privileges"
+                  or scan_err == "encryption-config-inaccessible"
+                  or "encryption-config-inaccessible" in sd
                   or "/platform-managed" in sd
                   or "rbac-403" in sd):
-                # Phase 29 Plan 02 produces these as MEDIUM severity (K8S-03 inaccessible path,
-                # AKS platform-managed default, RBAC denial degradation)
+                # Phase 29: connector emits scan_error='insufficient-rbac-privileges' for
+                # RBAC 403 (CR-01) and scan_error='encryption-config-inaccessible' via
+                # _emit_inaccessible_finding (K8S-03 path). Service-detail substrings preserved
+                # for the AKS platform-managed and synthetic-fixture cases.
                 dar_k8s_inaccessible_count += 1
             # EKS/encrypted, GKE/encrypted, AKS/kv-kms, secret-types-summary are positive/neutral
 

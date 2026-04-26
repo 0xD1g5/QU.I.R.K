@@ -13,13 +13,18 @@ from quirk.intelligence.scoring import SCORE_WEIGHTS, compute_readiness_score
 from quirk.models import CryptoEndpoint
 
 
-def _ep(service_detail: str, severity: str | None = None) -> CryptoEndpoint:
+def _ep(
+    service_detail: str,
+    severity: str | None = None,
+    scan_error: str | None = None,
+) -> CryptoEndpoint:
     return CryptoEndpoint(
         host="cluster-test",
         port=443,
         protocol="KUBERNETES",
         service_detail=service_detail,
         severity=severity,
+        scan_error=scan_error,
         scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
@@ -55,9 +60,17 @@ def test_dar_k8s_inaccessible_count_explicit_inaccessible():
 
 
 def test_dar_k8s_inaccessible_count_rbac_403():
-    endpoints = [_ep("rbac-403", severity="MEDIUM")]
+    # Live shape: connector emits scan_error='insufficient-rbac-privileges' with a
+    # remediation-text service_detail (NOT the substring 'rbac-403'). This used to be
+    # a false-green; CR-01 forces evidence.py to count the scan_error field.
+    endpoints = [_ep(
+        "Remediation: RBAC role requires get,list on secrets in namespace 'default'",
+        severity=None,
+        scan_error="insufficient-rbac-privileges",
+    )]
     summary = build_evidence_summary(endpoints)
     assert summary["dar_k8s_inaccessible_count"] == 1
+    assert summary["dar_k8s_unencrypted_count"] == 0
 
 
 def test_dar_k8s_no_finding_paths_no_increment():
