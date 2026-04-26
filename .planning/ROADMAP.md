@@ -703,5 +703,5 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 27. Database Encryption Detection | v4.3 | 4/4 | Complete    | 2026-04-25 |
 | 28. Object Storage Audit | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
-| 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete   | 2026-04-26 |
+| 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 31. Trend Analysis | v4.3 | 0/0 | Planned | — |

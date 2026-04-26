@@ -44,9 +44,9 @@ These close NEW-ISSUE-1 (OIDC RS256 mislabeled as TLS-sourced) and ISSUE-2 (ldap
 
 ### HashiCorp Vault
 
-- [ ] **VAULT-01**: Scanner can enumerate Vault transit engine key types with quantum-safety classification — including PQC key types (`ml-dsa`, `slh-dsa`) emitted as positive quantum-safe findings
-- [ ] **VAULT-02**: Scanner can detect Vault PKI mount CA certificate algorithm and flag RSA < 4096-bit signing keys or SHA-1 signing algorithms as HIGH findings
-- [ ] **VAULT-03**: Scanner can list active Vault auth methods and flag higher-risk methods (token, LDAP root bind) as findings with remediation guidance
+- [x] **VAULT-01**: Scanner can enumerate Vault transit engine key types with quantum-safety classification — including PQC key types (`ml-dsa`, `slh-dsa`) emitted as positive quantum-safe findings
+- [x] **VAULT-02**: Scanner can detect Vault PKI mount CA certificate algorithm and flag RSA < 4096-bit signing keys or SHA-1 signing algorithms as HIGH findings
+- [x] **VAULT-03**: Scanner can list active Vault auth methods and flag higher-risk methods (token, LDAP root bind) as findings with remediation guidance
 
 ### Trend Analysis
 
