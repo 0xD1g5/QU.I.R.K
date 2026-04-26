@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 EVIDENCE_SCHEMA_VERSION = "1.0.0"
 
 _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
-                  "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES")
+                  "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
@@ -86,6 +86,9 @@ def build_evidence_summary(
     # Kubernetes DAR counters (Phase 29)
     dar_k8s_unencrypted_count = 0       # EKS/GKE/AKS unencrypted clusters (HIGH)
     dar_k8s_inaccessible_count = 0      # AKS/platform-managed, encryption-config-inaccessible, rbac-403 (MEDIUM)
+
+    # Vault DAR counters (Phase 30, per D-11)
+    dar_vault_weak_count = 0   # HIGH severity: PKI RSA<4096, PKI SHA-1, token auth, ldap auth
 
     for ep in endpoint_list:
         host = str(getattr(ep, "host", "") or "")
@@ -203,6 +206,14 @@ def build_evidence_summary(
                 dar_k8s_inaccessible_count += 1
             # EKS/encrypted, GKE/encrypted, AKS/kv-kms, secret-types-summary are positive/neutral
 
+        elif proto == "VAULT":
+            sev = str(getattr(ep, "severity", "") or "").upper()
+            if sev == "HIGH":
+                # Per D-11: only HIGH (PKI RSA<4096 / SHA-1, token auth, ldap auth)
+                # increments dar_vault_weak_count. MEDIUM (exportable transit, userpass auth)
+                # does NOT increment.
+                dar_vault_weak_count += 1
+
     plaintext_http_targets = _finding_targets(finding_list, "Plaintext HTTP service detected")
     http_on_tls_port_targets = _finding_targets(finding_list, "HTTP on TLS-designated port")
     mtls_targets |= _finding_targets(finding_list, "mTLS required")
@@ -265,4 +276,6 @@ def build_evidence_summary(
         "dar_k8s_inaccessible_count": dar_k8s_inaccessible_count,
         "dar_k8s_unencrypted_ratio": round(dar_k8s_unencrypted_count / total_endpoints, 4) if total_endpoints else 0.0,
         "dar_k8s_inaccessible_ratio": round(dar_k8s_inaccessible_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "dar_vault_weak_count": dar_vault_weak_count,
+        "dar_vault_weak_ratio": round(dar_vault_weak_count / total_endpoints, 4) if total_endpoints else 0.0,
     }
