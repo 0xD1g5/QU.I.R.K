@@ -134,3 +134,30 @@ class ScanSession(BaseModel):
     scan_id: str          # ISO timestamp string (matches ScanMeta.scan_id)
     scanned_at: datetime
     total_endpoints: int
+
+
+# Trend Analysis (Phase 31)
+
+class SampleFinding(BaseModel):
+    host: str
+    port: int
+    protocol: str
+    severity: str
+
+
+class TrendReportResponse(BaseModel):
+    current_session_ts: Optional[datetime] = None
+    previous_session_ts: Optional[datetime] = None
+    current_score: Optional[int] = None
+    previous_score: Optional[int] = None
+    score_delta: Optional[int] = None
+    new_high: int = 0
+    new_medium: int = 0
+    new_low: int = 0
+    resolved_high: int = 0
+    resolved_medium: int = 0
+    resolved_low: int = 0
+    scan_errors_new_count: int = 0
+    scan_errors_resolved_count: int = 0
+    new_findings_sample: List[SampleFinding] = []
+    resolved_findings_sample: List[SampleFinding] = []
