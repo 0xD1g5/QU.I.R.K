@@ -122,8 +122,10 @@ def test_dar_score_includes_k8s_drivers():
     ]
     summary = build_evidence_summary(endpoints)
     score = compute_readiness_score(summary, profile="balanced")
-    labels = " ".join(d[0] if isinstance(d, (list, tuple)) else str(d)
-                      for d in score.get("drivers", []))
+    labels = " ".join(
+        d.get("reason", "") if isinstance(d, dict) else str(d)
+        for d in score.get("drivers", [])
+    )
     assert "Kubernetes" in labels or "etcd" in labels
 
 
