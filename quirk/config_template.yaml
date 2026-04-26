@@ -94,6 +94,12 @@ connectors:
   # k8s_context: ""               # kubeconfig context (optional)
   # gke_clusters: []              # [{name: my-gke, location: us-central1}]
   # aks_clusters: []              # [{name: my-aks, resource_group: rg}]
+  # -- HashiCorp Vault connector (optional, requires: pip install quirk[cloud]) --
+  # enable_vault: false
+  # vault_addr: "http://localhost:8200"
+  # vault_token: null               # defaults to VAULT_TOKEN env var
+  # vault_transit_mount: "transit"  # default transit mount path
+  # vault_tls_verify: true          # set false for self-signed HTTPS Vault
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
