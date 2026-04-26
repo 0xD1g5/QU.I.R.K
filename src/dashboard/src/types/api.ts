@@ -105,3 +105,28 @@ export interface ScanLatestResponse {
   roadmap: RoadmapData
   identity_findings: IdentityFinding[]
 }
+
+export interface SampleFinding {
+  host: string
+  port: number
+  protocol: string
+  severity: string
+}
+
+export interface TrendReport {
+  current_session_ts: string | null
+  previous_session_ts: string | null
+  current_score: number | null
+  previous_score: number | null
+  score_delta: number | null
+  new_high: number
+  new_medium: number
+  new_low: number
+  resolved_high: number
+  resolved_medium: number
+  resolved_low: number
+  scan_errors_new_count: number
+  scan_errors_resolved_count: number
+  new_findings_sample: SampleFinding[]
+  resolved_findings_sample: SampleFinding[]
+}
