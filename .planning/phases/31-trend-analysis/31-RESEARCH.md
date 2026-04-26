@@ -617,17 +617,19 @@ function ScoreDeltaBadge({ delta }: { delta: number | null }) {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Route file location — `routes/trends.py` vs append to `scan.py`**
    - What we know: CONTEXT.md says "Claude's discretion — `scan.py` already has `list_scans()` which trends.py depends on, so colocating is reasonable"
    - What's unclear: Whether the `app.py` router registration is set up to auto-discover new router files or requires manual registration
    - Recommendation: Read `quirk/dashboard/api/app.py` at Plan 01 start. If manual registration, a new `routes/trends.py` file is cleaner; if any auto-discovery, colocating in `scan.py` is simpler.
+   - **RESOLVED:** New `quirk/dashboard/api/routes/trends.py` file (Plan 02) — manual `include_router()` registration in `app.py` confirmed; colocation in `scan.py` rejected to keep finding-delta logic isolated from session-listing logic.
 
 2. **`score_delta` type — `int` vs `float`**
    - What we know: `compute_readiness_score()["score"]` returns `int` (verified); CONTEXT.md D-07 says `float`
    - What's unclear: Whether the UI-SPEC or frontend TypeScript type matters here
    - Recommendation: Use `Optional[int]` in Pydantic for accuracy. TypeScript `number` covers both. Document in schema docstring.
+   - **RESOLVED:** `Optional[int]` — scorer returns `int` (Pattern 6); Pydantic schema uses `Optional[int]` to match reality; TypeScript `number` covers either runtime shape.
 
 ---
 

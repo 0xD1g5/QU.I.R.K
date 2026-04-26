@@ -39,9 +39,9 @@ created: 2026-04-26
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 31-01-01 | 01 | 0 | TREND-01 | — | N/A | unit | `python -m pytest tests/test_intelligence_trends.py -x -q` | ❌ W0 | ⬜ pending |
-| 31-01-02 | 01 | 1 | TREND-01 | — | N/A | unit | `python -m pytest tests/test_intelligence_trends.py::test_compute_trend_report_score_delta -x -q` | ✅ | ⬜ pending |
-| 31-01-03 | 01 | 1 | TREND-02 | — | N/A | unit | `python -m pytest tests/test_intelligence_trends.py::test_net_new_findings -x -q` | ✅ | ⬜ pending |
-| 31-01-04 | 01 | 1 | TREND-03 | — | N/A | unit | `python -m pytest tests/test_intelligence_trends.py::test_resolved_findings -x -q` | ✅ | ⬜ pending |
+| 31-01-02 | 01 | 1 | TREND-01 | — | N/A | unit | `python -m pytest tests/test_intelligence_trends.py::test_score_delta_computed -x -q` | ✅ | ⬜ pending |
+| 31-01-03 | 01 | 1 | TREND-02 | — | N/A | unit | `python -m pytest tests/test_intelligence_trends.py::test_new_findings_counted -x -q` | ✅ | ⬜ pending |
+| 31-01-04 | 01 | 1 | TREND-03 | — | N/A | unit | `python -m pytest tests/test_intelligence_trends.py::test_resolved_findings_counted -x -q` | ✅ | ⬜ pending |
 | 31-02-01 | 02 | 2 | TREND-04 | — | N/A | integration | `python -m pytest tests/test_dashboard_trends.py -x -q` | ❌ W0 | ⬜ pending |
 | 31-03-01 | 03 | 3 | TREND-04 | — | N/A | integration | `python -m pytest tests/test_dashboard_trends.py -x -q` | ✅ | ⬜ pending |
 
