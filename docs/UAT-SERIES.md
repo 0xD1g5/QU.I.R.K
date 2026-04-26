@@ -1,9 +1,9 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-26 (Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
+**Last Updated:** 2026-04-26 (Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
-**Gate Status:** This document is the **release gate** for QU.I.R.K. v4.2. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
+**Gate Status:** This document is the **release gate** for QU.I.R.K. v4.3. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
 ---
 
@@ -91,12 +91,12 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `quirk 4.2.0` or `QU.I.R.K. v4.2.0`
+- Output matches format: `quirk 4.3.0` or `QU.I.R.K. v4.3.0`
 - Exit code 0
 
-**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-04-17  **Tester:** Digs  
-**Notes:** `python run_scan.py --version` → `QU.I.R.K. v4.2.0`. Exit 0.
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+**Notes:** Version bumped to v4.3.0 at start of v4.3 Data at Rest milestone. Re-test required.
 
 ---
 
