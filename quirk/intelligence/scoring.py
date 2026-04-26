@@ -20,6 +20,9 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "dar_db_weak_ssl_ratio": 6.0,
     "dar_storage_unencrypted_ratio": 12.0,   # Phase 28 D-10 — same weight as plaintext DB
     "dar_storage_aws_managed_ratio": 4.0,    # Phase 28 D-10 — compliance gap, not active weakness
+    "dar_k8s_unencrypted_ratio": 10.0,        # Phase 29 — etcd plaintext is high-impact but
+                                              # narrower scope than DB-wide plaintext
+    "dar_k8s_inaccessible_ratio": 4.0,        # Phase 29 — same weight as storage compliance gap
     "agility_high_impact_ratio": 14.0,
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
@@ -132,6 +135,8 @@ def compute_readiness_score(
     dar_db_weak_ssl = max(0, _as_int(evidence.get("dar_db_weak_ssl_count", 0)))
     dar_storage_unencrypted = max(0, _as_int(evidence.get("dar_storage_unencrypted_count", 0)))
     dar_storage_aws_managed = max(0, _as_int(evidence.get("dar_storage_aws_managed_count", 0)))
+    dar_k8s_unencrypted = max(0, _as_int(evidence.get("dar_k8s_unencrypted_count", 0)))
+    dar_k8s_inaccessible = max(0, _as_int(evidence.get("dar_k8s_inaccessible_count", 0)))
 
     hygiene_impacts: List[Tuple[str, float]] = [
         ("Plaintext HTTP exposure", -_ratio(plaintext_http_count, denom) * w["hygiene_plaintext_http_ratio"]),
@@ -174,6 +179,8 @@ def compute_readiness_score(
         ("Database weak SSL configuration", -_ratio(dar_db_weak_ssl, denom) * w["dar_db_weak_ssl_ratio"]),
         ("Object storage unencrypted", -_ratio(dar_storage_unencrypted, denom) * w["dar_storage_unencrypted_ratio"]),
         ("Object storage platform-managed keys", -_ratio(dar_storage_aws_managed, denom) * w["dar_storage_aws_managed_ratio"]),
+        ("Kubernetes etcd unencrypted", -_ratio(dar_k8s_unencrypted, denom) * w["dar_k8s_unencrypted_ratio"]),
+        ("Kubernetes etcd encryption inaccessible", -_ratio(dar_k8s_inaccessible, denom) * w["dar_k8s_inaccessible_ratio"]),
     ]
     dar_score, dar_drivers = _apply_weighted_impacts(dar_impacts)
 
