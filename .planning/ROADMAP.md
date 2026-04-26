@@ -264,7 +264,7 @@ Plans:
   4. kubernetes>=35.0.0 is declared in [cloud] extras; RBAC 403 errors are caught and produce insufficient-rbac-privileges findings rather than unhandled exceptions
 **Plans**: 3 plans
 Plans:
-- [ ] 29-01-PLAN.md — RED scaffold: pyproject.toml + ConnectorsCfg + failing tests for k8s_connector and ISSUE-2/3 invariants
+- [x] 29-01-PLAN.md — RED scaffold: pyproject.toml + ConnectorsCfg + failing tests for k8s_connector and ISSUE-2/3 invariants
 - [ ] 29-02-PLAN.md — GREEN implementation: k8s_connector.py (GKE+AKS+secret enum) + EKS in aws_connector.py + run_scan.py wiring
 - [ ] 29-03-PLAN.md — Intelligence + CBOM + dar_k8s tests + lab docs + UAT-SERIES.md updates
 
@@ -701,6 +701,6 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 26. GCP Connector | v4.3 | 3/3 | Complete    | 2026-04-25 |
 | 27. Database Encryption Detection | v4.3 | 4/4 | Complete    | 2026-04-25 |
 | 28. Object Storage Audit | v4.3 | 3/3 | Complete    | 2026-04-26 |
-| 29. Kubernetes Secrets Inspection | v4.3 | 0/0 | Planned | — |
+| 29. Kubernetes Secrets Inspection | v4.3 | 1/3 | In Progress|  |
 | 30. HashiCorp Vault Connector | v4.3 | 0/0 | Planned | — |
 | 31. Trend Analysis | v4.3 | 0/0 | Planned | — |

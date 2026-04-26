@@ -676,7 +676,7 @@ New SCORE_WEIGHTS entry: `"dar_vault_weak_ratio": 8.0` (lighter than db-plaintex
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Vault transit mount path — always "transit"?**
    - What we know: The existing chaos lab enables transit at `"transit"`. The config adds `vault_transit_mount: str = "transit"` as a configurable field.
