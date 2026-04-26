@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 from datetime import datetime, timezone
 from collections import Counter
@@ -661,13 +662,38 @@ def main():
             logger.info("Kerberos scan: %d endpoints from %d targets",
                         len(kerberos_endpoints), len(cfg.connectors.kerberos_targets))
 
+    # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
+    vault_endpoints = []
+    with _phase_timer(run_stats, "vault_scanning"):
+        if cfg.connectors.enable_vault:
+            from quirk.scanner.vault_connector import (
+                scan_vault_targets,
+                HVAC_AVAILABLE,
+            )
+            if not HVAC_AVAILABLE:
+                logger.v("hvac not installed -- Vault scanning skipped")
+            elif not (cfg.connectors.vault_addr or os.environ.get("VAULT_ADDR")):
+                logger.v("vault_addr not set -- Vault scanning skipped")
+            else:
+                vault_endpoints = scan_vault_targets(
+                    vault_addr=(cfg.connectors.vault_addr
+                                or os.environ.get("VAULT_ADDR", "")),
+                    token=cfg.connectors.vault_token,
+                    transit_mount=cfg.connectors.vault_transit_mount or "transit",
+                    tls_verify=cfg.connectors.vault_tls_verify,
+                    logger=logger,
+                    session_start=session_start,
+                )
+                logger.info("Vault scan: %d endpoints", len(vault_endpoints))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + aws_endpoints + azure_endpoints + gcp_endpoints
                  + db_endpoints
                  + s3_endpoints + blob_endpoints + gcs_storage_endpoints
                  + k8s_endpoints
-                 + dnssec_endpoints + saml_endpoints + kerberos_endpoints)
+                 + dnssec_endpoints + saml_endpoints + kerberos_endpoints
+                 + vault_endpoints)
 
     # ==============================
     # Findings + persistence + reports
