@@ -42,23 +42,17 @@ Full two-session response (two or more distinct sessions in the database):
 
 ```json
 {
-  "sessions": {
-    "current_ts": "2026-04-26T10:30:00",
-    "previous_ts": "2026-04-26T09:00:00"
-  },
+  "current_session_ts": "2026-04-26T10:30:00",
+  "previous_session_ts": "2026-04-26T09:00:00",
   "current_score": 72,
   "previous_score": 65,
   "score_delta": 7,
-  "new_finding_counts": {
-    "high": 0,
-    "medium": 2,
-    "low": 1
-  },
-  "resolved_finding_counts": {
-    "high": 1,
-    "medium": 0,
-    "low": 3
-  },
+  "new_high": 0,
+  "new_medium": 2,
+  "new_low": 1,
+  "resolved_high": 1,
+  "resolved_medium": 0,
+  "resolved_low": 3,
   "scan_errors_new_count": 0,
   "scan_errors_resolved_count": 1,
   "new_findings_sample": [
@@ -77,23 +71,17 @@ When fewer than two distinct sessions exist, `GET /api/trends` returns HTTP 200 
 
 ```json
 {
-  "sessions": {
-    "current_ts": "2026-04-26T10:30:00",
-    "previous_ts": null
-  },
+  "current_session_ts": "2026-04-26T10:30:00",
+  "previous_session_ts": null,
   "current_score": 72,
   "previous_score": null,
   "score_delta": null,
-  "new_finding_counts": {
-    "high": 0,
-    "medium": 0,
-    "low": 0
-  },
-  "resolved_finding_counts": {
-    "high": 0,
-    "medium": 0,
-    "low": 0
-  },
+  "new_high": 0,
+  "new_medium": 0,
+  "new_low": 0,
+  "resolved_high": 0,
+  "resolved_medium": 0,
+  "resolved_low": 0,
   "scan_errors_new_count": 0,
   "scan_errors_resolved_count": 0,
   "new_findings_sample": [],
