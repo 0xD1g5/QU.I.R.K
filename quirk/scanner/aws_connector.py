@@ -129,6 +129,75 @@ def _scan_rds_encryption(session, logger) -> List[CryptoEndpoint]:
     return results
 
 
+def _scan_eks_encryption(session, logger, session_start=None) -> List[CryptoEndpoint]:
+    """Detect EKS cluster etcd encryption status (K8S-01 EKS path).
+
+    Uses describe_cluster.encryptionConfig — an AWS management plane field, NOT a K8s API
+    resource. The kubernetes Python client cannot retrieve this; only boto3 can.
+
+    Severity ladder:
+        encryptionConfig absent OR empty list            → HIGH/EKS/unencrypted
+        encryptionConfig has resources=['secrets']       → EKS/encrypted:{keyArn} (no severity)
+        encryptionConfig present but no secrets entry    → HIGH/EKS/unencrypted
+
+    ISSUE-3: session_start threaded so all endpoints from a scan share scanned_at timestamp.
+    """
+    results: List[CryptoEndpoint] = []
+    ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+    try:
+        client = session.client("eks")
+        paginator = client.get_paginator("list_clusters")
+        for page in paginator.paginate():
+            for cluster_name in page.get("clusters", []):
+                try:
+                    resp = client.describe_cluster(name=cluster_name)
+                    cluster = resp.get("cluster", {})
+                    # Pitfall 3: handle both "encryptionConfig: []" and absent key.
+                    enc_cfg = cluster.get("encryptionConfig", []) or []
+                    if not enc_cfg:
+                        service_detail = "EKS/unencrypted"
+                        severity = "HIGH"
+                    else:
+                        secrets_encrypted = any(
+                            "secrets" in (entry.get("resources") or [])
+                            for entry in enc_cfg
+                        )
+                        if secrets_encrypted:
+                            kms_key = (
+                                enc_cfg[0].get("provider", {}).get("keyArn", "")
+                            )
+                            service_detail = f"EKS/encrypted:{kms_key}"
+                            severity = None
+                        else:
+                            service_detail = "EKS/unencrypted"
+                            severity = "HIGH"
+                    ep = CryptoEndpoint(
+                        host=f"aws://eks/{cluster_name}",
+                        port=0,
+                        protocol="KUBERNETES",
+                        service_detail=service_detail,
+                        dat_scan_json=json.dumps(
+                            {
+                                "cluster": cluster_name,
+                                "provider": "EKS",
+                                "encryptionConfig": enc_cfg,
+                            },
+                            default=str,
+                        ),
+                        scanned_at=ts,
+                    )
+                    if severity:
+                        ep.severity = severity
+                    results.append(ep)
+                except Exception as exc:
+                    if logger:
+                        logger.v(f"EKS cluster scan error for {cluster_name}: {exc}")
+    except Exception as exc:
+        if logger:
+            logger.v(f"EKS encryption scan error: {exc}")
+    return results
+
+
 def _scan_s3_encryption(
     session,
     logger,

@@ -571,6 +571,47 @@ def main():
                 logger.info(f"Azure Blob scan: {len(blob_endpoints)} container endpoints")
 
     # ==============================
+    # K8S secrets inspection (Phase 29, K8S-01 / K8S-02 / K8S-03)
+    # ==============================
+    k8s_endpoints = []
+    with _phase_timer(run_stats, "k8s_scanning"):
+        if cfg.connectors.enable_k8s:
+            from quirk.scanner.k8s_connector import scan_k8s_targets
+            k8s_endpoints = scan_k8s_targets(
+                provider=cfg.connectors.k8s_provider or "",
+                cluster_name=cfg.connectors.k8s_cluster_name or "",
+                namespace=cfg.connectors.k8s_namespace or "default",
+                kubeconfig=cfg.connectors.k8s_kubeconfig or None,
+                context=cfg.connectors.k8s_context or None,
+                gcp_project_id=cfg.connectors.gcp_project_id or "",
+                gke_clusters=cfg.connectors.gke_clusters or [],
+                azure_subscription_id=cfg.connectors.azure_subscription_id or "",
+                aks_clusters=cfg.connectors.aks_clusters or [],
+                logger=logger,
+                session_start=session_start,
+            )
+            # EKS path uses boto3 (NOT kubernetes Python client). Run alongside
+            # GKE/AKS/secret enumeration when k8s_provider == "eks".
+            if (cfg.connectors.k8s_provider or "").lower() == "eks":
+                try:
+                    from quirk.scanner.aws_connector import (
+                        BOTO3_AVAILABLE,
+                        _scan_eks_encryption,
+                    )
+                    if BOTO3_AVAILABLE:
+                        import boto3 as _boto3_eks
+                        _eks_session = _boto3_eks.Session(
+                            region_name=getattr(cfg.connectors, "aws_region", None) or None,
+                            profile_name=getattr(cfg.connectors, "aws_profile", None) or None,
+                        )
+                        k8s_endpoints.extend(_scan_eks_encryption(
+                            _eks_session, logger, session_start=session_start,
+                        ))
+                except Exception as exc:
+                    logger.v(f"EKS encryption scan unavailable: {exc}")
+            logger.info(f"K8S scan: {len(k8s_endpoints)} cluster endpoints")
+
+    # ==============================
     # GCS bucket encryption re-use (Phase 28, STOR-03 — zero API call invariant)
     # ==============================
     gcs_storage_endpoints = []
@@ -625,6 +666,7 @@ def main():
                  + aws_endpoints + azure_endpoints + gcp_endpoints
                  + db_endpoints
                  + s3_endpoints + blob_endpoints + gcs_storage_endpoints
+                 + k8s_endpoints
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints)
 
     # ==============================
