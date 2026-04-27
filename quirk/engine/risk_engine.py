@@ -445,3 +445,73 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
             })
 
     return _postprocess_findings(cfg, endpoints, findings)
+
+
+def evaluate_email_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Emit email-specific findings (EMAIL-08, EMAIL-09) for email scanner endpoints.
+
+    Phase 32. Called from run_scan.py after scan_email_targets() completes.
+    These findings are merged into the main findings list before _dedupe_findings()
+    runs in evaluate_endpoints(); layered findings (D-11) survive because titles differ.
+    """
+    findings: List[Dict[str, Any]] = []
+
+    for e in endpoints:
+        host = getattr(e, "host", "")
+        port = int(getattr(e, "port", 0) or 0)
+        protocol = getattr(e, "protocol", "") or ""
+        cipher = (getattr(e, "cipher_suite", "") or "").upper()
+        tls_version = getattr(e, "tls_version", "") or ""
+        pfs = getattr(e, "tls_pfs_supported", None)
+
+        # EMAIL-08: STARTTLS downgrade risk — port 25 ONLY, only when TLS actually negotiated
+        if port == 25 and protocol == "SMTP-STARTTLS" and tls_version:
+            findings.append({
+                "severity": "MEDIUM",
+                "host": host,
+                "port": port,
+                "title": "STARTTLS downgrade risk on SMTP",
+                "recommendation": (
+                    "STARTTLS (opportunistic TLS) is susceptible to stripping attacks that "
+                    "cannot be detected by an agentless scanner. An attacker in-path can "
+                    "suppress the STARTTLS capability advertisement, forcing plaintext delivery. "
+                    "Enforce MTA-STS (RFC 8461) or DANE (RFC 7672) to prevent stripping."
+                ),
+            })
+
+        # EMAIL-09: Weak RSA key exchange / 3DES / RC4 = HIGH
+        is_rsa_kex = (
+            cipher.startswith("TLS_RSA_WITH_")
+            or "AES128-SHA" in cipher
+            or "AES256-SHA" in cipher
+            or "3DES" in cipher
+            or "RC4" in cipher
+        ) and "ECDHE" not in cipher and "DHE-" not in cipher
+
+        if is_rsa_kex and tls_version:
+            findings.append({
+                "severity": "HIGH",
+                "host": host,
+                "port": port,
+                "title": "Weak cipher suite on email TLS endpoint",
+                "recommendation": (
+                    "TLS_RSA_WITH_* suites use RSA key exchange (no forward secrecy) and are "
+                    "quantum-vulnerable. Disable non-PFS suites and require ECDHE or TLS 1.3 "
+                    "cipher suites across all email protocol ports."
+                ),
+            })
+        elif pfs is False and tls_version and tls_version != "TLSv1.3":
+            # EMAIL-09 MEDIUM: Non-PFS ECDHE without TLS 1.3 (D-13)
+            findings.append({
+                "severity": "MEDIUM",
+                "host": host,
+                "port": port,
+                "title": "Non-PFS cipher suite on email TLS endpoint",
+                "recommendation": (
+                    "ECDHE without TLS 1.3 provides forward secrecy but remains quantum-vulnerable "
+                    "via Shor's algorithm. Prefer TLS 1.3 AEAD suites (AES-GCM, ChaCha20-Poly1305) "
+                    "and plan migration to post-quantum key encapsulation."
+                ),
+            })
+
+    return findings
