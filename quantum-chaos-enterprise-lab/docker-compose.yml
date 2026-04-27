@@ -949,6 +949,10 @@ services:
       dockerfile: Dockerfile
     container_name: quirk-chaos-dovecot-email
     profiles: ["email"]
+    command: ["/usr/sbin/dovecot", "-F"]
+    environment:
+      # Cap TLS at 1.2 via OpenSSL system config — Dovecot 2.3.16 lacks ssl_max_protocol
+      OPENSSL_CONF: /etc/dovecot/openssl-tls12-only.cnf
     ports:
       - "30143:143"
       - "30993:993"
