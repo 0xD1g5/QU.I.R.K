@@ -74,20 +74,14 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Identity CBOM pass 2+3 skip lists — no spurious X.509 CertificateProperties or TLS protocol components for SAML/Kerberos/DNSSEC endpoints — Phase 22-23
 - ✓ Scan-session timestamp isolation — shared session_start from run_scan.py into all 3 identity scanners; ISSUE-3 scan-window timing defect eliminated — Phase 24
 
-## Current Milestone: v4.3 Data at Rest
-
-**Goal:** Expand QU.I.R.K.'s cryptographic inventory to cover data-at-rest encryption and cloud coverage depth — database encryption settings, object storage policies, Kubernetes secrets, HashiCorp Vault transit keys, GCP connector, and cross-session trend analysis for delta reporting. First milestone to include Phase 25 (Identity Findings Accuracy) carried from v4.2.
-
-### Active
-
-**v4.3 Data at Rest (Phases 25+)**
-- ✓ Identity Findings Accuracy (Phase 25) — RS-family OIDC check in _derive_identity_findings(), TLS-bleed guard in _derive_findings(), ldap3>=2.9.1 in [identity] extras, chaos lab expected results — Validated in Phase 25
-- ✓ GCP connector — Cloud KMS (47-entry algorithm map including PQC), Cloud SQL TLS enforcement, GCS CMEK detection; `[cloud]` extras group; gcs_scan_json ORM column; CBOM Pass 1/2/3 integration — Validated in Phase 26
-- ✓ Database encryption detection — PostgreSQL 3-tier SSL probe (pg_has_role), MySQL Ssl_cipher scanner, RDS StorageEncrypted+KmsKeyId; `[db]` extras group; `dat_scan_json` ORM column; `dar_` evidence counters + `data_at_rest` as 5th subscore; CBOM Pass 1/2/3 integration; Docker chaos lab database profile (25432/23306) — Validated in Phase 27
-- ✓ Object storage audit — S3 severity ladder (HIGH/MEDIUM/None via ThreadPoolExecutor), Azure Blob keySource ladder (CMK/platform-managed), GCS sentinel reuse (zero duplicate API calls); dar_storage_* evidence counters + SCORE_WEIGHTS (12.0/4.0); CBOM Pass 1/2/3 skip-lists; MinIO chaos lab (storage-s3 profile); UAT-28-01/02/03 — Validated in Phase 28
-- ✓ Kubernetes secrets inspection — EKS/GKE/AKS managed encryption APIs, secret type enumeration, RBAC-403 degradation, K8S-03 inaccessible-finding invariant; dar_k8s_* evidence counters + CBOM integration — Validated in Phase 29
-- ✓ HashiCorp Vault connector — transit keys (VAULT-01 + PQC), PKI root+intermediate CA (VAULT-02), auth method risk tiering (VAULT-03); dar_vault_weak_count HIGH-only counter; CBOM Pass 1 algorithm registration, Pass 2+3 skip; dedicated --profile vault chaos lab (port 28200); conftest.py SHA-1 shim for cryptography 46.x — Validated in Phase 30
-- ✓ Trend analysis across scan sessions — score delta (D-01 match key), net-new/resolved findings by severity, scan error delta, React /trends dashboard page, UAT-9-09/10 — Validated in Phase 31
+**v4.3 Data at Rest (Phases 25–31) — SHIPPED 2026-04-26**
+- ✓ Identity Findings Accuracy (Phase 25) — RS-family OIDC check in _derive_identity_findings(), TLS-bleed guard in _derive_findings(), ldap3>=2.9.1 in [identity] extras, chaos lab expected results — v4.3
+- ✓ GCP connector — Cloud KMS (47-entry algorithm map including PQC), Cloud SQL TLS enforcement, GCS CMEK detection; `[cloud]` extras group; gcs_scan_json ORM column; CBOM Pass 1/2/3 integration — v4.3
+- ✓ Database encryption detection — PostgreSQL 3-tier SSL probe (pg_has_role), MySQL Ssl_cipher scanner, RDS StorageEncrypted+KmsKeyId; `[db]` extras group; `dat_scan_json` ORM column; `dar_` evidence counters + `data_at_rest` as 5th subscore; CBOM Pass 1/2/3 integration; Docker chaos lab database profile (25432/23306) — v4.3
+- ✓ Object storage audit — S3 severity ladder (HIGH/MEDIUM/None via ThreadPoolExecutor), Azure Blob keySource ladder (CMK/platform-managed), GCS sentinel reuse (zero duplicate API calls); dar_storage_* evidence counters + SCORE_WEIGHTS (12.0/4.0); CBOM Pass 1/2/3 skip-lists; MinIO chaos lab (storage-s3 profile) — v4.3
+- ✓ Kubernetes secrets inspection — EKS/GKE/AKS managed encryption APIs, secret type enumeration, RBAC-403 degradation, K8S-03 inaccessible-finding invariant; dar_k8s_* evidence counters + CBOM integration — v4.3
+- ✓ HashiCorp Vault connector — transit keys (VAULT-01 + PQC), PKI root+intermediate CA (VAULT-02), auth method risk tiering (VAULT-03); dar_vault_weak_count HIGH-only counter; CBOM Pass 1 algorithm registration, Pass 2+3 skip; dedicated --profile vault chaos lab (port 28200) — v4.3
+- ✓ Trend analysis across scan sessions — score delta (D-01 match key), net-new/resolved findings by severity, scan error delta, React /trends dashboard page — v4.3
 
 **v4.4 Data in Motion (Planned)**
 - [ ] Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 via sslyze handoff
@@ -113,18 +107,18 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ## Context
 
-- **Current version**: v4.3.0 — Phase 31 (Trend Analysis) complete 2026-04-26; v4.3 Data at Rest milestone complete
+- **Current version**: v4.3.0 — shipped 2026-04-26; v4.3 Data at Rest milestone archived
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
-- **Chaos lab**: Docker Compose, 14 profiles (core + 6 Phase 4 additions + 3 v4.2 identity: dnssec/saml/kerberos + storage-s3 Phase 28)
+- **Chaos lab**: Docker Compose, 16 profiles (core + 6 Phase 4 additions + 3 v4.2 identity: dnssec/saml/kerberos + storage-s3 Phase 28 + database Phase 27 + vault Phase 30)
 - **Business model**: Consulting deliverable — tool enables billable assessments
 - **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
 - **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, identity protocol scanning (Kerberos/SAML/DNSSEC), object storage encryption auditing (S3/Azure Blob/GCS), chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 482 tests passing (pytest); all Nyquist VALIDATION.md files up to date
+- **Test coverage**: 504 tests collected (pytest); all Nyquist VALIDATION.md files up to date
 - **Known tech debt**: ISSUE-2 (ldap3 absent from pyproject.toml — KERB-03 LDAP always inerts), NEW-ISSUE-1 (OIDC RS256 findings mislabeled as TLS-sourced) — both Phase 25 targets in v4.3
-- **v4.2 milestone shipped** (2026-04-24): 8 phases (17–24), 14 plans — full identity protocol surface: DNSSEC + SAML/OIDC + Kerberos scanners, 3 chaos lab profiles, Identity tab in dashboard, CBOM integration, scan-session timestamp isolation
+- **v4.3 milestone shipped** (2026-04-26): 7 phases (25–31), 24 plans — data-at-rest coverage: GCP connector, database encryption, object storage audit, K8s secrets, HashiCorp Vault, trend analysis dashboard page
 
 ## Constraints
 
@@ -151,10 +145,10 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | impacket in [identity] extras only | pyOpenSSL transitive conflict risk prevents placing impacket in core deps | ✓ Good — identity extras group keeps core install lightweight; consultants opt in with pip install quirk[identity] |
 | SAML_NS dict constant required | lxml XPath produces empty results without explicit namespace dict — silent failure without it | ✓ Good — SAML_NS as module-level constant is the correct lxml pattern; discovered during RED test debugging |
 | Shared session_start from run_scan.py | Per-scanner datetime.now() at endpoint creation time caused scan-window timing to exclude early-stamped identity endpoints | ✓ Good — ISSUE-3 eliminated; all identity endpoints from one scan share one scanned_at timestamp |
-| ldap3 deferred to Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; KERB-03 LDAP path always degrades gracefully | ⚠ Revisit — fix is one dependency line in v4.3 Phase 25; LDAP enumeration inert until then |
+| ldap3 added in Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; fixed as first task of v4.3 | ✓ Good — ldap3>=2.9.1 in [identity] extras; KERB-03 LDAP path is now reachable |
 
 ---
-*Last updated: 2026-04-26 — Phase 31 (Trend Analysis) complete; v4.3 Data at Rest milestone fully delivered.*
+*Last updated: 2026-04-26 after v4.3 milestone archive*
 
 ## Evolution
 

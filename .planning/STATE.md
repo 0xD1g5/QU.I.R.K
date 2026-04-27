@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v4.3
 milestone_name: Data at Rest
-status: milestone_complete
-stopped_at: Phase 31 UI-SPEC approved
+status: archived
+stopped_at: v4.3 milestone archived 2026-04-26
 last_updated: "2026-04-26T22:39:54.831Z"
-last_activity: 2026-04-26 -- Phase 31 execution started
+last_activity: 2026-04-26 -- v4.3 milestone close
 progress:
-  total_phases: 33
-  completed_phases: 30
+  total_phases: 31
+  completed_phases: 31
   total_plans: 88
   completed_plans: 88
-  percent: 91
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24)
+See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 31 — trend-analysis
+**Current focus:** Planning next milestone (/gsd-new-milestone)
 
 ## Current Position
 
-Phase: 31
-Plan: Not started
-Status: Milestone complete
+Phase: v4.3 archived
+Plan: N/A
+Status: Milestone archived — run /gsd-new-milestone to start v4.4
 Last activity: 2026-04-26
 
 Progress: [░░░░░░░░░░] 0/7 phases complete (v4.3)

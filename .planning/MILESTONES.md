@@ -1,5 +1,30 @@
 # Milestones
 
+## v4.3 Data at Rest (Shipped: 2026-04-26)
+
+**Phases completed:** 7 phases (25–31), 24 plans, 504 tests collected
+
+**Key accomplishments:**
+
+1. Identity Findings Accuracy (Phase 25) — OIDC RS-family routing fix in `_derive_identity_findings()`, TLS-bleed guard in `_derive_findings()`, `ldap3>=2.9.1` in `[identity]` extras, chaos lab expected results oracle for all three v4.2 identity scanner profiles (DNSSEC/SAML/Kerberos) — closes NEW-ISSUE-1, ISSUE-2, NEW-ISSUE-3 from v4.2 audit
+2. GCP Connector (Phase 26) — 47-entry `GCP_KMS_ALGORITHM_MAP` including PQC, Cloud SQL TLS enforcement, GCS CMEK detection; `gcs_scan_json` ORM column; `[cloud]` extras group; CBOM Pass 1/2/3 integration; `DefaultCredentialsError` explicit catch
+3. Database Encryption Detection (Phase 27) — PostgreSQL 3-tier SSL probe (`pg_has_role`), MySQL `Ssl_cipher` scanner, RDS `StorageEncrypted`+`KmsKeyId`; `dat_scan_json` ORM column; `dar_` 5th subscore prefix; `[db]` extras; Docker database chaos lab (25432/23306)
+4. Object Storage Audit (Phase 28) — S3 severity ladder via `ThreadPoolExecutor(max_workers=10)`, Azure Blob `keySource` ladder, GCS sentinel reuse (zero duplicate API calls); `dar_storage_*` evidence counters (SCORE_WEIGHTS 12.0/4.0); MinIO chaos lab (storage-s3 profile)
+5. Kubernetes Secrets Inspection (Phase 29) — EKS/GKE/AKS managed encryption APIs, secret type enumeration, RBAC-403 graceful degradation, `encryption-config-inaccessible` invariant; `dar_k8s_*` evidence counters; gap closure CR-01/02/03
+6. HashiCorp Vault Connector (Phase 30) — Transit keys with PQC positive findings (`ml-dsa`/`slh-dsa`), PKI CA cert detection, auth method risk tiering; `dar_vault_weak_count` HIGH-only counter; CBOM Pass 2+3 VAULT skip; dedicated chaos lab at port 28200 with seed.sh
+7. Trend Analysis (Phase 31) — `compute_trend_report()` with score delta and net-new/resolved findings by severity; `GET /api/trends` FastAPI route; React `TrendsPage` with `useTrendsData` hook and `/trends` route; `scanned_at`-based session grouping — no new SQLite table
+
+**Archived:** `.planning/milestones/v4.3-ROADMAP.md`, `.planning/milestones/v4.3-REQUIREMENTS.md`
+
+**Known deferred items at close:** 16 (see STATE.md Deferred Items)
+- B-1: OIDC ep.severity always None (cosmetic — downstream correct via scan.py re-derivation)
+- W-2: dat_scan_json always NULL for DB rows (scoring correct via service_detail; JSON contract broken)
+- W-1: Vault CBOM Pass 1 fragile — future VAULT skip list addition could break transit key registration
+- 9 UAT deferred items (live Docker/cloud/browser environment required)
+- Pre-existing carry-over UAT/verification gaps from prior milestones (acknowledged, non-blocking)
+
+---
+
 ## v4.2 Identity Crypto (Shipped: 2026-04-24)
 
 **Phases completed:** 8 phases (17–24), 14 plans, 352 tests passing
