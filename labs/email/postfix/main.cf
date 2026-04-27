@@ -1,0 +1,26 @@
+# Phase 32 chaos lab — intentionally weak TLS for scanner detection
+myhostname = postfix.chaos.local
+mydomain = chaos.local
+inet_interfaces = all
+inet_protocols = ipv4
+mynetworks = 0.0.0.0/0
+maillog_file = /dev/stdout
+
+# TLS protocol pinning — TLS 1.0/1.1 disabled by OpenSSL 3.x on scanner host anyway
+smtpd_tls_protocols = !SSLv2, !SSLv3
+smtp_tls_protocols = !SSLv2, !SSLv3
+
+# Force RSA key exchange / non-PFS by excluding ECDHE/EDH/DHE
+smtpd_tls_mandatory_ciphers = medium
+smtpd_tls_mandatory_exclude_ciphers = aNULL, eNULL, EXPORT, DES, MD5, PSK, SRP, CAMELLIA, ECDHE, EDH, DHE
+smtpd_tls_ciphers = medium
+smtpd_tls_exclude_ciphers = aNULL, eNULL, EXPORT, DES, MD5, PSK, SRP, CAMELLIA, ECDHE, EDH, DHE
+
+# Enable STARTTLS on port 25 + 587; implicit TLS on 465 (configured via master.cf)
+smtpd_tls_security_level = may
+smtpd_use_tls = yes
+smtpd_tls_cert_file = /etc/postfix/certs/postfix.crt
+smtpd_tls_key_file  = /etc/postfix/certs/postfix.key
+
+# Loglevel for chaos-lab debugging
+smtpd_tls_loglevel = 1
