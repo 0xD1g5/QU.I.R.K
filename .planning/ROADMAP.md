@@ -497,7 +497,7 @@ Plans:
   6. `ep.service_detail` format follows `"SMTP-STARTTLS:587"`, `"SMTPS:465"`, `"IMAPS:993"`, `"POP3S:995"` convention (EMAIL-10)
 **Plans**: 7 plans
 - [x] 32-01-PLAN.md — Test scaffolding for email scanner (Wave 1, RED state)
-- [ ] 32-02-PLAN.md — DB schema + migration + config flag + pyproject [motion] group (Wave 1)
+- [x] 32-02-PLAN.md — DB schema + migration + config flag + pyproject [motion] group (Wave 1)
 - [ ] 32-03-PLAN.md — quirk/scanner/email_scanner.py canonical 4-function module (Wave 2)
 - [ ] 32-04-PLAN.md — Risk engine evaluate_email_endpoints + run_scan + profile gating (Wave 2)
 - [ ] 32-05-PLAN.md — labs/email/ Postfix+Dovecot chaos lab + email Docker Compose profile (Wave 2)
@@ -696,7 +696,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
 | 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 31. Trend Analysis | v4.3 | 4/4 | Complete    | 2026-04-26 |
-| 32. Email Scanner | v4.4 | 1/7 | In Progress|  |
+| 32. Email Scanner | v4.4 | 2/7 | In Progress|  |
 | 33. Broker Scanner | v4.4 | 0/TBD | Not started | - |
 | 34. Motion Intelligence | v4.4 | 0/TBD | Not started | - |
 | 35. CBOM Integration | v4.4 | 0/TBD | Not started | - |

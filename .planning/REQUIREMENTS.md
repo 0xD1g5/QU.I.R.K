@@ -172,8 +172,8 @@ All requirements are grounded in parallel research conducted 2026-04-27:
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | STRUCT-01 | 32, 33, 37 | Complete |
-| STRUCT-02 | 32, 33, 37 | Pending |
-| STRUCT-03 | 32, 33, 37 | Pending |
+| STRUCT-02 | 32, 33, 37 | Complete |
+| STRUCT-03 | 32, 33, 37 | Complete |
 | EMAIL-00 | 32 | Complete |
 | EMAIL-01 | 32 | Complete |
 | EMAIL-02 | 32 | Complete |
