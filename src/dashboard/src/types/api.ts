@@ -3,6 +3,7 @@ export interface SubScores {
   modern_tls: number
   identity_trust: number
   agility_signals: number
+  data_at_rest: number
 }
 
 export interface ScoreData {
