@@ -6,6 +6,7 @@
 - ✅ **v4.1 Foundation Polish** — Phases 12–16, 10 plans (shipped 2026-04-08) → `.planning/milestones/v4.1-ROADMAP.md`
 - ✅ **v4.2 Identity Crypto** — Phases 17–24, 14 plans (shipped 2026-04-24) → `.planning/milestones/v4.2-ROADMAP.md`
 - ✅ **v4.3 Data at Rest** — Phases 25–31, 24 plans (shipped 2026-04-26) → `.planning/milestones/v4.3-ROADMAP.md`
+- 🔄 **v4.4 Data in Motion** — Phases 32–37 (in progress) → `.planning/milestones/v4.4-ROADMAP.md`
 
 ## Phases
 
@@ -466,6 +467,96 @@ Plans:
 - [x] 07-04-PLAN.md — Dashboard branding pass: favicon, page title, sidebar wordmark (BRAND-01)
 - [x] 07-05-PLAN.md — Packaging: version 4.0.0, quirk init, GitHub install path (BRAND-04)
 
+
+
+<details>
+<summary>🔄 v4.4 Data in Motion (Phases 32–37) — IN PROGRESS</summary>
+
+**Milestone Goal:** Extend QU.I.R.K.'s cryptographic inventory to cover network transport layers — auditing email protocol TLS (SMTP/IMAP/POP3, all 7 standard ports) and message broker TLS (Kafka, RabbitMQ, Redis) for weak ciphers, legacy TLS versions, plaintext listeners, and quantum-unsafe algorithms. Introduces the `data_in_motion` subscore as the 6th pillar of the quantum-readiness score.
+
+- [ ] **Phase 32: Email Scanner** — `email_scanner.py`: sslyze STARTTLS for SMTP/IMAP/POP3, stdlib fallback, STARTTLS downgrade finding, Postfix+Dovecot chaos lab (profile: email, ports 30025/30465/30587/30143/30993/30110/30995)
+- [ ] **Phase 33: Broker Scanner** — `broker_scanner.py`: Kafka (9092/9093/9094), RabbitMQ/AMQPS (5671/5672), Redis (6379/6380), Azure Service Bus, AWS SQS; broker chaos lab (profile: broker, ports 26379/26380/29092/29093/25671/25672)
+- [ ] **Phase 34: Motion Intelligence** — Six `motion_` evidence counters in `evidence.py`, five `motion_` ratio entries in `scoring.py`, `PROFILE_MULTIPLIERS` motion_ prefix, `data_in_motion` as 6th named subscore in `compute_readiness_score()`
+- [ ] **Phase 35: CBOM Integration** — Pass 1 algorithm components for email and broker TLS; Pass 2+3 skip lists for plaintext-only broker endpoints; quantum-safety classification for RSA key-exchange cipher suites
+- [ ] **Phase 36: Dashboard Motion Tab** — React `/motion` route, Motion tab (email per-port table + STARTTLS warning badge, broker per-type summary + plaintext flag), 6th subscore in executive summary card, `MotionFinding` FastAPI schema in `/api/scan/latest`
+- [ ] **Phase 37: Gap Closure and v4.4.0 Release** — Nyquist VALIDATION.md files for all 6 phases, INFRA-03 test coverage, version bump to 4.4.0
+
+</details>
+
+
+### Phase 32: Email Scanner
+**Goal**: QU.I.R.K. can audit TLS posture on all seven standard email protocol ports — detecting weak ciphers, legacy TLS versions, expired certificates, and STARTTLS downgrade risk — stored in `email_scan_json` and producing `CryptoEndpoint` rows with correct `ep.protocol` labels
+**Depends on**: Phase 31
+**Requirements**: STRUCT-01, STRUCT-02, STRUCT-03, EMAIL-00, EMAIL-01, EMAIL-02, EMAIL-03, EMAIL-04, EMAIL-05, EMAIL-06, EMAIL-07, EMAIL-08, EMAIL-09, EMAIL-10, EMAIL-11, EMAIL-12
+**Success Criteria** (what must be TRUE):
+  1. Scanning a mail server on any of the 7 default email ports returns TLS version, negotiated cipher suite, cert subject/issuer/expiry, and key algorithm — accessible in the DB `email_scan_json` column and in the scan's `CryptoEndpoint` rows
+  2. Port 25 STARTTLS endpoints emit a static MEDIUM `starttls-downgrade-risk` finding regardless of cipher strength; weak RSA key-exchange ciphers (`TLS_RSA_WITH_*`, 3DES, RC4) on any email port emit HIGH findings
+  3. A `CONNECTION_REFUSED` on port 25 does not crash the scan — it is handled gracefully and logged (cloud VM egress constraint)
+  4. When sslyze fails, the stdlib fallback (`smtplib`/`imaplib`/`poplib`) negotiates STARTTLS and extracts TLS version, cipher, and cert via the underlying SSLSocket
+  5. `docker compose --profile email up` starts the Postfix+Dovecot container with weak TLS (TLS 1.1 minimum, RSA non-PFS ciphers, self-signed RSA-2048 cert); scanning produces at minimum one HIGH finding for weak cipher and one MEDIUM for STARTTLS risk; `labs/email/expected_results.md` documents expected findings
+  6. `ep.service_detail` format follows `"SMTP-STARTTLS:587"`, `"SMTPS:465"`, `"IMAPS:993"`, `"POP3S:995"` convention (EMAIL-10)
+**Plans**: TBD
+
+### Phase 33: Broker Scanner
+**Goal**: QU.I.R.K. can audit TLS posture on Kafka, RabbitMQ, Redis, Azure Service Bus, and AWS SQS — detecting plaintext listeners, weak TLS versions, and quantum-unsafe ciphers — in a single `broker_scanner.py` module following the `db_connector.py` architecture pattern
+**Depends on**: Phase 31 (can develop in parallel with Phase 32)
+**Requirements**: STRUCT-01, STRUCT-02, STRUCT-03, BROKER-00, BROKER-ARCH, KAFKA-01, KAFKA-02, KAFKA-03, KAFKA-04, RABBIT-01, RABBIT-02, RABBIT-03, RABBIT-04, RABBIT-05, REDIS-01, REDIS-02, REDIS-03, BROKER-LAB-01, BROKER-LAB-02
+**Success Criteria** (what must be TRUE):
+  1. Scanning Kafka on port 9093 returns cert chain, accepted cipher suites, and TLS version; scanning plaintext port 9092 emits a HIGH finding (`kafka-plaintext-listener`) when the port responds
+  2. Scanning RabbitMQ on port 5671 (AMQPS) via sslyze returns full TLS probe results; plaintext port 5672 with a raw AMQP header probe emits HIGH (`amqp-plaintext-listener`) if the port responds with an AMQP frame
+  3. Scanning Redis on port 6380 via raw `ssl.SSLContext` socket wrap returns TLS version, negotiated cipher, and cert; plaintext port 6379 emits HIGH (`redis-plaintext-no-auth`) if Redis responds; `redis-py` `CONFIG GET tls-*` degrades gracefully on `NOAUTH`/`NOPERM`
+  4. `docker compose --profile broker up` starts all three broker containers; scanning chaos lab ports produces plaintext HIGH for all three brokers and weak cipher HIGH for at least two; `labs/broker/expected_results.md` documents expected findings
+  5. All three scanner functions accept `session_start` parameter and stamp `ep.scanned_at` with it — no per-scanner `datetime.now()` calls (STRUCT-01)
+  6. `broker_scan_json` column is present in the SQLite schema; `broker_scanner.py` is a single module exposing `scan_kafka_targets()`, `scan_rabbitmq_targets()`, `scan_redis_targets()`
+**Plans**: TBD
+
+### Phase 34: Motion Intelligence
+**Goal**: The quantum-readiness scoring engine recognizes email and broker TLS weaknesses as a distinct cryptographic surface — the `data_in_motion` subscore appears as the 6th named subscore in intelligence JSON alongside `tls`, `ssh`, `api`, `identity`, and `data_at_rest`
+**Depends on**: Phase 32, Phase 33
+**Requirements**: MOTION-01, MOTION-02, MOTION-03, MOTION-04
+**Success Criteria** (what must be TRUE):
+  1. A scan with plaintext Kafka and RabbitMQ listeners produces a lower `data_in_motion` subscore than a scan with only TLS-secured brokers — the `motion_broker_plaintext_ratio` weight (14.0) is applied correctly
+  2. `evidence.py` `EvidenceCounters` dataclass contains all six `motion_` fields: `motion_email_starttls_missing_count`, `motion_email_plaintext_count`, `motion_email_weak_cipher_count`, `motion_broker_plaintext_count`, `motion_broker_weak_tls_count`, `motion_broker_weak_cipher_count`
+  3. `scoring.py` `SCORE_WEIGHTS` contains all five `motion_` ratio entries with correct weights; `PROFILE_MULTIPLIERS` contains the `"motion_"` prefix key with strict/balanced/lenient values (MOTION-03)
+  4. `compute_readiness_score()` returns `"data_in_motion"` as a named 6th subscore; the overall quantum-readiness score is measurably affected when motion_ counters are non-zero
+**Plans**: TBD
+
+### Phase 35: CBOM Integration
+**Goal**: Email and broker TLS endpoints appear correctly in the CycloneDX CBOM — algorithm components registered in Pass 1, cert components in Pass 2, protocol components in Pass 3 — with plaintext-only endpoints skipped to prevent hollow certificate entries
+**Depends on**: Phase 32, Phase 33
+**Requirements**: CBOM-01, CBOM-02, CBOM-03, CBOM-04
+**Success Criteria** (what must be TRUE):
+  1. A CBOM generated from a scan with email TLS findings contains algorithm components with `ep.protocol` values `"SMTP-STARTTLS"`, `"SMTPS"`, `"IMAPS"`, `"POP3S"` — distinguishable from HTTPS endpoints in the CBOM viewer
+  2. A CBOM generated from a scan with broker TLS findings contains algorithm components with `ep.protocol` values `"AMQPS"`, `"KAFKA-TLS"`, `"REDIS-TLS"`; `TLS_RSA_WITH_*` suites classified `quantum-vulnerable` (HIGH) via `QUANTUM_SAFETY_MAP`
+  3. Plaintext-only broker endpoints (`"AMQP"`, `"KAFKA-PLAIN"`, `"REDIS-PLAIN"`) are in the Pass 2 and Pass 3 skip lists — no hollow `CertificateProperties` entries exist for endpoints with no TLS cert (CBOM-03)
+  4. Full test suite passes with no CBOM regressions; `builder.py` requires no structural changes — only skip list additions and `ep.protocol` string routing
+**Plans**: TBD
+
+### Phase 36: Dashboard Motion Tab
+**Goal**: Consultants can view email and broker TLS posture in the dashboard — a dedicated Motion tab shows per-port email summaries with STARTTLS warning badges and per-broker type summaries with plaintext-exposed flags; the executive summary card shows the `data_in_motion` subscore as the 6th line
+**Depends on**: Phase 34, Phase 35
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05
+**Success Criteria** (what must be TRUE):
+  1. The dashboard navigation shows a "Motion" tab that loads the `/motion` React route without errors, alongside the existing Identity and Trends tabs
+  2. The Motion tab Email section shows a per-port table: port, protocol label, TLS version, cipher suite, cert expiry, quantum risk tier; port-25 endpoints display a STARTTLS stripping warning badge
+  3. The Motion tab Broker section shows a per-broker-type summary: endpoint, port, TLS version, cipher suite, and a plaintext-exposed flag (red badge) when the plaintext port responded
+  4. The executive summary card shows a "Data in Motion" score line as the 6th entry; the score is non-zero when motion_ counters are populated from a scan
+  5. `GET /api/scan/latest` response includes `motion_findings: list[MotionFinding]` — a Pydantic-validated array parallel to `identity_findings`
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 37: Gap Closure and v4.4.0 Release
+**Goal**: All v4.4 requirements are verifiably satisfied, Nyquist VALIDATION.md files accurately reflect phase completion, and the version string is bumped to 4.4.0 across all output artifacts
+**Depends on**: Phase 36
+**Requirements**: STRUCT-01, STRUCT-02, STRUCT-03, INFRA-01, INFRA-02, INFRA-03
+**Success Criteria** (what must be TRUE):
+  1. `quirk/__init__.py` and `pyproject.toml` declare version `4.4.0`; `quirk --version`, CBOM metadata, and report section headers all return `4.4.0`
+  2. `pyproject.toml` `[motion]` extras group is declared with all direct dependencies; no dependency added retroactively outside a plan (INFRA-02)
+  3. All six scanner entry points have Nyquist VALIDATION.md coverage for: happy path (TLS found), graceful degradation (connection refused), and plaintext-only detection (INFRA-03)
+  4. All 6 phase VALIDATION.md files for v4.4 read `nyquist_compliant: true` and `wave_0_complete: true`
+  5. Full test suite passes (504+ tests, 0 failures); no open CRITICAL or HIGH unresolved issues
+**Plans**: TBD
+
 ## Backlog (Future Enhancements)
 
 Ideas captured during planning — not in scope for v1, but not lost.
@@ -598,3 +689,9 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
 | 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 31. Trend Analysis | v4.3 | 4/4 | Complete    | 2026-04-26 |
+| 32. Email Scanner | v4.4 | 0/TBD | Not started | - |
+| 33. Broker Scanner | v4.4 | 0/TBD | Not started | - |
+| 34. Motion Intelligence | v4.4 | 0/TBD | Not started | - |
+| 35. CBOM Integration | v4.4 | 0/TBD | Not started | - |
+| 36. Dashboard Motion Tab | v4.4 | 0/TBD | Not started | - |
+| 37. Gap Closure and v4.4.0 Release | v4.4 | 0/TBD | Not started | - |

@@ -164,3 +164,63 @@ All requirements are grounded in parallel research conducted 2026-04-27:
 ---
 
 *Requirements defined: 2026-04-27*
+
+---
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| STRUCT-01 | 32, 33, 37 | Pending |
+| STRUCT-02 | 32, 33, 37 | Pending |
+| STRUCT-03 | 32, 33, 37 | Pending |
+| EMAIL-00 | 32 | Pending |
+| EMAIL-01 | 32 | Pending |
+| EMAIL-02 | 32 | Pending |
+| EMAIL-03 | 32 | Pending |
+| EMAIL-04 | 32 | Pending |
+| EMAIL-05 | 32 | Pending |
+| EMAIL-06 | 32 | Pending |
+| EMAIL-07 | 32 | Pending |
+| EMAIL-08 | 32 | Pending |
+| EMAIL-09 | 32 | Pending |
+| EMAIL-10 | 32 | Pending |
+| EMAIL-11 | 32 | Pending |
+| EMAIL-12 | 32 | Pending |
+| BROKER-00 | 33 | Pending |
+| BROKER-ARCH | 33 | Pending |
+| KAFKA-01 | 33 | Pending |
+| KAFKA-02 | 33 | Pending |
+| KAFKA-03 | 33 | Pending |
+| KAFKA-04 | 33 | Pending |
+| RABBIT-01 | 33 | Pending |
+| RABBIT-02 | 33 | Pending |
+| RABBIT-03 | 33 | Pending |
+| RABBIT-04 | 33 | Pending |
+| RABBIT-05 | 33 | Pending |
+| REDIS-01 | 33 | Pending |
+| REDIS-02 | 33 | Pending |
+| REDIS-03 | 33 | Pending |
+| BROKER-LAB-01 | 33 | Pending |
+| BROKER-LAB-02 | 33 | Pending |
+| MOTION-01 | 34 | Pending |
+| MOTION-02 | 34 | Pending |
+| MOTION-03 | 34 | Pending |
+| MOTION-04 | 34 | Pending |
+| CBOM-01 | 35 | Pending |
+| CBOM-02 | 35 | Pending |
+| CBOM-03 | 35 | Pending |
+| CBOM-04 | 35 | Pending |
+| DASH-01 | 36 | Pending |
+| DASH-02 | 36 | Pending |
+| DASH-03 | 36 | Pending |
+| DASH-04 | 36 | Pending |
+| DASH-05 | 36 | Pending |
+| INFRA-01 | 37 | Pending |
+| INFRA-02 | 37 | Pending |
+| INFRA-03 | 37 | Pending |
+
+**Coverage:** 50/50 requirements mapped (100%) ✓
+
+*Traceability added: 2026-04-27*
+

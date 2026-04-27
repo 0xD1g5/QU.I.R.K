@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Data in Motion
-status: planning
+status: roadmapped
 stopped_at: ""
-last_updated: "2026-04-26T00:00:00.000Z"
-last_activity: 2026-04-26 -- Milestone v4.4 started
+last_updated: "2026-04-27T00:00:00.000Z"
+last_activity: 2026-04-27 -- Roadmap created; ready to plan Phase 32
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,16 +21,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.4 Data in Motion — email protocol scanning and message broker TLS audit
+**Current focus:** v4.4 Data in Motion — Phase 32 (Email Scanner) is next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 32 — Email Scanner (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-26 — Milestone v4.4 started
+Status: Roadmap complete; ready to plan Phase 32
+Last activity: 2026-04-27 — Roadmap created for v4.4 Data in Motion (Phases 32–37)
 
-Progress: [░░░░░░░░░░] 0/0 phases complete (v4.4)
+Progress: [░░░░░░░░░░] 0/6 phases complete (v4.4)
+
+## Phase Overview
+
+| Phase | Slug | Complexity | Depends On |
+|-------|------|------------|------------|
+| 32 | email-scanner | L | Phase 31 |
+| 33 | broker-scanner | L | Phase 31 (parallel to 32) |
+| 34 | motion-intelligence | M | Phase 32, 33 |
+| 35 | cbom-integration | M | Phase 32, 33 (parallel to 34) |
+| 36 | dashboard-motion-tab | M | Phase 34, 35 |
+| 37 | gap-closure-v4.4.0 | S | Phase 36 |
+
+**Critical path:** 31 → 32/33 (parallel) → 34/35 (parallel) → 36 → 37
 
 ## Performance Metrics
 
@@ -55,13 +68,20 @@ Previous milestone (v4.3) key decisions carried forward:
 - ISSUE-2 and ISSUE-3 patterns must be treated as structural requirements on every scanner phase — pyproject.toml diff is a required PLAN.md deliverable; session_start parameter is mandatory for all new scanners
 - All new scanners must include [motion] extras group entry in pyproject.toml at plan time
 
+Roadmap decisions (2026-04-27):
+- Phase 32 and Phase 33 develop in parallel — no shared code dependencies between email_scanner.py and broker_scanner.py
+- Phase 34 (Motion Intelligence) and Phase 35 (CBOM Integration) develop in parallel once 32+33 are done
+- Chaos lab port allocation: email profile uses 30xxx range, broker profile uses 26xxx/29xxx/25xxx ranges (no conflicts with existing profiles)
+- KAFKA-04 (AdminClient enrichment) is optional/graceful-degradation only — not required for Phase 33 success criteria; TLS probe via sslyze is the required path
+- OpenSSL 3.x TLS 1.0/1.1 caveat applies to both email and broker chaos labs — target RSA key-exchange and weak cipher as primary detectable findings at TLS 1.2
+
 ### Pending Todos
 
-None at milestone start.
+None at roadmap creation.
 
 ### Blockers/Concerns
 
-None at milestone start.
+None at roadmap creation.
 
 ## Deferred Items
 
@@ -86,5 +106,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-26
-Stopped at: Milestone v4.4 planning started
+Last session: 2026-04-27
+Stopped at: Roadmap created — ready to plan Phase 32 (Email Scanner)
+Next action: `/gsd-plan-phase 32` — Email Scanner
