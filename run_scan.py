@@ -700,8 +700,7 @@ def main():
                     logger=logger,
                     session_start=session_start,
                 )
-                logger.info("Email scan: %d endpoints from %d hosts",
-                            len(email_endpoints), len(email_hosts))
+                logger.info(f"Email scan: {len(email_endpoints)} endpoints from {len(email_hosts)} hosts")
 
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
