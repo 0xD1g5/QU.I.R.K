@@ -83,7 +83,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ HashiCorp Vault connector — transit keys (VAULT-01 + PQC), PKI root+intermediate CA (VAULT-02), auth method risk tiering (VAULT-03); dar_vault_weak_count HIGH-only counter; CBOM Pass 1 algorithm registration, Pass 2+3 skip; dedicated --profile vault chaos lab (port 28200) — v4.3
 - ✓ Trend analysis across scan sessions — score delta (D-01 match key), net-new/resolved findings by severity, scan error delta, React /trends dashboard page — v4.3
 
-**v4.4 Data in Motion (Planned)**
+**v4.4 Data in Motion (Active)**
 - [ ] Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 via sslyze handoff
 - [ ] Message broker TLS — Kafka, RabbitMQ, Redis, AMQP connection audit
 
@@ -105,9 +105,20 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
+## Current Milestone: v4.4 Data in Motion
+
+**Goal:** Extend QU.I.R.K.'s cryptographic inventory to cover network transport layers — auditing email protocols and message broker connections for weak TLS, cipher suites, and quantum-unsafe algorithms.
+
+**Target features:**
+- Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 TLS handshakes via sslyze; weak cipher/cert detection; chaos lab profile
+- Message broker TLS — Kafka, RabbitMQ, Redis, AMQP connection audit; TLS version/cipher enumeration; chaos lab profiles
+- Evidence counters wired into scoring (motion_ subscore prefix)
+- CBOM Pass 1/2/3 integration for both surfaces
+- Dashboard integration for new surfaces
+
 ## Context
 
-- **Current version**: v4.3.0 — shipped 2026-04-26; v4.3 Data at Rest milestone archived
+- **Current version**: v4.4.0 (in progress); v4.3.0 shipped 2026-04-26
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
@@ -148,7 +159,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | ldap3 added in Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; fixed as first task of v4.3 | ✓ Good — ldap3>=2.9.1 in [identity] extras; KERB-03 LDAP path is now reachable |
 
 ---
-*Last updated: 2026-04-26 after v4.3 milestone archive*
+*Last updated: 2026-04-26 — v4.4 Data in Motion milestone started*
 
 ## Evolution
 
