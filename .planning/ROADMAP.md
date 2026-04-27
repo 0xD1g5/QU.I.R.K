@@ -495,7 +495,14 @@ Plans:
   4. When sslyze fails, the stdlib fallback (`smtplib`/`imaplib`/`poplib`) negotiates STARTTLS and extracts TLS version, cipher, and cert via the underlying SSLSocket
   5. `docker compose --profile email up` starts the Postfix+Dovecot container with weak TLS (TLS 1.1 minimum, RSA non-PFS ciphers, self-signed RSA-2048 cert); scanning produces at minimum one HIGH finding for weak cipher and one MEDIUM for STARTTLS risk; `labs/email/expected_results.md` documents expected findings
   6. `ep.service_detail` format follows `"SMTP-STARTTLS:587"`, `"SMTPS:465"`, `"IMAPS:993"`, `"POP3S:995"` convention (EMAIL-10)
-**Plans**: TBD
+**Plans**: 7 plans
+- [ ] 32-01-PLAN.md — Test scaffolding for email scanner (Wave 1, RED state)
+- [ ] 32-02-PLAN.md — DB schema + migration + config flag + pyproject [motion] group (Wave 1)
+- [ ] 32-03-PLAN.md — quirk/scanner/email_scanner.py canonical 4-function module (Wave 2)
+- [ ] 32-04-PLAN.md — Risk engine evaluate_email_endpoints + run_scan + profile gating (Wave 2)
+- [ ] 32-05-PLAN.md — labs/email/ Postfix+Dovecot chaos lab + email Docker Compose profile (Wave 2)
+- [ ] 32-06-PLAN.md — labs/email/expected_results.md from live lab scan (Wave 3)
+- [ ] 32-07-PLAN.md — UAT-SERIES update + Obsidian sync + commit (Wave 4)
 
 ### Phase 33: Broker Scanner
 **Goal**: QU.I.R.K. can audit TLS posture on Kafka, RabbitMQ, Redis, Azure Service Bus, and AWS SQS — detecting plaintext listeners, weak TLS versions, and quantum-unsafe ciphers — in a single `broker_scanner.py` module following the `db_connector.py` architecture pattern
