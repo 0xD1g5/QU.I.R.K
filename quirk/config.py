@@ -97,6 +97,8 @@ class ConnectorsCfg:
     vault_token: Optional[str] = None       # if None, falls back to VAULT_TOKEN env var
     vault_transit_mount: str = "transit"    # default transit mount path (D-10)
     vault_tls_verify: bool = True           # passed to hvac.Client(verify=...) — D-09
+    # Email scanner enable flag (v4.4, Phase 32)
+    enable_email: bool = False
 
 
 @dataclass
