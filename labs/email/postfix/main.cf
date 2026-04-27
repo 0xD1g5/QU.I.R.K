@@ -6,9 +6,12 @@ inet_protocols = ipv4
 mynetworks = 0.0.0.0/0
 maillog_file = /dev/stdout
 
-# TLS protocol pinning — TLS 1.0/1.1 disabled by OpenSSL 3.x on scanner host anyway
-smtpd_tls_protocols = !SSLv2, !SSLv3
-smtp_tls_protocols = !SSLv2, !SSLv3
+# TLS protocol pinning — cap exactly at TLS 1.2 so weak-cipher detection fires.
+# (TLS 1.3 ciphers are PFS-only and bypass the cipher exclude list below.)
+smtpd_tls_protocols = TLSv1.2
+smtpd_tls_mandatory_protocols = TLSv1.2
+smtp_tls_protocols = TLSv1.2
+smtp_tls_mandatory_protocols = TLSv1.2
 
 # Force RSA key exchange / non-PFS by excluding ECDHE/EDH/DHE
 smtpd_tls_mandatory_ciphers = medium
@@ -24,3 +27,6 @@ smtpd_tls_key_file  = /etc/postfix/certs/postfix.key
 
 # Loglevel for chaos-lab debugging
 smtpd_tls_loglevel = 1
+
+# Postfix 3.6 requires smtpd_relay_restrictions; chaos lab doesn't accept relay
+smtpd_relay_restrictions = reject_unauth_destination
