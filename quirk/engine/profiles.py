@@ -87,6 +87,9 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
         if hasattr(scan, "tls_enum_mode") and (getattr(scan, "tls_enum_mode") is None):
             scan.tls_enum_mode = "off"
 
+        # Phase 32: do NOT enable email scanning in quick profile.
+        # cfg.connectors.enable_email default (False) stays.
+
     elif p == "deep":
         # slower, deeper enumeration
         _set_if_default("fingerprint_timeout_seconds", 6, default=4)
@@ -101,6 +104,11 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
         if hasattr(scan, "tls_enum_mode") and (getattr(scan, "tls_enum_mode") is None):
             scan.tls_enum_mode = "deep"
 
+        # Phase 32: deep profile enables email scanning.
+        if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_email"):
+            if not cfg.connectors.enable_email:
+                cfg.connectors.enable_email = True
+
     else:
         # standard
         _set_if_default("fingerprint_timeout_seconds", 4, default=4)
@@ -114,6 +122,11 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
 
         if hasattr(scan, "tls_enum_mode") and (getattr(scan, "tls_enum_mode") is None):
             scan.tls_enum_mode = "fast"
+
+        # Phase 32: standard profile enables email scanning.
+        if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_email"):
+            if not cfg.connectors.enable_email:
+                cfg.connectors.enable_email = True
 
     # -------------------------
     # safe-mode adjustments
