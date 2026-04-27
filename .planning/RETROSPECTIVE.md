@@ -148,6 +148,58 @@
 
 ---
 
+## Milestone: v4.3 — Data at Rest
+
+**Shipped:** 2026-04-26
+**Phases:** 7 (25–31) | **Plans:** 24 | **Tests at ship:** 504 collected
+
+### What Was Built
+
+- **Identity Findings Accuracy carry-over (Phase 25):** OIDC RS-family routing fixed in `_derive_identity_findings()`, TLS-bleed guard in `_derive_findings()`, `ldap3>=2.9.1` added to `[identity]` extras, and full chaos lab expected results oracle written for all three v4.2 identity scanner profiles — the first milestone where a prior-milestone audit finding arrived pre-packaged as Phase 1 of the new milestone
+- **GCP Connector (Phase 26):** 47-entry KMS algorithm map including PQC key types, Cloud SQL TLS enforcement detection, GCS CMEK detection — GCS enumeration data stored and forwarded to Phase 28, eliminating duplicate API calls
+- **Database Encryption Detection (Phase 27):** PostgreSQL 3-tier SSL probe using `pg_has_role()` privilege check, MySQL `Ssl_cipher` session scanner, RDS `StorageEncrypted`+`KmsKeyId` via existing boto3 session; `dat_scan_json` ORM column established as shared dependency; `dar_` 5th subscore prefix introduced; Docker chaos lab for database targets
+- **Object Storage Audit (Phase 28):** S3 per-bucket severity ladder via `ThreadPoolExecutor(max_workers=10)`, Azure Blob `keySource` classification, GCS CMEK sentinel reuse confirming zero duplicate storage API calls; MinIO chaos lab; dar_storage evidence counters with SCORE_WEIGHTS 12.0/4.0
+- **Kubernetes Secrets Inspection (Phase 29):** EKS/GKE/AKS managed cluster encryption APIs, secret type enumeration without reading values, RBAC-403 degradation, `encryption-config-inaccessible` invariant; gap closure plan 29-04 closed three VERIFICATION gaps after primary implementation
+- **HashiCorp Vault Connector (Phase 30):** Transit keys with PQC positive findings (`ml-dsa`/`slh-dsa` → quantum-safe), PKI CA cert algorithm detection, auth method risk tiering; dedicated chaos lab at port 28200; conftest.py SHA-1 shim required for cryptography 46.x compatibility
+- **Trend Analysis (Phase 31):** `compute_trend_report()` using `scanned_at`-based session grouping (no new SQLite table), score delta, net-new/resolved findings by severity, `GET /api/trends` FastAPI route, React `TrendsPage` with `useTrendsData` hook — first cross-session intelligence feature
+
+### What Worked
+
+- **CRITICAL PATH designation for Phase 27 paid off.** Marking Phase 27 as the explicit critical path dependency (`_ensure_v43_columns()` and `dat_scan_json` shared by Phases 28, 29, 30) allowed Phases 28/29/30 to be planned and executed in logical parallel with full confidence that the schema was stable. No rework required from schema drift.
+- **GCS sentinel reuse design (STOR-03).** The decision to have Phase 26 store GCS bucket data in `gcs_scan_json` and Phase 28 read from it — rather than each making independent `storage.buckets.list` API calls — required upfront API boundary agreement. That contract worked as designed: zero duplicate GCS calls in a single scan run.
+- **dar_ prefix as 5th parallel subscore.** Introducing `dar_` as a parallel prefix to `identity_` (rather than extending an existing subscore) kept the scoring infrastructure separable. This architectural choice, made at roadmap-creation time, meant all 6 dar_ scanner contributions (db, storage, k8s, vault) could be added independently without touching each other.
+- **Phase 25 carry-over pattern.** Treating the v4.2 audit's NEW-ISSUE-1 and ISSUE-2 as the literal Phase 25 of v4.3 — rather than shoehorning them into v4.2's close — produced a cleaner milestone with explicit traceability. The carry-over was pre-planned at roadmap creation, not discovered mid-execution.
+- **Gap closure plan 29-04.** After primary K8s implementation, VERIFICATION.md surfaced CR-01/02/03 (RBAC counter, AKS per-cluster inaccessible, service_detail alignment). Plan 29-04 closed all three in one targeted plan — the audit-then-gap-closure pattern validating at 3-gap scale again.
+
+### What Was Inefficient
+
+- **W-2: `dat_scan_json` always NULL.** The evidence counters were wired via `service_detail` parsing, which works for scoring, but the `dat_scan_json` column itself is never populated by any DB scanner. This was a structural gap — the column was introduced in Phase 27-01 as part of the ORM schema but no Phase 27 plan wrote to it. It should have been a Phase 27 exit criterion: "`dat_scan_json` is non-null after a DB scan."
+- **W-1: Vault CBOM Pass 1 fragile.** The decision to leave Vault endpoints registering algorithms through the default `else` clause (D-14) is architecturally fragile — a future `VAULT` addition to the Pass 1 skip list would silently break transit key registration. This was a known trade-off (documented in SUMMARY.md) but should have been resolved with an explicit `elif ep.protocol == 'VAULT'` guard in the same plan that introduced the skip entries.
+- **`__init__.py` version skew.** `quirk/__init__.py` still read `4.2.0` at milestone close despite `pyproject.toml` being `4.3.0`. This was caught during milestone archive and fixed, but it repeated the v4.1 lesson (importlib.metadata vs module attribute). The version bump should be a required milestone execution step, not a milestone-close finding.
+- **TREND-04 visual render deferred from Plan 03.** The React `/trends` page code was committed in Plan 31-03 but the human verification checkpoint was accepted without running the dashboard in a browser. Visual rendering confirmation should be a blocking checkpoint, not an acknowledged deferral — a blank /trends page in production is a user-visible regression even if the API is wired.
+
+### Patterns Established
+
+- **CRITICAL PATH annotation in roadmap:** When a phase establishes shared schema or infrastructure that multiple downstream phases depend on, mark it explicitly in the roadmap as `(CRITICAL PATH)`. This makes dependency sequencing unambiguous for any executor.
+- **GCS sentinel reuse contract:** Scanner A stores API enumeration results in a JSON column; Scanner B reads from that column rather than re-fetching. This pattern eliminates duplicate cloud API calls for any two scanners that share a common enumeration step. Document the producer-consumer contract in both SUMMARY.md files.
+- **dar_ prefix as independent subscore slot:** New scanner surface areas that score independently of each other should introduce their own prefix in `evidence.py`/`scoring.py`, not share an existing prefix. Keeps surface scoring separable for future per-surface dashboard breakdowns.
+- **conftest.py shim for upstream library breaks:** When a transitive dependency changes behavior across versions (cryptography 46.x SHA-1 deprecation), add the shim to `conftest.py` rather than patching individual test files. One location, visible to all tests.
+
+### Key Lessons
+
+1. **Column-level exit criteria.** A new ORM column that is always NULL is not "implemented" — it's a stub. Exit criteria for any plan that introduces a new DB column must include: "column is non-null after a successful scan run." Otherwise the column exists in the schema but fails the JSON contract it was designed to serve.
+2. **CBOM skip list symmetry is still not automatic.** This lesson appeared in v4.2 (DNSSEC missed in Pass 2). In v4.3, the Vault `elif` guard was skipped intentionally (D-14) — but the fragility was acknowledged rather than resolved. A future audit that catches a transit key registration regression will trace back to this decision. The correct fix is an explicit `elif ep.protocol == 'VAULT'` in Pass 1.
+3. **Version bump is a milestone phase task, not a milestone-close finding.** `__init__.py` and `pyproject.toml` version consistency should be a required exit step for the milestone's final phase (or a dedicated gap-closure plan), not discovered at archive time. Add to the phase exit checklist.
+4. **Visual rendering is a blocking checkpoint.** Frontend code that is committed but never rendered in a browser is in an unknown state. The `/trends` page deferred from Plan 03 is the canonical example. Human checkpoint at Plan 31-03 should have been `blocked` (not `accepted`) until browser confirmation was obtained.
+
+### Cost Observations
+
+- Model mix: Sonnet 4.6 primary throughout milestone
+- Sessions: 2-day execution (2026-04-24 → 2026-04-26); ~208 commits
+- Notable: Heaviest infrastructure milestone to date — 6 new scanner surfaces, 16 chaos lab profiles total at ship. Fastest per-phase execution of any milestone (24 plans in 2 days). Critical path discipline and pre-planned carry-over phase kept rework near zero.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -157,6 +209,7 @@
 | v3.9 Gap Closure | 11 | 40+ | First milestone to use audit-milestone + integration checker gate before close; established BACK-xx backlog and milestones/ archival patterns |
 | v4.1 Foundation Polish | 5 | 10 | Correctness-only milestone — no new features; 22/22 requirements satisfied; audit-gap-closure pattern validated at small scale |
 | v4.2 Identity Crypto | 8 | 14 | First major scanner expansion since v3.9; 3-phase gap closure sweep; shared session_start contract established; audit caught HIGH-severity ISSUE-3 before ship |
+| v4.3 Data at Rest | 7 | 24 | Heaviest infrastructure milestone — 6 scanner surfaces; CRITICAL PATH annotation pattern established; dar_ 5th subscore prefix; GCS sentinel reuse; carry-over phase pre-planned at roadmap creation |
 
 ### Cumulative Quality
 
@@ -165,6 +218,7 @@
 | v3.9 | 199 | 199 tests green at ship; 9 stale Nyquist VALIDATION.md files (BACK-62) |
 | v4.1 | 233 | 233 tests green at ship; all 14 VALIDATION.md files updated to nyquist_compliant: true; zero known tech debt |
 | v4.2 | 352 | 352 tests green at ship; 7/7 Nyquist VALIDATION.md files compliant; 2 MEDIUM gaps deferred (Phase 25 in v4.3) |
+| v4.3 | 504 | 504 tests collected at ship; tech_debt audit status (16 deferred items, all live-env or minor structural); __init__.py version skew fixed at archive time |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -174,3 +228,5 @@
 4. Dead code deferred across two milestones becomes permanent — enforce dead code deletion in the phase that discovers it, not later
 5. Every import-guarded optional dependency must exist in an installable extras group — graceful degradation is only meaningful if the non-degraded path is reachable
 6. Shared session_start is an integration contract, not a fix — future scanners added to run_scan.py must accept and use it from Phase 1
+7. Column-level exit criteria: a new ORM column that is always NULL is not implemented — exit criteria must include non-null verification after a real scan run
+8. Version bump (__init__.py) is a required milestone task, not a milestone-close finding — add to every final phase's exit checklist
