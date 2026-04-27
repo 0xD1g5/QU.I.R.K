@@ -501,7 +501,7 @@ Plans:
 - [x] 32-03-PLAN.md — quirk/scanner/email_scanner.py canonical 4-function module (Wave 2)
 - [x] 32-04-PLAN.md — Risk engine evaluate_email_endpoints + run_scan + profile gating (Wave 2)
 - [x] 32-05-PLAN.md — labs/email/ Postfix+Dovecot chaos lab + email Docker Compose profile (Wave 2)
-- [ ] 32-06-PLAN.md — labs/email/expected_results.md from live lab scan (Wave 3)
+- [x] 32-06-PLAN.md — labs/email/expected_results.md from live lab scan (Wave 3)
 - [ ] 32-07-PLAN.md — UAT-SERIES update + Obsidian sync + commit (Wave 4)
 
 ### Phase 33: Broker Scanner
@@ -696,7 +696,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
 | 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 31. Trend Analysis | v4.3 | 4/4 | Complete    | 2026-04-26 |
-| 32. Email Scanner | v4.4 | 5/7 | In Progress|  |
+| 32. Email Scanner | v4.4 | 6/7 | In Progress|  |
 | 33. Broker Scanner | v4.4 | 0/TBD | Not started | - |
 | 34. Motion Intelligence | v4.4 | 0/TBD | Not started | - |
 | 35. CBOM Integration | v4.4 | 0/TBD | Not started | - |
