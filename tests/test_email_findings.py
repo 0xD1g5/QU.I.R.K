@@ -38,25 +38,15 @@ def _ep(host="m.example.com", port=25, protocol="SMTP-STARTTLS",
 
 
 def _mk_cfg():
-    """Construct a minimal AppConfig with default ConnectorsCfg.enable_email=False."""
-    from quirk.config import (
-        AppConfig, AssessmentCfg, ScanCfg, TargetsCfg,
-        ConnectorsCfg, OutputCfg, IntelligenceCfg,
-    )
-    # AssessmentCfg requires positional args; use minimal placeholders.
-    assessment = AssessmentCfg(
-        name="test",
-        data_classification="internal",
-        report_owner="test",
-        timezone="UTC",
-    )
-    return AppConfig(
-        assessment=assessment,
-        scan=ScanCfg(),
-        targets=TargetsCfg(),
+    """Construct a minimal cfg duck-type with default ConnectorsCfg.enable_email=False.
+
+    apply_profile() mutates cfg.scan (defaults) and (Phase 32) cfg.connectors.enable_email.
+    A SimpleNamespace with the canonical ConnectorsCfg + ScanCfg suffices for gating tests.
+    """
+    from quirk.config import ConnectorsCfg, ScanCfg
+    return SimpleNamespace(
+        scan=ScanCfg(timeout_seconds=5, concurrency=200, ports_tls=[443]),
         connectors=ConnectorsCfg(),
-        output=OutputCfg(),
-        intelligence=IntelligenceCfg(),
     )
 
 
