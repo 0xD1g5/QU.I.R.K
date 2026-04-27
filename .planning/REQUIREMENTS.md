@@ -182,8 +182,8 @@ All requirements are grounded in parallel research conducted 2026-04-27:
 | EMAIL-05 | 32 | Complete |
 | EMAIL-06 | 32 | Complete |
 | EMAIL-07 | 32 | Complete |
-| EMAIL-08 | 32 | Pending |
-| EMAIL-09 | 32 | Pending |
+| EMAIL-08 | 32 | Complete |
+| EMAIL-09 | 32 | Complete |
 | EMAIL-10 | 32 | Complete |
 | EMAIL-11 | 32 | Pending |
 | EMAIL-12 | 32 | Pending |

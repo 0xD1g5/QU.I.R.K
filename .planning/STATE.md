@@ -4,7 +4,7 @@ milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
 status: executing
 stopped_at: Phase 32 context gathered
-last_updated: "2026-04-27T19:11:30.425Z"
+last_updated: "2026-04-27T19:18:03.955Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 25
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 32 (email-scanner) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-04-27
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Accumulated Context
 
 | Phase 32 P03 | 12 min | 2 tasks | 1 files |
+| Phase 32 P04 | 22 | 2 tasks | 5 files |
 
 ### Decisions
 
@@ -80,6 +81,7 @@ Roadmap decisions (2026-04-27):
 - OpenSSL 3.x TLS 1.0/1.1 caveat applies to both email and broker chaos labs — target RSA key-exchange and weak cipher as primary detectable findings at TLS 1.2
 - [Phase ?]: Phase 32 Plan 03: email_scanner.py uses module-level sslyze stub names so tests can patch SslyzeScanner even when sslyze is absent
 - [Phase ?]: Phase 32 Plan 03: _peer_metadata() duck-types the wrapped socket so MagicMock SSLSockets work without spec=ssl.SSLSocket
+- [Phase ?]: Phase 32 Plan 04: email findings merged inside the existing risk_engine phase-timer (single span) to preserve report metric integrity
 
 ### Pending Todos
 
@@ -112,6 +114,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-27T19:10:50.554Z
+Last session: 2026-04-27T19:17:53.001Z
 Stopped at: Phase 32 context gathered
 Next action: `/gsd-plan-phase 32` — Email Scanner
