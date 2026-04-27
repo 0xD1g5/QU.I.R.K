@@ -126,20 +126,25 @@ None at roadmap creation time. Structural risks documented in research/SUMMARY.m
 
 ## Deferred Items
 
-Items acknowledged and deferred at v4.2 milestone close on 2026-04-24 (carried to v4.3):
+Items acknowledged and deferred at v4.3 milestone close on 2026-04-27:
 
 | Category | Item | Status |
 |----------|------|--------|
 | uat_gap | Phase 04: 04-HUMAN-UAT.md (5 pending scenarios) | partial — Docker chaos lab tests, pre-v3.9 carry-over |
 | uat_gap | Phase 05: 05-HUMAN-UAT.md (5 pending scenarios) | partial — Dashboard UI tests, pre-v3.9 carry-over |
 | uat_gap | Phase 07: 07-HUMAN-UAT.md (4 pending scenarios) | partial — Packaging tests, pre-v3.9 carry-over |
-| uat_gap | Phase 13: 13-UAT.md (6 pending scenarios) | testing — Interactive mode, pre-v4.1 carry-over |
-| verification_gap | Phase 04: 04-VERIFICATION.md | human_needed — pre-v3.9 carry-over |
-| verification_gap | Phase 07: 07-VERIFICATION.md | human_needed — pre-v3.9 carry-over |
-| verification_gap | Phase 22: 22-VERIFICATION.md | human_needed — E2E live identity scan (requires Docker) |
-| verification_gap | Phase 24: 24-VERIFICATION.md | human_needed — intentionally accepted (0 pending scenarios) |
+| uat_gap | Phase 13: 13-UAT.md (6 pending scenarios) | deferred — Interactive mode, pre-v4.1 carry-over |
+| uat_gap | Phase 25: 25-HUMAN-UAT.md (2 pending scenarios) | partial — live identity scan requires Docker + samba-dc |
+| uat_gap | Phase 27: 27-HUMAN-UAT.md (1 pending scenario) | partial — live DB encryption scan requires running DB |
+| uat_gap | Phase 27: 27-UAT.md (7 pending scenarios) | deferred — DB encryption behavioral tests require live DB |
+| uat_gap | Phase 28: 28-HUMAN-UAT.md (3 pending scenarios) | partial — live S3/GCS bucket scan requires cloud credentials |
+| uat_gap | Phase 29: 29-UAT.md (10 pending scenarios) | testing — K8s secrets inspection requires live cluster |
+| uat_gap | Phase 30: 30-HUMAN-UAT.md (1 pending scenario) | partial — live Vault connector requires running Vault instance |
+| uat_gap | Phase 31: 31-HUMAN-UAT.md (4 pending scenarios) | partial — trend analysis requires prior scan history |
+| verification_gap | Phase 25: 25-VERIFICATION.md | human_needed — live identity scan (requires Docker) |
+| verification_gap | Phase 28: 28-VERIFICATION.md | human_needed — live object storage scan (requires cloud credentials) |
+| verification_gap | Phase 31: 31-VERIFICATION.md | human_needed — trend analysis UI requires running dashboard with scan history |
 | seed | SEED-001-backlog-rollout-phase-plan | dormant |
-| milestone_gap | NEW-ISSUE-3: expected_results_v3.md missing identity chaos lab entries | LOW — Phase 25 target |
 
 ## Session Continuity
 

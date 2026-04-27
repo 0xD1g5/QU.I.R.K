@@ -22,6 +22,7 @@ class SubScores(BaseModel):
     modern_tls: int
     identity_trust: int
     agility_signals: int
+    data_at_rest: int = 0
 
 
 class ScoreData(BaseModel):
