@@ -78,3 +78,8 @@ class CryptoEndpoint(Base):
     # ==========================
     dat_scan_json = Column(Text, nullable=True)  # Universal DAR scan result JSON (Phase 27+)
     severity = Column(String(16), nullable=True)  # Finding severity: HIGH, MEDIUM, LOW, INFO
+
+    # ==========================
+    # v4.4 Data in Motion fields
+    # ==========================
+    email_scan_json = Column(Text, nullable=True)  # Per-host email port scan summary JSON (Phase 32)
