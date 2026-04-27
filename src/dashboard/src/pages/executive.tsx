@@ -147,6 +147,7 @@ export function ExecutivePage() {
             <ScoreGauge score={score.subscores.modern_tls} label="Modern TLS" size={120} />
             <ScoreGauge score={score.subscores.identity_trust} label="Identity" size={120} />
             <ScoreGauge score={score.subscores.agility_signals} label="Agility" size={120} />
+            <ScoreGauge score={score.subscores.data_at_rest} label="Data at Rest" size={120} />
           </div>
         </CardContent>
       </Card>

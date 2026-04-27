@@ -597,6 +597,7 @@ def get_latest_scan(
             modern_tls=subscores_raw.get("modern_tls", 0),
             identity_trust=subscores_raw.get("identity_trust", 0),
             agility_signals=subscores_raw.get("agility_signals", 0),
+            data_at_rest=subscores_raw.get("data_at_rest", 0),
         ),
         drivers=score_raw.get("drivers", []),
     )
