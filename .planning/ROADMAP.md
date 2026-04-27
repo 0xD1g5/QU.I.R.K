@@ -474,7 +474,7 @@ Plans:
 
 **Milestone Goal:** Extend QU.I.R.K.'s cryptographic inventory to cover network transport layers — auditing email protocol TLS (SMTP/IMAP/POP3, all 7 standard ports) and message broker TLS (Kafka, RabbitMQ, Redis) for weak ciphers, legacy TLS versions, plaintext listeners, and quantum-unsafe algorithms. Introduces the `data_in_motion` subscore as the 6th pillar of the quantum-readiness score.
 
-- [ ] **Phase 32: Email Scanner** — `email_scanner.py`: sslyze STARTTLS for SMTP/IMAP/POP3, stdlib fallback, STARTTLS downgrade finding, Postfix+Dovecot chaos lab (profile: email, ports 30025/30465/30587/30143/30993/30110/30995)
+- [x] **Phase 32: Email Scanner** — `email_scanner.py`: sslyze STARTTLS for SMTP/IMAP/POP3, stdlib fallback, STARTTLS downgrade finding, Postfix+Dovecot chaos lab (profile: email, ports 30025/30465/30587/30143/30993/30110/30995)
 - [ ] **Phase 33: Broker Scanner** — `broker_scanner.py`: Kafka (9092/9093/9094), RabbitMQ/AMQPS (5671/5672), Redis (6379/6380), Azure Service Bus, AWS SQS; broker chaos lab (profile: broker, ports 26379/26380/29092/29093/25671/25672)
 - [ ] **Phase 34: Motion Intelligence** — Six `motion_` evidence counters in `evidence.py`, five `motion_` ratio entries in `scoring.py`, `PROFILE_MULTIPLIERS` motion_ prefix, `data_in_motion` as 6th named subscore in `compute_readiness_score()`
 - [ ] **Phase 35: CBOM Integration** — Pass 1 algorithm components for email and broker TLS; Pass 2+3 skip lists for plaintext-only broker endpoints; quantum-safety classification for RSA key-exchange cipher suites
