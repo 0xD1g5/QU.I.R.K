@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-26 (Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-04-27 (Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.3. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -1971,6 +1971,236 @@ manually).
 **Pass Criteria:**
 - Vault auth row count: exactly 2 (token HIGH + userpass MEDIUM)
 - No row produced for approle or kubernetes
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+## Phase 32: Email Scanner (UAT-32-XX)
+
+### UAT-32-01: Email Scan — All 7 Standard Ports Return TLS Metadata
+
+> Added Phase 32 (2026-04-27): Validates EMAIL-00..06 — `scan_email_targets()` against the
+> running `--profile email` chaos lab returns `CryptoEndpoint` rows for all 7 standard email
+> ports (25, 465, 587, 143, 993, 110, 995) with TLS version, negotiated cipher, cert subject /
+> issuer / expiry, and key algorithm; `email_scan_json` is populated on the DB rows.
+
+**Prerequisites:** `pip install quirk[motion]` (sslyze required for full enumeration); Docker
+available. Lab booted with privileged-port forwarding (e.g. `sudo socat` mapping 25→30025
+through 995→30995) OR direct invocation per `labs/email/expected_results.md`.
+
+**Steps:**
+1. `cd quantum-chaos-enterprise-lab && docker compose --profile email up -d --build`
+2. Wait for `postfix-email` and `dovecot-email` to report healthy
+   (`docker compose --profile email ps`).
+3. Configure `email_uat.yaml` with `connectors.enable_email: true`, target = `localhost`.
+4. Run `quirk --config email_uat.yaml --profile standard`.
+5. Inspect `quirk-output/scan-results.json` for the email rows; query the SQLite DB:
+   `SELECT host, port, protocol, tls_version, cipher_suite, email_scan_json FROM crypto_endpoints WHERE protocol LIKE '%MTP%' OR protocol LIKE '%MAP%' OR protocol LIKE '%OP3%';`
+6. `docker compose --profile email down`.
+
+**Expected:**
+- ≥7 `CryptoEndpoint` rows produced — one per port (25/465/587/143/993/110/995).
+- Each row has non-NULL `tls_version`, `cipher_suite`, `cert_subject`, `cert_expiry`,
+  `cert_pubkey_algo` (RSA-2048).
+- `email_scan_json` column is non-NULL for every row.
+- Cipher matches `labs/email/expected_results.md` capture
+  (e.g. `TLS_RSA_WITH_ARIA_256_GCM_SHA384` on Postfix ports, `TLS_CHACHA20_POLY1305_SHA256` on
+  Dovecot ports under TLS 1.3 default).
+
+**Pass Criteria:**
+- 7 email-protocol rows present in the DB.
+- `python -m pytest tests/test_email_scanner.py -q` exits 0 (18 passed).
+- `email_scan_json` column populated for all 7 rows.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-32-02: STARTTLS Downgrade on Port 25 + Weak Cipher Findings
+
+> Added Phase 32 (2026-04-27): Validates EMAIL-08/09 — port-25 STARTTLS endpoint emits a
+> static MEDIUM `STARTTLS downgrade risk on SMTP` finding regardless of cipher; a weak RSA
+> key-exchange cipher (`TLS_RSA_WITH_*`) on any email port emits HIGH
+> `Weak cipher suite on email TLS endpoint`. D-11 layering: a port-25 row with weak RSA cipher
+> emits BOTH findings — they are not deduplicated.
+
+**Prerequisites:** UAT-32-01 prerequisites met; lab booted; scan completed.
+
+**Steps:**
+1. From the same scan output, inspect findings:
+   `jq '.findings[] | select(.title | contains("STARTTLS") or contains("Weak cipher"))' quirk-output/scan-results.json`
+2. Confirm at least one MEDIUM `STARTTLS downgrade risk on SMTP` finding on port 25.
+3. Confirm at least one HIGH `Weak cipher suite on email TLS endpoint` finding (Postfix ports
+   25/465/587 against the lab cipher allowlist).
+4. Confirm port 25 has BOTH findings (D-11 layering).
+
+**Expected:**
+- ≥1 MEDIUM `STARTTLS downgrade risk on SMTP` finding, scoped to port 25.
+- ≥1 HIGH `Weak cipher suite on email TLS endpoint` finding.
+- Port 25 row triggers BOTH findings simultaneously when the cipher is weak.
+
+**Pass Criteria:**
+- Severity counts match `labs/email/expected_results.md`: ≥3 HIGH weak-cipher,
+  ≥1 MEDIUM STARTTLS-downgrade.
+- `python -m pytest tests/test_email_findings.py -q` exits 0 (9 passed).
+- D-11 layering: port 25 has 2 distinct findings (no `_dedupe_findings()` collapse).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-32-03: Unreachable Port 25 — Graceful CONNECTION_REFUSED
+
+> Added Phase 32 (2026-04-27): Validates EMAIL-01 + D-03 — `CONNECTION_REFUSED` on port 25
+> (cloud VM with egress block, or simulated locally via firewall drop) does NOT crash the
+> scan; it is logged at DEBUG and the remaining 6 email ports continue.
+
+**Prerequisites:** A target where port 25 is unreachable (e.g. cloud VM that blocks port 25
+egress, OR locally `sudo pfctl` / `iptables` drop on 25 only). Other email ports reachable
+(can also be the chaos lab with port 25 firewalled off from the host).
+
+**Steps:**
+1. Configure `email_uat.yaml` with the unreachable target.
+2. Run `quirk --config email_uat.yaml --profile standard --verbose`.
+3. Confirm scanner does NOT raise / abort.
+4. Inspect logs for a single DEBUG line referencing `CONNECTION_REFUSED` on port 25.
+5. Confirm scan completes, output written, dashboard renders, and findings for the OTHER
+   6 ports are still emitted (or scan_error rows recorded).
+
+**Expected:**
+- Scan exits 0 (success) — no traceback.
+- Logs contain `CONNECTION_REFUSED` at DEBUG level for port 25 (or equivalent
+  per-port error captured in `email_scan_json`).
+- Remaining 6 ports produce normal `CryptoEndpoint` rows.
+
+**Pass Criteria:**
+- Exit code 0 from `quirk` invocation.
+- Port-25 row has `scan_error` (or is absent) — never crashes the run.
+- Other ports succeed (rows present, `email_scan_json` populated).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-32-04: Stdlib Fallback — sslyze Uninstalled
+
+> Added Phase 32 (2026-04-27): Validates EMAIL-07 — when sslyze is not installed, the email
+> scanner falls through to `smtplib`/`imaplib`/`poplib` STARTTLS handshakes (and direct TLS
+> for the implicit-TLS ports), and still extracts TLS version + cipher + cert from the
+> `ssl.SSLSocket`. Note: stdlib's default `ssl.create_default_context()` excludes RSA-kex
+> ciphers, so against the chaos lab's RSA-only allowlist the Postfix ports may handshake-fail
+> via fallback — the test target should be a server that accepts at least one
+> stdlib-compatible cipher.
+
+**Prerequisites:** A virtualenv with `quirk` installed but WITHOUT sslyze
+(`pip uninstall -y sslyze`). A reachable mail server with at least one TLS 1.2 PFS cipher
+acceptable to the stdlib client (e.g. a real ISP mail server, OR a Postfix lab variant with
+ECDHE enabled — see `labs/email/postfix/main.cf` for the cipher excludes to relax).
+
+**Steps:**
+1. `pip uninstall -y sslyze` in the project venv.
+2. `python -c "from quirk.scanner.email_scanner import SSLYZE_AVAILABLE; print(SSLYZE_AVAILABLE)"`
+   — confirm `False`.
+3. Run `quirk --config email_uat.yaml --profile standard --verbose` against the
+   stdlib-compatible target.
+4. Inspect logs for fallback path indicators (no sslyze imports referenced).
+5. Inspect output rows: at least one row has non-NULL `tls_version` and `cipher_suite`
+   captured via the stdlib path.
+6. Re-install sslyze: `pip install sslyze`.
+
+**Expected:**
+- Scanner does not crash on missing sslyze.
+- At least one `CryptoEndpoint` row populated by the stdlib fallback path with
+  `tls_version` and `cipher_suite` non-NULL.
+- `_peer_metadata()` extracts `version()` / `cipher()` / `getpeercert()` from the underlying
+  `ssl.SSLSocket`.
+
+**Pass Criteria:**
+- `python -m pytest tests/test_email_scanner.py -q -k fallback` — 3 fallback tests green.
+- Live sslyze-uninstalled scan produces ≥1 row with non-NULL `tls_version`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-32-05: Chaos Lab End-to-End — Findings Match Expected Results
+
+> Added Phase 32 (2026-04-27): Validates EMAIL-11/12 — `docker compose --profile email up`
+> boots Postfix+Dovecot; running the scanner against the lab produces ≥1 HIGH weak-cipher
+> finding and ≥1 MEDIUM STARTTLS-downgrade finding; the captured output matches
+> `labs/email/expected_results.md`. Also covers the regression baseline for the
+> `logger.info()` call signature fix from Plan 32-06 (see commit `0c6a8c3`) — the live
+> end-to-end run with a real `quirk.logging_util.Logger` instance must not crash on the
+> `cfg.connectors.enable_email` branch.
+
+**Prerequisites:** sslyze installed; Docker available; privileged-port forwarding configured
+on macOS (or run on Linux without restrictions).
+
+**Steps:**
+1. `cd quantum-chaos-enterprise-lab && docker compose --profile email up -d --build`
+2. Wait for both services healthy.
+3. Run the full pipeline: `quirk --config email_uat.yaml --profile standard` with a real
+   `Logger` (not stubbed). Confirm the run does NOT raise
+   `TypeError: Logger.info() takes 2 positional arguments but 4 were given` (Plan 32-06
+   regression).
+4. Diff the scan output's email findings against `labs/email/expected_results.md` (compare
+   finding titles, severities, ports).
+5. `docker compose --profile email down`.
+
+**Expected:**
+- Run completes without `TypeError` on logger.info.
+- ≥1 HIGH `Weak cipher suite on email TLS endpoint` finding.
+- ≥1 MEDIUM `STARTTLS downgrade risk on SMTP` finding.
+- Captured cipher / TLS-version / cert posture matches `labs/email/expected_results.md`
+  (Postfix: `TLS_RSA_WITH_ARIA_256_GCM_SHA384` at TLS 1.2; Dovecot: TLS 1.3 default with
+  documented caveat).
+- Total finding count and severity distribution match the expected_results.md "Expected
+  Findings" table.
+
+**Pass Criteria:**
+- HIGH count and MEDIUM count meet the documented minimums.
+- `labs/email/expected_results.md` is byte-for-byte consistent with the live scan (or
+  documented diff justified by container image drift / OpenSSL caveat).
+- No `Logger.info()` TypeError in the run-scan log output.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-32-06: service_detail Label Format
+
+> Added Phase 32 (2026-04-27): Validates EMAIL-10 — every email `CryptoEndpoint` row's
+> `service_detail` field follows the `"<protocol_label>:<port>"` convention
+> (e.g. `"SMTP-STARTTLS:587"`, `"SMTPS:465"`, `"IMAP-STARTTLS:143"`, `"IMAPS:993"`,
+> `"POP3-STARTTLS:110"`, `"POP3S:995"`).
+
+**Prerequisites:** UAT-32-01 completed; scan output available.
+
+**Steps:**
+1. Query: `SELECT DISTINCT service_detail FROM crypto_endpoints WHERE protocol IN ('SMTP-STARTTLS','SMTPS','IMAP-STARTTLS','IMAPS','POP3-STARTTLS','POP3S');`
+2. Confirm each row matches the `^(SMTP-STARTTLS|SMTPS|IMAP-STARTTLS|IMAPS|POP3-STARTTLS|POP3S):\d+$` regex.
+
+**Expected:**
+- All 7 distinct `service_detail` values follow `<label>:<port>`:
+  `SMTP-STARTTLS:25`, `SMTPS:465`, `SMTP-STARTTLS:587`,
+  `IMAP-STARTTLS:143`, `IMAPS:993`, `POP3-STARTTLS:110`, `POP3S:995`.
+
+**Pass Criteria:**
+- All email rows match the regex `^(SMTP-STARTTLS|SMTPS|IMAP-STARTTLS|IMAPS|POP3-STARTTLS|POP3S):\d+$`.
+- No row has empty `service_detail` or a malformed label.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
