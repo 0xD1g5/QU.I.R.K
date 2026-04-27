@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Data in Motion
-status: roadmapped
-stopped_at: ""
-last_updated: "2026-04-27T00:00:00.000Z"
-last_activity: 2026-04-27 -- Roadmap created; ready to plan Phase 32
+status: planning
+stopped_at: Phase 32 context gathered
+last_updated: "2026-04-27T12:41:56.227Z"
+last_activity: 2026-04-27 — Roadmap created for v4.4 Data in Motion (Phases 32–37)
 progress:
-  total_phases: 6
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -65,10 +64,12 @@ Progress: [░░░░░░░░░░] 0/6 phases complete (v4.4)
 Decisions are logged in PROJECT.md Key Decisions table.
 
 Previous milestone (v4.3) key decisions carried forward:
+
 - ISSUE-2 and ISSUE-3 patterns must be treated as structural requirements on every scanner phase — pyproject.toml diff is a required PLAN.md deliverable; session_start parameter is mandatory for all new scanners
 - All new scanners must include [motion] extras group entry in pyproject.toml at plan time
 
 Roadmap decisions (2026-04-27):
+
 - Phase 32 and Phase 33 develop in parallel — no shared code dependencies between email_scanner.py and broker_scanner.py
 - Phase 34 (Motion Intelligence) and Phase 35 (CBOM Integration) develop in parallel once 32+33 are done
 - Chaos lab port allocation: email profile uses 30xxx range, broker profile uses 26xxx/29xxx/25xxx ranges (no conflicts with existing profiles)
@@ -106,6 +107,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-27
-Stopped at: Roadmap created — ready to plan Phase 32 (Email Scanner)
+Last session: 2026-04-27T12:41:56.217Z
+Stopped at: Phase 32 context gathered
 Next action: `/gsd-plan-phase 32` — Email Scanner
