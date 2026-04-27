@@ -4,14 +4,55 @@ Tests mock network calls — no live network required.
 Scanner module: quirk/scanner/email_scanner.py
 Phase 32 / Plan 01 — Wave 0 RED state. Tests fail until Plan 03 lands.
 
-NOTE: pytest.importorskip below skips this entire module when
+NOTE: pytest.importorskip below skips scanner-module tests when
 quirk.scanner.email_scanner does not yet exist (RED / Wave 0 state).
 After Plan 03 lands, importorskip is a no-op and all 17 tests run.
+
+test_email_scan_json_column_exists is placed BEFORE the importorskip guard
+because it depends only on quirk.db (Plan 02 scope) and must run in Wave 1
+before the scanner module (Plan 03) exists.
 """
 import json
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock, call
+
+
+# ---------------------------------------------------------------------------
+# EMAIL-00: DB column existence — Plan 02 scope, independent of scanner module
+# ---------------------------------------------------------------------------
+
+def test_email_scan_json_column_exists():
+    """EMAIL-00: init_db() must create email_scan_json column on crypto_endpoints."""
+    import os
+    import tempfile
+    from sqlalchemy import inspect as sa_inspect
+    from quirk.db import init_db
+
+    # Use a temp-file DB so init_db(path) signature is satisfied.
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = os.path.join(tmpdir, "test_email_col.db")
+        engine = init_db(db_path)
+
+    inspector = sa_inspect(engine)
+    columns = {col["name"] for col in inspector.get_columns("crypto_endpoints")}
+    assert "email_scan_json" in columns, (
+        f"email_scan_json column not found in crypto_endpoints; "
+        f"columns present: {sorted(columns)}"
+    )
+
+
+def test_email_scan_json_column_idempotent():
+    """EMAIL-00: calling init_db() twice on the same DB must not raise."""
+    import os
+    import tempfile
+    from quirk.db import init_db
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = os.path.join(tmpdir, "test_idempotent.db")
+        init_db(db_path)   # first call — creates column
+        init_db(db_path)   # second call — must not raise (column already exists)
+
 
 # ---------------------------------------------------------------------------
 # Soft import — scanner module does not exist yet at Wave 0 RED state.
@@ -135,27 +176,6 @@ def _make_mock_smtp_sock(
     ssock.cipher.return_value = (cipher_name, tls_version, 256)
     ssock.getpeercert.return_value = der_bytes
     return ssock
-
-
-# ---------------------------------------------------------------------------
-# EMAIL-00: DB column existence
-# ---------------------------------------------------------------------------
-
-def test_email_scan_json_column_exists():
-    """EMAIL-00: init_db() must create email_scan_json column on crypto_endpoints."""
-    from sqlalchemy import create_engine, inspect as sa_inspect
-    from quirk.db import init_db
-
-    # Use a fresh in-memory SQLite DB for isolation
-    engine = create_engine("sqlite:///:memory:")
-    init_db(engine)
-
-    inspector = sa_inspect(engine)
-    columns = {col["name"] for col in inspector.get_columns("crypto_endpoints")}
-    assert "email_scan_json" in columns, (
-        f"email_scan_json column not found in crypto_endpoints; "
-        f"columns present: {sorted(columns)}"
-    )
 
 
 # ---------------------------------------------------------------------------
