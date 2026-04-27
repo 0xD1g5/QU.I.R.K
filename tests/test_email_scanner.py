@@ -569,3 +569,90 @@ def test_email_ports_starttls_enum_alignment():
                 f"Port {port} (STARTTLS '{label}') must have non-None starttls_enum "
                 f"when sslyze is installed"
             )
+
+
+# ---------------------------------------------------------------------------
+# Phase 32 SC-1 / EMAIL-11: per-host email_scan_json aggregation
+# Mirrors the kerberos_scan_json attachment pattern:
+#   quirk/scanner/kerberos_scanner.py:294,329,340
+# ---------------------------------------------------------------------------
+
+@_skip_scanner
+def test_email_scan_json_attached_per_host():
+    """Phase 32 SC-1: at least one endpoint per host has email_scan_json populated.
+
+    Drive scan_email_targets across all 7 EMAIL_PORTS for a single host using
+    a stubbed scan_one_email that returns deterministic CryptoEndpoints. Then
+    assert exactly one endpoint per host carries email_scan_json (the first
+    by port order), the JSON deserializes to a dict, and the dict has an
+    entry for every port that was actually scanned (success and failure both
+    represented).
+    """
+    from quirk.models import CryptoEndpoint
+
+    # Build deterministic per-port endpoints. Port 25 simulates a failure
+    # (scan_error set) so we prove failed-scan ports also appear in the JSON.
+    def fake_scan_one(host, port, label, starttls_enum, timeout,
+                      logger=None, session_start=None):
+        ep = CryptoEndpoint(host=host, port=port, protocol=label)
+        ep.service_detail = f"{label}:{port}"
+        if port == 25:
+            ep.scan_error = "simulated failure"
+        else:
+            ep.tls_version = "TLSv1.2"
+            ep.cipher_suite = "AES256-SHA"
+            ep.cert_pubkey_alg = "RSA"
+            ep.cert_subject = "CN=mail.example.com"
+            ep.cert_issuer = "CN=TestCA"
+        return ep
+
+    fixed_time = datetime(2026, 4, 27, 12, 0, 0)
+    with patch("quirk.scanner.email_scanner.scan_one_email",
+               side_effect=fake_scan_one):
+        results = scan_email_targets(
+            ["mail.example.com"], timeout=5, session_start=fixed_time
+        )
+
+    # All 7 ports represented as endpoints
+    assert len(results) == 7, f"Expected 7 endpoints (one per port), got {len(results)}"
+
+    # Group by host and assert exactly one endpoint per host has email_scan_json
+    by_host: dict = {}
+    for ep in results:
+        by_host.setdefault(ep.host, []).append(ep)
+
+    for host, host_eps in by_host.items():
+        with_json = [e for e in host_eps if getattr(e, "email_scan_json", None)]
+        assert len(with_json) == 1, (
+            f"Expected exactly 1 endpoint with email_scan_json for host {host}, "
+            f"got {len(with_json)}"
+        )
+
+        # Determinism: must be the first endpoint by port order (matches
+        # kerberos_scan_json's "first by port" attach pattern)
+        sorted_by_port = sorted(host_eps, key=lambda e: e.port)
+        assert with_json[0] is sorted_by_port[0], (
+            f"email_scan_json must attach to the lowest-port endpoint for host {host}; "
+            f"attached to port {with_json[0].port}, expected {sorted_by_port[0].port}"
+        )
+
+        # JSON deserializes to a dict
+        payload = json.loads(with_json[0].email_scan_json)
+        assert isinstance(payload, dict), (
+            f"email_scan_json for host {host} must deserialize to dict, got {type(payload)}"
+        )
+        assert payload.get("host") == host
+        assert "ports" in payload and isinstance(payload["ports"], list)
+
+        # Every scanned port (including the simulated failure) appears in the JSON
+        json_ports = {entry["port"] for entry in payload["ports"]}
+        scanned_ports = {ep.port for ep in host_eps}
+        assert json_ports == scanned_ports, (
+            f"email_scan_json ports {json_ports} != scanned ports {scanned_ports}"
+        )
+
+        # The failure entry preserves scan_error
+        port25_entry = next(e for e in payload["ports"] if e["port"] == 25)
+        assert port25_entry.get("scan_error") == "simulated failure", (
+            f"Port 25 scan_error should round-trip into JSON; got {port25_entry}"
+        )
