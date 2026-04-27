@@ -917,6 +917,53 @@ services:
       - ./storage/minio-seed.sh:/minio-seed.sh:ro
     entrypoint: ["/bin/sh", "/minio-seed.sh"]
 
+  # ===========================================================================================
+  # PHASE 32 — EMAIL CHAOS LAB (profile: email)
+  # Postfix + Dovecot with weak RSA-2048 TLS (non-PFS, TLS 1.2 minimum).
+  # Generate certs first: make -C ../labs/email certs
+  # Bring up:             docker compose --profile email up -d
+  # ===========================================================================================
+  postfix-email:
+    build:
+      context: ../labs/email
+      dockerfile: Dockerfile
+    container_name: quirk-chaos-postfix-email
+    profiles: ["email"]
+    ports:
+      - "30025:25"
+      - "30465:465"
+      - "30587:587"
+    volumes:
+      - ../labs/email/certs/postfix.crt:/etc/postfix/certs/postfix.crt:ro
+      - ../labs/email/certs/postfix.key:/etc/postfix/certs/postfix.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "postfix status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  dovecot-email:
+    build:
+      context: ../labs/email
+      dockerfile: Dockerfile
+    container_name: quirk-chaos-dovecot-email
+    profiles: ["email"]
+    ports:
+      - "30143:143"
+      - "30993:993"
+      - "30110:110"
+      - "30995:995"
+    volumes:
+      - ../labs/email/certs/dovecot.crt:/etc/dovecot/private/dovecot.crt:ro
+      - ../labs/email/certs/dovecot.key:/etc/dovecot/private/dovecot.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "doveadm who >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
 volumes:
   id_postgres_data:
   stepca_data:
