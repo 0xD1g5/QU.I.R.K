@@ -546,6 +546,58 @@ def scan_email_targets(
             if ep is not None:
                 results.append(ep)
 
+    # ------------------------------------------------------------------
+    # Phase 32 SC-1 / EMAIL-11: per-host email_scan_json aggregation.
+    # Mirrors the kerberos_scan_json attachment pattern at
+    # quirk/scanner/kerberos_scanner.py:294,329,340 — group endpoints by
+    # host, build a structured summary of every port scan, and attach the
+    # JSON to the first endpoint (lowest port) per host for determinism.
+    # ------------------------------------------------------------------
+    def _port_key(ep) -> int:
+        """Sort key that tolerates MagicMock-backed endpoints in unit tests
+        (their .port is a MagicMock that can't be compared to int)."""
+        try:
+            return int(getattr(ep, "port", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    by_host: dict = {}
+    for ep in results:
+        host_key = getattr(ep, "host", None)
+        # Skip aggregation for MagicMock-backed endpoints (unit-test stubs):
+        # their host attribute is a MagicMock, not a hashable string. The real
+        # scanner always sets ep.host to a str via CryptoEndpoint(host=...).
+        if not isinstance(host_key, str):
+            continue
+        by_host.setdefault(host_key, []).append(ep)
+
+    session_start_iso = (
+        session_start.isoformat() if session_start is not None else None
+    )
+
+    for host, host_endpoints in by_host.items():
+        host_endpoints_sorted = sorted(host_endpoints, key=_port_key)
+        payload = {
+            "host": host,
+            "session_start": session_start_iso,
+            "ports": [
+                {
+                    "port": ep.port,
+                    "service_detail": getattr(ep, "service_detail", None),
+                    "tls_version": getattr(ep, "tls_version", None),
+                    "cipher_suite": getattr(ep, "cipher_suite", None),
+                    "cert_pubkey_alg": getattr(ep, "cert_pubkey_alg", None),
+                    "cert_subject": getattr(ep, "cert_subject", None),
+                    "cert_issuer": getattr(ep, "cert_issuer", None),
+                    "cert_not_after": getattr(ep, "cert_not_after", None),
+                    "scan_error": getattr(ep, "scan_error", None),
+                    "tls_blocker_reason": getattr(ep, "tls_blocker_reason", None),
+                }
+                for ep in host_endpoints_sorted
+            ],
+        }
+        host_endpoints_sorted[0].email_scan_json = json.dumps(payload, default=str)
+
     if logger:
         ok = len([
             e for e in results
