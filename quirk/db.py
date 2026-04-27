@@ -106,6 +106,26 @@ def _ensure_v43_columns(engine) -> None:
         conn.commit()
 
 
+_EMAIL_COLUMNS = ["email_scan_json"]
+
+
+def _ensure_email_columns(engine) -> None:
+    """Add v4.4 email scanner column (email_scan_json TEXT) if absent (idempotent).
+
+    Phase 32 — uses SQLAlchemy inspector to check existing columns before ALTER TABLE.
+    Called from init_db() after _ensure_v43_columns().
+    See _EMAIL_COLUMNS for the column list managed by _ensure_email_columns.
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    with engine.connect() as conn:
+        for col in _EMAIL_COLUMNS:
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
+        conn.commit()
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -126,6 +146,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_identity_columns(engine)  # v4.2: add identity columns if missing
     _ensure_gcp_columns(engine)  # v4.3: add GCP columns if missing
     _ensure_v43_columns(engine)  # v4.3: add data-at-rest columns if missing
+    _ensure_email_columns(engine)  # v4.4 Phase 32: add email scanner column
     return engine
 
 
