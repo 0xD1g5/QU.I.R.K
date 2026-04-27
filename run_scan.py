@@ -22,12 +22,13 @@ from quirk.scanner.aws_connector import scan_aws_targets
 from quirk.scanner.azure_connector import scan_azure_targets
 from quirk.scanner.gcp_connector import scan_gcp_targets
 from quirk.scanner.dnssec_scanner import scan_dnssec_targets
+from quirk.scanner.email_scanner import scan_email_targets
 
 from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
-from quirk.engine.risk_engine import evaluate_endpoints
+from quirk.engine.risk_engine import evaluate_endpoints, evaluate_email_endpoints
 from quirk.reports.writer import write_reports
 
 from quirk.engine.profiles import apply_profile
@@ -686,6 +687,22 @@ def main():
                 )
                 logger.info("Vault scan: %d endpoints", len(vault_endpoints))
 
+    # ── Email TLS scanning (Phase 32 — v4.4 Data in Motion) ────
+    email_endpoints = []
+    with _phase_timer(run_stats, "email_scanning"):
+        if cfg.connectors.enable_email:
+            # D-01/D-02: reuse the existing TLS target list verbatim (deduplicated by host)
+            email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+            if email_hosts:
+                email_endpoints = scan_email_targets(
+                    hosts=email_hosts,
+                    timeout=cfg.scan.timeout_seconds,
+                    logger=logger,
+                    session_start=session_start,
+                )
+                logger.info("Email scan: %d endpoints from %d hosts",
+                            len(email_endpoints), len(email_hosts))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + aws_endpoints + azure_endpoints + gcp_endpoints
@@ -693,13 +710,21 @@ def main():
                  + s3_endpoints + blob_endpoints + gcs_storage_endpoints
                  + k8s_endpoints
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints
-                 + vault_endpoints)
+                 + vault_endpoints
+                 + email_endpoints)
 
     # ==============================
     # Findings + persistence + reports
     # ==============================
     with _phase_timer(run_stats, "risk_engine"):
         findings = evaluate_endpoints(cfg, endpoints)
+        # Phase 32: email-specific findings (EMAIL-08, EMAIL-09).
+        # Titles are unique strings not produced elsewhere, so the (host, port,
+        # title, recommendation) dedup key in evaluate_endpoints will not collide
+        # with these. D-11 layered findings (port 25 + weak cipher) survive.
+        email_findings = evaluate_email_endpoints(email_endpoints)
+        if email_findings:
+            findings = (findings or []) + email_findings
 
     with _phase_timer(run_stats, "db_persist"):
         with get_session(cfg.output.db_path) as session:
