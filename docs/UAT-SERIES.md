@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-26 (Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-04-26 (Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.3. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -3851,9 +3851,9 @@ Each finding object contains:
 3. `curl -s http://localhost:8000/api/trends | jq .` — capture response.
 
 **Expected:**
-- HTTP 200 with the documented schema: sessions, score_delta, new_finding_counts, resolved_finding_counts, scan_errors_new_count, scan_errors_resolved_count, new_findings_sample, resolved_findings_sample.
-- sessions.previous_ts is non-null when ≥2 sessions exist; score_delta is a non-null integer (positive, negative, or zero).
-- new_finding_counts and resolved_finding_counts each contain exactly the keys high, medium, low with non-negative integer values.
+- HTTP 200 with flat response fields: `current_session_ts`, `previous_session_ts`, `current_score`, `previous_score`, `score_delta`, `new_high`, `new_medium`, `new_low`, `resolved_high`, `resolved_medium`, `resolved_low`, `scan_errors_new_count`, `scan_errors_resolved_count`, `new_findings_sample`, `resolved_findings_sample`.
+- `previous_session_ts` is non-null when ≥2 sessions exist; `score_delta` is a non-null integer (positive, negative, or zero).
+- `new_high`/`new_medium`/`new_low` and `resolved_high`/`resolved_medium`/`resolved_low` are non-negative integers (note: `new_high` and `resolved_high` bucket both CRITICAL and HIGH severity findings).
 - Sample arrays are length-capped at 5.
 
 **Pass Criteria:**
@@ -3883,7 +3883,7 @@ Each finding object contains:
 **Expected:**
 - Sidebar shows a Trends nav entry with the TrendingUp lucide icon.
 - /trends page renders the baseline empty state — NO score delta card, NO new/resolved counts, just the empty-state messaging from 31-UI-SPEC.md.
-- API response: score_delta is null (JSON null, not 0); sessions.previous_ts is null; new_finding_counts / resolved_finding_counts / sample arrays are zeroed/empty.
+- API response: `score_delta` is null (JSON null, not 0); `previous_session_ts` is null; `new_high`/`new_medium`/`new_low`/`resolved_high`/`resolved_medium`/`resolved_low` are 0; sample arrays are empty.
 
 **Pass Criteria:**
 - Trends nav entry visible and active-state styling matches other nav entries
