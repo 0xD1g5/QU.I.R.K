@@ -495,7 +495,7 @@ Plans:
   4. When sslyze fails, the stdlib fallback (`smtplib`/`imaplib`/`poplib`) negotiates STARTTLS and extracts TLS version, cipher, and cert via the underlying SSLSocket
   5. `docker compose --profile email up` starts the Postfix+Dovecot container with weak TLS (TLS 1.1 minimum, RSA non-PFS ciphers, self-signed RSA-2048 cert); scanning produces at minimum one HIGH finding for weak cipher and one MEDIUM for STARTTLS risk; `labs/email/expected_results.md` documents expected findings
   6. `ep.service_detail` format follows `"SMTP-STARTTLS:587"`, `"SMTPS:465"`, `"IMAPS:993"`, `"POP3S:995"` convention (EMAIL-10)
-**Plans**: 7 plans
+**Plans**: 8 plans
 - [x] 32-01-PLAN.md — Test scaffolding for email scanner (Wave 1, RED state)
 - [x] 32-02-PLAN.md — DB schema + migration + config flag + pyproject [motion] group (Wave 1)
 - [x] 32-03-PLAN.md — quirk/scanner/email_scanner.py canonical 4-function module (Wave 2)
@@ -503,6 +503,7 @@ Plans:
 - [x] 32-05-PLAN.md — labs/email/ Postfix+Dovecot chaos lab + email Docker Compose profile (Wave 2)
 - [x] 32-06-PLAN.md — labs/email/expected_results.md from live lab scan (Wave 3)
 - [x] 32-07-PLAN.md — UAT-SERIES update + Obsidian sync + commit (Wave 4)
+- [x] 32-08-PLAN.md — Email scan JSON persistence (gap closure) + real-Logger smoke test (Wave 5)
 
 ### Phase 33: Broker Scanner
 **Goal**: QU.I.R.K. can audit TLS posture on Kafka, RabbitMQ, Redis, Azure Service Bus, and AWS SQS — detecting plaintext listeners, weak TLS versions, and quantum-unsafe ciphers — in a single `broker_scanner.py` module following the `db_connector.py` architecture pattern
@@ -696,7 +697,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 29. Kubernetes Secrets Inspection | v4.3 | 4/4 | Complete    | 2026-04-26 |
 | 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 31. Trend Analysis | v4.3 | 4/4 | Complete    | 2026-04-26 |
-| 32. Email Scanner | v4.4 | 7/7 | Complete   | 2026-04-27 |
+| 32. Email Scanner | v4.4 | 8/8 | Complete   | 2026-04-27 |
 | 33. Broker Scanner | v4.4 | 0/TBD | Not started | - |
 | 34. Motion Intelligence | v4.4 | 0/TBD | Not started | - |
 | 35. CBOM Integration | v4.4 | 0/TBD | Not started | - |

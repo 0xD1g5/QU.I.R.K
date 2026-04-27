@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
-status: executing
-stopped_at: Phase 32 context gathered
-last_updated: "2026-04-27T19:53:39.904Z"
+status: verifying
+stopped_at: Completed 32-08-PLAN.md
+last_updated: "2026-04-27T20:08:47.615Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 25
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 Phase: 32 (email-scanner) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-27
 
 Progress: [░░░░░░░░░░] 0%
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 32 P04 | 22 | 2 tasks | 5 files |
 | Phase 32 P06 | 30 min | 2 tasks | 1 files |
 | Phase 32 P07 | 10min | 2 tasks | 4 files |
+| Phase 32 P08 | ~3.5 minutes | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -84,6 +85,7 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: Phase 32 Plan 03: email_scanner.py uses module-level sslyze stub names so tests can patch SslyzeScanner even when sslyze is absent
 - [Phase ?]: Phase 32 Plan 03: _peer_metadata() duck-types the wrapped socket so MagicMock SSLSockets work without spec=ssl.SSLSocket
 - [Phase ?]: Phase 32 Plan 04: email findings merged inside the existing risk_engine phase-timer (single span) to preserve report metric integrity
+- [Phase 32]: Plan 32-08: mirrored kerberos_scan_json attachment pattern to populate CryptoEndpoint.email_scan_json (closes Phase 32 SC-1) and added an AST-based real-Logger smoke test that catches stdlib-positional-args drift in run_scan.py's email branch
 
 ### Pending Todos
 
@@ -116,6 +118,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-27T19:53:39.901Z
-Stopped at: Phase 32 context gathered
+Last session: 2026-04-27T20:08:47.612Z
+Stopped at: Completed 32-08-PLAN.md
 Next action: `/gsd-plan-phase 32` — Email Scanner
