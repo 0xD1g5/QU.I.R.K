@@ -516,7 +516,15 @@ Plans:
   4. `docker compose --profile broker up` starts all three broker containers; scanning chaos lab ports produces plaintext HIGH for all three brokers and weak cipher HIGH for at least two; `labs/broker/expected_results.md` documents expected findings
   5. All three scanner functions accept `session_start` parameter and stamp `ep.scanned_at` with it — no per-scanner `datetime.now()` calls (STRUCT-01)
   6. `broker_scan_json` column is present in the SQLite schema; `broker_scanner.py` is a single module exposing `scan_kafka_targets()`, `scan_rabbitmq_targets()`, `scan_redis_targets()`
-**Plans**: TBD
+**Plans**: 8 plans
+- [ ] 33-01-PLAN.md — DB schema: broker_scan_json column + idempotent migration (Wave 1)
+- [ ] 33-02-PLAN.md — Config + profile + pyproject [kafka]/[redis] sub-extras (Wave 1)
+- [ ] 33-03-PLAN.md — broker_scanner.py: imports, guards, Kafka KAFKA-01..04 (Wave 2)
+- [ ] 33-04-PLAN.md — broker_scanner.py: RabbitMQ + AMQP plaintext + Azure SB / AWS SQS host expansion (Wave 3)
+- [ ] 33-05-PLAN.md — broker_scanner.py: Redis raw ssl wrap + redis-py CONFIG GET tls-* (Wave 4)
+- [ ] 33-06-PLAN.md — run_scan.py wiring + risk_engine evaluate_broker_endpoints + integration tests (Wave 5)
+- [ ] 33-07-PLAN.md — labs/broker chaos lab + docker-compose broker profile + expected_results.md (Wave 5)
+- [ ] 33-08-PLAN.md — Smoke run + UAT-SERIES + Obsidian sync + ROADMAP close + commit (Wave 6)
 
 ### Phase 34: Motion Intelligence
 **Goal**: The quantum-readiness scoring engine recognizes email and broker TLS weaknesses as a distinct cryptographic surface — the `data_in_motion` subscore appears as the 6th named subscore in intelligence JSON alongside `tls`, `ssh`, `api`, `identity`, and `data_at_rest`
