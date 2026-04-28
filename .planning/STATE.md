@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
-status: executing
-stopped_at: Phase 35 Plan 03 complete (lab-driven golden CBOM fixtures + structural test)
-last_updated: "2026-04-28T23:05:00Z"
-last_activity: 2026-04-28 -- Phase 35 Plan 03 complete (D-04 satisfied; 101/101 CBOM tests + 1 regen-skipped)
+status: verifying
+stopped_at: Phase 35 Plan 03 complete (lab-driven golden CBOM fixtures + structural test; 101/101 CBOM tests pass)
+last_updated: "2026-04-28T22:50:55.241Z"
+last_activity: 2026-04-28
 progress:
   total_phases: 37
   completed_phases: 34
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 Phase: 35 (cbom-integration) — EXECUTING
 Plan: 4 of 4
-Status: Executing Phase 35 — Plans 01/02/03 complete. Plan 04 (REQUIREMENTS.md amendments + UAT-SERIES + Obsidian sync) is next.
-Last activity: 2026-04-28 -- Phase 35 Plan 03 complete (commit 7329e4b; D-04 golden CBOM fixtures + structural test, 101/101 CBOM tests pass)
+Status: Phase complete — ready for verification
+Last activity: 2026-04-28
 
-Progress: [██████████] 99% (34 / 37 phases · 82 / 83 plans)
+Progress: [░░░░░░░░░░] 0%
 
 ## Phase Overview
 
@@ -65,6 +65,7 @@ Progress: [██████████] 99% (34 / 37 phases · 82 / 83 plans)
 | Phase 32 P06 | 30 min | 2 tasks | 1 files |
 | Phase 32 P07 | 10min | 2 tasks | 4 files |
 | Phase 32 P08 | ~3.5 minutes | 2 tasks | 3 files |
+| Phase 35 P04 | 180 | 3 tasks | 4 files |
 
 ### Decisions
 
@@ -86,6 +87,7 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: Phase 32 Plan 03: _peer_metadata() duck-types the wrapped socket so MagicMock SSLSockets work without spec=ssl.SSLSocket
 - [Phase ?]: Phase 32 Plan 04: email findings merged inside the existing risk_engine phase-timer (single span) to preserve report metric integrity
 - [Phase 32]: Plan 32-08: mirrored kerberos_scan_json attachment pattern to populate CryptoEndpoint.email_scan_json (closes Phase 32 SC-1) and added an AST-based real-Logger smoke test that catches stdlib-positional-args drift in run_scan.py's email branch
+- [Phase ?]: Phase 35 close: CBOM-01..04 marked Complete; REQUIREMENTS wording aligned to code; UAT-35-01..03 added
 
 ### Pending Todos
 
@@ -118,6 +120,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-28T23:05:00Z
+Last session: 2026-04-28T22:50:47.201Z
 Stopped at: Phase 35 Plan 03 complete (lab-driven golden CBOM fixtures + structural test; 101/101 CBOM tests pass)
 Next action: Execute Plan 35-04 (REQUIREMENTS.md amendments per D-01/D-02 + UAT-SERIES.md updates per D-07 + Obsidian sync per D-08)

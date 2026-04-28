@@ -551,7 +551,12 @@ Plans:
   2. A CBOM generated from a scan with broker TLS findings contains algorithm components with `ep.protocol` values `"AMQPS"`, `"KAFKA-TLS"`, `"REDIS-TLS"`; `TLS_RSA_WITH_*` suites classified `quantum-vulnerable` (HIGH) via `QUANTUM_SAFETY_MAP`
   3. Plaintext-only broker endpoints (`"AMQP"`, `"KAFKA-PLAIN"`, `"REDIS-PLAIN"`) are in the Pass 2 and Pass 3 skip lists — no hollow `CertificateProperties` entries exist for endpoints with no TLS cert (CBOM-03)
   4. Full test suite passes with no CBOM regressions; `builder.py` requires no structural changes — only skip list additions and `ep.protocol` string routing
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [x] 35-01-PLAN.md — RED synthesized-endpoint tests for email + broker CBOM wiring (Wave 1)
+- [x] 35-02-PLAN.md — GREEN: add KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN to builder Pass 2+3 skip tuples (Wave 2)
+- [x] 35-03-PLAN.md — Golden CBOM snapshots for email + broker labs + integration test (Wave 3)
+- [x] 35-04-PLAN.md — REQUIREMENTS.md edits (CBOM-01/CBOM-03) + UAT-SERIES.md UAT-35-01..03 + Obsidian phase note + vault sync + commit (Wave 4)
 
 ### Phase 36: Dashboard Motion Tab
 **Goal**: Consultants can view email and broker TLS posture in the dashboard — a dedicated Motion tab shows per-port email summaries with STARTTLS warning badges and per-broker type summaries with plaintext-exposed flags; the executive summary card shows the `data_in_motion` subscore as the 6th line
@@ -714,6 +719,6 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 32. Email Scanner | v4.4 | 8/8 | Complete   | 2026-04-27 |
 | 33. Broker Scanner | v4.4 | 0/TBD | Not started | - |
 | 34. Motion Intelligence | v4.4 | 0/TBD | Not started | - |
-| 35. CBOM Integration | v4.4 | 0/TBD | Not started | - |
+| 35. CBOM Integration | v4.4 | 4/4 | Complete   | 2026-04-28 |
 | 36. Dashboard Motion Tab | v4.4 | 0/TBD | Not started | - |
 | 37. Gap Closure and v4.4.0 Release | v4.4 | 0/TBD | Not started | - |
