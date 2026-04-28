@@ -1,0 +1,105 @@
+{
+  "components": [
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/aes-128-cbc",
+      "cipher_suite_names": [],
+      "name": "AES-128-CBC",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/rsa",
+      "cipher_suite_names": [],
+      "name": "RSA",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/rsa-2048",
+      "cipher_suite_names": [],
+      "name": "RSA-2048",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/sha-1",
+      "cipher_suite_names": [],
+      "name": "SHA-1",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/sha256withrsaencryption",
+      "cipher_suite_names": [],
+      "name": "sha256WithRSAEncryption",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:25671",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:25671",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:26380",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:26380",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:29093",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:29093",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:25671",
+      "cipher_suite_names": [],
+      "name": "protocol:tls:localhost:25671",
+      "protocol_type": "tls",
+      "protocol_version": "1.2",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:26380",
+      "cipher_suite_names": [],
+      "name": "protocol:tls:localhost:26380",
+      "protocol_type": "tls",
+      "protocol_version": "1.2",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:29093",
+      "cipher_suite_names": [
+        "TLS_RSA_WITH_AES_128_CBC_SHA"
+      ],
+      "name": "protocol:tls:localhost:29093",
+      "protocol_type": "tls",
+      "protocol_version": "1.2",
+      "type": "cryptographic-asset"
+    }
+  ]
+}
