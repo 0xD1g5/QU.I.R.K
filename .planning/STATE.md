@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
-status: idle
-stopped_at: Phase 33 closed (Path B); awaiting Phase 34 planning
-last_updated: "2026-04-28T00:00:00.000Z"
-last_activity: 2026-04-28 -- Phase 33 closed under Path B; SC-4 deferred to BACK-68
+status: Idle between phases — Phase 33 closed under Path B (SC-4 chaos-lab smoke deferred → BACK-68)
+stopped_at: Phase 34 context gathered
+last_updated: "2026-04-28T19:54:58.234Z"
+last_activity: 2026-04-28 -- Phase 33 closed; ready to plan Phase 34
 progress:
   total_phases: 37
   completed_phases: 33
@@ -118,6 +118,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-28
-Stopped at: Phase 33 closed (Path B) — STATE.md refreshed; Phase 34 not yet planned
+Last session: 2026-04-28T19:54:58.223Z
+Stopped at: Phase 34 context gathered
 Next action: `/gsd-plan-phase 34` — Motion Intelligence (data_in_motion subscore wiring; depends on Phases 32 + 33, both complete)
