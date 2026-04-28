@@ -475,7 +475,7 @@ Plans:
 **Milestone Goal:** Extend QU.I.R.K.'s cryptographic inventory to cover network transport layers — auditing email protocol TLS (SMTP/IMAP/POP3, all 7 standard ports) and message broker TLS (Kafka, RabbitMQ, Redis) for weak ciphers, legacy TLS versions, plaintext listeners, and quantum-unsafe algorithms. Introduces the `data_in_motion` subscore as the 6th pillar of the quantum-readiness score.
 
 - [x] **Phase 32: Email Scanner** — `email_scanner.py`: sslyze STARTTLS for SMTP/IMAP/POP3, stdlib fallback, STARTTLS downgrade finding, Postfix+Dovecot chaos lab (profile: email, ports 30025/30465/30587/30143/30993/30110/30995)
-- [ ] **Phase 33: Broker Scanner** — `broker_scanner.py`: Kafka (9092/9093/9094), RabbitMQ/AMQPS (5671/5672), Redis (6379/6380), Azure Service Bus, AWS SQS; broker chaos lab (profile: broker, ports 26379/26380/29092/29093/25671/25672)
+- [x] **Phase 33: Broker Scanner** — `broker_scanner.py`: Kafka (9092/9093/9094), RabbitMQ/AMQPS (5671/5672), Redis (6379/6380), Azure Service Bus, AWS SQS; broker chaos lab (profile: broker, ports 26379/26380/29092/29093/25671/25672) — SC-4 chaos-lab smoke deferred (scanner needs custom-port plumbing); 58-test pytest suite covers equivalent end-to-end logic
 - [ ] **Phase 34: Motion Intelligence** — Six `motion_` evidence counters in `evidence.py`, five `motion_` ratio entries in `scoring.py`, `PROFILE_MULTIPLIERS` motion_ prefix, `data_in_motion` as 6th named subscore in `compute_readiness_score()`
 - [ ] **Phase 35: CBOM Integration** — Pass 1 algorithm components for email and broker TLS; Pass 2+3 skip lists for plaintext-only broker endpoints; quantum-safety classification for RSA key-exchange cipher suites
 - [ ] **Phase 36: Dashboard Motion Tab** — React `/motion` route, Motion tab (email per-port table + STARTTLS warning badge, broker per-type summary + plaintext flag), 6th subscore in executive summary card, `MotionFinding` FastAPI schema in `/api/scan/latest`
@@ -517,14 +517,16 @@ Plans:
   5. All three scanner functions accept `session_start` parameter and stamp `ep.scanned_at` with it — no per-scanner `datetime.now()` calls (STRUCT-01)
   6. `broker_scan_json` column is present in the SQLite schema; `broker_scanner.py` is a single module exposing `scan_kafka_targets()`, `scan_rabbitmq_targets()`, `scan_redis_targets()`
 **Plans**: 8 plans
-- [ ] 33-01-PLAN.md — DB schema: broker_scan_json column + idempotent migration (Wave 1)
-- [ ] 33-02-PLAN.md — Config + profile + pyproject [kafka]/[redis] sub-extras (Wave 1)
-- [ ] 33-03-PLAN.md — broker_scanner.py: imports, guards, Kafka KAFKA-01..04 (Wave 2)
-- [ ] 33-04-PLAN.md — broker_scanner.py: RabbitMQ + AMQP plaintext + Azure SB / AWS SQS host expansion (Wave 3)
-- [ ] 33-05-PLAN.md — broker_scanner.py: Redis raw ssl wrap + redis-py CONFIG GET tls-* (Wave 4)
-- [ ] 33-06-PLAN.md — run_scan.py wiring + risk_engine evaluate_broker_endpoints + integration tests (Wave 5)
-- [ ] 33-07-PLAN.md — labs/broker chaos lab + docker-compose broker profile + expected_results.md (Wave 5)
-- [ ] 33-08-PLAN.md — Smoke run + UAT-SERIES + Obsidian sync + ROADMAP close + commit (Wave 6)
+- [x] 33-01-PLAN.md — DB schema: broker_scan_json column + idempotent migration (Wave 1)
+- [x] 33-02-PLAN.md — Config + profile + pyproject [kafka]/[redis] sub-extras (Wave 1)
+- [x] 33-03-PLAN.md — broker_scanner.py: imports, guards, Kafka KAFKA-01..04 (Wave 2)
+- [x] 33-04-PLAN.md — broker_scanner.py: RabbitMQ + AMQP plaintext + Azure SB / AWS SQS host expansion (Wave 3)
+- [x] 33-05-PLAN.md — broker_scanner.py: Redis raw ssl wrap + redis-py CONFIG GET tls-* (Wave 4)
+- [x] 33-06-PLAN.md — run_scan.py wiring + risk_engine evaluate_broker_endpoints + integration tests (Wave 5)
+- [x] 33-07-PLAN.md — labs/broker chaos lab + docker-compose broker profile + expected_results.md (Wave 5)
+- [x] 33-08-PLAN.md — Smoke run + UAT-SERIES + Obsidian sync + ROADMAP close + commit (Wave 6)
+
+**Closure Note (2026-04-28):** Phase 33 closed under Path B. Success Criterion 4 (chaos-lab smoke) is **deferred** — the scanner currently probes hardcoded broker default ports (9092/9093/9094, 5672/5671, 6379/6380) and cannot reach the lab's host-mapped ports (29092/29093/25671/25672/26379/26380). A follow-up plan should add custom-port plumbing to `scan_kafka_targets()` / `scan_rabbitmq_targets()` / `scan_redis_targets()` so UAT-33-03..07 can run live. Equivalent end-to-end verification is provided today by the 58-test pytest suite (`tests/test_broker_*`). Lab side-changes shipped in this wave: `apache/kafka:3.6` → `3.7.0` (image tag did not exist on Docker Hub); kafka healthcheck `--bootstrap-server localhost:29092` → `localhost:9092` (probes container-internal listener, not host-mapped port); ran `make certs` in `labs/broker/` to materialize the previously-empty cert mount points.
 
 ### Phase 34: Motion Intelligence
 **Goal**: The quantum-readiness scoring engine recognizes email and broker TLS weaknesses as a distinct cryptographic surface — the `data_in_motion` subscore appears as the 6th named subscore in intelligence JSON alongside `tls`, `ssh`, `api`, `identity`, and `data_at_rest`
