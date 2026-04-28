@@ -54,10 +54,9 @@ db = [
     "psycopg2-binary>=2.9.0",
     "PyMySQL>=1.1.0",
 ]
-motion = [
-    # Phase 32: email scanner — sslyze is a soft import in tls_scanner/email_scanner; no hard dep needed.
-    # Phase 33 will add broker deps (kafka-python, etc.) here.
-]
+motion = []
+kafka = ["kafka-python>=2.0"]
+redis = ["redis>=5.0"]
 
 [project.scripts]
 quirk = "run_scan:main"
