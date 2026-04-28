@@ -99,6 +99,11 @@ class ConnectorsCfg:
     vault_tls_verify: bool = True           # passed to hvac.Client(verify=...) — D-09
     # Email scanner enable flag (v4.4, Phase 32)
     enable_email: bool = False
+    # Broker scanner enable flag (v4.4 Phase 33 — D-10)
+    enable_broker: bool = False
+    # Cloud broker targets (D-01) — supplied via CLI/config only; no SDK enumeration (D-02)
+    broker_azure_namespaces: List[str] = field(default_factory=list)
+    broker_sqs_regions: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -191,14 +196,20 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         exclude_ips=_as_str_list(targets_raw.get("exclude_ips")),
     )
 
+    conn_raw = {k: v for k, v in (raw.get("connectors") or {}).items()
+                if k in _KNOWN_CONNECTOR_KEYS}
+    # Coerce broker list fields through _as_str_list to guard against scalar YAML values
+    # (T-33-03: user-supplied namespace/region strings must be proper lists before hostname construction)
+    if "broker_azure_namespaces" in conn_raw:
+        conn_raw["broker_azure_namespaces"] = _as_str_list(conn_raw["broker_azure_namespaces"])
+    if "broker_sqs_regions" in conn_raw:
+        conn_raw["broker_sqs_regions"] = _as_str_list(conn_raw["broker_sqs_regions"])
+
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
         scan=ScanCfg(**raw["scan"]),
         targets=targets,
-        connectors=ConnectorsCfg(
-            **{k: v for k, v in (raw.get("connectors") or {}).items()
-               if k in _KNOWN_CONNECTOR_KEYS}
-        ),
+        connectors=ConnectorsCfg(**conn_raw),
         output=OutputCfg(**raw["output"]),
         intelligence=intelligence_cfg,
     )
