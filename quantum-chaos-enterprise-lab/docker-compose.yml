@@ -968,6 +968,67 @@ services:
       retries: 6
       start_period: 30s
 
+  # ── Broker Chaos Lab (profile: broker) ─────────────────────
+  # Phase 33 / BROKER-LAB-01. Official images per CONTEXT.md D-15 (2026-04-27 revision).
+  # Weak TLS via bind-mounted config files. Plaintext ports intentionally listening.
+  kafka-broker:
+    image: apache/kafka:3.6
+    profiles: ["broker"]
+    hostname: kafka-broker
+    ports:
+      - "29092:29092"
+      - "29093:29093"
+    volumes:
+      - ../labs/broker/kafka/server.properties:/etc/kafka/server.properties:ro
+      - ../labs/broker/certs/kafka.crt:/etc/kafka/secrets/kafka.crt:ro
+      - ../labs/broker/certs/kafka.key:/etc/kafka/secrets/kafka.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  rabbitmq-broker:
+    image: rabbitmq:3.12-management
+    profiles: ["broker"]
+    hostname: rabbitmq-broker
+    ports:
+      - "25672:5672"
+      - "25671:5671"
+    environment:
+      - RABBITMQ_CONFIG_FILE=/etc/rabbitmq/rabbitmq.conf
+    volumes:
+      - ../labs/broker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ../labs/broker/certs/rabbitmq.crt:/etc/rabbitmq/certs/server.crt:ro
+      - ../labs/broker/certs/rabbitmq.key:/etc/rabbitmq/certs/server.key:ro
+      - ../labs/broker/certs/rabbitmq.crt:/etc/rabbitmq/certs/ca.crt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  redis-broker:
+    image: redis:7-alpine
+    profiles: ["broker"]
+    hostname: redis-broker
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    ports:
+      - "26379:6379"
+      - "26380:6380"
+    volumes:
+      - ../labs/broker/redis/redis.conf:/etc/redis/redis.conf:ro
+      - ../labs/broker/certs/redis.crt:/etc/redis/certs/redis.crt:ro
+      - ../labs/broker/certs/redis.key:/etc/redis/certs/redis.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
 volumes:
   id_postgres_data:
   stepca_data:
