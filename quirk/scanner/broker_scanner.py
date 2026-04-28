@@ -4,7 +4,7 @@ Phase 33 / BROKER-ARCH: single module, three protocol-family functions
 (scan_kafka_targets, scan_rabbitmq_targets, scan_redis_targets), parallel to
 quirk/scanner/db_connector.py.
 
-STRUCT-01: scanner accepts session_start; no per-scanner datetime.now() calls.
+STRUCT-01: scanner accepts session_start; no bare now() calls inside the scanner.
 D-07: kafka-python and redis-py are import-guarded optional sub-extras.
 """
 import base64
@@ -131,7 +131,7 @@ def _scan_one_sslyze_kafka(
     """
     global _sslyze_warned
 
-    if SslyzeScanner is None:
+    if not SSLYZE_AVAILABLE:
         if not _sslyze_warned:
             if logger:
                 logger.v("sslyze not installed — broker scanner Kafka probe skipped")
@@ -360,7 +360,7 @@ def scan_kafka_targets(
     KAFKA-01: sslyze probe on 9093.
     KAFKA-02: TCP detection on 9092.
     KAFKA-03: 9094 included for standard/deep profiles.
-    STRUCT-01: session_start propagated to every ep.scanned_at; no naked datetime.now() in this module.
+    STRUCT-01: session_start propagated to every ep.scanned_at; no bare now() calls in this module.
     """
     results: List[CryptoEndpoint] = []
     ports = [9092, 9093]
