@@ -112,9 +112,9 @@ These apply to every scanner phase in v4.4:
 
 ## CBOM Integration
 
-- **CBOM-01**: Email endpoints produce Pass 1 algorithm component entries (cert pubkey algorithm, negotiated TLS cipher suite) via the existing `cbom/classifier.py` + `cbom/builder.py` pipeline. No changes to `builder.py` required — `ep.protocol` label (`"SMTP-STARTTLS"`, `"SMTPS"`, `"IMAPS"`, `"POP3S"`) distinguishes email from HTTPS endpoints.
+- **CBOM-01**: Email endpoints produce Pass 1 algorithm component entries (cert pubkey algorithm, negotiated TLS cipher suite) via the existing `cbom/classifier.py` + `cbom/builder.py` pipeline. No changes to `builder.py` required — `ep.protocol` label (`"SMTP-STARTTLS"`, `"SMTPS"`, `"IMAP-STARTTLS"`, `"IMAPS"`, `"POP3-STARTTLS"`, `"POP3S"`) distinguishes email from HTTPS endpoints.
 - **CBOM-02**: Broker TLS endpoints produce Pass 1 algorithm component entries via the same pipeline. `ep.protocol` set to `"AMQPS"`, `"KAFKA-TLS"`, `"REDIS-TLS"` as appropriate.
-- **CBOM-03**: Plaintext-only broker endpoints (`"AMQP"`, `"KAFKA-PLAIN"`, `"REDIS-PLAIN"`) added to Pass 2 and Pass 3 skip lists in `builder.py` to prevent hollow `CertificateProperties` entries for endpoints with no TLS cert.
+- **CBOM-03**: Plaintext-only broker endpoints (`"KAFKA-PLAIN"`, `"AMQP-PLAIN"`, `"REDIS-PLAIN"`) added to Pass 2 and Pass 3 skip lists in `builder.py` to prevent hollow `CertificateProperties` entries for endpoints with no TLS cert.
 - **CBOM-04**: Quantum-safety classification for email and broker cipher suites follows the existing `QUANTUM_SAFETY_MAP` in `classifier.py`. `TLS_RSA_WITH_*` suites classified as `quantum-vulnerable` (HIGH); ECDHE as `quantum-vulnerable` (MEDIUM); TLS 1.3 AEAD as `quantum-unknown` (LOW).
 
 ---
@@ -207,10 +207,10 @@ All requirements are grounded in parallel research conducted 2026-04-27:
 | MOTION-02 | 34 | Pending |
 | MOTION-03 | 34 | Pending |
 | MOTION-04 | 34 | Pending |
-| CBOM-01 | 35 | Pending |
-| CBOM-02 | 35 | Pending |
-| CBOM-03 | 35 | Pending |
-| CBOM-04 | 35 | Pending |
+| CBOM-01 | 35 | Complete |
+| CBOM-02 | 35 | Complete |
+| CBOM-03 | 35 | Complete |
+| CBOM-04 | 35 | Complete |
 | DASH-01 | 36 | Pending |
 | DASH-02 | 36 | Pending |
 | DASH-03 | 36 | Pending |
