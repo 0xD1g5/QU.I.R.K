@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
-status: executing
-stopped_at: Phase 33 context gathered
-last_updated: "2026-04-28T01:43:29.657Z"
-last_activity: 2026-04-28 -- Phase 33 execution started
+status: idle
+stopped_at: Phase 33 closed (Path B); awaiting Phase 34 planning
+last_updated: "2026-04-28T00:00:00.000Z"
+last_activity: 2026-04-28 -- Phase 33 closed under Path B; SC-4 deferred to BACK-68
 progress:
-  total_phases: 25
-  completed_phases: 18
-  total_plans: 61
-  completed_plans: 58
-  percent: 95
+  total_phases: 37
+  completed_phases: 33
+  total_plans: 80
+  completed_plans: 79
+  percent: 99
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 33 — broker-scanner
+**Current focus:** Phase 34 — motion-intelligence (planning not yet started)
 
 ## Current Position
 
-Phase: 33 (broker-scanner) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 33
-Last activity: 2026-04-28 -- Phase 33 execution started
+Phase: 34 (motion-intelligence) — NOT PLANNED (no phase directory yet)
+Plan: — of —
+Status: Idle between phases — Phase 33 closed under Path B (SC-4 chaos-lab smoke deferred → BACK-68)
+Last activity: 2026-04-28 -- Phase 33 closed; ready to plan Phase 34
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 99% (33 / 37 phases · 79 / 80 plans)
 
 ## Phase Overview
 
@@ -118,6 +118,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-27T20:57:33.650Z
-Stopped at: Phase 33 context gathered
-Next action: `/gsd-plan-phase 32` — Email Scanner
+Last session: 2026-04-28
+Stopped at: Phase 33 closed (Path B) — STATE.md refreshed; Phase 34 not yet planned
+Next action: `/gsd-plan-phase 34` — Motion Intelligence (data_in_motion subscore wiring; depends on Phases 32 + 33, both complete)
