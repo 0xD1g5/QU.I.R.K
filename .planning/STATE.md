@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
 status: executing
-stopped_at: Phase 35 Plan 02 complete (GREEN — plaintext brokers skipped in CBOM Pass 2/3)
-last_updated: "2026-04-28T22:42:00Z"
-last_activity: 2026-04-28 -- Phase 35 Plan 02 complete (GREEN; 19/19 motion tests, 74/74 CBOM regression)
+stopped_at: Phase 35 Plan 03 complete (lab-driven golden CBOM fixtures + structural test)
+last_updated: "2026-04-28T23:05:00Z"
+last_activity: 2026-04-28 -- Phase 35 Plan 03 complete (D-04 satisfied; 101/101 CBOM tests + 1 regen-skipped)
 progress:
   total_phases: 37
   completed_phases: 34
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 35 (cbom-integration) — EXECUTING
-Plan: 3 of 4
-Status: Executing Phase 35 — Plan 01 (RED) + Plan 02 (GREEN) complete; production code change for Phase 35 is DONE. Plan 03 next (verification / snapshots).
-Last activity: 2026-04-28 -- Phase 35 Plan 02 complete (GREEN commit b76c818; 19/19 motion + 74/74 CBOM regression)
+Plan: 4 of 4
+Status: Executing Phase 35 — Plans 01/02/03 complete. Plan 04 (REQUIREMENTS.md amendments + UAT-SERIES + Obsidian sync) is next.
+Last activity: 2026-04-28 -- Phase 35 Plan 03 complete (commit 7329e4b; D-04 golden CBOM fixtures + structural test, 101/101 CBOM tests pass)
 
 Progress: [██████████] 99% (34 / 37 phases · 82 / 83 plans)
 
@@ -118,6 +118,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-28T22:42:00Z
-Stopped at: Phase 35 Plan 02 complete (GREEN — Pass 3 plaintext-broker leak closed; 19/19 motion tests pass; 74/74 CBOM regression suite pass)
-Next action: Execute Plan 35-03 (verification / golden snapshots)
+Last session: 2026-04-28T23:05:00Z
+Stopped at: Phase 35 Plan 03 complete (lab-driven golden CBOM fixtures + structural test; 101/101 CBOM tests pass)
+Next action: Execute Plan 35-04 (REQUIREMENTS.md amendments per D-01/D-02 + UAT-SERIES.md updates per D-07 + Obsidian sync per D-08)
