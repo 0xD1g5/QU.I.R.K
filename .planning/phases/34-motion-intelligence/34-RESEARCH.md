@@ -728,21 +728,23 @@ confirmation needed.
 (This table is NOT empty — five assumptions need discuss-phase or planner attention before
 implementation.)
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **A1/A2 above** — exact email scanner endpoint emission behavior on STARTTLS failure vs.
-   implicit-TLS unresponsive port. Resolve by reading `email_scanner.py` end-to-end during
-   plan or by adding a discuss-phase question.
+   implicit-TLS unresponsive port.
+   **RESOLVED 2026-04-28:** Planner verified `email_scanner.py` end-to-end. `ep.protocol = protocol_label` always runs (line 498) even on STARTTLS failure / implicit-TLS unresponsive port; `tls_version` stays empty in those failure modes. Counter-bump predicate in Plan 34-02 uses `protocol + (not tls_version)`. See CONTEXT D-02 + Plan 02 Task 1.
 
 2. **A5 above** — weak-cipher counter definition: HIGH-only or HIGH+MEDIUM (non-PFS ECDHE
-   < TLS 1.3)? Affects how aggressive the score drop is.
+   < TLS 1.3)?
+   **RESOLVED 2026-04-28:** HIGH-only — mirror `risk_engine.py:483-489` (email) and `:564-567` (broker) exactly. Excludes the non-PFS-MEDIUM branch at `risk_engine.py:503`. Rationale: Phase 28 (DAR) precedent of HIGH-severity-only counters; the strict profile multiplier (1.4×) handles aggressiveness orthogonally; non-PFS forward-secrecy is a different signal class. See Plan 02 Task 1.
 
 3. **D-12 interpretation** — does "full credit" mean `data_in_motion == 25` (subscore cap)
-   or only `score == 100` (total score with all subscores at cap)? Test assertion phrasing
-   depends on resolution.
+   or only `score == 100` (total score with all subscores at cap)?
+   **RESOLVED 2026-04-28:** Use **relative assertions only** in tests (no `== 25`, no `== 100`). Tests assert `subscore_with_findings < subscore_zero_baseline`. Robust to score_cap internals. See Plan 01 acceptance criteria (`grep -E '== ?(25|100)\b'` gate returns 0).
 
 4. **`_PROTOCOL_KEYS` extension** — out of scope per A4, but worth a one-line discuss-phase
    note for the next phase that touches `protocol_counts`.
+   **RESOLVED 2026-04-28:** Out of scope for Phase 34 — `_PROTOCOL_KEYS` (evidence.py:9-10) untouched. Plan 02 acceptance criterion verifies the tuple still ends with `"VAULT")`. Forwarded to backlog for any future phase that touches `protocol_counts`.
 
 ## Sources
 

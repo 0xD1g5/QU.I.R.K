@@ -537,7 +537,10 @@ Plans:
   2. `evidence.py` `EvidenceCounters` dataclass contains all six `motion_` fields: `motion_email_starttls_missing_count`, `motion_email_plaintext_count`, `motion_email_weak_cipher_count`, `motion_broker_plaintext_count`, `motion_broker_weak_tls_count`, `motion_broker_weak_cipher_count`
   3. `scoring.py` `SCORE_WEIGHTS` contains all five `motion_` ratio entries with correct weights; `PROFILE_MULTIPLIERS` contains the `"motion_"` prefix key with strict/balanced/lenient values (MOTION-03)
   4. `compute_readiness_score()` returns `"data_in_motion"` as a named 6th subscore; the overall quantum-readiness score is measurably affected when motion_ counters are non-zero
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 34-01-PLAN.md — RED unit-test scaffold for motion_ evidence counters and data_in_motion subscore (Wave 1)
+- [ ] 34-02-PLAN.md — Wire 6 motion_ counters in evidence.py + 5 SCORE_WEIGHTS entries, motion_ profile multiplier, motion_impacts block, data_in_motion 6th subscore in scoring.py (Wave 2)
+- [ ] 34-03-PLAN.md — UAT-SERIES.md update + Obsidian phase note + vault sync + commit (Wave 3)
 
 ### Phase 35: CBOM Integration
 **Goal**: Email and broker TLS endpoints appear correctly in the CycloneDX CBOM — algorithm components registered in Pass 1, cert components in Pass 2, protocol components in Pass 3 — with plaintext-only endpoints skipped to prevent hollow certificate entries
