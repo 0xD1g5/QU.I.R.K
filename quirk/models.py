@@ -83,3 +83,4 @@ class CryptoEndpoint(Base):
     # v4.4 Data in Motion fields
     # ==========================
     email_scan_json = Column(Text, nullable=True)  # Per-host email port scan summary JSON (Phase 32)
+    broker_scan_json = Column(Text, nullable=True)  # Phase 33 — BROKER-00 (per-scan nested broker probe summary)

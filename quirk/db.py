@@ -126,6 +126,25 @@ def _ensure_email_columns(engine) -> None:
         conn.commit()
 
 
+_BROKER_COLUMNS = ["broker_scan_json"]
+
+
+def _ensure_broker_columns(engine) -> None:
+    """Add v4.4 broker scanner column (broker_scan_json TEXT) if absent (idempotent).
+
+    Phase 33 / BROKER-00. Mirrors _ensure_email_columns shape exactly.
+    Called from init_db() after _ensure_email_columns().
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    with engine.connect() as conn:
+        for col in _BROKER_COLUMNS:
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
+        conn.commit()
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -147,6 +166,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_gcp_columns(engine)  # v4.3: add GCP columns if missing
     _ensure_v43_columns(engine)  # v4.3: add data-at-rest columns if missing
     _ensure_email_columns(engine)  # v4.4 Phase 32: add email scanner column
+    _ensure_broker_columns(engine)      # v4.4 Phase 33 — BROKER-00
     return engine
 
 
