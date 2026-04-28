@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
-status: Idle between phases — Phase 34 closed (motion intelligence wired; 15/15 motion tests GREEN)
-stopped_at: Phase 35 context gathered
-last_updated: "2026-04-28T21:46:13.812Z"
-last_activity: "2026-04-28 -- Phase 34 complete (3 plans: 34-01 RED scaffold, 34-02 GREEN implementation, 34-03 docs/Obsidian/UAT)"
+status: executing
+stopped_at: Phase 35 Plan 01 complete (RED tests committed)
+last_updated: "2026-04-28T22:38:35Z"
+last_activity: 2026-04-28 -- Phase 35 Plan 01 complete (RED test suite)
 progress:
   total_phases: 37
   completed_phases: 34
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 34 — motion-intelligence COMPLETE; ready to plan Phase 35 (cbom-integration)
+**Current focus:** Phase 35 — cbom-integration
 
 ## Current Position
 
-Phase: 34 (motion-intelligence) — COMPLETE (3/3 plans)
-Plan: 3 of 3
-Status: Idle between phases — Phase 34 closed (motion intelligence wired; 15/15 motion tests GREEN)
-Last activity: 2026-04-28 -- Phase 34 complete (3 plans: 34-01 RED scaffold, 34-02 GREEN implementation, 34-03 docs/Obsidian/UAT)
+Phase: 35 (cbom-integration) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 35 — Plan 01 complete (RED), Plan 02 next (GREEN)
+Last activity: 2026-04-28 -- Phase 35 Plan 01 complete (RED test suite committed d99ddd2)
 
 Progress: [██████████] 99% (34 / 37 phases · 82 / 83 plans)
 
@@ -118,6 +118,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-28T21:46:13.800Z
-Stopped at: Phase 35 context gathered
-Next action: `/gsd-plan-phase 35` — CBOM Integration (algorithm/cert components for email + broker endpoints; parallel to dashboard work in Phase 36)
+Last session: 2026-04-28T22:38:35Z
+Stopped at: Phase 35 Plan 01 complete (RED tests; 16 pass / 3 fail confirms RED state for Pass 3 protocol leak)
+Next action: Execute Plan 35-02 — flip the 3 RED tests GREEN by adding KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN to Pass 2 + Pass 3 skip tuples in quirk/cbom/builder.py
