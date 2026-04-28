@@ -972,7 +972,7 @@ services:
   # Phase 33 / BROKER-LAB-01. Official images per CONTEXT.md D-15 (2026-04-27 revision).
   # Weak TLS via bind-mounted config files. Plaintext ports intentionally listening.
   kafka-broker:
-    image: apache/kafka:3.6
+    image: apache/kafka:3.7.0
     profiles: ["broker"]
     hostname: kafka-broker
     ports:
@@ -983,7 +983,7 @@ services:
       - ../labs/broker/certs/kafka.crt:/etc/kafka/secrets/kafka.crt:ro
       - ../labs/broker/certs/kafka.key:/etc/kafka/secrets/kafka.key:ro
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 || exit 1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 6
