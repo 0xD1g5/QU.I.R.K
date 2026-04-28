@@ -69,11 +69,12 @@ def test_score_weights_has_dar_vault_weak_ratio_8():
 
 
 def test_compute_readiness_score_subscores_count_unchanged():
-    """D-13: NUM_SUBSCORES must stay 5 — vault adds to existing dar_impacts, not a new subscore."""
+    """D-13: vault adds to existing dar_impacts, not a new subscore.
+    Phase 34 D-04 adds data_in_motion as a 6th subscore — vault remains within data_at_rest."""
     ev = {"totals": {"endpoints": 1, "findings": 0}, "dar_vault_weak_count": 1}
     result = compute_readiness_score(ev)
     assert set(result["subscores"].keys()) == {
-        "hygiene", "modern_tls", "identity_trust", "agility_signals", "data_at_rest",
+        "hygiene", "modern_tls", "identity_trust", "agility_signals", "data_at_rest", "data_in_motion",
     }
 
 

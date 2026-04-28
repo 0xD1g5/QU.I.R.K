@@ -90,6 +90,14 @@ def build_evidence_summary(
     # Vault DAR counters (Phase 30, per D-11)
     dar_vault_weak_count = 0   # HIGH severity: PKI RSA<4096, PKI SHA-1, token auth, ldap auth
 
+    # Motion / data-in-motion counters (Phase 34)
+    motion_email_starttls_missing_count = 0  # *-STARTTLS endpoints with no tls_version (handshake never completed)
+    motion_email_plaintext_count = 0          # SMTPS/IMAPS/POP3S endpoints with no tls_version (implicit TLS unresponsive)
+    motion_email_weak_cipher_count = 0        # email TLS with TLS_RSA_WITH_*, 3DES, RC4 (HIGH only, mirrors risk_engine.py:483-489)
+    motion_broker_plaintext_count = 0         # KAFKA-PLAIN / AMQP-PLAIN / REDIS-PLAIN
+    motion_broker_weak_tls_count = 0          # broker TLS with tls_version in {TLSv1, TLSv1.0, TLSv1.1, SSLv3}
+    motion_broker_weak_cipher_count = 0       # broker TLS with weak cipher (HIGH only, mirrors risk_engine.py:564-567)
+
     for ep in endpoint_list:
         host = str(getattr(ep, "host", "") or "")
         port = int(getattr(ep, "port", 0) or 0)
@@ -214,6 +222,57 @@ def build_evidence_summary(
                 # does NOT increment.
                 dar_vault_weak_count += 1
 
+        # ---- Motion (Phase 34) — broker plaintext listeners ----
+        elif proto in {"KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"}:
+            motion_broker_plaintext_count += 1
+
+        # ---- Motion (Phase 34) — broker TLS endpoints ----
+        elif proto in {"KAFKA-TLS", "AMQPS", "AMQPS/AZURE-SERVICEBUS",
+                       "HTTPS/AWS-SQS", "REDIS-TLS"}:
+            tls_v = str(getattr(ep, "tls_version", "") or "").upper()
+            if tls_v in {"TLSV1", "TLSV1.0", "TLSV1.1", "SSLV3"}:
+                motion_broker_weak_tls_count += 1
+            cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
+            # Mirrors risk_engine.py:564-567 — HIGH-only weak-cipher predicate (per A5)
+            if cipher and (
+                cipher.startswith("TLS_RSA_WITH_")
+                or any(s in cipher for s in ("3DES", "RC4", "DES-CBC"))
+                or (any(s in cipher for s in ("AES128-SHA", "AES256-SHA"))
+                    and "ECDHE" not in cipher and "DHE" not in cipher)
+            ):
+                motion_broker_weak_cipher_count += 1
+
+        # ---- Motion (Phase 34) — email STARTTLS protocols ----
+        elif proto in {"SMTP-STARTTLS", "IMAP-STARTTLS", "POP3-STARTTLS"}:
+            tls_v = str(getattr(ep, "tls_version", "") or "")
+            if not tls_v:
+                # A1 verified: email_scanner.py line 498 always sets ep.protocol = protocol_label
+                # even on STARTTLS failure; tls_version stays empty → ticks the counter.
+                motion_email_starttls_missing_count += 1
+            else:
+                cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
+                # Mirrors risk_engine.py:483-489 — HIGH-only (A5)
+                if cipher and (
+                    cipher.startswith("TLS_RSA_WITH_")
+                    or any(s in cipher for s in ("3DES", "RC4"))
+                ):
+                    motion_email_weak_cipher_count += 1
+
+        # ---- Motion (Phase 34) — email implicit-TLS protocols ----
+        elif proto in {"SMTPS", "IMAPS", "POP3S"}:
+            tls_v = str(getattr(ep, "tls_version", "") or "")
+            if not tls_v:
+                # A2 verified: email_scanner.py emits the endpoint even when implicit-TLS
+                # port is unresponsive (tls_blocker_reason set, tls_version empty).
+                motion_email_plaintext_count += 1
+            else:
+                cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
+                if cipher and (
+                    cipher.startswith("TLS_RSA_WITH_")
+                    or any(s in cipher for s in ("3DES", "RC4"))
+                ):
+                    motion_email_weak_cipher_count += 1
+
     plaintext_http_targets = _finding_targets(finding_list, "Plaintext HTTP service detected")
     http_on_tls_port_targets = _finding_targets(finding_list, "HTTP on TLS-designated port")
     mtls_targets |= _finding_targets(finding_list, "mTLS required")
@@ -278,4 +337,22 @@ def build_evidence_summary(
         "dar_k8s_inaccessible_ratio": round(dar_k8s_inaccessible_count / total_endpoints, 4) if total_endpoints else 0.0,
         "dar_vault_weak_count": dar_vault_weak_count,
         "dar_vault_weak_ratio": round(dar_vault_weak_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "motion_email_starttls_missing_count": motion_email_starttls_missing_count,
+        "motion_email_plaintext_count": motion_email_plaintext_count,
+        "motion_email_weak_cipher_count": motion_email_weak_cipher_count,
+        "motion_broker_plaintext_count": motion_broker_plaintext_count,
+        "motion_broker_weak_tls_count": motion_broker_weak_tls_count,
+        "motion_broker_weak_cipher_count": motion_broker_weak_cipher_count,
+        # D-02: ratio numerator folds plaintext + starttls_missing into a single weight
+        "motion_email_plaintext_ratio": round(
+            (motion_email_plaintext_count + motion_email_starttls_missing_count)
+            / total_endpoints, 4) if total_endpoints else 0.0,
+        "motion_email_weak_cipher_ratio": round(
+            motion_email_weak_cipher_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "motion_broker_plaintext_ratio": round(
+            motion_broker_plaintext_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "motion_broker_weak_tls_ratio": round(
+            motion_broker_weak_tls_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "motion_broker_weak_cipher_ratio": round(
+            motion_broker_weak_cipher_count / total_endpoints, 4) if total_endpoints else 0.0,
     }

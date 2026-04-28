@@ -29,9 +29,9 @@ class ReadinessScoringTests(unittest.TestCase):
         self.assertIn("rating", result)
         self.assertIn("subscores", result)
         self.assertIn("drivers", result)
-        self.assertEqual(set(result["subscores"].keys()), {"hygiene", "modern_tls", "identity_trust", "agility_signals", "data_at_rest"})
+        self.assertEqual(set(result["subscores"].keys()), {"hygiene", "modern_tls", "identity_trust", "agility_signals", "data_at_rest", "data_in_motion"})
         MAX_SUBSCORE = 25  # per _apply_weighted_impacts cap
-        NUM_SUBSCORES = 5  # hygiene, modern_tls, identity_trust, agility_signals, data_at_rest
+        NUM_SUBSCORES = 6  # + data_in_motion (Phase 34)
         self.assertGreaterEqual(result["score"], 0)
         self.assertLessEqual(result["score"], MAX_SUBSCORE * NUM_SUBSCORES)
         self.assertLessEqual(len(result["drivers"]), 5)

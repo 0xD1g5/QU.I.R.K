@@ -24,6 +24,11 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "dar_k8s_unencrypted_ratio": 10.0,        # Phase 29 — etcd plaintext is high-impact but
                                               # narrower scope than DB-wide plaintext
     "dar_k8s_inaccessible_ratio": 4.0,        # Phase 29 — same weight as storage compliance gap
+    "motion_email_plaintext_ratio": 12.0,    # Phase 34 D-03 — email plaintext + STARTTLS-missing fold (D-01/D-02)
+    "motion_email_weak_cipher_ratio": 6.0,   # Phase 34 D-03 — HIGH-only cipher (A5)
+    "motion_broker_plaintext_ratio": 14.0,   # Phase 34 D-03 — KAFKA-PLAIN / AMQP-PLAIN / REDIS-PLAIN
+    "motion_broker_weak_tls_ratio": 8.0,     # Phase 34 D-03 — TLSv1.0/1.1/SSLv3 on broker
+    "motion_broker_weak_cipher_ratio": 6.0,  # Phase 34 D-03 — HIGH-only cipher (A5)
     "agility_high_impact_ratio": 14.0,
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
@@ -31,9 +36,9 @@ SCORE_WEIGHTS: Dict[str, float] = {
 }
 
 PROFILE_MULTIPLIERS: Dict[str, Dict[str, float]] = {
-    "strict":   {"agility_": 1.4, "identity_": 1.4, "dar_": 1.4},
-    "balanced": {"agility_": 1.0, "identity_": 1.0, "dar_": 1.0},
-    "lenient":  {"agility_": 0.7, "identity_": 0.7, "dar_": 0.7},
+    "strict":   {"agility_": 1.4, "identity_": 1.4, "dar_": 1.4, "motion_": 1.4},
+    "balanced": {"agility_": 1.0, "identity_": 1.0, "dar_": 1.0, "motion_": 1.0},
+    "lenient":  {"agility_": 0.7, "identity_": 0.7, "dar_": 0.7, "motion_": 0.7},
 }
 
 
@@ -187,11 +192,35 @@ def compute_readiness_score(
     ]
     dar_score, dar_drivers = _apply_weighted_impacts(dar_impacts)
 
-    total_score = int(hygiene_score + modern_tls_score + identity_trust_score + agility_score + dar_score)
+    # Motion (Phase 34) — mirrors dar_impacts shape; D-02 folds STARTTLS-missing into plaintext numerator
+    motion_email_plaintext_num = (
+        _as_int(evidence.get("motion_email_plaintext_count", 0))
+        + _as_int(evidence.get("motion_email_starttls_missing_count", 0))
+    )
+    motion_email_weak_cipher = max(0, _as_int(evidence.get("motion_email_weak_cipher_count", 0)))
+    motion_broker_plaintext = max(0, _as_int(evidence.get("motion_broker_plaintext_count", 0)))
+    motion_broker_weak_tls = max(0, _as_int(evidence.get("motion_broker_weak_tls_count", 0)))
+    motion_broker_weak_cipher = max(0, _as_int(evidence.get("motion_broker_weak_cipher_count", 0)))
+
+    motion_impacts: List[Tuple[str, float]] = [
+        ("Email plaintext or missing STARTTLS",
+         -_ratio(motion_email_plaintext_num, denom) * w["motion_email_plaintext_ratio"]),
+        ("Weak cipher on email TLS",
+         -_ratio(motion_email_weak_cipher, denom) * w["motion_email_weak_cipher_ratio"]),
+        ("Plaintext broker listeners",
+         -_ratio(motion_broker_plaintext, denom) * w["motion_broker_plaintext_ratio"]),
+        ("Weak TLS on brokers",
+         -_ratio(motion_broker_weak_tls, denom) * w["motion_broker_weak_tls_ratio"]),
+        ("Weak cipher on broker TLS",
+         -_ratio(motion_broker_weak_cipher, denom) * w["motion_broker_weak_cipher_ratio"]),
+    ]
+    motion_score, motion_drivers = _apply_weighted_impacts(motion_impacts)
+
+    total_score = int(hygiene_score + modern_tls_score + identity_trust_score + agility_score + dar_score + motion_score)
     rating = _rating(total_score)
 
     all_drivers: List[Tuple[str, int]] = (
-        hygiene_drivers + modern_tls_drivers + identity_trust_drivers + agility_drivers + dar_drivers
+        hygiene_drivers + modern_tls_drivers + identity_trust_drivers + agility_drivers + dar_drivers + motion_drivers
     )
     all_drivers_sorted = sorted(all_drivers, key=lambda x: (-abs(x[1]), x[0]))
     top_drivers = [{"reason": reason, "points": points} for reason, points in all_drivers_sorted[:5]]
@@ -205,6 +234,7 @@ def compute_readiness_score(
             "identity_trust": identity_trust_score,
             "agility_signals": agility_score,
             "data_at_rest": dar_score,
+            "data_in_motion": motion_score,
         },
         "drivers": top_drivers,
     }
