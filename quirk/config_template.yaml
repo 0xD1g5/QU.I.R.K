@@ -100,6 +100,13 @@ connectors:
   # vault_token: null               # defaults to VAULT_TOKEN env var
   # vault_transit_mount: "transit"  # default transit mount path
   # vault_tls_verify: true          # set false for self-signed HTTPS Vault
+  # -- Broker scanner (optional, requires: pip install quirk[kafka,redis]) --
+  # Broker scanner (Phase 33 — D-10/D-01)
+  # enable_broker: false
+  # Azure Service Bus namespaces — repeatable; produces probes against {namespace}.servicebus.windows.net:5671
+  # broker_azure_namespaces: []
+  # AWS SQS regions — repeatable; produces probes against sqs.{region}.amazonaws.com:443
+  # broker_sqs_regions: []
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
