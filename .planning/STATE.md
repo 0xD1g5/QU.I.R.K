@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
 status: executing
-stopped_at: Phase 35 Plan 01 complete (RED tests committed)
-last_updated: "2026-04-28T22:38:35Z"
-last_activity: 2026-04-28 -- Phase 35 Plan 01 complete (RED test suite)
+stopped_at: Phase 35 Plan 02 complete (GREEN — plaintext brokers skipped in CBOM Pass 2/3)
+last_updated: "2026-04-28T22:42:00Z"
+last_activity: 2026-04-28 -- Phase 35 Plan 02 complete (GREEN; 19/19 motion tests, 74/74 CBOM regression)
 progress:
   total_phases: 37
   completed_phases: 34
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 35 (cbom-integration) — EXECUTING
-Plan: 2 of 4
-Status: Executing Phase 35 — Plan 01 complete (RED), Plan 02 next (GREEN)
-Last activity: 2026-04-28 -- Phase 35 Plan 01 complete (RED test suite committed d99ddd2)
+Plan: 3 of 4
+Status: Executing Phase 35 — Plan 01 (RED) + Plan 02 (GREEN) complete; production code change for Phase 35 is DONE. Plan 03 next (verification / snapshots).
+Last activity: 2026-04-28 -- Phase 35 Plan 02 complete (GREEN commit b76c818; 19/19 motion + 74/74 CBOM regression)
 
 Progress: [██████████] 99% (34 / 37 phases · 82 / 83 plans)
 
@@ -118,6 +118,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-28T22:38:35Z
-Stopped at: Phase 35 Plan 01 complete (RED tests; 16 pass / 3 fail confirms RED state for Pass 3 protocol leak)
-Next action: Execute Plan 35-02 — flip the 3 RED tests GREEN by adding KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN to Pass 2 + Pass 3 skip tuples in quirk/cbom/builder.py
+Last session: 2026-04-28T22:42:00Z
+Stopped at: Phase 35 Plan 02 complete (GREEN — Pass 3 plaintext-broker leak closed; 19/19 motion tests pass; 74/74 CBOM regression suite pass)
+Next action: Execute Plan 35-03 (verification / golden snapshots)
