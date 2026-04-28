@@ -553,3 +553,105 @@ def scan_rabbitmq_targets(
     if logger:
         logger.stamp(f"RabbitMQ scans complete: {len(results)} endpoints")
     return results
+
+
+# ---------------------------------------------------------------------------
+# Redis: plaintext detection constant
+# ---------------------------------------------------------------------------
+
+REDIS_INLINE_TIMEOUT = 2
+
+
+# ---------------------------------------------------------------------------
+# Redis: plaintext PING detection (REDIS-02)
+# ---------------------------------------------------------------------------
+
+def _detect_redis_plaintext(host: str, port: int, timeout: int = REDIS_INLINE_TIMEOUT) -> bool:
+    """REDIS-02. Send PING; +PONG / -NOAUTH / *<reply> all indicate plaintext Redis."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            sock.sendall(b"PING\r\n")
+            sock.settimeout(timeout)
+            data = sock.recv(64)
+            return data.startswith((b'+', b'-', b'*'))
+    except (ConnectionRefusedError, OSError, socket.timeout):
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Redis: IP address detection helper for SNI suppression (REDIS-01)
+# ---------------------------------------------------------------------------
+
+def _is_ip_redis(host: str) -> bool:
+    """Crude IPv4/IPv6 detection — SNI is suppressed for raw IP addresses (REDIS-01)."""
+    import ipaddress
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Redis: raw ssl.SSLContext TLS probe (REDIS-01)
+# ---------------------------------------------------------------------------
+
+def _probe_redis_tls(host: str, port: int, timeout: int = 5) -> Optional[CryptoEndpoint]:
+    """REDIS-01. Raw ssl.SSLContext probe — sslyze CANNOT speak Redis (no app-layer banner)."""
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    server_hostname = host if not _is_ip_redis(host) else None
+    try:
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            with ctx.wrap_socket(sock, server_hostname=server_hostname) as ssock:
+                ver = ssock.version()
+                cip = ssock.cipher()                  # tuple (name, protocol, bits)
+                der = ssock.getpeercert(binary_form=True)
+                ep = CryptoEndpoint(host=host, port=port, protocol="REDIS-TLS")
+                ep.tls_version = ver
+                ep.cipher_suite = cip[0] if cip else None
+                if der:
+                    cert = x509.load_der_x509_certificate(der, default_backend())
+                    alg, size = _pubkey_info(cert.public_key())
+                    ep.cert_pubkey_alg = alg
+                    ep.cert_pubkey_size = size
+                    ep.cert_subject = cert.subject.rfc4514_string()
+                    ep.cert_issuer = cert.issuer.rfc4514_string()
+                return ep
+    except ConnectionRefusedError:
+        return None
+    except Exception as e:
+        ep = CryptoEndpoint(host=host, port=port, protocol="REDIS-TLS")
+        ep.scan_error = str(e)
+        return ep
+
+
+# ---------------------------------------------------------------------------
+# Redis: redis-py CONFIG GET enrichment (REDIS-03 / D-08)
+# ---------------------------------------------------------------------------
+
+def _enrich_redis_config(host: str, port: int, logger=None) -> dict:
+    """REDIS-03 / D-08. redis-py CONFIG GET tls-*. NOAUTH/NOPERM degrade silently to {}."""
+    if not REDIS_AVAILABLE:
+        return {}
+    try:
+        r = redis_lib.Redis(
+            host=host, port=port, ssl=True, ssl_cert_reqs="none",
+            socket_timeout=5, socket_connect_timeout=5,
+        )
+        tls_config = r.config_get("tls-*")
+        r.close()
+        return tls_config or {}
+    except redis_lib.exceptions.AuthenticationError as e:
+        if logger:
+            logger.debug(f"redis enrichment NOAUTH for {host}:{port}: {e}")
+        return {}
+    except redis_lib.exceptions.NoPermissionError as e:
+        if logger:
+            logger.debug(f"redis enrichment NOPERM for {host}:{port}: {e}")
+        return {}
+    except Exception as e:
+        if logger:
+            logger.debug(f"redis enrichment failed for {host}:{port}: {e}")
+        return {}
