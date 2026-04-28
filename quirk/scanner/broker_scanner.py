@@ -117,24 +117,25 @@ def _is_weak(name: str) -> bool:
 # sslyze probe for Kafka TLS ports (9093, 9094)
 # ---------------------------------------------------------------------------
 
-def _scan_one_sslyze_kafka(
+def _scan_one_sslyze_broker(
     host: str,
     port: int,
     timeout: int,
     logger: Optional[Logger] = None,
 ) -> Optional[CryptoEndpoint]:
-    """KAFKA-01: sslyze TLS probe against a Kafka TLS listener.
+    """Protocol-agnostic sslyze TLS probe (used by Kafka + RabbitMQ/AMQPS + cloud broker probes).
 
     Returns a populated CryptoEndpoint on success, None on any failure.
+    The caller is responsible for setting ep.protocol to the correct label.
     ConnectionRefusedError is silent at DEBUG (D-03 carry-forward).
-    No tls_opportunistic_encryption — Kafka TLS is direct, not STARTTLS.
+    No tls_opportunistic_encryption — broker TLS is always direct.
     """
     global _sslyze_warned
 
     if not SSLYZE_AVAILABLE:
         if not _sslyze_warned:
             if logger:
-                logger.v("sslyze not installed — broker scanner Kafka probe skipped")
+                logger.v("sslyze not installed — broker scanner TLS probe skipped")
             _sslyze_warned = True
         return None
 
@@ -163,11 +164,12 @@ def _scan_one_sslyze_kafka(
         server_result = results[0]
         if server_result.scan_status != ServerScanStatusEnum.COMPLETED:
             if logger:
-                logger.v(f"sslyze ERROR for Kafka {host}:{port}")
+                logger.v(f"sslyze ERROR for broker {host}:{port}")
             return None
 
         scan = server_result.scan_result
 
+        # Placeholder — callers (scan_one_kafka, scan_one_rabbitmq) set the final ep.protocol
         ep = CryptoEndpoint(host=host, port=port, protocol="KAFKA-TLS")
 
         # ----------------------------------------------------------------
@@ -252,7 +254,7 @@ def _scan_one_sslyze_kafka(
 
         if logger:
             logger.v(
-                f"sslyze KAFKA {host}:{port} version={ep.tls_version} "
+                f"sslyze BROKER {host}:{port} version={ep.tls_version} "
                 f"weak={ep.tls_weak_ciphers_present} pfs={ep.tls_pfs_supported}"
             )
 
@@ -262,14 +264,77 @@ def _scan_one_sslyze_kafka(
         # D-03: CONNECTION_REFUSED is non-fatal and silent at DEBUG
         if logger:
             try:
-                logger.debug(f"Kafka port {port} CONNECTION_REFUSED on {host} (sslyze)")
+                logger.debug(f"Broker port {port} CONNECTION_REFUSED on {host} (sslyze)")
             except AttributeError:
                 pass
         return None
     except Exception as e:
         if logger:
-            logger.v(f"sslyze exception for Kafka {host}:{port}: {e}")
+            logger.v(f"sslyze exception for broker {host}:{port}: {e}")
         return None
+
+
+# Backward-compat alias — Plan 03 tests import _scan_one_sslyze_kafka by name
+_scan_one_sslyze_kafka = _scan_one_sslyze_broker
+
+
+# ---------------------------------------------------------------------------
+# RabbitMQ: AMQP plaintext detection (RABBIT-02)
+# ---------------------------------------------------------------------------
+
+def _detect_amqp_plaintext(host: str, port: int, timeout: int = 2) -> bool:
+    """RABBIT-02. Send AMQP 0-9-1 header; len(data) > 0 = AMQP speaker (CONTEXT.md 2026-04-27).
+
+    NOTE: original spec said b'AMQP' prefix match — that yields false negatives because
+    the AMQP 0-9-1 Connection.Start response is a binary METHOD frame, not ASCII-prefixed.
+    """
+    try:
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            sock.sendall(AMQP_HEADER)
+            sock.settimeout(timeout)
+            data = sock.recv(256)
+            return len(data) > 0
+    except (ConnectionRefusedError, OSError, socket.timeout):
+        return False
+
+
+# ---------------------------------------------------------------------------
+# RabbitMQ: management API enrichment (RABBIT-03 / D-09)
+# ---------------------------------------------------------------------------
+
+def _enrich_rabbitmq_mgmt(host: str, port: int = 15672, logger=None) -> dict:
+    """RABBIT-03 / D-09. urllib.request GET /api/overview with Basic guest:guest.
+
+    Returns {} on connection failure or non-401 HTTP error.
+    Returns {"mgmt_auth": "rejected_401"} on 401 (informational data point, NOT an error).
+    No `requests` dependency (D-09).
+    """
+    url = f"http://{host}:{port}/api/overview"
+    credentials = base64.b64encode(b"guest:guest").decode()
+    req = urllib.request.Request(url, headers={"Authorization": f"Basic {credentials}"})
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+            return {
+                "rabbitmq_version": data.get("rabbitmq_version"),
+                "erlang_version": data.get("erlang_version"),
+                "listeners": data.get("listeners", []),
+                "node": data.get("node"),
+            }
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            if logger:
+                logger.debug(
+                    f"RabbitMQ mgmt API guest:guest rejected on {host}:{port} (401 — informational)"
+                )
+            return {"mgmt_auth": "rejected_401"}
+        if logger:
+            logger.debug(f"RabbitMQ mgmt API HTTP error {e.code} on {host}:{port}")
+        return {}
+    except Exception as e:
+        if logger:
+            logger.debug(f"RabbitMQ mgmt API failed on {host}:{port}: {e}")
+        return {}
 
 
 # ---------------------------------------------------------------------------
@@ -379,4 +444,112 @@ def scan_kafka_targets(
                 results.append(ep)
     if logger:
         logger.stamp(f"Kafka scans complete: {len(results)} endpoints")
+    return results
+
+
+# ---------------------------------------------------------------------------
+# RabbitMQ: per-host orchestrator
+# ---------------------------------------------------------------------------
+
+def scan_one_rabbitmq(
+    host: str,
+    port: int,
+    timeout: int,
+    *,
+    protocol_label: str = "AMQPS",
+    logger: Optional[Logger] = None,
+    session_start: Optional[datetime] = None,
+) -> Optional[CryptoEndpoint]:
+    """Probe a single RabbitMQ-family endpoint.
+
+    Port 5672 -> AMQP plaintext detection (RABBIT-02).
+    Other ports -> sslyze direct-TLS probe with caller-supplied protocol_label.
+    protocol_label values: "AMQPS" (5671 self-hosted), "AMQPS/Azure-ServiceBus" (5671 cloud),
+    "HTTPS/AWS-SQS" (443 cloud).
+    """
+    if port == 5672:
+        if _detect_amqp_plaintext(host, port):
+            ep = CryptoEndpoint(host=host, port=port, protocol="AMQP-PLAIN")
+            ep.service_detail = f"AMQP-PLAIN:{port}"
+            ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+            return ep
+        return None
+
+    ep = _scan_one_sslyze_broker(host, port, timeout, logger)
+    if ep is None:
+        return None
+    ep.protocol = protocol_label
+    ep.service_detail = f"{protocol_label}:{port}"
+    ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+    return ep
+
+
+# ---------------------------------------------------------------------------
+# RabbitMQ: top-level driver (RABBIT-01..05 + Azure SB + AWS SQS)
+# ---------------------------------------------------------------------------
+
+def scan_rabbitmq_targets(
+    hosts: List[str],
+    azure_namespaces: Optional[List[str]] = None,
+    sqs_regions: Optional[List[str]] = None,
+    timeout: int = 5,
+    logger: Optional[Logger] = None,
+    session_start: Optional[datetime] = None,
+) -> List[CryptoEndpoint]:
+    """RABBIT-01..05. Probe self-hosted RabbitMQ + Azure SB + AWS SQS in parallel.
+
+    Self-hosted: ports 5672 (AMQP plaintext detection) and 5671 (AMQPS via sslyze).
+    Azure Service Bus: {namespace}.servicebus.windows.net:5671 (D-03, RABBIT-04).
+    AWS SQS: sqs.{region}.amazonaws.com:443 (D-04, RABBIT-05).
+    RABBIT-03: Management API enrichment (best-effort, attaches to 5671 ep for that host).
+    STRUCT-01: session_start propagated; no bare now() calls in this module.
+    """
+    results: List[CryptoEndpoint] = []
+    azure_namespaces = azure_namespaces or []
+    sqs_regions = sqs_regions or []
+
+    # Self-hosted: 5672 (AMQP plaintext), 5671 (AMQPS)
+    self_tasks = [(h, 5672, "AMQPS") for h in hosts] + [(h, 5671, "AMQPS") for h in hosts]
+    # Azure SB: {ns}.servicebus.windows.net:5671 (D-03)
+    azure_tasks = [
+        (f"{ns}.servicebus.windows.net", 5671, "AMQPS/Azure-ServiceBus")
+        for ns in azure_namespaces
+    ]
+    # AWS SQS: sqs.{region}.amazonaws.com:443 (D-04)
+    sqs_tasks = [
+        (f"sqs.{r}.amazonaws.com", 443, "HTTPS/AWS-SQS")
+        for r in sqs_regions
+    ]
+    all_tasks = self_tasks + azure_tasks + sqs_tasks
+    if not all_tasks:
+        return results
+    if logger:
+        logger.stamp(
+            f"Starting RabbitMQ scans: {len(all_tasks)} probes "
+            f"(self={len(self_tasks)} azure={len(azure_tasks)} sqs={len(sqs_tasks)})"
+        )
+    with ThreadPoolExecutor(max_workers=min(len(all_tasks), 50)) as ex:
+        futs = {
+            ex.submit(
+                scan_one_rabbitmq, host, port, timeout,
+                protocol_label=label, logger=logger, session_start=session_start,
+            ): (host, port)
+            for host, port, label in all_tasks
+        }
+        for f in as_completed(futs):
+            ep = f.result()
+            if ep is not None:
+                results.append(ep)
+
+    # RABBIT-03: management API enrichment per self-hosted host
+    # (best-effort, attaches to first AMQPS endpoint for that host)
+    for host in hosts:
+        mgmt = _enrich_rabbitmq_mgmt(host, port=15672, logger=logger)
+        if mgmt:
+            for ep in results:
+                if ep.host == host and ep.protocol == "AMQPS":
+                    setattr(ep, "_rabbit_mgmt_enrichment", mgmt)
+                    break
+    if logger:
+        logger.stamp(f"RabbitMQ scans complete: {len(results)} endpoints")
     return results
