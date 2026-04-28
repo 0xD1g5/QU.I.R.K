@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
-status: verifying
-stopped_at: Phase 35 Plan 03 complete (lab-driven golden CBOM fixtures + structural test; 101/101 CBOM tests pass)
-last_updated: "2026-04-28T22:50:55.241Z"
-last_activity: 2026-04-28
+status: Idle between phases — Phase 35 closed (CBOM Pass 2/3 plaintext-broker skip wired; 101/101 CBOM tests GREEN; golden fixtures committed; CBOM-01..04 verified PASS)
+stopped_at: Phase 35 closed
+last_updated: "2026-04-28T23:30:00.000Z"
+last_activity: 2026-04-28 -- Phase 35 complete (4 plans: 35-01 RED, 35-02 GREEN, 35-03 golden CBOM, 35-04 close-out)
 progress:
   total_phases: 37
-  completed_phases: 34
-  total_plans: 83
-  completed_plans: 82
+  completed_phases: 35
+  total_plans: 86
+  completed_plans: 86
   percent: 99
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 35 — cbom-integration
+**Current focus:** Phase 35 — cbom-integration COMPLETE; ready to plan Phase 36 (dashboard-motion-tab)
 
 ## Current Position
 
-Phase: 35 (cbom-integration) — EXECUTING
+Phase: 35 (cbom-integration) — COMPLETE (4/4 plans, verified PASS)
 Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-04-28
+Status: Idle between phases — Phase 35 closed (CBOM Pass 2/3 plaintext-broker skip wired; 101/101 CBOM tests GREEN)
+Last activity: 2026-04-28 -- Phase 35 complete (4 plans: 35-01 RED, 35-02 GREEN, 35-03 golden CBOM, 35-04 close-out)
 
 Progress: [░░░░░░░░░░] 0%
 
