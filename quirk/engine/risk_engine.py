@@ -515,3 +515,63 @@ def evaluate_email_endpoints(endpoints) -> List[Dict[str, Any]]:
             })
 
     return findings
+
+
+def evaluate_broker_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Phase 33: emit broker-specific findings.
+
+    Plaintext findings (HIGH):
+      - kafka-plaintext-listener  (ep.protocol == "KAFKA-PLAIN")
+      - amqp-plaintext-listener   (ep.protocol == "AMQP-PLAIN")
+      - redis-plaintext-no-auth   (ep.protocol == "REDIS-PLAIN")
+
+    Weak-cipher findings (HIGH) for TLS_RSA_WITH_*, 3DES, RC4, or non-AEAD *-SHA on
+    any broker TLS protocol (KAFKA-TLS, AMQPS, AMQPS/Azure-ServiceBus, HTTPS/AWS-SQS, REDIS-TLS).
+    """
+    findings: List[Dict[str, Any]] = []
+    for e in endpoints:
+        host = getattr(e, "host", "")
+        port = int(getattr(e, "port", 0) or 0)
+        protocol = getattr(e, "protocol", "") or ""
+        cipher = (getattr(e, "cipher_suite", "") or "").upper()
+        tls_version = getattr(e, "tls_version", "") or ""
+
+        if protocol == "KAFKA-PLAIN":
+            findings.append({
+                "severity": "HIGH", "host": host, "port": port,
+                "title": "Plaintext Kafka listener detected",
+                "recommendation": "Disable PLAINTEXT listener or restrict access; enforce SSL/SASL_SSL on broker port 9092.",
+            })
+            continue
+        if protocol == "AMQP-PLAIN":
+            findings.append({
+                "severity": "HIGH", "host": host, "port": port,
+                "title": "Plaintext AMQP listener detected",
+                "recommendation": "Disable plaintext AMQP on port 5672; require AMQPS (port 5671) for all clients.",
+            })
+            continue
+        if protocol == "REDIS-PLAIN":
+            findings.append({
+                "severity": "HIGH", "host": host, "port": port,
+                "title": "Plaintext Redis listener (no auth)",
+                "recommendation": "Enable TLS on port 6380 and require AUTH; bind plaintext port to localhost only or disable.",
+            })
+            continue
+
+        # Weak-cipher detection on any broker TLS protocol
+        broker_tls = protocol in {"KAFKA-TLS", "AMQPS", "AMQPS/Azure-ServiceBus", "HTTPS/AWS-SQS", "REDIS-TLS"}
+        if broker_tls and tls_version:
+            is_rsa_kex = (
+                cipher.startswith("TLS_RSA_WITH_")
+                or any(s in cipher for s in ("AES128-SHA", "AES256-SHA", "3DES", "RC4", "DES-CBC"))
+            ) and "ECDHE" not in cipher and "DHE" not in cipher
+            if is_rsa_kex:
+                findings.append({
+                    "severity": "HIGH", "host": host, "port": port,
+                    "title": "Weak cipher suite on broker TLS endpoint",
+                    "recommendation": (
+                        "Broker is negotiating non-PFS RSA / 3DES / RC4 / weak-CBC suites. "
+                        "Disable TLS_RSA_WITH_* and legacy ciphers; require TLS 1.2+ AEAD or TLS 1.3."
+                    ),
+                })
+    return findings
