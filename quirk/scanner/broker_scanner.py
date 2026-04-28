@@ -445,3 +445,111 @@ def scan_kafka_targets(
     if logger:
         logger.stamp(f"Kafka scans complete: {len(results)} endpoints")
     return results
+
+
+# ---------------------------------------------------------------------------
+# RabbitMQ: per-host orchestrator
+# ---------------------------------------------------------------------------
+
+def scan_one_rabbitmq(
+    host: str,
+    port: int,
+    timeout: int,
+    *,
+    protocol_label: str = "AMQPS",
+    logger: Optional[Logger] = None,
+    session_start: Optional[datetime] = None,
+) -> Optional[CryptoEndpoint]:
+    """Probe a single RabbitMQ-family endpoint.
+
+    Port 5672 -> AMQP plaintext detection (RABBIT-02).
+    Other ports -> sslyze direct-TLS probe with caller-supplied protocol_label.
+    protocol_label values: "AMQPS" (5671 self-hosted), "AMQPS/Azure-ServiceBus" (5671 cloud),
+    "HTTPS/AWS-SQS" (443 cloud).
+    """
+    if port == 5672:
+        if _detect_amqp_plaintext(host, port):
+            ep = CryptoEndpoint(host=host, port=port, protocol="AMQP-PLAIN")
+            ep.service_detail = f"AMQP-PLAIN:{port}"
+            ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+            return ep
+        return None
+
+    ep = _scan_one_sslyze_broker(host, port, timeout, logger)
+    if ep is None:
+        return None
+    ep.protocol = protocol_label
+    ep.service_detail = f"{protocol_label}:{port}"
+    ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+    return ep
+
+
+# ---------------------------------------------------------------------------
+# RabbitMQ: top-level driver (RABBIT-01..05 + Azure SB + AWS SQS)
+# ---------------------------------------------------------------------------
+
+def scan_rabbitmq_targets(
+    hosts: List[str],
+    azure_namespaces: Optional[List[str]] = None,
+    sqs_regions: Optional[List[str]] = None,
+    timeout: int = 5,
+    logger: Optional[Logger] = None,
+    session_start: Optional[datetime] = None,
+) -> List[CryptoEndpoint]:
+    """RABBIT-01..05. Probe self-hosted RabbitMQ + Azure SB + AWS SQS in parallel.
+
+    Self-hosted: ports 5672 (AMQP plaintext detection) and 5671 (AMQPS via sslyze).
+    Azure Service Bus: {namespace}.servicebus.windows.net:5671 (D-03, RABBIT-04).
+    AWS SQS: sqs.{region}.amazonaws.com:443 (D-04, RABBIT-05).
+    RABBIT-03: Management API enrichment (best-effort, attaches to 5671 ep for that host).
+    STRUCT-01: session_start propagated; no bare now() calls in this module.
+    """
+    results: List[CryptoEndpoint] = []
+    azure_namespaces = azure_namespaces or []
+    sqs_regions = sqs_regions or []
+
+    # Self-hosted: 5672 (AMQP plaintext), 5671 (AMQPS)
+    self_tasks = [(h, 5672, "AMQPS") for h in hosts] + [(h, 5671, "AMQPS") for h in hosts]
+    # Azure SB: {ns}.servicebus.windows.net:5671 (D-03)
+    azure_tasks = [
+        (f"{ns}.servicebus.windows.net", 5671, "AMQPS/Azure-ServiceBus")
+        for ns in azure_namespaces
+    ]
+    # AWS SQS: sqs.{region}.amazonaws.com:443 (D-04)
+    sqs_tasks = [
+        (f"sqs.{r}.amazonaws.com", 443, "HTTPS/AWS-SQS")
+        for r in sqs_regions
+    ]
+    all_tasks = self_tasks + azure_tasks + sqs_tasks
+    if not all_tasks:
+        return results
+    if logger:
+        logger.stamp(
+            f"Starting RabbitMQ scans: {len(all_tasks)} probes "
+            f"(self={len(self_tasks)} azure={len(azure_tasks)} sqs={len(sqs_tasks)})"
+        )
+    with ThreadPoolExecutor(max_workers=min(len(all_tasks), 50)) as ex:
+        futs = {
+            ex.submit(
+                scan_one_rabbitmq, host, port, timeout,
+                protocol_label=label, logger=logger, session_start=session_start,
+            ): (host, port)
+            for host, port, label in all_tasks
+        }
+        for f in as_completed(futs):
+            ep = f.result()
+            if ep is not None:
+                results.append(ep)
+
+    # RABBIT-03: management API enrichment per self-hosted host
+    # (best-effort, attaches to first AMQPS endpoint for that host)
+    for host in hosts:
+        mgmt = _enrich_rabbitmq_mgmt(host, port=15672, logger=logger)
+        if mgmt:
+            for ep in results:
+                if ep.host == host and ep.protocol == "AMQPS":
+                    setattr(ep, "_rabbit_mgmt_enrichment", mgmt)
+                    break
+    if logger:
+        logger.stamp(f"RabbitMQ scans complete: {len(results)} endpoints")
+    return results
