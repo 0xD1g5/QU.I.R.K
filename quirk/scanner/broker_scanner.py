@@ -655,3 +655,65 @@ def _enrich_redis_config(host: str, port: int, logger=None) -> dict:
         if logger:
             logger.debug(f"redis enrichment failed for {host}:{port}: {e}")
         return {}
+
+
+# ---------------------------------------------------------------------------
+# Redis: per-host orchestrator (REDIS-01..03)
+# ---------------------------------------------------------------------------
+
+def scan_one_redis(
+    host: str,
+    port: int,
+    timeout: int,
+    logger: Optional[Logger] = None,
+    session_start: Optional[datetime] = None,
+) -> Optional[CryptoEndpoint]:
+    """Probe a single Redis host:port. Port 6379 -> plaintext detection; 6380 -> raw ssl probe."""
+    if port == 6379:
+        if _detect_redis_plaintext(host, port):
+            ep = CryptoEndpoint(host=host, port=port, protocol="REDIS-PLAIN")
+            ep.service_detail = f"REDIS-PLAIN:{port}"
+            ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+            return ep
+        return None
+
+    ep = _probe_redis_tls(host, port, timeout)
+    if ep is None:
+        return None
+    ep.service_detail = f"REDIS-TLS:{port}"
+    ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+
+    # REDIS-03 optional enrichment
+    enrichment = _enrich_redis_config(host, port, logger)
+    if enrichment:
+        setattr(ep, "_redis_config_enrichment", enrichment)
+    return ep
+
+
+# ---------------------------------------------------------------------------
+# Redis: top-level driver (REDIS-01..03)
+# ---------------------------------------------------------------------------
+
+def scan_redis_targets(
+    hosts: List[str],
+    timeout: int = 5,
+    logger: Optional[Logger] = None,
+    session_start: Optional[datetime] = None,
+) -> List[CryptoEndpoint]:
+    """REDIS-01..03. Probe Redis hosts on 6379 (plaintext) and 6380 (TLS) in parallel."""
+    results: List[CryptoEndpoint] = []
+    ports = [6379, 6380]
+    tasks = [(h, p) for h in hosts for p in ports]
+    if not tasks:
+        return results
+    if logger:
+        logger.stamp(f"Starting Redis scans: {len(tasks)} probes ({len(hosts)} hosts x 2 ports)")
+    with ThreadPoolExecutor(max_workers=min(len(tasks), 50)) as ex:
+        futs = {ex.submit(scan_one_redis, h, p, timeout, logger, session_start): (h, p) for h, p in tasks}
+        for f in as_completed(futs):
+            ep = f.result()
+            if ep is not None:
+                results.append(ep)
+    if logger:
+        logger.stamp(f"Redis scans complete: {len(results)} endpoints")
+    return results
