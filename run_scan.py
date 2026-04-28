@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import time
 from datetime import datetime, timezone
@@ -23,12 +24,15 @@ from quirk.scanner.azure_connector import scan_azure_targets
 from quirk.scanner.gcp_connector import scan_gcp_targets
 from quirk.scanner.dnssec_scanner import scan_dnssec_targets
 from quirk.scanner.email_scanner import scan_email_targets
+from quirk.scanner.broker_scanner import (
+    scan_kafka_targets, scan_rabbitmq_targets, scan_redis_targets,
+)
 
 from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
-from quirk.engine.risk_engine import evaluate_endpoints, evaluate_email_endpoints
+from quirk.engine.risk_engine import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints
 from quirk.reports.writer import write_reports
 
 from quirk.engine.profiles import apply_profile
@@ -186,6 +190,18 @@ def main():
     parser.add_argument("--resume", action="store_true", help="Reuse cache if valid")
     parser.add_argument("--force-discovery", action="store_true", help="Ignore discovery cache and re-run")
 
+    # Phase 33 / D-01: cloud broker target flags (repeatable)
+    parser.add_argument(
+        "--azure-servicebus-namespace",
+        action="append", default=[], dest="azure_servicebus_namespaces",
+        help="Azure Service Bus namespace to probe (repeatable). Phase 33 / D-01.",
+    )
+    parser.add_argument(
+        "--aws-sqs-region",
+        action="append", default=[], dest="aws_sqs_regions",
+        help="AWS SQS region to probe (repeatable). Phase 33 / D-01.",
+    )
+
     args = parser.parse_args()
 
     quiet = getattr(args, "quiet", False)
@@ -215,6 +231,17 @@ def main():
 
     # Apply profile defaults (v3.7)
     apply_profile(cfg, scan_profile, safe_mode=args.safe_mode)
+
+    # Phase 33 / D-01: cloud broker target plumbing — CLI extends config-supplied lists
+    if getattr(args, "azure_servicebus_namespaces", None):
+        cfg.connectors.broker_azure_namespaces = (
+            list(cfg.connectors.broker_azure_namespaces or []) + list(args.azure_servicebus_namespaces)
+        )
+    if getattr(args, "aws_sqs_regions", None):
+        cfg.connectors.broker_sqs_regions = (
+            list(cfg.connectors.broker_sqs_regions or []) + list(args.aws_sqs_regions)
+        )
+
     # Score profile (calibration) — independent from scan profile
     if getattr(args, "score_profile", None):
         if getattr(cfg, "intelligence", None) is None:
@@ -702,6 +729,67 @@ def main():
                 )
                 logger.info(f"Email scan: {len(email_endpoints)} endpoints from {len(email_hosts)} hosts")
 
+    # ── Broker TLS scanning (Phase 33) ────────────────────────
+    kafka_endpoints = []
+    rabbit_endpoints = []
+    redis_endpoints = []
+    with _phase_timer(run_stats, "broker_scanning"):
+        if cfg.connectors.enable_broker:
+            broker_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+            if broker_hosts:
+                kafka_endpoints = scan_kafka_targets(
+                    hosts=broker_hosts,
+                    timeout=cfg.scan.timeout_seconds,
+                    profile=cfg.scan.profile,
+                    logger=logger,
+                    session_start=session_start,
+                )
+                rabbit_endpoints = scan_rabbitmq_targets(
+                    hosts=broker_hosts,
+                    azure_namespaces=cfg.connectors.broker_azure_namespaces,
+                    sqs_regions=cfg.connectors.broker_sqs_regions,
+                    timeout=cfg.scan.timeout_seconds,
+                    logger=logger,
+                    session_start=session_start,
+                )
+                redis_endpoints = scan_redis_targets(
+                    hosts=broker_hosts,
+                    timeout=cfg.scan.timeout_seconds,
+                    logger=logger,
+                    session_start=session_start,
+                )
+                logger.info(
+                    f"Broker scan: kafka={len(kafka_endpoints)} "
+                    f"rabbit={len(rabbit_endpoints)} redis={len(redis_endpoints)}"
+                )
+
+    # broker_scan_json aggregation (Phase 33 / D-12, D-14)
+    all_broker_eps = kafka_endpoints + rabbit_endpoints + redis_endpoints
+    if all_broker_eps:
+        def _ep_dict(ep):
+            return {
+                "host": getattr(ep, "host", None),
+                "port": getattr(ep, "port", None),
+                "protocol": getattr(ep, "protocol", None),
+                "tls_version": getattr(ep, "tls_version", None),
+                "cipher_suite": getattr(ep, "cipher_suite", None),
+                "cert_pubkey_alg": getattr(ep, "cert_pubkey_alg", None),
+                "cert_subject": getattr(ep, "cert_subject", None),
+                "scan_error": getattr(ep, "scan_error", None),
+            }
+        azure_eps = [e for e in rabbit_endpoints if getattr(e, "protocol", "") == "AMQPS/Azure-ServiceBus"]
+        sqs_eps   = [e for e in rabbit_endpoints if getattr(e, "protocol", "") == "HTTPS/AWS-SQS"]
+        rabbit_self = [e for e in rabbit_endpoints if e not in azure_eps and e not in sqs_eps]
+        payload = {
+            "kafka":            [_ep_dict(e) for e in kafka_endpoints],
+            "rabbitmq":         [_ep_dict(e) for e in rabbit_self],
+            "redis":            [_ep_dict(e) for e in redis_endpoints],
+            "azure_servicebus": [_ep_dict(e) for e in azure_eps],
+            "aws_sqs":          [_ep_dict(e) for e in sqs_eps],
+            "session_start":    session_start.isoformat() if session_start else None,
+        }
+        setattr(all_broker_eps[0], "broker_scan_json", json.dumps(payload, default=str))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + aws_endpoints + azure_endpoints + gcp_endpoints
@@ -710,7 +798,8 @@ def main():
                  + k8s_endpoints
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints
                  + vault_endpoints
-                 + email_endpoints)
+                 + email_endpoints
+                 + kafka_endpoints + rabbit_endpoints + redis_endpoints)
 
     # ==============================
     # Findings + persistence + reports
@@ -724,6 +813,11 @@ def main():
         email_findings = evaluate_email_endpoints(email_endpoints)
         if email_findings:
             findings = (findings or []) + email_findings
+        # Phase 33: broker-specific findings (layered findings survive _dedupe_findings
+        # because titles differ per protocol; D-11/D-12 carry-forward from Phase 32).
+        broker_findings = evaluate_broker_endpoints(all_broker_eps if 'all_broker_eps' in dir() else [])
+        if broker_findings:
+            findings = (findings or []) + broker_findings
 
     with _phase_timer(run_stats, "db_persist"):
         with get_session(cfg.output.db_path) as session:
