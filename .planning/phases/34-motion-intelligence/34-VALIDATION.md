@@ -1,11 +1,15 @@
 ---
 phase: 34
 slug: motion-intelligence
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-28
+updated: 2026-04-29
 ---
+
+<!-- Re-validated 2026-04-29 by Phase 37 Plan 37-04 (D-05): tests/test_motion_scoring.py exists with 15 tests, all GREEN under `python -m pytest`. Direct `pytest` invocation fails with ModuleNotFoundError due to PYTHONPATH; `python -m pytest` is the project standard. -->
+
 
 # Phase 34 — Validation Strategy
 
@@ -38,9 +42,15 @@ created: 2026-04-28
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | MOTION-01..04 | — | counter ticks lower data_in_motion subscore | unit | `pytest tests/test_motion_scoring.py -q` | ❌ W0 | ⬜ pending |
-
-*Planner fills exact rows during PLAN.md write — one row per task with motion_ counter or scoring_ assertion.*
+| 34-01-01 | 01 | 1 | MOTION-01..04 | — | motion_ counters present in evidence summary even with zero endpoints | unit | `python -m pytest tests/test_motion_scoring.py::test_motion_keys_present_in_summary -q` | ✅ | ✅ green |
+| 34-01-02 | 01 | 1 | MOTION-01 | — | email weak-cipher counter increments | unit | `python -m pytest tests/test_motion_scoring.py::test_motion_email_weak_cipher_count -q` | ✅ | ✅ green |
+| 34-02-01 | 02 | 2 | MOTION-02 | — | score weights expose motion values | unit | `python -m pytest tests/test_motion_scoring.py::test_score_weights_motion_values -q` | ✅ | ✅ green |
+| 34-02-02 | 02 | 2 | MOTION-02 | — | profile multipliers apply to motion | unit | `python -m pytest tests/test_motion_scoring.py::test_profile_multipliers_motion -q` | ✅ | ✅ green |
+| 34-02-03 | 02 | 2 | MOTION-02 | — | data_in_motion subscore present | unit | `python -m pytest tests/test_motion_scoring.py::test_subscores_includes_data_in_motion -q` | ✅ | ✅ green |
+| 34-02-04 | 02 | 2 | MOTION-02 | — | findings lower the motion subscore | unit | `python -m pytest tests/test_motion_scoring.py::test_motion_subscore_lowers_with_findings -q` | ✅ | ✅ green |
+| 34-03-01 | 03 | 3 | MOTION-03 | — | top_drivers surfaces motion drivers | unit | `python -m pytest tests/test_motion_scoring.py::test_top_drivers_surfaces_motion -q` | ✅ | ✅ green |
+| 34-03-02 | 03 | 3 | MOTION-04 (D-12) | — | legacy evidence without motion keys preserves full credit | unit | `python -m pytest tests/test_motion_scoring.py::test_legacy_evidence_no_motion_keys_full_credit -q` | ✅ | ✅ green |
+| 34-03-03 | 03 | 3 | MOTION-02 | — | strict profile increases motion penalty | unit | `python -m pytest tests/test_motion_scoring.py::test_profile_strict_increases_motion_penalty -q` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -64,11 +74,11 @@ created: 2026-04-28
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references — `tests/test_motion_scoring.py` created
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-29 (re-validated by Phase 37 Plan 37-04)
