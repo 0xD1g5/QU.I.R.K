@@ -59,7 +59,7 @@ export function ExecutivePage() {
     return (
       <div className="space-y-6">
         <div className="flex gap-6">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-32 w-32 rounded-full" />
           ))}
         </div>
@@ -148,6 +148,7 @@ export function ExecutivePage() {
             <ScoreGauge score={score.subscores.identity_trust} label="Identity" size={120} />
             <ScoreGauge score={score.subscores.agility_signals} label="Agility" size={120} />
             <ScoreGauge score={score.subscores.data_at_rest} label="Data at Rest" size={120} />
+            <ScoreGauge score={score.subscores.data_in_motion} label="Data in Motion" size={120} />
           </div>
         </CardContent>
       </Card>
