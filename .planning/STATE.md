@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.4
-milestone_name: Data in Motion
-status: completed
-stopped_at: v4.4 milestone closed (tag v4.4.0 pushed; archives written)
-last_updated: "2026-04-29T04:00:31.964Z"
+milestone: v4.5
+milestone_name: Reliability & Gap Closure
+status: planning
+last_updated: "2026-04-29T12:34:56.764Z"
 last_activity: 2026-04-29
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Milestone: v4.4 Data in Motion — SHIPPED 2026-04-29 (tag v4.4.0)
-Phase: 37 (gap-closure-and-v4-4-0-release) — COMPLETE (final phase of v4.4)
-Status: Milestone v4.4 archived. REQUIREMENTS.md removed (fresh for next milestone). Awaiting `/gsd-new-milestone`.
-Last activity: 2026-04-29 — v4.4 milestone closed (6 phases / 33 plans; 662 pytest passed; archives written)
-
-Progress: [██████████] 100% (v4.4 complete)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-29 — Milestone v4.5 started
 
 ## Phase Overview
 

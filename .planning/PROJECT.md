@@ -109,15 +109,39 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current State: v4.4.0 Shipped — Planning Next Milestone
+## Current Milestone: v4.5 Reliability & Gap Closure
+
+**Goal:** Close v4.4 deferred items, harden scanner/CBOM/dashboard correctness, and automate the long-tail UAT debt — putting QU.I.R.K. in solid shape before the next capability and performance milestones.
+
+**Target features:**
+
+Gap closure
+- Fix DEF-v4.4-02: restore SAML/OIDC entries in `/api/scan/latest` `identity_findings` (ISSUE-3 from Phase 24)
+- Flip DEF-v4.4-01: Phase 36 `wave_0_complete` → `true` once the SAML fix lands
+- Ship DASH-05: Data at Rest dashboard tab (deferred from Phase 27)
+
+Reliability hardening
+- Test flakiness / CI stability — resolve the deferred SAML scan-window test, eliminate intermittents, lock CI green
+- Scanner robustness — graceful degradation under partial failures, missing extras, slow targets; timeout/retry audit across all scanners
+- CBOM correctness audit — CycloneDX 1.6 spec validation, classifier coverage, golden-snapshot drift review
+- Dashboard polish — console errors, accessibility, loading states across `/motion`, `/trends`, `/findings`
+
+UAT debt burndown
+- Automate where possible — CI-runnable Docker fixtures for items that don't truly need cloud creds (Phase 27 DB, Phase 29 minikube, etc.); cloud-bound items remain deferred
+
+**Phase numbering:** continues from Phase 38 (default). v4.4 ended at Phase 37.
+
+**Out of scope (this milestone):** new scanners, new cloud connectors, performance/scale work, SaaS, CBOM v2 schema work, mobile.
+
+## Current State: v4.4.0 Shipped — v4.5 Initialized
 
 v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The cryptographic inventory now covers six pillars: TLS, SSH, API, Identity, Data at Rest, and Data in Motion. Email and broker TLS posture flow through scanning → intelligence → CBOM → dashboard end-to-end.
 
-**Open items at close:**
-- DEF-v4.4-01 — Phase 36 `wave_0_complete: false` flip (gated on SAML scan-window regression)
-- DEF-v4.4-02 — SAML/OIDC missing from `/api/scan/latest` `identity_findings` (real functional regression, ISSUE-3 from Phase 24, predates v4.4)
-
-**Next milestone:** Not yet defined. Likely candidates surfaced during v4.4: SAML scan-window fix (ISSUE-3), KAFKA-04 AdminClient enrichment hardening, additional cloud-broker probes (Confluent Cloud, AWS MSK direct), live-cluster K8s motion scanning, Phase 36 motion-tab Sheet drawer + RTL coverage. Run `/gsd-new-milestone` to scope.
+**v4.5 starting open items (in scope):**
+- DEF-v4.4-01 — Phase 36 `wave_0_complete: false` flip (gated on SAML fix)
+- DEF-v4.4-02 — SAML/OIDC missing from `/api/scan/latest` `identity_findings`
+- DASH-05 — Data at Rest dashboard tab (deferred from Phase 27)
+- 14 carry-over UAT/verification gaps — automate where possible
 
 ## Context
 
@@ -167,7 +191,7 @@ v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The c
 | No git-tag and no `/gsd-complete-milestone` inside Phase 37 (D-10/D-11) | Tagging and milestone close are visible-to-others actions; reserve them for explicit user trigger after Phase 37 lands | ✓ Good — Phase 37 closed cleanly, then user triggered tag and `/gsd-complete-milestone v4.4` separately |
 
 ---
-*Last updated: 2026-04-29 — after v4.4 Data in Motion milestone shipped (tag v4.4.0)*
+*Last updated: 2026-04-29 — v4.5 Reliability & Gap Closure milestone initialized*
 
 ## Evolution
 
