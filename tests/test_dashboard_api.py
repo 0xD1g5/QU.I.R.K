@@ -70,3 +70,65 @@ def test_cbom_endpoint(dashboard_client):
     if resp.status_code == 200:
         data = resp.json()
         assert "cbom_components" in data
+
+
+# ---- Phase 36 — Motion Tab (DASH-04, DASH-05) ----
+
+def test_motion_findings_endpoint(dashboard_client):
+    """DASH-05: GET /api/scan/latest includes motion_findings list."""
+    resp = dashboard_client.get("/api/scan/latest")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "motion_findings" in data
+        assert isinstance(data["motion_findings"], list)
+
+
+def test_data_in_motion_subscore(dashboard_client):
+    """DASH-04: GET /api/scan/latest returns subscores.data_in_motion as int (Pitfall 1)."""
+    resp = dashboard_client.get("/api/scan/latest")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "data_in_motion" in data["score"]["subscores"]
+        assert isinstance(data["score"]["subscores"]["data_in_motion"], int)
+
+
+from types import SimpleNamespace
+
+
+def _ep(**kw):
+    defaults = dict(host="example.com", port=0, protocol="", tls_version=None,
+                    cipher_suite=None, cert_not_after=None)
+    defaults.update(kw)
+    return SimpleNamespace(**defaults)
+
+
+def test_derive_motion_findings_plaintext():
+    """DASH-05: KAFKA-PLAIN endpoint -> HIGH severity, plaintext_exposed=True."""
+    from quirk.dashboard.api.routes.scan import _derive_motion_findings
+    out = _derive_motion_findings([_ep(host="kafka.test", port=9092, protocol="KAFKA-PLAIN")])
+    assert len(out) == 1
+    assert out[0].severity == "HIGH"
+    assert out[0].plaintext_exposed is True
+
+
+def test_derive_motion_findings_starttls():
+    """DASH-05: starttls_warning=True only on port-25 SMTP-STARTTLS."""
+    from quirk.dashboard.api.routes.scan import _derive_motion_findings
+    out = _derive_motion_findings([
+        _ep(host="m", port=25,  protocol="SMTP-STARTTLS"),
+        _ep(host="m", port=587, protocol="SMTP-STARTTLS"),
+    ])
+    by_port = {f.port: f for f in out}
+    assert by_port[25].starttls_warning is True
+    assert by_port[587].starttls_warning is False
+
+
+def test_derive_motion_findings_azure():
+    """DASH-05: AMQPS/Azure-ServiceBus slash preserved verbatim (Phase 35 D-03)."""
+    from quirk.dashboard.api.routes.scan import _derive_motion_findings
+    out = _derive_motion_findings([_ep(host="ns.servicebus.windows.net", port=5671,
+                                       protocol="AMQPS/Azure-ServiceBus")])
+    assert len(out) == 1
+    assert out[0].protocol == "AMQPS/Azure-ServiceBus"
