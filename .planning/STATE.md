@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v4.4
-milestone_name: Identity Crypto Gap Closure
-status: executing
-stopped_at: Phase 37 context gathered
-last_updated: "2026-04-29T03:18:25.629Z"
-last_activity: 2026-04-29 -- Phase 37 execution started
+milestone_name: Data in Motion
+status: phase-complete
+stopped_at: Phase 37 complete (v4.4.0 gap closure shipped; tag + milestone-close deferred per D-10/D-11)
+last_updated: "2026-04-29T18:00:00.000Z"
+last_activity: 2026-04-29 -- Phase 37 closed (INFRA-01/02/03 + CHANGELOG + release notes); 662 pytest passed
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: 37 (gap-closure-and-v4-4-0-release) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 37
-Last activity: 2026-04-29 -- Phase 37 execution started
+Phase: 37 (gap-closure-and-v4-4-0-release) — COMPLETE
+Plan: 6 of 6
+Status: Phase 37 closed; awaiting user-triggered milestone close (`/gsd-complete-milestone v4.4`) and v4.4.0 git tag (both deferred per D-10/D-11)
+Last activity: 2026-04-29 -- Phase 37 closed (INFRA-01/02/03 + CHANGELOG + release notes; 662 pytest passed)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Phase Overview
 
