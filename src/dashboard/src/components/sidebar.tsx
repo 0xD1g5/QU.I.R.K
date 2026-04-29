@@ -11,6 +11,7 @@ import {
   Fingerprint,
   TrendingUp,
   Activity,
+  HardDrive,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { path: "/findings", label: "Findings", Icon: AlertTriangle },
   { path: "/identity", label: "Identity", Icon: Fingerprint },
   { path: "/motion", label: "Motion", Icon: Activity },
+  { path: "/data-at-rest", label: "Data at Rest", Icon: HardDrive },
   { path: "/certificates", label: "Certificates", Icon: Shield },
   { path: "/cbom", label: "CBOM Viewer", Icon: Database },
   { path: "/roadmap", label: "Migration Roadmap", Icon: GitBranch },

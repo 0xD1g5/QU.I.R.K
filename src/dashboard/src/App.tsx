@@ -8,6 +8,7 @@ import { ExecutivePage } from "@/pages/executive"
 import { FindingsPage } from "@/pages/findings"
 import { IdentityPage } from "@/pages/identity"
 import { MotionPage } from "@/pages/motion"
+import { DataAtRestPage } from "@/pages/data-at-rest"
 import { CertificatesPage } from "@/pages/certificates"
 import { CbomPage } from "@/pages/cbom"
 import { RoadmapPage } from "@/pages/roadmap"
@@ -30,6 +31,7 @@ export default function App() {
                   <Route path="/findings" element={<FindingsPage />} />
                   <Route path="/identity" element={<IdentityPage />} />
                   <Route path="/motion" element={<MotionPage />} />
+                  <Route path="/data-at-rest" element={<DataAtRestPage />} />
                   <Route path="/certificates" element={<CertificatesPage />} />
                   <Route path="/cbom" element={<CbomPage />} />
                   <Route path="/roadmap" element={<RoadmapPage />} />
