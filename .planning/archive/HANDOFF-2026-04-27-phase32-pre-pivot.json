@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-27T13:36:49.112Z",
+  "phase": "32",
+  "phase_name": "email-scanner",
+  "phase_dir": ".planning/phases/32-email-scanner",
+  "plan": null,
+  "task": null,
+  "total_tasks": 16,
+  "status": "paused_before_execution",
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {"id": "32-01", "name": "Email scanner test scaffolding (RED tests + fixtures)", "status": "not_started", "wave": 1, "task_count": 2},
+    {"id": "32-02", "name": "DB schema + config flag + [motion] extras foundation", "status": "not_started", "wave": 1, "task_count": 2},
+    {"id": "32-03", "name": "quirk/scanner/email_scanner.py implementation (sslyze + stdlib fallback)", "status": "not_started", "wave": 2, "task_count": 2},
+    {"id": "32-04", "name": "Wire email scanner into risk_engine + run_scan + profiles", "status": "not_started", "wave": 3, "task_count": 2},
+    {"id": "32-05", "name": "Postfix + Dovecot chaos lab under labs/email/ (Docker compose profile email)", "status": "not_started", "wave": 1, "task_count": 3, "autonomous": false},
+    {"id": "32-06", "name": "Live scan vs lab → labs/email/expected_results.md", "status": "not_started", "wave": 4, "task_count": 2, "autonomous": false},
+    {"id": "32-07", "name": "Phase completion ritual: Obsidian note + UAT-SERIES update + commit", "status": "not_started", "wave": 5, "task_count": 3, "autonomous": false}
+  ],
+  "blockers": [
+    {
+      "description": "gsd-sdk phase-plan-index returned wave: 1 for plan 32-07, but the plan's frontmatter declares wave: 5 with depends_on: [32-01..32-06]. Executing 32-07 in Wave 1 would write phase-completion docs (Obsidian note + UAT-SERIES) before any code exists.",
+      "type": "technical",
+      "workaround": "Use the corrected wave order in the handoff body (Wave 1 = 32-01,32-02,32-05; Wave 2 = 32-03; Wave 3 = 32-04; Wave 4 = 32-06; Wave 5 = 32-07) OR pass --wave N explicitly to bypass the broken auto-grouping. Do NOT trust the SDK's wave grouping for this phase as-is."
+    }
+  ],
+  "human_actions_pending": [
+    {"action": "Decide whether to proceed wave-by-wave (recommended: --wave 1 first) or run end-to-end with the corrected wave order", "context": "User was given the choice but invoked /gsd-pause-work before answering", "blocking": true},
+    {"action": "Ensure Docker is running before Wave 1 begins (32-05 builds Postfix+Dovecot chaos lab)", "context": "Plan 32-05 requires docker-compose; if Docker isn't up, the plan will checkpoint", "blocking": false},
+    {"action": "Be available for non-autonomous checkpoints on plans 32-05, 32-06, 32-07", "context": "These plans are marked autonomous: false in frontmatter and will pause for review", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Treat plan 32-07 as Wave 5 (per its frontmatter), not Wave 1 (per the SDK index)", "rationale": "Plan 32-07's depends_on chain requires all six prior plans; running it earlier would create completion docs documenting work that hasn't happened yet", "phase": "32"},
+    {"decision": "Recommended Wave 1 grouping: 32-01, 32-02, 32-05 (parallel-safe — no files_modified overlap)", "rationale": "tests/, quirk/{models,db,config}.py + pyproject.toml, and labs/email/ + quantum-chaos-enterprise-lab/docker-compose.yml are disjoint", "phase": "32"}
+  ],
+  "uncommitted_files": [
+    ".DS_Store",
+    "quantum-chaos-enterprise-lab/certs/ca.srl",
+    "quantum-chaos-enterprise-lab/certs/mtls.* (untracked: .crt, .csr, .ext, .key)",
+    "quantum-chaos-enterprise-lab/certs/scenarios/ (untracked)",
+    "quirk-output/ (untracked)",
+    ".clone/ (untracked)",
+    "planning/ (untracked — note: this is NOT .planning/, likely stray)"
+  ],
+  "next_action": "Re-invoke /gsd-execute-phase 32 --wave 1 (NOT a bare /gsd-execute-phase 32) to safely execute the three Wave-1 scaffolding plans in isolation, OR fix the wave-grouping bug in gsd-sdk first.",
+  "context_notes": "User invoked /gsd-execute-phase 32. Orchestrator initialized successfully (init.execute-phase + phase-plan-index returned valid JSON), but pre-flight inspection caught a wave-assignment defect: the SDK index reports plan 32-07 as wave 1 while its frontmatter says wave 5. Orchestrator presented findings + 3 options (run --wave 1 only / run all with corrected order / fix SDK first) and was awaiting user choice when /gsd-pause-work fired. NO subagents were spawned. NO code was written. NO worktrees were created. The phase is in pristine pre-execution state; STATE.md was NOT updated by state.begin-phase yet."
+}
