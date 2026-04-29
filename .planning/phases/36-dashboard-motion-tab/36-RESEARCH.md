@@ -470,22 +470,16 @@ function isEmailProtocol(protocol?: string): boolean {
 | A3 | `cipher_suite` and `cert_not_after` are present on CryptoEndpoint rows produced by Phase 32–33 scanners. | Common Pitfalls → Pitfall 5 | If absent, MotionFinding will surface `null` cells (acceptable per UI-SPEC table spec). Mitigation already coded into the example. `[CITED: risk_engine.py:213, 462, 537 — same getattr pattern used elsewhere]` |
 | A4 | Motion endpoints are tagged with `service_detail` like `"SMTP-STARTTLS:587"` (EMAIL-10), but the UI does NOT need this — it parses `protocol` directly. | Phase Requirements (DASH-02) | Low — even if service_detail format changes, motion.tsx never reads it. `[VERIFIED: src/dashboard/src/pages/motion.tsx will parse protocol field, per CONTEXT.md D-02]` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `motion_findings` include healthy TLS rows, or only "interesting" rows?**
-   - What we know: UI-SPEC renders `tls_version` for healthy rows (no badge), implying healthy rows ARE included.
-   - What's unclear: Does the backend emit one MotionFinding per email/broker endpoint regardless of severity, or only severity ≥ MEDIUM?
-   - Recommendation: **Emit one row per email/broker endpoint** (severity LOW/INFO for healthy ones). The page should be "this is what was scanned" not "these are problems." Planner should lock during PLAN.md. Note: this differs from `_derive_findings` which only emits problems — but DASH-02 says "per-port TLS posture summary," which implies all ports.
+   - **RESOLVED:** Emit one MotionFinding per email/broker endpoint regardless of severity (LOW/INFO for healthy rows). Plan 01 Task 3 (`_derive_motion_findings`) implements this — page reads "this is what was scanned," not just problems. Locked.
 
 2. **Where does `MotionFinding.cipher_suite` come from?**
-   - What we know: `evidence.py` reads `getattr(ep, "cipher_suite", None)` — implies `CryptoEndpoint.cipher_suite` exists.
-   - What's unclear: Is the column actually present in `quirk/models.py`?
-   - Recommendation: Planner verifies in Wave 0 by running `python -c "from quirk.models import CryptoEndpoint; print(CryptoEndpoint.__table__.columns.keys())"`. If absent, derive cipher info from `tls_capabilities_json` or surface `None`.
+   - **RESOLVED:** Use `getattr(ep, "cipher_suite", None)` defensively per Pitfall 5 — if the column is absent the field surfaces as `None` and the table renders an empty cell, which the UI-SPEC permits. Plan 01 Task 3 wires this. No Wave 0 column-introspection required.
 
 3. **Sidebar position when sidebar is collapsed (icon-only, <1024px)?**
-   - What we know: UI-SPEC says position 4 (between `/identity` and `/certificates`).
-   - What's unclear: Tooltip tooltip says `Activity` icon — does it differ enough from `TrendingUp` (Trends) at small sizes?
-   - Recommendation: Build with `Activity` per UI-SPEC; revisit if visual UAT flags it.
+   - **RESOLVED:** Use `Activity` icon per UI-SPEC (Plan 02 Task 3). Revisit only if manual UAT flags icon collision with `TrendingUp` (Trends).
 
 ## Environment Availability
 
