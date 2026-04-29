@@ -21,6 +21,7 @@ Usage: ./lab.sh <command> [options]
 Commands:
   up              Start the lab (docker compose up -d)
   all             Start ALL profiles at once — every service, every vulnerability
+  profiles        Print all known docker-compose profiles (one per line)
   down            Stop the lab (docker compose down)
   reset           Down + remove volumes + start fresh (down -v + up -d)
   status          Show running containers/ports for this lab project
@@ -38,6 +39,7 @@ Options (via env vars):
 Examples:
   ./lab.sh up
   PROFILE_ARGS="--profile identity" ./lab.sh up
+  ./lab.sh profiles
   ./lab.sh status
   ./lab.sh logs tls-modern
   ./lab.sh reset
@@ -47,6 +49,22 @@ EOF
 compose() {
   # Use a fixed project name to prevent name collisions across lab variants
   docker compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" ${PROFILE_ARGS} "$@"
+}
+
+# Derive ALL profiles from docker-compose.yml. Output: alphabetized, deduped, one per line.
+# Preserves set -euo pipefail (no unbound vars; pipefail-safe — sort handles empty input).
+_derive_all_profiles() {
+  if command -v yq >/dev/null 2>&1; then
+    yq eval '.. | select(has("profiles")) | .profiles[]' "${COMPOSE_FILE}" 2>/dev/null \
+      | sort -u
+  else
+    # Fallback: handles inline-array form (the only form in docker-compose.yml today).
+    # Restricted character class [a-zA-Z0-9_-] mitigates shell-injection risk on parsed names.
+    grep -E '^[[:space:]]*profiles:[[:space:]]*\[' "${COMPOSE_FILE}" \
+      | grep -oE '"[a-zA-Z0-9_-]+"' \
+      | tr -d '"' \
+      | sort -u
+  fi
 }
 
 cmd="${1:-}"
@@ -60,15 +78,21 @@ case "${cmd}" in
     compose ps
     ;;
   all)
-    ALL_PROFILES="--profile phaseA --profile cloud --profile identity --profile pki \
-      --profile jwt --profile registry --profile source --profile storage \
-      --profile ssh-weak --profile ldaps --profile dnssec --profile saml \
-      --profile kerberos"
+    mapfile -t _profiles < <(_derive_all_profiles)
+    if [[ ${#_profiles[@]} -eq 0 ]]; then
+      echo "❌ Could not derive profiles from ${COMPOSE_FILE}" >&2
+      exit 1
+    fi
+    ALL_PROFILES=""
+    for p in "${_profiles[@]}"; do ALL_PROFILES+=" --profile $p"; done
     echo "🔥 Starting ALL profiles: project=${PROJECT_NAME} file=${COMPOSE_FILE}"
-    echo "   Profiles: phaseA cloud identity pki jwt registry source storage ssh-weak ldaps dnssec saml kerberos"
+    echo "   Profiles: ${_profiles[*]}"
     PROFILE_ARGS="${ALL_PROFILES}" compose up -d
     echo "✅ Full chaos lab started."
     compose ps
+    ;;
+  profiles)
+    _derive_all_profiles
     ;;
   down)
     echo "🧯 Stopping lab: project=${PROJECT_NAME}"
