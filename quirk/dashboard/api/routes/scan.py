@@ -674,6 +674,7 @@ def get_latest_scan(
     confidence = ConfidenceData(
         confidence_score=confidence_raw.get("confidence_score", 0),
         confidence_rating=confidence_raw.get("confidence_rating", "NO_DATA"),
+        factor_breakdown=confidence_raw.get("factor_breakdown", {}),
     )
 
     # Derive remaining views
