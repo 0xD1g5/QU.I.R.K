@@ -799,7 +799,13 @@ Plans:
   2. `./lab.sh status` and `./lab.sh logs <service>` work cleanly against all v4.3 and v4.4 profiles with no orphan containers or broken service name references
   3. `quantum-chaos-enterprise-lab/README.md` documents every shipped profile (v4.0 through v4.4) with port assignments, expected scanner findings, and any required setup steps
   4. `expected_results_v4.md` exists and contains the expected-output oracle for all v4.3 and v4.4 profiles (DB, object storage, K8s, Vault, email, broker) — usable as a UAT reference
-**Plans**: TBD
+**Plans**: 6 plans
+  - [ ] 40-01-PLAN.md — lab.sh dynamic profile parser + profiles subcommand (LAB-01, LAB-02)
+  - [ ] 40-02-PLAN.md — expected_results_v4.md listener-profile sections (LAB-03)
+  - [ ] 40-03-PLAN.md — expected_results_v4.md DAR + messaging sections (LAB-03)
+  - [ ] 40-04-PLAN.md — README.md rewrite with Profile Summary Table (LAB-02)
+  - [ ] 40-05-PLAN.md — docs/chaos-lab.md extension for v4.2/v4.3/v4.4 (LAB-02)
+  - [ ] 40-06-PLAN.md — UAT-SERIES update + Obsidian sync + LAB-04 smoke + close (LAB-01..04)
 
 ### Phase 41: CI Stability & Scanner Robustness
 **Goal**: The CI test suite runs green with zero skipped-for-code-reasons tests and completes deterministically in under 60 seconds; all scanners degrade gracefully under missing extras, slow targets, and unexpected exceptions with a consistent, documented timeout/retry policy
