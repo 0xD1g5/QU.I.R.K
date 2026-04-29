@@ -6,6 +6,7 @@ nyquist_compliant: true
 wave_0_complete: true
 created: 2026-04-27
 approved: 2026-04-27
+updated: 2026-04-29
 ---
 
 # Phase 33 — Validation Strategy
@@ -106,6 +107,40 @@ the same plan, so Wave 0 dependencies are intra-plan rather than a dedicated Wav
 |----------|-------------|------------|-------------------|
 | Obsidian phase note renders correctly with backlinks resolved | (docs) | Obsidian rendering is a UI concern; backlinks resolve only inside the app | Open Digs vault → 20_Dev-Work/QUIRK/Phases/Phase-33-Broker-Scanner.md and confirm `[[Roadmap]]`, `[[_QUIRK-Hub]]` resolve to existing notes |
 | Smoke-run JSON visually inspected for nested broker_scan_json | BROKER-00 | Cross-checking JSON structure against D-12/D-14 expectations is faster by eye | Open quirk-output/phase33-smoke.json and confirm first endpoint has `broker_scan_json.kafka`, `.rabbitmq`, `.redis` keys |
+
+---
+
+## Nyquist Scenarios — INFRA-03
+
+Added retroactively in Phase 37 (Plan 37-03). The single auditable surface
+`tests/test_infra03_nyquist_coverage.py` exercises every broker-scanner entry
+point (Kafka / RabbitMQ / Redis / Azure Service Bus / AWS SQS) across three
+scenarios. Azure SB and AWS SQS are dispatched via `scan_rabbitmq_targets`
+parameters (`azure_namespaces=`, `sqs_regions=`) — not separate functions.
+
+| Entry Point | Scenario | Test Function | Command |
+|-------------|----------|---------------|---------|
+| `scan_kafka_targets` | happy | `test_scan_kafka_targets_happy` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_kafka_targets_happy -x` |
+| `scan_kafka_targets` | refused | `test_scan_kafka_targets_refused` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_kafka_targets_refused -x` |
+| `scan_kafka_targets` | plaintext-only (`KAFKA-PLAIN`) | `test_scan_kafka_targets_plaintext_only` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_kafka_targets_plaintext_only -x` |
+| `scan_rabbitmq_targets` | happy | `test_scan_rabbitmq_targets_happy` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_rabbitmq_targets_happy -x` |
+| `scan_rabbitmq_targets` | refused | `test_scan_rabbitmq_targets_refused` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_rabbitmq_targets_refused -x` |
+| `scan_rabbitmq_targets` | plaintext-only (`AMQP-PLAIN`) | `test_scan_rabbitmq_targets_plaintext_only` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_rabbitmq_targets_plaintext_only -x` |
+| `scan_redis_targets` | happy | `test_scan_redis_targets_happy` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_redis_targets_happy -x` |
+| `scan_redis_targets` | refused | `test_scan_redis_targets_refused` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_redis_targets_refused -x` |
+| `scan_redis_targets` | plaintext-only (`REDIS-PLAIN`) | `test_scan_redis_targets_plaintext_only` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_redis_targets_plaintext_only -x` |
+| `scan_rabbitmq_targets(azure_namespaces=…)` | happy (`AMQPS/Azure-ServiceBus`) | `test_azure_servicebus_probe_happy` | `pytest tests/test_infra03_nyquist_coverage.py::test_azure_servicebus_probe_happy -x` |
+| `scan_rabbitmq_targets(azure_namespaces=…)` | refused | `test_azure_servicebus_probe_refused` | `pytest tests/test_infra03_nyquist_coverage.py::test_azure_servicebus_probe_refused -x` |
+| `scan_rabbitmq_targets(azure_namespaces=…)` | plaintext-only (degenerate; AMQPS-only on 5671) | `test_azure_servicebus_probe_plaintext_only` | `pytest tests/test_infra03_nyquist_coverage.py::test_azure_servicebus_probe_plaintext_only -x` |
+| `scan_rabbitmq_targets(sqs_regions=…)` | happy (`HTTPS/AWS-SQS`) | `test_aws_sqs_probe_happy` | `pytest tests/test_infra03_nyquist_coverage.py::test_aws_sqs_probe_happy -x` |
+| `scan_rabbitmq_targets(sqs_regions=…)` | refused | `test_aws_sqs_probe_refused` | `pytest tests/test_infra03_nyquist_coverage.py::test_aws_sqs_probe_refused -x` |
+| `scan_rabbitmq_targets(sqs_regions=…)` | plaintext-only (degenerate; HTTPS-only on 443) | `test_aws_sqs_probe_plaintext_only` | `pytest tests/test_infra03_nyquist_coverage.py::test_aws_sqs_probe_plaintext_only -x` |
+
+All 15 broker rows pass under STRUCT-01 (`session_start=SESSION_START`).
+The Azure SB and AWS SQS plaintext-only rows are intentionally degenerate —
+those services have no plaintext port analog (Azure SB is AMQPS-only on 5671;
+SQS is HTTPS-only on 443). Tests document the expected absence of any finding
+under TLS-refused conditions.
 
 ---
 

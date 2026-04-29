@@ -5,7 +5,7 @@ status: approved
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-04-27
-updated: 2026-04-27
+updated: 2026-04-29
 ---
 
 # Phase 32 — Validation Strategy
@@ -77,6 +77,22 @@ updated: 2026-04-27
 | Lab container produces ≥1 HIGH weak-cipher + ≥1 MEDIUM starttls-downgrade-risk finding | EMAIL-11 / Success #5 | Requires `docker compose --profile email up` and a real scan against the lab | 1) `docker compose --profile email up -d` 2) `quirk scan --target localhost --ports 25,465,587,993,143,995,110` 3) Inspect findings for the two expected categories |
 | Port 25 cloud-egress block does not crash scan | Success #3 | Network-layer behavior depends on host egress policy | Run scan against an unreachable port-25 host (or simulate with iptables drop); confirm graceful `CONNECTION_REFUSED` log + scan completes |
 | Live-scan-derived expected_results.md | EMAIL-12 / Success #5 | Must reflect what actually negotiates against OpenSSL 3.x scanner host (cannot pre-author) | Run lab scan, capture output, transcribe finding titles + severities into `labs/email/expected_results.md` |
+
+---
+
+## Nyquist Scenarios — INFRA-03
+
+Added retroactively in Phase 37 (Plan 37-03). The single auditable surface
+`tests/test_infra03_nyquist_coverage.py` exercises every email-scanner entry
+point across three scenarios (happy / refused / plaintext-only).
+
+| Entry Point | Scenario | Test Function | Command |
+|-------------|----------|---------------|---------|
+| `scan_email_targets` | happy (TLS-bearing endpoint) | `test_scan_email_targets_happy` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_email_targets_happy -x` |
+| `scan_email_targets` | refused (`ConnectionRefusedError` + `SSLYZE_AVAILABLE=False`) | `test_scan_email_targets_refused` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_email_targets_refused -x` |
+| `scan_email_targets` | plaintext-only (SMTP-STARTTLS, no `tls_version`) | `test_scan_email_targets_plaintext_only` | `pytest tests/test_infra03_nyquist_coverage.py::test_scan_email_targets_plaintext_only -x` |
+
+All three pass with `session_start=SESSION_START` (STRUCT-01 lock).
 
 ---
 
