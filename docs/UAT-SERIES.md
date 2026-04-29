@@ -1523,7 +1523,7 @@ All of these services show status `Up` or `running`:
 1. Run a scan against a SAML/OIDC endpoint (e.g., simpla-samlphp chaos lab):
    ```bash
    docker compose --profile simpla-samlphp up -d && sleep 10
-   quirk scan --targets http://localhost:8880/simplesaml/saml2/idp/metadata.php
+   quirk --config <config-with-saml-target> 
    ```
 2. Open the dashboard: `quirk serve` → `http://127.0.0.1:8512`
 3. Navigate to the **Identity** tab — inspect findings for SAML/OIDC entries
@@ -3863,7 +3863,7 @@ Each finding object contains:
 **Prerequisites:** Full scan with DNSSEC, SAML, and Kerberos targets configured and reachable.
 
 **Steps:**
-1. Run a full scan: `quirk scan --config <config-with-all-3-identity-scanners>`
+1. Run a full scan: `quirk --config <config-with-all-3-identity-scanners>`
 2. Query the scan-latest API endpoint:
    ```bash
    curl -s http://localhost:7420/api/scan/latest | python3 -c "
@@ -4769,7 +4769,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Prerequisites:** `docker compose --profile email up -d` from `labs/email/`; deep scan run against `localhost`; dashboard accessible at `http://localhost:8000`.
 **Steps:**
 1. From `labs/email/`, run: `docker compose --profile email up -d`
-2. Run a deep scan: `quirk scan --target localhost --profile deep` (or project's standard invocation).
+2. Run a deep scan: `quirk --config <deep-profile-config>` (or project's standard invocation).
 3. Open `http://localhost:8000/motion`.
 4. In the Email Protocols table, locate the port-25 row.
 **Expected:** Port-25 row shows the amber `⚠ STARTTLS` badge in the Warning column. Other port rows (587, 465, etc.) do NOT show the badge.
@@ -4830,9 +4830,9 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **ID:** UAT-36-05
 **Title:** Empty-state cards render when no email/broker findings
 **Maps to:** DASH-01, DASH-05 (empty-state path)
-**Prerequisites:** A scan completed against a host with NEITHER email nor broker endpoints (e.g., `quirk scan --target example.com` against a plain HTTPS-only target).
+**Prerequisites:** A scan completed against a host with NEITHER email nor broker endpoints (e.g., `quirk --config <https-only-config>` against a plain HTTPS-only target).
 **Steps:**
-1. Run a scan against an HTTPS-only host: e.g., `quirk scan --target example.com`.
+1. Run a scan against an HTTPS-only host: e.g., `quirk --config <https-only-config>`.
 2. Open `http://localhost:8000/motion`.
 3. Inspect the Email Protocols section.
 4. Inspect the Message Brokers section.

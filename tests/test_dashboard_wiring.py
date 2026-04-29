@@ -31,11 +31,12 @@ def test_deps_default_db_path():
     Verifies GAP-INT-01: the dashboard fallback DB path matches config_template.yaml.
     """
     env_without_db_path = {k: v for k, v in os.environ.items() if k != "QUIRK_DB_PATH"}
-    with unittest.mock.patch.dict(os.environ, env_without_db_path, clear=True):
+    with unittest.mock.patch.dict(os.environ, env_without_db_path, clear=True), \
+         unittest.mock.patch("os.path.isfile", return_value=False):
         result = _default_db_path()
     assert result == "./quirk.db", (
         f"Expected './quirk.db' but got '{result}'. "
-        "Fix: change the default in deps.py to match config_template.yaml."
+        "Fix: change the fallback in deps.py to match config_template.yaml."
     )
 
 
