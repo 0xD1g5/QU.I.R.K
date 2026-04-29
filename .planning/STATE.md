@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Data in Motion
-status: phase-complete
-stopped_at: Phase 37 complete (v4.4.0 gap closure shipped; tag + milestone-close deferred per D-10/D-11)
-last_updated: "2026-04-29T18:00:00.000Z"
-last_activity: 2026-04-29 -- Phase 37 closed (INFRA-01/02/03 + CHANGELOG + release notes); 662 pytest passed
+status: completed
+stopped_at: v4.4 milestone closed (tag v4.4.0 pushed; archives written)
+last_updated: "2026-04-29T04:00:31.964Z"
+last_activity: 2026-04-29
 progress:
   total_phases: 1
   completed_phases: 1
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 37 — gap-closure-and-v4-4-0-release
+**Current focus:** v4.4 shipped — planning next milestone (`/gsd-new-milestone`)
 
 ## Current Position
 
-Phase: 37 (gap-closure-and-v4-4-0-release) — COMPLETE
-Plan: 6 of 6
-Status: Phase 37 closed; awaiting user-triggered milestone close (`/gsd-complete-milestone v4.4`) and v4.4.0 git tag (both deferred per D-10/D-11)
-Last activity: 2026-04-29 -- Phase 37 closed (INFRA-01/02/03 + CHANGELOG + release notes; 662 pytest passed)
+Milestone: v4.4 Data in Motion — SHIPPED 2026-04-29 (tag v4.4.0)
+Phase: 37 (gap-closure-and-v4-4-0-release) — COMPLETE (final phase of v4.4)
+Status: Milestone v4.4 archived. REQUIREMENTS.md removed (fresh for next milestone). Awaiting `/gsd-new-milestone`.
+Last activity: 2026-04-29 — v4.4 milestone closed (6 phases / 33 plans; 662 pytest passed; archives written)
 
-Progress: [██████████] 100%
+Progress: [██████████] 100% (v4.4 complete)
 
 ## Phase Overview
 
@@ -98,6 +98,13 @@ None at roadmap creation.
 None at roadmap creation.
 
 ## Deferred Items
+
+Items deferred at v4.4 close on 2026-04-29 (acknowledged, non-blocking for v4.4 ship):
+
+| ID | Category | Item | Status |
+|----|----------|------|--------|
+| DEF-v4.4-01 | phase_gating | Phase 36 `wave_0_complete: false` flip | gated on DEF-v4.4-02 fix; documented in `37-VALIDATION.md` "Deferred Gaps" #1 |
+| DEF-v4.4-02 | regression | SAML/OIDC missing from `/api/scan/latest` `identity_findings` (real bug, ISSUE-3 from Phase 24) | predates v4.4; out-of-scope for v4.4.0; tracked for v4.5 |
 
 Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 

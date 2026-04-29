@@ -1,5 +1,35 @@
 # Milestones
 
+## v4.4 Data in Motion (Shipped: 2026-04-29)
+
+**Phases completed:** 6 phases (32–37), 33 plans
+**Files changed:** 162 files, +26,973 / -233 lines
+**Timeline:** 2026-04-27 → 2026-04-29
+**Tests:** 662 passed, 7 skipped, 1 deferred (pre-existing SAML scan-window regression — Phase 24 ISSUE-3, out of scope)
+**Tag:** `v4.4.0` (commit `b72797a`)
+
+**Key accomplishments:**
+
+1. Email protocol scanning (Phase 32) — SMTP/SMTPS, IMAP/IMAPS, POP3/POP3S TLS posture across all 7 standard ports with STARTTLS-stripping detection on port 25; new `email` Docker chaos lab (Postfix + Dovecot, weak TLS).
+2. Message broker TLS scanning (Phase 33) — Kafka (9092/9093/9094), RabbitMQ AMQPS (5671) + management API, Redis TLS (6380), Azure Service Bus, AWS SQS; plaintext-listener HIGH findings for all three local broker types; new `broker` Docker chaos lab (Kafka + RabbitMQ + Redis, weak TLS).
+3. Data-in-motion intelligence (Phase 34) — six new `motion_*` evidence counters, three `motion_*_ratio` scoring weights with `strict`/`balanced`/`lenient` profile multipliers, and a 6th named `data_in_motion` subscore alongside `tls`/`ssh`/`api`/`identity`/`data_at_rest`; legacy v4.3 scans preserve full credit (D-12 backward compatibility).
+4. Motion CBOM integration (Phase 35) — email and broker TLS endpoints generate Pass-1 algorithm components with quantum-safety classification; plaintext-only labels (`KAFKA-PLAIN`, `AMQP-PLAIN`, `REDIS-PLAIN`, `SMTP-STARTTLS`) excluded from Pass-2/Pass-3; golden snapshot fixtures lock the output shape.
+5. Dashboard Motion tab (Phase 36) — new `/motion` React route with email per-port table + STARTTLS warnings, broker per-family grouped sections + plaintext flags, "Data in Motion" 6th `ScoreGauge`; `/api/scan/latest` carries `motion_findings`.
+6. v4.4.0 release artifacts (Phase 37) — version bump locked across 6 surfaces by `tests/test_version.py`; `[motion]` meta-extra over `[email]+[broker]+[kafka]`; INFRA-03 18-test Nyquist coverage module; first top-level `CHANGELOG.md` + `docs/release-notes/4.4.0.md`.
+
+**Requirements:** 50/50 mapped, 50/50 complete (100%) ✓
+
+**Known deferred items at close:** 2 (see STATE.md `## Deferred Items`)
+
+- **DEF-v4.4-01** — Phase 36 `wave_0_complete: false` flip — gated on the SAML scan-window regression below; documented in `37-VALIDATION.md` "Deferred Gaps" #1.
+- **DEF-v4.4-02** — SAML/OIDC missing from `/api/scan/latest` `identity_findings` (real functional regression, ISSUE-3 from Phase 24, predates v4.4) — out of scope for v4.4.0; tracked for v4.5 follow-up.
+
+**Carry-over from prior milestones:** 14 audit-open items (UAT gaps on phases 04–31, verification gaps on 25/28/31) — all pre-v4.4, non-blocking, retained in STATE.md `## Deferred Items`.
+
+**Archived:** `.planning/milestones/v4.4-ROADMAP.md`, `.planning/milestones/v4.4-REQUIREMENTS.md`
+
+---
+
 ## v4.3 Data at Rest (Shipped: 2026-04-26)
 
 **Phases completed:** 7 phases (25–31), 24 plans, 504 tests collected
@@ -17,6 +47,7 @@
 **Archived:** `.planning/milestones/v4.3-ROADMAP.md`, `.planning/milestones/v4.3-REQUIREMENTS.md`
 
 **Known deferred items at close:** 16 (see STATE.md Deferred Items)
+
 - B-1: OIDC ep.severity always None (cosmetic — downstream correct via scan.py re-derivation)
 - W-2: dat_scan_json always NULL for DB rows (scoring correct via service_detail; JSON contract broken)
 - W-1: Vault CBOM Pass 1 fragile — future VAULT skip list addition could break transit key registration
@@ -41,6 +72,7 @@
 **Archived:** `.planning/milestones/v4.2-ROADMAP.md`, `.planning/milestones/v4.2-REQUIREMENTS.md`
 
 **Known deferred items at close:** 12 (see STATE.md Deferred Items)
+
 - ISSUE-2 (MEDIUM): ldap3 absent from pyproject.toml → Phase 25 in v4.3
 - NEW-ISSUE-1 (MEDIUM): OIDC RS256 findings mislabeled as TLS-sourced → Phase 25 in v4.3
 - NEW-ISSUE-3 (LOW): expected_results_v3.md missing identity chaos lab entries → Phase 25 in v4.3

@@ -83,9 +83,13 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ HashiCorp Vault connector — transit keys (VAULT-01 + PQC), PKI root+intermediate CA (VAULT-02), auth method risk tiering (VAULT-03); dar_vault_weak_count HIGH-only counter; CBOM Pass 1 algorithm registration, Pass 2+3 skip; dedicated --profile vault chaos lab (port 28200) — v4.3
 - ✓ Trend analysis across scan sessions — score delta (D-01 match key), net-new/resolved findings by severity, scan error delta, React /trends dashboard page — v4.3
 
-**v4.4 Data in Motion (Active)**
-- [ ] Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 via sslyze handoff
-- [ ] Message broker TLS — Kafka, RabbitMQ, Redis, AMQP connection audit
+**v4.4 Data in Motion (Phases 32–37) — SHIPPED 2026-04-29**
+- ✓ Email protocol scanning — SMTP/SMTPS, IMAP/IMAPS, POP3/POP3S TLS posture across 7 standard ports; STARTTLS-stripping detection on port 25; weak-cipher HIGH findings; Postfix+Dovecot chaos lab — Phase 32
+- ✓ Message broker TLS — Kafka (9092/9093/9094) with optional AdminClient enrichment, RabbitMQ AMQPS (5671) + management API, Redis TLS (6380), Azure Service Bus, AWS SQS; plaintext-listener HIGH findings (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN); Kafka+RabbitMQ+Redis chaos lab profile — Phase 33
+- ✓ Data-in-motion intelligence — six `motion_*` evidence counters, three `motion_*_ratio` scoring weights with profile multipliers; `data_in_motion` 6th named subscore alongside `tls`/`ssh`/`api`/`identity`/`data_at_rest`; D-12 backward compatibility (legacy scans preserve full credit) — Phase 34
+- ✓ Motion CBOM integration — Pass-1 algorithm components for email/broker TLS endpoints with quantum-safety classification; Pass-2/3 skip-lists for plaintext-only labels; golden snapshot fixtures; AMQPS/Azure-ServiceBus passthrough — Phase 35
+- ✓ Dashboard Motion tab — `/motion` React route with email per-port table + STARTTLS warnings, broker per-family grouped sections + plaintext flags; "Data in Motion" 6th `ScoreGauge`; `motion_findings` field on `/api/scan/latest` — Phase 36 *(wave_0_complete deferred — DEF-v4.4-01)*
+- ✓ v4.4.0 release artifacts — version locked across 6 surfaces by `tests/test_version.py`; `[motion]` meta-extra over `[email]+[broker]+[kafka]`; INFRA-03 18-test Nyquist coverage module; first top-level `CHANGELOG.md` + `docs/release-notes/4.4.0.md` — Phase 37
 
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
@@ -98,38 +102,37 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 | Feature | Reason |
 |---------|--------|
-| Email / S/MIME scanning | Lower priority vs JWT/container/code surfaces; deferred |
+| S/MIME message-content scanning | Email *transport* TLS shipped in v4.4; S/MIME *content* (signed/encrypted email at rest) remains out of scope — agentless model cannot inspect mailbox content |
 | Windows AD CS live connector | Complex Kerberos/NTLM auth; stub remains, deferred to v2 |
 | Network traffic capture (Zeek/Wireshark) | Requires passive tap; out of scope for agentless model |
 | OpenVAS / Nessus integration | Full vuln scanner; different scope, heavy dependency |
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.4 Data in Motion
+## Current State: v4.4.0 Shipped — Planning Next Milestone
 
-**Goal:** Extend QU.I.R.K.'s cryptographic inventory to cover network transport layers — auditing email protocols and message broker connections for weak TLS, cipher suites, and quantum-unsafe algorithms.
+v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The cryptographic inventory now covers six pillars: TLS, SSH, API, Identity, Data at Rest, and Data in Motion. Email and broker TLS posture flow through scanning → intelligence → CBOM → dashboard end-to-end.
 
-**Target features:**
-- Email protocol scanning — SMTP/STARTTLS, IMAP, POP3 TLS handshakes via sslyze; weak cipher/cert detection; chaos lab profile
-- Message broker TLS — Kafka, RabbitMQ, Redis, AMQP connection audit; TLS version/cipher enumeration; chaos lab profiles
-- Evidence counters wired into scoring (motion_ subscore prefix)
-- CBOM Pass 1/2/3 integration for both surfaces
-- Dashboard integration for new surfaces
+**Open items at close:**
+- DEF-v4.4-01 — Phase 36 `wave_0_complete: false` flip (gated on SAML scan-window regression)
+- DEF-v4.4-02 — SAML/OIDC missing from `/api/scan/latest` `identity_findings` (real functional regression, ISSUE-3 from Phase 24, predates v4.4)
+
+**Next milestone:** Not yet defined. Likely candidates surfaced during v4.4: SAML scan-window fix (ISSUE-3), KAFKA-04 AdminClient enrichment hardening, additional cloud-broker probes (Confluent Cloud, AWS MSK direct), live-cluster K8s motion scanning, Phase 36 motion-tab Sheet drawer + RTL coverage. Run `/gsd-new-milestone` to scope.
 
 ## Context
 
-- **Current version**: v4.4.0 (in progress); v4.3.0 shipped 2026-04-26
+- **Current version**: v4.4.0 (shipped 2026-04-29); v4.3.0 shipped 2026-04-26
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
-- **Chaos lab**: Docker Compose, 16 profiles (core + 6 Phase 4 additions + 3 v4.2 identity: dnssec/saml/kerberos + storage-s3 Phase 28 + database Phase 27 + vault Phase 30)
+- **Chaos lab**: Docker Compose, 18 profiles (core + 6 Phase 4 + 3 v4.2 identity: dnssec/saml/kerberos + storage-s3 Phase 28 + database Phase 27 + vault Phase 30 + email Phase 32 + broker Phase 33)
 - **Business model**: Consulting deliverable — tool enables billable assessments
-- **Delivery model**: `pip install` + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
+- **Delivery model**: `pip install quirk[motion]` (single happy path) + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
-- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML), quantum-readiness scoring with NIST PQC classification, identity protocol scanning (Kerberos/SAML/DNSSEC), object storage encryption auditing (S3/Azure Blob/GCS), chaos lab for client-side scanner validation, polished HTML/PDF reports
-- **Test coverage**: 504 tests collected (pytest); all Nyquist VALIDATION.md files up to date
-- **Known tech debt**: ISSUE-2 (ldap3 absent from pyproject.toml — KERB-03 LDAP always inerts), NEW-ISSUE-1 (OIDC RS256 findings mislabeled as TLS-sourced) — both Phase 25 targets in v4.3
-- **v4.3 milestone shipped** (2026-04-26): 7 phases (25–31), 24 plans — data-at-rest coverage: GCP connector, database encryption, object storage audit, K8s secrets, HashiCorp Vault, trend analysis dashboard page
+- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML); 6-pillar quantum-readiness scoring with NIST PQC classification; identity protocol scanning (Kerberos/SAML/DNSSEC); data-at-rest coverage (databases, object storage, K8s secrets, Vault); data-in-motion coverage (email + broker TLS + cloud queues); chaos lab for client-side scanner validation; polished HTML/PDF reports
+- **Test coverage**: 662 tests passing (pytest); all v4.4 Nyquist VALIDATION.md files declare `nyquist_compliant: true` and `wave_0_complete: true` (except Phase 36 — DEF-v4.4-01)
+- **Known tech debt at v4.4 close**: SAML scan-window regression (DEF-v4.4-02), Phase 36 `wave_0_complete` gating (DEF-v4.4-01), 14 pre-v4.4 carry-over UAT/verification gaps in STATE.md `## Deferred Items`
+- **v4.4 milestone shipped** (2026-04-29): 6 phases (32–37), 33 plans — email + broker TLS scanning, motion intelligence, motion CBOM, dashboard Motion tab, v4.4.0 release artifacts
 
 ## Constraints
 
@@ -157,9 +160,14 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | SAML_NS dict constant required | lxml XPath produces empty results without explicit namespace dict — silent failure without it | ✓ Good — SAML_NS as module-level constant is the correct lxml pattern; discovered during RED test debugging |
 | Shared session_start from run_scan.py | Per-scanner datetime.now() at endpoint creation time caused scan-window timing to exclude early-stamped identity endpoints | ✓ Good — ISSUE-3 eliminated; all identity endpoints from one scan share one scanned_at timestamp |
 | ldap3 added in Phase 25 | ldap3 was absent from pyproject.toml at v4.2 ship; fixed as first task of v4.3 | ✓ Good — ldap3>=2.9.1 in [identity] extras; KERB-03 LDAP path is now reachable |
+| `[motion]` as a meta-extra over `[email]+[broker]+[kafka]` (v4.4 INFRA-02) | `pip install quirk[motion]` becomes one command for the full data-in-motion surface; sub-extras stay independently installable for narrow deployments | ✓ Good — `email = []` (zero non-core deps), `broker = ["redis>=5.0"]`, `kafka = ["kafka-python>=2.0"]`; legacy `[redis]` preserved for back-compat |
+| Single auditable Nyquist coverage module (v4.4 INFRA-03) | Spreading 18 Nyquist tests across phase-VALIDATION matrices fragments review; collecting them in one file (`tests/test_infra03_nyquist_coverage.py`) makes coverage trivially auditable | ✓ Good — 18 explicit functions (6 entry points × 3 scenarios) all GREEN; matrices in 32/33-VALIDATION.md cite them |
+| Azure Service Bus + AWS SQS dispatched through `scan_rabbitmq_targets` | Cloud broker probes share AMQPS/HTTPS-only TLS posture path with on-prem RabbitMQ; separate top-level functions would duplicate code | ✓ Good — `azure_namespaces=`/`sqs_regions=` parameters route to the same probe pipeline; protocol labels (`AMQPS/Azure-ServiceBus`, `HTTPS/AWS-SQS`) distinguish provenance |
+| `data_in_motion` legacy-scan backward compatibility (v4.4 D-12) | Re-loading a v4.3 scan in v4.4 should not artificially deflate the score — pre-Phase-34 scans have no `motion_*` keys | ✓ Good — absence of `motion_*` keys is detected and treated as "full credit" rather than "zero findings" |
+| No git-tag and no `/gsd-complete-milestone` inside Phase 37 (D-10/D-11) | Tagging and milestone close are visible-to-others actions; reserve them for explicit user trigger after Phase 37 lands | ✓ Good — Phase 37 closed cleanly, then user triggered tag and `/gsd-complete-milestone v4.4` separately |
 
 ---
-*Last updated: 2026-04-26 — v4.4 Data in Motion milestone started*
+*Last updated: 2026-04-29 — after v4.4 Data in Motion milestone shipped (tag v4.4.0)*
 
 ## Evolution
 

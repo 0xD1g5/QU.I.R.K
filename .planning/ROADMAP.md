@@ -6,7 +6,7 @@
 - ✅ **v4.1 Foundation Polish** — Phases 12–16, 10 plans (shipped 2026-04-08) → `.planning/milestones/v4.1-ROADMAP.md`
 - ✅ **v4.2 Identity Crypto** — Phases 17–24, 14 plans (shipped 2026-04-24) → `.planning/milestones/v4.2-ROADMAP.md`
 - ✅ **v4.3 Data at Rest** — Phases 25–31, 24 plans (shipped 2026-04-26) → `.planning/milestones/v4.3-ROADMAP.md`
-- 🔄 **v4.4 Data in Motion** — Phases 32–37 (in progress) → `.planning/milestones/v4.4-ROADMAP.md`
+- ✅ **v4.4 Data in Motion** — Phases 32–37, 33 plans (shipped 2026-04-29) → `.planning/milestones/v4.4-ROADMAP.md`
 
 ## Phases
 
@@ -470,7 +470,7 @@ Plans:
 
 
 <details>
-<summary>🔄 v4.4 Data in Motion (Phases 32–37) — IN PROGRESS</summary>
+<summary>✅ v4.4 Data in Motion (Phases 32–37) — SHIPPED 2026-04-29</summary>
 
 **Milestone Goal:** Extend QU.I.R.K.'s cryptographic inventory to cover network transport layers — auditing email protocol TLS (SMTP/IMAP/POP3, all 7 standard ports) and message broker TLS (Kafka, RabbitMQ, Redis) for weak ciphers, legacy TLS versions, plaintext listeners, and quantum-unsafe algorithms. Introduces the `data_in_motion` subscore as the 6th pillar of the quantum-readiness score.
 
@@ -478,7 +478,7 @@ Plans:
 - [x] **Phase 33: Broker Scanner** — `broker_scanner.py`: Kafka (9092/9093/9094), RabbitMQ/AMQPS (5671/5672), Redis (6379/6380), Azure Service Bus, AWS SQS; broker chaos lab (profile: broker, ports 26379/26380/29092/29093/25671/25672) — SC-4 chaos-lab smoke deferred (scanner needs custom-port plumbing); 58-test pytest suite covers equivalent end-to-end logic
 - [x] **Phase 34: Motion Intelligence** — Six `motion_` evidence counters in `evidence.py`, five `motion_` ratio entries in `scoring.py`, `PROFILE_MULTIPLIERS` motion_ prefix, `data_in_motion` as 6th named subscore in `compute_readiness_score()` (15/15 motion tests GREEN; commits: 4baeb3c → aa35696 → 2dc2515)
 - [x] **Phase 35: CBOM Integration** — Pass 2+3 plaintext-broker skip tuples extended in `quirk/cbom/builder.py` (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN); 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S) + 3 broker TLS labels (KAFKA-SSL, AMQPS, REDIS-TLS) emit crypto/protocol/tls components; lab-driven golden CBOM fixtures (`tests/fixtures/cbom/expected_*_cbom.json`) committed with structural verification test; REQUIREMENTS.md CBOM-01/CBOM-03 wording aligned to code; UAT-35-01..03 added (101/101 CBOM tests GREEN; verified PASS; commits: d99ddd2 → b76c818 → 7329e4b → 46960c0 → ca283ec → fc7e7d2)
-- [ ] **Phase 36: Dashboard Motion Tab** — React `/motion` route, Motion tab (email per-port table + STARTTLS warning badge, broker per-type summary + plaintext flag), 6th subscore in executive summary card, `MotionFinding` FastAPI schema in `/api/scan/latest`
+- [x] **Phase 36: Dashboard Motion Tab** — React `/motion` route, Motion tab (email per-port table + STARTTLS warning badge, broker per-type summary + plaintext flag), 6th subscore in executive summary card, `MotionFinding` FastAPI schema in `/api/scan/latest`. **Wave_0_complete deferred** pending SAML scan-window regression (DEF-v4.4-01)
 - [x] **Phase 37: Gap Closure and v4.4.0 Release** — Version bump to 4.4.0 across all 6 surfaces locked by `tests/test_version.py`; `[motion]` meta-extra over `[email]+[broker]+[kafka]`; `tests/test_infra03_nyquist_coverage.py` 18 explicit Nyquist tests GREEN; VALIDATION.md backfill (32/33/34/35/37 → `nyquist_compliant: true`, `wave_0_complete: true`); first top-level `CHANGELOG.md` + `docs/release-notes/4.4.0.md`. Deferrals: phase 36 `wave_0_complete` flip + SAML scan-window regression (Phase 24 ISSUE-3, out of scope). Per D-10/D-11, no git tag and no `/gsd-complete-milestone` invocation in-phase. (662 pytest passed, 7 skipped, 1 deferred; commits 9e21f30 → f13654a)
 
 </details>
@@ -691,7 +691,7 @@ Ideas captured during planning — not in scope for v1, but not lost.
 ## Progress
 
 **Execution Order:**
-v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/29/30 (parallel) -> 31
+v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipped 2026-04-29, tag v4.4.0).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -727,8 +727,10 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 active: 25 -> 26 -> 27 -> 28/2
 | 30. HashiCorp Vault Connector | v4.3 | 3/3 | Complete    | 2026-04-26 |
 | 31. Trend Analysis | v4.3 | 4/4 | Complete    | 2026-04-26 |
 | 32. Email Scanner | v4.4 | 8/8 | Complete   | 2026-04-27 |
-| 33. Broker Scanner | v4.4 | 0/TBD | Not started | - |
-| 34. Motion Intelligence | v4.4 | 0/TBD | Not started | - |
+| 33. Broker Scanner | v4.4 | 8/8 | Complete   | 2026-04-28 |
+| 34. Motion Intelligence | v4.4 | 3/3 | Complete   | 2026-04-28 |
 | 35. CBOM Integration | v4.4 | 4/4 | Complete   | 2026-04-28 |
-| 36. Dashboard Motion Tab | v4.4 | 4/4 | Complete   | 2026-04-29 |
-| 37. Gap Closure and v4.4.0 Release | v4.4 | 0/TBD | Not started | - |
+| 36. Dashboard Motion Tab | v4.4 | 4/4 | Complete*  | 2026-04-29 |
+| 37. Gap Closure and v4.4.0 Release | v4.4 | 6/6 | Complete   | 2026-04-29 |
+
+*Phase 36 wave_0_complete flip deferred (DEF-v4.4-01) — gated on SAML scan-window regression fix.
