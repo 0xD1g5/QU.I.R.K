@@ -14,8 +14,8 @@ capability and performance milestones.
 
 Close v4.4 known deferred items so the v4.4.0 ship audit shows zero red.
 
-- [ ] **GAP-01**: User running an identity scan sees SAML/OIDC entries restored in `/api/scan/latest` `identity_findings[]` (closes DEF-v4.4-02 / ISSUE-3 from Phase 24).
-- [ ] **GAP-02**: After GAP-01 lands, the deferred SAML scan-window pytest is re-enabled and passes; the test goes from `skip`/`xfail` to GREEN in CI.
+- [x] **GAP-01**: User running an identity scan sees SAML/OIDC entries restored in `/api/scan/latest` `identity_findings[]` (closes DEF-v4.4-02 / ISSUE-3 from Phase 24).
+- [x] **GAP-02**: After GAP-01 lands, the deferred SAML scan-window pytest is re-enabled and passes; the test goes from `skip`/`xfail` to GREEN in CI.
 - [ ] **GAP-03**: Phase 36 `wave_0_complete: false` is flipped to `true` in `36-VALIDATION.md` and the matrix shows `nyquist_compliant: true, wave_0_complete: true` (closes DEF-v4.4-01).
 - [ ] **GAP-04**: User opens the dashboard and sees a "Data at Rest" tab alongside the existing tabs, listing DB / object storage / K8s secrets / Vault findings with the existing v4.3 data shape (closes DASH-05 deferred from Phase 27).
 
@@ -103,8 +103,8 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| GAP-01 | Phase 38 | pending |
-| GAP-02 | Phase 38 | pending |
+| GAP-01 | Phase 38 | Complete |
+| GAP-02 | Phase 38 | Complete |
 | GAP-03 | Phase 38 | pending |
 | GAP-04 | Phase 39 | pending |
 | CI-01 | Phase 41 | pending |

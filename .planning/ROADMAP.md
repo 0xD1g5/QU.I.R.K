@@ -733,7 +733,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 35. CBOM Integration | v4.4 | 4/4 | Complete   | 2026-04-28 |
 | 36. Dashboard Motion Tab | v4.4 | 4/4 | Complete*  | 2026-04-29 |
 | 37. Gap Closure and v4.4.0 Release | v4.4 | 6/6 | Complete   | 2026-04-29 |
-| 38. Identity API Regression Fix | v4.5 | 0/TBD | Not started | - |
+| 38. Identity API Regression Fix | v4.5 | 1/4 | In Progress|  |
 | 39. Data at Rest Dashboard Tab | v4.5 | 0/TBD | Not started | - |
 | 40. Chaos Lab Parity | v4.5 | 0/TBD | Not started | - |
 | 41. CI Stability & Scanner Robustness | v4.5 | 0/TBD | Not started | - |
@@ -766,7 +766,11 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
   2. The previously `skip`/`xfail` SAML scan-window pytest runs without skip markers and passes GREEN in CI
   3. `36-VALIDATION.md` reads `nyquist_compliant: true, wave_0_complete: true` — DEF-v4.4-01 closed
   4. Full test suite passes with no regressions after the SAML fix (662+ tests, 0 failures)
-**Plans**: TBD
+**Plans**: 4 plans
+  - [x] 38-01-PLAN.md — Fix scan-window in scan.py (SESSION_BRACKET 5-min backward bracket) + extend regression test (GAP-01, GAP-02)
+  - [ ] 38-02-PLAN.md — Restore 36-VALIDATION.md from commit 99f48d2 and flip wave_0_complete: true (GAP-03)
+  - [ ] 38-03-PLAN.md — Scope test_all_completed_phase_validations_nyquist_compliant to skip-on-missing (full suite green)
+  - [ ] 38-04-PLAN.md — STATE.md + UAT-SERIES.md + Obsidian phase note + commit (mandatory close-out per CLAUDE.md)
 
 ### Phase 39: Data at Rest Dashboard Tab
 **Goal**: The React dashboard has a "Data at Rest" tab that surfaces DB encryption, object storage policy, Kubernetes secrets, and Vault findings from the existing v4.3 data shape — consultants can review the full DAR surface without leaving the dashboard
