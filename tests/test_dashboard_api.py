@@ -95,7 +95,6 @@ def test_data_in_motion_subscore(dashboard_client):
 
 
 from types import SimpleNamespace
-from quirk.dashboard.api.routes.scan import _derive_motion_findings
 
 
 def _ep(**kw):
@@ -107,6 +106,7 @@ def _ep(**kw):
 
 def test_derive_motion_findings_plaintext():
     """DASH-05: KAFKA-PLAIN endpoint -> HIGH severity, plaintext_exposed=True."""
+    from quirk.dashboard.api.routes.scan import _derive_motion_findings
     out = _derive_motion_findings([_ep(host="kafka.test", port=9092, protocol="KAFKA-PLAIN")])
     assert len(out) == 1
     assert out[0].severity == "HIGH"
@@ -115,6 +115,7 @@ def test_derive_motion_findings_plaintext():
 
 def test_derive_motion_findings_starttls():
     """DASH-05: starttls_warning=True only on port-25 SMTP-STARTTLS."""
+    from quirk.dashboard.api.routes.scan import _derive_motion_findings
     out = _derive_motion_findings([
         _ep(host="m", port=25,  protocol="SMTP-STARTTLS"),
         _ep(host="m", port=587, protocol="SMTP-STARTTLS"),
@@ -126,6 +127,7 @@ def test_derive_motion_findings_starttls():
 
 def test_derive_motion_findings_azure():
     """DASH-05: AMQPS/Azure-ServiceBus slash preserved verbatim (Phase 35 D-03)."""
+    from quirk.dashboard.api.routes.scan import _derive_motion_findings
     out = _derive_motion_findings([_ep(host="ns.servicebus.windows.net", port=5671,
                                        protocol="AMQPS/Azure-ServiceBus")])
     assert len(out) == 1

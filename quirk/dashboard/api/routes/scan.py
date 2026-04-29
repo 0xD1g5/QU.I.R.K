@@ -598,6 +598,7 @@ def get_latest_scan(
             identity_trust=subscores_raw.get("identity_trust", 0),
             agility_signals=subscores_raw.get("agility_signals", 0),
             data_at_rest=subscores_raw.get("data_at_rest", 0),
+            data_in_motion=subscores_raw.get("data_in_motion", 0),   # NEW — fixes silent drop
         ),
         drivers=score_raw.get("drivers", []),
     )

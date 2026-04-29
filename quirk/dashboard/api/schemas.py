@@ -23,6 +23,7 @@ class SubScores(BaseModel):
     identity_trust: int
     agility_signals: int
     data_at_rest: int = 0
+    data_in_motion: int = 0   # NEW — Phase 36 D-06
 
 
 class ScoreData(BaseModel):
@@ -90,6 +91,25 @@ class IdentityFinding(BaseModel):
     algorithm: str           # e.g. "rc4-hmac", "RSA-1024", "RSASHA1"
 
 
+# ---- Motion Findings (Phase 36 DASH-05) ----
+
+class MotionFinding(BaseModel):
+    host: str
+    port: int
+    severity: str
+    title: str
+    protocol: Optional[str] = None
+    description: Optional[str] = None
+    remediation: Optional[str] = None
+    quantum_risk: Optional[str] = None
+    source: Optional[str] = None
+    tls_version: Optional[str] = None
+    cipher_suite: Optional[str] = None
+    cert_not_after: Optional[str] = None    # ISO date string, not datetime
+    plaintext_exposed: bool = False         # NON-OPTIONAL per D-02
+    starttls_warning: bool = False          # NON-OPTIONAL per D-02
+
+
 # ---- Roadmap ----
 
 class RoadmapEdge(BaseModel):
@@ -129,6 +149,7 @@ class ScanLatestResponse(BaseModel):
     cbom_components: List[CbomComponent]
     roadmap: RoadmapData
     identity_findings: List[IdentityFinding] = []
+    motion_findings: List[MotionFinding] = []   # NEW — Phase 36 DASH-05
 
 
 class ScanSession(BaseModel):
