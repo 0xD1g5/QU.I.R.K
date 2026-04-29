@@ -24,10 +24,11 @@ export function isEmailProtocol(protocol?: string): boolean {
   return EMAIL_PROTOS.has(protocol ?? "")
 }
 
-export function getBrokerFamily(protocol: string): "Kafka" | "AMQP" | "Redis" | null {
+export function getBrokerFamily(protocol: string): "Kafka" | "AMQP" | "Redis" | "Cloud" | null {
   if (protocol.startsWith("KAFKA-")) return "Kafka"
   if (protocol.startsWith("AMQP-") || protocol.startsWith("AMQPS")) return "AMQP"
   if (protocol.startsWith("REDIS-")) return "Redis"
+  if (protocol.startsWith("HTTPS/")) return "Cloud"
   return null
 }
 
@@ -107,9 +108,9 @@ function EmailTable({ findings }: { findings: MotionFinding[] }) {
 }
 
 function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
-  const FAMILIES: Array<"Kafka" | "AMQP" | "Redis"> = ["Kafka", "AMQP", "Redis"]
+  const FAMILIES: Array<"Kafka" | "AMQP" | "Redis" | "Cloud"> = ["Kafka", "AMQP", "Redis", "Cloud"]
   const grouped = useMemo(() => {
-    const m: Record<string, MotionFinding[]> = { Kafka: [], AMQP: [], Redis: [] }
+    const m: Record<string, MotionFinding[]> = { Kafka: [], AMQP: [], Redis: [], Cloud: [] }
     for (const f of findings) {
       const fam = getBrokerFamily(f.protocol ?? "")
       if (fam) m[fam].push(f)
