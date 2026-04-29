@@ -734,7 +734,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 36. Dashboard Motion Tab | v4.4 | 4/4 | Complete*  | 2026-04-29 |
 | 37. Gap Closure and v4.4.0 Release | v4.4 | 6/6 | Complete   | 2026-04-29 |
 | 38. Identity API Regression Fix | v4.5 | 1/4 | In Progress|  |
-| 39. Data at Rest Dashboard Tab | v4.5 | 0/TBD | Not started | - |
+| 39. Data at Rest Dashboard Tab | v4.5 | 5/5 | Complete   | 2026-04-29 |
 | 40. Chaos Lab Parity | v4.5 | 0/TBD | Not started | - |
 | 41. CI Stability & Scanner Robustness | v4.5 | 0/TBD | Not started | - |
 | 42. CBOM Correctness Audit | v4.5 | 0/TBD | Not started | - |
@@ -748,7 +748,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 **Milestone Goal:** Close v4.4 deferred items, harden scanner/CBOM/dashboard correctness, and automate the long-tail UAT debt — putting QU.I.R.K. in solid shape before the next capability and performance milestones.
 
 - [x] **Phase 38: Identity API Regression Fix** - Restore SAML/OIDC entries in identity_findings, re-enable deferred SAML scan-window test, flip Phase 36 wave_0_complete (closes DEF-v4.4-01 and DEF-v4.4-02)
-- [ ] **Phase 39: Data at Rest Dashboard Tab** - Ship the DASH-05 deferred Data at Rest tab in the React dashboard with DB/object-storage/K8s/Vault findings (closes DASH-05 from Phase 27)
+- [x] **Phase 39: Data at Rest Dashboard Tab** - Ship the DASH-05 deferred Data at Rest tab in the React dashboard with DB/object-storage/K8s/Vault findings (closes DASH-05 from Phase 27) (completed 2026-04-29)
 - [ ] **Phase 40: Chaos Lab Parity** - Bring lab.sh, README, and expected-results oracle up to v4.4 parity so every shipped profile is documented, exercisable, and UAT-ready
 - [ ] **Phase 41: CI Stability & Scanner Robustness** - Lock CI green (zero deferred tests), harden all scanners against missing extras/timeouts/unexpected exceptions, document consistent timeout/retry policy
 - [ ] **Phase 42: CBOM Correctness Audit** - Validate CBOM JSON+XML against CycloneDX 1.6 spec, close classifier unknown-fallback gaps, review golden snapshot drift, unit-test Pass-2/3 skip lists
@@ -783,11 +783,11 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
   4. The DAR tab route appears in the browser console with zero errors
 **Plans**: 5 plans
 Plans:
-- [ ] 39-01-PLAN.md — Wave 0 RED test scaffold (tests/test_dar_dashboard.py with 8 failing tests + extended _ep fixture)
-- [ ] 39-02-PLAN.md — Backend: DarFinding schema + _derive_dar_findings projection + TS type mirror
-- [ ] 39-03-PLAN.md — Frontend skeleton: data-at-rest.tsx + App.tsx route + sidebar.tsx NAV_ITEMS (lockstep)
-- [ ] 39-04-PLAN.md — Per-category tables: DatabaseTable, ObjectStorageTable, KubernetesTable, VaultTable
-- [ ] 39-05-PLAN.md — Validation, UAT-SERIES.md update, Obsidian sync, commit
+- [x] 39-01-PLAN.md — Wave 0 RED test scaffold (tests/test_dar_dashboard.py with 8 failing tests + extended _ep fixture)
+- [x] 39-02-PLAN.md — Backend: DarFinding schema + _derive_dar_findings projection + TS type mirror
+- [x] 39-03-PLAN.md — Frontend skeleton: data-at-rest.tsx + App.tsx route + sidebar.tsx NAV_ITEMS (lockstep)
+- [x] 39-04-PLAN.md — Per-category tables: DatabaseTable, ObjectStorageTable, KubernetesTable, VaultTable
+- [x] 39-05-PLAN.md — Validation, UAT-SERIES.md update, Obsidian sync, commit
 **UI hint**: yes
 
 ### Phase 40: Chaos Lab Parity
