@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-04-29 (Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-04-29 (Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -4840,6 +4840,67 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Pass Criteria:**
 - Email section shows: "No email endpoints scanned in this session — enable the email scanner in your config or scan a mail server."
 - Broker section shows: "No broker endpoints scanned in this session — enable the broker scanner in your config or scan a message broker host."
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+## Phase 38: Identity API Regression Fix (UAT-38-XX)
+
+**Purpose:** Verify that SAML and OIDC findings are correctly returned in `/api/scan/latest` `identity_findings[]` after the scan-window regression fix (GAP-01/GAP-02 closure — `SESSION_BRACKET` 5-minute backward bracket).
+
+---
+
+**ID:** UAT-38-01
+**Title:** SAML scan-window regression — automated
+**Maps to:** GAP-01, GAP-02
+**Prerequisites:** Python venv active; `pytest` available; QU.I.R.K. v4.5.x checked out; `tests/test_identity_surface.py` present with `Issue3ScanWindowRegressionTest` class.
+**Steps:**
+1. From the repo root, run:
+   `python -m pytest tests/test_identity_surface.py::Issue3ScanWindowRegressionTest -x -q`
+2. Inspect output for pass/fail count.
+
+**Expected:** All 3 tests in `Issue3ScanWindowRegressionTest` pass. No failures.
+
+**Pass Criteria:**
+- `pytest` exits 0
+- Output shows `3 passed, 0 failed`
+- `identity_findings[]` contains entries for KERBEROS, SAML, and DNSSEC even when the Kerberos endpoint is timestamped 30 s after the others (proves the 5-minute backward bracket covers the skew)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-38-02
+**Title:** Live `/api/scan/latest` SAML round-trip — manual
+**Maps to:** GAP-01
+**Prerequisites:**
+- Docker + Docker Compose v2 installed
+- `quantum-chaos-enterprise-lab/lab.sh` available; `identity` profile containers running (`./lab.sh up identity` or equivalent)
+- Full QUIRK scan completed against the identity profile: `quirk --config config.yaml`
+- Dashboard API server running: `quirk-dashboard` (or `uvicorn quirk.dashboard.api.main:app`)
+
+**Steps:**
+1. Start the chaos lab identity profile:
+   `cd quantum-chaos-enterprise-lab && ./lab.sh up identity`
+2. Run a scan:
+   `quirk --config config.yaml`
+3. Query the latest-scan identity findings:
+   `curl -s http://localhost:8000/api/scan/latest | jq '.identity_findings[] | .protocol' | sort -u`
+4. Inspect the output set.
+
+**Expected:** Output set contains `"SAML"` (and at minimum one of `"KERBEROS"` or `"DNSSEC"` when those protocols are present in the lab profile). An empty array output is a FAIL.
+
+**Pass Criteria:**
+- `"SAML"` is present in the output of the `jq` pipe
+- `identity_findings` array is non-empty (empty array is a FAIL)
+- No HTTP 404 from `/api/scan/latest`
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
