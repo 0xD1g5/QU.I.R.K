@@ -585,7 +585,13 @@ Plans:
   3. All six scanner entry points have Nyquist VALIDATION.md coverage for: happy path (TLS found), graceful degradation (connection refused), and plaintext-only detection (INFRA-03)
   4. All 6 phase VALIDATION.md files for v4.4 read `nyquist_compliant: true` and `wave_0_complete: true`
   5. Full test suite passes (504+ tests, 0 failures); no open CRITICAL or HIGH unresolved issues
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 37-01-PLAN.md — INFRA-01: bump version to 4.4.0 across all surfaces; create tests/test_version.py
+- [ ] 37-02-PLAN.md — INFRA-02: restructure pyproject.toml [motion] meta-extra topology
+- [ ] 37-03-PLAN.md — INFRA-03: 18 Nyquist coverage tests (6 entry points × 3 scenarios)
+- [ ] 37-04-PLAN.md — VALIDATION.md backfill for phases 32-37 (D-04/D-05/D-06)
+- [ ] 37-05-PLAN.md — CHANGELOG.md 4.4.0 entry + docs/release-notes/4.4.0.md
+- [ ] 37-06-PLAN.md — Phase closure: Obsidian note, UAT-SERIES update, vault sync, final commit
 
 ## Backlog (Future Enhancements)
 
