@@ -4,6 +4,7 @@ export interface SubScores {
   identity_trust: number
   agility_signals: number
   data_at_rest: number
+  data_in_motion: number
 }
 
 export interface ScoreData {
@@ -90,6 +91,23 @@ export interface IdentityFinding {
   algorithm: string
 }
 
+export interface MotionFinding {
+  host: string
+  port: number
+  severity: string
+  title: string
+  protocol?: string
+  description?: string
+  remediation?: string
+  quantum_risk?: string
+  source?: string
+  tls_version?: string
+  cipher_suite?: string
+  cert_not_after?: string
+  plaintext_exposed: boolean
+  starttls_warning: boolean
+}
+
 export interface ScanSession {
   scan_id: string
   scanned_at: string
@@ -105,6 +123,7 @@ export interface ScanLatestResponse {
   cbom_components: CbomComponent[]
   roadmap: RoadmapData
   identity_findings: IdentityFinding[]
+  motion_findings: MotionFinding[]
 }
 
 export interface SampleFinding {
