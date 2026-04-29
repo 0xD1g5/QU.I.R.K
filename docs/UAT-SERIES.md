@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-04-29 (Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-04-29 (Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -4901,6 +4901,180 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - `"SAML"` is present in the output of the `jq` pipe
 - `identity_findings` array is non-empty (empty array is a FAIL)
 - No HTTP 404 from `/api/scan/latest`
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+## Phase 39: Dashboard Data at Rest Tab (UAT-39-XX)
+
+**Purpose:** Verify the new `/data-at-rest` dashboard route, ScoreGauge labeled "Data at Rest", four locked-column-set tables (Database · Object Storage · Kubernetes Secrets · Vault), per-section empty states, severity sort, null→em-dash rendering, and sidebar nav order. Closes GAP-04; ships DASH-05 deferred from Phase 27.
+
+---
+
+**ID:** UAT-39-01
+**Title:** Navigate to `/data-at-rest` from sidebar
+**Maps to:** GAP-04, DASH-05
+**Prerequisites:** `quirk serve` running on port 8512; at least one scan in the DB.
+**Steps:**
+1. Open `http://127.0.0.1:8512/`.
+2. Click **Data at Rest** in the sidebar (HardDrive icon, between Motion and Certificates).
+3. Confirm URL becomes `/data-at-rest`.
+4. Open browser DevTools Console.
+**Expected:** Page renders with h1 "Data at Rest" and a ScoreGauge labeled "Data at Rest". No console errors.
+**Pass Criteria:**
+- URL is `/data-at-rest`.
+- h1 "Data at Rest" visible.
+- ScoreGauge labeled "Data at Rest" visible.
+- Zero console errors, zero React warnings.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-39-02
+**Title:** Empty state per section when no DAR data
+**Maps to:** GAP-04
+**Prerequisites:** Scan completed with all DAR scanners disabled (no DB, S3, K8s, Vault findings).
+**Steps:**
+1. Run a scan with DAR scanners disabled (or against a non-DAR target).
+2. Open `http://127.0.0.1:8512/data-at-rest`.
+3. Inspect each of the four sections.
+**Expected:** Each section renders its EmptyStateCard with locked copy from UI-SPEC. Page does not crash.
+**Pass Criteria:**
+- Database Encryption section shows EmptyStateCard naming the database scanner config.
+- Object Storage section shows EmptyStateCard naming the object-storage scanner config.
+- Kubernetes Secrets section shows EmptyStateCard naming the K8s scanner config.
+- Vault section shows EmptyStateCard naming the Vault scanner config.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-39-03
+**Title:** Database table renders with locked columns
+**Maps to:** GAP-04
+**Prerequisites:** Scan with PostgreSQL/MySQL/RDS findings populated in `service_detail`.
+**Steps:**
+1. Run a scan against a host running PostgreSQL or MySQL with the DB scanner enabled.
+2. Open `http://127.0.0.1:8512/data-at-rest`.
+3. Locate the Database Encryption section.
+**Expected:** DatabaseTable renders with the locked column set: Engine · Host · Port · Severity · Title · Encryption at Rest · TLS in Transit · Quantum Risk · Remediation. Rows are severity-sorted (CRITICAL → HIGH → MEDIUM → LOW → INFO).
+**Pass Criteria:**
+- Exactly the 9 columns above, in order.
+- First row severity ≥ severity of last row.
+- Boolean fields render as ✓/✗ badges per UI-SPEC.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-39-04
+**Title:** Object Storage table renders with locked columns
+**Maps to:** GAP-04
+**Prerequisites:** Scan with S3 / Azure Blob findings populated in `dat_scan_json`.
+**Steps:**
+1. Run a scan against an S3 or Azure Blob target with the object-storage scanner enabled.
+2. Open `http://127.0.0.1:8512/data-at-rest`.
+3. Locate the Object Storage section.
+**Expected:** ObjectStorageTable renders with the locked column set: Provider · Host · Severity · Title · Encryption Mode · Public Access · KMS Key · Versioning · Quantum Risk · Remediation. Null fields render as em-dash (—).
+**Pass Criteria:**
+- Exactly the 10 columns above, in order.
+- Rows severity-sorted.
+- Any null/missing field is rendered as `—` (not `null`, `undefined`, or blank).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-39-05
+**Title:** Kubernetes table renders with locked columns
+**Maps to:** GAP-04
+**Prerequisites:** Scan with K8s namespace + cluster-encryption findings.
+**Steps:**
+1. Run a scan against a Kubernetes cluster with the K8s scanner enabled.
+2. Open `http://127.0.0.1:8512/data-at-rest`.
+3. Locate the Kubernetes Secrets section.
+**Expected:** KubernetesTable renders with the locked column set: Namespace · Host · Severity · Title · Secret Type · Encryption Provider · Quantum Risk · Remediation.
+**Pass Criteria:**
+- Exactly the 8 columns above, in order.
+- Rows severity-sorted.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-39-06
+**Title:** Vault table renders with locked columns
+**Maps to:** GAP-04
+**Prerequisites:** Scan with Vault transit / PKI / auth findings.
+**Steps:**
+1. Run a scan against a HashiCorp Vault instance with the Vault scanner enabled.
+2. Open `http://127.0.0.1:8512/data-at-rest`.
+3. Locate the Vault section.
+**Expected:** VaultTable renders with the locked column set: Host · Severity · Title · Mount Type · Seal Type · Auto-Unseal · Quantum Risk · Remediation. Seal Type and Auto-Unseal show em-dash for current scanner output (these fields are not probed yet).
+**Pass Criteria:**
+- Exactly the 8 columns above, in order.
+- Rows severity-sorted.
+- Seal Type and Auto-Unseal columns render as `—` for every row.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-39-07
+**Title:** Sidebar nav order matches D-11 lock
+**Maps to:** GAP-04
+**Prerequisites:** `quirk serve` running.
+**Steps:**
+1. Open `http://127.0.0.1:8512/`.
+2. Read the sidebar from top to bottom.
+**Expected:** Order is Executive Summary · Findings · Identity · Motion · Data at Rest · Certificates · CBOM Viewer · Migration Roadmap · Trends.
+**Pass Criteria:**
+- Exact order above; "Data at Rest" sits between "Motion" and "Certificates".
+- "Data at Rest" entry uses the HardDrive icon.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-39-08
+**Title:** Zero console errors gate
+**Maps to:** GAP-04
+**Prerequisites:** `quirk serve` running on port 8512 (production-build path; do NOT use `npm run dev` which has no `/api/*` proxy).
+**Steps:**
+1. Open `http://127.0.0.1:8512/data-at-rest`.
+2. Open DevTools → Console → Clear.
+3. Reload the page.
+4. Click another sidebar tab, then click back to "Data at Rest".
+**Expected:** Console shows zero errors and zero React warnings throughout the navigation cycle.
+**Pass Criteria:**
+- Zero red errors in DevTools Console after reload.
+- Zero React warnings after navigating away and back.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
