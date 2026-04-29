@@ -59,7 +59,7 @@ Bring `quantum-chaos-enterprise-lab/` up to date with everything that shipped in
 
 - [ ] **LAB-01**: User runs `./lab.sh all` and the command starts every chaos lab profile that ships in the repo, including v4.3 additions (`database`, `storage-s3`, `vault`) and v4.4 additions (`email`, `broker`); the profile list in `lab.sh` matches `docker-compose.yml` 1:1 with no missing profiles.
 - [x] **LAB-02**: User opens `quantum-chaos-enterprise-lab/README.md` and sees every shipped profile (v4.0 → v4.4) documented with port assignments, expected scanner findings, and any required setup steps; v4.3 + v4.4 profiles are not absent.
-- [ ] **LAB-03**: A successor to `expected_results_v3.md` (e.g., `expected_results_v4.md`) documents the expected scanner output oracle for v4.3 + v4.4 profiles (DB, object storage, K8s, Vault, email, broker) — used by chaos lab UAT runs and by GAP-04 / UAT-01 / UAT-02 / UAT-03 verification.
+- [x] **LAB-03**: A successor to `expected_results_v3.md` (e.g., `expected_results_v4.md`) documents the expected scanner output oracle for v4.3 + v4.4 profiles (DB, object storage, K8s, Vault, email, broker) — used by chaos lab UAT runs and by GAP-04 / UAT-01 / UAT-02 / UAT-03 verification.
 - [ ] **LAB-04**: `./lab.sh status` and `./lab.sh logs <service>` work cleanly against every v4.3 + v4.4 profile (no broken service names, no orphan containers from renamed services).
 
 ### UAT Debt Automation
@@ -123,7 +123,7 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 | DASH-03 | Phase 43 | pending |
 | LAB-01 | Phase 40 | pending |
 | LAB-02 | Phase 40 | Complete |
-| LAB-03 | Phase 40 | pending |
+| LAB-03 | Phase 40 | Complete |
 | LAB-04 | Phase 40 | pending |
 | UAT-01 | Phase 44 | pending |
 | UAT-02 | Phase 44 | pending |
