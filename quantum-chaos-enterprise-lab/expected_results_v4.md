@@ -347,3 +347,81 @@ docker compose --profile kerberos up -d && sleep 15 && quirk scan --targets loca
 ---
 
 <!-- DAR / messaging profile sections appended by plan 40-03 below this line -->
+
+---
+
+## Profile: database
+
+*PostgreSQL + MySQL with SSL explicitly disabled. Phase 27 DAR scanner targets — literal scanner output strings shown in `Expected condition / tag`.*
+
+```bash
+PROFILE_ARGS="--profile database" ./lab.sh up
+```
+
+| Port | Service | Engine | Expected protocol | TLS in Transit | Encryption-at-Rest | Expected condition / tag | Notes |
+|-----:|---------|--------|-------------------|----------------|-------------------|--------------------------|-------|
+| 25432 | postgres-ssl-off | PostgreSQL 15 | POSTGRESQL | OFF | none | DB_POSTGRESQL_SSL_OFF → `protocol=POSTGRESQL, service_detail=PostgreSQL/ssl-off` (HIGH) | `SHOW ssl` returns 'off'; db_connector.py L101 |
+| 25432 | postgres-ssl-off | PostgreSQL 15 | POSTGRESQL | partial | none | `protocol=POSTGRESQL, service_detail=PostgreSQL/plaintext-connections-allowed (N non-SSL)` (HIGH) | `pg_stat_ssl` shows non-SSL connections; db_connector.py L137 |
+| 23306 | mysql-ssl-off | MySQL 8 | MYSQL | OFF | none | DB_MYSQL_SSL_OFF → `protocol=MYSQL, service_detail=MySQL/ssl-off` (HIGH) | `SHOW STATUS LIKE 'Ssl_cipher'` empty; db_connector.py L227 |
+
+**Reference:** Scanner: `quirk/scanner/db_connector.py`. Risk titles via risk_engine `evaluate_db_endpoints`. Oracle aliases (`DB_POSTGRESQL_SSL_OFF`, `DB_MYSQL_SSL_OFF`) used by `docs/UAT-SERIES.md`.
+
+---
+
+## Profile: storage-s3
+
+*MinIO S3-compatible server. Seed creates `encrypted-bucket` (SSE-S3) + `unencrypted-bucket` (no SSE) for STOR-01.*
+
+```bash
+PROFILE_ARGS="--profile storage-s3" ./lab.sh up
+```
+
+| Port | Service | Provider | Expected protocol | Encryption Mode | Public Access | KMS Key | Versioning | Expected condition / tag | Notes |
+|-----:|---------|----------|-------------------|-----------------|---------------|---------|------------|--------------------------|-------|
+| 29000 | minio (encrypted-bucket) | MinIO | S3 | SSE-S3 (AES256) | private | S3-managed | n/a | (no finding) → `protocol=S3, service_detail=S3/sse-s3` | aws_connector.py L257 |
+| 29000 | minio (unencrypted-bucket) | MinIO | S3 | none | private | none | n/a | `protocol=S3, service_detail=S3/unencrypted` (HIGH) | aws_connector.py L252,263,268 |
+| 29001 | minio-console | MinIO Console | HTTP | n/a | local-only | n/a | n/a | not scanned | management UI |
+
+**Reference:** Scanner: `quirk/scanner/aws_connector.py`. Evidence keys: `dar_storage_unencrypted_count`, `dar_storage_aws_managed_count`, `dar_storage_unencrypted_ratio`. Detail in `labs/storage/expected_results.md`.
+
+---
+
+## Profile: vault
+
+*Dedicated Vault dev server (vault-30, image 1.17) on 28200. Independent of the legacy `storage` profile's Vault on 20009. Seeds transit keys, PKI mount, and auth methods for VAULT-01/02/03.*
+
+```bash
+PROFILE_ARGS="--profile vault" ./lab.sh up
+```
+
+| Port | Service | Mount Type | Seal Type | Auto-Unseal | Expected condition / tag | Notes |
+|-----:|---------|------------|-----------|-------------|--------------------------|-------|
+| 28200 | vault-30 | transit/rsa-2048-classification | shamir | no | (no finding — exportable=false) → `protocol=VAULT, service_detail=transit/rsa-2048-classification` | vault_connector.py L155 |
+| 28200 | vault-30 | transit/rsa-2048-exportable | shamir | no | `protocol=VAULT, service_detail=transit/rsa-2048-exportable` (MEDIUM) | exportable=true; vault_connector.py L158 |
+| 28200 | vault-30 | PKI/pki | shamir | no | `protocol=VAULT, service_detail=PKI/pki` (HIGH) | RSA<4096 root CA; vault_connector.py L251 |
+| 28200 | vault-30 | auth/token | shamir | no | `protocol=VAULT, service_detail=auth/token` (HIGH) | token auth enabled; vault_connector.py L352 |
+| 28200 | vault-30 | auth/userpass | shamir | no | `protocol=VAULT, service_detail=auth/userpass` (MEDIUM) | userpass auth enabled; vault_connector.py L354 |
+
+**Reference:** Scanner: `quirk/scanner/vault_connector.py`. Evidence: `dar_vault_weak_count` (HIGH-only per Phase 30 D-11). Detail in `labs/vault/expected_results.md`.
+
+---
+
+## Profile: storage
+
+**Deprecated** — split in v4.3 into `database` (PostgreSQL/MySQL SSL detection), `storage-s3` (MinIO/S3 buckets), and `vault` (Vault transit/PKI/auth audit). Retained for backwards compatibility with v4.1 / v4.2 UAT runs. Predates the clean per-resource split.
+
+```bash
+PROFILE_ARGS="--profile storage" ./lab.sh up
+```
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 20007 | localstack-kms | HTTPS | LocalStack KMS endpoint | KMS key seed via localstack-kms-seed |
+| 20009 | vault (legacy, image 1.15) | HTTPS | Vault dev mode | Predates the v4.3 vault profile on 28200 |
+| 20010 | postgres-pgcrypto | POSTGRESQL | pgcrypto extension probe target | DB-side encryption-at-rest demo |
+
+**Config-introspection findings (per `labs/storage/expected_results.md`):**
+- LocalStack KMS keys: `RSA_2048`, `RSA_1024`, `AES_256`, `ECC_P256` finding tags (per-key)
+- postgres-pgcrypto: `pgp_sym_encrypt (weak passphrase)` finding tag
+
+**Reference:** See `labs/storage/expected_results.md` for full per-resource detail. v4.3 successors give cleaner per-category coverage.
