@@ -1,5 +1,7 @@
 # Crypto Chaos Enterprise Lab — Expected Results v3
 
+> **Superseded by `expected_results_v4.md`** (Phase 40, v4.5 milestone, 2026-04-29). This file is retained for historical reference only — it predates the v4.3 DAR profiles (`database`, `storage-s3`, `vault`) and the v4.4 messaging profiles (`email`, `broker`), and contains drift in the SAML port (8880 vs compose 8080) and several profile names (`bind9` vs `dnssec`, `simpla-samlphp` vs `saml`, `samba-dc` vs `kerberos`). Use `expected_results_v4.md` for all UAT and consultant reference work.
+
 This file is the **source of truth** (“oracle”) for what the lab should expose and how a scanner should classify it.
 Host assumed: `127.0.0.1`
 

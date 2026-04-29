@@ -150,4 +150,200 @@ PROFILE_ARGS="--profile identity --profile pki" ./lab.sh up
 
 ---
 
+## Profile: jwt
+
+*4 JWT microservices with weak alg configs (LAB-01 / SCAN-03).*
+
+```bash
+PROFILE_ARGS="--profile jwt" ./lab.sh up
+```
+
+| Port | Service | Algorithm | Expected Finding | Key Size | Notes |
+|-----:|---------|-----------|-----------------|----------|-------|
+| 20001 | jwt-rs256 | RS256 (RSA) | WEAK_QUANTUM (quantum-vulnerable asymmetric) | 2048-bit | RS256 is classically safe but quantum-vulnerable; scanner should return RSA finding |
+| 20002 | jwt-hs256 | HS256 (HMAC-SHA256) | WEAK_KEY_SIZE | 128-bit | 16-byte HMAC key — below minimum 256-bit; scanner flags short symmetric key |
+| 20003 | jwt-rsa1024 | RS256 (RSA) | WEAK_KEY_SIZE + WEAK_QUANTUM | 1024-bit | RSA-1024 is classically weak and quantum-vulnerable; scanner flags key size |
+| 20004 | jwt-algnone | none | CRITICAL_NO_SIGNATURE | 0 | alg:none = no signature verification; scanner classifies as UNKNOWN/critical |
+
+**Scanner validation command:**
+```
+quirk scan --targets http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004
+```
+**Expected:** JWT scanner returns >= 2 weak-algorithm findings (HS256-weak + RSA-1024 + alg:none = 3 findings).
+
+---
+
+## Profile: registry
+
+*Docker Registry v2 + 3 seeded images with old crypto libs.*
+
+```bash
+PROFILE_ARGS="--profile registry" ./lab.sh up
+```
+
+| Image | Package | Version | Expected Finding | Notes |
+|-------|---------|---------|-----------------|-------|
+| image-old-libssl | openssl | 1.0.2n (ubuntu:18.04) | OUTDATED_CRYPTO_LIB | Syft detects openssl in allowlist |
+| image-old-libssl | libssl1.0.0 | 1.0.2n | OUTDATED_CRYPTO_LIB | Additional libssl package |
+| image-old-pycrypto | cryptography | 2.9.2 | OUTDATED_CRYPTO_LIB | Syft detects Python cryptography package |
+| image-old-pycrypto | pyopenssl | 19.1.0 | OUTDATED_CRYPTO_LIB | Syft detects pyOpenSSL package |
+| image-mixed | openssl | 1.0.2n | OUTDATED_CRYPTO_LIB | Combined old libssl + old pycrypto |
+| image-mixed | cryptography | 2.9.2 | OUTDATED_CRYPTO_LIB | Combined finding |
+
+**Scanner validation command:**
+```
+quirk scan --container localhost:20005/image-old-pycrypto localhost:20005/image-old-libssl localhost:20005/image-mixed
+```
+**Expected:** Container scanner returns at least 4 crypto library findings (cryptography, pyopenssl, openssl per image).
+
+---
+
+## Profile: source
+
+*Gitea + seeded repos with crypto anti-patterns (semgrep target).*
+
+```bash
+PROFILE_ARGS="--profile source" ./lab.sh up
+```
+
+| Repo | File | Anti-Pattern Category | semgrep Rule Match | Notes |
+|------|------|-----------------------|-------------------|-------|
+| crypto-antipatterns-python | crypto/weak_algorithms.py | Weak algorithm (MD5/DES/RC4/ECB) | python.cryptography.security.insecure-cipher* | MD5, DES, RC4, ECB mode |
+| crypto-antipatterns-python | secrets/hardcoded_keys.py | Hardcoded keys/secrets | secrets.* | RSA key + AES key + API secret literal |
+| crypto-antipatterns-python | crypto/weak_random.py | Weak random / custom crypto | python.lang.security.insecure-random | random.random() for security |
+| crypto-antipatterns-python | crypto/deprecated_protocols.py | Deprecated protocol usage | python.cryptography.security.ssl* | TLS 1.0 pinning |
+| crypto-antipatterns-go | main.go | Weak algorithm (MD5/DES/RC4) | go.crypto.security.* | crypto/md5, crypto/des, crypto/rc4, math/rand |
+| crypto-antipatterns-java | src/CryptoAntiPatterns.java | Weak algorithm + hardcoded | java.security.* | MessageDigest MD5, DES cipher, hardcoded key |
+
+**Scanner validation command:**
+```
+git clone http://localhost:20006/admin/crypto-antipatterns-python && cd crypto-antipatterns-python && semgrep --config p/cryptography .
+```
+**Expected:** At least 1 finding per anti-pattern category (hardcoded keys, weak algorithm, weak random, deprecated protocol).
+
+---
+
+## Profile: ssh-weak
+
+*OpenSSH 7.6p1 with deliberately weak KEX/hostkey/MAC algorithms on port 20022.*
+
+```bash
+PROFILE_ARGS="--profile ssh-weak" ./lab.sh up
+```
+
+| Port | Service | Algorithm Class | Expected ssh-audit Finding | Severity |
+|-----:|---------|----------------|---------------------------|----------|
+| 20022 | ssh-weak | KEX | diffie-hellman-group1-sha1 | CRITICAL |
+| 20022 | ssh-weak | KEX | diffie-hellman-group14-sha1 | WARNING |
+| 20022 | ssh-weak | KEX | diffie-hellman-group-exchange-sha1 | WARNING |
+| 20022 | ssh-weak | HostKey | ssh-dss | CRITICAL |
+| 20022 | ssh-weak | MAC | hmac-md5 | CRITICAL |
+| 20022 | ssh-weak | MAC | hmac-sha1 | WARNING |
+
+**Scanner validation command:**
+```
+docker compose --profile ssh-weak up -d && sleep 5 && ssh-audit localhost:20022
+```
+**Expected:** ssh-audit returns >= 3 critical/warning findings for KEX (group1-sha1), hostkey (ssh-dss), and MAC (hmac-md5).
+
+---
+
+## Profile: ldaps
+
+*OpenLDAP over LDAPS on standard port 636 with self-signed cert.*
+
+```bash
+PROFILE_ARGS="--profile ldaps" ./lab.sh up
+```
+
+| Port | Service | Expected TLS Finding | Notes |
+|-----:|---------|---------------------|-------|
+| 636 | ldaps | TLS certificate chain | sslyze returns cert chain for modern.crt (self-signed lab cert) |
+| 636 | ldaps | CERT_SELFSIGNED | modern.crt is self-signed lab cert — sslyze detects untrusted issuer |
+| 636 | ldaps | Protocol support | TLS 1.2/1.3 depending on OpenLDAP version |
+
+**Scanner validation command:**
+```
+docker compose --profile ldaps up -d && sleep 5 && sslyze --targets localhost:636
+```
+**Expected:** sslyze returns TLS certificate chain findings including self-signed cert detection.
+
+---
+
+## Profile: dnssec
+
+*BIND9 with weak DNSSEC zones (RSASHA1) on UDP/TCP 15353.*
+
+```bash
+PROFILE_ARGS="--profile dnssec" ./lab.sh up
+```
+
+> **Profile name note:** The Docker Compose profile is `dnssec` (compose is the source of truth). The v3 oracle used the service name `bind9` — that was a drift error, corrected here.
+
+| Zone | Algorithm | Algorithm ID | Expected Finding | Severity |
+|------|-----------|-------------|-----------------|----------|
+| weak.example.com | RSASHA1 | 5 | DNSSEC weak signing algorithm (SHA-1 collision-vulnerable) | CRITICAL |
+| weak.example.com | RSASHA1-NSEC3-SHA1 | 7 | DNSSEC weak signing algorithm (SHA-1) | CRITICAL |
+| unsigned.example.com | NONE | — | Unsigned zone — DNS responses are unauthenticated | HIGH |
+| nsec.example.com | ECDSAP256SHA256 | 13 | NSEC zone enumeration exposure | MEDIUM |
+
+**Scanner validation command:**
+```
+docker compose --profile dnssec up -d && sleep 5 && quirk scan --targets weak.example.com unsigned.example.com nsec.example.com
+```
+**Expected:** DNSSEC scanner returns >= 1 CRITICAL finding (RSASHA1) for weak.example.com, 1 HIGH finding (unsigned zone) for unsigned.example.com, and 1 MEDIUM finding (NSEC) for nsec.example.com. ECDSAP256SHA256 zones produce no algorithm severity finding.
+
+**Ports:** 15353/udp, 15353/tcp (service: bind9-dnssec)
+
+---
+
+## Profile: saml
+
+*simpleSAMLphp IdP with weak signing cert (RSA-1024 / SHA-1) on port 8080. Note: shares port 8080 with Keycloak's container-internal port; no host conflict because Keycloak uses `expose:` not `ports:` for 8080.*
+
+```bash
+PROFILE_ARGS="--profile saml" ./lab.sh up
+```
+
+> **Drift fixes vs v3 oracle:** Profile name corrected from `simpla-samlphp` to `saml`; port corrected from `8880` to `8080` (compose is the source of truth per D-14).
+
+| Port | Service | Certificate | Expected Finding | Severity |
+|-----:|---------|-------------|-----------------|----------|
+| 8080 | simplesamlphp | RSA-1024 signing cert | Weak SAML signing certificate: RSA-1024 | CRITICAL |
+| 8080 | simplesamlphp | SHA-1 algorithm URI | SHA-1 algorithm URI detected in SAML metadata | HIGH |
+
+**Scanner validation command:**
+```
+docker compose --profile saml up -d && sleep 10 && quirk scan --targets http://localhost:8080/simplesaml/saml2/idp/metadata.php
+```
+**Expected:** SAML scanner returns 1 CRITICAL finding for RSA-1024 signing certificate and optionally 1 HIGH finding if SHA-1 algorithm URI is present in metadata. Findings appear in the Identity tab (source="saml"), not the Findings tab.
+
+---
+
+## Profile: kerberos
+
+*Samba AD-DC for Kerberos etype enumeration on privileged ports 88 + 389. Warning: These ports collide with system DNS/LDAP if anything else is listening locally.*
+
+```bash
+PROFILE_ARGS="--profile kerberos" ./lab.sh up
+```
+
+> **Drift fix vs v3 oracle:** Profile name corrected from `samba-dc` to `kerberos` (compose is the source of truth per D-14).
+
+> **Port conflict warning:** Ports 88 and 389 are privileged ports that bind directly (not remapped to a high-numbered range). Do not run this profile if your host system has a local Kerberos KDC or LDAP server, as port conflicts will occur.
+
+| Port | Service | Etype ID | Etype Name | Expected Finding | Severity |
+|-----:|---------|---------|-----------|-----------------|----------|
+| 88 | samba-dc | 23 | rc4-hmac | Kerberos weak etype: rc4-hmac | HIGH |
+| 88 | samba-dc | 17 | aes128-cts-hmac-sha1-96 | Kerberos weak etype: aes128-cts-hmac-sha1-96 | HIGH |
+| 389 | samba-dc | — | LDAP | LDAP service exposed on standard port | INFO |
+
+**Scanner validation command:**
+```
+docker compose --profile kerberos up -d && sleep 15 && quirk scan --targets localhost:88
+```
+**Expected:** Kerberos scanner returns >= 2 HIGH findings for weak etypes (rc4-hmac, aes128-cts-hmac-sha1-96).
+
+---
+
 <!-- DAR / messaging profile sections appended by plan 40-03 below this line -->
