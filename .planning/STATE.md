@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: executing
-stopped_at: Phase 40 context gathered
-last_updated: "2026-04-29T21:32:29.710Z"
+stopped_at: Completed 40-02-PLAN.md (v4 oracle listener sections)
+last_updated: "2026-04-29T21:32:00.000Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 15
-  completed_plans: 10
-  percent: 67
+  completed_plans: 12
+  percent: 80
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 40 (chaos-lab-parity) — EXECUTING
-Plan: 2 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-04-29
 
@@ -65,12 +65,14 @@ Last activity: 2026-04-29
 | Phase 32 P07 | 10min | 2 tasks | 4 files |
 | Phase 32 P08 | ~3.5 minutes | 2 tasks | 3 files |
 | Phase 35 P04 | 180 | 3 tasks | 4 files |
+| Phase 40-chaos-lab-parity P05 | 2 | 1 tasks | 1 files |
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
 Phase 40 decisions:
+
 - [40-01]: lab.sh ALL_PROFILES replaced with _derive_all_profiles() that reads docker-compose.yml at runtime — structurally eliminates drift between lab.sh and compose (D-14)
 - [40-01]: grep character class extended to [a-zA-Z0-9_-] to handle phaseA profile name (uppercase A); plan snippet had [a-z0-9_-] which missed phaseA
 - [40-01]: yq preferred with grep fallback; yq not a hard requirement (not in chaos-lab toolchain today)
@@ -92,6 +94,7 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: Phase 32 Plan 04: email findings merged inside the existing risk_engine phase-timer (single span) to preserve report metric integrity
 - [Phase 32]: Plan 32-08: mirrored kerberos_scan_json attachment pattern to populate CryptoEndpoint.email_scan_json (closes Phase 32 SC-1) and added an AST-based real-Logger smoke test that catches stdlib-positional-args drift in run_scan.py's email branch
 - [Phase ?]: Phase 35 close: CBOM-01..04 marked Complete; REQUIREMENTS wording aligned to code; UAT-35-01..03 added
+- [Phase ?]: SAML port is 8080 (compose source of truth); 8880 was v3 oracle drift
 
 ### Pending Todos
 
@@ -131,6 +134,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-29T21:31:32Z
+Last session: 2026-04-29T21:34:10.478Z
 Stopped at: Completed 40-01-PLAN.md (dynamic profile derivation in lab.sh)
 Next action: Execute 40-02-PLAN.md (README rewrite)

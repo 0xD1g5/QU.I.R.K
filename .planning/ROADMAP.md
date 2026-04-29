@@ -735,7 +735,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 37. Gap Closure and v4.4.0 Release | v4.4 | 6/6 | Complete   | 2026-04-29 |
 | 38. Identity API Regression Fix | v4.5 | 1/4 | In Progress|  |
 | 39. Data at Rest Dashboard Tab | v4.5 | 5/5 | Complete   | 2026-04-29 |
-| 40. Chaos Lab Parity | v4.5 | 0/TBD | Not started | - |
+| 40. Chaos Lab Parity | v4.5 | 3/6 | In Progress|  |
 | 41. CI Stability & Scanner Robustness | v4.5 | 0/TBD | Not started | - |
 | 42. CBOM Correctness Audit | v4.5 | 0/TBD | Not started | - |
 | 43. Dashboard Polish | v4.5 | 0/TBD | Not started | - |
@@ -800,11 +800,11 @@ Plans:
   3. `quantum-chaos-enterprise-lab/README.md` documents every shipped profile (v4.0 through v4.4) with port assignments, expected scanner findings, and any required setup steps
   4. `expected_results_v4.md` exists and contains the expected-output oracle for all v4.3 and v4.4 profiles (DB, object storage, K8s, Vault, email, broker) — usable as a UAT reference
 **Plans**: 6 plans
-  - [ ] 40-01-PLAN.md — lab.sh dynamic profile parser + profiles subcommand (LAB-01, LAB-02)
-  - [ ] 40-02-PLAN.md — expected_results_v4.md listener-profile sections (LAB-03)
+  - [x] 40-01-PLAN.md — lab.sh dynamic profile parser + profiles subcommand (LAB-01, LAB-02)
+  - [x] 40-02-PLAN.md — expected_results_v4.md listener-profile sections (LAB-03)
   - [ ] 40-03-PLAN.md — expected_results_v4.md DAR + messaging sections (LAB-03)
   - [ ] 40-04-PLAN.md — README.md rewrite with Profile Summary Table (LAB-02)
-  - [ ] 40-05-PLAN.md — docs/chaos-lab.md extension for v4.2/v4.3/v4.4 (LAB-02)
+  - [x] 40-05-PLAN.md — docs/chaos-lab.md extension for v4.2/v4.3/v4.4 (LAB-02)
   - [ ] 40-06-PLAN.md — UAT-SERIES update + Obsidian sync + LAB-04 smoke + close (LAB-01..04)
 
 ### Phase 41: CI Stability & Scanner Robustness
