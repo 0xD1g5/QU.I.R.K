@@ -76,6 +76,8 @@ Phase 40 decisions:
 - [40-01]: lab.sh ALL_PROFILES replaced with _derive_all_profiles() that reads docker-compose.yml at runtime — structurally eliminates drift between lab.sh and compose (D-14)
 - [40-01]: grep character class extended to [a-zA-Z0-9_-] to handle phaseA profile name (uppercase A); plan snippet had [a-z0-9_-] which missed phaseA
 - [40-01]: yq preferred with grep fallback; yq not a hard requirement (not in chaos-lab toolchain today)
+- [40-02]: Compose profile names are authoritative; fixed 3 profile-name drifts (bind9→dnssec, simpla-samlphp→saml, samba-dc→kerberos) and SAML port (8880→8080)
+- [40-02]: pki section added as new content (v3 oracle had no pki section); sourced port 17443 / MTLS_STEPCA from docs/chaos-lab.md line 367
 
 Previous milestone (v4.3) key decisions carried forward:
 
@@ -134,6 +136,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-29T21:34:10.478Z
-Stopped at: Completed 40-01-PLAN.md (dynamic profile derivation in lab.sh)
-Next action: Execute 40-02-PLAN.md (README rewrite)
+Last session: 2026-04-29T21:32:00.000Z
+Stopped at: Completed 40-02-PLAN.md (v4 oracle listener sections — 13 profiles + v3 archive)
+Next action: Execute 40-03-PLAN.md (DAR/messaging sections for v4 oracle)
