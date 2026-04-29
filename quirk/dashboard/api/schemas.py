@@ -111,6 +111,44 @@ class MotionFinding(BaseModel):
     starttls_warning: bool = False          # NON-OPTIONAL per D-02
 
 
+# ---- DAR Findings (Phase 39 GAP-04) ----
+
+class DarFinding(BaseModel):
+    # Universal baseline (matches MotionFinding baseline)
+    host: str
+    port: int
+    severity: str
+    title: str
+    protocol: Optional[str] = None
+    description: Optional[str] = None
+    remediation: Optional[str] = None
+    quantum_risk: Optional[str] = None
+    source: Optional[str] = None
+
+    # Discriminator (D-02)
+    category: str  # "database" | "object_storage" | "kubernetes" | "vault"
+
+    # Database fields
+    encryption_at_rest: Optional[bool] = None
+    tls_in_transit: Optional[bool] = None
+
+    # Object Storage fields
+    encryption_mode: Optional[str] = None
+    kms_key_id: Optional[str] = None
+    public_access: Optional[bool] = None
+    versioning: Optional[bool] = None
+
+    # Kubernetes fields
+    namespace: Optional[str] = None
+    secret_type: Optional[str] = None
+    encryption_provider: Optional[str] = None
+
+    # Vault fields
+    seal_type: Optional[str] = None
+    auto_unseal: Optional[bool] = None
+    mount_type: Optional[str] = None
+
+
 # ---- Roadmap ----
 
 class RoadmapEdge(BaseModel):
@@ -151,6 +189,7 @@ class ScanLatestResponse(BaseModel):
     roadmap: RoadmapData
     identity_findings: List[IdentityFinding] = []
     motion_findings: List[MotionFinding] = []   # NEW — Phase 36 DASH-05
+    dar_findings: List[DarFinding] = []          # Phase 39 GAP-04
 
 
 class ScanSession(BaseModel):
