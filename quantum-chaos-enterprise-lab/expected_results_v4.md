@@ -425,3 +425,46 @@ PROFILE_ARGS="--profile storage" ./lab.sh up
 - postgres-pgcrypto: `pgp_sym_encrypt (weak passphrase)` finding tag
 
 **Reference:** See `labs/storage/expected_results.md` for full per-resource detail. v4.3 successors give cleaner per-category coverage.
+
+---
+
+## Profile: email
+
+*Postfix (SMTP / SMTPS / Submission) + Dovecot (IMAP / IMAPS / POP3 / POP3S) with weak RSA-2048 TLS, non-PFS suites, TLS 1.2 floor on Postfix. Dovecot defaults to TLS 1.3 → no weak-cipher finding without explicit pin (caveat). Expected total: 3 HIGH (weak-cipher: 25/465/587) + 1 MEDIUM (STARTTLS-downgrade: 25).*
+
+```bash
+PROFILE_ARGS="--profile email" ./lab.sh up
+```
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 30025 | postfix-email (smtp) | SMTP-STARTTLS | `protocol=SMTP-STARTTLS, service_detail=SMTP-STARTTLS:25`; risk: "STARTTLS downgrade risk on SMTP" (MEDIUM, EMAIL-08) + "Weak cipher suite on email TLS endpoint" (HIGH, EMAIL-09) | Container port 25 |
+| 30465 | postfix-email (smtps) | SMTPS | `protocol=SMTPS, service_detail=SMTPS:465`; risk: "Weak cipher suite on email TLS endpoint" (HIGH, EMAIL-09) | Container port 465 |
+| 30587 | postfix-email (submission) | SMTP-STARTTLS | `protocol=SMTP-STARTTLS, service_detail=SMTP-STARTTLS:587`; risk: "Weak cipher suite on email TLS endpoint" (HIGH, EMAIL-09) | Container port 587 |
+| 30143 | dovecot-email (imap) | IMAP-STARTTLS | `protocol=IMAP-STARTTLS, service_detail=IMAP-STARTTLS:143`; no weak-cipher finding by default | Container port 143; TLS 1.3 default |
+| 30993 | dovecot-email (imaps) | IMAPS | `protocol=IMAPS, service_detail=IMAPS:993`; no weak-cipher finding by default | Container port 993; TLS 1.3 default |
+| 30110 | dovecot-email (pop3) | POP3-STARTTLS | `protocol=POP3-STARTTLS, service_detail=POP3-STARTTLS:110`; no weak-cipher finding by default | Container port 110; TLS 1.3 default |
+| 30995 | dovecot-email (pop3s) | POP3S | `protocol=POP3S, service_detail=POP3S:995`; no weak-cipher finding by default | Container port 995; TLS 1.3 default |
+
+**Reference:** Scanner: `quirk/scanner/email_scanner.py`. Risk titles from `risk_engine.evaluate_email_endpoints`. Detail + TLS 1.3 caveat in `labs/email/expected_results.md`.
+
+---
+
+## Profile: broker
+
+*Kafka + RabbitMQ + Redis with intentional plaintext + weak-cipher TLS listeners. Expected total: 6 HIGH findings.*
+
+```bash
+PROFILE_ARGS="--profile broker" ./lab.sh up
+```
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 29092 | kafka-broker (plaintext) | KAFKA-PLAIN | `protocol=KAFKA-PLAIN, service_detail=KAFKA-PLAIN:29092`; risk: "Kafka plaintext listener detected" (HIGH, KAFKA-02) | broker_scanner.py L390 |
+| 29093 | kafka-broker (TLS) | KAFKA-TLS | `protocol=KAFKA-TLS, service_detail=KAFKA-TLS:29093`; risk: "Weak cipher suite on broker TLS endpoint" (HIGH, KAFKA-01) | broker_scanner.py L401 |
+| 25672 | rabbitmq-broker (plaintext) | AMQP-PLAIN | `protocol=AMQP-PLAIN, service_detail=AMQP-PLAIN:25672`; risk: "AMQP plaintext listener detected" (HIGH, RABBIT-02) | broker_scanner.py L472 |
+| 25671 | rabbitmq-broker (TLS) | AMQPS | `protocol=AMQPS, service_detail=AMQPS:25671`; risk: "Weak cipher suite on broker TLS endpoint" (HIGH, RABBIT-01) | broker_scanner.py L482 |
+| 26379 | redis-broker (plaintext) | REDIS-PLAIN | `protocol=REDIS-PLAIN, service_detail=REDIS-PLAIN:26379`; risk: "Redis plaintext listener (no authentication)" (HIGH, REDIS-02) | broker_scanner.py L674 |
+| 26380 | redis-broker (TLS) | REDIS-TLS | `protocol=REDIS-TLS, service_detail=REDIS-TLS:26380`; risk: "Weak cipher suite on broker TLS endpoint" (HIGH, REDIS-01) | broker_scanner.py L683 |
+
+**Reference:** Scanner: `quirk/scanner/broker_scanner.py`. Risk titles from `risk_engine.evaluate_broker_endpoints`. Detail in `labs/broker/expected_results.md`. Expected total: 6 HIGH.
