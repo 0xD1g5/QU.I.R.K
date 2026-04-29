@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.4
 milestone_name: Identity Crypto Gap Closure
-status: Idle between phases — Phase 35 closed (CBOM Pass 2/3 plaintext-broker skip wired; 101/101 CBOM tests GREEN; golden fixtures committed; CBOM-01..04 verified PASS)
-stopped_at: Phase 35 closed
-last_updated: "2026-04-28T23:30:00.000Z"
-last_activity: 2026-04-28 -- Phase 35 complete (4 plans: 35-01 RED, 35-02 GREEN, 35-03 golden CBOM, 35-04 close-out)
+status: Idle between phases — Phase 35 closed (CBOM Pass 2/3 plaintext-broker skip wired; 101/101 CBOM tests GREEN)
+stopped_at: Phase 36 context gathered
+last_updated: "2026-04-29T00:03:43.685Z"
+last_activity: "2026-04-28 -- Phase 35 complete (4 plans: 35-01 RED, 35-02 GREEN, 35-03 golden CBOM, 35-04 close-out)"
 progress:
   total_phases: 37
   completed_phases: 35
@@ -120,6 +120,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-28T22:50:47.201Z
-Stopped at: Phase 35 Plan 03 complete (lab-driven golden CBOM fixtures + structural test; 101/101 CBOM tests pass)
+Last session: 2026-04-29T00:03:43.673Z
+Stopped at: Phase 36 context gathered
 Next action: Execute Plan 35-04 (REQUIREMENTS.md amendments per D-01/D-02 + UAT-SERIES.md updates per D-07 + Obsidian sync per D-08)
