@@ -36,6 +36,7 @@ class ScoreData(BaseModel):
 class ConfidenceData(BaseModel):
     confidence_score: int
     confidence_rating: str  # HIGH / MEDIUM / LOW / VERY_LOW / NO_DATA
+    factor_breakdown: Optional[Dict[str, Any]] = None
 
 
 # ---- Findings ----
