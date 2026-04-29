@@ -140,7 +140,8 @@ export function ExecutivePage() {
                 {confidence.confidence_rating === "HIGH" ? "High Confidence"
                   : confidence.confidence_rating === "MEDIUM" ? "Medium Confidence"
                   : confidence.confidence_rating === "LOW" ? "Low Confidence"
-                  : "Low Confidence"}
+                  : confidence.confidence_rating === "VERY_LOW" ? "Very Low Confidence"
+                  : "No Data"}
               </Badge>
             </div>
             <ScoreGauge score={score.subscores.hygiene} label="Hygiene" size={120} />
