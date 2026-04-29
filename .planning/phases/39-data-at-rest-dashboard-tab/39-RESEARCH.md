@@ -726,17 +726,13 @@ research confirms it will be `null` in the current scanner implementation.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`scan_error` endpoints in projection scope**
-   - What we know: Endpoints with `scan_error` set have `severity=None` or absent (e.g., POSTGRESQL `"insufficient-privilege"` endpoint). These are also in the `endpoints` list.
-   - What's unclear: Should `_derive_dar_findings()` include `scan_error` endpoints in the DAR tab? Motion tab skips them (protocol filter handles it implicitly).
-   - Recommendation: Skip endpoints where `ep.scan_error` is not None. These represent scanner failures, not cryptographic posture findings. Planner should confirm.
+1. **`scan_error` endpoints in projection scope** — **RESOLVED**: skip endpoints where `ep.scan_error` is not None. They represent scanner failures, not cryptographic posture findings. Plan 02 Task 2 implements this guard via `if getattr(ep, "scan_error", None): continue` at the top of the per-endpoint loop in `_derive_dar_findings()`.
+   - What we knew: Endpoints with `scan_error` set have `severity=None` or absent (e.g., POSTGRESQL `"insufficient-privilege"` endpoint). Motion tab skips them (protocol filter handles it implicitly).
 
-2. **Engine column source for Database table**
-   - What we know: D-06 specifies an "Engine" column populated from `category` + `protocol`. The `protocol` field on the endpoint is `"POSTGRESQL"`, `"MYSQL"`, or `"RDS"`.
-   - What's unclear: The UI-SPEC says "Derived: POSTGRESQL / MYSQL / RDS" — this maps directly from `protocol`. No derivation needed; the `DarFinding.protocol` field carries this value.
-   - Recommendation: `protocol` field doubles as engine label for DB table. No additional field required.
+2. **Engine column source for Database table** — **RESOLVED**: `protocol` field doubles as the engine label for the DB table. No additional derivation field required. Plan 04 Task 1 renders the Engine column directly from `DarFinding.protocol` (values: `POSTGRESQL` / `MYSQL` / `RDS`).
+   - What we knew: D-06 specifies an "Engine" column from `category` + `protocol`. UI-SPEC says "Derived: POSTGRESQL / MYSQL / RDS" — this maps directly from `protocol`.
 
 ---
 

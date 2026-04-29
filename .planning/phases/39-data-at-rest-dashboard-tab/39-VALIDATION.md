@@ -1,10 +1,11 @@
 ---
 phase: 39
 slug: data-at-rest-dashboard-tab
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-29
+approved: 2026-04-29
 ---
 
 # Phase 39 — Validation Strategy
@@ -40,7 +41,18 @@ created: 2026-04-29
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 39-01-01 | 01 | 0 | GAP-04 | — | N/A | unit (stub) | `pytest tests/test_dar_dashboard.py -x -q` | ❌ W0 | ⬜ pending |
+| 39-01-01 | 01 | 0 | GAP-04 | — | N/A | unit (stub, RED) | `pytest tests/test_dar_dashboard.py -x -q` | ❌ W0 | ⬜ pending |
+| 39-02-01 | 02 | 1 | GAP-04 | T-39-01 | DarFinding model + dar_findings field on ScanLatestResponse — typed schema prevents arbitrary field exposure | unit (import + model) | `python -c "from quirk.dashboard.api.schemas import DarFinding, ScanLatestResponse; assert 'dar_findings' in ScanLatestResponse.model_fields"` | ✅ | ⬜ pending |
+| 39-02-02 | 02 | 1 | GAP-04 | T-39-01, T-39-02, T-39-03 | Per-protocol projection with json.loads guard, kms_key_id label-only, scan_error skip — DoS guard via try/except per dat_scan_json parse | unit (pytest, GREEN) | `pytest tests/test_dar_dashboard.py -x -q` | ✅ | ⬜ pending |
+| 39-03-01 | 03 | 2 | GAP-04 | — | data-at-rest.tsx renders ScoreGauge + 4 sections + per-section EmptyStateCard — empty-state coverage prevents blank-panel UX | type-check (tsc) | `cd src/dashboard && npx tsc --noEmit -p .` | ✅ | ⬜ pending |
+| 39-03-02 | 03 | 2 | GAP-04 | T-39-04 | App.tsx route + sidebar.tsx NAV_ITEMS (HardDrive, locked order) — auth alignment via existing route layout | build | `cd src/dashboard && npm run build` | ✅ | ⬜ pending |
+| 39-04-01 | 04 | 3 | GAP-04 | T-39-05 | Four locked-column tables, severity-sorted, React text-node interpolation only (no raw HTML injection) — XSS mitigation | build | `cd src/dashboard && npm run build` | ✅ | ⬜ pending |
+| 39-05-01 | 05 | 4 | GAP-04 | — | Full validation gate: compileall + pytest + dashboard build | integration | `python -m compileall quirk && python -m compileall tests && pytest tests/test_dar_dashboard.py -x -q && pytest -x -q && (cd src/dashboard && npm run build)` | ✅ | ⬜ pending |
+| 39-05-02 | 05 | 4 | GAP-04 | — | UAT-SERIES.md updated with ≥8 UAT-39-* cases | docs | `grep -c "UAT-39-" docs/UAT-SERIES.md \| awk '$1 >= 8 {exit 0} {exit 1}'` | ✅ | ⬜ pending |
+| 39-05-03 | 05 | 4 | GAP-04 | — | Manual console-error gate (`/data-at-rest` route shows zero errors in DevTools) — Success Criterion 4 | manual checkpoint | human-verify (DevTools console clean) | n/a | ⬜ pending |
+| 39-05-04 | 05 | 4 | GAP-04 | — | Obsidian phase note exists at vault filesystem path | docs sync | `test -f "/Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Phases/Phase-39-Data-At-Rest-Dashboard-Tab.md"` | ✅ | ⬜ pending |
+| 39-05-05 | 05 | 4 | GAP-04 | — | UAT-SERIES.md mirrored to Obsidian vault with QU.I.R.K. frontmatter | docs sync | `test -f "/Users/digs/vaults/Digs/20_Dev-Work/QUIRK/UAT-Series.md" && head -2 ".../UAT-Series.md" \| grep -q "project: QU.I.R.K."` | ✅ | ⬜ pending |
+| 39-05-06 | 05 | 4 | GAP-04 | — | Phase-tagged commit on branch (`phase-39`) | git | `git log --oneline -1 \| grep -q "phase-39"` | ✅ | ⬜ pending |
 
 ---
 
@@ -65,11 +77,11 @@ created: 2026-04-29
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (DAR test stub + fixture)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter (planner flips on completion)
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (DAR test stub + fixture)
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-29
