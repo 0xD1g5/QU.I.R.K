@@ -18,6 +18,31 @@ then produces a CycloneDX CBOM, quantum-readiness score, and prioritized remedia
 - After changes, run `python -m compileall` and relevant tests.
 - If detection logic changes, update `labs/*/expected_results.md` accordingly.
 
+## Chaos Lab Maintenance
+
+Any time the `quantum-chaos-enterprise-lab/` chaos lab gains, loses, renames, or
+materially reconfigures a Docker Compose profile (or its ports / services /
+scanner-relevant settings), `quantum-chaos-enterprise-lab/lab.sh` **must** be
+updated in the same change so it stays a faithful reflection of the lab's
+current state.
+
+Specifically:
+- The `all` command's `ALL_PROFILES` list must include every profile defined in
+  `docker-compose.yml`. No drift between the script's profile set and the
+  compose file's profile set.
+- New profiles must be runnable via `PROFILE_ARGS="--profile <name>" ./lab.sh up`
+  with no further script edits needed.
+- `./lab.sh status` and `./lab.sh logs <service>` must work cleanly against new
+  / renamed services — no broken references.
+- The corresponding `expected_results_*.md` oracle file (and the chaos lab
+  `README.md`) must list the new / changed profile with its ports, services,
+  and expected scanner findings.
+
+This rule applies to every phase, every milestone — not just lab-focused work.
+A scanner phase that adds a new chaos lab profile (e.g., Phase 32 `email`,
+Phase 33 `broker`, Phase 27 `database`, Phase 30 `vault`) is incomplete until
+`lab.sh`, the README, and the expected-results oracle are all updated.
+
 ---
 
 ## Mandatory Phase Completion Steps
