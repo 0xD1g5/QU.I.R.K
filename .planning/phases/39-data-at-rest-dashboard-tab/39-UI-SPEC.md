@@ -1,10 +1,11 @@
 ---
 phase: 39
 slug: data-at-rest-dashboard-tab
-status: draft
+status: approved
 shadcn_initialized: true
 preset: manual (no components.json — shadcn primitives installed directly into src/dashboard/src/components/ui/)
 created: 2026-04-29
+reviewed_at: 2026-04-29
 ---
 
 # Phase 39 — UI Design Contract
