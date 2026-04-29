@@ -7,6 +7,7 @@ import { PrintPage } from "@/pages/print"
 import { ExecutivePage } from "@/pages/executive"
 import { FindingsPage } from "@/pages/findings"
 import { IdentityPage } from "@/pages/identity"
+import { MotionPage } from "@/pages/motion"
 import { CertificatesPage } from "@/pages/certificates"
 import { CbomPage } from "@/pages/cbom"
 import { RoadmapPage } from "@/pages/roadmap"
@@ -28,6 +29,7 @@ export default function App() {
                   <Route path="/" element={<ExecutivePage />} />
                   <Route path="/findings" element={<FindingsPage />} />
                   <Route path="/identity" element={<IdentityPage />} />
+                  <Route path="/motion" element={<MotionPage />} />
                   <Route path="/certificates" element={<CertificatesPage />} />
                   <Route path="/cbom" element={<CbomPage />} />
                   <Route path="/roadmap" element={<RoadmapPage />} />
