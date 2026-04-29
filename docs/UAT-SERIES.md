@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.3.0
-**Last Updated:** 2026-04-28 (Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-04-28 (Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.3. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -4732,6 +4732,119 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 2. Inspect `tests/fixtures/cbom/expected_broker_cbom.json`: `grep -c 'localhost:29092\|localhost:25672\|localhost:26379' tests/fixtures/cbom/expected_broker_cbom.json` should return 0.
 **Expected:** Both tests pass; the grep on the broker snapshot returns 0 — no plaintext-port bom_refs leak into the CBOM.
 **Pass Criteria:** Both tests exit 0; grep step returns 0 matches.
+
+---
+
+## Phase 36: Dashboard Motion Tab (UAT-36-XX)
+
+**Purpose:** Verify the new `/motion` dashboard route, Email Protocols table (STARTTLS badge), Message Brokers grouped sections (plaintext badge + cloud chip), 6th ScoreGauge on the executive summary, and empty-state cards when no email/broker data is present. Maps to requirements DASH-01..05.
+
+---
+
+**ID:** UAT-36-01
+**Title:** `/motion` route loads with both sections
+**Maps to:** DASH-01
+**Prerequisites:** `quirk serve` running; at least one scan in the DB (any host).
+**Steps:**
+1. Open `http://localhost:8000/motion`.
+2. Confirm the page heading reads "Data in Motion".
+3. Confirm both `Email Protocols` and `Message Brokers` section headings are visible (either as a data table or an empty-state card).
+4. Open the browser console and confirm no JavaScript errors.
+**Expected:** Page loads successfully, both section headings present, no console errors.
+**Pass Criteria:**
+- "Data in Motion" heading visible.
+- Both "Email Protocols" and "Message Brokers" sections render.
+- Zero console errors.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-36-02
+**Title:** Port-25 STARTTLS warning badge renders
+**Maps to:** DASH-02
+**Prerequisites:** `docker compose --profile email up -d` from `labs/email/`; deep scan run against `localhost`; dashboard accessible at `http://localhost:8000`.
+**Steps:**
+1. From `labs/email/`, run: `docker compose --profile email up -d`
+2. Run a deep scan: `quirk scan --target localhost --profile deep` (or project's standard invocation).
+3. Open `http://localhost:8000/motion`.
+4. In the Email Protocols table, locate the port-25 row.
+**Expected:** Port-25 row shows the amber `⚠ STARTTLS` badge in the Warning column. Other port rows (587, 465, etc.) do NOT show the badge.
+**Pass Criteria:**
+- `⚠ STARTTLS` amber badge is present on the port-25 row.
+- No `⚠ STARTTLS` badge on port-587, port-465, or other rows.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-36-03
+**Title:** Plaintext broker shows `☠ PLAINTEXT` badge
+**Maps to:** DASH-03
+**Prerequisites:** `docker compose --profile broker up -d` from `labs/broker/`; scan run against `localhost`.
+**Steps:**
+1. From `labs/broker/`, run: `docker compose --profile broker up -d`
+2. Run a scan against `localhost`.
+3. Open `http://localhost:8000/motion`.
+4. In the Message Brokers section, locate the Kafka subsection and the KAFKA-PLAIN row (port 29092).
+**Expected:** The KAFKA-PLAIN row shows the orange `☠ PLAINTEXT` badge in the Status column. The Kafka subsection title reads `Kafka · N endpoint(s) · 1 plaintext` (or higher).
+**Pass Criteria:**
+- `☠ PLAINTEXT` orange badge visible on the port-29092 row.
+- Kafka subsection title includes `plaintext` count ≥ 1.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-36-04
+**Title:** Executive summary shows 6 ScoreGauges with Data in Motion last
+**Maps to:** DASH-04
+**Prerequisites:** Any scan with completed scoring in the DB.
+**Steps:**
+1. Open `http://localhost:8000/` (executive summary page).
+2. Count the ScoreGauges in the flex-wrap gauge row.
+3. Confirm the last gauge is labeled "Data in Motion".
+4. Confirm the gauge displays an integer score (not `NaN`, not blank).
+**Expected:** 6 gauges visible; "Data in Motion" is the last gauge in the row; gauge shows an integer value.
+**Pass Criteria:**
+- Exactly 6 ScoreGauge elements visible in the gauge row.
+- "Data in Motion" label present on the last gauge.
+- Score is a valid integer (not NaN, not empty).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+**ID:** UAT-36-05
+**Title:** Empty-state cards render when no email/broker findings
+**Maps to:** DASH-01, DASH-05 (empty-state path)
+**Prerequisites:** A scan completed against a host with NEITHER email nor broker endpoints (e.g., `quirk scan --target example.com` against a plain HTTPS-only target).
+**Steps:**
+1. Run a scan against an HTTPS-only host: e.g., `quirk scan --target example.com`.
+2. Open `http://localhost:8000/motion`.
+3. Inspect the Email Protocols section.
+4. Inspect the Message Brokers section.
+**Expected:** Both sections show the empty-state card with the locked copy message rather than a data table.
+**Pass Criteria:**
+- Email section shows: "No email endpoints scanned in this session — enable the email scanner in your config or scan a mail server."
+- Broker section shows: "No broker endpoints scanned in this session — enable the broker scanner in your config or scan a message broker host."
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
 
 ---
 
