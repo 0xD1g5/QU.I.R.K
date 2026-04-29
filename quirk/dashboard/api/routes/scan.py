@@ -16,6 +16,7 @@ from quirk.dashboard.api.schemas import (
     ConfidenceData,
     FindingItem,
     IdentityFinding,
+    MotionFinding,
     RoadmapData,
     RoadmapEdge,
     RoadmapNode,
@@ -325,6 +326,73 @@ def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityF
                 ))
 
     # Sort by severity
+    _severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    results.sort(key=lambda f: _severity_order.get(f.severity, 99))
+    return results
+
+
+def _derive_motion_findings(endpoints) -> list[MotionFinding]:
+    """Synthesize motion findings from email + broker CryptoEndpoints.
+
+    Mirrors _derive_identity_findings (lines 184-330). Carries protocol labels
+    verbatim — does NOT normalize "AMQPS/Azure-ServiceBus" (Phase 35 D-03).
+    Per RESEARCH.md Pitfall 5, uses getattr() for cipher_suite/cert_not_after.
+    """
+    EMAIL_PROTOS = {"SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS",
+                    "POP3-STARTTLS", "POP3S"}
+    BROKER_PLAIN = {"KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"}
+    BROKER_TLS = {"KAFKA-TLS", "AMQPS", "AMQPS/Azure-ServiceBus",
+                  "HTTPS/AWS-SQS", "REDIS-TLS"}
+    MOTION_PROTOS = EMAIL_PROTOS | BROKER_PLAIN | BROKER_TLS
+    LEGACY_TLS = {"TLSv1", "TLSv1.0", "TLSv1.1"}
+
+    results: list[MotionFinding] = []
+    for ep in endpoints:
+        proto = getattr(ep, "protocol", None) or ""
+        if proto not in MOTION_PROTOS:
+            continue
+        port = getattr(ep, "port", 0) or 0
+        tls_version = getattr(ep, "tls_version", None) or None
+        cipher_suite = getattr(ep, "cipher_suite", None) or None
+        cert_dt = getattr(ep, "cert_not_after", None)
+        cert_iso = cert_dt.isoformat() if cert_dt else None
+
+        plaintext = proto in BROKER_PLAIN
+        starttls_warning = (port == 25 and proto == "SMTP-STARTTLS")
+
+        # Severity rules (per RESEARCH.md §"Pattern 2"):
+        if plaintext:
+            severity = "HIGH"
+            title = f"{proto} plaintext listener exposed"
+            quantum_risk = "n/a (plaintext)"
+        elif starttls_warning:
+            severity = "MEDIUM"
+            title = "SMTP STARTTLS susceptible to stripping (port 25)"
+            quantum_risk = "depends on negotiated cipher"
+        elif proto in BROKER_TLS and tls_version in LEGACY_TLS:
+            severity = "HIGH"
+            title = f"{proto} legacy TLS version ({tls_version})"
+            quantum_risk = "quantum-vulnerable"
+        else:
+            severity = "LOW"
+            title = f"{proto} TLS endpoint"
+            quantum_risk = "quantum-vulnerable" if cipher_suite and "RSA" in cipher_suite else "quantum-unknown"
+
+        results.append(MotionFinding(
+            host=getattr(ep, "host", "") or "",
+            port=port,
+            severity=severity,
+            title=title,
+            protocol=proto,            # verbatim — preserve "AMQPS/Azure-ServiceBus"
+            tls_version=tls_version,
+            cipher_suite=cipher_suite,
+            cert_not_after=cert_iso,
+            quantum_risk=quantum_risk,
+            plaintext_exposed=plaintext,
+            starttls_warning=starttls_warning,
+            source="motion",
+        ))
+
     _severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
     results.sort(key=lambda f: _severity_order.get(f.severity, 99))
     return results
@@ -645,6 +713,7 @@ def get_latest_scan(
         cbom_components=cbom_components,
         roadmap=roadmap,
         identity_findings=identity_findings,
+        motion_findings=_derive_motion_findings(endpoints),   # NEW — Phase 36 DASH-05
     )
 
 
