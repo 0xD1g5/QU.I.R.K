@@ -749,7 +749,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 
 - [x] **Phase 38: Identity API Regression Fix** - Restore SAML/OIDC entries in identity_findings, re-enable deferred SAML scan-window test, flip Phase 36 wave_0_complete (closes DEF-v4.4-01 and DEF-v4.4-02)
 - [x] **Phase 39: Data at Rest Dashboard Tab** - Ship the DASH-05 deferred Data at Rest tab in the React dashboard with DB/object-storage/K8s/Vault findings (closes DASH-05 from Phase 27) (completed 2026-04-29)
-- [ ] **Phase 40: Chaos Lab Parity** - Bring lab.sh, README, and expected-results oracle up to v4.4 parity so every shipped profile is documented, exercisable, and UAT-ready
+- [x] **Phase 40: Chaos Lab Parity** - Bring lab.sh, README, and expected-results oracle up to v4.4 parity so every shipped profile is documented, exercisable, and UAT-ready (completed 2026-04-29)
 - [ ] **Phase 41: CI Stability & Scanner Robustness** - Lock CI green (zero deferred tests), harden all scanners against missing extras/timeouts/unexpected exceptions, document consistent timeout/retry policy
 - [ ] **Phase 42: CBOM Correctness Audit** - Validate CBOM JSON+XML against CycloneDX 1.6 spec, close classifier unknown-fallback gaps, review golden snapshot drift, unit-test Pass-2/3 skip lists
 - [ ] **Phase 43: Dashboard Polish** - Eliminate browser console errors and React warnings across all routes, add explicit loading/empty states, meet WCAG AA baseline
@@ -805,7 +805,7 @@ Plans:
   - [x] 40-03-PLAN.md — expected_results_v4.md DAR + messaging sections (LAB-03)
   - [x] 40-04-PLAN.md — README.md rewrite with Profile Summary Table (LAB-02)
   - [x] 40-05-PLAN.md — docs/chaos-lab.md extension for v4.2/v4.3/v4.4 (LAB-02)
-  - [ ] 40-06-PLAN.md — UAT-SERIES update + Obsidian sync + LAB-04 smoke + close (LAB-01..04)
+  - [x] 40-06-PLAN.md — UAT-SERIES update + Obsidian sync + LAB-04 smoke + close (LAB-01..04)
 
 ### Phase 41: CI Stability & Scanner Robustness
 **Goal**: The CI test suite runs green with zero skipped-for-code-reasons tests and completes deterministically in under 60 seconds; all scanners degrade gracefully under missing extras, slow targets, and unexpected exceptions with a consistent, documented timeout/retry policy

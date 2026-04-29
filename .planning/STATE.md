@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: executing
-stopped_at: Completed 40-02-PLAN.md (v4 oracle listener sections — 13 profiles + v3 archive)
-last_updated: "2026-04-29T21:42:29.573Z"
+stopped_at: Phase 40 complete
+last_updated: "2026-04-29T23:00:00.000Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 15
-  completed_plans: 14
-  percent: 93
+  completed_phases: 3
+  total_plans: 21
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: 40 (chaos-lab-parity) — EXECUTING
+Phase: 40 (chaos-lab-parity) — COMPLETE
 Plan: 6 of 6
-Status: Ready to execute
+Status: Complete
 Last activity: 2026-04-29
 
 ## Phase Overview
@@ -66,6 +66,7 @@ Last activity: 2026-04-29
 | Phase 32 P08 | ~3.5 minutes | 2 tasks | 3 files |
 | Phase 35 P04 | 180 | 3 tasks | 4 files |
 | Phase 40-chaos-lab-parity P05 | 2 | 1 tasks | 1 files |
+| Phase 40-chaos-lab-parity P06 | ~5 min | 4 tasks | 4 files |
 
 ### Decisions
 
@@ -78,6 +79,8 @@ Phase 40 decisions:
 - [40-01]: yq preferred with grep fallback; yq not a hard requirement (not in chaos-lab toolchain today)
 - [40-02]: Compose profile names are authoritative; fixed 3 profile-name drifts (bind9→dnssec, simpla-samlphp→saml, samba-dc→kerberos) and SAML port (8880→8080)
 - [40-02]: pki section added as new content (v3 oracle had no pki section); sourced port 17443 / MTLS_STEPCA from docs/chaos-lab.md line 367
+- [40-06]: lab.sh down arm (lines 97-101) omits PROFILE_ARGS — profile-tagged services survive teardown; deferred to Phase 41 backlog (fix: compose --profile "*" down --remove-orphans)
+- [40-06]: LAB-04 human-verified by operator across all 5 v4.3+v4.4 profiles (vault, database, storage-s3, email, broker) — status + logs clean against real compose service names
 
 Previous milestone (v4.3) key decisions carried forward:
 
@@ -136,6 +139,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-29T21:42:29.570Z
-Stopped at: Completed 40-02-PLAN.md (v4 oracle listener sections — 13 profiles + v3 archive)
-Next action: Execute 40-03-PLAN.md (DAR/messaging sections for v4 oracle)
+Last session: 2026-04-29T23:00:00.000Z
+Stopped at: Phase 40 complete — all 6 plans executed, LAB-01..04 marked Complete
+Next action: Execute Phase 41 (ci-stability-scanner-robustness)
