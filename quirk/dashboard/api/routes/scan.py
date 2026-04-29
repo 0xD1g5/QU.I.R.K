@@ -697,11 +697,11 @@ def get_latest_scan(
     cbom_components = _derive_cbom(endpoints)
     roadmap = _derive_roadmap(evidence, score_raw)
 
-    scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
+    response_scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
 
     return ScanLatestResponse(
         meta=ScanMeta(
-            scan_id=scan_id,
+            scan_id=response_scan_id,
             scanned_at=latest_ts if isinstance(latest_ts, datetime) else None,
             total_endpoints=len(endpoints),
             total_findings=len(findings),
