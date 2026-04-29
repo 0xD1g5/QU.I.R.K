@@ -4,7 +4,7 @@ milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: Roadmap defined — ready for /gsd-plan-phase 38
 stopped_at: Phase 37 context gathered
-last_updated: "2026-04-29T15:00:04.336Z"
+last_updated: "2026-04-29T18:00:00.000Z"
 last_activity: 2026-04-29 — v4.5 roadmap created (7 phases, 26 requirements)
 progress:
   total_phases: 7
@@ -98,12 +98,12 @@ None at roadmap creation.
 
 ## Deferred Items
 
-Items deferred at v4.4 close on 2026-04-29 (acknowledged, non-blocking for v4.4 ship):
+Items deferred at v4.4 close on 2026-04-29 (closed in v4.5 Phase 38 on 2026-04-29):
 
 | ID | Category | Item | Status |
 |----|----------|------|--------|
-| DEF-v4.4-01 | phase_gating | Phase 36 `wave_0_complete: false` flip | gated on DEF-v4.4-02 fix; documented in `37-VALIDATION.md` "Deferred Gaps" #1 |
-| DEF-v4.4-02 | regression | SAML/OIDC missing from `/api/scan/latest` `identity_findings` (real bug, ISSUE-3 from Phase 24) | predates v4.4; out-of-scope for v4.4.0; tracked for v4.5 |
+| DEF-v4.4-01 | phase_gating | Phase 36 `wave_0_complete: false` flip | closed in Phase 38 (PLAN 38-02) — wave_0_complete: true after GAP-01/02 closure |
+| DEF-v4.4-02 | regression | SAML/OIDC missing from `/api/scan/latest` `identity_findings` (real bug, ISSUE-3 from Phase 24) | closed in Phase 38 (PLAN 38-01) — SESSION_BRACKET 5-min backward bracket on /api/scan/latest implicit-latest branch; regression test green |
 
 Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 

@@ -747,7 +747,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 
 **Milestone Goal:** Close v4.4 deferred items, harden scanner/CBOM/dashboard correctness, and automate the long-tail UAT debt — putting QU.I.R.K. in solid shape before the next capability and performance milestones.
 
-- [ ] **Phase 38: Identity API Regression Fix** - Restore SAML/OIDC entries in identity_findings, re-enable deferred SAML scan-window test, flip Phase 36 wave_0_complete (closes DEF-v4.4-01 and DEF-v4.4-02)
+- [x] **Phase 38: Identity API Regression Fix** - Restore SAML/OIDC entries in identity_findings, re-enable deferred SAML scan-window test, flip Phase 36 wave_0_complete (closes DEF-v4.4-01 and DEF-v4.4-02)
 - [ ] **Phase 39: Data at Rest Dashboard Tab** - Ship the DASH-05 deferred Data at Rest tab in the React dashboard with DB/object-storage/K8s/Vault findings (closes DASH-05 from Phase 27)
 - [ ] **Phase 40: Chaos Lab Parity** - Bring lab.sh, README, and expected-results oracle up to v4.4 parity so every shipped profile is documented, exercisable, and UAT-ready
 - [ ] **Phase 41: CI Stability & Scanner Robustness** - Lock CI green (zero deferred tests), harden all scanners against missing extras/timeouts/unexpected exceptions, document consistent timeout/retry policy
@@ -768,9 +768,9 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
   4. Full test suite passes with no regressions after the SAML fix (662+ tests, 0 failures)
 **Plans**: 4 plans
   - [x] 38-01-PLAN.md — Fix scan-window in scan.py (SESSION_BRACKET 5-min backward bracket) + extend regression test (GAP-01, GAP-02)
-  - [ ] 38-02-PLAN.md — Restore 36-VALIDATION.md from commit 99f48d2 and flip wave_0_complete: true (GAP-03)
-  - [ ] 38-03-PLAN.md — Scope test_all_completed_phase_validations_nyquist_compliant to skip-on-missing (full suite green)
-  - [ ] 38-04-PLAN.md — STATE.md + UAT-SERIES.md + Obsidian phase note + commit (mandatory close-out per CLAUDE.md)
+  - [x] 38-02-PLAN.md — Restore 36-VALIDATION.md from commit 99f48d2 and flip wave_0_complete: true (GAP-03)
+  - [x] 38-03-PLAN.md — Scope test_all_completed_phase_validations_nyquist_compliant to skip-on-missing (full suite green)
+  - [x] 38-04-PLAN.md — STATE.md + UAT-SERIES.md + Obsidian phase note + commit (mandatory close-out per CLAUDE.md)
 
 ### Phase 39: Data at Rest Dashboard Tab
 **Goal**: The React dashboard has a "Data at Rest" tab that surfaces DB encryption, object storage policy, Kubernetes secrets, and Vault findings from the existing v4.3 data shape — consultants can review the full DAR surface without leaving the dashboard
