@@ -115,7 +115,7 @@ class OutputCfg:
 @dataclass
 class IntelligenceCfg:
     # Intelligence/scoring layer versioning
-    intelligence_version: str = "4.3.0"
+    intelligence_version: str = "4.4.0"
 
     # Score calibration profile used by scoring/reporting.
     # Supported: lenient|balanced|strict
