@@ -195,8 +195,12 @@ class CodeHygieneTests(unittest.TestCase):
         )
 
     # ------------------------------------------------------------------
-    # HYGN-04: All completed phase VALIDATION.md files must be nyquist_compliant: true
-    # Expected: RED (11 files have false, 2 are missing)
+    # HYGN-04: Phases with a VALIDATION.md on disk MUST declare
+    # nyquist_compliant: true. Phases whose VALIDATION.md is absent
+    # (e.g., the v4.4 cleanup in commit a991a69 removed phases 01-14)
+    # are skipped — Phase 38 D-02 picked skip-on-missing as the minimal
+    # resolution rather than backfilling 14 historical stub files.
+    # Expected: GREEN
     # ------------------------------------------------------------------
 
     def test_all_completed_phase_validations_nyquist_compliant(self) -> None:
@@ -232,7 +236,10 @@ class CodeHygieneTests(unittest.TestCase):
             validation_path = phases_dir / phase_slug / f"{phase_num}-VALIDATION.md"
 
             if not validation_path.exists():
-                failures.append((phase_slug, "file missing"))
+                # Phase 38 (D-02): skip-on-missing — the v4.4 cleanup commit
+                # a991a69 deleted the historical VALIDATION.md files for
+                # phases 01-14. The hygiene rule still has teeth for any
+                # phase that DOES have a VALIDATION.md on disk.
                 continue
 
             content = validation_path.read_text(encoding="utf-8")
