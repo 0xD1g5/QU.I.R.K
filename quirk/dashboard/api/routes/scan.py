@@ -14,6 +14,7 @@ from quirk.dashboard.api.schemas import (
     CbomComponent,
     CertItem,
     ConfidenceData,
+    DarFinding,
     FindingItem,
     IdentityFinding,
     MotionFinding,
@@ -411,6 +412,211 @@ def _derive_motion_findings(endpoints) -> list[MotionFinding]:
     return results
 
 
+# ---- DAR Findings (Phase 39 GAP-04) ----
+
+DAR_PROTOCOLS = {"POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT"}
+
+
+def _derive_dar_findings(endpoints) -> list[DarFinding]:
+    """Synthesize DarFinding list from CryptoEndpoints with DAR posture data.
+
+    Mirrors _derive_motion_findings (Phase 36). Per-protocol dispatch handles
+    scanner shape variance: POSTGRESQL/MYSQL/RDS use service_detail; S3, AZURE_BLOB,
+    KUBERNETES, VAULT use dat_scan_json. Endpoints with scan_error are skipped.
+    Malformed dat_scan_json is tolerated via try/except (V5).
+    """
+    results: list[DarFinding] = []
+    for ep in endpoints:
+        if getattr(ep, "scan_error", None):
+            continue
+        proto = (getattr(ep, "protocol", None) or "").upper()
+        if proto not in DAR_PROTOCOLS:
+            continue
+
+        host = getattr(ep, "host", "") or ""
+        port = getattr(ep, "port", 0) or 0
+        severity = getattr(ep, "severity", None) or "INFO"
+        service_detail = getattr(ep, "service_detail", None) or ""
+        dat_raw = getattr(ep, "dat_scan_json", None)
+        dat: dict = {}
+        if dat_raw:
+            try:
+                dat = json.loads(dat_raw)
+            except Exception:
+                dat = {}
+
+        if proto in {"POSTGRESQL", "MYSQL"}:
+            finding = _dar_db(host, port, proto, severity, service_detail)
+        elif proto == "RDS":
+            finding = _dar_rds(host, port, severity, service_detail)
+        elif proto == "S3":
+            finding = _dar_s3(host, port, severity, dat)
+        elif proto == "AZURE_BLOB":
+            finding = _dar_azure_blob(host, port, severity, dat)
+        elif proto == "KUBERNETES":
+            finding = _dar_k8s(host, port, severity, dat)
+        elif proto == "VAULT":
+            finding = _dar_vault(host, port, severity, dat)
+        else:
+            finding = None
+
+        if finding is not None:
+            results.append(finding)
+
+    _sev = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    results.sort(key=lambda f: _sev.get(f.severity, 99))
+    return results
+
+
+def _dar_db(host, port, proto, severity, service_detail):
+    sd = service_detail or ""
+    if "ssl-enforced" in sd:
+        enc, tls = True, True
+    elif "ssl-off" in sd or "plaintext-connections-allowed" in sd:
+        enc, tls = False, False
+    elif "-weak" in sd or "-ok" in sd:
+        enc, tls = True, True
+    else:
+        enc, tls = None, None
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"{proto} encryption posture",
+        protocol=proto, category="database",
+        encryption_at_rest=enc, tls_in_transit=tls,
+        source="database",
+    )
+
+
+def _dar_rds(host, port, severity, service_detail):
+    sd = service_detail or ""
+    if sd == "RDS/none":
+        enc, kms = False, None
+    elif sd == "RDS/sse-rds":
+        enc, kms = True, None
+    elif sd == "RDS/sse-kms-aws":
+        enc, kms = True, "AWS-managed"
+    elif sd == "RDS/sse-kms-cmk":
+        enc, kms = True, "CMK"
+    else:
+        enc, kms = None, None
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title="RDS encryption-at-rest",
+        protocol="RDS", category="database",
+        encryption_at_rest=enc, kms_key_id=kms,
+        source="database",
+    )
+
+
+# Note: S3/Azure/K8s/Vault helpers receive the parsed dat dict (not service_detail
+# from the endpoint object) — these protocols store context in dat_scan_json only.
+def _dar_s3(host, port, severity, dat):
+    sd = (dat.get("service_detail") or "").lower()
+    kms = None
+    if sd == "s3/unencrypted":
+        enc, mode = False, "none"
+    elif sd == "s3/sse-s3":
+        enc, mode = True, "SSE-S3"
+    elif sd == "s3/sse-kms-aws":
+        enc, mode, kms = True, "SSE-KMS", "AWS-managed"
+    elif sd == "s3/sse-kms-cmk":
+        enc, mode, kms = True, "SSE-KMS", "CMK"
+    else:
+        enc, mode = None, None
+    bucket = dat.get("bucket", "")
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"S3 bucket {bucket}".strip(),
+        protocol="S3", category="object_storage",
+        encryption_at_rest=enc, encryption_mode=mode,
+        kms_key_id=kms,
+        public_access=None,   # not probed by scanner (Pitfall 6)
+        versioning=None,      # not probed by scanner
+        source="object_storage",
+    )
+
+
+def _dar_azure_blob(host, port, severity, dat):
+    key_source = (dat.get("key_source") or "").lower()
+    if key_source == "microsoft.keyvault":
+        enc, mode = True, "CMK"
+    else:
+        enc, mode = True, "SSE-S3"
+    account = dat.get("account", "")
+    container = dat.get("container", "")
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"Azure Blob {account}/{container}",
+        protocol="AZURE_BLOB", category="object_storage",
+        encryption_at_rest=enc, encryption_mode=mode,
+        source="object_storage",
+    )
+
+
+def _dar_k8s(host, port, severity, dat):
+    if "namespace" in dat:
+        ns = dat.get("namespace", "")
+        counts = dat.get("secret_type_counts", {}) or {}
+        secret_type = ", ".join(
+            f"{t}:{c}" for t, c in sorted(counts.items(), key=lambda x: -x[1])
+        ) or None
+        return DarFinding(
+            host=host, port=port, severity=severity,
+            title=f"K8s secrets in namespace {ns}",
+            protocol="KUBERNETES", category="kubernetes",
+            namespace=ns or None, secret_type=secret_type,
+            source="kubernetes",
+        )
+    provider = dat.get("provider", "") or ""
+    if provider == "EKS":
+        cfg = dat.get("encryptionConfig") or []
+        encrypted = any(
+            "secrets" in (entry.get("resources") or [])
+            for entry in cfg if isinstance(entry, dict)
+        )
+        enc_provider = "EKS/KMS" if encrypted else None
+    elif provider == "GKE":
+        encrypted = dat.get("current_state") == 2
+        enc_provider = "GKE/Cloud-KMS" if encrypted else None
+    elif provider == "AKS":
+        encrypted = bool(dat.get("kv_kms_enabled"))
+        enc_provider = "AKS/Key-Vault" if encrypted else None
+    else:
+        encrypted, enc_provider = None, None
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"{provider or 'K8s'} cluster etcd encryption",
+        protocol="KUBERNETES", category="kubernetes",
+        encryption_at_rest=encrypted, encryption_provider=enc_provider,
+        source="kubernetes",
+    )
+
+
+def _dar_vault(host, port, severity, dat):
+    if "key_name" in dat:
+        mount_type = "transit"
+        title = f"Vault transit key: {dat.get('key_type', '')}".strip(": ")
+    elif "mount_point" in dat:
+        mount_type = "pki"
+        title = f"Vault PKI: {dat.get('mount_point', '')}"
+    elif "auth_path" in dat:
+        mount_type = "auth"
+        title = f"Vault auth: {dat.get('auth_type', '')}"
+    else:
+        mount_type = None
+        title = "Vault endpoint"
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=title,
+        protocol="VAULT", category="vault",
+        mount_type=mount_type,
+        seal_type=None,       # not probed (Pitfall 4)
+        auto_unseal=None,     # not probed (Pitfall 4)
+        remediation=dat.get("remediation"),
+        source="vault",
+    )
+
+
 def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     """Build CBOM components from endpoints by aggregating algorithm usage."""
     from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
@@ -726,6 +932,7 @@ def get_latest_scan(
         roadmap=roadmap,
         identity_findings=identity_findings,
         motion_findings=_derive_motion_findings(endpoints),   # NEW — Phase 36 DASH-05
+        dar_findings=_derive_dar_findings(endpoints),          # Phase 39 GAP-04
     )
 
 
