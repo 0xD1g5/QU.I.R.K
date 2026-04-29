@@ -99,36 +99,36 @@ Items intentionally deferred from v4.5 — surfaced for future milestones.
 
 ## Traceability
 
-Requirements → phases mapping is filled in by the roadmapper after roadmap approval.
+Requirements → phases mapping filled in by roadmapper 2026-04-29.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| GAP-01 | TBD | pending |
-| GAP-02 | TBD | pending |
-| GAP-03 | TBD | pending |
-| GAP-04 | TBD | pending |
-| CI-01 | TBD | pending |
-| CI-02 | TBD | pending |
-| CI-03 | TBD | pending |
-| ROBUST-01 | TBD | pending |
-| ROBUST-02 | TBD | pending |
-| ROBUST-03 | TBD | pending |
-| ROBUST-04 | TBD | pending |
-| CBOM-01 | TBD | pending |
-| CBOM-02 | TBD | pending |
-| CBOM-03 | TBD | pending |
-| CBOM-04 | TBD | pending |
-| DASH-01 | TBD | pending |
-| DASH-02 | TBD | pending |
-| DASH-03 | TBD | pending |
-| LAB-01 | TBD | pending |
-| LAB-02 | TBD | pending |
-| LAB-03 | TBD | pending |
-| LAB-04 | TBD | pending |
-| UAT-01 | TBD | pending |
-| UAT-02 | TBD | pending |
-| UAT-03 | TBD | pending |
-| UAT-04 | TBD | pending |
+| GAP-01 | Phase 38 | pending |
+| GAP-02 | Phase 38 | pending |
+| GAP-03 | Phase 38 | pending |
+| GAP-04 | Phase 39 | pending |
+| CI-01 | Phase 41 | pending |
+| CI-02 | Phase 41 | pending |
+| CI-03 | Phase 41 | pending |
+| ROBUST-01 | Phase 41 | pending |
+| ROBUST-02 | Phase 41 | pending |
+| ROBUST-03 | Phase 41 | pending |
+| ROBUST-04 | Phase 41 | pending |
+| CBOM-01 | Phase 42 | pending |
+| CBOM-02 | Phase 42 | pending |
+| CBOM-03 | Phase 42 | pending |
+| CBOM-04 | Phase 42 | pending |
+| DASH-01 | Phase 43 | pending |
+| DASH-02 | Phase 43 | pending |
+| DASH-03 | Phase 43 | pending |
+| LAB-01 | Phase 40 | pending |
+| LAB-02 | Phase 40 | pending |
+| LAB-03 | Phase 40 | pending |
+| LAB-04 | Phase 40 | pending |
+| UAT-01 | Phase 44 | pending |
+| UAT-02 | Phase 44 | pending |
+| UAT-03 | Phase 44 | pending |
+| UAT-04 | Phase 44 | pending |
 
 ---
 *Last updated: 2026-04-29 — v4.5 milestone initialized*

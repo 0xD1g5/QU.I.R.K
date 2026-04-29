@@ -7,6 +7,7 @@
 - ✅ **v4.2 Identity Crypto** — Phases 17–24, 14 plans (shipped 2026-04-24) → `.planning/milestones/v4.2-ROADMAP.md`
 - ✅ **v4.3 Data at Rest** — Phases 25–31, 24 plans (shipped 2026-04-26) → `.planning/milestones/v4.3-ROADMAP.md`
 - ✅ **v4.4 Data in Motion** — Phases 32–37, 33 plans (shipped 2026-04-29) → `.planning/milestones/v4.4-ROADMAP.md`
+- 🚧 **v4.5 Reliability & Gap Closure** — Phases 38–44 (in progress)
 
 ## Phases
 
@@ -732,5 +733,107 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 35. CBOM Integration | v4.4 | 4/4 | Complete   | 2026-04-28 |
 | 36. Dashboard Motion Tab | v4.4 | 4/4 | Complete*  | 2026-04-29 |
 | 37. Gap Closure and v4.4.0 Release | v4.4 | 6/6 | Complete   | 2026-04-29 |
+| 38. Identity API Regression Fix | v4.5 | 0/TBD | Not started | - |
+| 39. Data at Rest Dashboard Tab | v4.5 | 0/TBD | Not started | - |
+| 40. Chaos Lab Parity | v4.5 | 0/TBD | Not started | - |
+| 41. CI Stability & Scanner Robustness | v4.5 | 0/TBD | Not started | - |
+| 42. CBOM Correctness Audit | v4.5 | 0/TBD | Not started | - |
+| 43. Dashboard Polish | v4.5 | 0/TBD | Not started | - |
+| 44. UAT Debt Automation | v4.5 | 0/TBD | Not started | - |
 
 *Phase 36 wave_0_complete flip deferred (DEF-v4.4-01) — gated on SAML scan-window regression fix.
+
+### 🚧 v4.5 Reliability & Gap Closure (In Progress)
+
+**Milestone Goal:** Close v4.4 deferred items, harden scanner/CBOM/dashboard correctness, and automate the long-tail UAT debt — putting QU.I.R.K. in solid shape before the next capability and performance milestones.
+
+- [ ] **Phase 38: Identity API Regression Fix** - Restore SAML/OIDC entries in identity_findings, re-enable deferred SAML scan-window test, flip Phase 36 wave_0_complete (closes DEF-v4.4-01 and DEF-v4.4-02)
+- [ ] **Phase 39: Data at Rest Dashboard Tab** - Ship the DASH-05 deferred Data at Rest tab in the React dashboard with DB/object-storage/K8s/Vault findings (closes DASH-05 from Phase 27)
+- [ ] **Phase 40: Chaos Lab Parity** - Bring lab.sh, README, and expected-results oracle up to v4.4 parity so every shipped profile is documented, exercisable, and UAT-ready
+- [ ] **Phase 41: CI Stability & Scanner Robustness** - Lock CI green (zero deferred tests), harden all scanners against missing extras/timeouts/unexpected exceptions, document consistent timeout/retry policy
+- [ ] **Phase 42: CBOM Correctness Audit** - Validate CBOM JSON+XML against CycloneDX 1.6 spec, close classifier unknown-fallback gaps, review golden snapshot drift, unit-test Pass-2/3 skip lists
+- [ ] **Phase 43: Dashboard Polish** - Eliminate browser console errors and React warnings across all routes, add explicit loading/empty states, meet WCAG AA baseline
+- [ ] **Phase 44: UAT Debt Automation** - Automate Phase 27 DB, Phase 29 K8s, Phase 25 identity, and Phase 30 Vault UAT scenarios against existing chaos lab profiles; update STATE.md Deferred Items
+
+## Phase Details (v4.5)
+
+### Phase 38: Identity API Regression Fix
+**Goal**: SAML and OIDC findings are restored in the `/api/scan/latest` `identity_findings[]` response, the deferred SAML scan-window pytest passes GREEN, and Phase 36 wave_0_complete is flipped to `true`
+**Depends on**: Phase 37
+**Requirements**: GAP-01, GAP-02, GAP-03
+**Success Criteria** (what must be TRUE):
+  1. A scan against the SimpleSAMLphp chaos lab profile returns SAML entries in `identity_findings[]` from `GET /api/scan/latest` — no empty array when SAML findings exist
+  2. The previously `skip`/`xfail` SAML scan-window pytest runs without skip markers and passes GREEN in CI
+  3. `36-VALIDATION.md` reads `nyquist_compliant: true, wave_0_complete: true` — DEF-v4.4-01 closed
+  4. Full test suite passes with no regressions after the SAML fix (662+ tests, 0 failures)
+**Plans**: TBD
+
+### Phase 39: Data at Rest Dashboard Tab
+**Goal**: The React dashboard has a "Data at Rest" tab that surfaces DB encryption, object storage policy, Kubernetes secrets, and Vault findings from the existing v4.3 data shape — consultants can review the full DAR surface without leaving the dashboard
+**Depends on**: Phase 37 (can run parallel to Phase 38 — no shared code)
+**Requirements**: GAP-04
+**Success Criteria** (what must be TRUE):
+  1. A "Data at Rest" tab is visible in the dashboard navigation alongside Identity, Motion, Trends, and Findings
+  2. The tab displays per-category sections for database encryption, object storage, Kubernetes secrets, and Vault findings drawn from the existing v4.3 `dat_scan_json` / `dar_*` evidence fields
+  3. Empty state is shown when no DAR scan data exists — no crash, no blank panel
+  4. The DAR tab route appears in the browser console with zero errors
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 40: Chaos Lab Parity
+**Goal**: `lab.sh`, the README, and a new `expected_results_v4.md` oracle document fully cover every profile shipped through v4.4 so consultants running the lab see complete scanner-equivalent coverage and UAT can reference a stable oracle
+**Depends on**: Phase 37
+**Requirements**: LAB-01, LAB-02, LAB-03, LAB-04
+**Success Criteria** (what must be TRUE):
+  1. `./lab.sh all` starts every profile defined in `docker-compose.yml` including v4.3 additions (`database`, `storage-s3`, `vault`) and v4.4 additions (`email`, `broker`) — no missing or broken profile names
+  2. `./lab.sh status` and `./lab.sh logs <service>` work cleanly against all v4.3 and v4.4 profiles with no orphan containers or broken service name references
+  3. `quantum-chaos-enterprise-lab/README.md` documents every shipped profile (v4.0 through v4.4) with port assignments, expected scanner findings, and any required setup steps
+  4. `expected_results_v4.md` exists and contains the expected-output oracle for all v4.3 and v4.4 profiles (DB, object storage, K8s, Vault, email, broker) — usable as a UAT reference
+**Plans**: TBD
+
+### Phase 41: CI Stability & Scanner Robustness
+**Goal**: The CI test suite runs green with zero skipped-for-code-reasons tests and completes deterministically in under 60 seconds; all scanners degrade gracefully under missing extras, slow targets, and unexpected exceptions with a consistent, documented timeout/retry policy
+**Depends on**: Phase 38, Phase 40
+**Requirements**: CI-01, CI-02, CI-03, ROBUST-01, ROBUST-02, ROBUST-03, ROBUST-04
+**Success Criteria** (what must be TRUE):
+  1. `pytest` runs to completion with zero `skip`/`xfail` markers on tests deferred for code reasons (live-infra skips remain acceptable); the SAML scan-window test from Phase 38 is GREEN
+  2. Running a scan with `[motion]` not installed produces a clear advisory message and completes normally using the remaining scanners — no ImportError crash
+  3. A scan against a target that exceeds the per-scanner timeout budget does not stall indefinitely; the overall scan finishes within the documented upper-bound time
+  4. An unexpected scanner exception is captured in `scan_errors[]` with scanner name, target, and reason — the scan continues and other scanners produce normal output
+  5. Timeout, retry count, and backoff defaults are defined in a single location and documented; divergences found in the audit are reconciled
+  6. The default `pytest` run (excluding `pytest.mark.slow`) finishes in under 60 seconds on a developer machine
+**Plans**: TBD
+
+### Phase 42: CBOM Correctness Audit
+**Goal**: CycloneDX CBOM output is spec-valid, every in-scope algorithm is classified (no unknown fallbacks), golden snapshot drift is intentional and documented, and Pass-2/3 skip-list logic is fully unit-tested
+**Depends on**: Phase 40
+**Requirements**: CBOM-01, CBOM-02, CBOM-03, CBOM-04
+**Success Criteria** (what must be TRUE):
+  1. Automated pytest checks validate CBOM JSON and XML against the official CycloneDX 1.6 schema for every shipped chaos lab profile — zero schema violations
+  2. A classifier coverage report shows every algorithm name observed in test fixtures and chaos labs is mapped to a NIST PQC classification with no `unknown` fallback for any in-scope case
+  3. All golden snapshot differences between v4.4 and v4.5 are intentional: each changed snapshot has a rationale comment and an accompanying commit message explaining why
+  4. Pass-2 and Pass-3 skip-list logic has unit tests covering all motion plaintext labels and all v4.3 DAR skip cases — no untested skip paths remain
+**Plans**: TBD
+
+### Phase 43: Dashboard Polish
+**Goal**: All top-level dashboard routes render cleanly — zero browser console errors, zero React warnings, explicit loading states on first paint, explicit empty states when data is absent, and WCAG AA baseline accessibility
+**Depends on**: Phase 39, Phase 42
+**Requirements**: DASH-01, DASH-02, DASH-03
+**Success Criteria** (what must be TRUE):
+  1. Opening `/motion`, `/trends`, `/findings`, `/data-at-rest`, and all other top-level routes in a browser shows zero console errors and zero React warnings
+  2. Each route displays an explicit loading spinner or skeleton on first paint and an explicit "no data" empty state when scan data is missing — no flash of raw empty content
+  3. All interactive dashboard elements (tabs, buttons, table filters, navigation links) are reachable and operable via keyboard navigation with visible focus indicators
+  4. Semantic heading hierarchy is correct on all routes and color contrast on findings tables passes WCAG AA — verified by automated axe-core or equivalent check
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 44: UAT Debt Automation
+**Goal**: Phase 27 DB, Phase 29 K8s, Phase 25 identity, and Phase 30 Vault UAT scenarios that are automatable against existing chaos lab profiles are moved from `deferred` to `passing`; the STATE.md Deferred Items table reflects at least a 50% net reduction in carry-over items
+**Depends on**: Phase 40, Phase 41, Phase 42, Phase 43
+**Requirements**: UAT-01, UAT-02, UAT-03, UAT-04
+**Success Criteria** (what must be TRUE):
+  1. Phase 27 DB UAT scenarios that the existing `database` chaos lab profile can simulate run in CI and pass — items move from `pending`/`partial` to `passing`
+  2. Phase 29 K8s UAT scenarios that a local minikube or kind fixture can simulate run in CI and pass; cloud-managed encryption (EKS/GKE/AKS) cases are explicitly documented as cloud-only
+  3. Phase 25 identity and Phase 30 Vault UAT scenarios with existing chaos lab profiles are re-run; failing scenarios receive fixes or explicit `cloud-only` justification with rationale
+  4. The `## Deferred Items` table in `STATE.md` shows a net reduction of at least 50% of the 14 pre-v4.5 carry-over items — each closed item shows `automated` or `cloud-only` disposition
+**Plans**: TBD

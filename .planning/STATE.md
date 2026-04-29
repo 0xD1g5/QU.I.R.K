@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-04-29T12:34:56.764Z"
 last_activity: 2026-04-29
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,27 +20,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.4 shipped — planning next milestone (`/gsd-new-milestone`)
+**Current focus:** v4.5 Reliability & Gap Closure — Phase 38 next (identity API regression fix)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 38 (Identity API Regression Fix) — Not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-29 — Milestone v4.5 started
+Status: Roadmap defined — ready for /gsd-plan-phase 38
+Last activity: 2026-04-29 — v4.5 roadmap created (7 phases, 26 requirements)
 
 ## Phase Overview
 
 | Phase | Slug | Complexity | Depends On |
 |-------|------|------------|------------|
-| 32 | email-scanner | L | Phase 31 |
-| 33 | broker-scanner | L | Phase 31 (parallel to 32) |
-| 34 | motion-intelligence | M | Phase 32, 33 |
-| 35 | cbom-integration | M | Phase 32, 33 (parallel to 34) |
-| 36 | dashboard-motion-tab | M | Phase 34, 35 |
-| 37 | gap-closure-v4.4.0 | S | Phase 36 |
+| 38 | identity-api-regression-fix | S | Phase 37 |
+| 39 | data-at-rest-dashboard-tab | M | Phase 37 (parallel to 38) |
+| 40 | chaos-lab-parity | M | Phase 37 |
+| 41 | ci-stability-scanner-robustness | M | Phase 38, 40 |
+| 42 | cbom-correctness-audit | M | Phase 40 |
+| 43 | dashboard-polish | M | Phase 39, 42 |
+| 44 | uat-debt-automation | M | Phase 40, 41, 42, 43 |
 
-**Critical path:** 31 → 32/33 (parallel) → 34/35 (parallel) → 36 → 37
+**Critical path:** 37 → 38/39/40 (parallel) → 41/42 → 43 → 44
 
 ## Performance Metrics
 
