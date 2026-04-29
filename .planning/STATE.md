@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v4.5
 milestone_name: Reliability & Gap Closure
-status: completed
+status: executing
 stopped_at: Phase 40 context gathered
-last_updated: "2026-04-29T20:47:12.551Z"
-last_activity: 2026-04-29 -- Phase 39 complete
+last_updated: "2026-04-29T21:32:29.710Z"
+last_activity: 2026-04-29
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_plans: 15
+  completed_plans: 10
+  percent: 67
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 40 — chaos-lab-parity (next on critical path after 38/39)
+**Current focus:** Phase 40 — chaos-lab-parity
 
 ## Current Position
 
-Phase: 39 (data-at-rest-dashboard-tab) — COMPLETE
-Plan: 5 of 5
-Status: Phase 39 complete (GAP-04 + DASH-05 closed)
-Last activity: 2026-04-29 -- Phase 39 complete
+Phase: 40 (chaos-lab-parity) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-04-29
 
 ## Phase Overview
 
@@ -69,6 +69,11 @@ Last activity: 2026-04-29 -- Phase 39 complete
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+
+Phase 40 decisions:
+- [40-01]: lab.sh ALL_PROFILES replaced with _derive_all_profiles() that reads docker-compose.yml at runtime — structurally eliminates drift between lab.sh and compose (D-14)
+- [40-01]: grep character class extended to [a-zA-Z0-9_-] to handle phaseA profile name (uppercase A); plan snippet had [a-z0-9_-] which missed phaseA
+- [40-01]: yq preferred with grep fallback; yq not a hard requirement (not in chaos-lab toolchain today)
 
 Previous milestone (v4.3) key decisions carried forward:
 
@@ -126,6 +131,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-29T20:47:12.543Z
-Stopped at: Phase 40 context gathered
-Next action: /gsd-plan-phase 40 (Chaos Lab Parity)
+Last session: 2026-04-29T21:31:32Z
+Stopped at: Completed 40-01-PLAN.md (dynamic profile derivation in lab.sh)
+Next action: Execute 40-02-PLAN.md (README rewrite)
