@@ -31,6 +31,9 @@ from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 
 router = APIRouter()
 
+# Phase 38 (D-01): backward bracket from MAX(scanned_at) restores SAML/OIDC visibility under timestamp skew
+SESSION_BRACKET = timedelta(minutes=5)
+
 # Map classifier raw labels to frontend display values
 _QS_DISPLAY = {
     "quantum-safe": "Safe",
@@ -587,23 +590,21 @@ def get_latest_scan(
             raise HTTPException(status_code=404, detail=f"No scan found with scan_id={scan_id!r}")
         latest_ts = target_ts
     else:
-        # Derive the latest scan second from MAX, then load all endpoints in that second.
-        # Cannot use MAX + exact equality because each endpoint row gets its own
-        # microsecond-precision scanned_at; a range window captures the full session.
-        latest_ts_str = db.query(
-            func.strftime("%Y-%m-%d %H:%M:%S", func.max(CryptoEndpoint.scanned_at))
-        ).scalar()
-        if latest_ts_str is None:
+        # D-01: anchor on MAX(scanned_at), then load all endpoints in the
+        # SESSION_BRACKET window before that maximum. This restores SAML/OIDC
+        # findings that the previous 1-second forward window silently excluded
+        # when Kerberos finished last (ISSUE-3 / DEF-v4.4-02).
+        latest_ts = db.query(func.max(CryptoEndpoint.scanned_at)).scalar()
+        if latest_ts is None:
             raise HTTPException(
                 status_code=404,
                 detail="No scan results found. Run your first scan: quirk --config config.yaml",
             )
-        latest_ts = datetime.fromisoformat(latest_ts_str)
         endpoints: list[CryptoEndpoint] = (
             db.query(CryptoEndpoint)
             .filter(
-                CryptoEndpoint.scanned_at >= latest_ts,
-                CryptoEndpoint.scanned_at < latest_ts + timedelta(seconds=1),
+                CryptoEndpoint.scanned_at >= latest_ts - SESSION_BRACKET,
+                CryptoEndpoint.scanned_at <= latest_ts,
             )
             .all()
         )
