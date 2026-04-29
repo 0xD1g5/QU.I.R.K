@@ -781,7 +781,13 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
   2. The tab displays per-category sections for database encryption, object storage, Kubernetes secrets, and Vault findings drawn from the existing v4.3 `dat_scan_json` / `dar_*` evidence fields
   3. Empty state is shown when no DAR scan data exists — no crash, no blank panel
   4. The DAR tab route appears in the browser console with zero errors
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 39-01-PLAN.md — Wave 0 RED test scaffold (tests/test_dar_dashboard.py with 8 failing tests + extended _ep fixture)
+- [ ] 39-02-PLAN.md — Backend: DarFinding schema + _derive_dar_findings projection + TS type mirror
+- [ ] 39-03-PLAN.md — Frontend skeleton: data-at-rest.tsx + App.tsx route + sidebar.tsx NAV_ITEMS (lockstep)
+- [ ] 39-04-PLAN.md — Per-category tables: DatabaseTable, ObjectStorageTable, KubernetesTable, VaultTable
+- [ ] 39-05-PLAN.md — Validation, UAT-SERIES.md update, Obsidian sync, commit
 **UI hint**: yes
 
 ### Phase 40: Chaos Lab Parity
