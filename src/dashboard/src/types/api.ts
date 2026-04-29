@@ -108,6 +108,36 @@ export interface MotionFinding {
   starttls_warning: boolean
 }
 
+// Phase 39 GAP-04
+export interface DarFinding {
+  host: string
+  port: number
+  severity: string
+  title: string
+  protocol?: string
+  description?: string
+  remediation?: string
+  quantum_risk?: string
+  source?: string
+  category: string            // "database" | "object_storage" | "kubernetes" | "vault"
+  // Database
+  encryption_at_rest?: boolean | null
+  tls_in_transit?: boolean | null
+  // Object Storage
+  encryption_mode?: string | null
+  kms_key_id?: string | null
+  public_access?: boolean | null
+  versioning?: boolean | null
+  // Kubernetes
+  namespace?: string | null
+  secret_type?: string | null
+  encryption_provider?: string | null
+  // Vault
+  seal_type?: string | null
+  auto_unseal?: boolean | null
+  mount_type?: string | null
+}
+
 export interface ScanSession {
   scan_id: string
   scanned_at: string
@@ -124,6 +154,7 @@ export interface ScanLatestResponse {
   roadmap: RoadmapData
   identity_findings: IdentityFinding[]
   motion_findings: MotionFinding[]
+  dar_findings: DarFinding[]
 }
 
 export interface SampleFinding {
