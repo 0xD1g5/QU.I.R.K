@@ -568,7 +568,11 @@ Plans:
   3. The Motion tab Broker section shows a per-broker-type summary: endpoint, port, TLS version, cipher suite, and a plaintext-exposed flag (red badge) when the plaintext port responded
   4. The executive summary card shows a "Data in Motion" score line as the 6th entry; the score is non-zero when motion_ counters are populated from a scan
   5. `GET /api/scan/latest` response includes `motion_findings: list[MotionFinding]` — a Pydantic-validated array parallel to `identity_findings`
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 36-01-PLAN.md — Backend Pydantic schema (MotionFinding, SubScores.data_in_motion, ScanLatestResponse.motion_findings) + _derive_motion_findings + Pitfall 1 SubScores constructor fix + 5 pytest cases (Wave 1)
+- [ ] 36-02-PLAN.md — Frontend TS types + executive 6th ScoreGauge + sidebar Motion entry + /motion route registration (Wave 2)
+- [ ] 36-03-PLAN.md — Motion page implementation: EmailTable + BrokerGroupedSections (Kafka/AMQP/Redis) + STARTTLS/plaintext badges + cloud chip (Wave 3)
+- [ ] 36-04-PLAN.md — UAT-36-01..05 cases + manual UAT sign-off + vault sync + Obsidian phase note + commit (Wave 4)
 **UI hint**: yes
 
 ### Phase 37: Gap Closure and v4.4.0 Release
