@@ -562,6 +562,128 @@ class Issue3ScanWindowRegressionTest(unittest.TestCase):
         self.assertIn("DNSSEC", identity_protocols,
                        f"DNSSEC missing from identity_findings protocols: {identity_protocols}")
 
+    def _make_client_and_session(self):
+        """Return (TestClient, TestingSession factory) backed by a fresh in-memory SQLite DB."""
+        try:
+            import uuid
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from quirk.dashboard.api.app import create_app
+            from quirk.dashboard.api.deps import get_db
+            from quirk.models import Base
+            from fastapi.testclient import TestClient
+        except ImportError:
+            self.skipTest("Dashboard dependencies not available")
+
+        # Use a unique named shared-cache URI per test so the app's get_db override
+        # and the test's direct session share the same in-memory SQLite instance.
+        db_name = f"test_{uuid.uuid4().hex}"
+        engine = create_engine(
+            f"sqlite:///file:{db_name}?mode=memory&cache=shared&uri=true",
+            connect_args={"check_same_thread": False},
+        )
+        Base.metadata.create_all(engine)
+        TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+        def override_get_db():
+            db = TestingSession()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app = create_app()
+        app.dependency_overrides[get_db] = override_get_db
+        client = TestClient(app)
+        return client, TestingSession
+
+    def test_saml_visible_with_earlier_dnssec(self):
+        """Bracket edge case: DNSSEC at T-60s and SAML at T are both visible in identity_findings."""
+        from quirk.models import CryptoEndpoint
+        from datetime import datetime
+
+        client, TestingSession = self._make_client_and_session()
+
+        early_ts = datetime(2026, 1, 15, 12, 0, 0)   # DNSSEC — 60s before SAML
+        saml_ts = datetime(2026, 1, 15, 12, 1, 0)    # SAML — MAX(scanned_at)
+
+        db = TestingSession()
+        try:
+            db.add(CryptoEndpoint(
+                host="example.com",
+                port=53,
+                protocol="DNSSEC",
+                cert_pubkey_alg="RSASHA1",
+                service_detail="dnskey:tag=12345:role=ZSK",
+                scanned_at=early_ts,
+            ))
+            db.add(CryptoEndpoint(
+                host="idp.example.com",
+                port=443,
+                protocol="SAML",
+                cert_pubkey_alg="RSA",
+                cert_pubkey_size=1024,
+                service_detail="https://idp.example.com|use=signing|serial=ABC",
+                scanned_at=saml_ts,
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        resp = client.get("/api/scan/latest")
+        self.assertEqual(resp.status_code, 200,
+                         f"Expected 200, got {resp.status_code}: {resp.text}")
+
+        protocols = {f["protocol"] for f in resp.json().get("identity_findings", [])}
+        self.assertIn("SAML", protocols,
+                      f"SAML missing from identity_findings protocols: {protocols}")
+        self.assertIn("DNSSEC", protocols,
+                      f"DNSSEC missing from identity_findings protocols: {protocols}")
+
+    def test_explicit_scan_id_uses_exact_second(self):
+        """Guard: explicit ?scan_id= branch was NOT widened — it still uses 1-second window."""
+        from quirk.models import CryptoEndpoint
+        from datetime import datetime
+
+        client, TestingSession = self._make_client_and_session()
+
+        ts_a = datetime(2026, 1, 15, 12, 0, 0)   # older scan
+        ts_b = datetime(2026, 1, 15, 12, 5, 0)   # newer scan, 5 minutes later
+
+        db = TestingSession()
+        try:
+            db.add(CryptoEndpoint(
+                host="dc-old.example.com",
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg="rc4-hmac",
+                service_detail="etype:23:rc4-hmac:HIGH",
+                scanned_at=ts_a,
+            ))
+            db.add(CryptoEndpoint(
+                host="dc-new.example.com",
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg="rc4-hmac",
+                service_detail="etype:23:rc4-hmac:HIGH",
+                scanned_at=ts_b,
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        # Use ts_a's ISO string as the explicit scan_id
+        scan_id = ts_a.isoformat()
+        resp = client.get(f"/api/scan/latest?scan_id={scan_id}")
+        self.assertEqual(resp.status_code, 200,
+                         f"Expected 200, got {resp.status_code}: {resp.text}")
+
+        hosts = {f["host"] for f in resp.json().get("identity_findings", [])}
+        self.assertIn("dc-old.example.com", hosts,
+                      f"dc-old.example.com missing from identity_findings hosts: {hosts}")
+        self.assertNotIn("dc-new.example.com", hosts,
+                         f"dc-new.example.com should NOT be in identity_findings: {hosts}")
+
 
 if __name__ == "__main__":
     unittest.main()
