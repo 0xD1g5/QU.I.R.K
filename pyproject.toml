@@ -54,7 +54,9 @@ db = [
     "psycopg2-binary>=2.9.0",
     "PyMySQL>=1.1.0",
 ]
-motion = []
+motion = ["quirk[email]", "quirk[broker]", "quirk[kafka]"]
+email = []
+broker = ["redis>=5.0"]
 kafka = ["kafka-python>=2.0"]
 redis = ["redis>=5.0"]
 
