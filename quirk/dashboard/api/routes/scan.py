@@ -365,18 +365,26 @@ def _derive_motion_findings(endpoints) -> list[MotionFinding]:
             severity = "HIGH"
             title = f"{proto} plaintext listener exposed"
             quantum_risk = "n/a (plaintext)"
+            description = f"{proto} listener accepts plaintext traffic — credentials and message bodies traverse the network unencrypted."
+            remediation = "Disable plaintext listener; require TLS-only with modern ciphers and plan PQC migration."
         elif starttls_warning:
             severity = "MEDIUM"
             title = "SMTP STARTTLS susceptible to stripping (port 25)"
             quantum_risk = "depends on negotiated cipher"
+            description = "Port 25 SMTP with opportunistic STARTTLS can be downgraded to plaintext by an active attacker (STARTTLS stripping)."
+            remediation = "Enforce MTA-STS / DANE, prefer submission on 587 with required STARTTLS, and monitor for downgrade attempts."
         elif proto in BROKER_TLS and tls_version in LEGACY_TLS:
             severity = "HIGH"
             title = f"{proto} legacy TLS version ({tls_version})"
             quantum_risk = "quantum-vulnerable"
+            description = f"{proto} endpoint negotiated legacy TLS version {tls_version}, which is deprecated and exposes traffic to known protocol weaknesses."
+            remediation = "Upgrade broker/client to TLS 1.2+ (prefer TLS 1.3), disable legacy versions, and plan PQC migration."
         else:
             severity = "LOW"
             title = f"{proto} TLS endpoint"
             quantum_risk = "quantum-vulnerable" if cipher_suite and "RSA" in cipher_suite else "quantum-unknown"
+            description = f"{proto} is using TLS. Verify cipher suite and certificate strength."
+            remediation = "Enforce TLS 1.2+, disable weak ciphers, and plan PQC migration."
 
         results.append(MotionFinding(
             host=getattr(ep, "host", "") or "",
@@ -384,6 +392,8 @@ def _derive_motion_findings(endpoints) -> list[MotionFinding]:
             severity=severity,
             title=title,
             protocol=proto,            # verbatim — preserve "AMQPS/Azure-ServiceBus"
+            description=description,
+            remediation=remediation,
             tls_version=tls_version,
             cipher_suite=cipher_suite,
             cert_not_after=cert_iso,
