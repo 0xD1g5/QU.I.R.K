@@ -186,6 +186,7 @@ def _write_snapshot(name: str, builder_fn) -> Path:
 # One-shot fixture regeneration — gated by env var
 # ---------------------------------------------------------------------------
 
+@pytest.mark.slow
 @pytest.mark.skipif(
     os.environ.get("REGEN_CBOM_FIXTURES") != "1",
     reason="set REGEN_CBOM_FIXTURES=1 to regenerate golden fixtures",

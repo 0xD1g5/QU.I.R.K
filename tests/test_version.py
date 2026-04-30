@@ -20,6 +20,7 @@ def test_reports_platform_version_is_4_4_0():
     assert PLATFORM_VERSION == "4.4.0"
 
 
+@pytest.mark.slow
 def test_cli_version_subprocess():
     try:
         result = subprocess.run(

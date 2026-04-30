@@ -471,6 +471,7 @@ def test_ds_chain_valid():
 # DNSSEC-07: Chaos lab integration (skipped unless QUIRK_INTEGRATION_TESTS=1)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.skipif(
     not os.environ.get("QUIRK_INTEGRATION_TESTS"),
