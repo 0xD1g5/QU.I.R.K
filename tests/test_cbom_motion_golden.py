@@ -24,6 +24,11 @@ import pytest
 from quirk.cbom.builder import build_cbom
 from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
 from quirk.models import CryptoEndpoint
+from tests.test_cbom_motion_endpoints import (
+    _build_pki_lab_endpoints,
+    _build_saml_lab_endpoints,
+    _build_vault_lab_endpoints,
+)
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "cbom"
@@ -200,8 +205,11 @@ def test_generate_fixtures():
     Then ``git diff tests/fixtures/cbom/`` to review and commit.
     """
     for name, builder_fn in (
-        ("email", _build_email_lab_endpoints),
+        ("email",  _build_email_lab_endpoints),
         ("broker", _build_broker_lab_endpoints),
+        ("pki",    _build_pki_lab_endpoints),
+        ("vault",  _build_vault_lab_endpoints),
+        ("saml",   _build_saml_lab_endpoints),
     ):
         path = _write_snapshot(name, builder_fn)
         print(f"Wrote {path}")
@@ -237,6 +245,42 @@ def test_broker_cbom_matches_snapshot():
         "intentional, run "
         "`REGEN_CBOM_FIXTURES=1 pytest tests/test_cbom_motion_golden.py"
         "::test_generate_fixtures -s` and commit the updated JSON."
+    )
+
+
+def test_pki_cbom_matches_snapshot():
+    bom = build_cbom(_build_pki_lab_endpoints())
+    actual = _normalize_bom_for_snapshot(bom)
+    expected = _load_snapshot("pki")
+    assert actual == expected, (
+        "pki CBOM diverged from golden snapshot. If this change is "
+        "intentional, run "
+        "`REGEN_CBOM_FIXTURES=1 pytest tests/test_cbom_motion_golden.py"
+        "::test_generate_fixtures -s` and add a CHANGELOG.md entry."
+    )
+
+
+def test_vault_cbom_matches_snapshot():
+    bom = build_cbom(_build_vault_lab_endpoints())
+    actual = _normalize_bom_for_snapshot(bom)
+    expected = _load_snapshot("vault")
+    assert actual == expected, (
+        "vault CBOM diverged from golden snapshot. If this change is "
+        "intentional, run "
+        "`REGEN_CBOM_FIXTURES=1 pytest tests/test_cbom_motion_golden.py"
+        "::test_generate_fixtures -s` and add a CHANGELOG.md entry."
+    )
+
+
+def test_saml_cbom_matches_snapshot():
+    bom = build_cbom(_build_saml_lab_endpoints())
+    actual = _normalize_bom_for_snapshot(bom)
+    expected = _load_snapshot("saml")
+    assert actual == expected, (
+        "saml CBOM diverged from golden snapshot. If this change is "
+        "intentional, run "
+        "`REGEN_CBOM_FIXTURES=1 pytest tests/test_cbom_motion_golden.py"
+        "::test_generate_fixtures -s` and add a CHANGELOG.md entry."
     )
 
 
