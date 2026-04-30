@@ -751,7 +751,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 - [x] **Phase 39: Data at Rest Dashboard Tab** - Ship the DASH-05 deferred Data at Rest tab in the React dashboard with DB/object-storage/K8s/Vault findings (closes DASH-05 from Phase 27) (completed 2026-04-29)
 - [x] **Phase 40: Chaos Lab Parity** - Bring lab.sh, README, and expected-results oracle up to v4.4 parity so every shipped profile is documented, exercisable, and UAT-ready (completed 2026-04-29)
 - [x] **Phase 41: CI Stability & Scanner Robustness** - Lock CI green (zero deferred tests), harden all scanners against missing extras/timeouts/unexpected exceptions, document consistent timeout/retry policy (completed 2026-04-29)
-- [ ] **Phase 42: CBOM Correctness Audit** - Validate CBOM JSON+XML against CycloneDX 1.6 spec, close classifier unknown-fallback gaps, review golden snapshot drift, unit-test Pass-2/3 skip lists
+- [x] **Phase 42: CBOM Correctness Audit** - Validate CBOM JSON+XML against CycloneDX 1.6 spec, close classifier unknown-fallback gaps, review golden snapshot drift, unit-test Pass-2/3 skip lists (completed 2026-04-30)
 - [ ] **Phase 43: Dashboard Polish** - Eliminate browser console errors and React warnings across all routes, add explicit loading/empty states, meet WCAG AA baseline
 - [ ] **Phase 44: UAT Debt Automation** - Automate Phase 27 DB, Phase 29 K8s, Phase 25 identity, and Phase 30 Vault UAT scenarios against existing chaos lab profiles; update STATE.md Deferred Items
 
@@ -836,14 +836,14 @@ Plans:
   2. A classifier coverage report shows every algorithm name observed in test fixtures and chaos labs is mapped to a NIST PQC classification with no `unknown` fallback for any in-scope case
   3. All golden snapshot differences between v4.4 and v4.5 are intentional: each changed snapshot has a rationale comment and an accompanying commit message explaining why
   4. Pass-2 and Pass-3 skip-list logic has unit tests covering all motion plaintext labels and all v4.3 DAR skip cases — no untested skip paths remain
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 complete
 Plans:
 - [x] 42-01-PLAN.md — Wave 0 prerequisites: pyproject.toml [validation] extras pin + extract MOTION_PLAINTEXT_PROTOCOLS / DAR_SKIP_PROTOCOLS constants in builder.py (CBOM-01, CBOM-04)
 - [x] 42-02-PLAN.md — Schema validation harness: per-profile JSON+XML CycloneDX 1.6 gate + docker-compose drift sentinel (CBOM-01)
 - [x] 42-03-PLAN.md — Shape goldens: 3 new endpoint synthesizers (pki/vault/saml), 3 new snapshot tests, fixtures + CHANGELOG.md (CBOM-03)
 - [x] 42-04-PLAN.md — Classifier coverage gate + regen report (docs/cbom-classifier-coverage.md); close any _ALGORITHM_TABLE gaps (CBOM-02)
 - [x] 42-05-PLAN.md — Pass-2/Pass-3 skip-list parametrized unit tests driven off MOTION_PLAINTEXT_PROTOCOLS | DAR_SKIP_PROTOCOLS (CBOM-04)
-- [ ] 42-06-PLAN.md — Phase closeout: docs/UAT-SERIES.md UAT-42-01..04 + vault sync + Obsidian phase note + final compileall+pytest + commit
+- [x] 42-06-PLAN.md — Phase closeout: docs/UAT-SERIES.md UAT-42-01..04 + vault sync + Obsidian phase note + final compileall+pytest + commit
 
 ### Phase 43: Dashboard Polish
 **Goal**: All top-level dashboard routes render cleanly — zero browser console errors, zero React warnings, explicit loading states on first paint, explicit empty states when data is absent, and WCAG AA baseline accessibility
