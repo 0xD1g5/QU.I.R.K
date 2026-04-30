@@ -1,0 +1,78 @@
+{
+  "components": [
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/aes-256-gcm",
+      "cipher_suite_names": [],
+      "name": "AES-256-GCM",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/rsa",
+      "cipher_suite_names": [],
+      "name": "RSA",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/rsa-2048",
+      "cipher_suite_names": [],
+      "name": "RSA-2048",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/sha-384",
+      "cipher_suite_names": [],
+      "name": "SHA-384",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/sha256withrsaencryption",
+      "cipher_suite_names": [],
+      "name": "sha256WithRSAEncryption",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/x25519",
+      "cipher_suite_names": [],
+      "name": "X25519",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:17443",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:17443",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:17443",
+      "cipher_suite_names": [
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+      ],
+      "name": "protocol:tls:localhost:17443",
+      "protocol_type": "tls",
+      "protocol_version": "1.2",
+      "type": "cryptographic-asset"
+    }
+  ]
+}
