@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-04-29 (Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-04-29 (Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -5124,6 +5124,159 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - All 18 profiles from `./lab.sh profiles` return `OK: <name>` (zero `MISSING:` lines)
 - `grep -q 'Superseded by' quantum-chaos-enterprise-lab/expected_results_v3.md` exits 0
 - `grep -c 'expected_results_v4.md#profile-' quantum-chaos-enterprise-lab/README.md` outputs `19` (core + 18 named profiles)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+## Phase 41: CI Stability & Scanner Robustness (UAT-41-XX)
+
+**Purpose:** Manually verify the four CI-stability and scanner-robustness deliverables that cannot be cheaply asserted by unit tests: stderr advisory UX when the `[motion]` extra is missing, presence of the documented timeout upper-bound formula, lab.sh teardown sweeping profile-tagged services, and the default pytest run staying under the 60-second CI budget on a developer machine. Maps to requirements CI-01, CI-02, CI-03, ROBUST-01, ROBUST-02, ROBUST-03, ROBUST-04.
+
+---
+
+### UAT-41-01: Missing-[motion]-Extra Stderr Advisory
+
+**ID:** UAT-41-01
+**Title:** Missing `[motion]` extra emits canonical stderr advisory; CLI exits 0; scan_errors[] records `category=missing_extra`
+**Maps to:** ROBUST-01 (D-12)
+
+**Description:** When `quirk[motion]` is not installed (no `kafka-python` / `pika` / `redis`), invoking `quirk scan --enable-broker` must emit a single canonical stderr advisory line, exit 0, and produce a `scan_errors[]` entry tagged `category=missing_extra` so downstream trends counting (D-15) excludes it from regressions.
+
+**Prerequisites:**
+- A Python venv with QU.I.R.K. installed but WITHOUT the `[motion]` optional extras: `pip uninstall -y kafka-python pika redis` (or `pip install -e .` without `[motion]`).
+- A reachable scan target (`localhost` is fine — no broker need actually answer).
+
+**Steps:**
+1. Activate the venv and confirm: `python -c "import kafka" 2>&1 | grep -q "ModuleNotFoundError" && echo "OK: motion absent"`.
+2. Run: `quirk scan --target localhost --enable-broker 2> /tmp/quirk-stderr.log`.
+3. Inspect stderr: `grep "\[advisory\]" /tmp/quirk-stderr.log`.
+4. Confirm exit code: `echo $?` immediately after the scan command (must be `0`).
+5. Inspect the produced JSON output for a `scan_errors[]` entry with `category=missing_extra` (or examine the corresponding `CryptoEndpoint(scan_error_category="missing_extra")` row in the SQLite DB).
+
+**Expected:**
+- Stderr contains exactly one line of the form: ``[advisory] scanner=broker_scanner extra=motion not installed -- run `pip install quirk[motion]` to enable``.
+- CLI exits with status `0`.
+- The scan output includes one entry where `scan_error_category=missing_extra` (the broker advisory row).
+- The scan does NOT crash — TLS, SSH, fingerprint, jwt phases continue to run.
+
+**Pass Criteria:**
+- `grep -q "\[advisory\] scanner=broker_scanner extra=motion not installed" /tmp/quirk-stderr.log` exits 0.
+- Exit code of the `quirk scan` invocation is `0`.
+- At least one `scan_error_category=missing_extra` entry visible in JSON output or DB.
+- No traceback / `BaseException` / unhandled-error text in stderr.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-41-02: Configuration Docs Include Upper-Bound Formula
+
+**ID:** UAT-41-02
+**Title:** `docs/configuration.md` contains the documented scan-time upper-bound formula and safety-margin guidance
+**Maps to:** ROBUST-02 (D-10), ROBUST-04
+
+**Description:** The Phase 41 Plan 06 deliverable adds a "Timeout & Retry Policy (v4.5+)" section to `docs/configuration.md` with the canonical upper-bound formula consultants use to scope engagements. This UAT confirms the literal markers expected by clients and review tooling are present.
+
+**Prerequisites:** Repo checked out at v4.5+.
+
+**Steps:**
+1. From repo root run: `grep -q "scan_upper_bound" docs/configuration.md && echo "OK: scan_upper_bound"`.
+2. Run: `grep -q "safety_margin" docs/configuration.md && echo "OK: safety_margin"`.
+3. Run: `grep -q "scan.timeouts" docs/configuration.md && echo "OK: scan.timeouts"`.
+4. Run: `grep -q "DeprecationWarning" docs/configuration.md && echo "OK: deprecation"`.
+5. (Optional) Open the section in a markdown viewer and visually confirm the worked single-host (~36s) and 100-host TLS+SSH worst-case (~1610s) examples render cleanly.
+
+**Expected:**
+- Both `scan_upper_bound` and `safety_margin` literal strings appear at least once in `docs/configuration.md`.
+- The new "Timeout & Retry Policy (v4.5+)" section enumerates all 14 `[scan.timeouts]` slots and all 3 `[scan.retry]` slots with defaults.
+- A deprecation table maps the four legacy flat fields (`timeout_seconds`, `fingerprint_timeout_seconds`, `tls_timeout_seconds`, `ssh_timeout_seconds`) to their canonical sub-table targets and notes `DeprecationWarning`.
+
+**Pass Criteria:**
+- `grep -q "scan_upper_bound" docs/configuration.md` exits 0.
+- `grep -q "safety_margin" docs/configuration.md` exits 0.
+- `grep -q "scan.timeouts" docs/configuration.md` exits 0.
+- `grep -q "DeprecationWarning" docs/configuration.md` exits 0.
+- Cross-referenced audit doc exists: `test -f docs/timeout-retry-audit.md` exits 0.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-41-03: lab.sh Profile-Tagged Service Sweep on `down` and `reset`
+
+**ID:** UAT-41-03
+**Title:** `lab.sh down` and `lab.sh reset` sweep all profile-tagged services (no orphans survive teardown)
+**Maps to:** ROBUST-03 (D-18 + extension per RESEARCH OQ-4)
+
+**Description:** Phase 40 verification surfaced a gap where `lab.sh down` issued `compose down` without `PROFILE_ARGS`, leaving profile-tagged services (vault-30, kafka-broker, postgres-ssl-off, etc.) orphaned. Phase 41 Plan 06 fixes both the `down` and `reset` arms to use `compose --profile "*" --remove-orphans`. This UAT validates the fix end-to-end against running lab profiles.
+
+**Prerequisites:** Docker + Docker Compose v2 available; `quantum-chaos-enterprise-lab/` checked out; no other `quirk-lab` containers running.
+
+**Steps:**
+1. Bring up a profile-tagged service set: `cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile vault --profile broker --profile database" ./lab.sh up`.
+2. Confirm services are running: `docker ps --filter label=com.docker.compose.project=quirk-lab --format '{{.Names}}' | wc -l` (expect non-zero).
+3. Run: `./lab.sh down`.
+4. Confirm sweep: `docker ps -a --filter label=com.docker.compose.project=quirk-lab --format '{{.Names}}' | wc -l` (expect `0`).
+5. Repeat for the reset arm: bring services up again, then `./lab.sh reset` should also leave zero containers (after the implicit `up` it re-launches the default profile only).
+6. Verify the script source carries the wildcard sweep: `grep -q 'compose --profile "\*" down --remove-orphans' lab.sh && grep -q 'compose --profile "\*" down -v --remove-orphans' lab.sh`.
+
+**Expected:**
+- After `./lab.sh down`, no `quirk-lab`-labeled containers remain (running or stopped).
+- After `./lab.sh reset`, the post-reset container set matches a clean default-profile bring-up — no orphans from the previous profile selection.
+- Both wildcard `--profile "*"` invocations are visible in `lab.sh`.
+
+**Pass Criteria:**
+- `docker ps -a --filter label=com.docker.compose.project=quirk-lab` returns zero rows after `./lab.sh down`.
+- `grep -c 'compose --profile "\*" down' quantum-chaos-enterprise-lab/lab.sh` returns at least 2 (one for `down`, one for `reset`).
+- `bash -n quantum-chaos-enterprise-lab/lab.sh` exits 0 (script parses cleanly).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-41-04: Default Pytest Run Finishes Under 60 Seconds
+
+**ID:** UAT-41-04
+**Title:** `pytest -m 'not slow'` (the default pyproject `addopts`) completes within the D-16 60-second CI budget on a developer machine
+**Maps to:** CI-03 (D-16)
+
+**Description:** Phase 41's CI-03 requirement is that the default test run — bare `pytest` from the repo root — finishes in under 60 seconds. Plan 01 wired `addopts = -m 'not slow'` in `pyproject.toml`; Plan 05 marked 9 slow-test candidates with `@pytest.mark.slow`. After Plan 05, the default suite is `pytest -m 'not slow'` and reports ~6s wall-clock locally. This UAT validates the budget on a clean checkout.
+
+**Prerequisites:**
+- Clean repo (no leftover scan databases or large fixtures): `git status -s` is empty (or contains only intentional non-test artifacts).
+- Dependencies installed: `pip install -e ".[dashboard,motion]"` recently completed.
+- No background scans, dashboards, or chaos lab profiles consuming CPU on the host.
+
+**Steps:**
+1. From repo root: `time pytest -m 'not slow' tests/ 2>&1 | tail -5`.
+2. Record the `real` wall-clock value reported by the shell builtin `time`.
+3. Confirm the run reports `passed` (zero failures, zero errors) and the deselected count is non-zero (slow tests deselected).
+4. Re-run once to confirm the result is stable across two consecutive runs (no first-run flakiness).
+
+**Expected:**
+- pytest exits with status `0` (all collected tests pass).
+- `real` wall-clock as reported by `time` is **strictly less than 60 seconds**.
+- A non-zero number of tests are deselected (e.g., `10 deselected`) — confirming `slow` markers are respected.
+- Two consecutive runs both stay under 60s.
+
+**Pass Criteria:**
+- `pytest -m 'not slow' tests/` exit code is 0.
+- `time` `real` value is `<60s` on both consecutive runs.
+- Test summary shows `passed` with `deselected` count `>= 9` (Plan 05 marked 9 slow candidates).
+- No `errors` or `failures` reported.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
