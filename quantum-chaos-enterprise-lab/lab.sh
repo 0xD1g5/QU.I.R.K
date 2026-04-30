@@ -96,12 +96,12 @@ case "${cmd}" in
     ;;
   down)
     echo "🧯 Stopping lab: project=${PROJECT_NAME}"
-    compose down
+    compose --profile "*" down --remove-orphans
     echo "✅ Lab stopped."
     ;;
   reset)
     echo "♻️ Resetting lab (down -v + up -d): project=${PROJECT_NAME}"
-    compose down -v
+    compose --profile "*" down -v --remove-orphans
     compose up -d
     echo "✅ Lab reset complete."
     compose ps
