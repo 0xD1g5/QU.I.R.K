@@ -304,3 +304,364 @@ def test_classify_tls_aes_256_gcm_sha384_aead_only():
         f"TLSv1.3 suite should not decompose to X25519 (negotiated outside suite); "
         f"got {decomposed}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 42 / Plan 03 — Per-profile endpoint synthesizers
+#
+# Three shape-golden synthesizers (rich, used by snapshot tests in
+# tests/test_cbom_motion_golden.py) plus thirteen lightweight synthesizers
+# (one per remaining shipped chaos lab profile). Together they cover ALL 18
+# profiles in quantum-chaos-enterprise-lab/docker-compose.yml.
+#
+# All ports/algorithm names sourced from
+# quantum-chaos-enterprise-lab/expected_results_v3.md (2026-04-30).
+# Algorithm names default to RSA/2048 where possible to minimize Plan 04
+# gap-fill burden; profiles whose REAL scanner observable is a known-weak
+# algo (RSASHA1, ssh-dss, RC4-HMAC, MD5) use that name intentionally so the
+# Plan 04 classifier-coverage gate flags it for resolution.
+# ---------------------------------------------------------------------------
+
+
+# --- Shape-golden synthesizers (Phase 42 / Plan 03 — used by snapshot tests) ---
+
+def _build_pki_lab_endpoints() -> list[CryptoEndpoint]:
+    """PKI lab — TLS-with-cert shape (mTLS step-CA gateway, port 17443).
+
+    Sourced from quantum-chaos-enterprise-lab/docker-compose.yml line ~499
+    (mtls-stepca-gateway). Cipher suite chosen so all decomposed parts already
+    exist in the classifier's _ALGORITHM_TABLE.
+    """
+    subj = "CN=mtls.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=17443, protocol="HTTPS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_vault_lab_endpoints() -> list[CryptoEndpoint]:
+    """Vault lab — Data-at-rest shape (HashiCorp Vault, port 28200).
+
+    VAULT is in DAR_SKIP_PROTOCOLS — Pass 2 and Pass 3 skip this endpoint.
+    Pass 1 still emits an algorithm component for cert_pubkey_alg, so this
+    fixture captures the "algorithm-only" output shape characteristic of
+    DAR-skipped protocols.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=28200, protocol="VAULT",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_saml_lab_endpoints() -> list[CryptoEndpoint]:
+    """SAML lab — Identity shape (simplesamlphp IdP, port 8080).
+
+    SAML signing certs do not carry TLS metadata in the scanner output —
+    tls_version=None, cipher_suite=None. The cert_pubkey_alg / cert_pubkey_size
+    are the IdP signing-key observables.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=8080, protocol="SAML",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+# --- Lightweight synthesizers (Phase 42 / Plan 03 — no goldens) -----------
+# Minimum viable representative coverage: 1-3 endpoints each, ensuring the
+# schema validator (Plan 02) inspects a non-trivial Bom for every profile.
+
+
+def _build_cloud_lab_endpoints() -> list[CryptoEndpoint]:
+    """Cloud profile — TLS shape (localstack-tls + azurite-blob-tls).
+
+    Sourced from expected_results_v3.md Phase B — Cloud Simulators.
+    """
+    rows = [(24566, "HTTPS"), (21000, "HTTPS")]
+    subj = "CN=cloud.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=port, protocol=label,
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        )
+        for (port, label) in rows
+    ]
+
+
+def _build_database_lab_endpoints() -> list[CryptoEndpoint]:
+    """Database profile — DAR shape (POSTGRESQL ssl-off, port 25432).
+
+    POSTGRESQL/MYSQL are in DAR_SKIP_PROTOCOLS — Pass 2/3 skip. Pass 1 emits
+    an algorithm component for cert_pubkey_alg so the schema validator has a
+    non-trivial Bom. Sourced from expected_results_v3.md Phase 27.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=25432, protocol="POSTGRESQL",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_dnssec_lab_endpoints() -> list[CryptoEndpoint]:
+    """DNSSEC profile — port 15353, RSASHA1 weak signing alg.
+
+    Sourced from expected_results_v3.md "weak.example.com / RSASHA1".
+    NOTE: RSASHA1 likely surfaces an UNKNOWN classification — Plan 04 closes.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=15353, protocol="DNSSEC",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSASHA1", cert_pubkey_size=None,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_identity_lab_endpoints() -> list[CryptoEndpoint]:
+    """Identity profile — TLS shape (keycloak-tls + mtls-gateway).
+
+    Sourced from expected_results_v3.md identity profile section.
+    """
+    rows = [(15449, "HTTPS"), (16443, "HTTPS")]
+    subj = "CN=identity.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=port, protocol=label,
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        )
+        for (port, label) in rows
+    ]
+
+
+def _build_jwt_lab_endpoints() -> list[CryptoEndpoint]:
+    """JWT profile — port 20001, RS256 signing (RSA-based, quantum-vulnerable).
+
+    Sourced from expected_results_v3.md Phase 4 — JWT Profile.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=20001, protocol="JWT",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_kerberos_lab_endpoints() -> list[CryptoEndpoint]:
+    """Kerberos profile — port 88, RC4-HMAC weak enctype.
+
+    Sourced from expected_results_v3.md "rc4-hmac" finding.
+    NOTE: RC4-HMAC likely surfaces an UNKNOWN classification — Plan 04 closes.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=88, protocol="KERBEROS",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RC4-HMAC", cert_pubkey_size=None,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_ldaps_lab_endpoints() -> list[CryptoEndpoint]:
+    """LDAPS profile — TLS shape (port 636).
+
+    Sourced from expected_results_v3.md ldaps profile section.
+    """
+    subj = "CN=ldap.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=636, protocol="LDAPS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_phaseA_lab_endpoints() -> list[CryptoEndpoint]:
+    """phaseA profile — TLS shape (tls-missing-intermediate, tls-rsa1024, tls-sha1).
+
+    Sourced from expected_results_v3.md phaseA section. Includes an RSA-1024
+    weak-key endpoint and a sha1WithRSAEncryption weak-sig endpoint.
+    """
+    subj = "CN=phaseA.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=13443, protocol="HTTPS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+        CryptoEndpoint(
+            host="localhost", port=14443, protocol="HTTPS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+        CryptoEndpoint(
+            host="localhost", port=15443, protocol="HTTPS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha1WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_registry_lab_endpoints() -> list[CryptoEndpoint]:
+    """Registry profile — port 20005, OUTDATED_CRYPTO_LIB observable.
+
+    Sourced from expected_results_v3.md registry section. Defaults to RSA so
+    Pass 1 emits a known algorithm component (the OUTDATED_CRYPTO_LIB string
+    itself is not a Pass-1 observable — it's surfaced via tls_capabilities_json).
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=20005, protocol="CONTAINER",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_source_lab_endpoints() -> list[CryptoEndpoint]:
+    """Source profile — port 20006, weak-algorithm anti-pattern (MD5).
+
+    Sourced from expected_results_v3.md source-code scanner findings.
+    MD5 is in _ALGORITHM_TABLE so should classify cleanly.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=20006, protocol="SOURCE",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="MD5", cert_pubkey_size=None,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_ssh_weak_lab_endpoints() -> list[CryptoEndpoint]:
+    """ssh-weak profile — port 20022, ssh-dss hostkey (CRITICAL).
+
+    Sourced from expected_results_v3.md ssh-weak hostkey ssh-dss CRITICAL.
+    NOTE: ssh-dss may surface UNKNOWN — Plan 04 closes.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=20022, protocol="SSH",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="ssh-dss", cert_pubkey_size=None,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_storage_lab_endpoints() -> list[CryptoEndpoint]:
+    """Storage profile — VAULT (port 20009) + S3 (port 20007).
+
+    Sourced from expected_results_v3.md Phase 4 — Storage Profile. Both
+    protocols are in DAR_SKIP_PROTOCOLS — Pass 2/3 skip; Pass 1 emits algos.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=20009, protocol="VAULT",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="AES-256", cert_pubkey_size=None,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+        CryptoEndpoint(
+            host="localhost", port=20007, protocol="S3",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_storage_s3_lab_endpoints() -> list[CryptoEndpoint]:
+    """storage-s3 profile — MinIO S3 (port 29000), AES-256 SSE.
+
+    Sourced from expected_results_v3.md storage-s3 section. S3 is in
+    DAR_SKIP_PROTOCOLS — Pass 2/3 skip; Pass 1 emits algorithm.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=29000, protocol="S3",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="AES-256", cert_pubkey_size=None,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
