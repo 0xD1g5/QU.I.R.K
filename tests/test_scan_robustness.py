@@ -29,10 +29,22 @@ def test_missing_extra_exit_code_zero() -> None:
     raise NotImplementedError("Plan 04")
 
 
-@pytest.mark.xfail(reason="Plan 03 wires per-scanner timeout reads from cfg.scan.timeouts", strict=False)
 def test_per_scanner_timeout_respected_tls() -> None:
-    """ROBUST-02: TLS scanner reads cfg.scan.timeouts.tls_seconds, not cfg.scan.timeout_seconds."""
-    raise NotImplementedError("Plan 03")
+    """ROBUST-02: TLS scanner reads cfg.scan.timeouts.tls_seconds."""
+    import inspect
+    import run_scan
+    src = inspect.getsource(run_scan)
+    # The TLS phase must reference the new sub-table read (D-08).
+    assert "cfg.scan.timeouts.tls_seconds" in src, (
+        "TLS timeout not sourced from canonical sub-table"
+    )
+    # And the BACK-45 mutation pattern must be gone.
+    assert "cfg.scan.timeout_seconds = " not in src, (
+        "BACK-45 mutation still present"
+    )
+    assert "cfg.scan.concurrency = " not in src, (
+        "BACK-45 concurrency mutation still present"
+    )
 
 
 @pytest.mark.xfail(reason="Plan 04 wires D-14 BaseException wrapper", strict=False)

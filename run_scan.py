@@ -530,6 +530,7 @@ def main():
                     password=cfg.connectors.pg_scanner_password,
                     logger=logger,
                     session_start=session_start,
+                    cfg=cfg,
                 ))
             if cfg.connectors.mysql_targets:
                 db_endpoints.extend(scan_mysql_targets(
@@ -538,6 +539,7 @@ def main():
                     password=cfg.connectors.mysql_scanner_password,
                     logger=logger,
                     session_start=session_start,
+                    cfg=cfg,
                 ))
 
     # ==============================
@@ -695,6 +697,7 @@ def main():
                     tls_verify=cfg.connectors.vault_tls_verify,
                     logger=logger,
                     session_start=session_start,
+                    cfg=cfg,
                 )
                 logger.info("Vault scan: %d endpoints", len(vault_endpoints))
 
