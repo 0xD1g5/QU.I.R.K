@@ -4,14 +4,14 @@ milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: executing
 stopped_at: Phase 41 context gathered
-last_updated: "2026-04-30T01:10:17.389Z"
+last_updated: "2026-04-30T01:14:18.873Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 22
-  completed_plans: 20
-  percent: 91
+  completed_plans: 21
+  percent: 95
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 41 (ci-stability-scanner-robustness) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-04-30
 
@@ -72,6 +72,7 @@ Last activity: 2026-04-30
 | Phase 41 P03 | 9 min | 2 tasks | 7 files |
 | Phase 41 P04 | 10 min | 2 tasks | 3 files |
 | Phase 41 P05 | 10 min | 2 tasks | 12 files |
+| Phase 41 P06 | 10 min | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -118,6 +119,8 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: [41-04]: Optional-extra advisory probes scoped to broker + email (the [motion]-gated scanners)
 - [Phase ?]: Phase 41 Plan 05: Deleted dead test_migration_preserves_existing_rows (always-skip path); idempotency covered by sibling test.
 - [Phase ?]: Phase 41 Plan 05: Hard-imported gcp_connector and email_scanner modules; Wave 0 RED-state guards no longer needed.
+- [Phase ?]: Phase 41 Plan 06: D-10 + ROBUST-04 audit + lab.sh profile sweep
+- [Phase ?]: lab.sh down + reset arms now use --profile "*" --remove-orphans for full profile-sweep (D-18 + extension)
 
 ### Pending Todos
 
@@ -157,6 +160,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-30T01:10:09.813Z
+Last session: 2026-04-30T01:14:05.047Z
 Stopped at: Phase 41 context gathered
 Next action: Execute Phase 41 (ci-stability-scanner-robustness)

@@ -736,7 +736,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 38. Identity API Regression Fix | v4.5 | 1/4 | In Progress|  |
 | 39. Data at Rest Dashboard Tab | v4.5 | 5/5 | Complete   | 2026-04-29 |
 | 40. Chaos Lab Parity | v4.5 | 5/6 | In Progress|  |
-| 41. CI Stability & Scanner Robustness | v4.5 | 5/7 | In Progress|  |
+| 41. CI Stability & Scanner Robustness | v4.5 | 6/7 | In Progress|  |
 | 42. CBOM Correctness Audit | v4.5 | 0/TBD | Not started | - |
 | 43. Dashboard Polish | v4.5 | 0/TBD | Not started | - |
 | 44. UAT Debt Automation | v4.5 | 0/TBD | Not started | - |
@@ -824,7 +824,7 @@ Plans:
 - [x] 41-03-PLAN.md — Remove BACK-45 cfg.scan mutation in run_scan.py (D-08); fix run_scan.py:743 cfg.scan.profile bug; route all timeouts through cfg.scan.timeouts
 - [x] 41-04-PLAN.md — D-14 BaseException wrapper around every scanner phase; D-12 missing-extra advisories; D-15 trends.py category-aware error counting
 - [x] 41-05-PLAN.md — Delete 13 stale code-reason skips; convert defensive skips to pytest.fail; mark 9 slow-test candidates; meta-gate green
-- [ ] 41-06-PLAN.md — docs/configuration.md timeout/retry policy + upper-bound formula (D-10); docs/timeout-retry-audit.md (ROBUST-04); lab.sh down+reset profile-sweep fix (D-18)
+- [x] 41-06-PLAN.md — docs/configuration.md timeout/retry policy + upper-bound formula (D-10); docs/timeout-retry-audit.md (ROBUST-04); lab.sh down+reset profile-sweep fix (D-18)
 - [ ] 41-07-PLAN.md — Phase closure: docs/UAT-SERIES.md update + vault sync; Obsidian phase note; ROADMAP/STATE complete
 
 ### Phase 42: CBOM Correctness Audit
