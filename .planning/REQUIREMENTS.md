@@ -34,7 +34,7 @@ Improve graceful degradation across all scanners so partial failures don't poiso
 - [x] **ROBUST-01**: User runs a scan against a target where one scanner's optional dependency is missing (e.g., `[motion]` not installed); the scan completes, surfaces a clear advisory, and the other scanners produce normal output.
 - [x] **ROBUST-02**: User runs a scan against a slow or partially-unreachable target; each scanner respects a documented per-target timeout budget and the overall scan does not stall beyond a documented upper bound.
 - [x] **ROBUST-03**: User runs a scan where a scanner raises an unexpected exception; the exception is captured into `scan_errors[]` with scanner name + target + reason, and the rest of the scan continues to completion.
-- [ ] **ROBUST-04**: Timeout/retry policy across scanners is consistent and documented (one source of truth for default timeout, retry count, backoff) — audit identifies and reconciles divergences.
+- [x] **ROBUST-04**: Timeout/retry policy across scanners is consistent and documented (one source of truth for default timeout, retry count, backoff) — audit identifies and reconciles divergences.
 
 ### CBOM Correctness
 
@@ -113,7 +113,7 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 | ROBUST-01 | Phase 41 | Complete |
 | ROBUST-02 | Phase 41 | Complete |
 | ROBUST-03 | Phase 41 | Complete |
-| ROBUST-04 | Phase 41 | pending |
+| ROBUST-04 | Phase 41 | Complete |
 | CBOM-01 | Phase 42 | pending |
 | CBOM-02 | Phase 42 | pending |
 | CBOM-03 | Phase 42 | pending |
