@@ -57,6 +57,7 @@ def scan_pg_targets(
     password: Optional[str] = None,
     logger=None,
     session_start=None,
+    cfg=None,
 ) -> List[CryptoEndpoint]:
     """Scan PostgreSQL targets for SSL enforcement posture.
 
@@ -72,6 +73,11 @@ def scan_pg_targets(
 
     now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
     results: List[CryptoEndpoint] = []
+    # Phase 41 / D-08: per-scanner timeout sourced from canonical TimeoutsCfg
+    # sub-table; literal 5 retained as defense-in-depth fallback for tests/mocks.
+    db_connect_timeout = 5
+    if cfg is not None and hasattr(cfg, "scan") and hasattr(cfg.scan, "timeouts"):
+        db_connect_timeout = cfg.scan.timeouts.db_connect_seconds
 
     for target in targets:
         host, _, port_str = str(target).partition(":")
@@ -84,7 +90,7 @@ def scan_pg_targets(
                 port=port,
                 user=user or "postgres",
                 password=password or "",
-                connect_timeout=5,
+                connect_timeout=db_connect_timeout,
                 sslmode="disable",  # probe without SSL to check server-side config
             )
             with conn:
@@ -173,6 +179,7 @@ def scan_mysql_targets(
     password: Optional[str] = None,
     logger=None,
     session_start=None,
+    cfg=None,
 ) -> List[CryptoEndpoint]:
     """Scan MySQL/MariaDB targets for SSL session status.
 
@@ -191,6 +198,11 @@ def scan_mysql_targets(
 
     now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
     results: List[CryptoEndpoint] = []
+    # Phase 41 / D-08: per-scanner timeout sourced from canonical TimeoutsCfg
+    # sub-table; literal 5 retained as defense-in-depth fallback for tests/mocks.
+    db_connect_timeout = 5
+    if cfg is not None and hasattr(cfg, "scan") and hasattr(cfg.scan, "timeouts"):
+        db_connect_timeout = cfg.scan.timeouts.db_connect_seconds
 
     for target in targets:
         host, _, port_str = str(target).partition(":")
@@ -203,7 +215,7 @@ def scan_mysql_targets(
                 port=port,
                 user=user or "root",
                 password=password or "",
-                connect_timeout=5,
+                connect_timeout=db_connect_timeout,
                 ssl_disabled=True,  # intentionally bypass SSL to query server status
             )
             with conn:
