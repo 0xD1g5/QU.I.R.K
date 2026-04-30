@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v4.5
 milestone_name: Reliability & Gap Closure
-status: completed
+status: executing
 stopped_at: Phase 41 context gathered
-last_updated: "2026-04-29T23:56:33.327Z"
-last_activity: 2026-04-29
+last_updated: "2026-04-30T00:41:50.321Z"
+last_activity: 2026-04-30
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_plans: 22
+  completed_plans: 16
+  percent: 73
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 40 — chaos-lab-parity
+**Current focus:** Phase 41 — ci-stability-scanner-robustness
 
 ## Current Position
 
-Phase: 40 (chaos-lab-parity) — COMPLETE
-Plan: 6 of 6
-Status: Complete
-Last activity: 2026-04-29
+Phase: 41 (ci-stability-scanner-robustness) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-04-30
 
 ## Phase Overview
 
@@ -67,6 +67,7 @@ Last activity: 2026-04-29
 | Phase 35 P04 | 180 | 3 tasks | 4 files |
 | Phase 40-chaos-lab-parity P05 | 2 | 1 tasks | 1 files |
 | Phase 40-chaos-lab-parity P06 | ~5 min | 4 tasks | 4 files |
+| Phase 41 P01 | 12 min | 3 tasks | 7 files |
 
 ### Decisions
 
@@ -100,6 +101,9 @@ Roadmap decisions (2026-04-27):
 - [Phase 32]: Plan 32-08: mirrored kerberos_scan_json attachment pattern to populate CryptoEndpoint.email_scan_json (closes Phase 32 SC-1) and added an AST-based real-Logger smoke test that catches stdlib-positional-args drift in run_scan.py's email branch
 - [Phase ?]: Phase 35 close: CBOM-01..04 marked Complete; REQUIREMENTS wording aligned to code; UAT-35-01..03 added
 - [Phase ?]: SAML port is 8080 (compose source of truth); 8880 was v3 oracle drift
+- [Phase ?]: [41-01]: scan_error_category added as new column on CryptoEndpoint (not separate table) — preserves trends.py counting + reuses _ensure_*_columns migration pattern
+- [Phase ?]: [41-01]: skip-registry meta-test uses +/-2 line tolerance to absorb minor edits without forcing registry churn; meta-test marked @pytest.mark.skip_registry_gate (not in ALLOWED_SKIPS — it is the gate)
+- [Phase ?]: [41-01]: xfail-with-reason stubs (vs pytest.skip) keep pending tests visible in collection while non-blocking; each stub names the plan that lands the wiring
 
 ### Pending Todos
 
@@ -139,6 +143,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-29T23:56:33.317Z
+Last session: 2026-04-30T00:39:14.527Z
 Stopped at: Phase 41 context gathered
 Next action: Execute Phase 41 (ci-stability-scanner-robustness)

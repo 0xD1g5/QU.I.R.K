@@ -23,17 +23,17 @@ Close v4.4 known deferred items so the v4.4.0 ship audit shows zero red.
 
 Eliminate test flakiness and deferred tests so CI green is a meaningful signal.
 
-- [ ] **CI-01**: User runs `pytest` locally or in CI and sees zero `skip`/`xfail` markers on tests that were deferred for code reasons (live-infra skips remain — see UAT-* below).
+- [x] **CI-01**: User runs `pytest` locally or in CI and sees zero `skip`/`xfail` markers on tests that were deferred for code reasons (live-infra skips remain — see UAT-* below).
 - [ ] **CI-02**: Test suite executes deterministically — no test is order-dependent, no test relies on global state from another test, no test uses real time/sleep beyond what's necessary. Audit identifies and fixes any such cases.
-- [ ] **CI-03**: Long-running and slow tests are marked with `pytest.mark.slow` (or equivalent) so the default `pytest` run finishes in under 60 seconds on a developer machine.
+- [x] **CI-03**: Long-running and slow tests are marked with `pytest.mark.slow` (or equivalent) so the default `pytest` run finishes in under 60 seconds on a developer machine.
 
 ### Scanner Robustness
 
 Improve graceful degradation across all scanners so partial failures don't poison full scans.
 
-- [ ] **ROBUST-01**: User runs a scan against a target where one scanner's optional dependency is missing (e.g., `[motion]` not installed); the scan completes, surfaces a clear advisory, and the other scanners produce normal output.
-- [ ] **ROBUST-02**: User runs a scan against a slow or partially-unreachable target; each scanner respects a documented per-target timeout budget and the overall scan does not stall beyond a documented upper bound.
-- [ ] **ROBUST-03**: User runs a scan where a scanner raises an unexpected exception; the exception is captured into `scan_errors[]` with scanner name + target + reason, and the rest of the scan continues to completion.
+- [x] **ROBUST-01**: User runs a scan against a target where one scanner's optional dependency is missing (e.g., `[motion]` not installed); the scan completes, surfaces a clear advisory, and the other scanners produce normal output.
+- [x] **ROBUST-02**: User runs a scan against a slow or partially-unreachable target; each scanner respects a documented per-target timeout budget and the overall scan does not stall beyond a documented upper bound.
+- [x] **ROBUST-03**: User runs a scan where a scanner raises an unexpected exception; the exception is captured into `scan_errors[]` with scanner name + target + reason, and the rest of the scan continues to completion.
 - [ ] **ROBUST-04**: Timeout/retry policy across scanners is consistent and documented (one source of truth for default timeout, retry count, backoff) — audit identifies and reconciles divergences.
 
 ### CBOM Correctness
@@ -107,12 +107,12 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 | GAP-02 | Phase 38 | Complete |
 | GAP-03 | Phase 38 | pending |
 | GAP-04 | Phase 39 | pending |
-| CI-01 | Phase 41 | pending |
+| CI-01 | Phase 41 | Complete |
 | CI-02 | Phase 41 | pending |
-| CI-03 | Phase 41 | pending |
-| ROBUST-01 | Phase 41 | pending |
-| ROBUST-02 | Phase 41 | pending |
-| ROBUST-03 | Phase 41 | pending |
+| CI-03 | Phase 41 | Complete |
+| ROBUST-01 | Phase 41 | Complete |
+| ROBUST-02 | Phase 41 | Complete |
+| ROBUST-03 | Phase 41 | Complete |
 | ROBUST-04 | Phase 41 | pending |
 | CBOM-01 | Phase 42 | pending |
 | CBOM-02 | Phase 42 | pending |
