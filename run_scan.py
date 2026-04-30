@@ -786,24 +786,33 @@ def main():
     else:
         cfg_email_skip = True
 
-    def _run_email_phase():
-        if cfg_email_skip or not cfg.connectors.enable_email:
-            return []
-        email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
-        if not email_hosts:
-            return []
-        eps = scan_email_targets(
-            hosts=email_hosts,
-            timeout=cfg.scan.timeouts.email_seconds,
-            logger=logger,
-            session_start=session_start,
-        )
-        logger.info(f"Email scan: {len(eps)} endpoints from {len(email_hosts)} hosts")
-        return eps
-    email_endpoints = _wrapped_phase(
-        run_stats, "email_scanning", "email_scanner",
-        _run_email_phase, error_endpoints, logger,
-    ) or []
+    # Phase 41 / D-14: email phase wraps body in BaseException protection while
+    # keeping the `with _phase_timer(..., "email_scanning")` AST shape that the
+    # email-wiring AST guard test expects.
+    with _phase_timer(run_stats, "email_scanning"):
+        try:
+            if not cfg_email_skip and cfg.connectors.enable_email:
+                email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+                if email_hosts:
+                    email_endpoints = scan_email_targets(
+                        hosts=email_hosts,
+                        timeout=cfg.scan.timeouts.email_seconds,
+                        logger=logger,
+                        session_start=session_start,
+                    )
+                    logger.info(f"Email scan: {len(email_endpoints)} endpoints from {len(email_hosts)} hosts")
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as exc:  # noqa: BLE001 — D-14 wrapper by design
+            try:
+                logger.error(f"email_scanning: unhandled exception: {exc!r}")
+            except Exception:
+                pass
+            error_endpoints.append(CryptoEndpoint(
+                host="email_scanner", port=0, protocol="ERROR",
+                scan_error=str(exc) or exc.__class__.__name__,
+                scan_error_category="exception",
+            ))
 
     # ── Broker TLS scanning (Phase 33) ────────────────────────
     kafka_endpoints = []
