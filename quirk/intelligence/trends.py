@@ -252,9 +252,20 @@ def compute_trend_report(
     new_counts = _count_by_bucket(new_keys)
     resolved_counts = _count_by_bucket(resolved_keys)
 
-    # D-05: scan error count delta computed independently of finding delta
-    cur_err = sum(1 for ep in current_eps if ep.scan_error is not None)
-    prev_err = sum(1 for ep in previous_eps if ep.scan_error is not None)
+    # D-05: scan error count delta computed independently of finding delta.
+    # Phase 41 / D-15: exclude category='missing_extra' so that "user did not
+    # install [motion] this run" does not register as a scan-error regression.
+    # getattr(..., None) tolerates older DB rows that predate the column.
+    cur_err = sum(
+        1 for ep in current_eps
+        if ep.scan_error is not None
+        and getattr(ep, "scan_error_category", None) != "missing_extra"
+    )
+    prev_err = sum(
+        1 for ep in previous_eps
+        if ep.scan_error is not None
+        and getattr(ep, "scan_error_category", None) != "missing_extra"
+    )
     scan_errors_new_count = max(0, cur_err - prev_err)
     scan_errors_resolved_count = max(0, prev_err - cur_err)
 
