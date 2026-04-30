@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-04-29 (Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-04-30 (Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -5277,6 +5277,143 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - `time` `real` value is `<60s` on both consecutive runs.
 - Test summary shows `passed` with `deselected` count `>= 9` (Plan 05 marked 9 slow candidates).
 - No `errors` or `failures` reported.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+## Phase 42: CBOM Correctness Audit (UAT-42-XX)
+
+**Purpose:** Verify the four CBOM-correctness deliverables landed in Phase 42: per-profile CycloneDX 1.6 JSON+XML schema validation with a docker-compose drift sentinel, a classifier coverage gate that proves zero `UNKNOWN` algorithm fallbacks across all 18 chaos lab profiles plus a regenerable Markdown coverage report, three new shape-golden CBOM fixtures (pki / vault / saml) tracked via `tests/fixtures/cbom/CHANGELOG.md`, and a parametrized Pass-2/Pass-3 skip-list unit gate driven directly off the `MOTION_PLAINTEXT_PROTOCOLS | DAR_SKIP_PROTOCOLS` source-of-truth frozensets. Maps to requirements CBOM-01, CBOM-02, CBOM-03, CBOM-04.
+
+---
+
+### UAT-42-01: CBOM JSON+XML Schema Validation Across 18 Profiles
+
+**ID:** UAT-42-01
+**Title:** Every shipped chaos lab profile produces a CycloneDX 1.6 spec-valid CBOM (JSON + XML); drift sentinel locks the parametrize set to docker-compose.yml
+**Maps to:** CBOM-01
+
+**Description:** Phase 42 Plan 02 introduced `tests/test_cbom_schema_validation.py`, which calls `JsonStrictValidator(SchemaVersion.V1_6).validate_str(...)` and `XmlValidator(SchemaVersion.V1_6).validate_str(...)` against the CBOM produced for each of the 18 chaos lab profiles, asserting both validators return `None` (CycloneDX-python-lib idiom for "valid"). A drift sentinel (`test_parametrize_set_matches_docker_compose_profiles`) parses `quantum-chaos-enterprise-lab/docker-compose.yml` via `yaml.safe_load` and asserts the union of profile labels equals `tests._cbom_profiles.PROFILE_ENDPOINTS.keys()` so no future compose-file change can silently shrink coverage.
+
+**Prerequisites:** Repo at HEAD with `pip install -e .` complete (cyclonedx-python-lib[validation] >=11.7.0 transitive deps installed).
+
+**Steps:**
+1. From repo root: `.venv/bin/pytest tests/test_cbom_schema_validation.py -x -v`.
+2. Confirm 19 tests passed (18 profile parametrize cases + 1 drift sentinel).
+3. Optionally inspect a profile case: `pytest tests/test_cbom_schema_validation.py::test_cbom_validates_against_cyclonedx_1_6[pki] -x -v`.
+
+**Expected:**
+- All 19 tests pass; both JSON and XML validators return `None` for every profile.
+- Drift sentinel asserts `assert len(profiles) >= 18` and equality of the parametrize set with the compose-derived profile set.
+
+**Pass Criteria:**
+- `pytest tests/test_cbom_schema_validation.py -x -v` exits 0.
+- Output shows 19 passed (or 19 passed plus deselected slow markers).
+- `test_parametrize_set_matches_docker_compose_profiles` PASSED line is present.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-42-02: Classifier Coverage Gate + Regen Report
+
+**ID:** UAT-42-02
+**Title:** Every algorithm component emitted by `build_cbom()` for the 18 chaos lab profiles classifies to a non-UNKNOWN primitive; `docs/cbom-classifier-coverage.md` is byte-deterministic on regen
+**Maps to:** CBOM-02
+
+**Description:** Phase 42 Plan 04 added `tests/test_cbom_classifier_coverage.py::test_no_unknown_classifications_across_lab_profiles`, which walks `bom.components` for every profile in `tests._cbom_profiles.PROFILE_ENDPOINTS`, filters by `crypto_properties.asset_type.value == "algorithm"`, calls `classify_algorithm(c.name)`, and asserts no UNKNOWN primitive (except the JWT `alg:none` sentinel). A companion regen test (`test_regenerate_coverage_report`, gated by `REGEN_CBOM_COVERAGE=1` and `@pytest.mark.slow`) writes `docs/cbom-classifier-coverage.md`; a second consecutive regen produces zero git diff. Plan 04 added 12 `_ALGORITHM_TABLE` rows (RSA-1024/2048/3072/4096, AES-128/192/256, sha1/sha256/sha384/sha512withRSAEncryption, ecdsa-with-sha256/384/512, md5withRSAEncryption) to close the five gate-surfaced gaps plus 7 forward-looking neighbours.
+
+**Prerequisites:** Repo at HEAD with `pip install -e .` complete.
+
+**Steps:**
+1. From repo root: `.venv/bin/pytest tests/test_cbom_classifier_coverage.py -x`.
+2. Confirm: `test -f docs/cbom-classifier-coverage.md && grep -q '# CBOM Classifier Coverage Report' docs/cbom-classifier-coverage.md && grep -q '| Algorithm Name |' docs/cbom-classifier-coverage.md`.
+3. Determinism check (regen mode): `REGEN_CBOM_COVERAGE=1 .venv/bin/pytest tests/test_cbom_classifier_coverage.py::test_regenerate_coverage_report -s -m ""` then `git diff docs/cbom-classifier-coverage.md` (must be empty).
+
+**Expected:**
+- The gate test passes (1 passed, 1 deselected slow).
+- The Markdown report exists with the canonical heading and an `| Algorithm Name |` table.
+- Re-running the regen produces a byte-identical file (empty `git diff`).
+
+**Pass Criteria:**
+- `pytest tests/test_cbom_classifier_coverage.py -x` exits 0.
+- `docs/cbom-classifier-coverage.md` exists, contains `# CBOM Classifier Coverage Report` and a `| Algorithm Name |` table header.
+- Re-running the regen test with `REGEN_CBOM_COVERAGE=1` leaves `git diff docs/cbom-classifier-coverage.md` empty.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-42-03: Shape Goldens (pki/vault/saml) + CHANGELOG
+
+**ID:** UAT-42-03
+**Title:** Three new shape-golden CBOM snapshot tests (pki / vault / saml) pass; `tests/fixtures/cbom/CHANGELOG.md` documents the Phase 42 fixture additions; pre-existing email + broker goldens are byte-identical
+**Maps to:** CBOM-03
+
+**Description:** Phase 42 Plan 03 added three new shape-golden CBOM fixtures — `tests/fixtures/cbom/expected_pki_cbom.json` (TLS-with-cert shape, mTLS step-CA gateway), `expected_vault_cbom.json` (Pass-1-only DAR shape, VAULT in `DAR_SKIP_PROTOCOLS`), `expected_saml_cbom.json` (Identity shape, no TLS) — with corresponding `test_pki_cbom_matches_snapshot` / `test_vault_cbom_matches_snapshot` / `test_saml_cbom_matches_snapshot` snapshot tests in `tests/test_cbom_motion_golden.py`. `tests/fixtures/cbom/CHANGELOG.md` was created with a Phase 42 entry per D-09. Plan 03 also added `tests/_cbom_profiles.py::PROFILE_ENDPOINTS` (18-profile registry) plus 13 lightweight per-profile endpoint synthesizers in `tests/test_cbom_motion_endpoints.py`.
+
+**Prerequisites:** Repo at HEAD with `pip install -e .` complete.
+
+**Steps:**
+1. From repo root: `.venv/bin/pytest tests/test_cbom_motion_golden.py -x -v`.
+2. Confirm 5 snapshot tests passed: `test_email_cbom_matches_snapshot`, `test_broker_cbom_matches_snapshot`, `test_pki_cbom_matches_snapshot`, `test_vault_cbom_matches_snapshot`, `test_saml_cbom_matches_snapshot`.
+3. Verify CHANGELOG: `grep -q 'Phase 42' tests/fixtures/cbom/CHANGELOG.md`.
+4. Verify pre-existing fixtures unchanged: `git diff tests/fixtures/cbom/expected_email_cbom.json tests/fixtures/cbom/expected_broker_cbom.json` (must be empty).
+5. Inspect new fixtures exist: `ls tests/fixtures/cbom/expected_pki_cbom.json tests/fixtures/cbom/expected_vault_cbom.json tests/fixtures/cbom/expected_saml_cbom.json`.
+
+**Expected:**
+- All 5 snapshot tests + 6 structural-invariant tests pass.
+- The Phase 42 entry in `CHANGELOG.md` names the three new fixtures and documents the regen invocation (`REGEN_CBOM_FIXTURES=1 pytest ... -m ""`).
+- The two pre-existing email/broker goldens have empty diffs against HEAD.
+
+**Pass Criteria:**
+- `pytest tests/test_cbom_motion_golden.py -x -v` exits 0 with at least 5 PASSED snapshot tests visible.
+- `tests/fixtures/cbom/CHANGELOG.md` contains `Phase 42`.
+- `git diff tests/fixtures/cbom/expected_email_cbom.json tests/fixtures/cbom/expected_broker_cbom.json` produces no output.
+- All three new fixture files exist on disk.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-42-04: Pass-2 / Pass-3 Skip-List Unit Tests
+
+**ID:** UAT-42-04
+**Title:** Parametrized unit gate proves every label in `MOTION_PLAINTEXT_PROTOCOLS | DAR_SKIP_PROTOCOLS` is skipped by both Pass 2 (cert) and Pass 3 (protocol) of `build_cbom()`; sanity guard fails loudly if either constant is emptied
+**Maps to:** CBOM-04
+
+**Description:** Phase 42 Plan 01 lifted `MOTION_PLAINTEXT_PROTOCOLS` (3 labels: AMQP-PLAIN, KAFKA-PLAIN, REDIS-PLAIN) and `DAR_SKIP_PROTOCOLS` (9 labels: AZURE_BLOB, CLOUD_SQL, GCP, KUBERNETES, MYSQL, POSTGRESQL, RDS, S3, VAULT) to module-level frozensets in `quirk/cbom/builder.py`. Plan 05 added `tests/test_cbom_skip_lists.py` (84 lines, 13 tests) which parametrizes directly off `sorted(MOTION_PLAINTEXT_PROTOCOLS | DAR_SKIP_PROTOCOLS)` — no hardcoded list — building a full TLS+cert `CryptoEndpoint` per label and asserting the resulting CBOM contains NO `crypto/certificate/{host}:{port}` ref AND NO `crypto/protocol/tls/{host}:{port}` ref. A separate `test_skip_list_constants_are_nonempty` sanity guard fails if either constant is emptied (T-42-07 mitigation).
+
+**Prerequisites:** Repo at HEAD with `pip install -e .` complete.
+
+**Steps:**
+1. From repo root: `.venv/bin/pytest tests/test_cbom_skip_lists.py -x -v`.
+2. Confirm 13 tests passed (1 sanity + 12 parametrized: 3 motion + 9 DAR).
+3. Verify import path: `.venv/bin/python -c "from quirk.cbom.builder import MOTION_PLAINTEXT_PROTOCOLS, DAR_SKIP_PROTOCOLS; print(len(MOTION_PLAINTEXT_PROTOCOLS), len(DAR_SKIP_PROTOCOLS))"` — expect `3 9`.
+4. Spot-check parametrize ID surfaces a label name on failure: `pytest tests/test_cbom_skip_lists.py::test_skip_protocol_emits_no_cert_or_proto_component[VAULT] -x -v`.
+
+**Expected:**
+- All 13 tests pass.
+- Parametrize IDs are the protocol labels themselves (e.g. `[VAULT]`, `[KAFKA-PLAIN]`).
+- The import line runs cleanly with both frozensets present in `quirk.cbom.builder`.
+
+**Pass Criteria:**
+- `pytest tests/test_cbom_skip_lists.py -x -v` exits 0 with at least 12 parametrized cases plus 1 sanity guard (≥ 13 total).
+- `from quirk.cbom.builder import MOTION_PLAINTEXT_PROTOCOLS, DAR_SKIP_PROTOCOLS` succeeds.
+- `len(MOTION_PLAINTEXT_PROTOCOLS) == 3` and `len(DAR_SKIP_PROTOCOLS) == 9`.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
