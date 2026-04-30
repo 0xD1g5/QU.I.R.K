@@ -29,9 +29,9 @@ def test_cli_version_subprocess():
             timeout=10,
         )
     except Exception as exc:
-        pytest.skip(f"CLI --version not invokable: {exc}")
+        pytest.fail(f"CLI --version not invokable: {exc}")
     if result.returncode != 0:
-        pytest.skip("CLI --version returned non-zero")
+        pytest.fail("CLI --version returned non-zero")
     output = (result.stdout or "") + (result.stderr or "")
     assert "4.4.0" in output
 

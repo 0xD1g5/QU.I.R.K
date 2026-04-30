@@ -2,15 +2,6 @@
 
 Tests mock network calls — no live network required.
 Scanner module: quirk/scanner/email_scanner.py
-Phase 32 / Plan 01 — Wave 0 RED state. Tests fail until Plan 03 lands.
-
-NOTE: pytest.importorskip below skips scanner-module tests when
-quirk.scanner.email_scanner does not yet exist (RED / Wave 0 state).
-After Plan 03 lands, importorskip is a no-op and all 17 tests run.
-
-test_email_scan_json_column_exists is placed BEFORE the importorskip guard
-because it depends only on quirk.db (Plan 02 scope) and must run in Wave 1
-before the scanner module (Plan 03) exists.
 """
 import json
 import pytest
@@ -55,32 +46,14 @@ def test_email_scan_json_column_idempotent():
 
 
 # ---------------------------------------------------------------------------
-# Soft import — scanner module does not exist until Plan 03 (Wave 2).
-# Tests below that depend on it are marked skipif so pytest can still collect
-# and run test_email_scan_json_column_exists (Plan 02 scope) in Wave 1.
-# After Plan 03 lands, _EMAIL_SCANNER_AVAILABLE = True and all tests run.
+# Scanner module imports — Phase 32 Plan 03 has landed; hard imports are safe.
 # ---------------------------------------------------------------------------
-try:
-    from quirk.scanner.email_scanner import (
-        scan_email_targets,
-        scan_one_email,
-        EMAIL_PORTS,
-        _scan_one_sslyze_email,
-        _scan_one_fallback_email,
-    )
-    _EMAIL_SCANNER_AVAILABLE = True
-except ImportError:
-    # Stubs so the file compiles; tests using these are skipped via _skip_scanner
-    scan_email_targets = None  # type: ignore[assignment]
-    scan_one_email = None  # type: ignore[assignment]
-    EMAIL_PORTS = []  # type: ignore[assignment]
-    _scan_one_sslyze_email = None  # type: ignore[assignment]
-    _scan_one_fallback_email = None  # type: ignore[assignment]
-    _EMAIL_SCANNER_AVAILABLE = False
-
-_skip_scanner = pytest.mark.skipif(
-    not _EMAIL_SCANNER_AVAILABLE,
-    reason="Phase 32 Plan 03 implements quirk/scanner/email_scanner.py — Wave 0 RED state",
+from quirk.scanner.email_scanner import (
+    scan_email_targets,
+    scan_one_email,
+    EMAIL_PORTS,
+    _scan_one_sslyze_email,
+    _scan_one_fallback_email,
 )
 
 
@@ -193,7 +166,6 @@ def _make_mock_smtp_sock(
 # EMAIL-01: SMTP STARTTLS sslyze path — port 25
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner.SslyzeScanner")
 def test_scan_one_smtp_starttls_sslyze_port25(mock_scanner_cls):
     """EMAIL-01: scan_one_email on port 25 via sslyze returns SMTP-STARTTLS endpoint."""
@@ -220,7 +192,6 @@ def test_scan_one_smtp_starttls_sslyze_port25(mock_scanner_cls):
 # EMAIL-01: SMTP STARTTLS sslyze path — port 587
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner.SslyzeScanner")
 def test_scan_one_smtp_starttls_sslyze_port587(mock_scanner_cls):
     """EMAIL-01: scan_one_email on port 587 via sslyze returns SMTP-STARTTLS endpoint."""
@@ -245,7 +216,6 @@ def test_scan_one_smtp_starttls_sslyze_port587(mock_scanner_cls):
 # EMAIL-02: SMTPS implicit TLS — port 465
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner.SslyzeScanner")
 def test_scan_one_smtps_sslyze_port465(mock_scanner_cls):
     """EMAIL-02: scan_one_email on port 465 (implicit TLS, starttls_enum=None) → SMTPS."""
@@ -272,7 +242,6 @@ def test_scan_one_smtps_sslyze_port465(mock_scanner_cls):
 # EMAIL-03: IMAP STARTTLS — port 143
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner.SslyzeScanner")
 def test_scan_one_imap_starttls_sslyze_port143(mock_scanner_cls):
     """EMAIL-03: scan_one_email on port 143 with IMAP STARTTLS enum → IMAP-STARTTLS."""
@@ -297,7 +266,6 @@ def test_scan_one_imap_starttls_sslyze_port143(mock_scanner_cls):
 # EMAIL-04: IMAPS implicit TLS — port 993
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner.SslyzeScanner")
 def test_scan_one_imaps_sslyze_port993(mock_scanner_cls):
     """EMAIL-04: scan_one_email on port 993 (implicit TLS, starttls_enum=None) → IMAPS."""
@@ -322,7 +290,6 @@ def test_scan_one_imaps_sslyze_port993(mock_scanner_cls):
 # EMAIL-05: POP3 STARTTLS — port 110
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner.SslyzeScanner")
 def test_scan_one_pop3_starttls_sslyze_port110(mock_scanner_cls):
     """EMAIL-05: scan_one_email on port 110 with POP3 STARTTLS enum → POP3-STARTTLS."""
@@ -347,7 +314,6 @@ def test_scan_one_pop3_starttls_sslyze_port110(mock_scanner_cls):
 # EMAIL-06: POP3S implicit TLS — port 995
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner.SslyzeScanner")
 def test_scan_one_pop3s_sslyze_port995(mock_scanner_cls):
     """EMAIL-06: scan_one_email on port 995 (implicit TLS, starttls_enum=None) → POP3S."""
@@ -372,7 +338,6 @@ def test_scan_one_pop3s_sslyze_port995(mock_scanner_cls):
 # EMAIL-07: stdlib fallback — SMTP STARTTLS path
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner._scan_one_sslyze_email", return_value=None)
 @patch("quirk.scanner.email_scanner.smtplib")
 def test_fallback_smtp_starttls_returns_tls_metadata(mock_smtplib, mock_sslyze):
@@ -397,7 +362,6 @@ def test_fallback_smtp_starttls_returns_tls_metadata(mock_smtplib, mock_sslyze):
     )
 
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner._scan_one_sslyze_email", return_value=None)
 @patch("quirk.scanner.email_scanner.imaplib")
 def test_fallback_imap_starttls_returns_tls_metadata(mock_imaplib, mock_sslyze):
@@ -416,7 +380,6 @@ def test_fallback_imap_starttls_returns_tls_metadata(mock_imaplib, mock_sslyze):
     assert ep is not None, "Fallback must return a CryptoEndpoint for IMAP-STARTTLS"
 
 
-@_skip_scanner
 @patch("quirk.scanner.email_scanner._scan_one_sslyze_email", return_value=None)
 @patch("quirk.scanner.email_scanner.poplib")
 def test_fallback_pop3_starttls_returns_tls_metadata(mock_poplib, mock_sslyze):
@@ -439,7 +402,6 @@ def test_fallback_pop3_starttls_returns_tls_metadata(mock_poplib, mock_sslyze):
 # D-03 / EMAIL-01: CONNECTION_REFUSED is non-fatal
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 def test_connection_refused_non_fatal_port25():
     """D-03/EMAIL-01: ConnectionRefusedError on port 25 must not propagate; ep returned."""
     with patch("quirk.scanner.email_scanner._scan_one_sslyze_email", return_value=None), \
@@ -464,7 +426,6 @@ def test_connection_refused_non_fatal_port25():
 # EMAIL-10: service_detail label format
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 def test_service_detail_labels_match_spec():
     """EMAIL-10: scan_one_email sets ep.service_detail == f'{label}:{port}' for each port."""
     with patch("quirk.scanner.email_scanner._scan_one_sslyze_email", return_value=None), \
@@ -493,7 +454,6 @@ def test_service_detail_labels_match_spec():
 # EMAIL_PORTS table shape
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 def test_email_ports_table_has_seven_entries():
     """EMAIL_PORTS table must have exactly 7 entries covering all standard email ports."""
     assert len(EMAIL_PORTS) == 7, (
@@ -510,7 +470,6 @@ def test_email_ports_table_has_seven_entries():
 # STRUCT-01: session_start propagation
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 def test_session_start_propagation():
     """STRUCT-01: scan_email_targets forwards session_start to scan_one_email."""
     fixed_time = datetime(2026, 1, 1, 12, 0, 0)
@@ -531,7 +490,6 @@ def test_session_start_propagation():
             )
 
 
-@_skip_scanner
 def test_no_datetime_now_inside_scanner():
     """STRUCT-01/ISSUE-3: datetime.now() may only appear as fallback to session_start."""
     import inspect
@@ -550,7 +508,6 @@ def test_no_datetime_now_inside_scanner():
     )
 
 
-@_skip_scanner
 def test_email_ports_starttls_enum_alignment():
     """EMAIL-01..06: STARTTLS ports have non-None starttls_enum; implicit-TLS ports have None."""
     from quirk.scanner.email_scanner import EMAIL_PORTS, SSLYZE_AVAILABLE
@@ -577,7 +534,6 @@ def test_email_ports_starttls_enum_alignment():
 #   quirk/scanner/kerberos_scanner.py:294,329,340
 # ---------------------------------------------------------------------------
 
-@_skip_scanner
 def test_email_scan_json_attached_per_host():
     """Phase 32 SC-1: at least one endpoint per host has email_scan_json populated.
 
