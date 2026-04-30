@@ -62,96 +62,52 @@ class CodeHygieneTests(unittest.TestCase):
         )
 
     # ------------------------------------------------------------------
-    # HYGN-02: cfg.scan mutation guard — structural source assertions
-    # TLS test: Expected GREEN (base captured before mutation; finally restores)
-    # SSH test: Expected RED (mutations at lines 380-381 precede the try: at line 384)
+    # HYGN-02 (Phase 41 / D-08): BACK-45 cfg.scan mutation pattern dissolved.
+    # The original tests asserted that try/finally restored cfg.scan.timeout_seconds
+    # after mutation. Plan 41-03 removed the mutation entirely — TLS/SSH scanners now
+    # read cfg.scan.timeouts.{tls,ssh}_seconds directly. These tests are inverted:
+    # the mutation pattern must NOT appear in run_scan.py source.
     # ------------------------------------------------------------------
 
     def test_cfg_scan_restored_after_tls_exception(self) -> None:
-        """run_scan.py TLS phase must capture base_timeout before cfg.scan mutation
-        and restore it in a finally block."""
+        """Phase 41 / D-08: TLS phase must NOT mutate cfg.scan.timeout_seconds.
+        Mutation eliminated — scanner reads cfg.scan.timeouts.tls_seconds directly.
+        """
         source = inspect.getsource(run_scan)
-        lines = source.splitlines()
-
-        # Find the TLS scanning section
-        tls_section_start = None
-        for i, line in enumerate(lines):
-            if "tls_scanning" in line or "TLS scan phase" in line:
-                tls_section_start = i
-                break
-        self.assertIsNotNone(
-            tls_section_start,
-            "Could not locate TLS scan phase section in run_scan.py source",
+        # Strip comment lines so commentary mentioning the legacy pattern doesn't trip the gate.
+        non_comment = "\n".join(
+            line for line in source.splitlines() if not line.lstrip().startswith("#")
         )
-
-        # Assert base_timeout capture appears before TLS try block
-        self.assertIn(
-            "base_timeout = cfg.scan.timeout_seconds",
-            source,
-            "run_scan.py must capture base_timeout = cfg.scan.timeout_seconds before TLS try block",
+        self.assertNotIn(
+            "cfg.scan.timeout_seconds = ",
+            non_comment,
+            "BACK-45 mutation pattern must not appear in run_scan.py (D-08 dissolved it)",
         )
-
-        # Assert the finally block restores cfg.scan.timeout_seconds
-        self.assertIn(
-            "cfg.scan.timeout_seconds = base_timeout",
-            source,
-            "run_scan.py finally block must restore cfg.scan.timeout_seconds = base_timeout",
+        self.assertNotIn(
+            "cfg.scan.concurrency = ",
+            non_comment,
+            "BACK-45 concurrency mutation must not appear in run_scan.py (D-08 dissolved it)",
         )
 
     def test_cfg_scan_restored_after_ssh_exception(self) -> None:
-        """cfg.scan mutations for SSH phase must appear INSIDE the try block (after try:),
-        not before it. This ensures finally: always restores even if mutations fail.
-
-        Current state (RED): mutations at lines 380-381 precede the try: at line 384.
-        Expected fix: move cfg.scan.timeout_seconds = ssh_timeout inside the try block.
+        """Phase 41 / D-08: SSH phase must NOT mutate cfg.scan.timeout_seconds either.
+        Replaces the legacy ordering check — there is no mutation to order anymore.
         """
         source = inspect.getsource(run_scan)
-        lines = source.splitlines()
-
-        # Locate the SSH scan phase section
-        ssh_section_start = None
-        for i, line in enumerate(lines):
-            if "ssh_scanning" in line or "SSH scan phase" in line:
-                ssh_section_start = i
-                break
-        self.assertIsNotNone(
-            ssh_section_start,
-            "Could not locate SSH scan phase section in run_scan.py source",
+        # Same comment-strip safeguard.
+        non_comment = "\n".join(
+            line for line in source.splitlines() if not line.lstrip().startswith("#")
         )
-
-        # From the SSH section, find the index of the try: line and the mutation line
-        ssh_lines = lines[ssh_section_start:]
-
-        try_line_idx = None
-        mutation_line_idx = None
-
-        for i, line in enumerate(ssh_lines):
-            stripped = line.strip()
-            if stripped == "try:" and try_line_idx is None:
-                try_line_idx = i
-            # Look for the ssh_timeout mutation (the first one signals the unsafe ordering)
-            if re.match(r"cfg\.scan\.timeout_seconds\s*=\s*ssh_timeout", stripped):
-                if mutation_line_idx is None:
-                    mutation_line_idx = i
-
-        self.assertIsNotNone(
-            try_line_idx,
-            "Could not find try: in SSH scan phase section of run_scan.py",
+        self.assertNotRegex(
+            non_comment,
+            r"cfg\.scan\.timeout_seconds\s*=\s*ssh_timeout",
+            "SSH phase must not assign cfg.scan.timeout_seconds (D-08 dissolved BACK-45)",
         )
-        self.assertIsNotNone(
-            mutation_line_idx,
-            "Could not find cfg.scan.timeout_seconds = ssh_timeout in SSH scan phase section",
-        )
-
-        # The mutation must appear AFTER the try: (inside the try block)
-        self.assertGreater(
-            mutation_line_idx,
-            try_line_idx,
-            (
-                f"cfg.scan.timeout_seconds = ssh_timeout (relative line {mutation_line_idx}) "
-                f"must appear AFTER try: (relative line {try_line_idx}) "
-                "so that the finally block always fires — move mutation inside the try block"
-            ),
+        # And the canonical sub-table read must be present somewhere in the module.
+        self.assertIn(
+            "cfg.scan.timeouts.ssh_seconds",
+            source,
+            "run_scan.py must reference cfg.scan.timeouts.ssh_seconds (D-08 canonical source)",
         )
 
     # ------------------------------------------------------------------
