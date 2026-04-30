@@ -71,3 +71,11 @@ py-modules = ["run_scan"]
 
 [tool.setuptools.package-data]
 quirk = ["reports/templates/*.j2", "config_template.yaml", "dashboard/static/**/*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m not slow')",
+    "live_infra: marks tests requiring live external infrastructure (Docker/cloud/etc)",
+]
+addopts = "-m 'not slow'"
+testpaths = ["tests"]
