@@ -818,7 +818,14 @@ Plans:
   4. An unexpected scanner exception is captured in `scan_errors[]` with scanner name, target, and reason — the scan continues and other scanners produce normal output
   5. Timeout, retry count, and backoff defaults are defined in a single location and documented; divergences found in the audit are reconciled
   6. The default `pytest` run (excluding `pytest.mark.slow`) finishes in under 60 seconds on a developer machine
-**Plans**: TBD
+**Plans**: 7 plans
+- [ ] 41-01-PLAN.md — Wave 0 test infrastructure: pytest config, skip registry + AST-walk meta-gate, scan_error_category column, ROBUST/Timeouts test stubs
+- [ ] 41-02-PLAN.md — TimeoutsCfg / RetryCfg sub-tables on ScanCfg with deprecation-alias properties (D-06/D-07)
+- [ ] 41-03-PLAN.md — Remove BACK-45 cfg.scan mutation in run_scan.py (D-08); fix run_scan.py:743 cfg.scan.profile bug; route all timeouts through cfg.scan.timeouts
+- [ ] 41-04-PLAN.md — D-14 BaseException wrapper around every scanner phase; D-12 missing-extra advisories; D-15 trends.py category-aware error counting
+- [ ] 41-05-PLAN.md — Delete 13 stale code-reason skips; convert defensive skips to pytest.fail; mark 9 slow-test candidates; meta-gate green
+- [ ] 41-06-PLAN.md — docs/configuration.md timeout/retry policy + upper-bound formula (D-10); docs/timeout-retry-audit.md (ROBUST-04); lab.sh down+reset profile-sweep fix (D-18)
+- [ ] 41-07-PLAN.md — Phase closure: docs/UAT-SERIES.md update + vault sync; Obsidian phase note; ROADMAP/STATE complete
 
 ### Phase 42: CBOM Correctness Audit
 **Goal**: CycloneDX CBOM output is spec-valid, every in-scope algorithm is classified (no unknown fallbacks), golden snapshot drift is intentional and documented, and Pass-2/3 skip-list logic is fully unit-tested
