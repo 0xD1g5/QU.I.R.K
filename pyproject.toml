@@ -79,3 +79,4 @@ markers = [
 ]
 addopts = "-m 'not slow'"
 testpaths = ["tests"]
+pythonpath = ["."]
