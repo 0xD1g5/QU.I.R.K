@@ -377,6 +377,7 @@ def scan_vault_targets(
     tls_verify: bool = True,
     logger=None,
     session_start: Optional[datetime] = None,
+    cfg=None,
 ) -> List[CryptoEndpoint]:
     """Enumerate HashiCorp Vault cryptographic posture (VAULT-01/02/03).
 
@@ -404,13 +405,18 @@ def scan_vault_targets(
         )]
 
     resolved_addr = vault_addr or os.environ.get("VAULT_ADDR", "http://127.0.0.1:8200")
+    # Phase 41 / D-08: per-scanner timeout sourced from canonical TimeoutsCfg
+    # sub-table; literal 10 retained as defense-in-depth fallback for tests/mocks.
+    vault_timeout = 10
+    if cfg is not None and hasattr(cfg, "scan") and hasattr(cfg.scan, "timeouts"):
+        vault_timeout = cfg.scan.timeouts.vault_seconds
 
     try:
         client = hvac.Client(
             url=resolved_addr,
             token=resolved_token,
             verify=tls_verify,
-            timeout=10,
+            timeout=vault_timeout,
         )
     except Exception as exc:  # noqa: BLE001
         if logger:
