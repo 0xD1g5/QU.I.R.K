@@ -5144,7 +5144,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Title:** Missing `[motion]` extra emits canonical stderr advisory; CLI exits 0; scan_errors[] records `category=missing_extra`
 **Maps to:** ROBUST-01 (D-12)
 
-**Description:** When `quirk[motion]` is not installed (no `kafka-python` / `pika` / `redis`), invoking `quirk scan --enable-broker` must emit a single canonical stderr advisory line, exit 0, and produce a `scan_errors[]` entry tagged `category=missing_extra` so downstream trends counting (D-15) excludes it from regressions.
+**Description:** When `quirk[motion]` is not installed (no `kafka-python` / `pika` / `redis`), invoking `quirk --config <broker.yaml>` (with `enable_broker: true`) must emit a single canonical stderr advisory line, exit 0, and produce a `scan_errors[]` entry tagged `category=missing_extra` so downstream trends counting (D-15) excludes it from regressions.
 
 **Prerequisites:**
 - A Python venv with QU.I.R.K. installed but WITHOUT the `[motion]` optional extras: `pip uninstall -y kafka-python pika redis` (or `pip install -e .` without `[motion]`).
@@ -5152,7 +5152,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 **Steps:**
 1. Activate the venv and confirm: `python -c "import kafka" 2>&1 | grep -q "ModuleNotFoundError" && echo "OK: motion absent"`.
-2. Run: `quirk scan --target localhost --enable-broker 2> /tmp/quirk-stderr.log`.
+2. Prepare a YAML config (e.g. `/tmp/uat-41-01.yaml`) with `targets: [localhost]` and `scan: { enable_broker: true }`. Run: `quirk --config /tmp/uat-41-01.yaml 2> /tmp/quirk-stderr.log`.
 3. Inspect stderr: `grep "\[advisory\]" /tmp/quirk-stderr.log`.
 4. Confirm exit code: `echo $?` immediately after the scan command (must be `0`).
 5. Inspect the produced JSON output for a `scan_errors[]` entry with `category=missing_extra` (or examine the corresponding `CryptoEndpoint(scan_error_category="missing_extra")` row in the SQLite DB).
@@ -5165,7 +5165,7 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 
 **Pass Criteria:**
 - `grep -q "\[advisory\] scanner=broker_scanner extra=motion not installed" /tmp/quirk-stderr.log` exits 0.
-- Exit code of the `quirk scan` invocation is `0`.
+- Exit code of the `quirk --config` invocation is `0`.
 - At least one `scan_error_category=missing_extra` entry visible in JSON output or DB.
 - No traceback / `BaseException` / unhandled-error text in stderr.
 
