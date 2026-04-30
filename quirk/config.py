@@ -1,4 +1,5 @@
 import dataclasses
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -14,8 +15,51 @@ class AssessmentCfg:
 
 
 @dataclass
+class TimeoutsCfg:
+    """Phase 41 D-06: canonical [scan.timeouts] sub-table.
+
+    Per-scanner timeout values, replacing the legacy flat
+    ``*_timeout_seconds`` fields on ``ScanCfg``. Defaults match the
+    documented effective post-profile values from RESEARCH §"Proposed
+    [scan.timeouts] / [scan.retry] Shape".
+    """
+    default_seconds: int = 5
+    fingerprint_seconds: int = 4
+    tls_seconds: int = 6
+    ssh_seconds: int = 6
+    jwt_seconds: int = 10
+    container_seconds: int = 120
+    source_seconds: int = 300
+    dnssec_seconds: int = 10
+    saml_seconds: int = 10
+    kerberos_seconds: int = 10
+    vault_seconds: int = 10
+    db_connect_seconds: int = 5
+    broker_seconds: int = 10
+    email_seconds: int = 10
+
+
+@dataclass
+class RetryCfg:
+    """Phase 41 D-06: canonical [scan.retry] sub-table."""
+    retry_count: int = 0
+    backoff_base_seconds: float = 1.0
+    backoff_max_seconds: float = 5.0
+
+
+# Mapping of legacy ScanCfg flat kwargs → TimeoutsCfg field names.
+# Used by ScanCfg.__init__ (kwarg routing) and the deprecation-alias
+# properties (read-side warn-and-redirect).
+_LEGACY_TIMEOUT_KWARG_MAP = {
+    "timeout_seconds": "default_seconds",
+    "fingerprint_timeout_seconds": "fingerprint_seconds",
+    "tls_timeout_seconds": "tls_seconds",
+    "ssh_timeout_seconds": "ssh_seconds",
+}
+
+
+@dataclass(init=False)
 class ScanCfg:
-    timeout_seconds: int
     concurrency: int
     ports_tls: List[int]
     include_sni: bool = True
@@ -23,14 +67,90 @@ class ScanCfg:
     # v3.x additions (optional in YAML)
     tls_enum_mode: str = "fast"  # off|fast|deep
 
-    fingerprint_timeout_seconds: int = 2
     fingerprint_concurrency: int = 200
-
-    tls_timeout_seconds: int = 5
     tls_concurrency: int = 150
-
-    ssh_timeout_seconds: int = 5
     ssh_concurrency: int = 100
+
+    # Phase 41 D-06: nested canonical sub-tables
+    timeouts: TimeoutsCfg = field(default_factory=TimeoutsCfg)
+    retry: RetryCfg = field(default_factory=RetryCfg)
+
+    def __init__(
+        self,
+        concurrency: int,
+        ports_tls: List[int],
+        include_sni: bool = True,
+        tls_enum_mode: str = "fast",
+        fingerprint_concurrency: int = 200,
+        tls_concurrency: int = 150,
+        ssh_concurrency: int = 100,
+        timeouts: Optional[TimeoutsCfg] = None,
+        retry: Optional[RetryCfg] = None,
+        # Phase 41 D-07: legacy flat kwargs accepted for backward compat
+        # (e.g. ``ScanCfg(timeout_seconds=5, ...)``). They are routed to
+        # ``self.timeouts.*_seconds`` silently — the DeprecationWarning fires
+        # on attribute READ, not construction.
+        timeout_seconds: Optional[int] = None,
+        fingerprint_timeout_seconds: Optional[int] = None,
+        tls_timeout_seconds: Optional[int] = None,
+        ssh_timeout_seconds: Optional[int] = None,
+    ) -> None:
+        self.concurrency = concurrency
+        self.ports_tls = ports_tls
+        self.include_sni = include_sni
+        self.tls_enum_mode = tls_enum_mode
+        self.fingerprint_concurrency = fingerprint_concurrency
+        self.tls_concurrency = tls_concurrency
+        self.ssh_concurrency = ssh_concurrency
+        self.timeouts = timeouts if timeouts is not None else TimeoutsCfg()
+        self.retry = retry if retry is not None else RetryCfg()
+        # Route legacy flat kwargs into the nested TimeoutsCfg
+        legacy_values = {
+            "timeout_seconds": timeout_seconds,
+            "fingerprint_timeout_seconds": fingerprint_timeout_seconds,
+            "tls_timeout_seconds": tls_timeout_seconds,
+            "ssh_timeout_seconds": ssh_timeout_seconds,
+        }
+        for legacy_kw, value in legacy_values.items():
+            if value is not None:
+                setattr(self.timeouts, _LEGACY_TIMEOUT_KWARG_MAP[legacy_kw], int(value))
+
+    # ---- Phase 41 D-07: deprecation-alias properties ------------------
+    @property
+    def timeout_seconds(self) -> int:
+        warnings.warn(
+            "ScanCfg.timeout_seconds is deprecated; use ScanCfg.timeouts.default_seconds",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.timeouts.default_seconds
+
+    @property
+    def fingerprint_timeout_seconds(self) -> int:
+        warnings.warn(
+            "ScanCfg.fingerprint_timeout_seconds is deprecated; use ScanCfg.timeouts.fingerprint_seconds",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.timeouts.fingerprint_seconds
+
+    @property
+    def tls_timeout_seconds(self) -> int:
+        warnings.warn(
+            "ScanCfg.tls_timeout_seconds is deprecated; use ScanCfg.timeouts.tls_seconds",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.timeouts.tls_seconds
+
+    @property
+    def ssh_timeout_seconds(self) -> int:
+        warnings.warn(
+            "ScanCfg.ssh_timeout_seconds is deprecated; use ScanCfg.timeouts.ssh_seconds",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.timeouts.ssh_seconds
 
 
 @dataclass
@@ -205,9 +325,36 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
     if "broker_sqs_regions" in conn_raw:
         conn_raw["broker_sqs_regions"] = _as_str_list(conn_raw["broker_sqs_regions"])
 
+    # Phase 41 D-06/D-07: split [scan] into flat ScanCfg kwargs + nested
+    # TimeoutsCfg / RetryCfg sub-tables, with backward-compat for the four
+    # legacy flat ``*_timeout_seconds`` keys.
+    scan_raw = dict(raw.get("scan") or {})
+    timeouts_raw = scan_raw.pop("timeouts", None) or {}
+    retry_raw = scan_raw.pop("retry", None) or {}
+
+    timeouts_fields = {f.name for f in dataclasses.fields(TimeoutsCfg)}
+    retry_fields = {f.name for f in dataclasses.fields(RetryCfg)}
+    timeouts_cfg = TimeoutsCfg(
+        **{k: v for k, v in timeouts_raw.items() if k in timeouts_fields}
+    )
+    retry_cfg = RetryCfg(
+        **{k: v for k, v in retry_raw.items() if k in retry_fields}
+    )
+
+    # Legacy flat keys: only consulted when no [scan.timeouts] sub-table
+    # was provided. Strip them from scan_raw so they don't get forwarded to
+    # ScanCfg(**scan_raw); the constructor now treats them as deprecated
+    # and we'd rather route them deterministically here.
+    legacy_timeout_present = bool(timeouts_raw)
+    for legacy_kw, target_field in _LEGACY_TIMEOUT_KWARG_MAP.items():
+        if legacy_kw in scan_raw:
+            value = scan_raw.pop(legacy_kw)
+            if not legacy_timeout_present:
+                setattr(timeouts_cfg, target_field, int(value))
+
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
-        scan=ScanCfg(**raw["scan"]),
+        scan=ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw),
         targets=targets,
         connectors=ConnectorsCfg(**conn_raw),
         output=OutputCfg(**raw["output"]),
