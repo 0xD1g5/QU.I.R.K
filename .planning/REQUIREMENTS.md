@@ -24,7 +24,7 @@ Close v4.4 known deferred items so the v4.4.0 ship audit shows zero red.
 Eliminate test flakiness and deferred tests so CI green is a meaningful signal.
 
 - [x] **CI-01**: User runs `pytest` locally or in CI and sees zero `skip`/`xfail` markers on tests that were deferred for code reasons (live-infra skips remain — see UAT-* below).
-- [ ] **CI-02**: Test suite executes deterministically — no test is order-dependent, no test relies on global state from another test, no test uses real time/sleep beyond what's necessary. Audit identifies and fixes any such cases.
+- [x] **CI-02**: Test suite executes deterministically — no test is order-dependent, no test relies on global state from another test, no test uses real time/sleep beyond what's necessary. Audit identifies and fixes any such cases.
 - [x] **CI-03**: Long-running and slow tests are marked with `pytest.mark.slow` (or equivalent) so the default `pytest` run finishes in under 60 seconds on a developer machine.
 
 ### Scanner Robustness
@@ -108,7 +108,7 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 | GAP-03 | Phase 38 | pending |
 | GAP-04 | Phase 39 | pending |
 | CI-01 | Phase 41 | Complete |
-| CI-02 | Phase 41 | pending |
+| CI-02 | Phase 41 | Complete |
 | CI-03 | Phase 41 | Complete |
 | ROBUST-01 | Phase 41 | Complete |
 | ROBUST-02 | Phase 41 | Complete |

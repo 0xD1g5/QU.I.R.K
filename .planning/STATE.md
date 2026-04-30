@@ -4,14 +4,14 @@ milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: executing
 stopped_at: Phase 41 context gathered
-last_updated: "2026-04-30T01:05:11.231Z"
+last_updated: "2026-04-30T01:10:17.389Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 22
-  completed_plans: 19
-  percent: 86
+  completed_plans: 20
+  percent: 91
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 41 (ci-stability-scanner-robustness) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-04-30
 
@@ -71,6 +71,7 @@ Last activity: 2026-04-30
 | Phase 41 P02 | 10 min | 2 tasks | 3 files |
 | Phase 41 P03 | 9 min | 2 tasks | 7 files |
 | Phase 41 P04 | 10 min | 2 tasks | 3 files |
+| Phase 41 P05 | 10 min | 2 tasks | 12 files |
 
 ### Decisions
 
@@ -115,6 +116,8 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: [41-04]: _wrapped_phase used for TLS/SSH/broker; email phase keeps with-block AST shape with inline try/except (preserves test_email_run_scan_wiring AST guard)
 - [Phase ?]: [41-04]: trends.py D-15 exclusion uses getattr(ep, scan_error_category, None) so legacy DB rows without the column do not break counting
 - [Phase ?]: [41-04]: Optional-extra advisory probes scoped to broker + email (the [motion]-gated scanners)
+- [Phase ?]: Phase 41 Plan 05: Deleted dead test_migration_preserves_existing_rows (always-skip path); idempotency covered by sibling test.
+- [Phase ?]: Phase 41 Plan 05: Hard-imported gcp_connector and email_scanner modules; Wave 0 RED-state guards no longer needed.
 
 ### Pending Todos
 
@@ -154,6 +157,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-30T01:05:03.891Z
+Last session: 2026-04-30T01:10:09.813Z
 Stopped at: Phase 41 context gathered
 Next action: Execute Phase 41 (ci-stability-scanner-robustness)
