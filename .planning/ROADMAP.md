@@ -836,7 +836,14 @@ Plans:
   2. A classifier coverage report shows every algorithm name observed in test fixtures and chaos labs is mapped to a NIST PQC classification with no `unknown` fallback for any in-scope case
   3. All golden snapshot differences between v4.4 and v4.5 are intentional: each changed snapshot has a rationale comment and an accompanying commit message explaining why
   4. Pass-2 and Pass-3 skip-list logic has unit tests covering all motion plaintext labels and all v4.3 DAR skip cases — no untested skip paths remain
-**Plans**: TBD
+**Plans:** 6 plans
+Plans:
+- [ ] 42-01-PLAN.md — Wave 0 prerequisites: pyproject.toml [validation] extras pin + extract MOTION_PLAINTEXT_PROTOCOLS / DAR_SKIP_PROTOCOLS constants in builder.py (CBOM-01, CBOM-04)
+- [ ] 42-02-PLAN.md — Schema validation harness: per-profile JSON+XML CycloneDX 1.6 gate + docker-compose drift sentinel (CBOM-01)
+- [ ] 42-03-PLAN.md — Shape goldens: 3 new endpoint synthesizers (pki/vault/saml), 3 new snapshot tests, fixtures + CHANGELOG.md (CBOM-03)
+- [ ] 42-04-PLAN.md — Classifier coverage gate + regen report (docs/cbom-classifier-coverage.md); close any _ALGORITHM_TABLE gaps (CBOM-02)
+- [ ] 42-05-PLAN.md — Pass-2/Pass-3 skip-list parametrized unit tests driven off MOTION_PLAINTEXT_PROTOCOLS | DAR_SKIP_PROTOCOLS (CBOM-04)
+- [ ] 42-06-PLAN.md — Phase closeout: docs/UAT-SERIES.md UAT-42-01..04 + vault sync + Obsidian phase note + final compileall+pytest + commit
 
 ### Phase 43: Dashboard Polish
 **Goal**: All top-level dashboard routes render cleanly — zero browser console errors, zero React warnings, explicit loading states on first paint, explicit empty states when data is absent, and WCAG AA baseline accessibility
