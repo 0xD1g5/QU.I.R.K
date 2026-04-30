@@ -401,7 +401,9 @@ Where N values depend on target scope. Conservative single-host estimate: `4 + 6
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All 5 questions were resolved during planning. Resolutions are encoded in the Phase 41 plans (see 41-01 through 41-07). Bug-fix fold-in lives in Plan 03; ScanError storage decision is a new column on `CryptoEndpoint` per Plan 01; conftest.py:111 fixture conversion uses `pytest.importorskip` per Plan 05; lab.sh reset arm extension is in Plan 06; TimeoutsCfg ships as a TOML sub-table per D-06 in Plan 02.
 
 1. **`cfg.scan.profile` AttributeError bug (run_scan.py:743)**
    - What we know: `scan_kafka_targets()` is called with `profile=cfg.scan.profile` but `ScanCfg` has no `profile` attribute; this will raise `AttributeError` whenever `enable_broker=True`.
