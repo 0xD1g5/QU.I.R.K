@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import sys
 import time
 from datetime import datetime, timezone
 from collections import Counter
@@ -85,6 +86,60 @@ def _phase_timer(run_stats: Dict[str, Any], name: str):
             dur = time.perf_counter() - self_t.start
             run_stats["timings_sec"][name] = round(dur, 3)
     return _T()
+
+
+def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, logger):
+    """Phase 41 / D-14: run a scanner phase under BaseException protection.
+
+    Returns the scanner's return value, or [] when a non-fatal exception is
+    captured. Re-raises only KeyboardInterrupt and SystemExit so the user can
+    abort cleanly. All other exceptions (BaseException subclasses) are turned
+    into a CryptoEndpoint row with scan_error_category='exception' so the rest
+    of the scan can continue and the failure is visible in the report / DB.
+    """
+    try:
+        with _phase_timer(run_stats, phase_name):
+            return fn()
+    except (KeyboardInterrupt, SystemExit):
+        # D-14: never swallow user-abort or interpreter-exit signals.
+        raise
+    except BaseException as exc:  # noqa: BLE001 — D-14 wrapper by design
+        try:
+            logger.error(f"{phase_name}: unhandled exception: {exc!r}")
+        except Exception:
+            # Logger contract is best-effort; do not let logger failure mask the original error.
+            pass
+        error_endpoints.append(CryptoEndpoint(
+            host=scanner_label,
+            port=0,
+            protocol="ERROR",
+            scan_error=str(exc) or exc.__class__.__name__,
+            scan_error_category="exception",
+        ))
+        return []
+
+
+def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endpoints) -> None:
+    """Phase 41 / D-12: emit canonical stderr advisory + record CryptoEndpoint row.
+
+    Invoked when an optional-extra-gated scanner is enabled but its underlying
+    package is not installed. Produces stderr line:
+        [advisory] scanner=<name> extra=<group> not installed -- run `pip install quirk[<group>]` to enable
+    and appends a CryptoEndpoint with scan_error_category='missing_extra' so
+    trends.py can exclude it from regression counts (D-15).
+    """
+    print(
+        f"[advisory] scanner={scanner_name} extra={extra_group} not installed"
+        f" -- run `pip install quirk[{extra_group}]` to enable",
+        file=sys.stderr,
+    )
+    error_endpoints.append(CryptoEndpoint(
+        host=scanner_name,
+        port=0,
+        protocol="ADVISORY",
+        scan_error=f"optional extra [{extra_group}] not installed",
+        scan_error_category="missing_extra",
+    ))
 
 
 def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
@@ -317,6 +372,11 @@ def main():
     fp_cached = load_cache(cfg.output.directory, fp_key, args.cache_ttl_hours) if args.cache and args.resume else None
 
     inventory_endpoints: List[CryptoEndpoint] = []
+    # Phase 41 / D-12 + D-14: scanner-phase failure surface — both missing-extra
+    # advisory rows (category='missing_extra') and BaseException-captured rows
+    # (category='exception') flow through this list and merge into the main
+    # endpoints list before risk_engine / db_persist / write_reports.
+    error_endpoints: List[CryptoEndpoint] = []
     tls_targets: List[Tuple[str, int]] = []
     ssh_targets: List[Tuple[str, int]] = []
     classified_details: Dict[Tuple[str, int], str] = {}
@@ -411,36 +471,48 @@ def main():
     # Phase 41 / D-08: BACK-45 dissolved. The TLS scanner now reads
     # cfg.scan.timeouts.tls_seconds and cfg.scan.tls_concurrency directly — no
     # more cfg.scan mutate-and-restore pattern around the scan call.
-    tls_endpoints = []
-    with _phase_timer(run_stats, "tls_scanning"):
-        if tls_targets:
-            tls_endpoints = scan_tls_targets(
-                cfg,
-                tls_targets,
-                logger=logger,
-                progress_cb=None
-            )
-            for ep in tls_endpoints:
-                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                ep.service_detail = classified_details.get(key, "")
+    # Phase 41 / D-14: TLS phase runs under _wrapped_phase BaseException protection.
+    def _run_tls_phase():
+        if not tls_targets:
+            return []
+        eps = scan_tls_targets(
+            cfg,
+            tls_targets,
+            logger=logger,
+            progress_cb=None,
+        )
+        for ep in eps:
+            key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+            ep.service_detail = classified_details.get(key, "")
+        return eps
+    tls_endpoints = _wrapped_phase(
+        run_stats, "tls_scanning", "tls_scanner",
+        _run_tls_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # SSH scan phase (phase-tuned)
     # ==============================
     # Phase 41 / D-08: BACK-45 dissolved for SSH as well. The SSH scanner reads
     # cfg.scan.timeouts.ssh_seconds and cfg.scan.ssh_concurrency directly.
-    ssh_endpoints = []
-    with _phase_timer(run_stats, "ssh_scanning"):
-        if ssh_targets:
-            ssh_endpoints = scan_ssh_targets(
-                cfg,
-                ssh_targets,
-                logger=logger,
-                progress_cb=None
-            )
-            for ep in ssh_endpoints:
-                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                ep.service_detail = classified_details.get(key, "")
+    # Phase 41 / D-14: SSH phase runs under _wrapped_phase BaseException protection.
+    def _run_ssh_phase():
+        if not ssh_targets:
+            return []
+        eps = scan_ssh_targets(
+            cfg,
+            ssh_targets,
+            logger=logger,
+            progress_cb=None,
+        )
+        for ep in eps:
+            key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+            ep.service_detail = classified_details.get(key, "")
+        return eps
+    ssh_endpoints = _wrapped_phase(
+        run_stats, "ssh_scanning", "ssh_scanner",
+        _run_ssh_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # JWT scan phase
@@ -703,52 +775,91 @@ def main():
 
     # ── Email TLS scanning (Phase 32 — v4.4 Data in Motion) ────
     email_endpoints = []
-    with _phase_timer(run_stats, "email_scanning"):
-        if cfg.connectors.enable_email:
-            # D-01/D-02: reuse the existing TLS target list verbatim (deduplicated by host)
-            email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
-            if email_hosts:
-                email_endpoints = scan_email_targets(
-                    hosts=email_hosts,
-                    timeout=cfg.scan.timeouts.email_seconds,
-                    logger=logger,
-                    session_start=session_start,
-                )
-                logger.info(f"Email scan: {len(email_endpoints)} endpoints from {len(email_hosts)} hosts")
+    # Phase 41 / D-12: probe optional-extra availability and emit advisory if missing.
+    if cfg.connectors.enable_email:
+        from quirk.scanner import email_scanner as _email_mod
+        if not getattr(_email_mod, "SSLYZE_AVAILABLE", True):
+            _emit_missing_extra_advisory("email_scanner", "motion", error_endpoints)
+            cfg_email_skip = True
+        else:
+            cfg_email_skip = False
+    else:
+        cfg_email_skip = True
+
+    def _run_email_phase():
+        if cfg_email_skip or not cfg.connectors.enable_email:
+            return []
+        email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+        if not email_hosts:
+            return []
+        eps = scan_email_targets(
+            hosts=email_hosts,
+            timeout=cfg.scan.timeouts.email_seconds,
+            logger=logger,
+            session_start=session_start,
+        )
+        logger.info(f"Email scan: {len(eps)} endpoints from {len(email_hosts)} hosts")
+        return eps
+    email_endpoints = _wrapped_phase(
+        run_stats, "email_scanning", "email_scanner",
+        _run_email_phase, error_endpoints, logger,
+    ) or []
 
     # ── Broker TLS scanning (Phase 33) ────────────────────────
     kafka_endpoints = []
     rabbit_endpoints = []
     redis_endpoints = []
-    with _phase_timer(run_stats, "broker_scanning"):
-        if cfg.connectors.enable_broker:
-            broker_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
-            if broker_hosts:
-                kafka_endpoints = scan_kafka_targets(
-                    hosts=broker_hosts,
-                    timeout=cfg.scan.timeouts.broker_seconds,
-                    profile=scan_profile,
-                    logger=logger,
-                    session_start=session_start,
-                )
-                rabbit_endpoints = scan_rabbitmq_targets(
-                    hosts=broker_hosts,
-                    azure_namespaces=cfg.connectors.broker_azure_namespaces,
-                    sqs_regions=cfg.connectors.broker_sqs_regions,
-                    timeout=cfg.scan.timeouts.broker_seconds,
-                    logger=logger,
-                    session_start=session_start,
-                )
-                redis_endpoints = scan_redis_targets(
-                    hosts=broker_hosts,
-                    timeout=cfg.scan.timeouts.broker_seconds,
-                    logger=logger,
-                    session_start=session_start,
-                )
-                logger.info(
-                    f"Broker scan: kafka={len(kafka_endpoints)} "
-                    f"rabbit={len(rabbit_endpoints)} redis={len(redis_endpoints)}"
-                )
+    # Phase 41 / D-12: probe optional-extra availability — broker depends on the
+    # [motion] extra (sslyze + kafka-python + redis). If sslyze is absent, emit
+    # the canonical advisory and skip the phase rather than crashing on import.
+    if cfg.connectors.enable_broker:
+        from quirk.scanner import broker_scanner as _broker_mod
+        if not getattr(_broker_mod, "SSLYZE_AVAILABLE", True):
+            _emit_missing_extra_advisory("broker_scanner", "motion", error_endpoints)
+            cfg_broker_skip = True
+        else:
+            cfg_broker_skip = False
+    else:
+        cfg_broker_skip = True
+
+    def _run_broker_phase():
+        if cfg_broker_skip or not cfg.connectors.enable_broker:
+            return ([], [], [])
+        broker_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+        if not broker_hosts:
+            return ([], [], [])
+        k = scan_kafka_targets(
+            hosts=broker_hosts,
+            timeout=cfg.scan.timeouts.broker_seconds,
+            profile=scan_profile,
+            logger=logger,
+            session_start=session_start,
+        )
+        r = scan_rabbitmq_targets(
+            hosts=broker_hosts,
+            azure_namespaces=cfg.connectors.broker_azure_namespaces,
+            sqs_regions=cfg.connectors.broker_sqs_regions,
+            timeout=cfg.scan.timeouts.broker_seconds,
+            logger=logger,
+            session_start=session_start,
+        )
+        rd = scan_redis_targets(
+            hosts=broker_hosts,
+            timeout=cfg.scan.timeouts.broker_seconds,
+            logger=logger,
+            session_start=session_start,
+        )
+        logger.info(
+            f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)}"
+        )
+        return (k, r, rd)
+    _broker_result = _wrapped_phase(
+        run_stats, "broker_scanning", "broker_scanner",
+        _run_broker_phase, error_endpoints, logger,
+    )
+    if isinstance(_broker_result, tuple) and len(_broker_result) == 3:
+        kafka_endpoints, rabbit_endpoints, redis_endpoints = _broker_result
+    # else: BaseException captured — error_endpoints already records the failure.
 
     # broker_scan_json aggregation (Phase 33 / D-12, D-14)
     all_broker_eps = kafka_endpoints + rabbit_endpoints + redis_endpoints
@@ -786,7 +897,10 @@ def main():
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints
                  + vault_endpoints
                  + email_endpoints
-                 + kafka_endpoints + rabbit_endpoints + redis_endpoints)
+                 + kafka_endpoints + rabbit_endpoints + redis_endpoints
+                 # Phase 41 / D-12 + D-14: missing-extra advisory rows and
+                 # BaseException-captured rows flow into reports / DB persist.
+                 + error_endpoints)
 
     # ==============================
     # Findings + persistence + reports
