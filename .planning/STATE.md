@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: executing
-stopped_at: Phase 41 context gathered
-last_updated: "2026-04-30T01:14:18.873Z"
-last_activity: 2026-04-30
+stopped_at: Phase 41 complete
+last_updated: "2026-04-29T00:00:00.000Z"
+last_activity: 2026-04-29
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 22
-  completed_plans: 21
-  percent: 95
+  completed_plans: 22
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: 41 (ci-stability-scanner-robustness) — EXECUTING
-Plan: 7 of 7
-Status: Ready to execute
-Last activity: 2026-04-30
+Phase: 41 (ci-stability-scanner-robustness) — COMPLETE
+Plan: 7 of 7 (all complete)
+Status: Phase 41 closed; ready to begin Phase 42 (cbom-correctness-audit)
+Last activity: 2026-04-29
 
 ## Phase Overview
 
@@ -73,6 +73,7 @@ Last activity: 2026-04-30
 | Phase 41 P04 | 10 min | 2 tasks | 3 files |
 | Phase 41 P05 | 10 min | 2 tasks | 12 files |
 | Phase 41 P06 | 10 min | 2 tasks | 3 files |
+| Phase 41 P07 | ~5 min | 2 tasks | 4 files |
 
 ### Decisions
 
@@ -121,6 +122,8 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: Phase 41 Plan 05: Hard-imported gcp_connector and email_scanner modules; Wave 0 RED-state guards no longer needed.
 - [Phase ?]: Phase 41 Plan 06: D-10 + ROBUST-04 audit + lab.sh profile sweep
 - [Phase ?]: lab.sh down + reset arms now use --profile "*" --remove-orphans for full profile-sweep (D-18 + extension)
+- [41-07]: Phase 41 closed 2026-04-29 — UAT-41-01..04 added to UAT-SERIES.md, vault phase note + UAT mirror synced, ROADMAP marked [x]; CI-01..03 + ROBUST-01..04 all complete
+- [41-Summary]: TimeoutsCfg + RetryCfg sub-tables on ScanCfg with deprecation-alias properties on four legacy fields (D-06/07); BACK-45 cfg.scan mutation pattern dissolved by passing explicit kwargs; cfg.scan.profile bug at run_scan.py:743 fixed; _wrapped_phase helper around every scanner phase implements D-14; trends.py respects scan_error_category to exclude missing_extra from regression counts (D-15); lab.sh down + reset arms both sweep profile-tagged services (D-18 + extension)
 
 ### Pending Todos
 
@@ -160,6 +163,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-30T01:14:05.047Z
-Stopped at: Phase 41 context gathered
-Next action: Execute Phase 41 (ci-stability-scanner-robustness)
+Last session: 2026-04-29T00:00:00.000Z
+Stopped at: Phase 41 complete
+Next action: Begin Phase 42 (cbom-correctness-audit)
