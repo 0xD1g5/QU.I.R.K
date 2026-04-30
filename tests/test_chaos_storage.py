@@ -38,6 +38,7 @@ def test_minio_compose_profile_storage_s3():
     assert "minio-seed" in compose
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(
     not os.environ.get("QUIRK_RUN_DOCKER_IT"),
     reason="Set QUIRK_RUN_DOCKER_IT=1 to run live Docker integration",
@@ -64,6 +65,7 @@ def test_minio_unencrypted_bucket_produces_high_finding():
     assert "S3/unencrypted" in unencrypted[0].service_detail
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(
     not os.environ.get("QUIRK_RUN_DOCKER_IT"),
     reason="Set QUIRK_RUN_DOCKER_IT=1 to run live Docker integration",

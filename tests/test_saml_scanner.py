@@ -362,6 +362,7 @@ def test_saml_scan_json_oidc_structure():
 # SAML-06: Chaos lab integration (SKIPPED unless QUIRK_INTEGRATION_TESTS=1)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.skipif(
     not os.environ.get("QUIRK_INTEGRATION_TESTS"),

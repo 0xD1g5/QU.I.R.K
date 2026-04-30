@@ -3,7 +3,10 @@ import subprocess
 import sys
 import re
 
+import pytest
 
+
+@pytest.mark.slow
 def test_version_flag():
     """quirk --version must output 'QU.I.R.K. v{version}' to stdout."""
     result = subprocess.run(
