@@ -145,6 +145,29 @@ def _ensure_broker_columns(engine) -> None:
         conn.commit()
 
 
+_PHASE41_COLUMN_DDLS = {
+    "scan_error_category": "VARCHAR(32)",
+}
+
+
+def _ensure_phase41_columns(engine) -> None:
+    """Phase 41 D-11: add scan_error_category column to crypto_endpoints (idempotent).
+
+    Mirrors the _ensure_v43_columns shape exactly. Called from init_db()
+    after _ensure_broker_columns(). Producers populate this alongside
+    scan_error so trends.py (D-15) can filter category="missing_extra"
+    out of regression-error counts.
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    with engine.connect() as conn:
+        for col, col_type in _PHASE41_COLUMN_DDLS.items():
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
+        conn.commit()
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -167,6 +190,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_v43_columns(engine)  # v4.3: add data-at-rest columns if missing
     _ensure_email_columns(engine)  # v4.4 Phase 32: add email scanner column
     _ensure_broker_columns(engine)      # v4.4 Phase 33 — BROKER-00
+    _ensure_phase41_columns(engine)     # Phase 41 D-11 — scan_error_category
     return engine
 
 
