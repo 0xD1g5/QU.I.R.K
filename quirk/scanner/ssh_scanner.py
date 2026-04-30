@@ -103,7 +103,10 @@ def scan_ssh_targets(
 
     # Phase 41 / D-08: read per-scanner timeout + concurrency from canonical sub-table /
     # dedicated flat field. No more cfg.scan.timeout_seconds / cfg.scan.concurrency mutation.
-    ssh_timeout = getattr(cfg.scan.timeouts, "ssh_seconds", cfg.scan.timeout_seconds)
+    if hasattr(cfg.scan, "timeouts"):
+        ssh_timeout = cfg.scan.timeouts.ssh_seconds
+    else:
+        ssh_timeout = cfg.scan.timeout_seconds
     ssh_workers = getattr(cfg.scan, "ssh_concurrency", cfg.scan.concurrency)
 
     if logger:

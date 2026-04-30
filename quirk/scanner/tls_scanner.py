@@ -461,7 +461,10 @@ def scan_tls_targets(
     tls_enum_mode = getattr(getattr(cfg, "scan", cfg), "tls_enum_mode", "fast")
     # Phase 41 / D-08: read per-scanner timeout + concurrency from canonical sub-table /
     # dedicated flat field. No more cfg.scan.timeout_seconds / cfg.scan.concurrency mutation.
-    tls_timeout = getattr(cfg.scan.timeouts, "tls_seconds", cfg.scan.timeout_seconds)
+    if hasattr(cfg.scan, "timeouts"):
+        tls_timeout = cfg.scan.timeouts.tls_seconds
+    else:
+        tls_timeout = cfg.scan.timeout_seconds
     tls_workers = getattr(cfg.scan, "tls_concurrency", cfg.scan.concurrency)
     if logger:
         logger.stamp(f"Starting TLS scans: {len(targets)} targets (workers={tls_workers}, enum={tls_enum_mode})")
