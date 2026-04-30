@@ -4,14 +4,14 @@ milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: executing
 stopped_at: Phase 41 context gathered
-last_updated: "2026-04-30T00:47:45.411Z"
+last_updated: "2026-04-30T00:58:29.832Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 22
-  completed_plans: 17
-  percent: 77
+  completed_plans: 18
+  percent: 82
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 41 (ci-stability-scanner-robustness) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-04-30
 
@@ -69,6 +69,7 @@ Last activity: 2026-04-30
 | Phase 40-chaos-lab-parity P06 | ~5 min | 4 tasks | 4 files |
 | Phase 41 P01 | 12 min | 3 tasks | 7 files |
 | Phase 41 P02 | 10 min | 2 tasks | 3 files |
+| Phase 41 P03 | 9 min | 2 tasks | 7 files |
 
 ### Decisions
 
@@ -107,6 +108,9 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: [41-01]: xfail-with-reason stubs (vs pytest.skip) keep pending tests visible in collection while non-blocking; each stub names the plan that lands the wiring
 - [Phase ?]: [41-02]: Property setters added for legacy timeout aliases (silent route to TimeoutsCfg); apply_profile() in quirk/engine/profiles.py still writes through legacy names — Plan 03 cleans them up
 - [Phase ?]: [41-02]: @dataclass(init=False) + custom __init__ chosen for ScanCfg to make legacy *_timeout_seconds kwarg routing self-documenting in the signature
+- [Phase ?]: [41-03]: Scanners read TimeoutsCfg directly — D-08 BACK-45 dissolved
+- [Phase ?]: [41-03]: hasattr guard in TLS/SSH scanners + cfg=None kwarg in db/vault connectors for SimpleNamespace mock compat
+- [Phase ?]: [41-03]: HYGN-02 hygiene tests inverted (mutation-must-be-absent) instead of deleted to preserve regression guard role
 
 ### Pending Todos
 
@@ -146,6 +150,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-30T00:47:37.573Z
+Last session: 2026-04-30T00:58:29.829Z
 Stopped at: Phase 41 context gathered
 Next action: Execute Phase 41 (ci-stability-scanner-robustness)
