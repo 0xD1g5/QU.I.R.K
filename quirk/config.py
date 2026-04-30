@@ -116,6 +116,11 @@ class ScanCfg:
                 setattr(self.timeouts, _LEGACY_TIMEOUT_KWARG_MAP[legacy_kw], int(value))
 
     # ---- Phase 41 D-07: deprecation-alias properties ------------------
+    # Both read and write are supported for backward compat (apply_profile()
+    # in quirk/engine/profiles.py still writes through the legacy names until
+    # Plan 03 refactors it). Reads emit DeprecationWarning; writes route
+    # silently to the corresponding TimeoutsCfg field (Plan 03 cleans the
+    # remaining writers up).
     @property
     def timeout_seconds(self) -> int:
         warnings.warn(
@@ -124,6 +129,10 @@ class ScanCfg:
             stacklevel=2,
         )
         return self.timeouts.default_seconds
+
+    @timeout_seconds.setter
+    def timeout_seconds(self, value: int) -> None:
+        self.timeouts.default_seconds = int(value)
 
     @property
     def fingerprint_timeout_seconds(self) -> int:
@@ -134,6 +143,10 @@ class ScanCfg:
         )
         return self.timeouts.fingerprint_seconds
 
+    @fingerprint_timeout_seconds.setter
+    def fingerprint_timeout_seconds(self, value: int) -> None:
+        self.timeouts.fingerprint_seconds = int(value)
+
     @property
     def tls_timeout_seconds(self) -> int:
         warnings.warn(
@@ -143,6 +156,10 @@ class ScanCfg:
         )
         return self.timeouts.tls_seconds
 
+    @tls_timeout_seconds.setter
+    def tls_timeout_seconds(self, value: int) -> None:
+        self.timeouts.tls_seconds = int(value)
+
     @property
     def ssh_timeout_seconds(self) -> int:
         warnings.warn(
@@ -151,6 +168,10 @@ class ScanCfg:
             stacklevel=2,
         )
         return self.timeouts.ssh_seconds
+
+    @ssh_timeout_seconds.setter
+    def ssh_timeout_seconds(self, value: int) -> None:
+        self.timeouts.ssh_seconds = int(value)
 
 
 @dataclass

@@ -149,10 +149,20 @@ def test_template_field_alignment():
     # --- scan block ---
     scan_keys = set((raw.get("scan") or {}).keys())
     scan_field_names = {f.name for f in dataclasses.fields(ScanCfg)}
-    unknown_scan_keys = scan_keys - scan_field_names
+    # Phase 41 D-06/D-07: the four legacy flat *_timeout_seconds keys are
+    # no longer dataclass fields but remain valid template inputs (they're
+    # routed into ScanCfg.timeouts by config_from_dict for backward compat).
+    legacy_timeout_aliases = {
+        "timeout_seconds",
+        "fingerprint_timeout_seconds",
+        "tls_timeout_seconds",
+        "ssh_timeout_seconds",
+    }
+    valid_scan_keys = scan_field_names | legacy_timeout_aliases
+    unknown_scan_keys = scan_keys - valid_scan_keys
     assert not unknown_scan_keys, (
         f"config_template.yaml scan: block has unknown keys: {unknown_scan_keys}. "
-        f"Valid ScanCfg fields: {scan_field_names}"
+        f"Valid ScanCfg fields: {scan_field_names} (plus legacy aliases: {legacy_timeout_aliases})"
     )
 
 
