@@ -73,7 +73,7 @@ This phase **audits and hardens** the existing CBOM pipeline (`quirk/cbom/`). It
 - `tests/fixtures/cbom/expected_broker_cbom.json`, `expected_email_cbom.json`, `README.md` — existing goldens.
 
 ### Chaos lab oracle
-- `quantum-chaos-enterprise-lab/docker-compose.yml` — full profile list (19 profiles enumerated in CONTEXT discussion).
+- `quantum-chaos-enterprise-lab/docker-compose.yml` — full profile list (18 profiles per yaml.safe_load on 2026-04-30).
 - `quantum-chaos-enterprise-lab/expected_results_v3.md` (and any `expected_results_*.md` for newer milestones) — algorithm enumeration ground-truth.
 - `quantum-chaos-enterprise-lab/lab.sh` — `ALL_PROFILES` list (per CLAUDE.md chaos-lab maintenance rule, must remain in sync — Phase 42 must not drift this).
 
