@@ -4,14 +4,14 @@ milestone: v4.5
 milestone_name: Reliability & Gap Closure
 status: executing
 stopped_at: Phase 41 context gathered
-last_updated: "2026-04-30T00:58:29.832Z"
+last_updated: "2026-04-30T01:05:11.231Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 22
-  completed_plans: 18
-  percent: 82
+  completed_plans: 19
+  percent: 86
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 41 (ci-stability-scanner-robustness) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-04-30
 
@@ -70,6 +70,7 @@ Last activity: 2026-04-30
 | Phase 41 P01 | 12 min | 3 tasks | 7 files |
 | Phase 41 P02 | 10 min | 2 tasks | 3 files |
 | Phase 41 P03 | 9 min | 2 tasks | 7 files |
+| Phase 41 P04 | 10 min | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -111,6 +112,9 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: [41-03]: Scanners read TimeoutsCfg directly — D-08 BACK-45 dissolved
 - [Phase ?]: [41-03]: hasattr guard in TLS/SSH scanners + cfg=None kwarg in db/vault connectors for SimpleNamespace mock compat
 - [Phase ?]: [41-03]: HYGN-02 hygiene tests inverted (mutation-must-be-absent) instead of deleted to preserve regression guard role
+- [Phase ?]: [41-04]: _wrapped_phase used for TLS/SSH/broker; email phase keeps with-block AST shape with inline try/except (preserves test_email_run_scan_wiring AST guard)
+- [Phase ?]: [41-04]: trends.py D-15 exclusion uses getattr(ep, scan_error_category, None) so legacy DB rows without the column do not break counting
+- [Phase ?]: [41-04]: Optional-extra advisory probes scoped to broker + email (the [motion]-gated scanners)
 
 ### Pending Todos
 
@@ -150,6 +154,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-30T00:58:29.829Z
+Last session: 2026-04-30T01:05:03.891Z
 Stopped at: Phase 41 context gathered
 Next action: Execute Phase 41 (ci-stability-scanner-robustness)
