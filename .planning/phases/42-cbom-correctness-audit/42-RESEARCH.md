@@ -53,7 +53,7 @@ Phase 42 hardens an already-shipping CBOM pipeline (`quirk/cbom/`). All four req
 | ID | Description | Research Support |
 |----|-------------|------------------|
 | **CBOM-01** | CBOM JSON and XML outputs validate against the official CycloneDX 1.6 schema for every shipped chaos lab profile; validation is automated as a pytest check. | Confirmed validator entry points, return semantics, optional-extras requirement, and SchemaVersion.V1_6 enum. See "Standard Stack" + "Code Examples" + "Common Pitfalls #1". |
-| **CBOM-02** | Algorithm classifier coverage report; no `unknown` fallbacks for in-scope cases. | Confirmed `_ALGORITHM_TABLE` shape and `_FALLBACK` location at `classifier.py:181`. Coverage walk = union of algorithm names observed when `build_cbom()` runs against synthesized lab endpoints from all 19 profiles. |
+| **CBOM-02** | Algorithm classifier coverage report; no `unknown` fallbacks for in-scope cases. | Confirmed `_ALGORITHM_TABLE` shape and `_FALLBACK` location at `classifier.py:181`. Coverage walk = union of algorithm names observed when `build_cbom()` runs against synthesized lab endpoints from all 18 profiles. |
 | **CBOM-03** | Golden snapshot drift between v4.4 and v4.5 is reviewed; intentional, documented, accompanied by snapshot update commit with rationale. | Existing Phase 35 mechanism (`REGEN_CBOM_FIXTURES=1`) extends cleanly. Need 3 new endpoint synthesizers (TLS-with-cert / DAR / identity) modelled on `_build_email_lab_endpoints()` / `_build_broker_lab_endpoints()`. |
 | **CBOM-04** | Pass-2 / Pass-3 skip-list logic unit-tested for all motion-plaintext labels and all v4.3 DAR skip cases. | Skip-list literals located at `builder.py:436-440` (Pass 2) and `builder.py:519-523` (Pass 3). Refactor target identified — see "Code Examples #4". |
 </phase_requirements>
@@ -246,9 +246,9 @@ assert result is None, f"XML schema violation: {result}"
 
 **Why it happens:** `lab.sh` derives profiles dynamically (`_derive_all_profiles` in `lab.sh:56-65`) — there is no hardcoded list. But the test code will hardcode profile names. CLAUDE.md "Chaos Lab Maintenance" rule binds: any profile-list reference must stay in sync with `docker-compose.yml`.
 
-**How to avoid:** Source-of-truth for the test parametrization is `docker-compose.yml`. Either parse it in the test or hardcode against the verified inventory below (19 profiles as of 2026-04-30) and add a sentinel test that re-derives from compose and fails if drift occurs.
+**How to avoid:** Source-of-truth for the test parametrization is `docker-compose.yml`. Either parse it in the test or hardcode against the verified inventory below (18 profiles as of 2026-04-30) and add a sentinel test that re-derives from compose and fails if drift occurs.
 
-**Verified profile inventory (19 profiles)** [VERIFIED: `grep "profiles:" docker-compose.yml`]:
+**Verified profile inventory (18 profiles)** [VERIFIED: `grep "profiles:" docker-compose.yml`]:
 `broker`, `cloud`, `database`, `dnssec`, `email`, `identity`, `jwt`, `kerberos`, `ldaps`, `phaseA`, `pki`, `registry`, `saml`, `source`, `ssh-weak`, `storage`, `storage-s3`, `vault`. (Note: `identity` and `phaseA` are listed both alone and as a multi-profile member.)
 
 ### Pitfall 4: `_FALLBACK` is also a legitimate output for some inputs
@@ -289,7 +289,7 @@ PROFILE_ENDPOINTS = {
     "pki":     _build_pki_lab_endpoints,        # NEW (D-07)
     "vault":   _build_vault_lab_endpoints,       # NEW (D-07)
     "saml":    _build_saml_lab_endpoints,        # NEW (D-07)
-    # ... 19 entries total — one per docker-compose.yml profile
+    # ... 18 entries total — one per docker-compose.yml profile
 }
 
 @pytest.mark.parametrize("profile", sorted(PROFILE_ENDPOINTS))
@@ -506,25 +506,25 @@ def test_skip_protocol_emits_no_cert_or_proto_component(protocol):
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
 | A1 | Adding `[validation]` to the existing pin (`cyclonedx-python-lib[validation]>=11.7.0,<12`) does not introduce a transitive conflict with already-declared `lxml>=6.0` | Standard Stack | LOW — extra requires `lxml>=4,<7` which overlaps; should be conflict-free. Verify with `pip install -e .` dry-run. |
-| A2 | The 19 profiles in `docker-compose.yml` (verified via grep on 2026-04-30) is the complete shipped set; no out-of-tree compose overlays add profiles | Pitfall #3 | LOW — if a profile is added later, the test parametrization will simply not cover it (graceful). |
+| A2 | The 18 profiles in `docker-compose.yml` (verified via grep on 2026-04-30) is the complete shipped set; no out-of-tree compose overlays add profiles | Pitfall #3 | LOW — if a profile is added later, the test parametrization will simply not cover it (graceful). |
 | A3 | `pki` profile has the richest TLS cert chain, `vault`/`database` has the most informative DAR fields, `saml` has the richest identity coverage — final picks left to planner per D-07 | Project Structure | LOW — D-07 explicitly grants planner discretion within shape. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Profile-set parsing strategy in tests.**
-   - What we know: `docker-compose.yml` is the source of truth; `lab.sh` derives profiles dynamically; tests will reference 19 names.
-   - What's unclear: hardcode the 19 names in a test constant (simple, can drift) vs. parse `docker-compose.yml` at test time (zero drift, more code).
-   - Recommendation: hardcode the 19-name list as a frozenset in the test module, then add ONE sentinel test that parses `docker-compose.yml` and asserts equality. Drift = one failing test that points at the diff. Planner decides.
+   - What we know: `docker-compose.yml` is the source of truth; `lab.sh` derives profiles dynamically; tests will reference 18 names.
+   - What's unclear: hardcode the 18 names in a test constant (simple, can drift) vs. parse `docker-compose.yml` at test time (zero drift, more code).
+   - **RESOLVED:** hardcode the 18-name list as a frozenset in the test module, then add ONE sentinel test that parses `docker-compose.yml` and asserts equality. Drift = one failing test that points at the diff. Planner decides.
 
 2. **Database vs Vault for the DAR shape golden.**
    - What we know: D-07 says "vault or database — planner picks the one with the most informative DAR fields."
    - What's unclear: which profile actually surfaces the most DAR-distinct algorithms in `build_cbom()` output.
-   - Recommendation: planner should generate a one-shot diagnostic snapshot of both during planning and pick the one with more components in the bom. If they tie, prefer `vault` (fewer external deps in the test fixture).
+   - **RESOLVED:** planner should generate a one-shot diagnostic snapshot of both during planning and pick the one with more components in the bom. If they tie, prefer `vault` (fewer external deps in the test fixture).
 
 3. **SAML vs LDAPS for the identity shape golden.**
    - What we know: D-07 says "saml — alternative ldaps if SAML coverage is too thin."
    - What's unclear: SAML scanner emits `cert_pubkey_alg` for the IdP signing cert — but no separate identity-specific bom_ref shape. May be effectively a TLS-with-cert fixture.
-   - Recommendation: pick `saml`. If the snapshot turns out structurally identical to `pki`, swap to `ldaps`.
+   - **RESOLVED:** pick `saml`. If the snapshot turns out structurally identical to `pki`, swap to `ldaps`.
 
 ## Sources
 
