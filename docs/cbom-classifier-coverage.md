@@ -8,17 +8,17 @@ Per Phase 42 / D-05 — every algorithm surfaced by `build_cbom()` against any o
 | Algorithm Name | Primitive | NIST Level | Classical Bits | Surfaced By Profiles |
 |----------------|-----------|------------|----------------|-----------------------|
 | AES-128-CBC | BLOCK_CIPHER | 1 | 128 | broker |
-| AES-256 | UNKNOWN |  |  | storage |
+| AES-256 | BLOCK_CIPHER | 1 | 256 | storage |
 | AES-256-GCM | AE | 1 | 256 | cloud, identity, ldaps, phaseA, pki |
 | ChaCha20-Poly1305 | AE | 1 | 256 | email |
 | RC4-HMAC | BLOCK_CIPHER | 0 | 128 | kerberos |
 | RSA | PKE | 0 | 112 | broker, cloud, email, identity, jwt, ldaps, phaseA, pki, saml |
-| RSA-1024 | UNKNOWN |  |  | phaseA |
-| RSA-2048 | UNKNOWN |  |  | broker, cloud, email, identity, ldaps, phaseA, pki, vault |
+| RSA-1024 | PKE | 0 | 80 | phaseA |
+| RSA-2048 | PKE | 0 | 112 | broker, cloud, email, identity, ldaps, phaseA, pki, vault |
 | RSASHA1 | PKE |  |  | dnssec |
 | SHA-1 | HASH | 0 | 80 | broker |
 | SHA-256 | HASH | 0 | 128 | email |
 | SHA-384 | HASH | 2 | 192 | cloud, email, identity, ldaps, phaseA, pki |
 | X25519 | KEY_AGREE | 0 | 128 | cloud, identity, ldaps, phaseA, pki |
-| sha1WithRSAEncryption | UNKNOWN |  |  | phaseA |
-| sha256WithRSAEncryption | UNKNOWN |  |  | broker, cloud, email, identity, ldaps, phaseA, pki |
+| sha1WithRSAEncryption | SIGNATURE | 0 | 80 | phaseA |
+| sha256WithRSAEncryption | SIGNATURE | 0 | 112 | broker, cloud, email, identity, ldaps, phaseA, pki |
