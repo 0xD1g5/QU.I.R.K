@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v4.5
 milestone_name: Reliability & Gap Closure
-status: Phase 41 closed; ready to begin Phase 42 (cbom-correctness-audit)
+status: executing
 stopped_at: Phase 42 context gathered
-last_updated: "2026-04-30T11:40:36.833Z"
-last_activity: 2026-04-29
+last_updated: "2026-04-30T12:45:16.572Z"
+last_activity: 2026-04-30
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
+  total_plans: 28
+  completed_plans: 23
+  percent: 82
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 41 — ci-stability-scanner-robustness
+**Current focus:** Phase 42 — cbom-correctness-audit
 
 ## Current Position
 
-Phase: 41 (ci-stability-scanner-robustness) — COMPLETE
-Plan: 7 of 7 (all complete)
-Status: Phase 41 closed; ready to begin Phase 42 (cbom-correctness-audit)
-Last activity: 2026-04-29
+Phase: 42 (cbom-correctness-audit) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-04-30
 
 ## Phase Overview
 
@@ -74,6 +74,7 @@ Last activity: 2026-04-29
 | Phase 41 P05 | 10 min | 2 tasks | 12 files |
 | Phase 41 P06 | 10 min | 2 tasks | 3 files |
 | Phase 41 P07 | ~5 min | 2 tasks | 4 files |
+| Phase 42 P01 | 105 | 2 tasks | 2 files |
 
 ### Decisions
 
@@ -124,6 +125,8 @@ Roadmap decisions (2026-04-27):
 - [Phase ?]: lab.sh down + reset arms now use --profile "*" --remove-orphans for full profile-sweep (D-18 + extension)
 - [41-07]: Phase 41 closed 2026-04-29 — UAT-41-01..04 added to UAT-SERIES.md, vault phase note + UAT mirror synced, ROADMAP marked [x]; CI-01..03 + ROBUST-01..04 all complete
 - [41-Summary]: TimeoutsCfg + RetryCfg sub-tables on ScanCfg with deprecation-alias properties on four legacy fields (D-06/07); BACK-45 cfg.scan mutation pattern dissolved by passing explicit kwargs; cfg.scan.profile bug at run_scan.py:743 fixed; _wrapped_phase helper around every scanner phase implements D-14; trends.py respects scan_error_category to exclude missing_extra from regression counts (D-15); lab.sh down + reset arms both sweep profile-tagged services (D-18 + extension)
+- [Phase 42]: Adopted [validation] umbrella extra over hand-pinned deps (D-01)
+- [Phase 42]: Extracted MOTION_PLAINTEXT_PROTOCOLS and DAR_SKIP_PROTOCOLS as module-level frozensets (D-10/D-11)
 
 ### Pending Todos
 
@@ -163,6 +166,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-04-30T11:40:36.829Z
+Last session: 2026-04-30T12:44:31.999Z
 Stopped at: Phase 42 context gathered
 Next action: Begin Phase 42 (cbom-correctness-audit)

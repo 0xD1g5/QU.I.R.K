@@ -40,10 +40,10 @@ Improve graceful degradation across all scanners so partial failures don't poiso
 
 Audit CBOM output against CycloneDX 1.6 spec, classifier coverage, and golden snapshots.
 
-- [ ] **CBOM-01**: CBOM JSON and XML outputs validate against the official CycloneDX 1.6 schema for every shipped chaos lab profile; validation is automated as a pytest check.
+- [x] **CBOM-01**: CBOM JSON and XML outputs validate against the official CycloneDX 1.6 schema for every shipped chaos lab profile; validation is automated as a pytest check.
 - [ ] **CBOM-02**: User reviews the algorithm classifier coverage report: every algorithm name observed in test fixtures and chaos labs is mapped to a NIST PQC classification, with no `unknown` fallbacks for in-scope cases.
 - [ ] **CBOM-03**: Golden snapshot drift between v4.4 and v4.5 is reviewed; any change is intentional, documented, and accompanied by a snapshot update commit with rationale.
-- [ ] **CBOM-04**: Pass-2 / Pass-3 skip-list logic is unit-tested for all motion plaintext labels and all v4.3 DAR skip cases — coverage gaps closed.
+- [x] **CBOM-04**: Pass-2 / Pass-3 skip-list logic is unit-tested for all motion plaintext labels and all v4.3 DAR skip cases — coverage gaps closed.
 
 ### Dashboard Polish
 
@@ -114,10 +114,10 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 | ROBUST-02 | Phase 41 | Complete |
 | ROBUST-03 | Phase 41 | Complete |
 | ROBUST-04 | Phase 41 | Complete |
-| CBOM-01 | Phase 42 | pending |
+| CBOM-01 | Phase 42 | Complete |
 | CBOM-02 | Phase 42 | pending |
 | CBOM-03 | Phase 42 | pending |
-| CBOM-04 | Phase 42 | pending |
+| CBOM-04 | Phase 42 | Complete |
 | DASH-01 | Phase 43 | pending |
 | DASH-02 | Phase 43 | pending |
 | DASH-03 | Phase 43 | pending |
