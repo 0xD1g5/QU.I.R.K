@@ -14,10 +14,10 @@ Sweep all top-level dashboard routes — `/`, `/findings`, `/identity`, `/motion
 ## Implementation Decisions
 
 ### WCAG Verification Strategy
-- **D-01:** WCAG AA verification is automated via `@axe-core/cli` running against a `vite preview` server. CI invokes `npm run a11y:check`, which executes axe per route and diffs results against per-route baselines checked into the repo. Picked over Playwright + axe-core to keep Phase 43 a polish phase rather than a "stand up our first e2e framework" phase.
+- **D-01 (revised after research 2026-04-30):** WCAG AA verification is automated via **`@axe-core/puppeteer`** running against a `vite preview` server. The same harness *also* captures `console.warn` / `console.error` per route, satisfying SC #1 in one CI step instead of two. Originally CONTEXT.md picked `@axe-core/cli`; research (`43-RESEARCH.md`) found the CLI does not surface console messages, so a second tool would be needed anyway. `@axe-core/puppeteer` collapses both gates into a single harness with no Playwright adoption (puppeteer-core is library-only, ~50MB chromium download).
 - **D-02:** Per-route baselines stored at `src/dashboard/tests/a11y/baseline-{route-slug}.json`. Any new violation outside the baseline fails CI.
-- **D-03:** A seeded scan fixture is required so axe runs against populated routes (not the empty-state branch). Planner picks the fixture mechanism — likely a stub `/api/scans/latest` response served by Vite middleware in `a11y` mode, or a checked-in JSON fixture loaded via env flag.
-- **D-04:** Migration door for Phase 44 — when Phase 44 adopts Playwright for UAT scenarios, the same axe-core ruleset and baseline JSONs port directly to `@axe-core/playwright`. No work in Phase 43 is throwaway.
+- **D-03:** A seeded scan fixture is required so axe runs against populated routes (not the empty-state branch). Planner picks the fixture mechanism — researcher recommends Vite middleware gated by `VITE_A11Y_FIXTURE=1` (~30 lines, zero new deps, no MSW).
+- **D-04:** Migration door for Phase 44 — when Phase 44 adopts Playwright for UAT scenarios, the axe-core ruleset and baseline JSONs port to `@axe-core/playwright` with minimal rework (the harness changes shape; the baselines do not).
 
 ### Loading State Pattern
 - **D-05:** Per-page hand-tuned skeletons on data-heavy routes — `/findings`, `/cbom`, `/motion`, `/data-at-rest`, `/identity`, `/certificates`. Each skeleton mirrors its page's layout structure (header gauges, table rows, side panels). Reuses the shadcn `<Skeleton>` primitive already in use on `/data-at-rest` from Phase 39.
@@ -44,6 +44,11 @@ Sweep all top-level dashboard routes — `/`, `/findings`, `/identity`, `/motion
 ### Heading Hierarchy & Color Contrast (Success Criterion #4)
 - **D-17:** Each route has exactly one `<h1>` (the page title), with `<h2>` for major sections and `<h3>` for sub-sections. Verified by axe-core's `heading-order` and `page-has-heading-one` rules.
 - **D-18:** Color contrast on findings tables (severity badges, table text on muted backgrounds) verified by axe-core's `color-contrast` rule. Any failures fixed via the existing CSS-variable token system — no hardcoded `hsl()` values introduced (Phase 39 D-13 baseline).
+
+### CI Wiring (added after research 2026-04-30)
+- **D-19:** Phase 43 creates `.github/workflows/dashboard-quality.yml` (the repo currently has no GitHub Actions workflows). The workflow runs on PRs that touch `src/dashboard/**` and executes `npm run a11y:check` (which transitively covers the console-allowlist gate via the shared puppeteer harness). Picked over folding into a (currently absent) pytest workflow because the dashboard quality gate has no Python dependencies.
+- **D-20:** Cytoscape canvases on `/cbom` and `/roadmap` are known to fail axe `image-alt` / `region` rules. Phase 43 wraps each canvas with `role="img"` + a descriptive `aria-label` (one-liner per page). Researcher flagged this as a concrete plannable item, not a generic concern.
+- **D-21:** `react-router` future-flag warnings are NOT expected — package.json is on `react-router-dom@7.4.0` and those warnings were the v6→v7 migration mechanism. Allowlist seed therefore only needs the recharts `defaultProps` deprecation (verified upstream issue recharts/recharts#3615; affects `/` Executive `BarChart`).
 
 ### Claude's Discretion
 - Exact baseline-fixture mechanism for axe runs (Vite middleware mock vs JSON fixture vs MSW). Planner picks based on least-friction integration with `vite preview`.
