@@ -9,12 +9,7 @@ from unittest.mock import patch, MagicMock, PropertyMock
 
 from quirk.scanner.aws_connector import scan_aws_targets
 from quirk.scanner.azure_connector import scan_azure_targets
-
-try:
-    from quirk.scanner.gcp_connector import scan_gcp_targets
-    _HAS_GCP_MODULE = True
-except ImportError:
-    _HAS_GCP_MODULE = False
+from quirk.scanner.gcp_connector import scan_gcp_targets
 
 
 # ---- AWS Tests (SCAN-06) ----
@@ -151,7 +146,6 @@ def _build_gcp_mock_service():
     return svc
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_unavailable():
     """If google-api-python-client is not installed, scan_gcp_targets must return empty list."""
     with patch("quirk.scanner.gcp_connector.GCP_AVAILABLE", False):
@@ -159,7 +153,6 @@ def test_gcp_unavailable():
         assert endpoints == []
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_credentials_error_graceful():
     """DefaultCredentialsError at API call time must produce scan_error endpoint, not crash."""
     mock_service = _build_gcp_mock_service()
@@ -176,7 +169,6 @@ def test_gcp_credentials_error_graceful():
         assert "gcp-credentials-unavailable" in result[0].scan_error
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_kms_algorithm_mapping():
     """Cloud KMS RSA_SIGN_PKCS1_2048_SHA256 must map to cert_pubkey_alg=RSA, size=2048."""
     mock_service = _build_gcp_mock_service()
@@ -229,7 +221,6 @@ def test_gcp_kms_algorithm_mapping():
      .keyRings.return_value.cryptoKeys.return_value.list_next.assert_called_once())
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_cloud_sql_plaintext_allowed():
     """Cloud SQL ALLOW_UNENCRYPTED_AND_ENCRYPTED sslMode must produce HIGH finding."""
     mock_service = _build_gcp_mock_service()
@@ -253,7 +244,6 @@ def test_gcp_cloud_sql_plaintext_allowed():
     assert any("HIGH" in (ep.cert_pubkey_alg or "") for ep in sql_eps)
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_cloud_sql_encrypted_only():
     """Cloud SQL ENCRYPTED_ONLY sslMode must produce MEDIUM finding."""
     mock_service = _build_gcp_mock_service()
@@ -277,7 +267,6 @@ def test_gcp_cloud_sql_encrypted_only():
     assert any("MEDIUM" in (ep.cert_pubkey_alg or "") for ep in sql_eps)
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_cloud_sql_mtls_no_finding():
     """Cloud SQL TRUSTED_CLIENT_CERTIFICATE_REQUIRED sslMode must produce no CLOUD_SQL endpoint."""
     mock_service = _build_gcp_mock_service()
@@ -300,7 +289,6 @@ def test_gcp_cloud_sql_mtls_no_finding():
     assert len(sql_eps) == 0
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_cloud_sql_null_ssl_mode():
     """Cloud SQL instance with no sslMode must produce HIGH finding (D-08 missing/null case)."""
     mock_service = _build_gcp_mock_service()
@@ -324,7 +312,6 @@ def test_gcp_cloud_sql_null_ssl_mode():
     assert any("HIGH" in (ep.cert_pubkey_alg or "") for ep in sql_eps)
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_gcs_cmek_detection():
     """GCS bucket with defaultKmsKeyName must have cert_pubkey_alg=CMEK; plain bucket must not."""
     mock_service = _build_gcp_mock_service()
@@ -357,7 +344,6 @@ def test_gcp_gcs_cmek_detection():
     assert any(ep.cert_pubkey_alg != "CMEK" for ep in gcs_eps)
 
 
-@pytest.mark.skipif(not _HAS_GCP_MODULE, reason="gcp_connector.py not yet created")
 def test_gcp_gcs_scan_json_written():
     """Sentinel GCS endpoint must carry gcs_scan_json with full bucket list as JSON array."""
     mock_service = _build_gcp_mock_service()

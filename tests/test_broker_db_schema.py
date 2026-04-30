@@ -6,10 +6,9 @@ broker_scan_json TEXT NULL to crypto_endpoints without data loss.
 import tempfile
 import os
 
-import pytest
-from sqlalchemy import text, inspect as sa_inspect
+from sqlalchemy import inspect as sa_inspect
 
-from quirk.db import init_db, _ensure_broker_columns
+from quirk.db import init_db
 
 
 def _fresh_db():
@@ -51,42 +50,8 @@ def test_init_db_twice_no_error():
         os.unlink(tmp.name)
 
 
-def test_migration_preserves_existing_rows():
-    """Data preservation: existing rows survive _ensure_broker_columns ALTER TABLE."""
-    from sqlalchemy import create_engine
-    from quirk.models import Base
-
-    # Build a DB WITHOUT calling init_db, so we control the schema state.
-    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-    tmp.close()
-    try:
-        engine = create_engine(f"sqlite:///{tmp.name}")
-        Base.metadata.create_all(engine)
-
-        # Check if broker_scan_json already exists (Base may include it since model was updated).
-        cols_before = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
-        if "broker_scan_json" in cols_before:
-            # Column already in model; idempotency is covered by test_init_db_twice_no_error.
-            pytest.skip("Column already present via Base.metadata; idempotency covered by test_init_db_twice_no_error")
-
-        # Insert a row before migration runs.
-        with engine.begin() as conn:
-            conn.execute(text(
-                "INSERT INTO crypto_endpoints (host, port, protocol) VALUES ('test-host', 9093, 'KAFKA-TLS')"
-            ))
-
-        # Now run migration helper.
-        _ensure_broker_columns(engine)
-
-        # Verify row survived and broker_scan_json is NULL.
-        with engine.connect() as conn:
-            rows = list(conn.execute(
-                text("SELECT host, port, broker_scan_json FROM crypto_endpoints")
-            ).fetchall())
-
-        assert len(rows) == 1, "Row count should be 1 after migration"
-        assert rows[0][0] == "test-host", "host column preserved"
-        assert rows[0][2] is None, "broker_scan_json should be NULL for pre-existing row"
-    finally:
-        engine.dispose()
-        os.unlink(tmp.name)
+# NOTE: A `test_migration_preserves_existing_rows` test previously lived here but
+# was a no-op — `broker_scan_json` is now part of `Base.metadata`, so the data-
+# preservation path was unreachable and the test always pytest.skipped. Migration
+# idempotency is covered by `test_init_db_twice_no_error`. Removed in Phase 41
+# Plan 05 (D-04 stale-skip cleanup).
