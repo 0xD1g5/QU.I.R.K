@@ -309,7 +309,8 @@ def main():
     # ==============================
     # Fingerprinting (with cache)
     # ==============================
-    fp_timeout = _get_scan_int(cfg, "fingerprint_timeout_seconds", cfg.scan.timeout_seconds)
+    # Phase 41 / D-08: read fingerprint timeout from canonical TimeoutsCfg sub-table.
+    fp_timeout = getattr(cfg.scan.timeouts, "fingerprint_seconds", cfg.scan.timeout_seconds)
     fp_conc = _get_scan_int(cfg, "fingerprint_concurrency", cfg.scan.concurrency)
 
     fp_key = f"fingerprint-{scope_hash(cfg, args.discovery, nmap_extra_args=args.nmap_extra_args, ports=sorted(set([p for _, p in targets])))}"
@@ -407,56 +408,39 @@ def main():
     # ==============================
     # TLS scan phase (phase-tuned)
     # ==============================
-    tls_timeout = _get_scan_int(cfg, "tls_timeout_seconds", cfg.scan.timeout_seconds)
-    tls_conc = _get_scan_int(cfg, "tls_concurrency", cfg.scan.concurrency)
-
-    # Temporarily override shared cfg.scan controls (minimal diff)
-    base_timeout = cfg.scan.timeout_seconds
-    base_conc = cfg.scan.concurrency
-    cfg.scan.timeout_seconds = tls_timeout
-    cfg.scan.concurrency = tls_conc
-
+    # Phase 41 / D-08: BACK-45 dissolved. The TLS scanner now reads
+    # cfg.scan.timeouts.tls_seconds and cfg.scan.tls_concurrency directly — no
+    # more cfg.scan mutate-and-restore pattern around the scan call.
     tls_endpoints = []
-    try:
-        with _phase_timer(run_stats, "tls_scanning"):
-            if tls_targets:
-                tls_endpoints = scan_tls_targets(
-                    cfg,
-                    tls_targets,
-                    logger=logger,
-                    progress_cb=None
-                )
-                for ep in tls_endpoints:
-                    key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                    ep.service_detail = classified_details.get(key, "")
-    finally:
-        cfg.scan.timeout_seconds = base_timeout
-        cfg.scan.concurrency = base_conc
+    with _phase_timer(run_stats, "tls_scanning"):
+        if tls_targets:
+            tls_endpoints = scan_tls_targets(
+                cfg,
+                tls_targets,
+                logger=logger,
+                progress_cb=None
+            )
+            for ep in tls_endpoints:
+                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+                ep.service_detail = classified_details.get(key, "")
 
     # ==============================
     # SSH scan phase (phase-tuned)
     # ==============================
-    ssh_timeout = _get_scan_int(cfg, "ssh_timeout_seconds", cfg.scan.timeout_seconds)
-    ssh_conc = _get_scan_int(cfg, "ssh_concurrency", cfg.scan.concurrency)
-
+    # Phase 41 / D-08: BACK-45 dissolved for SSH as well. The SSH scanner reads
+    # cfg.scan.timeouts.ssh_seconds and cfg.scan.ssh_concurrency directly.
     ssh_endpoints = []
-    try:
-        cfg.scan.timeout_seconds = ssh_timeout
-        cfg.scan.concurrency = ssh_conc
-        with _phase_timer(run_stats, "ssh_scanning"):
-            if ssh_targets:
-                ssh_endpoints = scan_ssh_targets(
-                    cfg,
-                    ssh_targets,
-                    logger=logger,
-                    progress_cb=None
-                )
-                for ep in ssh_endpoints:
-                    key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                    ep.service_detail = classified_details.get(key, "")
-    finally:
-        cfg.scan.timeout_seconds = base_timeout
-        cfg.scan.concurrency = base_conc
+    with _phase_timer(run_stats, "ssh_scanning"):
+        if ssh_targets:
+            ssh_endpoints = scan_ssh_targets(
+                cfg,
+                ssh_targets,
+                logger=logger,
+                progress_cb=None
+            )
+            for ep in ssh_endpoints:
+                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+                ep.service_detail = classified_details.get(key, "")
 
     # ==============================
     # JWT scan phase
@@ -466,7 +450,7 @@ def main():
         if cfg.connectors.enable_jwt and cfg.connectors.jwt_targets:
             jwt_endpoints = scan_jwt_targets(
                 cfg.connectors.jwt_targets,
-                timeout=cfg.scan.timeout_seconds,
+                timeout=cfg.scan.timeouts.jwt_seconds,
                 logger=logger,
             )
 
@@ -478,7 +462,7 @@ def main():
         if cfg.connectors.enable_container and cfg.connectors.container_targets:
             container_endpoints = scan_container_targets(
                 cfg.connectors.container_targets,
-                timeout=cfg.scan.timeout_seconds,
+                timeout=cfg.scan.timeouts.container_seconds,
                 logger=logger,
             )
 
@@ -490,7 +474,7 @@ def main():
         if cfg.connectors.enable_source and cfg.connectors.source_targets:
             source_endpoints = scan_source_targets(
                 cfg.connectors.source_targets,
-                timeout=cfg.scan.timeout_seconds,
+                timeout=cfg.scan.timeouts.source_seconds,
                 logger=logger,
             )
 
@@ -723,7 +707,7 @@ def main():
             if email_hosts:
                 email_endpoints = scan_email_targets(
                     hosts=email_hosts,
-                    timeout=cfg.scan.timeout_seconds,
+                    timeout=cfg.scan.timeouts.email_seconds,
                     logger=logger,
                     session_start=session_start,
                 )
@@ -739,8 +723,8 @@ def main():
             if broker_hosts:
                 kafka_endpoints = scan_kafka_targets(
                     hosts=broker_hosts,
-                    timeout=cfg.scan.timeout_seconds,
-                    profile=cfg.scan.profile,
+                    timeout=cfg.scan.timeouts.broker_seconds,
+                    profile=scan_profile,
                     logger=logger,
                     session_start=session_start,
                 )
@@ -748,13 +732,13 @@ def main():
                     hosts=broker_hosts,
                     azure_namespaces=cfg.connectors.broker_azure_namespaces,
                     sqs_regions=cfg.connectors.broker_sqs_regions,
-                    timeout=cfg.scan.timeout_seconds,
+                    timeout=cfg.scan.timeouts.broker_seconds,
                     logger=logger,
                     session_start=session_start,
                 )
                 redis_endpoints = scan_redis_targets(
                     hosts=broker_hosts,
-                    timeout=cfg.scan.timeout_seconds,
+                    timeout=cfg.scan.timeouts.broker_seconds,
                     logger=logger,
                     session_start=session_start,
                 )
