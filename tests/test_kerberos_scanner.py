@@ -357,6 +357,7 @@ def test_kerberos_scan_json_structure():
 # Section 8: KERB-05 Integration / Chaos Lab test (SKIPPED unless env var set)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.slow
 @pytest.mark.skipif(
     not os.environ.get("QUIRK_KERBEROS_INTEGRATION"),
     reason="Set QUIRK_KERBEROS_INTEGRATION=1 to run against local Samba DC chaos lab",
