@@ -37,6 +37,23 @@ from quirk.models import CryptoEndpoint
 
 
 # ---------------------------------------------------------------------------
+# Module-level skip lists — exposed so unit tests can drive parametrize off them.
+# Per D-10 / D-11 (Phase 42).
+# ---------------------------------------------------------------------------
+
+MOTION_PLAINTEXT_PROTOCOLS: frozenset[str] = frozenset({
+    "KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN",
+})
+
+DAR_SKIP_PROTOCOLS: frozenset[str] = frozenset({
+    "POSTGRESQL", "MYSQL", "RDS",
+    "S3", "AZURE_BLOB",
+    "KUBERNETES", "VAULT",
+    "GCP", "CLOUD_SQL",
+})
+
+
+# ---------------------------------------------------------------------------
 # New-protocol helper functions
 # ---------------------------------------------------------------------------
 
@@ -433,11 +450,11 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # Pass 2 — Certificate components                                      #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        if ep.protocol in ("SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC",
-                           "GCP", "CLOUD_SQL", "POSTGRESQL", "MYSQL", "RDS",
-                           "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
-                           # v4.4 motion plaintext brokers — no TLS cert (Phase 35 / CBOM-03)
-                           "KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"):
+        if ep.protocol in (
+            "SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC",
+            *DAR_SKIP_PROTOCOLS,
+            *MOTION_PLAINTEXT_PROTOCOLS,
+        ):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -516,11 +533,12 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             )
             protocol_components.append(proto_component)
 
-        elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL",
-                             "DNSSEC", "SAML", "KERBEROS", "POSTGRESQL", "MYSQL", "RDS",
-                             "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
-                             # v4.4 motion plaintext brokers — no TLS protocol component (Phase 35 / CBOM-03)
-                             "KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"):
+        elif ep.protocol in (
+            "JWT", "CONTAINER", "SOURCE", "AWS", "AZURE",
+            "DNSSEC", "SAML", "KERBEROS",
+            *DAR_SKIP_PROTOCOLS,
+            *MOTION_PLAINTEXT_PROTOCOLS,
+        ):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             continue
