@@ -26,10 +26,15 @@ function a11yFixture(): Plugin {
       res.end(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8'))
       return
     }
-    if (req.url?.startsWith('/api/scan/trends')) {
+    if (req.url?.startsWith('/api/scans')) {
+      res.setHeader('Content-Type', 'application/json')
+      res.end('[]')
+      return
+    }
+    if (req.url?.startsWith('/api/trends')) {
       if (variant === 'empty') {
         res.setHeader('Content-Type', 'application/json')
-        res.end('[]')
+        res.end('{}')
         return
       }
       res.setHeader('Content-Type', 'application/json')
