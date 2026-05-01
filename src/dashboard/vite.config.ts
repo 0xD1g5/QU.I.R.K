@@ -37,6 +37,13 @@ function a11yFixture(): Plugin {
         res.end('{}')
         return
       }
+      if (variant === 'loading') {
+        setTimeout(() => {
+          res.setHeader('Content-Type', 'application/json')
+          res.end(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8'))
+        }, 3000)
+        return
+      }
       res.setHeader('Content-Type', 'application/json')
       res.end(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8'))
       return
