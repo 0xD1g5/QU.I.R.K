@@ -1,7 +1,7 @@
 import { useTrendsData } from "@/hooks/useTrendsData"
 import type { SampleFinding } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
+import { PageSpinner } from "@/components/PageSpinner"
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card"
@@ -79,23 +79,26 @@ function formatTs(iso: string | null): string {
 export function TrendsPage() {
   const { data, loading, error } = useTrendsData()
 
-  if (loading) return (
-    <div className="space-y-2">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-10 w-full" />
-      ))}
-    </div>
-  )
+  if (loading) return <PageSpinner ariaLabel="Loading trends" />
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
-  if (!data) return <p className="text-muted-foreground text-sm">No trend data available.</p>
+  if (!data) {
+    return (
+      <div className="space-y-4 py-8">
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Trends</h1>
+        <p className="text-muted-foreground text-sm">
+          No trend data available. Run a scan first to initialize the trends view.
+        </p>
+      </div>
+    )
+  }
 
   // D-06: baseline empty state — only one session exists
   if (!data.previous_session_ts) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-foreground font-semibold text-xl">Baseline scan</h2>
-        <p className="text-muted-foreground mt-2 text-sm">
-          Run another scan to see your progress over time.
+      <div className="space-y-4 py-8">
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Trends</h1>
+        <p className="text-muted-foreground text-sm">
+          No scan history yet. Run two or more scans to see trend lines.
         </p>
       </div>
     )

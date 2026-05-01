@@ -2,7 +2,7 @@ import { useScanData } from "@/hooks/useScanData"
 import { ScoreGauge } from "@/components/gauges/ScoreGauge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
+import { PageSpinner } from "@/components/PageSpinner"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
@@ -55,18 +55,7 @@ export function ExecutivePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-32 rounded-full" />
-          ))}
-        </div>
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (loading) return <PageSpinner ariaLabel="Loading executive summary" />
 
   if (error) {
     return (
@@ -76,7 +65,16 @@ export function ExecutivePage() {
     )
   }
 
-  if (!data) return null
+  if (!data) {
+    return (
+      <div className="space-y-4 py-8">
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Executive Summary</h1>
+        <p className="text-muted-foreground text-sm">
+          No scan data available. Run a scan first: <code>quirk scan &lt;target&gt;</code>
+        </p>
+      </div>
+    )
+  }
 
   const { score, confidence, findings, meta } = data
 
