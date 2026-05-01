@@ -15,10 +15,11 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
+import { IdentitySkeleton } from "./identity.skeleton"
+import { EmptyStateCard } from "@/components/EmptyStateCard"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -96,7 +97,7 @@ export function IdentityPage() {
     initialState: { pagination: { pageSize: 25 } },
   })
 
-  if (loading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+  if (loading) return <IdentitySkeleton />
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
   return (
@@ -132,12 +133,7 @@ export function IdentityPage() {
 
       {/* Identity findings table (D-11) */}
       {identityFindings.length === 0 ? (
-        <div className="text-center py-12">
-          <h2 className="text-foreground font-semibold text-xl">No identity protocol findings</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan.
-          </p>
-        </div>
+        <EmptyStateCard message="No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan." />
       ) : (
         <>
           <div className="flex gap-3 items-center">

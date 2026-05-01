@@ -3,6 +3,7 @@ import { useScanData } from "@/hooks/useScanData"
 import type { DarFinding } from "@/types/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyStateCard } from "@/components/EmptyStateCard"
 import { ScoreGauge } from "@/components/gauges/ScoreGauge"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -57,16 +58,6 @@ function SeverityBadge({ severity }: { severity: string }) {
     <Badge className={`${SEVERITY_STYLES[severity] ?? ""} font-semibold text-xs`}>
       {severity}
     </Badge>
-  )
-}
-
-function EmptyStateCard({ message }: { message: string }) {
-  return (
-    <Card>
-      <CardContent className="py-8">
-        <p className="text-muted-foreground text-sm">{message}</p>
-      </CardContent>
-    </Card>
   )
 }
 
@@ -284,9 +275,16 @@ export function DataAtRestPage() {
 
   if (loading) {
     return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
+      <div role="status" aria-label="Loading data at rest" className="space-y-6">
+        <span className="sr-only">Loading...</span>
+        <Skeleton className="h-7 w-32" />
+        {Array.from({ length: 4 }).map((_, s) => (
+          <div key={s} className="space-y-2">
+            <Skeleton className="h-5 w-48" />
+            {Array.from({ length: 4 }).map((_, r) => (
+              <Skeleton key={r} className="h-10 w-full" />
+            ))}
+          </div>
         ))}
       </div>
     )
