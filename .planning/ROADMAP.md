@@ -738,7 +738,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 40. Chaos Lab Parity | v4.5 | 5/6 | In Progress|  |
 | 41. CI Stability & Scanner Robustness | v4.5 | 6/7 | In Progress|  |
 | 42. CBOM Correctness Audit | v4.5 | 5/6 | In Progress|  |
-| 43. Dashboard Polish | v4.5 | 1/4 | In Progress|  |
+| 43. Dashboard Polish | v4.5 | 3/4 | In Progress|  |
 | 44. UAT Debt Automation | v4.5 | 0/TBD | Not started | - |
 
 *Phase 36 wave_0_complete flip deferred (DEF-v4.4-01) — gated on SAML scan-window regression fix.
@@ -857,8 +857,8 @@ Plans:
 **Plans**: 4 plans
 Plans:
 - [x] 43-01-PLAN.md — Test harness infrastructure: @axe-core/puppeteer + console capture + Vite fixture middleware + routes/fixtures/allowlist (DASH-01, DASH-02, DASH-03)
-- [ ] 43-02-PLAN.md — Page polish sweep: extract EmptyStateCard, create PageSpinner, layout-matched skeletons, heading hierarchy across 9 routes (DASH-01, DASH-02, DASH-03)
-- [ ] 43-03-PLAN.md — Sidebar focus-visible utilities + color-contrast audit via CSS variable tokens (DASH-03)
+- [x] 43-02-PLAN.md — Page polish sweep: extract EmptyStateCard, create PageSpinner, layout-matched skeletons, heading hierarchy across 9 routes (DASH-01, DASH-02, DASH-03)
+- [x] 43-03-PLAN.md — Sidebar focus-visible utilities + color-contrast audit via CSS variable tokens (DASH-03)
 - [ ] 43-04-PLAN.md — Capture axe baselines, expand allowlist, GHA dashboard-quality workflow, UAT-SERIES + vault + validation flip close-out (DASH-01, DASH-02, DASH-03)
 **UI hint**: yes
 
