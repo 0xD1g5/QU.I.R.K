@@ -1,0 +1,14 @@
+{
+  "violations": [
+    {
+      "id": "color-contrast",
+      "nodes": [
+        {
+          "target": [
+            ".h-9"
+          ]
+        }
+      ]
+    }
+  ]
+}
