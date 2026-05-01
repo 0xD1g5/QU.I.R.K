@@ -291,7 +291,7 @@ export function DataAtRestPage() {
   }
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
-  const darScore = data?.score.subscores.data_at_rest ?? 0
+  const darScore = data?.score?.subscores?.data_at_rest ?? 0
 
   return (
     <div className="space-y-6">

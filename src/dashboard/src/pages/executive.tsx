@@ -65,7 +65,7 @@ export function ExecutivePage() {
     )
   }
 
-  if (!data) {
+  if (!data || !data.score) {
     return (
       <div className="space-y-4 py-8">
         <h1 style={{ fontSize: 20, fontWeight: 600 }}>Executive Summary</h1>
@@ -76,7 +76,7 @@ export function ExecutivePage() {
     )
   }
 
-  const { score, confidence, findings, meta } = data
+  const { score, confidence, findings = [], meta } = data
 
   // Severity counts for bar chart
   const severityCounts = findings.reduce<Record<string, number>>((acc, f) => {
