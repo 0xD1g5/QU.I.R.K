@@ -1,0 +1,29 @@
+{
+  "violations": [
+    {
+      "id": "color-contrast",
+      "nodes": [
+        {
+          "target": [
+            ".bg-\\[hsl\\(24_95\\%_53\\%\\)\\]"
+          ]
+        },
+        {
+          "target": [
+            ".bg-\\[hsl\\(142_71\\%_45\\%\\)\\]"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scrollable-region-focusable",
+      "nodes": [
+        {
+          "target": [
+            "section[aria-labelledby=\"dar-obj-heading\"] > .rounded-xl.text-card-foreground.bg-card > .p-0 > .relative.overflow-auto.w-full"
+          ]
+        }
+      ]
+    }
+  ]
+}
