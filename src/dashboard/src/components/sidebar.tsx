@@ -66,6 +66,7 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
                     "min-h-[44px]", // accessibility touch target
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     isActive
                       ? "text-foreground border-b-2 lg:border-b-0 lg:border-l-2 border-accent bg-accent/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/5",
