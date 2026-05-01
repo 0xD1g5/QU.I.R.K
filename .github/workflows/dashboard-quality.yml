@@ -1,0 +1,43 @@
+name: Dashboard Quality
+
+on:
+  pull_request:
+    paths:
+      - 'src/dashboard/**'
+      - '.github/workflows/dashboard-quality.yml'
+
+jobs:
+  a11y:
+    name: Axe + Console Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dashboard
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run axe + console sweep (happy fixture)
+        run: npm run a11y:check
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
+
+      - name: Run axe + console sweep (empty fixture)
+        run: npm run a11y:check:empty
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
