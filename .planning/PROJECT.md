@@ -133,7 +133,7 @@ UAT debt burndown
 
 **Out of scope (this milestone):** new scanners, new cloud connectors, performance/scale work, SaaS, CBOM v2 schema work, mobile.
 
-## Current State: v4.4.0 Shipped — v4.5 Initialized
+## Current State: v4.4.0 Shipped — v4.5 Phase 43 Complete
 
 v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The cryptographic inventory now covers six pillars: TLS, SSH, API, Identity, Data at Rest, and Data in Motion. Email and broker TLS posture flow through scanning → intelligence → CBOM → dashboard end-to-end.
 
