@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
+import { EmptyStateCard } from "@/components/EmptyStateCard"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -30,16 +31,6 @@ export function getBrokerFamily(protocol: string): "Kafka" | "AMQP" | "Redis" | 
   if (protocol.startsWith("REDIS-")) return "Redis"
   if (protocol.startsWith("HTTPS/")) return "Cloud"
   return null
-}
-
-function EmptyStateCard({ message }: { message: string }) {
-  return (
-    <Card>
-      <CardContent className="py-8">
-        <p className="text-muted-foreground text-sm">{message}</p>
-      </CardContent>
-    </Card>
-  )
 }
 
 const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 } as const
@@ -208,9 +199,15 @@ export function MotionPage() {
 
   if (loading) {
     return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
+      <div role="status" aria-label="Loading motion" className="space-y-6">
+        <span className="sr-only">Loading...</span>
+        {Array.from({ length: 3 }).map((_, s) => (
+          <div key={s} className="space-y-2">
+            <Skeleton className="h-5 w-48" />
+            {Array.from({ length: 4 }).map((_, r) => (
+              <Skeleton key={r} className="h-10 w-full" />
+            ))}
+          </div>
         ))}
       </div>
     )

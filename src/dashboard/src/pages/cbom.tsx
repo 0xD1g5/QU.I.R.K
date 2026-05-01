@@ -6,8 +6,9 @@ import type { CbomComponent } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CbomSkeleton } from "./cbom.skeleton"
+import { EmptyStateCard } from "@/components/EmptyStateCard"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -51,12 +52,7 @@ function CbomTable({ components }: { components: CbomComponent[] }) {
 
   if (!components.length) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-foreground font-semibold text-xl">No CBOM data available</h2>
-        <p className="text-muted-foreground mt-2 text-sm">
-          The most recent scan did not produce CBOM output. Ensure the scanner completed successfully.
-        </p>
-      </div>
+      <EmptyStateCard message="No CBOM components in this scan — ensure the scanner completed successfully and that motion + data-at-rest scanners ran." />
     )
   }
 
@@ -417,14 +413,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
 export function CbomPage() {
   const { data, loading, error } = useScanData()
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>CBOM Viewer</h1>
-        <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-      </div>
-    )
-  }
+  if (loading) return <CbomSkeleton />
 
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
