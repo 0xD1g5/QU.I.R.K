@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-04-30 (Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-05-01 (Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -5414,6 +5414,180 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 - `pytest tests/test_cbom_skip_lists.py -x -v` exits 0 with at least 12 parametrized cases plus 1 sanity guard (≥ 13 total).
 - `from quirk.cbom.builder import MOTION_PLAINTEXT_PROTOCOLS, DAR_SKIP_PROTOCOLS` succeeds.
 - `len(MOTION_PLAINTEXT_PROTOCOLS) == 3` and `len(DAR_SKIP_PROTOCOLS) == 9`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+## Phase 43: Dashboard Polish (UAT-43-XX)
+
+**Purpose:** Verify that all nine in-scope dashboard routes (/, /findings, /identity, /motion, /data-at-rest, /certificates, /cbom, /roadmap, /trends) are console-error-free, render explicit loading states on first paint, render explicit empty states when scan data is absent, meet WCAG AA keyboard-navigation and focus-ring requirements, and that the GitHub Actions dashboard-quality CI gate enforces this bar on every future PR. Maps to requirements DASH-01, DASH-02, DASH-03.
+
+---
+
+### UAT-43-01: Dashboard A11y Sweep — Happy Fixture
+
+**ID:** UAT-43-01
+**Title:** `npm run a11y:check` exits 0 across all 9 dashboard routes against the seeded happy-path fixture
+**Maps to:** DASH-01, DASH-03
+
+**Description:** Phase 43 Plan 01 introduced an `@axe-core/puppeteer` harness (`src/dashboard/tests/a11y/run-a11y.mjs`) that boots `vite preview` with `VITE_A11Y_FIXTURE=1`, navigates all 9 routes, runs axe-core WCAG 2.1 A/AA rules, captures console messages, and diffs against per-route baseline JSONs. The `a11y:check` script runs the diff mode — it exits 1 if any new axe violation appears beyond the locked baseline or if any console message is not in `tests/console-allowlist.json`. Phase 43 Plans 02/03 eliminated the pre-existing violations so the baselines (written by Plan 04 Task 1) reflect a clean green state.
+
+**Prerequisites:**
+- Node 20+ installed
+- Dashboard dev dependencies installed: `cd src/dashboard && npm ci`
+- Production build present: `cd src/dashboard && npm run build`
+- 9 baseline JSON files present in `src/dashboard/tests/a11y/`
+
+**Steps:**
+1. Build the dashboard: `cd src/dashboard && npm run build`.
+2. Run the sweep: `cd src/dashboard && npm run a11y:check`.
+3. Confirm exit code 0 and that output reports zero new axe violations and zero unallowlisted console messages for each route.
+
+**Expected:**
+- Script exits 0.
+- Each route line shows `axe: 0 new violations` and `console: 0 unallowlisted messages`.
+- Only allowed console message is the recharts `defaultProps` deprecation warning (present in `tests/console-allowlist.json`).
+
+**Pass Criteria:**
+- `cd src/dashboard && npm run a11y:check` exits 0.
+- Output contains no "NEW axe violation" lines.
+- Output contains no "UNALLOWLISTED console" lines.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-43-02: Dashboard A11y Sweep — Empty Fixture
+
+**ID:** UAT-43-02
+**Title:** `npm run a11y:check:empty` exits 0; every route renders an explicit empty state (no crashes, no blank panels)
+**Maps to:** DASH-02
+
+**Description:** Phase 43 Plan 02 added `EmptyStateCard` (shared component) and `PageSpinner` and wired explicit empty-state branches into all 9 in-scope routes. The `a11y:check:empty` script runs the axe harness with `VITE_A11Y_FIXTURE_VARIANT=empty`, which serves `{}` for `/api/scan/latest` and `/api/trends`. Each route must render a legible empty state rather than blank panels or JavaScript errors, and those empty-state UIs must themselves be axe-clean.
+
+**Prerequisites:**
+- Same as UAT-43-01: `npm ci` + `npm run build` complete.
+
+**Steps:**
+1. Run the empty-fixture sweep: `cd src/dashboard && npm run a11y:check:empty`.
+2. Confirm exit code 0.
+3. Optionally start preview manually and visit each route: `cd src/dashboard && VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=empty npm run preview` then navigate to http://localhost:4173/.
+
+**Expected:**
+- Script exits 0.
+- Manual inspection: every route shows a card with a "no data" message (EmptyStateCard or page-level empty), not a blank panel or unhandled exception.
+
+**Pass Criteria:**
+- `cd src/dashboard && npm run a11y:check:empty` exits 0.
+- Manual walk (optional): each of the 9 routes renders a non-blank empty state with descriptive text.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-43-03: Keyboard Focus Visibility
+
+**ID:** UAT-43-03
+**Title:** Tab through the dashboard preview; every interactive element shows a visible focus ring
+**Maps to:** DASH-03
+
+**Description:** Phase 43 Plan 03 added `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2` to the React Router `<Link>` primitive in `src/dashboard/src/components/sidebar.tsx`. shadcn/radix components (buttons, tab triggers, inputs) already ship focus rings. This UAT verifies that pressing Tab on any route produces visible blue/white focus outlines on every interactive element — no "invisible focus" keyboard navigation.
+
+**Prerequisites:**
+- Dashboard preview running with happy fixture: `cd src/dashboard && VITE_A11Y_FIXTURE=1 npm run preview`
+- Modern browser open at http://localhost:4173/
+
+**Steps:**
+1. Start preview: `cd src/dashboard && VITE_A11Y_FIXTURE=1 npm run preview`.
+2. Open http://localhost:4173/ in a browser.
+3. Press Tab repeatedly. Observe focus indicator on each of: sidebar navigation Links, table sort column headers, filter input fields, tab trigger buttons, action buttons.
+4. Navigate to /findings, /identity, /motion, /cbom, /roadmap and repeat the Tab test on each.
+
+**Expected:**
+- A visible focus ring (blue outline, or white outline on dark sidebar) appears on every focusable element as Tab moves through the page.
+- No interactive element is reachable by Tab but invisible (no focus ring).
+
+**Pass Criteria:**
+- Every sidebar navigation link shows a 2px ring on focus.
+- At least one filter input, one table header, and one tab trigger show visible focus rings on their respective routes.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-43-04: Loading-State First Paint
+
+**ID:** UAT-43-04
+**Title:** With the loading fixture variant, skeleton/PageSpinner appears on first paint and persists ~3 seconds before content appears
+**Maps to:** DASH-02
+
+**Description:** Phase 43 Plan 02 added layout-matched skeleton components (`findings.skeleton.tsx`, `cbom.skeleton.tsx`, `identity.skeleton.tsx`, `certificates.skeleton.tsx`) and `PageSpinner` for context-derived routes (executive, trends, roadmap). The `VITE_A11Y_FIXTURE_VARIANT=loading` variant adds a 3-second delay to `/api/scan/latest` and `/api/trends` responses in the Vite fixture middleware, creating a reproducible loading window. This UAT confirms that no flash of raw empty content appears — the skeleton/spinner is the first visible state.
+
+**Prerequisites:**
+- Dashboard built: `cd src/dashboard && npm run build`
+- Preview available at http://localhost:4173/ with loading variant
+
+**Steps:**
+1. Start the loading-variant preview: `cd src/dashboard && VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=loading npm run preview`.
+2. Hard-reload (Cmd+Shift+R / Ctrl+Shift+R) on each of: / (executive), /findings, /motion, /trends.
+3. Observe first paint for ~5 seconds on each route.
+
+**Expected:**
+- / shows `PageSpinner` (6 skeleton circles + h-48 bar) for ~3 seconds, then populates with executive summary data.
+- /findings shows a layout-matched skeleton (filter bar placeholders + table row placeholders) for ~3 seconds.
+- /motion shows its skeleton (section headers + row blocks) for ~3 seconds.
+- /trends shows `PageSpinner` for ~3 seconds.
+- No route shows a flash of "no data" empty-state text before data arrives.
+
+**Pass Criteria:**
+- On each of the four routes above, a skeleton or spinner is visible on first paint (before the 3s delay expires).
+- No route shows an empty-state message ("No scan data" / "No trend data") while loading is in progress.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-43-05: GitHub Actions Dashboard-Quality Workflow
+
+**ID:** UAT-43-05
+**Title:** A PR touching `src/dashboard/**` triggers the `Dashboard Quality` workflow and it turns green
+**Maps to:** DASH-01, DASH-02, DASH-03
+
+**Description:** Phase 43 Plan 04 Task 2 created `.github/workflows/dashboard-quality.yml`. It triggers on PRs with `paths: ['src/dashboard/**', '.github/workflows/dashboard-quality.yml']` and runs: `npm ci`, `npm run build`, `npm run lint`, `npm run a11y:check` (happy fixture), `npm run a11y:check:empty` on an `ubuntu-latest` runner using `google-chrome-stable` via `PUPPETEER_EXECUTABLE_PATH`. This workflow enforces the Phase 43 quality bar going forward so dashboard regressions are caught at PR time rather than in production.
+
+**Prerequisites:**
+- GitHub repository with Actions enabled.
+- A fork or branch for test PR creation.
+
+**Steps:**
+1. Create a draft PR that touches at least one file in `src/dashboard/**` (e.g. add a comment to `src/dashboard/src/App.tsx`).
+2. Observe the Checks panel on the PR.
+3. Wait for the `Dashboard Quality / Axe + Console Gate` check to complete.
+
+**Expected:**
+- The `Dashboard Quality` workflow appears in the Checks list within ~30 seconds.
+- All steps complete green: Setup Node, Install dependencies, Build dashboard, Lint, Run axe + console sweep (happy fixture), Run axe + console sweep (empty fixture).
+- Total runtime < 3 minutes.
+
+**Pass Criteria:**
+- `Dashboard Quality / Axe + Console Gate` check shows "All jobs passed" (green check mark).
+- Both `npm run a11y:check` and `npm run a11y:check:empty` steps show exit 0 in the workflow log.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
