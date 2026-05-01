@@ -49,9 +49,9 @@ Audit CBOM output against CycloneDX 1.6 spec, classifier coverage, and golden sn
 
 Eliminate visible papercuts across the React dashboard.
 
-- [ ] **DASH-01**: User opens `/motion`, `/trends`, `/findings`, `/data-at-rest` (GAP-04), and other top-level routes; browser console shows zero errors and zero React warnings.
-- [ ] **DASH-02**: Each route displays an explicit loading state on first paint and an explicit empty state when data is missing — no flashes of "no data" before data arrives.
-- [ ] **DASH-03**: Dashboard meets baseline accessibility: keyboard navigation works on all interactive elements, focus indicators are visible, semantic heading order is correct, color contrast on findings tables passes WCAG AA — verified by axe-core or equivalent automated check.
+- [x] **DASH-01**: User opens `/motion`, `/trends`, `/findings`, `/data-at-rest` (GAP-04), and other top-level routes; browser console shows zero errors and zero React warnings.
+- [x] **DASH-02**: Each route displays an explicit loading state on first paint and an explicit empty state when data is missing — no flashes of "no data" before data arrives.
+- [x] **DASH-03**: Dashboard meets baseline accessibility: keyboard navigation works on all interactive elements, focus indicators are visible, semantic heading order is correct, color contrast on findings tables passes WCAG AA — verified by axe-core or equivalent automated check.
 
 ### Chaos Lab Parity
 
@@ -118,9 +118,9 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 | CBOM-02 | Phase 42 | Complete |
 | CBOM-03 | Phase 42 | pending |
 | CBOM-04 | Phase 42 | Complete |
-| DASH-01 | Phase 43 | pending |
-| DASH-02 | Phase 43 | pending |
-| DASH-03 | Phase 43 | pending |
+| DASH-01 | Phase 43 | Complete |
+| DASH-02 | Phase 43 | Complete |
+| DASH-03 | Phase 43 | Complete |
 | LAB-01 | Phase 40 | Complete |
 | LAB-02 | Phase 40 | Complete |
 | LAB-03 | Phase 40 | Complete |
