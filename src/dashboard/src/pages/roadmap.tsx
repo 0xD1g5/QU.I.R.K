@@ -16,9 +16,9 @@ try {
 }
 
 const PHASE_COLORS: Record<string, string> = {
-  NOW:   "hsl(0 72% 51%)",    // Red — Immediate
-  NEXT:  "hsl(38 92% 50%)",   // Amber — Short-term
-  LATER: "hsl(142 71% 45%)",  // Green — Long-term
+  NOW:   "hsl(0, 72%, 51%)",    // Red — Immediate
+  NEXT:  "hsl(38, 92%, 50%)",   // Amber — Short-term
+  LATER: "hsl(142, 71%, 45%)",  // Green — Long-term
 }
 
 const PHASE_LABEL: Record<string, string> = {
@@ -127,7 +127,7 @@ export function RoadmapPage() {
             "width": 150,
             "height": 52,
             "shape": "roundrectangle",
-            "background-color": "hsl(240 5% 46%)",
+            "background-color": "hsl(240, 5%, 46%)",
             "border-width": 0,
           },
         },
@@ -138,15 +138,15 @@ export function RoadmapPage() {
         // Selected state
         {
           selector: "node:selected",
-          style: { "border-width": 3, "border-color": "hsl(210 100% 65%)" },
+          style: { "border-width": 3, "border-color": "hsl(210, 100%, 65%)" },
         },
         // Cross-phase edges (visible arrows)
         {
           selector: "edge[rankOnly='false']",
           style: {
             "width": 2,
-            "line-color": "hsl(240 6% 40%)",
-            "target-arrow-color": "hsl(240 6% 40%)",
+            "line-color": "hsl(240, 6%, 40%)",
+            "target-arrow-color": "hsl(240, 6%, 40%)",
             "target-arrow-shape": "triangle",
             "curve-style": "bezier",
           },
@@ -169,17 +169,17 @@ export function RoadmapPage() {
     // Click handler — show detail panel
     cyRef.current.on("tap", "node", (evt) => {
       const nodeId = evt.target.data("id") as string
-      cyRef.current?.edges().style({ "line-color": "hsl(240 6% 40%)", "target-arrow-color": "hsl(240 6% 40%)" })
+      cyRef.current?.edges().style({ "line-color": "hsl(240, 6%, 40%)", "target-arrow-color": "hsl(240, 6%, 40%)" })
       evt.target.connectedEdges("[rankOnly='false']").style({
-        "line-color": "hsl(210 100% 65%)",
-        "target-arrow-color": "hsl(210 100% 65%)",
+        "line-color": "hsl(210, 100%, 65%)",
+        "target-arrow-color": "hsl(210, 100%, 65%)",
       })
       setSelected(nodeById[nodeId] ?? null)
     })
 
     cyRef.current.on("tap", (evt) => {
       if (evt.target === cyRef.current) {
-        cyRef.current?.edges().style({ "line-color": "hsl(240 6% 40%)", "target-arrow-color": "hsl(240 6% 40%)" })
+        cyRef.current?.edges().style({ "line-color": "hsl(240, 6%, 40%)", "target-arrow-color": "hsl(240, 6%, 40%)" })
         setSelected(null)
       }
     })
