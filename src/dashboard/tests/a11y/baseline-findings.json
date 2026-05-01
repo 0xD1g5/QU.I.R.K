@@ -1,0 +1,34 @@
+{
+  "violations": [
+    {
+      "id": "button-name",
+      "nodes": [
+        {
+          "target": [
+            "button[aria-controls=\"radix-_r_c_\"]"
+          ]
+        },
+        {
+          "target": [
+            "button[aria-controls=\"radix-_r_d_\"]"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "color-contrast",
+      "nodes": [
+        {
+          "target": [
+            "tr:nth-child(1) > td:nth-child(1) > .bg-\\[hsl\\(24_95\\%_53\\%\\)\\].text-white.px-2\\.5"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(2) > td:nth-child(1) > .bg-\\[hsl\\(24_95\\%_53\\%\\)\\].text-white.px-2\\.5"
+          ]
+        }
+      ]
+    }
+  ]
+}
