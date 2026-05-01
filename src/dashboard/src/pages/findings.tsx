@@ -15,10 +15,11 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
+import { FindingsSkeleton } from "./findings.skeleton"
+import { EmptyStateCard } from "@/components/EmptyStateCard"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -93,17 +94,12 @@ export function FindingsPage() {
     initialState: { pagination: { pageSize: 25 } },
   })
 
-  if (loading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+  if (loading) return <FindingsSkeleton />
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
   if (!data?.findings?.length) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-foreground font-semibold text-xl">No findings recorded</h2>
-        <p className="text-muted-foreground mt-2 text-sm">
-          Run a scan first: <code className="font-mono bg-card px-1 rounded">quirk scan --target &lt;host&gt;</code>. Results will appear here automatically.
-        </p>
-      </div>
+      <EmptyStateCard message="No findings recorded in this scan — run a scan first: quirk scan --target <host>. Results will appear here automatically." />
     )
   }
 
