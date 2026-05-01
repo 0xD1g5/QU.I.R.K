@@ -1,0 +1,13 @@
+{
+  "$schema": "./console-allowlist.schema.json",
+  "entries": [
+    {
+      "pattern": "^Warning: %s: Support for defaultProps will be removed.*",
+      "library": "recharts@2.15.4",
+      "upstream": "https://github.com/recharts/recharts/issues/3615",
+      "owner": "third-party / waiting on upstream",
+      "added": "2026-04-30",
+      "note": "Resolved by recharts 3.x; upgrade is a separate phase."
+    }
+  ]
+}

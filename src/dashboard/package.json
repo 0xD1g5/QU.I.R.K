@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "a11y:check": "node tests/a11y/run-a11y.mjs",
+    "a11y:check:empty": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=empty node tests/a11y/run-a11y.mjs",
+    "a11y:check:loading": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=loading node tests/a11y/run-a11y.mjs",
+    "a11y:baseline": "VITE_A11Y_FIXTURE=1 node tests/a11y/run-a11y.mjs --update-baselines"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -34,6 +38,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@axe-core/puppeteer": "^4.11.3",
     "@eslint/js": "^9.39.4",
     "@types/cytoscape": "^3.21.9",
     "@types/dagre": "^0.7.54",
@@ -47,6 +52,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "postcss": "^8.5.8",
+    "puppeteer-core": "^24.42.0",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
