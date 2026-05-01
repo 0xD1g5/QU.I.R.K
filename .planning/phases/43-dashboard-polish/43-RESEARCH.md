@@ -425,26 +425,30 @@ Plans MUST include explicit tasks for the four mandatory completion steps.
 | Fixture leak in production bundle | Information Disclosure | Vite middleware ONLY runs when `VITE_A11Y_FIXTURE=1` is set at server-launch time; production preview/build never sets it. Plan must verify build output does not contain fixture JSON. |
 | Allowlist bypass turning into runtime suppression | Tampering | D-14 enforces test-time only — verified by lint that the allowlist is never imported by app code (only by test harness). |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **CI host: GitHub Actions vs other?**
    - What we know: No `.github/workflows/` exists; pyproject.toml has pytest config; Phase 41 was "CI Stability" but the actual CI provider is undocumented in files I read.
    - What's unclear: Where does `make ci` (referenced in CONTEXT.md) actually run? Is there a CI provider?
    - Recommendation: Planner should confirm with user during plan-check; if no CI provider is wired, Phase 43 ships the npm script and documents the local-run procedure, leaving CI hookup to a follow-up.
+   - **RESOLVED (D-19):** Phase 43 creates `.github/workflows/dashboard-quality.yml` — GitHub Actions is the CI provider. No Makefile integration needed; the new workflow is a standalone PR gate for `src/dashboard/**` changes.
 
 2. **Should we do `@axe-core/cli` OR `@axe-core/puppeteer`?**
    - What we know: CONTEXT.md specifies `@axe-core/cli`. Console capture requires a separate driver. `@axe-core/puppeteer` collapses both.
    - What's unclear: Is the CONTEXT.md choice load-bearing, or was it a proxy for "use axe-core, not Playwright"?
    - Recommendation: Planner asks the user during plan-check whether `@axe-core/puppeteer` (one harness for axe + console) is acceptable; CONTEXT.md's intent ("not Playwright") is preserved either way.
+   - **RESOLVED (D-01 revised after research):** Use `@axe-core/puppeteer` — single harness drives both axe scans and console capture. `@axe-core/cli` alone cannot capture console messages. CONTEXT.md was amended post-research to reflect this; the "not Playwright" intent is preserved.
 
 3. **Skeleton file layout — co-located vs `components/skeletons/`?**
    - CONTEXT.md leaves this to Claude's discretion (D-50 implicit).
    - Recommendation: Co-locate as `pages/findings.skeleton.tsx` etc. Rationale: skeletons are tightly coupled to their page's layout; centralizing them adds import noise without reuse benefit (no skeleton is shared between two pages in this design).
+   - **RESOLVED (Claude's Discretion):** Co-located skeleton files (`pages/findings.skeleton.tsx` etc.) chosen per research recommendation. Centralized `components/skeletons/` is acceptable if planner prefers consistency; outcome is identical per CONTEXT.md.
 
 4. **Trends route fixture — what `useTrendsData()` shape?**
    - What we know: `useTrendsData.ts` exists alongside `useScanData.ts`; `trends.tsx` uses it; recharts is NOT imported by trends (it's only on `/`).
    - What's unclear: Whether the trends fixture needs separate file or shares scan fixture.
    - Recommendation: Plan a quick read of `useTrendsData.ts` during Wave 0 to determine.
+   - **RESOLVED (Plan 43-01 T1 read_first):** Executor reads `src/dashboard/src/hooks/useTrendsData.ts` as part of Wave 1 task 1 to determine fixture shape before writing `fixture-trends.json`. A separate fixture file is pre-planned; it can be collapsed into `fixture-scan.json` if the hook shares the same data shape.
 
 ## Environment Availability
 
