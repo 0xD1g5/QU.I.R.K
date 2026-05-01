@@ -1,0 +1,24 @@
+{
+  "violations": [
+    {
+      "id": "color-contrast",
+      "nodes": [
+        {
+          "target": [
+            ".justify-between.flex.items-center > .bg-\\[hsl\\(24_95\\%_53\\%\\)\\].text-white.px-2\\.5"
+          ]
+        },
+        {
+          "target": [
+            ".bg-\\[hsl\\(142_71\\%_45\\%\\)\\]"
+          ]
+        },
+        {
+          "target": [
+            "td:nth-child(1) > .bg-\\[hsl\\(24_95\\%_53\\%\\)\\].text-white.px-2\\.5"
+          ]
+        }
+      ]
+    }
+  ]
+}
