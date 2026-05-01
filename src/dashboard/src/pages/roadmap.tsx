@@ -4,8 +4,8 @@ import dagre from "cytoscape-dagre"
 import { useScanData } from "@/hooks/useScanData"
 import type { RoadmapNode } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { PageSpinner } from "@/components/PageSpinner"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
 // Register dagre layout (DAG directed graph — per D-16)
@@ -190,27 +190,17 @@ export function RoadmapPage() {
     }
   }, [nodes, nodeById])
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Migration Roadmap</h1>
-        <Skeleton className="w-full" style={{ height: "calc(100vh - 200px)", minHeight: 400 }} />
-      </div>
-    )
-  }
+  if (loading) return <PageSpinner ariaLabel="Loading remediation roadmap" />
 
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
   if (!nodes.length) {
     return (
-      <div className="space-y-4">
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Migration Roadmap</h1>
-        <div className="text-center py-12">
-          <h2 className="text-foreground font-semibold text-xl">No migration roadmap generated</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Run a scan with at least one finding to generate a prioritized migration roadmap.
-          </p>
-        </div>
+      <div className="space-y-4 py-8">
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Remediation Roadmap</h1>
+        <p className="text-muted-foreground text-sm">
+          No remediation items in this scan — either no findings exist or the scoring engine produced no recommendations.
+        </p>
       </div>
     )
   }
