@@ -854,7 +854,12 @@ Plans:
   2. Each route displays an explicit loading spinner or skeleton on first paint and an explicit "no data" empty state when scan data is missing — no flash of raw empty content
   3. All interactive dashboard elements (tabs, buttons, table filters, navigation links) are reachable and operable via keyboard navigation with visible focus indicators
   4. Semantic heading hierarchy is correct on all routes and color contrast on findings tables passes WCAG AA — verified by automated axe-core or equivalent check
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 43-01-PLAN.md — Test harness infrastructure: @axe-core/puppeteer + console capture + Vite fixture middleware + routes/fixtures/allowlist (DASH-01, DASH-02, DASH-03)
+- [ ] 43-02-PLAN.md — Page polish sweep: extract EmptyStateCard, create PageSpinner, layout-matched skeletons, heading hierarchy across 9 routes (DASH-01, DASH-02, DASH-03)
+- [ ] 43-03-PLAN.md — Sidebar focus-visible utilities + color-contrast audit via CSS variable tokens (DASH-03)
+- [ ] 43-04-PLAN.md — Capture axe baselines, expand allowlist, GHA dashboard-quality workflow, UAT-SERIES + vault + validation flip close-out (DASH-01, DASH-02, DASH-03)
 **UI hint**: yes
 
 ### Phase 44: UAT Debt Automation
