@@ -157,6 +157,11 @@ for (const { slug, path: routePath } of ROUTES) {
     console.log(`[a11y] Wrote baseline for ${slug}: ${results.violations.length} violation(s)`)
   } else {
     // Diff mode: compare against saved baseline
+    // NOTE: The baseline filename is not variant-aware. When VITE_A11Y_FIXTURE_VARIANT=empty
+    // (i.e. npm run a11y:check:empty), the harness falls back to { violations: [] } for
+    // every route because no baseline-<slug>-empty.json files exist. This means empty-state
+    // a11y regressions are silently swallowed and will not cause CI to fail.
+    // TODO: Make baselines variant-aware by writing/reading baseline-${slug}-${variant || 'default'}.json
     const baselinePath = resolve(A11Y_DIR, `baseline-${slug}.json`)
     const baseline = existsSync(baselinePath)
       ? JSON.parse(readFileSync(baselinePath, 'utf8'))
