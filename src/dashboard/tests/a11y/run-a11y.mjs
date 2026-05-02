@@ -47,7 +47,7 @@ function waitForPort(host, port, timeoutMs) {
       socket.on('connect', () => { socket.destroy(); resolveP() })
       socket.on('error', () => {
         socket.destroy()
-        if (Date.now() + CONNECT_POLL_MS > deadline) {
+        if (Date.now() >= deadline) {
           rejectP(new Error(`Timed out waiting for ${host}:${port} after ${timeoutMs}ms`))
         } else {
           setTimeout(attempt, CONNECT_POLL_MS)
