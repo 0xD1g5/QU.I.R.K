@@ -29,7 +29,7 @@ function ScoreDeltaBadge({ delta }: { delta: number | null }) {
       ▼ {delta} pts
     </Badge>
   )
-  return <Badge className="bg-[hsl(var(--muted))] text-muted-foreground">No change</Badge>
+  return <Badge variant="outline" className="text-muted-foreground">No change</Badge>
 }
 
 function SampleTable({ items }: { items: SampleFinding[] }) {
