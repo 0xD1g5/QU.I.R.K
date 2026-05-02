@@ -412,12 +412,12 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
 
 export function CbomPage() {
   const { data, loading, error } = useScanData()
+  // Stabilize reference so CbomGraph's useEffect dep array doesn't trigger on every parent render
+  const components = useMemo(() => data?.cbom_components ?? [], [data])
 
   if (loading) return <CbomSkeleton />
 
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
-
-  const components = data?.cbom_components ?? []
 
   return (
     <div className="space-y-4">
