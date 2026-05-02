@@ -32,6 +32,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
       - name: Run axe + console sweep (happy fixture)
         run: npm run a11y:check
         env:
