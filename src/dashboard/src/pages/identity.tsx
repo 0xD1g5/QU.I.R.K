@@ -37,9 +37,10 @@ function getProtocolStatus(findings: IdentityFinding[], protocol: string) {
   if (pf.length === 0) return { count: 0, worst: null, label: "Not Scanned" }
   const hasCritical = pf.some((f) => f.severity === "CRITICAL")
   const hasHigh = pf.some((f) => f.severity === "HIGH")
+  const hasMedium = pf.some((f) => f.severity === "MEDIUM")
   return {
     count: pf.length,
-    worst: hasCritical ? "CRITICAL" : hasHigh ? "HIGH" : "MEDIUM",
+    worst: hasCritical ? "CRITICAL" : hasHigh ? "HIGH" : hasMedium ? "MEDIUM" : "LOW",
     label: hasCritical ? "Critical" : hasHigh ? "At Risk" : "Clean",
   }
 }
