@@ -144,6 +144,8 @@ for (const { slug, path: routePath } of ROUTES) {
   // Run axe with WCAG 2A/2AA tags
   const results = await new AxePuppeteer(page).withTags(['wcag2a', 'wcag2aa']).analyze()
 
+  let newViolationsCount = 0
+
   if (UPDATE_BASELINES) {
     // Write baseline snapshot
     const baseline = {
@@ -178,6 +180,7 @@ for (const { slug, path: routePath } of ROUTES) {
     const newViolations = results.violations.filter(v =>
       v.nodes.some(n => !baselineKeys.has(`${v.id}::${[...n.target].sort().join('|')}`))
     )
+    newViolationsCount = newViolations.length
 
     if (newViolations.length > 0) {
       exitCode = 1
@@ -203,7 +206,7 @@ for (const { slug, path: routePath } of ROUTES) {
     }
   }
 
-  summary.push({ slug, violations: results.violations.length, console: unallowlisted.length })
+  summary.push({ slug, violations: newViolationsCount, console: unallowlisted.length })
   await page.close()
 }
 

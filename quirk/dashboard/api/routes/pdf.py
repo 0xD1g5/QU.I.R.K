@@ -52,7 +52,7 @@ def export_pdf() -> Response:
             page = context.new_page()
 
             page.goto(print_url, wait_until="networkidle", timeout=30_000)
-            page.wait_for_load_state("networkidle")
+            page.wait_for_selector('body[data-ready="true"]', timeout=15_000)
 
             pdf_bytes = page.pdf(
                 format="A4",
