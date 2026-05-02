@@ -41,7 +41,7 @@ export function CertificatesPage() {
               <TableHead scope="col" className="text-xs font-semibold">Port</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Subject CN</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Issuer</TableHead>
-              <TableHead scope="col" className="text-xs font-semibold" aria-sort="ascending">Expiry</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Expiry</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Algorithm</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Quantum Safety</TableHead>
             </TableRow>
