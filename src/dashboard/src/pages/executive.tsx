@@ -41,8 +41,11 @@ export function ExecutivePage() {
         const date = new Date().toISOString().split("T")[0]
         a.href = url
         a.download = `quirk-report-${date}.pdf`
+        document.body.appendChild(a)
         a.click()
-        URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        // Revoke after a tick so the browser has time to start the fetch
+        setTimeout(() => URL.revokeObjectURL(url), 100)
         setPdfMessage(`PDF saved to ~/Downloads/quirk-report-${date}.pdf`)
       } else {
         const body = await resp.json().catch(() => ({}))
