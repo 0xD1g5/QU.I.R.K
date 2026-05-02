@@ -1,27 +1,37 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-29T00:00:00.000Z",
-  "phase": null,
-  "phase_name": null,
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": 0,
-  "status": "clean_between_milestones",
-  "milestone_completed": "v4.4 Data in Motion (tag v4.4.0, archived 2026-04-29)",
-  "completed_tasks": [],
+  "timestamp": "2026-05-02T16:20:50.279Z",
+  "phase": "43",
+  "phase_name": "dashboard-polish",
+  "phase_dir": ".planning/phases/43-dashboard-polish",
+  "plan": 6,
+  "task": 6,
+  "total_tasks": 6,
+  "status": "complete",
+  "completed_tasks": [
+    {"id": 1, "name": "A11y CI harness (run-a11y.mjs, routes, baselines)", "status": "done", "commit": "multiple"},
+    {"id": 2, "name": "UX polish (skeletons, EmptyStateCard, pagination)", "status": "done", "commit": "multiple"},
+    {"id": 3, "name": "Contrast and focus rings (sidebar, WCAG audit)", "status": "done", "commit": "multiple"},
+    {"id": 4, "name": "CI integration (dashboard-quality.yml)", "status": "done", "commit": "multiple"},
+    {"id": 5, "name": "GAP: a11y newViolationsCount + pagination guards", "status": "done", "commit": "4b001a5 d862573"},
+    {"id": 6, "name": "GAP: PDF data-ready sentinel", "status": "done", "commit": "47e1a7d f8c489a"}
+  ],
   "remaining_tasks": [],
   "blockers": [],
-  "human_actions_pending": [
-    {"action": "Run /gsd-new-milestone to scope and initialize the next milestone", "context": "v4.4 archived; REQUIREMENTS.md removed for fresh milestone start", "blocking": false}
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "data-ready DOM sentinel for PDF export",
+      "rationale": "Playwright networkidle fires before React hydration; deterministic DOM attribute is the correct contract",
+      "phase": "43"
+    },
+    {
+      "decision": "Accepted 9 code review findings as non-blocking",
+      "rationale": "CR-02/03 are real bugs but don't affect gap closure goal; deferred to future phase",
+      "phase": "43"
+    }
   ],
-  "decisions": [],
-  "uncommitted_files": [
-    ".DS_Store",
-    "quantum-chaos-enterprise-lab/certs/ca.srl",
-    "tests/__pycache__/*.pyc (3 files)",
-    "untracked: .clone/, planning/, quirk-output/, quantum-chaos-enterprise-lab/certs/mtls.{crt,csr,ext,key}, quantum-chaos-enterprise-lab/certs/scenarios/"
-  ],
-  "next_action": "Run /gsd-new-milestone to begin the next milestone.",
-  "context_notes": "Clean checkpoint between milestones. v4.4 Data in Motion shipped 2026-04-29 (6 phases, 33 plans, 662 pytest passing). No active phase/spike/sketch/deliberation. All uncommitted files are dev byproducts (cert artifacts, pycache, scratch dirs) — not in-progress work."
+  "uncommitted_files": [],
+  "next_action": "Run /gsd-discuss-phase 44 to discuss UAT debt automation approach — K8s (minikube/kind) and Vault test isolation are the key design decisions",
+  "context_notes": "Phase 43 complete. Notable incident: wave-5 tracking commit accidentally reverted all 5 gap-closure code changes; restored in 74551c6 before verification. Next phase (44) targets 14 deferred UAT items from Phases 25-30, aiming for >=50% automated. No phase 44 directory exists yet."
 }
