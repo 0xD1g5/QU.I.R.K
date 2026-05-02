@@ -146,8 +146,11 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
   }, [components])
 
   const compByAlg = useMemo(() => {
-    const m: Record<string, CbomComponent> = {}
-    for (const comp of components) m[comp.algorithm] = comp
+    const m: Record<string, CbomComponent[]> = {}
+    for (const comp of components) {
+      if (!m[comp.algorithm]) m[comp.algorithm] = []
+      m[comp.algorithm].push(comp)
+    }
     return m
   }, [components])
 
@@ -278,7 +281,8 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
       node.connectedEdges().addClass("highlighted")
 
       if (d.nodeType === "algorithm") {
-        const comp = compByAlg[d.label]
+        // compByAlg maps algorithm -> array; use first entry (representative) for detail panel
+        const comp = compByAlg[d.label]?.[0]
         setSelected({
           nodeType: "algorithm",
           id: d.id,
@@ -383,7 +387,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
           {selected.nodeType === "system" && (
             <ul className="space-y-1">
               {selected.algorithms.map((alg) => {
-                const comp = compByAlg[alg]
+                const comp = compByAlg[alg]?.[0]
                 return (
                   <li key={alg} className="flex items-center gap-2">
                     <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: QS_NODE_COLOR[comp?.quantum_safety ?? "Unknown"] ?? QS_NODE_COLOR.Unknown }} />
