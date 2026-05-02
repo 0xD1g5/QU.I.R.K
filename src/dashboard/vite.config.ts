@@ -5,6 +5,9 @@ import { readFileSync } from 'node:fs'
 import type { Plugin } from 'vite'
 
 function a11yFixture(): Plugin {
+  // Cache fixture contents at plugin init time to avoid blocking reads on every request
+  const scanFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8')
+  const trendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8')
   const noCache = (r: any) => r.setHeader('Cache-Control', 'no-store')
   const handler = (req: any, res: any, next: any) => {
     if (!process.env.VITE_A11Y_FIXTURE) return next()
@@ -19,12 +22,12 @@ function a11yFixture(): Plugin {
         // Delay response so first-paint shows the loading skeleton/spinner
         setTimeout(() => {
           noCache(res); res.setHeader('Content-Type', 'application/json')
-          res.end(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8'))
+          res.end(scanFixture)
         }, 3000)
         return
       }
       noCache(res); res.setHeader('Content-Type', 'application/json')
-      res.end(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8'))
+      res.end(scanFixture)
       return
     }
     if (req.url?.startsWith('/api/scans')) {
@@ -41,12 +44,12 @@ function a11yFixture(): Plugin {
       if (variant === 'loading') {
         setTimeout(() => {
           noCache(res); res.setHeader('Content-Type', 'application/json')
-          res.end(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8'))
+          res.end(trendsFixture)
         }, 3000)
         return
       }
       noCache(res); res.setHeader('Content-Type', 'application/json')
-      res.end(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8'))
+      res.end(trendsFixture)
       return
     }
     next()
