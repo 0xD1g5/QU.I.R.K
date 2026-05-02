@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-05-01 (Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-05-02 (Phase 43 gap closure: UAT-43-06..08 added — a11y baseline-delta PASS/FAIL fix, pagination absent on single-page datasets, PDF data-ready sentinel; closes all Phase 43 UAT gaps. Earlier: Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -5588,6 +5588,104 @@ Pending: scanner custom-port support. Equivalent unit coverage in `tests/test_br
 **Pass Criteria:**
 - `Dashboard Quality / Axe + Console Gate` check shows "All jobs passed" (green check mark).
 - Both `npm run a11y:check` and `npm run a11y:check:empty` steps show exit 0 in the workflow log.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-43-06: A11y Harness Reports PASS on Baseline-Only Routes
+
+**ID:** UAT-43-06
+**Title:** `npm run a11y:check` (happy fixture) exits 0 and every route shows PASS even when baseline violations exist
+**Maps to:** DASH-07 (informal — gap closure for UAT issue 1)
+
+**Description:** Phase 43 Plan 05 (gap closure) fixed `run-a11y.mjs` to use `newViolationsCount` (baseline-delta) rather than `results.violations.length` (raw axe total) in the summary PASS/FAIL logic. Routes that have only baseline-captured violations should now show PASS instead of incorrectly reporting FAIL.
+
+**Prerequisites:**
+- `VITE_A11Y_FIXTURE=1 npm run dev` running (or use `npm run a11y:check` directly which starts its own server).
+
+**Steps:**
+1. From `src/dashboard/`, run `npm run a11y:check`.
+2. Observe the per-route summary lines in terminal output.
+3. Note the exit code.
+
+**Expected:**
+- Every route summary line shows `PASS`.
+- Process exits 0.
+- No route shows `FAIL` unless it has genuinely new violations not in the baseline.
+
+**Pass Criteria:**
+- Exit code 0.
+- All 9 route summary lines contain `PASS`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-43-07: Pagination Absent on Single-Page Datasets
+
+**ID:** UAT-43-07
+**Title:** Findings and Identity pages show no pagination controls when the dataset fits on one page
+**Maps to:** DASH-08 (informal — gap closure for UAT issue 3)
+
+**Description:** Phase 43 Plan 05 (gap closure) added `{table.getPageCount() > 1 && (...)}` guards around the pagination `<div>` in both `findings.tsx` and `identity.tsx`. On single-page datasets, the entire pagination bar (Previous/Next buttons + page counter) must be absent from the DOM — not just disabled.
+
+**Prerequisites:**
+- `VITE_A11Y_FIXTURE=1 npm run dev` running (fixture scan has a small dataset that fits on one page for both tables).
+
+**Steps:**
+1. Navigate to `/findings`.
+2. Inspect the DOM (or visually check) for pagination controls at the bottom of the table.
+3. Navigate to `/identity`.
+4. Repeat inspection.
+
+**Expected:**
+- No pagination bar visible on either page.
+- No disabled Previous/Next buttons present in the DOM.
+
+**Pass Criteria:**
+- DevTools DOM contains no element matching `.flex.items-center.justify-between` in the pagination area on either page.
+- `table.getPageCount()` returns 1 for the fixture dataset.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Status:** Pending
+**Notes:**
+
+---
+
+### UAT-43-08: PDF Export Produces Data-Populated PDF
+
+**ID:** UAT-43-08
+**Title:** Executive Summary PDF export button downloads a non-blank, data-populated PDF
+**Maps to:** DASH-06 (informal — gap closure for UAT issue 2)
+
+**Description:** Phase 43 Plan 06 (gap closure) added a `data-ready` DOM sentinel to `print.tsx` (set via `useEffect` once scan data is non-null) and updated `pdf.py` to `page.wait_for_selector('body[data-ready="true"]', timeout=15_000)` before calling `page.pdf()`. This ensures Playwright waits for React hydration before capture, eliminating the blank-PDF defect.
+
+**Prerequisites:**
+- QUIRK backend running with a real scan in the database (`quirk scan <target>` then `quirk serve`).
+- Or use the fixture dev server if a PDF-generation test endpoint is available.
+
+**Steps:**
+1. Open the Executive Summary page in the dashboard.
+2. Click "Export PDF".
+3. Wait for the download (up to 30 seconds).
+4. Open the downloaded `quirk-report.pdf`.
+
+**Expected:**
+- PDF contains rendered scan data: score gauges, findings summary, certificate list.
+- No blank or loading-state pages.
+- PDF is A4 format.
+
+**Pass Criteria:**
+- Downloaded file is a valid PDF (`file quirk-report.pdf` reports `PDF document`).
+- Opening the PDF shows populated tables and scores — not a blank page or spinner.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
