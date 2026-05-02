@@ -133,7 +133,7 @@ UAT debt burndown
 
 **Out of scope (this milestone):** new scanners, new cloud connectors, performance/scale work, SaaS, CBOM v2 schema work, mobile.
 
-## Current State: v4.4.0 Shipped — v4.5 Phase 43 Complete
+## Current State: v4.4.0 Shipped — v4.5 Phase 43 Complete (gap closure done)
 
 v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The cryptographic inventory now covers six pillars: TLS, SSH, API, Identity, Data at Rest, and Data in Motion. Email and broker TLS posture flow through scanning → intelligence → CBOM → dashboard end-to-end.
 
@@ -191,7 +191,7 @@ v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The c
 | No git-tag and no `/gsd-complete-milestone` inside Phase 37 (D-10/D-11) | Tagging and milestone close are visible-to-others actions; reserve them for explicit user trigger after Phase 37 lands | ✓ Good — Phase 37 closed cleanly, then user triggered tag and `/gsd-complete-milestone v4.4` separately |
 
 ---
-*Last updated: 2026-04-29 — v4.5 Reliability & Gap Closure milestone initialized*
+*Last updated: 2026-05-02 — Phase 43 dashboard-polish gap closure complete; a11y harness, pagination guards, PDF sentinel all verified*
 
 ## Evolution
 
