@@ -7,7 +7,7 @@ source:
   - .planning/phases/43-dashboard-polish/43-03-SUMMARY.md
   - .planning/phases/43-dashboard-polish/43-04-SUMMARY.md
 started: 2026-05-02T00:00:00Z
-updated: 2026-05-02T00:10:00Z
+updated: 2026-05-02T00:20:00Z
 ---
 
 ## Current Test
@@ -103,32 +103,39 @@ skipped: 0
 ## Gaps
 
 - truth: "npm run a11y:check summary block shows PASS for routes with no new violations, even when those routes have existing baseline violations"
-  status: failed
+  status: diagnosed
   reason: "User reported: Per-route output shows PASS (no new violations) on all 9 routes, but the final summary block labels 6 routes as FAIL based on raw violation count rather than baseline delta."
   severity: major
   test: 1
+  root_cause: "run-a11y.mjs line 206 pushes results.violations.length (total raw axe violations) into the summary array. Line 215 classifies PASS only if violations === 0. The per-route logic correctly uses newViolations.length but that value is never stored or referenced in the summary."
   artifacts:
-    - src/dashboard/tests/a11y/run-a11y.mjs
+    - path: src/dashboard/tests/a11y/run-a11y.mjs
+      issue: "line 206 stores results.violations.length; line 215 tests that count — should store and test newViolations.length"
   missing:
-    - Summary reporting logic must compare violations == baseline count (not violations > 0) to determine PASS/FAIL per route
+    - "Change line 206: summary.push({ slug, violations: newViolations.length, console: unallowlisted.length }) — hoist newViolations into scope first; guard with fallback 0 in UPDATE_BASELINES mode"
 
 - truth: "Executive Summary PDF export button saves a PDF file to disk"
-  status: failed
+  status: diagnosed
   reason: "User reported: failed due to playwright issue"
   severity: major
   test: 7
+  root_cause: "pdf.py lines 54-55 uses wait_until='networkidle' then immediately calls page.pdf(). networkidle fires once the HTML/JS bundle loads, before React has hydrated and useScanData has fetched /api/scan data. The /print route is a React SPA client-side route (served as index.html catch-all), so Playwright captures a blank/loading state. The CR-01 fix in executive.tsx is correctly applied and is not the cause."
   artifacts:
-    - src/dashboard/src/pages/executive.tsx
+    - path: quirk/dashboard/api/routes/pdf.py
+      issue: "lines 54-55: networkidle wait does not account for async React data fetching; page.pdf() called before scan data rendered"
   missing:
-    - PDF download working end-to-end in browser without Playwright/automation interference
+    - "After goto/networkidle, add page.wait_for_selector targeting a DOM element only present after scan data fully renders (e.g., data-ready='true' sentinel on <body> set by print.tsx after data loads)"
 
 - truth: "Findings and Identity pages show Previous/Next pagination buttons and page counter below their tables"
-  status: failed
+  status: diagnosed
   reason: "User reported: no numbers at all — pagination controls not visible on either page"
   severity: major
   test: 8
+  root_cause: "Pagination JSX IS present (findings.tsx lines 179-186, identity.tsx lines 188-195) and Button is correctly imported. However with pageSize=25 and fewer than 25 rows in the fixture, table.getPageCount() returns 1 and both buttons render disabled. The controls appear as greyed-out non-interactive elements that look absent. Fix: conditionally suppress the pagination bar when table.getPageCount() <= 1."
   artifacts:
-    - src/dashboard/src/pages/findings.tsx
-    - src/dashboard/src/pages/identity.tsx
+    - path: src/dashboard/src/pages/findings.tsx
+      issue: "lines 179-186: pagination bar always renders even on single-page datasets; disabled buttons look absent"
+    - path: src/dashboard/src/pages/identity.tsx
+      issue: "lines 188-195: same issue; bar is also gated on identityFindings.length > 0 (correct) but same disabled-button problem"
   missing:
-    - Pagination controls JSX rendered below table in both pages
+    - "Wrap pagination div in {table.getPageCount() > 1 && <div ...>} in both files so controls only appear when there is actually something to paginate"
