@@ -4,13 +4,14 @@ milestone: v4.6
 milestone_name: Enterprise Readiness
 status: planning
 stopped_at: Phase 45 context gathered
-last_updated: "2026-05-03T22:28:56.818Z"
+last_updated: "2026-05-03T23:27:57.363Z"
 last_activity: 2026-05-03 — Roadmap created; 6 phases (45–50), 32 requirements mapped
 progress:
   total_phases: 43
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -57,6 +58,7 @@ Last activity: 2026-05-03
 |-------|-------|-------|----------|
 | 43 | 6 | - | - |
 | 44 | 6 | - | - |
+| Phase 45-install-day-ux P01 | 8 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -128,6 +130,7 @@ Roadmap decisions (2026-04-27):
 - [41-Summary]: TimeoutsCfg + RetryCfg sub-tables on ScanCfg with deprecation-alias properties on four legacy fields (D-06/07); BACK-45 cfg.scan mutation pattern dissolved by passing explicit kwargs; cfg.scan.profile bug at run_scan.py:743 fixed; _wrapped_phase helper around every scanner phase implements D-14; trends.py respects scan_error_category to exclude missing_extra from regression counts (D-15); lab.sh down + reset arms both sweep profile-tagged services (D-18 + extension)
 - [Phase 42]: Adopted [validation] umbrella extra over hand-pinned deps (D-01)
 - [Phase 42]: Extracted MOTION_PLAINTEXT_PROTOCOLS and DAR_SKIP_PROTOCOLS as module-level frozensets (D-10/D-11)
+- [Phase ?]: Phase 45-01: [all] meta-extra excludes [identity] (impacket transitively downgrades cryptography, breaks TLS scanner)
 
 ### Pending Todos
 
@@ -175,6 +178,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-05-03T22:28:56.807Z
+Last session: 2026-05-03T23:27:53.786Z
 Stopped at: Phase 45 context gathered
 Next action: Plan Phase 45 (install-day-ux)

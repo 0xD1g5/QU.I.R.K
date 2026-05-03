@@ -908,7 +908,7 @@ Plans:
   3. User runs `pip install quirk[all]` and all scanner extras install successfully; impacket is NOT in `[all]` — it stays in `[identity]` only to avoid the pyOpenSSL transitive conflict
   4. The advisory message for each unavailable scanner names the exact extra to install (e.g., "install quirk[identity] for Kerberos scanning")
 **Plans**: 4 plans
-  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
+  - [x] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
   - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
   - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion (Wave 2)
   - [ ] 45-04-PLAN.md — Manual checkpoint + UAT-SERIES.md + vault sync + phase note (Wave 3)
@@ -990,7 +990,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 45. Install-Day UX | 0/TBD | Not started | - |
+| 45. Install-Day UX | 1/4 | In Progress|  |
 | 46. TLS Finding Gaps | 0/TBD | Not started | - |
 | 47. Nmap Discovery + Multi-Target Wizard | 0/TBD | Not started | - |
 | 48. Rich Finding Context | 0/TBD | Not started | - |
