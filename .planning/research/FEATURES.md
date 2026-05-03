@@ -1,391 +1,577 @@
-# Feature Research: Data at Rest — v4.3 Milestone
+# Feature Research: Enterprise Readiness — v4.6 Milestone
 
-**Domain:** Cloud and infrastructure data-at-rest cryptographic inventory for post-quantum readiness
-**Milestone:** v4.3 Data at Rest
-**Researched:** 2026-04-24
-**Confidence:** HIGH (GCP/AWS/Azure official docs verified; K8s official docs verified; Vault official docs verified; patterns confirmed against existing codebase)
-
----
-
-## Context: What Already Exists (Do Not Rebuild)
-
-QU.I.R.K. v4.2.0 ships the following that v4.3 must plug into:
-
-- `CryptoEndpoint` SQLite model with additive `*_scan_json` blob columns per scanner
-- `cloud_scan_json` column used by `aws_connector.py` and `azure_connector.py` — GCP reuses this same column, same pattern
-- `KMS_KEY_SPEC_MAP` in `aws_connector.py` maps key spec strings → (algorithm, key_size) — GCP needs an equivalent `GCP_KEY_ALGORITHM_MAP`
-- `build_cbom()` dispatches on `ep.protocol` — new protocol strings `GCP`, `DATABASE`, `OBJECT_STORAGE`, `K8S`, `VAULT` need dispatch entries in Pass 1 and Pass 3
-- `classify_algorithm()` in `quirk/cbom/classifier.py` is the single lookup table — new algorithm names must go here
-- `scanned_at` DateTime column on `CryptoEndpoint` is the only scan session marker — trend analysis needs a new `ScanSession` SQLite table or equivalent session-level metadata record
-- `run_scan.py` propagates a shared `session_start` datetime to all scanners (Phase 24 fix) — trend analysis anchors on this value
-- Intelligence scoring in `evidence.py` aggregates counters — new data-at-rest surface needs new evidence counters fed into scoring
+**Domain:** Consulting-grade cryptographic scanner — enterprise usability, compliance output, PQC remediation guidance
+**Milestone:** v4.6 Enterprise Readiness
+**Researched:** 2026-05-03
+**Confidence:** HIGH (NIST official docs, PCI-DSS 4.0 official docs, HIPAA HHS guidance, sslyze docs, python-nmap docs, PEP 771, NIST IR 8547 verified; OpenVAS/Nessus format patterns verified against official sources)
 
 ---
 
-## Feature 1: GCP Connector
+## Context: Existing Architecture (Do Not Rebuild)
 
-### What It Does
+v4.5 ships:
+- 13 scan surfaces across 6 pillars (TLS, SSH, API/JWT, identity, data-at-rest, data-in-motion)
+- `CryptoEndpoint` SQLite model with `*_scan_json` blob columns per scanner
+- `Finding` Pydantic model with `host`, `protocol`, `finding_type`, `severity`, `service_detail` fields — no `description`, `remediation`, or `compliance_refs` fields yet
+- sslyze as primary TLS scanner — `CertificateDeploymentAnalysisResult` exposes `verified_certificate_chain`, `leaf_certificate_subject_matches_hostname`, plus trust store validation results
+- `run_scan.py` with `_wrapped_phase` BaseException helper — all scanner phases share this pattern
+- `quirk/risk/engine.py` generates findings from sslyze results — current TLS findings: cipher-related only; cert validity, expiry, key-size findings are absent
+- Optional extras pattern established: `[identity]`, `[motion]`, `[cloud]`, `[db]`, `[vault]`, `[k8s]` — graceful ImportError degradation is already the pattern but not consistently applied
+- Interactive wizard in `quirk/cli/interactive.py` — single-target flow, consulting defaults, 17-port list
+- `quirk/reports/` HTML/PDF renderer — finding rows rendered without extended context fields
 
-Enumerates GCP Cloud KMS crypto key specs, Cloud SQL TLS enforcement mode, and GCS bucket
-default encryption configuration. Uses `google-cloud-kms`, `google-cloud-storage`, and
-`google-cloud-sqladmin` Python client libraries with ambient Application Default Credentials
-(ADC). Mirrors the structural pattern of `aws_connector.py`.
+---
 
-### Table Stakes: GCP Connector
+## Feature 1: Install-Day UX — Extras by Default, Graceful Degradation (BACK-76)
+
+### What This Feature Does
+
+Ships `identity` and `motion` extras as included-by-default in `pip install quirk`, and wraps
+every optional-dependency import in a consistent try/except pattern so that a plain
+`pip install quirk` (without extras) degrades gracefully instead of crashing 4 scanners with
+`ModuleNotFoundError` at runtime.
+
+### Why This Is Broken Today
+
+The 4 affected scanners (`kerberos_scanner`, `saml_scanner`, `dnssec_scanner`, and one broker
+scanner) import their optional libraries at module top-level. When the extra is not installed,
+the import fails at Python import time before `_wrapped_phase` can catch it. The user sees a raw
+`ModuleNotFoundError` and no findings from that surface — a silent data quality hole.
+
+### Table Stakes
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Cloud KMS key enumeration — list all key rings and crypto keys per project | GCP KMS is the primary secret/key store; consultants expect this like AWS KMS | MEDIUM | `google-cloud-kms` client; `KeyManagementServiceClient.list_key_rings()` + `list_crypto_keys()` paginated; protection level (SOFTWARE/HSM/EXTERNAL) is a critical finding field |
-| Map GCP key algorithm → (algorithm_name, key_size) | Without this, keys are opaque resource names | LOW | `CryptoKeyVersion.algorithm` enum: RSA_SIGN_PKCS1_2048_SHA256, EC_SIGN_P256_SHA256, GOOGLE_SYMMETRIC_ENCRYPTION, etc. Static map; 15–20 entries covers full GCP KMS algorithm set |
-| Cloud KMS key rotation status — rotation period and next rotation time | Unrotated keys are a compliance finding; many enterprise policies require 90-day rotation | LOW | `CryptoKey.rotation_period` field available via API; no rotation = finding |
-| Cloud SQL TLS enforcement mode — `ALLOW_UNENCRYPTED_AND_ENCRYPTED` vs `ENCRYPTED_ONLY` vs `TRUSTED_CLIENT_CERTIFICATE_REQUIRED` | Cloud SQL with TLS not enforced is a data-in-motion and posture finding | MEDIUM | `google-cloud-sqladmin` via `sqladmin_v1beta4` Discovery API; `DatabaseInstance.settings.ip_configuration.ssl_mode` field |
-| GCS bucket default encryption — GOOGLE_MANAGED (GMEK) vs CUSTOMER_MANAGED (CMEK) vs CUSTOMER_SUPPLIED (CSEK) | Storage encryption posture is table-stakes for a data-at-rest audit | MEDIUM | `google-cloud-storage` client; `Bucket.default_kms_key_name` — None means GMEK; present means CMEK with the KMS key URI |
-| Graceful degradation when `google-cloud-*` libraries not installed | Consistent with AWS/Azure pattern in the codebase | LOW | Try/except import at module top; log message if unavailable |
-| `protocol="GCP"` on CryptoEndpoint; `cloud_scan_json` blob storage | Required for CBOM dispatch; reuse existing column | LOW | Same pattern as `aws_connector.py` and `azure_connector.py`; no new DB column needed |
-| GCP ADC ambient auth — no credentials stored in code | Same requirement as AWS ambient IAM and Azure DefaultAzureCredential | LOW | `google.auth.default()` or `google.oauth2.credentials.Credentials`; no API key hardcoding |
+| Graceful ImportError degradation for all optional-dependency scanners | Every enterprise tool must install without crashing; a scanner that errors on import is broken, not optional | LOW | Pattern: `try: import foo; HAS_FOO = True except ImportError: HAS_FOO = False`; check `HAS_FOO` before scanner runs; emit a structured warning finding instead of crash |
+| User-visible "scanner unavailable" warning (not silent skip) | User must know a surface was skipped, not assume it was clean | LOW | Emit a single `Finding(severity="INFO", finding_type="SCANNER_UNAVAILABLE", service_detail="Install quirk[identity] to enable Kerberos/SAML/DNSSEC scanning")` per affected surface |
+| `identity` and `motion` extras included in default install | These surfaces are standard consulting deliverables; opt-out is better than opt-in for billable surfaces | LOW | Move `[identity]` and `[motion]` dep sets into `[default]` meta-extra or include in core `dependencies`; PEP 771 "default extras" is still a draft as of 2025 — use `dependencies` inclusion or a `[default]` meta-extra convention instead |
+| `pip install quirk` documentation updated to reflect new default | Documentation must match install behavior | LOW | Update `docs/installation.md` and `quirk init` welcome message |
 
-### Differentiators: GCP Connector
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Cloud KMS protection level: SOFTWARE vs HSM | HSM-backed keys provide hardware attestation; consultants ask this for FedRAMP/PCI-DSS clients | LOW | `CryptoKeyVersion.protection_level` field; flag SOFTWARE as a finding when client has compliance requirements |
-| Detect Cloud KMS keys NOT set as default for GCS buckets | Cross-surface finding: KMS key exists but GCS still uses GMEK | MEDIUM | Requires correlating KMS key list with GCS bucket CMEK assignments; useful aggregate finding |
-| Cloud SQL Server CA cert algorithm | Cloud SQL issues a server cert for TLS — check its algorithm | MEDIUM | Available via `SslCert` resource on the instance; maps to existing cert_pubkey_alg field |
-| BigQuery CMEK status | BigQuery datasets can use CMEK; enterprise clients often use BigQuery | MEDIUM | `google-cloud-bigquery` client; `Dataset.default_encryption_configuration`; defer to v4.4 unless straightforward |
-| Cloud Spanner encryption | Spanner uses Google-managed encryption by default; CMEK available | HIGH | Low enterprise frequency; defer |
+| Scanner health check at `quirk init` time | Proactive: show which scanners are available vs missing extras before first scan | LOW | `quirk init` runs `python -c "import impacket"` etc. and emits a table of surface availability |
+| `pip install quirk[all]` umbrella extra | Power users and CI pipelines want one command | LOW | Meta-extra over all sub-extras; existing `[motion]` meta-extra is the pattern |
 
-### Anti-Features: GCP Connector
+### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Google Workspace (Drive, Gmail) audit | Seems like full GCP coverage | Entirely different API scope (Admin SDK); not infrastructure KMS | Explicitly out of scope; document limitation |
-| Cloud HSM key material export | "Complete" key audit | HSM keys are not exportable by design; attempting this will always fail | Note in report: HSM protection level means no export possible — this is a positive security control |
-| Enumerate all projects in org automatically | Auto-discovery seems useful | Requires `resourcemanager.projects.list` at org level; many clients restrict this; causes auth failures | Accept project ID list from config; user specifies which projects to scan |
+| Bundle all optional deps into core | "Simplify install" | impacket has known transitive conflicts with pyOpenSSL; pulling into core breaks other users | Keep extras structure; fix defaults by including the safe ones |
+| Silent skip with no warning | "Clean output" | Creates false confidence — user thinks all surfaces were scanned | Always emit INFO finding when a surface is skipped due to missing dependency |
+
+### Dependency Notes
+
+- This is the **first phase** of v4.6 — it unblocks all subsequent testing because a clean install is required before validating scanner output
+- Changes are additive to `pyproject.toml` and import guards; no new libraries
 
 ---
 
-## Feature 2: Database Encryption Detection
+## Feature 2: TLS Finding Gaps (BACK-74)
 
-### What It Does
+### What This Feature Does
 
-Detects encryption-at-rest status for PostgreSQL, MySQL, and AWS RDS/Aurora instances.
-For cloud-managed databases (RDS), uses the cloud API. For self-hosted databases, connects
-via the database protocol to read system tables or server variables. This is a detection-only
-scanner — no data is read.
+Adds three missing finding types to the TLS risk engine: expired certificates, self-signed
+certificates (untrusted CA), and weak RSA key sizes (RSA-1024 and RSA-512). These are standard
+findings in every TLS assessment tool and are required for NIST SP 800-52r2 and PCI-DSS 4.0
+compliance reporting.
 
-### Key Findings Consultants Need
+### Why These Are Currently Missing
 
-Encryption-at-rest is nearly always the first checkbox in a data-at-rest audit. The actionable
-finding structure is: (1) Is it encrypted at all? (2) What encryption method/key manager?
-(3) Is TLS enforced for connections? RDS is the highest-value path because the API is
-deterministic and agentless.
+sslyze's `CertificateDeploymentAnalysisResult` provides all three signals already:
+- **Expired:** `received_certificate_chain[0].not_valid_after` vs `datetime.now()`
+- **Self-signed:** `verified_certificate_chain` is `None` when trust validation fails; sslyze trust store validation result provides `was_validation_successful = False` with reason
+- **Weak key:** `leaf_certificate_public_key.key_size` — RSA keys below 2048 bits are deprecated per NIST SP 800-131A and NIST IR 8547 (which deprecates all RSA by 2030; RSA-1024 was never NIST-recommended)
 
-### Table Stakes: Database Encryption Detection
+The sslyze data is available in `tls_capabilities_json`. The risk engine (`quirk/risk/engine.py`)
+does not read these fields when generating findings.
+
+### Table Stakes
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| AWS RDS `StorageEncrypted` flag detection via `describe_db_instances` | Canonical data-at-rest finding for cloud databases; covered by AWS Config rule `rds-storage-encrypted` | LOW | Already have boto3 in stack via `aws_connector.py`; call `rds_client.describe_db_instances()` paginated; `StorageEncrypted=False` is a HIGH finding |
-| AWS RDS `StorageEncryptionType` field — `none` vs `sse-rds` vs `sse-kms` | `StorageEncryptionType=none` is a hard finding (2025 Aurora API field); `sse-kms` confirms CMK usage | LOW | New 2025 Aurora API field; `StorageEncrypted=True` with `StorageEncryptionType=sse-rds` = AWS-owned key (weaker than CMK); CMK preferred for regulated workloads |
-| AWS RDS KmsKeyId — identify which KMS key protects the database | Finding: using AWS-managed key vs customer-managed key (different compliance posture) | LOW | `KmsKeyId` field in `describe_db_instances` response; cross-reference with existing KMS key list |
-| AWS RDS `MultiAZ` + snapshot encryption status | Snapshots and replicas must also be encrypted; common gap | LOW | `CopyTagsToSnapshot`, automated backup encryption inherits from instance |
-| `rds_force_ssl` / `require_secure_transport` detection for connection encryption | Encryption at rest without TLS in transit is half the picture; consultants always check both | MEDIUM | Requires `describe_db_parameters` for the parameter group; `rds.force_ssl=1` for PostgreSQL, `require_secure_transport=ON` for MySQL; adds API call per instance |
-| `protocol="DATABASE"` CryptoEndpoint + `cloud_scan_json` blob | CBOM integration; reuse existing field | LOW | Same pattern as cloud connectors |
-| Self-hosted PostgreSQL: query `pg_settings` for `ssl` and `ssl_ca_file` | Detect TLS enforcement on self-managed Postgres | MEDIUM | Connect via `psycopg2` or `asyncpg`; `SHOW ssl;` — requires DB credentials in config; flag as requiring credentials |
-| Self-hosted MySQL: `SHOW VARIABLES LIKE 'have_ssl'` and `require_secure_transport` | TLS posture for self-managed MySQL | MEDIUM | Connect via `pymysql`; `have_ssl=DISABLED` is a finding; requires DB credentials |
+| Expired certificate finding (CRITICAL severity) | Expired certs break TLS handshake; PCI-DSS 4.0 §6.3.3 requires cert validity tracking; every TLS scanner flags this | LOW | Check `not_valid_after < datetime.utcnow()`; finding: `TLS-EXPIRED-CERT`; severity: CRITICAL |
+| Near-expiry warning (HIGH severity, configurable threshold) | Proactive finding; standard in Qualys, Tenable, sslyze CLI — 30/60/90 day thresholds | LOW | Default threshold 30 days; configurable in `[scan]` config; finding: `TLS-CERT-EXPIRING-SOON`; severity: HIGH |
+| Self-signed / untrusted CA finding (HIGH severity) | Self-signed certs bypass PKI chain of trust; PCI-DSS 4.0 requires trusted CA; NIST SP 1800-16 certificate management guidance explicitly flags self-signed | LOW | sslyze `was_validation_successful=False` + reason `SELF_SIGNED`; finding: `TLS-SELF-SIGNED-CERT`; severity: HIGH |
+| RSA-1024 weak key finding (HIGH severity) | RSA-1024 provides ~80 bits of security — below NIST SP 800-131A minimum of 112 bits since 2014; never compliant | LOW | `leaf_certificate_public_key.key_size < 2048` for RSA; finding: `TLS-WEAK-KEY-RSA1024`; severity: HIGH |
+| RSA-512 weak key finding (CRITICAL severity) | RSA-512 is factored trivially; represents a fundamental security failure | LOW | `key_size <= 512` for RSA; severity: CRITICAL |
+| EC key size check (P-160, P-192 < NIST minimum) | Weak ECDSA curves below P-256 are deprecated | LOW | `key_size < 256` for EC keys; finding: `TLS-WEAK-KEY-EC`; severity: HIGH |
+| Hostname mismatch finding (HIGH severity) | Cert CN/SAN does not match scanned hostname; breaks TLS guarantees | LOW | sslyze `leaf_certificate_subject_matches_hostname=False`; finding: `TLS-HOSTNAME-MISMATCH` |
+| Chaos lab coverage for all new finding types | Regression prevention — chaos lab must exercise all new TLS findings | MEDIUM | Add a chaos lab profile or extend existing `tls-weak` profile with expired, self-signed, and RSA-1024 certs; update `expected_results_v4.md` oracle |
 
-### Differentiators: Database Encryption Detection
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Detect tablespace-level encryption in PostgreSQL (pgcrypto, TDE via pg_tde extension) | Enterprise PostgreSQL sometimes uses application-level or extension-level encryption — distinct from OS-level | HIGH | `pg_tde` extension is new (2024); not universally deployed; query `pg_extension` table; low enterprise prevalence currently |
-| AWS Aurora serverless encryption detection | Aurora serverless v2 has slightly different encryption behavior | LOW | Same API fields; `StorageEncrypted` applies; add `EngineMode=serverless` to report metadata |
-| Cross-reference RDS KMS key with KMS scan findings | Show which KMS key (already in CBOM from KMS scan) protects which RDS instance | MEDIUM | Post-scan enrichment step; requires matching `KmsKeyId` ARNs |
-| Azure SQL encryption detection — TDE status via Azure SQL API | Azure SQL uses TDE with either service-managed or customer-managed key | MEDIUM | `azure-mgmt-sql` client; `TransparentDataEncryption.status` field; extends existing Azure connector |
+| Certificate chain completeness check | Incomplete chain (missing intermediate) breaks some clients; common enterprise misconfiguration | LOW | sslyze `received_certificate_chain_has_anchor_in_it`, `received_certificate_chain` chain length vs `verified_certificate_chain`; finding: `TLS-INCOMPLETE-CHAIN` |
+| SHA-1 signature algorithm finding | SHA-1 signatures are broken; deprecated by all major browsers; still seen on legacy internal CAs | LOW | Check `signature_hash_algorithm.name == 'sha1'` on leaf cert; finding: `TLS-SHA1-SIGNATURE`; severity: HIGH |
+| Wildcard certificate detection (informational) | Wildcards increase blast radius of compromise; consultants note them | LOW | SAN contains `*.domain`; finding: `TLS-WILDCARD-CERT`; severity: INFO — informational, not a failure |
 
-### Anti-Features: Database Encryption Detection
+### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Read database schema / data samples | "Verify what's actually encrypted" | Accessing business data is out of scope; legal risk; agentless model violation | Detection is posture only; note limitation in report |
-| Oracle DB encryption detection | More complete coverage | Requires Oracle JDBC driver; proprietary protocol; very different client library | Out of scope v4.3; document explicitly |
-| MySQL Enterprise Audit plugin detection | Seems thorough | Requires auth + SUPER privilege; out of agentless model for self-hosted | Flag as manual verification needed for self-hosted |
+| Certificate revocation (OCSP/CRL) check | Thorough PKI hygiene | OCSP responders in enterprise are often unreachable from scanner host; high false-negative rate; adds latency | Note as manual verification item in remediation guidance |
+| CT log cross-checking | Transparency verification | Requires external CT log API calls; breaks offline mode | Out of scope for agentless offline scanner |
+
+### Dependency Notes
+
+- sslyze is already in the stack and provides all needed data fields — this is pure risk engine logic, no new dependencies
+- All 3 finding types feed into the existing TLS subscore via `evidence.py` counters; new counters needed: `tls_expired_count`, `tls_self_signed_count`, `tls_weak_key_count`
+- Chaos lab update is mandatory per CLAUDE.md: any new expected finding type requires oracle update
 
 ---
 
-## Feature 3: Object Storage Audit
+## Feature 3: Rich Finding Context — Per-Finding Risk Explanation and PQC Remediation (BACK-79)
 
-### What It Does
+### What This Feature Does
 
-Audits encryption configuration for object storage buckets across AWS S3, Azure Blob Storage,
-and GCS. Detects the encryption method (platform-managed vs customer-managed key), public
-access settings, and Object Lock status. This is a policy-read scanner — no object data is
-accessed.
+Adds three new fields to every finding in scan output, reports, and the dashboard API:
+`risk_explanation` (why this finding matters in plain language), `severity_rationale` (why
+this severity was assigned), and `remediation_path` (specific actionable steps, including
+FIPS 203/204/205 PQC migration path where applicable).
 
-### Key Findings Consultants Need
+### What Enterprise Users Expect
 
-S3/Blob/GCS buckets are the most commonly misconfigured data-at-rest surface. Since January 2023,
-S3 encrypts all new objects with SSE-S3 by default, so "encryption exists" is no longer the
-primary finding — the primary finding is now "what kind of encryption and who controls the key."
-For regulated workloads (HIPAA, FedRAMP, PCI-DSS), SSE-KMS with a customer-managed key is
-required over SSE-S3.
+Enterprise security scanners universally provide remediation context. The Nessus `.nessus`
+format has had `description`, `synopsis`, `solution`, and `see_also` fields since v2.
+Qualys and Tenable both provide `remediation`, `consequence`, and `cvss_rationale` on findings.
+SIEM integrations consume this context for automated triage.
 
-### Table Stakes: Object Storage Audit
+The QUIRK finding model currently provides only `finding_type`, `severity`, `host`, and
+`service_detail`. A consultant receiving a finding `TLS-WEAK-CIPHER: HIGH` with no explanation
+must look up the cipher in external references before writing the client deliverable. This doubles
+consultant time per finding.
+
+### Remediation Path per Finding Category (NIST-Sourced, HIGH Confidence)
+
+**Key establishment (RSA, ECDH, DH — quantum-vulnerable):**
+Replace with ML-KEM (FIPS 203). Minimum parameter set: ML-KEM-768 for general use, ML-KEM-1024
+for national security systems (CNSA 2.0). Deadline: NIST IR 8547 deprecates RSA-2048 by 2030,
+disallows all RSA/ECC by 2035.
+
+**Digital signatures (RSA-PKCS1, ECDSA — quantum-vulnerable):**
+Replace with ML-DSA (FIPS 204, primary choice) or SLH-DSA (FIPS 205, conservative hash-based
+fallback when lattice assumptions are a concern). ML-DSA-65 for general enterprise use,
+ML-DSA-87 for national security. SLH-DSA relies only on hash function security — use where
+algorithm diversity is required.
+
+**Symmetric encryption (AES-128+ — quantum-adequate):**
+No replacement needed. AES-128 provides ~64 bits of post-quantum security (Grover's algorithm
+halves effective key length). AES-256 provides ~128 bits — sufficient. No migration required
+before 2035.
+
+**Hash functions (SHA-256+):**
+SHA-256 provides ~128 bits of post-quantum security. SHA-384/SHA-512 preferred for signatures.
+SHA-1 and MD5: replace immediately (classical weakness, not quantum).
+
+**TLS protocol version:**
+TLS 1.3 is quantum-adequate for symmetric components; key exchange still needs PQC hybrid
+(X25519Kyber768 or MLKEM768X25519 are IETF-standardizing). TLS 1.2 acceptable with ECDHE
+key exchange until 2030. TLS 1.0/1.1: replace immediately.
+
+**Kerberos (RC4/DES enctypes):**
+Replace RC4-HMAC and DES with AES-256-CTS-HMAC-SHA1-96 (RFC 8009) as bridge, then migrate to
+AES-256-based Kerberos with PQC key wrap when RFC is finalized. RC4: CRITICAL finding.
+
+**DNSSEC (RSASHA1, DSA):**
+Migrate to ECDSAP256SHA256 (RFC 8624 — MUST implement) or ECDSAP384SHA384 now. Future:
+watch IETF DNSOP working group for ML-DSA DNSSEC algorithm.
+
+### Table Stakes
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| AWS S3: enumerate all buckets in account, read `get_bucket_encryption` | Core finding: SSE-S3 vs SSE-KMS (and which KMS key) vs no encryption config | LOW | `s3.list_buckets()` + `s3.get_bucket_encryption(Bucket=name)`; `ServerSideEncryptionRule.ApplyServerSideEncryptionByDefault.SSEAlgorithm` = `aws:kms` (CMK preferred) vs `AES256` (SSE-S3, AWS-managed) |
-| AWS S3: `get_public_access_block` — detect buckets with public access not blocked | Public buckets are a critical finding regardless of encryption; composite posture | LOW | `BlockPublicAcls`, `BlockPublicPolicy`, `IgnorePublicAcls`, `RestrictPublicBuckets` — all 4 must be True |
-| AWS S3: detect SSE-KMS key ARN — identify CMK vs AWS-managed key (`aws/s3`) | CMK vs AWS-managed key distinction is the primary compliance finding for regulated workloads | LOW | `KMSMasterKeyID` in encryption response; `alias/aws/s3` = AWS-managed, custom ARN = CMK |
-| AWS S3: Object Lock status — COMPLIANCE vs GOVERNANCE vs disabled | WORM compliance requirement in financial/healthcare; consultants check this for retention compliance | LOW | `s3.get_object_lock_configuration(Bucket=name)`; enabled/disabled + mode |
-| GCS: enumerate buckets in project, read `bucket.default_kms_key_name` | GMEK vs CMEK detection; equivalent to S3 SSE-S3 vs SSE-KMS distinction | LOW | `google-cloud-storage` client; already enumerated in GCP connector; share scan results |
-| GCS: uniform bucket-level access (public access prevention) | GCS public exposure equivalent of S3 public access block | LOW | `Bucket.iam_configuration.public_access_prevention` = `enforced` vs `inherited` |
-| Azure Blob: list storage accounts, read encryption config — `StorageAccountProperties.encryption` | Azure Blob uses AES-256 always; the finding is whether it uses Microsoft-managed vs customer-managed key | MEDIUM | `azure-mgmt-storage` client; `Encryption.key_source` = `Microsoft.Storage` (platform) vs `Microsoft.Keyvault` (CMK); `key_vault_properties.key_name` for CMK |
-| Azure Blob: `enable_https_traffic_only` flag — reject HTTP | Azure Blob equivalent of S3 secure transport; consultants always check | LOW | `StorageAccountProperties.enable_https_traffic_only` = True/False |
-| `protocol="OBJECT_STORAGE"` CryptoEndpoint; `cloud_scan_json` blob | CBOM integration | LOW | Reuse existing field; `host` = bucket ARN or resource name |
+| `risk_explanation` field on Finding — 1-2 sentences why this finding matters | Every enterprise scanner provides this; without it consultants must look up implications manually | MEDIUM | Static lookup table keyed on `finding_type`; ~60 entry coverage for all current finding types; no LLM, no dynamic generation |
+| `severity_rationale` field on Finding — why this severity (not one above/below) | Compliance auditors challenge severity assignments; rationale makes the report defensible | LOW | Append to static lookup; single sentence per finding type — e.g. "CRITICAL: RSA-512 keys can be factored with commodity hardware in hours." |
+| `remediation_path` field on Finding — 1-3 actionable steps | Core consultant time-save; the entire point of a readiness scanner is to drive remediation | MEDIUM | Static lookup keyed on `finding_type`; for PQC findings, cite FIPS 203/204/205 and NIST IR 8547 deadline explicitly |
+| PQC migration path for all quantum-vulnerable finding types | FIPS 203/204/205 are finalized (August 2024); including specific algorithm names is now authoritative | MEDIUM | Minimum: for every RSA/ECDSA/DH finding, state "Migrate to ML-KEM (FIPS 203) for key establishment; ML-DSA (FIPS 204) for signatures. Target: 2030 deprecation deadline per NIST IR 8547." |
+| Finding context visible in HTML/PDF reports | Consultants hand reports to clients; context must appear in the deliverable | MEDIUM | Extend report renderer to include `risk_explanation` + `remediation_path` as a collapsed/expandable section per finding row |
+| Finding context in `/api/scan/latest` JSON response | Dashboard and SIEM integration consumers expect these fields | LOW | Extend `Finding` Pydantic model to include new fields; old scans that lack context gracefully return empty strings |
 
-### Differentiators: Object Storage Audit
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| S3 bucket policy check — detect `"Effect": "Allow", "Principal": "*"` (public policy) | Public access block can be bypassed by a bucket policy with explicit Allow; double-check | MEDIUM | `s3.get_bucket_policy(Bucket=name)`; parse JSON for `Principal: *`; common gotcha |
-| S3 MFA Delete status | MFA Delete prevents accidental or malicious deletion of versioned objects; enterprise compliance | LOW | `s3.get_bucket_versioning(Bucket=name)`; `MFADelete=Enabled/Disabled` |
-| GCS retention policy detection | Equivalent to S3 Object Lock for GCS | LOW | `Bucket.retention_policy`; `is_locked` boolean |
-| Cross-surface finding: S3 bucket + no KMS key in KMS scan | Bucket uses CMK but KMS scan didn't find that key — key may be in different account | MEDIUM | Post-scan enrichment; requires ARN matching |
+| FIPS deadline callout per finding ("deprecated by 2030 per NIST IR 8547") | Regulatory urgency drives client prioritization; specific deadline is more compelling than "quantum-vulnerable" | LOW | Add `deprecation_deadline` field for NIST IR 8547 applicable findings: RSA-2048 → 2030, all RSA/ECC → 2035 |
+| Algorithm-specific migration complexity rating (LOW/MEDIUM/HIGH) | Consultants need to scope remediation effort; replacing a TLS cipher is LOW complexity, replacing an internal CA is HIGH | LOW | Static field on remediation lookup; helps with roadmap sizing |
+| `see_also` URLs field — link to authoritative standard | Auditors want to see primary source citations in reports | LOW | 1-2 URLs per finding type pointing to NIST.gov, PCI-DSS.org, or HHS.gov — standard practice in Nessus format |
 
-### Anti-Features: Object Storage Audit
+### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Object-level encryption verification (sample object reads) | "Actually verify the data is encrypted" | Reads business data; agentless model violation; legal risk | Policy-level detection is sufficient; note this in report |
-| Azure Data Lake Storage Gen2 audit | Broader Azure coverage | Different API surface; ADLS Gen2 inherits storage account encryption; overlap with Blob audit | Same storage account API covers it; no separate implementation needed |
-| List all bucket contents / object inventory | "Complete" audit | Volume can be millions of objects; timeout risk; data exposure | Never enumerate objects; only bucket-level policy |
+| LLM-generated remediation text per finding | "Dynamic, contextual guidance" | Requires network call; breaks offline mode; LLM accuracy not auditable; regulatory reports require reproducible output | Static lookup table is 100% reproducible, auditable, offline-capable, and fast |
+| Per-client customizable remediation text | "Tailored guidance" | Configuration complexity; maintenance burden; consultants already customize in their deliverable template | Provide clear, generic guidance; consultant adds client-specific context in their report |
+
+### Dependency Notes
+
+- No new pip dependencies — static lookup dict in `quirk/risk/remediation.py` (new file)
+- `Finding` Pydantic model must gain 3 new optional fields (backward-compatible: default empty string)
+- Report renderer changes affect both HTML and PDF paths
+- This feature makes **BACK-20 (compliance mapping)** easier — remediation context and compliance controls are both attributes of the same finding
 
 ---
 
-## Feature 4: Kubernetes Secrets Inspection
+## Feature 4: Compliance Mapping (BACK-20)
 
-### What It Does
+### What This Feature Does
 
-Detects whether Kubernetes etcd is configured with encryption at rest via `EncryptionConfiguration`,
-identifies the encryption provider in use (identity/none vs aescbc vs aesgcm vs secretbox vs kms),
-and enumerates Secret types to surface high-value secrets that should be encrypted
-(service account tokens, TLS certs, docker registry credentials). No secret values are read.
+Maps each finding to the specific control IDs in FIPS 140-3, NIST SP 800-208, PCI-DSS 4.0,
+and HIPAA/HITECH technical safeguards. Produces a compliance summary section in reports showing
+which controls are satisfied, which have gaps, and a per-framework compliance posture table.
 
-### Key Context
+### What Good Compliance Mapping Looks Like (Enterprise Standard)
 
-By default, Kubernetes Secrets are stored in etcd as Base64-encoded plaintext — not encrypted.
-This is the most commonly missed data-at-rest gap in Kubernetes security reviews. The finding
-"Secrets not encrypted in etcd" is HIGH severity and found in the majority of self-managed
-clusters. Managed Kubernetes (GKE, EKS, AKS) has varying defaults — GKE encrypts secrets by
-default with CMEK optional; EKS provides optional envelope encryption; AKS offers optional
-etcd encryption.
+Enterprise vulnerability scanners (Nessus, Qualys, OpenVAS) all map findings to at least:
+- CVE IDs (not applicable here — no CVEs)
+- CIS Controls or NIST 800-53 control IDs
+- PCI-DSS requirement numbers
+- HIPAA regulation sections
 
-### Table Stakes: K8s Secrets Inspection
+A defensible compliance mapping for cryptographic findings needs:
+1. **Finding → control reference** (one-to-many; a single finding may satisfy or violate multiple controls)
+2. **Control coverage table** in the report: control ID, description, status (PASS/FAIL/NOT-TESTED), finding references
+3. **Framework-level summary**: "PCI-DSS 4.0 — 8 of 12 assessed controls pass; 4 gaps identified"
+4. **Framework filter**: only show controls relevant to frameworks the client actually cares about
+
+### Key Framework Coverage (Verified Against Primary Sources)
+
+**PCI-DSS 4.0 (HIGH confidence — verified against official PCI SCC documentation):**
+- Req 4.2.1: TLS 1.2+ required for CHD transmission; TLS 1.0/1.1/SSL prohibited
+- Req 4.2.1.1: Inventory of trusted keys and certs maintained (maps to cert inventory)
+- Req 6.3.3: All software components protected against known vulnerabilities — weak ciphers qualify
+- Req 8.3.2: Strong cryptography for authentication credentials at rest
+- Req 8.6.1: System/application accounts managed with strong crypto
+- Cipher suites: AES-128+, ECDHE, SHA-256+; RC4/DES/3DES prohibited; expired/self-signed certs = violation
+
+**HIPAA Technical Safeguards (MEDIUM confidence — HHS.gov verified; HIPAA is "addressable" not prescriptive on algorithms):**
+- 45 CFR §164.312(a)(2)(iv): Encryption/decryption of ePHI (data at rest) — addressable
+- 45 CFR §164.312(e)(2)(ii): Encryption of ePHI in transit — addressable
+- NIST SP 800-111 (data at rest): AES-128+ required when encryption is implemented
+- NIST SP 800-52r2 (TLS): TLS 1.2+ for ePHI transmission; cipher suite restrictions align with PCI-DSS
+- Note: HIPAA does not mandate encryption but HHS states noncompliance with addressable specs requires documented alternative; "encrypt with a deprecated algorithm" is not an acceptable alternative
+
+**NIST SP 800-208 (HIGH confidence — verified against NIST CSRC):**
+- Applies to stateful hash-based signatures (LMS, HSS, XMSS, XMSSMT)
+- Relevant to DNSSEC and code signing findings only
+- Findings: use of RSASHA1 in DNSSEC = violation; ECDSAP256SHA256 = compliant
+
+**FIPS 140-3 (HIGH confidence — verified against NIST CSRC):**
+- Not a finding-level control in the traditional sense — FIPS 140-3 validates modules, not deployments
+- Correct mapping: "This algorithm uses a FIPS 140-3 approved algorithm: AES-256, SHA-256, ECDSA P-256" or "NOT APPROVED: RC4, MD5, DES, RSA-1024"
+- CMVP approved algorithm list is the authoritative source
+- PQC: ML-KEM, ML-DSA, SLH-DSA are now FIPS 140-3 approved (added to CAVP in 2024)
+
+**NIST IR 8547 / CNSA 2.0 (HIGH confidence):**
+- RSA-2048 and ECC P-256: deprecated by 2030 (no new systems)
+- All RSA/ECC: disallowed by 2035
+- ML-KEM-768 (general) / ML-KEM-1024 (NSS): required for key establishment
+- ML-DSA-65 (general) / ML-DSA-87 (NSS): required for signatures
+- These are federal mandates; any federal contractor facing audit will need this mapping
+
+### Table Stakes
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Detect `EncryptionConfiguration` on kube-apiserver — provider != identity | Core finding: is etcd encryption enabled at all? | MEDIUM | Agentless path: check `kubectl get apiserver` or read kube-apiserver pod spec `--encryption-provider-config` flag; for managed clusters, use cloud API (EKS: `describe_cluster.encryptionConfig`; GKE: `cluster.databaseEncryption`; AKS: `ManagedCluster.encryptionAtRestWithCustomerKey`) |
-| Identify encryption provider: `identity` (none) vs `aescbc` vs `aesgcm` vs `secretbox` vs `kms` | Provider determines the actual encryption strength | LOW | Static mapping: `identity` = CRITICAL (no encryption); `aescbc` = ADEQUATE (AES-256-CBC, quantum-adequate); `aesgcm` = ADEQUATE (AES-256-GCM, quantum-adequate + authenticated); `secretbox` = ADEQUATE (XSalsa20-Poly1305); `kms` = STRONG (delegated to external KMS) |
-| AWS EKS envelope encryption: `describe_cluster` `encryptionConfig` | EKS does not enable envelope encryption by default; finding when absent | LOW | `eks_client.describe_cluster(name=cluster_name)`; `cluster.encryptionConfig` — empty list = not enabled; HIGH finding |
-| GKE database encryption: `cluster.databaseEncryption.state` | GKE `DECRYPTED` state = application-layer encryption not enabled | LOW | Already enumerating GCS/KMS in GCP connector; add `container_v1.ClusterManagerClient().get_cluster()` call; `DECRYPTED` = finding |
-| AKS encryption at rest: `ManagedCluster.encryption_at_rest_with_customer_key` | AKS uses platform encryption by default; CMK encryption is customer responsibility | MEDIUM | `azure-mgmt-containerservice`; check `encryptionAtRestWithCustomerKey.keyVaultProperties` presence |
-| Enumerate Secret types in cluster — count by type | Show volume of sensitive secrets at risk if etcd unencrypted | MEDIUM | `kubernetes` Python client (`v1.list_secret_for_all_namespaces()`); count by `secret.type`; types: `kubernetes.io/tls`, `kubernetes.io/service-account-token`, `kubernetes.io/dockerconfigjson` — do NOT read `.data` values |
-| `protocol="K8S"` CryptoEndpoint; `cloud_scan_json` blob | CBOM integration | LOW | host = cluster endpoint; service_detail = "K8S_SECRETS_ENCRYPTION" |
-| Graceful fallback: kubeconfig-based auth with clear error if no kubeconfig | K8s connectivity is environment-dependent | LOW | `kubernetes` Python client reads `~/.kube/config` by default; catch `ConfigException`; log helpful message |
+| Finding → control ID mapping (static lookup) | Every compliance-oriented scanner provides control references; without this, compliance officers cannot map to their audit framework | MEDIUM | Dict keyed on `finding_type` → list of `(framework, control_id, description)` tuples; ~60 finding types × 3-4 frameworks |
+| Per-framework compliance summary in HTML/PDF report | Compliance officers present this section to auditors; it is the core deliverable for regulated industries | HIGH | New report section: framework name, total controls assessed, pass/fail/not-tested counts, gap list; conditional on which frameworks user enables in config |
+| `compliance_refs` field on Finding in API/JSON output | SIEM and GRC tool integrations consume finding data programmatically; control IDs are how they cross-reference | LOW | Extend `Finding` Pydantic model: `compliance_refs: list[ComplianceRef]` where `ComplianceRef` has `framework`, `control_id`, `control_description` |
+| Framework selection in config | Client A cares about PCI-DSS; Client B cares about HIPAA; show only relevant frameworks | LOW | `[compliance] frameworks = ["pci-dss-4", "hipaa", "fips-140-3"]` in `quirk.toml`; default: all frameworks |
+| "FIPS 140-3 approved / NOT approved" classification per algorithm in CBOM | CBOM already classifies quantum-safety; add FIPS approved status as a second classification dimension | MEDIUM | Extend `classify_algorithm()` to return `fips_140_3_approved: bool`; known approved list: AES, SHA-2, SHA-3, ECDSA P-256/P-384/P-521, RSA-2048+, ML-KEM, ML-DSA, SLH-DSA |
 
-### Differentiators: K8s Secrets Inspection
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| RBAC audit: who can `get secrets` across namespaces | Encryption at rest is worthless if any pod can read secrets via RBAC; shows "effective protection" | HIGH | `v1.list_cluster_role_binding()` + policy analysis; significant complexity; separate feature |
-| Detect Sealed Secrets (Bitnami) or External Secrets Operator | Shows whether org uses GitOps-safe secret management (preferred over native Secrets) | MEDIUM | Check for `SealedSecret` CRD or `ExternalSecret` CRD in cluster; `kubectl get crd` |
-| Audit Secret TTL / rotation via annotation patterns | Long-lived secrets are a risk even when encrypted | MEDIUM | Annotation conventions vary by org; not standardized |
+| SOC 2 Type II crypto controls mapping | SOC 2 CC6.1 and CC6.7 cover encryption of data in transit/rest; growing demand for SOC 2 evidence packages | MEDIUM | CC6.1: logical access controls including encryption; CC6.7: transmission security; map TLS and DAR findings |
+| ISO 27001:2022 Annex A.8.24 mapping | ISO 27001 updated in 2022; A.8.24 is "use of cryptography"; global standard for enterprise customers outside US | MEDIUM | A.8.24 requires crypto policy, key management lifecycle, algorithm selection — map directly to QUIRK finding types |
+| Compliance posture trend — did compliance score improve between scans | Show compliance improvement over time for audit evidence | MEDIUM | Requires trend analysis (already built in v4.3); add per-framework pass rate to ScanSession snapshot |
 
-### Anti-Features: K8s Secrets Inspection
+### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Read secret values (`.data` fields) | "Verify what's actually there" | Reads credentials/tokens; hard agentless model violation; legal risk | Count secret types only; never read `.data` |
-| Full etcd direct connection audit | Most thorough | Requires etcd client cert; etcd is not exposed in managed clusters; complex setup | Use kube-apiserver API; it's the correct abstraction layer |
-| Kubernetes config map audit | Config maps sometimes hold sensitive data | Config maps are not encrypted even with EncryptionConfiguration unless explicitly added; out of scope | Note in report: check if sensitive data is in ConfigMaps |
+| Automated compliance attestation / certification | "Prove we're compliant" | No scanner can attest compliance — only human auditor can; claiming otherwise creates legal liability | Clearly label output as "compliance gap assessment" not "certification"; include disclaimer in reports |
+| FedRAMP compliance mapping | Government clients want this | FedRAMP has hundreds of controls; crypto is a small subset; full FedRAMP coverage is a separate product surface | Note NIST SP 800-53 control IDs which FedRAMP inherits — this provides partial coverage |
+| Real-time compliance dashboard with live audit trail | "Continuous compliance" | Requires persistent backend, auth, multi-tenant data — SaaS milestone scope | CLI + periodic scan + PDF report is the correct v1 compliance model |
+
+### Dependency Notes
+
+- New file `quirk/compliance/mapper.py` — pure Python dict lookups, no new pip dependencies
+- Extends `Finding` Pydantic model (same pattern as BACK-79 `remediation_path`)
+- Report renderer needs a new "Compliance Mapping" section — significant but contained
+- BACK-79 (remediation context) and BACK-20 (compliance mapping) should ship in the same phase — they share the Finding model extension and static lookup infrastructure
 
 ---
 
-## Feature 5: HashiCorp Vault Connector
+## Feature 5: Nmap Port Discovery (BACK-75)
 
-### What It Does
+### What This Feature Does
 
-Connects to a HashiCorp Vault instance via its HTTP API, enumerates transit key specs
-(algorithm types and rotation status), PKI mount CA certificate algorithms, and auth method
-configuration. Uses the Vault token from environment or config — read-only API calls only.
-Vault is the most common enterprise key management and PKI system outside of cloud KMS.
+Adds an optional pre-scan phase that probes each target host for open ports before running
+the QUIRK scanner suite. Replaces the hardcoded 17-port consulting default list with discovered
+open ports. This is critical for real enterprise estates where services run on non-standard ports.
 
-### Key Vault API Facts (Verified Against Official Docs)
+### Pre-Scan vs In-Scan vs Post-Scan
 
-Transit key types supported by Vault (from official docs, current):
-`aes256-gcm96`, `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`,
-`rsa-2048`, `rsa-3072`, `rsa-4096`, `ml-dsa` (experimental PQC), `slh-dsa` (experimental PQC).
-All classical asymmetric types (RSA, ECDSA) are quantum-vulnerable via Shor's algorithm.
+Enterprise security tools use three models:
+- **Pre-scan discovery** (correct for QUIRK): Run port scan before any application-layer scanner; feed results into scanner as target list. Tools like Nessus and Qualys do this — port discovery is the first phase of every scan policy.
+- **In-scan discovery**: Port scan during application scanning in parallel. Adds complexity, harder to reason about.
+- **Post-scan discovery**: Not used — defeats the purpose (you've already missed services on unknown ports).
 
-### Table Stakes: HashiCorp Vault Connector
+QUIRK should use **pre-scan discovery**: at the start of `run_scan.py`, if nmap is available and discovery is enabled, probe each target for open ports, build a `{host: [port_list]}` dict, and pass it to each scanner phase as the target port list instead of the hardcoded defaults.
+
+### Root vs Non-Root Operation
+
+This is the key enterprise constraint. SYN scan (`-sS`) requires raw packet privileges (root/sudo
+on Unix, administrator on Windows). TCP connect scan (`-sT`) requires no elevated privileges —
+it uses the OS `connect()` system call. The tradeoffs:
+
+| Scan Type | Root Required | Speed | Stealth | Recommendation |
+|-----------|---------------|-------|---------|----------------|
+| SYN scan (`-sS`) | YES | Fast | High | Use when available (sudo/root context) |
+| TCP connect (`-sT`) | NO | Slower | Low (full handshake) | Default for non-root |
+
+**Enterprise recommendation:** Default to TCP connect scan (no root); detect if running as root
+and upgrade to SYN scan automatically. Consultants running from their laptop will not have root;
+enterprise environments where QUIRK runs in a privileged scan container can benefit from SYN.
+
+`python-nmap` wraps nmap correctly for both modes. It handles the privilege check at the nmap
+layer, not the Python layer.
+
+### Table Stakes
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| List transit engine mounts — `GET /v1/sys/mounts` | Discover all mounted secret engines; transit and PKI mounts are the primary crypto surfaces | LOW | `hvac` Python client or raw `requests`; `sys/mounts` returns all engine paths + types |
-| Enumerate transit keys per mount — `GET /v1/<mount>/keys` | Transit keys are Vault's encryption-as-a-service resource; key type determines quantum posture | MEDIUM | `LIST /v1/<transit_mount>/keys`; then `GET /v1/<transit_mount>/keys/<key_name>` for each key; `type` field maps to algorithm |
-| Map transit key type → (algorithm, key_size) | Without this, `rsa-2048` is just a string | LOW | Static map: `rsa-2048` → (RSA, 2048), `ecdsa-p256` → (ECDSA, 256), `aes256-gcm96` → (AES, 256), `ml-dsa` → (ML-DSA, 0); 12 entries covers all types |
-| Detect transit key rotation status — `min_decryption_version` vs `latest_version` | Keys not rotated in a long time are a finding; gap between min_decryption and latest = many old key versions still active | LOW | `min_decryption_version`, `latest_version`, `deletion_allowed` fields from key detail; long gap = audit finding |
-| PKI mount CA cert algorithm — `GET /v1/<pki_mount>/ca/pem` | PKI mount is the internal CA; its certificate algorithm (RSA vs ECDSA) is a primary quantum finding | MEDIUM | Fetch CA PEM; parse with `cryptography` lib (already in stack); extract `cert_pubkey_alg`, `cert_pubkey_size`, `cert_not_after` |
-| List auth methods — `GET /v1/sys/auth` | Auth method audit: token, approle, kubernetes, ldap, github — shows what identity methods are in use | LOW | `sys/auth` response; flag deprecated methods (`userpass` without MFA, `token` root token usage) |
-| Detect root token in use (policy audit) | Root token active = CRITICAL; root should be revoked after setup | MEDIUM | Check `token_policies` on current token; query `sys/auth/token/tune`; more accurately detected via audit log analysis |
-| `protocol="VAULT"` CryptoEndpoint; `cloud_scan_json` blob | CBOM integration | LOW | host = vault_addr; one CryptoEndpoint per transit key |
-| Graceful degradation when Vault unreachable or token invalid | Network/auth failures must not crash scan | LOW | `hvac` connection error handling; log + skip; token stored in config |
+| Optional pre-scan port discovery using nmap subprocess via `python-nmap` | Enterprise estates don't use standard ports; hardcoded defaults miss services on non-standard ports | MEDIUM | `python-nmap` (`nmap` PyPI package) wraps nmap; `nmap.PortScanner().scan(hosts, ports='1-65535', arguments='-sT --open')` for TCP connect; requires `nmap` binary installed on scanner host |
+| TCP connect scan as non-root default (`-sT`) | Consultants run from their laptop; cannot assume root/sudo | LOW | Detect `os.geteuid() == 0` and set `-sS` vs `-sT` automatically |
+| Discovery scope config: port range, timeout, parallelism | Enterprise estates vary; some allow only specific port ranges | LOW | Config section `[discovery]`: `enabled = true`, `port_range = "1-65535"`, `timeout_sec = 300`, `max_parallel_hosts = 10` |
+| Graceful degradation when nmap binary not found | `nmap` is not installed by default; scanner must fall back to consulting defaults | LOW | Try `nmap.PortScanner()` on import; catch `nmap.PortScannerError`; fall back to hardcoded port list with INFO log "nmap not found, using consulting defaults" |
+| `python-nmap` in `[discovery]` extras group | Keep nmap dependency optional — many users don't need port discovery | LOW | `pip install quirk[discovery]`; `python-nmap` is the only new dependency |
+| Discovery results cached and logged | Users need audit trail of what ports were found on which hosts | LOW | Write discovery results to scan output JSON; log per-host open ports at INFO level |
+| `-Pn` flag when hosts don't respond to ICMP ping | Enterprise firewalls commonly block ICMP; scanner must not skip hosts silently | LOW | Add `-Pn` to nmap arguments by default; most enterprise scanners do this |
 
-### Differentiators: HashiCorp Vault Connector
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Transit key `exportable` flag detection | Exportable transit keys undermine the key-never-leaves-Vault security model | LOW | `exportable` boolean in key detail; flag as finding if True |
-| PKI mount intermediate CA vs root CA detection | Root CA in Vault vs intermediate CA is an architectural finding | LOW | Check if CA cert is self-signed (issuer == subject); self-signed = root CA |
-| PKI certificate TTL / max TTL audit | Very long-lived internal certs are a rotation hygiene finding | LOW | `GET /v1/<pki_mount>/config/ca` or role config; `max_ttl` field |
-| Vault Enterprise namespace enumeration | Enterprise Vault uses namespaces; top-level scan misses them | HIGH | Requires Enterprise license; not universally applicable; defer |
-| `ml-dsa` / `slh-dsa` key detection as PQC-ready | Show positive finding: org already has PQC keys in Vault | LOW | These key types are in official Vault docs as experimental; classify as QUANTUM_SAFE in CBOM |
+| Service fingerprinting via nmap `-sV` | Detect service on non-standard port (e.g., SSH on port 2222 vs 22) — scanner routes to correct scanner module | MEDIUM | `-sV` adds service version detection; `nmap_result[host]['tcp'][port]['name']` gives service hint; feed into scanner routing logic |
+| Target range expansion: CIDR input in discovery phase | Discovery can scan a /24 at once; individual targets derived from open hosts | MEDIUM | nmap handles CIDR natively; this is the setup for BACK-77 multi-target |
+| Scan pacing / rate limiting for IDS-friendly scanning | Enterprise IDS/IPS will flag aggressive port scans | LOW | `--scan-delay 100ms` or `--max-rate 100` as configurable options in `[discovery]` |
 
-### Anti-Features: HashiCorp Vault Connector
+### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Read secret values from KV mounts | "Complete" audit | Reads credentials; hard agentless model violation | KV mounts are explicitly out of scope; audit crypto surfaces only (transit, PKI, auth) |
-| Vault audit log analysis | More accurate policy finding | Requires audit log backend access (file/syslog/socket); out of agentless model | Flag as "manual audit recommended" in report |
-| Vault unsealing / HA status | Operational concern | Not a crypto posture finding | Out of scope |
+| UDP port scanning | "Complete" coverage | UDP scanning is extremely slow, unreliable, and creates false negatives on filtered ports; requires root | Focus on TCP which covers all crypto services; note UDP DTLS as out of scope |
+| OS fingerprinting via nmap `-O` | Network inventory value | Requires root; not relevant to crypto posture | Out of scope |
+| Use Masscan for speed | "Faster than nmap" | Masscan requires root always; different output format; adds another external binary dependency | python-nmap with nmap is sufficient and one binary to manage |
+
+### Dependency Notes
+
+- `python-nmap` pip package wraps the `nmap` binary (external system dependency)
+- nmap binary is **not** pip-installable — installation instructions must cover system package (`brew install nmap`, `apt install nmap`, etc.)
+- This is the only v4.6 feature with a non-pip system dependency — documentation investment required
+- Pre-scan phase must complete before any scanner phase starts; `run_scan.py` orchestration change needed
 
 ---
 
-## Feature 6: Trend Analysis Across Scan Sessions
+## Feature 6: Multi-Target Wizard (BACK-77)
 
-### What It Does
+### What This Feature Does
 
-Compares the current scan's readiness score and findings against the most recent previous scan
-for the same target set. Produces a delta report: score delta (+/-), new findings introduced,
-findings resolved since last scan, and hosts whose posture degraded. This is a session-to-session
-diff, not time-series analytics.
+Fixes the interactive wizard and CLI to accept multiple targets via comma-separated input,
+a newline-delimited hosts file, CIDR notation, and IP ranges. Currently the interactive
+wizard accepts only a single hostname/IP string. Enterprise customers scan 50-500 hosts in
+a single assessment.
 
-### Key Context
+### What Enterprise Scanners Accept (HIGH confidence — Greenbone/OpenVAS docs verified, Nessus format verified)
 
-No existing `ScanSession` table exists — `scanned_at` on `CryptoEndpoint` is the only session
-marker. Trend analysis requires a new lightweight session-level metadata record in SQLite.
-The `session_start` value propagated by `run_scan.py` (Phase 24 fix) is the natural session key.
-The intelligence layer already computes `ScoreResult` per scan — delta is `current.score - previous.score`.
+All major enterprise vulnerability scanners support:
+1. **Single host**: `192.168.1.1` or `host.example.com`
+2. **Comma-separated**: `host1,host2,host3` or `192.168.1.1,192.168.1.2`
+3. **CIDR notation**: `192.168.1.0/24` (Nessus, OpenVAS, nmap all handle this natively)
+4. **IP ranges**: `192.168.1.1-254` (nmap `--exclude-host` style)
+5. **Hosts file**: `@/path/to/hosts.txt` (nmap convention) or `--targets-file hosts.txt`
+6. **Mixed**: One target per line in a file, which may itself be CIDR or individual IPs
 
-### Table Stakes: Trend Analysis
+QUIRK should support all 5 formats. The common enterprise workflow for a 200-host assessment is
+a `hosts.txt` file derived from a network inventory (CMDB export or nmap discovery output).
+
+### Table Stakes
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| New `ScanSession` table — id, session_start datetime, target_set hash, score, rating, endpoint_count | Without a session anchor, diff is impossible | LOW | SQLite additive table; `session_start` is the FK to `crypto_endpoints.scanned_at`; store score + rating snapshot per session |
-| Score delta — current score minus previous session score | Primary trend metric; consultants use this to demonstrate improvement to clients | LOW | `current_score - previous_score`; +5 = "improved"; -3 = "regressed"; displayed on exec summary |
-| New findings since last scan — findings in current session not in previous | Show what new risks appeared | MEDIUM | Compare finding fingerprints (host + protocol + finding_type) across sessions; `LEFT JOIN` on session WHERE previous has no match |
-| Resolved findings since last scan — findings in previous session not in current | Show what was fixed; positive reinforcement for remediation | MEDIUM | Inverse of above; finding present in previous but absent in current |
-| Degraded hosts — hosts whose individual score/risk worsened | Zoom in on which hosts drove score changes | MEDIUM | Per-host comparison across sessions; requires per-host severity roll-up |
-| Report output: delta section in HTML/PDF report | Consultants present this in slide decks; it must appear in the deliverable | MEDIUM | New section in `quirk/reports/` renderer; only displayed when 2+ sessions exist for target set |
-| Dashboard: trend tab or score delta badge on exec summary | Visual delta for the live dashboard session | MEDIUM | Score delta badge (+N/-N) on existing exec summary; minimal viable UI |
-| CLI: `quirk compare` or `--delta` flag to trigger comparison | User-facing entry point | LOW | Compare most recent two sessions by default; `--session-id` for specific comparison |
+| Comma-separated targets in interactive wizard and `--targets` CLI flag | Most immediate fix; power-users paste comma-delimited target lists from spreadsheets | LOW | Parse `targets_str.split(',')` and strip whitespace; existing wizard prompt becomes multi-value |
+| Hosts file input (`--targets-file /path/to/hosts.txt`) | Standard enterprise workflow for large target sets; each line = one host, IP, or CIDR | LOW | `argparse` adds `--targets-file`; read file, parse lines, skip `#` comments and blank lines |
+| CIDR expansion (e.g., `192.168.1.0/24` → host list) | Network admins think in subnets; CIDR input is expected | LOW | Python stdlib `ipaddress.ip_network('192.168.1.0/24').hosts()` — no new dependency |
+| IP range expansion (e.g., `192.168.1.1-254`) | Common nmap-style range notation | LOW | Parse `start-end` pattern; expand with `ipaddress`; limited to /24-scale ranges |
+| Target deduplication before scan | Prevent scanning same host twice when target lists overlap | LOW | `list(dict.fromkeys(targets))` preserves order while deduplicating |
+| Progress indication for multi-host scans | 50-host scan takes minutes; user needs to see progress | LOW | Existing `tqdm` or print progress; `Scanning host N of M: {host}` |
+| `--max-targets` safety limit with override flag | Prevent accidental 65000-host CIDR expansion | LOW | Default limit 500 hosts; `--max-targets 0` for unlimited; warn + confirm in interactive mode |
 
-### Differentiators: Trend Analysis
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Per-surface delta breakdown — which surface improved/worsened (TLS vs KMS vs Database) | Granular delta for consulting deliverables | MEDIUM | Requires surface-tagged findings; shows whether remediation efforts on TLS translated to score improvement |
-| Multi-session trend chart in dashboard | Visual posture trajectory over N scans | HIGH | Requires chart component; N data points in `ScanSession` table; defer until 3+ scans typically exist in prod |
-| Export delta report as standalone PDF | Client-ready remediation progress report | MEDIUM | Reuse existing PDF export pipeline; add delta section; triggered by `quirk report --delta` |
-| Automated regression alert — score drops more than threshold | Proactive posture monitoring | HIGH | Continuous monitoring; SaaS milestone territory; not CLI-appropriate |
+| Mixed format file (hosts file with CIDR lines and individual IPs) | Realistic enterprise target files contain both | LOW | Line-by-line: try CIDR parse first, then range, then single host |
+| Exclude list (`--exclude host1,host2` or `--exclude-file`) | Enterprise scans need to skip honeypot hosts, known-dead IPs | LOW | Standard nmap-style exclusion; subtract from expanded list |
+| Scan resume from partial results | Large scans interrupted midway; resume from last completed host | HIGH | Requires scan state persistence per host; significant complexity; defer to v4.7 |
 
-### Anti-Features: Trend Analysis
+### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Time-series analytics / aggregation over many sessions | "Historical trend" | Requires substantial data volume to be useful; complex UI; early consultants have 2-3 scans at most | Session-to-session diff is the right scope for v4.3; multi-session chart is v4.4+ |
-| Compare different target sets | Cross-client benchmarking | Different target sets are not comparable; score depends on target count and surface mix | Comparison is within the same target set only; document this constraint |
-| Automatic scan scheduling for trend | "Continuous monitoring" | Requires daemon/scheduler; SaaS milestone; breaks CLI delivery model | Document: run `quirk scan` periodically; delta is automatic when sessions accumulate |
+| Domain-to-IP resolution expansion | "Scan all IPs for a domain" | DNS can return many IPs; changes target semantics unexpectedly; creates scan scope creep | Scan the hostname as provided; let the TLS scanner handle multi-cert virtual hosting |
+| Automatic network topology discovery | "Find all hosts on the network" | Network enumeration without explicit scope is out of scope for an agentless consulting tool; legal risk | Use BACK-75 (nmap discovery) with explicit CIDR input; user defines scope |
+
+### Dependency Notes
+
+- `ipaddress` is Python stdlib — no new pip dependencies for CIDR/range expansion
+- Interacts with BACK-75 (port discovery): once multi-target is supported, port discovery should run per-host in the multi-target list
+- `run_scan.py` loop over targets already exists in some form — this extends it; interactive wizard needs the most work
+- Phase ordering: BACK-77 should come after BACK-75 because port discovery per expanded target list is the natural next step
+
+---
+
+## Feature 7: Architecture Reference + Operator's Guide (BACK-65 + BACK-66)
+
+### What This Feature Does
+
+Produces two documentation artifacts for enterprise self-onboarding:
+- **Architecture reference** (BACK-65): System architecture, component diagram, data flow, scan session lifecycle, SQLite schema reference, API contract
+- **Operator's guide** (BACK-66): Day-1 through Day-N operational runbook — install, configure, first scan, interpret results, generate report, schedule recurring scans, upgrade, troubleshoot
+
+### What Enterprise Operators Expect (MEDIUM confidence — runbook patterns well-established)
+
+Enterprise security tools that expect self-onboarding (no vendor hand-holding) need:
+
+**Architecture reference sections:**
+1. System overview diagram — components, their relationships, data flow direction
+2. Component inventory — CLI, FastAPI backend, React dashboard, SQLite, report renderer
+3. Scanner surface inventory — what each surface scans, protocol, required credentials/access
+4. Data model — key SQLite tables, what is stored, retention model
+5. API contract — FastAPI endpoint list with request/response shapes (OpenAPI spec)
+6. Security model — what data leaves the machine (nothing; all local), credentials handling
+
+**Operator's guide sections (runbook format):**
+1. Prerequisites — Python version, OS support, nmap binary for discovery
+2. Installation — `pip install quirk[all]` + `quirk init`
+3. Configuration — `quirk.toml` reference with all fields annotated
+4. First scan — `quirk scan` with a real target, viewing output
+5. Dashboard — `quirk serve`, what each tab shows, how to export PDF
+6. Multi-target workflow — hosts file, CIDR, progress monitoring
+7. Compliance reporting — enabling frameworks in config, reading the compliance section
+8. Recurring scan setup — cron pattern, result retention
+9. Upgrade path — `pip install --upgrade quirk`, schema migration notes
+10. Troubleshooting — common errors with root cause and fix
+
+### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Architecture reference doc in `docs/architecture.md` | Enterprise IT teams need to understand the system before deploying; security review requires architecture doc | MEDIUM | Text-based is acceptable; ASCII or Mermaid diagram for system overview; no complex tooling needed |
+| Operator's guide in `docs/operator-guide.md` | Self-onboarding without vendor support requires step-by-step runbook | HIGH | This is the highest-effort doc artifact — needs to cover all 10 sections above; must be accurate for v4.6 feature set |
+| Scanner surface reference table (one row per surface: what it scans, credentials required, extras needed) | Enterprise operators need to know what they're enabling and what access to grant | LOW | Table in architecture doc or operator's guide; 13 rows × 5 columns |
+| Configuration reference (all `quirk.toml` fields annotated with type, default, example) | Config documentation is table-stakes for any enterprise tool | MEDIUM | Auto-generate from config dataclass if possible; otherwise maintain manually; common failure is docs drift |
+| Troubleshooting section with top-10 error scenarios | Self-service support; reduces consultant support burden | MEDIUM | Cover: missing extras, nmap not found, credential errors, DB locked, port already in use, scan timeout |
+| Obsidian vault sync of both docs | Per CLAUDE.md: all docs must sync to vault | LOW | Standard vault sync pattern; write to `20_Dev-Work/QUIRK/Guides/` |
+
+### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Mermaid system diagram in architecture doc | Visual architecture is faster to review than prose; Mermaid renders in GitHub and Obsidian | LOW | Mermaid `graph LR` for component topology; `sequenceDiagram` for scan session lifecycle |
+| Scanner surface decision matrix (when to use each scanner, required credentials, risk of running agentlessly) | Operators need to scope which surfaces to enable for a given engagement | LOW | 3-column table per surface: "when to enable", "what access is needed", "what it can't detect" |
+| `quirk doctor` command — diagnose installation and config health | Self-service pre-scan check that catches common misconfigurations before the scan fails | MEDIUM | Check Python version, nmap availability, extras installed, config file validity, SQLite write access, scanner credentials present |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Video walkthrough / screencasts | "More approachable onboarding" | Production cost is high; becomes stale after each feature release | Written guide with screenshot callouts is more maintainable |
+| Interactive tutorial mode | In-product guided tour | Implementation complexity high; tutorial state management; scope creep | `quirk init` with guided prompts is sufficient; operator's guide is the external reference |
+
+### Dependency Notes
+
+- No code dependencies — documentation artifacts only (except `quirk doctor` which is code)
+- Architecture reference should be written first (BACK-65); operator's guide references architecture
+- Both docs must be Obsidian-synced per CLAUDE.md
+- `quirk doctor` (differentiator) touches the CLI and should be scoped separately if it slips
 
 ---
 
 ## Feature Dependencies
 
 ```
-[GCP Connector]
-    └──reuses──> aws_connector.py pattern (same CryptoEndpoint + cloud_scan_json)
-    └──reuses──> GCP connector output in GCS Object Storage Audit (share scan session)
-    └──requires──> google-cloud-kms, google-cloud-storage, google-cloud-sqladmin (new pip deps)
-    └──requires──> GCP_ALGORITHM_MAP (new static map; mirrors KMS_KEY_SPEC_MAP)
+[BACK-76: Install-day UX]
+    └──unblocks──> ALL other features (stable install required before testing anything)
+    └──requires──> pyproject.toml extras restructure
 
-[Database Encryption Detection — AWS RDS path]
-    └──reuses──> boto3 session from aws_connector.py (shared AWS session)
-    └──reuses──> KmsKeyId cross-reference with existing KMS scan findings
-    └──requires──> psycopg2 or pymysql for self-hosted path (optional dep; credential-gated)
+[BACK-74: TLS Finding Gaps]
+    └──requires──> sslyze data already in tls_capabilities_json (already present)
+    └──feeds──> BACK-79 (new findings need remediation context)
+    └──feeds──> BACK-20 (new findings need compliance mapping)
 
-[Object Storage Audit — AWS S3]
-    └──reuses──> boto3 session from aws_connector.py
-    └──enriches──> KMS scan (cross-reference S3 SSE-KMS key ARN with KMS key list)
+[BACK-79: Rich Finding Context]
+    └──requires──> Finding model extended with new fields
+    └──requires──> new quirk/risk/remediation.py static lookup
+    └──enhances──> BACK-74 findings (first users of remediation_path)
+    └──shares model extension with──> BACK-20
 
-[Object Storage Audit — GCS]
-    └──reuses──> GCS bucket enumeration already done in GCP Connector
-    └──note──> GCP Connector and Object Storage Audit must share scan data, not double-enumerate
+[BACK-20: Compliance Mapping]
+    └──requires──> Finding model extended (same extension as BACK-79)
+    └──requires──> new quirk/compliance/mapper.py
+    └──enhances──> report renderer (new section)
+    └──best shipped with──> BACK-79 (shared Finding model extension)
 
-[K8s Secrets Inspection — managed clusters]
-    └──requires──> kubernetes Python client (new pip dep)
-    └──reuses──> EKS cluster list via boto3 (aws_connector.py already has boto3 session)
-    └──reuses──> GKE cluster via google-cloud-container (add to GCP connector extras)
+[BACK-75: Nmap Port Discovery]
+    └──requires──> python-nmap pip dep + nmap binary
+    └──feeds──> BACK-77 (multi-target discovery uses nmap per host)
+    └──modifies──> run_scan.py orchestration (pre-scan phase)
 
-[HashiCorp Vault Connector]
-    └──requires──> hvac Python client (new pip dep) OR raw requests (already in stack)
-    └──enriches──> PKI mount CA cert → reuse cryptography lib cert parsing (already in stack)
-    └──requires──> VAULT_ADDR + VAULT_TOKEN in config (new config section)
+[BACK-77: Multi-Target Wizard]
+    └──requires──> BACK-75 for port discovery per host
+    └──requires──> ipaddress stdlib (no new dep)
+    └──modifies──> interactive.py wizard + run_scan.py target loop
 
-[Trend Analysis]
-    └──requires──> new ScanSession SQLite table (additive; no migration)
-    └──requires──> session_start propagation from run_scan.py (already done in Phase 24)
-    └──requires──> all scanners complete before session snapshot is written
-    └──enhances──> existing HTML/PDF report (new delta section)
-    └──enhances──> existing dashboard exec summary (score delta badge)
-    └──blocks──> nothing else; purely additive read-side feature
+[BACK-65+66: Architecture + Operator Docs]
+    └──requires──> all other features complete (docs must reflect final feature set)
+    └──requires──> nothing code-level
 ```
 
 ### Dependency Notes
 
-- **GCP shares session with Object Storage:** The GCS bucket enumeration in the GCP Connector produces the same data needed for Object Storage Audit. Implementation must pass bucket objects into both the GCP connector findings AND the object storage audit findings — do not enumerate GCS twice.
-- **AWS session sharing:** RDS encryption, S3 audit, and EKS cluster checks all use boto3. They should share the same `boto3.Session` established in `aws_connector.py` rather than creating independent sessions.
-- **Trend analysis is last in phase order:** It requires completed scan data; it is never a blocker for other features.
-- **`hvac` vs raw requests:** `hvac` is the official HashiCorp Python client; it is pip-installable and actively maintained. Raw `requests` is an alternative but `hvac` handles token refresh and error codes correctly. Use `hvac` with optional-import graceful degradation.
+- **BACK-79 and BACK-20 are tightly coupled**: both extend `Finding` Pydantic model and both feed the report renderer with new sections. Ship in the same phase to avoid double-touching the model.
+- **BACK-74 should precede BACK-79**: you need the new finding types to exist before writing their remediation guidance.
+- **BACK-75 should precede BACK-77**: multi-target without port discovery is useful but less valuable; discovery + multi-target together is the complete enterprise workflow.
+- **BACK-76 is phase 1 of the milestone**: nothing else should be developed or tested until install-day UX is stable.
+- **BACK-65+66 is the final phase**: docs reflect the full v4.6 feature set.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v4.3)
+### Launch With (v4.6)
 
-Minimum viable set — what the milestone ships:
+All 7 backlog items are in scope for v4.6. Priority order if forced to cut:
 
-- [ ] GCP Connector: Cloud KMS key enumeration + algorithm map + Cloud SQL TLS mode + GCS bucket CMEK detection
-- [ ] Database Encryption: AWS RDS `StorageEncrypted` + `StorageEncryptionType` + `KmsKeyId` + parameter group `rds.force_ssl` detection
-- [ ] Object Storage: S3 encryption policy (SSE-S3 vs SSE-KMS vs CMK) + public access block; GCS bucket CMEK; Azure Blob key_source
-- [ ] K8s Secrets: EKS `encryptionConfig` detection; GKE `databaseEncryption.state`; `kubernetes` client secret type count for self-managed clusters
-- [ ] HashiCorp Vault: transit key enumeration + type map; PKI mount CA cert extraction; auth method list
-- [ ] Trend Analysis: `ScanSession` table + score delta + new/resolved findings diff + HTML/PDF delta section
+- [x] **BACK-76**: Install-day UX — blocks everything; must ship
+- [x] **BACK-74**: TLS finding gaps — core scanner correctness; missing findings undermine credibility
+- [x] **BACK-79**: Rich finding context — highest consultant time-save; drives billable efficiency
+- [x] **BACK-20**: Compliance mapping — primary enterprise sales differentiator; HIPAA/PCI clients require this
+- [x] **BACK-75**: Nmap port discovery — required for real estate scans; hardcoded ports are the #1 consultant complaint
+- [x] **BACK-77**: Multi-target wizard — required for 50-host+ engagements; currently broken for multi-host
+- [x] **BACK-65+66**: Enterprise docs — self-onboarding gate; without docs, enterprise deployment requires vendor support
 
-### Add After Validation (v4.3.x)
+### Cut If Necessary (v4.6.x)
 
-- [ ] Azure SQL TDE detection — trigger: consultant with Azure-heavy client
-- [ ] K8s RBAC "who can read secrets" audit — trigger: client asks for deeper K8s review
-- [ ] Vault transit key `exportable` flag — trigger: consultant UAT finds Vault keys marked exportable
-- [ ] Multi-session trend chart in dashboard — trigger: consultants accumulate 3+ scan sessions in field use
-
-### Future Consideration (v4.4+)
-
-- [ ] BigQuery CMEK audit — defer until GCP connector is validated in field
-- [ ] PostgreSQL TDE / pg_tde extension detection — defer until pg_tde has more adoption
-- [ ] Oracle DB encryption — explicit out-of-scope for v1; requires JDBC/cx_Oracle
-- [ ] Trend analysis across different target sets / benchmarking — SaaS milestone feature
-- [ ] Vault Enterprise namespace enumeration — requires Enterprise license; low field frequency
+- Compliance mapping for SOC 2 and ISO 27001 (differentiators — defer the less common frameworks)
+- `quirk doctor` command (differentiator — useful but not blocking)
+- Service fingerprinting in nmap pre-scan (nmap `-sV` adds scan time; basic port discovery is sufficient)
+- Mermaid diagram in architecture doc (nice to have; prose architecture is acceptable)
 
 ---
 
@@ -393,97 +579,79 @@ Minimum viable set — what the milestone ships:
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| AWS RDS encryption detection | HIGH | LOW | P1 |
-| AWS S3 encryption audit | HIGH | LOW | P1 |
-| GCP KMS key enumeration | HIGH | MEDIUM | P1 |
-| GCS bucket CMEK detection | HIGH | LOW | P1 (shares GCP Connector work) |
-| EKS/GKE etcd encryption detection | HIGH | LOW | P1 |
-| Trend analysis — score delta | HIGH | MEDIUM | P1 |
-| HashiCorp Vault transit key audit | HIGH | MEDIUM | P1 |
-| Vault PKI CA cert extraction | HIGH | MEDIUM | P1 |
-| Cloud SQL TLS enforcement mode | MEDIUM | MEDIUM | P1 |
-| Azure Blob encryption key source | MEDIUM | MEDIUM | P1 |
-| Trend — new/resolved findings diff | MEDIUM | MEDIUM | P2 |
-| K8s secret type count (self-managed) | MEDIUM | MEDIUM | P2 |
-| S3 Object Lock / MFA Delete | MEDIUM | LOW | P2 |
-| Vault auth method list | MEDIUM | LOW | P2 |
-| Trend dashboard delta badge | MEDIUM | LOW | P2 |
-| GCP KMS protection level (HSM vs SW) | MEDIUM | LOW | P2 |
-| S3 bucket policy public-Allow check | MEDIUM | MEDIUM | P2 |
-| Vault transit exportable flag | LOW | LOW | P3 |
-| Azure SQL TDE detection | LOW | MEDIUM | P3 |
-| PostgreSQL self-hosted ssl detection | LOW | MEDIUM | P3 |
-| AKS CMK encryption detection | LOW | MEDIUM | P3 |
+| BACK-76: Graceful ImportError degradation | HIGH | LOW | P1 — phase 1 |
+| BACK-76: identity+motion in default install | HIGH | LOW | P1 — phase 1 |
+| BACK-74: Expired cert finding | HIGH | LOW | P1 |
+| BACK-74: Self-signed cert finding | HIGH | LOW | P1 |
+| BACK-74: RSA-1024/512 weak key finding | HIGH | LOW | P1 |
+| BACK-79: `risk_explanation` field | HIGH | MEDIUM | P1 |
+| BACK-79: `remediation_path` field with FIPS 203/204/205 | HIGH | MEDIUM | P1 |
+| BACK-20: Finding → control mapping (PCI + HIPAA) | HIGH | MEDIUM | P1 |
+| BACK-20: Compliance summary in HTML/PDF report | HIGH | HIGH | P1 |
+| BACK-75: TCP connect pre-scan (non-root) | HIGH | MEDIUM | P1 |
+| BACK-75: Graceful fallback when nmap missing | HIGH | LOW | P1 |
+| BACK-77: Comma-separated targets | HIGH | LOW | P1 |
+| BACK-77: Hosts file input | HIGH | LOW | P1 |
+| BACK-77: CIDR expansion | MEDIUM | LOW | P1 |
+| BACK-65: Architecture reference doc | HIGH | MEDIUM | P1 |
+| BACK-66: Operator's guide | HIGH | HIGH | P1 |
+| BACK-74: Near-expiry warning (30-day) | MEDIUM | LOW | P2 |
+| BACK-74: SHA-1 signature finding | MEDIUM | LOW | P2 |
+| BACK-74: Hostname mismatch finding | MEDIUM | LOW | P2 |
+| BACK-74: Chain completeness check | MEDIUM | LOW | P2 |
+| BACK-74: Chaos lab coverage for new TLS findings | MEDIUM | MEDIUM | P2 |
+| BACK-79: `see_also` URLs on findings | MEDIUM | LOW | P2 |
+| BACK-79: FIPS deadline callout per finding | MEDIUM | LOW | P2 |
+| BACK-20: FIPS 140-3 approved/not-approved per algorithm | MEDIUM | MEDIUM | P2 |
+| BACK-20: SOC 2 / ISO 27001 mapping | LOW | MEDIUM | P3 |
+| BACK-75: Service fingerprinting (`-sV`) | MEDIUM | MEDIUM | P2 |
+| BACK-75: Scan pacing / rate limiting | LOW | LOW | P3 |
+| BACK-77: Exclude list | MEDIUM | LOW | P2 |
+| BACK-66: `quirk doctor` command | MEDIUM | MEDIUM | P2 |
+| BACK-66: Mermaid diagram | LOW | LOW | P3 |
 
 **Priority key:**
-- P1: Ships in v4.3 milestone core
-- P2: Ships in v4.3 milestone if time permits; else v4.3.x
-- P3: v4.3.x or v4.4
+- P1: Ships in v4.6 milestone core
+- P2: Ships in v4.6 if time permits; else v4.6.x
+- P3: v4.6.x or v4.7
 
 ---
 
-## Consultant-Value Framing Per Finding Type
+## Consultant-Value Framing Per Feature
 
-Understanding which findings generate billable value drives phase ordering.
-
-| Finding | Why Actionable | Client Impact | Remediation Clarity |
-|---------|---------------|---------------|---------------------|
-| RDS `StorageEncrypted=False` | Direct HIPAA/PCI-DSS gap; enable flag + snapshot re-encrypt | HIGH | HIGH — one RDS setting |
-| RDS using AWS-managed key vs CMK | Compliance distinction for regulated workloads; CMK required for some certifications | HIGH | HIGH — change KMS key association |
-| S3 SSE-S3 (AES256) vs SSE-KMS with CMK | CMK required for FedRAMP High, HIPAA-eligible | HIGH | HIGH — update bucket default encryption |
-| S3 public access block not fully set | Data exfiltration risk regardless of encryption | CRITICAL | HIGH — 4 boolean flags |
-| K8s etcd encryption not enabled (EKS/GKE) | Secrets readable by anyone with etcd access | HIGH | MEDIUM — API server flag + key provider setup |
-| GCS bucket GMEK (no CMEK) | Compliance gap for GCP workloads requiring customer control | MEDIUM | MEDIUM — assign Cloud KMS key to bucket |
-| Vault transit key RSA-2048 (quantum-vulnerable) | Forward-looking PQC finding; migration to ml-dsa when finalized | MEDIUM | LOW — migration path not mature |
-| Vault transit key not rotated | Key hygiene finding | MEDIUM | HIGH — one Vault CLI command |
-| Vault PKI CA with RSA-2048 | Internal CA quantum posture; most likely finding in enterprise | HIGH | LOW — CA replacement is multi-quarter project |
-| Cloud SQL TLS not enforced | In-transit risk that compounds at-rest findings | MEDIUM | HIGH — one Cloud SQL settings change |
-| GCP KMS key SOFTWARE protection level | Compliance finding for HSM requirements | MEDIUM | MEDIUM — key migration required |
-| Score delta negative (posture degraded) | Client accountability metric; shows what changed between engagements | HIGH | HIGH — new findings list drives remediation |
-
----
-
-## New Dependencies for v4.3
-
-| Library | Feature | Status | Extras Group |
-|---------|---------|--------|--------------|
-| `google-cloud-kms` | GCP Connector (KMS) | New | `[gcp]` |
-| `google-cloud-storage` | GCP Connector + Object Storage | New | `[gcp]` |
-| `google-cloud-sqladmin` | GCP Connector (Cloud SQL) | New | `[gcp]` |
-| `hvac` | HashiCorp Vault Connector | New | `[vault]` |
-| `kubernetes` | K8s Secrets Inspection | New | `[k8s]` |
-| `psycopg2-binary` | Self-hosted PostgreSQL detection | New, credential-gated | `[database]` |
-| `pymysql` | Self-hosted MySQL detection | New, credential-gated | `[database]` |
-
-All new dependencies are pip-installable. Following the existing `[identity]` extras group pattern,
-v4.3 adds `[gcp]`, `[vault]`, `[k8s]`, and optionally `[database]` to `pyproject.toml`.
-Core install (`pip install quirk`) gains no new required dependencies.
+| Feature | Consultant Time Saved | Client Deliverable Impact | Priority Driver |
+|---------|----------------------|--------------------------|-----------------|
+| BACK-76: clean install | 30-60 min per engagement setup | None (invisible) | Credibility: crashes on install kill sales |
+| BACK-74: expired/self-signed findings | 1-2 hr (manual cert check eliminated) | HIGH — new critical findings in report | Scanner completeness |
+| BACK-79: remediation context | 2-4 hr per report (lookup + writing eliminated) | HIGH — findings become actionable without extra research | Billable efficiency multiplier |
+| BACK-20: compliance mapping | 3-6 hr per report (control cross-ref eliminated) | HIGH — compliance officers can present to auditors | Enterprise sales gate |
+| BACK-75: port discovery | 1-2 hr per engagement (no manual port list) | MEDIUM — catches services on non-standard ports | Scanner coverage |
+| BACK-77: multi-target | 0.5-1 hr per engagement (no manual host loop) | MEDIUM — enables 50+ host assessments | Engagement scale |
+| BACK-65+66: docs | N/A (enables self-service) | LOW direct / HIGH strategic | Enterprise deployment gate |
 
 ---
 
 ## Sources
 
-- [Google Cloud KMS — Key purposes and algorithms](https://docs.cloud.google.com/kms/docs/algorithms)
-- [Google Cloud KMS — Deep dive security](https://cloud.google.com/docs/security/key-management-deep-dive)
-- [Cloud Custodian — GCP KMS cryptokey audit](https://cloudcustodian.io/docs/gcp/examples/kms-cryptokey.html)
-- [GCP Cloud SQL — Configure SSL/TLS certificates](https://cloud.google.com/sql/docs/postgres/configure-ssl-instance)
-- [GCP Cloud Storage — Customer-managed encryption keys](https://cloud.google.com/storage/docs/encryption/customer-managed-keys)
-- [AWS RDS — Encrypting Amazon RDS resources](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html)
-- [AWS RDS StorageEncryptionType field (2025 Aurora update)](https://docs.datadoghq.com/security/default_rules/aws-rds-cluster-rds-clusters-should-have-encryption-at-rest-enabled)
-- [AWS S3 — Using SSE-KMS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html)
-- [AWS S3 — Auditing server-side encryption methods](https://aws.amazon.com/blogs/storage/auditing-amazon-s3-server-side-encryption-methods-for-object-uploads/)
-- [Kubernetes — Encrypting Confidential Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)
-- [Kubernetes — Using a KMS provider for data encryption](https://kubernetes.io/docs/tasks/administer-cluster/kms-provider/)
-- [HashiCorp Vault — Transit secrets engine](https://developer.hashicorp.com/vault/docs/secrets/transit)
-- [HashiCorp Vault — PKI secrets engine considerations](https://developer.hashicorp.com/vault/docs/secrets/pki/considerations)
-- [HashiCorp Vault — Transit API](https://developer.hashicorp.com/vault/api-docs/secret/transit)
-- [SecurityScorecard — Track security progress with Company Trends Report](https://support.securityscorecard.com/hc/en-us/articles/4403014788379-Track-security-progress-with-Company-Trends-Report)
-- [Post-Quantum Cryptography 2025: The Enterprise Readiness Gap](https://www.cio.inc/post-quantum-cryptography-2025-enterprise-readiness-gap-a-27367)
-- [Microsoft cloud security benchmark — Data protection](https://learn.microsoft.com/en-us/security/benchmark/azure/mcsb-data-protection)
-- [Percona — Testing encryption at rest in RDS](https://www.percona.com/blog/whats-best-way-to-enable-and-test-encryption-at-rest-in-rds/)
-- [Kubernetes Security Checklist 2025](https://atmosly.com/blog/kubernetes-security-checklist-50-best-practices-2025-part-ii)
+- [NIST FIPS 203: ML-KEM Standard](https://csrc.nist.gov/pubs/fips/203/final) — HIGH confidence
+- [NIST FIPS 204: ML-DSA Standard](https://csrc.nist.gov/pubs/fips/204/final) — HIGH confidence
+- [NIST IR 8547: Transition to PQC Standards (2024)](https://csrc.nist.gov/pubs/ir/8547/ipd) — HIGH confidence; RSA-2048 deprecated 2030, all RSA/ECC disallowed 2035
+- [NIST SP 800-52r2: TLS Guidelines](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-52r2.pdf) — HIGH confidence
+- [NIST SP 800-208: Stateful Hash-Based Signatures](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-208.pdf) — HIGH confidence; scope is LMS/XMSS only
+- [PCI-DSS 4.0 Requirement 4 — TLS requirements](https://www.isms.online/pci-dss/requirement-4/) — HIGH confidence; TLS 1.2+ required, expired/self-signed certs = violation
+- [PCI-DSS 4.0 Cryptographic Requirements — AppViewX analysis](https://www.appviewx.com/blogs/decoding-the-pci-dss-v4-0-cryptographic-requirements/) — MEDIUM confidence
+- [HHS HIPAA Encryption Requirements](https://www.hipaajournal.com/hipaa-encryption-requirements/) — HIGH confidence; 45 CFR §164.312 technical safeguards
+- [HHS.gov HIPAA Encryption FAQ](https://www.hhs.gov/hipaa/for-professionals/faq/encryption/index.html) — HIGH confidence; primary source
+- [sslyze documentation — Certificate Info scan command](https://blog.adqt.fr/sslyze/documentation/available-scan-commands.html) — HIGH confidence; verified field names
+- [python-nmap PyPI — TCP connect scan](https://pypi.org/project/python-nmap/) — HIGH confidence
+- [Nmap port scanning techniques — TCP connect vs SYN](https://nmap.org/book/man-port-scanning-techniques.html) — HIGH confidence; root requirement confirmed
+- [Greenbone/OpenVAS — multi-target input formats](https://docs.greenbone.net/GSM-Manual/gos-22.04/en/scanning.html) — HIGH confidence; comma and file-based import confirmed
+- [Nessus file format — finding fields (description, solution, see_also)](https://docs.tenable.com/quick-reference/nessus-file-format/Nessus-File-Format.pdf) — HIGH confidence; industry standard structure
+- [PEP 771: Default Extras](https://peps.python.org/pep-0771/) — MEDIUM confidence; still draft as of 2025; use meta-extra pattern instead
+- [NIST NCCoE PQC Migration Project](https://pages.nist.gov/nccoe-migration-post-quantum-cryptography/FAQ/index.html) — HIGH confidence
+- [NIST IR 8547 explained — 2030/2035 deadlines](https://www.pqcinformation.com/nist-ir-8547-explained-the-2030-and-2035-algorithm-deprecation-deadlines-every-compliance-officer-must-understand/) — MEDIUM confidence (secondary source but consistent with primary)
 
 ---
 
-*Feature research for: QU.I.R.K. v4.3 Data at Rest milestone — GCP connector, database encryption, object storage audit, K8s secrets, HashiCorp Vault, trend analysis*
-*Researched: 2026-04-24*
+*Feature research for: QU.I.R.K. v4.6 Enterprise Readiness milestone*
+*Researched: 2026-05-03*
