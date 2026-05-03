@@ -739,7 +739,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 41. CI Stability & Scanner Robustness | v4.5 | 6/7 | In Progress|  |
 | 42. CBOM Correctness Audit | v4.5 | 5/6 | In Progress|  |
 | 43. Dashboard Polish | v4.5 | 6/6 | Complete    | 2026-05-02 |
-| 44. UAT Debt Automation | v4.5 | 0/TBD | Not started | - |
+| 44. UAT Debt Automation | v4.5 | 5/6 | In Progress|  |
 
 *Phase 36 wave_0_complete flip deferred (DEF-v4.4-01) — gated on SAML scan-window regression fix.
 
@@ -872,9 +872,9 @@ Plans:
   3. Phase 25 identity and Phase 30 Vault UAT scenarios with existing chaos lab profiles are re-run; failing scenarios receive fixes or explicit `cloud-only` justification with rationale
   4. The `## Deferred Items` table in `STATE.md` shows a net reduction of at least 50% of the 14 pre-v4.5 carry-over items — each closed item shows `automated` or `cloud-only` disposition
 **Plans**: 6 plans
-  - [ ] 44-01-PLAN.md — Phase 27 DB UAT live integration tests against `database` chaos lab profile (PostgreSQL :25432, MySQL :23306) with skip_registry entries
-  - [ ] 44-02-PLAN.md — Phase 25 identity UAT traceability annotations on existing test_kerberos_scanner + test_saml_scanner integration tests
-  - [ ] 44-03-PLAN.md — Phase 30 Vault UAT live integration test (UAT-30-01 5-finding spec) against `vault` chaos lab profile (vault-30 :28200)
-  - [ ] 44-04-PLAN.md — Phase 31 VERIFICATION seeded-DB test for /api/trends flat wire format
-  - [ ] 44-05-PLAN.md — Phase 43 CR fixes (CR-02 ValueError, WR-01 finally block, WR-03 data_in_motion subscore, WR-04 scope=col on TableHead)
+  - [x] 44-01-PLAN.md — Phase 27 DB UAT live integration tests against `database` chaos lab profile (PostgreSQL :25432, MySQL :23306) with skip_registry entries
+  - [x] 44-02-PLAN.md — Phase 25 identity UAT traceability annotations on existing test_kerberos_scanner + test_saml_scanner integration tests
+  - [x] 44-03-PLAN.md — Phase 30 Vault UAT live integration test (UAT-30-01 5-finding spec) against `vault` chaos lab profile (vault-30 :28200)
+  - [x] 44-04-PLAN.md — Phase 31 VERIFICATION seeded-DB test for /api/trends flat wire format
+  - [x] 44-05-PLAN.md — Phase 43 CR fixes (CR-02 ValueError, WR-01 finally block, WR-03 data_in_motion subscore, WR-04 scope=col on TableHead)
   - [ ] 44-06-PLAN.md — STATE.md Deferred Items closure (7 rows, ≥50% net reduction)
