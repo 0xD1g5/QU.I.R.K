@@ -1,0 +1,105 @@
+# Requirements — v4.6 Enterprise Readiness
+
+**Milestone:** v4.6 Enterprise Readiness
+**Started:** 2026-05-03
+**Goal:** Make QUIRK credible and usable on real enterprise estates — fix install-day crashes, fill TLS finding gaps, enrich output with compliance context and PQC remediation guidance, and streamline the multi-target workflow.
+
+---
+
+## v4.6 Requirements
+
+### Install-Day UX (BACK-76)
+
+- [ ] **INSTALL-01**: User can `pip install quirk` and run a TLS-only scan with no ImportError crashes from absent identity/db/vault/motion extras
+- [ ] **INSTALL-02**: User sees a `missing_extra` advisory finding in the report when a scanner phase is skipped due to an unavailable optional dependency (no silent skips)
+- [ ] **INSTALL-03**: User can install all optional extras at once via `pip install quirk[all]`
+- [ ] **INSTALL-04**: User receives clear install-time guidance pointing to the right extra when a scanner is unavailable (e.g. "install quirk[identity] for Kerberos scanning")
+
+### TLS Finding Gaps (BACK-74)
+
+- [ ] **TLS-FIND-01**: User receives a CRITICAL finding when QUIRK encounters an expired TLS certificate (`cert_not_after` in the past)
+- [ ] **TLS-FIND-02**: User receives a HIGH finding when QUIRK encounters a self-signed TLS certificate (`issuer == subject` on the leaf cert)
+- [ ] **TLS-FIND-03**: User receives a MEDIUM finding when QUIRK encounters a TLS certificate signed by an untrusted CA (chain verification fails AND issuer ≠ subject)
+- [ ] **TLS-FIND-04**: User receives a HIGH finding when QUIRK encounters an RSA key smaller than 2048 bits in a TLS certificate
+- [ ] **TLS-FIND-05**: User receives a HIGH finding when QUIRK encounters an EC key smaller than 256 bits in a TLS certificate
+- [ ] **TLS-FIND-06**: TLS scanner falls back to the basic ssl_info path when sslyze CERTIFICATE_INFO returns ERROR (no half-populated CryptoEndpoint with `cert_not_after = None`)
+- [ ] **TLS-FIND-07**: A new chaos lab profile (`tls-cert-defects`) serves expired, self-signed, untrusted-CA, and RSA-1024 certificates for end-to-end finding verification
+
+### Rich Finding Context (BACK-79)
+
+- [ ] **CONTEXT-01**: Every finding emitted by QUIRK has a non-empty `description` field explaining the cryptographic risk in 1–3 sentences
+- [ ] **CONTEXT-02**: Every quantum-vulnerable finding includes a `remediation` field naming the appropriate FIPS 203/204/205 algorithm (ML-KEM/ML-DSA/SLH-DSA) — never legacy "Kyber"/"Dilithium" names
+- [ ] **CONTEXT-03**: Every quantum-vulnerable finding cites a NIST IR 8547 deprecation deadline (RSA/ECC deprecated 2030; disallowed 2035)
+- [ ] **CONTEXT-04**: A CI grep gate fails the build if any `risk_engine.py` or `routes/scan.py` string contains "Kyber", "Dilithium", or "when standards are adopted"
+
+### Compliance Mapping (BACK-20)
+
+- [ ] **COMPLY-01**: A new `quirk/compliance/` Python module exposes a `COMPLIANCE_MAP` keyed by finding category, returning matching control references with `version` keys
+- [ ] **COMPLY-02**: Compliance mapping covers PCI-DSS 4.0.1 controls 4.2.1, 4.2.1.1, 6.3.3, 8.3.2 for relevant TLS/key-storage findings
+- [ ] **COMPLY-03**: Compliance mapping covers HIPAA 45 CFR §164.312(a)(2)(iv), §164.312(e)(1), §164.312(e)(2)(ii) for relevant findings
+- [ ] **COMPLY-04**: Compliance mapping covers FIPS 140-3 approved/not-approved algorithm classifications for findings touching algorithm choice
+- [ ] **COMPLY-05**: HTML and PDF reports include a "Compliance Summary" section listing finding-to-control references grouped by framework
+- [ ] **COMPLY-06**: A unit test enforces that every `COMPLIANCE_MAP` entry includes a `version` key
+
+### Nmap Port Discovery (BACK-75)
+
+- [ ] **DISCOVER-01**: User is prompted in the interactive wizard to enable nmap-based port discovery for each target
+- [ ] **DISCOVER-02**: User receives a graceful warning (not a crash) when nmap discovery is requested but the `nmap` binary is not installed
+- [ ] **DISCOVER-03**: nmap discovery defaults include `--max-parallelism 100` to prevent macOS socket exhaustion on /24+ scopes
+- [ ] **DISCOVER-04**: User is warned before nmap invocation when target count × port count would exceed 10 000 probes
+
+### Multi-Target Wizard (BACK-77)
+
+- [ ] **MULTI-01**: User can paste comma-separated targets (`host1,host2,host3`) into the interactive wizard and have all three scanned
+- [ ] **MULTI-02**: User can pass a file of targets via `@filepath` syntax in the wizard (one target per line, `#`-prefixed comments ignored)
+- [ ] **MULTI-03**: User can pass `--targets-file <path>` to the CLI for non-interactive bulk scans
+- [ ] **MULTI-04**: User can pass IPv4 CIDR notation (e.g. `192.0.2.0/24`) and have it expanded via stdlib `ipaddress`
+- [ ] **MULTI-05**: User receives a clear error (not a silent failure) when a target is malformed or the targets file does not exist
+
+### Enterprise Documentation (BACK-65 + BACK-66)
+
+- [ ] **DOCS-01**: `docs/architecture.md` documents the QUIRK system architecture: scanner phases, data flow, SQLite schema, dashboard, and CBOM pipeline
+- [ ] **DOCS-02**: `docs/operators-guide.md` covers install, configuration, scanning workflow, troubleshooting, and a per-scanner reference for self-onboarding enterprise customers
+- [ ] **DOCS-03**: Both new docs are synced to the Obsidian vault under `20_Dev-Work/QUIRK/Reference/` with the standard frontmatter
+
+---
+
+## Future Requirements (deferred from v4.6)
+
+These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6.x or v4.7:
+
+- **TLS-FIND-08**: Near-expiry warning (cert valid but expires within 30 days) — MEDIUM finding
+- **TLS-FIND-09**: SHA-1 signature in TLS certificate detection
+- **TLS-FIND-10**: Hostname mismatch (CN/SAN does not match scanned target) detection
+- **CONTEXT-05**: `see_also` URL field per finding pointing to NIST/CSRC primary source
+- **COMPLY-07**: FIPS 140-3 approved/not-approved annotations on every CycloneDX CBOM algorithm component
+- **MULTI-06**: Exclude list (`!host` syntax) and trailing-comma input validation
+- **DOCS-04**: `quirk doctor` pre-scan health check command (binary presence, network reachability, config validity)
+- **COMPLY-08**: SOC 2 / ISO 27001 control mapping (out of v4.6 scope; bigger compliance research effort)
+
+---
+
+## Out of Scope (v4.6)
+
+| Requirement | Reason |
+|-------------|--------|
+| LLM-generated remediation text | Breaks offline mode and is not auditable for client deliverables; static lookup tables only |
+| Scan resume / checkpoint after partial failure | Significant orchestration change; defer to a later milestone focused on operational reliability |
+| OCSP/CRL revocation checking | Network-heavy, slow, and orthogonal to PQC readiness; defer to dedicated TLS depth milestone |
+| Service fingerprinting in nmap discovery (`-sV`) | Adds time and complexity for marginal benefit over port-only discovery |
+| Mermaid diagrams in architecture doc | Markdown ascii-table sketches sufficient for v4.6; revisit if customers request |
+| PEP 771 default-extras (when finalized) | Still a draft; the `[all]` meta-extra approach is the right v4.6 path |
+| Promoting impacket out of `[identity]` extras | pyOpenSSL transitive conflict downgrades `cryptography` library and breaks TLS scanner |
+| Compliance mapping as new dashboard page | Defer to v4.7 once compliance content stabilizes; v4.6 ships compliance via report-only |
+
+---
+
+## Traceability
+
+This section is populated by the gsd-roadmapper during phase decomposition.
+
+(empty — to be filled by roadmap step)
+
+---
+
+*Last updated: 2026-05-03 — v4.6 Enterprise Readiness milestone defined; 32 requirements across 7 categories*
