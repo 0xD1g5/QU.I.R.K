@@ -1,42 +1,54 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.9
-milestone_name: milestone
-status: verifying
-stopped_at: Completed 07-03-PLAN.md (HTML report renderer and PDF wiring)
-last_updated: "2026-04-01T02:11:38.551Z"
-last_activity: 2026-04-01
+milestone: v4.5
+milestone_name: Reliability & Gap Closure
+status: executing
+stopped_at: Phase 44 context gathered
+last_updated: "2026-05-03T19:10:40.839Z"
+last_activity: 2026-05-03 -- Phase 44 execution started
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 29
-  completed_plans: 33
-  percent: 0
+  total_plans: 40
+  completed_plans: 34
+  percent: 85
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-28)
+See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 07 — polish-and-packaging
+**Current focus:** Phase 44 — uat-debt-automation
 
 ## Current Position
 
-Phase: 07 (polish-and-packaging) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-04-01
+Phase: 44 (uat-debt-automation) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 44
+Last activity: 2026-05-03 -- Phase 44 execution started
 
-Progress: [░░░░░░░░░░] 0%
+## Phase Overview
+
+| Phase | Slug | Complexity | Depends On |
+|-------|------|------------|------------|
+| 38 | identity-api-regression-fix | S | Phase 37 |
+| 39 | data-at-rest-dashboard-tab | M | Phase 37 (parallel to 38) |
+| 40 | chaos-lab-parity | M | Phase 37 |
+| 41 | ci-stability-scanner-robustness | M | Phase 38, 40 |
+| 42 | cbom-correctness-audit | M | Phase 40 |
+| 43 | dashboard-polish | M | Phase 39, 42 |
+| 44 | uat-debt-automation | M | Phase 40, 41, 42, 43 |
+
+**Critical path:** 37 → 38/39/40 (parallel) → 41/42 → 43 → 44
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 10 (v4.4)
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -44,125 +56,117 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: -
-- Trend: -
-
-*Updated after each plan completion*
-| Phase 01-foundation-fixes P01 | 3 | 2 tasks | 3 files |
-| Phase 01-foundation-fixes P02 | 3 | 2 tasks | 4 files |
-| Phase 01-foundation-fixes P03 | 262 | 2 tasks | 3 files |
-| Phase 01-foundation-fixes P04 | 3 | 2 tasks | 52 files |
-| Phase 02-cbom-pipeline P01 | 2 | 2 tasks | 4 files |
-| Phase 02-cbom-pipeline P03 | 3 | 3 tasks | 5 files |
-| Phase 03-scanner-coverage P01 | 5 | 2 tasks | 7 files |
-| Phase 03-scanner-coverage P02 | 2 | 2 tasks | 3 files |
-| Phase 03-scanner-coverage P03 | 2 | 2 tasks | 2 files |
-| Phase 03-scanner-coverage P04 | 10 | 2 tasks | 5 files |
-| Phase 04-chaos-lab-expansion P02 | 15 | 2 tasks | 5 files |
-| Phase 04-chaos-lab-expansion P03 | 5 | 2 tasks | 2 files |
-| Phase 04 P04 | 3 | 2 tasks | 4 files |
-| Phase 04-chaos-lab-expansion P05 | 3 | 2 tasks | 4 files |
-| Phase 05-web-dashboard P01 | 93 | 2 tasks | 4 files |
-| Phase 05-web-dashboard P06 | 3 | 2 tasks | 6 files |
-| Phase 05-web-dashboard P04 | 6 | 3 tasks | 9 files |
-| Phase 05-web-dashboard P05 | 3 | 2 tasks | 4 files |
-| Phase 06-documentation P01 | 12 | 2 tasks | 3 files |
-| Phase 06-documentation P02 | 2 | 1 tasks | 1 files |
-| Phase 06-documentation P03 | 12 | 2 tasks | 4 files |
-| Phase 06-documentation P04 | 6 | 1 tasks | 1 files |
-| Phase 06-documentation P05 | 2 | 1 tasks | 1 files |
-| Phase 06-documentation P06 | 8 | 2 tasks | 2 files |
-| Phase 07 P01 | 109 | 2 tasks | 7 files |
-| Phase 07 P02 | 12 | 2 tasks | 5 files |
-| Phase 07 P05 | 8 | 2 tasks | 6 files |
-| Phase 07-polish-and-packaging P04 | 20 | 3 tasks | 6 files |
-| Phase 07 P03 | 128 | 2 tasks | 3 files |
+| 43 | 6 | - | - |
 
 ## Accumulated Context
+
+| Phase 32 P03 | 12 min | 2 tasks | 1 files |
+| Phase 32 P04 | 22 | 2 tasks | 5 files |
+| Phase 32 P06 | 30 min | 2 tasks | 1 files |
+| Phase 32 P07 | 10min | 2 tasks | 4 files |
+| Phase 32 P08 | ~3.5 minutes | 2 tasks | 3 files |
+| Phase 35 P04 | 180 | 3 tasks | 4 files |
+| Phase 40-chaos-lab-parity P05 | 2 | 1 tasks | 1 files |
+| Phase 40-chaos-lab-parity P06 | ~5 min | 4 tasks | 4 files |
+| Phase 41 P01 | 12 min | 3 tasks | 7 files |
+| Phase 41 P02 | 10 min | 2 tasks | 3 files |
+| Phase 41 P03 | 9 min | 2 tasks | 7 files |
+| Phase 41 P04 | 10 min | 2 tasks | 3 files |
+| Phase 41 P05 | 10 min | 2 tasks | 12 files |
+| Phase 41 P06 | 10 min | 2 tasks | 3 files |
+| Phase 41 P07 | ~5 min | 2 tasks | 4 files |
+| Phase 42 P01 | 105 | 2 tasks | 2 files |
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
 
-- Init: sslyze over testssl.sh (Python-native, programmatic API)
-- Init: ssh-audit over raw paramiko (JSON output, full algorithm enum maps to CBOM)
-- Init: cyclonedx-python-lib for CBOM (only Python SDK with full CycloneDX 1.4+ CBOM schema)
-- Init: SaaS deferred — prove value with CLI+dashboard first
-- [Phase 01-foundation-fixes]: Removed assessment-TIMESTAMP.json output from writer.py — assessment layer deprecated, single scoring path through intelligence/scoring.py
-- [Phase 01-foundation-fixes]: cert_pubkey_alg is canonical CryptoEndpoint field — checked first in _extract_cert_key_type before legacy fallbacks
-- [Phase 01-foundation-fixes]: D-04/D-05/D-06/D-07: ssh-audit subprocess with JSON output in ssh_audit_json column; tls_version field no longer misused; ThreadPoolExecutor for concurrency
-- [Phase 01-foundation-fixes]: sslyze primary TLS scanner with ssl+cryptography fallback; SSLYZE_AVAILABLE flag enables graceful degradation
-- [Phase 01-foundation-fixes]: tls_capabilities_json stores sslyze deep data: accepted_by_version dict, chain_depth, chain_verified, elliptic_curves
-- [Phase 01-foundation-fixes]: Package renamed qcscan -> quirk per D-13; pyproject.toml created with entry point quirk=run_scan:main per D-14/D-15; all QU.I.R.K. user-facing strings updated per D-16/D-17
-- [Phase 02-cbom-pipeline]: classify_algorithm returns 3-tuple (CryptoPrimitive, nist_level, classical_level) — single call carries both quantum and classical security bit-strength
-- [Phase 02-cbom-pipeline]: SHA-256 nist_level=0 (quantum-vulnerable via Grover halving); SHA-384 nist_level=2 — different levels reflect post-quantum effective security
-- [Phase 02-cbom-pipeline]: SSH vendor suffix stripping (@openssh.com, @libssh.org) and fuzzy hyphen-insertion fallback normalize algorithm names before lookup
-- [Phase 02-cbom-pipeline]: JsonV1Dot6/XmlV1Dot6 for CycloneDX 1.6 serialization — write_cbom_files() produces cbom-{stamp}.cdx.json and cbom-{stamp}.cdx.xml
-- [Phase 02-cbom-pipeline]: CBOM step placed after run_stats (step 4) in write_reports() so timing stats exclude CBOM generation
-- [Phase 03-scanner-coverage]: ConnectorsCfg Phase 3 fields use Python defaults for backwards-compatible config.yaml handling
-- [Phase 03-scanner-coverage]: Wave 0 test scaffolds define scanner module contracts before implementation (TDD RED state expected)
-- [Phase 03-scanner-coverage]: pyproject.toml build-backend changed to setuptools.build_meta for Python 3.14 compatibility
-- [Phase 03-scanner-coverage]: JWKS_PATHS probes three paths in order; OIDC discovery follows jwks_uri; RSA bits = modulus byte-length * 8; EC bits from crv lookup
-- [Phase 03-scanner-coverage]: scan_aws_targets calls _scan_acm last so assert_called_with('list_certificates') passes — test checks most recent get_paginator call
-- [Phase 03-scanner-coverage]: azure-mgmt-network imported inside _scan_app_gateways to keep it optional without affecting AZURE_AVAILABLE flag
-- [Phase 03-scanner-coverage]: JWT algorithm entries map to (SIGNATURE/MAC, 0, bits) per RFC 7518; alg:none maps to (UNKNOWN, 0, 0) as critical vulnerability marker
-- [Phase 03-scanner-coverage]: CBOM builder Pass 3 uses explicit elif for JWT/CONTAINER/SOURCE/AWS/AZURE to prevent TLS fallthrough (pitfall 6)
-- [Phase 04-chaos-lab-expansion]: apt 'openssl' is the CRYPTO_LIB_ALLOWLIST exact match in image-old-libssl; 'libssl1.0.0' also installed but not in frozenset
-- [Phase 04-chaos-lab-expansion]: registry-seed uses docker:24-dind + socket mount; seed.sh uses registry:5000 (compose network hostname) not localhost:20005
-- [Phase 04-chaos-lab-expansion]: Gitea admin user created via entrypoint bash -c with INSTALL_LOCK=true; gitea-seed waits on service_healthy with start_period: 30s; seed.sh uses printf + base64 tr -d newlines for alpine sh file encoding
-- [Phase 04]: RSA_1024 KMS key spec not supported by LocalStack free tier — second RSA_2048 with rsa-1024-fallback description used; KMS_KEY_SPEC_MAP has no RSA_1024 entry so scanner behavior unchanged
-- [Phase 04]: Storage profile uses dedicated LocalStack instance (port 20007, SERVICES=kms) independent of cloud profile LocalStack (port 24566, SERVICES=s3,sts,iam)
-- [Phase 04-chaos-lab-expansion]: ubuntu:18.04 for ssh-weak (OpenSSH 7.6p1 supports legacy algorithms removed in later versions); port 20022 avoids conflict with ssh-alt on 2222
-- [Phase 04-chaos-lab-expansion]: Port 636 for ldaps (standard LDAPS port required by sslyze); osixia/openldap cert mount path /container/service/slapd/assets/certs/ per image convention; LDAP_TLS_VERIFY_CLIENT=never for lab use
-- [Phase 05-web-dashboard]: httpx excluded from dashboard optional group — already in main deps; avoids version conflict
-- [Phase 05-web-dashboard]: deferred import in conftest.py dashboard_client fixture — try/except ImportError so stubs skip cleanly before quirk.dashboard exists
-- [Phase 05-web-dashboard]: FastAPI/uvicorn/playwright in optional dashboard group — keeps CLI-only installs free of dashboard deps
-- [Phase 05-web-dashboard]: sync_playwright imported at module level so mock.patch can intercept it in graceful-degradation tests
-- [Phase 05-web-dashboard]: json.dumps() used for PDF error serialization — Playwright error messages contain control chars that break f-string JSON
-- [Phase 05-web-dashboard]: conftest.py uses sqlite:///file::memory:?cache=shared&uri=true so in-memory DB is accessible from FastAPI sync route worker threads — plain :memory: creates separate per-connection DB
-- [Phase 05-web-dashboard]: Findings derived at API layer from CryptoEndpoint columns — no separate findings table needed for v1
-- [Phase 05-web-dashboard]: cytoscape-extensions.d.ts declares ambient module types for cose-bilkent and dagre — no @types packages available, ambient declaration is the TypeScript solution
-- [Phase 05-web-dashboard]: CBOM graph uses breadthfirst for <15 nodes, cose-bilkent for >=15 — balances layout quality vs compute cost for typical vs large CBOM inventories
-- [Phase 06-documentation]: README fully replaced — zero qcscan/QuRisk/Quantum Crypto Scanner references remain
-- [Phase 06-documentation]: docs/ directory at repo root with plain Markdown per D-03 — no build step, GitHub-compatible relative links
-- [Phase 06-documentation]: All config.yaml keys documented with type, default, and description — verified against config.yaml and ConnectorsCfg dataclass
-- [Phase 06-documentation]: Scan profiles (quick/standard/deep) and score profiles (lenient/balanced/strict) documented with use-case guidance in docs/configuration.md
-- [Phase 06-documentation]: IAM policy JSON derived from exact boto3 calls in aws_connector.py — 7 actions across 4 services (ACM, KMS, CloudFront, ELBv2), no wildcards, no write access
-- [Phase 06-documentation]: Azure RBAC uses Reader + Key Vault Reader built-in roles at subscription scope — no custom role definition needed
-- [Phase 06-documentation]: Docker guide documents full CRYPTO_LIB_ALLOWLIST; Git guide documents p/cryptography anti-pattern table (WEAK_ALGORITHM, HARDCODED_KEY, WEAK_RANDOM, DEPRECATED_PROTOCOL)
-- [Phase 06-documentation]: Two-layer structure (reference table + Client Conversation sidebox) per D-08 — serves consultant preparing offline AND glancing at guide during live client meeting
-- [Phase 06-documentation]: Report interpretation guide score band thresholds sourced verbatim from scoring.py _rating(): EXCELLENT>=85, GOOD>=70, MODERATE>=55, FAIR>=35, POOR<35
-- [Phase 06-documentation]: Three-section CBOM guide structure per D-10: compliance-officer / technical pipeline / audit evidence — matches three distinct reader audiences
-- [Phase 06-documentation]: alg:none documented as quantum-vulnerable (nist_level=0) with explicit callout that actual risk is authentication bypass — prevents consultant mischaracterization
-- [Phase 06-documentation]: Vault port is 20009 (not 20008 as in CONTEXT.md D-14) — docker-compose.yml is the ground truth per RESEARCH.md Pitfall 4
-- [Phase 06-documentation]: docs/chaos-lab.md is authoritative chaos lab operator guide; CHAOS_LAB_BUILD_AND_OPERATIONS_text_only.md retained as historical artifact per D-15
-- [Phase 07]: jinja2>=3.1.0 and rich>=13.0.0 added as core dependencies — required for CLI + report outputs in Phase 7
-- [Phase 07]: Wave 0 TDD scaffold: 10 RED stubs define full Phase 7 implementation contract; 7 behaviors already GREEN
-- [Phase 07]: init subcommand intercept placed before serve intercept — mirrors serve pattern exactly
-- [Phase 07]: tqdm=None retained after import removal to preserve residual references during transition (D-04)
-- [Phase 07]: importlib.resources.files('quirk').joinpath('config_template.yaml') used for template lookup in run_init() — works after pip install with os.path fallback for dev
-- [Phase 07]: quirk init defaults to 127.0.0.1 target and warns (not errors) on overwrite — idempotent for automation
-- [Phase 07]: docs/getting-started.md primary install changed to git+https GitHub URL; PyPI coming-soon note removed
-- [Phase 07-polish-and-packaging]: Use path-based SVG primitives for favicon (no text/font elements) to ensure cross-browser compatibility
-- [Phase 07-polish-and-packaging]: FileSystemLoader with os.path.dirname(__file__) used for Jinja2 template loading — no pip reinstall needed during development
-- [Phase 07-polish-and-packaging]: render_pdf_report() returns bool; pdf_path=None in write_reports() when Playwright unavailable — graceful degradation for HTML-only installs
+Phase 40 decisions:
+
+- [40-01]: lab.sh ALL_PROFILES replaced with _derive_all_profiles() that reads docker-compose.yml at runtime — structurally eliminates drift between lab.sh and compose (D-14)
+- [40-01]: grep character class extended to [a-zA-Z0-9_-] to handle phaseA profile name (uppercase A); plan snippet had [a-z0-9_-] which missed phaseA
+- [40-01]: yq preferred with grep fallback; yq not a hard requirement (not in chaos-lab toolchain today)
+- [40-02]: Compose profile names are authoritative; fixed 3 profile-name drifts (bind9→dnssec, simpla-samlphp→saml, samba-dc→kerberos) and SAML port (8880→8080)
+- [40-02]: pki section added as new content (v3 oracle had no pki section); sourced port 17443 / MTLS_STEPCA from docs/chaos-lab.md line 367
+- [40-06]: lab.sh down arm (lines 97-101) omits PROFILE_ARGS — profile-tagged services survive teardown; deferred to Phase 41 backlog (fix: compose --profile "*" down --remove-orphans)
+- [40-06]: LAB-04 human-verified by operator across all 5 v4.3+v4.4 profiles (vault, database, storage-s3, email, broker) — status + logs clean against real compose service names
+
+Previous milestone (v4.3) key decisions carried forward:
+
+- ISSUE-2 and ISSUE-3 patterns must be treated as structural requirements on every scanner phase — pyproject.toml diff is a required PLAN.md deliverable; session_start parameter is mandatory for all new scanners
+- All new scanners must include [motion] extras group entry in pyproject.toml at plan time
+
+Roadmap decisions (2026-04-27):
+
+- Phase 32 and Phase 33 develop in parallel — no shared code dependencies between email_scanner.py and broker_scanner.py
+- Phase 34 (Motion Intelligence) and Phase 35 (CBOM Integration) develop in parallel once 32+33 are done
+- Chaos lab port allocation: email profile uses 30xxx range, broker profile uses 26xxx/29xxx/25xxx ranges (no conflicts with existing profiles)
+- KAFKA-04 (AdminClient enrichment) is optional/graceful-degradation only — not required for Phase 33 success criteria; TLS probe via sslyze is the required path
+- OpenSSL 3.x TLS 1.0/1.1 caveat applies to both email and broker chaos labs — target RSA key-exchange and weak cipher as primary detectable findings at TLS 1.2
+- [Phase ?]: Phase 32 Plan 03: email_scanner.py uses module-level sslyze stub names so tests can patch SslyzeScanner even when sslyze is absent
+- [Phase ?]: Phase 32 Plan 03: _peer_metadata() duck-types the wrapped socket so MagicMock SSLSockets work without spec=ssl.SSLSocket
+- [Phase ?]: Phase 32 Plan 04: email findings merged inside the existing risk_engine phase-timer (single span) to preserve report metric integrity
+- [Phase 32]: Plan 32-08: mirrored kerberos_scan_json attachment pattern to populate CryptoEndpoint.email_scan_json (closes Phase 32 SC-1) and added an AST-based real-Logger smoke test that catches stdlib-positional-args drift in run_scan.py's email branch
+- [Phase ?]: Phase 35 close: CBOM-01..04 marked Complete; REQUIREMENTS wording aligned to code; UAT-35-01..03 added
+- [Phase ?]: SAML port is 8080 (compose source of truth); 8880 was v3 oracle drift
+- [Phase ?]: [41-01]: scan_error_category added as new column on CryptoEndpoint (not separate table) — preserves trends.py counting + reuses _ensure_*_columns migration pattern
+- [Phase ?]: [41-01]: skip-registry meta-test uses +/-2 line tolerance to absorb minor edits without forcing registry churn; meta-test marked @pytest.mark.skip_registry_gate (not in ALLOWED_SKIPS — it is the gate)
+- [Phase ?]: [41-01]: xfail-with-reason stubs (vs pytest.skip) keep pending tests visible in collection while non-blocking; each stub names the plan that lands the wiring
+- [Phase ?]: [41-02]: Property setters added for legacy timeout aliases (silent route to TimeoutsCfg); apply_profile() in quirk/engine/profiles.py still writes through legacy names — Plan 03 cleans them up
+- [Phase ?]: [41-02]: @dataclass(init=False) + custom __init__ chosen for ScanCfg to make legacy *_timeout_seconds kwarg routing self-documenting in the signature
+- [Phase ?]: [41-03]: Scanners read TimeoutsCfg directly — D-08 BACK-45 dissolved
+- [Phase ?]: [41-03]: hasattr guard in TLS/SSH scanners + cfg=None kwarg in db/vault connectors for SimpleNamespace mock compat
+- [Phase ?]: [41-03]: HYGN-02 hygiene tests inverted (mutation-must-be-absent) instead of deleted to preserve regression guard role
+- [Phase ?]: [41-04]: _wrapped_phase used for TLS/SSH/broker; email phase keeps with-block AST shape with inline try/except (preserves test_email_run_scan_wiring AST guard)
+- [Phase ?]: [41-04]: trends.py D-15 exclusion uses getattr(ep, scan_error_category, None) so legacy DB rows without the column do not break counting
+- [Phase ?]: [41-04]: Optional-extra advisory probes scoped to broker + email (the [motion]-gated scanners)
+- [Phase ?]: Phase 41 Plan 05: Deleted dead test_migration_preserves_existing_rows (always-skip path); idempotency covered by sibling test.
+- [Phase ?]: Phase 41 Plan 05: Hard-imported gcp_connector and email_scanner modules; Wave 0 RED-state guards no longer needed.
+- [Phase ?]: Phase 41 Plan 06: D-10 + ROBUST-04 audit + lab.sh profile sweep
+- [Phase ?]: lab.sh down + reset arms now use --profile "*" --remove-orphans for full profile-sweep (D-18 + extension)
+- [41-07]: Phase 41 closed 2026-04-29 — UAT-41-01..04 added to UAT-SERIES.md, vault phase note + UAT mirror synced, ROADMAP marked [x]; CI-01..03 + ROBUST-01..04 all complete
+- [41-Summary]: TimeoutsCfg + RetryCfg sub-tables on ScanCfg with deprecation-alias properties on four legacy fields (D-06/07); BACK-45 cfg.scan mutation pattern dissolved by passing explicit kwargs; cfg.scan.profile bug at run_scan.py:743 fixed; _wrapped_phase helper around every scanner phase implements D-14; trends.py respects scan_error_category to exclude missing_extra from regression counts (D-15); lab.sh down + reset arms both sweep profile-tagged services (D-18 + extension)
+- [Phase 42]: Adopted [validation] umbrella extra over hand-pinned deps (D-01)
+- [Phase 42]: Extracted MOTION_PLAINTEXT_PROTOCOLS and DAR_SKIP_PROTOCOLS as module-level frozensets (D-10/D-11)
 
 ### Pending Todos
 
-None yet.
+None at roadmap creation.
 
 ### Blockers/Concerns
 
-- Phase 5 (Web Dashboard) depends on Phase 2 (CBOM Pipeline) not Phase 4 — parallel path possible after Phase 2 ships
-- SCAN-01/SCAN-02 placed in Phase 1 (not Phase 3) because they are foundation scanner replacements, not net-new surface coverage
+None at roadmap creation.
+
+## Deferred Items
+
+Items deferred at v4.4 close on 2026-04-29 (closed in v4.5 Phase 38 on 2026-04-29):
+
+| ID | Category | Item | Status |
+|----|----------|------|--------|
+| DEF-v4.4-01 | phase_gating | Phase 36 `wave_0_complete: false` flip | closed in Phase 38 (PLAN 38-02) — wave_0_complete: true after GAP-01/02 closure |
+| DEF-v4.4-02 | regression | SAML/OIDC missing from `/api/scan/latest` `identity_findings` (real bug, ISSUE-3 from Phase 24) | closed in Phase 38 (PLAN 38-01) — SESSION_BRACKET 5-min backward bracket on /api/scan/latest implicit-latest branch; regression test green |
+
+Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Phase 04: 04-HUMAN-UAT.md (5 pending scenarios) | partial — Docker chaos lab tests, pre-v3.9 carry-over |
+| uat_gap | Phase 05: 05-HUMAN-UAT.md (5 pending scenarios) | partial — Dashboard UI tests, pre-v3.9 carry-over |
+| uat_gap | Phase 07: 07-HUMAN-UAT.md (4 pending scenarios) | partial — Packaging tests, pre-v3.9 carry-over |
+| uat_gap | Phase 13: 13-UAT.md (6 pending scenarios) | deferred — Interactive mode, pre-v4.1 carry-over |
+| uat_gap | Phase 25: 25-HUMAN-UAT.md (2 pending scenarios) | automated (chaos lab) — closed in Phase 44 (PLAN 44-02); tests/test_kerberos_scanner.py::test_samba_dc_integration + tests/test_saml_scanner.py::test_chaos_lab_integration cover UAT-25 against kerberos + saml chaos lab profiles |
+| uat_gap | Phase 27: 27-HUMAN-UAT.md (1 pending scenario) | automated (chaos lab) — closed in Phase 44 (PLAN 44-01); tests/test_uat_db_integration.py covers PostgreSQL/MySQL ssl-off against database chaos lab |
+| uat_gap | Phase 27: 27-UAT.md (7 pending scenarios) | automated (chaos lab) — closed in Phase 44 (PLAN 44-01); tests/test_uat_db_integration.py covers all 7 behavioral scenarios against database chaos lab profile (PostgreSQL :25432, MySQL :23306) |
+| uat_gap | Phase 28: 28-HUMAN-UAT.md (3 pending scenarios) | partial — live S3/GCS bucket scan requires cloud credentials |
+| uat_gap | Phase 29: 29-UAT.md (10 pending scenarios) | cloud-only — closed in Phase 44 (D-01/D-02/D-03): EKS/GKE/AKS encryption detection requires cloud-managed control plane APIs not available in a local cluster (UAT-29-01 needs AWS EKS DescribeCluster encryptionConfig.keyArn; UAT-29-02 needs GCP databaseEncryption.state; UAT-29-03 needs Azure AKS securityProfile.azureKeyVaultKms + AAD RBAC). Scanner logic is covered by mock-based unit tests in test_k8s_connector.py. Per-scenario justification: see .planning/phases/44-uat-debt-automation/44-06-PLAN.md §phase_29_cloud_only_justification |
+| uat_gap | Phase 30: 30-HUMAN-UAT.md (1 pending scenario) | automated (chaos lab) — closed in Phase 44 (PLAN 44-03); tests/test_vault_connector.py::test_vault_live_uat_30_01_five_findings covers UAT-30-01 (5 findings) against vault chaos lab profile (vault-30 :28200) |
+| uat_gap | Phase 31: 31-HUMAN-UAT.md (4 pending scenarios) | partial — trend analysis requires prior scan history |
+| verification_gap | Phase 25: 25-VERIFICATION.md | automated (chaos lab) — closed in Phase 44 (PLAN 44-02); same chaos lab integration test coverage as Phase 25 HUMAN-UAT closure |
+| verification_gap | Phase 28: 28-VERIFICATION.md | human_needed — live object storage scan (requires cloud credentials) |
+| verification_gap | Phase 31: 31-VERIFICATION.md | automated (pytest) — closed in Phase 44 (PLAN 44-04); tests/test_dashboard_trends.py::test_uat_31_trends_two_sessions_flat_wire_format seeds two distinct sessions in UUID-named SQLite and asserts /api/trends flat wire format |
 
 ## Session Continuity
 
-Last session: 2026-04-01T02:11:38.549Z
-Stopped at: Completed 07-03-PLAN.md (HTML report renderer and PDF wiring)
-Resume file: None
+Last session: 2026-05-03T17:00:35.819Z
+Stopped at: Phase 44 context gathered
+Next action: Begin Phase 42 (cbom-correctness-audit)
