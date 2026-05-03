@@ -363,7 +363,11 @@ def test_kerberos_scan_json_structure():
     reason="Set QUIRK_KERBEROS_INTEGRATION=1 to run against local Samba DC chaos lab",
 )
 def test_samba_dc_integration():
-    """KERB-05: Against a running Samba DC, scan returns RC4 etype 23 in results.
+    """UAT-25 / KERB-05: Phase 25 HUMAN-UAT closure — against the running `kerberos`
+    chaos lab profile (Samba DC), scan_kerberos_targets returns rc4-hmac (etype 23) in
+    cert_pubkey_alg results. This test is the automated equivalent of the Phase 25
+    HUMAN-UAT scenario and supersedes the manual run; closure recorded in
+    .planning/STATE.md Deferred Items (plan 44-06).
 
     Requires: QUIRK_KERBEROS_INTEGRATION=1 env var and running chaos lab (kerberos profile).
     """
