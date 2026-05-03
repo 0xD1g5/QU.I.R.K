@@ -256,6 +256,23 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
         port = int(getattr(e, "port", 0))
         proto = getattr(e, "protocol", "UNKNOWN")
 
+        # Phase 45 / D-04, D-05: ADVISORY rows produced by quirk.util.optional_extra
+        # become coverage_gap findings. INFO severity, zero score impact (D-07
+        # — see quirk/intelligence/evidence.py for the score-exclusion path).
+        # The `continue` is critical: it prevents the row from also being
+        # processed by the generic scan_err handler below (which would emit a
+        # duplicate "Informational protocol observation" finding).
+        if proto == "ADVISORY" and getattr(e, "scan_error_category", "") == "missing_extra":
+            findings.append({
+                "severity": "INFO",
+                "category": "coverage_gap",
+                "host": host,
+                "port": port,
+                "title": "Scanner skipped — optional extra not installed",
+                "recommendation": getattr(e, "scan_error", "") or "",
+            })
+            continue
+
         # Scan errors are normalized into blocker/advisory findings.
         scan_err = getattr(e, "scan_error", None)
         if scan_err:
