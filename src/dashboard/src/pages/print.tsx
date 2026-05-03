@@ -222,6 +222,10 @@ export function PrintPage() {
               <div className="score-number">{score.subscores.data_at_rest}</div>
               <div className="score-label">Data at Rest</div>
             </div>
+            <div className="score-item">
+              <div className="score-number">{score.subscores.data_in_motion}</div>
+              <div className="score-label">Data in Motion</div>
+            </div>
           </div>
           <p className="meta">
             Confidence: {confidence.confidence_rating} ({confidence.confidence_score}%)
