@@ -21,5 +21,10 @@ ALLOWED_SKIPS = [
     ("test_dnssec_scanner.py",          475, "live_infra",     "Requires BIND9 chaos lab"),
     ("test_saml_scanner.py",            366, "live_infra",     "Requires SimpleSAMLphp chaos lab"),
     ("test_kerberos_scanner.py",        360, "live_infra",     "Requires Samba DC chaos lab"),
-    ("test_cbom_motion_golden.py",      189, "live_infra",     "Fixture regen guard"),
+    ("test_cbom_motion_golden.py",      195, "live_infra",     "Fixture regen guard"),
+    ("test_cbom_classifier_coverage.py", 84, "live_infra",     "REGEN_CBOM_COVERAGE guard"),
+    ("test_uat_db_integration.py",       29, "live_infra",     "Requires PostgreSQL chaos lab (database profile)"),
+    ("test_uat_db_integration.py",       49, "live_infra",     "Requires MySQL chaos lab (database profile)"),
+    ("test_uat_db_integration.py",       69, "live_infra",     "Requires PostgreSQL chaos lab (database profile)"),
+    ("test_uat_db_integration.py",       84, "live_infra",     "Requires MySQL chaos lab (database profile)"),
 ]
