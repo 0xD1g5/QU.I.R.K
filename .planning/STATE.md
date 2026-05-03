@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v4.6
 milestone_name: Enterprise Readiness
 status: planning
-stopped_at: Defining requirements
+stopped_at: Roadmap created — Phase 45 ready to plan
 last_updated: "2026-05-03T00:00:00.000Z"
 last_activity: 2026-05-03
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,29 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-03)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.6 Enterprise Readiness — defining requirements
+**Current focus:** v4.6 Enterprise Readiness — roadmap created, Phase 45 ready to plan
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (roadmap created)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-03 — Milestone v4.6 started
+Status: Ready to plan Phase 45
+Last activity: 2026-05-03 — Roadmap created; 6 phases (45–50), 32 requirements mapped
 Last activity: 2026-05-03
 
 ## Phase Overview
 
 | Phase | Slug | Complexity | Depends On |
 |-------|------|------------|------------|
-| 38 | identity-api-regression-fix | S | Phase 37 |
-| 39 | data-at-rest-dashboard-tab | M | Phase 37 (parallel to 38) |
-| 40 | chaos-lab-parity | M | Phase 37 |
-| 41 | ci-stability-scanner-robustness | M | Phase 38, 40 |
-| 42 | cbom-correctness-audit | M | Phase 40 |
-| 43 | dashboard-polish | M | Phase 39, 42 |
-| 44 | uat-debt-automation | M | Phase 40, 41, 42, 43 |
+| 45 | install-day-ux | S | Phase 44 |
+| 46 | tls-finding-gaps | M | Phase 45 |
+| 47 | nmap-multi-target | M | Phase 45 (parallel to 46) |
+| 48 | rich-finding-context | M | Phase 46 |
+| 49 | compliance-mapping | M | Phase 48 |
+| 50 | enterprise-documentation | M | Phase 49 |
 
-**Critical path:** 37 → 38/39/40 (parallel) → 41/42 → 43 → 44
+**Critical path:** 45 → 46 → 48 → 49 → 50 (Phase 47 parallel to Phase 46)
 
 ## Performance Metrics
 
@@ -179,4 +178,4 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 Last session: 2026-05-03T17:00:35.819Z
 Stopped at: Phase 44 context gathered
-Next action: Begin Phase 42 (cbom-correctness-audit)
+Next action: Plan Phase 45 (install-day-ux)

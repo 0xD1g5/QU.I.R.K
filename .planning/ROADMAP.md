@@ -8,6 +8,7 @@
 - ✅ **v4.3 Data at Rest** — Phases 25–31, 24 plans (shipped 2026-04-26) → `.planning/milestones/v4.3-ROADMAP.md`
 - ✅ **v4.4 Data in Motion** — Phases 32–37, 33 plans (shipped 2026-04-29) → `.planning/milestones/v4.4-ROADMAP.md`
 - ✅ **v4.5 Reliability & Gap Closure** — Phases 38–44, 40 plans (shipped 2026-05-03) → `.planning/milestones/v4.5-ROADMAP.md`
+- 🚧 **v4.6 Enterprise Readiness** — Phases 45–50 (in progress)
 
 ## Phases
 
@@ -92,6 +93,18 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 44: UAT Debt Automation** - Automate Phase 27 DB, Phase 29 K8s, Phase 25 identity, and Phase 30 Vault UAT scenarios against existing chaos lab profiles (completed 2026-05-03)
 
 </details>
+
+### 🚧 v4.6 Enterprise Readiness (Phases 45–50) — IN PROGRESS
+
+**Milestone Goal:** Make QUIRK credible and usable on real enterprise estates — fix install-day crashes, fill TLS finding gaps, enrich output with compliance context and PQC remediation guidance, and streamline the multi-target workflow.
+
+- [ ] **Phase 45: Install-Day UX** - Graceful ImportError degradation and `[all]` meta-extra so `pip install quirk` never crashes on first run
+- [ ] **Phase 46: TLS Finding Gaps** - Emit CRITICAL/HIGH/MEDIUM findings for expired, self-signed, untrusted-CA, and weak-key TLS certificates with chaos lab verification
+- [ ] **Phase 47: Nmap Discovery + Multi-Target Wizard** - Pre-scan nmap port discovery and comma/file/CIDR multi-target input in interactive mode and CLI
+- [ ] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology
+- [ ] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports
+- [ ] **Phase 50: Enterprise Documentation** - `docs/architecture.md` and `docs/operators-guide.md` synced to Obsidian vault
+
 
 ### Phase 17: Identity Infrastructure
 **Goal**: The codebase is structurally ready to receive three new identity scanners — schema columns exist and are idempotent, optional dependency group is declared, and config flags are wired
@@ -879,3 +892,90 @@ Plans:
   - [x] 44-04-PLAN.md — Phase 31 VERIFICATION seeded-DB test for /api/trends flat wire format
   - [x] 44-05-PLAN.md — Phase 43 CR fixes (CR-02 ValueError, WR-01 finally block, WR-03 data_in_motion subscore, WR-04 scope=col on TableHead)
   - [x] 44-06-PLAN.md — STATE.md Deferred Items closure (7 rows, ≥50% net reduction)
+
+---
+
+## Phase Details — v4.6 Enterprise Readiness
+
+### Phase 45: Install-Day UX
+**Goal**: Users can install QUIRK with `pip install quirk` or `pip install quirk[all]` and run a scan without ImportError crashes, receiving visible advisory notices when optional scanner extras are absent
+**Depends on**: Phase 44 (v4.5 complete)
+**Requirements**: INSTALL-01, INSTALL-02, INSTALL-03, INSTALL-04
+**Success Criteria** (what must be TRUE):
+  1. User runs `pip install quirk` in a clean venv, executes a TLS-only scan, and receives a scan report with zero ImportError tracebacks
+  2. User runs a full scan with identity/db/vault/motion extras absent and sees a `missing_extra` advisory finding in the report for each skipped scanner — no silent skips
+  3. User runs `pip install quirk[all]` and all scanner extras install successfully; impacket is NOT in `[all]` — it stays in `[identity]` only to avoid the pyOpenSSL transitive conflict
+  4. The advisory message for each unavailable scanner names the exact extra to install (e.g., "install quirk[identity] for Kerberos scanning")
+**Plans**: TBD
+
+### Phase 46: TLS Finding Gaps
+**Goal**: Users receive actionable security findings for expired certificates, self-signed certificates, untrusted-CA certificates, and weak RSA/EC keys — certificate defects that previously produced zero findings in the report
+**Depends on**: Phase 45
+**Requirements**: TLS-FIND-01, TLS-FIND-02, TLS-FIND-03, TLS-FIND-04, TLS-FIND-05, TLS-FIND-06, TLS-FIND-07
+**Success Criteria** (what must be TRUE):
+  1. Scanning an expired TLS certificate produces a CRITICAL finding; scanning a self-signed certificate produces a HIGH finding; scanning a cert where issuer != subject and chain verification fails produces a MEDIUM untrusted-CA finding (three distinct finding types, three distinct severity levels)
+  2. Scanning a TLS endpoint with an RSA key < 2048 bits produces a HIGH finding; scanning one with an EC key < 256 bits produces a HIGH finding
+  3. When sslyze `CERTIFICATE_INFO` returns ERROR, the scanner falls back to the ssl_info path cleanly — no half-populated `CryptoEndpoint` with `cert_not_after = None` reaches the database
+  4. The `tls-cert-defects` chaos lab profile is running and QUIRK scanning it produces all expected findings: expired cert CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, and RSA-1024 weak-key HIGH
+**Plans**: TBD
+
+### Phase 47: Nmap Discovery + Multi-Target Wizard
+**Goal**: Users can feed QUIRK comma-separated hosts, a target file, or a CIDR range, and optionally pre-discover open ports with nmap — enabling real enterprise 50-host+ scans without manual port enumeration
+**Depends on**: Phase 45 (parallel to Phase 46)
+**Requirements**: DISCOVER-01, DISCOVER-02, DISCOVER-03, DISCOVER-04, MULTI-01, MULTI-02, MULTI-03, MULTI-04, MULTI-05
+**Success Criteria** (what must be TRUE):
+  1. User enters `host1,host2,host3` in the interactive wizard prompt and all three hosts are scanned in a single run
+  2. User enters `@/path/to/targets.txt` in the wizard (one host per line, `#`-prefixed comment lines ignored) and all listed hosts are scanned; `--targets-file <path>` CLI flag achieves the same for non-interactive bulk runs
+  3. User enters a CIDR range (e.g., `192.0.2.0/24`) and QUIRK expands it via stdlib `ipaddress` and scans all resulting hosts
+  4. User enables nmap discovery in the interactive wizard prompt; nmap runs with `--max-parallelism 100`; if nmap binary is absent, a clear warning is printed and scanning proceeds on default ports (no crash)
+  5. User is warned before nmap invocation when `len(targets) × len(ports) > 10,000`; a malformed target or missing targets file produces a clear error message, not a silent failure or unhandled exception
+**Plans**: TBD
+
+### Phase 48: Rich Finding Context
+**Goal**: Every finding emitted by QUIRK carries a non-empty plain-English risk description and, where quantum-relevant, a FIPS 203/204/205 remediation path with NIST IR 8547 deprecation deadlines — with all stale "Kyber"/"Dilithium" terminology purged from the codebase
+**Depends on**: Phase 46
+**Requirements**: CONTEXT-01, CONTEXT-02, CONTEXT-03, CONTEXT-04
+**Success Criteria** (what must be TRUE):
+  1. Every finding rendered in the HTML and PDF reports has a non-empty `description` field containing 1–3 sentences that explain the cryptographic risk in plain English
+  2. Every quantum-vulnerable finding in the report names the replacement algorithm using FIPS 203/204/205 designations only: ML-KEM, ML-DSA, or SLH-DSA — the strings "Kyber", "Dilithium", and "when standards are adopted" do not appear in any finding text
+  3. Every quantum-vulnerable finding cites the NIST IR 8547 deprecation timeline: RSA/ECC deprecated 2030, disallowed 2035
+  4. A CI test (grep-based gate) fails the build if "Kyber", "Dilithium", or "when standards are adopted" appear anywhere in `risk_engine.py` or `routes/scan.py`
+**Plans**: TBD
+
+### Phase 49: Compliance Mapping
+**Goal**: QUIRK findings are mapped to PCI-DSS 4.0.1, HIPAA 45 CFR, and FIPS 140-3 control references via a new `quirk/compliance/` module, and a "Compliance Summary" section appears in HTML/PDF reports — making QUIRK output directly usable as evidence in compliance assessments. Mappings include freshness metadata so they don't silently rot when regulators publish revisions
+**Depends on**: Phase 48
+**Requirements**: COMPLY-01, COMPLY-02, COMPLY-03, COMPLY-04, COMPLY-05, COMPLY-06, COMPLY-07, COMPLY-08, COMPLY-09
+**Success Criteria** (what must be TRUE):
+  1. A `quirk/compliance/__init__.py` module exists with a `COMPLIANCE_MAP` dict keyed by finding category; every entry includes `version`, `last_verified` (ISO date), and `source_url` keys (e.g., "PCI-DSS 4.0.1", "2026-05-03", "https://docs-prv.pcisecuritystandards.org/...")
+  2. Relevant TLS/key-storage findings map to PCI-DSS 4.0.1 controls 4.2.1, 4.2.1.1, 6.3.3, and 8.3.2
+  3. Relevant findings map to HIPAA 45 CFR §164.312(a)(2)(iv), §164.312(e)(1), and §164.312(e)(2)(ii)
+  4. Algorithm-choice findings map to FIPS 140-3 approved/not-approved classification
+  5. HTML and PDF reports contain a "Compliance Summary" section listing finding-to-control references grouped by framework (PCI-DSS, HIPAA, FIPS 140-3)
+  6. A unit test asserts every `COMPLIANCE_MAP` entry includes `version`, `last_verified`, and `source_url` keys; build fails if any entry is missing them
+  7. A CI staleness check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before client-facing staleness
+  8. `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` for operator pre-engagement verification
+**Plans**: TBD
+
+### Phase 50: Enterprise Documentation
+**Goal**: Enterprise customers can self-onboard QUIRK using two production-quality reference documents — an architecture reference and an operator's guide — both available in the repo and synced to the Obsidian vault. Operator's guide also documents the compliance map maintenance process so QUIRK's regulatory references stay current as standards evolve
+**Depends on**: Phase 49
+**Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04
+**Success Criteria** (what must be TRUE):
+  1. `docs/architecture.md` exists and covers scanner phases, data flow, SQLite schema, dashboard architecture, and CBOM pipeline — sufficient for an engineer to understand the full system without reading source code
+  2. `docs/operators-guide.md` exists and covers install, configuration, scanning workflow, troubleshooting, and a per-scanner reference — sufficient for an enterprise admin to deploy and operate QUIRK independently
+  3. Both documents are synced to the Obsidian vault under `20_Dev-Work/QUIRK/Reference/` with correct frontmatter (`type: reference`, `source: docs/<filename>.md`, `updated: 2026-05-XX`)
+  4. `docs/operators-guide.md` includes a "Compliance Map Maintenance" section documenting the quarterly review cadence, list of source URLs to monitor (PCI SSC, HHS.gov, NIST CSRC), and the upgrade path when a regulator publishes a revision (e.g. PCI-DSS 4.0.1 → 4.1)
+
+## Progress — v4.6 Enterprise Readiness
+
+**Critical path:** 45 → 46 → 48 → 49 → 50 (Phase 47 runs parallel to Phase 46)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 45. Install-Day UX | 0/TBD | Not started | - |
+| 46. TLS Finding Gaps | 0/TBD | Not started | - |
+| 47. Nmap Discovery + Multi-Target Wizard | 0/TBD | Not started | - |
+| 48. Rich Finding Context | 0/TBD | Not started | - |
+| 49. Compliance Mapping | 0/TBD | Not started | - |
+| 50. Enterprise Documentation | 0/TBD | Not started | - |

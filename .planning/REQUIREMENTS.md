@@ -40,6 +40,9 @@
 - [ ] **COMPLY-04**: Compliance mapping covers FIPS 140-3 approved/not-approved algorithm classifications for findings touching algorithm choice
 - [ ] **COMPLY-05**: HTML and PDF reports include a "Compliance Summary" section listing finding-to-control references grouped by framework
 - [ ] **COMPLY-06**: A unit test enforces that every `COMPLIANCE_MAP` entry includes a `version` key
+- [ ] **COMPLY-07**: Each `COMPLIANCE_MAP` entry includes `last_verified` (ISO date) and `source_url` keys pointing to the authoritative regulator publication
+- [ ] **COMPLY-08**: A CI check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before staleness becomes a client-facing issue
+- [ ] **COMPLY-09**: A `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` so operators can verify map freshness before client engagements
 
 ### Nmap Port Discovery (BACK-75)
 
@@ -61,6 +64,7 @@
 - [ ] **DOCS-01**: `docs/architecture.md` documents the QUIRK system architecture: scanner phases, data flow, SQLite schema, dashboard, and CBOM pipeline
 - [ ] **DOCS-02**: `docs/operators-guide.md` covers install, configuration, scanning workflow, troubleshooting, and a per-scanner reference for self-onboarding enterprise customers
 - [ ] **DOCS-03**: Both new docs are synced to the Obsidian vault under `20_Dev-Work/QUIRK/Reference/` with the standard frontmatter
+- [ ] **DOCS-04**: `docs/operators-guide.md` documents the compliance map maintenance process — quarterly review cadence, source URLs to monitor, and the upgrade path when a regulator publishes a revision (e.g. PCI-DSS 4.0.1 → 4.1)
 
 ---
 
@@ -72,10 +76,10 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 - **TLS-FIND-09**: SHA-1 signature in TLS certificate detection
 - **TLS-FIND-10**: Hostname mismatch (CN/SAN does not match scanned target) detection
 - **CONTEXT-05**: `see_also` URL field per finding pointing to NIST/CSRC primary source
-- **COMPLY-07**: FIPS 140-3 approved/not-approved annotations on every CycloneDX CBOM algorithm component
+- **COMPLY-10**: FIPS 140-3 approved/not-approved annotations on every CycloneDX CBOM algorithm component
 - **MULTI-06**: Exclude list (`!host` syntax) and trailing-comma input validation
-- **DOCS-04**: `quirk doctor` pre-scan health check command (binary presence, network reachability, config validity)
-- **COMPLY-08**: SOC 2 / ISO 27001 control mapping (out of v4.6 scope; bigger compliance research effort)
+- **DOCS-05**: `quirk doctor` pre-scan health check command (binary presence, network reachability, config validity)
+- **COMPLY-11**: SOC 2 / ISO 27001 control mapping (out of v4.6 scope; bigger compliance research effort)
 
 ---
 
@@ -96,10 +100,46 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 
 ## Traceability
 
-This section is populated by the gsd-roadmapper during phase decomposition.
-
-(empty — to be filled by roadmap step)
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INSTALL-01 | Phase 45 | Pending |
+| INSTALL-02 | Phase 45 | Pending |
+| INSTALL-03 | Phase 45 | Pending |
+| INSTALL-04 | Phase 45 | Pending |
+| TLS-FIND-01 | Phase 46 | Pending |
+| TLS-FIND-02 | Phase 46 | Pending |
+| TLS-FIND-03 | Phase 46 | Pending |
+| TLS-FIND-04 | Phase 46 | Pending |
+| TLS-FIND-05 | Phase 46 | Pending |
+| TLS-FIND-06 | Phase 46 | Pending |
+| TLS-FIND-07 | Phase 46 | Pending |
+| DISCOVER-01 | Phase 47 | Pending |
+| DISCOVER-02 | Phase 47 | Pending |
+| DISCOVER-03 | Phase 47 | Pending |
+| DISCOVER-04 | Phase 47 | Pending |
+| MULTI-01 | Phase 47 | Pending |
+| MULTI-02 | Phase 47 | Pending |
+| MULTI-03 | Phase 47 | Pending |
+| MULTI-04 | Phase 47 | Pending |
+| MULTI-05 | Phase 47 | Pending |
+| CONTEXT-01 | Phase 48 | Pending |
+| CONTEXT-02 | Phase 48 | Pending |
+| CONTEXT-03 | Phase 48 | Pending |
+| CONTEXT-04 | Phase 48 | Pending |
+| COMPLY-01 | Phase 49 | Pending |
+| COMPLY-02 | Phase 49 | Pending |
+| COMPLY-03 | Phase 49 | Pending |
+| COMPLY-04 | Phase 49 | Pending |
+| COMPLY-05 | Phase 49 | Pending |
+| COMPLY-06 | Phase 49 | Pending |
+| COMPLY-07 | Phase 49 | Pending |
+| COMPLY-08 | Phase 49 | Pending |
+| COMPLY-09 | Phase 49 | Pending |
+| DOCS-01 | Phase 50 | Pending |
+| DOCS-02 | Phase 50 | Pending |
+| DOCS-03 | Phase 50 | Pending |
+| DOCS-04 | Phase 50 | Pending |
 
 ---
 
-*Last updated: 2026-05-03 — v4.6 Enterprise Readiness milestone defined; 32 requirements across 7 categories*
+*Last updated: 2026-05-03 — v4.6 Enterprise Readiness milestone defined; 37 requirements across 7 categories (compliance maintainability added per user feedback)*
