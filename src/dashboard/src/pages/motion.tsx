@@ -49,13 +49,13 @@ function EmailTable({ findings }: { findings: MotionFinding[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs font-semibold">Port</TableHead>
-              <TableHead className="text-xs font-semibold">Protocol</TableHead>
-              <TableHead className="text-xs font-semibold">TLS Version</TableHead>
-              <TableHead className="text-xs font-semibold">Cipher Suite</TableHead>
-              <TableHead className="text-xs font-semibold">Cert Expiry</TableHead>
-              <TableHead className="text-xs font-semibold">Quantum Risk</TableHead>
-              <TableHead className="text-xs font-semibold">Warning</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Port</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Protocol</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">TLS Version</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Cipher Suite</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Cert Expiry</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Quantum Risk</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Warning</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,12 +131,12 @@ function BrokerGroupedSections({ findings }: { findings: MotionFinding[] }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs font-semibold">Host</TableHead>
-                    <TableHead className="text-xs font-semibold">Port</TableHead>
-                    <TableHead className="text-xs font-semibold">Protocol</TableHead>
-                    <TableHead className="text-xs font-semibold">TLS Version</TableHead>
-                    <TableHead className="text-xs font-semibold">Cipher Suite</TableHead>
-                    <TableHead className="text-xs font-semibold">Status</TableHead>
+                    <TableHead scope="col" className="text-xs font-semibold">Host</TableHead>
+                    <TableHead scope="col" className="text-xs font-semibold">Port</TableHead>
+                    <TableHead scope="col" className="text-xs font-semibold">Protocol</TableHead>
+                    <TableHead scope="col" className="text-xs font-semibold">TLS Version</TableHead>
+                    <TableHead scope="col" className="text-xs font-semibold">Cipher Suite</TableHead>
+                    <TableHead scope="col" className="text-xs font-semibold">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
