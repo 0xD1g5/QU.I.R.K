@@ -154,16 +154,16 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 | uat_gap | Phase 05: 05-HUMAN-UAT.md (5 pending scenarios) | partial — Dashboard UI tests, pre-v3.9 carry-over |
 | uat_gap | Phase 07: 07-HUMAN-UAT.md (4 pending scenarios) | partial — Packaging tests, pre-v3.9 carry-over |
 | uat_gap | Phase 13: 13-UAT.md (6 pending scenarios) | deferred — Interactive mode, pre-v4.1 carry-over |
-| uat_gap | Phase 25: 25-HUMAN-UAT.md (2 pending scenarios) | partial — live identity scan requires Docker + samba-dc |
-| uat_gap | Phase 27: 27-HUMAN-UAT.md (1 pending scenario) | partial — live DB encryption scan requires running DB |
-| uat_gap | Phase 27: 27-UAT.md (7 pending scenarios) | deferred — DB encryption behavioral tests require live DB |
+| uat_gap | Phase 25: 25-HUMAN-UAT.md (2 pending scenarios) | automated (chaos lab) — closed in Phase 44 (PLAN 44-02); tests/test_kerberos_scanner.py::test_samba_dc_integration + tests/test_saml_scanner.py::test_chaos_lab_integration cover UAT-25 against kerberos + saml chaos lab profiles |
+| uat_gap | Phase 27: 27-HUMAN-UAT.md (1 pending scenario) | automated (chaos lab) — closed in Phase 44 (PLAN 44-01); tests/test_uat_db_integration.py covers PostgreSQL/MySQL ssl-off against database chaos lab |
+| uat_gap | Phase 27: 27-UAT.md (7 pending scenarios) | automated (chaos lab) — closed in Phase 44 (PLAN 44-01); tests/test_uat_db_integration.py covers all 7 behavioral scenarios against database chaos lab profile (PostgreSQL :25432, MySQL :23306) |
 | uat_gap | Phase 28: 28-HUMAN-UAT.md (3 pending scenarios) | partial — live S3/GCS bucket scan requires cloud credentials |
-| uat_gap | Phase 29: 29-UAT.md (10 pending scenarios) | testing — K8s secrets inspection requires live cluster |
-| uat_gap | Phase 30: 30-HUMAN-UAT.md (1 pending scenario) | partial — live Vault connector requires running Vault instance |
+| uat_gap | Phase 29: 29-UAT.md (10 pending scenarios) | cloud-only — closed in Phase 44 (D-01/D-02/D-03): EKS/GKE/AKS encryption detection requires cloud-managed control plane APIs not available in a local cluster (UAT-29-01 needs AWS EKS DescribeCluster encryptionConfig.keyArn; UAT-29-02 needs GCP databaseEncryption.state; UAT-29-03 needs Azure AKS securityProfile.azureKeyVaultKms + AAD RBAC). Scanner logic is covered by mock-based unit tests in test_k8s_connector.py. Per-scenario justification: see .planning/phases/44-uat-debt-automation/44-06-PLAN.md §phase_29_cloud_only_justification |
+| uat_gap | Phase 30: 30-HUMAN-UAT.md (1 pending scenario) | automated (chaos lab) — closed in Phase 44 (PLAN 44-03); tests/test_vault_connector.py::test_vault_live_uat_30_01_five_findings covers UAT-30-01 (5 findings) against vault chaos lab profile (vault-30 :28200) |
 | uat_gap | Phase 31: 31-HUMAN-UAT.md (4 pending scenarios) | partial — trend analysis requires prior scan history |
-| verification_gap | Phase 25: 25-VERIFICATION.md | human_needed — live identity scan (requires Docker) |
+| verification_gap | Phase 25: 25-VERIFICATION.md | automated (chaos lab) — closed in Phase 44 (PLAN 44-02); same chaos lab integration test coverage as Phase 25 HUMAN-UAT closure |
 | verification_gap | Phase 28: 28-VERIFICATION.md | human_needed — live object storage scan (requires cloud credentials) |
-| verification_gap | Phase 31: 31-VERIFICATION.md | human_needed — trend analysis UI requires running dashboard with scan history |
+| verification_gap | Phase 31: 31-VERIFICATION.md | automated (pytest) — closed in Phase 44 (PLAN 44-04); tests/test_dashboard_trends.py::test_uat_31_trends_two_sessions_flat_wire_format seeds two distinct sessions in UUID-named SQLite and asserts /api/trends flat wire format |
 
 ## Session Continuity
 
