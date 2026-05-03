@@ -907,7 +907,10 @@ Plans:
   2. User runs a full scan with identity/db/vault/motion extras absent and sees a `missing_extra` advisory finding in the report for each skipped scanner — no silent skips
   3. User runs `pip install quirk[all]` and all scanner extras install successfully; impacket is NOT in `[all]` — it stays in `[identity]` only to avoid the pyOpenSSL transitive conflict
   4. The advisory message for each unavailable scanner names the exact extra to install (e.g., "install quirk[identity] for Kerberos scanning")
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
+  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
+  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
 
 ### Phase 46: TLS Finding Gaps
 **Goal**: Users receive actionable security findings for expired certificates, self-signed certificates, untrusted-CA certificates, and weak RSA/EC keys — certificate defects that previously produced zero findings in the report
@@ -918,7 +921,10 @@ Plans:
   2. Scanning a TLS endpoint with an RSA key < 2048 bits produces a HIGH finding; scanning one with an EC key < 256 bits produces a HIGH finding
   3. When sslyze `CERTIFICATE_INFO` returns ERROR, the scanner falls back to the ssl_info path cleanly — no half-populated `CryptoEndpoint` with `cert_not_after = None` reaches the database
   4. The `tls-cert-defects` chaos lab profile is running and QUIRK scanning it produces all expected findings: expired cert CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, and RSA-1024 weak-key HIGH
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
+  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
+  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
 
 ### Phase 47: Nmap Discovery + Multi-Target Wizard
 **Goal**: Users can feed QUIRK comma-separated hosts, a target file, or a CIDR range, and optionally pre-discover open ports with nmap — enabling real enterprise 50-host+ scans without manual port enumeration
@@ -930,7 +936,10 @@ Plans:
   3. User enters a CIDR range (e.g., `192.0.2.0/24`) and QUIRK expands it via stdlib `ipaddress` and scans all resulting hosts
   4. User enables nmap discovery in the interactive wizard prompt; nmap runs with `--max-parallelism 100`; if nmap binary is absent, a clear warning is printed and scanning proceeds on default ports (no crash)
   5. User is warned before nmap invocation when `len(targets) × len(ports) > 10,000`; a malformed target or missing targets file produces a clear error message, not a silent failure or unhandled exception
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
+  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
+  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
 
 ### Phase 48: Rich Finding Context
 **Goal**: Every finding emitted by QUIRK carries a non-empty plain-English risk description and, where quantum-relevant, a FIPS 203/204/205 remediation path with NIST IR 8547 deprecation deadlines — with all stale "Kyber"/"Dilithium" terminology purged from the codebase
@@ -941,7 +950,10 @@ Plans:
   2. Every quantum-vulnerable finding in the report names the replacement algorithm using FIPS 203/204/205 designations only: ML-KEM, ML-DSA, or SLH-DSA — the strings "Kyber", "Dilithium", and "when standards are adopted" do not appear in any finding text
   3. Every quantum-vulnerable finding cites the NIST IR 8547 deprecation timeline: RSA/ECC deprecated 2030, disallowed 2035
   4. A CI test (grep-based gate) fails the build if "Kyber", "Dilithium", or "when standards are adopted" appear anywhere in `risk_engine.py` or `routes/scan.py`
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
+  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
+  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
 
 ### Phase 49: Compliance Mapping
 **Goal**: QUIRK findings are mapped to PCI-DSS 4.0.1, HIPAA 45 CFR, and FIPS 140-3 control references via a new `quirk/compliance/` module, and a "Compliance Summary" section appears in HTML/PDF reports — making QUIRK output directly usable as evidence in compliance assessments. Mappings include freshness metadata so they don't silently rot when regulators publish revisions
@@ -956,7 +968,10 @@ Plans:
   6. A unit test asserts every `COMPLIANCE_MAP` entry includes `version`, `last_verified`, and `source_url` keys; build fails if any entry is missing them
   7. A CI staleness check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before client-facing staleness
   8. `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` for operator pre-engagement verification
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
+  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
+  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
 
 ### Phase 50: Enterprise Documentation
 **Goal**: Enterprise customers can self-onboard QUIRK using two production-quality reference documents — an architecture reference and an operator's guide — both available in the repo and synced to the Obsidian vault. Operator's guide also documents the compliance map maintenance process so QUIRK's regulatory references stay current as standards evolve
