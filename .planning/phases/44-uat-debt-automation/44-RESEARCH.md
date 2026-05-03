@@ -696,7 +696,7 @@ The four bug fixes do not introduce new attack surface. The `ValueError` handlin
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **New test files vs. extending existing ones for identity (Phase 25)**
    - What we know: `test_kerberos_scanner.py:360` and `test_saml_scanner.py:366` have existing live_infra integration tests (`test_samba_dc_integration`, `test_chaos_lab_integration`) that already cover UAT-5-22 and UAT-5-21 respectively.

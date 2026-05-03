@@ -2,8 +2,8 @@
 phase: 44
 slug: uat-debt-automation
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-03
 ---
 
@@ -51,8 +51,8 @@ created: 2026-05-03
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_uat_db_integration.py` — new file stub with live_infra skip skeleton for Phase 27 DB UAT scenarios
-- [ ] `tests/skip_registry.py` — updated ALLOWED_SKIPS entries for all new live_infra tests
+- [x] `tests/test_uat_db_integration.py` — new file created in Plan 44-01 Task 1
+- [x] `tests/skip_registry.py` — ALLOWED_SKIPS entries added in Plans 44-01 Task 2 and 44-03 Task 2
 
 *All other infrastructure (pytest, fixtures, chaos lab profiles) already exists.*
 
@@ -87,11 +87,11 @@ created: 2026-05-03
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (test_uat_db_integration.py + skip_registry entries)
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-05-03

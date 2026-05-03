@@ -36,7 +36,7 @@ This phase does NOT add new scanner capability, new chaos lab profiles, or new c
   5. Phase 29 UAT (10 pending) — formally closed as `cloud-only`
   6. Phase 30 HUMAN-UAT (1 pending) — automated via `vault` chaos lab (UAT-30-01 already specifies this path)
   7. Phase 31 VERIFICATION — automated via pytest seeded-DB fixture against `/api/trends`
-- **D-08:** Phase 31 VERIFICATION automation uses the existing `conftest.py` `dashboard_client` fixture pattern — two pre-seeded `CryptoEndpoint` scan sessions in an in-memory SQLite DB, driving `GET /api/trends` and asserting the response shape matches the UAT-9-09/10 wire format.
+- **D-08:** Phase 31 VERIFICATION automation uses a **UUID-named shared-cache SQLite engine** (not the plain `dashboard_client` conftest fixture — that fixture does not expose an underlying session for direct seeding). Use the UUID pattern from `tests/test_identity_surface.py:565-598`: `sqlite:///file:{uuid}?mode=memory&cache=shared&uri=true`, seed two `CryptoEndpoint` scan sessions with distinct timestamps, override `get_db`, and drive `GET /api/trends` asserting the flat UAT-9-09/10 wire format.
 
 ### Phase 43 Open CR Findings
 - **D-09:** Fix the 4 **real bugs** identified in `43-REVIEW.md`:
