@@ -739,7 +739,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 41. CI Stability & Scanner Robustness | v4.5 | 6/7 | In Progress|  |
 | 42. CBOM Correctness Audit | v4.5 | 5/6 | In Progress|  |
 | 43. Dashboard Polish | v4.5 | 6/6 | Complete    | 2026-05-02 |
-| 44. UAT Debt Automation | v4.5 | 6/6 | Complete   | 2026-05-03 |
+| 44. UAT Debt Automation | v4.5 | 6/6 | Complete    | 2026-05-03 |
 
 *Phase 36 wave_0_complete flip deferred (DEF-v4.4-01) — gated on SAML scan-window regression fix.
 

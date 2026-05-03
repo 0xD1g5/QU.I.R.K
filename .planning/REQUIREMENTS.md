@@ -66,10 +66,10 @@ Bring `quantum-chaos-enterprise-lab/` up to date with everything that shipped in
 
 Burn down the 14 carry-over UAT/verification gaps where automation is feasible without live cloud credentials.
 
-- [ ] **UAT-01**: Phase 27 DB UAT scenarios run against the existing `database` chaos lab profile in CI — previously deferred items move from `pending`/`partial` to `passing` where the chaos lab covers the scenario.
-- [ ] **UAT-02**: Phase 29 K8s UAT scenarios run against a minikube (or kind) fixture in CI — previously deferred items move to `passing` where the local cluster can simulate the case; cloud-managed encryption (EKS/GKE/AKS) cases remain documented as cloud-only.
-- [ ] **UAT-03**: Phase 25 (identity) and Phase 30 (Vault) UAT scenarios that already have chaos lab profiles are re-run and updated; failing scenarios get fixes or explicit "cloud-only" justification.
-- [ ] **UAT-04**: The `## Deferred Items` table in `STATE.md` is updated to reflect what was automated, what remains cloud-bound, and what was closed — net reduction of at least 50% of the 14 carry-over items.
+- [x] **UAT-01**: Phase 27 DB UAT scenarios run against the existing `database` chaos lab profile in CI — previously deferred items move from `pending`/`partial` to `passing` where the chaos lab covers the scenario.
+- [x] **UAT-02**: Phase 29 K8s UAT scenarios run against a minikube (or kind) fixture in CI — previously deferred items move to `passing` where the local cluster can simulate the case; cloud-managed encryption (EKS/GKE/AKS) cases remain documented as cloud-only.
+- [x] **UAT-03**: Phase 25 (identity) and Phase 30 (Vault) UAT scenarios that already have chaos lab profiles are re-run and updated; failing scenarios get fixes or explicit "cloud-only" justification.
+- [x] **UAT-04**: The `## Deferred Items` table in `STATE.md` is updated to reflect what was automated, what remains cloud-bound, and what was closed — net reduction of at least 50% of the 14 carry-over items.
 
 ---
 
@@ -125,10 +125,10 @@ Requirements → phases mapping filled in by roadmapper 2026-04-29.
 | LAB-02 | Phase 40 | Complete |
 | LAB-03 | Phase 40 | Complete |
 | LAB-04 | Phase 40 | Complete |
-| UAT-01 | Phase 44 | pending |
-| UAT-02 | Phase 44 | pending |
-| UAT-03 | Phase 44 | pending |
-| UAT-04 | Phase 44 | pending |
+| UAT-01 | Phase 44 | Complete |
+| UAT-02 | Phase 44 | Complete |
+| UAT-03 | Phase 44 | Complete |
+| UAT-04 | Phase 44 | Complete |
 
 ---
 *Last updated: 2026-04-29 — v4.5 milestone initialized*
