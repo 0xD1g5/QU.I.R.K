@@ -52,6 +52,7 @@ class FindingItem(BaseModel):
     remediation: Optional[str] = None
     quantum_risk: Optional[str] = None   # quantum-safety label
     source: Optional[str] = None        # scanner type
+    category: Optional[str] = None      # Phase 45 — coverage_gap visibility (Q2)
 
 
 # ---- Certificates ----
