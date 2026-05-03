@@ -69,15 +69,15 @@ function DatabaseTable({ findings }: { findings: DarFinding[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs font-semibold">Engine</TableHead>
-              <TableHead className="text-xs font-semibold">Host</TableHead>
-              <TableHead className="text-xs font-semibold">Port</TableHead>
-              <TableHead className="text-xs font-semibold">Severity</TableHead>
-              <TableHead className="text-xs font-semibold">Title</TableHead>
-              <TableHead className="text-xs font-semibold">Encryption at Rest</TableHead>
-              <TableHead className="text-xs font-semibold">TLS in Transit</TableHead>
-              <TableHead className="text-xs font-semibold">Quantum Risk</TableHead>
-              <TableHead className="text-xs font-semibold">Remediation</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Engine</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Host</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Port</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Severity</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Title</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Encryption at Rest</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">TLS in Transit</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Quantum Risk</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Remediation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -117,16 +117,16 @@ function ObjectStorageTable({ findings }: { findings: DarFinding[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs font-semibold">Provider</TableHead>
-              <TableHead className="text-xs font-semibold">Host</TableHead>
-              <TableHead className="text-xs font-semibold">Severity</TableHead>
-              <TableHead className="text-xs font-semibold">Title</TableHead>
-              <TableHead className="text-xs font-semibold">Encryption Mode</TableHead>
-              <TableHead className="text-xs font-semibold">Public Access</TableHead>
-              <TableHead className="text-xs font-semibold">KMS Key</TableHead>
-              <TableHead className="text-xs font-semibold">Versioning</TableHead>
-              <TableHead className="text-xs font-semibold">Quantum Risk</TableHead>
-              <TableHead className="text-xs font-semibold">Remediation</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Provider</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Host</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Severity</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Title</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Encryption Mode</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Public Access</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">KMS Key</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Versioning</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Quantum Risk</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Remediation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -177,14 +177,14 @@ function KubernetesTable({ findings }: { findings: DarFinding[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs font-semibold">Namespace</TableHead>
-              <TableHead className="text-xs font-semibold">Host</TableHead>
-              <TableHead className="text-xs font-semibold">Severity</TableHead>
-              <TableHead className="text-xs font-semibold">Title</TableHead>
-              <TableHead className="text-xs font-semibold">Secret Type</TableHead>
-              <TableHead className="text-xs font-semibold">Encryption Provider</TableHead>
-              <TableHead className="text-xs font-semibold">Quantum Risk</TableHead>
-              <TableHead className="text-xs font-semibold">Remediation</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Namespace</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Host</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Severity</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Title</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Secret Type</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Encryption Provider</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Quantum Risk</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Remediation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -215,14 +215,14 @@ function VaultTable({ findings }: { findings: DarFinding[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs font-semibold">Host</TableHead>
-              <TableHead className="text-xs font-semibold">Severity</TableHead>
-              <TableHead className="text-xs font-semibold">Title</TableHead>
-              <TableHead className="text-xs font-semibold">Mount Type</TableHead>
-              <TableHead className="text-xs font-semibold">Seal Type</TableHead>
-              <TableHead className="text-xs font-semibold">Auto-Unseal</TableHead>
-              <TableHead className="text-xs font-semibold">Quantum Risk</TableHead>
-              <TableHead className="text-xs font-semibold">Remediation</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Host</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Severity</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Title</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Mount Type</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Seal Type</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Auto-Unseal</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Quantum Risk</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Remediation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
