@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.5
 milestone_name: Reliability & Gap Closure
-status: milestone_complete
+status: completed
 stopped_at: Phase 44 context gathered
-last_updated: "2026-05-03T19:10:40.839Z"
-last_activity: 2026-05-03 -- Phase 44 execution started
+last_updated: "2026-05-03T20:20:10.764Z"
+last_activity: 2026-05-03
 progress:
   total_phases: 7
   completed_phases: 7
   total_plans: 40
-  completed_plans: 34
+  completed_plans: 40
   percent: 100
 ---
 
@@ -139,6 +139,14 @@ None at roadmap creation.
 None at roadmap creation.
 
 ## Deferred Items
+
+Items acknowledged and deferred at v4.5 milestone close on 2026-05-03:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Phase 43: 43-HUMAN-UAT.md (2 pending) — loading-state first paint + keyboard focus ring visibility | deferred — require live browser session; cannot automate without E2E test infra |
+| uat_gap | Phase 44: 44-HUMAN-UAT.md (1 pending) — Phase 29 K8s cloud-only justification review | deferred — human confirmation needed; justification document exists at 44-06-PLAN.md §phase_29_cloud_only_justification |
+| seed | SEED-001-backlog-rollout-phase-plan [dormant] — Create prioritized phase rollout plan from backlog items | dormant — carry to v4.6 planning |
 
 Items deferred at v4.4 close on 2026-04-29 (closed in v4.5 Phase 38 on 2026-04-29):
 

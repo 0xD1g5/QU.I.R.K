@@ -200,6 +200,56 @@
 
 ---
 
+## Milestone: v4.5 — Reliability & Gap Closure
+
+**Shipped:** 2026-05-03
+**Phases:** 7 (38–44) | **Plans:** 40
+
+### What Was Built
+
+- Phase 38: 5-min SESSION_BRACKET fix for `/api/scan/latest` implicit-latest branch + wave_0_complete flip — closed both v4.4 carry-over defects
+- Phase 39: Data at Rest React tab — DarFinding Pydantic model + 4 category tables (DB/ObjectStorage/K8s/Vault) — shipped deferred DASH-05
+- Phase 40: `_derive_all_profiles()` runtime parser for lab.sh + `expected_results_v4.md` 13-profile oracle + chaos-lab.md 8 profile sections
+- Phase 41: TimeoutsCfg/RetryCfg sub-tables, `_wrapped_phase` BaseException helper, scan_error_category column, zero code-reason skips, < 60s default suite
+- Phase 42: CycloneDX 1.6 schema gate across 18 profiles; classifier coverage gate; MOTION_PLAINTEXT_PROTOCOLS / DAR_SKIP_PROTOCOLS constants; parametrized skip-list tests
+- Phase 43: Zero browser console errors; EmptyStateCard/PageSpinner; axe-core GHA workflow; WCAG AA focus rings; DOM-sentinel PDF gate
+- Phase 44: DB/Vault/identity UAT chaos lab integration tests; Phase 31 seeded-DB /api/trends test; 7 of 14 STATE.md carry-over gaps closed
+
+### What Worked
+
+- **Structural drift elimination over discipline** — `_derive_all_profiles()` reading docker-compose.yml at runtime is a permanent fix to a recurring 3x drift problem; better than asking humans to keep a list in sync
+- **Parametrized test coverage of skip lists** — extracting MOTION_PLAINTEXT_PROTOCOLS and DAR_SKIP_PROTOCOLS as constants and testing them parametrically caught previously invisible edge cases
+- **DOM sentinel for PDF** — waiting for `body[data-ready]` attribute instead of a fixed sleep is the correct asynchronous handshake pattern; discovered organically
+- **UAT automation via chaos lab** — closing 7 carry-over items by wiring existing chaos lab profiles to pytest integration tests (rather than one-off scripts) was high-leverage
+
+### What Was Inefficient
+
+- REQUIREMENTS.md checkboxes for GAP-03, GAP-04, CBOM-03 were not updated when the work landed in their respective phases — discovered at milestone close; cost minor cleanup time
+- Progress table in ROADMAP.md drifted (phases 38/40/41/42 showed wrong plan counts) — could be fixed automatically when plans complete
+- v4.4 RETROSPECTIVE.md entry was never written — skipped gap carried to v4.5 close
+
+### Patterns Established
+
+- `_wrapped_phase` pattern: every scanner phase in run_scan.py should use the BaseException helper — mandatory for all future scanner additions
+- Chaos lab UAT automation: when a manual UAT item exists and a chaos lab profile covers it, write an integration pytest test against the profile rather than leaving it as human-UAT
+- CycloneDX validation gate: schema validation is now part of CI; new CBOM additions must not introduce schema violations
+- DOM-sentinel pattern for async UI/PDF testing: set `body[data-ready]` in React after data loads; wait for it in Playwright
+
+### Key Lessons
+
+1. **Drift is structural, not discipline** — any list that humans must keep in sync with a system file will drift; generate it from the system file at runtime instead
+2. **UAT debt accumulates into a milestone-scale task** — 14 carry-over items from v4.2/v4.3 required a full phase (44) to address; keep UAT debt under 5 open items per milestone
+3. **Parametrize what you test, not what you eyeball** — skip lists and protocol labels are logic that can be wrong silently without parametrized coverage
+4. **Schema validation in CI, not just "it looks right"** — CBOM output was spec-valid but this was only verified locally until Phase 42; gate it from the start of any schema-producing feature
+
+### Cost Observations
+
+- Sessions: ~212 commits across 5 days
+- Model: Claude Sonnet 4.x (mixed)
+- Notable: Phase 41 (7 plans) was the heaviest single phase; systematic robustness work benefits from tight plan decomposition
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -210,6 +260,8 @@
 | v4.1 Foundation Polish | 5 | 10 | Correctness-only milestone — no new features; 22/22 requirements satisfied; audit-gap-closure pattern validated at small scale |
 | v4.2 Identity Crypto | 8 | 14 | First major scanner expansion since v3.9; 3-phase gap closure sweep; shared session_start contract established; audit caught HIGH-severity ISSUE-3 before ship |
 | v4.3 Data at Rest | 7 | 24 | Heaviest infrastructure milestone — 6 scanner surfaces; CRITICAL PATH annotation pattern established; dar_ 5th subscore prefix; GCS sentinel reuse; carry-over phase pre-planned at roadmap creation |
+| v4.4 Data in Motion | 6 | 33 | First motion-coverage milestone — email + broker TLS, 6th subscore, motion CBOM; meta-extra pattern `[motion]`; 18-test Nyquist coverage module; CHANGELOG.md introduced; retrospective entry skipped at close |
+| v4.5 Reliability & Gap Closure | 7 | 40 | First reliability-only milestone — no new scanner surface; structural drift fixes (runtime profile parser, _wrapped_phase, schema gate); 7/14 UAT debt automated; test count: 662→718 |
 
 ### Cumulative Quality
 
@@ -219,6 +271,8 @@
 | v4.1 | 233 | 233 tests green at ship; all 14 VALIDATION.md files updated to nyquist_compliant: true; zero known tech debt |
 | v4.2 | 352 | 352 tests green at ship; 7/7 Nyquist VALIDATION.md files compliant; 2 MEDIUM gaps deferred (Phase 25 in v4.3) |
 | v4.3 | 504 | 504 tests collected at ship; tech_debt audit status (16 deferred items, all live-env or minor structural); __init__.py version skew fixed at archive time |
+| v4.4 | 662 | 662 tests at ship; all Nyquist VALIDATION.md compliant except Phase 36 (DEF-v4.4-01, closed in v4.5) |
+| v4.5 | 718 | 718 tests at ship; all Nyquist VALIDATION.md compliant; 7 carry-over UAT gaps remain (cloud-only or browser-only) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -230,3 +284,6 @@
 6. Shared session_start is an integration contract, not a fix — future scanners added to run_scan.py must accept and use it from Phase 1
 7. Column-level exit criteria: a new ORM column that is always NULL is not implemented — exit criteria must include non-null verification after a real scan run
 8. Version bump (__init__.py) is a required milestone task, not a milestone-close finding — add to every final phase's exit checklist
+9. Drift is structural, not discipline — any list humans must keep in sync with a system file will drift; generate it from the file at runtime instead
+10. UAT debt under 5 open items per milestone — beyond that, it requires a dedicated closing phase to address systematically
+11. Parametrize skip-list coverage from the first day — skip logic that isn't tested is invisible tech debt

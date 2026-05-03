@@ -1,5 +1,46 @@
 # Milestones
 
+## v4.5 Reliability & Gap Closure (Shipped: 2026-05-03)
+
+**Phases completed:** 7 phases, 40 plans, 69 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- Typed DarFinding Pydantic model + _derive_dar_findings() projection with 7-protocol dispatch, wired into ScanLatestResponse — all 8 Wave 0 tests GREEN
+- lab.sh ALL_PROFILES replaced with _derive_all_profiles() bash parser reading docker-compose.yml at runtime, adding profiles subcommand, covering all 18 profiles including v4.3+v4.4 additions
+- One-liner:
+- Six category-tuned oracle sections (database, storage-s3, vault, storage legacy, email, broker) appended to expected_results_v4.md using verbatim scanner output strings, completing the 19-profile v4 oracle through v4.4
+- One-liner:
+- One-liner:
+- Pytest config with slow-marker exclusion, AST-walk skip-registry gate, scan_error_category column with idempotent migration, and 9 xfail stubs that downstream plans turn green.
+- Canonical [scan.timeouts] / [scan.retry] sub-tables landed on ScanCfg with warn-on-read deprecation aliases for the four legacy flat fields; config_from_dict loads sub-tables and falls back to legacy flat keys when no sub-table is present.
+- BACK-45 cfg.scan mutation pattern eliminated; TLS/SSH/db/vault/jwt/container/source/email/broker scanners now read timeouts from the canonical cfg.scan.timeouts sub-table; run_scan.py:743 broker AttributeError fixed; ROBUST-02 TLS-timeout test green.
+- `_wrapped_phase` helper added to run_scan.py with BaseException protection (re-raises KeyboardInterrupt/SystemExit, captures everything else as `scan_error_category='exception'`); broker_scanner and email_scanner emit canonical D-12 advisory + `scan_error_category='missing_extra'` row when the [motion] extra is absent; trends.py cur_err/prev_err exclude `missing_extra` so absent extras never register as regressions; 4 ROBUST-01/03 xfail stubs flipped to real assertions plus one new D-15 trends test — all green.
+- Deletes 13 stale code-reason skips, converts defensive skips to pytest.fail, marks 9 slow tests, and turns the Plan 01 skip-registry meta-gate green — default `pytest` now runs in ~6s with zero stale skip markers.
+- Consultant-facing timeout/retry documentation landed (configuration.md sub-table reference + D-10 upper-bound formula + ROBUST-04 audit doc), and the Phase 40 carry-over `lab.sh` profile-sweep gap is closed on both `down` and `reset` arms.
+- Phase 41 closed across all four artifacts: UAT-SERIES.md gained UAT-41-01..04 entries (stderr advisory, upper-bound formula, lab.sh profile sweep, 60s budget); vault UAT-Series.md mirror synced; vault Phase-41 phase note created with status: complete sourcing all 6 prior plan SUMMARYs; ROADMAP.md Phase 41 checkbox flipped to [x]; STATE.md updated with Phase 41 close-out decisions and progress 4/7 phases (22/22 plans, 100%).
+- 1. [Rule 3 — Blocker] Added `tests/__init__.py` to make `tests` a real package
+- 3 shape-golden synthesizers
+- 1. [Rule 3 — Blocking] Added `pythonpath = ["."]` to `[tool.pytest.ini_options]`
+- Vault UAT mirror
+- 1. [Rule 1 - Bug] Corrected trends API path in fixture middleware
+- Sidebar Link primitives now receive visible keyboard focus rings via Tailwind focus-visible utilities; axe color-contrast audit confirmed zero new violations against the seeded fixture baseline.
+- 1. [Rule 1 - Bug] Fixed Cytoscape HSL syntax error in roadmap.tsx
+- DOM sentinel pattern closes UAT Gap 2: print.tsx sets `body[data-ready]` after data loads; pdf.py waits for that attribute before calling `page.pdf()`
+- 1. [Rule 1 - Bug] Fixed pre-existing skip_registry drift
+- One-liner:
+- 1. [Rule 1 - Bug] Used correct scan_vault_targets signature
+- One-liner:
+- One-liner:
+- 7 of 14 deferred UAT/VERIFICATION items closed in STATE.md via chaos lab automation and pytest tests, satisfying UAT-02 (Phase 29 cloud-only rationale) and UAT-04 (>=50% net reduction)
+
+---
+
 ## v4.4 Data in Motion (Shipped: 2026-04-29)
 
 **Phases completed:** 6 phases (32–37), 33 plans

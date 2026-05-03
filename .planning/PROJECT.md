@@ -91,6 +91,16 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Dashboard Motion tab — `/motion` React route with email per-port table + STARTTLS warnings, broker per-family grouped sections + plaintext flags; "Data in Motion" 6th `ScoreGauge`; `motion_findings` field on `/api/scan/latest` — Phase 36 *(wave_0_complete deferred — DEF-v4.4-01)*
 - ✓ v4.4.0 release artifacts — version locked across 6 surfaces by `tests/test_version.py`; `[motion]` meta-extra over `[email]+[broker]+[kafka]`; INFRA-03 18-test Nyquist coverage module; first top-level `CHANGELOG.md` + `docs/release-notes/4.4.0.md` — Phase 37
 
+**v4.5 Reliability & Gap Closure (Phases 38–44) — SHIPPED 2026-05-03**
+- ✓ Identity API regression fixed — 5-min backward SESSION_BRACKET restores SAML/OIDC in `/api/scan/latest`; DEF-v4.4-02 closed — Phase 38
+- ✓ Phase 36 wave_0_complete flip — 36-VALIDATION.md restored from git history, `wave_0_complete: true`; DEF-v4.4-01 closed — Phase 38
+- ✓ Data at Rest dashboard tab — 4 per-category tables (Database/ObjectStorage/Kubernetes/Vault) wired to DarFinding Pydantic model; DASH-05 closed — Phase 39
+- ✓ Chaos lab parity — `_derive_all_profiles()` reads docker-compose.yml at runtime (zero-drift); `expected_results_v4.md` oracle for 13 listener profiles; docs/chaos-lab.md 8 new profile sections — Phase 40
+- ✓ CI stability + scanner robustness — TimeoutsCfg/RetryCfg sub-tables on ScanCfg; `_wrapped_phase` BaseException wrapper; `scan_error_category` column; zero code-reason skips; `pytest` default run < 60s — Phase 41
+- ✓ CBOM correctness — CycloneDX 1.6 schema validation gate for all 18 profiles; classifier coverage report (no unknown fallbacks); Pass-2/3 skip-list parametrized tests; MOTION_PLAINTEXT_PROTOCOLS + DAR_SKIP_PROTOCOLS constants — Phase 42
+- ✓ Dashboard WCAG AA — zero browser console errors across all routes; visible focus rings; keyboard navigation; semantic heading order; axe-core baseline captured in GHA workflow — Phase 43
+- ✓ UAT debt automation — Phase 27 DB integration tests (PostgreSQL/MySQL vs chaos lab); Phase 25/30 traceability annotations + Vault UAT-30-01 live test; Phase 31 seeded-DB /api/trends test; 7 of 14 carry-over items closed — Phase 44
+
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
 - [ ] Scan job queue (Celery + Redis or similar)
@@ -109,46 +119,13 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.5 Reliability & Gap Closure
+## Current State: v4.5.0 Shipped — Planning Next Milestone
 
-**Goal:** Close v4.4 deferred items, harden scanner/CBOM/dashboard correctness, and automate the long-tail UAT debt — putting QU.I.R.K. in solid shape before the next capability and performance milestones.
-
-**Target features:**
-
-Gap closure
-- Fix DEF-v4.4-02: restore SAML/OIDC entries in `/api/scan/latest` `identity_findings` (ISSUE-3 from Phase 24)
-- Flip DEF-v4.4-01: Phase 36 `wave_0_complete` → `true` once the SAML fix lands
-- Ship DASH-05: Data at Rest dashboard tab (deferred from Phase 27)
-
-Reliability hardening
-- Test flakiness / CI stability — resolve the deferred SAML scan-window test, eliminate intermittents, lock CI green
-- Scanner robustness — graceful degradation under partial failures, missing extras, slow targets; timeout/retry audit across all scanners
-- CBOM correctness audit — CycloneDX 1.6 spec validation, classifier coverage, golden-snapshot drift review
-- Dashboard polish — console errors, accessibility, loading states across `/motion`, `/trends`, `/findings`
-
-UAT debt burndown
-- Automate where possible — CI-runnable Docker fixtures for items that don't truly need cloud creds (Phase 27 DB, Phase 29 minikube, etc.); cloud-bound items remain deferred
-
-**Phase numbering:** continues from Phase 38 (default). v4.4 ended at Phase 37.
-
-**Out of scope (this milestone):** new scanners, new cloud connectors, performance/scale work, SaaS, CBOM v2 schema work, mobile.
-
-## Current State: v4.4.0 Shipped — v4.5 Milestone Complete
-
-v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The cryptographic inventory now covers six pillars: TLS, SSH, API, Identity, Data at Rest, and Data in Motion. Email and broker TLS posture flow through scanning → intelligence → CBOM → dashboard end-to-end.
-
-**v4.5 Reliability & Gap Closure — all 7 phases complete (2026-05-03):**
-- ✓ DEF-v4.4-01 — Phase 36 `wave_0_complete: false` flip resolved (Phase 38)
-- ✓ DEF-v4.4-02 — SAML/OIDC identity findings wired to API (Phase 38)
-- ✓ DASH-05 — Data at Rest dashboard tab shipped (Phase 39)
-- ✓ Chaos lab parity + CI stability (Phases 40–41)
-- ✓ CBOM correctness audit (Phase 42)
-- ✓ Dashboard polish + a11y (Phase 43)
-- ✓ UAT debt automation — 7 of 14 carry-over gaps closed; 4 bug fixes from Phase 43 review (Phase 44)
+v4.5 "Reliability & Gap Closure" shipped 2026-05-03 (tag `v4.5.0`). All v4.4 deferred items closed. The scanner is now hardened with consistent timeout/retry policy, CI runs green in under 60 seconds, CBOM validates against CycloneDX 1.6 schema, and the dashboard meets WCAG AA baseline. 7 of 14 pre-v4.5 UAT carry-over gaps were automated via chaos lab integration tests. The product is in solid shape for the next capability milestone.
 
 ## Context
 
-- **Current version**: v4.4.0 (shipped 2026-04-29); v4.3.0 shipped 2026-04-26
+- **Current version**: v4.5.0 (shipped 2026-05-03); v4.4.0 shipped 2026-04-29
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
@@ -157,9 +134,9 @@ v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The c
 - **Delivery model**: `pip install quirk[motion]` (single happy path) + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
 - **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML); 6-pillar quantum-readiness scoring with NIST PQC classification; identity protocol scanning (Kerberos/SAML/DNSSEC); data-at-rest coverage (databases, object storage, K8s secrets, Vault); data-in-motion coverage (email + broker TLS + cloud queues); chaos lab for client-side scanner validation; polished HTML/PDF reports
-- **Test coverage**: 662 tests passing (pytest); all v4.4 Nyquist VALIDATION.md files declare `nyquist_compliant: true` and `wave_0_complete: true` (except Phase 36 — DEF-v4.4-01)
-- **Known tech debt at v4.4 close**: SAML scan-window regression (DEF-v4.4-02), Phase 36 `wave_0_complete` gating (DEF-v4.4-01), 14 pre-v4.4 carry-over UAT/verification gaps in STATE.md `## Deferred Items`
-- **v4.4 milestone shipped** (2026-04-29): 6 phases (32–37), 33 plans — email + broker TLS scanning, motion intelligence, motion CBOM, dashboard Motion tab, v4.4.0 release artifacts
+- **Test coverage**: 718 tests passing (pytest); all Nyquist VALIDATION.md files declare `nyquist_compliant: true` and `wave_0_complete: true`
+- **Known tech debt at v4.5 close**: 7 carry-over UAT items remain — Phase 43 browser UAT (loading-state/focus-ring, requires live browser), Phase 44 K8s cloud-only review (human sign-off), Phase 28/31 cloud-credential items; see STATE.md `## Deferred Items`
+- **v4.5 milestone shipped** (2026-05-03): 7 phases (38–44), 40 plans — identity API fix, DAR tab, chaos lab parity, CI/scanner robustness, CBOM correctness, dashboard a11y, UAT automation
 
 ## Constraints
 
@@ -192,9 +169,14 @@ v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The c
 | Azure Service Bus + AWS SQS dispatched through `scan_rabbitmq_targets` | Cloud broker probes share AMQPS/HTTPS-only TLS posture path with on-prem RabbitMQ; separate top-level functions would duplicate code | ✓ Good — `azure_namespaces=`/`sqs_regions=` parameters route to the same probe pipeline; protocol labels (`AMQPS/Azure-ServiceBus`, `HTTPS/AWS-SQS`) distinguish provenance |
 | `data_in_motion` legacy-scan backward compatibility (v4.4 D-12) | Re-loading a v4.3 scan in v4.4 should not artificially deflate the score — pre-Phase-34 scans have no `motion_*` keys | ✓ Good — absence of `motion_*` keys is detected and treated as "full credit" rather than "zero findings" |
 | No git-tag and no `/gsd-complete-milestone` inside Phase 37 (D-10/D-11) | Tagging and milestone close are visible-to-others actions; reserve them for explicit user trigger after Phase 37 lands | ✓ Good — Phase 37 closed cleanly, then user triggered tag and `/gsd-complete-milestone v4.4` separately |
+| `_derive_all_profiles()` reads docker-compose.yml at runtime (v4.5 Phase 40) | Hardcoded ALL_PROFILES list in lab.sh drifted 3 times in one milestone — structural fix more durable than discipline | ✓ Good — profile names are now always in sync; grep pattern extended to `[a-zA-Z0-9_-]` to handle uppercase (phaseA) profile names |
+| `_wrapped_phase` BaseException helper in run_scan.py (v4.5 Phase 41) | Per-scanner try/except was inconsistent — 12 scanner phases, 12 different patterns; single helper enforces D-14 uniformly | ✓ Good — KeyboardInterrupt/SystemExit re-raised; all other exceptions captured as `scan_error_category='exception'`; trends.py excludes `missing_extra` from regression counts |
+| TimeoutsCfg/RetryCfg as ScanCfg sub-tables with deprecation aliases (v4.5 Phase 41) | 4 flat timeout fields on ScanCfg with no single source of truth; BACK-45 cfg.scan mutation spread across callers | ✓ Good — `@dataclass(init=False)` + custom `__init__` makes legacy kwarg routing self-documenting; BACK-45 dissolved by passing explicit kwargs |
+| CycloneDX 1.6 schema validation in CI via `[validation]` umbrella extra (v4.5 Phase 42) | Schema validation was missing — silent output drift between releases; `jsonschema` + `lxml` already present, gating was the gap | ✓ Good — per-profile JSON+XML validated in pytest; docker-compose drift sentinel added to catch profile-name changes without oracle update |
+| MOTION_PLAINTEXT_PROTOCOLS + DAR_SKIP_PROTOCOLS as module-level frozensets (v4.5 Phase 42) | Duplicated inline sets across Pass-2/3 skip logic were invisible to parametrized testing | ✓ Good — constants extracted; skip-list parametrized unit tests cover all 14 motion labels and 7 DAR protocols |
 
 ---
-*Last updated: 2026-05-03 — v4.5 Reliability & Gap Closure milestone complete (Phase 44); 7/14 carry-over UAT gaps closed as automated tests, 4 bug fixes applied, STATE.md Deferred Items table updated*
+*Last updated: 2026-05-03 — v4.5 Reliability & Gap Closure milestone shipped; full evolution review complete*
 
 ## Evolution
 
