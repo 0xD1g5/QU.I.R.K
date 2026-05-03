@@ -42,24 +42,33 @@ def export_pdf() -> Response:
             media_type="application/json",
         )
 
-    port = int(os.environ.get("QUIRK_SERVE_PORT", "8512"))
+    try:
+        port = int(os.environ.get("QUIRK_SERVE_PORT", "8512"))
+    except ValueError:
+        return Response(
+            content=json.dumps({"detail": "QUIRK_SERVE_PORT is not a valid integer."}).encode(),
+            status_code=500,
+            media_type="application/json",
+        )
     print_url = f"http://127.0.0.1:{port}/print"
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            context = browser.new_context()
-            page = context.new_page()
+            try:
+                context = browser.new_context()
+                page = context.new_page()
 
-            page.goto(print_url, wait_until="networkidle", timeout=30_000)
-            page.wait_for_selector('body[data-ready="true"]', timeout=15_000)
+                page.goto(print_url, wait_until="networkidle", timeout=30_000)
+                page.wait_for_selector('body[data-ready="true"]', timeout=15_000)
 
-            pdf_bytes = page.pdf(
-                format="A4",
-                print_background=True,
-                margin={"top": "16mm", "bottom": "16mm", "left": "12mm", "right": "12mm"},
-            )
-            browser.close()
+                pdf_bytes = page.pdf(
+                    format="A4",
+                    print_background=True,
+                    margin={"top": "16mm", "bottom": "16mm", "left": "12mm", "right": "12mm"},
+                )
+            finally:
+                browser.close()
 
         return Response(
             content=pdf_bytes,
