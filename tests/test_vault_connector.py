@@ -437,3 +437,68 @@ def test_dat_scan_json_populated_on_every_vault_endpoint():
         # Must be valid JSON
         import json as _json
         _json.loads(ep.dat_scan_json)
+
+
+# ---------------------------------------------------------------------------
+# Section: Phase 30 / UAT-30-01 Live Integration (SKIPPED unless env var set)
+# ---------------------------------------------------------------------------
+# Closes Phase 30 HUMAN-UAT (1 pending) — see .planning/STATE.md Deferred Items.
+# Run locally with:
+#   cd quantum-chaos-enterprise-lab && ./lab.sh up vault
+#   QUIRK_VAULT_INTEGRATION=1 python -m pytest tests/test_vault_connector.py::test_vault_live_uat_30_01_five_findings -v
+
+import os as _os_uat
+import pytest as _pytest_uat
+
+
+@_pytest_uat.mark.slow
+@_pytest_uat.mark.skipif(
+    not _os_uat.environ.get("QUIRK_VAULT_INTEGRATION"),
+    reason="Set QUIRK_VAULT_INTEGRATION=1 and start `docker compose --profile vault up -d`",
+)
+def test_vault_live_uat_30_01_five_findings():
+    """UAT-30-01: vault-30 chaos lab (port 28200, root token) produces 5 expected findings.
+
+    Pitfall 3: this test MUST point at port 28200 (vault-30, image 1.17), NOT
+    20009 (legacy storage-profile vault, image 1.15) — the seeded state differs.
+    """
+    from quirk.scanner.vault_connector import scan_vault_targets
+
+    results = scan_vault_targets(
+        vault_addr="http://localhost:28200",
+        token="root",
+    )
+
+    assert len(results) >= 5, (
+        f"Expected >=5 vault findings (UAT-30-01); got {len(results)}: "
+        f"{[(r.service_detail, r.severity) for r in results]}"
+    )
+
+    details = [(r.service_detail or "", r.severity) for r in results]
+
+    # Finding 2: transit exportable RSA-2048 -> MEDIUM
+    assert any("transit" in d.lower() and "exportable" in d.lower() and sev == "MEDIUM"
+               for d, sev in details), (
+        f"Missing transit/rsa-2048-exportable MEDIUM finding; got: {details}"
+    )
+
+    # Finding 3: PKI RSA-2048 root CA -> HIGH
+    assert any("pki" in d.lower() and sev == "HIGH" for d, sev in details), (
+        f"Missing PKI HIGH finding; got: {details}"
+    )
+
+    # Finding 4: auth/token -> HIGH
+    assert any("token" in d.lower() and sev == "HIGH" for d, sev in details), (
+        f"Missing auth/token HIGH finding; got: {details}"
+    )
+
+    # Finding 5: auth/userpass -> MEDIUM
+    assert any("userpass" in d.lower() and sev == "MEDIUM" for d, sev in details), (
+        f"Missing auth/userpass MEDIUM finding; got: {details}"
+    )
+
+    # dar_vault_weak_count == 2 (HIGH-only) per expected_results_v4.md
+    high_count = sum(1 for _, sev in details if sev == "HIGH")
+    assert high_count >= 2, (
+        f"Expected >=2 HIGH vault findings (dar_vault_weak_count==2); got {high_count}: {details}"
+    )
