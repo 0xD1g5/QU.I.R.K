@@ -739,7 +739,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 41. CI Stability & Scanner Robustness | v4.5 | 6/7 | In Progress|  |
 | 42. CBOM Correctness Audit | v4.5 | 5/6 | In Progress|  |
 | 43. Dashboard Polish | v4.5 | 6/6 | Complete    | 2026-05-02 |
-| 44. UAT Debt Automation | v4.5 | 5/6 | In Progress|  |
+| 44. UAT Debt Automation | v4.5 | 6/6 | Complete   | 2026-05-03 |
 
 *Phase 36 wave_0_complete flip deferred (DEF-v4.4-01) — gated on SAML scan-window regression fix.
 
@@ -753,7 +753,7 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 - [x] **Phase 41: CI Stability & Scanner Robustness** - Lock CI green (zero deferred tests), harden all scanners against missing extras/timeouts/unexpected exceptions, document consistent timeout/retry policy (completed 2026-04-29)
 - [x] **Phase 42: CBOM Correctness Audit** - Validate CBOM JSON+XML against CycloneDX 1.6 spec, close classifier unknown-fallback gaps, review golden snapshot drift, unit-test Pass-2/3 skip lists (completed 2026-04-30)
 - [x] **Phase 43: Dashboard Polish** - Eliminate browser console errors and React warnings across all routes, add explicit loading/empty states, meet WCAG AA baseline (completed 2026-05-01)
-- [ ] **Phase 44: UAT Debt Automation** - Automate Phase 27 DB, Phase 29 K8s, Phase 25 identity, and Phase 30 Vault UAT scenarios against existing chaos lab profiles; update STATE.md Deferred Items
+- [x] **Phase 44: UAT Debt Automation** - Automate Phase 27 DB, Phase 29 K8s, Phase 25 identity, and Phase 30 Vault UAT scenarios against existing chaos lab profiles; update STATE.md Deferred Items (completed 2026-05-03)
 
 ## Phase Details (v4.5)
 
@@ -877,4 +877,4 @@ Plans:
   - [x] 44-03-PLAN.md — Phase 30 Vault UAT live integration test (UAT-30-01 5-finding spec) against `vault` chaos lab profile (vault-30 :28200)
   - [x] 44-04-PLAN.md — Phase 31 VERIFICATION seeded-DB test for /api/trends flat wire format
   - [x] 44-05-PLAN.md — Phase 43 CR fixes (CR-02 ValueError, WR-01 finally block, WR-03 data_in_motion subscore, WR-04 scope=col on TableHead)
-  - [ ] 44-06-PLAN.md — STATE.md Deferred Items closure (7 rows, ≥50% net reduction)
+  - [x] 44-06-PLAN.md — STATE.md Deferred Items closure (7 rows, ≥50% net reduction)
