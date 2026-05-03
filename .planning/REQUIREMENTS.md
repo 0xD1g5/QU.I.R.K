@@ -10,10 +10,10 @@
 
 ### Install-Day UX (BACK-76)
 
-- [ ] **INSTALL-01**: User can `pip install quirk` and run a TLS-only scan with no ImportError crashes from absent identity/db/vault/motion extras
-- [ ] **INSTALL-02**: User sees a `missing_extra` advisory finding in the report when a scanner phase is skipped due to an unavailable optional dependency (no silent skips)
+- [x] **INSTALL-01**: User can `pip install quirk` and run a TLS-only scan with no ImportError crashes from absent identity/db/vault/motion extras
+- [x] **INSTALL-02**: User sees a `missing_extra` advisory finding in the report when a scanner phase is skipped due to an unavailable optional dependency (no silent skips)
 - [x] **INSTALL-03**: User can install all optional extras at once via `pip install quirk[all]`
-- [ ] **INSTALL-04**: User receives clear install-time guidance pointing to the right extra when a scanner is unavailable (e.g. "install quirk[identity] for Kerberos scanning")
+- [x] **INSTALL-04**: User receives clear install-time guidance pointing to the right extra when a scanner is unavailable (e.g. "install quirk[identity] for Kerberos scanning")
 
 ### TLS Finding Gaps (BACK-74)
 
@@ -102,10 +102,10 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INSTALL-01 | Phase 45 | Pending |
-| INSTALL-02 | Phase 45 | Pending |
+| INSTALL-01 | Phase 45 | Complete |
+| INSTALL-02 | Phase 45 | Complete |
 | INSTALL-03 | Phase 45 | Complete |
-| INSTALL-04 | Phase 45 | Pending |
+| INSTALL-04 | Phase 45 | Complete |
 | TLS-FIND-01 | Phase 46 | Pending |
 | TLS-FIND-02 | Phase 46 | Pending |
 | TLS-FIND-03 | Phase 46 | Pending |
