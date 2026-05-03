@@ -907,10 +907,11 @@ Plans:
   2. User runs a full scan with identity/db/vault/motion extras absent and sees a `missing_extra` advisory finding in the report for each skipped scanner — no silent skips
   3. User runs `pip install quirk[all]` and all scanner extras install successfully; impacket is NOT in `[all]` — it stays in `[identity]` only to avoid the pyOpenSSL transitive conflict
   4. The advisory message for each unavailable scanner names the exact extra to install (e.g., "install quirk[identity] for Kerberos scanning")
-**Plans**: 3 plans
+**Plans**: 4 plans
   - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
   - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
-  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
+  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion (Wave 2)
+  - [ ] 45-04-PLAN.md — Manual checkpoint + UAT-SERIES.md + vault sync + phase note (Wave 3)
 
 ### Phase 46: TLS Finding Gaps
 **Goal**: Users receive actionable security findings for expired certificates, self-signed certificates, untrusted-CA certificates, and weak RSA/EC keys — certificate defects that previously produced zero findings in the report
