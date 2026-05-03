@@ -81,36 +81,14 @@ def test_sev_counts_exclude_coverage_gap(tmp_path):
         _gap_finding(host="saml"),
     ]
     html = _render(tmp_path, findings)
-    # The sev_counts pills should report HIGH=1, INFO=0 (the two coverage_gap rows
-    # must NOT inflate the INFO count).
-    # The renderer formats counts via the template — assert via the literal value cells.
-    # Look for the INFO pill and ensure its accompanying count is 0.
-    # Search for "INFO" in proximity to "0" in the sev_counts area; safer: assert the
-    # sev_counts pill text contains "INFO" and "0" near each other.
-    # Use a robust approach: render with NO coverage_gap, render with 2 coverage_gap,
-    # confirm INFO count is identical (0 in both).
-    html_zero = _render(tmp_path, [findings[0]])
-    # Pull the exact "INFO ... <some int>" sequence; if both reports equal, we're good.
-    assert ">INFO<" in html_zero or "INFO" in html_zero
-    # Most direct: extract the sev_counts dict-driven pill markup. The renderer
-    # produces something like `<span class="pill ...">INFO {{ count }}</span>` —
-    # rather than parsing markup, assert the pair.
-    # We assert the precise template substring contains an INFO=0 occurrence.
-    # For both renders, count occurrences of "INFO" — they should match.
-    # Strongest check: the integer `2` should NOT appear next to INFO since INFO is 0.
-    import re
-    # Pull the severity pills section; renderer outputs something like:
-    # <span class="...">INFO</span><span ...>0</span> or similar.
-    # Find any "INFO" then nearest digit afterwards (within 50 chars).
-    m = re.search(r"INFO[^0-9<]{0,80}([0-9]+)", html)
-    assert m is not None, "could not locate INFO count in rendered HTML"
-    info_count = int(m.group(1))
-    assert info_count == 0, (
-        f"INFO sev count was {info_count}; expected 0 (coverage_gap rows must be excluded)"
-    )
-    m2 = re.search(r"HIGH[^0-9<]{0,80}([0-9]+)", html)
-    assert m2 is not None
-    assert int(m2.group(1)) == 1
+    # The renderer's severity badges only render when count > 0, formatted as:
+    #   <div class="sev-badge sev-INFO">INFO: 1</div>
+    # So with two coverage_gap INFO rows excluded, the INFO badge must NOT appear,
+    # while the HIGH badge with count 1 MUST appear.
+    assert "HIGH: 1" in html, "HIGH=1 badge missing"
+    # If coverage_gap leaked into sev_counts, we'd see "INFO: 2".
+    assert "INFO: 2" not in html, "coverage_gap rows leaked into INFO sev count"
+    assert "INFO: 1" not in html, "unexpected INFO=1 (coverage_gap rows should be filtered)"
 
 
 def test_no_coverage_gaps_section_when_empty(tmp_path):
