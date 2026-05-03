@@ -377,6 +377,13 @@ def main():
     # (category='exception') flow through this list and merge into the main
     # endpoints list before risk_engine / db_persist / write_reports.
     error_endpoints: List[CryptoEndpoint] = []
+    # Phase 45 / D-08: centralized optional-extra probe. For each enabled scanner
+    # whose optional extra is unavailable, emit one ADVISORY CryptoEndpoint into
+    # error_endpoints. Phase 41 inline calls at lines ~782 (email) and ~827 (broker)
+    # are LEFT IN PLACE per D-11 — the registry intentionally omits motion to avoid
+    # double-emitting for those two scanners. See .planning/phases/45-install-day-ux/.
+    from quirk.util.optional_extra import probe_missing_extras
+    probe_missing_extras(cfg, error_endpoints)
     tls_targets: List[Tuple[str, int]] = []
     ssh_targets: List[Tuple[str, int]] = []
     classified_details: Dict[Tuple[str, int], str] = {}
