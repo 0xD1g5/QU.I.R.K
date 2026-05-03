@@ -59,6 +59,17 @@ email = []
 broker = ["redis>=5.0"]
 kafka = ["kafka-python>=2.0"]
 redis = ["redis>=5.0"]
+all = [
+    "quirk[cloud]",
+    "quirk[db]",
+    "quirk[motion]",
+    "quirk[redis]",
+    "quirk[dashboard]",
+]
+# NOTE: quirk[identity] is INTENTIONALLY EXCLUDED from [all] -- impacket
+# transitively pulls pyOpenSSL which downgrades cryptography and breaks the
+# TLS scanner. See Phase 45 / D-01. tests/test_install_all_excludes_impacket.py
+# guards this; do NOT add quirk[identity] to the list above.
 
 [project.scripts]
 quirk = "run_scan:main"
