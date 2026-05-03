@@ -369,7 +369,12 @@ def test_saml_scan_json_oidc_structure():
     reason="Set QUIRK_INTEGRATION_TESTS=1 to run integration tests against chaos lab"
 )
 def test_chaos_lab_integration():
-    """SAML-06: Full integration test against SimpleSAMLphp chaos lab at localhost:8080.
+    """UAT-25 / SAML-06: Phase 25 HUMAN-UAT + VERIFICATION closure — against the
+    running `saml` chaos lab profile (SimpleSAMLphp at localhost:8080),
+    scan_saml_targets returns at least one CryptoEndpoint with cert_pubkey_size=1024
+    (the seeded weak RSA-1024 cert). This test is the automated equivalent of the
+    Phase 25 HUMAN-UAT and VERIFICATION scenarios; closure recorded in
+    .planning/STATE.md Deferred Items (plan 44-06).
 
     Requires:
     - docker compose --profile saml up -d
