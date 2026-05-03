@@ -21,5 +21,7 @@ ALLOWED_SKIPS = [
     ("test_dnssec_scanner.py",          475, "live_infra",     "Requires BIND9 chaos lab"),
     ("test_saml_scanner.py",            366, "live_infra",     "Requires SimpleSAMLphp chaos lab"),
     ("test_kerberos_scanner.py",        360, "live_infra",     "Requires Samba DC chaos lab"),
-    ("test_cbom_motion_golden.py",      189, "live_infra",     "Fixture regen guard"),
+    ("test_cbom_classifier_coverage.py",  84, "live_infra",     "Fixture regen guard (REGEN_CBOM_COVERAGE=1)"),
+    ("test_cbom_motion_golden.py",       195, "live_infra",     "Fixture regen guard"),
+    ("test_vault_connector.py",          455, "live_infra",     "Requires Vault-30 chaos lab (vault profile)"),
 ]
