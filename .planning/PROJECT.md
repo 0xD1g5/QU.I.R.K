@@ -133,15 +133,18 @@ UAT debt burndown
 
 **Out of scope (this milestone):** new scanners, new cloud connectors, performance/scale work, SaaS, CBOM v2 schema work, mobile.
 
-## Current State: v4.4.0 Shipped — v4.5 Phase 43 Complete (gap closure done)
+## Current State: v4.4.0 Shipped — v4.5 Milestone Complete
 
 v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The cryptographic inventory now covers six pillars: TLS, SSH, API, Identity, Data at Rest, and Data in Motion. Email and broker TLS posture flow through scanning → intelligence → CBOM → dashboard end-to-end.
 
-**v4.5 starting open items (in scope):**
-- DEF-v4.4-01 — Phase 36 `wave_0_complete: false` flip (gated on SAML fix)
-- DEF-v4.4-02 — SAML/OIDC missing from `/api/scan/latest` `identity_findings`
-- DASH-05 — Data at Rest dashboard tab (deferred from Phase 27)
-- 14 carry-over UAT/verification gaps — automate where possible
+**v4.5 Reliability & Gap Closure — all 7 phases complete (2026-05-03):**
+- ✓ DEF-v4.4-01 — Phase 36 `wave_0_complete: false` flip resolved (Phase 38)
+- ✓ DEF-v4.4-02 — SAML/OIDC identity findings wired to API (Phase 38)
+- ✓ DASH-05 — Data at Rest dashboard tab shipped (Phase 39)
+- ✓ Chaos lab parity + CI stability (Phases 40–41)
+- ✓ CBOM correctness audit (Phase 42)
+- ✓ Dashboard polish + a11y (Phase 43)
+- ✓ UAT debt automation — 7 of 14 carry-over gaps closed; 4 bug fixes from Phase 43 review (Phase 44)
 
 ## Context
 
@@ -191,7 +194,7 @@ v4.4 "Data in Motion" shipped 2026-04-29 (tag `v4.4.0`, commit `b72797a`). The c
 | No git-tag and no `/gsd-complete-milestone` inside Phase 37 (D-10/D-11) | Tagging and milestone close are visible-to-others actions; reserve them for explicit user trigger after Phase 37 lands | ✓ Good — Phase 37 closed cleanly, then user triggered tag and `/gsd-complete-milestone v4.4` separately |
 
 ---
-*Last updated: 2026-05-02 — Phase 43 dashboard-polish gap closure complete; a11y harness, pagination guards, PDF sentinel all verified*
+*Last updated: 2026-05-03 — v4.5 Reliability & Gap Closure milestone complete (Phase 44); 7/14 carry-over UAT gaps closed as automated tests, 4 bug fixes applied, STATE.md Deferred Items table updated*
 
 ## Evolution
 
