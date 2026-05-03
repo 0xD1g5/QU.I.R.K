@@ -119,9 +119,22 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current State: v4.5.0 Shipped — Planning Next Milestone
+## Current Milestone: v4.6 Enterprise Readiness
 
-v4.5 "Reliability & Gap Closure" shipped 2026-05-03 (tag `v4.5.0`). All v4.4 deferred items closed. The scanner is now hardened with consistent timeout/retry policy, CI runs green in under 60 seconds, CBOM validates against CycloneDX 1.6 schema, and the dashboard meets WCAG AA baseline. 7 of 14 pre-v4.5 UAT carry-over gaps were automated via chaos lab integration tests. The product is in solid shape for the next capability milestone.
+**Goal:** Make QUIRK credible and usable on real enterprise estates — fix install-day crashes, fill TLS finding gaps, enrich output with compliance context and PQC remediation guidance, and streamline the multi-target workflow.
+
+**Target features:**
+- BACK-76: Install-day UX — ship identity/motion extras by default; graceful ImportError degradation across all 4 affected scanners
+- BACK-74: TLS finding gaps — expired certs, self-signed certs, and RSA-1024/512 keys currently produce zero findings; fix this
+- BACK-79: Rich finding context — per-finding risk explanation, severity rationale, and FIPS 203/204 PQC remediation path
+- BACK-20: Compliance mapping — map findings to FIPS/NIST SP 800-208/PCI-DSS/HIPAA frameworks as a billable deliverable
+- BACK-75: Nmap port discovery — pre-scan nmap probe so the scanner isn't bound to hardcoded consulting ports
+- BACK-77: Multi-target wizard — fix multi-host input (comma-separated or file) in interactive mode for 50-host+ customers
+- BACK-65+66: Enterprise docs — Architecture reference + Operator's guide for self-onboarding
+
+## Current State: v4.5.0 Shipped — v4.6 In Planning
+
+v4.5 "Reliability & Gap Closure" shipped 2026-05-03 (tag `v4.5.0`). All v4.4 deferred items closed. The scanner is now hardened with consistent timeout/retry policy, CI runs green in under 60 seconds, CBOM validates against CycloneDX 1.6 schema, and the dashboard meets WCAG AA baseline. 7 of 14 pre-v4.5 UAT carry-over gaps were automated via chaos lab integration tests. v4.6 planning started 2026-05-03 with enterprise readiness as the milestone theme.
 
 ## Context
 
@@ -176,7 +189,7 @@ v4.5 "Reliability & Gap Closure" shipped 2026-05-03 (tag `v4.5.0`). All v4.4 def
 | MOTION_PLAINTEXT_PROTOCOLS + DAR_SKIP_PROTOCOLS as module-level frozensets (v4.5 Phase 42) | Duplicated inline sets across Pass-2/3 skip logic were invisible to parametrized testing | ✓ Good — constants extracted; skip-list parametrized unit tests cover all 14 motion labels and 7 DAR protocols |
 
 ---
-*Last updated: 2026-05-03 — v4.5 Reliability & Gap Closure milestone shipped; full evolution review complete*
+*Last updated: 2026-05-03 — v4.6 Enterprise Readiness milestone started; v4.5 shipped same day*
 
 ## Evolution
 
