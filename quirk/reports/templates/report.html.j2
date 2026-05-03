@@ -174,7 +174,7 @@
     <table>
       <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Description</th></tr></thead>
       <tbody>
-      {% for f in findings[:10] %}
+      {% for f in (findings | rejectattr('category', 'equalto', 'coverage_gap') | list)[:10] %}
       <tr>
         <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
         <td>{{ f.get('title','') }}</td>
@@ -206,12 +206,26 @@
   <section id="technical-appendix">
     <h1>Technical Appendix</h1>
 
+    {% set coverage_gaps = findings | selectattr('category', 'equalto', 'coverage_gap') | list %}
+    {% if coverage_gaps %}
+    <h2>Coverage Gaps</h2>
+    <p style="color:var(--text-muted)">Scanners that were enabled in config but skipped because their optional extra is not installed. These advisories do not affect the readiness score.</p>
+    <table>
+      <thead><tr><th>Scanner</th><th>Recommendation</th></tr></thead>
+      <tbody>
+      {% for f in coverage_gaps %}
+      <tr><td>{{ f.get('host','') }}</td><td>{{ f.get('recommendation','') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
     <h2>All Findings</h2>
     {% if findings %}
     <table>
       <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Recommendation</th></tr></thead>
       <tbody>
-      {% for f in findings %}
+      {% for f in findings if f.get('category') != 'coverage_gap' %}
       <tr>
         <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
         <td>{{ f.get('title','') }}</td>
