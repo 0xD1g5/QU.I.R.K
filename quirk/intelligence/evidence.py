@@ -56,6 +56,14 @@ def build_evidence_summary(
 ) -> Dict[str, Any]:
     endpoint_list = list(endpoints)
     finding_list = list(findings) if findings is not None else []
+    # Phase 45 / D-07: coverage_gap findings are pure information and MUST NOT
+    # affect totals.findings, finding_severity_counts, or any downstream score
+    # weighting (scoring.py reads finding_severity_counts; confidence.py and
+    # roadmap.py read this evidence dict). Filter them out at the source.
+    finding_list = [
+        f for f in finding_list
+        if not (isinstance(f, Mapping) and f.get("category") == "coverage_gap")
+    ]
     ref_utc = _resolve_reference_utc(endpoint_list, reference_utc)
     expiring_cutoff = ref_utc + timedelta(days=max(0, int(expiring_days)))
 
