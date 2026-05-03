@@ -68,6 +68,10 @@ def render_html_report(
     # Severity counts
     sev_counts: Dict[str, int] = {}
     for f in (findings or []):
+        # Phase 45 / D-07: coverage_gap findings are advisory-only and MUST NOT
+        # inflate severity counts in the executive summary.
+        if f.get("category") == "coverage_gap":
+            continue
         s = str(f.get("severity", "INFO")).upper()
         sev_counts[s] = sev_counts.get(s, 0) + 1
 
