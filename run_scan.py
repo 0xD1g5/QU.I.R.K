@@ -354,7 +354,7 @@ def main():
             targets=nmap_targets,
             ports=ports_for_nmap,
             threshold=10_000,  # D-12: threshold locked to 10,000 by roadmap success criterion #5; not configurable
-            is_tty=sys.stdout.isatty(),
+            is_tty=sys.stdin.isatty(),  # stdin.isatty(): correct check for "can user provide input"
         ):
             logger.info("Aborted by user — projected probe count exceeded threshold.")
             return
