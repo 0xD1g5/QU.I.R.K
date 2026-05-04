@@ -149,6 +149,28 @@ def is_extra_available(extra: str) -> bool:
     return True
 
 
+def select_nmap_port_list(cfg, nmap_available: bool) -> list:
+    """Return the port list to use for nmap scanning (D-08).
+
+    When nmap is available, returns ``cfg.scan.ports_tls`` (the operator-
+    configured list). When nmap is NOT available, falls back to
+    ``CONSULTING_TLS_PORTS`` from ``quirk.interactive`` — the curated 17-port
+    consulting list. This is a pure helper so both ``run_scan.py`` and tests
+    can import from the same canonical location.
+
+    Args:
+        cfg: AppConfig instance with a ``.scan.ports_tls`` attribute.
+        nmap_available: True if the nmap binary was found via is_extra_available.
+
+    Returns:
+        List of port integers.
+    """
+    if not nmap_available:
+        from quirk.interactive import CONSULTING_TLS_PORTS  # D-08: fallback
+        return CONSULTING_TLS_PORTS
+    return getattr(cfg.scan, "ports_tls", None) or []
+
+
 def probe_missing_extras(cfg, error_endpoints) -> None:
     """Walk REGISTRY; append one ADVISORY ``CryptoEndpoint`` per gap.
 
