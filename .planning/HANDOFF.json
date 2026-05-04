@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-04T03:38:08.674Z",
+  "timestamp": "2026-05-04T12:31:40.274Z",
   "phase": "47",
   "phase_name": "nmap-discovery-multi-target-wizard",
   "phase_dir": ".planning/phases/47-nmap-discovery-multi-target-wizard",
@@ -8,37 +8,40 @@
   "task": null,
   "total_tasks": 11,
   "status": "paused",
-  "stage": "post-plan, pre-execute",
   "completed_tasks": [
-    {"id": "discuss", "name": "CONTEXT.md captured (16 locked decisions D-01..D-16)", "status": "done"},
-    {"id": "research", "name": "47-RESEARCH.md (10 findings, HIGH confidence, file:line cited)", "status": "done", "commit": "1d52d5f"},
-    {"id": "plan", "name": "Three plans authored (47-01, 47-02, 47-03)", "status": "done", "commit": "1d52d5f"},
-    {"id": "plan-check-1", "name": "Plan-checker pass 1 → CONCERNS (B1, B2, W1, W6)", "status": "done"},
-    {"id": "revise", "name": "Surgical revisions applied (wave linearization + D-12 literal + verify-block fix + widened try/except)", "status": "done", "commit": "1d52d5f"},
-    {"id": "plan-check-2", "name": "Plan-checker pass 2 → PASS", "status": "done"}
+    {"id": 1, "name": "47-01: multi-target parser + --targets-file CLI", "status": "done", "commit": "bb1c2f2"},
+    {"id": 2, "name": "47-02: nmap wiring + probe-budget guard", "status": "done", "commit": "0131d96"},
+    {"id": 3, "name": "47-03: CBOM json-validation swap + post-write validation", "status": "done", "commit": "a4fbc4b"},
+    {"id": 4, "name": "code review + CR-01/WR-01/WR-02/WR-03 fixes", "status": "done", "commit": "eb5424e"},
+    {"id": 5, "name": "fix: sys.stdin.isatty() for probe-budget TTY check", "status": "done", "commit": "583257e"},
+    {"id": 6, "name": "UAT Test 3: wizard nmap y/N fires exactly once", "status": "done", "commit": null}
   ],
   "remaining_tasks": [
-    {"id": "execute-47-01", "name": "Execute 47-01: target parser + --targets-file CLI (3 tasks, MULTI-01..05)", "status": "not_started", "wave": 1},
-    {"id": "execute-47-02", "name": "Execute 47-02: nmap wiring + --max-parallelism + probe-budget guard + binary advisory (4 tasks, DISCOVER-01..04)", "status": "not_started", "wave": 2, "depends_on": ["47-01"]},
-    {"id": "execute-47-03", "name": "Execute 47-03: cyclonedx [json-validation] swap + post-write JSON-schema validation (4 tasks, D-13..D-16)", "status": "not_started", "wave": 3, "depends_on": ["47-02"]},
-    {"id": "verify", "name": "Phase verification (gsd-verifier) against 5 success criteria", "status": "not_started"},
-    {"id": "obsidian-note", "name": "Phase 47 Obsidian note at /Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Phases/Phase-47-Nmap-Discovery-Multi-Target-Wizard.md", "status": "not_started"},
-    {"id": "uat-update", "name": "docs/UAT-SERIES.md update (already a task in 47-03 Task 3)", "status": "not_started"},
-    {"id": "uat-vault-sync", "name": "Sync UAT-SERIES.md to vault + commit", "status": "not_started"}
+    {"id": 7, "name": "UAT Test 4 re-test: probe-budget guard shows prompt (after stdin.isatty fix)", "status": "in_progress"},
+    {"id": 8, "name": "UAT Tests 1+2: wizard CSV + @file flows (optional if user approves)", "status": "not_started"},
+    {"id": 9, "name": "phase.complete: roadmap + STATE + REQUIREMENTS", "status": "not_started"},
+    {"id": 10, "name": "Obsidian phase note at 20_Dev-Work/QUIRK/Phases/Phase-47-Nmap-Discovery-Multi-Target-Wizard.md", "status": "not_started"},
+    {"id": 11, "name": "Sync UAT-SERIES.md to Obsidian vault", "status": "not_started"}
   ],
   "blockers": [],
-  "human_actions_pending": [],
+  "human_actions_pending": [
+    {
+      "action": "Re-run Test 4: python run_scan.py with 10.0.0.0/22 + nmap y + any profile",
+      "context": "Previous run used sys.stdout.isatty() which returned False inside run_scan.py; fix committed at 583257e uses sys.stdin.isatty(). Expect prompt: 'Projected probe count (21,462) exceeds 10,000. Proceed? [y/N]:'",
+      "blocking": true
+    },
+    {
+      "action": "Say 'approved' after Test 4 passes",
+      "context": "Triggers phase completion: roadmap update, Obsidian note, UAT sync",
+      "blocking": true
+    }
+  ],
   "decisions": [
-    {"decision": "Linearized wave structure to 1→2→3", "rationale": "47-02 and 47-03 both extend quirk/util/optional_extra.py REGISTRY; serialization eliminates merge risk on the shared dataclass", "phase": "47"},
-    {"decision": "Threshold 10_000 passed explicitly at run_scan.py call site (not just helper default)", "rationale": "D-12 locks the literal; explicit pass + comment prevents future executor from parameterizing it", "phase": "47"},
-    {"decision": "Try/except in cbom/writer.py wraps both JsonStrictValidator(...) construction AND validate_str()", "rationale": "RESEARCH F6: MissingOptionalDependencyException can fire at either site; wrapping only validate_str leaves missing-deps path uncovered", "phase": "47"},
-    {"decision": "Extend OptionalExtra with optional binary field (vs sibling probe_missing_binaries)", "rationale": "Single registry, single probe loop, easier maintenance — researcher recommendation accepted", "phase": "47"}
+    {"decision": "D-09 setattr gated on used_config_file (CR-01 fix)", "rationale": "Wizard already sets enable_nmap; unconditional overwrite silently discarded y/N answer", "phase": "47"},
+    {"decision": "sys.stdin.isatty() instead of sys.stdout.isatty() for budget guard", "rationale": "stdout replaced by logging setup before nmap block; stdin is semantically correct", "phase": "47"},
+    {"decision": "IN-01/IN-02/IN-03 deferred", "rationale": "Info-level only, no functional impact", "phase": "47"}
   ],
-  "uncommitted_files": [
-    ".DS_Store (M)",
-    "tests/__pycache__/*.pyc (M)",
-    "Pre-existing untracked unrelated to phase 47: .clone/, .vite/, planning/, quirk-output/, quantum-chaos-enterprise-lab/certs/*, .planning/phases/45-install-day-ux/45-RESEARCH.md, 45-VERIFICATION.md, .planning/milestones/v4.5-phases/36-dashboard-motion-tab/, src/dashboard/.planning/STATE.md"
-  ],
-  "next_action": "Run /gsd-execute-phase 47 — wave 1 spawns executor for 47-01 (target parser + --targets-file CLI).",
-  "context_notes": "Plan-phase workflow complete. Three plans verified PASS by plan-checker after one revision pass. CONTEXT decisions D-01..D-16 are LOCKED — executors must not contradict. RESEARCH F1..F10 cite file:line anchors for every hook point. Wave structure is fully linear (1→2→3) due to shared file in optional_extra.py — gives up some parallelism for zero merge risk. Quality warnings W2/W3/W4/W5/W7 not applied — deferred to executor judgment per surgical-revision discipline."
+  "uncommitted_files": [],
+  "next_action": "Re-test Test 4, then on approval run: gsd-sdk query phase.complete 47, update PROJECT.md, write Obsidian note, sync UAT-SERIES.md to vault per CLAUDE.md",
+  "context_notes": "All 11 tasks done, code review clean, 2 post-review bugs fixed. Only gate remaining is user UAT approval."
 }
