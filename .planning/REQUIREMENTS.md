@@ -139,7 +139,12 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | DOCS-02 | Phase 50 | Pending |
 | DOCS-03 | Phase 50 | Pending |
 | DOCS-04 | Phase 50 | Pending |
+| CONTEXT-05 | Future (v4.7) | Deferred |
+| COMPLY-10 | Future (v4.7) | Deferred |
+| MULTI-06 | Future (v4.6.x) | Deferred |
+| DOCS-05 | Future (v4.6.x) | Deferred |
+| COMPLY-11 | Future (v4.7) | Deferred |
 
 ---
 
-*Last updated: 2026-05-03 — v4.6 Enterprise Readiness milestone defined; 37 requirements across 7 categories (compliance maintainability added per user feedback)*
+*Last updated: 2026-05-04 — Phase 47 closed; 5 deferred (v4.7 / v4.6.x) requirements added to traceability for lint coverage*
