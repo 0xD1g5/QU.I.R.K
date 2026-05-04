@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.6
 milestone_name: Enterprise Readiness
-status: completed
-stopped_at: Phase 46 context gathered
-last_updated: "2026-05-04T01:23:21.823Z"
-last_activity: 2026-05-03 — Phase 45 Plan 04 complete (UAT-1-09/10/11 added to Series 1; vault mirror + Phase-45 note written; INSTALL-01..04 closed)
+status: in_progress
+stopped_at: Phase 46 Wave 1 (Plan 46-01) complete
+last_updated: "2026-05-03T00:00:00.000Z"
+last_activity: 2026-05-03 — Phase 46 Plan 01 complete (chain_verified column + migration shim + scanner plumbing + D-01 gate; 728 tests pass)
 progress:
   total_phases: 43
   completed_phases: 1
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-03)
 
 ## Current Position
 
-Phase: 45-install-day-ux — COMPLETE
-Plan: 04 (phase closing — UAT-SERIES.md + vault sync + Phase-45 note) — complete
-Status: All 4 plans complete; INSTALL-01..04 closed; ready for Phase 46 (tls-finding-gaps)
-Last activity: 2026-05-03 — Phase 45 Plan 04 complete (UAT-1-09/10/11 added to Series 1; vault mirror + Phase-45 note written; INSTALL-01..04 closed)
-Last activity: 2026-05-03
+Phase: 46-tls-finding-gaps — IN PROGRESS (Wave 1 of 3 complete)
+Plan: 01 (chain_verified column + scanner plumbing + D-01 gate) — complete
+Status: Plan 46-01 done; Plans 46-02 (risk engine), 46-03 (CBOM/report wiring), 46-04 (phase closing) pending
+Last activity: 2026-05-03 — Phase 46 Plan 01 complete (TLS-FIND-06 closed; foundation for Plan 46-02 untrusted-CA branch)
+Next action: Execute Plan 46-02 (Wave 2 — risk-engine untrusted-CA branch reads ep.chain_verified)
 
 ## Phase Overview
 
@@ -62,6 +62,7 @@ Last activity: 2026-05-03
 | Phase 45-install-day-ux P02 | 12 | 3 tasks | 4 files |
 | Phase 45-install-day-ux P03 | 5 | 5 tasks | 9 files |
 | Phase 45-install-day-ux P04 | 6 | 3 tasks | 3 files |
+| Phase 46-tls-finding-gaps P01 | ~12 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,10 @@ Roadmap decisions (2026-04-27):
 - [Phase 42]: Adopted [validation] umbrella extra over hand-pinned deps (D-01)
 - [Phase 42]: Extracted MOTION_PLAINTEXT_PROTOCOLS and DAR_SKIP_PROTOCOLS as module-level frozensets (D-10/D-11)
 - [Phase ?]: Phase 45-01: [all] meta-extra excludes [identity] (impacket transitively downgrades cryptography, breaks TLS scanner)
+- [46-01]: chain_verified added as Boolean column on CryptoEndpoint (TLS-FIND-06); BOOLEAN type stores as INTEGER 0/1/NULL in SQLite — tri-state-compatible with Python None/True/False
+- [46-01]: Fallback _scan_one_fallback gets a CERT_REQUIRED verify pre-pass BEFORE the existing CERT_NONE metadata pass; both run independently (verify result + metadata extraction decoupled)
+- [46-01]: Network errors on the verify pre-pass set chain_verified=None, NOT False (Pitfall 1 — avoid false untrusted-CA findings on transient network failures)
+- [46-01]: scan_one D-01 gate uses field-level merge (cert_not_after, cert_subject, cert_issuer, cert_pubkey_size+alg, chain_verified) — sslyze ep is mutated in place; fallback ep is consulted only for missing fields
 
 ### Pending Todos
 
@@ -181,6 +186,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-05-04T01:23:21.813Z
-Stopped at: Phase 46 context gathered
-Next action: Execute Plan 45-04 (Wave 3 — UAT-SERIES update, vault sync, Obsidian phase note, ROADMAP update, manual checkpoint)
+Last session: 2026-05-03T00:00:00.000Z
+Stopped at: Phase 46 Wave 1 (Plan 46-01) complete
+Next action: Execute Plan 46-02 (Wave 2 — risk-engine untrusted-CA branch reads ep.chain_verified)
