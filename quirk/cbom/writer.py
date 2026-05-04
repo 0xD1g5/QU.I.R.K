@@ -82,6 +82,18 @@ def write_cbom_files(
     except MissingOptionalDependencyException:
         # D-16: deps missing — registry probe in run_scan.py emits the INFO advisory; skip silently here.
         pass
+    except Exception as exc:  # D-15: any other validation error is a soft-fail WARN, not a crash
+        if error_endpoints is not None:
+            from quirk.models import CryptoEndpoint
+            error_endpoints.append(
+                CryptoEndpoint(
+                    host="cbom_validator",
+                    port=0,
+                    protocol="ADVISORY",
+                    scan_error=f"CBOM JSON validation error: {exc}",
+                    scan_error_category="coverage_gap",
+                )
+            )
 
     # XML output (CycloneDX 1.6, uses stdlib xml.etree — no lxml needed)
     xml_out = XmlV1Dot6(bom)
