@@ -42,6 +42,7 @@ from quirk.engine.rate_limiter import TokenBucket
 
 from quirk import __version__
 from quirk.cli.banner import print_banner
+from quirk.util.targets import apply_targets_file_override  # D-03
 
 
 def _error_category(desc: str) -> str:
@@ -222,6 +223,13 @@ def main():
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
     parser.add_argument("--config", help="Path to config.yaml (skip prompts)")
+    parser.add_argument(
+        "--targets-file",
+        help=(
+            "Path to file of targets (one per line, '#' comments). "
+            "Replaces config targets entirely (does NOT merge). Phase 47 / D-03."
+        ),
+    )  # D-03
     parser.add_argument("--verbose", action="store_true", help="Verbose output during scan")
     parser.add_argument("--progress", action="store_true", help="Show progress bars during scan")
 
@@ -296,6 +304,10 @@ def main():
         cfg.connectors.broker_sqs_regions = (
             list(cfg.connectors.broker_sqs_regions or []) + list(args.aws_sqs_regions)
         )
+
+    # Phase 47 / D-03: --targets-file REPLACES cfg.targets.fqdns + cidrs (does NOT merge)
+    if getattr(args, "targets_file", None):
+        apply_targets_file_override(cfg, args.targets_file)  # D-03
 
     # Score profile (calibration) — independent from scan profile
     if getattr(args, "score_profile", None):
