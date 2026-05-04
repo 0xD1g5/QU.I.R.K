@@ -1,37 +1,44 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-02T16:20:50.279Z",
-  "phase": "43",
-  "phase_name": "dashboard-polish",
-  "phase_dir": ".planning/phases/43-dashboard-polish",
-  "plan": 6,
-  "task": 6,
-  "total_tasks": 6,
-  "status": "complete",
+  "timestamp": "2026-05-04T03:38:08.674Z",
+  "phase": "47",
+  "phase_name": "nmap-discovery-multi-target-wizard",
+  "phase_dir": ".planning/phases/47-nmap-discovery-multi-target-wizard",
+  "plan": null,
+  "task": null,
+  "total_tasks": 11,
+  "status": "paused",
+  "stage": "post-plan, pre-execute",
   "completed_tasks": [
-    {"id": 1, "name": "A11y CI harness (run-a11y.mjs, routes, baselines)", "status": "done", "commit": "multiple"},
-    {"id": 2, "name": "UX polish (skeletons, EmptyStateCard, pagination)", "status": "done", "commit": "multiple"},
-    {"id": 3, "name": "Contrast and focus rings (sidebar, WCAG audit)", "status": "done", "commit": "multiple"},
-    {"id": 4, "name": "CI integration (dashboard-quality.yml)", "status": "done", "commit": "multiple"},
-    {"id": 5, "name": "GAP: a11y newViolationsCount + pagination guards", "status": "done", "commit": "4b001a5 d862573"},
-    {"id": 6, "name": "GAP: PDF data-ready sentinel", "status": "done", "commit": "47e1a7d f8c489a"}
+    {"id": "discuss", "name": "CONTEXT.md captured (16 locked decisions D-01..D-16)", "status": "done"},
+    {"id": "research", "name": "47-RESEARCH.md (10 findings, HIGH confidence, file:line cited)", "status": "done", "commit": "1d52d5f"},
+    {"id": "plan", "name": "Three plans authored (47-01, 47-02, 47-03)", "status": "done", "commit": "1d52d5f"},
+    {"id": "plan-check-1", "name": "Plan-checker pass 1 → CONCERNS (B1, B2, W1, W6)", "status": "done"},
+    {"id": "revise", "name": "Surgical revisions applied (wave linearization + D-12 literal + verify-block fix + widened try/except)", "status": "done", "commit": "1d52d5f"},
+    {"id": "plan-check-2", "name": "Plan-checker pass 2 → PASS", "status": "done"}
   ],
-  "remaining_tasks": [],
+  "remaining_tasks": [
+    {"id": "execute-47-01", "name": "Execute 47-01: target parser + --targets-file CLI (3 tasks, MULTI-01..05)", "status": "not_started", "wave": 1},
+    {"id": "execute-47-02", "name": "Execute 47-02: nmap wiring + --max-parallelism + probe-budget guard + binary advisory (4 tasks, DISCOVER-01..04)", "status": "not_started", "wave": 2, "depends_on": ["47-01"]},
+    {"id": "execute-47-03", "name": "Execute 47-03: cyclonedx [json-validation] swap + post-write JSON-schema validation (4 tasks, D-13..D-16)", "status": "not_started", "wave": 3, "depends_on": ["47-02"]},
+    {"id": "verify", "name": "Phase verification (gsd-verifier) against 5 success criteria", "status": "not_started"},
+    {"id": "obsidian-note", "name": "Phase 47 Obsidian note at /Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Phases/Phase-47-Nmap-Discovery-Multi-Target-Wizard.md", "status": "not_started"},
+    {"id": "uat-update", "name": "docs/UAT-SERIES.md update (already a task in 47-03 Task 3)", "status": "not_started"},
+    {"id": "uat-vault-sync", "name": "Sync UAT-SERIES.md to vault + commit", "status": "not_started"}
+  ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {
-      "decision": "data-ready DOM sentinel for PDF export",
-      "rationale": "Playwright networkidle fires before React hydration; deterministic DOM attribute is the correct contract",
-      "phase": "43"
-    },
-    {
-      "decision": "Accepted 9 code review findings as non-blocking",
-      "rationale": "CR-02/03 are real bugs but don't affect gap closure goal; deferred to future phase",
-      "phase": "43"
-    }
+    {"decision": "Linearized wave structure to 1→2→3", "rationale": "47-02 and 47-03 both extend quirk/util/optional_extra.py REGISTRY; serialization eliminates merge risk on the shared dataclass", "phase": "47"},
+    {"decision": "Threshold 10_000 passed explicitly at run_scan.py call site (not just helper default)", "rationale": "D-12 locks the literal; explicit pass + comment prevents future executor from parameterizing it", "phase": "47"},
+    {"decision": "Try/except in cbom/writer.py wraps both JsonStrictValidator(...) construction AND validate_str()", "rationale": "RESEARCH F6: MissingOptionalDependencyException can fire at either site; wrapping only validate_str leaves missing-deps path uncovered", "phase": "47"},
+    {"decision": "Extend OptionalExtra with optional binary field (vs sibling probe_missing_binaries)", "rationale": "Single registry, single probe loop, easier maintenance — researcher recommendation accepted", "phase": "47"}
   ],
-  "uncommitted_files": [],
-  "next_action": "Run /gsd-discuss-phase 44 to discuss UAT debt automation approach — K8s (minikube/kind) and Vault test isolation are the key design decisions",
-  "context_notes": "Phase 43 complete. Notable incident: wave-5 tracking commit accidentally reverted all 5 gap-closure code changes; restored in 74551c6 before verification. Next phase (44) targets 14 deferred UAT items from Phases 25-30, aiming for >=50% automated. No phase 44 directory exists yet."
+  "uncommitted_files": [
+    ".DS_Store (M)",
+    "tests/__pycache__/*.pyc (M)",
+    "Pre-existing untracked unrelated to phase 47: .clone/, .vite/, planning/, quirk-output/, quantum-chaos-enterprise-lab/certs/*, .planning/phases/45-install-day-ux/45-RESEARCH.md, 45-VERIFICATION.md, .planning/milestones/v4.5-phases/36-dashboard-motion-tab/, src/dashboard/.planning/STATE.md"
+  ],
+  "next_action": "Run /gsd-execute-phase 47 — wave 1 spawns executor for 47-01 (target parser + --targets-file CLI).",
+  "context_notes": "Plan-phase workflow complete. Three plans verified PASS by plan-checker after one revision pass. CONTEXT decisions D-01..D-16 are LOCKED — executors must not contradict. RESEARCH F1..F10 cite file:line anchors for every hook point. Wave structure is fully linear (1→2→3) due to shared file in optional_extra.py — gives up some parallelism for zero merge risk. Quality warnings W2/W3/W4/W5/W7 not applied — deferred to executor judgment per surgical-revision discipline."
 }
