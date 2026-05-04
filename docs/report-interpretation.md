@@ -118,7 +118,7 @@ The table below maps every common finding title to its plain-English explanation
 | Expired certificate | CRITICAL | Certificate past its `Not After` date | Renew certificate immediately |
 | Self-signed certificate | MEDIUM | Certificate not issued by a trusted CA | Replace with CA-issued cert |
 | TLS handshake blocked assessment | MEDIUM | Service refused connection or required client cert | Validate service config; add to exclusions if expected |
-| SSH quantum planning advisory | INFO | SSH host key or KEX algorithm is quantum-vulnerable (RSA/ECDH) | Plan CRYSTALS-Kyber/ML-KEM migration for post-quantum OpenSSH |
+| SSH quantum planning advisory | INFO | SSH host key or KEX algorithm is quantum-vulnerable (RSA/ECDH) | Plan migration to post-quantum SSH using ML-KEM (FIPS 203) when OpenSSH support lands |
 | Unknown open service | MEDIUM | Open port did not respond to TLS, HTTP, or SSH probes | Inventory this service; close if unneeded |
 | mTLS required | INFO | Service requires client certificate — positive signal | No action; note for zero-trust posture documentation |
 
@@ -147,7 +147,7 @@ The migration roadmap organizes findings and recommendations into three planning
 |---------|-------|-----------------|
 | **NOW** | Critical and High severity items; classical security risks requiring immediate action | Within 30 days |
 | **NEXT** | Medium severity items; modernization work for quantum-vulnerable algorithms still widely supported | 90 days to 12 months |
-| **LATER** | Long-horizon quantum migration; CRYSTALS-Kyber (ML-KEM), ML-DSA adoption when standards finalize in your ecosystem | 2026–2030 (NIST FIPS 203/204/205 window) |
+| **LATER** | Long-horizon quantum migration: adopt ML-KEM (FIPS 203) for key exchange and ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures as your ecosystem ships PQC support. Per NIST IR 8547, RSA and ECC are deprecated after 2030 and disallowed after 2035. | 2026–2030 (NIST FIPS 203/204/205 window) |
 
 - **NOW** — Fix active classical security problems first. These are risks you have today, regardless of quantum. A client cannot justify deferring an expired certificate or plaintext HTTP service because "we'll handle everything during the quantum migration."
 - **NEXT** — Early quantum preparation that fits into the normal modernization cycle. Disabling legacy TLS, replacing self-signed certificates, and adopting ECDSA are all work your team can do in regular sprint cycles without waiting for post-quantum standards to stabilize.
