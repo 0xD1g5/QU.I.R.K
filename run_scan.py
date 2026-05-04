@@ -999,7 +999,7 @@ def main():
     run_stats["error_categories"] = dict(err_counts)
 
     with _phase_timer(run_stats, "reporting"):
-        write_reports(cfg, endpoints, findings, run_stats=run_stats)
+        write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints)
 
 
 if __name__ == "__main__":

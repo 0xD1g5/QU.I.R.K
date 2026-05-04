@@ -88,7 +88,9 @@ def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def write_reports(cfg, endpoints, findings, run_stats=None):
+def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=None):
+    # D-15 (Phase 47 / Plan 03): error_endpoints is passed through to write_cbom_files
+    # so schema-validation failures can be recorded as coverage_gap WARN findings.
     outdir = cfg.output.directory
     os.makedirs(outdir, exist_ok=True)
 
@@ -194,7 +196,9 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
 
     # 5) CBOM artifacts
     cbom = build_cbom(endpoints)
-    cbom_json_path, cbom_xml_path = write_cbom_files(cbom, outdir, stamp)
+    cbom_json_path, cbom_xml_path = write_cbom_files(
+        cbom, outdir, stamp, error_endpoints=error_endpoints
+    )
 
     # Rich scan summary table (D-05)
     _console = Console()
