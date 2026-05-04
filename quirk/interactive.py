@@ -135,6 +135,12 @@ def interactive_config() -> tuple[AppConfig, str]:
     include_ips = _prompt_list("Specific IPs to include", [])
     exclude_ips = _prompt_list("IPs to exclude", [])
 
+    # --- 1b. Nmap discovery toggle (D-06: one global y/N, NOT per-target) ---
+    enable_nmap = _prompt_bool(
+        "Run nmap port discovery first? (recommended for >10 hosts)",
+        default=False,
+    )  # D-06: single global toggle, NOT per-target
+
     # --- 2. Scan options (D-05/D-06) ---
     scan_profile = _prompt_profile()
 
@@ -206,6 +212,10 @@ def interactive_config() -> tuple[AppConfig, str]:
 
     crown_jewels = _prompt_list("Crown jewels hosts/IPs/FQDNs (blank to skip)", [])
 
+    # Reflect enable_nmap onto connectors (D-06/D-09: no new DiscoveryCfg sub-table;
+    # setattr because ConnectorsCfg is a dataclass without this field — defensive).
+    _enable_nmap_wizard = enable_nmap  # capture before cfg construction
+
     # --- Build config (Pitfall 1: supply baseline ScanCfg values) ---
     cfg = AppConfig(
         assessment=AssessmentCfg(
@@ -251,6 +261,12 @@ def interactive_config() -> tuple[AppConfig, str]:
         crown_jewels=crown_jewels,
     )
     attach_context(cfg, ctx)
+
+    # D-06/D-09: reflect wizard nmap toggle onto cfg.connectors so the registry probe
+    # and run_scan.py nmap-call-site both see the same boolean. setattr is defensive
+    # because ConnectorsCfg does not declare enable_nmap (no new DiscoveryCfg sub-table
+    # this phase per Risks #1).
+    setattr(cfg.connectors, "enable_nmap", _enable_nmap_wizard)  # D-06
 
     print("\nConfig captured.\n")
     return cfg, scan_profile   # D-07
