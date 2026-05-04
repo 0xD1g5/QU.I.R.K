@@ -14,6 +14,7 @@ from quirk.config import (
     IntelligenceCfg,
 )
 from quirk.assessment.operator_context import OperatorContext, attach_context
+from quirk.util.targets import parse_target_tokens, load_targets_file  # D-01
 
 DEFAULT_TIMEZONE = "America/New_York"
 
@@ -124,10 +125,13 @@ def _prompt_data_classification(default_num: str = "3") -> tuple[str, list[str]]
 def interactive_config() -> tuple[AppConfig, str]:
     print("\n=== QU.I.R.K. -- Interactive Setup ===\n")
 
-    # --- 1. Targets (D-15) ---
+    # --- 1. Targets (D-01: one smart prompt, syntax-routed per token) ---
     print("Targets")
-    cidrs = _prompt_list("CIDR blocks", [])
-    fqdns = _prompt_list("FQDNs", [])
+    raw_targets = _prompt(
+        "Targets (CSV, @file, or CIDR; e.g. 'host1,10.0.0.0/24,@hosts.txt')",
+        default="",
+    )  # D-01
+    fqdns, cidrs = parse_target_tokens(raw_targets)  # D-01: routes each token
     include_ips = _prompt_list("Specific IPs to include", [])
     exclude_ips = _prompt_list("IPs to exclude", [])
 
