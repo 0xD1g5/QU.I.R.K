@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v4.6
 milestone_name: Enterprise Readiness
 status: in_progress
-stopped_at: Phase 46 Wave 1 (Plan 46-01) complete
+stopped_at: Phase 46 Wave 2 (Plan 46-03) complete — Plan 46-02 still in flight (parallel)
 last_updated: "2026-05-03T00:00:00.000Z"
-last_activity: 2026-05-03 — Phase 46 Plan 01 complete (chain_verified column + migration shim + scanner plumbing + D-01 gate; 728 tests pass)
+last_activity: 2026-05-03 — Phase 46 Plan 03 complete (tls-cert-defects chaos lab profile + untrusted-ca cert + oracle/README updates; awaiting Task 3 human-verify live boot)
 progress:
   total_phases: 43
   completed_phases: 1
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-03)
 
 ## Current Position
 
-Phase: 46-tls-finding-gaps — IN PROGRESS (Wave 1 of 3 complete)
-Plan: 01 (chain_verified column + scanner plumbing + D-01 gate) — complete
-Status: Plan 46-01 done; Plans 46-02 (risk engine), 46-03 (CBOM/report wiring), 46-04 (phase closing) pending
-Last activity: 2026-05-03 — Phase 46 Plan 01 complete (TLS-FIND-06 closed; foundation for Plan 46-02 untrusted-CA branch)
-Next action: Execute Plan 46-02 (Wave 2 — risk-engine untrusted-CA branch reads ep.chain_verified)
+Phase: 46-tls-finding-gaps — IN PROGRESS (Wave 2 of 3 — Plan 46-03 complete; Plan 46-02 parallel/in-flight)
+Plan: 03 (tls-cert-defects chaos lab profile) — complete
+Status: Plan 46-01 done; Plan 46-03 done (Tasks 1+2 committed; Task 3 human-verify pending operator); Plan 46-02 (risk engine) in parallel; Plan 46-04 (phase closing) pending
+Last activity: 2026-05-03 — Phase 46 Plan 03 complete (TLS-FIND-07 chaos lab fixture in place; live-fire boot deferred to operator)
+Next action: Operator runs Plan 46-03 Task 3 human-verify (lab.sh up --profile tls-cert-defects + 4 curl probes + lab.sh down). Plan 46-02 wraps independently. Then Plan 46-04 (phase closing).
 
 ## Phase Overview
 
@@ -139,6 +139,10 @@ Roadmap decisions (2026-04-27):
 - [46-01]: Fallback _scan_one_fallback gets a CERT_REQUIRED verify pre-pass BEFORE the existing CERT_NONE metadata pass; both run independently (verify result + metadata extraction decoupled)
 - [46-01]: Network errors on the verify pre-pass set chain_verified=None, NOT False (Pitfall 1 — avoid false untrusted-CA findings on transient network failures)
 - [46-01]: scan_one D-01 gate uses field-level merge (cert_not_after, cert_subject, cert_issuer, cert_pubkey_size+alg, chain_verified) — sslyze ep is mutated in place; fallback ep is consulted only for missing fields
+- [46-03]: tls-cert-defects profile uses ports 13444-13447 (NOT 13443-13446 — 13443 already taken by phaseA tls-missing-intermediate)
+- [46-03]: untrusted-CA leaf cert generated as RSA-2048 (strong) — isolates the untrusted-CA finding from the RSA-1024 finding when scanned at port 13446
+- [46-03]: tls-cert-rsa1024 service includes OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf + legacy.cnf volume mount (Pitfall 3 — nginx 3.x rejects RSA-1024 without legacy provider)
+- [46-03]: lab.sh ALL_PROFILES NOT touched — Phase 40 D-14 _derive_all_profiles() runtime parser auto-discovered tls-cert-defects (verified: ./lab.sh profiles output)
 
 ### Pending Todos
 
