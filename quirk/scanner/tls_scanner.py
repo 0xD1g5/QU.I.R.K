@@ -210,6 +210,9 @@ def _scan_one_sslyze(
             chain_depth = 0
             chain_verified = False
 
+        # Phase 46 TLS-FIND-06: persist chain verification result to column
+        ep.chain_verified = chain_verified
+
         # ----------------------------------------------------------------
         # Cipher suites per protocol
         # ----------------------------------------------------------------
@@ -342,6 +345,30 @@ def _scan_one_fallback(
         sni_used=bool(include_sni),
     )
 
+    # Phase 46 D-01: chain verification pre-pass.
+    # CERT_REQUIRED against system trust store. SSLCertVerificationError → False.
+    # Any other exception (timeout, connection refused) → None (indeterminate).
+    # Per Pitfall 1: network errors must NOT produce false untrusted-CA findings.
+    try:
+        verify_ctx = ssl.create_default_context()
+        verify_ctx.check_hostname = True
+        verify_ctx.verify_mode = ssl.CERT_REQUIRED
+        is_ip_for_verify = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(host)
+            is_ip_for_verify = True
+        except Exception:
+            pass
+        verify_hostname = host if (include_sni and not is_ip_for_verify) else None
+        with socket.create_connection((host, port), timeout=timeout) as vsock:
+            with verify_ctx.wrap_socket(vsock, server_hostname=verify_hostname) as vssock:
+                ep.chain_verified = True
+    except ssl.SSLCertVerificationError:
+        ep.chain_verified = False
+    except Exception:
+        ep.chain_verified = None
+
     try:
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
@@ -442,6 +469,23 @@ def scan_one(
         try:
             ep = _scan_one_sslyze(host, port, timeout, include_sni, logger)
             if ep is not None:
+                # Phase 46 D-01: validation gate — half-populated ep => merge with fallback.
+                # If sslyze omitted critical certificate metadata, run the fallback and
+                # merge any missing fields (chain_verified included) so the row that
+                # reaches the DB is never half-populated.
+                if ep.cert_not_after is None or not (ep.cert_subject or "").strip():
+                    fb = _scan_one_fallback(host, port, timeout, include_sni, logger, tls_enum_mode)
+                    if ep.cert_not_after is None:
+                        ep.cert_not_after = fb.cert_not_after
+                    if not (ep.cert_subject or "").strip():
+                        ep.cert_subject = fb.cert_subject
+                    if not (ep.cert_issuer or "").strip():
+                        ep.cert_issuer = fb.cert_issuer
+                    if ep.cert_pubkey_size is None:
+                        ep.cert_pubkey_size = fb.cert_pubkey_size
+                        ep.cert_pubkey_alg = fb.cert_pubkey_alg
+                    if ep.chain_verified is None:
+                        ep.chain_verified = fb.chain_verified
                 return ep
         except Exception as e:
             if logger:
