@@ -27,10 +27,10 @@
 
 ### Rich Finding Context (BACK-79)
 
-- [ ] **CONTEXT-01**: Every finding emitted by QUIRK has a non-empty `description` field explaining the cryptographic risk in 1–3 sentences
-- [ ] **CONTEXT-02**: Every quantum-vulnerable finding includes a `remediation` field naming the appropriate FIPS 203/204/205 algorithm (ML-KEM/ML-DSA/SLH-DSA) — never legacy "Kyber"/"Dilithium" names
-- [ ] **CONTEXT-03**: Every quantum-vulnerable finding cites a NIST IR 8547 deprecation deadline (RSA/ECC deprecated 2030; disallowed 2035)
-- [ ] **CONTEXT-04**: A CI grep gate fails the build if any `risk_engine.py` or `routes/scan.py` string contains "Kyber", "Dilithium", or "when standards are adopted"
+- [x] **CONTEXT-01**: Every finding emitted by QUIRK has a non-empty `description` field explaining the cryptographic risk in 1–3 sentences
+- [x] **CONTEXT-02**: Every quantum-vulnerable finding includes a `remediation` field naming the appropriate FIPS 203/204/205 algorithm (ML-KEM/ML-DSA/SLH-DSA) — never legacy "Kyber"/"Dilithium" names
+- [x] **CONTEXT-03**: Every quantum-vulnerable finding cites a NIST IR 8547 deprecation deadline (RSA/ECC deprecated 2030; disallowed 2035)
+- [x] **CONTEXT-04**: A CI grep gate fails the build if any `risk_engine.py` or `routes/scan.py` string contains "Kyber", "Dilithium", or "when standards are adopted"
 
 ### Compliance Mapping (BACK-20)
 
@@ -122,10 +122,10 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | MULTI-03 | Phase 47 | Complete |
 | MULTI-04 | Phase 47 | Complete |
 | MULTI-05 | Phase 47 | Complete |
-| CONTEXT-01 | Phase 48 | Pending |
-| CONTEXT-02 | Phase 48 | Pending |
-| CONTEXT-03 | Phase 48 | Pending |
-| CONTEXT-04 | Phase 48 | Pending |
+| CONTEXT-01 | Phase 48 | Complete |
+| CONTEXT-02 | Phase 48 | Complete |
+| CONTEXT-03 | Phase 48 | Complete |
+| CONTEXT-04 | Phase 48 | Complete |
 | COMPLY-01 | Phase 49 | Pending |
 | COMPLY-02 | Phase 49 | Pending |
 | COMPLY-03 | Phase 49 | Pending |

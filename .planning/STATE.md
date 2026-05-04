@@ -4,15 +4,15 @@ milestone: v4.6
 milestone_name: Enterprise Readiness
 current_phase: 48
 current_phase_name: rich-finding-context
-status: completed
-stopped_at: Phase 48 context gathered
-last_updated: "2026-05-04T15:27:26.965Z"
-last_activity: 2026-05-04
+status: verifying
+stopped_at: Phase 48 complete (Plans 48-01/02/03 all landed)
+last_updated: "2026-05-04T17:00:00.000Z"
+last_activity: 2026-05-04 -- Phase 48 Plan 03 complete (CI gate + docs purge + UAT-48 + Obsidian sync)
 progress:
   total_phases: 43
-  completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  completed_phases: 4
+  total_plans: 14
+  completed_plans: 14
   percent: 100
 ---
 
@@ -23,16 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-03)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 47 — nmap-discovery-multi-target-wizard
+**Current focus:** Phase 48 — rich-finding-context
 
 ## Current Position
 
+Phase: 48 (rich-finding-context) — EXECUTING
 Current Phase: 48
 Current Phase Name: rich-finding-context
-Plan: Not started
-Status: Phase 47 complete; Phase 48 ready for context/plan
-Last Activity: 2026-05-04
-Last Activity Description: Phase 47 (Nmap Discovery + Multi-Target Wizard) closed — UAT passed, ROADMAP/REQUIREMENTS updated, Obsidian phase note synced
+Plan: 3 of 3
+Status: Phase complete — ready for verification
+Last activity: 2026-05-04
+Last Activity Description: Phase 48 execution started
 Next action: Phase 48 (Rich Finding Context).
 
 ## Phase Overview
@@ -68,6 +69,9 @@ Next action: Phase 48 (Rich Finding Context).
 | Phase 45-install-day-ux P04 | 6 | 3 tasks | 3 files |
 | Phase 46-tls-finding-gaps P01 | ~12 min | 2 tasks | 5 files |
 | 47 | 3 | - | - |
+| Phase 48-rich-finding-context P01 | ~25 min | 2 tasks | 3 files |
+| Phase 48-rich-finding-context P02 | ~10 min | 2 tasks | 4 files |
+| Phase 48-rich-finding-context P03 | ~12 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -154,6 +158,11 @@ Roadmap decisions (2026-04-27):
 - [46-02]: Parallel-staging race — Plan 46-02 file changes (risk_engine.py + 2 test files) were captured by Plan 46-03's commit 386e1bd because both plans shared a working copy; rather than rewriting history (would clobber 46-03's correctly authored chaos-lab work), the mis-attribution is documented in 46-02-SUMMARY.md
 - [46-04]: Plan 46-01 verify pre-pass set check_hostname=True unconditionally; when server_hostname=None (SNI off / IP target) wrap_socket raised ValueError, swallowed by broad except as chain_verified=None — making the untrusted-CA branch structurally dead end-to-end. Fix in commit de70301: when verify_hostname is None, set check_hostname=False (chain validation is independent of hostname check; hostname mismatch is out of scope per CONTEXT.md)
 - [46-04]: Live-fire chaos lab brought up via 'docker compose -p chaoslab --profile tls-cert-defects up -d' (NOT lab.sh) per BACK-87 — operator instructions explicitly recommended this workaround; phase 46 verification path bypasses BACK-87 entirely
+- [48-01]: `_build_finding(...)` chokepoint helper validates non-empty description+recommendation at construction (D-02); `NIST_IR_8547_DEPRECATION` module constant appended to every quantum-vulnerable finding's recommendation (D-06); deterministic suffix preserves `_dedupe_findings` tuple equality (T-48-03 mitigation)
+- [48-02]: `# DO NOT UNIFY` guardrail comment locks the intentional `recommendation` (risk-engine dict) vs `remediation` (dashboard DTO) field-name asymmetry; `routes/scan.py::_derive_findings` constructs `FindingItem` from `CryptoEndpoint` state, not from risk-engine dicts — no rename needed
+- [48-03]: CI grep gate placement is a pytest test (`tests/test_pqc_terminology_gate.py`) — only existing in-repo lint-by-disk-read precedent (`tests/test_packaging.py`); auto-collected without Makefile/scripts runner; the GitHub workflow is path-scoped to `src/dashboard/**` and would not trigger on Python source changes anyway
+- [48-03]: Two-test gate (file-resolution + substring) — `test_gated_files_resolve` makes accidental file rename of `risk_engine.py` or `routes/scan.py` a loud failure rather than a silent gate bypass
+- [48-03]: D-04 doc rewrites in `docs/report-interpretation.md` (lines 121, 150) + `docs/quirk-overview.md` (line 75) replace Kyber/Dilithium/when-standards phrasing with FIPS 203/204/205 + NIST IR 8547 deprecation phrase
 
 ### Pending Todos
 
@@ -201,6 +210,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-05-04T15:27:26.954Z
-Stopped at: Phase 48 context gathered
-Next action: Execute Plan 46-02 (Wave 2 — risk-engine untrusted-CA branch reads ep.chain_verified)
+Last session: 2026-05-04T17:00:00.000Z
+Stopped at: Phase 48 complete — Plans 48-01/02/03 all landed; CONTEXT-01..04 closed
+Next action: Phase 49 (Compliance Mapping) — keys off the FIPS 203/204/205 literal substrings written by Phase 48
