@@ -1,5 +1,6 @@
 """Phase 45 / Plan 02: centralized optional-extra registry + probe.
 Phase 47 / Plan 02: extended with optional ``binary`` field for binary-availability probing.
+Phase 47 / Plan 03: added ``cbom`` registry entry for CBOM JSON schema validation (D-13, D-16).
 
 Per Phase 45 / D-08, D-10, and Q1/Q3 user decisions:
 
@@ -126,6 +127,20 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
             "falling back to consulting-tls port list"
         ),
         enabled_attrs=("enable_nmap",),
+    ),
+    # D-13 / D-16 (Phase 47 / Plan 03): CBOM JSON schema validation via
+    # cyclonedx-python-lib[json-validation] (jsonschema + referencing).
+    # enabled_attrs=() means "always probe" — CBOM is always written.
+    # Missing deps → one coverage_gap INFO advisory; validation skipped silently.
+    OptionalExtra(
+        extra="cbom",
+        modules=("jsonschema", "referencing"),
+        scanner_label="cbom_validator",
+        install_hint=(
+            "CBOM JSON schema validation skipped — "
+            "run `pip install quirk[cbom]` to enable"
+        ),
+        enabled_attrs=(),  # always probe — CBOM is always written
     ),
 )
 
