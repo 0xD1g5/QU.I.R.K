@@ -334,3 +334,76 @@ def test_nmap_fallback_uses_consulting_tls_ports():
     assert result_avail == [443, 8443], (
         f"Expected cfg.scan.ports_tls when nmap available, got {result_avail!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 1 (47-03) — cbom registry entry + advisory when jsonschema missing (D-13, D-16)
+# ---------------------------------------------------------------------------
+
+def test_cbom_registry_entry_present():
+    """D-13 / D-16: REGISTRY must contain exactly one entry with extra=='cbom',
+    modules==('jsonschema', 'referencing'), enabled_attrs==(),
+    scanner_label=='cbom_validator', and install_hint containing the literal
+    substring 'pip install quirk[cbom]' (INSTALL-04 / Phase 45 D-09 invariant)."""
+    from quirk.util.optional_extra import REGISTRY
+
+    cbom_entries = [e for e in REGISTRY if e.extra == "cbom"]
+    assert len(cbom_entries) == 1, (
+        f"Expected exactly 1 cbom entry in REGISTRY, found {len(cbom_entries)}"
+    )
+    entry = cbom_entries[0]
+    assert entry.modules == ("jsonschema", "referencing"), (
+        f"cbom entry.modules mismatch: {entry.modules!r}"
+    )
+    assert entry.enabled_attrs == (), (
+        f"cbom entry must always-probe (enabled_attrs=()), got {entry.enabled_attrs!r}"
+    )
+    assert entry.scanner_label == "cbom_validator", (
+        f"cbom entry.scanner_label mismatch: {entry.scanner_label!r}"
+    )
+    assert "pip install quirk[cbom]" in entry.install_hint, (
+        f"cbom install_hint missing literal 'pip install quirk[cbom]': {entry.install_hint!r}"
+    )
+
+
+def test_cbom_extra_advisory_when_jsonschema_missing():
+    """D-16: when jsonschema module is absent, probe_missing_extras appends one
+    ADVISORY row for cbom_validator; when modules are present, no advisory."""
+    from quirk.util import optional_extra
+    from types import SimpleNamespace
+
+    # Build a cfg with no enable_* flags; cbom has enabled_attrs=() so always probes.
+    cfg = SimpleNamespace(connectors=SimpleNamespace(
+        enable_kerberos=False,
+        enable_db=False,
+        enable_gcp=False,
+        enable_k8s=False,
+        enable_vault=False,
+        enable_nmap=False,
+    ))
+
+    # --- missing jsonschema: expect one cbom_validator advisory ---
+    error_endpoints = []
+    with patch.object(optional_extra, "find_spec", return_value=None), \
+         patch("shutil.which", return_value="/usr/bin/nmap"):
+        optional_extra.probe_missing_extras(cfg, error_endpoints)
+
+    cbom_advisories = [ep for ep in error_endpoints if ep.host == "cbom_validator"]
+    assert len(cbom_advisories) == 1, (
+        f"Expected 1 cbom advisory when jsonschema absent, got {len(cbom_advisories)}"
+    )
+    ep = cbom_advisories[0]
+    assert ep.protocol == "ADVISORY"
+    assert ep.scan_error_category == "missing_extra"
+    assert "pip install quirk[cbom]" in ep.scan_error
+
+    # --- modules present: no cbom_validator advisory ---
+    error_endpoints2 = []
+    with patch.object(optional_extra, "find_spec", return_value=object()), \
+         patch("shutil.which", return_value="/usr/bin/nmap"):
+        optional_extra.probe_missing_extras(cfg, error_endpoints2)
+
+    cbom_advisories2 = [ep for ep in error_endpoints2 if ep.host == "cbom_validator"]
+    assert len(cbom_advisories2) == 0, (
+        "Expected no cbom advisory when jsonschema + referencing are present"
+    )
