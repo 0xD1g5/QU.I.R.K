@@ -72,7 +72,7 @@ QUIRK performs deep TLS analysis using sslyze as its primary engine, with a fall
 - Negotiated cipher suites and protocol versions
 - Quantum vulnerability classification per NIST PQC standards
 
-Every TLS certificate's key algorithm is evaluated against a 50-entry NIST PQC classification table that marks each algorithm as *quantum-safe*, *quantum-vulnerable*, or *hybrid-ready*. RSA and ECDSA keys are flagged as vulnerable. CRYSTALS-Kyber and ML-DSA implementations are recognized as quantum-safe.
+Every TLS certificate's key algorithm is evaluated against a 50-entry NIST PQC classification table that marks each algorithm as *quantum-safe*, *quantum-vulnerable*, or *hybrid-ready*. RSA and ECDSA keys are flagged as vulnerable. ML-KEM (FIPS 203) and ML-DSA (FIPS 204) implementations are recognized as quantum-safe.
 
 ### SSH Protocol Auditing
 
