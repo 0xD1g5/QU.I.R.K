@@ -85,15 +85,16 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
     # === Findings table ===
     lines.append("## Findings")
     lines.append("")
-    lines.append("| Severity | Host | Port | Title | Recommendation |")
-    lines.append("|---|---|---:|---|---|")
+    lines.append("| Severity | Host | Port | Title | Description | Recommendation |")
+    lines.append("|---|---|---:|---|---|---|")
     for f in findings:
         sev = f.get("severity", "INFO")
         host = f.get("host", "")
         port = f.get("port", "")
         title = f.get("title", "")
+        desc = f.get("description", "")
         rec = f.get("recommendation", "")
-        lines.append(f"| {sev} | {host} | {port} | {title} | {rec} |")
+        lines.append(f"| {sev} | {host} | {port} | {title} | {desc} | {rec} |")
 
     lines.append("")
     return "\n".join(lines)
