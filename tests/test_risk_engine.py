@@ -315,6 +315,133 @@ class TestQuantumVulnerableCertKey:
 # Integration: multiple rules fire on same endpoint
 # ---------------------------------------------------------------------------
 
+class TestRichFindingContext:
+    """Phase 48 Plan 01 invariants: every finding emitted by evaluate_endpoints
+    has a non-empty description; every quantum-vulnerable finding cites the
+    NIST IR 8547 deprecation phrase and a FIPS 203/204/205 designation; no
+    finding contains stale Kyber/Dilithium/'when standards are adopted'
+    terminology.
+    """
+
+    @pytest.fixture
+    def all_findings(self):
+        past = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=10)
+        soon = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=15)
+        caps_unverified = json.dumps({"chain_verified": False, "chain_depth": 1})
+        eps = [
+            # Legacy TLS versions
+            _tls_ep(host="10.0.0.10", tls_version="TLSv1.0",
+                    tls_supported_versions="TLSv1.0,TLSv1.2"),
+            # Legacy cipher suites
+            _tls_ep(host="10.0.0.11", tls_legacy_suites_present=True),
+            # Expired cert
+            _tls_ep(host="10.0.0.12", cert_not_after=past),
+            # Expiring cert
+            _tls_ep(host="10.0.0.13", cert_not_after=soon),
+            # Self-signed
+            _tls_ep(host="10.0.0.14", cert_issuer="CN=self",
+                    cert_subject="CN=self"),
+            # Untrusted CA
+            _tls_ep(host="10.0.0.15", cert_issuer="CN=Unknown CA",
+                    cert_subject="CN=example.com",
+                    tls_capabilities_json=caps_unverified),
+            # RSA undersized — quantum_vulnerable
+            _tls_ep(host="10.0.0.16", cert_pubkey_alg="RSA",
+                    cert_pubkey_size=1024),
+            # RSA — quantum_vulnerable
+            _tls_ep(host="10.0.0.17", cert_pubkey_alg="RSA",
+                    cert_pubkey_size=2048),
+            # ECDSA undersized — quantum_vulnerable
+            _tls_ep(host="10.0.0.18", cert_pubkey_alg="ECDSA",
+                    cert_pubkey_size=192),
+            # ECDSA — quantum_vulnerable
+            _tls_ep(host="10.0.0.19", cert_pubkey_alg="ECDSA",
+                    cert_pubkey_size=256),
+            # SSH advisory — quantum_vulnerable
+            SimpleNamespace(host="10.0.0.20", port=22, protocol="SSH",
+                            scan_error=None),
+            # UNKNOWN open service
+            SimpleNamespace(host="10.0.0.21", port=9999, protocol="UNKNOWN",
+                            scan_error=None),
+            # HTTP plaintext
+            SimpleNamespace(host="10.0.0.22", port=80, protocol="HTTP",
+                            scan_error=None),
+        ]
+        return evaluate_endpoints(_cfg(), eps)
+
+    def test_every_finding_has_non_empty_description(self, all_findings):
+        assert all_findings, "fixture should yield findings"
+        for f in all_findings:
+            desc = f.get("description")
+            assert desc, f"Missing description: {f}"
+            assert isinstance(desc, str) and desc.strip(), \
+                f"Whitespace-only description: {f}"
+
+    def test_no_stale_pqc_terms(self, all_findings):
+        forbidden = ("kyber", "dilithium", "when standards are adopted")
+        for f in all_findings:
+            blob = (f.get("description", "") + " " +
+                    f.get("recommendation", "")).lower()
+            for term in forbidden:
+                assert term not in blob, \
+                    f"Stale term '{term}' in finding: {f}"
+
+    def test_quantum_vulnerable_findings_cite_deprecation_and_fips(
+            self, all_findings):
+        # Heuristic: quantum-vulnerable findings have RSA/ECDSA in title or
+        # are SSH advisory (per plan tasks).
+        qv_titles = ("RSA", "ECDSA", "SSH quantum")
+        qv_findings = [
+            f for f in all_findings
+            if any(t in f.get("title", "") for t in qv_titles)
+        ]
+        assert qv_findings, \
+            "Fixture should produce at least one quantum-vulnerable finding"
+        for f in qv_findings:
+            rec = f.get("recommendation", "")
+            assert NIST_IR_8547_DEPRECATION in rec, \
+                f"Missing deprecation phrase: {f}"
+            assert any(s in rec for s in ("FIPS 203", "FIPS 204", "FIPS 205")), \
+                f"Missing FIPS designation: {f}"
+
+    def test_non_quantum_findings_omit_deprecation_phrase(self, all_findings):
+        non_qv_titles = (
+            "Legacy TLS versions",
+            "Legacy TLS cipher suites",
+            "TLS certificate expired",
+            "TLS certificate expiring",
+            "TLS certificate is self-signed",
+            "TLS certificate issued by untrusted CA",
+            "Plaintext HTTP service detected",
+            "Unknown open service",
+        )
+        non_qv = [
+            f for f in all_findings
+            if any(f.get("title", "").startswith(t) for t in non_qv_titles)
+        ]
+        assert non_qv, "Fixture should produce non-quantum findings"
+        for f in non_qv:
+            assert NIST_IR_8547_DEPRECATION not in f.get("recommendation", ""), \
+                f"Non-quantum finding leaked deprecation phrase: {f}"
+
+    def test_dedup_safety_for_quantum_findings(self):
+        """T-48-03: two quantum-vulnerable endpoints with identical
+        (host, port, title) collapse to one finding because the deterministic
+        deprecation suffix preserves recommendation equality."""
+        ep1 = _tls_ep(host="10.0.0.50", port=443,
+                      cert_pubkey_alg="RSA", cert_pubkey_size=2048)
+        ep2 = _tls_ep(host="10.0.0.50", port=443,
+                      cert_pubkey_alg="RSA", cert_pubkey_size=2048)
+        findings = evaluate_endpoints(_cfg(), [ep1, ep2])
+        rsa_findings = [
+            f for f in findings
+            if f.get("title") == "TLS certificate uses quantum-vulnerable RSA key"
+        ]
+        assert len(rsa_findings) == 1, \
+            f"Expected 1 deduped RSA finding, got {len(rsa_findings)}"
+        assert NIST_IR_8547_DEPRECATION in rsa_findings[0]["recommendation"]
+
+
 class TestMultipleRulesOnOneEndpoint:
     def test_expired_self_signed_rsa1024_all_fire(self):
         past = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=5)
