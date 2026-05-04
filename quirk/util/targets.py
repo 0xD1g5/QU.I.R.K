@@ -29,6 +29,8 @@ Public surface:
 from __future__ import annotations
 
 import ipaddress
+import sys
+from typing import Callable, Optional
 
 
 def load_targets_file(path: str) -> str:
@@ -116,6 +118,88 @@ def parse_target_tokens(
             fqdns.append(token)
 
     return fqdns, cidrs
+
+
+def projected_probe_count(targets: list, ports: list) -> int:
+    """Count the total number of probes: hosts × ports.
+
+    For CIDR tokens (containing '/'), count live hosts via .hosts() (excludes
+    network/broadcast addresses for IPv4). For bare hosts/FQDNs/IPs, count 1
+    each. Risks #4: uses .hosts() NOT .num_addresses to avoid off-by-2 on IPv4
+    /24.
+
+    Args:
+        targets: List of target tokens (CIDR strings or bare hosts/FQDNs/IPs).
+        ports: List of port integers.
+
+    Returns:
+        Total probe count (host_count × port_count).
+    """
+    host_count = 0
+    for t in targets:
+        if "/" in t:
+            try:
+                network = ipaddress.ip_network(t, strict=False)
+                host_count += len(list(network.hosts()))
+            except ValueError:
+                host_count += 1  # treat malformed CIDRs as single host
+        else:
+            host_count += 1
+    return host_count * len(ports)
+
+
+def maybe_confirm_probe_budget(
+    targets: list,
+    ports: list,
+    threshold: int = 10_000,
+    is_tty: Optional[bool] = None,
+    prompt_fn: Callable = input,
+    stderr_print_fn: Optional[Callable] = None,
+) -> bool:
+    """TTY-aware probe-budget guard; returns True if scan should proceed.
+
+    D-10: When probe count exceeds threshold:
+      - TTY mode → print projection and require y/N confirm (returns False on 'n').
+      - Non-TTY mode → print warning to stderr and auto-proceed (returns True).
+    D-12: threshold default is 10,000 (kwarg exists for testability; run_scan.py
+    MUST pass the literal 10_000 at the call site, not rely on the default).
+
+    Args:
+        targets: Target list passed to projected_probe_count.
+        ports: Port list passed to projected_probe_count.
+        threshold: Budget limit (default 10,000; D-12 — not configurable in prod).
+        is_tty: Override for sys.stdout.isatty(); None means auto-detect.
+        prompt_fn: Callable used to ask y/N (injectable for tests).
+        stderr_print_fn: Callable used for stderr warning (injectable for tests).
+
+    Returns:
+        True if scan should proceed, False if user aborted.
+    """
+    count = projected_probe_count(targets, ports)
+    if count <= threshold:
+        return True
+
+    if is_tty is None:
+        is_tty = sys.stdout.isatty()  # D-10
+
+    formatted = f"{count:,}"
+    if is_tty:
+        answer = prompt_fn(
+            f"⚠️  Projected probe count ({formatted}) exceeds {threshold:,}. "
+            "Proceed? [y/N]: "
+        ).strip().lower()
+        return answer in ("y", "yes")
+    else:
+        # Non-TTY: warn to stderr, auto-proceed (D-10)
+        warn_msg = (
+            f"WARNING: Projected probe count ({formatted}) exceeds {threshold:,}. "
+            "Auto-proceeding in non-TTY mode."
+        )
+        if stderr_print_fn is not None:
+            stderr_print_fn(warn_msg)
+        else:
+            print(warn_msg, file=sys.stderr)
+        return True
 
 
 def apply_targets_file_override(cfg, targets_file_path: str) -> None:
