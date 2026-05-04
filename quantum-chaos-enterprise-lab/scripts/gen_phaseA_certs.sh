@@ -78,5 +78,8 @@ issue_leaf "rsa1024" "rsa1024.chaos.local" "scenario-root" 365 1024 sha256
 echo "==> Scenario: SHA1 signed leaf (legacy signature)"
 issue_leaf "sha1" "sha1.chaos.local" "scenario-root" 365 2048 sha1
 
+echo "==> Scenario: untrusted-CA leaf (RSA-2048 strong key, signed by off-trust-store scenario-root)"
+issue_leaf "untrusted-ca" "untrusted-ca.chaos.local" "scenario-root" 365 2048 sha256
+
 echo "✅ PhaseA scenario certs generated under $BASE"
 echo "   Note: Some clients may treat SHA1 as legacy/unacceptable; that's intended for detection."
