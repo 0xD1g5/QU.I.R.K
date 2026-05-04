@@ -41,6 +41,11 @@ class ConfidenceData(BaseModel):
 
 # ---- Findings ----
 
+# DO NOT UNIFY: dashboard FindingItem uses `remediation` while the risk-engine
+# finding dicts (quirk/engine/risk_engine.py _build_finding) use `recommendation`.
+# This asymmetry is intentional and pre-existing — the dashboard route in
+# routes/scan.py constructs FindingItem from CryptoEndpoint state directly and
+# does NOT consume risk-engine dicts. See Phase 48 PATTERNS §3.
 class FindingItem(BaseModel):
     id: Optional[int] = None
     host: str
