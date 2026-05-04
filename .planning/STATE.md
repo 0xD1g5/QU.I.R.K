@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v4.6
 milestone_name: Enterprise Readiness
 status: in_progress
-stopped_at: Phase 46 Wave 2 (Plan 46-03) complete — Plan 46-02 still in flight (parallel)
+stopped_at: Phase 46 Wave 2 (Plans 46-02 + 46-03) complete — Plan 46-04 pending
 last_updated: "2026-05-03T00:00:00.000Z"
-last_activity: 2026-05-03 — Phase 46 Plan 03 complete (tls-cert-defects chaos lab profile + untrusted-ca cert + oracle/README updates; awaiting Task 3 human-verify live boot)
+last_activity: 2026-05-03 — Phase 46 Plan 02 complete (risk-engine cert-defect severity bumps + D-04 branch split + _chain_verified() direct-column upgrade; 34 targeted + 739 full-suite tests pass). Plan 46-03 also complete (chaos lab fixture). Plan 46-04 phase-closing pending.
 progress:
   total_phases: 43
   completed_phases: 1
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-03)
 
 ## Current Position
 
-Phase: 46-tls-finding-gaps — IN PROGRESS (Wave 2 of 3 — Plan 46-03 complete; Plan 46-02 parallel/in-flight)
-Plan: 03 (tls-cert-defects chaos lab profile) — complete
-Status: Plan 46-01 done; Plan 46-03 done (Tasks 1+2 committed; Task 3 human-verify pending operator); Plan 46-02 (risk engine) in parallel; Plan 46-04 (phase closing) pending
-Last activity: 2026-05-03 — Phase 46 Plan 03 complete (TLS-FIND-07 chaos lab fixture in place; live-fire boot deferred to operator)
-Next action: Operator runs Plan 46-03 Task 3 human-verify (lab.sh up --profile tls-cert-defects + 4 curl probes + lab.sh down). Plan 46-02 wraps independently. Then Plan 46-04 (phase closing).
+Phase: 46-tls-finding-gaps — IN PROGRESS (Waves 1+2 of 3 complete)
+Plan: 02 (risk-engine cert-defect severity + D-04 branch split) — complete
+Status: Plans 46-01, 46-02, 46-03 done. Plan 46-03 Task 3 human-verify pending operator. Plan 46-04 (phase closing) pending.
+Last activity: 2026-05-03 — Phase 46 Plan 02 complete (TLS-FIND-01..05 logic now correct: CRITICAL/HIGH/MEDIUM/HIGH/HIGH; D-02 + D-04 enforced; _chain_verified prefers ep.chain_verified column).
+Next action: Operator runs Plan 46-03 Task 3 human-verify (lab.sh up --profile tls-cert-defects + 4 curl probes + lab.sh down). Then Plan 46-04 (phase closing).
 
 ## Phase Overview
 
@@ -143,6 +143,10 @@ Roadmap decisions (2026-04-27):
 - [46-03]: untrusted-CA leaf cert generated as RSA-2048 (strong) — isolates the untrusted-CA finding from the RSA-1024 finding when scanned at port 13446
 - [46-03]: tls-cert-rsa1024 service includes OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf + legacy.cnf volume mount (Pitfall 3 — nginx 3.x rejects RSA-1024 without legacy provider)
 - [46-03]: lab.sh ALL_PROFILES NOT touched — Phase 40 D-14 _derive_all_profiles() runtime parser auto-discovered tls-cert-defects (verified: ./lab.sh profiles output)
+- [46-02]: _chain_verified() uses _SENTINEL = object() to distinguish a column value of None (indeterminate) from a missing attribute (legacy pre-Phase-46 ORM row); only after both attribute-presence and not-None checks does the helper return bool — preserves tri-state semantics from Plan 46-01
+- [46-02]: D-04 implementation uses if/elif within a single block — when issuer == subject, the untrusted-CA branch is structurally unreachable, eliminating any mutual-exclusivity bug surface
+- [46-02]: Severity bumps — expired HIGH→CRITICAL (TLS-FIND-01); self-signed MEDIUM→HIGH (TLS-FIND-02); untrusted-CA gets dedicated MEDIUM branch (TLS-FIND-03)
+- [46-02]: Parallel-staging race — Plan 46-02 file changes (risk_engine.py + 2 test files) were captured by Plan 46-03's commit 386e1bd because both plans shared a working copy; rather than rewriting history (would clobber 46-03's correctly authored chaos-lab work), the mis-attribution is documented in 46-02-SUMMARY.md
 
 ### Pending Todos
 
