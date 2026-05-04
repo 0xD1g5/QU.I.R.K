@@ -99,7 +99,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Milestone Goal:** Make QUIRK credible and usable on real enterprise estates — fix install-day crashes, fill TLS finding gaps, enrich output with compliance context and PQC remediation guidance, and streamline the multi-target workflow.
 
 - [ ] **Phase 45: Install-Day UX** - Graceful ImportError degradation and `[all]` meta-extra so `pip install quirk` never crashes on first run
-- [ ] **Phase 46: TLS Finding Gaps** - Emit CRITICAL/HIGH/MEDIUM findings for expired, self-signed, untrusted-CA, and weak-key TLS certificates with chaos lab verification
+- [x] **Phase 46: TLS Finding Gaps** - Emit CRITICAL/HIGH/MEDIUM findings for expired, self-signed, untrusted-CA, and weak-key TLS certificates with chaos lab verification (completed 2026-05-03)
 - [ ] **Phase 47: Nmap Discovery + Multi-Target Wizard** - Pre-scan nmap port discovery and comma/file/CIDR multi-target input in interactive mode and CLI
 - [ ] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology
 - [ ] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports
@@ -924,10 +924,10 @@ Plans:
   3. When sslyze `CERTIFICATE_INFO` returns ERROR, the scanner falls back to the ssl_info path cleanly — no half-populated `CryptoEndpoint` with `cert_not_after = None` reaches the database
   4. The `tls-cert-defects` chaos lab profile is running and QUIRK scanning it produces all expected findings: expired cert CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, and RSA-1024 weak-key HIGH
 **Plans**: 4 plans
-  - [ ] 46-01-PLAN.md — Schema + scanner wiring (chain_verified column, ALTER TABLE migration, sslyze + fallback plumbing, D-01 validation gate)
-  - [ ] 46-02-PLAN.md — Risk engine refactor: severities (TLS-FIND-01 CRITICAL, TLS-FIND-02 HIGH) + D-04 mutual exclusivity branch split + existing-test updates
-  - [ ] 46-03-PLAN.md — Chaos lab `tls-cert-defects` profile (4 services on 13444-13447, untrusted-CA cert generation, README + expected_results sync)
-  - [ ] 46-04-PLAN.md — UAT-SERIES.md + Obsidian phase note + Roadmap/Hub sync + live-fire end-to-end UAT
+  - [x] 46-01-PLAN.md — Schema + scanner wiring (chain_verified column, ALTER TABLE migration, sslyze + fallback plumbing, D-01 validation gate)
+  - [x] 46-02-PLAN.md — Risk engine refactor: severities (TLS-FIND-01 CRITICAL, TLS-FIND-02 HIGH) + D-04 mutual exclusivity branch split + existing-test updates
+  - [x] 46-03-PLAN.md — Chaos lab `tls-cert-defects` profile (4 services on 13444-13447, untrusted-CA cert generation, README + expected_results sync)
+  - [x] 46-04-PLAN.md — UAT-SERIES.md + Obsidian phase note + Roadmap/Hub sync + live-fire end-to-end UAT
 
 ### Phase 47: Nmap Discovery + Multi-Target Wizard
 **Goal**: Users can feed QUIRK comma-separated hosts, a target file, or a CIDR range, and optionally pre-discover open ports with nmap — enabling real enterprise 50-host+ scans without manual port enumeration

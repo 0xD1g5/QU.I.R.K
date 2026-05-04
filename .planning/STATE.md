@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v4.6
 milestone_name: Enterprise Readiness
 status: in_progress
-stopped_at: Phase 46 Wave 2 (Plans 46-02 + 46-03) complete — Plan 46-04 pending
-last_updated: "2026-05-03T00:00:00.000Z"
-last_activity: 2026-05-03 — Phase 46 Plan 02 complete (risk-engine cert-defect severity bumps + D-04 branch split + _chain_verified() direct-column upgrade; 34 targeted + 739 full-suite tests pass). Plan 46-03 also complete (chaos lab fixture). Plan 46-04 phase-closing pending.
+stopped_at: Phase 46 COMPLETE — all 4 plans landed, end-to-end live-fire verified
+last_updated: "2026-05-03T03:00:00.000Z"
+last_activity: 2026-05-03 — Phase 46 closed. Plan 46-04 wrote UAT-46-01..05, synced 4 vault files, ran live-fire end-to-end against tls-cert-defects chaos lab profile (4-finding severity matrix CRITICAL/HIGH/MEDIUM/HIGH confirmed; D-02 + D-04 honored), and auto-fixed a Plan 46-01 verify-pre-pass bug (check_hostname=True ValueError on hostname-less targets — commit de70301) that had been silently dead-ending the untrusted-CA branch end-to-end. Ready for Phase 47.
 progress:
   total_phases: 43
   completed_phases: 1
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-05-03)
 
 ## Current Position
 
-Phase: 46-tls-finding-gaps — IN PROGRESS (Waves 1+2 of 3 complete)
-Plan: 02 (risk-engine cert-defect severity + D-04 branch split) — complete
-Status: Plans 46-01, 46-02, 46-03 done. Plan 46-03 Task 3 human-verify pending operator. Plan 46-04 (phase closing) pending.
-Last activity: 2026-05-03 — Phase 46 Plan 02 complete (TLS-FIND-01..05 logic now correct: CRITICAL/HIGH/MEDIUM/HIGH/HIGH; D-02 + D-04 enforced; _chain_verified prefers ep.chain_verified column).
-Next action: Operator runs Plan 46-03 Task 3 human-verify (lab.sh up --profile tls-cert-defects + 4 curl probes + lab.sh down). Then Plan 46-04 (phase closing).
+Phase: 46-tls-finding-gaps — COMPLETE (all 3 waves landed 2026-05-03)
+Plan: 04 (docs + UAT + Obsidian sync + live-fire end-to-end) — complete
+Status: Plans 46-01, 46-02, 46-03, 46-04 all done. End-to-end live-fire verified (CRITICAL/HIGH/MEDIUM/HIGH severity matrix; D-02 + D-04 honored). Plan 46-04 auto-fixed a Plan 46-01 verify-pre-pass bug (commit de70301) that had been making the untrusted-CA branch structurally dead end-to-end on hostname-less targets.
+Last activity: 2026-05-03 — Phase 46 closed end-to-end. UAT-46-01..05 added; vault Phase note + UAT-Series + Roadmap + Hub all synced.
+Next action: Phase 47 (Nmap Discovery + Multi-Target Wizard).
 
 ## Phase Overview
 
@@ -147,6 +147,8 @@ Roadmap decisions (2026-04-27):
 - [46-02]: D-04 implementation uses if/elif within a single block — when issuer == subject, the untrusted-CA branch is structurally unreachable, eliminating any mutual-exclusivity bug surface
 - [46-02]: Severity bumps — expired HIGH→CRITICAL (TLS-FIND-01); self-signed MEDIUM→HIGH (TLS-FIND-02); untrusted-CA gets dedicated MEDIUM branch (TLS-FIND-03)
 - [46-02]: Parallel-staging race — Plan 46-02 file changes (risk_engine.py + 2 test files) were captured by Plan 46-03's commit 386e1bd because both plans shared a working copy; rather than rewriting history (would clobber 46-03's correctly authored chaos-lab work), the mis-attribution is documented in 46-02-SUMMARY.md
+- [46-04]: Plan 46-01 verify pre-pass set check_hostname=True unconditionally; when server_hostname=None (SNI off / IP target) wrap_socket raised ValueError, swallowed by broad except as chain_verified=None — making the untrusted-CA branch structurally dead end-to-end. Fix in commit de70301: when verify_hostname is None, set check_hostname=False (chain validation is independent of hostname check; hostname mismatch is out of scope per CONTEXT.md)
+- [46-04]: Live-fire chaos lab brought up via 'docker compose -p chaoslab --profile tls-cert-defects up -d' (NOT lab.sh) per BACK-87 — operator instructions explicitly recommended this workaround; phase 46 verification path bypasses BACK-87 entirely
 
 ### Pending Todos
 
