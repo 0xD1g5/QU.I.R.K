@@ -954,9 +954,9 @@ Plans:
   3. Every quantum-vulnerable finding cites the NIST IR 8547 deprecation timeline: RSA/ECC deprecated 2030, disallowed 2035
   4. A CI test (grep-based gate) fails the build if "Kyber", "Dilithium", or "when standards are adopted" appear anywhere in `risk_engine.py` or `routes/scan.py`
 **Plans**: 3 plans
-  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
-  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
-  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
+  - [ ] 48-01-PLAN.md — Risk engine: _build_finding helper + NIST_IR_8547_DEPRECATION constant + producer migration + dedup safety
+  - [ ] 48-02-PLAN.md — Renderer (HTML All Findings + technical Markdown) + dashboard wiring + JSON export verification + recommendation/remediation guardrail
+  - [ ] 48-03-PLAN.md — CI grep gate (tests/test_pqc_terminology_gate.py) + docs purge + UAT-SERIES.md + Obsidian phase note
 
 ### Phase 49: Compliance Mapping
 **Goal**: QUIRK findings are mapped to PCI-DSS 4.0.1, HIPAA 45 CFR, and FIPS 140-3 control references via a new `quirk/compliance/` module, and a "Compliance Summary" section appears in HTML/PDF reports — making QUIRK output directly usable as evidence in compliance assessments. Mappings include freshness metadata so they don't silently rot when regulators publish revisions
