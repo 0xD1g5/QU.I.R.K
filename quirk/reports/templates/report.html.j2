@@ -223,7 +223,7 @@
     <h2>All Findings</h2>
     {% if findings %}
     <table>
-      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Recommendation</th></tr></thead>
+      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Description</th><th>Recommendation</th></tr></thead>
       <tbody>
       {% for f in findings if f.get('category') != 'coverage_gap' %}
       <tr>
@@ -231,7 +231,8 @@
         <td>{{ f.get('title','') }}</td>
         <td>{{ f.get('host','') }}</td>
         <td>{{ f.get('port','') }}</td>
-        <td>{{ f.get('recommendation','')[:160] }}</td>
+        <td>{{ f.get('description','')[:200] }}{% if f.get('description','')|length > 200 %}…{% endif %}</td>
+        <td>{{ f.get('recommendation','')[:200] }}{% if f.get('recommendation','')|length > 200 %}…{% endif %}</td>
       </tr>
       {% endfor %}
       </tbody>
