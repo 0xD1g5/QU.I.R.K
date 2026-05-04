@@ -10,7 +10,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from quirk.engine.risk_engine import evaluate_endpoints
+from quirk.engine.risk_engine import (
+    NIST_IR_8547_DEPRECATION,
+    _build_finding,
+    evaluate_endpoints,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +56,60 @@ def _titles(findings):
 
 def _find(findings, title):
     return next((f for f in findings if f["title"] == title), None)
+
+
+# ---------------------------------------------------------------------------
+# Phase 48 — _build_finding helper (D-02, D-06)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildFinding:
+    def test_rejects_empty_description(self):
+        with pytest.raises(ValueError):
+            _build_finding(severity="LOW", host="h", port=1, title="t",
+                           description="", recommendation="r")
+
+    def test_rejects_whitespace_description(self):
+        with pytest.raises(ValueError):
+            _build_finding(severity="LOW", host="h", port=1, title="t",
+                           description="   ", recommendation="r")
+
+    def test_rejects_empty_recommendation(self):
+        with pytest.raises(ValueError):
+            _build_finding(severity="LOW", host="h", port=1, title="t",
+                           description="d", recommendation="")
+
+    def test_rejects_whitespace_recommendation(self):
+        with pytest.raises(ValueError):
+            _build_finding(severity="LOW", host="h", port=1, title="t",
+                           description="d", recommendation="  \t")
+
+    def test_quantum_vulnerable_appends_deprecation_phrase(self):
+        f = _build_finding(
+            severity="HIGH", host="h", port=1, title="t",
+            description="d",
+            recommendation="Migrate to ML-KEM (FIPS 203).",
+            quantum_vulnerable=True,
+        )
+        assert NIST_IR_8547_DEPRECATION in f["recommendation"]
+        assert f["recommendation"].endswith(NIST_IR_8547_DEPRECATION)
+
+    def test_non_quantum_does_not_append(self):
+        f = _build_finding(severity="LOW", host="h", port=1, title="t",
+                           description="d", recommendation="r")
+        assert NIST_IR_8547_DEPRECATION not in f["recommendation"]
+
+    def test_constant_exact_string(self):
+        assert NIST_IR_8547_DEPRECATION == (
+            "Per NIST IR 8547, RSA and ECC are deprecated after 2030 and "
+            "disallowed after 2035."
+        )
+
+    def test_returns_six_key_dict(self):
+        f = _build_finding(severity="LOW", host="h", port=1, title="t",
+                           description="d", recommendation="r")
+        assert set(f.keys()) == {"severity", "host", "port", "title",
+                                  "description", "recommendation"}
 
 
 # ---------------------------------------------------------------------------
