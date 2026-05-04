@@ -85,3 +85,8 @@ class CryptoEndpoint(Base):
     # ==========================
     email_scan_json = Column(Text, nullable=True)  # Per-host email port scan summary JSON (Phase 32)
     broker_scan_json = Column(Text, nullable=True)  # Phase 33 — BROKER-00 (per-scan nested broker probe summary)
+
+    # ==========================
+    # v4.6 TLS finding gap fields (Phase 46)
+    # ==========================
+    chain_verified = Column(Boolean, nullable=True)  # TLS-FIND-06: True/False/None per D-01
