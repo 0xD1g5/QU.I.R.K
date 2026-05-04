@@ -43,6 +43,7 @@ from quirk.engine.rate_limiter import TokenBucket
 from quirk import __version__
 from quirk.cli.banner import print_banner
 from quirk.util.targets import apply_targets_file_override  # D-03
+from quirk.util.optional_extra import is_extra_available, select_nmap_port_list  # D-08/D-09
 
 
 def _error_category(desc: str) -> str:
@@ -309,6 +310,11 @@ def main():
     if getattr(args, "targets_file", None):
         apply_targets_file_override(cfg, args.targets_file)  # D-03
 
+    # Phase 47 / D-09: reflect --discovery flag onto cfg.connectors.enable_nmap so the
+    # registry probe (probe_missing_extras at L386) and the wizard path converge on the
+    # same boolean. No new DiscoveryCfg sub-table this phase (Risks #1).
+    setattr(cfg.connectors, "enable_nmap", args.discovery == "nmap")  # D-09
+
     # Score profile (calibration) — independent from scan profile
     if getattr(args, "score_profile", None):
         if getattr(cfg, "intelligence", None) is None:
@@ -335,8 +341,22 @@ def main():
             logger.info("⚠️ No CIDRs/FQDNs/IPs provided for Nmap discovery. Add targets and re-run.")
             return
 
-        ports_for_nmap = sorted(set((cfg.scan.ports_tls or []) + [22, 80, 8080, 8000]))
+        # D-08: check if nmap binary is available; fall back to CONSULTING_TLS_PORTS if not.
+        nmap_binary_available = is_extra_available("nmap")
+        # D-11: use post-config resolved port list; select_nmap_port_list handles fallback.
+        ports_for_nmap = sorted(set(select_nmap_port_list(cfg, nmap_binary_available) + [22, 80, 8080, 8000]))  # D-08/D-11
         extra_args = args.nmap_extra_args.strip()
+
+        # D-10/D-11/D-12: TTY-aware probe-budget guard (inserted Task 3)
+        from quirk.util.targets import maybe_confirm_probe_budget
+        if not maybe_confirm_probe_budget(
+            targets=nmap_targets,
+            ports=ports_for_nmap,
+            threshold=10_000,  # D-12: threshold locked to 10,000 by roadmap success criterion #5; not configurable
+            is_tty=sys.stdout.isatty(),
+        ):
+            logger.info("Aborted by user — projected probe count exceeded threshold.")
+            return
 
         d_key = f"discovery-{scope_hash(cfg, 'nmap', nmap_extra_args=extra_args, ports=ports_for_nmap)}"
         cached = load_cache(cfg.output.directory, d_key, args.cache_ttl_hours) if args.cache and args.resume and not args.force_discovery else None
@@ -345,6 +365,15 @@ def main():
             if cached:
                 logger.stamp(f"♻️ Using cached discovery results ({d_key})")
                 targets = serial_to_targets(cached.get("targets", []))
+            elif not nmap_binary_available:
+                # D-08: nmap binary absent — advisory already emitted by probe_missing_extras;
+                # fall back to builtin discovery using CONSULTING_TLS_PORTS.
+                logger.info(
+                    "⚠️ nmap binary not found — falling back to builtin discovery "
+                    "(consulting-tls port list). Install nmap and ensure it is in PATH."
+                )
+                targets = expand_targets(cfg)
+                targets = _filter_excludes(targets, cfg.targets.exclude_ips or [])
             else:
                 open_ports = run_nmap_discovery(
                     targets=nmap_targets,

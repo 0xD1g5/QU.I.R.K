@@ -31,11 +31,16 @@ def test_registry_omits_motion_and_redis():
 
 # ---------------------------------------------------------------------------
 # Test 2 — every install_hint contains the literal `pip install quirk[<extra>]`
+#           (binary-only extras are exempt — they have no pip package)
 # ---------------------------------------------------------------------------
 def test_all_hints_contain_pip_install_literal():
     from quirk.util.optional_extra import REGISTRY
 
     for entry in REGISTRY:
+        # Binary-only extras (modules=()) have no pip package — their install_hint
+        # contains system-package instructions instead (Phase 47 / D-08).
+        if not entry.modules:
+            continue
         literal = f"pip install quirk[{entry.extra}]"
         assert literal in entry.install_hint, (
             f"entry {entry.extra!r} hint missing literal {literal!r}: "
@@ -185,3 +190,147 @@ def test_probe_invoked_in_run_scan_main():
     # Existing Phase 41 inline advisories MUST still be present (D-11).
     assert '_emit_missing_extra_advisory("email_scanner", "motion"' in src
     assert '_emit_missing_extra_advisory("broker_scanner", "motion"' in src
+
+
+# ---------------------------------------------------------------------------
+# Task 1 (47-02) — binary field + nmap registry entry + binary probe semantics
+# ---------------------------------------------------------------------------
+
+def test_binary_field_default_is_none():
+    """OptionalExtra.binary defaults to None (backward-compat: existing 4 entries unchanged)."""
+    from quirk.util.optional_extra import OptionalExtra
+
+    entry = OptionalExtra(
+        extra="x",
+        modules=("y",),
+        scanner_label="z",
+        install_hint="hint with `pip install quirk[x]`",
+        enabled_attrs=(),
+    )
+    assert entry.binary is None
+
+
+def test_nmap_registry_entry_present():
+    """REGISTRY must contain exactly one entry with extra=='nmap', binary=='nmap',
+    modules==(), enabled_attrs==('enable_nmap',), and install_hint containing
+    the literal substring 'install nmap' (D-08)."""
+    from quirk.util.optional_extra import REGISTRY
+
+    nmap_entries = [e for e in REGISTRY if e.extra == "nmap"]
+    assert len(nmap_entries) == 1, (
+        f"Expected exactly 1 nmap entry in REGISTRY, found {len(nmap_entries)}"
+    )
+    entry = nmap_entries[0]
+    assert entry.binary == "nmap"
+    assert entry.modules == ()
+    assert entry.enabled_attrs == ("enable_nmap",)
+    assert "install nmap" in entry.install_hint, (
+        f"nmap install_hint missing 'install nmap': {entry.install_hint!r}"
+    )
+
+
+def test_nmap_binary_missing_emits_advisory():
+    """DISCOVER-02: when enable_nmap=True and shutil.which('nmap') returns None,
+    probe_missing_extras appends one ADVISORY with host='nmap_discovery',
+    protocol='ADVISORY', scan_error_category='missing_extra'."""
+    from quirk.util import optional_extra
+    from unittest.mock import patch
+
+    cfg = _make_cfg(
+        enable_kerberos=False,
+        enable_db=False,
+        enable_gcp=False,
+        enable_k8s=False,
+        enable_vault=False,
+        enable_nmap=True,
+    )
+    error_endpoints = []
+
+    # All modules importable (modules=()), binary missing.
+    with patch.object(optional_extra, "find_spec", return_value=object()), \
+         patch("shutil.which", return_value=None):
+        optional_extra.probe_missing_extras(cfg, error_endpoints)
+
+    nmap_advisories = [ep for ep in error_endpoints if ep.host == "nmap_discovery"]
+    assert len(nmap_advisories) == 1, (
+        f"Expected 1 nmap advisory, got {len(nmap_advisories)}: {error_endpoints}"
+    )
+    ep = nmap_advisories[0]
+    assert ep.protocol == "ADVISORY"
+    assert ep.scan_error_category == "missing_extra"
+
+
+def test_nmap_binary_present_no_advisory():
+    """When enable_nmap=True and shutil.which('nmap') returns a path, no advisory."""
+    from quirk.util import optional_extra
+    from unittest.mock import patch
+
+    cfg = _make_cfg(
+        enable_kerberos=False,
+        enable_db=False,
+        enable_gcp=False,
+        enable_k8s=False,
+        enable_vault=False,
+        enable_nmap=True,
+    )
+    error_endpoints = []
+
+    with patch.object(optional_extra, "find_spec", return_value=object()), \
+         patch("shutil.which", return_value="/usr/bin/nmap"):
+        optional_extra.probe_missing_extras(cfg, error_endpoints)
+
+    nmap_advisories = [ep for ep in error_endpoints if ep.host == "nmap_discovery"]
+    assert len(nmap_advisories) == 0, (
+        "Expected no nmap advisory when binary is present"
+    )
+
+
+def test_nmap_disabled_silent():
+    """D-08 silent-when-disabled: when enable_nmap=False and binary is absent,
+    no advisory is emitted."""
+    from quirk.util import optional_extra
+    from unittest.mock import patch
+
+    cfg = _make_cfg(
+        enable_kerberos=False,
+        enable_db=False,
+        enable_gcp=False,
+        enable_k8s=False,
+        enable_vault=False,
+        enable_nmap=False,
+    )
+    error_endpoints = []
+
+    with patch.object(optional_extra, "find_spec", return_value=object()), \
+         patch("shutil.which", return_value=None):
+        optional_extra.probe_missing_extras(cfg, error_endpoints)
+
+    nmap_advisories = [ep for ep in error_endpoints if ep.host == "nmap_discovery"]
+    assert len(nmap_advisories) == 0, (
+        "Expected no nmap advisory when scanner is disabled"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Task 2 (47-02) — select_nmap_port_list helper + CONSULTING_TLS_PORTS fallback
+# ---------------------------------------------------------------------------
+
+def test_nmap_fallback_uses_consulting_tls_ports():
+    """When nmap is unavailable, select_nmap_port_list returns CONSULTING_TLS_PORTS (D-08)."""
+    from quirk.util.optional_extra import select_nmap_port_list
+    from quirk.interactive import CONSULTING_TLS_PORTS
+    from types import SimpleNamespace
+
+    cfg = SimpleNamespace(scan=SimpleNamespace(ports_tls=[443, 8443]))
+
+    # When nmap is NOT available, should return CONSULTING_TLS_PORTS.
+    result = select_nmap_port_list(cfg, nmap_available=False)
+    assert result == CONSULTING_TLS_PORTS, (
+        f"Expected CONSULTING_TLS_PORTS fallback when nmap unavailable, got {result!r}"
+    )
+
+    # When nmap IS available, should return cfg.scan.ports_tls.
+    result_avail = select_nmap_port_list(cfg, nmap_available=True)
+    assert result_avail == [443, 8443], (
+        f"Expected cfg.scan.ports_tls when nmap available, got {result_avail!r}"
+    )
