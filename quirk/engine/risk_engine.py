@@ -83,82 +83,117 @@ def _evaluate_container_package(
     if name in _OPENSSL_NAMES:
         for prefix, sev, label in _OPENSSL_EOL:
             if version.startswith(prefix):
-                return {
-                    "severity": sev,
-                    "host": host,
-                    "port": port,
-                    "title": f"End-of-life {label} in container image",
-                    "recommendation": (
+                return _build_finding(
+                    severity=sev,
+                    host=host,
+                    port=port,
+                    title=f"End-of-life {label} in container image",
+                    description=(
+                        "The container image bundles an end-of-life OpenSSL release "
+                        "that no longer receives upstream security patches. Newly "
+                        "disclosed CVEs will not be fixed in this image."
+                    ),
+                    recommendation=(
                         f"{label} has reached end-of-life and no longer receives security patches. "
                         "Update the base image to a supported distribution with a current OpenSSL version."
                     ),
-                }
-        return {
-            "severity": "LOW",
-            "host": host,
-            "port": port,
-            "title": f"Container image uses quantum-vulnerable crypto library ({name}@{version})",
-            "recommendation": (
-                "Plan migration to post-quantum cryptography when NIST PQC standards are adopted upstream."
+                )
+        return _build_finding(
+            severity="LOW",
+            host=host,
+            port=port,
+            title=f"Container image uses quantum-vulnerable crypto library ({name}@{version})",
+            description=(
+                "The container image bundles a classical cryptographic library "
+                "(RSA/ECDSA-based) vulnerable to a sufficiently large quantum "
+                "computer. Long-lived data encrypted by services in this image "
+                "faces 'harvest now, decrypt later' risk."
             ),
-        }
+            recommendation=(
+                "Plan migration to ML-KEM (FIPS 203) for key exchange and "
+                "ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures once "
+                "upstream library support is available."
+            ),
+            quantum_vulnerable=True,
+        )
 
     if name == "cryptography":
         major = _pkg_major(version)
         if major is not None and major < 3:
-            return {
-                "severity": "HIGH",
-                "host": host,
-                "port": port,
-                "title": f"Severely outdated Python cryptography package ({version}) in container image",
-                "recommendation": (
+            return _build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title=f"Severely outdated Python cryptography package ({version}) in container image",
+                description=(
+                    "The container image ships a years-old release of the Python "
+                    "'cryptography' package with multiple known CVEs. Vulnerabilities "
+                    "in TLS, X.509 parsing, and key handling are not patched."
+                ),
+                recommendation=(
                     f"cryptography {version} is over 4 years old with multiple known CVEs. "
                     "Update to the latest version and rebuild the container image."
                 ),
-            }
+            )
         if major is not None and major < 41:
-            return {
-                "severity": "MEDIUM",
-                "host": host,
-                "port": port,
-                "title": f"Outdated Python cryptography package ({version}) in container image",
-                "recommendation": (
+            return _build_finding(
+                severity="MEDIUM",
+                host=host,
+                port=port,
+                title=f"Outdated Python cryptography package ({version}) in container image",
+                description=(
+                    "The container image ships an outdated release of the Python "
+                    "'cryptography' package that may have unpatched vulnerabilities."
+                ),
+                recommendation=(
                     f"cryptography {version} may have unpatched vulnerabilities. "
                     "Update to the latest version and rebuild the container image."
                 ),
-            }
+            )
 
     if name == "pyopenssl":
         major = _pkg_major(version)
         if major is not None and major < 20:
-            return {
-                "severity": "MEDIUM",
-                "host": host,
-                "port": port,
-                "title": f"Outdated pyOpenSSL package ({version}) in container image",
-                "recommendation": (
+            return _build_finding(
+                severity="MEDIUM",
+                host=host,
+                port=port,
+                title=f"Outdated pyOpenSSL package ({version}) in container image",
+                description=(
+                    "The container image ships an outdated pyOpenSSL release that "
+                    "may have known vulnerabilities in TLS or certificate handling."
+                ),
+                recommendation=(
                     f"pyOpenSSL {version} may have known vulnerabilities. "
                     "Update to the latest version."
                 ),
-            }
+            )
 
     if name in {"libgcrypt20", "libgcrypt"}:
         if version.startswith("1.8."):
-            return {
-                "severity": "MEDIUM",
-                "host": host,
-                "port": port,
-                "title": f"Outdated libgcrypt ({version}) in container image",
-                "recommendation": "libgcrypt 1.8.x is outdated. Update the base image.",
-            }
+            return _build_finding(
+                severity="MEDIUM",
+                host=host,
+                port=port,
+                title=f"Outdated libgcrypt ({version}) in container image",
+                description=(
+                    "The container image bundles libgcrypt 1.8.x, an outdated "
+                    "branch that no longer receives current security fixes."
+                ),
+                recommendation="libgcrypt 1.8.x is outdated. Update the base image.",
+            )
 
-    return {
-        "severity": "LOW",
-        "host": host,
-        "port": port,
-        "title": f"Container image contains crypto library ({name}@{version})",
-        "recommendation": "Review cryptographic library inventory and plan lifecycle management.",
-    }
+    return _build_finding(
+        severity="LOW",
+        host=host,
+        port=port,
+        title=f"Container image contains crypto library ({name}@{version})",
+        description=(
+            "The container image inventory includes a cryptographic library "
+            "that should be tracked for lifecycle and CVE exposure."
+        ),
+        recommendation="Review cryptographic library inventory and plan lifecycle management.",
+    )
 
 
 def _error_category(desc: str) -> str:
@@ -225,6 +260,11 @@ def _normalize_finding(f: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _dedupe_findings(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # NOTE (Phase 48 D-02/D-06): _build_finding appends NIST_IR_8547_DEPRECATION
+    # to recommendation deterministically for quantum_vulnerable=True findings.
+    # Same input recommendation -> same output recommendation -> two findings
+    # that previously deduped on (host, port, title, recommendation) continue
+    # to dedup. T-48-03 mitigation.
     deduped: Dict[Tuple[str, int, str, str], Dict[str, Any]] = {}
 
     for finding in findings:
@@ -325,14 +365,26 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
         # processed by the generic scan_err handler below (which would emit a
         # duplicate "Informational protocol observation" finding).
         if proto == "ADVISORY" and getattr(e, "scan_error_category", "") == "missing_extra":
-            findings.append({
-                "severity": "INFO",
-                "category": "coverage_gap",
-                "host": host,
-                "port": port,
-                "title": "Scanner skipped — optional extra not installed",
-                "recommendation": getattr(e, "scan_error", "") or "",
-            })
+            scan_err_msg = getattr(e, "scan_error", "") or ""
+            adv = _build_finding(
+                severity="INFO",
+                host=host,
+                port=port,
+                title="Scanner skipped — optional extra not installed",
+                description=(
+                    "A QUIRK scanner was skipped because its optional Python extra is "
+                    "not installed in this environment. Coverage for this protocol is "
+                    "incomplete until the extra is installed; the gap is reported "
+                    "informationally and does not impact the quantum-readiness score."
+                ),
+                recommendation=(
+                    scan_err_msg or
+                    "Install the missing optional extra (pip install 'quirk[<extra>]') "
+                    "and re-run the scan to obtain coverage for this protocol."
+                ),
+            )
+            adv["category"] = "coverage_gap"
+            findings.append(adv)
             continue
 
         # Scan errors are normalized into blocker/advisory findings.
@@ -340,66 +392,103 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
         if scan_err:
             err_cat = _error_category(scan_err)
             if proto == "TLS" and err_cat in {"TLS_HANDSHAKE_FAILED", "TIMEOUT"}:
-                findings.append({
-                    "severity": "MEDIUM",
-                    "host": host,
-                    "port": port,
-                    "title": "TLS handshake blocked assessment",
-                    "recommendation": "TLS handshake failure is blocking accurate cryptographic assessment. Validate handshake policy and endpoint expectations.",
-                    "detail": scan_err,
-                })
+                f = _build_finding(
+                    severity="MEDIUM",
+                    host=host,
+                    port=port,
+                    title="TLS handshake blocked assessment",
+                    description=(
+                        "The TLS handshake failed or timed out, so QUIRK could not "
+                        "evaluate the negotiated protocol version, cipher suite, or "
+                        "certificate. The endpoint's cryptographic posture is unknown "
+                        "and may hide misconfigurations."
+                    ),
+                    recommendation="TLS handshake failure is blocking accurate cryptographic assessment. Validate handshake policy and endpoint expectations.",
+                )
+                f["detail"] = scan_err
+                findings.append(f)
                 continue
             if proto == "TLS" and err_cat == "MTLS_REQUIRED":
-                findings.append({
-                    "severity": "INFO",
-                    "host": host,
-                    "port": port,
-                    "title": "mTLS required",
-                    "recommendation": "Confirm client certificate requirements and document trust chain and onboarding process.",
-                    "detail": scan_err,
-                })
+                f = _build_finding(
+                    severity="INFO",
+                    host=host,
+                    port=port,
+                    title="mTLS required",
+                    description=(
+                        "The endpoint requires client certificate authentication "
+                        "(mTLS) before completing the TLS handshake. QUIRK was unable "
+                        "to authenticate; the trust chain and onboarding flow should "
+                        "be validated out-of-band."
+                    ),
+                    recommendation="Confirm client certificate requirements and document trust chain and onboarding process.",
+                )
+                f["detail"] = scan_err
+                findings.append(f)
                 continue
-            findings.append({
-                "severity": "INFO",
-                "host": host,
-                "port": port,
-                "title": "Informational protocol observation",
-                "recommendation": "Review protocol behavior and endpoint availability details.",
-                "detail": scan_err,
-            })
+            f = _build_finding(
+                severity="INFO",
+                host=host,
+                port=port,
+                title="Informational protocol observation",
+                description=(
+                    "QUIRK observed a non-fatal protocol behavior or availability "
+                    "issue while probing this endpoint. The observation is recorded "
+                    "for inventory purposes but does not by itself indicate a defect."
+                ),
+                recommendation="Review protocol behavior and endpoint availability details.",
+            )
+            f["detail"] = scan_err
+            findings.append(f)
             continue
 
         if proto == "HTTP":
-            findings.append({
-                "severity": "HIGH",
-                "host": host,
-                "port": port,
-                "title": "Plaintext HTTP service detected",
-                "recommendation": "Migrate management/application endpoints to HTTPS/TLS where feasible.",
-            })
+            findings.append(_build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title="Plaintext HTTP service detected",
+                description=(
+                    "This service responds to plaintext HTTP. Credentials, session "
+                    "tokens, and application payloads transit unencrypted and are "
+                    "trivially intercepted by anyone on the network path."
+                ),
+                recommendation="Migrate management/application endpoints to HTTPS/TLS where feasible.",
+            ))
 
         if proto == "TLS":
             if _has_legacy_tls_versions(e):
-                findings.append({
-                    "severity": "LOW",
-                    "host": host,
-                    "port": port,
-                    "title": "Legacy TLS versions allowed (TLS 1.0/1.1)",
-                    "recommendation": "Disable TLS 1.0/1.1 and standardize on TLS 1.2+ (prefer TLS 1.3).",
-                })
+                findings.append(_build_finding(
+                    severity="LOW",
+                    host=host,
+                    port=port,
+                    title="Legacy TLS versions allowed (TLS 1.0/1.1)",
+                    description=(
+                        "This service accepts TLS 1.0 or TLS 1.1, protocols deprecated "
+                        "by the IETF (RFC 8996) and prohibited by PCI-DSS, FedRAMP, and "
+                        "most enterprise security baselines. Attackers can downgrade "
+                        "connections and exploit known cipher weaknesses."
+                    ),
+                    recommendation="Disable TLS 1.0/1.1 and standardize on TLS 1.2+ (prefer TLS 1.3).",
+                ))
 
             # BUG-01: Legacy cipher suites (non-AEAD, non-PFS)
             if getattr(e, "tls_legacy_suites_present", False):
-                findings.append({
-                    "severity": "LOW",
-                    "host": host,
-                    "port": port,
-                    "title": "Legacy TLS cipher suites accepted",
-                    "recommendation": (
+                findings.append(_build_finding(
+                    severity="LOW",
+                    host=host,
+                    port=port,
+                    title="Legacy TLS cipher suites accepted",
+                    description=(
+                        "The endpoint negotiates legacy non-AEAD cipher suites (CBC-mode "
+                        "with HMAC-SHA1) that lack forward secrecy or use weak MACs. "
+                        "These suites are vulnerable to padding-oracle and downgrade "
+                        "attacks and do not meet modern enterprise baselines."
+                    ),
+                    recommendation=(
                         "Disable legacy cipher suites (e.g. AES128-SHA, AES256-SHA) and require "
                         "AEAD suites with forward secrecy (AES-GCM, ChaCha20-Poly1305)."
                     ),
-                })
+                ))
 
             # BUG-02: Certificate expiry
             cert_not_after = getattr(e, "cert_not_after", None)
@@ -408,27 +497,38 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 # cert_not_after is stored as naive UTC (tzinfo stripped at scan time)
                 na = cert_not_after if cert_not_after.tzinfo is None else cert_not_after.astimezone(timezone.utc).replace(tzinfo=None)
                 if na < now_naive:
-                    findings.append({
-                        "severity": "CRITICAL",
-                        "host": host,
-                        "port": port,
-                        "title": "TLS certificate expired",
-                        "recommendation": (
+                    findings.append(_build_finding(
+                        severity="CRITICAL",
+                        host=host,
+                        port=port,
+                        title="TLS certificate expired",
+                        description=(
+                            "This certificate has passed its notAfter date. Clients "
+                            "receive trust warnings and may refuse to connect, breaking "
+                            "automated integrations and exposing users to phishing-style "
+                            "click-through normalization."
+                        ),
+                        recommendation=(
                             f"Certificate expired {na.date()}. Renew immediately — expired certs "
                             "cause trust failures and may block legitimate clients."
                         ),
-                    })
+                    ))
                 elif na < now_naive + timedelta(days=30):
-                    findings.append({
-                        "severity": "MEDIUM",
-                        "host": host,
-                        "port": port,
-                        "title": "TLS certificate expiring within 30 days",
-                        "recommendation": (
+                    findings.append(_build_finding(
+                        severity="MEDIUM",
+                        host=host,
+                        port=port,
+                        title="TLS certificate expiring within 30 days",
+                        description=(
+                            "This certificate is approaching its notAfter date. Renew "
+                            "before expiry to avoid service interruption and trust "
+                            "warnings on dependent clients."
+                        ),
+                        recommendation=(
                             f"Certificate expires {na.date()}. Schedule renewal before expiry "
                             "to avoid service disruption."
                         ),
-                    })
+                    ))
 
             # TLS-FIND-02 / TLS-FIND-03: Self-signed vs untrusted-CA — mutually
             # exclusive per D-04. A self-signed cert (issuer == subject) is a
@@ -440,93 +540,144 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
             cv = _chain_verified(e)
             is_self_signed = bool(cert_issuer and cert_subject and cert_issuer == cert_subject)
             if is_self_signed:
-                findings.append({
-                    "severity": "HIGH",
-                    "host": host,
-                    "port": port,
-                    "title": "TLS certificate is self-signed",
-                    "recommendation": (
+                findings.append(_build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="TLS certificate is self-signed",
+                    description=(
+                        "This certificate is self-signed and is not issued by a trusted "
+                        "certificate authority. Clients cannot verify the server's "
+                        "identity and are exposed to man-in-the-middle interception."
+                    ),
+                    recommendation=(
                         "The certificate's issuer is identical to its subject — the "
                         "certificate is self-signed and is not anchored to a trusted "
                         "certificate authority. Replace with a certificate issued by a "
                         "trusted CA (public or internal PKI)."
                     ),
-                })
+                ))
             elif cert_issuer and cert_subject and cert_issuer != cert_subject and cv is False:
-                findings.append({
-                    "severity": "MEDIUM",
-                    "host": host,
-                    "port": port,
-                    "title": "TLS certificate issued by untrusted CA",
-                    "recommendation": (
+                findings.append(_build_finding(
+                    severity="MEDIUM",
+                    host=host,
+                    port=port,
+                    title="TLS certificate issued by untrusted CA",
+                    description=(
+                        "This certificate chains to a certificate authority not in the "
+                        "system trust store. Clients cannot verify the server's identity, "
+                        "and connection establishment depends on out-of-band trust."
+                    ),
+                    recommendation=(
                         "Chain verification against the system trust store failed. The "
                         "certificate is issued by a CA that is not present in the trust "
                         "store. Replace with a certificate from a publicly trusted CA, "
                         "or add the issuing CA to the system trust store if it is an "
                         "internal PKI."
                     ),
-                })
+                ))
 
             # BUG-04: Quantum-vulnerable TLS certificate key algorithm
             cert_pubkey_alg = (getattr(e, "cert_pubkey_alg", "") or "").strip().upper()
             cert_pubkey_size = getattr(e, "cert_pubkey_size", None)
             if cert_pubkey_alg == "RSA":
                 if cert_pubkey_size is not None and cert_pubkey_size < 2048:
-                    findings.append({
-                        "severity": "HIGH",
-                        "host": host,
-                        "port": port,
-                        "title": "TLS certificate uses undersized RSA key",
-                        "recommendation": (
-                            f"RSA-{cert_pubkey_size} is below the 2048-bit classical minimum and "
-                            "is quantum-vulnerable. Migrate to RSA-2048+ or ECDSA P-256, then "
-                            "plan post-quantum migration to NIST PQC algorithms."
+                    findings.append(_build_finding(
+                        severity="HIGH",
+                        host=host,
+                        port=port,
+                        title="TLS certificate uses undersized RSA key",
+                        description=(
+                            "This certificate uses an RSA key below the classical 2048-bit "
+                            "minimum, which is breakable by today's classical attackers and "
+                            "is also vulnerable to a sufficiently large quantum computer. "
+                            "Captured ciphertext today can be decrypted retroactively under "
+                            "a 'harvest now, decrypt later' threat model."
                         ),
-                    })
+                        recommendation=(
+                            f"RSA-{cert_pubkey_size} is below the 2048-bit classical minimum. "
+                            "Migrate to RSA-2048+ or ECDSA P-256 immediately, and plan "
+                            "migration to ML-KEM (FIPS 203) for key exchange and ML-DSA "
+                            "(FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                        ),
+                        quantum_vulnerable=True,
+                    ))
                 else:
-                    findings.append({
-                        "severity": "MEDIUM",
-                        "host": host,
-                        "port": port,
-                        "title": "TLS certificate uses quantum-vulnerable RSA key",
-                        "recommendation": (
-                            "RSA is broken by Shor's algorithm on a cryptographically relevant "
-                            "quantum computer. Plan migration to NIST-approved PQC algorithms "
-                            "(ML-KEM / CRYSTALS-Kyber for key exchange, ML-DSA / Dilithium for signatures)."
+                    findings.append(_build_finding(
+                        severity="MEDIUM",
+                        host=host,
+                        port=port,
+                        title="TLS certificate uses quantum-vulnerable RSA key",
+                        description=(
+                            "This certificate uses RSA, an algorithm vulnerable to attack "
+                            "by a sufficiently large quantum computer via Shor's algorithm. "
+                            "Captured ciphertext today can be decrypted retroactively once "
+                            "such a computer exists ('harvest now, decrypt later')."
                         ),
-                    })
+                        recommendation=(
+                            "Plan migration to ML-KEM (FIPS 203) for key exchange and "
+                            "ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                        ),
+                        quantum_vulnerable=True,
+                    ))
             elif cert_pubkey_alg == "ECDSA":
                 if cert_pubkey_size is not None and cert_pubkey_size < 256:
-                    findings.append({
-                        "severity": "HIGH",
-                        "host": host,
-                        "port": port,
-                        "title": "TLS certificate uses undersized ECDSA key",
-                        "recommendation": (
-                            f"ECDSA-{cert_pubkey_size} is below the P-256 classical minimum and "
-                            "is quantum-vulnerable. Migrate to P-256+ and plan post-quantum migration."
+                    findings.append(_build_finding(
+                        severity="HIGH",
+                        host=host,
+                        port=port,
+                        title="TLS certificate uses undersized ECDSA key",
+                        description=(
+                            "This certificate uses an ECDSA key below the P-256 classical "
+                            "minimum and is vulnerable both to classical attack at this "
+                            "key size and to a sufficiently large quantum computer."
                         ),
-                    })
+                        recommendation=(
+                            f"ECDSA-{cert_pubkey_size} is below the P-256 classical minimum. "
+                            "Migrate to P-256+ immediately and plan migration to ML-DSA "
+                            "(FIPS 204) or SLH-DSA (FIPS 205) for signatures and ML-KEM "
+                            "(FIPS 203) for key exchange."
+                        ),
+                        quantum_vulnerable=True,
+                    ))
                 else:
-                    findings.append({
-                        "severity": "MEDIUM",
-                        "host": host,
-                        "port": port,
-                        "title": "TLS certificate uses quantum-vulnerable ECDSA key",
-                        "recommendation": (
-                            "ECDSA is broken by Shor's algorithm on a cryptographically relevant "
-                            "quantum computer. Plan migration to NIST-approved PQC algorithms."
+                    findings.append(_build_finding(
+                        severity="MEDIUM",
+                        host=host,
+                        port=port,
+                        title="TLS certificate uses quantum-vulnerable ECDSA key",
+                        description=(
+                            "This certificate uses ECDSA, an algorithm vulnerable to attack "
+                            "by a sufficiently large quantum computer. Signatures are "
+                            "forgeable and key-exchange material is recoverable in a "
+                            "post-quantum threat model."
                         ),
-                    })
+                        recommendation=(
+                            "Plan migration to ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) "
+                            "for signatures and ML-KEM (FIPS 203) for key exchange."
+                        ),
+                        quantum_vulnerable=True,
+                    ))
 
         if proto == "SSH":
-            findings.append({
-                "severity": "INFO",
-                "host": host,
-                "port": port,
-                "title": "SSH quantum planning advisory",
-                "recommendation": "Inventory SSH host keys and KEX algorithms; evaluate lifecycle and PQC readiness.",
-            })
+            findings.append(_build_finding(
+                severity="INFO",
+                host=host,
+                port=port,
+                title="SSH quantum planning advisory",
+                description=(
+                    "This SSH host key or key-exchange algorithm relies on RSA or "
+                    "classical ECDH, both vulnerable to a sufficiently large quantum "
+                    "computer. Long-lived SSH credentials face 'harvest now, decrypt "
+                    "later' risk."
+                ),
+                recommendation=(
+                    "Inventory SSH host keys and KEX algorithms; plan migration to "
+                    "post-quantum SSH using ML-KEM (FIPS 203) for key exchange when "
+                    "OpenSSH support lands."
+                ),
+                quantum_vulnerable=True,
+            ))
 
         if proto == "CONTAINER":
             pkg_name = (getattr(e, "cipher_suite", "") or "").strip()
@@ -536,13 +687,18 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 findings.append(finding)
 
         if proto == "UNKNOWN":
-            findings.append({
-                "severity": "MEDIUM",
-                "host": host,
-                "port": port,
-                "title": "Unknown open service",
-                "recommendation": "Fingerprint with a deeper probe or validate service ownership and purpose.",
-            })
+            findings.append(_build_finding(
+                severity="MEDIUM",
+                host=host,
+                port=port,
+                title="Unknown open service",
+                description=(
+                    "An open TCP port responded but QUIRK could not classify the "
+                    "running service. Unmapped services may carry undiscovered "
+                    "cryptographic risk and should be inventoried."
+                ),
+                recommendation="Fingerprint with a deeper probe or validate service ownership and purpose.",
+            ))
 
     return _postprocess_findings(cfg, endpoints, findings)
 
@@ -566,18 +722,24 @@ def evaluate_email_endpoints(endpoints) -> List[Dict[str, Any]]:
 
         # EMAIL-08: STARTTLS downgrade risk — port 25 ONLY, only when TLS actually negotiated
         if port == 25 and protocol == "SMTP-STARTTLS" and tls_version:
-            findings.append({
-                "severity": "MEDIUM",
-                "host": host,
-                "port": port,
-                "title": "STARTTLS downgrade risk on SMTP",
-                "recommendation": (
+            findings.append(_build_finding(
+                severity="MEDIUM",
+                host=host,
+                port=port,
+                title="STARTTLS downgrade risk on SMTP",
+                description=(
+                    "This SMTP service negotiates TLS opportunistically via STARTTLS. "
+                    "An in-path attacker can strip the STARTTLS capability "
+                    "advertisement, forcing plaintext mail delivery. The downgrade "
+                    "is invisible to agentless scanners and to the connecting MTA."
+                ),
+                recommendation=(
                     "STARTTLS (opportunistic TLS) is susceptible to stripping attacks that "
                     "cannot be detected by an agentless scanner. An attacker in-path can "
                     "suppress the STARTTLS capability advertisement, forcing plaintext delivery. "
                     "Enforce MTA-STS (RFC 8461) or DANE (RFC 7672) to prevent stripping."
                 ),
-            })
+            ))
 
         # EMAIL-09: Weak RSA key exchange / 3DES / RC4 = HIGH
         is_rsa_kex = (
@@ -589,30 +751,44 @@ def evaluate_email_endpoints(endpoints) -> List[Dict[str, Any]]:
         ) and "ECDHE" not in cipher and "DHE-" not in cipher
 
         if is_rsa_kex and tls_version:
-            findings.append({
-                "severity": "HIGH",
-                "host": host,
-                "port": port,
-                "title": "Weak cipher suite on email TLS endpoint",
-                "recommendation": (
+            findings.append(_build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title="Weak cipher suite on email TLS endpoint",
+                description=(
+                    "This email TLS endpoint negotiates a non-PFS RSA key-exchange "
+                    "or legacy 3DES/RC4 cipher suite. Sessions lack forward secrecy "
+                    "and the underlying RSA key exchange is quantum-vulnerable: "
+                    "captured traffic can be decrypted retroactively."
+                ),
+                recommendation=(
                     "TLS_RSA_WITH_* suites use RSA key exchange (no forward secrecy) and are "
                     "quantum-vulnerable. Disable non-PFS suites and require ECDHE or TLS 1.3 "
-                    "cipher suites across all email protocol ports."
+                    "cipher suites across all email protocol ports. Plan migration to "
+                    "ML-KEM (FIPS 203) for key exchange."
                 ),
-            })
+                quantum_vulnerable=True,
+            ))
         elif pfs is False and tls_version and tls_version != "TLSv1.3":
             # EMAIL-09 MEDIUM: Non-PFS ECDHE without TLS 1.3 (D-13)
-            findings.append({
-                "severity": "MEDIUM",
-                "host": host,
-                "port": port,
-                "title": "Non-PFS cipher suite on email TLS endpoint",
-                "recommendation": (
+            findings.append(_build_finding(
+                severity="MEDIUM",
+                host=host,
+                port=port,
+                title="Non-PFS cipher suite on email TLS endpoint",
+                description=(
+                    "This email TLS endpoint advertises ECDHE but operates below "
+                    "TLS 1.3, leaving the key exchange vulnerable to Shor's algorithm "
+                    "on a sufficiently large quantum computer."
+                ),
+                recommendation=(
                     "ECDHE without TLS 1.3 provides forward secrecy but remains quantum-vulnerable "
                     "via Shor's algorithm. Prefer TLS 1.3 AEAD suites (AES-GCM, ChaCha20-Poly1305) "
-                    "and plan migration to post-quantum key encapsulation."
+                    "and plan migration to ML-KEM (FIPS 203) for key encapsulation."
                 ),
-            })
+                quantum_vulnerable=True,
+            ))
 
     return findings
 
@@ -637,25 +813,41 @@ def evaluate_broker_endpoints(endpoints) -> List[Dict[str, Any]]:
         tls_version = getattr(e, "tls_version", "") or ""
 
         if protocol == "KAFKA-PLAIN":
-            findings.append({
-                "severity": "HIGH", "host": host, "port": port,
-                "title": "Plaintext Kafka listener detected",
-                "recommendation": "Disable PLAINTEXT listener or restrict access; enforce SSL/SASL_SSL on broker port 9092.",
-            })
+            findings.append(_build_finding(
+                severity="HIGH", host=host, port=port,
+                title="Plaintext Kafka listener detected",
+                description=(
+                    "This Kafka broker exposes a PLAINTEXT listener. Topic data, "
+                    "consumer offsets, and SASL credentials transit unencrypted "
+                    "and are interceptable by anyone on the network path."
+                ),
+                recommendation="Disable PLAINTEXT listener or restrict access; enforce SSL/SASL_SSL on broker port 9092.",
+            ))
             continue
         if protocol == "AMQP-PLAIN":
-            findings.append({
-                "severity": "HIGH", "host": host, "port": port,
-                "title": "Plaintext AMQP listener detected",
-                "recommendation": "Disable plaintext AMQP on port 5672; require AMQPS (port 5671) for all clients.",
-            })
+            findings.append(_build_finding(
+                severity="HIGH", host=host, port=port,
+                title="Plaintext AMQP listener detected",
+                description=(
+                    "This AMQP broker accepts plaintext connections on port 5672. "
+                    "Message bodies, routing keys, and authentication credentials "
+                    "are exposed to any in-path attacker."
+                ),
+                recommendation="Disable plaintext AMQP on port 5672; require AMQPS (port 5671) for all clients.",
+            ))
             continue
         if protocol == "REDIS-PLAIN":
-            findings.append({
-                "severity": "HIGH", "host": host, "port": port,
-                "title": "Plaintext Redis listener (no auth)",
-                "recommendation": "Enable TLS on port 6380 and require AUTH; bind plaintext port to localhost only or disable.",
-            })
+            findings.append(_build_finding(
+                severity="HIGH", host=host, port=port,
+                title="Plaintext Redis listener (no auth)",
+                description=(
+                    "This Redis instance accepts plaintext connections without "
+                    "authentication. Cached session data, application secrets, and "
+                    "queued jobs are readable and writable by any network reachable "
+                    "client."
+                ),
+                recommendation="Enable TLS on port 6380 and require AUTH; bind plaintext port to localhost only or disable.",
+            ))
             continue
 
         # Weak-cipher detection on any broker TLS protocol
@@ -666,12 +858,19 @@ def evaluate_broker_endpoints(endpoints) -> List[Dict[str, Any]]:
                 or any(s in cipher for s in ("AES128-SHA", "AES256-SHA", "3DES", "RC4", "DES-CBC"))
             ) and "ECDHE" not in cipher and "DHE" not in cipher
             if is_rsa_kex:
-                findings.append({
-                    "severity": "HIGH", "host": host, "port": port,
-                    "title": "Weak cipher suite on broker TLS endpoint",
-                    "recommendation": (
-                        "Broker is negotiating non-PFS RSA / 3DES / RC4 / weak-CBC suites. "
-                        "Disable TLS_RSA_WITH_* and legacy ciphers; require TLS 1.2+ AEAD or TLS 1.3."
+                findings.append(_build_finding(
+                    severity="HIGH", host=host, port=port,
+                    title="Weak cipher suite on broker TLS endpoint",
+                    description=(
+                        "This broker TLS endpoint negotiates a non-PFS RSA key-exchange "
+                        "or legacy 3DES/RC4/weak-CBC cipher suite. Sessions lack forward "
+                        "secrecy and the underlying RSA key exchange is quantum-vulnerable."
                     ),
-                })
+                    recommendation=(
+                        "Broker is negotiating non-PFS RSA / 3DES / RC4 / weak-CBC suites. "
+                        "Disable TLS_RSA_WITH_* and legacy ciphers; require TLS 1.2+ AEAD or "
+                        "TLS 1.3. Plan migration to ML-KEM (FIPS 203) for key exchange."
+                    ),
+                    quantum_vulnerable=True,
+                ))
     return findings
