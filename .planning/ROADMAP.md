@@ -909,9 +909,9 @@ Plans:
   4. The advisory message for each unavailable scanner names the exact extra to install (e.g., "install quirk[identity] for Kerberos scanning")
 **Plans**: 4 plans
   - [x] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
-  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
-  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion (Wave 2)
-  - [ ] 45-04-PLAN.md — Manual checkpoint + UAT-SERIES.md + vault sync + phase note (Wave 3)
+  - [x] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
+  - [x] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion (Wave 2)
+  - [x] 45-04-PLAN.md — Manual checkpoint + UAT-SERIES.md + vault sync + phase note (Wave 3)
 
 ### Phase 46: TLS Finding Gaps
 **Goal**: Users receive actionable security findings for expired certificates, self-signed certificates, untrusted-CA certificates, and weak RSA/EC keys — certificate defects that previously produced zero findings in the report
@@ -923,7 +923,7 @@ Plans:
   3. When sslyze `CERTIFICATE_INFO` returns ERROR, the scanner falls back to the ssl_info path cleanly — no half-populated `CryptoEndpoint` with `cert_not_after = None` reaches the database
   4. The `tls-cert-defects` chaos lab profile is running and QUIRK scanning it produces all expected findings: expired cert CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, and RSA-1024 weak-key HIGH
 **Plans**: 3 plans
-  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
+  - [x] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
   - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
   - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
 
@@ -990,7 +990,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 45. Install-Day UX | 1/4 | In Progress|  |
+| 45. Install-Day UX | 4/4 | Complete   | 2026-05-04 |
 | 46. TLS Finding Gaps | 0/TBD | Not started | - |
 | 47. Nmap Discovery + Multi-Target Wizard | 0/TBD | Not started | - |
 | 48. Rich Finding Context | 0/TBD | Not started | - |
