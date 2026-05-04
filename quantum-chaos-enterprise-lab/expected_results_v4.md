@@ -468,3 +468,35 @@ PROFILE_ARGS="--profile broker" ./lab.sh up
 | 26380 | redis-broker (TLS) | REDIS-TLS | `protocol=REDIS-TLS, service_detail=REDIS-TLS:26380`; risk: "Weak cipher suite on broker TLS endpoint" (HIGH, REDIS-01) | broker_scanner.py L683 |
 
 **Reference:** Scanner: `quirk/scanner/broker_scanner.py`. Risk titles from `risk_engine.evaluate_broker_endpoints`. Detail in `labs/broker/expected_results.md`. Expected total: 6 HIGH.
+
+---
+
+## Profile: tls-cert-defects
+
+*Phase 46 / TLS-FIND-07. Single-profile target exercising all four cert-defect finding classes (TLS-FIND-01..05) end-to-end. Existing `tls-expired` (port 9443) and `tls-selfsigned` (port 10443) profiles remain unchanged for back-compat — this profile lives on a dedicated port range (13444-13447) so both can coexist.*
+
+```bash
+PROFILE_ARGS="--profile tls-cert-defects" ./lab.sh up
+```
+
+| Port | Service | Cert source | Expected scanner finding | Severity | Requirement |
+|-----:|---------|-------------|--------------------------|----------|-------------|
+| 13444 | tls-cert-expired      | `certs/expired.crt` (already past `not_after`) | "TLS certificate expired" | CRITICAL | TLS-FIND-01 |
+| 13445 | tls-cert-selfsigned   | `certs/selfsigned.crt` (issuer == subject) | "TLS certificate is self-signed" | HIGH | TLS-FIND-02 |
+| 13446 | tls-cert-untrusted-ca | `certs/scenarios/untrusted-ca/leaf.crt` (RSA-2048 leaf signed by `scenario-root` CA, NOT in system trust store) | "TLS certificate issued by untrusted CA" | MEDIUM | TLS-FIND-03 |
+| 13447 | tls-cert-rsa1024      | `certs/scenarios/rsa1024/leaf.crt` (RSA-1024 weak key, OpenSSL legacy provider) | "Undersized RSA key" | HIGH | TLS-FIND-04 |
+
+**Live-fire smoke command:**
+
+```bash
+quirk scan localhost:13444,localhost:13445,localhost:13446,localhost:13447 --output report.html
+```
+
+**Expected:** 4 distinct findings, severities CRITICAL / HIGH / MEDIUM / HIGH, no untrusted-CA finding emitted on the self-signed endpoint (D-04 mutual exclusivity), no rollup (D-02 — one finding per defect class).
+
+**Notes**
+- The untrusted-CA leaf is RSA-2048 — strong key — so the untrusted-CA finding is isolated from the RSA-1024 finding (no double-fire on port 13446).
+- `tls-cert-rsa1024` requires `OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf` (Pitfall 3) — modern OpenSSL 3 refuses RSA-1024 without the legacy provider.
+- `lab.sh` auto-discovers this profile via `_derive_all_profiles()` reading docker-compose.yml at runtime — no manual `ALL_PROFILES` edit was needed.
+
+**Reference:** Risk-engine branches in `quirk/engine/risk_engine.py:343–423`. Cert generation in `scripts/gen_phaseA_certs.sh` (`issue_leaf "untrusted-ca" ...`).
