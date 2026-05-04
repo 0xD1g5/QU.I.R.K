@@ -1029,6 +1029,52 @@ services:
       retries: 6
       start_period: 30s
 
+  # =========================
+  # PHASE 46 — TLS CERT DEFECTS PROFILE (profile: tls-cert-defects)
+  # Single-profile target exercising all four cert-defect finding classes
+  # (TLS-FIND-01..05) for end-to-end UAT. Ports 13444-13447 (13443 is taken
+  # by phaseA tls-missing-intermediate). Existing tls-expired (9443) and
+  # tls-selfsigned (10443) profiles remain unchanged for back-compat.
+  # =========================
+  tls-cert-expired:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    volumes:
+      - ./nginx/cert-defects/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    ports:
+      - "13444:443"
+
+  tls-cert-selfsigned:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    volumes:
+      - ./nginx/cert-defects/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    ports:
+      - "13445:443"
+
+  tls-cert-untrusted-ca:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    volumes:
+      - ./nginx/cert-defects/untrusted-ca/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    ports:
+      - "13446:443"
+
+  tls-cert-rsa1024:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
+    volumes:
+      - ./nginx/cert-defects/rsa1024/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    ports:
+      - "13447:443"
+
 volumes:
   id_postgres_data:
   stepca_data:

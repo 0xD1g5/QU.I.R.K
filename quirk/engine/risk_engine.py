@@ -133,8 +133,22 @@ def _has_legacy_tls_versions(ep: Any) -> bool:
     return bool({"TLSv1", "TLSv1.1"} & versions)
 
 
+_SENTINEL = object()
+
+
 def _chain_verified(ep: Any) -> Optional[bool]:
-    """Parse chain_verified from tls_capabilities_json blob; returns None if absent."""
+    """Return tri-state chain-verification result for ``ep``.
+
+    Phase 46 (TLS-FIND-06): prefer the direct ``chain_verified`` column
+    (now declared on CryptoEndpoint as Boolean nullable). Fall back to
+    the legacy ``tls_capabilities_json`` blob for backward compatibility
+    with rows written before the column existed. Returns ``None`` when
+    no signal is available — callers MUST treat ``None`` as indeterminate
+    (D-04: untrusted-CA branch fires only on explicit ``False``).
+    """
+    cv_direct = getattr(ep, "chain_verified", _SENTINEL)
+    if cv_direct is not _SENTINEL and cv_direct is not None:
+        return bool(cv_direct)
     caps_raw = getattr(ep, "tls_capabilities_json", None)
     if not caps_raw:
         return None
@@ -347,7 +361,7 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 na = cert_not_after if cert_not_after.tzinfo is None else cert_not_after.astimezone(timezone.utc).replace(tzinfo=None)
                 if na < now_naive:
                     findings.append({
-                        "severity": "HIGH",
+                        "severity": "CRITICAL",
                         "host": host,
                         "port": port,
                         "title": "TLS certificate expired",
@@ -368,19 +382,40 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                         ),
                     })
 
-            # BUG-03: Self-signed or chain-unverified certificate
+            # TLS-FIND-02 / TLS-FIND-03: Self-signed vs untrusted-CA — mutually
+            # exclusive per D-04. A self-signed cert (issuer == subject) is a
+            # strict subset of "chain didn't verify"; emitting both would be
+            # redundant noise. Both branches are independent of expired/RSA/EC
+            # branches per D-02 (one finding per defect class, no rollup).
             cert_issuer = (getattr(e, "cert_issuer", "") or "").strip()
             cert_subject = (getattr(e, "cert_subject", "") or "").strip()
             cv = _chain_verified(e)
-            if (cert_issuer and cert_subject and cert_issuer == cert_subject) or cv is False:
+            is_self_signed = bool(cert_issuer and cert_subject and cert_issuer == cert_subject)
+            if is_self_signed:
+                findings.append({
+                    "severity": "HIGH",
+                    "host": host,
+                    "port": port,
+                    "title": "TLS certificate is self-signed",
+                    "recommendation": (
+                        "The certificate's issuer is identical to its subject — the "
+                        "certificate is self-signed and is not anchored to a trusted "
+                        "certificate authority. Replace with a certificate issued by a "
+                        "trusted CA (public or internal PKI)."
+                    ),
+                })
+            elif cert_issuer and cert_subject and cert_issuer != cert_subject and cv is False:
                 findings.append({
                     "severity": "MEDIUM",
                     "host": host,
                     "port": port,
-                    "title": "Self-signed or untrusted TLS certificate",
+                    "title": "TLS certificate issued by untrusted CA",
                     "recommendation": (
-                        "Replace with a certificate issued by a trusted CA. Self-signed certs "
-                        "cannot establish a verifiable chain of trust for external clients."
+                        "Chain verification against the system trust store failed. The "
+                        "certificate is issued by a CA that is not present in the trust "
+                        "store. Replace with a certificate from a publicly trusted CA, "
+                        "or add the issuing CA to the system trust store if it is an "
+                        "internal PKI."
                     ),
                 })
 
