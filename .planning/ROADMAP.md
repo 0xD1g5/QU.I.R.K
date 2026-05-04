@@ -100,7 +100,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 45: Install-Day UX** - Graceful ImportError degradation and `[all]` meta-extra so `pip install quirk` never crashes on first run
 - [x] **Phase 46: TLS Finding Gaps** - Emit CRITICAL/HIGH/MEDIUM findings for expired, self-signed, untrusted-CA, and weak-key TLS certificates with chaos lab verification (completed 2026-05-03)
-- [ ] **Phase 47: Nmap Discovery + Multi-Target Wizard** - Pre-scan nmap port discovery and comma/file/CIDR multi-target input in interactive mode and CLI
+- [x] **Phase 47: Nmap Discovery + Multi-Target Wizard** - Pre-scan nmap port discovery and comma/file/CIDR multi-target input in interactive mode and CLI (completed 2026-05-04)
 - [ ] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology
 - [ ] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports
 - [ ] **Phase 50: Enterprise Documentation** - `docs/architecture.md` and `docs/operators-guide.md` synced to Obsidian vault
@@ -994,7 +994,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 45. Install-Day UX | 4/4 | Complete   | 2026-05-04 |
 | 46. TLS Finding Gaps | 0/4 | Planned | - |
-| 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete   | 2026-05-04 |
+| 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete    | 2026-05-04 |
 | 48. Rich Finding Context | 0/TBD | Not started | - |
 | 49. Compliance Mapping | 0/TBD | Not started | - |
 | 50. Enterprise Documentation | 0/TBD | Not started | - |

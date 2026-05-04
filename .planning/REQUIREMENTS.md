@@ -46,18 +46,18 @@
 
 ### Nmap Port Discovery (BACK-75)
 
-- [ ] **DISCOVER-01**: User is prompted in the interactive wizard to enable nmap-based port discovery for each target
-- [ ] **DISCOVER-02**: User receives a graceful warning (not a crash) when nmap discovery is requested but the `nmap` binary is not installed
-- [ ] **DISCOVER-03**: nmap discovery defaults include `--max-parallelism 100` to prevent macOS socket exhaustion on /24+ scopes
-- [ ] **DISCOVER-04**: User is warned before nmap invocation when target count × port count would exceed 10 000 probes
+- [x] **DISCOVER-01**: User is prompted in the interactive wizard to enable nmap-based port discovery for each target
+- [x] **DISCOVER-02**: User receives a graceful warning (not a crash) when nmap discovery is requested but the `nmap` binary is not installed
+- [x] **DISCOVER-03**: nmap discovery defaults include `--max-parallelism 100` to prevent macOS socket exhaustion on /24+ scopes
+- [x] **DISCOVER-04**: User is warned before nmap invocation when target count × port count would exceed 10 000 probes
 
 ### Multi-Target Wizard (BACK-77)
 
-- [ ] **MULTI-01**: User can paste comma-separated targets (`host1,host2,host3`) into the interactive wizard and have all three scanned
-- [ ] **MULTI-02**: User can pass a file of targets via `@filepath` syntax in the wizard (one target per line, `#`-prefixed comments ignored)
-- [ ] **MULTI-03**: User can pass `--targets-file <path>` to the CLI for non-interactive bulk scans
-- [ ] **MULTI-04**: User can pass IPv4 CIDR notation (e.g. `192.0.2.0/24`) and have it expanded via stdlib `ipaddress`
-- [ ] **MULTI-05**: User receives a clear error (not a silent failure) when a target is malformed or the targets file does not exist
+- [x] **MULTI-01**: User can paste comma-separated targets (`host1,host2,host3`) into the interactive wizard and have all three scanned
+- [x] **MULTI-02**: User can pass a file of targets via `@filepath` syntax in the wizard (one target per line, `#`-prefixed comments ignored)
+- [x] **MULTI-03**: User can pass `--targets-file <path>` to the CLI for non-interactive bulk scans
+- [x] **MULTI-04**: User can pass IPv4 CIDR notation (e.g. `192.0.2.0/24`) and have it expanded via stdlib `ipaddress`
+- [x] **MULTI-05**: User receives a clear error (not a silent failure) when a target is malformed or the targets file does not exist
 
 ### Enterprise Documentation (BACK-65 + BACK-66)
 
@@ -113,15 +113,15 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | TLS-FIND-05 | Phase 46 | Pending |
 | TLS-FIND-06 | Phase 46 | Pending |
 | TLS-FIND-07 | Phase 46 | Pending |
-| DISCOVER-01 | Phase 47 | Pending |
-| DISCOVER-02 | Phase 47 | Pending |
-| DISCOVER-03 | Phase 47 | Pending |
-| DISCOVER-04 | Phase 47 | Pending |
-| MULTI-01 | Phase 47 | Pending |
-| MULTI-02 | Phase 47 | Pending |
-| MULTI-03 | Phase 47 | Pending |
-| MULTI-04 | Phase 47 | Pending |
-| MULTI-05 | Phase 47 | Pending |
+| DISCOVER-01 | Phase 47 | Complete |
+| DISCOVER-02 | Phase 47 | Complete |
+| DISCOVER-03 | Phase 47 | Complete |
+| DISCOVER-04 | Phase 47 | Complete |
+| MULTI-01 | Phase 47 | Complete |
+| MULTI-02 | Phase 47 | Complete |
+| MULTI-03 | Phase 47 | Complete |
+| MULTI-04 | Phase 47 | Complete |
+| MULTI-05 | Phase 47 | Complete |
 | CONTEXT-01 | Phase 48 | Pending |
 | CONTEXT-02 | Phase 48 | Pending |
 | CONTEXT-03 | Phase 48 | Pending |
