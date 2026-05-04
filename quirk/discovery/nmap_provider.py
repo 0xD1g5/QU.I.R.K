@@ -26,6 +26,7 @@ def _default_nmap_args(ports_csv: str) -> List[str]:
         "-p", ports_csv,
         "--max-retries", "1",
         "--host-timeout", "10s",
+        "--max-parallelism", "100",  # D-07: hard-coded; not configurable in Phase 47.
     ]
 
 
