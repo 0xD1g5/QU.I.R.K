@@ -28,4 +28,6 @@ ALLOWED_SKIPS = [
     ("test_uat_db_integration.py",       69, "live_infra",     "Requires PostgreSQL chaos lab (database profile)"),
     ("test_uat_db_integration.py",       84, "live_infra",     "Requires MySQL chaos lab (database profile)"),
     ("test_vault_connector.py",          455, "live_infra",     "Requires Vault-30 chaos lab (vault profile)"),
+    ("test_tls_scanner_chain_verified.py", 140, "optional_extra", "sslyze is [motion]; Phase 46 TLS-FIND-06"),
+    ("test_tls_scanner_chain_verified.py", 152, "optional_extra", "sslyze is [motion]; Phase 46 TLS-FIND-06"),
 ]
