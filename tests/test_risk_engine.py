@@ -94,12 +94,12 @@ class TestCertExpiry:
         future = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days_ahead)
         return _tls_ep(cert_not_after=future)
 
-    def test_expired_cert_produces_high_finding(self):
+    def test_expired_cert_produces_critical_finding(self):
         ep = self._expired_ep()
         findings = evaluate_endpoints(_cfg(), [ep])
         f = _find(findings, "TLS certificate expired")
         assert f is not None
-        assert f["severity"] == "HIGH"
+        assert f["severity"] == "CRITICAL"
 
     def test_expiring_soon_produces_medium_finding(self):
         ep = self._expiring_ep(days_ahead=10)
@@ -125,7 +125,7 @@ class TestCertExpiry:
         assert _find(findings, "TLS certificate expired") is None
 
     def test_expired_beats_expiring_soon(self):
-        # Expired cert must produce HIGH, not the MEDIUM expiring-soon finding
+        # Expired cert must produce CRITICAL, not the MEDIUM expiring-soon finding
         past = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
         ep = _tls_ep(cert_not_after=past)
         findings = evaluate_endpoints(_cfg(), [ep])
@@ -138,17 +138,20 @@ class TestCertExpiry:
 # ---------------------------------------------------------------------------
 
 class TestSelfSigned:
-    def test_self_signed_issuer_eq_subject_produces_medium(self):
+    def test_self_signed_issuer_eq_subject_produces_high(self):
         ep = _tls_ep(
             cert_issuer="CN=myserver",
             cert_subject="CN=myserver",
         )
         findings = evaluate_endpoints(_cfg(), [ep])
-        f = _find(findings, "Self-signed or untrusted TLS certificate")
+        f = _find(findings, "TLS certificate is self-signed")
         assert f is not None
-        assert f["severity"] == "MEDIUM"
+        assert f["severity"] == "HIGH"
+        # D-04: self-signed must NOT also fire the untrusted-CA branch
+        assert _find(findings, "TLS certificate issued by untrusted CA") is None
 
     def test_chain_unverified_false_produces_medium(self):
+        # D-04: untrusted-CA fires only when issuer != subject AND chain_verified is False
         caps = json.dumps({"chain_verified": False, "chain_depth": 1})
         ep = _tls_ep(
             cert_issuer="CN=Unknown CA",
@@ -156,9 +159,10 @@ class TestSelfSigned:
             tls_capabilities_json=caps,
         )
         findings = evaluate_endpoints(_cfg(), [ep])
-        f = _find(findings, "Self-signed or untrusted TLS certificate")
+        f = _find(findings, "TLS certificate issued by untrusted CA")
         assert f is not None
         assert f["severity"] == "MEDIUM"
+        assert _find(findings, "TLS certificate is self-signed") is None
 
     def test_chain_verified_true_no_finding(self):
         caps = json.dumps({"chain_verified": True, "chain_depth": 3})
@@ -168,7 +172,8 @@ class TestSelfSigned:
             tls_capabilities_json=caps,
         )
         findings = evaluate_endpoints(_cfg(), [ep])
-        assert _find(findings, "Self-signed or untrusted TLS certificate") is None
+        assert _find(findings, "TLS certificate is self-signed") is None
+        assert _find(findings, "TLS certificate issued by untrusted CA") is None
 
     def test_different_issuer_subject_no_caps_no_finding(self):
         ep = _tls_ep(
@@ -177,13 +182,15 @@ class TestSelfSigned:
             tls_capabilities_json=None,
         )
         findings = evaluate_endpoints(_cfg(), [ep])
-        assert _find(findings, "Self-signed or untrusted TLS certificate") is None
+        assert _find(findings, "TLS certificate is self-signed") is None
+        assert _find(findings, "TLS certificate issued by untrusted CA") is None
 
     def test_empty_issuer_subject_no_finding(self):
-        # Missing cert data — do not produce spurious self-signed finding
+        # Missing cert data — do not produce spurious cert-trust findings
         ep = _tls_ep(cert_issuer="", cert_subject="")
         findings = evaluate_endpoints(_cfg(), [ep])
-        assert _find(findings, "Self-signed or untrusted TLS certificate") is None
+        assert _find(findings, "TLS certificate is self-signed") is None
+        assert _find(findings, "TLS certificate issued by untrusted CA") is None
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +270,17 @@ class TestMultipleRulesOnOneEndpoint:
         )
         findings = evaluate_endpoints(_cfg(), [ep])
         titles = _titles(findings)
+        # D-02: each defect class emits an independent finding (no rollup)
         assert "TLS certificate expired" in titles
-        assert "Self-signed or untrusted TLS certificate" in titles
+        assert "TLS certificate is self-signed" in titles
         assert "TLS certificate uses undersized RSA key" in titles
         assert "Legacy TLS cipher suites accepted" in titles
+        # D-04: self-signed precludes the untrusted-CA finding
+        assert "TLS certificate issued by untrusted CA" not in titles
+        # Severity bumps per TLS-FIND-01 / TLS-FIND-02
+        expired = _find(findings, "TLS certificate expired")
+        assert expired is not None and expired["severity"] == "CRITICAL"
+        self_signed = _find(findings, "TLS certificate is self-signed")
+        assert self_signed is not None and self_signed["severity"] == "HIGH"
+        rsa = _find(findings, "TLS certificate uses undersized RSA key")
+        assert rsa is not None and rsa["severity"] == "HIGH"

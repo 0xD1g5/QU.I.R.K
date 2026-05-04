@@ -41,6 +41,7 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | vault | vault-30 (1.17), vault-30-seed | 28200 | [Expected Findings](expected_results_v4.md#profile-vault) | v4.3 (DAR); independent of legacy `storage` profile |
 | email | postfix-email, dovecot-email | 30025, 30465, 30587, 30143, 30993, 30110, 30995 | [Expected Findings](expected_results_v4.md#profile-email) | v4.4 |
 | broker | kafka-broker, rabbitmq-broker, redis-broker | 29092, 29093, 25672, 25671, 26379, 26380 | [Expected Findings](expected_results_v4.md#profile-broker) | v4.4 |
+| tls-cert-defects | tls-cert-expired, tls-cert-selfsigned, tls-cert-untrusted-ca, tls-cert-rsa1024 | 13444, 13445, 13446, 13447 | [Expected Findings](expected_results_v4.md#profile-tls-cert-defects) | v4.6 (Phase 46); single-profile target exercising TLS-FIND-01..05 cert-defect findings end-to-end |
 
 ## Documentation
 
