@@ -80,9 +80,7 @@ def test_at_file_no_nested_at_prefix(tmp_path):
     # "@<inner>" appearing inside the file is a bare host token (D-02: no nested @file)
     # actual-host.com should be a plain host
     assert "actual-host.com" in fqdns
-    # The nested @file path is treated as a bare host string, not loaded
-    assert str(inner) not in fqdns or f"@{inner}" in fqdns or f"@{inner}".lstrip("@") not in [h for h in fqdns if "/" not in h and not h.startswith("@")]
-    # Simpler assertion: real-host.com (from nested file) should NOT appear
+    # The nested @file is NOT expanded — its contents must not appear in fqdns
     assert "real-host.com" not in fqdns
 
 
