@@ -351,7 +351,6 @@ def _scan_one_fallback(
     # Per Pitfall 1: network errors must NOT produce false untrusted-CA findings.
     try:
         verify_ctx = ssl.create_default_context()
-        verify_ctx.check_hostname = True
         verify_ctx.verify_mode = ssl.CERT_REQUIRED
         is_ip_for_verify = False
         try:
@@ -361,6 +360,18 @@ def _scan_one_fallback(
         except Exception:
             pass
         verify_hostname = host if (include_sni and not is_ip_for_verify) else None
+        # Phase 46 fix: ssl requires server_hostname when check_hostname=True. When
+        # we have no hostname to use (SNI off, or host is a literal IP), disable
+        # the hostname check so the chain-verification pre-pass can still run —
+        # chain validation against the system trust store is independent of the
+        # hostname check, and a hostname mismatch is a separate concern from
+        # untrusted-CA. Without this, verify_ctx.wrap_socket raises ValueError,
+        # which the broad except below would swallow as chain_verified=None,
+        # leaving the untrusted-CA branch structurally dead.
+        if verify_hostname is None:
+            verify_ctx.check_hostname = False
+        else:
+            verify_ctx.check_hostname = True
         with socket.create_connection((host, port), timeout=timeout) as vsock:
             with verify_ctx.wrap_socket(vsock, server_hostname=verify_hostname) as vssock:
                 ep.chain_verified = True
