@@ -309,3 +309,28 @@ def test_nmap_disabled_silent():
     assert len(nmap_advisories) == 0, (
         "Expected no nmap advisory when scanner is disabled"
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 2 (47-02) — select_nmap_port_list helper + CONSULTING_TLS_PORTS fallback
+# ---------------------------------------------------------------------------
+
+def test_nmap_fallback_uses_consulting_tls_ports():
+    """When nmap is unavailable, select_nmap_port_list returns CONSULTING_TLS_PORTS (D-08)."""
+    from quirk.util.optional_extra import select_nmap_port_list
+    from quirk.interactive import CONSULTING_TLS_PORTS
+    from types import SimpleNamespace
+
+    cfg = SimpleNamespace(scan=SimpleNamespace(ports_tls=[443, 8443]))
+
+    # When nmap is NOT available, should return CONSULTING_TLS_PORTS.
+    result = select_nmap_port_list(cfg, nmap_available=False)
+    assert result == CONSULTING_TLS_PORTS, (
+        f"Expected CONSULTING_TLS_PORTS fallback when nmap unavailable, got {result!r}"
+    )
+
+    # When nmap IS available, should return cfg.scan.ports_tls.
+    result_avail = select_nmap_port_list(cfg, nmap_available=True)
+    assert result_avail == [443, 8443], (
+        f"Expected cfg.scan.ports_tls when nmap available, got {result_avail!r}"
+    )
