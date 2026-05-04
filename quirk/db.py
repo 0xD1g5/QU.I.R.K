@@ -168,6 +168,28 @@ def _ensure_phase41_columns(engine) -> None:
         conn.commit()
 
 
+_PHASE46_COLUMN_DDLS = {
+    "chain_verified": "BOOLEAN",
+}
+
+
+def _ensure_phase46_columns(engine) -> None:
+    """Phase 46 TLS-FIND-06: add chain_verified column (idempotent).
+
+    Mirrors _ensure_phase41_columns shape. Called from init_db()
+    after _ensure_phase41_columns. SQLite stores BOOLEAN as INTEGER
+    (0/1/NULL) — fully compatible with Python's tri-state None/True/False.
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    with engine.connect() as conn:
+        for col, col_type in _PHASE46_COLUMN_DDLS.items():
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
+        conn.commit()
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -191,6 +213,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_email_columns(engine)  # v4.4 Phase 32: add email scanner column
     _ensure_broker_columns(engine)      # v4.4 Phase 33 — BROKER-00
     _ensure_phase41_columns(engine)     # Phase 41 D-11 — scan_error_category
+    _ensure_phase46_columns(engine)     # Phase 46 — TLS-FIND-06 chain_verified
     return engine
 
 
