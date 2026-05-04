@@ -994,7 +994,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 45. Install-Day UX | 4/4 | Complete   | 2026-05-04 |
 | 46. TLS Finding Gaps | 0/4 | Planned | - |
-| 47. Nmap Discovery + Multi-Target Wizard | 0/TBD | Not started | - |
+| 47. Nmap Discovery + Multi-Target Wizard | 1/3 | In Progress|  |
 | 48. Rich Finding Context | 0/TBD | Not started | - |
 | 49. Compliance Mapping | 0/TBD | Not started | - |
 | 50. Enterprise Documentation | 0/TBD | Not started | - |
