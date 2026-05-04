@@ -922,10 +922,11 @@ Plans:
   2. Scanning a TLS endpoint with an RSA key < 2048 bits produces a HIGH finding; scanning one with an EC key < 256 bits produces a HIGH finding
   3. When sslyze `CERTIFICATE_INFO` returns ERROR, the scanner falls back to the ssl_info path cleanly — no half-populated `CryptoEndpoint` with `cert_not_after = None` reaches the database
   4. The `tls-cert-defects` chaos lab profile is running and QUIRK scanning it produces all expected findings: expired cert CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, and RSA-1024 weak-key HIGH
-**Plans**: 3 plans
-  - [x] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
-  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
-  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
+**Plans**: 4 plans
+  - [ ] 46-01-PLAN.md — Schema + scanner wiring (chain_verified column, ALTER TABLE migration, sslyze + fallback plumbing, D-01 validation gate)
+  - [ ] 46-02-PLAN.md — Risk engine refactor: severities (TLS-FIND-01 CRITICAL, TLS-FIND-02 HIGH) + D-04 mutual exclusivity branch split + existing-test updates
+  - [ ] 46-03-PLAN.md — Chaos lab `tls-cert-defects` profile (4 services on 13444-13447, untrusted-CA cert generation, README + expected_results sync)
+  - [ ] 46-04-PLAN.md — UAT-SERIES.md + Obsidian phase note + Roadmap/Hub sync + live-fire end-to-end UAT
 
 ### Phase 47: Nmap Discovery + Multi-Target Wizard
 **Goal**: Users can feed QUIRK comma-separated hosts, a target file, or a CIDR range, and optionally pre-discover open ports with nmap — enabling real enterprise 50-host+ scans without manual port enumeration
@@ -991,7 +992,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 45. Install-Day UX | 4/4 | Complete   | 2026-05-04 |
-| 46. TLS Finding Gaps | 0/TBD | Not started | - |
+| 46. TLS Finding Gaps | 0/4 | Planned | - |
 | 47. Nmap Discovery + Multi-Target Wizard | 0/TBD | Not started | - |
 | 48. Rich Finding Context | 0/TBD | Not started | - |
 | 49. Compliance Mapping | 0/TBD | Not started | - |
