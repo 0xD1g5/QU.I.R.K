@@ -18,6 +18,54 @@ _OPENSSL_EOL: List[Tuple[str, str, str]] = [
 
 _OPENSSL_NAMES = frozenset({"openssl", "libssl", "libssl1.0", "libssl1.0.0", "libssl1.1", "libssl3", "libcrypto", "libcrypto3"})
 
+# Phase 48 D-06: canonical NIST IR 8547 deprecation phrase. The single
+# authoritative anchor for the v4.6 quantum-vulnerable recommendation suffix
+# and for Phase 49 (Compliance Mapping). Per-finding drift is structurally
+# impossible because every quantum-vulnerable finding receives this exact
+# constant via _build_finding(quantum_vulnerable=True).
+NIST_IR_8547_DEPRECATION = (
+    "Per NIST IR 8547, RSA and ECC are deprecated after 2030 and "
+    "disallowed after 2035."
+)
+
+
+def _build_finding(
+    *,
+    severity: str,
+    host: str,
+    port: int,
+    title: str,
+    description: str,
+    recommendation: str,
+    quantum_vulnerable: bool = False,
+) -> Dict[str, Any]:
+    """Single chokepoint for finding construction (Phase 48 D-02).
+
+    Enforces non-empty ``description`` and ``recommendation``. Appends
+    :data:`NIST_IR_8547_DEPRECATION` to ``recommendation`` (separated by a
+    single space) when ``quantum_vulnerable`` is ``True`` (D-06). Raises
+    ``ValueError`` if either string is empty or whitespace-only.
+
+    The append is deterministic: identical input recommendations produce
+    identical output recommendations, preserving ``_dedupe_findings``
+    correctness (see NOTE at line ~189).
+    """
+    if not description or not description.strip():
+        raise ValueError("_build_finding requires a non-empty description")
+    if not recommendation or not recommendation.strip():
+        raise ValueError("_build_finding requires a non-empty recommendation")
+    rec = recommendation.strip()
+    if quantum_vulnerable:
+        rec = f"{rec} {NIST_IR_8547_DEPRECATION}"
+    return {
+        "severity": severity,
+        "host": host,
+        "port": port,
+        "title": title,
+        "description": description.strip(),
+        "recommendation": rec,
+    }
+
 
 def _pkg_major(version: str) -> Optional[int]:
     try:
