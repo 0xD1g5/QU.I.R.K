@@ -310,10 +310,11 @@ def main():
     if getattr(args, "targets_file", None):
         apply_targets_file_override(cfg, args.targets_file)  # D-03
 
-    # Phase 47 / D-09: reflect --discovery flag onto cfg.connectors.enable_nmap so the
-    # registry probe (probe_missing_extras at L386) and the wizard path converge on the
-    # same boolean. No new DiscoveryCfg sub-table this phase (Risks #1).
-    setattr(cfg.connectors, "enable_nmap", args.discovery == "nmap")  # D-09
+    # Phase 47 / D-09: reflect --discovery flag onto cfg.connectors.enable_nmap for
+    # --config / CLI mode. In interactive mode the wizard already set enable_nmap via
+    # interactive_config(); overwriting here would silently discard the user's y/N answer.
+    if used_config_file:
+        setattr(cfg.connectors, "enable_nmap", args.discovery == "nmap")  # D-09
 
     # Score profile (calibration) — independent from scan profile
     if getattr(args, "score_profile", None):
@@ -335,7 +336,7 @@ def main():
     # ==============================
     targets: List[Tuple[str, int]] = []
 
-    if args.discovery == "nmap":
+    if getattr(cfg.connectors, "enable_nmap", False):
         nmap_targets = _build_nmap_target_list(cfg)
         if not nmap_targets:
             logger.info("⚠️ No CIDRs/FQDNs/IPs provided for Nmap discovery. Add targets and re-run.")
@@ -973,7 +974,7 @@ def main():
             findings = (findings or []) + email_findings
         # Phase 33: broker-specific findings (layered findings survive _dedupe_findings
         # because titles differ per protocol; D-11/D-12 carry-forward from Phase 32).
-        broker_findings = evaluate_broker_endpoints(all_broker_eps if 'all_broker_eps' in dir() else [])
+        broker_findings = evaluate_broker_endpoints(all_broker_eps)
         if broker_findings:
             findings = (findings or []) + broker_findings
 
