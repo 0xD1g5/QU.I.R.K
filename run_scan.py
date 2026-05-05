@@ -220,6 +220,29 @@ def main():
         _serve(port=serve_args.port, host=serve_args.host, no_open=serve_args.no_open)
         return
 
+    # --- compliance subcommand: intercept before scan argparse (Phase 49 D-05) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "compliance":
+        comp_parser = argparse.ArgumentParser(
+            prog="quirk compliance",
+            description="Inspect QUIRK's compliance mapping data (PCI-DSS / HIPAA / FIPS 140-3)",
+        )
+        comp_sub = comp_parser.add_subparsers(dest="action", required=True)
+        status_parser = comp_sub.add_parser(
+            "status",
+            help="Print per-framework version, last_verified date, and source URL",
+        )
+        status_parser.add_argument(
+            "--format",
+            choices=["text", "json"],
+            default="text",
+            help="Output format (default: text)",
+        )
+        comp_args = comp_parser.parse_args(_sys.argv[2:])
+        if comp_args.action == "status":
+            from quirk.compliance import status_report
+            status_report(format=comp_args.format)
+        return
+
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
