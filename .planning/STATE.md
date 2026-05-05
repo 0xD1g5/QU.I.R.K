@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v4.6
 milestone_name: Enterprise Readiness
-current_phase: 48
-current_phase_name: rich-finding-context
-status: verifying
+current_phase: 49
+current_phase_name: compliance-mapping
+status: executing
 stopped_at: Phase 49 context gathered
-last_updated: "2026-05-05T20:20:38.276Z"
-last_activity: 2026-05-04
+last_updated: "2026-05-05T21:37:49.518Z"
+last_activity: 2026-05-05
 progress:
   total_phases: 43
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_plans: 19
+  completed_plans: 15
+  percent: 79
 ---
 
 # Project State
@@ -23,17 +23,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-03)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 48 — rich-finding-context
+**Current focus:** Phase 49 — compliance-mapping
 
 ## Current Position
 
-Phase: 48 (rich-finding-context) — EXECUTING
-Current Phase: 48
-Current Phase Name: rich-finding-context
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-05-04
-Last Activity Description: Phase 48 execution started
+Phase: 49 (compliance-mapping) — EXECUTING
+Current Phase: 49
+Current Phase Name: compliance-mapping
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-05-05
+Last Activity Description: Phase 49 execution started
 Next action: Phase 48 (Rich Finding Context).
 
 ## Phase Overview
@@ -72,6 +72,7 @@ Next action: Phase 48 (Rich Finding Context).
 | Phase 48-rich-finding-context P01 | ~25 min | 2 tasks | 3 files |
 | Phase 48-rich-finding-context P02 | ~10 min | 2 tasks | 4 files |
 | Phase 48-rich-finding-context P03 | ~12 min | 2 tasks | 9 files |
+| Phase 49-compliance-mapping P01 | 6min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,8 @@ Roadmap decisions (2026-04-27):
 - [48-03]: CI grep gate placement is a pytest test (`tests/test_pqc_terminology_gate.py`) — only existing in-repo lint-by-disk-read precedent (`tests/test_packaging.py`); auto-collected without Makefile/scripts runner; the GitHub workflow is path-scoped to `src/dashboard/**` and would not trigger on Python source changes anyway
 - [48-03]: Two-test gate (file-resolution + substring) — `test_gated_files_resolve` makes accidental file rename of `risk_engine.py` or `routes/scan.py` a loud failure rather than a silent gate bypass
 - [48-03]: D-04 doc rewrites in `docs/report-interpretation.md` (lines 121, 150) + `docs/quirk-overview.md` (line 75) replace Kyber/Dilithium/when-standards phrasing with FIPS 203/204/205 + NIST IR 8547 deprecation phrase
+- [Phase ?]: AST extraction over runtime engine sweep — CI must not depend on Docker chaos lab
+- [Phase ?]: Lazy TITLE_PREFIX_ALIASES import keeps Phase 49 fixture collectable before quirk.compliance exists
 
 ### Pending Todos
 
@@ -210,6 +213,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-05-05T20:20:38.267Z
+Last session: 2026-05-05T21:37:38.407Z
 Stopped at: Phase 49 context gathered
 Next action: Phase 49 (Compliance Mapping) — keys off the FIPS 203/204/205 literal substrings written by Phase 48

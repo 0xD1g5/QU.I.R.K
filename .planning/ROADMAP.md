@@ -972,7 +972,7 @@ Plans:
   7. A CI staleness check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before client-facing staleness
   8. `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` for operator pre-engagement verification
 **Plans**: 5 plans
-  - [ ] 49-01-PLAN.md — Wave 0 RED test scaffold (5 test files + chaos-lab fixture aggregator)
+  - [x] 49-01-PLAN.md — Wave 0 RED test scaffold (5 test files + chaos-lab fixture aggregator)
   - [ ] 49-02-PLAN.md — quirk/compliance/ module + _build_finding compliance injection + FindingItem DTO field
   - [ ] 49-03-PLAN.md — Compliance Summary Jinja2 block in report.html.j2 (HTML + PDF inheritance)
   - [ ] 49-04-PLAN.md — run_scan.py compliance status subcommand intercept (text + json formats)
@@ -998,5 +998,5 @@ Plans:
 | 46. TLS Finding Gaps | 0/4 | Planned | - |
 | 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete    | 2026-05-04 |
 | 48. Rich Finding Context | 3/3 | Complete   | 2026-05-04 |
-| 49. Compliance Mapping | 0/TBD | Not started | - |
+| 49. Compliance Mapping | 1/5 | In Progress|  |
 | 50. Enterprise Documentation | 0/TBD | Not started | - |
