@@ -105,11 +105,15 @@ class TestBuildFinding:
             "disallowed after 2035."
         )
 
-    def test_returns_six_key_dict(self):
+    def test_returns_seven_key_dict(self):
+        # Phase 49 D-02: _build_finding now eagerly attaches a `compliance`
+        # list[dict] key alongside the original six.
         f = _build_finding(severity="LOW", host="h", port=1, title="t",
                            description="d", recommendation="r")
         assert set(f.keys()) == {"severity", "host", "port", "title",
-                                  "description", "recommendation"}
+                                  "description", "recommendation",
+                                  "compliance"}
+        assert f["compliance"] == []  # unmapped title → empty list
 
 
 # ---------------------------------------------------------------------------

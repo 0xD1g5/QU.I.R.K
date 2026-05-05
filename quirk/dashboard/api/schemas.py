@@ -58,6 +58,11 @@ class FindingItem(BaseModel):
     quantum_risk: Optional[str] = None   # quantum-safety label
     source: Optional[str] = None        # scanner type
     category: Optional[str] = None      # Phase 45 — coverage_gap visibility (Q2)
+    # Phase 49 D-02: eager compliance attachment surface (forward-compat
+    # for BACK-72 dashboard work; HTML/PDF reports already read from the
+    # finding dict directly). Each entry: {framework, control, version,
+    # last_verified, source_url}.
+    compliance: List[Dict[str, Any]] = []
 
 
 # ---- Certificates ----
