@@ -971,10 +971,12 @@ Plans:
   6. A unit test asserts every `COMPLIANCE_MAP` entry includes `version`, `last_verified`, and `source_url` keys; build fails if any entry is missing them
   7. A CI staleness check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before client-facing staleness
   8. `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` for operator pre-engagement verification
-**Plans**: 3 plans
-  - [ ] 45-01-PLAN.md — `[all]` meta-extra + impacket-exclusion regression
-  - [ ] 45-02-PLAN.md — Centralized optional-extra registry + probe wiring
-  - [ ] 45-03-PLAN.md — Risk engine, renderer, dashboard DTO, score exclusion, docs sync
+**Plans**: 5 plans
+  - [ ] 49-01-PLAN.md — Wave 0 RED test scaffold (5 test files + chaos-lab fixture aggregator)
+  - [ ] 49-02-PLAN.md — quirk/compliance/ module + _build_finding compliance injection + FindingItem DTO field
+  - [ ] 49-03-PLAN.md — Compliance Summary Jinja2 block in report.html.j2 (HTML + PDF inheritance)
+  - [ ] 49-04-PLAN.md — run_scan.py compliance status subcommand intercept (text + json formats)
+  - [ ] 49-05-PLAN.md — Docs (report-interpretation.md + UAT-SERIES.md) + Obsidian phase note + UAT vault sync + hub refresh + commit
 
 ### Phase 50: Enterprise Documentation
 **Goal**: Enterprise customers can self-onboard QUIRK using two production-quality reference documents — an architecture reference and an operator's guide — both available in the repo and synced to the Obsidian vault. Operator's guide also documents the compliance map maintenance process so QUIRK's regulatory references stay current as standards evolve
