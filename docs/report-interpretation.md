@@ -158,4 +158,21 @@ The migration roadmap organizes findings and recommendations into three planning
 
 ---
 
-*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`.*
+## 8. Compliance Summary
+
+QU.I.R.K. now maps each finding to **PCI-DSS 4.0.1, HIPAA 45 CFR, and FIPS 140-3** control references and renders them in a "Compliance Summary" section of the HTML and PDF reports. This makes the report directly usable as evidence in client compliance assessments — the assessor doesn't have to translate technical findings to control language.
+
+The section is grouped into three framework subsections (PCI-DSS 4.0.1, HIPAA 45 CFR, FIPS 140-3). Each subsection renders a table with four columns: **Severity**, **Finding**, **Control reference + version** (e.g., `4.2.1` at `4.0.1`), and a **Source URL with the last-verified date**. The source URL points to the authoritative regulator publication (PCI Security Standards Council, the eCFR, or NIST CSRC) — never a third-party summary — so an assessor can click through and confirm the control text directly.
+
+A separate "**Findings without compliance mapping**" subsection lists any findings whose title is not in `COMPLIANCE_MAP`. This surfaces coverage gaps so the assessor (or the operator preparing for the engagement) can confirm whether the absence is intentional — informational findings, observability advisories, scan-error categories — or a real gap that needs a mapping update before the report ships.
+
+The compliance map's review cadence and upgrade procedure for regulator revisions is documented in `docs/operators-guide.md` (Phase 50 — TODO at the time of writing).
+
+Operators can verify compliance map freshness before a client engagement by running `quirk compliance status` (use `--format json` for machine-readable output). The command prints the map version, oldest `last_verified` date, and source URL per framework, so the operator can confirm the map hasn't gone stale (default staleness threshold: 365 days) since the last release.
+
+> **Client Conversation — Compliance Summary:**
+> "We've mapped each finding to the controls your auditor cares about — PCI-DSS, HIPAA, and FIPS 140-3. Each row links back to the regulator's official publication so your assessor can confirm the control text directly. The 'Findings without compliance mapping' section is intentional transparency — it tells you which findings are informational versus which are unmapped gaps we're actively closing."
+
+---
+
+*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`.*
