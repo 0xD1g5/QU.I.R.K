@@ -6,14 +6,14 @@ current_phase: 49
 current_phase_name: compliance-mapping
 status: executing
 stopped_at: Phase 49 context gathered
-last_updated: "2026-05-05T21:43:33.023Z"
+last_updated: "2026-05-05T21:53:06.908Z"
 last_activity: 2026-05-05
 progress:
   total_phases: 43
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
-  completed_plans: 16
-  percent: 84
+  completed_plans: 19
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-03)
 Phase: 49 (compliance-mapping) — EXECUTING
 Current Phase: 49
 Current Phase Name: compliance-mapping
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-05-05
 Last Activity Description: Phase 49 Plan 03 complete — Compliance Summary HTML section (COMPLY-05 GREEN)
@@ -75,6 +75,7 @@ Next action: Phase 48 (Rich Finding Context).
 | Phase 49-compliance-mapping P01 | 6min | 2 tasks | 7 files |
 | Phase 49 P02 | 6m | 2 tasks | 4 files |
 | Phase 49 P03 | ~5 min | 1 tasks | 1 files |
+| Phase 49 P05 | 7min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -168,6 +169,7 @@ Roadmap decisions (2026-04-27):
 - [48-03]: D-04 doc rewrites in `docs/report-interpretation.md` (lines 121, 150) + `docs/quirk-overview.md` (line 75) replace Kyber/Dilithium/when-standards phrasing with FIPS 203/204/205 + NIST IR 8547 deprecation phrase
 - [Phase ?]: AST extraction over runtime engine sweep — CI must not depend on Docker chaos lab
 - [Phase ?]: Lazy TITLE_PREFIX_ALIASES import keeps Phase 49 fixture collectable before quirk.compliance exists
+- [Phase ?]: Phase 49 closes COMPLY-01..09 with eager compliance attachment, Compliance Summary HTML/PDF section, and quirk compliance status CLI; Phase 50 owns operators-guide maintenance prose
 
 ### Pending Todos
 
@@ -215,6 +217,6 @@ Items carried over from v4.3 (acknowledged, non-blocking for v4.4):
 
 ## Session Continuity
 
-Last session: 2026-05-05T21:43:33.020Z
+Last session: 2026-05-05T21:52:58.320Z
 Stopped at: Phase 49 context gathered
 Next action: Phase 49 (Compliance Mapping) — keys off the FIPS 203/204/205 literal substrings written by Phase 48

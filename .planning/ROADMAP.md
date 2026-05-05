@@ -974,9 +974,9 @@ Plans:
 **Plans**: 5 plans
   - [x] 49-01-PLAN.md — Wave 0 RED test scaffold (5 test files + chaos-lab fixture aggregator)
   - [x] 49-02-PLAN.md — quirk/compliance/ module + _build_finding compliance injection + FindingItem DTO field
-  - [ ] 49-03-PLAN.md — Compliance Summary Jinja2 block in report.html.j2 (HTML + PDF inheritance)
-  - [ ] 49-04-PLAN.md — run_scan.py compliance status subcommand intercept (text + json formats)
-  - [ ] 49-05-PLAN.md — Docs (report-interpretation.md + UAT-SERIES.md) + Obsidian phase note + UAT vault sync + hub refresh + commit
+  - [x] 49-03-PLAN.md — Compliance Summary Jinja2 block in report.html.j2 (HTML + PDF inheritance)
+  - [x] 49-04-PLAN.md — run_scan.py compliance status subcommand intercept (text + json formats)
+  - [x] 49-05-PLAN.md — Docs (report-interpretation.md + UAT-SERIES.md) + Obsidian phase note + UAT vault sync + hub refresh + commit
 
 ### Phase 50: Enterprise Documentation
 **Goal**: Enterprise customers can self-onboard QUIRK using two production-quality reference documents — an architecture reference and an operator's guide — both available in the repo and synced to the Obsidian vault. Operator's guide also documents the compliance map maintenance process so QUIRK's regulatory references stay current as standards evolve
@@ -998,5 +998,5 @@ Plans:
 | 46. TLS Finding Gaps | 0/4 | Planned | - |
 | 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete    | 2026-05-04 |
 | 48. Rich Finding Context | 3/3 | Complete   | 2026-05-04 |
-| 49. Compliance Mapping | 2/5 | In Progress|  |
+| 49. Compliance Mapping | 5/5 | Complete   | 2026-05-05 |
 | 50. Enterprise Documentation | 0/TBD | Not started | - |

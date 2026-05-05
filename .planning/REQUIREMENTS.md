@@ -42,7 +42,7 @@
 - [x] **COMPLY-06**: A unit test enforces that every `COMPLIANCE_MAP` entry includes a `version` key
 - [x] **COMPLY-07**: Each `COMPLIANCE_MAP` entry includes `last_verified` (ISO date) and `source_url` keys pointing to the authoritative regulator publication
 - [ ] **COMPLY-08**: A CI check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before staleness becomes a client-facing issue
-- [ ] **COMPLY-09**: A `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` so operators can verify map freshness before client engagements
+- [x] **COMPLY-09**: A `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` so operators can verify map freshness before client engagements
 
 ### Nmap Port Discovery (BACK-75)
 
@@ -134,7 +134,7 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | COMPLY-06 | Phase 49 | Complete |
 | COMPLY-07 | Phase 49 | Complete |
 | COMPLY-08 | Phase 49 | Pending |
-| COMPLY-09 | Phase 49 | Pending |
+| COMPLY-09 | Phase 49 | Complete |
 | DOCS-01 | Phase 50 | Pending |
 | DOCS-02 | Phase 50 | Pending |
 | DOCS-03 | Phase 50 | Pending |
