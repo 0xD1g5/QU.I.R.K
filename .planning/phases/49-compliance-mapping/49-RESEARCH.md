@@ -769,27 +769,29 @@ for FIPS entries. The control field is a classification, not a paragraph referen
 | A5 | Playwright's PDF renderer correctly handles `<table>` markup matching the existing report.html.j2 patterns | Pitfall 2 | Low — same markup is already in use at lines 173-186 and 223-242 [ASSUMED based on existing usage; Wave 0 PDF smoke test confirms] |
 | A6 | The chaos-lab fixture set exists or is straightforwardly constructable as input to `tests/test_compliance_title_join.py` | Code Examples (gate 2) | Medium — if no fixture aggregator helper exists, the planner must add one in Wave 0 [ASSUMED — chaos lab profiles exist per CLAUDE.md but no `tests/fixtures/chaos_lab_findings.py` aggregator was confirmed in this research pass] |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four open questions were resolved during plan-phase iteration 2 (2026-05-05).
 
 1. **Title normalization vs. structured category field**
    - What we know: 7 of 31 titles use f-string interpolation that defeats exact-match lookup.
    - What's unclear: Whether planner prefers in-helper normalization (Pitfall 1 option 2) or accepts a small `category` annotation just for the container family (Pitfall 1 option 3).
-   - Recommendation: Lock normalization in the planner phase; document the rule in the COMPLIANCE_MAP docstring and a dedicated unit test.
+   - **RESOLVED:** Neither regex-based normalization nor a `category` field. Adopted explicit `TITLE_PREFIX_ALIASES` table (longest-prefix-first lookup) — fixed-string titles (incl. parens-in-key like `"Legacy TLS versions allowed (TLS 1.0/1.1)"`) match `COMPLIANCE_MAP` verbatim; only the 7 f-string templates consult the alias table. Same contract is shared by Plan 49-01 aggregator and Plan 49-02 runtime to keep the title-join gate green. See `49-02-PLAN.md` `<title_inventory>` block for the canonical mapping.
 
 2. **`tests/fixtures/chaos_lab_findings.py` aggregator**
    - What we know: Chaos lab profiles exist and emit findings; Phase 42 already exercises them for CBOM analysis (per memory `project_cbom_zero_algo_profiles.md`).
    - What's unclear: Whether a reusable `collect_emitted_titles()` helper exists or must be written.
-   - Recommendation: Wave 0 of the plan should include a task to verify or create this helper. Without it, the title-join gate cannot run.
+   - **RESOLVED:** Helper does not exist — `tests/fixtures/` contains only `cbom/` and `email/` subdirs (verified by pattern-mapper). Plan 49-01 Task 1 creates `tests/fixtures/chaos_lab_findings.py` with an AST-based extractor (no Docker dependency, CI-safe).
 
 3. **Do JSON exports need a schema update for downstream consumers?**
    - What we know: CONTEXT D-02 says "JSON export path requires no change — the dict propagates."
    - What's unclear: Whether any external tooling (consultant scripts, CI integrations) consumes the JSON export with a strict schema validator that would reject the new `compliance` field.
-   - Recommendation: Add a docs note in `docs/report-interpretation.md` calling out the new field — consumers of strict-schema JSON parsers may need to update their schemas. No code change required in this phase.
+   - **RESOLVED:** Doc note only, no code change. Plan 49-05 Task 1 adds a paragraph in `docs/report-interpretation.md` calling out the new `compliance` field for strict-schema JSON consumers.
 
 4. **Should `quirk compliance status` exit non-zero on staleness?**
    - What we know: The pytest gate fails on staleness; that's the build-time signal.
    - What's unclear: Whether the runtime CLI should ALSO exit non-zero (so an operator running `quirk compliance status && deploy.sh` fails fast at runtime), or stay informational.
-   - Recommendation: Stay informational (exit 0) for the v4.6 cut. The pytest gate is the structural enforcement; the CLI is operator-pre-engagement verification (per CONTEXT D-05). Document in operators-guide (Phase 50).
+   - **RESOLVED:** Informational only (exit 0 when invocation succeeds). The pytest freshness gate is the structural enforcement; the CLI is operator pre-engagement verification per CONTEXT D-05. UAT-49-04 documents the operator-facing semantic. Phase 50 operators-guide will document the maintenance cadence.
 
 ## Environment Availability
 
