@@ -973,7 +973,7 @@ Plans:
   8. `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` for operator pre-engagement verification
 **Plans**: 5 plans
   - [x] 49-01-PLAN.md — Wave 0 RED test scaffold (5 test files + chaos-lab fixture aggregator)
-  - [ ] 49-02-PLAN.md — quirk/compliance/ module + _build_finding compliance injection + FindingItem DTO field
+  - [x] 49-02-PLAN.md — quirk/compliance/ module + _build_finding compliance injection + FindingItem DTO field
   - [ ] 49-03-PLAN.md — Compliance Summary Jinja2 block in report.html.j2 (HTML + PDF inheritance)
   - [ ] 49-04-PLAN.md — run_scan.py compliance status subcommand intercept (text + json formats)
   - [ ] 49-05-PLAN.md — Docs (report-interpretation.md + UAT-SERIES.md) + Obsidian phase note + UAT vault sync + hub refresh + commit
@@ -998,5 +998,5 @@ Plans:
 | 46. TLS Finding Gaps | 0/4 | Planned | - |
 | 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete    | 2026-05-04 |
 | 48. Rich Finding Context | 3/3 | Complete   | 2026-05-04 |
-| 49. Compliance Mapping | 1/5 | In Progress|  |
+| 49. Compliance Mapping | 2/5 | In Progress|  |
 | 50. Enterprise Documentation | 0/TBD | Not started | - |

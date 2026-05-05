@@ -34,13 +34,13 @@
 
 ### Compliance Mapping (BACK-20)
 
-- [ ] **COMPLY-01**: A new `quirk/compliance/` Python module exposes a `COMPLIANCE_MAP` keyed by finding category, returning matching control references with `version` keys
-- [ ] **COMPLY-02**: Compliance mapping covers PCI-DSS 4.0.1 controls 4.2.1, 4.2.1.1, 6.3.3, 8.3.2 for relevant TLS/key-storage findings
-- [ ] **COMPLY-03**: Compliance mapping covers HIPAA 45 CFR §164.312(a)(2)(iv), §164.312(e)(1), §164.312(e)(2)(ii) for relevant findings
-- [ ] **COMPLY-04**: Compliance mapping covers FIPS 140-3 approved/not-approved algorithm classifications for findings touching algorithm choice
+- [x] **COMPLY-01**: A new `quirk/compliance/` Python module exposes a `COMPLIANCE_MAP` keyed by finding category, returning matching control references with `version` keys
+- [x] **COMPLY-02**: Compliance mapping covers PCI-DSS 4.0.1 controls 4.2.1, 4.2.1.1, 6.3.3, 8.3.2 for relevant TLS/key-storage findings
+- [x] **COMPLY-03**: Compliance mapping covers HIPAA 45 CFR §164.312(a)(2)(iv), §164.312(e)(1), §164.312(e)(2)(ii) for relevant findings
+- [x] **COMPLY-04**: Compliance mapping covers FIPS 140-3 approved/not-approved algorithm classifications for findings touching algorithm choice
 - [ ] **COMPLY-05**: HTML and PDF reports include a "Compliance Summary" section listing finding-to-control references grouped by framework
-- [ ] **COMPLY-06**: A unit test enforces that every `COMPLIANCE_MAP` entry includes a `version` key
-- [ ] **COMPLY-07**: Each `COMPLIANCE_MAP` entry includes `last_verified` (ISO date) and `source_url` keys pointing to the authoritative regulator publication
+- [x] **COMPLY-06**: A unit test enforces that every `COMPLIANCE_MAP` entry includes a `version` key
+- [x] **COMPLY-07**: Each `COMPLIANCE_MAP` entry includes `last_verified` (ISO date) and `source_url` keys pointing to the authoritative regulator publication
 - [ ] **COMPLY-08**: A CI check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before staleness becomes a client-facing issue
 - [ ] **COMPLY-09**: A `quirk compliance status` CLI subcommand prints per-framework version, `last_verified` date, and `source_url` so operators can verify map freshness before client engagements
 
@@ -126,13 +126,13 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | CONTEXT-02 | Phase 48 | Complete |
 | CONTEXT-03 | Phase 48 | Complete |
 | CONTEXT-04 | Phase 48 | Complete |
-| COMPLY-01 | Phase 49 | Pending |
-| COMPLY-02 | Phase 49 | Pending |
-| COMPLY-03 | Phase 49 | Pending |
-| COMPLY-04 | Phase 49 | Pending |
+| COMPLY-01 | Phase 49 | Complete |
+| COMPLY-02 | Phase 49 | Complete |
+| COMPLY-03 | Phase 49 | Complete |
+| COMPLY-04 | Phase 49 | Complete |
 | COMPLY-05 | Phase 49 | Pending |
-| COMPLY-06 | Phase 49 | Pending |
-| COMPLY-07 | Phase 49 | Pending |
+| COMPLY-06 | Phase 49 | Complete |
+| COMPLY-07 | Phase 49 | Complete |
 | COMPLY-08 | Phase 49 | Pending |
 | COMPLY-09 | Phase 49 | Pending |
 | DOCS-01 | Phase 50 | Pending |
