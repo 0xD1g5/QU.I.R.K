@@ -38,7 +38,7 @@
 - [x] **COMPLY-02**: Compliance mapping covers PCI-DSS 4.0.1 controls 4.2.1, 4.2.1.1, 6.3.3, 8.3.2 for relevant TLS/key-storage findings
 - [x] **COMPLY-03**: Compliance mapping covers HIPAA 45 CFR §164.312(a)(2)(iv), §164.312(e)(1), §164.312(e)(2)(ii) for relevant findings
 - [x] **COMPLY-04**: Compliance mapping covers FIPS 140-3 approved/not-approved algorithm classifications for findings touching algorithm choice
-- [ ] **COMPLY-05**: HTML and PDF reports include a "Compliance Summary" section listing finding-to-control references grouped by framework
+- [x] **COMPLY-05**: HTML and PDF reports include a "Compliance Summary" section listing finding-to-control references grouped by framework
 - [x] **COMPLY-06**: A unit test enforces that every `COMPLIANCE_MAP` entry includes a `version` key
 - [x] **COMPLY-07**: Each `COMPLIANCE_MAP` entry includes `last_verified` (ISO date) and `source_url` keys pointing to the authoritative regulator publication
 - [ ] **COMPLY-08**: A CI check warns when any entry's `last_verified` is older than 12 months (configurable threshold) so maintainers are alerted before staleness becomes a client-facing issue
@@ -130,7 +130,7 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | COMPLY-02 | Phase 49 | Complete |
 | COMPLY-03 | Phase 49 | Complete |
 | COMPLY-04 | Phase 49 | Complete |
-| COMPLY-05 | Phase 49 | Pending |
+| COMPLY-05 | Phase 49 | Complete (49-03) |
 | COMPLY-06 | Phase 49 | Complete |
 | COMPLY-07 | Phase 49 | Complete |
 | COMPLY-08 | Phase 49 | Pending |
