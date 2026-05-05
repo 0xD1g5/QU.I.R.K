@@ -103,7 +103,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 47: Nmap Discovery + Multi-Target Wizard** - Pre-scan nmap port discovery and comma/file/CIDR multi-target input in interactive mode and CLI (completed 2026-05-04)
 - [ ] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology
 - [x] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports (completed 2026-05-05)
-- [ ] **Phase 50: Enterprise Documentation** - `docs/architecture.md` and `docs/operators-guide.md` synced to Obsidian vault
+- [x] **Phase 50: Enterprise Documentation** - `docs/architecture.md` and `docs/operators-guide.md` synced to Obsidian vault (completed 2026-05-05)
 
 
 ### Phase 17: Identity Infrastructure
@@ -987,12 +987,12 @@ Plans:
   2. `docs/operators-guide.md` exists and covers install, configuration, scanning workflow, troubleshooting, and a per-scanner reference — sufficient for an enterprise admin to deploy and operate QUIRK independently
   3. Both documents are synced to the Obsidian vault under `20_Dev-Work/QUIRK/Reference/` with correct frontmatter (`type: reference`, `source: docs/<filename>.md`, `updated: 2026-05-XX`)
   4. `docs/operators-guide.md` includes a "Compliance Map Maintenance" section documenting the quarterly review cadence, list of source URLs to monitor (PCI SSC, HHS.gov, NIST CSRC), and the upgrade path when a regulator publishes a revision (e.g. PCI-DSS 4.0.1 → 4.1)
-**Plans:** 3/5 plans executed
+**Plans:** 5/5 plans executed
   - [x] 50-01-PLAN.md — Wave 0 RED docs-presence gate test (tests/test_phase50_docs_presence.py)
   - [x] 50-02-PLAN.md — Author docs/architecture.md (enterprise-architect framing, mermaid diagrams, credential matrix)
   - [x] 50-03-PLAN.md — Author docs/operators-guide.md (install/configure/scan/troubleshoot/per-scanner ref + Compliance Map Maintenance runbook)
-  - [ ] 50-04-PLAN.md — Obsidian vault sync: Reference/Architecture.md, Reference/Operators-Guide.md, hub MOC update, Phase-50 phase note
-  - [ ] 50-05-PLAN.md — UAT-SERIES.md Series 19 + vault sync + ROADMAP/STATE close + commits
+  - [x] 50-04-PLAN.md — Obsidian vault sync: Reference/Architecture.md, Reference/Operators-Guide.md, hub MOC update, Phase-50 phase note
+  - [x] 50-05-PLAN.md — UAT-SERIES.md Series 19 + vault sync + ROADMAP/STATE close + commits
 
 ## Progress — v4.6 Enterprise Readiness
 
@@ -1005,4 +1005,4 @@ Plans:
 | 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete    | 2026-05-04 |
 | 48. Rich Finding Context | 3/3 | Complete   | 2026-05-04 |
 | 49. Compliance Mapping | 5/5 | Complete   | 2026-05-05 |
-| 50. Enterprise Documentation | 3/5 | In Progress|  |
+| 50. Enterprise Documentation | 5/5 | Complete | 2026-05-05 |

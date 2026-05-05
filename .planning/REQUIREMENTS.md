@@ -61,10 +61,10 @@
 
 ### Enterprise Documentation (BACK-65 + BACK-66)
 
-- [ ] **DOCS-01**: `docs/architecture.md` documents the QUIRK system architecture: scanner phases, data flow, SQLite schema, dashboard, and CBOM pipeline
-- [ ] **DOCS-02**: `docs/operators-guide.md` covers install, configuration, scanning workflow, troubleshooting, and a per-scanner reference for self-onboarding enterprise customers
-- [ ] **DOCS-03**: Both new docs are synced to the Obsidian vault under `20_Dev-Work/QUIRK/Reference/` with the standard frontmatter
-- [ ] **DOCS-04**: `docs/operators-guide.md` documents the compliance map maintenance process — quarterly review cadence, source URLs to monitor, and the upgrade path when a regulator publishes a revision (e.g. PCI-DSS 4.0.1 → 4.1)
+- [x] **DOCS-01**: `docs/architecture.md` documents the QUIRK system architecture: scanner phases, data flow, SQLite schema, dashboard, and CBOM pipeline
+- [x] **DOCS-02**: `docs/operators-guide.md` covers install, configuration, scanning workflow, troubleshooting, and a per-scanner reference for self-onboarding enterprise customers
+- [x] **DOCS-03**: Both new docs are synced to the Obsidian vault under `20_Dev-Work/QUIRK/Reference/` with the standard frontmatter
+- [x] **DOCS-04**: `docs/operators-guide.md` documents the compliance map maintenance process — quarterly review cadence, source URLs to monitor, and the upgrade path when a regulator publishes a revision (e.g. PCI-DSS 4.0.1 → 4.1)
 
 ---
 
@@ -135,10 +135,10 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | COMPLY-07 | Phase 49 | Complete |
 | COMPLY-08 | Phase 49 | Complete |
 | COMPLY-09 | Phase 49 | Complete |
-| DOCS-01 | Phase 50 | Pending |
-| DOCS-02 | Phase 50 | Pending |
-| DOCS-03 | Phase 50 | Pending |
-| DOCS-04 | Phase 50 | Pending |
+| DOCS-01 | Phase 50 | Complete |
+| DOCS-02 | Phase 50 | Complete |
+| DOCS-03 | Phase 50 | Complete |
+| DOCS-04 | Phase 50 | Complete |
 | CONTEXT-05 | Future (v4.7) | Deferred |
 | COMPLY-10 | Future (v4.7) | Deferred |
 | MULTI-06 | Future (v4.6.x) | Deferred |
@@ -147,4 +147,4 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 
 ---
 
-*Last updated: 2026-05-04 — Phase 47 closed; 5 deferred (v4.7 / v4.6.x) requirements added to traceability for lint coverage*
+*Last updated: 2026-05-05 — Phase 50 closed; v4.6 Enterprise Readiness milestone complete*
