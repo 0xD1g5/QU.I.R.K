@@ -4,8 +4,32 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from quirk.compliance import COMPLIANCE_MAP, TITLE_PREFIX_ALIASES
+
 
 _SEVERITY_RANK = {"INFO": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+
+# Phase 49 D-02 + Pitfall 1: canonical-key lookup for COMPLIANCE_MAP.
+# COMPLIANCE_MAP keys are the LITERAL emitted titles (parens preserved).
+# The 7 f-string titles whose runtime form contains an interpolated value
+# are mapped via TITLE_PREFIX_ALIASES (longest-prefix-first). Any title
+# not matching a known prefix is returned verbatim — fixed-string titles
+# (incl. those with parens like "Legacy TLS versions allowed (TLS 1.0/1.1)"
+# and "Plaintext Redis listener (no auth)") look up directly.
+#
+# Cache the prefixes sorted longest-first at module load. The prefix list
+# is small (currently 7 entries) so this is O(n) per lookup with n = 7.
+_COMPLIANCE_PREFIXES_LONGEST_FIRST = sorted(
+    TITLE_PREFIX_ALIASES, key=len, reverse=True
+)
+
+
+def _normalize_for_compliance(title: str) -> str:
+    """Phase 49 D-02: canonicalize finding titles for COMPLIANCE_MAP lookup."""
+    for prefix in _COMPLIANCE_PREFIXES_LONGEST_FIRST:
+        if title.startswith(prefix):
+            return TITLE_PREFIX_ALIASES[prefix]
+    return title
 
 # (version_prefix, severity, eol_label)
 _OPENSSL_EOL: List[Tuple[str, str, str]] = [
@@ -64,6 +88,8 @@ def _build_finding(
         "title": title,
         "description": description.strip(),
         "recommendation": rec,
+        # Phase 49 D-02: eager compliance attachment via the chokepoint.
+        "compliance": COMPLIANCE_MAP.get(_normalize_for_compliance(title), []),
     }
 
 
