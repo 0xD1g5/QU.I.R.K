@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-05-04 (Phase 48 wrap: UAT-48-01..04 added for Rich Finding Context — UAT-48-01 every finding in `findings-*.json` carries a non-empty `description`; UAT-48-02 HTML All Findings table contains `<th>Description</th>` adjacent to Recommendation; UAT-48-03 every quantum-vulnerable finding's recommendation cites `FIPS 203/204/205` and `Per NIST IR 8547`; UAT-48-04 `tests/test_pqc_terminology_gate.py` passes clean and fails the build when stale terminology is injected into either gated source file. Closes CONTEXT-01..04. Earlier: Phase 47 wrap: UAT-47-01..08 added for Nmap Discovery + Multi-Target Wizard + CBOM JSON Validation — UAT-47-01 CSV targets through wizard; UAT-47-02 @file targets ingestion; UAT-47-03 --targets-file non-interactive; UAT-47-04 nmap y/N prompt appears once; UAT-47-05 missing nmap binary — no crash, ADVISORY row, consulting-ports fallback; UAT-47-06 targets x ports > 10000 shows confirm prompt in TTY mode; UAT-47-07 CBOM JSON validates via post-write JsonStrictValidator; UAT-47-08 pip install quirk[cbom] install_hint actionable. Closes DISCOVER-01..04, MULTI-01..05. Earlier: Phase 46 wrap: UAT-46-01..05 added for TLS Finding Gaps — UAT-46-01 expired-cert produces CRITICAL finding (TLS-FIND-01) at chaos lab `tls-cert-defects` port 13444; UAT-46-02 self-signed cert produces HIGH "TLS certificate is self-signed" finding at port 13445 AND emits NO untrusted-CA finding on the same endpoint (D-04 mutual exclusivity, TLS-FIND-02); UAT-46-03 untrusted-CA cert produces MEDIUM "TLS certificate issued by untrusted CA" finding at port 13446 (TLS-FIND-03); UAT-46-04 RSA-1024 cert produces HIGH "TLS certificate uses undersized RSA key" finding at port 13447 (TLS-FIND-04); UAT-46-05 D-02 multi-defect independence — a single endpoint with multiple cert defects emits one finding per class with no rollup. Closes TLS-FIND-01..07. Earlier: Phase 45 wrap: UAT-1-09/10/11 added for Install-Day UX — UAT-1-09 clean-venv `pip install quirk` (no extras) TLS-only scan against chaos lab `tls-modern` produces zero ImportError/ModuleNotFoundError in HTML report (INSTALL-01); UAT-1-10 Coverage Gaps advisories surface as a dedicated `<h2>` section in the HTML report when `enable_kerberos`/`enable_db`/`enable_gcp`/`enable_k8s`/`enable_vault` are true and matching extras absent — each row's Recommendation column contains the literal `pip install quirk[<extra>]`, advisories are filtered out of the All Findings table, and readiness score is unchanged versus running with the same scanners disabled (INSTALL-02 + INSTALL-04 + D-07 score-exclusion); UAT-1-11 `pip install quirk[all]` in a fresh venv excludes impacket (`python -c "import impacket"` raises ModuleNotFoundError) while `import fastapi, psycopg2, googleapiclient, hvac, kubernetes` all succeed (INSTALL-03). Closes INSTALL-01..04. Earlier: Phase 44 wrap: UAT-44-01..04 added for UAT Debt Automation — UAT-44-01 Phase 27 DB integration tests (PostgreSQL+MySQL ssl-off via `QUIRK_DB_INTEGRATION=1`); UAT-44-02 Phase 25 Kerberos/SAML traceability annotations (existing tests annotated with UAT-25 closure trail); UAT-44-03 Phase 30 Vault live integration test (5-finding spec against vault-30 :28200 via `QUIRK_VAULT_INTEGRATION=1`); UAT-44-04 Phase 31 trends flat-wire-format pytest test (in-memory SQLite, no chaos lab needed). Closes UAT-01..04. v4.5 Reliability & Gap Closure milestone complete. Earlier: Phase 43 gap closure: UAT-43-06..08 added — a11y baseline-delta PASS/FAIL fix, pagination absent on single-page datasets, PDF data-ready sentinel; closes all Phase 43 UAT gaps. Earlier: Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-05-05 (Phase 49 wrap: UAT-49-01..05 added for Compliance Mapping — UAT-49-01 schema gate (every COMPLIANCE_MAP entry has framework + control + version + last_verified + source_url); UAT-49-02 freshness gate (no entry's last_verified older than STALENESS_THRESHOLD_DAYS = 365); UAT-49-03 title-join gate (every emitted finding title is in COMPLIANCE_MAP or UNMAPPED_TITLES); UAT-49-04 `quirk compliance status` CLI smoke (text + JSON formats); UAT-49-05 HTML/PDF Compliance Summary section visual + smoke. Closes COMPLY-01..09. Compliance map maintenance cadence + regulator-revision upgrade procedure are documented in docs/operators-guide.md (Phase 50). Earlier: Phase 48 wrap: UAT-48-01..04 added for Rich Finding Context — UAT-48-01 every finding in `findings-*.json` carries a non-empty `description`; UAT-48-02 HTML All Findings table contains `<th>Description</th>` adjacent to Recommendation; UAT-48-03 every quantum-vulnerable finding's recommendation cites `FIPS 203/204/205` and `Per NIST IR 8547`; UAT-48-04 `tests/test_pqc_terminology_gate.py` passes clean and fails the build when stale terminology is injected into either gated source file. Closes CONTEXT-01..04. Earlier: Phase 47 wrap: UAT-47-01..08 added for Nmap Discovery + Multi-Target Wizard + CBOM JSON Validation — UAT-47-01 CSV targets through wizard; UAT-47-02 @file targets ingestion; UAT-47-03 --targets-file non-interactive; UAT-47-04 nmap y/N prompt appears once; UAT-47-05 missing nmap binary — no crash, ADVISORY row, consulting-ports fallback; UAT-47-06 targets x ports > 10000 shows confirm prompt in TTY mode; UAT-47-07 CBOM JSON validates via post-write JsonStrictValidator; UAT-47-08 pip install quirk[cbom] install_hint actionable. Closes DISCOVER-01..04, MULTI-01..05. Earlier: Phase 46 wrap: UAT-46-01..05 added for TLS Finding Gaps — UAT-46-01 expired-cert produces CRITICAL finding (TLS-FIND-01) at chaos lab `tls-cert-defects` port 13444; UAT-46-02 self-signed cert produces HIGH "TLS certificate is self-signed" finding at port 13445 AND emits NO untrusted-CA finding on the same endpoint (D-04 mutual exclusivity, TLS-FIND-02); UAT-46-03 untrusted-CA cert produces MEDIUM "TLS certificate issued by untrusted CA" finding at port 13446 (TLS-FIND-03); UAT-46-04 RSA-1024 cert produces HIGH "TLS certificate uses undersized RSA key" finding at port 13447 (TLS-FIND-04); UAT-46-05 D-02 multi-defect independence — a single endpoint with multiple cert defects emits one finding per class with no rollup. Closes TLS-FIND-01..07. Earlier: Phase 45 wrap: UAT-1-09/10/11 added for Install-Day UX — UAT-1-09 clean-venv `pip install quirk` (no extras) TLS-only scan against chaos lab `tls-modern` produces zero ImportError/ModuleNotFoundError in HTML report (INSTALL-01); UAT-1-10 Coverage Gaps advisories surface as a dedicated `<h2>` section in the HTML report when `enable_kerberos`/`enable_db`/`enable_gcp`/`enable_k8s`/`enable_vault` are true and matching extras absent — each row's Recommendation column contains the literal `pip install quirk[<extra>]`, advisories are filtered out of the All Findings table, and readiness score is unchanged versus running with the same scanners disabled (INSTALL-02 + INSTALL-04 + D-07 score-exclusion); UAT-1-11 `pip install quirk[all]` in a fresh venv excludes impacket (`python -c "import impacket"` raises ModuleNotFoundError) while `import fastapi, psycopg2, googleapiclient, hvac, kubernetes` all succeed (INSTALL-03). Closes INSTALL-01..04. Earlier: Phase 44 wrap: UAT-44-01..04 added for UAT Debt Automation — UAT-44-01 Phase 27 DB integration tests (PostgreSQL+MySQL ssl-off via `QUIRK_DB_INTEGRATION=1`); UAT-44-02 Phase 25 Kerberos/SAML traceability annotations (existing tests annotated with UAT-25 closure trail); UAT-44-03 Phase 30 Vault live integration test (5-finding spec against vault-30 :28200 via `QUIRK_VAULT_INTEGRATION=1`); UAT-44-04 Phase 31 trends flat-wire-format pytest test (in-memory SQLite, no chaos lab needed). Closes UAT-01..04. v4.5 Reliability & Gap Closure milestone complete. Earlier: Phase 43 gap closure: UAT-43-06..08 added — a11y baseline-delta PASS/FAIL fix, pagination absent on single-page datasets, PDF data-ready sentinel; closes all Phase 43 UAT gaps. Earlier: Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -6395,6 +6395,146 @@ The findings JSON lands at `<output.directory>/findings-<ts>.json`.
 - Step 1: `2 passed` exit code 0.
 - Step 3: `1 failed` with assertion message containing `risk_engine.py` and `kyber`.
 - Step 5: `2 passed` exit code 0 after revert.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+# Series 18: Phase 49 — Compliance Mapping
+
+**Covers:** COMPLY-01..09 from Phase 49
+
+**Note:** UAT-49-01..04 are CI-gate / smoke tests that run without a live chaos lab. UAT-49-05 requires a completed scan against the chaos lab `tls-cert-defects` profile so at least one mapped and one unmapped finding render in the report.
+
+The compliance map maintenance cadence and upgrade procedure for regulator revisions are documented in `docs/operators-guide.md` (Phase 50 — Compliance Map Maintenance section). Operators preparing for client engagements should run `quirk compliance status` to confirm freshness before each engagement.
+
+---
+
+### UAT-49-01: Compliance Map Schema Gate (COMPLY-01, COMPLY-06, COMPLY-07)
+
+**ID:** UAT-49-01
+**Title:** Every `COMPLIANCE_MAP` entry contains the required schema keys with valid values
+
+**Prerequisites:** Repo on `QUIRK-v4`; clean working tree; `quirk/compliance/__init__.py` exists.
+
+**Steps:**
+1. Run the schema gate: `pytest tests/test_compliance_schema.py -x -q`
+
+**Expected:** All schema assertions green. Every `COMPLIANCE_MAP` entry has `framework`, `control`, `version`, `last_verified` (ISO `YYYY-MM-DD`), and `source_url` (https://...) keys.
+
+**Pass Criteria:**
+- `pytest tests/test_compliance_schema.py -x -q` exits 0 with all tests passing.
+- Every entry's `last_verified` parses as an ISO date.
+- Every entry's `source_url` starts with `https://` and points to the authoritative regulator publication (PCI Security Standards Council, the eCFR, or NIST CSRC).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-49-02: Compliance Map Freshness Gate (COMPLY-08)
+
+**ID:** UAT-49-02
+**Title:** No `COMPLIANCE_MAP` entry's `last_verified` is older than `STALENESS_THRESHOLD_DAYS` (365)
+
+**Prerequisites:** Repo on `QUIRK-v4`; clean working tree.
+
+**Steps:**
+1. Run the freshness gate: `pytest tests/test_compliance_freshness.py -x -q`
+
+**Expected:** Test passes. If it fails, the failure message names every stale entry and includes a fix recipe (re-verify the source URL and bump `last_verified`).
+
+**Pass Criteria:**
+- `pytest tests/test_compliance_freshness.py -x -q` exits 0.
+- No `last_verified` date is older than 365 days from today.
+- (Failure mode check — optional) Temporarily set one entry's `last_verified` to a date >365 days ago; confirm the test fails with a clear "stale entry" message that names the offender. Revert the edit before continuing.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-49-03: Compliance Title-Join Gate (COMPLY-02, COMPLY-03, COMPLY-04)
+
+**ID:** UAT-49-03
+**Title:** Every emitted finding title is present in `COMPLIANCE_MAP` or `UNMAPPED_TITLES`
+
+**Prerequisites:** Repo on `QUIRK-v4`; clean working tree; `tests/fixtures/chaos_lab_findings.py` AST aggregator returns ≥24 titles.
+
+**Steps:**
+1. Run the title-join gate: `pytest tests/test_compliance_title_join.py -x -q`
+
+**Expected:** Both tests pass — the AST aggregator returns a non-empty title set, and every emitted title is either in `COMPLIANCE_MAP` (after longest-prefix-first normalization through `TITLE_PREFIX_ALIASES`) or in `UNMAPPED_TITLES`.
+
+**Pass Criteria:**
+- `pytest tests/test_compliance_title_join.py -x -q` exits 0.
+- Every entry in `UNMAPPED_TITLES` carries an inline comment justifying the absence of a mapping (per D-04).
+- (Regression guard) Renaming a finding title in `quirk/engine/risk_engine.py` without updating the map (or the allow-set) produces a loud test failure.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-49-04: `quirk compliance status` CLI Smoke (COMPLY-09)
+
+**ID:** UAT-49-04
+**Title:** `quirk compliance status` prints per-framework version + last_verified + source_url in both text and JSON formats
+
+**Prerequisites:** Repo on `QUIRK-v4`; QUIRK installed (or `python run_scan.py` runnable from repo root).
+
+**Steps:**
+1. Run the text-format smoke: `python run_scan.py compliance status`
+2. Run the JSON-format smoke: `python run_scan.py compliance status --format json`
+3. Run the pytest CLI smoke: `pytest tests/test_compliance_cli.py -x -q`
+
+**Expected:**
+- Step 1 prints a fixed-width table with at least one row per framework (PCI-DSS 4.0.1, HIPAA 45 CFR, FIPS 140-3) showing version, oldest `last_verified`, and `source_url`. Exit code 0.
+- Step 2 prints a JSON dict keyed by framework. The output parses as valid JSON. Exit code 0.
+- Step 3 passes (path-exists + text smoke + JSON smoke).
+
+**Pass Criteria:**
+- Both CLI invocations exit 0.
+- Text output contains all three framework labels: `PCI-DSS 4.0.1`, `HIPAA 45 CFR`, `FIPS 140-3`.
+- JSON output parses as a dict (`python -c "import json,sys; json.loads(sys.stdin.read())"` succeeds when piped).
+- `pytest tests/test_compliance_cli.py -x -q` shows 3 passed.
+
+**Operator note:** This is the pre-engagement freshness verification command per COMPLY-09. See also `docs/operators-guide.md` (Phase 50) for the full review-cadence prose.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:**
+
+---
+
+### UAT-49-05: Compliance Summary Section in HTML/PDF Report (COMPLY-05)
+
+**ID:** UAT-49-05
+**Title:** HTML and PDF reports render a "Compliance Summary" section with three framework subsections plus a "Findings without compliance mapping" subsection
+
+**Prerequisites:** Chaos lab running with the `tls-cert-defects` profile (`./quantum-chaos-enterprise-lab/lab.sh up` with `PROFILE_ARGS="--profile tls-cert-defects"`); a completed scan against `localhost` producing at least one mapped and one unmapped finding; `quirk-output/report-*.html` exists.
+
+**Steps:**
+1. Run the HTML smoke: `pytest tests/test_compliance_report_section.py -x -q`
+2. Open the latest `quirk-output/report-*.html` in a browser.
+3. Locate the "Compliance Summary" section (after All Findings, before Endpoint Inventory).
+4. Confirm three framework subsections render: `PCI-DSS 4.0.1`, `HIPAA 45 CFR`, `FIPS 140-3`. Each table has columns: Severity / Finding / Control (+version) / Source link · last_verified.
+5. Confirm the "Findings without compliance mapping" subsection renders (with a muted "all mapped" note if every finding mapped, or a `<ul>` of `title (host)` lines if any are unmapped).
+6. Click a source URL link and confirm it opens the regulator's authoritative publication.
+7. Generate the PDF (`quirk` with PDF export) and confirm the same section inherits.
+
+**Expected:** All five required substrings appear in the HTML: `Compliance Summary`, `PCI-DSS 4.0.1`, `HIPAA 45 CFR`, `FIPS 140-3`, `Findings without compliance mapping`. PDF inherits the section automatically via the existing Playwright path.
+
+**Pass Criteria:**
+- `pytest tests/test_compliance_report_section.py -x -q` shows 2 passed.
+- Visual inspection: all three framework subsections render cleanly with populated tables (no broken HTML, no blank cells where data is expected).
+- At least one source URL link is clickable and opens the regulator's authoritative page (HTTPS, no broken redirects).
+- PDF export contains the same Compliance Summary section.
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
