@@ -102,7 +102,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 46: TLS Finding Gaps** - Emit CRITICAL/HIGH/MEDIUM findings for expired, self-signed, untrusted-CA, and weak-key TLS certificates with chaos lab verification (completed 2026-05-03)
 - [x] **Phase 47: Nmap Discovery + Multi-Target Wizard** - Pre-scan nmap port discovery and comma/file/CIDR multi-target input in interactive mode and CLI (completed 2026-05-04)
 - [ ] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology
-- [ ] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports
+- [x] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports (completed 2026-05-05)
 - [ ] **Phase 50: Enterprise Documentation** - `docs/architecture.md` and `docs/operators-guide.md` synced to Obsidian vault
 
 
