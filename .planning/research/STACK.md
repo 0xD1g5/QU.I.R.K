@@ -1,283 +1,229 @@
 # Stack Research
 
-**Domain:** Enterprise cryptographic scanner — v4.6 incremental additions only
-**Researched:** 2026-05-03
-**Confidence:** HIGH (all claims verified against live codebase or official sources)
+**Domain:** Governance & Compliance Platform — QRAMM maturity model + SOC2/ISO27001 mapping on top of existing Python CLI + FastAPI + React app (QU.I.R.K. v4.7)
+**Researched:** 2026-05-05
+**Confidence:** HIGH
 
 ---
 
-## Summary of Findings
+## Context: What Already Exists (Do Not Re-Research)
 
-v4.6 requires **zero new pip dependencies** for five of seven features. Three features (nmap port
-discovery, compliance mapping, PQC remediation context) are pure Python implemented via stdlib +
-existing tables. Two features (TLS finding gaps, install-day UX) are fixes to code that already
-exists. One feature (multi-target wizard) is CLI logic only. One feature (architecture + operator
-docs) is documentation only.
+The following are validated and must not be replaced or duplicated:
 
-The only new optional system dependency is `nmap` the binary (already partially wired in
-`quirk/discovery/`). No new Python packages should be added to pyproject.toml for v4.6.
-
----
-
-## Recommended Stack — Additions and Changes by Feature
-
-### BACK-75: Nmap Port Discovery
-
-**Decision: subprocess (stdlib) — already implemented, just not wired to the CLI wizard.**
-
-`quirk/discovery/nmap_provider.py` and `quirk/discovery/nmap_parser.py` already exist and
-implement exactly what BACK-75 requires: subprocess call to system `nmap`, XML output, pure-stdlib
-XML parsing, `NmapOpenPort` dataclass, `run_nmap_discovery()` entry point.
-
-**No new packages needed.** The task for v4.6 is wiring this existing module to:
-1. The CLI `--discover` flag / interactive mode wizard
-2. The `run_scan.py` orchestrator
-
-**Why subprocess over python-nmap or libnmap:**
-
-| Library | Latest Version | Last Release | Status | Why Not |
-|---------|---------------|--------------|--------|---------|
-| subprocess (stdlib) | n/a | current | Active | Already used; zero install weight |
-| python-nmap | 0.7.1 | Oct 2021 | Inactive / abandoned | 4+ years no release; Snyk flags as discontinued |
-| python-libnmap | 0.7.3 | Sep 2022 | Low activity | 3+ years no release; Python 3.6/3.7/3.8 classifiers only |
-
-Both wrapper libraries are effectively unmaintained. The subprocess approach has no dependency
-weight, no import to guard, and the existing QUIRK implementation already handles:
-- `FileNotFoundError` (nmap not in PATH → `RuntimeError` with install instruction)
-- `subprocess.TimeoutExpired` (configurable via `timeout_seconds` kwarg)
-- Non-zero exit codes (stderr surfaced in error message)
-- XML parsing with stdlib `xml.etree.ElementTree`
-
-**nmap binary requirement:** Document in Installation guide and Operator's guide.
-- macOS: `brew install nmap`
-- Debian/Ubuntu: `apt install nmap`
-- RHEL/CentOS: `yum install nmap`
-
-Make `--discover` flag fail gracefully when nmap is absent (already handled by the
-`FileNotFoundError` path in `nmap_provider.py`).
+| Component | Version | Notes |
+|-----------|---------|-------|
+| Python | 3.11+ | Core scanner and FastAPI backend |
+| FastAPI | >=0.128.8 | Already in `[dashboard]` extra |
+| SQLAlchemy | >=2.0 | `declarative_base()` + `Column` pattern in `quirk/models.py` |
+| SQLite | (stdlib) | Primary DB; additive schema columns only — no breaking migrations |
+| React | 19.2.x | Bundled SPA in `quirk/dashboard/static/` |
+| Recharts | 2.15.x | **Already in bundle** — `RadarChart`, `BarChart`, `ResponsiveContainer` all present |
+| shadcn/ui + Radix | current | Component library; all new UI components follow this pattern |
+| Tailwind CSS | 3.4.x | Utility CSS; already configured |
+| rich | >=13.0.0 | `Console`, `Panel`, `Table` already used in `quirk/cli/banner.py` |
+| cyclonedx-python-lib | >=11.7.0,<12 | CBOM pipeline; FIPS 140-3 annotations extend existing classifier |
+| PCI-DSS/HIPAA/FIPS 140-3 compliance map | v4.6 | `quirk/compliance/__init__.py`; SOC2/ISO27001 are pure additive extensions |
 
 ---
 
-### BACK-74: TLS Finding Gaps (Expired / Self-Signed / Weak Key Size)
+## New Capabilities Needed for v4.7
 
-**Decision: Extend existing finding-generation logic — no new packages.**
+### 1. QRAMM Scoring Math — Python Backend
 
-The existing `_scan_one_sslyze()` function already captures all three data points. The sslyze
-`CERTIFICATE_INFO` scan command populates `CertificateDeploymentAnalysisResult`, and the QUIRK
-scanner already reads:
+**Verdict:** No new library needed. Pure Python arithmetic.
 
-| Field | Location in Code | Contains |
-|-------|-----------------|----------|
-| `ep.cert_not_after` | `tls_scanner.py:205` | Certificate expiry datetime (naive UTC) |
-| `ep.cert_pubkey_alg` | `tls_scanner.py:194` | "RSA", "ECDSA", "Ed25519", "Ed448" |
-| `ep.cert_pubkey_size` | `tls_scanner.py:195` | Key size in bits (int) |
-| `chain_verified` | `tls_scanner.py:208` | `True` if any trust store accepted the chain |
+The QRAMM scoring formula is:
+- Practice Score = sum(10 question scores) ÷ 10  (scale 1–5)
+- Practice weight: Stream A (5 questions, 60%) + Stream B (5 questions, 40%)
+- Dimension Score = MIN(Practice 1, Practice 2, Practice 3)  — weakest-link aggregation
+- Overall Score = (CVI + SGRM + DPE + ITR) ÷ 4
+- Profile multiplier: 0.8–1.5× applied to raw scores based on org context
 
-**The gap is not data collection — it is finding generation.** The risk engine currently does not
-emit a finding when:
-- `ep.cert_not_after < datetime.now()` — expired certificate
-- `chain_verified == False` — self-signed or otherwise untrusted chain
-- `ep.cert_pubkey_alg == "RSA" and ep.cert_pubkey_size <= 1024` — RSA-512 or RSA-1024
+This is scalar arithmetic over 120 float values. NumPy, pandas, and scipy are all unnecessary overhead. Implement as pure Python functions in `quirk/qramm/scoring.py`.
 
-All three conditions are detectable from data already on `CryptoEndpoint`. No sslyze API changes,
-no new packages.
-
-**Self-signed detection refinement:** `verified_certificate_chain is None` catches all cases
-where no bundled trust store (Mozilla, Apple) accepts the chain. For a more precise label, also
-check `leaf.issuer == leaf.subject` on the `cryptography.Certificate` object — this is already
-imported and no new dependency is needed.
-
-**Fallback path** (`_scan_one_fallback`, `tls_scanner.py:329+`): the same fields are set on
-lines 377–389 via direct `cryptography` library usage. Both paths need the finding-generation fix.
+**Confidence:** HIGH — verified against QRAMM framework docs at qramm.org and the csnp/qramm GitHub repo (`framework/qramm-overview.md`).
 
 ---
 
-### BACK-79: Rich Finding Context (Risk Explanation + PQC Remediation Path)
+### 2. QRAMM Data Model — SQLite / SQLAlchemy
 
-**Decision: New `quirk/intelligence/remediation.py` module with static lookup dicts — no new packages.**
+**Verdict:** New SQLAlchemy `Table` classes following existing `CryptoEndpoint` pattern in `quirk/models.py`. No migration tool (Alembic) needed — additive `CREATE TABLE IF NOT EXISTS` on `db.py` initialization.
 
-No authoritative pip-installable library maps algorithms to FIPS 203/204 remediation paths. NIST
-FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA) were finalized August 13, 2024, but no Python package
-wraps these standards into a "replace X with Y" lookup. The existing `_ALGORITHM_TABLE` in
-`quirk/cbom/classifier.py` is already the authoritative source of truth for quantum vulnerability
-classification in QUIRK.
+Required tables:
 
-The new module should contain three static dicts:
+| Table | Purpose |
+|-------|---------|
+| `qramm_assessments` | One row per assessment run; org profile, timestamps, overall score |
+| `qramm_responses` | One row per question answer (assessment_id, dimension, practice, question_id, stream, score 1–5) |
+| `qramm_evidence_links` | Bridge: scanner finding → QRAMM question auto-population |
+| `qramm_framework_meta` | Static metadata: `qramm_version`, `last_verified`, `source_url` for staleness gate |
 
-1. **`RISK_EXPLANATION`** — algorithm → one-sentence risk rationale
-   (e.g., `"rsa": "Broken by Shor's algorithm on a sufficiently large quantum computer"`)
+Schema notes:
+- 120 static question definitions: embed as a Python data structure in `quirk/qramm/questions.py` (not a table) — QRAMM questions are versioned framework content, not user data
+- `qramm_assessments.calibration_profile` mirrors existing `ScanCfg` profile field for report coherence
+- All new columns/tables are additive; existing scans remain readable
 
-2. **`PQC_REMEDIATION`** — algorithm category → `{fips_standard, replacement, deadline, url}`
-   - RSA/ECDH key exchange → ML-KEM (FIPS 203)
-   - RSA-PSS/ECDSA/EdDSA signatures → ML-DSA (FIPS 204)
-   - Stateless hash-based signatures → SLH-DSA (FIPS 205)
-   - Migration timeline: CNSA 2.0 mandates federal completion by 2030, all systems by 2035
-
-3. **`SEVERITY_RATIONALE`** — finding code → why this severity was assigned
-   (e.g., `"CERT-EXPIRED": "Expired certificates break TLS trust chains and indicate absent certificate lifecycle management"`)
-
-**Existing schema is ready.** `description` and `remediation` fields already exist on all four
-finding models (`FindingItem`, `IdentityFinding`, `MotionFinding`, `DarFinding`) and are currently
-sparsely populated. BACK-79 means systematically populating them from `remediation.py` — no schema
-changes required (though an optional `pqc_migration_path` str field could be added).
+**Confidence:** HIGH — SQLAlchemy 2.0 `declarative_base` pattern verified in existing codebase; QRAMM data structure verified against qramm.org framework docs.
 
 ---
 
-### BACK-20: Compliance Mapping (FIPS 140-3 / NIST SP 800-208 / PCI-DSS 4.0 / HIPAA)
+### 3. QRAMM Assessment UI — React Wizard
 
-**Decision: New `quirk/intelligence/compliance.py` module with static lookup table — no new packages.**
+**Verdict:** No new React libraries needed. Use existing shadcn/ui components.
 
-No pip-installable compliance library covers the intersection of cryptographic algorithm findings +
-FIPS 140-3 + NIST SP 800-208 + PCI-DSS 4.0 + HIPAA. The PyPI `compliance-checker` package covers
-IOOS oceanographic standards — wrong domain entirely. IBM Quantum Safe Explorer is proprietary.
+The 120-question wizard (4 dimensions × 3 practices × 10 questions) maps cleanly to:
+- `@radix-ui/react-tabs` (already present) — tab per dimension
+- shadcn/ui `<Select>` or radio group — 1–5 Likert scale per question
+- `react-router-dom` (already present) — `/qramm/*` route namespace
 
-**Verified compliance content for the lookup table:**
+Multi-step wizard state: `useState` or `useReducer` over a `Record<string, number>` response map. No external form library (react-hook-form, formik) needed for a flat 120-integer data set with no validation complexity.
 
-PCI-DSS 4.0 (HIGH confidence):
-- Req 4.2.1: Strong cryptography required for cardholder data in transit; TLS 1.2+ with approved ciphers
-- RSA minimum: 2048-bit (RSA-1024 non-compliant)
-- TLS 1.0 and TLS 1.1 prohibited (deadline passed March 2022)
-- Effective key strength floor: 112 bits
-
-FIPS 140-3 disallowed algorithms (HIGH confidence):
-- RC4, DES, 3DES (below 112-bit effective), MD5, SHA-1 (for digital signatures)
-- RSA < 2048-bit, ECDH < 224-bit
-- SSL 2.0, SSL 3.0, TLS 1.0, TLS 1.1
-
-HIPAA Technical Safeguards (HIGH confidence):
-- 45 CFR §164.312(a)(2)(iv): encryption/decryption (addressable)
-- 45 CFR §164.312(e)(2)(ii): encryption in transit (addressable)
-- HHS defers to NIST guidance; no algorithm mandate — maps by reference
-
-NIST SP 800-208 (MEDIUM confidence):
-- Covers LMS and XMSS stateful hash-based signature schemes
-- Narrow applicability to QUIRK: only relevant if scanning LMS/XMSS key material, which is rare in enterprise TLS
-
-**Implementation:** `COMPLIANCE_MAP` dict keyed by finding code (e.g., `"TLS-WEAK-CIPHER"`,
-`"CERT-SELF-SIGNED"`, `"TLS-EXPIRED-CERT"`) with values mapping framework names to requirement
-references. Append to `FindingItem.description` at report render time, or return as a new
-`compliance_refs` list field on the API response.
+**Confidence:** HIGH — verified existing Radix primitives in `package.json`; wizard complexity does not justify a new dependency.
 
 ---
 
-### BACK-76: Install-Day UX (Extras by Default + Graceful ImportError)
+### 4. QRAMM Scorecard Visualizations — Radar + Bar Charts
 
-**Decision: pyproject.toml restructuring + scanner audit — no new packages.**
+**Verdict:** `recharts` already in bundle at `^2.15.4`. No new charting library needed.
 
-The graceful degradation pattern is established: `IMPACKET_AVAILABLE` sentinel in
-`kerberos_scanner.py`, `SSLYZE_AVAILABLE` in `tls_scanner.py`. The work is:
+Verified via Context7 (`/recharts/recharts`):
+- `<RadarChart>` + `<PolarGrid>` + `<PolarAngleAxis>` + `<Radar>` — renders 4-dimension spider chart out of the box
+- `<ResponsiveContainer>` — makes it fluid in the dashboard layout
+- `<BarChart>` + `<Bar>` — maturity distribution histogram per dimension
 
-1. Create a new `[all]` meta-extra: `pip install quirk[all]` becomes the recommended install path,
-   pulling in `identity`, `motion`, `cloud`, `db`, `dashboard`.
-2. Audit all scanner modules for `ImportError` crash sites where the `_AVAILABLE` guard pattern
-   is absent.
-3. Add `try/except ImportError` + `_AVAILABLE = False` + skip-with-warning to any scanner missing it.
-4. Decide whether `identity` and `motion` extras should move to default `[project.dependencies]`
-   (they are lightweight: `impacket` is heavy; `motion` sub-extras are zero-dep for `email`, only
-   `redis` and `kafka-python` for broker/kafka). Recommended: keep in extras, but add `[all]` shortcut.
+Do not add Chart.js, D3, or Apache ECharts. They are heavier, not already in the bundle, and Recharts already covers the needed chart types with React-native semantics.
+
+**Confidence:** HIGH — verified component list in Context7 documentation; `recharts` confirmed at `^2.15.4` in `src/dashboard/package.json`.
 
 ---
 
-### BACK-77: Multi-Target Wizard
+### 5. SOC2 / ISO 27001 Framework Mapping Data
 
-**Decision: stdlib only — no new packages.**
+**Verdict:** Embed as static Python dicts in `quirk/compliance/__init__.py`, following the existing `_pci()` / `_hipaa()` / `_fips()` helper pattern. No external library or database table needed.
 
-Comma-separated input: `"host1,host2,host3".split(",")`. File-based input: `open(path).readlines()`.
-argparse already handles CLI argument parsing. This is pure orchestration logic in `run_scan.py`
-and/or the interactive wizard.
+**Framework data sources (for authoring, not runtime dependency):**
+
+| Framework | Controls | Data Source for Authoring |
+|-----------|----------|--------------------------|
+| SOC2 (AICPA TSC 2017+) | ~61 Common Criteria across 9 TSC categories (CC1–CC9) | AICPA Trust Services Criteria publication (free download); Vanta Control Set JSON (`VantaInc/vanta-control-set` on GitHub) for machine-readable reference |
+| ISO 27001:2022 | 93 controls across 4 themes (Organizational/People/Physical/Technological) | ISO 27001:2022 Annex A (OSCAL-formatted community catalog at `usnistgov/OSCAL` for structure reference) |
+
+**Why static dicts, not a library:**
+- `CISO-Assistant` (intuitem/ciso-assistant-community) stores framework data as YAML but requires a full Django + PostgreSQL deployment — not embeddable
+- `oscal-pydantic` (`pip install oscal-pydantic`) parses OSCAL JSON but NIST's official OSCAL catalogs do not include SOC2 or ISO27001; community-contributed mappings would require hand-authoring the control list anyway, with added library overhead
+- The existing `COMPLIANCE_MAP` pattern (keyed by finding category, `last_verified` + `source_url` + `version` metadata, CI staleness gate) is already correct and enforced; SOC2/ISO27001 entries follow the same structure with zero new infrastructure
+
+**Staleness enforcement:** The existing `STALENESS_THRESHOLD_DAYS = 365` (Phase 49 / COMPLY-08) covers PCI/HIPAA/FIPS. SOC2/ISO27001 entries added in v4.7 use the same `last_verified` field. The quarterly CI gate already gates on this. No new enforcement mechanism needed.
+
+**Confidence:** MEDIUM-HIGH — SOC2 TSC structure verified via AICPA documentation and Vanta Control Set repo; ISO 27001:2022 control count (93) verified via multiple compliance sources. The "embed as static dict" decision is HIGH confidence given existing pattern; specific control IDs to map require framework document review during implementation.
 
 ---
 
-### BACK-65 + BACK-66: Architecture Doc + Operator's Guide
+### 6. CBOM FIPS 140-3 Annotations — COMPLY-10
 
-**Decision: Markdown files only — no stack changes.**
+**Verdict:** No new library. Extend existing `quirk/cbom/classifier.py` and `quirk/cbom/builder.py`.
 
-New files in `docs/architecture.md` and `docs/operator-guide.md`. Add to the Obsidian vault sync
-workflow per CLAUDE.md guidance.
+The CycloneDX 1.6 schema (`cyclonedx-python-lib>=11.7.0`) already supports algorithm components with `cryptoProperties`. The classifier already has a 50+ entry NIST PQC lookup table. FIPS 140-3 annotation is adding a `fips_approved: bool` field and FIPS 140-3 reference to the `cryptoProperties` of each algorithm component.
+
+No FIPS 140-3 parsing library exists or is needed — the approved algorithm list is a finite static set (AES-128/256 CBC/GCM, SHA-256/384/512, RSA-2048+ PSS, ECDSA P-256/P-384, HMAC-SHA-256+, ML-KEM, ML-DSA per FIPS 203/204).
+
+**Confidence:** HIGH — verified against existing classifier structure and `cyclonedx-python-lib` schema capabilities.
 
 ---
 
-## Definitive New-Package Table for v4.6
+### 7. `quirk doctor` Health-Check CLI Command
 
-| Feature | New Package | pyproject.toml Change |
-|---------|-------------|----------------------|
-| BACK-75 nmap discovery | None | None — discovery module already exists |
-| BACK-74 TLS gaps | None | None — fix is in finding-generation code |
-| BACK-79 rich context | None | None — new internal module only |
-| BACK-20 compliance | None | None — new internal module only |
-| BACK-76 install UX | None | Add `[all]` meta-extra grouping existing extras |
-| BACK-77 multi-target | None | None — stdlib only |
-| BACK-65/66 docs | None | None — documentation only |
+**Verdict:** No new library. Implement with existing `rich` (already in core deps at `>=13.0.0`) + Python stdlib `importlib.util.find_spec()` for import probing.
 
-**Net new pip dependencies for v4.6: zero.**
+**Pattern:** A `quirk doctor` subcommand runs a checklist of named checks, prints a `rich.table.Table` with Pass/Warn/Fail per check, and exits with code `1` if any check is Fail. This is the established `brew doctor` / `flutter doctor` / `poetry check` pattern.
+
+Recommended checks:
+```
+1. Python version >= 3.11         ← sys.version_info
+2. Config file present + parseable ← Path(config_path).exists() + yaml.safe_load
+3. SQLite DB path writable         ← tempfile write probe to db_path directory
+4. Dashboard extras installed      ← importlib.util.find_spec("fastapi")
+5. CBOM extras installed           ← importlib.util.find_spec("cyclonedx")
+6. Cloud extras installed          ← importlib.util.find_spec("google.cloud")
+7. Compliance map staleness        ← STALENESS_THRESHOLD_DAYS gate in compliance/__init__.py
+8. QRAMM framework staleness       ← qramm_version/last_verified in qramm_framework_meta (v4.7)
+```
+
+Implementation: `quirk/cli/doctor_cmd.py` registered as `quirk doctor` in `run_scan.py` CLI entry point. Uses `rich.table.Table` + `rich.console.Console` (both already imported in `quirk/cli/banner.py`). Exit code `0` = all pass/warn, `1` = any fail.
+
+**Confidence:** HIGH — `rich` verified in core deps and actively used in `quirk/cli/`; `importlib.util` is Python stdlib; pattern is industry-standard.
+
+---
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| QRAMM scoring | Pure Python floats | NumPy | 120 scalar values; numpy import cost not justified |
+| Compliance framework data | Static Python dicts | `oscal-pydantic` library | OSCAL official catalogs don't include SOC2/ISO27001; adds dep for no gain |
+| Compliance framework data | Static Python dicts | CISO-Assistant YAML files | Full Django + PostgreSQL app; not embeddable without extraction |
+| Radar chart | Recharts (already bundled) | D3.js | Already in bundle; D3 requires imperative SVG code; no benefit |
+| Radar chart | Recharts (already bundled) | Apache ECharts | Heavier bundle; not already present; same chart types |
+| Assessment wizard state | `useState` / `useReducer` | react-hook-form | Overkill for flat integer map; no validation complexity |
+| Doctor command | `rich` + `importlib` | Custom health check library | `rich` already a core dep; no new dependency justified |
+| SQLAlchemy schema evolution | Additive `CREATE TABLE IF NOT EXISTS` | Alembic | Single-file local SQLite; migration tooling adds complexity with no benefit until SaaS phase |
 
 ---
 
 ## What NOT to Add
 
-| Avoid | Specific Problem | Use Instead |
-|-------|-----------------|-------------|
-| python-nmap | Last release Oct 2021; Snyk health score "inactive"; 24K weekly downloads suggests inertia not vitality | subprocess (already in `quirk/discovery/`) |
-| python-libnmap | Last release Sep 2022; Python 3.6-3.8 classifiers only; zero active development | subprocess (already in `quirk/discovery/`) |
-| compliance-checker (PyPI) | Covers IOOS oceanographic data, not cryptographic controls; completely wrong domain | Static dict in `quirk/intelligence/compliance.py` |
-| Any "FIPS mapping" library | None exist for this use case; would be unmaintained niche packages | Static `PQC_REMEDIATION` dict derived from FIPS 203/204/205 text |
-| nmap Python wrappers (aionmap, python3-nmap) | Add concurrency complexity; aionmap appears abandoned; QUIRK needs one blocking probe, not parallelism | subprocess with `timeout=` parameter |
-| Explicit `cryptography` version pin | Already a transitive dependency of sslyze; explicit pin risks conflict; existing `hasattr` guard on `not_valid_before_utc` handles version differences cleanly | Leave as transitive |
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| NumPy / SciPy / pandas | Maturity math is scalar; adds 50+ MB to install footprint | Pure Python arithmetic in `quirk/qramm/scoring.py` |
+| `oscal-pydantic` | OSCAL doesn't have official SOC2/ISO27001 catalogs; adds dep with no usable data | Static dicts following existing `_pci()` pattern |
+| `react-hook-form` or `formik` | 120 integer inputs with no validation complexity | `useState` + `useReducer` |
+| Chart.js or D3.js | Recharts already bundled; D3 is imperative/verbose | `recharts` `RadarChart` (already present at `^2.15.4`) |
+| Alembic | Local SQLite; additive tables don't need migration tooling | `CREATE TABLE IF NOT EXISTS` in `quirk/db.py` |
+| Full GRC platform SDK | Django + PostgreSQL stack; not embeddable | Hand-authored static compliance dicts |
+| Any new mandatory `pip` dependency | Zero new core deps is an explicit v4.7 constraint per PROJECT.md | Wire against existing `SQLAlchemy`, `FastAPI`, `rich`, `Recharts` |
 
 ---
 
-## sslyze API Reference for BACK-74 (Integration Point)
+## Version Compatibility Notes
 
-All three data points needed for BACK-74 are already present on `CryptoEndpoint` after
-`_scan_one_sslyze()` runs. The finding-generation fix belongs in the risk engine or a
-`_derive_tls_findings()` function:
+| Package | Current Constraint | v4.7 Impact |
+|---------|--------------------|-------------|
+| `recharts` | `^2.15.4` | RadarChart present since v2.x; no upgrade needed |
+| `SQLAlchemy` | `>=2.0` | `declarative_base` pattern used for new QRAMM tables |
+| `cyclonedx-python-lib` | `>=11.7.0,<12` | FIPS 140-3 annotation extends `cryptoProperties`; no version bump needed |
+| `rich` | `>=13.0.0` | `Table`, `Console`, `Panel` all present since v13; no upgrade |
+| `@radix-ui/react-tabs` | `^1.1.13` | Already in bundle; QRAMM wizard uses it for dimension tabs |
+| `react-router-dom` | `^7.4.0` | Already in bundle; add `/qramm/*` route namespace |
 
-```python
-# Data already captured in tls_scanner.py — no sslyze API changes needed:
-# leaf = deployment.received_certificate_chain[0]  (cryptography.Certificate)
-# ep.cert_not_after       — set on line 205
-# ep.cert_pubkey_alg      — set on line 194
-# ep.cert_pubkey_size     — set on line 195
-# chain_verified          — bool: deployment.verified_certificate_chain is not None
+---
 
-# Conditions that should emit findings but currently do not:
-# expired:     ep.cert_not_after < datetime.now()             → CERT-EXPIRED / HIGH
-# self-signed: not chain_verified                             → CERT-UNTRUSTED / HIGH
-#              (refined: also check leaf.issuer == leaf.subject for CERT-SELF-SIGNED)
-# weak key:    ep.cert_pubkey_alg == "RSA" and               → TLS-WEAK-KEY / HIGH
-#              ep.cert_pubkey_size is not None and
-#              ep.cert_pubkey_size <= 1024
+## Installation
+
+No new `pip install` commands for v4.7 core features. All new capabilities wire against existing dependencies.
+
+```bash
+# Nothing new to install — all stack additions are code, not new packages.
+# Verify existing extras still install cleanly after v4.7 schema additions:
+pip install quirk[all]
+pip install quirk[dashboard]
 ```
-
----
-
-## Version Compatibility
-
-No new packages means no new compatibility surface.
-
-| Package | Current Constraint | Notes |
-|---------|-------------------|-------|
-| sslyze | transitive | `tls_capabilities_json` records sslyze version at scan time |
-| cryptography | transitive via sslyze | `not_valid_before_utc` requires >=42.0; existing `hasattr` guard on line 198 handles older versions |
-| nmap binary | system, >=7.x | 7.x and 8.x both produce compatible XML; no version pin possible for system binary |
 
 ---
 
 ## Sources
 
-- `quirk/discovery/nmap_provider.py` (codebase) — subprocess implementation confirmed; FileNotFoundError and TimeoutExpired already handled (HIGH confidence)
-- `quirk/scanner/tls_scanner.py` (codebase) — cert_not_after, cert_pubkey_alg, cert_pubkey_size, chain_verified all confirmed present (HIGH confidence)
-- `quirk/cbom/classifier.py` (codebase) — PQC FIPS 203/204/205 entries (ml-kem-*, ml-dsa-*, slh-dsa-*) confirmed present (HIGH confidence)
-- `quirk/dashboard/api/schemas.py` (codebase) — description and remediation fields confirmed on all four Finding models (HIGH confidence)
-- https://pypi.org/project/python-nmap/ — version 0.7.1, released Oct 26 2021 (HIGH confidence)
-- https://pypi.org/project/python-libnmap/ — version 0.7.3, released Sep 1 2022 (HIGH confidence)
-- https://snyk.io/advisor/python/python-nmap — maintenance status: inactive (MEDIUM confidence)
-- https://csrc.nist.gov/pubs/fips/203/final — FIPS 203 ML-KEM standard, published Aug 13 2024 (HIGH confidence)
-- https://csrc.nist.gov/news/2024/postquantum-cryptography-fips-approved — FIPS 203/204/205 approved Aug 13 2024 (HIGH confidence)
-- https://blog.adqt.fr/sslyze/documentation/available-scan-commands.html — CertificateDeploymentAnalysisResult field list (MEDIUM confidence — unofficial docs mirror)
-- https://www.appviewx.com/blogs/decoding-the-pci-dss-v4-0-cryptographic-requirements/ — PCI-DSS 4.0 Req 4.2.1 cryptographic requirements (MEDIUM confidence)
+- [QRAMM Toolkit Overview](https://qramm.org/toolkit-overview.html) — Dimension structure, scoring formula, 120-question count, 5-level maturity scale (HIGH confidence)
+- [QRAMM Framework Overview on GitHub](https://github.com/csnp/qramm/blob/main/framework/qramm-overview.md) — Confirmed weakest-link Dimension Score formula, Stream A/B weighting (HIGH confidence)
+- [Recharts RadarChart — Context7 `/recharts/recharts`](https://context7.com/recharts/recharts) — Verified `RadarChart`, `PolarGrid`, `PolarAngleAxis`, `ResponsiveContainer` all exported in v2.x (HIGH confidence)
+- [Vanta Control Set](https://github.com/VantaInc/vanta-control-set) — Machine-readable SOC2 + ISO27001 controls in JSON; usable as authoring reference (MEDIUM confidence — low maintenance activity on the repo)
+- [NIST OSCAL](https://github.com/usnistgov/OSCAL) — Official OSCAL catalogs (NIST 800-53, CSF, 800-171); SOC2/ISO27001 not in official catalog (HIGH confidence)
+- [oscal-pydantic on PyPI](https://pypi.org/project/oscal-pydantic/) — Available but only useful for NIST-native catalogs (MEDIUM confidence)
+- [CISO-Assistant Community](https://github.com/intuitem/ciso-assistant-community) — 130+ framework GRC platform; YAML framework data not embeddable standalone (MEDIUM confidence)
+- `src/dashboard/package.json` — Confirmed `recharts@^2.15.4` already in bundle (HIGH confidence — direct file read)
+- `quirk/models.py` — Confirmed `declarative_base()` + `Column` SQLAlchemy 2.0 pattern (HIGH confidence — direct file read)
+- `quirk/compliance/__init__.py` — Confirmed `_pci()`/`_hipaa()`/`_fips()` dict pattern + `last_verified`/`source_url`/`STALENESS_THRESHOLD_DAYS` infrastructure (HIGH confidence — direct file read)
+- `quirk/cli/banner.py` — Confirmed `rich.console.Console` + `rich.panel.Panel` already imported in core CLI (HIGH confidence — direct file read)
 
 ---
-
-*Stack research for: QU.I.R.K. v4.6 Enterprise Readiness*
-*Researched: 2026-05-03*
+*Stack research for: QU.I.R.K. v4.7 Governance & Compliance Platform*
+*Researched: 2026-05-05*

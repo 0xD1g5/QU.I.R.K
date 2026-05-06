@@ -1,181 +1,176 @@
 # Pitfalls Research
 
-**Domain:** Enterprise readiness additions to an existing Python cryptographic scanner (QU.I.R.K. v4.6)
-**Researched:** 2026-05-03
-**Confidence:** HIGH (code-verified for integration pitfalls; MEDIUM for PCI-DSS 4.0 / FIPS mapping details)
+**Domain:** Adding a governance maturity model (QRAMM) + SOC2/ISO27001 compliance mapping to an existing Python cryptographic scanner (QU.I.R.K. v4.7)
+**Researched:** 2026-05-05
+**Confidence:** HIGH (code-verified against existing codebase patterns); MEDIUM (QRAMM model specifics, SOC2/ISO27001 mapping accuracy)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Extras-by-default silently resurrects pyOpenSSL transitive conflicts
+### Pitfall 1: Evidence Bridge Over-Claiming — Scanner Findings Do Not Prove Governance Maturity
 
 **What goes wrong:**
-Moving `[identity]` (impacket) or `[motion]` (broker/kafka) into the default install via a `[default]` or `all` meta-extra pulls impacket into every pip install of QUIRK. impacket has a known transitive conflict with pyOpenSSL versions that sslyze and the cryptography library expect. The conflict does not always surface as a hard error — sometimes it silently downgrades `cryptography` to a version that removes `not_valid_before_utc` / `not_valid_after_utc`, causing the TLS scanner to fall through to the deprecated `.not_valid_before` path and emit deprecation warnings in CI.
+The evidence bridge auto-populates QRAMM question answers from live scanner findings (e.g., "TLS 1.3 found on 12 endpoints" auto-answers the "Are strong TLS versions enforced?" question as Level 3). This feels like a power feature but becomes a liability when the auto-populated answer claims a maturity level the organization has not actually earned. Scanning what is deployed is not the same as governance of what is deployed. An org can have TLS 1.3 everywhere by accident (vendor default) and score Level 3 on "Cryptographic Visibility" despite having zero inventory management process, no policy, and no repeatable procedure. If the QRAMM report is used in an audit, the inflated score becomes a misrepresentation.
 
 **Why it happens:**
-The PROJECT.md Key Decisions record explicitly states "impacket>=0.13.0,<0.14 in [identity] extras only — pyOpenSSL transitive conflict risk prevents placing impacket in core deps." Adding it to a default group recreates the same conflict without any code change.
+Developers map scanner outputs (HIGH confidence, measurable) directly to QRAMM maturity levels (which require governance evidence: policies, process repeatability, documented ownership). The two evidence types are categorically different. Technical presence is necessary but not sufficient for any QRAMM level above Level 1.
 
 **How to avoid:**
-Do not add impacket to any default or `all` meta-extra. The correct BACK-76 implementation is graceful ImportError degradation inside each optional scanner — not promoting extras to required. Implement the `try: import ...; HAS_X = True` + `except ImportError: HAS_X = False` pattern at module level (not function level) so the flag is evaluated once. Call `_emit_missing_extra_advisory()` (already in run_scan.py) rather than crashing. Keep identity, cloud, db, motion as explicit opt-in extras.
+Treat the evidence bridge as a read-only hint layer, not an answer layer. Auto-populated answers must use a distinct `evidence_source: "scanner_auto"` flag and must render with a visual "unconfirmed" state in the UI — a different color or an explicit "Verify this claim" prompt before the answer is locked. Require a human confirmation click before any auto-populated answer contributes to the final score. Define and document the exact mapping: scanner finding X populates QRAMM question Y as a suggested answer at maturity level Z, not as a confirmed answer. In the scoring engine, apply a `confidence_discount` (e.g., 0.8x) to any dimension where more than 50% of answers are scanner-sourced without human confirmation.
 
 **Warning signs:**
-- `pip install quirk[all]` succeeds but `python -c "import sslyze"` prints a version conflict warning
-- `not_valid_before_utc` AttributeError appears in pytest output on a fresh venv
-- test_version.py surface-count test fails because a transitive dependency bumped a minor version
+- QRAMM report generates a Level 3 or higher maturity score on the first run against an org with no prior governance work
+- Evidence bridge sets `answer_value` directly rather than `suggested_answer` + `requires_confirmation: true`
+- The compliance report cites scanner-derived answers without disclosure that they are automated
 
 **Phase to address:**
-BACK-76 phase — verify in a clean venv with only core deps installed, and separately with each extras group installed, that no import-time conflict occurs.
+QRAMM Evidence Bridge phase — design the data model with `evidence_source`, `confirmed_by`, `confirmed_at` fields before writing any bridge logic. The UI must not allow an unconfirmed auto-answer to be included in the final export.
 
 ---
 
-### Pitfall 2: sslyze `verified_certificate_chain is None` conflated with self-signed detection
+### Pitfall 2: QRAMM Scoring Model Drift — Hardcoded Profile Multiplier and Level Thresholds
 
 **What goes wrong:**
-The risk engine (risk_engine.py line 358) already handles `chain_verified == False` as a self-signed signal, reading from `tls_capabilities_json`. However, sslyze returns `verified_certificate_chain = None` for ANY chain that fails validation against its bundled trust stores — not just self-signed certs. A corporate-issued internal CA cert that is not in Mozilla/Apple/Windows trust stores will fire the self-signed finding when it should not. Conversely, a cert signed by a publicly trusted CA that has expired will have `verified_certificate_chain = None` AND `cert_not_after` in the past, producing a duplicate finding flood (both expiry HIGH and self-signed MEDIUM on the same endpoint).
+The QRAMM model uses a profile multiplier (0.8–1.5x) and five-level thresholds (1.0–1.5, 1.6–2.5, 2.6–3.5, 3.6–3.9, 4.0). These values are sourced from the QRAMM toolkit, which is an externally maintained framework. If QUIRK hardcodes the multiplier range and thresholds as Python literals, any revision to the QRAMM framework (e.g., added dimensions, reweighted practice areas, updated level boundaries) requires a QUIRK code change. More critically, QUIRK reports generated before and after a QRAMM version change will produce different scores for identical answers — causing client confusion if they compare reports year-over-year and cannot explain the delta.
 
 **Why it happens:**
-sslyze bundles five trust stores (Android, Apple, Java, Mozilla, Windows). An internal enterprise CA not in any of those stores produces `verified_certificate_chain = None` — identical to an actual self-signed cert. The current `issuer == subject` check is the only classical self-signed guard. When sslyze is the active path, `chain_verified` in `tls_capabilities_json` is populated from `deployment.verified_certificate_chain is not None`, so internal CA certs will always set it `False`.
+The first implementation of a scoring model always hardcodes constants. It is the path of least resistance. The QRAMM toolkit is an Excel tool — its version is not machine-readable by default, and there is no API to detect framework updates. So developers copy the constants once and never revisit them.
 
 **How to avoid:**
-For BACK-74, distinguish the three cases explicitly:
-1. `issuer == subject` — definitely self-signed (keep existing check)
-2. `chain_verified == False` AND `issuer != subject` — internally issued / untrusted CA (softer "untrusted CA" finding, not "self-signed")
-3. Chain failed AND cert is expired — suppress the "untrusted chain" finding; the expiry finding is sufficient
-
-Add a `_is_self_signed(ep)` helper that returns True only when issuer == subject. Separately emit "Untrusted certificate chain" (MEDIUM) when chain is not verified but cert is not self-signed. Deduplicate expiry + chain-failure on the same endpoint.
+Store all QRAMM model constants (level thresholds, multiplier range, dimension weights, question-to-practice-area mapping, 120-question text) in a versioned data structure: `QRAMM_MODEL_VERSION = "1.0"` and a `QRAMM_MODEL: dict` constant with a `version`, `source_url`, and `last_verified` key — exactly the same pattern used in `quirk/compliance/__init__.py` for the existing compliance map. Every assessment record in SQLite must store the `qramm_model_version` at the time of assessment. The `quirk qramm status` CLI and the staleness CI gate must check that `last_verified` is within 365 days. When QRAMM updates its framework, updating QUIRK requires changing one data module, not hunting string literals across the codebase.
 
 **Warning signs:**
-- Chaos lab TLS profile produces both "Self-signed" and "Expired" findings on the same endpoint
-- Internal CA targets produce "self-signed" in reports delivered to clients using private PKI
-- sslyze path emits 2x the findings count of the fallback path for the same target
+- Level thresholds and multiplier ranges are Python literals inside the scoring function, not a named constant with a version key
+- SQLite `qramm_assessment` table has no `model_version` column
+- Two assessments from different QUIRK versions produce different scores for identical answers with no recorded explanation
 
 **Phase to address:**
-BACK-74 phase — add chaos lab targets with (a) self-signed, (b) expired, (c) internal CA certs and verify each produces exactly one finding with the correct title.
+QRAMM Data Model phase — the `QRAMM_MODEL` versioned constant must exist before any scoring function is written.
 
 ---
 
-### Pitfall 3: `cert_not_after` is NULL in the SQLite row when sslyze's CERTIFICATE_INFO command fails
+### Pitfall 3: 120-Question Wizard State Loss on Navigation — React Unmount Anti-Pattern
 
 **What goes wrong:**
-When sslyze returns `COMPLETED` status for the server scan but the `CERTIFICATE_INFO` scan command attempt itself has status `ERROR`, the sslyze path sets `chain_depth = 0` and `chain_verified = False` but skips populating `cert_not_after`, `cert_pubkey_size`, and `cert_issuer`. The endpoint is returned from `_scan_one_sslyze()` rather than triggering the fallback. The risk engine then has `cert_not_after = None` and skips the expiry check entirely. The self-signed check also silently passes because both `cert_issuer` and `cert_subject` are empty strings, so `issuer == subject` evaluates `False`.
+A naive implementation of the 120-question assessment wizard splits questions across steps and uses component-per-step routing (e.g., `/qramm/step/1`, `/qramm/step/2`). React router navigation between steps unmounts the current step component, destroying its local state. If the wizard uses `useState` per-step for answers, the user loses all work when they press the browser Back button, refresh the page, or if a tab is put to sleep by the browser. A 120-question wizard where a wrong navigation gesture silently discards 40 minutes of work is a consultant-rage-inducing UX failure.
 
 **Why it happens:**
-`_scan_one_sslyze()` returns a partially-populated `CryptoEndpoint` when the server scan completes but the CERTIFICATE_INFO command fails (e.g., mTLS-required endpoint, or a cert that triggers an OpenSSL parsing error). The caller in `scan_one()` sees a non-None return and never calls `_scan_one_fallback()`.
+Multi-step forms are routinely implemented as page-per-step because it maps naturally to router semantics. This works acceptably for 3–5 step forms where each step takes seconds. It fails for 120-question assessments where a single dimension (30 questions) takes 5–10 minutes and any unmount drops answers that are not yet persisted.
 
 **How to avoid:**
-In `_scan_one_sslyze()`, when `cert_attempt.status != ScanCommandAttemptStatusEnum.COMPLETED`, return `None` to trigger the fallback rather than returning a half-populated endpoint. Add a guard: if `ep.cert_not_after is None` after the sslyze block, return `None`. Add a test with an mTLS-required chaos lab target that verifies the fallback path populates cert fields.
+Keep all 120 answers in a single React context (or Zustand store) that lives at the top-level layout component, above all route changes. Answer state must never be owned by a step-level component. Persist the entire in-progress assessment to the backend (draft save via `POST /api/qramm/assessment/draft`) every time any answer changes, with debouncing (500ms). On wizard mount, load the draft from the backend if one exists. This makes browser refresh recovery automatic. Never use `useNavigate` to advance steps — use tab-index state within a single mounted component so nothing unmounts between steps. Treat the 120 questions as a single long form with a scrollable/paginated display, not as multiple pages.
 
 **Warning signs:**
-- BACK-74 test for "expired cert" passes with sslyze installed but produces zero findings when sslyze is uninstalled and fallback runs
-- SQLite rows with `cert_not_after IS NULL` but `tls_version` populated (indicates sslyze partial success)
-- `scan_error_category` is NULL but all cert columns are NULL on a successfully connected endpoint
+- `useEffect(() => { setAnswers([]) }, [])` appears at step-component level
+- Each wizard step is a separate React route (`/qramm/step/:n`)
+- No draft-save endpoint exists in the FastAPI backend
+- Browser Back button during assessment produces an empty answers array
 
 **Phase to address:**
-BACK-74 phase — the fix is a guard in `_scan_one_sslyze()`. Requires a chaos lab cert that exercises the CERTIFICATE_INFO ERROR path.
+QRAMM Assessment UI phase — state architecture must be decided before any step component is written. The draft-save endpoint must exist before the wizard is wired.
 
 ---
 
-### Pitfall 4: FIPS 203/204 remediation text mixing draft submission names with final standard names
+### Pitfall 4: SQLite Schema for Assessment State — JSON Blob Anti-Pattern
 
 **What goes wrong:**
-The risk engine currently uses mixed terminology in remediation strings: "ML-KEM / CRYSTALS-Kyber for key exchange, ML-DSA / Dilithium for signatures" (risk_engine.py line 395). FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA) were finalized in August 2024. The original competition submission names "Kyber" and "Dilithium" are no longer normative. Procurement documents or compliance reports containing both names cause confusion when clients or auditors search for the standard. More critically, remediation text that says "when NIST PQC standards are adopted upstream" (risk_engine.py line 54) is already factually wrong — the standards are published and final.
+Storing the 120 QRAMM question answers as a single `answers_json` TEXT blob on an `assessment` row feels natural (it mirrors the existing `tls_capabilities_json`, `ssh_audit_json` patterns in `quirk/models.py`). However, those existing JSON blobs are raw scanner outputs that are never queried by field — they are opaque payloads for the UI. QRAMM answers are different: the scoring engine needs to aggregate by dimension, filter by practice area, compute per-question confidence weights, and detect which answers are scanner-confirmed vs. human-confirmed. Running `json_extract()` across 120 keys on every scoring call is fragile and slow. More critically, the JSON blob approach makes it impossible to write a unit test that asserts "dimension CVI has 30 answered questions" without deserializing the blob.
 
 **Why it happens:**
-The CBOM classifier (classifier.py line 144) already correctly uses the FIPS 203/204/205 designations. The risk engine remediation strings were written before August 2024 finalization and were not updated. For BACK-79 rich finding context, new strings will be added — if written carelessly, they inherit the same staleness.
+The existing `*_scan_json` pattern in `models.py` works well for raw scan outputs and developers correctly recognize the additive migration constraint. They reach for the same pattern for assessment state because it avoids schema design work.
 
 **How to avoid:**
-Use only NIST-normative names in all new remediation text: "ML-KEM" (FIPS 203), "ML-DSA" (FIPS 204), "SLH-DSA" (FIPS 205). Never write "Kyber" or "Dilithium" in user-facing strings. Cite the FIPS number explicitly when possible. Replace the stale "when NIST PQC standards are adopted upstream" phrasing with "NIST finalized FIPS 203/204/205 in August 2024 — migration planning should begin now. Federal systems must migrate by 2030 per NIST IR 8547." Extract all PQC remediation strings into a shared constant module so they are updated once and propagate everywhere. Add a CI grep check for "Kyber" or "Dilithium" in remediation strings.
+Use a normalized `qramm_answer` table: `(id, assessment_id FK, question_id, dimension, practice_area, answer_value INT, evidence_source TEXT, suggested_by TEXT, confirmed_at DATETIME, model_version TEXT)`. This is a separate table from `qramm_assessment` (which holds the header: org profile, created_at, overall score, model version). The `assessment_id` FK makes all answers for one assessment queryable with a simple `WHERE assessment_id = ?`. Scoring queries become `SELECT AVG(answer_value) FROM qramm_answer WHERE assessment_id = ? AND dimension = 'CVI'` — no JSON deserialization. Keep a `summary_json` column on `qramm_assessment` only for the pre-computed score breakdown (not the raw answers), to avoid recomputing on every dashboard load. The additive migration constraint is satisfied: both new tables are created via `CREATE TABLE IF NOT EXISTS`, never altering existing tables.
 
 **Warning signs:**
-- Any string in risk_engine.py or a new remediation module containing "Kyber", "Dilithium", or "when standards are adopted"
-- CBOM classifier and risk engine use different algorithm names for the same algorithm
-- Compliance report contains a FIPS citation that references a draft document number
+- `qramm_assessment` has an `answers_json` TEXT column instead of a `qramm_answer` child table
+- Scoring function deserializes a JSON blob and iterates over it to compute dimension averages
+- No SQLAlchemy `relationship()` from `QRAMMAssessment` to `QRAMMAnswer`
 
 **Phase to address:**
-BACK-79 phase — do a remediation string audit before writing any new strings.
+QRAMM Data Model phase — normalize the schema before writing any API routes or scoring logic.
 
 ---
 
-### Pitfall 5: Compliance mapping becomes a maintenance liability the moment it ships
+### Pitfall 5: PDF Export Regression — QRAMM Section Breaking Existing Print Layout
 
 **What goes wrong:**
-Hardcoding control IDs like "FIPS 140-3 IG D.F", "PCI-DSS 4.0 Req 4.2.1", "NIST SP 800-208 Section 3.1" directly in finding dicts or Python constants makes the mapping a one-way door. PCI-DSS 4.0.1 was released in June 2024, renumbering some requirements from PCI-DSS 4.0. HIPAA does not use numbered control IDs — it uses safeguard names ("Encryption and Decryption", 45 CFR §164.312(a)(2)(iv)) that are stable but easy to misformat. Mapping findings to specific PCI-DSS 4.0.1 requirement numbers that shift in a future version will require codebase edits when PCI-DSS 5.0 arrives.
-
-**Key PCI-DSS 4.0 vs 3.2.1 differences that affect QUIRK:**
-- Req 4.2.1 and 4.2.1.1 are new in 4.0: require documented inventory of all TLS keys and certs — maps directly to QUIRK's cert inventory feature
-- 4.0 requires TLS 1.2+ (not 1.1+); weak cipher suites explicitly disallowed
-- 4.0.1 (June 2024) adjusts numbering — always cite version string in the mapping
-
-**How to avoid:**
-Separate compliance mapping data from finding logic. Use a `COMPLIANCE_MAP: dict[str, list[dict]]` module constant, keyed by finding category (e.g., "TLS_EXPIRED", "RSA_WEAK_KEY"), not by finding title string. Each entry is a list of dicts: `{"framework": "PCI-DSS", "version": "4.0.1", "control": "4.2.1", "requirement": "..."}`. Findings stay unchanged; the compliance layer is additive. Updating to PCI-DSS 5.0 means editing one dict, not auditing 30 finding generators. Include a `version` key on every mapping entry.
-
-**Warning signs:**
-- Compliance control IDs are string literals inside `_derive_tls_findings()` or equivalent
-- No `version` key on any compliance mapping entry
-- HIPAA references use requirement numbers (HIPAA has no numbered controls — it uses safeguard names)
-
-**Phase to address:**
-BACK-20 phase — design the `COMPLIANCE_MAP` data structure before writing any mappings.
-
----
-
-### Pitfall 6: Nmap running as non-root silently exhausts file descriptors on macOS with large scopes
-
-**What goes wrong:**
-The current `nmap_provider.py` uses `-sT` (TCP connect scan) which does not require root — correct. However, on macOS, running nmap against large CIDR blocks with `-sT -Pn` opens one socket per (host, port) combination simultaneously. For a /24 with 17 ports that is 4,335 concurrent sockets, exceeding macOS's default per-process file descriptor limit of 256 and silently dropping results. On Linux systems where nmap has the SUID bit set, nmap may auto-upgrade from `-sT` to `-sS` (SYN scan requiring raw sockets) — which then fails for non-root callers despite SUID.
+The current `POST /api/export/pdf` route navigates Playwright to `/print`, waits for `body[data-ready="true"]`, then renders A4 with fixed margins. Adding a QRAMM governance section to the print route (radar chart, 8-framework compliance table, dimension breakdowns) will change page count, affect page breaks in the existing Technical Findings section, and potentially push the Executive Summary off page 1. Playwright PDF output changes when content reflows. The Chromium version pinned in the development environment may differ from CI, producing different page counts. Radar charts rendered via a canvas or SVG element may not print at all if the element is not in the visible DOM or if it relies on JavaScript animations that have not settled when Playwright captures the page.
 
 **Why it happens:**
-`_default_nmap_args()` does not limit concurrent parallelism. The BACK-75 phase adds nmap as a pre-scan probe. If the consultant runs it against a client's /16 (65,536 hosts × 17 ports = 1.1M combinations), the default 1800-second timeout will be exceeded and nmap returns an empty target list — with no user-visible finding or warning.
+PDF print layout is treated as a visual concern that "just works." Developers add new sections to the print route without print-specific CSS, without testing page breaks, and without verifying that chart elements are print-visible. The 30-second Playwright timeout and 15-second selector wait are generous for the existing lean report but may be insufficient if the QRAMM section triggers additional async data fetches.
 
 **How to avoid:**
-Add `--max-parallelism 100` to `_default_nmap_args()`. Add a target count guard before invoking nmap: if `len(targets) * len(ports) > 10_000`, warn and ask for confirmation. For CIDR inputs larger than /24, recommend splitting the scope. The RuntimeError on timeout (already in `nmap_provider.py` line 80) is good — ensure it propagates through `_wrapped_phase` correctly. Never document or suggest setting the SUID bit on nmap in the operator's guide.
+Add `@media print` CSS rules for every new QRAMM section before the section ships. Explicitly set `page-break-before: always` on the QRAMM section to guarantee it starts on a fresh page rather than inheriting broken pagination from the technical section. Set `break-inside: avoid` on each sub-table and chart container. Render the radar chart as a static SVG (no animation) — never as a `<canvas>` element, which does not print reliably. Add a snapshot test: render the print route headlessly and assert the PDF page count is within an expected range (e.g., 4–12 pages). Pin the Playwright/Chromium version in `pyproject.toml` to the same version used in CI. Do not add any new async data fetches inside the print route's React component — the component must receive all data synchronously from props/context at mount time, not fetch it after mount.
 
 **Warning signs:**
-- Nmap returns 0 open ports on a target known to have open ports
-- `quirk.db` contains 0 TLS endpoints after a nmap-discovery scan on a non-trivial scope
-- Nmap discovery blocks until the full `--nmap-timeout` with no progress output
+- The `/print` React component calls `useEffect(() => { fetch(...) })` at component mount for QRAMM data
+- QRAMM radar chart is implemented as `<canvas>` rather than inline SVG
+- No `@media print` CSS for the QRAMM section
+- PDF page count is not asserted in any test
 
 **Phase to address:**
-BACK-75 phase — add `--max-parallelism` to defaults and target count guard before invocation.
+QRAMM Report Export phase — print CSS must be written alongside the QRAMM section components, not added later as a fix.
 
 ---
 
-### Pitfall 7: Multi-target wizard accepting bare hostnames that are actually file paths
+### Pitfall 6: Staleness Gate False Positives — Date-Based CI Failures Blocking Legitimate Deployments
 
 **What goes wrong:**
-The interactive wizard (`_prompt_list()` in interactive.py) splits on comma/whitespace and accepts any token as an FQDN. If the user types a filename like `targets.txt` intending file-based input (which BACK-77 will add), the current code will try to resolve `targets.txt` as a hostname, fail silently at scan time (TLS connection refused or DNS NXDOMAIN), and produce 0 findings for all those targets with no user-visible explanation.
+The existing Phase 49 staleness infrastructure uses `STALENESS_THRESHOLD_DAYS = 365` and compares `last_verified` against the current date. The v4.7 QRAMM staleness gate extends this to QRAMM model constants (90-day threshold per the milestone spec) and SOC2/ISO27001 control mappings. The false-positive risk arises when: (1) CI runs in a timezone where the date rolls over at a different moment than the developer's local machine; (2) a patch release is cut exactly at the 90-day boundary and the CI run on that day fails; (3) the staleness check reads `datetime.utcnow()` (deprecated) instead of `datetime.now(timezone.utc)`, producing a 0-day-old reading in some Python versions; (4) a `last_verified` date is bumped during a cosmetic edit (comment change) without actual re-verification, creating false freshness and defeating the gate.
 
 **Why it happens:**
-File-based input does not exist yet. When it is added, the parsing logic must differentiate between a path token and a hostname token before any input enters the target list. Without this check, user error produces a silent zero-findings scan that looks identical to a successful scan of unreachable hosts.
+Staleness checks feel straightforward but have three independent failure modes: clock source (utcnow vs. timezone-aware now), boundary edge cases (exactly N days), and social pressure to bump the date to silence CI rather than do the verification.
 
 **How to avoid:**
-When BACK-77 adds file-based input, detect file paths before the FQDN split: if a token starts with `/`, `./`, or ends with `.txt`/`.csv`, attempt to read it as a file first. If the file does not exist, warn explicitly ("'targets.txt' not found as a file — treating as hostname"). Add FQDN validation: reject tokens that are empty strings after stripping, or that contain only digits and dots but fail `ipaddress.ip_address()` (likely a malformed IP). Strip and filter empty strings from all `_prompt_list()` output — a trailing comma currently produces an empty-string hostname.
+Use `datetime.now(timezone.utc).date()` everywhere — never `datetime.utcnow()`. The BACK-56 tech debt item (datetime.utcnow deprecation) must be resolved in the same milestone before any new staleness gates are added. Use `<` (strictly less than) not `<=` for the boundary: a last_verified date that is exactly `threshold_days` old is not yet stale. Add a CI environment variable `QUIRK_CI_STALENESS_OVERRIDE_DATE` that allows the test suite to inject a fixed "today" date — this enables tests to verify staleness behavior at known boundaries without coupling the test to wall-clock time. Distinguish "not yet verified" (null last_verified) from "verified but stale" — they require different CI failure messages and different remediation actions. Document in CONTRIBUTING.md that bumping `last_verified` requires a link to the verification artifact (PR, external changelog, or issue) in the commit message.
 
 **Warning signs:**
-- Interactive wizard accepts `targets.txt` without warning and produces a scan with 0 TLS endpoints
-- User-supplied CIDR like `10.0.0.0/8` generates 16 million IPs silently without confirmation
-- Token list contains empty strings after split (user typed trailing comma or double space)
+- Staleness check uses `datetime.utcnow()` — BACK-56 not yet resolved
+- CI fails on the 90th day after a release and the fix is to bump `last_verified` without re-verification
+- `QUIRK_CI_STALENESS_OVERRIDE_DATE` does not exist as an env var hook in the staleness module
+- `last_verified` is updated in the same commit as a docstring fix with no re-verification evidence
 
 **Phase to address:**
-BACK-77 phase — validation must run before targets are written to config, not after.
+QRAMM Data Model / staleness enforcement phase — resolve BACK-56 first. Write the staleness module with the injectable-date pattern before adding any QRAMM thresholds.
 
 ---
 
-### Pitfall 8: IPv6 literal addresses breaking target parsing
+### Pitfall 7: SOC2 and ISO27001 Mapping Accuracy — Framework Versioning and Partial Coverage Misrepresentation
 
 **What goes wrong:**
-`expand_targets()` in `target_expander.py` handles IPv4 CIDRs via `ipaddress.ip_network()`. IPv6 addresses typed as literals (e.g., `2001:db8::1`) via `_prompt_list()` are not currently validated. `ipaddress.ip_network("2001:db8::1/64")` raises `ValueError: 2001:db8::1/64 has host bits set` unless `strict=False` is passed — and the multi-target wizard would surface this as an unhandled traceback. Additionally, sslyze's `ServerNetworkLocation` and `socket.create_connection` have different expectations for IPv6 bracket formatting.
+SOC2 Trust Service Criteria (TSC) reference AICPA 2017 (updated 2022). ISO 27001:2022 reorganized from 114 controls across 14 domains (ISO 27001:2013) to 93 controls across 4 clauses. Mappings written against ISO 27001:2013 control IDs (e.g., "A.10.1.1") are invalid in ISO 27001:2022 (which uses "8.24"). If QUIRK maps TLS findings to ISO 27001 controls using 2013 numbering without declaring the version, a client undergoing a 2022 audit will find the control references do not match their framework. SOC2 is an even larger trap: the TSC are principles (CC6.1, CC6.7), not numbered controls, and their applicability depends on which Trust Service Categories the organization has selected. Mapping a TLS finding to CC6.7 (availability-adjacent) when the org has not selected Availability TSC produces a report that looks authoritative but is scoped incorrectly.
 
 **How to avoid:**
-In `expand_targets()`, detect IPv6 CIDRs and retry with `strict=False`. Document in the operator's guide that IPv6 CIDR ranges in nmap notation are not supported (confirmed in nmap docs — IPv6 only accepts full addresses, not CIDR). For the sslyze path, bracket IPv6 literals before passing to `ServerNetworkLocation`. For the fallback path, `socket.create_connection` accepts raw IPv6 literals without brackets.
+Version-pin every mapping entry with `"version": "ISO 27001:2022"` or `"version": "SOC 2 TSC 2017 (2022 points of focus)"` — never just `"ISO 27001"`. Use the new ISO 27001:2022 clause numbers (8.x) not the 2013 Annex A numbers (A.x.x). For SOC2, map only to Common Criteria (CC) controls — not to Availability, Confidentiality, or Processing Integrity controls unless the org profile in the QRAMM assessment explicitly indicates those TSCs apply. Add an org-profile input during the QRAMM org wizard: "Which Trust Service Categories does your SOC2 audit cover?" and gate the SOC2 control display on the answer. Add a prominent disclaimer in the PDF export: "SOC2 control mapping reflects Common Criteria applicable to all audits; additional TSC controls may apply based on your audit scope." Never display a "100% coverage" badge for any framework — QUIRK scans the network/crypto surface, not the full control environment, and claiming full coverage is a material misrepresentation.
 
 **Warning signs:**
-- User types `::1` as a target and gets an unhandled ValueError at scan start
-- IPv6 target produces sslyze `ERROR_NO_CONNECTIVITY` while the fallback path succeeds for the same host
+- Any SOC2 control reference uses clause numbers rather than CC/A/C/I/P/PI prefix notation
+- Any ISO 27001 control reference uses `A.x.x` notation (2013 numbering) without a version declaration
+- QUIRK displays a coverage percentage above ~30% for any framework — a cryptographic scanner cannot cover human-process controls
+- The QRAMM compliance mapping view shows all 8 frameworks with equal confidence regardless of org TSC selection
 
 **Phase to address:**
-BACK-77 phase — input validation layer.
+COMPLY-11 SOC2/ISO27001 mapping phase — the control reference data structure must enforce version as a required field (not nullable). A unit test must assert that no entry uses 2013-era `A.x.x` control IDs without a version override.
+
+---
+
+### Pitfall 8: CBOM FIPS 140-3 Annotations — certificationLevel Inferred vs. Verified
+
+**What goes wrong:**
+CycloneDX 1.6 (QUIRK's current output format) supports `certificationLevel` on algorithm components. The tempting implementation annotates any algorithm that is FIPS-approved (ML-KEM, AES-256, SHA-2) with `certificationLevel: "FIPS 140-3"`. This is factually wrong: FIPS 140-3 certifies the *implementation* (a specific hardware or software module validated by a CMVP lab), not the algorithm. AES-256 implemented in OpenSSL 3.x is not FIPS 140-3 certified unless OpenSSL's FIPS provider module was specifically validated and the application was configured to use it. Annotating an endpoint's TLS AES-256 cipher as FIPS 140-3 certified when the server runs unvalidated OpenSSL will be challenged immediately in any FISMA or FedRAMP audit.
+
+**How to avoid:**
+Use `certificationLevel` only when scanner evidence explicitly indicates a validated module (e.g., a CloudHSM KMS key, a FIPS-mode AWS service, a Vault transit key configured with a FIPS-validated backend). For all other algorithm components, omit `certificationLevel` or set it to `"none"`. Annotate algorithm components with a `quantum_safety` property (already implemented in QUIRK's CBOM classifier) but not with a certification claim that cannot be verified by a network scanner. Add a disclaimer to the CBOM export: "certificationLevel annotations are present only where scanner evidence indicates a validated cryptographic module. Network-observable algorithm usage does not imply FIPS 140-3 module validation." The COMPLY-10 requirement is CBOM FIPS 140-3 *annotations* — interpret this as "annotate findings that are relevant to FIPS 140-3 compliance evaluation" not "claim FIPS certification on all matching algorithms."
+
+**Warning signs:**
+- Every AES or SHA component in the CBOM has `certificationLevel: "FIPS 140-3"` regardless of whether the endpoint is a cloud HSM or a local Apache server
+- No test asserts that a non-validated endpoint produces `certificationLevel: "none"` or absent field
+- CBOM export does not include a disclaimer about the distinction between algorithm approval and module validation
+
+**Phase to address:**
+COMPLY-10 CBOM FIPS annotation phase — define the exact evidence criteria that justifies each certification level claim before writing any annotation logic.
 
 ---
 
@@ -183,11 +178,13 @@ BACK-77 phase — input validation layer.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Hardcoding compliance control IDs in finding dicts | Fast to ship | Every framework version bump requires code audit across 30+ finding generators | Never — use a COMPLIANCE_MAP constant |
-| Copying PQC remediation text per finding type | Each message is customizable | 8+ places to update when algorithm names change | Never — extract into a shared PQC_REMEDIATION module |
-| Promoting optional extras to defaults without testing transitive deps | "Just works" for first install | pyOpenSSL / impacket / sslyze version conflict re-emerges silently | Never for impacket |
-| Using `issuer == subject` as the only self-signed signal | Simple one-liner | Internal CA certs incorrectly flagged as self-signed in enterprise environments | Acceptable only when paired with a distinct "Untrusted chain" check |
-| Nmap with no parallelism cap | Works on small lab scopes | Exceeds socket limit on /24+ enterprise scopes | Never without target count guard |
+| Store all 120 QRAMM answers as a `answers_json` blob | Fast schema, mirrors existing scan JSON pattern | Cannot query per-dimension; scoring function is a deserialize-iterate loop; untestable at unit level | Never — normalize to `qramm_answer` table |
+| Auto-confirm scanner evidence as QRAMM answers | Demo looks impressive; answers fill automatically | Audit misrepresentation risk; inflated maturity scores | Never — require human confirmation click |
+| Hardcode QRAMM level thresholds and multipliers as literals | Fast to ship | Breaks year-over-year comparability when QRAMM framework updates | Never — use a versioned `QRAMM_MODEL` constant |
+| Map all FIPS-approved algorithms to `certificationLevel: "FIPS 140-3"` | CBOM looks comprehensive | Any auditor will challenge unverified certification claims | Never — only annotate with evidence |
+| ISO 27001 control IDs without version declaration | Looks complete | 2013 vs 2022 numbering mismatch in client audit | Never — version key is required |
+| Add new PDF section without print-specific CSS | Quick to ship | Page break regressions break existing report layout | Never for a document delivered to paying clients |
+| Bump `last_verified` to silence CI without re-verification | Passes CI | Defeats the staleness gate entirely; creates false assurance | Never — document verification artifact in commit |
 
 ---
 
@@ -195,14 +192,14 @@ BACK-77 phase — input validation layer.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| sslyze CERTIFICATE_INFO | Treating `attempt.status != COMPLETED` as partial success; returning half-populated CryptoEndpoint | Return `None` from `_scan_one_sslyze` when cert info command fails; let fallback populate cert fields |
-| sslyze `verified_certificate_chain` | Treating `None` as proof of self-signed cert | `None` means trust validation failed against bundled stores; self-signed requires `issuer == subject` |
-| `cryptography` library datetime | Using `.not_valid_before` / `.not_valid_after` (deprecated) | Always prefer `not_valid_before_utc` / `not_valid_after_utc`; the existing hasattr guard is correct — do not remove it |
-| nmap `-sT` + `-Pn` on macOS | No socket count limit; exhausts file descriptors on large scopes | Add `--max-parallelism 100` to default args |
-| impacket in meta-extras | Including impacket in `all` or default extra | Keep in `[identity]` only; pyOpenSSL conflict is documented in PROJECT.md Key Decisions |
-| FIPS 203/204 naming | Using "Kyber"/"Dilithium" in user-facing remediation text | Use "ML-KEM" (FIPS 203), "ML-DSA" (FIPS 204), "SLH-DSA" (FIPS 205) |
-| PCI-DSS version references | Mapping to "PCI-DSS 4.0" when 4.0.1 is current | Always include version string; PCI-DSS 4.0.1 was released June 2024 |
-| Interactive wizard file input | No detection of file-path tokens in FQDN list | Detect `.txt`/`.csv` path tokens before hostname validation; warn if file not found |
+| QRAMM evidence bridge | Setting `answer_value` directly from scanner output | Set `suggested_answer` + `evidence_source: "scanner_auto"` + `requires_confirmation: true`; human click locks the answer |
+| Playwright PDF export + new sections | Adding async fetches inside `/print` component | All QRAMM data must be in React context at mount time; no fetch-on-render in print route |
+| SOC2 TSC mapping | Mapping findings to all 5 TSC categories | Map only to Common Criteria (CC) by default; gate additional TSC on org profile input |
+| ISO 27001 control IDs | Using 2013 Annex A numbering (A.10.1.1) | Use 2022 clause numbering (8.24); version-pin every entry |
+| SQLite additive migration for QRAMM tables | `ALTER TABLE` existing tables to add columns | `CREATE TABLE IF NOT EXISTS qramm_assessment` and `qramm_answer` — never alter `crypto_endpoint` |
+| Staleness gate datetime | `datetime.utcnow()` | `datetime.now(timezone.utc).date()` — BACK-56 must be resolved first |
+| QRAMM wizard step navigation | Route-per-step causing unmount | Single mounted component with tab-index state; answers in top-level context |
+| CBOM certificationLevel | Annotating all FIPS-approved algorithms | Annotate only endpoints with validated module evidence (HSM, FIPS-mode cloud service) |
 
 ---
 
@@ -210,9 +207,9 @@ BACK-77 phase — input validation layer.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Nmap against /16 CIDR with no parallelism cap | 65K hosts × 17 ports = 1.1M socket attempts; 1800s timeout; 0 results returned | Target count guard before nmap invocation; warn above /24 | Any scope larger than ~256 hosts without tuning |
-| sslyze per-server thread with no host timeout | Hung host blocks thread for full `tls_timeout` seconds in 50+ host scans | `_wrapped_phase` handles BaseException; ensure TLS timeout is passed to `ServerNetworkConfiguration` | 50+ host scan with unreachable hosts |
-| COMPLIANCE_MAP as nested inline dicts in finding generators | Correct for 5 mappings; unmanageable at 50 | Module-level constant dict keyed by finding category | When second or third compliance framework is added |
+| Scoring 120 QRAMM answers by deserializing JSON blob on every API call | `/api/qramm/assessment/:id/score` takes > 500ms | Pre-compute score breakdown into `summary_json` column on save; only recompute on answer change | Any org with > 5 assessments loaded in the dashboard simultaneously |
+| Radar chart rendered as `<canvas>` in print route | Chart is blank in PDF export | Use static inline SVG; no animations, no JavaScript canvas | Every PDF export when canvas is used |
+| Loading all 120 questions from DB on every wizard page render | Wizard feels slow to navigate between dimensions | Load all 120 questions once at wizard mount; keep in memory for session | Any connection latency > 100ms |
 
 ---
 
@@ -220,10 +217,10 @@ BACK-77 phase — input validation layer.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Documenting nmap SUID setup in operator's guide | Enables privilege escalation; attackers can spawn root shell via nmap NSE lua scripts | Never document or suggest SUID on nmap; always run as non-root with `-sT` |
-| PQC remediation text citing deprecated algorithm names | Consultant delivers report with "Kyber" — procurement department purchases a non-FIPS product | CI grep check: fail on "Kyber" or "Dilithium" in any file under `quirk/` |
-| Compliance mapping that does not pin a framework version | Client fails audit because report cites PCI-DSS 3.2.1 controls that do not exist in 4.0.1 | Always include `version` key; make version a data attribute not a string literal |
-| Treating `CERT_VERIFY_FAILED` as a scan error rather than a finding-opportunity | Self-signed / expired certs are silently skipped | `CERT_VERIFY_FAILED` should still allow cert field population via `ssl.CERT_NONE`; existing fallback already does this — do not regress it when adding BACK-74 logic |
+| Displaying QRAMM maturity score without org-profile context | A Level 2 org in financial services is worse than a Level 2 startup — raw score without profile is misleading | Always display score alongside profile multiplier and org sector in reports |
+| Evidence bridge populating answers from scanner data without audit trail | Auditor cannot verify how a QRAMM answer was derived | Every answer row must store `evidence_source`, `evidence_ref` (scan session ID), `confirmed_by`, `confirmed_at` |
+| SOC2 control mapping claiming "passed" for any control | Scanner cannot verify human-process controls (policies, training, vendor reviews) | Display only "relevant" or "technical evidence present" — never "compliant" or "passed" |
+| Storing assessment answers with no `assessment_id` FK | Multiple incomplete assessments accumulate as orphaned rows | Enforce FK integrity at the ORM layer; auto-delete orphaned draft answers after 30 days |
 
 ---
 
@@ -231,26 +228,25 @@ BACK-77 phase — input validation layer.
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| PQC remediation saying "plan to migrate when standards are adopted" | Consultant looks uninformed — FIPS 203/204 are final | Phrase as "NIST finalized FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA) in August 2024. Federal systems must migrate by 2030 per NIST IR 8547." |
-| Compliance mapping without version numbers | Client asks "which version of PCI-DSS?" — consultant cannot answer | Always format as "PCI-DSS 4.0.1 Req 4.2.1" not "PCI DSS Req 4.2.1" |
-| Nmap discovery returning 0 targets silently | Consultant assumes scan ran; delivers blank report | Log a WARNING and surface in scan completion summary if nmap returns 0 open ports for any target in scope |
-| Multi-target wizard accepting trailing comma | Produces empty-string hostname; silent DNS failure | Strip and filter empty strings from `_prompt_list()` output before returning |
-| `missing_extra` advisory buried in verbose log | IT generalist never sees it; thinks scanner ran fully | Surface `missing_extra` advisory in the scan completion summary, not only in verbose log |
+| 120 questions displayed as a single scrolling list | Consultant loses track of position; no sense of progress | Group by dimension (4 groups of 30); show dimension progress bar; allow saving and resuming per-dimension |
+| Auto-populated answers indistinguishable from human answers | Consultant exports a report thinking all answers are confirmed; client catches inflated score in audit | Use distinct visual state for `evidence_source: "scanner_auto"` answers (amber badge, "Verify" button) |
+| Radar chart showing Level 5 spikes | Client incorrectly believes they are fully quantum-ready in that dimension | Cap visual display at the raw score; add explanatory text for any dimension above Level 3 |
+| PDF export including all 120 question answers | 30-page appendix that no client reads | Export dimension summaries + findings by default; offer raw Q&A as an optional appendix with explicit checkbox |
+| `quirk doctor` health-check output mixing QRAMM model freshness with scanner dep checks | Consultant cannot triage which issue to fix first | Group output: (1) Scanner dependencies, (2) Compliance map freshness, (3) QRAMM model freshness — separate sections with separate exit codes |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **BACK-76 ImportError degradation:** Verify with a clean venv that has ONLY core deps — no identity, motion, cloud, or db extras. Every optional scanner must produce a `missing_extra` advisory and continue, not raise ImportError and crash.
-- [ ] **BACK-74 expired cert detection:** Verify with a chaos lab cert that has `not_valid_after` in the past that the risk engine produces exactly one "TLS certificate expired" HIGH finding — not zero, not two.
-- [ ] **BACK-74 self-signed vs internal CA:** Verify that a cert signed by an internal CA (issuer != subject) produces "Untrusted certificate chain" not "Self-signed or untrusted TLS certificate." The two finding titles must be distinct strings so they appear separately in reports.
-- [ ] **BACK-74 RSA-1024 detection:** Verify that a chaos lab cert with RSA-1024 produces the "TLS certificate uses undersized RSA key" HIGH finding, not just the generic "quantum-vulnerable RSA" MEDIUM.
-- [ ] **BACK-79 PQC remediation naming:** grep for "Kyber" and "Dilithium" in all modified files before shipping — zero hits required.
-- [ ] **BACK-20 compliance map versioning:** Every entry in COMPLIANCE_MAP has a `version` key with a specific version string (not just "PCI-DSS"). Confirmed by unit test.
-- [ ] **BACK-75 nmap target guard:** Verify that a target list exceeding the count threshold triggers a user-visible warning, not a silent 1800-second timeout.
-- [ ] **BACK-77 file-based input:** Verify that typing `targets.txt` (file does not exist) in the wizard produces an explicit warning, not a silent NXDOMAIN scan.
-- [ ] **BACK-77 trailing comma:** Verify that `host1,,host2` input produces a 2-element list, not a 3-element list with an empty-string entry.
-- [ ] **BACK-65+66 docs freshness:** Verify every CLI flag documented in the operator's guide matches `quirk --help` output exactly. Version string in docs matches `quirk --version` output.
+- [ ] **QRAMM evidence bridge:** Every auto-populated answer has `evidence_source: "scanner_auto"` and `requires_confirmation: true`. A human confirmation click is required before the answer contributes to the scored total. Verify by checking a fresh assessment with no human inputs — the score should be 0 or explicitly marked as "unconfirmed."
+- [ ] **QRAMM model versioning:** Every scoring function reads thresholds and weights from `QRAMM_MODEL` constant, not literals. `QRAMM_MODEL` has a `version` and `last_verified` key. `qramm_assessment` table has a `model_version` column populated at assessment creation time.
+- [ ] **Wizard state persistence:** Browser refresh during question 60 of 120 restores the in-progress answers from the backend draft. Verify: answer Q1–Q30, refresh, Q1–Q30 answers are present.
+- [ ] **SQLite schema normalization:** `qramm_answer` is a separate table, not a JSON column on `qramm_assessment`. Verify by running `SELECT sql FROM sqlite_master WHERE name='qramm_answer'` — must return a CREATE TABLE statement with individual columns.
+- [ ] **PDF print layout:** Adding QRAMM section does not push Executive Summary off page 1. Verify by generating a PDF from a fully populated assessment and checking that page 1 is still the exec summary.
+- [ ] **Staleness gate injectable date:** `QUIRK_CI_STALENESS_OVERRIDE_DATE` env var is respected by the staleness check. Verify by setting it to a date 91 days after a `last_verified` date and asserting the gate fails.
+- [ ] **SOC2 control version:** Every SOC2 mapping entry uses `CC` prefix notation (Common Criteria), not numeric controls. Every ISO 27001 entry uses 2022 clause numbering and has a `version: "ISO 27001:2022"` key. Verify with a unit test.
+- [ ] **CBOM certificationLevel discipline:** Generating a CBOM from a standard TLS endpoint produces no `certificationLevel` annotation or explicitly `"none"`. Only a Cloud HSM or FIPS-mode service produces a non-null annotation. Verify with the chaos lab.
+- [ ] **BACK-56 resolved before staleness gates:** `git grep "utcnow"` in `quirk/` returns 0 results before any QRAMM staleness module is merged.
 
 ---
 
@@ -258,12 +254,12 @@ BACK-77 phase — input validation layer.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| impacket transitive conflict re-introduced via meta-extra | MEDIUM | Remove from meta-extra; release patch version; document in CHANGELOG |
-| sslyze partial-success path ships with NULL cert fields | LOW | Two-line guard in `_scan_one_sslyze`; existing tests catch it if chaos lab mTLS target is in place |
-| Compliance map with wrong PCI-DSS version string | LOW | Update COMPLIANCE_MAP constant; no DB migration; republish affected reports |
-| PQC naming inconsistency shipped in client deliverable | HIGH | Requires updated report regeneration for affected scans; client communication required |
-| Nmap hanging on /16 scope | LOW | User cancels with Ctrl-C; `_wrapped_phase` captures exception; next scan with smaller scope works |
-| File-path token accepted as hostname silently | LOW | Rescan with correct input; no data corruption |
+| Evidence bridge ships without confirmation gate | HIGH — assessments already exported with inflated scores | Add confirmation gate in patch; mark all existing auto-populated answers `requires_reconfirmation: true`; notify users to re-verify; do not silently recalculate old scores |
+| QRAMM model constants hardcoded — framework updates | MEDIUM | Extract to `QRAMM_MODEL` constant in a patch; all new assessments use new version; old assessments retain their `model_version` reference |
+| SOC2/ISO27001 wrong-version control IDs shipped to clients | HIGH — auditor challenge in a live engagement | Issue corrected report immediately; add version correction to patch release; cite version in CHANGELOG |
+| PDF regression breaks exec summary pagination | LOW — visual only | Fix `@media print` CSS; re-export from the same scan data |
+| Staleness gate blocking CI release without re-verification | LOW | Use `QUIRK_CI_STALENESS_OVERRIDE_DATE` to verify the test is correct; then actually perform re-verification; do not bypass the gate by bumping the date |
+| `answers_json` blob schema shipped — needs normalization | HIGH — requires data migration | Write a one-time migration script to deserialize existing blobs into `qramm_answer` rows; test migration on a copy before running on production DB |
 
 ---
 
@@ -271,30 +267,30 @@ BACK-77 phase — input validation layer.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Extras-by-default transitive conflict | BACK-76 | `pip install quirk` (no extras) in clean venv; `python -c "from quirk.scanner.kerberos_scanner import scan_kerberos_targets"` produces advisory, not ImportError |
-| sslyze `verified_certificate_chain` conflated with self-signed | BACK-74 | Chaos lab with internal CA cert: finding title is "Untrusted certificate chain" not "Self-signed" |
-| sslyze partial success with NULL cert fields | BACK-74 | Chaos lab with mTLS endpoint: cert fields populated on successful TLS connection |
-| RSA-1024 finding gap | BACK-74 | Chaos lab cert with RSA-1024: "undersized RSA key" HIGH finding present in risk output |
-| FIPS 203/204 naming staleness | BACK-79 | CI grep: `grep -r "Kyber\|Dilithium" quirk/` returns 0 results |
-| Compliance map maintenance debt | BACK-20 | Unit test: every COMPLIANCE_MAP entry has `version` key with non-empty string value |
-| Nmap parallelism + target count | BACK-75 | Test with >500 target list: warning emitted before nmap invocation; `--max-parallelism` present in nmap args |
-| Multi-target file-path token | BACK-77 | Interactive wizard test: `targets.txt` (non-existent file) input produces warning, not silent NXDOMAIN scan |
-| IPv6 literal in target list | BACK-77 | `::1` as FQDN input: does not raise unhandled ValueError |
-| Documentation drift | BACK-65/66 | CLI help text snapshot compared against operator's guide content; version string matched |
+| Evidence bridge over-claiming | QRAMM Evidence Bridge phase | Unit test: fresh assessment with all scanner evidence returns `overall_confirmed_score = 0` until human confirmation |
+| QRAMM model version drift | QRAMM Data Model phase | `QRAMM_MODEL` constant exists with `version` key; scoring function has no numeric literals for thresholds |
+| Wizard state loss on navigation | QRAMM Assessment UI phase | Integration test: answer 30 questions, force route change, confirm answers reload from draft |
+| JSON blob schema for answers | QRAMM Data Model phase | `sqlite_master` query: `qramm_answer` is a real table, not a column on `qramm_assessment` |
+| PDF layout regression | QRAMM Report Export phase | PDF snapshot test: page 1 is exec summary; QRAMM section starts on its own page |
+| Staleness gate false positives | QRAMM staleness enforcement phase | CI runs with injected date at exactly 90 days — must NOT fail; at 91 days — must fail |
+| SOC2 wrong-version control IDs | COMPLY-11 phase | Unit test: all SOC2 entries use `CC` prefix; all ISO 27001 entries use `8.x` clause numbers |
+| CBOM certificationLevel over-annotation | COMPLY-10 phase | Chaos lab: standard TLS endpoint CBOM has no `certificationLevel` or has `"none"` |
+| BACK-56 datetime.utcnow before staleness gates | Tech debt phase (same milestone) | `git grep "utcnow" quirk/` returns 0 before any staleness module merges |
 
 ---
 
 ## Sources
 
-- QU.I.R.K. codebase — `quirk/scanner/tls_scanner.py`, `quirk/engine/risk_engine.py`, `quirk/discovery/nmap_provider.py`, `quirk/interactive.py`, `quirk/scanner/target_expander.py`, `pyproject.toml` (direct code inspection, HIGH confidence)
-- `.planning/PROJECT.md` Key Decisions — impacket/pyOpenSSL conflict decision recorded explicitly (HIGH confidence)
-- [sslyze issue #355 — verified_certificate_chain None for internal CAs](https://github.com/nabla-c0d3/sslyze/issues/355) (MEDIUM confidence)
-- [NIST CSRC — FIPS 203/204/205 finalized August 2024](https://csrc.nist.gov/news/2024/postquantum-cryptography-fips-approved) (HIGH confidence)
-- [PCI-DSS 4.0 cryptographic requirements — Req 4.2.1/4.2.1.1](https://www.appviewx.com/blogs/decoding-the-pci-dss-v4-0-cryptographic-requirements/) (MEDIUM confidence — cross-verify against pcisecuritystandards.org before shipping compliance mappings)
-- [Nmap performance — host timeout, parallelism options](https://nmap.org/book/man-performance.html) (HIGH confidence)
-- [Python optional import patterns — module-level try/except](https://discuss.python.org/t/optional-imports-for-optional-dependencies/104760) (HIGH confidence)
-- [Clock skew and TLS certificate validity — UTC naive datetime pitfall](https://shop.trustico.com/blogs/stories/how-time-synchronization-affects-ssl-certificate-validation-why-incorrect-clocks-cause-certificate-errors) (MEDIUM confidence)
+- QU.I.R.K. codebase — `quirk/compliance/__init__.py`, `quirk/dashboard/api/routes/pdf.py`, `quirk/models.py` (direct code inspection, HIGH confidence)
+- `.planning/PROJECT.md` — v4.7 milestone feature list and Key Decisions (HIGH confidence)
+- [QRAMM Toolkit Overview — qramm.org](https://qramm.org/toolkit-overview.html) — 4 dimensions, 120 questions, 12 practice areas, profile multiplier 0.8–1.5x, 5-level thresholds (MEDIUM confidence — external framework, verify on each review)
+- [CycloneDX v1.7 release — certificationLevel and FIPS inference caveat](https://cyclonedx.org/news/cyclonedx-v1.7-released/) — "compliance is usually inferred" caution (HIGH confidence)
+- [Censinet — ISO 27001 and SOC 2 integration pitfalls](https://censinet.com/perspectives/iso-27001-and-soc-2-integration-common-pitfalls-to-avoid) — control alignment, scoping errors, documentation gaps (MEDIUM confidence)
+- [Ampcus — ISO 27001 mapping with SOC2/HIPAA/PCI-DSS/NIST](https://www.ampcuscyber.com/ampcuscyber.com/blogs/iso-27001-mapping-with-security-standards/) — 2022 control restructure context (MEDIUM confidence)
+- [Playwright PDF generation — print CSS regression risks](https://pdf4.dev/blog/html-to-pdf-benchmark-2026) — Chromium version pinning, print-specific CSS necessity (MEDIUM confidence)
+- [Anecdotes — 3 types of automated compliance evidence](https://www.anecdotes.ai/post/3-types-of-automated-compliance-evidence-which-do-you-need) — false positive/negative risks in automated evidence (MEDIUM confidence)
+- [NIST CSRC — FIPS 140-3 final](https://csrc.nist.gov/pubs/fips/140-3/final) — certificationLevel means module validation, not algorithm approval (HIGH confidence)
 
 ---
-*Pitfalls research for: QU.I.R.K. v4.6 Enterprise Readiness milestone*
-*Researched: 2026-05-03*
+*Pitfalls research for: QU.I.R.K. v4.7 Governance & Compliance Platform milestone*
+*Researched: 2026-05-05*

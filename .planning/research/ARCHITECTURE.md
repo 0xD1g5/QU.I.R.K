@@ -1,487 +1,577 @@
-# Architecture Patterns: v4.6 Enterprise Readiness Integration
+# Architecture Research — v4.7 QRAMM Integration
 
-**Project:** QU.I.R.K. v4.6
-**Researched:** 2026-05-03
-**Confidence:** HIGH — all findings based on direct source inspection
-
----
-
-## Integration Summary by Feature
-
-### BACK-76: Install-Day UX — Graceful ImportError Degradation
-
-**Problem:** sslyze, impacket, kafka-python, redis, hvac are optional extras that currently crash
-the scanner on import at runtime if the corresponding extra is not installed.
-
-**Existing pattern to follow:** `_emit_missing_extra_advisory()` in `run_scan.py` (lines 122–142)
-is the canonical v4.5 Phase 41 pattern. It prints a stderr advisory, appends a
-`CryptoEndpoint(scan_error_category='missing_extra')` row, and returns, allowing the rest of
-the scan to continue.
-
-**Where degradation needs to be added:**
-
-| Scanner | Module | AVAILABLE flag exists? | Advisory wired in run_scan.py? |
-|---------|--------|----------------------|-------------------------------|
-| `email_scanner` | `quirk/scanner/email_scanner.py` | `SSLYZE_AVAILABLE` | YES (lines 779-787) |
-| `broker_scanner` | `quirk/scanner/broker_scanner.py` | `SSLYZE_AVAILABLE` | YES (lines 824-830) |
-| `kerberos_scanner` | `quirk/scanner/kerberos_scanner.py` | `IMPACKET_AVAILABLE` | NO — missing advisory |
-| `vault_connector` | `quirk/scanner/vault_connector.py` | `HVAC_AVAILABLE` | Partial — guards on HVAC_AVAILABLE but no advisory emission |
-| `db_connector` | `quirk/scanner/db_connector.py` | Unknown — check psycopg2/pymysql guards | NO — missing advisory |
-
-**What BACK-76 requires:**
-1. Wire `_emit_missing_extra_advisory("kerberos_scanner", "identity", error_endpoints)` in the
-   kerberos scanning block of `run_scan.py` when `IMPACKET_AVAILABLE is False`.
-2. Wire advisory for `vault_connector` when `HVAC_AVAILABLE is False`.
-3. Wire advisory for `db_connector` when psycopg2/pymysql are absent.
-4. `pyproject.toml`: move sslyze into core deps or a default-installed extra so email/broker
-   scanning works on first install. The milestone context says "ship identity/motion extras by
-   default" — this means changing the install happy path.
-5. The `_wrapped_phase` helper is already present and should wrap the kerberos/vault/db phases
-   consistently (they currently use bare `with _phase_timer()` blocks without `_wrapped_phase`).
-
-**Files to modify:** `run_scan.py`, `pyproject.toml`. No new modules needed.
+**Domain:** Governance/compliance platform extension — QRAMM maturity model + SOC2/ISO27001 compliance mapping onto existing QUIRK scanner
+**Researched:** 2026-05-05
+**Confidence:** HIGH (based on direct codebase inspection; no speculative claims)
 
 ---
 
-### BACK-74: TLS Finding Gaps — Expired Certs, Self-Signed Certs, RSA-1024/512
+## Current Architecture Baseline (v4.6)
 
-**Good news: the finding generation code already exists.** Inspecting `quirk/engine/risk_engine.py`
-(lines 325–421) shows that `evaluate_endpoints()` already generates:
-- `"TLS certificate expired"` (HIGH) and `"TLS certificate expiring within 30 days"` (MEDIUM)
-  via `cert_not_after` datetime comparison (lines 326–352)
-- `"Self-signed or untrusted TLS certificate"` (MEDIUM) via `cert_issuer == cert_subject` or
-  `chain_verified is False` (lines 355–368)
-- `"TLS certificate uses undersized RSA key"` (HIGH) for `cert_pubkey_size < 2048` (lines 371–397)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  CLI Layer  (run_scan.py — single entry point `quirk`)               │
+│  Subcommands: init | serve | compliance | [scan args]               │
+│  Pattern: manual sys.argv[1] interception before argparse            │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │
+         ┌─────────────────┼─────────────────────┐
+         │                 │                     │
+┌────────▼────────┐ ┌──────▼───────┐ ┌──────────▼──────────────────┐
+│  Scanner Layer  │ │  Engine Layer│ │  Dashboard Layer             │
+│ quirk/scanner/  │ │quirk/engine/ │ │  FastAPI (quirk/dashboard/)  │
+│  tls_scanner    │ │ risk_engine  │ │  /api/scan/latest  (scan.py) │
+│  ssh_scanner    │ │ scoring      │ │  /api/trends       (trends)  │
+│  jwt_scanner    │ │ migration_   │ │  /api/pdf          (pdf.py)  │
+│  ...12 scanners │ │  planner     │ │  /api/health                 │
+└────────┬────────┘ │ profiles     │ │                              │
+         │          └──────┬───────┘ │  React SPA (src/dashboard/)  │
+         │                 │         │  10 pages (executive, findings│
+┌────────▼─────────────────▼───────┐ │  identity, motion, dat, certs│
+│  Persistence Layer                │ │  cbom, roadmap, trends, print│
+│  quirk/db.py + quirk/models.py    │ └──────────────────────────────┘
+│  SQLite — single table:           │
+│  crypto_endpoints (93 columns)    │
+│  ALTER TABLE migration per phase  │
+└───────────────────────────────────┘
+         │
+┌────────▼──────────────────────────┐
+│  Support Modules                  │
+│  quirk/cbom/    — 3-pass pipeline │
+│  quirk/compliance/ — COMPLIANCE_  │
+│    MAP dict + status_report()     │
+│  quirk/intelligence/ — scoring    │
+│  quirk/reports/ — HTML/PDF        │
+└───────────────────────────────────┘
+```
 
-Similarly, `quirk/dashboard/api/routes/scan.py` `_derive_findings()` (lines 47–186) already
-generates these as `FindingItem` objects.
+### Key Architectural Facts Confirmed by Inspection
 
-**The actual gap is data availability, not finding logic.** The sslyze scanner path
-(`_scan_one_sslyze` in `quirk/scanner/tls_scanner.py`) correctly populates:
-- `ep.cert_not_before` / `ep.cert_not_after` (lines 197–205) from `leaf.not_valid_before_utc`
-- `ep.cert_subject` / `ep.cert_issuer` (lines 183–184)
-- `ep.cert_pubkey_size` via `_pubkey_info(pubkey)` (lines 192–195)
-- `tls_capabilities_json` with `"chain_verified"` (line 308)
+1. **Single ORM table.** `crypto_endpoints` in `quirk/models.py` holds all scan data. Every new scanner phase appended columns via `ALTER TABLE` migrations in `quirk/db.py`. There is no findings table — findings are derived at query time in `routes/scan.py _derive_findings()`.
 
-The fallback scanner (`_scan_one_fallback`) also populates all these fields (lines 368–389).
+2. **Migration pattern is `_ensure_*_columns()` chains.** `init_db()` calls 7 stacked `_ensure_` functions in order. QRAMM's 3 new tables will be standalone SQLAlchemy `Base` subclasses with a corresponding `_ensure_qramm_tables()` at the end of `init_db()`.
 
-**Investigation needed in BACK-74 phase:** Verify whether expired/self-signed certs in the chaos
-lab actually reach the finding generation step. The most likely culprits:
-1. sslyze may return `scan_status != COMPLETED` for expired/self-signed certs (TLS validation
-   errors) → `_scan_one_sslyze` returns `None` → falls back to `_scan_one_fallback` → fallback
-   uses `ssl.CERT_NONE` so it connects regardless.
-2. The fallback's `chain_verified` value is never set (only sslyze sets it in `tls_capabilities_json`).
-3. The risk_engine `_chain_verified()` helper (line 136) reads `chain_verified` from
-   `tls_capabilities_json` — if the fallback ran, that field is absent and `_chain_verified()`
-   returns `None`, so the self-signed check falls through.
+3. **FastAPI routes are one file per logical domain.** `routes/health.py`, `routes/scan.py`, `routes/trends.py`, `routes/pdf.py` — each registered in `app.py` with `include_router`. QRAMM gets `routes/qramm.py`.
 
-**Fix location:** `_scan_one_sslyze` — after `CERTIFICATE_INFO` completes, capture
-`deployment.verified_certificate_chain is not None`, store in `tls_capabilities_json`. Also add
-a direct self-signed heuristic (`leaf.issuer == leaf.subject`) directly onto `ep` at scan time
-so the fallback scanner path also emits it without depending on sslyze.
+4. **CLI subcommands are manual `sys.argv[1]` branches in `run_scan.py`.** `init`, `serve`, `compliance` each have their own `if len(_sys.argv) > 1 and _sys.argv[1] == "..."` block. `quirk qramm` and `quirk doctor` follow the exact same pattern.
 
-**Files to modify:** `quirk/scanner/tls_scanner.py` only. The risk_engine and dashboard route
-finding generators are already correct — no changes needed there.
+5. **React SPA uses BrowserRouter with file-per-page structure.** Each page is `src/dashboard/src/pages/<name>.tsx`, added to `App.tsx`'s `<Routes>`. QRAMM wizard gets `pages/qramm.tsx` (and sub-components under `components/qramm/`).
+
+6. **`COMPLIANCE_MAP` is a module-level dict in `quirk/compliance/__init__.py`.** It is keyed by finding title string. SOC2 and ISO27001 entries are added to the same dict using new `_soc2()` / `_iso()` helper functions matching the existing `_pci()`, `_hipaa()`, `_fips()` pattern.
+
+7. **CBOM pipeline is 3-pass in `quirk/cbom/builder.py`.** Pass 1: algorithm components. Pass 2: certificate components. Pass 3: protocol components. FIPS annotations are added as properties on existing Pass-1 algorithm components — not a separate pass.
 
 ---
 
-### BACK-79: Rich Finding Context — Per-Finding Risk Explanation + PQC Remediation
+## QRAMM Integration: Decisions and Rationale
 
-**Where enrichment belongs: at finding generation time, not at API response time.**
+### Decision 1: Where the 3 QRAMM Tables Live
 
-Rationale: findings are derived at API response time from endpoint data (no separate findings
-table). Adding enrichment at API response time would duplicate logic between `risk_engine.py`
-(CLI/report path) and `routes/scan.py` (dashboard path). The correct approach is to enrich the
-`recommendation` and `description` fields when findings are generated, so both paths benefit.
+**Recommended approach:** Add three new SQLAlchemy ORM classes to `quirk/models.py` alongside `CryptoEndpoint`. They are independent top-level tables, not columns on `crypto_endpoints`.
 
-**Current finding schema** (`FindingItem` in `quirk/dashboard/api/schemas.py`, lines 44–56):
 ```python
-class FindingItem(BaseModel):
-    id: Optional[int] = None
-    host: str
-    port: int
-    severity: str
-    title: str
-    protocol: Optional[str] = None
-    description: Optional[str] = None      # already exists
-    remediation: Optional[str] = None      # already exists
-    quantum_risk: Optional[str] = None     # already exists
-    source: Optional[str] = None
+# quirk/models.py additions
+
+class QRAMMSession(Base):
+    __tablename__ = "qramm_sessions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+    org_profile_id = Column(Integer, ForeignKey("qramm_profiles.id"), nullable=True)
+    status = Column(String(16), nullable=False, default="in_progress")  # in_progress | complete
+    # Cached per-dimension scores (updated on each save)
+    score_cvi = Column(Float, nullable=True)
+    score_sgrm = Column(Float, nullable=True)
+    score_dpe = Column(Float, nullable=True)
+    score_itr = Column(Float, nullable=True)
+    # Staleness metadata
+    qramm_version = Column(String(16), nullable=False, default="1.0")
+    last_verified = Column(String(10), nullable=True)   # ISO date YYYY-MM-DD
+    source_url = Column(Text, nullable=True)
+
+
+class QRAMMAnswer(Base):
+    __tablename__ = "qramm_answers"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey("qramm_sessions.id"), nullable=False)
+    question_number = Column(Integer, nullable=False)   # 1-120
+    dimension = Column(String(8), nullable=False)       # CVI | SGRM | DPE | ITR
+    practice = Column(String(16), nullable=False)       # e.g. CVI-1
+    stream = Column(String(16), nullable=False)         # foundation | advanced
+    answer = Column(Integer, nullable=True)             # 1-4 (null = unanswered)
+    evidence_note = Column(Text, nullable=True)
+    auto_populated = Column(Boolean, default=False)     # True = evidence bridge filled this
+
+
+class QRAMMProfile(Base):
+    __tablename__ = "qramm_profiles"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    industry = Column(String(64), nullable=True)
+    size = Column(String(32), nullable=True)            # SMB | Enterprise | Large Enterprise
+    geo_scope = Column(String(32), nullable=True)       # Local | National | Global
+    data_sensitivity = Column(String(32), nullable=True) # Low | Medium | High | Critical
+    regulatory_requirements = Column(Text, nullable=True) # JSON list of framework strings
+    multiplier = Column(Float, nullable=False, default=1.0)  # 0.8-1.5
 ```
 
-All three enrichment fields (`description`, `remediation`, `quantum_risk`) already exist on
-`FindingItem`. The risk_engine `evaluate_endpoints()` (lines 246–447) populates `recommendation`
-but not `description`. The dashboard API `_derive_findings()` populates `description` inline.
+**Why independent tables, not columns on `crypto_endpoints`:** QRAMM sessions are a completely different entity from scan endpoints. A session has a lifecycle (in_progress/complete), relates to one org profile, and contains up to 120 answers. Forcing this into `crypto_endpoints` would be structurally wrong — there is no `(host, port)` pairing. Independent tables with FK relationships are correct relational design.
 
-**What BACK-79 requires:**
-1. Expand `description` text in `_derive_findings()` (in `routes/scan.py`) to include risk
-   rationale — why this matters quantum-security-wise, not just what the finding is.
-2. Expand `remediation` text in `_derive_findings()` to include specific PQC migration path
-   (algorithm name, NIST standard reference: FIPS 203 ML-KEM, FIPS 204 ML-DSA, FIPS 205 SLH-DSA).
-3. Expand `risk_engine.evaluate_endpoints()` `recommendation` text similarly for the CLI/report path.
-4. Optionally add `pqc_migration_path: Optional[str] = None` to `FindingItem` — but enriching
-   the existing `remediation` string is simpler and avoids TypeScript schema churn in
-   `src/dashboard/src/types/api.ts`.
-5. Apply same enrichment to `IdentityFinding`, `MotionFinding`, `DarFinding` derivation functions.
+**Why in `models.py` (not a new file):** Existing pattern — `CryptoEndpoint` is the only ORM class and lives in `models.py`. Keeping all ORM classes in one file means `Base.metadata.create_all(engine)` in `init_db()` picks them up automatically without extra imports.
 
-**No new modules needed.** Enrichment is a text expansion within existing generation functions.
-
-**Files to modify:**
-- `quirk/engine/risk_engine.py` — expand `recommendation` strings
-- `quirk/dashboard/api/routes/scan.py` — expand `description` and `remediation` strings in
-  `_derive_findings()`, `_derive_identity_findings()`, `_derive_motion_findings()`, `_derive_dar_findings()`
-- `quirk/dashboard/api/schemas.py` — add `pqc_migration_path: Optional[str] = None` if desired
+**Migration:** Add `_ensure_qramm_tables(engine)` at the end of `init_db()`. Use `inspector.get_table_names()` to check table existence before `Base.metadata.create_all(engine, tables=[QRAMMSession.__table__, ...])`. This is idempotent and follows the spirit of the existing `_ensure_*` pattern while being cleaner for whole-table creation than `ALTER TABLE`.
 
 ---
 
-### BACK-20: Compliance Mapping — FIPS/NIST SP 800-208/PCI-DSS 4.0/HIPAA
+### Decision 2: Evidence Bridge — Read from SQLite at Session-Start
 
-**Where it belongs: a new module `quirk/compliance/` consumed at report generation time.**
+**Recommended approach:** At session creation time, read the latest scan's `CryptoEndpoint` rows from SQLite and compute `auto_populated` answers immediately. Store them in `qramm_answers` with `auto_populated=True`. Do not pass findings at session creation via API.
 
-Compliance mapping maps findings to framework control IDs. It has no dependency on scan data
-beyond the finding itself (severity + title + algorithm). This is pure reference data + lookup logic,
-not scanner logic. Creating `quirk/compliance/` separates concerns cleanly:
+**Data flow:**
 
 ```
-quirk/compliance/
-    __init__.py
-    mapper.py           # finding -> [ControlReference] lookup
-    frameworks.py       # FIPS_140_3 / NIST_SP_800_208 / PCI_DSS_4 / HIPAA constants
+POST /api/qramm/sessions
+  |
+  ├── CREATE QRAMMSession (status=in_progress)
+  ├── (optional) link QRAMMProfile if org_profile_id provided
+  ├── fetch MAX(scanned_at) scan window from crypto_endpoints
+  |     (reuse SESSION_BRACKET = timedelta(minutes=5) pattern from routes/scan.py)
+  ├── call quirk.qramm.evidence_bridge.derive_answers(endpoints) -> List[AnswerHint]
+  └── bulk-INSERT qramm_answers with auto_populated=True for derived hints
+      -> returns { session_id, auto_populated_count }
 ```
 
-**Data model for a control reference:**
+**Why read at session-start, not passed at creation:** If the client passes findings, the caller must load them — adding a roundtrip and tying the API shape to the full endpoint model. The backend is co-located with the database (local CLI model). Reading from SQLite directly is cheaper than client-round-tripping bulk endpoint data. Session creation is the only moment when evidence is "fresh" relative to the latest scan — loading later risks stale derivation against a superseded scan. This matches how `routes/scan.py` already reads at request time.
+
+**Where evidence bridge lives:** New module `quirk/qramm/evidence_bridge.py`. It imports `CryptoEndpoint` from `quirk/models` only. It is called by the QRAMM route, not by the scanner. Input: `List[CryptoEndpoint]`. Output: `List[dict]` with keys `{question_number, dimension, practice, stream, answer, evidence_note}`.
+
+**Mapping scope confirmed by ROADMAP.md (BACK-71):** CVI-1.1 (automated discovery), CVI-1.2 (severity-classified findings + NIST PQC labels), DPE-1.1 (TLS 1.3 / AES-256 in use), ITR-1.1 (TLS coverage rate, weak-cipher rate). All 4 CVI foundation questions partially auto-populatable. SGRM and most advanced questions remain manual.
+
+---
+
+### Decision 3: `quirk qramm status` CLI Placement
+
+**Recommended approach:** New `qramm` subcommand block in `run_scan.py`, parallel to the existing `compliance` block. Do NOT extend `quirk compliance status`.
+
+**Implementation pattern** (matching Phase 49's `compliance` block exactly):
+
 ```python
-@dataclass
-class ControlReference:
-    framework: str       # "FIPS 140-3" | "NIST SP 800-208" | "PCI DSS 4.0" | "HIPAA"
-    control_id: str      # e.g. "PCI DSS 4.0 s6.2.4"
-    requirement: str     # human-readable control text
-    applicability: str   # "DIRECT" | "RELATED" | "INFORMATIONAL"
+# run_scan.py — after the compliance block
+if len(_sys.argv) > 1 and _sys.argv[1] == "qramm":
+    qramm_parser = argparse.ArgumentParser(
+        prog="quirk qramm",
+        description="Manage QRAMM assessment sessions and staleness",
+    )
+    qramm_sub = qramm_parser.add_subparsers(dest="action", required=True)
+    status_sub = qramm_sub.add_parser("status", help="Print QRAMM framework version and staleness metadata")
+    status_sub.add_argument("--format", choices=["text", "json"], default="text")
+    status_sub.add_argument("--db", default="./quirk.db", help="Path to quirk.db")
+    qramm_args = qramm_parser.parse_args(_sys.argv[2:])
+    if qramm_args.action == "status":
+        from quirk.qramm import status_report as qramm_status
+        qramm_status(db_path=qramm_args.db, format=qramm_args.format)
+    return
 ```
 
-**Integration points:**
+**Why separate from `quirk compliance status`:** `quirk compliance status` is currently DB-free — it reads from the static `COMPLIANCE_MAP` dict with no I/O. Adding QRAMM staleness (which requires a DB read for `qramm_sessions.last_verified`) forces a `--db` flag and DB connection onto a previously zero-dependency command. Mixing them breaks single-responsibility. Separate subcommands preserve the compliance command's zero-dependency design.
 
-1. **CLI report path:** `quirk/reports/technical.py` and `quirk/reports/executive.py` call the
-   mapper on the findings list at report write time. No schema changes.
-
-2. **API path:** Add `compliance_references` list field to `FindingItem` in schemas.py, or expose
-   compliance as a separate API endpoint `GET /api/compliance` (preferred — avoids bloating the
-   already-large `ScanLatestResponse`). A separate endpoint also means the React frontend can
-   lazy-load compliance data only when the compliance tab is open.
-
-3. **Optional-by-default:** The compliance module has zero external dependencies — it is pure
-   Python lookup tables. No extra group needed. It ships in core and is simply not called unless
-   the user requests a compliance report.
-
-**No breaking schema changes required** if delivered as a new API endpoint. The compliance module
-does not touch the SQLite schema (no new ORM columns). Finding-to-control mapping is stateless.
-
-**Files to create:** `quirk/compliance/__init__.py`, `quirk/compliance/mapper.py`,
-`quirk/compliance/frameworks.py`
-
-**Files to modify:** `quirk/reports/technical.py`, `quirk/reports/executive.py` (add compliance
-section to HTML/PDF reports); optionally new `quirk/dashboard/api/routes/compliance.py` and
-additions to `quirk/dashboard/api/schemas.py` (new `ComplianceRef` model).
+**`quirk doctor`** — same `sys.argv` interception pattern: a new `if _sys.argv[1] == "doctor"` block that runs health checks (DB accessible, extras installed, COMPLIANCE_MAP staleness, QRAMM staleness if sessions exist) and prints a status table. `doctor` calls into both `quirk.compliance.status_report()` and `quirk.qramm.status_report()` — it is the aggregate view.
 
 ---
 
-### BACK-75: Nmap Port Discovery — Pre-Scan Nmap Probe
+### Decision 4: CBOM FIPS Annotations — Property on Existing Pass-1 Components
 
-**Nmap integration already exists end-to-end.** The `quirk/discovery/nmap_provider.py` module
-implements `run_nmap_discovery()` which runs nmap, parses XML, and returns `NmapOpenPort` objects.
-The `run_scan.py` `--discovery nmap` CLI flag (line 228) routes through this code path already
-(lines 321–356).
+**Recommended approach:** Add a FIPS-status property to existing algorithm `Component` objects during Pass 1. Do not create a separate annotation pass.
 
-**What BACK-75 requires is UX work, not new architecture:**
+**Implementation:**
 
-1. `interactive.py` (`interactive_config()`) currently does not surface nmap discovery as an
-   option — the user must pass `--discovery nmap` on the CLI. Add a `_prompt_bool("Use Nmap for
-   port discovery (requires nmap in PATH)", False)` prompt after the scan profile question.
+```python
+# In quirk/cbom/builder.py — Pass 1 loop, after component creation
+# CycloneDX 1.6 Component.properties is a set of Property objects
 
-2. When nmap is chosen in interactive mode, check if `nmap` is in PATH before the scan starts
-   and emit a clear error if not. The current `run_nmap_discovery()` raises `RuntimeError` on
-   `FileNotFoundError` — this needs to be caught gracefully and presented as a user-facing
-   message, not a traceback.
+fips_status = _fips_status_for_algorithm(algo_name, nist_level)
+if fips_status:
+    comp.properties.add(Property(name="fips-140-3:status", value=fips_status))
+    comp.properties.add(Property(name="fips-140-3:reference", value="FIPS 140-3 / SP 800-131A R2"))
+```
 
-3. The `--nmap-extra-args`, `--nmap-path`, and `--nmap-timeout` CLI flags already exist. No new
-   CLI flags needed.
+**FIPS status values (3-tier):**
+- `"approved"` — AES-256-GCM, ECDH-P384, ML-KEM, ML-DSA, SLH-DSA, SHA-256, SHA-3
+- `"approved-with-deprecation-2030"` — RSA-2048+, ECDSA-P256+, ECDH-P256 (NIST IR 8547 schedule)
+- `"not-approved"` — RSA<2048, EC<256, MD5, SHA-1, RC4, DES, 3DES, TLS 1.0/1.1 cipher suites
 
-**Graceful degradation:** nmap is a subprocess call, not a Python package — no `ImportError`
-pattern applies. The degradation is: if nmap binary is absent, fall back to builtin
-fingerprinting with an advisory message. The `nmap_provider.py` `FileNotFoundError` catch
-(line 75–79) already raises `RuntimeError`. The fix is to catch that `RuntimeError` in
-`run_scan.py` and fall back to builtin discovery rather than aborting the scan.
+Helper function `_fips_status_for_algorithm(algo_name: str, nist_level: int | None) -> str | None` belongs in `quirk/cbom/classifier.py`, alongside the existing `quantum_safety_label()` function. This groups all algorithm classification logic in one place.
 
-**Files to modify:** `quirk/interactive.py` (add discovery prompt), `run_scan.py` (catch nmap
-RuntimeError and fall back). No new modules.
+**Why not a separate pass:** Pass 1 already has `algo_name` and `nist_level` in scope. A 4th pass would re-iterate all components to attach a property computable from data already in hand during Pass 1. The existing 3-pass structure exists because Pass 2 (certs) and Pass 3 (protocols) operate on different input data. FIPS status derives from the same data Pass 1 already processes.
 
 ---
 
-### BACK-77: Multi-Target Wizard — Multi-Host Input in Interactive Mode
+### Decision 5: SOC2/ISO27001 COMPLIANCE_MAP Extension
 
-**Current state in `quirk/interactive.py`:**
+**Recommended approach:** Add `_soc2()` and `_iso()` helper functions in `quirk/compliance/__init__.py`, matching the shape of existing `_pci()`, `_hipaa()`, `_fips()`. Extend existing `COMPLIANCE_MAP` entries with new framework dicts. Add a new `_PHASE_XX_VERIFIED` constant for the verification date.
 
-The `_prompt_list()` helper (lines 71–77) already accepts comma-or-space-separated input and
-returns `List[str]`. The "Targets" section (lines 127–133) calls `_prompt_list` for CIDRs,
-FQDNs, and IPs — so multi-host input is architecturally supported.
+```python
+_SOC2_TR_URL = "https://www.aicpa-cima.com/resources/landing/2017-trust-services-criteria"
+_ISO_27001_URL = "https://www.iso.org/standard/82875.html"  # ISO/IEC 27001:2022
 
-**The gap is not parsing, it is UX and file-input:**
+def _soc2(control: str) -> Dict[str, Any]:
+    return {
+        "framework": "SOC 2 (Trust Services Criteria)",
+        "control": control,
+        "version": "2017-rev",
+        "last_verified": _PHASE_XX_VERIFIED,
+        "source_url": _SOC2_TR_URL,
+    }
 
-1. Consultants with 50+ hosts need to supply a file path (`@hosts.txt`) rather than pasting
-   comma-separated IPs into a prompt. `_prompt_list()` does not support file-path input.
+def _iso(control: str) -> Dict[str, Any]:
+    return {
+        "framework": "ISO/IEC 27001:2022",
+        "control": control,
+        "version": "2022",
+        "last_verified": _PHASE_XX_VERIFIED,
+        "source_url": _ISO_27001_URL,
+    }
+```
 
-2. The interactive prompt for FQDNs/IPs does not validate input length or give feedback on how
-   many hosts were recognized.
+**Representative mappings for existing finding categories:**
 
-3. `TargetsCfg` in `config.py` already has `fqdns: List[str]`, `cidrs: List[str]`,
-   `include_ips: List[str]` — the data model is correct.
+| Finding Category | SOC2 Control | ISO 27001:2022 Annex A |
+|-----------------|-------------|------------------------|
+| Legacy TLS versions allowed (TLS 1.0/1.1) | CC6.7 | A.8.24 (Use of cryptography) |
+| Plaintext HTTP service detected | CC6.7 | A.8.20 (Networks security) |
+| TLS certificate expired | CC9.9 (Availability) | A.8.24 |
+| TLS certificate uses undersized RSA key | CC6.7 | A.8.24 |
+| Plaintext Kafka listener detected | CC6.7 | A.8.20 |
 
-**What BACK-77 requires:**
+**CI staleness gate:** The existing `status_report()` iterates all `COMPLIANCE_MAP` entries and surfaces the oldest `last_verified` per framework. New SOC2/ISO entries participate in this check automatically. No gate code changes needed.
 
-1. Extend `_prompt_list()` or add `_prompt_list_or_file()`: if input starts with `@`, read lines
-   from that file and return them as the list.
-
-2. Add a `--targets-file` CLI argument to `run_scan.py` that loads a newline-delimited host file
-   into `cfg.targets.include_ips` / `cfg.targets.fqdns` before the scan begins.
-
-3. The interactive wizard should explicitly prompt: "Enter hosts/IPs directly, or enter @filepath
-   to load from a file."
-
-4. Add basic validation: after parsing, print the count of recognized targets so the user can
-   confirm the input was correctly parsed.
-
-**Files to modify:** `quirk/interactive.py` (`_prompt_list_or_file()` helper, update target
-prompts), `run_scan.py` (add `--targets-file` argparse argument, load before `interactive_config()`
-or merge after). No schema changes — `TargetsCfg` fields are already lists.
-
----
-
-### BACK-65 + BACK-66: Architecture Reference Doc + Operator's Guide
-
-**Where docs live:** `docs/` directory, Markdown format. Existing files:
-- `docs/getting-started.md`
-- `docs/installation.md`
-- `docs/configuration.md`
-- `docs/report-interpretation.md`
-- `docs/chaos-lab.md`
-- `docs/connectors/` — per-connector guides
-
-**Format:** Plain Markdown only. Existing guides are plain Markdown with no special tooling.
-The Obsidian vault sync (CLAUDE.md "Sync Workflows" section) handles publishing.
-
-**BACK-65: Architecture Reference Doc** → `docs/architecture.md`
-Contents: system diagram (ASCII or Mermaid), scanner pipeline, CBOM pipeline, intelligence layer,
-FastAPI/React data flow, SQLite schema overview, extras groups, chaos lab structure.
-
-**BACK-66: Operator's Guide** → `docs/operators-guide.md`
-Contents: production deployment checklist, config.yaml complete reference, all scanner enable
-flags, nmap integration, multi-target patterns, troubleshooting scan errors, reading the report,
-compliance mapping usage.
-
-**Files to create:** `docs/architecture.md`, `docs/operators-guide.md`. No code changes.
-Both files must be synced to Obsidian vault at `20_Dev-Work/QUIRK/Guides/` per CLAUDE.md patterns.
+**STALENESS_THRESHOLD_DAYS:** The existing constant is 365 days (annual review). QRAMM staleness is 90 days (quarterly). Keep them separate: `quirk/compliance/__init__.py` retains `STALENESS_THRESHOLD_DAYS = 365`, `quirk/qramm/staleness.py` defines `STALENESS_THRESHOLD_DAYS = 90`.
 
 ---
 
-## System-Level Data Flow
+## New Module Structure
 
 ```
-CLI / interactive.py
-        |
-        v
-run_scan.py
-  |  discovery (builtin fingerprinting OR nmap — BACK-75)
-  |  multi-target file load (BACK-77)
-  |  +-----------------------------------------------------------------+
-  |  | scanner phases, each in _wrapped_phase or _phase_timer           |
-  |  |   tls_scanner.py  ->  CryptoEndpoint[]  (BACK-74 fixes here)   |
-  |  |   ssh_scanner.py  ->  CryptoEndpoint[]                          |
-  |  |   kerberos/saml/dnssec  ->  CryptoEndpoint[]  (BACK-76 guard)  |
-  |  |   email_scanner  ->  CryptoEndpoint[]                           |
-  |  |   broker_scanner  ->  CryptoEndpoint[]                          |
-  |  |   db/k8s/vault/aws/azure/gcp  ->  CryptoEndpoint[]  (BACK-76)  |
-  |  +-----------------------------------------------------------------+
-  |  risk_engine.evaluate_endpoints()  ->  findings (BACK-79 enriched)
-  |  SQLite persist
-  |  write_reports()  <-- quirk/compliance/mapper.py called here (BACK-20)
-  +-> quirk-output/ (intelligence*.json, report-*.html, cbom-*.json/.xml)
-
-FastAPI (quirk/dashboard/api/)
-  GET /api/scan/latest
-    _derive_findings()          (BACK-79 enriched description/remediation)
-    _derive_identity_findings()
-    _derive_motion_findings()
-    _derive_dar_findings()
-    _derive_cbom()
-    compute_readiness_score()
-    compute_confidence()
-  GET /api/compliance  (new, BACK-20)
-    quirk/compliance/mapper.map_finding()
-
-React SPA (src/dashboard/)
+quirk/
+├── qramm/
+│   ├── __init__.py          # status_report(db_path, format) function + __all__
+│   ├── questions.py         # QRAMM_QUESTIONS: List[dict] -- 120 question definitions
+│   │                        # (question_number, dimension, practice, stream, text, scale_labels)
+│   ├── evidence_bridge.py   # derive_answers(endpoints: List[CryptoEndpoint]) -> List[AnswerHint]
+│   ├── scoring.py           # score_session(session_id, db_path) -> DimensionScores
+│   │                        # applies profile multiplier, produces per-dimension weighted scores
+│   └── staleness.py         # QRAMM_VERSION, QRAMM_SOURCE_URL, STALENESS_THRESHOLD_DAYS=90
+│                            # check_staleness(last_verified: str) -> bool
+├── compliance/
+│   └── __init__.py          # EXTEND: add _soc2(), _iso(), new COMPLIANCE_MAP entries
+├── models.py                # EXTEND: append QRAMMSession, QRAMMAnswer, QRAMMProfile classes
+├── db.py                    # EXTEND: add _ensure_qramm_tables() call in init_db()
+└── dashboard/api/routes/
+    └── qramm.py             # NEW: FastAPI CRUD endpoints for QRAMM lifecycle
 ```
+
+React additions:
+
+```
+src/dashboard/src/
+├── pages/
+│   └── qramm.tsx            # Main QRAMM page (org profile wizard + dimension tabs)
+├── components/qramm/
+│   ├── OrgProfileForm.tsx   # Industry/size/geo/sensitivity form -> POST profile
+│   ├── DimensionTabs.tsx    # CVI / SGRM / DPE / ITR tab layout
+│   ├── QuestionCard.tsx     # Single question: text + radio 1-4 + evidence note
+│   ├── ProgressTracker.tsx  # "X of 120 answered" progress bar
+│   ├── RadarChart.tsx       # Recharts RadarChart -- 4-axis dimension scores
+│   └── ScorecardTable.tsx   # Dimension summary: Raw / Weighted / Benchmark / Level
+└── types/
+    └── qramm.ts             # TypeScript interfaces mirroring Pydantic schemas
+```
+
+---
+
+## Data Flow
+
+### QRAMM Assessment Creation Flow
+
+```
+User opens QRAMM page (React)
+    |
+    ├── Step 1: Org Profile form
+    |     POST /api/qramm/profiles  ->  { id, multiplier }
+    |
+    ├── Step 2: Create session
+    |     POST /api/qramm/sessions  { org_profile_id }
+    |           |
+    |           ├── INSERT qramm_sessions (status=in_progress)
+    |           ├── fetch latest CryptoEndpoint rows from crypto_endpoints
+    |           ├── call evidence_bridge.derive_answers(endpoints)
+    |           └── bulk INSERT qramm_answers (auto_populated=True for derived)
+    |                -> returns { session_id, auto_populated_count }
+    |
+    ├── Step 3: Dimension tabs -- question-by-question
+    |     GET /api/qramm/sessions/{id}/answers  -> all 120 answers (with auto_populated flag)
+    |     PATCH /api/qramm/sessions/{id}/answers/{q_num}  { answer, evidence_note }
+    |           -> UPDATE qramm_answers, auto_populated=False (user overrode)
+    |
+    └── Step 4: Score and view scorecard
+          POST /api/qramm/sessions/{id}/score
+                -> calls scoring.score_session() with profile multiplier
+                -> UPDATE qramm_sessions (score_cvi, score_sgrm, score_dpe, score_itr, status=complete)
+                -> returns DimensionScores response
+```
+
+### Evidence Bridge Internal Flow
+
+```
+derive_answers(endpoints: List[CryptoEndpoint]) -> List[AnswerHint]:
+    
+    # CVI-1.1: Automated discovery check
+    # Any endpoints present = automated scan ran
+    if len(endpoints) > 0:
+        yield AnswerHint(question=CVI_1_1, answer=3,
+            note=f"QUIRK discovered {len(endpoints)} endpoints via automated scanner")
+    
+    # CVI-1.2: Vulnerability assessment
+    # Presence of severity-classified endpoints with quantum-safety labels
+    quantum_vulnerable = [ep for ep in endpoints
+                          if ep.cert_pubkey_alg and "RSA" in ep.cert_pubkey_alg]
+    if quantum_vulnerable:
+        yield AnswerHint(question=CVI_1_2, answer=3,
+            note=f"NIST PQC-classified findings: {len(quantum_vulnerable)} RSA endpoints")
+    
+    # DPE-1.1: Encryption implementation evidence
+    tls13_eps = [ep for ep in endpoints if ep.tls_version == "TLSv1.3"]
+    tls_eps = [ep for ep in endpoints if ep.tls_version]
+    if tls_eps and len(tls13_eps) / len(tls_eps) > 0.5:
+        yield AnswerHint(question=DPE_1_1, answer=3,
+            note=f"TLS 1.3 on {len(tls13_eps)}/{len(tls_eps)} TLS endpoints")
+    
+    # ITR-1.1: TLS coverage rate as evidence note (answer requires human judgment)
+    total = len(endpoints)
+    tls_covered = len([ep for ep in endpoints if ep.tls_version])
+    if total > 0:
+        coverage_pct = tls_covered / total * 100
+        yield AnswerHint(question=ITR_1_1, answer=None,  # no auto-answer
+            note=f"{coverage_pct:.0f}% TLS coverage across {total} scanned endpoints")
+```
+
+**Critical design choice on risk_engine import:** `evidence_bridge.py` must NOT import `risk_engine.py`. Risk engine imports `quirk.compliance`, and if compliance were to import `quirk.qramm.evidence_bridge`, the cycle would be: `risk_engine -> compliance -> qramm -> evidence_bridge -> risk_engine`. The bridge reads raw `CryptoEndpoint` fields directly. This is the correct pattern — the bridge is a lightweight field-level inspector, not a finding derivation engine.
+
+---
+
+## FastAPI Route Design
+
+```python
+# quirk/dashboard/api/routes/qramm.py
+
+router = APIRouter(prefix="/qramm", tags=["qramm"])
+
+# Profiles
+POST   /api/qramm/profiles                     # create org profile, compute multiplier
+GET    /api/qramm/profiles/{id}                # fetch profile
+
+# Sessions
+POST   /api/qramm/sessions                     # create session + run evidence bridge
+GET    /api/qramm/sessions                     # list sessions (id, created_at, status, scores)
+GET    /api/qramm/sessions/{id}                # session detail + cached scores
+DELETE /api/qramm/sessions/{id}                # delete session + cascade answers
+
+# Answers
+GET    /api/qramm/sessions/{id}/answers        # all 120 answers for session
+PATCH  /api/qramm/sessions/{id}/answers/{q}   # update single answer
+
+# Scoring
+POST   /api/qramm/sessions/{id}/score          # compute/recompute dimension scores
+
+# Status (for `quirk qramm status` CLI and dashboard health panel)
+GET    /api/qramm/status                       # QRAMM version, staleness, session count
+```
+
+Register in `app.py`:
+```python
+from quirk.dashboard.api.routes import health, pdf, scan, trends, qramm
+application.include_router(qramm.router, prefix="/api")
+```
+
+---
+
+## Phase Build Order and Parallelism
+
+```
+Phase A: Data Model + Backend API (BACK-68)          <- MUST BE FIRST (no deps)
+    Creates: QRAMMSession, QRAMMAnswer, QRAMMProfile ORM classes in models.py
+    Creates: _ensure_qramm_tables() in db.py
+    Creates: /api/qramm/* CRUD routes in routes/qramm.py
+    Creates: quirk/qramm/__init__.py, questions.py, scoring.py, staleness.py
+    Creates: Pydantic schemas in schemas.py
+    No frontend required. No other phases block on it at start.
+
+Phase B: SOC2/ISO27001 Compliance Map (COMPLY-11)    <- parallel with A
+    Extends: quirk/compliance/__init__.py (_soc2, _iso, new COMPLIANCE_MAP entries)
+    No new tables, no frontend. Zero deps on Phase A.
+
+Phase C: CBOM FIPS Annotations (COMPLY-10)           <- parallel with A, B
+    Extends: quirk/cbom/classifier.py (_fips_status_for_algorithm function)
+    Extends: quirk/cbom/builder.py Pass-1 loop (Property attachment)
+    No new tables, no frontend. Zero deps on Phase A or B.
+
+Phase D: `quirk doctor` CLI (DOCS-05)               <- parallel with A, B, C
+    Extends: run_scan.py with `doctor` subcommand block
+    Light dep on Phase A: doctor checks QRAMM table existence
+    but can degrade gracefully (try inspector.get_table_names()) if tables absent.
+    Effectively zero hard dep — can land same time as A or after.
+
+--- Phase A must complete before these can start ---
+
+Phase E: QRAMM Evidence Bridge (BACK-71)            <- depends on A
+    Creates: quirk/qramm/evidence_bridge.py
+    Wires: POST /api/qramm/sessions to call bridge at creation
+    No new tables, no frontend.
+
+--- Phases A and E must complete before these ---
+
+Phase F: QRAMM Assessment UI + Scorecard            <- depends on A, E
+         (BACK-69 + BACK-70, combine into one phase)
+    Creates: src/dashboard/src/pages/qramm.tsx
+    Creates: OrgProfileForm, DimensionTabs, QuestionCard, ProgressTracker
+    Creates: RadarChart, ScorecardTable
+    Adds: sidebar nav item, /qramm route in App.tsx
+
+--- Phases B and F must complete before this ---
+
+Phase G: QRAMM Compliance Mapping View (BACK-72)   <- depends on B, F
+    Extends: qramm.tsx or new compliance-mapping sub-page
+    Maps: QRAMM practice scores -> 8 framework coverage table
+
+--- Phase F (minimum) must complete before this ---
+
+Phase H: QRAMM Report Export + Staleness CI Gate   <- depends on F, G
+         (BACK-73 + staleness enforcement)
+    Extends: quirk/reports/ -- combined governance + technical PDF
+    Extends: CI workflow with 90-day QRAMM staleness gate
+    Extends: run_scan.py with `quirk qramm status` subcommand block
+```
+
+**Recommended milestone phase numbering:**
+
+| Phase | Contents | Depends On |
+|-------|----------|------------|
+| 51 | BACK-68: Data Model + Backend API | none (first) |
+| 52 | COMPLY-10 + COMPLY-11 + DOCS-05 | none (can parallel 51) |
+| 53 | BACK-71: Evidence Bridge | 51 |
+| 54 | BACK-69 + BACK-70: Assessment UI + Scorecard | 51, 53 |
+| 55 | BACK-72: Compliance Mapping View | 52, 54 |
+| 56 | BACK-73: Report Export + Staleness CI Gate + `quirk qramm status` | 54, 55 |
+
+Phases 51 and 52 can execute in parallel if there are two engineers. In a single-engineer flow, 52 before 53 is fine since 52 has zero DB/API deps.
 
 ---
 
 ## Component Boundaries
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| `run_scan.py` | Orchestrates all scanner phases; assembles endpoint list; calls risk_engine, db persist, write_reports | All scanner modules, risk_engine, reports, db |
-| `quirk/interactive.py` | Interactive wizard — prompts, builds AppConfig | run_scan.py (returns cfg + scan_profile) |
-| `quirk/scanner/tls_scanner.py` | TLS scanning via sslyze (primary) + ssl fallback; populates CryptoEndpoint | run_scan.py |
-| `quirk/engine/risk_engine.py` | CLI-path finding generation; finding dedup/normalization | run_scan.py, reports |
-| `quirk/dashboard/api/routes/scan.py` | API-path finding derivation (parallel to risk_engine); score/confidence computation | FastAPI, intelligence/, cbom/classifier |
-| `quirk/compliance/` (NEW) | Finding-to-control-ID mapping; zero external deps | risk_engine, routes/scan.py, reports |
-| `quirk/discovery/nmap_provider.py` | Subprocess nmap execution and XML output | run_scan.py |
-| `quirk/cbom/` | classifier -> builder -> writer pipeline; CycloneDX 1.6 JSON+XML | run_scan.py via write_reports; classifier imported by routes/scan.py |
-| `quirk/intelligence/` | 6-pillar scoring, evidence counters, confidence, roadmap | routes/scan.py, write_reports |
-| `docs/` | Markdown documentation suite | Obsidian vault sync |
-
----
-
-## New vs. Modified Files Summary
-
-| Backlog Item | Action | Files |
-|---|---|---|
-| BACK-76 | Modify | `run_scan.py`, `pyproject.toml` |
-| BACK-74 | Modify | `quirk/scanner/tls_scanner.py` |
-| BACK-79 | Modify | `quirk/engine/risk_engine.py`, `quirk/dashboard/api/routes/scan.py`, optionally `quirk/dashboard/api/schemas.py` |
-| BACK-20 | Create + Modify | `quirk/compliance/__init__.py`, `quirk/compliance/mapper.py`, `quirk/compliance/frameworks.py`; modify `quirk/reports/technical.py`, `quirk/reports/executive.py`; optionally new `quirk/dashboard/api/routes/compliance.py` and additions to `quirk/dashboard/api/schemas.py` |
-| BACK-75 | Modify | `quirk/interactive.py`, `run_scan.py` |
-| BACK-77 | Modify | `quirk/interactive.py`, `run_scan.py` |
-| BACK-65 | Create | `docs/architecture.md` |
-| BACK-66 | Create | `docs/operators-guide.md` |
-
----
-
-## Recommended Build Order
-
-Dependencies between the 7 features:
-
-```
-BACK-76 (graceful degradation)
-    No dependencies. Build first — fixes crashes that block testing of everything else.
-
-BACK-74 (TLS finding gaps)
-    Depends on BACK-76 being stable (need reliable sslyze path before debugging cert data).
-
-BACK-75 (nmap discovery UX) + BACK-77 (multi-target wizard)
-    No dependencies on BACK-74 or each other. Can be one phase or two parallel phases.
-
-BACK-79 (rich finding context)
-    Depends on BACK-74 (want all TLS findings present before enriching text).
-    Must precede BACK-20 (compliance text uses enriched remediation descriptions).
-
-BACK-20 (compliance mapping)
-    Depends on BACK-79 (enriched findings make mapping more coherent).
-    No code dependency on BACK-75 or BACK-77.
-
-BACK-65 + BACK-66 (docs)
-    Written last — documents the completed feature set.
-```
-
-**Recommended phase sequence:**
-1. BACK-76 — install-day fixes (unblocks all testing)
-2. BACK-74 — TLS finding gaps (core correctness)
-3. BACK-75 + BACK-77 — nmap + multi-target (independent; one combined phase)
-4. BACK-79 — finding enrichment (requires correct findings from BACK-74)
-5. BACK-20 — compliance mapping (new module; requires enriched findings)
-6. BACK-65 + BACK-66 — documentation (last, documents completed milestone)
-
----
-
-## Patterns to Follow
-
-### Pattern 1: Optional Extra Guard (BACK-76)
-Follow the existing `_emit_missing_extra_advisory()` + `_wrapped_phase()` pattern from Phase 41.
-
-The correct shape for a scanner phase with optional extras in `run_scan.py`:
-```python
-# 1. Probe at module level, outside _wrapped_phase:
-if cfg.connectors.enable_kerberos and cfg.connectors.kerberos_targets:
-    from quirk.scanner import kerberos_scanner as _kerb_mod
-    if not getattr(_kerb_mod, "IMPACKET_AVAILABLE", True):
-        _emit_missing_extra_advisory("kerberos_scanner", "identity", error_endpoints)
-        cfg_kerberos_skip = True
-    else:
-        cfg_kerberos_skip = False
-else:
-    cfg_kerberos_skip = True
-
-# 2. Run inside _wrapped_phase:
-def _run_kerberos_phase():
-    if cfg_kerberos_skip:
-        return []
-    ...
-kerberos_endpoints = _wrapped_phase(
-    run_stats, "kerberos_scanning", "kerberos_scanner",
-    _run_kerberos_phase, error_endpoints, logger,
-) or []
-```
-
-### Pattern 2: File-or-List Input (BACK-77)
-```python
-def _prompt_list_or_file(text: str, default=None) -> List[str]:
-    raw = _prompt(f"{text} (comma-separated, or @filepath)", "")
-    if raw.startswith("@"):
-        path = raw[1:].strip()
-        try:
-            with open(path) as f:
-                return [l.strip() for l in f if l.strip() and not l.startswith("#")]
-        except OSError as e:
-            print(f"  Could not read file {path}: {e}")
-            return []
-    return [x.strip() for x in re.split(r"[,\s]+", raw) if x.strip()]
-```
-
-### Pattern 3: sslyze Version Guard (BACK-74)
-The existing `hasattr(leaf, "not_valid_before_utc")` guard in `_scan_one_sslyze` (line 198)
-is the established pattern for accessing sslyze API surface that may differ across versions.
-All BACK-74 changes to `_scan_one_sslyze` must use `hasattr` guards for any new API access.
+| Component | Responsibility | Communicates With | Modified or New |
+|-----------|---------------|------------------|-----------------|
+| `quirk/qramm/__init__.py` | `status_report()` CLI function for session staleness | `qramm_sessions` table via SQLAlchemy | NEW |
+| `quirk/qramm/questions.py` | Static 120-question catalog (`QRAMM_QUESTIONS`) | No runtime deps | NEW |
+| `quirk/qramm/evidence_bridge.py` | Derive answers from `CryptoEndpoint` rows | `quirk/models.py` only | NEW |
+| `quirk/qramm/scoring.py` | Compute weighted dimension scores with profile multiplier | `qramm_sessions`, `qramm_answers`, `qramm_profiles` | NEW |
+| `quirk/qramm/staleness.py` | Constants and `check_staleness()` | No runtime deps | NEW |
+| `quirk/models.py` | ORM class definitions | SQLAlchemy `Base` | MODIFIED — append 3 new classes |
+| `quirk/db.py` | DB init and migration | `quirk/models.py` | MODIFIED — append `_ensure_qramm_tables()` |
+| `quirk/compliance/__init__.py` | `COMPLIANCE_MAP` + `status_report()` | Static only | MODIFIED — add `_soc2()`, `_iso()`, new entries |
+| `quirk/cbom/builder.py` | CBOM construction (3 passes) | `quirk/cbom/classifier.py` | MODIFIED — add FIPS Property in Pass-1 loop |
+| `quirk/cbom/classifier.py` | Algorithm lookup table + classification helpers | cyclonedx-python-lib | MODIFIED — add `_fips_status_for_algorithm()` |
+| `quirk/dashboard/api/routes/qramm.py` | FastAPI CRUD for QRAMM lifecycle | `qramm.*` modules, `quirk/db.py` | NEW |
+| `quirk/dashboard/api/app.py` | FastAPI app factory | All route modules | MODIFIED — register `qramm.router` |
+| `quirk/dashboard/api/schemas.py` | Pydantic response models | None (pure schema) | MODIFIED — add QRAMM response models |
+| `run_scan.py` | CLI entry point and subcommand dispatch | All `quirk.*` modules | MODIFIED — add `qramm` and `doctor` subcommand blocks |
+| `src/dashboard/src/pages/qramm.tsx` | QRAMM assessment wizard page | `/api/qramm/*` endpoints | NEW |
+| `src/dashboard/src/components/qramm/` | Org profile form, dimension tabs, question cards, scorecard, radar | `qramm.tsx` | NEW |
+| `src/dashboard/src/App.tsx` | React Router + sidebar registration | All pages | MODIFIED — add `/qramm` route and sidebar item |
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Third Finding Derivation Path
-`risk_engine.evaluate_endpoints()` (CLI path) and `_derive_findings()` (API path) are already
-parallel implementations. Do not add a third finding derivation path for compliance. Call
-`mapper.map_finding(finding_dict)` from both existing paths.
+### Anti-Pattern 1: Storing Pre-computed Findings in a `qramm_findings` Table
 
-### Anti-Pattern 2: New Required Dependencies for Optional Features
-Compliance mapping (BACK-20) must remain zero-dependency — no new pip packages. The framework
-control tables are static data. If compliance data ever needs external fetch, that is a future
-SaaS feature.
+**What people do:** Create a separate findings table for QRAMM that duplicates the derivation logic already in `routes/scan.py _derive_findings()`, creating two sources of truth.
 
-### Anti-Pattern 3: Breaking the `tls_capabilities_json` Contract
-The `chain_verified` field inside `tls_capabilities_json` is read by `_chain_verified()` in
-`risk_engine.py`. When modifying `_scan_one_sslyze` for BACK-74, add new keys alongside
-existing ones — do not rename or remove `chain_verified` or `source` keys. Existing tests
-snapshot this structure.
+**Why it's wrong:** `_derive_findings()` is the authoritative derivation path. A duplicate findings table drifts the moment any finding logic changes. Two sources of truth create audit confusion for a compliance deliverable.
 
-### Anti-Pattern 4: Mutating AppConfig After Construction
-The `_wrapped_phase` advisory pattern sets a `cfg_*_skip` boolean variable rather than mutating
-`cfg.connectors.enable_*`. Do not change the enable flags on the config object — this would
-affect report/stats output and violate the Phase 41 design.
+**Do this instead:** Evidence bridge reads `CryptoEndpoint` raw fields directly (same data source as `_derive_findings()`). QRAMM answers reference scanner evidence by description string in `evidence_note`, not by FK to a findings row.
 
-### Anti-Pattern 5: sslyze Returning None for Invalid Certs
-`_scan_one_sslyze` returns `None` when `scan_status != COMPLETED`. For expired/self-signed
-certs, sslyze may complete the scan but with `CERTIFICATE_INFO` in a non-COMPLETED attempt
-state. Check `cert_attempt.status` specifically (not just server scan status) and extract
-whatever cert data is available even on partial sslyze results, before triggering fallback.
+### Anti-Pattern 2: Importing `risk_engine.evaluate_endpoints()` from `evidence_bridge.py`
+
+**What people do:** Call the existing risk engine from the evidence bridge to reuse finding logic.
+
+**Why it's wrong:** Creates a potential circular import: `risk_engine -> compliance -> qramm -> evidence_bridge -> risk_engine`. Also pulls the heavy risk engine into a module that only needs a few field-level checks.
+
+**Do this instead:** `evidence_bridge.py` reads `CryptoEndpoint` field values directly (`ep.tls_version`, `ep.protocol`, `ep.cert_pubkey_alg`). Duplicate a small subset of logic rather than creating the import dependency.
+
+### Anti-Pattern 3: A 4th CBOM Annotation Pass
+
+**What people do:** Add a separate post-processing pass to attach FIPS annotations to all algorithm components.
+
+**Why it's wrong:** Pass 1 already has `algo_name` and `nist_level` in scope. A 4th pass iterates the component set twice for a property computable without re-iteration.
+
+**Do this instead:** Add FIPS `Property` objects in Pass 1, where `algo_name` and `nist_level` are already bound. One loop, one responsibility.
+
+### Anti-Pattern 4: Extending `quirk compliance status` to Include QRAMM Staleness
+
+**What people do:** Add QRAMM session staleness output to the existing `quirk compliance status` command.
+
+**Why it's wrong:** `quirk compliance status` is currently DB-free. Adding QRAMM staleness forces a `--db` flag and SQLAlchemy session onto a previously zero-dependency command.
+
+**Do this instead:** `quirk qramm status --db ./quirk.db` is a separate subcommand. `quirk doctor` is the aggregate that calls both.
+
+### Anti-Pattern 5: Storing QRAMM Questions in the Database
+
+**What people do:** Insert 120 rows of question text into a `qramm_question_definitions` table.
+
+**Why it's wrong:** Questions are framework-versioned content, not user data. DB storage forces schema migrations on QRAMM framework version bumps. Adds JOIN complexity to every answer query.
+
+**Do this instead:** `quirk/qramm/questions.py` with a module-level `QRAMM_QUESTIONS: List[dict]` constant. The DB stores only `question_number` as an integer. Question text is resolved at runtime from the module constant. Identical to the `COMPLIANCE_MAP` pattern.
 
 ---
 
-## Confidence Assessment
+## Integration Points
 
-| Area | Confidence | Source |
-|------|------------|--------|
-| BACK-76 missing advisories | HIGH | Direct inspection of run_scan.py kerberos/vault/db phases |
-| BACK-74 finding code exists | HIGH | Direct inspection of risk_engine.py lines 325-421 and routes/scan.py lines 47-186 |
-| BACK-74 data availability gap | HIGH | sslyze fallback path confirmed via tls_scanner.py; chain_verified only set by sslyze path |
-| BACK-79 schema fields exist | HIGH | Direct inspection of schemas.py FindingItem |
-| BACK-20 no new deps needed | HIGH | Compliance mapping is static lookup; verified no external calls required |
-| BACK-75 nmap fully implemented | HIGH | Direct inspection of nmap_provider.py and run_scan.py lines 321-356 |
-| BACK-77 _prompt_list exists | HIGH | Direct inspection of interactive.py lines 71-77 |
-| BACK-65/66 docs format | HIGH | Direct inspection of docs/ directory structure |
+### Existing Systems Requiring No Change
+
+- `quirk/engine/risk_engine.py` — QRAMM adds no new finding categories; `_build_finding()` chokepoint and `_normalize_for_compliance()` operate only on findings, no QRAMM coupling needed.
+- `quirk/intelligence/scoring.py` — QRAMM score is separate from the 6-subscore quantum-readiness score; no coupling.
+- `quirk/reports/` — Report export (Phase H / BACK-73) adds a new report template or extends the existing HTML/PDF renderer; the existing `writer.py` is not modified until Phase H.
+- `cyclonedx-python-lib` — `Component.properties` (`Set[Property]`) is already in the CycloneDX 1.6 SDK in the current pinned version (`>=11.7.0,<12`). No version bump needed for FIPS annotation.
+
+### Existing Systems Requiring Modification
+
+- `quirk/models.py`: append 3 ORM classes (additive, non-breaking).
+- `quirk/db.py`: append `_ensure_qramm_tables()` to `init_db()` (additive).
+- `quirk/dashboard/api/app.py`: import and register `qramm.router` (additive).
+- `quirk/dashboard/api/schemas.py`: append QRAMM Pydantic models (additive).
+- `run_scan.py`: append `qramm` and `doctor` subcommand blocks (additive).
+- `src/dashboard/src/App.tsx`: add `/qramm` route and sidebar entry (additive).
+
+All modifications are strictly additive. No existing interfaces change. No existing tests require modification as a precondition for Phase A.
+
+---
+
+## Sources
+
+- `quirk/models.py` — confirmed CryptoEndpoint ORM structure and ALTER TABLE migration pattern
+- `quirk/db.py` — confirmed `_ensure_*_columns()` chain pattern in `init_db()`
+- `quirk/compliance/__init__.py` — confirmed COMPLIANCE_MAP structure, `_pci()/_hipaa()/_fips()` helper pattern, `status_report()` design, `STALENESS_THRESHOLD_DAYS = 365`
+- `quirk/dashboard/api/app.py` — confirmed route registration pattern
+- `quirk/dashboard/api/routes/scan.py` — confirmed `_derive_findings()` at-query-time derivation, `SESSION_BRACKET = timedelta(minutes=5)` design for scan window
+- `quirk/dashboard/api/schemas.py` — confirmed Pydantic schema shape for new QRAMM schemas to follow
+- `quirk/cbom/builder.py` — confirmed 3-pass structure, module-level constants pattern
+- `quirk/cbom/classifier.py` — confirmed `quantum_safety_label()` location as the right home for `_fips_status_for_algorithm()`
+- `run_scan.py` (lines 223-244) — confirmed CLI subcommand dispatch pattern for `qramm` and `doctor` additions
+- `src/dashboard/src/App.tsx` — confirmed React Router pattern and existing page list
+- `pyproject.toml` — confirmed `cyclonedx-python-lib[json-validation]>=11.7.0,<12` is pinned; `Component.properties` available
+- `.planning/ROADMAP.md` BACK-68 through BACK-73 — confirmed QRAMM scope definitions and dimension structure
+- `.planning/PROJECT.md` — confirmed v4.7 milestone targets, architectural decisions log, and constraint that all modifications must be additive (no breaking schema migrations)
+
+---
+*Architecture research for: QU.I.R.K. v4.7 Governance & Compliance Platform*
+*Researched: 2026-05-05*
