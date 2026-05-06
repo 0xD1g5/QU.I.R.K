@@ -243,6 +243,12 @@ def main():
             status_report(format=comp_args.format)
         return
 
+    # --- doctor subcommand: intercept before scan argparse (Phase 52 DOCS-05 / D-10) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "doctor":
+        from quirk.cli.doctor_cmd import run_doctor
+        run_doctor()
+        return
+
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
