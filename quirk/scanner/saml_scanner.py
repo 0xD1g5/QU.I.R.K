@@ -3,9 +3,13 @@ extracts signing/encryption certificates and algorithm declarations."""
 
 try:
     import lxml.etree as ET
-    import defusedxml.lxml as _defused_lxml_ET
     def _safe_ET_fromstring(xml_bytes):  # noqa: E306
-        return _defused_lxml_ET.fromstring(xml_bytes)
+        # Phase 52 DEBT-04: raw lxml.etree parser with security flags.
+        # resolve_entities=False blocks XXE; no_network=True blocks SSRF.
+        return ET.fromstring(
+            xml_bytes,
+            parser=ET.XMLParser(resolve_entities=False, no_network=True),
+        )
     LXML_AVAILABLE = True
 except ImportError:
     ET = None  # type: ignore[assignment]
@@ -155,7 +159,7 @@ def _parse_saml_metadata(xml_bytes: bytes, target_url: str, now=None) -> "tuple[
 
     Returns (endpoints, scan_dict) where endpoints is a list of CryptoEndpoint objects
     and scan_dict is the D-17 JSON structure dict for saml_scan_json (D-02, D-05).
-    Uses defusedxml.lxml.fromstring() for XXE-safe parsing.
+    Uses _safe_ET_fromstring() (lxml.etree with resolve_entities=False) for XXE-safe parsing.
     """
     root = _safe_ET_fromstring(xml_bytes)
 
