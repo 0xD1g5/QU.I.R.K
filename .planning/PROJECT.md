@@ -101,6 +101,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Dashboard WCAG AA — zero browser console errors across all routes; visible focus rings; keyboard navigation; semantic heading order; axe-core baseline captured in GHA workflow — Phase 43
 - ✓ UAT debt automation — Phase 27 DB integration tests (PostgreSQL/MySQL vs chaos lab); Phase 25/30 traceability annotations + Vault UAT-30-01 live test; Phase 31 seeded-DB /api/trends test; 7 of 14 carry-over items closed — Phase 44
 
+**v4.7 Governance & Compliance Platform (Phases 51–56) — In Progress**
+- ✓ QRAMM core infrastructure — `QRAMMSession`/`QRAMMAnswer`/`QRAMMProfile` ORM models; 120-question CSNP catalog; weakest-link scoring engine; 5-endpoint FastAPI CRUD router at `/api/qramm/`; 35-test suite; DEBT-01 `datetime.utcnow` deprecation closed — Phase 51
+
 **v4.6 Enterprise Readiness (Phases 45–50) — SHIPPED 2026-05-05**
 - ✓ Install-Day UX — `[all]` meta-extra + `quirk.util.optional_extra` probe registry; coverage-gap advisory findings for missing scanner extras; zero ImportError crashes on `pip install quirk` — Phase 45
 - ✓ TLS Finding Gaps — 5 new finding types (expired CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, RSA<2048/EC<256 HIGH); `chain_verified` DB column; `tls-cert-defects` chaos lab profile — Phase 46
@@ -144,7 +147,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - QRAMM staleness enforcement — quarterly CI gate (90-day threshold); `quirk qramm status` CLI
 - Tech debt: BACK-56 (datetime.utcnow deprecation), BACK-67 (defusedxml.lxml migration), BACK-87 (lab.sh PROFILE_ARGS bug), BACK-85 (ports_scanned in run-stats)
 
-## Current State: v4.6.0 Shipped
+## Current State: v4.7 In Progress — Phase 51 Complete
+
+v4.7 "Governance & Compliance Platform" is underway. Phase 51 (QRAMM Core Infrastructure) complete 2026-05-06: QRAMM database models, 120-question CSNP catalog, weakest-link scoring engine, FastAPI CRUD router, and 35-test suite are all wired and verified. DEBT-01 (`datetime.utcnow` deprecation) closed. Phases 52–56 build on this foundation toward the full governance platform.
 
 v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plans, 3-day execution. QUIRK can now be installed with `pip install quirk` without crashes, surfaces 5 new TLS certificate-defect finding types, accepts multi-target and CIDR input with optional nmap discovery, enriches every finding with FIPS-compliant PQC remediation guidance, maps findings to PCI-DSS/HIPAA/FIPS 140-3 controls, and ships two enterprise reference documents. Compliance mapping introduces staleness infrastructure (quarterly review cadence enforced by CI gate).
 
@@ -205,7 +210,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-05 — v4.7 Governance & Compliance Platform milestone started*
+*Last updated: 2026-05-06 — Phase 51 QRAMM core infrastructure complete*
 
 ## Evolution
 
