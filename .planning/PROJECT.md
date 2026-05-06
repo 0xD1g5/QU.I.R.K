@@ -103,6 +103,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 **v4.7 Governance & Compliance Platform (Phases 51–56) — In Progress**
 - ✓ QRAMM core infrastructure — `QRAMMSession`/`QRAMMAnswer`/`QRAMMProfile` ORM models; 120-question CSNP catalog; weakest-link scoring engine; 5-endpoint FastAPI CRUD router at `/api/qramm/`; 35-test suite; DEBT-01 `datetime.utcnow` deprecation closed — Phase 51
+- ✓ Compliance uplift & health check — SOC2/ISO 27001:2022 mappings; CBOM FIPS 140-3 2-tier annotations (approved/non-approved; `certified` deferred to CMVP attestation phase per D-01); `quirk doctor` pre-engagement health dashboard with Rich table; lab.sh PROFILE_ARGS CLI override fix; `ports_scanned`/`hosts_scanned` in run-stats JSON; DEBT-02/03/04 closed — Phase 52
 
 **v4.6 Enterprise Readiness (Phases 45–50) — SHIPPED 2026-05-05**
 - ✓ Install-Day UX — `[all]` meta-extra + `quirk.util.optional_extra` probe registry; coverage-gap advisory findings for missing scanner extras; zero ImportError crashes on `pip install quirk` — Phase 45
@@ -147,9 +148,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - QRAMM staleness enforcement — quarterly CI gate (90-day threshold); `quirk qramm status` CLI
 - Tech debt: BACK-56 (datetime.utcnow deprecation), BACK-67 (defusedxml.lxml migration), BACK-87 (lab.sh PROFILE_ARGS bug), BACK-85 (ports_scanned in run-stats)
 
-## Current State: v4.7 In Progress — Phase 51 Complete
+## Current State: v4.7 In Progress — Phase 52 Complete
 
-v4.7 "Governance & Compliance Platform" is underway. Phase 51 (QRAMM Core Infrastructure) complete 2026-05-06: QRAMM database models, 120-question CSNP catalog, weakest-link scoring engine, FastAPI CRUD router, and 35-test suite are all wired and verified. DEBT-01 (`datetime.utcnow` deprecation) closed. Phases 52–56 build on this foundation toward the full governance platform.
+v4.7 "Governance & Compliance Platform" is underway. Phase 52 (Compliance Uplift & Health Check) complete 2026-05-06: SOC2 and ISO 27001:2022 framework mappings added to `quirk/compliance/`; CBOM algorithm components now carry FIPS 140-3 2-tier annotations; `quirk doctor` health-check CLI ships with Rich-formatted table; lab.sh PROFILE_ARGS override bug closed; `ports_scanned`/`hosts_scanned` added to run-stats JSON. DEBT-02/03/04 closed. Phase 53 (QRAMM Evidence Bridge) is next on the critical path.
 
 v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plans, 3-day execution. QUIRK can now be installed with `pip install quirk` without crashes, surfaces 5 new TLS certificate-defect finding types, accepts multi-target and CIDR input with optional nmap discovery, enriches every finding with FIPS-compliant PQC remediation guidance, maps findings to PCI-DSS/HIPAA/FIPS 140-3 controls, and ships two enterprise reference documents. Compliance mapping introduces staleness infrastructure (quarterly review cadence enforced by CI gate).
 
@@ -210,7 +211,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-06 — Phase 51 QRAMM core infrastructure complete*
+*Last updated: 2026-05-06 — Phase 52 Compliance Uplift & Health Check complete*
 
 ## Evolution
 
