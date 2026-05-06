@@ -90,6 +90,9 @@ def _check_config(config_path: str = _CONFIG_DEFAULT_PATH) -> Tuple[bool, str, s
         return False, "info", f"[yellow][!] {config_path} not found (run `quirk init` to create one)[/yellow]"
     try:
         import yaml
+    except ImportError:
+        return False, "info", "[yellow][!] PyYAML not installed — config validation skipped[/yellow]"
+    try:
         with open(config_path, "r") as fh:
             yaml.safe_load(fh)
         return False, None, f"[green][✓][/green] {config_path} parses cleanly"

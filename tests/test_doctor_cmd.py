@@ -8,6 +8,11 @@ from unittest import mock
 def test_doctor_exits_0_all_pass(monkeypatch):
     """run_doctor() exits 0 when all non-informational checks pass."""
     monkeypatch.setattr("shutil.which", lambda x: "/usr/bin/" + x)
+    # Freeze compliance freshness so the test never fails as last_verified dates age.
+    monkeypatch.setattr(
+        "quirk.cli.doctor_cmd._check_compliance_freshness",
+        lambda: (True, "[green][✓][/green] mocked freshness"),
+    )
     with mock.patch("sqlite3.connect") as mock_conn:
         mock_conn.return_value.execute = lambda q: None
         mock_conn.return_value.close = lambda: None
