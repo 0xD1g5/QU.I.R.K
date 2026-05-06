@@ -466,3 +466,34 @@ intelligence:
   profile: "balanced"                   # lenient|balanced|strict
   calibration_overrides: {}
 ```
+
+---
+
+## Compliance Frameworks
+
+QUIRK's `COMPLIANCE_MAP` (in `quirk/compliance/__init__.py`) maps every finding
+category to one or more of the following frameworks. As of Phase 52 (v4.7), all
+frameworks are kept fresh by the `STALENESS_THRESHOLD_DAYS` gate and verified
+by `quirk doctor` before each scan.
+
+| Framework | Version | Builder helper |
+|-----------|---------|----------------|
+| PCI-DSS | 4.0.1 | `_pci(control)` |
+| HIPAA | 2024-rev (45 CFR §164.312) | `_hipaa(control)` |
+| FIPS 140-3 | NIST FIPS 140-3 | `_fips(control)` |
+| SOC2 | 2017-rev (Trust Services Criteria) | `_soc2(control)` — Phase 52 |
+| ISO 27001 | ISO 27001:2022 (8.x clause numbering) | `_iso(control)` — Phase 52 |
+
+**ISO 27001:2022 control assignments** (Phase 52):
+- `8.24` — Use of cryptography (algorithm/key-size findings)
+- `8.26` — Application security requirements (TLS/protocol transport findings)
+- `8.28` — Secure coding (source-code scanner findings)
+
+**SOC2 CC6.x control assignments** (Phase 52):
+- `CC6.6` — Logical access controls (authentication, key, certificate findings)
+- `CC6.7` — Transmission encryption (cipher, protocol, transport findings)
+
+CBOM algorithm components carry a `quirk:fips140-3-status` property
+(`approved` or `non-approved`) derived from the NIST quantum security level.
+The `certified` tier is reserved for a future phase that will ingest CMVP
+module attestation.
