@@ -190,6 +190,20 @@ def _ensure_phase46_columns(engine) -> None:
         conn.commit()
 
 
+def _ensure_qramm_tables(engine) -> None:
+    """Phase 51 QRAMM-01: create QRAMM assessment tables if absent (idempotent).
+
+    Uses Base.metadata.create_all with checkfirst=True. These are entirely
+    new tables (qramm_sessions, qramm_answers, qramm_profiles) — not new
+    columns on crypto_endpoints — so we use create_all rather than the
+    ALTER TABLE pattern of the other _ensure_* functions.
+
+    QRAMMSession/QRAMMAnswer/QRAMMProfile are registered on Base.metadata
+    via the import of quirk.models at the top of this file (D-05).
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -214,6 +228,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_broker_columns(engine)      # v4.4 Phase 33 — BROKER-00
     _ensure_phase41_columns(engine)     # Phase 41 D-11 — scan_error_category
     _ensure_phase46_columns(engine)     # Phase 46 — TLS-FIND-06 chain_verified
+    _ensure_qramm_tables(engine)         # Phase 51 — QRAMM-01
     return engine
 
 
