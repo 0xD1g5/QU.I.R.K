@@ -35,6 +35,11 @@ _HIPAA_164_312_URL = (
 )
 _FIPS_140_3_URL = "https://csrc.nist.gov/pubs/fips/140-3/final"
 
+# Phase 52 — SOC2 + ISO 27001:2022 framework constants (D-05, D-07)
+_PHASE_52_VERIFIED: str = "2026-05-05"
+_SOC2_CC_URL = "https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater/trust-services-criteria"
+_ISO_27001_URL = "https://www.iso.org/standard/82875.html"
+
 
 def _pci(control: str) -> Dict[str, Any]:
     return {
@@ -63,6 +68,28 @@ def _fips(control: str) -> Dict[str, Any]:
         "version": "FIPS 140-3",
         "last_verified": _PHASE_49_VERIFIED,
         "source_url": _FIPS_140_3_URL,
+    }
+
+
+def _soc2(control: str) -> Dict[str, Any]:
+    """SOC2 Trust Services Criteria 2017 revision builder (Phase 52 D-05)."""
+    return {
+        "framework": "SOC2 CC",
+        "control": control,
+        "version": "2017-rev",
+        "last_verified": _PHASE_52_VERIFIED,
+        "source_url": _SOC2_CC_URL,
+    }
+
+
+def _iso(control: str) -> Dict[str, Any]:
+    """ISO 27001:2022 builder. Use 8.x clause numbering only (Phase 52 D-07)."""
+    return {
+        "framework": "ISO 27001:2022",
+        "control": control,
+        "version": "ISO 27001:2022",
+        "last_verified": _PHASE_52_VERIFIED,
+        "source_url": _ISO_27001_URL,
     }
 
 
