@@ -127,9 +127,22 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.7 (Planning)
+## Current Milestone: v4.7 Governance & Compliance Platform
 
-v4.6 Enterprise Readiness shipped 2026-05-05. Next milestone scope TBD — candidates include COMPLY-10/11 (CBOM FIPS annotations, SOC2/ISO27001 mapping), DOCS-05 (quirk doctor health check), BACK-87 (lab.sh PROFILE_ARGS fix), and promotion of the QRAMM data model (BACK-68..73) or dashboard-initiated scanning (BACK-86).
+**Goal:** Extend QUIRK from a compliance-tagged scanner into a full governance platform by completing the compliance framework and integrating the QRAMM maturity model — making QUIRK's primary consulting deliverable a scored governance assessment grounded in live scanner findings.
+
+**Target features:**
+- COMPLY-10: CBOM FIPS 140-3 algorithm-level annotations
+- COMPLY-11: SOC 2 / ISO 27001 compliance framework mapping (extends PCI-DSS/HIPAA/FIPS 140-3)
+- DOCS-05: `quirk doctor` health-check CLI command
+- QRAMM Data Model & Backend API — SQLite tables, FastAPI CRUD, qramm_version/last_verified/source_url staleness metadata
+- QRAMM Assessment UI — Org Profile wizard + 120-question dimension assessment
+- QRAMM Scorecard & Visualizations — radar chart, maturity distribution, dimension summary
+- QRAMM Evidence Bridge — auto-populate QRAMM answers from live scanner findings
+- QRAMM Compliance Mapping View — 8 frameworks, coverage table, relevance scores
+- QRAMM Report Export — combined governance + technical PDF
+- QRAMM staleness enforcement — quarterly CI gate (90-day threshold); `quirk qramm status` CLI
+- Tech debt: BACK-56 (datetime.utcnow deprecation), BACK-67 (defusedxml.lxml migration), BACK-87 (lab.sh PROFILE_ARGS bug), BACK-85 (ports_scanned in run-stats)
 
 ## Current State: v4.6.0 Shipped
 
@@ -192,7 +205,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-05 — v4.6 Enterprise Readiness shipped*
+*Last updated: 2026-05-05 — v4.7 Governance & Compliance Platform milestone started*
 
 ## Evolution
 
