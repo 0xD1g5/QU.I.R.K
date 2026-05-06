@@ -21,11 +21,11 @@ const EMAIL_PROTOS = new Set([
   "SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS", "POP3-STARTTLS", "POP3S",
 ])
 
-export function isEmailProtocol(protocol?: string): boolean {
+function isEmailProtocol(protocol?: string): boolean {
   return EMAIL_PROTOS.has(protocol ?? "")
 }
 
-export function getBrokerFamily(protocol: string): "Kafka" | "AMQP" | "Redis" | "Cloud" | null {
+function getBrokerFamily(protocol: string): "Kafka" | "AMQP" | "Redis" | "Cloud" | null {
   if (protocol.startsWith("KAFKA-")) return "Kafka"
   if (protocol.startsWith("AMQP-") || protocol.startsWith("AMQPS")) return "AMQP"
   if (protocol.startsWith("REDIS-")) return "Redis"
