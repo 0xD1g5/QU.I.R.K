@@ -36,6 +36,7 @@ def serve(port: int = 8512, host: str = "127.0.0.1", no_open: bool = False) -> N
             webbrowser.open(url)
         threading.Thread(target=_open, daemon=True).start()
 
+    os.environ["QUIRK_SERVE_PORT"] = str(port)
     uvicorn.run(
         "quirk.dashboard.api.app:app",
         host=host,

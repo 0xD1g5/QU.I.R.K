@@ -2,7 +2,7 @@ import { useScanData } from "@/hooks/useScanData"
 import { ScoreGauge } from "@/components/gauges/ScoreGauge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
+import { PageSpinner } from "@/components/PageSpinner"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
@@ -41,8 +41,11 @@ export function ExecutivePage() {
         const date = new Date().toISOString().split("T")[0]
         a.href = url
         a.download = `quirk-report-${date}.pdf`
+        document.body.appendChild(a)
         a.click()
-        URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        // Revoke after a tick so the browser has time to start the fetch
+        setTimeout(() => URL.revokeObjectURL(url), 100)
         setPdfMessage(`PDF saved to ~/Downloads/quirk-report-${date}.pdf`)
       } else {
         const body = await resp.json().catch(() => ({}))
@@ -55,18 +58,7 @@ export function ExecutivePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex gap-6">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-32 rounded-full" />
-          ))}
-        </div>
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (loading) return <PageSpinner ariaLabel="Loading executive summary" />
 
   if (error) {
     return (
@@ -76,9 +68,18 @@ export function ExecutivePage() {
     )
   }
 
-  if (!data) return null
+  if (!data || !data.score) {
+    return (
+      <div className="space-y-4 py-8">
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Executive Summary</h1>
+        <p className="text-muted-foreground text-sm">
+          No scan data available. Run a scan first: <code>quirk scan &lt;target&gt;</code>
+        </p>
+      </div>
+    )
+  }
 
-  const { score, confidence, findings, meta } = data
+  const { score, confidence, findings = [], meta } = data
 
   // Severity counts for bar chart
   const severityCounts = findings.reduce<Record<string, number>>((acc, f) => {
@@ -140,13 +141,16 @@ export function ExecutivePage() {
                 {confidence.confidence_rating === "HIGH" ? "High Confidence"
                   : confidence.confidence_rating === "MEDIUM" ? "Medium Confidence"
                   : confidence.confidence_rating === "LOW" ? "Low Confidence"
-                  : "Low Confidence"}
+                  : confidence.confidence_rating === "VERY_LOW" ? "Very Low Confidence"
+                  : "No Data"}
               </Badge>
             </div>
             <ScoreGauge score={score.subscores.hygiene} label="Hygiene" size={120} />
             <ScoreGauge score={score.subscores.modern_tls} label="Modern TLS" size={120} />
             <ScoreGauge score={score.subscores.identity_trust} label="Identity" size={120} />
             <ScoreGauge score={score.subscores.agility_signals} label="Agility" size={120} />
+            <ScoreGauge score={score.subscores.data_at_rest} label="Data at Rest" size={120} />
+            <ScoreGauge score={score.subscores.data_in_motion} label="Data in Motion" size={120} />
           </div>
         </CardContent>
       </Card>

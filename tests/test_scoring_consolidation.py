@@ -102,5 +102,113 @@ class ScoringConsolidationImportTests(unittest.TestCase):
         )
 
 
+def _get_executive_source() -> str:
+    exec_path = pathlib.Path(__file__).parent.parent / "quirk" / "reports" / "executive.py"
+    return exec_path.read_text(encoding="utf-8")
+
+
+class ExecutiveConsolidationTests(unittest.TestCase):
+    """Tests confirming executive.py migration to intelligence call sequence (Plan 02)."""
+
+    def setUp(self) -> None:
+        self.source = _get_executive_source()
+        self.imports = _collect_imports(self.source)
+
+    def test_executive_no_assessment_readiness_import(self) -> None:
+        """executive.py must NOT import from quirk.assessment.readiness_score."""
+        for module, names in self.imports:
+            self.assertNotEqual(
+                module,
+                "quirk.assessment.readiness_score",
+                f"Found forbidden import 'from quirk.assessment.readiness_score import {names}' in executive.py",
+            )
+
+    def test_executive_no_assessment_confidence_import(self) -> None:
+        """executive.py must NOT import from quirk.assessment.confidence."""
+        for module, names in self.imports:
+            self.assertNotEqual(
+                module,
+                "quirk.assessment.confidence",
+                f"Found forbidden import 'from quirk.assessment.confidence import {names}' in executive.py",
+            )
+
+    def test_executive_no_assessment_transition_planner_import(self) -> None:
+        """executive.py must NOT import from quirk.assessment.transition_planner."""
+        for module, names in self.imports:
+            self.assertNotEqual(
+                module,
+                "quirk.assessment.transition_planner",
+                f"Found forbidden import 'from quirk.assessment.transition_planner import {names}' in executive.py",
+            )
+
+    def test_executive_no_assessment_interpretation_import(self) -> None:
+        """executive.py must NOT import from quirk.assessment.interpretation_engine."""
+        for module, names in self.imports:
+            self.assertNotEqual(
+                module,
+                "quirk.assessment.interpretation_engine",
+                f"Found forbidden import 'from quirk.assessment.interpretation_engine import {names}' in executive.py",
+            )
+
+    def test_executive_uses_intelligence_scoring(self) -> None:
+        """executive.py must import compute_readiness_score from quirk.intelligence.scoring."""
+        found = any(
+            module == "quirk.intelligence.scoring" and "compute_readiness_score" in names
+            for module, names in self.imports
+        )
+        self.assertTrue(
+            found,
+            "Expected 'from quirk.intelligence.scoring import compute_readiness_score' in executive.py",
+        )
+
+    def test_executive_uses_intelligence_evidence(self) -> None:
+        """executive.py must import build_evidence_summary from quirk.intelligence.evidence."""
+        found = any(
+            module == "quirk.intelligence.evidence" and "build_evidence_summary" in names
+            for module, names in self.imports
+        )
+        self.assertTrue(
+            found,
+            "Expected 'from quirk.intelligence.evidence import build_evidence_summary' in executive.py",
+        )
+
+    def test_executive_uses_now_next_later_roadmap(self) -> None:
+        """executive.py roadmap must use NOW/NEXT/LATER labels, not wave_1/wave_2/wave_3."""
+        self.assertIn("NOW", self.source, "Expected 'NOW' label in executive.py roadmap output")
+        self.assertIn("NEXT", self.source, "Expected 'NEXT' label in executive.py roadmap output")
+        self.assertIn("LATER", self.source, "Expected 'LATER' label in executive.py roadmap output")
+        self.assertNotIn("wave_1", self.source, "Deprecated 'wave_1' attribute found in executive.py")
+        self.assertNotIn("wave_2", self.source, "Deprecated 'wave_2' attribute found in executive.py")
+        self.assertNotIn("wave_3", self.source, "Deprecated 'wave_3' attribute found in executive.py")
+
+
+class AssessmentDeletionTests(unittest.TestCase):
+    """Guard tests ensuring deleted assessment modules stay deleted."""
+
+    def test_readiness_score_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "readiness_score.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_confidence_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "confidence.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_transition_planner_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "transition_planner.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_interpretation_engine_deleted(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "interpretation_engine.py"
+        self.assertFalse(p.exists(), f"{p} should be deleted (D-02)")
+
+    def test_operator_context_preserved(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "operator_context.py"
+        self.assertTrue(p.exists(), f"{p} must be preserved (used by run_scan.py)")
+
+    def test_migration_advisor_preserved(self) -> None:
+        p = pathlib.Path(__file__).parent.parent / "quirk" / "assessment" / "migration_advisor.py"
+        self.assertTrue(p.exists(), f"{p} must be preserved (used by executive.py)")
+
+
 if __name__ == "__main__":
     unittest.main()

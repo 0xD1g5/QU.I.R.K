@@ -8,20 +8,25 @@ from rich.text import Text
 
 
 # ── ASCII art variants ────────────────────────────────────────────────────────
+# NOTE: All art strings use r"..." (raw strings) so that backslashes are
+# treated as literal characters and not interpreted as Python escape sequences
+# (e.g. \n, \t, \r, \b etc.).  The explicit + "\n" at the end of each line
+# provides the real newline that terminates each row of art.
 
 _ACROBAT = (
-    "      o__ __o        o         o   __o__   o__ __o         o         o/ \n"
-    "     /v     v\      <|>       <|>    |    <|     v\       <|>       /v  \n"
-    "    />       <\     / \       / \   / \   / \     <\      / >      />   \n"
-    "  o/           \o   \o/       \o/   \o/   \o/     o/      \o__ __o/     \n"
-    " <|             |>   |         |     |     |__  _<|        |__ __|      \n"
-    "  \\           //   < >       < >   < >    |       \       |      \     \n"
-    "    \       \o/      \         /     |    <o>       \o    <o>      \o   \n"
-    "     o       |        o       o      o     |         v\    |        v\  \n"
-    "     <\__   / \       <\__ __/>    __|>_  / \         <\  / \        <\ \n"
-                                                                        
+    r"      o__ __o        o         o   __o__   o__ __o         o         o/ " + "\n"
+    r"     /v     v\      <|>       <|>    |    <|     v\       <|>       /v  " + "\n"
+    r"    />       <\     / \       / \   / \   / \     <\      / >      />   " + "\n"
+    r"  o/           \o   \o/       \o/   \o/   \o/     o/      \o__ __o/     " + "\n"
+    r" <|             |>   |         |     |     |__  _<|        |__ __|      " + "\n"
+    r"  \\           //   < >       < >   < >    |       \       |      \     " + "\n"
+    r"    \       \o/      \         /     |    <o>       \o    <o>      \o   " + "\n"
+    r"     o       |        o       o      o     |         v\    |        v\  " + "\n"
+    r"     <\__   / \       <\__ __/>    __|>_  / \         <\  / \        <\ " + "\n"
 )
 
+# _SHADOW uses only box-drawing Unicode characters — no backslashes at all,
+# so a plain string is fine here.
 _SHADOW = (
     " ██████╗ ██╗   ██╗ ██╗ ██████╗ ██╗  ██╗\n"
     "██╔═══██╗██║   ██║ ██║ ██╔══██╗██║ ██╔╝\n"
@@ -31,47 +36,49 @@ _SHADOW = (
     " ╚══▀▀═╝  ╚═════╝  ╚═╝ ╚═╝  ╚═╝╚═╝  ╚═╝"
 )
 
+# _BASIC has backticks but no backslashes — plain string is safe.
 _BASIC = (
-   "  .d88b.  db    db d888888b d8888b. db   dD \n"
-   " .8P  Y8. 88    88   `88'   88  `8D 88 ,8P' \n"
-   " 88    88 88    88    88    88oobY' 88,8P   \n"
-   " 88    88 88    88    88    88`8b   88`8b   \n"
-   " `8P  d8' 88b  d88   .88.   88 `88. 88 `88. \n"
-   "  `Y88'Y8 ~Y8888P' Y888888P 88   YD YP   YD \n"
+    "  .d88b.  db    db d888888b d8888b. db   dD \n"
+    " .8P  Y8. 88    88   `88'   88  `8D 88 ,8P' \n"
+    " 88    88 88    88    88    88oobY' 88,8P   \n"
+    " 88    88 88    88    88    88`8b   88`8b   \n"
+    " `8P  d8' 88b  d88   .88.   88 `88. 88 `88. \n"
+    "  `Y88'Y8 ~Y8888P' Y888888P 88   YD YP   YD \n"
 )
 
+# _ISO is heavy with backslashes — raw strings required.
 _ISO = (
-    "      ___           ___                       ___           ___      \n"
-    "     /\  \         /\__\          ___        /\  \         /\__\     \n"
-    "    /::\  \       /:/  /         /\  \      /::\  \       /:/  /     \n"
-    "   /:/\:\  \     /:/  /          \:\  \    /:/\:\  \     /:/__/      \n"
-    "   \:\~\:\  \   /:/  /  ___      /::\__\  /::\~\:\  \   /::\__\____  \n"
-    "    \:\ \:\__\ /:/__/  /\__\  __/:/\/__/ /:/\:\ \:\__\ /:/\:::::\__\ \n"
-    "     \:\/:/  / \:\  \ /:/  / /\/:/  /    \/_|::\/:/  / \/_|:|~~|~    \n"
-    "      \::/  /   \:\  /:/  /  \::/__/        |:|::/  /     |:|  |     \n"
-    "      /:/  /     \:\/:/  /    \:\__\        |:|\/__/      |:|  |     \n"
-    "     /:/  /       \::/  /      \/__/        |:|  |        |:|  |     \n"
-    "     \/__/         \/__/                     \|__|         \|__|     \n"
-
+    r"      ___           ___                       ___           ___      " + "\n"
+    r"     /\  \         /\__\          ___        /\  \         /\__\     " + "\n"
+    r"    /::\  \       /:/  /         /\  \      /::\  \       /:/  /     " + "\n"
+    r"   /:/\:\  \     /:/  /          \:\  \    /:/\:\  \     /:/__/      " + "\n"
+    r"   \:\~\:\  \   /:/  /  ___      /::\__\  /::\~\:\  \   /::\__\____  " + "\n"
+    r"    \:\ \:\__\ /:/__/  /\__\  __/:/\/__/ /:/\:\ \:\__\ /:/\:::::\__\ " + "\n"
+    r"     \:\/:/  / \:\  \ /:/  / /\/:/  /    \/_|::\/:/  / \/_|:|~~|~    " + "\n"
+    r"      \::/  /   \:\  /:/  /  \::/__/        |:|::/  /     |:|  |     " + "\n"
+    r"      /:/  /     \:\/:/  /    \:\__\        |:|\/__/      |:|  |     " + "\n"
+    r"     /:/  /       \::/  /      \/__/        |:|  |        |:|  |     " + "\n"
+    r"     \/__/         \/__/                     \|__|         \|__|     " + "\n"
 )
 
+# _FACES has \- which is technically undefined behavior in non-raw strings.
 _FACES = (
-    "     @__          \-^-/          |||           ((_           /777       \n"
-    "    (o o)         (o o)         (o o)         (o o)         (o o)       \n"
-    " ooO--(_)--Ooo-ooO--(_)--Ooo-ooO--(_)--Ooo-ooO--(_)--Ooo-ooO--(_)--Ooo- \n"   
-
+    r"     @__          \-^-/          |||           ((_           /777       " + "\n"
+    r"    (o o)         (o o)         (o o)         (o o)         (o o)       " + "\n"
+    r" ooO--(_)--Ooo-ooO--(_)--Ooo-ooO--(_)--Ooo-ooO--(_)--Ooo-ooO--(_)--Ooo- " + "\n"
 )
 
+# _STANDARD has several backslash sequences — raw strings required.
 _STANDARD = (
-    "  ___  _   _ ___ ____  _  __ \n"
-    " / _ \| | | |_ _|  _ \| |/ / \n"
-    "| | | | | | || || |_) | ' /  \n" 
-    "| |_| | |_| || ||  _ <| . \  \n"
-    " \__\_\\___/|___|_| \_\_|\_\ \n"
-
+    r"  ___  _   _ ___ ____  _  __ " + "\n"
+    r" / _ \| | | |_ _|  _ \| |/ / " + "\n"
+    r"| | | | | | || || |_) | ' /  " + "\n"
+    r"| |_| | |_| || ||  _ <| . \  " + "\n"
+    r" \__\_\\___/|___|_| \_\_|\_\ " + "\n"
 )
 
-_BIG = (                                                                                          
+# _BIG has no backslashes — plain strings are fine.
+_BIG = (
     "     QQQQQQQQQ     UUUUUUUU     UUUUUUUUIIIIIIIIIIRRRRRRRRRRRRRRRRR   KKKKKKKKK    KKKKKKK \n"
     "   QQ:::::::::QQ   U::::::U     U::::::UI::::::::IR::::::::::::::::R  K:::::::K    K:::::K \n"
     " QQ:::::::::::::QQ U::::::U     U::::::UI::::::::IR::::::RRRRRR:::::R K:::::::K    K:::::K \n"
@@ -89,10 +96,10 @@ _BIG = (
     "   QQ:::::::::::Q      UU:::::::::UU    I::::::::IR::::::R     R:::::RK:::::::K    K:::::K \n"
     "     QQQQQQQQ::::QQ      UUUUUUUUU      IIIIIIIIIIRRRRRRRR     RRRRRRRKKKKKKKKK    KKKKKKK \n"
     "             Q:::::Q                                                                       \n"
-    "              QQQQQQ                                                                       \n" 
-
+    "              QQQQQQ                                                                       \n"
 )
 
+# _O8 has no backslashes — plain strings are fine.
 _O8 = (
     "   ooooooo  ooooo  oooo ooooo oooooooooo  oooo   oooo \n"
     " o888   888o 888    88   888   888    888  888  o88   \n"
@@ -100,10 +107,9 @@ _O8 = (
     " 888o  8o888 888    88   888   888  88o    888  88o   \n"
     "   88ooo88    888oo88   o888o o888o  88o8 o888o o888o \n"
     "        88o8                                          \n"
+)
 
-) 
-
-BANNER_VARIANTS = [_ACROBAT, _SHADOW, _BASIC, _BIG, _FACES, _STANDARD, _DAMN, _ISO, _O8]
+BANNER_VARIANTS = [_ACROBAT, _SHADOW, _BASIC, _BIG, _FACES, _STANDARD, _ISO, _O8]
 
 
 # ── Color palettes ────────────────────────────────────────────────────────────
@@ -113,7 +119,6 @@ class _Palette(NamedTuple):
     art: str
     title: str
     subtitle: str
-    domains: str
     border: str
     sep: str
 
@@ -121,29 +126,28 @@ class _Palette(NamedTuple):
 PALETTES = [
     _Palette("electric blue",
         art="#00cfff", title="#00e5ff", subtitle="#3b9dff",
-        domains="#4a7aaa", border="#1a5a9a", sep="#2a4a6a"),
+        border="#1a5a9a", sep="#2a4a6a"),
     _Palette("matrix green",
         art="#00ff41", title="#39ff14", subtitle="#00cc33",
-        domains="#007a1f", border="#004a10", sep="#003a0d"),
+        border="#004a10", sep="#003a0d"),
     _Palette("neon magenta",
         art="#ff2d9b", title="#ff69b4", subtitle="#cc0077",
-        domains="#8a0050", border="#7a0045", sep="#5a0035"),
+        border="#7a0045", sep="#5a0035"),
     _Palette("gold",
         art="#ffb700", title="#ffd700", subtitle="#cc8800",
-        domains="#7a5500", border="#6a4500", sep="#4a3000"),
+        border="#6a4500", sep="#4a3000"),
     _Palette("void purple",
         art="#c77dff", title="#e040fb", subtitle="#9d4edd",
-        domains="#5a2a8a", border="#4a1a7a", sep="#3a1060"),
+        border="#4a1a7a", sep="#3a1060"),
     _Palette("ember",
         art="#ff6b35", title="#ff4500", subtitle="#cc3300",
-        domains="#7a2000", border="#6a1a00", sep="#4a1000"),
+        border="#6a1a00", sep="#4a1000"),
     _Palette("arctic teal",
         art="#00e5b4", title="#00ffd0", subtitle="#00b894",
-        domains="#006a52", border="#007a5a", sep="#005040"),
+        border="#007a5a", sep="#005040"),
 ]
 
 BYLINE = "0xD1g5 // fulcrum"
-DOMAINS = "TLS · SSH · JWT · CBOM · KMS · PQC"
 
 
 def print_banner(version: str, quiet: bool = False) -> None:
@@ -167,7 +171,6 @@ def print_banner(version: str, quiet: bool = False) -> None:
     content.append("\n")
     content.append("Quantum Infrastructure Readiness Kit", style=f"bold {p.subtitle}")
     content.append("  ")
-    content.append(DOMAINS, style=f"dim {p.domains}")
     content.append("\n")
     content.append(BYLINE, style=f"dim {p.art}")
 

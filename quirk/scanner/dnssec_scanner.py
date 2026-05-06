@@ -1,0 +1,325 @@
+"""DNSSEC scanner module — queries DNSKEY/DS records and classifies algorithms per RFC 8624/9905."""
+
+import json
+import logging
+from datetime import datetime, timezone
+
+try:
+    import dns.message
+    import dns.query
+    import dns.rdatatype
+    import dns.resolver
+    import dns.dnssec
+    import dns.flags
+    DNSPYTHON_AVAILABLE = True
+except ImportError:
+    DNSPYTHON_AVAILABLE = False
+
+from quirk.models import CryptoEndpoint
+
+# DNSSEC algorithm severity map per RFC 8624/9905 (D-04)
+# Maps algorithm number -> (name, severity)
+# CRITICAL: SHA-1 / MD5 / DSA / GOST based algorithms
+# HIGH: RSA-only algorithms (quantum-vulnerable)
+# SAFE: ECDSA / EdDSA algorithms
+DNSSEC_ALG_MAP: dict = {
+    1:  ("RSAMD5",              "CRITICAL"),
+    3:  ("DSA",                 "CRITICAL"),
+    5:  ("RSASHA1",             "CRITICAL"),
+    6:  ("DSA-NSEC3-SHA1",      "CRITICAL"),
+    7:  ("RSASHA1-NSEC3-SHA1",  "CRITICAL"),
+    8:  ("RSASHA256",           "HIGH"),
+    10: ("RSASHA512",           "HIGH"),
+    12: ("ECC-GOST",            "CRITICAL"),
+    13: ("ECDSAP256SHA256",     "SAFE"),
+    14: ("ECDSAP384SHA384",     "SAFE"),
+    15: ("ED25519",             "SAFE"),
+    16: ("ED448",               "SAFE"),
+}
+
+
+def _resolve_ns(domain: str, timeout: int) -> list:
+    """Resolve authoritative nameserver IPs for a domain.
+
+    Returns list of NS IP strings. Returns [] on any failure.
+    """
+    try:
+        ns_answer = dns.resolver.resolve(domain, "NS", lifetime=timeout)
+        ips = []
+        for rdata in ns_answer:
+            ns_name = str(rdata.target)
+            try:
+                a_answer = dns.resolver.resolve(ns_name, "A", lifetime=timeout)
+                for a_rdata in a_answer:
+                    ips.append(a_rdata.address)
+            except Exception:
+                pass
+        return ips
+    except Exception:
+        return []
+
+
+def _query_rrset(domain: str, rdtype, ns_ip: str, timeout: int):
+    """Query a specific RR type from an authoritative nameserver.
+
+    Creates a query with DO bit (want_dnssec=True) and clears RD flag so
+    authoritative servers respond without recursion refusal.
+
+    Returns the DNS response message, or None on failure.
+    """
+    try:
+        request = dns.message.make_query(domain, rdtype, want_dnssec=True)
+        request.flags &= ~dns.flags.RD
+        result = dns.query.udp_with_fallback(request, ns_ip, timeout=timeout)
+        # Real dnspython returns (response, used_tcp) tuple; mocks may return response directly
+        if isinstance(result, tuple):
+            return result[0]
+        return result
+    except Exception:
+        return None
+
+
+def _parse_dnskeys(dnskey_rrset) -> list:
+    """Parse DNSKEY rrset into a list of dicts with flags, alg, tag, key_size, role.
+
+    Each dict: {"flags": int, "alg": int, "tag": int, "key_size": int|None, "role": str}
+    """
+    keys = []
+    for rdata in dnskey_rrset:
+        alg_num = int(rdata.algorithm)
+        key_tag = dns.dnssec.key_id(rdata)
+        role = "KSK" if (rdata.flags & 0x0001) else "ZSK"
+
+        # RSA algorithms: parse RFC 3110 format to extract modulus length
+        key_size = None
+        if alg_num in (1, 5, 7, 8, 10):
+            try:
+                key_bytes = rdata.key
+                if key_bytes[0] == 0:
+                    exp_len = (key_bytes[1] << 8) | key_bytes[2]
+                    modulus_start = 3 + exp_len
+                else:
+                    exp_len = key_bytes[0]
+                    modulus_start = 1 + exp_len
+                key_size = (len(key_bytes) - modulus_start) * 8
+            except Exception:
+                key_size = None
+
+        keys.append({
+            "flags": int(rdata.flags),
+            "alg": alg_num,
+            "tag": key_tag,
+            "key_size": key_size,
+            "role": role,
+        })
+    return keys
+
+
+def _parse_ds_records(ds_rrset) -> list:
+    """Parse DS rrset into a list of dicts with key_tag, algorithm, digest_type.
+
+    Each dict: {"key_tag": int, "algorithm": int, "digest_type": int}
+    """
+    return [
+        {
+            "key_tag": rdata.key_tag,
+            "algorithm": int(rdata.algorithm),
+            "digest_type": rdata.digest_type,
+        }
+        for rdata in ds_rrset
+    ]
+
+
+def _check_chain(dnskeys: list, ds_records: list) -> bool:
+    """Check whether any DS record matches a DNSKEY by key_tag.
+
+    Returns True if chain is valid (at least one matching key_tag found).
+    Returns False if chain is broken (no DS matches any DNSKEY).
+    """
+    dnskey_tags = {d["tag"] for d in dnskeys}
+    ds_tags = {ds["key_tag"] for ds in ds_records}
+    return bool(dnskey_tags & ds_tags)
+
+
+def _detect_nsec_type(domain: str, ns_ip: str, timeout: int):
+    """Detect NSEC vs NSEC3 by sending NXDOMAIN probe query and inspecting authority section.
+
+    Returns "NSEC", "NSEC3", or None if neither found.
+    """
+    try:
+        probe_domain = f"_quirk_probe_.{domain}"
+        response = _query_rrset(probe_domain, dns.rdatatype.A, ns_ip, timeout)
+        if response is None:
+            return None
+        for rrset in response.authority:
+            if rrset.rdtype == dns.rdatatype.NSEC:   # 47
+                return "NSEC"
+            if rrset.rdtype == dns.rdatatype.NSEC3:  # 50
+                return "NSEC3"
+        return None
+    except Exception:
+        return None
+
+
+def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
+    """Scan a single domain for DNSSEC posture.
+
+    Returns list of CryptoEndpoint objects for this domain.
+    """
+    ns_ips = _resolve_ns(domain, timeout)
+    if not ns_ips:
+        if logger:
+            logger.warning("DNSSEC: could not resolve NS for %s", domain)
+        return []
+
+    ns_ip = ns_ips[0]
+
+    # Query DNSKEY
+    dnskey_response = _query_rrset(domain, dns.rdatatype.DNSKEY, ns_ip, timeout)
+
+    # Find DNSKEY rrset in answer section
+    dnskey_rrset = None
+    if dnskey_response:
+        for rrset in dnskey_response.answer:
+            if rrset.rdtype == dns.rdatatype.DNSKEY:
+                dnskey_rrset = rrset
+                break
+
+    now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+
+    # Unsigned zone — no DNSKEY
+    if dnskey_rrset is None:
+        scan_dict = {
+            "domain": domain,
+            "ns_queried": ns_ip,
+            "signed": False,
+            "dnskeys": [],
+            "ds_records": [],
+            "nsec_type": None,
+            "chain_valid": None,
+        }
+        return [CryptoEndpoint(
+            host=domain,
+            port=53,
+            protocol="DNSSEC",
+            cert_pubkey_alg="NONE",
+            cert_pubkey_size=None,
+            dnssec_scan_json=json.dumps(scan_dict),
+            service_detail="unsigned-zone",
+            scanned_at=now,
+        )]
+
+    # Signed zone — parse keys
+    dnskeys = _parse_dnskeys(dnskey_rrset)
+
+    # Detect NSEC type
+    nsec_type = _detect_nsec_type(domain, ns_ip, timeout)
+
+    # Query DS records — may be in the same response or separate
+    ds_records = []
+    if dnskey_response:
+        for rrset in dnskey_response.answer:
+            if rrset.rdtype == dns.rdatatype.DS:
+                ds_records = _parse_ds_records(rrset)
+                break
+
+    if not ds_records:
+        ds_response = _query_rrset(domain, dns.rdatatype.DS, ns_ip, timeout)
+        if ds_response:
+            for rrset in ds_response.answer:
+                if rrset.rdtype == dns.rdatatype.DS:
+                    ds_records = _parse_ds_records(rrset)
+                    break
+
+    chain_valid = _check_chain(dnskeys, ds_records) if ds_records else None
+
+    scan_dict = {
+        "domain": domain,
+        "ns_queried": ns_ip,
+        "signed": True,
+        "dnskeys": dnskeys,
+        "ds_records": ds_records,
+        "nsec_type": nsec_type,
+        "chain_valid": chain_valid,
+    }
+
+    endpoints = []
+
+    # One CryptoEndpoint per DNSKEY
+    for key in dnskeys:
+        alg_name, _severity = DNSSEC_ALG_MAP.get(key["alg"], (f"UNKNOWN-{key['alg']}", "HIGH"))
+        endpoints.append(CryptoEndpoint(
+            host=domain,
+            port=53,
+            protocol="DNSSEC",
+            cert_pubkey_alg=alg_name,
+            cert_pubkey_size=key["key_size"],
+            service_detail=f"dnskey:tag={key['tag']}:role={key['role']}",
+            dnssec_scan_json=json.dumps(scan_dict),
+            scanned_at=now,
+        ))
+
+    # NSEC exposure finding
+    if nsec_type == "NSEC":
+        endpoints.append(CryptoEndpoint(
+            host=domain,
+            port=53,
+            protocol="DNSSEC",
+            cert_pubkey_alg="NSEC",
+            cert_pubkey_size=None,
+            service_detail="nsec-exposure",
+            dnssec_scan_json=json.dumps(scan_dict),
+            scanned_at=now,
+        ))
+
+    # DS chain broken finding
+    if chain_valid is False:
+        endpoints.append(CryptoEndpoint(
+            host=domain,
+            port=53,
+            protocol="DNSSEC",
+            cert_pubkey_alg="DS-MISMATCH",
+            cert_pubkey_size=None,
+            service_detail="ds-chain-broken",
+            dnssec_scan_json=json.dumps(scan_dict),
+            scanned_at=now,
+        ))
+
+    # DS SHA-1 digest finding
+    for ds in ds_records:
+        if ds["digest_type"] == 1:
+            endpoints.append(CryptoEndpoint(
+                host=domain,
+                port=53,
+                protocol="DNSSEC",
+                cert_pubkey_alg="SHA1-DS",
+                cert_pubkey_size=None,
+                service_detail="sha1-ds-digest",
+                dnssec_scan_json=json.dumps(scan_dict),
+                scanned_at=now,
+            ))
+
+    return endpoints
+
+
+def scan_dnssec_targets(targets: list, timeout: int = 10, logger=None, session_start=None) -> list:
+    """Scan DNSSEC posture for a list of domain targets.
+
+    Returns list of CryptoEndpoint objects — one per DNSKEY record found, plus
+    additional entries for unsigned zones, NSEC exposure, and DS chain breaks.
+
+    Degrades gracefully if dnspython is not installed (returns empty list).
+    """
+    if not DNSPYTHON_AVAILABLE:
+        if logger:
+            logger.warning("dnspython not installed — DNSSEC scanning disabled")
+        return []
+
+    results = []
+    for domain in targets:
+        try:
+            results.extend(_scan_domain(domain, timeout, logger, session_start=session_start))
+        except Exception as exc:
+            if logger:
+                logger.warning("DNSSEC scan failed for %s: %s", domain, exc)
+    return results

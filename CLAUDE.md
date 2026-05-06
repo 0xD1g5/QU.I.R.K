@@ -18,6 +18,73 @@ then produces a CycloneDX CBOM, quantum-readiness score, and prioritized remedia
 - After changes, run `python -m compileall` and relevant tests.
 - If detection logic changes, update `labs/*/expected_results.md` accordingly.
 
+## Chaos Lab Maintenance
+
+Any time the `quantum-chaos-enterprise-lab/` chaos lab gains, loses, renames, or
+materially reconfigures a Docker Compose profile (or its ports / services /
+scanner-relevant settings), `quantum-chaos-enterprise-lab/lab.sh` **must** be
+updated in the same change so it stays a faithful reflection of the lab's
+current state.
+
+Specifically:
+- The `all` command's `ALL_PROFILES` list must include every profile defined in
+  `docker-compose.yml`. No drift between the script's profile set and the
+  compose file's profile set.
+- New profiles must be runnable via `PROFILE_ARGS="--profile <name>" ./lab.sh up`
+  with no further script edits needed.
+- `./lab.sh status` and `./lab.sh logs <service>` must work cleanly against new
+  / renamed services — no broken references.
+- The corresponding `expected_results_*.md` oracle file (and the chaos lab
+  `README.md`) must list the new / changed profile with its ports, services,
+  and expected scanner findings.
+
+This rule applies to every phase, every milestone — not just lab-focused work.
+A scanner phase that adds a new chaos lab profile (e.g., Phase 32 `email`,
+Phase 33 `broker`, Phase 27 `database`, Phase 30 `vault`) is incomplete until
+`lab.sh`, the README, and the expected-results oracle are all updated.
+
+---
+
+## Mandatory Phase Completion Steps
+
+These steps are **required at the end of every `/gsd:execute-phase` run**, after verification passes and `update_roadmap` / `update_project_md` complete. Do not skip them.
+
+### 1. Create Obsidian Phase Note
+
+Write the phase note directly to the vault filesystem (do NOT use `obsidian CLI content=` — files are too large for shell expansion):
+
+```
+/Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Phases/Phase-NN-<Slug>.md
+```
+
+Format: frontmatter (`status: complete`, `type: phase`, `source`, `updated`) + Goal + Requirements Covered + Success Criteria + What Was Built (one subsection per plan, sourced from SUMMARY.md files) + `[[Roadmap]]` link.
+
+See existing notes at `/Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Phases/` for the template pattern.
+
+### 2. Update `docs/UAT-SERIES.md`
+
+After each phase, update the relevant test series to reflect what changed:
+- If version bumped: update version strings in UAT-1-02 pass criteria and the document header
+- If output paths changed: update affected pass criteria
+- If new features added: add new test cases to the relevant series
+- Update `**Last Updated:**` date at the top
+
+### 3. Sync UAT-SERIES.md to Obsidian
+
+Write directly to vault filesystem (file is too large for CLI `content=` parameter):
+
+```bash
+printf "---\nproject: QU.I.R.K.\ntype: reference\nstatus: active\nsource: docs/UAT-SERIES.md\nupdated: YYYY-MM-DD\n---\n\n" > /tmp/uat_vault.md
+cat docs/UAT-SERIES.md >> /tmp/uat_vault.md
+cp /tmp/uat_vault.md "/Users/digs/vaults/Digs/20_Dev-Work/QUIRK/UAT-Series.md"
+```
+
+### 4. Commit `docs/UAT-SERIES.md`
+
+```bash
+node "/Users/digs/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-NN): update UAT-SERIES.md" --files docs/UAT-SERIES.md
+```
+
 ---
 
 ## Obsidian Vault Integration

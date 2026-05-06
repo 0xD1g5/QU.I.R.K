@@ -1,144 +1,128 @@
-# Requirements: QU.I.R.K.
+# Requirements: QU.I.R.K. v4.7 Governance & Compliance Platform
 
-## Project
+**Defined:** 2026-05-05
+**Core Value:** Complete, defensible cryptographic inventory with a CBOM deliverable and quantum-readiness score — handed to a client in under two hours.
 
-Quantum Infrastructure Readiness Kit — consulting-grade cryptographic inventory scanner and
-quantum-readiness assessment platform. Delivers a complete, defensible cryptographic inventory
-with a CBOM deliverable and quantum-readiness score that a consultant can hand to a client
-in under two hours.
+## v4.7 Requirements
 
-## Scope
+Requirements for the Governance & Compliance Platform milestone. Each maps to roadmap phases.
 
-**Milestone:** v4.0 — Foundation to polished consulting tool
-**Granularity:** Standard (5-8 phases)
-**Baseline:** v3.9 (QuRisk) scanner core — TLS, SSH banner, HTTP detection, risk engine,
-intelligence layer, SQLite persistence, scan profiles, chaos lab — all operational.
+### Compliance Extensions
 
-## Requirement Categories
+- [x] **COMPLY-10**: CBOM Pass-1 algorithm components carry a 3-tier FIPS 140-3 status annotation (`certified` / `approved` / `non-approved`) via `Component.properties` — only endpoints with verifiable CMVP-validated evidence receive `certified`; all others receive `approved` or `non-approved` based on algorithm classification
+- [x] **COMPLY-11**: SOC2 CC6.x controls (cryptography-relevant Common Criteria subset) are mapped to QUIRK finding categories in `COMPLIANCE_MAP` via a `_soc2()` helper following the existing `_pci()` / `_hipaa()` / `_fips()` builder pattern
+- [x] **COMPLY-12**: ISO 27001:2022 Annex A controls (8.x clause numbering, not 2013 A.x.x) are mapped to QUIRK finding categories via an `_iso()` helper; the framework entry declares `version: "ISO 27001:2022"` and is unit-tested to reject 2013-style `A.x.x` control IDs
 
-### CORE — Core Fixes
+### QRAMM Core Infrastructure
 
-| ID | Requirement | Priority | Notes |
-|----|-------------|----------|-------|
-| CORE-01 | Scoring system consolidation — deprecate duplicate paths (assessment/readiness_score.py + intelligence/scoring.py), single authoritative path through writer.py evidence model | Must have | Correctness blocker |
-| CORE-02 | Fix cert_pubkey_alg field propagation in writer.py (_extract_cert_key_type mismatch) | Must have | Data quality blocker |
-| CORE-03 | Rename QuRisk → QU.I.R.K. / quirk throughout codebase, CLI, and all references | Must have | Brand identity |
-| CORE-04 | SSH scanner thread-pool — replace sequential per-host scanning with concurrent thread pool | Must have | Performance blocker for large scans |
+- [x] **QRAMM-01**: SQLite gains three new normalized tables — `qramm_sessions` (lifecycle, `model_version`, `profile_multiplier`, `status`), `qramm_answers` (`assessment_id` FK, `question_number`, `dimension`, `practice_area`, `answer_value`, `suggested_answer`, `confirmed_at`, `evidence_source`), `qramm_profiles` (org profile inputs → computed multiplier 0.8–1.5×) — created via `_ensure_qramm_tables()` in `db.py:init_db()`, no changes to `CryptoEndpoint`
+- [x] **QRAMM-02**: FastAPI router at `/api/qramm/` provides CRUD endpoints for the assessment lifecycle: create session, read session, save/update answers, score session, delete session
+- [x] **QRAMM-03**: `quirk/qramm/questions.py` contains the full 120-question catalog as a versioned `QRAMM_QUESTIONS` constant (4 dimensions × 3 practices × 10 questions); each entry carries `question_number`, `dimension`, `practice_area`, `text`, and `maturity_labels`
+- [x] **QRAMM-04**: `quirk/qramm/scoring.py` computes dimension scores using the weakest-link minimum rule (dimension score = `min()` of its 3 practice scores, NOT average); profile multiplier applied to weighted dimension scores; overall score = average of 4 weighted dimensions; scoring logic is unit-tested to match the CSNP QRAMM toolkit reference values
 
-### SCAN — Scanner Capabilities
+### QRAMM Staleness Enforcement
 
-| ID | Requirement | Priority | Notes |
-|----|-------------|----------|-------|
-| SCAN-01 | sslyze TLS deep scan integration — replace/augment capability enum with Python-native deep scanner | Must have | Python-native, programmatic API |
-| SCAN-02 | ssh-audit KEX/hostkey/MAC full enumeration — replace banner-only SSH scan | Must have | Full algorithm inventory for CBOM |
-| SCAN-03 | API/JWT scanner — REST endpoint discovery, JWKS fetch, JWT algorithm and key-size classification | Must have | New attack surface coverage |
-| SCAN-04 | Container/binary crypto scanner — Syft + Trivy subprocess wrapper for crypto library inventory | Must have | Container surface coverage |
-| SCAN-05 | Source code scanner — CBOMkit Hyperion / PQCA integration for code-level crypto detection | Must have | Code surface coverage |
-| SCAN-06 | AWS cloud connector — ACM, KMS, CloudFront, ELB/ALB via boto3 | Must have | Cloud surface coverage |
-| SCAN-07 | Azure cloud connector — Key Vault, App Gateway via azure-sdk-for-python | Must have | Cloud surface coverage |
+- [ ] **QRAMM-05**: `QRAMM_MODEL` module constant in `quirk/qramm/model_meta.py` carries `qramm_version` (string), `last_verified` (ISO date), and `source_url` (`https://qramm.org`) — mirroring the compliance staleness pattern from v4.6
+- [ ] **QRAMM-06**: CI pytest gate fails when `QRAMM_MODEL.last_verified` is more than 90 days old; supports injectable `QUIRK_CI_STALENESS_OVERRIDE_DATE` env var for CI boundary testing
+- [ ] **QRAMM-07**: `quirk qramm status` CLI subcommand displays `qramm_version`, `last_verified`, days remaining until stale, and current staleness verdict; exits non-zero when stale
 
-### CBOM — Cryptographic Bill of Materials Pipeline
+### QRAMM Assessment Experience
 
-| ID | Requirement | Priority | Notes |
-|----|-------------|----------|-------|
-| CBOM-01 | cyclonedx-python-lib integration — map all scan results to CycloneDX CBOM components | Must have | Key differentiator |
-| CBOM-02 | Algorithm → CBOM component mapping layer (all scanner outputs → CycloneDX schema) | Must have | Required for CBOM output |
-| CBOM-03 | NIST PQC quantum-safety classification enrichment per algorithm | Must have | Required for readiness scoring |
-| CBOM-04 | CBOM JSON + XML output artifact per scan run | Must have | Consulting deliverable |
+- [ ] **QRAMM-08**: React QRAMM Assessment page presents 120 questions across 4 dimension tabs (CVI, SGRM, DPE, ITR); each question displays a 1–4 radio scale with maturity-level labels (Basic / Developing / Established / Optimizing) and an optional evidence note field; a progress tracker shows questions answered per dimension
+- [ ] **QRAMM-09**: Org Profile wizard collects industry sector, organization size, geographic scope, data sensitivity, and regulatory obligations; computes a profile multiplier (0.8–1.5×) before the assessment begins and stores it in `qramm_profiles`
+- [ ] **QRAMM-10**: All 120 assessment answers live in top-level React context above all route changes; every answer change triggers a debounced `POST /api/qramm/assessment/draft` so browser refresh restores in-progress answers without data loss
+- [ ] **QRAMM-11**: QRAMM Scorecard displays: (a) radar chart (4-axis Recharts `RadarChart`, rendered as static SVG for PDF compatibility), (b) dimension summary table (raw score, weighted score, industry benchmark, maturity level, completion %), (c) maturity distribution (count of practices at each maturity level); real-time score recalculation is disabled mid-session — scores update only on explicit "Calculate Score" action
 
-### LAB — Chaos Lab Expansion
+### QRAMM Evidence Bridge
 
-| ID | Requirement | Priority | Notes |
-|----|-------------|----------|-------|
-| LAB-01 | jwt profile — 4 JWT API services (RS256, HS256-weak, RSA1024, alg:none) + JWKS server | Must have | Validates SCAN-03 |
-| LAB-02 | registry profile — Docker Registry v2 + test images with embedded crypto vulnerabilities | Must have | Validates SCAN-04 |
-| LAB-03 | source profile — Gitea + pre-seeded repos with crypto anti-patterns | Must have | Validates SCAN-05 |
-| LAB-04 | storage profile — LocalStack KMS, HashiCorp Vault, postgres-encrypted | Must have | Validates SCAN-06 cloud patterns |
-| LAB-05 | ssh-weak service — OpenSSH with deliberately weak KEX/hostkey/MAC config | Must have | Validates SCAN-02 |
-| LAB-06 | ldaps service — OpenLDAP over TLS (LDAPS on port 636) | Must have | Validates TLS/sslyze against directory services |
+- [ ] **QRAMM-12**: At QRAMM assessment session creation (`POST /api/qramm/sessions`), the evidence bridge auto-populates CVI dimension questions (~30 questions) by reading the latest scan's `CryptoEndpoint` rows via the SESSION_BRACKET scan-window pattern; `quirk/qramm/evidence_bridge.py` does NOT import `risk_engine` (circular import prevention)
+- [ ] **QRAMM-13**: Auto-populated answers are stored in `qramm_answers.suggested_answer` with `requires_confirmation: true`; `answer_value` remains `null` until a human confirms; only rows with a non-null `confirmed_at` timestamp contribute to the final maturity score
+- [ ] **QRAMM-14**: Auto-filled answers display an "Auto-filled from scan" badge in the assessment UI and remain fully editable; the badge is removed when the human modifies or confirms the answer
 
-### UI — Web Dashboard
+### QRAMM Governance Artifacts
 
-| ID | Requirement | Priority | Notes |
-|----|-------------|----------|-------|
-| UI-01 | FastAPI API layer — scan job management, results API, serving scanner output | Must have | Backend for dashboard |
-| UI-02 | React + shadcn/ui executive dashboard — score gauges, trend charts, severity heatmaps | Must have | Primary UI deliverable |
-| UI-03 | Findings table, certificate inventory, CBOM viewer in dashboard | Must have | Core dashboard content |
-| UI-04 | HTML report export + PDF generation via Playwright headless | Must have | Consulting deliverable |
+- [ ] **QRAMM-15**: Dashboard includes a QRAMM Compliance Mapping view showing an 8-framework coverage table (NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, BSI TR-02102) with per-practice relevance scores derived from the active assessment session; view never displays a "fully compliant" badge and never shows a coverage percentage above the scanner's actual coverage ceiling
+- [ ] **QRAMM-16**: Combined PDF export (`/print` route) includes a QRAMM section (executive QRAMM summary, dimension scorecard table, static SVG radar chart, compliance framework mapping summary) starting on a new page via `@media print { page-break-before: always }` — existing Technical Findings section layout is not regressed
 
-### DOC — Documentation
+### Health & Diagnostics
 
-| ID | Requirement | Priority | Notes |
-|----|-------------|----------|-------|
-| DOC-01 | Getting Started guide — zero-to-first-scan in under 10 minutes | Must have | Onboarding gate |
-| DOC-02 | Installation guide — macOS, Linux, Windows via WSL; system requirements | Must have | Required for distribution |
-| DOC-03 | Configuration reference — all config.yaml options documented | Must have | Power user reference |
-| DOC-04 | Connector setup guides — AWS, Azure, Docker, Git with least-privilege credential templates | Must have | Required for cloud connectors |
-| DOC-05 | Report interpretation guide — what each score/finding means, what to tell the client | Must have | Consultant enablement |
-| DOC-06 | CBOM guide — what it is, how to use it for compliance evidence | Must have | Differentiator enablement |
-| DOC-07 | Chaos lab operator guide — updated for all new profiles (jwt, registry, source, storage, ssh-weak, ldaps) | Must have | Lab usability |
+- [x] **DOCS-05**: `quirk doctor` CLI subcommand performs a health check across 8 categories — Python environment, scanner binaries (nmap/syft/semgrep), compliance framework freshness, QRAMM framework freshness, database connectivity, configuration validity, network connectivity (informational), dashboard process status (informational) — and displays results with `[✓]` / `[!]` / `[✗]` symbols using `rich`; exits with code 1 if any non-informational check fails
 
-### BRAND — Branding and Polish
+### Tech Debt
 
-| ID | Requirement | Priority | Notes |
-|----|-------------|----------|-------|
-| BRAND-01 | QU.I.R.K. visual identity — name treatment, color palette, logo mark for reports and dashboard | Must have | Professional positioning |
-| BRAND-02 | CLI UX polish — rich progress indicators, consistent output formatting, version command | Must have | Consultant UX |
-| BRAND-03 | Professional report templates — HTML + PDF with QU.I.R.K. branding and consultant-grade layout | Must have | Consulting deliverable quality |
-| BRAND-04 | Packaging + installer — pip install quirk or single-file distribution; zero-to-scan < 10 min on fresh machine | Must have | Distribution gate |
+- [x] **DEBT-01**: All `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)` across `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected modules (BACK-56); resolves Python 3.12+ `DeprecationWarning`
+- [x] **DEBT-02**: `lab.sh` PROFILE_ARGS CLI precedence fixed — inbound env value is snapshotted before `source .env` so `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults (BACK-87)
+- [x] **DEBT-03**: `run-stats-*.json` output includes `ports_scanned` (sorted list of all ports that entered the scan pipeline) and `hosts_scanned` (sorted list of all scanned hosts), closing UAT-3-02 verification gap (BACK-85)
+- [x] **DEBT-04**: `quirk/scanner/saml_scanner.py` migrated from deprecated `defusedxml.lxml` to raw `lxml.etree` with `resolve_entities=False` and `no_network=True` parser options; all 27 existing SAML tests pass GREEN (BACK-67)
 
-## Out of Scope (v1)
+---
+
+## Future Requirements
+
+Deferred to v4.8 or later — not in scope for v4.7.
+
+### QRAMM Coverage Expansion
+
+- **QRAMM-F01**: Evidence bridge extended to SGRM, DPE, and ITR dimensions (requires validation of CVI bridge quality first)
+- **QRAMM-F02**: QRAMM standalone PDF export (governance-only delivery, without full QUIRK technical findings)
+- **QRAMM-F03**: Multi-session QRAMM history — compare assessment scores across time to track maturity improvement
+
+### Compliance Depth
+
+- **COMPLY-F01**: CMMC 2.0 SC.3.177/SC.3.187 control mapping
+- **COMPLY-F02**: NIST CSF 2.0 Protect function mapping
+- **COMPLY-F03**: FedRAMP compliance mapping (deferred — hundreds of controls, misleading without full coverage)
+
+### Platform
+
+- **PLATFORM-F01**: Dashboard-initiated scan configuration and launch (BACK-86) — deferred to SaaS milestone
+
+---
+
+## Out of Scope
+
+Explicitly excluded from v4.7. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Email / S/MIME scanning | Lower priority vs JWT/container/code surfaces; deferred to v2 |
-| Windows AD CS live connector | Complex Kerberos/NTLM auth; stub remains; deferred to v2 |
-| Network traffic capture (Zeek/Wireshark) | Requires passive tap; out of scope for agentless model |
-| OpenVAS / Nessus integration | Full vuln scanner; different scope, heavy dependency |
-| Mobile app | Web-first; SaaS phase determines mobile need |
-| Real-time continuous monitoring | SaaS milestone, not v1 |
-| SaaS platform (multi-tenant, Celery, hosted reporting) | Deferred to future milestone after v1 ships |
-| Score trend charts in CLI | Dashboard handles visualization |
+| QRAMM evidence bridge for SGRM/DPE/ITR | Requires human judgment; auto-population would inflate governance scores; scoped to CVI only for v4.7 |
+| AI inference for QRAMM answers | Only ~25% of questions have technical evidence equivalents; governance theater risk |
+| QRAMM Excel import | Unversioned file format, no stable API contract |
+| Real-time score updates during answer entry | Weakest-link rule makes intermediate scores misleading |
+| FedRAMP compliance mapping | Hundreds of controls; scanner cannot satisfy process controls |
+| "100% compliant" badges for any framework | Scanner covers cryptographic controls only; process controls require human attestation |
+| Authenticated scan mode (BACK-64) | Platform-level concern; requires credential security review gate |
+| Dashboard-initiated scanning (BACK-86) | Targeted for SaaS milestone |
+
+---
 
 ## Traceability
 
+Populated by the roadmapper. Updated at each phase transition.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 1 | Complete |
-| CORE-02 | Phase 1 | Complete |
-| CORE-03 | Phase 1 | Complete |
-| CORE-04 | Phase 1 | Complete |
-| SCAN-01 | Phase 1 | Complete |
-| SCAN-02 | Phase 1 | Complete |
-| CBOM-01 | Phase 2 | Complete |
-| CBOM-02 | Phase 2 | Complete |
-| CBOM-03 | Phase 2 | Complete |
-| CBOM-04 | Phase 2 | Complete |
-| SCAN-03 | Phase 3 | Complete |
-| SCAN-04 | Phase 3 | Complete |
-| SCAN-05 | Phase 3 | Complete |
-| SCAN-06 | Phase 3 | Complete |
-| SCAN-07 | Phase 3 | Complete |
-| LAB-01 | Phase 4 | Complete |
-| LAB-02 | Phase 4 | Complete |
-| LAB-03 | Phase 4 | Complete |
-| LAB-04 | Phase 4 | Complete |
-| LAB-05 | Phase 4 | Complete |
-| LAB-06 | Phase 4 | Complete |
-| UI-01 | Phase 5 | Complete |
-| UI-02 | Phase 5 | Complete |
-| UI-03 | Phase 5 | Complete |
-| UI-04 | Phase 5 | Complete |
-| DOC-01 | Phase 6 | Complete |
-| DOC-02 | Phase 6 | Complete |
-| DOC-03 | Phase 6 | Complete |
-| DOC-04 | Phase 6 | Complete |
-| DOC-05 | Phase 6 | Complete |
-| DOC-06 | Phase 6 | Complete |
-| DOC-07 | Phase 6 | Complete |
-| BRAND-01 | Phase 7 | Complete |
-| BRAND-02 | Phase 7 | Complete |
-| BRAND-03 | Phase 7 | Complete |
-| BRAND-04 | Phase 7 | Complete |
-
-**Coverage:** 36/36 v1 requirements mapped. No orphans.
+| QRAMM-01 | Phase 51 | Complete |
+| QRAMM-02 | Phase 51 | Complete |
+| QRAMM-03 | Phase 51 | Complete |
+| QRAMM-04 | Phase 51 | Complete |
+| DEBT-01 | Phase 51 | Complete |
+| COMPLY-10 | Phase 52 | Complete |
+| COMPLY-11 | Phase 52 | Complete |
+| COMPLY-12 | Phase 52 | Complete |
+| DOCS-05 | Phase 52 | Complete |
+| DEBT-02 | Phase 52 | Complete |
+| DEBT-03 | Phase 52 | Complete |
+| DEBT-04 | Phase 52 | Complete |
+| QRAMM-12 | Phase 53 | Pending |
+| QRAMM-13 | Phase 53 | Pending |
+| QRAMM-14 | Phase 53 | Pending |
+| QRAMM-08 | Phase 54 | Pending |
+| QRAMM-09 | Phase 54 | Pending |
+| QRAMM-10 | Phase 54 | Pending |
+| QRAMM-11 | Phase 54 | Pending |
+| QRAMM-05 | Phase 55 | Pending |
+| QRAMM-06 | Phase 55 | Pending |
+| QRAMM-07 | Phase 55 | Pending |
+| QRAMM-15 | Phase 55 | Pending |
+| QRAMM-16 | Phase 56 | Pending |

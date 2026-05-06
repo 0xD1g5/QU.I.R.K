@@ -1,0 +1,822 @@
+[
+  {
+    "id": "UAT-1-02",
+    "name": "Version Flag",
+    "category": "Installation & Setup",
+    "status": "PASS",
+    "notes": "",
+    "actual": "QU.I.R.K. v4.2.0",
+    "elapsed": 0.36,
+    "timestamp": "2026-04-16T22:54:50.945933"
+  },
+  {
+    "id": "UAT-1-03",
+    "name": "quirk init \u2014 Default Config Generation",
+    "category": "Installation & Setup",
+    "status": "PASS",
+    "notes": "",
+    "actual": "config.yaml created",
+    "elapsed": 0.37,
+    "timestamp": "2026-04-16T22:54:51.314844"
+  },
+  {
+    "id": "UAT-1-04",
+    "name": "quirk init \u2014 Config at Custom Path",
+    "category": "Installation & Setup",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.69,
+    "timestamp": "2026-04-16T22:54:52.002759"
+  },
+  {
+    "id": "UAT-1-07",
+    "name": "Identity Extras Group \u2014 Installation",
+    "category": "Installation & Setup",
+    "status": "PASS",
+    "notes": "",
+    "actual": "{'impacket': True, 'dns.dnssec': True, 'lxml.etree': True, 'defusedxml': True, 'signxml': True}",
+    "elapsed": 0.21,
+    "timestamp": "2026-04-16T22:54:52.213444"
+  },
+  {
+    "id": "UAT-2-02",
+    "name": "Interactive Wizard \u2014 Single Target",
+    "category": "CLI - Interactive Mode",
+    "status": "PASS",
+    "notes": "Scan ran, 1 findings file(s)",
+    "actual": "out_files=['findings-20260417-025454.json']",
+    "elapsed": 2.84,
+    "timestamp": "2026-04-16T22:54:55.055898"
+  },
+  {
+    "id": "UAT-2-03",
+    "name": "Interactive Wizard \u2014 Multiple Targets",
+    "category": "CLI - Interactive Mode",
+    "status": "PASS",
+    "notes": "Multi-target scan ran, 1 file(s)",
+    "actual": "files=['findings-20260417-025457.json']",
+    "elapsed": 2.83,
+    "timestamp": "2026-04-16T22:54:57.885655"
+  },
+  {
+    "id": "UAT-3-01",
+    "name": "Scan with Config File \u2014 Minimal",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "code=0, findings=['findings-20260417-025501.json']",
+    "elapsed": 3.83,
+    "timestamp": "2026-04-16T22:55:01.714436"
+  },
+  {
+    "id": "UAT-3-02",
+    "name": "Scan Profiles \u2014 Quick vs Standard vs Deep",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "{'quick': {'code': 0, 'stats': True}, 'standard': {'code': 0, 'stats': True}, 'deep': {'code': 0, 'stats': True}}",
+    "elapsed": 11.48,
+    "timestamp": "2026-04-16T22:55:13.192508"
+  },
+  {
+    "id": "UAT-3-03",
+    "name": "Score Profile \u2014 Strict vs Balanced vs Lenient",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "{'strict': 75, 'balanced': 78, 'lenient': 80}",
+    "elapsed": 11.52,
+    "timestamp": "2026-04-16T22:55:24.707870"
+  },
+  {
+    "id": "UAT-3-04",
+    "name": "Verbose Output",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 3.85,
+    "timestamp": "2026-04-16T22:55:28.562055"
+  },
+  {
+    "id": "UAT-3-05",
+    "name": "Progress Bars",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 3.87,
+    "timestamp": "2026-04-16T22:55:32.435725"
+  },
+  {
+    "id": "UAT-3-06",
+    "name": "Safe Mode",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 4.83,
+    "timestamp": "2026-04-16T22:55:37.266359"
+  },
+  {
+    "id": "UAT-3-07",
+    "name": "Discovery Mode \u2014 nmap",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 3.95,
+    "timestamp": "2026-04-16T22:55:41.220820"
+  },
+  {
+    "id": "UAT-3-08",
+    "name": "Cache Mode",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "run1=3.9s run2=3.9s",
+    "actual": "",
+    "elapsed": 7.77,
+    "timestamp": "2026-04-16T22:55:48.987091"
+  },
+  {
+    "id": "UAT-3-09",
+    "name": "Quiet Mode \u2014 Banner Suppression",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 3.97,
+    "timestamp": "2026-04-16T22:55:52.956351"
+  },
+  {
+    "id": "UAT-3-10",
+    "name": "Rate Limiting",
+    "category": "CLI - Config-File Mode",
+    "status": "PASS",
+    "notes": "",
+    "actual": "rate_limit=2.0",
+    "elapsed": 3.83,
+    "timestamp": "2026-04-16T22:55:56.784451"
+  },
+  {
+    "id": "UAT-4-01",
+    "name": "Lab Health Check \u2014 All Core Services Up",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "{443: True, 8443: True, 9443: True, 10443: True, 11443: True, 8444: True, 8000: True, 2222: True, 5555: True}",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.786729"
+  },
+  {
+    "id": "UAT-4-02",
+    "name": "Modern TLS Service (Port 443)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.786804"
+  },
+  {
+    "id": "UAT-4-03",
+    "name": "Legacy TLS Service (Port 8443)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.786867"
+  },
+  {
+    "id": "UAT-4-04",
+    "name": "Expired Certificate (Port 9443)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.786938"
+  },
+  {
+    "id": "UAT-4-05",
+    "name": "Self-Signed Certificate (Port 10443)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.787000"
+  },
+  {
+    "id": "UAT-4-06",
+    "name": "mTLS Required (Port 11443)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.787055"
+  },
+  {
+    "id": "UAT-4-07",
+    "name": "HTTP on TLS-like Port (Port 8444)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.787115"
+  },
+  {
+    "id": "UAT-4-08",
+    "name": "Legacy HTTP Plaintext (Port 8000)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.787175"
+  },
+  {
+    "id": "UAT-4-09",
+    "name": "SSH Alt Port (Port 2222)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.787236"
+  },
+  {
+    "id": "UAT-4-10",
+    "name": "Unknown Port (Port 5555)",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:55:56.787326"
+  },
+  {
+    "id": "UAT-4-11",
+    "name": "Full Core Lab Scan via QuRisk CLI",
+    "category": "Lab Environment - Core",
+    "status": "PASS",
+    "notes": "10 DB rows, ports covered=[443, 2222, 8000, 8443, 8444, 9443, 10443, 11443]",
+    "actual": "",
+    "elapsed": 5.87,
+    "timestamp": "2026-04-16T22:56:02.659385"
+  },
+  {
+    "id": "UAT-5-01",
+    "name": "Phase A Profile Services",
+    "category": "Lab Environment - Extended",
+    "status": "SKIP",
+    "notes": "Container group check \u2014 see UAT-4-01",
+    "actual": "",
+    "elapsed": 0,
+    "timestamp": "2026-04-16T22:56:02.659430"
+  },
+  {
+    "id": "UAT-5-02",
+    "name": "Weak TLS Chain \u2014 Missing Intermediate (Port 13443)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.659642"
+  },
+  {
+    "id": "UAT-5-03",
+    "name": "Weak RSA-1024 Key (Port 14443)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.659740"
+  },
+  {
+    "id": "UAT-5-04",
+    "name": "SHA-1 Signed Certificate (Port 15443)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.659830"
+  },
+  {
+    "id": "UAT-5-05",
+    "name": "JWT Profile Services",
+    "category": "Lab Environment - Extended",
+    "status": "SKIP",
+    "notes": "Container group check \u2014 see UAT-4-01",
+    "actual": "",
+    "elapsed": 0,
+    "timestamp": "2026-04-16T22:56:02.659833"
+  },
+  {
+    "id": "UAT-5-06",
+    "name": "JWT RS256 (Good) (Port 20001)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.659899"
+  },
+  {
+    "id": "UAT-5-07",
+    "name": "JWT HS256 (Symmetric Weak) (Port 20002)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.659965"
+  },
+  {
+    "id": "UAT-5-08",
+    "name": "JWT RSA-1024 Weak Key (Port 20003)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.660036"
+  },
+  {
+    "id": "UAT-5-09",
+    "name": "JWT Algorithm None (Port 20004)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.660107"
+  },
+  {
+    "id": "UAT-5-11",
+    "name": "SSH Weak Profile (Port 20022)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.660173"
+  },
+  {
+    "id": "UAT-5-13",
+    "name": "Identity Profile \u2014 Keycloak TLS (Port 15449)",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "open=True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:02.660235"
+  },
+  {
+    "id": "UAT-5-10",
+    "name": "Full JWT Lab Scan",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 5.76,
+    "timestamp": "2026-04-16T22:56:08.421526"
+  },
+  {
+    "id": "UAT-5-12",
+    "name": "Weak SSH Scan via QuRisk CLI",
+    "category": "Lab Environment - Extended",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.73,
+    "timestamp": "2026-04-16T22:56:09.154814"
+  },
+  {
+    "id": "UAT-6-01",
+    "name": "Findings Output \u2014 JSON Structure",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "['host', 'port', 'recommendation', 'severity', 'title']",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155186"
+  },
+  {
+    "id": "UAT-6-02",
+    "name": "TLS Findings \u2014 Cipher Suite Detection",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "cipher=ECDHE-RSA-AES256-GCM-SHA384, tls=TLSv1.2",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155444"
+  },
+  {
+    "id": "UAT-6-03",
+    "name": "Certificate Expiry Detection",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "cert_not_after=2026-02-20 15:17:33.000000",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155556"
+  },
+  {
+    "id": "UAT-6-04",
+    "name": "Self-Signed Certificate Detection",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "issuer==CN=selfsigned.chaos.local,OU=SelfSigned,O=ChaosLab,L=Lab,ST=NY,C=US: True",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155649"
+  },
+  {
+    "id": "UAT-6-05",
+    "name": "mTLS Endpoint Classification",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "protocol=TLS, tls_blocker=None",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155737"
+  },
+  {
+    "id": "UAT-6-06",
+    "name": "Plaintext HTTP Finding \u2014 Severity Check",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "1 finding(s) for port 8000",
+    "actual": "severity=HIGH",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155786"
+  },
+  {
+    "id": "UAT-6-07",
+    "name": "HTTP on TLS-Like Port Detection",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "1 finding(s) for port 8444",
+    "actual": "severity=HIGH",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155791"
+  },
+  {
+    "id": "UAT-6-08",
+    "name": "Quantum Safety Classification \u2014 SSH Algorithms",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "1 finding(s) for port 2222",
+    "actual": "severity=INFO",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155794"
+  },
+  {
+    "id": "UAT-6-09",
+    "name": "Scorecard Output \u2014 CLI Review",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155904"
+  },
+  {
+    "id": "UAT-6-10",
+    "name": "Roadmap Output \u2014 Migration Phases",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.155993"
+  },
+  {
+    "id": "UAT-6-11",
+    "name": "CBOM JSON Structure",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.156067"
+  },
+  {
+    "id": "UAT-6-12",
+    "name": "CBOM XML Validity",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.156283"
+  },
+  {
+    "id": "UAT-6-13",
+    "name": "Intelligence JSON \u2014 Machine-Readable Output",
+    "category": "Cryptographic Findings",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:09.156342"
+  },
+  {
+    "id": "UAT-7-18",
+    "name": "PDF Export \u2014 API Endpoint Direct Test",
+    "category": "Web Dashboard UI",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.88,
+    "timestamp": "2026-04-16T22:56:10.561995"
+  },
+  {
+    "id": "UAT-7-19",
+    "name": "Dashboard \u2014 API Latest Scan Endpoint",
+    "category": "Web Dashboard UI",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.01,
+    "timestamp": "2026-04-16T22:56:10.568398"
+  },
+  {
+    "id": "UAT-8-01",
+    "name": "Score Range Validation",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "score=75",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:10.803372"
+  },
+  {
+    "id": "UAT-8-02",
+    "name": "Confidence Score \u2014 Low Coverage Scenario",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:10.803556"
+  },
+  {
+    "id": "UAT-8-03",
+    "name": "Score Impact \u2014 Adding Plaintext HTTP",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "{'tls_only': 78, 'tls_plus_http': 72}",
+    "elapsed": 11.75,
+    "timestamp": "2026-04-16T22:56:22.552351"
+  },
+  {
+    "id": "UAT-8-06",
+    "name": "Roadmap Evidence Links",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.552670"
+  },
+  {
+    "id": "UAT-8-08",
+    "name": "validate.py \u2014 Clean Output Directory Validation",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "ValidationResult(ok=False, errors=['intelligence.roadmap must be a list'], warnings=[])\n",
+    "elapsed": 0.41,
+    "timestamp": "2026-04-16T22:56:22.961085"
+  },
+  {
+    "id": "UAT-8-09",
+    "name": "Identity Scoring \u2014 Kerberos Weak Etype Penalty",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.962093"
+  },
+  {
+    "id": "UAT-8-10",
+    "name": "Identity Scoring \u2014 SAML Weak Signing Certificate Penalty",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.962179"
+  },
+  {
+    "id": "UAT-8-11",
+    "name": "Identity Scoring \u2014 DNSSEC Weak Algorithm Penalty",
+    "category": "Scoring & Intelligence",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.962243"
+  },
+  {
+    "id": "UAT-9-01",
+    "name": "All Output Files Generated",
+    "category": "Report Generation",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.962748"
+  },
+  {
+    "id": "UAT-9-02",
+    "name": "Executive Summary \u2014 Structure",
+    "category": "Report Generation",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.962997"
+  },
+  {
+    "id": "UAT-9-03",
+    "name": "Technical Findings \u2014 Per-Endpoint Detail",
+    "category": "Report Generation",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.963185"
+  },
+  {
+    "id": "UAT-9-04",
+    "name": "Run Stats \u2014 Timing Data",
+    "category": "Report Generation",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.963387"
+  },
+  {
+    "id": "UAT-9-05",
+    "name": "HTML Report Generation",
+    "category": "Report Generation",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.963603"
+  },
+  {
+    "id": "UAT-9-07",
+    "name": "CBOM JSON \u2014 Cross-Scanner Algorithm Coverage",
+    "category": "Report Generation",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.963809"
+  },
+  {
+    "id": "UAT-9-08",
+    "name": "CBOM XML \u2014 Schema Validation",
+    "category": "Report Generation",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:22.964147"
+  },
+  {
+    "id": "UAT-10-01",
+    "name": "No Reachable Targets \u2014 Graceful Handling",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "Graceful exit. code=0, files=4",
+    "actual": "files=4",
+    "elapsed": 2.8,
+    "timestamp": "2026-04-16T22:56:25.764353"
+  },
+  {
+    "id": "UAT-10-02",
+    "name": "Config File Not Found \u2014 Helpful Error",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "",
+    "actual": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 QU.I.R.K.  v4.2.0 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502      QQQQQQQQQ     UUUUUUUU     UUUUUUUUIIIIIIIIIIRRRRRRRRRRRRRRRRR          \u2502\n\u2502 KKKKKKKKK    KKKKKKK                ",
+    "elapsed": 0.36,
+    "timestamp": "2026-04-16T22:56:26.125993"
+  },
+  {
+    "id": "UAT-10-03",
+    "name": "Invalid Config YAML \u2014 Parse Error",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "",
+    "actual": "\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 QU.I.R.K.  v4.2.0 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502       ___           ___                       ___           ___              \u2502\n\u2502      /\\  \\         /\\__\\          __",
+    "elapsed": 0.36,
+    "timestamp": "2026-04-16T22:56:26.486505"
+  },
+  {
+    "id": "UAT-10-04",
+    "name": "Mixed Reachable/Unreachable Targets",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 3.87,
+    "timestamp": "2026-04-16T22:56:30.351815"
+  },
+  {
+    "id": "UAT-10-05",
+    "name": "Rate Limiting \u2014 Token Bucket",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 4.94,
+    "timestamp": "2026-04-16T22:56:35.296771"
+  },
+  {
+    "id": "UAT-10-06",
+    "name": "Concurrent Scan Safety \u2014 No Race Conditions",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 3.95,
+    "timestamp": "2026-04-16T22:56:39.243215"
+  },
+  {
+    "id": "UAT-10-07",
+    "name": "Database Persistence \u2014 Multiple Scans",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "2 distinct scan timestamps",
+    "actual": "",
+    "elapsed": 7.68,
+    "timestamp": "2026-04-16T22:56:46.922997"
+  },
+  {
+    "id": "UAT-10-09",
+    "name": "SSH Scan Without ssh-audit Installed",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "ssh-audit not installed \u2014 no crash observed. code=0",
+    "actual": "",
+    "elapsed": 0.69,
+    "timestamp": "2026-04-16T22:56:47.613751"
+  },
+  {
+    "id": "UAT-10-10",
+    "name": "sslyze Not Installed \u2014 Graceful Degradation",
+    "category": "Edge Cases & Error Handling",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 3.86,
+    "timestamp": "2026-04-16T22:56:51.469736"
+  },
+  {
+    "id": "UAT-11-01",
+    "name": "Complete Workflow \u2014 Lab to Dashboard",
+    "category": "End-to-End Workflow",
+    "status": "PASS",
+    "notes": "",
+    "actual": "12 files generated",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:51.469874"
+  },
+  {
+    "id": "UAT-11-03",
+    "name": "CLI to Dashboard Handoff \u2014 Report Consistency",
+    "category": "End-to-End Workflow",
+    "status": "PASS",
+    "notes": "",
+    "actual": "",
+    "elapsed": 0.0,
+    "timestamp": "2026-04-16T22:56:51.470394"
+  },
+  {
+    "id": "UAT-11-04",
+    "name": "Repeat Scan \u2014 Delta Detection",
+    "category": "End-to-End Workflow",
+    "status": "PASS",
+    "notes": "",
+    "actual": "2 runs",
+    "elapsed": 7.69,
+    "timestamp": "2026-04-16T22:56:59.164512"
+  }
+]

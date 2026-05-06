@@ -21,8 +21,11 @@ RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
         python3 python3-pip \
         openssl libssl1.0.0 \
+        gcc libffi-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir \
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install --no-cache-dir setuptools wheel && \
+    python3 -m pip install --no-cache-dir --no-build-isolation \
     "cryptography==2.9.2" \
     "pyOpenSSL==19.1.0"
 COPY --from=gobuilder /app-binary /usr/local/bin/app-binary

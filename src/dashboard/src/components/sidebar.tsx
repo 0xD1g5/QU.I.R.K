@@ -8,17 +8,26 @@ import {
   Shield,
   Database,
   GitBranch,
+  Fingerprint,
+  TrendingUp,
+  Activity,
+  HardDrive,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ModeToggle } from "@/components/mode-toggle"
+import { ScanSelector } from "@/components/ScanSelector"
 
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },
   { path: "/findings", label: "Findings", Icon: AlertTriangle },
+  { path: "/identity", label: "Identity", Icon: Fingerprint },
+  { path: "/motion", label: "Motion", Icon: Activity },
+  { path: "/data-at-rest", label: "Data at Rest", Icon: HardDrive },
   { path: "/certificates", label: "Certificates", Icon: Shield },
   { path: "/cbom", label: "CBOM Viewer", Icon: Database },
   { path: "/roadmap", label: "Migration Roadmap", Icon: GitBranch },
+  { path: "/trends", label: "Trends", Icon: TrendingUp },
 ]
 
 export function Sidebar() {
@@ -57,6 +66,7 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
                     "min-h-[44px]", // accessibility touch target
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     isActive
                       ? "text-foreground border-b-2 lg:border-b-0 lg:border-l-2 border-accent bg-accent/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/5",
@@ -74,6 +84,9 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* Scan history selector — only shown when >1 scan exists */}
+      <ScanSelector />
 
       {/* Theme toggle at bottom */}
       <div className="px-2 py-4 border-t border-border">

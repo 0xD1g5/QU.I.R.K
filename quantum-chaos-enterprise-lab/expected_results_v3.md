@@ -1,5 +1,7 @@
 # Crypto Chaos Enterprise Lab — Expected Results v3
 
+> **Superseded by `expected_results_v4.md`** (Phase 40, v4.5 milestone, 2026-04-29). This file is retained for historical reference only — it predates the v4.3 DAR profiles (`database`, `storage-s3`, `vault`) and the v4.4 messaging profiles (`email`, `broker`), and contains drift in the SAML port (8880 vs compose 8080) and several profile names (`bind9` vs `dnssec`, `simpla-samlphp` vs `saml`, `samba-dc` vs `kerberos`). Use `expected_results_v4.md` for all UAT and consultant reference work.
+
 This file is the **source of truth** (“oracle”) for what the lab should expose and how a scanner should classify it.
 Host assumed: `127.0.0.1`
 
@@ -218,3 +220,76 @@ docker compose --profile ssh-weak up -d && sleep 5 && ssh-audit localhost:20022
 docker compose --profile ldaps up -d && sleep 5 && sslyze --targets localhost:636
 ```
 **Expected:** sslyze returns TLS certificate chain findings including self-signed cert detection.
+
+
+
+## Phase 25 — DNSSEC Profile (profile: bind9)
+
+| Zone | Algorithm | Algorithm ID | Expected Finding | Severity |
+|------|-----------|-------------|-----------------|----------|
+| weak.example.com | RSASHA1 | 5 | DNSSEC weak signing algorithm (SHA-1 collision-vulnerable) | CRITICAL |
+| weak.example.com | RSASHA1-NSEC3-SHA1 | 7 | DNSSEC weak signing algorithm (SHA-1) | CRITICAL |
+| unsigned.example.com | NONE | — | Unsigned zone — DNS responses are unauthenticated | HIGH |
+| nsec.example.com | ECDSAP256SHA256 | 13 | NSEC zone enumeration exposure | MEDIUM |
+
+**Scanner validation command:**
+```
+docker compose --profile bind9 up -d && sleep 5 && quirk scan --targets weak.example.com unsigned.example.com nsec.example.com
+```
+**Expected:** DNSSEC scanner returns >= 1 CRITICAL finding (RSASHA1) for weak.example.com, 1 HIGH finding (unsigned zone) for unsigned.example.com, and 1 MEDIUM finding (NSEC) for nsec.example.com. ECDSAP256SHA256 zones produce no algorithm severity finding.
+
+
+
+## Phase 25 — SAML/OIDC Profile (profile: simpla-samlphp)
+
+| Port | Service | Certificate | Expected Finding | Severity |
+|-----:|---------|-------------|-----------------|----------|
+| 8880 | simpla-samlphp | RSA-1024 signing cert | Weak SAML signing certificate: RSA-1024 | CRITICAL |
+| 8880 | simpla-samlphp | SHA-1 algorithm URI | SHA-1 algorithm URI detected in SAML metadata | HIGH |
+
+**Scanner validation command:**
+```
+docker compose --profile simpla-samlphp up -d && sleep 10 && quirk scan --targets http://localhost:8880/simplesaml/saml2/idp/metadata.php
+```
+**Expected:** SAML scanner returns 1 CRITICAL finding for RSA-1024 signing certificate and optionally 1 HIGH finding if SHA-1 algorithm URI is present in metadata. Findings appear in the Identity tab (source="saml"), not the Findings tab.
+
+
+
+## Phase 25 — Kerberos Profile (profile: samba-dc)
+
+| Port | Service | Etype ID | Etype Name | Expected Finding | Severity |
+|-----:|---------|---------|-----------|-----------------|----------|
+| 88 | samba-dc | 23 | rc4-hmac | Kerberos weak etype: rc4-hmac | HIGH |
+| 88 | samba-dc | 17 | aes128-cts-hmac-sha1-96 | Kerberos weak etype: aes128-cts-hmac-sha1-96 | HIGH |
+
+**Scanner validation command:**
+```
+docker compose --profile samba-dc up -d && sleep 15 && quirk scan --targets localhost:88
+```
+
+
+
+## Phase 27 — Database SSL Detection (profile: database)
+
+Start chaos lab: `docker compose --profile database up -d`
+
+### postgres-ssl-off (port 25432)
+
+**Target:** `localhost:25432`
+**Expected finding:** HIGH `DB_POSTGRESQL_SSL_OFF`
+**service_detail:** `PostgreSQL/ssl-off`
+**Protocol:** `POSTGRESQL`
+
+When `SHOW ssl` returns `'off'`, the scanner must emit a HIGH finding immediately
+without attempting further pg_stat_ssl queries.
+
+### mysql-ssl-off (port 23306)
+
+**Target:** `localhost:23306`
+**Expected finding:** HIGH `DB_MYSQL_SSL_OFF`
+**service_detail:** `MySQL/ssl-off`
+**Protocol:** `MYSQL`
+
+When `SHOW STATUS LIKE 'Ssl_cipher'` returns an empty cipher value, the scanner
+must emit a HIGH finding indicating SSL is globally disabled on this MySQL instance.
+**Expected:** DB scanner returns 1 HIGH finding (`DB_MYSQL_SSL_OFF`) for `localhost:23306`.

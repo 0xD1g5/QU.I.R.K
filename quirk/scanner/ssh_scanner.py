@@ -101,15 +101,23 @@ def scan_ssh_targets(
     if not targets:
         return results
 
+    # Phase 41 / D-08: read per-scanner timeout + concurrency from canonical sub-table /
+    # dedicated flat field. No more cfg.scan.timeout_seconds / cfg.scan.concurrency mutation.
+    if hasattr(cfg.scan, "timeouts"):
+        ssh_timeout = cfg.scan.timeouts.ssh_seconds
+    else:
+        ssh_timeout = cfg.scan.timeout_seconds
+    ssh_workers = getattr(cfg.scan, "ssh_concurrency", cfg.scan.concurrency)
+
     if logger:
         logger.stamp(
             f"Starting SSH scans: {len(targets)} targets "
-            f"(workers={cfg.scan.concurrency})"
+            f"(workers={ssh_workers})"
         )
 
-    with ThreadPoolExecutor(max_workers=cfg.scan.concurrency) as ex:
+    with ThreadPoolExecutor(max_workers=ssh_workers) as ex:
         futures = [
-            ex.submit(scan_ssh_one, host, port, cfg.scan.timeout_seconds, logger)
+            ex.submit(scan_ssh_one, host, port, ssh_timeout, logger)
             for (host, port) in targets
         ]
         for f in as_completed(futures):

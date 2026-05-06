@@ -2,7 +2,7 @@ import json
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 from rich.table import Table
@@ -20,9 +20,9 @@ from quirk.cbom import build_cbom, write_cbom_files
 from quirk.reports.html_renderer import render_html_report, render_pdf_report
 
 
-PLATFORM_VERSION = "4.0"
+PLATFORM_VERSION = "4.4.0"
 SCHEMA_VERSION = 2
-INTELLIGENCE_VERSION = "4.0.0"
+INTELLIGENCE_VERSION = "4.4.0"
 
 
 def _utc_stamp() -> str:
@@ -32,11 +32,6 @@ def _utc_stamp() -> str:
 def _json_dump(path: str, obj: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2, sort_keys=True, default=str)
-
-
-def _count_findings(findings: List[Dict[str, Any]], title_contains: str) -> int:
-    t = title_contains.lower()
-    return sum(1 for f in (findings or []) if t in str(f.get("title", "")).lower())
 
 
 def _extract_cert_key_type(ep: Any) -> Optional[str]:
@@ -55,51 +50,6 @@ def _extract_cert_key_type(ep: Any) -> Optional[str]:
             if cert.get(k):
                 return str(cert.get(k)).upper()
     return None
-
-
-def _extract_cert_dates(ep: Any) -> Tuple[Optional[datetime], Optional[datetime]]:
-    nb = getattr(ep, "cert_not_before", None)
-    na = getattr(ep, "cert_not_after", None)
-
-    def _to_dt(x):
-        if x is None:
-            return None
-        if isinstance(x, datetime):
-            return x
-        try:
-            return datetime.fromisoformat(str(x))
-        except Exception:
-            return None
-
-    return _to_dt(nb), _to_dt(na)
-
-
-def _is_self_signed(ep: Any) -> Optional[bool]:
-    v = getattr(ep, "cert_self_signed", None)
-    if isinstance(v, bool):
-        return v
-
-    subj = getattr(ep, "cert_subject", None)
-    issuer = getattr(ep, "cert_issuer", None)
-    if subj and issuer:
-        return str(subj) == str(issuer)
-
-    cert = getattr(ep, "cert", None)
-    if isinstance(cert, dict):
-        subj = cert.get("subject")
-        issuer = cert.get("issuer")
-        if subj and issuer:
-            return str(subj) == str(issuer)
-
-    return None
-
-
-def _mtls_present(ep: Any) -> bool:
-    for attr in ("mtls", "mtls_present", "client_auth", "requires_client_cert"):
-        v = getattr(ep, attr, None)
-        if isinstance(v, bool):
-            return v
-    return False
 
 
 def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], drivers: List[str], roadmap: List[Dict[str, Any]]) -> str:
@@ -138,7 +88,9 @@ def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def write_reports(cfg, endpoints, findings, run_stats=None):
+def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=None):
+    # D-15 (Phase 47 / Plan 03): error_endpoints is passed through to write_cbom_files
+    # so schema-validation failures can be recorded as coverage_gap WARN findings.
     outdir = cfg.output.directory
     os.makedirs(outdir, exist_ok=True)
 
@@ -162,7 +114,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
 
     # 3) Intelligence outputs — single authoritative scoring path
     evidence = build_evidence_summary(endpoints, findings)
-    score_raw = compute_readiness_score(evidence)
+    score_raw = compute_readiness_score(
+        evidence,
+        profile=cfg.intelligence.profile,
+        weights=cfg.intelligence.calibration_overrides or None,
+    )
     conf_raw = compute_confidence(evidence)
     roadmap_raw = build_phased_roadmap(evidence, score_raw)
 
@@ -195,6 +151,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
         },
         "confidence": conf,
         "roadmap": roadmap_raw,
+        "calibration": {
+            "profile": cfg.intelligence.profile,
+            "overrides_applied": bool(cfg.intelligence.calibration_overrides),
+        },
     }
     intelligence_path = os.path.join(outdir, f"intelligence-{stamp}.json")
     _json_dump(intelligence_path, intelligence)
@@ -236,7 +196,9 @@ def write_reports(cfg, endpoints, findings, run_stats=None):
 
     # 5) CBOM artifacts
     cbom = build_cbom(endpoints)
-    cbom_json_path, cbom_xml_path = write_cbom_files(cbom, outdir, stamp)
+    cbom_json_path, cbom_xml_path = write_cbom_files(
+        cbom, outdir, stamp, error_endpoints=error_endpoints
+    )
 
     # Rich scan summary table (D-05)
     _console = Console()

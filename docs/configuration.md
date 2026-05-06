@@ -64,6 +64,128 @@ scan:
 
 ---
 
+## Timeout & Retry Policy (v4.5+)
+
+Phase 41 introduced canonical `[scan.timeouts]` and `[scan.retry]` sub-tables that supersede the
+legacy flat fields. Every scanner — fingerprint, TLS, SSH, JWT, container, source, DNSSEC, SAML,
+Kerberos, Vault, database, broker, email — reads its connection timeout and retry policy from
+these sub-tables (canonical source: `quirk/config.py` `TimeoutsCfg` / `RetryCfg` dataclasses). The
+flat fields documented above (`timeout_seconds`, `fingerprint_timeout_seconds`, `tls_timeout_seconds`,
+`ssh_timeout_seconds`) remain readable for backward compatibility but emit `DeprecationWarning` on
+read; new configurations should use the sub-tables.
+
+### `[scan.timeouts]` — per-scanner connection timeouts
+
+| Slot | Type | Default (s) | Applies to |
+|------|------|-------------|------------|
+| `default_seconds` | int | `5` | Fallback for any scanner without a dedicated slot |
+| `fingerprint_seconds` | int | `4` | Fingerprint phase TCP/banner probe |
+| `tls_seconds` | int | `6` | TLS handshake / ciphersuite enumeration |
+| `ssh_seconds` | int | `6` | SSH banner + KEX exchange |
+| `jwt_seconds` | int | `10` | JWT/REST endpoint probes |
+| `container_seconds` | int | `120` | Container image binary scans (per image) |
+| `source_seconds` | int | `300` | Source-tree crypto scan (per repo) |
+| `dnssec_seconds` | int | `10` | DNSSEC record + DS chain probe |
+| `saml_seconds` | int | `10` | SAML metadata fetch |
+| `kerberos_seconds` | int | `10` | Kerberos KDC probe |
+| `vault_seconds` | int | `10` | HashiCorp Vault / KMS API call |
+| `db_connect_seconds` | int | `5` | Database driver connect (Postgres, MySQL, …) |
+| `broker_seconds` | int | `10` | Message broker probe (Kafka, RabbitMQ, Redis) |
+| `email_seconds` | int | `10` | SMTP/IMAP/POP3 STARTTLS probe |
+
+### `[scan.retry]` — retry/backoff policy
+
+| Slot | Type | Default | Description |
+|------|------|---------|-------------|
+| `retry_count` | int | `0` | Number of retries after the initial attempt (0 = no retry) |
+| `backoff_base_seconds` | float | `1.0` | Initial backoff before the first retry |
+| `backoff_max_seconds` | float | `5.0` | Backoff ceiling — exponential backoff caps here |
+
+### Deprecation notice
+
+The legacy flat fields below are still accepted but emit `DeprecationWarning` on read:
+
+| Legacy field | New canonical slot |
+|--------------|--------------------|
+| `scan.timeout_seconds` | `scan.timeouts.default_seconds` |
+| `scan.fingerprint_timeout_seconds` | `scan.timeouts.fingerprint_seconds` |
+| `scan.tls_timeout_seconds` | `scan.timeouts.tls_seconds` |
+| `scan.ssh_timeout_seconds` | `scan.timeouts.ssh_seconds` |
+
+Migrate at your earliest convenience — the flat fields will be removed in a future major release.
+
+### Overall scan upper-bound formula (D-10)
+
+The total wall-clock upper bound for a single scan run is bounded by:
+
+```
+scan_upper_bound = (
+  fingerprint_timeout * N_targets
+  + tls_timeout       * N_tls_candidates
+  + ssh_timeout       * N_ssh_candidates
+  + max(jwt_timeout, container_timeout, source_timeout, ...) * N_connector_targets
+) + 10s safety_margin
+```
+
+Where:
+- `N_targets` = number of fingerprinted hosts
+- `N_tls_candidates` = subset of targets with at least one TLS-eligible port open
+- `N_ssh_candidates` = subset of targets with at least one SSH-eligible port open
+- `N_connector_targets` = number of connector probes (JWT URLs, container images, source repos, etc.)
+- The `max(...)` term reflects connector phases running in sequence — pick the longest active connector timeout
+- `safety_margin` = 10s flat allowance for orchestration, report writing, and finalization
+
+**Worked example — single-host scan, all phases enabled:**
+
+```
+fingerprint (4s) + tls (6s) + ssh (6s) + max(jwt=10s) + safety (10s)
+= 4 + 6 + 6 + 10 + 10
+≈ 36 seconds
+```
+
+For a 100-host scan with TLS+SSH on every host and no connectors:
+
+```
+4*100 + 6*100 + 6*100 + 10
+= 400 + 600 + 600 + 10
+≈ 1610 seconds (~27 min) worst case
+```
+
+Concurrency (`concurrency: 200`) reduces wall-clock substantially below the upper bound; the formula
+is the consultant-quotable worst case, not the expected runtime.
+
+### Example TOML / YAML snippet
+
+```yaml
+scan:
+  concurrency: 200
+  ports_tls: [443, 8443]
+  timeouts:
+    default_seconds: 5
+    fingerprint_seconds: 4
+    tls_seconds: 6
+    ssh_seconds: 6
+    jwt_seconds: 10
+    container_seconds: 120
+    source_seconds: 300
+    dnssec_seconds: 10
+    saml_seconds: 10
+    kerberos_seconds: 10
+    vault_seconds: 10
+    db_connect_seconds: 5
+    broker_seconds: 10
+    email_seconds: 10
+  retry:
+    retry_count: 0
+    backoff_base_seconds: 1.0
+    backoff_max_seconds: 5.0
+```
+
+See [`docs/timeout-retry-audit.md`](timeout-retry-audit.md) for the per-scanner audit table mapping
+each scanner to its canonical timeout slot (ROBUST-04).
+
+---
+
 ## Targets Block
 
 Defines what to scan. At least one of `fqdns` or `cidrs` must have entries.
@@ -172,6 +294,25 @@ Controls the quantum-readiness scoring calibration and version metadata.
 - `lenient` — Reduces penalty weights. Use in immature environments where a score shock would be counterproductive. Suitable for a first engagement where you need to show progress rather than alarm.
 - `balanced` — Default. Production-calibrated weights designed for typical enterprise networks.
 - `strict` — Increases penalty weights. Use in high-compliance environments (FedRAMP, CNSA 2.0) where the client must demonstrate a tighter posture.
+
+#### How Score Profiles Work
+
+Score profiles adjust the weight of **crypto-agility** and **identity/certificate** scoring categories. Hygiene and TLS modernization weights are unchanged across all profiles.
+
+| Profile | Agility Weight | Identity Weight | Use Case |
+|---------|---------------|-----------------|----------|
+| `strict` | 1.4x base | 1.4x base | Post-quantum readiness assessment — amplifies crypto-agility and certificate hygiene penalties |
+| `balanced` | 1.0x (default) | 1.0x (default) | General-purpose assessment |
+| `lenient` | 0.7x base | 0.7x base | Status-quo baseline — reduces agility and identity penalties for organizations not yet planning PQC migration |
+
+Setting `calibration_overrides` in the intelligence section allows fine-grained per-weight adjustments that override profile defaults. For example:
+
+```yaml
+intelligence:
+  profile: strict
+  calibration_overrides:
+    agility_rsa_only_penalty: 4.0  # Override strict's amplified RSA penalty
+```
 
 ```yaml
 intelligence:
@@ -325,3 +466,34 @@ intelligence:
   profile: "balanced"                   # lenient|balanced|strict
   calibration_overrides: {}
 ```
+
+---
+
+## Compliance Frameworks
+
+QUIRK's `COMPLIANCE_MAP` (in `quirk/compliance/__init__.py`) maps every finding
+category to one or more of the following frameworks. As of Phase 52 (v4.7), all
+frameworks are kept fresh by the `STALENESS_THRESHOLD_DAYS` gate and verified
+by `quirk doctor` before each scan.
+
+| Framework | Version | Builder helper |
+|-----------|---------|----------------|
+| PCI-DSS | 4.0.1 | `_pci(control)` |
+| HIPAA | 2024-rev (45 CFR §164.312) | `_hipaa(control)` |
+| FIPS 140-3 | NIST FIPS 140-3 | `_fips(control)` |
+| SOC2 | 2017-rev (Trust Services Criteria) | `_soc2(control)` — Phase 52 |
+| ISO 27001 | ISO 27001:2022 (8.x clause numbering) | `_iso(control)` — Phase 52 |
+
+**ISO 27001:2022 control assignments** (Phase 52):
+- `8.24` — Use of cryptography (algorithm/key-size findings)
+- `8.26` — Application security requirements (TLS/protocol transport findings)
+- `8.28` — Secure coding (source-code scanner findings)
+
+**SOC2 CC6.x control assignments** (Phase 52):
+- `CC6.6` — Logical access controls (authentication, key, certificate findings)
+- `CC6.7` — Transmission encryption (cipher, protocol, transport findings)
+
+CBOM algorithm components carry a `quirk:fips140-3-status` property
+(`approved` or `non-approved`) derived from the NIST quantum security level.
+The `certified` tier is reserved for a future phase that will ingest CMVP
+module attestation.
