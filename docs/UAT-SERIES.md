@@ -6940,9 +6940,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - `.venv/bin/python3 -m pytest tests/test_cbom_builder.py::test_algorithm_component_has_fips_property -q` exits 0.
 - `.venv/bin/python3 -m pytest tests/test_cbom_builder.py::test_fips_status_helper -q` exits 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** 2 passed in 0.59s. Both FIPS pytest gates green.
 
 ---
 
@@ -6966,9 +6966,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 3: `A.x.x count: 0`.
 - All ISO 27001:2022 entries have `version == "ISO 27001:2022"` (not `"ISO 27001"` or `"2022"`).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** 4 passed in 0.01s. SOC2 CC6.x and ISO 27001:2022 schema gates all green.
 
 ---
 
@@ -7048,9 +7048,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 3 (if file present): both `True True` printed.
 - `grep -c "ports_scanned\|hosts_scanned" run_scan.py` returns at least 2.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** 1 passed in 1.18s. run-stats ports_scanned and hosts_scanned fields confirmed present.
 
 ---
 
@@ -7074,8 +7074,8 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 3: exits 0; no `DeprecationWarning` emitted.
 - `grep -c "import defusedxml.ElementTree" quirk/scanner/saml_scanner.py` returns 1 (second-tier fallback preserved).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** 26 passed in 0.29s under -W error::DeprecationWarning. PytestUnknownMarkWarning on @pytest.mark.integration is a pytest registry nit — not a DeprecationWarning, does not trip the gate.
 
 ---
