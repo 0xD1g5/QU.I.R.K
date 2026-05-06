@@ -1016,7 +1016,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 **Milestone Goal:** Extend QUIRK from a compliance-tagged scanner into a full governance platform by completing the compliance framework and integrating the QRAMM maturity model — making QUIRK's primary consulting deliverable a scored governance assessment grounded in live scanner findings.
 
 - [x] **Phase 51: QRAMM Core Infrastructure** - SQLite tables, FastAPI CRUD, 120-question catalog, scoring engine, and datetime.utcnow fix — the backend foundation all QRAMM phases depend on (completed 2026-05-06)
-- [ ] **Phase 52: Compliance Uplift & Health Check** - SOC2/ISO 27001 framework extensions, CBOM FIPS 140-3 annotations, `quirk doctor` CLI, and four tech debt items (parallel to Phase 51)
+- [x] **Phase 52: Compliance Uplift & Health Check** - SOC2/ISO 27001 framework extensions, CBOM FIPS 140-3 annotations, `quirk doctor` CLI, and four tech debt items (parallel to Phase 51) (completed 2026-05-06)
 - [ ] **Phase 53: QRAMM Evidence Bridge** - Auto-populate CVI dimension answers from live scanner findings via SESSION_BRACKET scan-window; suggested_answer storage with confirmation workflow
 - [ ] **Phase 54: QRAMM Assessment UI & Scorecard** - Org Profile wizard, 120-question dimension tabs, answer persistence, radar chart scorecard
 - [ ] **Phase 55: QRAMM Compliance Mapping View** - 8-framework coverage table, per-practice relevance scores, staleness CLI and CI gate
@@ -1057,16 +1057,16 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   7. `quirk/scanner/saml_scanner.py` imports raw `lxml.etree` with `resolve_entities=False` and `no_network=True`; all 27 existing SAML tests pass GREEN
 **Plans**: 6 plans
 **Wave 0**
-- [ ] 52-01-PLAN.md — Wave 0 test scaffolding (FIPS, SOC2/ISO, doctor, run-stats stubs)
+- [x] 52-01-PLAN.md — Wave 0 test scaffolding (FIPS, SOC2/ISO, doctor, run-stats stubs)
 
 **Wave 1** *(blocked on Wave 0 completion)*
-- [ ] 52-02-PLAN.md — CBOM FIPS 140-3 status annotation (COMPLY-10)
-- [ ] 52-03-PLAN.md — SOC2 + ISO 27001:2022 COMPLIANCE_MAP extension (COMPLY-11/12)
-- [ ] 52-04-PLAN.md — quirk doctor CLI subcommand (DOCS-05)
-- [ ] 52-05-PLAN.md — Tech debt closures: lab.sh PROFILE_ARGS, run-stats fields, lxml migration (DEBT-02/03/04)
+- [x] 52-02-PLAN.md — CBOM FIPS 140-3 status annotation (COMPLY-10)
+- [x] 52-03-PLAN.md — SOC2 + ISO 27001:2022 COMPLIANCE_MAP extension (COMPLY-11/12)
+- [x] 52-04-PLAN.md — quirk doctor CLI subcommand (DOCS-05)
+- [x] 52-05-PLAN.md — Tech debt closures: lab.sh PROFILE_ARGS, run-stats fields, lxml migration (DEBT-02/03/04)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 52-06-PLAN.md — Documentation, UAT-SERIES, Obsidian phase note + sync
+- [x] 52-06-PLAN.md — Documentation, UAT-SERIES, Obsidian phase note + sync
 
 **Cross-cutting constraints:**
 - Every CBOM algorithm component must carry `quirk:fips140-3-status` (Wave 1 → Wave 2 verification dependency)
@@ -1122,7 +1122,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 51. QRAMM Core Infrastructure | v4.7 | 6/6 | Complete    | 2026-05-06 |
-| 52. Compliance Uplift & Health Check | v4.7 | 0/TBD | Not started | - |
+| 52. Compliance Uplift & Health Check | v4.7 | 6/6 | Complete   | 2026-05-06 |
 | 53. QRAMM Evidence Bridge | v4.7 | 0/TBD | Not started | - |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 0/TBD | Not started | - |
 | 55. QRAMM Compliance Mapping View | v4.7 | 0/TBD | Not started | - |
