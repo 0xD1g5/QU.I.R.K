@@ -1054,14 +1054,23 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   4. `quirk doctor` runs and exits code 0 when all non-informational checks pass; exits code 1 if Python version is unsupported, a required binary is missing, compliance or QRAMM frameworks are stale, or `quirk.db` is unreachable; output uses `[✓]` / `[!]` / `[✗]` symbols
   5. `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults — the fix is verified with a smoke test showing the correct profile name in `lab.sh` startup output
   6. `run-stats-*.json` output includes `ports_scanned` (sorted list) and `hosts_scanned` (sorted list) derived from the actual scan pipeline targets
-  7. `quirk/scanner/saml_scanner.py` imports raw `lxml.etree` with `resolve_entities=False` and `no_network=True`; all 25 existing SAML tests pass GREEN
+  7. `quirk/scanner/saml_scanner.py` imports raw `lxml.etree` with `resolve_entities=False` and `no_network=True`; all 27 existing SAML tests pass GREEN
 **Plans**: 6 plans
+**Wave 0**
 - [ ] 52-01-PLAN.md — Wave 0 test scaffolding (FIPS, SOC2/ISO, doctor, run-stats stubs)
+
+**Wave 1** *(blocked on Wave 0 completion)*
 - [ ] 52-02-PLAN.md — CBOM FIPS 140-3 status annotation (COMPLY-10)
 - [ ] 52-03-PLAN.md — SOC2 + ISO 27001:2022 COMPLIANCE_MAP extension (COMPLY-11/12)
 - [ ] 52-04-PLAN.md — quirk doctor CLI subcommand (DOCS-05)
 - [ ] 52-05-PLAN.md — Tech debt closures: lab.sh PROFILE_ARGS, run-stats fields, lxml migration (DEBT-02/03/04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 52-06-PLAN.md — Documentation, UAT-SERIES, Obsidian phase note + sync
+
+**Cross-cutting constraints:**
+- Every CBOM algorithm component must carry `quirk:fips140-3-status` (Wave 1 → Wave 2 verification dependency)
+- `quirk doctor` depends on `quirk.compliance.status_report()` being fully extended before doctor tests pass GREEN
 
 ### Phase 53: QRAMM Evidence Bridge
 **Goal**: When a QRAMM assessment session is created, up to 30 CVI dimension questions are auto-populated with `suggested_answer` values derived from the latest scan's `CryptoEndpoint` rows — reducing manual assessment effort and grounding the governance score in live scanner evidence

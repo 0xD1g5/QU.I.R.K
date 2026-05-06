@@ -53,7 +53,7 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 - [ ] **DEBT-01**: All `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)` across `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected modules (BACK-56); resolves Python 3.12+ `DeprecationWarning`
 - [ ] **DEBT-02**: `lab.sh` PROFILE_ARGS CLI precedence fixed — inbound env value is snapshotted before `source .env` so `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults (BACK-87)
 - [ ] **DEBT-03**: `run-stats-*.json` output includes `ports_scanned` (sorted list of all ports that entered the scan pipeline) and `hosts_scanned` (sorted list of all scanned hosts), closing UAT-3-02 verification gap (BACK-85)
-- [ ] **DEBT-04**: `quirk/scanner/saml_scanner.py` migrated from deprecated `defusedxml.lxml` to raw `lxml.etree` with `resolve_entities=False` and `no_network=True` parser options; all 25 existing SAML tests pass GREEN (BACK-67)
+- [ ] **DEBT-04**: `quirk/scanner/saml_scanner.py` migrated from deprecated `defusedxml.lxml` to raw `lxml.etree` with `resolve_entities=False` and `no_network=True` parser options; all 27 existing SAML tests pass GREEN (BACK-67)
 
 ---
 

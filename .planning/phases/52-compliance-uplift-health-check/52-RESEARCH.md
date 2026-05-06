@@ -101,6 +101,7 @@ Phase 52 is a four-track parallel phase requiring no new pip dependencies. All w
 | rich | 14.3.3 [VERIFIED: pip show in project venv] | Rich terminal output; `Console`, `Table` | Already in `pyproject.toml`; used throughout QUIRK writers |
 | lxml | 6.0.1 [VERIFIED: project venv] | XML parsing for SAML migration | Already in `pyproject.toml`; replaces `defusedxml.lxml` |
 | defusedxml | 0.7.1 [VERIFIED: project venv] | Still in deps for fallback stdlib path | Remains for `defusedxml.ElementTree` fallback when `lxml` absent |
+| PyYAML | >=6.0 [in pyproject.toml] | `config.yaml` validation in `quirk doctor` `_check_config()` | Already in project deps; used via `yaml.safe_load()` |
 
 ### No New Dependencies
 Phase 52 explicitly requires zero new pip dependencies [VERIFIED: CONTEXT.md, STATE.md v4.7-D-01 scope].
@@ -504,17 +505,11 @@ All 23 COMPLIANCE_MAP keys and their existing framework coverage (for D-09 parit
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **DEBT-03 exact placement**
-   - What we know: `run_stats["counts"]["ports_scanned"]` and `run_stats["counts"]["hosts_scanned"]` already exist in the source code (run_scan.py:534–535). A matching run-stats JSON from April 2026 does NOT have these fields (predates the code).
-   - What's unclear: Does REQUIREMENTS.md DEBT-03 require them at `run_stats["ports_scanned"]` (top-level) or is `run_stats["counts"]["ports_scanned"]` (nested) the correct location? The UAT-3-02 note references "run-stats ports_scanned" without nesting indication.
-   - Recommendation: Plan should verify that a fresh scan produces these fields in the output JSON. If already present under `counts`, DEBT-03 may be a verification-only task, not a code task.
+1. **DEBT-03 exact placement** — RESOLVED: D-16 (CONTEXT.md) specifies `run_stats` dict in `run_scan.py` before `write_reports()` call. Plan 05 Task 3 implements a conditional: verify top-level fields exist first (they may already from the code at run_scan.py:534–535); if only nested under `counts`, promote to top-level. Either way the acceptance criterion is `run-stats JSON contains top-level "ports_scanned" and "hosts_scanned"`.
 
-2. **`quirk doctor` config.yaml path**
-   - What we know: Doctor needs to validate that `config.yaml` parses cleanly (D-14 category 6). The default path is `"./config.yaml"` (from `quirk init`).
-   - What's unclear: Should doctor look for `config.yaml` in the current working directory only, or accept a `--config` flag? D-12 says no format flag needed, but config location may vary.
-   - Recommendation: Default to `./config.yaml` with graceful `[!]` informational if no config file found (not a hard failure); leave `--config` flag for future.
+2. **`quirk doctor` config.yaml path** — RESOLVED: D-12 (CONTEXT.md) specifies no `--config` flag. Doctor defaults to `./config.yaml` with graceful `[!]` informational output (non-fatal) if file is absent. Plan 04 implements `_check_config()` accordingly.
 
 ---
 
