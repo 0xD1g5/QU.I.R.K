@@ -16,6 +16,7 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
+from cyclonedx.model import Property
 from cyclonedx.model.bom import Bom, BomMetaData
 from cyclonedx.model.bom_ref import BomRef
 from cyclonedx.model.component import Component, ComponentType
@@ -270,6 +271,20 @@ def _normalize_bom_ref_key(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9._-]", "_", name).lower()
 
 
+def _fips_status(nist_level: int | None) -> str:
+    """Return FIPS 140-3 approval status from NIST quantum security level.
+
+    Per Phase 52 D-02:
+        nist_level >= 1    -> "approved"     (quantum-safe or NIST-approved classical)
+        nist_level == 0    -> "non-approved" (quantum-vulnerable: RSA, 3DES, etc.)
+        nist_level is None -> "non-approved" (unknown algorithm)
+
+    The "certified" tier is reserved for a future phase with CMVP attestation
+    support (Phase 52 D-01) and is intentionally never emitted in v4.7.
+    """
+    return "approved" if (nist_level is not None and nist_level >= 1) else "non-approved"
+
+
 def _make_algorithm_component(
     name: str,
     bom_ref_key: str,
@@ -293,6 +308,7 @@ def _make_algorithm_component(
             asset_type=CryptoAssetType.ALGORITHM,
             algorithm_properties=algo_props,
         ),
+        properties=[Property(name="quirk:fips140-3-status", value=_fips_status(nist_level))],
     )
 
 
