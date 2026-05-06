@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
-import { ScanProvider } from "@/context/ScanContext"
+import { ScanProvider } from "@/context/ScanProvider"
 import { Sidebar } from "@/components/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { PrintPage } from "@/pages/print"
