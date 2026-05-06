@@ -9,7 +9,7 @@ The QU.I.R.K. Chaos Lab is a Docker Compose environment that simulates a realist
 - **Train new team members** — walk through each vulnerability class hands-on without touching production infrastructure
 - **Validate scanner changes** — run the lab after any code change to confirm no regressions
 
-The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces covering TLS / SSH / HTTP baseline (core), service inventory + cert chain scenarios (phaseA), cloud storage (cloud), identity (identity + pki), JWT misconfigurations (jwt), container registries (registry), source-code crypto anti-patterns (source), legacy storage (storage), legacy SSH (ssh-weak), LDAPS (ldaps), DNSSEC weakness (dnssec), SAML weakness (saml), Kerberos etype enumeration (kerberos), DAR — databases (database), DAR — object storage (storage-s3), DAR — Vault (vault), email transport (email), and message brokers (broker).
+The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces covering TLS / SSH / HTTP baseline (core), service inventory + cert chain scenarios (phaseA), cloud storage (cloud), identity (identity + pki), JWT misconfigurations (jwt), container registries (registry), source-code crypto anti-patterns (source), legacy storage (storage), legacy SSH (ssh-weak), LDAPS (ldaps), DNSSEC weakness (dnssec), SAML weakness (saml), Kerberos etype enumeration (kerberos), DAR — databases (database), DAR — object storage (storage-s3), DAR — Vault (vault), email transport (email), message brokers (broker), and TLS certificate defects (tls-cert-defects).
 
 > **For UAT-grade expected scanner findings, see `quantum-chaos-enterprise-lab/expected_results_v4.md`** — the authoritative per-profile oracle used by chaos lab UAT runs and dashboard cross-references.
 
@@ -571,6 +571,36 @@ See: `labs/broker/expected_results.md`
 
 ---
 
+### 3.20 tls-cert-defects Profile (v4.6)
+
+The `tls-cert-defects` profile (introduced in Phase 46) ships four nginx services, each serving a TLS endpoint with a different certificate defect class. This is the canonical chaos lab target for the four certificate-defect finding types added in v4.6 (`TLS-FIND-01..05`). Ports 13444–13447 are used; 13443 (phaseA `tls-missing-intermediate`) is preserved for back-compat.
+
+| Port  | Service               | Cert Defect               | Expected Finding                 | Severity |
+|-------|-----------------------|---------------------------|----------------------------------|----------|
+| 13444 | tls-cert-expired      | Expired certificate       | `CERT_EXPIRED`                   | HIGH     |
+| 13445 | tls-cert-selfsigned   | Self-signed certificate   | `CERT_SELFSIGNED`                | MEDIUM   |
+| 13446 | tls-cert-untrusted-ca | Untrusted/private CA      | `CERT_UNTRUSTED_CA`              | MEDIUM   |
+| 13447 | tls-cert-rsa1024      | RSA-1024 key (weak size)  | `CERT_WEAK_KEY` + `CERT_RSA1024` | HIGH     |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile tls-cert-defects" ./lab.sh up
+```
+
+**Expected scanner findings:**
+
+- `CERT_EXPIRED` on port 13444 — HIGH
+- `CERT_SELFSIGNED` on port 13445 — MEDIUM
+- `CERT_UNTRUSTED_CA` on port 13446 — MEDIUM
+- `CERT_WEAK_KEY` / `CERT_RSA1024` on port 13447 — HIGH
+
+> **Port note:** Ports 13444–13447 do not conflict with any other profile. Port 13443 (`tls-missing-intermediate` in phaseA) is intentionally left unchanged.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-tls-cert-defects`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.
@@ -660,6 +690,10 @@ All lab ports across all profiles, sorted by port number:
 | 23306 | mysql-ssl-off            | database  | MySQL/ssl-off HIGH                        |
 | 88    | samba-dc                 | kerberos  | weak etype: rc4-hmac HIGH                 |
 | 389   | samba-dc                 | kerberos  | weak etype: aes128-cts-hmac-sha1-96 HIGH  |
+| 13444 | tls-cert-expired         | tls-cert-defects | CERT_EXPIRED HIGH                  |
+| 13445 | tls-cert-selfsigned      | tls-cert-defects | CERT_SELFSIGNED MEDIUM             |
+| 13446 | tls-cert-untrusted-ca    | tls-cert-defects | CERT_UNTRUSTED_CA MEDIUM           |
+| 13447 | tls-cert-rsa1024         | tls-cert-defects | CERT_WEAK_KEY / CERT_RSA1024 HIGH  |
 
 ---
 
