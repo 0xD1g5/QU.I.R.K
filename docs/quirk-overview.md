@@ -3,7 +3,7 @@ project: QU.I.R.K.
 type: reference
 status: active
 source: docs/quirk-overview.md
-updated: 2026-04-09
+updated: 2026-05-06
 ---
 
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
@@ -52,9 +52,9 @@ U.S. Office of Management and Budget (OMB) Memorandum M-23-02, NSA's Commercial 
 
 ---
 
-## Current Capabilities — v4.2
+## Current Capabilities — v4.6
 
-QU.I.R.K. v4.2 represents the culmination of the Identity Crypto milestone, expanding the platform's cryptographic discovery surface to cover every major protocol category in the modern enterprise stack.
+QU.I.R.K. v4.6 represents the Enterprise Readiness milestone, delivering a production-hardened platform with full cryptographic inventory across every major protocol surface, structured compliance mappings, enterprise-scale multi-target workflows, and rich finding context for remediation planning.
 
 ### Cryptographic Discovery Engine
 
@@ -107,7 +107,7 @@ Native connectors for **AWS** and **Azure** enumerate the cryptographic configur
 
 Both connectors map cloud key specifications against the NIST PQC classification table, identifying RSA and ECC KMS keys as quantum-vulnerable and flagging them for migration to AES-256 or ML-KEM equivalents.
 
-### Identity Protocol Scanning — New in v4.2
+### Identity Protocol Scanning (v4.2)
 
 Version 4.2 adds dedicated scanners for the three most widely deployed identity protocols in enterprise environments. This is the category most often overlooked in quantum-readiness assessments.
 
@@ -140,15 +140,56 @@ The intelligence layer produces a composite quantum-readiness score from four we
 
 Scores are calibrated against three organizational profiles — *strict*, *balanced*, and *lenient* — to account for different risk tolerances and regulatory obligations. Each profile applies weighted multipliers to the subscores, producing a final readiness rating on a 0–100 scale with an associated risk tier (LOW / MEDIUM / HIGH / CRITICAL).
 
+### Data at Rest Encryption (v4.3)
+
+QUIRK expanded coverage to encryption of stored data across four major surfaces:
+
+- **Database encryption** — PostgreSQL `pg_stat_ssl`, MySQL `Ssl_cipher` status, RDS `StorageEncrypted` and encryption type. Plaintext connections and disabled SSL emit HIGH-severity findings.
+- **Object storage** — S3 bucket SSE mode (SSE-S3 / SSE-KMS / unencrypted), Azure Blob CMK vs. platform-managed key, GCS CMEK configuration.
+- **Kubernetes secrets at rest** — EKS/GKE/AKS managed encryption APIs and etcd `EncryptionConfiguration` provider detection.
+- **HashiCorp Vault** — Transit key type classification (including ML-DSA and SLH-DSA as quantum-safe positives), PKI mount CA certificate algorithm, auth method enumeration.
+
+A dedicated `data_at_rest` subscore joins the scoring composite, and a **Data at Rest tab** in the dashboard surfaces findings from all four surfaces.
+
+### Data in Motion (v4.4)
+
+QUIRK added full TLS posture scanning for email and message broker protocols, completing coverage of in-transit cryptographic surfaces:
+
+- **Email** — SMTP/STARTTLS (port 25 stripping-risk detection), SMTPS, submission (587), IMAP/IMAPS (143/993), POP3/POP3S (110/995). Weak ciphers surface as HIGH; STARTTLS-downgrade capability surfaces as MEDIUM.
+- **Message brokers** — Apache Kafka (PLAINTEXT / SSL / SASL_SSL), RabbitMQ (AMQP / AMQPS), Redis (plaintext / TLS). Plaintext listeners emit HIGH findings. Azure Service Bus and AWS SQS cloud broker surfaces are also dispatched.
+- **`data_in_motion` subscore** — six `motion_*` intelligence counters feed a dedicated subscore on the executive summary card alongside TLS, SSH, API, Identity, and Data at Rest.
+
 ### Web Dashboard
 
-The local web dashboard provides immediate visual access to scan results without requiring any additional configuration. Five core views are available:
+The local web dashboard provides immediate visual access to scan results without requiring any additional configuration. Seven core views are available:
 
-- **Executive Summary** — overall readiness score with gauge visualization, severity breakdown, top findings, and scan metadata
-- **Findings** — full findings table with severity filtering, algorithm detail, and per-host drill-down
+- **Executive Summary** — overall readiness score with gauge visualization, six subscores (TLS, SSH, API, Identity, Data at Rest, Data in Motion), severity breakdown, and scan metadata
+- **Findings** — full findings table with severity filtering, algorithm detail, compliance framework tag, and per-host drill-down
 - **Certificate Inventory** — all discovered TLS certificates with expiry countdown, key algorithm, and quantum safety status
 - **CBOM Viewer** — interactive bipartite graph of the cryptographic bill of materials, linking systems to algorithms and components
 - **Migration Roadmap** — prioritized remediation DAG showing NOW / NEXT / LATER migration waves, dependency chains, and effort estimates
+- **Data at Rest** — database, object storage, Kubernetes, and Vault findings with per-surface encrypted/unencrypted breakdown
+- **Data in Motion** — email and broker TLS posture grid with per-port cipher weakness and plaintext-exposure flags; **Trends** — score deltas and new/resolved findings across scan sessions
+
+### Reliability and Platform Hardening (v4.5)
+
+The v4.5 milestone closed reliability gaps discovered after the initial feature build:
+
+- All scanners are hardened against missing optional extras, connection timeouts, and unexpected exceptions — a scan never crashes due to a single unreachable endpoint.
+- CBOM JSON and XML output validates against the CycloneDX 1.6 schema; classifier unknown-fallback gaps are closed.
+- Dashboard meets WCAG AA accessibility baseline across all routes, with explicit loading and empty states on every view.
+- The `quirk doctor` health check and timeout/retry policy are documented in the Operator's Guide.
+
+### Enterprise Readiness (v4.6)
+
+v4.6 makes QUIRK production-ready for enterprise deployments:
+
+- **Install-Day UX** — `pip install quirk` and `pip install quirk[all]` complete without `ImportError` crashes; a centralized optional-extra registry emits advisory notices when a scanner extra is absent rather than raising an exception.
+- **TLS Certificate Findings** — Expired certificates, self-signed certificates, untrusted/private-CA certificates, and weak RSA/EC key sizes now produce explicit findings with severity classification. Previously these conditions produced zero findings.
+- **Multi-Target Wizard and Nmap Discovery** — Users can pass comma-separated hosts, `--targets-file`, or a CIDR range directly. An optional nmap-based port discovery step (`--nmap-discover`) pre-populates the target list without manual port enumeration — enabling real 50-host+ enterprise scans.
+- **Rich Finding Context** — Every finding carries a plain-English risk description. Quantum-relevant findings include the FIPS 203/204/205 remediation path and NIST IR 8547 deprecation deadline. All Kyber/Dilithium pre-standardization terminology is purged.
+- **Compliance Framework Mapping** — Findings carry machine-readable control references to PCI DSS 4.0.1 (Requirements 4.2.1 and 12.3.3), HIPAA 45 CFR § 164.312, and FIPS 140-3. The `quirk compliance status` CLI command reports coverage. A quarterly staleness check prevents mapping drift.
+- **`quirk doctor` Pre-Scan Health Check** — The `quirk doctor` command validates dependencies, chaos lab connectivity, config syntax, and scanner readiness in a single pre-engagement step.
 
 ### Professional Report Export
 
@@ -168,41 +209,26 @@ QUIRK produces HTML and PDF reports suitable for direct client delivery. The PDF
 
 ## What's Coming
 
-### v4.3 — Data at Rest
+### v4.7 — Governance & Compliance Platform (in progress)
 
-The next milestone expands QUIRK's coverage to encryption of stored data:
+v4.7 integrates the **CSNP QRAMM (Quantum Readiness Assurance Maturity Model)** framework as a first-class governance layer alongside the existing technical inventory.
 
-- **Database encryption detection** — PostgreSQL SSL mode, MySQL/MariaDB TLS, RDS encryption-at-rest, MSSQL Transparent Data Encryption
-- **Object storage audit** — S3 bucket encryption policies (SSE-S3, SSE-KMS, no encryption), Azure Blob CMK vs. platform key, GCS bucket settings
-- **Kubernetes secrets at rest** — etcd EncryptionConfiguration provider detection (aescbc, aesgcm, secretbox, KMS)
-- **HashiCorp Vault connector** — transit key specs, PKI mount signing algorithms, auth method crypto configuration
+**QRAMM Core** (Phase 51 — shipped) introduces the 120-question maturity catalog, a weakest-link scoring engine, and the SQLite tables and FastAPI CRUD endpoints that all QRAMM phases depend on. QRAMM evaluates organizational maturity across four governance dimensions — Cryptographic Visibility & Inventory, Strategic Governance & Risk Management, Data Protection Engineering, and Implementation & Technical Readiness.
 
-### v4.4 — Data in Motion
+**Compliance Uplift & Health Check** (Phase 52 — shipped) extends the compliance module with SOC 2 CC6 and ISO 27001:2022 control references; CBOM algorithm components now carry `quirk:fips140-3-status` annotations; and `quirk doctor` gives operators a pre-engagement health dashboard.
 
-Protocol coverage extends to the remaining communication channels:
+**Coming in v4.7:**
 
-- **Email protocol scanning** — SMTP/STARTTLS, IMAPS, POP3S cipher and protocol analysis via sslyze integration
-- **Message broker TLS** — Kafka (9092/9093), RabbitMQ (5672/5671), Redis (6379/6380) TLS negotiation and cipher audit
-
-### QRAMM Governance Integration
-
-QUIRK is integrating the **CSNP QRAMM (Quantum Readiness Assurance Maturity Model)** framework directly into the dashboard. QRAMM evaluates organizational maturity across four governance dimensions — Cryptographic Visibility & Inventory, Strategic Governance & Risk Management, Data Protection Engineering, and Implementation & Technical Readiness — using a 120-question structured assessment.
-
-The integration introduces a unique capability: QUIRK's scan results will **automatically pre-populate QRAMM answers** based on technical evidence. An organization running QUIRK at Level 3 automated discovery automatically satisfies multiple CVI dimension criteria. The combined output — a technical CBOM alongside a governance maturity scorecard — produces a consulting deliverable that addresses both the technical and organizational sides of a post-quantum readiness engagement. Compliance mappings to NIST PQC, CNSA 2.0, ISO/IEC 27001:2022, PCI DSS v4.0, CMMC 2.0, and five other frameworks are included.
+- **QRAMM Evidence Bridge** (Phase 53) — Auto-populate CVI dimension answers from live scanner findings using a scan-session bracket. An organization running QUIRK at Level 3 automated discovery automatically satisfies multiple CVI criteria without manual questionnaire work.
+- **QRAMM Assessment UI & Scorecard** (Phase 54) — An Org Profile wizard, 120-question dimension tabs with answer persistence, and a radar-chart scorecard in the React dashboard.
+- **QRAMM Compliance Mapping View** (Phase 55) — An 8-framework coverage table (NIST PQC, CNSA 2.0, PCI DSS 4.0.1, HIPAA, FIPS 140-3, SOC 2, ISO 27001:2022, CMMC 2.0) with per-practice relevance scores and a CI staleness gate.
+- **Combined PDF Export** (Phase 56) — A single professional PDF combining the technical CBOM report and the QRAMM governance scorecard, with a quarterly staleness enforcement gate.
 
 *(QRAMM v1.0 framework by CSNP — qramm.org. Used with attribution.)*
 
-### Compliance Framework Mapping
-
-A standalone compliance mapping module will map QUIRK findings directly to FIPS 140-3, NIST SP 800-57, PCI DSS 4.0 requirement 4.2.1, and HIPAA technical safeguards. The classifier already knows quantum-vulnerability severity; the mapping layer translates that knowledge into the language auditors speak.
-
 ### Authenticated Scan Mode
 
-A first-class optional credential model will enable deeper probing where credentials are available. Kerberos scanners will access per-account encryption type bitmaps via authenticated LDAP bind. SSH scanners will retrieve sshd_config directly from authenticated hosts. All credentials are stored with environment variable substitution — no plaintext secrets in configuration files.
-
-### Trend Analysis & Continuous Monitoring
-
-QUIRK currently treats each scan as an independent point-in-time assessment. A forthcoming intelligence layer will generate delta insights across scan sessions: score change since last scan, newly introduced findings, resolved findings, and hosts with degraded posture. Scheduled continuous scanning mode will transform QUIRK from an audit tool into an ongoing monitoring capability.
+A first-class optional credential model will enable deeper probing where credentials are available. Kerberos scanners will access per-account encryption type bitmaps via authenticated LDAP bind. SSH scanners will retrieve `sshd_config` directly from authenticated hosts. All credentials are stored with environment variable substitution — no plaintext secrets in configuration files.
 
 ### SaaS Platform
 
