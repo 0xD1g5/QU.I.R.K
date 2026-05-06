@@ -1036,7 +1036,12 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   3. `quirk/qramm/questions.py` exports `QRAMM_QUESTIONS` as a list of exactly 120 entries; each entry carries `question_number`, `dimension`, `practice_area`, `text`, and `maturity_labels`; a unit test verifies count and schema
   4. Scoring a session with deliberately weakest-link answers produces dimension scores equal to the minimum of its 3 practice scores (not the average); a unit test asserts exact numeric agreement with a CSNP QRAMM reference calculation
   5. Running the test suite produces zero `DeprecationWarning: datetime.utcnow()` messages — `datetime.now(timezone.utc)` is used throughout `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected module
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 51-01-PLAN.md — ORM models (QRAMMSession/Answer/Profile) + _ensure_qramm_tables() in db.py
+  - [ ] 51-02-PLAN.md — quirk/qramm/ package: questions.py (120 entries) + scoring.py + model_meta.py + __init__.py
+  - [ ] 51-03-PLAN.md — FastAPI CRUD router at /api/qramm/ + app.py registration
+  - [ ] 51-04-PLAN.md — Test suite: test_qramm_questions.py + test_qramm_scoring.py + test_qramm_router.py
+  - [ ] 51-05-PLAN.md — DEBT-01: replace datetime.utcnow() in test_saml_scanner.py and test_broker_scanner_redis.py
 
 ### Phase 52: Compliance Uplift & Health Check
 **Goal**: The compliance module gains SOC2 and ISO 27001:2022 framework mappings; CBOM algorithm components carry FIPS 140-3 status annotations; `quirk doctor` gives operators a pre-engagement health dashboard; four backlog tech debt items are closed — this phase runs in parallel with Phase 51
