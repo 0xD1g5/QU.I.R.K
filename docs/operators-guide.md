@@ -347,6 +347,8 @@ demand.
 | HIPAA 45 CFR §164.312 (publisher landing) | HHS / ECFR | https://www.hhs.gov/hipaa/for-professionals/index.html |
 | HIPAA 45 CFR §164.312 (canonical regulation text) | HHS / ECFR | https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164 |
 | FIPS 140-3 | NIST CSRC | https://csrc.nist.gov/publications/fips |
+| SOC 2 (Trust Services Criteria) | AICPA | https://www.aicpa-cima.com/resources/landing/aicpa-trust-services-criteria |
+| ISO 27001:2022 | ISO / national body | https://www.iso.org/standard/27001 |
 
 ### 7.3 How to detect drift
 

@@ -57,12 +57,13 @@ OIDC_ALG_SEVERITY = {
 def _fetch_metadata(url: str, timeout: int) -> "bytes | None":
     """Fetch raw content from a SAML metadata or OIDC discovery URL.
 
-    Follows redirects and disables SSL verification for enterprise CAs (D-13, D-14).
+    Follows redirects. Uses system CA bundle (verify=True) so a network-positioned
+    attacker cannot serve a forged metadata document via a fake TLS connection.
     Returns raw bytes on success, None on any error.
     """
     try:
         import httpx
-        response = httpx.get(url, timeout=timeout, follow_redirects=True, verify=False)
+        response = httpx.get(url, timeout=timeout, follow_redirects=True, verify=True)
         if response.status_code == 200:
             return response.content
         logging.getLogger(__name__).warning(
@@ -223,6 +224,7 @@ def _parse_saml_metadata(xml_bytes: bytes, target_url: str, now=None) -> "tuple[
             cert_pubkey_alg=cert_info["key_alg"],
             cert_pubkey_size=cert_info["key_bits"],
             service_detail=f"{entity_id}|use=signing|serial={cert_info['serial']}",
+            severity=_classify_key_severity(cert_info["key_alg"], cert_info["key_bits"]),
             saml_scan_json=json.dumps(scan_dict),
             scanned_at=now,
         )
@@ -253,6 +255,7 @@ def _parse_saml_metadata(xml_bytes: bytes, target_url: str, now=None) -> "tuple[
             cert_pubkey_alg=cert_info["key_alg"],
             cert_pubkey_size=cert_info["key_bits"],
             service_detail=f"{entity_id}|use=encryption|serial={cert_info['serial']}",
+            severity=_classify_key_severity(cert_info["key_alg"], cert_info["key_bits"]),
             saml_scan_json=json.dumps(scan_dict),
             scanned_at=now,
         )
@@ -341,6 +344,7 @@ def _parse_oidc_discovery(json_bytes: bytes, target_url: str, now=None) -> "tupl
                 cert_pubkey_alg=alg,
                 cert_pubkey_size=2048 if (alg.startswith("RS") or alg.startswith("PS")) else None,
                 service_detail="oidc-discovery|id_token_signing_alg",
+                severity=severity,
                 saml_scan_json=json.dumps(scan_dict),
                 scanned_at=now,
             )
@@ -357,6 +361,7 @@ def _parse_oidc_discovery(json_bytes: bytes, target_url: str, now=None) -> "tupl
                 cert_pubkey_alg=alg,
                 cert_pubkey_size=2048 if (alg.startswith("RS") or alg.startswith("PS")) else None,
                 service_detail="oidc-discovery|request_object_signing_alg",
+                severity=severity,
                 saml_scan_json=json.dumps(scan_dict),
                 scanned_at=now,
             )
