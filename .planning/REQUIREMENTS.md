@@ -102,27 +102,27 @@ Populated by the roadmapper. Updated at each phase transition.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMPLY-10 | — | Pending |
-| COMPLY-11 | — | Pending |
-| COMPLY-12 | — | Pending |
-| QRAMM-01 | — | Pending |
-| QRAMM-02 | — | Pending |
-| QRAMM-03 | — | Pending |
-| QRAMM-04 | — | Pending |
-| QRAMM-05 | — | Pending |
-| QRAMM-06 | — | Pending |
-| QRAMM-07 | — | Pending |
-| QRAMM-08 | — | Pending |
-| QRAMM-09 | — | Pending |
-| QRAMM-10 | — | Pending |
-| QRAMM-11 | — | Pending |
-| QRAMM-12 | — | Pending |
-| QRAMM-13 | — | Pending |
-| QRAMM-14 | — | Pending |
-| QRAMM-15 | — | Pending |
-| QRAMM-16 | — | Pending |
-| DOCS-05 | — | Pending |
-| DEBT-01 | — | Pending |
-| DEBT-02 | — | Pending |
-| DEBT-03 | — | Pending |
-| DEBT-04 | — | Pending |
+| QRAMM-01 | Phase 51 | Pending |
+| QRAMM-02 | Phase 51 | Pending |
+| QRAMM-03 | Phase 51 | Pending |
+| QRAMM-04 | Phase 51 | Pending |
+| DEBT-01 | Phase 51 | Pending |
+| COMPLY-10 | Phase 52 | Pending |
+| COMPLY-11 | Phase 52 | Pending |
+| COMPLY-12 | Phase 52 | Pending |
+| DOCS-05 | Phase 52 | Pending |
+| DEBT-02 | Phase 52 | Pending |
+| DEBT-03 | Phase 52 | Pending |
+| DEBT-04 | Phase 52 | Pending |
+| QRAMM-12 | Phase 53 | Pending |
+| QRAMM-13 | Phase 53 | Pending |
+| QRAMM-14 | Phase 53 | Pending |
+| QRAMM-08 | Phase 54 | Pending |
+| QRAMM-09 | Phase 54 | Pending |
+| QRAMM-10 | Phase 54 | Pending |
+| QRAMM-11 | Phase 54 | Pending |
+| QRAMM-05 | Phase 55 | Pending |
+| QRAMM-06 | Phase 55 | Pending |
+| QRAMM-07 | Phase 55 | Pending |
+| QRAMM-15 | Phase 55 | Pending |
+| QRAMM-16 | Phase 56 | Pending |

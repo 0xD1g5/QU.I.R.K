@@ -9,6 +9,7 @@
 - ✅ **v4.4 Data in Motion** — Phases 32–37, 33 plans (shipped 2026-04-29) → `.planning/milestones/v4.4-ROADMAP.md`
 - ✅ **v4.5 Reliability & Gap Closure** — Phases 38–44, 40 plans (shipped 2026-05-03) → `.planning/milestones/v4.5-ROADMAP.md`
 - ✅ **v4.6 Enterprise Readiness** — Phases 45–50, 24 plans (shipped 2026-05-05) → `.planning/milestones/v4.6-ROADMAP.md`
+- 🔄 **v4.7 Governance & Compliance Platform** — Phases 51–56 (in progress, started 2026-05-05)
 
 ## Phases
 
@@ -1006,3 +1007,103 @@ Plans:
 ## Phase Details — v4.6 Enterprise Readiness — SHIPPED 2026-05-05
 
 See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and milestone summary.
+
+## Phases — v4.7 Governance & Compliance Platform
+
+<details>
+<summary>v4.7 Governance & Compliance Platform (Phases 51–56) — IN PROGRESS</summary>
+
+**Milestone Goal:** Extend QUIRK from a compliance-tagged scanner into a full governance platform by completing the compliance framework and integrating the QRAMM maturity model — making QUIRK's primary consulting deliverable a scored governance assessment grounded in live scanner findings.
+
+- [ ] **Phase 51: QRAMM Core Infrastructure** - SQLite tables, FastAPI CRUD, 120-question catalog, scoring engine, and datetime.utcnow fix — the backend foundation all QRAMM phases depend on
+- [ ] **Phase 52: Compliance Uplift & Health Check** - SOC2/ISO 27001 framework extensions, CBOM FIPS 140-3 annotations, `quirk doctor` CLI, and four tech debt items (parallel to Phase 51)
+- [ ] **Phase 53: QRAMM Evidence Bridge** - Auto-populate CVI dimension answers from live scanner findings via SESSION_BRACKET scan-window; suggested_answer storage with confirmation workflow
+- [ ] **Phase 54: QRAMM Assessment UI & Scorecard** - Org Profile wizard, 120-question dimension tabs, answer persistence, radar chart scorecard
+- [ ] **Phase 55: QRAMM Compliance Mapping View** - 8-framework coverage table, per-practice relevance scores, staleness CLI and CI gate
+- [ ] **Phase 56: PDF Export & Staleness Enforcement** - Combined governance + technical PDF, QRAMM section with radar chart, quarterly CI staleness gate
+
+</details>
+
+## Phase Details — v4.7 Governance & Compliance Platform
+
+### Phase 51: QRAMM Core Infrastructure
+**Goal**: The backend is fully equipped to run QRAMM assessments — three new SQLite tables, a complete FastAPI CRUD router, the versioned 120-question catalog, and a unit-tested weakest-link scoring engine; datetime.utcnow deprecation warning eliminated
+**Depends on**: Phase 50 (v4.6 complete)
+**Requirements**: QRAMM-01, QRAMM-02, QRAMM-03, QRAMM-04, DEBT-01
+**Success Criteria** (what must be TRUE):
+  1. Running `quirk serve` against a fresh database creates `qramm_sessions`, `qramm_answers`, and `qramm_profiles` tables idempotently via `_ensure_qramm_tables()` — no migration error on an existing v4.6 `quirk.db`
+  2. `POST /api/qramm/sessions`, `GET /api/qramm/sessions/{id}`, `POST /api/qramm/sessions/{id}/answers`, `POST /api/qramm/sessions/{id}/score`, and `DELETE /api/qramm/sessions/{id}` all respond with correct HTTP status codes and Pydantic-validated payloads
+  3. `quirk/qramm/questions.py` exports `QRAMM_QUESTIONS` as a list of exactly 120 entries; each entry carries `question_number`, `dimension`, `practice_area`, `text`, and `maturity_labels`; a unit test verifies count and schema
+  4. Scoring a session with deliberately weakest-link answers produces dimension scores equal to the minimum of its 3 practice scores (not the average); a unit test asserts exact numeric agreement with a CSNP QRAMM reference calculation
+  5. Running the test suite produces zero `DeprecationWarning: datetime.utcnow()` messages — `datetime.now(timezone.utc)` is used throughout `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected module
+**Plans**: TBD
+
+### Phase 52: Compliance Uplift & Health Check
+**Goal**: The compliance module gains SOC2 and ISO 27001:2022 framework mappings; CBOM algorithm components carry FIPS 140-3 status annotations; `quirk doctor` gives operators a pre-engagement health dashboard; four backlog tech debt items are closed — this phase runs in parallel with Phase 51
+**Depends on**: Phase 50 (v4.6 complete; Phase 51 is a parallel sibling with zero shared dependencies)
+**Requirements**: COMPLY-10, COMPLY-11, COMPLY-12, DOCS-05, DEBT-02, DEBT-03, DEBT-04
+**Success Criteria** (what must be TRUE):
+  1. CBOM JSON output contains a `properties` array on every algorithm component with a `quirk:fips140-3-status` property set to `certified`, `approved`, or `non-approved`; endpoints with verifiable CMVP evidence receive `certified`; others receive `approved` or `non-approved` based on algorithm classification; a unit test verifies annotation presence for at least one component from each tier
+  2. `COMPLIANCE_MAP` in `quirk/compliance/__init__.py` contains a `_soc2()` helper that maps relevant finding categories to SOC2 CC6.x controls following the existing `_pci()` / `_hipaa()` / `_fips()` builder pattern; a unit test asserts at least three CC6.x control IDs are present
+  3. `COMPLIANCE_MAP` contains a `_iso()` helper with ISO 27001:2022 Annex A controls using 8.x clause numbering; a unit test rejects any 2013-style `A.x.x` control ID with an explicit assertion error
+  4. `quirk doctor` runs and exits code 0 when all non-informational checks pass; exits code 1 if Python version is unsupported, a required binary is missing, compliance or QRAMM frameworks are stale, or `quirk.db` is unreachable; output uses `[✓]` / `[!]` / `[✗]` symbols
+  5. `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults — the fix is verified with a smoke test showing the correct profile name in `lab.sh` startup output
+  6. `run-stats-*.json` output includes `ports_scanned` (sorted list) and `hosts_scanned` (sorted list) derived from the actual scan pipeline targets
+  7. `quirk/scanner/saml_scanner.py` imports raw `lxml.etree` with `resolve_entities=False` and `no_network=True`; all 25 existing SAML tests pass GREEN
+**Plans**: TBD
+
+### Phase 53: QRAMM Evidence Bridge
+**Goal**: When a QRAMM assessment session is created, up to 30 CVI dimension questions are auto-populated with `suggested_answer` values derived from the latest scan's `CryptoEndpoint` rows — reducing manual assessment effort and grounding the governance score in live scanner evidence
+**Depends on**: Phase 51
+**Requirements**: QRAMM-12, QRAMM-13, QRAMM-14
+**Success Criteria** (what must be TRUE):
+  1. `POST /api/qramm/sessions` triggers `evidence_bridge.py` to read `CryptoEndpoint` rows within the SESSION_BRACKET scan-window and sets `suggested_answer` on up to 30 CVI-dimension rows; `quirk/qramm/evidence_bridge.py` does NOT import `risk_engine` (circular import prevention is unit-tested by checking `sys.modules`)
+  2. Auto-populated rows have `answer_value = null`, `suggested_answer = <1-4>`, and `requires_confirmation = true`; calling `POST .../score` with unconfirmed rows excludes them from maturity calculation; calling it after `confirmed_at` is set includes them — both behaviors are asserted by tests
+  3. A scan with RC4-HMAC Kerberos findings produces lower CVI auto-suggested answers than a scan with only AES-256 findings — the bridge correctly translates cryptographic weakness to lower QRAMM maturity
+**Plans**: TBD
+
+### Phase 54: QRAMM Assessment UI & Scorecard
+**Goal**: A consultant can complete a QRAMM assessment entirely within the QUIRK dashboard — filling out the Org Profile, answering all 120 questions across 4 dimension tabs, viewing auto-filled suggestions with confirmation badges, and seeing a live-rendered scorecard with radar chart and dimension table
+**Depends on**: Phase 51, Phase 53
+**Requirements**: QRAMM-08, QRAMM-09, QRAMM-10, QRAMM-11
+**Success Criteria** (what must be TRUE):
+  1. The Org Profile wizard page collects industry sector, organization size, geographic scope, data sensitivity, and regulatory obligations; submitting the form stores a `qramm_profiles` row and redirects to the assessment tab view
+  2. The assessment view renders 120 questions across 4 dimension tabs (CVI, SGRM, DPE, ITR); each question displays a 1–4 radio scale with `Basic / Developing / Established / Optimizing` labels and an optional evidence note field; a per-dimension progress counter updates as questions are answered
+  3. Navigating away from the assessment and returning (or refreshing the browser) restores all previously entered answers without data loss — answers are persisted via debounced `POST /api/qramm/assessment/draft` to the backend
+  4. The QRAMM Scorecard page displays a 4-axis `RadarChart` (CVI, SGRM, DPE, ITR), a dimension summary table with raw score / weighted score / industry benchmark / maturity level / completion %, and a maturity distribution showing practice counts at each level; scores update only when the user clicks "Calculate Score" (not in real time)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 55: QRAMM Compliance Mapping View
+**Goal**: Consultants can see exactly which of 8 governance frameworks each QRAMM practice contributes to — backed by a live assessment session — and can run a CLI command to verify QRAMM model freshness before client engagements
+**Depends on**: Phase 52, Phase 54
+**Requirements**: QRAMM-05, QRAMM-06, QRAMM-07, QRAMM-15
+**Success Criteria** (what must be TRUE):
+  1. The QRAMM Compliance Mapping view shows a table covering all 8 frameworks (NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, BSI TR-02102) with per-practice relevance scores derived from the active assessment session; the view never shows a "fully compliant" badge and never shows a coverage percentage above the scanner's actual coverage ceiling
+  2. `quirk qramm status` exits code 0 when `QRAMM_MODEL.last_verified` is within 90 days; exits code 1 when stale; output shows version, `last_verified`, days remaining, and verdict — consistent with the `quirk compliance status` pattern
+  3. A pytest gate fails if `QRAMM_MODEL.last_verified` in `quirk/qramm/model_meta.py` is more than 90 days old; the `QUIRK_CI_STALENESS_OVERRIDE_DATE` environment variable allows CI boundary testing without touching source
+  4. `quirk/qramm/model_meta.py` exports `QRAMM_MODEL` with `qramm_version`, `last_verified` (ISO date string), and `source_url = "https://qramm.org"` — mirroring the compliance staleness pattern from v4.6
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 56: PDF Export & Staleness Enforcement
+**Goal**: The combined PDF export includes a QRAMM section (executive summary, dimension scorecard, static SVG radar chart, compliance framework mapping summary) that starts on a new page — and the quarterly staleness CI gate rejects builds when QRAMM model metadata is more than 90 days old
+**Depends on**: Phase 54, Phase 55
+**Requirements**: QRAMM-16
+**Success Criteria** (what must be TRUE):
+  1. The PDF produced via the `/print` route includes a QRAMM section starting on a new page (via `@media print { page-break-before: always }`) containing: executive QRAMM summary paragraph, dimension scorecard table, the static SVG radar chart rendered at print resolution, and a compliance framework mapping summary for the 8 frameworks
+  2. The existing Technical Findings section layout is not regressed — pagination, finding table column widths, and cert inventory layout in the PDF are unchanged from v4.6 output; a visual regression fixture or plan comparison confirms this
+  3. A consultant running a full QRAMM assessment and clicking "Export PDF" receives a single file containing both the governance assessment and the technical scanner findings — the primary consulting deliverable
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress — v4.7 Phases
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 51. QRAMM Core Infrastructure | v4.7 | 0/TBD | Not started | - |
+| 52. Compliance Uplift & Health Check | v4.7 | 0/TBD | Not started | - |
+| 53. QRAMM Evidence Bridge | v4.7 | 0/TBD | Not started | - |
+| 54. QRAMM Assessment UI & Scorecard | v4.7 | 0/TBD | Not started | - |
+| 55. QRAMM Compliance Mapping View | v4.7 | 0/TBD | Not started | - |
+| 56. PDF Export & Staleness Enforcement | v4.7 | 0/TBD | Not started | - |
