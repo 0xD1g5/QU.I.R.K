@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+_PROFILE_ARGS_OVERRIDE="${PROFILE_ARGS:-}"   # snapshot CLI value BEFORE .env can overwrite it (Phase 52 DEBT-02)
+
 if [[ -f ".env" ]]; then
   set -a
   # shellcheck disable=SC1091
@@ -11,7 +13,7 @@ fi
 # ---- Config ----
 PROJECT_NAME="${PROJECT_NAME:-chaoslab}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
-PROFILE_ARGS="${PROFILE_ARGS:-}"   # e.g. "--profile identity" or "--profile core --profile identity"
+PROFILE_ARGS="${_PROFILE_ARGS_OVERRIDE:-${PROFILE_ARGS:-}}"   # CLI wins over .env (Phase 52 DEBT-02)
 
 # ---- Helpers ----
 usage() {
