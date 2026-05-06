@@ -9,7 +9,9 @@ The QU.I.R.K. Chaos Lab is a Docker Compose environment that simulates a realist
 - **Train new team members** — walk through each vulnerability class hands-on without touching production infrastructure
 - **Validate scanner changes** — run the lab after any code change to confirm no regressions
 
-The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces for Phase 4 scanner coverage (JWT, container registry, source code, cloud storage, legacy SSH, and LDAPS).
+The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces covering TLS / SSH / HTTP baseline (core), service inventory + cert chain scenarios (phaseA), cloud storage (cloud), identity (identity + pki), JWT misconfigurations (jwt), container registries (registry), source-code crypto anti-patterns (source), legacy storage (storage), legacy SSH (ssh-weak), LDAPS (ldaps), DNSSEC weakness (dnssec), SAML weakness (saml), Kerberos etype enumeration (kerberos), DAR — databases (database), DAR — object storage (storage-s3), DAR — Vault (vault), email transport (email), message brokers (broker), and TLS certificate defects (tls-cert-defects).
+
+> **For UAT-grade expected scanner findings, see `quantum-chaos-enterprise-lab/expected_results_v4.md`** — the authoritative per-profile oracle used by chaos lab UAT runs and dashboard cross-references.
 
 **Prerequisites:**
 
@@ -323,6 +325,282 @@ scan:
 
 ---
 
+### 3.12 dnssec Profile (v4.2)
+
+The `dnssec` profile ships a BIND9 authoritative nameserver pre-configured with intentionally weak DNSSEC signing — `RSASHA1` algorithm zones and an unsigned test zone — designed to exercise QU.I.R.K.'s DNS cryptography audit path. It is the canonical chaos lab target for DNSSEC weakness detection.
+
+| Port        | Service      | Protocol | Finding Tag                       |
+|-------------|--------------|----------|-----------------------------------|
+| 15353/udp   | bind9-dnssec | DNS/UDP  | RSASHA1 weak-algo CRITICAL        |
+| 15353/tcp   | bind9-dnssec | DNS/TCP  | unsigned zone HIGH, NSEC MEDIUM   |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile dnssec" ./lab.sh up
+```
+
+**Expected scanner findings:**
+
+- `RSASHA1` weak-algorithm signing detected — CRITICAL
+- Unsigned zone present — HIGH
+- `NSEC` (non-authenticated denial of existence) in use — MEDIUM
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-dnssec`
+
+---
+
+### 3.13 saml Profile (v4.2)
+
+The `saml` profile ships a simpleSAMLphp IdP configured with a deliberately weak RSA-1024 signing certificate and SHA-1 algorithm URI, exercising QU.I.R.K.'s SAML metadata inspection path. This is the canonical chaos lab target for SAML signing-certificate weakness.
+
+| Port | Service       | Protocol | Finding Tag                    |
+|------|---------------|----------|--------------------------------|
+| 8080 | simplesamlphp | HTTP/TLS | RSA-1024 signing cert CRITICAL |
+| 8080 | simplesamlphp | HTTP/TLS | SHA-1 algorithm URI HIGH       |
+
+> **Port note:** The compose-authoritative host port is **8080**. Earlier versions of this guide and the v3 oracle incorrectly listed 8880 — 8080 is correct. Keycloak (identity profile) uses `expose: 8080` not `ports:`, so there is no host-level conflict when both profiles run simultaneously.
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile saml" ./lab.sh up
+```
+
+**Expected scanner findings:**
+
+- `RSA-1024 signing cert` detected in SAML metadata — CRITICAL
+- `SHA-1 algorithm URI` in SAML signing method — HIGH
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-saml`
+
+---
+
+### 3.14 kerberos Profile (v4.2)
+
+The `kerberos` profile runs a Samba Active Directory Domain Controller configured to advertise weak Kerberos encryption types (`rc4-hmac`, `aes128-cts-hmac-sha1-96`), giving QU.I.R.K.'s Kerberos etype enumeration scanner a realistic target. Both encryption types fall below the FIPS 140-3 / NIST SP 800-131A minimum requirements.
+
+| Port | Service  | Protocol  | Finding Tag                              |
+|------|----------|-----------|------------------------------------------|
+| 88   | samba-dc | Kerberos  | weak etype: rc4-hmac HIGH                |
+| 389  | samba-dc | LDAP/Kerb | weak etype: aes128-cts-hmac-sha1-96 HIGH |
+
+> **Port collision warning:** Ports 88 and 389 are not remapped to a non-standard range. If the lab host is a domain member or has a local Kerberos/LDAP daemon (e.g. `krb5kdc`, Active Directory agent, or system OpenLDAP on port 389), there will be a conflict. Verify with `lsof -i:88 -i:389` before starting this profile.
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile kerberos" ./lab.sh up
+```
+
+**Expected scanner findings:**
+
+- `weak etype: rc4-hmac` advertised by KDC — HIGH
+- `weak etype: aes128-cts-hmac-sha1-96` advertised by KDC — HIGH
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-kerberos`
+
+---
+
+### 3.15 vault Profile (v4.3 — DAR)
+
+The `vault` profile (introduced in Phase 30) ships a standalone HashiCorp Vault 1.17 dev server (`vault-30`) pre-seeded with transit keys, a PKI root CA, and auth method mounts that exercise QU.I.R.K.'s Vault connector. It is intentionally on port **28200** and is independent of the legacy `storage` profile's Vault instance (port 20009, image 1.15).
+
+| Port  | Service   | Resource                       | Expected Finding                      | Severity |
+|-------|-----------|--------------------------------|---------------------------------------|----------|
+| 28200 | vault-30  | transit/rsa-2048-classification | Classification only                  | (none)   |
+| 28200 | vault-30  | transit/rsa-2048-exportable    | Exportable transit key                | MEDIUM   |
+| 28200 | vault-30  | PKI/pki                        | RSA<4096 root CA                      | HIGH     |
+| 28200 | vault-30  | auth/token                     | Dev-mode root token always enabled    | HIGH     |
+| 28200 | vault-30  | auth/userpass                  | Userpass auth method enabled          | MEDIUM   |
+
+Credentials: root token `root` (dev mode — never use in production).
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile vault" ./lab.sh up
+```
+
+**Expected scanner findings:**
+
+- `PKI/<mount>` RSA<4096 root CA detected — HIGH
+- `auth/token` always-on in dev mode — HIGH
+- `transit/<key_name>` exportable transit key — MEDIUM
+- `auth/userpass` method enabled — MEDIUM
+
+See: `labs/vault/expected_results.md`
+
+---
+
+### 3.16 database Profile (v4.3 — DAR)
+
+The `database` profile (introduced in Phase 27) ships a PostgreSQL 15 instance (`postgres-ssl-off`) and a MySQL 8 instance (`mysql-ssl-off`), each with SSL/TLS explicitly disabled, providing QU.I.R.K.'s database connector with clear regression targets for plaintext-connection detection.
+
+| Port  | Service          | Engine     | Expected Finding                                              | Severity |
+|-------|------------------|------------|---------------------------------------------------------------|----------|
+| 25432 | postgres-ssl-off | PostgreSQL | `PostgreSQL/ssl-off` — SSL disabled at engine level           | HIGH     |
+| 25432 | postgres-ssl-off | PostgreSQL | `PostgreSQL/plaintext-connections-allowed` — non-SSL conns    | HIGH     |
+| 23306 | mysql-ssl-off    | MySQL      | `MySQL/ssl-off` — SSL disabled at engine level                | HIGH     |
+
+Credentials: PostgreSQL — default `postgres` superuser (no password in lab config); MySQL — root with no password.
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile database" ./lab.sh up
+```
+
+**Expected scanner findings:**
+
+- `PostgreSQL/ssl-off` — SSL parameter is `off` — HIGH
+- `PostgreSQL/plaintext-connections-allowed (N non-SSL)` — non-SSL connections present in `pg_stat_ssl` — HIGH
+- `MySQL/ssl-off` — `Ssl_cipher` status variable is empty — HIGH
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-database`
+
+---
+
+### 3.17 storage-s3 Profile (v4.3 — DAR)
+
+The `storage-s3` profile (introduced in Phase 28) ships a MinIO S3-compatible object storage server. A seed container creates two buckets on startup: one encrypted (SSE-S3) and one unencrypted, providing QU.I.R.K.'s S3 connector with a clean positive/negative pair for encryption-at-rest detection.
+
+| Port  | Service       | Bucket              | SSE Mode | Expected Finding     | Severity |
+|-------|---------------|---------------------|----------|----------------------|----------|
+| 29000 | minio         | encrypted-bucket    | SSE-S3   | `S3/sse-s3`          | (none)   |
+| 29000 | minio         | unencrypted-bucket  | None     | `S3/unencrypted`     | HIGH     |
+| 29001 | minio-console | (admin UI)          | —        | —                    | —        |
+
+Credentials: access key `minioadmin`, secret key `minioadmin`.
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile storage-s3" ./lab.sh up
+```
+
+Add to your config.yaml:
+
+```yaml
+connectors:
+  enable_s3: true
+  aws_region: us-east-1
+  aws_endpoint_url: http://localhost:29000
+```
+
+**Expected scanner findings:**
+
+- `S3/unencrypted` on `arn:aws:s3:::unencrypted-bucket` — HIGH
+- `S3/sse-s3` on `arn:aws:s3:::encrypted-bucket` — no finding (positive control)
+
+See: `labs/storage/expected_results.md`
+
+---
+
+### 3.18 email Profile (v4.4)
+
+The `email` profile (introduced in Phase 32) ships a Postfix SMTP server and a Dovecot IMAP/POP3 server. Postfix is hard-capped to TLS 1.2 with non-PFS RSA cipher suites, producing weak-cipher and STARTTLS-downgrade findings. Dovecot defaults to TLS 1.3, so its ports do not emit weak-cipher findings under default scan invocation (see caveat below).
+
+| Host Port | Container Port | Service              | Protocol      | Notes                                      |
+|-----------|----------------|----------------------|---------------|--------------------------------------------|
+| 30025     | 25             | postfix-email (SMTP) | SMTP-STARTTLS | STARTTLS-downgrade MEDIUM + weak-cipher HIGH |
+| 30465     | 465            | postfix-email (SMTPS)| SMTPS         | weak-cipher HIGH (implicit TLS)            |
+| 30587     | 587            | postfix-email (submission)| SMTP-STARTTLS | weak-cipher HIGH                      |
+| 30143     | 143            | dovecot-email (IMAP) | IMAP-STARTTLS | TLS 1.3 — no weak-cipher finding           |
+| 30993     | 993            | dovecot-email (IMAPS)| IMAPS         | TLS 1.3 — no weak-cipher finding           |
+| 30110     | 110            | dovecot-email (POP3) | POP3-STARTTLS | TLS 1.3 — no weak-cipher finding           |
+| 30995     | 995            | dovecot-email (POP3S)| POP3S         | TLS 1.3 — no weak-cipher finding           |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile email" ./lab.sh up
+```
+
+Allow ~30 seconds for both containers to reach healthy status before scanning.
+
+**Expected scanner findings:**
+
+- `Weak cipher suite on email TLS endpoint` — port 25 — HIGH (EMAIL-09)
+- `Weak cipher suite on email TLS endpoint` — port 465 — HIGH (EMAIL-09)
+- `Weak cipher suite on email TLS endpoint` — port 587 — HIGH (EMAIL-09)
+- `STARTTLS downgrade risk on SMTP` — port 25 — MEDIUM (EMAIL-08)
+
+> **Dovecot caveat:** Dovecot 2.3.16 (Ubuntu 22.04) negotiates TLS 1.3 when the client offers it, bypassing the TLS 1.2 weak-cipher restriction in the lab's config. Ports 30143/30993/30110/30995 emit **no** weak-cipher findings under the default scan path. To exercise the TLS 1.2 weak-cipher path on Dovecot, pin the client: `openssl s_client -tls1_2 -connect localhost:30143 -starttls imap`.
+
+See: `labs/email/expected_results.md`
+
+---
+
+### 3.19 broker Profile (v4.4)
+
+The `broker` profile (introduced in Phase 33) ships three message brokers — Apache Kafka, RabbitMQ, and Redis — each configured with both a plaintext listener and a TLS listener using deliberately weak non-PFS RSA cipher suites. This exercises QU.I.R.K.'s broker scanner across all three broker types simultaneously.
+
+| Host Port | Service         | Protocol   | Expected Finding                              | Severity |
+|-----------|-----------------|------------|-----------------------------------------------|----------|
+| 29092     | kafka-broker    | KAFKA-PLAIN| Kafka plaintext listener detected             | HIGH     |
+| 29093     | kafka-broker    | KAFKA-TLS  | Weak cipher suite on broker TLS endpoint      | HIGH     |
+| 25672     | rabbitmq-broker | AMQP-PLAIN | AMQP plaintext listener detected              | HIGH     |
+| 25671     | rabbitmq-broker | AMQPS      | Weak cipher suite on broker TLS endpoint      | HIGH     |
+| 26379     | redis-broker    | REDIS-PLAIN| Redis plaintext listener (no authentication)  | HIGH     |
+| 26380     | redis-broker    | REDIS-TLS  | Weak cipher suite on broker TLS endpoint      | HIGH     |
+
+**Start:**
+
+Generate TLS certs before first boot:
+
+```bash
+cd labs/broker && make certs && cd ../..
+PROFILE_ARGS="--profile broker" ./lab.sh up
+```
+
+Allow ~30 seconds for all three healthchecks to pass.
+
+**Expected scanner findings:**
+
+- `Kafka plaintext listener detected` — port 29092 — HIGH (KAFKA-02)
+- `Weak cipher suite on broker TLS endpoint` — port 29093 — HIGH (KAFKA-01)
+- `AMQP plaintext listener detected` — port 25672 — HIGH (RABBIT-02)
+- `Weak cipher suite on broker TLS endpoint` — port 25671 — HIGH (RABBIT-01)
+- `Redis plaintext listener (no authentication)` — port 26379 — HIGH (REDIS-02)
+- `Weak cipher suite on broker TLS endpoint` — port 26380 — HIGH (REDIS-01)
+
+**Total: 6 HIGH findings** (3 plaintext + 3 weak-cipher TLS).
+
+See: `labs/broker/expected_results.md`
+
+---
+
+### 3.20 tls-cert-defects Profile (v4.6)
+
+The `tls-cert-defects` profile (introduced in Phase 46) ships four nginx services, each serving a TLS endpoint with a different certificate defect class. This is the canonical chaos lab target for the four certificate-defect finding types added in v4.6 (`TLS-FIND-01..05`). Ports 13444–13447 are used; 13443 (phaseA `tls-missing-intermediate`) is preserved for back-compat.
+
+| Port  | Service               | Cert Defect               | Expected Finding                 | Severity |
+|-------|-----------------------|---------------------------|----------------------------------|----------|
+| 13444 | tls-cert-expired      | Expired certificate       | `CERT_EXPIRED`                   | HIGH     |
+| 13445 | tls-cert-selfsigned   | Self-signed certificate   | `CERT_SELFSIGNED`                | MEDIUM   |
+| 13446 | tls-cert-untrusted-ca | Untrusted/private CA      | `CERT_UNTRUSTED_CA`              | MEDIUM   |
+| 13447 | tls-cert-rsa1024      | RSA-1024 key (weak size)  | `CERT_WEAK_KEY` + `CERT_RSA1024` | HIGH     |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile tls-cert-defects" ./lab.sh up
+```
+
+**Expected scanner findings:**
+
+- `CERT_EXPIRED` on port 13444 — HIGH
+- `CERT_SELFSIGNED` on port 13445 — MEDIUM
+- `CERT_UNTRUSTED_CA` on port 13446 — MEDIUM
+- `CERT_WEAK_KEY` / `CERT_RSA1024` on port 13447 — HIGH
+
+> **Port note:** Ports 13444–13447 do not conflict with any other profile. Port 13443 (`tls-missing-intermediate` in phaseA) is intentionally left unchanged.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-tls-cert-defects`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.
@@ -333,6 +611,12 @@ PROFILE_ARGS="--profile jwt --profile registry --profile source --profile storag
 ```
 
 **Port conflict note:** The storage profile uses a dedicated LocalStack instance on port **20007** (`SERVICES=kms`). This is separate from the cloud profile LocalStack on port **24566** (`SERVICES=s3,sts,iam`). Both can run simultaneously without conflict.
+
+To list every profile defined in the compose file (live read — never out of date):
+
+```bash
+./lab.sh profiles
+```
 
 ---
 
@@ -383,6 +667,33 @@ All lab ports across all profiles, sorted by port number:
 | 21002 | azurite-table-tls        | cloud     | CLOUD_AZURITE_TABLE_TLS                   |
 | 24443 | ingress-sni              | phaseA    | INGRESS_SNI                               |
 | 24566 | localstack-cloud         | cloud     | CLOUD_AWS_LOCALSTACK_TLS                  |
+| 25432 | postgres-ssl-off         | database  | PostgreSQL/ssl-off HIGH                   |
+| 25671 | rabbitmq-broker (AMQPS)  | broker    | Weak cipher suite on broker TLS endpoint  |
+| 25672 | rabbitmq-broker (AMQP)   | broker    | AMQP plaintext listener detected          |
+| 26379 | redis-broker (plain)     | broker    | Redis plaintext listener (no auth)        |
+| 26380 | redis-broker (TLS)       | broker    | Weak cipher suite on broker TLS endpoint  |
+| 28200 | vault-30                 | vault     | PKI/auth/transit DAR audit                |
+| 29000 | minio                    | storage-s3| S3/unencrypted HIGH (unencrypted-bucket)  |
+| 29001 | minio-console            | storage-s3| MinIO admin UI (no scanner finding)       |
+| 29092 | kafka-broker (plain)     | broker    | Kafka plaintext listener detected         |
+| 29093 | kafka-broker (TLS)       | broker    | Weak cipher suite on broker TLS endpoint  |
+| 30025 | postfix-email (SMTP)     | email     | STARTTLS-downgrade MEDIUM + weak-cipher HIGH |
+| 30110 | dovecot-email (POP3)     | email     | POP3-STARTTLS (TLS 1.3 — no weak-cipher) |
+| 30143 | dovecot-email (IMAP)     | email     | IMAP-STARTTLS (TLS 1.3 — no weak-cipher) |
+| 30465 | postfix-email (SMTPS)    | email     | Weak cipher suite on email TLS endpoint   |
+| 30587 | postfix-email (submission)| email    | Weak cipher suite on email TLS endpoint   |
+| 30993 | dovecot-email (IMAPS)    | email     | IMAPS (TLS 1.3 — no weak-cipher)          |
+| 30995 | dovecot-email (POP3S)    | email     | POP3S (TLS 1.3 — no weak-cipher)          |
+| 8080  | simplesamlphp            | saml      | RSA-1024 signing cert CRITICAL            |
+| 15353/udp | bind9-dnssec         | dnssec    | RSASHA1 weak-algo CRITICAL                |
+| 15353/tcp | bind9-dnssec         | dnssec    | unsigned zone HIGH, NSEC MEDIUM           |
+| 23306 | mysql-ssl-off            | database  | MySQL/ssl-off HIGH                        |
+| 88    | samba-dc                 | kerberos  | weak etype: rc4-hmac HIGH                 |
+| 389   | samba-dc                 | kerberos  | weak etype: aes128-cts-hmac-sha1-96 HIGH  |
+| 13444 | tls-cert-expired         | tls-cert-defects | CERT_EXPIRED HIGH                  |
+| 13445 | tls-cert-selfsigned      | tls-cert-defects | CERT_SELFSIGNED MEDIUM             |
+| 13446 | tls-cert-untrusted-ca    | tls-cert-defects | CERT_UNTRUSTED_CA MEDIUM           |
+| 13447 | tls-cert-rsa1024         | tls-cert-defects | CERT_WEAK_KEY / CERT_RSA1024 HIGH  |
 
 ---
 

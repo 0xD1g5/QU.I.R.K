@@ -48,6 +48,15 @@ Then follow the [Getting Started guide](docs/getting-started.md) to run your fir
 - **Web dashboard** at `http://localhost:8512` — interactive findings browser and CBOM graph
 - **PDF report** — client-ready export from the dashboard
 
+## What's New in v4.3
+
+- **GCP Connector (Phase 26)** — Cloud KMS key classification (47-entry algorithm map including PQC), Cloud SQL TLS enforcement, and GCS CMEK detection.
+- **Database Encryption Detection (Phase 27)** — PostgreSQL, MySQL, and RDS encryption posture surfaced via a new `data_at_rest` subscore.
+- **Object Storage Audit (Phase 28)** — S3 SSE-S3/SSE-KMS/CMK, Azure Blob CMK/platform-managed, GCS CMEK using zero duplicate API calls.
+- **Kubernetes Secrets Inspection (Phase 29)** — EKS/GKE/AKS managed cluster encryption APIs; RBAC-403 graceful degradation.
+- **HashiCorp Vault Connector (Phase 30)** — Transit key type classification (including ml-dsa/slh-dsa PQC positive), PKI mount CA cert auditing, and auth method risk tiering.
+- **Trend Analysis (v4.3, Phase 31)** — `quirk/intelligence/trends.py` produces a session-over-session score delta plus per-severity new/resolved finding counts between the two most recent scan sessions. Surfaced via `GET /api/trends` and a new dashboard `/trends` tab. No new SQLite table — uses existing scanned_at grouping.
+
 ## License
 
 Proprietary. All rights reserved.

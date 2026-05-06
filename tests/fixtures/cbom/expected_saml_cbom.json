@@ -1,0 +1,13 @@
+{
+  "components": [
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/rsa",
+      "cipher_suite_names": [],
+      "name": "RSA",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    }
+  ]
+}

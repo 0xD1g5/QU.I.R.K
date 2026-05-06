@@ -1,0 +1,29 @@
+{
+  "violations": [
+    {
+      "id": "button-name",
+      "nodes": [
+        {
+          "target": [
+            ".justify-between"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "color-contrast",
+      "nodes": [
+        {
+          "target": [
+            "tr:nth-child(2) > td:nth-child(4) > .bg-\\[hsl\\(142_71\\%_45\\%\\)\\].text-white.px-2\\.5"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(3) > td:nth-child(4) > .bg-\\[hsl\\(142_71\\%_45\\%\\)\\].text-white.px-2\\.5"
+          ]
+        }
+      ]
+    }
+  ]
+}

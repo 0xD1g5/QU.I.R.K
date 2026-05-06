@@ -43,10 +43,10 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
             )
         lines.append("")
 
-    # === TLS Capabilities (v3.6) ===
+    # === TLS Capabilities ===
     tls_eps = [e for e in endpoints if getattr(e, "protocol", "") == "TLS" and not getattr(e, "scan_error", None)]
     if tls_eps:
-        lines.append("## TLS Capabilities (v3.6)")
+        lines.append("## TLS Capabilities")
         lines.append("")
         lines.append("| Host | Port | Negotiated TLS | Supported Versions | Weak Ciphers Present | Legacy Suites Present | PFS | Cipher Sample | Notes |")
         lines.append("|---|---:|---|---|---|---|---|---|---|")
@@ -85,15 +85,16 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
     # === Findings table ===
     lines.append("## Findings")
     lines.append("")
-    lines.append("| Severity | Host | Port | Title | Recommendation |")
-    lines.append("|---|---|---:|---|---|")
+    lines.append("| Severity | Host | Port | Title | Description | Recommendation |")
+    lines.append("|---|---|---:|---|---|---|")
     for f in findings:
         sev = f.get("severity", "INFO")
         host = f.get("host", "")
         port = f.get("port", "")
         title = f.get("title", "")
+        desc = f.get("description", "")
         rec = f.get("recommendation", "")
-        lines.append(f"| {sev} | {host} | {port} | {title} | {rec} |")
+        lines.append(f"| {sev} | {host} | {port} | {title} | {desc} | {rec} |")
 
     lines.append("")
     return "\n".join(lines)

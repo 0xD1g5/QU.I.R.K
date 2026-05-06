@@ -102,6 +102,13 @@ database records. Each record contains the raw cryptographic material discovered
 | Source code | Cryptographic anti-patterns found by semgrep (rule IDs reference specific algorithms) |
 | AWS cloud | KMS key specs, ACM certificate algorithms, CloudFront TLS policies, ELBv2 listener algorithms |
 | Azure cloud | Key Vault key types, App Gateway TLS settings |
+| GCP cloud | Cloud KMS key specs, Cloud SQL TLS enforcement, GCS bucket encryption (added v4.3) |
+| Database | PostgreSQL pg_stat_ssl, MySQL SSL status, RDS StorageEncrypted (added v4.3) |
+| Object storage | S3 SSE mode, Azure Blob CMK, GCS CMEK (added v4.3) |
+| Kubernetes | EKS/GKE/AKS encryption API, etcd EncryptionConfiguration provider (added v4.3) |
+| HashiCorp Vault | Transit key types, PKI CA certificates, auth method list (added v4.3) |
+| Email | SMTP/STARTTLS, SMTPS, submission, IMAP/IMAPS, POP3/POP3S cipher and protocol (added v4.4) |
+| Message brokers | Kafka, RabbitMQ, Redis TLS posture and plaintext-listener detection (added v4.4) |
 
 #### Step 2: Algorithm Extraction
 
@@ -279,11 +286,40 @@ label identifies systems using pre-quantum algorithms that CNSA 2.0 requires rep
 | AES-256 | `quantum-safe` | — already compliant |
 | SHA-384 / SHA-512 | `quantum-safe` | — already compliant |
 
+### PCI DSS 4.0.1 Alignment
+
+PCI DSS 4.0.1 Requirement 4.2.1 mandates that strong cryptography is used to protect Primary Account Data (PAD) in transit. Requirement 12.3.3 requires a cryptographic inventory and targeted risk analysis for all cryptographic suites and protocols in use. QU.I.R.K. findings now carry machine-readable PCI DSS control references (added in v4.6 via the `quirk/compliance/` module).
+
+**Suggested audit language:**
+
+> *"A cryptographic inventory was conducted on [date] using QU.I.R.K. v[version] in support of PCI DSS 4.0.1 Requirements 4.2.1 and 12.3.3. Findings carrying a `PCI-DSS 4.0.1` compliance reference are included in the attached report. The complete inventory is attached as CBOM artifact `cbom-[timestamp].cdx.json`."*
+
+---
+
+### HIPAA 45 CFR § 164.312 Alignment
+
+HIPAA Technical Safeguard § 164.312(a)(2)(iv) (Encryption and Decryption) and § 164.312(e)(2)(ii) (Encryption) require covered entities to implement encryption of electronic protected health information (ePHI) at rest and in transit when deemed reasonable and appropriate. QU.I.R.K. findings identify weak or absent encryption that bears on these requirements, and findings carry machine-readable HIPAA control references (added in v4.6).
+
+---
+
+### FIPS 140-3 Alignment
+
+FIPS 140-3 (Security Requirements for Cryptographic Modules) governs cryptographic module validation for U.S. federal use. Starting in v4.7, every algorithm component in the CycloneDX CBOM carries a `quirk:fips140-3-status` property set to `approved` (NIST level ≥ 1) or `non-approved` (NIST level 0 or unknown). This annotation enables direct alignment with FIPS 140-3 module usage requirements without secondary analysis.
+
+---
+
+### SOC 2 (Trust Services Criteria) Alignment
+
+SOC 2 CC6 (Logical and Physical Access Controls) requires cryptographic controls to protect data in transit and at rest. QU.I.R.K. findings carry machine-readable SOC 2 control references for CC6 sub-criteria (added in v4.7 Phase 52).
+
+---
+
 ### ISO 27001 / ISO 27002:2022 Alignment
 
 ISO 27002:2022 Control 8.24 (Use of cryptography) requires organizations to define rules on the
 use of cryptographic controls and maintain an inventory of cryptographic assets. The QU.I.R.K.
-CBOM satisfies the inventory component of Control 8.24.
+CBOM satisfies the inventory component of Control 8.24. Machine-readable ISO 27001:2022 control
+references are attached to findings from v4.7 onward (Phase 52).
 
 **Suggested audit language:**
 
@@ -370,6 +406,7 @@ CBOM import, the JSON artifact is typically the preferred format.
 - [ ] `metadata.component.name` is `QU.I.R.K.` and `version` is recorded
 - [ ] `components` array is non-empty
 - [ ] Algorithm components include `nistQuantumSecurityLevel` property
+- [ ] Algorithm components include `quirk:fips140-3-status` property (`approved` or `non-approved`) — v4.7+
 - [ ] Both JSON and XML artifacts are present
 
 ### Classification Logic Summary
@@ -387,7 +424,7 @@ block of each algorithm component in the CBOM.
 
 ---
 
-*Guide version: Phase 6 (2026-03-31) — covers QU.I.R.K. v3.9*
+*Guide version: Phase 52 (2026-05-06) — covers QU.I.R.K. v4.7 (in progress); last materially updated for v4.6 (Phase 49–52 compliance framework additions)*
 
 *Canonical references: `quirk/cbom/classifier.py` (`quantum_safety_label()`, `_ALGORITHM_TABLE`),
-`quirk/cbom/builder.py` (`build_cbom()`)*
+`quirk/cbom/builder.py` (`build_cbom()`), `quirk/compliance/` (framework mappings)*

@@ -1,11 +1,12 @@
 import { useMemo } from "react"
 import { useScanData } from "@/hooks/useScanData"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { AlertTriangle } from "lucide-react"
+import { CertificatesSkeleton } from "./certificates.skeleton"
+import { EmptyStateCard } from "@/components/EmptyStateCard"
 
 const QS_BADGE: Record<string, string> = {
   Safe: "bg-[hsl(142_71%_45%)] text-white",
@@ -18,19 +19,14 @@ export function CertificatesPage() {
   const { data, loading, error } = useScanData()
   const now = useMemo(() => new Date(), [])
 
-  if (loading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+  if (loading) return <CertificatesSkeleton />
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
   const certs = data?.certificates ?? []
 
   if (!certs.length) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-foreground font-semibold text-xl">No TLS endpoints found</h2>
-        <p className="text-muted-foreground mt-2 text-sm">
-          No TLS certificates were discovered in the most recent scan. Verify scan targets include HTTPS or TLS services.
-        </p>
-      </div>
+      <EmptyStateCard message="No TLS certificates discovered in this scan — verify scan targets include HTTPS or TLS services." />
     )
   }
 
@@ -45,7 +41,7 @@ export function CertificatesPage() {
               <TableHead scope="col" className="text-xs font-semibold">Port</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Subject CN</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Issuer</TableHead>
-              <TableHead scope="col" className="text-xs font-semibold" aria-sort="ascending">Expiry</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold">Expiry</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Algorithm</TableHead>
               <TableHead scope="col" className="text-xs font-semibold">Quantum Safety</TableHead>
             </TableRow>
