@@ -129,6 +129,7 @@ COMPLIANCE_MAP: Dict[str, List[Dict[str, Any]]] = {
     # ── PCI 4.2.1 + HIPAA §164.312(e)(1) family — plaintext / weak transit
     "Plaintext HTTP service detected": [
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     # NB: parens preserved verbatim — risk_engine.py:464 emits this exact string.
     "Legacy TLS versions allowed (TLS 1.0/1.1)": [
@@ -136,77 +137,93 @@ COMPLIANCE_MAP: Dict[str, List[Dict[str, Any]]] = {
         _pci("4.2.1.1"),
         _hipaa("§164.312(e)(1)"),
         _fips("Not-Approved (SP 800-131A R2)"),
+        _soc2("CC6.6"), _soc2("CC6.7"), _iso("8.26"),
     ],
     "Legacy TLS cipher suites accepted": [
         _pci("4.2.1"),
         _hipaa("§164.312(e)(1)"),
         _fips("Not-Approved (SP 800-131A R2)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     # ── PCI 4.2.1.1 — cert/key inventory
-    "TLS certificate expired": [_pci("4.2.1.1")],
-    "TLS certificate expiring within 30 days": [_pci("4.2.1.1")],
-    "TLS certificate is self-signed": [_pci("4.2.1.1")],
-    "TLS certificate issued by untrusted CA": [_pci("4.2.1.1")],
+    "TLS certificate expired": [_pci("4.2.1.1"), _soc2("CC6.6"), _iso("8.24")],
+    "TLS certificate expiring within 30 days": [_pci("4.2.1.1"), _soc2("CC6.6"), _iso("8.24")],
+    "TLS certificate is self-signed": [_pci("4.2.1.1"), _soc2("CC6.6"), _iso("8.24")],
+    "TLS certificate issued by untrusted CA": [_pci("4.2.1.1"), _soc2("CC6.6"), _iso("8.24")],
     # ── PCI 6.3.3 + HIPAA §164.312(a)(2)(iv) + FIPS — undersized keys
     "TLS certificate uses undersized RSA key": [
         _pci("6.3.3"),
         _hipaa("§164.312(a)(2)(iv)"),
         _fips("Not-Approved (SP 800-131A R2: RSA <2048)"),
+        _soc2("CC6.6"), _iso("8.24"),
     ],
     "TLS certificate uses undersized ECDSA key": [
         _pci("6.3.3"),
         _hipaa("§164.312(a)(2)(iv)"),
         _fips("Not-Approved (SP 800-186: curve <256-bit)"),
+        _soc2("CC6.6"), _iso("8.24"),
     ],
     # ── Quantum-vulnerable strong-but-deprecated keys
     "TLS certificate uses quantum-vulnerable RSA key": [
         _pci("6.3.3"),
         _fips("Approved with Deprecation 2030/2035 (NIST IR 8547)"),
+        _soc2("CC6.6"), _iso("8.24"),
     ],
     "TLS certificate uses quantum-vulnerable ECDSA key": [
         _pci("6.3.3"),
         _fips("Approved with Deprecation 2030/2035 (NIST IR 8547)"),
+        _soc2("CC6.6"), _iso("8.24"),
     ],
     # ── Email TLS family
     "STARTTLS downgrade risk on SMTP": [
         _pci("4.2.1"), _hipaa("§164.312(e)(2)(ii)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     "Weak cipher suite on email TLS endpoint": [
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
-    "Non-PFS cipher suite on email TLS endpoint": [_pci("4.2.1")],
+    "Non-PFS cipher suite on email TLS endpoint": [_pci("4.2.1"), _soc2("CC6.7"), _iso("8.26")],
     # ── Broker plaintext / weak family
     "Plaintext Kafka listener detected": [
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     "Plaintext AMQP listener detected": [
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     # NB: parens preserved verbatim — risk_engine.py emits this exact string.
     "Plaintext Redis listener (no auth)": [
         _pci("4.2.1"),
         _pci("8.3.2"),
         _hipaa("§164.312(e)(1)"),
+        _soc2("CC6.6"), _soc2("CC6.7"), _iso("8.26"),
     ],
     "Weak cipher suite on broker TLS endpoint": [
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     # ── Container findings — keys are CANONICAL FORMS (TITLE_PREFIX_ALIASES targets)
     "End-of-life in container image": [
         _pci("6.3.3"),
         _fips("Not-Approved (legacy crypto library default primitives)"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     "Container image uses quantum-vulnerable crypto library": [
         _fips("Approved with Deprecation 2030/2035 (NIST IR 8547)"),
+        _soc2("CC6.6"), _iso("8.24"),
     ],
     "Severely outdated Python cryptography package in container image": [
         _pci("6.3.3"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
     "Outdated Python cryptography package in container image": [
         _pci("6.3.3"),
+        _soc2("CC6.7"), _iso("8.26"),
     ],
-    "Outdated pyOpenSSL package in container image": [_pci("6.3.3")],
-    "Outdated libgcrypt in container image": [_pci("6.3.3")],
+    "Outdated pyOpenSSL package in container image": [_pci("6.3.3"), _soc2("CC6.7"), _iso("8.26")],
+    "Outdated libgcrypt in container image": [_pci("6.3.3"), _soc2("CC6.7"), _iso("8.26")],
 }
 
 
