@@ -12,13 +12,15 @@ import {
 import { useScanData } from "@/hooks/useScanData"
 import type { FindingItem } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
+import { FindingsSkeleton } from "./findings.skeleton"
+import { EmptyStateCard } from "@/components/EmptyStateCard"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -33,13 +35,20 @@ export function FindingsPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: "severity", desc: false }])
   const [globalFilter, setGlobalFilter] = useState("")
   const [severityFilter, setSeverityFilter] = useState("ALL")
+  const [protocolFilter, setProtocolFilter] = useState("ALL")
   const [selectedFinding, setSelectedFinding] = useState<FindingItem | null>(null)
 
   const findings = useMemo(() => {
     if (!data?.findings) return []
-    if (severityFilter === "ALL") return data.findings
-    return data.findings.filter((f) => f.severity === severityFilter)
-  }, [data, severityFilter])
+    let filtered = data.findings
+    if (severityFilter !== "ALL") {
+      filtered = filtered.filter((f) => f.severity === severityFilter)
+    }
+    if (protocolFilter !== "ALL") {
+      filtered = filtered.filter((f) => f.protocol === protocolFilter)
+    }
+    return filtered
+  }, [data, severityFilter, protocolFilter])
 
   const columns: ColumnDef<FindingItem>[] = [
     {
@@ -86,17 +95,12 @@ export function FindingsPage() {
     initialState: { pagination: { pageSize: 25 } },
   })
 
-  if (loading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+  if (loading) return <FindingsSkeleton />
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
   if (!data?.findings?.length) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-foreground font-semibold text-xl">No findings recorded</h2>
-        <p className="text-muted-foreground mt-2 text-sm">
-          Run a scan first: <code className="font-mono bg-card px-1 rounded">quirk scan --target &lt;host&gt;</code>. Results will appear here automatically.
-        </p>
-      </div>
+      <EmptyStateCard message="No findings recorded in this scan — run a scan first: quirk scan --target <host>. Results will appear here automatically." />
     )
   }
 
@@ -112,6 +116,17 @@ export function FindingsPage() {
             <SelectItem value="ALL">All Severities</SelectItem>
             {["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"].map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={protocolFilter} onValueChange={setProtocolFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Protocol" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Protocols</SelectItem>
+            {["TLS", "SSH", "HTTP", "KERBEROS", "SAML", "DNSSEC"].map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -160,6 +175,17 @@ export function FindingsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination controls */}
+      {table.getPageCount() > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
+          <span>Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Previous</Button>
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</Button>
+          </div>
+        </div>
+      )}
 
       {/* Finding detail Sheet */}
       <Sheet open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>

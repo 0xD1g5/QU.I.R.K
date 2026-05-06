@@ -30,7 +30,6 @@ targets:
 connectors:
   enable_aws: false
   enable_azure: false
-  enable_windows_adcs: false
 
 output:
   directory: "output"

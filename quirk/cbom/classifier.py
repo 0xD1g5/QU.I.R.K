@@ -93,6 +93,10 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     # CycloneDX canonical names (used by builder for cert/TLS decomposition)
     # ------------------------------------------------------------------
     "rsa": (CryptoPrimitive.PKE, 0, 112),
+    "rsa-1024": (CryptoPrimitive.PKE, 0, 80),     # RSA with 1024-bit modulus — deprecated
+    "rsa-2048": (CryptoPrimitive.PKE, 0, 112),    # RSA with 2048-bit modulus — quantum-vulnerable
+    "rsa-3072": (CryptoPrimitive.PKE, 0, 128),    # RSA with 3072-bit modulus — quantum-vulnerable
+    "rsa-4096": (CryptoPrimitive.PKE, 0, 152),    # RSA with 4096-bit modulus — quantum-vulnerable
     "ecdsa": (CryptoPrimitive.SIGNATURE, 0, 128),
     "ec": (CryptoPrimitive.SIGNATURE, 0, 128),
     "ed25519": (CryptoPrimitive.SIGNATURE, 0, 128),
@@ -105,8 +109,14 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "x448": (CryptoPrimitive.KEY_AGREE, 0, 224),
     "aes-256-gcm": (CryptoPrimitive.AE, 1, 256),
     "aes-128-gcm": (CryptoPrimitive.AE, 1, 128),
+    "aes-256-ccm": (CryptoPrimitive.AE, 1, 256),
+    "aes-128-ccm": (CryptoPrimitive.AE, 1, 128),
     "aes-256-cbc": (CryptoPrimitive.BLOCK_CIPHER, 3, 256),
     "aes-128-cbc": (CryptoPrimitive.BLOCK_CIPHER, 1, 128),
+    # Bare AES key-specs (used by DAR/storage scanners — raw key material name)
+    "aes-128": (CryptoPrimitive.BLOCK_CIPHER, 1, 128),
+    "aes-192": (CryptoPrimitive.BLOCK_CIPHER, 1, 192),
+    "aes-256": (CryptoPrimitive.BLOCK_CIPHER, 1, 256),
     # chacha20-poly1305 already present above (SSH enc form without hyphen variant)
     "3des": (CryptoPrimitive.BLOCK_CIPHER, 0, 112),
     "sha-1": (CryptoPrimitive.HASH, 0, 80),
@@ -144,6 +154,48 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "slh-dsa-256": (CryptoPrimitive.SIGNATURE, 5, 256),
     "sntrup761x25519": (CryptoPrimitive.KEM, 3, 128),
     "ml-kem-768+x25519": (CryptoPrimitive.KEM, 3, 192),
+    # ------------------------------------------------------------------
+    # DNSSEC algorithms (RFC 8624 / RFC 9905)
+    # ------------------------------------------------------------------
+    "rsamd5":             (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 1 — MUST NOT
+    "rsasha1":            (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 5 — MUST NOT
+    "dsa-nsec3-sha1":     (CryptoPrimitive.SIGNATURE, None, None),  # DNSSEC alg 6 — MUST NOT
+    "rsasha1-nsec3-sha1": (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 7 — MUST NOT
+    "rsasha256":          (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 8 — quantum-vulnerable
+    "rsasha512":          (CryptoPrimitive.PKE, None, None),        # DNSSEC alg 10 — quantum-vulnerable
+    "ecc-gost":           (CryptoPrimitive.SIGNATURE, None, None),  # DNSSEC alg 12 — MUST NOT
+    "ecdsap256sha256":    (CryptoPrimitive.SIGNATURE, 1, 128),      # DNSSEC alg 13
+    "ecdsap384sha384":    (CryptoPrimitive.SIGNATURE, 3, 192),      # DNSSEC alg 14
+    # Note: "dsa", "ed25519", "ed448" already present above
+    # ------------------------------------------------------------------
+    # SAML / OIDC algorithm identifiers
+    # ------------------------------------------------------------------
+    # SAML XML algorithm URI shortened form (cert_pubkey_alg="SHA1" for SHA-1 URI findings)
+    "sha1":   (CryptoPrimitive.HASH, None, None),        # SHA-1 deprecated — quantum-vulnerable hash
+    # ------------------------------------------------------------------
+    # X.509 certificate signature algorithm OIDs (RFC 4055 / RFC 5754)
+    # Surfaced by build_cbom() certificate signature decomposition.
+    # ------------------------------------------------------------------
+    "md5withrsaencryption":    (CryptoPrimitive.SIGNATURE, 0, 64),   # RFC 3279 — deprecated
+    "sha1withrsaencryption":   (CryptoPrimitive.SIGNATURE, 0, 80),   # RFC 3279 — deprecated
+    "sha256withrsaencryption": (CryptoPrimitive.SIGNATURE, 0, 112),  # RFC 4055
+    "sha384withrsaencryption": (CryptoPrimitive.SIGNATURE, 0, 112),  # RFC 4055
+    "sha512withrsaencryption": (CryptoPrimitive.SIGNATURE, 0, 112),  # RFC 4055
+    "ecdsa-with-sha256":       (CryptoPrimitive.SIGNATURE, 0, 128),  # RFC 5754
+    "ecdsa-with-sha384":       (CryptoPrimitive.SIGNATURE, 0, 192),  # RFC 5754
+    "ecdsa-with-sha512":       (CryptoPrimitive.SIGNATURE, 0, 256),  # RFC 5754
+    # Note: OIDC JWT algorithm names (rs256, ps256, es256, eddsa, etc.) already present
+    # in the JWT/JOSE section above — SAML/OIDC reuse the same algorithm strings
+    # ------------------------------------------------------------------
+    # Kerberos encryption types (RFC 4120 / RFC 3962 / RFC 8009)
+    # ------------------------------------------------------------------
+    "des-cbc-crc":                (CryptoPrimitive.BLOCK_CIPHER, None, None),   # etype 1 -- deprecated
+    "des-cbc-md4":                (CryptoPrimitive.BLOCK_CIPHER, None, None),   # etype 2 -- deprecated
+    "des-cbc-md5":                (CryptoPrimitive.BLOCK_CIPHER, None, None),   # etype 3 -- deprecated
+    "aes128-cts-hmac-sha1-96":    (CryptoPrimitive.BLOCK_CIPHER, 0, 128),       # etype 17 -- quantum-vulnerable (Grover)
+    "aes256-cts-hmac-sha1-96":    (CryptoPrimitive.BLOCK_CIPHER, 1, 256),       # etype 18 -- quantum-safe
+    "aes256-cts-hmac-sha384-192": (CryptoPrimitive.BLOCK_CIPHER, 1, 256),       # etype 20 -- quantum-safe (RFC 8009)
+    "rc4-hmac":                   (CryptoPrimitive.BLOCK_CIPHER, 0, 128),       # etype 23 -- quantum-vulnerable
 }
 
 _FALLBACK = (CryptoPrimitive.UNKNOWN, None, None)

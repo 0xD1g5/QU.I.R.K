@@ -174,7 +174,7 @@
     <table>
       <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Description</th></tr></thead>
       <tbody>
-      {% for f in findings[:10] %}
+      {% for f in (findings | rejectattr('category', 'equalto', 'coverage_gap') | list)[:10] %}
       <tr>
         <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
         <td>{{ f.get('title','') }}</td>
@@ -206,24 +206,96 @@
   <section id="technical-appendix">
     <h1>Technical Appendix</h1>
 
+    {% set coverage_gaps = findings | selectattr('category', 'equalto', 'coverage_gap') | list %}
+    {% if coverage_gaps %}
+    <h2>Coverage Gaps</h2>
+    <p style="color:var(--text-muted)">Scanners that were enabled in config but skipped because their optional extra is not installed. These advisories do not affect the readiness score.</p>
+    <table>
+      <thead><tr><th>Scanner</th><th>Recommendation</th></tr></thead>
+      <tbody>
+      {% for f in coverage_gaps %}
+      <tr><td>{{ f.get('host','') }}</td><td>{{ f.get('recommendation','') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
     <h2>All Findings</h2>
     {% if findings %}
     <table>
-      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Recommendation</th></tr></thead>
+      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Description</th><th>Recommendation</th></tr></thead>
       <tbody>
-      {% for f in findings %}
+      {% for f in findings if f.get('category') != 'coverage_gap' %}
       <tr>
         <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
         <td>{{ f.get('title','') }}</td>
         <td>{{ f.get('host','') }}</td>
         <td>{{ f.get('port','') }}</td>
-        <td>{{ f.get('recommendation','')[:160] }}</td>
+        <td>{{ f.get('description','')[:200] }}{% if f.get('description','')|length > 200 %}…{% endif %}</td>
+        <td>{{ f.get('recommendation','')[:200] }}{% if f.get('recommendation','')|length > 200 %}…{% endif %}</td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
     {% else %}
     <p style="color:var(--text-muted)">No findings recorded for this scan.</p>
+    {% endif %}
+
+    {# ── Phase 49 D-03: Compliance Summary section (framework-grouped tables) ── #}
+    <h2>Compliance Summary</h2>
+    <p style="color:var(--text-muted)">
+      Findings mapped to compliance control references. Use these as evidence input
+      for PCI-DSS, HIPAA, and FIPS 140-3 assessments. See
+      <code>docs/report-interpretation.md</code> for assessor handoff guidance.
+    </p>
+    {% set _frameworks = ['PCI-DSS 4.0.1', 'HIPAA 45 CFR', 'FIPS 140-3'] %}
+    {% for fw in _frameworks %}
+      {% set _rows = [] %}
+      {% for f in findings if f.get('category') != 'coverage_gap' %}
+        {% for c in f.get('compliance', []) if c.get('framework') == fw %}
+          {% set _ = _rows.append((f, c)) %}
+        {% endfor %}
+      {% endfor %}
+      <h3>{{ fw }}</h3>
+      {% if _rows %}
+      <table>
+        <thead><tr><th>Severity</th><th>Finding</th><th>Control</th><th>Source</th></tr></thead>
+        <tbody>
+        {% for f, c in _rows %}
+        <tr>
+          <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
+          <td>{{ f.get('title','') }}</td>
+          <td>{{ c.get('control','') }} ({{ c.get('version','') }})</td>
+          <td><a href="{{ c.get('source_url','') }}">link</a> &middot; verified {{ c.get('last_verified','') }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--text-muted)">No findings mapped to {{ fw }}.</p>
+      {% endif %}
+    {% endfor %}
+
+    {# ── Coverage-gap surfacing per D-03 — findings without any compliance mapping ── #}
+    {% set _unmapped = [] %}
+    {% for f in findings if f.get('category') != 'coverage_gap' %}
+      {% if not f.get('compliance', []) %}
+        {% set _ = _unmapped.append(f) %}
+      {% endif %}
+    {% endfor %}
+    {% if _unmapped %}
+    <h3>Findings without compliance mapping</h3>
+    <p style="color:var(--text-muted)">
+      These findings are not mapped to any compliance framework. Reviewer should
+      confirm this is expected (informational findings, observability advisories)
+      rather than a coverage gap in the compliance map.
+    </p>
+    <ul>
+      {% for f in _unmapped %}<li>{{ f.get('title','') }} ({{ f.get('host','') }})</li>{% endfor %}
+    </ul>
+    {% else %}
+    <h3>Findings without compliance mapping</h3>
+    <p style="color:var(--text-muted)">All findings are mapped to at least one compliance framework.</p>
     {% endif %}
 
     <h2>Endpoint Inventory</h2>

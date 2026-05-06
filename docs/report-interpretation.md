@@ -118,7 +118,7 @@ The table below maps every common finding title to its plain-English explanation
 | Expired certificate | CRITICAL | Certificate past its `Not After` date | Renew certificate immediately |
 | Self-signed certificate | MEDIUM | Certificate not issued by a trusted CA | Replace with CA-issued cert |
 | TLS handshake blocked assessment | MEDIUM | Service refused connection or required client cert | Validate service config; add to exclusions if expected |
-| SSH quantum planning advisory | INFO | SSH host key or KEX algorithm is quantum-vulnerable (RSA/ECDH) | Plan CRYSTALS-Kyber/ML-KEM migration for post-quantum OpenSSH |
+| SSH quantum planning advisory | INFO | SSH host key or KEX algorithm is quantum-vulnerable (RSA/ECDH) | Plan migration to post-quantum SSH using ML-KEM (FIPS 203) when OpenSSH support lands |
 | Unknown open service | MEDIUM | Open port did not respond to TLS, HTTP, or SSH probes | Inventory this service; close if unneeded |
 | mTLS required | INFO | Service requires client certificate — positive signal | No action; note for zero-trust posture documentation |
 
@@ -147,7 +147,7 @@ The migration roadmap organizes findings and recommendations into three planning
 |---------|-------|-----------------|
 | **NOW** | Critical and High severity items; classical security risks requiring immediate action | Within 30 days |
 | **NEXT** | Medium severity items; modernization work for quantum-vulnerable algorithms still widely supported | 90 days to 12 months |
-| **LATER** | Long-horizon quantum migration; CRYSTALS-Kyber (ML-KEM), ML-DSA adoption when standards finalize in your ecosystem | 2026–2030 (NIST FIPS 203/204/205 window) |
+| **LATER** | Long-horizon quantum migration: adopt ML-KEM (FIPS 203) for key exchange and ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures as your ecosystem ships PQC support. Per NIST IR 8547, RSA and ECC are deprecated after 2030 and disallowed after 2035. | 2026–2030 (NIST FIPS 203/204/205 window) |
 
 - **NOW** — Fix active classical security problems first. These are risks you have today, regardless of quantum. A client cannot justify deferring an expired certificate or plaintext HTTP service because "we'll handle everything during the quantum migration."
 - **NEXT** — Early quantum preparation that fits into the normal modernization cycle. Disabling legacy TLS, replacing self-signed certificates, and adopting ECDSA are all work your team can do in regular sprint cycles without waiting for post-quantum standards to stabilize.
@@ -158,4 +158,21 @@ The migration roadmap organizes findings and recommendations into three planning
 
 ---
 
-*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`.*
+## 8. Compliance Summary
+
+QU.I.R.K. now maps each finding to **PCI-DSS 4.0.1, HIPAA 45 CFR, and FIPS 140-3** control references and renders them in a "Compliance Summary" section of the HTML and PDF reports. This makes the report directly usable as evidence in client compliance assessments — the assessor doesn't have to translate technical findings to control language.
+
+The section is grouped into three framework subsections (PCI-DSS 4.0.1, HIPAA 45 CFR, FIPS 140-3). Each subsection renders a table with four columns: **Severity**, **Finding**, **Control reference + version** (e.g., `4.2.1` at `4.0.1`), and a **Source URL with the last-verified date**. The source URL points to the authoritative regulator publication (PCI Security Standards Council, the eCFR, or NIST CSRC) — never a third-party summary — so an assessor can click through and confirm the control text directly.
+
+A separate "**Findings without compliance mapping**" subsection lists any findings whose title is not in `COMPLIANCE_MAP`. This surfaces coverage gaps so the assessor (or the operator preparing for the engagement) can confirm whether the absence is intentional — informational findings, observability advisories, scan-error categories — or a real gap that needs a mapping update before the report ships.
+
+The compliance map's review cadence and upgrade procedure for regulator revisions is documented in `docs/operators-guide.md` (Phase 50 — TODO at the time of writing).
+
+Operators can verify compliance map freshness before a client engagement by running `quirk compliance status` (use `--format json` for machine-readable output). The command prints the map version, oldest `last_verified` date, and source URL per framework, so the operator can confirm the map hasn't gone stale (default staleness threshold: 365 days) since the last release.
+
+> **Client Conversation — Compliance Summary:**
+> "We've mapped each finding to the controls your auditor cares about — PCI-DSS, HIPAA, and FIPS 140-3. Each row links back to the regulator's official publication so your assessor can confirm the control text directly. The 'Findings without compliance mapping' section is intentional transparency — it tells you which findings are informational versus which are unmapped gaps we're actively closing."
+
+---
+
+*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`.*

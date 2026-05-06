@@ -1,0 +1,29 @@
+  assessment:                                                                                                                                                                  
+    name: "Chaos Lab — Registry Scan"                                                                                                                                          
+    report_owner: "Security Team"                                                                                                                                              
+    data_classification: "CONFIDENTIAL"                                                                                                                                        
+    timezone: "UTC"                                                                                                                                                            
+                                                                                                                                                                               
+  targets:                                                                                                                                                                     
+    include_ips:                                                                                                                                                               
+      - "127.0.0.1"                                                                                                                                                            
+                                                                                                                                                                               
+  scan:                                                                                                                                                                        
+    ports_tls: [443]                                                                                                                                                           
+    timeout_seconds: 5                                                                                                                                                         
+    concurrency: 20  
+    include_sni: true                                                                                                                                                           
+                                                                                                                                                                               
+  output:                                                                                                                                                                      
+    directory: "./quirk-output"                                                                                                                                                
+    db_path: "./quirk-output/quirk.db"                                                                                                                                         
+                                                                                                                                                                               
+  connectors:                                                                                                                                                                  
+    enable_aws: false                                                                                                                                                          
+    enable_azure: false                                                                                                                                                        
+    enable_container: true                                                                                                                                                     
+    container_targets:                                                                                                                                                         
+      - "127.0.0.1:20005/image-old-libssl"                                                                                                                                 
+      - "127.0.0.1:20005/image-old-pycrypto"                                                                                                                                   
+      - "127.0.0.1:20005/image-mixed"   
+

@@ -1,4 +1,7 @@
 import argparse
+import json
+import os
+import sys
 import time
 from datetime import datetime, timezone
 from collections import Counter
@@ -19,12 +22,18 @@ from quirk.scanner.container_scanner import scan_container_targets
 from quirk.scanner.source_scanner import scan_source_targets
 from quirk.scanner.aws_connector import scan_aws_targets
 from quirk.scanner.azure_connector import scan_azure_targets
+from quirk.scanner.gcp_connector import scan_gcp_targets
+from quirk.scanner.dnssec_scanner import scan_dnssec_targets
+from quirk.scanner.email_scanner import scan_email_targets
+from quirk.scanner.broker_scanner import (
+    scan_kafka_targets, scan_rabbitmq_targets, scan_redis_targets,
+)
 
 from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
-from quirk.assessment.operator_context import prompt_for_context, attach_context
-from quirk.engine.risk_engine import evaluate_endpoints
+from quirk.assessment.operator_context import attach_context
+from quirk.engine.risk_engine import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints
 from quirk.reports.writer import write_reports
 
 from quirk.engine.profiles import apply_profile
@@ -33,6 +42,8 @@ from quirk.engine.rate_limiter import TokenBucket
 
 from quirk import __version__
 from quirk.cli.banner import print_banner
+from quirk.util.targets import apply_targets_file_override  # D-03
+from quirk.util.optional_extra import is_extra_available, select_nmap_port_list  # D-08/D-09
 
 
 def _error_category(desc: str) -> str:
@@ -77,6 +88,89 @@ def _phase_timer(run_stats: Dict[str, Any], name: str):
             dur = time.perf_counter() - self_t.start
             run_stats["timings_sec"][name] = round(dur, 3)
     return _T()
+
+
+def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, logger):
+    """Phase 41 / D-14: run a scanner phase under BaseException protection.
+
+    Returns the scanner's return value, or [] when a non-fatal exception is
+    captured. Re-raises only KeyboardInterrupt and SystemExit so the user can
+    abort cleanly. All other exceptions (BaseException subclasses) are turned
+    into a CryptoEndpoint row with scan_error_category='exception' so the rest
+    of the scan can continue and the failure is visible in the report / DB.
+    """
+    try:
+        with _phase_timer(run_stats, phase_name):
+            return fn()
+    except (KeyboardInterrupt, SystemExit):
+        # D-14: never swallow user-abort or interpreter-exit signals.
+        raise
+    except BaseException as exc:  # noqa: BLE001 — D-14 wrapper by design
+        try:
+            logger.error(f"{phase_name}: unhandled exception: {exc!r}")
+        except Exception:
+            # Logger contract is best-effort; do not let logger failure mask the original error.
+            pass
+        error_endpoints.append(CryptoEndpoint(
+            host=scanner_label,
+            port=0,
+            protocol="ERROR",
+            scan_error=str(exc) or exc.__class__.__name__,
+            scan_error_category="exception",
+        ))
+        return []
+
+
+def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endpoints) -> None:
+    """Phase 41 / D-12: emit canonical stderr advisory + record CryptoEndpoint row.
+
+    Invoked when an optional-extra-gated scanner is enabled but its underlying
+    package is not installed. Produces stderr line:
+        [advisory] scanner=<name> extra=<group> not installed -- run `pip install quirk[<group>]` to enable
+    and appends a CryptoEndpoint with scan_error_category='missing_extra' so
+    trends.py can exclude it from regression counts (D-15).
+    """
+    print(
+        f"[advisory] scanner={scanner_name} extra={extra_group} not installed"
+        f" -- run `pip install quirk[{extra_group}]` to enable",
+        file=sys.stderr,
+    )
+    error_endpoints.append(CryptoEndpoint(
+        host=scanner_name,
+        port=0,
+        protocol="ADVISORY",
+        scan_error=f"optional extra [{extra_group}] not installed",
+        scan_error_category="missing_extra",
+    ))
+
+
+def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
+    """Read gcs_scan_json from the GCS-SUMMARY sentinel produced by Phase 26 (STOR-03).
+
+    STOR-03 invariant: this function makes ZERO new GCS API calls. Phase 26 already wrote
+    per-bucket CryptoEndpoint rows into gcp_endpoints; this helper only consumes the
+    sentinel's gcs_scan_json blob to confirm the data hand-off works. No new endpoints are
+    created here — the per-bucket rows are already present.
+
+    Returns [] always. Future phases may extend this to derive additional findings from the
+    sentinel JSON without making new API calls.
+    """
+    import json as _json
+    sentinel = next(
+        (ep for ep in (gcp_endpoints or []) if getattr(ep, "cert_pubkey_alg", "") == "GCS-SUMMARY"),
+        None,
+    )
+    if sentinel is None:
+        return []
+    raw = getattr(sentinel, "gcs_scan_json", None)
+    if not raw:
+        return []
+    try:
+        _json.loads(raw)  # validate JSON (informational; result not used)
+    except (ValueError, TypeError):
+        return []
+    # STOR-03 satisfied: Phase 26's per-bucket rows already in gcp_endpoints; no API call here.
+    return []
 
 
 def main():
@@ -126,10 +220,46 @@ def main():
         _serve(port=serve_args.port, host=serve_args.host, no_open=serve_args.no_open)
         return
 
+    # --- compliance subcommand: intercept before scan argparse (Phase 49 D-05) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "compliance":
+        comp_parser = argparse.ArgumentParser(
+            prog="quirk compliance",
+            description="Inspect QUIRK's compliance mapping data (PCI-DSS / HIPAA / FIPS 140-3)",
+        )
+        comp_sub = comp_parser.add_subparsers(dest="action", required=True)
+        status_parser = comp_sub.add_parser(
+            "status",
+            help="Print per-framework version, last_verified date, and source URL",
+        )
+        status_parser.add_argument(
+            "--format",
+            choices=["text", "json"],
+            default="text",
+            help="Output format (default: text)",
+        )
+        comp_args = comp_parser.parse_args(_sys.argv[2:])
+        if comp_args.action == "status":
+            from quirk.compliance import status_report
+            status_report(format=comp_args.format)
+        return
+
+    # --- doctor subcommand: intercept before scan argparse (Phase 52 DOCS-05 / D-10) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "doctor":
+        from quirk.cli.doctor_cmd import run_doctor
+        run_doctor()
+        return
+
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
     parser.add_argument("--config", help="Path to config.yaml (skip prompts)")
+    parser.add_argument(
+        "--targets-file",
+        help=(
+            "Path to file of targets (one per line, '#' comments). "
+            "Replaces config targets entirely (does NOT merge). Phase 47 / D-03."
+        ),
+    )  # D-03
     parser.add_argument("--verbose", action="store_true", help="Verbose output during scan")
     parser.add_argument("--progress", action="store_true", help="Show progress bars during scan")
 
@@ -153,13 +283,22 @@ def main():
     parser.add_argument("--resume", action="store_true", help="Reuse cache if valid")
     parser.add_argument("--force-discovery", action="store_true", help="Ignore discovery cache and re-run")
 
+    # Phase 33 / D-01: cloud broker target flags (repeatable)
+    parser.add_argument(
+        "--azure-servicebus-namespace",
+        action="append", default=[], dest="azure_servicebus_namespaces",
+        help="Azure Service Bus namespace to probe (repeatable). Phase 33 / D-01.",
+    )
+    parser.add_argument(
+        "--aws-sqs-region",
+        action="append", default=[], dest="aws_sqs_regions",
+        help="AWS SQS region to probe (repeatable). Phase 33 / D-01.",
+    )
+
     args = parser.parse_args()
 
     quiet = getattr(args, "quiet", False)
     print_banner(__version__, quiet=quiet)
-
-    # rich Progress used throughout; tqdm removed (D-04)
-    tqdm = None  # kept for any residual references during transition
 
     logger = Logger(verbose=args.verbose, use_tqdm=bool(args.progress))
 
@@ -175,15 +314,37 @@ def main():
     }
 
     used_config_file = False
+    scan_profile = args.profile
     if args.config:
         logger.info(f"🧾 Loading config from: {args.config}")
         cfg = load_config(args.config)
         used_config_file = True
     else:
-        cfg = interactive_config()
+        cfg, scan_profile = interactive_config()
 
     # Apply profile defaults (v3.7)
-    apply_profile(cfg, args.profile, safe_mode=args.safe_mode)
+    apply_profile(cfg, scan_profile, safe_mode=args.safe_mode)
+
+    # Phase 33 / D-01: cloud broker target plumbing — CLI extends config-supplied lists
+    if getattr(args, "azure_servicebus_namespaces", None):
+        cfg.connectors.broker_azure_namespaces = (
+            list(cfg.connectors.broker_azure_namespaces or []) + list(args.azure_servicebus_namespaces)
+        )
+    if getattr(args, "aws_sqs_regions", None):
+        cfg.connectors.broker_sqs_regions = (
+            list(cfg.connectors.broker_sqs_regions or []) + list(args.aws_sqs_regions)
+        )
+
+    # Phase 47 / D-03: --targets-file REPLACES cfg.targets.fqdns + cidrs (does NOT merge)
+    if getattr(args, "targets_file", None):
+        apply_targets_file_override(cfg, args.targets_file)  # D-03
+
+    # Phase 47 / D-09: reflect --discovery flag onto cfg.connectors.enable_nmap for
+    # --config / CLI mode. In interactive mode the wizard already set enable_nmap via
+    # interactive_config(); overwriting here would silently discard the user's y/N answer.
+    if used_config_file:
+        setattr(cfg.connectors, "enable_nmap", args.discovery == "nmap")  # D-09
+
     # Score profile (calibration) — independent from scan profile
     if getattr(args, "score_profile", None):
         if getattr(cfg, "intelligence", None) is None:
@@ -195,11 +356,6 @@ def main():
         if getattr(cfg, "intelligence", None) is not None:
             cfg.intelligence.profile = args.score_profile  # type: ignore[attr-defined]
 
-    # v3.5.1 context prompts (only in interactive mode)
-    if not used_config_file:
-        ctx = prompt_for_context()
-        attach_context(cfg, ctx)
-
     init_db(cfg.output.db_path)
 
     limiter = TokenBucket(args.rate_limit, capacity=max(1.0, args.rate_limit)) if args.rate_limit and args.rate_limit > 0 else None
@@ -209,14 +365,28 @@ def main():
     # ==============================
     targets: List[Tuple[str, int]] = []
 
-    if args.discovery == "nmap":
+    if getattr(cfg.connectors, "enable_nmap", False):
         nmap_targets = _build_nmap_target_list(cfg)
         if not nmap_targets:
             logger.info("⚠️ No CIDRs/FQDNs/IPs provided for Nmap discovery. Add targets and re-run.")
             return
 
-        ports_for_nmap = sorted(set((cfg.scan.ports_tls or []) + [22, 80, 8080, 8000]))
+        # D-08: check if nmap binary is available; fall back to CONSULTING_TLS_PORTS if not.
+        nmap_binary_available = is_extra_available("nmap")
+        # D-11: use post-config resolved port list; select_nmap_port_list handles fallback.
+        ports_for_nmap = sorted(set(select_nmap_port_list(cfg, nmap_binary_available) + [22, 80, 8080, 8000]))  # D-08/D-11
         extra_args = args.nmap_extra_args.strip()
+
+        # D-10/D-11/D-12: TTY-aware probe-budget guard (inserted Task 3)
+        from quirk.util.targets import maybe_confirm_probe_budget
+        if not maybe_confirm_probe_budget(
+            targets=nmap_targets,
+            ports=ports_for_nmap,
+            threshold=10_000,  # D-12: threshold locked to 10,000 by roadmap success criterion #5; not configurable
+            is_tty=sys.stdin.isatty(),  # stdin.isatty(): correct check for "can user provide input"
+        ):
+            logger.info("Aborted by user — projected probe count exceeded threshold.")
+            return
 
         d_key = f"discovery-{scope_hash(cfg, 'nmap', nmap_extra_args=extra_args, ports=ports_for_nmap)}"
         cached = load_cache(cfg.output.directory, d_key, args.cache_ttl_hours) if args.cache and args.resume and not args.force_discovery else None
@@ -225,6 +395,15 @@ def main():
             if cached:
                 logger.stamp(f"♻️ Using cached discovery results ({d_key})")
                 targets = serial_to_targets(cached.get("targets", []))
+            elif not nmap_binary_available:
+                # D-08: nmap binary absent — advisory already emitted by probe_missing_extras;
+                # fall back to builtin discovery using CONSULTING_TLS_PORTS.
+                logger.info(
+                    "⚠️ nmap binary not found — falling back to builtin discovery "
+                    "(consulting-tls port list). Install nmap and ensure it is in PATH."
+                )
+                targets = expand_targets(cfg)
+                targets = _filter_excludes(targets, cfg.targets.exclude_ips or [])
             else:
                 open_ports = run_nmap_discovery(
                     targets=nmap_targets,
@@ -256,13 +435,26 @@ def main():
     # ==============================
     # Fingerprinting (with cache)
     # ==============================
-    fp_timeout = _get_scan_int(cfg, "fingerprint_timeout_seconds", cfg.scan.timeout_seconds)
+    # Phase 41 / D-08: read fingerprint timeout from canonical TimeoutsCfg sub-table.
+    fp_timeout = getattr(cfg.scan.timeouts, "fingerprint_seconds", cfg.scan.timeout_seconds)
     fp_conc = _get_scan_int(cfg, "fingerprint_concurrency", cfg.scan.concurrency)
 
     fp_key = f"fingerprint-{scope_hash(cfg, args.discovery, nmap_extra_args=args.nmap_extra_args, ports=sorted(set([p for _, p in targets])))}"
     fp_cached = load_cache(cfg.output.directory, fp_key, args.cache_ttl_hours) if args.cache and args.resume else None
 
     inventory_endpoints: List[CryptoEndpoint] = []
+    # Phase 41 / D-12 + D-14: scanner-phase failure surface — both missing-extra
+    # advisory rows (category='missing_extra') and BaseException-captured rows
+    # (category='exception') flow through this list and merge into the main
+    # endpoints list before risk_engine / db_persist / write_reports.
+    error_endpoints: List[CryptoEndpoint] = []
+    # Phase 45 / D-08: centralized optional-extra probe. For each enabled scanner
+    # whose optional extra is unavailable, emit one ADVISORY CryptoEndpoint into
+    # error_endpoints. Phase 41 inline calls at lines ~782 (email) and ~827 (broker)
+    # are LEFT IN PLACE per D-11 — the registry intentionally omits motion to avoid
+    # double-emitting for those two scanners. See .planning/phases/45-install-day-ux/.
+    from quirk.util.optional_extra import probe_missing_extras
+    probe_missing_extras(cfg, error_endpoints)
     tls_targets: List[Tuple[str, int]] = []
     ssh_targets: List[Tuple[str, int]] = []
     classified_details: Dict[Tuple[str, int], str] = {}
@@ -280,10 +472,6 @@ def main():
             fp_results = fp_cached.get("fingerprints", [])
         else:
             logger.stamp(f"Fingerprinting {len(targets)} targets... (workers={fp_conc}, timeout={fp_timeout}s)")
-            if tqdm:
-                bar = tqdm(total=len(targets), desc="Fingerprinting", unit="target")
-            else:
-                bar = None
 
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -291,10 +479,6 @@ def main():
                 futs = [ex.submit(_fp_task, h, p) for h, p in targets]
                 for f in as_completed(futs):
                     fp_results.append(f.result())
-                    if bar:
-                        bar.update(1)
-            if bar:
-                bar.close()
 
             if args.cache:
                 save_cache(cfg.output.directory, fp_key, {"fingerprints": fp_results, "timeout": fp_timeout, "workers": fp_conc})
@@ -353,6 +537,8 @@ def main():
         "tls_candidates": len(tls_targets),
         "ssh_candidates": len(ssh_targets),
         "inventory_other": len(inventory_endpoints),
+        "hosts_scanned": sorted({h for h, _ in targets}),
+        "ports_scanned": sorted({p for _, p in targets}),
     }
 
     logger.stamp(f"TLS candidates: {len(tls_targets)} | SSH candidates: {len(ssh_targets)} | Other inventory: {len(inventory_endpoints)}")
@@ -360,55 +546,51 @@ def main():
     # ==============================
     # TLS scan phase (phase-tuned)
     # ==============================
-    tls_timeout = _get_scan_int(cfg, "tls_timeout_seconds", cfg.scan.timeout_seconds)
-    tls_conc = _get_scan_int(cfg, "tls_concurrency", cfg.scan.concurrency)
-
-    # Temporarily override shared cfg.scan controls (minimal diff)
-    base_timeout = cfg.scan.timeout_seconds
-    base_conc = cfg.scan.concurrency
-    cfg.scan.timeout_seconds = tls_timeout
-    cfg.scan.concurrency = tls_conc
-
-    tls_endpoints = []
-    with _phase_timer(run_stats, "tls_scanning"):
-        if tls_targets:
-            tls_endpoints = scan_tls_targets(
-                cfg,
-                tls_targets,
-                logger=logger,
-                progress_cb=None
-            )
-            for ep in tls_endpoints:
-                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                ep.service_detail = classified_details.get(key, "")
-
-    cfg.scan.timeout_seconds = base_timeout
-    cfg.scan.concurrency = base_conc
+    # Phase 41 / D-08: BACK-45 dissolved. The TLS scanner now reads
+    # cfg.scan.timeouts.tls_seconds and cfg.scan.tls_concurrency directly — no
+    # more cfg.scan mutate-and-restore pattern around the scan call.
+    # Phase 41 / D-14: TLS phase runs under _wrapped_phase BaseException protection.
+    def _run_tls_phase():
+        if not tls_targets:
+            return []
+        eps = scan_tls_targets(
+            cfg,
+            tls_targets,
+            logger=logger,
+            progress_cb=None,
+        )
+        for ep in eps:
+            key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+            ep.service_detail = classified_details.get(key, "")
+        return eps
+    tls_endpoints = _wrapped_phase(
+        run_stats, "tls_scanning", "tls_scanner",
+        _run_tls_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # SSH scan phase (phase-tuned)
     # ==============================
-    ssh_timeout = _get_scan_int(cfg, "ssh_timeout_seconds", cfg.scan.timeout_seconds)
-    ssh_conc = _get_scan_int(cfg, "ssh_concurrency", cfg.scan.concurrency)
-
-    cfg.scan.timeout_seconds = ssh_timeout
-    cfg.scan.concurrency = ssh_conc
-
-    ssh_endpoints = []
-    with _phase_timer(run_stats, "ssh_scanning"):
-        if ssh_targets:
-            ssh_endpoints = scan_ssh_targets(
-                cfg,
-                ssh_targets,
-                logger=logger,
-                progress_cb=None
-            )
-            for ep in ssh_endpoints:
-                key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
-                ep.service_detail = classified_details.get(key, "")
-
-    cfg.scan.timeout_seconds = base_timeout
-    cfg.scan.concurrency = base_conc
+    # Phase 41 / D-08: BACK-45 dissolved for SSH as well. The SSH scanner reads
+    # cfg.scan.timeouts.ssh_seconds and cfg.scan.ssh_concurrency directly.
+    # Phase 41 / D-14: SSH phase runs under _wrapped_phase BaseException protection.
+    def _run_ssh_phase():
+        if not ssh_targets:
+            return []
+        eps = scan_ssh_targets(
+            cfg,
+            ssh_targets,
+            logger=logger,
+            progress_cb=None,
+        )
+        for ep in eps:
+            key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
+            ep.service_detail = classified_details.get(key, "")
+        return eps
+    ssh_endpoints = _wrapped_phase(
+        run_stats, "ssh_scanning", "ssh_scanner",
+        _run_ssh_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # JWT scan phase
@@ -418,7 +600,7 @@ def main():
         if cfg.connectors.enable_jwt and cfg.connectors.jwt_targets:
             jwt_endpoints = scan_jwt_targets(
                 cfg.connectors.jwt_targets,
-                timeout=cfg.scan.timeout_seconds,
+                timeout=cfg.scan.timeouts.jwt_seconds,
                 logger=logger,
             )
 
@@ -430,7 +612,7 @@ def main():
         if cfg.connectors.enable_container and cfg.connectors.container_targets:
             container_endpoints = scan_container_targets(
                 cfg.connectors.container_targets,
-                timeout=cfg.scan.timeout_seconds,
+                timeout=cfg.scan.timeouts.container_seconds,
                 logger=logger,
             )
 
@@ -442,7 +624,7 @@ def main():
         if cfg.connectors.enable_source and cfg.connectors.source_targets:
             source_endpoints = scan_source_targets(
                 cfg.connectors.source_targets,
-                timeout=cfg.scan.timeout_seconds,
+                timeout=cfg.scan.timeouts.source_seconds,
                 logger=logger,
             )
 
@@ -470,15 +652,360 @@ def main():
                 logger=logger,
             )
 
+    # ==============================
+    # GCP cloud connector phase
+    # ==============================
+    gcp_endpoints = []
+    with _phase_timer(run_stats, "gcp_scanning"):
+        if cfg.connectors.enable_gcp:
+            gcp_endpoints = scan_gcp_targets(
+                project_id=cfg.connectors.gcp_project_id or "",
+                logger=logger,
+            )
+
+    # ── Shared identity-scan session timestamp (ISSUE-3 fix) ──
+    session_start = datetime.now(timezone.utc)
+
+    # ==============================
+    # DB connector phase (PostgreSQL / MySQL) — Phase 27
+    # ==============================
+    db_endpoints = []
+    with _phase_timer(run_stats, "db_scanning"):
+        if cfg.connectors.enable_db:
+            from quirk.scanner.db_connector import scan_pg_targets, scan_mysql_targets
+            if cfg.connectors.pg_targets:
+                db_endpoints.extend(scan_pg_targets(
+                    targets=cfg.connectors.pg_targets,
+                    user=cfg.connectors.pg_scanner_user,
+                    password=cfg.connectors.pg_scanner_password,
+                    logger=logger,
+                    session_start=session_start,
+                    cfg=cfg,
+                ))
+            if cfg.connectors.mysql_targets:
+                db_endpoints.extend(scan_mysql_targets(
+                    targets=cfg.connectors.mysql_targets,
+                    user=cfg.connectors.mysql_scanner_user,
+                    password=cfg.connectors.mysql_scanner_password,
+                    logger=logger,
+                    session_start=session_start,
+                    cfg=cfg,
+                ))
+
+    # ==============================
+    # S3 object storage encryption (Phase 28, STOR-01)
+    # ==============================
+    s3_endpoints = []
+    with _phase_timer(run_stats, "s3_scanning"):
+        if cfg.connectors.enable_s3:
+            from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
+            if not BOTO3_AVAILABLE:
+                logger.v("boto3 not installed — S3 scanning skipped")
+            else:
+                import boto3
+                s3_session = boto3.Session(
+                    region_name=cfg.connectors.aws_region,
+                    profile_name=cfg.connectors.aws_profile,
+                )
+                s3_endpoints = _scan_s3_encryption(
+                    session=s3_session,
+                    logger=logger,
+                    session_start=session_start,
+                    endpoint_url=cfg.connectors.aws_endpoint_url or None,
+                )
+                logger.info(f"S3 scan: {len(s3_endpoints)} bucket endpoints")
+
+    # ==============================
+    # Azure Blob container encryption (Phase 28, STOR-02)
+    # ==============================
+    blob_endpoints = []
+    with _phase_timer(run_stats, "blob_scanning"):
+        if cfg.connectors.enable_blob:
+            from quirk.scanner.azure_connector import _scan_blob_encryption, AZURE_AVAILABLE, DefaultAzureCredential
+            if not AZURE_AVAILABLE:
+                logger.v("azure SDK not installed — Azure Blob scanning skipped")
+            elif not (cfg.connectors.azure_subscription_id or "").strip():
+                logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
+            else:
+                blob_endpoints = _scan_blob_encryption(
+                    credential=DefaultAzureCredential(),
+                    subscription_id=cfg.connectors.azure_subscription_id,
+                    logger=logger,
+                    session_start=session_start,
+                )
+                logger.info(f"Azure Blob scan: {len(blob_endpoints)} container endpoints")
+
+    # ==============================
+    # K8S secrets inspection (Phase 29, K8S-01 / K8S-02 / K8S-03)
+    # ==============================
+    k8s_endpoints = []
+    with _phase_timer(run_stats, "k8s_scanning"):
+        if cfg.connectors.enable_k8s:
+            from quirk.scanner.k8s_connector import scan_k8s_targets
+            k8s_endpoints = scan_k8s_targets(
+                provider=cfg.connectors.k8s_provider or "",
+                cluster_name=cfg.connectors.k8s_cluster_name or "",
+                namespace=cfg.connectors.k8s_namespace or "default",
+                kubeconfig=cfg.connectors.k8s_kubeconfig or None,
+                context=cfg.connectors.k8s_context or None,
+                gcp_project_id=cfg.connectors.gcp_project_id or "",
+                gke_clusters=cfg.connectors.gke_clusters or [],
+                azure_subscription_id=cfg.connectors.azure_subscription_id or "",
+                aks_clusters=cfg.connectors.aks_clusters or [],
+                logger=logger,
+                session_start=session_start,
+            )
+            # EKS path uses boto3 (NOT kubernetes Python client). Run alongside
+            # GKE/AKS/secret enumeration when k8s_provider == "eks".
+            if (cfg.connectors.k8s_provider or "").lower() == "eks":
+                try:
+                    from quirk.scanner.aws_connector import (
+                        BOTO3_AVAILABLE,
+                        _scan_eks_encryption,
+                    )
+                    if BOTO3_AVAILABLE:
+                        import boto3 as _boto3_eks
+                        _eks_session = _boto3_eks.Session(
+                            region_name=getattr(cfg.connectors, "aws_region", None) or None,
+                            profile_name=getattr(cfg.connectors, "aws_profile", None) or None,
+                        )
+                        k8s_endpoints.extend(_scan_eks_encryption(
+                            _eks_session, logger, session_start=session_start,
+                        ))
+                except Exception as exc:
+                    logger.v(f"EKS encryption scan unavailable: {exc}")
+            logger.info(f"K8S scan: {len(k8s_endpoints)} cluster endpoints")
+
+    # ==============================
+    # GCS bucket encryption re-use (Phase 28, STOR-03 — zero API call invariant)
+    # ==============================
+    gcs_storage_endpoints = []
+    with _phase_timer(run_stats, "gcs_storage_reuse"):
+        gcs_storage_endpoints = _process_gcs_storage_encryption(gcp_endpoints, logger=logger)
+        if gcs_storage_endpoints:
+            logger.info(f"GCS storage re-use: {len(gcs_storage_endpoints)} derived endpoints")
+
+    # ── DNSSEC scanning ─────────────────────────────────────
+    dnssec_endpoints = []
+    with _phase_timer(run_stats, "dnssec_scanning"):
+        if cfg.connectors.enable_dnssec and cfg.connectors.dnssec_targets:
+            dnssec_endpoints = scan_dnssec_targets(
+                targets=cfg.connectors.dnssec_targets,
+                timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
+                logger=logger,
+                session_start=session_start,
+            )
+            logger.info("DNSSEC scan: %d endpoints from %d targets",
+                        len(dnssec_endpoints), len(cfg.connectors.dnssec_targets))
+
+    # ── SAML/OIDC scanning ────────────────────────────────────
+    saml_endpoints = []
+    with _phase_timer(run_stats, "saml_scanning"):
+        if cfg.connectors.enable_saml and cfg.connectors.saml_targets:
+            from quirk.scanner.saml_scanner import scan_saml_targets
+            saml_endpoints = scan_saml_targets(
+                targets=cfg.connectors.saml_targets,
+                timeout=getattr(cfg.connectors, "saml_timeout", 10),
+                logger=logger,
+                session_start=session_start,
+            )
+            logger.info("SAML scan: %d endpoints from %d targets",
+                        len(saml_endpoints), len(cfg.connectors.saml_targets))
+
+    # ── Kerberos scanning ────────────────────────────────────
+    kerberos_endpoints = []
+    with _phase_timer(run_stats, "kerberos_scanning"):
+        if cfg.connectors.enable_kerberos and cfg.connectors.kerberos_targets:
+            from quirk.scanner.kerberos_scanner import scan_kerberos_targets
+            kerberos_endpoints = scan_kerberos_targets(
+                targets=cfg.connectors.kerberos_targets,
+                timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
+                logger=logger,
+                session_start=session_start,
+            )
+            logger.info("Kerberos scan: %d endpoints from %d targets",
+                        len(kerberos_endpoints), len(cfg.connectors.kerberos_targets))
+
+    # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
+    vault_endpoints = []
+    with _phase_timer(run_stats, "vault_scanning"):
+        if cfg.connectors.enable_vault:
+            from quirk.scanner.vault_connector import (
+                scan_vault_targets,
+                HVAC_AVAILABLE,
+            )
+            if not HVAC_AVAILABLE:
+                logger.v("hvac not installed -- Vault scanning skipped")
+            elif not (cfg.connectors.vault_addr or os.environ.get("VAULT_ADDR")):
+                logger.v("vault_addr not set -- Vault scanning skipped")
+            else:
+                vault_endpoints = scan_vault_targets(
+                    vault_addr=(cfg.connectors.vault_addr
+                                or os.environ.get("VAULT_ADDR", "")),
+                    token=cfg.connectors.vault_token,
+                    transit_mount=cfg.connectors.vault_transit_mount or "transit",
+                    tls_verify=cfg.connectors.vault_tls_verify,
+                    logger=logger,
+                    session_start=session_start,
+                    cfg=cfg,
+                )
+                logger.info("Vault scan: %d endpoints", len(vault_endpoints))
+
+    # ── Email TLS scanning (Phase 32 — v4.4 Data in Motion) ────
+    email_endpoints = []
+    # Phase 41 / D-12: probe optional-extra availability and emit advisory if missing.
+    if cfg.connectors.enable_email:
+        from quirk.scanner import email_scanner as _email_mod
+        if not getattr(_email_mod, "SSLYZE_AVAILABLE", True):
+            _emit_missing_extra_advisory("email_scanner", "motion", error_endpoints)
+            cfg_email_skip = True
+        else:
+            cfg_email_skip = False
+    else:
+        cfg_email_skip = True
+
+    # Phase 41 / D-14: email phase wraps body in BaseException protection while
+    # keeping the `with _phase_timer(..., "email_scanning")` AST shape that the
+    # email-wiring AST guard test expects.
+    with _phase_timer(run_stats, "email_scanning"):
+        try:
+            if not cfg_email_skip and cfg.connectors.enable_email:
+                email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+                if email_hosts:
+                    email_endpoints = scan_email_targets(
+                        hosts=email_hosts,
+                        timeout=cfg.scan.timeouts.email_seconds,
+                        logger=logger,
+                        session_start=session_start,
+                    )
+                    logger.info(f"Email scan: {len(email_endpoints)} endpoints from {len(email_hosts)} hosts")
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as exc:  # noqa: BLE001 — D-14 wrapper by design
+            try:
+                logger.error(f"email_scanning: unhandled exception: {exc!r}")
+            except Exception:
+                pass
+            error_endpoints.append(CryptoEndpoint(
+                host="email_scanner", port=0, protocol="ERROR",
+                scan_error=str(exc) or exc.__class__.__name__,
+                scan_error_category="exception",
+            ))
+
+    # ── Broker TLS scanning (Phase 33) ────────────────────────
+    kafka_endpoints = []
+    rabbit_endpoints = []
+    redis_endpoints = []
+    # Phase 41 / D-12: probe optional-extra availability — broker depends on the
+    # [motion] extra (sslyze + kafka-python + redis). If sslyze is absent, emit
+    # the canonical advisory and skip the phase rather than crashing on import.
+    if cfg.connectors.enable_broker:
+        from quirk.scanner import broker_scanner as _broker_mod
+        if not getattr(_broker_mod, "SSLYZE_AVAILABLE", True):
+            _emit_missing_extra_advisory("broker_scanner", "motion", error_endpoints)
+            cfg_broker_skip = True
+        else:
+            cfg_broker_skip = False
+    else:
+        cfg_broker_skip = True
+
+    def _run_broker_phase():
+        if cfg_broker_skip or not cfg.connectors.enable_broker:
+            return ([], [], [])
+        broker_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+        if not broker_hosts:
+            return ([], [], [])
+        k = scan_kafka_targets(
+            hosts=broker_hosts,
+            timeout=cfg.scan.timeouts.broker_seconds,
+            profile=scan_profile,
+            logger=logger,
+            session_start=session_start,
+        )
+        r = scan_rabbitmq_targets(
+            hosts=broker_hosts,
+            azure_namespaces=cfg.connectors.broker_azure_namespaces,
+            sqs_regions=cfg.connectors.broker_sqs_regions,
+            timeout=cfg.scan.timeouts.broker_seconds,
+            logger=logger,
+            session_start=session_start,
+        )
+        rd = scan_redis_targets(
+            hosts=broker_hosts,
+            timeout=cfg.scan.timeouts.broker_seconds,
+            logger=logger,
+            session_start=session_start,
+        )
+        logger.info(
+            f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)}"
+        )
+        return (k, r, rd)
+    _broker_result = _wrapped_phase(
+        run_stats, "broker_scanning", "broker_scanner",
+        _run_broker_phase, error_endpoints, logger,
+    )
+    if isinstance(_broker_result, tuple) and len(_broker_result) == 3:
+        kafka_endpoints, rabbit_endpoints, redis_endpoints = _broker_result
+    # else: BaseException captured — error_endpoints already records the failure.
+
+    # broker_scan_json aggregation (Phase 33 / D-12, D-14)
+    all_broker_eps = kafka_endpoints + rabbit_endpoints + redis_endpoints
+    if all_broker_eps:
+        def _ep_dict(ep):
+            return {
+                "host": getattr(ep, "host", None),
+                "port": getattr(ep, "port", None),
+                "protocol": getattr(ep, "protocol", None),
+                "tls_version": getattr(ep, "tls_version", None),
+                "cipher_suite": getattr(ep, "cipher_suite", None),
+                "cert_pubkey_alg": getattr(ep, "cert_pubkey_alg", None),
+                "cert_subject": getattr(ep, "cert_subject", None),
+                "scan_error": getattr(ep, "scan_error", None),
+            }
+        azure_eps = [e for e in rabbit_endpoints if getattr(e, "protocol", "") == "AMQPS/Azure-ServiceBus"]
+        sqs_eps   = [e for e in rabbit_endpoints if getattr(e, "protocol", "") == "HTTPS/AWS-SQS"]
+        rabbit_self = [e for e in rabbit_endpoints if e not in azure_eps and e not in sqs_eps]
+        payload = {
+            "kafka":            [_ep_dict(e) for e in kafka_endpoints],
+            "rabbitmq":         [_ep_dict(e) for e in rabbit_self],
+            "redis":            [_ep_dict(e) for e in redis_endpoints],
+            "azure_servicebus": [_ep_dict(e) for e in azure_eps],
+            "aws_sqs":          [_ep_dict(e) for e in sqs_eps],
+            "session_start":    session_start.isoformat() if session_start else None,
+        }
+        setattr(all_broker_eps[0], "broker_scan_json", json.dumps(payload, default=str))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
-                 + aws_endpoints + azure_endpoints)
+                 + aws_endpoints + azure_endpoints + gcp_endpoints
+                 + db_endpoints
+                 + s3_endpoints + blob_endpoints + gcs_storage_endpoints
+                 + k8s_endpoints
+                 + dnssec_endpoints + saml_endpoints + kerberos_endpoints
+                 + vault_endpoints
+                 + email_endpoints
+                 + kafka_endpoints + rabbit_endpoints + redis_endpoints
+                 # Phase 41 / D-12 + D-14: missing-extra advisory rows and
+                 # BaseException-captured rows flow into reports / DB persist.
+                 + error_endpoints)
 
     # ==============================
     # Findings + persistence + reports
     # ==============================
     with _phase_timer(run_stats, "risk_engine"):
         findings = evaluate_endpoints(cfg, endpoints)
+        # Phase 32: email-specific findings (EMAIL-08, EMAIL-09).
+        # Titles are unique strings not produced elsewhere, so the (host, port,
+        # title, recommendation) dedup key in evaluate_endpoints will not collide
+        # with these. D-11 layered findings (port 25 + weak cipher) survive.
+        email_findings = evaluate_email_endpoints(email_endpoints)
+        if email_findings:
+            findings = (findings or []) + email_findings
+        # Phase 33: broker-specific findings (layered findings survive _dedupe_findings
+        # because titles differ per protocol; D-11/D-12 carry-forward from Phase 32).
+        broker_findings = evaluate_broker_endpoints(all_broker_eps)
+        if broker_findings:
+            findings = (findings or []) + broker_findings
 
     with _phase_timer(run_stats, "db_persist"):
         with get_session(cfg.output.db_path) as session:
@@ -502,7 +1029,7 @@ def main():
     run_stats["error_categories"] = dict(err_counts)
 
     with _phase_timer(run_stats, "reporting"):
-        write_reports(cfg, endpoints, findings, run_stats=run_stats)
+        write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints)
 
 
 if __name__ == "__main__":

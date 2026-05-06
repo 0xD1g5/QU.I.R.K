@@ -1,0 +1,11 @@
+[
+  { "slug": "root",          "path": "/" },
+  { "slug": "findings",      "path": "/findings" },
+  { "slug": "identity",      "path": "/identity" },
+  { "slug": "motion",        "path": "/motion" },
+  { "slug": "data-at-rest",  "path": "/data-at-rest" },
+  { "slug": "certificates",  "path": "/certificates" },
+  { "slug": "cbom",          "path": "/cbom" },
+  { "slug": "roadmap",       "path": "/roadmap" },
+  { "slug": "trends",        "path": "/trends" }
+]

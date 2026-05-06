@@ -45,6 +45,10 @@ def _make_cfg(tmp_path):
             data_classification="Internal",
             timezone="UTC",
         ),
+        intelligence=SimpleNamespace(
+            profile="balanced",
+            calibration_overrides=None,
+        ),
     )
 
 
@@ -63,7 +67,7 @@ def _stub_evidence(endpoints, findings):
     }
 
 
-def _stub_score(evidence):
+def _stub_score(evidence, **kwargs):
     return {
         "score": 55,
         "subscores": {"inventory": 50, "cipher": 50, "certificate": 50, "protocol": 50},

@@ -69,6 +69,34 @@ def _ssh_endpoint(**overrides):
     return CryptoEndpoint(**defaults)
 
 
+def _saml_endpoint(**overrides):
+    """Create a SAML CryptoEndpoint with sensible defaults."""
+    defaults = dict(
+        host="idp.example.com", port=443, protocol="SAML",
+        tls_version=None, cipher_suite=None,
+        cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+        cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        cert_not_before=None, cert_not_after=None,
+        tls_capabilities_json=None, ssh_audit_json=None,
+    )
+    defaults.update(overrides)
+    return CryptoEndpoint(**defaults)
+
+
+def _kerberos_endpoint(**overrides):
+    """Create a Kerberos CryptoEndpoint with sensible defaults."""
+    defaults = dict(
+        host="dc.example.com", port=88, protocol="KERBEROS",
+        tls_version=None, cipher_suite=None,
+        cert_pubkey_alg="rc4-hmac", cert_pubkey_size=None,
+        cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        cert_not_before=None, cert_not_after=None,
+        tls_capabilities_json=None, ssh_audit_json=None,
+    )
+    defaults.update(overrides)
+    return CryptoEndpoint(**defaults)
+
+
 def _component_names(bom: Bom) -> list[str]:
     """Return sorted list of component names from a Bom."""
     return sorted(c.name for c in bom.components)
@@ -384,3 +412,150 @@ def test_azure_endpoint_no_tls_protocol():
     bom = build_cbom([ep])
     proto_names = [c.name for c in bom.components if "protocol:tls" in str(c.bom_ref)]
     assert len(proto_names) == 0
+
+
+# ---------------------------------------------------------------------------
+# SAML protocol tests (Phase 22 gap closure — SAML-05)
+# ---------------------------------------------------------------------------
+
+def test_saml_endpoint_algorithm_registered():
+    """SAML endpoint registers algorithm component from cert_pubkey_alg."""
+    ep = _saml_endpoint(cert_pubkey_alg="RSA", cert_pubkey_size=2048)
+    bom = build_cbom([ep])
+    algo_refs = [c.bom_ref for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert any("rsa" in str(ref) for ref in algo_refs), f"RSA algorithm not found in {algo_refs}"
+
+
+def test_saml_endpoint_no_tls_protocol():
+    """SAML endpoint must NOT produce a TLS protocol component."""
+    ep = _saml_endpoint()
+    bom = build_cbom([ep])
+    tls_protos = [c for c in bom.components if str(c.bom_ref).startswith("crypto/protocol/tls/")]
+    assert tls_protos == [], f"Spurious TLS protocol components for SAML: {[str(c.bom_ref) for c in tls_protos]}"
+
+
+def test_saml_endpoint_no_certificate():
+    """SAML SHA1 finding must NOT produce a certificate component (no cert metadata)."""
+    ep = _saml_endpoint(cert_pubkey_alg="SHA1", cert_pubkey_size=None)
+    bom = build_cbom([ep])
+    cert_comps = [c for c in bom.components if str(c.bom_ref).startswith("crypto/certificate/")]
+    assert cert_comps == [], f"Spurious certificate components for SAML: {[str(c.bom_ref) for c in cert_comps]}"
+
+
+# ---------------------------------------------------------------------------
+# Kerberos protocol tests (Phase 22 gap closure — KERB-04)
+# ---------------------------------------------------------------------------
+
+def test_kerberos_endpoint_algorithm_registered():
+    """Kerberos endpoint registers algorithm component from etype name."""
+    ep = _kerberos_endpoint(cert_pubkey_alg="rc4-hmac")
+    bom = build_cbom([ep])
+    algo_refs = [str(c.bom_ref) for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert any("rc4-hmac" in ref for ref in algo_refs), f"rc4-hmac algorithm not found in {algo_refs}"
+
+
+def test_kerberos_endpoint_no_tls_protocol():
+    """Kerberos endpoint must NOT produce a TLS protocol component."""
+    ep = _kerberos_endpoint()
+    bom = build_cbom([ep])
+    tls_protos = [c for c in bom.components if str(c.bom_ref).startswith("crypto/protocol/tls/")]
+    assert tls_protos == [], f"Spurious TLS protocol components for Kerberos: {[str(c.bom_ref) for c in tls_protos]}"
+
+
+def test_kerberos_endpoint_no_certificate():
+    """Kerberos etype endpoint must NOT produce a certificate component."""
+    ep = _kerberos_endpoint(cert_pubkey_alg="rc4-hmac")
+    bom = build_cbom([ep])
+    cert_comps = [c for c in bom.components if str(c.bom_ref).startswith("crypto/certificate/")]
+    assert cert_comps == [], f"Spurious certificate components for Kerberos: {[str(c.bom_ref) for c in cert_comps]}"
+
+
+def test_kerberos_unreachable_excluded():
+    """Kerberos 'kerberos-unreachable' synthetic finding must NOT register an algorithm."""
+    ep = _kerberos_endpoint(cert_pubkey_alg="kerberos-unreachable")
+    bom = build_cbom([ep])
+    algo_refs = [str(c.bom_ref) for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert algo_refs == [], f"kerberos-unreachable should not register algorithm: {algo_refs}"
+
+
+# ---------------------------------------------------------------------------
+# DNSSEC protocol tests (Phase 23 gap closure — DNSSEC-04)
+# ---------------------------------------------------------------------------
+
+def _dnssec_endpoint(**overrides):
+    """Create a DNSSEC CryptoEndpoint with sensible defaults."""
+    defaults = dict(
+        host="example.com", port=53, protocol="DNSSEC",
+        tls_version=None, cipher_suite=None,
+        cert_pubkey_alg="ECDSAP256SHA256", cert_pubkey_size=256,
+        cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        cert_not_before=None, cert_not_after=None,
+        tls_capabilities_json=None, ssh_audit_json=None,
+    )
+    defaults.update(overrides)
+    return CryptoEndpoint(**defaults)
+
+
+def test_dnssec_endpoint_algorithm_registered():
+    """DNSSEC endpoint registers algorithm component from cert_pubkey_alg."""
+    ep = _dnssec_endpoint(cert_pubkey_alg="ECDSAP256SHA256", cert_pubkey_size=256)
+    bom = build_cbom([ep])
+    algo_refs = [c.bom_ref for c in bom.components if "crypto/algorithm/" in str(c.bom_ref)]
+    assert any("ecdsap256sha256" in str(ref) for ref in algo_refs), \
+        f"ECDSAP256SHA256 algorithm not found in {algo_refs}"
+
+
+def test_dnssec_endpoint_no_tls_protocol():
+    """DNSSEC endpoint must NOT produce a TLS protocol component."""
+    ep = _dnssec_endpoint()
+    bom = build_cbom([ep])
+    tls_protos = [c for c in bom.components
+                  if str(c.bom_ref).startswith("crypto/protocol/tls/")]
+    assert tls_protos == [], \
+        f"Spurious TLS protocol components for DNSSEC: {[str(c.bom_ref) for c in tls_protos]}"
+
+
+def test_dnssec_endpoint_no_certificate():
+    """DNSSEC endpoint must NOT produce a certificate component (DNSKEY is not an X.509 cert)."""
+    ep = _dnssec_endpoint(cert_pubkey_alg="ECDSAP256SHA256", cert_pubkey_size=256)
+    bom = build_cbom([ep])
+    cert_comps = [c for c in bom.components
+                  if str(c.bom_ref).startswith("crypto/certificate/")]
+    assert cert_comps == [], \
+        f"Spurious certificate components for DNSSEC: {[str(c.bom_ref) for c in cert_comps]}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 52 COMPLY-10 — FIPS 140-3 annotation stubs (RED — fail until Plan 02)
+# ---------------------------------------------------------------------------
+
+def test_fips_status_helper():
+    """COMPLY-10 (D-04): _fips_status() maps nist_level correctly."""
+    from quirk.cbom.builder import _fips_status
+    assert _fips_status(1) == "approved"
+    assert _fips_status(3) == "approved"
+    assert _fips_status(0) == "non-approved"
+    assert _fips_status(None) == "non-approved"
+
+
+def test_algorithm_component_has_fips_property():
+    """COMPLY-10 (D-03): Every algo component built by build_cbom carries quirk:fips140-3-status."""
+    ep = _tls_endpoint()
+    bom = build_cbom([ep])
+    algo_components = [
+        c for c in bom.components
+        if hasattr(c, "crypto_properties")
+        and c.crypto_properties is not None
+        and c.crypto_properties.asset_type is not None
+        and c.crypto_properties.asset_type.value == "algorithm"
+    ]
+    assert algo_components, "Expected at least one algorithm component in CBOM"
+    for comp in algo_components:
+        prop_names = {p.name for p in (comp.properties or [])}
+        assert "quirk:fips140-3-status" in prop_names, (
+            f"Algorithm component '{comp.name}' missing quirk:fips140-3-status property"
+        )
+        fips_val = next(p.value for p in comp.properties if p.name == "quirk:fips140-3-status")
+        assert fips_val in ("approved", "non-approved"), (
+            f"quirk:fips140-3-status must be 'approved' or 'non-approved', got '{fips_val}'"
+        )

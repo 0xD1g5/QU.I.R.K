@@ -77,5 +77,15 @@ class EvidenceSummaryTests(unittest.TestCase):
         self.assertEqual(summary["scan_error"]["rate"], 0.2)
 
 
+def test_dar_db_counters():
+    """dar_ counters must be present in build_evidence_summary output (Phase 27 DB-01/DB-02)."""
+    # This test will fail until dar_ counters are added to evidence.py in Plan 02
+    result = build_evidence_summary([])
+    assert "dar_db_plaintext_count" in result, "dar_db_plaintext_count missing from evidence summary"
+    assert "dar_db_weak_ssl_count" in result, "dar_db_weak_ssl_count missing from evidence summary"
+    assert "dar_db_plaintext_ratio" in result, "dar_db_plaintext_ratio missing from evidence summary"
+    assert "dar_db_weak_ssl_ratio" in result, "dar_db_weak_ssl_ratio missing from evidence summary"
+
+
 if __name__ == "__main__":
     unittest.main()

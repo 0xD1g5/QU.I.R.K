@@ -1,0 +1,14 @@
+# Custom OpenSSL config for Dovecot — caps protocol at TLS 1.2 so the chaos lab
+# always exposes TLS 1.2 with non-PFS ciphers (Dovecot 2.3.16 lacks ssl_max_protocol).
+openssl_conf = openssl_init
+
+[openssl_init]
+ssl_conf = ssl_sect
+
+[ssl_sect]
+system_default = system_default_sect
+
+[system_default_sect]
+MinProtocol = TLSv1.2
+MaxProtocol = TLSv1.2
+CipherString = AES128-SHA:AES256-SHA:!ECDHE:!DHE:!EDH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5

@@ -4,8 +4,8 @@ import dagre from "cytoscape-dagre"
 import { useScanData } from "@/hooks/useScanData"
 import type { RoadmapNode } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { PageSpinner } from "@/components/PageSpinner"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
 // Register dagre layout (DAG directed graph — per D-16)
@@ -16,9 +16,9 @@ try {
 }
 
 const PHASE_COLORS: Record<string, string> = {
-  NOW:   "hsl(0 72% 51%)",    // Red — Immediate
-  NEXT:  "hsl(38 92% 50%)",   // Amber — Short-term
-  LATER: "hsl(142 71% 45%)",  // Green — Long-term
+  NOW:   "hsl(0, 72%, 51%)",    // Red — Immediate
+  NEXT:  "hsl(38, 92%, 50%)",   // Amber — Short-term
+  LATER: "hsl(142, 71%, 45%)",  // Green — Long-term
 }
 
 const PHASE_LABEL: Record<string, string> = {
@@ -127,7 +127,7 @@ export function RoadmapPage() {
             "width": 150,
             "height": 52,
             "shape": "roundrectangle",
-            "background-color": "hsl(240 5% 46%)",
+            "background-color": "hsl(240, 5%, 46%)",
             "border-width": 0,
           },
         },
@@ -138,15 +138,15 @@ export function RoadmapPage() {
         // Selected state
         {
           selector: "node:selected",
-          style: { "border-width": 3, "border-color": "hsl(210 100% 65%)" },
+          style: { "border-width": 3, "border-color": "hsl(210, 100%, 65%)" },
         },
         // Cross-phase edges (visible arrows)
         {
           selector: "edge[rankOnly='false']",
           style: {
             "width": 2,
-            "line-color": "hsl(240 6% 40%)",
-            "target-arrow-color": "hsl(240 6% 40%)",
+            "line-color": "hsl(240, 6%, 40%)",
+            "target-arrow-color": "hsl(240, 6%, 40%)",
             "target-arrow-shape": "triangle",
             "curve-style": "bezier",
           },
@@ -169,17 +169,17 @@ export function RoadmapPage() {
     // Click handler — show detail panel
     cyRef.current.on("tap", "node", (evt) => {
       const nodeId = evt.target.data("id") as string
-      cyRef.current?.edges().style({ "line-color": "hsl(240 6% 40%)", "target-arrow-color": "hsl(240 6% 40%)" })
+      cyRef.current?.edges().style({ "line-color": "hsl(240, 6%, 40%)", "target-arrow-color": "hsl(240, 6%, 40%)" })
       evt.target.connectedEdges("[rankOnly='false']").style({
-        "line-color": "hsl(210 100% 65%)",
-        "target-arrow-color": "hsl(210 100% 65%)",
+        "line-color": "hsl(210, 100%, 65%)",
+        "target-arrow-color": "hsl(210, 100%, 65%)",
       })
       setSelected(nodeById[nodeId] ?? null)
     })
 
     cyRef.current.on("tap", (evt) => {
       if (evt.target === cyRef.current) {
-        cyRef.current?.edges().style({ "line-color": "hsl(240 6% 40%)", "target-arrow-color": "hsl(240 6% 40%)" })
+        cyRef.current?.edges().style({ "line-color": "hsl(240, 6%, 40%)", "target-arrow-color": "hsl(240, 6%, 40%)" })
         setSelected(null)
       }
     })
@@ -190,27 +190,17 @@ export function RoadmapPage() {
     }
   }, [nodes, nodeById])
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Migration Roadmap</h1>
-        <Skeleton className="w-full" style={{ height: "calc(100vh - 200px)", minHeight: 400 }} />
-      </div>
-    )
-  }
+  if (loading) return <PageSpinner ariaLabel="Loading remediation roadmap" />
 
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
 
   if (!nodes.length) {
     return (
-      <div className="space-y-4">
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Migration Roadmap</h1>
-        <div className="text-center py-12">
-          <h2 className="text-foreground font-semibold text-xl">No migration roadmap generated</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Run a scan with at least one finding to generate a prioritized migration roadmap.
-          </p>
-        </div>
+      <div className="space-y-4 py-8">
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Remediation Roadmap</h1>
+        <p className="text-muted-foreground text-sm">
+          No remediation items in this scan — either no findings exist or the scoring engine produced no recommendations.
+        </p>
       </div>
     )
   }

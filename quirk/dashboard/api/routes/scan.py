@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -14,18 +14,34 @@ from quirk.dashboard.api.schemas import (
     CbomComponent,
     CertItem,
     ConfidenceData,
+    DarFinding,
     FindingItem,
+    IdentityFinding,
+    MotionFinding,
     RoadmapData,
     RoadmapEdge,
     RoadmapNode,
     ScanLatestResponse,
     ScanMeta,
+    ScanSession,
     ScoreData,
     SubScores,
 )
 from quirk.models import CryptoEndpoint
+from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 
 router = APIRouter()
+
+# Phase 38 (D-01): backward bracket from MAX(scanned_at) restores SAML/OIDC visibility under timestamp skew
+SESSION_BRACKET = timedelta(minutes=5)
+
+# Map classifier raw labels to frontend display values
+_QS_DISPLAY = {
+    "quantum-safe": "Safe",
+    "quantum-vulnerable": "Vulnerable",
+    "hybrid": "At Risk",
+    "unknown": "Unknown",
+}
 
 
 def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
@@ -38,6 +54,12 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     findings: list[FindingItem] = []
 
     for ep in endpoints:
+        # D-03: skip identity protocol endpoints — handled exclusively by
+        # _derive_identity_findings(); none of the TLS checks apply to them.
+        proto = (ep.protocol or "").upper()
+        if proto in {"KERBEROS", "SAML", "DNSSEC"}:
+            continue
+
         # Unencrypted HTTP
         if ep.protocol and ep.protocol.upper() == "HTTP":
             findings.append(FindingItem(
@@ -139,8 +161,9 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
         # Quantum-vulnerable algorithm (non-RSA)
         if ep.cert_pubkey_alg and not ep.cert_pubkey_alg.upper().startswith("RSA"):
             try:
-                from quirk.cbom.classifier import quantum_safety_label
-                qs = quantum_safety_label(ep.cert_pubkey_alg)
+                from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
+                _, nist_level, _ = classify_algorithm(ep.cert_pubkey_alg)
+                qs = _QS_DISPLAY.get(quantum_safety_label(nist_level), "Unknown")
                 if qs in ("Vulnerable", "At Risk"):
                     findings.append(FindingItem(
                         id=ep.id,
@@ -163,17 +186,440 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     return findings
 
 
+def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityFinding]:
+    """Synthesize identity protocol findings from KERBEROS/SAML/DNSSEC endpoints.
+
+    Per D-06: single derivation function returns IdentityFinding list.
+    Per D-07: results are exposed as identity_findings AND converted to FindingItem
+    for the main findings list.
+    """
+    results: list[IdentityFinding] = []
+
+    for ep in endpoints:
+        proto = (ep.protocol or "").upper()
+
+        if proto == "KERBEROS":
+            sd = ep.service_detail or ""
+            # service_detail format: "etype:{id}:{name}:{severity}"
+            parts = sd.split(":")
+            if len(parts) >= 4 and parts[0] == "etype":
+                etype_id = parts[1]
+                name = parts[2]
+                severity = parts[3]
+                if severity in ("CRITICAL", "HIGH"):
+                    results.append(IdentityFinding(
+                        host=ep.host,
+                        port=ep.port,
+                        severity=severity,
+                        title=f"Kerberos weak etype: {name}",
+                        protocol="KERBEROS",
+                        description=(
+                            f"KDC accepts etype {etype_id} ({name}) which is classified as {severity}. "
+                            f"RC4 and DES etypes are cryptographically weak and quantum-vulnerable."
+                        ),
+                        remediation=(
+                            "Disable RC4-HMAC and DES etypes in KDC configuration. "
+                            "Enforce AES-256 (etype 18/20) as minimum."
+                        ),
+                        quantum_risk="Vulnerable",
+                        source="kerberos",
+                        algorithm=name,
+                    ))
+
+        elif proto == "SAML":
+            alg = (ep.cert_pubkey_alg or "").upper()
+            size = ep.cert_pubkey_size
+            sd = ep.service_detail or ""
+
+            # RS-family OIDC check (D-01, D-02) — runs before SHA-1 check (highest specificity)
+            severity = OIDC_ALG_SEVERITY.get(alg)
+            if severity is not None:
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity=severity,
+                    title=f"OIDC RS-family algorithm: {alg}",
+                    protocol="SAML",
+                    description=(
+                        f"OIDC endpoint uses {alg} which relies on RSA. "
+                        f"RSA is quantum-vulnerable and will be broken by Shor's algorithm."
+                    ),
+                    remediation=(
+                        "Migrate OIDC token signing to ECDSA (ES256/ES384) or EdDSA "
+                        "per NIST PQC roadmap recommendations."
+                    ),
+                    quantum_risk="Vulnerable",
+                    source="saml",
+                    algorithm=alg,
+                ))
+            elif alg == "SHA1":
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity="HIGH",
+                    title="SHA-1 algorithm URI detected in SAML metadata",
+                    protocol="SAML",
+                    description=(
+                        "SAML metadata references SHA-1 signing algorithm. "
+                        "SHA-1 is collision-vulnerable since 2017 (SHAttered attack)."
+                    ),
+                    remediation="Update IdP to use SHA-256 or SHA-384 signature algorithms.",
+                    quantum_risk="Vulnerable",
+                    source="saml",
+                    algorithm="SHA1",
+                ))
+            elif alg not in OIDC_ALG_SEVERITY and size is not None and isinstance(size, int) and size < 2048:
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity="CRITICAL",
+                    title=f"Weak SAML signing certificate: {alg}-{size}",
+                    protocol="SAML",
+                    description=(
+                        f"SAML signing certificate uses {size}-bit {alg} key, "
+                        f"below the 2048-bit minimum for RSA."
+                    ),
+                    remediation=(
+                        "Replace IdP signing certificate with RSA-2048 minimum "
+                        "or switch to ECDSA P-256."
+                    ),
+                    quantum_risk="Vulnerable",
+                    source="saml",
+                    algorithm=f"{alg}-{size}" if size else alg,
+                ))
+
+        elif proto == "DNSSEC":
+            alg = (ep.cert_pubkey_alg or "").upper()
+            sd = ep.service_detail or ""
+
+            _DNSSEC_WEAK_MAP = {
+                "RSASHA1": ("CRITICAL", "RSASHA1 (algorithm 5) uses SHA-1 which is collision-vulnerable"),
+                "RSASHA1-NSEC3-SHA1": ("CRITICAL", "RSASHA1-NSEC3-SHA1 (algorithm 7) uses SHA-1"),
+                "RSAMD5": ("CRITICAL", "RSAMD5 (algorithm 1) uses MD5 which is broken"),
+                "DSA": ("CRITICAL", "DSA (algorithm 3) is deprecated by NIST"),
+                "DSA-NSEC3-SHA1": ("CRITICAL", "DSA-NSEC3-SHA1 (algorithm 6) is deprecated"),
+                "NONE": ("HIGH", "Zone has no DNSSEC signing — DNS responses are unauthenticated"),
+                "SHA1-DS": ("HIGH", "DS record uses SHA-1 digest — vulnerable to collision attacks"),
+                "DS-MISMATCH": ("HIGH", "DS record key tag does not match any DNSKEY — broken chain of trust"),
+                "NSEC": ("MEDIUM", "Zone uses NSEC records — enables zone enumeration by walking"),
+            }
+
+            if alg in _DNSSEC_WEAK_MAP:
+                severity, desc = _DNSSEC_WEAK_MAP[alg]
+                if alg == "NONE":
+                    remediation = "Deploy DNSSEC signing with a strong algorithm."
+                elif alg == "SHA1-DS":
+                    remediation = "Replace SHA-1 DS digest with SHA-256 (digest type 2)."
+                elif alg == "DS-MISMATCH":
+                    remediation = "Verify DS records match published DNSKEYs."
+                elif severity == "CRITICAL":
+                    remediation = "Migrate to ECDSAP256SHA256 (algorithm 13) or Ed25519 (algorithm 15) per RFC 8624."
+                else:
+                    remediation = "Consider using NSEC3 with opt-out to prevent zone walking."
+                results.append(IdentityFinding(
+                    host=ep.host,
+                    port=ep.port,
+                    severity=severity,
+                    title=f"DNSSEC: {alg.replace('-', ' ').replace('_', ' ')}",
+                    protocol="DNSSEC",
+                    description=desc,
+                    remediation=remediation,
+                    quantum_risk="Vulnerable" if severity == "CRITICAL" else None,
+                    source="dnssec",
+                    algorithm=ep.cert_pubkey_alg or alg,  # preserve original case
+                ))
+
+    # Sort by severity
+    _severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    results.sort(key=lambda f: _severity_order.get(f.severity, 99))
+    return results
+
+
+def _derive_motion_findings(endpoints) -> list[MotionFinding]:
+    """Synthesize motion findings from email + broker CryptoEndpoints.
+
+    Mirrors _derive_identity_findings (lines 184-330). Carries protocol labels
+    verbatim — does NOT normalize "AMQPS/Azure-ServiceBus" (Phase 35 D-03).
+    Per RESEARCH.md Pitfall 5, uses getattr() for cipher_suite/cert_not_after.
+    """
+    EMAIL_PROTOS = {"SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS",
+                    "POP3-STARTTLS", "POP3S"}
+    BROKER_PLAIN = {"KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"}
+    BROKER_TLS = {"KAFKA-TLS", "AMQPS", "AMQPS/Azure-ServiceBus",
+                  "HTTPS/AWS-SQS", "REDIS-TLS"}
+    MOTION_PROTOS = EMAIL_PROTOS | BROKER_PLAIN | BROKER_TLS
+    LEGACY_TLS = {"TLSv1", "TLSv1.0", "TLSv1.1"}
+
+    results: list[MotionFinding] = []
+    for ep in endpoints:
+        proto = getattr(ep, "protocol", None) or ""
+        if proto not in MOTION_PROTOS:
+            continue
+        port = getattr(ep, "port", 0) or 0
+        tls_version = getattr(ep, "tls_version", None) or None
+        cipher_suite = getattr(ep, "cipher_suite", None) or None
+        cert_dt = getattr(ep, "cert_not_after", None)
+        cert_iso = cert_dt.isoformat() if cert_dt else None
+
+        plaintext = proto in BROKER_PLAIN
+        starttls_warning = (port == 25 and proto == "SMTP-STARTTLS")
+
+        # Severity rules (per RESEARCH.md §"Pattern 2"):
+        if plaintext:
+            severity = "HIGH"
+            title = f"{proto} plaintext listener exposed"
+            quantum_risk = "n/a (plaintext)"
+            description = f"{proto} listener accepts plaintext traffic — credentials and message bodies traverse the network unencrypted."
+            remediation = "Disable plaintext listener; require TLS-only with modern ciphers and plan PQC migration."
+        elif starttls_warning:
+            severity = "MEDIUM"
+            title = "SMTP STARTTLS susceptible to stripping (port 25)"
+            quantum_risk = "depends on negotiated cipher"
+            description = "Port 25 SMTP with opportunistic STARTTLS can be downgraded to plaintext by an active attacker (STARTTLS stripping)."
+            remediation = "Enforce MTA-STS / DANE, prefer submission on 587 with required STARTTLS, and monitor for downgrade attempts."
+        elif proto in BROKER_TLS and tls_version in LEGACY_TLS:
+            severity = "HIGH"
+            title = f"{proto} legacy TLS version ({tls_version})"
+            quantum_risk = "quantum-vulnerable"
+            description = f"{proto} endpoint negotiated legacy TLS version {tls_version}, which is deprecated and exposes traffic to known protocol weaknesses."
+            remediation = "Upgrade broker/client to TLS 1.2+ (prefer TLS 1.3), disable legacy versions, and plan PQC migration."
+        else:
+            severity = "LOW"
+            title = f"{proto} TLS endpoint"
+            quantum_risk = "quantum-vulnerable" if cipher_suite and "RSA" in cipher_suite else "quantum-unknown"
+            description = f"{proto} is using TLS. Verify cipher suite and certificate strength."
+            remediation = "Enforce TLS 1.2+, disable weak ciphers, and plan PQC migration."
+
+        results.append(MotionFinding(
+            host=getattr(ep, "host", "") or "",
+            port=port,
+            severity=severity,
+            title=title,
+            protocol=proto,            # verbatim — preserve "AMQPS/Azure-ServiceBus"
+            description=description,
+            remediation=remediation,
+            tls_version=tls_version,
+            cipher_suite=cipher_suite,
+            cert_not_after=cert_iso,
+            quantum_risk=quantum_risk,
+            plaintext_exposed=plaintext,
+            starttls_warning=starttls_warning,
+            source="motion",
+        ))
+
+    _severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    results.sort(key=lambda f: _severity_order.get(f.severity, 99))
+    return results
+
+
+# ---- DAR Findings (Phase 39 GAP-04) ----
+
+DAR_PROTOCOLS = {"POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT"}
+
+
+def _derive_dar_findings(endpoints) -> list[DarFinding]:
+    """Synthesize DarFinding list from CryptoEndpoints with DAR posture data.
+
+    Mirrors _derive_motion_findings (Phase 36). Per-protocol dispatch handles
+    scanner shape variance: POSTGRESQL/MYSQL/RDS use service_detail; S3, AZURE_BLOB,
+    KUBERNETES, VAULT use dat_scan_json. Endpoints with scan_error are skipped.
+    Malformed dat_scan_json is tolerated via try/except (V5).
+    """
+    results: list[DarFinding] = []
+    for ep in endpoints:
+        if getattr(ep, "scan_error", None):
+            continue
+        proto = (getattr(ep, "protocol", None) or "").upper()
+        if proto not in DAR_PROTOCOLS:
+            continue
+
+        host = getattr(ep, "host", "") or ""
+        port = getattr(ep, "port", 0) or 0
+        severity = getattr(ep, "severity", None) or "INFO"
+        service_detail = getattr(ep, "service_detail", None) or ""
+        dat_raw = getattr(ep, "dat_scan_json", None)
+        dat: dict = {}
+        if dat_raw:
+            try:
+                dat = json.loads(dat_raw)
+            except Exception:
+                dat = {}
+
+        if proto in {"POSTGRESQL", "MYSQL"}:
+            finding = _dar_db(host, port, proto, severity, service_detail)
+        elif proto == "RDS":
+            finding = _dar_rds(host, port, severity, service_detail)
+        elif proto == "S3":
+            finding = _dar_s3(host, port, severity, dat)
+        elif proto == "AZURE_BLOB":
+            finding = _dar_azure_blob(host, port, severity, dat)
+        elif proto == "KUBERNETES":
+            finding = _dar_k8s(host, port, severity, dat)
+        elif proto == "VAULT":
+            finding = _dar_vault(host, port, severity, dat)
+        else:
+            finding = None
+
+        if finding is not None:
+            results.append(finding)
+
+    _sev = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    results.sort(key=lambda f: _sev.get(f.severity, 99))
+    return results
+
+
+def _dar_db(host, port, proto, severity, service_detail):
+    sd = service_detail or ""
+    if "ssl-enforced" in sd:
+        enc, tls = True, True
+    elif "ssl-off" in sd or "plaintext-connections-allowed" in sd:
+        enc, tls = False, False
+    elif "-weak" in sd or "-ok" in sd:
+        enc, tls = True, True
+    else:
+        enc, tls = None, None
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"{proto} encryption posture",
+        protocol=proto, category="database",
+        encryption_at_rest=enc, tls_in_transit=tls,
+        source="database",
+    )
+
+
+def _dar_rds(host, port, severity, service_detail):
+    sd = service_detail or ""
+    if sd == "RDS/none":
+        enc, kms = False, None
+    elif sd == "RDS/sse-rds":
+        enc, kms = True, None
+    elif sd == "RDS/sse-kms-aws":
+        enc, kms = True, "AWS-managed"
+    elif sd == "RDS/sse-kms-cmk":
+        enc, kms = True, "CMK"
+    else:
+        enc, kms = None, None
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title="RDS encryption-at-rest",
+        protocol="RDS", category="database",
+        encryption_at_rest=enc, kms_key_id=kms,
+        source="database",
+    )
+
+
+# Note: S3/Azure/K8s/Vault helpers receive the parsed dat dict (not service_detail
+# from the endpoint object) — these protocols store context in dat_scan_json only.
+def _dar_s3(host, port, severity, dat):
+    sd = (dat.get("service_detail") or "").lower()
+    kms = None
+    if sd == "s3/unencrypted":
+        enc, mode = False, "none"
+    elif sd == "s3/sse-s3":
+        enc, mode = True, "SSE-S3"
+    elif sd == "s3/sse-kms-aws":
+        enc, mode, kms = True, "SSE-KMS", "AWS-managed"
+    elif sd == "s3/sse-kms-cmk":
+        enc, mode, kms = True, "SSE-KMS", "CMK"
+    else:
+        enc, mode = None, None
+    bucket = dat.get("bucket", "")
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"S3 bucket {bucket}".strip(),
+        protocol="S3", category="object_storage",
+        encryption_at_rest=enc, encryption_mode=mode,
+        kms_key_id=kms,
+        public_access=None,   # not probed by scanner (Pitfall 6)
+        versioning=None,      # not probed by scanner
+        source="object_storage",
+    )
+
+
+def _dar_azure_blob(host, port, severity, dat):
+    key_source = (dat.get("key_source") or "").lower()
+    if key_source == "microsoft.keyvault":
+        enc, mode = True, "CMK"
+    else:
+        enc, mode = True, "SSE-S3"
+    account = dat.get("account", "")
+    container = dat.get("container", "")
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"Azure Blob {account}/{container}",
+        protocol="AZURE_BLOB", category="object_storage",
+        encryption_at_rest=enc, encryption_mode=mode,
+        source="object_storage",
+    )
+
+
+def _dar_k8s(host, port, severity, dat):
+    if "namespace" in dat:
+        ns = dat.get("namespace", "")
+        counts = dat.get("secret_type_counts", {}) or {}
+        secret_type = ", ".join(
+            f"{t}:{c}" for t, c in sorted(counts.items(), key=lambda x: -x[1])
+        ) or None
+        return DarFinding(
+            host=host, port=port, severity=severity,
+            title=f"K8s secrets in namespace {ns}",
+            protocol="KUBERNETES", category="kubernetes",
+            namespace=ns or None, secret_type=secret_type,
+            source="kubernetes",
+        )
+    provider = dat.get("provider", "") or ""
+    if provider == "EKS":
+        cfg = dat.get("encryptionConfig") or []
+        encrypted = any(
+            "secrets" in (entry.get("resources") or [])
+            for entry in cfg if isinstance(entry, dict)
+        )
+        enc_provider = "EKS/KMS" if encrypted else None
+    elif provider == "GKE":
+        encrypted = dat.get("current_state") == 2
+        enc_provider = "GKE/Cloud-KMS" if encrypted else None
+    elif provider == "AKS":
+        encrypted = bool(dat.get("kv_kms_enabled"))
+        enc_provider = "AKS/Key-Vault" if encrypted else None
+    else:
+        encrypted, enc_provider = None, None
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=f"{provider or 'K8s'} cluster etcd encryption",
+        protocol="KUBERNETES", category="kubernetes",
+        encryption_at_rest=encrypted, encryption_provider=enc_provider,
+        source="kubernetes",
+    )
+
+
+def _dar_vault(host, port, severity, dat):
+    if "key_name" in dat:
+        mount_type = "transit"
+        title = f"Vault transit key: {dat.get('key_type', '')}".strip(": ")
+    elif "mount_point" in dat:
+        mount_type = "pki"
+        title = f"Vault PKI: {dat.get('mount_point', '')}"
+    elif "auth_path" in dat:
+        mount_type = "auth"
+        title = f"Vault auth: {dat.get('auth_type', '')}"
+    else:
+        mount_type = None
+        title = "Vault endpoint"
+    return DarFinding(
+        host=host, port=port, severity=severity,
+        title=title,
+        protocol="VAULT", category="vault",
+        mount_type=mount_type,
+        seal_type=None,       # not probed (Pitfall 4)
+        auto_unseal=None,     # not probed (Pitfall 4)
+        remediation=dat.get("remediation"),
+        source="vault",
+    )
+
+
 def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     """Build CBOM components from endpoints by aggregating algorithm usage."""
     from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
-
-    # Map internal classifier labels to frontend display values
-    _QS_DISPLAY = {
-        "quantum-safe": "Safe",
-        "quantum-vulnerable": "Vulnerable",
-        "hybrid": "At Risk",
-        "unknown": "Unknown",
-    }
 
     def _qs_for_alg(alg: str) -> str:
         try:
@@ -198,6 +644,28 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
             if alg not in algo_map:
                 algo_map[alg] = {"quantum_safety": "Unknown", "key_size": None, "type": "protocol", "sources": set()}
             algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
+
+        # Parse SSH audit JSON for algorithm inventory
+        if ep.ssh_audit_json:
+            try:
+                ssh_data = json.loads(ep.ssh_audit_json)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                ssh_data = {}
+            _SSH_TYPE = {"kex": "key-exchange", "key": "signature", "enc": "cipher", "mac": "hash"}
+            for section, alg_type in _SSH_TYPE.items():
+                for entry in ssh_data.get(section, []):
+                    alg = entry.get("algorithm") if isinstance(entry, dict) else None
+                    if not alg:
+                        continue
+                    qs = _qs_for_alg(alg)
+                    if alg not in algo_map:
+                        algo_map[alg] = {
+                            "quantum_safety": qs,
+                            "key_size": entry.get("keysize"),
+                            "type": alg_type,
+                            "sources": set(),
+                        }
+                    algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
 
         # Parse JWT/cloud/container scan JSON for algorithms
         for json_col in (ep.jwt_scan_json, ep.cloud_scan_json):
@@ -265,34 +733,110 @@ def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
     return RoadmapData(nodes=nodes, edges=edges)
 
 
-@router.get("/scan/latest", response_model=ScanLatestResponse)
-def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
-    """GET /api/scan/latest — returns the most recent scan session's full results.
+@router.get("/scans", response_model=List[ScanSession])
+def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
+    """GET /api/scans — returns the last 10 distinct scan sessions, newest first.
 
-    scan_id is derived from MAX(scanned_at) — no separate session table needed.
-    The response is shaped for future multi-scan navigation: scan_id field present,
-    future endpoint can accept ?scan_id= param without breaking this response shape.
+    Groups by second-truncated timestamp because each CryptoEndpoint row is
+    written with its own microsecond-precision scanned_at. Grouping by the raw
+    value produces one row per endpoint rather than one per scan session.
     """
-    # Find the most recent scan timestamp
-    latest_ts = db.query(func.max(CryptoEndpoint.scanned_at)).scalar()
-    if latest_ts is None:
-        raise HTTPException(
-            status_code=404,
-            detail="No scan results found. Run your first scan: quirk scan --target <host>",
-        )
-
-    # Load all endpoints from that scan session
-    endpoints: list[CryptoEndpoint] = (
-        db.query(CryptoEndpoint)
-        .filter(CryptoEndpoint.scanned_at == latest_ts)
+    ts_sec = func.strftime("%Y-%m-%d %H:%M:%S", CryptoEndpoint.scanned_at).label("ts_sec")
+    rows = (
+        db.query(ts_sec, func.count(CryptoEndpoint.id).label("cnt"))
+        .group_by("ts_sec")
+        .order_by(ts_sec.desc())
+        .limit(10)
         .all()
     )
+    return [
+        ScanSession(
+            scan_id=ts_str,
+            scanned_at=datetime.fromisoformat(ts_str),
+            total_endpoints=cnt,
+        )
+        for ts_str, cnt in rows
+    ]
+
+
+def _cert_expiry_key(c: "CertItem") -> datetime:
+    """Return a timezone-aware datetime for sorting; normalises naive datetimes to UTC."""
+    dt = c.cert_not_after
+    if dt is None:
+        return datetime.max.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+@router.get("/scan/latest", response_model=ScanLatestResponse)
+def get_latest_scan(
+    scan_id: Optional[str] = Query(default=None, description="ISO timestamp scan_id to load; omit for latest"),
+    db: Session = Depends(get_db),
+) -> ScanLatestResponse:
+    """GET /api/scan/latest — returns a scan session's full results.
+
+    Without ?scan_id=: returns the most recent scan (MAX scanned_at).
+    With ?scan_id=<ISO timestamp>: returns that specific scan session.
+    """
+    if scan_id is not None:
+        try:
+            target_ts = datetime.fromisoformat(scan_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid scan_id format: {scan_id!r}")
+        endpoints: list[CryptoEndpoint] = (
+            db.query(CryptoEndpoint)
+            .filter(
+                CryptoEndpoint.scanned_at >= target_ts,
+                CryptoEndpoint.scanned_at < target_ts + timedelta(seconds=1),
+            )
+            .all()
+        )
+        if not endpoints:
+            raise HTTPException(status_code=404, detail=f"No scan found with scan_id={scan_id!r}")
+        latest_ts = target_ts
+    else:
+        # D-01: anchor on MAX(scanned_at), then load all endpoints in the
+        # SESSION_BRACKET window before that maximum. This restores SAML/OIDC
+        # findings that the previous 1-second forward window silently excluded
+        # when Kerberos finished last (ISSUE-3 / DEF-v4.4-02).
+        latest_ts = db.query(func.max(CryptoEndpoint.scanned_at)).scalar()
+        if latest_ts is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No scan results found. Run your first scan: quirk --config config.yaml",
+            )
+        endpoints: list[CryptoEndpoint] = (
+            db.query(CryptoEndpoint)
+            .filter(
+                CryptoEndpoint.scanned_at >= latest_ts - SESSION_BRACKET,
+                CryptoEndpoint.scanned_at <= latest_ts,
+            )
+            .all()
+        )
 
     if not endpoints:
         raise HTTPException(status_code=404, detail="No endpoints found for latest scan.")
 
     # Derive findings first — needed by evidence summary
     findings = _derive_findings(endpoints)
+
+    # Derive identity findings (IDENT-02 + IDENT-04)
+    identity_findings = _derive_identity_findings(endpoints)
+
+    # Per D-07: append identity findings as FindingItem to main findings list
+    for idf in identity_findings:
+        findings.append(FindingItem(
+            host=idf.host,
+            port=idf.port,
+            severity=idf.severity,
+            title=idf.title,
+            protocol=idf.protocol,
+            description=idf.description,
+            remediation=idf.remediation,
+            quantum_risk=idf.quantum_risk,
+            source=idf.source,
+        ))
 
     # Build evidence summary for intelligence functions
     try:
@@ -301,10 +845,25 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
     except Exception:
         evidence = {}
 
+    # Read scan-time profile from intelligence JSON (SCORE-04)
+    stored_profile = None
+    try:
+        import os as _os
+        from pathlib import Path as _Path
+        from quirk.validate import _latest_intelligence
+        import json as _json
+        _output_dir = _Path(_os.environ.get("QUIRK_OUTPUT_DIR", "./quirk-output"))
+        _intel_path = _latest_intelligence(_output_dir)
+        if _intel_path:
+            _intel_data = _json.loads(_intel_path.read_text(encoding="utf-8"))
+            stored_profile = _intel_data.get("calibration", {}).get("profile")
+    except Exception:
+        pass  # fall back to balanced default via profile=None
+
     # Compute score and confidence
     try:
         from quirk.intelligence.scoring import compute_readiness_score
-        score_raw = compute_readiness_score(evidence)
+        score_raw = compute_readiness_score(evidence, profile=stored_profile)
     except Exception:
         score_raw = {"score": 0, "rating": "POOR", "subscores": {}, "drivers": []}
 
@@ -323,6 +882,8 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
             modern_tls=subscores_raw.get("modern_tls", 0),
             identity_trust=subscores_raw.get("identity_trust", 0),
             agility_signals=subscores_raw.get("agility_signals", 0),
+            data_at_rest=subscores_raw.get("data_at_rest", 0),
+            data_in_motion=subscores_raw.get("data_in_motion", 0),   # NEW — fixes silent drop
         ),
         drivers=score_raw.get("drivers", []),
     )
@@ -330,6 +891,7 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
     confidence = ConfidenceData(
         confidence_score=confidence_raw.get("confidence_score", 0),
         confidence_rating=confidence_raw.get("confidence_rating", "NO_DATA"),
+        factor_breakdown=confidence_raw.get("factor_breakdown", {}),
     )
 
     # Derive remaining views
@@ -348,16 +910,16 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
         if ep.protocol and ep.protocol.upper() == "TLS"
     ]
     # Sort certificates by expiry ascending (soonest first, per UI-SPEC)
-    certificates.sort(key=lambda c: c.cert_not_after or datetime.max.replace(tzinfo=timezone.utc))
+    certificates.sort(key=_cert_expiry_key)
 
     cbom_components = _derive_cbom(endpoints)
     roadmap = _derive_roadmap(evidence, score_raw)
 
-    scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
+    response_scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
 
     return ScanLatestResponse(
         meta=ScanMeta(
-            scan_id=scan_id,
+            scan_id=response_scan_id,
             scanned_at=latest_ts if isinstance(latest_ts, datetime) else None,
             total_endpoints=len(endpoints),
             total_findings=len(findings),
@@ -368,6 +930,9 @@ def get_latest_scan(db: Session = Depends(get_db)) -> ScanLatestResponse:
         certificates=certificates,
         cbom_components=cbom_components,
         roadmap=roadmap,
+        identity_findings=identity_findings,
+        motion_findings=_derive_motion_findings(endpoints),   # NEW — Phase 36 DASH-05
+        dar_findings=_derive_dar_findings(endpoints),          # Phase 39 GAP-04
     )
 
 
@@ -375,7 +940,9 @@ def _cert_quantum_safety(algorithm: Optional[str]) -> Optional[str]:
     if not algorithm:
         return None
     try:
-        from quirk.cbom.classifier import quantum_safety_label
-        return quantum_safety_label(algorithm)
+        from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
+        _, nist_level, _ = classify_algorithm(algorithm)
+        raw = quantum_safety_label(nist_level)
+        return _QS_DISPLAY.get(raw, "Unknown")
     except Exception:
         return "Unknown"

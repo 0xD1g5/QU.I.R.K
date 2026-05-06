@@ -16,6 +16,7 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
+from cyclonedx.model import Property
 from cyclonedx.model.bom import Bom, BomMetaData
 from cyclonedx.model.bom_ref import BomRef
 from cyclonedx.model.component import Component, ComponentType
@@ -37,6 +38,23 @@ from quirk.models import CryptoEndpoint
 
 
 # ---------------------------------------------------------------------------
+# Module-level skip lists — exposed so unit tests can drive parametrize off them.
+# Per D-10 / D-11 (Phase 42).
+# ---------------------------------------------------------------------------
+
+MOTION_PLAINTEXT_PROTOCOLS: frozenset[str] = frozenset({
+    "KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN",
+})
+
+DAR_SKIP_PROTOCOLS: frozenset[str] = frozenset({
+    "POSTGRESQL", "MYSQL", "RDS",
+    "S3", "AZURE_BLOB",
+    "KUBERNETES", "VAULT",
+    "GCP", "CLOUD_SQL",
+})
+
+
+# ---------------------------------------------------------------------------
 # New-protocol helper functions
 # ---------------------------------------------------------------------------
 
@@ -48,20 +66,24 @@ def _extract_algo_from_rule_id(rule_id: str | None) -> str | None:
     if not rule_id:
         return None
     rule_lower = rule_id.lower()
-    # Map known algorithm names found in semgrep crypto rules
-    algo_hints = {
-        "md5": "MD5", "sha1": "SHA-1", "des": "3DES", "rc4": "RC4",
-        "blowfish": "Blowfish", "md4": "MD4", "sha-1": "SHA-1",
-        "rsa": "RSA", "dsa": "DSA", "aes": "AES-256-GCM",
-    }
-    for fragment, canonical in algo_hints.items():
+    # Map known algorithm names found in semgrep crypto rules.
+    # Ordered list — longer/more-specific patterns checked first to avoid
+    # false positives (e.g. "ecdsa" must match before "dsa", "3des" before "des").
+    algo_hints = [
+        ("ecdsa", "ECDSA"), ("sha-1", "SHA-1"), ("sha1", "SHA-1"),
+        ("blowfish", "Blowfish"), ("3des", "3DES"),
+        ("md5", "MD5"), ("md4", "MD4"), ("rc4", "RC4"),
+        ("rsa", "RSA"), ("dsa", "DSA"), ("des", "3DES"),
+        ("aes", "AES-256-GCM"),
+    ]
+    for fragment, canonical in algo_hints:
         if fragment in rule_lower:
             return canonical
     return None
 
 
 def _normalize_cloud_key_spec(key_spec: str) -> str | None:
-    """Normalize AWS KMS KeySpec or Azure key_type to algorithm name."""
+    """Normalize AWS KMS KeySpec, Azure key_type, or GCP algorithm string to algorithm name."""
     spec_upper = (key_spec or "").upper().replace("-", "_")
     mapping = {
         "RSA_2048": "RSA", "RSA_3072": "RSA", "RSA_4096": "RSA",
@@ -69,11 +91,40 @@ def _normalize_cloud_key_spec(key_spec: str) -> str | None:
         "ECC_SECG_P256K1": "ECDSA", "SYMMETRIC_DEFAULT": "AES-256-GCM",
         "RSA": "RSA", "RSA_HSM": "RSA", "EC": "ECDSA", "EC_HSM": "ECDSA",
         "OCT": "AES-256-GCM", "OCT_HSM": "AES-256-GCM",
+        # GCP Cloud KMS algorithm strings (Phase 26)
+        "RSA_SIGN_PKCS1_2048_SHA256": "RSA", "RSA_SIGN_PKCS1_3072_SHA256": "RSA",
+        "RSA_SIGN_PKCS1_4096_SHA256": "RSA", "RSA_SIGN_PKCS1_4096_SHA512": "RSA",
+        "RSA_SIGN_PSS_2048_SHA256": "RSA", "RSA_SIGN_PSS_3072_SHA256": "RSA",
+        "RSA_SIGN_PSS_4096_SHA256": "RSA", "RSA_SIGN_PSS_4096_SHA512": "RSA",
+        "RSA_SIGN_RAW_PKCS1_2048": "RSA", "RSA_SIGN_RAW_PKCS1_3072": "RSA",
+        "RSA_SIGN_RAW_PKCS1_4096": "RSA",
+        "RSA_DECRYPT_OAEP_2048_SHA256": "RSA", "RSA_DECRYPT_OAEP_3072_SHA256": "RSA",
+        "RSA_DECRYPT_OAEP_4096_SHA256": "RSA", "RSA_DECRYPT_OAEP_4096_SHA512": "RSA",
+        "RSA_DECRYPT_OAEP_2048_SHA1": "RSA", "RSA_DECRYPT_OAEP_3072_SHA1": "RSA",
+        "RSA_DECRYPT_OAEP_4096_SHA1": "RSA",
+        "EC_SIGN_P256_SHA256": "ECDSA", "EC_SIGN_P384_SHA384": "ECDSA",
+        "EC_SIGN_SECP256K1_SHA256": "ECDSA", "EC_SIGN_ED25519": "EdDSA",
+        "GOOGLE_SYMMETRIC_ENCRYPTION": "AES-256-GCM",
+        "AES_128_GCM": "AES-128-GCM", "AES_256_GCM": "AES-256-GCM",
+        "AES_128_CBC": "AES-128-CBC", "AES_256_CBC": "AES-256-CBC",
+        "AES_128_CTR": "AES-128-CTR", "AES_256_CTR": "AES-256-CTR",
+        "HMAC_SHA256": "HMAC", "HMAC_SHA1": "HMAC", "HMAC_SHA384": "HMAC",
+        "HMAC_SHA512": "HMAC", "HMAC_SHA224": "HMAC",
+        "EXTERNAL_SYMMETRIC_ENCRYPTION": "AES-256-GCM",
+        "ML_KEM_768": "ml-kem-768", "ML_KEM_1024": "ml-kem-1024",
+        "KEM_XWING": "ml-kem-768",
+        "PQ_SIGN_ML_DSA_44": "ml-dsa-44", "PQ_SIGN_ML_DSA_65": "ml-dsa-65",
+        "PQ_SIGN_ML_DSA_87": "ml-dsa-87",
+        "PQ_SIGN_SLH_DSA_SHA2_128S": "slh-dsa-128",
+        "PQ_SIGN_HASH_SLH_DSA_SHA2_128S_SHA256": "slh-dsa-128",
+        "PQ_SIGN_ML_DSA_44_EXTERNAL_MU": "ml-dsa-44",
+        "PQ_SIGN_ML_DSA_65_EXTERNAL_MU": "ml-dsa-65",
+        "PQ_SIGN_ML_DSA_87_EXTERNAL_MU": "ml-dsa-87",
     }
     return mapping.get(spec_upper)
 
 # Tool version — duplicated here to avoid circular imports with quirk.reports.writer
-PLATFORM_VERSION = "3.9"
+PLATFORM_VERSION = "4.4.0"
 
 # ---------------------------------------------------------------------------
 # Cipher suite decomposition
@@ -93,8 +144,8 @@ _KEX_MAP: dict[str, str] = {
 _ENC_MAP: dict[str, str] = {
     "AES_256_GCM": "AES-256-GCM",
     "AES_128_GCM": "AES-128-GCM",
-    "AES_256_CCM": "AES-256-GCM",
-    "AES_128_CCM": "AES-128-GCM",
+    "AES_256_CCM": "AES-256-CCM",
+    "AES_128_CCM": "AES-128-CCM",
     "AES_256_CBC": "AES-256-CBC",
     "AES_128_CBC": "AES-128-CBC",
     "CHACHA20_POLY1305": "ChaCha20-Poly1305",
@@ -220,6 +271,20 @@ def _normalize_bom_ref_key(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9._-]", "_", name).lower()
 
 
+def _fips_status(nist_level: int | None) -> str:
+    """Return FIPS 140-3 approval status from NIST quantum security level.
+
+    Per Phase 52 D-02:
+        nist_level >= 1    -> "approved"     (quantum-safe or NIST-approved classical)
+        nist_level == 0    -> "non-approved" (quantum-vulnerable: RSA, 3DES, etc.)
+        nist_level is None -> "non-approved" (unknown algorithm)
+
+    The "certified" tier is reserved for a future phase with CMVP attestation
+    support (Phase 52 D-01) and is intentionally never emitted in v4.7.
+    """
+    return "approved" if (nist_level is not None and nist_level >= 1) else "non-approved"
+
+
 def _make_algorithm_component(
     name: str,
     bom_ref_key: str,
@@ -243,6 +308,7 @@ def _make_algorithm_component(
             asset_type=CryptoAssetType.ALGORITHM,
             algorithm_properties=algo_props,
         ),
+        properties=[Property(name="quirk:fips140-3-status", value=_fips_status(nist_level))],
     )
 
 
@@ -335,18 +401,49 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             if algo_hint:
                 _register_algorithm(algo_hint, algo_registry)
 
-        elif ep.protocol in ("AWS", "AZURE"):
+        elif ep.protocol in ("AWS", "AZURE", "GCP"):
             # Cloud: parse cloud_scan_json for algorithm/key spec
-            cloud_data = json.loads(ep.cloud_scan_json or "{}")
-            key_spec = cloud_data.get("KeySpec") or cloud_data.get("KeyAlgorithm") or cloud_data.get("key_type")
+            try:
+                cloud_data = json.loads(ep.cloud_scan_json or "{}")
+            except (json.JSONDecodeError, TypeError, ValueError):
+                cloud_data = {}
+            key_spec = (cloud_data.get("KeySpec") or cloud_data.get("KeyAlgorithm")
+                        or cloud_data.get("key_type") or cloud_data.get("gcp_algorithm"))
             if key_spec:
                 normalized = _normalize_cloud_key_spec(key_spec)
                 if normalized:
                     key_size = cloud_data.get("key_size") or ep.cert_pubkey_size
                     _register_algorithm(normalized, algo_registry, key_size=key_size)
-            # Also register cert_pubkey_alg if set (ACM certs)
+            # Also register cert_pubkey_alg if set (ACM certs, GCS-SUMMARY sentinel is skipped via falsy check)
+            if ep.cert_pubkey_alg and ep.cert_pubkey_alg not in ("GCS-SUMMARY",):
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol == "CLOUD_SQL":
+            # Cloud SQL findings encode severity (HIGH/MEDIUM), not algorithm names.
+            # Skip algorithm registration — finding detail is in cloud_scan_json.
+            pass
+
+        elif ep.protocol == "DNSSEC":
+            # DNSSEC: cert_pubkey_alg holds the DNSKEY algorithm name
+            # Exclude synthetic finding types — they are not real cryptographic algorithms
+            if ep.cert_pubkey_alg and ep.cert_pubkey_alg not in ("NONE", "NSEC", "DS-MISMATCH", "SHA1-DS"):
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol == "SAML":
+            # SAML: cert_pubkey_alg holds algorithm name (RSA, ECDSA) or SHA1 for URI findings
             if ep.cert_pubkey_alg:
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol == "KERBEROS":
+            # Kerberos: cert_pubkey_alg holds the etype name (e.g. "rc4-hmac", "aes256-cts-hmac-sha1-96")
+            # Exclude "kerberos-unreachable" synthetic finding -- not a real algorithm (per D-18)
+            if ep.cert_pubkey_alg and ep.cert_pubkey_alg != "kerberos-unreachable":
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol in ("POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES"):
+            # DB, object storage, and Kubernetes config findings — no key material to catalog.
+            # Security signal is in service_detail; CBOM algorithm catalog not applicable.
+            pass
 
         else:
             # TLS (default for backwards compatibility with existing protocol values)
@@ -369,7 +466,11 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # Pass 2 — Certificate components                                      #
     # ------------------------------------------------------------------ #
     for ep in endpoints:
-        if ep.protocol in ("SSH", "CONTAINER", "SOURCE"):
+        if ep.protocol in (
+            "SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC",
+            *DAR_SKIP_PROTOCOLS,
+            *MOTION_PLAINTEXT_PROTOCOLS,
+        ):
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -448,7 +549,12 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             )
             protocol_components.append(proto_component)
 
-        elif ep.protocol in ("JWT", "CONTAINER", "SOURCE", "AWS", "AZURE"):
+        elif ep.protocol in (
+            "JWT", "CONTAINER", "SOURCE", "AWS", "AZURE",
+            "DNSSEC", "SAML", "KERBEROS",
+            *DAR_SKIP_PROTOCOLS,
+            *MOTION_PLAINTEXT_PROTOCOLS,
+        ):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             continue

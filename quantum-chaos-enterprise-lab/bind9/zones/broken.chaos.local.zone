@@ -1,0 +1,40 @@
+; broken.chaos.local — ECDSAP256SHA256 zone with deliberately broken DS chain
+; DNSSEC-06: DS key_tag (99999) does not match any DNSKEY key_tag (12345)
+; This simulates a misconfigured DS record at the parent zone
+; NOTE: These are hardcoded test records for chaos lab use.
+$TTL 300
+$ORIGIN broken.chaos.local.
+
+@ IN SOA ns1.broken.chaos.local. admin.broken.chaos.local. (
+    2024010101 ; serial
+    3600       ; refresh
+    900        ; retry
+    604800     ; expire
+    300        ; minimum
+)
+
+@ IN NS ns1.broken.chaos.local.
+
+ns1 IN A 127.0.0.1
+@ IN A 127.0.0.1
+
+; DNSKEY — KSK (flags=257), algorithm 13 (ECDSAP256SHA256)
+; key_tag for this DNSKEY = 12345
+@ IN DNSKEY 257 3 13 (
+    xLkRkSRPNAJLN1VQWGkBt3sL9eAG4Fmgj7N8K9v3kNBkE5Y4T6h8FXOm
+    HbP1Kj9VNY2eIk3u7gFBZ+OlX6vWc==
+) ; key tag = 12345
+
+; RRSIG for DNSKEY (synthetic)
+@ IN RRSIG DNSKEY 13 2 300 (
+    20991231000000 20240101000000 12345 broken.chaos.local.
+    AbCdEfGhIjKlMnOpQrStUvWxYz0123456789AbCdEfGhIjKl
+    MnOpQrStUvWxYz0123456789XyZa==
+)
+
+; DS record with WRONG key_tag (99999 != 12345) — simulates broken chain
+; Format: key_tag algorithm digest_type digest
+; This DS record intentionally references a non-existent KSK
+@ IN DS 99999 13 2 (
+    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+)

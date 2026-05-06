@@ -1,4 +1,4 @@
-import { createElement } from "react"
+import { createElement, useEffect } from "react"
 import { useScanData } from "@/hooks/useScanData"
 import type { FindingItem, CertItem, CbomComponent, RoadmapNode } from "@/types/api"
 
@@ -148,6 +148,15 @@ function PrintRoadmap({ nodes }: { nodes: RoadmapNode[] }) {
 export function PrintPage() {
   const { data, loading, error } = useScanData()
 
+  useEffect(() => {
+    if (data) {
+      document.body.setAttribute('data-ready', 'true')
+    }
+    return () => {
+      document.body.removeAttribute('data-ready')
+    }
+  }, [data])
+
   if (loading) {
     return (
       <div style={{ padding: 40, fontFamily: "sans-serif" }}>
@@ -208,6 +217,14 @@ export function PrintPage() {
             <div className="score-item">
               <div className="score-number">{score.subscores.agility_signals}</div>
               <div className="score-label">Agility</div>
+            </div>
+            <div className="score-item">
+              <div className="score-number">{score.subscores.data_at_rest}</div>
+              <div className="score-label">Data at Rest</div>
+            </div>
+            <div className="score-item">
+              <div className="score-number">{score.subscores.data_in_motion}</div>
+              <div className="score-label">Data in Motion</div>
             </div>
           </div>
           <p className="meta">

@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "scan_id": "2026-04-30T12:00:00.000000",
+    "scanned_at": "2026-04-30T12:00:00Z",
+    "total_endpoints": 12,
+    "total_findings": 8
+  },
+  "score": {
+    "score": 62,
+    "rating": "MODERATE",
+    "subscores": {
+      "hygiene": 55,
+      "modern_tls": 70,
+      "identity_trust": 60,
+      "agility_signals": 50,
+      "data_at_rest": 65,
+      "data_in_motion": 70
+    },
+    "drivers": [
+      { "id": "weak-cipher", "impact": -10, "description": "Weak cipher suites detected on 2 endpoints" },
+      { "id": "no-ear", "impact": -8, "description": "Database encryption at rest not confirmed" }
+    ]
+  },
+  "confidence": {
+    "confidence_score": 75,
+    "confidence_rating": "MEDIUM",
+    "factor_breakdown": {
+      "tls_coverage": 0.9,
+      "identity_coverage": 0.6,
+      "dar_coverage": 0.7
+    }
+  },
+  "findings": [
+    {
+      "id": 1,
+      "host": "chaos-lab.local",
+      "port": 443,
+      "severity": "HIGH",
+      "title": "TLS 1.0 Enabled",
+      "protocol": "TLS",
+      "description": "Server supports deprecated TLS 1.0 protocol which has known vulnerabilities.",
+      "remediation": "Disable TLS 1.0 and 1.1 in server configuration; require TLS 1.2 or higher.",
+      "quantum_risk": "At Risk",
+      "source": "tls"
+    },
+    {
+      "id": 2,
+      "host": "chaos-lab.local",
+      "port": 8443,
+      "severity": "MEDIUM",
+      "title": "Weak Cipher Suite Detected",
+      "protocol": "TLS",
+      "description": "Server supports RC4 cipher suite which is vulnerable to several attacks.",
+      "remediation": "Remove RC4 from the cipher suite configuration and prefer AES-GCM suites.",
+      "quantum_risk": "Vulnerable",
+      "source": "tls"
+    },
+    {
+      "id": 3,
+      "host": "chaos-lab.local",
+      "port": 22,
+      "severity": "HIGH",
+      "title": "SSH Uses Weak Host Key Algorithm",
+      "protocol": "SSH",
+      "description": "SSH server offers RSA-1024 host key, which is insufficient for modern security.",
+      "remediation": "Generate and deploy ED25519 or RSA-4096 host keys.",
+      "quantum_risk": "Vulnerable",
+      "source": "ssh"
+    }
+  ],
+  "certificates": [
+    {
+      "host": "chaos-lab.local",
+      "port": 443,
+      "cert_subject": "CN=chaos-lab.local",
+      "cert_issuer": "CN=Chaos Lab CA",
+      "cert_not_after": "2027-04-30T00:00:00Z",
+      "cert_pubkey_alg": "RSA",
+      "cert_pubkey_size": 2048,
+      "quantum_safety": "At Risk"
+    },
+    {
+      "host": "chaos-lab.local",
+      "port": 8443,
+      "cert_subject": "CN=api.chaos-lab.local",
+      "cert_issuer": "CN=Chaos Lab CA",
+      "cert_not_after": "2027-06-15T00:00:00Z",
+      "cert_pubkey_alg": "RSA",
+      "cert_pubkey_size": 2048,
+      "quantum_safety": "At Risk"
+    }
+  ],
+  "cbom_components": [
+    {
+      "algorithm": "RSA",
+      "type": "signature",
+      "key_size": 2048,
+      "quantum_safety": "At Risk",
+      "source_systems": ["chaos-lab.local:443", "chaos-lab.local:8443"]
+    },
+    {
+      "algorithm": "AES-256-GCM",
+      "type": "cipher",
+      "key_size": 256,
+      "quantum_safety": "Safe",
+      "source_systems": ["chaos-lab.local:443"]
+    },
+    {
+      "algorithm": "SHA-256",
+      "type": "hash",
+      "key_size": null,
+      "quantum_safety": "Safe",
+      "source_systems": ["chaos-lab.local:443", "chaos-lab.local:22"]
+    },
+    {
+      "algorithm": "RC4",
+      "type": "cipher",
+      "key_size": 128,
+      "quantum_safety": "Vulnerable",
+      "source_systems": ["chaos-lab.local:8443"]
+    }
+  ],
+  "roadmap": {
+    "nodes": [
+      {
+        "id": "disable-tls10",
+        "title": "Disable TLS 1.0/1.1",
+        "timeframe": "0-30 days",
+        "why": "TLS 1.0 is deprecated and vulnerable to BEAST/POODLE attacks.",
+        "phase": "NOW"
+      },
+      {
+        "id": "remove-rc4",
+        "title": "Remove RC4 cipher suites",
+        "timeframe": "0-30 days",
+        "why": "RC4 is cryptographically broken and should not be used.",
+        "phase": "NOW"
+      },
+      {
+        "id": "upgrade-ssh-keys",
+        "title": "Upgrade SSH host keys to ED25519",
+        "timeframe": "31-90 days",
+        "why": "RSA-1024 keys provide insufficient security margin.",
+        "phase": "NEXT"
+      },
+      {
+        "id": "pqc-migration",
+        "title": "Evaluate post-quantum cryptography migration",
+        "timeframe": "90+ days",
+        "why": "RSA and ECDSA are vulnerable to quantum computer attacks.",
+        "phase": "LATER"
+      }
+    ],
+    "edges": [
+      { "source": "disable-tls10", "target": "remove-rc4", "reason": "Both are TLS hygiene fixes; address together" },
+      { "source": "remove-rc4", "target": "upgrade-ssh-keys", "reason": "Complete cipher hygiene before key upgrades" },
+      { "source": "upgrade-ssh-keys", "target": "pqc-migration", "reason": "Foundation for post-quantum readiness" }
+    ]
+  },
+  "identity_findings": [
+    {
+      "host": "chaos-lab.local",
+      "port": 88,
+      "severity": "HIGH",
+      "title": "Kerberos Using RC4-HMAC",
+      "protocol": "KERBEROS",
+      "description": "Kerberos domain supports RC4-HMAC (arcfour-hmac), which is cryptographically weak.",
+      "remediation": "Configure domain to require AES256-CTS-HMAC-SHA1-96 only.",
+      "quantum_risk": "Vulnerable",
+      "source": "kerberos",
+      "algorithm": "rc4-hmac"
+    },
+    {
+      "host": "chaos-lab.local",
+      "port": 53,
+      "severity": "MEDIUM",
+      "title": "DNSSEC Using RSASHA1",
+      "protocol": "DNSSEC",
+      "description": "DNSSEC zone signing uses RSASHA1 algorithm, which is deprecated.",
+      "remediation": "Migrate DNSSEC zone signing to ECDSAP256SHA256 or RSASHA256.",
+      "quantum_risk": "At Risk",
+      "source": "dnssec",
+      "algorithm": "RSASHA1"
+    }
+  ],
+  "motion_findings": [
+    {
+      "host": "chaos-lab.local",
+      "port": 443,
+      "severity": "HIGH",
+      "title": "TLS 1.0 Active on HTTPS",
+      "protocol": "HTTPS",
+      "description": "HTTPS endpoint accepts TLS 1.0 connections.",
+      "remediation": "Configure web server to reject TLS versions below 1.2.",
+      "quantum_risk": "At Risk",
+      "source": "tls",
+      "tls_version": "TLS 1.0",
+      "cipher_suite": "TLS_RSA_WITH_RC4_128_SHA",
+      "cert_not_after": "2027-04-30",
+      "plaintext_exposed": false,
+      "starttls_warning": false
+    },
+    {
+      "host": "chaos-lab.local",
+      "port": 25,
+      "severity": "HIGH",
+      "title": "SMTP Without STARTTLS",
+      "protocol": "SMTP",
+      "description": "SMTP server does not offer or enforce STARTTLS upgrade.",
+      "remediation": "Enable STARTTLS in SMTP server config and set require_tls=yes.",
+      "quantum_risk": "At Risk",
+      "source": "email",
+      "tls_version": null,
+      "cipher_suite": null,
+      "cert_not_after": null,
+      "plaintext_exposed": true,
+      "starttls_warning": true
+    }
+  ],
+  "dar_findings": [
+    {
+      "host": "chaos-lab.local",
+      "port": 5432,
+      "severity": "HIGH",
+      "title": "PostgreSQL Encryption at Rest Not Confirmed",
+      "protocol": "POSTGRES",
+      "description": "PostgreSQL database does not have transparent data encryption enabled.",
+      "remediation": "Enable PostgreSQL TDE or use filesystem-level encryption (LUKS/dm-crypt).",
+      "quantum_risk": "At Risk",
+      "source": "database",
+      "category": "database",
+      "encryption_at_rest": false,
+      "tls_in_transit": true
+    },
+    {
+      "host": "10.0.0.x",
+      "port": 9000,
+      "severity": "MEDIUM",
+      "title": "S3-Compatible Object Storage Without Server-Side Encryption",
+      "protocol": "S3",
+      "description": "MinIO bucket does not have server-side encryption enabled.",
+      "remediation": "Enable SSE-S3 or SSE-KMS on all buckets storing sensitive data.",
+      "quantum_risk": "At Risk",
+      "source": "storage",
+      "category": "object_storage",
+      "encryption_mode": null,
+      "kms_key_id": null,
+      "public_access": false,
+      "versioning": true
+    }
+  ]
+}

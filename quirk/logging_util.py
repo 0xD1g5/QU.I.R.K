@@ -1,6 +1,6 @@
 from __future__ import annotations
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 _PRINT_LOCK = threading.Lock()
@@ -40,5 +40,5 @@ class Logger:
         self._write(msg)
 
     def stamp(self, msg: str) -> None:
-        ts = datetime.utcnow().strftime("%H:%M:%S")
+        ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
         self.info(f"[{ts}Z] {msg}")

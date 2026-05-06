@@ -1,0 +1,198 @@
+{
+  "components": [
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/chacha20-poly1305",
+      "cipher_suite_names": [],
+      "name": "ChaCha20-Poly1305",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/rsa",
+      "cipher_suite_names": [],
+      "name": "RSA",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/rsa-2048",
+      "cipher_suite_names": [],
+      "name": "RSA-2048",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/sha-256",
+      "cipher_suite_names": [],
+      "name": "SHA-256",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/sha-384",
+      "cipher_suite_names": [],
+      "name": "SHA-384",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "algorithm",
+      "bom_ref": "crypto/algorithm/sha256withrsaencryption",
+      "cipher_suite_names": [],
+      "name": "sha256WithRSAEncryption",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:30025",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:30025",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:30110",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:30110",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:30143",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:30143",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:30465",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:30465",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:30587",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:30587",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:30993",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:30993",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "certificate",
+      "bom_ref": "crypto/certificate/localhost:30995",
+      "cipher_suite_names": [],
+      "name": "cert:localhost:30995",
+      "protocol_type": null,
+      "protocol_version": null,
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:30025",
+      "cipher_suite_names": [
+        "TLS_RSA_WITH_ARIA_256_GCM_SHA384"
+      ],
+      "name": "protocol:tls:localhost:30025",
+      "protocol_type": "tls",
+      "protocol_version": "1.2",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:30110",
+      "cipher_suite_names": [
+        "TLS_CHACHA20_POLY1305_SHA256"
+      ],
+      "name": "protocol:tls:localhost:30110",
+      "protocol_type": "tls",
+      "protocol_version": "1.3",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:30143",
+      "cipher_suite_names": [
+        "TLS_CHACHA20_POLY1305_SHA256"
+      ],
+      "name": "protocol:tls:localhost:30143",
+      "protocol_type": "tls",
+      "protocol_version": "1.3",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:30465",
+      "cipher_suite_names": [
+        "TLS_RSA_WITH_ARIA_256_GCM_SHA384"
+      ],
+      "name": "protocol:tls:localhost:30465",
+      "protocol_type": "tls",
+      "protocol_version": "1.2",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:30587",
+      "cipher_suite_names": [
+        "TLS_RSA_WITH_ARIA_256_GCM_SHA384"
+      ],
+      "name": "protocol:tls:localhost:30587",
+      "protocol_type": "tls",
+      "protocol_version": "1.2",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:30993",
+      "cipher_suite_names": [
+        "TLS_CHACHA20_POLY1305_SHA256"
+      ],
+      "name": "protocol:tls:localhost:30993",
+      "protocol_type": "tls",
+      "protocol_version": "1.3",
+      "type": "cryptographic-asset"
+    },
+    {
+      "asset_type": "protocol",
+      "bom_ref": "crypto/protocol/tls/localhost:30995",
+      "cipher_suite_names": [
+        "TLS_CHACHA20_POLY1305_SHA256"
+      ],
+      "name": "protocol:tls:localhost:30995",
+      "protocol_type": "tls",
+      "protocol_version": "1.3",
+      "type": "cryptographic-asset"
+    }
+  ]
+}

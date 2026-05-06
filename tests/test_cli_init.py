@@ -4,7 +4,10 @@ import sys
 import os
 import tempfile
 
+import pytest
 
+
+@pytest.mark.slow
 def test_init_creates_config(tmp_path):
     """quirk init must create a config.yaml in the specified output path."""
     out = str(tmp_path / "config.yaml")
@@ -19,6 +22,7 @@ def test_init_creates_config(tmp_path):
     assert "127.0.0.1" in content, "Generated config.yaml must default to 127.0.0.1"
 
 
+@pytest.mark.slow
 def test_init_no_overwrite(tmp_path):
     """quirk init must not silently overwrite an existing config.yaml."""
     out = str(tmp_path / "config.yaml")

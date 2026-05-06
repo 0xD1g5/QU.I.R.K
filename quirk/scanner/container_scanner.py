@@ -16,8 +16,10 @@ from quirk.models import CryptoEndpoint
 CRYPTO_LIB_ALLOWLIST = frozenset({
     "openssl",
     "libssl",
-    "libssl3",
+    "libssl1.0",
+    "libssl1.0.0",
     "libssl1.1",
+    "libssl3",
     "libcrypto",
     "libcrypto3",
     "botan",
