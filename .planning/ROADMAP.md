@@ -1122,7 +1122,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 51. QRAMM Core Infrastructure | v4.7 | 6/6 | Complete    | 2026-05-06 |
-| 52. Compliance Uplift & Health Check | v4.7 | 6/6 | Complete   | 2026-05-06 |
+| 52. Compliance Uplift & Health Check | v4.7 | 6/6 | Complete    | 2026-05-06 |
 | 53. QRAMM Evidence Bridge | v4.7 | 0/TBD | Not started | - |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 0/TBD | Not started | - |
 | 55. QRAMM Compliance Mapping View | v4.7 | 0/TBD | Not started | - |

@@ -9,9 +9,9 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 
 ### Compliance Extensions
 
-- [ ] **COMPLY-10**: CBOM Pass-1 algorithm components carry a 3-tier FIPS 140-3 status annotation (`certified` / `approved` / `non-approved`) via `Component.properties` — only endpoints with verifiable CMVP-validated evidence receive `certified`; all others receive `approved` or `non-approved` based on algorithm classification
-- [ ] **COMPLY-11**: SOC2 CC6.x controls (cryptography-relevant Common Criteria subset) are mapped to QUIRK finding categories in `COMPLIANCE_MAP` via a `_soc2()` helper following the existing `_pci()` / `_hipaa()` / `_fips()` builder pattern
-- [ ] **COMPLY-12**: ISO 27001:2022 Annex A controls (8.x clause numbering, not 2013 A.x.x) are mapped to QUIRK finding categories via an `_iso()` helper; the framework entry declares `version: "ISO 27001:2022"` and is unit-tested to reject 2013-style `A.x.x` control IDs
+- [x] **COMPLY-10**: CBOM Pass-1 algorithm components carry a 3-tier FIPS 140-3 status annotation (`certified` / `approved` / `non-approved`) via `Component.properties` — only endpoints with verifiable CMVP-validated evidence receive `certified`; all others receive `approved` or `non-approved` based on algorithm classification
+- [x] **COMPLY-11**: SOC2 CC6.x controls (cryptography-relevant Common Criteria subset) are mapped to QUIRK finding categories in `COMPLIANCE_MAP` via a `_soc2()` helper following the existing `_pci()` / `_hipaa()` / `_fips()` builder pattern
+- [x] **COMPLY-12**: ISO 27001:2022 Annex A controls (8.x clause numbering, not 2013 A.x.x) are mapped to QUIRK finding categories via an `_iso()` helper; the framework entry declares `version: "ISO 27001:2022"` and is unit-tested to reject 2013-style `A.x.x` control IDs
 
 ### QRAMM Core Infrastructure
 
@@ -46,14 +46,14 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 
 ### Health & Diagnostics
 
-- [ ] **DOCS-05**: `quirk doctor` CLI subcommand performs a health check across 8 categories — Python environment, scanner binaries (nmap/syft/semgrep), compliance framework freshness, QRAMM framework freshness, database connectivity, configuration validity, network connectivity (informational), dashboard process status (informational) — and displays results with `[✓]` / `[!]` / `[✗]` symbols using `rich`; exits with code 1 if any non-informational check fails
+- [x] **DOCS-05**: `quirk doctor` CLI subcommand performs a health check across 8 categories — Python environment, scanner binaries (nmap/syft/semgrep), compliance framework freshness, QRAMM framework freshness, database connectivity, configuration validity, network connectivity (informational), dashboard process status (informational) — and displays results with `[✓]` / `[!]` / `[✗]` symbols using `rich`; exits with code 1 if any non-informational check fails
 
 ### Tech Debt
 
 - [x] **DEBT-01**: All `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)` across `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected modules (BACK-56); resolves Python 3.12+ `DeprecationWarning`
-- [ ] **DEBT-02**: `lab.sh` PROFILE_ARGS CLI precedence fixed — inbound env value is snapshotted before `source .env` so `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults (BACK-87)
-- [ ] **DEBT-03**: `run-stats-*.json` output includes `ports_scanned` (sorted list of all ports that entered the scan pipeline) and `hosts_scanned` (sorted list of all scanned hosts), closing UAT-3-02 verification gap (BACK-85)
-- [ ] **DEBT-04**: `quirk/scanner/saml_scanner.py` migrated from deprecated `defusedxml.lxml` to raw `lxml.etree` with `resolve_entities=False` and `no_network=True` parser options; all 27 existing SAML tests pass GREEN (BACK-67)
+- [x] **DEBT-02**: `lab.sh` PROFILE_ARGS CLI precedence fixed — inbound env value is snapshotted before `source .env` so `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults (BACK-87)
+- [x] **DEBT-03**: `run-stats-*.json` output includes `ports_scanned` (sorted list of all ports that entered the scan pipeline) and `hosts_scanned` (sorted list of all scanned hosts), closing UAT-3-02 verification gap (BACK-85)
+- [x] **DEBT-04**: `quirk/scanner/saml_scanner.py` migrated from deprecated `defusedxml.lxml` to raw `lxml.etree` with `resolve_entities=False` and `no_network=True` parser options; all 27 existing SAML tests pass GREEN (BACK-67)
 
 ---
 
@@ -107,13 +107,13 @@ Populated by the roadmapper. Updated at each phase transition.
 | QRAMM-03 | Phase 51 | Complete |
 | QRAMM-04 | Phase 51 | Complete |
 | DEBT-01 | Phase 51 | Complete |
-| COMPLY-10 | Phase 52 | Pending |
-| COMPLY-11 | Phase 52 | Pending |
-| COMPLY-12 | Phase 52 | Pending |
-| DOCS-05 | Phase 52 | Pending |
-| DEBT-02 | Phase 52 | Pending |
-| DEBT-03 | Phase 52 | Pending |
-| DEBT-04 | Phase 52 | Pending |
+| COMPLY-10 | Phase 52 | Complete |
+| COMPLY-11 | Phase 52 | Complete |
+| COMPLY-12 | Phase 52 | Complete |
+| DOCS-05 | Phase 52 | Complete |
+| DEBT-02 | Phase 52 | Complete |
+| DEBT-03 | Phase 52 | Complete |
+| DEBT-04 | Phase 52 | Complete |
 | QRAMM-12 | Phase 53 | Pending |
 | QRAMM-13 | Phase 53 | Pending |
 | QRAMM-14 | Phase 53 | Pending |

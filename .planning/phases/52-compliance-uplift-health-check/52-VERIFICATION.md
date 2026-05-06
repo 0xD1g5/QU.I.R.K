@@ -1,14 +1,14 @@
 ---
 phase: 52-compliance-uplift-health-check
 verified: 2026-05-06T00:00:00Z
-status: human_needed
+status: passed
 score: 6/7 must-haves verified
-overrides_applied: 0
+overrides_applied: 1
 overrides:
   - must_have: "COMPLY-10: CBOM Pass-1 algorithm components carry a 3-tier FIPS 140-3 status annotation (certified / approved / non-approved)"
     reason: "Phase 52 CONTEXT.md D-01 explicitly scopes 'certified' tier to a future CMVP attestation phase. Implementation ships 2-tier (approved / non-approved). The plan must_haves, acceptance criteria, and automated tests are all written around the 2-tier contract. The REQUIREMENTS.md text predates the D-01 scope decision. This deviation is intentional and documented."
-    accepted_by: ""
-    accepted_at: ""
+    accepted_by: "user"
+    accepted_at: "2026-05-06"
 gaps: []
 human_verification:
   - test: "quirk doctor end-to-end render"
@@ -23,7 +23,7 @@ human_verification:
 
 **Phase Goal:** Compliance uplift (FIPS 140-3 CBOM annotation, SOC2 + ISO 27001:2022 mapping), health-check CLI (`quirk doctor`), and three v4.6 tech-debt closures — all verified by automated tests and documented for operators.
 **Verified:** 2026-05-06
-**Status:** human_needed
+**Status:** passed (human verification approved 2026-05-06)
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
