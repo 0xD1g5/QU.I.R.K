@@ -17,13 +17,13 @@
 
 ### TLS Finding Gaps (BACK-74)
 
-- [ ] **TLS-FIND-01**: User receives a CRITICAL finding when QUIRK encounters an expired TLS certificate (`cert_not_after` in the past)
-- [ ] **TLS-FIND-02**: User receives a HIGH finding when QUIRK encounters a self-signed TLS certificate (`issuer == subject` on the leaf cert)
-- [ ] **TLS-FIND-03**: User receives a MEDIUM finding when QUIRK encounters a TLS certificate signed by an untrusted CA (chain verification fails AND issuer ≠ subject)
-- [ ] **TLS-FIND-04**: User receives a HIGH finding when QUIRK encounters an RSA key smaller than 2048 bits in a TLS certificate
-- [ ] **TLS-FIND-05**: User receives a HIGH finding when QUIRK encounters an EC key smaller than 256 bits in a TLS certificate
-- [ ] **TLS-FIND-06**: TLS scanner falls back to the basic ssl_info path when sslyze CERTIFICATE_INFO returns ERROR (no half-populated CryptoEndpoint with `cert_not_after = None`)
-- [ ] **TLS-FIND-07**: A new chaos lab profile (`tls-cert-defects`) serves expired, self-signed, untrusted-CA, and RSA-1024 certificates for end-to-end finding verification
+- [x] **TLS-FIND-01**: User receives a CRITICAL finding when QUIRK encounters an expired TLS certificate (`cert_not_after` in the past)
+- [x] **TLS-FIND-02**: User receives a HIGH finding when QUIRK encounters a self-signed TLS certificate (`issuer == subject` on the leaf cert)
+- [x] **TLS-FIND-03**: User receives a MEDIUM finding when QUIRK encounters a TLS certificate signed by an untrusted CA (chain verification fails AND issuer ≠ subject)
+- [x] **TLS-FIND-04**: User receives a HIGH finding when QUIRK encounters an RSA key smaller than 2048 bits in a TLS certificate
+- [x] **TLS-FIND-05**: User receives a HIGH finding when QUIRK encounters an EC key smaller than 256 bits in a TLS certificate
+- [x] **TLS-FIND-06**: TLS scanner falls back to the basic ssl_info path when sslyze CERTIFICATE_INFO returns ERROR (no half-populated CryptoEndpoint with `cert_not_after = None`)
+- [x] **TLS-FIND-07**: A new chaos lab profile (`tls-cert-defects`) serves expired, self-signed, untrusted-CA, and RSA-1024 certificates for end-to-end finding verification
 
 ### Rich Finding Context (BACK-79)
 
@@ -106,13 +106,13 @@ These were considered for v4.6 but deferred to keep scope tight. Promote in v4.6
 | INSTALL-02 | Phase 45 | Complete |
 | INSTALL-03 | Phase 45 | Complete |
 | INSTALL-04 | Phase 45 | Complete |
-| TLS-FIND-01 | Phase 46 | Pending |
-| TLS-FIND-02 | Phase 46 | Pending |
-| TLS-FIND-03 | Phase 46 | Pending |
-| TLS-FIND-04 | Phase 46 | Pending |
-| TLS-FIND-05 | Phase 46 | Pending |
-| TLS-FIND-06 | Phase 46 | Pending |
-| TLS-FIND-07 | Phase 46 | Pending |
+| TLS-FIND-01 | Phase 46 | Complete |
+| TLS-FIND-02 | Phase 46 | Complete |
+| TLS-FIND-03 | Phase 46 | Complete |
+| TLS-FIND-04 | Phase 46 | Complete |
+| TLS-FIND-05 | Phase 46 | Complete |
+| TLS-FIND-06 | Phase 46 | Complete |
+| TLS-FIND-07 | Phase 46 | Complete |
 | DISCOVER-01 | Phase 47 | Complete |
 | DISCOVER-02 | Phase 47 | Complete |
 | DISCOVER-03 | Phase 47 | Complete |
