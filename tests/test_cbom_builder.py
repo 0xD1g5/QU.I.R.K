@@ -523,3 +523,39 @@ def test_dnssec_endpoint_no_certificate():
                   if str(c.bom_ref).startswith("crypto/certificate/")]
     assert cert_comps == [], \
         f"Spurious certificate components for DNSSEC: {[str(c.bom_ref) for c in cert_comps]}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 52 COMPLY-10 — FIPS 140-3 annotation stubs (RED — fail until Plan 02)
+# ---------------------------------------------------------------------------
+
+def test_fips_status_helper():
+    """COMPLY-10 (D-04): _fips_status() maps nist_level correctly."""
+    from quirk.cbom.builder import _fips_status
+    assert _fips_status(1) == "approved"
+    assert _fips_status(3) == "approved"
+    assert _fips_status(0) == "non-approved"
+    assert _fips_status(None) == "non-approved"
+
+
+def test_algorithm_component_has_fips_property():
+    """COMPLY-10 (D-03): Every algo component built by build_cbom carries quirk:fips140-3-status."""
+    ep = _tls_endpoint()
+    bom = build_cbom([ep])
+    algo_components = [
+        c for c in bom.components
+        if hasattr(c, "crypto_properties")
+        and c.crypto_properties is not None
+        and c.crypto_properties.asset_type is not None
+        and c.crypto_properties.asset_type.value == "algorithm"
+    ]
+    assert algo_components, "Expected at least one algorithm component in CBOM"
+    for comp in algo_components:
+        prop_names = {p.name for p in (comp.properties or [])}
+        assert "quirk:fips140-3-status" in prop_names, (
+            f"Algorithm component '{comp.name}' missing quirk:fips140-3-status property"
+        )
+        fips_val = next(p.value for p in comp.properties if p.name == "quirk:fips140-3-status")
+        assert fips_val in ("approved", "non-approved"), (
+            f"quirk:fips140-3-status must be 'approved' or 'non-approved', got '{fips_val}'"
+        )
