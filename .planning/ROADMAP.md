@@ -8,7 +8,7 @@
 - ✅ **v4.3 Data at Rest** — Phases 25–31, 24 plans (shipped 2026-04-26) → `.planning/milestones/v4.3-ROADMAP.md`
 - ✅ **v4.4 Data in Motion** — Phases 32–37, 33 plans (shipped 2026-04-29) → `.planning/milestones/v4.4-ROADMAP.md`
 - ✅ **v4.5 Reliability & Gap Closure** — Phases 38–44, 40 plans (shipped 2026-05-03) → `.planning/milestones/v4.5-ROADMAP.md`
-- 🚧 **v4.6 Enterprise Readiness** — Phases 45–50 (in progress)
+- ✅ **v4.6 Enterprise Readiness** — Phases 45–50, 24 plans (shipped 2026-05-05) → `.planning/milestones/v4.6-ROADMAP.md`
 
 ## Phases
 
@@ -94,7 +94,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
-### 🚧 v4.6 Enterprise Readiness (Phases 45–50) — IN PROGRESS
+<details>
+<summary>✅ v4.6 Enterprise Readiness (Phases 45–50) — SHIPPED 2026-05-05</summary>
 
 **Milestone Goal:** Make QUIRK credible and usable on real enterprise estates — fix install-day crashes, fill TLS finding gaps, enrich output with compliance context and PQC remediation guidance, and streamline the multi-target workflow.
 
@@ -104,6 +105,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology (completed 2026-05-04)
 - [x] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports (completed 2026-05-05)
 - [x] **Phase 50: Enterprise Documentation** - `docs/architecture.md` and `docs/operators-guide.md` synced to Obsidian vault (completed 2026-05-05)
+
+</details>
 
 
 ### Phase 17: Identity Infrastructure
@@ -722,7 +725,7 @@ Ideas captured during planning — not in scope for v1, but not lost.
 ## Progress
 
 **Execution Order:**
-v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipped 2026-04-29, tag v4.4.0). v4.5 complete (shipped 2026-05-03, tag v4.5.0).
+v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipped 2026-04-29, tag v4.4.0). v4.5 complete (shipped 2026-05-03, tag v4.5.0). v4.6 complete (shipped 2026-05-05, tag v4.6.0).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -770,6 +773,12 @@ v3.9 complete. v4.1 complete. v4.2 complete. v4.3 complete. v4.4 complete (shipp
 | 42. CBOM Correctness Audit | v4.5 | 6/6 | Complete   | 2026-04-30 |
 | 43. Dashboard Polish | v4.5 | 6/6 | Complete   | 2026-05-01 |
 | 44. UAT Debt Automation | v4.5 | 6/6 | Complete   | 2026-05-03 |
+| 45. Install-Day UX | v4.6 | 4/4 | Complete | 2026-05-03 |
+| 46. TLS Finding Gaps | v4.6 | 4/4 | Complete | 2026-05-03 |
+| 47. Nmap Discovery + Multi-Target Wizard | v4.6 | 3/3 | Complete | 2026-05-04 |
+| 48. Rich Finding Context | v4.6 | 3/3 | Complete | 2026-05-04 |
+| 49. Compliance Mapping | v4.6 | 5/5 | Complete | 2026-05-05 |
+| 50. Enterprise Documentation | v4.6 | 5/5 | Complete | 2026-05-05 |
 
 ## Phase Details (v4.5) — SHIPPED 2026-05-03
 
@@ -994,15 +1003,6 @@ Plans:
   - [x] 50-04-PLAN.md — Obsidian vault sync: Reference/Architecture.md, Reference/Operators-Guide.md, hub MOC update, Phase-50 phase note
   - [x] 50-05-PLAN.md — UAT-SERIES.md Series 19 + vault sync + ROADMAP/STATE close + commits
 
-## Progress — v4.6 Enterprise Readiness
+## Phase Details — v4.6 Enterprise Readiness — SHIPPED 2026-05-05
 
-**Critical path:** 45 → 46 → 48 → 49 → 50 (Phase 47 runs parallel to Phase 46)
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 45. Install-Day UX | 4/4 | Complete   | 2026-05-04 |
-| 46. TLS Finding Gaps | 4/4 | Complete | 2026-05-03 |
-| 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete    | 2026-05-04 |
-| 48. Rich Finding Context | 3/3 | Complete   | 2026-05-04 |
-| 49. Compliance Mapping | 5/5 | Complete   | 2026-05-05 |
-| 50. Enterprise Documentation | 5/5 | Complete | 2026-05-05 |
+See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and milestone summary.

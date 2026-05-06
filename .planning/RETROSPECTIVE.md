@@ -250,6 +250,56 @@
 
 ---
 
+## Milestone: v4.6 — Enterprise Readiness
+
+**Shipped:** 2026-05-05
+**Phases:** 6 (45–50) | **Plans:** 24 | **Commits:** 105 | **Timeline:** 3 days
+
+### What Was Built
+
+- Phase 45: `[all]` meta-extra + `quirk.util.optional_extra` probe registry + coverage-gap advisory findings — zero ImportError crashes on `pip install quirk`
+- Phase 46: 5 new TLS certificate-defect finding types (expired/self-signed/untrusted-CA/weak-RSA/weak-EC); `chain_verified` DB column with sslyze + fallback plumbing; `tls-cert-defects` chaos lab profile (4 nginx services on 13444–13447)
+- Phase 47: `quirk.util.targets` module — comma/`@file`/CIDR multi-target parsing; `--targets-file` CLI flag; nmap pre-scan discovery with `--max-parallelism 100` and 10,000-probe budget TTY guard; CBOM json-validation optional-extra advisory
+- Phase 48: `_build_finding` chokepoint enforcing non-empty description/remediation; `NIST_IR_8547_DEPRECATION` constant; FIPS 203/204/205 terminology throughout; CI grep gate (`test_pqc_terminology_gate.py`)
+- Phase 49: `quirk/compliance/` module with 24-entry `COMPLIANCE_MAP` (PCI-DSS 4.0.1/HIPAA/FIPS 140-3); `_normalize_for_compliance` longest-prefix-first matcher; staleness CI gate; `quirk compliance status` CLI; Compliance Summary Jinja2 block in reports
+- Phase 50: `docs/architecture.md` (3 Mermaid diagrams, connector credential matrix) + `docs/operators-guide.md` (compliance runbook, quarterly cadence); both synced to Obsidian vault `Reference/`
+
+### What Worked
+
+- **Chokepoint-enforced contracts** — `_build_finding` as the single finding emitter made the "non-empty description" invariant trivially testable without touching 20+ call sites individually; the CI grep gate acts as a second enforcement layer
+- **3-day execution velocity** — tight milestone scope (7 backlog items, 36 requirements, zero new pip deps in core path) enabled fast execution without context overhead
+- **TDD RED-before-GREEN discipline** — Phase 49 Plan 01 spent a full plan writing 5 RED-state tests before any implementation; by Plan 05 all 5 tests were GREEN with zero rework
+- **Milestone audit at v4.5 close pre-positioned v4.6** — because requirements, scope, and integration gaps were clarified before execution started, phases 45–50 had no ambiguity at execution time
+- **`_normalize_for_compliance` longest-prefix-first** — category normalization using a sorted-by-length descending map cleanly handled f-string title variants without runtime regex
+
+### What Was Inefficient
+
+- Phase 47 ROADMAP.md plan references accidentally listed Phase 45 plan names (copy-paste from template) — discovered at milestone audit; minor cleanup
+- Phase 46 VERIFICATION.md was never authored; the milestone closed with a `passed_with_followup` status rather than a clean pass — artifact discipline should match code discipline
+- BACK-87 (lab.sh PROFILE_ARGS override bug) was discovered during Phase 46 live-fire verification, introduced workaround friction for that phase and all future chaos lab work until fixed
+
+### Patterns Established
+
+- **Advisory finding pattern** — `ADVISORY`-category CryptoEndpoints + coverage-gap findings are the standard way to surface "configuration missing" without a scan crash; any new optional scanner should follow Phase 45 patterns
+- **`_build_finding` chokepoint pattern** — all new finding types should go through `_build_finding()`; no direct dict construction in risk_engine branches
+- **Compliance module `UNMAPPED_TITLES` allow-list** — intentionally unmapped finding categories (non-cryptographic advisories) are documented in `UNMAPPED_TITLES` with inline justification; new finding categories need an explicit entry or an UNMAPPED_TITLES annotation
+- **Staleness infrastructure for regulatory mappings** — any compliance or regulatory mapping needs `last_verified` + `source_url` + staleness CI gate; this pattern from Phase 49 is the template for future compliance work
+
+### Key Lessons
+
+1. **Scope discipline pays off** — tight scope (zero infra, zero new dependencies in core path, 7 backlog items → 36 requirements) enabled 3-day execution; feature creep and scope drift are the primary execution velocity killers
+2. **Chokepoints beat convention** — a single enforced entry point (`_build_finding`) with an assertion is more durable than a convention ("remember to set description") documented in a comment
+3. **Regulatory mappings rot without maintenance infrastructure** — shipping a compliance mapping without a staleness CI gate and operator visibility is tech debt from day one; Phase 49 built the infrastructure correctly
+4. **Artifact completeness is a first-class deliverable** — Phase 46's missing VERIFICATION.md meant the audit had to work around it; VERIFICATION.md should be authored atomically with the last plan, not deferred
+
+### Cost Observations
+
+- Sessions: 105 commits, 3 days (2026-05-03 → 2026-05-05)
+- Model: Claude Sonnet 4.6
+- Notable: Phase 49 (5 plans) was the heaviest; compliance module design benefited from the RED-state scaffold phase buying time to think about normalization edge cases before implementation
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

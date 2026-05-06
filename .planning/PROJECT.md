@@ -101,6 +101,14 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Dashboard WCAG AA — zero browser console errors across all routes; visible focus rings; keyboard navigation; semantic heading order; axe-core baseline captured in GHA workflow — Phase 43
 - ✓ UAT debt automation — Phase 27 DB integration tests (PostgreSQL/MySQL vs chaos lab); Phase 25/30 traceability annotations + Vault UAT-30-01 live test; Phase 31 seeded-DB /api/trends test; 7 of 14 carry-over items closed — Phase 44
 
+**v4.6 Enterprise Readiness (Phases 45–50) — SHIPPED 2026-05-05**
+- ✓ Install-Day UX — `[all]` meta-extra + `quirk.util.optional_extra` probe registry; coverage-gap advisory findings for missing scanner extras; zero ImportError crashes on `pip install quirk` — Phase 45
+- ✓ TLS Finding Gaps — 5 new finding types (expired CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, RSA<2048/EC<256 HIGH); `chain_verified` DB column; `tls-cert-defects` chaos lab profile — Phase 46
+- ✓ Nmap Discovery + Multi-Target Wizard — comma/`@file`/CIDR target ingestion; optional nmap pre-scan with 10,000-probe budget guard; `--targets-file` CLI flag; `quirk.util.targets` module — Phase 47
+- ✓ Rich Finding Context — `_build_finding` chokepoint enforces non-empty `description`/`remediation`; FIPS 203/204/205 algorithm names replace stale Kyber/Dilithium; CI grep gate — Phase 48
+- ✓ Compliance Mapping — `quirk/compliance/` module maps 24 finding categories to PCI-DSS 4.0.1/HIPAA/FIPS 140-3; staleness CI gate; `quirk compliance status` CLI; Compliance Summary in HTML/PDF reports — Phase 49
+- ✓ Enterprise Documentation — `docs/architecture.md` + `docs/operators-guide.md` with compliance runbook; both synced to Obsidian vault Reference/ — Phase 50
+
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
 - [ ] Scan job queue (Celery + Redis or similar)
@@ -119,37 +127,28 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.6 Enterprise Readiness
+## Current Milestone: v4.7 (Planning)
 
-**Goal:** Make QUIRK credible and usable on real enterprise estates — fix install-day crashes, fill TLS finding gaps, enrich output with compliance context and PQC remediation guidance, and streamline the multi-target workflow.
+v4.6 Enterprise Readiness shipped 2026-05-05. Next milestone scope TBD — candidates include COMPLY-10/11 (CBOM FIPS annotations, SOC2/ISO27001 mapping), DOCS-05 (quirk doctor health check), BACK-87 (lab.sh PROFILE_ARGS fix), and promotion of the QRAMM data model (BACK-68..73) or dashboard-initiated scanning (BACK-86).
 
-**Target features:**
-- BACK-76: Install-day UX — ship identity/motion extras by default; graceful ImportError degradation across all 4 affected scanners
-- BACK-74: TLS finding gaps — expired certs, self-signed certs, and RSA-1024/512 keys currently produce zero findings; fix this
-- BACK-79: Rich finding context — per-finding risk explanation, severity rationale, and FIPS 203/204 PQC remediation path
-- BACK-20: Compliance mapping — map findings to FIPS/NIST SP 800-208/PCI-DSS/HIPAA frameworks as a billable deliverable
-- BACK-75: Nmap port discovery — pre-scan nmap probe so the scanner isn't bound to hardcoded consulting ports
-- BACK-77: Multi-target wizard — fix multi-host input (comma-separated or file) in interactive mode for 50-host+ customers
-- BACK-65+66: Enterprise docs — Architecture reference + Operator's guide for self-onboarding
+## Current State: v4.6.0 Shipped
 
-## Current State: v4.5.0 Shipped — v4.6 In Planning
-
-v4.5 "Reliability & Gap Closure" shipped 2026-05-03 (tag `v4.5.0`). All v4.4 deferred items closed. The scanner is now hardened with consistent timeout/retry policy, CI runs green in under 60 seconds, CBOM validates against CycloneDX 1.6 schema, and the dashboard meets WCAG AA baseline. 7 of 14 pre-v4.5 UAT carry-over gaps were automated via chaos lab integration tests. v4.6 planning started 2026-05-03 with enterprise readiness as the milestone theme.
+v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plans, 3-day execution. QUIRK can now be installed with `pip install quirk` without crashes, surfaces 5 new TLS certificate-defect finding types, accepts multi-target and CIDR input with optional nmap discovery, enriches every finding with FIPS-compliant PQC remediation guidance, maps findings to PCI-DSS/HIPAA/FIPS 140-3 controls, and ships two enterprise reference documents. Compliance mapping introduces staleness infrastructure (quarterly review cadence enforced by CI gate).
 
 ## Context
 
-- **Current version**: v4.5.0 (shipped 2026-05-03); v4.4.0 shipped 2026-04-29
+- **Current version**: v4.6.0 (shipped 2026-05-05); v4.5.0 shipped 2026-05-03
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
-- **Chaos lab**: Docker Compose, 18 profiles (core + 6 Phase 4 + 3 v4.2 identity: dnssec/saml/kerberos + storage-s3 Phase 28 + database Phase 27 + vault Phase 30 + email Phase 32 + broker Phase 33)
+- **Chaos lab**: Docker Compose, 19 profiles (core + 6 Phase 4 + 3 v4.2 identity: dnssec/saml/kerberos + storage-s3 + database + vault + email + broker + tls-cert-defects Phase 46)
 - **Business model**: Consulting deliverable — tool enables billable assessments
-- **Delivery model**: `pip install quirk[motion]` (single happy path) + `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
+- **Delivery model**: `pip install quirk[all]` (meta-extra, excludes impacket) or `pip install quirk` (TLS-only minimal); `quirk init` + `quirk --config` + `quirk serve`; SaaS platform (future milestone)
 - **Target users**: Security consultants (power), IT generalists (guided), compliance officers (reports)
-- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML); 6-pillar quantum-readiness scoring with NIST PQC classification; identity protocol scanning (Kerberos/SAML/DNSSEC); data-at-rest coverage (databases, object storage, K8s secrets, Vault); data-in-motion coverage (email + broker TLS + cloud queues); chaos lab for client-side scanner validation; polished HTML/PDF reports
-- **Test coverage**: 718 tests passing (pytest); all Nyquist VALIDATION.md files declare `nyquist_compliant: true` and `wave_0_complete: true`
-- **Known tech debt at v4.5 close**: 7 carry-over UAT items remain — Phase 43 browser UAT (loading-state/focus-ring, requires live browser), Phase 44 K8s cloud-only review (human sign-off), Phase 28/31 cloud-credential items; see STATE.md `## Deferred Items`
-- **v4.5 milestone shipped** (2026-05-03): 7 phases (38–44), 40 plans — identity API fix, DAR tab, chaos lab parity, CI/scanner robustness, CBOM correctness, dashboard a11y, UAT automation
+- **Key differentiators**: CBOM output (CycloneDX 1.6 JSON+XML); 6-pillar quantum-readiness scoring with NIST PQC classification; compliance mapping to PCI-DSS/HIPAA/FIPS 140-3; identity protocol scanning; data-at-rest + data-in-motion coverage; enterprise-grade TLS certificate defect detection; nmap-backed multi-target scanning; chaos lab for client-side scanner validation; polished HTML/PDF reports
+- **Test coverage**: ~750+ tests passing (pytest); CI runs in < 60s
+- **Known tech debt at v4.6 close**: Phase 46 VERIFICATION.md not authored (code verified live); Phase 47 4 manual TTY tests pending; `test_cbom_schema_validation.py` fails in envs missing cyclonedx json-validation extra; BACK-87 lab.sh PROFILE_ARGS override bug; 7 carry-over UAT items from v4.5
+- **v4.6 milestone shipped** (2026-05-05): 6 phases (45–50), 24 plans — install-day UX, TLS finding gaps, nmap/multi-target, rich finding context, compliance mapping, enterprise docs
 
 ## Constraints
 
@@ -187,9 +186,13 @@ v4.5 "Reliability & Gap Closure" shipped 2026-05-03 (tag `v4.5.0`). All v4.4 def
 | TimeoutsCfg/RetryCfg as ScanCfg sub-tables with deprecation aliases (v4.5 Phase 41) | 4 flat timeout fields on ScanCfg with no single source of truth; BACK-45 cfg.scan mutation spread across callers | ✓ Good — `@dataclass(init=False)` + custom `__init__` makes legacy kwarg routing self-documenting; BACK-45 dissolved by passing explicit kwargs |
 | CycloneDX 1.6 schema validation in CI via `[validation]` umbrella extra (v4.5 Phase 42) | Schema validation was missing — silent output drift between releases; `jsonschema` + `lxml` already present, gating was the gap | ✓ Good — per-profile JSON+XML validated in pytest; docker-compose drift sentinel added to catch profile-name changes without oracle update |
 | MOTION_PLAINTEXT_PROTOCOLS + DAR_SKIP_PROTOCOLS as module-level frozensets (v4.5 Phase 42) | Duplicated inline sets across Pass-2/3 skip logic were invisible to parametrized testing | ✓ Good — constants extracted; skip-list parametrized unit tests cover all 14 motion labels and 7 DAR protocols |
+| `_build_finding` chokepoint as single finding dict emitter (v4.6 Phase 48) | Per-branch description drift was invisible — 20+ call sites, no enforcement; helper enforces non-empty description/remediation | ✓ Good — CI grep gate + chokepoint together prevent stale PQC terminology from re-entering |
+| `COMPLIANCE_MAP` keyed by finding category string (v4.6 Phase 49) | Finding category (title prefix) is the stable API surface shared by risk_engine and compliance module | ✓ Good — `_normalize_for_compliance` longest-prefix-first matching; UNMAPPED_TITLES allow-list covers 7 intentionally unmapped cases |
+| `[all]` meta-extra excludes `[identity]` (v4.6 Phase 45) | impacket pyOpenSSL transitive conflict downgrades `cryptography`, breaking TLS scanner | ✓ Good — `[all]` is safe for most users; `[identity]` requires explicit opt-in; documented in operators-guide |
+| Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-03 — v4.6 Enterprise Readiness milestone started; v4.5 shipped same day*
+*Last updated: 2026-05-05 — v4.6 Enterprise Readiness shipped*
 
 ## Evolution
 

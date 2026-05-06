@@ -1,5 +1,25 @@
 # Milestones
 
+## v4.6 Enterprise Readiness (Shipped: 2026-05-05)
+
+**Phases completed:** 6 phases (45–50), 24 plans
+**Files changed:** 125 files, +20,560 / -405 lines
+**Timeline:** 2026-05-03 → 2026-05-05 (3 days), 105 commits
+**Audit:** passed_with_followup — 36/36 requirements, 6/6 integration flows
+
+**Key accomplishments:**
+
+- `[all]` meta-extra + `quirk.util.optional_extra` probe registry eliminate ImportError crashes on `pip install quirk`; coverage-gap advisory findings surface missing extras gracefully
+- 5 new TLS finding types (expired CRITICAL, self-signed HIGH, untrusted-CA MEDIUM, RSA<2048 HIGH, EC<256 HIGH) + `tls-cert-defects` chaos lab profile for end-to-end verification
+- Comma/`@file`/CIDR multi-target ingestion and optional nmap pre-scan port discovery with 10,000-probe TTY budget guard wired into both interactive mode and CLI
+- `_build_finding` chokepoint enforces non-empty `description`/`remediation` on every finding; FIPS 203/204/205 algorithm names replace stale Kyber/Dilithium terminology project-wide; CI grep gate enforces compliance
+- `quirk/compliance/` maps 24 finding categories to PCI-DSS 4.0.1/HIPAA/FIPS 140-3; staleness CI gate; `quirk compliance status` CLI; Compliance Summary in HTML/PDF reports
+- `docs/architecture.md` (3 Mermaid diagrams, connector matrix) and `docs/operators-guide.md` (compliance runbook) authored and synced to Obsidian vault Reference/
+
+**Deferred to v4.7:** COMPLY-10 (CBOM FIPS annotations), COMPLY-11 (SOC2/ISO27001 mapping), DOCS-05 (quirk doctor health check)
+
+---
+
 ## v4.5 Reliability & Gap Closure (Shipped: 2026-05-03)
 
 **Phases completed:** 7 phases, 40 plans, 69 tasks
