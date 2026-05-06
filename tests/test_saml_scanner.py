@@ -6,6 +6,7 @@ Scanner module: quirk/scanner/saml_scanner.py
 
 import base64
 import datetime
+from datetime import timezone as _tz
 import json
 import os
 import pytest
@@ -41,8 +42,8 @@ def _generate_test_cert(key_size: int = 1024) -> str:
         .issuer_name(subject)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+        .not_valid_before(datetime.datetime.now(_tz.utc).replace(tzinfo=None))
+        .not_valid_after((datetime.datetime.now(_tz.utc) + datetime.timedelta(days=365)).replace(tzinfo=None))
         .sign(key, hashes.SHA256())
     )
     return base64.b64encode(cert.public_bytes(serialization.Encoding.DER)).decode()
