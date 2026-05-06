@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float
 
 Base = declarative_base()
 
@@ -90,3 +90,65 @@ class CryptoEndpoint(Base):
     # v4.6 TLS finding gap fields (Phase 46)
     # ==========================
     chain_verified = Column(Boolean, nullable=True)  # TLS-FIND-06: True/False/None per D-01
+
+
+class QRAMMSession(Base):
+    """QRAMM assessment session (Phase 51 — QRAMM-01).
+
+    Stores one row per assessment session. score_json holds the persisted
+    weakest-link score result computed by POST /api/qramm/sessions/{id}/score.
+    """
+
+    __tablename__ = "qramm_sessions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    org_name = Column(String(255), nullable=True)
+    created_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, nullable=True)
+    model_version = Column(String(32), nullable=True)
+    profile_id = Column(Integer, nullable=True)  # FK -> qramm_profiles.id (no DB-level constraint; SQLite)
+    status = Column(String(32), nullable=True)   # "draft" | "scored" | "complete"
+    score_json = Column(Text, nullable=True)     # JSON blob: overall, dimensions, maturity, profile_multiplier
+
+
+class QRAMMAnswer(Base):
+    """QRAMM per-question answer row (Phase 51 — QRAMM-01).
+
+    Phase 53 columns (suggested_answer, confirmed_at, evidence_source) are
+    pre-provisioned here per Open Question 2 to avoid ALTER TABLE in Phase 53.
+    Phase 51 router does not populate them — they remain NULL.
+    """
+
+    __tablename__ = "qramm_answers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, nullable=False)  # FK -> qramm_sessions.id (explicit cascade in router)
+    question_number = Column(Integer, nullable=False)  # 1-120
+    dimension = Column(String(16), nullable=False)     # "CVI" | "SGRM" | "DPE" | "ITR"
+    practice_area = Column(String(8), nullable=False)  # "1.1" .. "4.3"
+    answer_value = Column(Integer, nullable=True)      # 1-4; NULL until answered
+    # Phase 53 columns (QRAMM-13) — pre-provisioned, unused by Phase 51:
+    suggested_answer = Column(Integer, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+    evidence_source = Column(String(255), nullable=True)
+
+
+class QRAMMProfile(Base):
+    """QRAMM organizational profile (Phase 51 — QRAMM-01).
+
+    One row per assessment session. multiplier is the computed Float
+    (range 0.8-1.5) applied to dimension scores during overall score
+    computation.
+    """
+
+    __tablename__ = "qramm_profiles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, nullable=True)
+    industry = Column(String(64), nullable=True)
+    org_size = Column(String(32), nullable=True)
+    data_sensitivity = Column(String(32), nullable=True)
+    regulatory_obligations = Column(Text, nullable=True)  # JSON list of framework codes
+    geographic_scope = Column(String(32), nullable=True)
+    multiplier = Column(Float, nullable=True)             # 0.8 - 1.5
+    created_at = Column(DateTime, nullable=True)
