@@ -1040,7 +1040,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   - [x] 51-01-PLAN.md — ORM models (QRAMMSession/Answer/Profile) + _ensure_qramm_tables() in db.py
   - [x] 51-02-PLAN.md — quirk/qramm/ package: questions.py (120 entries) + scoring.py + model_meta.py + __init__.py
   - [x] 51-03-PLAN.md — FastAPI CRUD router at /api/qramm/ + app.py registration
-  - [ ] 51-04-PLAN.md — Test suite: test_qramm_questions.py + test_qramm_scoring.py + test_qramm_router.py
+  - [x] 51-04-PLAN.md — Test suite: test_qramm_questions.py + test_qramm_scoring.py + test_qramm_router.py
   - [x] 51-05-PLAN.md — DEBT-01: replace datetime.utcnow() in test_saml_scanner.py and test_broker_scanner_redis.py
 
 ### Phase 52: Compliance Uplift & Health Check
@@ -1121,7 +1121,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 51. QRAMM Core Infrastructure | v4.7 | 4/6 | In Progress|  |
+| 51. QRAMM Core Infrastructure | v4.7 | 5/6 | In Progress|  |
 | 52. Compliance Uplift & Health Check | v4.7 | 0/TBD | Not started | - |
 | 53. QRAMM Evidence Bridge | v4.7 | 0/TBD | Not started | - |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 0/TBD | Not started | - |
