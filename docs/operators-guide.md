@@ -255,6 +255,67 @@ and Amazon SQS (per `broker_sqs_regions`). Findings include plaintext-listener
 detection, weak TLS configuration, and missing authentication. Gated by
 `connectors.enable_broker=true` and requires `quirk[motion]`.
 
+### quirk doctor
+
+Pre-engagement health check. Runs eight diagnostic probes and prints a
+Rich-formatted dashboard. Exit code is the machine-readable signal:
+
+- `0` — all non-informational checks pass; QUIRK is ready to scan
+- `1` — one or more non-informational checks failed; address before scanning
+
+#### Usage
+
+```bash
+quirk doctor
+```
+
+No flags are accepted. Invoke before each client engagement.
+
+#### Categories
+
+| # | Category | Severity | Failure exits 1? |
+|---|----------|----------|------------------|
+| 1 | Python environment (>= 3.11) | non-informational | yes |
+| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | non-informational | yes |
+| 3 | Compliance framework freshness (within `STALENESS_THRESHOLD_DAYS`) | non-informational | yes |
+| 4 | QRAMM module availability | informational | **no** |
+| 5 | Database (`./quirk.db` reachable) | non-informational | yes |
+| 6 | Configuration (`./config.yaml` parses) | non-informational | yes (malformed); informational only if file is absent |
+| 7 | Network connectivity (DNS probe) | informational | **no** |
+| 8 | Dashboard process (port 8512) | informational | **no** |
+
+#### Symbols
+
+- `[✓]` — check passed
+- `[!]` — informational status (never causes exit 1)
+- `[✗]` — check failed (causes exit 1 if non-informational)
+
+#### Examples
+
+```text
+$ quirk doctor
+                        QU.I.R.K. Health Check
+┏━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Check                   ┃ Status                                        ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Python environment      │ [✓] Python 3.14                               │
+│ Binary: nmap            │ [✓] /opt/homebrew/bin/nmap                    │
+│ Binary: syft            │ [✓] /opt/homebrew/bin/syft                    │
+│ Binary: semgrep         │ [✗] semgrep not found in PATH                 │
+│ Compliance freshness    │ [✓] all frameworks within freshness window    │
+│ QRAMM module            │ [!] QRAMM module not installed — Phase 51     │
+│ Database (quirk.db)     │ [✓] ./quirk.db reachable                      │
+│ Configuration           │ [✓] ./config.yaml parses cleanly              │
+│ Network connectivity    │ [✓] outbound TCP to 8.8.8.8:53 OK             │
+│ Dashboard process       │ [!] dashboard not running on port 8512        │
+└─────────────────────────┴───────────────────────────────────────────────┘
+$ echo $?
+1
+```
+
+(In the example above, `semgrep` is missing — a non-informational failure that
+exits 1.)
+
 ---
 
 ## 7. Compliance Map Maintenance
