@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 4.4.0
-**Last Updated:** 2026-05-05 (Phase 50 wrap: UAT-50-NN added for Enterprise Documentation — UAT-50-01 architecture.md presence + section coverage; UAT-50-02 operators-guide.md presence + section coverage; UAT-50-03 vault Reference/ sync verification (`Reference/Architecture.md` + `Reference/Operators-Guide.md` with `type: reference` frontmatter and `_QUIRK-Hub.md` wikilinks); UAT-50-04 compliance maintenance citation completeness (PCI SSC + ECFR + NIST CSRC source URLs, `quirk compliance status` CLI, `STALENESS_THRESHOLD_DAYS` constant, `tests/test_compliance_freshness.py` path, and a worked PCI-DSS 4.0.1 → 4.1 upgrade example). Closes DOCS-01..04. v4.6 Enterprise Readiness milestone complete. Earlier: Phase 49 wrap: UAT-49-01..05 added for Compliance Mapping — UAT-49-01 schema gate (every COMPLIANCE_MAP entry has framework + control + version + last_verified + source_url); UAT-49-02 freshness gate (no entry's last_verified older than STALENESS_THRESHOLD_DAYS = 365); UAT-49-03 title-join gate (every emitted finding title is in COMPLIANCE_MAP or UNMAPPED_TITLES); UAT-49-04 `quirk compliance status` CLI smoke (text + JSON formats); UAT-49-05 HTML/PDF Compliance Summary section visual + smoke. Closes COMPLY-01..09. Compliance map maintenance cadence + regulator-revision upgrade procedure are documented in docs/operators-guide.md (Phase 50). Earlier: Phase 48 wrap: UAT-48-01..04 added for Rich Finding Context — UAT-48-01 every finding in `findings-*.json` carries a non-empty `description`; UAT-48-02 HTML All Findings table contains `<th>Description</th>` adjacent to Recommendation; UAT-48-03 every quantum-vulnerable finding's recommendation cites `FIPS 203/204/205` and `Per NIST IR 8547`; UAT-48-04 `tests/test_pqc_terminology_gate.py` passes clean and fails the build when stale terminology is injected into either gated source file. Closes CONTEXT-01..04. Earlier: Phase 47 wrap: UAT-47-01..08 added for Nmap Discovery + Multi-Target Wizard + CBOM JSON Validation — UAT-47-01 CSV targets through wizard; UAT-47-02 @file targets ingestion; UAT-47-03 --targets-file non-interactive; UAT-47-04 nmap y/N prompt appears once; UAT-47-05 missing nmap binary — no crash, ADVISORY row, consulting-ports fallback; UAT-47-06 targets x ports > 10000 shows confirm prompt in TTY mode; UAT-47-07 CBOM JSON validates via post-write JsonStrictValidator; UAT-47-08 pip install quirk[cbom] install_hint actionable. Closes DISCOVER-01..04, MULTI-01..05. Earlier: Phase 46 wrap: UAT-46-01..05 added for TLS Finding Gaps — UAT-46-01 expired-cert produces CRITICAL finding (TLS-FIND-01) at chaos lab `tls-cert-defects` port 13444; UAT-46-02 self-signed cert produces HIGH "TLS certificate is self-signed" finding at port 13445 AND emits NO untrusted-CA finding on the same endpoint (D-04 mutual exclusivity, TLS-FIND-02); UAT-46-03 untrusted-CA cert produces MEDIUM "TLS certificate issued by untrusted CA" finding at port 13446 (TLS-FIND-03); UAT-46-04 RSA-1024 cert produces HIGH "TLS certificate uses undersized RSA key" finding at port 13447 (TLS-FIND-04); UAT-46-05 D-02 multi-defect independence — a single endpoint with multiple cert defects emits one finding per class with no rollup. Closes TLS-FIND-01..07. Earlier: Phase 45 wrap: UAT-1-09/10/11 added for Install-Day UX — UAT-1-09 clean-venv `pip install quirk` (no extras) TLS-only scan against chaos lab `tls-modern` produces zero ImportError/ModuleNotFoundError in HTML report (INSTALL-01); UAT-1-10 Coverage Gaps advisories surface as a dedicated `<h2>` section in the HTML report when `enable_kerberos`/`enable_db`/`enable_gcp`/`enable_k8s`/`enable_vault` are true and matching extras absent — each row's Recommendation column contains the literal `pip install quirk[<extra>]`, advisories are filtered out of the All Findings table, and readiness score is unchanged versus running with the same scanners disabled (INSTALL-02 + INSTALL-04 + D-07 score-exclusion); UAT-1-11 `pip install quirk[all]` in a fresh venv excludes impacket (`python -c "import impacket"` raises ModuleNotFoundError) while `import fastapi, psycopg2, googleapiclient, hvac, kubernetes` all succeed (INSTALL-03). Closes INSTALL-01..04. Earlier: Phase 44 wrap: UAT-44-01..04 added for UAT Debt Automation — UAT-44-01 Phase 27 DB integration tests (PostgreSQL+MySQL ssl-off via `QUIRK_DB_INTEGRATION=1`); UAT-44-02 Phase 25 Kerberos/SAML traceability annotations (existing tests annotated with UAT-25 closure trail); UAT-44-03 Phase 30 Vault live integration test (5-finding spec against vault-30 :28200 via `QUIRK_VAULT_INTEGRATION=1`); UAT-44-04 Phase 31 trends flat-wire-format pytest test (in-memory SQLite, no chaos lab needed). Closes UAT-01..04. v4.5 Reliability & Gap Closure milestone complete. Earlier: Phase 43 gap closure: UAT-43-06..08 added — a11y baseline-delta PASS/FAIL fix, pagination absent on single-page datasets, PDF data-ready sentinel; closes all Phase 43 UAT gaps. Earlier: Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
+**Last Updated:** 2026-05-06 (Phase 51 wrap: UAT-51-01..07 added for QRAMM Core Infrastructure — UAT-51-01 Create QRAMM session (QRAMM-01/02); UAT-51-02 Read QRAMM session round-trip (QRAMM-02); UAT-51-03 Save QRAMM answers with validation (QRAMM-02); UAT-51-04 Score a QRAMM session (QRAMM-04); UAT-51-05 Delete QRAMM session cascades answers (QRAMM-01); UAT-51-06 QRAMM tables created by init_db (QRAMM-01); UAT-51-07 DEBT-01 zero-utcnow gate. Closes QRAMM-01..04, DEBT-01. Earlier: Phase 50 wrap: UAT-50-NN added for Enterprise Documentation — UAT-50-01 architecture.md presence + section coverage; UAT-50-02 operators-guide.md presence + section coverage; UAT-50-03 vault Reference/ sync verification (`Reference/Architecture.md` + `Reference/Operators-Guide.md` with `type: reference` frontmatter and `_QUIRK-Hub.md` wikilinks); UAT-50-04 compliance maintenance citation completeness (PCI SSC + ECFR + NIST CSRC source URLs, `quirk compliance status` CLI, `STALENESS_THRESHOLD_DAYS` constant, `tests/test_compliance_freshness.py` path, and a worked PCI-DSS 4.0.1 → 4.1 upgrade example). Closes DOCS-01..04. v4.6 Enterprise Readiness milestone complete. Earlier: Phase 49 wrap: UAT-49-01..05 added for Compliance Mapping — UAT-49-01 schema gate (every COMPLIANCE_MAP entry has framework + control + version + last_verified + source_url); UAT-49-02 freshness gate (no entry's last_verified older than STALENESS_THRESHOLD_DAYS = 365); UAT-49-03 title-join gate (every emitted finding title is in COMPLIANCE_MAP or UNMAPPED_TITLES); UAT-49-04 `quirk compliance status` CLI smoke (text + JSON formats); UAT-49-05 HTML/PDF Compliance Summary section visual + smoke. Closes COMPLY-01..09. Compliance map maintenance cadence + regulator-revision upgrade procedure are documented in docs/operators-guide.md (Phase 50). Earlier: Phase 48 wrap: UAT-48-01..04 added for Rich Finding Context — UAT-48-01 every finding in `findings-*.json` carries a non-empty `description`; UAT-48-02 HTML All Findings table contains `<th>Description</th>` adjacent to Recommendation; UAT-48-03 every quantum-vulnerable finding's recommendation cites `FIPS 203/204/205` and `Per NIST IR 8547`; UAT-48-04 `tests/test_pqc_terminology_gate.py` passes clean and fails the build when stale terminology is injected into either gated source file. Closes CONTEXT-01..04. Earlier: Phase 47 wrap: UAT-47-01..08 added for Nmap Discovery + Multi-Target Wizard + CBOM JSON Validation — UAT-47-01 CSV targets through wizard; UAT-47-02 @file targets ingestion; UAT-47-03 --targets-file non-interactive; UAT-47-04 nmap y/N prompt appears once; UAT-47-05 missing nmap binary — no crash, ADVISORY row, consulting-ports fallback; UAT-47-06 targets x ports > 10000 shows confirm prompt in TTY mode; UAT-47-07 CBOM JSON validates via post-write JsonStrictValidator; UAT-47-08 pip install quirk[cbom] install_hint actionable. Closes DISCOVER-01..04, MULTI-01..05. Earlier: Phase 46 wrap: UAT-46-01..05 added for TLS Finding Gaps — UAT-46-01 expired-cert produces CRITICAL finding (TLS-FIND-01) at chaos lab `tls-cert-defects` port 13444; UAT-46-02 self-signed cert produces HIGH "TLS certificate is self-signed" finding at port 13445 AND emits NO untrusted-CA finding on the same endpoint (D-04 mutual exclusivity, TLS-FIND-02); UAT-46-03 untrusted-CA cert produces MEDIUM "TLS certificate issued by untrusted CA" finding at port 13446 (TLS-FIND-03); UAT-46-04 RSA-1024 cert produces HIGH "TLS certificate uses undersized RSA key" finding at port 13447 (TLS-FIND-04); UAT-46-05 D-02 multi-defect independence — a single endpoint with multiple cert defects emits one finding per class with no rollup. Closes TLS-FIND-01..07. Earlier: Phase 45 wrap: UAT-1-09/10/11 added for Install-Day UX — UAT-1-09 clean-venv `pip install quirk` (no extras) TLS-only scan against chaos lab `tls-modern` produces zero ImportError/ModuleNotFoundError in HTML report (INSTALL-01); UAT-1-10 Coverage Gaps advisories surface as a dedicated `<h2>` section in the HTML report when `enable_kerberos`/`enable_db`/`enable_gcp`/`enable_k8s`/`enable_vault` are true and matching extras absent — each row's Recommendation column contains the literal `pip install quirk[<extra>]`, advisories are filtered out of the All Findings table, and readiness score is unchanged versus running with the same scanners disabled (INSTALL-02 + INSTALL-04 + D-07 score-exclusion); UAT-1-11 `pip install quirk[all]` in a fresh venv excludes impacket (`python -c "import impacket"` raises ModuleNotFoundError) while `import fastapi, psycopg2, googleapiclient, hvac, kubernetes` all succeed (INSTALL-03). Closes INSTALL-01..04. Earlier: Phase 44 wrap: UAT-44-01..04 added for UAT Debt Automation — UAT-44-01 Phase 27 DB integration tests (PostgreSQL+MySQL ssl-off via `QUIRK_DB_INTEGRATION=1`); UAT-44-02 Phase 25 Kerberos/SAML traceability annotations (existing tests annotated with UAT-25 closure trail); UAT-44-03 Phase 30 Vault live integration test (5-finding spec against vault-30 :28200 via `QUIRK_VAULT_INTEGRATION=1`); UAT-44-04 Phase 31 trends flat-wire-format pytest test (in-memory SQLite, no chaos lab needed). Closes UAT-01..04. v4.5 Reliability & Gap Closure milestone complete. Earlier: Phase 43 gap closure: UAT-43-06..08 added — a11y baseline-delta PASS/FAIL fix, pagination absent on single-page datasets, PDF data-ready sentinel; closes all Phase 43 UAT gaps. Earlier: Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v4.4. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
 
@@ -6721,5 +6721,193 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:**
+
+---
+
+# Series 20: Phase 51 — QRAMM Core Infrastructure
+
+**Covers:** QRAMM-01..04, DEBT-01 from Phase 51
+
+**Note:** UAT-51-01..06 require a running `quirk serve` instance. UAT-51-07 requires the repo on `QUIRK-v4` with a Python 3.11+ virtualenv. UAT-51-04 requires saving all 120 answers before scoring.
+
+---
+
+### UAT-51-01: Create QRAMM session via API (QRAMM-01, QRAMM-02)
+
+**ID:** UAT-51-01
+**Title:** POST /api/qramm/sessions creates a session and returns 201 with session_id and status=draft
+
+**Prerequisites:** `quirk serve` running on localhost:8000 against a fresh (or existing) `quirk.db`.
+
+**Steps:**
+1. `curl -s -w "\n%{http_code}" -X POST http://localhost:8000/api/qramm/sessions -H "Content-Type: application/json" -d '{"org_name":"UAT-Org"}'`
+2. Note the returned `session_id`.
+3. Verify HTTP status code is 201.
+
+**Expected:** HTTP 201; response body contains `session_id` (positive integer), `org_name == "UAT-Org"`, and `status == "draft"`.
+
+**Pass Criteria:**
+- HTTP status code is `201`.
+- Response JSON contains `session_id` key with a positive integer value.
+- Response JSON contains `org_name == "UAT-Org"`.
+- Response JSON contains `status == "draft"`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** UAT-51-01
+
+---
+
+### UAT-51-02: Read QRAMM session round-trip (QRAMM-02)
+
+**ID:** UAT-51-02
+**Title:** GET /api/qramm/sessions/{id} returns session with answers_count=0 and score=null immediately after creation
+
+**Prerequisites:** UAT-51-01 completed; `session_id` value captured.
+
+**Steps:**
+1. `curl -s -w "\n%{http_code}" http://localhost:8000/api/qramm/sessions/{session_id}` (replace `{session_id}` with value from UAT-51-01).
+2. Verify HTTP status code is 200.
+3. `curl -s -w "\n%{http_code}" http://localhost:8000/api/qramm/sessions/9999` (non-existent session).
+
+**Expected:** GET of valid session returns 200 with matching org_name, answers_count=0, score=null. GET of 9999 returns 404.
+
+**Pass Criteria:**
+- Step 1: HTTP 200; `session_id` matches; `answers_count == 0`; `score` is null.
+- Step 3: HTTP 404; body contains `"Session not found"`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** UAT-51-02
+
+---
+
+### UAT-51-03: Save QRAMM answers with validation (QRAMM-02)
+
+**ID:** UAT-51-03
+**Title:** POST /api/qramm/sessions/{id}/answers persists answers and rejects out-of-range values with 422
+
+**Prerequisites:** UAT-51-01 completed; `session_id` captured.
+
+**Steps:**
+1. `curl -s -w "\n%{http_code}" -X POST http://localhost:8000/api/qramm/sessions/{session_id}/answers -H "Content-Type: application/json" -d '{"answers":[{"question_number":1,"answer_value":3}]}'`
+2. Verify HTTP 200; `saved_count == 1`; `total_answered == 1`.
+3. `curl -s -w "\n%{http_code}" -X POST http://localhost:8000/api/qramm/sessions/{session_id}/answers -H "Content-Type: application/json" -d '{"answers":[{"question_number":1,"answer_value":5}]}'` (out-of-range value).
+4. Verify HTTP 422.
+
+**Expected:** Valid answer saves cleanly (200, correct counts). Out-of-range answer_value 5 is rejected with 422 Unprocessable Entity.
+
+**Pass Criteria:**
+- Step 1: HTTP 200; response contains `saved_count == 1` and `total_answered == 1`.
+- Step 3: HTTP 422 (Pydantic Field(ge=1, le=4) validation failure).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** UAT-51-03
+
+---
+
+### UAT-51-04: Score a QRAMM session (QRAMM-04)
+
+**ID:** UAT-51-04
+**Title:** POST /api/qramm/sessions/{id}/score computes weakest-link score with correct dimensions and maturity label
+
+**Prerequisites:** UAT-51-01 completed; `session_id` captured. All 120 answers must be saved.
+
+**Steps:**
+1. Save all 120 answers with `answer_value: 2`:
+   ```bash
+   ANSWERS=$(python3 -c "import json; print(json.dumps({'answers':[{'question_number':i,'answer_value':2} for i in range(1,121)]}))")
+   curl -s -X POST http://localhost:8000/api/qramm/sessions/{session_id}/answers -H "Content-Type: application/json" -d "$ANSWERS"
+   ```
+2. `curl -s -w "\n%{http_code}" -X POST http://localhost:8000/api/qramm/sessions/{session_id}/score -H "Content-Type: application/json" -d '{}'`
+3. Verify HTTP 200 and inspect response body.
+
+**Expected:** HTTP 200; `overall` in [1.0, 4.0]; `dimensions` keys = `{CVI, SGRM, DPE, ITR}`; `maturity` is one of `Basic|Developing|Established|Advanced|Optimizing`; `profile_multiplier == 1.0`. With all answers at value 2, `overall == 2.0` and `maturity == "Developing"`.
+
+**Pass Criteria:**
+- HTTP 200.
+- Response contains `overall` (float in [1.0, 4.0]).
+- Response contains `dimensions` with exactly the keys `CVI`, `SGRM`, `DPE`, `ITR`.
+- Response contains `maturity` — one of `Basic`, `Developing`, `Established`, `Advanced`, `Optimizing`.
+- Response contains `profile_multiplier == 1.0` (when no profile row exists).
+- With all-2 answers: `overall == 2.0` and `maturity == "Developing"`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** UAT-51-04
+
+---
+
+### UAT-51-05: Delete QRAMM session cascades answers (QRAMM-01)
+
+**ID:** UAT-51-05
+**Title:** DELETE /api/qramm/sessions/{id} returns 204 and subsequent GET returns 404
+
+**Prerequisites:** UAT-51-01..04 completed; `session_id` captured and scored.
+
+**Steps:**
+1. `curl -s -w "\n%{http_code}" -X DELETE http://localhost:8000/api/qramm/sessions/{session_id}`
+2. Verify HTTP 204 (no body).
+3. `curl -s -w "\n%{http_code}" http://localhost:8000/api/qramm/sessions/{session_id}`
+4. Verify HTTP 404.
+
+**Expected:** DELETE returns 204. Subsequent GET of the same session_id returns 404. Answer rows are explicitly purged before session delete (SQLite FK enforcement workaround in router).
+
+**Pass Criteria:**
+- Step 1: HTTP 204 with empty body.
+- Step 3: HTTP 404.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** UAT-51-05
+
+---
+
+### UAT-51-06: QRAMM tables created by init_db (QRAMM-01)
+
+**ID:** UAT-51-06
+**Title:** init_db() creates qramm_sessions, qramm_answers, and qramm_profiles idempotently from a fresh database
+
+**Prerequisites:** Python 3.11+ virtualenv with `pip install -e ".[dashboard]"`; no existing test DB at `/tmp/uat_qramm.db`.
+
+**Steps:**
+1. `rm -f /tmp/uat_qramm.db`
+2. `python3 -c "from quirk.db import init_db; from sqlalchemy import inspect; e=init_db('/tmp/uat_qramm.db'); print(sorted(set(inspect(e).get_table_names()) & {'qramm_sessions','qramm_answers','qramm_profiles'}))"`
+3. Re-run Step 2 without deleting the DB (idempotency test — must not error).
+
+**Expected:** Step 2 prints `['qramm_answers', 'qramm_profiles', 'qramm_sessions']`. Step 3 (repeat) completes without error.
+
+**Pass Criteria:**
+- Step 2 output: `['qramm_answers', 'qramm_profiles', 'qramm_sessions']` (sorted, all 3 tables).
+- Step 3: no exception raised (idempotent via `checkfirst=True`).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** UAT-51-06
+
+---
+
+### UAT-51-07: DEBT-01 zero-utcnow gate
+
+**ID:** UAT-51-07
+**Title:** Test suite emits zero datetime.utcnow() DeprecationWarnings under -W error::DeprecationWarning
+
+**Prerequisites:** Python 3.11+ virtualenv with `pip install -e ".[dashboard]"`; repo on `QUIRK-v4`.
+
+**Steps:**
+1. `python -m pytest tests/ -W error::DeprecationWarning 2>&1 | grep -c "datetime.utcnow"`
+2. Verify the count returned is `0`.
+3. `python -m pytest tests/test_saml_scanner.py tests/test_broker_scanner_redis.py -W error::DeprecationWarning -v 2>&1 | tail -5`
+
+**Expected:** Step 1 returns `0` (no `datetime.utcnow` occurrences in test output). Step 3 shows all tests passing without DeprecationWarning escalation to errors.
+
+**Pass Criteria:**
+- Step 1: output is `0`.
+- Step 3: all targeted tests pass (exit code 0); no `DeprecationWarning` raised.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** UAT-51-07
 
 ---
