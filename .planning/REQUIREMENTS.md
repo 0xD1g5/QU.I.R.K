@@ -15,10 +15,10 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 
 ### QRAMM Core Infrastructure
 
-- [ ] **QRAMM-01**: SQLite gains three new normalized tables — `qramm_sessions` (lifecycle, `model_version`, `profile_multiplier`, `status`), `qramm_answers` (`assessment_id` FK, `question_number`, `dimension`, `practice_area`, `answer_value`, `suggested_answer`, `confirmed_at`, `evidence_source`), `qramm_profiles` (org profile inputs → computed multiplier 0.8–1.5×) — created via `_ensure_qramm_tables()` in `db.py:init_db()`, no changes to `CryptoEndpoint`
-- [ ] **QRAMM-02**: FastAPI router at `/api/qramm/` provides CRUD endpoints for the assessment lifecycle: create session, read session, save/update answers, score session, delete session
-- [ ] **QRAMM-03**: `quirk/qramm/questions.py` contains the full 120-question catalog as a versioned `QRAMM_QUESTIONS` constant (4 dimensions × 3 practices × 10 questions); each entry carries `question_number`, `dimension`, `practice_area`, `text`, and `maturity_labels`
-- [ ] **QRAMM-04**: `quirk/qramm/scoring.py` computes dimension scores using the weakest-link minimum rule (dimension score = `min()` of its 3 practice scores, NOT average); profile multiplier applied to weighted dimension scores; overall score = average of 4 weighted dimensions; scoring logic is unit-tested to match the CSNP QRAMM toolkit reference values
+- [x] **QRAMM-01**: SQLite gains three new normalized tables — `qramm_sessions` (lifecycle, `model_version`, `profile_multiplier`, `status`), `qramm_answers` (`assessment_id` FK, `question_number`, `dimension`, `practice_area`, `answer_value`, `suggested_answer`, `confirmed_at`, `evidence_source`), `qramm_profiles` (org profile inputs → computed multiplier 0.8–1.5×) — created via `_ensure_qramm_tables()` in `db.py:init_db()`, no changes to `CryptoEndpoint`
+- [x] **QRAMM-02**: FastAPI router at `/api/qramm/` provides CRUD endpoints for the assessment lifecycle: create session, read session, save/update answers, score session, delete session
+- [x] **QRAMM-03**: `quirk/qramm/questions.py` contains the full 120-question catalog as a versioned `QRAMM_QUESTIONS` constant (4 dimensions × 3 practices × 10 questions); each entry carries `question_number`, `dimension`, `practice_area`, `text`, and `maturity_labels`
+- [x] **QRAMM-04**: `quirk/qramm/scoring.py` computes dimension scores using the weakest-link minimum rule (dimension score = `min()` of its 3 practice scores, NOT average); profile multiplier applied to weighted dimension scores; overall score = average of 4 weighted dimensions; scoring logic is unit-tested to match the CSNP QRAMM toolkit reference values
 
 ### QRAMM Staleness Enforcement
 
@@ -50,7 +50,7 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 
 ### Tech Debt
 
-- [ ] **DEBT-01**: All `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)` across `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected modules (BACK-56); resolves Python 3.12+ `DeprecationWarning`
+- [x] **DEBT-01**: All `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)` across `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected modules (BACK-56); resolves Python 3.12+ `DeprecationWarning`
 - [ ] **DEBT-02**: `lab.sh` PROFILE_ARGS CLI precedence fixed — inbound env value is snapshotted before `source .env` so `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults (BACK-87)
 - [ ] **DEBT-03**: `run-stats-*.json` output includes `ports_scanned` (sorted list of all ports that entered the scan pipeline) and `hosts_scanned` (sorted list of all scanned hosts), closing UAT-3-02 verification gap (BACK-85)
 - [ ] **DEBT-04**: `quirk/scanner/saml_scanner.py` migrated from deprecated `defusedxml.lxml` to raw `lxml.etree` with `resolve_entities=False` and `no_network=True` parser options; all 27 existing SAML tests pass GREEN (BACK-67)
@@ -102,11 +102,11 @@ Populated by the roadmapper. Updated at each phase transition.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QRAMM-01 | Phase 51 | Pending |
-| QRAMM-02 | Phase 51 | Pending |
-| QRAMM-03 | Phase 51 | Pending |
-| QRAMM-04 | Phase 51 | Pending |
-| DEBT-01 | Phase 51 | Pending |
+| QRAMM-01 | Phase 51 | Complete |
+| QRAMM-02 | Phase 51 | Complete |
+| QRAMM-03 | Phase 51 | Complete |
+| QRAMM-04 | Phase 51 | Complete |
+| DEBT-01 | Phase 51 | Complete |
 | COMPLY-10 | Phase 52 | Pending |
 | COMPLY-11 | Phase 52 | Pending |
 | COMPLY-12 | Phase 52 | Pending |
