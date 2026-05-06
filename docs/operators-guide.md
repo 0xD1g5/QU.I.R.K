@@ -66,7 +66,7 @@ quirk --config config.yaml  # use the generated config
 
 ## 3. Scan
 
-Two entry points: `quirk scan` launches the interactive wizard (recommended for first
+Two entry points: `quirk` (no args) launches the interactive wizard (recommended for first
 use); `quirk --config config.yaml` runs non-interactively against a pre-authored
 config (recommended for CI and customer engagements). Targets accept multi-line paste,
 `@filepath` indirection, `--targets-file <path>`, and IPv4 CIDR ranges (Phase 47).
