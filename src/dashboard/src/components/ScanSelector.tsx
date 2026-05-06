@@ -1,5 +1,5 @@
 import { useScanList } from "@/hooks/useScanList"
-import { useSelectedScan } from "@/context/ScanContext"
+import { useSelectedScan } from "@/hooks/useSelectedScan"
 import {
   Select,
   SelectContent,

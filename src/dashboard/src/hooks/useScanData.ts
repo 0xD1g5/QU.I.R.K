@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import type { ScanLatestResponse } from "@/types/api"
-import { useSelectedScan } from "@/context/ScanContext"
+import { useSelectedScan } from "@/hooks/useSelectedScan"
 
 interface UseScanDataResult {
   data: ScanLatestResponse | null
