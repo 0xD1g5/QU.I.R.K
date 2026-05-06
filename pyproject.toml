@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quirk"
-version = "4.0.0"
+version = "4.4.0"
 description = "QU.I.R.K. -- Quantum Infrastructure Readiness Kit"
 requires-python = ">=3.10"
 license = {text = "Proprietary"}
@@ -13,7 +13,7 @@ dependencies = [
     "cryptography>=44.0",
     "SQLAlchemy>=2.0",
     "tqdm>=4.67",
-    "cyclonedx-python-lib>=11.7.0,<12",
+    "cyclonedx-python-lib[json-validation]>=11.7.0,<12",
     "httpx>=0.28.0",
     "jinja2>=3.1.0",
     "rich>=13.0.0",
@@ -24,6 +24,10 @@ dependencies = [
     "azure-keyvault-certificates>=4.10.0",
     "azure-keyvault-keys>=4.11.0",
     "azure-mgmt-network>=30.2.0",
+    "dnspython[dnssec]>=2.8.0",
+    "lxml>=6.0",
+    "defusedxml>=0.7.1",
+    "signxml>=4.4.0",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +37,41 @@ dashboard = [
     "python-multipart>=0.0.20",
     "playwright>=1.58.0",
 ]
+identity = [
+    "impacket>=0.13.0,<0.14",
+    "ldap3>=2.9.1",
+]
+cloud = [
+    "google-api-python-client>=2.0.0",
+    "google-auth>=2.36.0",
+    "azure-mgmt-storage>=21.0.0",      # Phase 28: Azure Blob encryption audit (STOR-02)
+    "kubernetes>=35.0.0",              # Phase 29: Kubernetes secrets inspection (K8S-01, K8S-02)
+    "google-cloud-container>=2.0.0",   # Phase 29: GKE databaseEncryption.state (K8S-01)
+    "azure-mgmt-containerservice>=35.0.0",  # Phase 29: AKS Key Vault KMS detection (K8S-01)
+    "hvac>=2.4.0",                     # Phase 30: HashiCorp Vault connector (VAULT-01/02/03)
+]
+db = [
+    "psycopg2-binary>=2.9.0",
+    "PyMySQL>=1.1.0",
+]
+motion = ["quirk[email]", "quirk[broker]", "quirk[kafka]"]
+email = []
+broker = ["redis>=5.0"]
+kafka = ["kafka-python>=2.0"]
+redis = ["redis>=5.0"]
+cbom = ["cyclonedx-python-lib[json-validation]>=11.7.0,<12"]
+all = [
+    "quirk[cloud]",
+    "quirk[cbom]",
+    "quirk[db]",
+    "quirk[motion]",
+    "quirk[redis]",
+    "quirk[dashboard]",
+]
+# NOTE: quirk[identity] is INTENTIONALLY EXCLUDED from [all] -- impacket
+# transitively pulls pyOpenSSL which downgrades cryptography and breaks the
+# TLS scanner. See Phase 45 / D-01. tests/test_install_all_excludes_impacket.py
+# guards this; do NOT add quirk[identity] to the list above.
 
 [project.scripts]
 quirk = "run_scan:main"
@@ -44,4 +83,13 @@ include = ["quirk*"]
 py-modules = ["run_scan"]
 
 [tool.setuptools.package-data]
-quirk = ["reports/templates/*.j2", "config_template.yaml"]
+quirk = ["reports/templates/*.j2", "config_template.yaml", "dashboard/static/**/*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m not slow')",
+    "live_infra: marks tests requiring live external infrastructure (Docker/cloud/etc)",
+]
+addopts = "-m 'not slow'"
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -210,6 +210,9 @@ def _scan_one_sslyze(
             chain_depth = 0
             chain_verified = False
 
+        # Phase 46 TLS-FIND-06: persist chain verification result to column
+        ep.chain_verified = chain_verified
+
         # ----------------------------------------------------------------
         # Cipher suites per protocol
         # ----------------------------------------------------------------
@@ -342,6 +345,41 @@ def _scan_one_fallback(
         sni_used=bool(include_sni),
     )
 
+    # Phase 46 D-01: chain verification pre-pass.
+    # CERT_REQUIRED against system trust store. SSLCertVerificationError → False.
+    # Any other exception (timeout, connection refused) → None (indeterminate).
+    # Per Pitfall 1: network errors must NOT produce false untrusted-CA findings.
+    try:
+        verify_ctx = ssl.create_default_context()
+        verify_ctx.verify_mode = ssl.CERT_REQUIRED
+        is_ip_for_verify = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(host)
+            is_ip_for_verify = True
+        except Exception:
+            pass
+        verify_hostname = host if (include_sni and not is_ip_for_verify) else None
+        # Phase 46 fix: ssl requires server_hostname when check_hostname=True. When
+        # we have no hostname to use (SNI off, or host is a literal IP), disable
+        # the hostname check so the chain-verification pre-pass can still run —
+        # chain validation against the system trust store is independent of the
+        # hostname check, and a hostname mismatch is a separate concern from
+        # untrusted-CA. Without this, verify_ctx.wrap_socket raises ValueError,
+        # which the broad except below would swallow as chain_verified=None,
+        # leaving the untrusted-CA branch structurally dead.
+        if verify_hostname is None:
+            verify_ctx.check_hostname = False
+        else:
+            verify_ctx.check_hostname = True
+        with socket.create_connection((host, port), timeout=timeout) as vsock:
+            with verify_ctx.wrap_socket(vsock, server_hostname=verify_hostname) as vssock:
+                ep.chain_verified = True
+    except ssl.SSLCertVerificationError:
+        ep.chain_verified = False
+    except Exception:
+        ep.chain_verified = None
+
     try:
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
@@ -442,6 +480,23 @@ def scan_one(
         try:
             ep = _scan_one_sslyze(host, port, timeout, include_sni, logger)
             if ep is not None:
+                # Phase 46 D-01: validation gate — half-populated ep => merge with fallback.
+                # If sslyze omitted critical certificate metadata, run the fallback and
+                # merge any missing fields (chain_verified included) so the row that
+                # reaches the DB is never half-populated.
+                if ep.cert_not_after is None or not (ep.cert_subject or "").strip():
+                    fb = _scan_one_fallback(host, port, timeout, include_sni, logger, tls_enum_mode)
+                    if ep.cert_not_after is None:
+                        ep.cert_not_after = fb.cert_not_after
+                    if not (ep.cert_subject or "").strip():
+                        ep.cert_subject = fb.cert_subject
+                    if not (ep.cert_issuer or "").strip():
+                        ep.cert_issuer = fb.cert_issuer
+                    if ep.cert_pubkey_size is None:
+                        ep.cert_pubkey_size = fb.cert_pubkey_size
+                        ep.cert_pubkey_alg = fb.cert_pubkey_alg
+                    if ep.chain_verified is None:
+                        ep.chain_verified = fb.chain_verified
                 return ep
         except Exception as e:
             if logger:
@@ -459,12 +514,19 @@ def scan_tls_targets(
 
     # default enum mode
     tls_enum_mode = getattr(getattr(cfg, "scan", cfg), "tls_enum_mode", "fast")
+    # Phase 41 / D-08: read per-scanner timeout + concurrency from canonical sub-table /
+    # dedicated flat field. No more cfg.scan.timeout_seconds / cfg.scan.concurrency mutation.
+    if hasattr(cfg.scan, "timeouts"):
+        tls_timeout = cfg.scan.timeouts.tls_seconds
+    else:
+        tls_timeout = cfg.scan.timeout_seconds
+    tls_workers = getattr(cfg.scan, "tls_concurrency", cfg.scan.concurrency)
     if logger:
-        logger.stamp(f"Starting TLS scans: {len(targets)} targets (workers={cfg.scan.concurrency}, enum={tls_enum_mode})")
+        logger.stamp(f"Starting TLS scans: {len(targets)} targets (workers={tls_workers}, enum={tls_enum_mode})")
 
-    with ThreadPoolExecutor(max_workers=cfg.scan.concurrency) as ex:
+    with ThreadPoolExecutor(max_workers=tls_workers) as ex:
         futures = [
-            ex.submit(scan_one, host, port, cfg.scan.timeout_seconds, cfg.scan.include_sni, logger, tls_enum_mode)
+            ex.submit(scan_one, host, port, tls_timeout, cfg.scan.include_sni, logger, tls_enum_mode)
             for (host, port) in targets
         ]
         for f in as_completed(futures):

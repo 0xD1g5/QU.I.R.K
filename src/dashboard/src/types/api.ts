@@ -3,6 +3,8 @@ export interface SubScores {
   modern_tls: number
   identity_trust: number
   agility_signals: number
+  data_at_rest: number
+  data_in_motion: number
 }
 
 export interface ScoreData {
@@ -76,6 +78,72 @@ export interface ScanMeta {
   total_findings: number
 }
 
+export interface IdentityFinding {
+  host: string
+  port: number
+  severity: string
+  title: string
+  protocol?: string
+  description?: string
+  remediation?: string
+  quantum_risk?: string
+  source?: string
+  algorithm: string
+}
+
+export interface MotionFinding {
+  host: string
+  port: number
+  severity: string
+  title: string
+  protocol?: string
+  description?: string
+  remediation?: string
+  quantum_risk?: string
+  source?: string
+  tls_version?: string
+  cipher_suite?: string
+  cert_not_after?: string
+  plaintext_exposed: boolean
+  starttls_warning: boolean
+}
+
+// Phase 39 GAP-04
+export interface DarFinding {
+  host: string
+  port: number
+  severity: string
+  title: string
+  protocol?: string
+  description?: string
+  remediation?: string
+  quantum_risk?: string
+  source?: string
+  category: string            // "database" | "object_storage" | "kubernetes" | "vault"
+  // Database
+  encryption_at_rest?: boolean | null
+  tls_in_transit?: boolean | null
+  // Object Storage
+  encryption_mode?: string | null
+  kms_key_id?: string | null
+  public_access?: boolean | null
+  versioning?: boolean | null
+  // Kubernetes
+  namespace?: string | null
+  secret_type?: string | null
+  encryption_provider?: string | null
+  // Vault
+  seal_type?: string | null
+  auto_unseal?: boolean | null
+  mount_type?: string | null
+}
+
+export interface ScanSession {
+  scan_id: string
+  scanned_at: string
+  total_endpoints: number
+}
+
 export interface ScanLatestResponse {
   meta: ScanMeta
   score: ScoreData
@@ -84,4 +152,32 @@ export interface ScanLatestResponse {
   certificates: CertItem[]
   cbom_components: CbomComponent[]
   roadmap: RoadmapData
+  identity_findings: IdentityFinding[]
+  motion_findings: MotionFinding[]
+  dar_findings: DarFinding[]
+}
+
+export interface SampleFinding {
+  host: string
+  port: number
+  protocol: string
+  severity: string
+}
+
+export interface TrendReport {
+  current_session_ts: string | null
+  previous_session_ts: string | null
+  current_score: number | null
+  previous_score: number | null
+  score_delta: number | null
+  new_high: number
+  new_medium: number
+  new_low: number
+  resolved_high: number
+  resolved_medium: number
+  resolved_low: number
+  scan_errors_new_count: number
+  scan_errors_resolved_count: number
+  new_findings_sample: SampleFinding[]
+  resolved_findings_sample: SampleFinding[]
 }

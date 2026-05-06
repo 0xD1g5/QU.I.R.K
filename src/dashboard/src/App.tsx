@@ -1,18 +1,24 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
+import { ScanProvider } from "@/context/ScanContext"
 import { Sidebar } from "@/components/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { PrintPage } from "@/pages/print"
 import { ExecutivePage } from "@/pages/executive"
 import { FindingsPage } from "@/pages/findings"
+import { IdentityPage } from "@/pages/identity"
+import { MotionPage } from "@/pages/motion"
+import { DataAtRestPage } from "@/pages/data-at-rest"
 import { CertificatesPage } from "@/pages/certificates"
 import { CbomPage } from "@/pages/cbom"
 import { RoadmapPage } from "@/pages/roadmap"
+import { TrendsPage } from "@/pages/trends"
 
 
 export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="quirk-ui-theme">
+      <ScanProvider>
       <TooltipProvider>
         <BrowserRouter>
           <div className="flex min-h-screen bg-background text-foreground">
@@ -23,9 +29,13 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<ExecutivePage />} />
                   <Route path="/findings" element={<FindingsPage />} />
+                  <Route path="/identity" element={<IdentityPage />} />
+                  <Route path="/motion" element={<MotionPage />} />
+                  <Route path="/data-at-rest" element={<DataAtRestPage />} />
                   <Route path="/certificates" element={<CertificatesPage />} />
                   <Route path="/cbom" element={<CbomPage />} />
                   <Route path="/roadmap" element={<RoadmapPage />} />
+                  <Route path="/trends" element={<TrendsPage />} />
                   <Route path="/print" element={<PrintPage />} />
                 </Routes>
               </div>
@@ -33,6 +43,7 @@ export default function App() {
           </div>
         </BrowserRouter>
       </TooltipProvider>
+      </ScanProvider>
     </ThemeProvider>
   )
 }

@@ -184,18 +184,24 @@ services:
   tls-rsa1024:
     image: nginx:stable
     profiles: ["phaseA"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
     volumes:
       - ./nginx/phaseA/tls-rsa1024/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs/scenarios:/etc/nginx/scenarios:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
     ports:
       - "14443:443"
 
   tls-sha1:
     image: nginx:stable
     profiles: ["phaseA"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
     volumes:
       - ./nginx/phaseA/tls-sha1/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs/scenarios:/etc/nginx/scenarios:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
     ports:
       - "15443:443"
 
@@ -219,7 +225,7 @@ services:
   # PHASE B — CLOUD SIMULATORS (profile: cloud)
   # =========================
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3
     profiles: ["cloud"]
     environment:
       - SERVICES=s3,sts,iam
@@ -464,7 +470,7 @@ services:
 
   whoami:
     image: traefik/whoami:v1.10.1
-    profiles: ["identity"]
+    profiles: ["identity", "phaseA"]
     expose:
       - "80"
 
@@ -647,7 +653,7 @@ services:
   # INDEPENDENT of existing cloud profile (different LocalStack instance, SERVICES=kms only)
   # =========================
   localstack-kms:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3
     profiles: ["storage"]
     environment:
       - SERVICES=kms
@@ -710,6 +716,45 @@ services:
       VAULT_DEV_ROOT_TOKEN_ID: "root"
     entrypoint: ["/bin/sh", "/vault-seed.sh"]
 
+  # =========================
+  # PHASE 30 — HASHICORP VAULT PROFILE (profile: vault)
+  # LAB-30: Dedicated Vault dev server with seed scenarios for VAULT-01/02/03
+  # Port: 28200 (safe range — does NOT collide with existing storage/vault at 20009)
+  # Image: hashicorp/vault:1.17 (latest stable as of 2026-04)
+  # =========================
+  vault-30:
+    image: hashicorp/vault:1.17
+    profiles: ["vault"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    ports:
+      - "28200:8200"
+    cap_add:
+      - IPC_LOCK
+    command: ["vault", "server", "-dev"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  vault-30-seed:
+    image: hashicorp/vault:1.17
+    profiles: ["vault"]
+    restart: "no"
+    depends_on:
+      vault-30:
+        condition: service_healthy
+    volumes:
+      - ./vault/seed.sh:/seed.sh:ro
+    environment:
+      VAULT_ADDR: "http://vault-30:8200"
+      VAULT_TOKEN: "root"
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+    entrypoint: ["/bin/sh", "/seed.sh"]
+
   postgres-pgcrypto:
     image: postgres:16
     profiles: ["storage"]
@@ -760,6 +805,275 @@ services:
     ports:
       - "636:636"
     restart: unless-stopped
+
+  # ── DNSSEC Chaos Lab (profile: dnssec) ──────────────────
+  bind9-dnssec:
+    build:
+      context: ./bind9
+      dockerfile: Dockerfile
+    profiles: ["dnssec"]
+    ports:
+      - "15353:53/udp"
+      - "15353:53/tcp"
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "weak.chaos.local", "SOA"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── SAML Chaos Lab (profile: saml) ────────────────────────
+  simplesamlphp:
+    image: kenchan0130/simplesamlphp
+    profiles: ["saml"]
+    environment:
+      SIMPLESAMLPHP_SP_ENTITY_ID: "https://sp.chaos.local"
+      SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: "https://sp.chaos.local/acs"
+    volumes:
+      - ./simplesamlphp/cert/server.crt:/var/www/simplesamlphp/cert/server.crt:ro
+      - ./simplesamlphp/cert/server.key:/var/www/simplesamlphp/cert/server.key:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/simplesaml/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Kerberos Chaos Lab (profile: kerberos) ──────────────────
+  samba-dc:
+    build:
+      context: ./samba
+      dockerfile: Dockerfile
+    profiles: ["kerberos"]
+    ports:
+      - "88:88"
+      - "389:389"
+    healthcheck:
+      test: ["CMD-SHELL", "smbclient -L localhost -N 2>/dev/null | grep -q QUIRK || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
+  # =========================
+  # PHASE 27 — DATABASE SSL DETECTION (profile: database)
+  # =========================
+  postgres-ssl-off:
+    image: postgres:15
+    profiles: ["database"]
+    environment:
+      POSTGRES_DB: quirk_db
+      POSTGRES_USER: quirk_scanner
+      POSTGRES_PASSWORD: quirk_scanner
+    command: postgres -c ssl=off
+    ports:
+      - "25432:5432"
+
+  mysql-ssl-off:
+    image: mysql:8
+    profiles: ["database"]
+    environment:
+      MYSQL_DATABASE: quirk_db
+      MYSQL_USER: quirk_scanner
+      MYSQL_PASSWORD: quirk_scanner
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD: "root"
+    command: --skip-ssl
+    ports:
+      - "23306:3306"
+
+  # ===========================================================================================
+  # PHASE 28 — OBJECT STORAGE PROFILE (profile: storage-s3)
+  # MinIO S3-compatible local server for STOR-01 validation. Distinct from "storage" profile
+  # (which already serves vault/localstack-kms/pgcrypto from earlier phases).
+  # ===========================================================================================
+  minio:
+    image: minio/minio:latest
+    profiles: ["storage-s3"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "29000:9000"
+      - "29001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  minio-seed:
+    image: minio/mc:latest
+    profiles: ["storage-s3"]
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./storage/minio-seed.sh:/minio-seed.sh:ro
+    entrypoint: ["/bin/sh", "/minio-seed.sh"]
+
+  # ===========================================================================================
+  # PHASE 32 — EMAIL CHAOS LAB (profile: email)
+  # Postfix + Dovecot with weak RSA-2048 TLS (non-PFS, TLS 1.2 minimum).
+  # Generate certs first: make -C ../labs/email certs
+  # Bring up:             docker compose --profile email up -d
+  # ===========================================================================================
+  postfix-email:
+    build:
+      context: ../labs/email
+      dockerfile: Dockerfile
+    container_name: quirk-chaos-postfix-email
+    profiles: ["email"]
+    ports:
+      - "30025:25"
+      - "30465:465"
+      - "30587:587"
+    volumes:
+      - ../labs/email/certs/postfix.crt:/etc/postfix/certs/postfix.crt:ro
+      - ../labs/email/certs/postfix.key:/etc/postfix/certs/postfix.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "postfix status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  dovecot-email:
+    build:
+      context: ../labs/email
+      dockerfile: Dockerfile
+    container_name: quirk-chaos-dovecot-email
+    profiles: ["email"]
+    command: ["/usr/sbin/dovecot", "-F"]
+    environment:
+      # Cap TLS at 1.2 via OpenSSL system config — Dovecot 2.3.16 lacks ssl_max_protocol
+      OPENSSL_CONF: /etc/dovecot/openssl-tls12-only.cnf
+    ports:
+      - "30143:143"
+      - "30993:993"
+      - "30110:110"
+      - "30995:995"
+    volumes:
+      - ../labs/email/certs/dovecot.crt:/etc/dovecot/private/dovecot.crt:ro
+      - ../labs/email/certs/dovecot.key:/etc/dovecot/private/dovecot.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "doveadm who >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  # ── Broker Chaos Lab (profile: broker) ─────────────────────
+  # Phase 33 / BROKER-LAB-01. Official images per CONTEXT.md D-15 (2026-04-27 revision).
+  # Weak TLS via bind-mounted config files. Plaintext ports intentionally listening.
+  kafka-broker:
+    image: apache/kafka:3.7.0
+    profiles: ["broker"]
+    hostname: kafka-broker
+    ports:
+      - "29092:29092"
+      - "29093:29093"
+    volumes:
+      - ../labs/broker/kafka/server.properties:/etc/kafka/server.properties:ro
+      - ../labs/broker/certs/kafka.crt:/etc/kafka/secrets/kafka.crt:ro
+      - ../labs/broker/certs/kafka.key:/etc/kafka/secrets/kafka.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  rabbitmq-broker:
+    image: rabbitmq:3.12-management
+    profiles: ["broker"]
+    hostname: rabbitmq-broker
+    ports:
+      - "25672:5672"
+      - "25671:5671"
+    environment:
+      - RABBITMQ_CONFIG_FILE=/etc/rabbitmq/rabbitmq.conf
+    volumes:
+      - ../labs/broker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ../labs/broker/certs/rabbitmq.crt:/etc/rabbitmq/certs/server.crt:ro
+      - ../labs/broker/certs/rabbitmq.key:/etc/rabbitmq/certs/server.key:ro
+      - ../labs/broker/certs/rabbitmq.crt:/etc/rabbitmq/certs/ca.crt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  redis-broker:
+    image: redis:7-alpine
+    profiles: ["broker"]
+    hostname: redis-broker
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    ports:
+      - "26379:6379"
+      - "26380:6380"
+    volumes:
+      - ../labs/broker/redis/redis.conf:/etc/redis/redis.conf:ro
+      - ../labs/broker/certs/redis.crt:/etc/redis/certs/redis.crt:ro
+      - ../labs/broker/certs/redis.key:/etc/redis/certs/redis.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  # =========================
+  # PHASE 46 — TLS CERT DEFECTS PROFILE (profile: tls-cert-defects)
+  # Single-profile target exercising all four cert-defect finding classes
+  # (TLS-FIND-01..05) for end-to-end UAT. Ports 13444-13447 (13443 is taken
+  # by phaseA tls-missing-intermediate). Existing tls-expired (9443) and
+  # tls-selfsigned (10443) profiles remain unchanged for back-compat.
+  # =========================
+  tls-cert-expired:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    volumes:
+      - ./nginx/cert-defects/expired/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    ports:
+      - "13444:443"
+
+  tls-cert-selfsigned:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    volumes:
+      - ./nginx/cert-defects/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    ports:
+      - "13445:443"
+
+  tls-cert-untrusted-ca:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    volumes:
+      - ./nginx/cert-defects/untrusted-ca/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    ports:
+      - "13446:443"
+
+  tls-cert-rsa1024:
+    image: nginx:stable
+    profiles: ["tls-cert-defects"]
+    environment:
+      - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
+    volumes:
+      - ./nginx/cert-defects/rsa1024/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
+      - ./certs/scenarios:/etc/nginx/scenarios:ro
+    ports:
+      - "13447:443"
 
 volumes:
   id_postgres_data:

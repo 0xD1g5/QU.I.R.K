@@ -1,12 +1,98 @@
 from collections import Counter
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Any, Dict, List
 
-from quirk.assessment.readiness_score import compute_readiness_score
-from quirk.assessment.transition_planner import build_transition_roadmap
+from quirk.intelligence.evidence import build_evidence_summary
+from quirk.intelligence.scoring import compute_readiness_score
+from quirk.intelligence.confidence import compute_confidence
+from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.assessment.migration_advisor import recommend_migration_paths
-from quirk.assessment.interpretation_engine import build_interpretation
-from quirk.assessment.confidence import compute_confidence
+
+
+def _build_interpretation(
+    evidence: Dict[str, Any],
+    score: Dict[str, Any],
+    endpoints=None,
+    findings=None,
+) -> Dict[str, Any]:
+    """
+    Produces human-friendly narrative bullets for executive reporting.
+    Ported from quirk.assessment.interpretation_engine, adapted for intelligence dicts.
+    """
+    sev_counts = Counter(
+        (f.get("severity", "UNKNOWN") for f in (findings or [])),
+    )
+
+    bullets: List[str] = []
+
+    # Score framing
+    bullets.append(
+        f"Quantum Readiness Score is **{score['score']}/100** (**{score['rating']}**)."
+    )
+
+    # Drivers (top 3) — dict-based access (Pitfall 1: NOT tuple unpacking)
+    drivers = score.get("drivers", [])
+    if drivers:
+        top = drivers[:3]
+        drivers_txt = "; ".join(
+            [f"{d['reason']} (-{d['points']})" for d in top]
+        )
+        bullets.append(f"Top score drivers: {drivers_txt}.")
+
+    # TLS/SSH visibility framing
+    tls_ok = len(
+        [
+            e
+            for e in (endpoints or [])
+            if getattr(e, "protocol", "") == "TLS" and not getattr(e, "scan_error", None)
+        ]
+    )
+    ssh_ok = len(
+        [
+            e
+            for e in (endpoints or [])
+            if getattr(e, "protocol", "") == "SSH" and not getattr(e, "scan_error", None)
+        ]
+    )
+    if tls_ok + ssh_ok == 0:
+        bullets.append(
+            "No successful deep TLS/SSH handshakes were captured in this run; "
+            "expand visibility (scope, segmentation allowances, and ports) to improve confidence."
+        )
+    else:
+        bullets.append(
+            f"Successfully profiled **{tls_ok} TLS** and **{ssh_ok} SSH** "
+            "endpoints in scope for cryptographic posture."
+        )
+
+    # TIMEOUT and NOT_TLS_ON_PORT event context from endpoints
+    err_cats: Dict[str, int] = {}
+    for e in (endpoints or []):
+        err = getattr(e, "scan_error", None)
+        if err:
+            err_cats[str(err)] = err_cats.get(str(err), 0) + 1
+
+    timeout = err_cats.get("TIMEOUT", 0)
+    not_tls = err_cats.get("NOT_TLS_ON_PORT", 0)
+    if timeout:
+        bullets.append(
+            f"Observed **{timeout} TIMEOUT** events, commonly indicating "
+            "filtering/segmentation or unreachable hosts during scan."
+        )
+    if not_tls:
+        bullets.append(
+            f"Observed **{not_tls} NOT_TLS_ON_PORT** events, indicating services on "
+            "TLS-like ports that do not speak TLS (common with device management interfaces)."
+        )
+
+    # CRITICAL+HIGH severity summary
+    hi_crit = sev_counts.get("CRITICAL", 0) + sev_counts.get("HIGH", 0)
+    bullets.append(
+        f"High-impact items (CRITICAL+HIGH): **{hi_crit}**. "
+        "Near-term hygiene accelerates crypto agility and reduces baseline risk."
+    )
+
+    return {"bullets": bullets}
 
 
 def _count_noninfo(findings: List[Dict]) -> Counter:
@@ -16,19 +102,48 @@ def _count_noninfo(findings: List[Dict]) -> Counter:
 def build_exec_markdown(cfg, endpoints, findings) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    score = compute_readiness_score(cfg, endpoints, findings)
-    roadmap = build_transition_roadmap(cfg, endpoints, findings)
+    evidence = build_evidence_summary(endpoints, findings)
+    score_raw = compute_readiness_score(
+        evidence,
+        profile=cfg.intelligence.profile,
+        weights=cfg.intelligence.calibration_overrides or None,
+    )
+    conf_raw = compute_confidence(evidence)
+    roadmap_raw = build_phased_roadmap(evidence, score_raw)
     recs = recommend_migration_paths(findings)
-    interp = build_interpretation(cfg, endpoints, findings, score)
-    conf = compute_confidence(cfg, endpoints)
+    interp = _build_interpretation(evidence, score_raw, endpoints=endpoints, findings=findings)
 
     sev_counts = _count_noninfo(findings)
     high_crit = sev_counts.get("HIGH", 0) + sev_counts.get("CRITICAL", 0)
 
-    tls_ok = score.breakdown.coverage.get("tls_success", 0)
-    ssh_ok = score.breakdown.coverage.get("ssh_success", 0)
-    http_plain = score.breakdown.coverage.get("http_plain", 0)
-    unknown_open = score.breakdown.coverage.get("unknown_open", 0)
+    # Discovery counts from evidence
+    tls_ok = len(
+        [
+            e
+            for e in endpoints
+            if getattr(e, "protocol", "") == "TLS" and not getattr(e, "scan_error", None)
+        ]
+    )
+    ssh_ok = len(
+        [
+            e
+            for e in endpoints
+            if getattr(e, "protocol", "") == "SSH" and not getattr(e, "scan_error", None)
+        ]
+    )
+    http_plain = evidence.get("plaintext_http_count", 0)
+    unknown_open = evidence.get("protocol_counts", {}).get("UNKNOWN", 0)
+
+    # Confidence section values
+    coverage_pct = int(
+        conf_raw.get("factor_breakdown", {})
+        .get("coverage_ratio", {})
+        .get("value", 0) * 100
+    )
+    tls_enum_coverage_pct = evidence.get("tls_enum_coverage_pct", 0)
+    blockers_top = Counter(
+        str(getattr(e, "scan_error", "")) for e in endpoints if getattr(e, "scan_error", None)
+    ).most_common(5)
 
     lines: List[str] = []
     lines.append(f"# {cfg.assessment.name}")
@@ -40,23 +155,30 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append("")
 
     lines.append("## Quantum Readiness Score")
-    lines.append(f"**Score:** **{score.score}/100**  \n**Rating:** **{score.rating}**")
+    lines.append(f"**Score:** **{score_raw['score']}/100**  \n**Rating:** **{score_raw['rating']}**")
     lines.append("")
     lines.append("### Score Drivers (Top)")
-    if score.breakdown.drivers:
-        for label, pts in score.breakdown.drivers[:8]:
-            lines.append(f"- {label} (**-{pts}**)")
+    if score_raw.get("drivers"):
+        for d in score_raw["drivers"][:8]:
+            lines.append(f"- {d['reason']} (**-{d['points']}**)")
 
     lines.append("")
-    lines.append("## Confidence & Coverage (v3.7)")
-    lines.append(f"- **Confidence:** **{conf.get('confidence_rating')}** ({conf.get('confidence_score')}/100)")
-    lines.append(f"- **Coverage:** {conf.get('coverage_pct')}% (TLS+SSH successful / total in-scope endpoints)")
-    lines.append(f"- **TLS Enumeration Coverage:** {conf.get('tls_enum_coverage_pct')}% (TLS-success endpoints with capabilities captured)")
-    blockers = conf.get("blockers_top") or []
-    if blockers:
+    lines.append("## Confidence & Coverage")
+    lines.append(
+        f"- **Confidence:** **{conf_raw['confidence_rating']}** ({conf_raw['confidence_score']}/100)"
+    )
+    lines.append(
+        f"- **Coverage:** {coverage_pct}% "
+        "(TLS+SSH successful / total in-scope endpoints)"
+    )
+    lines.append(
+        f"- **TLS Enumeration Coverage:** {tls_enum_coverage_pct}% "
+        "(TLS-success endpoints with capabilities captured)"
+    )
+    if blockers_top:
         lines.append("- **Top visibility blockers:**")
-        for b in blockers[:5]:
-            lines.append(f"  - {b.get('category')}: {b.get('count')}")
+        for category, count in blockers_top:
+            lines.append(f"  - {category}: {count}")
 
     lines.append("")
     lines.append("## Discovery and Coverage")
@@ -79,25 +201,22 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append("")
     lines.append("## Transition Roadmap")
     lines.append("")
-    lines.append("### Wave 1 — Hygiene (0–6 months)")
-    for item in roadmap.wave_1:
-        lines.append(f"- **{item.title}** — {item.rationale}")
-        lines.append(f"  - Deliverable: {item.deliverable}")
-        lines.append(f"  - Owner: {item.owner_hint} | Effort: {item.effort}")
-
-    lines.append("")
-    lines.append("### Wave 2 — Modernization (6–24 months)")
-    for item in roadmap.wave_2:
-        lines.append(f"- **{item.title}** — {item.rationale}")
-        lines.append(f"  - Deliverable: {item.deliverable}")
-        lines.append(f"  - Owner: {item.owner_hint} | Effort: {item.effort}")
-
-    lines.append("")
-    lines.append("### Wave 3 — PQC Preparation (24+ months)")
-    for item in roadmap.wave_3:
-        lines.append(f"- **{item.title}** — {item.rationale}")
-        lines.append(f"  - Deliverable: {item.deliverable}")
-        lines.append(f"  - Owner: {item.owner_hint} | Effort: {item.effort}")
+    roadmap_items = roadmap_raw.get("items", [])
+    phase_labels = {
+        "NOW": "NOW — Immediate (0-6 months)",
+        "NEXT": "NEXT — Near-term (6-18 months)",
+        "LATER": "LATER — Strategic (18+ months)",
+    }
+    for phase_key in ("NOW", "NEXT", "LATER"):
+        phase_items = [r for r in roadmap_items if r.get("phase") == phase_key]
+        if phase_items:
+            lines.append(f"### {phase_labels[phase_key]}")
+            for item in phase_items:
+                lines.append(f"- **{item['title']}** — {item['why']}")
+                lines.append(
+                    f"  - Owner: {item['owner_placeholder']} | Timeframe: {item['timeframe']}"
+                )
+            lines.append("")
 
     if recs:
         lines.append("")
@@ -108,15 +227,29 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
                 break
             lines.append(f"- **{r.get('path')}** — {r.get('recommendation')}")
             if r.get("host") and r.get("port") is not None:
-                lines.append(f"  - Target: {r.get('host')}:{r.get('port')} | Severity: {r.get('severity')}")
+                lines.append(
+                    f"  - Target: {r.get('host')}:{r.get('port')} | Severity: {r.get('severity')}"
+                )
             shown += 1
 
     lines.append("")
     lines.append("## Recommended Next Actions (30–60 days)")
-    lines.append("1. Confirm ownership for TLS termination points and certificate authorities (internal and cloud).")
-    lines.append("2. Establish certificate lifecycle automation and renewal SLAs; address near-term expirations.")
-    lines.append("3. Launch crypto-agility baselining (standard TLS patterns, dependency mapping, upgrade paths).")
-    lines.append("4. Identify 2–3 pilot candidates for PQC/hybrid readiness planning and vendor capability mapping.")
+    lines.append(
+        "1. Confirm ownership for TLS termination points and certificate authorities "
+        "(internal and cloud)."
+    )
+    lines.append(
+        "2. Establish certificate lifecycle automation and renewal SLAs; "
+        "address near-term expirations."
+    )
+    lines.append(
+        "3. Launch crypto-agility baselining (standard TLS patterns, dependency mapping, "
+        "upgrade paths)."
+    )
+    lines.append(
+        "4. Identify 2–3 pilot candidates for PQC/hybrid readiness planning "
+        "and vendor capability mapping."
+    )
     lines.append("")
 
     return "\n".join(lines)
