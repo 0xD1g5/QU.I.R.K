@@ -1015,7 +1015,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 
 **Milestone Goal:** Extend QUIRK from a compliance-tagged scanner into a full governance platform by completing the compliance framework and integrating the QRAMM maturity model — making QUIRK's primary consulting deliverable a scored governance assessment grounded in live scanner findings.
 
-- [ ] **Phase 51: QRAMM Core Infrastructure** - SQLite tables, FastAPI CRUD, 120-question catalog, scoring engine, and datetime.utcnow fix — the backend foundation all QRAMM phases depend on
+- [x] **Phase 51: QRAMM Core Infrastructure** - SQLite tables, FastAPI CRUD, 120-question catalog, scoring engine, and datetime.utcnow fix — the backend foundation all QRAMM phases depend on (completed 2026-05-06)
 - [ ] **Phase 52: Compliance Uplift & Health Check** - SOC2/ISO 27001 framework extensions, CBOM FIPS 140-3 annotations, `quirk doctor` CLI, and four tech debt items (parallel to Phase 51)
 - [ ] **Phase 53: QRAMM Evidence Bridge** - Auto-populate CVI dimension answers from live scanner findings via SESSION_BRACKET scan-window; suggested_answer storage with confirmation workflow
 - [ ] **Phase 54: QRAMM Assessment UI & Scorecard** - Org Profile wizard, 120-question dimension tabs, answer persistence, radar chart scorecard
@@ -1121,7 +1121,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 51. QRAMM Core Infrastructure | v4.7 | 5/6 | In Progress|  |
+| 51. QRAMM Core Infrastructure | v4.7 | 6/6 | Complete   | 2026-05-06 |
 | 52. Compliance Uplift & Health Check | v4.7 | 0/TBD | Not started | - |
 | 53. QRAMM Evidence Bridge | v4.7 | 0/TBD | Not started | - |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 0/TBD | Not started | - |
