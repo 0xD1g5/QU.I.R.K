@@ -6940,9 +6940,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - `.venv/bin/python3 -m pytest tests/test_cbom_builder.py::test_algorithm_component_has_fips_property -q` exits 0.
 - `.venv/bin/python3 -m pytest tests/test_cbom_builder.py::test_fips_status_helper -q` exits 0.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** Approved by human tester. All FIPS 140-3 annotation criteria confirmed.
 
 ---
 
@@ -6966,9 +6966,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 3: `A.x.x count: 0`.
 - All ISO 27001:2022 entries have `version == "ISO 27001:2022"` (not `"ISO 27001"` or `"2022"`).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** Approved by human tester. SOC2 and ISO 27001:2022 mapping coverage confirmed.
 
 ---
 
@@ -6996,9 +6996,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 6: all 3 `test_doctor_cmd.py` tests pass.
 - `grep -c "### quirk doctor" docs/operators-guide.md` returns 1.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** Approved by human tester. `python run_scan.py doctor` confirmed: Rich table renders, exit 0 on non-info checks passing, semgrep and dashboard show as non-fatal.
 
 ---
 
@@ -7023,9 +7023,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - `grep -c "_PROFILE_ARGS_OVERRIDE=" quantum-chaos-enterprise-lab/lab.sh` returns 1.
 - `grep -c "_PROFILE_ARGS_OVERRIDE:-" quantum-chaos-enterprise-lab/lab.sh` returns 1.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** Approved by human tester. CLI PROFILE_ARGS override confirmed working; syntax OK.
 
 ---
 
@@ -7048,9 +7048,9 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 3 (if file present): both `True True` printed.
 - `grep -c "ports_scanned\|hosts_scanned" run_scan.py` returns at least 2.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** Approved by human tester. run-stats fields ports_scanned and hosts_scanned confirmed present.
 
 ---
 
@@ -7074,8 +7074,8 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 - Step 3: exits 0; no `DeprecationWarning` emitted.
 - `grep -c "import defusedxml.ElementTree" quirk/scanner/saml_scanner.py` returns 1 (second-tier fallback preserved).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-06  **Tester:** Digs
+**Notes:** Approved by human tester. lxml migration confirmed; no DeprecationWarning; defusedxml.ElementTree fallback preserved.
 
 ---
