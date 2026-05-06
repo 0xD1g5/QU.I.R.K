@@ -1,30 +1,47 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-04T17:12:44.177Z",
-  "phase": "48",
-  "phase_name": "rich-finding-context",
-  "phase_dir": ".planning/phases/48-rich-finding-context",
-  "plan": 3,
-  "task": 2,
-  "total_tasks": 2,
-  "status": "phase_complete_verified",
+  "timestamp": "2026-05-06T12:33:53.730Z",
+  "phase": "52",
+  "phase_name": "compliance-uplift-health-check",
+  "phase_dir": ".planning/phases/52-compliance-uplift-health-check",
+  "plan": 6,
+  "task": 6,
+  "total_tasks": 6,
+  "status": "paused",
   "completed_tasks": [
-    {"id": "48-01", "name": "_build_finding chokepoint + producer migrations + dedup safety", "status": "done", "commit": "c5636d4"},
-    {"id": "48-02", "name": "wire description through HTML/Markdown/dashboard/JSON consumers + E2E tests", "status": "done", "commit": "97c37cf"},
-    {"id": "48-03", "name": "CI grep gate + docs purge + UAT-48 + Obsidian sync + phase note", "status": "done", "commit": "2331652"}
+    {"id": 1, "name": "Phase 51: QRAMM Core Infrastructure", "status": "done", "commit": "842c100"},
+    {"id": 2, "name": "Phase 52: Compliance Uplift & Health Check", "status": "done", "commit": "4fe333b"},
+    {"id": 3, "name": "UAT-SERIES.md updated and committed", "status": "done", "commit": "1e1b96b"},
+    {"id": 4, "name": "Obsidian Phase-51 and Phase-52 notes created in vault", "status": "done", "commit": null},
+    {"id": 5, "name": "PROJECT.md evolved post-phase-52", "status": "done", "commit": "842c100"},
+    {"id": 6, "name": "All Phase 52 UAT items passed (human + pytest)", "status": "done", "commit": "4fe333b"}
   ],
-  "remaining_tasks": [],
+  "remaining_tasks": [
+    {"id": 1, "name": "Phase 53: QRAMM Evidence Bridge", "status": "not_started"},
+    {"id": 2, "name": "Phase 54: QRAMM Assessment UI & Scorecard", "status": "not_started"},
+    {"id": 3, "name": "Phase 55: QRAMM Compliance Mapping View", "status": "not_started"},
+    {"id": 4, "name": "Phase 56: PDF Export & Staleness Enforcement", "status": "not_started"}
+  ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "_build_finding helper as sole producer in risk_engine.py", "rationale": "Single chokepoint guarantees non-empty description + canonical NIST IR 8547 phrase + FIPS-only recommendations; deterministic suffix append preserves _dedupe_findings keying", "phase": "48"},
-    {"decision": "Preserve recommendation (engine) vs remediation (dashboard DTO) field-name asymmetry", "rationale": "Domain seam — engine emits raw scanner advice; dashboard DTO presents UI-reworded text. Unifying would either coarsen engine or pre-couple to UI", "phase": "48"},
-    {"decision": "CI grep gate as durable invariant for PQC terminology", "rationale": "Turns one-time docs purge into permanent guardrail. Sanity-tested live: injecting 'kyber' fails the gate; reverting passes. Future regressions cannot merge", "phase": "48"},
-    {"decision": "Defer 19 pre-existing CBOM-schema failures", "rationale": "Reproduce identically at pre-Phase-48 commit 386e1bd; root cause is Phase 46 chaos-lab profile registration gap (PROFILE_ENDPOINTS missing tls-cert-defects), not a Phase 48 regression", "phase": "48"}
+    {
+      "decision": "COMPLY-10 implemented as 2-tier FIPS annotation (approved/non-approved only)",
+      "rationale": "REQUIREMENTS.md defines 3 tiers including 'certified' — D-01 in Phase 52 CONTEXT.md scopes 'certified' to a future CMVP attestation phase. User accepted deviation 2026-05-06.",
+      "phase": "52"
+    },
+    {
+      "decision": "Phase 52 runs in parallel with Phase 51 — zero shared dependencies",
+      "rationale": "Both depend on Phase 50 (v4.6 complete); no code overlap between QRAMM infra and compliance/health-check work.",
+      "phase": "51-52"
+    }
   ],
   "uncommitted_files": [
-    ".planning/phases/48-rich-finding-context/48-VERIFICATION.md"
+    ".planning/milestones/v4.6-phases/47-nmap-discovery-multi-target-wizard/47-VERIFICATION.md",
+    ".planning/phases/51-qramm-core-infrastructure/51-06-SUMMARY.md",
+    ".planning/phases/51-qramm-core-infrastructure/51-PATTERNS.md",
+    ".planning/phases/52-compliance-uplift-health-check/52-02-SUMMARY.md"
   ],
-  "next_action": "Decide next: /gsd-plan-phase 49 (Compliance Mapping — depends on stabilized FIPS 203/204/205 strings from this phase) OR /gsd-progress for v4.6 milestone status. Commit 48-VERIFICATION.md as part of pause WIP.",
-  "context_notes": "Phase 48 closed cleanly: 3 waves sequential (producer -> consumers -> CI gate + docs), 41 phase-48 tests pass, zero new regressions vs pre-existing 19-failure CBOM-schema baseline. Verifier independently confirmed each CONTEXT-01..04 with file/line evidence and a live gate sanity-test. Obsidian phase note + UAT-Series mirror + guides synced to vault Digs at 20_Dev-Work/QUIRK. Branch QUIRK-v4. SDK ergonomics gap noted by 48-03 executor: state.add-decision and state.record-metric argv shapes rejected positional/JSON/key=value forms — direct STATE.md edits used as fallback; worth a follow-up SDK fix but does not block Phase 49."
+  "next_action": "Run /gsd-plan-phase for Phase 53: QRAMM Evidence Bridge. Read .planning/ROADMAP.md Phase 53 section and .planning/phases/51-qramm-core-infrastructure/ to understand the QRAMM backend surface before planning.",
+  "context_notes": "v4.7 Governance & Compliance Platform is 2 of 6 phases done. Phases 51 and 52 ran in parallel and both shipped on 2026-05-06. Phase 53 is the next critical-path item — it bridges live scanner findings into QRAMM assessment answers. The QRAMM backend API (/api/qramm/) from Phase 51 is the foundation Phase 53 builds on."
 }
