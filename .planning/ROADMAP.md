@@ -98,10 +98,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Milestone Goal:** Make QUIRK credible and usable on real enterprise estates — fix install-day crashes, fill TLS finding gaps, enrich output with compliance context and PQC remediation guidance, and streamline the multi-target workflow.
 
-- [ ] **Phase 45: Install-Day UX** - Graceful ImportError degradation and `[all]` meta-extra so `pip install quirk` never crashes on first run
+- [x] **Phase 45: Install-Day UX** - Graceful ImportError degradation and `[all]` meta-extra so `pip install quirk` never crashes on first run (completed 2026-05-03)
 - [x] **Phase 46: TLS Finding Gaps** - Emit CRITICAL/HIGH/MEDIUM findings for expired, self-signed, untrusted-CA, and weak-key TLS certificates with chaos lab verification (completed 2026-05-03)
 - [x] **Phase 47: Nmap Discovery + Multi-Target Wizard** - Pre-scan nmap port discovery and comma/file/CIDR multi-target input in interactive mode and CLI (completed 2026-05-04)
-- [ ] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology
+- [x] **Phase 48: Rich Finding Context** - Populate `description` and `remediation` fields across all finding types with FIPS 203/204/205 guidance; purge stale PQC terminology (completed 2026-05-04)
 - [x] **Phase 49: Compliance Mapping** - New `quirk/compliance/` module mapping findings to PCI-DSS/HIPAA/FIPS framework references; compliance section in HTML/PDF reports (completed 2026-05-05)
 - [x] **Phase 50: Enterprise Documentation** - `docs/architecture.md` and `docs/operators-guide.md` synced to Obsidian vault (completed 2026-05-05)
 
@@ -1001,7 +1001,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 45. Install-Day UX | 4/4 | Complete   | 2026-05-04 |
-| 46. TLS Finding Gaps | 0/4 | Planned | - |
+| 46. TLS Finding Gaps | 4/4 | Complete | 2026-05-03 |
 | 47. Nmap Discovery + Multi-Target Wizard | 3/3 | Complete    | 2026-05-04 |
 | 48. Rich Finding Context | 3/3 | Complete   | 2026-05-04 |
 | 49. Compliance Mapping | 5/5 | Complete   | 2026-05-05 |
