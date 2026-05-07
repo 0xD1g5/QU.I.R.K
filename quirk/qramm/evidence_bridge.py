@@ -165,12 +165,22 @@ def _parse_json_blob(blob: str | None) -> Any:
 def _walk_json_for_alg_strings(obj: Any) -> list[str]:
     """Recursively extract algorithm-name strings from a parsed JSON structure.
 
-    Strategy:
-      - If `obj` is a dict, harvest values for any key in `_ALG_KEYS` (when value is a string)
-        and recurse into all values for nested structures.
-      - If `obj` is a list, recurse into each element.
-      - If `obj` is None or scalar non-string, return [].
-    Unknown strings are kept; classify_algorithm() filters them via nist_level=None.
+    Two code paths for dict entries:
+      1. Key is in ``_ALG_KEYS`` AND value is a non-empty string → yield the
+         value as an algorithm name string (e.g. ``{"algorithm": "rc4-hmac"}``).
+      2. Value is a dict or list → recurse into it.  This fires when the key is
+         NOT in ``_ALG_KEYS`` (container wrapper entries), OR when the key IS in
+         ``_ALG_KEYS`` but its value is a container rather than a string (the
+         ``if`` guard fails on ``isinstance(value, str)``, so the ``elif``
+         handles it).
+
+    Non-ALG-key string values are intentionally skipped (not appended, not
+    recursed — they are not algorithm names).  List elements are recursed when
+    they are dicts or lists; bare strings in a list are appended directly
+    (e.g. ``{"encryption_types": ["rc4-hmac", ...]}``).
+
+    Unknown strings are kept; ``classify_algorithm()`` filters them later via
+    ``nist_level=None``.
     """
     out: list[str] = []
     if obj is None:
@@ -180,6 +190,9 @@ def _walk_json_for_alg_strings(obj: Any) -> list[str]:
             if key in _ALG_KEYS and isinstance(value, str) and value:
                 out.append(value)
             elif isinstance(value, (dict, list)):
+                # Recurse when key is NOT in _ALG_KEYS (or when it IS but value
+                # is a container rather than a string).
+                # Non-ALG-key string values are intentionally not appended here.
                 out.extend(_walk_json_for_alg_strings(value))
     elif isinstance(obj, list):
         for item in obj:
