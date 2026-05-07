@@ -1083,7 +1083,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   3. A scan with RC4-HMAC Kerberos findings produces lower CVI auto-suggested answers than a scan with only AES-256 findings — the bridge correctly translates cryptographic weakness to lower QRAMM maturity
 **Plans**: 4 plans
   - [x] 53-01-PLAN.md — Wave 0 RED test scaffold: tests/test_qramm_evidence_bridge.py with 8 contract tests + seed helpers
-  - [ ] 53-02-PLAN.md — quirk/qramm/evidence_bridge.py: SESSION_BRACKET, classify_algorithm integration, D-05/06/07 derivation
+  - [x] 53-02-PLAN.md — quirk/qramm/evidence_bridge.py: SESSION_BRACKET, classify_algorithm integration, D-05/06/07 derivation
   - [ ] 53-03-PLAN.md — Wire bridge into qramm.py router (create_session pre-creates 30 CVI rows + calls bridge; save_answers auto-sets confirmed_at)
   - [ ] 53-04-PLAN.md — Phase completion: Obsidian Phase-53 note + docs/UAT-SERIES.md update + vault sync + commit
 
@@ -1128,7 +1128,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 |-------|-----------|----------------|--------|-----------|
 | 51. QRAMM Core Infrastructure | v4.7 | 6/6 | Complete    | 2026-05-06 |
 | 52. Compliance Uplift & Health Check | v4.7 | 6/6 | Complete    | 2026-05-06 |
-| 53. QRAMM Evidence Bridge | v4.7 | 1/4 | In Progress|  |
+| 53. QRAMM Evidence Bridge | v4.7 | 2/4 | In Progress|  |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 0/TBD | Not started | - |
 | 55. QRAMM Compliance Mapping View | v4.7 | 0/TBD | Not started | - |
 | 56. PDF Export & Staleness Enforcement | v4.7 | 0/TBD | Not started | - |
