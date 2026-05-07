@@ -15,6 +15,7 @@ endpoint explicitly removes QRAMMAnswer rows first.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -34,6 +35,7 @@ from quirk.qramm.scoring import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # ---------- Pydantic models (inline per D-11) ----------
@@ -143,8 +145,16 @@ def create_session(
 
     # Phase 53 (QRAMM-12): synchronous evidence bridge — derives suggested_answer
     # for the 30 CVI rows from the SESSION_BRACKET scan cohort. Skips silently
-    # (D-02) when no scan data exists.
-    populate_cvi_suggestions(session.id, db)
+    # (D-02) when no scan data exists. Errors are logged but do NOT prevent the
+    # 201 response; the session is valid and caller always receives a session_id.
+    try:
+        populate_cvi_suggestions(session.id, db)
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "evidence_bridge: failed to populate CVI suggestions for session %s; "
+            "session created successfully with blank suggestions",
+            session.id,
+        )
 
     return CreateSessionResponse(
         session_id=session.id,
