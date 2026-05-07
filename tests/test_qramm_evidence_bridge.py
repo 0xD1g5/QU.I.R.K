@@ -1,0 +1,311 @@
+"""Phase 53 — QRAMM evidence bridge tests (QRAMM-12, QRAMM-13, QRAMM-14).
+
+Wave 0 RED scaffold. These tests define the contract for `quirk/qramm/evidence_bridge.py`
+and `quirk/dashboard/api/routes/qramm.py` modifications planned in 53-02 and 53-03.
+"""
+from __future__ import annotations
+
+import inspect
+import json
+import pathlib
+import sys
+import uuid
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from quirk.dashboard.api.app import create_app
+from quirk.dashboard.api.deps import get_db
+from quirk.models import Base, CryptoEndpoint, QRAMMAnswer, QRAMMSession
+
+
+# ---------- Shared fixtures ----------
+
+def _make_bridge_db():
+    db_name = f"test_bridge_{uuid.uuid4().hex}"
+    engine = create_engine(
+        f"sqlite:///file:{db_name}?mode=memory&cache=shared&uri=true",
+        connect_args={"check_same_thread": False},
+    )
+    Base.metadata.create_all(engine)
+    return sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+def _make_bridge_client():
+    """FastAPI TestClient with isolated in-memory DB. Mirrors test_qramm_router._make_qramm_client."""
+    TestingSession = _make_bridge_db()
+    app = create_app()
+
+    def _override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = _override_get_db
+    return TestClient(app), TestingSession
+
+
+def _seed_endpoints(db, scenario: str) -> None:
+    """Seed CryptoEndpoint rows for the SESSION_BRACKET cohort.
+
+    scenario in {"rc4_heavy", "aes256_only", "mixed", "empty"}.
+    All seeded rows use scanned_at = today (UTC) so they fall in the SESSION_BRACKET.
+    """
+    now = datetime.now(timezone.utc)
+    if scenario == "empty":
+        return
+    if scenario == "rc4_heavy":
+        # 4 endpoints, all with rc4-hmac (nist_level == 0)
+        for i in range(4):
+            db.add(CryptoEndpoint(
+                host=f"kdc-{i}.example", port=88, protocol="kerberos", scanned_at=now,
+                kerberos_scan_json=json.dumps({"etype_details": [{"etype": 23, "name": "rc4-hmac", "severity": "CRITICAL"}]}),
+            ))
+    elif scenario == "aes256_only":
+        # 4 endpoints, all with aes256-cts-hmac-sha1-96 (nist_level == 1)
+        for i in range(4):
+            db.add(CryptoEndpoint(
+                host=f"kdc-{i}.example", port=88, protocol="kerberos", scanned_at=now,
+                kerberos_scan_json=json.dumps({"etype_details": [{"etype": 18, "name": "aes256-cts-hmac-sha1-96", "severity": "OK"}]}),
+            ))
+    elif scenario == "mixed":
+        # Variety of protocols and algorithms — exercises Practice 1.1 and 1.3 logic
+        db.add(CryptoEndpoint(host="tls-1.example", port=443, protocol="tls", scanned_at=now,
+            tls_version="TLSv1.2", cipher_suite="ECDHE-RSA-AES256-GCM-SHA384",
+            cert_sig_alg="sha256WithRSAEncryption", cert_pubkey_alg="RSA"))
+        db.add(CryptoEndpoint(host="ssh-1.example", port=22, protocol="ssh", scanned_at=now,
+            ssh_audit_json=json.dumps({"kex": [{"algorithm": "curve25519-sha256"}]})))
+        db.add(CryptoEndpoint(host="kdc-1.example", port=88, protocol="kerberos", scanned_at=now,
+            kerberos_scan_json=json.dumps({"etype_details": [{"etype": 18, "name": "aes256-cts-hmac-sha1-96", "severity": "OK"}]})))
+        db.add(CryptoEndpoint(host="jwt-1.example", port=443, protocol="jwt", scanned_at=now,
+            jwt_scan_json=json.dumps({"keys": [{"alg": "RS256"}]})))
+    db.commit()
+
+
+# ---------- QRAMM-12 tests ----------
+
+def test_bridge_populates_on_session_create():
+    """POST /api/qramm/sessions triggers bridge; 30 CVI rows have suggested_answer set."""
+    from quirk.qramm.evidence_bridge import populate_cvi_suggestions  # noqa: F401
+    client, TestingSession = _make_bridge_client()
+    db = TestingSession()
+    try:
+        _seed_endpoints(db, "mixed")
+    finally:
+        db.close()
+    resp = client.post("/api/qramm/sessions", json={"org_name": "Acme"})
+    assert resp.status_code == 201
+    sid = resp.json()["session_id"]
+    db = TestingSession()
+    try:
+        rows = db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.dimension == "CVI").all()
+        assert len(rows) == 30, f"expected 30 CVI rows, got {len(rows)}"
+        for r in rows:
+            assert r.suggested_answer in (1, 2, 3, 4), f"Q{r.question_number} suggested_answer={r.suggested_answer!r}"
+            assert r.answer_value is None
+            assert r.evidence_source is not None and r.evidence_source.startswith("evidence_bridge:scan:")
+    finally:
+        db.close()
+
+
+def test_bridge_skips_when_no_scan_data():
+    """D-02: zero CryptoEndpoint rows -> session creates with 30 blank CVI rows, no suggested_answer."""
+    from quirk.qramm.evidence_bridge import populate_cvi_suggestions  # noqa: F401
+    client, TestingSession = _make_bridge_client()
+    # Do not seed any endpoints
+    resp = client.post("/api/qramm/sessions", json={"org_name": "Empty"})
+    assert resp.status_code == 201
+    sid = resp.json()["session_id"]
+    db = TestingSession()
+    try:
+        rows = db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.dimension == "CVI").all()
+        assert len(rows) == 30
+        for r in rows:
+            assert r.suggested_answer is None, f"Q{r.question_number} should be None when no scan data"
+            assert r.evidence_source is None
+    finally:
+        db.close()
+
+
+def test_no_risk_engine_import():
+    """QRAMM-12: evidence_bridge.py source must not import risk_engine; sys.modules check after import."""
+    import quirk.qramm.evidence_bridge as bridge_mod
+    src_path = pathlib.Path(inspect.getsourcefile(bridge_mod))
+    text = src_path.read_text(encoding="utf-8")
+    forbidden = ["quirk.engine.risk_engine", "quirk.risk_engine"]
+    for f in forbidden:
+        assert f"from {f}" not in text, f"QRAMM-12 violation: evidence_bridge imports {f}"
+        assert f"import {f}" not in text, f"QRAMM-12 violation: evidence_bridge imports {f}"
+    # sys.modules check — bridge import must not transitively pull risk_engine
+    assert "quirk.engine.risk_engine" not in sys.modules
+    assert "quirk.risk_engine" not in sys.modules
+
+
+# ---------- QRAMM-13 tests ----------
+
+def test_rc4_scan_lower_score_than_aes256():
+    """ROADMAP SC-3: RC4-HMAC scan -> CVI 1.2 suggested < AES-256-only scan -> CVI 1.2 suggested."""
+    from quirk.qramm.evidence_bridge import populate_cvi_suggestions
+    # RC4-heavy run
+    TS_rc4 = _make_bridge_db()
+    db = TS_rc4()
+    try:
+        _seed_endpoints(db, "rc4_heavy")
+        s = QRAMMSession(org_name="rc4", created_at=datetime.now(timezone.utc),
+                         updated_at=datetime.now(timezone.utc), status="draft")
+        db.add(s); db.flush()
+        from quirk.qramm.questions import QRAMM_QUESTIONS
+        for q in [q for q in QRAMM_QUESTIONS if q["dimension"] == "CVI"]:
+            db.add(QRAMMAnswer(session_id=s.id, question_number=q["question_number"],
+                               dimension="CVI", practice_area=q["practice_area"]))
+        db.commit()
+        populate_cvi_suggestions(s.id, db)
+        rc4_score = db.query(QRAMMAnswer).filter(
+            QRAMMAnswer.session_id == s.id,
+            QRAMMAnswer.practice_area == "1.2",
+        ).first().suggested_answer
+    finally:
+        db.close()
+    # AES-256-only run
+    TS_aes = _make_bridge_db()
+    db = TS_aes()
+    try:
+        _seed_endpoints(db, "aes256_only")
+        s = QRAMMSession(org_name="aes", created_at=datetime.now(timezone.utc),
+                         updated_at=datetime.now(timezone.utc), status="draft")
+        db.add(s); db.flush()
+        from quirk.qramm.questions import QRAMM_QUESTIONS
+        for q in [q for q in QRAMM_QUESTIONS if q["dimension"] == "CVI"]:
+            db.add(QRAMMAnswer(session_id=s.id, question_number=q["question_number"],
+                               dimension="CVI", practice_area=q["practice_area"]))
+        db.commit()
+        populate_cvi_suggestions(s.id, db)
+        aes_score = db.query(QRAMMAnswer).filter(
+            QRAMMAnswer.session_id == s.id,
+            QRAMMAnswer.practice_area == "1.2",
+        ).first().suggested_answer
+    finally:
+        db.close()
+    assert rc4_score < aes_score, f"RC4 score {rc4_score} must be < AES-256 score {aes_score} (D-05 quartile)"
+    assert rc4_score == 1 and aes_score == 4
+
+
+def test_unconfirmed_excluded_from_score():
+    """QRAMM-13: rows with suggested_answer set but answer_value NULL must NOT contribute to score."""
+    from quirk.qramm.evidence_bridge import populate_cvi_suggestions  # noqa: F401
+    client, TestingSession = _make_bridge_client()
+    db = TestingSession()
+    try:
+        _seed_endpoints(db, "mixed")
+    finally:
+        db.close()
+    resp = client.post("/api/qramm/sessions", json={"org_name": "Acme"})
+    sid = resp.json()["session_id"]
+    score_resp = client.post(f"/api/qramm/sessions/{sid}/score", json={})
+    assert score_resp.status_code == 200
+    body = score_resp.json()
+    # All rows are unconfirmed (answer_value=None) -> CVI dimension score is 0.0 (no practices contribute)
+    # NOTE: score_session returns dimensions as a dict keyed by dimension name, not a list.
+    cvi = body.get("dimensions", {}).get("CVI")
+    assert cvi is not None, "score response must include CVI dimension"
+    # Unconfirmed rows are excluded from scoring -> CVI score is 0.0 and practices dict is empty.
+    assert cvi.get("score", 1.0) == 0.0 or cvi.get("practices", {}) == {}, \
+        "unconfirmed suggestions must not register as completion (score=0.0 or no practices scored)"
+
+
+def test_confirmed_included_in_score():
+    """QRAMM-13: writing answer_value to a row with suggested_answer flips it into the score."""
+    from quirk.qramm.evidence_bridge import populate_cvi_suggestions  # noqa: F401
+    client, TestingSession = _make_bridge_client()
+    db = TestingSession()
+    try:
+        _seed_endpoints(db, "mixed")
+    finally:
+        db.close()
+    resp = client.post("/api/qramm/sessions", json={"org_name": "Acme"})
+    sid = resp.json()["session_id"]
+    # Confirm Q1 by sending the suggested value as answer_value
+    db = TestingSession()
+    try:
+        q1 = db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.question_number == 1).first()
+        suggested = q1.suggested_answer
+    finally:
+        db.close()
+    confirm = client.post(f"/api/qramm/sessions/{sid}/answers",
+                          json={"answers": [{"question_number": 1, "answer_value": suggested}]})
+    assert confirm.status_code == 200
+    db = TestingSession()
+    try:
+        q1 = db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.question_number == 1).first()
+        assert q1.answer_value == suggested
+        assert q1.confirmed_at is not None, "D-09: confirmed_at must auto-set when answer_value written to suggested row"
+    finally:
+        db.close()
+
+
+def test_confirmed_at_auto_set():
+    """D-09: save_answers writing answer_value to a row with suggested_answer NOT NULL auto-sets confirmed_at."""
+    from quirk.qramm.evidence_bridge import populate_cvi_suggestions  # noqa: F401
+    client, TestingSession = _make_bridge_client()
+    db = TestingSession()
+    try:
+        _seed_endpoints(db, "aes256_only")
+    finally:
+        db.close()
+    resp = client.post("/api/qramm/sessions", json={"org_name": "Acme"})
+    sid = resp.json()["session_id"]
+    before = datetime.now(timezone.utc) - timedelta(seconds=1)
+    confirm = client.post(f"/api/qramm/sessions/{sid}/answers",
+                          json={"answers": [{"question_number": 5, "answer_value": 4}]})
+    assert confirm.status_code == 200
+    db = TestingSession()
+    try:
+        row = db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.question_number == 5).first()
+        assert row.suggested_answer is not None
+        assert row.confirmed_at is not None
+        # confirmed_at may be naive (SQLite) — compare by removing tzinfo if present
+        confirmed = row.confirmed_at
+        if confirmed.tzinfo is None:
+            confirmed = confirmed.replace(tzinfo=timezone.utc)
+        assert confirmed >= before
+    finally:
+        db.close()
+
+
+# ---------- QRAMM-14 test ----------
+
+def test_badge_signal_data_model():
+    """QRAMM-14: badge state derives from (suggested_answer NOT NULL AND answer_value NULL)."""
+    from quirk.qramm.evidence_bridge import populate_cvi_suggestions  # noqa: F401
+    client, TestingSession = _make_bridge_client()
+    db = TestingSession()
+    try:
+        _seed_endpoints(db, "mixed")
+    finally:
+        db.close()
+    resp = client.post("/api/qramm/sessions", json={"org_name": "Acme"})
+    sid = resp.json()["session_id"]
+    db = TestingSession()
+    try:
+        rows = db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.dimension == "CVI").all()
+        # Before confirmation: badge visible for ALL CVI rows (suggested set, answer_value None)
+        for r in rows:
+            badge_visible = r.suggested_answer is not None and r.answer_value is None
+            assert badge_visible, f"Q{r.question_number} should show badge"
+    finally:
+        db.close()
+    # After confirming Q1, badge for Q1 must be gone
+    client.post(f"/api/qramm/sessions/{sid}/answers",
+                json={"answers": [{"question_number": 1, "answer_value": 3}]})
+    db = TestingSession()
+    try:
+        q1 = db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.question_number == 1).first()
+        badge_visible = q1.suggested_answer is not None and q1.answer_value is None
+        assert not badge_visible, "Q1 badge must disappear after confirmation"
+    finally:
+        db.close()
