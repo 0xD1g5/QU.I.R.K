@@ -1081,7 +1081,11 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   1. `POST /api/qramm/sessions` triggers `evidence_bridge.py` to read `CryptoEndpoint` rows within the SESSION_BRACKET scan-window and sets `suggested_answer` on up to 30 CVI-dimension rows; `quirk/qramm/evidence_bridge.py` does NOT import `risk_engine` (circular import prevention is unit-tested by checking `sys.modules`)
   2. Auto-populated rows have `answer_value = null`, `suggested_answer = <1-4>`, and `requires_confirmation = true`; calling `POST .../score` with unconfirmed rows excludes them from maturity calculation; calling it after `confirmed_at` is set includes them — both behaviors are asserted by tests
   3. A scan with RC4-HMAC Kerberos findings produces lower CVI auto-suggested answers than a scan with only AES-256 findings — the bridge correctly translates cryptographic weakness to lower QRAMM maturity
-**Plans**: TBD
+**Plans**: 4 plans
+  - [ ] 53-01-PLAN.md — Wave 0 RED test scaffold: tests/test_qramm_evidence_bridge.py with 8 contract tests + seed helpers
+  - [ ] 53-02-PLAN.md — quirk/qramm/evidence_bridge.py: SESSION_BRACKET, classify_algorithm integration, D-05/06/07 derivation
+  - [ ] 53-03-PLAN.md — Wire bridge into qramm.py router (create_session pre-creates 30 CVI rows + calls bridge; save_answers auto-sets confirmed_at)
+  - [ ] 53-04-PLAN.md — Phase completion: Obsidian Phase-53 note + docs/UAT-SERIES.md update + vault sync + commit
 
 ### Phase 54: QRAMM Assessment UI & Scorecard
 **Goal**: A consultant can complete a QRAMM assessment entirely within the QUIRK dashboard — filling out the Org Profile, answering all 120 questions across 4 dimension tabs, viewing auto-filled suggestions with confirmation badges, and seeing a live-rendered scorecard with radar chart and dimension table

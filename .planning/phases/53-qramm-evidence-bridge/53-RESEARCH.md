@@ -626,17 +626,19 @@ else:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **JSON blob internal structure for algorithm extraction**
    - What we know: CONTEXT.md says bridge reads `kerberos_scan_json`, `ssh_audit_json`, etc. and extracts algorithm strings. `classify_algorithm()` can classify them if found.
    - What's unclear: The exact JSON structure of each blob type — e.g., does `kerberos_scan_json` store `{"encryption_types": ["rc4-hmac", "aes256-cts-hmac-sha1-96"]}` or nested differently?
    - Recommendation: Planner should read one actual blob from the DB or read the relevant scanner source file to confirm the JSON shape before implementing `_walk_json_for_alg_strings`. This is the highest-risk unknown for test correctness.
+   - **RESOLVED:** Verified `kerberos_scan_json` shape from `quirk/scanner/kerberos_scanner.py:300-323` — `{"etype_details": [{"etype": int, "name": "rc4-hmac" | "aes256-cts-hmac-sha1-96" | ..., "severity": str}]}`. SSH/JWT/TLS shapes documented in `<interfaces>` block of 53-01-PLAN.md. Bridge uses recursive `_walk_json_for_alg_strings` to find string leaves and feeds them through `classify_algorithm()` — robust to nested variants.
 
 2. **Concurrent request safety (double-bridge invocation)**
    - What we know: Bridge is synchronous; SQLite is single-writer.
    - What's unclear: If `create_session` is called twice rapidly, both will try to update the same rows (different session IDs — no conflict). Non-issue.
    - Recommendation: No action needed.
+   - **RESOLVED:** Non-issue confirmed. Distinct session IDs preclude row conflict; SQLite single-writer semantics serialize commits.
 
 ---
 
