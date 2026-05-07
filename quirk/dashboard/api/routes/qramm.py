@@ -24,8 +24,9 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.models import QRAMMAnswer, QRAMMSession
+from quirk.qramm.evidence_bridge import populate_cvi_suggestions
 from quirk.qramm.model_meta import QRAMM_MODEL
-from quirk.qramm.questions import get_question
+from quirk.qramm.questions import QRAMM_QUESTIONS, get_question
 from quirk.qramm.scoring import (
     compute_dimension_score,
     compute_overall_score,
@@ -121,8 +122,30 @@ def create_session(
         status="draft",
     )
     db.add(session)
+    db.flush()  # Phase 53: get session.id without committing yet
+
+    # Phase 53 (QRAMM-12): pre-create 30 blank CVI QRAMMAnswer rows so the bridge
+    # can bulk-update them, and so the UI can render all 30 questions even when
+    # the bridge skips silently (D-02).
+    for q in QRAMM_QUESTIONS:
+        if q["dimension"] != "CVI":
+            continue
+        db.add(QRAMMAnswer(
+            session_id=session.id,
+            question_number=q["question_number"],
+            dimension=q["dimension"],
+            practice_area=q["practice_area"],
+            answer_value=None,
+            suggested_answer=None,
+        ))
     db.commit()
     db.refresh(session)
+
+    # Phase 53 (QRAMM-12): synchronous evidence bridge — derives suggested_answer
+    # for the 30 CVI rows from the SESSION_BRACKET scan cohort. Skips silently
+    # (D-02) when no scan data exists.
+    populate_cvi_suggestions(session.id, db)
+
     return CreateSessionResponse(
         session_id=session.id,
         org_name=session.org_name,
@@ -190,6 +213,11 @@ def save_answers(
             existing.answer_value = item.answer_value
             existing.dimension = meta["dimension"]
             existing.practice_area = meta["practice_area"]
+            # Phase 53 D-09 (QRAMM-13/14): auto-confirm a suggested answer when
+            # the human writes answer_value. Badge state (QRAMM-14) is implicit
+            # in (suggested_answer IS NOT NULL AND answer_value IS NULL).
+            if existing.suggested_answer is not None and item.answer_value is not None:
+                existing.confirmed_at = _now_iso()
         saved += 1
     session.updated_at = _now_iso()
     db.commit()
