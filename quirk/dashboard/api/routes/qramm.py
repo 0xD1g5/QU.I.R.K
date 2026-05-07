@@ -53,13 +53,6 @@ class CreateSessionResponse(BaseModel):
     model_version: str
 
 
-class ScoreBlock(BaseModel):
-    overall: float
-    dimensions: Dict[str, float]
-    maturity: str
-    profile_multiplier: float
-
-
 class SessionRead(BaseModel):
     session_id: int
     org_name: Optional[str]
