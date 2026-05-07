@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Command · Obsidian Pro UI Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../ds-tokens.css">
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--ds-font-body);background:var(--ds-bg-page);color:var(--ds-text);min-height:100vh}
+  .app-header{position:fixed;top:0;left:0;right:0;height:52px;z-index:100;background:var(--ds-bg-base);border-bottom:1px solid var(--ds-border);display:flex;align-items:center;justify-content:space-between;padding:0 var(--ds-s4)}
+  .header-left{display:flex;align-items:center;gap:var(--ds-s3)}
+  .header-logo{width:26px;height:26px;border-radius:var(--ds-r-md);background:var(--ds-accent);color:var(--ds-accent-on);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .header-title{font-size:13px;font-weight:600}
+  .header-version{font-size:10px;color:var(--ds-text-faint);font-family:var(--ds-font-mono)}
+  .header-palette{font-size:11px;padding:4px 12px;border-radius:var(--ds-r-pill);background:var(--ds-accent-dim);color:var(--ds-accent);border:1px solid var(--ds-accent-bdr);font-family:var(--ds-font-mono)}
+  .app-layout{display:flex;padding-top:52px;min-height:100vh}
+  .app-main{flex:1;padding:var(--ds-s6) var(--ds-s8);max-width:1100px}
+  .section-eyebrow{font-size:var(--ds-fs-label);letter-spacing:var(--ds-tracking);color:var(--ds-text-faint);font-family:var(--ds-font-mono);text-transform:uppercase}
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes slideIn { from{transform:translateX(40px);opacity:0} to{transform:none;opacity:1} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="DashboardScreen.jsx"></script>
+<script type="text/babel" src="DetectionsScreen.jsx"></script>
+<script type="text/babel" src="DetailDrawer.jsx"></script>
+
+<script type="text/babel">
+  const { useState, useEffect } = React;
+
+  function App() {
+    const [theme,  setTheme]  = useState("dark");
+    const [screen, setScreen] = useState("detections");
+    const [row,    setRow]    = useState(null);
+
+    useEffect(() => {
+      document.documentElement.setAttribute("data-theme", theme);
+    }, [theme]);
+
+    return (
+      <div data-screen-label={`Command — ${screen}`}>
+        <Header theme={theme} onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")} />
+        <div className="app-layout">
+          <NavRail screen={screen} onScreen={setScreen} />
+          <main className="app-main">
+            {screen === "dashboard"  && <DashboardScreen />}
+            {screen === "detections" && <DetectionsScreen onSelect={setRow} />}
+            {screen === "assets"     && (
+              <div className="ds-card" style={{ padding: 'var(--ds-s8)', textAlign: 'center', color: 'var(--ds-text-muted)' }}>
+                <p className="section-eyebrow">stub</p>
+                <p style={{ marginTop: 8, fontSize: 14 }}>Asset inventory — not yet implemented in this UI kit.</p>
+              </div>
+            )}
+            {(screen === "policies" || screen === "logs") && (
+              <div className="ds-card" style={{ padding: 'var(--ds-s8)', textAlign: 'center', color: 'var(--ds-text-muted)' }}>
+                <p className="section-eyebrow">stub</p>
+                <p style={{ marginTop: 8, fontSize: 14 }}>{screen} — not yet implemented in this UI kit.</p>
+              </div>
+            )}
+          </main>
+        </div>
+        <DetailDrawer row={row} onClose={() => setRow(null)} />
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,473 @@
+/* ═══════════════════════════════════════════════════════════════
+   DS — Obsidian Pro Design System
+   Single-palette · v1.1 · Ready for Claude Design
+   ═══════════════════════════════════════════════════════════════
+
+   USAGE:
+     <link rel="stylesheet" href="ds-tokens.css">
+     No theme switching required — one palette, always on.
+
+   PALETTE:  Obsidian Pro
+   AUDIENCE: Customer-facing tools, CoE deliverables,
+             presales assets, summit dashboards
+   FONTS:    system-ui (UI/body) · JetBrains Mono (data/code)
+   GRID:     8px base
+   ═══════════════════════════════════════════════════════════════ */
+
+
+/* ── 1. TOKENS ─────────────────────────────────────────────── */
+
+:root {
+
+  /* ─── Background ──────────────────────────────────────────── */
+  --ds-bg-page:          #080a0f;   /* outermost page / shell   */
+  --ds-bg-base:          #0d0f14;   /* app bg / card bg         */
+  --ds-bg-surface:       #161921;   /* raised elements          */
+  --ds-bg-elevated:      #1e2129;   /* dropdowns / modals       */
+
+  /* ─── Border ──────────────────────────────────────────────── */
+  --ds-border:           #252d3e;
+  --ds-border-subtle:    rgba(37, 45, 62, 0.45);
+
+  /* ─── Text ────────────────────────────────────────────────── */
+  --ds-text:             #f0f2f8;   /* primary                  */
+  --ds-text-muted:       #6e7a95;   /* labels / secondary       */
+  --ds-text-faint:       #4a5568;   /* placeholder / disabled   */
+
+  /* ─── Accent (interactive elements only) ─────────────────── */
+  --ds-accent:           #4ba8a8;
+  --ds-accent-dim:       rgba(75, 168, 168, 0.12);
+  --ds-accent-bdr:       rgba(75, 168, 168, 0.28);
+  --ds-accent-on:        #ffffff;   /* text ON accent-filled bg */
+
+  /* ─── Semantic: Critical ──────────────────────────────────── */
+  --ds-critical:         #e05555;
+  --ds-critical-dim:     rgba(224, 85, 85, 0.10);
+  --ds-critical-bdr:     rgba(224, 85, 85, 0.28);
+
+  /* ─── Semantic: High ──────────────────────────────────────── */
+  --ds-high:             #d4893a;
+  --ds-high-dim:         rgba(212, 137, 58, 0.10);
+  --ds-high-bdr:         rgba(212, 137, 58, 0.28);
+
+  /* ─── Semantic: OK / Success ──────────────────────────────── */
+  --ds-ok:               #3fa876;
+  --ds-ok-dim:           rgba(63, 168, 118, 0.10);
+  --ds-ok-bdr:           rgba(63, 168, 118, 0.28);
+
+  /* ─── Semantic: Medium / Neutral ─────────────────────────── */
+  --ds-medium:           #8892a4;
+  --ds-medium-dim:       rgba(136, 146, 164, 0.08);
+  --ds-medium-bdr:       rgba(136, 146, 164, 0.22);
+
+  /* ─── Semantic: Info (maps to accent) ────────────────────── */
+  --ds-info:             #4ba8a8;
+  --ds-info-dim:         rgba(75, 168, 168, 0.12);
+
+  /* ─── Typography ──────────────────────────────────────────── */
+  --ds-font-body:        -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --ds-font-mono:        'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+
+  /* Font scale */
+  --ds-fs-label:         10px;    /* ALL-CAPS eyebrow labels   */
+  --ds-fs-ui:            12px;    /* table cells, chips, btns  */
+  --ds-fs-body:          13px;    /* body / description text   */
+  --ds-fs-h3:            15px;    /* card titles               */
+  --ds-fs-h2:            18px;    /* section headers           */
+  --ds-fs-h1:            22px;    /* page titles               */
+  --ds-fs-metric-sm:     22px;    /* compact metric            */
+  --ds-fs-metric:        30px;    /* standard stat card        */
+  --ds-fs-metric-lg:     40px;    /* hero / single KPI         */
+
+  /* Label tracking */
+  --ds-tracking:         0.08em;
+
+  /* ─── Spacing — 8px grid ──────────────────────────────────── */
+  --ds-s1:    4px;
+  --ds-s2:    8px;
+  --ds-s3:    12px;
+  --ds-s4:    16px;
+  --ds-s5:    20px;
+  --ds-s6:    24px;
+  --ds-s8:    32px;
+  --ds-s10:   40px;
+
+  /* ─── Radius ──────────────────────────────────────────────── */
+  --ds-r-sm:    4px;
+  --ds-r-md:    6px;
+  --ds-r-lg:    10px;
+  --ds-r-xl:    14px;
+  --ds-r-pill:  100px;
+
+  /* ─── Navigation ──────────────────────────────────────────── */
+  --ds-nav-bg:        #0a0c10;
+  --ds-nav-active:    #151b28;
+  --ds-nav-width:     54px;
+  --ds-nav-width-exp: 220px;
+
+  /* ─── Motion ──────────────────────────────────────────────── */
+  --ds-ease:     0.18s ease;
+  --ds-ease-md:  0.25s ease;
+}
+
+
+/* ── 2. BASE COMPONENT CLASSES ─────────────────────────────── */
+
+/* ── Card ── */
+.ds-card {
+  background: var(--ds-bg-base);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-lg);
+  padding: var(--ds-s4);
+}
+.ds-card--surface  { background: var(--ds-bg-surface); }
+.ds-card--elevated { background: var(--ds-bg-elevated); }
+
+/* ── Stat card ── */
+.ds-stat {
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-md);
+  padding: var(--ds-s3);
+}
+.ds-stat__label {
+  font-size: var(--ds-fs-label);
+  letter-spacing: var(--ds-tracking);
+  color: var(--ds-text-muted);
+  margin-bottom: var(--ds-s1);
+  text-transform: uppercase;
+  font-family: var(--ds-font-body);
+}
+.ds-stat__value {
+  font-size: var(--ds-fs-metric);
+  font-weight: 700;
+  color: var(--ds-text);
+  line-height: 1;
+  font-family: var(--ds-font-mono);
+}
+.ds-stat__delta {
+  font-size: var(--ds-fs-label);
+  color: var(--ds-text-muted);
+  margin-top: var(--ds-s1);
+}
+.ds-stat--critical {
+  background: var(--ds-critical-dim);
+  border-color: var(--ds-critical-bdr);
+}
+.ds-stat--critical .ds-stat__label,
+.ds-stat--critical .ds-stat__value,
+.ds-stat--critical .ds-stat__delta {
+  color: var(--ds-critical);
+}
+
+/* ── Buttons ── */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-s2);
+  font-size: var(--ds-fs-ui);
+  font-family: var(--ds-font-body);
+  padding: 7px var(--ds-s4);
+  border-radius: var(--ds-r-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--ds-ease);
+  text-decoration: none;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.ds-btn--primary {
+  background: var(--ds-accent);
+  color: var(--ds-accent-on);
+}
+.ds-btn--primary:hover { opacity: 0.85; }
+
+.ds-btn--secondary {
+  background: transparent;
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+.ds-btn--secondary:hover {
+  background: var(--ds-bg-surface);
+  border-color: var(--ds-text-muted);
+}
+
+.ds-btn--danger {
+  background: var(--ds-critical-dim);
+  color: var(--ds-critical);
+  border-color: var(--ds-critical-bdr);
+}
+.ds-btn--danger:hover {
+  background: var(--ds-critical);
+  color: #fff;
+  border-color: var(--ds-critical);
+}
+
+.ds-btn--ghost {
+  background: transparent;
+  color: var(--ds-text-muted);
+  border-color: transparent;
+}
+.ds-btn--ghost:hover {
+  color: var(--ds-text);
+  background: var(--ds-bg-surface);
+}
+
+.ds-btn--sm  { font-size: 11px; padding: 4px var(--ds-s3); }
+.ds-btn--lg  { font-size: 13px; padding: 9px var(--ds-s5); }
+.ds-btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+/* ── Badges / Chips ── */
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--ds-r-pill);
+  font-weight: 500;
+  font-family: var(--ds-font-body);
+}
+.ds-badge__dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ds-badge--critical { background: var(--ds-critical-dim); color: var(--ds-critical); }
+.ds-badge--critical .ds-badge__dot { background: var(--ds-critical); }
+
+.ds-badge--high     { background: var(--ds-high-dim);     color: var(--ds-high); }
+.ds-badge--high .ds-badge__dot { background: var(--ds-high); }
+
+.ds-badge--ok       { background: var(--ds-ok-dim);       color: var(--ds-ok); }
+.ds-badge--ok .ds-badge__dot { background: var(--ds-ok); }
+
+.ds-badge--medium   { background: var(--ds-medium-dim);   color: var(--ds-medium); }
+.ds-badge--medium .ds-badge__dot { background: var(--ds-medium); }
+
+.ds-badge--info     { background: var(--ds-info-dim);     color: var(--ds-info); }
+.ds-badge--info .ds-badge__dot { background: var(--ds-info); }
+
+.ds-badge--accent {
+  background: var(--ds-accent-dim);
+  color: var(--ds-accent);
+  border: 1px solid var(--ds-accent-bdr);
+}
+
+/* ── Table ── */
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-fs-ui);
+  font-family: var(--ds-font-body);
+}
+.ds-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: var(--ds-fs-label);
+  letter-spacing: var(--ds-tracking);
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--ds-text-muted);
+  border-bottom: 1px solid var(--ds-border);
+  user-select: none;
+  white-space: nowrap;
+}
+.ds-table th.sort  { cursor: pointer; }
+.ds-table th.sort:hover { color: var(--ds-text); }
+
+.ds-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--ds-border);
+  color: var(--ds-text);
+}
+.ds-table tr:last-child td { border-bottom: none; }
+.ds-table tbody tr:hover td { background: var(--ds-bg-surface); }
+
+.ds-table .dim  { color: var(--ds-text-muted); }
+.ds-table .mono { font-family: var(--ds-font-mono); font-size: 11px; }
+.ds-table .num  { text-align: right; font-family: var(--ds-font-mono); }
+
+/* ── Form inputs ── */
+.ds-field { display: flex; flex-direction: column; gap: var(--ds-s1); }
+
+.ds-label {
+  font-size: var(--ds-fs-label);
+  letter-spacing: var(--ds-tracking);
+  color: var(--ds-text-muted);
+  text-transform: uppercase;
+}
+.ds-helper     { font-size: 11px; color: var(--ds-text-faint); }
+.ds-error-text { font-size: 11px; color: var(--ds-critical); }
+
+.ds-input,
+.ds-select,
+.ds-textarea {
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-md);
+  color: var(--ds-text);
+  font-size: var(--ds-fs-body);
+  font-family: var(--ds-font-body);
+  padding: 7px var(--ds-s3);
+  width: 100%;
+  outline: none;
+  transition: border-color var(--ds-ease);
+}
+.ds-input::placeholder { color: var(--ds-text-faint); }
+.ds-input:focus,
+.ds-select:focus   { border-color: var(--ds-accent); }
+.ds-input--error   { border-color: var(--ds-critical); }
+
+.ds-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e7a95' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.ds-search { position: relative; display: block; }
+.ds-search .ds-input { padding-left: 32px; }
+.ds-search::before {
+  content: '⌕';
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--ds-text-faint);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.ds-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-s2);
+  cursor: pointer;
+  font-size: var(--ds-fs-body);
+  color: var(--ds-text);
+  user-select: none;
+}
+.ds-checkbox input[type="checkbox"] {
+  appearance: none;
+  width: 16px; height: 16px;
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: all var(--ds-ease);
+}
+.ds-checkbox input[type="checkbox"]:checked {
+  background: var(--ds-accent);
+  border-color: var(--ds-accent);
+}
+.ds-checkbox input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px; top: 2px;
+  width: 5px; height: 8px;
+  border: 2px solid var(--ds-accent-on);
+  border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+
+/* ── Navigation ── */
+.ds-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--ds-nav-width);
+  background: var(--ds-nav-bg);
+  border-right: 1px solid var(--ds-border);
+  padding: var(--ds-s3) 0;
+  gap: var(--ds-s2);
+}
+.ds-nav__logo {
+  width: 28px; height: 28px;
+  border-radius: var(--ds-r-md);
+  background: var(--ds-accent);
+  color: var(--ds-accent-on);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  margin-bottom: var(--ds-s2);
+  font-family: var(--ds-font-body);
+}
+.ds-nav__item {
+  width: 36px; height: 36px;
+  border-radius: var(--ds-r-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  transition: all var(--ds-ease);
+}
+.ds-nav__item:hover   { color: var(--ds-text); background: var(--ds-bg-surface); }
+.ds-nav__item.active  { background: var(--ds-nav-active); color: var(--ds-accent); }
+.ds-nav__divider      { width: 24px; height: 1px; background: var(--ds-border); }
+.ds-nav__spacer       { flex: 1; }
+
+
+/* ── 3. UTILITY HELPERS ─────────────────────────────────────── */
+
+.ds-divider        { height: 1px; background: var(--ds-border); margin: var(--ds-s4) 0; }
+.ds-divider--sub   { background: var(--ds-border-subtle); }
+
+.ds-text-label {
+  font-size: var(--ds-fs-label);
+  letter-spacing: var(--ds-tracking);
+  text-transform: uppercase;
+  color: var(--ds-text-muted);
+}
+.ds-mono { font-family: var(--ds-font-mono); font-size: 11px; }
+
+.ds-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--ds-s3); }
+.ds-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--ds-s3); }
+.ds-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--ds-s3); }
+
+@media (max-width: 600px) {
+  .ds-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .ds-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+
+/* ── 4. DESIGN SYSTEM REFERENCE ─────────────────────────────── */
+/*
+   For Claude Design onboarding — summarized palette:
+
+   BACKGROUNDS
+     Page:     #080a0f
+     Base:     #0d0f14
+     Surface:  #161921
+     Elevated: #1e2129
+
+   ACCENT (buttons, links, active states)
+     Primary:  #6675f7
+     On accent:#ffffff
+
+   SEMANTIC (severity only — never decorative)
+     Critical: #e05555   ← immediate action required
+     High:     #d4893a   ← elevated risk, review needed
+     OK:       #3fa876   ← healthy / resolved
+     Medium:   #8892a4   ← neutral / informational
+     Info:     #6675f7   ← same as accent
+
+   TEXT
+     Primary:  #f0f2f8
+     Muted:    #6e7a95
+     Faint:    #4a5568
+
+   BORDER
+     Default:  #252d3e
+
+   TYPOGRAPHY
+     UI/Body:  system-ui, -apple-system, Segoe UI, sans-serif
+     Data:     JetBrains Mono, Fira Code, SF Mono, monospace
+
+   SPACING BASE: 8px
+   BORDER RADIUS: 4 / 6 / 10 / 14 / 100px
+*/

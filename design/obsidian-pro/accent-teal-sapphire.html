@@ -1,0 +1,134 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Accent — steel teal vs sapphire</title>
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#080a0f;color:#f0f2f8;font-family:var(--ds-font-body);padding:32px;min-height:100vh}
+  h1{font-size:22px;font-weight:700;margin-bottom:6px}
+  .sub{font-size:13px;color:#9aa3ba;margin-bottom:32px;max-width:720px;line-height:1.55}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+  @media(max-width:1100px){.grid{grid-template-columns:1fr}}
+
+  .opt{background:#0d0f14;border:1px solid #252d3e;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .opt-head{display:flex;align-items:center;gap:12px}
+  .opt-swatch{width:40px;height:40px;border-radius:8px;flex-shrink:0;border:1px solid rgba(255,255,255,.06)}
+  .opt-name{font-size:15px;font-weight:600;line-height:1.1}
+  .opt-hex{font-family:'JetBrains Mono',monospace;font-size:11px;color:#9aa3ba;margin-top:3px}
+  .opt-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);border:1px solid var(--accent-bdr);padding:3px 8px;border-radius:100px;margin-left:auto}
+  .opt-desc{font-size:12px;color:#9aa3ba;line-height:1.55}
+
+  .demo{background:#161921;border:1px solid #252d3e;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .demo-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:7px 14px;border-radius:6px;border:1px solid transparent;font-weight:500;font-family:inherit;cursor:pointer}
+  .btn--primary{background:var(--accent);color:var(--accent-on,#fff)}
+  .btn--secondary{background:transparent;color:#f0f2f8;border-color:#252d3e}
+  .btn--ghost{background:transparent;color:#9aa3ba}
+  .input{background:#0d0f14;border:1px solid var(--accent);border-radius:6px;color:#f0f2f8;font-size:13px;padding:7px 12px;font-family:inherit;outline:none;width:200px}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:100px;font-weight:500}
+  .badge .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .b-acc{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-bdr)}
+  .b-crit{background:rgba(224,85,85,.10);color:#e05555}.b-crit .dot{background:#e05555}
+  .b-high{background:rgba(212,137,58,.10);color:#d4893a}.b-high .dot{background:#d4893a}
+  .b-ok{background:rgba(63,168,118,.10);color:#3fa876}.b-ok .dot{background:#3fa876}
+  .b-med{background:rgba(136,146,164,.08);color:#9aa3ba}.b-med .dot{background:#9aa3ba}
+
+  .stat{display:flex;align-items:flex-end;gap:14px}
+  .stat-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9aa3ba;display:block;margin-bottom:3px}
+  .metric{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;line-height:1;color:var(--accent);font-feature-settings:'tnum' 1}
+  .bar{height:6px;width:120px;background:#1e2129;border-radius:100px;overflow:hidden;margin-bottom:6px}
+  .bar-fill{height:100%;width:72%;background:var(--accent);border-radius:100px}
+
+  .nav{display:flex;gap:4px;background:#0a0c10;border:1px solid #252d3e;border-radius:8px;padding:6px}
+  .nav-item{padding:6px 12px;border-radius:6px;font-size:12px;color:#9aa3ba;display:flex;align-items:center;gap:6px}
+  .nav-item.on{background:#151b28;color:var(--accent)}
+  .nav-item .pip{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+  .takeaway{margin-top:32px;padding:18px 20px;background:#0d0f14;border:1px solid #252d3e;border-radius:10px;display:flex;flex-direction:column;gap:8px;max-width:1100px}
+  .takeaway-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9aa3ba;font-family:'JetBrains Mono',monospace}
+  .takeaway p{font-size:13px;line-height:1.6;color:#f0f2f8}
+  .takeaway code{font-family:'JetBrains Mono',monospace;font-size:12px;color:#a4b6de;background:#161921;padding:1px 6px;border-radius:4px;border:1px solid #252d3e}
+</style>
+</head>
+<body>
+
+<h1>Accent · steel teal vs sapphire</h1>
+<p class="sub">Both are subtle — they aren't shouting. Both are <em>not purple</em>. Steel teal pulls toward green-cyan but desaturated enough not to read as neon; sapphire is a deep, navy-leaning blue that reads as "serious infrastructure."</p>
+
+<div class="grid">
+
+  <div class="opt" style="--accent:#3a9b9b;--accent-dim:rgba(58,155,155,.12);--accent-bdr:rgba(58,155,155,.30);--accent-on:#fff">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#3a9b9b"></div>
+      <div><div class="opt-name">Steel teal</div><div class="opt-hex">#3a9b9b</div></div>
+      <span class="opt-tag">premium technical</span>
+    </div>
+    <p class="opt-desc">Desaturated cyan / teal. Sophisticated, "Stripe-of-tomorrow" energy. Reads quiet but distinctly not-indigo. Watch: still in the green-blue family — slight visual proximity to OK green but separation is solid.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <div class="opt" style="--accent:#2c6fb8;--accent-dim:rgba(44,111,184,.14);--accent-bdr:rgba(44,111,184,.32);--accent-on:#fff">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#2c6fb8"></div>
+      <div><div class="opt-name">Sapphire</div><div class="opt-hex">#2c6fb8</div></div>
+      <span class="opt-tag">serious infra</span>
+    </div>
+    <p class="opt-desc">Deep, slightly desaturated blue. Navy-leaning, not purple-leaning. Reads as confident infrastructure. Maximum separation from severity colors. Quiet but clearly intentional.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <div class="opt" style="--accent:#4ba8a8;--accent-dim:rgba(75,168,168,.12);--accent-bdr:rgba(75,168,168,.30);--accent-on:#0d0f14">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#4ba8a8"></div>
+      <div><div class="opt-name">Steel teal · brighter</div><div class="opt-hex">#4ba8a8</div></div>
+      <span class="opt-tag">teal, lifted</span>
+    </div>
+    <p class="opt-desc">Same family as steel teal, lifted for more presence on the very dark page. If steel teal feels too dim on `#080a0f`, this is the same character with more punch.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <div class="opt" style="--accent:#3578c9;--accent-dim:rgba(53,120,201,.14);--accent-bdr:rgba(53,120,201,.32);--accent-on:#fff">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#3578c9"></div>
+      <div><div class="opt-name">Sapphire · brighter</div><div class="opt-hex">#3578c9</div></div>
+      <span class="opt-tag">sapphire, lifted</span>
+    </div>
+    <p class="opt-desc">Brighter sapphire — keeps the navy character, more visible on dark. Still clearly distinct from indigo (less violet, more pure blue).</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="takeaway">
+  <span class="takeaway-label">Quick read</span>
+  <p>Both teal options pull toward green; both sapphire options stay firmly blue. Side-by-side, the question is: do you want the accent to feel <em>cool</em> (teal) or <em>deep</em> (sapphire)?</p>
+  <p>If you want maximum distance from the current indigo, <strong>steel teal <code>#3a9b9b</code></strong> is the most different choice while still reading subtle. If you want subtlety with the safest seat at the table, <strong>sapphire <code>#2c6fb8</code></strong>.</p>
+  <p>Pick one and I'll roll it through tokens, preview cards, and the UI kit. Nothing committed yet.</p>
+</div>
+
+</body>
+</html>

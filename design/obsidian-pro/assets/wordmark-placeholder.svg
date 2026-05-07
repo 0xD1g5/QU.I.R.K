@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="28" viewBox="0 0 120 28">
+  <rect x="0" y="0" width="28" height="28" rx="6" fill="#6675f7"></rect>
+  <text x="14" y="19" text-anchor="middle" font-family="-apple-system, system-ui, Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#ffffff">OP</text>
+  <text x="38" y="19" font-family="-apple-system, system-ui, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#f0f2f8">Obsidian Pro</text>
+</svg>

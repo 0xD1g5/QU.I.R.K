@@ -1,0 +1,44 @@
+/* Card-base styles for Design System tab preview cards.
+   Each preview HTML is intended to render at ~700px wide.
+   We embed tokens here so cards are self-contained. */
+:root {
+  --ds-bg-page:#080a0f; --ds-bg-base:#0d0f14; --ds-bg-surface:#161921; --ds-bg-elevated:#1e2129;
+  --ds-border:#252d3e; --ds-border-subtle:rgba(37,45,62,.45);
+  --ds-text:#f0f2f8; --ds-text-muted:#9aa3ba; --ds-text-faint:#a4b6de;
+  --ds-accent:#4ba8a8; --ds-accent-dim:rgba(75,168,168,.12); --ds-accent-bdr:rgba(75,168,168,.28); --ds-accent-on:#fff;
+  --ds-critical:#e05555; --ds-critical-dim:rgba(224,85,85,.10); --ds-critical-bdr:rgba(224,85,85,.28);
+  --ds-high:#d4893a; --ds-high-dim:rgba(212,137,58,.10); --ds-high-bdr:rgba(212,137,58,.28);
+  --ds-ok:#3fa876; --ds-ok-dim:rgba(63,168,118,.10); --ds-ok-bdr:rgba(63,168,118,.28);
+  --ds-medium:#8892a4; --ds-medium-dim:rgba(136,146,164,.08); --ds-medium-bdr:rgba(136,146,164,.22);
+  --ds-info:#4ba8a8;
+  --ds-font-body:-apple-system,'Segoe UI',system-ui,sans-serif;
+  --ds-font-mono:'JetBrains Mono','Fira Code','SF Mono',monospace;
+  --ds-tracking:.08em;
+  --ds-s1:4px;--ds-s2:8px;--ds-s3:12px;--ds-s4:16px;--ds-s5:20px;--ds-s6:24px;--ds-s8:32px;
+  --ds-r-sm:4px;--ds-r-md:6px;--ds-r-lg:10px;--ds-r-pill:100px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--ds-bg-page);color:var(--ds-text);font-family:var(--ds-font-body);min-height:100vh}
+body{padding:var(--ds-s5)}
+.card{display:flex;flex-direction:column;gap:var(--ds-s3)}
+.swatch-row{display:flex;gap:var(--ds-s2);flex-wrap:wrap}
+.swatch{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.swatch-box{width:64px;height:64px;border-radius:var(--ds-r-md);border:1px solid var(--ds-border-subtle)}
+.swatch-name{font-size:9px;color:var(--ds-text-faint);font-family:var(--ds-font-mono);letter-spacing:.04em}
+.swatch-hex{font-size:9px;color:var(--ds-text-muted);font-family:var(--ds-font-mono)}
+.label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ds-text-muted);font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:var(--ds-r-pill);font-weight:500}
+.badge .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.badge--critical{background:var(--ds-critical-dim);color:var(--ds-critical)}.badge--critical .dot{background:var(--ds-critical)}
+.badge--high{background:var(--ds-high-dim);color:var(--ds-high)}.badge--high .dot{background:var(--ds-high)}
+.badge--ok{background:var(--ds-ok-dim);color:var(--ds-ok)}.badge--ok .dot{background:var(--ds-ok)}
+.badge--medium{background:var(--ds-medium-dim);color:var(--ds-medium)}.badge--medium .dot{background:var(--ds-medium)}
+.badge--info{background:var(--ds-accent-dim);color:var(--ds-info)}.badge--info .dot{background:var(--ds-info)}
+.badge--accent{background:var(--ds-accent-dim);color:var(--ds-accent);border:1px solid var(--ds-accent-bdr)}
+.btn{display:inline-flex;align-items:center;gap:var(--ds-s2);font-size:12px;font-family:var(--ds-font-body);padding:7px 16px;border-radius:var(--ds-r-md);border:1px solid transparent;cursor:pointer;font-weight:500;line-height:1.4}
+.btn--primary{background:var(--ds-accent);color:var(--ds-accent-on,#fff)}
+.btn--secondary{background:transparent;color:var(--ds-text);border-color:var(--ds-border)}
+.btn--danger{background:var(--ds-critical-dim);color:var(--ds-critical);border-color:var(--ds-critical-bdr)}
+.btn--ghost{background:transparent;color:var(--ds-text-muted)}
+.btn--sm{font-size:11px;padding:4px 12px}
+.btn--lg{font-size:13px;padding:9px 20px}

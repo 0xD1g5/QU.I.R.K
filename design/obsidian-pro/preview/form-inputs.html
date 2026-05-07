@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css"></head><body>
+<div class="card">
+  <span class="label">Form inputs · labels are uppercase + tracked</span>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label class="label">Hostname</label>
+      <input type="text" placeholder="e.g. SRV-DC01" style="background:#161921;border:1px solid #252d3e;border-radius:6px;color:#f0f2f8;font-size:13px;padding:7px 12px;outline:none;font-family:inherit">
+      <span style="font-size:11px;color:#4a5568">Enter the target hostname or IP</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label class="label">CVE ID</label>
+      <input type="text" value="CVE-2024-INVALID" style="background:#161921;border:1px solid #e05555;border-radius:6px;color:#f0f2f8;font-size:13px;padding:7px 12px;outline:none;font-family:inherit">
+      <span style="font-size:11px;color:#e05555">Invalid CVE format</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label class="label">Severity Filter</label>
+      <select style="background:#161921;border:1px solid #4ba8a8;border-radius:6px;color:#f0f2f8;font-size:13px;padding:7px 12px;outline:none;font-family:inherit"><option>All severities</option></select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label class="label">Search</label>
+      <input type="text" placeholder="Search endpoints…" style="background:#161921;border:1px solid #252d3e;border-radius:6px;color:#f0f2f8;font-size:13px;padding:7px 12px 7px 28px;outline:none;font-family:inherit">
+    </div>
+  </div>
+</div>
+</body></html>

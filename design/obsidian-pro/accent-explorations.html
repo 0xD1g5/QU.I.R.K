@@ -1,0 +1,181 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Accent options</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#080a0f;color:#f0f2f8;font-family:var(--ds-font-body);padding:32px;min-height:100vh}
+  h1{font-size:22px;font-weight:700;margin-bottom:6px}
+  .sub{font-size:13px;color:#9aa3ba;margin-bottom:32px;max-width:720px;line-height:1.55}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+  @media(max-width:1100px){.grid{grid-template-columns:1fr}}
+
+  .opt{background:#0d0f14;border:1px solid #252d3e;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .opt.current{border-color:rgba(102,117,247,.5);box-shadow:inset 0 0 0 1px rgba(102,117,247,.15)}
+  .opt-head{display:flex;align-items:center;gap:12px}
+  .opt-swatch{width:40px;height:40px;border-radius:8px;flex-shrink:0;border:1px solid rgba(255,255,255,.06)}
+  .opt-name{font-size:15px;font-weight:600;line-height:1.1}
+  .opt-hex{font-family:var(--ds-font-mono);font-size:11px;color:#9aa3ba;margin-top:3px;letter-spacing:.02em}
+  .opt-tag{font-family:var(--ds-font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);border:1px solid var(--accent-bdr);padding:3px 8px;border-radius:100px;margin-left:auto}
+  .opt-desc{font-size:12px;color:#9aa3ba;line-height:1.55;margin-top:-2px}
+
+  /* mini-app demo */
+  .demo{background:#161921;border:1px solid #252d3e;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .demo-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:7px 14px;border-radius:6px;border:1px solid transparent;font-weight:500;font-family:inherit;cursor:pointer}
+  .btn--primary{background:var(--accent);color:#fff}
+  .btn--secondary{background:transparent;color:#f0f2f8;border-color:#252d3e}
+  .btn--ghost{background:transparent;color:#9aa3ba}
+  .input{background:#0d0f14;border:1px solid var(--accent);border-radius:6px;color:#f0f2f8;font-size:13px;padding:7px 12px;font-family:inherit;outline:none;width:200px}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:100px;font-weight:500}
+  .badge .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .b-acc{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-bdr)}
+  .b-crit{background:rgba(224,85,85,.10);color:#e05555}
+  .b-crit .dot{background:#e05555}
+  .b-high{background:rgba(212,137,58,.10);color:#d4893a}
+  .b-high .dot{background:#d4893a}
+  .b-ok{background:rgba(63,168,118,.10);color:#3fa876}
+  .b-ok .dot{background:#3fa876}
+  .b-med{background:rgba(136,146,164,.08);color:#9aa3ba}
+  .b-med .dot{background:#9aa3ba}
+
+  .stat{display:flex;align-items:flex-end;gap:14px}
+  .stat-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9aa3ba;display:block;margin-bottom:3px}
+  .metric{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;line-height:1;color:var(--accent);font-feature-settings:'tnum' 1}
+  .bar{height:6px;width:120px;background:#1e2129;border-radius:100px;overflow:hidden;margin-bottom:6px}
+  .bar-fill{height:100%;width:72%;background:var(--accent);border-radius:100px}
+
+  /* nav strip */
+  .nav{display:flex;gap:4px;background:#0a0c10;border:1px solid #252d3e;border-radius:8px;padding:6px}
+  .nav-item{padding:6px 12px;border-radius:6px;font-size:12px;color:#9aa3ba;display:flex;align-items:center;gap:6px}
+  .nav-item.on{background:#151b28;color:var(--accent)}
+  .nav-item .pip{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+  .takeaway{margin-top:32px;padding:18px 20px;background:#0d0f14;border:1px solid #252d3e;border-radius:10px;display:flex;flex-direction:column;gap:8px;max-width:1100px}
+  .takeaway-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9aa3ba;font-family:var(--ds-font-mono)}
+  .takeaway p{font-size:13px;line-height:1.6;color:#f0f2f8}
+  .takeaway code{font-family:var(--ds-font-mono);font-size:12px;color:#a4b6de;background:#161921;padding:1px 6px;border-radius:4px;border:1px solid #252d3e}
+</style>
+</head>
+<body>
+
+<h1>Accent options · same severity row, different accent</h1>
+<p class="sub">Each card runs the same micro-app — primary button, focused input, active nav, hero metric — through a different accent. Severity colors are held constant. The job is: which accent reads <em>distinctly</em>, doesn't fight the severity row, and pulls the 0xD1g5 brand into the product.</p>
+
+<div class="grid">
+
+  <!-- 1. CURRENT INDIGO -->
+  <div class="opt current" style="--accent:#6675f7;--accent-dim:rgba(102,117,247,.10);--accent-bdr:rgba(102,117,247,.25)">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#6675f7"></div>
+      <div><div class="opt-name">Indigo · current</div><div class="opt-hex">#6675f7</div></div>
+      <span class="opt-tag">v1.2 baseline</span>
+    </div>
+    <p class="opt-desc">Safe, professional, exactly what every security vendor uses. The "you can't get fired for picking this" choice. Doesn't reference the brand mark at all.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <!-- 2. LOGO CYAN -->
+  <div class="opt" style="--accent:#00e5cc;--accent-dim:rgba(0,229,204,.12);--accent-bdr:rgba(0,229,204,.30)">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#00e5cc"></div>
+      <div><div class="opt-name">Logo cyan · brand-aligned</div><div class="opt-hex">#00e5cc</div></div>
+      <span class="opt-tag">distinct</span>
+    </div>
+    <p class="opt-desc">Pulled directly from the 0xD1g5 mark. Most distinctive option — feels electric, technical, hacker-adjacent. Watch: cyan can read close to the OK green when both are on screen.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary" style="color:#0d0f14">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <!-- 3. ELECTRIC VIOLET -->
+  <div class="opt" style="--accent:#9b6bff;--accent-dim:rgba(155,107,255,.12);--accent-bdr:rgba(155,107,255,.28)">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#9b6bff"></div>
+      <div><div class="opt-name">Electric violet</div><div class="opt-hex">#9b6bff</div></div>
+      <span class="opt-tag">confident</span>
+    </div>
+    <p class="opt-desc">Same family as the current indigo, but pushed harder toward purple. More memorable, still safe with severity colors. Pairs especially well with the orange `--ds-high`.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <!-- 4. COBALT -->
+  <div class="opt" style="--accent:#3b82f6;--accent-dim:rgba(59,130,246,.12);--accent-bdr:rgba(59,130,246,.30)">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#3b82f6"></div>
+      <div><div class="opt-name">Cobalt</div><div class="opt-hex">#3b82f6</div></div>
+      <span class="opt-tag">technical</span>
+    </div>
+    <p class="opt-desc">Linear/Vercel territory. Crisp, modern, less "vendor". Reads younger and more developer-tool than security-vendor. Cleanly separates from severity reds, oranges, greens.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <!-- 5. LOGO PINK -->
+  <div class="opt" style="--accent:#ff3366;--accent-dim:rgba(255,51,102,.12);--accent-bdr:rgba(255,51,102,.30)">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#ff3366"></div>
+      <div><div class="opt-name">Logo pink · maximum brand</div><div class="opt-hex">#ff3366</div></div>
+      <span class="opt-tag">risk</span>
+    </div>
+    <p class="opt-desc">Maximum brand alignment. The "0x" eyebrow on the mark is this exact color. Risk: it's perilously close to the critical red — your "live" chip and your "critical" chip start arguing.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+  <!-- 6. LIFTED INDIGO -->
+  <div class="opt" style="--accent:#7c8aff;--accent-dim:rgba(124,138,255,.12);--accent-bdr:rgba(124,138,255,.28)">
+    <div class="opt-head">
+      <div class="opt-swatch" style="background:#7c8aff"></div>
+      <div><div class="opt-name">Lifted indigo</div><div class="opt-hex">#7c8aff</div></div>
+      <span class="opt-tag">if you love indigo</span>
+    </div>
+    <p class="opt-desc">If you want to stay indigo but want it more present on dark surfaces. A gentle lift — same family, more confident, slightly more readable on `#080a0f`.</p>
+    <div class="demo">
+      <div class="nav"><div class="nav-item on"><span class="pip"></span>Dashboard</div><div class="nav-item">Detections</div><div class="nav-item">Assets</div></div>
+      <div class="demo-row"><button class="btn btn--primary">Investigate</button><button class="btn btn--secondary">Assign</button><button class="btn btn--ghost">Dismiss</button></div>
+      <input class="input" value="SRV-DC01" />
+      <div class="demo-row"><span class="badge b-crit"><span class="dot"></span>critical</span><span class="badge b-high"><span class="dot"></span>high</span><span class="badge b-ok"><span class="dot"></span>ok</span><span class="badge b-med"><span class="dot"></span>medium</span><span class="badge b-acc">● live</span></div>
+      <div class="stat"><div><span class="stat-label">Coverage</span><span class="metric">98.2<span style="font-size:14px;font-weight:400;color:#9aa3ba">%</span></span></div><div><div class="bar"><div class="bar-fill"></div></div><span class="stat-label" style="margin:0">target 85</span></div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="takeaway">
+  <span class="takeaway-label">My recommendation</span>
+  <p>Your current <code>#6675f7</code> is professional but generic. The decision is really about <em>how brand-aligned</em> you want the product to feel. Three viable paths:</p>
+  <p>① Keep <strong>indigo</strong> (current or lifted). Wins on safety, loses on distinction. Treat the 0xD1g5 mark as separate brand surface.<br>
+  ② Move to <strong>logo cyan</strong> <code>#00e5cc</code>. Best brand integration. Cyan + indigo + cyan-accent is the actual 0xD1g5 visual language. Watch the green proximity in the OK chip — solvable with a slightly cooler green.<br>
+  ③ Pick <strong>electric violet</strong> <code>#9b6bff</code>. Compromise: keeps the indigo family but pushes hard enough to feel intentional rather than default.</p>
+  <p>I'd reach for <strong>option ② (logo cyan)</strong> — the brand mark is too good to wall off. If you want to test it, say the word and I'll roll cyan through the full UI kit and re-render the preview cards so you can see the whole system together, not just isolated swatches.</p>
+</div>
+
+</body>
+</html>
