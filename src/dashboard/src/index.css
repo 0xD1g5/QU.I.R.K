@@ -1,87 +1,151 @@
+/* ── JetBrains Mono — Obsidian Pro brand typeface for data/numerics ── */
+/* Variable font (full weight axis 100–800, preferred) */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono[wght].ttf') format('truetype-variations'),
+       url('/fonts/JetBrainsMono[wght].ttf') format('truetype');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-Italic[wght].ttf') format('truetype-variations'),
+       url('/fonts/JetBrainsMono-Italic[wght].ttf') format('truetype');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 95%;
+    /* ── Backgrounds (Obsidian Pro dark ramp) ── */
+    --background: 220 29% 5%;          /* #080a0f page shell */
+    --foreground: 220 43% 96%;         /* #f0f2f8 primary text */
 
-    --card: 240 6% 10%;
-    --card-foreground: 0 0% 95%;
+    --card: 220 21% 7%;                /* #0d0f14 app/card bg */
+    --card-foreground: 220 43% 96%;
 
-    --popover: 240 6% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 18% 11%;            /* #161921 raised/surface */
+    --popover-foreground: 220 43% 96%;
 
-    --primary: 210 100% 56%;
+    /* ── Accent: Obsidian Pro teal — interactive elements only ── */
+    --primary: 180 37% 47%;            /* #4ba8a8 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 6% 15%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 220 18% 11%;          /* #161921 surface bg */
+    --secondary-foreground: 220 43% 96%;
 
-    --muted: 240 6% 10%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 220 21% 7%;               /* #0d0f14 */
+    --muted-foreground: 220 16% 50%;   /* #6e7a95 labels */
 
-    --accent: 210 100% 56%;
+    --accent: 180 37% 47%;             /* #4ba8a8 teal — matches primary */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 68% 60%;          /* #e05555 critical */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 17%;
-    --input: 240 6% 17%;
-    --ring: 210 100% 56%;
+    --border: 220 24% 19%;             /* #252d3e */
+    --input: 220 24% 19%;
+    --ring: 180 37% 47%;               /* teal focus ring */
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;                /* 6px — Obsidian Pro btn/input radius */
 
-    /* Security-domain semantic tokens (dark default) */
-    --quantum-safe: 142 71% 45%;       /* Green 500 */
-    --quantum-at-risk: 38 92% 50%;     /* Amber 500 */
-    --quantum-vulnerable: 0 72% 51%;   /* Red 600 */
-    --severity-high: 24 95% 53%;       /* Orange 500 */
-    --severity-medium: 38 92% 50%;     /* Amber 500 */
-    --severity-low: 213 94% 68%;       /* Blue 400 */
-    --severity-info: 240 5% 46%;       /* Zinc 500 */
+    /* ── Obsidian Pro design tokens (native --ds-* for component use) ── */
+    --ds-bg-page:         #080a0f;
+    --ds-bg-base:         #0d0f14;
+    --ds-bg-surface:      #161921;
+    --ds-bg-elevated:     #1e2129;
+    --ds-border:          #252d3e;
+    --ds-border-subtle:   rgba(37, 45, 62, 0.45);
+    --ds-text:            #f0f2f8;
+    --ds-text-muted:      #6e7a95;
+    --ds-text-faint:      #4a5568;
+    --ds-accent:          #4ba8a8;
+    --ds-accent-dim:      rgba(75, 168, 168, 0.12);
+    --ds-accent-bdr:      rgba(75, 168, 168, 0.28);
+    --ds-critical:        #e05555;
+    --ds-critical-dim:    rgba(224, 85, 85, 0.10);
+    --ds-critical-bdr:    rgba(224, 85, 85, 0.28);
+    --ds-high:            #d4893a;
+    --ds-high-dim:        rgba(212, 137, 58, 0.10);
+    --ds-high-bdr:        rgba(212, 137, 58, 0.28);
+    --ds-ok:              #3fa876;
+    --ds-ok-dim:          rgba(63, 168, 118, 0.10);
+    --ds-ok-bdr:          rgba(63, 168, 118, 0.28);
+    --ds-medium:          #8892a4;
+    --ds-medium-dim:      rgba(136, 146, 164, 0.08);
+    --ds-medium-bdr:      rgba(136, 146, 164, 0.22);
+    --ds-font-mono:       'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace;
+
+    /* ── Security-domain severity tokens (aligned to Obsidian Pro) ── */
+    --quantum-safe: 152 47% 45%;       /* #3fa876 ok/safe */
+    --quantum-at-risk: 28 64% 52%;     /* #d4893a high risk */
+    --quantum-vulnerable: 0 68% 60%;   /* #e05555 critical */
+    --severity-high: 28 64% 52%;       /* #d4893a */
+    --severity-medium: 220 16% 50%;    /* #8892a4 neutral */
+    --severity-low: 180 37% 47%;       /* #4ba8a8 teal info */
+    --severity-info: 220 16% 50%;      /* #8892a4 */
   }
 
-  /* Light mode override — full parallel token set (not stubbed) */
+  /* Light mode override */
   .light {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 8%;
+    --background: 220 43% 98%;         /* #f6f7fb */
+    --foreground: 220 22% 12%;         /* #11141c */
 
-    --card: 0 0% 98%;
-    --card-foreground: 240 10% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 22% 12%;
 
-    --popover: 0 0% 98%;
-    --popover-foreground: 240 10% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 22% 12%;
 
-    --primary: 210 100% 56%;
+    --primary: 180 45% 41%;            /* #4ba8a8 slightly deepened for light */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 94%;
-    --secondary-foreground: 240 10% 8%;
+    --secondary: 220 20% 94%;          /* #f1f3f9 surface */
+    --secondary-foreground: 220 22% 12%;
 
-    --muted: 240 5% 94%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 220 20% 94%;
+    --muted-foreground: 220 17% 40%;   /* #525e78 */
 
-    --accent: 210 100% 56%;           /* Sky 500 — same as dark mode */
+    --accent: 180 45% 41%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 45%;
+    --destructive: 0 64% 47%;          /* #c83a3a */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5% 88%;
-    --input: 240 5% 88%;
-    --ring: 210 100% 56%;
+    --border: 220 16% 84%;             /* #d8dde8 */
+    --input: 220 16% 84%;
+    --ring: 180 45% 41%;
 
-    /* Security tokens — slightly adjusted for light background contrast */
-    --quantum-safe: 142 71% 38%;      /* slightly darker green for contrast */
-    --quantum-at-risk: 38 92% 44%;    /* slightly darker amber */
-    --quantum-vulnerable: 0 72% 45%; /* slightly darker red */
-    --severity-high: 24 95% 47%;
-    --severity-medium: 38 92% 44%;
-    --severity-low: 213 94% 55%;
-    --severity-info: 240 5% 38%;
+    /* ── Obsidian Pro light tokens ── */
+    --ds-bg-page:         #f6f7fb;
+    --ds-bg-base:         #ffffff;
+    --ds-bg-surface:      #f1f3f9;
+    --ds-bg-elevated:     #ffffff;
+    --ds-border:          #d8dde8;
+    --ds-border-subtle:   rgba(216, 221, 232, 0.6);
+    --ds-text:            #11141c;
+    --ds-text-muted:      #525e78;
+    --ds-text-faint:      #8a93a8;
+    --ds-accent:          #3a9696;
+    --ds-critical:        #c83a3a;
+    --ds-high:            #b46b1b;
+    --ds-ok:              #2c8a5d;
+    --ds-medium:          #6c7589;
+
+    /* Security tokens adjusted for light contrast */
+    --quantum-safe: 152 47% 36%;
+    --quantum-at-risk: 28 64% 40%;
+    --quantum-vulnerable: 0 64% 47%;
+    --severity-high: 28 64% 40%;
+    --severity-medium: 220 12% 43%;
+    --severity-low: 180 45% 41%;
+    --severity-info: 220 12% 43%;
   }
 }
 
@@ -92,4 +156,55 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── Obsidian Pro utility classes ── */
+
+/* Eyebrow labels: 10px ALL CAPS with 0.08em tracking — structural rhythm of the system */
+.label-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-muted, hsl(var(--muted-foreground)));
+}
+
+/* Monospace data values with tabular figures (non-negotiable for tables) */
+.font-data {
+  font-family: var(--ds-font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+}
+
+/* Stat metric — large bold mono number (stat cards) */
+.stat-metric {
+  font-family: var(--ds-font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-feature-settings: 'tnum' 1;
+  font-weight: 700;
+}
+
+/* Severity dim backgrounds for badges/chips */
+.severity-critical-chip {
+  background: var(--ds-critical-dim);
+  border: 1px solid var(--ds-critical-bdr);
+  color: var(--ds-critical);
+}
+.severity-high-chip {
+  background: var(--ds-high-dim);
+  border: 1px solid var(--ds-high-bdr);
+  color: var(--ds-high);
+}
+.severity-ok-chip {
+  background: var(--ds-ok-dim);
+  border: 1px solid var(--ds-ok-bdr);
+  color: var(--ds-ok);
+}
+.severity-medium-chip {
+  background: var(--ds-medium-dim);
+  border: 1px solid var(--ds-medium-bdr);
+  color: var(--ds-medium);
+}
+.severity-accent-chip {
+  background: var(--ds-accent-dim);
+  border: 1px solid var(--ds-accent-bdr);
+  color: var(--ds-accent);
 }
