@@ -35,9 +35,9 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 
 ### QRAMM Evidence Bridge
 
-- [ ] **QRAMM-12**: At QRAMM assessment session creation (`POST /api/qramm/sessions`), the evidence bridge auto-populates CVI dimension questions (~30 questions) by reading the latest scan's `CryptoEndpoint` rows via the SESSION_BRACKET scan-window pattern; `quirk/qramm/evidence_bridge.py` does NOT import `risk_engine` (circular import prevention)
-- [ ] **QRAMM-13**: Auto-populated answers are stored in `qramm_answers.suggested_answer` with `requires_confirmation: true`; `answer_value` remains `null` until a human confirms; only rows with a non-null `confirmed_at` timestamp contribute to the final maturity score
-- [ ] **QRAMM-14**: Auto-filled answers display an "Auto-filled from scan" badge in the assessment UI and remain fully editable; the badge is removed when the human modifies or confirms the answer
+- [x] **QRAMM-12**: At QRAMM assessment session creation (`POST /api/qramm/sessions`), the evidence bridge auto-populates CVI dimension questions (~30 questions) by reading the latest scan's `CryptoEndpoint` rows via the SESSION_BRACKET scan-window pattern; `quirk/qramm/evidence_bridge.py` does NOT import `risk_engine` (circular import prevention)
+- [x] **QRAMM-13**: Auto-populated answers are stored in `qramm_answers.suggested_answer` with `requires_confirmation: true`; `answer_value` remains `null` until a human confirms; only rows with a non-null `confirmed_at` timestamp contribute to the final maturity score
+- [x] **QRAMM-14**: Auto-filled answers display an "Auto-filled from scan" badge in the assessment UI and remain fully editable; the badge is removed when the human modifies or confirms the answer
 
 ### QRAMM Governance Artifacts
 
@@ -114,9 +114,9 @@ Populated by the roadmapper. Updated at each phase transition.
 | DEBT-02 | Phase 52 | Complete |
 | DEBT-03 | Phase 52 | Complete |
 | DEBT-04 | Phase 52 | Complete |
-| QRAMM-12 | Phase 53 | Pending |
-| QRAMM-13 | Phase 53 | Pending |
-| QRAMM-14 | Phase 53 | Pending |
+| QRAMM-12 | Phase 53 | Complete |
+| QRAMM-13 | Phase 53 | Complete |
+| QRAMM-14 | Phase 53 | Complete |
 | QRAMM-08 | Phase 54 | Pending |
 | QRAMM-09 | Phase 54 | Pending |
 | QRAMM-10 | Phase 54 | Pending |
