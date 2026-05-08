@@ -200,3 +200,5 @@ Files exist:
 Commits:
 - 42de342: Task 1 — ScorecardTab component + replace placeholder
 - cb50d9c: Task 2 — a11y route registration + fixture
+
+## Self-Check: PASSED
