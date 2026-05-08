@@ -249,6 +249,14 @@ def main():
         run_doctor()
         return
 
+    # --- qramm subcommand: intercept before scan argparse (Phase 55 QRAMM-07) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "qramm":
+        if len(_sys.argv) > 2 and _sys.argv[2] == "status":
+            from quirk.cli.qramm_cmd import run_qramm_status
+            run_qramm_status()
+            return
+        # Future: other `quirk qramm <action>` subcommands route here.
+
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
