@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v4.7
 milestone_name: Governance & Compliance Platform
 status: executing
-stopped_at: Phase 55 UI-SPEC approved
+stopped_at: Phase 55 Plan 03 complete (human verification approved, isUnscored bug fixed)
 last_updated: "2026-05-08T13:01:09.469Z"
 last_activity: 2026-05-08
 progress:
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 55 (qramm-compliance-mapping-view) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-08
 
@@ -81,6 +81,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [v4.7-D-06]: QRAMM-16 (PDF export) is the sole requirement in Phase 56 — it is not combined with Phase 55 to avoid a phase that conflates UI work (Phase 55) with print/export work (Phase 56) and to keep success criteria independently verifiable.
 - [v4.7-D-07]: QRAMM staleness metadata (QRAMM-05, QRAMM-06, QRAMM-07) assigned to Phase 55, not Phase 51 — staleness enforcement requires the compliance mapping view (Phase 55) to be meaningful; it mirrors the `quirk compliance status` pattern from v4.6 Phase 49.
 
+**Phase 55 Plan 03 decisions (2026-05-08):**
+
+- [55-D-01]: isUnscored derived from API rows, not ctx.scoreResult — ctx.scoreResult resets on page reload; API data is the source of truth for scored-state detection across browser sessions
+
 ### Pending Todos
 
 None at roadmap creation.
@@ -103,6 +107,6 @@ Items carried forward from v4.6 close (2026-05-05):
 
 ## Session Continuity
 
-Last session: 2026-05-08T13:01:09.466Z
-Stopped at: Phase 55 UI-SPEC approved
-Next action: `/gsd-plan-phase 51` — QRAMM Core Infrastructure
+Last session: 2026-05-08T14:00:00.000Z
+Stopped at: Phase 55 Plan 03 complete — Task 4 human verification approved
+Next action: Phase 55 Plan 04 (staleness CLI + tests) or next phase
