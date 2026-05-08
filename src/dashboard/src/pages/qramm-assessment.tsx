@@ -14,21 +14,8 @@ import {
   PRACTICE_AREA_NAMES,
 } from "@/lib/qramm-constants"
 import { PracticeAreaSection } from "@/components/qramm/PracticeAreaSection"
+import { ScorecardTab } from "@/components/qramm/ScorecardTab"
 import type { QuestionItem } from "@/types/api"
-
-// ── Scorecard placeholder (plan 05 will replace this) ─────────────────────────
-
-function ScorecardPlaceholder() {
-  return (
-    <Card>
-      <CardContent className="p-8 text-center">
-        <p className="text-muted-foreground text-sm">
-          Scorecard — to be implemented in plan 05.
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
 
 // ── Dimension tab inner component ─────────────────────────────────────────────
 
@@ -261,7 +248,7 @@ export function AssessmentPage() {
         ))}
 
         <TabsContent value="scorecard">
-          <ScorecardPlaceholder />
+          <ScorecardTab />
         </TabsContent>
       </Tabs>
     </div>
