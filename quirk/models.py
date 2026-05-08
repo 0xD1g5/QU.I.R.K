@@ -131,6 +131,7 @@ class QRAMMAnswer(Base):
     suggested_answer = Column(Integer, nullable=True)
     confirmed_at = Column(DateTime, nullable=True)
     evidence_source = Column(String(255), nullable=True)
+    evidence_note = Column(Text, nullable=True)   # Phase 54 — freeform consultant note per question
 
 
 class QRAMMProfile(Base):
