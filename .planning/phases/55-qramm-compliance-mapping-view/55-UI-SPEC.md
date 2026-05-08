@@ -1,10 +1,11 @@
 ---
 phase: 55
 slug: qramm-compliance-mapping-view
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york / zinc / css-variables
 created: 2026-05-08
+reviewed_at: 2026-05-08T00:00:00Z
 ---
 
 # Phase 55 — UI Design Contract
