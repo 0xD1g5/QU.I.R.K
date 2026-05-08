@@ -380,6 +380,22 @@ def delete_session(session_id: int, db: Session = Depends(get_db)) -> None:
     return None
 
 
+# ---------- Phase 54 Plan 04: question catalog endpoint ----------
+
+class QuestionItem(BaseModel):
+    question_number: int
+    dimension: str
+    practice_area: str
+    text: str
+    maturity_labels: List[str]
+
+
+@router.get("/qramm/questions", response_model=List[QuestionItem])
+def list_questions() -> List[QuestionItem]:
+    """Return the full 120-question QRAMM catalog (versioned constant from quirk.qramm.questions)."""
+    return [QuestionItem(**q) for q in QRAMM_QUESTIONS]
+
+
 # ---------- Phase 54 Plan 01: 4 new endpoints ----------
 
 @router.get("/qramm/sessions", response_model=List[SessionSummary])
