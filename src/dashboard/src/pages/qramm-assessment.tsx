@@ -1,0 +1,269 @@
+import { useState, useEffect, useContext, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { PageSpinner } from "@/components/PageSpinner"
+import { QRAMMContext, type AnswerState } from "@/context/QRAMMContext"
+import { useQRAMMSession } from "@/hooks/useQRAMMSession"
+import {
+  DIMENSIONS,
+  type Dimension,
+  DIMENSION_PRACTICE_AREAS,
+  PRACTICE_AREA_NAMES,
+} from "@/lib/qramm-constants"
+import { PracticeAreaSection } from "@/components/qramm/PracticeAreaSection"
+import type { QuestionItem } from "@/types/api"
+
+// ── Scorecard placeholder (plan 05 will replace this) ─────────────────────────
+
+function ScorecardPlaceholder() {
+  return (
+    <Card>
+      <CardContent className="p-8 text-center">
+        <p className="text-muted-foreground text-sm">
+          Scorecard — to be implemented in plan 05.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ── Dimension tab inner component ─────────────────────────────────────────────
+
+interface DimensionTabProps {
+  dimension: Dimension
+  questionsByArea: Map<string, QuestionItem[]>
+  answers: Map<number, AnswerState>
+  onAnswerChange: (qn: number, partial: Partial<AnswerState>) => void
+  onConfirm: (qn: number, pendingValue: number) => void
+}
+
+function DimensionTab({
+  dimension,
+  questionsByArea,
+  answers,
+  onAnswerChange,
+  onConfirm,
+}: DimensionTabProps) {
+  const practiceAreas = DIMENSION_PRACTICE_AREAS[dimension]
+
+  // Count answered questions across all practice areas for this dimension
+  const allQuestions = practiceAreas.flatMap(
+    (pa) => questionsByArea.get(pa) ?? []
+  )
+  const answered = allQuestions.filter(
+    (q) => (answers.get(q.question_number)?.answer_value ?? null) != null
+  ).length
+  const total = allQuestions.length
+
+  return (
+    <div className="space-y-6 pt-4">
+      {/* Per-dimension progress */}
+      <div className="space-y-1.5">
+        <Progress
+          value={total > 0 ? (answered / total) * 100 : 0}
+          aria-label={`${answered} of ${total} questions answered`}
+        />
+        <p className="text-xs text-muted-foreground">
+          {answered} of {total} answered
+        </p>
+      </div>
+
+      {/* Practice area sections */}
+      {practiceAreas.map((pa) => {
+        const questions = questionsByArea.get(pa) ?? []
+        return (
+          <PracticeAreaSection
+            key={pa}
+            practiceArea={pa}
+            practiceAreaName={PRACTICE_AREA_NAMES[pa] ?? pa}
+            questions={questions}
+            answers={answers}
+            onAnswerChange={onAnswerChange}
+            onConfirm={onConfirm}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+// ── AssessmentPage ─────────────────────────────────────────────────────────────
+
+export function AssessmentPage() {
+  const ctx = useContext(QRAMMContext)
+  const navigate = useNavigate()
+  const { session, loading: sessionLoading } = useQRAMMSession()
+
+  const [questions, setQuestions] = useState<QuestionItem[]>([])
+  const [questionsLoading, setQuestionsLoading] = useState(true)
+  const [showNewAssessmentConfirm, setShowNewAssessmentConfirm] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+
+  // Fetch question catalog on mount (cancellation guard pattern)
+  useEffect(() => {
+    let cancelled = false
+    setQuestionsLoading(true)
+
+    fetch("/api/qramm/questions")
+      .then((r) => {
+        if (!r.ok) throw new Error(`/api/qramm/questions: ${r.status}`)
+        return r.json() as Promise<QuestionItem[]>
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setQuestions(data)
+          setQuestionsLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setQuestionsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Group questions by practice_area — recompute only when catalog changes
+  const questionsByArea = useMemo(() => {
+    const map = new Map<string, QuestionItem[]>()
+    for (const q of questions) {
+      const bucket = map.get(q.practice_area) ?? []
+      bucket.push(q)
+      map.set(q.practice_area, bucket)
+    }
+    // Sort each bucket by question_number ascending
+    for (const [pa, bucket] of map) {
+      map.set(
+        pa,
+        bucket.sort((a, b) => a.question_number - b.question_number)
+      )
+    }
+    return map
+  }, [questions])
+
+  // Answer change handler — delegates to QRAMMProvider's debounced persister
+  function handleAnswerChange(qn: number, partial: Partial<AnswerState>) {
+    ctx.setAnswer(qn, partial)
+  }
+
+  // Confirm handler for auto-filled questions — sets answer_value + confirmed_at optimistically
+  // so the badge disappears immediately without waiting for a server round-trip
+  function handleConfirm(qn: number, pendingValue: number) {
+    ctx.setAnswer(qn, {
+      answer_value: pendingValue as 1 | 2 | 3 | 4,
+      confirmed_at: new Date().toISOString(),
+    })
+  }
+
+  // New Assessment: archive current session, reset context, redirect to /qramm
+  async function handleNewAssessment() {
+    if (!ctx.sessionId) return
+    setArchiving(true)
+    try {
+      await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
+    } finally {
+      ctx.setSessionId(null)
+      ctx.resetAnswers(new Map())
+      ctx.setProfile(null)
+      ctx.setScoreResult(null)
+      setArchiving(false)
+      navigate("/qramm")
+    }
+  }
+
+  // Loading state
+  if (sessionLoading || questionsLoading) {
+    return <PageSpinner ariaLabel="Loading QRAMM assessment" />
+  }
+
+  // Empty state — no session exists
+  if (!session) {
+    return (
+      <Card className="max-w-lg mx-auto mt-12">
+        <CardHeader>
+          <CardTitle>No Assessment Started</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Complete the Org Profile to begin your QRAMM assessment.
+          </p>
+          <Button onClick={() => navigate("/qramm")}>Begin Org Profile</Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">QRAMM Assessment</h1>
+        <div className="space-y-2 text-right">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowNewAssessmentConfirm((v) => !v)}
+          >
+            New Assessment
+          </Button>
+          {showNewAssessmentConfirm && (
+            <div className="rounded-md border bg-card p-4 text-left space-y-3 shadow-sm">
+              <p className="text-sm font-medium">Start a New Assessment?</p>
+              <p className="text-xs text-muted-foreground">
+                Starting a new assessment will archive your current progress. This cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewAssessmentConfirm(false)}
+                >
+                  Keep Current Assessment
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={archiving}
+                  onClick={handleNewAssessment}
+                >
+                  {archiving ? "Archiving…" : "Confirm New Assessment"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 5-tab assessment layout */}
+      <Tabs defaultValue="cvi">
+        <TabsList>
+          <TabsTrigger value="cvi">CVI</TabsTrigger>
+          <TabsTrigger value="sgrm">SGRM</TabsTrigger>
+          <TabsTrigger value="dpe">DPE</TabsTrigger>
+          <TabsTrigger value="itr">ITR</TabsTrigger>
+          <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
+        </TabsList>
+
+        {DIMENSIONS.map((dim) => (
+          <TabsContent key={dim} value={dim.toLowerCase()}>
+            <DimensionTab
+              dimension={dim}
+              questionsByArea={questionsByArea}
+              answers={ctx.answers}
+              onAnswerChange={handleAnswerChange}
+              onConfirm={handleConfirm}
+            />
+          </TabsContent>
+        ))}
+
+        <TabsContent value="scorecard">
+          <ScorecardPlaceholder />
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
