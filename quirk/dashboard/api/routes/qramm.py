@@ -81,7 +81,8 @@ class SaveAnswersResponse(BaseModel):
 
 
 class ScoreRequest(BaseModel):
-    profile_multiplier: Optional[float] = Field(default=None, ge=0.5, le=2.0)
+    # Range matches the spec and _compute_multiplier clamp (RESEARCH A4: 0.8–1.5).
+    profile_multiplier: Optional[float] = Field(default=None, ge=0.8, le=1.5)
 
 
 # ---------- Phase 54 Plan 01: new Pydantic models ----------
@@ -321,6 +322,11 @@ def score_session(
         .filter(QRAMMAnswer.session_id == session_id, QRAMMAnswer.answer_value.isnot(None))
         .all()
     )
+    if not rows:
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot score a session with no answered questions",
+        )
     practice_buckets: Dict[str, List[int]] = {}
     practice_to_dim: Dict[str, str] = {}
     for r in rows:
@@ -439,9 +445,32 @@ def create_profile(
     payload: CreateProfileRequest,
     db: Session = Depends(get_db),
 ) -> CreateProfileResponse:
-    """Gap 2 — QRAMM-09: create org profile, compute multiplier, link to session."""
+    """Gap 2 — QRAMM-09: upsert org profile, compute multiplier, link to session.
+
+    Uses upsert semantics: if a profile row for this session already exists it
+    is updated in-place rather than creating a second orphaned row.
+    """
     session = _get_session_or_404(db, payload.session_id)
     multiplier = _compute_multiplier(payload.industry, payload.data_sensitivity)
+    existing = (
+        db.query(QRAMMProfile)
+        .filter(QRAMMProfile.session_id == payload.session_id)
+        .one_or_none()
+    )
+    if existing:
+        existing.industry = payload.industry
+        existing.org_size = payload.org_size
+        existing.geographic_scope = payload.geographic_scope
+        existing.data_sensitivity = payload.data_sensitivity
+        existing.regulatory_obligations = json.dumps(payload.regulatory_obligations)
+        existing.multiplier = multiplier
+        db.commit()
+        db.refresh(existing)
+        return CreateProfileResponse(
+            profile_id=existing.id,
+            session_id=payload.session_id,
+            multiplier=multiplier,
+        )
     profile = QRAMMProfile(
         session_id=payload.session_id,
         industry=payload.industry,

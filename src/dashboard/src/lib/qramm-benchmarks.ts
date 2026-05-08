@@ -22,5 +22,7 @@ export const INDUSTRY_BENCHMARKS: Record<string, DimensionBenchmarks> = {
 
 export function getBenchmarks(industry: string | null | undefined): DimensionBenchmarks | null {
   if (!industry) return null
-  return INDUSTRY_BENCHMARKS[industry] ?? INDUSTRY_BENCHMARKS.other
+  // Return null for unknown industry strings so the scorecard renders "—"
+  // in the benchmark column rather than silently showing the generic floor value.
+  return INDUSTRY_BENCHMARKS[industry] ?? null
 }
