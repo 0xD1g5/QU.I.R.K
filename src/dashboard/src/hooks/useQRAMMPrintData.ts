@@ -39,6 +39,7 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
         const scored = list.find((s) => s.status === "scored")
         if (!scored) {
           // No scored session — resolve with null payloads (D-04/D-05). NOT an error.
+          // Returning here is safe: the finally block always runs and clears loading.
           if (!cancelled) {
             setScoreResult(null)
             setComplianceRows(null)
