@@ -4,29 +4,30 @@ reviewed: 2026-05-07T00:00:00Z
 depth: standard
 files_reviewed: 23
 files_reviewed_list:
-  - tests/test_qramm_answer.py
-  - quirk/models.py
-  - quirk/db.py
   - quirk/dashboard/api/routes/qramm.py
-  - tests/test_qramm_router.py
-  - src/dashboard/src/components/ui/radio-group.tsx
+  - quirk/db.py
+  - quirk/models.py
+  - src/dashboard/src/App.tsx
+  - src/dashboard/src/components/qramm/PracticeAreaSection.tsx
+  - src/dashboard/src/components/qramm/QuestionCard.tsx
+  - src/dashboard/src/components/qramm/ScorecardTab.tsx
+  - src/dashboard/src/components/sidebar.tsx
   - src/dashboard/src/components/ui/collapsible.tsx
   - src/dashboard/src/components/ui/label.tsx
+  - src/dashboard/src/components/ui/radio-group.tsx
   - src/dashboard/src/context/QRAMMContext.tsx
   - src/dashboard/src/context/QRAMMProvider.tsx
   - src/dashboard/src/hooks/useQRAMMSession.ts
   - src/dashboard/src/lib/qramm-benchmarks.ts
   - src/dashboard/src/lib/qramm-constants.ts
-  - src/dashboard/src/types/api.ts
-  - src/dashboard/src/pages/qramm-profile.tsx
-  - src/dashboard/src/App.tsx
-  - src/dashboard/src/components/sidebar.tsx
-  - src/dashboard/src/components/qramm/QuestionCard.tsx
-  - src/dashboard/src/components/qramm/PracticeAreaSection.tsx
   - src/dashboard/src/pages/qramm-assessment.tsx
-  - src/dashboard/src/components/qramm/ScorecardTab.tsx
-  - src/dashboard/vite.config.ts
+  - src/dashboard/src/pages/qramm-profile.tsx
+  - src/dashboard/src/types/api.ts
+  - src/dashboard/tests/a11y/fixture-qramm.json
   - src/dashboard/tests/a11y/routes.json
+  - src/dashboard/vite.config.ts
+  - tests/test_qramm_answer.py
+  - tests/test_qramm_router.py
 findings:
   critical: 4
   warning: 7
@@ -44,23 +45,23 @@ status: issues_found
 
 ## Summary
 
-This phase delivers the QRAMM assessment UI: org profile wizard, 4-dimension question tabs, per-question radio/evidence card, and a scorecard with radar chart. The backend gains four new API endpoints (list sessions, create profile, draft answer upsert, read answers) plus a migration for `evidence_note` on `qramm_answers`.
+This phase delivers the QRAMM assessment UI: org profile wizard, four dimension question tabs (CVI/SGRM/DPE/ITR), per-question radio/evidence card, and a scorecard with radar chart. The backend gains four new API endpoints (list sessions, create profile, draft answer upsert, read answers) plus the Phase 54 `evidence_note` migration on `qramm_answers`. The test suite covers the new endpoints well.
 
-The implementation is broadly sound in structure. However several correctness issues were found — two of which can cause silent data loss or incorrect scoring, and two of which allow the application to reach an unrecoverable state. The debounce logic in `QRAMMProvider` has a closure bug that silently drops in-flight answer saves. The scorecard completion-percentage computation hard-codes question-number ranges that will break the moment the question catalog layout deviates from 1–30/31–60/61–90/91–120. The `draft_answer` endpoint allows upserts to silently clobber `evidence_note` with `None` when only `answer_value` is being patched. And the `list_sessions` endpoint issues N+1 queries (one `COUNT` per session row) with no limit or pagination, which degrades to a full-table scan as history grows and also exposes all historical assessment data to any unauthenticated caller on the same network.
+Four critical defects were found. The most severe is a data-loss bug in `QRAMMProvider`: the single shared debounce timer means that rapid edits across different questions silently drop all but the last save — a scenario that occurs under normal usage. The scorecard completion computation hard-codes question-number arithmetic that will silently mismatch if the question catalog layout changes. The `list_sessions` endpoint issues an unbounded N+1 query set with no pagination. The `handleNewAssessment` / `handleConfirmNew` flows in both page files reset client context even on server-side failures, causing the client and server to diverge.
 
 ---
 
 ## Critical Issues
 
-### CR-01: Debounce closure in `QRAMMProvider` captures a stale `qn` and `state` reference
+### CR-01: Single shared debounce timer in `QRAMMProvider` causes silent data loss across multiple questions
 
-**File:** `src/dashboard/src/context/QRAMMProvider.tsx:15-36`
+**File:** `src/dashboard/src/context/QRAMMProvider.tsx:18-36`
 
-**Issue:** `persistDraft` is a `useCallback` with `[]` as its dependency array, so it is memoised once. Inside the `setTimeout` callback it closes over `qn` and `state`, which are parameters to the outer `persistDraft` call. This part is fine — parameters are captured correctly per call. **However**, the debounce implementation uses a single shared `debounceRef` across all question numbers. If the user edits question 5 (starts a 300 ms timer) and then immediately edits question 12, the question-5 timer is cancelled and only the question-12 payload is sent. The question-5 change is silently lost — no retry, no error surfaced, no queuing. This is data-loss under normal, realistic usage (tabbing through questions quickly).
+**Issue:** `debounceRef` is a single `useRef` holding one timer. Every call to `persistDraft` — regardless of which `qn` (question number) is being updated — clears that single timer and schedules a new one. When a user edits question 5 and then edits question 12 within 300 ms (normal when scrolling through a practice area section or using keyboard navigation), the question-5 timer is cancelled. Only the question-12 payload is sent to `/api/qramm/assessment/draft`. The question-5 answer is written to local React state but never persisted to the server. On a page reload `useQRAMMSession` re-seeds answers from the server, and question 5 reverts to its pre-edit value with no indication to the user.
 
-The comment in the code describes debouncing as if it is per-question, but the single `debounceRef` implements a global last-writer-wins debounce. Only the most-recently-touched question is ever persisted.
+This is a silent data loss bug under realistic usage. The comment on line 18 implies the debounce is per-question ("QRAMMProvider debounces 300ms") but the implementation is global last-writer-wins.
 
-**Fix:** Maintain a `Map<number, ReturnType<typeof setTimeout>>` keyed by `questionNumber` so each question has its own independent debounce timer:
+**Fix:** Maintain a per-question debounce map so each question has an independent timer:
 
 ```typescript
 const debounceRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
@@ -83,9 +84,7 @@ const persistDraft = useCallback((qn: number, state: Partial<AnswerState>) => {
           evidence_note: state.evidence_note ?? null,
         }),
       })
-    } catch {
-      // surface via page layer
-    }
+    } catch { /* surface via page layer */ }
   }, 300)
   debounceRef.current.set(qn, timer)
 }, [])
@@ -93,178 +92,25 @@ const persistDraft = useCallback((qn: number, state: Partial<AnswerState>) => {
 
 ---
 
-### CR-02: `draft_answer` endpoint silently wipes `evidence_note` when only `answer_value` is sent
+### CR-02: `handleNewAssessment` and `handleConfirmNew` reset client context in `finally` — server divergence on failure
 
-**File:** `quirk/dashboard/api/routes/qramm.py:472-491`
+**File:** `src/dashboard/src/pages/qramm-assessment.tsx:150-163` and `src/dashboard/src/pages/qramm-profile.tsx:49-65`
 
-**Issue:** `DraftAnswerRequest.evidence_note` defaults to `None`. When the frontend calls `POST /api/qramm/assessment/draft` with only `answer_value` (e.g., the batch `save_answers` path, or any caller that omits the field), the update branch checks `if payload.evidence_note is not None` and correctly skips the assignment. **But the insert branch (no existing row)** always writes `evidence_note=payload.evidence_note`, which is `None` — overwriting any prior value if the ORM somehow merges, but more critically: if a row is deleted and re-created via the upsert path, the note is lost.
+**Issue:** Both "New Assessment" flows follow a `try/finally` pattern where the `finally` block unconditionally resets `sessionId`, `answers`, `profile`, `scoreResult` and (in the assessment page) navigates to `/qramm`. In `qramm-assessment.tsx` the `finally` always fires regardless of whether the `DELETE` returned a non-2xx status code — a non-ok response does not throw, so the `catch` does not intercept it. The client clears its state and navigates away while the server still has the old session. When `useQRAMMSession` runs after navigation it re-fetches the session list, finds the un-deleted session, and re-seeds context from it — the user ends up back on the resume screen having been led to believe they started fresh.
 
-A more immediate issue: `persistDraft` in `QRAMMProvider` always passes `state.evidence_note ?? null`. When `setAnswer` is called with only `{ answer_value: 3 }` (no `evidence_note` key), `state.evidence_note` is `undefined`, so `undefined ?? null` yields `null`, and the POST body contains `"evidence_note": null`. The backend receives a non-None `None` equivalent that passes the `if payload.evidence_note is not None` guard as False — correct. But the update branch for the *new-row* path (line 473–480) unconditionally sets `evidence_note=payload.evidence_note` to `None`. If the question was pre-seeded by the CVI bridge with a note, this wipes it.
+In `qramm-profile.tsx` (line 55) the `catch` block explicitly silences errors: `// Ignore errors — user wants a clean slate regardless`. This is the same divergence: on a network error the server still has the session, but the client shows a fresh profile form. On the next reload the session reappears.
 
-More concretely: when the user changes a radio button on a pre-seeded CVI question (which triggers `handleAnswerChange` → `setAnswer({answer_value: n})` → `persistDraft(qn, {answer_value: n})`), `evidence_note` is absent from `state` in `persistDraft`, so `state.evidence_note ?? null` is `null`. The backend receives `evidence_note: null` and — because this is an **existing** row — correctly skips the assignment (line 485). That path is safe. However, **non-pre-seeded SGRM/DPE/ITR questions** that have no existing row will have a new row created with `evidence_note=None` even when the user previously entered a note that was persisted by a separate `evidence_note`-only draft call. The scenario: user types a note (draft fires, note saved), user changes radio within the debounce window (note draft is cancelled by CR-01), radio draft fires without note → new row created, note erased.
-
-This is a compounding bug with CR-01 and produces silent evidence-note data loss.
-
-**Fix:** In the insert branch, only set `evidence_note` when the payload value is non-None:
-
-```python
-row = QRAMMAnswer(
-    session_id=payload.session_id,
-    question_number=payload.question_number,
-    dimension=meta["dimension"],
-    practice_area=meta["practice_area"],
-    answer_value=payload.answer_value,
-    evidence_note=payload.evidence_note,  # None is fine for new rows
-)
-```
-
-The insert path is actually fine as-is for brand-new rows (None is the correct default). The real fix needed is in `persistDraft` (CR-01): never send `evidence_note` in the body unless it was explicitly changed. Pass it only when the `state` object contains the key:
+**Fix:** Check `resp.ok` before resetting context and only navigate/reload on success:
 
 ```typescript
-body: JSON.stringify({
-  session_id: sid,
-  question_number: qn,
-  ...(state.answer_value !== undefined && { answer_value: state.answer_value ?? null }),
-  ...("evidence_note" in state && { evidence_note: state.evidence_note ?? null }),
-}),
-```
-
----
-
-### CR-03: `list_sessions` endpoint has no authentication guard and no pagination — unbounded data exposure
-
-**File:** `quirk/dashboard/api/routes/qramm.py:401-423`
-
-**Issue:** `GET /api/qramm/sessions` returns **all** assessment sessions in the database with no limit, no pagination, and — consistent with the rest of the API — no authentication. For a single-user local tool this is low-risk, but the QRAMM assessment is specifically described as a consulting-grade engagement tool that may be run against client organisations. If the backend is exposed on a LAN (standard dev/consulting setup), all prior client assessment sessions (org names, answer counts, status, creation timestamps) are readable by any device on that network.
-
-Additionally the endpoint issues a separate `COUNT` query for every session row returned (lines 411–415). For a consultant who has run assessments for N clients, this is N+1 queries. There is no `LIMIT` clause, so the response also grows without bound.
-
-**Fix (minimum viable):** Add a `limit` query parameter and default it to a reasonable cap (e.g. 50):
-
-```python
-@router.get("/qramm/sessions", response_model=List[SessionSummary])
-def list_sessions(db: Session = Depends(get_db), limit: int = 50) -> List[SessionSummary]:
-    sessions = (
-        db.query(QRAMMSession)
-        .order_by(QRAMMSession.created_at.desc())
-        .limit(limit)
-        .all()
-    )
-    ...
-```
-
-The N+1 query pattern should also be resolved with a subquery or joined count rather than a Python-level loop.
-
----
-
-### CR-04: `ScorecardTab` completion percentage hard-codes question-number ranges
-
-**File:** `src/dashboard/src/components/qramm/ScorecardTab.tsx:36-42`
-
-**Issue:** Completion per dimension is computed by deriving the dimension from the question number:
-
-```typescript
-const dimIdx = Math.floor((qn - 1) / 30)
-if (DIMENSIONS[dimIdx] === dim) answered += 1
-```
-
-This hard-codes the assumption that questions 1–30 = CVI, 31–60 = SGRM, 61–90 = DPE, 91–120 = ITR and that each dimension has exactly 30 questions. This assumption is not validated anywhere in the frontend. If the QRAMM question catalog ever gains, loses, or reorders questions (even by one), this arithmetic breaks silently — dimensions are mis-attributed and percentages are wrong. The backend `QRAMM_QUESTIONS` list is the authoritative source of `question_number → dimension` mapping; the frontend already fetches it into `QuestionItem[]` via the assessment page.
-
-The context `answers` map keys are `question_number` values (integers), but the `AnswerState` type does not carry `dimension`. The correct fix is to look up the dimension from the fetched question catalog, not from arithmetic on the question number.
-
-**Fix:** Pass `questionsByArea` (or a `qnToDim` map) as a prop from `AssessmentPage` to `ScorecardTab`, or store it in context:
-
-```typescript
-// In ScorecardTab, receive qnToDim: Map<number, string> as prop
-const completionByDim = useMemo(() => {
-  const out: Record<string, number> = {}
-  const totals: Record<string, number> = {}
-  for (const dim of DIMENSIONS) { out[dim] = 0; totals[dim] = 0 }
-  for (const [qn, a] of ctx.answers) {
-    const dim = qnToDim.get(qn)
-    if (!dim) continue
-    totals[dim] = (totals[dim] ?? 0) + 1
-    if (a.answer_value != null) out[dim] = (out[dim] ?? 0) + 1
-  }
-  return Object.fromEntries(
-    DIMENSIONS.map(d => [d, totals[d] ? Math.round((out[d] / totals[d]) * 100) : 0])
-  )
-}, [ctx.answers, qnToDim])
-```
-
----
-
-## Warnings
-
-### WR-01: `useQRAMMSession` omits `ctx` from `useEffect` dependency array
-
-**File:** `src/dashboard/src/hooks/useQRAMMSession.ts:78`
-
-**Issue:** The `useEffect` dependency array is `[tick]` with an `eslint-disable-line react-hooks/exhaustive-deps` suppression. Inside the effect, `ctx.setSessionId`, `ctx.resetAnswers` are called. These are stable callback references (from `useCallback` in `QRAMMProvider`), so in practice they will not change. However suppressing the exhaustive-deps rule entirely rather than listing the stable refs hides the risk: if `QRAMMProvider` is ever refactored to return unstable refs (e.g. by removing `useCallback`), the stale closure will silently stop updating the context.
-
-**Fix:** List the specific stable context functions as deps, or document why suppression is acceptable:
-
-```typescript
-}, [tick, ctx.setSessionId, ctx.resetAnswers]) // stable refs from QRAMMProvider useCallback
-```
-
----
-
-### WR-02: `handleConfirmNew` defined inside a conditional render branch — hoisting/stale closure risk
-
-**File:** `src/dashboard/src/pages/qramm-profile.tsx:49-65`
-
-**Issue:** `handleConfirmNew` is declared as an `async function` inside the `if (session !== null)` branch — i.e., inside the function body of `OrgProfilePage` but conditionally only executed when the branch is rendered. This is not strictly a hooks violation (it is not a hook), but the function captures `ctx`, `reload`, and `setShowNewConfirm` from the outer render scope. If React ever renders the component tree in a way that the branch condition flips between the function declaration and invocation (unusual but possible under concurrent mode with transitions), the captured values may be stale.
-
-Additionally, the `finally` block always calls `reload()` even when the `DELETE` request fails (the `catch` swallows the error). This means after a failed delete the UI calls `reload()`, which re-fetches the session list, sees the old session still exists, and re-renders the resume screen — correct. But the user has no indication the delete failed. This is a UX gap that creates confusion ("I clicked New Assessment but my old one is still there").
-
-**Fix:** Move `handleConfirmNew` to a stable `useCallback` at the top of the component, and surface a failure message rather than silently ignoring the delete error:
-
-```typescript
-const handleConfirmNew = useCallback(async () => {
-  setArchiving(true)
-  try {
-    if (ctx.sessionId != null) {
-      const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
-      if (!resp.ok) {
-        setSubmitError("Could not archive session — try again")
-        return
-      }
-    }
-  } catch {
-    setSubmitError("Could not archive session — check your connection")
-    return
-  } finally {
-    setArchiving(false)
-  }
-  ctx.setSessionId(null)
-  ctx.setProfile(null)
-  ctx.setScoreResult(null)
-  ctx.resetAnswers(new Map())
-  setShowNewConfirm(false)
-  reload()
-}, [ctx, reload])
-```
-
----
-
-### WR-03: `handleNewAssessment` in `AssessmentPage` does not surface DELETE errors to the user
-
-**File:** `src/dashboard/src/pages/qramm-assessment.tsx:150-163`
-
-**Issue:** The `try/finally` pattern resets context and navigates to `/qramm` even when the `DELETE` request fails (network error or 5xx). The user is silently redirected and sees a "no session" state, but the server still has the old session. On next load, `useQRAMMSession` will re-fetch it and resume from the old data — contradicting the user's intent to start fresh.
-
-**Fix:** Check response status and show an error rather than silently proceeding:
-
-```typescript
+// qramm-assessment.tsx
 async function handleNewAssessment() {
   if (!ctx.sessionId) return
   setArchiving(true)
   try {
     const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
-    if (!resp.ok) {
-      // surface error; do not reset context
-      setArchiving(false)
+    if (!resp.ok && resp.status !== 404) {
+      // surface error state — do NOT reset context
       return
     }
     ctx.setSessionId(null)
@@ -273,7 +119,7 @@ async function handleNewAssessment() {
     ctx.setScoreResult(null)
     navigate("/qramm")
   } catch {
-    // surface error
+    // surface error to user
   } finally {
     setArchiving(false)
   }
@@ -282,7 +128,171 @@ async function handleNewAssessment() {
 
 ---
 
-### WR-04: `getBenchmarks` falls back to `INDUSTRY_BENCHMARKS.other` for unknown industries instead of returning null
+### CR-03: `list_sessions` issues N+1 queries with no upper bound on result set
+
+**File:** `quirk/dashboard/api/routes/qramm.py:401-423`
+
+**Issue:** The endpoint fetches all session rows then executes a separate `COUNT` SQL query for each session row inside a Python loop (lines 411-415). With N sessions this is N+1 database round-trips. There is no `LIMIT` clause on the initial session query, so both the response size and the query count grow unbounded as assessment history accumulates. For a consultant who has run dozens of client assessments, this endpoint blocks the sync thread pool for the duration of N+1 sequential SQLite queries and returns an arbitrarily large response.
+
+Beyond the N+1 pattern, fetching all historical assessment sessions (org names, timestamps, status, answer counts) with no authentication or pagination gate exposes all prior client data to any browser on the same LAN as the API server.
+
+**Fix:** Resolve with a correlated subquery to reduce to a single DB round-trip, and add a default `limit`:
+
+```python
+from sqlalchemy import func
+
+@router.get("/qramm/sessions", response_model=List[SessionSummary])
+def list_sessions(db: Session = Depends(get_db), limit: int = 50) -> List[SessionSummary]:
+    answered_sq = (
+        db.query(
+            QRAMMAnswer.session_id,
+            func.count(QRAMMAnswer.id).label("cnt"),
+        )
+        .filter(QRAMMAnswer.answer_value.isnot(None))
+        .group_by(QRAMMAnswer.session_id)
+        .subquery()
+    )
+    rows = (
+        db.query(QRAMMSession, func.coalesce(answered_sq.c.cnt, 0).label("answers_count"))
+        .outerjoin(answered_sq, QRAMMSession.id == answered_sq.c.session_id)
+        .order_by(QRAMMSession.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        SessionSummary(
+            session_id=s.id,
+            org_name=s.org_name,
+            created_at=_iso_str(s.created_at),
+            status=s.status,
+            answers_count=count,
+        )
+        for s, count in rows
+    ]
+```
+
+---
+
+### CR-04: `ScorecardTab` completion percentage hard-codes question-number arithmetic instead of using the catalog
+
+**File:** `src/dashboard/src/components/qramm/ScorecardTab.tsx:36-42`
+
+**Issue:** Completion per dimension is computed by deriving the dimension index from the question number:
+
+```typescript
+const dimIdx = Math.floor((qn - 1) / 30)
+if (DIMENSIONS[dimIdx] === dim) answered += 1
+```
+
+This hard-codes the assumption that questions 1–30 = CVI, 31–60 = SGRM, 61–90 = DPE, 91–120 = ITR. This is a parallel source of truth that diverges from `QRAMM_QUESTIONS` (the authoritative catalog). If any question is added, removed, or renumbered, the per-dimension completion percentages shown in the scorecard table will be wrong — silently and with no type-system protection. The frontend already fetches the 120-question catalog from `/api/qramm/questions` into the `questions: QuestionItem[]` state in `AssessmentPage`; each `QuestionItem` carries a `dimension` field.
+
+Additionally, the denominator is hard-coded as `30` (line 40: `(answered / 30) * 100`). If any dimension ever has a different question count, completion percentages exceed 100% or never reach 100%.
+
+**Fix:** Pass a question-number-to-dimension lookup into `ScorecardTab` rather than performing arithmetic:
+
+```typescript
+// In qramm-assessment.tsx: build and pass to ScorecardTab
+const qnToDim = useMemo(() => {
+  const m = new Map<number, string>()
+  for (const q of questions) m.set(q.question_number, q.dimension)
+  return m
+}, [questions])
+
+// ScorecardTab receives: qnToDim: Map<number, string>
+const completionByDim = useMemo(() => {
+  const answered: Record<string, number> = {}
+  const totals: Record<string, number> = {}
+  for (const [qn, a] of ctx.answers) {
+    const dim = qnToDim.get(qn)
+    if (!dim) continue
+    totals[dim] = (totals[dim] ?? 0) + 1
+    if (a.answer_value != null) answered[dim] = (answered[dim] ?? 0) + 1
+  }
+  return Object.fromEntries(
+    DIMENSIONS.map(d => [d, totals[d] ? Math.round(((answered[d] ?? 0) / totals[d]) * 100) : 0])
+  )
+}, [ctx.answers, qnToDim])
+```
+
+---
+
+## Warnings
+
+### WR-01: `persistDraft` always includes `evidence_note: null` when only `answer_value` changes — can overwrite a previously saved note
+
+**File:** `src/dashboard/src/context/QRAMMProvider.tsx:26-29`
+
+**Issue:** `persistDraft` is called with the `state` partial passed to `setAnswer`. When only `answer_value` is being changed (e.g., user clicks a radio button), `state` contains `{ answer_value: 3 }` and `state.evidence_note` is `undefined`. The body construction `state.evidence_note ?? null` converts `undefined` to `null` and sends `"evidence_note": null` to the backend. The backend `draft_answer` update branch correctly guards `if payload.evidence_note is not None` and skips the assignment (line 485 of `qramm.py`), so the note is not wiped in the update path.
+
+However, for **non-pre-seeded questions** (SGRM/DPE/ITR) where no row exists yet, the `draft_answer` insert branch fires and sets `evidence_note=None` (from `payload.evidence_note` which is `None`) — wiping any note the user typed in a previous draft call that was superseded by a radio-button edit that arrived first via the debounce queue. This is a compound effect of CR-01 (global debounce drops the note-save, then radio-save creates the row with `evidence_note=None`).
+
+Even without CR-01 in play, the body should not include `evidence_note` at all when the caller did not explicitly set it:
+
+**Fix:** Only include `evidence_note` in the POST body when the `state` partial explicitly carries the key:
+
+```typescript
+body: JSON.stringify({
+  session_id: sid,
+  question_number: qn,
+  ...("answer_value" in state && { answer_value: state.answer_value ?? null }),
+  ...("evidence_note" in state && { evidence_note: state.evidence_note ?? null }),
+}),
+```
+
+---
+
+### WR-02: `create_profile` allows duplicate profiles per session — old rows orphaned
+
+**File:** `quirk/dashboard/api/routes/qramm.py:426-453`
+
+**Issue:** `POST /api/qramm/profiles` always inserts a new row and updates `session.profile_id`. Calling it twice for the same session creates two `QRAMMProfile` rows with the same `session_id`. The first profile row is orphaned — no foreign key constraint, no cascade, no cleanup. Any analytics or reporting that queries `qramm_profiles` on `session_id` will find multiple rows and return ambiguous results. The UI currently calls this endpoint only once, but the API is not guarded.
+
+**Fix:** Upsert semantics — check for an existing profile row first:
+
+```python
+existing = (
+    db.query(QRAMMProfile)
+    .filter(QRAMMProfile.session_id == payload.session_id)
+    .one_or_none()
+)
+if existing:
+    # update in place
+    existing.industry = payload.industry
+    existing.org_size = payload.org_size
+    existing.geographic_scope = payload.geographic_scope
+    existing.data_sensitivity = payload.data_sensitivity
+    existing.regulatory_obligations = json.dumps(payload.regulatory_obligations)
+    existing.multiplier = multiplier
+    db.commit()
+    db.refresh(existing)
+    return CreateProfileResponse(profile_id=existing.id, session_id=payload.session_id, multiplier=multiplier)
+```
+
+---
+
+### WR-03: `test_list_sessions_orders_desc` is non-deterministic on fast hardware
+
+**File:** `tests/test_qramm_router.py:278-290`
+
+**Issue:** The test creates two sessions back-to-back in the same function with no delay:
+
+```python
+sid1 = client.post("/api/qramm/sessions", json={"org_name": "First"}).json()["session_id"]
+sid2 = client.post("/api/qramm/sessions", json={"org_name": "Second"}).json()["session_id"]
+```
+
+The ORDER BY clause in `list_sessions` is `QRAMMSession.created_at.desc()`. On a fast machine with an in-memory SQLite database, both rows may receive identical `created_at` timestamps (same microsecond). When timestamps tie, SQLite's ordering is undefined — the assertion `body[0]["session_id"] == sid2` can fail non-deterministically.
+
+**Fix:** Assert ordering by ID as a tiebreaker in the endpoint, or add a minimal sleep in the test, or assert membership rather than position when timestamps may collide:
+
+```python
+# In list_sessions endpoint, add tiebreaker:
+.order_by(QRAMMSession.created_at.desc(), QRAMMSession.id.desc())
+```
+
+---
+
+### WR-04: `getBenchmarks` silently falls back to `other` benchmarks for unrecognised industry strings
 
 **File:** `src/dashboard/src/lib/qramm-benchmarks.ts:23-26`
 
@@ -292,9 +302,9 @@ async function handleNewAssessment() {
 return INDUSTRY_BENCHMARKS[industry] ?? INDUSTRY_BENCHMARKS.other
 ```
 
-When a future profile wizard adds a new `industry` value that is not yet in `INDUSTRY_BENCHMARKS`, this silently returns the `other` benchmark (all 2.0s) rather than `null`. The scorecard then shows a benchmark column that appears to have real data but is actually the generic `other` floor. This is a silent accuracy failure: consultants see a benchmark comparison that is fabricated.
+Any unknown `industry` string (future option, typo, API mismatch) silently returns the generic `other` benchmark (all 2.0). The scorecard then renders a benchmark comparison column that appears to contain real industry data but is actually the placeholder floor value. Consultants using the scorecard cannot distinguish a genuine `other` benchmark from a fallback caused by a missing entry.
 
-**Fix:** Return `null` for unknown industries so the scorecard correctly renders "—":
+**Fix:** Return `null` for unknown industries and let the scorecard render "—" in the benchmark column:
 
 ```typescript
 export function getBenchmarks(industry: string | null | undefined): DimensionBenchmarks | null {
@@ -305,140 +315,111 @@ export function getBenchmarks(industry: string | null | undefined): DimensionBen
 
 ---
 
-### WR-05: `vite.config.ts` reads fixture files at plugin-init time with synchronous `readFileSync` — crashes the dev server when fixture files are absent
+### WR-05: `vite.config.ts` reads fixture files at plugin initialisation time — crashes dev server when files are absent
 
 **File:** `src/dashboard/vite.config.ts:10-12`
 
-**Issue:** `readFileSync` at module evaluation time (plugin init) will throw `ENOENT` if `fixture-scan.json`, `fixture-trends.json`, or `fixture-qramm.json` are missing. This crashes the Vite dev server for any developer who does not have the fixture files in place — even when `VITE_A11Y_FIXTURE` is not set. The files are only needed when the env var is active.
-
-**Fix:** Guard the reads inside `configureServer` / `configurePreviewServer` (where the env var is checked), or lazy-read inside the handler:
+**Issue:** Lines 10–12 call `readFileSync` synchronously at plugin init time, before any env-var check:
 
 ```typescript
-function a11yFixture(): Plugin {
-  let scanFixture: string, trendsFixture: string, qrammFixtureRaw: Record<string, unknown>
+const scanFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8')
+const trendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8')
+const qrammFixtureRaw = JSON.parse(readFileSync(...))
+```
 
-  return {
-    name: 'a11y-fixture',
-    configureServer(server) {
-      if (!process.env.VITE_A11Y_FIXTURE) return
-      scanFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-scan.json'), 'utf8')
-      trendsFixture = readFileSync(path.resolve(__dirname, './tests/a11y/fixture-trends.json'), 'utf8')
-      qrammFixtureRaw = JSON.parse(readFileSync(path.resolve(__dirname, './tests/a11y/fixture-qramm.json'), 'utf8'))
-      server.middlewares.use(handler)
-    },
-    ...
-  }
-}
+Any developer who runs `vite dev` or `vite build` without the fixture files present — or on a fresh clone before the test fixture files are committed — gets an `ENOENT` crash at startup even if they never intend to use the a11y fixture mode. The files are only needed when `VITE_A11Y_FIXTURE` is set.
+
+**Fix:** Move the `readFileSync` calls inside `configureServer` after the env-var guard:
+
+```typescript
+configureServer(server) {
+  if (!process.env.VITE_A11Y_FIXTURE) return
+  const scanFixture = readFileSync(...)
+  // ...
+  server.middlewares.use(handler)
+},
 ```
 
 ---
 
-### WR-06: `create_profile` endpoint does not validate that the session already has a profile — calling it twice creates two QRAMMProfile rows
-
-**File:** `quirk/dashboard/api/routes/qramm.py:426-453`
-
-**Issue:** `POST /api/qramm/profiles` inserts a new `QRAMMProfile` row and updates `session.profile_id` unconditionally. Calling it twice for the same session creates two orphaned `QRAMMProfile` rows. The second call updates `session.profile_id` to the new row, leaving the first row unreferenced but present in the database. Over time this accumulates dead rows and may confuse any query that joins on `qramm_profiles.session_id`.
-
-There is no uniqueness constraint on `(session_id)` in `QRAMMProfile` and no guard in the endpoint.
-
-**Fix:** Check whether a profile already exists and update it rather than inserting a duplicate:
-
-```python
-existing_profile = (
-    db.query(QRAMMProfile)
-    .filter(QRAMMProfile.session_id == payload.session_id)
-    .one_or_none()
-)
-if existing_profile:
-    existing_profile.industry = payload.industry
-    # ... update remaining fields
-    db.commit()
-    db.refresh(existing_profile)
-    return CreateProfileResponse(...)
-```
-
----
-
-### WR-07: `QuestionCard` renders a `Confirm Answer` button for all auto-filled questions including those that have already been confirmed
-
-**File:** `src/dashboard/src/components/qramm/QuestionCard.tsx:131-143`
-
-**Issue:** The `isAutoFilled` flag is `suggested_answer != null && confirmed_at == null`. Once the user clicks Confirm, `confirmed_at` is set optimistically (in `handleConfirm` → `onConfirm` → `AssessmentPage.handleConfirm`), so `isAutoFilled` becomes `false` and the button disappears — correct. However, on the **next page load** (when answers are re-seeded from the server via `useQRAMMSession`), `confirmed_at` comes back from `QRAMMAnswerRead.confirmed_at`, which is a `string | null`. If the server returns a `confirmed_at` value, the button correctly stays hidden. But if the server's `confirmed_at` column is `NULL` for a question that was confirmed via the backend's `draft_answer` endpoint — which only sets `confirmed_at` when `suggested_answer IS NOT NULL AND answer_value IS NOT NULL` (line 488) — then after a reload the user is shown the Confirm button again for a question they already confirmed.
-
-The backend `draft_answer` does set `confirmed_at` for the update branch. The risk is specifically when a question is created via the insert branch of `draft_answer` with both `suggested_answer` and `answer_value` set: line 473 creates the row but never sets `confirmed_at`. After a reload, the user sees the Confirm button on an already-answered question.
-
-**Fix:** In the `draft_answer` insert branch, set `confirmed_at` when both `suggested_answer` and `answer_value` are present:
-
-```python
-row = QRAMMAnswer(
-    ...
-    answer_value=payload.answer_value,
-    evidence_note=payload.evidence_note,
-    confirmed_at=_now_iso() if (
-        payload.answer_value is not None and payload.suggested_answer is not None
-    ) else None,
-)
-```
-
-Note: `DraftAnswerRequest` does not accept `suggested_answer` as a field, so the insert branch cannot set it. The real fix is: when creating a new row via `draft_answer`, look up whether a pre-seeded row with a `suggested_answer` already exists before branching to insert (which the code already does via `one_or_none()`). If a row with `suggested_answer` exists, the update branch is taken; the insert branch only fires when no row exists at all, so `suggested_answer` will always be `None` on insert — meaning `confirmed_at` should never need to be set in the insert branch. Document this invariant with a comment to prevent future confusion.
-
----
-
-## Info
-
-### IN-01: `_compute_multiplier` does not validate that `industry` or `data_sensitivity` are from the allowed set
-
-**File:** `quirk/dashboard/api/routes/qramm.py:146-152`
-
-**Issue:** `CreateProfileRequest.industry` and `data_sensitivity` are typed as `str` with no `Literal` / `Enum` constraint. Any string is accepted; unknown values silently fall back to `1.00` / `0.0`. A typo in an API call (e.g. `"finacial_services"`) returns `201` with a silently wrong multiplier. The frontend constrains choices via `SELECT` widgets, but the API itself has no guard.
-
-**Fix:** Use Pydantic `Literal` or `Enum` types:
-
-```python
-from typing import Literal
-IndustryType = Literal["financial_services", "healthcare", "government", "technology", "retail", "energy", "other"]
-
-class CreateProfileRequest(BaseModel):
-    industry: IndustryType
-    data_sensitivity: Literal["public", "internal", "confidential", "restricted_secret", "restricted"]
-    ...
-```
-
----
-
-### IN-02: `test_qramm_router.py` `test_read_session_round_trip` asserts `answers_count == 0` but Phase 53 pre-seeds 30 CVI rows
-
-**File:** `tests/test_qramm_router.py:97`
-
-**Issue:**
-
-```python
-assert body["answers_count"] == 0
-```
-
-`create_session` pre-seeds 30 blank CVI `QRAMMAnswer` rows (Phase 53 QRAMM-12). `answers_count` is computed as rows where `answer_value IS NOT NULL`, so blank pre-seeded rows (where `answer_value=None`) do not count. The assertion passes today. But the assertion comment says nothing about this, and any change that pre-fills answers with a non-null `answer_value` would silently break this test's assumption without the test explaining why. The assertion should include a comment anchoring it to the `answer_value IS NOT NULL` filter.
-
-**Fix:** Add a clarifying comment:
-
-```python
-# Pre-seeded CVI rows have answer_value=None, so count must be 0 here.
-assert body["answers_count"] == 0
-```
-
----
-
-### IN-03: `ScoreRequest.profile_multiplier` has bounds `ge=0.5, le=2.0` but `_compute_multiplier` clamps to `0.8–1.5`
+### WR-06: `ScoreRequest.profile_multiplier` accepts values outside the model-specified range
 
 **File:** `quirk/dashboard/api/routes/qramm.py:83`
 
-**Issue:** The API accepts `profile_multiplier` values from 0.5 to 2.0, but the RESEARCH/spec document states the valid range is 0.8–1.5 and `_compute_multiplier` enforces that via `max(0.8, min(1.5, ...))`. The `score_session` endpoint does not clamp the manually-supplied multiplier — a caller who sends `{"profile_multiplier": 0.5}` gets weighted scores computed at 0.5x, which is outside the specified model range. The inconsistency between the validation bounds and the spec range is confusing and can produce out-of-spec score results.
+**Issue:** `ScoreRequest.profile_multiplier` is validated as `ge=0.5, le=2.0`. The RESEARCH document and `_compute_multiplier` both specify the valid multiplier range as 0.8–1.5. An API caller who sends `{"profile_multiplier": 0.5}` gets a `200` response with weighted scores computed at 0.5x — outside the model's defined range and without any clamping in `score_session`. This produces out-of-spec scores that are persisted to `score_json`.
 
-**Fix:** Tighten the Pydantic bounds to match the spec:
+**Fix:** Tighten the Pydantic bounds to match the spec and mirror `_compute_multiplier`:
 
 ```python
 class ScoreRequest(BaseModel):
     profile_multiplier: Optional[float] = Field(default=None, ge=0.8, le=1.5)
 ```
+
+---
+
+### WR-07: `score_session` returns `200` with `overall=0.0` when no questions are answered
+
+**File:** `quirk/dashboard/api/routes/qramm.py:308-370`
+
+**Issue:** If called on a session with zero answered questions (or only CVI pre-seeded rows with `answer_value=NULL`), `rows` is empty, `practice_buckets` is empty, all `dimension_scores` are `0.0`, and the endpoint returns `{ "overall": 0.0, "maturity": "...", status: "scored" }`. This is then persisted to `score_json` and `status` is set to `"scored"`. A session with no answered questions now shows as scored, which is semantically incorrect and will confuse any downstream consumer that treats `status="scored"` as meaningful.
+
+**Fix:** Guard against scoring an empty session:
+
+```python
+if not rows:
+    raise HTTPException(
+        status_code=422,
+        detail="Cannot score a session with no answered questions",
+    )
+```
+
+---
+
+## Info
+
+### IN-01: `_compute_multiplier` silently falls back to defaults for unknown `industry` or `data_sensitivity` values
+
+**File:** `quirk/dashboard/api/routes/qramm.py:146-152`
+
+**Issue:** `CreateProfileRequest.industry` and `data_sensitivity` are plain `str` fields with no enumeration constraint. Unknown values fall back silently: `_INDUSTRY_BASE.get(industry, 1.00)` and `_SENSITIVITY_DELTA.get(data_sensitivity, 0.0)`. A typo or future UI option that is not yet in the backend dictionaries returns `201` with a silently incorrect multiplier.
+
+**Fix:** Apply Pydantic `Literal` validation so the API rejects unrecognised values with `422`:
+
+```python
+from typing import Literal
+IndustryLiteral = Literal["financial_services","healthcare","government","technology","retail","energy","other"]
+SensitivityLiteral = Literal["public","internal","confidential","restricted_secret","restricted"]
+
+class CreateProfileRequest(BaseModel):
+    industry: IndustryLiteral
+    data_sensitivity: SensitivityLiteral
+    ...
+```
+
+---
+
+### IN-02: `test_read_session_round_trip` asserts `answers_count == 0` without explaining the pre-seeding invariant
+
+**File:** `tests/test_qramm_router.py:97`
+
+**Issue:** `create_session` pre-seeds 30 blank CVI `QRAMMAnswer` rows with `answer_value=None` (Phase 53 QRAMM-12). `answers_count` only counts rows where `answer_value IS NOT NULL`, so the assertion passes. But there is no comment explaining this — a future reader may assume no rows are created at all, and a change that accidentally fills pre-seeded rows with a default `answer_value` will break the assertion silently.
+
+**Fix:** Add a comment anchoring the assertion to the filter:
+
+```python
+# Pre-seeded CVI rows have answer_value=None and are excluded from answers_count.
+assert body["answers_count"] == 0
+```
+
+---
+
+### IN-03: `_ensure_qramm_tables` is redundant — QRAMM tables are already created by the top-level `Base.metadata.create_all` in `init_db`
+
+**File:** `quirk/db.py:214-225` and `252`
+
+**Issue:** `init_db` calls `Base.metadata.create_all(engine)` on line 244, which creates all ORM-registered tables including `QRAMMSession`, `QRAMMAnswer`, and `QRAMMProfile` (registered via `quirk.models`). Then on line 252 it calls `_ensure_qramm_tables(engine)`, which calls `Base.metadata.create_all(engine, checkfirst=True)` again. The second call is a complete no-op — all tables already exist. The function adds confusion (the docstring says "create QRAMM tables if absent" but they are already created) and maintenance surface (two code paths that both create the same tables).
+
+**Fix:** Remove `_ensure_qramm_tables` and its call from `init_db`. The top-level `create_all` on line 244 already covers all Base-registered tables. If isolated QRAMM table creation is needed for tests, document that tests should call `Base.metadata.create_all(engine)` directly.
 
 ---
 
