@@ -184,6 +184,14 @@ export interface TrendReport {
 
 // ============== QRAMM (Phase 54) ==============
 
+export interface QuestionItem {
+  question_number: number
+  dimension: string
+  practice_area: string
+  text: string
+  maturity_labels: string[]
+}
+
 export type MaturityValue = 1 | 2 | 3 | 4
 
 export interface QRAMMSessionSummary {

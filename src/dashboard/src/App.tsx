@@ -15,10 +15,7 @@ import { CbomPage } from "@/pages/cbom"
 import { RoadmapPage } from "@/pages/roadmap"
 import { TrendsPage } from "@/pages/trends"
 import { OrgProfilePage } from "@/pages/qramm-profile"
-
-function _AssessmentPagePlaceholder() {
-  return <div className="py-8 text-muted-foreground">Assessment view — to be implemented in plan 04.</div>
-}
+import { AssessmentPage } from "@/pages/qramm-assessment"
 
 export default function App() {
   return (
@@ -44,7 +41,7 @@ export default function App() {
                       <Route path="/trends" element={<TrendsPage />} />
                       <Route path="/print" element={<PrintPage />} />
                       <Route path="/qramm" element={<OrgProfilePage />} />
-                      <Route path="/qramm/assessment" element={<_AssessmentPagePlaceholder />} />
+                      <Route path="/qramm/assessment" element={<AssessmentPage />} />
                     </Routes>
                   </div>
                 </main>
