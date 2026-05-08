@@ -1113,7 +1113,10 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   2. `quirk qramm status` exits code 0 when `QRAMM_MODEL.last_verified` is within 90 days; exits code 1 when stale; output shows version, `last_verified`, days remaining, and verdict — consistent with the `quirk compliance status` pattern
   3. A pytest gate fails if `QRAMM_MODEL.last_verified` in `quirk/qramm/model_meta.py` is more than 90 days old; the `QUIRK_CI_STALENESS_OVERRIDE_DATE` environment variable allows CI boundary testing without touching source
   4. `quirk/qramm/model_meta.py` exports `QRAMM_MODEL` with `qramm_version`, `last_verified` (ISO date string), and `source_url = "https://qramm.org"` — mirroring the compliance staleness pattern from v4.6
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 55-01-PLAN.md — Backend: compliance_map.py module, GET /api/qramm/sessions/{id}/compliance-map endpoint, endpoint tests
+- [ ] 55-02-PLAN.md — CLI: quirk qramm status subcommand, run_scan.py intercept, pytest staleness gate with QUIRK_CI_STALENESS_OVERRIDE_DATE
+- [ ] 55-03-PLAN.md — Frontend: QRAMMComplianceMapRow type, ComplianceMapTab component, 6th tab wiring in qramm-assessment.tsx
 **UI hint**: yes
 
 ### Phase 56: PDF Export & Staleness Enforcement
