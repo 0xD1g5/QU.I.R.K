@@ -146,19 +146,28 @@ export function AssessmentPage() {
     })
   }
 
-  // New Assessment: archive current session, reset context, redirect to /qramm
+  // New Assessment: archive current session, reset context, redirect to /qramm.
+  // Only reset client context and navigate on a successful DELETE — a non-ok
+  // response does not throw, so we must check resp.ok explicitly to avoid
+  // diverging client and server state on failure.
   async function handleNewAssessment() {
     if (!ctx.sessionId) return
     setArchiving(true)
     try {
-      await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
-    } finally {
+      const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
+      if (!resp.ok && resp.status !== 404) {
+        // Server still has the session — do NOT reset context or navigate.
+        return
+      }
       ctx.setSessionId(null)
       ctx.resetAnswers(new Map())
       ctx.setProfile(null)
       ctx.setScoreResult(null)
-      setArchiving(false)
       navigate("/qramm")
+    } catch {
+      // Network error — leave context intact so the user can retry.
+    } finally {
+      setArchiving(false)
     }
   }
 
