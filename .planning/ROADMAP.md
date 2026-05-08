@@ -1142,4 +1142,4 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | 53. QRAMM Evidence Bridge | v4.7 | 4/4 | Complete    | 2026-05-07 |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 5/5 | Complete   | 2026-05-08 |
 | 55. QRAMM Compliance Mapping View | v4.7 | 3/3 | Complete   | 2026-05-08 |
-| 56. PDF Export & Staleness Enforcement | v4.7 | 3/3 | Complete   | 2026-05-08 |
+| 56. PDF Export & Staleness Enforcement | v4.7 | 3/3 | Complete    | 2026-05-08 |
