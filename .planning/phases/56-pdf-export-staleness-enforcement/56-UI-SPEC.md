@@ -43,7 +43,7 @@ Declared values (multiples of 4 only). Print route uses inline `style={{}}` or s
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Badge horizontal padding (1px top/bottom, 6px left/right — matches existing `.badge` rule) |
-| sm | 8px | Table cell padding (5–6px vertical, 8px horizontal — matches existing `th`/`td` rules) |
+| sm | 8px | Table cell padding (8px horizontal — matches existing `th`/`td` rules) |
 | md | 16px | Section margin-bottom for framework sub-sections; body paragraph gaps |
 | lg | 24px | `.print-section` padding-top (existing rule preserved); `h2` margin-top |
 | xl | 32px | Score-row gap (existing `.score-row` rule uses `gap:32px`) |
@@ -53,8 +53,9 @@ Declared values (multiples of 4 only). Print route uses inline `style={{}}` or s
 Exceptions:
 - Radar SVG: fixed `200×200` viewBox with `radius = 80` (compass positions). Polygon points
   computed as `score / 4 * 80` per axis. Container div: `width:200px; height:200px; margin:16px 0`.
-- Table cell vertical padding: 5px (existing `td` rule) — not a multiple of 4. Preserved as-is
-  to not regress existing sections.
+- Pre-Phase-56 inherited values (e.g. existing `td` vertical padding) are out-of-scope for this
+  phase's spacing contract — inherited, not declared here. Phase 56 does not introduce or modify
+  those rules.
 
 ---
 
@@ -83,12 +84,11 @@ static CSS — no CSS variables.
 |------|-------|-------|
 | Dominant (60%) | #ffffff | Page background, table cell backgrounds |
 | Secondary (30%) | #f4f4f5 | Table header background (existing `th` rule) |
+| Accent (10%) — teal | #4ba8a8 | Radar polygon stroke, `.tier-scanner` badge background (matches dashboard `--ds-accent`) |
+| Accent (10%) — fill variant | rgba(75, 168, 168, 0.18) | Radar chart polygon fill (`fill-opacity: 0.18`) |
 | Foreground text | #0a0a0a | Body text (existing `body` rule) |
 | Muted text | #52525b | `.meta` class text (existing), radar axis labels |
 | Border / rule | #e4e4e7 | Table borders (existing `th`/`td` rules) |
-| Accent — radar polygon fill | rgba(75, 168, 168, 0.18) | Radar chart polygon fill (`fill-opacity: 0.18`, `#4ba8a8` teal — matches dashboard `--ds-accent`) |
-| Accent — radar polygon stroke | #4ba8a8 | Radar polygon outline stroke (`stroke-width:2`) |
-| Radar axis lines | #e4e4e7 | Four axis lines from center to compass endpoint |
 | Destructive | Not used | No destructive actions in print route |
 
 **Coverage tier badge colors (new PRINT_CSS entries):**
