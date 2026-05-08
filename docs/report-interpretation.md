@@ -175,4 +175,37 @@ Operators can verify compliance map freshness before a client engagement by runn
 
 ---
 
-*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`.*
+---
+
+## 9. QRAMM Governance Assessment Section
+
+The combined PDF includes a QRAMM (Quantum Readiness & Maturity Model) Governance Assessment section that begins on a new page after the Migration Roadmap. This section is intended to be read alongside the technical findings — it gives executives and CISOs the governance context for the scanner-derived crypto inventory.
+
+### What the section contains
+
+- **Radar chart (inline SVG)** — Rendered first in the section. A four-axis polygon plotting the four QRAMM dimensions: CVI (Cryptographic Visibility & Inventory), SGRM (Standards & Governance Risk Management), DPE (Data Protection & Encryption), and ITR (Incident & Transition Readiness). The polygon shows the session's raw dimension scores on a 0–4 scale; closer to the outer edge means higher maturity.
+- **Executive intro paragraph** — A one-sentence summary identifying that the section reflects the most recent completed QRAMM assessment.
+- **Dimension Scorecard table** — Four rows (one per dimension) with raw score, weighted score, and overall maturity level.
+- **Compliance Framework Coverage summary** — An 8-row table mapping the assessment to NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, and BSI TR-02102. Each framework shows a coverage tier badge: **Scanner-informed** (the QUIRK scanner contributes signal — currently CVI only) or **Manual only** (the framework's relevance is derived purely from manual assessment answers).
+- **Per-framework practice detail** — Below the summary table, eight subsections (one per framework) flow continuously without page breaks. Each shows every practice area's relevance score and whether it was scanner-informed.
+
+### When no QRAMM assessment has been completed
+
+The QRAMM section heading still appears in the PDF, but the body shows only:
+
+> "No QRAMM assessment completed — run an assessment from the dashboard to populate this section."
+
+This keeps the PDF structure consistent across all engagements and signals that the QRAMM capability exists.
+
+### Coverage caveat
+
+QUIRK's scanner directly informs the CVI dimension (cryptographic visibility from real findings). SGRM, DPE, and ITR require manual assessment input via the dashboard's QRAMM questionnaire. The footnote in the PDF reflects this:
+
+> "Coverage reflects QUIRK scanner findings for CVI only — SGRM, DPE, ITR require manual assessment."
+
+> **Client Conversation — QRAMM Governance Assessment:**
+> "The QRAMM section of the PDF gives you the governance layer — how your organization's policies, processes, and readiness posture map to the cryptographic risks we found in the technical scan. The radar chart shows maturity across four dimensions. CVI — Cryptographic Visibility — is the only dimension informed directly by the scanner findings. The other three dimensions reflect your answers in the assessment questionnaire. If you haven't completed an assessment yet, that section will show a placeholder — we can walk through it together after the technical findings review."
+
+---
+
+*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`.*
