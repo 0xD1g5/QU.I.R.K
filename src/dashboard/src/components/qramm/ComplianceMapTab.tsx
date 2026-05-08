@@ -51,6 +51,7 @@ const UNSCORED_BANNER =
 interface PracticeRow {
   practice_area: string
   dimension: string
+  scanner_informed: boolean
   scores: Record<string, number | null>
 }
 
@@ -61,6 +62,7 @@ function groupRows(rows: QRAMMComplianceMapRow[]): PracticeRow[] {
       byPa[r.practice_area] = {
         practice_area: r.practice_area,
         dimension: r.dimension,
+        scanner_informed: r.scanner_informed,
         scores: {},
       }
     }
@@ -183,7 +185,9 @@ export function ComplianceMapTab() {
                         </TableCell>
                         {FRAMEWORK_KEYS.map((fw) => (
                           <TableCell key={fw} className="font-data text-sm">
-                            {formatScore(row.scores[fw] ?? null)}
+                            {row.scanner_informed
+                              ? formatScore(row.scores[fw] ?? null)
+                              : "—"}
                           </TableCell>
                         ))}
                       </TableRow>
