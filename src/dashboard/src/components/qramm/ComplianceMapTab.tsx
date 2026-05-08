@@ -108,7 +108,7 @@ export function ComplianceMapTab() {
   }, [ctx.sessionId, ctx.scoreResult])
 
   const grouped = groupRows(rows)
-  const isUnscored = !ctx.scoreResult || rows.every(
+  const isUnscored = rows.length === 0 || rows.every(
     (r) => r.relevance_score === null
   )
 
