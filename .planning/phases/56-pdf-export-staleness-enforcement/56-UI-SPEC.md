@@ -66,11 +66,9 @@ these rules — it does NOT introduce new font sizes or weights.
 | Role | Size | Weight | Line Height | Usage in Phase 56 |
 |------|------|--------|-------------|-------------------|
 | Body / table cell | 14px | 400 | 1.5 | `body` rule (existing) — compliance detail rows |
-| Small / badge / meta | 11–12px | 600 (badge) / 400 (meta) | 1.4 | `.badge` (11px/600), `.meta` (12px/400), table `font-size:12px` |
+| Small / badge / meta / SVG labels | 12px | 600 (badge) / 400 (meta, SVG) | 1.4 | `.badge` (12px/600), `.meta` (12px/400), table `font-size:12px`, SVG axis/score `<text>` elements |
 | Subheading | 16px | 600 | 1.3 | `h3` rule (existing) — per-framework section headings |
 | Section heading | 20px | 600 | 1.2 | `h2` rule (existing) — "QRAMM Governance Assessment" heading |
-| SVG axis labels | 11px | 400 | n/a | `<text>` elements inside radar SVG — set via `font-size="11"` SVG attribute |
-| SVG score values | 11px | 600 | n/a | `<text>` elements at axis endpoints — set via `font-weight="600"` |
 
 Source: existing `PRINT_CSS` entries in `print.tsx` lines 10–13.
 
@@ -172,8 +170,8 @@ The `<h2>` heading always renders. The body varies between scored and no-session
 | Axis lines | `<line>` from `(100,100)` to each endpoint, `stroke:#e4e4e7`, `stroke-width:1` |
 | Score polygon | `<polygon>` with 4 computed points, `fill:rgba(75,168,168,0.18)`, `stroke:#4ba8a8`, `stroke-width:2` |
 | Point computation | `cx = 100 + cos(angle) * (score/4 * 80)`, `cy = 100 + sin(angle) * (score/4 * 80)` per axis |
-| Axis labels | `<text>` at each endpoint — dimension name (e.g., "CVI") at offset 10px beyond endpoint |
-| Score values | `<text>` adjacent to each polygon vertex — score to 1 decimal place |
+| Axis labels | `<text>` at each endpoint — dimension name (e.g., "CVI") at offset 10px beyond endpoint; `font-size="12"` |
+| Score values | `<text>` adjacent to each polygon vertex — score to 1 decimal place; `font-size="12"` `font-weight="600"` |
 | Container | `<div style="width:200px;height:200px;margin:16px 0">` wrapping the SVG |
 
 ---
@@ -225,7 +223,7 @@ These static strings must be appended to the `PRINT_CSS` array in `print.tsx`:
 ".tier-scanner{background:#4ba8a8;color:#fff}"
 ".tier-manual{background:#e4e4e7;color:#52525b}"
 ".qramm-radar{margin:16px 0}"
-".qramm-footnote{font-size:11px;color:#52525b;margin-top:8px;border-top:1px solid #e4e4e7;padding-top:6px}"
+".qramm-footnote{font-size:12px;color:#52525b;margin-top:8px;border-top:1px solid #e4e4e7;padding-top:8px}"
 ".qramm-detail-section{margin-top:16px}"
 ```
 
