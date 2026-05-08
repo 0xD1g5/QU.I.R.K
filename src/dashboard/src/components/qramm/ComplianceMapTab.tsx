@@ -7,8 +7,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { QRAMMContext } from "@/context/QRAMMContext"
-import type { QRAMMComplianceMapRow } from "@/types/api"
+import type { QRAMMComplianceMapRow, QRAMMScoreResponse } from "@/types/api"
 
 const FRAMEWORK_KEYS = [
   "NIST_PQC", "NSM10", "CNSA2", "ISO27001",
@@ -83,6 +84,31 @@ export function ComplianceMapTab() {
   const [rows, setRows] = useState<QRAMMComplianceMapRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scoring, setScoring] = useState(false)
+  const [scoreError, setScoreError] = useState<string | null>(null)
+
+  async function handleCalculate() {
+    if (!ctx.sessionId) return
+    setScoring(true)
+    setScoreError(null)
+    try {
+      const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}/score`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_multiplier: ctx.profile?.multiplier ?? null }),
+      })
+      if (!resp.ok) {
+        setScoreError("Could not calculate score — check your connection and try again.")
+        return
+      }
+      const json: QRAMMScoreResponse = await resp.json()
+      ctx.setScoreResult(json)
+    } catch {
+      setScoreError("Could not calculate score — check your connection and try again.")
+    } finally {
+      setScoring(false)
+    }
+  }
 
   useEffect(() => {
     if (!ctx.sessionId) {
@@ -129,8 +155,21 @@ export function ComplianceMapTab() {
 
       {!error && isUnscored && (
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-3">
             <p className="text-sm text-muted-foreground">{UNSCORED_BANNER}</p>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleCalculate}
+              disabled={scoring || !ctx.sessionId}
+            >
+              {scoring ? (
+                <><Loader2 className="animate-spin h-4 w-4 mr-2" />Calculating…</>
+              ) : "Calculate Score"}
+            </Button>
+            {scoreError && (
+              <p className="text-sm text-destructive">{scoreError}</p>
+            )}
           </CardContent>
         </Card>
       )}
