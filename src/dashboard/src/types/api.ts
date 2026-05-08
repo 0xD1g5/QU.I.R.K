@@ -222,3 +222,15 @@ export interface QRAMMScoreResponse {
   dimensions: Record<string, { score: number; weighted: number }>
   profile_multiplier: number
 }
+
+// Phase 55 QRAMM-15: Compliance Map row returned by
+// GET /api/qramm/sessions/{id}/compliance-map
+export interface QRAMMComplianceMapRow {
+  practice_number: string
+  practice_area: string
+  dimension: string
+  framework: string
+  static_weight: number
+  relevance_score: number | null
+  scanner_informed: boolean
+}
