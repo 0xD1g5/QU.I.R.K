@@ -502,6 +502,21 @@ def test_read_answers_404():
     assert resp.status_code == 404
 
 
+# ---------- Phase 54 Plan 04: GET /api/qramm/questions ----------
+
+def test_list_questions_returns_120():
+    client, _ = _make_qramm_client()
+    resp = client.get("/api/qramm/questions")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body) == 120
+    required_keys = {"question_number", "dimension", "practice_area", "text", "maturity_labels"}
+    for item in body:
+        assert required_keys.issubset(item.keys())
+    numbers = sorted(item["question_number"] for item in body)
+    assert numbers == list(range(1, 121))
+
+
 # ---------- DEBT-01 zero-warning gate (Plan 05 also covers this) ----------
 
 def test_no_utcnow_in_qramm_module():
