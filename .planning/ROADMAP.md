@@ -1020,7 +1020,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 - [x] **Phase 52: Compliance Uplift & Health Check** - SOC2/ISO 27001 framework extensions, CBOM FIPS 140-3 annotations, `quirk doctor` CLI, and four tech debt items (parallel to Phase 51) (completed 2026-05-06)
 - [x] **Phase 53: QRAMM Evidence Bridge** - Auto-populate CVI dimension answers from live scanner findings via SESSION_BRACKET scan-window; suggested_answer storage with confirmation workflow (completed 2026-05-07)
 - [x] **Phase 54: QRAMM Assessment UI & Scorecard** - Org Profile wizard, 120-question dimension tabs, answer persistence, radar chart scorecard (completed 2026-05-08)
-- [ ] **Phase 55: QRAMM Compliance Mapping View** - 8-framework coverage table, per-practice relevance scores, staleness CLI and CI gate
+- [x] **Phase 55: QRAMM Compliance Mapping View** - 8-framework coverage table, per-practice relevance scores, staleness CLI and CI gate (completed 2026-05-08)
 - [ ] **Phase 56: PDF Export & Staleness Enforcement** - Combined governance + technical PDF, QRAMM section with radar chart, quarterly CI staleness gate
 
 </details>
@@ -1116,7 +1116,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 **Plans**: 3 plans
 - [x] 55-01-PLAN.md — Backend: compliance_map.py module, GET /api/qramm/sessions/{id}/compliance-map endpoint, endpoint tests
 - [x] 55-02-PLAN.md — CLI: quirk qramm status subcommand, run_scan.py intercept, pytest staleness gate with QUIRK_CI_STALENESS_OVERRIDE_DATE
-- [ ] 55-03-PLAN.md — Frontend: QRAMMComplianceMapRow type, ComplianceMapTab component, 6th tab wiring in qramm-assessment.tsx
+- [x] 55-03-PLAN.md — Frontend: QRAMMComplianceMapRow type, ComplianceMapTab component, 6th tab wiring in qramm-assessment.tsx
 **UI hint**: yes
 
 ### Phase 56: PDF Export & Staleness Enforcement
@@ -1138,5 +1138,5 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | 52. Compliance Uplift & Health Check | v4.7 | 6/6 | Complete    | 2026-05-06 |
 | 53. QRAMM Evidence Bridge | v4.7 | 4/4 | Complete    | 2026-05-07 |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 5/5 | Complete   | 2026-05-08 |
-| 55. QRAMM Compliance Mapping View | v4.7 | 2/3 | In Progress|  |
+| 55. QRAMM Compliance Mapping View | v4.7 | 3/3 | Complete   | 2026-05-08 |
 | 56. PDF Export & Staleness Enforcement | v4.7 | 0/TBD | Not started | - |

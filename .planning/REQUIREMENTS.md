@@ -41,7 +41,7 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 
 ### QRAMM Governance Artifacts
 
-- [ ] **QRAMM-15**: Dashboard includes a QRAMM Compliance Mapping view showing an 8-framework coverage table (NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, BSI TR-02102) with per-practice relevance scores derived from the active assessment session; view never displays a "fully compliant" badge and never shows a coverage percentage above the scanner's actual coverage ceiling
+- [x] **QRAMM-15**: Dashboard includes a QRAMM Compliance Mapping view showing an 8-framework coverage table (NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, BSI TR-02102) with per-practice relevance scores derived from the active assessment session; view never displays a "fully compliant" badge and never shows a coverage percentage above the scanner's actual coverage ceiling
 - [ ] **QRAMM-16**: Combined PDF export (`/print` route) includes a QRAMM section (executive QRAMM summary, dimension scorecard table, static SVG radar chart, compliance framework mapping summary) starting on a new page via `@media print { page-break-before: always }` — existing Technical Findings section layout is not regressed
 
 ### Health & Diagnostics
@@ -124,5 +124,5 @@ Populated by the roadmapper. Updated at each phase transition.
 | QRAMM-05 | Phase 55 | Pending |
 | QRAMM-06 | Phase 55 | Pending |
 | QRAMM-07 | Phase 55 | Pending |
-| QRAMM-15 | Phase 55 | Pending |
+| QRAMM-15 | Phase 55 | Complete |
 | QRAMM-16 | Phase 56 | Pending |
