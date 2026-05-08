@@ -73,11 +73,9 @@ Data values (scores, percentages, raw numbers) use JetBrains Mono via `.font-dat
 | Role | Tailwind Class | Size | Weight | Line Height | Usage |
 |------|---------------|------|--------|-------------|-------|
 | Body | `text-sm` | 14px | 400 (regular) | 1.5 | Question text, evidence note placeholder, wizard field labels, table cells |
-| Label | `text-xs` | 12px | 600 (semibold) | 1.4 | Table header (`font-semibold`), badge text, maturity level radio labels, section subheadings, progress counter |
+| Label | `text-xs` | 12px | 600 (semibold) | 1.4 | Table header (`font-semibold`), badge text, maturity level radio labels, section subheadings, progress counter. For eyebrow contexts (tab group label above the 5 tabs, "PRACTICE AREA" section labels, scorecard "DIMENSION SCORES" column header): add `uppercase tracking-[0.08em]` — no new size token |
 | Heading | `text-base` | 16px | 600 (semibold) | 1.3 | Practice area section headers, wizard step titles, scorecard panel headings |
-| Display | `text-lg` | 18px | 700 (bold) | 1.2 | Page-level headings ("QRAMM Assessment", "Org Profile"), scorecard dimension score values |
-
-Eyebrow labels (10px / semibold / all-caps / 0.08em tracking): use `.label-eyebrow` utility class from index.css. Apply to: tab group label above the 5 tabs, "PRACTICE AREA" section labels, scorecard "DIMENSION SCORES" column header.
+| Display | `text-lg` | 18px | 600 (semibold) | 1.2 | Page-level headings ("QRAMM Assessment", "Org Profile"), scorecard dimension score values |
 
 Monospace numerics: apply `.font-data` to raw score, weighted score, benchmark, and completion percentage values in the dimension summary table.
 
@@ -136,7 +134,7 @@ These tokens already exist in tailwind.config.ts — no new tokens needed.
 
 **Auto-resume state:** If a session exists and an org profile is saved, `/qramm` shows a "Resume Assessment" card overlay instead of the blank wizard form. This card shows: org name summary + "Continue Assessment" primary button + "New Assessment" destructive secondary button.
 
-**"New Assessment" interaction:** Renders an inline confirmation (not modal) with copy: "Starting a new assessment will archive your current progress. This cannot be undone." + "Confirm New Assessment" (destructive button) + "Cancel" (ghost button).
+**"New Assessment" interaction:** Renders an inline confirmation (not modal) with copy: "Starting a new assessment will archive your current progress. This cannot be undone." + "Confirm New Assessment" (destructive button) + "Keep Current Assessment" (ghost button).
 
 ### Assessment View (`/qramm/assessment`)
 
@@ -258,7 +256,7 @@ scoreResult: ScoreResult | null
 | New Assessment confirmation heading | "Start a New Assessment?" |
 | New Assessment confirmation body | "Starting a new assessment will archive your current progress. This cannot be undone." |
 | New Assessment confirm action | "Confirm New Assessment" |
-| New Assessment cancel action | "Cancel" |
+| New Assessment cancel action | "Keep Current Assessment" |
 | Save error toast | "Answer not saved — check your connection" |
 | Score error toast | "Could not calculate score — check your connection and try again" |
 | Practice area progress label | "X of 10 answered" |
