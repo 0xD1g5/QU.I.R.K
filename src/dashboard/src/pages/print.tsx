@@ -244,7 +244,7 @@ function PrintQRAMM({
       <h3>Dimension Scorecard</h3>
       <table>
         <thead>
-          <tr><th>Dimension</th><th>Raw Score</th><th>Weighted Score</th><th>Maturity</th></tr>
+          <tr><th>Dimension</th><th>Raw Score</th><th>Weighted Score</th></tr>
         </thead>
         <tbody>
           {QRAMM_DIMS.map((d) => {
@@ -256,17 +256,21 @@ function PrintQRAMM({
                 <td>{d}</td>
                 <td>{raw.toFixed(1)}</td>
                 <td>{weighted.toFixed(2)}</td>
-                <td>{scoreResult.maturity}</td>
               </tr>
             )
           })}
+          <tr>
+            <td colSpan={3} style={{ fontWeight: 600, textAlign: "right" }}>
+              Overall maturity: {scoreResult.maturity}
+            </td>
+          </tr>
         </tbody>
       </table>
 
       <h3>Compliance Framework Coverage</h3>
       <table>
         <thead>
-          <tr><th>Framework</th><th>Coverage Tier</th><th>Source</th></tr>
+          <tr><th>Framework</th><th>Coverage Tier</th></tr>
         </thead>
         <tbody>
           {FRAMEWORK_ORDER.map((fw) => {
@@ -277,7 +281,6 @@ function PrintQRAMM({
               <tr key={fw}>
                 <td>{FRAMEWORK_DISPLAY[fw]}</td>
                 <td><span className={cls}>{label}</span></td>
-                <td>{label}</td>
               </tr>
             )
           })}
@@ -328,14 +331,14 @@ export function PrintPage() {
     console.error("QRAMM print data error:", qrammError)
   }
 
+  // Set data-ready only when both hooks have resolved. No cleanup return: removing the
+  // attribute on every dependency change creates a transient window that PDF renderers
+  // polling the attribute could observe before the re-set fires.
   useEffect(() => {
-    if (data && !qrammLoading) {
+    if (data && !loading && !qrammLoading) {
       document.body.setAttribute('data-ready', 'true')
     }
-    return () => {
-      document.body.removeAttribute('data-ready')
-    }
-  }, [data, qrammLoading])
+  }, [data, loading, qrammLoading])
 
   if (loading) {
     return (
