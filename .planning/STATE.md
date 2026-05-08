@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.7
 milestone_name: Governance & Compliance Platform
-status: milestone_complete
-stopped_at: Phase 56 UI-SPEC approved
-last_updated: "2026-05-08T17:29:32.448Z"
-last_activity: 2026-05-08 -- Phase 56 execution started
+status: Phase inserted (urgent) — not planned
+stopped_at: Phase 56.1 context gathered
+last_updated: "2026-05-08T23:52:26.840Z"
+last_activity: 2026-05-08
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
   total_plans: 27
-  completed_plans: 24
+  completed_plans: 27
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 56 — pdf-export-staleness-enforcement
+**Current focus:** Phase 56.1 — close-qramm-06-07-wire-ci-staleness-gate-workflow
 
 ## Current Position
 
-Phase: 56
+Phase: 56.1
 Plan: Not started
-Status: Milestone complete
+Status: Phase inserted (urgent) — not planned
 Last activity: 2026-05-08
 
 Progress bar: `░░░░░░░░░░░░░░░░░░░░` 0% (0/6 phases)
@@ -66,6 +66,10 @@ Progress bar: `░░░░░░░░░░░░░░░░░░░░` 0% 
 | 56 | TBD | Not started |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 56.1 inserted after Phase 56: Close QRAMM-06/07 — wire CI staleness gate workflow (URGENT)
 
 ### Decisions
 
@@ -107,6 +111,6 @@ Items carried forward from v4.6 close (2026-05-05):
 
 ## Session Continuity
 
-Last session: 2026-05-08T16:38:34.467Z
-Stopped at: Phase 56 UI-SPEC approved
+Last session: 2026-05-08T23:52:26.836Z
+Stopped at: Phase 56.1 context gathered
 Next action: Phase 55 Plan 04 (staleness CLI + tests) or next phase
