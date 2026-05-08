@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
@@ -399,28 +400,38 @@ def list_questions() -> List[QuestionItem]:
 # ---------- Phase 54 Plan 01: 4 new endpoints ----------
 
 @router.get("/qramm/sessions", response_model=List[SessionSummary])
-def list_sessions(db: Session = Depends(get_db)) -> List[SessionSummary]:
-    """Gap 1 — D-03: list all assessment sessions, most-recent first."""
-    sessions = (
-        db.query(QRAMMSession)
-        .order_by(QRAMMSession.created_at.desc())
+def list_sessions(db: Session = Depends(get_db), limit: int = 50) -> List[SessionSummary]:
+    """Gap 1 — D-03: list assessment sessions, most-recent first (default limit 50).
+
+    Uses a single GROUP BY subquery to count answered questions per session,
+    replacing the previous N+1 per-session COUNT loop.
+    """
+    answered_sq = (
+        db.query(
+            QRAMMAnswer.session_id,
+            func.count(QRAMMAnswer.id).label("cnt"),
+        )
+        .filter(QRAMMAnswer.answer_value.isnot(None))
+        .group_by(QRAMMAnswer.session_id)
+        .subquery()
+    )
+    rows = (
+        db.query(QRAMMSession, func.coalesce(answered_sq.c.cnt, 0).label("answers_count"))
+        .outerjoin(answered_sq, QRAMMSession.id == answered_sq.c.session_id)
+        .order_by(QRAMMSession.created_at.desc(), QRAMMSession.id.desc())
+        .limit(limit)
         .all()
     )
-    result = []
-    for s in sessions:
-        answers_count = (
-            db.query(QRAMMAnswer)
-            .filter(QRAMMAnswer.session_id == s.id, QRAMMAnswer.answer_value.isnot(None))
-            .count()
-        )
-        result.append(SessionSummary(
+    return [
+        SessionSummary(
             session_id=s.id,
             org_name=s.org_name,
             created_at=_iso_str(s.created_at),
             status=s.status,
-            answers_count=answers_count,
-        ))
-    return result
+            answers_count=count,
+        )
+        for s, count in rows
+    ]
 
 
 @router.post("/qramm/profiles", status_code=201, response_model=CreateProfileResponse)
