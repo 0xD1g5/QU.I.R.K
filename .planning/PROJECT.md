@@ -150,6 +150,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - Tech debt: BACK-56 (datetime.utcnow deprecation), BACK-67 (defusedxml.lxml migration), BACK-87 (lab.sh PROFILE_ARGS bug), BACK-85 (ports_scanned in run-stats)
 
 ## Current State: v4.7 In Progress — Phase 53 Complete
+Phase 56 complete — QRAMM Governance Assessment section added to PDF export (QRAMM-16)
 
 v4.7 "Governance & Compliance Platform" is underway. Phase 53 (QRAMM Evidence Bridge) complete 2026-05-07: `quirk/qramm/evidence_bridge.py` auto-populates 30 CVI dimension questions with `suggested_answer` values derived from the SESSION_BRACKET scan cohort on session create; D-05/D-06/D-07 quartile/threshold derivation rules implemented; `confirmed_at` auto-set when a human confirms a bridge suggestion (D-09); badge signal is implicit in `suggested_answer IS NOT NULL AND answer_value IS NULL` (QRAMM-14); zero `risk_engine` coupling; 8-test TDD suite all GREEN with 36/36 total passing. Phase 54 (QRAMM Assessment UI & Scorecard) is next on the critical path.
 
@@ -212,7 +213,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-07 — Phase 53 QRAMM Evidence Bridge complete*
+*Last updated: 2026-05-08
 
 ## Evolution
 
