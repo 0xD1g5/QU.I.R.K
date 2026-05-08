@@ -50,18 +50,23 @@ export function OrgProfilePage() {
       setArchiving(true)
       try {
         if (ctx.sessionId != null) {
-          await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
+          const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
+          if (!resp.ok && resp.status !== 404) {
+            // Server still has the session — do NOT reset context so the user
+            // can retry rather than ending up with diverged client/server state.
+            return
+          }
         }
-      } catch {
-        // Ignore errors — user wants a clean slate regardless
-      } finally {
         ctx.setSessionId(null)
         ctx.setProfile(null)
         ctx.setScoreResult(null)
         ctx.resetAnswers(new Map())
         setShowNewConfirm(false)
-        setArchiving(false)
         reload()
+      } catch {
+        // Network error — leave context intact so the user can retry.
+      } finally {
+        setArchiving(false)
       }
     }
 
