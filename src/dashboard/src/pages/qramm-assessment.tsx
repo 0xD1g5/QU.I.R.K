@@ -15,6 +15,7 @@ import {
 } from "@/lib/qramm-constants"
 import { PracticeAreaSection } from "@/components/qramm/PracticeAreaSection"
 import { ScorecardTab } from "@/components/qramm/ScorecardTab"
+import { ComplianceMapTab } from "@/components/qramm/ComplianceMapTab"
 import type { QuestionItem } from "@/types/api"
 
 // ── Dimension tab inner component ─────────────────────────────────────────────
@@ -250,6 +251,7 @@ export function AssessmentPage() {
           <TabsTrigger value="dpe">DPE</TabsTrigger>
           <TabsTrigger value="itr">ITR</TabsTrigger>
           <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance Map</TabsTrigger>
         </TabsList>
 
         {DIMENSIONS.map((dim) => (
@@ -266,6 +268,10 @@ export function AssessmentPage() {
 
         <TabsContent value="scorecard">
           <ScorecardTab qnToDim={qnToDim} />
+        </TabsContent>
+
+        <TabsContent value="compliance">
+          <ComplianceMapTab />
         </TabsContent>
       </Tabs>
     </div>
