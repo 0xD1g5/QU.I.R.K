@@ -1096,7 +1096,12 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   2. The assessment view renders 120 questions across 4 dimension tabs (CVI, SGRM, DPE, ITR); each question displays a 1–4 radio scale with `Basic / Developing / Established / Optimizing` labels and an optional evidence note field; a per-dimension progress counter updates as questions are answered
   3. Navigating away from the assessment and returning (or refreshing the browser) restores all previously entered answers without data loss — answers are persisted via debounced `POST /api/qramm/assessment/draft` to the backend
   4. The QRAMM Scorecard page displays a 4-axis `RadarChart` (CVI, SGRM, DPE, ITR), a dimension summary table with raw score / weighted score / industry benchmark / maturity level / completion %, and a maturity distribution showing practice counts at each level; scores update only when the user clicks "Calculate Score" (not in real time)
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 54-01-PLAN.md — Backend foundation: evidence_note column migration + 4 missing QRAMM API endpoints (sessions list, profile create with multiplier, draft answer, answers read) + pytest coverage
+  - [ ] 54-02-PLAN.md — Frontend foundation: shadcn primitives (radio-group, collapsible, label) + QRAMMContext/QRAMMProvider with debounced draft persister + useQRAMMSession hook + static lookups (industry benchmarks, practice area names, option lists)
+  - [ ] 54-03-PLAN.md — Org Profile wizard page (/qramm) + App.tsx provider wiring + sidebar nav entry with startsWith active state
+  - [ ] 54-04-PLAN.md — Assessment view (/qramm/assessment): 5 tabs, 120 questions across 12 default-open Collapsible sections, RadioGroup + evidence note per card, two-step Confirm UX for auto-filled questions, restore-on-reload
+  - [ ] 54-05-PLAN.md — Scorecard tab: RadarChart (isAnimationActive=false), dimension summary table, maturity distribution, explicit Calculate Score action, a11y route registration + fixture
 **UI hint**: yes
 
 ### Phase 55: QRAMM Compliance Mapping View
