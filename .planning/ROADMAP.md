@@ -1019,7 +1019,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 - [x] **Phase 51: QRAMM Core Infrastructure** - SQLite tables, FastAPI CRUD, 120-question catalog, scoring engine, and datetime.utcnow fix — the backend foundation all QRAMM phases depend on (completed 2026-05-06)
 - [x] **Phase 52: Compliance Uplift & Health Check** - SOC2/ISO 27001 framework extensions, CBOM FIPS 140-3 annotations, `quirk doctor` CLI, and four tech debt items (parallel to Phase 51) (completed 2026-05-06)
 - [x] **Phase 53: QRAMM Evidence Bridge** - Auto-populate CVI dimension answers from live scanner findings via SESSION_BRACKET scan-window; suggested_answer storage with confirmation workflow (completed 2026-05-07)
-- [ ] **Phase 54: QRAMM Assessment UI & Scorecard** - Org Profile wizard, 120-question dimension tabs, answer persistence, radar chart scorecard
+- [x] **Phase 54: QRAMM Assessment UI & Scorecard** - Org Profile wizard, 120-question dimension tabs, answer persistence, radar chart scorecard (completed 2026-05-08)
 - [ ] **Phase 55: QRAMM Compliance Mapping View** - 8-framework coverage table, per-practice relevance scores, staleness CLI and CI gate
 - [ ] **Phase 56: PDF Export & Staleness Enforcement** - Combined governance + technical PDF, QRAMM section with radar chart, quarterly CI staleness gate
 
@@ -1101,7 +1101,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   - [x] 54-02-PLAN.md — Frontend foundation: shadcn primitives (radio-group, collapsible, label) + QRAMMContext/QRAMMProvider with debounced draft persister + useQRAMMSession hook + static lookups (industry benchmarks, practice area names, option lists)
   - [x] 54-03-PLAN.md — Org Profile wizard page (/qramm) + App.tsx provider wiring + sidebar nav entry with startsWith active state
   - [x] 54-04-PLAN.md — Assessment view (/qramm/assessment): 5 tabs, 120 questions across 12 default-open Collapsible sections, RadioGroup + evidence note per card, two-step Confirm UX for auto-filled questions, restore-on-reload
-  - [ ] 54-05-PLAN.md — Scorecard tab: RadarChart (isAnimationActive=false), dimension summary table, maturity distribution, explicit Calculate Score action, a11y route registration + fixture
+  - [x] 54-05-PLAN.md — Scorecard tab: RadarChart (isAnimationActive=false), dimension summary table, maturity distribution, explicit Calculate Score action, a11y route registration + fixture
 **UI hint**: yes
 
 ### Phase 55: QRAMM Compliance Mapping View
@@ -1134,6 +1134,6 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | 51. QRAMM Core Infrastructure | v4.7 | 6/6 | Complete    | 2026-05-06 |
 | 52. Compliance Uplift & Health Check | v4.7 | 6/6 | Complete    | 2026-05-06 |
 | 53. QRAMM Evidence Bridge | v4.7 | 4/4 | Complete    | 2026-05-07 |
-| 54. QRAMM Assessment UI & Scorecard | v4.7 | 4/5 | In Progress|  |
+| 54. QRAMM Assessment UI & Scorecard | v4.7 | 5/5 | Complete   | 2026-05-08 |
 | 55. QRAMM Compliance Mapping View | v4.7 | 0/TBD | Not started | - |
 | 56. PDF Export & Staleness Enforcement | v4.7 | 0/TBD | Not started | - |
