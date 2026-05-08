@@ -8,15 +8,19 @@ export function QRAMMProvider({ children }: { children: ReactNode }) {
   const [answers, setAnswers] = useState<Map<number, AnswerState>>(new Map())
   const [profile, setProfile] = useState<OrgProfile | null>(null)
   const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Per-question debounce map — each question gets its own independent timer so
+  // rapid edits across different questions do not cancel each other's saves.
+  const debounceRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const sessionIdRef = useRef<number | null>(null)
   sessionIdRef.current = sessionId
 
   const persistDraft = useCallback((qn: number, state: Partial<AnswerState>) => {
     const sid = sessionIdRef.current
     if (sid == null) return
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
+    const existing = debounceRef.current.get(qn)
+    if (existing) clearTimeout(existing)
+    const timer = setTimeout(async () => {
+      debounceRef.current.delete(qn)
       try {
         await fetch("/api/qramm/assessment/draft", {
           method: "POST",
@@ -24,8 +28,8 @@ export function QRAMMProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({
             session_id: sid,
             question_number: qn,
-            answer_value: state.answer_value ?? null,
-            evidence_note: state.evidence_note ?? null,
+            ...("answer_value" in state && { answer_value: state.answer_value ?? null }),
+            ...("evidence_note" in state && { evidence_note: state.evidence_note ?? null }),
           }),
         })
       } catch {
@@ -33,6 +37,7 @@ export function QRAMMProvider({ children }: { children: ReactNode }) {
         // (UI-SPEC: "Answer not saved — check your connection")
       }
     }, 300)
+    debounceRef.current.set(qn, timer)
   }, [])
 
   const setAnswer = useCallback((questionNumber: number, state: Partial<AnswerState>) => {
