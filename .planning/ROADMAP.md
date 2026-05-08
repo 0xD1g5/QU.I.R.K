@@ -1021,7 +1021,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 - [x] **Phase 53: QRAMM Evidence Bridge** - Auto-populate CVI dimension answers from live scanner findings via SESSION_BRACKET scan-window; suggested_answer storage with confirmation workflow (completed 2026-05-07)
 - [x] **Phase 54: QRAMM Assessment UI & Scorecard** - Org Profile wizard, 120-question dimension tabs, answer persistence, radar chart scorecard (completed 2026-05-08)
 - [x] **Phase 55: QRAMM Compliance Mapping View** - 8-framework coverage table, per-practice relevance scores, staleness CLI and CI gate (completed 2026-05-08)
-- [ ] **Phase 56: PDF Export & Staleness Enforcement** - Combined governance + technical PDF, QRAMM section with radar chart, quarterly CI staleness gate
+- [x] **Phase 56: PDF Export & Staleness Enforcement** - Combined governance + technical PDF, QRAMM section with radar chart, quarterly CI staleness gate (completed 2026-05-08)
 
 </details>
 
@@ -1130,7 +1130,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 **Plans**: 3 plans
 - [x] 56-01-PLAN.md — useQRAMMPrintData hook (most-recent-scored session + parallel score/compliance-map fetch)
 - [x] 56-02-PLAN.md — print.tsx PrintQRAMM section: PRINT_CSS additions, inline SVG radar, dimension scorecard, 8-row compliance summary, per-framework practice detail, data-ready gate
-- [ ] 56-03-PLAN.md — Docs + Obsidian: UAT-SERIES.md cases, report-interpretation.md QRAMM section, Phase-56 vault note
+- [x] 56-03-PLAN.md — Docs + Obsidian: UAT-SERIES.md cases, report-interpretation.md QRAMM section, Phase-56 vault note
 **UI hint**: yes
 
 ## Progress — v4.7 Phases
@@ -1142,4 +1142,4 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | 53. QRAMM Evidence Bridge | v4.7 | 4/4 | Complete    | 2026-05-07 |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 5/5 | Complete   | 2026-05-08 |
 | 55. QRAMM Compliance Mapping View | v4.7 | 3/3 | Complete   | 2026-05-08 |
-| 56. PDF Export & Staleness Enforcement | v4.7 | 2/3 | In Progress|  |
+| 56. PDF Export & Staleness Enforcement | v4.7 | 3/3 | Complete   | 2026-05-08 |
