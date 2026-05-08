@@ -1129,7 +1129,7 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   3. A consultant running a full QRAMM assessment and clicking "Export PDF" receives a single file containing both the governance assessment and the technical scanner findings — the primary consulting deliverable
 **Plans**: 3 plans
 - [x] 56-01-PLAN.md — useQRAMMPrintData hook (most-recent-scored session + parallel score/compliance-map fetch)
-- [ ] 56-02-PLAN.md — print.tsx PrintQRAMM section: PRINT_CSS additions, inline SVG radar, dimension scorecard, 8-row compliance summary, per-framework practice detail, data-ready gate
+- [x] 56-02-PLAN.md — print.tsx PrintQRAMM section: PRINT_CSS additions, inline SVG radar, dimension scorecard, 8-row compliance summary, per-framework practice detail, data-ready gate
 - [ ] 56-03-PLAN.md — Docs + Obsidian: UAT-SERIES.md cases, report-interpretation.md QRAMM section, Phase-56 vault note
 **UI hint**: yes
 
@@ -1142,4 +1142,4 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | 53. QRAMM Evidence Bridge | v4.7 | 4/4 | Complete    | 2026-05-07 |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 5/5 | Complete   | 2026-05-08 |
 | 55. QRAMM Compliance Mapping View | v4.7 | 3/3 | Complete   | 2026-05-08 |
-| 56. PDF Export & Staleness Enforcement | v4.7 | 1/3 | In Progress|  |
+| 56. PDF Export & Staleness Enforcement | v4.7 | 2/3 | In Progress|  |
