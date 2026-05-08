@@ -1,0 +1,1477 @@
+{
+  "GET /api/qramm/sessions": [
+    {
+      "session_id": 1,
+      "org_name": "Acme Corp",
+      "created_at": "2026-05-07T00:00:00Z",
+      "status": "draft",
+      "answers_count": 12
+    }
+  ],
+  "GET /api/qramm/sessions/1": {
+    "session_id": 1,
+    "org_name": "Acme Corp",
+    "status": "draft",
+    "model_version": "1.0",
+    "answers_count": 12,
+    "profile_id": null
+  },
+  "GET /api/qramm/sessions/1/answers": [
+    {
+      "question_number": 1,
+      "answer_value": 3,
+      "suggested_answer": null,
+      "confirmed_at": null,
+      "evidence_note": null
+    },
+    {
+      "question_number": 2,
+      "answer_value": null,
+      "suggested_answer": 2,
+      "confirmed_at": null,
+      "evidence_note": null
+    }
+  ],
+  "GET /api/qramm/questions": [
+    {
+      "question_number": 1,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 1: Cryptographic Discovery and Inventory Management practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 2,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 2: Cryptographic Discovery and Inventory Management practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 3,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 3: Cryptographic Discovery and Inventory Management practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 4,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 4: Cryptographic Discovery and Inventory Management practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 5,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 5: Cryptographic Discovery and Inventory Management practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 6,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 6: Cryptographic Discovery and Inventory Management practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 7,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 7: Cryptographic Discovery and Inventory Management practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 8,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 8: Cryptographic Discovery and Inventory Management practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 9,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 9: Cryptographic Discovery and Inventory Management practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 10,
+      "dimension": "CVI",
+      "practice_area": "1.1",
+      "text": "Question 10: Cryptographic Discovery and Inventory Management practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 11,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 11: Vulnerability Assessment and Classification practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 12,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 12: Vulnerability Assessment and Classification practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 13,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 13: Vulnerability Assessment and Classification practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 14,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 14: Vulnerability Assessment and Classification practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 15,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 15: Vulnerability Assessment and Classification practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 16,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 16: Vulnerability Assessment and Classification practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 17,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 17: Vulnerability Assessment and Classification practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 18,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 18: Vulnerability Assessment and Classification practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 19,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 19: Vulnerability Assessment and Classification practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 20,
+      "dimension": "CVI",
+      "practice_area": "1.2",
+      "text": "Question 20: Vulnerability Assessment and Classification practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 21,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 21: Cryptographic Dependency Mapping practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 22,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 22: Cryptographic Dependency Mapping practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 23,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 23: Cryptographic Dependency Mapping practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 24,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 24: Cryptographic Dependency Mapping practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 25,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 25: Cryptographic Dependency Mapping practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 26,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 26: Cryptographic Dependency Mapping practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 27,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 27: Cryptographic Dependency Mapping practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 28,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 28: Cryptographic Dependency Mapping practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 29,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 29: Cryptographic Dependency Mapping practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 30,
+      "dimension": "CVI",
+      "practice_area": "1.3",
+      "text": "Question 30: Cryptographic Dependency Mapping practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 31,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 31: Executive Leadership and Policy Management practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 32,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 32: Executive Leadership and Policy Management practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 33,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 33: Executive Leadership and Policy Management practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 34,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 34: Executive Leadership and Policy Management practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 35,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 35: Executive Leadership and Policy Management practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 36,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 36: Executive Leadership and Policy Management practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 37,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 37: Executive Leadership and Policy Management practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 38,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 38: Executive Leadership and Policy Management practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 39,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 39: Executive Leadership and Policy Management practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 40,
+      "dimension": "SGRM",
+      "practice_area": "2.1",
+      "text": "Question 40: Executive Leadership and Policy Management practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 41,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 41: Risk and Compliance Management practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 42,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 42: Risk and Compliance Management practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 43,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 43: Risk and Compliance Management practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 44,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 44: Risk and Compliance Management practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 45,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 45: Risk and Compliance Management practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 46,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 46: Risk and Compliance Management practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 47,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 47: Risk and Compliance Management practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 48,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 48: Risk and Compliance Management practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 49,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 49: Risk and Compliance Management practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 50,
+      "dimension": "SGRM",
+      "practice_area": "2.2",
+      "text": "Question 50: Risk and Compliance Management practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 51,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 51: Third-Party Risk Management practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 52,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 52: Third-Party Risk Management practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 53,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 53: Third-Party Risk Management practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 54,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 54: Third-Party Risk Management practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 55,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 55: Third-Party Risk Management practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 56,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 56: Third-Party Risk Management practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 57,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 57: Third-Party Risk Management practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 58,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 58: Third-Party Risk Management practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 59,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 59: Third-Party Risk Management practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 60,
+      "dimension": "SGRM",
+      "practice_area": "2.3",
+      "text": "Question 60: Third-Party Risk Management practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 61,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 61: Data Classification practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 62,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 62: Data Classification practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 63,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 63: Data Classification practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 64,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 64: Data Classification practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 65,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 65: Data Classification practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 66,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 66: Data Classification practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 67,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 67: Data Classification practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 68,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 68: Data Classification practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 69,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 69: Data Classification practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 70,
+      "dimension": "DPE",
+      "practice_area": "3.1",
+      "text": "Question 70: Data Classification practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 71,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 71: Storage Security practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 72,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 72: Storage Security practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 73,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 73: Storage Security practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 74,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 74: Storage Security practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 75,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 75: Storage Security practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 76,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 76: Storage Security practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 77,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 77: Storage Security practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 78,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 78: Storage Security practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 79,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 79: Storage Security practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 80,
+      "dimension": "DPE",
+      "practice_area": "3.2",
+      "text": "Question 80: Storage Security practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 81,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 81: Transit Security practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 82,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 82: Transit Security practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 83,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 83: Transit Security practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 84,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 84: Transit Security practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 85,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 85: Transit Security practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 86,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 86: Transit Security practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 87,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 87: Transit Security practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 88,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 88: Transit Security practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 89,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 89: Transit Security practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 90,
+      "dimension": "DPE",
+      "practice_area": "3.3",
+      "text": "Question 90: Transit Security practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 91,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 91: Infrastructure practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 92,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 92: Infrastructure practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 93,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 93: Infrastructure practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 94,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 94: Infrastructure practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 95,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 95: Infrastructure practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 96,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 96: Infrastructure practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 97,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 97: Infrastructure practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 98,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 98: Infrastructure practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 99,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 99: Infrastructure practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 100,
+      "dimension": "ITR",
+      "practice_area": "4.1",
+      "text": "Question 100: Infrastructure practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 101,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 101: Implementation practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 102,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 102: Implementation practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 103,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 103: Implementation practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 104,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 104: Implementation practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 105,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 105: Implementation practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 106,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 106: Implementation practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 107,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 107: Implementation practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 108,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 108: Implementation practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 109,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 109: Implementation practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 110,
+      "dimension": "ITR",
+      "practice_area": "4.2",
+      "text": "Question 110: Implementation practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 111,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 111: Testing and Validation practice area item 1",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 112,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 112: Testing and Validation practice area item 2",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 113,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 113: Testing and Validation practice area item 3",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 114,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 114: Testing and Validation practice area item 4",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 115,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 115: Testing and Validation practice area item 5",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 116,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 116: Testing and Validation practice area item 6",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 117,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 117: Testing and Validation practice area item 7",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 118,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 118: Testing and Validation practice area item 8",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 119,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 119: Testing and Validation practice area item 9",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    },
+    {
+      "question_number": 120,
+      "dimension": "ITR",
+      "practice_area": "4.3",
+      "text": "Question 120: Testing and Validation practice area item 10",
+      "maturity_labels": [
+        "Basic",
+        "Developing",
+        "Established",
+        "Optimizing"
+      ]
+    }
+  ]
+}
