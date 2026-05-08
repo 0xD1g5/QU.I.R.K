@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Activity,
   HardDrive,
+  ClipboardList,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { path: "/cbom", label: "CBOM Viewer", Icon: Database },
   { path: "/roadmap", label: "Migration Roadmap", Icon: GitBranch },
   { path: "/trends", label: "Trends", Icon: TrendingUp },
+  { path: "/qramm", label: "QRAMM Assessment", Icon: ClipboardList },
 ]
 
 export function Sidebar() {
@@ -56,7 +58,9 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1 py-4 px-2" aria-label="Dashboard navigation">
         {NAV_ITEMS.map(({ path, label, Icon }) => {
-          const isActive = location.pathname === path
+          const isActive = path === "/qramm"
+            ? location.pathname.startsWith("/qramm")
+            : location.pathname === path
           return (
             <Tooltip key={path}>
               <TooltipTrigger asChild>
