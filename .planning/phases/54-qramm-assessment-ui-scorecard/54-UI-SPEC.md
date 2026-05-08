@@ -1,10 +1,11 @@
 ---
 phase: 54
 slug: qramm-assessment-ui-scorecard
-status: draft
+status: approved
 shadcn_initialized: true
 preset: none
 created: 2026-05-07
+reviewed_at: 2026-05-07
 ---
 
 # Phase 54 — UI Design Contract
