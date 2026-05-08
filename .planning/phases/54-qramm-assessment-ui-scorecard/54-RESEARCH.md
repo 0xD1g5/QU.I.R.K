@@ -614,27 +614,15 @@ const json = await resp.json()
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Evidence note column**
-   - What we know: QRAMMAnswer has no evidence_note column; the UI renders one per question
-   - What's unclear: Is it in scope for Phase 54 or deferred (display-only textarea, no persistence)?
-   - Recommendation: Add the column in this phase — omitting it means the draft endpoint cannot honor it and the field would silently discard user input
+1. **Evidence note column** — RESOLVED in Plan 01 Task 1: `_ensure_phase54_qramm_columns()` adds `evidence_note TEXT` to `qramm_answers`. The draft endpoint stores and returns it. Full persistence in scope for Phase 54.
 
-2. **Profile multiplier formula**
-   - What we know: multiplier range is 0.8–1.5; QRAMMProfile has industry, org_size, data_sensitivity fields
-   - What's unclear: The exact computation formula was not implemented in Phase 51 (column exists but is always NULL)
-   - Recommendation: Use a static lookup table; document it as an approximation in comments
+2. **Profile multiplier formula** — RESOLVED in Plan 01 Task 2: static lookup table keyed by `(industry, data_sensitivity)` pairs, returning values in range 0.8–1.5. Documented as approximation in code comments. Formula is a nested dict in `quirk/api/qramm.py`.
 
-3. **Benchmark values**
-   - What we know: D-12 specifies hardcoded values keyed by sector; example given is financial_services CVI 3.1
-   - What's unclear: Whether the full 7-sector x 4-dimension table has been sourced
-   - Recommendation: Define a representative table in src/lib/qramm-benchmarks.ts with source comment attributing to CSNP QRAMM community averages
+3. **Benchmark values** — RESOLVED in Plan 02 Task 2: a representative 7-sector × 4-dimension table is hardcoded in `src/dashboard/src/lib/qramm-benchmarks.ts` with a source comment attributing to CSNP QRAMM community averages. Values are authoritative enough for v1.
 
-4. **Toast vs. inline banner**
-   - What we know: UI-SPEC calls for non-blocking toast notification (bottom-right) for save and score errors
-   - What's unclear: Whether adding sonner is acceptable or the project prefers zero new npm dependencies
-   - Recommendation: Add sonner — it is the shadcn-standard toast and adds approximately 8KB gzipped
+4. **Toast vs. inline banner** — RESOLVED in Plan 03 Task 2: NO sonner dependency added. A minimal inline error banner (`text-sm text-destructive` paragraph below submit) is used instead. Zero new npm dependencies. Future phase may upgrade.
 
 ---
 
