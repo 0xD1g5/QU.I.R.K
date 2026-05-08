@@ -254,6 +254,254 @@ def test_delete_session_not_found():
     assert resp.status_code == 404
 
 
+# ---------- Phase 54 Plan 01: 4 new endpoints ----------
+
+def test_list_sessions():
+    """Test 1: GET /api/qramm/sessions returns list with session_id and answers_count."""
+    client, _ = _make_qramm_client()
+    create_resp = client.post("/api/qramm/sessions", json={"org_name": "ListOrg"})
+    assert create_resp.status_code == 201
+    sid = create_resp.json()["session_id"]
+
+    resp = client.get("/api/qramm/sessions")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert isinstance(body, list)
+    assert len(body) >= 1
+    session_ids = [s["session_id"] for s in body]
+    assert sid in session_ids
+    # answers_count must be an int
+    match = next(s for s in body if s["session_id"] == sid)
+    assert isinstance(match["answers_count"], int)
+
+
+def test_list_sessions_orders_desc():
+    """Test 2: GET /api/qramm/sessions returns most-recently-created session first."""
+    client, _ = _make_qramm_client()
+    sid1 = client.post("/api/qramm/sessions", json={"org_name": "First"}).json()["session_id"]
+    sid2 = client.post("/api/qramm/sessions", json={"org_name": "Second"}).json()["session_id"]
+
+    resp = client.get("/api/qramm/sessions")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body) >= 2
+    # Most recent session should be first
+    assert body[0]["session_id"] == sid2
+
+
+def test_create_profile():
+    """Test 3: POST /api/qramm/profiles returns 201 with profile_id, session_id, multiplier in 0.8-1.5."""
+    client, TestingSession = _make_qramm_client()
+    sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+
+    resp = client.post("/api/qramm/profiles", json={
+        "session_id": sid,
+        "industry": "healthcare",
+        "org_size": "medium",
+        "geographic_scope": "national",
+        "data_sensitivity": "confidential",
+        "regulatory_obligations": ["HIPAA", "SOC2"],
+    })
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert "profile_id" in body
+    assert body["session_id"] == sid
+    assert isinstance(body["multiplier"], float)
+    assert 0.8 <= body["multiplier"] <= 1.5
+
+    # Session.profile_id must be updated
+    db = TestingSession()
+    try:
+        from quirk.models import QRAMMSession
+        session = db.get(QRAMMSession, sid)
+        assert session.profile_id == body["profile_id"]
+    finally:
+        db.close()
+
+
+def test_create_profile_multiplier_varies():
+    """Test 4: Different industry+data_sensitivity combos produce different multipliers."""
+    client, _ = _make_qramm_client()
+    sid1 = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+    sid2 = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+
+    resp_high = client.post("/api/qramm/profiles", json={
+        "session_id": sid1,
+        "industry": "financial_services",
+        "org_size": "large",
+        "geographic_scope": "global",
+        "data_sensitivity": "restricted_secret",
+        "regulatory_obligations": [],
+    })
+    resp_low = client.post("/api/qramm/profiles", json={
+        "session_id": sid2,
+        "industry": "other",
+        "org_size": "small",
+        "geographic_scope": "local",
+        "data_sensitivity": "public",
+        "regulatory_obligations": [],
+    })
+    assert resp_high.status_code == 201
+    assert resp_low.status_code == 201
+    assert resp_high.json()["multiplier"] != resp_low.json()["multiplier"]
+
+
+def test_draft_answer_creates_row():
+    """Test 5: POST /api/qramm/assessment/draft creates row; GET /answers shows it."""
+    client, _ = _make_qramm_client()
+    sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+
+    draft_resp = client.post("/api/qramm/assessment/draft", json={
+        "session_id": sid,
+        "question_number": 1,
+        "answer_value": 3,
+        "evidence_note": "note text",
+    })
+    assert draft_resp.status_code == 200, draft_resp.text
+    assert draft_resp.json()["saved"] is True
+
+    answers_resp = client.get(f"/api/qramm/sessions/{sid}/answers")
+    assert answers_resp.status_code == 200, answers_resp.text
+    answers = answers_resp.json()
+    q1 = next((a for a in answers if a["question_number"] == 1), None)
+    assert q1 is not None
+    assert q1["answer_value"] == 3
+    assert q1["evidence_note"] == "note text"
+
+
+def test_draft_answer_updates_row():
+    """Test 6: Second POST draft for same (session, question_number) overwrites the first."""
+    client, _ = _make_qramm_client()
+    sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+
+    client.post("/api/qramm/assessment/draft", json={
+        "session_id": sid,
+        "question_number": 5,
+        "answer_value": 1,
+    })
+    client.post("/api/qramm/assessment/draft", json={
+        "session_id": sid,
+        "question_number": 5,
+        "answer_value": 4,
+    })
+    answers = client.get(f"/api/qramm/sessions/{sid}/answers").json()
+    q5_rows = [a for a in answers if a["question_number"] == 5]
+    # Only one row for question 5; the second call's value wins
+    assert len(q5_rows) == 1
+    assert q5_rows[0]["answer_value"] == 4
+
+
+def test_draft_answer_confirms_when_suggested():
+    """Test 7: When existing row has suggested_answer, providing answer_value sets confirmed_at."""
+    from quirk.models import QRAMMAnswer
+
+    client, TestingSession = _make_qramm_client()
+    sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+
+    # Pre-insert a row with suggested_answer, no answer_value (simulating auto-fill).
+    # Use question 31 (SGRM) — create_session only pre-seeds CVI (questions 1-30),
+    # so question 31 will not collide with pre-seeded rows.
+    db = TestingSession()
+    try:
+        row = QRAMMAnswer(
+            session_id=sid,
+            question_number=31,
+            dimension="SGRM",
+            practice_area="2.1",
+            suggested_answer=2,
+            answer_value=None,
+        )
+        db.add(row)
+        db.commit()
+    finally:
+        db.close()
+
+    client.post("/api/qramm/assessment/draft", json={
+        "session_id": sid,
+        "question_number": 31,
+        "answer_value": 3,
+    })
+
+    db = TestingSession()
+    try:
+        existing = (
+            db.query(QRAMMAnswer)
+            .filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.question_number == 31)
+            .one_or_none()
+        )
+        assert existing is not None
+        assert existing.confirmed_at is not None, "confirmed_at should be set after overriding suggested_answer"
+    finally:
+        db.close()
+
+
+def test_draft_answer_validation():
+    """Test 8: Pydantic validation rejects out-of-range question_number and answer_value."""
+    client, _ = _make_qramm_client()
+    sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+
+    # question_number=0 → 422
+    resp = client.post("/api/qramm/assessment/draft", json={
+        "session_id": sid,
+        "question_number": 0,
+        "answer_value": 2,
+    })
+    assert resp.status_code == 422, resp.text
+
+    # question_number=121 → 422
+    resp = client.post("/api/qramm/assessment/draft", json={
+        "session_id": sid,
+        "question_number": 121,
+        "answer_value": 2,
+    })
+    assert resp.status_code == 422, resp.text
+
+    # answer_value=5 → 422
+    resp = client.post("/api/qramm/assessment/draft", json={
+        "session_id": sid,
+        "question_number": 5,
+        "answer_value": 5,
+    })
+    assert resp.status_code == 422, resp.text
+
+
+def test_read_answers_includes_suggested():
+    """Test 9: GET /api/qramm/sessions/{id}/answers includes suggested_answer field."""
+    from quirk.models import QRAMMAnswer
+
+    client, TestingSession = _make_qramm_client()
+    sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
+
+    # Use question 32 (SGRM) — not pre-seeded by create_session (CVI only, q1-30).
+    db = TestingSession()
+    try:
+        row = QRAMMAnswer(
+            session_id=sid,
+            question_number=32,
+            dimension="SGRM",
+            practice_area="2.1",
+            suggested_answer=2,
+        )
+        db.add(row)
+        db.commit()
+    finally:
+        db.close()
+
+    answers_resp = client.get(f"/api/qramm/sessions/{sid}/answers")
+    assert answers_resp.status_code == 200, answers_resp.text
+    answers = answers_resp.json()
+    q32 = next((a for a in answers if a["question_number"] == 32), None)
+    assert q32 is not None
+    assert q32["suggested_answer"] == 2
+
+
+def test_read_answers_404():
+    """Test 10: GET /api/qramm/sessions/99999/answers → 404."""
+    client, _ = _make_qramm_client()
+    resp = client.get("/api/qramm/sessions/99999/answers")
+    assert resp.status_code == 404
+
+
 # ---------- DEBT-01 zero-warning gate (Plan 05 also covers this) ----------
 
 def test_no_utcnow_in_qramm_module():

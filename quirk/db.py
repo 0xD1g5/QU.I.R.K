@@ -190,6 +190,27 @@ def _ensure_phase46_columns(engine) -> None:
         conn.commit()
 
 
+_PHASE54_QRAMM_ANSWER_DDLS = {
+    "evidence_note": "TEXT",
+}
+
+
+def _ensure_phase54_qramm_columns(engine) -> None:
+    """Phase 54 QRAMM-10: add evidence_note column to qramm_answers (idempotent).
+
+    Mirrors _ensure_phase46_columns shape. Called from init_db()
+    after _ensure_qramm_tables(). SQLite TEXT column, nullable.
+    """
+    existing = {c["name"] for c in sa_inspect(engine).get_columns("qramm_answers")}
+    with engine.connect() as conn:
+        for col, col_type in _PHASE54_QRAMM_ANSWER_DDLS.items():
+            if not _SAFE_COL_RE.match(col):
+                raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if col not in existing:
+                conn.execute(text(f"ALTER TABLE qramm_answers ADD COLUMN {col} {col_type}"))
+        conn.commit()
+
+
 def _ensure_qramm_tables(engine) -> None:
     """Phase 51 QRAMM-01: create QRAMM assessment tables if absent (idempotent).
 
@@ -229,6 +250,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_phase41_columns(engine)     # Phase 41 D-11 — scan_error_category
     _ensure_phase46_columns(engine)     # Phase 46 — TLS-FIND-06 chain_verified
     _ensure_qramm_tables(engine)         # Phase 51 — QRAMM-01
+    _ensure_phase54_qramm_columns(engine)  # Phase 54 — evidence_note column
     return engine
 
 
