@@ -132,6 +132,14 @@ export function AssessmentPage() {
     return map
   }, [questions])
 
+  // Authoritative question-number → dimension lookup derived from the catalog.
+  // Passed to ScorecardTab to avoid hard-coded arithmetic on question ranges.
+  const qnToDim = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const q of questions) m.set(q.question_number, q.dimension)
+    return m
+  }, [questions])
+
   // Answer change handler — delegates to QRAMMProvider's debounced persister
   function handleAnswerChange(qn: number, partial: Partial<AnswerState>) {
     ctx.setAnswer(qn, partial)
@@ -257,7 +265,7 @@ export function AssessmentPage() {
         ))}
 
         <TabsContent value="scorecard">
-          <ScorecardTab />
+          <ScorecardTab qnToDim={qnToDim} />
         </TabsContent>
       </Tabs>
     </div>

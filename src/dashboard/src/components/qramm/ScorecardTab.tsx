@@ -21,26 +21,30 @@ import {
 import { getBenchmarks } from "@/lib/qramm-benchmarks"
 import type { QRAMMScoreResponse } from "@/types/api"
 
-export function ScorecardTab() {
+interface ScorecardTabProps {
+  /** Lookup map from question number to dimension string, derived from the catalog. */
+  qnToDim: Map<number, string>
+}
+
+export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
   const ctx = useContext(QRAMMContext)
   const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Compute completion percentages per dimension from context answers
+  // Compute completion percentages per dimension using the authoritative catalog
+  // lookup rather than hard-coded question-number arithmetic.
   const completionByDim = useMemo(() => {
-    const out: Record<string, number> = {}
-    for (const dim of DIMENSIONS) {
-      let answered = 0
-      for (const [qn, a] of ctx.answers) {
-        if (a.answer_value == null) continue
-        // Questions 1-30 = CVI, 31-60 = SGRM, 61-90 = DPE, 91-120 = ITR
-        const dimIdx = Math.floor((qn - 1) / 30)
-        if (DIMENSIONS[dimIdx] === dim) answered += 1
-      }
-      out[dim] = Math.round((answered / 30) * 100)
+    const answered: Record<string, number> = {}
+    const totals: Record<string, number> = {}
+    for (const [qn, dim] of qnToDim) {
+      totals[dim] = (totals[dim] ?? 0) + 1
+      const a = ctx.answers.get(qn)
+      if (a?.answer_value != null) answered[dim] = (answered[dim] ?? 0) + 1
     }
-    return out
-  }, [ctx.answers])
+    return Object.fromEntries(
+      DIMENSIONS.map(d => [d, totals[d] ? Math.round(((answered[d] ?? 0) / totals[d]) * 100) : 0])
+    )
+  }, [ctx.answers, qnToDim])
 
   // Approximate maturity distribution by bucketing each dimension's score
   const maturityDist = useMemo(() => {
