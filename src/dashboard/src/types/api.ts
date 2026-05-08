@@ -181,3 +181,36 @@ export interface TrendReport {
   new_findings_sample: SampleFinding[]
   resolved_findings_sample: SampleFinding[]
 }
+
+// ============== QRAMM (Phase 54) ==============
+
+export type MaturityValue = 1 | 2 | 3 | 4
+
+export interface QRAMMSessionSummary {
+  session_id: number
+  org_name: string | null
+  created_at: string | null
+  status: string | null
+  answers_count: number
+}
+
+export interface QRAMMAnswerRead {
+  question_number: number
+  answer_value: number | null
+  suggested_answer: number | null
+  confirmed_at: string | null
+  evidence_note: string | null
+}
+
+export interface QRAMMProfileResponse {
+  profile_id: number
+  session_id: number
+  multiplier: number
+}
+
+export interface QRAMMScoreResponse {
+  overall: number
+  maturity: string
+  dimensions: Record<string, { score: number; weighted: number }>
+  profile_multiplier: number
+}
