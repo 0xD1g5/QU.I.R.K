@@ -321,15 +321,21 @@ function PrintQRAMM({
 
 export function PrintPage() {
   const { data, loading, error } = useScanData()
+  const { scoreResult, complianceRows, loading: qrammLoading, error: qrammError } = useQRAMMPrintData()
+  // QRAMM hook errors should not block the rest of the PDF — log and render the no-session fallback in that section.
+  if (qrammError) {
+    // eslint-disable-next-line no-console
+    console.error("QRAMM print data error:", qrammError)
+  }
 
   useEffect(() => {
-    if (data) {
+    if (data && !qrammLoading) {
       document.body.setAttribute('data-ready', 'true')
     }
     return () => {
       document.body.removeAttribute('data-ready')
     }
-  }, [data])
+  }, [data, qrammLoading])
 
   if (loading) {
     return (
@@ -428,6 +434,15 @@ export function PrintPage() {
         <div className="print-section">
           <h2>Migration Roadmap</h2>
           <PrintRoadmap nodes={roadmap.nodes} />
+        </div>
+
+        {/* Section 7: QRAMM Governance Assessment */}
+        <div className="print-section">
+          <h2>QRAMM Governance Assessment</h2>
+          <PrintQRAMM
+            scoreResult={qrammError ? null : scoreResult}
+            complianceRows={qrammError ? null : complianceRows}
+          />
         </div>
 
       </div>
