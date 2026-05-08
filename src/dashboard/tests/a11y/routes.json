@@ -7,5 +7,7 @@
   { "slug": "certificates",  "path": "/certificates" },
   { "slug": "cbom",          "path": "/cbom" },
   { "slug": "roadmap",       "path": "/roadmap" },
-  { "slug": "trends",        "path": "/trends" }
+  { "slug": "trends",        "path": "/trends" },
+  { "slug": "qramm",            "path": "/qramm" },
+  { "slug": "qramm-assessment", "path": "/qramm/assessment" }
 ]
