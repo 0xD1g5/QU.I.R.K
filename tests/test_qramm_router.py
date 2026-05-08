@@ -398,14 +398,16 @@ def test_draft_answer_confirms_when_suggested():
     client, TestingSession = _make_qramm_client()
     sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
 
-    # Pre-insert a row with suggested_answer, no answer_value (simulating auto-fill)
+    # Pre-insert a row with suggested_answer, no answer_value (simulating auto-fill).
+    # Use question 31 (SGRM) — create_session only pre-seeds CVI (questions 1-30),
+    # so question 31 will not collide with pre-seeded rows.
     db = TestingSession()
     try:
         row = QRAMMAnswer(
             session_id=sid,
-            question_number=10,
-            dimension="CVI",
-            practice_area="1.1",
+            question_number=31,
+            dimension="SGRM",
+            practice_area="2.1",
             suggested_answer=2,
             answer_value=None,
         )
@@ -416,7 +418,7 @@ def test_draft_answer_confirms_when_suggested():
 
     client.post("/api/qramm/assessment/draft", json={
         "session_id": sid,
-        "question_number": 10,
+        "question_number": 31,
         "answer_value": 3,
     })
 
@@ -424,7 +426,7 @@ def test_draft_answer_confirms_when_suggested():
     try:
         existing = (
             db.query(QRAMMAnswer)
-            .filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.question_number == 10)
+            .filter(QRAMMAnswer.session_id == sid, QRAMMAnswer.question_number == 31)
             .one_or_none()
         )
         assert existing is not None
@@ -470,13 +472,14 @@ def test_read_answers_includes_suggested():
     client, TestingSession = _make_qramm_client()
     sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
 
+    # Use question 32 (SGRM) — not pre-seeded by create_session (CVI only, q1-30).
     db = TestingSession()
     try:
         row = QRAMMAnswer(
             session_id=sid,
-            question_number=2,
-            dimension="CVI",
-            practice_area="1.1",
+            question_number=32,
+            dimension="SGRM",
+            practice_area="2.1",
             suggested_answer=2,
         )
         db.add(row)
@@ -487,9 +490,9 @@ def test_read_answers_includes_suggested():
     answers_resp = client.get(f"/api/qramm/sessions/{sid}/answers")
     assert answers_resp.status_code == 200, answers_resp.text
     answers = answers_resp.json()
-    q2 = next((a for a in answers if a["question_number"] == 2), None)
-    assert q2 is not None
-    assert q2["suggested_answer"] == 2
+    q32 = next((a for a in answers if a["question_number"] == 32), None)
+    assert q32 is not None
+    assert q32["suggested_answer"] == 2
 
 
 def test_read_answers_404():

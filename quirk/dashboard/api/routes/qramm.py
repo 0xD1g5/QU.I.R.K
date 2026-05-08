@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
-from quirk.models import QRAMMAnswer, QRAMMSession
+from quirk.models import QRAMMAnswer, QRAMMProfile, QRAMMSession
 from quirk.qramm.evidence_bridge import populate_cvi_suggestions
 from quirk.qramm.model_meta import QRAMM_MODEL
 from quirk.qramm.questions import QRAMM_QUESTIONS, get_question
@@ -81,6 +81,75 @@ class SaveAnswersResponse(BaseModel):
 
 class ScoreRequest(BaseModel):
     profile_multiplier: Optional[float] = Field(default=None, ge=0.5, le=2.0)
+
+
+# ---------- Phase 54 Plan 01: new Pydantic models ----------
+
+class SessionSummary(BaseModel):
+    session_id: int
+    org_name: Optional[str]
+    created_at: Optional[str]
+    status: Optional[str]
+    answers_count: int
+
+
+class CreateProfileRequest(BaseModel):
+    session_id: int
+    industry: str
+    org_size: str
+    geographic_scope: str
+    data_sensitivity: str
+    regulatory_obligations: List[str]
+
+
+class CreateProfileResponse(BaseModel):
+    profile_id: int
+    session_id: int
+    multiplier: float
+
+
+class DraftAnswerRequest(BaseModel):
+    session_id: int
+    question_number: int = Field(ge=1, le=120)
+    answer_value: Optional[int] = Field(default=None, ge=1, le=4)
+    evidence_note: Optional[str] = Field(default=None, max_length=2000)
+
+
+class AnswerRead(BaseModel):
+    question_number: int
+    answer_value: Optional[int]
+    suggested_answer: Optional[int]
+    confirmed_at: Optional[str]
+    evidence_note: Optional[str]
+
+
+# ---------- Phase 54 Plan 01: multiplier helper ----------
+
+_INDUSTRY_BASE = {
+    "financial_services": 1.20,
+    "healthcare":         1.15,
+    "government":         1.20,
+    "technology":         1.05,
+    "retail":             0.95,
+    "energy":             1.10,
+    "other":              1.00,
+}
+_SENSITIVITY_DELTA = {
+    "public":              -0.10,
+    "internal":             0.00,
+    "confidential":         0.10,
+    "restricted_secret":    0.20,
+    "restricted":           0.20,  # alias
+}
+
+
+def _compute_multiplier(industry: str, data_sensitivity: str) -> float:
+    """Compute profile risk multiplier from industry + data sensitivity (Phase 54 RESEARCH A4)."""
+    base = _INDUSTRY_BASE.get(industry, 1.00)
+    delta = _SENSITIVITY_DELTA.get(data_sensitivity, 0.0)
+    value = base + delta
+    # Clamp to spec range 0.8-1.5
+    return max(0.8, min(1.5, round(value, 2)))
 
 
 # ---------- Helpers ----------
@@ -309,3 +378,119 @@ def delete_session(session_id: int, db: Session = Depends(get_db)) -> None:
     db.delete(session)
     db.commit()
     return None
+
+
+# ---------- Phase 54 Plan 01: 4 new endpoints ----------
+
+@router.get("/qramm/sessions", response_model=List[SessionSummary])
+def list_sessions(db: Session = Depends(get_db)) -> List[SessionSummary]:
+    """Gap 1 — D-03: list all assessment sessions, most-recent first."""
+    sessions = (
+        db.query(QRAMMSession)
+        .order_by(QRAMMSession.created_at.desc())
+        .all()
+    )
+    result = []
+    for s in sessions:
+        answers_count = (
+            db.query(QRAMMAnswer)
+            .filter(QRAMMAnswer.session_id == s.id, QRAMMAnswer.answer_value.isnot(None))
+            .count()
+        )
+        result.append(SessionSummary(
+            session_id=s.id,
+            org_name=s.org_name,
+            created_at=_iso_str(s.created_at),
+            status=s.status,
+            answers_count=answers_count,
+        ))
+    return result
+
+
+@router.post("/qramm/profiles", status_code=201, response_model=CreateProfileResponse)
+def create_profile(
+    payload: CreateProfileRequest,
+    db: Session = Depends(get_db),
+) -> CreateProfileResponse:
+    """Gap 2 — QRAMM-09: create org profile, compute multiplier, link to session."""
+    session = _get_session_or_404(db, payload.session_id)
+    multiplier = _compute_multiplier(payload.industry, payload.data_sensitivity)
+    profile = QRAMMProfile(
+        session_id=payload.session_id,
+        industry=payload.industry,
+        org_size=payload.org_size,
+        geographic_scope=payload.geographic_scope,
+        data_sensitivity=payload.data_sensitivity,
+        regulatory_obligations=json.dumps(payload.regulatory_obligations),
+        multiplier=multiplier,
+        created_at=_now_iso(),
+    )
+    db.add(profile)
+    db.flush()
+    session.profile_id = profile.id
+    db.commit()
+    db.refresh(profile)
+    return CreateProfileResponse(
+        profile_id=profile.id,
+        session_id=payload.session_id,
+        multiplier=multiplier,
+    )
+
+
+@router.post("/qramm/assessment/draft", response_model=Dict[str, Any])
+def draft_answer(
+    payload: DraftAnswerRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Gap 3 — QRAMM-10: debounced single-answer upsert with auto-confirm on suggested."""
+    _get_session_or_404(db, payload.session_id)
+    meta = get_question(payload.question_number)
+    existing = (
+        db.query(QRAMMAnswer)
+        .filter(
+            QRAMMAnswer.session_id == payload.session_id,
+            QRAMMAnswer.question_number == payload.question_number,
+        )
+        .one_or_none()
+    )
+    if existing is None:
+        row = QRAMMAnswer(
+            session_id=payload.session_id,
+            question_number=payload.question_number,
+            dimension=meta["dimension"],
+            practice_area=meta["practice_area"],
+            answer_value=payload.answer_value,
+            evidence_note=payload.evidence_note,
+        )
+        db.add(row)
+    else:
+        if payload.answer_value is not None:
+            existing.answer_value = payload.answer_value
+        if payload.evidence_note is not None:
+            existing.evidence_note = payload.evidence_note
+        # D-04/D-05: set confirmed_at when consultant overrides a suggested answer
+        if existing.suggested_answer is not None and payload.answer_value is not None:
+            existing.confirmed_at = _now_iso()
+    db.commit()
+    return {"saved": True}
+
+
+@router.get("/qramm/sessions/{session_id}/answers", response_model=List[AnswerRead])
+def read_answers(session_id: int, db: Session = Depends(get_db)) -> List[AnswerRead]:
+    """Gap 4 — QRAMM-10: return all answer rows for a session with suggested/confirmed state."""
+    _get_session_or_404(db, session_id)
+    rows = (
+        db.query(QRAMMAnswer)
+        .filter(QRAMMAnswer.session_id == session_id)
+        .all()
+    )
+    return [
+        AnswerRead(
+            question_number=r.question_number,
+            answer_value=r.answer_value,
+            suggested_answer=r.suggested_answer,
+            confirmed_at=_iso_str(r.confirmed_at),
+            evidence_note=r.evidence_note,
+        )
+        for r in rows
+    ]
