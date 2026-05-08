@@ -26,6 +26,12 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.models import QRAMMAnswer, QRAMMProfile, QRAMMSession
+from quirk.qramm.compliance_map import (
+    FRAMEWORK_KEYS,
+    PRACTICE_AREA_TO_DIMENSION,
+    QRAMM_COMPLIANCE_WEIGHTS,
+    SCANNER_COVERAGE,
+)
 from quirk.qramm.evidence_bridge import populate_cvi_suggestions
 from quirk.qramm.model_meta import QRAMM_MODEL
 from quirk.qramm.questions import QRAMM_QUESTIONS, get_question
@@ -123,6 +129,18 @@ class AnswerRead(BaseModel):
     suggested_answer: Optional[int]
     confirmed_at: Optional[str]
     evidence_note: Optional[str]
+
+
+# ---------- Phase 55 Plan 01: compliance map model ----------
+
+class ComplianceMapRow(BaseModel):
+    practice_number: str            # e.g. "1.1-NIST_PQC" — practice_area + framework joined
+    practice_area: str              # e.g. "1.1"
+    dimension: str                  # "CVI" | "SGRM" | "DPE" | "ITR"
+    framework: str                  # one of FRAMEWORK_KEYS
+    static_weight: float            # 0.0 .. 1.0
+    relevance_score: Optional[float]
+    scanner_informed: bool
 
 
 # ---------- Phase 54 Plan 01: multiplier helper ----------
@@ -550,3 +568,77 @@ def read_answers(session_id: int, db: Session = Depends(get_db)) -> List[AnswerR
         )
         for r in rows
     ]
+
+
+# ---------- Phase 55 Plan 01: compliance map endpoint ----------
+
+@router.get(
+    "/qramm/sessions/{session_id}/compliance-map",
+    response_model=List[ComplianceMapRow],
+)
+def get_compliance_map(
+    session_id: int,
+    db: Session = Depends(get_db),
+) -> List[ComplianceMapRow]:
+    """Phase 55 QRAMM-15: per-practice × per-framework relevance scores.
+
+    Returns 96 rows (12 practice areas × 8 frameworks). When the session has
+    no score_json, every row carries relevance_score=None (HTTP 200 — never
+    404/409 per Phase 55 D-03). When scored, raw = static_weight ×
+    dimension_score, capped at SCANNER_COVERAGE[dimension] × static_weight
+    per Phase 55 D-07.
+    """
+    session = _get_session_or_404(db, session_id)
+
+    score_data: Optional[Dict[str, Any]] = None
+    if session.score_json:
+        try:
+            score_data = json.loads(session.score_json)
+        except (TypeError, ValueError):
+            score_data = None
+
+    rows: List[ComplianceMapRow] = []
+    # Sort practice areas for stable ordering across responses.
+    for practice_area in sorted(QRAMM_COMPLIANCE_WEIGHTS.keys()):
+        dimension = PRACTICE_AREA_TO_DIMENSION[practice_area]
+        ceiling = SCANNER_COVERAGE.get(dimension, 0.0)
+        scanner_informed = ceiling > 0.0
+
+        # Read raw dimension score (0.0–4.0 scale) — see Phase 55
+        # RESEARCH Pitfall 2: read ["score"], NOT ["weighted"].
+        dim_score: Optional[float] = None
+        if score_data is not None:
+            try:
+                dim_score = float(
+                    score_data["dimensions"][dimension]["score"]
+                )
+            except (KeyError, TypeError, ValueError):
+                dim_score = None
+
+        for framework in FRAMEWORK_KEYS:
+            static_weight = float(
+                QRAMM_COMPLIANCE_WEIGHTS[practice_area][framework]
+            )
+            if dim_score is None:
+                relevance_score: Optional[float] = None
+            else:
+                # Normalize dim_score from 0.0–4.0 to 0.0–1.0 before
+                # multiplying by weight, so output stays in 0.0–1.0 range.
+                normalized = dim_score / 4.0
+                raw = static_weight * normalized
+                cap = ceiling * static_weight
+                relevance_score = min(raw, cap)
+
+            rows.append(
+                ComplianceMapRow(
+                    practice_number=f"{practice_area}-{framework}",
+                    practice_area=practice_area,
+                    dimension=dimension,
+                    framework=framework,
+                    static_weight=static_weight,
+                    relevance_score=relevance_score,
+                    scanner_informed=scanner_informed,
+                )
+            )
+
+    return rows
