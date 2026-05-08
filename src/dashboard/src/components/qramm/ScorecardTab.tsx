@@ -141,27 +141,25 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                   dataKey="axis"
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                 />
-                {ctx.scoreResult ? (
-                  <>
-                    <Radar
-                      name="Assessment"
-                      dataKey="score"
-                      fill="rgba(75, 168, 168, 0.20)"
-                      stroke="hsl(var(--accent))"
-                      isAnimationActive={false}
-                    />
-                    {benchmarks && (
-                      <Radar
-                        name="Benchmark"
-                        dataKey="benchmark"
-                        fill="rgba(110, 122, 149, 0.15)"
-                        stroke="hsl(var(--muted-foreground))"
-                        strokeDasharray="4 2"
-                        isAnimationActive={false}
-                      />
-                    )}
-                  </>
-                ) : null}
+                <Radar
+                  name="Assessment"
+                  dataKey="score"
+                  fill="rgba(75, 168, 168, 0.20)"
+                  fillOpacity={ctx.scoreResult ? 1 : 0}
+                  stroke="hsl(var(--accent))"
+                  strokeOpacity={ctx.scoreResult ? 1 : 0}
+                  isAnimationActive={false}
+                />
+                <Radar
+                  name="Benchmark"
+                  dataKey="benchmark"
+                  fill="rgba(110, 122, 149, 0.15)"
+                  fillOpacity={ctx.scoreResult && benchmarks ? 1 : 0}
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeOpacity={ctx.scoreResult && benchmarks ? 1 : 0}
+                  strokeDasharray="4 2"
+                  isAnimationActive={false}
+                />
               </RadarChart>
               {!ctx.scoreResult && (
                 <p className="text-xs text-muted-foreground mt-4 text-center max-w-[280px]">
