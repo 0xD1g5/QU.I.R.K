@@ -28,6 +28,11 @@ const PRINT_CSS = [
   ".score-item{text-align:center;min-width:80px}",
   ".score-number{font-size:28px;font-weight:600}",
   ".score-label{font-size:12px;font-weight:600;color:#52525b}",
+  ".tier-scanner{background:#4ba8a8;color:#fff}",
+  ".tier-manual{background:#e4e4e7;color:#52525b}",
+  ".qramm-radar{margin:16px 0}",
+  ".qramm-footnote{font-size:12px;color:#52525b;margin-top:8px;border-top:1px solid #e4e4e7;padding-top:8px}",
+  ".qramm-detail-section{margin-top:16px}",
 ].join("")
 
 function PrintFindings({ findings }: { findings: FindingItem[] }) {
