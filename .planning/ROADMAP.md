@@ -1114,8 +1114,8 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
   3. A pytest gate fails if `QRAMM_MODEL.last_verified` in `quirk/qramm/model_meta.py` is more than 90 days old; the `QUIRK_CI_STALENESS_OVERRIDE_DATE` environment variable allows CI boundary testing without touching source
   4. `quirk/qramm/model_meta.py` exports `QRAMM_MODEL` with `qramm_version`, `last_verified` (ISO date string), and `source_url = "https://qramm.org"` — mirroring the compliance staleness pattern from v4.6
 **Plans**: 3 plans
-- [ ] 55-01-PLAN.md — Backend: compliance_map.py module, GET /api/qramm/sessions/{id}/compliance-map endpoint, endpoint tests
-- [ ] 55-02-PLAN.md — CLI: quirk qramm status subcommand, run_scan.py intercept, pytest staleness gate with QUIRK_CI_STALENESS_OVERRIDE_DATE
+- [x] 55-01-PLAN.md — Backend: compliance_map.py module, GET /api/qramm/sessions/{id}/compliance-map endpoint, endpoint tests
+- [x] 55-02-PLAN.md — CLI: quirk qramm status subcommand, run_scan.py intercept, pytest staleness gate with QUIRK_CI_STALENESS_OVERRIDE_DATE
 - [ ] 55-03-PLAN.md — Frontend: QRAMMComplianceMapRow type, ComplianceMapTab component, 6th tab wiring in qramm-assessment.tsx
 **UI hint**: yes
 
@@ -1138,5 +1138,5 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | 52. Compliance Uplift & Health Check | v4.7 | 6/6 | Complete    | 2026-05-06 |
 | 53. QRAMM Evidence Bridge | v4.7 | 4/4 | Complete    | 2026-05-07 |
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 5/5 | Complete   | 2026-05-08 |
-| 55. QRAMM Compliance Mapping View | v4.7 | 0/TBD | Not started | - |
+| 55. QRAMM Compliance Mapping View | v4.7 | 2/3 | In Progress|  |
 | 56. PDF Export & Staleness Enforcement | v4.7 | 0/TBD | Not started | - |
