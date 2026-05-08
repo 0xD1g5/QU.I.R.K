@@ -67,13 +67,19 @@ def test_practice_area_names_complete() -> None:
 def test_no_engine_imports_in_compliance_map() -> None:
     import quirk.qramm.compliance_map as cm
     src = open(cm.__file__).read()
-    # Strip comments before the import scan.
-    code_lines = [
-        ln for ln in src.splitlines() if not ln.lstrip().startswith("#")
+    # Only check import lines — filter to lines that are actual import statements,
+    # ignoring comments and docstrings that may reference forbidden modules by name.
+    import_lines = [
+        ln for ln in src.splitlines()
+        if ln.lstrip().startswith("import ") or ln.lstrip().startswith("from ")
     ]
-    code = "\n".join(code_lines)
-    assert "quirk.engine.risk_engine" not in code
-    assert "from quirk.scanner" not in code
+    import_code = "\n".join(import_lines)
+    assert "risk_engine" not in import_code, (
+        "compliance_map.py must not import risk_engine"
+    )
+    assert "quirk.scanner" not in import_code, (
+        "compliance_map.py must not import from quirk.scanner"
+    )
 
 
 # ---------------- endpoint tests (direct function call) ----------------
