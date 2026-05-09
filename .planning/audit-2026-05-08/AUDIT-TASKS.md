@@ -44,12 +44,12 @@ wont_fix: 0
 
 | Finding ID | Severity | Title | Closed-By | Status |
 |---|---|---|---|---|
-| scanners-protocol/CR-01 | BLOCKER | JWT scanner disables TLS verification on JWKS fetch (MITM) | Phase 57 (HARDEN-SCAN-01) | [ ] mapped |
-| scanners-protocol/CR-02 | BLOCKER | Argument injection into semgrep via repo_path | Phase 57 (HARDEN-SCAN-02) | [ ] mapped |
-| scanners-protocol/CR-03 | BLOCKER | Argument injection into syft via image_ref | Phase 57 (HARDEN-SCAN-03) | [ ] mapped |
-| scanners-protocol/CR-04 | BLOCKER | SSRF in SAML metadata fetcher — no scheme/host validation | Phase 57 (HARDEN-SCAN-04) | [ ] mapped |
-| scanners-protocol/CR-05 | BLOCKER | Hardcoded guest:guest credentials sent to arbitrary hosts | Phase 57 (HARDEN-SCAN-05) | [ ] mapped |
-| scanners-protocol/CR-06 | BLOCKER | verify=False on RabbitMQ mgmt API + ssl_cert_reqs=none Redis | Phase 57 (HARDEN-SCAN-06) | [ ] mapped |
+| scanners-protocol/CR-01 | BLOCKER | JWT scanner disables TLS verification on JWKS fetch (MITM) | Phase 57 (HARDEN-SCAN-01) | [x] closed |
+| scanners-protocol/CR-02 | BLOCKER | Argument injection into semgrep via repo_path | Phase 57 (HARDEN-SCAN-02) | [x] closed |
+| scanners-protocol/CR-03 | BLOCKER | Argument injection into syft via image_ref | Phase 57 (HARDEN-SCAN-03) | [x] closed |
+| scanners-protocol/CR-04 | BLOCKER | SSRF in SAML metadata fetcher — no scheme/host validation | Phase 57 (HARDEN-SCAN-04) | [x] closed |
+| scanners-protocol/CR-05 | BLOCKER | Hardcoded guest:guest credentials sent to arbitrary hosts | Phase 57 (HARDEN-SCAN-05) | [x] closed |
+| scanners-protocol/CR-06 | BLOCKER | verify=False on RabbitMQ mgmt API + ssl_cert_reqs=none Redis | Phase 57 (HARDEN-SCAN-06) | [x] closed |
 | scanners-protocol/CR-07 | BLOCKER | Nested ThreadPoolExecutor + sslyze internal pool resource leak | — | [ ] open |
 | scanners-protocol/CR-08 | BLOCKER | fingerprint._tcp_connect socket leak on SSH banner branch | — | [ ] open |
 | scanners-protocol/WR-01 | WARNING | coverage.calculate_coverage can return >100% | — | [ ] open |
