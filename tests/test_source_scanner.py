@@ -41,7 +41,8 @@ SAMPLE_SEMGREP_OUTPUT = {
 
 def test_semgrep_not_found():
     """If semgrep binary is absent, must return empty list (per D-14)."""
-    with patch("shutil.which", return_value=None):
+    with patch("shutil.which", return_value=None), \
+         patch("os.path.isdir", return_value=True):
         endpoints = scan_source_repo("/path/to/repo", timeout=120)
         assert endpoints == []
 
@@ -53,7 +54,8 @@ def test_semgrep_findings_parsed():
     mock_proc.returncode = 0
 
     with patch("shutil.which", return_value="/usr/bin/semgrep"), \
-         patch("subprocess.run", return_value=mock_proc):
+         patch("subprocess.run", return_value=mock_proc), \
+         patch("os.path.isdir", return_value=True):
         endpoints = scan_source_repo("/path/to/repo", timeout=120)
         assert len(endpoints) == 2
         for ep in endpoints:
@@ -70,7 +72,8 @@ def test_semgrep_service_detail_format():
     mock_proc.returncode = 0
 
     with patch("shutil.which", return_value="/usr/bin/semgrep"), \
-         patch("subprocess.run", return_value=mock_proc):
+         patch("subprocess.run", return_value=mock_proc), \
+         patch("os.path.isdir", return_value=True):
         endpoints = scan_source_repo("/path/to/repo", timeout=120)
         assert endpoints[0].service_detail == "app/auth.py:42"
         assert endpoints[1].service_detail == "app/encrypt.py:10"
@@ -83,7 +86,8 @@ def test_semgrep_cipher_suite_is_rule_id():
     mock_proc.returncode = 0
 
     with patch("shutil.which", return_value="/usr/bin/semgrep"), \
-         patch("subprocess.run", return_value=mock_proc):
+         patch("subprocess.run", return_value=mock_proc), \
+         patch("os.path.isdir", return_value=True):
         endpoints = scan_source_repo("/path/to/repo", timeout=120)
         assert "insecure-hash-algorithms-md5" in endpoints[0].cipher_suite
 
@@ -95,6 +99,7 @@ def test_semgrep_json_parse_error():
     mock_proc.returncode = 1
 
     with patch("shutil.which", return_value="/usr/bin/semgrep"), \
-         patch("subprocess.run", return_value=mock_proc):
+         patch("subprocess.run", return_value=mock_proc), \
+         patch("os.path.isdir", return_value=True):
         endpoints = scan_source_repo("/path/to/repo", timeout=120)
         assert endpoints == []
