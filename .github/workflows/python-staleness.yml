@@ -1,0 +1,28 @@
+name: Python Staleness Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1'  # Mondays 09:00 UTC
+
+jobs:
+  staleness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project (editable) and pytest
+        run: |
+          pip install -e .
+          pip install pytest
+
+      - name: Run staleness gates
+        run: pytest tests/test_qramm_staleness.py tests/test_compliance_freshness.py -v
