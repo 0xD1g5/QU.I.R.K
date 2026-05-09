@@ -31,10 +31,10 @@ wont_fix: 0
 
 | Severity | Total | Mapped | Open | Closed | Deferred | Won't-fix |
 |---|---:|---:|---:|---:|---:|---:|
-| BLOCKER | 44 | 21 | 23 | 0 | 0 | 0 |
+| BLOCKER | 44 | 17 | 23 | 4 | 0 | 0 |
 | WARNING | 96 | 0 | 96 | 0 | 0 | 0 |
 | INFO | 29 | 0 | 29 | 0 | 0 | 0 |
-| **TOTAL** | **169** | **21** | **148** | **0** | **0** | **0** |
+| **TOTAL** | **169** | **17** | **148** | **4** | **0** | **0** |
 
 ---
 
@@ -173,15 +173,15 @@ wont_fix: 0
 
 | Finding ID | Severity | Title | Closed-By | Status |
 |---|---|---|---|---|
-| api-cli-core/CR-01 | BLOCKER | Path traversal in quirk init --output | Phase 58 (HARDEN-API-02) | [ ] mapped |
-| api-cli-core/CR-02 | BLOCKER | SSRF / port binding in routes/pdf.py via QUIRK_SERVE_PORT | Phase 58 (HARDEN-API-03) | [ ] mapped |
-| api-cli-core/CR-03 | BLOCKER | Missing authentication on every dashboard route | Phase 58 (HARDEN-API-01) | [ ] mapped |
+| api-cli-core/CR-01 | BLOCKER | Path traversal in quirk init --output | Phase 58 (HARDEN-API-02) | [x] closed |
+| api-cli-core/CR-02 | BLOCKER | SSRF / port binding in routes/pdf.py via QUIRK_SERVE_PORT | Phase 58 (HARDEN-API-03) | [x] closed |
+| api-cli-core/CR-03 | BLOCKER | Missing authentication on every dashboard route | Phase 58 (HARDEN-API-01) | [x] closed |
 | api-cli-core/CR-04 | BLOCKER | QRAMMProfile.session_id is nullable and has no DB-level FK | — | [ ] open |
 | api-cli-core/CR-05 | BLOCKER | delete_session does not clear qramm_sessions.profile_id link | — | [ ] open |
 | api-cli-core/CR-06 | BLOCKER | Bare except: pass in classifier call drops findings silently | — | [ ] open |
 | api-cli-core/CR-07 | BLOCKER | SQL injection guard on column names lacks col_type DDL fragment | — | [ ] open |
 | api-cli-core/CR-08 | BLOCKER | init_db ALTER TABLE migrations are not transactional | — | [ ] open |
-| api-cli-core/CR-09 | BLOCKER | parse_target_tokens reflective DoS via deep @file recursion | Phase 58 (HARDEN-API-04) | [ ] mapped |
+| api-cli-core/CR-09 | BLOCKER | parse_target_tokens reflective DoS via deep @file recursion | Phase 58 (HARDEN-API-04) | [x] closed |
 | api-cli-core/WR-01 | WARNING | _check_dashboard / _check_network always return True | — | [ ] open |
 | api-cli-core/WR-02 | WARNING | _check_db opens DB at default path regardless of QUIRK_DB_PATH | — | [ ] open |
 | api-cli-core/WR-03 | WARNING | _default_db_path mtime-newest-wins is non-deterministic | — | [ ] open |
