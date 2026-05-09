@@ -7429,8 +7429,8 @@ pip install pytest
 - The run's job log shows `pytest tests/test_qramm_staleness.py tests/test_compliance_freshness.py -v` was executed
 - No `QUIRK_CI_STALENESS_OVERRIDE_DATE` is set in the workflow run env (production CI uses real `today()` per D-04)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:** UAT-56.1-03
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-09  **Tester:** Digs
+**Notes:** UAT-56.1-03 — verified against GitHub Actions run 25587922284 (job 75120074628) on merge commit `bb3fb00`. "Python Staleness Gate" workflow listed in Actions UI; push trigger completed `success` in 35s. Job log shows exact pytest invocation `pytest tests/test_qramm_staleness.py tests/test_compliance_freshness.py -v`; 7/7 tests passed in 4.47s including QRAMM-06 hard gate against real today(), QRAMM-07 CLI smokes, and COMPLY-08 freshness gate. Run env had no `QUIRK_CI_STALENESS_OVERRIDE_DATE` (D-04 satisfied). Non-blocking: Node.js 20 deprecation warning on actions/checkout@v4 and actions/setup-python@v5 — auto-bumped to Node 24 on 2026-06-02.
 
 ---
