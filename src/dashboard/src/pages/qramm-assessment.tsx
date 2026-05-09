@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
+import { fetchApi } from "@/lib/api"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -95,7 +96,7 @@ export function AssessmentPage() {
     let cancelled = false
     setQuestionsLoading(true)
 
-    fetch("/api/qramm/questions")
+    fetchApi("/api/qramm/questions")
       .then((r) => {
         if (!r.ok) throw new Error(`/api/qramm/questions: ${r.status}`)
         return r.json() as Promise<QuestionItem[]>
@@ -163,7 +164,7 @@ export function AssessmentPage() {
     if (!ctx.sessionId) return
     setArchiving(true)
     try {
-      const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
+      const resp = await fetchApi(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
       if (!resp.ok && resp.status !== 404) {
         // Server still has the session — do NOT reset context or navigate.
         return
