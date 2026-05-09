@@ -658,6 +658,7 @@ def main():
                 cfg.connectors.jwt_targets,
                 timeout=cfg.scan.timeouts.jwt_seconds,
                 logger=logger,
+                allow_insecure_jwks=cfg.security.allow_insecure_jwks,
             )
 
     # ==============================
