@@ -11,6 +11,7 @@ The CLI surface (quirk qramm status) is Phase 55 (QRAMM-07) — not built here.
 from __future__ import annotations
 
 # Per QRAMM-06 — quarterly re-verification cadence for an active open-source model.
+# See CLAUDE.md "Staleness Review Cadence" for the bump procedure.
 STALENESS_THRESHOLD_DAYS: int = 90
 
 QRAMM_MODEL = {
