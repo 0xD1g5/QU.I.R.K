@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.dashboard.api.middleware.csrf import require_csrf
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -41,7 +43,7 @@ from quirk.qramm.scoring import (
     compute_practice_score,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_auth), Depends(require_csrf)])
 logger = logging.getLogger(__name__)
 
 
