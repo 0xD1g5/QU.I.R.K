@@ -1226,7 +1226,15 @@ Plans:
   3. The 61st mutating request from one IP within a minute returns 429 with a `Retry-After` header; informational routes are exempt; a load test demonstrates the limit and exemption
   4. `quirk init --output <path>` rejects `..`, absolute paths outside the allowlist, and symlinks pointing outside the allowlist with a clear error; a fuzz test feeds 50+ traversal patterns and asserts each is rejected
   5. `routes/pdf.py` rejects `QUIRK_SERVE_PORT` outside `1024–65535`, binds outbound fetches to `localhost`, and refuses to follow redirects to non-loopback hosts; `@file` target loading enforces the path allowlist, 1 MB size cap, and 10,000-line cap with explicit error messages on each violation
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+- [ ] 58-01-PLAN.md — Auth middleware + config extension (require_auth, require_csrf, SecurityCfg.api_token)
+- [ ] 58-02-PLAN.md — CORS + rate-limit middleware registration in app factory
+- [ ] 58-03-PLAN.md — CLI path-traversal guard, PDF port clamp, @file target guards
+- [ ] 58-04-PLAN.md — TDD: Wire auth/CSRF to routers + full integration test suite
+- [ ] 58-05-PLAN.md — TDD: CLI init fuzz corpus + TargetFileError reason-code tests
+- [ ] 58-06-PLAN.md — React fetchApi() utility + migrate all raw fetch() call sites
+- [ ] 58-07-PLAN.md — Audit ledger closure (CR-01, CR-02, CR-03, CR-09) + UAT-SERIES.md update
 **UI hint**: yes
 
 ### Phase 59: Credential Leakage Sweep
@@ -1350,7 +1358,7 @@ Plans:
 | Phase | Wave | Plans Complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
 | 57. Scanner Security Hardening | A | 6/6 | Complete   | 2026-05-09 |
-| 58. Dashboard API Hardening | A | 0/TBD | Not started | - |
+| 58. Dashboard API Hardening | A | 0/7 | Planned | - |
 | 59. Credential Leakage Sweep | A | 0/TBD | Not started | - |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
 | 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
