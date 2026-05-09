@@ -1149,9 +1149,9 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 **Goal:** Wire the QRAMM staleness gate, the compliance freshness gate, and the QRAMM CLI smoke tests into a new GitHub Actions workflow so that QRAMM-06's 90-day pytest gate is actually enforced on every PR, every push to `main`, and weekly via cron — and document the cadence in `CLAUDE.md`.
 **Requirements**: QRAMM-06, QRAMM-07, COMPLY-08
 **Depends on:** Phase 56
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 56.1-01-PLAN.md — Create .github/workflows/python-staleness.yml
-- [ ] 56.1-02-PLAN.md — CLAUDE.md cadence section + REQUIREMENTS.md / ROADMAP.md closure + model_meta.py pointer
-- [ ] 56.1-03-PLAN.md — UAT-SERIES.md update + Obsidian phase note + UAT commit
+- [x] 56.1-01-PLAN.md — Create .github/workflows/python-staleness.yml
+- [x] 56.1-02-PLAN.md — CLAUDE.md cadence section + REQUIREMENTS.md / ROADMAP.md closure + model_meta.py pointer
+- [x] 56.1-03-PLAN.md — UAT-SERIES.md update + Obsidian phase note + UAT commit
