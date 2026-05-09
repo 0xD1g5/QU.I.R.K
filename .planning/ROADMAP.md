@@ -1208,8 +1208,8 @@ Plans:
   4. The broker scanner sends NO credentials by default — no `guest:guest`, no Basic-auth header — and TLS-required is the default for management API + Redis probes; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding
   5. Running the full scanner test suite plus the chaos-lab smoke (`./lab.sh up && quirk scan --target <lab>`) produces zero outbound requests with `verify=False`, zero hardcoded credentials in any captured HTTP body, and zero subprocess invocations with un-sanitized arguments
 **Plans**: 6 plans
-- [ ] 57-01-PLAN.md — Shared util helpers (url_allowlist + subprocess_input) + tests
-- [ ] 57-02-PLAN.md — SecurityCfg + BrokerCredential config wiring + CLI flags + models.py docstring (D-06)
+- [x] 57-01-PLAN.md — Shared util helpers (url_allowlist + subprocess_input) + tests
+- [x] 57-02-PLAN.md — SecurityCfg + BrokerCredential config wiring + CLI flags + models.py docstring (D-06)
 - [ ] 57-03-PLAN.md — JWT scanner CR-01 (verify=True default + JWKS advisory) + ROADMAP D-11 correction
 - [ ] 57-04-PLAN.md — SAML scanner CR-04 (validate_external_url SSRF guard + internal-target advisory)
 - [ ] 57-05-PLAN.md — Source + container scanners CR-02/CR-03 (subprocess input validation + argv `--`)
@@ -1349,7 +1349,7 @@ Plans:
 
 | Phase | Wave | Plans Complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
-| 57. Scanner Security Hardening | A | 0/TBD | Not started | - |
+| 57. Scanner Security Hardening | A | 2/6 | In Progress|  |
 | 58. Dashboard API Hardening | A | 0/TBD | Not started | - |
 | 59. Credential Leakage Sweep | A | 0/TBD | Not started | - |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
