@@ -1,0 +1,78 @@
+"""Phase 57 phase-wide invariants. Single grep gate that asserts no
+regression of the six closed audit blockers reintroduces a forbidden
+pattern."""
+import pathlib
+import re
+import pytest
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+SCANNER_FILES = [
+    REPO_ROOT / "quirk" / "scanner" / "jwt_scanner.py",
+    REPO_ROOT / "quirk" / "scanner" / "saml_scanner.py",
+    REPO_ROOT / "quirk" / "scanner" / "source_scanner.py",
+    REPO_ROOT / "quirk" / "scanner" / "container_scanner.py",
+    REPO_ROOT / "quirk" / "scanner" / "broker_scanner.py",
+]
+
+
+def _strip_comments(src: str) -> str:
+    # Drop full-line comments and end-of-line comments. Crude but enough
+    # for these grep gates — Python doesn't have block comments and string
+    # literals containing '#' are rare enough in scanner files that a
+    # post-strip false-positive review is acceptable.
+    out_lines = []
+    for line in src.splitlines():
+        stripped = line.split("#", 1)[0]
+        out_lines.append(stripped)
+    return "\n".join(out_lines)
+
+
+@pytest.mark.parametrize("scanner_file", SCANNER_FILES, ids=lambda p: p.name)
+def test_no_unconditional_verify_false(scanner_file):
+    """CR-01: no verify=False literal outside comments (jwt only — but check all)."""
+    src = _strip_comments(scanner_file.read_text())
+    # The only acceptable form is `verify=verify_tls` (parameter pass-through).
+    # A literal `verify=False` outside comments fails.
+    assert "verify=False" not in src, (
+        f"{scanner_file.name} contains literal verify=False outside comments — "
+        "regression of CR-01"
+    )
+
+
+def test_broker_no_hardcoded_guest_creds():
+    """CR-05: no `guest:guest` literal anywhere in broker_scanner.py."""
+    src = (REPO_ROOT / "quirk" / "scanner" / "broker_scanner.py").read_text()
+    assert "guest:guest" not in src, "Regression of CR-05 — guest:guest literal"
+    assert b"guest:guest" not in src.encode(), "Regression of CR-05 — guest:guest bytes"
+
+
+def test_broker_no_unconditional_ssl_cert_reqs_none():
+    """CR-06: ssl_cert_reqs="none" must be conditional only."""
+    src = _strip_comments((REPO_ROOT / "quirk" / "scanner" / "broker_scanner.py").read_text())
+    # Acceptable: `ssl_cert_reqs = "none" if allow_cleartext else "required"`
+    # Acceptable: `ssl_cert_reqs=ssl_cert_reqs`
+    # NOT acceptable: a kwarg literal `ssl_cert_reqs="none"` in a Redis() call.
+    # Match `ssl_cert_reqs="none"` occurring as a function-call kwarg pattern.
+    kwarg_pattern = re.compile(r'ssl_cert_reqs\s*=\s*"none"')
+    # Each match must be inside a conditional expression (either after `if`
+    # on the same line or in a ternary). Heuristic: filter matches that
+    # appear after an `if ` token on the same line.
+    matches = []
+    for line in src.splitlines():
+        if kwarg_pattern.search(line) and " if " not in line:
+            matches.append(line)
+    assert matches == [], (
+        f'Regression of CR-06 — unconditional ssl_cert_reqs="none": {matches}'
+    )
+
+
+def test_audit_tasks_six_blockers_closed():
+    ledger = (REPO_ROOT / ".planning" / "audit-2026-05-08" / "AUDIT-TASKS.md").read_text()
+    for cr in ["CR-01", "CR-02", "CR-03", "CR-04", "CR-05", "CR-06"]:
+        row_pattern = re.compile(
+            r"\|\s*scanners-protocol/" + cr + r"\s*\|.*\|\s*\[x\] closed\s*\|"
+        )
+        assert row_pattern.search(ledger), (
+            f"AUDIT-TASKS.md row scanners-protocol/{cr} is not [x] closed"
+        )
