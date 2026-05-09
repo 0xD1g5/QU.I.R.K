@@ -750,6 +750,8 @@ def scan_one_redis(
     timeout: int,
     logger: Optional[Logger] = None,
     session_start: Optional[datetime] = None,
+    *,
+    allow_cleartext: bool = False,
 ) -> Optional[CryptoEndpoint]:
     """Probe a single Redis host:port. Port 6379 -> plaintext detection; 6380 -> raw ssl probe."""
     if port == 6379:
@@ -767,7 +769,7 @@ def scan_one_redis(
     ep.scanned_at = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
 
     # REDIS-03 optional enrichment
-    enrichment = _enrich_redis_config(host, port, logger)
+    enrichment = _enrich_redis_config(host, port, logger, allow_cleartext=allow_cleartext)
     if enrichment:
         setattr(ep, "_redis_config_enrichment", enrichment)
     return ep
@@ -782,8 +784,11 @@ def scan_redis_targets(
     timeout: int = 5,
     logger: Optional[Logger] = None,
     session_start: Optional[datetime] = None,
+    *,
+    security=None,
 ) -> List[CryptoEndpoint]:
     """REDIS-01..03. Probe Redis hosts on 6379 (plaintext) and 6380 (TLS) in parallel."""
+    allow_cleartext = bool(security and getattr(security, "allow_cleartext_broker_probe", False))
     results: List[CryptoEndpoint] = []
     ports = [6379, 6380]
     tasks = [(h, p) for h in hosts for p in ports]
@@ -792,7 +797,10 @@ def scan_redis_targets(
     if logger:
         logger.stamp(f"Starting Redis scans: {len(tasks)} probes ({len(hosts)} hosts x 2 ports)")
     with ThreadPoolExecutor(max_workers=min(len(tasks), 50)) as ex:
-        futs = {ex.submit(scan_one_redis, h, p, timeout, logger, session_start): (h, p) for h, p in tasks}
+        futs = {
+            ex.submit(scan_one_redis, h, p, timeout, logger, session_start, allow_cleartext=allow_cleartext): (h, p)
+            for h, p in tasks
+        }
         for f in as_completed(futs):
             ep = f.result()
             if ep is not None:
