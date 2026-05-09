@@ -219,7 +219,7 @@ def test_scan_rabbitmq_targets_plaintext_only():
 
 def test_scan_redis_targets_happy():
     # INFRA-03 / REDIS-01 — happy: TLS on 6380 succeeds.
-    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None):
+    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False):
         if port == 6380:
             return _tls_endpoint(host, port, "REDIS-TLS")
         return None
@@ -246,7 +246,7 @@ def test_scan_redis_targets_refused():
 
 def test_scan_redis_targets_plaintext_only():
     # INFRA-03 / REDIS-02 — plaintext-only: 6379 PING/PONG without auth.
-    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None):
+    def fake_scan_one_redis(host, port, timeout, logger=None, session_start=None, *, allow_cleartext=False):
         if port == 6379:
             return _plain_endpoint(host, port, "REDIS-PLAIN")
         return None
