@@ -987,6 +987,8 @@ def main():
             timeout=cfg.scan.timeouts.broker_seconds,
             logger=logger,
             session_start=session_start,
+            security=cfg.security,
+            broker_credentials=cfg.broker_credentials,
         )
         rd = scan_redis_targets(
             hosts=broker_hosts,
