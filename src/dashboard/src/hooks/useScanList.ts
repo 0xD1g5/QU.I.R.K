@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import type { ScanSession } from "@/types/api"
+import { fetchApi } from "@/lib/api"
 
 interface UseScanListResult {
   sessions: ScanSession[]
@@ -14,7 +15,7 @@ export function useScanList(): UseScanListResult {
     let cancelled = false
     async function fetchSessions() {
       try {
-        const resp = await fetch("/api/scans")
+        const resp = await fetchApi("/api/scans")
         if (resp.ok) {
           const data: ScanSession[] = await resp.json()
           if (!cancelled) setSessions(data)

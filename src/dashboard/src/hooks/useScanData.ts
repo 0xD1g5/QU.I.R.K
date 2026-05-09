@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import type { ScanLatestResponse } from "@/types/api"
 import { useSelectedScan } from "@/hooks/useSelectedScan"
+import { fetchApi } from "@/lib/api"
 
 interface UseScanDataResult {
   data: ScanLatestResponse | null
@@ -24,8 +25,21 @@ export function useScanData(): UseScanDataResult {
         const url = selectedScanId
           ? `/api/scan/latest?scan_id=${encodeURIComponent(selectedScanId)}`
           : "/api/scan/latest"
-        const resp = await fetch(url)
+        const resp = await fetchApi(url)
         if (!resp.ok) {
+          if (resp.status === 401) {
+            setError("Authentication required")
+            return
+          }
+          if (resp.status === 403) {
+            setError("Request blocked")
+            return
+          }
+          if (resp.status === 429) {
+            const retryAfter = resp.headers.get("Retry-After") ?? "60"
+            setError(`Too many requests. Wait ${retryAfter} seconds and try again.`)
+            return
+          }
           if (resp.status === 404) {
             setError("No scan data available. Run a scan first: quirk scan <target>")
           } else {
