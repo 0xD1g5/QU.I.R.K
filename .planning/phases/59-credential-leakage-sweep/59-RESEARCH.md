@@ -540,22 +540,16 @@ No missing dependencies.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `safe_str` include the message at all, or always return class-only?**
-   - What we know: The requirements say "returns `f"{type(exc).__name__}"` by default" — suggesting class-only is the default. The "scrubs known-sensitive substrings" language implies the message may be returned if clean.
-   - What's unclear: "by default" could mean "when no message is available" or "unless message is clean".
-   - Recommendation: Return `f"{class_name}: {scrubbed_msg}"` when no sensitive pattern matches. This preserves diagnostic value for benign exceptions (ConnectionRefusedError, TimeoutError). Success Criterion 1 says "returns `f"{type(exc).__name__}"` by default" — interpret as the minimum guaranteed return; message inclusion is additive.
+   - RESOLVED: Return `f"{class_name}: {scrubbed_msg}"` when no sensitive pattern matches; class-only otherwise. Adopted by Plan 01 (`quirk/util/safe_exc.py`) and validated by `test_safe_str_benign_passthrough`. Success Criterion 1's "by default" is interpreted as the minimum guaranteed return; message inclusion is additive when safe.
 
 2. **Are logger.v calls in scope?**
-   - What we know: Phase goal text says "scan_error, logs, or report output." LEAK-02 says only connectors that "persist `scan_error`."
-   - What's unclear: Whether to also route logger.v calls through `safe_str`.
-   - Recommendation: Apply `safe_str` to logger.v calls in vault_connector.py and gcp_connector.py opportunistically (Pattern A intent), but do NOT add them to the LEAK-03 AST gate scope. This avoids scope creep in the gate.
+   - RESOLVED: Opportunistic `safe_str` wrapping for logger.v calls in vault_connector.py / gcp_connector.py (Pattern A intent), but NOT in the LEAK-03 AST gate scope. Adopted by Plan 02 Task 2 (vault_connector opportunistic edits) and Plan 03 (gate covers `scan_error` writes only).
 
 3. **Should the AST gate also cover `quirk/cbom/writer.py`?**
-   - What we know: `writer.py` has two leaky writes (`f"CBOM JSON ...: {exc}"`). These are JSON validation errors, not credential-bearing exceptions.
-   - What's unclear: Whether CBOM writer is "in scope" for LEAK-02 (it is not a "connector").
-   - Recommendation: Fix it opportunistically (low cost), include it in the gate scan directories to be thorough.
+   - RESOLVED: YES — `quirk/cbom/` is included in Plan 03's `SCANNER_DIRS`, AND Plan 02 Task 2 sweeps both `cbom/writer.py` callsites (lines 78, 93) via `safe_str` so the gate finds zero violations on first run.
 
 ---
 
