@@ -22,9 +22,9 @@ Requirements for the Governance & Compliance Platform milestone. Each maps to ro
 
 ### QRAMM Staleness Enforcement
 
-- [ ] **QRAMM-05**: `QRAMM_MODEL` module constant in `quirk/qramm/model_meta.py` carries `qramm_version` (string), `last_verified` (ISO date), and `source_url` (`https://qramm.org`) — mirroring the compliance staleness pattern from v4.6
-- [ ] **QRAMM-06**: CI pytest gate fails when `QRAMM_MODEL.last_verified` is more than 90 days old; supports injectable `QUIRK_CI_STALENESS_OVERRIDE_DATE` env var for CI boundary testing
-- [ ] **QRAMM-07**: `quirk qramm status` CLI subcommand displays `qramm_version`, `last_verified`, days remaining until stale, and current staleness verdict; exits non-zero when stale
+- [x] **QRAMM-05**: `QRAMM_MODEL` module constant in `quirk/qramm/model_meta.py` carries `qramm_version` (string), `last_verified` (ISO date), and `source_url` (`https://qramm.org`) — mirroring the compliance staleness pattern from v4.6
+- [x] **QRAMM-06**: CI pytest gate fails when `QRAMM_MODEL.last_verified` is more than 90 days old; supports injectable `QUIRK_CI_STALENESS_OVERRIDE_DATE` env var for CI boundary testing
+- [x] **QRAMM-07**: `quirk qramm status` CLI subcommand displays `qramm_version`, `last_verified`, days remaining until stale, and current staleness verdict; exits non-zero when stale
 
 ### QRAMM Assessment Experience
 
@@ -121,8 +121,9 @@ Populated by the roadmapper. Updated at each phase transition.
 | QRAMM-09 | Phase 54 | Pending |
 | QRAMM-10 | Phase 54 | Pending |
 | QRAMM-11 | Phase 54 | Pending |
-| QRAMM-05 | Phase 55 | Pending |
-| QRAMM-06 | Phase 55 | Pending |
-| QRAMM-07 | Phase 55 | Pending |
+| QRAMM-05 | Phase 55 | Complete (Phase 55) |
+| QRAMM-06 | Phase 55 | Complete (Phase 55 + 56.1) |
+| QRAMM-07 | Phase 55 | Complete (Phase 55 + 56.1) |
 | QRAMM-15 | Phase 55 | Complete |
 | QRAMM-16 | Phase 56 | Complete |
+| COMPLY-08 | Phase 49 | Complete — CI-protected by python-staleness.yml (Phase 56.1) |
