@@ -54,8 +54,9 @@ def test_cidr_routes_to_cidrs():
     assert cidrs == ["10.0.0.0/24"]
 
 
-def test_mixed_csv_with_cidr_and_file_token(tmp_path):
+def test_mixed_csv_with_cidr_and_file_token(tmp_path, monkeypatch):
     """Mixed CSV: host + CIDR + @file all routed correctly (MULTI-01/02/04)."""
+    monkeypatch.chdir(tmp_path)  # Phase 58: @file guard requires file within CWD
     extras = tmp_path / "extras.txt"
     extras.write_text("x.com\n#comment\n\ny.com\n")
 
@@ -66,8 +67,9 @@ def test_mixed_csv_with_cidr_and_file_token(tmp_path):
     assert cidrs == ["10.0.0.0/24"]
 
 
-def test_at_file_no_nested_at_prefix(tmp_path):
+def test_at_file_no_nested_at_prefix(tmp_path, monkeypatch):
     """D-02: a line starting with '@' inside a targets file is treated as a bare host, not re-routed."""
+    monkeypatch.chdir(tmp_path)  # Phase 58: @file guard requires file within CWD
     inner = tmp_path / "nested.txt"
     inner.write_text("real-host.com\n")
 
@@ -93,10 +95,12 @@ def test_malformed_cidr_raises_with_token():
 
 def test_missing_file_token_raises_with_path():
     """@-prefixed token pointing at missing file raises FileNotFoundError (D-05/MULTI-05)."""
-    bad_path = "/no/such/targets.txt"
+    # Phase 58: external absolute paths now raise TargetFileError(path_traversal) before
+    # file-existence check. Use a relative (within-CWD) path to exercise FileNotFoundError.
+    bad_path = "./no_such_quirk_targets_test.txt"
     with pytest.raises(FileNotFoundError) as exc_info:
         parse_target_tokens(f"@{bad_path}")
-    assert bad_path in str(exc_info.value)
+    assert "no_such_quirk_targets_test" in str(exc_info.value)
 
 
 def test_whitespace_tokens_skipped():
