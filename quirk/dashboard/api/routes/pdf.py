@@ -13,10 +13,13 @@ from __future__ import annotations
 import json
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 
-router = APIRouter()
+from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.dashboard.api.middleware.csrf import require_csrf
+
+router = APIRouter(dependencies=[Depends(require_auth), Depends(require_csrf)])
 
 # Module-level import allows test mocking via patch("quirk.dashboard.api.routes.pdf.sync_playwright")
 try:
