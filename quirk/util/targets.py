@@ -29,8 +29,41 @@ Public surface:
 from __future__ import annotations
 
 import ipaddress
+import os
 import sys
-from typing import Callable, Optional
+from typing import Callable, Final, Optional
+
+
+# ---------------------------------------------------------------------------
+# @file target validation (Phase 58 / CR-09 / HARDEN-API-06)
+# ---------------------------------------------------------------------------
+
+# Reason-code constants — mirror RC_* pattern from quirk/util/subprocess_input.py
+RC_PATH_TRAVERSAL: Final[str] = "path_traversal"
+RC_PATH_NOT_ALLOWED_PREFIX: Final[str] = "path_not_allowed_prefix"
+RC_TARGET_FILE_TOO_LARGE: Final[str] = "target_file_too_large"
+RC_TARGET_FILE_TOO_MANY_LINES: Final[str] = "target_file_too_many_lines"
+
+_BLOCKED_PREFIXES: tuple[str, ...] = ("/etc", "/proc", "/sys", "/dev")
+_MAX_FILE_SIZE: int = 1_048_576   # 1 MB (D-13)
+_MAX_LINE_COUNT: int = 10_000     # D-13
+
+
+class TargetFileError(ValueError):
+    """Raised by parse_target_tokens() when @file validation fails (D-13/D-14).
+
+    Extends ValueError for backward compatibility with callers catching ValueError.
+
+    Attributes:
+        path: The file path that failed validation.
+        reason: One of RC_PATH_TRAVERSAL, RC_PATH_NOT_ALLOWED_PREFIX,
+                RC_TARGET_FILE_TOO_LARGE, RC_TARGET_FILE_TOO_MANY_LINES.
+    """
+
+    def __init__(self, path: str, reason: str) -> None:
+        self.path = path
+        self.reason = reason
+        super().__init__(f"Target file rejected ({reason}): {path!r}")
 
 
 def load_targets_file(path: str) -> str:
@@ -100,6 +133,38 @@ def parse_target_tokens(
         if token.startswith("@") and not _in_file:
             # D-01: @-prefix → file load; D-02: suppress nested @-routing
             file_path = token[1:]
+
+            # D-13: validate @file path before loading (Phase 58 / CR-09)
+            _real = os.path.realpath(file_path)
+            _cwd_real = os.path.realpath(os.getcwd())
+
+            # Check 1: path must descend from CWD
+            if not (_real.startswith(_cwd_real + os.sep) or _real == _cwd_real):
+                raise TargetFileError(file_path, RC_PATH_TRAVERSAL)
+
+            # Check 2: reject blocked system prefixes
+            if any(_real.startswith(p) for p in _BLOCKED_PREFIXES):
+                raise TargetFileError(file_path, RC_PATH_NOT_ALLOWED_PREFIX)
+
+            # Check 3: size cap (1 MB)
+            try:
+                if os.path.getsize(file_path) > _MAX_FILE_SIZE:
+                    raise TargetFileError(file_path, RC_TARGET_FILE_TOO_LARGE)
+            except TargetFileError:
+                raise
+            except OSError:
+                pass  # FileNotFoundError will surface naturally in load_targets_file
+
+            # Check 4: line cap (10,000 lines) — stream-count, do not load into memory
+            try:
+                with open(file_path, encoding="utf-8", errors="replace") as _fh:
+                    if sum(1 for _ in _fh) > _MAX_LINE_COUNT:
+                        raise TargetFileError(file_path, RC_TARGET_FILE_TOO_MANY_LINES)
+            except TargetFileError:
+                raise
+            except OSError:
+                pass  # FileNotFoundError will surface naturally in load_targets_file
+
             file_raw = load_targets_file(file_path)
             file_fqdns, file_cidrs = parse_target_tokens(file_raw, _in_file=True)
             fqdns.extend(file_fqdns)
