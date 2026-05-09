@@ -1252,7 +1252,10 @@ Plans:
   2. Every connector that writes `scan_error` (vault, GCP, AWS, DB, broker, email, identity) routes exception text through `safe_str(exc)`; an end-to-end test seeds each connector with a synthesized credential-bearing exception and asserts the resulting `scan_error` row contains only the exception class name
   3. A pytest gate enumerates `scan_error` writes via AST scan and fails the build if any caller bypasses `safe_str(exc)` — mirroring the `_build_finding` chokepoint pattern from v4.6 Phase 48
   4. Replaying a corpus of v4.7 scan databases through a leak detector finds zero credential-shaped substrings in any `scan_error` value
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 59-01-PLAN.md — Build safe_str helper + unit corpus (LEAK-01)
+  - [ ] 59-02-PLAN.md — Apply safe_str to 8 leaky callsites + unify db_connector (LEAK-02)
+  - [ ] 59-03-PLAN.md — AST CI gate + corpus replay regression (LEAK-03)
 
 ### Phase 60: Score Arithmetic Correctness
 **Goal**: Every score path is bounded and defensible — total readiness is clamped to `[0, 100]`, the QRAMM profile multiplier is clamped server-side, the confidence bonus is gated on actual data, and QRAMM maturity thresholds are contiguous with no scoring gaps. Closes audit blockers 12, 15 + Pattern E.
