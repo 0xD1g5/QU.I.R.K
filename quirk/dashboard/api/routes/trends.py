@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends
+from quirk.dashboard.api.middleware.auth import require_auth
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -26,7 +27,7 @@ from quirk.dashboard.api.schemas import (
 from quirk.intelligence.trends import compute_trend_report
 from quirk.models import CryptoEndpoint
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_auth)])
 
 
 def _list_session_timestamps(db: Session) -> List[datetime]:
