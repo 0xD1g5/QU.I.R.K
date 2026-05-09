@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from quirk.dashboard.api.middleware.auth import require_auth
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -30,7 +31,7 @@ from quirk.dashboard.api.schemas import (
 from quirk.models import CryptoEndpoint
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_auth)])
 
 # Phase 38 (D-01): backward bracket from MAX(scanned_at) restores SAML/OIDC visibility under timestamp skew
 SESSION_BRACKET = timedelta(minutes=5)
