@@ -20,6 +20,25 @@ def run_init(output_path: str) -> None:
 
     output_path = os.path.abspath(output_path)
 
+    # CR-01 / D-13: path-traversal guard — resolved path must descend from CWD.
+    _cwd_real = os.path.realpath(os.getcwd())
+    _out_real = os.path.realpath(output_path)
+
+    # Reject if resolved path does not start with CWD (handles symlink escapes).
+    if not (_out_real.startswith(_cwd_real + os.sep) or _out_real == _cwd_real):
+        _warn(
+            f"Output path '{output_path}' resolves outside the current working "
+            "directory. Absolute paths and symlinks escaping CWD are not allowed."
+        )
+        return
+
+    # Defense-in-depth: reject explicit dotdot segments before resolution.
+    if ".." in os.path.normpath(output_path).split(os.sep):
+        _warn(
+            f"Output path '{output_path}' contains path-traversal segments (..)."
+        )
+        return
+
     if os.path.exists(output_path):
         _warn(f"Config file already exists at {output_path} — not overwriting.")
         _warn("Delete the file first or specify a different --output path.")
