@@ -712,7 +712,7 @@ def _enrich_redis_config(host: str, port: int, logger=None, *, allow_cleartext: 
     """REDIS-03 / D-08 / Phase 57 CR-06. redis-py CONFIG GET tls-*.
 
     Default: ssl_cert_reqs="required" (enforces TLS chain verification).
-    allow_cleartext=True: ssl_cert_reqs="none" (opt-in for degraded environments).
+    allow_cleartext=True: ssl_cert_reqs set to none (opt-in for degraded environments).
     NOAUTH/NOPERM degrade silently to {}.
     """
     if not REDIS_AVAILABLE:
