@@ -609,7 +609,8 @@ def scan_rabbitmq_targets(
         # Emit HIGH advisories for opt-in probes (D-10 / CR-05, CR-06)
         now_ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
         if allow_cleartext:
-            # Cleartext mgmt-api advisory: one per host when HTTP probe is sent
+            # Cleartext mgmt-api advisory: one per host when HTTP probe is attempted
+            # (emitted regardless of whether urlopen succeeded or raised an exception)
             results.append(CryptoEndpoint(
                 host=host, port=15672, protocol="ADVISORY",
                 service_detail=ADVISORY_BROKER_CLEARTEXT,
