@@ -865,6 +865,7 @@ def main():
                 timeout=getattr(cfg.connectors, "saml_timeout", 10),
                 logger=logger,
                 session_start=session_start,
+                allow_internal_targets=cfg.security.allow_internal_targets,
             )
             logger.info("SAML scan: %d endpoints from %d targets",
                         len(saml_endpoints), len(cfg.connectors.saml_targets))
