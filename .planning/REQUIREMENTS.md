@@ -18,7 +18,7 @@
 #### Scanner Security Hardening
 *Closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`). Phase 57.*
 
-- [ ] **HARDEN-SCAN-01**: JWKS fetch in `quirk/scanner/api_scanner.py` enables TLS verification by default; the operator-facing flag to disable verification (if any) is renamed, gated behind an explicit config knob, and emits a HIGH advisory finding when used (closes CR-01)
+- [ ] **HARDEN-SCAN-01**: JWKS fetch in `quirk/scanner/jwt_scanner.py` enables TLS verification by default; the operator-facing flag to disable verification (if any) is renamed, gated behind an explicit config knob, and emits a HIGH advisory finding when used (closes CR-01)
 - [ ] **HARDEN-SCAN-02**: SAML scanner HTTP fetcher routes through a shared URL-allowlist helper that rejects RFC1918 ranges, link-local, loopback, `file://`, and metadata-service IPs (169.254.169.254, fd00:ec2::254) unless an explicit `--allow-internal-targets` flag is set (closes CR-04)
 - [ ] **HARDEN-SCAN-03**: `quirk/scanner/source_scanner.py` validates `repo_path` against a path-allowlist (existing local directory, no shell metacharacters) before invoking `subprocess.run` for semgrep (closes CR-02)
 - [ ] **HARDEN-SCAN-04**: `quirk/scanner/container_scanner.py` validates `image_ref` against a regex allowlist (registry/image:tag form), rejecting `dir:/`, `file://`, and any value containing shell metacharacters before invoking syft (closes CR-03)
