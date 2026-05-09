@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.util.subprocess_input import validate_repo_path
 
 
 def scan_source_repo(
@@ -27,7 +28,23 @@ def scan_source_repo(
     - source_scan_json = full finding JSON
 
     Returns empty list if semgrep is absent, subprocess fails, or JSON is invalid.
+    Rejected inputs (argv injection, path traversal, etc.) return a single
+    CryptoEndpoint with scan_error_category="invalid_input" and no subprocess call.
     """
+    # Phase 57 / CR-02: reject argv-injection inputs before subprocess.run.
+    _validation = validate_repo_path(repo_path)
+    if not _validation.ok:
+        if logger:
+            logger.v(f"SOURCE rejected {_validation.redacted_preview!r}: {_validation.reason}")
+        return [CryptoEndpoint(
+            host=_validation.redacted_preview,
+            port=0,
+            protocol="SOURCE",
+            scan_error=_validation.reason,
+            scan_error_category="invalid_input",
+            scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        )]
+
     exe = shutil.which("semgrep")
     if not exe:
         if logger:
@@ -36,7 +53,7 @@ def scan_source_repo(
 
     try:
         proc = subprocess.run(
-            [exe, "--json", "--config", "p/cryptography", repo_path],
+            [exe, "--json", "--config", "p/cryptography", "--", repo_path],
             capture_output=True,
             text=True,
             timeout=timeout,
