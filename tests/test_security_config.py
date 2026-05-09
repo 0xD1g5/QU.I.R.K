@@ -39,7 +39,9 @@ def _base_raw() -> dict:
 
 def test_security_block_missing_defaults_safe():
     cfg = config_from_dict(_base_raw())
-    assert cfg.security == SecurityCfg(False, False, False)
+    # Phase 58: SecurityCfg gained api_token and cors_origins; config_from_dict sets
+    # cors_origins=[] (not the field default) when the security block is absent.
+    assert cfg.security == SecurityCfg(False, False, False, api_token="", cors_origins=[])
 
 
 def test_security_block_partial_load():
