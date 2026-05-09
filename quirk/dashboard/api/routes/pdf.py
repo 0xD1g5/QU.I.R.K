@@ -50,6 +50,17 @@ def export_pdf() -> Response:
             status_code=500,
             media_type="application/json",
         )
+
+    # D-11 / CR-02: port range clamp — reject values outside safe ephemeral range
+    if not (1024 <= port <= 65535):
+        return Response(
+            content=json.dumps(
+                {"detail": "QUIRK_SERVE_PORT is out of allowed range (1024–65535)."}
+            ).encode(),
+            status_code=500,
+            media_type="application/json",
+        )
+
     print_url = f"http://127.0.0.1:{port}/print"
 
     try:
@@ -58,6 +69,19 @@ def export_pdf() -> Response:
             try:
                 context = browser.new_context()
                 page = context.new_page()
+
+                # D-12 / CR-02: abort navigations that resolve to non-loopback hosts.
+                _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+
+                def _abort_non_loopback(route):
+                    from urllib.parse import urlparse
+                    host = urlparse(route.request.url).hostname or ""
+                    if host not in _LOOPBACK_HOSTS:
+                        route.abort()
+                    else:
+                        route.continue_()
+
+                page.route("**/*", _abort_non_loopback)
 
                 page.goto(print_url, wait_until="networkidle", timeout=30_000)
                 page.wait_for_selector('body[data-ready="true"]', timeout=15_000)
