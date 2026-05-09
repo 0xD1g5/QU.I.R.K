@@ -1228,12 +1228,17 @@ Plans:
   5. `routes/pdf.py` rejects `QUIRK_SERVE_PORT` outside `1024–65535`, binds outbound fetches to `localhost`, and refuses to follow redirects to non-loopback hosts; `@file` target loading enforces the path allowlist, 1 MB size cap, and 10,000-line cap with explicit error messages on each violation
 **Plans**: 7 plans
 Plans:
+**Wave 1**
 - [ ] 58-01-PLAN.md — Auth middleware + config extension (require_auth, require_csrf, SecurityCfg.api_token)
 - [ ] 58-02-PLAN.md — CORS + rate-limit middleware registration in app factory
 - [ ] 58-03-PLAN.md — CLI path-traversal guard, PDF port clamp, @file target guards
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 58-04-PLAN.md — TDD: Wire auth/CSRF to routers + full integration test suite
 - [ ] 58-05-PLAN.md — TDD: CLI init fuzz corpus + TargetFileError reason-code tests
 - [ ] 58-06-PLAN.md — React fetchApi() utility + migrate all raw fetch() call sites
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 58-07-PLAN.md — Audit ledger closure (CR-01, CR-02, CR-03, CR-09) + UAT-SERIES.md update
 **UI hint**: yes
 
