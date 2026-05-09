@@ -47,7 +47,7 @@ def _make_bridge_client():
             db.close()
 
     app.dependency_overrides[get_db] = _override_get_db
-    return TestClient(app), TestingSession
+    return TestClient(app, headers={"X-Quirk-Request": "1"}), TestingSession
 
 
 def _seed_endpoints(db, scenario: str) -> None:
