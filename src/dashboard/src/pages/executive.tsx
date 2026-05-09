@@ -1,4 +1,5 @@
 import { useScanData } from "@/hooks/useScanData"
+import { fetchApi } from "@/lib/api"
 import { ScoreGauge } from "@/components/gauges/ScoreGauge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -33,7 +34,7 @@ export function ExecutivePage() {
     setPdfExporting(true)
     setPdfMessage("Generating PDF...")
     try {
-      const resp = await fetch("/api/export/pdf", { method: "POST" })
+      const resp = await fetchApi("/api/export/pdf", { method: "POST" })
       if (resp.ok) {
         const blob = await resp.blob()
         const url = URL.createObjectURL(blob)

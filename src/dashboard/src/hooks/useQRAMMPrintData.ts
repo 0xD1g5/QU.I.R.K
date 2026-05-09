@@ -4,6 +4,7 @@ import type {
   QRAMMScoreResponse,
   QRAMMComplianceMapRow,
 } from "@/types/api"
+import { fetchApi } from "@/lib/api"
 
 interface UseQRAMMPrintDataResult {
   scoreResult: QRAMMScoreResponse | null
@@ -26,9 +27,22 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
         setLoading(true)
         setError(null)
 
-        const listResp = await fetch("/api/qramm/sessions")
+        const listResp = await fetchApi("/api/qramm/sessions")
         if (!listResp.ok) {
           if (!cancelled) {
+            if (listResp.status === 401) {
+              setError("Authentication required")
+              return
+            }
+            if (listResp.status === 403) {
+              setError("Request blocked")
+              return
+            }
+            if (listResp.status === 429) {
+              const retryAfter = listResp.headers.get("Retry-After") ?? "60"
+              setError(`Too many requests. Wait ${retryAfter} seconds and try again.`)
+              return
+            }
             setError(`API error: ${listResp.status} ${listResp.statusText}`)
           }
           return
@@ -48,18 +62,44 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
         }
 
         const [scoreResp, mapResp] = await Promise.all([
-          fetch(`/api/qramm/sessions/${scored.session_id}/score`),
-          fetch(`/api/qramm/sessions/${scored.session_id}/compliance-map`),
+          fetchApi(`/api/qramm/sessions/${scored.session_id}/score`),
+          fetchApi(`/api/qramm/sessions/${scored.session_id}/compliance-map`),
         ])
 
         if (!scoreResp.ok) {
           if (!cancelled) {
+            if (scoreResp.status === 401) {
+              setError("Authentication required")
+              return
+            }
+            if (scoreResp.status === 403) {
+              setError("Request blocked")
+              return
+            }
+            if (scoreResp.status === 429) {
+              const retryAfter = scoreResp.headers.get("Retry-After") ?? "60"
+              setError(`Too many requests. Wait ${retryAfter} seconds and try again.`)
+              return
+            }
             setError(`API error: ${scoreResp.status} ${scoreResp.statusText}`)
           }
           return
         }
         if (!mapResp.ok) {
           if (!cancelled) {
+            if (mapResp.status === 401) {
+              setError("Authentication required")
+              return
+            }
+            if (mapResp.status === 403) {
+              setError("Request blocked")
+              return
+            }
+            if (mapResp.status === 429) {
+              const retryAfter = mapResp.headers.get("Retry-After") ?? "60"
+              setError(`Too many requests. Wait ${retryAfter} seconds and try again.`)
+              return
+            }
             setError(`API error: ${mapResp.status} ${mapResp.statusText}`)
           }
           return
