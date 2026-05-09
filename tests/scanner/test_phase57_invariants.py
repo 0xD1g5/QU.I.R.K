@@ -1,8 +1,10 @@
 """Phase 57 phase-wide invariants. Single grep gate that asserts no
 regression of the six closed audit blockers reintroduces a forbidden
 pattern."""
+import io
 import pathlib
 import re
+import tokenize
 import pytest
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
@@ -17,15 +19,20 @@ SCANNER_FILES = [
 
 
 def _strip_comments(src: str) -> str:
-    # Drop full-line comments and end-of-line comments. Crude but enough
-    # for these grep gates — Python doesn't have block comments and string
-    # literals containing '#' are rare enough in scanner files that a
-    # post-strip false-positive review is acceptable.
-    out_lines = []
-    for line in src.splitlines():
-        stripped = line.split("#", 1)[0]
-        out_lines.append(stripped)
-    return "\n".join(out_lines)
+    """Strip Python comments accurately using the tokenize module.
+
+    Unlike splitting on '#', this correctly handles '#' inside string literals
+    so that grep gates do not produce false-negatives when patterns appear in
+    comments adjacent to code that uses '#' in strings.
+    """
+    tokens = tokenize.generate_tokens(io.StringIO(src).readline)
+    result = []
+    for tok_type, tok_string, *_ in tokens:
+        if tok_type == tokenize.COMMENT:
+            result.append("")
+        else:
+            result.append(tok_string)
+    return "".join(result)
 
 
 @pytest.mark.parametrize("scanner_file", SCANNER_FILES, ids=lambda p: p.name)
