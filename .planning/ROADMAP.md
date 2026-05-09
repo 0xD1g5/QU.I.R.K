@@ -1229,9 +1229,9 @@ Plans:
 **Plans**: 7 plans
 Plans:
 **Wave 1**
-- [ ] 58-01-PLAN.md — Auth middleware + config extension (require_auth, require_csrf, SecurityCfg.api_token)
-- [ ] 58-02-PLAN.md — CORS + rate-limit middleware registration in app factory
-- [ ] 58-03-PLAN.md — CLI path-traversal guard, PDF port clamp, @file target guards
+- [x] 58-01-PLAN.md — Auth middleware + config extension (require_auth, require_csrf, SecurityCfg.api_token)
+- [x] 58-02-PLAN.md — CORS + rate-limit middleware registration in app factory
+- [x] 58-03-PLAN.md — CLI path-traversal guard, PDF port clamp, @file target guards
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 58-04-PLAN.md — TDD: Wire auth/CSRF to routers + full integration test suite
@@ -1363,7 +1363,7 @@ Plans:
 | Phase | Wave | Plans Complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
 | 57. Scanner Security Hardening | A | 6/6 | Complete   | 2026-05-09 |
-| 58. Dashboard API Hardening | A | 0/7 | Planned | - |
+| 58. Dashboard API Hardening | A | 3/7 | In Progress|  |
 | 59. Credential Leakage Sweep | A | 0/TBD | Not started | - |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
 | 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
