@@ -79,12 +79,16 @@ Existing scale applies. No new type styles introduced by this phase.
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 | 1.5 | Hook error messages, `EmptyStateCard` body |
-| Label | 12px | 500 | 1.4 | Inline status labels, `text-muted-foreground` copy |
+| Label | 12px | 400 | 1.4 | Inline status labels, `text-muted-foreground` copy |
 | Heading | 20px | 600 | 1.2 | Section headings (unchanged) |
-| Display | 28px | 700 | 1.1 | Stat metrics (unchanged) |
+| Display | 28px | 600 | 1.1 | Stat metrics (unchanged) |
+
+Two weights only: 400 (regular) for Body and Label roles; 600 (semibold) for Heading and
+Display roles. Size differentiation (12px / 14px / 20px / 28px) provides sufficient hierarchy
+without additional weight variation.
 
 Error messages in this phase use the Body role: 14px / 400 / 1.5 at `text-destructive` color.
-Rate-limit retry countdown (if rendered) uses the Label role: 12px / 500 at
+Rate-limit retry copy (if rendered) uses the Label role: 12px / 400 at
 `text-muted-foreground`.
 
 Source: pre-populated from existing `src/index.css` and `tailwind.config.ts` — unchanged.
