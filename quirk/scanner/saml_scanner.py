@@ -101,8 +101,9 @@ def _fetch_metadata(
 def _classify_target(url: str, content: bytes) -> str:
     """Determine whether a URL/content is a SAML metadata document or OIDC discovery doc.
 
-    Returns "saml" or "oidc" (D-01).
+    Returns "saml", "oidc", or "unknown" (D-01).
     Checks URL path for '.well-known' first; falls back to content sniffing.
+    Binary or non-XML content returns "unknown" so the caller can log a distinct warning.
     """
     if ".well-known" in url:
         return "oidc"
@@ -110,7 +111,11 @@ def _classify_target(url: str, content: bytes) -> str:
         json.loads(content)
         return "oidc"
     except Exception:
+        pass
+    stripped = content.lstrip()
+    if stripped.startswith(b"<") or stripped.startswith(b"<?xml"):
         return "saml"
+    return "unknown"
 
 
 def _parse_cert_element(cert_b64_text: str) -> "dict | None":
@@ -455,11 +460,13 @@ def scan_saml_targets(
                 all_endpoints.extend(endpoints)
             except Exception as exc:
                 log.warning("SAML: OIDC parse failed for %s: %s", target_url, exc)
-        else:
+        elif target_type == "saml":
             try:
                 endpoints, _scan_dict = _parse_saml_metadata(content, target_url, now=now)
                 all_endpoints.extend(endpoints)
             except Exception as exc:
                 log.warning("SAML: metadata parse failed for %s: %s", target_url, exc)
+        else:
+            log.warning("SAML: unrecognised content type for %s (not JSON or XML), skipping", target_url)
 
     return all_endpoints
