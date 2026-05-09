@@ -218,7 +218,7 @@ export function OrgProfilePage() {
 
             {/* Org Size */}
             <div className="space-y-2">
-              <Label htmlFor="org-size">Organisation Size</Label>
+              <Label htmlFor="org-size">Organization Size</Label>
               <Select value={orgSize} onValueChange={setOrgSize} required>
                 <SelectTrigger id="org-size">
                   <SelectValue placeholder="Select size…" />
