@@ -13,9 +13,12 @@ import mimetypes
 import os
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from quirk.config import get_cors_origins
+from quirk.dashboard.api.middleware.rate_limit import RateLimitMiddleware
 from quirk.dashboard.api.routes import health, pdf, qramm, scan, trends
 
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
@@ -34,6 +37,25 @@ def create_app() -> FastAPI:
         title="QU.I.R.K. Dashboard API",
         description="Local dashboard API for quantum-readiness scan results",
         version="1.0.0",
+    )
+
+    # -------------------------------------------------------------------------
+    # Middleware — Phase 58 / HARDEN-API-02, HARDEN-API-03
+    # FastAPI applies add_middleware in REVERSE registration order.
+    # Execution order: CORS (outermost) -> RateLimit -> route dispatch.
+    # Auth + CSRF are Depends()-injected at router level (Plan 03).
+    # CORS origins are configurable via QUIRK_CORS_ORIGINS env var or
+    # security.cors_origins YAML field (defaults: 127.0.0.1 + localhost).
+    # -------------------------------------------------------------------------
+    application.add_middleware(
+        RateLimitMiddleware,  # registered first = innermost (runs after CORS)
+    )
+    application.add_middleware(
+        CORSMiddleware,  # registered last = outermost (runs first on every request)
+        allow_origins=get_cors_origins(),
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # 1. API routes
