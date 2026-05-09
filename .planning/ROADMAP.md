@@ -1202,7 +1202,7 @@ Plans:
 **Depends on**: Phase 56.1 (v4.7 close-out)
 **Requirements**: HARDEN-SCAN-01, HARDEN-SCAN-02, HARDEN-SCAN-03, HARDEN-SCAN-04, HARDEN-SCAN-05, HARDEN-SCAN-06
 **Success Criteria** (what must be TRUE):
-  1. JWKS fetches in `quirk/scanner/api_scanner.py` use `verify=True` by default; if the operator opts into disabled verification via an explicit config knob, the scan emits a HIGH advisory finding naming the affected JWKS URL
+  1. JWKS fetches in `quirk/scanner/jwt_scanner.py` use `verify=True` by default; if the operator opts into disabled verification via an explicit config knob, the scan emits a HIGH advisory finding naming the affected JWKS URL
   2. The SAML scanner refuses to fetch URLs resolving to RFC1918, link-local, loopback, `file://`, or cloud metadata IPs (169.254.169.254, fd00:ec2::254) unless `--allow-internal-targets` is set; a unit test feeds each forbidden category and asserts the scan never issues an outbound HTTP request
   3. `quirk/scanner/source_scanner.py` and `quirk/scanner/container_scanner.py` reject `repo_path` / `image_ref` containing shell metacharacters, `..`, or `dir:/` / `file://` prefixes before invoking semgrep / syft; rejected inputs produce a structured `scan_error_category="invalid_input"` row, never a subprocess call
   4. The broker scanner sends NO credentials by default — no `guest:guest`, no Basic-auth header — and TLS-required is the default for management API + Redis probes; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding
