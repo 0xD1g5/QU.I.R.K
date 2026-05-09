@@ -84,20 +84,24 @@ def test_credentials_with_unset_env_falls_back_anonymous(monkeypatch):
 
 
 def test_redis_default_ssl_cert_reqs_required():
-    with patch("quirk.scanner.broker_scanner.redis_lib.Redis") as mock_redis_cls:
-        mock_redis_cls.return_value.config_get.return_value = {}
+    mock_redis_lib = MagicMock()
+    mock_redis_lib.Redis.return_value.config_get.return_value = {}
+    with patch("quirk.scanner.broker_scanner.redis_lib", mock_redis_lib), \
+         patch("quirk.scanner.broker_scanner.REDIS_AVAILABLE", True):
         _enrich_redis_config("redis.example", 6380)
-        kwargs = mock_redis_cls.call_args.kwargs
+        kwargs = mock_redis_lib.Redis.call_args.kwargs
         assert kwargs.get("ssl_cert_reqs") == "required", (
             f"Expected ssl_cert_reqs='required' by default, got {kwargs.get('ssl_cert_reqs')!r}"
         )
 
 
 def test_redis_cleartext_optin_uses_none():
-    with patch("quirk.scanner.broker_scanner.redis_lib.Redis") as mock_redis_cls:
-        mock_redis_cls.return_value.config_get.return_value = {}
+    mock_redis_lib = MagicMock()
+    mock_redis_lib.Redis.return_value.config_get.return_value = {}
+    with patch("quirk.scanner.broker_scanner.redis_lib", mock_redis_lib), \
+         patch("quirk.scanner.broker_scanner.REDIS_AVAILABLE", True):
         _enrich_redis_config("redis.example", 6380, allow_cleartext=True)
-        kwargs = mock_redis_cls.call_args.kwargs
+        kwargs = mock_redis_lib.Redis.call_args.kwargs
         assert kwargs.get("ssl_cert_reqs") == "none"
 
 

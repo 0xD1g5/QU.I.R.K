@@ -9,13 +9,14 @@ D-07: kafka-python and redis-py are import-guarded optional sub-extras.
 """
 import base64
 import json
+import os
 import socket
 import ssl
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -74,6 +75,13 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 _sslyze_warned = False
+
+# ---------------------------------------------------------------------------
+# Phase 57 / D-09: HIGH advisory service_detail constants (CR-05 / CR-06)
+# ---------------------------------------------------------------------------
+
+ADVISORY_BROKER_CLEARTEXT  = "BROKER/cleartext-mgmt-api"
+ADVISORY_BROKER_CREDENTIAL = "BROKER/credential-probe"
 
 # ---------------------------------------------------------------------------
 # Plaintext detection helpers
@@ -302,16 +310,42 @@ def _detect_amqp_plaintext(host: str, port: int, timeout: int = 2) -> bool:
 # RabbitMQ: management API enrichment (RABBIT-03 / D-09)
 # ---------------------------------------------------------------------------
 
-def _enrich_rabbitmq_mgmt(host: str, port: int = 15672, logger=None) -> dict:
-    """RABBIT-03 / D-09. urllib.request GET /api/overview with Basic guest:guest.
+def _enrich_rabbitmq_mgmt(
+    host: str,
+    port: int = 15672,
+    logger=None,
+    *,
+    credentials: "dict | None" = None,
+    allow_cleartext: bool = False,
+) -> dict:
+    """Phase 57 / CR-05, CR-06. urllib.request GET /api/overview.
 
-    Returns {} on connection failure or non-401 HTTP error.
-    Returns {"mgmt_auth": "rejected_401"} on 401 (informational data point, NOT an error).
+    Default (allow_cleartext=False): refuses HTTP probing entirely (returns {}).
+    Cleartext opt-in (allow_cleartext=True): issues HTTP request anonymously
+    unless `credentials` dict carries {"user", "pass_env"} AND the env var is
+    set; then sends Basic auth.
+
     No `requests` dependency (D-09).
+    Returns {} on connection failure or non-401 HTTP error.
+    Returns {"mgmt_auth": "rejected_401"} on 401 (informational).
     """
+    # Default: no probe over plaintext (CR-06).
+    if not allow_cleartext:
+        return {}
+
     url = f"http://{host}:{port}/api/overview"
-    credentials = base64.b64encode(b"guest:guest").decode()
-    req = urllib.request.Request(url, headers={"Authorization": f"Basic {credentials}"})
+    headers: dict = {}
+    sent_auth = False
+    if credentials:
+        user = credentials.get("user", "") if isinstance(credentials, dict) else getattr(credentials, "user", "")
+        pass_env = credentials.get("pass_env", "") if isinstance(credentials, dict) else getattr(credentials, "pass_env", "")
+        password = os.environ.get(str(pass_env), "") if pass_env else ""
+        if password:
+            creds_bytes = base64.b64encode(f"{user}:{password}".encode()).decode()
+            headers["Authorization"] = f"Basic {creds_bytes}"
+            sent_auth = True
+        # Else: anonymous fallback (D-05) — no header, no error
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read())
@@ -320,14 +354,15 @@ def _enrich_rabbitmq_mgmt(host: str, port: int = 15672, logger=None) -> dict:
                 "erlang_version": data.get("erlang_version"),
                 "listeners": data.get("listeners", []),
                 "node": data.get("node"),
+                "_sent_auth": sent_auth,
             }
     except urllib.error.HTTPError as e:
         if e.code == 401:
             if logger:
                 logger.debug(
-                    f"RabbitMQ mgmt API guest:guest rejected on {host}:{port} (401 — informational)"
+                    f"RabbitMQ mgmt API anonymous probe rejected on {host}:{port} (401 — informational)"
                 )
-            return {"mgmt_auth": "rejected_401"}
+            return {"mgmt_auth": "rejected_401", "_sent_auth": sent_auth}
         if logger:
             logger.debug(f"RabbitMQ mgmt API HTTP error {e.code} on {host}:{port}")
         return {}
@@ -495,8 +530,15 @@ def scan_rabbitmq_targets(
     timeout: int = 5,
     logger: Optional[Logger] = None,
     session_start: Optional[datetime] = None,
+    *,
+    security=None,
+    broker_credentials: "Optional[Dict]" = None,
 ) -> List[CryptoEndpoint]:
     """RABBIT-01..05. Probe self-hosted RabbitMQ + Azure SB + AWS SQS in parallel.
+
+    Phase 57 / CR-05, CR-06:
+    - security: SecurityCfg instance (controls allow_cleartext_broker_probe flag)
+    - broker_credentials: dict[host:port -> BrokerCredential] for per-host auth
 
     Self-hosted: ports 5672 (AMQP plaintext detection) and 5671 (AMQPS via sslyze).
     Azure Service Bus: {namespace}.servicebus.windows.net:5671 (D-03, RABBIT-04).
@@ -541,15 +583,50 @@ def scan_rabbitmq_targets(
             if ep is not None:
                 results.append(ep)
 
-    # RABBIT-03: management API enrichment per self-hosted host
+    # RABBIT-03 / Phase 57 CR-05, CR-06: management API enrichment per self-hosted host
     # (best-effort, attaches to first AMQPS endpoint for that host)
+    allow_cleartext = bool(security and getattr(security, "allow_cleartext_broker_probe", False))
+    broker_credentials = broker_credentials or {}
     for host in hosts:
-        mgmt = _enrich_rabbitmq_mgmt(host, port=15672, logger=logger)
+        cred_obj = broker_credentials.get(f"{host}:15672")
+        cred_dict = None
+        if cred_obj is not None:
+            cred_dict = {
+                "user": getattr(cred_obj, "user", "") if not isinstance(cred_obj, dict) else cred_obj.get("user", ""),
+                "pass_env": getattr(cred_obj, "pass_env", "") if not isinstance(cred_obj, dict) else cred_obj.get("pass_env", ""),
+            }
+        mgmt = _enrich_rabbitmq_mgmt(
+            host, port=15672, logger=logger,
+            credentials=cred_dict,
+            allow_cleartext=allow_cleartext,
+        )
         if mgmt:
             for ep in results:
                 if ep.host == host and ep.protocol == "AMQPS":
                     setattr(ep, "_rabbit_mgmt_enrichment", mgmt)
                     break
+
+        # Emit HIGH advisories for opt-in probes (D-10 / CR-05, CR-06)
+        now_ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+        if allow_cleartext:
+            # Cleartext mgmt-api advisory: one per host when HTTP probe is sent
+            results.append(CryptoEndpoint(
+                host=host, port=15672, protocol="ADVISORY",
+                service_detail=ADVISORY_BROKER_CLEARTEXT,
+                severity="HIGH", scan_error_category="config",
+                scanned_at=now_ts,
+            ))
+        if cred_dict:
+            # Credential-probe advisory: only when env-var password was actually set
+            pass_env = cred_dict.get("pass_env", "")
+            password = os.environ.get(str(pass_env), "") if pass_env else ""
+            if password:
+                results.append(CryptoEndpoint(
+                    host=host, port=15672, protocol="ADVISORY",
+                    service_detail=ADVISORY_BROKER_CREDENTIAL,
+                    severity="HIGH", scan_error_category="config",
+                    scanned_at=now_ts,
+                ))
     if logger:
         logger.stamp(f"RabbitMQ scans complete: {len(results)} endpoints")
     return results
@@ -631,13 +708,19 @@ def _probe_redis_tls(host: str, port: int, timeout: int = 5) -> Optional[CryptoE
 # Redis: redis-py CONFIG GET enrichment (REDIS-03 / D-08)
 # ---------------------------------------------------------------------------
 
-def _enrich_redis_config(host: str, port: int, logger=None) -> dict:
-    """REDIS-03 / D-08. redis-py CONFIG GET tls-*. NOAUTH/NOPERM degrade silently to {}."""
+def _enrich_redis_config(host: str, port: int, logger=None, *, allow_cleartext: bool = False) -> dict:
+    """REDIS-03 / D-08 / Phase 57 CR-06. redis-py CONFIG GET tls-*.
+
+    Default: ssl_cert_reqs="required" (enforces TLS chain verification).
+    allow_cleartext=True: ssl_cert_reqs="none" (opt-in for degraded environments).
+    NOAUTH/NOPERM degrade silently to {}.
+    """
     if not REDIS_AVAILABLE:
         return {}
+    ssl_cert_reqs = "none" if allow_cleartext else "required"  # CR-06: TLS-required default
     try:
         r = redis_lib.Redis(
-            host=host, port=port, ssl=True, ssl_cert_reqs="none",
+            host=host, port=port, ssl=True, ssl_cert_reqs=ssl_cert_reqs,
             socket_timeout=5, socket_connect_timeout=5,
         )
         tls_config = r.config_get("tls-*")
