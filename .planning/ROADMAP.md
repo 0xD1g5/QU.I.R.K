@@ -1143,3 +1143,15 @@ See `.planning/milestones/v4.6-ROADMAP.md` for full phase details, plans, and mi
 | 54. QRAMM Assessment UI & Scorecard | v4.7 | 5/5 | Complete   | 2026-05-08 |
 | 55. QRAMM Compliance Mapping View | v4.7 | 3/3 | Complete   | 2026-05-08 |
 | 56. PDF Export & Staleness Enforcement | v4.7 | 3/3 | Complete    | 2026-05-08 |
+
+### Phase 56.1: Close QRAMM-06/07 — wire CI staleness gate workflow (INSERTED)
+
+**Goal:** Wire the QRAMM staleness gate, the compliance freshness gate, and the QRAMM CLI smoke tests into a new GitHub Actions workflow so that QRAMM-06's 90-day pytest gate is actually enforced on every PR, every push to `main`, and weekly via cron — and document the cadence in `CLAUDE.md`.
+**Requirements**: QRAMM-06, QRAMM-07, COMPLY-08
+**Depends on:** Phase 56
+**Plans:** 3 plans
+
+Plans:
+- [ ] 56.1-01-PLAN.md — Create .github/workflows/python-staleness.yml
+- [ ] 56.1-02-PLAN.md — CLAUDE.md cadence section + REQUIREMENTS.md / ROADMAP.md closure + model_meta.py pointer
+- [ ] 56.1-03-PLAN.md — UAT-SERIES.md update + Obsidian phase note + UAT commit
