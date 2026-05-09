@@ -127,6 +127,11 @@ security:
   allow_internal_targets: false        # CR-04: permit RFC1918/loopback SAML/broker URLs
   allow_cleartext_broker_probe: false  # CR-06: permit HTTP/no-TLS broker mgmt API probes
   allow_insecure_jwks: false           # CR-01: permit verify=False JWKS fetches
+  api_token: ""                        # CR-03: bearer token for dashboard API (leave blank to disable)
+                                       # Env var QUIRK_API_TOKEN takes priority when both are set.
+  cors_origins:                        # HARDEN-API-02: CORS allowlist (loopback-only by default)
+    - "http://127.0.0.1"               # Override with QUIRK_CORS_ORIGINS=origin1,origin2 env var
+    - "http://localhost"
 
 # -- Broker credentials (Phase 57 / CR-05) ---------------------------------
 # Per-host opt-in credentials for broker management API probes.
