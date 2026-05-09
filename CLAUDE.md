@@ -18,6 +18,24 @@ then produces a CycloneDX CBOM, quantum-readiness score, and prioritized remedia
 - After changes, run `python -m compileall` and relevant tests.
 - If detection logic changes, update `labs/*/expected_results.md` accordingly.
 
+## Staleness Review Cadence
+
+Two project data files carry a `last_verified` date and are gated by CI to
+prevent silent staleness:
+
+- `quirk/qramm/model_meta.py` — QRAMM model (90-day cadence,
+  `STALENESS_THRESHOLD_DAYS = 90`)
+- `quirk/compliance/__init__.py` — Compliance mappings (365-day cadence)
+
+When CI fails with a "STALE" assertion:
+
+1. Re-verify the catalog against its `source_url`.
+2. Bump `last_verified` to today's ISO date in the relevant file.
+3. Commit with message `chore: re-verify <model> catalog (YYYY-MM-DD)`.
+
+Enforcement workflow: `.github/workflows/python-staleness.yml` (runs on every
+PR, every push to `main`, and weekly Monday 09:00 UTC cron).
+
 ## Chaos Lab Maintenance
 
 Any time the `quantum-chaos-enterprise-lab/` chaos lab gains, loses, renames, or
