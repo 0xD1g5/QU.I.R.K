@@ -9,7 +9,8 @@
 - ✅ **v4.4 Data in Motion** — Phases 32–37, 33 plans (shipped 2026-04-29) → `.planning/milestones/v4.4-ROADMAP.md`
 - ✅ **v4.5 Reliability & Gap Closure** — Phases 38–44, 40 plans (shipped 2026-05-03) → `.planning/milestones/v4.5-ROADMAP.md`
 - ✅ **v4.6 Enterprise Readiness** — Phases 45–50, 24 plans (shipped 2026-05-05) → `.planning/milestones/v4.6-ROADMAP.md`
-- 🔄 **v4.7 Governance & Compliance Platform** — Phases 51–56 (in progress, started 2026-05-05)
+- ✅ **v4.7 Governance & Compliance Platform** — Phases 51–56 + 56.1, 27 plans (shipped 2026-05-08)
+- 🔄 **v4.8 Pre-Primetime Hardening + Operating Model** — Phases 57–68 (in progress, started 2026-05-09) — **Wave A (57–62) gates Wave B (63–68)**
 
 ## Phases
 
@@ -1155,3 +1156,202 @@ Plans:
 - [x] 56.1-01-PLAN.md — Create .github/workflows/python-staleness.yml
 - [x] 56.1-02-PLAN.md — CLAUDE.md cadence section + REQUIREMENTS.md / ROADMAP.md closure + model_meta.py pointer
 - [x] 56.1-03-PLAN.md — UAT-SERIES.md update + Obsidian phase note + UAT commit
+
+---
+
+## Phases — v4.8 Pre-Primetime Hardening + Operating Model
+
+> **Wave gating:** Wave A (Phases 57–62) is the **mandatory hardening gate** for v4.8. **No Wave B phase (63–68) may start until every Wave A phase is `[x]` complete.** This is the v4.8 cornerstone — operating-model features must sit on top of an audited, hardened security and correctness foundation, not the other way round.
+>
+> **Wave A internal parallelism:** Phases 57, 58, 59, 60, 61, and 62 touch disjoint code paths (protocol scanners / dashboard route layer / shared util / scoring engine / CBOM builder / React hooks). They MAY be executed in parallel by independent agents. The wave-gate is the *completion barrier*, not the *execution barrier*.
+>
+> **Wave B critical path:** 65 → 66 (history needs scan launch); 65 depends on 58 (dashboard auth must exist before dashboard launches scans). Phase 63 (scheduled scans) has a **soft dependency** on Phase 67 (resumable scans) — schedulable scans benefit from resumable infra but can ship without; if 67 lands first, 63 inherits the resume capability for free.
+>
+> **Audit traceability:** Every Wave A phase goal explicitly names the audit-2026-05-08 blocker IDs it closes so traceability is self-documenting against `.planning/audit-2026-05-08/AUDIT-SUMMARY.md`.
+
+<details>
+<summary>v4.8 Pre-Primetime Hardening + Operating Model (Phases 57–68) — IN PROGRESS</summary>
+
+**Milestone Goal:** Close all 15 audit-identified blockers (Wave A) and ship the operating-model features that turn QU.I.R.K. into a deploy-and-forget platform (Wave B). v4.8 is the primetime cutover — after this milestone a customer can install, schedule, and operate QU.I.R.K. without operator hand-holding, on top of a hardened security and correctness foundation.
+
+**Wave A — Pre-Primetime Hardening (gates Wave B):**
+
+- [ ] **Phase 57: Scanner Security Hardening** - JWKS TLS verification, SAML SSRF allowlist, semgrep/syft argument-injection guards, broker hardcoded-credential removal, broker TLS-required default — closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`)
+- [ ] **Phase 58: Dashboard API Hardening** - Single-user bearer auth + CSRF, CORS allowlist lockdown, per-route rate limiting, `quirk init` path-traversal guard, PDF SSRF clamp, `@file` allowlist + size cap — closes audit blockers 7–10 (`api-cli-core/CR-01, CR-02, CR-03, CR-09`)
+- [ ] **Phase 59: Credential Leakage Sweep** - Shared `quirk/util/safe_exc.py::safe_str(exc)` helper applied across every connector and route handler that persists `scan_error`; AST-based pytest gate prevents future bypasses — closes audit blocker 11 + Pattern A
+- [ ] **Phase 60: Score Arithmetic Correctness** - Top-level readiness clamp ≤100, server-side QRAMM profile multiplier clamp `[0.8, 1.5]`, confidence-bonus zero-data guard, contiguous QRAMM maturity threshold bands — closes audit blockers 12, 15 + Pattern E
+- [ ] **Phase 61: CBOM Coverage + Report Sanitization** - CBOM Pass-1 algorithm components for the 12+ protocol families currently emitting zero algos, VAULT classification consistent across Pass-1/2/3, markdown report tables escape `|` / `\n` / control chars on adversary-controllable strings — closes audit blockers 13, 14
+- [ ] **Phase 62: React Hook Cancellation Pattern** - Standardized `useCancellableFetch` (or equivalent) across every data-fetch hook in `src/dashboard/src/hooks/`, QRAMM debounce coalescing fix, auto-fill confirm round-trip preserves badge contract, ESLint/codemod guard rule — closes Pattern C
+
+**Wave B — Operating Model (gated on Wave A complete):**
+
+- [ ] **Phase 63: Scheduled / Continuous Scanning** - `quirk schedule add` CLI + `scheduled_scans` SQLite table + `quirk scheduler run` long-running dispatcher + dashboard `/schedules` listing (BACK-25)
+- [ ] **Phase 64: Trend Analysis Foundation** - Multi-scan timeline of overall + per-pillar scores and finding counts on `/trends`, regression alert chips on dashboard home with deep-links to the regressing scan (BACK-21)
+- [ ] **Phase 65: Dashboard-Initiated Scan** - `/scan/new` form, Pydantic-shared validation, backend job spawn, live status polling, post-completion navigation (BACK-86 slice 1)
+- [ ] **Phase 66: Dashboard Scan History + Clone/Compare** - `/scans` list + "Clone configuration" prefill + side-by-side compare diff view (BACK-86 slice 2)
+- [ ] **Phase 67: Resumable / Partial-Failure Scans** - `scan_checkpoints` SQLite table + `quirk scan --resume <id>` continuation + per-scanner partial-failure isolation with dashboard panel
+- [ ] **Phase 68: Operator Error-Message Pass** - Stable error codes with one-line cause + one-line remediation across every CLI exit, dashboard 4xx/5xx, and `scan_error_category` row; first-run install-day errors follow the same format
+
+</details>
+
+## Phase Details — v4.8 Pre-Primetime Hardening + Operating Model
+
+### Phase 57: Scanner Security Hardening
+**Goal**: Every protocol scanner is safe to point at an untrusted target — TLS verification is on by default, SSRF is gated by an explicit allowlist, subprocess wrappers reject shell-metacharacter input, and no scanner ships hardcoded credentials to the network. Closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`).
+**Wave**: A (gating)
+**Depends on**: Phase 56.1 (v4.7 close-out)
+**Requirements**: HARDEN-SCAN-01, HARDEN-SCAN-02, HARDEN-SCAN-03, HARDEN-SCAN-04, HARDEN-SCAN-05, HARDEN-SCAN-06
+**Success Criteria** (what must be TRUE):
+  1. JWKS fetches in `quirk/scanner/api_scanner.py` use `verify=True` by default; if the operator opts into disabled verification via an explicit config knob, the scan emits a HIGH advisory finding naming the affected JWKS URL
+  2. The SAML scanner refuses to fetch URLs resolving to RFC1918, link-local, loopback, `file://`, or cloud metadata IPs (169.254.169.254, fd00:ec2::254) unless `--allow-internal-targets` is set; a unit test feeds each forbidden category and asserts the scan never issues an outbound HTTP request
+  3. `quirk/scanner/source_scanner.py` and `quirk/scanner/container_scanner.py` reject `repo_path` / `image_ref` containing shell metacharacters, `..`, or `dir:/` / `file://` prefixes before invoking semgrep / syft; rejected inputs produce a structured `scan_error_category="invalid_input"` row, never a subprocess call
+  4. The broker scanner sends NO credentials by default — no `guest:guest`, no Basic-auth header — and TLS-required is the default for management API + Redis probes; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding
+  5. Running the full scanner test suite plus the chaos-lab smoke (`./lab.sh up && quirk scan --target <lab>`) produces zero outbound requests with `verify=False`, zero hardcoded credentials in any captured HTTP body, and zero subprocess invocations with un-sanitized arguments
+**Plans**: TBD
+
+### Phase 58: Dashboard API Hardening
+**Goal**: The dashboard API is safe to expose beyond the loopback interface — every mutating route requires auth, CORS is locked down, rate limiting throttles abuse, and operator-supplied paths cannot escape their allowlists. Closes audit blockers 7–10 (`api-cli-core/CR-01, CR-02, CR-03, CR-09`).
+**Wave**: A (gating)
+**Depends on**: Phase 56.1 (v4.7 close-out)
+**Requirements**: HARDEN-API-01, HARDEN-API-02, HARDEN-API-03, HARDEN-API-04, HARDEN-API-05, HARDEN-API-06
+**Success Criteria** (what must be TRUE):
+  1. Every mutating dashboard route returns 401 (with no business-logic execution) when the bearer token is missing or invalid; a CSRF token is required on browser-form requests; auth coverage is asserted by an automated route-introspection test that fails if a new mutating route is added without auth
+  2. The CORS preflight from a non-allowlisted origin returns 403 with no body; the allowlist defaults to `127.0.0.1` + `localhost` and is overridable via config; an integration test exercises both allowed and denied origins
+  3. The 61st mutating request from one IP within a minute returns 429 with a `Retry-After` header; informational routes are exempt; a load test demonstrates the limit and exemption
+  4. `quirk init --output <path>` rejects `..`, absolute paths outside the allowlist, and symlinks pointing outside the allowlist with a clear error; a fuzz test feeds 50+ traversal patterns and asserts each is rejected
+  5. `routes/pdf.py` rejects `QUIRK_SERVE_PORT` outside `1024–65535`, binds outbound fetches to `localhost`, and refuses to follow redirects to non-loopback hosts; `@file` target loading enforces the path allowlist, 1 MB size cap, and 10,000-line cap with explicit error messages on each violation
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 59: Credential Leakage Sweep
+**Goal**: No exception text leaks credentials into `scan_error`, logs, or report output. A single `safe_str(exc)` chokepoint replaces every raw `f"...: {exc}"` interpolation across connectors and route handlers, and an AST-based CI gate prevents future regressions. Closes audit blocker 11 + Pattern A.
+**Wave**: A (gating)
+**Depends on**: Phase 56.1 (v4.7 close-out)
+**Requirements**: LEAK-01, LEAK-02, LEAK-03
+**Success Criteria** (what must be TRUE):
+  1. `quirk/util/safe_exc.py::safe_str(exc)` exists, returns `f"{type(exc).__name__}"` by default, and scrubs known-sensitive substrings (token-like base64 strings, connection-string passwords, GCP ADC paths, Vault tokens) — covered by a unit test corpus of representative leaky exception messages
+  2. Every connector that writes `scan_error` (vault, GCP, AWS, DB, broker, email, identity) routes exception text through `safe_str(exc)`; an end-to-end test seeds each connector with a synthesized credential-bearing exception and asserts the resulting `scan_error` row contains only the exception class name
+  3. A pytest gate enumerates `scan_error` writes via AST scan and fails the build if any caller bypasses `safe_str(exc)` — mirroring the `_build_finding` chokepoint pattern from v4.6 Phase 48
+  4. Replaying a corpus of v4.7 scan databases through a leak detector finds zero credential-shaped substrings in any `scan_error` value
+**Plans**: TBD
+
+### Phase 60: Score Arithmetic Correctness
+**Goal**: Every score path is bounded and defensible — total readiness is clamped to `[0, 100]`, the QRAMM profile multiplier is clamped server-side, the confidence bonus is gated on actual data, and QRAMM maturity thresholds are contiguous with no scoring gaps. Closes audit blockers 12, 15 + Pattern E.
+**Wave**: A (gating)
+**Depends on**: Phase 56.1 (v4.7 close-out)
+**Requirements**: SCORE-01, SCORE-02, SCORE-03, SCORE-04
+**Success Criteria** (what must be TRUE):
+  1. Reports, JSON output, and the dashboard never display a readiness score above 100 or below 0; a property test driving synthesized evidence rows asserts the invariant across 1,000 randomized inputs
+  2. `POST /api/qramm/sessions/{id}/score` with a client-supplied multiplier outside `[0.8, 1.5]` returns 400 with a documented error code; values inside the range are accepted unchanged; the canonical range is documented in the OpenAPI schema
+  3. A scan with zero TLS endpoints scanned receives a confidence bonus of exactly 0, not the previous 20-point default; a unit test fixes the regression
+  4. A parametrized test sweeps the `[0, 100]` range at 0.5-point increments and asserts every score maps to exactly one QRAMM maturity level — no gaps, no overlaps, no silent fall-throughs
+**Plans**: TBD
+
+### Phase 61: CBOM Coverage + Report Sanitization
+**Goal**: CBOM Pass-1 emits at least one algorithm component for every protocol family the scanner produces evidence for, VAULT is classified consistently across all three CBOM passes, and markdown reports cannot be broken or injected by adversary-controllable strings (host, cipher, cert subject, banner, finding text). Closes audit blockers 13, 14.
+**Wave**: A (gating)
+**Depends on**: Phase 56.1 (v4.7 close-out)
+**Requirements**: CBOM-COVER-01, CBOM-COVER-02, REPORT-SAN-01, REPORT-SAN-02
+**Success Criteria** (what must be TRUE):
+  1. A per-profile CBOM emission test asserts at least one algorithm component for each of the 12+ previously-zero-algo protocol families (database, registry, source, ssh-weak, storage-s3, broker subfamilies, email subfamilies, vault, identity-secondary); the test fails loudly if any family regresses to zero
+  2. VAULT is routed through a vault-specific Pass-1 branch (not the TLS branch) and Pass-2 / Pass-3 emit consistent evidence claims about the same vault endpoint; a golden snapshot fixture for a chaos-lab vault scan is byte-identical across runs
+  3. Rendering both the technical and executive markdown reports against an adversarial corpus (pipes, newlines, backticks, HTML entities, control characters in host / cipher / cert subject / cert issuer / banner / finding text / evidence note fields) produces output that parses as valid GFM tables with no row-break or injection escape
+  4. CycloneDX 1.6 schema validation continues to pass for every chaos-lab profile post-fix — no new validation regressions introduced by Pass-1 expansion
+**Plans**: TBD
+
+### Phase 62: React Hook Cancellation Pattern
+**Goal**: Every data-fetch hook in the dashboard is cancellation-safe — switching scans mid-fetch never overwrites newer data with stale results, QRAMM debounce coalesces rapid edits into one request, the auto-fill confirm round-trip preserves the badge contract, and a CI guard rule prevents future regressions. Closes Pattern C.
+**Wave**: A (gating)
+**Depends on**: Phase 56.1 (v4.7 close-out)
+**Requirements**: HOOK-01, HOOK-02, HOOK-03, HOOK-04
+**Success Criteria** (what must be TRUE):
+  1. Every hook in `src/dashboard/src/hooks/` (`useScanData`, `useQRAMMSession`, `useTrendData`, etc.) uses the standardized cancellation pattern (`useCancellableFetch` or equivalent) and gates each `setState` call after an async boundary with an `if (!cancelled)` guard; a Playwright scenario rapidly switches between two scans and asserts the displayed scan ID always matches the most recently selected one
+  2. Typing 20 rapid answer changes within a single 300 ms debounce window POSTs exactly one coalesced batch to `/api/qramm/assessment/draft` (verified by a network-recorder test); per-keystroke partial writes never reach the backend
+  3. Auto-filling a CVI question and confirming it removes the "Auto-filled from scan" badge in-place without triggering a full QRAMM session refetch — `confirmed_at` round-trips correctly through the existing optimistic-update path
+  4. A custom ESLint rule (or codemod check in CI) flags any new `useEffect` block calling `setState` from an async branch without an `if (!cancelled)` guard; the rule fires on a deliberately broken fixture and is silent on a correct fixture
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 63: Scheduled / Continuous Scanning
+**Goal**: An operator can register a recurring scan via a cron expression, leave QUIRK running, and trust that scans dispatch on schedule with results visible in the dashboard — turning QUIRK from a one-shot CLI into a continuously-running posture monitor (BACK-25).
+**Wave**: B (gated on full Wave A completion)
+**Depends on**: Wave A complete (Phases 57–62); soft dependency on Phase 67 (scheduled scans benefit from resumable infrastructure)
+**Requirements**: SCHED-01, SCHED-02, SCHED-03
+**Success Criteria** (what must be TRUE):
+  1. `quirk schedule add --name "weekly-prod" --cron "0 2 * * 1" --target prod.example.com --profile balanced` persists a row to a new `scheduled_scans` SQLite table and the row is visible via `quirk schedule list`
+  2. `quirk scheduler run` (long-running mode) wakes at the cron time, dispatches the scan, writes results to the standard scan output path, and surfaces dispatch status (`pending` / `running` / `completed` / `failed`) to the dashboard `/schedules` route
+  3. The dashboard `/schedules` route lists all scheduled scans with name, target, profile, cron expression, next-run time, last-run timestamp + status, and provides enable/disable toggles that round-trip to the backend
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 64: Trend Analysis Foundation
+**Goal**: Consultants and operators can see how cryptographic posture has moved across the last N scans — overall score, per-pillar subscores, and finding counts on a single timeline — and are alerted when posture regresses (BACK-21).
+**Wave**: B (gated on full Wave A completion)
+**Depends on**: Wave A complete (Phases 57–62); benefits from Phase 63 data volume
+**Requirements**: TREND-01, TREND-02
+**Success Criteria** (what must be TRUE):
+  1. The `/trends` route renders a multi-scan timeline (default last 30 scans) showing overall readiness, the six pillar subscores (TLS, SSH, API, Identity, Data-at-Rest, Data-in-Motion), and finding counts by severity tier; hovering a point reveals the underlying scan ID and timestamp
+  2. A regression — score drop ≥ 5 points OR a new HIGH/CRITICAL finding category vs the previous scan — surfaces as an alert chip on the dashboard home with a deep-link to the regressing scan; the chip is dismissible and the dismissal is per-scan, not global
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 65: Dashboard-Initiated Scan
+**Goal**: An operator who never opens a terminal can configure, launch, and watch a scan progress to completion entirely from the dashboard — closing the primetime gap that currently forces every customer to use the CLI (BACK-86 slice 1).
+**Wave**: B (gated on full Wave A completion)
+**Depends on**: Phase 58 (dashboard auth must exist before the dashboard can dispatch scans), Wave A complete
+**Requirements**: UI-SCAN-01, UI-SCAN-02, UI-SCAN-03
+**Success Criteria** (what must be TRUE):
+  1. A `/scan/new` route presents a form for target spec (single host, comma list, CIDR, `@file`), profile (quick/standard/deep), and options (calibration, scanner toggles); validation errors render against the same Pydantic schema the CLI uses, never silently re-shapes input
+  2. Submitting the form creates a scan job and returns a job ID; a live status page polls progress and streams scanner-stage transitions (Discovery → TLS → SSH → … → Reports) to the UI; the page is cancellation-safe per Phase 62 pattern
+  3. On scan completion the UI navigates to the new scan's results view and the new scan is selectable from the existing scan switcher; the scan is indistinguishable from a CLI-launched scan in storage and reporting
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 66: Dashboard Scan History + Clone/Compare
+**Goal**: Operators can browse every scan QUIRK has ever produced, re-launch any prior scan with one click ("Clone configuration"), and side-by-side compare any two scans to see exactly what changed (BACK-86 slice 2).
+**Wave**: B (gated on full Wave A completion)
+**Depends on**: Phase 65
+**Requirements**: UI-HIST-01, UI-HIST-02
+**Success Criteria** (what must be TRUE):
+  1. A `/scans` route lists every scan with date, target, profile, overall score, finding counts by severity, and a "Clone configuration" button that pre-fills `/scan/new` with the source scan's exact configuration
+  2. Selecting two scans via "Compare" mode renders a diff view showing readiness score delta, per-pillar subscore deltas, added findings (with severity badges), removed findings, and changed endpoint posture (e.g., a host's cipher list changed); the diff handles scans with disjoint target sets gracefully
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 67: Resumable / Partial-Failure Scans
+**Goal**: A scan that crashes mid-run can be resumed from its last completed scanner stage, and a single unreachable target or one cloud connector failure no longer aborts an entire engagement scan — partial results are preserved with explicit per-scanner status.
+**Wave**: B (gated on full Wave A completion)
+**Depends on**: Wave A complete (Phases 57–62)
+**Requirements**: RESUME-01, RESUME-02
+**Success Criteria** (what must be TRUE):
+  1. A scan that crashes between scanner stages leaves a recoverable checkpoint in a new `scan_checkpoints` SQLite table; `quirk scan --resume <scan-id>` continues from the last completed scanner stage and produces results indistinguishable from an uninterrupted run for the same inputs
+  2. A simulated failure of a single connector (e.g., GCP credentials missing) during a multi-connector scan completes the scan with a `partial_failures` array in the output JSON and a per-scanner status panel in the dashboard; remaining scanners' findings are preserved and contribute to the score normally
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 68: Operator Error-Message Pass
+**Goal**: Every error an operator can encounter — CLI exit codes, dashboard 4xx/5xx responses, persisted `scan_error_category` rows, first-run install-day failures — emits a stable error code, a one-line cause, and a one-line remediation hint, with a single reference page documenting all codes.
+**Wave**: B (gated on full Wave A completion)
+**Depends on**: Wave A complete (Phases 57–62)
+**Requirements**: UX-01, UX-02
+**Success Criteria** (what must be TRUE):
+  1. Every operator-facing error path (CLI non-zero exit, dashboard 4xx/5xx, `scan_error_category` row) carries a stable error code (e.g., `QRK-NMAP-001`), a one-line cause, and a one-line remediation hint; an `quirk errors` reference page (and `docs/error-codes.md`) lists every code with cause and fix
+  2. First-run install-day errors (missing extras, missing nmap binary, port-conflict on `quirk serve`, unreadable `quirk.db`) render with the same one-line-cause + one-line-fix format and reference a specific `QRK-INSTALL-NNN` code; a smoke test exercises each scenario on a fresh venv and asserts the format
+**Plans**: TBD
+
+## Progress — v4.8 Phases
+
+| Phase | Wave | Plans Complete | Status | Completed |
+|-------|------|----------------|--------|-----------|
+| 57. Scanner Security Hardening | A | 0/TBD | Not started | - |
+| 58. Dashboard API Hardening | A | 0/TBD | Not started | - |
+| 59. Credential Leakage Sweep | A | 0/TBD | Not started | - |
+| 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
+| 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
+| 62. React Hook Cancellation Pattern | A | 0/TBD | Not started | - |
+| 63. Scheduled / Continuous Scanning | B | 0/TBD | Blocked on Wave A | - |
+| 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |
+| 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Wave A | - |
+| 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
+| 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
+| 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |

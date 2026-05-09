@@ -198,6 +198,48 @@ Items explicitly deferred and not in v4.8:
 
 Populated by the roadmapper. Updated at each phase transition.
 
+**Coverage:** 41/41 active v4.8 requirements mapped (100%) — Wave A: 27 reqs across Phases 57–62 | Wave B: 14 reqs across Phases 63–68
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _(filled by roadmapper)_ | _(filled by roadmapper)_ | _(filled by roadmapper)_ |
+| HARDEN-SCAN-01 | Phase 57 | Pending |
+| HARDEN-SCAN-02 | Phase 57 | Pending |
+| HARDEN-SCAN-03 | Phase 57 | Pending |
+| HARDEN-SCAN-04 | Phase 57 | Pending |
+| HARDEN-SCAN-05 | Phase 57 | Pending |
+| HARDEN-SCAN-06 | Phase 57 | Pending |
+| HARDEN-API-01 | Phase 58 | Pending |
+| HARDEN-API-02 | Phase 58 | Pending |
+| HARDEN-API-03 | Phase 58 | Pending |
+| HARDEN-API-04 | Phase 58 | Pending |
+| HARDEN-API-05 | Phase 58 | Pending |
+| HARDEN-API-06 | Phase 58 | Pending |
+| LEAK-01 | Phase 59 | Pending |
+| LEAK-02 | Phase 59 | Pending |
+| LEAK-03 | Phase 59 | Pending |
+| SCORE-01 | Phase 60 | Pending |
+| SCORE-02 | Phase 60 | Pending |
+| SCORE-03 | Phase 60 | Pending |
+| SCORE-04 | Phase 60 | Pending |
+| CBOM-COVER-01 | Phase 61 | Pending |
+| CBOM-COVER-02 | Phase 61 | Pending |
+| REPORT-SAN-01 | Phase 61 | Pending |
+| REPORT-SAN-02 | Phase 61 | Pending |
+| HOOK-01 | Phase 62 | Pending |
+| HOOK-02 | Phase 62 | Pending |
+| HOOK-03 | Phase 62 | Pending |
+| HOOK-04 | Phase 62 | Pending |
+| SCHED-01 | Phase 63 | Pending |
+| SCHED-02 | Phase 63 | Pending |
+| SCHED-03 | Phase 63 | Pending |
+| TREND-01 | Phase 64 | Pending |
+| TREND-02 | Phase 64 | Pending |
+| UI-SCAN-01 | Phase 65 | Pending |
+| UI-SCAN-02 | Phase 65 | Pending |
+| UI-SCAN-03 | Phase 65 | Pending |
+| UI-HIST-01 | Phase 66 | Pending |
+| UI-HIST-02 | Phase 66 | Pending |
+| RESUME-01 | Phase 67 | Pending |
+| RESUME-02 | Phase 67 | Pending |
+| UX-01 | Phase 68 | Pending |
+| UX-02 | Phase 68 | Pending |

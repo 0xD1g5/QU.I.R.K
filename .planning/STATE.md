@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v4.8
 milestone_name: Pre-Primetime Hardening + Operating Model
-status: planning
-last_updated: "2026-05-09T12:17:26.592Z"
+status: roadmap_complete
+last_updated: "2026-05-09T13:00:00.000Z"
 last_activity: 2026-05-09
 progress:
-  total_phases: 0
+  total_phases: 12
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,74 +17,87 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-05)
+See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 56.1 — close-qramm-06-07-wire-ci-staleness-gate-workflow
+**Current focus:** Phase 57 — Scanner Security Hardening (Wave A entrypoint)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (roadmap defined)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-09 — Milestone v4.8 started
+Status: Roadmap complete; ready to plan Phase 57
+Last activity: 2026-05-09 — v4.8 roadmap authored from audit-2026-05-08 findings
 
 ## Phase Overview
 
-| Phase | Slug | Depends On | Requirements |
-|-------|------|------------|--------------|
-| 51 | qramm-core-infrastructure | Phase 50 | QRAMM-01, QRAMM-02, QRAMM-03, QRAMM-04, DEBT-01 |
-| 52 | compliance-uplift-health-check | Phase 50 (parallel to 51) | COMPLY-10, COMPLY-11, COMPLY-12, DOCS-05, DEBT-02, DEBT-03, DEBT-04 |
-| 53 | qramm-evidence-bridge | Phase 51 | QRAMM-12, QRAMM-13, QRAMM-14 |
-| 54 | qramm-assessment-ui-scorecard | Phase 51, Phase 53 | QRAMM-08, QRAMM-09, QRAMM-10, QRAMM-11 |
-| 55 | qramm-compliance-mapping-view | Phase 52, Phase 54 | QRAMM-05, QRAMM-06, QRAMM-07, QRAMM-15 |
-| 56 | pdf-export-staleness-enforcement | Phase 54, Phase 55 | QRAMM-16 |
+| Phase | Slug | Wave | Depends On | Requirements |
+|-------|------|------|------------|--------------|
+| 57 | scanner-security-hardening | A | Phase 56.1 | HARDEN-SCAN-01..06 |
+| 58 | dashboard-api-hardening | A | Phase 56.1 | HARDEN-API-01..06 |
+| 59 | credential-leakage-sweep | A | Phase 56.1 | LEAK-01, LEAK-02, LEAK-03 |
+| 60 | score-arithmetic-correctness | A | Phase 56.1 | SCORE-01..04 |
+| 61 | cbom-coverage-report-sanitization | A | Phase 56.1 | CBOM-COVER-01, CBOM-COVER-02, REPORT-SAN-01, REPORT-SAN-02 |
+| 62 | react-hook-cancellation-pattern | A | Phase 56.1 | HOOK-01..04 |
+| 63 | scheduled-continuous-scanning | B | Wave A complete (soft: Phase 67) | SCHED-01, SCHED-02, SCHED-03 |
+| 64 | trend-analysis-foundation | B | Wave A complete | TREND-01, TREND-02 |
+| 65 | dashboard-initiated-scan | B | Wave A complete (hard: Phase 58) | UI-SCAN-01, UI-SCAN-02, UI-SCAN-03 |
+| 66 | dashboard-scan-history-clone-compare | B | Phase 65 | UI-HIST-01, UI-HIST-02 |
+| 67 | resumable-partial-failure-scans | B | Wave A complete | RESUME-01, RESUME-02 |
+| 68 | operator-error-message-pass | B | Wave A complete | UX-01, UX-02 |
 
-**Critical path:** 50 → 51 → 53 → 54 → 55 → 56
-**Parallel execution:** Phase 52 runs in parallel with Phase 51 (zero shared dependencies)
+**Wave gating:** Wave A (Phases 57–62) MUST be 100% complete before any Wave B phase (63–68) starts. This is the v4.8 cornerstone — no operating-model feature ships on top of un-hardened security/correctness foundations.
+
+**Wave A internal parallelism:** Phases 57, 58, 59, 60, 61, 62 touch disjoint code paths and may be executed in parallel by independent agents. The wave-gate is the completion barrier, not the execution barrier.
+
+**Wave B critical path:** 65 → 66; 65 hard-depends on 58 (dashboard auth before dashboard launches scans). Phase 63 has a soft dependency on Phase 67 (resumable infra benefits scheduled scans but is not gating).
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 22 (v4.7)
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 27 (v4.7 — Phases 51, 52, 53, 54, 55, 56, 56.1)
+- Average duration: ~3.5 days/phase across v4.7
+- Total execution time: 0 hours (v4.8)
 
 **By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 51 | TBD | Not started |
-| 52 | 6 | Ready to execute |
-| 53 | TBD | Not started |
-| 54 | TBD | Not started |
-| 55 | TBD | Not started |
-| 56 | TBD | Not started |
+| 57 | TBD | Not started |
+| 58 | TBD | Not started |
+| 59 | TBD | Not started |
+| 60 | TBD | Not started |
+| 61 | TBD | Not started |
+| 62 | TBD | Not started |
+| 63 | TBD | Blocked on Wave A |
+| 64 | TBD | Blocked on Wave A |
+| 65 | TBD | Blocked on Wave A |
+| 66 | TBD | Blocked on Wave A + Phase 65 |
+| 67 | TBD | Blocked on Wave A |
+| 68 | TBD | Blocked on Wave A |
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- Phase 56.1 inserted after Phase 56: Close QRAMM-06/07 — wire CI staleness gate workflow (URGENT)
+- v4.8 roadmap authored 2026-05-09 against `.planning/audit-2026-05-08/AUDIT-SUMMARY.md` (44 blockers / 96 warnings / 29 info across 116 files / 6 subsystems).
+- Wave A / Wave B split adopted from audit recommendation (lines 134–158 of AUDIT-SUMMARY.md).
+- HORIZON.md v4.8 anchor item set absorbed into Wave B; residual trust/polish items absorbed into Wave A.
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-**v4.7 roadmap decisions (2026-05-05):**
+**v4.8 roadmap decisions (2026-05-09):**
 
-- [v4.7-D-01]: Phase 51 and Phase 52 are fully parallel — Phase 51 owns QRAMM tables/API/scoring/questions, Phase 52 owns compliance extensions + doctor CLI + tech debt. Zero shared code paths at planning time.
-- [v4.7-D-02]: DEBT-01 (datetime.utcnow → datetime.now(timezone.utc)) assigned to Phase 51 — must ship before any staleness gate logic is written in Phase 55/56 to avoid a Python 3.12+ DeprecationWarning in the CI staleness infrastructure itself.
-- [v4.7-D-03]: QRAMM evidence bridge (Phase 53) gates on Phase 51 only, not Phase 52 — the bridge reads CryptoEndpoint rows via SESSION_BRACKET pattern; no dependency on compliance module extensions.
-- [v4.7-D-04]: Phase 55 gates on both Phase 52 (for ISO 27001:2022 + SOC2 framework availability) and Phase 54 (for active assessment session data to drive per-practice relevance scores).
-- [v4.7-D-05]: Phase 56 gates on Phase 54 (radar chart SVG must exist for PDF embed) and Phase 55 (compliance mapping summary section requires the 8-framework view to be implemented).
-- [v4.7-D-06]: QRAMM-16 (PDF export) is the sole requirement in Phase 56 — it is not combined with Phase 55 to avoid a phase that conflates UI work (Phase 55) with print/export work (Phase 56) and to keep success criteria independently verifiable.
-- [v4.7-D-07]: QRAMM staleness metadata (QRAMM-05, QRAMM-06, QRAMM-07) assigned to Phase 55, not Phase 51 — staleness enforcement requires the compliance mapping view (Phase 55) to be meaningful; it mirrors the `quirk compliance status` pattern from v4.6 Phase 49.
-
-**Phase 55 Plan 03 decisions (2026-05-08):**
-
-- [55-D-01]: isUnscored derived from API rows, not ctx.scoreResult — ctx.scoreResult resets on page reload; API data is the source of truth for scored-state detection across browser sessions
+- [v4.8-D-01]: Wave A is a HARD gate for Wave B. No Wave B phase may start until all 6 Wave A phases are `[x]`. Rationale: shipping operating-model features on top of unhardened security/correctness foundations would invert the primetime quality goal.
+- [v4.8-D-02]: Wave A internally parallel — 57, 58, 59, 60, 61, 62 touch disjoint code paths (protocol scanners / route layer / shared util / scoring / CBOM builder / React hooks). Independent agents may execute them concurrently.
+- [v4.8-D-03]: Phase 63 (scheduled scans) carries a SOFT dependency on Phase 67 (resumable scans) — schedulable scans benefit from resumable infra but can ship without; ordering is opportunistic.
+- [v4.8-D-04]: Phase 65 (dashboard-initiated scan) carries a HARD dependency on Phase 58 (dashboard API hardening) — the dashboard cannot dispatch scans before single-user auth + CSRF + CORS lockdown land.
+- [v4.8-D-05]: Phase goals explicitly name the audit blocker IDs each phase closes (e.g., "closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`)"). Self-documenting traceability against AUDIT-SUMMARY.md.
+- [v4.8-D-06]: Markdown injection in HTML/PDF rendering surfaces is OUT OF SCOPE for v4.8 — Phase 61 REPORT-SAN-01 covers markdown only. HTML/PDF injection is a separate audit shape deferred to v4.9+.
+- [v4.8-D-07]: Dead code cleanup (`tls_scanner.py` duplicate, `intelligence/schema.py`, `migration_planner.py` stub, `risk_engine.py` rename) deferred to v5.x tech-debt sweep — not v4.8.
 
 ### Pending Todos
 
@@ -96,7 +109,7 @@ None at roadmap creation.
 
 ## Deferred Items
 
-Items carried forward from v4.6 close (2026-05-05):
+Items carried forward from v4.7 close (2026-05-08):
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -108,6 +121,6 @@ Items carried forward from v4.6 close (2026-05-05):
 
 ## Session Continuity
 
-Last session: 2026-05-08T23:52:26.836Z
-Stopped at: Phase 56.1 context gathered
-Next action: Phase 55 Plan 04 (staleness CLI + tests) or next phase
+Last session: 2026-05-09T13:00:00.000Z
+Stopped at: v4.8 ROADMAP.md authored, STATE.md updated, REQUIREMENTS.md traceability filled
+Next action: `/gsd-plan-phase 57` (Scanner Security Hardening — Wave A entrypoint). Wave A phases 57–62 may be planned in parallel.
