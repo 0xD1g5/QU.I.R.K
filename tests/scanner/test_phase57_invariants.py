@@ -24,15 +24,22 @@ def _strip_comments(src: str) -> str:
     Unlike splitting on '#', this correctly handles '#' inside string literals
     so that grep gates do not produce false-negatives when patterns appear in
     comments adjacent to code that uses '#' in strings.
+
+    The source text is rebuilt as a list of characters; each comment token is
+    blanked out (replaced with spaces of the same length) so that all other
+    offsets — and therefore line structure — are preserved exactly.
     """
-    tokens = tokenize.generate_tokens(io.StringIO(src).readline)
-    result = []
-    for tok_type, tok_string, *_ in tokens:
+    chars = list(src)
+    for tok_type, tok_string, tok_start, tok_end, _ in tokenize.generate_tokens(
+        io.StringIO(src).readline
+    ):
         if tok_type == tokenize.COMMENT:
-            result.append("")
-        else:
-            result.append(tok_string)
-    return "".join(result)
+            lines = src.splitlines(keepends=True)
+            start_offset = sum(len(lines[i]) for i in range(tok_start[0] - 1)) + tok_start[1]
+            end_offset = sum(len(lines[i]) for i in range(tok_end[0] - 1)) + tok_end[1]
+            for i in range(start_offset, end_offset):
+                chars[i] = " "
+    return "".join(chars)
 
 
 @pytest.mark.parametrize("scanner_file", SCANNER_FILES, ids=lambda p: p.name)
