@@ -15,6 +15,7 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.util.url_allowlist import validate_external_url
 
 # Phase 57 / D-09: HIGH advisory service_detail when allow_insecure_jwks is set.
 ADVISORY_JWKS_VERIFY_DISABLED = "JWKS/verify-disabled"
@@ -79,6 +80,9 @@ def _fetch_jwks(
             if path == "/.well-known/openid-configuration":
                 jwks_uri = data.get("jwks_uri")
                 if not jwks_uri:
+                    continue
+                _vr = validate_external_url(jwks_uri)
+                if not _vr.ok:
                     continue
                 fetched_urls.append(jwks_uri)
                 resp2 = httpx.get(jwks_uri, timeout=timeout, follow_redirects=True, verify=verify_tls)
