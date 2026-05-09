@@ -31,6 +31,12 @@ from urllib.parse import urlparse
 from cryptography.x509 import load_der_x509_certificate
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from quirk.models import CryptoEndpoint
+from quirk.util.url_allowlist import validate_external_url
+
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
 
 # SAML XML namespace map — all lxml XPath calls use explicit namespaces=SAML_NS (D-06)
 SAML_NS = {
@@ -43,6 +49,9 @@ SAML_NS = {
 # Substrings indicating SHA-1 algorithm URIs (D-05); checked case-insensitively
 SHA1_INDICATORS = ("sha1", "sha-1")
 
+# Phase 57 / D-09: HIGH advisory service_detail when allow_internal_targets is set.
+ADVISORY_SAML_INTERNAL_TARGET = "SAML/internal-target-fetched"
+
 # OIDC algorithm severity map per D-09
 # None means informational only (no finding produced)
 OIDC_ALG_SEVERITY = {
@@ -54,15 +63,29 @@ OIDC_ALG_SEVERITY = {
 }
 
 
-def _fetch_metadata(url: str, timeout: int) -> "bytes | None":
+def _fetch_metadata(
+    url: str,
+    timeout: int,
+    *,
+    allow_internal: bool = False,
+) -> "bytes | None":
     """Fetch raw content from a SAML metadata or OIDC discovery URL.
+
+    Phase 57 / CR-04: SSRF-guarded metadata fetch. Calls validate_external_url
+    before issuing any outbound HTTP request. Blocked URLs return None with zero
+    outbound requests.
 
     Follows redirects. Uses system CA bundle (verify=True) so a network-positioned
     attacker cannot serve a forged metadata document via a fake TLS connection.
     Returns raw bytes on success, None on any error.
     """
+    result = validate_external_url(url, allow_internal=allow_internal)
+    if not result.ok:
+        logging.getLogger(__name__).warning(
+            "SAML: blocked fetch to %r (%s)", result.redacted_preview, result.reason
+        )
+        return None
     try:
-        import httpx
         response = httpx.get(url, timeout=timeout, follow_redirects=True, verify=True)
         if response.status_code == 200:
             return response.content
@@ -375,8 +398,20 @@ def _parse_oidc_discovery(json_bytes: bytes, target_url: str, now=None) -> "tupl
     return endpoints, scan_dict
 
 
-def scan_saml_targets(targets: list, timeout: int = 10, logger=None, session_start=None) -> list:
+def scan_saml_targets(
+    targets: list,
+    timeout: int = 10,
+    logger=None,
+    session_start=None,
+    *,
+    allow_internal_targets: bool = False,
+) -> list:
     """Scan SAML IdP metadata and OIDC discovery endpoints.
+
+    Phase 57 / CR-04: supports allow_internal_targets kwarg. When True, fetches to
+    RFC1918/loopback/link-local IPs proceed and emit a HIGH advisory CryptoEndpoint
+    per affected target. Metadata-service IPs (169.254.169.254, fd00:ec2::254) are
+    always blocked regardless of allow_internal_targets.
 
     Returns list of CryptoEndpoint objects.
     Degrades gracefully if lxml is not installed (returns empty list).
@@ -391,10 +426,26 @@ def scan_saml_targets(targets: list, timeout: int = 10, logger=None, session_sta
     all_endpoints = []
 
     for target_url in targets:
-        content = _fetch_metadata(target_url, timeout)
+        content = _fetch_metadata(target_url, timeout, allow_internal=allow_internal_targets)
         if content is None:
             log.warning("SAML: no content fetched from %s, skipping", target_url)
             continue
+
+        # Phase 57 / CR-04: if allow_internal_targets is set and the target was an
+        # internal (non-metadata) IP, emit a HIGH advisory so the consulting deliverable
+        # surfaces exactly which internal hosts were probed.
+        if allow_internal_targets:
+            strict = validate_external_url(target_url, allow_internal=False)
+            if not strict.ok and strict.reason in {"internal_ip", "loopback", "link_local"}:
+                all_endpoints.append(CryptoEndpoint(
+                    host=target_url,
+                    port=443,
+                    protocol="ADVISORY",
+                    service_detail=ADVISORY_SAML_INTERNAL_TARGET,
+                    severity="HIGH",
+                    scan_error_category="config",
+                    scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                ))
 
         target_type = _classify_target(target_url, content)
 
