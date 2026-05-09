@@ -22,8 +22,8 @@
 - [ ] **HARDEN-SCAN-02**: SAML scanner HTTP fetcher routes through a shared URL-allowlist helper that rejects RFC1918 ranges, link-local, loopback, `file://`, and metadata-service IPs (169.254.169.254, fd00:ec2::254) unless an explicit `--allow-internal-targets` flag is set (closes CR-04)
 - [ ] **HARDEN-SCAN-03**: `quirk/scanner/source_scanner.py` validates `repo_path` against a path-allowlist (existing local directory, no shell metacharacters) before invoking `subprocess.run` for semgrep (closes CR-02)
 - [ ] **HARDEN-SCAN-04**: `quirk/scanner/container_scanner.py` validates `image_ref` against a regex allowlist (registry/image:tag form), rejecting `dir:/`, `file://`, and any value containing shell metacharacters before invoking syft (closes CR-03)
-- [ ] **HARDEN-SCAN-05**: `quirk/scanner/broker_scanner.py` no longer ships a hardcoded `guest:guest` Basic-auth credential to every host; default behavior probes anonymously, and any credential probe requires an explicit per-target opt-in via config (closes CR-05)
-- [ ] **HARDEN-SCAN-06**: Broker management API and Redis probes default to TLS-required and reject `ssl_cert_reqs="none"`; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding (closes CR-06)
+- [x] **HARDEN-SCAN-05**: `quirk/scanner/broker_scanner.py` no longer ships a hardcoded `guest:guest` Basic-auth credential to every host; default behavior probes anonymously, and any credential probe requires an explicit per-target opt-in via config (closes CR-05)
+- [x] **HARDEN-SCAN-06**: Broker management API and Redis probes default to TLS-required and reject `ssl_cert_reqs="none"`; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding (closes CR-06)
 
 #### Dashboard API Hardening
 *Closes audit blockers 7–10 (`api-cli-core/CR-01..CR-03, CR-09`). Phase 58.*
@@ -206,8 +206,8 @@ Populated by the roadmapper. Updated at each phase transition.
 | HARDEN-SCAN-02 | Phase 57 | Pending |
 | HARDEN-SCAN-03 | Phase 57 | Pending |
 | HARDEN-SCAN-04 | Phase 57 | Pending |
-| HARDEN-SCAN-05 | Phase 57 | Pending |
-| HARDEN-SCAN-06 | Phase 57 | Pending |
+| HARDEN-SCAN-05 | Phase 57 | Complete |
+| HARDEN-SCAN-06 | Phase 57 | Complete |
 | HARDEN-API-01 | Phase 58 | Pending |
 | HARDEN-API-02 | Phase 58 | Pending |
 | HARDEN-API-03 | Phase 58 | Pending |

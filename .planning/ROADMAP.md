@@ -1176,7 +1176,7 @@ Plans:
 
 **Wave A — Pre-Primetime Hardening (gates Wave B):**
 
-- [ ] **Phase 57: Scanner Security Hardening** - JWKS TLS verification, SAML SSRF allowlist, semgrep/syft argument-injection guards, broker hardcoded-credential removal, broker TLS-required default — closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`)
+- [x] **Phase 57: Scanner Security Hardening** - JWKS TLS verification, SAML SSRF allowlist, semgrep/syft argument-injection guards, broker hardcoded-credential removal, broker TLS-required default — closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`) (completed 2026-05-09)
 - [ ] **Phase 58: Dashboard API Hardening** - Single-user bearer auth + CSRF, CORS allowlist lockdown, per-route rate limiting, `quirk init` path-traversal guard, PDF SSRF clamp, `@file` allowlist + size cap — closes audit blockers 7–10 (`api-cli-core/CR-01, CR-02, CR-03, CR-09`)
 - [ ] **Phase 59: Credential Leakage Sweep** - Shared `quirk/util/safe_exc.py::safe_str(exc)` helper applied across every connector and route handler that persists `scan_error`; AST-based pytest gate prevents future bypasses — closes audit blocker 11 + Pattern A
 - [ ] **Phase 60: Score Arithmetic Correctness** - Top-level readiness clamp ≤100, server-side QRAMM profile multiplier clamp `[0.8, 1.5]`, confidence-bonus zero-data guard, contiguous QRAMM maturity threshold bands — closes audit blockers 12, 15 + Pattern E
@@ -1202,7 +1202,7 @@ Plans:
 **Depends on**: Phase 56.1 (v4.7 close-out)
 **Requirements**: HARDEN-SCAN-01, HARDEN-SCAN-02, HARDEN-SCAN-03, HARDEN-SCAN-04, HARDEN-SCAN-05, HARDEN-SCAN-06
 **Success Criteria** (what must be TRUE):
-  1. JWKS fetches in `quirk/scanner/jwt_scanner.py` use `verify=True` by default; if the operator opts into disabled verification via an explicit config knob, the scan emits a HIGH advisory finding naming the affected JWKS URL
+  1. JWKS fetches in `quirk/scanner/api_scanner.py` use `verify=True` by default; if the operator opts into disabled verification via an explicit config knob, the scan emits a HIGH advisory finding naming the affected JWKS URL
   2. The SAML scanner refuses to fetch URLs resolving to RFC1918, link-local, loopback, `file://`, or cloud metadata IPs (169.254.169.254, fd00:ec2::254) unless `--allow-internal-targets` is set; a unit test feeds each forbidden category and asserts the scan never issues an outbound HTTP request
   3. `quirk/scanner/source_scanner.py` and `quirk/scanner/container_scanner.py` reject `repo_path` / `image_ref` containing shell metacharacters, `..`, or `dir:/` / `file://` prefixes before invoking semgrep / syft; rejected inputs produce a structured `scan_error_category="invalid_input"` row, never a subprocess call
   4. The broker scanner sends NO credentials by default — no `guest:guest`, no Basic-auth header — and TLS-required is the default for management API + Redis probes; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding
@@ -1210,10 +1210,10 @@ Plans:
 **Plans**: 6 plans
 - [x] 57-01-PLAN.md — Shared util helpers (url_allowlist + subprocess_input) + tests
 - [x] 57-02-PLAN.md — SecurityCfg + BrokerCredential config wiring + CLI flags + models.py docstring (D-06)
-- [ ] 57-03-PLAN.md — JWT scanner CR-01 (verify=True default + JWKS advisory) + ROADMAP D-11 correction
-- [ ] 57-04-PLAN.md — SAML scanner CR-04 (validate_external_url SSRF guard + internal-target advisory)
-- [ ] 57-05-PLAN.md — Source + container scanners CR-02/CR-03 (subprocess input validation + argv `--`)
-- [ ] 57-06-PLAN.md — Broker scanner CR-05/CR-06 (no guest:guest, TLS-required default, advisories) + AUDIT-TASKS.md flip
+- [x] 57-03-PLAN.md — JWT scanner CR-01 (verify=True default + JWKS advisory) + ROADMAP D-11 correction
+- [x] 57-04-PLAN.md — SAML scanner CR-04 (validate_external_url SSRF guard + internal-target advisory)
+- [x] 57-05-PLAN.md — Source + container scanners CR-02/CR-03 (subprocess input validation + argv `--`)
+- [x] 57-06-PLAN.md — Broker scanner CR-05/CR-06 (no guest:guest, TLS-required default, advisories) + AUDIT-TASKS.md flip
 
 ### Phase 58: Dashboard API Hardening
 **Goal**: The dashboard API is safe to expose beyond the loopback interface — every mutating route requires auth, CORS is locked down, rate limiting throttles abuse, and operator-supplied paths cannot escape their allowlists. Closes audit blockers 7–10 (`api-cli-core/CR-01, CR-02, CR-03, CR-09`).
@@ -1349,7 +1349,7 @@ Plans:
 
 | Phase | Wave | Plans Complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
-| 57. Scanner Security Hardening | A | 2/6 | In Progress|  |
+| 57. Scanner Security Hardening | A | 6/6 | Complete   | 2026-05-09 |
 | 58. Dashboard API Hardening | A | 0/TBD | Not started | - |
 | 59. Credential Leakage Sweep | A | 0/TBD | Not started | - |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
