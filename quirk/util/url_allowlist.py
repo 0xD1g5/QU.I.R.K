@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import socket
 from dataclasses import dataclass
 from typing import Final
 from urllib.parse import urlparse
@@ -102,8 +103,9 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
     - Loopback addresses (``127.0.0.1``, ``::1``) → RC_LOOPBACK (unless *allow_internal*).
     - Link-local addresses (non-metadata ``169.254.x.x``) → RC_LINK_LOCAL (unless *allow_internal*).
 
-    Hostname targets (non-IP) are accepted without DNS resolution; paranoia-mode
-    DNS rebinding guard is out of scope (see threat model residual risk note).
+    Hostname targets (non-IP) are resolved via DNS and the resulting IP is subject
+    to the same IP-class checks. If DNS resolution fails the target is treated as
+    unreachable and accepted (ok=True) so the caller's connection attempt fails naturally.
 
     Args:
         url: The URL string to validate.
@@ -127,8 +129,14 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
     try:
         ip = ipaddress.ip_address(host)
     except ValueError:
-        # Host is a domain name — accept (no DNS resolution per threat model).
-        return ValidationResult(True, "", "")
+        # Host is a domain name — resolve to check the actual destination IP.
+        # If DNS resolution fails the host is unreachable; return ok=True so the
+        # caller's normal connection attempt fails naturally.
+        try:
+            resolved = socket.gethostbyname(host)
+            ip = ipaddress.ip_address(resolved)
+        except (socket.gaierror, ValueError):
+            return ValidationResult(True, "", "")
 
     # 2a. Metadata service — always blocked, even with allow_internal=True.
     if ip in _METADATA_IPS:
