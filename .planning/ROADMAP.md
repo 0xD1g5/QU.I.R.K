@@ -1234,9 +1234,9 @@ Plans:
 - [x] 58-03-PLAN.md — CLI path-traversal guard, PDF port clamp, @file target guards
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 58-04-PLAN.md — TDD: Wire auth/CSRF to routers + full integration test suite
-- [ ] 58-05-PLAN.md — TDD: CLI init fuzz corpus + TargetFileError reason-code tests
-- [ ] 58-06-PLAN.md — React fetchApi() utility + migrate all raw fetch() call sites
+- [x] 58-04-PLAN.md — TDD: Wire auth/CSRF to routers + full integration test suite
+- [x] 58-05-PLAN.md — TDD: CLI init fuzz corpus + TargetFileError reason-code tests
+- [x] 58-06-PLAN.md — React fetchApi() utility + migrate all raw fetch() call sites
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 58-07-PLAN.md — Audit ledger closure (CR-01, CR-02, CR-03, CR-09) + UAT-SERIES.md update
@@ -1363,7 +1363,7 @@ Plans:
 | Phase | Wave | Plans Complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
 | 57. Scanner Security Hardening | A | 6/6 | Complete   | 2026-05-09 |
-| 58. Dashboard API Hardening | A | 3/7 | In Progress|  |
+| 58. Dashboard API Hardening | A | 6/7 | In Progress|  |
 | 59. Credential Leakage Sweep | A | 0/TBD | Not started | - |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
 | 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
