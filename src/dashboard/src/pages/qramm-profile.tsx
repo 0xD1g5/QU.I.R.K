@@ -1,5 +1,6 @@
 import { useContext, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { fetchApi } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -50,7 +51,7 @@ export function OrgProfilePage() {
       setArchiving(true)
       try {
         if (ctx.sessionId != null) {
-          const resp = await fetch(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
+          const resp = await fetchApi(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
           if (!resp.ok && resp.status !== 404) {
             // Server still has the session — do NOT reset context so the user
             // can retry rather than ending up with diverged client/server state.
@@ -141,9 +142,8 @@ export function OrgProfilePage() {
     setSubmitting(true)
     try {
       // Step 1: Create session
-      const sessionResp = await fetch("/api/qramm/sessions", {
+      const sessionResp = await fetchApi("/api/qramm/sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ org_name: null }),
       })
       if (!sessionResp.ok) {
@@ -153,9 +153,8 @@ export function OrgProfilePage() {
       const sessionId: number = sessionBody.session_id
 
       // Step 2: Create profile
-      const profileResp = await fetch("/api/qramm/profiles", {
+      const profileResp = await fetchApi("/api/qramm/profiles", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: sessionId,
           industry,
