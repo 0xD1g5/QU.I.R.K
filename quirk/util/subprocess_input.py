@@ -126,7 +126,10 @@ def validate_repo_path(p: str) -> ValidationResult:
     if _SHELL_METACHARS.search(p):
         return ValidationResult(False, RC_SHELL_METACHAR, _redact_preview(p))
 
-    if not os.path.isdir(p):
+    real = os.path.realpath(p)
+    if ".." in real:
+        return ValidationResult(False, RC_PATH_TRAVERSAL, _redact_preview(p))
+    if not os.path.isdir(real):
         return ValidationResult(False, RC_NONEXISTENT_PATH, _redact_preview(p))
 
     return ValidationResult(True, "", "")
