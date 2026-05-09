@@ -132,27 +132,33 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.7 Governance & Compliance Platform
+## Current Milestone: v4.8 Pre-Primetime Hardening + Operating Model
 
-**Goal:** Extend QUIRK from a compliance-tagged scanner into a full governance platform by completing the compliance framework and integrating the QRAMM maturity model — making QUIRK's primary consulting deliverable a scored governance assessment grounded in live scanner findings.
+**Goal:** Close all 15 audit-identified blockers (Wave A) and ship the operating-model features that turn QU.I.R.K. into a deploy-and-forget platform (Wave B). v4.8 is the primetime cutover — after this milestone a customer can install, schedule, and operate QU.I.R.K. without operator hand-holding, on top of a hardened security and correctness foundation.
 
 **Target features:**
-- COMPLY-10: CBOM FIPS 140-3 algorithm-level annotations
-- COMPLY-11: SOC 2 / ISO 27001 compliance framework mapping (extends PCI-DSS/HIPAA/FIPS 140-3)
-- DOCS-05: `quirk doctor` health-check CLI command
-- QRAMM Data Model & Backend API — SQLite tables, FastAPI CRUD, qramm_version/last_verified/source_url staleness metadata
-- QRAMM Assessment UI — Org Profile wizard + 120-question dimension assessment
-- QRAMM Scorecard & Visualizations — radar chart, maturity distribution, dimension summary
-- QRAMM Evidence Bridge — auto-populate QRAMM answers from live scanner findings
-- QRAMM Compliance Mapping View — 8 frameworks, coverage table, relevance scores
-- QRAMM Report Export — combined governance + technical PDF
-- QRAMM staleness enforcement — quarterly CI gate (90-day threshold); `quirk qramm status` CLI
-- Tech debt: BACK-56 (datetime.utcnow deprecation), BACK-67 (defusedxml.lxml migration), BACK-87 (lab.sh PROFILE_ARGS bug), BACK-85 (ports_scanned in run-stats)
 
-## Current State: v4.7 In Progress — Phase 53 Complete
-Phase 56 complete — QRAMM Governance Assessment section added to PDF export (QRAMM-16)
+**Wave A — Pre-Primetime Hardening (Phases 57–62, audit fix-up):**
+- Scanner security hardening — JWT verification, SSRF allowlist, argument-injection guards, hardcoded-credential removal across protocol scanners (closes audit blockers 1–6)
+- Dashboard API hardening — single-user auth + CSRF, CORS lockdown, rate-limit middleware, path-traversal guards, `@file` allowlist (closes audit blockers 7–10)
+- Credential leakage sweep — shared `safe_str(exc)` helper applied across all connectors and route handlers (Pattern A; closes audit blocker 11)
+- Score arithmetic correctness — readiness clamp ≤100, profile multiplier server-side clamp, confidence-bonus zero-data guard, maturity threshold band fixes (closes audit blockers 12, 15)
+- CBOM Pass-1 coverage expansion + report sanitization — close OBS-1 across 12+ protocol families, route VAULT correctly, escape pipe/newline characters in markdown report tables (closes audit blockers 13, 14)
+- React hook cancellation pattern — standardize `if (!cancelled)` guards across data-fetch hooks; QRAMM debounce coalescing fix; auto-fill confirm round-trip (Pattern C)
 
-v4.7 "Governance & Compliance Platform" is underway. Phase 53 (QRAMM Evidence Bridge) complete 2026-05-07: `quirk/qramm/evidence_bridge.py` auto-populates 30 CVI dimension questions with `suggested_answer` values derived from the SESSION_BRACKET scan cohort on session create; D-05/D-06/D-07 quartile/threshold derivation rules implemented; `confirmed_at` auto-set when a human confirms a bridge suggestion (D-09); badge signal is implicit in `suggested_answer IS NOT NULL AND answer_value IS NULL` (QRAMM-14); zero `risk_engine` coupling; 8-test TDD suite all GREEN with 36/36 total passing. Phase 54 (QRAMM Assessment UI & Scorecard) is next on the critical path.
+**Wave B — Operating Model (Phases 63–68, gated on Wave A):**
+- Scheduled / continuous scanning mode (BACK-25)
+- Trend analysis foundation (BACK-21)
+- Dashboard-initiated scan: configure, launch, live status (BACK-86 slice 1)
+- Dashboard scan history + clone/compare (BACK-86 slice 2)
+- Resumable / partial-failure scans
+- Operator error-message pass
+
+## Current State: v4.8 Initialized — Defining Requirements
+
+v4.8 "Pre-Primetime Hardening + Operating Model" initialized 2026-05-09 following the comprehensive pre-v4.8 codebase audit (2026-05-08). Audit findings: 41 blockers, 91 warnings, 22 info across 116 files in 6 subsystems; top-15 blockers triaged as gating for primetime cutover. Wave A (6 hardening phases) blocks Wave B (6 operating-model phases) — shipping operating-model features on top of unhardened security/correctness foundations would invert the primetime quality goal.
+
+v4.7 "Governance & Compliance Platform" shipped 2026-05-08: 6 phases + 1 close-out (51, 52, 53, 54, 55, 56, 56.1), 27 plans. QRAMM data model, evidence bridge, assessment UI, scorecard, compliance mapping view, PDF export with governance section, and CI staleness gate all delivered. SOC2 + ISO 27001 mappings shipped alongside FIPS 140-3 annotations and `quirk doctor` health-check CLI.
 
 v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plans, 3-day execution. QUIRK can now be installed with `pip install quirk` without crashes, surfaces 5 new TLS certificate-defect finding types, accepts multi-target and CIDR input with optional nmap discovery, enriches every finding with FIPS-compliant PQC remediation guidance, maps findings to PCI-DSS/HIPAA/FIPS 140-3 controls, and ships two enterprise reference documents. Compliance mapping introduces staleness infrastructure (quarterly review cadence enforced by CI gate).
 
@@ -213,7 +219,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-08
+*Last updated: 2026-05-09
 
 ## Evolution
 
