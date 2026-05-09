@@ -46,6 +46,21 @@ from quirk.util.targets import apply_targets_file_override  # D-03
 from quirk.util.optional_extra import is_extra_available, select_nmap_port_list  # D-08/D-09
 
 
+def apply_security_cli_overrides(cfg, args) -> None:
+    """Phase 57 / D-04: CLI flags can only flip cfg.security.* False -> True.
+
+    An absent CLI flag (default=False) MUST NOT override a True value already
+    loaded from YAML. This is an opt-in-only pattern: CLI flags escalate
+    permissions, never revoke them.
+    """
+    if getattr(args, "allow_internal_targets", False):
+        cfg.security.allow_internal_targets = True
+    if getattr(args, "allow_cleartext_broker_probe", False):
+        cfg.security.allow_cleartext_broker_probe = True
+    if getattr(args, "allow_insecure_jwks", False):
+        cfg.security.allow_insecure_jwks = True
+
+
 def _error_category(desc: str) -> str:
     if not desc:
         return "UNKNOWN"
@@ -303,6 +318,36 @@ def main():
         help="AWS SQS region to probe (repeatable). Phase 33 / D-01.",
     )
 
+    # Phase 57 / D-04: security hardening opt-outs.
+    # These flags can only flip cfg.security.* False -> True; an absent flag
+    # never overrides a True value loaded from YAML.
+    parser.add_argument(
+        "--allow-internal-targets",
+        action="store_true", default=False,
+        help=(
+            "Permit SAML/broker fetches to RFC1918, loopback, and link-local IPs. "
+            "Cloud metadata IPs (169.254.169.254, fd00:ec2::254) remain blocked. "
+            "Emits HIGH advisory per affected target. Phase 57 / CR-04."
+        ),
+    )
+    parser.add_argument(
+        "--allow-cleartext-broker-probe",
+        action="store_true", default=False,
+        help=(
+            "Permit broker management API probes over HTTP (no TLS) and Redis "
+            "ssl_cert_reqs=none. Emits HIGH advisory per affected target. "
+            "Phase 57 / CR-06."
+        ),
+    )
+    parser.add_argument(
+        "--allow-insecure-jwks",
+        action="store_true", default=False,
+        help=(
+            "Disable TLS certificate verification for JWKS fetches. "
+            "Emits HIGH advisory per affected target. Phase 57 / CR-01."
+        ),
+    )
+
     args = parser.parse_args()
 
     quiet = getattr(args, "quiet", False)
@@ -346,6 +391,9 @@ def main():
     # Phase 47 / D-03: --targets-file REPLACES cfg.targets.fqdns + cidrs (does NOT merge)
     if getattr(args, "targets_file", None):
         apply_targets_file_override(cfg, args.targets_file)  # D-03
+
+    # Phase 57 / D-04: CLI flags override YAML security block per-run (opt-in only, never opt-out).
+    apply_security_cli_overrides(cfg, args)
 
     # Phase 47 / D-09: reflect --discovery flag onto cfg.connectors.enable_nmap for
     # --config / CLI mode. In interactive mode the wizard already set enable_nmap via

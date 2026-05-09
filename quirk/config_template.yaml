@@ -117,3 +117,22 @@ connectors:
 #                            #   lenient  — 0.7x agility + identity weights (relaxed posture)
 #   # calibration_overrides: # Fine-tune individual weight keys (advanced)
 #   #   agility_high_impact_ratio: 14.0
+
+# -- Security hardening (Phase 57 / HARDEN-SCAN-01..06) --------------------
+# These knobs disable safety checks that protect against SSRF and credential
+# exposure. Each opt-in emits a HIGH advisory finding naming the affected
+# target. CLI flags override per-run:
+#   --allow-internal-targets, --allow-cleartext-broker-probe, --allow-insecure-jwks.
+security:
+  allow_internal_targets: false        # CR-04: permit RFC1918/loopback SAML/broker URLs
+  allow_cleartext_broker_probe: false  # CR-06: permit HTTP/no-TLS broker mgmt API probes
+  allow_insecure_jwks: false           # CR-01: permit verify=False JWKS fetches
+
+# -- Broker credentials (Phase 57 / CR-05) ---------------------------------
+# Per-host opt-in credentials for broker management API probes.
+# Keyed by host:port. Passwords MUST be in environment variables (never inline).
+# Default behavior probes anonymously — credentials are sent ONLY to listed hosts.
+# broker_credentials:
+#   "rabbit.lab:15672":
+#     user: "admin"
+#     pass_env: "RABBIT_LAB_PASS"   # os.environ["RABBIT_LAB_PASS"] at scan time

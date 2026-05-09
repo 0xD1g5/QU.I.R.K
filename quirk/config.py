@@ -267,6 +267,33 @@ class IntelligenceCfg:
 
 
 @dataclass
+class SecurityCfg:
+    """Phase 57 / D-04: operator safety-override knobs. All default False.
+
+    - allow_internal_targets: permit SAML/broker fetches to RFC1918, loopback,
+      link-local IPs (CR-04). Metadata-service IPs remain blocked even when True.
+    - allow_cleartext_broker_probe: permit broker mgmt API probes over HTTP /
+      ssl_cert_reqs="none" Redis (CR-06).
+    - allow_insecure_jwks: disable TLS certificate verification on JWKS fetches
+      (CR-01).
+    """
+    allow_internal_targets: bool = False
+    allow_cleartext_broker_probe: bool = False
+    allow_insecure_jwks: bool = False
+
+
+@dataclass(frozen=True)
+class BrokerCredential:
+    """Phase 57 / D-05: per-host broker credential entry.
+
+    `pass_env` is the NAME of the environment variable holding the password,
+    NOT the password itself. Passwords MUST NOT appear inline in YAML.
+    """
+    user: str
+    pass_env: str
+
+
+@dataclass
 class AppConfig:
     assessment: AssessmentCfg
     scan: ScanCfg
@@ -274,6 +301,8 @@ class AppConfig:
     connectors: ConnectorsCfg
     output: OutputCfg
     intelligence: IntelligenceCfg
+    security: SecurityCfg = field(default_factory=SecurityCfg)             # Phase 57 / D-04
+    broker_credentials: Dict[str, BrokerCredential] = field(default_factory=dict)  # Phase 57 / D-05
 
 
 def _as_str_list(v: Any) -> List[str]:
@@ -373,6 +402,25 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
             if not legacy_timeout_present:
                 setattr(timeouts_cfg, target_field, int(value))
 
+    # Phase 57 / D-04: security hardening opt-out knobs
+    security_raw = raw.get("security") or {}
+    security_cfg = SecurityCfg(
+        allow_internal_targets=bool(security_raw.get("allow_internal_targets", False)),
+        allow_cleartext_broker_probe=bool(security_raw.get("allow_cleartext_broker_probe", False)),
+        allow_insecure_jwks=bool(security_raw.get("allow_insecure_jwks", False)),
+    )
+
+    # Phase 57 / D-05: per-host broker credentials (pass_env is env-var name, never inline password)
+    broker_creds_raw = raw.get("broker_credentials") or {}
+    broker_credentials: Dict[str, BrokerCredential] = {}
+    for host_port, cred in broker_creds_raw.items():
+        if not isinstance(cred, dict):
+            continue
+        broker_credentials[str(host_port)] = BrokerCredential(
+            user=str(cred.get("user", "")),
+            pass_env=str(cred.get("pass_env", "")),
+        )
+
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
         scan=ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw),
@@ -380,6 +428,8 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         connectors=ConnectorsCfg(**conn_raw),
         output=OutputCfg(**raw["output"]),
         intelligence=intelligence_cfg,
+        security=security_cfg,
+        broker_credentials=broker_credentials,
     )
 
 
