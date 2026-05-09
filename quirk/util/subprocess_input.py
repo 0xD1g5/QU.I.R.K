@@ -68,6 +68,11 @@ _SHELL_METACHARS: re.Pattern[str] = re.compile(r"[;|&$`<>*?()\\\s]")
 # Starts with an alphanumeric character; max 255 chars total.
 _IMAGE_REF_RE: re.Pattern[str] = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._\-/:@]{0,254}$")
 
+# Local-filesystem / daemon-socket scheme prefixes that must be blocked.
+# These cause Syft/Trivy to read from the local filesystem or Docker daemon
+# rather than pull from a registry (analogous to the blocked dir:/file: vectors).
+_LOCAL_REF_PREFIXES = ("dir:", "file:", "oci:", "docker-daemon:", "podman:", "docker-archive:")
+
 # Pattern for stripping ASCII control characters (D-08).
 _CTRL_RE: re.Pattern[str] = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -140,8 +145,9 @@ def validate_image_ref(r: str) -> ValidationResult:
 
     Rejects:
     - Refs starting with ``-`` → RC_LEADING_DASH (argv injection guard).
-    - Refs starting with ``dir:`` or ``file:`` → RC_INVALID_IMAGE_REF
-      (Syft/Trivy local-filesystem escape vectors).
+    - Refs starting with any local-access prefix (``dir:``, ``file:``, ``oci:``,
+      ``docker-daemon:``, ``podman:``, ``docker-archive:``) → RC_INVALID_IMAGE_REF
+      (Syft/Trivy local-filesystem / daemon-socket escape vectors).
     - Refs containing shell metacharacters → RC_SHELL_METACHAR.
     - Empty string or refs not matching the OCI distribution-spec regex →
       RC_INVALID_IMAGE_REF.
@@ -157,7 +163,7 @@ def validate_image_ref(r: str) -> ValidationResult:
     if r.startswith("-"):
         return ValidationResult(False, RC_LEADING_DASH, _redact_preview(r))
 
-    if r.startswith("dir:") or r.startswith("file:"):
+    if any(r.startswith(p) for p in _LOCAL_REF_PREFIXES):
         return ValidationResult(False, RC_INVALID_IMAGE_REF, _redact_preview(r))
 
     if _SHELL_METACHARS.search(r):
