@@ -1,98 +1,196 @@
-# Requirements: QU.I.R.K. v4.7 Governance & Compliance Platform
+# Requirements: QU.I.R.K. v4.8 Pre-Primetime Hardening + Operating Model
 
-**Defined:** 2026-05-05
+**Defined:** 2026-05-09
 **Core Value:** Complete, defensible cryptographic inventory with a CBOM deliverable and quantum-readiness score — handed to a client in under two hours.
 
-## v4.7 Requirements
+**Milestone goal:** Close all 15 audit-identified blockers (Wave A) and ship the operating-model features that turn QU.I.R.K. into a deploy-and-forget platform (Wave B). Wave A is gating; Wave B cannot start until all Wave A phases are complete.
 
-Requirements for the Governance & Compliance Platform milestone. Each maps to roadmap phases.
+**Source documents:**
+- Audit: `.planning/audit-2026-05-08/AUDIT-SUMMARY.md` (44 blockers, 96 warnings, 29 info across 116 files / 6 subsystems)
+- Outlook: `.planning/HORIZON.md` — v4.8 framed as primetime cutover
 
-### Compliance Extensions
+---
+
+## v4.8 Requirements
+
+### Wave A — Pre-Primetime Hardening (gates Wave B)
+
+#### Scanner Security Hardening
+*Closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`). Phase 57.*
+
+- [ ] **HARDEN-SCAN-01**: JWKS fetch in `quirk/scanner/api_scanner.py` enables TLS verification by default; the operator-facing flag to disable verification (if any) is renamed, gated behind an explicit config knob, and emits a HIGH advisory finding when used (closes CR-01)
+- [ ] **HARDEN-SCAN-02**: SAML scanner HTTP fetcher routes through a shared URL-allowlist helper that rejects RFC1918 ranges, link-local, loopback, `file://`, and metadata-service IPs (169.254.169.254, fd00:ec2::254) unless an explicit `--allow-internal-targets` flag is set (closes CR-04)
+- [ ] **HARDEN-SCAN-03**: `quirk/scanner/source_scanner.py` validates `repo_path` against a path-allowlist (existing local directory, no shell metacharacters) before invoking `subprocess.run` for semgrep (closes CR-02)
+- [ ] **HARDEN-SCAN-04**: `quirk/scanner/container_scanner.py` validates `image_ref` against a regex allowlist (registry/image:tag form), rejecting `dir:/`, `file://`, and any value containing shell metacharacters before invoking syft (closes CR-03)
+- [ ] **HARDEN-SCAN-05**: `quirk/scanner/broker_scanner.py` no longer ships a hardcoded `guest:guest` Basic-auth credential to every host; default behavior probes anonymously, and any credential probe requires an explicit per-target opt-in via config (closes CR-05)
+- [ ] **HARDEN-SCAN-06**: Broker management API and Redis probes default to TLS-required and reject `ssl_cert_reqs="none"`; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding (closes CR-06)
+
+#### Dashboard API Hardening
+*Closes audit blockers 7–10 (`api-cli-core/CR-01..CR-03, CR-09`). Phase 58.*
+
+- [ ] **HARDEN-API-01**: Every mutating dashboard route requires a single-user bearer token loaded from config or environment; missing/invalid token returns 401 before route logic runs; CSRF token required on browser-form requests (closes CR-03 — auth)
+- [ ] **HARDEN-API-02**: CORS middleware is locked down to a configurable allowlist (default `127.0.0.1` and `localhost` only); preflight rejection for unknown origins returns 403 with no body (closes CR-03 — CORS)
+- [ ] **HARDEN-API-03**: Rate-limit middleware applies per-route token-bucket limits to mutating routes (default 60 req/min/IP) with 429 on exhaustion; informational routes exempted (closes CR-03 — rate-limit)
+- [ ] **HARDEN-API-04**: `quirk init` validates `output_path` against a path-traversal allowlist (resolved path must descend from CWD or an explicit `--target` directory); rejects `..`, absolute paths outside allowlist, and symlinks pointing outside the allowlist (closes CR-01)
+- [ ] **HARDEN-API-05**: `routes/pdf.py` validates `QUIRK_SERVE_PORT` against an integer-port allowlist (1024–65535) and binds outbound fetches to localhost only (closes CR-02)
+- [ ] **HARDEN-API-06**: `@file` target loading enforces a path allowlist (no traversal outside `--target` dir, no absolute paths to `/etc`, `/proc`, `/sys`, `/dev`), a maximum file size (default 1 MB), and a maximum target-line count (default 10,000) (closes CR-09)
+
+#### Credential Leakage Sweep
+*Closes audit blocker 11 + Pattern A (cross-subsystem). Phase 59.*
+
+- [ ] **LEAK-01**: A shared `quirk/util/safe_exc.py::safe_str(exc)` helper returns `f"{type(exc).__name__}"` by default and scrubs known-sensitive substrings (token-like strings, connection-string passwords, GCP ADC paths) from the exception message before returning
+- [ ] **LEAK-02**: Every connector that persists `scan_error` (vault, GCP, AWS, DB, broker, email, identity) routes exception text through `safe_str(exc)`; raw exception stringification (`f"...: {exc}"`) is removed from connector error paths
+- [ ] **LEAK-03**: A pytest gate enumerates all `scan_error` writes via AST scan and fails the build if any new caller bypasses `safe_str(exc)` (mirrors the `_build_finding` chokepoint pattern from v4.6 Phase 48)
+
+#### Score Arithmetic Correctness
+*Closes audit blockers 12, 15 + Pattern E. Phase 60.*
+
+- [ ] **SCORE-01**: Total readiness score is clamped to `[0, 100]` at the top-level emission point in `quirk/intelligence/scoring.py`; reports never display a value above 100 (closes CR-06)
+- [ ] **SCORE-02**: QRAMM profile multiplier is clamped server-side to `[0.8, 1.5]` regardless of client-supplied value; client values outside the range are rejected with 400 and the canonical range is documented in the API schema (closes BL-01)
+- [ ] **SCORE-03**: Confidence bonus is awarded only when at least one TLS endpoint is scanned; zero-data scans receive zero confidence bonus instead of the current 20-point default
+- [ ] **SCORE-04**: QRAMM maturity threshold bands are closed and contiguous — every score in `[0, 100]` maps to exactly one maturity level; threshold gap audit covered by parametrized test sweeping at 0.5-point increments
+
+#### CBOM Coverage + Report Sanitization
+*Closes audit blockers 13, 14. Phase 61.*
+
+- [ ] **CBOM-COVER-01**: CBOM Pass-1 emits at least one algorithm component for each of the 12+ protocol families currently dropping zero algos (database, registry, source, ssh-weak, storage-s3, broker subfamilies, email subfamilies, vault, identity-secondary); per-protocol coverage assertion in test suite (closes CR-01)
+- [ ] **CBOM-COVER-02**: VAULT classification is consistent across Pass-1 / Pass-2 / Pass-3 — Pass-1 routes to a vault-specific branch (not the TLS branch), Pass-2 and Pass-3 emit the same evidence claims about the vault endpoint
+- [ ] **REPORT-SAN-01**: All adversary-controllable strings (host, cipher_suite, cert_subject, cert_issuer, finding text, banner, evidence note) interpolated into markdown report tables are escaped so that pipe (`|`) and newline characters cannot break table rendering or inject content (closes CR-07)
+- [ ] **REPORT-SAN-02**: A pytest fixture renders both the technical and executive markdown reports against a corpus of adversarial inputs (pipes, newlines, backticks, HTML entities, control characters) and asserts the output is a valid GFM table
+
+#### React Hook Cancellation Pattern
+*Closes Pattern C (cross-frontend). Phase 62.*
+
+- [ ] **HOOK-01**: A standardized cancellation pattern (`useCancellableFetch` or equivalent) is used by every data-fetch hook in `src/dashboard/src/hooks/` (`useScanData`, `useQRAMMSession`, `useTrendData`, etc.); each hook gates state-setters with an `if (!cancelled)` check after every async boundary
+- [ ] **HOOK-02**: QRAMM debounce coalescing is fixed so that rapid answer changes during a single debounce window POST a single coalesced batch instead of stale per-keystroke partials
+- [ ] **HOOK-03**: Auto-fill confirm round-trip preserves the badge-removal contract (badge disappears when `confirmed_at` is set) without requiring a full session refetch
+- [ ] **HOOK-04**: A custom ESLint rule (or codemod check in CI) flags `useEffect` blocks that call `setState` from an async branch without an `if (!cancelled)` guard
+
+### Wave B — Operating Model (gates on Wave A complete)
+
+#### Scheduled / Continuous Scanning
+*BACK-25. Phase 63.*
+
+- [ ] **SCHED-01**: Operator can register a scan schedule via `quirk schedule add --name <X> --cron <expr> --target <Y>` that persists to a new `scheduled_scans` SQLite table with cron expression, target spec, profile, and enabled flag
+- [ ] **SCHED-02**: A `quirk scheduler run` long-running mode dispatches scheduled scans at their cron times, writes scan results to the standard scan output path, and surfaces dispatch status to the dashboard
+- [ ] **SCHED-03**: Dashboard `/schedules` route lists scheduled scans, their next-run time, last-run status, and provides enable/disable toggles
+
+#### Trend Analysis Foundation
+*BACK-21. Phase 64.*
+
+- [ ] **TREND-01**: The dashboard `/trends` route renders a multi-scan timeline of overall readiness score, per-pillar subscores, and finding counts across the last N scans (default 30)
+- [ ] **TREND-02**: Trend regressions (score drop ≥ 5 points OR new HIGH/CRITICAL finding category) are surfaced as alert chips on the dashboard home with deep-links to the regressing scan
+
+#### Dashboard-Initiated Scan
+*BACK-86 slice 1. Phase 65.*
+
+- [ ] **UI-SCAN-01**: A `/scan/new` dashboard route lets operators configure a scan (target spec, profile, options) via form, validate inputs against the same Pydantic schema the CLI uses, and submit
+- [ ] **UI-SCAN-02**: Scan submission spawns the scan via the dashboard backend with a job ID; a live status page polls progress and streams scanner stage transitions to the UI
+- [ ] **UI-SCAN-03**: On scan completion, the UI navigates to the scan results view and the new scan is selectable from the scan switcher
+
+#### Dashboard Scan History + Clone/Compare
+*BACK-86 slice 2. Phase 66.*
+
+- [ ] **UI-HIST-01**: A `/scans` route lists all scans with date, target, profile, overall score, and a "Clone configuration" button that pre-fills the `/scan/new` form
+- [ ] **UI-HIST-02**: A "Compare" mode on `/scans` lets the operator pick any two scans and renders a diff view (score deltas, added/removed findings, changed endpoint posture)
+
+#### Resumable / Partial-Failure Scans
+*Phase 67.*
+
+- [ ] **RESUME-01**: A scan that crashes mid-run leaves a recoverable checkpoint in `scan_checkpoints` SQLite table; `quirk scan --resume <scan-id>` continues from the last completed scanner stage
+- [ ] **RESUME-02**: Per-scanner failures (e.g., one cloud connector errors but TLS succeeds) no longer abort the whole scan — the scan completes with a `partial_failures` array in the output and a per-scanner status panel in the dashboard
+
+#### Operator Error-Message Pass
+*Phase 68.*
+
+- [ ] **UX-01**: Every operator-facing error path (CLI exit, dashboard 4xx/5xx, scan_error_category rows) includes a one-line cause, a one-line remediation hint, and a stable error code; an `quirk errors` reference page documents all codes
+- [ ] **UX-02**: First-run install-day errors (missing extras, missing nmap binary, port-conflict on `quirk serve`) render with the same one-line-cause + one-line-fix format
+
+---
+
+## Validated Requirements
+
+### v4.7 — Governance & Compliance Platform (Shipped 2026-05-08)
+
+#### Compliance Extensions
 
 - [x] **COMPLY-10**: CBOM Pass-1 algorithm components carry a 3-tier FIPS 140-3 status annotation (`certified` / `approved` / `non-approved`) via `Component.properties` — only endpoints with verifiable CMVP-validated evidence receive `certified`; all others receive `approved` or `non-approved` based on algorithm classification
 - [x] **COMPLY-11**: SOC2 CC6.x controls (cryptography-relevant Common Criteria subset) are mapped to QUIRK finding categories in `COMPLIANCE_MAP` via a `_soc2()` helper following the existing `_pci()` / `_hipaa()` / `_fips()` builder pattern
 - [x] **COMPLY-12**: ISO 27001:2022 Annex A controls (8.x clause numbering, not 2013 A.x.x) are mapped to QUIRK finding categories via an `_iso()` helper; the framework entry declares `version: "ISO 27001:2022"` and is unit-tested to reject 2013-style `A.x.x` control IDs
 
-### QRAMM Core Infrastructure
+#### QRAMM Core Infrastructure
 
-- [x] **QRAMM-01**: SQLite gains three new normalized tables — `qramm_sessions` (lifecycle, `model_version`, `profile_multiplier`, `status`), `qramm_answers` (`assessment_id` FK, `question_number`, `dimension`, `practice_area`, `answer_value`, `suggested_answer`, `confirmed_at`, `evidence_source`), `qramm_profiles` (org profile inputs → computed multiplier 0.8–1.5×) — created via `_ensure_qramm_tables()` in `db.py:init_db()`, no changes to `CryptoEndpoint`
-- [x] **QRAMM-02**: FastAPI router at `/api/qramm/` provides CRUD endpoints for the assessment lifecycle: create session, read session, save/update answers, score session, delete session
-- [x] **QRAMM-03**: `quirk/qramm/questions.py` contains the full 120-question catalog as a versioned `QRAMM_QUESTIONS` constant (4 dimensions × 3 practices × 10 questions); each entry carries `question_number`, `dimension`, `practice_area`, `text`, and `maturity_labels`
-- [x] **QRAMM-04**: `quirk/qramm/scoring.py` computes dimension scores using the weakest-link minimum rule (dimension score = `min()` of its 3 practice scores, NOT average); profile multiplier applied to weighted dimension scores; overall score = average of 4 weighted dimensions; scoring logic is unit-tested to match the CSNP QRAMM toolkit reference values
+- [x] **QRAMM-01**: SQLite gains three new normalized tables — `qramm_sessions`, `qramm_answers`, `qramm_profiles` — created via `_ensure_qramm_tables()` in `db.py:init_db()`
+- [x] **QRAMM-02**: FastAPI router at `/api/qramm/` provides CRUD endpoints for the assessment lifecycle
+- [x] **QRAMM-03**: `quirk/qramm/questions.py` contains the full 120-question catalog as a versioned `QRAMM_QUESTIONS` constant
+- [x] **QRAMM-04**: `quirk/qramm/scoring.py` computes dimension scores using the weakest-link minimum rule
 
-### QRAMM Staleness Enforcement
+#### QRAMM Staleness Enforcement
 
-- [x] **QRAMM-05**: `QRAMM_MODEL` module constant in `quirk/qramm/model_meta.py` carries `qramm_version` (string), `last_verified` (ISO date), and `source_url` (`https://qramm.org`) — mirroring the compliance staleness pattern from v4.6
-- [x] **QRAMM-06**: CI pytest gate fails when `QRAMM_MODEL.last_verified` is more than 90 days old; supports injectable `QUIRK_CI_STALENESS_OVERRIDE_DATE` env var for CI boundary testing
-- [x] **QRAMM-07**: `quirk qramm status` CLI subcommand displays `qramm_version`, `last_verified`, days remaining until stale, and current staleness verdict; exits non-zero when stale
+- [x] **QRAMM-05**: `QRAMM_MODEL` module constant in `quirk/qramm/model_meta.py` carries `qramm_version`, `last_verified`, and `source_url`
+- [x] **QRAMM-06**: CI pytest gate fails when `QRAMM_MODEL.last_verified` is more than 90 days old
+- [x] **QRAMM-07**: `quirk qramm status` CLI subcommand displays staleness metadata and verdict
 
-### QRAMM Assessment Experience
+#### QRAMM Assessment Experience
 
-- [ ] **QRAMM-08**: React QRAMM Assessment page presents 120 questions across 4 dimension tabs (CVI, SGRM, DPE, ITR); each question displays a 1–4 radio scale with maturity-level labels (Basic / Developing / Established / Optimizing) and an optional evidence note field; a progress tracker shows questions answered per dimension
-- [ ] **QRAMM-09**: Org Profile wizard collects industry sector, organization size, geographic scope, data sensitivity, and regulatory obligations; computes a profile multiplier (0.8–1.5×) before the assessment begins and stores it in `qramm_profiles`
-- [ ] **QRAMM-10**: All 120 assessment answers live in top-level React context above all route changes; every answer change triggers a debounced `POST /api/qramm/assessment/draft` so browser refresh restores in-progress answers without data loss
-- [ ] **QRAMM-11**: QRAMM Scorecard displays: (a) radar chart (4-axis Recharts `RadarChart`, rendered as static SVG for PDF compatibility), (b) dimension summary table (raw score, weighted score, industry benchmark, maturity level, completion %), (c) maturity distribution (count of practices at each maturity level); real-time score recalculation is disabled mid-session — scores update only on explicit "Calculate Score" action
+- [x] **QRAMM-08**: React QRAMM Assessment page presents 120 questions across 4 dimension tabs
+- [x] **QRAMM-09**: Org Profile wizard collects organization inputs and computes profile multiplier
+- [x] **QRAMM-10**: All 120 assessment answers live in top-level React context with debounced draft persistence
+- [x] **QRAMM-11**: QRAMM Scorecard displays radar chart, dimension summary table, and maturity distribution
 
-### QRAMM Evidence Bridge
+#### QRAMM Evidence Bridge
 
-- [x] **QRAMM-12**: At QRAMM assessment session creation (`POST /api/qramm/sessions`), the evidence bridge auto-populates CVI dimension questions (~30 questions) by reading the latest scan's `CryptoEndpoint` rows via the SESSION_BRACKET scan-window pattern; `quirk/qramm/evidence_bridge.py` does NOT import `risk_engine` (circular import prevention)
-- [x] **QRAMM-13**: Auto-populated answers are stored in `qramm_answers.suggested_answer` with `requires_confirmation: true`; `answer_value` remains `null` until a human confirms; only rows with a non-null `confirmed_at` timestamp contribute to the final maturity score
-- [x] **QRAMM-14**: Auto-filled answers display an "Auto-filled from scan" badge in the assessment UI and remain fully editable; the badge is removed when the human modifies or confirms the answer
+- [x] **QRAMM-12**: At session creation the evidence bridge auto-populates CVI dimension questions via SESSION_BRACKET pattern
+- [x] **QRAMM-13**: Auto-populated answers are stored in `suggested_answer` with `requires_confirmation: true`
+- [x] **QRAMM-14**: Auto-filled answers display an "Auto-filled from scan" badge; badge removed when human modifies/confirms
 
-### QRAMM Governance Artifacts
+#### QRAMM Governance Artifacts
 
-- [x] **QRAMM-15**: Dashboard includes a QRAMM Compliance Mapping view showing an 8-framework coverage table (NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, BSI TR-02102) with per-practice relevance scores derived from the active assessment session; view never displays a "fully compliant" badge and never shows a coverage percentage above the scanner's actual coverage ceiling
-- [x] **QRAMM-16**: Combined PDF export (`/print` route) includes a QRAMM section (executive QRAMM summary, dimension scorecard table, static SVG radar chart, compliance framework mapping summary) starting on a new page via `@media print { page-break-before: always }` — existing Technical Findings section layout is not regressed
+- [x] **QRAMM-15**: Dashboard QRAMM Compliance Mapping view shows 8-framework coverage table
+- [x] **QRAMM-16**: Combined PDF export includes a QRAMM section starting on a new page
 
-### Health & Diagnostics
+#### Health & Diagnostics
 
-- [x] **DOCS-05**: `quirk doctor` CLI subcommand performs a health check across 8 categories — Python environment, scanner binaries (nmap/syft/semgrep), compliance framework freshness, QRAMM framework freshness, database connectivity, configuration validity, network connectivity (informational), dashboard process status (informational) — and displays results with `[✓]` / `[!]` / `[✗]` symbols using `rich`; exits with code 1 if any non-informational check fails
+- [x] **DOCS-05**: `quirk doctor` CLI subcommand performs a health check across 8 categories
 
-### Tech Debt
+#### Tech Debt
 
-- [x] **DEBT-01**: All `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)` across `quirk/logging_util.py`, `quirk/discovery/nmap_provider.py`, and any other affected modules (BACK-56); resolves Python 3.12+ `DeprecationWarning`
-- [x] **DEBT-02**: `lab.sh` PROFILE_ARGS CLI precedence fixed — inbound env value is snapshotted before `source .env` so `PROFILE_ARGS="--profile <name>" ./lab.sh up` correctly overrides `.env` defaults (BACK-87)
-- [x] **DEBT-03**: `run-stats-*.json` output includes `ports_scanned` (sorted list of all ports that entered the scan pipeline) and `hosts_scanned` (sorted list of all scanned hosts), closing UAT-3-02 verification gap (BACK-85)
-- [x] **DEBT-04**: `quirk/scanner/saml_scanner.py` migrated from deprecated `defusedxml.lxml` to raw `lxml.etree` with `resolve_entities=False` and `no_network=True` parser options; all 27 existing SAML tests pass GREEN (BACK-67)
+- [x] **DEBT-01**: All `datetime.utcnow()` calls replaced with `datetime.now(timezone.utc)` (BACK-56)
+- [x] **DEBT-02**: `lab.sh` PROFILE_ARGS CLI precedence fixed (BACK-87)
+- [x] **DEBT-03**: `run-stats-*.json` includes `ports_scanned` and `hosts_scanned` (BACK-85)
+- [x] **DEBT-04**: SAML scanner migrated from `defusedxml.lxml` to raw `lxml.etree` (BACK-67)
+
+### Earlier milestones (v4.0 – v4.6)
+
+See `.planning/MILESTONES.md` for full validated requirement history per milestone.
 
 ---
 
 ## Future Requirements
 
-Deferred to v4.8 or later — not in scope for v4.7.
+Items that may surface in v4.9+ or later:
 
-### QRAMM Coverage Expansion
-
-- **QRAMM-F01**: Evidence bridge extended to SGRM, DPE, and ITR dimensions (requires validation of CVI bridge quality first)
-- **QRAMM-F02**: QRAMM standalone PDF export (governance-only delivery, without full QUIRK technical findings)
-- **QRAMM-F03**: Multi-session QRAMM history — compare assessment scores across time to track maturity improvement
-
-### Compliance Depth
-
-- **COMPLY-F01**: CMMC 2.0 SC.3.177/SC.3.187 control mapping
-- **COMPLY-F02**: NIST CSF 2.0 Protect function mapping
-- **COMPLY-F03**: FedRAMP compliance mapping (deferred — hundreds of controls, misleading without full coverage)
-
-### Platform
-
-- **PLATFORM-F01**: Dashboard-initiated scan configuration and launch (BACK-86) — deferred to SaaS milestone
+- **CBOM Coverage Expansion** — protocol families beyond the 12+ closed in v4.8
+- **Trend Analysis Depth** — anomaly detection, baseline drift alerting, multi-tenant trend isolation
+- **Distributed Scanning Nodes** — multi-node scan dispatch, central aggregation (BACK-26)
+- **Multi-User Auth** — beyond v4.8's single-user bearer token: roles, audit log, SSO
 
 ---
 
 ## Out of Scope
 
-Explicitly excluded from v4.7. Documented to prevent scope creep.
+Items explicitly deferred and not in v4.8:
 
-| Feature | Reason |
-|---------|--------|
-| QRAMM evidence bridge for SGRM/DPE/ITR | Requires human judgment; auto-population would inflate governance scores; scoped to CVI only for v4.7 |
-| AI inference for QRAMM answers | Only ~25% of questions have technical evidence equivalents; governance theater risk |
-| QRAMM Excel import | Unversioned file format, no stable API contract |
-| Real-time score updates during answer entry | Weakest-link rule makes intermediate scores misleading |
-| FedRAMP compliance mapping | Hundreds of controls; scanner cannot satisfy process controls |
-| "100% compliant" badges for any framework | Scanner covers cryptographic controls only; process controls require human attestation |
-| Authenticated scan mode (BACK-64) | Platform-level concern; requires credential security review gate |
-| Dashboard-initiated scanning (BACK-86) | Targeted for SaaS milestone |
+| Item | Reason |
+|---|---|
+| Markdown injection in reports → HTML/PDF surface | Wave A REPORT-SAN-01 handles markdown; HTML/PDF rendering injection is a separate audit shape |
+| Advisor false-positives (audit WR-09 scanners-cloud) | Non-blocking polish; defer to dedicated tuning pass |
+| Dead code cleanup (`tls_scanner.py`, `intelligence/schema.py`, `migration_planner.py` stub) | Fits v5.x chaos lab + tech debt sweep, not v4.8 hardening |
+| `risk_engine.py` rename (misnamed — it's a findings evaluator) | Pure rename; defer to v5.x tech debt sweep |
+| Multi-user / RBAC dashboard | v4.8 ships single-user bearer token; multi-user is a separate milestone |
+| Performance profiling pass | Audit excluded runtime measurement; warrants dedicated phase |
+| Test correctness audit (excluded from 2026-05-08 audit) | Separate audit shape |
+| Chaos lab audit (excluded from 2026-05-08 audit) | Separate audit shape |
 
 ---
 
@@ -102,28 +200,4 @@ Populated by the roadmapper. Updated at each phase transition.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QRAMM-01 | Phase 51 | Complete |
-| QRAMM-02 | Phase 51 | Complete |
-| QRAMM-03 | Phase 51 | Complete |
-| QRAMM-04 | Phase 51 | Complete |
-| DEBT-01 | Phase 51 | Complete |
-| COMPLY-10 | Phase 52 | Complete |
-| COMPLY-11 | Phase 52 | Complete |
-| COMPLY-12 | Phase 52 | Complete |
-| DOCS-05 | Phase 52 | Complete |
-| DEBT-02 | Phase 52 | Complete |
-| DEBT-03 | Phase 52 | Complete |
-| DEBT-04 | Phase 52 | Complete |
-| QRAMM-12 | Phase 53 | Complete |
-| QRAMM-13 | Phase 53 | Complete |
-| QRAMM-14 | Phase 53 | Complete |
-| QRAMM-08 | Phase 54 | Pending |
-| QRAMM-09 | Phase 54 | Pending |
-| QRAMM-10 | Phase 54 | Pending |
-| QRAMM-11 | Phase 54 | Pending |
-| QRAMM-05 | Phase 55 | Complete (Phase 55) |
-| QRAMM-06 | Phase 55 | Complete (Phase 55 + 56.1) |
-| QRAMM-07 | Phase 55 | Complete (Phase 55 + 56.1) |
-| QRAMM-15 | Phase 55 | Complete |
-| QRAMM-16 | Phase 56 | Complete |
-| COMPLY-08 | Phase 49 | Complete — CI-protected by python-staleness.yml (Phase 56.1) |
+| _(filled by roadmapper)_ | _(filled by roadmapper)_ | _(filled by roadmapper)_ |
