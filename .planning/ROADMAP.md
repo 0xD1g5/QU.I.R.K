@@ -1207,7 +1207,13 @@ Plans:
   3. `quirk/scanner/source_scanner.py` and `quirk/scanner/container_scanner.py` reject `repo_path` / `image_ref` containing shell metacharacters, `..`, or `dir:/` / `file://` prefixes before invoking semgrep / syft; rejected inputs produce a structured `scan_error_category="invalid_input"` row, never a subprocess call
   4. The broker scanner sends NO credentials by default — no `guest:guest`, no Basic-auth header — and TLS-required is the default for management API + Redis probes; cleartext probes require an explicit `--allow-cleartext-broker-probe` flag and emit a HIGH advisory finding
   5. Running the full scanner test suite plus the chaos-lab smoke (`./lab.sh up && quirk scan --target <lab>`) produces zero outbound requests with `verify=False`, zero hardcoded credentials in any captured HTTP body, and zero subprocess invocations with un-sanitized arguments
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 57-01-PLAN.md — Shared util helpers (url_allowlist + subprocess_input) + tests
+- [ ] 57-02-PLAN.md — SecurityCfg + BrokerCredential config wiring + CLI flags + models.py docstring (D-06)
+- [ ] 57-03-PLAN.md — JWT scanner CR-01 (verify=True default + JWKS advisory) + ROADMAP D-11 correction
+- [ ] 57-04-PLAN.md — SAML scanner CR-04 (validate_external_url SSRF guard + internal-target advisory)
+- [ ] 57-05-PLAN.md — Source + container scanners CR-02/CR-03 (subprocess input validation + argv `--`)
+- [ ] 57-06-PLAN.md — Broker scanner CR-05/CR-06 (no guest:guest, TLS-required default, advisories) + AUDIT-TASKS.md flip
 
 ### Phase 58: Dashboard API Hardening
 **Goal**: The dashboard API is safe to expose beyond the loopback interface — every mutating route requires auth, CORS is locked down, rate limiting throttles abuse, and operator-supplied paths cannot escape their allowlists. Closes audit blockers 7–10 (`api-cli-core/CR-01, CR-02, CR-03, CR-09`).
