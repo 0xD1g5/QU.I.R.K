@@ -154,7 +154,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - Resumable / partial-failure scans
 - Operator error-message pass
 
-## Current State: v4.8 Initialized — Defining Requirements
+## Current State: v4.8 In Progress — Wave A Phase 3/6 Complete
+
+Phase 59 complete (2026-05-10) — credential leakage sweep: `safe_str()` scrubbing helper built (LEAK-01), applied to all 9 leaky callsites across scanner/discovery/CBOM modules (LEAK-02), AST CI gate enforcing no-raw-exc in `scan_error` writes (LEAK-03). 32/32 tests pass.
 
 v4.8 "Pre-Primetime Hardening + Operating Model" initialized 2026-05-09 following the comprehensive pre-v4.8 codebase audit (2026-05-08). Audit findings: 41 blockers, 91 warnings, 22 info across 116 files in 6 subsystems; top-15 blockers triaged as gating for primetime cutover. Wave A (6 hardening phases) blocks Wave B (6 operating-model phases) — shipping operating-model features on top of unhardened security/correctness foundations would invert the primetime quality goal.
 
@@ -219,7 +221,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-09
+*Last updated: 2026-05-10
 
 ## Evolution
 
