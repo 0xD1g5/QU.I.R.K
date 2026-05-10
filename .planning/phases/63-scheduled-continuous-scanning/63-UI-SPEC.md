@@ -67,7 +67,7 @@ Declared values (all multiples of 4, following existing project convention):
 | Body | 14px (`text-sm`) | 400 (regular) | 1.5 | system-ui / sans | existing pages default |
 | Label / column header | 12px (`text-xs`) | 600 (semibold) | 1.4 | system-ui / sans | findings.tsx table headers |
 | Heading (page title) | 20px (`text-xl`) | 600 (semibold) | 1.2 | system-ui / sans | existing page titles |
-| Mono data (cron expr, timestamps, paths) | 13px (`text-[13px] font-mono`) | 400 (regular) | 1.4 | JetBrains Mono | src/index.css `--ds-font-mono` |
+| Mono data (cron expr, timestamps, paths) | 14px (`text-sm font-mono`) | 400 (regular) | 1.4 | JetBrains Mono | src/index.css `--ds-font-mono` |
 
 **Rules:**
 - Cron expressions, next-run timestamps, last-run timestamps, and scan output paths must always render in `font-mono` using the `--ds-font-mono` stack.
@@ -158,9 +158,9 @@ Icon: `Calendar` from `lucide-react` for the sidebar nav item.
 |--------|---------|-------|
 | Name | `scheduled_scans.name` | `text-sm font-medium text-foreground` |
 | Target | `scheduled_scans.target` | `text-sm text-muted-foreground` |
-| Cron | `scheduled_scans.cron_expr` | `text-[13px] font-mono text-foreground` + Tooltip showing human-readable schedule |
-| Next Run | `next_run_at` (computed by API) | `text-[13px] font-mono text-muted-foreground` |
-| Last Run | `last_run_at` + status badge | Timestamp in `text-[13px] font-mono` + Badge for status |
+| Cron | `scheduled_scans.cron_expr` | `text-sm font-mono text-foreground` + Tooltip showing human-readable schedule |
+| Next Run | `next_run_at` (computed by API) | `text-sm font-mono text-muted-foreground` |
+| Last Run | `last_run_at` + status badge | Timestamp in `text-sm font-mono` + Badge for status |
 | Enabled | `Switch` component | Accent when on; muted when off |
 | Actions | `Button` variant="ghost" size="icon" | Delete icon button (`Trash2` from lucide) |
 
@@ -183,7 +183,7 @@ Icon: `Calendar` from `lucide-react` for the sidebar nav item.
 - Confirmation: `Dialog` with:
   - Title: "Delete schedule?"
   - Body: "This will permanently remove '{name}'. Running or pending dispatches will not be interrupted."
-  - Actions: Cancel (secondary Button) + "Delete" (destructive Button using `variant="destructive"`)
+  - Actions: "Keep Schedule" (secondary Button) + "Delete Schedule" (destructive Button using `variant="destructive"`)
 - On DELETE success: remove row from local state optimistically
 - On DELETE failure: show inline error in Dialog footer (`text-destructive text-sm`)
 
@@ -244,8 +244,8 @@ Import `Calendar` from `lucide-react`. Insert after the `TrendingUp` (Trends) en
 | Error state (load failure) | "Failed to load schedules. Check that the dashboard API is reachable." |
 | Delete dialog title | "Delete schedule?" |
 | Delete dialog body | "This will permanently remove '{name}'. Running or pending dispatches will not be interrupted." |
-| Delete confirm button | "Delete" |
-| Delete cancel button | "Cancel" |
+| Delete confirm button | "Delete Schedule" |
+| Delete cancel button | "Keep Schedule" |
 | Toggle aria-label (enabled) | "{name} — enabled" |
 | Toggle aria-label (disabled) | "{name} — disabled" |
 | Schedule never run | "—" (em dash) in Last Run column |
