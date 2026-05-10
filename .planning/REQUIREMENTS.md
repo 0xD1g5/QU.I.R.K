@@ -45,10 +45,10 @@
 #### Score Arithmetic Correctness
 *Closes audit blockers 12, 15 + Pattern E. Phase 60.*
 
-- [ ] **SCORE-01**: Total readiness score is clamped to `[0, 100]` at the top-level emission point in `quirk/intelligence/scoring.py`; reports never display a value above 100 (closes CR-06)
-- [ ] **SCORE-02**: QRAMM profile multiplier is clamped server-side to `[0.8, 1.5]` regardless of client-supplied value; client values outside the range are rejected with 400 and the canonical range is documented in the API schema (closes BL-01)
-- [ ] **SCORE-03**: Confidence bonus is awarded only when at least one TLS endpoint is scanned; zero-data scans receive zero confidence bonus instead of the current 20-point default
-- [ ] **SCORE-04**: QRAMM maturity threshold bands are closed and contiguous — every score in `[0, 100]` maps to exactly one maturity level; threshold gap audit covered by parametrized test sweeping at 0.5-point increments
+- [x] **SCORE-01**: Total readiness score is clamped to `[0, 100]` at the top-level emission point in `quirk/intelligence/scoring.py`; reports never display a value above 100 (closes CR-06)
+- [x] **SCORE-02**: QRAMM profile multiplier is clamped server-side to `[0.8, 1.5]` regardless of client-supplied value; client values outside the range are rejected with 400 and the canonical range is documented in the API schema (closes BL-01)
+- [x] **SCORE-03**: Confidence bonus is awarded only when at least one TLS endpoint is scanned; zero-data scans receive zero confidence bonus instead of the current 20-point default
+- [x] **SCORE-04**: QRAMM maturity threshold bands are closed and contiguous — every score in `[0, 100]` maps to exactly one maturity level; threshold gap audit covered by parametrized test sweeping at 0.5-point increments
 
 #### CBOM Coverage + Report Sanitization
 *Closes audit blockers 13, 14. Phase 61.*
@@ -217,10 +217,10 @@ Populated by the roadmapper. Updated at each phase transition.
 | LEAK-01 | Phase 59 | Complete |
 | LEAK-02 | Phase 59 | Complete |
 | LEAK-03 | Phase 59 | Complete |
-| SCORE-01 | Phase 60 | Pending |
-| SCORE-02 | Phase 60 | Pending |
-| SCORE-03 | Phase 60 | Pending |
-| SCORE-04 | Phase 60 | Pending |
+| SCORE-01 | Phase 60 | Complete |
+| SCORE-02 | Phase 60 | Complete |
+| SCORE-03 | Phase 60 | Complete |
+| SCORE-04 | Phase 60 | Complete |
 | CBOM-COVER-01 | Phase 61 | Pending |
 | CBOM-COVER-02 | Phase 61 | Pending |
 | REPORT-SAN-01 | Phase 61 | Pending |
