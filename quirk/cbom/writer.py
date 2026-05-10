@@ -22,6 +22,7 @@ from cyclonedx.validation.json import (
     JsonStrictValidator,
     MissingOptionalDependencyException,
 )
+from quirk.util.safe_exc import safe_str
 
 
 def write_cbom_files(
@@ -75,7 +76,7 @@ def write_cbom_files(
                     host="cbom_validator",
                     port=0,
                     protocol="ADVISORY",
-                    scan_error=f"CBOM JSON failed schema validation: {err}",
+                    scan_error=f"CBOM JSON failed schema validation: {safe_str(Exception(str(err)))}",
                     scan_error_category="coverage_gap",
                 )
             )
@@ -90,7 +91,7 @@ def write_cbom_files(
                     host="cbom_validator",
                     port=0,
                     protocol="ADVISORY",
-                    scan_error=f"CBOM JSON validation error: {exc}",
+                    scan_error=f"CBOM JSON validation error: {safe_str(exc)}",
                     scan_error_category="coverage_gap",
                 )
             )
