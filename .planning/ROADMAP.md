@@ -1253,7 +1253,7 @@ Plans:
   3. A pytest gate enumerates `scan_error` writes via AST scan and fails the build if any caller bypasses `safe_str(exc)` — mirroring the `_build_finding` chokepoint pattern from v4.6 Phase 48
   4. Replaying a corpus of v4.7 scan databases through a leak detector finds zero credential-shaped substrings in any `scan_error` value
 **Plans**: 3 plans
-  - [ ] 59-01-PLAN.md — Build safe_str helper + unit corpus (LEAK-01)
+  - [x] 59-01-PLAN.md — Build safe_str helper + unit corpus (LEAK-01)
   - [ ] 59-02-PLAN.md — Apply safe_str to 8 leaky callsites + unify db_connector (LEAK-02)
   - [ ] 59-03-PLAN.md — AST CI gate + corpus replay regression (LEAK-03)
 
@@ -1367,7 +1367,7 @@ Plans:
 |-------|------|----------------|--------|-----------|
 | 57. Scanner Security Hardening | A | 6/6 | Complete   | 2026-05-09 |
 | 58. Dashboard API Hardening | A | 6/7 | In Progress|  |
-| 59. Credential Leakage Sweep | A | 0/TBD | Not started | - |
+| 59. Credential Leakage Sweep | A | 1/3 | In Progress|  |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
 | 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
 | 62. React Hook Cancellation Pattern | A | 0/TBD | Not started | - |
