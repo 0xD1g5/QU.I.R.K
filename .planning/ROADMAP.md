@@ -1337,8 +1337,8 @@ Plans:
   2. A regression — score drop ≥ 5 points OR a new HIGH/CRITICAL finding category vs the previous scan — surfaces as an alert chip on the dashboard home with a deep-link to the regressing scan; the chip is dismissible and the dismissal is per-scan, not global
 **Plans**: 3 plans
 **Wave 1** *(parallel)*
-- [ ] 64-01-PLAN.md — Backend: Wave 0 tests + TrendTimelineResponse schemas + GET /api/trends/timeline?n=30 endpoint (TREND-01 backend)
-- [ ] 64-03-PLAN.md — RegressionAlertChip component + ExecutivePage insertion (TREND-02; consumes existing /api/trends, no Plan 01 dependency)
+- [x] 64-01-PLAN.md — Backend: Wave 0 tests + TrendTimelineResponse schemas + GET /api/trends/timeline?n=30 endpoint (TREND-01 backend)
+- [x] 64-03-PLAN.md — RegressionAlertChip component + ExecutivePage insertion (TREND-02; consumes existing /api/trends, no Plan 01 dependency)
 **Wave 2** *(blocked on 64-01)*
 - [ ] 64-02-PLAN.md — Frontend: TrendTimeline types + useTimelineData hook + Recharts LineChart on TrendsPage (TREND-01 frontend)
 **UI hint**: yes
@@ -1398,7 +1398,7 @@ Plans:
 | 61. CBOM Coverage + Report Sanitization | A | 3/3 | Complete    | 2026-05-10 |
 | 62. React Hook Cancellation Pattern | A | 2/5 | Complete    | 2026-05-10 |
 | 63. Scheduled / Continuous Scanning | B | 3/3 | Complete   | 2026-05-10 |
-| 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |
+| 64. Trend Analysis Foundation | B | 2/3 | In Progress|  |
 | 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Wave A | - |
 | 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
