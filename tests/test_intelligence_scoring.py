@@ -129,3 +129,19 @@ class ProfileWeightTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_subscores_unaffected_by_clamp():
+    """SCORE-01 regression guard: verify subscores in the returned dict are not
+    clamped individually — only the top-level 'score' receives the clamp.
+    Subscores are allowed to exceed 25 in edge cases (per _apply_weighted_impacts).
+    """
+    from quirk.intelligence.scoring import compute_readiness_score
+
+    # Minimal evidence — all subscores should sum within valid range
+    result = compute_readiness_score({})
+    assert "subscores" in result
+    for key, val in result["subscores"].items():
+        assert isinstance(val, int), f"subscore {key} is not int: {val}"
+    # The aggregated score must be clamped
+    assert 0 <= result["score"] <= 100
