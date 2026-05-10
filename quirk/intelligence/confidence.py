@@ -80,7 +80,7 @@ def compute_confidence(
         if tls_enum_coverage_pct >= 0.0:
             tls_enum_coverage_ratio = tls_enum_coverage_pct / 100.0
     if tls_enum_coverage_ratio < 0.0:
-        tls_enum_coverage_ratio = 1.0 if tls_count == 0 else 0.0
+        tls_enum_coverage_ratio = 0.0  # no TLS data → no coverage bonus
     tls_enum_coverage_ratio = _clamp(tls_enum_coverage_ratio, 0.0, 1.0)
 
     points_coverage = 100.0 * w["coverage_ratio"] * coverage_ratio
