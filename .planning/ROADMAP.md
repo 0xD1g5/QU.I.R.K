@@ -1384,7 +1384,7 @@ Wave 3 *(blocked on Wave 2 completion)*
 | 59. Credential Leakage Sweep | A | 3/3 | Complete    | 2026-05-10 |
 | 60. Score Arithmetic Correctness | A | 2/2 | Complete    | 2026-05-10 |
 | 61. CBOM Coverage + Report Sanitization | A | 3/3 | Complete    | 2026-05-10 |
-| 62. React Hook Cancellation Pattern | A | 0/TBD | Not started | - |
+| 62. React Hook Cancellation Pattern | A | 0/5 | Planned    |  |
 | 63. Scheduled / Continuous Scanning | B | 0/TBD | Blocked on Wave A | - |
 | 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |
 | 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Wave A | - |
