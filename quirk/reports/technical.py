@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Dict, List
 
+from quirk.reports._md_escape import md_cell
+
 
 def _scan_error_category(scan_error: str) -> str:
     if not scan_error:
@@ -39,7 +41,7 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
         lines.append("|---|---:|---|---|")
         for e in sorted(inv_eps, key=lambda x: (x.host, x.port, getattr(x, "protocol", ""))):
             lines.append(
-                f"| {e.host} | {e.port} | {getattr(e, 'protocol', '') or ''} | {_service_detail(e)} |"
+                f"| {md_cell(e.host)} | {e.port} | {md_cell(getattr(e, 'protocol', '') or '')} | {md_cell(_service_detail(e))} |"
             )
         lines.append("")
 
@@ -58,7 +60,7 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
             sample = getattr(e, "tls_supported_ciphers_sample", "") or ""
             notes = getattr(e, "tls_enum_notes", "") or ""
             lines.append(
-                f"| {e.host} | {e.port} | {getattr(e, 'tls_version', '') or ''} | {sv} | {weak} | {legacy} | {pfs} | {sample} | {notes} |"
+                f"| {md_cell(e.host)} | {e.port} | {md_cell(getattr(e, 'tls_version', '') or '')} | {md_cell(sv)} | {weak} | {legacy} | {pfs} | {md_cell(sample)} | {md_cell(notes)} |"
             )
         lines.append("")
 
@@ -78,7 +80,7 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
         lines.append("|---|---:|---|---|")
         for e, blocker in sorted(tls_blocked, key=lambda x: (x[0].host, x[0].port)):
             lines.append(
-                f"| {e.host} | {e.port} | {blocker} | {getattr(e, 'scan_error', '') or ''} |"
+                f"| {md_cell(e.host)} | {e.port} | {md_cell(blocker)} | {md_cell(getattr(e, 'scan_error', '') or '')} |"
             )
         lines.append("")
 
@@ -94,7 +96,7 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
         title = f.get("title", "")
         desc = f.get("description", "")
         rec = f.get("recommendation", "")
-        lines.append(f"| {sev} | {host} | {port} | {title} | {desc} | {rec} |")
+        lines.append(f"| {sev} | {md_cell(host)} | {port} | {md_cell(title)} | {md_cell(desc)} | {md_cell(rec)} |")
 
     lines.append("")
     return "\n".join(lines)
