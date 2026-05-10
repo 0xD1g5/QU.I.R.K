@@ -1,0 +1,14 @@
+[
+  [
+    "aes256-gcm96",
+    "ComponentType.CRYPTOGRAPHIC_ASSET"
+  ],
+  [
+    "ed25519",
+    "ComponentType.CRYPTOGRAPHIC_ASSET"
+  ],
+  [
+    "rsa-2048",
+    "ComponentType.CRYPTOGRAPHIC_ASSET"
+  ]
+]
