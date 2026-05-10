@@ -147,13 +147,11 @@ export function AssessmentPage() {
     ctx.setAnswer(qn, partial)
   }
 
-  // Confirm handler for auto-filled questions — sets answer_value + confirmed_at optimistically
-  // so the badge disappears immediately without waiting for a server round-trip
+  // Confirm handler for auto-filled questions — direct flush via QRAMMProvider.confirmAnswer
+  // (BR-02): cancels pending debounce for the question, merges confirmed_at into local state,
+  // and POSTs answer_value directly. Backend auto-sets confirmed_at server-side.
   function handleConfirm(qn: number, pendingValue: number) {
-    ctx.setAnswer(qn, {
-      answer_value: pendingValue as 1 | 2 | 3 | 4,
-      confirmed_at: new Date().toISOString(),
-    })
+    ctx.confirmAnswer(qn, pendingValue as 1 | 2 | 3 | 4)
   }
 
   // New Assessment: archive current session, reset context, redirect to /qramm.
@@ -162,6 +160,7 @@ export function AssessmentPage() {
   // diverging client and server state on failure.
   async function handleNewAssessment() {
     if (!ctx.sessionId) return
+    ctx.clearPendingDebounces()  // WR-14: abort timers before resetting state
     setArchiving(true)
     try {
       const resp = await fetchApi(`/api/qramm/sessions/${ctx.sessionId}`, { method: "DELETE" })
