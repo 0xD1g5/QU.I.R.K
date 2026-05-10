@@ -154,7 +154,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - Resumable / partial-failure scans
 - Operator error-message pass
 
-## Current State: v4.8 In Progress — Wave A Phase 4/6 Complete
+## Current State: v4.8 In Progress — Wave A Phase 5/6 Complete
+
+Phase 61 complete (2026-05-10) — CBOM Pass-1 coverage expansion + report sanitization: 9 new dispatch branches in builder.py (VAULT, CONTAINER, MYSQL, POSTGRESQL/RDS, S3/AZURE_BLOB, SOURCE fallback, SSH host-key fallback, MOTION_PLAINTEXT guard, KUBERNETES pass); 14-family parametrized coverage test (test_cbom_coverage.py); VAULT golden snapshot (test_cbom_vault_consistency.py); md_cell() GFM escape utility + 15 wrapping calls in technical.py; 5-test adversarial sanitization corpus. Audit ledger rows CR-01, CR-02, CR-07 closed. Code review noted 3 warnings (WR-01 S3 false-positive, WR-02 SSH fallback unconditional, WR-03 tautological test assertion) — advisory, deferred to /gsd-code-review 61 --fix.
 
 Phase 60 complete (2026-05-10) — score arithmetic correctness: readiness score clamped to [0,100] (SCORE-01), TLS confidence bonus zeroed on absent TLS data (SCORE-02), QRAMM multiplier guard fires as explicit 400 before DB access (SCORE-03), maturity-band sweep confirmed (SCORE-04). Code-review fix CR-01 also applied: QRAMM overall score clamped to CSNP [0,4.0] scale. 45/45 tests pass. Audit ledger rows BL-01, BL-02, CR-04, CR-06, WR-05 closed.
 
