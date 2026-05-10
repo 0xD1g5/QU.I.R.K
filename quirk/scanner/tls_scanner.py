@@ -12,6 +12,7 @@ from cryptography.hazmat.backends import default_backend
 from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.scanner.tls_capabilities import enumerate_tls_capabilities
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # sslyze optional import
@@ -451,7 +452,7 @@ def _scan_one_fallback(
     except Exception as e:
         cat = _categorize_tls_error(e)
         ep.tls_blocker_reason = cat
-        ep.scan_error = f"{cat}: {e}"
+        ep.scan_error = f"{cat}: {safe_str(e)}"
         if logger:
             logger.v(f"TLS {host}:{port} {cat} ({e})")
 
