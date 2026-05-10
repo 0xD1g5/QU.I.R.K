@@ -211,15 +211,15 @@ wont_fix: 0
 
 | Finding ID | Severity | Title | Closed-By | Status |
 |---|---|---|---|---|
-| react-frontend/BR-01 | BLOCKER | Debounced draft persister drops fields on rapid multi-field edits | Phase 62 (HOOK-01) | [ ] mapped |
-| react-frontend/BR-02 | BLOCKER | Confirm-auto-fill flow never persists confirmed_at to server | Phase 62 (HOOK-02) | [ ] mapped |
-| react-frontend/BR-03 | BLOCKER | useScanData error setters lack cancellation guard | Phase 62 (HOOK-03) | [ ] mapped |
-| react-frontend/BR-04 | BLOCKER | useScanData does not clear stale data when scan switches | Phase 62 (HOOK-03) | [ ] mapped |
-| react-frontend/BR-05 | BLOCKER | /print data-ready sentinel never reset — stale on re-fetch | Phase 62 (HOOK-04) | [ ] mapped |
-| react-frontend/BR-06 | BLOCKER | System theme not reactive — prefers-color-scheme read once | Phase 62 (HOOK-04) | [ ] mapped |
-| react-frontend/WR-01 | WARNING | useQRAMMSession setError/setSession run without cancellation guard | — | [ ] open |
+| react-frontend/BR-01 | BLOCKER | Debounced draft persister drops fields on rapid multi-field edits | Phase 62 (HOOK-01) | [x] closed |
+| react-frontend/BR-02 | BLOCKER | Confirm-auto-fill flow never persists confirmed_at to server | Phase 62 (HOOK-02) | [x] closed |
+| react-frontend/BR-03 | BLOCKER | useScanData error setters lack cancellation guard | Phase 62 (HOOK-03) | [x] closed |
+| react-frontend/BR-04 | BLOCKER | useScanData does not clear stale data when scan switches | Phase 62 (HOOK-03) | [x] closed |
+| react-frontend/BR-05 | BLOCKER | /print data-ready sentinel never reset — stale on re-fetch | Phase 62 (HOOK-04) | [x] closed |
+| react-frontend/BR-06 | BLOCKER | System theme not reactive — prefers-color-scheme read once | Phase 62 (HOOK-04) | [x] closed |
+| react-frontend/WR-01 | WARNING | useQRAMMSession setError/setSession run without cancellation guard | Phase 62 (HOOK-01) | [x] closed |
 | react-frontend/WR-02 | WARNING | useScanList silently swallows non-OK responses | — | [ ] open |
-| react-frontend/WR-03 | WARNING | Pending QRAMM debounce timers leak on provider unmount | — | [ ] open |
+| react-frontend/WR-03 | WARNING | Pending QRAMM debounce timers leak on provider unmount | Phase 62 (HOOK-03) | [x] closed |
 | react-frontend/WR-04 | WARNING | theme-provider casts localStorage value to Theme without validation | — | [ ] open |
 | react-frontend/WR-05 | WARNING | executive PDF download setTimeout revoke leaks across unmount | — | [ ] open |
 | react-frontend/WR-06 | WARNING | executive reads body.detail without coercion check | — | [ ] open |
@@ -230,7 +230,7 @@ wont_fix: 0
 | react-frontend/WR-11 | WARNING | ScorecardTab Maturity Distribution width math hardcodes /4 | — | [ ] open |
 | react-frontend/WR-12 | WARNING | ScorecardTab maturity bar applies badge text/border classes | — | [ ] open |
 | react-frontend/WR-13 | WARNING | ComplianceMapTab re-fetches on every ctx.scoreResult change | — | [ ] open |
-| react-frontend/WR-14 | WARNING | qramm-assessment handleNewAssessment does not abort debounced persists | — | [ ] open |
+| react-frontend/WR-14 | WARNING | qramm-assessment handleNewAssessment does not abort debounced persists | Phase 62 (HOOK-03) | [x] closed |
 | react-frontend/IN-01 | INFO | qramm-assessment comment says 5-tab but renders 6 tabs | — | [ ] open |
 | react-frontend/IN-02 | INFO | cbom/roadmap try/catch swallows extension registration error | — | [ ] open |
 | react-frontend/IN-03 | INFO | findings/identity recreate columns array on every render | — | [ ] open |

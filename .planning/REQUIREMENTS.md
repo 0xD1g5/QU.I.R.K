@@ -61,10 +61,10 @@
 #### React Hook Cancellation Pattern
 *Closes Pattern C (cross-frontend). Phase 62.*
 
-- [ ] **HOOK-01**: A standardized cancellation pattern (`useCancellableFetch` or equivalent) is used by every data-fetch hook in `src/dashboard/src/hooks/` (`useScanData`, `useQRAMMSession`, `useTrendData`, etc.); each hook gates state-setters with an `if (!cancelled)` check after every async boundary
-- [ ] **HOOK-02**: QRAMM debounce coalescing is fixed so that rapid answer changes during a single debounce window POST a single coalesced batch instead of stale per-keystroke partials
-- [ ] **HOOK-03**: Auto-fill confirm round-trip preserves the badge-removal contract (badge disappears when `confirmed_at` is set) without requiring a full session refetch
-- [ ] **HOOK-04**: A custom ESLint rule (or codemod check in CI) flags `useEffect` blocks that call `setState` from an async branch without an `if (!cancelled)` guard
+- [x] **HOOK-01**: A standardized cancellation pattern (`useCancellableFetch` or equivalent) is used by every data-fetch hook in `src/dashboard/src/hooks/` (`useScanData`, `useQRAMMSession`, `useTrendData`, etc.); each hook gates state-setters with an `if (!cancelled)` check after every async boundary
+- [x] **HOOK-02**: QRAMM debounce coalescing is fixed so that rapid answer changes during a single debounce window POST a single coalesced batch instead of stale per-keystroke partials
+- [x] **HOOK-03**: Auto-fill confirm round-trip preserves the badge-removal contract (badge disappears when `confirmed_at` is set) without requiring a full session refetch
+- [x] **HOOK-04**: A custom ESLint rule (or codemod check in CI) flags `useEffect` blocks that call `setState` from an async branch without an `if (!cancelled)` guard
 
 ### Wave B — Operating Model (gates on Wave A complete)
 
@@ -225,10 +225,10 @@ Populated by the roadmapper. Updated at each phase transition.
 | CBOM-COVER-02 | Phase 61 | Pending |
 | REPORT-SAN-01 | Phase 61 | Pending |
 | REPORT-SAN-02 | Phase 61 | Pending |
-| HOOK-01 | Phase 62 | Pending |
-| HOOK-02 | Phase 62 | Pending |
-| HOOK-03 | Phase 62 | Pending |
-| HOOK-04 | Phase 62 | Pending |
+| HOOK-01 | Phase 62 | Complete |
+| HOOK-02 | Phase 62 | Complete |
+| HOOK-03 | Phase 62 | Complete |
+| HOOK-04 | Phase 62 | Complete |
 | SCHED-01 | Phase 63 | Pending |
 | SCHED-02 | Phase 63 | Pending |
 | SCHED-03 | Phase 63 | Pending |
