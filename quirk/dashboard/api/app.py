@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 from quirk.config import get_cors_origins
 from quirk.dashboard.api.middleware.rate_limit import RateLimitMiddleware
-from quirk.dashboard.api.routes import health, pdf, qramm, scan, trends
+from quirk.dashboard.api.routes import health, pdf, qramm, scan, schedules, trends
 
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 
@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
     application.include_router(scan.router, prefix="/api")
     application.include_router(trends.router, prefix="/api")
     application.include_router(qramm.router, prefix="/api")
+    application.include_router(schedules.router, prefix="/api")
 
     # 2. Root-level static files — registered before the SPA catch-all so the
     #    wildcard route does not intercept favicon.ico / favicon.svg / favicon.png.
