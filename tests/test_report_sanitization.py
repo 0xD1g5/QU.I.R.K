@@ -74,24 +74,46 @@ def _count_unescaped_pipes(line: str) -> int:
 
 
 def test_no_unescaped_pipe_in_data_cells(rendered_md):
-    """Assert every interior `|` in a data row is escaped (`\\|`)."""
-    rows = _table_rows(rendered_md)
-    assert rows, "build_tech_markdown emitted no table rows for adversarial corpus"
-    for line in rows:
-        # Skip header + separator rows (--- patterns); data rows have alphanumerics
-        if re.fullmatch(r"\|[\s\-:|]+\|", line):
+    """Assert data rows contain no MORE unescaped pipes than the header row.
+
+    The structural column delimiters (one per cell boundary) are intentional
+    unescaped pipes.  Any additional unescaped pipe beyond the header count
+    means a data cell leaked a raw `|` character that md_cell() should have
+    escaped as `\\|`.
+
+    Splitting cells on the unescaped-pipe delimiter is tautological for
+    per-cell checking (the split consumes the very chars we'd be looking for),
+    so we instead compare per-row pipe counts against the column count
+    established by the header row.
+    """
+    all_lines = rendered_md.splitlines()
+    _separator_re = re.compile(r"\|[\s\-:|]+\|")
+
+    # Build a mapping: for each table block (header → separator → data rows),
+    # record the unescaped-pipe count of the header row as the expected count
+    # for all data rows in that block.
+    expected_pipe_count: dict[int, int] = {}  # line-index → expected count
+    for idx, line in enumerate(all_lines):
+        if _separator_re.fullmatch(line) and idx >= 2:
+            header_line = all_lines[idx - 1]
+            expected = _count_unescaped_pipes(header_line)
+            # Tag all subsequent data rows (until a non-pipe line or end)
+            j = idx + 1
+            while j < len(all_lines) and all_lines[j].startswith("|"):
+                expected_pipe_count[j] = expected
+                j += 1
+
+    assert expected_pipe_count, "No table data rows found to validate"
+
+    for idx, line in enumerate(all_lines):
+        if idx not in expected_pipe_count:
             continue
-        # Strip leading and trailing column separators, leaving interior cells
-        interior = line.strip()[1:-1]
-        # Split on UNESCAPED pipes — interior cells should contain no unescaped pipe
-        # if and only if the count of unescaped `|` equals the number of cells minus 1
-        # AND each split chunk is the cell content. We assert no chunk contains a bare pipe.
-        # Simpler: re.split with negative lookbehind to find unescaped pipes
-        cells = re.split(r"(?<!\\)\|", interior)
-        for cell in cells:
-            assert "|" not in cell.replace("\\|", ""), (
-                f"Unescaped pipe found in cell {cell!r} of row {line!r}"
-            )
+        actual = _count_unescaped_pipes(line)
+        expected = expected_pipe_count[idx]
+        assert actual == expected, (
+            f"Data row has {actual} unescaped pipes but header has {expected}; "
+            f"a data cell likely leaked a raw '|'. Row: {line!r}"
+        )
 
 
 def test_consistent_column_count_per_section(rendered_md):
