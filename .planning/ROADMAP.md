@@ -1180,7 +1180,7 @@ Plans:
 - [ ] **Phase 58: Dashboard API Hardening** - Single-user bearer auth + CSRF, CORS allowlist lockdown, per-route rate limiting, `quirk init` path-traversal guard, PDF SSRF clamp, `@file` allowlist + size cap — closes audit blockers 7–10 (`api-cli-core/CR-01, CR-02, CR-03, CR-09`)
 - [x] **Phase 59: Credential Leakage Sweep** - Shared `quirk/util/safe_exc.py::safe_str(exc)` helper applied across every connector and route handler that persists `scan_error`; AST-based pytest gate prevents future bypasses — closes audit blocker 11 + Pattern A (completed 2026-05-10)
 - [x] **Phase 60: Score Arithmetic Correctness** - Top-level readiness clamp ≤100, server-side QRAMM profile multiplier clamp `[0.8, 1.5]`, confidence-bonus zero-data guard, contiguous QRAMM maturity threshold bands — closes audit blockers 12, 15 + Pattern E (completed 2026-05-10)
-- [ ] **Phase 61: CBOM Coverage + Report Sanitization** - CBOM Pass-1 algorithm components for the 12+ protocol families currently emitting zero algos, VAULT classification consistent across Pass-1/2/3, markdown report tables escape `|` / `\n` / control chars on adversary-controllable strings — closes audit blockers 13, 14
+- [x] **Phase 61: CBOM Coverage + Report Sanitization** - CBOM Pass-1 algorithm components for the 12+ protocol families currently emitting zero algos, VAULT classification consistent across Pass-1/2/3, markdown report tables escape `|` / `\n` / control chars on adversary-controllable strings — closes audit blockers 13, 14 (completed 2026-05-10)
 - [ ] **Phase 62: React Hook Cancellation Pattern** - Standardized `useCancellableFetch` (or equivalent) across every data-fetch hook in `src/dashboard/src/hooks/`, QRAMM debounce coalescing fix, auto-fill confirm round-trip preserves badge contract, ESLint/codemod guard rule — closes Pattern C
 
 **Wave B — Operating Model (gated on Wave A complete):**
@@ -1282,7 +1282,7 @@ Plans:
 **Plans**: 3 plans
 - [x] 61-01-PLAN.md — CBOM Pass-1 coverage branches + per-family coverage test + VAULT golden snapshot
 - [x] 61-02-PLAN.md — md_cell escape utility + technical.py wrapping + adversarial corpus test
-- [ ] 61-03-PLAN.md — Audit ledger flip (CR-01/02/07) + UAT-SERIES sync + Obsidian phase note
+- [x] 61-03-PLAN.md — Audit ledger flip (CR-01/02/07) + UAT-SERIES sync + Obsidian phase note
 
 ### Phase 62: React Hook Cancellation Pattern
 **Goal**: Every data-fetch hook in the dashboard is cancellation-safe — switching scans mid-fetch never overwrites newer data with stale results, QRAMM debounce coalesces rapid edits into one request, the auto-fill confirm round-trip preserves the badge contract, and a CI guard rule prevents future regressions. Closes Pattern C.
@@ -1372,7 +1372,7 @@ Plans:
 | 58. Dashboard API Hardening | A | 6/7 | In Progress|  |
 | 59. Credential Leakage Sweep | A | 3/3 | Complete    | 2026-05-10 |
 | 60. Score Arithmetic Correctness | A | 2/2 | Complete    | 2026-05-10 |
-| 61. CBOM Coverage + Report Sanitization | A | 2/3 | In Progress|  |
+| 61. CBOM Coverage + Report Sanitization | A | 3/3 | Complete   | 2026-05-10 |
 | 62. React Hook Cancellation Pattern | A | 0/TBD | Not started | - |
 | 63. Scheduled / Continuous Scanning | B | 0/TBD | Blocked on Wave A | - |
 | 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |

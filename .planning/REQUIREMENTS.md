@@ -53,10 +53,10 @@
 #### CBOM Coverage + Report Sanitization
 *Closes audit blockers 13, 14. Phase 61.*
 
-- [ ] **CBOM-COVER-01**: CBOM Pass-1 emits at least one algorithm component for each of the 12+ protocol families currently dropping zero algos (database, registry, source, ssh-weak, storage-s3, broker subfamilies, email subfamilies, vault, identity-secondary); per-protocol coverage assertion in test suite (closes CR-01)
-- [ ] **CBOM-COVER-02**: VAULT classification is consistent across Pass-1 / Pass-2 / Pass-3 — Pass-1 routes to a vault-specific branch (not the TLS branch), Pass-2 and Pass-3 emit the same evidence claims about the vault endpoint
-- [ ] **REPORT-SAN-01**: All adversary-controllable strings (host, cipher_suite, cert_subject, cert_issuer, finding text, banner, evidence note) interpolated into markdown report tables are escaped so that pipe (`|`) and newline characters cannot break table rendering or inject content (closes CR-07)
-- [ ] **REPORT-SAN-02**: A pytest fixture renders both the technical and executive markdown reports against a corpus of adversarial inputs (pipes, newlines, backticks, HTML entities, control characters) and asserts the output is a valid GFM table
+- [x] **CBOM-COVER-01**: CBOM Pass-1 emits at least one algorithm component for each of the 12+ protocol families currently dropping zero algos (database, registry, source, ssh-weak, storage-s3, broker subfamilies, email subfamilies, vault, identity-secondary); per-protocol coverage assertion in test suite (closes CR-01)
+- [x] **CBOM-COVER-02**: VAULT classification is consistent across Pass-1 / Pass-2 / Pass-3 — Pass-1 routes to a vault-specific branch (not the TLS branch), Pass-2 and Pass-3 emit the same evidence claims about the vault endpoint
+- [x] **REPORT-SAN-01**: All adversary-controllable strings (host, cipher_suite, cert_subject, cert_issuer, finding text, banner, evidence note) interpolated into markdown report tables are escaped so that pipe (`|`) and newline characters cannot break table rendering or inject content (closes CR-07)
+- [x] **REPORT-SAN-02**: A pytest fixture renders both the technical and executive markdown reports against a corpus of adversarial inputs (pipes, newlines, backticks, HTML entities, control characters) and asserts the output is a valid GFM table
 
 #### React Hook Cancellation Pattern
 *Closes Pattern C (cross-frontend). Phase 62.*
@@ -221,10 +221,10 @@ Populated by the roadmapper. Updated at each phase transition.
 | SCORE-02 | Phase 60 | Complete |
 | SCORE-03 | Phase 60 | Complete |
 | SCORE-04 | Phase 60 | Complete |
-| CBOM-COVER-01 | Phase 61 | Pending |
-| CBOM-COVER-02 | Phase 61 | Pending |
-| REPORT-SAN-01 | Phase 61 | Pending |
-| REPORT-SAN-02 | Phase 61 | Pending |
+| CBOM-COVER-01 | Phase 61 | Complete |
+| CBOM-COVER-02 | Phase 61 | Complete |
+| REPORT-SAN-01 | Phase 61 | Complete |
+| REPORT-SAN-02 | Phase 61 | Complete |
 | HOOK-01 | Phase 62 | Pending |
 | HOOK-02 | Phase 62 | Pending |
 | HOOK-03 | Phase 62 | Pending |
