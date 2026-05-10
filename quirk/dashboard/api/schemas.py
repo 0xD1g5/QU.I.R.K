@@ -234,3 +234,37 @@ class TrendReportResponse(BaseModel):
     scan_errors_resolved_count: int = 0
     new_findings_sample: List[SampleFinding] = []
     resolved_findings_sample: List[SampleFinding] = []
+
+
+# ---- Timeline (Phase 64 TREND-01) ----
+
+class FindingCounts(BaseModel):
+    """Severity-bucketed counts for a single scan session.
+
+    Mirrors the bucket keys produced by quirk.intelligence.trends._count_by_bucket
+    (CRITICAL/HIGH -> high, MEDIUM -> medium, LOW -> low; INFO excluded).
+    """
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+
+
+class TrendSessionPoint(BaseModel):
+    """One point on the multi-scan timeline.
+
+    session_ts is an ISO 8601 datetime string (per D-02).
+    subscores reuses the existing SubScores model (per D-06).
+    """
+    session_ts: str
+    score: int
+    subscores: SubScores
+    finding_counts: FindingCounts
+
+
+class TrendTimelineResponse(BaseModel):
+    """Response for GET /api/trends/timeline (TREND-01).
+
+    sessions are returned newest-first per D-02; the frontend reverses
+    before passing to Recharts.
+    """
+    sessions: List[TrendSessionPoint] = []
