@@ -182,6 +182,24 @@ export interface TrendReport {
   resolved_findings_sample: SampleFinding[]
 }
 
+// Phase 64 TREND-01: timeline types
+export interface TrendFindingCounts {
+  high: number
+  medium: number
+  low: number
+}
+
+export interface TrendSessionPoint {
+  session_ts: string       // ISO 8601 string
+  score: number
+  subscores: SubScores     // reuses existing SubScores interface
+  finding_counts: TrendFindingCounts
+}
+
+export interface TrendTimeline {
+  sessions: TrendSessionPoint[]
+}
+
 // ============== QRAMM (Phase 54) ==============
 
 export interface QuestionItem {
