@@ -14,17 +14,26 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from quirk.dashboard.api.middleware.auth import require_auth
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.schemas import (
+    FindingCounts,
     SampleFinding,
     TrendReportResponse,
+    TrendSessionPoint,
+    TrendTimelineResponse,
 )
-from quirk.intelligence.trends import compute_trend_report
+from quirk.intelligence.evidence import build_evidence_summary
+from quirk.intelligence.scoring import compute_readiness_score
+from quirk.intelligence.trends import (
+    _count_by_bucket,
+    _fetch_session_endpoints,
+    compute_trend_report,
+)
 from quirk.models import CryptoEndpoint
 
 router = APIRouter(dependencies=[Depends(require_auth)])
@@ -116,3 +125,69 @@ def _to_response(report) -> TrendReportResponse:
             for s in report.resolved_findings_sample
         ],
     )
+
+
+def _list_session_timestamps_n(db: Session, n: int) -> List[datetime]:
+    """Return up to n most recent distinct session timestamps (newest first).
+
+    Variant of _list_session_timestamps() with a parameterized LIMIT.
+    Do NOT modify _list_session_timestamps() — it is hardcoded to LIMIT 10
+    and consumed by get_trends. (CONTEXT.md D-03)
+    """
+    ts_sec = func.strftime(
+        "%Y-%m-%d %H:%M:%S", CryptoEndpoint.scanned_at
+    ).label("ts_sec")
+    rows = (
+        db.query(ts_sec)
+        .filter(CryptoEndpoint.scanned_at.isnot(None))
+        .group_by("ts_sec")
+        .order_by(ts_sec.desc())
+        .limit(n)
+        .all()
+    )
+    return [datetime.fromisoformat(r.ts_sec) for r in rows]
+
+
+@router.get("/trends/timeline", response_model=TrendTimelineResponse)
+def get_trends_timeline(
+    n: int = Query(default=30, ge=2, le=200),
+    db: Session = Depends(get_db),
+) -> TrendTimelineResponse:
+    """Multi-scan timeline endpoint (TREND-01).
+
+    Returns up to n most-recent sessions, newest-first. Each session
+    carries the overall readiness score, all 6 subscores, and severity-
+    bucketed finding counts. Auth is inherited from the router-level
+    dependencies=[Depends(require_auth)] declaration — no per-route
+    annotation needed (RESEARCH.md Pitfall 5).
+    """
+    sessions = _list_session_timestamps_n(db, n)
+    if not sessions:
+        return TrendTimelineResponse(sessions=[])
+    points: List[TrendSessionPoint] = []
+    for ts in sessions:
+        eps = _fetch_session_endpoints(db, ts)
+        if not eps:
+            continue
+        evidence = build_evidence_summary(eps)
+        score_dict = compute_readiness_score(evidence)
+        sub = score_dict["subscores"]
+        keys = [
+            (ep.host, ep.port, ep.protocol, ep.severity)
+            for ep in eps
+            if ep.scan_error is None
+        ]
+        counts = _count_by_bucket(keys)
+        points.append(
+            TrendSessionPoint(
+                session_ts=ts.isoformat(),
+                score=int(score_dict["score"]),
+                subscores=sub,
+                finding_counts=FindingCounts(
+                    high=counts.get("high", 0),
+                    medium=counts.get("medium", 0),
+                    low=counts.get("low", 0),
+                ),
+            )
+        )
+    return TrendTimelineResponse(sessions=points)
