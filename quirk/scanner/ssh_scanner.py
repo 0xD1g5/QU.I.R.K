@@ -8,6 +8,7 @@ from typing import List, Tuple, Optional, Callable
 
 from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
+from quirk.util.safe_exc import safe_str
 
 
 def _run_ssh_audit(host: str, port: int, timeout: int) -> Optional[dict]:
@@ -82,7 +83,7 @@ def scan_ssh_one(
                 logger.v(f"SSH {host}:{port} banner={ep.service_detail!r}")
 
     except Exception as e:
-        ep.scan_error = f"SSH_ERROR: {e}"
+        ep.scan_error = f"SSH_ERROR: {safe_str(e)}"
         if logger:
             logger.v(f"SSH {host}:{port} SSH_ERROR ({e})")
 

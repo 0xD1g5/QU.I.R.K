@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # Optional imports with module-level None (required for test patching)
@@ -162,7 +163,7 @@ def scan_pg_targets(
                 host=ep_host,
                 port=port,
                 protocol="POSTGRESQL",
-                scan_error=f"connection-error: {type(exc).__name__}",
+                scan_error=f"connection-error: {safe_str(exc)}",
                 scanned_at=now,
             ))
 
@@ -265,7 +266,7 @@ def scan_mysql_targets(
                 host=ep_host,
                 port=port,
                 protocol="MYSQL",
-                scan_error=f"connection-error: {type(exc).__name__}",
+                scan_error=f"connection-error: {safe_str(exc)}",
                 scanned_at=now,
             ))
 

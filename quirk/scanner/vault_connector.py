@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # hvac optional import (D-16, mirrors GCP_AVAILABLE / BOTO3_AVAILABLE).
@@ -420,12 +421,12 @@ def scan_vault_targets(
         )
     except Exception as exc:  # noqa: BLE001
         if logger:
-            logger.v(f"Vault hvac.Client construction error: {exc}")
+            logger.v(f"Vault hvac.Client construction error: {safe_str(exc)}")
         return [CryptoEndpoint(
             host=resolved_addr,
             port=8200,
             protocol="VAULT",
-            scan_error=f"vault-client-init-failed: {exc}",
+            scan_error=f"vault-client-init-failed: {safe_str(exc)}",
             scanned_at=now,
         )]
 
@@ -442,12 +443,12 @@ def scan_vault_targets(
             )]
     except Exception as exc:  # noqa: BLE001
         if logger:
-            logger.v(f"Vault auth check network error: {exc}")
+            logger.v(f"Vault auth check network error: {safe_str(exc)}")
         return [CryptoEndpoint(
             host=resolved_addr,
             port=8200,
             protocol="VAULT",
-            scan_error=f"vault-auth-failed: {exc}",
+            scan_error=f"vault-auth-failed: {safe_str(exc)}",
             scanned_at=now,
         )]
 
