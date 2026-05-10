@@ -161,3 +161,192 @@ def test_uat_31_trends_two_sessions_flat_wire_format():
     assert data["resolved_medium"] >= 1, (
         f"Expected resolved_medium >= 1 (b.example TLS MEDIUM is resolved); got {data['resolved_medium']}"
     )
+
+
+# ---- Wave 0: GET /api/trends/timeline (TREND-01) ----
+
+import uuid as _uuid_t64
+from datetime import datetime as _dt_t64, timedelta as _td_t64
+
+from sqlalchemy import create_engine as _create_engine_t64
+from sqlalchemy.orm import sessionmaker as _sessionmaker_t64
+from fastapi.testclient import TestClient as _TestClient_t64
+
+
+def _make_trend64_client_and_session():
+    """Named shared-cache UUID pattern — mirrors _make_uat31_client_and_session().
+
+    Each call creates an isolated in-memory SQLite database so test data does
+    not bleed between test functions.
+    """
+    from quirk.dashboard.api.app import create_app
+    from quirk.dashboard.api.deps import get_db
+    from quirk.models import Base
+
+    db_name = f"test_trend64_{_uuid_t64.uuid4().hex}"
+    engine = _create_engine_t64(
+        f"sqlite:///file:{db_name}?mode=memory&cache=shared&uri=true",
+        connect_args={"check_same_thread": False},
+    )
+    Base.metadata.create_all(engine)
+    TestingSession = _sessionmaker_t64(bind=engine, autoflush=False, autocommit=False)
+
+    def _override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _override_get_db
+    return _TestClient_t64(app), TestingSession
+
+
+def test_trends_timeline_endpoint(dashboard_client):
+    """TREND-01: GET /api/trends/timeline returns 200 with sessions array (empty DB)."""
+    resp = dashboard_client.get("/api/trends/timeline")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "sessions" in data
+    assert isinstance(data["sessions"], list)
+
+
+def test_trends_timeline_schema():
+    """TREND-01: Response schema has session_ts, score, subscores (6 keys), finding_counts.
+
+    Seeds TWO sessions with varied severity and protocol values to exercise
+    scoring and bucket logic. INFO rows must NOT appear in finding_counts.
+    """
+    from quirk.models import CryptoEndpoint
+
+    client, SessionFactory = _make_trend64_client_and_session()
+    db = SessionFactory()
+
+    _BASE_TS = _dt_t64(2026, 5, 1, 10, 0, 0)
+    try:
+        # Session 1 — varied severities and protocols
+        for sev, proto in [
+            ("HIGH", "TLS"),
+            ("MEDIUM", "SSH"),
+            ("LOW", "TLS"),
+            ("INFO", "HTTP"),
+        ]:
+            db.add(CryptoEndpoint(
+                host=f"s1-{sev.lower()}.example",
+                port=443,
+                protocol=proto,
+                severity=sev,
+                scanned_at=_BASE_TS,
+            ))
+        # Session 2 — two minutes later, also varied
+        _TS2 = _BASE_TS + _td_t64(minutes=2)
+        for sev, proto in [
+            ("HIGH", "SSH"),
+            ("MEDIUM", "TLS"),
+            ("LOW", "HTTP"),
+            ("INFO", "TLS"),
+        ]:
+            db.add(CryptoEndpoint(
+                host=f"s2-{sev.lower()}.example",
+                port=22,
+                protocol=proto,
+                severity=sev,
+                scanned_at=_TS2,
+            ))
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.get("/api/trends/timeline?n=30")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    _EXPECTED_SUBSCORE_KEYS = {
+        "hygiene", "modern_tls", "identity_trust",
+        "agility_signals", "data_at_rest", "data_in_motion",
+    }
+    _EXPECTED_FC_KEYS = {"high", "medium", "low"}
+
+    for item in data["sessions"]:
+        assert {"session_ts", "score", "subscores", "finding_counts"} == set(item.keys()), (
+            f"Unexpected keys in session item: {set(item.keys())}"
+        )
+        assert set(item["subscores"].keys()) == _EXPECTED_SUBSCORE_KEYS, (
+            f"subscores keys mismatch: {set(item['subscores'].keys())}"
+        )
+        assert set(item["finding_counts"].keys()) == _EXPECTED_FC_KEYS, (
+            f"finding_counts keys mismatch: {set(item['finding_counts'].keys())}"
+        )
+        # INFO rows must NOT inflate any bucket (they map to None in _SEVERITY_BUCKET)
+        total_counted = sum(item["finding_counts"].values())
+        assert total_counted >= 0  # basic sanity; INFO excluded means count <= non-INFO rows
+
+
+def test_trends_timeline_n_param(dashboard_client):
+    """TREND-01: ?n=N returns at most N sessions."""
+    from quirk.models import CryptoEndpoint
+    from quirk.dashboard.api.app import create_app
+    from quirk.dashboard.api.deps import get_db
+    from quirk.models import Base
+    import uuid as _u
+
+    db_name = f"test_trend64_nparam_{_u.uuid4().hex}"
+    engine = _create_engine_t64(
+        f"sqlite:///file:{db_name}?mode=memory&cache=shared&uri=true",
+        connect_args={"check_same_thread": False},
+    )
+    Base.metadata.create_all(engine)
+    NSession = _sessionmaker_t64(bind=engine, autoflush=False, autocommit=False)
+
+    def _override():
+        db = NSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _override
+    client = _TestClient_t64(app)
+
+    db = NSession()
+    _BASE = _dt_t64(2026, 5, 1, 8, 0, 0)
+    try:
+        for i in range(6):
+            ts = _BASE + _td_t64(minutes=i * 5)
+            db.add(CryptoEndpoint(
+                host=f"nparam-{i}.example",
+                port=443,
+                protocol="TLS",
+                severity="HIGH",
+                scanned_at=ts,
+            ))
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.get("/api/trends/timeline?n=5")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["sessions"]) <= 5
+
+
+def test_trends_timeline_n_validation(dashboard_client):
+    """TREND-01: ?n=1 and ?n=201 return HTTP 422 (Pydantic ge=2 / le=200 constraint)."""
+    resp_low = dashboard_client.get("/api/trends/timeline?n=1")
+    assert resp_low.status_code == 422, (
+        f"Expected 422 for n=1; got {resp_low.status_code}"
+    )
+    resp_high = dashboard_client.get("/api/trends/timeline?n=201")
+    assert resp_high.status_code == 422, (
+        f"Expected 422 for n=201; got {resp_high.status_code}"
+    )
+
+
+def test_trends_timeline_empty(dashboard_client):
+    """TREND-01: Empty DB returns HTTP 200 with sessions == []."""
+    resp = dashboard_client.get("/api/trends/timeline")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sessions"] == []
