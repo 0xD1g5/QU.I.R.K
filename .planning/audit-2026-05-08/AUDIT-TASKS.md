@@ -116,8 +116,8 @@ wont_fix: 0
 
 | Finding ID | Severity | Title | Closed-By | Status |
 |---|---|---|---|---|
-| qramm-compliance/BL-01 | BLOCKER | Profile multiplier not clamped server-side | Phase 60 (SCORE-01) | [ ] mapped |
-| qramm-compliance/BL-02 | BLOCKER | Maturity threshold gap mis-classifies scores in [1.4,1.5) etc. | Phase 60 (SCORE-02) | [ ] mapped |
+| qramm-compliance/BL-01 | BLOCKER | Profile multiplier not clamped server-side | Phase 60 (SCORE-01) | [x] closed |
+| qramm-compliance/BL-02 | BLOCKER | Maturity threshold gap mis-classifies scores in [1.4,1.5) etc. | Phase 60 (SCORE-02) | [x] closed |
 | qramm-compliance/BL-03 | BLOCKER | last_verified lexicographic string comparison is fragile | — | [ ] open |
 | qramm-compliance/BL-04 | BLOCKER | int(years_raw) accepts negative/zero years | — | [ ] open |
 | qramm-compliance/WR-01 | WARNING | Evidence bridge date-string equality vulnerable to TZ drift | — | [ ] open |
@@ -141,15 +141,15 @@ wont_fix: 0
 | cbom-intel-reports/CR-01 | BLOCKER | CBOM Pass-1 emits zero algo components for 12 protocol families | Phase 61 (CBOM-COVER-01) | [ ] mapped |
 | cbom-intel-reports/CR-02 | BLOCKER | VAULT protocol falls through to TLS branch in Pass-1/2/3 | Phase 61 (CBOM-COVER-02) | [ ] mapped |
 | cbom-intel-reports/CR-03 | BLOCKER | SOURCE algo hint maps DES->3DES and collapses AES variants | — | [ ] open |
-| cbom-intel-reports/CR-04 | BLOCKER | Confidence returns 100% TLS-enum coverage when no TLS scanned | Phase 60 (SCORE-03) | [ ] mapped |
+| cbom-intel-reports/CR-04 | BLOCKER | Confidence returns 100% TLS-enum coverage when no TLS scanned | Phase 60 (SCORE-03) | [x] closed |
 | cbom-intel-reports/CR-05 | BLOCKER | Trend 1-second session window cannot disambiguate two scans | — | [ ] open |
-| cbom-intel-reports/CR-06 | BLOCKER | Score subscores can sum >100; agility_score added unbounded | Phase 60 (SCORE-04) | [ ] mapped |
+| cbom-intel-reports/CR-06 | BLOCKER | Score subscores can sum >100; agility_score added unbounded | Phase 60 (SCORE-04) | [x] closed |
 | cbom-intel-reports/CR-07 | BLOCKER | Markdown injection / table-break in technical.py finding rows | Phase 61 (REPORT-SAN-01) | [ ] mapped |
 | cbom-intel-reports/WR-01 | WARNING | PDF render uses blanket except Exception — masks programmer errors | — | [ ] open |
 | cbom-intel-reports/WR-02 | WARNING | PDF render does not clean up Playwright resources on exception | — | [ ] open |
 | cbom-intel-reports/WR-03 | WARNING | motion_broker_weak_tls_count predicate uses inconsistent uppercase | — | [ ] open |
 | cbom-intel-reports/WR-04 | WARNING | ECDSA detection in evidence.py mismatches cert_pubkey_alg conventions | — | [ ] open |
-| cbom-intel-reports/WR-05 | WARNING | _apply_weighted_impacts uses fixed score_cap=25.0 | Phase 60 (SCORE-04) | [ ] mapped |
+| cbom-intel-reports/WR-05 | WARNING | _apply_weighted_impacts uses fixed score_cap=25.0 | Phase 60 (SCORE-04) | [x] closed |
 | cbom-intel-reports/WR-06 | WARNING | SCORE_WEIGHTS sum is 261, not normalized | — | [ ] open |
 | cbom-intel-reports/WR-07 | WARNING | Roadmap _why string-format produces double-period artifacts | — | [ ] open |
 | cbom-intel-reports/WR-08 | WARNING | Roadmap mutation-after-yield merge rule undocumented | — | [ ] open |
