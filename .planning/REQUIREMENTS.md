@@ -38,9 +38,9 @@
 #### Credential Leakage Sweep
 *Closes audit blocker 11 + Pattern A (cross-subsystem). Phase 59.*
 
-- [ ] **LEAK-01**: A shared `quirk/util/safe_exc.py::safe_str(exc)` helper returns `f"{type(exc).__name__}"` by default and scrubs known-sensitive substrings (token-like strings, connection-string passwords, GCP ADC paths) from the exception message before returning
-- [ ] **LEAK-02**: Every connector that persists `scan_error` (vault, GCP, AWS, DB, broker, email, identity) routes exception text through `safe_str(exc)`; raw exception stringification (`f"...: {exc}"`) is removed from connector error paths
-- [ ] **LEAK-03**: A pytest gate enumerates all `scan_error` writes via AST scan and fails the build if any new caller bypasses `safe_str(exc)` (mirrors the `_build_finding` chokepoint pattern from v4.6 Phase 48)
+- [x] **LEAK-01**: A shared `quirk/util/safe_exc.py::safe_str(exc)` helper returns `f"{type(exc).__name__}"` by default and scrubs known-sensitive substrings (token-like strings, connection-string passwords, GCP ADC paths) from the exception message before returning
+- [x] **LEAK-02**: Every connector that persists `scan_error` (vault, GCP, AWS, DB, broker, email, identity) routes exception text through `safe_str(exc)`; raw exception stringification (`f"...: {exc}"`) is removed from connector error paths
+- [x] **LEAK-03**: A pytest gate enumerates all `scan_error` writes via AST scan and fails the build if any new caller bypasses `safe_str(exc)` (mirrors the `_build_finding` chokepoint pattern from v4.6 Phase 48)
 
 #### Score Arithmetic Correctness
 *Closes audit blockers 12, 15 + Pattern E. Phase 60.*
@@ -214,9 +214,9 @@ Populated by the roadmapper. Updated at each phase transition.
 | HARDEN-API-04 | Phase 58 | Pending |
 | HARDEN-API-05 | Phase 58 | Pending |
 | HARDEN-API-06 | Phase 58 | Pending |
-| LEAK-01 | Phase 59 | Pending |
-| LEAK-02 | Phase 59 | Pending |
-| LEAK-03 | Phase 59 | Pending |
+| LEAK-01 | Phase 59 | Complete |
+| LEAK-02 | Phase 59 | Complete |
+| LEAK-03 | Phase 59 | Complete |
 | SCORE-01 | Phase 60 | Pending |
 | SCORE-02 | Phase 60 | Pending |
 | SCORE-03 | Phase 60 | Pending |

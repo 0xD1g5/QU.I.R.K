@@ -1367,7 +1367,7 @@ Plans:
 |-------|------|----------------|--------|-----------|
 | 57. Scanner Security Hardening | A | 6/6 | Complete   | 2026-05-09 |
 | 58. Dashboard API Hardening | A | 6/7 | In Progress|  |
-| 59. Credential Leakage Sweep | A | 3/3 | Complete   | 2026-05-10 |
+| 59. Credential Leakage Sweep | A | 3/3 | Complete    | 2026-05-10 |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
 | 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
 | 62. React Hook Cancellation Pattern | A | 0/TBD | Not started | - |
