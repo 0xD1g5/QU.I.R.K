@@ -1317,7 +1317,11 @@ Wave 3 *(blocked on Wave 2 completion)*
   1. `quirk schedule add --name "weekly-prod" --cron "0 2 * * 1" --target prod.example.com --profile balanced` persists a row to a new `scheduled_scans` SQLite table and the row is visible via `quirk schedule list`
   2. `quirk scheduler run` (long-running mode) wakes at the cron time, dispatches the scan, writes results to the standard scan output path, and surfaces dispatch status (`pending` / `running` / `completed` / `failed`) to the dashboard `/schedules` route
   3. The dashboard `/schedules` route lists all scheduled scans with name, target, profile, cron expression, next-run time, last-run timestamp + status, and provides enable/disable toggles that round-trip to the backend
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 63-01-PLAN.md — DB models (ScheduledScan/ScheduledRun), `quirk schedule` CLI CRUD, run_scan.py interception, croniter dependency (SCHED-01)
+- [ ] 63-02-PLAN.md — `quirk scheduler run` 60s sleep-loop dispatcher with subprocess invocation, signal handling, startup recovery (SCHED-02)
+- [ ] 63-03-PLAN.md — FastAPI `/api/schedules` CRUD router (auth+csrf) and React `/schedules` dashboard page with toggle/delete (SCHED-01 API, SCHED-03)
 **UI hint**: yes
 
 ### Phase 64: Trend Analysis Foundation
