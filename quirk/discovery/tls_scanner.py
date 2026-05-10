@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec, ed25519, ed448
 from cryptography.hazmat.backends import default_backend
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
 
 
 def _pubkey_info(pubkey):
@@ -92,7 +93,7 @@ def scan_one(host: str, port: int, timeout: int, include_sni: bool) -> CryptoEnd
 
 
     except Exception as e:
-        ep.scan_error = str(e)
+        ep.scan_error = safe_str(e)
 
     return ep
 

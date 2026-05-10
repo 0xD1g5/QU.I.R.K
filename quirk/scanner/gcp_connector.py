@@ -15,6 +15,7 @@ import json
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # google-api-python-client optional import (D-02, D-07)
@@ -378,7 +379,7 @@ def scan_gcp_targets(project_id: str, logger=None) -> List[CryptoEndpoint]:
         )
     except Exception as exc:
         # DefaultCredentialsError fires here when no ADC is configured (D-04 / Pitfall 2)
-        scan_error_msg = f"gcp-credentials-unavailable: {exc}"
+        scan_error_msg = f"gcp-credentials-unavailable: {safe_str(exc)}"
         if logger:
             logger.v(scan_error_msg)
         return [
