@@ -36,6 +36,7 @@ dashboard = [
     "uvicorn[standard]>=0.39.0",
     "python-multipart>=0.0.20",
     "playwright>=1.58.0",
+    "croniter>=1.4.0",
 ]
 identity = [
     "impacket>=0.13.0,<0.14",
