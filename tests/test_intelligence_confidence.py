@@ -69,3 +69,20 @@ class ConfidenceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_zero_tls_produces_no_enum_coverage_bonus():
+    """SCORE-03 regression guard (D-08): tls_count=0 must yield 0.0 tls_enum_coverage_ratio points."""
+    from quirk.intelligence.confidence import compute_confidence
+
+    evidence = {
+        "totals": {"endpoints": 10},
+        "protocol_counts": {"TLS": 0, "SSH": 3, "UNKNOWN": 2},
+        # Deliberately omit tls_enum_coverage_ratio and tls_enum_coverage_pct
+    }
+    result = compute_confidence(evidence)
+    factor = result["factor_breakdown"]["tls_enum_coverage_ratio"]
+    assert factor["value"] == 0.0, f"Expected ratio 0.0, got {factor['value']}"
+    assert factor["points"] == 0.0, (
+        f"Expected 0.0 points for tls_enum_coverage_ratio when no TLS, got {factor['points']}"
+    )
