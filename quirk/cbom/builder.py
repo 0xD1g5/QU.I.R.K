@@ -384,8 +384,9 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                     if alg:
                         keysize = entry.get("keysize")
                         _register_algorithm(alg, algo_registry, key_size=keysize)
-            # D-07: also register host key alg if present (ssh-weak fallback when ssh_audit_json is empty)
-            if ep.cert_pubkey_alg:
+            # D-07: fallback — only register cert_pubkey_alg when ssh_audit_json was empty/unparseable;
+            # if ssh_data is populated the host key algorithm is already captured from the key section.
+            if ep.cert_pubkey_alg and not ssh_data:
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
         elif ep.protocol == "JWT":
