@@ -1181,7 +1181,7 @@ Plans:
 - [x] **Phase 59: Credential Leakage Sweep** - Shared `quirk/util/safe_exc.py::safe_str(exc)` helper applied across every connector and route handler that persists `scan_error`; AST-based pytest gate prevents future bypasses — closes audit blocker 11 + Pattern A (completed 2026-05-10)
 - [x] **Phase 60: Score Arithmetic Correctness** - Top-level readiness clamp ≤100, server-side QRAMM profile multiplier clamp `[0.8, 1.5]`, confidence-bonus zero-data guard, contiguous QRAMM maturity threshold bands — closes audit blockers 12, 15 + Pattern E (completed 2026-05-10)
 - [x] **Phase 61: CBOM Coverage + Report Sanitization** - CBOM Pass-1 algorithm components for the 12+ protocol families currently emitting zero algos, VAULT classification consistent across Pass-1/2/3, markdown report tables escape `|` / `\n` / control chars on adversary-controllable strings — closes audit blockers 13, 14 (completed 2026-05-10)
-- [ ] **Phase 62: React Hook Cancellation Pattern** - Standardized `useCancellableFetch` (or equivalent) across every data-fetch hook in `src/dashboard/src/hooks/`, QRAMM debounce coalescing fix, auto-fill confirm round-trip preserves badge contract, ESLint/codemod guard rule — closes Pattern C
+- [x] **Phase 62: React Hook Cancellation Pattern** - Standardized `useCancellableFetch` (or equivalent) across every data-fetch hook in `src/dashboard/src/hooks/`, QRAMM debounce coalescing fix, auto-fill confirm round-trip preserves badge contract, ESLint/codemod guard rule — closes Pattern C (completed 2026-05-10)
 
 **Wave B — Operating Model (gated on Wave A complete):**
 
@@ -1384,7 +1384,7 @@ Wave 3 *(blocked on Wave 2 completion)*
 | 59. Credential Leakage Sweep | A | 3/3 | Complete    | 2026-05-10 |
 | 60. Score Arithmetic Correctness | A | 2/2 | Complete    | 2026-05-10 |
 | 61. CBOM Coverage + Report Sanitization | A | 3/3 | Complete    | 2026-05-10 |
-| 62. React Hook Cancellation Pattern | A | 2/5 | In Progress|  |
+| 62. React Hook Cancellation Pattern | A | 2/5 | Complete    | 2026-05-10 |
 | 63. Scheduled / Continuous Scanning | B | 0/TBD | Blocked on Wave A | - |
 | 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |
 | 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Wave A | - |
