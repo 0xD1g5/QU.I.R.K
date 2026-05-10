@@ -20,7 +20,9 @@ export function QRAMMProvider({ children }: { children: ReactNode }) {
   // rapid edits across different questions do not cancel each other's saves.
   const debounceRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
   const sessionIdRef = useRef<number | null>(null)
-  sessionIdRef.current = sessionId
+  // Intentional: sync ref with state so callbacks that close over sessionIdRef.current
+  // always see the latest sessionId. This is a well-known React ref sync pattern.
+  sessionIdRef.current = sessionId // eslint-disable-line react-hooks/refs
   // BR-01 (D-03): synchronous merged-answer ref so persistDraft sees the latest
   // accumulated AnswerState (not the last-changed partial). Update before setAnswers.
   const latestAnswersRef = useRef<Map<number, AnswerState>>(new Map())
@@ -111,9 +113,12 @@ export function QRAMMProvider({ children }: { children: ReactNode }) {
 
   // WR-03 (D-05): clear all pending debounce timers on provider unmount.
   useEffect(() => {
+    // Capture the ref value inside the effect so the cleanup function holds a
+    // stable reference to the Map at mount time (ref identity is stable).
+    const timers = debounceRef.current
     return () => {
-      debounceRef.current.forEach((t) => clearTimeout(t))
-      debounceRef.current.clear()
+      timers.forEach((t) => clearTimeout(t))
+      timers.clear()
     }
   }, [])
 
