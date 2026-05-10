@@ -1294,7 +1294,11 @@ Plans:
   2. Typing 20 rapid answer changes within a single 300 ms debounce window POSTs exactly one coalesced batch to `/api/qramm/assessment/draft` (verified by a network-recorder test); per-keystroke partial writes never reach the backend
   3. Auto-filling a CVI question and confirming it removes the "Auto-filled from scan" badge in-place without triggering a full QRAMM session refetch — `confirmed_at` round-trips correctly through the existing optimistic-update path
   4. A custom ESLint rule (or codemod check in CI) flags any new `useEffect` block calling `setState` from an async branch without an `if (!cancelled)` guard; the rule fires on a deliberately broken fixture and is silent on a correct fixture
-**Plans**: TBD
+**Plans**: 4 plans
+  - [ ] 62-01-PLAN.md — Hook cancellation guards: useScanData (BR-03/BR-04) + useScanList (WR-02)
+  - [ ] 62-02-PLAN.md — Hook cancellation guards: useQRAMMSession error branches (WR-01)
+  - [ ] 62-03-PLAN.md — QRAMM provider coalescing + confirmAnswer flush + print sentinel + reactive theme (BR-01/02/05/06, WR-03/14)
+  - [ ] 62-04-PLAN.md — Vitest+MSW tests, CI guard script, audit + REQUIREMENTS ledger closure
 **UI hint**: yes
 
 ### Phase 63: Scheduled / Continuous Scanning
