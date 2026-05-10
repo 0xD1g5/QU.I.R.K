@@ -35,10 +35,28 @@ class ConfidenceTests(unittest.TestCase):
         self.assertLess(noisy_score, base_score)
 
     def test_confidence_and_readiness_are_independent_outputs(self) -> None:
-        a = _evidence()
-        b = _evidence()
-        # Change finding severity distribution heavily to impact readiness
-        b["finding_severity_counts"] = {"CRITICAL": 0, "HIGH": 4, "MEDIUM": 0, "LOW": 0, "INFO": 0}
+        # Use evidence with enough penalties so readiness pre-clamp sum stays under 100.
+        # This is required because compute_readiness_score() clamps total to [0, 100]
+        # (SCORE-01); the two inputs must differ visibly after clamping.
+        heavily_penalized = {
+            "totals": {"endpoints": 10, "findings": 4},
+            "protocol_counts": {"TLS": 1, "HTTP": 8, "SSH": 1, "UNKNOWN": 0},
+            "scan_error": {"count": 5, "rate": 0.5},
+            "tls_enum_coverage_ratio": 1.0,
+            "plaintext_http_count": 8,
+            "http_on_tls_port_count": 7,
+            "mtls_present_count": 0,
+            "cert_key_type_counts": {"RSA": 10, "ECDSA": 0},
+            "certificate_observations": {
+                "certs_observed": 8,
+                "expired_count": 6,
+                "expiring_count": 0,
+                "self_signed_count": 5,
+            },
+            "finding_severity_counts": {"CRITICAL": 0, "HIGH": 2, "MEDIUM": 1, "LOW": 0, "INFO": 1},
+        }
+        a = heavily_penalized
+        b = {**heavily_penalized, "finding_severity_counts": {"CRITICAL": 0, "HIGH": 4, "MEDIUM": 0, "LOW": 0, "INFO": 0}}
 
         conf_a = compute_confidence(a)["confidence_score"]
         conf_b = compute_confidence(b)["confidence_score"]

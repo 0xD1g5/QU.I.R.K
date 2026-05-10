@@ -216,7 +216,11 @@ def compute_readiness_score(
     ]
     motion_score, motion_drivers = _apply_weighted_impacts(motion_impacts)
 
-    total_score = int(hygiene_score + modern_tls_score + identity_trust_score + agility_score + dar_score + motion_score)
+    total_score = int(_clamp(
+        hygiene_score + modern_tls_score + identity_trust_score +
+        agility_score + dar_score + motion_score,
+        0, 100,
+    ))
     rating = _rating(total_score)
 
     all_drivers: List[Tuple[str, int]] = (
