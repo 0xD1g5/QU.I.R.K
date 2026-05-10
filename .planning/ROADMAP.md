@@ -1178,7 +1178,7 @@ Plans:
 
 - [x] **Phase 57: Scanner Security Hardening** - JWKS TLS verification, SAML SSRF allowlist, semgrep/syft argument-injection guards, broker hardcoded-credential removal, broker TLS-required default — closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`) (completed 2026-05-09)
 - [ ] **Phase 58: Dashboard API Hardening** - Single-user bearer auth + CSRF, CORS allowlist lockdown, per-route rate limiting, `quirk init` path-traversal guard, PDF SSRF clamp, `@file` allowlist + size cap — closes audit blockers 7–10 (`api-cli-core/CR-01, CR-02, CR-03, CR-09`)
-- [ ] **Phase 59: Credential Leakage Sweep** - Shared `quirk/util/safe_exc.py::safe_str(exc)` helper applied across every connector and route handler that persists `scan_error`; AST-based pytest gate prevents future bypasses — closes audit blocker 11 + Pattern A
+- [x] **Phase 59: Credential Leakage Sweep** - Shared `quirk/util/safe_exc.py::safe_str(exc)` helper applied across every connector and route handler that persists `scan_error`; AST-based pytest gate prevents future bypasses — closes audit blocker 11 + Pattern A (completed 2026-05-10)
 - [ ] **Phase 60: Score Arithmetic Correctness** - Top-level readiness clamp ≤100, server-side QRAMM profile multiplier clamp `[0.8, 1.5]`, confidence-bonus zero-data guard, contiguous QRAMM maturity threshold bands — closes audit blockers 12, 15 + Pattern E
 - [ ] **Phase 61: CBOM Coverage + Report Sanitization** - CBOM Pass-1 algorithm components for the 12+ protocol families currently emitting zero algos, VAULT classification consistent across Pass-1/2/3, markdown report tables escape `|` / `\n` / control chars on adversary-controllable strings — closes audit blockers 13, 14
 - [ ] **Phase 62: React Hook Cancellation Pattern** - Standardized `useCancellableFetch` (or equivalent) across every data-fetch hook in `src/dashboard/src/hooks/`, QRAMM debounce coalescing fix, auto-fill confirm round-trip preserves badge contract, ESLint/codemod guard rule — closes Pattern C
@@ -1255,7 +1255,7 @@ Plans:
 **Plans**: 3 plans
   - [x] 59-01-PLAN.md — Build safe_str helper + unit corpus (LEAK-01)
   - [x] 59-02-PLAN.md — Apply safe_str to 8 leaky callsites + unify db_connector (LEAK-02)
-  - [ ] 59-03-PLAN.md — AST CI gate + corpus replay regression (LEAK-03)
+  - [x] 59-03-PLAN.md — AST CI gate + corpus replay regression (LEAK-03)
 
 ### Phase 60: Score Arithmetic Correctness
 **Goal**: Every score path is bounded and defensible — total readiness is clamped to `[0, 100]`, the QRAMM profile multiplier is clamped server-side, the confidence bonus is gated on actual data, and QRAMM maturity thresholds are contiguous with no scoring gaps. Closes audit blockers 12, 15 + Pattern E.
@@ -1367,7 +1367,7 @@ Plans:
 |-------|------|----------------|--------|-----------|
 | 57. Scanner Security Hardening | A | 6/6 | Complete   | 2026-05-09 |
 | 58. Dashboard API Hardening | A | 6/7 | In Progress|  |
-| 59. Credential Leakage Sweep | A | 2/3 | In Progress|  |
+| 59. Credential Leakage Sweep | A | 3/3 | Complete   | 2026-05-10 |
 | 60. Score Arithmetic Correctness | A | 0/TBD | Not started | - |
 | 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
 | 62. React Hook Cancellation Pattern | A | 0/TBD | Not started | - |
