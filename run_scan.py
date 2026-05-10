@@ -264,6 +264,18 @@ def main():
         run_doctor()
         return
 
+    # --- schedule subcommand: intercept before scan argparse (Phase 63 SCHED-01) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "schedule":
+        from quirk.cli.schedule_cmd import run_schedule
+        run_schedule(_sys.argv[2:])
+        return
+
+    # --- scheduler subcommand: intercept before scan argparse (Phase 63 SCHED-02) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "scheduler":
+        from quirk.cli.scheduler_cmd import run_scheduler
+        run_scheduler(_sys.argv[2:])
+        return
+
     # --- qramm subcommand: intercept before scan argparse (Phase 55 QRAMM-07) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "qramm":
         if len(_sys.argv) > 2 and _sys.argv[2] == "status":

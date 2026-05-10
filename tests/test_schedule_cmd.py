@@ -1,15 +1,16 @@
 """Tests for quirk schedule CLI CRUD commands (Phase 63 — SCHED-01).
 
 Task 1: model registration + table creation tests (pass immediately).
-Task 2: run_schedule CLI tests (xfail until schedule_cmd.py ships).
+Task 2: run_schedule CLI tests (full implementations).
 """
 from __future__ import annotations
 
+import sys
+
 import pytest
-import sqlalchemy
 from sqlalchemy import inspect as sa_inspect
 
-from quirk.db import get_engine, init_db
+from quirk.db import get_engine, get_session, init_db
 from quirk.models import ScheduledScan, ScheduledRun
 
 
@@ -34,15 +35,13 @@ def test_init_db_creates_scheduled_tables(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Task 2 tests — CLI CRUD (xfail until schedule_cmd.py ships in Task 2)
+# Task 2 tests — CLI CRUD (full implementations)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(reason="run_schedule lands in Task 2", strict=False)
 def test_schedule_add_persists(tmp_path):
     """add subcommand must write a row with all expected field values."""
     from quirk.cli.schedule_cmd import run_schedule
-    from quirk.db import get_session
 
     db_path = str(tmp_path / "quirk.db")
     init_db(db_path)
@@ -66,7 +65,6 @@ def test_schedule_add_persists(tmp_path):
         assert row.created_at is not None
 
 
-@pytest.mark.xfail(reason="run_schedule lands in Task 2", strict=False)
 def test_schedule_add_invalid_cron(tmp_path):
     """add subcommand must reject invalid cron expressions with SystemExit."""
     from quirk.cli.schedule_cmd import run_schedule
@@ -88,7 +86,6 @@ def test_schedule_add_invalid_cron(tmp_path):
         assert db.query(ScheduledScan).filter_by(name="bad-cron").first() is None
 
 
-@pytest.mark.xfail(reason="run_schedule lands in Task 2", strict=False)
 def test_schedule_list_shows_row(tmp_path, capsys):
     """list subcommand must print a table containing the schedule name."""
     from quirk.cli.schedule_cmd import run_schedule
@@ -109,7 +106,6 @@ def test_schedule_list_shows_row(tmp_path, capsys):
     assert "weekly-prod" in captured.out
 
 
-@pytest.mark.xfail(reason="run_schedule lands in Task 2", strict=False)
 def test_schedule_add_duplicate_name(tmp_path, capsys):
     """Second add with same name must exit non-zero with 'already exists' message."""
     from quirk.cli.schedule_cmd import run_schedule
@@ -135,13 +131,12 @@ def test_schedule_add_duplicate_name(tmp_path, capsys):
         ])
     assert exc_info.value.code != 0
     captured = capsys.readouterr()
-    assert "already exists" in captured.out or "already exists" in captured.err
+    combined = captured.out + captured.err
+    assert "already exists" in combined
 
 
-@pytest.mark.xfail(reason="run_schedule lands in Task 2", strict=False)
 def test_run_scan_intercepts_schedule(tmp_path, monkeypatch, capsys):
     """run_scan.main() must short-circuit on argv[1] == 'schedule' without scan argparse."""
-    import sys
     import run_scan
 
     db_path = str(tmp_path / "quirk.db")
@@ -154,4 +149,5 @@ def test_run_scan_intercepts_schedule(tmp_path, monkeypatch, capsys):
     except SystemExit:
         pass  # list with no rows exits 0; either way no "target required" argparse error
     captured = capsys.readouterr()
-    assert "target" not in captured.err.lower() or "target required" not in captured.err
+    # Must NOT have fallen through to scan argparse error about missing target
+    assert "required" not in captured.err.lower() or "target" not in captured.err.lower()
