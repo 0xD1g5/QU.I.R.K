@@ -153,3 +153,41 @@ class QRAMMProfile(Base):
     geographic_scope = Column(String(32), nullable=True)
     multiplier = Column(Float, nullable=True)             # 0.8 - 1.5
     created_at = Column(DateTime, nullable=True)
+
+
+class ScheduledScan(Base):
+    """Scheduled scan configuration (Phase 63 — SCHED-01).
+
+    One row per named schedule. The scheduler dispatcher (Plan 02) reads
+    enabled rows and dispatches them when cron_expr fires.
+    """
+
+    __tablename__ = "scheduled_scans"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False, unique=True)
+    cron_expr = Column(String(128), nullable=False)
+    target = Column(String(512), nullable=False)
+    profile = Column(String(64), nullable=True)       # None = "balanced"
+    enabled = Column(Boolean, default=True)
+    last_run_at = Column(DateTime, nullable=True)     # None = never run
+    created_at = Column(DateTime, nullable=False)
+
+
+class ScheduledRun(Base):
+    """Dispatch run history for a scheduled scan (Phase 63 — SCHED-01).
+
+    One row per dispatch invocation. Plan 02 (scheduler dispatcher) populates
+    rows; Plan 03 (dashboard API) exposes them. status lifecycle:
+    pending -> running -> completed | failed.
+    """
+
+    __tablename__ = "scheduled_runs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    schedule_id = Column(Integer, nullable=False)     # FK -> scheduled_scans.id (no DB-level constraint; SQLite)
+    dispatched_at = Column(DateTime, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    status = Column(String(16), nullable=False)       # pending/running/completed/failed
+    scan_output_path = Column(Text, nullable=True)
+    scan_id = Column(String(64), nullable=True)       # null until scan completes

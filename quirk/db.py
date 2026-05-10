@@ -225,6 +225,16 @@ def _ensure_qramm_tables(engine) -> None:
     Base.metadata.create_all(engine, checkfirst=True)
 
 
+def _ensure_scheduled_tables(engine) -> None:
+    """Phase 63 SCHED-01: create scheduled_scans and scheduled_runs tables if absent.
+
+    Uses Base.metadata.create_all with checkfirst=True. ScheduledScan and
+    ScheduledRun are registered on Base.metadata via import of quirk.models.
+    New tables only — not new columns — so create_all is correct (not ALTER TABLE).
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -251,6 +261,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_phase46_columns(engine)     # Phase 46 — TLS-FIND-06 chain_verified
     _ensure_qramm_tables(engine)         # Phase 51 — QRAMM-01
     _ensure_phase54_qramm_columns(engine)  # Phase 54 — evidence_note column
+    _ensure_scheduled_tables(engine)     # Phase 63 — SCHED-01
     return engine
 
 
