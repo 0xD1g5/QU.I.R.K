@@ -183,7 +183,7 @@ export function OrgProfilePage() {
 
       // Step 4: Navigate
       navigate("/qramm/assessment")
-    } catch (err) {
+    } catch {
       setSubmitError("Could not start assessment — check your connection and try again")
     } finally {
       setSubmitting(false)
