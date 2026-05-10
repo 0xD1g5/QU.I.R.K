@@ -101,3 +101,36 @@ def test_d09_isolation_no_forbidden_imports():
     for f in forbidden:
         assert f"from {f}" not in text, f"D-09 violation: scoring.py imports {f}"
         assert f"import {f}" not in text, f"D-09 violation: scoring.py imports {f}"
+
+
+@pytest.mark.parametrize("raw_score", [i * 0.5 for i in range(0, 9)])
+def test_maturity_label_no_gaps_no_overlaps(raw_score):
+    """SCORE-04: every score in [0.0, 4.0] at 0.5-step increments maps to
+    exactly one of the five canonical QRAMM maturity labels — no gaps, no
+    fall-throughs, no None returns.
+
+    Steps: 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 (9 values)
+    Per CONTEXT.md D-09.
+    """
+    from quirk.qramm.scoring import _maturity_label
+
+    VALID_LABELS = {"Basic", "Developing", "Established", "Advanced", "Optimizing"}
+    label = _maturity_label(raw_score)
+    assert label is not None, f"_maturity_label({raw_score}) returned None"
+    assert label in VALID_LABELS, (
+        f"_maturity_label({raw_score}) returned unexpected label: {label!r}"
+    )
+
+
+def test_maturity_label_covers_all_five_levels():
+    """Sanity check: the 9-step sweep produces all five canonical labels at
+    least once, confirming full coverage of the maturity band."""
+    from quirk.qramm.scoring import _maturity_label
+
+    scores = [i * 0.5 for i in range(0, 9)]
+    labels_seen = {_maturity_label(s) for s in scores}
+    expected = {"Basic", "Developing", "Established", "Advanced", "Optimizing"}
+    assert labels_seen == expected, (
+        f"Not all labels covered. Missing: {expected - labels_seen}, "
+        f"Unexpected: {labels_seen - expected}"
+    )
