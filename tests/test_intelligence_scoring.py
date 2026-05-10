@@ -37,7 +37,7 @@ class ReadinessScoringTests(unittest.TestCase):
         MAX_SUBSCORE = 25  # per _apply_weighted_impacts cap
         NUM_SUBSCORES = 6  # + data_in_motion (Phase 34)
         self.assertGreaterEqual(result["score"], 0)
-        self.assertLessEqual(result["score"], MAX_SUBSCORE * NUM_SUBSCORES)
+        self.assertLessEqual(result["score"], 100)
         self.assertLessEqual(len(result["drivers"]), 5)
 
     def test_risky_evidence_scores_lower(self) -> None:
@@ -134,14 +134,15 @@ if __name__ == "__main__":
 def test_subscores_unaffected_by_clamp():
     """SCORE-01 regression guard: verify subscores in the returned dict are not
     clamped individually — only the top-level 'score' receives the clamp.
-    Subscores are allowed to exceed 25 in edge cases (per _apply_weighted_impacts).
+    Each subscore is clamped to [0, 25] by _apply_weighted_impacts; the aggregated total is clamped to [0, 100].
     """
     from quirk.intelligence.scoring import compute_readiness_score
 
-    # Minimal evidence — all subscores should sum within valid range
+    # Minimal evidence — all subscores should be within [0, 25]
     result = compute_readiness_score({})
     assert "subscores" in result
     for key, val in result["subscores"].items():
         assert isinstance(val, int), f"subscore {key} is not int: {val}"
+        assert 0 <= val <= 25, f"subscore {key}={val} outside [0, 25]"
     # The aggregated score must be clamped
     assert 0 <= result["score"] <= 100
