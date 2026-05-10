@@ -384,6 +384,9 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                     if alg:
                         keysize = entry.get("keysize")
                         _register_algorithm(alg, algo_registry, key_size=keysize)
+            # D-07: also register host key alg if present (ssh-weak fallback when ssh_audit_json is empty)
+            if ep.cert_pubkey_alg:
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
         elif ep.protocol == "JWT":
             # JWT: cert_pubkey_alg holds algorithm (RS256, ES256, etc.)
@@ -391,15 +394,16 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
         elif ep.protocol == "CONTAINER":
-            # Container: cipher_suite=library_name, tls_version=library_version
-            # No algorithm to register — library presence is the finding.
-            pass
+            # Container: cipher_suite=library_name (e.g., "openssl", "libssl")
+            if ep.cipher_suite:
+                _register_algorithm(ep.cipher_suite, algo_registry)
 
         elif ep.protocol == "SOURCE":
             # Source: cipher_suite=semgrep rule_id, extract algorithm hint
             algo_hint = _extract_algo_from_rule_id(ep.cipher_suite)
-            if algo_hint:
-                _register_algorithm(algo_hint, algo_registry)
+            algo_to_register = algo_hint or ep.cipher_suite  # D-06: fallback to raw rule ID
+            if algo_to_register:
+                _register_algorithm(algo_to_register, algo_registry)
 
         elif ep.protocol in ("AWS", "AZURE", "GCP"):
             # Cloud: parse cloud_scan_json for algorithm/key spec
@@ -440,9 +444,43 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             if ep.cert_pubkey_alg and ep.cert_pubkey_alg != "kerberos-unreachable":
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
-        elif ep.protocol in ("POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES"):
-            # DB, object storage, and Kubernetes config findings — no key material to catalog.
-            # Security signal is in service_detail; CBOM algorithm catalog not applicable.
+        elif ep.protocol == "VAULT":
+            # D-01: Vault transit key type lives in cert_pubkey_alg
+            # (e.g., "rsa-2048", "aes256-gcm96", "ed25519")
+            # VAULT stays in DAR_SKIP_PROTOCOLS for Pass-2/3 (no X.509 cert components)
+            if ep.cert_pubkey_alg:
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol == "MYSQL":
+            # D-04: MySQL cipher in service_detail as "MySQL/<cipher>-ok" or "MySQL/<cipher>-weak"
+            detail = ep.service_detail or ""
+            if "/" in detail:
+                cipher_part = detail.split("/", 1)[1]
+                if cipher_part.endswith(("-ok", "-weak")):
+                    cipher_name = cipher_part.rsplit("-", 1)[0]
+                else:
+                    cipher_name = cipher_part
+                if cipher_name and cipher_name.upper() not in ("SSL-OFF", "UNSPECIFIED", ""):
+                    _register_algorithm(cipher_name, algo_registry)
+
+        elif ep.protocol in ("POSTGRESQL", "RDS"):
+            # D-04: Postgres/RDS: cert_pubkey_alg may be set by RDS connector; bare Postgres skips cleanly
+            if ep.cert_pubkey_alg:
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+
+        elif ep.protocol in ("S3", "AZURE_BLOB"):
+            # D-05: S3/Azure Blob: service_detail encodes encryption posture
+            # ("S3/sse-s3", "S3/sse-kms-aws", "S3/sse-kms-cmk", "S3/unencrypted")
+            detail = ep.service_detail or ""
+            if "unencrypted" not in detail.lower():
+                _register_algorithm("AES-256", algo_registry)
+
+        elif ep.protocol == "KUBERNETES":
+            # Kubernetes config findings — no key material to catalog.
+            pass
+
+        elif ep.protocol in MOTION_PLAINTEXT_PROTOCOLS:
+            # D-08: Plaintext broker subfamilies: no encryption to catalog (the absence IS the finding)
             pass
 
         else:
