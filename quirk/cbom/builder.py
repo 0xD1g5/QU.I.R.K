@@ -472,8 +472,15 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
         elif ep.protocol in ("S3", "AZURE_BLOB"):
             # D-05: S3/Azure Blob: service_detail encodes encryption posture
             # ("S3/sse-s3", "S3/sse-kms-aws", "S3/sse-kms-cmk", "S3/unencrypted")
+            # Only register AES-256 when posture is positively confirmed as encrypted;
+            # None/"" means "unknown" — do not emit a false-positive algorithm entry.
+            _S3_ENCRYPTED_POSTURES = frozenset({
+                "sse-s3", "sse-kms-aws", "sse-kms-cmk",      # S3
+                "sse-cmek", "sse-microsoft-storage",           # Azure Blob
+            })
             detail = ep.service_detail or ""
-            if "unencrypted" not in detail.lower():
+            detail_lower = detail.lower()
+            if any(posture in detail_lower for posture in _S3_ENCRYPTED_POSTURES):
                 _register_algorithm("AES-256", algo_registry)
 
         elif ep.protocol == "KUBERNETES":
