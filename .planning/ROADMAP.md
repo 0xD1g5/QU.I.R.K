@@ -1279,7 +1279,10 @@ Plans:
   2. VAULT is routed through a vault-specific Pass-1 branch (not the TLS branch) and Pass-2 / Pass-3 emit consistent evidence claims about the same vault endpoint; a golden snapshot fixture for a chaos-lab vault scan is byte-identical across runs
   3. Rendering both the technical and executive markdown reports against an adversarial corpus (pipes, newlines, backticks, HTML entities, control characters in host / cipher / cert subject / cert issuer / banner / finding text / evidence note fields) produces output that parses as valid GFM tables with no row-break or injection escape
   4. CycloneDX 1.6 schema validation continues to pass for every chaos-lab profile post-fix — no new validation regressions introduced by Pass-1 expansion
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 61-01-PLAN.md — CBOM Pass-1 coverage branches + per-family coverage test + VAULT golden snapshot
+- [ ] 61-02-PLAN.md — md_cell escape utility + technical.py wrapping + adversarial corpus test
+- [ ] 61-03-PLAN.md — Audit ledger flip (CR-01/02/07) + UAT-SERIES sync + Obsidian phase note
 
 ### Phase 62: React Hook Cancellation Pattern
 **Goal**: Every data-fetch hook in the dashboard is cancellation-safe — switching scans mid-fetch never overwrites newer data with stale results, QRAMM debounce coalesces rapid edits into one request, the auto-fill confirm round-trip preserves the badge contract, and a CI guard rule prevents future regressions. Closes Pattern C.
