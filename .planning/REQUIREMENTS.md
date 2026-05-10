@@ -71,7 +71,7 @@
 #### Scheduled / Continuous Scanning
 *BACK-25. Phase 63.*
 
-- [ ] **SCHED-01**: Operator can register a scan schedule via `quirk schedule add --name <X> --cron <expr> --target <Y>` that persists to a new `scheduled_scans` SQLite table with cron expression, target spec, profile, and enabled flag
+- [x] **SCHED-01**: Operator can register a scan schedule via `quirk schedule add --name <X> --cron <expr> --target <Y>` that persists to a new `scheduled_scans` SQLite table with cron expression, target spec, profile, and enabled flag
 - [ ] **SCHED-02**: A `quirk scheduler run` long-running mode dispatches scheduled scans at their cron times, writes scan results to the standard scan output path, and surfaces dispatch status to the dashboard
 - [ ] **SCHED-03**: Dashboard `/schedules` route lists scheduled scans, their next-run time, last-run status, and provides enable/disable toggles
 
@@ -229,7 +229,7 @@ Populated by the roadmapper. Updated at each phase transition.
 | HOOK-02 | Phase 62 | Complete |
 | HOOK-03 | Phase 62 | Complete |
 | HOOK-04 | Phase 62 | Complete |
-| SCHED-01 | Phase 63 | Pending |
+| SCHED-01 | Phase 63 | Complete |
 | SCHED-02 | Phase 63 | Pending |
 | SCHED-03 | Phase 63 | Pending |
 | TREND-01 | Phase 64 | Pending |
