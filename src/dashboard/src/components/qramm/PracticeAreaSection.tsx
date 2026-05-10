@@ -30,7 +30,6 @@ const DEFAULT_ANSWER: AnswerState = {
 }
 
 export function PracticeAreaSection({
-  practiceArea: _practiceArea,
   practiceAreaName,
   questions,
   answers,
