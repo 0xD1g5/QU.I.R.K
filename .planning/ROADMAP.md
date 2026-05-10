@@ -1323,7 +1323,7 @@ Plans:
 - [x] 63-01-PLAN.md — DB models (ScheduledScan/ScheduledRun), `quirk schedule` CLI CRUD, run_scan.py interception, croniter dependency (SCHED-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 63-02-PLAN.md — `quirk scheduler run` 60s sleep-loop dispatcher with subprocess invocation, signal handling, startup recovery (SCHED-02)
+- [x] 63-02-PLAN.md — `quirk scheduler run` 60s sleep-loop dispatcher with subprocess invocation, signal handling, startup recovery (SCHED-02)
 - [ ] 63-03-PLAN.md — FastAPI `/api/schedules` CRUD router (auth+csrf) and React `/schedules` dashboard page with toggle/delete (SCHED-01 API, SCHED-03)
 **UI hint**: yes
 
@@ -1392,7 +1392,7 @@ Plans:
 | 60. Score Arithmetic Correctness | A | 2/2 | Complete    | 2026-05-10 |
 | 61. CBOM Coverage + Report Sanitization | A | 3/3 | Complete    | 2026-05-10 |
 | 62. React Hook Cancellation Pattern | A | 2/5 | Complete    | 2026-05-10 |
-| 63. Scheduled / Continuous Scanning | B | 1/3 | In Progress|  |
+| 63. Scheduled / Continuous Scanning | B | 2/3 | In Progress|  |
 | 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |
 | 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Wave A | - |
 | 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
