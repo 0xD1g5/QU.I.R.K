@@ -1335,7 +1335,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. The `/trends` route renders a multi-scan timeline (default last 30 scans) showing overall readiness, the six pillar subscores (TLS, SSH, API, Identity, Data-at-Rest, Data-in-Motion), and finding counts by severity tier; hovering a point reveals the underlying scan ID and timestamp
   2. A regression — score drop ≥ 5 points OR a new HIGH/CRITICAL finding category vs the previous scan — surfaces as an alert chip on the dashboard home with a deep-link to the regressing scan; the chip is dismissible and the dismissal is per-scan, not global
-**Plans**: TBD
+**Plans**: 3 plans
+**Wave 1** *(parallel)*
+- [ ] 64-01-PLAN.md — Backend: Wave 0 tests + TrendTimelineResponse schemas + GET /api/trends/timeline?n=30 endpoint (TREND-01 backend)
+- [ ] 64-03-PLAN.md — RegressionAlertChip component + ExecutivePage insertion (TREND-02; consumes existing /api/trends, no Plan 01 dependency)
+**Wave 2** *(blocked on 64-01)*
+- [ ] 64-02-PLAN.md — Frontend: TrendTimeline types + useTimelineData hook + Recharts LineChart on TrendsPage (TREND-01 frontend)
 **UI hint**: yes
 
 ### Phase 65: Dashboard-Initiated Scan
