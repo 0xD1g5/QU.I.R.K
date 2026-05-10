@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
 import { useState } from "react"
+import { RegressionAlertChip } from "@/components/RegressionAlertChip"
 
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "hsl(0 72% 51%)",
@@ -123,6 +124,9 @@ export function ExecutivePage() {
           </Button>
         </div>
       </div>
+
+      {/* Phase 64 TREND-02: Regression alert (above score gauge) */}
+      <RegressionAlertChip />
 
       {/* Score gauges row */}
       <Card>
