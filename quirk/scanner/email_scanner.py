@@ -25,6 +25,7 @@ from cryptography.hazmat.backends import default_backend
 from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.scanner.tls_scanner import _pubkey_info, _extract_sans  # D-10: reuse, do NOT duplicate
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # sslyze optional import (mirrors tls_scanner.py guard, plus
@@ -467,11 +468,11 @@ def _scan_one_fallback_email(
                 except AttributeError:
                     pass
         else:
-            ep.scan_error = str(e)
+            ep.scan_error = safe_str(e)
             if logger:
                 logger.v(f"Email fallback OSError {host}:{port}: {e}")
     except Exception as e:
-        ep.scan_error = str(e)
+        ep.scan_error = safe_str(e)
         if logger:
             logger.v(f"Email fallback error {host}:{port}: {e}")
 
