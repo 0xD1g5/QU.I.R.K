@@ -1280,8 +1280,8 @@ Plans:
   3. Rendering both the technical and executive markdown reports against an adversarial corpus (pipes, newlines, backticks, HTML entities, control characters in host / cipher / cert subject / cert issuer / banner / finding text / evidence note fields) produces output that parses as valid GFM tables with no row-break or injection escape
   4. CycloneDX 1.6 schema validation continues to pass for every chaos-lab profile post-fix — no new validation regressions introduced by Pass-1 expansion
 **Plans**: 3 plans
-- [ ] 61-01-PLAN.md — CBOM Pass-1 coverage branches + per-family coverage test + VAULT golden snapshot
-- [ ] 61-02-PLAN.md — md_cell escape utility + technical.py wrapping + adversarial corpus test
+- [x] 61-01-PLAN.md — CBOM Pass-1 coverage branches + per-family coverage test + VAULT golden snapshot
+- [x] 61-02-PLAN.md — md_cell escape utility + technical.py wrapping + adversarial corpus test
 - [ ] 61-03-PLAN.md — Audit ledger flip (CR-01/02/07) + UAT-SERIES sync + Obsidian phase note
 
 ### Phase 62: React Hook Cancellation Pattern
@@ -1372,7 +1372,7 @@ Plans:
 | 58. Dashboard API Hardening | A | 6/7 | In Progress|  |
 | 59. Credential Leakage Sweep | A | 3/3 | Complete    | 2026-05-10 |
 | 60. Score Arithmetic Correctness | A | 2/2 | Complete    | 2026-05-10 |
-| 61. CBOM Coverage + Report Sanitization | A | 0/TBD | Not started | - |
+| 61. CBOM Coverage + Report Sanitization | A | 2/3 | In Progress|  |
 | 62. React Hook Cancellation Pattern | A | 0/TBD | Not started | - |
 | 63. Scheduled / Continuous Scanning | B | 0/TBD | Blocked on Wave A | - |
 | 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |
