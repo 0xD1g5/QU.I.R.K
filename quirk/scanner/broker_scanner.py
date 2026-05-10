@@ -24,6 +24,7 @@ from cryptography.hazmat.backends import default_backend
 from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.scanner.tls_scanner import _pubkey_info, _extract_sans
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # sslyze optional import (same guard as email_scanner.py)
@@ -701,7 +702,7 @@ def _probe_redis_tls(host: str, port: int, timeout: int = 5) -> Optional[CryptoE
         return None
     except Exception as e:
         ep = CryptoEndpoint(host=host, port=port, protocol="REDIS-TLS")
-        ep.scan_error = str(e)
+        ep.scan_error = safe_str(e)
         return ep
 
 
