@@ -2,9 +2,9 @@
   "components": [
     {
       "asset_type": "algorithm",
-      "bom_ref": "crypto/algorithm/rsa-2048",
+      "bom_ref": "crypto/algorithm/rsa",
       "cipher_suite_names": [],
-      "name": "RSA-2048",
+      "name": "RSA",
       "protocol_type": null,
       "protocol_version": null,
       "type": "cryptographic-asset"
