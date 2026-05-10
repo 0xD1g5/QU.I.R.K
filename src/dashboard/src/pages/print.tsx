@@ -325,6 +325,15 @@ function PrintQRAMM({
 export function PrintPage() {
   const { data, loading, error } = useScanData()
   const { scoreResult, complianceRows, loading: qrammLoading, error: qrammError } = useQRAMMPrintData()
+
+  // BR-05 (D-06): clear stale data-ready on mount (in case a previous PrintPage left it set)
+  // and on unmount, so the attribute does not survive client-side navigation.
+  // Empty dep array — runs once on mount, cleanup on unmount only.
+  useEffect(() => {
+    document.body.removeAttribute('data-ready')
+    return () => { document.body.removeAttribute('data-ready') }
+  }, [])
+
   // QRAMM hook errors should not block the rest of the PDF — log and render the no-session fallback in that section.
   if (qrammError) {
     // eslint-disable-next-line no-console

@@ -33,6 +33,8 @@ interface QRAMMContextValue {
   setProfile: (p: OrgProfile | null) => void
   scoreResult: ScoreResult | null
   setScoreResult: (r: ScoreResult | null) => void
+  confirmAnswer: (questionNumber: number, value: 1 | 2 | 3 | 4) => void
+  clearPendingDebounces: () => void
 }
 
 export const QRAMMContext = createContext<QRAMMContextValue>({
@@ -45,4 +47,6 @@ export const QRAMMContext = createContext<QRAMMContextValue>({
   setProfile: () => {},
   scoreResult: null,
   setScoreResult: () => {},
+  confirmAnswer: () => {},
+  clearPendingDebounces: () => {},
 })
