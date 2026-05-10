@@ -154,7 +154,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - Resumable / partial-failure scans
 - Operator error-message pass
 
-## Current State: v4.8 In Progress — Wave A Phase 3/6 Complete
+## Current State: v4.8 In Progress — Wave A Phase 4/6 Complete
+
+Phase 60 complete (2026-05-10) — score arithmetic correctness: readiness score clamped to [0,100] (SCORE-01), TLS confidence bonus zeroed on absent TLS data (SCORE-02), QRAMM multiplier guard fires as explicit 400 before DB access (SCORE-03), maturity-band sweep confirmed (SCORE-04). Code-review fix CR-01 also applied: QRAMM overall score clamped to CSNP [0,4.0] scale. 45/45 tests pass. Audit ledger rows BL-01, BL-02, CR-04, CR-06, WR-05 closed.
 
 Phase 59 complete (2026-05-10) — credential leakage sweep: `safe_str()` scrubbing helper built (LEAK-01), applied to all 9 leaky callsites across scanner/discovery/CBOM modules (LEAK-02), AST CI gate enforcing no-raw-exc in `scan_error` writes (LEAK-03). 32/32 tests pass.
 
