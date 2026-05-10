@@ -90,7 +90,11 @@ class SaveAnswersResponse(BaseModel):
 
 class ScoreRequest(BaseModel):
     # Range matches the spec and _compute_multiplier clamp (RESEARCH A4: 0.8–1.5).
-    profile_multiplier: Optional[float] = Field(default=None, ge=0.8, le=1.5)
+    profile_multiplier: Optional[float] = Field(
+        default=None,
+        description="Profile risk multiplier. Valid range: [0.8, 1.5]. "
+                    "Values outside this range return HTTP 400 (QRAMM_MULTIPLIER_OUT_OF_RANGE).",
+    )
 
 
 # ---------- Phase 54 Plan 01: new Pydantic models ----------
@@ -335,6 +339,16 @@ def score_session(
 ) -> Dict[str, Any]:
     session = _get_session_or_404(db, session_id)
     multiplier = (payload.profile_multiplier if payload and payload.profile_multiplier is not None else 1.0)
+    if payload is not None and payload.profile_multiplier is not None:
+        if not (0.8 <= multiplier <= 1.5):
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "QRAMM_MULTIPLIER_OUT_OF_RANGE",
+                    "message": "profile_multiplier must be in [0.8, 1.5]",
+                    "valid_range": [0.8, 1.5],
+                },
+            )
 
     # Group answers by (dimension, practice_area)
     rows = (
