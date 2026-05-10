@@ -1319,7 +1319,10 @@ Wave 3 *(blocked on Wave 2 completion)*
   3. The dashboard `/schedules` route lists all scheduled scans with name, target, profile, cron expression, next-run time, last-run timestamp + status, and provides enable/disable toggles that round-trip to the backend
 **Plans**: 3 plans
 Plans:
+**Wave 1**
 - [ ] 63-01-PLAN.md — DB models (ScheduledScan/ScheduledRun), `quirk schedule` CLI CRUD, run_scan.py interception, croniter dependency (SCHED-01)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 63-02-PLAN.md — `quirk scheduler run` 60s sleep-loop dispatcher with subprocess invocation, signal handling, startup recovery (SCHED-02)
 - [ ] 63-03-PLAN.md — FastAPI `/api/schedules` CRUD router (auth+csrf) and React `/schedules` dashboard page with toggle/delete (SCHED-01 API, SCHED-03)
 **UI hint**: yes

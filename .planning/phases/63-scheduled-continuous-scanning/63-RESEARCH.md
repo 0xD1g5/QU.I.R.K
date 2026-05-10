@@ -731,17 +731,13 @@ assert resp.status_code == 200
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **config.yaml path for dispatched subprocesses**
-   - What we know: D-02 specifies passing `--config` to the subprocess
-   - What's unclear: The dispatcher itself reads config (to find DB path); how does it know where `config.yaml` is?
-   - Recommendation: Use `QUIRK_DB_PATH` env var (already in `deps.py`) to find the DB; pass the config path as a CLI arg to `quirk scheduler run --config config.yaml`
+1. **config.yaml path for dispatched subprocesses** — RESOLVED in Plan 02 Task 1
+   - Resolution: `quirk scheduler run` accepts `--config config.yaml`; DB path derived from config or `QUIRK_DB_PATH` env var. Subprocess receives `--config config_path` argument.
 
-2. **`quirk schedule add` — does it need a `--config` flag?**
-   - What we know: The CLI CRUD commands need to know which DB to write to
-   - What's unclear: Do they pick up `QUIRK_DB_PATH` or `config.yaml`?
-   - Recommendation: Add `--config config.yaml` as optional arg; default to `./quirk.db` fallback matching `deps.py` priority order
+2. **`quirk schedule add` — does it need a `--config` flag?** — RESOLVED in Plan 01 Task 2
+   - Resolution: `--config` is optional; resolution order is `QUIRK_DB_PATH` env var → `--config` path → `./quirk.db` fallback, matching `deps.py` priority order.
 
 ---
 
