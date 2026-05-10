@@ -4,21 +4,25 @@ from quirk.intelligence.scoring import compute_readiness_score
 
 
 def _base_evidence() -> dict:
+    # Deliberately degraded evidence so subscores sum < 100 pre-clamp.
+    # This allows profile and override comparisons to produce distinct clamped scores
+    # now that compute_readiness_score() applies _clamp(total, 0, 100) (SCORE-01).
     return {
-        "totals": {"endpoints": 10, "findings": 4},
-        "protocol_counts": {"TLS": 6, "HTTP": 2, "SSH": 1, "UNKNOWN": 1},
-        "plaintext_http_count": 1,
-        "http_on_tls_port_count": 1,
-        "mtls_present_count": 1,
-        "cert_key_type_counts": {"RSA": 6, "ECDSA": 2},
+        "totals": {"endpoints": 10, "findings": 10},
+        "protocol_counts": {"TLS": 2, "HTTP": 6, "SSH": 1, "UNKNOWN": 1},
+        "plaintext_http_count": 6,
+        "http_on_tls_port_count": 5,
+        "mtls_present_count": 0,
+        "cert_key_type_counts": {"RSA": 10, "ECDSA": 0},
         "certificate_observations": {
             "certs_observed": 8,
-            "expired_count": 0,
-            "expiring_count": 1,
-            "self_signed_count": 0,
+            "expired_count": 4,
+            "expiring_count": 2,
+            "self_signed_count": 4,
         },
-        "scan_error": {"count": 1, "rate": 0.1},
-        "finding_severity_counts": {"CRITICAL": 0, "HIGH": 2, "MEDIUM": 1, "LOW": 0, "INFO": 1},
+        "scan_error": {"count": 5, "rate": 0.5},
+        "finding_severity_counts": {"CRITICAL": 3, "HIGH": 5, "MEDIUM": 2, "LOW": 0, "INFO": 0},
+        "legacy_tls_count": 5,
     }
 
 
@@ -37,15 +41,16 @@ class ReadinessScoringTests(unittest.TestCase):
         self.assertLessEqual(len(result["drivers"]), 5)
 
     def test_risky_evidence_scores_lower(self) -> None:
+        # _base_evidence() already produces a sub-100 score; add further degradation
+        # so risky stays clearly below safe after _clamp(total, 0, 100) is applied.
         safe = _base_evidence()
         risky = _base_evidence()
-        risky["plaintext_http_count"] = 4
-        risky["http_on_tls_port_count"] = 3
-        risky["scan_error"] = {"count": 5, "rate": 0.5}
-        risky["certificate_observations"]["expired_count"] = 3
-        risky["certificate_observations"]["self_signed_count"] = 2
-        risky["cert_key_type_counts"] = {"RSA": 8, "ECDSA": 0}
-        risky["finding_severity_counts"]["HIGH"] = 4
+        risky["plaintext_http_count"] = 8
+        risky["http_on_tls_port_count"] = 8
+        risky["certificate_observations"]["expired_count"] = 5
+        risky["certificate_observations"]["self_signed_count"] = 5
+        risky["finding_severity_counts"]["HIGH"] = 8
+        risky["finding_severity_counts"]["CRITICAL"] = 5
 
         safe_score = compute_readiness_score(safe)["score"]
         risky_score = compute_readiness_score(risky)["score"]
