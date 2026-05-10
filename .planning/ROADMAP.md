@@ -1302,7 +1302,7 @@ Wave 1 *(Plans 01/02/03 run in parallel — fully disjoint file sets)*
   - [ ] 62-03-PLAN.md — QRAMM provider coalescing + confirmAnswer flush + print sentinel + reactive theme (BR-01/02/05/06, WR-03/14)
 
 Wave 2 *(blocked on Wave 1 completion)*
-  - [ ] 62-04-PLAN.md — Vitest+MSW tests, CI guard script, audit + REQUIREMENTS ledger closure
+  - [x] 62-04-PLAN.md — Vitest+MSW tests, CI guard script, audit + REQUIREMENTS ledger closure
 
 Wave 3 *(blocked on Wave 2 completion)*
   - [ ] 62-05-PLAN.md — docs/UAT-SERIES.md update, Obsidian vault sync, phase note creation (CLAUDE.md mandatory steps)
@@ -1384,7 +1384,7 @@ Wave 3 *(blocked on Wave 2 completion)*
 | 59. Credential Leakage Sweep | A | 3/3 | Complete    | 2026-05-10 |
 | 60. Score Arithmetic Correctness | A | 2/2 | Complete    | 2026-05-10 |
 | 61. CBOM Coverage + Report Sanitization | A | 3/3 | Complete    | 2026-05-10 |
-| 62. React Hook Cancellation Pattern | A | 0/5 | Planned    |  |
+| 62. React Hook Cancellation Pattern | A | 1/5 | In Progress|  |
 | 63. Scheduled / Continuous Scanning | B | 0/TBD | Blocked on Wave A | - |
 | 64. Trend Analysis Foundation | B | 0/TBD | Blocked on Wave A | - |
 | 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Wave A | - |
