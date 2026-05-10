@@ -337,7 +337,8 @@ def score_session(
     payload: Optional[ScoreRequest] = None,
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    session = _get_session_or_404(db, session_id)
+    # Validate multiplier BEFORE DB lookup so out-of-range values always return
+    # 400 (not 404) regardless of whether the session exists (D-04/D-05/D-06).
     multiplier = (payload.profile_multiplier if payload and payload.profile_multiplier is not None else 1.0)
     if payload is not None and payload.profile_multiplier is not None:
         if not (0.8 <= multiplier <= 1.5):
@@ -349,6 +350,7 @@ def score_session(
                     "valid_range": [0.8, 1.5],
                 },
             )
+    session = _get_session_or_404(db, session_id)
 
     # Group answers by (dimension, practice_area)
     rows = (
