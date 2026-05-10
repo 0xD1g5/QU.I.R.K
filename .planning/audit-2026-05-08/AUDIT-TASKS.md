@@ -138,13 +138,13 @@ wont_fix: 0
 
 | Finding ID | Severity | Title | Closed-By | Status |
 |---|---|---|---|---|
-| cbom-intel-reports/CR-01 | BLOCKER | CBOM Pass-1 emits zero algo components for 12 protocol families | Phase 61 (CBOM-COVER-01) | [ ] mapped |
-| cbom-intel-reports/CR-02 | BLOCKER | VAULT protocol falls through to TLS branch in Pass-1/2/3 | Phase 61 (CBOM-COVER-02) | [ ] mapped |
+| cbom-intel-reports/CR-01 | BLOCKER | CBOM Pass-1 emits zero algo components for 12 protocol families | Phase 61 (CBOM-COVER-01) | [x] closed — closed by Phase 61 (CBOM-COVER-01, see tests/test_cbom_coverage.py per-family parametrize) |
+| cbom-intel-reports/CR-02 | BLOCKER | VAULT protocol falls through to TLS branch in Pass-1/2/3 | Phase 61 (CBOM-COVER-02) | [x] closed — closed by Phase 61 (CBOM-COVER-02, dedicated VAULT Pass-1 branch + tests/test_cbom_vault_consistency.py golden snapshot) |
 | cbom-intel-reports/CR-03 | BLOCKER | SOURCE algo hint maps DES->3DES and collapses AES variants | — | [ ] open |
 | cbom-intel-reports/CR-04 | BLOCKER | Confidence returns 100% TLS-enum coverage when no TLS scanned | Phase 60 (SCORE-03) | [x] closed |
 | cbom-intel-reports/CR-05 | BLOCKER | Trend 1-second session window cannot disambiguate two scans | — | [ ] open |
 | cbom-intel-reports/CR-06 | BLOCKER | Score subscores can sum >100; agility_score added unbounded | Phase 60 (SCORE-04) | [x] closed |
-| cbom-intel-reports/CR-07 | BLOCKER | Markdown injection / table-break in technical.py finding rows | Phase 61 (REPORT-SAN-01) | [ ] mapped |
+| cbom-intel-reports/CR-07 | BLOCKER | Markdown injection / table-break in technical.py finding rows | Phase 61 (REPORT-SAN-01) | [x] closed — closed by Phase 61 (REPORT-SAN-01/02, quirk/reports/_md_escape.py md_cell + tests/test_report_sanitization.py adversarial corpus) |
 | cbom-intel-reports/WR-01 | WARNING | PDF render uses blanket except Exception — masks programmer errors | — | [ ] open |
 | cbom-intel-reports/WR-02 | WARNING | PDF render does not clean up Playwright resources on exception | — | [ ] open |
 | cbom-intel-reports/WR-03 | WARNING | motion_broker_weak_tls_count predicate uses inconsistent uppercase | — | [ ] open |
