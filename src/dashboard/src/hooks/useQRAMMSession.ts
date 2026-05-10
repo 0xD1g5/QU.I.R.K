@@ -1,6 +1,7 @@
 import { useEffect, useState, useContext, useRef } from "react"
 import { QRAMMContext, type AnswerState } from "@/context/QRAMMContext"
 import type { QRAMMSessionSummary, QRAMMAnswerRead } from "@/types/api"
+import { fetchApi } from "@/lib/api"
 
 interface UseQRAMMSessionResult {
   session: QRAMMSessionSummary | null
@@ -25,29 +26,64 @@ export function useQRAMMSession(): UseQRAMMSessionResult {
         setLoading(true)
         setError(null)
 
-        const listResp = await fetch("/api/qramm/sessions")
+        const listResp = await fetchApi("/api/qramm/sessions")
         if (!listResp.ok) {
-          setError(`API error: ${listResp.status} ${listResp.statusText}`)
+          if (!cancelled) {
+            if (listResp.status === 401) {
+              setError("Authentication required")
+              return
+            }
+            if (listResp.status === 403) {
+              setError("Request blocked")
+              return
+            }
+            if (listResp.status === 429) {
+              const retryAfter = listResp.headers.get("Retry-After") ?? "60"
+              setError(`Too many requests. Wait ${retryAfter} seconds and try again.`)
+              return
+            }
+            setError(`API error: ${listResp.status} ${listResp.statusText}`)
+          }
           return
         }
         const list: QRAMMSessionSummary[] = await listResp.json()
         if (cancelled) return
 
         if (list.length === 0) {
-          setSession(null)
-          ctx.setSessionId(null)
+          if (!cancelled) {
+            setSession(null)
+            ctx.setSessionId(null)
+          }
           return
         }
 
         const latest = list[0]
-        setSession(latest)
-        ctx.setSessionId(latest.session_id)
+        if (!cancelled) {
+          setSession(latest)
+          ctx.setSessionId(latest.session_id)
+        }
 
         // Seed answers only once per session_id load (avoid clobbering edits).
+        // seededRef invariant preserved exactly — only cancellation guards added below.
         if (seededRef.current !== latest.session_id) {
-          const ansResp = await fetch(`/api/qramm/sessions/${latest.session_id}/answers`)
+          const ansResp = await fetchApi(`/api/qramm/sessions/${latest.session_id}/answers`)
           if (!ansResp.ok) {
-            setError(`API error: ${ansResp.status} ${ansResp.statusText}`)
+            if (!cancelled) {
+              if (ansResp.status === 401) {
+                setError("Authentication required")
+                return
+              }
+              if (ansResp.status === 403) {
+                setError("Request blocked")
+                return
+              }
+              if (ansResp.status === 429) {
+                const retryAfter = ansResp.headers.get("Retry-After") ?? "60"
+                setError(`Too many requests. Wait ${retryAfter} seconds and try again.`)
+                return
+              }
+              setError(`API error: ${ansResp.status} ${ansResp.statusText}`)
+            }
             return
           }
           const rows: QRAMMAnswerRead[] = await ansResp.json()
@@ -61,8 +97,10 @@ export function useQRAMMSession(): UseQRAMMSessionResult {
               evidence_note: r.evidence_note ?? "",
             })
           }
-          ctx.resetAnswers(map)
-          seededRef.current = latest.session_id
+          if (!cancelled) {
+            ctx.resetAnswers(map)
+            seededRef.current = latest.session_id
+          }
         }
       } catch (err) {
         if (!cancelled) {
