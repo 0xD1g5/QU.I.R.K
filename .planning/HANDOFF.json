@@ -1,63 +1,42 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-09T03:46:58Z",
-  "context": "default",
-  "phase": null,
-  "phase_name": "Post-v4.7 milestone close + comprehensive code audit",
-  "phase_dir": ".planning/audit-2026-05-08",
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
-  "status": "paused",
+  "timestamp": "2026-05-10T23:03:16.440Z",
+  "phase": "64",
+  "phase_name": "trend-analysis-foundation",
+  "phase_dir": ".planning/phases/64-trend-analysis-foundation",
+  "plan": 3,
+  "task": "human-uat",
+  "total_tasks": "complete",
+  "status": "awaiting_human_uat",
   "completed_tasks": [
-    {"id": 1, "name": "Phase 54 HUMAN-UAT walkthrough — 5/5 PASS", "status": "done", "commit": "a2ba083"},
-    {"id": 2, "name": "Phase 54 closeout — Series 22.5 in UAT-SERIES.md, Organisation→Organization spelling fix, dashboard rebuild, Obsidian Phase-54 note + UAT-Series sync", "status": "done", "commit": "a2ba083"},
-    {"id": 3, "name": "Verified zero outstanding HUMAN-UAT in v4.7 (52/53/54/55/56/56.1 all complete or passed)", "status": "done"},
-    {"id": 4, "name": "Investigated gsd-audit-fix — confirmed wrong tool (UAT-debt pipeline, not code review)", "status": "done"},
-    {"id": 5, "name": "Whole-codebase audit: 6 parallel gsd-code-reviewer agents at deep depth across 116 files", "status": "done", "commit": "uncommitted"},
-    {"id": 6, "name": "AUDIT-SUMMARY.md synthesis with proposed v4.8 Wave A/B phase decomposition", "status": "done", "commit": "uncommitted"}
+    {"id": "64-01-T1", "name": "Wave 0 failing tests for /api/trends/timeline", "status": "done", "commit": "287d34d"},
+    {"id": "64-01-T2", "name": "FindingCounts, TrendSessionPoint, TrendTimelineResponse schemas", "status": "done", "commit": "3fc6b48"},
+    {"id": "64-01-T3", "name": "GET /api/trends/timeline endpoint", "status": "done", "commit": "aa36937"},
+    {"id": "64-03-T1", "name": "RegressionAlertChip component", "status": "done", "commit": "a37d0b7"},
+    {"id": "64-03-T2", "name": "RegressionAlertChip in ExecutivePage + build", "status": "done", "commit": "fa882d4"},
+    {"id": "64-02-T1", "name": "TrendTimeline TS types + useTimelineData hook", "status": "done", "commit": "3f3c0be"},
+    {"id": "64-02-T2", "name": "LineChart on TrendsPage + dashboard build", "status": "done", "commit": "2baf1cf"}
   ],
   "remaining_tasks": [
-    {"id": 7, "name": "Triage top 15 blockers with stakeholder lens (enterprise-first per memory)", "status": "not_started"},
-    {"id": 8, "name": "Decide v4.8 Wave A / Wave B split — accept proposal or revise", "status": "not_started"},
-    {"id": 9, "name": "Run /gsd-new-milestone v4.8 with audit findings as input", "status": "not_started"},
-    {"id": 10, "name": "Update HORIZON.md with rationale-log entries for the audit-driven scope expansion", "status": "not_started"},
-    {"id": 11, "name": "Commit audit artifacts (.planning/audit-2026-05-08/ — currently uncommitted)", "status": "not_started"},
-    {"id": 12, "name": "Memory note: persist audit-finding categories so future audits can compare drift", "status": "not_started"}
+    {"id": "UAT-1", "name": "Multi-scan timeline chart renders on /trends", "status": "pending_human"},
+    {"id": "UAT-2", "name": "Regression chip visible on / with score-drop scan", "status": "pending_human"},
+    {"id": "UAT-3", "name": "Per-session dismissal persists across refresh", "status": "pending_human"},
+    {"id": "UAT-4", "name": "New scan shows fresh chip after prior dismissal", "status": "pending_human"}
   ],
-  "blockers": [],
+  "blockers": [
+    {
+      "description": "croniter missing from venv — caused quirk serve crash",
+      "type": "resolved",
+      "workaround": "Fixed: .venv/bin/pip install croniter"
+    }
+  ],
   "human_actions_pending": [
-    {"action": "Read 6 subsystem REVIEW.md files (summary aggregates; details matter)", "context": "Triage decisions can't be made from summary alone — per-subsystem context determines fix complexity", "blocking": false},
-    {"action": "Decide which blockers gate v4.8 ship vs ship-with-documented-warnings", "context": "Memory: enterprise-first prioritization. HORIZON: v4.8 is primetime cutover (deploy-and-forget bar)", "blocking": false}
+    {
+      "action": "Run quirk serve and test 4 UAT items in browser",
+      "context": "UAT items require visual chart rendering and localStorage interaction",
+      "blocking": true
+    }
   ],
-  "decisions": [
-    {"decision": "Run audit BEFORE v4.8, not after", "rationale": "HORIZON.md frames v4.8 as primetime cutover with highest quality bar; audit at clean checkpoint maps findings to single state; audit findings inform v4.8 phase decomposition rather than disrupting it mid-flight", "phase": "audit-2026-05-08"},
-    {"decision": "Whole-codebase scope (not just QRAMM/v4.7)", "rationale": "User explicit choice; primetime cutover spans entire codebase, not just newest surface", "phase": "audit-2026-05-08"},
-    {"decision": "6 parallel gsd-code-reviewer agents at deep depth, partitioned by subsystem", "rationale": "gsd-code-review skill is phase-scoped; gsd-audit-fix is for UAT-debt only; direct parallel dispatch matches the 'wider audit' shape", "phase": "audit-2026-05-08"},
-    {"decision": "Proposed v4.8 split: Wave A (6 hardening phases 57-62) before Wave B (6 operating-model phases 63-68)", "rationale": "Audit revealed dashboard API has zero auth/CORS/rate-limiting; shipping scheduled+dashboard-launched scans on top of unhardened API would invert the primetime quality goal", "phase": "audit-2026-05-08"},
-    {"decision": "Excluded from audit: tests/, chaos lab, build/CI workflows, shadcn UI primitives", "rationale": "Scope discipline; each excluded surface is its own audit shape", "phase": "audit-2026-05-08"}
-  ],
-  "uncommitted_files": [
-    ".planning/audit-2026-05-08/AUDIT-SUMMARY.md",
-    ".planning/audit-2026-05-08/scanners-protocol/REVIEW.md",
-    ".planning/audit-2026-05-08/scanners-cloud/REVIEW.md",
-    ".planning/audit-2026-05-08/qramm-compliance/REVIEW.md",
-    ".planning/audit-2026-05-08/cbom-intel-reports/REVIEW.md",
-    ".planning/audit-2026-05-08/api-cli-core/REVIEW.md",
-    ".planning/audit-2026-05-08/react-frontend/REVIEW.md"
-  ],
-  "next_action": "Read .planning/audit-2026-05-08/AUDIT-SUMMARY.md, then walk the top 15 blockers with the user. Decide whether to commit audit artifacts as-is or refine first.",
-  "context_notes": "v4.7 Governance & Compliance Platform shipped fully today (2026-05-08). Audit found 41+ blockers across 6 subsystems — bigger scope than HORIZON.md's pre-loaded 'residual trust/polish' track anticipated. The dashboard API hardening finding (zero auth/CORS/rate-limiting/CSRF on mutating routes) is the most v4.8-critical because v4.8 ships dashboard-initiated scans (BACK-86 slice 1). Recommend Wave A/B split before any v4.8 phase planning.",
-  "audit_artifacts": {
-    "summary": ".planning/audit-2026-05-08/AUDIT-SUMMARY.md",
-    "subsystem_reports": {
-      "scanners_protocol": {"path": ".planning/audit-2026-05-08/scanners-protocol/REVIEW.md", "blockers": 8, "warnings": 14, "info": 6, "files": 17},
-      "scanners_cloud": {"path": ".planning/audit-2026-05-08/scanners-cloud/REVIEW.md", "blockers": 10, "warnings": 24, "info": 0, "files": 11},
-      "qramm_compliance": {"path": ".planning/audit-2026-05-08/qramm-compliance/REVIEW.md", "blockers": 4, "warnings": 13, "info": 0, "files": 8},
-      "cbom_intel_reports": {"path": ".planning/audit-2026-05-08/cbom-intel-reports/REVIEW.md", "blockers": 7, "warnings": 14, "info": 9, "files": 13},
-      "api_cli_core": {"path": ".planning/audit-2026-05-08/api-cli-core/REVIEW.md", "blockers": 9, "warnings": 17, "info": 7, "files": 21},
-      "react_frontend": {"path": ".planning/audit-2026-05-08/react-frontend/REVIEW.md", "blockers": 6, "warnings": 14, "info": 7, "files": 46}
-    },
-    "totals": {"blockers": 44, "warnings": 96, "info": 29, "files_reviewed": 116}
-  }
+  "next_action": "User tests 4 UAT items in browser then responds approved or reports issues. On approved: phase.complete 64, Obsidian note, UAT-SERIES.md update, advance to Phase 65.",
+  "context_notes": "All plans executed and merged. 9/9 automated checks passed. Only browser UAT remains. croniter dep was fixed in-session."
 }
