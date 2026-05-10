@@ -16,6 +16,7 @@ import { RoadmapPage } from "@/pages/roadmap"
 import { TrendsPage } from "@/pages/trends"
 import { OrgProfilePage } from "@/pages/qramm-profile"
 import { AssessmentPage } from "@/pages/qramm-assessment"
+import { SchedulesPage } from "@/pages/schedules"
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
                       <Route path="/print" element={<PrintPage />} />
                       <Route path="/qramm" element={<OrgProfilePage />} />
                       <Route path="/qramm/assessment" element={<AssessmentPage />} />
+                      <Route path="/schedules" element={<SchedulesPage />} />
                     </Routes>
                   </div>
                 </main>
