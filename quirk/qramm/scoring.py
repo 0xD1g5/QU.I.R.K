@@ -53,7 +53,7 @@ def compute_overall_score(
       multiplier: profile multiplier (typically 0.8-1.5; default 1.0 neutral)
     """
     dims = ["CVI", "SGRM", "DPE", "ITR"]
-    weighted = {d: round(dimension_scores.get(d, 0.0) * multiplier, 4) for d in dims}
+    weighted = {d: round(min(4.0, dimension_scores.get(d, 0.0) * multiplier), 4) for d in dims}
     overall = round(sum(weighted.values()) / len(dims), 4)
     return {
         "overall": overall,

@@ -19,7 +19,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
 from pydantic import BaseModel, Field
@@ -442,7 +442,7 @@ def list_questions() -> List[QuestionItem]:
 # ---------- Phase 54 Plan 01: 4 new endpoints ----------
 
 @router.get("/qramm/sessions", response_model=List[SessionSummary])
-def list_sessions(db: Session = Depends(get_db), limit: int = 50) -> List[SessionSummary]:
+def list_sessions(db: Session = Depends(get_db), limit: int = Query(default=50, ge=1, le=200)) -> List[SessionSummary]:
     """Gap 1 — D-03: list assessment sessions, most-recent first (default limit 50).
 
     Uses a single GROUP BY subquery to count answered questions per session,
