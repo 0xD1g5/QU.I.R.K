@@ -31,6 +31,20 @@ export function ThemeProvider({
     }
   }, [theme])
 
+  // BR-06 (D-07): wire MediaQueryList listener so OS dark/light toggle is reflected
+  // while the app is running. Listener is only active when theme === "system".
+  useEffect(() => {
+    if (theme !== "system") return
+    const mql = window.matchMedia("(prefers-color-scheme: dark)")
+    const handler = (e: MediaQueryListEvent) => {
+      const root = window.document.documentElement
+      root.classList.remove("light", "dark")
+      root.classList.add(e.matches ? "dark" : "light")
+    }
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [theme])
+
   const value: ThemeProviderState = {
     theme,
     setTheme: (t: Theme) => {
