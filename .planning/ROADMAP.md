@@ -1187,7 +1187,7 @@ Plans:
 
 - [x] **Phase 63: Scheduled / Continuous Scanning** - `quirk schedule add` CLI + `scheduled_scans` SQLite table + `quirk scheduler run` long-running dispatcher + dashboard `/schedules` listing (BACK-25) (completed 2026-05-10)
 - [ ] **Phase 64: Trend Analysis Foundation** - Multi-scan timeline of overall + per-pillar scores and finding counts on `/trends`, regression alert chips on dashboard home with deep-links to the regressing scan (BACK-21)
-- [ ] **Phase 64.1: Audit Residual Blockers** - Triage all 19 open BLOCKERs from the 2026-05-08 audit (record deferred-v4.9 / wont-fix dispositions); fix the 5 that directly undermine Phase 64 UAT or Phase 65 foundations: trend session-window disambiguation (CR-05), non-transactional `init_db` migrations (api-cli-core/CR-08), QRAMM staleness date comparison (BL-03), QRAMM negative-years guard (BL-04), SOURCE algo hint DES→3DES collapse (cbom-intel-reports/CR-03)
+- [x] **Phase 64.1: Audit Residual Blockers** - Triage all 19 open BLOCKERs from the 2026-05-08 audit (record deferred-v4.9 / wont-fix dispositions); fix the 5 that directly undermine Phase 64 UAT or Phase 65 foundations: trend session-window disambiguation (CR-05), non-transactional `init_db` migrations (api-cli-core/CR-08), QRAMM staleness date comparison (BL-03), QRAMM negative-years guard (BL-04), SOURCE algo hint DES→3DES collapse (cbom-intel-reports/CR-03) (completed 2026-05-11)
 - [ ] **Phase 65: Dashboard-Initiated Scan** - `/scan/new` form, Pydantic-shared validation, backend job spawn, live status polling, post-completion navigation (BACK-86 slice 1)
 - [ ] **Phase 66: Dashboard Scan History + Clone/Compare** - `/scans` list + "Clone configuration" prefill + side-by-side compare diff view (BACK-86 slice 2)
 - [ ] **Phase 67: Resumable / Partial-Failure Scans** - `scan_checkpoints` SQLite table + `quirk scan --resume <id>` continuation + per-scanner partial-failure isolation with dashboard panel
@@ -1358,7 +1358,7 @@ Plans:
   6. All remaining 14 open BLOCKERs have a recorded disposition (`deferred-v4.9` or `wont-fix`) with rationale in `AUDIT-TASKS.md` — zero rows remain as bare `[ ] open`
 **Plans**: 2 plans
 - [x] 64.1-01-PLAN.md — Fix 5 audit BLOCKERs (CR-03, CR-05, BL-03, BL-04, api-cli-core/CR-08) + regression tests + close 5 ledger rows
-- [ ] 64.1-02-PLAN.md — Apply formal dispositions to remaining 14 open BLOCKERs (deferred-v4.9 / wont-fix) and close 2 Phase-59-mapped rows
+- [x] 64.1-02-PLAN.md — Apply formal dispositions to remaining 14 open BLOCKERs (deferred-v4.9 / wont-fix) and close 2 Phase-59-mapped rows
 
 ### Phase 65: Dashboard-Initiated Scan
 **Goal**: An operator who never opens a terminal can configure, launch, and watch a scan progress to completion entirely from the dashboard — closing the primetime gap that currently forces every customer to use the CLI (BACK-86 slice 1).
@@ -1416,7 +1416,7 @@ Plans:
 | 62. React Hook Cancellation Pattern | A | 2/5 | Complete    | 2026-05-10 |
 | 63. Scheduled / Continuous Scanning | B | 3/3 | Complete   | 2026-05-10 |
 | 64. Trend Analysis Foundation | B | 3/3 | Complete   | 2026-05-10 |
-| 64.1. Audit Residual Blockers | B | 1/2 | In Progress|  |
+| 64.1. Audit Residual Blockers | B | 2/2 | Complete   | 2026-05-11 |
 | 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Phase 64.1 | - |
 | 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
