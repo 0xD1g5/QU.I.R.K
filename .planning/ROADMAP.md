@@ -1356,7 +1356,9 @@ Plans:
   4. `qramm-compliance/BL-04` fixed: `int(years_raw)` input is clamped to `>= 1` before use; negative or zero values raise a validation error with a clear message
   5. `cbom-intel-reports/CR-03` fixed: SOURCE scanner algo hint correctly distinguishes DES from 3DES and preserves AES variant specificity (AES-128 ≠ AES-256)
   6. All remaining 14 open BLOCKERs have a recorded disposition (`deferred-v4.9` or `wont-fix`) with rationale in `AUDIT-TASKS.md` — zero rows remain as bare `[ ] open`
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 64.1-01-PLAN.md — Fix 5 audit BLOCKERs (CR-03, CR-05, BL-03, BL-04, api-cli-core/CR-08) + regression tests + close 5 ledger rows
+- [ ] 64.1-02-PLAN.md — Apply formal dispositions to remaining 14 open BLOCKERs (deferred-v4.9 / wont-fix) and close 2 Phase-59-mapped rows
 
 ### Phase 65: Dashboard-Initiated Scan
 **Goal**: An operator who never opens a terminal can configure, launch, and watch a scan progress to completion entirely from the dashboard — closing the primetime gap that currently forces every customer to use the CLI (BACK-86 slice 1).
