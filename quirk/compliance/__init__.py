@@ -16,6 +16,7 @@ quirk/engine/risk_engine.py.
 """
 from __future__ import annotations
 
+import datetime
 from typing import Any, Dict, FrozenSet, List
 
 # Phase 49 D-04 / COMPLY-08: configurable freshness threshold.
@@ -257,7 +258,11 @@ def status_report(format: str = "text") -> None:
         for e in entries:
             key = e["framework"]
             # Keep the OLDEST last_verified per framework (worst-case staleness signal).
-            if key not in seen or e["last_verified"] < seen[key]["last_verified"]:
+            if (
+                key not in seen
+                or datetime.date.fromisoformat(e["last_verified"])
+                < datetime.date.fromisoformat(seen[key]["last_verified"])
+            ):
                 seen[key] = {
                     "framework": e["framework"],
                     "version": e["version"],
