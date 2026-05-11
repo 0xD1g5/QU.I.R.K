@@ -80,8 +80,8 @@ wont_fix: 0
 | scanners-cloud/CR-01 | BLOCKER | migration_planner.py is a stub — does not implement scoring | — | [ ] open |
 | scanners-cloud/CR-02 | BLOCKER | GCP Cloud SQL stuffs severity into cert_pubkey_alg field | — | [ ] open |
 | scanners-cloud/CR-03 | BLOCKER | K8s scan_k8s_targets calls _scan_aks_encryption with None cred | — | [ ] open |
-| scanners-cloud/CR-04 | BLOCKER | Vault scan_error leaks raw exception text incl token fragments | Phase 59 (LEAK-01) | [ ] mapped |
-| scanners-cloud/CR-05 | BLOCKER | GCP scan_gcp_targets exception message includes raw cred text | Phase 59 (LEAK-02) | [ ] mapped |
+| scanners-cloud/CR-04 | BLOCKER | Vault scan_error leaks raw exception text incl token fragments | Phase 59 (LEAK-01) | [x] closed — closed by Phase 59 (safe_str helper in quirk/util/safe_exc.py applied to vault_connector scan_error path; AST gate test in tests/test_safe_exc_gate.py) |
+| scanners-cloud/CR-05 | BLOCKER | GCP scan_gcp_targets exception message includes raw cred text | Phase 59 (LEAK-02) | [x] closed — closed by Phase 59 (safe_str helper in quirk/util/safe_exc.py applied to scan_gcp_targets exception path; AST gate test in tests/test_safe_exc_gate.py) |
 | scanners-cloud/CR-06 | BLOCKER | Cache TTL boundary inverted on ttl_hours <= 0 | — | [ ] open |
 | scanners-cloud/CR-07 | BLOCKER | TokenBucket starvation when tokens > capacity requested | — | [ ] open |
 | scanners-cloud/CR-08 | BLOCKER | TokenBucket sleep + busy-wait can starve under contention | — | [ ] open |
