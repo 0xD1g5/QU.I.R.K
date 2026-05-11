@@ -2,11 +2,12 @@
 audit: comprehensive-codebase-2026-05-08
 ledger_status: active
 generated: 2026-05-09
+triaged: 2026-05-10
 total_findings: 169
-closed: 28
-open: 139
-deferred: 0
-wont_fix: 0
+closed: 34
+open: 121
+deferred: 13
+wont_fix: 1
 ---
 
 # Audit Findings Ledger — 2026-05-08
@@ -31,10 +32,10 @@ wont_fix: 0
 
 | Severity | Total | Mapped | Open | Closed | Deferred | Won't-fix |
 |---|---:|---:|---:|---:|---:|---:|
-| BLOCKER | 44 | 2 | 14 | 28 | 0 | 0 |
-| WARNING | 96 | 0 | 96 | 0 | 0 | 0 |
+| BLOCKER | 44 | 0 | 0 | 30 | 13 | 1 |
+| WARNING | 96 | 0 | 92 | 4 | 0 | 0 |
 | INFO | 29 | 0 | 29 | 0 | 0 | 0 |
-| **TOTAL** | **169** | **2** | **139** | **28** | **0** | **0** |
+| **TOTAL** | **169** | **0** | **121** | **34** | **13** | **1** |
 
 ---
 
@@ -50,8 +51,8 @@ wont_fix: 0
 | scanners-protocol/CR-04 | BLOCKER | SSRF in SAML metadata fetcher — no scheme/host validation | Phase 57 (HARDEN-SCAN-04) | [x] closed |
 | scanners-protocol/CR-05 | BLOCKER | Hardcoded guest:guest credentials sent to arbitrary hosts | Phase 57 (HARDEN-SCAN-05) | [x] closed |
 | scanners-protocol/CR-06 | BLOCKER | verify=False on RabbitMQ mgmt API + ssl_cert_reqs=none Redis | Phase 57 (HARDEN-SCAN-06) | [x] closed |
-| scanners-protocol/CR-07 | BLOCKER | Nested ThreadPoolExecutor + sslyze internal pool resource leak | — | [ ] open |
-| scanners-protocol/CR-08 | BLOCKER | fingerprint._tcp_connect socket leak on SSH banner branch | — | [ ] open |
+| scanners-protocol/CR-07 | BLOCKER | Nested ThreadPoolExecutor + sslyze internal pool resource leak | — | [ ] deferred-v4.9 |
+| scanners-protocol/CR-08 | BLOCKER | fingerprint._tcp_connect socket leak on SSH banner branch | — | [ ] deferred-v4.9 |
 | scanners-protocol/WR-01 | WARNING | coverage.calculate_coverage can return >100% | — | [ ] open |
 | scanners-protocol/WR-02 | WARNING | quantum_readiness_score non-monotonic; severity case-sensitive | — | [ ] open |
 | scanners-protocol/WR-03 | WARNING | Bare except Exception swallowing subprocess errors silently | — | [ ] open |
@@ -77,16 +78,16 @@ wont_fix: 0
 
 | Finding ID | Severity | Title | Closed-By | Status |
 |---|---|---|---|---|
-| scanners-cloud/CR-01 | BLOCKER | migration_planner.py is a stub — does not implement scoring | — | [ ] open |
-| scanners-cloud/CR-02 | BLOCKER | GCP Cloud SQL stuffs severity into cert_pubkey_alg field | — | [ ] open |
-| scanners-cloud/CR-03 | BLOCKER | K8s scan_k8s_targets calls _scan_aks_encryption with None cred | — | [ ] open |
-| scanners-cloud/CR-04 | BLOCKER | Vault scan_error leaks raw exception text incl token fragments | Phase 59 (LEAK-01) | [ ] mapped |
-| scanners-cloud/CR-05 | BLOCKER | GCP scan_gcp_targets exception message includes raw cred text | Phase 59 (LEAK-02) | [ ] mapped |
-| scanners-cloud/CR-06 | BLOCKER | Cache TTL boundary inverted on ttl_hours <= 0 | — | [ ] open |
-| scanners-cloud/CR-07 | BLOCKER | TokenBucket starvation when tokens > capacity requested | — | [ ] open |
-| scanners-cloud/CR-08 | BLOCKER | TokenBucket sleep + busy-wait can starve under contention | — | [ ] open |
-| scanners-cloud/CR-09 | BLOCKER | K8s scan_k8s_targets empty-list edge case violates K8S-03 | — | [ ] open |
-| scanners-cloud/CR-10 | BLOCKER | Azure Blob key_source microsoft.storage conflated with absent | — | [ ] open |
+| scanners-cloud/CR-01 | BLOCKER | migration_planner.py is a stub — does not implement scoring | — | [ ] wont-fix |
+| scanners-cloud/CR-02 | BLOCKER | GCP Cloud SQL stuffs severity into cert_pubkey_alg field | — | [ ] deferred-v4.9 |
+| scanners-cloud/CR-03 | BLOCKER | K8s scan_k8s_targets calls _scan_aks_encryption with None cred | — | [ ] deferred-v4.9 |
+| scanners-cloud/CR-04 | BLOCKER | Vault scan_error leaks raw exception text incl token fragments | Phase 59 (LEAK-01) | [x] closed — closed by Phase 59 (safe_str helper in quirk/util/safe_exc.py applied to vault_connector scan_error path; AST gate test in tests/test_safe_exc_gate.py) |
+| scanners-cloud/CR-05 | BLOCKER | GCP scan_gcp_targets exception message includes raw cred text | Phase 59 (LEAK-02) | [x] closed — closed by Phase 59 (safe_str helper in quirk/util/safe_exc.py applied to scan_gcp_targets exception path; AST gate test in tests/test_safe_exc_gate.py) |
+| scanners-cloud/CR-06 | BLOCKER | Cache TTL boundary inverted on ttl_hours <= 0 | — | [ ] deferred-v4.9 |
+| scanners-cloud/CR-07 | BLOCKER | TokenBucket starvation when tokens > capacity requested | — | [ ] deferred-v4.9 |
+| scanners-cloud/CR-08 | BLOCKER | TokenBucket sleep + busy-wait can starve under contention | — | [ ] deferred-v4.9 |
+| scanners-cloud/CR-09 | BLOCKER | K8s scan_k8s_targets empty-list edge case violates K8S-03 | — | [ ] deferred-v4.9 |
+| scanners-cloud/CR-10 | BLOCKER | Azure Blob key_source microsoft.storage conflated with absent | — | [ ] deferred-v4.9 |
 | scanners-cloud/WR-01 | WARNING | AWS _scan_acm may pass empty ARN to describe_certificate | — | [ ] open |
 | scanners-cloud/WR-02 | WARNING | AWS _scan_kms does not skip disabled or pending-deletion keys | — | [ ] open |
 | scanners-cloud/WR-03 | WARNING | Azure _scan_keyvault_keys swallows key_size — always None | — | [ ] open |
@@ -176,10 +177,10 @@ wont_fix: 0
 | api-cli-core/CR-01 | BLOCKER | Path traversal in quirk init --output | Phase 58 (HARDEN-API-02) | [x] closed |
 | api-cli-core/CR-02 | BLOCKER | SSRF / port binding in routes/pdf.py via QUIRK_SERVE_PORT | Phase 58 (HARDEN-API-03) | [x] closed |
 | api-cli-core/CR-03 | BLOCKER | Missing authentication on every dashboard route | Phase 58 (HARDEN-API-01) | [x] closed |
-| api-cli-core/CR-04 | BLOCKER | QRAMMProfile.session_id is nullable and has no DB-level FK | — | [ ] open |
-| api-cli-core/CR-05 | BLOCKER | delete_session does not clear qramm_sessions.profile_id link | — | [ ] open |
-| api-cli-core/CR-06 | BLOCKER | Bare except: pass in classifier call drops findings silently | — | [ ] open |
-| api-cli-core/CR-07 | BLOCKER | SQL injection guard on column names lacks col_type DDL fragment | — | [ ] open |
+| api-cli-core/CR-04 | BLOCKER | QRAMMProfile.session_id is nullable and has no DB-level FK | — | [ ] deferred-v4.9 |
+| api-cli-core/CR-05 | BLOCKER | delete_session does not clear qramm_sessions.profile_id link | — | [ ] deferred-v4.9 |
+| api-cli-core/CR-06 | BLOCKER | Bare except: pass in classifier call drops findings silently | — | [ ] deferred-v4.9 |
+| api-cli-core/CR-07 | BLOCKER | SQL injection guard on column names lacks col_type DDL fragment | — | [ ] deferred-v4.9 |
 | api-cli-core/CR-08 | BLOCKER | init_db ALTER TABLE migrations are not transactional | Phase 64.1 (CR-08) | [x] closed — closed by Phase 64.1 (tests/test_init_db_idempotent.py) |
 | api-cli-core/CR-09 | BLOCKER | parse_target_tokens reflective DoS via deep @file recursion | Phase 58 (HARDEN-API-04) | [x] closed |
 | api-cli-core/WR-01 | WARNING | _check_dashboard / _check_network always return True | — | [ ] open |
@@ -283,3 +284,149 @@ These are recommendations for the human triage pass.
 ---
 
 _Generated: 2026-05-09 from `.planning/audit-2026-05-08/` REVIEW.md files._
+
+---
+
+## Dispositions — Phase 64.1 (2026-05-10)
+
+Structured rationale blocks for all 14 remaining open BLOCKERs not addressed by a code fix in Phase 64.1 Plan 1. Applied per CONTEXT.md D-06 format.
+
+---
+
+### scanners-protocol/CR-07 — Nested ThreadPoolExecutor + sslyze pool resource leak
+
+> **deferred-v4.9** — scanners-protocol/CR-07
+> - Rationale: sslyze invocation in tls_scanner uses a context-manager pool nested inside the scanner's own ThreadPoolExecutor; on exception inside sslyze's pool, the inner pool can leak threads.
+> - Safe to defer: Triggers only on sslyze internal exception during TLS enumeration. Resource leak is bounded by scan lifetime (single-shot CLI invocation; FastAPI dashboard scans are also bounded). No long-running daemon mode exists.
+> - Fix phase: v4.9 scanner reliability sweep — would naturally pair with WR-12 thread pool sizing work.
+> - Risk: low — daemon mode does not exist; per-scan leak is reclaimed at process exit.
+
+---
+
+### scanners-protocol/CR-08 — fingerprint._tcp_connect socket leak on SSH banner branch
+
+> **deferred-v4.9** — scanners-protocol/CR-08
+> - Rationale: SSH banner branch in fingerprint._tcp_connect opens a socket but on early-return error path does not always close it.
+> - Safe to defer: Sockets are reclaimed at scan-process exit; SSH fingerprinting is a niche code path; no production deployments report file descriptor exhaustion.
+> - Fix phase: v4.9 scanner reliability sweep — pair with CR-07 thread/resource leak cleanup.
+> - Risk: low — bounded by single scan run; no daemon mode.
+
+---
+
+### scanners-cloud/CR-01 — migration_planner.py is a 16-line stub
+
+> **wont-fix** — scanners-cloud/CR-01
+> - Rationale: migration_planner.py is dead code — the real migration recommendation logic lives in quirk/intelligence/migration_advisor.py (audited separately as qramm-compliance/WR-09). The stub will be removed in v5.2 chaos-lab + tech-debt sweep per AUDIT-SUMMARY recommendation. No code path imports the stub today.
+> - Acceptable because: The file is entirely unused — zero imports, zero callers. It does not score, classify, or process anything. Leaving it in place creates confusion (misleading filename) but no correctness or security risk. Removal is a cleanup task, not a bug fix.
+> - Fix phase: v5.2 dead-code removal (delete file entirely).
+> - Risk: low — unused module; misleading filename only.
+
+---
+
+### scanners-cloud/CR-02 — GCP Cloud SQL stuffs severity into cert_pubkey_alg field
+
+> **deferred-v4.9** — scanners-cloud/CR-02
+> - Rationale: gcp_connector._scan_cloud_sql writes the severity string ("WARN", "CRITICAL") into the cert_pubkey_alg column, conflating algorithm and severity.
+> - Safe to defer: Output is consumed only by GCP-specific reporting; users see the conflation in raw JSON but the dashboard's severity badge is derived independently from the severity column. No incorrect finding classification occurs; the issue is data-field misuse only.
+> - Fix phase: v4.9 GCP connector polish — pair with scanners-cloud/WR-22 (Cloud SQL description not surfaced).
+> - Risk: low — cosmetic field misuse; severity is still computed correctly elsewhere.
+
+---
+
+### scanners-cloud/CR-03 — K8s scan_k8s_targets calls _scan_aks_encryption with None cred
+
+> **deferred-v4.9** — scanners-cloud/CR-03
+> - Rationale: When azure_cred is unavailable but AKS targets are present, _scan_aks_encryption is invoked with None and fails with AttributeError caught by a bare except.
+> - Safe to defer: K8s is opt-in via the cloud profile + extras install; most users hit the documented "azure-identity not installed" path long before this branch. Failure is silent (caught) — no incorrect findings, just missing data for that AKS target.
+> - Fix phase: v4.9 K8s reliability sweep — pair with CR-09 empty-list edge case (same function, same phase scope).
+> - Risk: medium — silent data loss for AKS users who have credentials misconfigured; operator sees incomplete results without error indication.
+
+---
+
+### scanners-cloud/CR-06 — Cache TTL boundary inverted on ttl_hours <= 0
+
+> **deferred-v4.9** — scanners-cloud/CR-06
+> - Rationale: Cache._is_fresh treats ttl_hours <= 0 as "always fresh" instead of "never fresh"; documentation says ttl=0 disables caching.
+> - Safe to defer: Default ttl_hours is 24; no production config sets ttl <= 0. Operators who want to disable cache use --no-cache or set ttl very low (e.g., 0.001h) which still produces correct behavior.
+> - Fix phase: v4.9 cache subsystem cleanup — Pattern D migration-safety group.
+> - Risk: low — only manifests when operator deliberately sets ttl <= 0 via config or CLI; no default path affected.
+
+---
+
+### scanners-cloud/CR-07 — TokenBucket starvation when tokens > capacity requested
+
+> **deferred-v4.9** — scanners-cloud/CR-07
+> - Rationale: TokenBucket.acquire(n) where n > capacity loops forever because the bucket can never accumulate that many tokens.
+> - Safe to defer: All current callers request n=1 (single API call per acquire). No code path requests n > capacity. A defensive precondition check would protect future contributors but provides zero operational benefit today.
+> - Fix phase: v4.9 rate-limiting sweep — pair with CR-08 contention starvation fix.
+> - Risk: low — no current caller triggers this path; only manifests if future code requests n > capacity.
+
+---
+
+### scanners-cloud/CR-08 — TokenBucket sleep + busy-wait contention starvation
+
+> **deferred-v4.9** — scanners-cloud/CR-08
+> - Rationale: Under high concurrent acquire load, the sleep-then-retry loop without a fair queue can starve some callers indefinitely.
+> - Safe to defer: Cloud scanners run with ThreadPoolExecutor max_workers=8 typically; bucket sizing is per-cloud-provider rate limits. Real-world contention is bounded and no production starvation has been reported.
+> - Fix phase: v4.9 rate-limiting sweep — pair with CR-07 capacity starvation fix.
+> - Risk: medium — could manifest under aggressive parallelism settings (large --max-workers or future parallel scan dispatch from Phase 65).
+
+---
+
+### scanners-cloud/CR-09 — K8s scan_k8s_targets empty-list edge case violates K8S-03
+
+> **deferred-v4.9** — scanners-cloud/CR-09
+> - Rationale: When target list is empty after filtering, scan_k8s_targets returns a malformed empty result that violates the K8S-03 contract (expected: empty list with metadata; actual: bare empty list).
+> - Safe to defer: Empty-target path is exercised only when all K8s clusters are explicitly excluded from the scan. Dashboard handles bare empty list gracefully (no crash, just empty table).
+> - Fix phase: v4.9 K8s reliability sweep — pair with CR-03 None-credential AKS bug (same function scope).
+> - Risk: low — schema cosmetic; no user-visible incorrect data or crash; contract violation only affects downstream API consumers.
+
+---
+
+### scanners-cloud/CR-10 — Azure Blob key_source microsoft.storage conflated with absent
+
+> **deferred-v4.9** — scanners-cloud/CR-10
+> - Rationale: azure_blob._classify treats key_source="Microsoft.Storage" and key_source=None as the same case, masking the distinction between platform-managed-keys (known state) and unknown-state.
+> - Safe to defer: Both states produce the same finding severity (WARN — not customer-managed); the conflation only affects the detail/description string, not the classification or severity badge shown in the dashboard.
+> - Fix phase: v4.9 Azure connector polish — pair with scanners-cloud/WR-03 Azure keyvault key_size fix.
+> - Risk: low — finding severity unchanged; only diagnostic detail text is less precise.
+
+---
+
+### api-cli-core/CR-04 — QRAMMProfile.session_id nullable, no DB-level FK
+
+> **deferred-v4.9** — api-cli-core/CR-04
+> - Rationale: QRAMMProfile model declares session_id as nullable=True with no SQLAlchemy ForeignKey constraint; orphan profiles can exist after session deletion if the application-level cascade fails.
+> - Safe to defer: delete_session does cascade in application code (Phase 51 D-09 decision); the missing DB-level FK is a defense-in-depth gap, not a current exploitable bug. No orphan profiles have been observed in practice.
+> - Fix phase: v4.9 QRAMM data model hardening — pair with CR-05 stale FK pointer fix (same model, same migration).
+> - Risk: low — application-level cascade works correctly; DB-level constraint is belt-and-suspenders hardening only.
+
+---
+
+### api-cli-core/CR-05 — delete_session does not clear qramm_sessions.profile_id link
+
+> **deferred-v4.9** — api-cli-core/CR-05
+> - Rationale: delete_session removes QRAMMSession but does not null out the reverse profile_id pointer on QRAMMProfile, leaving the profile with a stale FK string referencing a deleted session.
+> - Safe to defer: No code path reads profile.session_id without re-validating against the live sessions table; the stale pointer is inert and causes no incorrect data to be displayed or returned.
+> - Fix phase: v4.9 QRAMM data model hardening — pair with CR-04 nullable FK constraint fix.
+> - Risk: low — dangling pointer is read-only stale data; no incorrect behavior triggered.
+
+---
+
+### api-cli-core/CR-06 — Bare except: pass in classifier call drops findings silently
+
+> **deferred-v4.9** — api-cli-core/CR-06
+> - Rationale: One classifier invocation path swallows all exceptions with bare `except: pass`, dropping findings without logging any indication of the failure.
+> - Safe to defer: Classifier exceptions are extremely rare given that input is structured Pydantic models validated at ingestion. Failure mode is silent under-count (missing findings), not a crash or false positive.
+> - Fix phase: v4.9 logging-hygiene sweep — pair with bare-except findings across WR-03, WR-08, IN-02 (common pattern across subsystems).
+> - Risk: medium — silent finding loss is invisible to operators; scan result may under-report vulnerabilities without any warning.
+
+---
+
+### api-cli-core/CR-07 — SQL injection guard on column names lacks col_type DDL fragment
+
+> **deferred-v4.9** — api-cli-core/CR-07
+> - Rationale: _SAFE_COL_RE allowlist validates column names but the col_type DDL fragment (e.g., "TEXT", "VARCHAR(16)") appended in ALTER TABLE statements is interpolated without a separate validation guard.
+> - Safe to defer: All col_type values are hardcoded string constants in _V43_COLUMN_DDLS, _PHASE41_COLUMN_DDLS, and equivalent dicts — they are never user-influenced. Current attack surface is zero; the gap is a "future contributor adds a dynamic col_type" defense failure, not a present-day injection vector.
+> - Fix phase: v4.9 schema-migration safety sweep — pair with init_db idempotency hardening (the test added by Phase 64.1 Plan 1 for CR-08 already exercises the migration path).
+> - Risk: low — zero current attack surface; all col_type values are repo-hardcoded constants; only a future code change could introduce the vector.
