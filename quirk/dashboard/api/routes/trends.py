@@ -4,10 +4,9 @@ Returns HTTP 200 with score_delta=null and zeroed counts when fewer than two
 distinct sessions exist (D-06). NULL scanned_at rows are excluded from session
 grouping and endpoint fetches (D-13).
 
-Session grouping uses func.strftime second-truncated grouping to match the
-pattern in scan.py:457 — each session's endpoints share a common session_start
-timestamp with microsecond precision, so we truncate to the second to produce
-one logical session row per scan run.
+Session grouping uses func.strftime microsecond-precision grouping (%Y-%m-%d %H:%M:%f)
+to produce one logical session row per scan run. This ensures two scans started
+within the same second appear as distinct timeline points (CR-05 fix).
 """
 from __future__ import annotations
 
@@ -42,21 +41,22 @@ router = APIRouter(dependencies=[Depends(require_auth)])
 def _list_session_timestamps(db: Session) -> List[datetime]:
     """Return up to 10 most recent distinct session timestamps (newest first).
 
-    Uses the verbatim strftime grouping pattern from scan.py:457-472. Excludes
+    Uses microsecond-precision strftime format (%Y-%m-%d %H:%M:%f) so two scans
+    started within the same second appear as distinct sessions (CR-05). Excludes
     NULL scanned_at rows (D-13) via explicit isnot(None) filter.
     """
-    ts_sec = func.strftime(
-        "%Y-%m-%d %H:%M:%S", CryptoEndpoint.scanned_at
-    ).label("ts_sec")
+    ts_usec = func.strftime(
+        "%Y-%m-%d %H:%M:%f", CryptoEndpoint.scanned_at
+    ).label("ts_usec")
     rows = (
-        db.query(ts_sec)
+        db.query(ts_usec)
         .filter(CryptoEndpoint.scanned_at.isnot(None))
-        .group_by("ts_sec")
-        .order_by(ts_sec.desc())
+        .group_by("ts_usec")
+        .order_by(ts_usec.desc())
         .limit(10)
         .all()
     )
-    return [datetime.fromisoformat(r.ts_sec) for r in rows]
+    return [datetime.fromisoformat(r.ts_usec) for r in rows]
 
 
 @router.get("/trends", response_model=TrendReportResponse)
@@ -133,19 +133,20 @@ def _list_session_timestamps_n(db: Session, n: int) -> List[datetime]:
     Variant of _list_session_timestamps() with a parameterized LIMIT.
     Do NOT modify _list_session_timestamps() — it is hardcoded to LIMIT 10
     and consumed by get_trends. (CONTEXT.md D-03)
+    Uses microsecond-precision strftime format (%Y-%m-%d %H:%M:%f) — CR-05.
     """
-    ts_sec = func.strftime(
-        "%Y-%m-%d %H:%M:%S", CryptoEndpoint.scanned_at
-    ).label("ts_sec")
+    ts_usec = func.strftime(
+        "%Y-%m-%d %H:%M:%f", CryptoEndpoint.scanned_at
+    ).label("ts_usec")
     rows = (
-        db.query(ts_sec)
+        db.query(ts_usec)
         .filter(CryptoEndpoint.scanned_at.isnot(None))
-        .group_by("ts_sec")
-        .order_by(ts_sec.desc())
+        .group_by("ts_usec")
+        .order_by(ts_usec.desc())
         .limit(n)
         .all()
     )
-    return [datetime.fromisoformat(r.ts_sec) for r in rows]
+    return [datetime.fromisoformat(r.ts_usec) for r in rows]
 
 
 @router.get("/trends/timeline", response_model=TrendTimelineResponse)

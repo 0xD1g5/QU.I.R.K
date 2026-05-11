@@ -3,8 +3,8 @@ audit: comprehensive-codebase-2026-05-08
 ledger_status: active
 generated: 2026-05-09
 total_findings: 169
-closed: 0
-open: 148
+closed: 28
+open: 139
 deferred: 0
 wont_fix: 0
 ---
@@ -31,10 +31,10 @@ wont_fix: 0
 
 | Severity | Total | Mapped | Open | Closed | Deferred | Won't-fix |
 |---|---:|---:|---:|---:|---:|---:|
-| BLOCKER | 44 | 17 | 23 | 4 | 0 | 0 |
+| BLOCKER | 44 | 2 | 14 | 28 | 0 | 0 |
 | WARNING | 96 | 0 | 96 | 0 | 0 | 0 |
 | INFO | 29 | 0 | 29 | 0 | 0 | 0 |
-| **TOTAL** | **169** | **17** | **148** | **4** | **0** | **0** |
+| **TOTAL** | **169** | **2** | **139** | **28** | **0** | **0** |
 
 ---
 
@@ -118,8 +118,8 @@ wont_fix: 0
 |---|---|---|---|---|
 | qramm-compliance/BL-01 | BLOCKER | Profile multiplier not clamped server-side | Phase 60 (SCORE-01) | [x] closed |
 | qramm-compliance/BL-02 | BLOCKER | Maturity threshold gap mis-classifies scores in [1.4,1.5) etc. | Phase 60 (SCORE-02) | [x] closed |
-| qramm-compliance/BL-03 | BLOCKER | last_verified lexicographic string comparison is fragile | — | [ ] open |
-| qramm-compliance/BL-04 | BLOCKER | int(years_raw) accepts negative/zero years | — | [ ] open |
+| qramm-compliance/BL-03 | BLOCKER | last_verified lexicographic string comparison is fragile | Phase 64.1 (BL-03) | [x] closed — closed by Phase 64.1 (tests/test_compliance_status_staleness.py) |
+| qramm-compliance/BL-04 | BLOCKER | int(years_raw) accepts negative/zero years | Phase 64.1 (BL-04) | [x] closed — closed by Phase 64.1 (tests/test_operator_context_years_clamp.py) |
 | qramm-compliance/WR-01 | WARNING | Evidence bridge date-string equality vulnerable to TZ drift | — | [ ] open |
 | qramm-compliance/WR-02 | WARNING | compute_practice_score accepts out-of-range answers | — | [ ] open |
 | qramm-compliance/WR-03 | WARNING | evidence_bridge synchronize_session=fetch suboptimal; no idempotency | — | [ ] open |
@@ -140,9 +140,9 @@ wont_fix: 0
 |---|---|---|---|---|
 | cbom-intel-reports/CR-01 | BLOCKER | CBOM Pass-1 emits zero algo components for 12 protocol families | Phase 61 (CBOM-COVER-01) | [x] closed — closed by Phase 61 (CBOM-COVER-01, see tests/test_cbom_coverage.py per-family parametrize) |
 | cbom-intel-reports/CR-02 | BLOCKER | VAULT protocol falls through to TLS branch in Pass-1/2/3 | Phase 61 (CBOM-COVER-02) | [x] closed — closed by Phase 61 (CBOM-COVER-02, dedicated VAULT Pass-1 branch + tests/test_cbom_vault_consistency.py golden snapshot) |
-| cbom-intel-reports/CR-03 | BLOCKER | SOURCE algo hint maps DES->3DES and collapses AES variants | — | [ ] open |
+| cbom-intel-reports/CR-03 | BLOCKER | SOURCE algo hint maps DES->3DES and collapses AES variants | Phase 64.1 (CR-03) | [x] closed — closed by Phase 64.1 (tests/test_cbom_builder_algo_hints.py) |
 | cbom-intel-reports/CR-04 | BLOCKER | Confidence returns 100% TLS-enum coverage when no TLS scanned | Phase 60 (SCORE-03) | [x] closed |
-| cbom-intel-reports/CR-05 | BLOCKER | Trend 1-second session window cannot disambiguate two scans | — | [ ] open |
+| cbom-intel-reports/CR-05 | BLOCKER | Trend 1-second session window cannot disambiguate two scans | Phase 64.1 (CR-05) | [x] closed — closed by Phase 64.1 (tests/test_trends_subsecond_sessions.py) |
 | cbom-intel-reports/CR-06 | BLOCKER | Score subscores can sum >100; agility_score added unbounded | Phase 60 (SCORE-04) | [x] closed |
 | cbom-intel-reports/CR-07 | BLOCKER | Markdown injection / table-break in technical.py finding rows | Phase 61 (REPORT-SAN-01) | [x] closed — closed by Phase 61 (REPORT-SAN-01/02, quirk/reports/_md_escape.py md_cell + tests/test_report_sanitization.py adversarial corpus) |
 | cbom-intel-reports/WR-01 | WARNING | PDF render uses blanket except Exception — masks programmer errors | — | [ ] open |
@@ -180,7 +180,7 @@ wont_fix: 0
 | api-cli-core/CR-05 | BLOCKER | delete_session does not clear qramm_sessions.profile_id link | — | [ ] open |
 | api-cli-core/CR-06 | BLOCKER | Bare except: pass in classifier call drops findings silently | — | [ ] open |
 | api-cli-core/CR-07 | BLOCKER | SQL injection guard on column names lacks col_type DDL fragment | — | [ ] open |
-| api-cli-core/CR-08 | BLOCKER | init_db ALTER TABLE migrations are not transactional | — | [ ] open |
+| api-cli-core/CR-08 | BLOCKER | init_db ALTER TABLE migrations are not transactional | Phase 64.1 (CR-08) | [x] closed — closed by Phase 64.1 (tests/test_init_db_idempotent.py) |
 | api-cli-core/CR-09 | BLOCKER | parse_target_tokens reflective DoS via deep @file recursion | Phase 58 (HARDEN-API-04) | [x] closed |
 | api-cli-core/WR-01 | WARNING | _check_dashboard / _check_network always return True | — | [ ] open |
 | api-cli-core/WR-02 | WARNING | _check_db opens DB at default path regardless of QUIRK_DB_PATH | — | [ ] open |
