@@ -1187,6 +1187,7 @@ Plans:
 
 - [x] **Phase 63: Scheduled / Continuous Scanning** - `quirk schedule add` CLI + `scheduled_scans` SQLite table + `quirk scheduler run` long-running dispatcher + dashboard `/schedules` listing (BACK-25) (completed 2026-05-10)
 - [ ] **Phase 64: Trend Analysis Foundation** - Multi-scan timeline of overall + per-pillar scores and finding counts on `/trends`, regression alert chips on dashboard home with deep-links to the regressing scan (BACK-21)
+- [ ] **Phase 64.1: Audit Residual Blockers** - Triage all 19 open BLOCKERs from the 2026-05-08 audit (record deferred-v4.9 / wont-fix dispositions); fix the 5 that directly undermine Phase 64 UAT or Phase 65 foundations: trend session-window disambiguation (CR-05), non-transactional `init_db` migrations (api-cli-core/CR-08), QRAMM staleness date comparison (BL-03), QRAMM negative-years guard (BL-04), SOURCE algo hint DES→3DES collapse (cbom-intel-reports/CR-03)
 - [ ] **Phase 65: Dashboard-Initiated Scan** - `/scan/new` form, Pydantic-shared validation, backend job spawn, live status polling, post-completion navigation (BACK-86 slice 1)
 - [ ] **Phase 66: Dashboard Scan History + Clone/Compare** - `/scans` list + "Clone configuration" prefill + side-by-side compare diff view (BACK-86 slice 2)
 - [ ] **Phase 67: Resumable / Partial-Failure Scans** - `scan_checkpoints` SQLite table + `quirk scan --resume <id>` continuation + per-scanner partial-failure isolation with dashboard panel
@@ -1343,10 +1344,24 @@ Plans:
 - [x] 64-02-PLAN.md — Frontend: TrendTimeline types + useTimelineData hook + Recharts LineChart on TrendsPage (TREND-01 frontend)
 **UI hint**: yes
 
+### Phase 64.1: Audit Residual Blockers
+**Goal**: Clear the audit ledger before Phase 65 extends the code paths it documents — record formal dispositions for all 19 open BLOCKERs from the 2026-05-08 audit, and fix the five that either directly undermine Phase 64's already-in-UAT trend feature or land in Phase 65's exact foundations.
+**Wave**: B (bridge between Phase 64 and Phase 65)
+**Depends on**: Phase 64 complete (human UAT signed off)
+**Requirements**: Audit triage of `.planning/audit-2026-05-08/AUDIT-TASKS.md` open rows
+**Success Criteria** (what must be TRUE):
+  1. `cbom-intel-reports/CR-05` fixed: two scans created within 1 second are no longer merged into the same session window; the trend timeline correctly shows them as distinct data points
+  2. `api-cli-core/CR-08` fixed: every `ALTER TABLE` in `init_db()` executes inside a transaction; a failed migration rolls back cleanly with no partial column additions
+  3. `qramm-compliance/BL-03` fixed: `last_verified` staleness check uses `datetime.date` comparison, not lexicographic string comparison
+  4. `qramm-compliance/BL-04` fixed: `int(years_raw)` input is clamped to `>= 1` before use; negative or zero values raise a validation error with a clear message
+  5. `cbom-intel-reports/CR-03` fixed: SOURCE scanner algo hint correctly distinguishes DES from 3DES and preserves AES variant specificity (AES-128 ≠ AES-256)
+  6. All remaining 14 open BLOCKERs have a recorded disposition (`deferred-v4.9` or `wont-fix`) with rationale in `AUDIT-TASKS.md` — zero rows remain as bare `[ ] open`
+**Plans**: TBD
+
 ### Phase 65: Dashboard-Initiated Scan
 **Goal**: An operator who never opens a terminal can configure, launch, and watch a scan progress to completion entirely from the dashboard — closing the primetime gap that currently forces every customer to use the CLI (BACK-86 slice 1).
 **Wave**: B (gated on full Wave A completion)
-**Depends on**: Phase 58 (dashboard auth must exist before the dashboard can dispatch scans), Wave A complete
+**Depends on**: Phase 64.1 complete, Phase 58 (dashboard auth must exist before the dashboard can dispatch scans), Wave A complete
 **Requirements**: UI-SCAN-01, UI-SCAN-02, UI-SCAN-03
 **Success Criteria** (what must be TRUE):
   1. A `/scan/new` route presents a form for target spec (single host, comma list, CIDR, `@file`), profile (quick/standard/deep), and options (calibration, scanner toggles); validation errors render against the same Pydantic schema the CLI uses, never silently re-shapes input
@@ -1399,7 +1414,8 @@ Plans:
 | 62. React Hook Cancellation Pattern | A | 2/5 | Complete    | 2026-05-10 |
 | 63. Scheduled / Continuous Scanning | B | 3/3 | Complete   | 2026-05-10 |
 | 64. Trend Analysis Foundation | B | 3/3 | Complete   | 2026-05-10 |
-| 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Wave A | - |
+| 64.1. Audit Residual Blockers | B | 0/TBD | Ready to plan | - |
+| 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Phase 64.1 | - |
 | 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
 | 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
