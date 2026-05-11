@@ -198,6 +198,10 @@ def interactive_config() -> tuple[AppConfig, str]:
         data_longevity_years = int(years_raw) if years_raw else 7
     except (ValueError, EOFError):
         data_longevity_years = 7
+    if data_longevity_years < 1:
+        raise ValueError(
+            f"Data longevity years must be at least 1 (got: {years_raw!r})"
+        )
 
     print("\nExposure context:")
     print("  1) internal  (internal-only / segmented)")
