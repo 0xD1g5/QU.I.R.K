@@ -154,7 +154,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - Resumable / partial-failure scans
 - Operator error-message pass
 
-## Current State: v4.8 In Progress — Wave A Phase 6/6 Complete
+## Current State: v4.8 In Progress — Phase 64.1 Complete (Wave A gap-closure)
+
+Phase 64.1 complete (2026-05-10) — audit residual blockers: 5 code fixes with regression tests (algo hints CR-03, staleness date comparison BL-03, years clamp BL-04, sub-second session window CR-05 corrected to ms precision, db init idempotency CR-08); 14 structured D-06 dispositions for remaining BLOCKERs (13 deferred-v4.9, 1 wont-fix); AUDIT-TASKS.md now has zero bare-open BLOCKERs. 32/32 regression tests pass.
 
 Phase 62 complete (2026-05-10) — React hook cancellation pattern: all post-await state setters in useScanData, useScanList, useQRAMMSession wrapped in `if (!cancelled)`; synchronous stale-data clear before each refetch; QRAMMProvider debounce coalescing (1 POST per 300ms window); confirmAnswer flush method; unmount cleanup; print sentinel; reactive system theme. Vitest+MSW test infra added; 2 regression tests (scan-switch stale-data + debounce coalescing); check-cancelled-guards.sh CI script. All 9 audit rows BR-01..BR-06/WR-01/WR-03/WR-14 closed; HOOK-01..04 requirements closed. Code review found 4 warnings (WR-01 setArchiving after navigate, WR-02 narrow CI setter allowlist, WR-03 fetchApi header type gap, WR-04 npm test missing from CI) — advisory.
 
@@ -225,7 +227,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
 
 ---
-*Last updated: 2026-05-10
+*Last updated: 2026-05-11
 
 ## Evolution
 
