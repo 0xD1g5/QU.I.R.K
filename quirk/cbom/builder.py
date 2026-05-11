@@ -73,8 +73,9 @@ def _extract_algo_from_rule_id(rule_id: str | None) -> str | None:
         ("ecdsa", "ECDSA"), ("sha-1", "SHA-1"), ("sha1", "SHA-1"),
         ("blowfish", "Blowfish"), ("3des", "3DES"),
         ("md5", "MD5"), ("md4", "MD4"), ("rc4", "RC4"),
-        ("rsa", "RSA"), ("dsa", "DSA"), ("des", "3DES"),
-        ("aes", "AES-256-GCM"),
+        ("rsa", "RSA"), ("dsa", "DSA"), ("des", "DES"),
+        ("aes-256", "AES-256"), ("aes-128", "AES-128"),
+        ("aes", "AES"),
     ]
     for fragment, canonical in algo_hints:
         if fragment in rule_lower:
