@@ -1357,7 +1357,7 @@ Plans:
   5. `cbom-intel-reports/CR-03` fixed: SOURCE scanner algo hint correctly distinguishes DES from 3DES and preserves AES variant specificity (AES-128 ≠ AES-256)
   6. All remaining 14 open BLOCKERs have a recorded disposition (`deferred-v4.9` or `wont-fix`) with rationale in `AUDIT-TASKS.md` — zero rows remain as bare `[ ] open`
 **Plans**: 2 plans
-- [ ] 64.1-01-PLAN.md — Fix 5 audit BLOCKERs (CR-03, CR-05, BL-03, BL-04, api-cli-core/CR-08) + regression tests + close 5 ledger rows
+- [x] 64.1-01-PLAN.md — Fix 5 audit BLOCKERs (CR-03, CR-05, BL-03, BL-04, api-cli-core/CR-08) + regression tests + close 5 ledger rows
 - [ ] 64.1-02-PLAN.md — Apply formal dispositions to remaining 14 open BLOCKERs (deferred-v4.9 / wont-fix) and close 2 Phase-59-mapped rows
 
 ### Phase 65: Dashboard-Initiated Scan
@@ -1416,7 +1416,7 @@ Plans:
 | 62. React Hook Cancellation Pattern | A | 2/5 | Complete    | 2026-05-10 |
 | 63. Scheduled / Continuous Scanning | B | 3/3 | Complete   | 2026-05-10 |
 | 64. Trend Analysis Foundation | B | 3/3 | Complete   | 2026-05-10 |
-| 64.1. Audit Residual Blockers | B | 0/TBD | Ready to plan | - |
+| 64.1. Audit Residual Blockers | B | 1/2 | In Progress|  |
 | 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Phase 64.1 | - |
 | 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
