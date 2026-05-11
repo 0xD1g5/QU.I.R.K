@@ -67,9 +67,10 @@ def test_scanned_at_roundtrip_microsecond_precision(db_session) -> None:
     sessions = _list_session_timestamps(db_session)
     assert len(sessions) == 1
     recovered = sessions[0]
-    # strftime %f produces 6-digit microseconds in SQLite
+    # strftime %f produces 3-digit milliseconds in SQLite; TS_A uses an exact-ms value
+    # (100000 µs = 100 ms) so the round-trip is lossless for this input.
     assert recovered.microsecond == TS_A.microsecond, (
-        f"Microsecond precision lost: expected {TS_A.microsecond}, got {recovered.microsecond}"
+        f"Millisecond precision lost: expected {TS_A.microsecond}, got {recovered.microsecond}"
     )
 
 

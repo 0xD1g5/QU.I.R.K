@@ -81,17 +81,19 @@ class TrendReport:
 # ---------------------------------------------------------------------------
 
 def _fetch_session_endpoints(db: Session, target_ts: datetime) -> List[CryptoEndpoint]:
-    """Fetch all endpoints in the 1-microsecond window (one canonical scanned_at timestamp).
+    """Fetch all endpoints in the 1-millisecond window for a canonical scanned_at timestamp.
 
-    Uses a 1-microsecond window so only endpoints whose scanned_at equals target_ts
-    are returned. This prevents two scans within the same second from being merged
-    (CR-05 fix). Excludes NULL scanned_at rows (D-13) via explicit filter.
+    SQLite's strftime('%f') produces 3-digit millisecond precision, not microseconds.
+    target_ts is always millisecond-aligned (microseconds divisible by 1000), so the
+    correct window is 1ms — wide enough to capture any stored sub-ms components while
+    still preventing two scans 100ms apart from merging (CR-05 fix). Excludes NULL
+    scanned_at rows (D-13) via explicit filter.
     """
     endpoints = (
         db.query(CryptoEndpoint)
         .filter(
             CryptoEndpoint.scanned_at >= target_ts,
-            CryptoEndpoint.scanned_at < target_ts + timedelta(microseconds=1),
+            CryptoEndpoint.scanned_at < target_ts + timedelta(milliseconds=1),
             CryptoEndpoint.scanned_at.isnot(None),
         )
         .all()
@@ -237,12 +239,13 @@ def compute_trend_report(
     current_keys = {
         (ep.host, ep.port, ep.protocol, ep.severity)
         for ep in current_eps
-        if ep.scan_error is None
+        if ep.scan_error is None and ep.severity is not None
     }
     previous_keys = {
         (ep.host, ep.port, ep.protocol, ep.severity)
         for ep in previous_eps
         if ep.scan_error is None
+        and ep.severity is not None
         and (ep.host, ep.port, ep.protocol) not in current_error_hosts
     }
 
