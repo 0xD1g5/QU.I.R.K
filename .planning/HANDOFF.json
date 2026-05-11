@@ -1,42 +1,31 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-10T23:03:16.440Z",
-  "phase": "64",
-  "phase_name": "trend-analysis-foundation",
-  "phase_dir": ".planning/phases/64-trend-analysis-foundation",
-  "plan": 3,
-  "task": "human-uat",
-  "total_tasks": "complete",
-  "status": "awaiting_human_uat",
-  "completed_tasks": [
-    {"id": "64-01-T1", "name": "Wave 0 failing tests for /api/trends/timeline", "status": "done", "commit": "287d34d"},
-    {"id": "64-01-T2", "name": "FindingCounts, TrendSessionPoint, TrendTimelineResponse schemas", "status": "done", "commit": "3fc6b48"},
-    {"id": "64-01-T3", "name": "GET /api/trends/timeline endpoint", "status": "done", "commit": "aa36937"},
-    {"id": "64-03-T1", "name": "RegressionAlertChip component", "status": "done", "commit": "a37d0b7"},
-    {"id": "64-03-T2", "name": "RegressionAlertChip in ExecutivePage + build", "status": "done", "commit": "fa882d4"},
-    {"id": "64-02-T1", "name": "TrendTimeline TS types + useTimelineData hook", "status": "done", "commit": "3f3c0be"},
-    {"id": "64-02-T2", "name": "LineChart on TrendsPage + dashboard build", "status": "done", "commit": "2baf1cf"}
-  ],
+  "timestamp": "2026-05-11T03:04:17Z",
+  "phase": "65",
+  "phase_name": "dashboard-initiated-scan",
+  "phase_dir": ".planning/phases/65-dashboard-initiated-scan",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
+  "completed_tasks": [],
   "remaining_tasks": [
-    {"id": "UAT-1", "name": "Multi-scan timeline chart renders on /trends", "status": "pending_human"},
-    {"id": "UAT-2", "name": "Regression chip visible on / with score-drop scan", "status": "pending_human"},
-    {"id": "UAT-3", "name": "Per-session dismissal persists across refresh", "status": "pending_human"},
-    {"id": "UAT-4", "name": "New scan shows fresh chip after prior dismissal", "status": "pending_human"}
+    {"id": 1, "name": "Run /gsd-discuss-phase 65 to validate assumptions before planning", "status": "not_started"},
+    {"id": 2, "name": "Plan Phase 65 (/gsd-plan-phase 65)", "status": "not_started"},
+    {"id": 3, "name": "Execute Phase 65 (/gsd-execute-phase 65)", "status": "not_started"},
+    {"id": 4, "name": "Flip Phase 64 ROADMAP checkbox from [ ] to [x]", "status": "not_started"}
   ],
-  "blockers": [
-    {
-      "description": "croniter missing from venv — caused quirk serve crash",
-      "type": "resolved",
-      "workaround": "Fixed: .venv/bin/pip install croniter"
-    }
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Wave A is a hard gate for Wave B", "rationale": "No operating-model feature ships on unhardened foundations", "phase": "57-62"},
+    {"decision": "Phase 65 uses subprocess.Popen for scan dispatch", "rationale": "Crash-isolated, PID-trackable, reuses full run_scan.py code path unchanged", "phase": "65"},
+    {"decision": "scan_jobs SQLite table via new SQLAlchemy model in quirk/models.py", "rationale": "Consistent with existing persistence layer; no new runtime dependencies", "phase": "65"}
   ],
-  "human_actions_pending": [
-    {
-      "action": "Run quirk serve and test 4 UAT items in browser",
-      "context": "UAT items require visual chart rendering and localStorage interaction",
-      "blocking": true
-    }
+  "uncommitted_files": [
+    ".planning/milestones/v4.6-phases/47-nmap-discovery-multi-target-wizard/47-VERIFICATION.md",
+    "(several deleted .planning/phases/51-56 files from prior cleanup — planning artifacts only)"
   ],
-  "next_action": "User tests 4 UAT items in browser then responds approved or reports issues. On approved: phase.complete 64, Obsidian note, UAT-SERIES.md update, advance to Phase 65.",
-  "context_notes": "All plans executed and merged. 9/9 automated checks passed. Only browser UAT remains. croniter dep was fixed in-session."
+  "next_action": "/gsd-discuss-phase 65 — re-examine CONTEXT.md assumptions before generating plans. Focus: subprocess dispatch interaction with FastAPI lifecycle, scan_jobs migration strategy, polling interval for live status page.",
+  "context_notes": "Paused cleanly between phases. Wave A done, Wave B 3/6 complete (63, 64, 64.1). Phase 65 CONTEXT.md already gathered. Note: Phase 64 ROADMAP checkbox is still [ ] even though all 3 plans+summaries exist — flip to [x] before or during Phase 65 planning."
 }
