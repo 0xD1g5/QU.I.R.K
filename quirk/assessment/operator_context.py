@@ -40,6 +40,10 @@ def prompt_for_context() -> OperatorContext:
         years = int(years_raw) if years_raw else 7
     except Exception:
         years = 7
+    if years < 1:
+        raise ValueError(
+            f"Data longevity years must be at least 1 (got: {years_raw!r})"
+        )
 
     # Exposure
     print("\nExposure context:")
