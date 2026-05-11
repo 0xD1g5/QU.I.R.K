@@ -41,9 +41,10 @@ router = APIRouter(dependencies=[Depends(require_auth)])
 def _list_session_timestamps(db: Session) -> List[datetime]:
     """Return up to 10 most recent distinct session timestamps (newest first).
 
-    Uses microsecond-precision strftime format (%Y-%m-%d %H:%M:%f) so two scans
-    started within the same second appear as distinct sessions (CR-05). Excludes
-    NULL scanned_at rows (D-13) via explicit isnot(None) filter.
+    Uses millisecond-precision strftime format (%Y-%m-%d %H:%M:%f) — SQLite's %f
+    returns 3 decimal digits (ms), not 6 (µs) — so two scans started in different
+    milliseconds appear as distinct sessions (CR-05). Excludes NULL scanned_at rows
+    (D-13) via explicit isnot(None) filter.
     """
     ts_usec = func.strftime(
         "%Y-%m-%d %H:%M:%f", CryptoEndpoint.scanned_at
