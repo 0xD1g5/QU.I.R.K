@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import mimetypes
 import os
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +20,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from quirk.config import get_cors_origins
+from quirk.dashboard.api.deps import _default_db_path
 from quirk.dashboard.api.middleware.rate_limit import RateLimitMiddleware
 from quirk.dashboard.api.routes import health, jobs, pdf, qramm, scan, schedules, trends
 
@@ -32,12 +35,55 @@ def _index_html() -> str:
     return os.path.join(_STATIC_DIR, "index.html")
 
 
-def create_app() -> FastAPI:
+def _recover_stale_jobs(db_path: str) -> None:
+    """Phase 65 D-12: flip orphaned `running` scan_jobs rows to `failed` on startup.
+
+    Wrapped in try/except so a missing table on first-ever boot (before init_db
+    has run) does not crash API startup.
+    """
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from quirk.models import ScanJob
+
+        engine = create_engine(
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False},
+        )
+        Session = sessionmaker(bind=engine, expire_on_commit=False)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        with Session() as db:
+            stale_rows = db.query(ScanJob).filter(ScanJob.status == "running").all()
+            for row in stale_rows:
+                row.status = "failed"
+                row.error_message = "API restarted — job lost"
+                row.completed_at = now
+            if stale_rows:
+                db.commit()
+    except Exception:
+        # Best-effort: never crash API startup on stale-job sweep failure
+        pass
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Phase 65 D-12: sweep stale `running` scan_jobs to `failed` on startup."""
+    db_path = application.state.db_path
+    _recover_stale_jobs(db_path)
+    yield
+    # No teardown
+
+
+def create_app(db_path: str | None = None) -> FastAPI:
+    if db_path is None:
+        db_path = _default_db_path()
     application = FastAPI(
         title="QU.I.R.K. Dashboard API",
         description="Local dashboard API for quantum-readiness scan results",
         version="1.0.0",
+        lifespan=lifespan,
     )
+    application.state.db_path = db_path
 
     # -------------------------------------------------------------------------
     # Middleware — Phase 58 / HARDEN-API-02, HARDEN-API-03
