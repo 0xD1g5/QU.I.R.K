@@ -1,10 +1,11 @@
 ---
 phase: 65
 slug: dashboard-initiated-scan
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york / zinc / cssVariables"
 created: 2026-05-13
+reviewed_at: 2026-05-13
 ---
 
 # Phase 65 — UI Design Contract
