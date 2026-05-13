@@ -44,6 +44,11 @@ from quirk import __version__
 from quirk.cli.banner import print_banner
 from quirk.util.targets import apply_targets_file_override  # D-03
 from quirk.util.optional_extra import is_extra_available, select_nmap_port_list  # D-08/D-09
+from quirk.cli.job_progress import (  # Phase 65 — best-effort job progress updates
+    update_job_stage,
+    mark_job_completed,
+    mark_job_failed,
+)
 
 
 def apply_security_cli_overrides(cfg, args) -> None:
@@ -347,8 +352,24 @@ def main():
             "Emits HIGH advisory per affected target. Phase 57 / CR-01."
         ),
     )
+    parser.add_argument(
+        "--job-id",
+        default=None,
+        help="Dashboard job ID for progress reporting (Phase 65). No-op if absent.",
+    )
+    parser.add_argument(
+        "--db-path",
+        default=None,
+        help="Explicit SQLite path for job progress writes (Phase 65). Required when --job-id is set.",
+    )
 
     args = parser.parse_args()
+
+    # Phase 65: populate module-level job report dict so _run_main_with_job_guard
+    # can write mark_job_failed on uncaught exceptions after argparse completes.
+    if args.job_id and args.db_path:
+        _job_report["job_id"] = args.job_id
+        _job_report["db_path"] = args.db_path
 
     quiet = getattr(args, "quiet", False)
     print_banner(__version__, quiet=quiet)
@@ -414,11 +435,17 @@ def main():
 
     init_db(cfg.output.db_path)
 
+    # Phase 65: scan_run_id is the started_utc timestamp (unique per scan invocation).
+    # Used by mark_job_completed to associate the completed ScanJob with this scan run.
+    scan_run_id: Optional[str] = run_stats["started_utc"]
+
     limiter = TokenBucket(args.rate_limit, capacity=max(1.0, args.rate_limit)) if args.rate_limit and args.rate_limit > 0 else None
 
     # ==============================
     # Discovery targets
     # ==============================
+    if args.job_id and args.db_path:
+        update_job_stage(args.db_path, args.job_id, "discovery")
     targets: List[Tuple[str, int]] = []
 
     if getattr(cfg.connectors, "enable_nmap", False):
@@ -602,6 +629,8 @@ def main():
     # ==============================
     # TLS scan phase (phase-tuned)
     # ==============================
+    if args.job_id and args.db_path:
+        update_job_stage(args.db_path, args.job_id, "tls")
     # Phase 41 / D-08: BACK-45 dissolved. The TLS scanner now reads
     # cfg.scan.timeouts.tls_seconds and cfg.scan.tls_concurrency directly — no
     # more cfg.scan mutate-and-restore pattern around the scan call.
@@ -627,6 +656,8 @@ def main():
     # ==============================
     # SSH scan phase (phase-tuned)
     # ==============================
+    if args.job_id and args.db_path:
+        update_job_stage(args.db_path, args.job_id, "ssh")
     # Phase 41 / D-08: BACK-45 dissolved for SSH as well. The SSH scanner reads
     # cfg.scan.timeouts.ssh_seconds and cfg.scan.ssh_concurrency directly.
     # Phase 41 / D-14: SSH phase runs under _wrapped_phase BaseException protection.
@@ -651,6 +682,8 @@ def main():
     # ==============================
     # JWT scan phase
     # ==============================
+    if args.job_id and args.db_path:
+        update_job_stage(args.db_path, args.job_id, "api")
     jwt_endpoints = []
     with _phase_timer(run_stats, "jwt_scanning"):
         if cfg.connectors.enable_jwt and cfg.connectors.jwt_targets:
@@ -688,6 +721,8 @@ def main():
     # ==============================
     # AWS cloud connector phase
     # ==============================
+    if args.job_id and args.db_path:
+        update_job_stage(args.db_path, args.job_id, "identity")
     aws_endpoints = []
     with _phase_timer(run_stats, "aws_scanning"):
         if cfg.connectors.enable_aws:
@@ -752,6 +787,8 @@ def main():
     # ==============================
     # S3 object storage encryption (Phase 28, STOR-01)
     # ==============================
+    if args.job_id and args.db_path:
+        update_job_stage(args.db_path, args.job_id, "data_at_rest")
     s3_endpoints = []
     with _phase_timer(run_stats, "s3_scanning"):
         if cfg.connectors.enable_s3:
@@ -1088,9 +1125,36 @@ def main():
     run_stats["protocol_counts"] = dict(proto_counts)
     run_stats["error_categories"] = dict(err_counts)
 
+    if args.job_id and args.db_path:
+        update_job_stage(args.db_path, args.job_id, "reports")
     with _phase_timer(run_stats, "reporting"):
         write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints)
 
+    # Phase 65: mark scan job completed after all phases succeed.
+    if args.job_id and args.db_path:
+        mark_job_completed(args.db_path, args.job_id, scan_run_id)
+
+    # Phase 65: mark scan job failed on any uncaught exception.
+    # The try/except wraps the full scan body below; this sentinel is never
+    # executed — failures are caught in the except clause.
+
+
+# Phase 65: module-level dict allows the __main__ exception handler to
+# write mark_job_failed without access to main()'s local `args`.
+_job_report: Dict[str, Any] = {}
+
+
+def _run_main_with_job_guard() -> None:
+    """Phase 65: run main(); on exception write mark_job_failed if --job-id was set."""
+    try:
+        main()
+    except Exception as exc:
+        job_id = _job_report.get("job_id")
+        db_path = _job_report.get("db_path")
+        if job_id and db_path:
+            mark_job_failed(db_path, job_id, f"{type(exc).__name__}: {exc}")
+        raise
+
 
 if __name__ == "__main__":
-    main()
+    _run_main_with_job_guard()
