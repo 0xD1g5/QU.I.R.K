@@ -252,3 +252,23 @@ export interface QRAMMComplianceMapRow {
   relevance_score: number | null
   scanner_informed: boolean
 }
+
+// Phase 65 UI-SCAN-01/02: dashboard-initiated scan job types
+export interface ScanSubmitRequest {
+  targets: string
+  profile: "quick" | "standard" | "deep"
+  calibration: "strict" | "balanced" | "lenient"
+  enable_nmap: boolean
+}
+
+export interface JobStatus {
+  job_id: string
+  status: "queued" | "running" | "completed" | "failed" | "cancelled"
+  current_stage: string | null
+  started_at: string | null
+  completed_at: string | null
+  scan_run_id: string | null
+  error_message: string | null
+  stage_index: number
+  stage_total: number
+}
