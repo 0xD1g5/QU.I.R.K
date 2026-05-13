@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom"
+import { useParams, Link } from "react-router-dom"
 import { CheckCircle2 } from "lucide-react"
 import { useJobStatus } from "@/hooks/useJobStatus"
 import { fetchApi } from "@/lib/api"
@@ -39,16 +39,13 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function ScanJobPage() {
   const { jobId } = useParams<{ jobId: string }>()
-  const navigate = useNavigate()
   const result = useJobStatus(jobId ?? "")
 
   const handleCancel = async () => {
     if (!jobId) return
     try {
-      const resp = await fetchApi(`/api/jobs/${jobId}`, { method: "DELETE" })
-      if (resp.status === 204 || resp.ok) {
-        navigate("/scan/new", { state: { cancelled: true } })
-      }
+      await fetchApi(`/api/jobs/${jobId}`, { method: "DELETE" })
+      // Don't navigate — let the polling hook pick up status: "cancelled" on the next fetch.
     } catch {
       // surface error inline; do not block UI
     }
