@@ -1,7 +1,7 @@
 // D-13 color audit (Phase 7): all component color tokens verified to use CSS variables.
 // Hardcoded values found and resolved: ScoreGauge.tsx hsl() literals -> hsl(var(--token)) CSS variable refs;
 // chart.tsx #ccc/#fff are CSS attribute selectors targeting Recharts internals (intentional one-off).
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -14,9 +14,11 @@ import {
   HardDrive,
   ClipboardList,
   Calendar,
+  Scan,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ScanSelector } from "@/components/ScanSelector"
 
@@ -36,6 +38,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   return (
     <aside
@@ -55,6 +58,24 @@ export function Sidebar() {
         </span>
         {/* Monogram on narrow sidebar */}
         <span className="text-accent font-black text-lg lg:hidden font-mono leading-none">Q</span>
+      </div>
+
+      {/* New Scan CTA — above all nav items, below wordmark */}
+      <div className="px-2 py-3 border-b border-border">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="default"
+              className="w-full justify-start gap-3 min-h-[44px]"
+              onClick={() => navigate("/scan/new")}
+              aria-label="New Scan"
+            >
+              <Scan className="h-5 w-5 flex-shrink-0" />
+              <span className="hidden lg:inline">New Scan</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="lg:hidden">New Scan</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Navigation */}
