@@ -168,7 +168,7 @@ export function ScanNewPage() {
             <Checkbox
               id="enable_nmap"
               checked={enableNmap}
-              onCheckedChange={(checked) => setEnableNmap(checked === true)}
+              onCheckedChange={(checked: boolean | "indeterminate") => setEnableNmap(checked === true)}
               className="mt-0.5"
             />
             <div>
