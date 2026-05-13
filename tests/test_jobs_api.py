@@ -295,8 +295,41 @@ def test_cancel_job(monkeypatch):
 
 
 # --------------------------------------------------------------------------
-# Test 11: stale_job_recovery — deferred to Plan 04
+# Test 11: stale_job_recovery — Plan 04 lifespan + _recover_stale_jobs
 # --------------------------------------------------------------------------
 
-def test_stale_job_recovery():
-    pytest.skip("Implemented in Plan 04 — lifespan _recover_stale_jobs")
+def test_stale_job_recovery(tmp_path):
+    """Phase 65 D-12: _recover_stale_jobs flips running jobs to failed."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from quirk.dashboard.api.app import _recover_stale_jobs
+    from quirk.models import Base, ScanJob
+
+    db_file = str(tmp_path / "test.db")
+    engine = create_engine(f"sqlite:///{db_file}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine, expire_on_commit=False)
+
+    # Seed two rows: one running, one already completed
+    with Session() as db:
+        db.add(ScanJob(
+            job_id="stale-1", status="running", target="x.com",
+            profile="standard", calibration="balanced", enable_nmap=False,
+        ))
+        db.add(ScanJob(
+            job_id="done-1", status="completed", target="y.com",
+            profile="standard", calibration="balanced", enable_nmap=False,
+        ))
+        db.commit()
+
+    _recover_stale_jobs(db_file)
+
+    with Session() as db:
+        stale = db.get(ScanJob, "stale-1")
+        done = db.get(ScanJob, "done-1")
+        assert stale.status == "failed"
+        assert stale.error_message == "API restarted — job lost"
+        assert stale.completed_at is not None
+        # Completed row must NOT be touched
+        assert done.status == "completed"
+        assert done.error_message is None
