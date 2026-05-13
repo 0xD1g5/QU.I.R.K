@@ -6,9 +6,9 @@ TypeScript types in src/dashboard/src/types/api.ts must mirror these exactly.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class HealthResponse(BaseModel):
@@ -268,3 +268,37 @@ class TrendTimelineResponse(BaseModel):
     before passing to Recharts.
     """
     sessions: List[TrendSessionPoint] = []
+
+
+# Phase 65 UI-SCAN-01: dashboard-initiated scan submission
+class ScanSubmitRequest(BaseModel):
+    """POST /api/jobs request body. Pydantic is authoritative validation."""
+    targets: str = Field(..., min_length=1, max_length=1024)
+    profile: Literal["quick", "standard", "deep"] = "standard"
+    calibration: Literal["strict", "balanced", "lenient"] = "balanced"
+    enable_nmap: bool = False
+
+    @field_validator("targets")
+    @classmethod
+    def no_file_paths(cls, v: str) -> str:
+        """Reject @file targets — CLI-only by design (D-05 defense-in-depth)."""
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Targets field is required.")
+        if stripped.startswith("@"):
+            raise ValueError("@file paths are not supported from the dashboard — use the CLI")
+        return v
+
+
+# Phase 65 UI-SCAN-02: live scan job status
+class JobStatusResponse(BaseModel):
+    """GET /api/jobs/{id} response body."""
+    job_id: str
+    status: str            # queued | running | completed | failed | cancelled
+    current_stage: Optional[str] = None
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    scan_run_id: Optional[str] = None
+    error_message: Optional[str] = None
+    stage_index: int       # 0..7, backend-computed
+    stage_total: int = 7
