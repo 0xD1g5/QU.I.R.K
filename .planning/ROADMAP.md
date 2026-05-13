@@ -1370,7 +1370,7 @@ Plans:
   2. Submitting the form creates a scan job and returns a job ID; a live status page polls progress and streams scanner-stage transitions (Discovery → TLS → SSH → … → Reports) to the UI; the page is cancellation-safe per Phase 62 pattern
   3. On scan completion the UI navigates to the new scan's results view and the new scan is selectable from the existing scan switcher; the scan is indistinguishable from a CLI-launched scan in storage and reporting
 **Plans**: 6 plans
-  - [ ] 65-01-PLAN.md — Wave 0 foundation: ScanJob model, DB migration, Checkbox install, pytest stubs
+  - [x] 65-01-PLAN.md — Wave 0 foundation: ScanJob model, DB migration, Checkbox install, pytest stubs
   - [ ] 65-02-PLAN.md — quirk/cli/job_progress.py helper + run_scan.py --job-id/--db-path wiring
   - [ ] 65-03-PLAN.md — Pydantic schemas + /api/jobs router (POST/GET/DELETE) + 10 test bodies
   - [ ] 65-04-PLAN.md — app.py FastAPI lifespan + create_app(db_path) + jobs router mount
@@ -1423,7 +1423,7 @@ Plans:
 | 63. Scheduled / Continuous Scanning | B | 3/3 | Complete   | 2026-05-10 |
 | 64. Trend Analysis Foundation | B | 3/3 | Complete   | 2026-05-10 |
 | 64.1. Audit Residual Blockers | B | 2/2 | Complete    | 2026-05-11 |
-| 65. Dashboard-Initiated Scan | B | 0/TBD | Blocked on Phase 64.1 | - |
+| 65. Dashboard-Initiated Scan | B | 1/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
 | 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
