@@ -259,8 +259,8 @@ def init_db(db_path: str) -> Engine:
     with engine.connect() as conn:
         conn.commit()
 
-    # Create schema
-    Base.metadata.create_all(engine)
+    # Create schema (checkfirst=True prevents "table already exists" on restart)
+    Base.metadata.create_all(engine, checkfirst=True)
     _ensure_identity_columns(engine)  # v4.2: add identity columns if missing
     _ensure_gcp_columns(engine)  # v4.3: add GCP columns if missing
     _ensure_v43_columns(engine)  # v4.3: add data-at-rest columns if missing

@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import uuid
+import yaml
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -45,6 +46,58 @@ _STAGE_TOTAL = 7
 def _utcnow_naive() -> datetime:
     """Tz-naive UTC datetime — matches schedules.py convention (Pitfall 6)."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _write_job_config(
+    output_dir: Path,
+    targets: str,
+    db_path: str,
+    calibration: str,
+) -> str:
+    """Write a minimal config YAML for a dashboard-dispatched scan.
+
+    run_scan.py has no --target CLI flag; all target/output config must live
+    in a YAML file passed via --config. Targets are classified as cidrs (if
+    they contain '/') or fqdns (hostnames and bare IPs).
+    """
+    target_list = [t.strip() for t in targets.split(",") if t.strip()]
+    fqdns = [t for t in target_list if "/" not in t]
+    cidrs = [t for t in target_list if "/" in t]
+
+    config = {
+        "assessment": {
+            "name": "Dashboard Scan",
+            "data_classification": "confidential",
+            "report_owner": "Dashboard",
+            "timezone": "UTC",
+        },
+        "scan": {
+            "concurrency": 100,
+            "ports_tls": [443, 8443, 9443, 10443, 2222, 8000],
+            "include_sni": True,
+        },
+        "targets": {
+            "fqdns": fqdns,
+            "cidrs": cidrs,
+            "include_ips": [],
+            "exclude_ips": [],
+        },
+        "output": {
+            "directory": str(output_dir),
+            "db_path": db_path,
+        },
+        "intelligence": {
+            "intelligence_version": "4.8.0",
+            "profile": calibration,
+        },
+        "security": {
+            "allow_internal_targets": True,
+        },
+    }
+    config_path = str(output_dir / "config.yaml")
+    with open(config_path, "w") as fh:
+        yaml.dump(config, fh, default_flow_style=False)
+    return config_path
 
 
 def _stage_index(current_stage: Optional[str], status: str) -> int:
@@ -105,11 +158,13 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     db.add(row)
     db.flush()
 
+    config_path = _write_job_config(output_dir, payload.targets, db_path, payload.calibration)
+
     cmd = [
         sys.executable, "run_scan.py",
-        "--target", payload.targets,
+        "--config", config_path,
         "--profile", payload.profile,
-        "--output", str(output_dir),
+        "--quiet",
         "--db-path", db_path,
         "--job-id", job_id,
     ]
