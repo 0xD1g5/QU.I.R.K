@@ -1373,7 +1373,7 @@ Plans:
   - [x] 65-01-PLAN.md — Wave 0 foundation: ScanJob model, DB migration, Checkbox install, pytest stubs
   - [x] 65-02-PLAN.md — quirk/cli/job_progress.py helper + run_scan.py --job-id/--db-path wiring
   - [x] 65-03-PLAN.md — Pydantic schemas + /api/jobs router (POST/GET/DELETE) + 10 test bodies
-  - [ ] 65-04-PLAN.md — app.py FastAPI lifespan + create_app(db_path) + jobs router mount
+  - [x] 65-04-PLAN.md — app.py FastAPI lifespan + create_app(db_path) + jobs router mount
   - [ ] 65-05-PLAN.md — React types + useJobStatus hook + ScanNewPage + ScanJobPage + routes + sidebar CTA
   - [ ] 65-06-PLAN.md — Human UAT walkthrough + ARCHITECTURE.md update + UAT-SERIES.md + Obsidian sync
 **UI hint**: yes
@@ -1423,7 +1423,7 @@ Plans:
 | 63. Scheduled / Continuous Scanning | B | 3/3 | Complete   | 2026-05-10 |
 | 64. Trend Analysis Foundation | B | 3/3 | Complete   | 2026-05-10 |
 | 64.1. Audit Residual Blockers | B | 2/2 | Complete    | 2026-05-11 |
-| 65. Dashboard-Initiated Scan | B | 3/6 | In Progress|  |
+| 65. Dashboard-Initiated Scan | B | 4/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
 | 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
