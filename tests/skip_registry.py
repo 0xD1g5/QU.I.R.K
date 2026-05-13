@@ -30,4 +30,16 @@ ALLOWED_SKIPS = [
     ("test_vault_connector.py",          455, "live_infra",     "Requires Vault-30 chaos lab (vault profile)"),
     ("test_tls_scanner_chain_verified.py", 140, "optional_extra", "sslyze is [motion]; Phase 46 TLS-FIND-06"),
     ("test_tls_scanner_chain_verified.py", 152, "optional_extra", "sslyze is [motion]; Phase 46 TLS-FIND-06"),
+    # Phase 65 Plan 01 stubs — replaced by real implementations in Plans 03/04
+    ("test_jobs_api.py",  44, "live_infra", "Phase 65 Plan 03 stub — POST /api/jobs row insert"),
+    ("test_jobs_api.py",  48, "live_infra", "Phase 65 Plan 03 stub — @file rejection"),
+    ("test_jobs_api.py",  52, "live_infra", "Phase 65 Plan 03 stub — empty targets validation"),
+    ("test_jobs_api.py",  56, "live_infra", "Phase 65 Plan 03 stub — auth dependency wiring"),
+    ("test_jobs_api.py",  60, "live_infra", "Phase 65 Plan 03 stub — CSRF dependency wiring"),
+    ("test_jobs_api.py",  64, "live_infra", "Phase 65 Plan 03 stub — GET /api/jobs/{id} response shape"),
+    ("test_jobs_api.py",  68, "live_infra", "Phase 65 Plan 03 stub — 404 on unknown job_id"),
+    ("test_jobs_api.py",  72, "live_infra", "Phase 65 Plan 03 stub — GET auth dependency"),
+    ("test_jobs_api.py",  76, "live_infra", "Phase 65 Plan 03 stub — stage_index computation"),
+    ("test_jobs_api.py",  80, "live_infra", "Phase 65 Plan 03 stub — DELETE SIGTERM + cancelled"),
+    ("test_jobs_api.py",  84, "live_infra", "Phase 65 Plan 04 stub — lifespan _recover_stale_jobs"),
 ]
