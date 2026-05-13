@@ -60,15 +60,15 @@ No new type scales introduced — Phase 65 reuses existing project-wide definiti
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
 | Body | 14px | 400 (regular) | 1.5 | system-ui | Form descriptions, table cells, badge text |
-| Label | 14px | 500 (medium) | 1.4 | system-ui | Form field labels, step indicator labels |
+| Label | 14px | 600 (semibold) | 1.4 | system-ui | Form field labels, step indicator labels |
 | Heading (card) | 16px | 600 (semibold) | 1.3 | system-ui | Page section headings, card titles |
 | Display (page) | 20px | 600 (semibold) | 1.2 | system-ui | Page-level heading ("New Scan", "Scan Progress") |
 
 Monospace: JetBrains Mono at 13px / weight 400 — used for job ID display,
 scan stage names, and target textarea input (mirrors existing findings/CBOM tables).
 
-Declared weights: regular (400) and semibold (600). Medium (500) for labels only.
-Maximum 3 distinct weights on any single screen.
+Declared weights: regular (400) and semibold (600).
+Maximum 2 distinct weights on any single screen.
 
 ---
 
@@ -278,6 +278,7 @@ No destructive confirmation dialogs in this phase. The "Cancel scan" button fire
 - Progress bar: `aria-label="Scan progress"` + `aria-valuenow={stage_index}` + `aria-valuemax={7}`.
 - Cancel button: `aria-label="Cancel scan job {jobId}"` on the destructive button.
 - Loading state: `<PageSpinner ariaLabel="Loading scan status" />` (existing pattern).
+- Icon-only collapsed sidebar CTA (below lg breakpoint): `aria-label="New Scan"` on the icon-only `<Button>`.
 
 ---
 
