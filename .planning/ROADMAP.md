@@ -1188,7 +1188,7 @@ Plans:
 - [x] **Phase 63: Scheduled / Continuous Scanning** - `quirk schedule add` CLI + `scheduled_scans` SQLite table + `quirk scheduler run` long-running dispatcher + dashboard `/schedules` listing (BACK-25) (completed 2026-05-10)
 - [x] **Phase 64: Trend Analysis Foundation** - Multi-scan timeline of overall + per-pillar scores and finding counts on `/trends`, regression alert chips on dashboard home with deep-links to the regressing scan (BACK-21) (completed 2026-05-10)
 - [x] **Phase 64.1: Audit Residual Blockers** - Triage all 19 open BLOCKERs from the 2026-05-08 audit (record deferred-v4.9 / wont-fix dispositions); fix the 5 that directly undermine Phase 64 UAT or Phase 65 foundations: trend session-window disambiguation (CR-05), non-transactional `init_db` migrations (api-cli-core/CR-08), QRAMM staleness date comparison (BL-03), QRAMM negative-years guard (BL-04), SOURCE algo hint DES→3DES collapse (cbom-intel-reports/CR-03) (completed 2026-05-11)
-- [ ] **Phase 65: Dashboard-Initiated Scan** - `/scan/new` form, Pydantic-shared validation, backend job spawn, live status polling, post-completion navigation (BACK-86 slice 1)
+- [x] **Phase 65: Dashboard-Initiated Scan** - `/scan/new` form, Pydantic-shared validation, backend job spawn, live status polling, post-completion navigation (BACK-86 slice 1) (completed 2026-05-13)
 - [ ] **Phase 66: Dashboard Scan History + Clone/Compare** - `/scans` list + "Clone configuration" prefill + side-by-side compare diff view (BACK-86 slice 2)
 - [ ] **Phase 67: Resumable / Partial-Failure Scans** - `scan_checkpoints` SQLite table + `quirk scan --resume <id>` continuation + per-scanner partial-failure isolation with dashboard panel
 - [ ] **Phase 68: Operator Error-Message Pass** - Stable error codes with one-line cause + one-line remediation across every CLI exit, dashboard 4xx/5xx, and `scan_error_category` row; first-run install-day errors follow the same format
@@ -1375,7 +1375,7 @@ Plans:
   - [x] 65-03-PLAN.md — Pydantic schemas + /api/jobs router (POST/GET/DELETE) + 10 test bodies
   - [x] 65-04-PLAN.md — app.py FastAPI lifespan + create_app(db_path) + jobs router mount
   - [x] 65-05-PLAN.md — React types + useJobStatus hook + ScanNewPage + ScanJobPage + routes + sidebar CTA
-  - [ ] 65-06-PLAN.md — Human UAT walkthrough + ARCHITECTURE.md update + UAT-SERIES.md + Obsidian sync
+  - [x] 65-06-PLAN.md — Human UAT walkthrough + ARCHITECTURE.md update + UAT-SERIES.md + Obsidian sync
 **UI hint**: yes
 
 ### Phase 66: Dashboard Scan History + Clone/Compare
