@@ -48,6 +48,7 @@ from quirk.cli.job_progress import (  # Phase 65 — best-effort job progress up
     update_job_stage,
     mark_job_completed,
     mark_job_failed,
+    write_scan_checkpoint,   # Phase 67 RESUME-01
 )
 
 
@@ -162,6 +163,49 @@ def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endp
         scan_error=f"optional extra [{extra_group}] not installed",
         scan_error_category="missing_extra",
     ))
+
+
+def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
+    """Phase 67 RESUME-01: flush a stage's CryptoEndpoint rows to SQLite immediately.
+
+    Called after each scanner stage so a crash between stages leaves results
+    for completed stages persisted. Silent no-op on failure — the scan's
+    bulk persist at the end is the safety net.
+    """
+    if not endpoints or not db_path:
+        return
+    try:
+        with get_session(db_path) as session:
+            for ep in endpoints:
+                session.merge(ep)   # merge: safe if row already exists
+            session.commit()
+    except Exception:
+        pass
+
+
+def _collect_stage_partial_failures(
+    run_stats: dict,
+    stage: str,
+    error_endpoints: list,
+    previous_error_count: int,
+) -> list:
+    """Phase 67 RESUME-02: build partial_failures entries from new error_endpoints.
+
+    Compares error_endpoints length before vs after a stage to find new errors.
+    Returns the list of new partial_failure dicts (also appended to run_stats).
+    """
+    new_errors = error_endpoints[previous_error_count:]
+    stage_failures = []
+    for ep in new_errors:
+        stage_failures.append({
+            "stage": stage,
+            "scanner": getattr(ep, "host", "unknown"),
+            "error_category": getattr(ep, "scan_error_category", "exception"),
+            "error_message": getattr(ep, "scan_error", "") or "",
+            "endpoint_count": 0,
+        })
+    run_stats.setdefault("partial_failures", []).extend(stage_failures)
+    return stage_failures
 
 
 def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
@@ -635,6 +679,7 @@ def main():
         "hosts_scanned": sorted({h for h, _ in targets}),
         "ports_scanned": sorted({p for _, p in targets}),
     }
+    run_stats.setdefault("partial_failures", [])   # Phase 67 RESUME-02
 
     logger.stamp(f"TLS candidates: {len(tls_targets)} | SSH candidates: {len(ssh_targets)} | Other inventory: {len(inventory_endpoints)}")
 
