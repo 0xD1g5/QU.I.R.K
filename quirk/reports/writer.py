@@ -188,6 +188,8 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     if run_stats is not None:
         run_stats.setdefault("timings_sec", {})
         run_stats["timings_sec"].setdefault("reporting", round(time.perf_counter() - report_start, 3))
+        # Phase 67 RESUME-02: ensure partial_failures key present even for clean scans
+        run_stats.setdefault("partial_failures", [])
 
     stats_path = None
     if run_stats:
