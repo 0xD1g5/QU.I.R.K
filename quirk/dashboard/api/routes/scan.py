@@ -24,6 +24,7 @@ from quirk.dashboard.api.schemas import (
     FindingItem,
     IdentityFinding,
     MotionFinding,
+    PartialFailureEntry,
     RoadmapData,
     RoadmapEdge,
     RoadmapNode,
@@ -856,6 +857,44 @@ def _cert_expiry_key(c: "CertItem") -> datetime:
     return dt
 
 
+def _load_partial_failures(db: Session, scan_run_id_str: str) -> list[PartialFailureEntry]:
+    """Phase 67 RESUME-02: load partial_failures from scan_checkpoints.error_summary.
+
+    Returns [] if no checkpoints exist (pre-Phase 67 scans or clean scans).
+    scan_run_id_str: ISO timestamp string (same as CryptoEndpoint.scanned_at value).
+    """
+    import json as _json
+    try:
+        from quirk.models import ScanCheckpoint
+        cps = (
+            db.query(ScanCheckpoint)
+            .filter(
+                ScanCheckpoint.scan_run_id == scan_run_id_str,
+                ScanCheckpoint.partial_failure == True,  # noqa: E712
+            )
+            .all()
+        )
+        result: list[PartialFailureEntry] = []
+        for cp in cps:
+            if not cp.error_summary:
+                continue
+            try:
+                entries = _json.loads(cp.error_summary)
+                for entry in entries:
+                    result.append(PartialFailureEntry(
+                        stage=cp.stage,
+                        scanner=entry.get("scanner", "unknown"),
+                        error_category=entry.get("error_category", "exception"),
+                        error_message=entry.get("error_message", ""),
+                        endpoint_count=entry.get("endpoint_count", 0),
+                    ))
+            except (ValueError, KeyError):
+                pass
+        return result
+    except Exception:
+        return []
+
+
 @router.get("/scan/latest", response_model=ScanLatestResponse)
 def get_latest_scan(
     scan_id: Optional[str] = Query(default=None, description="ISO timestamp scan_id to load; omit for latest"),
@@ -1004,6 +1043,9 @@ def get_latest_scan(
 
     response_scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
 
+    # Phase 67 RESUME-02: load partial_failures from scan_checkpoints
+    partial_failures = _load_partial_failures(db, response_scan_id)
+
     return ScanLatestResponse(
         meta=ScanMeta(
             scan_id=response_scan_id,
@@ -1020,6 +1062,7 @@ def get_latest_scan(
         identity_findings=identity_findings,
         motion_findings=_derive_motion_findings(endpoints),   # NEW — Phase 36 DASH-05
         dar_findings=_derive_dar_findings(endpoints),          # Phase 39 GAP-04
+        partial_failures=partial_failures,                     # Phase 67 RESUME-02
     )
 
 
