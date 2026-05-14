@@ -300,6 +300,50 @@
 
 ---
 
+## Milestone: v4.8 — Pre-Primetime Hardening + Operating Model
+
+**Shipped:** 2026-05-14
+**Phases:** 13 (57–68, including 64.1) | **Plans:** 53 | **Tasks:** 122
+
+### What Was Built
+
+- Wave A (Phases 57–62): All 15 audit blockers closed — JWT TLS verification, SAML SSRF allowlist, argument-injection guards, bearer auth + CSRF, CORS lockdown, rate-limit middleware, `safe_str` credential scrubbing, score arithmetic clamps, CBOM Pass-1 coverage expansion, React hook cancellation pattern
+- Wave B (Phases 63–68): Scheduled scanning, multi-scan trend timeline with regression chips, dashboard-initiated scan with live stage polling, scan history/clone/compare, resumable partial-failure scans, stable operator error-code registry
+- Phase 64.1 (audit residual): 5 code fixes for remaining BLOCKERs + 14 structured dispositions (13 deferred-v4.9, 1 wont-fix); AUDIT-TASKS.md zero bare-open BLOCKERs at v4.8 close
+
+### What Worked
+
+- Wave A / Wave B split made the primetime cutover rationale self-documenting; every executor knew exactly what was gating
+- Parallel Wave A execution (6 phases on disjoint code paths) compressed the hardening sprint to 2 days
+- Pre-phase audit (2026-05-08) with an explicit `AUDIT-TASKS.md` ledger meant zero ambiguity about what "done" looked like at every step
+- UAT walkthroughs for browser-visual behaviors completed in the same session as milestone close (no carry-over)
+
+### What Was Inefficient
+
+- REQUIREMENTS.md checkbox tracking fell behind — 15 requirements implemented but never ticked; caught at milestone close pre-flight
+- Phase 62 SUMMARY.md files for Plans 01–03 missing (worktree cherry-pick gap); documentation artifact, not code gap, but adds friction at close
+- `status: pass` in HUMAN-UAT.md is not recognized by the SDK — only `status: complete` passes the audit gate; discovered at close instead of at execution time
+
+### Patterns Established
+
+- Audit-ledger-as-milestone-input: AUDIT-TASKS.md maps directly to phase requirements with traceability IDs; this pattern should be reused for v4.9 which consumes the same ledger
+- Error registry (`quirk/errors.py`): INSTALL-xxx / DASHBOARD-xxx / SCAN-xxx stable codes with cause+remediation is now the mandatory format for all operator-facing errors
+- `_wrapped_phase()` + `ScanCheckpoint`: all 12 scanners now use uniform error capture + resumability; new scanners added in v4.9 must adopt the same pattern from day 1
+
+### Key Lessons
+
+- Wave gating requires a CI-enforced check, not just documentation — two phases tried to start Wave B before Wave A was fully closed; caught by executor state checks, not by automation
+- `human_needed` VERIFICATION.md status must be resolved before milestone close — carrying it forward creates pre-flight noise; build a "UAT day" into the milestone timeline
+- Browser-visual contracts (chart rendering, chip placement, FIFO state) are genuinely untestable by pytest and should be explicitly UAT-budgeted rather than treated as optional
+
+### Cost Observations
+
+- Model mix: Sonnet 4.x primary; Opus for planning agents
+- Sessions: ~9 across 6 days (2026-05-09 → 2026-05-14)
+- Notable: Wave A subagent parallelism was the most cost-efficient execution pattern in any milestone to date — 6 phases in 2 days with clear code-path isolation
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -312,6 +356,9 @@
 | v4.3 Data at Rest | 7 | 24 | Heaviest infrastructure milestone — 6 scanner surfaces; CRITICAL PATH annotation pattern established; dar_ 5th subscore prefix; GCS sentinel reuse; carry-over phase pre-planned at roadmap creation |
 | v4.4 Data in Motion | 6 | 33 | First motion-coverage milestone — email + broker TLS, 6th subscore, motion CBOM; meta-extra pattern `[motion]`; 18-test Nyquist coverage module; CHANGELOG.md introduced; retrospective entry skipped at close |
 | v4.5 Reliability & Gap Closure | 7 | 40 | First reliability-only milestone — no new scanner surface; structural drift fixes (runtime profile parser, _wrapped_phase, schema gate); 7/14 UAT debt automated; test count: 662→718 |
+| v4.6 Enterprise Readiness | 6 | 24 | Install-day UX, 5 TLS finding types, nmap/multi-target, rich finding context, compliance mapping to PCI-DSS/HIPAA/FIPS 140-3, enterprise docs |
+| v4.7 Governance & Compliance Platform | 7 | 27 | QRAMM data model + evidence bridge, assessment UI, compliance mapping view, PDF governance section, staleness CI gate, `quirk doctor` health check |
+| v4.8 Pre-Primetime Hardening + Operating Model | 13 | 53 | Audit-driven Wave A (15 blockers) + Wave B operating model (scheduled scans, trends, dashboard scan launch, history/compare, resumable scans, error registry); first milestone with subagent-parallel Wave execution |
 
 ### Cumulative Quality
 
@@ -323,6 +370,9 @@
 | v4.3 | 504 | 504 tests collected at ship; tech_debt audit status (16 deferred items, all live-env or minor structural); __init__.py version skew fixed at archive time |
 | v4.4 | 662 | 662 tests at ship; all Nyquist VALIDATION.md compliant except Phase 36 (DEF-v4.4-01, closed in v4.5) |
 | v4.5 | 718 | 718 tests at ship; all Nyquist VALIDATION.md compliant; 7 carry-over UAT gaps remain (cloud-only or browser-only) |
+| v4.6 | ~800 | Compliance mapping + enterprise docs added; test count estimated |
+| v4.7 | ~850 | QRAMM 35-test suite added; staleness CI gates added |
+| v4.8 | ~900+ | 31 pre-existing failures unrelated to v4.8 work remain; Wave A regression suites added (auth/CSRF/rate-limit: 16 tests, score arithmetic: 45 tests, credential scrubbing: 32 tests) |
 
 ### Top Lessons (Verified Across Milestones)
 

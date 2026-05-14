@@ -1,5 +1,57 @@
 # Milestones
 
+## v4.8 Pre-Primetime Hardening + Operating Model (Shipped: 2026-05-14)
+
+**Phases completed:** 13 phases, 53 plans, 122 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- One-liner:
+- SAML metadata fetcher routes all outbound URLs through validate_external_url before httpx.get, blocking RFC1918/loopback/link-local/file:///metadata IPs by default and emitting a HIGH advisory CryptoEndpoint per internal target when operator opts in via allow_internal_targets
+- One-liner:
+- broker_scanner.py changes:
+- Bearer-token auth (hmac.compare_digest) and CSRF header check middleware for the FastAPI dashboard API, with configurable CORS allowlist and api_token fields in SecurityCfg
+- Sliding-window rate limiter (60 POST/PUT/DELETE/PATCH/min/IP, Retry-After) and configurable CORSMiddleware registered in FastAPI app factory via get_cors_origins() — zero new pip dependencies
+- One-liner:
+- Full 16-test auth/CSRF/rate-limit/CORS/GET-auth/introspection/pdf-port-clamp suite; require_auth + require_csrf wired at router level on pdf, qramm, scan, and trends routers via TDD RED/GREEN cycle
+- One-liner:
+- fetchApi() TypeScript wrapper in src/dashboard/src/lib/api.ts enforcing X-Quirk-Request CSRF header and Bearer token on all 14 API call sites across 9 dashboard files, with 401/403/429 error handling at each site
+- One-liner:
+- Substitution table:
+- 1. [Rule 1 - Bug] Refined _is_fstring_with_safe_str to handle benign Name + safe_str pattern
+- One-liner:
+- One-liner:
+- 1. [Rule 1 - Bug] Regenerated expected_vault_cbom.json golden fixture
+- One-liner:
+- One-liner:
+- One-liner:
+- SQLite-backed scheduled_scans/scheduled_runs tables with argparse CRUD subcommands (add/list/enable/disable/remove) using croniter for cron validation and path-traversal-safe name allowlist
+- 60-second sleep-loop dispatcher with SIGINT/SIGTERM signal handling, croniter next-run computation, subprocess.Popen crash-isolated dispatch, and startup recovery for orphaned runs
+- FastAPI GET/POST/PATCH/DELETE /api/schedules router (first writable dashboard route, D-04) + React /schedules page with Switch toggles, delete Dialog, and optimistic UI — 11 pytest tests, production build verified
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- 1. [Rule 3 - Blocking] Added Phase 63 model/helper prereqs missing from worktree
+- 1. [Rule 2 - Missing] Register Plan 01 test stubs in skip_registry.py
+- 1. [Rule 3 - Blocking] Worktree branch was 14 commits behind main
+- `src/dashboard/src/types/api.ts`
+- One-liner:
+- 1. [Rule 3 - Blocker] Worktree missing Phase 63/64/65 infrastructure
+- One-liner:
+- Import addition
+- Argparse additions
+- quirk/dashboard/api/schemas.py:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+
+---
+
 ## v4.6 Enterprise Readiness (Shipped: 2026-05-05)
 
 **Phases completed:** 6 phases (45–50), 24 plans

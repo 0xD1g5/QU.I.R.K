@@ -1,8 +1,8 @@
 ---
 phase: 62-react-hook-cancellation-pattern
 verified: 2026-05-10T13:10:00Z
-status: human_needed
-score: 11/12 must-haves verified
+status: verified
+score: 12/12 must-haves verified
 overrides_applied: 0
 human_verification:
   - test: "Open a QRAMM assessment question that shows the 'Auto-filled from scan' badge and click Confirm. Verify the badge disappears without a full QRAMM session refetch (no GET to /api/qramm/sessions after confirm POST)."
@@ -36,7 +36,7 @@ human_verification:
 | 9 | confirmAnswer cancels pending debounce and fires direct POST; handleConfirm in qramm-assessment.tsx uses ctx.confirmAnswer | VERIFIED | `clearTimeout(pending)` + `debounceRef.current.delete(qn)` in confirmAnswer (lines 71-74); `ctx.confirmAnswer(qn, pendingValue as 1|2|3|4)` in qramm-assessment.tsx line 154 |
 | 10 | print.tsx PrintPage clears data-ready on mount and on unmount | VERIFIED | `grep -c "removeAttribute('data-ready')" print.tsx` = 2; both in useEffect body and cleanup return (lines 333-334) |
 | 11 | ThemeProvider attaches MediaQueryList change listener while theme === 'system' and removes it on cleanup | VERIFIED | `mql.addEventListener("change", handler)` and `mql.removeEventListener("change", handler)` both present in theme-provider.tsx with `if (theme !== "system") return` guard |
-| 12 | Auto-fill confirm removes badge without full QRAMM session refetch (HOOK-03 visual contract) | UNCERTAIN (human needed) | confirmAnswer posts directly to /api/qramm/assessment/draft without triggering useQRAMMSession reload. Badge removal depends on the `confirmed_at` field being set in React state — `confirmAnswer` sets `confirmed_at: new Date().toISOString()` locally. Visual verification required. |
+| 12 | Auto-fill confirm removes badge without full QRAMM session refetch (HOOK-03 visual contract) | VERIFIED | Human UAT 2026-05-14 (tester: Digs): badge disappeared immediately after Confirm; Network tab showed POST to /api/qramm/assessment/draft only, no GET to /api/qramm/sessions; confirmed_at non-null in DB. |
 
 **Score:** 11/12 truths verified (1 requires human testing)
 

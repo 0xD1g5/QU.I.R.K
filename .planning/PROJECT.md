@@ -101,6 +101,21 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Dashboard WCAG AA — zero browser console errors across all routes; visible focus rings; keyboard navigation; semantic heading order; axe-core baseline captured in GHA workflow — Phase 43
 - ✓ UAT debt automation — Phase 27 DB integration tests (PostgreSQL/MySQL vs chaos lab); Phase 25/30 traceability annotations + Vault UAT-30-01 live test; Phase 31 seeded-DB /api/trends test; 7 of 14 carry-over items closed — Phase 44
 
+**v4.8 Pre-Primetime Hardening + Operating Model (Phases 57–68) — SHIPPED 2026-05-14**
+- ✓ Scanner security hardening — JWT JWKS TLS verification, SAML SSRF allowlist, semgrep/syft argument-injection guards, broker hardcoded-credential removal, broker TLS-required default — Phase 57
+- ✓ Dashboard API hardening — single-user bearer auth + CSRF, CORS allowlist lockdown, per-route rate limiting, path-traversal guards for `quirk init` and `@file`, PDF SSRF clamp — Phase 58
+- ✓ Credential leakage sweep — shared `safe_str(exc)` helper across all connectors/routes; AST-based pytest gate prevents regressions — Phase 59
+- ✓ Score arithmetic correctness — readiness clamp ≤100, QRAMM multiplier guard, confidence-bonus zero-data guard, contiguous maturity threshold bands — Phase 60
+- ✓ CBOM Pass-1 coverage + report sanitization — algorithm components for 12+ protocol families previously emitting zero; VAULT classification consistent across all passes; markdown report escaping — Phase 61
+- ✓ React hook cancellation pattern — `if (!cancelled)` guards across all data-fetch hooks; QRAMM debounce coalescing; `confirmAnswer` flush; Vitest+MSW test infra; CI guard script — Phase 62
+- ✓ Scheduled/continuous scanning — `scheduled_scans`/`scheduled_runs` SQLite tables; `quirk schedule` CRUD CLI; `quirk scheduler run` dispatcher; dashboard `/schedules` page — Phase 63
+- ✓ Trend analysis foundation — `/api/trends/timeline` multi-scan endpoint; 7-series Recharts LineChart on `/trends`; `RegressionAlertChip` on executive dashboard with per-session localStorage dismissal — Phase 64
+- ✓ Audit residual blockers — 5 code fixes (algo hints, staleness date, years clamp, ms-precision session window, non-transactional init_db); 14 D-06 structured dispositions for remaining BLOCKERs — Phase 64.1
+- ✓ Dashboard-initiated scan — `/scan/new` form with Pydantic-shared validation; `/scan/job/:id` live stage polling; post-completion navigation; `ScanJob` backend model — Phase 65
+- ✓ Scan history + clone/compare — `/scans` history list with enriched fields; Clone pre-fill with reconstruction notice for CLI scans; `/compare` diff view (score delta, 6 subscore pillars, findings diff) — Phase 66
+- ✓ Resumable/partial-failure scans — `scan_checkpoints` table; `--resume-scan-id` CLI; per-scanner `_wrapped_phase()` uniform error capture; `ScannerStatusCard` on executive dashboard — Phase 67
+- ✓ Operator error-message pass — `quirk/errors.py` stable registry (50 codes, cause+remediation); `quirk errors` CLI; `format_error()` applied across all CLI exits, dashboard 4xx/5xx, and install-day paths — Phase 68
+
 **v4.7 Governance & Compliance Platform (Phases 51–56) — In Progress**
 - ✓ QRAMM core infrastructure — `QRAMMSession`/`QRAMMAnswer`/`QRAMMProfile` ORM models; 120-question CSNP catalog; weakest-link scoring engine; 5-endpoint FastAPI CRUD router at `/api/qramm/`; 35-test suite; DEBT-01 `datetime.utcnow` deprecation closed — Phase 51
 - ✓ Compliance uplift & health check — SOC2/ISO 27001:2022 mappings; CBOM FIPS 140-3 2-tier annotations (approved/non-approved; `certified` deferred to CMVP attestation phase per D-01); `quirk doctor` pre-engagement health dashboard with Rich table; lab.sh PROFILE_ARGS CLI override fix; `ports_scanned`/`hosts_scanned` in run-stats JSON; DEBT-02/03/04 closed — Phase 52
@@ -132,31 +147,15 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.8 Pre-Primetime Hardening + Operating Model
+## Current Milestone: v4.9 Audit Depth (starting)
 
-**Goal:** Close all 15 audit-identified blockers (Wave A) and ship the operating-model features that turn QU.I.R.K. into a deploy-and-forget platform (Wave B). v4.8 is the primetime cutover — after this milestone a customer can install, schedule, and operate QU.I.R.K. without operator hand-holding, on top of a hardened security and correctness foundation.
+**Goal:** Work through the 121 open audit findings (92 WARNINGs + 29 INFOs) and 13 deferred BLOCKERs from the 2026-05-08 audit, systematically hardening correctness, resource management, input validation, and code quality across all six scanner subsystems.
 
-**Target features:**
+**Target features:** TBD — defined during `/gsd-new-milestone 4.9`
 
-**Wave A — Pre-Primetime Hardening (Phases 57–62, audit fix-up):**
-- Scanner security hardening — JWT verification, SSRF allowlist, argument-injection guards, hardcoded-credential removal across protocol scanners (closes audit blockers 1–6)
-- Dashboard API hardening — single-user auth + CSRF, CORS lockdown, rate-limit middleware, path-traversal guards, `@file` allowlist (closes audit blockers 7–10)
-- Credential leakage sweep — shared `safe_str(exc)` helper applied across all connectors and route handlers (Pattern A; closes audit blocker 11)
-- Score arithmetic correctness — readiness clamp ≤100, profile multiplier server-side clamp, confidence-bonus zero-data guard, maturity threshold band fixes (closes audit blockers 12, 15)
-- CBOM Pass-1 coverage expansion + report sanitization — close OBS-1 across 12+ protocol families, route VAULT correctly, escape pipe/newline characters in markdown report tables (closes audit blockers 13, 14)
-- React hook cancellation pattern — standardize `if (!cancelled)` guards across data-fetch hooks; QRAMM debounce coalescing fix; auto-fill confirm round-trip (Pattern C)
+## Current State: v4.8 SHIPPED 2026-05-14
 
-**Wave B — Operating Model (Phases 63–68, gated on Wave A):**
-- Scheduled / continuous scanning mode (BACK-25)
-- Trend analysis foundation (BACK-21)
-- Dashboard-initiated scan: configure, launch, live status (BACK-86 slice 1)
-- Dashboard scan history + clone/compare (BACK-86 slice 2)
-- Resumable / partial-failure scans
-- Operator error-message pass
-
-## Current State: v4.8 In Progress — Phase 67 Complete (Wave B)
-
-Phase 67 complete (2026-05-14) — resumable/partial-failure scans: `ScanCheckpoint` ORM model + `scan_checkpoints` table, per-stage checkpoint writes + `_flush_stage_endpoints` in `run_scan.py`, all 12 scanners migrated to `_wrapped_phase()` for uniform error capture, `--resume-scan-id` + `--list-resumable` CLI flags, `partial_failures` guaranteed in output JSON, `PartialFailureEntry` Pydantic model + `ScannerStatusCard` on Executive dashboard. Entry point corrected to `_run_main_with_job_guard`. RESUME-01 + RESUME-02 closed.
+v4.8 shipped 2026-05-14 — 13 phases (57–68), 53 plans, 122 tasks. All 15 audit blockers closed (Wave A) and 6 operating-model features shipped (Wave B). QU.I.R.K. now supports auth-gated dashboard, scheduled scans, trend regression alerts, dashboard-initiated scans, scan history with clone/compare, resumable partial-failure scans, and a stable error-code registry across all operator-facing surfaces.
 
 Phase 64.1 complete (2026-05-10) — audit residual blockers: 5 code fixes with regression tests (algo hints CR-03, staleness date comparison BL-03, years clamp BL-04, sub-second session window CR-05 corrected to ms precision, db init idempotency CR-08); 14 structured D-06 dispositions for remaining BLOCKERs (13 deferred-v4.9, 1 wont-fix); AUDIT-TASKS.md now has zero bare-open BLOCKERs. 32/32 regression tests pass.
 
@@ -174,7 +173,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 
 ## Context
 
-- **Current version**: v4.6.0 (shipped 2026-05-05); v4.5.0 shipped 2026-05-03
+- **Current version**: v4.8.0 (shipped 2026-05-14); v4.7.0 shipped 2026-05-08
 - **Language**: Python 3.11+ (core scanner, FastAPI backend)
 - **Frontend**: React + shadcn/ui + Tailwind CSS (built React bundle in `quirk/dashboard/static/`)
 - **Database**: SQLite (local, `./quirk.db`); designed for Postgres migration at SaaS phase
@@ -227,9 +226,15 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | `COMPLIANCE_MAP` keyed by finding category string (v4.6 Phase 49) | Finding category (title prefix) is the stable API surface shared by risk_engine and compliance module | ✓ Good — `_normalize_for_compliance` longest-prefix-first matching; UNMAPPED_TITLES allow-list covers 7 intentionally unmapped cases |
 | `[all]` meta-extra excludes `[identity]` (v4.6 Phase 45) | impacket pyOpenSSL transitive conflict downgrades `cryptography`, breaking TLS scanner | ✓ Good — `[all]` is safe for most users; `[identity]` requires explicit opt-in; documented in operators-guide |
 | Hybrid docs structure: canonical sections + "See also" links (v4.6 Phase 50) | Avoids duplicating connector guides while keeping operators-guide self-contained | ✓ Good — operators-guide stays under 1,000 lines; existing connector docs remain authoritative |
+| Wave A hard-gates Wave B (v4.8 D-01) | Shipping operating-model features on top of unhardened security/correctness foundations would invert the primetime quality goal | ✓ Good — all 15 audit blockers closed before any Wave B phase started; no audit finding escaped to Wave B |
+| Wave A internally parallel (v4.8 D-02) | Phases 57–62 touch disjoint code paths; independent agents can execute concurrently | ✓ Good — 6 phases completed on 2026-05-09/10 with subagent parallelism |
+| `safe_str(exc)` shared helper over per-site scrubbing (v4.8 Phase 59) | 9 leaky callsites; fixing individually would leave gaps; AST gate prevents regression | ✓ Good — LEAK-01/02/03 closed; 32 tests pass; CI gate catches future bypasses |
+| `if (!cancelled)` guard pattern from useTrendsData.ts as canonical (v4.8 Phase 62) | Selecting one hook as canonical prevents per-hook interpretation drift; CI script enforces it | ✓ Good — 4 hooks migrated; 2 Vitest tests; check-cancelled-guards.sh exits 1 on violation |
+| `quirk errors` registry with stable error codes (v4.8 Phase 68) | Operator-facing errors need stable codes for runbook references; raw exceptions are unusable in production | ✓ Good — 50 codes, cause+remediation for each; `format_error()` applied at all exit points |
+| Markdown injection in HTML/PDF deferred to v4.9+ (v4.8 D-06) | REPORT-SAN-01 covers markdown tables only; HTML/PDF injection is a separate attack surface shape | — Pending — deferred intentionally; AUDIT-TASKS.md tracks the open WARNING rows |
 
 ---
-*Last updated: 2026-05-14
+*Last updated: 2026-05-14 after v4.8 milestone*
 
 ## Evolution
 
