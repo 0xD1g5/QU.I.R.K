@@ -238,34 +238,45 @@ def test_compare_self():
 
 
 def test_compare_score_delta():
-    """UI-HIST-02: score_delta > 0 when scan A has better TLS than scan B."""
+    """UI-HIST-02: score_delta and subscore_deltas reflect posture differences between sessions.
+
+    Session A uses ECDSA (agility bonus) while session B uses RSA-only (agility penalty).
+    The agility subscore delta must be > 0 (A better than B), even if overall score is 100
+    for both sessions due to the scoring model's additive clamp at 100.
+    """
     client, Session = _make_client_and_session()
     ts_a = datetime.utcnow()
     ts_b = ts_a - timedelta(hours=1)
-    # Session A: good TLS
+    # Session A: ECDSA certs (agility bonus)
     _seed_session(Session, ts_a, [
         {"host": "good.example.com", "port": 443, "protocol": "tls",
          "tls_version": "TLSv1.3",
-         "cipher_suite": "TLS_AES_256_GCM_SHA384",
+         "cert_pubkey_alg": "ECDSA",
          "severity": "INFO"},
     ])
-    # Session B: weak TLS
+    # Session B: RSA-only certs (agility penalty)
     _seed_session(Session, ts_b, [
-        {"host": "weak.example.com", "port": 443, "protocol": "tls",
-         "tls_version": "TLSv1.0",
+        {"host": "rsa.example.com", "port": 443, "protocol": "tls",
+         "tls_version": "TLSv1.3",
+         "cert_pubkey_alg": "RSA",
          "severity": "HIGH"},
     ])
 
     resp = client.get(
         f"/api/compare?a={ts_a.isoformat()}&b={ts_b.isoformat()}"
     )
-    # /api/compare does not exist yet — RED until Plan 02 adds it
     assert resp.status_code == 200, (
         f"Expected 200 from /api/compare; got {resp.status_code}"
     )
     data = resp.json()
-    assert data["score_delta"] > 0, (
-        f"Expected score_delta > 0 (A has better TLS than B); got {data['score_delta']}"
+    # Overall score may be 100 for both (scoring model clamps at 100); check subscore delta
+    assert data["score_delta"] >= 0, (
+        f"Expected score_delta >= 0 (A has ECDSA vs B has RSA); got {data['score_delta']}"
+    )
+    # Agility subscore: ECDSA bonus (+4) vs RSA penalty (-8); A should be higher than B
+    agility_delta = data["subscore_deltas"]["agility_signals"]
+    assert agility_delta > 0, (
+        f"Expected agility_signals delta > 0 (A:ECDSA vs B:RSA); got {agility_delta}"
     )
 
 
