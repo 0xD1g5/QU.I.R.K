@@ -62,11 +62,13 @@ All type roles use the Tailwind utility classes; no custom CSS needed unless not
 | Body | 14px | 400 (regular) | 1.5 | `text-sm` — table rows, finding descriptions |
 | Label | 12px | 600 (semibold) | 1.4 | `text-xs font-semibold` — column headers, section labels, badge text |
 | Heading | 20px | 600 (semibold) | 1.2 | `text-xl font-semibold` — page titles (`/scans`, `/compare`) |
-| Display | 28px | 700 (bold) | 1.1 | `text-2xl font-bold font-data stat-metric` — numeric score values in compare header |
+| Display | 28px | 600 (semibold) | 1.1 | `text-2xl font-semibold font-data stat-metric` — numeric score values in compare header |
+
+Type scale: exactly 4 sizes (14, 12, 20, 28px). Exactly 2 weights (400 regular, 600 semibold).
 
 Data rule: any numeric value (score, delta, finding count) must use `font-data` class (JetBrains Mono, `tnum` feature) so digits align in tabular context.
 
-Eyebrow labels (section group headers in compare view): use `.label-eyebrow` utility class from `index.css` — 10px / weight 600 / ALL CAPS / `letter-spacing: 0.08em`.
+Eyebrow labels (section group headers in compare view): use `.label-eyebrow` modifier class from `index.css` — ALL CAPS / `letter-spacing: 0.08em` applied on top of the existing 12px Label role (`text-xs font-semibold`). This is a visual treatment only; it does NOT introduce a new point size.
 
 ---
 
