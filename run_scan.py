@@ -766,39 +766,51 @@ def main():
     _err_before_api = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "api")
-    jwt_endpoints = []
-    with _phase_timer(run_stats, "jwt_scanning"):
-        if cfg.connectors.enable_jwt and cfg.connectors.jwt_targets:
-            jwt_endpoints = scan_jwt_targets(
-                cfg.connectors.jwt_targets,
-                timeout=cfg.scan.timeouts.jwt_seconds,
-                logger=logger,
-                allow_insecure_jwks=cfg.security.allow_insecure_jwks,
-            )
+    def _run_jwt_phase():
+        if not (cfg.connectors.enable_jwt and cfg.connectors.jwt_targets):
+            return []
+        return scan_jwt_targets(
+            cfg.connectors.jwt_targets,
+            timeout=cfg.scan.timeouts.jwt_seconds,
+            logger=logger,
+            allow_insecure_jwks=cfg.security.allow_insecure_jwks,
+        )
+    jwt_endpoints = _wrapped_phase(
+        run_stats, "jwt_scanning", "jwt_scanner",
+        _run_jwt_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # Container scan phase
     # ==============================
-    container_endpoints = []
-    with _phase_timer(run_stats, "container_scanning"):
-        if cfg.connectors.enable_container and cfg.connectors.container_targets:
-            container_endpoints = scan_container_targets(
-                cfg.connectors.container_targets,
-                timeout=cfg.scan.timeouts.container_seconds,
-                logger=logger,
-            )
+    def _run_container_phase():
+        if not (cfg.connectors.enable_container and cfg.connectors.container_targets):
+            return []
+        return scan_container_targets(
+            cfg.connectors.container_targets,
+            timeout=cfg.scan.timeouts.container_seconds,
+            logger=logger,
+        )
+    container_endpoints = _wrapped_phase(
+        run_stats, "container_scanning", "container_scanner",
+        _run_container_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # Source code scan phase
     # ==============================
-    source_endpoints = []
-    with _phase_timer(run_stats, "source_scanning"):
-        if cfg.connectors.enable_source and cfg.connectors.source_targets:
-            source_endpoints = scan_source_targets(
-                cfg.connectors.source_targets,
-                timeout=cfg.scan.timeouts.source_seconds,
-                logger=logger,
-            )
+    def _run_source_phase():
+        if not (cfg.connectors.enable_source and cfg.connectors.source_targets):
+            return []
+        return scan_source_targets(
+            cfg.connectors.source_targets,
+            timeout=cfg.scan.timeouts.source_seconds,
+            logger=logger,
+        )
+    source_endpoints = _wrapped_phase(
+        run_stats, "source_scanning", "source_scanner",
+        _run_source_phase, error_endpoints, logger,
+    ) or []
 
     _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints)  # Phase 67 RESUME-01
     _api_pf = _collect_stage_partial_failures(run_stats, "api", error_endpoints, _err_before_api)
