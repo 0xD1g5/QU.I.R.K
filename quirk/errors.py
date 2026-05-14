@@ -36,8 +36,8 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
     ),
     "INSTALL-004": ErrorEntry(
         code="INSTALL-004",
-        cause="Port 8512 is already in use.",
-        fix="Run `lsof -i :8512` to find the conflicting process, or use `quirk serve --port <other>`.",
+        cause="Dashboard port is already in use.",
+        fix="Run `lsof -i :<port>` to find the conflicting process, or use `quirk serve --port <other>`.",
     ),
     "INSTALL-005": ErrorEntry(
         code="INSTALL-005",
@@ -130,6 +130,11 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         code="DASHBOARD-012",
         cause="Playwright not installed for PDF export.",
         fix="Run `pip install playwright && playwright install chromium`.",
+    ),
+    "DASHBOARD-013": ErrorEntry(
+        code="DASHBOARD-013",
+        cause="PDF export failed due to an unexpected error.",
+        fix="Check server logs for the full traceback and file an issue if reproducible.",
     ),
 
     # --- SCHED domain (scheduled scans) ---
