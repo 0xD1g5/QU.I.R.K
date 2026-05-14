@@ -15,6 +15,7 @@ import os
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
+from quirk.errors import format_error
 
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
@@ -38,9 +39,7 @@ def export_pdf() -> Response:
     """
     if sync_playwright is None:
         return Response(
-            content=json.dumps(
-                {"detail": "Playwright not installed. Run: pip install playwright && playwright install chromium"}
-            ).encode(),
+            content=json.dumps({"detail": format_error("DASHBOARD-012")}).encode(),
             status_code=503,
             media_type="application/json",
         )

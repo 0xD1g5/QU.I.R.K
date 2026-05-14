@@ -20,6 +20,7 @@ from typing import List, Optional
 
 from croniter import croniter
 from fastapi import APIRouter, Depends, HTTPException
+from quirk.errors import format_error
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -98,7 +99,7 @@ def _last_run_status(db: Session, schedule_id: int) -> Optional[str]:
 def _get_or_404(db: Session, schedule_id: int) -> ScheduledScan:
     row = db.get(ScheduledScan, schedule_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Schedule not found")
+        raise HTTPException(status_code=404, detail=format_error("SCHED-004"))
     return row
 
 
@@ -135,7 +136,7 @@ def create_schedule(
     if not croniter.is_valid(payload.cron_expr):
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid cron expression: {payload.cron_expr!r}",
+            detail=format_error("SCHED-002"),
         )
     row = ScheduledScan(
         name=payload.name,
@@ -156,7 +157,7 @@ def create_schedule(
         # T-63-16 / LEAK-02: fixed message, never stringify the exception
         raise HTTPException(
             status_code=409,
-            detail=f"Schedule '{payload.name}' already exists",
+            detail=format_error("SCHED-003"),
         )
     return _to_response(db, row)
 

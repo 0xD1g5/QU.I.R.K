@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from quirk.errors import format_error
 from quirk.dashboard.api.middleware.auth import require_auth
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -909,7 +910,7 @@ def get_latest_scan(
         try:
             target_ts = datetime.fromisoformat(scan_id)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid scan_id format: {scan_id!r}")
+            raise HTTPException(status_code=400, detail=format_error("DASHBOARD-004"))
         endpoints: list[CryptoEndpoint] = (
             db.query(CryptoEndpoint)
             .filter(
@@ -919,7 +920,7 @@ def get_latest_scan(
             .all()
         )
         if not endpoints:
-            raise HTTPException(status_code=404, detail=f"No scan found with scan_id={scan_id!r}")
+            raise HTTPException(status_code=404, detail=format_error("DASHBOARD-005"))
         latest_ts = target_ts
     else:
         # D-01: anchor on MAX(scanned_at), then load all endpoints in the
@@ -930,7 +931,7 @@ def get_latest_scan(
         if latest_ts is None:
             raise HTTPException(
                 status_code=404,
-                detail="No scan results found. Run your first scan: quirk --config config.yaml",
+                detail=format_error("DASHBOARD-006"),
             )
         endpoints: list[CryptoEndpoint] = (
             db.query(CryptoEndpoint)
@@ -942,7 +943,7 @@ def get_latest_scan(
         )
 
     if not endpoints:
-        raise HTTPException(status_code=404, detail="No endpoints found for latest scan.")
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-006"))
 
     # Derive findings first — needed by evidence summary
     findings = _derive_findings(endpoints)
@@ -1121,19 +1122,19 @@ def compare_scans(
       - session not found  → HTTP 404
     """
     if a == b:
-        raise HTTPException(status_code=400, detail="Cannot compare a scan to itself.")
+        raise HTTPException(status_code=400, detail=format_error("DASHBOARD-007"))
     try:
         ts_a = datetime.fromisoformat(a)
         ts_b = datetime.fromisoformat(b)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid scan_id format.")
+        raise HTTPException(status_code=400, detail=format_error("DASHBOARD-004"))
 
     eps_a = _fetch_session_endpoints_1s(db, ts_a)
     eps_b = _fetch_session_endpoints_1s(db, ts_b)
     if not eps_a:
-        raise HTTPException(status_code=404, detail=f"No scan found: {a!r}")
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-005"))
     if not eps_b:
-        raise HTTPException(status_code=404, detail=f"No scan found: {b!r}")
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-005"))
 
     # Scores + subscores (D-07)
     # compute_readiness_score returns subscores as a plain dict — use dict access
