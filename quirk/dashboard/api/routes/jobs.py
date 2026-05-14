@@ -54,6 +54,7 @@ def _write_job_config(
     targets: str,
     db_path: str,
     calibration: str,
+    allow_internal_targets: bool = False,
 ) -> str:
     """Write a minimal config YAML for a dashboard-dispatched scan.
 
@@ -92,7 +93,7 @@ def _write_job_config(
             "profile": calibration,
         },
         "security": {
-            "allow_internal_targets": True,
+            "allow_internal_targets": allow_internal_targets,
         },
     }
     config_path = str(output_dir / "config.yaml")
@@ -159,7 +160,10 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     db.add(row)
     db.flush()
 
-    config_path = _write_job_config(output_dir, payload.targets, db_path, payload.calibration)
+    config_path = _write_job_config(
+        output_dir, payload.targets, db_path, payload.calibration,
+        allow_internal_targets=payload.allow_internal_targets,
+    )
 
     cmd = [
         sys.executable, "run_scan.py",

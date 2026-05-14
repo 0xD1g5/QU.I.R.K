@@ -104,16 +104,15 @@ def export_pdf() -> Response:
         )
 
     except Exception as exc:
-        msg = str(exc)
-        if "chromium" in msg.lower() or "executable" in msg.lower() or "no such file" in msg.lower():
-            detail = f"PDF export failed. Ensure Playwright is installed: playwright install chromium. Error: {msg}"
+        msg = str(exc).lower()
+        if "chromium" in msg or "executable" in msg or "no such file" in msg:
             return Response(
-                content=json.dumps({"detail": detail}).encode(),
+                content=json.dumps({"detail": format_error("DASHBOARD-012")}).encode(),
                 status_code=503,
                 media_type="application/json",
             )
         return Response(
-            content=json.dumps({"detail": f"PDF export failed: {msg}"}).encode(),
+            content=json.dumps({"detail": format_error("DASHBOARD-013")}).encode(),
             status_code=500,
             media_type="application/json",
         )

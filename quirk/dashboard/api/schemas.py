@@ -339,6 +339,7 @@ class ScanSubmitRequest(BaseModel):
     profile: Literal["quick", "standard", "deep"] = "standard"
     calibration: Literal["strict", "balanced", "lenient"] = "balanced"
     enable_nmap: bool = False
+    allow_internal_targets: bool = False
 
     @field_validator("targets")
     @classmethod

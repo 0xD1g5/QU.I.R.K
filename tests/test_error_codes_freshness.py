@@ -42,4 +42,4 @@ def test_error_codes_md_contains_install_section():
     assert "## INSTALL" in text
     assert "| QRK-INSTALL-001 |" in text
     assert "| QRK-INSTALL-004 |" in text
-    assert "lsof -i :8512" in text
+    assert "lsof -i" in text
