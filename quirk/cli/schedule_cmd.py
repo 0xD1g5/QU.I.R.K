@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from croniter import croniter
 
 from quirk.db import get_session, init_db
+from quirk.errors import format_error
 from quirk.models import ScheduledScan
 
 # T-63-02: validate name to prevent path traversal (no path separators, bounded length)
@@ -37,15 +38,12 @@ def _cmd_add(args: argparse.Namespace, console: Console) -> None:
     """Handle `quirk schedule add` — validate and insert a new ScheduledScan row."""
     # T-63-02: validate name against allowlist regex before any DB write
     if not _NAME_RE.match(args.name):
-        console.print(
-            f"[red]Invalid schedule name: '{args.name}'. "
-            "Only letters, digits, underscore, hyphen, and dot are allowed (max 255 chars).[/]"
-        )
+        console.print(f"[red]{format_error('SCHED-001')}[/red]")
         sys.exit(2)
 
     # T-63-01: validate cron expression using croniter before any DB write
     if not croniter.is_valid(args.cron):
-        console.print(f"[red]Invalid cron expression: {args.cron!r}[/]")
+        console.print(f"[red]{format_error('SCHED-002')}[/red]")
         sys.exit(2)
 
     db_path = _resolve_db_path(args.config)
@@ -67,7 +65,7 @@ def _cmd_add(args: argparse.Namespace, console: Console) -> None:
             # commit() is called by the context manager on clean exit
     except IntegrityError:
         # T-63-03: fixed message — never stringify the exception (LEAK-02 pattern)
-        console.print(f"[red]Schedule '{args.name}' already exists[/]")
+        console.print(f"[red]{format_error('SCHED-003')}[/red]")
         sys.exit(2)
 
     console.print(f"[green]Schedule '{args.name}' added.[/]")
@@ -115,7 +113,7 @@ def _cmd_enable_disable(args: argparse.Namespace, console: Console, *, enable: b
     with get_session(db_path) as db:
         row = db.query(ScheduledScan).filter_by(name=args.name).first()
         if row is None:
-            console.print(f"[red]Schedule '{args.name}' not found.[/]")
+            console.print(f"[red]{format_error('SCHED-004')}[/red]")
             sys.exit(2)
         row.enabled = enable
         # commit() called automatically by context manager
@@ -132,7 +130,7 @@ def _cmd_remove(args: argparse.Namespace, console: Console) -> None:
     with get_session(db_path) as db:
         row = db.query(ScheduledScan).filter_by(name=args.name).first()
         if row is None:
-            console.print(f"[red]Schedule '{args.name}' not found.[/]")
+            console.print(f"[red]{format_error('SCHED-004')}[/red]")
             sys.exit(2)
         db.delete(row)
         # commit() called automatically by context manager

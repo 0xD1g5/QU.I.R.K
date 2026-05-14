@@ -37,9 +37,12 @@ Public surface:
 from __future__ import annotations
 
 import shutil
+import sys
 from dataclasses import dataclass, field
 from importlib.util import find_spec
 from typing import Optional, Tuple
+
+from quirk.errors import format_error
 
 
 @dataclass(frozen=True)
@@ -219,6 +222,7 @@ def probe_missing_extras(cfg, error_endpoints) -> None:
         if modules_ok and binary_ok:
             continue
         # Enabled (or always-probe) AND missing → emit one advisory.
+        print(format_error("INSTALL-001"), file=sys.stderr)
         error_endpoints.append(
             CryptoEndpoint(
                 host=entry.scanner_label,
