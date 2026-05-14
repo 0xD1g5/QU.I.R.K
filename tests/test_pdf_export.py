@@ -1,6 +1,8 @@
 """PDF export tests."""
 import pytest
 
+from quirk.errors import format_error
+
 
 def test_pdf_export_endpoint(dashboard_client):
     """UI-04: POST /api/export/pdf returns 200 (PDF) or 503 (chromium absent)."""
@@ -13,7 +15,7 @@ def test_pdf_export_endpoint(dashboard_client):
     else:
         body = resp.json()
         assert "detail" in body
-        assert "playwright" in body["detail"].lower() or "chromium" in body["detail"].lower()
+        assert "QRK-DASHBOARD-" in body["detail"]
 
 
 def test_pdf_export_graceful_degradation(dashboard_client):
@@ -25,6 +27,6 @@ def test_pdf_export_graceful_degradation(dashboard_client):
         side_effect=Exception("Executable doesn't exist at /path/to/chromium"),
     ):
         resp = dashboard_client.post("/api/export/pdf")
-    assert resp.status_code in (503, 500)
+    assert resp.status_code == 503
     body = resp.json()
-    assert "detail" in body
+    assert body["detail"] == format_error("DASHBOARD-012")
