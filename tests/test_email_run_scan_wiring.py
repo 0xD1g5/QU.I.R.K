@@ -105,23 +105,31 @@ def test_email_branch_logger_calls_use_real_logger_signatures(capsys):
 
     tree = ast.parse(RUN_SCAN.read_text(encoding="utf-8"))
 
-    # Find the email-scanning `with _phase_timer(..., "email_scanning"):` block.
+    # Find the email-scanning block. Supports two structural patterns:
+    # 1. Legacy: `with _phase_timer(..., "email_scanning"):` block
+    # 2. Phase-67 refactor: `def _run_email_phase():` inner function
     email_block_node = None
     for node in ast.walk(tree):
-        if not isinstance(node, ast.With):
-            continue
-        for item in node.items:
-            ctx = item.context_expr
-            if isinstance(ctx, ast.Call):
-                for arg in ctx.args:
-                    if isinstance(arg, ast.Constant) and arg.value == "email_scanning":
-                        email_block_node = node
-                        break
-        if email_block_node is not None:
+        # Pattern 1: _phase_timer context manager with "email_scanning" label
+        if isinstance(node, ast.With):
+            for item in node.items:
+                ctx = item.context_expr
+                if isinstance(ctx, ast.Call):
+                    for arg in ctx.args:
+                        if isinstance(arg, ast.Constant) and arg.value == "email_scanning":
+                            email_block_node = node
+                            break
+            if email_block_node is not None:
+                break
+        # Pattern 2: _run_email_phase inner function (Phase 67 _wrapped_phase refactor)
+        if isinstance(node, ast.FunctionDef) and node.name == "_run_email_phase":
+            email_block_node = node
             break
 
     assert email_block_node is not None, (
-        "Could not find `with _phase_timer(..., 'email_scanning'):` block in run_scan.py"
+        "Could not find email scanning block in run_scan.py. "
+        "Expected either `with _phase_timer(..., 'email_scanning'):` "
+        "or `def _run_email_phase():` function definition."
     )
 
     # Collect every logger.info(...) call inside that block.
