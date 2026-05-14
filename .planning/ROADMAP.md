@@ -1417,7 +1417,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Every operator-facing error path (CLI non-zero exit, dashboard 4xx/5xx, `scan_error_category` row) carries a stable error code (e.g., `QRK-NMAP-001`), a one-line cause, and a one-line remediation hint; an `quirk errors` reference page (and `docs/error-codes.md`) lists every code with cause and fix
   2. First-run install-day errors (missing extras, missing nmap binary, port-conflict on `quirk serve`, unreadable `quirk.db`) render with the same one-line-cause + one-line-fix format and reference a specific `QRK-INSTALL-NNN` code; a smoke test exercises each scenario on a fresh venv and asserts the format
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 68-01-PLAN.md — Create quirk/errors.py canonical error registry + unit tests
+- [ ] 68-02-PLAN.md — Build quirk errors CLI command + wire run_scan.py argparse + generate docs/error-codes.md
+- [ ] 68-03-PLAN.md — Migrate CLI error paths (run_scan inline, doctor, schedule, optional_extra, kerberos) + update test_scan_robustness
+- [ ] 68-04-PLAN.md — Migrate dashboard error paths (middleware, routes, server.py port-conflict) + update affected API tests
+- [ ] 68-05-PLAN.md — Add install-day smoke tests + docs/error-codes.md freshness CI gate
 
 ## Progress — v4.8 Phases
 
@@ -1435,4 +1441,4 @@ Plans:
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
 | 67. Resumable / Partial-Failure Scans | B | 5/5 | Complete    | 2026-05-14 |
-| 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
+| 68. Operator Error-Message Pass | B | 0/5 | Planned | - |
