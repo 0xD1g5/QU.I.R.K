@@ -1400,7 +1400,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. A scan that crashes between scanner stages leaves a recoverable checkpoint in a new `scan_checkpoints` SQLite table; `quirk scan --resume <scan-id>` continues from the last completed scanner stage and produces results indistinguishable from an uninterrupted run for the same inputs
   2. A simulated failure of a single connector (e.g., GCP credentials missing) during a multi-connector scan completes the scan with a `partial_failures` array in the output JSON and a per-scanner status panel in the dashboard; remaining scanners' findings are preserved and contribute to the score normally
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 67-01-PLAN.md — DB layer: ScanCheckpoint model + _ensure_scan_checkpoints_table + write_scan_checkpoint() helper
+- [ ] 67-02-PLAN.md — Incremental persistence: per-stage checkpoint writes + partial_failures accumulation in run_scan.py
+- [ ] 67-03-PLAN.md — _wrapped_phase migration: migrate all inline try/except scanner invocations to _wrapped_phase
+- [ ] 67-04-PLAN.md — Resume CLI: --resume-scan-id flow + --list-resumable command + partial_failures in output JSON
+- [ ] 67-05-PLAN.md — Dashboard: PartialFailureEntry schema + partial_failures on ScanLatestResponse + Scanner Status card
 **UI hint**: yes
 
 ### Phase 68: Operator Error-Message Pass
