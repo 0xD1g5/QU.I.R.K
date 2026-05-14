@@ -1190,7 +1190,7 @@ Plans:
 - [x] **Phase 64.1: Audit Residual Blockers** - Triage all 19 open BLOCKERs from the 2026-05-08 audit (record deferred-v4.9 / wont-fix dispositions); fix the 5 that directly undermine Phase 64 UAT or Phase 65 foundations: trend session-window disambiguation (CR-05), non-transactional `init_db` migrations (api-cli-core/CR-08), QRAMM staleness date comparison (BL-03), QRAMM negative-years guard (BL-04), SOURCE algo hint DES→3DES collapse (cbom-intel-reports/CR-03) (completed 2026-05-11)
 - [x] **Phase 65: Dashboard-Initiated Scan** - `/scan/new` form, Pydantic-shared validation, backend job spawn, live status polling, post-completion navigation (BACK-86 slice 1) (completed 2026-05-13)
 - [x] **Phase 66: Dashboard Scan History + Clone/Compare** - `/scans` list + "Clone configuration" prefill + side-by-side compare diff view (BACK-86 slice 2) (completed 2026-05-14)
-- [ ] **Phase 67: Resumable / Partial-Failure Scans** - `scan_checkpoints` SQLite table + `quirk scan --resume <id>` continuation + per-scanner partial-failure isolation with dashboard panel
+- [x] **Phase 67: Resumable / Partial-Failure Scans** - `scan_checkpoints` SQLite table + `quirk scan --resume <id>` continuation + per-scanner partial-failure isolation with dashboard panel (completed 2026-05-14)
 - [ ] **Phase 68: Operator Error-Message Pass** - Stable error codes with one-line cause + one-line remediation across every CLI exit, dashboard 4xx/5xx, and `scan_error_category` row; first-run install-day errors follow the same format
 
 </details>
@@ -1405,8 +1405,8 @@ Plans:
 - [x] 67-01-PLAN.md — DB layer: ScanCheckpoint model + _ensure_scan_checkpoints_table + write_scan_checkpoint() helper
 - [x] 67-02-PLAN.md — Incremental persistence: per-stage checkpoint writes + partial_failures accumulation in run_scan.py
 - [x] 67-03-PLAN.md — _wrapped_phase migration: migrate all inline try/except scanner invocations to _wrapped_phase
-- [ ] 67-04-PLAN.md — Resume CLI: --resume-scan-id flow + --list-resumable command + partial_failures in output JSON
-- [ ] 67-05-PLAN.md — Dashboard: PartialFailureEntry schema + partial_failures on ScanLatestResponse + Scanner Status card
+- [x] 67-04-PLAN.md — Resume CLI: --resume-scan-id flow + --list-resumable command + partial_failures in output JSON
+- [x] 67-05-PLAN.md — Dashboard: PartialFailureEntry schema + partial_failures on ScanLatestResponse + Scanner Status card
 **UI hint**: yes
 
 ### Phase 68: Operator Error-Message Pass
@@ -1434,5 +1434,5 @@ Plans:
 | 64.1. Audit Residual Blockers | B | 2/2 | Complete    | 2026-05-11 |
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
-| 67. Resumable / Partial-Failure Scans | B | 3/5 | In Progress|  |
+| 67. Resumable / Partial-Failure Scans | B | 5/5 | Complete   | 2026-05-14 |
 | 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
