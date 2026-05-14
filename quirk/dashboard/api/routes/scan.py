@@ -1043,8 +1043,33 @@ def get_latest_scan(
 
     response_scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
 
-    # Phase 67 RESUME-02: load partial_failures from scan_checkpoints
-    partial_failures = _load_partial_failures(db, response_scan_id)
+    # Phase 67 RESUME-02: load partial_failures from scan_checkpoints.
+    # CR-02: response_scan_id is MAX(scanned_at) (tz-naive ISO), but scan_checkpoints
+    # rows are keyed by scan_run_id = started_utc (tz-aware ISO, different event).
+    # Resolve the correct scan_run_id via ScanJob: find the completed ScanJob
+    # whose completed_at is closest to latest_ts — its scan_run_id is the checkpoint key.
+    _checkpoint_scan_run_id: Optional[str] = None
+    try:
+        _latest_ts_naive = latest_ts if isinstance(latest_ts, datetime) else None
+        if _latest_ts_naive is not None:
+            # Search window: scan completed within 30 minutes of latest_ts
+            _window = timedelta(minutes=30)
+            _job = (
+                db.query(ScanJob)
+                .filter(
+                    ScanJob.status == "completed",
+                    ScanJob.scan_run_id.isnot(None),
+                    ScanJob.completed_at >= _latest_ts_naive - _window,
+                    ScanJob.completed_at <= _latest_ts_naive + _window,
+                )
+                .order_by(ScanJob.completed_at.desc())
+                .first()
+            )
+            if _job and _job.scan_run_id:
+                _checkpoint_scan_run_id = _job.scan_run_id
+    except Exception:
+        pass
+    partial_failures = _load_partial_failures(db, _checkpoint_scan_run_id) if _checkpoint_scan_run_id else []
 
     return ScanLatestResponse(
         meta=ScanMeta(
