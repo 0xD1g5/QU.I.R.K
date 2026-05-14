@@ -195,7 +195,7 @@ def test_get_job_not_found():
     response = tc.get("/api/jobs/nonexistent-uuid-abcd1234")
     assert response.status_code == 404, response.text
     data = response.json()
-    assert "Job not found" in data["detail"]
+    assert "QRK-DASHBOARD-008" in data["detail"]
 
 
 # --------------------------------------------------------------------------

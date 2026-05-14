@@ -106,6 +106,6 @@ def dashboard_client():
 
         app = create_app()
         app.dependency_overrides[get_db] = override_get_db
-        return TestClient(app)
+        return TestClient(app, headers={"X-Quirk-Request": "1"})
     except ImportError as exc:
         pytest.fail("quirk.dashboard import failed unexpectedly: " + repr(exc))

@@ -40,7 +40,7 @@ def _make_qramm_client() -> Tuple[TestClient, object]:
 
     app = create_app()
     app.dependency_overrides[get_db] = _override_get_db
-    return TestClient(app), TestingSession
+    return TestClient(app, headers={"X-Quirk-Request": "1"}), TestingSession
 
 
 # ---------- QRAMM-01: tables exist after init_db() ----------
@@ -102,7 +102,7 @@ def test_read_session_not_found():
     client, _ = _make_qramm_client()
     resp = client.get("/api/qramm/sessions/9999")
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Session not found"
+    assert "QRK-DASHBOARD-009" in resp.json()["detail"]
 
 
 def test_save_answers_basic():
