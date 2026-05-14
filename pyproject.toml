@@ -75,7 +75,7 @@ all = [
 # guards this; do NOT add quirk[identity] to the list above.
 
 [project.scripts]
-quirk = "run_scan:main"
+quirk = "run_scan:_run_main_with_job_guard"
 
 [tool.setuptools.packages.find]
 include = ["quirk*"]
