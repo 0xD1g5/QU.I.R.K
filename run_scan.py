@@ -826,37 +826,49 @@ def main():
     _err_before_identity = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "identity")
-    aws_endpoints = []
-    with _phase_timer(run_stats, "aws_scanning"):
-        if cfg.connectors.enable_aws:
-            aws_endpoints = scan_aws_targets(
-                region=cfg.connectors.aws_region,
-                profile=cfg.connectors.aws_profile,
-                logger=logger,
-            )
+    def _run_aws_phase():
+        if not cfg.connectors.enable_aws:
+            return []
+        return scan_aws_targets(
+            region=cfg.connectors.aws_region,
+            profile=cfg.connectors.aws_profile,
+            logger=logger,
+        )
+    aws_endpoints = _wrapped_phase(
+        run_stats, "aws_scanning", "aws_connector",
+        _run_aws_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # Azure cloud connector phase
     # ==============================
-    azure_endpoints = []
-    with _phase_timer(run_stats, "azure_scanning"):
-        if cfg.connectors.enable_azure:
-            azure_endpoints = scan_azure_targets(
-                subscription_id=cfg.connectors.azure_subscription_id or "",
-                keyvault_urls=cfg.connectors.azure_keyvault_urls,
-                logger=logger,
-            )
+    def _run_azure_phase():
+        if not cfg.connectors.enable_azure:
+            return []
+        return scan_azure_targets(
+            subscription_id=cfg.connectors.azure_subscription_id or "",
+            keyvault_urls=cfg.connectors.azure_keyvault_urls,
+            logger=logger,
+        )
+    azure_endpoints = _wrapped_phase(
+        run_stats, "azure_scanning", "azure_connector",
+        _run_azure_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # GCP cloud connector phase
     # ==============================
-    gcp_endpoints = []
-    with _phase_timer(run_stats, "gcp_scanning"):
-        if cfg.connectors.enable_gcp:
-            gcp_endpoints = scan_gcp_targets(
-                project_id=cfg.connectors.gcp_project_id or "",
-                logger=logger,
-            )
+    def _run_gcp_phase():
+        if not cfg.connectors.enable_gcp:
+            return []
+        return scan_gcp_targets(
+            project_id=cfg.connectors.gcp_project_id or "",
+            logger=logger,
+        )
+    gcp_endpoints = _wrapped_phase(
+        run_stats, "gcp_scanning", "gcp_connector",
+        _run_gcp_phase, error_endpoints, logger,
+    ) or []
 
     # ── Shared identity-scan session timestamp (ISSUE-3 fix) ──
     session_start = datetime.now(timezone.utc)
@@ -864,28 +876,34 @@ def main():
     # ==============================
     # DB connector phase (PostgreSQL / MySQL) — Phase 27
     # ==============================
-    db_endpoints = []
-    with _phase_timer(run_stats, "db_scanning"):
-        if cfg.connectors.enable_db:
-            from quirk.scanner.db_connector import scan_pg_targets, scan_mysql_targets
-            if cfg.connectors.pg_targets:
-                db_endpoints.extend(scan_pg_targets(
-                    targets=cfg.connectors.pg_targets,
-                    user=cfg.connectors.pg_scanner_user,
-                    password=cfg.connectors.pg_scanner_password,
-                    logger=logger,
-                    session_start=session_start,
-                    cfg=cfg,
-                ))
-            if cfg.connectors.mysql_targets:
-                db_endpoints.extend(scan_mysql_targets(
-                    targets=cfg.connectors.mysql_targets,
-                    user=cfg.connectors.mysql_scanner_user,
-                    password=cfg.connectors.mysql_scanner_password,
-                    logger=logger,
-                    session_start=session_start,
-                    cfg=cfg,
-                ))
+    def _run_db_phase():
+        if not cfg.connectors.enable_db:
+            return []
+        from quirk.scanner.db_connector import scan_pg_targets, scan_mysql_targets
+        result = []
+        if cfg.connectors.pg_targets:
+            result.extend(scan_pg_targets(
+                targets=cfg.connectors.pg_targets,
+                user=cfg.connectors.pg_scanner_user,
+                password=cfg.connectors.pg_scanner_password,
+                logger=logger,
+                session_start=session_start,
+                cfg=cfg,
+            ))
+        if cfg.connectors.mysql_targets:
+            result.extend(scan_mysql_targets(
+                targets=cfg.connectors.mysql_targets,
+                user=cfg.connectors.mysql_scanner_user,
+                password=cfg.connectors.mysql_scanner_password,
+                logger=logger,
+                session_start=session_start,
+                cfg=cfg,
+            ))
+        return result
+    db_endpoints = _wrapped_phase(
+        run_stats, "db_scanning", "db_connector",
+        _run_db_phase, error_endpoints, logger,
+    ) or []
 
     # Phase 67 RESUME-01: flush identity stage endpoints before data_at_rest begins
     # identity = aws + azure + gcp + db (dnssec/saml/kerberos run after data_at_rest in this codebase)
@@ -904,86 +922,102 @@ def main():
     _err_before_dar = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "data_at_rest")
-    s3_endpoints = []
-    with _phase_timer(run_stats, "s3_scanning"):
-        if cfg.connectors.enable_s3:
-            from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
-            if not BOTO3_AVAILABLE:
-                logger.v("boto3 not installed — S3 scanning skipped")
-            else:
-                import boto3
-                s3_session = boto3.Session(
-                    region_name=cfg.connectors.aws_region,
-                    profile_name=cfg.connectors.aws_profile,
-                )
-                s3_endpoints = _scan_s3_encryption(
-                    session=s3_session,
-                    logger=logger,
-                    session_start=session_start,
-                    endpoint_url=cfg.connectors.aws_endpoint_url or None,
-                )
-                logger.info(f"S3 scan: {len(s3_endpoints)} bucket endpoints")
+    def _run_s3_phase():
+        if not cfg.connectors.enable_s3:
+            return []
+        from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
+        if not BOTO3_AVAILABLE:
+            logger.v("boto3 not installed — S3 scanning skipped")
+            return []
+        import boto3
+        s3_session = boto3.Session(
+            region_name=cfg.connectors.aws_region,
+            profile_name=cfg.connectors.aws_profile,
+        )
+        eps = _scan_s3_encryption(
+            session=s3_session,
+            logger=logger,
+            session_start=session_start,
+            endpoint_url=cfg.connectors.aws_endpoint_url or None,
+        )
+        logger.info(f"S3 scan: {len(eps)} bucket endpoints")
+        return eps
+    s3_endpoints = _wrapped_phase(
+        run_stats, "s3_scanning", "s3_connector",
+        _run_s3_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # Azure Blob container encryption (Phase 28, STOR-02)
     # ==============================
-    blob_endpoints = []
-    with _phase_timer(run_stats, "blob_scanning"):
-        if cfg.connectors.enable_blob:
-            from quirk.scanner.azure_connector import _scan_blob_encryption, AZURE_AVAILABLE, DefaultAzureCredential
-            if not AZURE_AVAILABLE:
-                logger.v("azure SDK not installed — Azure Blob scanning skipped")
-            elif not (cfg.connectors.azure_subscription_id or "").strip():
-                logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
-            else:
-                blob_endpoints = _scan_blob_encryption(
-                    credential=DefaultAzureCredential(),
-                    subscription_id=cfg.connectors.azure_subscription_id,
-                    logger=logger,
-                    session_start=session_start,
-                )
-                logger.info(f"Azure Blob scan: {len(blob_endpoints)} container endpoints")
+    def _run_blob_phase():
+        if not cfg.connectors.enable_blob:
+            return []
+        from quirk.scanner.azure_connector import _scan_blob_encryption, AZURE_AVAILABLE, DefaultAzureCredential
+        if not AZURE_AVAILABLE:
+            logger.v("azure SDK not installed — Azure Blob scanning skipped")
+            return []
+        if not (cfg.connectors.azure_subscription_id or "").strip():
+            logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
+            return []
+        eps = _scan_blob_encryption(
+            credential=DefaultAzureCredential(),
+            subscription_id=cfg.connectors.azure_subscription_id,
+            logger=logger,
+            session_start=session_start,
+        )
+        logger.info(f"Azure Blob scan: {len(eps)} container endpoints")
+        return eps
+    blob_endpoints = _wrapped_phase(
+        run_stats, "blob_scanning", "azure_blob_connector",
+        _run_blob_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # K8S secrets inspection (Phase 29, K8S-01 / K8S-02 / K8S-03)
     # ==============================
-    k8s_endpoints = []
-    with _phase_timer(run_stats, "k8s_scanning"):
-        if cfg.connectors.enable_k8s:
-            from quirk.scanner.k8s_connector import scan_k8s_targets
-            k8s_endpoints = scan_k8s_targets(
-                provider=cfg.connectors.k8s_provider or "",
-                cluster_name=cfg.connectors.k8s_cluster_name or "",
-                namespace=cfg.connectors.k8s_namespace or "default",
-                kubeconfig=cfg.connectors.k8s_kubeconfig or None,
-                context=cfg.connectors.k8s_context or None,
-                gcp_project_id=cfg.connectors.gcp_project_id or "",
-                gke_clusters=cfg.connectors.gke_clusters or [],
-                azure_subscription_id=cfg.connectors.azure_subscription_id or "",
-                aks_clusters=cfg.connectors.aks_clusters or [],
-                logger=logger,
-                session_start=session_start,
-            )
-            # EKS path uses boto3 (NOT kubernetes Python client). Run alongside
-            # GKE/AKS/secret enumeration when k8s_provider == "eks".
-            if (cfg.connectors.k8s_provider or "").lower() == "eks":
-                try:
-                    from quirk.scanner.aws_connector import (
-                        BOTO3_AVAILABLE,
-                        _scan_eks_encryption,
+    def _run_k8s_phase():
+        if not cfg.connectors.enable_k8s:
+            return []
+        from quirk.scanner.k8s_connector import scan_k8s_targets
+        eps = scan_k8s_targets(
+            provider=cfg.connectors.k8s_provider or "",
+            cluster_name=cfg.connectors.k8s_cluster_name or "",
+            namespace=cfg.connectors.k8s_namespace or "default",
+            kubeconfig=cfg.connectors.k8s_kubeconfig or None,
+            context=cfg.connectors.k8s_context or None,
+            gcp_project_id=cfg.connectors.gcp_project_id or "",
+            gke_clusters=cfg.connectors.gke_clusters or [],
+            azure_subscription_id=cfg.connectors.azure_subscription_id or "",
+            aks_clusters=cfg.connectors.aks_clusters or [],
+            logger=logger,
+            session_start=session_start,
+        )
+        # EKS path uses boto3 (NOT kubernetes Python client). Run alongside
+        # GKE/AKS/secret enumeration when k8s_provider == "eks".
+        if (cfg.connectors.k8s_provider or "").lower() == "eks":
+            try:
+                from quirk.scanner.aws_connector import (
+                    BOTO3_AVAILABLE,
+                    _scan_eks_encryption,
+                )
+                if BOTO3_AVAILABLE:
+                    import boto3 as _boto3_eks
+                    _eks_session = _boto3_eks.Session(
+                        region_name=getattr(cfg.connectors, "aws_region", None) or None,
+                        profile_name=getattr(cfg.connectors, "aws_profile", None) or None,
                     )
-                    if BOTO3_AVAILABLE:
-                        import boto3 as _boto3_eks
-                        _eks_session = _boto3_eks.Session(
-                            region_name=getattr(cfg.connectors, "aws_region", None) or None,
-                            profile_name=getattr(cfg.connectors, "aws_profile", None) or None,
-                        )
-                        k8s_endpoints.extend(_scan_eks_encryption(
-                            _eks_session, logger, session_start=session_start,
-                        ))
-                except Exception as exc:
-                    logger.v(f"EKS encryption scan unavailable: {exc}")
-            logger.info(f"K8S scan: {len(k8s_endpoints)} cluster endpoints")
+                    eps.extend(_scan_eks_encryption(
+                        _eks_session, logger, session_start=session_start,
+                    ))
+            except Exception as exc:
+                logger.v(f"EKS encryption scan unavailable: {exc}")
+        logger.info(f"K8S scan: {len(eps)} cluster endpoints")
+        return eps
+    k8s_endpoints = _wrapped_phase(
+        run_stats, "k8s_scanning", "k8s_connector",
+        _run_k8s_phase, error_endpoints, logger,
+    ) or []
 
     # ==============================
     # GCS bucket encryption re-use (Phase 28, STOR-03 — zero API call invariant)
@@ -995,71 +1029,92 @@ def main():
             logger.info(f"GCS storage re-use: {len(gcs_storage_endpoints)} derived endpoints")
 
     # ── DNSSEC scanning ─────────────────────────────────────
-    dnssec_endpoints = []
-    with _phase_timer(run_stats, "dnssec_scanning"):
-        if cfg.connectors.enable_dnssec and cfg.connectors.dnssec_targets:
-            dnssec_endpoints = scan_dnssec_targets(
-                targets=cfg.connectors.dnssec_targets,
-                timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
-                logger=logger,
-                session_start=session_start,
-            )
-            logger.info("DNSSEC scan: %d endpoints from %d targets",
-                        len(dnssec_endpoints), len(cfg.connectors.dnssec_targets))
+    def _run_dnssec_phase():
+        if not (cfg.connectors.enable_dnssec and cfg.connectors.dnssec_targets):
+            return []
+        eps = scan_dnssec_targets(
+            targets=cfg.connectors.dnssec_targets,
+            timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
+            logger=logger,
+            session_start=session_start,
+        )
+        logger.info("DNSSEC scan: %d endpoints from %d targets",
+                    len(eps), len(cfg.connectors.dnssec_targets))
+        return eps
+    dnssec_endpoints = _wrapped_phase(
+        run_stats, "dnssec_scanning", "dnssec_scanner",
+        _run_dnssec_phase, error_endpoints, logger,
+    ) or []
 
     # ── SAML/OIDC scanning ────────────────────────────────────
-    saml_endpoints = []
-    with _phase_timer(run_stats, "saml_scanning"):
-        if cfg.connectors.enable_saml and cfg.connectors.saml_targets:
-            from quirk.scanner.saml_scanner import scan_saml_targets
-            saml_endpoints = scan_saml_targets(
-                targets=cfg.connectors.saml_targets,
-                timeout=getattr(cfg.connectors, "saml_timeout", 10),
-                logger=logger,
-                session_start=session_start,
-                allow_internal_targets=cfg.security.allow_internal_targets,
-            )
-            logger.info("SAML scan: %d endpoints from %d targets",
-                        len(saml_endpoints), len(cfg.connectors.saml_targets))
+    def _run_saml_phase():
+        if not (cfg.connectors.enable_saml and cfg.connectors.saml_targets):
+            return []
+        from quirk.scanner.saml_scanner import scan_saml_targets
+        eps = scan_saml_targets(
+            targets=cfg.connectors.saml_targets,
+            timeout=getattr(cfg.connectors, "saml_timeout", 10),
+            logger=logger,
+            session_start=session_start,
+            allow_internal_targets=cfg.security.allow_internal_targets,
+        )
+        logger.info("SAML scan: %d endpoints from %d targets",
+                    len(eps), len(cfg.connectors.saml_targets))
+        return eps
+    saml_endpoints = _wrapped_phase(
+        run_stats, "saml_scanning", "saml_scanner",
+        _run_saml_phase, error_endpoints, logger,
+    ) or []
 
     # ── Kerberos scanning ────────────────────────────────────
-    kerberos_endpoints = []
-    with _phase_timer(run_stats, "kerberos_scanning"):
-        if cfg.connectors.enable_kerberos and cfg.connectors.kerberos_targets:
-            from quirk.scanner.kerberos_scanner import scan_kerberos_targets
-            kerberos_endpoints = scan_kerberos_targets(
-                targets=cfg.connectors.kerberos_targets,
-                timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
-                logger=logger,
-                session_start=session_start,
-            )
-            logger.info("Kerberos scan: %d endpoints from %d targets",
-                        len(kerberos_endpoints), len(cfg.connectors.kerberos_targets))
+    def _run_kerberos_phase():
+        if not (cfg.connectors.enable_kerberos and cfg.connectors.kerberos_targets):
+            return []
+        from quirk.scanner.kerberos_scanner import scan_kerberos_targets
+        eps = scan_kerberos_targets(
+            targets=cfg.connectors.kerberos_targets,
+            timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
+            logger=logger,
+            session_start=session_start,
+        )
+        logger.info("Kerberos scan: %d endpoints from %d targets",
+                    len(eps), len(cfg.connectors.kerberos_targets))
+        return eps
+    kerberos_endpoints = _wrapped_phase(
+        run_stats, "kerberos_scanning", "kerberos_scanner",
+        _run_kerberos_phase, error_endpoints, logger,
+    ) or []
 
     # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
-    vault_endpoints = []
-    with _phase_timer(run_stats, "vault_scanning"):
-        if cfg.connectors.enable_vault:
-            from quirk.scanner.vault_connector import (
-                scan_vault_targets,
-                HVAC_AVAILABLE,
-            )
-            if not HVAC_AVAILABLE:
-                logger.v("hvac not installed -- Vault scanning skipped")
-            elif not (cfg.connectors.vault_addr or os.environ.get("VAULT_ADDR")):
-                logger.v("vault_addr not set -- Vault scanning skipped")
-            else:
-                vault_endpoints = scan_vault_targets(
-                    vault_addr=(cfg.connectors.vault_addr
-                                or os.environ.get("VAULT_ADDR", "")),
-                    token=cfg.connectors.vault_token,
-                    transit_mount=cfg.connectors.vault_transit_mount or "transit",
-                    tls_verify=cfg.connectors.vault_tls_verify,
-                    logger=logger,
-                    session_start=session_start,
-                    cfg=cfg,
-                )
-                logger.info("Vault scan: %d endpoints", len(vault_endpoints))
+    def _run_vault_phase():
+        if not cfg.connectors.enable_vault:
+            return []
+        from quirk.scanner.vault_connector import (
+            scan_vault_targets,
+            HVAC_AVAILABLE,
+        )
+        if not HVAC_AVAILABLE:
+            logger.v("hvac not installed -- Vault scanning skipped")
+            return []
+        if not (cfg.connectors.vault_addr or os.environ.get("VAULT_ADDR")):
+            logger.v("vault_addr not set -- Vault scanning skipped")
+            return []
+        eps = scan_vault_targets(
+            vault_addr=(cfg.connectors.vault_addr
+                        or os.environ.get("VAULT_ADDR", "")),
+            token=cfg.connectors.vault_token,
+            transit_mount=cfg.connectors.vault_transit_mount or "transit",
+            tls_verify=cfg.connectors.vault_tls_verify,
+            logger=logger,
+            session_start=session_start,
+            cfg=cfg,
+        )
+        logger.info("Vault scan: %d endpoints", len(eps))
+        return eps
+    vault_endpoints = _wrapped_phase(
+        run_stats, "vault_scanning", "vault_connector",
+        _run_vault_phase, error_endpoints, logger,
+    ) or []
 
     # Phase 67 RESUME-01: flush data_at_rest stage endpoints before broker_email begins
     _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + vault_endpoints
@@ -1085,33 +1140,27 @@ def main():
     else:
         cfg_email_skip = True
 
-    # Phase 41 / D-14: email phase wraps body in BaseException protection while
-    # keeping the `with _phase_timer(..., "email_scanning")` AST shape that the
-    # email-wiring AST guard test expects.
-    with _phase_timer(run_stats, "email_scanning"):
-        try:
-            if not cfg_email_skip and cfg.connectors.enable_email:
-                email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
-                if email_hosts:
-                    email_endpoints = scan_email_targets(
-                        hosts=email_hosts,
-                        timeout=cfg.scan.timeouts.email_seconds,
-                        logger=logger,
-                        session_start=session_start,
-                    )
-                    logger.info(f"Email scan: {len(email_endpoints)} endpoints from {len(email_hosts)} hosts")
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except BaseException as exc:  # noqa: BLE001 — D-14 wrapper by design
-            try:
-                logger.error(f"email_scanning: unhandled exception: {exc!r}")
-            except Exception:
-                pass
-            error_endpoints.append(CryptoEndpoint(
-                host="email_scanner", port=0, protocol="ERROR",
-                scan_error=str(exc) or exc.__class__.__name__,
-                scan_error_category="exception",
-            ))
+    # Phase 67 / D-04: email phase now uses _wrapped_phase for uniform error capture.
+    # cfg_email_skip and _emit_missing_extra_advisory() call above remain before the
+    # _run_email_phase def — correct ordering preserved.
+    def _run_email_phase():
+        if cfg_email_skip or not cfg.connectors.enable_email:
+            return []
+        email_hosts = list(dict.fromkeys(h for h, _ in tls_targets))
+        if not email_hosts:
+            return []
+        eps = scan_email_targets(
+            hosts=email_hosts,
+            timeout=cfg.scan.timeouts.email_seconds,
+            logger=logger,
+            session_start=session_start,
+        )
+        logger.info(f"Email scan: {len(eps)} endpoints from {len(email_hosts)} hosts")
+        return eps
+    email_endpoints = _wrapped_phase(
+        run_stats, "email_scanning", "email_scanner",
+        _run_email_phase, error_endpoints, logger,
+    ) or []
 
     # ── Broker TLS scanning (Phase 33) ────────────────────────
     kafka_endpoints = []
