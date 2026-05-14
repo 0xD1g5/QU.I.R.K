@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { RegressionAlertChip } from "@/components/RegressionAlertChip"
+import type { PartialFailureEntry } from "@/types/api"
 
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "hsl(0 72% 51%)",
@@ -24,6 +25,70 @@ const CONFIDENCE_BADGE_VARIANT: Record<string, "default" | "secondary" | "destru
   LOW: "outline",
   VERY_LOW: "destructive",
   NO_DATA: "outline",
+}
+
+function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[] }) {
+  function badgeElement(entry: PartialFailureEntry) {
+    const cat = entry.error_category
+    // Derive status from error_category per UI-SPEC:
+    // missing_extra -> Skipped (gray), exception -> Failed (red), partial -> Partial (amber)
+    if (cat === "missing_extra") {
+      return (
+        <Badge variant="secondary" aria-label="status: Skipped">
+          Skipped
+        </Badge>
+      )
+    }
+    if (cat === "exception") {
+      return (
+        <Badge variant="destructive" aria-label="status: Failed">
+          Failed
+        </Badge>
+      )
+    }
+    // partial or unknown -> amber custom badge
+    return (
+      <Badge
+        className="bg-[#d4893a]/10 text-[#d4893a] border border-[#d4893a]/28"
+        aria-label="status: Partial"
+      >
+        Partial
+      </Badge>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle style={{ fontSize: 20, fontWeight: 600 }}>
+          Scanner Status
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {failures.map((entry, idx) => (
+          <div
+            key={idx}
+            className="flex items-center gap-3 py-2 border-b border-border last:border-0"
+          >
+            <span className="text-muted-foreground text-sm w-24 shrink-0">
+              {entry.stage}
+            </span>
+            <span className="text-sm w-32 shrink-0">{entry.scanner}</span>
+            {badgeElement(entry)}
+            <span className="text-muted-foreground text-sm w-28 shrink-0">
+              {entry.error_category}
+            </span>
+            <span
+              className="text-sm truncate max-w-[60ch]"
+              title={entry.error_message}
+            >
+              {entry.error_message}
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
 }
 
 export function ExecutivePage() {
@@ -183,6 +248,11 @@ export function ExecutivePage() {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Phase 67 RESUME-02: Scanner Status card — only shown when there are partial failures */}
+      {data.partial_failures && data.partial_failures.length > 0 && (
+        <ScannerStatusCard failures={data.partial_failures} />
+      )}
 
       {/* Scan metadata */}
       <p className="text-muted-foreground" style={{ fontSize: 14 }}>
