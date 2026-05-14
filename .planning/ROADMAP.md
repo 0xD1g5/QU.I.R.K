@@ -1426,8 +1426,8 @@ Plans:
 - [x] 68-02-PLAN.md — Build quirk errors CLI command + wire run_scan.py argparse + generate docs/error-codes.md
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 68-03-PLAN.md — Migrate CLI error paths (run_scan inline, doctor, schedule, optional_extra, kerberos) + update test_scan_robustness
-- [ ] 68-04-PLAN.md — Migrate dashboard error paths (middleware, routes, server.py port-conflict) + update affected API tests
+- [x] 68-03-PLAN.md — Migrate CLI error paths (run_scan inline, doctor, schedule, optional_extra, kerberos) + update test_scan_robustness
+- [x] 68-04-PLAN.md — Migrate dashboard error paths (middleware, routes, server.py port-conflict) + update affected API tests
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 68-05-PLAN.md — Add install-day smoke tests + docs/error-codes.md freshness CI gate
@@ -1448,4 +1448,4 @@ Plans:
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
 | 67. Resumable / Partial-Failure Scans | B | 5/5 | Complete    | 2026-05-14 |
-| 68. Operator Error-Message Pass | B | 2/5 | In Progress|  |
+| 68. Operator Error-Message Pass | B | 4/5 | In Progress|  |
