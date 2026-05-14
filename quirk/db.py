@@ -244,6 +244,15 @@ def _ensure_scan_jobs_table(engine) -> None:
     Base.metadata.create_all(engine, checkfirst=True)
 
 
+def _ensure_scan_checkpoints_table(engine) -> None:
+    """Phase 67 RESUME-01: create scan_checkpoints table if absent (idempotent).
+
+    ScanCheckpoint is registered on Base.metadata via import of quirk.models.
+    Uses checkfirst=True per the same pattern as _ensure_scan_jobs_table.
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -272,6 +281,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_phase54_qramm_columns(engine)  # Phase 54 — evidence_note column
     _ensure_scheduled_tables(engine)     # Phase 63 — SCHED-01
     _ensure_scan_jobs_table(engine)      # Phase 65 — UI-SCAN-01
+    _ensure_scan_checkpoints_table(engine)  # Phase 67 — RESUME-01
     return engine
 
 
