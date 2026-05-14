@@ -142,6 +142,50 @@ export interface ScanSession {
   scan_id: string
   scanned_at: string
   total_endpoints: number
+  score: number
+  profile: string | null
+  calibration: string | null
+  target: string | null
+  finding_counts: { high: number; medium: number; low: number }
+}
+
+export interface CompareScanSummary {
+  scan_id: string
+  scanned_at: string
+  score: number
+}
+
+export interface SubscoreDelta {
+  hygiene: number
+  modern_tls: number
+  identity_trust: number
+  agility_signals: number
+  data_at_rest: number
+  data_in_motion: number
+}
+
+export interface CompareFinding {
+  host: string
+  protocol?: string
+  severity: string
+  description?: string
+}
+
+export interface CompareEndpoint {
+  host: string
+  reason?: string
+}
+
+export interface CompareResponse {
+  scan_a: CompareScanSummary
+  scan_b: CompareScanSummary
+  score_delta: number
+  subscore_deltas: SubscoreDelta
+  added_findings: CompareFinding[]
+  removed_findings: CompareFinding[]
+  endpoints_only_in_a: string[]
+  endpoints_only_in_b: string[]
+  changed_endpoints: CompareEndpoint[]
 }
 
 export interface ScanLatestResponse {
