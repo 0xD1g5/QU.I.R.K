@@ -1403,8 +1403,8 @@ Plans:
 **Plans**: 5 plans
 Plans:
 - [x] 67-01-PLAN.md — DB layer: ScanCheckpoint model + _ensure_scan_checkpoints_table + write_scan_checkpoint() helper
-- [ ] 67-02-PLAN.md — Incremental persistence: per-stage checkpoint writes + partial_failures accumulation in run_scan.py
-- [ ] 67-03-PLAN.md — _wrapped_phase migration: migrate all inline try/except scanner invocations to _wrapped_phase
+- [x] 67-02-PLAN.md — Incremental persistence: per-stage checkpoint writes + partial_failures accumulation in run_scan.py
+- [x] 67-03-PLAN.md — _wrapped_phase migration: migrate all inline try/except scanner invocations to _wrapped_phase
 - [ ] 67-04-PLAN.md — Resume CLI: --resume-scan-id flow + --list-resumable command + partial_failures in output JSON
 - [ ] 67-05-PLAN.md — Dashboard: PartialFailureEntry schema + partial_failures on ScanLatestResponse + Scanner Status card
 **UI hint**: yes
@@ -1434,5 +1434,5 @@ Plans:
 | 64.1. Audit Residual Blockers | B | 2/2 | Complete    | 2026-05-11 |
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
-| 67. Resumable / Partial-Failure Scans | B | 1/5 | In Progress|  |
+| 67. Resumable / Partial-Failure Scans | B | 3/5 | In Progress|  |
 | 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
