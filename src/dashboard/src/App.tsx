@@ -19,6 +19,8 @@ import { AssessmentPage } from "@/pages/qramm-assessment"
 import { SchedulesPage } from "@/pages/schedules"
 import { ScanNewPage } from "@/pages/scan-new"
 import { ScanJobPage } from "@/pages/scan-job"
+import { ScanHistoryPage } from "@/pages/scan-history"
+import { ComparePage } from "@/pages/compare"
 
 export default function App() {
   return (
@@ -48,6 +50,8 @@ export default function App() {
                       <Route path="/schedules" element={<SchedulesPage />} />
                       <Route path="/scan/new" element={<ScanNewPage />} />
                       <Route path="/scan/job/:jobId" element={<ScanJobPage />} />
+                      <Route path="/scans" element={<ScanHistoryPage />} />
+                      <Route path="/compare" element={<ComparePage />} />
                     </Routes>
                   </div>
                 </main>
