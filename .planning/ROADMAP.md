@@ -1191,7 +1191,7 @@ Plans:
 - [x] **Phase 65: Dashboard-Initiated Scan** - `/scan/new` form, Pydantic-shared validation, backend job spawn, live status polling, post-completion navigation (BACK-86 slice 1) (completed 2026-05-13)
 - [x] **Phase 66: Dashboard Scan History + Clone/Compare** - `/scans` list + "Clone configuration" prefill + side-by-side compare diff view (BACK-86 slice 2) (completed 2026-05-14)
 - [x] **Phase 67: Resumable / Partial-Failure Scans** - `scan_checkpoints` SQLite table + `quirk scan --resume <id>` continuation + per-scanner partial-failure isolation with dashboard panel (completed 2026-05-14)
-- [ ] **Phase 68: Operator Error-Message Pass** - Stable error codes with one-line cause + one-line remediation across every CLI exit, dashboard 4xx/5xx, and `scan_error_category` row; first-run install-day errors follow the same format
+- [x] **Phase 68: Operator Error-Message Pass** - Stable error codes with one-line cause + one-line remediation across every CLI exit, dashboard 4xx/5xx, and `scan_error_category` row; first-run install-day errors follow the same format (completed 2026-05-14)
 
 </details>
 
@@ -1448,4 +1448,4 @@ Plans:
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
 | 67. Resumable / Partial-Failure Scans | B | 5/5 | Complete    | 2026-05-14 |
-| 68. Operator Error-Message Pass | B | 5/5 | Complete   | 2026-05-14 |
+| 68. Operator Error-Message Pass | B | 5/5 | Complete    | 2026-05-14 |

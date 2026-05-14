@@ -103,8 +103,8 @@
 #### Operator Error-Message Pass
 *Phase 68.*
 
-- [ ] **UX-01**: Every operator-facing error path (CLI exit, dashboard 4xx/5xx, scan_error_category rows) includes a one-line cause, a one-line remediation hint, and a stable error code; an `quirk errors` reference page documents all codes
-- [ ] **UX-02**: First-run install-day errors (missing extras, missing nmap binary, port-conflict on `quirk serve`) render with the same one-line-cause + one-line-fix format
+- [x] **UX-01**: Every operator-facing error path (CLI exit, dashboard 4xx/5xx, scan_error_category rows) includes a one-line cause, a one-line remediation hint, and a stable error code; an `quirk errors` reference page documents all codes
+- [x] **UX-02**: First-run install-day errors (missing extras, missing nmap binary, port-conflict on `quirk serve`) render with the same one-line-cause + one-line-fix format
 
 ---
 
@@ -241,5 +241,5 @@ Populated by the roadmapper. Updated at each phase transition.
 | UI-HIST-02 | Phase 66 | Complete |
 | RESUME-01 | Phase 67 | Complete |
 | RESUME-02 | Phase 67 | Complete |
-| UX-01 | Phase 68 | Pending |
-| UX-02 | Phase 68 | Pending |
+| UX-01 | Phase 68 | Complete |
+| UX-02 | Phase 68 | Complete |
