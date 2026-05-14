@@ -147,11 +147,15 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.9 Audit Depth (starting)
+## Current Milestone: v4.9 Audit Depth
 
-**Goal:** Work through the 121 open audit findings (92 WARNINGs + 29 INFOs) and 13 deferred BLOCKERs from the 2026-05-08 audit, systematically hardening correctness, resource management, input validation, and code quality across all six scanner subsystems.
+**Goal:** Systematically close the 121 remaining open findings from the 2026-05-08 audit (92 WARNINGs + 29 INFOs + 13 deferred BLOCKERs), hardening correctness, resource management, input validation, and code quality across all six scanner subsystems.
 
-**Target features:** TBD — defined during `/gsd-new-milestone 4.9`
+**Target features:**
+- WARNING fixes by subsystem (scanners, API/CLI, CBOM/intelligence, dashboard, scoring)
+- Deferred BLOCKER remediation — nested thread pool resource leak, socket leak on SSH banner branch
+- INFO/code-quality improvements — deprecation warnings, dead-import cleanup, test infrastructure gaps
+- AUDIT-TASKS.md fully triaged to zero bare-open rows
 
 ## Current State: v4.8 SHIPPED 2026-05-14
 

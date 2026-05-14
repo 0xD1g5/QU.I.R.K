@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.8
-milestone_name: Pre-Primetime Hardening + Operating Model
-status: Awaiting next milestone
-stopped_at: Phase 68 context gathered
-last_updated: "2026-05-14T23:02:37.522Z"
-last_activity: 2026-05-14 — Milestone v4.8 completed and archived
+milestone: v4.9
+milestone_name: Audit Depth
+status: planning
+last_updated: "2026-05-14T23:15:47.447Z"
+last_activity: 2026-05-14
 progress:
-  total_phases: 13
-  completed_phases: 11
-  total_plans: 53
-  completed_plans: 49
-  percent: 92
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: Milestone v4.8 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-14 — Milestone v4.8 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-14 — Milestone v4.9 started
 
 ## Phase Overview
 
