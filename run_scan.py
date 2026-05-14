@@ -48,6 +48,7 @@ from quirk.cli.job_progress import (  # Phase 65 — best-effort job progress up
     update_job_stage,
     mark_job_completed,
     mark_job_failed,
+    write_scan_checkpoint,   # Phase 67 RESUME-01
 )
 
 
@@ -162,6 +163,49 @@ def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endp
         scan_error=f"optional extra [{extra_group}] not installed",
         scan_error_category="missing_extra",
     ))
+
+
+def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
+    """Phase 67 RESUME-01: flush a stage's CryptoEndpoint rows to SQLite immediately.
+
+    Called after each scanner stage so a crash between stages leaves results
+    for completed stages persisted. Silent no-op on failure — the scan's
+    bulk persist at the end is the safety net.
+    """
+    if not endpoints or not db_path:
+        return
+    try:
+        with get_session(db_path) as session:
+            for ep in endpoints:
+                session.merge(ep)   # merge: safe if row already exists
+            session.commit()
+    except Exception:
+        pass
+
+
+def _collect_stage_partial_failures(
+    run_stats: dict,
+    stage: str,
+    error_endpoints: list,
+    previous_error_count: int,
+) -> list:
+    """Phase 67 RESUME-02: build partial_failures entries from new error_endpoints.
+
+    Compares error_endpoints length before vs after a stage to find new errors.
+    Returns the list of new partial_failure dicts (also appended to run_stats).
+    """
+    new_errors = error_endpoints[previous_error_count:]
+    stage_failures = []
+    for ep in new_errors:
+        stage_failures.append({
+            "stage": stage,
+            "scanner": getattr(ep, "host", "unknown"),
+            "error_category": getattr(ep, "scan_error_category", "exception"),
+            "error_message": getattr(ep, "scan_error", "") or "",
+            "endpoint_count": 0,
+        })
+    run_stats.setdefault("partial_failures", []).extend(stage_failures)
+    return stage_failures
 
 
 def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
@@ -635,12 +679,22 @@ def main():
         "hosts_scanned": sorted({h for h, _ in targets}),
         "ports_scanned": sorted({p for _, p in targets}),
     }
+    run_stats.setdefault("partial_failures", [])   # Phase 67 RESUME-02
 
     logger.stamp(f"TLS candidates: {len(tls_targets)} | SSH candidates: {len(ssh_targets)} | Other inventory: {len(inventory_endpoints)}")
+
+    # Phase 67 RESUME-01: persist inventory before first scanner stage
+    _flush_stage_endpoints(cfg.output.db_path, inventory_endpoints)
+    if args.db_path:
+        write_scan_checkpoint(
+            args.db_path, scan_run_id, "inventory", "completed",
+            endpoint_count=len(inventory_endpoints),
+        )
 
     # ==============================
     # TLS scan phase (phase-tuned)
     # ==============================
+    _err_before_tls = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "tls")
     # Phase 41 / D-08: BACK-45 dissolved. The TLS scanner now reads
@@ -664,10 +718,18 @@ def main():
         run_stats, "tls_scanning", "tls_scanner",
         _run_tls_phase, error_endpoints, logger,
     ) or []
+    _flush_stage_endpoints(cfg.output.db_path, tls_endpoints)   # Phase 67 RESUME-01
+    _tls_pf = _collect_stage_partial_failures(run_stats, "tls", error_endpoints, _err_before_tls)
+    if args.db_path:
+        write_scan_checkpoint(args.db_path, scan_run_id, "tls",
+            status="partial" if _tls_pf else "completed",
+            endpoint_count=len(tls_endpoints), partial_failure=bool(_tls_pf),
+            error_summary=_tls_pf or None)
 
     # ==============================
     # SSH scan phase (phase-tuned)
     # ==============================
+    _err_before_ssh = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "ssh")
     # Phase 41 / D-08: BACK-45 dissolved for SSH as well. The SSH scanner reads
@@ -690,10 +752,18 @@ def main():
         run_stats, "ssh_scanning", "ssh_scanner",
         _run_ssh_phase, error_endpoints, logger,
     ) or []
+    _flush_stage_endpoints(cfg.output.db_path, ssh_endpoints)   # Phase 67 RESUME-01
+    _ssh_pf = _collect_stage_partial_failures(run_stats, "ssh", error_endpoints, _err_before_ssh)
+    if args.db_path:
+        write_scan_checkpoint(args.db_path, scan_run_id, "ssh",
+            status="partial" if _ssh_pf else "completed",
+            endpoint_count=len(ssh_endpoints), partial_failure=bool(_ssh_pf),
+            error_summary=_ssh_pf or None)
 
     # ==============================
     # JWT scan phase
     # ==============================
+    _err_before_api = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "api")
     jwt_endpoints = []
@@ -730,9 +800,18 @@ def main():
                 logger=logger,
             )
 
+    _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints)  # Phase 67 RESUME-01
+    _api_pf = _collect_stage_partial_failures(run_stats, "api", error_endpoints, _err_before_api)
+    if args.db_path:
+        write_scan_checkpoint(args.db_path, scan_run_id, "api",
+            status="partial" if _api_pf else "completed",
+            endpoint_count=len(jwt_endpoints + container_endpoints + source_endpoints),
+            partial_failure=bool(_api_pf), error_summary=_api_pf or None)
+
     # ==============================
     # AWS cloud connector phase
     # ==============================
+    _err_before_identity = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "identity")
     aws_endpoints = []
@@ -796,9 +875,21 @@ def main():
                     cfg=cfg,
                 ))
 
+    # Phase 67 RESUME-01: flush identity stage endpoints before data_at_rest begins
+    # identity = aws + azure + gcp + db (dnssec/saml/kerberos run after data_at_rest in this codebase)
+    _identity_eps = aws_endpoints + azure_endpoints + gcp_endpoints + db_endpoints
+    _flush_stage_endpoints(cfg.output.db_path, _identity_eps)
+    _identity_pf = _collect_stage_partial_failures(run_stats, "identity", error_endpoints, _err_before_identity)
+    if args.db_path:
+        write_scan_checkpoint(args.db_path, scan_run_id, "identity",
+            status="partial" if _identity_pf else "completed",
+            endpoint_count=len(_identity_eps), partial_failure=bool(_identity_pf),
+            error_summary=_identity_pf or None)
+
     # ==============================
     # S3 object storage encryption (Phase 28, STOR-01)
     # ==============================
+    _err_before_dar = len(error_endpoints)  # Phase 67 RESUME-02
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "data_at_rest")
     s3_endpoints = []
@@ -958,7 +1049,18 @@ def main():
                 )
                 logger.info("Vault scan: %d endpoints", len(vault_endpoints))
 
+    # Phase 67 RESUME-01: flush data_at_rest stage endpoints before broker_email begins
+    _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + vault_endpoints
+    _flush_stage_endpoints(cfg.output.db_path, _dar_eps)
+    _dar_pf = _collect_stage_partial_failures(run_stats, "data_at_rest", error_endpoints, _err_before_dar)
+    if args.db_path:
+        write_scan_checkpoint(args.db_path, scan_run_id, "data_at_rest",
+            status="partial" if _dar_pf else "completed",
+            endpoint_count=len(_dar_eps), partial_failure=bool(_dar_pf),
+            error_summary=_dar_pf or None)
+
     # ── Email TLS scanning (Phase 32 — v4.4 Data in Motion) ────
+    _err_before_broker = len(error_endpoints)  # Phase 67 RESUME-02
     email_endpoints = []
     # Phase 41 / D-12: probe optional-extra availability and emit advisory if missing.
     if cfg.connectors.enable_email:
@@ -1084,6 +1186,16 @@ def main():
         }
         setattr(all_broker_eps[0], "broker_scan_json", json.dumps(payload, default=str))
 
+    # Phase 67 RESUME-01: flush broker_email stage endpoints
+    _broker_email_eps = email_endpoints + kafka_endpoints + rabbit_endpoints + redis_endpoints
+    _flush_stage_endpoints(cfg.output.db_path, _broker_email_eps)
+    _broker_pf = _collect_stage_partial_failures(run_stats, "broker_email", error_endpoints, _err_before_broker)
+    if args.db_path:
+        write_scan_checkpoint(args.db_path, scan_run_id, "broker_email",
+            status="partial" if _broker_pf else "completed",
+            endpoint_count=len(_broker_email_eps), partial_failure=bool(_broker_pf),
+            error_summary=_broker_pf or None)
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + aws_endpoints + azure_endpoints + gcp_endpoints
@@ -1141,6 +1253,11 @@ def main():
         update_job_stage(args.db_path, args.job_id, "reports")
     with _phase_timer(run_stats, "reporting"):
         write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints)
+
+    # Phase 67 RESUME-01: checkpoint after reports written
+    if args.db_path:
+        write_scan_checkpoint(args.db_path, scan_run_id, "reports", "completed",
+            endpoint_count=len(endpoints))
 
     # Phase 65: mark scan job completed after all phases succeed.
     if args.job_id and args.db_path:
