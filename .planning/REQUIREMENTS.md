@@ -91,8 +91,8 @@
 #### Dashboard Scan History + Clone/Compare
 *BACK-86 slice 2. Phase 66.*
 
-- [ ] **UI-HIST-01**: A `/scans` route lists all scans with date, target, profile, overall score, and a "Clone configuration" button that pre-fills the `/scan/new` form
-- [ ] **UI-HIST-02**: A "Compare" mode on `/scans` lets the operator pick any two scans and renders a diff view (score deltas, added/removed findings, changed endpoint posture)
+- [x] **UI-HIST-01**: A `/scans` route lists all scans with date, target, profile, overall score, and a "Clone configuration" button that pre-fills the `/scan/new` form
+- [x] **UI-HIST-02**: A "Compare" mode on `/scans` lets the operator pick any two scans and renders a diff view (score deltas, added/removed findings, changed endpoint posture)
 
 #### Resumable / Partial-Failure Scans
 *Phase 67.*
@@ -237,8 +237,8 @@ Populated by the roadmapper. Updated at each phase transition.
 | UI-SCAN-01 | Phase 65 | Pending |
 | UI-SCAN-02 | Phase 65 | Pending |
 | UI-SCAN-03 | Phase 65 | Pending |
-| UI-HIST-01 | Phase 66 | Pending |
-| UI-HIST-02 | Phase 66 | Pending |
+| UI-HIST-01 | Phase 66 | Complete |
+| UI-HIST-02 | Phase 66 | Complete |
 | RESUME-01 | Phase 67 | Pending |
 | RESUME-02 | Phase 67 | Pending |
 | UX-01 | Phase 68 | Pending |

@@ -1427,6 +1427,6 @@ Plans:
 | 64. Trend Analysis Foundation | B | 3/3 | Complete   | 2026-05-10 |
 | 64.1. Audit Residual Blockers | B | 2/2 | Complete    | 2026-05-11 |
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
-| 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete   | 2026-05-14 |
+| 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
 | 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
