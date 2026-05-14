@@ -6,10 +6,13 @@ Zero new pip dependencies — stdlib only: collections, math, threading, time.
 """
 from __future__ import annotations
 
+import json
 import math
 import threading
 import time
 from collections import defaultdict, deque
+
+from quirk.errors import format_error
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -55,7 +58,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 oldest: float = bucket[0]
                 retry_after: int = math.ceil(_WINDOW_SECONDS - (now - oldest))
                 return Response(
-                    content='{"detail":"Rate limit exceeded"}',
+                    content=json.dumps({"detail": format_error("DASHBOARD-003")}).encode(),
                     status_code=429,
                     media_type="application/json",
                     headers={"Retry-After": str(max(retry_after, 1))},

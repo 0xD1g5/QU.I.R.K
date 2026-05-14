@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request
 
+from quirk.errors import format_error
+
 CSRF_HEADER = "X-Quirk-Request"
 _MUTATING_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
 
@@ -17,11 +19,11 @@ def require_csrf(request: Request) -> None:
     """FastAPI Depends() — requires X-Quirk-Request: 1 on mutating requests (D-07).
 
     Missing header on a mutating request → 403 Forbidden.
-    Body: {"detail": "Missing CSRF header: X-Quirk-Request"}
+    Body: {"detail": "[QRK-DASHBOARD-002] ..."}
     """
     if request.method in _MUTATING_METHODS:
         if request.headers.get(CSRF_HEADER) != "1":
             raise HTTPException(
                 status_code=403,
-                detail=f"Missing CSRF header: {CSRF_HEADER}",
+                detail=format_error("DASHBOARD-002"),
             )

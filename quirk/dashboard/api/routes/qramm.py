@@ -19,6 +19,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from quirk.errors import format_error
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
@@ -93,7 +95,7 @@ class ScoreRequest(BaseModel):
     profile_multiplier: Optional[float] = Field(
         default=None,
         description="Profile risk multiplier. Valid range: [0.8, 1.5]. "
-                    "Values outside this range return HTTP 400 (QRAMM_MULTIPLIER_OUT_OF_RANGE).",
+                    "Values outside this range return HTTP 400 (QRK-DASHBOARD-010).",
     )
 
 
@@ -191,7 +193,7 @@ def _iso_str(dt: Optional[datetime]) -> Optional[str]:
 def _get_session_or_404(db: Session, session_id: int) -> QRAMMSession:
     session = db.get(QRAMMSession, session_id)
     if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-009"))
     return session
 
 
@@ -344,11 +346,7 @@ def score_session(
         if not (0.8 <= multiplier <= 1.5):
             raise HTTPException(
                 status_code=400,
-                detail={
-                    "error_code": "QRAMM_MULTIPLIER_OUT_OF_RANGE",
-                    "message": "profile_multiplier must be in [0.8, 1.5]",
-                    "valid_range": [0.8, 1.5],
-                },
+                detail=format_error("DASHBOARD-010"),
             )
     session = _get_session_or_404(db, session_id)
 
@@ -361,7 +359,7 @@ def score_session(
     if not rows:
         raise HTTPException(
             status_code=422,
-            detail="Cannot score a session with no answered questions",
+            detail=format_error("DASHBOARD-011"),
         )
     practice_buckets: Dict[str, List[int]] = {}
     practice_to_dim: Dict[str, str] = {}

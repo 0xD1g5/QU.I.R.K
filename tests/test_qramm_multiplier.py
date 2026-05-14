@@ -2,6 +2,7 @@
 
 Tests the 400 guard added by Phase 60 Plan 01, Task 01-03.
 Per CONTEXT.md D-04, D-05.
+Phase 68 update: detail is now a plain QRK-DASHBOARD-010 string (no longer dict).
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ _CSRF_HEADERS = {"X-Quirk-Request": "1"}
 
 @pytest.mark.parametrize("bad_multiplier", [0.0, 0.5, 0.79, 1.51, 2.0, 9.99, -1.0])
 def test_out_of_range_multiplier_returns_400(bad_multiplier):
-    """Values outside [0.8, 1.5] must return 400 with QRAMM_MULTIPLIER_OUT_OF_RANGE."""
+    """Values outside [0.8, 1.5] must return 400 with QRK-DASHBOARD-010 detail."""
     # Session 99999 almost certainly does not exist, but the multiplier guard
     # fires BEFORE the DB lookup, so we still get 400 not 404.
     resp = client.post(
@@ -30,11 +31,10 @@ def test_out_of_range_multiplier_returns_400(bad_multiplier):
         f"multiplier={bad_multiplier}: expected 400, got {resp.status_code}. body={resp.text}"
     )
     body = resp.json()
-    detail = body.get("detail", {})
-    assert detail.get("error_code") == "QRAMM_MULTIPLIER_OUT_OF_RANGE", (
-        f"Missing or wrong error_code in response: {body}"
+    detail = body.get("detail", "")
+    assert "QRK-DASHBOARD-010" in detail, (
+        f"Missing QRK-DASHBOARD-010 in detail: {body}"
     )
-    assert detail.get("valid_range") == [0.8, 1.5]
 
 
 @pytest.mark.parametrize("good_multiplier", [0.8, 1.0, 1.2, 1.5])
