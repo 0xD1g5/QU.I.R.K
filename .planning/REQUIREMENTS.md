@@ -102,9 +102,44 @@ These items were considered but deferred beyond v4.9:
 
 ## Traceability
 
-| Requirement | Phase |
-|-------------|-------|
-| (populated by roadmapper) | — |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BLOCK-01 | Phase 69 | Pending |
+| BLOCK-02 | Phase 69 | Pending |
+| BLOCK-03 | Phase 69 | Pending |
+| BLOCK-04 | Phase 69 | Pending |
+| BLOCK-05 | Phase 69 | Pending |
+| BLOCK-06 | Phase 69 | Pending |
+| BLOCK-07 | Phase 70 | Pending |
+| BLOCK-08 | Phase 70 | Pending |
+| PROTO-01 | Phase 71 | Pending |
+| PROTO-02 | Phase 71 | Pending |
+| PROTO-03 | Phase 71 | Pending |
+| PROTO-04 | Phase 71 | Pending |
+| PROTO-05 | Phase 71 | Pending |
+| CLOUD-01 | Phase 72 | Pending |
+| CLOUD-02 | Phase 72 | Pending |
+| CLOUD-03 | Phase 72 | Pending |
+| CLOUD-04 | Phase 72 | Pending |
+| CLOUD-05 | Phase 72 | Pending |
+| INTEL-01 | Phase 73 | Pending |
+| INTEL-02 | Phase 73 | Pending |
+| INTEL-03 | Phase 73 | Pending |
+| QWARN-01 | Phase 74 | Pending |
+| QWARN-02 | Phase 74 | Pending |
+| QWARN-03 | Phase 74 | Pending |
+| APCL-01 | Phase 75 | Pending |
+| APCL-02 | Phase 75 | Pending |
+| APCL-03 | Phase 75 | Pending |
+| APCL-04 | Phase 75 | Pending |
+| REACT-01 | Phase 76 | Pending |
+| REACT-02 | Phase 76 | Pending |
+| REACT-03 | Phase 76 | Pending |
+| INFO-01 | Phase 77 | Pending |
+| INFO-02 | Phase 77 | Pending |
+| INFO-03 | Phase 77 | Pending |
+| INFO-04 | Phase 77 | Pending |
+| LEDGER-01 | Phase 77 | Pending |
 
 ---
 

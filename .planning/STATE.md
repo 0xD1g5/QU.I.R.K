@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v4.9
 milestone_name: Audit Depth
 status: planning
-last_updated: "2026-05-14T23:15:47.447Z"
+last_updated: "2026-05-14"
 last_activity: 2026-05-14
 progress:
-  total_phases: 0
+  total_phases: 9
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,90 +17,69 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-09)
+See: .planning/PROJECT.md (updated 2026-05-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 68 — Operator Error-Message Pass
+**Current focus:** Phase 69 — Deferred BLOCKERs (Scanner + Cloud)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 0 of 9 (roadmap created, ready to plan Phase 69)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-14 — Milestone v4.9 started
+Status: Ready to plan
+Last activity: 2026-05-14 — v4.9 roadmap authored (9 phases, 36 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Phase Overview
 
-| Phase | Slug | Wave | Depends On | Requirements |
-|-------|------|------|------------|--------------|
-| 57 | scanner-security-hardening | A | Phase 56.1 | HARDEN-SCAN-01..06 |
-| 58 | dashboard-api-hardening | A | Phase 56.1 | HARDEN-API-01..06 |
-| 59 | credential-leakage-sweep | A | Phase 56.1 | LEAK-01, LEAK-02, LEAK-03 |
-| 60 | score-arithmetic-correctness | A | Phase 56.1 | SCORE-01..04 |
-| 61 | cbom-coverage-report-sanitization | A | Phase 56.1 | CBOM-COVER-01, CBOM-COVER-02, REPORT-SAN-01, REPORT-SAN-02 |
-| 62 | react-hook-cancellation-pattern | A | Phase 56.1 | HOOK-01..04 |
-| 63 | scheduled-continuous-scanning | B | Wave A complete (soft: Phase 67) | SCHED-01, SCHED-02, SCHED-03 |
-| 64 | trend-analysis-foundation | B | Wave A complete | TREND-01, TREND-02 |
-| 65 | dashboard-initiated-scan | B | Wave A complete (hard: Phase 58) | UI-SCAN-01, UI-SCAN-02, UI-SCAN-03 |
-| 66 | dashboard-scan-history-clone-compare | B | Phase 65 | UI-HIST-01, UI-HIST-02 |
-| 67 | resumable-partial-failure-scans | B | Wave A complete | RESUME-01, RESUME-02 |
-| 68 | operator-error-message-pass | B | Wave A complete | UX-01, UX-02 |
-
-**Wave gating:** Wave A (Phases 57–62) MUST be 100% complete before any Wave B phase (63–68) starts. This is the v4.8 cornerstone — no operating-model feature ships on top of un-hardened security/correctness foundations.
-
-**Wave A internal parallelism:** Phases 57, 58, 59, 60, 61, 62 touch disjoint code paths and may be executed in parallel by independent agents. The wave-gate is the completion barrier, not the execution barrier.
-
-**Wave B critical path:** 65 → 66; 65 hard-depends on 58 (dashboard auth before dashboard launches scans). Phase 63 has a soft dependency on Phase 67 (resumable infra benefits scheduled scans but is not gating).
+| Phase | Slug | Requirements |
+|-------|------|--------------|
+| 69 | deferred-blockers-scanner-cloud | BLOCK-01..06 |
+| 70 | deferred-blockers-api-qramm | BLOCK-07..08 |
+| 71 | protocol-scanner-warnings | PROTO-01..05 |
+| 72 | cloud-scanner-warnings | CLOUD-01..05 |
+| 73 | cbom-intelligence-reports-warnings | INTEL-01..03 |
+| 74 | qramm-compliance-warnings | QWARN-01..03 |
+| 75 | api-cli-core-warnings | APCL-01..04 |
+| 76 | react-frontend-warnings | REACT-01..03 |
+| 77 | code-quality-audit-closure | INFO-01..04, LEDGER-01 |
 
 ## Performance Metrics
 
 **Velocity:**
-
-- Total plans completed: 52 (v4.7 — Phases 51, 52, 53, 54, 55, 56, 56.1)
-- Average duration: ~3.5 days/phase across v4.7
-- Total execution time: 0 hours (v4.8)
+- Total plans completed: 0 (v4.9)
+- Average duration: ~3.5 days/phase across v4.8
+- Total execution time: 0 hours (v4.9)
 
 **By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 57 | 6 plans | Complete |
-| 58 | 7 plans | Complete |
-| 59 | 4 plans | Complete |
-| 60 | 4 plans | Complete |
-| 61 | 3 plans | Complete |
-| 62 | 4 plans | Complete |
-| 63 | 3 plans | Complete |
-| 64 | TBD | Ready to plan |
-| 65 | TBD | Blocked on Wave A |
-| 66 | TBD | Blocked on Wave A + Phase 65 |
-| 67 | TBD | Blocked on Wave A |
-| 68 | TBD | Blocked on Wave A |
-| Phase 57 P06 | 20min | 3 tasks | 5 files |
-| Phase 61 P03 | 5 minutes | 3 tasks | 2 files |
-| Phase 63 P02 | 3min | 1 tasks | 2 files |
+| 69 | TBD | Not started |
+| 70 | TBD | Not started |
+| 71 | TBD | Not started |
+| 72 | TBD | Not started |
+| 73 | TBD | Not started |
+| 74 | TBD | Not started |
+| 75 | TBD | Not started |
+| 76 | TBD | Not started |
+| 77 | TBD | Not started |
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- v4.8 roadmap authored 2026-05-09 against `.planning/audit-2026-05-08/AUDIT-SUMMARY.md` (44 blockers / 96 warnings / 29 info across 116 files / 6 subsystems).
-- Wave A / Wave B split adopted from audit recommendation (lines 134–158 of AUDIT-SUMMARY.md).
-- HORIZON.md v4.8 anchor item set absorbed into Wave B; residual trust/polish items absorbed into Wave A.
+- v4.9 roadmap authored 2026-05-14 against 36 requirements derived from `.planning/audit-2026-05-08/AUDIT-TASKS.md` open rows (13 deferred BLOCKERs + 92 WARNINGs + 29 INFOs).
+- 9 phases (69–77): 2 BLOCKER phases, 6 WARNING-by-subsystem phases, 1 INFO+closure phase.
+- Phases group requirements by code locality to minimize merge conflicts.
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-
-**v4.8 roadmap decisions (2026-05-09):**
-
-- [v4.8-D-01]: Wave A is a HARD gate for Wave B. No Wave B phase may start until all 6 Wave A phases are `[x]`. Rationale: shipping operating-model features on top of unhardened security/correctness foundations would invert the primetime quality goal.
-- [v4.8-D-02]: Wave A internally parallel — 57, 58, 59, 60, 61, 62 touch disjoint code paths (protocol scanners / route layer / shared util / scoring / CBOM builder / React hooks). Independent agents may execute them concurrently.
-- [v4.8-D-03]: Phase 63 (scheduled scans) carries a SOFT dependency on Phase 67 (resumable scans) — schedulable scans benefit from resumable infra but can ship without; ordering is opportunistic.
-- [v4.8-D-04]: Phase 65 (dashboard-initiated scan) carries a HARD dependency on Phase 58 (dashboard API hardening) — the dashboard cannot dispatch scans before single-user auth + CSRF + CORS lockdown land.
-- [v4.8-D-05]: Phase goals explicitly name the audit blocker IDs each phase closes (e.g., "closes audit blockers 1–6 (`scanners-protocol/CR-01..CR-06`)"). Self-documenting traceability against AUDIT-SUMMARY.md.
-- [v4.8-D-06]: Markdown injection in HTML/PDF rendering surfaces is OUT OF SCOPE for v4.8 — Phase 61 REPORT-SAN-01 covers markdown only. HTML/PDF injection is a separate audit shape deferred to v4.9+.
-- [v4.8-D-07]: Dead code cleanup (`tls_scanner.py` duplicate, `intelligence/schema.py`, `migration_planner.py` stub, `risk_engine.py` rename) deferred to v5.x tech-debt sweep — not v4.8.
+- [v4.9-D-01]: Deferred BLOCKERs split into two phases by code locality: scanner/cloud resource correctness (Phase 69) vs API/QRAMM model integrity (Phase 70). Both are highest priority and unblock WARNING fixes in the same subsystems.
+- [v4.9-D-02]: WARNING phases are strictly subsystem-scoped (protocol scanner, cloud scanner, CBOM/intel/reports, QRAMM/compliance, API/CLI/core, React frontend) to eliminate cross-phase merge conflicts.
+- [v4.9-D-03]: LEDGER-01 (audit closure) folded into Phase 77 as the final step — all finding rows should be dispositioned as phases 69-76 execute.
+- [v4.9-D-04]: INFO/code-quality items (INFO-01..04) batched into Phase 77 alongside LEDGER-01 since they are low-risk, non-interdependent, and a natural final-cleanup sweep.
 
 ### Pending Todos
 
@@ -112,22 +91,18 @@ None at roadmap creation.
 
 ## Deferred Items
 
-Items carried forward from v4.7 close (2026-05-08):
+Items carried forward from v4.8 close (2026-05-14):
 
 | Category | Item | Status |
 |----------|------|--------|
 | uat_gap | Phase 43: 43-HUMAN-UAT.md (2 pending) — loading-state first paint + keyboard focus ring visibility | deferred — require live browser session |
 | uat_gap | Phase 44: 44-HUMAN-UAT.md (1 pending) — Phase 29 K8s cloud-only justification review | deferred — human confirmation needed |
-| verification_gap | Phase 46: 46-VERIFICATION.md not authored (code verified live during Phase 46 execution) | deferred — retroactive authoring needed |
+| verification_gap | Phase 46: 46-VERIFICATION.md not authored (code verified live) | deferred — retroactive authoring needed |
 | uat_gap | Phase 47: 4 manual TTY tests pending (nmap wizard interactive flow) | deferred — require TTY session |
-| test_infra | `test_cbom_schema_validation.py` fails when `cyclonedx-python-lib[json-validation]` not installed | deferred — optional dep, not blocking |
+| test_infra | test_cbom_schema_validation.py fails when cyclonedx json-validation extra absent | deferred — optional dep, not blocking |
 
 ## Session Continuity
 
-Last session: 2026-05-14T16:17:54.012Z
-Stopped at: Phase 68 context gathered
-Next action: `/gsd-plan-phase 57` (Scanner Security Hardening — Wave A entrypoint). Wave A phases 57–62 may be planned in parallel.
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+Last session: 2026-05-14
+Stopped at: Roadmap created — 9 phases (69–77), 36 requirements mapped
+Next action: `/gsd-plan-phase 69` (Deferred BLOCKERs — Scanner + Cloud)

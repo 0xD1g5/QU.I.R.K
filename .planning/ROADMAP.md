@@ -11,6 +11,7 @@
 - ✅ **v4.6 Enterprise Readiness** — Phases 45–50, 24 plans (shipped 2026-05-05) → `.planning/milestones/v4.6-ROADMAP.md`
 - ✅ **v4.7 Governance & Compliance Platform** — Phases 51–56 + 56.1, 27 plans (shipped 2026-05-08)
 - ✅ **v4.8 Pre-Primetime Hardening + Operating Model** — Phases 57–68 (shipped 2026-05-14) → `.planning/milestones/v4.8-ROADMAP.md`
+- 🚧 **v4.9 Audit Depth** — Phases 69–77 (in progress)
 
 ## Phases
 
@@ -1449,3 +1450,137 @@ Plans:
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
 | 67. Resumable / Partial-Failure Scans | B | 5/5 | Complete    | 2026-05-14 |
 | 68. Operator Error-Message Pass | B | 5/5 | Complete    | 2026-05-14 |
+
+---
+
+## v4.9 Audit Depth — Phases 69–77
+
+**Milestone Goal:** Systematically close the 121 remaining open findings from the 2026-05-08 audit (13 deferred BLOCKERs + 92 WARNINGs + 29 INFOs), hardening correctness, resource management, input validation, and code quality across all six scanner subsystems. AUDIT-TASKS.md reaches zero bare-open rows.
+
+### Phase Checklist
+
+- [ ] **Phase 69: Deferred BLOCKERs — Scanner + Cloud** - Fix resource leaks (ThreadPool, socket) and cloud data correctness bugs (GCP SQL, K8s, Azure Blob, Cache, TokenBucket)
+- [ ] **Phase 70: Deferred BLOCKERs — API + QRAMM Model** - Enforce DB-level FK constraint on QRAMMProfile; replace bare except in classifier and harden DDL interpolation
+- [ ] **Phase 71: Protocol Scanner WARNINGs** - Coverage clamp, case-insensitive severity, bare except removal, nmap hardening, identity scanner input bounds, extras/ThreadPool/dedup fixes
+- [ ] **Phase 72: Cloud Scanner WARNINGs** - AWS/Azure/GCP data correctness, Cache/scope_hash robustness, profiles.py mutations, Vault/DB connector hardening
+- [ ] **Phase 73: CBOM + Intelligence + Reports WARNINGs** - PDF resource cleanup, weak-crypto predicate consistency, score weight normalization, cipher label correctness
+- [ ] **Phase 74: QRAMM + Compliance WARNINGs** - Practice score validation, evidence bridge TZ safety, migration advisor precision, model_meta helper, stale comment removal
+- [ ] **Phase 75: API + CLI + Core WARNINGs** - doctor checks, scan-id microsecond safety, list_scans grouping, QRAMM error handling, interactive/validate/route input hardening
+- [ ] **Phase 76: React Frontend WARNINGs** - API error surfacing, localStorage validation, PDF revoke-on-unmount, ComplianceMapTab dep fix, cert regex, CBOM typing, scorecard math
+- [ ] **Phase 77: INFO/Code Quality + Audit Ledger Closure** - Protocol/CBOM/API/React INFOs, AUDIT-TASKS.md fully triaged to zero bare-open rows
+
+### Phase Details
+
+### Phase 69: Deferred BLOCKERs — Scanner + Cloud
+**Goal**: The six highest-priority deferred BLOCKERs in the scanner and cloud subsystems are fixed — resource leaks eliminated, cloud data written to correct fields, and rate-limiting primitives safe under all inputs. Closes audit findings scanners-protocol/CR-07, CR-08 and scanners-cloud/CR-02, CR-03, CR-06, CR-07, CR-08, CR-09, CR-10.
+**Depends on**: Phase 68 (v4.8 complete)
+**Requirements**: BLOCK-01, BLOCK-02, BLOCK-03, BLOCK-04, BLOCK-05, BLOCK-06
+**Success Criteria** (what must be TRUE):
+  1. An sslyze scan under simulated network error completes without leaving orphaned threads or open sockets; a pytest fixture asserts the ThreadPoolExecutor and tcp_connect socket are closed on all exception paths
+  2. A GCP Cloud SQL scan writes SSL enforcement status to `severity` and `description` fields (not `cert_pubkey_alg`); a test asserts `cert_pubkey_alg` is absent from the Cloud SQL finding dict
+  3. A K8s scan with `azure_cred=None` returns a K8S-03-conformant empty result (no AttributeError); an empty target list returns `[]` without raising
+  4. An Azure Blob finding for a platform-managed key (Microsoft.Storage) contains distinct severity and description from a finding where `key_source` is absent; a test covers both branches
+  5. `Cache._is_fresh` with `ttl_hours=0` returns `False` on every call (never fresh); `TokenBucket.acquire(n)` where `n > capacity` raises immediately (no infinite loop)
+**Plans**: TBD
+
+### Phase 70: Deferred BLOCKERs — API + QRAMM Model
+**Goal**: The two deferred BLOCKERs in the API/QRAMM subsystem are resolved — the `QRAMMProfile` table has a real DB-level FK constraint with safe session deletion, and the classifier no longer uses a bare `except` or interpolates unvalidated strings into DDL. Closes audit findings api-cli-core/CR-04, CR-05, CR-06, CR-07.
+**Depends on**: Phase 69
+**Requirements**: BLOCK-07, BLOCK-08
+**Success Criteria** (what must be TRUE):
+  1. The `qramm_profiles` table has a `FOREIGN KEY (session_id) REFERENCES qramm_sessions(id)` constraint; calling `delete_session` nulls the corresponding `profile_id` pointer before deletion, preventing a FK violation
+  2. The classifier `except` clause catches a specific exception type (not bare `except`) and logs the error with a structured message; the `col_type` string is validated against an allowlist before interpolation into any `ALTER TABLE` statement
+  3. A pytest fixture that attempts to delete a QRAMM session with an active profile verifies the operation completes cleanly (no FK error, no dangling row)
+**Plans**: TBD
+
+### Phase 71: Protocol Scanner WARNINGs
+**Goal**: All five WARNING clusters in the protocol scanner subsystem are resolved — coverage percentages are bounded, severity comparisons are case-insensitive, subprocess errors are logged not swallowed, nmap inputs are validated and parsed safely, identity scanner inputs are bounded, and the extras/ThreadPool/dedup issues are fixed. Closes audit findings scanners-protocol/WR-01 through WR-14.
+**Depends on**: Phase 69
+**Requirements**: PROTO-01, PROTO-02, PROTO-03, PROTO-04, PROTO-05
+**Success Criteria** (what must be TRUE):
+  1. `coverage.calculate_coverage` returns a value in `[0.0, 1.0]` under any input; `quantum_readiness_score` severity comparison passes with mixed-case severity strings (e.g., `"High"`, `"HIGH"`)
+  2. A subprocess failure in any protocol scanner emits a logged error (not a bare `except` swallow); the error appears in the scan log and the scan continues with a partial result
+  3. `nmap_provider.run_nmap_discovery` validates `extra_args` against a character allowlist and raises on violation; nmap XML is parsed via `defusedxml` (not stdlib ET); default port CSV is correct
+  4. DNSSEC `_parse_dnskeys` key_bytes access is bounded; Kerberos decode errors are logged; Kerberos nonce uses `secrets.token_bytes`; SAML JSON parse has a byte-size cap
+  5. Optional-dep extras messaging is consistent across email/broker/container/source scanners; email/broker `ThreadPool max_workers` is configurable via `ScanCfg`; `discovery/tls_scanner.py` duplicate is deleted; `target_expander` dedup is stable, CIDR expansion bounded, type confusion resolved
+**Plans**: TBD
+
+### Phase 72: Cloud Scanner WARNINGs
+**Goal**: All five WARNING clusters in the cloud scanner subsystem are resolved — AWS/Azure/GCP data correctness, Cache and scope_hash robustness, profiles.py mutation guards, and Vault/DB connector hardening. Closes audit findings scanners-cloud/WR-01 through WR-24.
+**Depends on**: Phase 69
+**Requirements**: CLOUD-01, CLOUD-02, CLOUD-03, CLOUD-04, CLOUD-05
+**Success Criteria** (what must be TRUE):
+  1. An AWS ACM scan with an empty ARN does not raise; KMS skips disabled/pending-deletion keys; S3 `executor.map` propagates classifier exceptions; EKS `enc_cfg` reads from the entire list not index 0
+  2. Azure KeyVault `key_size` is populated for all key types; K8s `cluster_name` has colons stripped; K8s `Counter` excludes `None` values; K8s `key_name` is omitted in unencrypted path in `dat_scan_json`
+  3. GCP KMS pagination loop has a cap; UNSPECIFIED/UNKNOWN key handling is consistent; GCP Cloud SQL description is surfaced in `service_detail`
+  4. `Cache._read_json` handles malformed JSON gracefully (no exception on corrupt cache file); `scope_hash` includes connector enable flags; `profiles.py` file is verified complete and not truncated
+  5. All 10 miscellaneous cloud WARNING fixes land: risk_engine naming, profiles.py email/broker mutation guard, standard profile re-apply, vault VAULT_TOKEN env order, DB password empty-string default, DB exception message strip, AWS ThreadPoolExecutor module-level import, Vault PKI PEM split hardened, `_postprocess_findings` safe under iteration, `_dedupe_findings` ordering stable
+**Plans**: TBD
+
+### Phase 73: CBOM + Intelligence + Reports WARNINGs
+**Goal**: All three WARNING clusters in the CBOM/intelligence/reports subsystem are resolved — PDF resources are cleaned up, weak-crypto predicates are consistent, and score weights, roadmap output, and cipher labels are corrected. Closes audit findings cbom-intel-reports/WR-01 through WR-14.
+**Depends on**: Phase 69
+**Requirements**: INTEL-01, INTEL-02, INTEL-03
+**Success Criteria** (what must be TRUE):
+  1. PDF render exceptions are caught by type (not a blanket `except`); Playwright resources are released in a `finally` block; a PDF generation failure prints a user-visible warning without crashing the scan
+  2. `motion_broker_weak_tls_count` predicate is uppercase-consistent; ECDSA detection matches `cert_pubkey_alg` conventions; SAML weak detection handles mixed-case SHA-1; email/broker weak-cipher predicates are unified via shared helper
+  3. `SCORE_WEIGHTS` are documented and normalized; the roadmap double-period artifact is removed; executive `_build_interpretation` guards `score['score']` access; TLS 1.2 non-PFS cipher KEX returns the correct `RSA-kex` label; confidence weight overrides pass through clamp and validation
+**Plans**: TBD
+
+### Phase 74: QRAMM + Compliance WARNINGs
+**Goal**: All three WARNING clusters in the QRAMM/compliance subsystem are resolved — practice scores reject out-of-range inputs, the evidence bridge is TZ-safe and idempotent, and migration advisor precision, coverage disambiguation, and stale comments are fixed. Closes audit findings qramm-compliance/WR-01 through WR-13.
+**Depends on**: Phase 70
+**Requirements**: QWARN-01, QWARN-02, QWARN-03
+**Success Criteria** (what must be TRUE):
+  1. `compute_practice_score` raises a clear validation error for answers outside the defined range; Practice 1.1 Discovery score incorporates endpoint count; `vuln_pct` denominator is guarded against zero; the Maturity label `>= 4.0` is either reachable or documented as intentional
+  2. Evidence bridge date comparison uses `datetime.date` (not string comparison) and is TZ-safe; `synchronize_session` is idempotent under repeated calls; `db.commit` failures are handled and logged; `attach_context` `AttributeError` is logged not swallowed
+  3. Migration advisor substring matching false positives are reduced; `_walk_json_for_alg_strings` covers all `ALG_KEYS`; compliance weight `0.0` vs not-yet-covered is disambiguated in output; `model_meta.py` has `is_qramm_model_stale()` helper; stale Phase 50 TODO comment removed
+**Plans**: TBD
+
+### Phase 75: API + CLI + Core WARNINGs
+**Goal**: All four WARNING clusters in the API/CLI/core subsystem are resolved — doctor checks return meaningful data, scan-id time-window is microsecond-safe, list_scans grouping is correct, and QRAMM/interactive/validate/route input hardening is complete. Closes audit findings api-cli-core/WR-01 through WR-17.
+**Depends on**: Phase 70
+**Requirements**: APCL-01, APCL-02, APCL-03, APCL-04
+**Success Criteria** (what must be TRUE):
+  1. `quirk doctor` `_check_dashboard` and `_check_network` return status objects with actionable content; `_check_db` uses `QUIRK_DB_PATH` env var; `_default_db_path` selects deterministically
+  2. `get_latest_scan ?scan_id=` time-window handles microsecond-precision timestamps correctly (no off-by-one exclusion); `list_scans` groups by parsed `datetime` not formatted string; `compute_overall_score` multiplier is validated server-side before DB access
+  3. `routes/qramm read_session` returns a structured error on JSON corruption (not a 500 with raw traceback); `_derive_dar_findings` bare `except` is replaced with logged exception; `list_questions` handles `QRAMM_QUESTIONS` schema drift gracefully
+  4. Interactive `_prompt_int` handles `EOF` without infinite loop; exposure default is validated; `setattr` nmap injection replaced with `ConnectorsCfg` field; `validate.py` artifact list includes `intelligence-{stamp}.json`; `qramm_cmd` env override has try/except; `routes/scan QUIRK_OUTPUT_DIR` input validated; `parse_target_tokens` validates hostname format
+**Plans**: TBD
+
+### Phase 76: React Frontend WARNINGs
+**Goal**: All three WARNING clusters in the React frontend are resolved — API error surfacing, localStorage/PDF/ComplianceMapTab correctness, and cert regex/CBOM typing/scorecard math are fixed. Closes audit findings react-frontend/WR-02, WR-04 through WR-13.
+**Depends on**: Phase 75
+**Requirements**: REACT-01, REACT-02, REACT-03
+**Success Criteria** (what must be TRUE):
+  1. `useScanList` surfaces non-OK API responses as user-visible error state (not silent empty list); executive `body.detail` coercion is checked before access; print data-ready sentinel is not set when QRAMM has errored; QRAMM `submitError` exposes the actual error message from the API response
+  2. `localStorage` Theme value is validated before cast (invalid values fall back to default); executive PDF download `setTimeout` revoke runs on unmount (no leaked timer); `ComplianceMapTab` re-fetches only on targeted dependency change (no spurious refetch loop)
+  3. Certificate Subject CN regex handles RFC 2253-escaped commas correctly; CBOM Cytoscape registration cast is replaced with proper TypeScript typing; `ScorecardTab` Maturity Distribution width math and badge classes produce the correct visual output
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 77: INFO/Code Quality + Audit Ledger Closure
+**Goal**: All four INFO/code-quality requirement groups are addressed across the four subsystems (protocol scanner, CBOM/intelligence, API/CLI, React frontend), and AUDIT-TASKS.md is brought to zero bare-open rows — every one of the 169 findings carries an explicit closed, deferred, or wont-fix disposition. Closes audit findings scanners-protocol/IN-01..06, cbom-intel-reports/IN-01..09, api-cli-core/IN-01..07, react-frontend/IN-01..07, and LEDGER-01.
+**Depends on**: Phase 71, Phase 72, Phase 73, Phase 74, Phase 75, Phase 76
+**Requirements**: INFO-01, INFO-02, INFO-03, INFO-04, LEDGER-01
+**Success Criteria** (what must be TRUE):
+  1. All 6 protocol scanner INFOs are closed: TLS SSLContext downgrade is commented, DNSSEC_ALG_MAP includes reserved algorithms 9 and 11, SHA1_INDICATORS is precise, fingerprint Host header is correct, `_is_pfs`/`_is_weak` are deduplicated, Kerberos realm IPv4 detection is hardened
+  2. All 9 CBOM/intelligence INFOs are closed: `PLATFORM_VERSION` is centralized, SSH algorithms JSONDecodeError is logged, trend session fetch is batched, `_PROTOCOL_KEYS` is complete, roadmap baseline governance is documented, migration paths truncation indicator added, dead timeframe branch removed, hosts_count falsy handled, `IntelligenceReport` dataclass used or removed
+  3. All 7 API/CLI INFOs are closed: QRAMM endpoint types tightened, `_FACES` banner escape corrected, interactive TZ fallback uses IANA name, QRAMM magic numbers extracted to constants, `app.py` closure capture corrected, `db.py` helpers collapsed, `targets.py` CIDR host-list materialisation bounded
+  4. All 7 React frontend INFOs are closed: qramm-assessment tab count comment corrected, cbom extension error logged, findings/identity columns memoized, `useQRAMMSession` seededRef reset on New Assessment, cbom compByAlg variance tracked, print `createElement` replaced, `useScanData` propagates fetch URL into errors
+  5. `AUDIT-TASKS.md` has zero rows in `[ ] open` state — every finding is `[x] closed`, `[ ] deferred-*`, or `[ ] wont-fix` with rationale
+**Plans**: TBD
+
+## Progress — v4.9 Phases
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 69. Deferred BLOCKERs — Scanner + Cloud | 0/TBD | Not started | - |
+| 70. Deferred BLOCKERs — API + QRAMM Model | 0/TBD | Not started | - |
+| 71. Protocol Scanner WARNINGs | 0/TBD | Not started | - |
+| 72. Cloud Scanner WARNINGs | 0/TBD | Not started | - |
+| 73. CBOM + Intelligence + Reports WARNINGs | 0/TBD | Not started | - |
+| 74. QRAMM + Compliance WARNINGs | 0/TBD | Not started | - |
+| 75. API + CLI + Core WARNINGs | 0/TBD | Not started | - |
+| 76. React Frontend WARNINGs | 0/TBD | Not started | - |
+| 77. INFO/Code Quality + Audit Ledger Closure | 0/TBD | Not started | - |
