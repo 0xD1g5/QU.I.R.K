@@ -1420,7 +1420,7 @@ Plans:
 **Plans**: 5 plans
 Plans:
 **Wave 1**
-- [ ] 68-01-PLAN.md — Create quirk/errors.py canonical error registry + unit tests
+- [x] 68-01-PLAN.md — Create quirk/errors.py canonical error registry + unit tests
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 68-02-PLAN.md — Build quirk errors CLI command + wire run_scan.py argparse + generate docs/error-codes.md
@@ -1448,4 +1448,4 @@ Plans:
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
 | 67. Resumable / Partial-Failure Scans | B | 5/5 | Complete    | 2026-05-14 |
-| 68. Operator Error-Message Pass | B | 0/5 | Planned | - |
+| 68. Operator Error-Message Pass | B | 1/5 | In Progress|  |
