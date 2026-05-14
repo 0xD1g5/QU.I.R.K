@@ -154,9 +154,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - Resumable / partial-failure scans
 - Operator error-message pass
 
-## Current State: v4.8 In Progress — Phase 66 Complete (Wave B)
+## Current State: v4.8 In Progress — Phase 67 Complete (Wave B)
 
-Phase 66 complete (2026-05-14) — dashboard scan history + clone/compare: `GET /api/scans` uncapped and enriched (score, profile, calibration, target, finding counts), `GET /api/compare` endpoint live (score delta, subscore deltas, added/removed findings, endpoint diff), `ScanHistoryPage` at `/scans` with FIFO checkbox selection and sticky compare bar, `ComparePage` at `/compare` with score header + 3 tabs, clone preload in scan-new with amber CLI-reconstruction notice. 9 pytest GREEN. Null `scanned_at` guard added to `list_scans()` (production bug fix). UI-HIST-01 + UI-HIST-02 closed.
+Phase 67 complete (2026-05-14) — resumable/partial-failure scans: `ScanCheckpoint` ORM model + `scan_checkpoints` table, per-stage checkpoint writes + `_flush_stage_endpoints` in `run_scan.py`, all 12 scanners migrated to `_wrapped_phase()` for uniform error capture, `--resume-scan-id` + `--list-resumable` CLI flags, `partial_failures` guaranteed in output JSON, `PartialFailureEntry` Pydantic model + `ScannerStatusCard` on Executive dashboard. Entry point corrected to `_run_main_with_job_guard`. RESUME-01 + RESUME-02 closed.
 
 Phase 64.1 complete (2026-05-10) — audit residual blockers: 5 code fixes with regression tests (algo hints CR-03, staleness date comparison BL-03, years clamp BL-04, sub-second session window CR-05 corrected to ms precision, db init idempotency CR-08); 14 structured D-06 dispositions for remaining BLOCKERs (13 deferred-v4.9, 1 wont-fix); AUDIT-TASKS.md now has zero bare-open BLOCKERs. 32/32 regression tests pass.
 
