@@ -690,7 +690,10 @@ def main():
 
                 # Load existing endpoints for this scan_run_id (best-effort; used to
                 # populate stage endpoint lists when skipping completed stages).
-                _target_ts = _dt.fromisoformat(scan_run_id)
+                # CR-01: strip tz offset so the filter matches tz-naive scanned_at
+                # values stored in SQLite (stored via .replace(tzinfo=None) at
+                # persist time — tz-aware strings fail SQLite string comparison).
+                _target_ts = _dt.fromisoformat(scan_run_id).replace(tzinfo=None)
                 _resumed_endpoints = (
                     _db.query(_CE)
                     .filter(
