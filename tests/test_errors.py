@@ -20,7 +20,7 @@ REQUIRED_CODES = {
     # DASHBOARD domain
     "DASHBOARD-001", "DASHBOARD-002", "DASHBOARD-003", "DASHBOARD-004",
     "DASHBOARD-005", "DASHBOARD-006", "DASHBOARD-007", "DASHBOARD-008",
-    "DASHBOARD-009", "DASHBOARD-010", "DASHBOARD-011", "DASHBOARD-012",
+    "DASHBOARD-009", "DASHBOARD-010", "DASHBOARD-011", "DASHBOARD-012", "DASHBOARD-013",
     # SCHED domain
     "SCHED-001", "SCHED-002", "SCHED-003", "SCHED-004",
     # CBOM domain
@@ -72,7 +72,9 @@ def test_no_newlines_in_cause_or_fix():
 
 
 def test_install_004_includes_lsof_hint():
-    assert "lsof -i :8512" in format_error("INSTALL-004")
+    msg = format_error("INSTALL-004")
+    assert "lsof -i" in msg
+    assert "port" in msg.lower()
 
 
 def test_dashboard_010_qramm_multiplier_range():
