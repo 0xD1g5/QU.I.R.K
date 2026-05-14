@@ -17,7 +17,11 @@ from typing import Tuple
 from rich.console import Console
 from rich.table import Table
 
+from quirk.errors import format_error
+
 _PYTHON_MIN = (3, 11)
+
+_BINARY_TO_CODE = {"nmap": "INSTALL-006", "syft": "INSTALL-007", "semgrep": "INSTALL-008"}
 _DB_DEFAULT_PATH = "./quirk.db"
 _CONFIG_DEFAULT_PATH = "./config.yaml"
 _DASHBOARD_PORT = 8512
@@ -28,14 +32,15 @@ def _check_python_version() -> Tuple[bool, str]:
     ok = sys.version_info >= _PYTHON_MIN
     if ok:
         return True, f"[green][✓][/green] Python {sys.version_info.major}.{sys.version_info.minor}"
-    return False, f"[red][✗] Python {sys.version_info.major}.{sys.version_info.minor} < {_PYTHON_MIN[0]}.{_PYTHON_MIN[1]}[/red]"
+    return False, f"[red][✗] {format_error('INSTALL-005')}[/red]"
 
 
 def _check_binary(name: str) -> Tuple[bool, str]:
     path = shutil.which(name)
     if path:
         return True, f"[green][✓][/green] {path}"
-    return False, f"[red][✗] {name} not found in PATH[/red]"
+    code = _BINARY_TO_CODE.get(name, "INSTALL-006")
+    return False, f"[red][✗] {format_error(code)}[/red]"
 
 
 def _check_compliance_freshness() -> Tuple[bool, str]:
@@ -55,7 +60,7 @@ def _check_compliance_freshness() -> Tuple[bool, str]:
             if (today - lv).days > STALENESS_THRESHOLD_DAYS:
                 stale.append(f"{title}/{entry.get('framework', '?')}")
     if stale:
-        return False, f"[red][✗] {len(stale)} compliance entries stale (>{STALENESS_THRESHOLD_DAYS} days)[/red]"
+        return False, f"[red][✗] {format_error('INSTALL-009')}[/red]"
     return True, "[green][✓][/green] all frameworks within freshness window"
 
 
@@ -77,8 +82,8 @@ def _check_db(db_path: str = _DB_DEFAULT_PATH) -> Tuple[bool, str]:
         finally:
             conn.close()
         return True, f"[green][✓][/green] {db_path} reachable"
-    except Exception as exc:
-        return False, f"[red][✗] cannot open {db_path}: {exc}[/red]"
+    except Exception:
+        return False, f"[red][✗] {format_error('INSTALL-003')}[/red]"
 
 
 def _check_config(config_path: str = _CONFIG_DEFAULT_PATH) -> Tuple[bool, str, str]:
@@ -96,8 +101,8 @@ def _check_config(config_path: str = _CONFIG_DEFAULT_PATH) -> Tuple[bool, str, s
         with open(config_path, "r") as fh:
             yaml.safe_load(fh)
         return False, None, f"[green][✓][/green] {config_path} parses cleanly"
-    except Exception as exc:
-        return True, None, f"[red][✗] {config_path} malformed: {exc}[/red]"
+    except Exception:
+        return True, None, f"[red][✗] {format_error('INSTALL-010')}[/red]"
 
 
 def _check_network() -> Tuple[bool, str]:
