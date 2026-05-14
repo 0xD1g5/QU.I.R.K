@@ -183,6 +183,20 @@ class RoadmapData(BaseModel):
 
 # ---- Scan Summary ----
 
+class PartialFailureEntry(BaseModel):
+    """Phase 67 RESUME-02: one entry per scanner that had a partial failure.
+
+    Sourced from scan_checkpoints.error_summary JSON array.
+    stage: inventory|tls|ssh|api|identity|data_at_rest|broker_email|reports
+    error_category: exception|missing_extra
+    """
+    stage: str
+    scanner: str
+    error_category: str
+    error_message: str
+    endpoint_count: int = 0
+
+
 class ScanMeta(BaseModel):
     scan_id: str          # ISO timestamp of most recent scan
     scanned_at: Optional[datetime] = None
@@ -201,6 +215,7 @@ class ScanLatestResponse(BaseModel):
     identity_findings: List[IdentityFinding] = []
     motion_findings: List[MotionFinding] = []   # NEW — Phase 36 DASH-05
     dar_findings: List[DarFinding] = []          # Phase 39 GAP-04
+    partial_failures: List[PartialFailureEntry] = []  # Phase 67 RESUME-02
 
 
 class ScanSession(BaseModel):
