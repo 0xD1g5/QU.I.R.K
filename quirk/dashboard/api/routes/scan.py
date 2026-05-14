@@ -784,6 +784,8 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
 
     sessions: list[ScanSession] = []
     for ts_str, cnt in rows:
+        if ts_str is None:
+            continue
         try:
             ts = datetime.fromisoformat(ts_str)
         except ValueError:
