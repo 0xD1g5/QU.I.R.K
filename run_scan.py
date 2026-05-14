@@ -458,6 +458,12 @@ def main():
             return
         # Future: other `quirk qramm <action>` subcommands route here.
 
+    # --- errors subcommand: intercept before scan argparse (Phase 68 UX-01) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "errors":
+        from quirk.cli.errors_cmd import run_errors
+        run_errors(_sys.argv[2:])
+        return
+
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
