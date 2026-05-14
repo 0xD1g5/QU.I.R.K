@@ -213,3 +213,24 @@ class ScanJob(Base):
     completed_at = Column(DateTime, nullable=True)
     scan_run_id = Column(String, nullable=True)           # CryptoEndpoint scan_run_id on completion
     error_message = Column(Text, nullable=True)
+
+
+class ScanCheckpoint(Base):
+    """Phase 67 RESUME-01: per-stage checkpoint for resumable scans.
+
+    One row per stage per scan_run_id. Stage completes → row written.
+    Resume reads completed rows to skip already-finished stages.
+    status values: completed | partial | failed | skipped
+    stage values:  inventory | tls | ssh | api | identity |
+                   data_at_rest | broker_email | reports
+    """
+    __tablename__ = "scan_checkpoints"
+
+    checkpoint_id   = Column(Integer, primary_key=True, autoincrement=True)
+    scan_run_id     = Column(String, nullable=False, index=True)
+    stage           = Column(String(32), nullable=False)
+    status          = Column(String(16), nullable=False)
+    completed_at    = Column(DateTime, nullable=False)
+    endpoint_count  = Column(Integer, nullable=False, default=0)
+    partial_failure = Column(Boolean, nullable=False, default=False)
+    error_summary   = Column(Text, nullable=True)   # JSON array or NULL
