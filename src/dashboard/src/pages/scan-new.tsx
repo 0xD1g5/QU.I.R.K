@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { fetchApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -11,9 +11,15 @@ import type { ScanSubmitRequest } from "@/types/api"
 
 export function ScanNewPage() {
   const navigate = useNavigate()
-  const [targets, setTargets] = useState("")
-  const [profile, setProfile] = useState<ScanSubmitRequest["profile"]>("standard")
-  const [calibration, setCalibration] = useState<ScanSubmitRequest["calibration"]>("balanced")
+  const [searchParams] = useSearchParams()
+  const isReconstructed = searchParams.get("reconstructed") === "1"
+  const [targets, setTargets] = useState(() => searchParams.get("target") ?? "")
+  const [profile, setProfile] = useState<ScanSubmitRequest["profile"]>(
+    () => (searchParams.get("profile") as ScanSubmitRequest["profile"]) ?? "standard",
+  )
+  const [calibration, setCalibration] = useState<ScanSubmitRequest["calibration"]>(
+    () => (searchParams.get("calibration") as ScanSubmitRequest["calibration"]) ?? "balanced",
+  )
   const [enableNmap, setEnableNmap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -76,6 +82,20 @@ export function ScanNewPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Targets field */}
         <div className="space-y-2">
+          {isReconstructed && (
+            <div
+              role="status"
+              className="rounded-md border px-4 py-3 text-sm mb-2"
+              style={{
+                backgroundColor: "hsl(var(--ds-high-dim, 30 80% 50% / 0.10))",
+                borderColor: "hsl(var(--ds-high-bdr, 30 80% 50% / 0.30))",
+                color: "hsl(var(--ds-high, 30 80% 50%))",
+              }}
+            >
+              <p className="font-semibold">Targets reconstructed from scan results</p>
+              <p className="text-xs mt-1">This clone was launched from the CLI. Review the target list before submitting.</p>
+            </div>
+          )}
           <Label htmlFor="targets">Targets</Label>
           <textarea
             id="targets"
