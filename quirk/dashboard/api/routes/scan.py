@@ -14,8 +14,13 @@ from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.schemas import (
     CbomComponent,
     CertItem,
+    CompareEndpoint,
+    CompareFinding,
+    CompareResponse,
+    CompareScanSummary,
     ConfidenceData,
     DarFinding,
+    FindingCounts,
     FindingItem,
     IdentityFinding,
     MotionFinding,
@@ -27,8 +32,12 @@ from quirk.dashboard.api.schemas import (
     ScanSession,
     ScoreData,
     SubScores,
+    SubscoreDelta,
 )
-from quirk.models import CryptoEndpoint
+from quirk.models import CryptoEndpoint, ScanJob
+from quirk.intelligence.evidence import build_evidence_summary
+from quirk.intelligence.scoring import compute_readiness_score
+from quirk.intelligence.trends import _count_by_bucket
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 
 router = APIRouter(dependencies=[Depends(require_auth)])
@@ -734,9 +743,32 @@ def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
     return RoadmapData(nodes=nodes, edges=edges)
 
 
+def _fetch_session_endpoints_1s(db: Session, ts: datetime) -> list[CryptoEndpoint]:
+    """Fetch CryptoEndpoint rows for a session using a 1-second window.
+
+    list_scans() and compare_scans() group by second-precision timestamps,
+    so we cannot reuse trends._fetch_session_endpoints (1ms window — incompatible
+    with second-precision ts_sec strings from the GROUP BY query).
+    """
+    return (
+        db.query(CryptoEndpoint)
+        .filter(
+            CryptoEndpoint.scanned_at >= ts,
+            CryptoEndpoint.scanned_at < ts + timedelta(seconds=1),
+            CryptoEndpoint.scanned_at.isnot(None),
+        )
+        .all()
+    )
+
+
 @router.get("/scans", response_model=List[ScanSession])
 def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
-    """GET /api/scans — returns the last 10 distinct scan sessions, newest first.
+    """GET /api/scans — returns ALL distinct scan sessions, newest first.
+
+    Phase 66 D-01: LIMIT 10 removed — return every session.
+    Phase 66 D-02: per-session score computed inline via evidence pipeline.
+    Phase 66 D-03: finding severity counts via _count_by_bucket.
+    Phase 66 D-04: clone data from ScanJob join; fallback to host reconstruction.
 
     Groups by second-truncated timestamp because each CryptoEndpoint row is
     written with its own microsecond-precision scanned_at. Grouping by the raw
@@ -747,17 +779,69 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
         db.query(ts_sec, func.count(CryptoEndpoint.id).label("cnt"))
         .group_by("ts_sec")
         .order_by(ts_sec.desc())
-        .limit(10)
         .all()
-    )
-    return [
-        ScanSession(
-            scan_id=ts_str,
-            scanned_at=datetime.fromisoformat(ts_str),
-            total_endpoints=cnt,
+    )  # NO LIMIT — per D-01
+
+    sessions: list[ScanSession] = []
+    for ts_str, cnt in rows:
+        try:
+            ts = datetime.fromisoformat(ts_str)
+        except ValueError:
+            continue
+
+        eps = _fetch_session_endpoints_1s(db, ts)
+
+        # Per-session score (D-02)
+        score = 0
+        if eps:
+            evidence = build_evidence_summary(eps)
+            score_dict = compute_readiness_score(evidence)
+            score = int(score_dict["score"])
+
+        # Finding counts (D-03)
+        keys = [
+            (ep.host, ep.port, ep.protocol, ep.severity)
+            for ep in eps
+            if ep.scan_error is None and ep.severity
+        ]
+        counts = _count_by_bucket(keys)
+
+        # Clone data (D-04) — try ScanJob join first, fall back to host reconstruction
+        # Use ts.isoformat()[:19] (T-separator) because scan_run_id is stored via
+        # datetime.isoformat() — ts_str uses a space separator from strftime (Pitfall 2).
+        ts_prefix = ts.isoformat()[:19]  # e.g. "2026-05-14T11:51:54"
+        job = (
+            db.query(ScanJob)
+            .filter(ScanJob.scan_run_id.like(f"{ts_prefix}%"))
+            .first()
         )
-        for ts_str, cnt in rows
-    ]
+        if job is not None:
+            target = job.target
+            profile = job.profile
+            calibration = job.calibration
+        else:
+            hosts = sorted({ep.host for ep in eps if ep.host})
+            target = ", ".join(hosts) if hosts else None
+            profile = None
+            calibration = None
+
+        sessions.append(
+            ScanSession(
+                scan_id=ts_str,
+                scanned_at=ts,
+                total_endpoints=cnt,
+                score=score,
+                profile=profile,
+                calibration=calibration,
+                target=target,
+                finding_counts=FindingCounts(
+                    high=counts.get("high", 0),
+                    medium=counts.get("medium", 0),
+                    low=counts.get("low", 0),
+                ),
+            )
+        )
+    return sessions
 
 
 def _cert_expiry_key(c: "CertItem") -> datetime:
@@ -947,3 +1031,102 @@ def _cert_quantum_safety(algorithm: Optional[str]) -> Optional[str]:
         return _QS_DISPLAY.get(raw, "Unknown")
     except Exception:
         return "Unknown"
+
+
+@router.get("/compare", response_model=CompareResponse)
+def compare_scans(
+    a: str = Query(..., description="scan_id of scan A (newer)"),
+    b: str = Query(..., description="scan_id of scan B (baseline)"),
+    db: Session = Depends(get_db),
+) -> CompareResponse:
+    """GET /api/compare?a=X&b=Y — return a structured diff between two scan sessions.
+
+    Phase 66 D-07: score delta, subscore deltas, added/removed findings,
+    endpoint diff (only_in_a, only_in_b, changed_endpoints).
+
+    Auth: inherited from router-level require_auth (do NOT add per-route — Pitfall 4).
+    Error handling:
+      - a == b  → HTTP 400 (Cannot compare a scan to itself.)
+      - malformed scan_id → HTTP 400 (Invalid scan_id format.)
+      - session not found  → HTTP 404
+    """
+    if a == b:
+        raise HTTPException(status_code=400, detail="Cannot compare a scan to itself.")
+    try:
+        ts_a = datetime.fromisoformat(a)
+        ts_b = datetime.fromisoformat(b)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid scan_id format.")
+
+    eps_a = _fetch_session_endpoints_1s(db, ts_a)
+    eps_b = _fetch_session_endpoints_1s(db, ts_b)
+    if not eps_a:
+        raise HTTPException(status_code=404, detail=f"No scan found: {a!r}")
+    if not eps_b:
+        raise HTTPException(status_code=404, detail=f"No scan found: {b!r}")
+
+    # Scores + subscores (D-07)
+    # compute_readiness_score returns subscores as a plain dict — use dict access
+    evidence_a = build_evidence_summary(eps_a)
+    evidence_b = build_evidence_summary(eps_b)
+    sd_a = compute_readiness_score(evidence_a)
+    sd_b = compute_readiness_score(evidence_b)
+    score_a = int(sd_a["score"])
+    score_b = int(sd_b["score"])
+    sub_a = sd_a["subscores"]  # dict: {"hygiene": int, "modern_tls": int, ...}
+    sub_b = sd_b["subscores"]
+
+    subscore_deltas = SubscoreDelta(
+        hygiene=int(sub_a.get("hygiene", 0)) - int(sub_b.get("hygiene", 0)),
+        modern_tls=int(sub_a.get("modern_tls", 0)) - int(sub_b.get("modern_tls", 0)),
+        identity_trust=int(sub_a.get("identity_trust", 0)) - int(sub_b.get("identity_trust", 0)),
+        agility_signals=int(sub_a.get("agility_signals", 0)) - int(sub_b.get("agility_signals", 0)),
+        data_at_rest=int(sub_a.get("data_at_rest", 0)) - int(sub_b.get("data_at_rest", 0)),
+        data_in_motion=int(sub_a.get("data_in_motion", 0)) - int(sub_b.get("data_in_motion", 0)),
+    )
+
+    # Finding diff: (host, protocol, severity) composite key (D-07, Pattern 3)
+    def _ep_key(ep: CryptoEndpoint) -> tuple[str, str, str] | None:
+        if ep.scan_error or not ep.severity:
+            return None
+        return (ep.host or "", ep.protocol or "", ep.severity or "")
+
+    def _key_to_finding(key: tuple[str, str, str]) -> CompareFinding:
+        host, proto, sev = key
+        return CompareFinding(host=host, protocol=proto or None, severity=sev)
+
+    keys_a = {k for k in (_ep_key(ep) for ep in eps_a) if k is not None}
+    keys_b = {k for k in (_ep_key(ep) for ep in eps_b) if k is not None}
+    added_findings = [_key_to_finding(k) for k in sorted(keys_a - keys_b)]
+    removed_findings = [_key_to_finding(k) for k in sorted(keys_b - keys_a)]
+
+    # Endpoint diff: host sets + posture comparison
+    hosts_a: dict[str, CryptoEndpoint] = {ep.host: ep for ep in eps_a if ep.host}
+    hosts_b: dict[str, CryptoEndpoint] = {ep.host: ep for ep in eps_b if ep.host}
+    only_in_a = sorted(set(hosts_a) - set(hosts_b))
+    only_in_b = sorted(set(hosts_b) - set(hosts_a))
+    common = sorted(set(hosts_a) & set(hosts_b))
+    changed_endpoints: list[CompareEndpoint] = []
+    for host in common:
+        ea, eb = hosts_a[host], hosts_b[host]
+        reasons = []
+        if ea.tls_version != eb.tls_version:
+            reasons.append("tls_version changed")
+        if ea.cipher_suite != eb.cipher_suite:
+            reasons.append("cipher_suite changed")
+        if ea.cert_pubkey_alg != eb.cert_pubkey_alg:
+            reasons.append("cert_pubkey_alg changed")
+        if reasons:
+            changed_endpoints.append(CompareEndpoint(host=host, reason="; ".join(reasons)))
+
+    return CompareResponse(
+        scan_a=CompareScanSummary(scan_id=a, scanned_at=ts_a, score=score_a),
+        scan_b=CompareScanSummary(scan_id=b, scanned_at=ts_b, score=score_b),
+        score_delta=score_a - score_b,
+        subscore_deltas=subscore_deltas,
+        added_findings=added_findings,
+        removed_findings=removed_findings,
+        endpoints_only_in_a=only_in_a,
+        endpoints_only_in_b=only_in_b,
+        changed_endpoints=changed_endpoints,
+    )
