@@ -1387,8 +1387,8 @@ Plans:
   1. A `/scans` route lists every scan with date, target, profile, overall score, finding counts by severity, and a "Clone configuration" button that pre-fills `/scan/new` with the source scan's exact configuration
   2. Selecting two scans via "Compare" mode renders a diff view showing readiness score delta, per-pillar subscore deltas, added findings (with severity badges), removed findings, and changed endpoint posture (e.g., a host's cipher list changed); the diff handles scans with disjoint target sets gracefully
 **Plans**: 3 plans
-  - [ ] 66-01-PLAN.md — Wave 0 pytest scaffold (9 failing tests for /api/scans + /api/compare contracts)
-  - [ ] 66-02-PLAN.md — Backend: extend /api/scans (no LIMIT, enriched fields, clone data) + new /api/compare endpoint
+  - [x] 66-01-PLAN.md — Wave 0 pytest scaffold (9 failing tests for /api/scans + /api/compare contracts)
+  - [x] 66-02-PLAN.md — Backend: extend /api/scans (no LIMIT, enriched fields, clone data) + new /api/compare endpoint
   - [ ] 66-03-PLAN.md — Frontend: types + useCompareData hook + /scans + /compare pages + scan-new clone preload + sidebar + build
 **UI hint**: yes
 
@@ -1427,6 +1427,6 @@ Plans:
 | 64. Trend Analysis Foundation | B | 3/3 | Complete   | 2026-05-10 |
 | 64.1. Audit Residual Blockers | B | 2/2 | Complete    | 2026-05-11 |
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
-| 66. Dashboard Scan History + Clone/Compare | B | 0/TBD | Blocked on Wave A + Phase 65 | - |
+| 66. Dashboard Scan History + Clone/Compare | B | 2/3 | In Progress|  |
 | 67. Resumable / Partial-Failure Scans | B | 0/TBD | Blocked on Wave A | - |
 | 68. Operator Error-Message Pass | B | 0/TBD | Blocked on Wave A | - |
