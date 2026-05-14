@@ -6,6 +6,7 @@ progress is observational only.
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -66,5 +67,41 @@ def mark_job_failed(db_path: str, job_id: str, error_message: str) -> None:
                 row.error_message = error_message[:4096]  # cap to prevent oversize
                 row.completed_at = _utcnow_naive()
                 db.commit()
+    except Exception:
+        pass
+
+
+def write_scan_checkpoint(
+    db_path: str,
+    scan_run_id: str,
+    stage: str,
+    status: str,
+    endpoint_count: int = 0,
+    partial_failure: bool = False,
+    error_summary: Optional[list] = None,
+) -> None:
+    """Phase 67 RESUME-01: write a scan_checkpoints row after a stage completes.
+
+    Silent no-op on any failure — checkpoint writes must NEVER crash the scan.
+    error_summary: list of dicts serialized to JSON, or None.
+    """
+    try:
+        import json as _json
+        from quirk.models import ScanCheckpoint
+        error_json: Optional[str] = None
+        if error_summary:
+            error_json = _json.dumps(error_summary, default=str)
+        row = ScanCheckpoint(
+            scan_run_id=scan_run_id,
+            stage=stage,
+            status=status,
+            completed_at=_utcnow_naive(),
+            endpoint_count=endpoint_count,
+            partial_failure=partial_failure,
+            error_summary=error_json,
+        )
+        with _open_session(db_path) as db:
+            db.add(row)
+            db.commit()
     except Exception:
         pass
