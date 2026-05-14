@@ -16,14 +16,11 @@ import inspect
 
 
 def test_missing_extra_advisory_stderr() -> None:
-    """ROBUST-01 / D-12: stderr advisory format
-    ``[advisory] scanner=<name> extra=<group> not installed -- run \
-`pip install quirk[<group>]` to enable``.
-    """
+    """ROBUST-01 / D-12 / Phase 68 UX-02: stderr advisory emits QRK format via format_error."""
     import run_scan
     src = inspect.getsource(run_scan)
-    assert "[advisory] scanner=" in src, "canonical advisory prefix missing"
-    assert "pip install quirk[" in src, "pip install quirk[<group>] hint missing"
+    assert "format_error" in src, "run_scan.py must import/call format_error"
+    assert "INSTALL-001" in src, "run_scan.py must reference QRK-INSTALL-001 for missing-extra advisory"
     assert (
         "scan_error_category=\"missing_extra\"" in src
         or "scan_error_category='missing_extra'" in src
@@ -42,7 +39,7 @@ def test_missing_extra_exit_code_zero() -> None:
     src = inspect.getsource(run_scan)
     assert "missing_extra" in src
     # No sys.exit on the advisory path — advisories print to stderr only.
-    advisory_block_start = src.find("[advisory] scanner=")
+    advisory_block_start = src.find("format_error(\"INSTALL-001\")")
     assert advisory_block_start != -1
     # Within ~500 chars of the advisory print there must NOT be a sys.exit(non-zero)
     window = src[advisory_block_start: advisory_block_start + 500]
