@@ -1430,7 +1430,7 @@ Plans:
 - [x] 68-04-PLAN.md — Migrate dashboard error paths (middleware, routes, server.py port-conflict) + update affected API tests
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 68-05-PLAN.md — Add install-day smoke tests + docs/error-codes.md freshness CI gate
+- [x] 68-05-PLAN.md — Add install-day smoke tests + docs/error-codes.md freshness CI gate
 
 ## Progress — v4.8 Phases
 
@@ -1448,4 +1448,4 @@ Plans:
 | 65. Dashboard-Initiated Scan | B | 5/6 | In Progress|  |
 | 66. Dashboard Scan History + Clone/Compare | B | 3/3 | Complete    | 2026-05-14 |
 | 67. Resumable / Partial-Failure Scans | B | 5/5 | Complete    | 2026-05-14 |
-| 68. Operator Error-Message Pass | B | 4/5 | In Progress|  |
+| 68. Operator Error-Message Pass | B | 5/5 | Complete   | 2026-05-14 |
