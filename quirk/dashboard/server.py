@@ -5,6 +5,8 @@ import os
 import sys
 import webbrowser
 
+from quirk.errors import format_error
+
 
 def serve(port: int = 8512, host: str = "127.0.0.1", no_open: bool = False) -> None:
     """Start the QU.I.R.K. dashboard server.
@@ -43,11 +45,6 @@ def serve(port: int = 8512, host: str = "127.0.0.1", no_open: bool = False) -> N
         )
     except OSError as exc:
         if "address already in use" in str(exc).lower():
-            print(
-                f"[QRK-INSTALL-004] Port {port} is already in use. "
-                f"Fix: Run `lsof -i :{port}` to find the conflicting process, "
-                "or use `quirk serve --port <other>` to bind a different port.",
-                file=sys.stderr,
-            )
+            print(format_error("INSTALL-004").replace("<port>", str(port)), file=sys.stderr)
             sys.exit(1)
         raise
