@@ -121,7 +121,7 @@ def test_mutating_route_accepts_valid_token(monkeypatch):
 
 
 def test_invalid_token_returns_401(monkeypatch):
-    """Wrong bearer token returns 401 with detail 'Authentication required'."""
+    """Wrong bearer token returns 401 with QRK-DASHBOARD-001 error code."""
     monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
     _, tc = _app_with_db()
     response = tc.post(
@@ -133,7 +133,7 @@ def test_invalid_token_returns_401(monkeypatch):
         },
     )
     assert response.status_code == 401
-    assert response.json()["detail"] == "Authentication required"
+    assert "QRK-DASHBOARD-001" in response.json()["detail"]
 
 
 def test_auth_disabled_when_no_token_configured(client):
@@ -194,7 +194,7 @@ def test_csrf_body_content(monkeypatch):
         headers={"Authorization": "Bearer test-token"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "Missing CSRF header: X-Quirk-Request"
+    assert "QRK-DASHBOARD-002" in response.json()["detail"]
 
 
 # --------------------------------------------------------------------------
