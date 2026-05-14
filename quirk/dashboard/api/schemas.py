@@ -207,6 +207,12 @@ class ScanSession(BaseModel):
     scan_id: str          # ISO timestamp string (matches ScanMeta.scan_id)
     scanned_at: datetime
     total_endpoints: int
+    # Phase 66 UI-HIST-01 additions — all Optional/default for backward compat with ScanSelector
+    score: int = 0
+    profile: Optional[str] = None
+    calibration: Optional[str] = None
+    target: Optional[str] = None
+    finding_counts: "FindingCounts" = Field(default_factory=lambda: FindingCounts())
 
 
 # Trend Analysis (Phase 31)
@@ -247,6 +253,47 @@ class FindingCounts(BaseModel):
     high: int = 0
     medium: int = 0
     low: int = 0
+
+
+# Phase 66 UI-HIST-02: compare endpoint schemas
+
+class CompareScanSummary(BaseModel):
+    scan_id: str
+    scanned_at: datetime
+    score: int
+
+
+class SubscoreDelta(BaseModel):
+    hygiene: int = 0
+    modern_tls: int = 0
+    identity_trust: int = 0
+    agility_signals: int = 0
+    data_at_rest: int = 0
+    data_in_motion: int = 0
+
+
+class CompareFinding(BaseModel):
+    host: str
+    protocol: Optional[str] = None
+    severity: str
+    description: Optional[str] = None
+
+
+class CompareEndpoint(BaseModel):
+    host: str
+    reason: Optional[str] = None
+
+
+class CompareResponse(BaseModel):
+    scan_a: CompareScanSummary
+    scan_b: CompareScanSummary
+    score_delta: int
+    subscore_deltas: SubscoreDelta
+    added_findings: List[CompareFinding] = []
+    removed_findings: List[CompareFinding] = []
+    endpoints_only_in_a: List[str] = []
+    endpoints_only_in_b: List[str] = []
+    changed_endpoints: List[CompareEndpoint] = []
 
 
 class TrendSessionPoint(BaseModel):
