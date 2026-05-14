@@ -1419,10 +1419,17 @@ Plans:
   2. First-run install-day errors (missing extras, missing nmap binary, port-conflict on `quirk serve`, unreadable `quirk.db`) render with the same one-line-cause + one-line-fix format and reference a specific `QRK-INSTALL-NNN` code; a smoke test exercises each scenario on a fresh venv and asserts the format
 **Plans**: 5 plans
 Plans:
+**Wave 1**
 - [ ] 68-01-PLAN.md — Create quirk/errors.py canonical error registry + unit tests
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 68-02-PLAN.md — Build quirk errors CLI command + wire run_scan.py argparse + generate docs/error-codes.md
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 68-03-PLAN.md — Migrate CLI error paths (run_scan inline, doctor, schedule, optional_extra, kerberos) + update test_scan_robustness
 - [ ] 68-04-PLAN.md — Migrate dashboard error paths (middleware, routes, server.py port-conflict) + update affected API tests
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 68-05-PLAN.md — Add install-day smoke tests + docs/error-codes.md freshness CI gate
 
 ## Progress — v4.8 Phases
