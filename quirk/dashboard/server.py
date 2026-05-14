@@ -5,6 +5,8 @@ import os
 import sys
 import webbrowser
 
+from quirk.errors import format_error
+
 
 def serve(port: int = 8512, host: str = "127.0.0.1", no_open: bool = False) -> None:
     """Start the QU.I.R.K. dashboard server.
@@ -17,10 +19,7 @@ def serve(port: int = 8512, host: str = "127.0.0.1", no_open: bool = False) -> N
     try:
         import uvicorn
     except ImportError:
-        print(
-            "ERROR: uvicorn not installed. Run: pip install 'quirk[dashboard]'",
-            file=sys.stderr,
-        )
+        print(format_error("INSTALL-002"), file=sys.stderr)
         sys.exit(1)
 
     url = f"http://{host}:{port}"
@@ -37,9 +36,15 @@ def serve(port: int = 8512, host: str = "127.0.0.1", no_open: bool = False) -> N
         threading.Thread(target=_open, daemon=True).start()
 
     os.environ["QUIRK_SERVE_PORT"] = str(port)
-    uvicorn.run(
-        "quirk.dashboard.api.app:app",
-        host=host,
-        port=port,
-        log_level="info",
-    )
+    try:
+        uvicorn.run(
+            "quirk.dashboard.api.app:app",
+            host=host,
+            port=port,
+            log_level="info",
+        )
+    except OSError as exc:
+        if "address already in use" in str(exc).lower():
+            print(format_error("INSTALL-004"), file=sys.stderr)
+            sys.exit(1)
+        raise
