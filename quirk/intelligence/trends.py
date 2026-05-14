@@ -3,10 +3,9 @@
 compute_trend_report() is a pure function (D-12: no datetime.now() inside).
 The caller supplies current_ts and previous_ts as parameters.
 
-Session grouping uses func.strftime second-truncated grouping to match scan.py:457,
-because each CryptoEndpoint row carries microsecond-precision scanned_at values
-from a shared session_start timestamp. Grouping by the truncated second produces
-one logical session per run.
+Session grouping uses func.strftime microsecond-precision grouping (%Y-%m-%d %H:%M:%f)
+so two scans started within the same second appear as distinct sessions (CR-05).
+_fetch_session_endpoints uses a 1-microsecond window to match exactly one session.
 
 NULL scanned_at rows (D-13): v4.2-era endpoints may have scanned_at IS NULL.
 These are excluded from session grouping AND from per-session endpoint fetches by
@@ -82,16 +81,19 @@ class TrendReport:
 # ---------------------------------------------------------------------------
 
 def _fetch_session_endpoints(db: Session, target_ts: datetime) -> List[CryptoEndpoint]:
-    """Fetch all endpoints in the ±1 second window around target_ts.
+    """Fetch all endpoints in the 1-millisecond window for a canonical scanned_at timestamp.
 
-    Uses the verbatim pattern from scan.py:497-507. Excludes NULL scanned_at
-    rows (D-13) via explicit filter.
+    SQLite's strftime('%f') produces 3-digit millisecond precision, not microseconds.
+    target_ts is always millisecond-aligned (microseconds divisible by 1000), so the
+    correct window is 1ms — wide enough to capture any stored sub-ms components while
+    still preventing two scans 100ms apart from merging (CR-05 fix). Excludes NULL
+    scanned_at rows (D-13) via explicit filter.
     """
     endpoints = (
         db.query(CryptoEndpoint)
         .filter(
             CryptoEndpoint.scanned_at >= target_ts,
-            CryptoEndpoint.scanned_at < target_ts + timedelta(seconds=1),
+            CryptoEndpoint.scanned_at < target_ts + timedelta(milliseconds=1),
             CryptoEndpoint.scanned_at.isnot(None),
         )
         .all()
@@ -237,12 +239,13 @@ def compute_trend_report(
     current_keys = {
         (ep.host, ep.port, ep.protocol, ep.severity)
         for ep in current_eps
-        if ep.scan_error is None
+        if ep.scan_error is None and ep.severity is not None
     }
     previous_keys = {
         (ep.host, ep.port, ep.protocol, ep.severity)
         for ep in previous_eps
         if ep.scan_error is None
+        and ep.severity is not None
         and (ep.host, ep.port, ep.protocol) not in current_error_hosts
     }
 

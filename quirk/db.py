@@ -225,6 +225,25 @@ def _ensure_qramm_tables(engine) -> None:
     Base.metadata.create_all(engine, checkfirst=True)
 
 
+def _ensure_scheduled_tables(engine) -> None:
+    """Phase 63 SCHED-01: create scheduled_scans and scheduled_runs tables if absent.
+
+    Uses Base.metadata.create_all with checkfirst=True. ScheduledScan and
+    ScheduledRun are registered on Base.metadata via import of quirk.models.
+    New tables only — not new columns — so create_all is correct (not ALTER TABLE).
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
+def _ensure_scan_jobs_table(engine) -> None:
+    """Phase 65 UI-SCAN-01: create scan_jobs table if absent (idempotent).
+
+    ScanJob is registered on Base.metadata via import of quirk.models.
+    Uses checkfirst=True per the same pattern as _ensure_scheduled_tables.
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -240,8 +259,8 @@ def init_db(db_path: str) -> Engine:
     with engine.connect() as conn:
         conn.commit()
 
-    # Create schema
-    Base.metadata.create_all(engine)
+    # Create schema (checkfirst=True prevents "table already exists" on restart)
+    Base.metadata.create_all(engine, checkfirst=True)
     _ensure_identity_columns(engine)  # v4.2: add identity columns if missing
     _ensure_gcp_columns(engine)  # v4.3: add GCP columns if missing
     _ensure_v43_columns(engine)  # v4.3: add data-at-rest columns if missing
@@ -251,6 +270,8 @@ def init_db(db_path: str) -> Engine:
     _ensure_phase46_columns(engine)     # Phase 46 — TLS-FIND-06 chain_verified
     _ensure_qramm_tables(engine)         # Phase 51 — QRAMM-01
     _ensure_phase54_qramm_columns(engine)  # Phase 54 — evidence_note column
+    _ensure_scheduled_tables(engine)     # Phase 63 — SCHED-01
+    _ensure_scan_jobs_table(engine)      # Phase 65 — UI-SCAN-01
     return engine
 
 

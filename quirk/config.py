@@ -1,4 +1,5 @@
 import dataclasses
+import os
 import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -280,6 +281,8 @@ class SecurityCfg:
     allow_internal_targets: bool = False
     allow_cleartext_broker_probe: bool = False
     allow_insecure_jwks: bool = False
+    api_token: str = ""  # Phase 58 / CR-03: bearer token for dashboard API; "" = auth disabled (D-02)
+    cors_origins: list = dataclasses.field(default_factory=lambda: ["http://127.0.0.1", "http://localhost"])  # Phase 58 / HARDEN-API-02: CORS allowlist; overridden by QUIRK_CORS_ORIGINS env var (comma-separated)
 
 
 @dataclass(frozen=True)
@@ -408,6 +411,8 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         allow_internal_targets=bool(security_raw.get("allow_internal_targets", False)),
         allow_cleartext_broker_probe=bool(security_raw.get("allow_cleartext_broker_probe", False)),
         allow_insecure_jwks=bool(security_raw.get("allow_insecure_jwks", False)),
+        api_token=str(security_raw.get("api_token", "") or ""),
+        cors_origins=list(security_raw.get("cors_origins") or []),
     )
 
     # Phase 57 / D-05: per-host broker credentials (pass_env is env-var name, never inline password)
@@ -437,3 +442,19 @@ def load_config(path: str) -> AppConfig:
     with open(path, "r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
     return config_from_dict(raw)
+
+
+def get_cors_origins() -> list:
+    """Return CORS allowlist: QUIRK_CORS_ORIGINS env var (comma-separated) wins over YAML.
+
+    Default when neither is set: ["http://127.0.0.1", "http://localhost"].
+    """
+    if env_val := os.environ.get("QUIRK_CORS_ORIGINS"):
+        return [o.strip() for o in env_val.split(",") if o.strip()]
+    try:
+        cfg = load_config()
+        if cfg.security.cors_origins:
+            return list(cfg.security.cors_origins)
+    except Exception:
+        pass
+    return ["http://127.0.0.1", "http://localhost"]
