@@ -208,6 +208,131 @@ def _collect_stage_partial_failures(
     return stage_failures
 
 
+def _resolve_db_path(args) -> str | None:
+    """Phase 67 RESUME-01: resolve db_path for pre-scan commands (list-resumable)."""
+    if getattr(args, "db_path", None):
+        return args.db_path
+    config_path = getattr(args, "config", None)
+    if config_path:
+        try:
+            from quirk.config import load_config
+            cfg = load_config(config_path)
+            return cfg.output.db_path
+        except Exception:
+            pass
+    # Fall back to default path used by config wizard
+    return "./quirk.db"
+
+
+def _handle_list_resumable(args) -> None:
+    """Phase 67 RESUME-01: print rich table of incomplete scan runs.
+
+    A scan run is "resumable" if it has scan_checkpoints rows but does NOT
+    have a 'reports' stage with status='completed'. Joins scan_jobs to
+    recover the original target if available.
+
+    Output columns: Scan ID | Last Stage | Status | Age | Target
+    Age > 72h: row highlighted yellow.
+    Empty result: plain text 'No resumable scans found.'
+    """
+    from rich.table import Table
+    from rich.console import Console
+    from quirk.models import ScanCheckpoint, ScanJob
+    from quirk.db import get_session, init_db
+    from datetime import datetime, timezone
+
+    db_path = getattr(args, "db_path", None) or _resolve_db_path(args)
+    if not db_path:
+        print("No database path available. Use --db-path or --config.", file=sys.stderr)
+        return
+
+    try:
+        init_db(db_path)
+    except Exception as exc:
+        print(f"[error] cannot open database: {exc}", file=sys.stderr)
+        return
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    STALE_HOURS = 72
+
+    try:
+        with get_session(db_path) as db:
+            # Find scan_run_ids with checkpoints but no completed 'reports' stage
+            all_run_ids = [r[0] for r in db.query(ScanCheckpoint.scan_run_id).distinct().all()]
+            # scan_run_ids with a completed reports stage
+            completed_ids = {
+                r[0] for r in db.query(ScanCheckpoint.scan_run_id)
+                .filter(ScanCheckpoint.stage == "reports", ScanCheckpoint.status == "completed")
+                .all()
+            }
+            resumable_ids = [rid for rid in all_run_ids if rid not in completed_ids]
+
+            if not resumable_ids:
+                print("No resumable scans found.")
+                return
+
+            # Build table rows
+            table = Table(title="Resumable Scans", show_header=True, header_style="bold")
+            table.add_column("Scan ID", style="cyan", no_wrap=True)
+            table.add_column("Last Stage", style="white")
+            table.add_column("Status", style="white")
+            table.add_column("Age", style="white")
+            table.add_column("Target", style="dim")
+
+            for run_id in sorted(resumable_ids, reverse=True):
+                # Last checkpoint for this run
+                last_cp = (
+                    db.query(ScanCheckpoint)
+                    .filter(ScanCheckpoint.scan_run_id == run_id)
+                    .order_by(ScanCheckpoint.checkpoint_id.desc())
+                    .first()
+                )
+                if last_cp is None:
+                    continue
+
+                # Age calculation
+                completed_at = last_cp.completed_at  # tz-naive UTC
+                if completed_at:
+                    diff = now - completed_at
+                    total_hours = int(diff.total_seconds() // 3600)
+                    mins = int((diff.total_seconds() % 3600) // 60)
+                    if total_hours >= 24:
+                        age_str = f"{total_hours // 24}d {total_hours % 24}h"
+                    else:
+                        age_str = f"{total_hours}h {mins}m"
+                else:
+                    age_str = "unknown"
+                    total_hours = 0
+
+                # Target from scan_jobs (best-effort)
+                job_row = (
+                    db.query(ScanJob)
+                    .filter(ScanJob.scan_run_id == run_id)
+                    .first()
+                )
+                target_str = getattr(job_row, "target", "—") if job_row else "—"
+
+                row_style = "yellow" if total_hours >= STALE_HOURS else ""
+                table.add_row(
+                    run_id,
+                    last_cp.stage,
+                    last_cp.status,
+                    age_str,
+                    target_str,
+                    style=row_style,
+                )
+
+            Console().print(table)
+
+    except Exception as exc:
+        print(f"[error] list-resumable failed: {exc}", file=sys.stderr)
+
+
+def _stage_completed(completed_stages: set, stage: str) -> bool:
+    """Phase 67 RESUME-01: True if this stage was completed in a prior run."""
+    return stage in completed_stages
+
+
 def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
     """Read gcs_scan_json from the GCS-SUMMARY sentinel produced by Phase 26 (STOR-03).
 
@@ -367,6 +492,21 @@ def main():
     parser.add_argument("--resume", action="store_true", help="Reuse cache if valid")
     parser.add_argument("--force-discovery", action="store_true", help="Ignore discovery cache and re-run")
 
+    # Phase 67 RESUME-01: checkpoint resume flags
+    parser.add_argument(
+        "--resume-scan-id",
+        default=None,
+        metavar="SCAN_RUN_ID",
+        help="Resume an interrupted scan from its last completed stage. "
+             "Use --list-resumable to find valid SCAN_RUN_IDs.",
+    )
+    parser.add_argument(
+        "--list-resumable",
+        action="store_true",
+        default=False,
+        help="List interrupted scans that can be resumed with --resume-scan-id.",
+    )
+
     # Phase 33 / D-01: cloud broker target flags (repeatable)
     parser.add_argument(
         "--azure-servicebus-namespace",
@@ -420,6 +560,11 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Phase 67 RESUME-01: --list-resumable exits after printing table
+    if args.list_resumable:
+        _handle_list_resumable(args)
+        sys.exit(0)
 
     # Phase 65: populate module-level job report dict so _run_main_with_job_guard
     # can write mark_job_failed on uncaught exceptions after argparse completes.
