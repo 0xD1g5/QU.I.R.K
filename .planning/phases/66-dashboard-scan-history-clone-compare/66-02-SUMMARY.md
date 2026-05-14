@@ -125,4 +125,12 @@ None — all API fields are wired to real data sources. `profile=None` and `cali
 
 No new threat surfaces introduced. Auth inherited from router-level `require_auth` on both `list_scans()` and `compare_scans()` (T-66-01 mitigated). Input validation via `datetime.fromisoformat()` on both `a` and `b` params (T-66-02 mitigated).
 
-## Self-Check
+## Self-Check: PASSED
+
+- FOUND: quirk/dashboard/api/schemas.py
+- FOUND: quirk/dashboard/api/routes/scan.py
+- FOUND: tests/test_dashboard_scan_history.py
+- FOUND: .planning/phases/66-dashboard-scan-history-clone-compare/66-02-SUMMARY.md
+- FOUND commit 71c67e5 (RED — test scaffold + infrastructure sync)
+- FOUND commit 057a61e (Task 1 — schemas)
+- FOUND commit 6a3ed32 (Task 2 — routes + fixes)
