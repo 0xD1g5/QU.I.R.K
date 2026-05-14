@@ -108,6 +108,15 @@ export interface MotionFinding {
   starttls_warning: boolean
 }
 
+// Phase 67 RESUME-02
+export interface PartialFailureEntry {
+  stage: string
+  scanner: string
+  error_category: string
+  error_message: string
+  endpoint_count: number
+}
+
 // Phase 39 GAP-04
 export interface DarFinding {
   host: string
@@ -199,6 +208,7 @@ export interface ScanLatestResponse {
   identity_findings: IdentityFinding[]
   motion_findings: MotionFinding[]
   dar_findings: DarFinding[]
+  partial_failures?: PartialFailureEntry[]  // Phase 67 RESUME-02
 }
 
 export interface SampleFinding {
