@@ -16,7 +16,10 @@ import logging
 import random
 import socket
 import struct
+import sys
 from datetime import datetime, timezone
+
+from quirk.errors import format_error
 
 from quirk.models import CryptoEndpoint
 
@@ -244,13 +247,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
     Degrades gracefully if impacket is not installed (returns empty list).
     """
     if not IMPACKET_AVAILABLE:
-        import sys
-        print(
-            "\n[QUIRK] Kerberos scanning requires the identity extras:\n"
-            "    pip install quirk[identity]\n"
-            "Kerberos scanning disabled for this run.\n",
-            file=sys.stderr,
-        )
+        print(format_error("INSTALL-001"), file=sys.stderr)
         if logger:
             logger.warning("impacket not installed -- Kerberos scanning disabled")
         return []

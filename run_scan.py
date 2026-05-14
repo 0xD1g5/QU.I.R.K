@@ -42,6 +42,7 @@ from quirk.engine.rate_limiter import TokenBucket
 
 from quirk import __version__
 from quirk.cli.banner import print_banner
+from quirk.errors import format_error
 from quirk.util.targets import apply_targets_file_override  # D-03
 from quirk.util.optional_extra import is_extra_available, select_nmap_port_list  # D-08/D-09
 from quirk.cli.job_progress import (  # Phase 65 — best-effort job progress updates
@@ -143,19 +144,14 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
 
 
 def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endpoints) -> None:
-    """Phase 41 / D-12: emit canonical stderr advisory + record CryptoEndpoint row.
+    """Phase 41 / D-12 — Phase 68 UX-02: emit QRK-INSTALL-001 stderr advisory + record CryptoEndpoint row.
 
     Invoked when an optional-extra-gated scanner is enabled but its underlying
-    package is not installed. Produces stderr line:
-        [advisory] scanner=<name> extra=<group> not installed -- run `pip install quirk[<group>]` to enable
-    and appends a CryptoEndpoint with scan_error_category='missing_extra' so
+    package is not installed. Emits format_error("INSTALL-001") to stderr and
+    appends a CryptoEndpoint with scan_error_category='missing_extra' so
     trends.py can exclude it from regression counts (D-15).
     """
-    print(
-        f"[advisory] scanner={scanner_name} extra={extra_group} not installed"
-        f" -- run `pip install quirk[{extra_group}]` to enable",
-        file=sys.stderr,
-    )
+    print(format_error("INSTALL-001"), file=sys.stderr)
     error_endpoints.append(CryptoEndpoint(
         host=scanner_name,
         port=0,
@@ -243,13 +239,13 @@ def _handle_list_resumable(args) -> None:
 
     db_path = getattr(args, "db_path", None) or _resolve_db_path(args)
     if not db_path:
-        print("No database path available. Use --db-path or --config.", file=sys.stderr)
+        print(format_error("INSTALL-003"), file=sys.stderr)
         return
 
     try:
         init_db(db_path)
-    except Exception as exc:
-        print(f"[error] cannot open database: {exc}", file=sys.stderr)
+    except Exception:
+        print(format_error("INSTALL-003"), file=sys.stderr)
         return
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
