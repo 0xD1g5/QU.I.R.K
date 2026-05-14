@@ -110,7 +110,7 @@ def test_post_duplicate_name_returns_409(dashboard_client):
     assert response.status_code == 409, response.text
     data = response.json()
     # T-63-16 / LEAK-02: error message must not stringify the exception
-    assert "dup-test" in data["detail"]
+    assert "QRK-SCHED-003" in data["detail"]
     assert "IntegrityError" not in data["detail"]
 
 

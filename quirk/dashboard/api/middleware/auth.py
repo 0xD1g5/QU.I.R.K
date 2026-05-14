@@ -8,6 +8,8 @@ from typing import Optional
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from quirk.errors import format_error
+
 
 def _get_configured_token() -> str:
     """Priority: QUIRK_API_TOKEN env var -> security.api_token YAML field -> ''.
@@ -43,6 +45,6 @@ def require_auth(
     if not configured:
         return  # D-02: auth disabled
     if credentials is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
+        raise HTTPException(status_code=401, detail=format_error("DASHBOARD-001"))
     if not hmac.compare_digest(credentials.credentials, configured):  # D-03
-        raise HTTPException(status_code=401, detail="Authentication required")
+        raise HTTPException(status_code=401, detail=format_error("DASHBOARD-001"))

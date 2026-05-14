@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from quirk.errors import format_error
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db, _default_db_path
@@ -134,7 +135,7 @@ def _to_response(row: ScanJob) -> JobStatusResponse:
 def _get_or_404(db: Session, job_id: str) -> ScanJob:
     row = db.get(ScanJob, job_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-008"))
     return row
 
 
