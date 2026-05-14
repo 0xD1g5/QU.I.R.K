@@ -97,8 +97,8 @@
 #### Resumable / Partial-Failure Scans
 *Phase 67.*
 
-- [ ] **RESUME-01**: A scan that crashes mid-run leaves a recoverable checkpoint in `scan_checkpoints` SQLite table; `quirk scan --resume <scan-id>` continues from the last completed scanner stage
-- [ ] **RESUME-02**: Per-scanner failures (e.g., one cloud connector errors but TLS succeeds) no longer abort the whole scan — the scan completes with a `partial_failures` array in the output and a per-scanner status panel in the dashboard
+- [x] **RESUME-01**: A scan that crashes mid-run leaves a recoverable checkpoint in `scan_checkpoints` SQLite table; `quirk scan --resume <scan-id>` continues from the last completed scanner stage
+- [x] **RESUME-02**: Per-scanner failures (e.g., one cloud connector errors but TLS succeeds) no longer abort the whole scan — the scan completes with a `partial_failures` array in the output and a per-scanner status panel in the dashboard
 
 #### Operator Error-Message Pass
 *Phase 68.*
@@ -239,7 +239,7 @@ Populated by the roadmapper. Updated at each phase transition.
 | UI-SCAN-03 | Phase 65 | Pending |
 | UI-HIST-01 | Phase 66 | Complete |
 | UI-HIST-02 | Phase 66 | Complete |
-| RESUME-01 | Phase 67 | Pending |
-| RESUME-02 | Phase 67 | Pending |
+| RESUME-01 | Phase 67 | Complete |
+| RESUME-02 | Phase 67 | Complete |
 | UX-01 | Phase 68 | Pending |
 | UX-02 | Phase 68 | Pending |
