@@ -1611,7 +1611,10 @@ def main():
     with _phase_timer(run_stats, "db_persist"):
         with get_session(cfg.output.db_path) as session:
             for ep in endpoints:
-                session.add(ep)
+                # CR-03: use merge() instead of add() so that detached resumed
+                # endpoints (which already have a PK from a prior flush) are
+                # UPDATE'd rather than INSERT'd, avoiding IntegrityError on resume.
+                session.merge(ep)
             session.commit()
 
     proto_counts = Counter([getattr(e, "protocol", "UNKNOWN") for e in endpoints])
