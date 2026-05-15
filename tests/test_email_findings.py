@@ -55,7 +55,7 @@ def _mk_cfg():
 # ---------------------------------------------------------------------------
 
 def test_y1_starttls_downgrade_emitted_on_port_25():
-    from quirk.engine.risk_engine import evaluate_email_endpoints
+    from quirk.engine.findings_evaluator import evaluate_email_endpoints
     findings = evaluate_email_endpoints([
         _ep(port=25, protocol="SMTP-STARTTLS",
             cipher_suite="ECDHE-RSA-AES256-GCM-SHA384",
@@ -72,7 +72,7 @@ def test_y1_starttls_downgrade_emitted_on_port_25():
 # ---------------------------------------------------------------------------
 
 def test_y2_no_downgrade_finding_on_port_587():
-    from quirk.engine.risk_engine import evaluate_email_endpoints
+    from quirk.engine.findings_evaluator import evaluate_email_endpoints
     findings = evaluate_email_endpoints([
         _ep(port=587, protocol="SMTP-STARTTLS",
             cipher_suite="ECDHE-RSA-AES256-GCM-SHA384",
@@ -86,7 +86,7 @@ def test_y2_no_downgrade_finding_on_port_587():
 # ---------------------------------------------------------------------------
 
 def test_y3_weak_cipher_high_for_tls_rsa_with():
-    from quirk.engine.risk_engine import evaluate_email_endpoints
+    from quirk.engine.findings_evaluator import evaluate_email_endpoints
     findings = evaluate_email_endpoints([
         _ep(port=993, protocol="IMAPS",
             cipher_suite="TLS_RSA_WITH_AES_128_CBC_SHA",
@@ -102,7 +102,7 @@ def test_y3_weak_cipher_high_for_tls_rsa_with():
 # ---------------------------------------------------------------------------
 
 def test_y4_weak_cipher_high_for_legacy_openssl_aes256_sha():
-    from quirk.engine.risk_engine import evaluate_email_endpoints
+    from quirk.engine.findings_evaluator import evaluate_email_endpoints
     findings = evaluate_email_endpoints([
         _ep(port=993, protocol="IMAPS",
             cipher_suite="AES256-SHA",
@@ -118,7 +118,7 @@ def test_y4_weak_cipher_high_for_legacy_openssl_aes256_sha():
 # ---------------------------------------------------------------------------
 
 def test_y5_non_pfs_medium_for_ecdhe_without_tls13():
-    from quirk.engine.risk_engine import evaluate_email_endpoints
+    from quirk.engine.findings_evaluator import evaluate_email_endpoints
     findings = evaluate_email_endpoints([
         _ep(port=993, protocol="IMAPS",
             cipher_suite="ECDHE-RSA-AES256-GCM-SHA384",
@@ -134,7 +134,7 @@ def test_y5_non_pfs_medium_for_ecdhe_without_tls13():
 # ---------------------------------------------------------------------------
 
 def test_y6_layered_findings_on_port_25_with_weak_cipher():
-    from quirk.engine.risk_engine import evaluate_email_endpoints
+    from quirk.engine.findings_evaluator import evaluate_email_endpoints
     findings = evaluate_email_endpoints([
         _ep(port=25, protocol="SMTP-STARTTLS",
             cipher_suite="AES256-SHA",
