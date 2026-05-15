@@ -22,7 +22,7 @@ MODIFIED_FILES = [
     "quirk/scanner/email_scanner.py",
     "quirk/scanner/broker_scanner.py",
     "quirk/scanner/ssh_scanner.py",
-    "quirk/discovery/tls_scanner.py",
+    # quirk/discovery/tls_scanner.py removed in Phase 71 (WR-13, dead duplicate)
     "quirk/cbom/writer.py",
 ]
 
