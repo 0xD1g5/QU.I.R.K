@@ -63,10 +63,10 @@ wont_fix: 1
 | scanners-protocol/WR-08 | WARNING | kerberos _probe_kdc_udp silently swallows all decode errors | Phase 71 | [x] closed |
 | scanners-protocol/WR-09 | WARNING | kerberos _build_as_req uses non-cryptographic RNG for nonce | Phase 71 | [x] closed |
 | scanners-protocol/WR-10 | WARNING | saml _classify_target parses JSON of arbitrary bytes; no size cap | Phase 71 | [x] closed |
-| scanners-protocol/WR-11 | WARNING | Inconsistent extras messaging across optional-dep scanners | — | [ ] open |
-| scanners-protocol/WR-12 | WARNING | email/broker ThreadPool workers hardcoded to 50 | — | [ ] open |
-| scanners-protocol/WR-13 | WARNING | discovery/tls_scanner.py is dead-code duplicate | — | [ ] open |
-| scanners-protocol/WR-14 | WARNING | target_expander dedup; no CIDR bound; type confusion | — | [ ] open |
+| scanners-protocol/WR-11 | WARNING | Inconsistent extras messaging across optional-dep scanners | Phase 71 | [x] closed |
+| scanners-protocol/WR-12 | WARNING | email/broker ThreadPool workers hardcoded to 50 | Phase 71 | [x] closed |
+| scanners-protocol/WR-13 | WARNING | discovery/tls_scanner.py is dead-code duplicate | Phase 71 | [x] closed |
+| scanners-protocol/WR-14 | WARNING | target_expander dedup; no CIDR bound; type confusion | Phase 71 | [x] closed |
 | scanners-protocol/IN-01 | INFO | tls_capabilities downgrade SSLContext warrants comment | — | [ ] open |
 | scanners-protocol/IN-02 | INFO | DNSSEC_ALG_MAP missing reserved algorithms 9, 11 | — | [ ] open |
 | scanners-protocol/IN-03 | INFO | SHA1_INDICATORS substring match too loose | — | [ ] open |
