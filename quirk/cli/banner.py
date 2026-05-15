@@ -61,7 +61,8 @@ _ISO = (
     r"     \/__/         \/__/                     \|__|         \|__|     " + "\n"
 )
 
-# _FACES has \- which is technically undefined behavior in non-raw strings.
+# _FACES uses raw string r"..."; backslash-dash is literal text — closes api-cli-core/IN-02 per RESEARCH C-5.
+# (Phase 77 D-17: the prior comment misread the literal; the code was always correct.)
 _FACES = (
     r"     @__          \-^-/          |||           ((_           /777       " + "\n"
     r"    (o o)         (o o)         (o o)         (o o)         (o o)       " + "\n"
