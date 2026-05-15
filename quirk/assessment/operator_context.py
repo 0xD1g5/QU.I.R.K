@@ -1,7 +1,10 @@
 ﻿from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -79,11 +82,19 @@ def attach_context(cfg, ctx: OperatorContext) -> None:
     ctx_dict = ctx.to_dict()
 
     # Try top-level storage
+    # D-07 (WR-08): narrow AttributeError so missing-attribute paths are visible
+    # in logs (not silently swallowed). Trailing `except Exception` is a user-
+    # override safety net — log AND re-raise so unexpected failures remain
+    # observable (e.g. dataclass FrozenInstanceError, custom __setattr__ raising
+    # ValueError, etc.).
     try:
         setattr(cfg, "assessment_context", ctx_dict)
         return
-    except Exception:
-        pass
+    except AttributeError as e:
+        logger.warning("attach_context skipped — source object missing attribute: %s", e)
+    except Exception as e:
+        logger.warning("attach_context unexpected: %s", e)
+        raise
 
     # Try nested (cfg.assessment.*)
     try:
@@ -91,8 +102,11 @@ def attach_context(cfg, ctx: OperatorContext) -> None:
         if assessment is not None:
             setattr(assessment, "context", ctx_dict)
             return
-    except Exception:
-        pass
+    except AttributeError as e:
+        logger.warning("attach_context skipped — source object missing attribute: %s", e)
+    except Exception as e:
+        logger.warning("attach_context unexpected: %s", e)
+        raise
 
     # Last resort: no-op (still safe; score engine will default)
     return
