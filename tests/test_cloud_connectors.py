@@ -241,7 +241,10 @@ def test_gcp_cloud_sql_plaintext_allowed():
 
     sql_eps = [ep for ep in endpoints if ep.protocol == "CLOUD_SQL"]
     assert len(sql_eps) >= 1
-    assert any("HIGH" in (ep.cert_pubkey_alg or "") for ep in sql_eps)
+    # BLOCK-02 / D-08: severity belongs in the severity column, not cert_pubkey_alg
+    assert any(ep.severity == "HIGH" for ep in sql_eps)
+    assert all((ep.cert_pubkey_alg or "") == "" for ep in sql_eps)
+    assert any((ep.service_detail or "").startswith("CLOUD_SQL/") for ep in sql_eps)
 
 
 def test_gcp_cloud_sql_encrypted_only():
@@ -264,7 +267,9 @@ def test_gcp_cloud_sql_encrypted_only():
 
     sql_eps = [ep for ep in endpoints if ep.protocol == "CLOUD_SQL"]
     assert len(sql_eps) >= 1
-    assert any("MEDIUM" in (ep.cert_pubkey_alg or "") for ep in sql_eps)
+    # BLOCK-02 / D-08: severity belongs in the severity column, not cert_pubkey_alg
+    assert any(ep.severity == "MEDIUM" for ep in sql_eps)
+    assert all((ep.cert_pubkey_alg or "") == "" for ep in sql_eps)
 
 
 def test_gcp_cloud_sql_mtls_no_finding():
@@ -309,7 +314,9 @@ def test_gcp_cloud_sql_null_ssl_mode():
 
     sql_eps = [ep for ep in endpoints if ep.protocol == "CLOUD_SQL"]
     assert len(sql_eps) >= 1
-    assert any("HIGH" in (ep.cert_pubkey_alg or "") for ep in sql_eps)
+    # BLOCK-02 / D-08: severity belongs in the severity column, not cert_pubkey_alg
+    assert any(ep.severity == "HIGH" for ep in sql_eps)
+    assert all((ep.cert_pubkey_alg or "") == "" for ep in sql_eps)
 
 
 def test_gcp_gcs_cmek_detection():
