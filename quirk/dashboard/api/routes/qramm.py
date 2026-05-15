@@ -178,12 +178,20 @@ _SENSITIVITY_DELTA = {
 
 
 def _compute_multiplier(industry: str, data_sensitivity: str) -> float:
-    """Compute profile risk multiplier from industry + data sensitivity (Phase 54 RESEARCH A4)."""
+    """Compute profile risk multiplier from industry + data sensitivity (Phase 54 RESEARCH A4).
+
+    Phase 75-02 D-07 (WR-09): clamp BEFORE round (boundary safety). Round-then-clamp
+    can let a raw value at the boundary escape the declared band (e.g. 1.505 rounds
+    to 1.51 which clamps back to 1.5, but 0.794 rounds to 0.79 which clamps to 0.80
+    — the order must be clamp-first so the final rounded value is always within
+    [0.8, 1.5] regardless of input arithmetic precision).
+    """
     base = _INDUSTRY_BASE.get(industry, 1.00)
     delta = _SENSITIVITY_DELTA.get(data_sensitivity, 0.0)
     value = base + delta
-    # Clamp to spec range 0.8-1.5
-    return max(0.8, min(1.5, round(value, 2)))
+    # Clamp to spec range 0.8-1.5 BEFORE rounding (D-07)
+    clamped = max(0.8, min(1.5, value))
+    return round(clamped, 2)
 
 
 # ---------- Helpers ----------
@@ -348,14 +356,23 @@ def score_session(
     payload: Optional[ScoreRequest] = None,
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    # Validate multiplier BEFORE DB lookup so out-of-range values always return
-    # 400 (not 404) regardless of whether the session exists (D-04/D-05/D-06).
+    # Phase 75-02 D-06 (WR-06): validate multiplier server-side BEFORE any DB access.
+    # Range stays [0.8, 1.5] per Phase 54 spec + RESEARCH C-2 + user override
+    # (NOT widened to [0.0, 4.0]). isinstance + bool guard is defense in depth —
+    # Pydantic enforces float at parse, this catches any path that bypasses it.
     multiplier = (payload.profile_multiplier if payload and payload.profile_multiplier is not None else 1.0)
     if payload is not None and payload.profile_multiplier is not None:
-        if not (0.8 <= multiplier <= 1.5):
+        if (
+            isinstance(multiplier, bool)
+            or not isinstance(multiplier, (int, float))
+            or not (0.8 <= multiplier <= 1.5)
+        ):
             raise HTTPException(
                 status_code=400,
-                detail=format_error("DASHBOARD-010"),
+                detail=(
+                    f'{format_error("DASHBOARD-010")} '
+                    "multiplier must be numeric in [0.8, 1.5]"
+                ),
             )
     session = _get_session_or_404(db, session_id)
 
