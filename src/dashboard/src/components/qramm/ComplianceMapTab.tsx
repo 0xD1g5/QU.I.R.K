@@ -133,7 +133,10 @@ export function ComplianceMapTab() {
     return () => {
       cancelled = true
     }
-  }, [ctx.sessionId, ctx.scoreResult])
+    // D-07 (WR-13): scoreResult intentionally omitted — compliance rows are
+    // framework-question mapping, independent of scored values. Re-fetching
+    // on every scoreResult mutation produced a spurious refetch loop.
+  }, [ctx.sessionId])
 
   const grouped = groupRows(rows)
   const isUnscored = rows.length === 0 || rows.every(
