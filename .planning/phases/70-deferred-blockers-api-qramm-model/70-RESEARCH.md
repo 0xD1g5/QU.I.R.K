@@ -542,17 +542,13 @@ This means the **delete-session FK-safe test** can use the existing `_make_qramm
 | A3 | `quantum_safety_label` and `classify_algorithm` together raise only `KeyError`/`TypeError`/`AttributeError` under malformed input | Pitfall 5, D-05 | MEDIUM — if a real call path raises `ValueError` or similar, that exception will now propagate (CONTEXT.md D-05 explicitly accepts this trade); add a test case if a runtime surprise occurs |
 | A4 | The current `_V43_COLUMN_DDLS` / `_PHASE41_COLUMN_DDLS` / `_PHASE46_COLUMN_DDLS` / `_PHASE54_QRAMM_ANSWER_DDLS` literal values all match `_SAFE_COL_TYPE_RE` | Pitfall 6, D-06 | LOW — manually verified by grep; verify by running `_ensure_*_columns` once after the guard lands |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the AUDIT-TASKS row-flip belong in the last plan (70-03) or a dedicated 70-04?**
-   - What we know: Phase 69 folded the flip into its final plan's SUMMARY.
-   - What's unclear: Whether the planner prefers a dedicated closeout plan to keep diffs separated.
-   - Recommendation: Fold into 70-03 per Phase 69 precedent unless the planner has reason to split.
+   - **RESOLVED:** Folded into 70-03 Task 3 per Phase 69 precedent.
 
 2. **Should `_qs_for_alg` be lifted to a module-level function for direct testability?**
-   - What we know: It is currently a closure inside `_derive_cbom`.
-   - What's unclear: Whether the planner accepts the minor refactor (lifting it to module scope) or prefers to test through `_derive_cbom`'s public surface.
-   - Recommendation: Lift to module scope — minimal-diff cost (one indent change + the function moves up), pays back in direct unit-testability. CLAUDE.md "minimal diffs" applies but does not forbid this kind of testability lift.
+   - **RESOLVED:** Lifted to module scope in 70-02 Task 2 (accepts the minor refactor for direct unit-testability).
 
 ## Environment Availability
 
