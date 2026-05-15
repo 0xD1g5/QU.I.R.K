@@ -27,6 +27,18 @@ const CONFIDENCE_BADGE_VARIANT: Record<string, "default" | "secondary" | "destru
   NO_DATA: "outline",
 }
 
+/**
+ * D-02 (WR-06): Defensive coercion of an unknown response body to a
+ * user-facing string. Guards against raw-string bodies, null/undefined,
+ * and non-string `detail` fields — never throws on `body.detail` access.
+ */
+export function coerceErrorDetail(body: unknown): string {
+  if (body && typeof body === "object" && typeof (body as {detail?: unknown}).detail === 'string') {
+    return (body as { detail: string }).detail
+  }
+  return String(body ?? "Unknown error")
+}
+
 function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[] }) {
   function badgeElement(entry: PartialFailureEntry) {
     const cat = entry.error_category
@@ -115,8 +127,13 @@ export function ExecutivePage() {
         setTimeout(() => URL.revokeObjectURL(url), 100)
         setPdfMessage(`PDF saved to ~/Downloads/quirk-report-${date}.pdf`)
       } else {
-        const body = await resp.json().catch(() => ({}))
-        setPdfMessage(body.detail ?? "PDF export failed. Ensure Playwright is installed: playwright install chromium")
+        const body = await resp.json().catch(() => null)
+        const detail = coerceErrorDetail(body)
+        // Preserve the operator-friendly Playwright hint when the API returned
+        // no actionable detail (null, {}, etc. — coercion yields a non-string-detail fallback).
+        const looksUseful =
+          body && typeof body === "object" && typeof (body as {detail?: unknown}).detail === 'string'
+        setPdfMessage(looksUseful ? detail : "PDF export failed. Ensure Playwright is installed: playwright install chromium")
       }
     } catch {
       setPdfMessage("PDF export failed. Ensure Playwright is installed: `playwright install chromium`")

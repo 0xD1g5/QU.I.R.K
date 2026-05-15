@@ -136,6 +136,28 @@ export function OrgProfilePage() {
     )
   }
 
+  // D-04 (WR-08): extract API error body via D-02-style coercion so the
+  // operator sees the real reason ("Organization Name required") instead
+  // of a generic connectivity hint.
+  async function readApiError(resp: Response, fallback: string): Promise<string> {
+    let body: unknown = null
+    const text = await resp.text().catch(() => "")
+    if (text) {
+      try {
+        body = JSON.parse(text)
+      } catch {
+        body = text
+      }
+    }
+    if (body && typeof body === "object" && typeof (body as {detail?: unknown}).detail === 'string') {
+      return (body as { detail: string }).detail
+    }
+    if (typeof body === "string" && body.length > 0) {
+      return body
+    }
+    return fallback
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitError(null)
@@ -147,7 +169,9 @@ export function OrgProfilePage() {
         body: JSON.stringify({ org_name: null }),
       })
       if (!sessionResp.ok) {
-        throw new Error(`Session creation failed: ${sessionResp.status}`)
+        const detail = await readApiError(sessionResp, "Could not start assessment — check your connection and try again")
+        setSubmitError(detail)
+        return
       }
       const sessionBody = await sessionResp.json()
       const sessionId: number = sessionBody.session_id
@@ -165,7 +189,9 @@ export function OrgProfilePage() {
         }),
       })
       if (!profileResp.ok) {
-        throw new Error(`Profile creation failed: ${profileResp.status}`)
+        const detail = await readApiError(profileResp, "Could not start assessment — check your connection and try again")
+        setSubmitError(detail)
+        return
       }
       const profileBody = await profileResp.json()
       const multiplier: number = profileBody.multiplier
