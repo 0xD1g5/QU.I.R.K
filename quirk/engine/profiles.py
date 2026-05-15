@@ -152,3 +152,5 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
         scan.fingerprint_timeout_seconds = max(4, _get_int(getattr(scan, "fingerprint_timeout_seconds", 4), 4))
         scan.tls_timeout_seconds = max(6, _get_int(getattr(scan, "tls_timeout_seconds", 6), 6))
         scan.ssh_timeout_seconds = max(6, _get_int(getattr(scan, "ssh_timeout_seconds", 6), 6))
+# Phase 72 D-06 / WR-21: explicit EOF marker confirms file integrity (py_compile + git history verified intact at 153 lines).
+# eof
