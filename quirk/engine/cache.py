@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
+import logging
 import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_dir(path: str) -> None:
@@ -25,13 +29,30 @@ def _write_json(path: str, obj: Any) -> None:
 
 
 def _read_json(path: str) -> Any:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    # Phase 72 D-18 / WR-15: corrupt cache file (malformed JSON or invalid
+    # UTF-8) returns None instead of raising — caller treats as cache miss.
+    # File is intentionally left on disk for forensics (do NOT delete).
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        logger.warning("Cache file %s corrupt — ignoring: %s", path, e)
+        return None
 
 
 def scope_hash(cfg, discovery_mode: str, nmap_extra_args: str = "", ports: Optional[List[int]] = None) -> str:
     t = cfg.targets
     scan = cfg.scan
+
+    # Phase 72 D-19 / WR-16: include connector enable flags in the cache
+    # scope hash so toggling enable_email / enable_broker / etc. invalidates
+    # the cache. The `_user_set_fields` sidecar (added by D-02 in PLAN 05) is
+    # a `frozenset` and not JSON-serializable, so drop it defensively — this
+    # is a no-op if D-02 has not landed yet.
+    connectors_dict: Dict[str, Any] = {}
+    if getattr(cfg, "connectors", None) is not None and dataclasses.is_dataclass(cfg.connectors):
+        connectors_dict = dataclasses.asdict(cfg.connectors)
+        connectors_dict.pop("_user_set_fields", None)
 
     parts = {
         "discovery_mode": discovery_mode,
@@ -42,6 +63,7 @@ def scope_hash(cfg, discovery_mode: str, nmap_extra_args: str = "", ports: Optio
         "ports": sorted(ports if ports is not None else (scan.ports_tls or [])),
         "include_sni": bool(scan.include_sni),
         "nmap_extra_args": (nmap_extra_args or "").strip(),
+        "connectors": connectors_dict,
     }
     raw = json.dumps(parts, sort_keys=True).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:16]
@@ -54,6 +76,9 @@ def load_cache(output_dir: str, key: str, ttl_hours: int) -> Optional[Dict[str, 
         return None
 
     obj = _read_json(path)
+    if obj is None:
+        # Phase 72 D-18: corrupt cache file → treat as cache miss.
+        return None
     ts = obj.get("_cached_at", 0)
     age = _now() - float(ts or 0)
     if ttl_hours <= 0:
