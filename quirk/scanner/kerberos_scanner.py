@@ -7,13 +7,15 @@ try:
     from impacket.krb5 import constants
     from impacket.krb5.types import KerberosTime, Principal
     from pyasn1.codec.ber import encoder, decoder
+    from pyasn1.error import PyAsn1Error
     IMPACKET_AVAILABLE = True
 except ImportError:
     IMPACKET_AVAILABLE = False
+    PyAsn1Error = Exception  # type: ignore[assignment,misc]  # fallback when impacket/pyasn1 absent
 
 import json
 import logging
-import random
+import secrets
 import socket
 import struct
 import sys
@@ -82,7 +84,10 @@ def _build_as_req(client_name, server_name, realm: str):
     req_body['till'] = KerberosTime.to_asn1(
         datetime(2037, 12, 31, 0, 0, tzinfo=timezone.utc)
     )
-    req_body['nonce'] = random.getrandbits(31)
+    # Cryptographic RNG per audit WR-09 (Phase 71): unpredictable 31-bit nonce
+    # defeats replay-attack precomputation. ASN.1 INTEGER field accepts uint32; we
+    # mask to 31 bits to preserve the pre-Phase-71 wire-format range.
+    req_body['nonce'] = secrets.randbits(31)
     seq_set_iter(req_body, 'etype', ALL_ETYPES)
     return as_req
 
@@ -178,7 +183,14 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int) -> list:
                 for entry in info1:
                     etypes.append(int(entry['etype']))
         return etypes
-    except Exception:
+    except (socket.timeout, socket.error, OSError) as e:
+        # WR-08 (Phase 71): UDP transport failure — log+continue (best-effort fallback)
+        logger.warning("KDC UDP probe transport failed for %r: %s", host, e)
+        return []
+    except (ValueError, TypeError, struct.error, IndexError, KeyError, PyAsn1Error) as e:
+        # WR-08 (Phase 71): malformed KDC response — log+continue. Covers pyasn1
+        # decode errors (PyAsn1Error) and any shape/type mismatches downstream.
+        logger.warning("KDC UDP probe decode failed for %r: %s", host, e)
         return []
     finally:
         sock.close()
