@@ -40,6 +40,14 @@ AZURE_KEY_TYPE_MAP = {
     "oct-HSM": ("AES", None),
 }
 
+# Phase 72 D-12 (WR-03): EC curve name -> key size (bits) for KeyVault EC keys.
+_AZURE_EC_CURVE_SIZES = {
+    "P-256": 256,
+    "P-384": 384,
+    "P-521": 521,
+    "secp256k1": 256,
+}
+
 
 def _scan_keyvault_keys(credential, vault_url: str, logger) -> List[CryptoEndpoint]:
     """Enumerate Key Vault keys and map to CryptoEndpoint instances."""
@@ -50,7 +58,33 @@ def _scan_keyvault_keys(credential, vault_url: str, logger) -> List[CryptoEndpoi
             try:
                 key_type_str = str(key.key_type) if key.key_type is not None else ""
                 alg_name, _ = AZURE_KEY_TYPE_MAP.get(key_type_str, (key_type_str, None))
-                key_size = getattr(key, "key_size", None)
+                # Phase 72 D-12 (WR-03): populate key_size per-key-type. Previous
+                # code read getattr(key, "key_size", None) unconditionally, which
+                # returned None for RSA/EC keys because KeyProperties does not
+                # expose key material; key_size is only meaningful for OCT.
+                key_size = None
+                kt = key_type_str.lower()
+                if "rsa" in kt:
+                    n_val = getattr(key, "n", None)
+                    if n_val is not None:
+                        try:
+                            key_size = n_val.bit_length()
+                        except AttributeError:
+                            key_size = getattr(key, "key_size", None)
+                    else:
+                        key_size = getattr(key, "key_size", None)
+                elif "ec" in kt:
+                    crv = getattr(key, "crv", None) or getattr(key, "curve", None)
+                    if crv is not None:
+                        key_size = _AZURE_EC_CURVE_SIZES.get(str(crv), None)
+                elif "oct" in kt:
+                    key_size = getattr(key, "key_size", None)
+                else:
+                    if logger:
+                        logger.v(
+                            f"Azure KeyVault key type {key_type_str!r} — "
+                            "key_size left as None"
+                        )
                 host = key.id if key.id else vault_url
                 cloud_data = {
                     "name": key.name,
