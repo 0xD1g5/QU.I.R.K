@@ -58,7 +58,7 @@
 
 ### REACT — React Frontend WARNINGs
 
-- [ ] **REACT-01**: useScanList surfaces non-OK API responses as user-visible errors; executive body.detail coercion checked before access; print data-ready sentinel not set when QRAMM has errored; QRAMM submitError exposes actual error message (closes react-frontend/WR-02, WR-06, WR-07, WR-08)
+- [x] **REACT-01**: useScanList surfaces non-OK API responses as user-visible errors; executive body.detail coercion checked before access; print data-ready sentinel not set when QRAMM has errored; QRAMM submitError exposes actual error message (closes react-frontend/WR-02, WR-06, WR-07, WR-08)
 - [ ] **REACT-02**: localStorage Theme value validated before cast; executive PDF download setTimeout revoke on unmount; ComplianceMapTab re-fetches on targeted dependency change only (closes react-frontend/WR-04, WR-05, WR-13)
 - [ ] **REACT-03**: Certificate Subject CN regex handles RFC2253-escaped commas; CBOM Cytoscape registration cast replaced with proper typing; ScorecardTab Maturity Distribution width math and badge classes corrected (closes react-frontend/WR-09, WR-10, WR-11, WR-12)
 
@@ -132,7 +132,7 @@ These items were considered but deferred beyond v4.9:
 | APCL-02 | Phase 75 | Pending |
 | APCL-03 | Phase 75 | Pending |
 | APCL-04 | Phase 75 | Complete |
-| REACT-01 | Phase 76 | Pending |
+| REACT-01 | Phase 76 | Complete |
 | REACT-02 | Phase 76 | Pending |
 | REACT-03 | Phase 76 | Pending |
 | INFO-01 | Phase 77 | Pending |
