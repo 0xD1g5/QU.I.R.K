@@ -132,27 +132,38 @@ def _scan_gke_encryption(
                 # PITFALL 4: int() cast avoids string vs enum comparison errors
                 state_val = int(db_enc.current_state) if db_enc else 0
                 # 2 == CURRENT_STATE_ENCRYPTED; 0 == unspecified; 1 == DECRYPTED
+                # Phase 72 D-15 (WR-20): build dat_scan_json as a fresh dict per
+                # branch. Previously the unencrypted path inherited the encrypted
+                # branch's key_name (read via getattr(db_enc, "key_name", "")),
+                # which could leak a stale key_name value on the unencrypted path.
                 if state_val == 2:
                     key_name = getattr(db_enc, "key_name", "")
                     service_detail = f"GKE/encrypted:{key_name}"
                     severity = None
+                    dat_scan_json = {
+                        "cluster": cfg["name"],
+                        "provider": "GKE",
+                        "current_state": state_val,
+                        "encrypted": True,
+                        "key_name": key_name,
+                    }
                 else:
                     service_detail = "GKE/unencrypted"
                     severity = "HIGH"
+                    # NOTE: no key_name key — the unencrypted path must NOT
+                    # include it (Phase 72 D-15).
+                    dat_scan_json = {
+                        "cluster": cfg["name"],
+                        "provider": "GKE",
+                        "current_state": state_val,
+                        "encrypted": False,
+                    }
                 ep = CryptoEndpoint(
                     host=f"gcp://gke/{project_id}/{cfg['name']}",
                     port=0,
                     protocol="KUBERNETES",
                     service_detail=service_detail,
-                    dat_scan_json=json.dumps(
-                        {
-                            "cluster": cfg["name"],
-                            "provider": "GKE",
-                            "current_state": state_val,
-                            "key_name": getattr(db_enc, "key_name", "") if db_enc else "",
-                        },
-                        default=str,
-                    ),
+                    dat_scan_json=json.dumps(dat_scan_json, default=str),
                     scanned_at=now,
                 )
                 if severity:
@@ -283,9 +294,18 @@ def _enumerate_secret_types(
     try:
         secrets = k8s_core_v1.list_namespaced_secret(namespace=namespace)
         # Count by type — T-29-04 invariant: only secret.type accessed, never secret.data
-        type_counts = dict(Counter(
-            (s.type or "Opaque") for s in secrets.items
-        ))
+        # Phase 72 D-14 (WR-17): filter None-typed secrets explicitly rather than
+        # coercing them to "Opaque" — None and Opaque are semantically distinct
+        # and the prior coercion masked the gap in count signal.
+        secret_types = [s.type for s in secrets.items]
+        skipped_nones = sum(1 for t in secret_types if t is None)
+        if skipped_nones and logger:
+            logger.v(
+                f"K8s _enumerate_secret_types: skipped {skipped_nones} "
+                "None-typed secrets in namespace "
+                f"{namespace!r}"
+            )
+        type_counts = dict(Counter(t for t in secret_types if t is not None))
         return CryptoEndpoint(
             host=host_id,
             port=0,
@@ -342,6 +362,10 @@ def _emit_inaccessible_finding(
     NEVER returns empty list — K8S-03 requires at least one endpoint per scan call.
     """
     now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+    # Phase 72 D-13 (WR-06): strip colons from cluster_name before embedding it
+    # in the finding identity tuple. Colons in cluster names break CSV/CBOM
+    # output ordering and dedup downstream.
+    cluster_name = (cluster_name or "").replace(":", "")
     return CryptoEndpoint(
         host=f"k8s://{cluster_name or provider or 'unknown'}",
         port=0,
