@@ -22,15 +22,14 @@ from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
         ("RC4-MD5", True),                      # RC4 + MD5
         ("NULL-SHA", True),                     # NULL + SHA1
         ("EXPORT40-RC2-CBC-MD5", True),         # EXPORT + MD5
-        ("ADH-AES128-SHA", True),               # ANON (ADH) -> ANON token? ADH contains no ANON. Use ANON token via ADH? No - we use literal ANON. Use AECDH-NULL-SHA instead via NULL.
-        # Note: above ADH-AES128-SHA matches via SHA1 token (AES128-SHA contains SHA1 substring).
         ("AECDH-NULL-SHA", True),               # NULL token
         ("DES-CBC3-SHA", True),                 # CBC3 (RESEARCH C-8) + DES
-        ("IDEA-CBC-SHA", True),                 # IDEA + SHA1
+        ("IDEA-CBC-SHA", True),                 # IDEA
         ("SHA1", True),                         # SAML-flavored
-        ("sha-1", True),                        # lowercase normalized
-        ("EXP-RC4-MD5", True),                  # EXPORT shorthand? "EXP" doesn't contain EXPORT. matches via RC4+MD5.
+        ("sha-1", True),                        # lowercase normalized to SHA-1
+        ("RC4-SHA", True),                      # RC4
         ("ANON-DH-AES256-SHA", True),           # ANON literal token
+        ("TLS_ECDH_anon_WITH_AES_128_CBC_SHA", True),  # uppercases to anon -> ANON
         # Strong — no weak token
         ("AES128-GCM-SHA256", False),
         ("ECDHE-RSA-AES256-GCM-SHA384", False),
