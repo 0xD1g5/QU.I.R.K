@@ -2,7 +2,9 @@
 set -e
 
 GITEA_URL="http://gitea:3000"
-ADMIN_USER="admin"
+# Gitea 1.21+ reserves the username "admin"; the lab admin is provisioned
+# by the `gitea-init` one-shot container (docker-compose.yml) as `labadmin`.
+ADMIN_USER="labadmin"
 ADMIN_PASS="admin123"
 
 echo "=== Waiting for Gitea to be ready ==="
