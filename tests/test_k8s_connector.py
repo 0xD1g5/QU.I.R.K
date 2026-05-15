@@ -15,6 +15,44 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _k8s_available_flags():
+    """Phase 69.1: patch *_AVAILABLE flags + stub missing cloud-SDK modules.
+
+    Tests in this file exercise scan_k8s_targets's SDK-dispatch branches. The
+    module-level K8S_AVAILABLE / AKS_AVAILABLE / GKE_AVAILABLE flags default to
+    False in .venv because the cloud SDKs (kubernetes, azure-mgmt-containerservice,
+    google-cloud-container) are opt-in extras.
+
+    Some tests also patch attributes on those modules via patch("module.X",
+    create=True) — but patch() can only create missing attributes on objects
+    that already exist. So we stub the parent modules in sys.modules with
+    MagicMock placeholders before patches resolve.
+
+    Tests that want to exercise the K8S-03 path A/B fallbacks can override via
+    patch("...K8S_AVAILABLE", False) inside the test body.
+    """
+    import sys
+    # patch() with create=True can only add missing *attributes* on existing
+    # modules. quirk.scanner.k8s_connector already self-stubs
+    # google.cloud.container_v1 (and azure.mgmt.containerservice) in sys.modules
+    # at import time, but doesn't stub the parent packages (`google`,
+    # `google.cloud`). pkgutil.resolve_name() needs the parents to traverse the
+    # dotted path. Add only the parent stubs — leave the leaf module alone so
+    # patches and the module's own `_gke_container` alias point to the same
+    # object.
+    parent_stubs = {}
+    if "google" not in sys.modules:
+        parent_stubs["google"] = MagicMock()
+    if "google.cloud" not in sys.modules:
+        parent_stubs["google.cloud"] = MagicMock()
+    with patch("quirk.scanner.k8s_connector.K8S_AVAILABLE", True), \
+         patch("quirk.scanner.k8s_connector.AKS_AVAILABLE", True), \
+         patch("quirk.scanner.k8s_connector.GKE_AVAILABLE", True), \
+         patch.dict(sys.modules, parent_stubs):
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -301,7 +339,11 @@ def test_secret_rbac_403_produces_insufficient_privileges():
     try:
         from kubernetes.client.rest import ApiException
     except ImportError:
-        ApiException = type("ApiException", (Exception,), {"status": 403, "reason": ""})
+        class ApiException(Exception):
+            def __init__(self, status=None, reason=None, *args, **kwargs):
+                self.status = status
+                self.reason = reason
+                super().__init__(f"{status} {reason}")
     mock_v1 = MagicMock()
     mock_v1.list_namespaced_secret.side_effect = ApiException(
         status=403, reason="Forbidden"
