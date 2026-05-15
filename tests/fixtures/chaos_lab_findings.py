@@ -1,6 +1,6 @@
 """Phase 49 D-04: source-of-truth aggregator for the title-join gate.
 
-Walks ``quirk/engine/risk_engine.py`` via ``ast`` and extracts every
+Walks ``quirk/engine/findings_evaluator.py`` via ``ast`` and extracts every
 ``title=`` literal passed to ``_build_finding(...)``. Fixed-string titles
 are preserved verbatim (parens included). f-string titles are reduced to
 their literal-only template (constant parts joined; FormattedValue parts
@@ -11,6 +11,9 @@ Why AST over a runtime engine sweep: chaos lab requires Docker; CI must
 not depend on it. AST extraction reads the literal title strings
 deterministically from source — exactly the join surface the gate is
 protecting.
+
+Phase 72 D-05 / WR-10: file path was renamed risk_engine.py → findings_evaluator.py;
+the 2-line shim at the old path no longer contains _build_finding call sites.
 """
 from __future__ import annotations
 
@@ -18,7 +21,8 @@ import ast
 import pathlib
 
 _RISK_ENGINE = (
-    pathlib.Path(__file__).resolve().parents[2] / "quirk/engine/risk_engine.py"
+    pathlib.Path(__file__).resolve().parents[2]
+    / "quirk/engine/findings_evaluator.py"
 )
 
 
