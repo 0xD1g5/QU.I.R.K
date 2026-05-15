@@ -1553,7 +1553,7 @@ Plans:
   3. Migration advisor substring matching false positives are reduced; `_walk_json_for_alg_strings` covers all `ALG_KEYS`; compliance weight `0.0` vs not-yet-covered is disambiguated in output; `model_meta.py` has `is_qramm_model_stale()` helper; stale Phase 50 TODO comment removed
 **Plans**: TBD
 
-### Phase 75: API + CLI + Core WARNINGs
+### Phase 75: API + CLI + Core WARNINGs ✅
 **Goal**: All four WARNING clusters in the API/CLI/core subsystem are resolved — doctor checks return meaningful data, scan-id time-window is microsecond-safe, list_scans grouping is correct, and QRAMM/interactive/validate/route input hardening is complete. Closes audit findings api-cli-core/WR-01 through WR-17.
 **Depends on**: Phase 70
 **Requirements**: APCL-01, APCL-02, APCL-03, APCL-04
