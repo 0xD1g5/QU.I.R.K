@@ -7,6 +7,7 @@ import {
 import { AlertTriangle } from "lucide-react"
 import { CertificatesSkeleton } from "./certificates.skeleton"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { extractCN } from "@/lib/cert-parse"
 
 const QS_BADGE: Record<string, string> = {
   Safe: "bg-[hsl(142_71%_45%)] text-white",
@@ -57,12 +58,8 @@ export function CertificatesPage() {
                 : "text-muted-foreground"
                 : "text-muted-foreground"
 
-              const subjectCN = cert.cert_subject
-                ? (cert.cert_subject.match(/CN=([^,]+)/)?.[1] ?? cert.cert_subject)
-                : "—"
-              const issuerCN = cert.cert_issuer
-                ? (cert.cert_issuer.match(/CN=([^,]+)/)?.[1] ?? cert.cert_issuer)
-                : "—"
+              const subjectCN = extractCN(cert.cert_subject)
+              const issuerCN = extractCN(cert.cert_issuer)
 
               return (
                 <TableRow key={i}>

@@ -17,6 +17,8 @@ import {
   DIMENSIONS,
   MATURITY_LABEL,
   MATURITY_BADGE_CLASS,
+  MATURITY_BAR_CLASS,
+  DIMENSION_COUNT,
 } from "@/lib/qramm-constants"
 import { getBenchmarks } from "@/lib/qramm-benchmarks"
 import type { QRAMMScoreResponse } from "@/types/api"
@@ -46,7 +48,10 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
     )
   }, [ctx.answers, qnToDim])
 
-  // Approximate maturity distribution by bucketing each dimension's score
+  // Approximate maturity distribution by bucketing each dimension's score.
+  // When every dimension's score is null (Phase 74 "Indeterminate" sentinel),
+  // we render an em-dash row in place of bars rather than a row of zero-width
+  // bars — see D-10 (WR-11).
   const maturityDist = useMemo(() => {
     const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 }
     if (!ctx.scoreResult) return dist
@@ -57,6 +62,14 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
       dist[bucket] += 1
     }
     return dist
+  }, [ctx.scoreResult])
+
+  const isIndeterminate = useMemo(() => {
+    if (!ctx.scoreResult) return false
+    if (ctx.scoreResult.maturity === "Indeterminate") return true
+    return DIMENSIONS.every(
+      (dim) => ctx.scoreResult!.dimensions[dim]?.score == null,
+    )
   }, [ctx.scoreResult])
 
   async function handleCalculate() {
@@ -184,14 +197,15 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold">{MATURITY_LABEL[level]}</span>
                       <span className="font-data text-sm">
-                        {ctx.scoreResult ? count : "—"}
+                        {ctx.scoreResult && !isIndeterminate ? count : "—"}
                       </span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-muted">
-                      {ctx.scoreResult && (
+                      {ctx.scoreResult && !isIndeterminate && (
                         <div
-                          className={`h-2 rounded-full ${MATURITY_BADGE_CLASS[level]}`}
-                          style={{ width: `${(count / 4) * 100}%` }}
+                          data-testid={`maturity-bar-${level}`}
+                          className={`h-2 rounded-full ${MATURITY_BAR_CLASS[level]}`}
+                          style={{ width: `${(count / DIMENSION_COUNT) * 100}%` }}
                         />
                       )}
                     </div>
@@ -228,18 +242,23 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                 const benchmark = benchmarks
                   ? benchmarks[dim.toLowerCase() as keyof typeof benchmarks]
                   : null
+                // Phase 74 "Indeterminate" sentinel: d.score can be null even
+                // when d itself is present. Guard with a numeric typeof check
+                // before invoking .toFixed / Math.round (D-10 null-safety).
+                const dscore = typeof d?.score === "number" ? d.score : null
+                const dweighted = typeof d?.weighted === "number" ? d.weighted : null
                 const maturityInt =
-                  d != null
-                    ? Math.max(1, Math.min(4, Math.round(d.score)))
+                  dscore != null
+                    ? Math.max(1, Math.min(4, Math.round(dscore)))
                     : null
                 return (
                   <TableRow key={dim}>
                     <TableCell className="text-sm">{dim}</TableCell>
                     <TableCell className="font-data">
-                      {d != null ? d.score.toFixed(2) : "—"}
+                      {dscore != null ? dscore.toFixed(2) : "—"}
                     </TableCell>
                     <TableCell className="font-data">
-                      {d != null ? d.weighted.toFixed(2) : "—"}
+                      {dweighted != null ? dweighted.toFixed(2) : "—"}
                     </TableCell>
                     <TableCell className="font-data">
                       {benchmark != null ? benchmark.toFixed(2) : "—"}
