@@ -1,8 +1,14 @@
 ---
 id: SEED-001
-status: dormant
+status: superseded
 planted: 2026-04-02
 planted_during: Post-Phase-7 / Pre-Phase-8 (Legacy Debt Cleanup)
+closed: 2026-05-05
+closed_reason: >
+  Superseded by project evolution. The seed called for a structured backlog rollout
+  plan after Phase 9; that work was accomplished implicitly through milestones v4.1–v4.6
+  (Phases 10–50). The backlog has been sequenced and the primary enterprise-readiness
+  work is now complete. No action required.
 trigger_when: Phase 9 (Scoring Consolidation) is marked complete
 scope: Medium
 ---
