@@ -4,14 +4,14 @@ milestone: v4.9
 milestone_name: Audit Depth — Phases 69–77
 status: verifying
 stopped_at: Phase 72 complete
-last_updated: "2026-05-15T20:34:20.490Z"
+last_updated: "2026-05-15T23:57:32.353Z"
 last_activity: 2026-05-15
 progress:
-  total_phases: 67
-  completed_phases: 23
-  total_plans: 115
-  completed_plans: 107
-  percent: 34
+  total_phases: 10
+  completed_phases: 10
+  total_plans: 42
+  completed_plans: 42
+  percent: 100
 ---
 
 # Project State
@@ -73,6 +73,7 @@ Progress: [██████████] 100%
 | Phase 71 P02 | 3m | 2 tasks | 4 files |
 | Phase 75 P04 | ~25min | 3 tasks | 7 files |
 | Phase 76 P01 | 377 | 3 tasks | 8 files |
+| Phase 77 P05 | 540 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,7 @@ Progress: [██████████] 100%
 - [v4.9-D-03]: LEDGER-01 (audit closure) folded into Phase 77 as the final step — all finding rows should be dispositioned as phases 69-76 execute.
 - [v4.9-D-04]: INFO/code-quality items (INFO-01..04) batched into Phase 77 alongside LEDGER-01 since they are low-risk, non-interdependent, and a natural final-cleanup sweep.
 - [Phase ?]: [70-01] FK retrofit uses raw DBAPI cursor for PRAGMA hygiene (SQLA 2.x autobegin conflict)
+- [Phase ?]: Plan 77-05 closed LEDGER-01: 29 INFO row flips (27 closed + 2 wont-fix-with-rationale) + 2 D-30 bare-row rationale upgrades + D-31 CI gate. v4.9 SC-5 zero-bare-open invariant ACHIEVED
 
 ### Pending Todos
 
@@ -112,6 +114,6 @@ Items carried forward from v4.8 close (2026-05-14):
 
 ## Session Continuity
 
-Last session: 2026-05-15T20:34:15.808Z
+Last session: 2026-05-15T23:57:22.140Z
 Stopped at: Phase 72 complete
 Next action: `/gsd-plan-phase 69` (Deferred BLOCKERs — Scanner + Cloud)

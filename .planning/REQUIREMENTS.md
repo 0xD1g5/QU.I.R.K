@@ -71,7 +71,7 @@
 
 ### LEDGER — Audit Closure
 
-- [ ] **LEDGER-01**: AUDIT-TASKS.md has zero bare-open `[ ] open` rows — all 169 findings carry an explicit `[x] closed`, `[ ] deferred-*`, or `[ ] wont-fix` disposition with rationale
+- [x] **LEDGER-01**: AUDIT-TASKS.md has zero bare-open `[ ] open` rows — all 169 findings carry an explicit `[x] closed`, `[ ] deferred-*`, or `[ ] wont-fix` disposition with rationale
 
 ---
 
@@ -139,7 +139,7 @@ These items were considered but deferred beyond v4.9:
 | INFO-02 | Phase 77 | Pending |
 | INFO-03 | Phase 77 | Pending |
 | INFO-04 | Phase 77 | Pending |
-| LEDGER-01 | Phase 77 | Pending |
+| LEDGER-01 | Phase 77 | Complete |
 
 ---
 
