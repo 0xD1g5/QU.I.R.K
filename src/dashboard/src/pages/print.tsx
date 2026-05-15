@@ -3,6 +3,7 @@ import { useScanData } from "@/hooks/useScanData"
 import { useQRAMMPrintData } from "@/hooks/useQRAMMPrintData"
 import type { FindingItem, CertItem, CbomComponent, RoadmapNode } from "@/types/api"
 import type { QRAMMScoreResponse, QRAMMComplianceMapRow } from "@/types/api"
+import { extractCN } from "@/lib/cert-parse"
 
 const FRAMEWORK_DISPLAY: Record<string, string> = {
   NIST_PQC: "NIST PQC Standards",
@@ -85,7 +86,7 @@ function PrintCerts({ certs }: { certs: CertItem[] }) {
       </thead>
       <tbody>
         {certs.map((c, i) => {
-          const subjectCN = c.cert_subject ? (c.cert_subject.match(/CN=([^,]+)/)?.[1] ?? c.cert_subject) : "—"
+          const subjectCN = extractCN(c.cert_subject)
           const expiry = c.cert_not_after
             ? new Date(c.cert_not_after).toLocaleDateString("en-US", { dateStyle: "medium" })
             : "—"

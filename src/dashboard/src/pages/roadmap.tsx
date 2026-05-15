@@ -10,7 +10,7 @@ import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
 // Register dagre layout (DAG directed graph — per D-16)
 try {
-  cytoscape.use(dagre as cytoscape.Ext)
+  cytoscape.use(dagre)
 } catch {
   // already registered
 }
