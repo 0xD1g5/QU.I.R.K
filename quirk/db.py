@@ -3,11 +3,28 @@ import re
 from contextlib import contextmanager
 from typing import Iterator, Optional
 
-from sqlalchemy import create_engine, inspect as sa_inspect, text
+from sqlalchemy import create_engine, event, inspect as sa_inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from quirk.models import Base  # Declarative Base from quirk/models.py
+
+
+@event.listens_for(Engine, "connect")
+def _sqlite_fk_pragma(dbapi_connection, connection_record):
+    """Phase 70 BLOCK-07/D-02: enable per-connection FK enforcement.
+
+    SQLite FK constraints are declared at table-create time but only enforced
+    when this PRAGMA is set. Without it, ON DELETE SET NULL is documentation.
+    Attached at module level so the hook fires for every Engine in the process
+    (including in-memory test engines built via create_engine directly).
+    """
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
+
 
 # Allowlist pattern for migration column names — prevents SQL injection via column interpolation.
 _SAFE_COL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -211,6 +228,85 @@ def _ensure_phase54_qramm_columns(engine) -> None:
         conn.commit()
 
 
+def _ensure_qramm_profiles_fk(engine) -> None:
+    """Phase 70 BLOCK-07/D-01: retrofit FK on qramm_profiles.session_id.
+
+    Pre-existing on-disk databases were created when QRAMMProfile.session_id
+    had no DB-level FK declaration. SQLite does not support
+    ALTER TABLE ... ADD CONSTRAINT, so we follow the canonical 12-step rebuild
+    (https://sqlite.org/lang_altertable.html §7):
+      1. PRAGMA foreign_keys=OFF (outside any transaction — Pitfall 3)
+      2. BEGIN
+      3. CREATE qramm_profiles_new with the FK clause
+      4. INSERT ... SELECT (explicit column list — Pitfall 1)
+      5. DROP qramm_profiles
+      6. RENAME _new -> qramm_profiles
+      7. COMMIT
+      8. PRAGMA foreign_keys=ON
+
+    Idempotent: skip when PRAGMA foreign_key_list('qramm_profiles') already
+    lists a row referencing qramm_sessions.
+    """
+    # Idempotency check uses an ORM connection (auto-managed transaction is fine
+    # for a read-only PRAGMA query).
+    with engine.connect() as conn:
+        fk_rows = conn.execute(
+            text("PRAGMA foreign_key_list('qramm_profiles')")
+        ).fetchall()
+    if any(row[2] == "qramm_sessions" for row in fk_rows):
+        return  # idempotent — FK already present
+
+    # Pitfall 3: PRAGMA foreign_keys is a no-op inside a transaction.
+    # SQLAlchemy 2.x auto-begins a transaction on the first execute via
+    # engine.connect(), so we drop down to the raw DBAPI connection (which is
+    # in autocommit mode by default for the SQLite driver) to issue PRAGMA
+    # statements outside any transaction, then BEGIN/COMMIT explicitly.
+    raw = engine.raw_connection()
+    try:
+        cursor = raw.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=OFF")
+            cursor.execute("BEGIN")
+            try:
+                cursor.execute(
+                    """
+                    CREATE TABLE qramm_profiles_new (
+                        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        session_id INTEGER REFERENCES qramm_sessions(id) ON DELETE SET NULL,
+                        industry VARCHAR(64),
+                        org_size VARCHAR(32),
+                        data_sensitivity VARCHAR(32),
+                        regulatory_obligations TEXT,
+                        geographic_scope VARCHAR(32),
+                        multiplier FLOAT,
+                        created_at DATETIME
+                    )
+                    """
+                )
+                cursor.execute(
+                    "INSERT INTO qramm_profiles_new "
+                    "(id, session_id, industry, org_size, data_sensitivity, "
+                    "regulatory_obligations, geographic_scope, multiplier, created_at) "
+                    "SELECT id, session_id, industry, org_size, data_sensitivity, "
+                    "regulatory_obligations, geographic_scope, multiplier, created_at "
+                    "FROM qramm_profiles"
+                )
+                cursor.execute("DROP TABLE qramm_profiles")
+                cursor.execute(
+                    "ALTER TABLE qramm_profiles_new RENAME TO qramm_profiles"
+                )
+                cursor.execute("COMMIT")
+            except Exception:
+                cursor.execute("ROLLBACK")
+                raise
+            finally:
+                cursor.execute("PRAGMA foreign_keys=ON")
+        finally:
+            cursor.close()
+    finally:
+        raw.close()
+
+
 def _ensure_qramm_tables(engine) -> None:
     """Phase 51 QRAMM-01: create QRAMM assessment tables if absent (idempotent).
 
@@ -279,6 +375,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_phase46_columns(engine)     # Phase 46 — TLS-FIND-06 chain_verified
     _ensure_qramm_tables(engine)         # Phase 51 — QRAMM-01
     _ensure_phase54_qramm_columns(engine)  # Phase 54 — evidence_note column
+    _ensure_qramm_profiles_fk(engine)    # Phase 70 BLOCK-07/D-01 — FK retrofit
     _ensure_scheduled_tables(engine)     # Phase 63 — SCHED-01
     _ensure_scan_jobs_table(engine)      # Phase 65 — UI-SCAN-01
     _ensure_scan_checkpoints_table(engine)  # Phase 67 — RESUME-01
