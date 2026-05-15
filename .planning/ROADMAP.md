@@ -1462,7 +1462,7 @@ Plans:
 - [x] **Phase 69: Deferred BLOCKERs — Scanner + Cloud** - Fix resource leaks (ThreadPool, socket) and cloud data correctness bugs (GCP SQL, K8s, Azure Blob, Cache, TokenBucket) (completed 2026-05-15)
 - [x] **Phase 69.1: K8s Test Fixture Hardening (INSERTED)** - Add autouse `*_AVAILABLE` fixture to `tests/test_k8s_connector.py` so the canonical `.venv` (Python 3.14) runs the full k8s_connector suite green regardless of optional cloud-SDK installation. Unblocks Phase 69-03 test + 4 pre-existing failures (completed 2026-05-15)
 - [x] **Phase 70: Deferred BLOCKERs — API + QRAMM Model** - Enforce DB-level FK constraint on QRAMMProfile; replace bare except in classifier and harden DDL interpolation (completed 2026-05-15)
-- [ ] **Phase 71: Protocol Scanner WARNINGs** - Coverage clamp, case-insensitive severity, bare except removal, nmap hardening, identity scanner input bounds, extras/ThreadPool/dedup fixes
+- [x] **Phase 71: Protocol Scanner WARNINGs** - Coverage clamp, case-insensitive severity, bare except removal, nmap hardening, identity scanner input bounds, extras/ThreadPool/dedup fixes (completed 2026-05-15)
 - [ ] **Phase 72: Cloud Scanner WARNINGs** - AWS/Azure/GCP data correctness, Cache/scope_hash robustness, profiles.py mutations, Vault/DB connector hardening
 - [ ] **Phase 73: CBOM + Intelligence + Reports WARNINGs** - PDF resource cleanup, weak-crypto predicate consistency, score weight normalization, cipher label correctness
 - [ ] **Phase 74: QRAMM + Compliance WARNINGs** - Practice score validation, evidence bridge TZ safety, migration advisor precision, model_meta helper, stale comment removal
@@ -1514,11 +1514,11 @@ Plans:
   4. DNSSEC `_parse_dnskeys` key_bytes access is bounded; Kerberos decode errors are logged; Kerberos nonce uses `secrets.token_bytes`; SAML JSON parse has a byte-size cap
   5. Optional-dep extras messaging is consistent across email/broker/container/source scanners; email/broker `ThreadPool max_workers` is configurable via `ScanCfg`; `discovery/tls_scanner.py` duplicate is deleted; `target_expander` dedup is stable, CIDR expansion bounded, type confusion resolved
 **Plans**: 5 plans
-  - [ ] 71-01-PLAN.md — calculate_coverage clamp + case-insensitive severity in quantum_readiness_score (PROTO-01, closes WR-01/02)
-  - [ ] 71-02-PLAN.md — Narrow WR-03 subprocess except + module logger in fingerprint scanner (PROTO-02, closes WR-03)
-  - [ ] 71-03-PLAN.md — nmap default port CSV + extra_args allowlist + defusedxml parser (PROTO-03, closes WR-04/05/06)
-  - [ ] 71-04-PLAN.md — DNSSEC bound + Kerberos decode-log + secrets nonce + SAML JSON byte cap (PROTO-04, closes WR-07/08/09/10)
-  - [ ] 71-05-PLAN.md — Unified extras messaging + ScanCfg.motion_concurrency + delete tls_scanner dup + target_expander cap/dedup/normalize (PROTO-05, closes WR-11/12/13/14)
+  - [x] 71-01-PLAN.md — calculate_coverage clamp + case-insensitive severity in quantum_readiness_score (PROTO-01, closes WR-01/02)
+  - [x] 71-02-PLAN.md — Narrow WR-03 subprocess except + module logger in fingerprint scanner (PROTO-02, closes WR-03)
+  - [x] 71-03-PLAN.md — nmap default port CSV + extra_args allowlist + defusedxml parser (PROTO-03, closes WR-04/05/06)
+  - [x] 71-04-PLAN.md — DNSSEC bound + Kerberos decode-log + secrets nonce + SAML JSON byte cap (PROTO-04, closes WR-07/08/09/10)
+  - [x] 71-05-PLAN.md — Unified extras messaging + ScanCfg.motion_concurrency + delete tls_scanner dup + target_expander cap/dedup/normalize (PROTO-05, closes WR-11/12/13/14)
 
 ### Phase 72: Cloud Scanner WARNINGs
 **Goal**: All five WARNING clusters in the cloud scanner subsystem are resolved — AWS/Azure/GCP data correctness, Cache and scope_hash robustness, profiles.py mutation guards, and Vault/DB connector hardening. Closes audit findings scanners-cloud/WR-01 through WR-24.
@@ -1592,7 +1592,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 69. Deferred BLOCKERs — Scanner + Cloud | 0/TBD | Not started | - |
 | 70. Deferred BLOCKERs — API + QRAMM Model | 3/3 | Complete   | 2026-05-15 |
-| 71. Protocol Scanner WARNINGs | 0/TBD | Not started | - |
+| 71. Protocol Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
 | 72. Cloud Scanner WARNINGs | 0/TBD | Not started | - |
 | 73. CBOM + Intelligence + Reports WARNINGs | 0/TBD | Not started | - |
 | 74. QRAMM + Compliance WARNINGs | 0/TBD | Not started | - |

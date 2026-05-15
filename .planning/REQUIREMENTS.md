@@ -24,7 +24,7 @@
 ### PROTO — Scanner-Protocol WARNINGs
 
 - [ ] **PROTO-01**: coverage.calculate_coverage return value clamped to [0.0, 1.0]; quantum_readiness_score severity comparison is case-insensitive (closes scanners-protocol/WR-01, WR-02)
-- [ ] **PROTO-02**: Bare except swallowing subprocess errors replaced with specific exception handling and stderr logging (closes scanners-protocol/WR-03)
+- [x] **PROTO-02**: Bare except swallowing subprocess errors replaced with specific exception handling and stderr logging (closes scanners-protocol/WR-03)
 - [ ] **PROTO-03**: nmap_provider default port CSV corrected; extra_args validated against character allowlist; nmap XML output parsed via defusedxml to eliminate XXE surface (closes scanners-protocol/WR-04, WR-05, WR-06)
 - [ ] **PROTO-04**: DNSSEC _parse_dnskeys key_bytes subscript bounded; Kerberos decode errors logged not silently swallowed; Kerberos nonce uses cryptographic RNG; SAML _classify_target JSON parse has byte size cap (closes scanners-protocol/WR-07, WR-08, WR-09, WR-10)
 - [ ] **PROTO-05**: Optional-dep extras messaging consistent across email/broker/container/source scanners; email/broker ThreadPool max_workers configurable via ScanCfg; discovery/tls_scanner.py dead duplicate deleted; target_expander dedup stable, CIDR expansion bounded, type confusion resolved (closes scanners-protocol/WR-11, WR-12, WR-13, WR-14)
@@ -113,7 +113,7 @@ These items were considered but deferred beyond v4.9:
 | BLOCK-07 | Phase 70 | Complete |
 | BLOCK-08 | Phase 70 | Complete |
 | PROTO-01 | Phase 71 | Pending |
-| PROTO-02 | Phase 71 | Pending |
+| PROTO-02 | Phase 71 | Complete |
 | PROTO-03 | Phase 71 | Pending |
 | PROTO-04 | Phase 71 | Pending |
 | PROTO-05 | Phase 71 | Pending |
