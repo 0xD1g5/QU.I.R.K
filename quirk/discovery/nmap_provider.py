@@ -1,12 +1,35 @@
 ﻿from __future__ import annotations
 
 import os
+import re
 import subprocess
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from quirk.logging_util import Logger
 from quirk.discovery.nmap_parser import parse_nmap_xml, NmapOpenPort
+
+# D-04 / WR-05 — defense-in-depth allowlist for nmap extra_args tokens.
+# Mirrors the Phase 70 `_SAFE_COL_TYPE_RE` pattern (quirk/db.py:34).
+_SAFE_NMAP_ARG_RE = re.compile(r"^[A-Za-z0-9._:/=,-]+$")
+
+# D-03 / WR-04 — fixed consulting-grade port set (SSH, HTTP, motion email,
+# Kerberos, LDAP/LDAPS, RDP, AMQPS, Kafka). The dynamic TLS half comes from
+# `cfg.scan.ports_tls`; see `default_nmap_ports_csv` below.
+_FIXED_NMAP_PORTS: tuple = (
+    22, 25, 80, 88, 389, 465, 587, 636, 993, 995, 3389, 5671, 8080, 9092,
+)
+
+
+def default_nmap_ports_csv(ports_tls: Iterable[int]) -> str:
+    """
+    Compose the consulting-grade default nmap port CSV (D-03 / WR-04).
+
+    Union of `cfg.scan.ports_tls` (so the default tracks TLS port changes)
+    and the fixed protocol set in `_FIXED_NMAP_PORTS`. Sorted, deduped.
+    """
+    ports = sorted(set(int(p) for p in ports_tls) | set(_FIXED_NMAP_PORTS))
+    return ",".join(str(p) for p in ports)
 
 
 def _default_nmap_args(ports_csv: str) -> List[str]:
@@ -51,11 +74,25 @@ def run_nmap_discovery(
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     xml_path = os.path.join(output_dir, f"nmap-discovery-{stamp}.xml")
 
-    ports_csv = ",".join(str(p) for p in sorted(set(ports))) if ports else "22,80,443,8443,9443,10443,5001"
+    # D-03 / WR-04 — when caller passes no explicit port list, fall back to
+    # the consulting-grade union (cfg.scan.ports_tls + fixed protocol set).
+    # The default here hardcodes the canonical TLS list (Phase 47 consulting
+    # set: 443, 8443, 9443, 10443, 5001) since this fallback runs without a
+    # cfg handle; callers with a cfg should pass `ports` explicitly.
+    if ports:
+        ports_csv = ",".join(str(p) for p in sorted(set(ports)))
+    else:
+        ports_csv = default_nmap_ports_csv((443, 8443, 9443, 10443, 5001))
 
     args = [nmap_path] + _default_nmap_args(ports_csv)
 
     if extra_args:
+        # D-04 / WR-05 — validate every extra_args token against the allowlist
+        # BEFORE subprocess. Mirrors `_SAFE_COL_TYPE_RE` defense-in-depth
+        # pattern from Phase 70. Reject loudly — no quoting / escaping.
+        for token in extra_args:
+            if not _SAFE_NMAP_ARG_RE.match(token):
+                raise ValueError(f"Unsafe nmap extra arg: {token!r}")
         # allow user overrides like: ["-sS"] if running admin/root
         args.extend(extra_args)
 
