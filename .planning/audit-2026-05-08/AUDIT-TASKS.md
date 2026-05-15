@@ -129,11 +129,11 @@ wont_fix: 1
 | qramm-compliance/WR-06 | WARNING | Maturity label >=4.0 unreachable at multiplier=1.0 (FP noise) | Phase 74 | [x] closed |
 | qramm-compliance/WR-07 | WARNING | evidence_bridge does not handle db.commit failure | Phase 74 | [x] closed |
 | qramm-compliance/WR-08 | WARNING | attach_context swallows AttributeError; user context dropped | Phase 74 | [x] closed |
-| qramm-compliance/WR-09 | WARNING | migration_advisor substring matching produces false positives | — | [ ] open |
-| qramm-compliance/WR-10 | WARNING | _walk_json_for_alg_strings skips non-_ALG_KEYS strings | — | [ ] open |
-| qramm-compliance/WR-11 | WARNING | compliance_map.py weight 0.0 ambiguous vs not-yet-covered | — | [ ] open |
-| qramm-compliance/WR-12 | WARNING | model_meta.py lacks is_qramm_model_stale helper | — | [ ] open |
-| qramm-compliance/WR-13 | WARNING | TODO Phase 50 comment left in production module header | — | [ ] open |
+| qramm-compliance/WR-09 | WARNING | migration_advisor substring matching produces false positives | Phase 74 (74-03 D-08) | [x] closed — CANONICAL_ALG_SYNONYMS + _matches word-boundary regex; substring title checks replaced with `re.search(r"\b...\b")`. Tests: tests/test_migration_advisor_precision.py (DESede/libdes3/AES-128 negative cases). |
+| qramm-compliance/WR-10 | WARNING | _walk_json_for_alg_strings skips non-_ALG_KEYS strings | Phase 74 (74-03 D-09) | [x] closed — third dict-arm scans non-_ALG_KEYS string values via _matches; existing keyed + list behavior preserved. Tests: tests/test_migration_advisor_precision.py::test_walk_json_extracts_non_keyed_alg_string. |
+| qramm-compliance/WR-11 | WARNING | compliance_map.py weight 0.0 ambiguous vs not-yet-covered | Phase 74 (74-03 D-10) | [x] closed — NEW SCANNER_COVERAGE_STATUS parallel dict (CVI='covered', SGRM/DPE/ITR='pending'); ComplianceMapRow surfaces coverage_status; pending/n_a EXCLUDED from rollup. Tests: tests/test_compliance_coverage_status.py + updated tests/test_qramm_compliance_map.py. |
+| qramm-compliance/WR-12 | WARNING | model_meta.py lacks is_qramm_model_stale helper | Phase 74 (74-03 D-11) | [x] closed — public `is_qramm_model_stale(today=None)` using nested `QRAMM_MODEL["last_verified"]` access; strict `>` boundary at STALENESS_THRESHOLD_DAYS. Tests: tests/test_qramm_model_stale.py (parametrized stale/fresh + boundary). |
+| qramm-compliance/WR-13 | WARNING | TODO Phase 50 comment left in production module header | Phase 74 (74-03 D-12) | [x] closed — stripped trailing `# TODO Phase 50` from quirk/compliance/__init__.py:3; target doc docs/operators-guide.md §7 verified to exist (line 321). |
 
 ### CBOM + Intelligence + Reports
 
