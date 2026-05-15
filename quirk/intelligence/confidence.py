@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Mapping
 
 CONFIDENCE_WEIGHTS: Dict[str, float] = {
@@ -8,6 +9,9 @@ CONFIDENCE_WEIGHTS: Dict[str, float] = {
     "unknown_ratio": 0.15,
     "tls_enum_coverage_ratio": 0.20,
 }
+
+_LOGGER = logging.getLogger(__name__)
+_KNOWN_CONFIDENCE_KEYS = frozenset(CONFIDENCE_WEIGHTS.keys())
 
 
 def _as_int(v: Any) -> int:
@@ -45,8 +49,20 @@ def compute_confidence(
 ) -> Dict[str, Any]:
     w = dict(CONFIDENCE_WEIGHTS)
     if weights:
+        # D-09 / WR-13 Phase 73: clamp + fail-loud on non-numeric; WARN on unknown key.
         for key, value in weights.items():
-            w[key] = _as_float(value)
+            try:
+                num = float(value)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"Confidence override {key!r} must be numeric in [0.0, 1.0], got {value!r}"
+                )
+            w[key] = max(0.0, min(1.0, num))
+            if key not in _KNOWN_CONFIDENCE_KEYS:
+                _LOGGER.warning(
+                    "Unknown confidence override key %r — forward-compat (Phase 73 / D-09)",
+                    key,
+                )
 
     totals = evidence.get("totals", {}) if isinstance(evidence.get("totals", {}), Mapping) else {}
     protocol_counts = evidence.get("protocol_counts", {}) if isinstance(evidence.get("protocol_counts", {}), Mapping) else {}
