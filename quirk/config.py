@@ -251,6 +251,9 @@ class ConnectorsCfg:
     # Cloud broker targets (D-01) — supplied via CLI/config only; no SDK enumeration (D-02)
     broker_azure_namespaces: List[str] = field(default_factory=list)
     broker_sqs_regions: List[str] = field(default_factory=list)
+    # Phase 72 D-02 / WR-11: tracks which keys appeared in the raw YAML connectors block.
+    # Used by quirk.engine.profiles to suppress mutation of user-explicit values.
+    _user_set_fields: frozenset = field(default_factory=frozenset, repr=False, compare=False)
 
 
 @dataclass
@@ -431,11 +434,16 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
             pass_env=str(cred.get("pass_env", "")),
         )
 
+    # Phase 72 D-02 / WR-11: build connectors then stamp user-set field set so the
+    # profile-application code can distinguish user-explicit values from defaults.
+    connectors_cfg = ConnectorsCfg(**conn_raw)
+    connectors_cfg._user_set_fields = frozenset(conn_raw.keys())
+
     return AppConfig(
         assessment=AssessmentCfg(**raw["assessment"]),
         scan=ScanCfg(timeouts=timeouts_cfg, retry=retry_cfg, **scan_raw),
         targets=targets,
-        connectors=ConnectorsCfg(**conn_raw),
+        connectors=connectors_cfg,
         output=OutputCfg(**raw["output"]),
         intelligence=intelligence_cfg,
         security=security_cfg,
