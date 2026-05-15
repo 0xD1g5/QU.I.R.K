@@ -7,7 +7,7 @@ import { PageSpinner } from "@/components/PageSpinner"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { RegressionAlertChip } from "@/components/RegressionAlertChip"
 import type { PartialFailureEntry } from "@/types/api"
 
@@ -108,6 +108,26 @@ export function ExecutivePage() {
   const [pdfExporting, setPdfExporting] = useState(false)
   const [pdfMessage, setPdfMessage] = useState<string | null>(null)
 
+  // D-06 (WR-05): track revoke timer + blob URL in refs so a useEffect
+  // cleanup releases both on unmount. Prevents the setTimeout from firing
+  // after the component is gone and prevents blob URL leaks when the user
+  // navigates away mid-download.
+  const revokeTimerRef = useRef<number | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (revokeTimerRef.current !== null) {
+        clearTimeout(revokeTimerRef.current)
+        revokeTimerRef.current = null
+      }
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+    }
+  }, [])
+
   async function handleExportPdf() {
     setPdfExporting(true)
     setPdfMessage("Generating PDF...")
@@ -123,8 +143,15 @@ export function ExecutivePage() {
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
-        // Revoke after a tick so the browser has time to start the fetch
-        setTimeout(() => URL.revokeObjectURL(url), 100)
+        // D-06 (WR-05): Revoke after a tick so the browser has time to
+        // start the fetch. Track both the timer id and the blob URL so the
+        // component-scope cleanup effect can release them on unmount.
+        blobUrlRef.current = url
+        revokeTimerRef.current = window.setTimeout(() => {
+          URL.revokeObjectURL(url)
+          blobUrlRef.current = null
+          revokeTimerRef.current = null
+        }, 100)
         setPdfMessage(`PDF saved to ~/Downloads/quirk-report-${date}.pdf`)
       } else {
         const body = await resp.json().catch(() => null)
