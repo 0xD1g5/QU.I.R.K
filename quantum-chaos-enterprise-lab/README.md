@@ -35,7 +35,7 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | ldaps | ldaps | 636 | [Expected Findings](expected_results_v4.md#profile-ldaps) | v4.1 |
 | dnssec | bind9-dnssec | 15353/udp, 15353/tcp | [Expected Findings](expected_results_v4.md#profile-dnssec) | v4.2 |
 | saml | simplesamlphp | 8080 | [Expected Findings](expected_results_v4.md#profile-saml) | v4.2; note: port 8080 — avoid running alongside `identity` (Keycloak exposes 8080 internally) |
-| kerberos | samba-dc | 88, 389 | [Expected Findings](expected_results_v4.md#profile-kerberos) | v4.2; privileged ports — collides with system DNS/AD if anything else listens on 88/389 |
+| kerberos | samba-dc | 88, 389 | [Expected Findings](expected_results_v4.md#profile-kerberos) | v4.2; privileged ports — collides with system DNS/AD if anything else listens on 88/389. **macOS:** `./lab.sh all` skips this profile automatically because the OS-level KDC binds `*:88`. Set `LAB_INCLUDE_KERBEROS=1` to opt in (requires stopping the system KDC first). Tracked for full host-port remap under BACK-89. |
 | database | postgres-ssl-off, mysql-ssl-off | 25432, 23306 | [Expected Findings](expected_results_v4.md#profile-database) | v4.3 (DAR) |
 | storage-s3 | minio, minio-seed | 29000, 29001 | [Expected Findings](expected_results_v4.md#profile-storage-s3) | v4.3 (DAR) |
 | vault | vault-30 (1.17), vault-30-seed | 28200 | [Expected Findings](expected_results_v4.md#profile-vault) | v4.3 (DAR); independent of legacy `storage` profile |
