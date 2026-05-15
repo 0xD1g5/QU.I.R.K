@@ -1405,10 +1405,14 @@ def main():
             if not (cfg.connectors.vault_addr or os.environ.get("VAULT_ADDR")):
                 logger.v("vault_addr not set -- Vault scanning skipped")
                 return []
+            # Phase 72 D-22 / WR-09: connector requires explicit token now (no implicit
+            # env fallback inside vault_connector). Source the token here at the caller
+            # boundary — config takes precedence; VAULT_TOKEN env is the operator override.
+            _vault_token = cfg.connectors.vault_token or os.environ.get("VAULT_TOKEN", "")
             eps = scan_vault_targets(
                 vault_addr=(cfg.connectors.vault_addr
                             or os.environ.get("VAULT_ADDR", "")),
-                token=cfg.connectors.vault_token,
+                token=_vault_token,
                 transit_mount=cfg.connectors.vault_transit_mount or "transit",
                 tls_verify=cfg.connectors.vault_tls_verify,
                 logger=logger,
