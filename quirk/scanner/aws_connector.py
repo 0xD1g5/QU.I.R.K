@@ -325,8 +325,18 @@ def _scan_s3_encryption(
                     logger.v(f"S3 endpoint build error for bucket {bucket!r}: {exc}")
                 return None
 
+        # Phase 72 D-09 (WR-13): as_completed + per-future .result() so _build_endpoint
+        # failures are logged at WARNING and don't silently drop results.
         with ThreadPoolExecutor(max_workers=10) as executor:
-            for ep in executor.map(_build_endpoint, buckets):
+            futures = {executor.submit(_build_endpoint, bucket): bucket for bucket in buckets}
+            for f in as_completed(futures):
+                bucket = futures[f]
+                try:
+                    ep = f.result()
+                except Exception as exc:
+                    if logger:
+                        logger.v(f"S3 endpoint task crashed for bucket {bucket!r}: {exc}")
+                    continue
                 if ep is not None:
                     results.append(ep)
 
