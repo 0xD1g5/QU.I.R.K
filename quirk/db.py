@@ -28,6 +28,10 @@ def _sqlite_fk_pragma(dbapi_connection, connection_record):
 
 # Allowlist pattern for migration column names — prevents SQL injection via column interpolation.
 _SAFE_COL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+# Phase 70 BLOCK-08/D-06: allowlist pattern for migration `col_type` DDL fragments.
+# Defense-in-depth — current values are hardcoded literals, but the f-string
+# interpolation surface remains a future-contributor risk. Bounded VARCHAR(d{1,4}).
+_SAFE_COL_TYPE_RE = re.compile(r"^(TEXT|INTEGER|REAL|BOOLEAN|DATETIME|VARCHAR\(\d{1,4}\))$")
 
 
 def _ensure_parent_dir(path: str) -> None:
@@ -118,6 +122,8 @@ def _ensure_v43_columns(engine) -> None:
         for col, col_type in _V43_COLUMN_DDLS.items():
             if not _SAFE_COL_RE.match(col):
                 raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if not _SAFE_COL_TYPE_RE.match(col_type):
+                raise ValueError(f"Unsafe column type in migration: {col_type!r}")
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
         conn.commit()
@@ -180,6 +186,8 @@ def _ensure_phase41_columns(engine) -> None:
         for col, col_type in _PHASE41_COLUMN_DDLS.items():
             if not _SAFE_COL_RE.match(col):
                 raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if not _SAFE_COL_TYPE_RE.match(col_type):
+                raise ValueError(f"Unsafe column type in migration: {col_type!r}")
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
         conn.commit()
@@ -202,6 +210,8 @@ def _ensure_phase46_columns(engine) -> None:
         for col, col_type in _PHASE46_COLUMN_DDLS.items():
             if not _SAFE_COL_RE.match(col):
                 raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if not _SAFE_COL_TYPE_RE.match(col_type):
+                raise ValueError(f"Unsafe column type in migration: {col_type!r}")
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
         conn.commit()
@@ -223,6 +233,8 @@ def _ensure_phase54_qramm_columns(engine) -> None:
         for col, col_type in _PHASE54_QRAMM_ANSWER_DDLS.items():
             if not _SAFE_COL_RE.match(col):
                 raise ValueError(f"Unsafe column name in migration: {col!r}")
+            if not _SAFE_COL_TYPE_RE.match(col_type):
+                raise ValueError(f"Unsafe column type in migration: {col_type!r}")
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE qramm_answers ADD COLUMN {col} {col_type}"))
         conn.commit()
