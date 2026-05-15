@@ -192,13 +192,13 @@ wont_fix: 1
 | api-cli-core/WR-07 | WARNING | routes/qramm read_session returns score=None on JSON corruption | Phase 75 | [x] closed |
 | api-cli-core/WR-08 | WARNING | _derive_dar_findings swallows json.loads errors with bare except | Phase 75 | [x] closed |
 | api-cli-core/WR-09 | WARNING | _compute_multiplier rounds before clamp — boundary fragile | Phase 75 | [x] closed |
-| api-cli-core/WR-10 | WARNING | interactive _prompt_int infinite loop on EOF | — | [ ] open |
-| api-cli-core/WR-11 | WARNING | interactive exposure default silently used when input not 1/2/3 | — | [ ] open |
-| api-cli-core/WR-12 | WARNING | setattr enable_nmap injects undeclared dataclass attribute | — | [ ] open |
-| api-cli-core/WR-13 | WARNING | validate.py artifact list missing intelligence-{stamp}.json | — | [ ] open |
-| api-cli-core/WR-14 | WARNING | qramm_cmd env override has no try/except on malformed input | — | [ ] open |
-| api-cli-core/WR-15 | WARNING | routes/scan reads QUIRK_OUTPUT_DIR from env into Path read | — | [ ] open |
-| api-cli-core/WR-16 | WARNING | parse_target_tokens does not validate hostnames | — | [ ] open |
+| api-cli-core/WR-10 | WARNING | interactive _prompt_int infinite loop on EOF | Phase 75 | [x] closed |
+| api-cli-core/WR-11 | WARNING | interactive exposure default silently used when input not 1/2/3 | Phase 75 | [x] closed |
+| api-cli-core/WR-12 | WARNING | setattr enable_nmap injects undeclared dataclass attribute | Phase 75 | [x] closed |
+| api-cli-core/WR-13 | WARNING | validate.py artifact list missing intelligence-{stamp}.json | Phase 75 | [x] closed |
+| api-cli-core/WR-14 | WARNING | qramm_cmd env override has no try/except on malformed input | Phase 75 | [x] closed |
+| api-cli-core/WR-15 | WARNING | routes/scan reads QUIRK_OUTPUT_DIR from env into Path read | Phase 75 | [x] closed |
+| api-cli-core/WR-16 | WARNING | parse_target_tokens does not validate hostnames | Phase 75 | [x] closed |
 | api-cli-core/WR-17 | WARNING | routes/qramm list_questions fragile on QRAMM_QUESTIONS schema drift | Phase 75 | [x] closed |
 | api-cli-core/IN-01 | INFO | Dict[str, Any] type erasure on QRAMM endpoints | — | [ ] open |
 | api-cli-core/IN-02 | INFO | _FACES banner has \- ambiguous escape (comment misleading) | — | [ ] open |
