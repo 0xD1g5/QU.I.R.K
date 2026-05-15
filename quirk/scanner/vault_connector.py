@@ -273,14 +273,31 @@ def _scan_pki_mounts(
                     mount_point=mount_clean,
                 )
                 if chain_pem:
-                    # The chain may contain multiple PEM blocks concatenated.
-                    # Split on the BEGIN CERTIFICATE marker.
-                    blocks = [
-                        b for b in chain_pem.split("-----BEGIN CERTIFICATE-----")
-                        if b.strip()
-                    ]
-                    for idx, block in enumerate(blocks, start=1):
-                        single_pem = "-----BEGIN CERTIFICATE-----" + block
+                    # Phase 72 D-23 / WR-18: use cryptography.x509.load_pem_x509_certificates
+                    # (plural; cryptography >= 36, pyproject pins >= 44.0) instead of the
+                    # naive split heuristic — handles mixed line endings, embedded comments,
+                    # and trailing whitespace correctly.
+                    from cryptography import x509 as _x509
+                    from cryptography.hazmat.primitives import serialization as _serialization
+                    try:
+                        chain_bytes = chain_pem.encode("utf-8") if isinstance(chain_pem, str) else chain_pem
+                        chain_certs = _x509.load_pem_x509_certificates(chain_bytes)
+                    except AttributeError:
+                        # cryptography < 36 — should never hit at our >= 44.0 pin; defensive.
+                        if logger:
+                            logger.v(
+                                "cryptography lib too old for load_pem_x509_certificates "
+                                "(need >= 36); bump dependency"
+                            )
+                        chain_certs = []
+                    except ValueError as _pem_err:
+                        if logger:
+                            logger.v(f"Vault PKI chain PEM parse failed: {safe_str(_pem_err)}")
+                        chain_certs = []
+                    for idx, _cert in enumerate(chain_certs, start=1):
+                        single_pem = _cert.public_bytes(
+                            _serialization.Encoding.PEM
+                        ).decode("ascii")
                         try:
                             alg, size, sev, reason, sig_alg = _classify_pki_cert(single_pem)
                             results.append(CryptoEndpoint(
@@ -393,8 +410,16 @@ def scan_vault_targets(
         return []
 
     now = _now_or(session_start)
-    resolved_token = token or os.environ.get("VAULT_TOKEN", "")
+    # Phase 72 D-22 / WR-09: explicit token contract — caller must source the token
+    # (env var, config, secret manager). No implicit os.environ fallback in connector.
+    if token is None:
+        raise ValueError(
+            "vault_connector requires explicit token; "
+            "pass the VAULT_TOKEN env value through if env fallback intended"
+        )
+    resolved_token = token
     if not resolved_token:
+        # Caller passed an empty string explicitly — keep the existing scan_error path
         return [CryptoEndpoint(
             host=vault_addr or "vault://unknown",
             port=8200,
