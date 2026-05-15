@@ -59,10 +59,10 @@ wont_fix: 1
 | scanners-protocol/WR-04 | WARNING | nmap_provider default port CSV is incomplete and wrong | Phase 71 | [x] closed — closed by Phase 71 (71-03 / PROTO-03): default port CSV composed via default_nmap_ports_csv() unioning cfg.scan.ports_tls with fixed consulting set (22,25,80,88,389,465,587,636,993,995,3389,5671,8080,9092) per locked D-03. Tests: tests/test_nmap_hardening.py::test_default_port_csv_includes_consulting_set. |
 | scanners-protocol/WR-05 | WARNING | nmap_provider.run_nmap_discovery accepts unvalidated extra_args | Phase 71 | [x] closed — closed by Phase 71 (71-03 / PROTO-03): _SAFE_NMAP_ARG_RE allowlist (^[A-Za-z0-9._:/=,-]+$) validates every extra_args token before subprocess; unsafe tokens raise ValueError per locked D-04 (mirrors Phase 70 _SAFE_COL_TYPE_RE). Tests: tests/test_nmap_hardening.py (allowlist accept/reject + subprocess-not-reached assertion). |
 | scanners-protocol/WR-06 | WARNING | nmap_parser uses stdlib ET — XXE / billion-laughs surface | Phase 71 | [x] closed — closed by Phase 71 (71-03 / PROTO-03): nmap_parser imports defusedxml.ElementTree (defuses XXE/billion-laughs/external-DTD) per locked D-05; defusedxml already a core dep. Tests: tests/test_nmap_hardening.py::test_nmap_parser_uses_defusedxml + test_nmap_parser_blocks_xxe (EntitiesForbidden on external-entity DOCTYPE). |
-| scanners-protocol/WR-07 | WARNING | dnssec _parse_dnskeys unbounded subscript on key_bytes | — | [ ] open |
-| scanners-protocol/WR-08 | WARNING | kerberos _probe_kdc_udp silently swallows all decode errors | — | [ ] open |
-| scanners-protocol/WR-09 | WARNING | kerberos _build_as_req uses non-cryptographic RNG for nonce | — | [ ] open |
-| scanners-protocol/WR-10 | WARNING | saml _classify_target parses JSON of arbitrary bytes; no size cap | — | [ ] open |
+| scanners-protocol/WR-07 | WARNING | dnssec _parse_dnskeys unbounded subscript on key_bytes | Phase 71 | [x] closed |
+| scanners-protocol/WR-08 | WARNING | kerberos _probe_kdc_udp silently swallows all decode errors | Phase 71 | [x] closed |
+| scanners-protocol/WR-09 | WARNING | kerberos _build_as_req uses non-cryptographic RNG for nonce | Phase 71 | [x] closed |
+| scanners-protocol/WR-10 | WARNING | saml _classify_target parses JSON of arbitrary bytes; no size cap | Phase 71 | [x] closed |
 | scanners-protocol/WR-11 | WARNING | Inconsistent extras messaging across optional-dep scanners | — | [ ] open |
 | scanners-protocol/WR-12 | WARNING | email/broker ThreadPool workers hardcoded to 50 | — | [ ] open |
 | scanners-protocol/WR-13 | WARNING | discovery/tls_scanner.py is dead-code duplicate | — | [ ] open |
