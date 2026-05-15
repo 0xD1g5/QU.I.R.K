@@ -455,6 +455,7 @@ def scan_kafka_targets(
     profile: str = "standard",
     logger: Optional[Logger] = None,
     session_start: Optional[datetime] = None,
+    motion_concurrency: int = 50,
 ) -> List[CryptoEndpoint]:
     """Probe Kafka hosts on 9092 (plaintext), 9093 (TLS), and 9094 (TLS, standard/deep only).
 
@@ -472,7 +473,7 @@ def scan_kafka_targets(
         return results
     if logger:
         logger.stamp(f"Starting Kafka scans: {len(tasks)} probes ({len(hosts)} hosts x {len(ports)} ports)")
-    with ThreadPoolExecutor(max_workers=min(len(tasks), 50)) as ex:
+    with ThreadPoolExecutor(max_workers=min(len(tasks), motion_concurrency)) as ex:
         futs = {ex.submit(scan_one_kafka, h, p, timeout, logger, session_start): (h, p) for h, p in tasks}
         for f in as_completed(futs):
             ep = f.result()
@@ -534,6 +535,7 @@ def scan_rabbitmq_targets(
     *,
     security=None,
     broker_credentials: "Optional[Dict]" = None,
+    motion_concurrency: int = 50,
 ) -> List[CryptoEndpoint]:
     """RABBIT-01..05. Probe self-hosted RabbitMQ + Azure SB + AWS SQS in parallel.
 
@@ -571,7 +573,7 @@ def scan_rabbitmq_targets(
             f"Starting RabbitMQ scans: {len(all_tasks)} probes "
             f"(self={len(self_tasks)} azure={len(azure_tasks)} sqs={len(sqs_tasks)})"
         )
-    with ThreadPoolExecutor(max_workers=min(len(all_tasks), 50)) as ex:
+    with ThreadPoolExecutor(max_workers=min(len(all_tasks), motion_concurrency)) as ex:
         futs = {
             ex.submit(
                 scan_one_rabbitmq, host, port, timeout,
@@ -788,6 +790,7 @@ def scan_redis_targets(
     session_start: Optional[datetime] = None,
     *,
     security=None,
+    motion_concurrency: int = 50,
 ) -> List[CryptoEndpoint]:
     """REDIS-01..03. Probe Redis hosts on 6379 (plaintext) and 6380 (TLS) in parallel."""
     allow_cleartext = bool(security and getattr(security, "allow_cleartext_broker_probe", False))
@@ -798,7 +801,7 @@ def scan_redis_targets(
         return results
     if logger:
         logger.stamp(f"Starting Redis scans: {len(tasks)} probes ({len(hosts)} hosts x 2 ports)")
-    with ThreadPoolExecutor(max_workers=min(len(tasks), 50)) as ex:
+    with ThreadPoolExecutor(max_workers=min(len(tasks), motion_concurrency)) as ex:
         futs = {
             ex.submit(scan_one_redis, h, p, timeout, logger, session_start, allow_cleartext=allow_cleartext): (h, p)
             for h, p in tasks
