@@ -512,6 +512,7 @@ def scan_email_targets(
     timeout: int,
     logger: Optional[Logger] = None,
     session_start=None,
+    motion_concurrency: int = 50,
 ) -> List[CryptoEndpoint]:
     """Scan each host across all 7 EMAIL_PORTS via ThreadPoolExecutor."""
     results: List[CryptoEndpoint] = []
@@ -529,7 +530,7 @@ def scan_email_targets(
             f"({len(hosts)} hosts × {len(EMAIL_PORTS)} ports)"
         )
 
-    with ThreadPoolExecutor(max_workers=min(len(tasks), 50)) as ex:
+    with ThreadPoolExecutor(max_workers=min(len(tasks), motion_concurrency)) as ex:
         futures = {
             ex.submit(
                 scan_one_email, host, port, label, starttls_enum,
