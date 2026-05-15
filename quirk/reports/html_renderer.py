@@ -1,9 +1,12 @@
 """Jinja2-based standalone HTML report renderer for QU.I.R.K. (Phase 7, D-08 to D-12)."""
 import os
+import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+from quirk.util.safe_exc import safe_str
 
 
 def _score_band(total: int) -> str:
@@ -109,8 +112,10 @@ def render_pdf_report(html_path: str, pdf_path: str) -> bool:
     """
     try:
         from playwright.sync_api import sync_playwright
+        from playwright.sync_api import Error as PlaywrightError, TimeoutError as PlaywrightTimeoutError
     except ImportError:
         return False
+    browser = None
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -122,7 +127,16 @@ def render_pdf_report(html_path: str, pdf_path: str) -> bool:
                 margin={"top": "15mm", "bottom": "15mm", "left": "12mm", "right": "12mm"},
                 print_background=True,
             )
-            browser.close()
         return True
-    except Exception:
+    except (PlaywrightError, PlaywrightTimeoutError, OSError, RuntimeError) as e:
+        print(
+            f"PDF generation failed: {safe_str(e)}; scan complete, HTML report at {html_path}",
+            file=sys.stderr,
+        )
         return False
+    finally:
+        if browser is not None:
+            try:
+                browser.close()
+            except Exception:
+                pass
