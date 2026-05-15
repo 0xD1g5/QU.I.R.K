@@ -26,6 +26,14 @@ except ImportError:
 import base64
 import json
 import logging
+
+# Module-level logger (Phase 71 WR-10)
+logger = logging.getLogger(__name__)
+
+# Phase 71 / WR-10 / D-10: maximum JSON payload accepted by _classify_target.
+# 1 MiB is generous for OIDC discovery docs (typical < 10 KiB) and bounds memory
+# exposure from a malicious endpoint serving multi-GB JSON.
+MAX_SAML_JSON_BYTES = 1_048_576
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 from cryptography.x509 import load_der_x509_certificate
@@ -107,11 +115,30 @@ def _classify_target(url: str, content: bytes) -> str:
     """
     if ".well-known" in url:
         return "oidc"
-    try:
-        json.loads(content)
-        return "oidc"
-    except Exception:
-        pass
+    # Phase 71 WR-10 (D-10): cap JSON payload size BEFORE json.loads to bound
+    # memory exposure from a malicious endpoint. Oversized payloads log WARNING
+    # and fall through to the XML sniff / "unknown" fallback (same shape as a
+    # JSONDecodeError would yield).
+    if isinstance(content, (bytes, bytearray)):
+        payload_len = len(content)
+    elif content is None:
+        payload_len = 0
+    else:
+        payload_len = len(content.encode("utf-8"))
+    if payload_len > MAX_SAML_JSON_BYTES:
+        logger.warning(
+            "SAML _classify_target payload from %r is %d bytes; exceeds "
+            "MAX_SAML_JSON_BYTES (%d) — skipping JSON parse",
+            url, payload_len, MAX_SAML_JSON_BYTES,
+        )
+    else:
+        try:
+            json.loads(content)
+            return "oidc"
+        except (json.JSONDecodeError, ValueError, UnicodeDecodeError, TypeError) as e:
+            # WR-10 (Phase 71): narrowed from bare except; log at debug level
+            # because JSON-vs-XML sniffing routinely fails for legitimate SAML XML.
+            logger.debug("SAML _classify_target JSON parse failed for %r: %s", url, e)
     stripped = content.lstrip()
     if stripped.startswith(b"<") or stripped.startswith(b"<?xml"):
         return "saml"
