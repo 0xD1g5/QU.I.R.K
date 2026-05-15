@@ -45,6 +45,7 @@ from quirk.qramm.scoring import (
     compute_overall_score,
     compute_practice_score,
 )
+from quirk.util.safe_exc import safe_str
 
 router = APIRouter(dependencies=[Depends(require_auth), Depends(require_csrf)])
 logger = logging.getLogger(__name__)
@@ -272,8 +273,11 @@ def read_session(session_id: int, db: Session = Depends(get_db)) -> SessionRead:
     if session.score_json:
         try:
             score = json.loads(session.score_json)
-        except (TypeError, ValueError):
-            score = None
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Session JSON corrupt: {safe_str(e)}",
+            )
     return SessionRead(
         session_id=session.id,
         org_name=session.org_name,
@@ -441,8 +445,22 @@ class QuestionItem(BaseModel):
 
 @router.get("/qramm/questions", response_model=List[QuestionItem])
 def list_questions() -> List[QuestionItem]:
-    """Return the full 120-question QRAMM catalog (versioned constant from quirk.qramm.questions)."""
-    return [QuestionItem(**q) for q in QRAMM_QUESTIONS]
+    """Return the full 120-question QRAMM catalog (versioned constant from quirk.qramm.questions).
+
+    D-10 / RESEARCH C-5: use ``.get()`` defaults on the real ``QuestionItem``
+    fields so future schema drift in ``QRAMM_QUESTIONS`` degrades to 200 with
+    default values instead of raising ``ValidationError`` → 500.
+    """
+    return [
+        QuestionItem(
+            question_number=q.get("question_number", 0),
+            dimension=q.get("dimension", ""),
+            practice_area=q.get("practice_area", ""),
+            text=q.get("text", ""),
+            maturity_labels=q.get("maturity_labels", []),
+        )
+        for q in QRAMM_QUESTIONS
+    ]
 
 
 # ---------- Phase 54 Plan 01: 4 new endpoints ----------
