@@ -33,8 +33,14 @@ from cyclonedx.model.crypto import (
     ProtocolPropertiesType,
 )
 
+from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
 from quirk.cbom.classifier import classify_algorithm
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -124,8 +130,8 @@ def _normalize_cloud_key_spec(key_spec: str) -> str | None:
     }
     return mapping.get(spec_upper)
 
-# Tool version — duplicated here to avoid circular imports with quirk.reports.writer
-PLATFORM_VERSION = "4.4.0"
+# Tool version — single-source via `from quirk import __version__ as PLATFORM_VERSION`
+# at module top (Phase 77 D-07 / cbom-intel-reports/IN-01).
 
 # ---------------------------------------------------------------------------
 # Cipher suite decomposition
@@ -322,7 +328,12 @@ def _extract_ssh_algorithms(ssh_audit_json_str: str | None) -> dict[str, list[di
         return {}
     try:
         data = json.loads(ssh_audit_json_str)
-    except (json.JSONDecodeError, TypeError, ValueError):
+    except json.JSONDecodeError as e:
+        # closes cbom-intel-reports/IN-02 (Phase 77 D-08) — no longer silent;
+        # surface parse failure via Phase 59 safe_str sanitization.
+        logger.warning("Failed to parse SSH algorithms JSON: %s", safe_str(e))
+        return {}
+    except (TypeError, ValueError):
         return {}
     result: dict[str, list[dict]] = {}
     for section in ("kex", "key", "enc", "mac"):

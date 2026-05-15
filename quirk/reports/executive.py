@@ -238,6 +238,10 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
                     f"  - Target: {r.get('host')}:{r.get('port')} | Severity: {r.get('severity')}"
                 )
             shown += 1
+        # closes cbom-intel-reports/IN-06 (Phase 77 D-12) — make truncation transparent.
+        remaining = max(0, len(recs) - 10)
+        if remaining:
+            lines.append(f"- ... and {remaining} more (see full report)")
 
     lines.append("")
     lines.append("## Recommended Next Actions (30–60 days)")

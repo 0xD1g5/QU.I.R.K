@@ -12,6 +12,7 @@ from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
 from quirk.engine.migration_planner import categorize_waves
 
+from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
@@ -20,7 +21,17 @@ from quirk.cbom import build_cbom, write_cbom_files
 from quirk.reports.html_renderer import render_html_report, render_pdf_report
 
 
-PLATFORM_VERSION = "4.4.0"
+def _unique_hosts(hosts) -> set:
+    """Deduplicate hosts, filtering falsy entries (None, '').
+
+    Phase 77 D-14 / cbom-intel-reports/IN-08: previously the set construction
+    `{h for h in hosts}` collapsed None and "" into a single "" member which
+    inflated hosts_count by 1 when any endpoint lacked a host. Filter falsy
+    entries before deduplicating.
+    """
+    return {h for h in (hosts or []) if h}
+
+
 SCHEMA_VERSION = 2
 INTELLIGENCE_VERSION = "4.4.0"
 
@@ -219,7 +230,9 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     summary_table.add_column("Metric", style="bold cyan", min_width=24)
     summary_table.add_column("Value", justify="right", min_width=16)
 
-    hosts_count = len(set(getattr(ep, "host", None) or getattr(ep, "target", "") for ep in (endpoints or [])))
+    hosts_count = len(
+        _unique_hosts(getattr(ep, "host", None) or getattr(ep, "target", "") for ep in (endpoints or []))
+    )  # closes cbom-intel-reports/IN-08 (Phase 77 D-14)
     crit_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "CRITICAL")
     high_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "HIGH")
     medium_count = sum(1 for f in (findings or []) if str(f.get("severity", "")).upper() == "MEDIUM")
