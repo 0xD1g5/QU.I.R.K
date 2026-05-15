@@ -139,7 +139,7 @@ _KEX_MAP: dict[str, str] = {
     "ECDH": "X25519",
     "DHE": "DH-GroupExchange",
     "DH": "DH-2048",
-    "RSA": "RSA",  # RSA key exchange (used in non-PFS suites)
+    "RSA": "RSA-kex",  # D-08/WR-12 Phase 73: relabel to disambiguate from cert-signature RSA-auth
 }
 
 _ENC_MAP: dict[str, str] = {
