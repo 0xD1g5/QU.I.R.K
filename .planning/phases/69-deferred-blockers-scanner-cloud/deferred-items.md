@@ -1,5 +1,12 @@
 # Phase 69 Deferred Items
 
+> **UPDATE 2026-05-15:** Phase 69.1 (K8s Test Fixture Hardening) closed
+> 6 of the items below. The Phase 69-03 env-fragile test and all 4
+> pre-existing `test_k8s_connector.py` failures now pass in canonical
+> `.venv`. See `.planning/phases/69.1-k8s-test-fixture-hardening/69.1-VERIFICATION.md`.
+> The 2 `test_tls_scanner_chain_verified.py` entries remain open as a
+> separate test-infra concern.
+
 ## Pre-existing test failures (NOT Phase 69 regressions)
 
 Verified pre-existing by `git checkout 92d9f26 -- tests/test_k8s_connector.py quirk/scanner/k8s_connector.py` and running pytest. All failures predate Phase 69.
