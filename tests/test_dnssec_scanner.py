@@ -104,8 +104,12 @@ def test_algorithm_classification_safe():
 
 
 def test_algorithm_map_has_all_twelve_entries():
-    """DNSSEC-02: ALG_MAP must cover all 12 defined algorithm numbers."""
-    expected_keys = {1, 3, 5, 6, 7, 8, 10, 12, 13, 14, 15, 16}
+    """DNSSEC-02 + Phase 77 D-02: ALG_MAP covers 12 defined algorithm numbers
+    plus the two IANA-Reserved slots (9, 11) added in Phase 77 to close
+    scanners-protocol/IN-02 (the previously-undefined Reserved range now has
+    explicit HIGH-severity entries instead of falling through to UNKNOWN).
+    """
+    expected_keys = {1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
     assert set(DNSSEC_ALG_MAP.keys()) == expected_keys
 
 
