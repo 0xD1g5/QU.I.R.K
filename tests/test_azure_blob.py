@@ -49,6 +49,59 @@ def test_azure_blob_platform_managed_medium():
     assert ep.protocol == "AZURE_BLOB"
     assert ep.service_detail == "BLOB/platform-managed"
     assert ep.severity == "MEDIUM"
+    payload = json.loads(ep.dat_scan_json)
+    assert payload["finding_id"] == "BLOB-PLATFORM"
+    assert "Platform-managed" in payload["description"]
+
+
+def test_azure_blob_absent_key_source_unknown():
+    """encryption=None → BLOB/unknown (MEDIUM) — distinct from platform-managed (BLOCK-04)."""
+    from quirk.scanner.azure_connector import _scan_blob_encryption
+    account = _make_account("acct_unknown", None)
+    with patch("quirk.scanner.azure_connector.AZURE_AVAILABLE", True), \
+         patch("azure.mgmt.storage.StorageManagementClient", create=True) as mock_cls:
+        client = MagicMock()
+        client.storage_accounts.list.return_value = [account]
+        container = MagicMock()
+        container.id = f"{account.id}/blobServices/default/containers/c"
+        container.name = "c"
+        client.blob_containers.list.return_value = [container]
+        mock_cls.return_value = client
+        result = _scan_blob_encryption(credential=MagicMock(), subscription_id="s", logger=None)
+    assert len(result) == 1
+    ep = result[0]
+    assert ep.service_detail == "BLOB/unknown"
+    assert ep.severity == "MEDIUM"
+    payload = json.loads(ep.dat_scan_json)
+    assert payload["finding_id"] == "BLOB-UNKNOWN"
+    assert payload["key_source"] == "absent"
+    assert "unavailable" in payload["description"].lower()
+
+
+@pytest.mark.parametrize("key_source,expected_sd,expected_fid", [
+    ("Microsoft.Keyvault", "BLOB/cmk", "BLOB-CMK"),
+    ("Microsoft.Storage", "BLOB/platform-managed", "BLOB-PLATFORM"),
+    (None, "BLOB/unknown", "BLOB-UNKNOWN"),
+])
+def test_azure_blob_finding_id_in_dat_scan_json(key_source, expected_sd, expected_fid):
+    from quirk.scanner.azure_connector import _scan_blob_encryption
+    account = _make_account("acct_fid", key_source)
+    with patch("quirk.scanner.azure_connector.AZURE_AVAILABLE", True), \
+         patch("azure.mgmt.storage.StorageManagementClient", create=True) as mock_cls:
+        client = MagicMock()
+        client.storage_accounts.list.return_value = [account]
+        container = MagicMock()
+        container.id = f"{account.id}/blobServices/default/containers/c"
+        container.name = "c"
+        client.blob_containers.list.return_value = [container]
+        mock_cls.return_value = client
+        result = _scan_blob_encryption(credential=MagicMock(), subscription_id="s", logger=None)
+    assert len(result) == 1
+    ep = result[0]
+    assert ep.service_detail == expected_sd
+    payload = json.loads(ep.dat_scan_json)
+    assert payload["finding_id"] == expected_fid
+    assert "description" in payload
 
 
 def test_azure_blob_cmk_no_finding():
@@ -68,25 +121,6 @@ def test_azure_blob_cmk_no_finding():
     ep = result[0]
     assert ep.service_detail == "BLOB/cmk"
     assert getattr(ep, "severity", None) is None
-
-
-def test_azure_blob_absent_key_source_medium():
-    """encryption=None → treat as platform-managed (MEDIUM)."""
-    from quirk.scanner.azure_connector import _scan_blob_encryption
-    account = _make_account("acct3", None)
-    with patch("quirk.scanner.azure_connector.AZURE_AVAILABLE", True), \
-         patch("azure.mgmt.storage.StorageManagementClient", create=True) as mock_cls:
-        client = MagicMock()
-        client.storage_accounts.list.return_value = [account]
-        container = MagicMock()
-        container.id = f"{account.id}/blobServices/default/containers/c"
-        container.name = "c"
-        client.blob_containers.list.return_value = [container]
-        mock_cls.return_value = client
-        result = _scan_blob_encryption(credential=MagicMock(), subscription_id="s", logger=None)
-    assert len(result) == 1
-    assert result[0].severity == "MEDIUM"
-    assert result[0].service_detail == "BLOB/platform-managed"
 
 
 def test_azure_blob_per_container_endpoint():
