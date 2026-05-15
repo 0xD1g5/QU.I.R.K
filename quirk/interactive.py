@@ -47,16 +47,53 @@ def _prompt(text: str, default: Optional[str] = None) -> str:
 
 
 def _prompt_int(text: str, default: int, minv: int = 1, maxv: int = 100000) -> int:
-    while True:
-        raw = _prompt(text, str(default))
+    """Bounded integer prompt with EOF safety (Phase 75 / WR-10 / D-11).
+
+    - Function-entry guard: default must be in [minv, maxv] or ValueError.
+    - EOFError / KeyboardInterrupt returns the in-range default cleanly
+      (RESEARCH A3: Claude's discretion — preserves existing caller contract).
+    - Bounded 3-attempt retry loop; falls through to default after retries exhausted.
+    """
+    if not (minv <= default <= maxv):
+        raise ValueError(
+            f"_prompt_int default {default} out of range [{minv}, {maxv}]"
+        )
+    for _ in range(3):
+        try:
+            raw = input(f"{text} [{default}]: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return default
+        if not raw:
+            return default
         try:
             v = int(raw)
-            if v < minv or v > maxv:
-                print(f"  Enter a number between {minv} and {maxv}.")
-                continue
-            return v
         except ValueError:
-            print("  Please enter a valid integer.")
+            print(f"  Invalid integer {raw!r}; expected an int in [{minv}, {maxv}].")
+            continue
+        if minv <= v <= maxv:
+            return v
+        print(f"  Value {v} out of range [{minv}, {maxv}].")
+    return default
+
+
+def _prompt_exposure(default: int = 2) -> int:
+    """Exposure-context prompt with 3-retry reprompt (Phase 75 / WR-11 / D-12).
+
+    Accepts only {"1", "2", "3"}. Invalid input reprompts (up to 3 attempts) with
+    explicit error message. EOFError returns the in-range default. After 3 invalid
+    retries, raises ValueError("Exposure selection exhausted retry budget").
+    """
+    for _ in range(3):
+        try:
+            raw = input(f"Choose 1/2/3 [{default}]: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return default
+        if not raw:
+            return default
+        if raw in ("1", "2", "3"):
+            return int(raw)
+        print(f"  Invalid choice {raw!r}; expected 1, 2, or 3.")
+    raise ValueError("Exposure selection exhausted retry budget")
 
 
 def _prompt_bool(text: str, default: bool) -> bool:
@@ -207,11 +244,12 @@ def interactive_config() -> tuple[AppConfig, str]:
     print("  1) internal  (internal-only / segmented)")
     print("  2) mixed     (internal + some internet-facing)")
     print("  3) internet  (many internet-facing services)")
-    exp_raw = _prompt("Choose 1/2/3", "2").strip()
+    # Phase 75 / WR-11 / D-12: 3-retry reprompt loop; fail-loud on exhaustion.
+    exp_choice = _prompt_exposure(default=2)
     exposure = "mixed"
-    if exp_raw == "1":
+    if exp_choice == 1:
         exposure = "internal"
-    elif exp_raw == "3":
+    elif exp_choice == 3:
         exposure = "internet"
 
     crown_jewels = _prompt_list("Crown jewels hosts/IPs/FQDNs (blank to skip)", [])
@@ -266,11 +304,9 @@ def interactive_config() -> tuple[AppConfig, str]:
     )
     attach_context(cfg, ctx)
 
-    # D-06/D-09: reflect wizard nmap toggle onto cfg.connectors so the registry probe
-    # and run_scan.py nmap-call-site both see the same boolean. setattr is defensive
-    # because ConnectorsCfg does not declare enable_nmap (no new DiscoveryCfg sub-table
-    # this phase per Risks #1).
-    setattr(cfg.connectors, "enable_nmap", _enable_nmap_wizard)  # D-06
+    # Phase 75 / WR-12 / D-13: ConnectorsCfg.enable_nmap is now a declared dataclass
+    # field; replace prior defensive setattr injection with normal assignment.
+    cfg.connectors.enable_nmap = _enable_nmap_wizard
 
     print("\nConfig captured.\n")
     return cfg, scan_profile   # D-07
