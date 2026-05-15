@@ -183,9 +183,9 @@ wont_fix: 1
 | api-cli-core/CR-07 | BLOCKER | SQL injection guard on column names lacks col_type DDL fragment | Phase 70 | [x] closed — closed by Phase 70 (BLOCK-08): _SAFE_COL_TYPE_RE allowlist + ValueError guard in _ensure_v43/_phase41/_phase46/_phase54_qramm_columns. Tests: tests/test_db_migrations.py (full file — regex matrix + 4 poisoned-dict tests) |
 | api-cli-core/CR-08 | BLOCKER | init_db ALTER TABLE migrations are not transactional | Phase 64.1 (CR-08) | [x] closed — closed by Phase 64.1 (tests/test_init_db_idempotent.py) |
 | api-cli-core/CR-09 | BLOCKER | parse_target_tokens reflective DoS via deep @file recursion | Phase 58 (HARDEN-API-04) | [x] closed |
-| api-cli-core/WR-01 | WARNING | _check_dashboard / _check_network always return True | — | [ ] open |
-| api-cli-core/WR-02 | WARNING | _check_db opens DB at default path regardless of QUIRK_DB_PATH | — | [ ] open |
-| api-cli-core/WR-03 | WARNING | _default_db_path mtime-newest-wins is non-deterministic | — | [ ] open |
+| api-cli-core/WR-01 | WARNING | _check_dashboard / _check_network always return True | Phase 75 | [x] closed |
+| api-cli-core/WR-02 | WARNING | _check_db opens DB at default path regardless of QUIRK_DB_PATH | Phase 75 | [x] closed |
+| api-cli-core/WR-03 | WARNING | _default_db_path mtime-newest-wins is non-deterministic | Phase 75 | [x] closed |
 | api-cli-core/WR-04 | WARNING | get_latest_scan ?scan_id= time-window slice off-by-microsecond | — | [ ] open |
 | api-cli-core/WR-05 | WARNING | list_scans groups by string-formatted timestamp — TZ-fragile | — | [ ] open |
 | api-cli-core/WR-06 | WARNING | compute_overall_score multiplier validated client-side only | — | [ ] open |
