@@ -68,7 +68,10 @@ export function IdentityPage() {
     return data?.identity_findings ?? []
   }, [data])
 
-  const columns: ColumnDef<IdentityFinding>[] = [
+  // D-25 (IN-03): memoize columns for stable reference identity across renders
+  // (TanStack Table relies on referential stability of the columns array).
+  // Cells only close over `row.original` / module-level constants — empty deps.
+  const columns = useMemo<ColumnDef<IdentityFinding>[]>(() => [
     {
       accessorKey: "severity",
       header: "Severity",
@@ -83,7 +86,7 @@ export function IdentityPage() {
     { accessorKey: "port", header: "Port" },
     { accessorKey: "title", header: "Title" },
     { accessorKey: "algorithm", header: "Algorithm" },
-  ]
+  ], [])
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table returns non-memoizable functions; known React Compiler limitation
   const table = useReactTable({

@@ -8,11 +8,15 @@ import { Button } from "@/components/ui/button"
 import { PageSpinner } from "@/components/PageSpinner"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
-// Register dagre layout (DAG directed graph — per D-16)
+// Register dagre layout (DAG directed graph — per D-16).
+// D-24 (IN-02): log via console.error and re-throw genuine failures so
+// the visualization fails loudly rather than silently. The /already/i
+// message guard swallows HMR re-registration (RESEARCH C-12 Pattern 8).
 try {
   cytoscape.use(dagre)
-} catch {
-  // already registered
+} catch (e) {
+  console.error('cytoscape.use(dagre) failed:', e)
+  if (!(e instanceof Error) || !/already/i.test(e.message)) throw e
 }
 
 const PHASE_COLORS: Record<string, string> = {

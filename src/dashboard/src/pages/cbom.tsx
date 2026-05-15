@@ -15,11 +15,26 @@ import {
 import { Button } from "@/components/ui/button"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
-// Register Cytoscape layout extension once
+// Register Cytoscape layout extension once.
+// D-24 (IN-02): log via console.error and re-throw genuine failures so
+// the visualization fails loudly rather than silently. The /already/i
+// message guard swallows HMR re-registration (RESEARCH C-12 Pattern 8).
 try {
   cytoscape.use(coseBilkent)
-} catch {
-  // already registered
+} catch (e) {
+  console.error('cytoscape.use(coseBilkent) failed:', e)
+  if (!(e instanceof Error) || !/already/i.test(e.message)) throw e
+}
+
+// D-27 (IN-05): representative selector for `compByAlg[alg]` lookups.
+// Returns the first component with a non-zero `count`, falling back to
+// the first entry to preserve the existing "any representative" semantic
+// (Researcher recommendation; preserves O(1) call-site cost).
+export function firstNonZeroComp<T extends { count?: number }>(
+  comps: T[] | undefined,
+): T | undefined {
+  if (!comps || comps.length === 0) return undefined
+  return comps.find((c) => (c.count ?? 0) > 0) ?? comps[0]
 }
 
 const QS_BADGE: Record<string, string> = {
@@ -281,8 +296,8 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
       node.connectedEdges().addClass("highlighted")
 
       if (d.nodeType === "algorithm") {
-        // compByAlg maps algorithm -> array; use first entry (representative) for detail panel
-        const comp = compByAlg[d.label]?.[0]
+        // compByAlg maps algorithm -> array; pick first-non-zero (D-27, closes react-frontend/IN-05)
+        const comp = firstNonZeroComp(compByAlg[d.label])
         setSelected({
           nodeType: "algorithm",
           id: d.id,
@@ -387,7 +402,7 @@ function CbomGraph({ components }: { components: CbomComponent[] }) {
           {selected.nodeType === "system" && (
             <ul className="space-y-1">
               {selected.algorithms.map((alg) => {
-                const comp = compByAlg[alg]?.[0]
+                const comp = firstNonZeroComp(compByAlg[alg])  // D-27 (closes react-frontend/IN-05)
                 return (
                   <li key={alg} className="flex items-center gap-2">
                     <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: QS_NODE_COLOR[comp?.quantum_safety ?? "Unknown"] ?? QS_NODE_COLOR.Unknown }} />
