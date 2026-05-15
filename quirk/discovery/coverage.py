@@ -1,9 +1,10 @@
 def calculate_coverage(target_count, reachable_hosts, tls_endpoints):
     if target_count == 0:
-        return 0
+        return 0.0
 
     coverage = (tls_endpoints / target_count) * 100
-    return round(coverage, 2)
+    # Clamp per audit WR-01 (Phase 71): never report >100% or negative coverage.
+    return max(0.0, min(1.0, round(coverage, 2)))
 
 
 def quantum_readiness_score(findings, endpoints):
@@ -11,11 +12,13 @@ def quantum_readiness_score(findings, endpoints):
 
     # Penalize deprecated TLS
     for f in findings:
-        if f["severity"] == "CRITICAL":
+        # Normalize severity case per audit WR-02 (Phase 71): uppercase comparison.
+        severity = str(f["severity"]).upper()
+        if severity == "CRITICAL":
             score -= 25
-        elif f["severity"] == "HIGH":
+        elif severity == "HIGH":
             score -= 10
-        elif f["severity"] == "MEDIUM":
+        elif severity == "MEDIUM":
             score -= 5
 
     # Penalize lack of discovery
