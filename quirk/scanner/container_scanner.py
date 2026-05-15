@@ -4,6 +4,7 @@ Uses syft to scan container images and returns one CryptoEndpoint per
 crypto library found in the image. Degrades gracefully if syft is absent.
 """
 import json
+import logging
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -11,6 +12,8 @@ from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
 from quirk.util.subprocess_input import validate_image_ref
+
+logger = logging.getLogger(__name__)
 
 # Only these package names are considered crypto libraries.
 # Checked against artifact["name"].lower().
@@ -85,7 +88,16 @@ def scan_container_image(
             timeout=timeout,
         )
         data = json.loads(proc.stdout)
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+    except (
+        subprocess.TimeoutExpired,
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        OSError,
+        json.JSONDecodeError,
+    ) as e:
+        logger.warning(
+            "subprocess failed in scan_container_image for %r: %s", image_ref, e
+        )
         return []
 
     endpoints: List[CryptoEndpoint] = []
