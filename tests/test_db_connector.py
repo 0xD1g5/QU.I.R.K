@@ -23,12 +23,18 @@ def test_schema_fresh_db_has_dat_scan_json():
 
 
 def test_v43_columns_idempotent():
-    """_ensure_v43_columns() must not raise on second call (idempotent guard)."""
-    from quirk.db import _ensure_v43_columns
+    """_ensure_columns(crypto_endpoints, _V43_COLUMNS) must not raise on second
+    call (idempotent guard).
+
+    Phase 77 D-21: prior `_ensure_v43_columns` helper was consolidated into the
+    generic `_ensure_columns` entry point + `_V43_COLUMNS` tuple constant.
+    Idempotency semantic is unchanged.
+    """
+    from quirk.db import _V43_COLUMNS, _ensure_columns
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
-    _ensure_v43_columns(engine)
-    _ensure_v43_columns(engine)  # second call must not raise
+    _ensure_columns(engine, "crypto_endpoints", _V43_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _V43_COLUMNS)  # second call must not raise
 
 
 # ---------------------------------------------------------------------------
