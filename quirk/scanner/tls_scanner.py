@@ -131,7 +131,9 @@ def _scan_one_sslyze(
         except ValueError:
             pass
 
-        sni_hostname = host if (include_sni and not is_ip) else None
+        # nassl.set_tlsext_host_name requires str, not None (Python 3.14+).
+        # For IP targets / include_sni=False, pass host as placeholder; ep.sni_used tracks intent.
+        sni_hostname = host if (include_sni and not is_ip) else host
 
         scan_request = ServerScanRequest(
             server_location=ServerNetworkLocation(hostname=host, port=port),
