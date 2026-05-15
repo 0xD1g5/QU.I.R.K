@@ -107,38 +107,48 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
             scan.tls_enum_mode = "deep"
 
         # Phase 32: deep profile enables email scanning.
+        # Phase 72 D-02 / WR-11: respect user-explicit enable_email value from YAML.
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_email"):
-            if not cfg.connectors.enable_email:
-                cfg.connectors.enable_email = True
+            user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
+            if "enable_email" not in user_set:
+                if not cfg.connectors.enable_email:
+                    cfg.connectors.enable_email = True
 
         # Phase 33: deep profile enables broker scanning (D-10).
+        # Phase 72 D-02 / WR-11: respect user-explicit enable_broker value from YAML.
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_broker"):
-            if not cfg.connectors.enable_broker:
-                cfg.connectors.enable_broker = True
+            user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
+            if "enable_broker" not in user_set:
+                if not cfg.connectors.enable_broker:
+                    cfg.connectors.enable_broker = True
 
     else:
         # standard
-        _set_if_default("fingerprint_timeout_seconds", 4, default=4)
-        _set_if_default("fingerprint_concurrency", 200, default=base_concurrency_default)
-
-        _set_if_default("tls_timeout_seconds", 6, default=base_timeout_default)
-        _set_if_default("tls_concurrency", 150, default=base_concurrency_default)
-
-        _set_if_default("ssh_timeout_seconds", 6, default=base_timeout_default)
+        # Phase 72 D-03 / WR-12: removed no-op _set_if_default("fingerprint_timeout_seconds", 4) — matches TimeoutsCfg default.
+        # Phase 72 D-03 / WR-12: removed no-op _set_if_default("fingerprint_concurrency", 200) — matches ScanCfg default.
+        # Phase 72 D-03 / WR-12: removed no-op _set_if_default("tls_timeout_seconds", 6) — matches TimeoutsCfg default.
+        # Phase 72 D-03 / WR-12: removed no-op _set_if_default("tls_concurrency", 150) — matches ScanCfg default.
+        # Phase 72 D-03 / WR-12: removed no-op _set_if_default("ssh_timeout_seconds", 6) — matches TimeoutsCfg default.
         _set_if_default("ssh_concurrency", 150, default=base_concurrency_default)
 
         if hasattr(scan, "tls_enum_mode") and (getattr(scan, "tls_enum_mode") is None):
             scan.tls_enum_mode = "fast"
 
         # Phase 32: standard profile enables email scanning.
+        # Phase 72 D-02 / WR-11: respect user-explicit enable_email value from YAML.
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_email"):
-            if not cfg.connectors.enable_email:
-                cfg.connectors.enable_email = True
+            user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
+            if "enable_email" not in user_set:
+                if not cfg.connectors.enable_email:
+                    cfg.connectors.enable_email = True
 
         # Phase 33: standard profile enables broker scanning (D-10).
+        # Phase 72 D-02 / WR-11: respect user-explicit enable_broker value from YAML.
         if hasattr(cfg, "connectors") and hasattr(cfg.connectors, "enable_broker"):
-            if not cfg.connectors.enable_broker:
-                cfg.connectors.enable_broker = True
+            user_set = getattr(cfg.connectors, "_user_set_fields", frozenset())
+            if "enable_broker" not in user_set:
+                if not cfg.connectors.enable_broker:
+                    cfg.connectors.enable_broker = True
 
     # -------------------------
     # safe-mode adjustments
