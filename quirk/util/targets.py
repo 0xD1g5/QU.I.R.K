@@ -30,8 +30,18 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import re
 import sys
 from typing import Callable, Final, Optional
+
+
+# Phase 75 / WR-16 / D-17: RFC-1123 hostname validation regex.
+# Single labels 1..63 chars, alnum start/end, hyphens allowed mid-label.
+# Multi-label hostnames are dot-separated labels.
+_HOSTNAME_RE = re.compile(
+    r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+    r"(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +190,24 @@ def parse_target_tokens(
 
         else:
             # D-01: bare host, FQDN, or IP (including @-prefixed tokens from files)
-            fqdns.append(token)
+            # Phase 75 / WR-16 / D-17: RFC-1123 hostname validation with IP fallback.
+            # D-02 preservation: in-file @-prefixed tokens pass through as opaque
+            # bare-host strings (the leading '@' is part of the host string), so
+            # they bypass the RFC-1123 ladder. Top-level @-tokens are already
+            # routed by the earlier branch and never reach this point.
+            if token.startswith("@"):
+                fqdns.append(token)
+            elif _HOSTNAME_RE.fullmatch(token):
+                fqdns.append(token)
+            else:
+                try:
+                    ipaddress.ip_address(token)
+                except ValueError:
+                    raise ValueError(
+                        f"Invalid target token {token!r}: "
+                        "not a valid hostname or IP address"
+                    )
+                fqdns.append(token)
 
     return fqdns, cidrs
 
