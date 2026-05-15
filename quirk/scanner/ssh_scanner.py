@@ -1,4 +1,5 @@
 import json
+import logging
 import shutil
 import socket
 import subprocess
@@ -9,6 +10,8 @@ from typing import List, Tuple, Optional, Callable
 from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.util.safe_exc import safe_str
+
+logger = logging.getLogger(__name__)
 
 
 def _run_ssh_audit(host: str, port: int, timeout: int) -> Optional[dict]:
@@ -26,7 +29,16 @@ def _run_ssh_audit(host: str, port: int, timeout: int) -> Optional[dict]:
         if proc.stdout.strip():
             return json.loads(proc.stdout)
         return None
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+    except (
+        subprocess.TimeoutExpired,
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        OSError,
+        json.JSONDecodeError,
+    ) as e:
+        logger.warning(
+            "subprocess failed in _run_ssh_audit for %s:%s: %s", host, port, e
+        )
         return None
 
 
