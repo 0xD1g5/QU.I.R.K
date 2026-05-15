@@ -48,7 +48,10 @@ def scan_source_repo(
     exe = shutil.which("semgrep")
     if not exe:
         if logger:
-            logger.v("semgrep not found — install with: pip install semgrep")
+            logger.v(
+                "semgrep is not installed — pip install 'quirk[cbom]' and "
+                "`pip install semgrep` to enable source code scanning"
+            )
         return []
 
     try:

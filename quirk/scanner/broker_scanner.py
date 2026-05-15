@@ -144,7 +144,10 @@ def _scan_one_sslyze_broker(
     if not SSLYZE_AVAILABLE:
         if not _sslyze_warned:
             if logger:
-                logger.v("sslyze not installed — broker scanner TLS probe skipped")
+                logger.v(
+                    "sslyze is not installed — pip install 'quirk[motion]' "
+                    "to enable broker scanning (TLS probe skipped)"
+                )
             _sslyze_warned = True
         return None
 
