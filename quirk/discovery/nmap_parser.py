@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
-import xml.etree.ElementTree as ET
+# defusedxml per audit WR-06 — defuses XXE/billion-laughs on nmap XML output
+import defusedxml.ElementTree as ET
 
 
 @dataclass
