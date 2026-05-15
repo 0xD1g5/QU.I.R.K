@@ -84,10 +84,11 @@ def _build_as_req(client_name, server_name, realm: str):
     req_body['till'] = KerberosTime.to_asn1(
         datetime(2037, 12, 31, 0, 0, tzinfo=timezone.utc)
     )
-    # Cryptographic RNG per audit WR-09 (Phase 71): unpredictable 31-bit nonce
-    # defeats replay-attack precomputation. ASN.1 INTEGER field accepts uint32; we
-    # mask to 31 bits to preserve the pre-Phase-71 wire-format range.
-    req_body['nonce'] = secrets.randbits(31)
+    # Cryptographic RNG per audit WR-09 (Phase 71) and CONTEXT D-09: full
+    # 32-bit unsigned nonce per RFC 4120 §5.4.1. pyasn1 handles DER signed-int
+    # encoding (leading-zero byte expansion when the high bit is set) on its
+    # own — the caller does not need to mask.
+    req_body['nonce'] = secrets.randbits(32)
     seq_set_iter(req_body, 'etype', ALL_ETYPES)
     return as_req
 
