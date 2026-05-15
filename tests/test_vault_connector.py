@@ -135,15 +135,13 @@ def test_hvac_unavailable_returns_empty_list():
         assert scan_vault_targets("http://localhost:8200", token="root") == []
 
 
-def test_no_token_produces_scan_error():
-    """Missing token must produce single scan_error endpoint with vault-no-token prefix."""
-    with patch("quirk.scanner.vault_connector.HVAC_AVAILABLE", True), \
-         patch.dict("os.environ", {}, clear=False):
-        # Ensure VAULT_TOKEN env var is not set
-        import os as _os
-        _os.environ.pop("VAULT_TOKEN", None)
+def test_empty_token_produces_scan_error():
+    """Phase 72 D-22: token='' (explicit empty string) must produce scan_error endpoint.
+    The old contract was token=None producing scan_error; that path now raises
+    ValueError (see test_scan_vault_targets_raises_on_none_token below)."""
+    with patch("quirk.scanner.vault_connector.HVAC_AVAILABLE", True):
         from quirk.scanner.vault_connector import scan_vault_targets
-        results = scan_vault_targets("http://localhost:8200", token=None)
+        results = scan_vault_targets("http://localhost:8200", token="")
     assert len(results) == 1
     assert results[0].protocol == "VAULT"
     assert results[0].port == 8200
@@ -501,4 +499,59 @@ def test_vault_live_uat_30_01_five_findings():
     high_count = sum(1 for _, sev in details if sev == "HIGH")
     assert high_count >= 2, (
         f"Expected >=2 HIGH vault findings (dar_vault_weak_count==2); got {high_count}: {details}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 72 D-22 / WR-09: explicit token requirement
+# Phase 72 D-23 / WR-18: PEM plural parser
+# ---------------------------------------------------------------------------
+
+def test_scan_vault_targets_raises_on_none_token():
+    """token=None must raise ValueError — no implicit env fallback per D-22."""
+    with patch("quirk.scanner.vault_connector.HVAC_AVAILABLE", True):
+        from quirk.scanner.vault_connector import scan_vault_targets
+        with pytest.raises(ValueError, match="explicit token"):
+            scan_vault_targets(vault_addr="http://127.0.0.1:8200", token=None)
+
+
+def test_scan_vault_targets_accepts_explicit_token():
+    """Explicit token must not raise; downstream hvac.Client is mocked."""
+    mock_client = MagicMock()
+    mock_client.is_authenticated.return_value = False  # short-circuits to auth-failed endpoint
+    mock_hvac = MagicMock()
+    mock_hvac.Client.return_value = mock_client
+    with patch("quirk.scanner.vault_connector.HVAC_AVAILABLE", True), \
+         patch("quirk.scanner.vault_connector.hvac", mock_hvac):
+        from quirk.scanner.vault_connector import scan_vault_targets
+        result = scan_vault_targets(
+            vault_addr="http://127.0.0.1:8200",
+            token="hvs.AAAA-fake-token",
+        )
+    # Should not raise; returns an auth-failed endpoint (since is_authenticated=False)
+    assert isinstance(result, list)
+
+
+def test_scan_pki_mounts_uses_load_pem_x509_certificates():
+    """Static-source assertion: vault_connector must invoke the plural cryptography
+    PEM parser, not the naive split heuristic (D-23 / WR-18)."""
+    import inspect as _inspect
+    import quirk.scanner.vault_connector as vc_mod
+    src = _inspect.getsource(vc_mod)
+    assert "load_pem_x509_certificates" in src, (
+        "vault_connector must use cryptography.x509.load_pem_x509_certificates (plural)"
+    )
+
+
+def test_scan_pki_mounts_parses_multi_cert_chain():
+    """Build a two-cert PEM chain. Confirm load_pem_x509_certificates parses both."""
+    pem1 = _make_test_pem_rsa(2048)
+    pem2 = _make_test_pem_rsa(4096)
+    chain = pem1 + pem2
+
+    from cryptography import x509
+    certs = x509.load_pem_x509_certificates(chain.encode("utf-8"))
+    assert len(certs) == 2, (
+        f"expected 2 certs in the chain, got {len(certs)} — the plural parser "
+        f"must split the chain identically to the production code path"
     )

@@ -312,3 +312,92 @@ def test_rds_cmk_service_detail():
     rds_results = [ep for ep in results if getattr(ep, "protocol", "") == "RDS"]
     assert len(rds_results) >= 1
     assert rds_results[0].service_detail == "RDS/sse-kms-cmk"
+
+
+# ---------------------------------------------------------------------------
+# Phase 72 D-20 / WR-07: password=None kwarg handling
+# Phase 72 D-21 / WR-08: mysql safe_str exception coverage
+# ---------------------------------------------------------------------------
+
+def _capture_pg_kwargs(captured):
+    """Build a psycopg2.connect mock that captures kwargs and raises after."""
+    def _fake_connect(**kwargs):
+        captured.update(kwargs)
+        raise RuntimeError("stop-after-capture")
+    return _fake_connect
+
+
+def _capture_my_kwargs(captured):
+    def _fake_connect(**kwargs):
+        captured.update(kwargs)
+        raise RuntimeError("stop-after-capture")
+    return _fake_connect
+
+
+def test_pg_connect_password_none_omits_kwarg():
+    """password=None must omit the password kwarg entirely (libpq reads .pgpass)."""
+    captured = {}
+    mock_pg = MagicMock()
+    mock_pg.connect.side_effect = _capture_pg_kwargs(captured)
+    with patch("quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.psycopg2", mock_pg):
+        from quirk.scanner.db_connector import scan_pg_targets
+        scan_pg_targets(targets=["localhost:5432"], user="u", password=None)
+    assert "password" not in captured, f"password kwarg must be omitted; got {captured}"
+
+
+def test_pg_connect_password_empty_string_passes_through():
+    """password='' must be passed through (explicit empty-password attempt)."""
+    captured = {}
+    mock_pg = MagicMock()
+    mock_pg.connect.side_effect = _capture_pg_kwargs(captured)
+    with patch("quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.psycopg2", mock_pg):
+        from quirk.scanner.db_connector import scan_pg_targets
+        scan_pg_targets(targets=["localhost:5432"], user="u", password="")
+    assert captured.get("password") == "", f"password='' must pass through; got {captured}"
+
+
+def test_pg_connect_password_nonempty_passes_through():
+    """password='secret' must be passed through normally."""
+    captured = {}
+    mock_pg = MagicMock()
+    mock_pg.connect.side_effect = _capture_pg_kwargs(captured)
+    with patch("quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.psycopg2", mock_pg):
+        from quirk.scanner.db_connector import scan_pg_targets
+        scan_pg_targets(targets=["localhost:5432"], user="u", password="secret")
+    assert captured.get("password") == "secret"
+
+
+def test_mysql_connect_password_none_omits_kwarg():
+    """MySQL: password=None must omit the password kwarg."""
+    captured = {}
+    mock_my = MagicMock()
+    mock_my.connect.side_effect = _capture_my_kwargs(captured)
+    with patch("quirk.scanner.db_connector.PYMYSQL_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.pymysql", mock_my):
+        from quirk.scanner.db_connector import scan_mysql_targets
+        scan_mysql_targets(targets=["localhost:3306"], user="u", password=None)
+    assert "password" not in captured, f"password kwarg must be omitted; got {captured}"
+
+
+def test_mysql_exception_uses_safe_str():
+    """MySQL exception with credential-bearing message must be sanitized via safe_str.
+    safe_str (Phase 59) matches long base64-shaped tokens and Authorization headers;
+    when triggered it returns just the exception class name, dropping the message."""
+    leaky_token = "AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMM"
+    mock_my = MagicMock()
+    mock_my.connect.side_effect = RuntimeError(
+        f"Access denied — token leaked in error: {leaky_token}"
+    )
+    with patch("quirk.scanner.db_connector.PYMYSQL_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.pymysql", mock_my):
+        from quirk.scanner.db_connector import scan_mysql_targets
+        results = scan_mysql_targets(targets=["localhost:3306"], user="u", password="secret")
+    err_endpoints = [r for r in results if getattr(r, "scan_error", None)]
+    assert err_endpoints, "expected at least one scan_error endpoint"
+    for ep in err_endpoints:
+        assert leaky_token not in (ep.scan_error or ""), (
+            f"safe_str must strip credentials; got: {ep.scan_error}"
+        )
