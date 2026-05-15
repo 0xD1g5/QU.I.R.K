@@ -84,7 +84,7 @@ function DimensionTab({
 export function AssessmentPage() {
   const ctx = useContext(QRAMMContext)
   const navigate = useNavigate()
-  const { session, loading: sessionLoading } = useQRAMMSession()
+  const { session, loading: sessionLoading, resetSession } = useQRAMMSession()
 
   const [questions, setQuestions] = useState<QuestionItem[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(true)
@@ -172,6 +172,7 @@ export function AssessmentPage() {
       ctx.resetAnswers(new Map())
       ctx.setProfile(null)
       ctx.setScoreResult(null)
+      resetSession()  // D-26 (IN-04): clear seededRef so the next session re-seeds
       navigate("/qramm")
     } catch {
       // Network error — leave context intact so the user can retry.
@@ -243,7 +244,7 @@ export function AssessmentPage() {
         </div>
       </div>
 
-      {/* 5-tab assessment layout */}
+      {/* 6-tab assessment layout: CVI, SGRM, DPE, ITR, Scorecard, Compliance Map — closes react-frontend/IN-01 (D-23) */}
       <Tabs defaultValue="cvi">
         <TabsList>
           <TabsTrigger value="cvi">CVI</TabsTrigger>

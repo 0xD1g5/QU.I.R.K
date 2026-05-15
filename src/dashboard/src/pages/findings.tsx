@@ -50,7 +50,10 @@ export function FindingsPage() {
     return filtered
   }, [data, severityFilter, protocolFilter])
 
-  const columns: ColumnDef<FindingItem>[] = [
+  // D-25 (IN-03): memoize columns for stable reference identity across renders
+  // (TanStack Table relies on referential stability of the columns array).
+  // Cells only close over `row.original` / module-level constants — empty deps.
+  const columns = useMemo<ColumnDef<FindingItem>[]>(() => [
     {
       accessorKey: "severity",
       header: "Severity",
@@ -79,7 +82,7 @@ export function FindingsPage() {
       },
     },
     { accessorKey: "source", header: "Source" },
-  ]
+  ], [])
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table returns non-memoizable functions; known React Compiler limitation
   const table = useReactTable({

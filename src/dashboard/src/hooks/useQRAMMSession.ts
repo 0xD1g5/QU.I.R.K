@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useRef } from "react"
+import { useEffect, useState, useContext, useRef, useCallback } from "react"
 import { QRAMMContext, type AnswerState } from "@/context/QRAMMContext"
 import type { QRAMMSessionSummary, QRAMMAnswerRead } from "@/types/api"
 import { fetchApi } from "@/lib/api"
@@ -8,6 +8,7 @@ interface UseQRAMMSessionResult {
   loading: boolean
   error: string | null
   reload: () => void
+  resetSession: () => void
 }
 
 export function useQRAMMSession(): UseQRAMMSessionResult {
@@ -115,10 +116,19 @@ export function useQRAMMSession(): UseQRAMMSessionResult {
     return () => { cancelled = true }
   }, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // D-26 (IN-04): reset the seededRef so the next session load re-seeds answers
+  // after a "New Assessment" flow trigger. Without this, archiveAndReset leaves
+  // seededRef pointing at the archived session_id and the next session's answers
+  // would not be loaded into the QRAMM context.
+  const resetSession = useCallback(() => {
+    seededRef.current = null
+  }, [])
+
   return {
     session,
     loading,
     error,
     reload: () => setTick(t => t + 1),
+    resetSession,
   }
 }

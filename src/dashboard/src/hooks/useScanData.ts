@@ -24,11 +24,15 @@ export function useScanData(): UseScanDataResult {
     setLoading(true)
     setError(null)
 
+    // D-29 (IN-07): hoist URL out of try-block so it is in scope for both
+    // the non-ok error path and the catch handler — operators see which
+    // endpoint failed (RESEARCH Pitfall 8).
+    const url = selectedScanId
+      ? `/api/scan/latest?scan_id=${encodeURIComponent(selectedScanId)}`
+      : "/api/scan/latest"
+
     async function fetchData() {
       try {
-        const url = selectedScanId
-          ? `/api/scan/latest?scan_id=${encodeURIComponent(selectedScanId)}`
-          : "/api/scan/latest"
         const resp = await fetchApi(url)
         if (!resp.ok) {
           if (!cancelled) {
@@ -48,7 +52,7 @@ export function useScanData(): UseScanDataResult {
             if (resp.status === 404) {
               setError("No scan data available. Run a scan first: quirk scan <target>")
             } else {
-              setError(`API error: ${resp.status} ${resp.statusText}`)
+              setError(`Failed to fetch ${url}: ${resp.status} ${resp.statusText}`)
             }
           }
           return
@@ -59,7 +63,9 @@ export function useScanData(): UseScanDataResult {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load scan data")
+          setError(
+            `Failed to fetch ${url}: ${err instanceof Error ? err.message : String(err)}`,
+          )
         }
       } finally {
         if (!cancelled) {
