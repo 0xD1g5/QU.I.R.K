@@ -226,10 +226,10 @@ wont_fix: 1
 | react-frontend/WR-06 | WARNING | executive reads body.detail without coercion check | Phase 76 | [x] closed |
 | react-frontend/WR-07 | WARNING | print data-ready set even when QRAMM has errored | Phase 76 | [x] closed |
 | react-frontend/WR-08 | WARNING | qramm-profile submitError swallows actual error message | Phase 76 | [x] closed |
-| react-frontend/WR-09 | WARNING | certificates Subject CN regex breaks on RFC2253-escaped commas | — | [ ] open |
-| react-frontend/WR-10 | WARNING | cbom Cytoscape registration uses cast without proper typing | — | [ ] open |
-| react-frontend/WR-11 | WARNING | ScorecardTab Maturity Distribution width math hardcodes /4 | — | [ ] open |
-| react-frontend/WR-12 | WARNING | ScorecardTab maturity bar applies badge text/border classes | — | [ ] open |
+| react-frontend/WR-09 | WARNING | certificates Subject CN regex breaks on RFC2253-escaped commas | Phase 76 | [x] closed |
+| react-frontend/WR-10 | WARNING | cbom Cytoscape registration uses cast without proper typing | Phase 76 | [x] closed |
+| react-frontend/WR-11 | WARNING | ScorecardTab Maturity Distribution width math hardcodes /4 | Phase 76 | [x] closed |
+| react-frontend/WR-12 | WARNING | ScorecardTab maturity bar applies badge text/border classes | Phase 76 | [x] closed |
 | react-frontend/WR-13 | WARNING | ComplianceMapTab re-fetches on every ctx.scoreResult change | Phase 76 | [x] closed |
 | react-frontend/WR-14 | WARNING | qramm-assessment handleNewAssessment does not abort debounced persists | Phase 62 (HOOK-03) | [x] closed |
 | react-frontend/IN-01 | INFO | qramm-assessment comment says 5-tab but renders 6 tabs | — | [ ] open |
