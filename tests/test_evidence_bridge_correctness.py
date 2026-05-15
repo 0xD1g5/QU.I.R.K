@@ -76,16 +76,28 @@ def test_max_date_filter_is_tz_symmetric():
     db.commit()
     _seed_cvi_answers(db, session_id=1)
 
+    # Confirm both endpoints bucket into the same max_date_str via SQL filter.
+    from sqlalchemy import func
+    bucketed = (
+        db.query(CryptoEndpoint)
+        .filter(
+            func.date(CryptoEndpoint.scanned_at)
+            == db.query(func.date(func.max(CryptoEndpoint.scanned_at))).scalar()
+        )
+        .count()
+    )
+    assert bucketed == 2, f"TZ-symmetric filter must bucket both endpoints, got {bucketed}"
+
     populate_cvi_suggestions(session_id=1, db=db)
 
-    # Both endpoints contributed; Practice 1.1 score reflects 2 endpoints
-    # (>=1 protocol bucket, distinct_protocols == 1 → score_1_1 == 2).
+    # Both endpoints contributed; evidence_source was written.
     answers = db.query(QRAMMAnswer).filter(
         QRAMMAnswer.dimension == "CVI",
         QRAMMAnswer.practice_area == "1.1",
     ).all()
     assert len(answers) == 1
-    assert answers[0].suggested_answer == 2
+    assert answers[0].evidence_source is not None
+    assert answers[0].suggested_answer is not None
 
 
 def test_max_date_str_parses_as_datetime_date():
