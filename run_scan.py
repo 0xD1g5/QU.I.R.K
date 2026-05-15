@@ -1475,6 +1475,7 @@ def main():
                 timeout=cfg.scan.timeouts.email_seconds,
                 logger=logger,
                 session_start=session_start,
+                motion_concurrency=cfg.scan.motion_concurrency,
             )
             logger.info(f"Email scan: {len(eps)} endpoints from {len(email_hosts)} hosts")
             return eps
@@ -1512,6 +1513,7 @@ def main():
                 profile=scan_profile,
                 logger=logger,
                 session_start=session_start,
+                motion_concurrency=cfg.scan.motion_concurrency,
             )
             r = scan_rabbitmq_targets(
                 hosts=broker_hosts,
@@ -1522,12 +1524,14 @@ def main():
                 session_start=session_start,
                 security=cfg.security,
                 broker_credentials=cfg.broker_credentials,
+                motion_concurrency=cfg.scan.motion_concurrency,
             )
             rd = scan_redis_targets(
                 hosts=broker_hosts,
                 timeout=cfg.scan.timeouts.broker_seconds,
                 logger=logger,
                 session_start=session_start,
+                motion_concurrency=cfg.scan.motion_concurrency,
             )
             logger.info(
                 f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)}"

@@ -71,6 +71,9 @@ class ScanCfg:
     fingerprint_concurrency: int = 200
     tls_concurrency: int = 150
     ssh_concurrency: int = 100
+    # Phase 71 / D-02 / WR-12: ThreadPool max_workers knob shared by email + broker
+    # ("motion" subsystem) scanners. Default 50 preserves prior hardcoded behavior.
+    motion_concurrency: int = 50
 
     # Phase 41 D-06: nested canonical sub-tables
     timeouts: TimeoutsCfg = field(default_factory=TimeoutsCfg)
@@ -85,6 +88,7 @@ class ScanCfg:
         fingerprint_concurrency: int = 200,
         tls_concurrency: int = 150,
         ssh_concurrency: int = 100,
+        motion_concurrency: int = 50,
         timeouts: Optional[TimeoutsCfg] = None,
         retry: Optional[RetryCfg] = None,
         # Phase 41 D-07: legacy flat kwargs accepted for backward compat
@@ -103,6 +107,7 @@ class ScanCfg:
         self.fingerprint_concurrency = fingerprint_concurrency
         self.tls_concurrency = tls_concurrency
         self.ssh_concurrency = ssh_concurrency
+        self.motion_concurrency = motion_concurrency
         self.timeouts = timeouts if timeouts is not None else TimeoutsCfg()
         self.retry = retry if retry is not None else RetryCfg()
         # Route legacy flat kwargs into the nested TimeoutsCfg
