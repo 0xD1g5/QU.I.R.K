@@ -1543,7 +1543,7 @@ Plans:
   3. `SCORE_WEIGHTS` are documented and normalized; the roadmap double-period artifact is removed; executive `_build_interpretation` guards `score['score']` access; TLS 1.2 non-PFS cipher KEX returns the correct `RSA-kex` label; confidence weight overrides pass through clamp and validation
 **Plans**: TBD
 
-### Phase 74: QRAMM + Compliance WARNINGs
+### Phase 74: QRAMM + Compliance WARNINGs ✅
 **Goal**: All three WARNING clusters in the QRAMM/compliance subsystem are resolved — practice scores reject out-of-range inputs, the evidence bridge is TZ-safe and idempotent, and migration advisor precision, coverage disambiguation, and stale comments are fixed. Closes audit findings qramm-compliance/WR-01 through WR-13.
 **Depends on**: Phase 70
 **Requirements**: QWARN-01, QWARN-02, QWARN-03
@@ -1596,7 +1596,7 @@ Plans:
 | 71. Protocol Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
 | 72. Cloud Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
 | 73. CBOM + Intelligence + Reports WARNINGs | 3/3 | Complete   | 2026-05-15 |
-| 74. QRAMM + Compliance WARNINGs | 0/TBD | Not started | - |
+| 74. QRAMM + Compliance WARNINGs | 3/3 | Complete   | 2026-05-15 |
 | 75. API + CLI + Core WARNINGs | 0/TBD | Not started | - |
 | 76. React Frontend WARNINGs | 0/TBD | Not started | - |
 | 77. INFO/Code Quality + Audit Ledger Closure | 0/TBD | Not started | - |
