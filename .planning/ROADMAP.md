@@ -1498,7 +1498,10 @@ Plans:
   1. The `qramm_profiles` table has a `FOREIGN KEY (session_id) REFERENCES qramm_sessions(id)` constraint; calling `delete_session` nulls the corresponding `profile_id` pointer before deletion, preventing a FK violation
   2. The classifier `except` clause catches a specific exception type (not bare `except`) and logs the error with a structured message; the `col_type` string is validated against an allowlist before interpolation into any `ALTER TABLE` statement
   3. A pytest fixture that attempts to delete a QRAMM session with an active profile verifies the operation completes cleanly (no FK error, no dangling row)
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 70-01-PLAN.md — FK retrofit on qramm_profiles.session_id + per-connection PRAGMA foreign_keys=ON + delete_session reorder (BLOCK-07, closes CR-04/05)
+  - [ ] 70-02-PLAN.md — Narrow _qs_for_alg except + module logger in scan.py (BLOCK-08 partial, closes CR-06)
+  - [ ] 70-03-PLAN.md — _SAFE_COL_TYPE_RE allowlist in 4 _ensure_* helpers + AUDIT-TASKS row flips for CR-04/05/06/07 (BLOCK-08 partial, closes CR-07)
 
 ### Phase 71: Protocol Scanner WARNINGs
 **Goal**: All five WARNING clusters in the protocol scanner subsystem are resolved — coverage percentages are bounded, severity comparisons are case-insensitive, subprocess errors are logged not swallowed, nmap inputs are validated and parsed safely, identity scanner inputs are bounded, and the extras/ThreadPool/dedup issues are fixed. Closes audit findings scanners-protocol/WR-01 through WR-14.
