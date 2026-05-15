@@ -680,76 +680,6 @@ services:
       sh -c "apk add --no-cache curl git > /dev/null 2>&1 && sh /seed.sh"
 
   # =========================
-  # PHASE 4 — STORAGE PROFILE (profile: storage)
-  # LAB-04: LocalStack KMS + HashiCorp Vault + postgres-pgcrypto
-  # Ports: 20007 (localstack-kms), 20009 (vault), 20010 (postgres-pgcrypto)
-  # INDEPENDENT of existing cloud profile (different LocalStack instance, SERVICES=kms only)
-  # =========================
-  localstack-kms:
-    image: localstack/localstack:3
-    profiles: ["storage"]
-    environment:
-      - SERVICES=kms
-      - DEBUG=0
-      - DEFAULT_REGION=us-east-1
-    ports:
-      - "20007:4566"
-    healthcheck:
-      test: ["CMD", "bash", "-c", "curl -sf http://localhost:4566/_localstack/health | grep -q '\"kms\"'"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 20s
-
-  localstack-kms-seed:
-    image: amazon/aws-cli:latest
-    profiles: ["storage"]
-    restart: "no"
-    depends_on:
-      localstack-kms:
-        condition: service_healthy
-    volumes:
-      - ./storage/kms-seed.sh:/kms-seed.sh:ro
-    environment:
-      - AWS_DEFAULT_REGION=us-east-1
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-    entrypoint: ["/bin/sh", "/kms-seed.sh"]
-
-  vault:
-    image: hashicorp/vault:1.15
-    profiles: ["storage"]
-    environment:
-      VAULT_DEV_ROOT_TOKEN_ID: "root"
-      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
-    ports:
-      - "20009:8200"
-    cap_add:
-      - IPC_LOCK
-    command: ["vault", "server", "-dev"]
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8200/v1/sys/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-  vault-seed:
-    image: hashicorp/vault:1.15
-    profiles: ["storage"]
-    restart: "no"
-    depends_on:
-      vault:
-        condition: service_healthy
-    volumes:
-      - ./storage/vault-seed.sh:/vault-seed.sh:ro
-    environment:
-      VAULT_ADDR: "http://vault:8200"
-      VAULT_TOKEN: "root"
-      VAULT_DEV_ROOT_TOKEN_ID: "root"
-    entrypoint: ["/bin/sh", "/vault-seed.sh"]
-
-  # =========================
   # PHASE 30 — HASHICORP VAULT PROFILE (profile: vault)
   # LAB-30: Dedicated Vault dev server with seed scenarios for VAULT-01/02/03
   # Port: 28200 (safe range — does NOT collide with existing storage/vault at 20009)
@@ -787,19 +717,6 @@ services:
       VAULT_TOKEN: "root"
       VAULT_DEV_ROOT_TOKEN_ID: "root"
     entrypoint: ["/bin/sh", "/seed.sh"]
-
-  postgres-pgcrypto:
-    image: postgres:16
-    profiles: ["storage"]
-    environment:
-      POSTGRES_DB: pgcrypto_lab
-      POSTGRES_USER: pglab
-      POSTGRES_PASSWORD: pglab
-    ports:
-      - "20010:5432"
-    volumes:
-      - ./storage/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - pgcrypto_data:/var/lib/postgresql/data
 
   # =========================
   # PHASE 4 — SSH-WEAK PROFILE (profile: ssh-weak)
@@ -1114,4 +1031,3 @@ volumes:
   stepca_data:
   registry_data:
   gitea_data:
-  pgcrypto_data:
