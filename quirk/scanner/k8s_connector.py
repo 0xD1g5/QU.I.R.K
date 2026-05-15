@@ -490,6 +490,17 @@ def scan_k8s_targets(
                         session_start=session_start,
                     ))
             if credential is not None:
+                # CR-09 (Phase 69 / locked decision D-09): when credentials are
+                # valid but no AKS clusters were configured, short-circuit to []
+                # WITHOUT calling _scan_aks_encryption (which would receive
+                # cluster_configs=[] and could raise AttributeError on the empty
+                # path) and WITHOUT emitting an inaccessible finding. The K8S-03
+                # "at least one finding" invariant applies at the per-provider
+                # level, not for an empty cluster list when credentials are valid
+                # — the inaccessible-finding path is reserved for the
+                # credential=None branch above (Phase 29 / CR-03).
+                if not (aks_clusters or []):
+                    return []
                 results.extend(_scan_aks_encryption(
                     credential=credential,
                     subscription_id=azure_subscription_id or "",
