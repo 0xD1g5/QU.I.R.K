@@ -1501,7 +1501,7 @@ Plans:
 **Plans**: 3 plans
   - [x] 70-01-PLAN.md — FK retrofit on qramm_profiles.session_id + per-connection PRAGMA foreign_keys=ON + delete_session reorder (BLOCK-07, closes CR-04/05)
   - [ ] 70-02-PLAN.md — Narrow _qs_for_alg except + module logger in scan.py (BLOCK-08 partial, closes CR-06)
-  - [ ] 70-03-PLAN.md — _SAFE_COL_TYPE_RE allowlist in 4 _ensure_* helpers + AUDIT-TASKS row flips for CR-04/05/06/07 (BLOCK-08 partial, closes CR-07)
+  - [x] 70-03-PLAN.md — _SAFE_COL_TYPE_RE allowlist in 4 _ensure_* helpers + AUDIT-TASKS row flips for CR-04/05/06/07 (BLOCK-08 partial, closes CR-07)
 
 ### Phase 71: Protocol Scanner WARNINGs
 **Goal**: All five WARNING clusters in the protocol scanner subsystem are resolved — coverage percentages are bounded, severity comparisons are case-insensitive, subprocess errors are logged not swallowed, nmap inputs are validated and parsed safely, identity scanner inputs are bounded, and the extras/ThreadPool/dedup issues are fixed. Closes audit findings scanners-protocol/WR-01 through WR-14.
@@ -1586,7 +1586,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 69. Deferred BLOCKERs — Scanner + Cloud | 0/TBD | Not started | - |
-| 70. Deferred BLOCKERs — API + QRAMM Model | 1/3 | In Progress|  |
+| 70. Deferred BLOCKERs — API + QRAMM Model | 2/3 | In Progress|  |
 | 71. Protocol Scanner WARNINGs | 0/TBD | Not started | - |
 | 72. Cloud Scanner WARNINGs | 0/TBD | Not started | - |
 | 73. CBOM + Intelligence + Reports WARNINGs | 0/TBD | Not started | - |
