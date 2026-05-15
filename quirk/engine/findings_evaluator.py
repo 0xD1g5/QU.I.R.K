@@ -12,7 +12,11 @@ from typing import Any, Dict, List, Optional, Tuple
 from quirk.compliance import COMPLIANCE_MAP, TITLE_PREFIX_ALIASES
 
 
-_SEVERITY_RANK = {"INFO": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+# Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
+# key. Lower rank = higher severity; CRITICAL sorts first so high-severity findings
+# cluster at the top of dedup output. Also used by the dedup tie-break — when two
+# findings collide on the dedup key, the lower-rank (higher-severity) finding wins.
+_SEVERITY_RANK = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 
 # Phase 49 D-02 + Pitfall 1: canonical-key lookup for COMPLIANCE_MAP.
 # COMPLIANCE_MAP keys are the LITERAL emitted titles (parens preserved).
@@ -310,16 +314,26 @@ def _dedupe_findings(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if prior is None:
             deduped[key] = f
             continue
-        cur_rank = _SEVERITY_RANK.get(str(f.get("severity", "INFO")).upper(), 0)
-        prev_rank = _SEVERITY_RANK.get(str(prior.get("severity", "INFO")).upper(), 0)
-        if cur_rank > prev_rank:
+        # Phase 72 D-04: rank inverted (CRITICAL=0..INFO=4); lower rank = higher severity.
+        cur_rank = _SEVERITY_RANK.get(str(f.get("severity", "INFO")).upper(), 4)
+        prev_rank = _SEVERITY_RANK.get(str(prior.get("severity", "INFO")).upper(), 4)
+        if cur_rank < prev_rank:
             deduped[key] = f
 
+    # Phase 72 D-04 / WR-24: stable sort key — severity_rank first so high-severity
+    # findings cluster. 'recommendation' dropped from key: remediation-text edits no
+    # longer reshuffle golden output. C-4 adjudication: "finding_id" in D-04 maps to
+    # `title` (no finding_id column exists in the dedup tuple).
     return [
         deduped[k]
         for k in sorted(
             deduped.keys(),
-            key=lambda x: (x[0], x[1], x[2], x[3]),
+            key=lambda x: (
+                _SEVERITY_RANK.get(str(deduped[x].get("severity", "INFO")).upper(), 4),
+                x[2],  # title — per Phase 72 C-4 mapping for D-04's "finding_id"
+                x[0],  # host
+                x[1],  # port
+            ),
         )
     ]
 
@@ -337,7 +351,10 @@ def _postprocess_findings(cfg, endpoints, findings: List[Dict[str, Any]]) -> Lis
     for e in endpoints:
         ep_map[(getattr(e, "host", ""), int(getattr(e, "port", 0)))] = e
 
-    for f in findings:
+    # Phase 72 D-24 / WR-23: defensive snapshot iteration. Body currently mutates
+    # fields of existing finding dicts in-place; the snapshot protects against
+    # future maintainers adding append/remove without re-checking iteration safety.
+    for f in tuple(findings):
         host = f.get("host", "")
         port = int(f.get("port") or 0)
         title = (f.get("title") or "").strip()
