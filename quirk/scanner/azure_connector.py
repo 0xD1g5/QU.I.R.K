@@ -130,9 +130,13 @@ def _scan_blob_encryption(
     the account, and creates one CryptoEndpoint per container with the parent account's
     encryption setting applied.
 
-    keySource ladder per D-07 (lowercased comparison):
-      "microsoft.keyvault" → BLOB/cmk (no severity)
-      "microsoft.storage" / absent / null → MEDIUM/BLOB/platform-managed
+    keySource ladder per D-04 (lowercased comparison) — three-way branch:
+      "microsoft.keyvault" → BLOB/cmk      (finding_id BLOB-CMK,      severity None)
+      "microsoft.storage"  → BLOB/platform-managed (finding_id BLOB-PLATFORM, MEDIUM)
+      absent / null / ""   → BLOB/unknown  (finding_id BLOB-UNKNOWN,  MEDIUM)
+    BLOCK-04: BLOB-PLATFORM and BLOB-UNKNOWN share severity tier but are
+    semantically distinct findings; differentiated via service_detail and
+    dat_scan_json["finding_id"]. No new schema column.
 
     Uses inline import for azure-mgmt-storage (function-body scope, ImportError-guarded)
     following the _scan_app_gateways pattern. azure-mgmt-storage is in [cloud] extras only.
@@ -172,10 +176,25 @@ def _scan_blob_encryption(
 
                 if key_source == "microsoft.keyvault":
                     service_detail = "BLOB/cmk"
+                    finding_id = "BLOB-CMK"
+                    description = "Customer-managed key (Azure Key Vault)"
                     severity = None
-                else:
-                    # microsoft.storage / "" / absent → platform-managed (MEDIUM)
+                elif key_source == "microsoft.storage":
                     service_detail = "BLOB/platform-managed"
+                    finding_id = "BLOB-PLATFORM"
+                    description = (
+                        "Platform-managed AES-256 (Microsoft.Storage) — "
+                        "not customer-managed"
+                    )
+                    severity = "MEDIUM"
+                else:
+                    # absent / null / "" / unrecognized → unknown (BLOCK-04, D-04)
+                    service_detail = "BLOB/unknown"
+                    finding_id = "BLOB-UNKNOWN"
+                    description = (
+                        "Encryption key source unavailable — could not "
+                        "determine key management type"
+                    )
                     severity = "MEDIUM"
 
                 # Extract resource group from ARM resource ID per Pitfall 2:
@@ -211,6 +230,8 @@ def _scan_blob_encryption(
                             "account": account_name,
                             "container": container_name,
                             "key_source": key_source_raw or "absent",
+                            "finding_id": finding_id,
+                            "description": description,
                         }, default=str),
                         scanned_at=ts,
                     )
