@@ -7,10 +7,14 @@ Degrades gracefully when boto3 is not installed.
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+
+# Phase 72 D-08: KMS key states that cannot encrypt new data — skip during scan.
+_KMS_SKIP_STATES = frozenset({"Disabled", "PendingDeletion", "PendingImport", "Unavailable"})
 
 # ---------------------------------------------------------------------------
 # boto3 optional import (D-15, D-17)
@@ -51,6 +55,12 @@ def _scan_acm(session, logger) -> List[CryptoEndpoint]:
         for page in paginator.paginate():
             for cert_summary in page.get("CertificateSummaryList", []):
                 arn = cert_summary.get("CertificateArn", "")
+                # Phase 72 D-07 (WR-01): empty / whitespace ARNs come from malformed
+                # listing responses; degrade gracefully like Phase 71 D-11.
+                if not arn or not arn.strip():
+                    if logger:
+                        logger.v("ACM cert with empty ARN — skipping")
+                    continue
                 try:
                     detail = client.describe_certificate(CertificateArn=arn).get("Certificate", {})
                     key_alg = detail.get("KeyAlgorithm", "")
@@ -155,40 +165,55 @@ def _scan_eks_encryption(session, logger, session_start=None) -> List[CryptoEndp
                     # Pitfall 3: handle both "encryptionConfig: []" and absent key.
                     enc_cfg = cluster.get("encryptionConfig", []) or []
                     if not enc_cfg:
-                        service_detail = "EKS/unencrypted"
-                        severity = "HIGH"
-                    else:
-                        secrets_encrypted = any(
-                            "secrets" in (entry.get("resources") or [])
-                            for entry in enc_cfg
+                        # No encryption providers configured — single unencrypted finding.
+                        ep = CryptoEndpoint(
+                            host=f"aws://eks/{cluster_name}",
+                            port=0,
+                            protocol="KUBERNETES",
+                            service_detail="EKS/unencrypted",
+                            dat_scan_json=json.dumps(
+                                {
+                                    "cluster": cluster_name,
+                                    "provider": "EKS",
+                                    "encryptionConfig": enc_cfg,
+                                },
+                                default=str,
+                            ),
+                            scanned_at=ts,
                         )
-                        if secrets_encrypted:
-                            kms_key = (
-                                enc_cfg[0].get("provider", {}).get("keyArn", "")
+                        ep.severity = "HIGH"
+                        results.append(ep)
+                    else:
+                        # Phase 72 D-10 (WR-14): iterate full enc_cfg list, emit one
+                        # finding per provider entry (EKS allows multiple providers).
+                        for cfg in enc_cfg:
+                            entry_resources = cfg.get("resources") or []
+                            encrypts_secrets = "secrets" in entry_resources
+                            if encrypts_secrets:
+                                kms_key = (cfg.get("provider") or {}).get("keyArn", "")
+                                service_detail = f"EKS/encrypted:{kms_key}"
+                                severity = None
+                            else:
+                                service_detail = "EKS/unencrypted"
+                                severity = "HIGH"
+                            ep = CryptoEndpoint(
+                                host=f"aws://eks/{cluster_name}",
+                                port=0,
+                                protocol="KUBERNETES",
+                                service_detail=service_detail,
+                                dat_scan_json=json.dumps(
+                                    {
+                                        "cluster": cluster_name,
+                                        "provider": "EKS",
+                                        "encryptionConfig": cfg,
+                                    },
+                                    default=str,
+                                ),
+                                scanned_at=ts,
                             )
-                            service_detail = f"EKS/encrypted:{kms_key}"
-                            severity = None
-                        else:
-                            service_detail = "EKS/unencrypted"
-                            severity = "HIGH"
-                    ep = CryptoEndpoint(
-                        host=f"aws://eks/{cluster_name}",
-                        port=0,
-                        protocol="KUBERNETES",
-                        service_detail=service_detail,
-                        dat_scan_json=json.dumps(
-                            {
-                                "cluster": cluster_name,
-                                "provider": "EKS",
-                                "encryptionConfig": enc_cfg,
-                            },
-                            default=str,
-                        ),
-                        scanned_at=ts,
-                    )
-                    if severity:
-                        ep.severity = severity
-                    results.append(ep)
+                            if severity:
+                                ep.severity = severity
+                            results.append(ep)
                 except Exception as exc:
                     if logger:
                         logger.v(f"EKS cluster scan error for {cluster_name}: {exc}")
@@ -223,7 +248,7 @@ def _scan_s3_encryption(
         session_start: timezone-aware datetime; falls back to now() when absent (ISSUE-3).
         endpoint_url: optional MinIO/LocalStack endpoint override (D-08, Phase 28 chaos lab).
     """
-    from concurrent.futures import ThreadPoolExecutor
+    # Phase 72 D-11 (WR-19): ThreadPoolExecutor / as_completed now imported at module scope.
     from botocore.exceptions import ClientError
 
     if not BOTO3_AVAILABLE:
@@ -323,6 +348,13 @@ def _scan_kms(session, logger) -> List[CryptoEndpoint]:
                 key_id = key_entry.get("KeyId", "")
                 try:
                     metadata = client.describe_key(KeyId=key_id).get("KeyMetadata", {})
+                    # Phase 72 D-08 (WR-02): skip keys in non-encrypting states; these
+                    # cannot encrypt new data and pollute the scorecard.
+                    state = metadata.get("KeyState")
+                    if state in _KMS_SKIP_STATES:
+                        if logger:
+                            logger.info(f"KMS key {key_id} skipped (state={state})")
+                        continue
                     arn = metadata.get("Arn", key_id)
                     # KeySpec preferred; fall back to CustomerMasterKeySpec for older keys
                     key_spec = metadata.get("KeySpec") or metadata.get("CustomerMasterKeySpec", "")
