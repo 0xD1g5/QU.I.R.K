@@ -9,7 +9,10 @@ from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
 EVIDENCE_SCHEMA_VERSION = "1.0.0"
 
 _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
-                  "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT")
+                  "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
+                  # closes cbom-intel-reports/IN-04 (Phase 77 D-10) — 6 scanner-emitted
+                  # protocol keys per RESEARCH C-10 inventory.
+                  "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:

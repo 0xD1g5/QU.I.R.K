@@ -81,6 +81,19 @@ class RoadmapItem:
 
 @dataclass(frozen=True, slots=True)
 class IntelligenceReport:
+    """Typed return shape for the intelligence pipeline aggregate output.
+
+    Phase 77 D-15 pivot (cbom-intel-reports/IN-09): the original audit row
+    proposed cascade-delete on the assumption of zero importers. RESEARCH C-1
+    showed live importers exist (the `tests/test_intelligence_schema.py`
+    importer constructs the dataclass and exercises every field), and the
+    Phase-77 execution pivot preserves the class as the canonical typed
+    container for `(score_inputs, score_result, confidence_result, roadmap)`
+    plus the schema-version stamp. A CI guard in
+    `tests/test_intelligence_public_api.py` asserts the live importer continues
+    to exercise the fields, preventing accidental future re-deletion.
+    """
+
     generated_utc: str
     score_inputs: ScoreInputs
     score_result: ScoreResult
