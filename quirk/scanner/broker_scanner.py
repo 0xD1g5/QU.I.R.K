@@ -25,6 +25,10 @@ from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.scanner.tls_scanner import _pubkey_info, _extract_sans
 from quirk.util.safe_exc import safe_str
+from quirk.util.weak_crypto import (  # Phase 77 D-05 — closes scanners-protocol/IN-05
+    is_pfs_cipher,
+    is_weak_cipher_classification,
+)
 
 # ---------------------------------------------------------------------------
 # sslyze optional import (same guard as email_scanner.py)
@@ -110,16 +114,6 @@ _BROKER_PROTO_MAP = [
     ("tls_1_1_cipher_suites", "TLSv1.1", 2),
     ("tls_1_0_cipher_suites", "TLSv1.0", 1),
 ]
-
-
-def _is_pfs(name: str) -> bool:
-    upper = name.upper()
-    return "ECDHE" in upper or "DHE" in upper
-
-
-def _is_weak(name: str) -> bool:
-    upper = name.upper()
-    return any(m in upper for m in ("RC4", "3DES", "CBC3", "NULL", "EXPORT", "MD5"))
 
 
 # ---------------------------------------------------------------------------
@@ -211,9 +205,9 @@ def _scan_one_sslyze_broker(
                     highest_priority = priority
                     highest_version = version_label
                 for cipher_name in names:
-                    if _is_pfs(cipher_name):
+                    if is_pfs_cipher(cipher_name):
                         pfs_supported = True
-                    if _is_weak(cipher_name):
+                    if is_weak_cipher_classification(cipher_name):
                         weak_present = True
 
         ep.tls_version = highest_version
