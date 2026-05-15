@@ -58,6 +58,7 @@ Close all 14 WARNING-severity audit findings in the protocol-scanner subsystem f
 ### Coverage clamp (PROTO-01 / WR-01)
 
 - **D-06 (locked):** `quirk/discovery/coverage.py::calculate_coverage` returns `max(0.0, min(1.0, coverage))` at the final return statement. Clamp only — do NOT change the underlying numerator/denominator math (that's a Phase 73 INTEL-03 concern per D-08). Add an inline comment citing WR-01.
+- **D-06a (correction, 2026-05-15):** Clamp range corrected to [0.0, 100.0] to match the existing percent semantic preserved by D-15. The original [0.0, 1.0] in D-06 reflected a unit error in the discuss-phase; the function returns a percent (0–100), not a fraction. Code, tests, and ROADMAP Phase 71 success criterion 1 updated to `[0.0, 100.0] (percent)`.
 
 ### Severity comparison normalization (PROTO-01 / WR-02)
 

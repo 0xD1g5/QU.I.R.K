@@ -1508,7 +1508,7 @@ Plans:
 **Depends on**: Phase 69
 **Requirements**: PROTO-01, PROTO-02, PROTO-03, PROTO-04, PROTO-05
 **Success Criteria** (what must be TRUE):
-  1. `coverage.calculate_coverage` returns a value in `[0.0, 1.0]` under any input; `quantum_readiness_score` severity comparison passes with mixed-case severity strings (e.g., `"High"`, `"HIGH"`)
+  1. `coverage.calculate_coverage` returns a value in `[0.0, 100.0]` (percent) under any input; `quantum_readiness_score` severity comparison passes with mixed-case severity strings (e.g., `"High"`, `"HIGH"`)
   2. A subprocess failure in any protocol scanner emits a logged error (not a bare `except` swallow); the error appears in the scan log and the scan continues with a partial result
   3. `nmap_provider.run_nmap_discovery` validates `extra_args` against a character allowlist and raises on violation; nmap XML is parsed via `defusedxml` (not stdlib ET); default port CSV is correct
   4. DNSSEC `_parse_dnskeys` key_bytes access is bounded; Kerberos decode errors are logged; Kerberos nonce uses `secrets.token_bytes`; SAML JSON parse has a byte-size cap
