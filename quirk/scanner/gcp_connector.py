@@ -305,12 +305,22 @@ def _scan_cloud_sql(service, project_id: str, logger) -> List[CryptoEndpoint]:
                         continue
 
                     severity, description = finding
+                    # Phase 72 D-17 (WR-22): surface the Cloud SQL instance description
+                    # in service_detail via slash-suffix encoding (mirrors Phase 69
+                    # BLOCK-02 routing). The CryptoEndpoint schema has a single
+                    # service_detail field, so finding-description and instance-
+                    # description are concatenated by '/'.
+                    instance_description = instance.get("description") or "no-description"
+                    instance_desc_slug = instance_description.replace(" ", "-")
                     ep = CryptoEndpoint(
                         host=f"gcp://{project_id}/sql/{instance_name}",
                         port=0,
                         protocol="CLOUD_SQL",
                         severity=severity,
-                        service_detail=f"CLOUD_SQL/{description.replace(' ', '-')}",
+                        service_detail=(
+                            f"CLOUD_SQL/{description.replace(' ', '-')}"
+                            f"/{instance_desc_slug}"
+                        ),
                         cloud_scan_json=json.dumps(
                             {"sslMode": ssl_mode, "finding": description},
                             default=str,
