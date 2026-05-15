@@ -1461,7 +1461,7 @@ Plans:
 
 - [x] **Phase 69: Deferred BLOCKERs — Scanner + Cloud** - Fix resource leaks (ThreadPool, socket) and cloud data correctness bugs (GCP SQL, K8s, Azure Blob, Cache, TokenBucket) (completed 2026-05-15)
 - [x] **Phase 69.1: K8s Test Fixture Hardening (INSERTED)** - Add autouse `*_AVAILABLE` fixture to `tests/test_k8s_connector.py` so the canonical `.venv` (Python 3.14) runs the full k8s_connector suite green regardless of optional cloud-SDK installation. Unblocks Phase 69-03 test + 4 pre-existing failures (completed 2026-05-15)
-- [ ] **Phase 70: Deferred BLOCKERs — API + QRAMM Model** - Enforce DB-level FK constraint on QRAMMProfile; replace bare except in classifier and harden DDL interpolation
+- [x] **Phase 70: Deferred BLOCKERs — API + QRAMM Model** - Enforce DB-level FK constraint on QRAMMProfile; replace bare except in classifier and harden DDL interpolation (completed 2026-05-15)
 - [ ] **Phase 71: Protocol Scanner WARNINGs** - Coverage clamp, case-insensitive severity, bare except removal, nmap hardening, identity scanner input bounds, extras/ThreadPool/dedup fixes
 - [ ] **Phase 72: Cloud Scanner WARNINGs** - AWS/Azure/GCP data correctness, Cache/scope_hash robustness, profiles.py mutations, Vault/DB connector hardening
 - [ ] **Phase 73: CBOM + Intelligence + Reports WARNINGs** - PDF resource cleanup, weak-crypto predicate consistency, score weight normalization, cipher label correctness
@@ -1500,7 +1500,7 @@ Plans:
   3. A pytest fixture that attempts to delete a QRAMM session with an active profile verifies the operation completes cleanly (no FK error, no dangling row)
 **Plans**: 3 plans
   - [x] 70-01-PLAN.md — FK retrofit on qramm_profiles.session_id + per-connection PRAGMA foreign_keys=ON + delete_session reorder (BLOCK-07, closes CR-04/05)
-  - [ ] 70-02-PLAN.md — Narrow _qs_for_alg except + module logger in scan.py (BLOCK-08 partial, closes CR-06)
+  - [x] 70-02-PLAN.md — Narrow _qs_for_alg except + module logger in scan.py (BLOCK-08 partial, closes CR-06)
   - [x] 70-03-PLAN.md — _SAFE_COL_TYPE_RE allowlist in 4 _ensure_* helpers + AUDIT-TASKS row flips for CR-04/05/06/07 (BLOCK-08 partial, closes CR-07)
 
 ### Phase 71: Protocol Scanner WARNINGs
@@ -1586,7 +1586,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 69. Deferred BLOCKERs — Scanner + Cloud | 0/TBD | Not started | - |
-| 70. Deferred BLOCKERs — API + QRAMM Model | 2/3 | In Progress|  |
+| 70. Deferred BLOCKERs — API + QRAMM Model | 3/3 | Complete   | 2026-05-15 |
 | 71. Protocol Scanner WARNINGs | 0/TBD | Not started | - |
 | 72. Cloud Scanner WARNINGs | 0/TBD | Not started | - |
 | 73. CBOM + Intelligence + Reports WARNINGs | 0/TBD | Not started | - |
