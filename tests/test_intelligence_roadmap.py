@@ -1,6 +1,6 @@
 import unittest
 
-from quirk.intelligence.roadmap import build_phased_roadmap
+from quirk.intelligence.roadmap import _add_candidate, _why, build_phased_roadmap
 
 
 def _evidence() -> dict:
@@ -79,6 +79,58 @@ class IntelligenceRoadmapTests(unittest.TestCase):
         self.assertIn("NOW", phases)
         self.assertIn("NEXT", phases)
         self.assertIn("LATER", phases)
+
+
+class WhyDoublePeriodTests(unittest.TestCase):
+    """D-05 / WR-07: `_why` strips trailing period on hint before re-appending."""
+
+    def test_why_no_double_period_when_hint_ends_with_period(self) -> None:
+        self.assertEqual(_why("Base.", "Hint."), "Base. Driver: Hint.")
+
+    def test_why_preserves_no_period_hint(self) -> None:
+        self.assertEqual(_why("Base.", "Hint"), "Base. Driver: Hint.")
+
+    def test_why_empty_hint_unchanged(self) -> None:
+        self.assertEqual(_why("Base.", ""), "Base.")
+
+
+class AddCandidateMergeRuleTests(unittest.TestCase):
+    """D-06 / WR-08: lower (phase, _priority, title) tuple wins."""
+
+    def _call(self, items, *, phase, title, priority):
+        _add_candidate(
+            items,
+            phase=phase,
+            title=title,
+            why="why-text",
+            owner_placeholder="Security",
+            dependencies=[],
+            priority=priority,
+        )
+
+    def test_add_candidate_merge_lower_key_wins(self) -> None:
+        items: dict = {}
+        # First: LATER phase (highest _PHASE_ORDER tuple)
+        self._call(items, phase="LATER", title="Same Title", priority=5)
+        # Second: NOW phase (lowest tuple) — should replace
+        self._call(items, phase="NOW", title="Same Title", priority=1)
+        self.assertEqual(items["Same Title"]["phase"], "NOW")
+        self.assertEqual(items["Same Title"]["_priority"], 1)
+
+    def test_add_candidate_merge_higher_key_loses(self) -> None:
+        items: dict = {}
+        self._call(items, phase="NOW", title="Same Title", priority=1)
+        self._call(items, phase="LATER", title="Same Title", priority=5)
+        self.assertEqual(items["Same Title"]["phase"], "NOW")
+        self.assertEqual(items["Same Title"]["_priority"], 1)
+
+    def test_add_candidate_merge_equal_key_preserves_original(self) -> None:
+        items: dict = {}
+        self._call(items, phase="NOW", title="Same Title", priority=3)
+        # Mark candidate to detect replacement
+        items["Same Title"]["_marker"] = "first"
+        self._call(items, phase="NOW", title="Same Title", priority=3)
+        self.assertEqual(items["Same Title"].get("_marker"), "first")
 
 
 if __name__ == "__main__":
