@@ -1481,7 +1481,13 @@ Plans:
   3. A K8s scan with `azure_cred=None` returns a K8S-03-conformant empty result (no AttributeError); an empty target list returns `[]` without raising
   4. An Azure Blob finding for a platform-managed key (Microsoft.Storage) contains distinct severity and description from a finding where `key_source` is absent; a test covers both branches
   5. `Cache._is_fresh` with `ttl_hours=0` returns `False` on every call (never fresh); `TokenBucket.acquire(n)` where `n > capacity` raises immediately (no infinite loop)
-**Plans**: TBD
+**Plans**:
+  - 69-01 (Wave B): BLOCK-01 — sslyze try/finally cleanup + fingerprint socket close on all exception paths
+  - 69-02 (Wave A): BLOCK-02 — GCP Cloud SQL severity → severity column; rewrite 3 existing tests
+  - 69-03 (Wave B, depends on 69-01): BLOCK-03 — K8s empty-aks_clusters short-circuit (returns [] per D-09); hosts closing tasks (compileall, full pytest, AUDIT-TASKS flip, Obsidian phase note)
+  - 69-04 (Wave A): BLOCK-04 — Azure Blob 3-way branch (BLOB-CMK / BLOB-PLATFORM / BLOB-UNKNOWN) via service_detail + dat_scan_json.finding_id (no schema change)
+  - 69-05 (Wave A): BLOCK-05 — cache.py ttl_hours<=0 returns None; UAT-SERIES API contract note
+  - 69-06 (Wave A): BLOCK-06 — TokenBucket capacity guard + threading.Condition + rate=0 fast path; new tests/test_rate_limiter.py
 
 ### Phase 70: Deferred BLOCKERs — API + QRAMM Model
 **Goal**: The two deferred BLOCKERs in the API/QRAMM subsystem are resolved — the `QRAMMProfile` table has a real DB-level FK constraint with safe session deletion, and the classifier no longer uses a bare `except` or interpolates unvalidated strings into DDL. Closes audit findings api-cli-core/CR-04, CR-05, CR-06, CR-07.
