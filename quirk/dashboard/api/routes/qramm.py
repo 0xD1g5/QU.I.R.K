@@ -414,7 +414,10 @@ def score_session(
 @router.delete("/qramm/sessions/{session_id}", status_code=204)
 def delete_session(session_id: int, db: Session = Depends(get_db)) -> None:
     session = _get_session_or_404(db, session_id)
-    # Explicit cascade — SQLite FK enforcement is per-connection PRAGMA only.
+    # Phase 70 BLOCK-07/D-04: FK-safe ordering.
+    session.profile_id = None
+    db.flush()
+    db.query(QRAMMProfile).filter(QRAMMProfile.session_id == session_id).delete()
     db.query(QRAMMAnswer).filter(QRAMMAnswer.session_id == session_id).delete()
     db.delete(session)
     db.commit()

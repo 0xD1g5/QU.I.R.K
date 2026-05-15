@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey
 
 Base = declarative_base()
 
@@ -145,7 +145,12 @@ class QRAMMProfile(Base):
     __tablename__ = "qramm_profiles"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(Integer, nullable=True)
+    # Phase 70 BLOCK-07/D-03: real DB-level FK (PRAGMA foreign_keys=ON enforces it).
+    session_id = Column(
+        Integer,
+        ForeignKey("qramm_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     industry = Column(String(64), nullable=True)
     org_size = Column(String(32), nullable=True)
     data_sensitivity = Column(String(32), nullable=True)
