@@ -27,6 +27,11 @@ output/
 data/
 tmp/
 recordings/
+quirk-output/
+
+# Local scratch / build artifacts
+.clone/
+.vite/
 
 # Claude / GSD tooling
 .claude/
