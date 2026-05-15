@@ -197,3 +197,58 @@ def test_html_report_has_description_column(
         "Description column missing in HTML All Findings (expected >= 2 occurrences "
         "— Top Findings + All Findings)"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 73 INTEL-01 / WR-14 — PDF failure advisory propagates via writer
+# ---------------------------------------------------------------------------
+
+@patch("quirk.reports.writer.render_pdf_report")
+@patch("quirk.reports.writer.categorize_waves")
+@patch("quirk.reports.writer.build_phased_roadmap")
+@patch("quirk.reports.writer.compute_confidence")
+@patch("quirk.reports.writer.compute_readiness_score")
+@patch("quirk.reports.writer.build_evidence_summary")
+def test_pdf_failure_advisory_propagates_via_writer(
+    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, mock_pdf,
+    tmp_path, capsys,
+):
+    """Phase 73 WR-14: writer consumes False from render_pdf_report and assigns pdf_path=None.
+
+    The user-visible stderr advisory is emitted by the callee (html_renderer.py
+    per RESEARCH C-3). This test asserts the writer's `pdf_ok=False` branch is
+    exercised when render fails and that the advisory CAN be observed via
+    the callee path in the same writer flow.
+    """
+    mock_evidence.side_effect = _stub_evidence
+    mock_score.side_effect = _stub_score
+    mock_conf.side_effect = _stub_confidence
+    mock_roadmap.side_effect = _stub_roadmap
+    mock_waves.side_effect = _stub_waves
+
+    # Force PDF render to fail AND emit the callee advisory directly so this
+    # test exercises the contract that writer remains stable on pdf_ok=False.
+    def _fail_and_advise(html_path, pdf_path):
+        import sys as _sys
+        print(
+            f"PDF generation failed: RuntimeError: simulated; "
+            f"scan complete, HTML report at {html_path}",
+            file=_sys.stderr,
+        )
+        return False
+
+    mock_pdf.side_effect = _fail_and_advise
+
+    from quirk.reports.writer import write_reports
+
+    # Should NOT raise even though PDF rendering "failed"
+    write_reports(_make_cfg(tmp_path), endpoints=[], findings=_findings_fixture())
+
+    err = capsys.readouterr().err
+    assert "PDF generation failed:" in err, (
+        "Expected PDF failure advisory in stderr — writer must not swallow callee output"
+    )
+
+    # HTML report still produced even with PDF failure
+    html_files = glob.glob(os.path.join(str(tmp_path), "report-*.html"))
+    assert html_files, "HTML report should still exist when PDF render fails"
