@@ -17,12 +17,19 @@ from __future__ import annotations
 from typing import Dict, List
 
 
-def compute_practice_score(answers: List[int]) -> float:
+def compute_practice_score(answers: List[int], practice_id: str = "") -> float:
     """Average of question answers within a single practice area.
 
-    CSNP toolkit uses 4-point scale (1-4). Empty list returns 0.0.
-    Result rounded to 4 decimal places to avoid float representation noise.
+    CSNP toolkit uses 0-4 scale (D-01 widens docstring's "1-4" to {0,1,2,3,4}).
+    Empty list returns 0.0. Out-of-range answers fail loud (D-01 / WR-02) BEFORE
+    summation — no silent clamping. Result rounded to 4 decimal places to avoid
+    float representation noise.
     """
+    for answer in answers:
+        if answer not in (0, 1, 2, 3, 4):
+            raise ValueError(
+                f"Practice score answer {answer!r} for {practice_id} out of range [0, 4]"
+            )
     if not answers:
         return 0.0
     return round(sum(answers) / len(answers), 4)
@@ -63,17 +70,20 @@ def compute_overall_score(
     }
 
 
-def _maturity_label(score: float) -> str:
+def _maturity_label(score: float | None) -> str:
     """Map aggregated score to CSNP maturity level name.
 
     Thresholds verified from github.com/csnp/qramm/framework/maturity-levels.md:
+      None:    Indeterminate  (D-03 / WR-05: no algos found → cannot grade)
       1.0-1.4: Basic
       1.5-2.4: Developing
       2.5-3.4: Established
-      3.5-3.9: Advanced
-      4.0:     Optimizing
+      3.5-3.94: Advanced
+      >=3.95:  Optimizing  (D-04 / WR-06: lowered from 4.0 to absorb FP noise at sub-1.0 multipliers)
     """
-    if score >= 4.0:
+    if score is None:
+        return "Indeterminate"
+    if score >= 3.95:
         return "Optimizing"
     if score >= 3.5:
         return "Advanced"
