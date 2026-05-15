@@ -118,6 +118,19 @@ _PROTECTION_LEVEL_MAP = {
     "HSM_SINGLE_TENANT": "CloudKMS/HSM_SINGLE_TENANT",
 }
 
+# Phase 72 D-01 (WR-04): per-loop cap; ~1M items at default page size.
+# Each while-pagination loop in _scan_kms maintains its own counter and raises
+# ValueError if exceeded, preventing runaway scans on pathological deployments.
+MAX_KMS_PAGES = 1000
+
+# Phase 72 D-16 (WR-05): raw-algorithm skip set, checked BEFORE map lookup.
+# Distinct from the post-map alg_name == "UNKNOWN" branch so logs name the
+# original GCP algorithm string.
+_GCP_KMS_SKIP_ALGORITHMS = frozenset({
+    "CRYPTO_KEY_VERSION_ALGORITHM_UNSPECIFIED",
+    "UNKNOWN",
+})
+
 
 def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
     """Enumerate Cloud KMS keys with auto-location discovery and primary version algorithm mapping.
@@ -130,7 +143,14 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
     try:
         # Auto-discover all locations
         loc_request = service.projects().locations().list(name=project_resource)
+        loc_page_count = 0
         while loc_request is not None:
+            loc_page_count += 1
+            if loc_page_count > MAX_KMS_PAGES:
+                raise ValueError(
+                    f"GCP KMS pagination exceeded {MAX_KMS_PAGES} pages for "
+                    f"{project_resource}; aborting to prevent runaway scan"
+                )
             loc_response = loc_request.execute()
             for location in loc_response.get("locations", []):
                 location_id = location.get("locationId", "")
@@ -140,7 +160,14 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
                 kr_request = service.projects().locations().keyRings().list(
                     parent=location_name
                 )
+                kr_page_count = 0
                 while kr_request is not None:
+                    kr_page_count += 1
+                    if kr_page_count > MAX_KMS_PAGES:
+                        raise ValueError(
+                            f"GCP KMS pagination exceeded {MAX_KMS_PAGES} pages for "
+                            f"{location_name}; aborting to prevent runaway scan"
+                        )
                     kr_response = kr_request.execute()
                     for key_ring in kr_response.get("keyRings", []):
                         key_ring_name = key_ring.get("name", "")
@@ -149,7 +176,14 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
                         ck_request = service.projects().locations().keyRings().cryptoKeys().list(
                             parent=key_ring_name
                         )
+                        ck_page_count = 0
                         while ck_request is not None:
+                            ck_page_count += 1
+                            if ck_page_count > MAX_KMS_PAGES:
+                                raise ValueError(
+                                    f"GCP KMS pagination exceeded {MAX_KMS_PAGES} pages for "
+                                    f"{key_ring_name}; aborting to prevent runaway scan"
+                                )
                             ck_response = ck_request.execute()
                             for key in ck_response.get("cryptoKeys", []):
                                 key_name = key.get("name", "")
@@ -166,6 +200,17 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
                                     algorithm = primary.get("algorithm", "")
                                     if not algorithm:
                                         algorithm = key.get("versionTemplate", {}).get("algorithm", "")
+
+                                    # Phase 72 D-16 (WR-05): explicit raw-algorithm skip BEFORE map
+                                    # lookup so the INFO log names the original GCP enum value.
+                                    if algorithm in _GCP_KMS_SKIP_ALGORITHMS:
+                                        if logger:
+                                            logger.info(
+                                                "GCP key %s skipped (algorithm=%s)",
+                                                key_name,
+                                                algorithm,
+                                            )
+                                        continue
 
                                     alg_name, key_size = GCP_KMS_ALGORITHM_MAP.get(
                                         algorithm, (algorithm or "UNKNOWN", None)
