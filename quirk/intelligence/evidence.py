@@ -4,6 +4,8 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
+from quirk.util.weak_crypto import is_weak_cipher, is_legacy_tls_version
+
 EVIDENCE_SCHEMA_VERSION = "1.0.0"
 
 _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
@@ -127,7 +129,7 @@ def build_evidence_summary(
         key_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
         if key_alg.startswith("RSA"):
             cert_key_type_counts["RSA"] += 1
-        elif key_alg.startswith("ECDSA"):
+        elif key_alg.startswith(("EC", "ECDSA")):
             cert_key_type_counts["ECDSA"] += 1
 
         cert_not_after = getattr(ep, "cert_not_after", None)
@@ -155,7 +157,7 @@ def build_evidence_summary(
         elif proto == "SAML":
             _saml_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
             _saml_size = getattr(ep, "cert_pubkey_size", None)
-            if _saml_alg == "SHA1":
+            if is_weak_cipher(_saml_alg):
                 saml_weak_signing_count += 1
             elif _saml_size is not None and isinstance(_saml_size, int) and _saml_size < 2048:
                 saml_weak_signing_count += 1
@@ -240,13 +242,15 @@ def build_evidence_summary(
         elif proto in {"KAFKA-TLS", "AMQPS", "AMQPS/AZURE-SERVICEBUS",
                        "HTTPS/AWS-SQS", "REDIS-TLS"}:
             tls_v = str(getattr(ep, "tls_version", "") or "").upper()
-            if tls_v in {"TLSV1", "TLSV1.0", "TLSV1.1", "SSLV3"}:
+            if is_legacy_tls_version(tls_v):
                 motion_broker_weak_tls_count += 1
             cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
-            # Mirrors risk_engine.py:564-567 — HIGH-only weak-cipher predicate (per A5)
+            # Mirrors risk_engine.py:564-567 — HIGH-only weak-cipher predicate (per A5).
+            # Phase 73 / D-10: token portion unified via is_weak_cipher; structural
+            # TLS_RSA_WITH_ + ECDHE-less-AES-SHA clauses remain inline.
             if cipher and (
                 cipher.startswith("TLS_RSA_WITH_")
-                or any(s in cipher for s in ("3DES", "RC4", "DES-CBC"))
+                or is_weak_cipher(cipher)
                 or (any(s in cipher for s in ("AES128-SHA", "AES256-SHA"))
                     and "ECDHE" not in cipher and "DHE" not in cipher)
             ):
@@ -261,10 +265,12 @@ def build_evidence_summary(
                 motion_email_starttls_missing_count += 1
             else:
                 cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
-                # Mirrors risk_engine.py:483-489 — HIGH-only (A5)
+                # Mirrors risk_engine.py:483-489 — HIGH-only (A5).
+                # Phase 73 / D-02 (WR-11): token portion unified via is_weak_cipher
+                # — email now covers the same token set as broker.
                 if cipher and (
                     cipher.startswith("TLS_RSA_WITH_")
-                    or any(s in cipher for s in ("3DES", "RC4"))
+                    or is_weak_cipher(cipher)
                 ):
                     motion_email_weak_cipher_count += 1
 
