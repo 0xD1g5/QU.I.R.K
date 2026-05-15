@@ -1460,6 +1460,7 @@ Plans:
 ### Phase Checklist
 
 - [x] **Phase 69: Deferred BLOCKERs — Scanner + Cloud** - Fix resource leaks (ThreadPool, socket) and cloud data correctness bugs (GCP SQL, K8s, Azure Blob, Cache, TokenBucket) (completed 2026-05-15)
+- [ ] **Phase 69.1: K8s Test Fixture Hardening (INSERTED)** - Add autouse `*_AVAILABLE` fixture to `tests/test_k8s_connector.py` so the canonical `.venv` (Python 3.14) runs the full k8s_connector suite green regardless of optional cloud-SDK installation. Unblocks Phase 69-03 test + 4 pre-existing failures.
 - [ ] **Phase 70: Deferred BLOCKERs — API + QRAMM Model** - Enforce DB-level FK constraint on QRAMMProfile; replace bare except in classifier and harden DDL interpolation
 - [ ] **Phase 71: Protocol Scanner WARNINGs** - Coverage clamp, case-insensitive severity, bare except removal, nmap hardening, identity scanner input bounds, extras/ThreadPool/dedup fixes
 - [ ] **Phase 72: Cloud Scanner WARNINGs** - AWS/Azure/GCP data correctness, Cache/scope_hash robustness, profiles.py mutations, Vault/DB connector hardening
