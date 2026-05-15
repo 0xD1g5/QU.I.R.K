@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from quirk.engine.risk_engine import evaluate_endpoints
+from quirk.engine.findings_evaluator import evaluate_endpoints
 
 
 def _cfg():
