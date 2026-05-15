@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -41,6 +42,8 @@ from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import _count_by_bucket
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(require_auth)])
 
@@ -629,18 +632,31 @@ def _dar_vault(host, port, severity, dat):
     )
 
 
-def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
-    """Build CBOM components from endpoints by aggregating algorithm usage."""
+def _qs_for_alg(alg: str) -> str:
+    """Map an algorithm string to its quantum-safety display label.
+
+    Phase 70 BLOCK-08 / D-05: lifted to module scope (was a closure inside
+    `_derive_cbom`) for direct unit-testability; `except Exception:` narrowed
+    to `(KeyError, TypeError, AttributeError)` so unrelated exception types
+    propagate to the caller (real bugs surface instead of being silently
+    relabeled "Unknown"). Lazy classifier import preserves test-time
+    `monkeypatch.setattr("quirk.cbom.classifier.classify_algorithm", ...)`.
+    """
+    # Lazy import: keeps the dotted-path monkeypatch target authoritative and
+    # avoids import-time coupling between this route module and the classifier.
     from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
 
-    def _qs_for_alg(alg: str) -> str:
-        try:
-            _, nist_level, _ = classify_algorithm(alg)
-            raw = quantum_safety_label(nist_level)
-        except Exception:
-            raw = "unknown"
-        return _QS_DISPLAY.get(raw, "Unknown")
+    try:
+        _, nist_level, _ = classify_algorithm(alg)
+        raw = quantum_safety_label(nist_level)
+    except (KeyError, TypeError, AttributeError) as e:
+        logger.warning("classifier failed for alg=%r: %s", alg, e)
+        raw = "unknown"
+    return _QS_DISPLAY.get(raw, "Unknown")
 
+
+def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
+    """Build CBOM components from endpoints by aggregating algorithm usage."""
     algo_map: dict[str, dict] = {}  # algorithm -> {quantum_safety, source_systems: set}
 
     for ep in endpoints:
