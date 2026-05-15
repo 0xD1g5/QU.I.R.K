@@ -60,183 +60,80 @@ def get_engine(db_path: str) -> Engine:
     )
 
 
-_IDENTITY_COLUMNS = [
-    "kerberos_scan_json",
-    "saml_scan_json",
-    "dnssec_scan_json",
-]
+# ---------- Phase 77 D-21 (api-cli-core/IN-06): generic _ensure_columns helper ----------
+# Consolidates 8 prior per-feature ``_ensure_*_columns`` helpers (identity, GCP,
+# v43 / DAT, email, broker, Phase 41 scan_error_category, Phase 46 chain_verified,
+# Phase 54 QRAMM evidence_note) into a single SQLite ALTER-TABLE-IF-MISSING
+# helper per RESEARCH Pattern 3. The 5 table-creating / FK-rebuild helpers
+# (_ensure_qramm_profiles_fk, _ensure_qramm_tables, _ensure_scheduled_tables,
+# _ensure_scan_jobs_table, _ensure_scan_checkpoints_table) intentionally remain
+# UNTOUCHED — they use Base.metadata.create_all / raw FK rebuild (different
+# pattern per RESEARCH inventory recommendation).
+# Closes api-cli-core/IN-06.
+
+# Per-feature column lists (column name, DDL fragment). DDL must satisfy
+# _SAFE_COL_TYPE_RE; column names must satisfy _SAFE_COL_RE.
+_IDENTITY_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("kerberos_scan_json", "TEXT"),  # Phase v4.2 identity scanner
+    ("saml_scan_json",     "TEXT"),
+    ("dnssec_scan_json",   "TEXT"),
+)
+_GCP_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("gcs_scan_json", "TEXT"),  # Phase v4.3 GCP / GCS scanner
+)
+_V43_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("dat_scan_json", "TEXT"),         # Phase v4.3 data-at-rest
+    ("severity",      "VARCHAR(16)"),
+)
+_EMAIL_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("email_scan_json", "TEXT"),  # Phase 32 email scanner
+)
+_BROKER_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("broker_scan_json", "TEXT"),  # Phase 33 broker scanner (BROKER-00)
+)
+_PHASE41_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("scan_error_category", "VARCHAR(32)"),  # Phase 41 D-11
+)
+_PHASE46_COLUMNS: tuple[tuple[str, str], ...] = (
+    # SQLite stores BOOLEAN as INTEGER (0/1/NULL); fully compatible with
+    # Python's tri-state None/True/False — see Phase 46 TLS-FIND-06.
+    ("chain_verified", "BOOLEAN"),
+)
+_PHASE54_QRAMM_ANSWER_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("evidence_note", "TEXT"),  # Phase 54 QRAMM-10
+)
 
 
-def _ensure_identity_columns(engine) -> None:
-    """Add identity scanner JSON columns to crypto_endpoints if absent (idempotent).
+def _ensure_columns(
+    engine,
+    table: str,
+    expected: tuple[tuple[str, str], ...],
+) -> None:
+    """Generic SQLite ALTER-TABLE-IF-MISSING migration helper.
 
-    Uses SQLAlchemy inspector to check existing columns before ALTER TABLE.
-    Called from init_db() after create_all(). Per D-01: inspector-first,
-    no exception-for-control-flow.
+    Phase 77 D-21 / RESEARCH Pattern 3 — consolidates 8 prior per-feature
+    helpers. Mirrors their inspector-first, idempotent shape:
+      1. Read existing columns via SQLAlchemy inspector
+      2. For each (col, ddl) in ``expected``:
+         - reject names not matching ``_SAFE_COL_RE`` (defense in depth)
+         - reject DDL fragments not matching ``_SAFE_COL_TYPE_RE``
+         - skip if already present
+         - otherwise ``ALTER TABLE {table} ADD COLUMN {col} {ddl}``
+
+    Args:
+        engine: SQLAlchemy Engine bound to the target SQLite database.
+        table: Target table name (must already exist; create_all runs first).
+        expected: Tuple of (column_name, ddl_fragment) pairs.
     """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    existing = {c["name"] for c in sa_inspect(engine).get_columns(table)}
     with engine.connect() as conn:
-        for col in _IDENTITY_COLUMNS:
-            if not _SAFE_COL_RE.match(col):
-                raise ValueError(f"Unsafe column name in migration: {col!r}")
-            if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
-        conn.commit()
-
-
-_GCP_COLUMNS = [
-    "gcs_scan_json",
-]
-
-
-def _ensure_gcp_columns(engine) -> None:
-    """Add GCP scanner JSON column to crypto_endpoints if absent (idempotent).
-
-    Uses SQLAlchemy inspector to check existing columns before ALTER TABLE.
-    Called from init_db() after _ensure_identity_columns().
-    """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
-    with engine.connect() as conn:
-        for col in _GCP_COLUMNS:
-            if not _SAFE_COL_RE.match(col):
-                raise ValueError(f"Unsafe column name in migration: {col!r}")
-            if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
-        conn.commit()
-
-
-_V43_COLUMN_DDLS = {
-    "dat_scan_json": "TEXT",
-    "severity": "VARCHAR(16)",
-}
-
-
-def _ensure_v43_columns(engine) -> None:
-    """Add v4.3 data-at-rest columns (dat_scan_json TEXT, severity VARCHAR(16)) if absent.
-
-    Called from init_db() after _ensure_gcp_columns(). Phases 28-30 write to
-    dat_scan_json; no new columns needed for subsequent phases.
-    """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
-    with engine.connect() as conn:
-        for col, col_type in _V43_COLUMN_DDLS.items():
-            if not _SAFE_COL_RE.match(col):
-                raise ValueError(f"Unsafe column name in migration: {col!r}")
-            if not _SAFE_COL_TYPE_RE.match(col_type):
-                raise ValueError(f"Unsafe column type in migration: {col_type!r}")
-            if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
-        conn.commit()
-
-
-_EMAIL_COLUMNS = ["email_scan_json"]
-
-
-def _ensure_email_columns(engine) -> None:
-    """Add v4.4 email scanner column (email_scan_json TEXT) if absent (idempotent).
-
-    Phase 32 — uses SQLAlchemy inspector to check existing columns before ALTER TABLE.
-    Called from init_db() after _ensure_v43_columns().
-    See _EMAIL_COLUMNS for the column list managed by _ensure_email_columns.
-    """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
-    with engine.connect() as conn:
-        for col in _EMAIL_COLUMNS:
-            if not _SAFE_COL_RE.match(col):
-                raise ValueError(f"Unsafe column name in migration: {col!r}")
-            if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
-        conn.commit()
-
-
-_BROKER_COLUMNS = ["broker_scan_json"]
-
-
-def _ensure_broker_columns(engine) -> None:
-    """Add v4.4 broker scanner column (broker_scan_json TEXT) if absent (idempotent).
-
-    Phase 33 / BROKER-00. Mirrors _ensure_email_columns shape exactly.
-    Called from init_db() after _ensure_email_columns().
-    """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
-    with engine.connect() as conn:
-        for col in _BROKER_COLUMNS:
-            if not _SAFE_COL_RE.match(col):
-                raise ValueError(f"Unsafe column name in migration: {col!r}")
-            if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} TEXT"))
-        conn.commit()
-
-
-_PHASE41_COLUMN_DDLS = {
-    "scan_error_category": "VARCHAR(32)",
-}
-
-
-def _ensure_phase41_columns(engine) -> None:
-    """Phase 41 D-11: add scan_error_category column to crypto_endpoints (idempotent).
-
-    Mirrors the _ensure_v43_columns shape exactly. Called from init_db()
-    after _ensure_broker_columns(). Producers populate this alongside
-    scan_error so trends.py (D-15) can filter category="missing_extra"
-    out of regression-error counts.
-    """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
-    with engine.connect() as conn:
-        for col, col_type in _PHASE41_COLUMN_DDLS.items():
+        for col, col_type in expected:
             if not _SAFE_COL_RE.match(col):
                 raise ValueError(f"Unsafe column name in migration: {col!r}")
             if not _SAFE_COL_TYPE_RE.match(col_type):
                 raise ValueError(f"Unsafe column type in migration: {col_type!r}")
             if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
-        conn.commit()
-
-
-_PHASE46_COLUMN_DDLS = {
-    "chain_verified": "BOOLEAN",
-}
-
-
-def _ensure_phase46_columns(engine) -> None:
-    """Phase 46 TLS-FIND-06: add chain_verified column (idempotent).
-
-    Mirrors _ensure_phase41_columns shape. Called from init_db()
-    after _ensure_phase41_columns. SQLite stores BOOLEAN as INTEGER
-    (0/1/NULL) — fully compatible with Python's tri-state None/True/False.
-    """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
-    with engine.connect() as conn:
-        for col, col_type in _PHASE46_COLUMN_DDLS.items():
-            if not _SAFE_COL_RE.match(col):
-                raise ValueError(f"Unsafe column name in migration: {col!r}")
-            if not _SAFE_COL_TYPE_RE.match(col_type):
-                raise ValueError(f"Unsafe column type in migration: {col_type!r}")
-            if col not in existing:
-                conn.execute(text(f"ALTER TABLE crypto_endpoints ADD COLUMN {col} {col_type}"))
-        conn.commit()
-
-
-_PHASE54_QRAMM_ANSWER_DDLS = {
-    "evidence_note": "TEXT",
-}
-
-
-def _ensure_phase54_qramm_columns(engine) -> None:
-    """Phase 54 QRAMM-10: add evidence_note column to qramm_answers (idempotent).
-
-    Mirrors _ensure_phase46_columns shape. Called from init_db()
-    after _ensure_qramm_tables(). SQLite TEXT column, nullable.
-    """
-    existing = {c["name"] for c in sa_inspect(engine).get_columns("qramm_answers")}
-    with engine.connect() as conn:
-        for col, col_type in _PHASE54_QRAMM_ANSWER_DDLS.items():
-            if not _SAFE_COL_RE.match(col):
-                raise ValueError(f"Unsafe column name in migration: {col!r}")
-            if not _SAFE_COL_TYPE_RE.match(col_type):
-                raise ValueError(f"Unsafe column type in migration: {col_type!r}")
-            if col not in existing:
-                conn.execute(text(f"ALTER TABLE qramm_answers ADD COLUMN {col} {col_type}"))
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
         conn.commit()
 
 
@@ -378,15 +275,18 @@ def init_db(db_path: str) -> Engine:
 
     # Create schema (checkfirst=True prevents "table already exists" on restart)
     Base.metadata.create_all(engine, checkfirst=True)
-    _ensure_identity_columns(engine)  # v4.2: add identity columns if missing
-    _ensure_gcp_columns(engine)  # v4.3: add GCP columns if missing
-    _ensure_v43_columns(engine)  # v4.3: add data-at-rest columns if missing
-    _ensure_email_columns(engine)  # v4.4 Phase 32: add email scanner column
-    _ensure_broker_columns(engine)      # v4.4 Phase 33 — BROKER-00
-    _ensure_phase41_columns(engine)     # Phase 41 D-11 — scan_error_category
-    _ensure_phase46_columns(engine)     # Phase 46 — TLS-FIND-06 chain_verified
-    _ensure_qramm_tables(engine)         # Phase 51 — QRAMM-01
-    _ensure_phase54_qramm_columns(engine)  # Phase 54 — evidence_note column
+    # Phase 77 D-21: column-adding migrations now flow through the generic
+    # ``_ensure_columns(engine, table, expected)`` helper. Ordering preserved
+    # exactly from the prior 8-helper chain.
+    _ensure_columns(engine, "crypto_endpoints", _IDENTITY_COLUMNS)   # v4.2 identity
+    _ensure_columns(engine, "crypto_endpoints", _GCP_COLUMNS)         # v4.3 GCP
+    _ensure_columns(engine, "crypto_endpoints", _V43_COLUMNS)         # v4.3 DAT
+    _ensure_columns(engine, "crypto_endpoints", _EMAIL_COLUMNS)       # Phase 32 email
+    _ensure_columns(engine, "crypto_endpoints", _BROKER_COLUMNS)      # Phase 33 broker
+    _ensure_columns(engine, "crypto_endpoints", _PHASE41_COLUMNS)     # Phase 41 D-11
+    _ensure_columns(engine, "crypto_endpoints", _PHASE46_COLUMNS)     # Phase 46
+    _ensure_qramm_tables(engine)                                       # Phase 51 QRAMM-01
+    _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)  # Phase 54
     _ensure_qramm_profiles_fk(engine)    # Phase 70 BLOCK-07/D-01 — FK retrofit
     _ensure_scheduled_tables(engine)     # Phase 63 — SCHED-01
     _ensure_scan_jobs_table(engine)      # Phase 65 — UI-SCAN-01
