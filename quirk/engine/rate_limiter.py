@@ -15,19 +15,22 @@ class TokenBucket:
         self.capacity = float(capacity if capacity is not None else max(1.0, self.rate))
         self.tokens = self.capacity
         self.updated = time.perf_counter()
-        self.lock = threading.Lock()
+        self._cond = threading.Condition()
 
     def acquire(self, tokens: float = 1.0):
         if self.rate <= 0:
             return
-        while True:
-            with self.lock:
+        if tokens > self.capacity:
+            raise ValueError(f"tokens {tokens} > capacity {self.capacity}")
+        with self._cond:
+            while True:
                 now = time.perf_counter()
                 elapsed = now - self.updated
                 self.updated = now
                 self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
                 if self.tokens >= tokens:
                     self.tokens -= tokens
+                    self._cond.notify_all()
                     return
-            time.sleep(0.01)
-
+                wait_secs = (tokens - self.tokens) / self.rate
+                self._cond.wait(timeout=wait_secs)
