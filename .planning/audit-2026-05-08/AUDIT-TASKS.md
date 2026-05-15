@@ -121,14 +121,14 @@ wont_fix: 1
 | qramm-compliance/BL-02 | BLOCKER | Maturity threshold gap mis-classifies scores in [1.4,1.5) etc. | Phase 60 (SCORE-02) | [x] closed |
 | qramm-compliance/BL-03 | BLOCKER | last_verified lexicographic string comparison is fragile | Phase 64.1 (BL-03) | [x] closed — closed by Phase 64.1 (tests/test_compliance_status_staleness.py) |
 | qramm-compliance/BL-04 | BLOCKER | int(years_raw) accepts negative/zero years | Phase 64.1 (BL-04) | [x] closed — closed by Phase 64.1 (tests/test_operator_context_years_clamp.py) |
-| qramm-compliance/WR-01 | WARNING | Evidence bridge date-string equality vulnerable to TZ drift | — | [ ] open |
+| qramm-compliance/WR-01 | WARNING | Evidence bridge date-string equality vulnerable to TZ drift | Phase 74 | [x] closed |
 | qramm-compliance/WR-02 | WARNING | compute_practice_score accepts out-of-range answers | Phase 74 | [x] closed |
-| qramm-compliance/WR-03 | WARNING | evidence_bridge synchronize_session=fetch suboptimal; no idempotency | — | [ ] open |
+| qramm-compliance/WR-03 | WARNING | evidence_bridge synchronize_session=fetch suboptimal; no idempotency | Phase 74 | [x] closed |
 | qramm-compliance/WR-04 | WARNING | Practice 1.1 Discovery score ignores endpoint count entirely | Phase 74 | [x] closed |
 | qramm-compliance/WR-05 | WARNING | vuln_pct unbounded division — zero algos scores 4 (Advanced) | Phase 74 | [x] closed |
 | qramm-compliance/WR-06 | WARNING | Maturity label >=4.0 unreachable at multiplier=1.0 (FP noise) | Phase 74 | [x] closed |
-| qramm-compliance/WR-07 | WARNING | evidence_bridge does not handle db.commit failure | — | [ ] open |
-| qramm-compliance/WR-08 | WARNING | attach_context swallows AttributeError; user context dropped | — | [ ] open |
+| qramm-compliance/WR-07 | WARNING | evidence_bridge does not handle db.commit failure | Phase 74 | [x] closed |
+| qramm-compliance/WR-08 | WARNING | attach_context swallows AttributeError; user context dropped | Phase 74 | [x] closed |
 | qramm-compliance/WR-09 | WARNING | migration_advisor substring matching produces false positives | — | [ ] open |
 | qramm-compliance/WR-10 | WARNING | _walk_json_for_alg_strings skips non-_ALG_KEYS strings | — | [ ] open |
 | qramm-compliance/WR-11 | WARNING | compliance_map.py weight 0.0 ambiguous vs not-yet-covered | — | [ ] open |
