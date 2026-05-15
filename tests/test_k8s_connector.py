@@ -542,3 +542,122 @@ def test_aks_empty_cluster_list_returns_empty():
         f"CR-09 / D-09: expected [] for valid azure_cred + empty aks_clusters; "
         f"got {results}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 72 / WR-06 / D-13: _emit_inaccessible_finding strips ':' from cluster_name
+# ---------------------------------------------------------------------------
+
+def test_emit_inaccessible_finding_strips_colon_from_cluster_name():
+    """WR-06 (D-13): colons in cluster_name break CSV/CBOM dedup. Strip them at
+    function entry before embedding in the finding host identity."""
+    from quirk.scanner.k8s_connector import _emit_inaccessible_finding
+    ep = _emit_inaccessible_finding(
+        provider="gke",
+        cluster_name="my:cluster:dev",
+        reason="sdk-absent",
+    )
+    # Identity is encoded into host="k8s://{cluster_name}"; assert no colons
+    # remain in the cluster_name segment.
+    assert ep.host == "k8s://myclusterdev"
+    assert ":" not in ep.host.split("//", 1)[1]
+
+
+def test_emit_inaccessible_finding_empty_cluster_name_safe():
+    """Defensive: empty cluster_name still strips cleanly and falls back to provider."""
+    from quirk.scanner.k8s_connector import _emit_inaccessible_finding
+    ep = _emit_inaccessible_finding(
+        provider="gke",
+        cluster_name="",
+        reason="sdk-absent",
+    )
+    assert ep.host == "k8s://gke"
+
+
+# ---------------------------------------------------------------------------
+# Phase 72 / WR-17 / D-14: _enumerate_secret_types excludes None-typed secrets
+# ---------------------------------------------------------------------------
+
+def test_enumerate_secret_types_excludes_none():
+    """WR-17 (D-14): None-typed secrets must be filtered out of the Counter
+    rather than coerced to 'Opaque' (which masked them as indistinguishable
+    from real Opaque secrets)."""
+    from quirk.scanner.k8s_connector import _enumerate_secret_types
+    mock_v1 = MagicMock()
+    mock_v1.list_namespaced_secret.return_value = _make_secret_list(
+        [None, "Opaque", "kubernetes.io/tls", None]
+    )
+    logger = MagicMock()
+    ep = _enumerate_secret_types(mock_v1, namespace="default", logger=logger)
+    assert ep is not None
+    counts = json.loads(ep.dat_scan_json)["secret_type_counts"]
+    # None is excluded; Opaque and kubernetes.io/tls each appear once.
+    assert counts == {"Opaque": 1, "kubernetes.io/tls": 1}
+    assert None not in counts
+    # DEBUG log of skipped count must fire (2 Nones).
+    assert any(
+        "skipped 2" in str(c.args) or "skipped 2 " in str(c.args)
+        for c in logger.v.call_args_list
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 72 / WR-20 / D-15: dat_scan_json is a fresh dict per branch — unencrypted
+# path MUST NOT include key_name
+# ---------------------------------------------------------------------------
+
+def test_dat_scan_json_unencrypted_omits_key_name():
+    """WR-20 (D-15): the unencrypted GKE branch (current_state != 2) produces
+    a fresh dat_scan_json that does NOT include a key_name key."""
+    with patch("quirk.scanner.k8s_connector.GKE_AVAILABLE", True):
+        from quirk.scanner.k8s_connector import _scan_gke_encryption
+        with patch(
+            "google.cloud.container_v1.ClusterManagerClient", create=True
+        ) as mock_cls:
+            mock_client = MagicMock()
+            cluster = MagicMock()
+            cluster.database_encryption.current_state = 1  # DECRYPTED
+            # Even if SDK echoes a stale key_name on db_enc, the unencrypted
+            # branch must NOT propagate it into dat_scan_json.
+            cluster.database_encryption.key_name = "stale-leak"
+            mock_client.get_cluster.return_value = cluster
+            mock_cls.return_value = mock_client
+            results = _scan_gke_encryption(
+                project_id="p",
+                cluster_configs=[{"name": "g", "location": "us"}],
+                logger=None,
+            )
+    assert len(results) == 1
+    payload = json.loads(results[0].dat_scan_json)
+    assert "key_name" not in payload, (
+        f"WR-20: unencrypted path must omit key_name; got {payload}"
+    )
+    assert payload.get("encrypted") is False
+
+
+def test_dat_scan_json_encrypted_includes_key_name():
+    """Positive guard: the encrypted branch DOES include key_name (we did not
+    over-strip in the D-15 restructure)."""
+    with patch("quirk.scanner.k8s_connector.GKE_AVAILABLE", True):
+        from quirk.scanner.k8s_connector import _scan_gke_encryption
+        with patch(
+            "google.cloud.container_v1.ClusterManagerClient", create=True
+        ) as mock_cls:
+            mock_client = MagicMock()
+            cluster = MagicMock()
+            cluster.database_encryption.current_state = 2  # ENCRYPTED
+            cluster.database_encryption.key_name = (
+                "projects/p/locations/g/keyRings/r/cryptoKeys/k"
+            )
+            mock_client.get_cluster.return_value = cluster
+            mock_cls.return_value = mock_client
+            results = _scan_gke_encryption(
+                project_id="p",
+                cluster_configs=[{"name": "g", "location": "us"}],
+                logger=None,
+            )
+    assert len(results) == 1
+    payload = json.loads(results[0].dat_scan_json)
+    assert "key_name" in payload
+    assert payload["key_name"].endswith("/cryptoKeys/k")
+    assert payload.get("encrypted") is True
