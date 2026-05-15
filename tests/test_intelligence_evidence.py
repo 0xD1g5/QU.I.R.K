@@ -16,9 +16,12 @@ class _Ep:
     scan_error: str | None = None
     tls_blocker_reason: str | None = None
     cert_pubkey_alg: str | None = None
+    cert_pubkey_size: int | None = None
     cert_not_after: datetime | None = None
     cert_subject: str | None = None
     cert_issuer: str | None = None
+    tls_version: str | None = None
+    cipher_suite: str | None = None
 
 
 class EvidenceSummaryTests(unittest.TestCase):
@@ -85,6 +88,80 @@ def test_dar_db_counters():
     assert "dar_db_weak_ssl_count" in result, "dar_db_weak_ssl_count missing from evidence summary"
     assert "dar_db_plaintext_ratio" in result, "dar_db_plaintext_ratio missing from evidence summary"
     assert "dar_db_weak_ssl_ratio" in result, "dar_db_weak_ssl_ratio missing from evidence summary"
+
+
+# ---- Phase 73 / INTEL-02 / WR-03/04/10/11 tests -------------------------------
+
+def _ecdsa_count(cert_alg: str) -> int:
+    summary = build_evidence_summary([_Ep(host="h", port=443, protocol="TLS",
+                                          cert_pubkey_alg=cert_alg)])
+    return summary["cert_key_type_counts"].get("ECDSA", 0)
+
+
+def test_ecdsa_alias_ec():
+    """WR-04 / D-03: cert_pubkey_alg='EC' increments ECDSA counter."""
+    assert _ecdsa_count("EC") == 1
+
+
+def test_ecdsa_alias_ecdsa():
+    """WR-04 / D-03: cert_pubkey_alg='ECDSA' increments ECDSA counter."""
+    assert _ecdsa_count("ECDSA") == 1
+
+
+def test_ecdsa_negative_ed25519():
+    """WR-04 / D-03: ED25519 input does NOT increment ECDSA counter."""
+    assert _ecdsa_count("ED25519") == 0
+
+
+def _saml_count(alg: str) -> int:
+    summary = build_evidence_summary([_Ep(host="h", port=443, protocol="SAML",
+                                          cert_pubkey_alg=alg)])
+    return summary.get("saml_weak_signing_count", 0)
+
+
+def test_saml_sha1_mixed_case():
+    """WR-10 / D-02: SAML alg in {SHA-1, sha1, #rsa-sha1} all increment counter."""
+    for alg in ("SHA-1", "sha1", "#rsa-sha1"):
+        assert _saml_count(alg) == 1, f"missed: {alg!r}"
+
+
+def test_motion_broker_legacy_tls():
+    """WR-03 / D-10: tls_version='TLSv1.1' increments motion_broker_weak_tls_count."""
+    summary = build_evidence_summary([_Ep(host="h", port=9093, protocol="KAFKA-TLS",
+                                          tls_version="TLSv1.1")])
+    assert summary["motion_broker_weak_tls_count"] == 1
+
+
+def test_motion_email_des_cbc_now_detected():
+    """WR-11 / D-02: cipher 'DES-CBC-SHA' now increments motion_email_weak_cipher_count
+    (pre-fix the email predicate only checked 3DES / RC4)."""
+    summary = build_evidence_summary([_Ep(host="h", port=25, protocol="SMTP-STARTTLS",
+                                          tls_version="TLSv1.2",
+                                          cipher_suite="DES-CBC-SHA")])
+    assert summary["motion_email_weak_cipher_count"] == 1
+
+
+def test_email_broker_parity_token_set():
+    """WR-11 / D-02: For token-driven weak ciphers, email and broker predicates
+    produce identical truth values."""
+    for cipher in ("DES-CBC-SHA", "RC4-MD5", "AES128-GCM-SHA256",
+                   "ECDHE-RSA-AES256-GCM-SHA384"):
+        email = build_evidence_summary([_Ep(host="h", port=25,
+                                            protocol="SMTP-STARTTLS",
+                                            tls_version="TLSv1.2",
+                                            cipher_suite=cipher)])
+        broker = build_evidence_summary([_Ep(host="h", port=9093,
+                                             protocol="KAFKA-TLS",
+                                             tls_version="TLSv1.2",
+                                             cipher_suite=cipher)])
+        # Structural-RSA and ECDHE-less-AES-SHA broker special-cases excluded
+        # — only token-set parity tested.
+        assert (email["motion_email_weak_cipher_count"]
+                == broker["motion_broker_weak_cipher_count"]), (
+            f"parity failure for cipher={cipher!r}: "
+            f"email={email['motion_email_weak_cipher_count']} "
+            f"broker={broker['motion_broker_weak_cipher_count']}"
+        )
 
 
 if __name__ == "__main__":
