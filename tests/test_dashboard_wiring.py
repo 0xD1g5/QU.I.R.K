@@ -26,17 +26,19 @@ from quirk.models import CryptoEndpoint
 
 
 def test_deps_default_db_path():
-    """_default_db_path() returns './quirk.db' when QUIRK_DB_PATH env var is not set.
+    """_default_db_path() returns canonical './quirk-output/quirk.db' when no DBs exist.
 
-    Verifies GAP-INT-01: the dashboard fallback DB path matches config_template.yaml.
+    Verifies GAP-INT-01 + Phase 75 D-03 (WR-03): the dashboard fallback DB path
+    is the single canonical ``./quirk-output/quirk.db`` (RESEARCH A1 / Phase 74
+    D-05 precedent), not the legacy ``./quirk.db`` root path.
     """
     env_without_db_path = {k: v for k, v in os.environ.items() if k != "QUIRK_DB_PATH"}
     with unittest.mock.patch.dict(os.environ, env_without_db_path, clear=True), \
          unittest.mock.patch("os.path.isfile", return_value=False):
         result = _default_db_path()
-    assert result == "./quirk.db", (
-        f"Expected './quirk.db' but got '{result}'. "
-        "Fix: change the fallback in deps.py to match config_template.yaml."
+    assert result == "./quirk-output/quirk.db", (
+        f"Expected canonical './quirk-output/quirk.db' but got '{result}'. "
+        "Phase 75 D-03 set the canonical resolver to quirk-output/quirk.db."
     )
 
 
