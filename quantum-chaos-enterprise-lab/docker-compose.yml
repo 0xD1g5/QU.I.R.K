@@ -695,7 +695,7 @@ services:
       - IPC_LOCK
     command: ["vault", "server", "-dev"]
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8200/v1/sys/health"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -734,7 +734,7 @@ services:
       - IPC_LOCK
     command: ["vault", "server", "-dev"]
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8200/v1/sys/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8200/v1/sys/health"]
       interval: 5s
       timeout: 5s
       retries: 10

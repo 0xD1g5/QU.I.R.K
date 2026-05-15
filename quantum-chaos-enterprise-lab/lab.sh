@@ -80,16 +80,40 @@ case "${cmd}" in
     compose ps
     ;;
   all)
-    mapfile -t _profiles < <(_derive_all_profiles)
+    # Portable across bash 3.2 (macOS default) — `mapfile` is bash 4+.
+    _profiles=()
+    while IFS= read -r _p; do
+      [[ -n "${_p}" ]] && _profiles+=("${_p}")
+    done < <(_derive_all_profiles)
     if [[ ${#_profiles[@]} -eq 0 ]]; then
       echo "❌ Could not derive profiles from ${COMPOSE_FILE}" >&2
       exit 1
     fi
+    # macOS ships its own KDC bound to *:88 — the `kerberos` profile collides.
+    # Skip it on Darwin unless the user explicitly opts in. See BACK-89 for the
+    # full remap that makes this unconditional.
+    _skipped=""
+    if [[ "$(uname -s)" == "Darwin" && "${LAB_INCLUDE_KERBEROS:-0}" != "1" ]]; then
+      _filtered=()
+      for p in "${_profiles[@]}"; do
+        if [[ "$p" == "kerberos" ]]; then
+          _skipped="kerberos"
+        else
+          _filtered+=("$p")
+        fi
+      done
+      _profiles=("${_filtered[@]}")
+    fi
     ALL_PROFILES=""
     for p in "${_profiles[@]}"; do ALL_PROFILES+=" --profile $p"; done
+    # Assign explicitly so the .env-sourced PROFILE_ARGS can't shadow this.
+    PROFILE_ARGS="${ALL_PROFILES}"
     echo "🔥 Starting ALL profiles: project=${PROJECT_NAME} file=${COMPOSE_FILE}"
     echo "   Profiles: ${_profiles[*]}"
-    PROFILE_ARGS="${ALL_PROFILES}" compose up -d
+    if [[ -n "${_skipped}" ]]; then
+      echo "   ⏭  Skipped on macOS: ${_skipped} (set LAB_INCLUDE_KERBEROS=1 to include; see BACK-89)"
+    fi
+    compose up -d
     echo "✅ Full chaos lab started."
     compose ps
     ;;
