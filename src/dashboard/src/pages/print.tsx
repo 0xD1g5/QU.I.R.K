@@ -1,4 +1,4 @@
-import { createElement, useEffect } from "react"
+import { useEffect } from "react"
 import { useScanData } from "@/hooks/useScanData"
 import { useQRAMMPrintData } from "@/hooks/useQRAMMPrintData"
 import type { FindingItem, CertItem, CbomComponent, RoadmapNode } from "@/types/api"
@@ -374,10 +374,10 @@ export function PrintPage() {
     : "Unknown"
 
   return (
-    // Inject static print CSS via createElement to avoid hook restrictions on inline HTML.
-    // The CSS string is a pure constant — no user data is interpolated into it.
+    // D-28 (IN-06): inject static print CSS via JSX <style>. The CSS string
+    // is a pure module-level constant — no user content is interpolated.
     <>
-      {createElement("style", null, PRINT_CSS)}
+      <style>{PRINT_CSS}</style>
       <div style={{ padding: "0 24px", maxWidth: 900, margin: "0 auto" }}>
 
         {/* D-03 (WR-07): visible alert when QRAMM data could not be loaded. */}
