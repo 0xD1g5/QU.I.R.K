@@ -344,10 +344,12 @@ export function PrintPage() {
   // attribute on every dependency change creates a transient window that PDF renderers
   // polling the attribute could observe before the re-set fires.
   useEffect(() => {
-    if (data && !loading && !qrammLoading) {
+    // D-03 (WR-07): also gate on !qrammError so the PDF renderer never
+    // captures a page that is missing the Q section due to a QRAMM hook error.
+    if (data && !loading && !qrammLoading && !qrammError) {
       document.body.setAttribute('data-ready', 'true')
     }
-  }, [data, loading, qrammLoading])
+  }, [data, loading, qrammLoading, qrammError])
 
   if (loading) {
     return (
@@ -376,6 +378,13 @@ export function PrintPage() {
     <>
       {createElement("style", null, PRINT_CSS)}
       <div style={{ padding: "0 24px", maxWidth: 900, margin: "0 auto" }}>
+
+        {/* D-03 (WR-07): visible alert when QRAMM data could not be loaded. */}
+        {qrammError && (
+          <div role="alert" className="text-destructive text-sm" style={{ padding: "8px 0" }}>
+            QRAMM data unavailable — Q section omitted
+          </div>
+        )}
 
         {/* Section 1: Cover */}
         <div className="print-section">
