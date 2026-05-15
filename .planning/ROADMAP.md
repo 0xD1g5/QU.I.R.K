@@ -1533,7 +1533,7 @@ Plans:
 **Plans**: 5/5 complete (72-01 AWS, 72-02 Azure/K8s, 72-03 GCP, 72-04 Cache/profiles, 72-05 Misc)
 **Status**: ✅ Complete (2026-05-15) — 24/24 WR rows closed, 119/119 targeted tests green
 
-### Phase 73: CBOM + Intelligence + Reports WARNINGs
+### Phase 73: CBOM + Intelligence + Reports WARNINGs ✅
 **Goal**: All three WARNING clusters in the CBOM/intelligence/reports subsystem are resolved — PDF resources are cleaned up, weak-crypto predicates are consistent, and score weights, roadmap output, and cipher labels are corrected. Closes audit findings cbom-intel-reports/WR-01 through WR-14.
 **Depends on**: Phase 69
 **Requirements**: INTEL-01, INTEL-02, INTEL-03
@@ -1595,7 +1595,7 @@ Plans:
 | 70. Deferred BLOCKERs — API + QRAMM Model | 3/3 | Complete   | 2026-05-15 |
 | 71. Protocol Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
 | 72. Cloud Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
-| 73. CBOM + Intelligence + Reports WARNINGs | 0/TBD | Not started | - |
+| 73. CBOM + Intelligence + Reports WARNINGs | 3/3 | Complete   | 2026-05-15 |
 | 74. QRAMM + Compliance WARNINGs | 0/TBD | Not started | - |
 | 75. API + CLI + Core WARNINGs | 0/TBD | Not started | - |
 | 76. React Frontend WARNINGs | 0/TBD | Not started | - |
