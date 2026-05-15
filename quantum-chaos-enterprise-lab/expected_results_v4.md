@@ -217,7 +217,7 @@ PROFILE_ARGS="--profile source" ./lab.sh up
 
 **Scanner validation command:**
 ```
-git clone http://localhost:20006/admin/crypto-antipatterns-python && cd crypto-antipatterns-python && semgrep --config p/cryptography .
+git clone http://localhost:20006/labadmin/crypto-antipatterns-python && cd crypto-antipatterns-python && semgrep --config p/cryptography .
 ```
 **Expected:** At least 1 finding per anti-pattern category (hardcoded keys, weak algorithm, weak random, deprecated protocol).
 
