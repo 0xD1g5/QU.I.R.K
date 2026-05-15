@@ -89,16 +89,18 @@ def _fetch_session_endpoints(db: Session, target_ts: datetime) -> List[CryptoEnd
     still preventing two scans 100ms apart from merging (CR-05 fix). Excludes NULL
     scanned_at rows (D-13) via explicit filter.
     """
-    endpoints = (
+    # closes cbom-intel-reports/IN-03 (Phase 77 D-09) — yield_per(1000) streaming
+    # replaces .all() materialization; SQLAlchemy idiomatic chunk size per Discretion.
+    streamed = (
         db.query(CryptoEndpoint)
         .filter(
             CryptoEndpoint.scanned_at >= target_ts,
             CryptoEndpoint.scanned_at < target_ts + timedelta(milliseconds=1),
             CryptoEndpoint.scanned_at.isnot(None),
         )
-        .all()
+        .yield_per(1000)
     )
-    return endpoints
+    return list(streamed)
 
 
 def _bucket_for_severity(sev: str) -> Optional[str]:

@@ -79,6 +79,10 @@ def render_html_report(
         sev_counts[s] = sev_counts.get(s, 0) + 1
 
     # Roadmap sections
+    # Phase 77 D-13 / cbom-intel-reports/IN-07: C-7 verification — both branches
+    # (timeframe match and phase match) are reachable; closes IN-07 as
+    # audit-flip-only. See tests/test_html_renderer_roadmap_section.py for the
+    # mutation evidence.
     def roadmap_section(tf: str) -> List[Dict]:
         return [r for r in (roadmap_items or []) if r.get("timeframe") == tf or r.get("phase") == tf]
 
