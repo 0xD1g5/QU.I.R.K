@@ -41,6 +41,31 @@ export const MATURITY_BADGE_CLASS: Record<number, string> = {
   1: "bg-quantum-vulnerable/20 text-quantum-vulnerable border border-quantum-vulnerable/30",
 }
 
+/**
+ * Number of QRAMM dimensions (CVI, SGRM, DPE, ITR) — used for bucket-fraction
+ * math in the ScorecardTab Maturity Distribution bars (D-10 / WR-11).
+ *
+ * NOTE: This is the dimension *count*, NOT a maturity ceiling. The two happen
+ * to share the value 4 (4 dimensions, maturity scale 1..4), but the semantics
+ * are independent and must stay independently named.
+ */
+export const DIMENSION_COUNT = 4
+
+/**
+ * Solid-color bar fill classes for the Maturity Distribution bars (D-10 / WR-12).
+ *
+ * Distinct from MATURITY_BADGE_CLASS — Badge tokens carry "bg-X/20 text-X
+ * border-X" (suitable for Badge UI). Bar fills require a solid `bg-*` only;
+ * applying badge tokens to a bar div leaves the bar visually empty because
+ * the text/border tokens have no element content to color.
+ */
+export const MATURITY_BAR_CLASS: Record<number, string> = {
+  4: "bg-quantum-safe",
+  3: "bg-severity-low",
+  2: "bg-quantum-at-risk",
+  1: "bg-quantum-vulnerable",
+}
+
 // Org Profile wizard option lists (UI-SPEC §Component Interaction Contracts)
 export const INDUSTRY_OPTIONS = [
   { value: "financial_services", label: "Financial Services" },
