@@ -146,8 +146,8 @@ wont_fix: 1
 | cbom-intel-reports/CR-05 | BLOCKER | Trend 1-second session window cannot disambiguate two scans | Phase 64.1 (CR-05) | [x] closed — closed by Phase 64.1 (tests/test_trends_subsecond_sessions.py) |
 | cbom-intel-reports/CR-06 | BLOCKER | Score subscores can sum >100; agility_score added unbounded | Phase 60 (SCORE-04) | [x] closed |
 | cbom-intel-reports/CR-07 | BLOCKER | Markdown injection / table-break in technical.py finding rows | Phase 61 (REPORT-SAN-01) | [x] closed — closed by Phase 61 (REPORT-SAN-01/02, quirk/reports/_md_escape.py md_cell + tests/test_report_sanitization.py adversarial corpus) |
-| cbom-intel-reports/WR-01 | WARNING | PDF render uses blanket except Exception — masks programmer errors | — | [ ] open |
-| cbom-intel-reports/WR-02 | WARNING | PDF render does not clean up Playwright resources on exception | — | [ ] open |
+| cbom-intel-reports/WR-01 | WARNING | PDF render uses blanket except Exception — masks programmer errors | Phase 73 | [x] closed — closed by Phase 73 (73-01 / INTEL-01 / D-01): render_pdf_report's inner blanket `except Exception` replaced with narrowed tuple `(PlaywrightError, PlaywrightTimeoutError, OSError, RuntimeError)` per RESEARCH C-2 sync-API translation. Programmer bugs (e.g., KeyError) now propagate. Test: tests/test_pdf_render_hardening.py::test_render_pdf_propagates_unexpected_exception |
+| cbom-intel-reports/WR-02 | WARNING | PDF render does not clean up Playwright resources on exception | Phase 73 | [x] closed — closed by Phase 73 (73-01 / INTEL-01 / D-01): Playwright lifecycle wrapped in try/finally; `browser` initialized to None pre-try, finally calls `if browser is not None: try: browser.close() except Exception: pass` (close-time errors never mask original failure). Sync API has no explicit context (RESEARCH C-2). Tests: tests/test_pdf_render_hardening.py::test_render_pdf_closes_browser_in_finally + test_render_pdf_close_failure_does_not_mask |
 | cbom-intel-reports/WR-03 | WARNING | motion_broker_weak_tls_count predicate uses inconsistent uppercase | — | [ ] open |
 | cbom-intel-reports/WR-04 | WARNING | ECDSA detection in evidence.py mismatches cert_pubkey_alg conventions | — | [ ] open |
 | cbom-intel-reports/WR-05 | WARNING | _apply_weighted_impacts uses fixed score_cap=25.0 | Phase 60 (SCORE-04) | [x] closed |
@@ -159,7 +159,7 @@ wont_fix: 1
 | cbom-intel-reports/WR-11 | WARNING | evidence.py motion email weak-cipher predicate diverges from broker | — | [ ] open |
 | cbom-intel-reports/WR-12 | WARNING | _decompose_cipher_suite returns wrong KEX for RSA non-PFS in TLS1.2 | — | [ ] open |
 | cbom-intel-reports/WR-13 | WARNING | confidence.py weight overrides bypass clamp and validation | — | [ ] open |
-| cbom-intel-reports/WR-14 | WARNING | writer.py PDF graceful degradation prints no warning to user | — | [ ] open |
+| cbom-intel-reports/WR-14 | WARNING | writer.py PDF graceful degradation prints no warning to user | Phase 73 | [x] closed — closed by Phase 73 (73-01 / INTEL-01 / D-01): user-visible advisory `f"PDF generation failed: {safe_str(e)}; scan complete, HTML report at {html_path}"` printed to sys.stderr from the callee (html_renderer.py) on the narrowed-except path. Exception text routed through `quirk.util.safe_exc.safe_str` (AST-gated). RESEARCH C-3: callee-emit chosen because both `e` and `html_path` are in scope. Tests: tests/test_pdf_render_hardening.py (3 advisory assertions) + tests/test_reports_writer.py::test_pdf_failure_advisory_propagates_via_writer |
 | cbom-intel-reports/IN-01 | INFO | Hardcoded PLATFORM_VERSION = 4.4.0 duplicated across modules | — | [ ] open |
 | cbom-intel-reports/IN-02 | INFO | _extract_ssh_algorithms swallows JSONDecodeError silently | — | [ ] open |
 | cbom-intel-reports/IN-03 | INFO | Trend analysis fetches all endpoints into memory per session | — | [ ] open |
