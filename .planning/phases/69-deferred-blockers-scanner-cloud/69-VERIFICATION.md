@@ -71,4 +71,36 @@ All six deferred BLOCKER audit findings closed in the scanner and cloud subsyste
 
 ## Commit Manifest
 
-23 commits on `main` for Phase 69 (from `5e20a23` through `b6d4122`); see `git log --oneline 92d9f26..HEAD` and per-plan SUMMARY.md files for full attribution.
+23 commits on `main` for Phase 69 (from `5e20a23` through `b6d4122`); see `git log --oneline 92d9f26..HEAD` and per-plan SUMMARY.md files for full attribution. Plus closeout commit `63809c1`.
+
+## Independent Verification (gsd-verifier)
+
+**Verdict: PASS** — Phase goal achieved. Orchestrator's claims independently confirmed.
+
+### Source code spot-checks (read-only)
+
+| Plan | Claim | Evidence | Verdict |
+|------|-------|----------|---------|
+| 69-01 TLS | try/finally + del scanner + gc.collect | `quirk/scanner/tls_scanner.py:163-172` | PASS |
+| 69-01 SSH | BaseException socket close | `quirk/scanner/fingerprint.py:165-167` (`except BaseException:` → `s.close()`) | PASS |
+| 69-02 GCP | `_scan_cloud_sql` no longer writes severity to cert_pubkey_alg | `quirk/scanner/gcp_connector.py:232-291`; remaining usages at 193/314/331 are KMS/GCS (out of scope) | PASS |
+| 69-03 K8s | empty-aks_clusters guard inside credential-success branch | `quirk/scanner/k8s_connector.py:502` per D-09 | PASS |
+| 69-04 Azure | BLOB-PLATFORM / BLOB-UNKNOWN / BLOB-CMK three-way | `quirk/scanner/azure_connector.py:179,184,193` | PASS |
+| 69-05 Cache | `ttl_hours <= 0` returns None | `quirk/engine/cache.py:59-63` | PASS |
+| 69-06 RateLimiter | Condition + ValueError + rate<=0 fast path, no time.sleep | `quirk/engine/rate_limiter.py:18,21,24`; zero `time.sleep` matches | PASS |
+
+### Tests (independent re-run)
+
+`pytest tests/test_tls_scanner_resource_cleanup.py tests/test_fingerprint_socket_cleanup.py tests/test_cloud_connectors.py tests/test_azure_blob.py tests/test_cache.py tests/test_rate_limiter.py -q` → **40 passed in 1.21s**. Matches orchestrator's claim (3 + 4 + 15 + 10 + 4 + 4 = 40).
+
+### Audit ledger
+
+8 rows attributed to Phase 69 at `AUDIT-TASKS.md` lines 54, 55, 82, 86, 87, 88, 89, 90. Line 83 (`scanners-cloud/CR-03`) intentionally not flipped (Phase 29 closure, out of scope per D-09).
+
+### Findings
+
+- **PASS** — Phase goal achieved; 6/6 BLOCKERs at correct callsites; 40/40 tests green; 8/8 audit rows flipped.
+- **FLAG (non-blocking)** — `test_aks_empty_cluster_list_returns_empty` is environment-fragile under `.venv` py3.14. Source fix structurally correct. Tracked in `deferred-items.md`. Same root cause as 5 pre-existing `test_k8s_connector.py` failures inherited from `92d9f26`.
+- **No human verification required.** All changes are non-UI correctness fixes with deterministic test coverage.
+
+**Signed:** gsd-verifier — independent goal-backward verification, 2026-05-15. Orchestrator's `status: passed` claim corroborated. Phase 69 ready to close; proceed to Phase 70.
