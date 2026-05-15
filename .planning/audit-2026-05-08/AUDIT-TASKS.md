@@ -221,8 +221,8 @@ wont_fix: 1
 | react-frontend/WR-01 | WARNING | useQRAMMSession setError/setSession run without cancellation guard | Phase 62 (HOOK-01) | [x] closed |
 | react-frontend/WR-02 | WARNING | useScanList silently swallows non-OK responses | Phase 76 | [x] closed |
 | react-frontend/WR-03 | WARNING | Pending QRAMM debounce timers leak on provider unmount | Phase 62 (HOOK-03) | [x] closed |
-| react-frontend/WR-04 | WARNING | theme-provider casts localStorage value to Theme without validation | — | [ ] open |
-| react-frontend/WR-05 | WARNING | executive PDF download setTimeout revoke leaks across unmount | — | [ ] open |
+| react-frontend/WR-04 | WARNING | theme-provider casts localStorage value to Theme without validation | Phase 76 | [x] closed |
+| react-frontend/WR-05 | WARNING | executive PDF download setTimeout revoke leaks across unmount | Phase 76 | [x] closed |
 | react-frontend/WR-06 | WARNING | executive reads body.detail without coercion check | Phase 76 | [x] closed |
 | react-frontend/WR-07 | WARNING | print data-ready set even when QRAMM has errored | Phase 76 | [x] closed |
 | react-frontend/WR-08 | WARNING | qramm-profile submitError swallows actual error message | Phase 76 | [x] closed |
@@ -230,7 +230,7 @@ wont_fix: 1
 | react-frontend/WR-10 | WARNING | cbom Cytoscape registration uses cast without proper typing | — | [ ] open |
 | react-frontend/WR-11 | WARNING | ScorecardTab Maturity Distribution width math hardcodes /4 | — | [ ] open |
 | react-frontend/WR-12 | WARNING | ScorecardTab maturity bar applies badge text/border classes | — | [ ] open |
-| react-frontend/WR-13 | WARNING | ComplianceMapTab re-fetches on every ctx.scoreResult change | — | [ ] open |
+| react-frontend/WR-13 | WARNING | ComplianceMapTab re-fetches on every ctx.scoreResult change | Phase 76 | [x] closed |
 | react-frontend/WR-14 | WARNING | qramm-assessment handleNewAssessment does not abort debounced persists | Phase 62 (HOOK-03) | [x] closed |
 | react-frontend/IN-01 | INFO | qramm-assessment comment says 5-tab but renders 6 tabs | — | [ ] open |
 | react-frontend/IN-02 | INFO | cbom/roadmap try/catch swallows extension registration error | — | [ ] open |
