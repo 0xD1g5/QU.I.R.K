@@ -446,3 +446,57 @@ def test_aks_credential_failure_no_clusters_still_emits_one_inaccessible():
         f"K8S-03 invariant violated: empty aks_clusters + credential failure produced "
         f"no inaccessible finding. results={results}"
     )
+
+
+# ---------------------------------------------------------------------------
+# CR-09 regression (BLOCK-03, Phase 69): valid azure_cred + empty aks_clusters
+# must short-circuit to [] WITHOUT raising AttributeError and WITHOUT emitting
+# an inaccessible finding from this path (per locked decision D-09).
+# The K8S-03 "at least one finding" invariant applies at the per-provider level,
+# NOT for an empty cluster list when credentials are valid.
+# ---------------------------------------------------------------------------
+
+def test_aks_empty_cluster_list_returns_empty():
+    """CR-09 / D-09: valid azure_cred + empty aks_clusters returns [] cleanly.
+
+    Pre-fix, _scan_aks_encryption was called with cluster_configs=[] and raised
+    AttributeError. Post-fix, the function short-circuits to [] without calling
+    _scan_aks_encryption and without emitting an inaccessible finding for this
+    path (inaccessible findings are reserved for the credential=None branch,
+    which is Phase 29 work).
+    """
+    sentinel_cred = MagicMock(name="azure-credential")
+
+    def _should_not_be_called(*_args, **_kwargs):
+        raise AssertionError(
+            "_scan_aks_encryption must NOT be called when aks_clusters is empty "
+            "(CR-09 / D-09 short-circuit)"
+        )
+
+    with patch("quirk.scanner.k8s_connector.AKS_AVAILABLE", True):
+        from quirk.scanner.k8s_connector import scan_k8s_targets
+        with patch(
+            "azure.identity.DefaultAzureCredential",
+            create=True,
+            return_value=sentinel_cred,
+        ), patch(
+            "quirk.scanner.k8s_connector._scan_aks_encryption",
+            side_effect=_should_not_be_called,
+        ):
+            # Must not raise.
+            results = scan_k8s_targets(
+                provider="aks",
+                cluster_name="",
+                namespace="default",
+                azure_subscription_id="sub-1",
+                aks_clusters=[],
+                logger=None,
+            )
+
+    # D-09: returns [] for the empty-aks_clusters + valid-credential case.
+    # No inaccessible finding must be emitted from THIS path (that path is
+    # reserved for the credential=None branch — Phase 29).
+    assert results == [], (
+        f"CR-09 / D-09: expected [] for valid azure_cred + empty aks_clusters; "
+        f"got {results}"
+    )
