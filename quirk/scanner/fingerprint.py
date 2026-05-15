@@ -151,10 +151,23 @@ def fingerprint_service(host: str, port: int, timeout: int = 3) -> Fingerprint:
     except OSError:
         return Fingerprint(False, "CLOSED", "UNREACHABLE")
 
-    with s:
-        banner = _try_read_ssh_banner(s)
-        if banner:
-            return Fingerprint(True, "SSH", banner)
+    # BLOCK-01 / CR-08 (Phase 69, D-06): defense-in-depth socket cleanup.
+    # `with s:` covers normal and Exception-typed exit from the SSH banner
+    # check, but a BaseException (KeyboardInterrupt / SystemExit) raised
+    # between `s = _tcp_connect(...)` above and entering the `with` block
+    # below would leak the socket. The outer try/except BaseException
+    # guarantees s.close() runs on every exit path, then re-raises.
+    try:
+        with s:
+            banner = _try_read_ssh_banner(s)
+            if banner:
+                return Fingerprint(True, "SSH", banner)
+    except BaseException:
+        try:
+            s.close()
+        except Exception:
+            pass
+        raise
 
     # TLS check
     server_hostname = None if _is_ip(host) else host
