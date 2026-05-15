@@ -17,6 +17,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from quirk.assessment.migration_advisor import CANONICAL_ALG_SYNONYMS, _matches
 from quirk.cbom.classifier import classify_algorithm
 from quirk.models import CryptoEndpoint, QRAMMAnswer
 
@@ -242,8 +243,14 @@ def _walk_json_for_alg_strings(obj: Any) -> list[str]:
             elif isinstance(value, (dict, list)):
                 # Recurse when key is NOT in _ALG_KEYS (or when it IS but value
                 # is a container rather than a string).
-                # Non-ALG-key string values are intentionally not appended here.
                 out.extend(_walk_json_for_alg_strings(value))
+            elif isinstance(value, str) and value:
+                # Phase 74-03 D-09 (WR-10): scan non-_ALG_KEYS string values
+                # for canonical algorithm tokens via the migration_advisor
+                # `_matches` helper. Captures algorithm names stored under
+                # non-canonical keys (schema drift across scanner JSON shapes).
+                if any(_matches(canon, value) for canon in CANONICAL_ALG_SYNONYMS):
+                    out.append(value)
     elif isinstance(obj, list):
         for item in obj:
             if isinstance(item, (dict, list)):
