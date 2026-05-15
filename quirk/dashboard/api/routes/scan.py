@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -45,6 +47,36 @@ from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.util.safe_exc import safe_str
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_output_dir() -> Path:
+    """Resolve QUIRK_OUTPUT_DIR env var with path-traversal guard.
+
+    Phase 75 / WR-15 / D-16 — mirrors Phase 58 / CR-01 precedent in
+    quirk/cli/init_cmd.py:21-40 (realpath + CWD-descent + ``..`` reject +
+    isdir + readable). Raises ValueError on any guard failure.
+    """
+    raw = os.environ.get("QUIRK_OUTPUT_DIR", "./quirk-output")
+    cwd_real = os.path.realpath(os.getcwd())
+    out_real = os.path.realpath(raw)
+    if ".." in os.path.normpath(raw).split(os.sep):
+        raise ValueError(
+            f"QUIRK_OUTPUT_DIR contains traversal segments: {raw!r}"
+        )
+    if not (out_real.startswith(cwd_real + os.sep) or out_real == cwd_real):
+        raise ValueError(
+            f"QUIRK_OUTPUT_DIR resolves outside CWD: {raw!r}"
+        )
+    if not Path(out_real).is_dir():
+        raise ValueError(
+            f"QUIRK_OUTPUT_DIR is not a directory: {raw!r}"
+        )
+    if not os.access(out_real, os.R_OK):
+        raise ValueError(
+            f"QUIRK_OUTPUT_DIR is not readable: {raw!r}"
+        )
+    return Path(out_real)
+
 
 router = APIRouter(dependencies=[Depends(require_auth)])
 
@@ -794,22 +826,31 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
     written with its own microsecond-precision scanned_at. Grouping by the raw
     value produces one row per endpoint rather than one per scan session.
     """
-    ts_sec = func.strftime("%Y-%m-%d %H:%M:%S", CryptoEndpoint.scanned_at).label("ts_sec")
-    rows = (
-        db.query(ts_sec, func.count(CryptoEndpoint.id).label("cnt"))
-        .group_by("ts_sec")
-        .order_by(ts_sec.desc())
+    # Phase 75-02 D-05 (WR-05): group by parsed-datetime keys (microsecond-truncated)
+    # instead of TZ-fragile strftime string keys. Mirrors trends.py:41-60 precedent.
+    raw_rows = (
+        db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.id)
+        .filter(CryptoEndpoint.scanned_at.isnot(None))
         .all()
-    )  # NO LIMIT — per D-01
+    )
+    groups: dict[datetime, int] = {}
+    for row_ts, _row_id in raw_rows:
+        if row_ts is None:
+            continue
+        # row_ts is a datetime (SQLAlchemy DateTime column); accept str defensively.
+        if isinstance(row_ts, str):
+            try:
+                row_ts = datetime.fromisoformat(row_ts)
+            except ValueError:
+                continue
+        key = row_ts.replace(microsecond=0)
+        groups[key] = groups.get(key, 0) + 1
 
     sessions: list[ScanSession] = []
-    for ts_str, cnt in rows:
-        if ts_str is None:
-            continue
-        try:
-            ts = datetime.fromisoformat(ts_str)
-        except ValueError:
-            continue
+    # Sort descending on the parsed datetime key (newest first) per D-05.
+    for ts in sorted(groups.keys(), reverse=True):
+        cnt = groups[ts]
+        ts_str = ts.isoformat(sep=" ")  # back-compat shape for scan_id consumers
 
         eps = _fetch_session_endpoints_1s(db, ts)
 
@@ -929,11 +970,17 @@ def get_latest_scan(
             target_ts = datetime.fromisoformat(scan_id)
         except ValueError:
             raise HTTPException(status_code=400, detail=format_error("DASHBOARD-004"))
+        # Phase 75-02 D-04 (WR-04): inclusive [start, end] microsecond-precision window.
+        # SQLite stores scanned_at with microsecond resolution; compare parsed
+        # datetime objects (not formatted strings). Match any row in the same
+        # containing second as the query timestamp.
+        window_start = target_ts.replace(microsecond=0)
+        window_end = target_ts.replace(microsecond=999_999)
         endpoints: list[CryptoEndpoint] = (
             db.query(CryptoEndpoint)
             .filter(
-                CryptoEndpoint.scanned_at >= target_ts,
-                CryptoEndpoint.scanned_at < target_ts + timedelta(seconds=1),
+                CryptoEndpoint.scanned_at >= window_start,
+                CryptoEndpoint.scanned_at <= window_end,
             )
             .all()
         )
@@ -993,11 +1040,10 @@ def get_latest_scan(
     # Read scan-time profile from intelligence JSON (SCORE-04)
     stored_profile = None
     try:
-        import os as _os
-        from pathlib import Path as _Path
         from quirk.validate import _latest_intelligence
         import json as _json
-        _output_dir = _Path(_os.environ.get("QUIRK_OUTPUT_DIR", "./quirk-output"))
+        # Phase 75 / WR-15 / D-16: validated path-traversal-safe resolution
+        _output_dir = _resolve_output_dir()
         _intel_path = _latest_intelligence(_output_dir)
         if _intel_path:
             _intel_data = _json.loads(_intel_path.read_text(encoding="utf-8"))
