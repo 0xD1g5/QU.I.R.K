@@ -264,8 +264,8 @@ def _scan_cloud_sql(service, project_id: str, logger) -> List[CryptoEndpoint]:
                         host=f"gcp://{project_id}/sql/{instance_name}",
                         port=0,
                         protocol="CLOUD_SQL",
-                        cert_pubkey_alg=severity,
-                        service_detail=instance_name,
+                        severity=severity,
+                        service_detail=f"CLOUD_SQL/{description.replace(' ', '-')}",
                         cloud_scan_json=json.dumps(
                             {"sslMode": ssl_mode, "finding": description},
                             default=str,
