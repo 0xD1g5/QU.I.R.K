@@ -17,7 +17,7 @@ import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
 
 // Register Cytoscape layout extension once
 try {
-  cytoscape.use(coseBilkent as cytoscape.Ext)
+  cytoscape.use(coseBilkent)
 } catch {
   // already registered
 }
