@@ -923,12 +923,13 @@ services:
   # (which already serves vault/localstack-kms/pgcrypto from earlier phases).
   # ===========================================================================================
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     profiles: ["storage-s3"]
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_KMS_SECRET_KEY: "lab-key:e6QwR1eRz0t8u3y2z6mP/m4G2D8jH7yB3KvN0aN8z7M="
     ports:
       - "29000:9000"
       - "29001:9001"
