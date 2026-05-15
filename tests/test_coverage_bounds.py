@@ -14,15 +14,15 @@ from quirk.discovery.coverage import calculate_coverage, quantum_readiness_score
 
 
 # ----------------------------------------------------------------------------
-# calculate_coverage clamp tests (WR-01 / D-06)
+# calculate_coverage clamp tests (WR-01 / D-06 + D-06a percent-scale correction)
 # ----------------------------------------------------------------------------
 
 
 def test_calculate_coverage_clamps_above_one():
-    """tls_endpoints exceeding target_count must clamp to 1.0, not >1.0."""
+    """tls_endpoints exceeding target_count must clamp to 100.0 (percent scale)."""
     result = calculate_coverage(10, 5, 20)
-    assert result <= 1.0
-    assert result == 1.0
+    assert result <= 100.0
+    assert result == 100.0
 
 
 def test_calculate_coverage_clamps_below_zero():
@@ -33,15 +33,15 @@ def test_calculate_coverage_clamps_below_zero():
 
 
 def test_calculate_coverage_zero_denominator():
-    """Zero target_count must not raise and must return a value in [0.0, 1.0]."""
+    """Zero target_count must not raise and must return a value in [0.0, 100.0]."""
     result = calculate_coverage(0, 0, 0)
-    assert 0.0 <= result <= 1.0
+    assert 0.0 <= result <= 100.0
 
 
 def test_calculate_coverage_normal_range():
-    """A valid mid-range input must return a value within [0.0, 1.0]."""
+    """A valid mid-range input must return a value within [0.0, 100.0]."""
     result = calculate_coverage(10, 5, 5)
-    assert 0.0 <= result <= 1.0
+    assert 0.0 <= result <= 100.0
 
 
 # ----------------------------------------------------------------------------
