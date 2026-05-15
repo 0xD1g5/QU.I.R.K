@@ -406,28 +406,6 @@ PROFILE_ARGS="--profile vault" ./lab.sh up
 
 ---
 
-## Profile: storage
-
-**Deprecated** — split in v4.3 into `database` (PostgreSQL/MySQL SSL detection), `storage-s3` (MinIO/S3 buckets), and `vault` (Vault transit/PKI/auth audit). Retained for backwards compatibility with v4.1 / v4.2 UAT runs. Predates the clean per-resource split.
-
-```bash
-PROFILE_ARGS="--profile storage" ./lab.sh up
-```
-
-| Port | Service | Expected protocol | Expected condition / tag | Notes |
-|-----:|---------|-------------------|--------------------------|-------|
-| 20007 | localstack-kms | HTTPS | LocalStack KMS endpoint | KMS key seed via localstack-kms-seed |
-| 20009 | vault (legacy, image 1.15) | HTTPS | Vault dev mode | Predates the v4.3 vault profile on 28200 |
-| 20010 | postgres-pgcrypto | POSTGRESQL | pgcrypto extension probe target | DB-side encryption-at-rest demo |
-
-**Config-introspection findings (per `labs/storage/expected_results.md`):**
-- LocalStack KMS keys: `RSA_2048`, `RSA_1024`, `AES_256`, `ECC_P256` finding tags (per-key)
-- postgres-pgcrypto: `pgp_sym_encrypt (weak passphrase)` finding tag
-
-**Reference:** See `labs/storage/expected_results.md` for full per-resource detail. v4.3 successors give cleaner per-category coverage.
-
----
-
 ## Profile: email
 
 *Postfix (SMTP / SMTPS / Submission) + Dovecot (IMAP / IMAPS / POP3 / POP3S) with weak RSA-2048 TLS, non-PFS suites, TLS 1.2 floor on Postfix. Dovecot defaults to TLS 1.3 → no weak-cipher finding without explicit pin (caveat). Expected total: 3 HIGH (weak-cipher: 25/465/587) + 1 MEDIUM (STARTTLS-downgrade: 25).*

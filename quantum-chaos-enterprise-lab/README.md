@@ -30,7 +30,6 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | jwt | jwt-rs256, jwt-hs256, jwt-rsa1024, jwt-algnone | 20001, 20002, 20003, 20004 | [Expected Findings](expected_results_v4.md#profile-jwt) | v4.1 |
 | registry | registry, registry-seed | 20005 | [Expected Findings](expected_results_v4.md#profile-registry) | v4.1 |
 | source | gitea, gitea-seed | 20006 | [Expected Findings](expected_results_v4.md#profile-source) | v4.1 |
-| storage | localstack-kms, vault (1.15), postgres-pgcrypto | 20007, 20009, 20010 | [Expected Findings](expected_results_v4.md#profile-storage) | v4.1; **deprecated** — see `database` / `storage-s3` / `vault` |
 | ssh-weak | ssh-weak | 20022 | [Expected Findings](expected_results_v4.md#profile-ssh-weak) | v4.1 |
 | ldaps | ldaps | 636 | [Expected Findings](expected_results_v4.md#profile-ldaps) | v4.1 |
 | dnssec | bind9-dnssec | 15353/udp, 15353/tcp | [Expected Findings](expected_results_v4.md#profile-dnssec) | v4.2 |
@@ -42,6 +41,16 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | email | postfix-email, dovecot-email | 30025, 30465, 30587, 30143, 30993, 30110, 30995 | [Expected Findings](expected_results_v4.md#profile-email) | v4.4 |
 | broker | kafka-broker, rabbitmq-broker, redis-broker | 29092, 29093, 25672, 25671, 26379, 26380 | [Expected Findings](expected_results_v4.md#profile-broker) | v4.4 |
 | tls-cert-defects | tls-cert-expired, tls-cert-selfsigned, tls-cert-untrusted-ca, tls-cert-rsa1024 | 13444, 13445, 13446, 13447 | [Expected Findings](expected_results_v4.md#profile-tls-cert-defects) | v4.6 (Phase 46); single-profile target exercising TLS-FIND-01..05 cert-defect findings end-to-end |
+
+### Image Pin Policy
+
+All services in `docker-compose.yml` carry an explicit version tag because floating tags (`:latest`, `:8`, `:3`) are silently advanced by Docker Hub, which is exactly what broke four services at once and was discovered under Phase 999.83 / BACK-90.
+
+- Major-only tags (e.g. `mysql:8`, `nginx:1`, `postgres:15`) are NOT acceptable — Docker Hub re-points them across breaking minor releases.
+- Minor or dated pins ARE acceptable — e.g. `mysql:8.0`, `gitea/gitea:1.21`, `hashicorp/vault:1.17`, `minio/minio:RELEASE.YYYY-MM-DDTHH-MM-SSZ`.
+- When upgrading a pin, treat it as a chaos-lab maintenance change per CLAUDE.md: update `lab.sh` / `README.md` / `expected_results_v4.md` together in the same commit if behavior changes.
+
+Pins enforced this phase: `gitea/gitea:1.21` (unchanged), `minio/minio:RELEASE.2025-09-07T16-13-09Z` (newly pinned from `:latest`), `mysql:8.0` (newly pinned from `:8`), and legacy `hashicorp/vault:1.15` deleted along with the deprecated `storage` profile.
 
 ## Documentation
 
