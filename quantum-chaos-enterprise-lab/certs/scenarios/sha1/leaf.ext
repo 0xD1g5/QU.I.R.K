@@ -1,0 +1,3 @@
+subjectAltName=DNS:sha1.chaos.local,DNS:localhost,IP:127.0.0.1
+extendedKeyUsage=serverAuth
+keyUsage=digitalSignature,keyEncipherment
