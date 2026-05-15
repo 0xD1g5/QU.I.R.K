@@ -14,6 +14,8 @@ Decision enforcement:
 Public surface:
   is_weak_cipher(cipher_or_label: str | None) -> bool
   is_legacy_tls_version(tls_version: str | None) -> bool
+  is_pfs_cipher(cipher: str | None) -> bool                    # Phase 77 D-05
+  is_weak_cipher_classification(cipher: str | None) -> bool   # Phase 77 D-05
 """
 from __future__ import annotations
 
@@ -54,3 +56,47 @@ def is_legacy_tls_version(tls_version: str | None) -> bool:
     if not tls_version:
         return False
     return tls_version.upper() in _LEGACY_TLS_VERSIONS
+
+
+# Phase 77 D-05 — closes scanners-protocol/IN-05: centralize the local
+# `_is_pfs` / `_is_weak` inner functions previously duplicated across
+# broker_scanner.py, email_scanner.py, and tls_scanner.py.
+# Mirror of the 6-token weak-cipher set used by the 3 scanners pre-Phase 77.
+# Kept separate from _WEAK_CIPHER_TOKENS above (which serves a broader
+# classification used by the intelligence layer — different semantics).
+_WEAK_CLASSIFICATION_TOKENS: Final[tuple[str, ...]] = (
+    "RC4", "3DES", "CBC3", "NULL", "EXPORT", "MD5",
+)
+
+
+def is_pfs_cipher(cipher: str | None) -> bool:
+    """Return True iff *cipher* provides Perfect Forward Secrecy (Phase 77 D-05).
+
+    Consolidates the local ``_is_pfs`` from ``broker_scanner.py``,
+    ``email_scanner.py``, and ``tls_scanner.py``. Matches both the OpenSSL
+    short-name form (``ECDHE-RSA-AES128-GCM-SHA256``) and the IANA
+    ``TLS_ECDHE_*`` form by checking either ``ECDHE`` or ``DHE`` token
+    presence after uppercasing — same semantics as the deleted callers.
+    """
+    if not cipher:
+        return False
+    upper = cipher.upper()
+    return "ECDHE" in upper or "DHE" in upper
+
+
+def is_weak_cipher_classification(cipher: str | None) -> bool:
+    """Return True iff *cipher* is weak by classification (Phase 77 D-05).
+
+    Consolidates the local ``_is_weak`` from ``broker_scanner.py``,
+    ``email_scanner.py``, and ``tls_scanner.py``. The 6-token set
+    (RC4 / 3DES / CBC3 / NULL / EXPORT / MD5) preserves the exact
+    semantics of the three deleted inner functions.
+
+    NOTE: This is intentionally narrower than :func:`is_weak_cipher` (which
+    serves the intelligence-layer SAML/SHA1/IDEA/DES surface). Callers must
+    not collapse the two — they have different audiences.
+    """
+    if not cipher:
+        return False
+    upper = cipher.upper()
+    return any(token in upper for token in _WEAK_CLASSIFICATION_TOKENS)
