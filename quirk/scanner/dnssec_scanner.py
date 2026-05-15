@@ -17,6 +17,25 @@ except ImportError:
 
 from quirk.models import CryptoEndpoint
 
+# Module-level logger (Phase 71 WR-07)
+logger = logging.getLogger(__name__)
+
+# DNSKEY algorithm minimum public-key byte lengths per RFC 4034/6605/8080 (Phase 71 WR-07 / D-11).
+# RSA family (5, 7, 8, 10) require at least the encoding header (exp-len byte + 1-byte exp + 1 modulus byte) = 3
+# practical floor 5 to guard against truncation in the multi-byte exp-len form.
+# Fixed-size algorithms come straight from their RFCs.
+_DNSKEY_MIN_BYTES: dict = {
+    1:  5,    # RSAMD5 (RFC 4034 §2.1.5 — same RFC 3110 encoding floor as RSA-SHA1)
+    5:  5,    # RSASHA1
+    7:  5,    # RSASHA1-NSEC3-SHA1
+    8:  5,    # RSASHA256
+    10: 5,    # RSASHA512
+    13: 64,   # ECDSA P-256 / SHA-256 (RFC 6605 §4 — uncompressed X||Y, 32+32 bytes)
+    14: 96,   # ECDSA P-384 / SHA-384 (RFC 6605 §4 — uncompressed X||Y, 48+48 bytes)
+    15: 32,   # Ed25519 (RFC 8080 §3)
+    16: 57,   # Ed448   (RFC 8080 §3)
+}
+
 # DNSSEC algorithm severity map per RFC 8624/9905 (D-04)
 # Maps algorithm number -> (name, severity)
 # CRITICAL: SHA-1 / MD5 / DSA / GOST based algorithms
@@ -90,19 +109,38 @@ def _parse_dnskeys(dnskey_rrset) -> list:
         key_tag = dns.dnssec.key_id(rdata)
         role = "KSK" if (rdata.flags & 0x0001) else "ZSK"
 
+        # Phase 71 WR-07 (D-11): bound key_bytes length against the algorithm-specific
+        # minimum BEFORE any subscript access. Malformed/truncated records log a WARNING
+        # and are skipped so DNSSEC scans degrade gracefully rather than aborting.
+        key_bytes = rdata.key
+        min_len = _DNSKEY_MIN_BYTES.get(alg_num, 1)
+        if len(key_bytes) < min_len:
+            logger.warning(
+                "DNSKEY (alg %d) too short: %d bytes < %d; skipping",
+                alg_num, len(key_bytes), min_len,
+            )
+            continue
+
         # RSA algorithms: parse RFC 3110 format to extract modulus length
         key_size = None
         if alg_num in (1, 5, 7, 8, 10):
             try:
-                key_bytes = rdata.key
                 if key_bytes[0] == 0:
+                    if len(key_bytes) < 3:
+                        raise ValueError("RSA multi-byte exponent length header truncated")
                     exp_len = (key_bytes[1] << 8) | key_bytes[2]
                     modulus_start = 3 + exp_len
                 else:
                     exp_len = key_bytes[0]
                     modulus_start = 1 + exp_len
+                if modulus_start >= len(key_bytes):
+                    raise ValueError("RSA modulus offset past key_bytes end")
                 key_size = (len(key_bytes) - modulus_start) * 8
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "DNSKEY RSA (alg %d) modulus parse failed: %s",
+                    alg_num, exc,
+                )
                 key_size = None
 
         keys.append({
