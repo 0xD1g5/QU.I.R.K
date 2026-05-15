@@ -153,9 +153,23 @@ def _scan_one_sslyze(
             },
         )
 
+        # BLOCK-01 / CR-07 (Phase 69, D-05): wrap Scanner lifecycle in
+        # try/finally so the sslyze Scanner — which owns an internal nassl
+        # thread/process pool released only at GC — is dropped on every exit
+        # path, including when get_results() raises mid-scan. sslyze.Scanner
+        # exposes no public close()/__exit__ (verified against sslyze 6.2.0):
+        # only `del` + gc.collect() reliably releases it.
         scanner = SslyzeScanner(per_server_concurrent_connections_limit=2)
-        scanner.queue_scans([scan_request])
-        results = list(scanner.get_results())
+        try:
+            scanner.queue_scans([scan_request])
+            results = list(scanner.get_results())
+        finally:
+            try:
+                del scanner
+            except Exception:
+                pass
+            import gc
+            gc.collect()
         if not results:
             return None
 
