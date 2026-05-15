@@ -141,7 +141,11 @@ def test_endpoint_scored_cvi_nonzero(monkeypatch) -> None:
         assert r.scanner_informed is True
 
 
-def test_endpoint_scored_sgrm_dpe_itr_zero(monkeypatch) -> None:
+def test_endpoint_scored_sgrm_dpe_itr_pending(monkeypatch) -> None:
+    """Phase 74-03 D-10 (WR-11): pending dimensions are EXCLUDED from rollup
+    (relevance_score=None), not capped at 0.0. Resolves the weight=0.0
+    ambiguity by distinguishing 'covered' from 'pending'.
+    """
     rows = _call_compliance_map(
         monkeypatch, _build_score_json(cvi=4.0, sgrm=4.0, dpe=4.0, itr=4.0)
     )
@@ -149,8 +153,9 @@ def test_endpoint_scored_sgrm_dpe_itr_zero(monkeypatch) -> None:
         dim_rows = [r for r in rows if r.dimension == dim]
         assert len(dim_rows) == 3 * 8 == 24
         for r in dim_rows:
-            assert r.relevance_score == 0.0
+            assert r.relevance_score is None  # D-10: pending excluded
             assert r.scanner_informed is False
+            assert r.coverage_status == "pending"
 
 
 def test_endpoint_row_shape(monkeypatch) -> None:
@@ -159,6 +164,7 @@ def test_endpoint_row_shape(monkeypatch) -> None:
     expected_keys = {
         "practice_number", "practice_area", "dimension", "framework",
         "static_weight", "relevance_score", "scanner_informed",
+        "coverage_status",  # Phase 74-03 D-10 (WR-11)
     }
     assert set(sample.model_dump().keys()) == expected_keys
 
