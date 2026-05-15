@@ -10,7 +10,14 @@ duplicate weight data in the React app.
 """
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from typing import Dict, Final, Literal, Tuple
+
+# Phase 74-03 D-10 (WR-11): Coverage status semantics for SCANNER_COVERAGE.
+# Distinguishes "covered" (contributes to rollup at full weight), "partial"
+# (half weight), "pending" (in-scope but not yet implemented — EXCLUDED from
+# rollup), and "n/a" (intentionally out-of-scope — EXCLUDED). Resolves the
+# weight=0.0 ambiguity flagged in audit row qramm-compliance/WR-11.
+CoverageStatus = Literal["covered", "partial", "pending", "n/a"]
 
 
 FRAMEWORK_KEYS: Tuple[str, ...] = (
@@ -37,6 +44,17 @@ SCANNER_COVERAGE: Dict[str, float] = {
     "SGRM": 0.0,
     "DPE": 0.0,
     "ITR": 0.0,
+}
+
+# Phase 74-03 D-10 (WR-11): parallel status dict. Keys MUST match
+# SCANNER_COVERAGE.keys() (CI gate: tests/test_compliance_coverage_status.py).
+# CVI is scanner-informed in v4.8; SGRM/DPE/ITR remain 'pending' until the
+# v5.x evidence-bridge expansion (QRAMM-F01) wires them in.
+SCANNER_COVERAGE_STATUS: Final[Dict[str, CoverageStatus]] = {
+    "CVI":  "covered",
+    "SGRM": "pending",
+    "DPE":  "pending",
+    "ITR":  "pending",
 }
 
 PRACTICE_AREA_TO_DIMENSION: Dict[str, str] = {

@@ -35,6 +35,7 @@ from quirk.qramm.compliance_map import (
     PRACTICE_AREA_TO_DIMENSION,
     QRAMM_COMPLIANCE_WEIGHTS,
     SCANNER_COVERAGE,
+    SCANNER_COVERAGE_STATUS,
 )
 from quirk.qramm.evidence_bridge import populate_cvi_suggestions
 from quirk.qramm.model_meta import QRAMM_MODEL
@@ -149,6 +150,10 @@ class ComplianceMapRow(BaseModel):
     static_weight: float            # 0.0 .. 1.0
     relevance_score: Optional[float]
     scanner_informed: bool
+    # Phase 74-03 D-10 (WR-11): coverage status for this row's dimension.
+    # 'covered' | 'partial' | 'pending' | 'n/a'. 'pending'/'n/a' rows are
+    # excluded from the rollup; 'partial' contributes at half-weight.
+    coverage_status: Optional[str] = None
 
 
 # ---------- Phase 54 Plan 01: multiplier helper ----------
@@ -622,6 +627,8 @@ def get_compliance_map(
         dimension = PRACTICE_AREA_TO_DIMENSION[practice_area]
         ceiling = SCANNER_COVERAGE.get(dimension, 0.0)
         scanner_informed = ceiling > 0.0
+        # Phase 74-03 D-10 (WR-11): explicit coverage status.
+        coverage_status = SCANNER_COVERAGE_STATUS.get(dimension)
 
         # Read raw dimension score (0.0–4.0 scale) — see Phase 55
         # RESEARCH Pitfall 2: read ["score"], NOT ["weighted"].
@@ -640,6 +647,9 @@ def get_compliance_map(
             )
             if dim_score is None:
                 relevance_score: Optional[float] = None
+            elif coverage_status in ("pending", "n/a"):
+                # Phase 74-03 D-10: pending / n/a rows excluded from rollup.
+                relevance_score = None
             else:
                 # Normalize dim_score from 0.0–4.0 to 0.0–1.0 before
                 # multiplying by weight, so output stays in 0.0–1.0 range.
@@ -647,6 +657,9 @@ def get_compliance_map(
                 raw = static_weight * normalized
                 cap = ceiling * static_weight
                 relevance_score = min(raw, cap)
+                # Phase 74-03 D-10a: 'partial' contributes at half-weight.
+                if coverage_status == "partial":
+                    relevance_score = relevance_score * 0.5
 
             rows.append(
                 ComplianceMapRow(
@@ -657,6 +670,7 @@ def get_compliance_map(
                     static_weight=static_weight,
                     relevance_score=relevance_score,
                     scanner_informed=scanner_informed,
+                    coverage_status=coverage_status,
                 )
             )
 
