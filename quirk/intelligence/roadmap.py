@@ -377,6 +377,26 @@ def build_phased_roadmap(
             priority=priority,
         )
 
+    # closes cbom-intel-reports/IN-05 (Phase 77 D-11) — emit baseline-governance
+    # item BOTH when len(items) < min_items AND when no governance item exists,
+    # even if min_items has already been satisfied by driver-derived candidates.
+    _GOVERNANCE_BASELINE = next(
+        (entry for entry in baseline if entry[1] == "Establish crypto governance review"),
+        None,
+    )
+    if _GOVERNANCE_BASELINE is not None:
+        gov_phase, gov_title, gov_why, gov_owner, gov_deps, gov_priority = _GOVERNANCE_BASELINE
+        if gov_title not in items or len(items) < min_items:
+            _add_candidate(
+                items,
+                phase=gov_phase,
+                title=gov_title,
+                why=gov_why,
+                owner_placeholder=gov_owner,
+                dependencies=gov_deps,
+                priority=gov_priority,
+            )
+
     sorted_items = sorted(
         items.values(),
         key=lambda x: (
