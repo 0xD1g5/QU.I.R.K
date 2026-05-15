@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from quirk.engine.risk_engine import evaluate_broker_endpoints, _dedupe_findings
+from quirk.engine.findings_evaluator import evaluate_broker_endpoints, _dedupe_findings
 
 
 # ---------------------------------------------------------------------------

@@ -33,7 +33,7 @@ from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
-from quirk.engine.risk_engine import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints
+from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints
 from quirk.reports.writer import write_reports
 
 from quirk.engine.profiles import apply_profile

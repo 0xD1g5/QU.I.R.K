@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from quirk.engine.risk_engine import _chain_verified, evaluate_endpoints
+from quirk.engine.findings_evaluator import _chain_verified, evaluate_endpoints
 
 
 # ---------------------------------------------------------------------------

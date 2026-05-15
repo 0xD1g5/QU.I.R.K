@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from quirk.engine.risk_engine import (
+from quirk.engine.findings_evaluator import (
     NIST_IR_8547_DEPRECATION,
     _build_finding,
     evaluate_endpoints,
