@@ -822,7 +822,7 @@ services:
       - "25432:5432"
 
   mysql-ssl-off:
-    image: mysql:8
+    image: mysql:8.0
     profiles: ["database"]
     environment:
       MYSQL_DATABASE: quirk_db
