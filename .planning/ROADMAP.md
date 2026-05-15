@@ -1520,17 +1520,18 @@ Plans:
   - [x] 71-04-PLAN.md — DNSSEC bound + Kerberos decode-log + secrets nonce + SAML JSON byte cap (PROTO-04, closes WR-07/08/09/10)
   - [x] 71-05-PLAN.md — Unified extras messaging + ScanCfg.motion_concurrency + delete tls_scanner dup + target_expander cap/dedup/normalize (PROTO-05, closes WR-11/12/13/14)
 
-### Phase 72: Cloud Scanner WARNINGs
+### Phase 72: Cloud Scanner WARNINGs ✅
 **Goal**: All five WARNING clusters in the cloud scanner subsystem are resolved — AWS/Azure/GCP data correctness, Cache and scope_hash robustness, profiles.py mutation guards, and Vault/DB connector hardening. Closes audit findings scanners-cloud/WR-01 through WR-24.
 **Depends on**: Phase 69
 **Requirements**: CLOUD-01, CLOUD-02, CLOUD-03, CLOUD-04, CLOUD-05
 **Success Criteria** (what must be TRUE):
-  1. An AWS ACM scan with an empty ARN does not raise; KMS skips disabled/pending-deletion keys; S3 `executor.map` propagates classifier exceptions; EKS `enc_cfg` reads from the entire list not index 0
-  2. Azure KeyVault `key_size` is populated for all key types; K8s `cluster_name` has colons stripped; K8s `Counter` excludes `None` values; K8s `key_name` is omitted in unencrypted path in `dat_scan_json`
-  3. GCP KMS pagination loop has a cap; UNSPECIFIED/UNKNOWN key handling is consistent; GCP Cloud SQL description is surfaced in `service_detail`
-  4. `Cache._read_json` handles malformed JSON gracefully (no exception on corrupt cache file); `scope_hash` includes connector enable flags; `profiles.py` file is verified complete and not truncated
-  5. All 10 miscellaneous cloud WARNING fixes land: risk_engine naming, profiles.py email/broker mutation guard, standard profile re-apply, vault VAULT_TOKEN env order, DB password empty-string default, DB exception message strip, AWS ThreadPoolExecutor module-level import, Vault PKI PEM split hardened, `_postprocess_findings` safe under iteration, `_dedupe_findings` ordering stable
-**Plans**: TBD
+  1. ✅ An AWS ACM scan with an empty ARN does not raise; KMS skips disabled/pending-deletion keys; S3 `executor.map` propagates classifier exceptions; EKS `enc_cfg` reads from the entire list not index 0
+  2. ✅ Azure KeyVault `key_size` is populated for all key types; K8s `cluster_name` has colons stripped; K8s `Counter` excludes `None` values; K8s `key_name` is omitted in unencrypted path in `dat_scan_json`
+  3. ✅ GCP KMS pagination loop has a cap; UNSPECIFIED/UNKNOWN key handling is consistent; GCP Cloud SQL description is surfaced in `service_detail`
+  4. ✅ `Cache._read_json` handles malformed JSON gracefully; `scope_hash` includes connector enable flags; `profiles.py` file verified complete (`# eof` marker)
+  5. ✅ All 10 miscellaneous cloud WARNING fixes landed: risk_engine→findings_evaluator rename, profiles.py mutation guard via `_user_set_fields`, standard profile re-apply suppressed, vault VAULT_TOKEN env order, DB password handling, DB exception `safe_str`, AWS ThreadPoolExecutor at module level, Vault PKI PEM via `cryptography.x509`, `_postprocess_findings` safe iteration, `_dedupe_findings` stable sort
+**Plans**: 5/5 complete (72-01 AWS, 72-02 Azure/K8s, 72-03 GCP, 72-04 Cache/profiles, 72-05 Misc)
+**Status**: ✅ Complete (2026-05-15) — 24/24 WR rows closed, 119/119 targeted tests green
 
 ### Phase 73: CBOM + Intelligence + Reports WARNINGs
 **Goal**: All three WARNING clusters in the CBOM/intelligence/reports subsystem are resolved — PDF resources are cleaned up, weak-crypto predicates are consistent, and score weights, roadmap output, and cipher labels are corrected. Closes audit findings cbom-intel-reports/WR-01 through WR-14.
@@ -1593,7 +1594,7 @@ Plans:
 | 69. Deferred BLOCKERs — Scanner + Cloud | 0/TBD | Not started | - |
 | 70. Deferred BLOCKERs — API + QRAMM Model | 3/3 | Complete   | 2026-05-15 |
 | 71. Protocol Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
-| 72. Cloud Scanner WARNINGs | 0/TBD | Not started | - |
+| 72. Cloud Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
 | 73. CBOM + Intelligence + Reports WARNINGs | 0/TBD | Not started | - |
 | 74. QRAMM + Compliance WARNINGs | 0/TBD | Not started | - |
 | 75. API + CLI + Core WARNINGs | 0/TBD | Not started | - |
