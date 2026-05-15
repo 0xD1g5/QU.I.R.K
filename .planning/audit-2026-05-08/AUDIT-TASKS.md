@@ -177,10 +177,10 @@ wont_fix: 1
 | api-cli-core/CR-01 | BLOCKER | Path traversal in quirk init --output | Phase 58 (HARDEN-API-02) | [x] closed |
 | api-cli-core/CR-02 | BLOCKER | SSRF / port binding in routes/pdf.py via QUIRK_SERVE_PORT | Phase 58 (HARDEN-API-03) | [x] closed |
 | api-cli-core/CR-03 | BLOCKER | Missing authentication on every dashboard route | Phase 58 (HARDEN-API-01) | [x] closed |
-| api-cli-core/CR-04 | BLOCKER | QRAMMProfile.session_id is nullable and has no DB-level FK | — | [ ] deferred-v4.9 |
-| api-cli-core/CR-05 | BLOCKER | delete_session does not clear qramm_sessions.profile_id link | — | [ ] deferred-v4.9 |
-| api-cli-core/CR-06 | BLOCKER | Bare except: pass in classifier call drops findings silently | — | [ ] deferred-v4.9 |
-| api-cli-core/CR-07 | BLOCKER | SQL injection guard on column names lacks col_type DDL fragment | — | [ ] deferred-v4.9 |
+| api-cli-core/CR-04 | BLOCKER | QRAMMProfile.session_id is nullable and has no DB-level FK | Phase 70 | [x] closed — closed by Phase 70 (BLOCK-07): ForeignKey(qramm_sessions.id, ondelete=SET NULL) on QRAMMProfile.session_id + _ensure_qramm_profiles_fk 12-step rebuild + per-connection PRAGMA foreign_keys=ON via connect event. Tests: tests/test_qramm_models.py::test_qramm_profiles_has_db_level_fk, ::test_connect_event_enables_fk_pragma |
+| api-cli-core/CR-05 | BLOCKER | delete_session does not clear qramm_sessions.profile_id link | Phase 70 | [x] closed — closed by Phase 70 (BLOCK-07): delete_session re-ordered to null session.profile_id + flush before profile/answer deletes (D-04). Tests: tests/test_qramm_delete_session_fk.py::test_delete_session_with_profile_clears_fk, ::test_delete_session_with_profile_and_answers |
+| api-cli-core/CR-06 | BLOCKER | Bare except: pass in classifier call drops findings silently | Phase 70 | [x] closed — closed by Phase 70 (BLOCK-08): _qs_for_alg narrowed to except (KeyError, TypeError, AttributeError) with logger.warning; unrelated exceptions propagate. Tests: tests/test_cbom_scan_route.py (full file — 6 tests covering swallow + propagation) |
+| api-cli-core/CR-07 | BLOCKER | SQL injection guard on column names lacks col_type DDL fragment | Phase 70 | [x] closed — closed by Phase 70 (BLOCK-08): _SAFE_COL_TYPE_RE allowlist + ValueError guard in _ensure_v43/_phase41/_phase46/_phase54_qramm_columns. Tests: tests/test_db_migrations.py (full file — regex matrix + 4 poisoned-dict tests) |
 | api-cli-core/CR-08 | BLOCKER | init_db ALTER TABLE migrations are not transactional | Phase 64.1 (CR-08) | [x] closed — closed by Phase 64.1 (tests/test_init_db_idempotent.py) |
 | api-cli-core/CR-09 | BLOCKER | parse_target_tokens reflective DoS via deep @file recursion | Phase 58 (HARDEN-API-04) | [x] closed |
 | api-cli-core/WR-01 | WARNING | _check_dashboard / _check_network always return True | — | [ ] open |
@@ -401,6 +401,11 @@ Structured rationale blocks for all 14 remaining open BLOCKERs not addressed by 
 > - Fix phase: v4.9 QRAMM data model hardening — pair with CR-05 stale FK pointer fix (same model, same migration).
 > - Risk: low — application-level cascade works correctly; DB-level constraint is belt-and-suspenders hardening only.
 
+> **closed by Phase 70** — 70-01
+> - Resolution: ForeignKey(qramm_sessions.id, ondelete=SET NULL) added to QRAMMProfile.session_id (D-03); _ensure_qramm_profiles_fk 12-step rebuild for existing DBs (D-01); per-connection PRAGMA foreign_keys=ON via SQLAlchemy connect event (D-02).
+> - Evidence: tests/test_qramm_models.py::test_qramm_profiles_has_db_level_fk, ::test_connect_event_enables_fk_pragma
+> - Commit: (pending)
+
 ---
 
 ### api-cli-core/CR-05 — delete_session does not clear qramm_sessions.profile_id link
@@ -410,6 +415,11 @@ Structured rationale blocks for all 14 remaining open BLOCKERs not addressed by 
 > - Safe to defer: No code path reads profile.session_id without re-validating against the live sessions table; the stale pointer is inert and causes no incorrect data to be displayed or returned.
 > - Fix phase: v4.9 QRAMM data model hardening — pair with CR-04 nullable FK constraint fix.
 > - Risk: low — dangling pointer is read-only stale data; no incorrect behavior triggered.
+
+> **closed by Phase 70** — 70-01
+> - Resolution: delete_session re-ordered per D-04 — null session.profile_id, db.flush(), then delete linked QRAMMProfile rows, then QRAMMAnswer rows, then the session itself. FK-safe under PRAGMA foreign_keys=ON.
+> - Evidence: tests/test_qramm_delete_session_fk.py::test_delete_session_with_profile_clears_fk, ::test_delete_session_with_profile_and_answers
+> - Commit: (pending)
 
 ---
 
@@ -421,6 +431,11 @@ Structured rationale blocks for all 14 remaining open BLOCKERs not addressed by 
 > - Fix phase: v4.9 logging-hygiene sweep — pair with bare-except findings across WR-03, WR-08, IN-02 (common pattern across subsystems).
 > - Risk: medium — silent finding loss is invisible to operators; scan result may under-report vulnerabilities without any warning.
 
+> **closed by Phase 70** — 70-02
+> - Resolution: _qs_for_alg narrowed to except (KeyError, TypeError, AttributeError) per D-05 with logger.warning("classifier failed for alg=%r: %s", ...) on the swallowed cases; unrelated exceptions (e.g., RuntimeError) propagate to surface real bugs.
+> - Evidence: tests/test_cbom_scan_route.py (full file — 6 tests covering swallow + propagation)
+> - Commit: (pending)
+
 ---
 
 ### api-cli-core/CR-07 — SQL injection guard on column names lacks col_type DDL fragment
@@ -430,3 +445,8 @@ Structured rationale blocks for all 14 remaining open BLOCKERs not addressed by 
 > - Safe to defer: All col_type values are hardcoded string constants in _V43_COLUMN_DDLS, _PHASE41_COLUMN_DDLS, and equivalent dicts — they are never user-influenced. Current attack surface is zero; the gap is a "future contributor adds a dynamic col_type" defense failure, not a present-day injection vector.
 > - Fix phase: v4.9 schema-migration safety sweep — pair with init_db idempotency hardening (the test added by Phase 64.1 Plan 1 for CR-08 already exercises the migration path).
 > - Risk: low — zero current attack surface; all col_type values are repo-hardcoded constants; only a future code change could introduce the vector.
+
+> **closed by Phase 70** — 70-03
+> - Resolution: _SAFE_COL_TYPE_RE = ^(TEXT|INTEGER|REAL|BOOLEAN|DATETIME|VARCHAR\(\d{1,4}\))$ added at quirk/db.py module scope adjacent to _SAFE_COL_RE per D-06; ValueError("Unsafe column type in migration: ...") guard inserted in _ensure_v43_columns, _ensure_phase41_columns, _ensure_phase46_columns, _ensure_phase54_qramm_columns. D-07 do-not-touch list (identity/gcp/email/broker) preserved.
+> - Evidence: tests/test_db_migrations.py (full file — regex matrix + 4 poisoned-dict tests)
+> - Commit: (pending)
