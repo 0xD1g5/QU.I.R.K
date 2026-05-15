@@ -240,3 +240,75 @@ class TestInitDbQRAMMTables:
         assert qramm_idx > p46_idx, (
             "_ensure_qramm_tables must appear after _ensure_phase46_columns in init_db"
         )
+
+
+# ---------- Phase 70 BLOCK-07: FK retrofit + PRAGMA enforcement ----------
+
+def test_qramm_profiles_has_db_level_fk(tmp_path):
+    """BLOCK-07/D-01+D-03: PRAGMA foreign_key_list reports a FK on
+    qramm_profiles.session_id referencing qramm_sessions(id) ON DELETE SET NULL.
+    """
+    from sqlalchemy import text
+
+    from quirk.db import init_db
+
+    engine = init_db(str(tmp_path / "fk.db"))
+    with engine.connect() as conn:
+        rows = conn.execute(text("PRAGMA foreign_key_list('qramm_profiles')")).fetchall()
+    # PRAGMA foreign_key_list row: (id, seq, table, from, to, on_update, on_delete, match)
+    matching = [r for r in rows if r[2] == "qramm_sessions"]
+    assert matching, f"No FK on qramm_profiles -> qramm_sessions. rows={rows!r}"
+    on_delete = matching[0][6]
+    assert on_delete == "SET NULL", (
+        f"Expected ON DELETE SET NULL on qramm_profiles.session_id; got {on_delete!r}"
+    )
+
+
+def test_connect_event_enables_fk_pragma(tmp_path):
+    """BLOCK-07/D-02: every newly opened SQLAlchemy connection has
+    PRAGMA foreign_keys=1 (set by the module-level connect event listener).
+    """
+    from sqlalchemy import text
+
+    from quirk.db import init_db
+
+    engine = init_db(str(tmp_path / "pragma.db"))
+    with engine.connect() as conn:
+        val = conn.execute(text("PRAGMA foreign_keys")).scalar()
+    assert val == 1, f"Expected PRAGMA foreign_keys=1, got {val!r}"
+
+
+def test_qramm_profiles_fk_retrofit_idempotent(tmp_path):
+    """BLOCK-07/D-01: init_db on the same on-disk DB twice does not raise,
+    does not rebuild the table, and preserves rows inserted between calls.
+    """
+    from sqlalchemy import text
+
+    from quirk.db import init_db
+
+    db_path = str(tmp_path / "idem.db")
+    engine = init_db(db_path)
+
+    # Insert a profile row between the two init_db calls — second init_db
+    # MUST NOT rebuild the table (which would lose this row had we forced
+    # a rebuild). The idempotency guard should short-circuit on
+    # PRAGMA foreign_key_list seeing the existing FK row.
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO qramm_profiles (industry) VALUES ('finance')"
+            )
+        )
+        conn.commit()
+
+    # Second init_db on the same path — must not raise.
+    engine2 = init_db(db_path)
+
+    with engine2.connect() as conn:
+        cnt = conn.execute(
+            text("SELECT COUNT(*) FROM qramm_profiles WHERE industry='finance'")
+        ).scalar()
+    assert cnt == 1, (
+        f"Row inserted between init_db calls was lost — expected 1, got {cnt!r}; "
+        "the rebuild migration must be idempotent."
+    )
