@@ -90,10 +90,10 @@ wont_fix: 1
 | scanners-cloud/CR-10 | BLOCKER | Azure Blob key_source microsoft.storage conflated with absent | Phase 69 (BLOCK-04) | [x] closed — closed by Phase 69 (BLOCK-04): Azure Blob _scan_blob_encryption now emits semantically distinct findings via service_detail + dat_scan_json[finding_id]: BLOB-PLATFORM (microsoft.storage), BLOB-UNKNOWN (absent/null), BLOB-CMK (microsoft.keyvault) per locked decision D-04 — no schema column added. evidence.py dar_storage_aws_managed_count extended to count BLOB/unknown alongside BLOB/platform-managed (preserves MEDIUM-tier scoring). Test: tests/test_azure_blob.py (10 tests, parameterized) |
 | scanners-cloud/WR-01 | WARNING | AWS _scan_acm may pass empty ARN to describe_certificate | — | [ ] open |
 | scanners-cloud/WR-02 | WARNING | AWS _scan_kms does not skip disabled or pending-deletion keys | — | [ ] open |
-| scanners-cloud/WR-03 | WARNING | Azure _scan_keyvault_keys swallows key_size — always None | — | [ ] open |
+| scanners-cloud/WR-03 | WARNING | Azure _scan_keyvault_keys swallows key_size — always None | Phase 72 | [x] closed — closed by Phase 72 (72-02 / D-12): _scan_keyvault_keys derives key_size per-type — RSA via key.n.bit_length(), EC via _AZURE_EC_CURVE_SIZES map (P-256/384/521 + secp256k1), OCT via properties.key_size, unknown types leave None + DEBUG log via logger.v. Test: tests/test_azure_keyvault.py (9 tests covering RSA 2048/4096, EC P-256/P-384/P-521/secp256k1, OCT 256, unknown type, unknown curve) |
 | scanners-cloud/WR-04 | WARNING | GCP _scan_kms triple-nested while with no pagination cap | — | [ ] open |
 | scanners-cloud/WR-05 | WARNING | GCP _scan_kms skips UNSPECIFIED/UNKNOWN keys inconsistently | — | [ ] open |
-| scanners-cloud/WR-06 | WARNING | K8s _emit_inaccessible_finding does not strip : from cluster_name | — | [ ] open |
+| scanners-cloud/WR-06 | WARNING | K8s _emit_inaccessible_finding does not strip : from cluster_name | Phase 72 | [x] closed — closed by Phase 72 (72-02 / D-13): _emit_inaccessible_finding now applies cluster_name = (cluster_name or "").replace(":", "") at function entry before embedding in the finding's host identity tuple. Colons in cluster names no longer corrupt CSV/CBOM ordering or dedup. Test: tests/test_k8s_connector.py::test_emit_inaccessible_finding_strips_colon_from_cluster_name + test_emit_inaccessible_finding_empty_cluster_name_safe |
 | scanners-cloud/WR-07 | WARNING | DB connector psycopg2.connect password defaults to empty string | — | [ ] open |
 | scanners-cloud/WR-08 | WARNING | DB connector exception message does not strip target host | — | [ ] open |
 | scanners-cloud/WR-09 | WARNING | vault_connector reads VAULT_TOKEN from env after token=None | — | [ ] open |
@@ -104,10 +104,10 @@ wont_fix: 1
 | scanners-cloud/WR-14 | WARNING | AWS _scan_eks_encryption reads enc_cfg[0] on multi-entry list | — | [ ] open |
 | scanners-cloud/WR-15 | WARNING | Cache _read_json does not handle malformed JSON | — | [ ] open |
 | scanners-cloud/WR-16 | WARNING | cache.scope_hash does not include connector enable flags | — | [ ] open |
-| scanners-cloud/WR-17 | WARNING | K8s _enumerate_secret_types Counter may include None | — | [ ] open |
+| scanners-cloud/WR-17 | WARNING | K8s _enumerate_secret_types Counter may include None | Phase 72 | [x] closed — closed by Phase 72 (72-02 / D-14): _enumerate_secret_types now filters None-typed secrets explicitly via `Counter(t for t in secret_types if t is not None)` rather than coercing them to "Opaque" via `s.type or "Opaque"` (RESEARCH Pitfall 4). Skipped-None count logged at DEBUG via logger.v. None and Opaque are now semantically distinct in the count signal. Test: tests/test_k8s_connector.py::test_enumerate_secret_types_excludes_none |
 | scanners-cloud/WR-18 | WARNING | Vault _scan_pki_mounts PEM split heuristic fragile | — | [ ] open |
 | scanners-cloud/WR-19 | WARNING | AWS module-level ThreadPoolExecutor import inside function | — | [ ] open |
-| scanners-cloud/WR-20 | WARNING | K8s key_name from unencrypted path included in dat_scan_json | — | [ ] open |
+| scanners-cloud/WR-20 | WARNING | K8s key_name from unencrypted path included in dat_scan_json | Phase 72 | [x] closed — closed by Phase 72 (72-02 / D-15): _scan_gke_encryption now builds a fresh dat_scan_json dict per branch — the encrypted branch includes `key_name` and `encrypted: True`; the unencrypted branch explicitly omits `key_name` and sets `encrypted: False`. Inline comment marks the contract (`Phase 72 D-15`). Eliminates cross-branch dict pollution. Test: tests/test_k8s_connector.py::test_dat_scan_json_unencrypted_omits_key_name + test_dat_scan_json_encrypted_includes_key_name |
 | scanners-cloud/WR-21 | WARNING | profiles.py tail truncated mid-function — verify EOF | — | [ ] open |
 | scanners-cloud/WR-22 | WARNING | GCP _scan_cloud_sql description not surfaced via service_detail | — | [ ] open |
 | scanners-cloud/WR-23 | WARNING | evaluate_endpoints _postprocess_findings mutates during iteration | — | [ ] open |
