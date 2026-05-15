@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v4.9
-milestone_name: Audit Depth
-status: planning
+milestone_name: Audit Depth — Phases 69–77
+status: executing
 stopped_at: Phase 70 context gathered
-last_updated: "2026-05-15T11:30:38.748Z"
-last_activity: 2026-05-15 — Phase 69.1 complete (K8s test fixture hardening; 18/18 k8s tests green)
+last_updated: "2026-05-15T12:06:07.369Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 9
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 9
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 70 — Deferred BLOCKERs (API + QRAMM Model) — ready to plan
+**Current focus:** Phase 70 — deferred-blockers-api-qramm-model
 
 ## Current Position
 
-Phase: 2 of 9 (Phase 69 + 69.1 complete, ready to plan Phase 70)
-Plan: —
-Status: Ready to plan Phase 70
-Last activity: 2026-05-15 — Phase 69.1 complete (K8s test fixture hardening; 18/18 k8s tests green)
+Phase: 70 (deferred-blockers-api-qramm-model) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-05-15
 
-Progress: [██░░░░░░░░] 22%
+Progress: [████████░░] 78%
 
 ## Phase Overview
 
@@ -67,6 +67,7 @@ Progress: [██░░░░░░░░] 22%
 | 75 | TBD | Not started |
 | 76 | TBD | Not started |
 | 77 | TBD | Not started |
+| Phase 70 P01 | 25min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,7 @@ Progress: [██░░░░░░░░] 22%
 - [v4.9-D-02]: WARNING phases are strictly subsystem-scoped (protocol scanner, cloud scanner, CBOM/intel/reports, QRAMM/compliance, API/CLI/core, React frontend) to eliminate cross-phase merge conflicts.
 - [v4.9-D-03]: LEDGER-01 (audit closure) folded into Phase 77 as the final step — all finding rows should be dispositioned as phases 69-76 execute.
 - [v4.9-D-04]: INFO/code-quality items (INFO-01..04) batched into Phase 77 alongside LEDGER-01 since they are low-risk, non-interdependent, and a natural final-cleanup sweep.
+- [Phase ?]: [70-01] FK retrofit uses raw DBAPI cursor for PRAGMA hygiene (SQLA 2.x autobegin conflict)
 
 ### Pending Todos
 
@@ -105,6 +107,6 @@ Items carried forward from v4.8 close (2026-05-14):
 
 ## Session Continuity
 
-Last session: 2026-05-15T11:30:38.744Z
+Last session: 2026-05-15T12:05:52.188Z
 Stopped at: Phase 70 context gathered
 Next action: `/gsd-plan-phase 69` (Deferred BLOCKERs — Scanner + Cloud)

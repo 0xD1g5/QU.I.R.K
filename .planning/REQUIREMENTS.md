@@ -18,7 +18,7 @@
 - [ ] **BLOCK-04**: Azure Blob connector distinguishes platform-managed key (Microsoft.Storage) from absent key_source state in both severity and description output (closes scanners-cloud/CR-10)
 - [ ] **BLOCK-05**: Cache._is_fresh treats ttl_hours ≤ 0 as "never fresh" (cache disabled) per documented operator semantics (closes scanners-cloud/CR-06)
 - [ ] **BLOCK-06**: TokenBucket.acquire raises on n > capacity instead of looping forever; contention starvation eliminated via fair queue or equivalent guard (closes scanners-cloud/CR-07, CR-08)
-- [ ] **BLOCK-07**: QRAMMProfile.session_id has a DB-level FK constraint; delete_session nulls the reverse profile_id pointer to prevent dangling references (closes api-cli-core/CR-04, CR-05)
+- [x] **BLOCK-07**: QRAMMProfile.session_id has a DB-level FK constraint; delete_session nulls the reverse profile_id pointer to prevent dangling references (closes api-cli-core/CR-04, CR-05)
 - [ ] **BLOCK-08**: Bare except in classifier invocation replaced with specific logged exception; DDL col_type string validated before interpolation into ALTER TABLE (closes api-cli-core/CR-06, CR-07)
 
 ### PROTO — Scanner-Protocol WARNINGs
@@ -110,7 +110,7 @@ These items were considered but deferred beyond v4.9:
 | BLOCK-04 | Phase 69 | Pending |
 | BLOCK-05 | Phase 69 | Pending |
 | BLOCK-06 | Phase 69 | Pending |
-| BLOCK-07 | Phase 70 | Pending |
+| BLOCK-07 | Phase 70 | Complete |
 | BLOCK-08 | Phase 70 | Pending |
 | PROTO-01 | Phase 71 | Pending |
 | PROTO-02 | Phase 71 | Pending |
