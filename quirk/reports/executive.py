@@ -8,6 +8,9 @@ from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.assessment.migration_advisor import recommend_migration_paths
 
+# D-07 / WR-09 (Phase 73): fallback bullet when score dict is malformed.
+_INTERPRETATION_UNAVAILABLE = "Score data unavailable for this run."
+
 
 def _build_interpretation(
     evidence: Dict[str, Any],
@@ -25,9 +28,13 @@ def _build_interpretation(
 
     bullets: List[str] = []
 
-    # Score framing
+    # Score framing — D-07 / WR-09 guard: score may be None, non-dict, or missing 'score' key.
+    score_val = score.get("score") if isinstance(score, dict) else None
+    if score_val is None:
+        return {"bullets": [_INTERPRETATION_UNAVAILABLE]}
+    rating_val = score.get("rating", "Unknown")
     bullets.append(
-        f"Quantum Readiness Score is **{score['score']}/100** (**{score['rating']}**)."
+        f"Quantum Readiness Score is **{score_val}/100** (**{rating_val}**)."
     )
 
     # Drivers (top 3) — dict-based access (Pitfall 1: NOT tuple unpacking)
