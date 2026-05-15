@@ -11,7 +11,7 @@ from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.util.safe_exc import safe_str
 
-logger = logging.getLogger(__name__)
+_LOG = logging.getLogger(__name__)
 
 
 def _run_ssh_audit(host: str, port: int, timeout: int) -> Optional[dict]:
@@ -36,7 +36,7 @@ def _run_ssh_audit(host: str, port: int, timeout: int) -> Optional[dict]:
         OSError,
         json.JSONDecodeError,
     ) as e:
-        logger.warning(
+        _LOG.warning(
             "subprocess failed in _run_ssh_audit for %s:%s: %s", host, port, e
         )
         return None

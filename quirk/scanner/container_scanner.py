@@ -13,7 +13,7 @@ from typing import List, Optional
 from quirk.models import CryptoEndpoint
 from quirk.util.subprocess_input import validate_image_ref
 
-logger = logging.getLogger(__name__)
+_LOG = logging.getLogger(__name__)
 
 # Only these package names are considered crypto libraries.
 # Checked against artifact["name"].lower().
@@ -95,7 +95,7 @@ def scan_container_image(
         OSError,
         json.JSONDecodeError,
     ) as e:
-        logger.warning(
+        _LOG.warning(
             "subprocess failed in scan_container_image for %r: %s", image_ref, e
         )
         return []
