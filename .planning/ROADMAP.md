@@ -1574,6 +1574,7 @@ Plans:
   3. Certificate Subject CN regex handles RFC 2253-escaped commas correctly; CBOM Cytoscape registration cast is replaced with proper TypeScript typing; `ScorecardTab` Maturity Distribution width math and badge classes produce the correct visual output
 **Plans**: TBD
 **UI hint**: yes
+**Status**: ✅ Complete (2026-05-15) — 11/11 WR rows closed (WR-02/04..13)
 
 ### Phase 77: INFO/Code Quality + Audit Ledger Closure
 **Goal**: All four INFO/code-quality requirement groups are addressed across the four subsystems (protocol scanner, CBOM/intelligence, API/CLI, React frontend), and AUDIT-TASKS.md is brought to zero bare-open rows — every one of the 169 findings carries an explicit closed, deferred, or wont-fix disposition. Closes audit findings scanners-protocol/IN-01..06, cbom-intel-reports/IN-01..09, api-cli-core/IN-01..07, react-frontend/IN-01..07, and LEDGER-01.
@@ -1586,6 +1587,20 @@ Plans:
   4. All 7 React frontend INFOs are closed: qramm-assessment tab count comment corrected, cbom extension error logged, findings/identity columns memoized, `useQRAMMSession` seededRef reset on New Assessment, cbom compByAlg variance tracked, print `createElement` replaced, `useScanData` propagates fetch URL into errors
   5. `AUDIT-TASKS.md` has zero rows in `[ ] open` state — every finding is `[x] closed`, `[ ] deferred-*`, or `[ ] wont-fix` with rationale
 **Plans**: TBD
+
+### Phase 999.83: Chaos Lab Service Config Drift
+**Goal**: All four pre-existing chaos lab service config drift bugs are fixed — `./lab.sh all` on macOS produces 64 of 64 running containers with all seed containers exiting cleanly (exit 0), and no `unhealthy` or `crashed` services. Specifically: gitea no longer crashes on root-user check, minio-seed completes auto-encryption setup, vault-seed completes transit key creation, and mysql-ssl-off accepts its TLS-disable configuration. Promoted from BACK-90 (filed 2026-05-15 after BACK-89 work made `lab.sh all` reach completion for the first time and exposed the cluster).
+**Depends on**: None (chaos lab is self-contained; commit `9cdd7e3` provides the prerequisite working `lab.sh all` baseline)
+**Requirements**: BACK-90 (see v4.8-ROADMAP.md backlog row for full bug-by-bug context, log excerpts, and proposed fixes)
+**Success Criteria** (what must be TRUE):
+  1. `gitea` (profile: source) — service stays `Up (healthy)`; admin user `admin/admin123` exists; `gitea-seed` completes `Exited (0)` having created its crypto-antipattern repos. Image still pinned to `gitea/gitea:1.21` or later; fix achieved without downgrading to a pre-1.21 version
+  2. `minio-seed` (profile: storage-s3) — `Exited (0)` with the `encrypted-bucket` carrying server-side encryption configured. Either: (a) `minio` service has KMS env vars set and the auto-encryption step succeeds; or (b) the auto-encryption step is removed from `storage/seed.sh` with a rationale comment explaining why it's not needed for current `expected_results_v4.md` findings
+  3. `vault-seed` (profile: storage, deprecated) — `Exited (0)` with the transit key created. Either: (a) `vault/seed.sh` uses `rsa-2048` instead of `rsa-1024` and the corresponding QRAMM finding still triggers on sub-3072 RSA; or (b) `rsa-1024` is imported externally via `transit/keys/<name>/import`; or (c) the deprecated `storage` profile is removed entirely with the README and oracle updated
+  4. `mysql-ssl-off` (profile: database) — service stays `Up`; QUIRK scanner reports it as plaintext/SSL-off as before. Fix uses one of: (a) pin `mysql:8.0` (last version supporting `--skip-ssl`); or (b) keep 8.4 and switch to `--require-secure-transport=OFF` removing `--skip-ssl`. Image pin made explicit either way
+  5. `expected_results_v4.md` findings for profiles `source`, `storage-s3`, `storage`, `database` are unchanged compared to the pre-fix oracle (or updated with an explicit rationale per change). `quirk scan` against any of these profiles produces the same finding count and severities as documented in the v4.4-v4.5 oracle
+  6. `lab.sh down && lab.sh all` end-to-end on macOS: zero containers in `Exited (1)`, `Exited (2)`, or `unhealthy` state after 60s settle. CLAUDE.md chaos-lab maintenance rule satisfied: README and oracle reflect any version pins or config changes
+**Plans**: TBD
+**Provenance**: Discovered 2026-05-15 during BACK-89 verification. Original log evidence and root-cause analysis captured in v4.8-ROADMAP.md BACK-90 row.
 
 ## Progress — v4.9 Phases
 
