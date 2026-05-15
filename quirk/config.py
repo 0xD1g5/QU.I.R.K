@@ -196,6 +196,8 @@ class ConnectorsCfg:
     enable_jwt: bool = False
     enable_container: bool = False
     enable_source: bool = False
+    # Phase 75 / APCL-04 / WR-12 (D-13): declared nmap toggle (replaces setattr injection)
+    enable_nmap: bool = False
     # AWS connector config (per D-15)
     aws_region: str = "us-east-1"
     aws_profile: Optional[str] = None

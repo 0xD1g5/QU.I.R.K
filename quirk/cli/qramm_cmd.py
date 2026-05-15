@@ -12,10 +12,13 @@ for date-only arithmetic.
 from __future__ import annotations
 
 import datetime
+import logging
 import os
 import sys
 
 from quirk.qramm.model_meta import QRAMM_MODEL, STALENESS_THRESHOLD_DAYS
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_today() -> datetime.date:
@@ -25,10 +28,16 @@ def _resolve_today() -> datetime.date:
     Override semantics match the pytest gate (test_qramm_staleness.py) so
     `QUIRK_CI_STALENESS_OVERRIDE_DATE=2026-09-01 quirk qramm status` and
     the corresponding pytest run agree on the verdict.
+
+    Phase 75 / WR-14 / D-15: malformed override values are logged and the
+    function falls back to datetime.date.today() rather than raising.
     """
     override = os.environ.get("QUIRK_CI_STALENESS_OVERRIDE_DATE")
     if override:
-        return datetime.date.fromisoformat(override)
+        try:
+            return datetime.date.fromisoformat(override)
+        except (ValueError, KeyError) as e:
+            logger.warning("QRAMM cmd env override invalid: %s", e)
     return datetime.date.today()
 
 

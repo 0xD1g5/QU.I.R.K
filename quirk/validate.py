@@ -115,6 +115,7 @@ def validate_run(output_dir: Path) -> ValidationResult:
         return ValidationResult(False, ["Could not parse timestamp from intelligence file"], [])
 
     expected_files = [
+        f"intelligence-{stamp}.json",  # Phase 75 / WR-13 / D-14
         f"findings-{stamp}.json",
         f"executive-summary-{stamp}.md",
         f"technical-findings-{stamp}.md",
