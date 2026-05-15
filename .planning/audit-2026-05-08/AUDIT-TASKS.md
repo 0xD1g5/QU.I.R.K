@@ -219,13 +219,13 @@ wont_fix: 1
 | react-frontend/BR-05 | BLOCKER | /print data-ready sentinel never reset — stale on re-fetch | Phase 62 (HOOK-04) | [x] closed |
 | react-frontend/BR-06 | BLOCKER | System theme not reactive — prefers-color-scheme read once | Phase 62 (HOOK-04) | [x] closed |
 | react-frontend/WR-01 | WARNING | useQRAMMSession setError/setSession run without cancellation guard | Phase 62 (HOOK-01) | [x] closed |
-| react-frontend/WR-02 | WARNING | useScanList silently swallows non-OK responses | — | [ ] open |
+| react-frontend/WR-02 | WARNING | useScanList silently swallows non-OK responses | Phase 76 | [x] closed |
 | react-frontend/WR-03 | WARNING | Pending QRAMM debounce timers leak on provider unmount | Phase 62 (HOOK-03) | [x] closed |
 | react-frontend/WR-04 | WARNING | theme-provider casts localStorage value to Theme without validation | — | [ ] open |
 | react-frontend/WR-05 | WARNING | executive PDF download setTimeout revoke leaks across unmount | — | [ ] open |
-| react-frontend/WR-06 | WARNING | executive reads body.detail without coercion check | — | [ ] open |
-| react-frontend/WR-07 | WARNING | print data-ready set even when QRAMM has errored | — | [ ] open |
-| react-frontend/WR-08 | WARNING | qramm-profile submitError swallows actual error message | — | [ ] open |
+| react-frontend/WR-06 | WARNING | executive reads body.detail without coercion check | Phase 76 | [x] closed |
+| react-frontend/WR-07 | WARNING | print data-ready set even when QRAMM has errored | Phase 76 | [x] closed |
+| react-frontend/WR-08 | WARNING | qramm-profile submitError swallows actual error message | Phase 76 | [x] closed |
 | react-frontend/WR-09 | WARNING | certificates Subject CN regex breaks on RFC2253-escaped commas | — | [ ] open |
 | react-frontend/WR-10 | WARNING | cbom Cytoscape registration uses cast without proper typing | — | [ ] open |
 | react-frontend/WR-11 | WARNING | ScorecardTab Maturity Distribution width math hardcodes /4 | — | [ ] open |
