@@ -1466,7 +1466,7 @@ Plans:
 - [ ] **Phase 72: Cloud Scanner WARNINGs** - AWS/Azure/GCP data correctness, Cache/scope_hash robustness, profiles.py mutations, Vault/DB connector hardening
 - [ ] **Phase 73: CBOM + Intelligence + Reports WARNINGs** - PDF resource cleanup, weak-crypto predicate consistency, score weight normalization, cipher label correctness
 - [ ] **Phase 74: QRAMM + Compliance WARNINGs** - Practice score validation, evidence bridge TZ safety, migration advisor precision, model_meta helper, stale comment removal
-- [ ] **Phase 75: API + CLI + Core WARNINGs** - doctor checks, scan-id microsecond safety, list_scans grouping, QRAMM error handling, interactive/validate/route input hardening
+- [x] **Phase 75: API + CLI + Core WARNINGs** - doctor checks, scan-id microsecond safety, list_scans grouping, QRAMM error handling, interactive/validate/route input hardening (completed 2026-05-15)
 - [ ] **Phase 76: React Frontend WARNINGs** - API error surfacing, localStorage validation, PDF revoke-on-unmount, ComplianceMapTab dep fix, cert regex, CBOM typing, scorecard math
 - [ ] **Phase 77: INFO/Code Quality + Audit Ledger Closure** - Protocol/CBOM/API/React INFOs, AUDIT-TASKS.md fully triaged to zero bare-open rows
 
@@ -1597,6 +1597,6 @@ Plans:
 | 72. Cloud Scanner WARNINGs | 5/5 | Complete   | 2026-05-15 |
 | 73. CBOM + Intelligence + Reports WARNINGs | 3/3 | Complete   | 2026-05-15 |
 | 74. QRAMM + Compliance WARNINGs | 3/3 | Complete   | 2026-05-15 |
-| 75. API + CLI + Core WARNINGs | 0/TBD | Not started | - |
+| 75. API + CLI + Core WARNINGs | 4/4 | Complete   | 2026-05-15 |
 | 76. React Frontend WARNINGs | 0/TBD | Not started | - |
 | 77. INFO/Code Quality + Audit Ledger Closure | 0/TBD | Not started | - |

@@ -54,7 +54,7 @@
 - [ ] **APCL-01**: quirk doctor _check_dashboard and _check_network return meaningful status; _check_db uses QUIRK_DB_PATH; _default_db_path uses deterministic selection (closes api-cli-core/WR-01, WR-02, WR-03)
 - [ ] **APCL-02**: get_latest_scan ?scan_id= time-window is microsecond-safe; list_scans groups by parsed timestamp not formatted string; compute_overall_score multiplier validated server-side (closes api-cli-core/WR-04, WR-05, WR-06)
 - [ ] **APCL-03**: routes/qramm read_session returns structured error on JSON corruption; _derive_dar_findings bare except replaced with logged exception; routes/qramm list_questions handles QRAMM_QUESTIONS schema drift gracefully (closes api-cli-core/WR-07, WR-08, WR-17)
-- [ ] **APCL-04**: interactive _prompt_int handles EOF without infinite loop; exposure default validated not silently applied; setattr nmap injection replaced with ConnectorsCfg field; validate.py artifact list includes intelligence-{stamp}.json; qramm_cmd env override has try/except; routes/scan QUIRK_OUTPUT_DIR input validated; parse_target_tokens validates hostname format (closes api-cli-core/WR-10, WR-11, WR-12, WR-13, WR-14, WR-15, WR-16)
+- [x] **APCL-04**: interactive _prompt_int handles EOF without infinite loop; exposure default validated not silently applied; setattr nmap injection replaced with ConnectorsCfg field; validate.py artifact list includes intelligence-{stamp}.json; qramm_cmd env override has try/except; routes/scan QUIRK_OUTPUT_DIR input validated; parse_target_tokens validates hostname format (closes api-cli-core/WR-10, WR-11, WR-12, WR-13, WR-14, WR-15, WR-16)
 
 ### REACT — React Frontend WARNINGs
 
@@ -131,7 +131,7 @@ These items were considered but deferred beyond v4.9:
 | APCL-01 | Phase 75 | Pending |
 | APCL-02 | Phase 75 | Pending |
 | APCL-03 | Phase 75 | Pending |
-| APCL-04 | Phase 75 | Pending |
+| APCL-04 | Phase 75 | Complete |
 | REACT-01 | Phase 76 | Pending |
 | REACT-02 | Phase 76 | Pending |
 | REACT-03 | Phase 76 | Pending |
