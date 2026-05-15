@@ -5,6 +5,7 @@ usage in source repositories. Returns one CryptoEndpoint per finding.
 Degrades gracefully if semgrep is absent.
 """
 import json
+import logging
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -12,6 +13,8 @@ from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
 from quirk.util.subprocess_input import validate_repo_path
+
+logger = logging.getLogger(__name__)
 
 
 def scan_source_repo(
@@ -62,7 +65,16 @@ def scan_source_repo(
             timeout=timeout,
         )
         data = json.loads(proc.stdout)
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+    except (
+        subprocess.TimeoutExpired,
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        OSError,
+        json.JSONDecodeError,
+    ) as e:
+        logger.warning(
+            "subprocess failed in scan_source_repo for %r: %s", repo_path, e
+        )
         return []
 
     endpoints: List[CryptoEndpoint] = []
