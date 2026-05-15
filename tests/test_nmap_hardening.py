@@ -57,6 +57,27 @@ def test_safe_nmap_arg_re_rejects_injection(token):
     assert not _SAFE_NMAP_ARG_RE.match(token), f"unsafe token accepted: {token!r}"
 
 
+def test_run_nmap_discovery_rejects_trailing_newline_extra_arg(monkeypatch, tmp_path):
+    """Regression for WR-1 (Phase 71 review): a token with a trailing newline
+    must be rejected. Python's `$` in non-MULTILINE mode matches before a final
+    `\\n`, so `.match()` would let `"abc\\n-O"` through. The validation site
+    uses `.fullmatch()` to close this gap. Monkeypatch subprocess.run so the
+    test fails loudly if we ever reach the spawn site."""
+
+    def boom(*a, **kw):
+        raise AssertionError("subprocess.run reached despite unsafe extra_args")
+
+    monkeypatch.setattr(subprocess, "run", boom)
+
+    with pytest.raises(ValueError, match="Unsafe nmap extra arg"):
+        run_nmap_discovery(
+            targets=["127.0.0.1"],
+            ports=[443],
+            output_dir=str(tmp_path),
+            extra_args=["abc\n-O"],
+        )
+
+
 def test_run_nmap_discovery_rejects_unsafe_extra_args(monkeypatch, tmp_path):
     """Validation MUST run before subprocess; we monkeypatch subprocess.run to
     raise so the test proves we never reached it."""
