@@ -91,7 +91,10 @@ def run_nmap_discovery(
         # BEFORE subprocess. Mirrors `_SAFE_COL_TYPE_RE` defense-in-depth
         # pattern from Phase 70. Reject loudly — no quoting / escaping.
         for token in extra_args:
-            if not _SAFE_NMAP_ARG_RE.match(token):
+            # Use fullmatch (not match) so the trailing `$` cannot match before
+            # a final `\n` — a token like "foo\n-O" would otherwise slip the
+            # allowlist (re audit WR-1, Phase 71 review).
+            if not _SAFE_NMAP_ARG_RE.fullmatch(token):
                 raise ValueError(f"Unsafe nmap extra arg: {token!r}")
         # allow user overrides like: ["-sS"] if running admin/root
         args.extend(extra_args)
