@@ -1513,7 +1513,12 @@ Plans:
   3. `nmap_provider.run_nmap_discovery` validates `extra_args` against a character allowlist and raises on violation; nmap XML is parsed via `defusedxml` (not stdlib ET); default port CSV is correct
   4. DNSSEC `_parse_dnskeys` key_bytes access is bounded; Kerberos decode errors are logged; Kerberos nonce uses `secrets.token_bytes`; SAML JSON parse has a byte-size cap
   5. Optional-dep extras messaging is consistent across email/broker/container/source scanners; email/broker `ThreadPool max_workers` is configurable via `ScanCfg`; `discovery/tls_scanner.py` duplicate is deleted; `target_expander` dedup is stable, CIDR expansion bounded, type confusion resolved
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 71-01-PLAN.md — calculate_coverage clamp + case-insensitive severity in quantum_readiness_score (PROTO-01, closes WR-01/02)
+  - [ ] 71-02-PLAN.md — Narrow WR-03 subprocess except + module logger in fingerprint scanner (PROTO-02, closes WR-03)
+  - [ ] 71-03-PLAN.md — nmap default port CSV + extra_args allowlist + defusedxml parser (PROTO-03, closes WR-04/05/06)
+  - [ ] 71-04-PLAN.md — DNSSEC bound + Kerberos decode-log + secrets nonce + SAML JSON byte cap (PROTO-04, closes WR-07/08/09/10)
+  - [ ] 71-05-PLAN.md — Unified extras messaging + ScanCfg.motion_concurrency + delete tls_scanner dup + target_expander cap/dedup/normalize (PROTO-05, closes WR-11/12/13/14)
 
 ### Phase 72: Cloud Scanner WARNINGs
 **Goal**: All five WARNING clusters in the cloud scanner subsystem are resolved — AWS/Azure/GCP data correctness, Cache and scope_hash robustness, profiles.py mutation guards, and Vault/DB connector hardening. Closes audit findings scanners-cloud/WR-01 through WR-24.
