@@ -2,6 +2,19 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Tuple
 
+# SCORE_WEIGHTS invariant (D-04, WR-06 — Phase 73 documentation, NOT normalization)
+# ----------------------------------------------------------------------------
+# These values are ABSOLUTE per-ratio coefficients, NOT probabilities, NOT
+# a normalized PMF. Their sum is 261.0 BY DESIGN.
+#
+# The total_score arithmetic below already clamps to [0, 100] (closed by
+# Phase 60 SCORE-01) and `_apply_weighted_impacts` shares score caps across
+# these weights — see Phase 60 SCORE-04 / CR-06 closure for the cap-sharing
+# rationale that this docstring deliberately preserves.
+#
+# Any contributor adding, removing, or modifying a weight value MUST update
+# `tests/test_score_weights_invariant.py` to match the new expected sum.
+# CI will fail loudly otherwise.
 SCORE_WEIGHTS: Dict[str, float] = {
     "hygiene_plaintext_http_ratio": 18.0,
     "hygiene_http_on_tls_ratio": 16.0,
