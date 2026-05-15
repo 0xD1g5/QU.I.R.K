@@ -51,6 +51,20 @@ router = APIRouter(dependencies=[Depends(require_auth), Depends(require_csrf)])
 logger = logging.getLogger(__name__)
 
 
+# ---------- Phase 77 D-19 (api-cli-core/IN-04): QRAMM multiplier clamp constants ----------
+# RESEARCH C-2 location adjudication: these constants live HERE in routes/qramm.py,
+# NOT in quirk/qramm/scoring.py (CONTEXT D-19 misread the source).
+# Lineage:
+#   Phase 54 introduced the profile multiplier ([0.8, 1.5] clamp band).
+#   Phase 75-02 D-06 (WR-06) confirmed [0.8, 1.5] server-side validation
+#                  + WR-09 ordered clamp-before-round for boundary safety.
+# Closes api-cli-core/IN-04.
+MULTIPLIER_MIN: float = 0.8
+MULTIPLIER_MAX: float = 1.5
+MULTIPLIER_LOW_STEP: float = 0.10
+MULTIPLIER_HIGH_STEP: float = 0.20
+
+
 # ---------- Pydantic models (inline per D-11) ----------
 
 class CreateSessionRequest(BaseModel):
@@ -99,6 +113,28 @@ class ScoreRequest(BaseModel):
         description="Profile risk multiplier. Valid range: [0.8, 1.5]. "
                     "Values outside this range return HTTP 400 (QRK-DASHBOARD-010).",
     )
+
+
+class QrammScoreResponse(BaseModel):
+    """Public QRAMM scoring response (Phase 77 D-16 / api-cli-core/IN-01).
+
+    Narrows the prior ``Dict[str, Any]`` return on
+    POST /qramm/sessions/{session_id}/score to an explicit Pydantic model.
+    Full TypedDict migration for the remaining ``Dict[str, Any]`` sites in this
+    module is deferred to v5.0 per CONTEXT Deferred Ideas (Discretion D-16).
+
+    Field shape mirrors the response dict built at the score_session return
+    site exactly — no field renames, no new fields, no removals.
+    """
+    session_id: int
+    overall: float
+    maturity: str
+    # ``dimensions`` is a 4-key mapping (CVI/SGRM/DPE/ITR) where each value is
+    # a per-dimension breakdown {score, weighted, practices}. Schema-narrowing
+    # the inner shape is deferred to v5.0 alongside the rest of the Dict[str,
+    # Any] sites.
+    dimensions: Dict[str, Any]
+    profile_multiplier: float
 
 
 # ---------- Phase 54 Plan 01: new Pydantic models ----------
@@ -169,11 +205,11 @@ _INDUSTRY_BASE = {
     "other":              1.00,
 }
 _SENSITIVITY_DELTA = {
-    "public":              -0.10,
+    "public":              -MULTIPLIER_LOW_STEP,
     "internal":             0.00,
-    "confidential":         0.10,
-    "restricted_secret":    0.20,
-    "restricted":           0.20,  # alias
+    "confidential":         MULTIPLIER_LOW_STEP,
+    "restricted_secret":    MULTIPLIER_HIGH_STEP,
+    "restricted":           MULTIPLIER_HIGH_STEP,  # alias
 }
 
 
@@ -189,8 +225,8 @@ def _compute_multiplier(industry: str, data_sensitivity: str) -> float:
     base = _INDUSTRY_BASE.get(industry, 1.00)
     delta = _SENSITIVITY_DELTA.get(data_sensitivity, 0.0)
     value = base + delta
-    # Clamp to spec range 0.8-1.5 BEFORE rounding (D-07)
-    clamped = max(0.8, min(1.5, value))
+    # Clamp to spec range [MULTIPLIER_MIN, MULTIPLIER_MAX] BEFORE rounding (Phase 75-02 D-07)
+    clamped = max(MULTIPLIER_MIN, min(MULTIPLIER_MAX, value))
     return round(clamped, 2)
 
 
@@ -350,12 +386,12 @@ def save_answers(
     )
 
 
-@router.post("/qramm/sessions/{session_id}/score")
+@router.post("/qramm/sessions/{session_id}/score", response_model=QrammScoreResponse)
 def score_session(
     session_id: int,
     payload: Optional[ScoreRequest] = None,
     db: Session = Depends(get_db),
-) -> Dict[str, Any]:
+) -> QrammScoreResponse:
     # Phase 75-02 D-06 (WR-06): validate multiplier server-side BEFORE any DB access.
     # Range stays [0.8, 1.5] per Phase 54 spec + RESEARCH C-2 + user override
     # (NOT widened to [0.0, 4.0]). isinstance + bool guard is defense in depth —
@@ -365,13 +401,13 @@ def score_session(
         if (
             isinstance(multiplier, bool)
             or not isinstance(multiplier, (int, float))
-            or not (0.8 <= multiplier <= 1.5)
+            or not (MULTIPLIER_MIN <= multiplier <= MULTIPLIER_MAX)
         ):
             raise HTTPException(
                 status_code=400,
                 detail=(
                     f'{format_error("DASHBOARD-010")} '
-                    "multiplier must be numeric in [0.8, 1.5]"
+                    f"multiplier must be numeric in [{MULTIPLIER_MIN}, {MULTIPLIER_MAX}]"
                 ),
             )
     session = _get_session_or_404(db, session_id)
@@ -421,16 +457,17 @@ def score_session(
             "practices": dim_to_practices.get(dim, {}),
         }
 
-    response: Dict[str, Any] = {
-        "session_id": session_id,
-        "overall": overall_block["overall"],
-        "maturity": overall_block["maturity"],
-        "dimensions": dim_breakdown,
-        "profile_multiplier": float(multiplier),
-    }
+    response = QrammScoreResponse(
+        session_id=session_id,
+        overall=overall_block["overall"],
+        maturity=overall_block["maturity"],
+        dimensions=dim_breakdown,
+        profile_multiplier=float(multiplier),
+    )
 
-    # Persist
-    session.score_json = json.dumps(response, default=str)
+    # Persist (Phase 77 D-16: serialize the typed model for round-trip stability
+    # with read_session, which expects the same key set under session.score_json).
+    session.score_json = json.dumps(response.model_dump(), default=str)
     session.status = "scored"
     session.updated_at = _now_iso()
     db.commit()
