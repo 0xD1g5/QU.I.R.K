@@ -108,7 +108,12 @@ def _http_probe_plain(host: str, port: int, timeout: int) -> tuple[bool, str]:
 
     try:
         with s:
-            req = b"GET / HTTP/1.0\r\nHost: localhost\r\nUser-Agent: quirk\r\n\r\n"
+            # Phase 77 D-04 — closes scanners-protocol/IN-04: send the target
+            # hostname (not the literal "localhost") so virtual-host-routed
+            # servers respond against the right vhost.
+            req = (
+                f"GET / HTTP/1.0\r\nHost: {host}\r\nUser-Agent: quirk\r\n\r\n"
+            ).encode("ascii", errors="replace")
             s.sendall(req)
             data = s.recv(512)
 

@@ -13,6 +13,10 @@ from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.scanner.tls_capabilities import enumerate_tls_capabilities
 from quirk.util.safe_exc import safe_str
+from quirk.util.weak_crypto import (  # Phase 77 D-05 — closes scanners-protocol/IN-05
+    is_pfs_cipher,
+    is_weak_cipher_classification,
+)
 
 # ---------------------------------------------------------------------------
 # sslyze optional import
@@ -245,21 +249,11 @@ def _scan_one_sslyze(
         weak_present = False
         legacy_suites = False
 
-        def _is_pfs(name: str) -> bool:
-            upper = name.upper()
-            return "ECDHE" in upper or "DHE" in upper
-
-        weak_markers = ("RC4", "3DES", "CBC3", "NULL", "EXPORT", "MD5")
-
-        def _is_weak(name: str) -> bool:
-            upper = name.upper()
-            return any(m in upper for m in weak_markers)
-
         def _is_legacy_suite(name: str) -> bool:
             upper = name.upper()
             if upper in {"AES128-SHA", "AES256-SHA"}:
                 return True
-            if "CBC" in upper and not _is_pfs(upper):
+            if "CBC" in upper and not is_pfs_cipher(upper):
                 return True
             return False
 
@@ -284,9 +278,9 @@ def _scan_one_sslyze(
                     highest_version = version_label
 
                 for cipher_name in names:
-                    if _is_pfs(cipher_name):
+                    if is_pfs_cipher(cipher_name):
                         pfs_supported = True
-                    if _is_weak(cipher_name):
+                    if is_weak_cipher_classification(cipher_name):
                         weak_present = True
                     if _is_legacy_suite(cipher_name):
                         legacy_suites = True

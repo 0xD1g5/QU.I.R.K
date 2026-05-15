@@ -48,7 +48,9 @@ DNSSEC_ALG_MAP: dict = {
     6:  ("DSA-NSEC3-SHA1",      "CRITICAL"),
     7:  ("RSASHA1-NSEC3-SHA1",  "CRITICAL"),
     8:  ("RSASHA256",           "HIGH"),
+    9:  ("Reserved",            "HIGH"),       # IANA Reserved per RFC 8624 — closes scanners-protocol/IN-02 (Phase 77 D-02)
     10: ("RSASHA512",           "HIGH"),
+    11: ("Reserved",            "HIGH"),       # IANA Reserved per RFC 8624
     12: ("ECC-GOST",            "CRITICAL"),
     13: ("ECDSAP256SHA256",     "SAFE"),
     14: ("ECDSAP384SHA384",     "SAFE"),

@@ -26,6 +26,10 @@ from quirk.models import CryptoEndpoint
 from quirk.logging_util import Logger
 from quirk.scanner.tls_scanner import _pubkey_info, _extract_sans  # D-10: reuse, do NOT duplicate
 from quirk.util.safe_exc import safe_str
+from quirk.util.weak_crypto import (  # Phase 77 D-05 — closes scanners-protocol/IN-05
+    is_pfs_cipher,
+    is_weak_cipher_classification,
+)
 
 # ---------------------------------------------------------------------------
 # sslyze optional import (mirrors tls_scanner.py guard, plus
@@ -98,16 +102,6 @@ _EMAIL_PROTO_MAP = [
     ("tls_1_3_cipher_suites", "TLSv1.3", 4),
     ("tls_1_2_cipher_suites", "TLSv1.2", 3),
 ]
-
-
-def _is_pfs(name: str) -> bool:
-    upper = name.upper()
-    return "ECDHE" in upper or "DHE" in upper
-
-
-def _is_weak(name: str) -> bool:
-    upper = name.upper()
-    return any(m in upper for m in ("RC4", "3DES", "CBC3", "NULL", "EXPORT", "MD5"))
 
 
 def _scan_one_sslyze_email(
@@ -202,9 +196,9 @@ def _scan_one_sslyze_email(
                     highest_priority = priority
                     highest_version = version_label
                 for cipher_name in names:
-                    if _is_pfs(cipher_name):
+                    if is_pfs_cipher(cipher_name):
                         pfs_supported = True
-                    if _is_weak(cipher_name):
+                    if is_weak_cipher_classification(cipher_name):
                         weak_present = True
 
         ep.tls_version = highest_version
@@ -410,8 +404,8 @@ def _scan_one_fallback_email(
         ep.cipher_suite = cipher_name
 
         if cipher_name:
-            ep.tls_pfs_supported = _is_pfs(cipher_name)
-            ep.tls_weak_ciphers_present = _is_weak(cipher_name)
+            ep.tls_pfs_supported = is_pfs_cipher(cipher_name)
+            ep.tls_weak_ciphers_present = is_weak_cipher_classification(cipher_name)
 
         if der and isinstance(der, (bytes, bytearray)):
             try:

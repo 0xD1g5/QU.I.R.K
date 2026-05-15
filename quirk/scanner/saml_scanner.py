@@ -40,6 +40,7 @@ from cryptography.x509 import load_der_x509_certificate
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from quirk.models import CryptoEndpoint
 from quirk.util.url_allowlist import validate_external_url
+from quirk.assessment.migration_advisor import _matches  # Phase 77 D-03 — word-boundary SHA1 detection
 
 try:
     import httpx
@@ -182,10 +183,13 @@ def _parse_cert_element(cert_b64_text: str) -> "dict | None":
 def _is_sha1_uri(uri: str) -> bool:
     """Return True if uri contains a SHA-1 algorithm indicator (D-05).
 
-    Checks for 'sha1' or 'sha-1' (case-insensitive) anywhere in the URI string.
+    Phase 77 D-03 — closes scanners-protocol/IN-03: replaces the previous
+    substring scan (which mis-matched ``SHA1024`` as a SHA-1 indicator) with
+    the Phase 74 ``_matches`` word-boundary helper. The helper consults
+    ``CANONICAL_ALG_SYNONYMS["SHA1"]`` which covers both ``SHA1`` and
+    ``SHA-1`` variants.
     """
-    lower = uri.lower()
-    return any(ind in lower for ind in SHA1_INDICATORS)
+    return _matches("SHA1", uri)
 
 
 def _classify_key_severity(key_alg: str, key_bits: "int | None") -> "str | None":

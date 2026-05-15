@@ -13,6 +13,7 @@ except ImportError:
     IMPACKET_AVAILABLE = False
     PyAsn1Error = Exception  # type: ignore[assignment,misc]  # fallback when impacket/pyasn1 absent
 
+import ipaddress  # Phase 77 D-06 — closes scanners-protocol/IN-06
 import json
 import logging
 import secrets
@@ -50,15 +51,23 @@ ALL_ETYPES = [17, 18, 20, 23, 1, 3]
 def _derive_realm(host: str) -> str:
     """Derive Kerberos realm from FQDN by uppercasing domain portion (per D-06).
 
-    For IP addresses (all-numeric octets), returns the address uppercased as-is.
+    For IP addresses (IPv4 or IPv6), returns the address uppercased as-is.
     For single-label hostnames, returns uppercased hostname.
     For FQDNs with >= 2 labels, returns the last two labels uppercased.
+
+    Phase 77 D-06 — closes scanners-protocol/IN-06: the previous
+    ``parts.isdigit()`` quad-form heuristic mis-classified IPv6 literals
+    like ``"::1"`` and any host whose label happened to be all-numeric.
+    Replaced with the stdlib ``ipaddress.ip_address`` strict parser
+    (RESEARCH Pattern 4).
     """
     stripped = host.strip()
-    parts = stripped.split(".")
-    # Detect IPv4 address: all parts are numeric
-    if len(parts) == 4 and all(p.isdigit() for p in parts):
+    try:
+        ipaddress.ip_address(stripped)
         return stripped.upper()
+    except ValueError:
+        pass
+    parts = stripped.split(".")
     if len(parts) >= 2:
         return ".".join(parts[-2:]).upper()
     return stripped.upper()

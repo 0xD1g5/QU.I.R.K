@@ -49,6 +49,9 @@ def _try_handshake(
     Attempt a TLS handshake using standard library ssl.
     Returns: (success, negotiated_version, negotiated_cipher_tuple)
     """
+    # WHY: This function intentionally probes deprecated TLS bands (1.0 / 1.1)
+    # to inventory legacy-server posture for the CBOM. It is NOT a real
+    # handshake-downgrade — closes scanners-protocol/IN-01 (Phase 77 D-01).
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
