@@ -85,15 +85,28 @@ def scan_pg_targets(
         port = int(port_str) if port_str.isdigit() else 5432
         ep_host = f"postgresql://{host}:{port}"
 
+        # Phase 72 D-20 / WR-07: password kwarg handling.
+        # password is None  -> omit kwarg entirely (libpq reads .pgpass / PGPASSWORD)
+        # password == ""    -> explicit empty-password attempt; pass through with INFO log
+        # password is set   -> pass through normally
+        pg_kwargs = dict(
+            host=host,
+            port=port,
+            user=user or "postgres",
+            connect_timeout=db_connect_timeout,
+            sslmode="disable",
+        )
+        if password is None:
+            pass  # libpq handles .pgpass / PGPASSWORD fallback
+        elif password == "":
+            if logger:
+                logger.v(f"PostgreSQL connect with explicit empty password (user={user or 'postgres'})")
+            pg_kwargs["password"] = ""
+        else:
+            pg_kwargs["password"] = password
+
         try:
-            conn = psycopg2.connect(
-                host=host,
-                port=port,
-                user=user or "postgres",
-                password=password or "",
-                connect_timeout=db_connect_timeout,
-                sslmode="disable",  # probe without SSL to check server-side config
-            )
+            conn = psycopg2.connect(**pg_kwargs)
             with conn:
                 with conn.cursor() as cur:
                     # Tier 1: server-level SSL enabled?
@@ -157,8 +170,9 @@ def scan_pg_targets(
                         ))
 
         except Exception as exc:
+            # Phase 72 D-21 / WR-08: route raw exception through safe_str before logging.
             if logger:
-                logger.v(f"PostgreSQL scan error for {ep_host}: {exc}")
+                logger.v(f"PostgreSQL scan error for {ep_host}: {safe_str(exc)}")
             results.append(CryptoEndpoint(
                 host=ep_host,
                 port=port,
@@ -210,15 +224,28 @@ def scan_mysql_targets(
         port = int(port_str) if port_str.isdigit() else 3306
         ep_host = f"mysql://{host}:{port}"
 
+        # Phase 72 D-20 / WR-07: password kwarg handling (mirrors postgres branch).
+        # password is None  -> omit kwarg entirely (lets pymysql read from defaults file / env)
+        # password == ""    -> explicit empty-password attempt; pass through with INFO log
+        # password is set   -> pass through normally
+        my_kwargs = dict(
+            host=host,
+            port=port,
+            user=user or "root",
+            connect_timeout=db_connect_timeout,
+            ssl_disabled=True,
+        )
+        if password is None:
+            pass  # pymysql will read from defaults file / env if configured
+        elif password == "":
+            if logger:
+                logger.v(f"MySQL connect with explicit empty password (user={user or 'root'})")
+            my_kwargs["password"] = ""
+        else:
+            my_kwargs["password"] = password
+
         try:
-            conn = pymysql.connect(
-                host=host,
-                port=port,
-                user=user or "root",
-                password=password or "",
-                connect_timeout=db_connect_timeout,
-                ssl_disabled=True,  # intentionally bypass SSL to query server status
-            )
+            conn = pymysql.connect(**my_kwargs)
             with conn:
                 with conn.cursor() as cur:
                     # NOTE: With ssl_disabled=True the scanner's own Ssl_cipher is always empty.
@@ -260,8 +287,9 @@ def scan_mysql_targets(
                         ))
 
         except Exception as exc:
+            # Phase 72 D-21 / WR-08: route raw exception through safe_str before logging.
             if logger:
-                logger.v(f"MySQL scan error for {ep_host}: {exc}")
+                logger.v(f"MySQL scan error for {ep_host}: {safe_str(exc)}")
             results.append(CryptoEndpoint(
                 host=ep_host,
                 port=port,
