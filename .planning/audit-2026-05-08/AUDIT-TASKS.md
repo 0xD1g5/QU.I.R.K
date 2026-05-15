@@ -86,7 +86,7 @@ wont_fix: 1
 | scanners-cloud/CR-06 | BLOCKER | Cache TTL boundary inverted on ttl_hours <= 0 | — | [ ] deferred-v4.9 |
 | scanners-cloud/CR-07 | BLOCKER | TokenBucket starvation when tokens > capacity requested | — | [ ] deferred-v4.9 |
 | scanners-cloud/CR-08 | BLOCKER | TokenBucket sleep + busy-wait can starve under contention | — | [ ] deferred-v4.9 |
-| scanners-cloud/CR-09 | BLOCKER | K8s scan_k8s_targets empty-list edge case violates K8S-03 | — | [ ] deferred-v4.9 |
+| scanners-cloud/CR-09 | BLOCKER | K8s scan_k8s_targets empty-list edge case violates K8S-03 | Phase 69 (BLOCK-03) | [x] closed — closed by Phase 69 (BLOCK-03 / CR-09): explicit empty-aks_clusters short-circuit added to scan_k8s_targets per locked decision D-09; returns [] without raising AttributeError and without emitting an inaccessible finding (that path reserved for credential=None / CR-03 / Phase 29). Test: tests/test_k8s_connector.py::test_aks_empty_cluster_list_returns_empty |
 | scanners-cloud/CR-10 | BLOCKER | Azure Blob key_source microsoft.storage conflated with absent | — | [ ] deferred-v4.9 |
 | scanners-cloud/WR-01 | WARNING | AWS _scan_acm may pass empty ARN to describe_certificate | — | [ ] open |
 | scanners-cloud/WR-02 | WARNING | AWS _scan_kms does not skip disabled or pending-deletion keys | — | [ ] open |
