@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy import inspect as sa_inspect
 
-from quirk.db import init_db, _ensure_phase46_columns
+from quirk.db import init_db, _ensure_columns, _PHASE46_COLUMNS
 from quirk.models import CryptoEndpoint
 
 
@@ -77,9 +77,9 @@ def test_migration_shim_idempotent():
     engine = init_db(db_path)
     # Call again on the already-migrated DB — must not raise.
     engine = init_db(db_path)
-    # And explicitly hammer the shim itself.
-    _ensure_phase46_columns(engine)
-    _ensure_phase46_columns(engine)
+    # And explicitly hammer the shim itself (Phase 77 D-21: now via generic helper).
+    _ensure_columns(engine, "crypto_endpoints", _PHASE46_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _PHASE46_COLUMNS)
     cols = [c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")]
     assert cols.count("chain_verified") == 1
 

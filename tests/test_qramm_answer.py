@@ -32,10 +32,12 @@ def _make_engine():
 
 def test_evidence_note_column_exists_after_migration():
     """Behavior 1: After _ensure_phase54_qramm_columns(), column 'evidence_note' exists."""
-    from quirk.db import _ensure_phase54_qramm_columns
+    # Phase 77 D-21: _ensure_phase54_qramm_columns consolidated into the
+    # generic _ensure_columns helper + _PHASE54_QRAMM_ANSWER_COLUMNS tuple.
+    from quirk.db import _PHASE54_QRAMM_ANSWER_COLUMNS, _ensure_columns
 
     engine = _make_engine()
-    _ensure_phase54_qramm_columns(engine)
+    _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)
 
     col_names = {c["name"] for c in sa_inspect(engine).get_columns("qramm_answers")}
     assert "evidence_note" in col_names, (
@@ -45,21 +47,24 @@ def test_evidence_note_column_exists_after_migration():
 
 def test_ensure_phase54_qramm_columns_idempotent():
     """Behavior 2: Calling _ensure_phase54_qramm_columns twice does not raise."""
-    from quirk.db import _ensure_phase54_qramm_columns
+    # Phase 77 D-21: _ensure_phase54_qramm_columns consolidated into the
+    # generic _ensure_columns helper + _PHASE54_QRAMM_ANSWER_COLUMNS tuple.
+    from quirk.db import _PHASE54_QRAMM_ANSWER_COLUMNS, _ensure_columns
 
     engine = _make_engine()
-    _ensure_phase54_qramm_columns(engine)
+    _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)
     # Second call must be a no-op, not raise an OperationalError.
-    _ensure_phase54_qramm_columns(engine)
+    _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)
 
 
 def test_qramm_answer_evidence_note_round_trip():
     """Behavior 3: A QRAMMAnswer row inserted with evidence_note is read back with that value."""
-    from quirk.db import _ensure_phase54_qramm_columns
+    # Phase 77 D-21: consolidated into generic _ensure_columns helper.
+    from quirk.db import _PHASE54_QRAMM_ANSWER_COLUMNS, _ensure_columns
     from quirk.models import QRAMMAnswer
 
     engine = _make_engine()
-    _ensure_phase54_qramm_columns(engine)
+    _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)
 
     Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     db = Session()
