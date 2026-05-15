@@ -42,6 +42,7 @@ from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import _count_by_bucket
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
+from quirk.util.safe_exc import safe_str
 
 logger = logging.getLogger(__name__)
 
@@ -457,8 +458,9 @@ def _derive_dar_findings(endpoints) -> list[DarFinding]:
         if dat_raw:
             try:
                 dat = json.loads(dat_raw)
-            except Exception:
-                dat = {}
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.warning("DAR finding parse skipped: %s", safe_str(e))
+                continue
 
         if proto in {"POSTGRESQL", "MYSQL"}:
             finding = _dar_db(host, port, proto, severity, service_detail)
