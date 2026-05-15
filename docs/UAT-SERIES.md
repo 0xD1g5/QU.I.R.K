@@ -8608,3 +8608,28 @@ All tests are automated (pytest). No chaos lab required.
 
 **Result:** [ ] PASS / [ ] FAIL
 **Date:** —  **Tester:** —
+
+---
+
+## Phase 999.83 — Chaos Lab Service Config Drift (BACK-90)
+
+**Last Updated:** 2026-05-15
+
+Closes the four pre-existing chaos-lab service config drift bugs surfaced under BACK-90, plus a cross-cutting docs cleanup. Lab UAT criterion (`./lab.sh down && ./lab.sh all`, 60s settle, zero unexpected exited/unhealthy on the four fix sites) passes on macOS.
+
+**Plans:**
+- **Plan 999.83-01 — Gitea root-user crash (profile `source`):** Removed the custom root-running `command:` wrapper from the `gitea` service; the `gitea/gitea:1.21` image entrypoint now runs gitea as the `git` user automatically. Admin provisioning moved to a one-shot `gitea-init` sidecar that calls `gitea admin user create` as `git` after the gitea service is healthy. Admin user renamed from reserved `admin` to `labadmin` (Gitea 1.21 reserves `admin`); `source/seed.sh` + oracle clone command updated in lockstep. Commit `0fd8883`.
+- **Plan 999.83-02 — MinIO SSE-S3 KMS missing (profile `storage-s3`):** Added `MINIO_KMS_SECRET_KEY=lab-key:<base64-32-bytes>` to the `minio` service so the built-in static KMS exists when `minio-seed` calls `mc encrypt set sse-s3 local/encrypted-bucket`. Image pinned `minio/minio:latest` → `minio/minio:RELEASE.2025-09-07T16-13-09Z`. Oracle row 381 (`encrypted-bucket | SSE-S3 (AES256)`) preserved. Commit `ab6d56e`.
+- **Plan 999.83-03 — Deprecated `storage` profile removal:** Deleted the v4.1 `storage` profile entirely — 5 service blocks (`localstack-kms`, `localstack-kms-seed`, legacy `vault` (1.15), `vault-seed`, `postgres-pgcrypto`), 3 orphan seed scripts (`storage/{vault-seed.sh,kms-seed.sh,postgres-init.sql}`), and the orphan `pgcrypto_data:` named volume. Coverage already split into `database` / `storage-s3` / `vault` profiles in v4.3. Active `vault-30` (image 1.17) on profile `vault` untouched. Commit `48c11af`.
+- **Plan 999.83-04 — MySQL `--skip-ssl` removed (profile `database`):** Pinned `mysql-ssl-off` from floating `mysql:8` to `mysql:8.0`. The floating tag now resolves to MySQL 8.4.x which removed the `--skip-ssl` flag; pinning to 8.0 preserves the lab's documented insecure-by-default behavior. Smoke scan via `scan_mysql_targets(['127.0.0.1:23306'], ...)` returns 1 HIGH finding with `service_detail=MySQL/ssl-off`, preserving oracle row 365. Commit `68b0a60`.
+- **Plan 999.83-05 — Cross-cutting docs cleanup + Image Pin Policy + UAT:** README.md row 33 (deprecated `storage` profile) deleted; new `### Image Pin Policy` subsection added codifying the "no floating tags" rule with the four pins enforced this phase (`gitea/gitea:1.21`, `minio/minio:RELEASE.2025-09-07T16-13-09Z`, `mysql:8.0`, `hashicorp/vault:1.17`); `expected_results_v4.md` `## Profile: storage` section deleted in full. Global UAT (`./lab.sh down && ./lab.sh all`, 60s settle) verifies all four bug fix sites: `gitea` Up (healthy), `gitea-init` Exited (0), `minio-seed` Exited (0), `mysql-ssl-off` Up with image `mysql:8.0`, `vault-30` Up (healthy), legacy storage profile services absent. Three pre-existing macOS-host issues on `ldaps` / `rabbitmq-broker` / `gitea-seed`-re-run (unrelated to BACK-90) logged to `.planning/phases/999.83-.../deferred-items.md`.
+
+**Pass criteria:**
+- `./lab.sh down && ./lab.sh all` on macOS — all four fix sites land in expected steady-state (`gitea` healthy, `gitea-init` Exit 0, `minio-seed` Exit 0, `mysql-ssl-off` Up, `vault-30` healthy).
+- Smoke scan against `127.0.0.1:23306` returns 1 HIGH with `service_detail=MySQL/ssl-off`.
+- `quantum-chaos-enterprise-lab/README.md` contains `Image Pin Policy` subsection.
+- `quantum-chaos-enterprise-lab/expected_results_v4.md` no longer contains `## Profile: storage`.
+
+**Result:** [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-15  **Tester:** Claude (Phase 999.83-05 executor)
+**Notes:** Strict "zero non-zero exits anywhere in lab" criterion not met due to three pre-existing macOS-host issues unrelated to BACK-90 (see deferred-items.md). Phase scope (the four BACK-90 fix sites + deprecated profile removal + image-pin policy) verifies clean.
