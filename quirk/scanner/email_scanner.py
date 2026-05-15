@@ -128,7 +128,10 @@ def _scan_one_sslyze_email(
     if SslyzeScanner is None:
         if not _sslyze_warned:
             if logger:
-                logger.v("sslyze not installed — email scanner using stdlib fallback")
+                logger.v(
+                    "sslyze is not installed — pip install 'quirk[motion]' "
+                    "to enable email scanning (stdlib fallback in use)"
+                )
             _sslyze_warned = True
         return None
 
