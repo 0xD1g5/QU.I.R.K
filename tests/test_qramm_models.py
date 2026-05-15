@@ -228,17 +228,24 @@ class TestInitDbQRAMMTables:
         assert callable(db_mod._ensure_qramm_tables)
 
     def test_ensure_qramm_tables_called_after_phase46(self):
-        """Verify call order: _ensure_phase46_columns before _ensure_qramm_tables in init_db source."""
+        """Verify call order: Phase 46 column migration runs before
+        _ensure_qramm_tables in init_db source.
+
+        Phase 77 D-21: per-feature _ensure_phase46_columns helper consolidated
+        into the generic _ensure_columns helper + _PHASE46_COLUMNS tuple. The
+        ordering invariant is now checked via the _PHASE46_COLUMNS reference
+        site in init_db.
+        """
         import inspect
         import quirk.db as db_mod
 
         src = inspect.getsource(db_mod.init_db)
-        p46_idx = src.find("_ensure_phase46_columns")
+        p46_idx = src.find("_PHASE46_COLUMNS")
         qramm_idx = src.find("_ensure_qramm_tables")
-        assert p46_idx != -1, "_ensure_phase46_columns not found in init_db"
+        assert p46_idx != -1, "_PHASE46_COLUMNS migration call not found in init_db"
         assert qramm_idx != -1, "_ensure_qramm_tables not found in init_db"
         assert qramm_idx > p46_idx, (
-            "_ensure_qramm_tables must appear after _ensure_phase46_columns in init_db"
+            "_ensure_qramm_tables must appear after the _PHASE46_COLUMNS migration in init_db"
         )
 
 
