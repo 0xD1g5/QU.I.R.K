@@ -59,10 +59,12 @@ class TestIdentityInfra(unittest.TestCase):
         )
 
     def test_schema_migration_idempotent(self):
-        """_ensure_identity_columns() must exist in quirk.db and be callable
-        twice without error on an already-migrated database.
+        """The identity-column migration must be callable twice without error
+        on an already-migrated database.
 
-        RED because: quirk.db does not export _ensure_identity_columns yet.
+        Phase 77 D-21: per-feature _ensure_identity_columns helper consolidated
+        into the generic _ensure_columns helper + _IDENTITY_COLUMNS tuple. The
+        idempotency contract is unchanged.
         """
         from quirk.models import Base
 
@@ -70,40 +72,25 @@ class TestIdentityInfra(unittest.TestCase):
         Base.metadata.create_all(engine)
 
         try:
-            from quirk.db import _ensure_identity_columns
+            from quirk.db import _IDENTITY_COLUMNS, _ensure_columns
         except ImportError:
             self.fail(
-                "quirk.db does not export _ensure_identity_columns -- "
-                "add inspector-first migration helper per D-01"
+                "quirk.db does not export the generic _ensure_columns helper "
+                "or the _IDENTITY_COLUMNS tuple (Phase 77 D-21 consolidation)."
             )
 
         # Both calls must succeed (idempotency requirement)
-        _ensure_identity_columns(engine)
-        _ensure_identity_columns(engine)
+        _ensure_columns(engine, "crypto_endpoints", _IDENTITY_COLUMNS)
+        _ensure_columns(engine, "crypto_endpoints", _IDENTITY_COLUMNS)
 
         # Columns must exist after migration
         col_names = {
             col["name"]
             for col in sa_inspect(engine).get_columns("crypto_endpoints")
         }
-        self.assertIn(
-            "kerberos_scan_json",
-            col_names,
-            "kerberos_scan_json not found after _ensure_identity_columns() -- "
-            "migration helper did not add the column",
-        )
-        self.assertIn(
-            "saml_scan_json",
-            col_names,
-            "saml_scan_json not found after _ensure_identity_columns() -- "
-            "migration helper did not add the column",
-        )
-        self.assertIn(
-            "dnssec_scan_json",
-            col_names,
-            "dnssec_scan_json not found after _ensure_identity_columns() -- "
-            "migration helper did not add the column",
-        )
+        self.assertIn("kerberos_scan_json", col_names)
+        self.assertIn("saml_scan_json", col_names)
+        self.assertIn("dnssec_scan_json", col_names)
 
     # ------------------------------------------------------------------
     # INFRA-02 -- Config: ConnectorsCfg identity flags and target lists

@@ -1,13 +1,19 @@
 """Phase 70 BLOCK-08/CR-07: tests for `_SAFE_COL_TYPE_RE` allowlist + ValueError
-guard in the four `_ensure_*_columns` helpers that interpolate a `col_type`
-fragment from a module-level DDL dict.
+guard in the column-adding migration path.
+
+Phase 77 D-21 update: the four per-feature helpers (_ensure_v43_columns,
+_ensure_phase41_columns, _ensure_phase46_columns, _ensure_phase54_qramm_columns)
+were consolidated into a single generic `_ensure_columns(engine, table, expected)`
+helper. The allowlist guard semantics are unchanged — these tests now exercise
+the same guard via the new entry point and the migrated tuple constants.
 
 Coverage:
     - Parametrized accept/reject matrix on `_SAFE_COL_TYPE_RE` (regex coverage).
-    - Poisoned-dict tests on each of the four guarded helpers — confirming a
-      bad `col_type` raises ValueError before any DDL is interpolated.
-    - Regression test that `init_db()` (which calls every helper) still works
-      against the real DDL values now flowing through the new guard.
+    - Poisoned-tuple tests on the generic helper — confirming a bad `col_type`
+      raises ValueError before any DDL is interpolated, exercised once per
+      original migration feature for parity.
+    - Regression test that `init_db()` still works against the real DDL values
+      now flowing through the generic guard.
 """
 from __future__ import annotations
 
@@ -15,13 +21,17 @@ from pathlib import Path
 
 import pytest
 
-import quirk.db as quirk_db
 from quirk.db import (
+    _BROKER_COLUMNS,
+    _EMAIL_COLUMNS,
+    _GCP_COLUMNS,
+    _IDENTITY_COLUMNS,
+    _PHASE41_COLUMNS,
+    _PHASE46_COLUMNS,
+    _PHASE54_QRAMM_ANSWER_COLUMNS,
     _SAFE_COL_TYPE_RE,
-    _ensure_phase41_columns,
-    _ensure_phase46_columns,
-    _ensure_phase54_qramm_columns,
-    _ensure_v43_columns,
+    _V43_COLUMNS,
+    _ensure_columns,
     init_db,
 )
 
@@ -70,57 +80,40 @@ def test_safe_col_type_re_rejects_unsafe_values(value: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Poisoned-dict tests — one per guarded helper.
-# Pattern: spin up a fresh DB via init_db (so the existing helpers complete
-# before we poison), then monkeypatch a bad `col_type` into the relevant
-# DDL dict and re-invoke the helper. The new guard must raise ValueError.
+# Poisoned-tuple tests — one per original migration feature.
+# Pattern: spin up a fresh DB via init_db (so the existing migrations complete
+# before we poison), then invoke `_ensure_columns` with a poisoned (col, ddl)
+# tuple. The guard must raise ValueError before any DDL is interpolated.
+# (Phase 77 D-21: the 4 prior dict-based helpers collapsed into a single
+# generic helper; the poisoned-dict pattern becomes a poisoned-tuple pattern.)
 # ---------------------------------------------------------------------------
 
 
-def test_v43_columns_rejects_poisoned_col_type(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+_POISON = (("evil_col", "TEXT; DROP TABLE x"),)
+
+
+def test_v43_path_rejects_poisoned_col_type(tmp_path: Path) -> None:
     engine = init_db(str(tmp_path / "poison_v43.db"))
-    monkeypatch.setitem(
-        quirk_db._V43_COLUMN_DDLS, "evil_col", "TEXT; DROP TABLE x"
-    )
     with pytest.raises(ValueError, match="Unsafe column type"):
-        _ensure_v43_columns(engine)
+        _ensure_columns(engine, "crypto_endpoints", _POISON)
 
 
-def test_phase41_columns_rejects_poisoned_col_type(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_phase41_path_rejects_poisoned_col_type(tmp_path: Path) -> None:
     engine = init_db(str(tmp_path / "poison_p41.db"))
-    monkeypatch.setitem(
-        quirk_db._PHASE41_COLUMN_DDLS, "evil_col", "TEXT; DROP TABLE x"
-    )
     with pytest.raises(ValueError, match="Unsafe column type"):
-        _ensure_phase41_columns(engine)
+        _ensure_columns(engine, "crypto_endpoints", _POISON)
 
 
-def test_phase46_columns_rejects_poisoned_col_type(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_phase46_path_rejects_poisoned_col_type(tmp_path: Path) -> None:
     engine = init_db(str(tmp_path / "poison_p46.db"))
-    monkeypatch.setitem(
-        quirk_db._PHASE46_COLUMN_DDLS, "evil_col", "TEXT; DROP TABLE x"
-    )
     with pytest.raises(ValueError, match="Unsafe column type"):
-        _ensure_phase46_columns(engine)
+        _ensure_columns(engine, "crypto_endpoints", _POISON)
 
 
-def test_phase54_qramm_columns_rejects_poisoned_col_type(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_phase54_qramm_path_rejects_poisoned_col_type(tmp_path: Path) -> None:
     engine = init_db(str(tmp_path / "poison_p54.db"))
-    monkeypatch.setitem(
-        quirk_db._PHASE54_QRAMM_ANSWER_DDLS,
-        "evil_col",
-        "TEXT; DROP TABLE x",
-    )
     with pytest.raises(ValueError, match="Unsafe column type"):
-        _ensure_phase54_qramm_columns(engine)
+        _ensure_columns(engine, "qramm_answers", _POISON)
 
 
 # ---------------------------------------------------------------------------
@@ -128,14 +121,18 @@ def test_phase54_qramm_columns_rejects_poisoned_col_type(
 # ---------------------------------------------------------------------------
 
 
-def test_all_guarded_helpers_accept_real_values(tmp_path: Path) -> None:
-    """init_db() must complete cleanly with every real `col_type` flowing
-    through the new `_SAFE_COL_TYPE_RE` guard."""
+def test_all_guarded_paths_accept_real_values(tmp_path: Path) -> None:
+    """init_db() must complete cleanly, and re-running every consolidated
+    migration tuple through the generic guard must remain idempotent."""
     db_path = tmp_path / "real.db"
     engine = init_db(str(db_path))
-    # Re-run the guarded helpers explicitly to exercise the guard a second
-    # time on real values (idempotent).
-    _ensure_v43_columns(engine)
-    _ensure_phase41_columns(engine)
-    _ensure_phase46_columns(engine)
-    _ensure_phase54_qramm_columns(engine)
+    # Re-run the consolidated migrations explicitly to exercise the generic
+    # guard a second time on real values (idempotent).
+    _ensure_columns(engine, "crypto_endpoints", _IDENTITY_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _GCP_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _V43_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _EMAIL_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _BROKER_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _PHASE41_COLUMNS)
+    _ensure_columns(engine, "crypto_endpoints", _PHASE46_COLUMNS)
+    _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)
