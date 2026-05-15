@@ -1,4 +1,7 @@
+import logging
 import unittest
+
+import pytest
 
 from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.scoring import compute_readiness_score
@@ -86,3 +89,67 @@ def test_zero_tls_produces_no_enum_coverage_bonus():
     assert factor["points"] == 0.0, (
         f"Expected 0.0 points for tls_enum_coverage_ratio when no TLS, got {factor['points']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# D-09 / WR-13 Phase 73: weight-override clamp + fail-loud + WARN unknown keys
+# ---------------------------------------------------------------------------
+
+def _baseline_evidence() -> dict:
+    return _evidence()
+
+
+def test_override_clamps_below_zero():
+    """Below-zero override values clamp to 0.0."""
+    result = compute_confidence(
+        _baseline_evidence(), weights={"coverage_ratio": -0.5}
+    )
+    assert result["factor_breakdown"]["coverage_ratio"]["weight"] == 0.0
+
+
+def test_override_clamps_above_one():
+    """Above-one override values clamp to 1.0."""
+    result = compute_confidence(
+        _baseline_evidence(), weights={"coverage_ratio": 1.5}
+    )
+    assert result["factor_breakdown"]["coverage_ratio"]["weight"] == 1.0
+
+
+def test_override_in_range_passes_through():
+    """Override values in [0.0, 1.0] pass through unchanged (float-coerced)."""
+    result = compute_confidence(
+        _baseline_evidence(), weights={"coverage_ratio": 0.7}
+    )
+    assert result["factor_breakdown"]["coverage_ratio"]["weight"] == 0.7
+
+
+def test_override_non_numeric_raises_value_error():
+    """Non-numeric override value raises ValueError with diagnostic message."""
+    with pytest.raises(ValueError, match=r"must be numeric in \[0\.0, 1\.0\]"):
+        compute_confidence(_baseline_evidence(), weights={"coverage_ratio": "abc"})
+
+
+def test_override_none_value_raises_value_error():
+    """None override value raises ValueError."""
+    with pytest.raises(ValueError):
+        compute_confidence(_baseline_evidence(), weights={"coverage_ratio": None})
+
+
+def test_override_list_value_raises_value_error():
+    """List override value raises ValueError."""
+    with pytest.raises(ValueError):
+        compute_confidence(_baseline_evidence(), weights={"coverage_ratio": [1.0]})
+
+
+def test_override_unknown_key_logs_warning_and_accepts(caplog):
+    """Unknown override key logs WARNING but does not raise (forward-compat)."""
+    with caplog.at_level(logging.WARNING, logger="quirk.intelligence.confidence"):
+        result = compute_confidence(
+            _baseline_evidence(), weights={"unknown_xyz": 0.5}
+        )
+    assert result["confidence_score"] >= 0
+    # caplog captured at WARNING level — must contain the unknown key name.
+    msgs = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    joined = " ".join(msgs)
+    assert "unknown_xyz" in joined
+    assert "forward-compat" in joined or "Unknown confidence override" in joined
