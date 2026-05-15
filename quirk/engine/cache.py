@@ -57,7 +57,10 @@ def load_cache(output_dir: str, key: str, ttl_hours: int) -> Optional[Dict[str, 
     ts = obj.get("_cached_at", 0)
     age = _now() - float(ts or 0)
     if ttl_hours <= 0:
-        return obj
+        # ttl_hours <= 0 means "cache disabled" — never return cached data
+        # (D-10 / BLOCK-05). Previously this branch returned obj, which was
+        # the opposite of intended semantics.
+        return None
     if age <= ttl_hours * 3600:
         return obj
     return None
