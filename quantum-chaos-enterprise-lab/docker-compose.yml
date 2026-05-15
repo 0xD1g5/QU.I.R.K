@@ -626,21 +626,54 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
-    command: >
-      bash -c "
-        /usr/local/bin/gitea web &
-        sleep 10 &&
-        gitea admin user create --admin --username admin --password admin123 --email admin@chaos.local --must-change-password false 2>/dev/null || true &&
-        wait
-      "
+
+  # One-shot admin bootstrap. Runs as the `git` user via the image entrypoint,
+  # creates the admin user on the shared sqlite db before the web container
+  # serves traffic. Replaces the prior root-running `command:` wrapper on the
+  # `gitea` service (BACK-90 bug 1, CONTEXT D-1 — keeps admin provisioning
+  # declarative, no docker socket, no API bootstrap dance).
+  gitea-init:
+    image: gitea/gitea:1.21
+    profiles: ["source"]
+    restart: "no"
+    depends_on:
+      gitea:
+        condition: service_healthy
+    environment:
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__database__PATH: /data/gitea/gitea.db
+      GITEA__log__LEVEL: "warn"
+    volumes:
+      - gitea_data:/data
+    entrypoint: ["/usr/bin/entrypoint"]
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        set -e
+        # Gitea web (already healthy via depends_on) has materialized
+        # /data/gitea/conf/app.ini + sqlite schema. Idempotently create the
+        # admin user as the `git` user (1.21+ refuses to run as root, so
+        # `su git -c ...` satisfies the safety check). Replaces the prior
+        # root-running `command:` wrapper on the gitea service (BACK-90 bug 1,
+        # CONTEXT D-1 — admin provisioning moved out of `command:` block,
+        # no docker socket mount, no API bootstrap dance).
+        # NOTE: Gitea reserves the username "admin", so we provision "labadmin"
+        # (mirrored in source/seed.sh). Password admin123 + email preserved.
+        if su git -c "gitea admin user list" 2>/dev/null | grep -qE '(^|[[:space:]])labadmin([[:space:]]|$)'; then
+          echo "labadmin user already exists; skipping"
+        else
+          su git -c "gitea admin user create --admin --username labadmin --password admin123 --email admin@chaos.local --must-change-password=false"
+        fi
 
   gitea-seed:
     image: alpine:3.19
     profiles: ["source"]
     restart: "no"
     depends_on:
-      gitea:
-        condition: service_healthy
+      gitea-init:
+        condition: service_completed_successfully
     volumes:
       - ./source/seed.sh:/seed.sh:ro
     command: >
