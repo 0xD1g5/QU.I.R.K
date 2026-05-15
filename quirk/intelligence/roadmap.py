@@ -47,7 +47,7 @@ def _driver_hint(reasons: Sequence[str], keywords: Sequence[str]) -> str:
 
 def _why(base: str, hint: str) -> str:
     if hint:
-        return f"{base} Driver: {hint}."
+        return f"{base} Driver: {hint.rstrip('.')}."
     return base
 
 
@@ -61,6 +61,22 @@ def _add_candidate(
     dependencies: Sequence[str],
     priority: int,
 ) -> None:
+    """Merge a candidate into the items dict by title (D-06 / WR-08 Phase 73).
+
+    Merge rule (the previously-undocumented contract):
+      - If `title` is not in `items`, the candidate is inserted as-is.
+      - If `title` is already in `items`, the existing entry and the new
+        candidate are compared via the tuple
+        `(_PHASE_ORDER[phase], int(_priority), title)`.
+      - The candidate with the LEXICOGRAPHICALLY-LOWER tuple wins and replaces
+        the existing entry. Equal tuples preserve the original (strict `<`).
+
+    This is intentional merge accumulator behavior — earlier-phase / higher-
+    priority candidates take precedence regardless of insertion order, so
+    callers can register candidates in any order without affecting the final
+    roadmap shape. See `.planning/audit-2026-05-08/AUDIT-TASKS.md`
+    cbom-intel-reports/WR-08 closure (Phase 73) for context.
+    """
     existing = items.get(title)
     candidate = {
         "phase": phase,
