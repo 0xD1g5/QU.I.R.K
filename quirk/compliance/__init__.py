@@ -1,6 +1,6 @@
 """Phase 49 D-01: Compliance mapping for QUIRK findings (PCI-DSS 4.0.1, HIPAA 45 CFR, FIPS 140-3).
 
-Maintenance cadence: see docs/operators-guide.md §"Compliance Map Maintenance".  # TODO Phase 50
+Maintenance cadence: see docs/operators-guide.md §"Compliance Map Maintenance".
 
 Compliance refs are EAGERLY attached to every finding dict by
 quirk.engine.risk_engine._build_finding (Phase 49 D-02). Renderers and JSON
