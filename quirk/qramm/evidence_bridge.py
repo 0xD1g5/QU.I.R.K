@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from typing import Any, Iterable
 
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from quirk.cbom.classifier import classify_algorithm
@@ -32,6 +34,15 @@ _EVIDENCE_SOURCE_VERSION = "v1"
 _ALG_KEYS = {"algorithm", "alg", "name", "keyAlgorithm", "key_algorithm"}
 
 
+def _discovery_factor(endpoint_count: int) -> float:
+    """D-02 (WR-04): scale Practice 1.1 by log10(endpoint_count)/3 in [0.25, 1.0].
+
+    Curve: 1 endpoint → 0.25 (floor), 10 → ~0.333, 100 → ~0.667, 1000+ → 1.0.
+    A scan that found nothing cannot claim Discovery maturity.
+    """
+    return min(1.0, max(0.25, math.log10(max(endpoint_count, 1)) / 3.0))
+
+
 def populate_cvi_suggestions(session_id: int, db: Session) -> None:
     """Derive CVI suggested_answer values from the SESSION_BRACKET scan cohort.
 
@@ -45,6 +56,10 @@ def populate_cvi_suggestions(session_id: int, db: Session) -> None:
         logger.info("evidence_bridge: no scan data found, skipping")
         return
 
+    # D-05 (WR-01): TZ-symmetric — both sides use SQLAlchemy func.date(), evaluated
+    # by the same engine, so neither side carries an implicit local-TZ offset. Any
+    # downstream Python-side use of max_date_str must parse via
+    # datetime.date.fromisoformat(max_date_str) before equality compare.
     endpoints = (
         db.query(CryptoEndpoint)
         .filter(func.date(CryptoEndpoint.scanned_at) == max_date_str)
@@ -86,16 +101,28 @@ def populate_cvi_suggestions(session_id: int, db: Session) -> None:
     else:
         score_1_1 = 4
 
+    # D-02 (WR-04): scale by log10(endpoint_count)/3 in [0.25, 1.0].
+    # A scan that found nothing cannot claim Discovery maturity.
+    score_1_1 = round(score_1_1 * _discovery_factor(total_endpoints), 4)
+
     # D-05 — Practice 1.2 (Vulnerability Assessment): % endpoints with nist_level == 0
-    vuln_pct = (vulnerable_endpoint_count / total_endpoints) * 100.0
-    if vuln_pct <= 25.0:
-        score_1_2 = 4
-    elif vuln_pct <= 50.0:
-        score_1_2 = 3
-    elif vuln_pct <= 75.0:
-        score_1_2 = 2
+    # D-03 (WR-05): when zero algorithms classified, vuln_pct is INDETERMINATE
+    # (cannot compute "% vulnerable" without a denominator of known algos).
+    # Sentinel propagates through score_1_2 → _maturity_label → "Indeterminate".
+    total_algos = len(algorithm_set)
+    if total_algos == 0 or total_endpoints == 0:
+        vuln_pct: float | None = None
+        score_1_2: int | None = None
     else:
-        score_1_2 = 1
+        vuln_pct = (vulnerable_endpoint_count / total_endpoints) * 100.0
+        if vuln_pct <= 25.0:
+            score_1_2 = 4
+        elif vuln_pct <= 50.0:
+            score_1_2 = 3
+        elif vuln_pct <= 75.0:
+            score_1_2 = 2
+        else:
+            score_1_2 = 1
 
     # D-07 — Practice 1.3 (Dependency Mapping): distinct algorithm count
     distinct_algs = len(algorithm_set)
@@ -112,6 +139,23 @@ def populate_cvi_suggestions(session_id: int, db: Session) -> None:
     practice_scores = {"1.1": score_1_1, "1.2": score_1_2, "1.3": score_1_3}
 
     for practice_area, suggested_value in practice_scores.items():
+        # D-06 (WR-03): idempotent skip — pre-query existing rows; if every row
+        # already matches the desired (suggested_answer, evidence_source) state,
+        # skip the UPDATE entirely (no-op writes are silent corruption risk).
+        existing = (
+            db.query(QRAMMAnswer)
+            .filter(
+                QRAMMAnswer.session_id == session_id,
+                QRAMMAnswer.dimension == "CVI",
+                QRAMMAnswer.practice_area == practice_area,
+            )
+            .all()
+        )
+        if existing and all(
+            r.suggested_answer == suggested_value and r.evidence_source == evidence_source
+            for r in existing
+        ):
+            continue  # D-06: idempotent skip — desired state already persisted
         db.query(QRAMMAnswer).filter(
             QRAMMAnswer.session_id == session_id,
             QRAMMAnswer.dimension == "CVI",
@@ -124,7 +168,13 @@ def populate_cvi_suggestions(session_id: int, db: Session) -> None:
             synchronize_session="fetch",
         )
 
-    db.commit()
+    # D-06 (WR-07): wrap commit so SQLAlchemyError is logged + rolled back, never silent.
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        logger.warning("evidence_bridge UPDATE failed: %s", e)
+        db.rollback()
+        return
 
 
 def _extract_algorithm_names(ep: CryptoEndpoint) -> list[str]:
