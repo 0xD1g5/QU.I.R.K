@@ -201,7 +201,9 @@ def build_evidence_summary(
 
         elif proto == "AZURE_BLOB":
             sd = str(getattr(ep, "service_detail", "") or "")
-            if "BLOB/platform-managed" in sd:
+            # BLOCK-04 / D-04: BLOB/platform-managed and BLOB/unknown share
+            # the MEDIUM severity tier; both count toward aws_managed.
+            if "BLOB/platform-managed" in sd or "BLOB/unknown" in sd:
                 dar_storage_aws_managed_count += 1
             # BLOB/cmk is positive posture — no penalty
 
