@@ -1,577 +1,439 @@
-# Architecture Research — v4.7 QRAMM Integration
+# Architecture Research — v4.10 Launch Readiness Integration
 
-**Domain:** Governance/compliance platform extension — QRAMM maturity model + SOC2/ISO27001 compliance mapping onto existing QUIRK scanner
-**Researched:** 2026-05-05
-**Confidence:** HIGH (based on direct codebase inspection; no speculative claims)
-
----
-
-## Current Architecture Baseline (v4.6)
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  CLI Layer  (run_scan.py — single entry point `quirk`)               │
-│  Subcommands: init | serve | compliance | [scan args]               │
-│  Pattern: manual sys.argv[1] interception before argparse            │
-└──────────────────────────┬──────────────────────────────────────────┘
-                           │
-         ┌─────────────────┼─────────────────────┐
-         │                 │                     │
-┌────────▼────────┐ ┌──────▼───────┐ ┌──────────▼──────────────────┐
-│  Scanner Layer  │ │  Engine Layer│ │  Dashboard Layer             │
-│ quirk/scanner/  │ │quirk/engine/ │ │  FastAPI (quirk/dashboard/)  │
-│  tls_scanner    │ │ risk_engine  │ │  /api/scan/latest  (scan.py) │
-│  ssh_scanner    │ │ scoring      │ │  /api/trends       (trends)  │
-│  jwt_scanner    │ │ migration_   │ │  /api/pdf          (pdf.py)  │
-│  ...12 scanners │ │  planner     │ │  /api/health                 │
-└────────┬────────┘ │ profiles     │ │                              │
-         │          └──────┬───────┘ │  React SPA (src/dashboard/)  │
-         │                 │         │  10 pages (executive, findings│
-┌────────▼─────────────────▼───────┐ │  identity, motion, dat, certs│
-│  Persistence Layer                │ │  cbom, roadmap, trends, print│
-│  quirk/db.py + quirk/models.py    │ └──────────────────────────────┘
-│  SQLite — single table:           │
-│  crypto_endpoints (93 columns)    │
-│  ALTER TABLE migration per phase  │
-└───────────────────────────────────┘
-         │
-┌────────▼──────────────────────────┐
-│  Support Modules                  │
-│  quirk/cbom/    — 3-pass pipeline │
-│  quirk/compliance/ — COMPLIANCE_  │
-│    MAP dict + status_report()     │
-│  quirk/intelligence/ — scoring    │
-│  quirk/reports/ — HTML/PDF        │
-└───────────────────────────────────┘
-```
-
-### Key Architectural Facts Confirmed by Inspection
-
-1. **Single ORM table.** `crypto_endpoints` in `quirk/models.py` holds all scan data. Every new scanner phase appended columns via `ALTER TABLE` migrations in `quirk/db.py`. There is no findings table — findings are derived at query time in `routes/scan.py _derive_findings()`.
-
-2. **Migration pattern is `_ensure_*_columns()` chains.** `init_db()` calls 7 stacked `_ensure_` functions in order. QRAMM's 3 new tables will be standalone SQLAlchemy `Base` subclasses with a corresponding `_ensure_qramm_tables()` at the end of `init_db()`.
-
-3. **FastAPI routes are one file per logical domain.** `routes/health.py`, `routes/scan.py`, `routes/trends.py`, `routes/pdf.py` — each registered in `app.py` with `include_router`. QRAMM gets `routes/qramm.py`.
-
-4. **CLI subcommands are manual `sys.argv[1]` branches in `run_scan.py`.** `init`, `serve`, `compliance` each have their own `if len(_sys.argv) > 1 and _sys.argv[1] == "..."` block. `quirk qramm` and `quirk doctor` follow the exact same pattern.
-
-5. **React SPA uses BrowserRouter with file-per-page structure.** Each page is `src/dashboard/src/pages/<name>.tsx`, added to `App.tsx`'s `<Routes>`. QRAMM wizard gets `pages/qramm.tsx` (and sub-components under `components/qramm/`).
-
-6. **`COMPLIANCE_MAP` is a module-level dict in `quirk/compliance/__init__.py`.** It is keyed by finding title string. SOC2 and ISO27001 entries are added to the same dict using new `_soc2()` / `_iso()` helper functions matching the existing `_pci()`, `_hipaa()`, `_fips()` pattern.
-
-7. **CBOM pipeline is 3-pass in `quirk/cbom/builder.py`.** Pass 1: algorithm components. Pass 2: certificate components. Pass 3: protocol components. FIPS annotations are added as properties on existing Pass-1 algorithm components — not a separate pass.
+**Domain:** Integration analysis for 5 v4.10 workstreams against mature QUIRK v4.9 architecture
+**Researched:** 2026-05-16
+**Confidence:** HIGH (based on direct codebase inspection of v4.9-shipped code; no speculative claims)
 
 ---
 
-## QRAMM Integration: Decisions and Rationale
-
-### Decision 1: Where the 3 QRAMM Tables Live
-
-**Recommended approach:** Add three new SQLAlchemy ORM classes to `quirk/models.py` alongside `CryptoEndpoint`. They are independent top-level tables, not columns on `crypto_endpoints`.
-
-```python
-# quirk/models.py additions
-
-class QRAMMSession(Base):
-    __tablename__ = "qramm_sessions"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    created_at = Column(DateTime, nullable=False)
-    updated_at = Column(DateTime, nullable=False)
-    org_profile_id = Column(Integer, ForeignKey("qramm_profiles.id"), nullable=True)
-    status = Column(String(16), nullable=False, default="in_progress")  # in_progress | complete
-    # Cached per-dimension scores (updated on each save)
-    score_cvi = Column(Float, nullable=True)
-    score_sgrm = Column(Float, nullable=True)
-    score_dpe = Column(Float, nullable=True)
-    score_itr = Column(Float, nullable=True)
-    # Staleness metadata
-    qramm_version = Column(String(16), nullable=False, default="1.0")
-    last_verified = Column(String(10), nullable=True)   # ISO date YYYY-MM-DD
-    source_url = Column(Text, nullable=True)
-
-
-class QRAMMAnswer(Base):
-    __tablename__ = "qramm_answers"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(Integer, ForeignKey("qramm_sessions.id"), nullable=False)
-    question_number = Column(Integer, nullable=False)   # 1-120
-    dimension = Column(String(8), nullable=False)       # CVI | SGRM | DPE | ITR
-    practice = Column(String(16), nullable=False)       # e.g. CVI-1
-    stream = Column(String(16), nullable=False)         # foundation | advanced
-    answer = Column(Integer, nullable=True)             # 1-4 (null = unanswered)
-    evidence_note = Column(Text, nullable=True)
-    auto_populated = Column(Boolean, default=False)     # True = evidence bridge filled this
-
-
-class QRAMMProfile(Base):
-    __tablename__ = "qramm_profiles"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    industry = Column(String(64), nullable=True)
-    size = Column(String(32), nullable=True)            # SMB | Enterprise | Large Enterprise
-    geo_scope = Column(String(32), nullable=True)       # Local | National | Global
-    data_sensitivity = Column(String(32), nullable=True) # Low | Medium | High | Critical
-    regulatory_requirements = Column(Text, nullable=True) # JSON list of framework strings
-    multiplier = Column(Float, nullable=False, default=1.0)  # 0.8-1.5
-```
-
-**Why independent tables, not columns on `crypto_endpoints`:** QRAMM sessions are a completely different entity from scan endpoints. A session has a lifecycle (in_progress/complete), relates to one org profile, and contains up to 120 answers. Forcing this into `crypto_endpoints` would be structurally wrong — there is no `(host, port)` pairing. Independent tables with FK relationships are correct relational design.
-
-**Why in `models.py` (not a new file):** Existing pattern — `CryptoEndpoint` is the only ORM class and lives in `models.py`. Keeping all ORM classes in one file means `Base.metadata.create_all(engine)` in `init_db()` picks them up automatically without extra imports.
-
-**Migration:** Add `_ensure_qramm_tables(engine)` at the end of `init_db()`. Use `inspector.get_table_names()` to check table existence before `Base.metadata.create_all(engine, tables=[QRAMMSession.__table__, ...])`. This is idempotent and follows the spirit of the existing `_ensure_*` pattern while being cleaner for whole-table creation than `ALTER TABLE`.
-
----
-
-### Decision 2: Evidence Bridge — Read from SQLite at Session-Start
-
-**Recommended approach:** At session creation time, read the latest scan's `CryptoEndpoint` rows from SQLite and compute `auto_populated` answers immediately. Store them in `qramm_answers` with `auto_populated=True`. Do not pass findings at session creation via API.
-
-**Data flow:**
+## Existing Architecture Baseline (v4.9, verified)
 
 ```
-POST /api/qramm/sessions
-  |
-  ├── CREATE QRAMMSession (status=in_progress)
-  ├── (optional) link QRAMMProfile if org_profile_id provided
-  ├── fetch MAX(scanned_at) scan window from crypto_endpoints
-  |     (reuse SESSION_BRACKET = timedelta(minutes=5) pattern from routes/scan.py)
-  ├── call quirk.qramm.evidence_bridge.derive_answers(endpoints) -> List[AnswerHint]
-  └── bulk-INSERT qramm_answers with auto_populated=True for derived hints
-      -> returns { session_id, auto_populated_count }
-```
+run_scan.py (orchestrator)
+  └── _wrapped_phase() for each scanner → CryptoEndpoint rows → SQLite
+      ├── tls_scanner        → tls_capabilities_json
+      ├── ssh_scanner        → ssh_audit_json
+      ├── jwt_scanner        → jwt_scan_json
+      ├── container_scanner  → container_scan_json
+      ├── source_scanner     → source_scan_json
+      ├── aws/azure/gcp_connector → cloud_scan_json / gcs_scan_json
+      ├── dnssec_scanner     → dnssec_scan_json   (identity family)
+      ├── saml_scanner       → saml_scan_json     (identity family)
+      ├── kerberos_scanner   → kerberos_scan_json (identity family)
+      ├── email_scanner      → email_scan_json
+      ├── broker_scanner     → broker_scan_json
+      └── db_connector + vault_connector + k8s_connector → dat_scan_json
 
-**Why read at session-start, not passed at creation:** If the client passes findings, the caller must load them — adding a roundtrip and tying the API shape to the full endpoint model. The backend is co-located with the database (local CLI model). Reading from SQLite directly is cheaper than client-round-tripping bulk endpoint data. Session creation is the only moment when evidence is "fresh" relative to the latest scan — loading later risks stale derivation against a superseded scan. This matches how `routes/scan.py` already reads at request time.
+quirk/intelligence/
+  ├── evidence.py       → build_evidence_summary() counts protocol-keyed endpoints
+  │     counters: identity_weak_etype_count, saml_weak_signing_count,
+  │               dnssec_weak_algo_count, dar_*, motion_*
+  └── scoring.py        → compute_readiness_score() reads evidence → 6 subscores
+        SCORE_WEIGHTS sum=261.0 (CI-gated invariant)
+        identity_ prefix → multiplied by PROFILE_MULTIPLIERS[profile]["identity_"]
 
-**Where evidence bridge lives:** New module `quirk/qramm/evidence_bridge.py`. It imports `CryptoEndpoint` from `quirk/models` only. It is called by the QRAMM route, not by the scanner. Input: `List[CryptoEndpoint]`. Output: `List[dict]` with keys `{question_number, dimension, practice, stream, answer, evidence_note}`.
+quirk/cbom/
+  ├── classifier.py     → classify_algorithm() → (primitive, nist_level, classical_level)
+  ├── builder.py        → build_cbom() 3-pass builder
+  │     Pass 1: _make_algorithm_component() for each endpoint
+  │     Pass 2: _make_certificate_component() — skip if in DAR_SKIP_PROTOCOLS
+  │     Pass 3: _make_protocol_component()    — skip if in MOTION_PLAINTEXT_PROTOCOLS
+  │     _fips_status(): nist_level>=1 → "approved", else "non-approved"
+  │     "certified" tier deferred (Phase 52 D-01 — CMVP attestation hook)
+  └── writer.py         → write_cbom_files() JSON+XML output
 
-**Mapping scope confirmed by ROADMAP.md (BACK-71):** CVI-1.1 (automated discovery), CVI-1.2 (severity-classified findings + NIST PQC labels), DPE-1.1 (TLS 1.3 / AES-256 in use), ITR-1.1 (TLS coverage rate, weak-cipher rate). All 4 CVI foundation questions partially auto-populatable. SGRM and most advanced questions remain manual.
+quirk/reports/
+  ├── _md_escape.py     → md_cell() GFM table-cell escaping (Phase 61 REPORT-SAN-01)
+  │     Neutralizes: CRLF/LF, pipe injection, ASCII control chars
+  │     NOT YET: backtick/asterisk HTML entity escaping (deferred D-11/WR-01)
+  ├── technical.py      → md_cell() applied to all table-cell interpolations
+  ├── executive.py      → (escaping status TBD — check before HTML hardening phase)
+  ├── html_renderer.py  → Jinja2 + autoescape=["html","j2"] for template rendering
+  │     render_html_report() → jinja2 Environment(autoescape=select_autoescape())
+  │     render_pdf_report()  → Playwright headless Chromium
+  └── writer.py         → orchestrates all report types; imports categorize_waves()
+                           from quirk/engine/migration_planner.py
 
----
+quirk/compliance/__init__.py
+  ├── COMPLIANCE_MAP: 24 categories → PCI-DSS/HIPAA/FIPS/SOC2/ISO27001 controls
+  ├── STALENESS_THRESHOLD_DAYS = 365 (CI gate: tests/test_compliance_freshness.py)
+  └── _fips() helper: {framework, control, version, last_verified, source_url}
 
-### Decision 3: `quirk qramm status` CLI Placement
+quirk/dashboard/api/
+  ├── schemas.py        → Pydantic models: IdentityFinding, DarFinding, MotionFinding
+  │     ScanLatestResponse: identity_findings[], dar_findings[], motion_findings[]
+  └── routes/scan.py    → /api/scan/latest populates all three finding families
 
-**Recommended approach:** New `qramm` subcommand block in `run_scan.py`, parallel to the existing `compliance` block. Do NOT extend `quirk compliance status`.
+quirk/models.py (CryptoEndpoint ORM columns — additive only)
+  tls, ssh, jwt, container, source, cloud, identity (3 cols), dat, email, broker
+  chain_verified (Phase 46)
+  [smime_scan_json, adcs_scan_json — NOT YET, v4.10 additions]
 
-**Implementation pattern** (matching Phase 49's `compliance` block exactly):
-
-```python
-# run_scan.py — after the compliance block
-if len(_sys.argv) > 1 and _sys.argv[1] == "qramm":
-    qramm_parser = argparse.ArgumentParser(
-        prog="quirk qramm",
-        description="Manage QRAMM assessment sessions and staleness",
-    )
-    qramm_sub = qramm_parser.add_subparsers(dest="action", required=True)
-    status_sub = qramm_sub.add_parser("status", help="Print QRAMM framework version and staleness metadata")
-    status_sub.add_argument("--format", choices=["text", "json"], default="text")
-    status_sub.add_argument("--db", default="./quirk.db", help="Path to quirk.db")
-    qramm_args = qramm_parser.parse_args(_sys.argv[2:])
-    if qramm_args.action == "status":
-        from quirk.qramm import status_report as qramm_status
-        qramm_status(db_path=qramm_args.db, format=qramm_args.format)
-    return
-```
-
-**Why separate from `quirk compliance status`:** `quirk compliance status` is currently DB-free — it reads from the static `COMPLIANCE_MAP` dict with no I/O. Adding QRAMM staleness (which requires a DB read for `qramm_sessions.last_verified`) forces a `--db` flag and DB connection onto a previously zero-dependency command. Mixing them breaks single-responsibility. Separate subcommands preserve the compliance command's zero-dependency design.
-
-**`quirk doctor`** — same `sys.argv` interception pattern: a new `if _sys.argv[1] == "doctor"` block that runs health checks (DB accessible, extras installed, COMPLIANCE_MAP staleness, QRAMM staleness if sessions exist) and prints a status table. `doctor` calls into both `quirk.compliance.status_report()` and `quirk.qramm.status_report()` — it is the aggregate view.
-
----
-
-### Decision 4: CBOM FIPS Annotations — Property on Existing Pass-1 Components
-
-**Recommended approach:** Add a FIPS-status property to existing algorithm `Component` objects during Pass 1. Do not create a separate annotation pass.
-
-**Implementation:**
-
-```python
-# In quirk/cbom/builder.py — Pass 1 loop, after component creation
-# CycloneDX 1.6 Component.properties is a set of Property objects
-
-fips_status = _fips_status_for_algorithm(algo_name, nist_level)
-if fips_status:
-    comp.properties.add(Property(name="fips-140-3:status", value=fips_status))
-    comp.properties.add(Property(name="fips-140-3:reference", value="FIPS 140-3 / SP 800-131A R2"))
-```
-
-**FIPS status values (3-tier):**
-- `"approved"` — AES-256-GCM, ECDH-P384, ML-KEM, ML-DSA, SLH-DSA, SHA-256, SHA-3
-- `"approved-with-deprecation-2030"` — RSA-2048+, ECDSA-P256+, ECDH-P256 (NIST IR 8547 schedule)
-- `"not-approved"` — RSA<2048, EC<256, MD5, SHA-1, RC4, DES, 3DES, TLS 1.0/1.1 cipher suites
-
-Helper function `_fips_status_for_algorithm(algo_name: str, nist_level: int | None) -> str | None` belongs in `quirk/cbom/classifier.py`, alongside the existing `quantum_safety_label()` function. This groups all algorithm classification logic in one place.
-
-**Why not a separate pass:** Pass 1 already has `algo_name` and `nist_level` in scope. A 4th pass would re-iterate all components to attach a property computable from data already in hand during Pass 1. The existing 3-pass structure exists because Pass 2 (certs) and Pass 3 (protocols) operate on different input data. FIPS status derives from the same data Pass 1 already processes.
-
----
-
-### Decision 5: SOC2/ISO27001 COMPLIANCE_MAP Extension
-
-**Recommended approach:** Add `_soc2()` and `_iso()` helper functions in `quirk/compliance/__init__.py`, matching the shape of existing `_pci()`, `_hipaa()`, `_fips()`. Extend existing `COMPLIANCE_MAP` entries with new framework dicts. Add a new `_PHASE_XX_VERIFIED` constant for the verification date.
-
-```python
-_SOC2_TR_URL = "https://www.aicpa-cima.com/resources/landing/2017-trust-services-criteria"
-_ISO_27001_URL = "https://www.iso.org/standard/82875.html"  # ISO/IEC 27001:2022
-
-def _soc2(control: str) -> Dict[str, Any]:
-    return {
-        "framework": "SOC 2 (Trust Services Criteria)",
-        "control": control,
-        "version": "2017-rev",
-        "last_verified": _PHASE_XX_VERIFIED,
-        "source_url": _SOC2_TR_URL,
-    }
-
-def _iso(control: str) -> Dict[str, Any]:
-    return {
-        "framework": "ISO/IEC 27001:2022",
-        "control": control,
-        "version": "2022",
-        "last_verified": _PHASE_XX_VERIFIED,
-        "source_url": _ISO_27001_URL,
-    }
-```
-
-**Representative mappings for existing finding categories:**
-
-| Finding Category | SOC2 Control | ISO 27001:2022 Annex A |
-|-----------------|-------------|------------------------|
-| Legacy TLS versions allowed (TLS 1.0/1.1) | CC6.7 | A.8.24 (Use of cryptography) |
-| Plaintext HTTP service detected | CC6.7 | A.8.20 (Networks security) |
-| TLS certificate expired | CC9.9 (Availability) | A.8.24 |
-| TLS certificate uses undersized RSA key | CC6.7 | A.8.24 |
-| Plaintext Kafka listener detected | CC6.7 | A.8.20 |
-
-**CI staleness gate:** The existing `status_report()` iterates all `COMPLIANCE_MAP` entries and surfaces the oldest `last_verified` per framework. New SOC2/ISO entries participate in this check automatically. No gate code changes needed.
-
-**STALENESS_THRESHOLD_DAYS:** The existing constant is 365 days (annual review). QRAMM staleness is 90 days (quarterly). Keep them separate: `quirk/compliance/__init__.py` retains `STALENESS_THRESHOLD_DAYS = 365`, `quirk/qramm/staleness.py` defines `STALENESS_THRESHOLD_DAYS = 90`.
-
----
-
-## New Module Structure
-
-```
-quirk/
-├── qramm/
-│   ├── __init__.py          # status_report(db_path, format) function + __all__
-│   ├── questions.py         # QRAMM_QUESTIONS: List[dict] -- 120 question definitions
-│   │                        # (question_number, dimension, practice, stream, text, scale_labels)
-│   ├── evidence_bridge.py   # derive_answers(endpoints: List[CryptoEndpoint]) -> List[AnswerHint]
-│   ├── scoring.py           # score_session(session_id, db_path) -> DimensionScores
-│   │                        # applies profile multiplier, produces per-dimension weighted scores
-│   └── staleness.py         # QRAMM_VERSION, QRAMM_SOURCE_URL, STALENESS_THRESHOLD_DAYS=90
-│                            # check_staleness(last_verified: str) -> bool
-├── compliance/
-│   └── __init__.py          # EXTEND: add _soc2(), _iso(), new COMPLIANCE_MAP entries
-├── models.py                # EXTEND: append QRAMMSession, QRAMMAnswer, QRAMMProfile classes
-├── db.py                    # EXTEND: add _ensure_qramm_tables() call in init_db()
-└── dashboard/api/routes/
-    └── qramm.py             # NEW: FastAPI CRUD endpoints for QRAMM lifecycle
-```
-
-React additions:
-
-```
-src/dashboard/src/
-├── pages/
-│   └── qramm.tsx            # Main QRAMM page (org profile wizard + dimension tabs)
-├── components/qramm/
-│   ├── OrgProfileForm.tsx   # Industry/size/geo/sensitivity form -> POST profile
-│   ├── DimensionTabs.tsx    # CVI / SGRM / DPE / ITR tab layout
-│   ├── QuestionCard.tsx     # Single question: text + radio 1-4 + evidence note
-│   ├── ProgressTracker.tsx  # "X of 120 answered" progress bar
-│   ├── RadarChart.tsx       # Recharts RadarChart -- 4-axis dimension scores
-│   └── ScorecardTable.tsx   # Dimension summary: Raw / Weighted / Benchmark / Level
-└── types/
-    └── qramm.ts             # TypeScript interfaces mirroring Pydantic schemas
+quantum-chaos-enterprise-lab/
+  18 active profiles (storage deprecated in 999.83):
+  broker, cloud, database, dnssec, email, identity, jwt, kerberos, ldaps,
+  phaseA, pki, registry, saml, source, ssh-weak, storage-s3, tls-cert-defects, vault
+  _derive_all_profiles() reads docker-compose.yml at runtime — no hardcoded list
+  Image Pin Policy enforced since 999.83: minor/dated pins required, no floating tags
 ```
 
 ---
 
-## Data Flow
+## Workstream 1: S/MIME Content Scanning
 
-### QRAMM Assessment Creation Flow
+### Follows identity-scanner pattern exactly
 
-```
-User opens QRAMM page (React)
-    |
-    ├── Step 1: Org Profile form
-    |     POST /api/qramm/profiles  ->  { id, multiplier }
-    |
-    ├── Step 2: Create session
-    |     POST /api/qramm/sessions  { org_profile_id }
-    |           |
-    |           ├── INSERT qramm_sessions (status=in_progress)
-    |           ├── fetch latest CryptoEndpoint rows from crypto_endpoints
-    |           ├── call evidence_bridge.derive_answers(endpoints)
-    |           └── bulk INSERT qramm_answers (auto_populated=True for derived)
-    |                -> returns { session_id, auto_populated_count }
-    |
-    ├── Step 3: Dimension tabs -- question-by-question
-    |     GET /api/qramm/sessions/{id}/answers  -> all 120 answers (with auto_populated flag)
-    |     PATCH /api/qramm/sessions/{id}/answers/{q_num}  { answer, evidence_note }
-    |           -> UPDATE qramm_answers, auto_populated=False (user overrode)
-    |
-    └── Step 4: Score and view scorecard
-          POST /api/qramm/sessions/{id}/score
-                -> calls scoring.score_session() with profile multiplier
-                -> UPDATE qramm_sessions (score_cvi, score_sgrm, score_dpe, score_itr, status=complete)
-                -> returns DimensionScores response
-```
+S/MIME is email content-layer cryptography (signed/encrypted message bodies), distinct from email transport TLS already in `email_scanner.py`. The identity-scanner pattern (DNSSEC/SAML/Kerberos) is the correct template:
 
-### Evidence Bridge Internal Flow
+**New module:** `quirk/scanner/smime_scanner.py`
 
-```
-derive_answers(endpoints: List[CryptoEndpoint]) -> List[AnswerHint]:
-    
-    # CVI-1.1: Automated discovery check
-    # Any endpoints present = automated scan ran
-    if len(endpoints) > 0:
-        yield AnswerHint(question=CVI_1_1, answer=3,
-            note=f"QUIRK discovered {len(endpoints)} endpoints via automated scanner")
-    
-    # CVI-1.2: Vulnerability assessment
-    # Presence of severity-classified endpoints with quantum-safety labels
-    quantum_vulnerable = [ep for ep in endpoints
-                          if ep.cert_pubkey_alg and "RSA" in ep.cert_pubkey_alg]
-    if quantum_vulnerable:
-        yield AnswerHint(question=CVI_1_2, answer=3,
-            note=f"NIST PQC-classified findings: {len(quantum_vulnerable)} RSA endpoints")
-    
-    # DPE-1.1: Encryption implementation evidence
-    tls13_eps = [ep for ep in endpoints if ep.tls_version == "TLSv1.3"]
-    tls_eps = [ep for ep in endpoints if ep.tls_version]
-    if tls_eps and len(tls13_eps) / len(tls_eps) > 0.5:
-        yield AnswerHint(question=DPE_1_1, answer=3,
-            note=f"TLS 1.3 on {len(tls13_eps)}/{len(tls_eps)} TLS endpoints")
-    
-    # ITR-1.1: TLS coverage rate as evidence note (answer requires human judgment)
-    total = len(endpoints)
-    tls_covered = len([ep for ep in endpoints if ep.tls_version])
-    if total > 0:
-        coverage_pct = tls_covered / total * 100
-        yield AnswerHint(question=ITR_1_1, answer=None,  # no auto-answer
-            note=f"{coverage_pct:.0f}% TLS coverage across {total} scanned endpoints")
-```
+Protocol label: `"SMIME"` — matches the `_PROTOCOL_KEYS` tuple in `evidence.py` (needs adding there too).
 
-**Critical design choice on risk_engine import:** `evidence_bridge.py` must NOT import `risk_engine.py`. Risk engine imports `quirk.compliance`, and if compliance were to import `quirk.qramm.evidence_bridge`, the cycle would be: `risk_engine -> compliance -> qramm -> evidence_bridge -> risk_engine`. The bridge reads raw `CryptoEndpoint` fields directly. This is the correct pattern — the bridge is a lightweight field-level inspector, not a finding derivation engine.
+**Scanner approach:** Agentless IMAP connection via `imaplib` (stdlib) or `httpx`-backed IMAP proxy. Fetch a sample of messages from `INBOX` with `Content-Type: multipart/signed` or `application/pkcs7-mime`. Extract embedded X.509 certificates via `cryptography.x509`. Classify signing algorithm (RSA key size, SHA-1 vs SHA-256, EC). No mailbox write access required.
+
+**Alternative for air-gapped/no-IMAP scenarios:** Accept a directory of `.eml` files as a scan target (source-scanner style). This is the offline-capable path that respects the agentless constraint.
+
+**New ORM column:** `smime_scan_json` on `CryptoEndpoint`. Pattern matches `kerberos_scan_json`, `saml_scan_json`, `dnssec_scan_json` — all added in v4.2 Phase 17 as a batch column addition.
+
+**New evidence counters in `evidence.py`:**
+- `smime_weak_signing_count` — RSA<2048 or SHA-1 message signing key
+- `smime_unencrypted_count` — signed-only (no encryption, quantum-vulnerable data in flight)
+
+These slot naturally into the `identity_` prefix family because PROFILE_MULTIPLIERS already applies `"identity_"` prefix multiplication. No new subscore needed — the identity posture subscore is the correct bucket for message-layer signing keys.
+
+**New SCORE_WEIGHTS entries** (two new weights must be added and the CI invariant test updated):
+- `"identity_smime_weak_signing_ratio": 8.0` — same weight as `identity_saml_weak_signing_ratio`
+- `"identity_smime_unencrypted_ratio": 6.0` — lighter, informational
+
+**New FastAPI schema field:** `IdentityFinding` in `schemas.py` already supports protocol=`"SMIME"` — no new model needed. `ScanLatestResponse.identity_findings` already carries the list.
+
+**Chaos lab profile:** A mock IMAP server (e.g., `dovecot` or `greenmail` Docker image) pre-seeded with signed `.eml` files using RSA-1024 + SHA-1 (weak) and RSA-2048 + SHA-256 (safe) certificates. Profile name: `smime`. Port: choose one not in use (e.g., `21143` for IMAPS). Seed container drops pre-signed `.eml` files into the inbox via `Maildir`.
+
+**CBOM contribution:** Pass-1 `_make_algorithm_component()` for `SMIME` endpoints with signing algorithm (RSA, SHA-1, etc.). Pass-2 certificate components for the signer cert. Pass-3: protocol component labeled `S/MIME`. No additional skip-list entries needed — S/MIME is not in `DAR_SKIP_PROTOCOLS` or `MOTION_PLAINTEXT_PROTOCOLS`.
+
+**Dependency footprint:** `imaplib` is stdlib. `cryptography` is already a core dep. `email` module is stdlib. No new pip extras required for basic operation. The `[identity]` extras group (`impacket`, `ldap3`) is not needed for S/MIME.
+
+**Extras group:** Create `[smime]` optional extra if IMAP library needs pinning, or absorb into `[motion]` since it's email-layer. Recommendation: `[smime]` stays separate to avoid inflating `[motion]`.
 
 ---
 
-## FastAPI Route Design
+## Workstream 2: Windows AD CS Scanner
 
-```python
-# quirk/dashboard/api/routes/qramm.py
+### Follows identity-scanner pattern with a critical constraint: Windows-only APIs
 
-router = APIRouter(prefix="/qramm", tags=["qramm"])
+**New module:** `quirk/scanner/adcs_scanner.py`
 
-# Profiles
-POST   /api/qramm/profiles                     # create org profile, compute multiplier
-GET    /api/qramm/profiles/{id}                # fetch profile
+AD CS (Active Directory Certificate Services) is a PKI CA built into Windows Server. The interesting attack surface: misconfigured certificate templates that allow privilege escalation (ESC1–ESC8 patterns from the Certify/Certipy research). The agentless scanner approach:
 
-# Sessions
-POST   /api/qramm/sessions                     # create session + run evidence bridge
-GET    /api/qramm/sessions                     # list sessions (id, created_at, status, scores)
-GET    /api/qramm/sessions/{id}                # session detail + cached scores
-DELETE /api/qramm/sessions/{id}                # delete session + cascade answers
+1. **LDAP enumeration** — AD CS publishes template ACLs, enrollment rights, and `msPKI-*` attributes via LDAP under `CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=...`. This is readable without write access using `ldap3` (already in `[identity]` extras). This is the **primary path**.
 
-# Answers
-GET    /api/qramm/sessions/{id}/answers        # all 120 answers for session
-PATCH  /api/qramm/sessions/{id}/answers/{q}   # update single answer
+2. **HTTP/HTTPS enrollment endpoint** — `http://<ca-server>/certsrv/` — NTLM-authenticable. Secondary path; TLS posture of the enrollment endpoint is already covered by `tls_scanner`.
 
-# Scoring
-POST   /api/qramm/sessions/{id}/score          # compute/recompute dimension scores
+3. **WinRM/RPC stub** — truly Windows-native and requires Windows. **Do not implement.** Keep as a stub comment.
 
-# Status (for `quirk qramm status` CLI and dashboard health panel)
-GET    /api/qramm/status                       # QRAMM version, staleness, session count
+The LDAP path means the v4.10 scanner can operate on any platform (Linux/macOS/Windows) as long as the target AD is LDAP-reachable. The `ldap3>=2.9.1` dep is already in `[identity]` extras.
+
+**New ORM column:** `adcs_scan_json` on `CryptoEndpoint`.
+
+**New evidence counters:**
+- `adcs_weak_template_count` — templates allowing requestor-supplied SAN (ESC1) or over-permissive enrollment rights (ESC3/4)
+- `adcs_weak_ca_key_count` — CA root key RSA<4096 or using SHA-1
+
+**Subscore routing:** Roll into `identity_trust` subscore alongside SAML/Kerberos/DNSSEC. New SCORE_WEIGHTS entries:
+- `"identity_adcs_weak_template_ratio": 10.0` — equivalent to `identity_kerberos_weak_etype_ratio`
+- `"identity_adcs_weak_ca_key_ratio": 8.0`
+
+**FastAPI schema:** `IdentityFinding` with `protocol="ADCS"`. No new Pydantic model needed.
+
+**Chaos lab profile — CRITICAL CONSTRAINT:**
+AD CS requires a Windows Server CA. Fully authentic Windows containers are not available on macOS Docker Desktop (`--platform linux/amd64` only). Two practical approaches:
+
+- Option A (recommended for v4.10): Ship a **mock LDAP dataset** — a containerized `OpenLDAP` pre-populated with AD CS schema attributes (`msPKI-Certificate-Name-Flag`, `msPKI-Enrollment-Flag`, ACLs) that mimic a misconfigured template. The scanner's LDAP path runs against this mock. Profile name: `adcs`. Port: e.g., `21389` (LDAPS mock).
+- Option B (deferred): Samba AD DC (`samba/samba:latest`) extended with AD CS attributes. The kerberos profile already uses Samba DC — this would extend it. However, Samba does not implement AD CS natively; schema-level injection is required. Complexity is high.
+
+Recommendation: Option A (OpenLDAP mock with AD CS attributes) for v4.10. Document that a real Windows AD CS environment is required for production accuracy. This is consistent with the existing kerberos profile using Samba DC as a controlled substitute.
+
+**CBOM contribution:** Pass-1 algorithm components for CA signing key algorithm. Pass-2 certificate components for the CA certificate. Pass-3: no new protocol type needed; treat enrollment endpoint TLS as `TLS` protocol (already handled by `tls_scanner`).
+
+**Dependency footprint:** `ldap3` is already in `[identity]` extras. No new pip deps for the LDAP path.
+
+---
+
+## Workstream 3: Report Injection Hardening
+
+### Where the gaps are (precise layering)
+
+The current escaping state (from Phase 61 REPORT-SAN-01, deferred D-11/WR-01):
+
+| Layer | Current State | Gap |
+|-------|--------------|-----|
+| GFM table cells | `md_cell()` in `_md_escape.py` — escapes `\|`, CRLF, control chars | Applied in `technical.py`; NOT yet applied to `executive.py` (verify at phase start) |
+| HTML template | Jinja2 `autoescape=select_autoescape(["html","j2"])` in `html_renderer.py` | Covers template variable interpolation. Gap: any raw `Markup()` bypass or `| safe` filter use in templates |
+| HTML template (finding data) | Finding dicts pass through Jinja2 autoescape | Verify no `| safe` applied to user-controlled fields in `report.html.j2` |
+| PDF (Playwright) | Chromium renders the autoescaped HTML | No additional sanitization needed if HTML layer is clean |
+| Markdown → HTML conversion | N/A — HTML report is generated directly by Jinja2, not by converting Markdown | No `markdown.convert()` call exists; reports are independent codepaths |
+
+**Where to add escaping (in phase order):**
+
+1. **`executive.py`** — audit for raw f-string interpolation into GFM tables. Apply `md_cell()` to all table-cell strings that contain user-controlled data (org name, domain names, finding titles). `technical.py` is already hardened.
+
+2. **`report.html.j2` template** — audit for `| safe` filter applied to scanner-emitted strings. All finding `.description`, `.remediation`, `.host`, `.title` fields must flow through Jinja2's autoescaping (no `| safe`). Any template variable that takes raw scanner output needs verification.
+
+3. **`executive.py` HTML section** (if executive.py has an HTML output path distinct from `html_renderer.py`) — verify the call chain.
+
+4. **SSRF clamp for PDF** — `render_pdf_report()` in `html_renderer.py` already exists. Verify no `page.goto()` call can be influenced by scanner-emitted URLs (Playwright PDF renders a local file path, not a network URL — confirm this is enforced).
+
+**AST/grep CI gate for regression prevention:**
+
+The existing pattern from Phase 59 (credential leakage AST gate) and Phase 62 (check-cancelled-guards.sh) is the model. For injection hardening:
+
+- **grep gate:** `scripts/check-md-cell-coverage.sh` — enumerate all GFM table-cell interpolation sites in `quirk/reports/*.py` that do NOT call `md_cell()` and fail CI if any are found. This is the same pattern as the Phase 59 AST gate for `scan_error` writes.
+- **template audit test:** `tests/test_report_template_no_safe_filter.py` — grep `report.html.j2` for `| safe` applied to scanner-emitted variables; fail if found.
+
+**Build order note:** Report injection hardening is safe to execute in parallel with CMVP attestation (they touch different files). However, if CMVP attestation adds new fields to the HTML report template (e.g., `fips_certified` badges), those new template variables must also be audited for injection. Schedule injection hardening to run either before or in the same phase wave as CMVP attestation template additions.
+
+---
+
+## Workstream 4: CMVP Attestation Feed
+
+### Where it lives in the architecture
+
+**New module:** `quirk/compliance/cmvp.py`
+
+CMVP (Cryptographic Module Validation Program) is the NIST/CCCS database of FIPS 140-2/3 validated modules. The NIST feed is available as a public JSON API: `https://csrc.nist.gov/projects/cryptographic-module-validation-program/validated-modules/search/api/` (or the equivalent JSON export).
+
+**Integration point with CBOM Pass-1 `_fips_status()`:**
+
+In `quirk/cbom/builder.py`, the `_fips_status()` function currently emits two tiers: `"approved"` and `"non-approved"`. The comment at line 289 explicitly marks:
+
+> "The 'certified' tier is reserved for a future phase with CMVP attestation support (Phase 52 D-01) and is intentionally never emitted in v4.7."
+
+The v4.10 CMVP phase closes this deferred D-01. The integration is:
+
+1. `quirk/compliance/cmvp.py` loads the NIST CMVP feed and builds a lookup: `algorithm_name → [certificate_numbers]`.
+2. `_fips_status()` in `builder.py` gains a third tier: `"certified"` — emitted when the algorithm name (e.g., `"AES-256-GCM"`, `"SHA-256"`) has one or more active NIST CMVP certificates in the lookup.
+3. The `quirk:fips140-3-status` CBOM `Property` value becomes `"approved"`, `"non-approved"`, or `"certified"`.
+
+**Module design for `cmvp.py`:**
+
+```
+quirk/compliance/cmvp.py
+  CMVP_FEED_URL = "https://csrc.nist.gov/..."
+  STALENESS_THRESHOLD_DAYS = 90   # quarterly cadence (same as qramm model_meta.py)
+  last_verified = "YYYY-MM-DD"    # bumped on re-verification
+  source_url = CMVP_FEED_URL
+
+  def get_certified_algorithms() -> frozenset[str]: ...
+  def is_cmvp_certified(algorithm_name: str) -> bool: ...
 ```
 
-Register in `app.py`:
-```python
-from quirk.dashboard.api.routes import health, pdf, scan, trends, qramm
-application.include_router(qramm.router, prefix="/api")
+**Cache strategy (offline-capable constraint is hard):**
+
+The NIST feed must not be fetched at scan time (breaks air-gapped client engagements). Two-tier approach:
+
+- **Bundled cache:** Ship a `quirk/compliance/cmvp_cache.json` as package data, updated at release time. This is the offline path. The staleness CI gate (`tests/test_cmvp_freshness.py`) fails if `last_verified` is > 90 days old.
+- **Runtime refresh:** `cmvp.py` exposes a `quirk compliance cmvp refresh` CLI subcommand that fetches the current NIST feed and regenerates `cmvp_cache.json`. Online-only; not called during scan.
+
+**Staleness gate pattern:** Identical to `quirk/qramm/model_meta.py` (`STALENESS_THRESHOLD_DAYS = 90`). CI workflow `python-staleness.yml` already runs `pytest tests/test_qramm_staleness.py tests/test_compliance_freshness.py` — add `tests/test_cmvp_freshness.py` to the same workflow step.
+
+**FIPS 140-3 compliance annotation ripple:**
+
+The `quirk/compliance/__init__.py` COMPLIANCE_MAP has `_fips()` control entries. Adding "certified" tier to CBOM output may surface in the compliance summary section of HTML/PDF reports. The compliance module itself needs no changes — the `fips140-3-status` property is a CBOM-level annotation, not a finding-level compliance mapping.
+
+**Build order note:** CMVP attestation must land before (or in the same phase as) any HTML/PDF template that renders a `fips140-3-status` badge. If the badge template uses the `"certified"` value without the module being present, it renders as "approved" (safe fallback, not broken). CMVP can therefore be scheduled independently of the HTML hardening phase.
+
+---
+
+## Workstream 5: Release Engineering
+
+### Where each artifact lives
+
+**Signed wheel/sdist:** `.github/workflows/release.yml` (new file). The existing `python-staleness.yml` and `dashboard-quality.yml` are the only current CI workflows. Release workflow pattern:
+
+```yaml
+# .github/workflows/release.yml
+on:
+  push:
+    tags: ['v*']
+jobs:
+  build:   # python -m build → dist/
+  sign:    # sigstore or GPG sign → dist/*.sig
+  publish: # upload to PyPI or GitHub Releases
+```
+
+The sigstore approach (keyless signing via OIDC, `sigstore` Python package) is preferred over GPG for open-source packages in 2026 — no key management burden, GitHub Actions OIDC token is sufficient. GPG is the fallback for air-gapped distribution.
+
+**Version policy doc:** `docs/RELEASING.md` (new file). Documents: version bump procedure, which surfaces to update (6 surfaces currently gated by `tests/test_version.py`), tag naming convention, how to trigger the release workflow, how to verify signed artifacts.
+
+**SECURITY.md:** Repo root (standard GitHub convention for vulnerability disclosure). References `docs/RELEASING.md` for the disclosure-to-release pipeline.
+
+**CODE_OF_CONDUCT.md:** Repo root. Boilerplate Contributor Covenant or equivalent.
+
+**CHANGELOG-driven release script:** The existing `CHANGELOG.md` at repo root + `docs/release-notes/4.4.0.md`, `4.5.0.md`, `4.6.0.md` establish the pattern. A `scripts/generate-release-notes.py` script (or shell script) reads `docs/release-notes/<version>.md` and appends to `CHANGELOG.md`. Used in the release workflow before tagging.
+
+**Version bump surface (currently 6, gated by `tests/test_version.py`):**
+1. `pyproject.toml [project] version`
+2. `quirk/__init__.py __version__`
+3. CBOM `metadata.component.version` (set from `__version__`)
+4. HTML report generated_at header (from `__version__`)
+5. `CHANGELOG.md` latest entry
+6. `docs/release-notes/<version>.md` header
+
+The release engineering phase does not change these surfaces; it adds tooling to update them consistently.
+
+---
+
+## Workstream 6: Chaos Lab Fidelity (Phase 999.83 Lessons)
+
+### What Phase 999.83 taught us
+
+From the SUMMARY files and CONTEXT.md, the concrete lessons are:
+
+**Lesson 1 — `_derive_all_profiles()` runtime-read is sound; image pins are the new risk surface.**
+
+The runtime-read pattern (Phase 40) solved the ALL_PROFILES drift problem permanently. Phase 999.83 confirmed it works: no profile-name drift bugs appeared. The new risk surface is **floating image tags** causing silent behavioral changes between `docker pull` invocations. The Image Pin Policy (added to `README.md` in Plan 05) is the mitigation: minor/dated tags only, no major-only tags.
+
+**Lesson 2 — Seed scripts must be idempotent.**
+
+`source/seed.sh` (gitea-seed) exits 22 on re-runs because `POST /api/v1/user/repos` returns 409 when repos already exist. This is a pre-existing bug (DEF-999.83-C) not fixed in 999.83. The pattern: all seed scripts must check existence before creation. Future chaos lab additions should model this from day one.
+
+**Lesson 3 — The `command:` override in docker-compose.yml bypasses the image entrypoint security steps.**
+
+The gitea root-crash (Bug 1) was caused by `command:` overriding the entrypoint that drops privileges. Pattern: avoid overriding `command:` in any service that has a security-significant entrypoint. Use sidecar init containers or environment variables for post-startup initialization.
+
+**Lesson 4 — macOS bind-mount permission model creates false negatives in lab UAT.**
+
+`ldaps` (openldap chown) and `rabbitmq-broker` (erlang cookie eacces) both fail on macOS due to Docker Desktop's bind-mount uid/gid behavior, unrelated to BACK-90. These are filed as DEF-999.83-A/B. The implication: the UAT criterion for new chaos lab profiles should be "four fix sites PASS" not "zero exits anywhere" — macro-level "zero exits" is unachievable on macOS for some profiles.
+
+**Is `_derive_all_profiles()` sufficient, or do we need per-profile config validation?**
+
+The runtime-read is sufficient for profile-name drift. Per-profile config validation (e.g., a CI check that verifies every profile has a healthcheck and an explicit image pin) would add defense-in-depth. This is a good follow-on but not required for v4.10. The existing `docker-compose ... config --profile <name>` command (used in acceptance criteria of Plan 01) validates YAML syntax at the per-profile level — the CI could call this for all profiles.
+
+**New chaos lab profiles in v4.10 (S/MIME, AD CS mock):**
+
+Both must follow the established pattern:
+- `docker-compose.yml`: add profile with explicit image pin (minor/dated tag), healthcheck, seed container dependency chain.
+- `lab.sh`: no changes needed — `_derive_all_profiles()` picks up new profiles automatically.
+- `README.md`: add row to Profile Summary table (port, services, scanner finding summary).
+- `expected_results_v4.md`: add `## Profile: smime` and `## Profile: adcs` sections with expected scanner findings.
+
+---
+
+## Component Integration Map
+
+### New vs Modified Files per Workstream
+
+| Workstream | New Files | Modified Files |
+|------------|-----------|----------------|
+| S/MIME scanner | `quirk/scanner/smime_scanner.py` | `quirk/models.py` (+smime_scan_json column), `quirk/intelligence/evidence.py` (+2 counters, +SMIME to _PROTOCOL_KEYS), `quirk/intelligence/scoring.py` (+2 SCORE_WEIGHTS), `quirk/cbom/builder.py` (register SMIME in Pass-1/2/3), `quirk/dashboard/api/schemas.py` (no new model, protocol field covers it), `quantum-chaos-enterprise-lab/docker-compose.yml`, `README.md`, `expected_results_v4.md` |
+| AD CS scanner | `quirk/scanner/adcs_scanner.py`, chaos lab OpenLDAP mock config | `quirk/models.py` (+adcs_scan_json), `quirk/intelligence/evidence.py` (+2 counters, +ADCS to _PROTOCOL_KEYS), `quirk/intelligence/scoring.py` (+2 SCORE_WEIGHTS), `quirk/cbom/builder.py` (Pass-1), `quantum-chaos-enterprise-lab/docker-compose.yml`, `README.md`, `expected_results_v4.md` |
+| Report injection hardening | `scripts/check-md-cell-coverage.sh`, `tests/test_report_template_no_safe_filter.py` | `quirk/reports/executive.py` (apply md_cell to table cells), `report.html.j2` (audit/remove any `| safe` on scanner data), `.github/workflows/dashboard-quality.yml` (add grep gate step) |
+| CMVP attestation | `quirk/compliance/cmvp.py`, `quirk/compliance/cmvp_cache.json`, `tests/test_cmvp_freshness.py` | `quirk/cbom/builder.py` (_fips_status adds "certified" tier), `quirk/compliance/__init__.py` (may need CMVP section), `.github/workflows/python-staleness.yml` (add test_cmvp_freshness.py), `quirk/cli/` (new `compliance cmvp refresh` subcommand) |
+| Release engineering | `.github/workflows/release.yml`, `docs/RELEASING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `scripts/generate-release-notes.py` | `pyproject.toml` (sigstore/build tooling in `[dev]` extras), `.github/workflows/python-staleness.yml` (version check on tag push) |
+| Chaos lab fidelity | Per-bug seed scripts, init containers | `quantum-chaos-enterprise-lab/docker-compose.yml`, seed scripts for DEF-999.83-A/B/C, `expected_results_v4.md`, `README.md` |
+
+### migration_planner.py Removal
+
+`quirk/engine/migration_planner.py` contains only one function (`categorize_waves`) with 12 lines. It is imported in exactly one place: `quirk/reports/writer.py`. The function is trivially relocatable to `quirk/intelligence/roadmap.py` (which already handles phased roadmap logic) or inlined into `writer.py`. Tests mock `categorize_waves` at `quirk.reports.writer.categorize_waves` — the mock path must be updated. No architectural risk; pure housekeeping.
+
+---
+
+## Data Flow Changes
+
+### S/MIME and AD CS follow the same flow as identity scanners
+
+```
+run_scan.py
+  └── _wrapped_phase("smime", scan_smime_targets, ...)
+       └── scan_smime_targets(cfg) → [CryptoEndpoint(protocol="SMIME", smime_scan_json=...)]
+
+evidence.py build_evidence_summary()
+  └── proto == "SMIME" → increment smime_weak_signing_count | smime_unencrypted_count
+
+scoring.py compute_readiness_score()
+  └── identity_trust_score -= ratio(smime_weak_signing_count) * w["identity_smime_weak_signing_ratio"]
+
+cbom/builder.py build_cbom()
+  └── Pass 1: SMIME endpoints → _make_algorithm_component(signing algo)
+  └── Pass 2: SMIME endpoints → _make_certificate_component(signer cert)
+  └── Pass 3: SMIME endpoints → _make_protocol_component("S/MIME")
+
+dashboard/api/routes/scan.py /api/scan/latest
+  └── identity_findings: IdentityFinding(protocol="SMIME", algorithm="RSA-1024", severity="HIGH")
+```
+
+### CMVP flow (CBOM annotation only, no scoring impact)
+
+```
+quirk/compliance/cmvp.py (loaded at import time, uses bundled cache)
+  └── is_cmvp_certified(algo_name) → bool
+
+quirk/cbom/builder.py _fips_status()
+  └── if is_cmvp_certified(name): return "certified"
+  └── elif nist_level >= 1:       return "approved"
+  └── else:                       return "non-approved"
+
+CycloneDX CBOM output
+  └── <property name="quirk:fips140-3-status">certified</property>
 ```
 
 ---
 
-## Phase Build Order and Parallelism
+## Build Order and Parallelization
 
-```
-Phase A: Data Model + Backend API (BACK-68)          <- MUST BE FIRST (no deps)
-    Creates: QRAMMSession, QRAMMAnswer, QRAMMProfile ORM classes in models.py
-    Creates: _ensure_qramm_tables() in db.py
-    Creates: /api/qramm/* CRUD routes in routes/qramm.py
-    Creates: quirk/qramm/__init__.py, questions.py, scoring.py, staleness.py
-    Creates: Pydantic schemas in schemas.py
-    No frontend required. No other phases block on it at start.
+### Wave A: Independent (can parallelize)
 
-Phase B: SOC2/ISO27001 Compliance Map (COMPLY-11)    <- parallel with A
-    Extends: quirk/compliance/__init__.py (_soc2, _iso, new COMPLIANCE_MAP entries)
-    No new tables, no frontend. Zero deps on Phase A.
+| Phase | Work | Parallelizable? | Dependency |
+|-------|------|----------------|------------|
+| A1: S/MIME scanner | New scanner module + ORM column + evidence counters | Yes | None |
+| A2: AD CS scanner | New scanner module + ORM column + evidence counters | Yes | None |
+| A3: Report injection hardening | Escaping audit + CI gates | Yes | None |
+| A4: CMVP attestation | New compliance module + CBOM `_fips_status` 3rd tier | Yes | None |
+| A5: Chaos lab fidelity (999.83 deferred) | DEF-999.83-A/B/C fixes | Yes | None |
 
-Phase C: CBOM FIPS Annotations (COMPLY-10)           <- parallel with A, B
-    Extends: quirk/cbom/classifier.py (_fips_status_for_algorithm function)
-    Extends: quirk/cbom/builder.py Pass-1 loop (Property attachment)
-    No new tables, no frontend. Zero deps on Phase A or B.
+All five A-wave workstreams touch disjoint code paths. They can execute in parallel across sub-agents.
 
-Phase D: `quirk doctor` CLI (DOCS-05)               <- parallel with A, B, C
-    Extends: run_scan.py with `doctor` subcommand block
-    Light dep on Phase A: doctor checks QRAMM table existence
-    but can degrade gracefully (try inspector.get_table_names()) if tables absent.
-    Effectively zero hard dep — can land same time as A or after.
+### Wave B: Integration (requires A-wave completion)
 
---- Phase A must complete before these can start ---
+| Phase | Work | Dependency |
+|-------|------|------------|
+| B1: S/MIME + AD CS scoring weight CI gate | Update `tests/test_score_weights_invariant.py` for new SCORE_WEIGHTS sum | A1 + A2 both complete (sum changes twice) |
+| B2: Report template CMVP badge rendering | If HTML report gains a CMVP badge, template change requires both CMVP module (A4) and injection hardening (A3) to be reviewed together | A3 + A4 |
+| B3: Release engineering | Signed artifact workflow should gate on all A-wave work being merged | All A-wave phases complete |
+| B4: Chaos lab profiles for S/MIME + AD CS | New `smime` and `adcs` profiles in docker-compose.yml | A1 + A2 (scanner must exist before expected_results oracle can be written) |
 
-Phase E: QRAMM Evidence Bridge (BACK-71)            <- depends on A
-    Creates: quirk/qramm/evidence_bridge.py
-    Wires: POST /api/qramm/sessions to call bridge at creation
-    No new tables, no frontend.
+### Wave C: Polish + verification (sequential)
 
---- Phases A and E must complete before these ---
-
-Phase F: QRAMM Assessment UI + Scorecard            <- depends on A, E
-         (BACK-69 + BACK-70, combine into one phase)
-    Creates: src/dashboard/src/pages/qramm.tsx
-    Creates: OrgProfileForm, DimensionTabs, QuestionCard, ProgressTracker
-    Creates: RadarChart, ScorecardTable
-    Adds: sidebar nav item, /qramm route in App.tsx
-
---- Phases B and F must complete before this ---
-
-Phase G: QRAMM Compliance Mapping View (BACK-72)   <- depends on B, F
-    Extends: qramm.tsx or new compliance-mapping sub-page
-    Maps: QRAMM practice scores -> 8 framework coverage table
-
---- Phase F (minimum) must complete before this ---
-
-Phase H: QRAMM Report Export + Staleness CI Gate   <- depends on F, G
-         (BACK-73 + staleness enforcement)
-    Extends: quirk/reports/ -- combined governance + technical PDF
-    Extends: CI workflow with 90-day QRAMM staleness gate
-    Extends: run_scan.py with `quirk qramm status` subcommand block
-```
-
-**Recommended milestone phase numbering:**
-
-| Phase | Contents | Depends On |
-|-------|----------|------------|
-| 51 | BACK-68: Data Model + Backend API | none (first) |
-| 52 | COMPLY-10 + COMPLY-11 + DOCS-05 | none (can parallel 51) |
-| 53 | BACK-71: Evidence Bridge | 51 |
-| 54 | BACK-69 + BACK-70: Assessment UI + Scorecard | 51, 53 |
-| 55 | BACK-72: Compliance Mapping View | 52, 54 |
-| 56 | BACK-73: Report Export + Staleness CI Gate + `quirk qramm status` | 54, 55 |
-
-Phases 51 and 52 can execute in parallel if there are two engineers. In a single-engineer flow, 52 before 53 is fine since 52 has zero DB/API deps.
+| Phase | Work |
+|-------|------|
+| C1: migration_planner.py removal | Inline/relocate `categorize_waves`, update mock paths in 7 test files |
+| C2: public-launch polish | Homebrew formula, Docker image, quickstart, marketing README, demo script — all require stable release-engineered artifacts |
+| C3: upgrade migration docs | v4.x → v4.10 migration guide; requires knowing what schema columns changed |
 
 ---
 
-## Component Boundaries
+## Scalability and Schema Constraints
 
-| Component | Responsibility | Communicates With | Modified or New |
-|-----------|---------------|------------------|-----------------|
-| `quirk/qramm/__init__.py` | `status_report()` CLI function for session staleness | `qramm_sessions` table via SQLAlchemy | NEW |
-| `quirk/qramm/questions.py` | Static 120-question catalog (`QRAMM_QUESTIONS`) | No runtime deps | NEW |
-| `quirk/qramm/evidence_bridge.py` | Derive answers from `CryptoEndpoint` rows | `quirk/models.py` only | NEW |
-| `quirk/qramm/scoring.py` | Compute weighted dimension scores with profile multiplier | `qramm_sessions`, `qramm_answers`, `qramm_profiles` | NEW |
-| `quirk/qramm/staleness.py` | Constants and `check_staleness()` | No runtime deps | NEW |
-| `quirk/models.py` | ORM class definitions | SQLAlchemy `Base` | MODIFIED — append 3 new classes |
-| `quirk/db.py` | DB init and migration | `quirk/models.py` | MODIFIED — append `_ensure_qramm_tables()` |
-| `quirk/compliance/__init__.py` | `COMPLIANCE_MAP` + `status_report()` | Static only | MODIFIED — add `_soc2()`, `_iso()`, new entries |
-| `quirk/cbom/builder.py` | CBOM construction (3 passes) | `quirk/cbom/classifier.py` | MODIFIED — add FIPS Property in Pass-1 loop |
-| `quirk/cbom/classifier.py` | Algorithm lookup table + classification helpers | cyclonedx-python-lib | MODIFIED — add `_fips_status_for_algorithm()` |
-| `quirk/dashboard/api/routes/qramm.py` | FastAPI CRUD for QRAMM lifecycle | `qramm.*` modules, `quirk/db.py` | NEW |
-| `quirk/dashboard/api/app.py` | FastAPI app factory | All route modules | MODIFIED — register `qramm.router` |
-| `quirk/dashboard/api/schemas.py` | Pydantic response models | None (pure schema) | MODIFIED — add QRAMM response models |
-| `run_scan.py` | CLI entry point and subcommand dispatch | All `quirk.*` modules | MODIFIED — add `qramm` and `doctor` subcommand blocks |
-| `src/dashboard/src/pages/qramm.tsx` | QRAMM assessment wizard page | `/api/qramm/*` endpoints | NEW |
-| `src/dashboard/src/components/qramm/` | Org profile form, dimension tabs, question cards, scorecard, radar | `qramm.tsx` | NEW |
-| `src/dashboard/src/App.tsx` | React Router + sidebar registration | All pages | MODIFIED — add `/qramm` route and sidebar item |
+The `additive-only schema` constraint (no breaking migrations in v1) means `smime_scan_json` and `adcs_scan_json` follow the exact pattern of every prior column addition: `Column(Text, nullable=True)` appended to `CryptoEndpoint`. SQLite `ALTER TABLE ADD COLUMN` is supported; `quirk/db.py` `init_db()` handles idempotent column additions if it uses `CREATE TABLE IF NOT EXISTS` (confirm pattern before executing).
 
----
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Storing Pre-computed Findings in a `qramm_findings` Table
-
-**What people do:** Create a separate findings table for QRAMM that duplicates the derivation logic already in `routes/scan.py _derive_findings()`, creating two sources of truth.
-
-**Why it's wrong:** `_derive_findings()` is the authoritative derivation path. A duplicate findings table drifts the moment any finding logic changes. Two sources of truth create audit confusion for a compliance deliverable.
-
-**Do this instead:** Evidence bridge reads `CryptoEndpoint` raw fields directly (same data source as `_derive_findings()`). QRAMM answers reference scanner evidence by description string in `evidence_note`, not by FK to a findings row.
-
-### Anti-Pattern 2: Importing `risk_engine.evaluate_endpoints()` from `evidence_bridge.py`
-
-**What people do:** Call the existing risk engine from the evidence bridge to reuse finding logic.
-
-**Why it's wrong:** Creates a potential circular import: `risk_engine -> compliance -> qramm -> evidence_bridge -> risk_engine`. Also pulls the heavy risk engine into a module that only needs a few field-level checks.
-
-**Do this instead:** `evidence_bridge.py` reads `CryptoEndpoint` field values directly (`ep.tls_version`, `ep.protocol`, `ep.cert_pubkey_alg`). Duplicate a small subset of logic rather than creating the import dependency.
-
-### Anti-Pattern 3: A 4th CBOM Annotation Pass
-
-**What people do:** Add a separate post-processing pass to attach FIPS annotations to all algorithm components.
-
-**Why it's wrong:** Pass 1 already has `algo_name` and `nist_level` in scope. A 4th pass iterates the component set twice for a property computable without re-iteration.
-
-**Do this instead:** Add FIPS `Property` objects in Pass 1, where `algo_name` and `nist_level` are already bound. One loop, one responsibility.
-
-### Anti-Pattern 4: Extending `quirk compliance status` to Include QRAMM Staleness
-
-**What people do:** Add QRAMM session staleness output to the existing `quirk compliance status` command.
-
-**Why it's wrong:** `quirk compliance status` is currently DB-free. Adding QRAMM staleness forces a `--db` flag and SQLAlchemy session onto a previously zero-dependency command.
-
-**Do this instead:** `quirk qramm status --db ./quirk.db` is a separate subcommand. `quirk doctor` is the aggregate that calls both.
-
-### Anti-Pattern 5: Storing QRAMM Questions in the Database
-
-**What people do:** Insert 120 rows of question text into a `qramm_question_definitions` table.
-
-**Why it's wrong:** Questions are framework-versioned content, not user data. DB storage forces schema migrations on QRAMM framework version bumps. Adds JOIN complexity to every answer query.
-
-**Do this instead:** `quirk/qramm/questions.py` with a module-level `QRAMM_QUESTIONS: List[dict]` constant. The DB stores only `question_number` as an integer. Question text is resolved at runtime from the module constant. Identical to the `COMPLIANCE_MAP` pattern.
-
----
-
-## Integration Points
-
-### Existing Systems Requiring No Change
-
-- `quirk/engine/risk_engine.py` — QRAMM adds no new finding categories; `_build_finding()` chokepoint and `_normalize_for_compliance()` operate only on findings, no QRAMM coupling needed.
-- `quirk/intelligence/scoring.py` — QRAMM score is separate from the 6-subscore quantum-readiness score; no coupling.
-- `quirk/reports/` — Report export (Phase H / BACK-73) adds a new report template or extends the existing HTML/PDF renderer; the existing `writer.py` is not modified until Phase H.
-- `cyclonedx-python-lib` — `Component.properties` (`Set[Property]`) is already in the CycloneDX 1.6 SDK in the current pinned version (`>=11.7.0,<12`). No version bump needed for FIPS annotation.
-
-### Existing Systems Requiring Modification
-
-- `quirk/models.py`: append 3 ORM classes (additive, non-breaking).
-- `quirk/db.py`: append `_ensure_qramm_tables()` to `init_db()` (additive).
-- `quirk/dashboard/api/app.py`: import and register `qramm.router` (additive).
-- `quirk/dashboard/api/schemas.py`: append QRAMM Pydantic models (additive).
-- `run_scan.py`: append `qramm` and `doctor` subcommand blocks (additive).
-- `src/dashboard/src/App.tsx`: add `/qramm` route and sidebar entry (additive).
-
-All modifications are strictly additive. No existing interfaces change. No existing tests require modification as a precondition for Phase A.
+The SCORE_WEIGHTS sum invariant (`tests/test_score_weights_invariant.py`) currently expects sum=261.0. Adding 4 new weights (2 for S/MIME, 2 for AD CS) changes the expected sum. This test must be updated as a final integration step after both scanner phases complete — or each scanner phase updates it independently with the expected sum after their additions.
 
 ---
 
 ## Sources
 
-- `quirk/models.py` — confirmed CryptoEndpoint ORM structure and ALTER TABLE migration pattern
-- `quirk/db.py` — confirmed `_ensure_*_columns()` chain pattern in `init_db()`
-- `quirk/compliance/__init__.py` — confirmed COMPLIANCE_MAP structure, `_pci()/_hipaa()/_fips()` helper pattern, `status_report()` design, `STALENESS_THRESHOLD_DAYS = 365`
-- `quirk/dashboard/api/app.py` — confirmed route registration pattern
-- `quirk/dashboard/api/routes/scan.py` — confirmed `_derive_findings()` at-query-time derivation, `SESSION_BRACKET = timedelta(minutes=5)` design for scan window
-- `quirk/dashboard/api/schemas.py` — confirmed Pydantic schema shape for new QRAMM schemas to follow
-- `quirk/cbom/builder.py` — confirmed 3-pass structure, module-level constants pattern
-- `quirk/cbom/classifier.py` — confirmed `quantum_safety_label()` location as the right home for `_fips_status_for_algorithm()`
-- `run_scan.py` (lines 223-244) — confirmed CLI subcommand dispatch pattern for `qramm` and `doctor` additions
-- `src/dashboard/src/App.tsx` — confirmed React Router pattern and existing page list
-- `pyproject.toml` — confirmed `cyclonedx-python-lib[json-validation]>=11.7.0,<12` is pinned; `Component.properties` available
-- `.planning/ROADMAP.md` BACK-68 through BACK-73 — confirmed QRAMM scope definitions and dimension structure
-- `.planning/PROJECT.md` — confirmed v4.7 milestone targets, architectural decisions log, and constraint that all modifications must be additive (no breaking schema migrations)
-
----
-*Architecture research for: QU.I.R.K. v4.7 Governance & Compliance Platform*
-*Researched: 2026-05-05*
+- `quirk/intelligence/evidence.py` — direct inspection, evidence counter families
+- `quirk/intelligence/scoring.py` — SCORE_WEIGHTS dict (sum=261.0), PROFILE_MULTIPLIERS
+- `quirk/cbom/builder.py` — `_fips_status()` docstring (Phase 52 D-01 CMVP deferred comment at line 289)
+- `quirk/reports/_md_escape.py` — Phase 61 REPORT-SAN-01 escaping scope and documented deferral of HTML-entity escaping
+- `quirk/reports/html_renderer.py` — Jinja2 autoescape configuration
+- `quirk/models.py` — full CryptoEndpoint column inventory
+- `quirk/dashboard/api/schemas.py` — IdentityFinding, MotionFinding, DarFinding models
+- `quirk/compliance/__init__.py` — COMPLIANCE_MAP, STALENESS_THRESHOLD_DAYS, _fips() helper
+- `.planning/PROJECT.md` — v4.10 milestone context, out-of-scope promotions, key decisions log
+- `.planning/phases/999.83-chaos-lab-service-config-drift/CONTEXT.md` — decisions and root-causes
+- `.planning/phases/999.83-chaos-lab-service-config-drift/999.83-01-SUMMARY.md` — gitea init-sidecar pattern
+- `.planning/phases/999.83-chaos-lab-service-config-drift/999.83-05-SUMMARY.md` — deferred items, image pin policy, macOS bind-mount lessons
+- `run_scan.py` — `_wrapped_phase()` pattern, scanner invocation order
+- `quantum-chaos-enterprise-lab/lab.sh` — `_derive_all_profiles()` runtime-read pattern (confirmed working)
+- `quantum-chaos-enterprise-lab/docker-compose.yml` — 18 active profiles confirmed

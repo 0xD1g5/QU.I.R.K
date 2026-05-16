@@ -1,172 +1,201 @@
-# Stack Research
+# Stack Research — v4.10 Launch Readiness (NEW additions only)
 
-**Domain:** Governance & Compliance Platform — QRAMM maturity model + SOC2/ISO27001 mapping on top of existing Python CLI + FastAPI + React app (QU.I.R.K. v4.7)
-**Researched:** 2026-05-05
-**Confidence:** HIGH
+**Domain:** Cryptographic inventory scanner — identity protocol expansion, report hardening, release engineering
+**Researched:** 2026-05-16
+**Confidence:** HIGH for S/MIME parsing, HTML sanitization, sigstore, CMVP feed; MEDIUM for AD CS (certipy conflict analysis); LOW for certipy programmatic API (CLI-centric design, no confirmed module-level API)
 
----
-
-## Context: What Already Exists (Do Not Re-Research)
-
-The following are validated and must not be replaced or duplicated:
-
-| Component | Version | Notes |
-|-----------|---------|-------|
-| Python | 3.11+ | Core scanner and FastAPI backend |
-| FastAPI | >=0.128.8 | Already in `[dashboard]` extra |
-| SQLAlchemy | >=2.0 | `declarative_base()` + `Column` pattern in `quirk/models.py` |
-| SQLite | (stdlib) | Primary DB; additive schema columns only — no breaking migrations |
-| React | 19.2.x | Bundled SPA in `quirk/dashboard/static/` |
-| Recharts | 2.15.x | **Already in bundle** — `RadarChart`, `BarChart`, `ResponsiveContainer` all present |
-| shadcn/ui + Radix | current | Component library; all new UI components follow this pattern |
-| Tailwind CSS | 3.4.x | Utility CSS; already configured |
-| rich | >=13.0.0 | `Console`, `Panel`, `Table` already used in `quirk/cli/banner.py` |
-| cyclonedx-python-lib | >=11.7.0,<12 | CBOM pipeline; FIPS 140-3 annotations extend existing classifier |
-| PCI-DSS/HIPAA/FIPS 140-3 compliance map | v4.6 | `quirk/compliance/__init__.py`; SOC2/ISO27001 are pure additive extensions |
+> This file covers ONLY new library additions for v4.10. The existing validated stack (sslyze, impacket, cyclonedx-python-lib, FastAPI, React + shadcn/ui, SQLite, etc.) is documented in PROJECT.md Key Decisions and is NOT repeated here.
 
 ---
 
-## New Capabilities Needed for v4.7
+## Feature Area 1: S/MIME Content Scanning
 
-### 1. QRAMM Scoring Math — Python Backend
+### Approach: `cryptography` pkcs7 module + stdlib `email` + `asn1crypto`
 
-**Verdict:** No new library needed. Pure Python arithmetic.
+S/MIME messages are CMS-wrapped PKCS#7 structures. The `cryptography` package (already in core deps at `>=44.0`) gained full PKCS7SignatureBuilder and `pkcs7_decrypt_smime` support — **no new library is needed for the structural parsing layer.** `asn1crypto` (already a transitive dep of `cryptography`) provides lower-level `cms.ContentInfo.load()` for cases where `cryptography`'s high-level API doesn't expose an accessor (e.g., reading the `digestAlgorithms` field directly from `SignedData`).
 
-The QRAMM scoring formula is:
-- Practice Score = sum(10 question scores) ÷ 10  (scale 1–5)
-- Practice weight: Stream A (5 questions, 60%) + Stream B (5 questions, 40%)
-- Dimension Score = MIN(Practice 1, Practice 2, Practice 3)  — weakest-link aggregation
-- Overall Score = (CVI + SGRM + DPE + ITR) ÷ 4
-- Profile multiplier: 0.8–1.5× applied to raw scores based on org context
+IMAP retrieval uses stdlib `imaplib` + `email` (both stdlib, Python 3.11+, zero new deps). `.eml` corpus parsing also uses `email.message_from_bytes()`. The `email.generator` / `email.policy` APIs handle RFC 2822 multipart unwrapping to reach the `application/pkcs7-mime` or `application/pkcs7-signature` part.
 
-This is scalar arithmetic over 120 float values. NumPy, pandas, and scipy are all unnecessary overhead. Implement as pure Python functions in `quirk/qramm/scoring.py`.
+### New Core Dep: None (zero new packages for S/MIME content parsing)
 
-**Confidence:** HIGH — verified against QRAMM framework docs at qramm.org and the csnp/qramm GitHub repo (`framework/qramm-overview.md`).
+The parsing path uses:
+- `cryptography>=44.0` (already in `[project.dependencies]`) — `pkcs7.load_pem_pkcs7_certificates()`, `pkcs7_decrypt_smime()`
+- `asn1crypto==1.5.1` (already a transitive dep of `cryptography`) — `cms.ContentInfo.load()` for raw DER SignedData traversal; provides direct access to `signed_data['digest_algorithms']`, `signer_infos`, embedded cert list
+- `imaplib` + `email` (stdlib) — IMAP fetch + MIME multipart unwrapping
 
----
+**Why not M2Crypto:** Requires compiled OpenSSL bindings, no wheel on PyPI for macOS arm64, hostile to offline installs. The existing `cryptography` lib's hazmat PKCS7 API covers the same surface with pure-Python portability.
 
-### 2. QRAMM Data Model — SQLite / SQLAlchemy
+**Why not `python-smime` / `smime` on PyPI:** Last release 2017/2019; no longer maintained; asn1crypto-based but adds nothing beyond what is already available via direct asn1crypto access.
 
-**Verdict:** New SQLAlchemy `Table` classes following existing `CryptoEndpoint` pattern in `quirk/models.py`. No migration tool (Alembic) needed — additive `CREATE TABLE IF NOT EXISTS` on `db.py` initialization.
+**Why not `endesive`:** Broader PDF/XAdES signing library; brings unnecessary scope; the scanner only needs to READ signed content, not produce it.
 
-Required tables:
+### New `[smime]` extras group
 
-| Table | Purpose |
-|-------|---------|
-| `qramm_assessments` | One row per assessment run; org profile, timestamps, overall score |
-| `qramm_responses` | One row per question answer (assessment_id, dimension, practice, question_id, stream, score 1–5) |
-| `qramm_evidence_links` | Bridge: scanner finding → QRAMM question auto-population |
-| `qramm_framework_meta` | Static metadata: `qramm_version`, `last_verified`, `source_url` for staleness gate |
-
-Schema notes:
-- 120 static question definitions: embed as a Python data structure in `quirk/qramm/questions.py` (not a table) — QRAMM questions are versioned framework content, not user data
-- `qramm_assessments.calibration_profile` mirrors existing `ScanCfg` profile field for report coherence
-- All new columns/tables are additive; existing scans remain readable
-
-**Confidence:** HIGH — SQLAlchemy 2.0 `declarative_base` pattern verified in existing codebase; QRAMM data structure verified against qramm.org framework docs.
-
----
-
-### 3. QRAMM Assessment UI — React Wizard
-
-**Verdict:** No new React libraries needed. Use existing shadcn/ui components.
-
-The 120-question wizard (4 dimensions × 3 practices × 10 questions) maps cleanly to:
-- `@radix-ui/react-tabs` (already present) — tab per dimension
-- shadcn/ui `<Select>` or radio group — 1–5 Likert scale per question
-- `react-router-dom` (already present) — `/qramm/*` route namespace
-
-Multi-step wizard state: `useState` or `useReducer` over a `Record<string, number>` response map. No external form library (react-hook-form, formik) needed for a flat 120-integer data set with no validation complexity.
-
-**Confidence:** HIGH — verified existing Radix primitives in `package.json`; wizard complexity does not justify a new dependency.
-
----
-
-### 4. QRAMM Scorecard Visualizations — Radar + Bar Charts
-
-**Verdict:** `recharts` already in bundle at `^2.15.4`. No new charting library needed.
-
-Verified via Context7 (`/recharts/recharts`):
-- `<RadarChart>` + `<PolarGrid>` + `<PolarAngleAxis>` + `<Radar>` — renders 4-dimension spider chart out of the box
-- `<ResponsiveContainer>` — makes it fluid in the dashboard layout
-- `<BarChart>` + `<Bar>` — maturity distribution histogram per dimension
-
-Do not add Chart.js, D3, or Apache ECharts. They are heavier, not already in the bundle, and Recharts already covers the needed chart types with React-native semantics.
-
-**Confidence:** HIGH — verified component list in Context7 documentation; `recharts` confirmed at `^2.15.4` in `src/dashboard/package.json`.
-
----
-
-### 5. SOC2 / ISO 27001 Framework Mapping Data
-
-**Verdict:** Embed as static Python dicts in `quirk/compliance/__init__.py`, following the existing `_pci()` / `_hipaa()` / `_fips()` helper pattern. No external library or database table needed.
-
-**Framework data sources (for authoring, not runtime dependency):**
-
-| Framework | Controls | Data Source for Authoring |
-|-----------|----------|--------------------------|
-| SOC2 (AICPA TSC 2017+) | ~61 Common Criteria across 9 TSC categories (CC1–CC9) | AICPA Trust Services Criteria publication (free download); Vanta Control Set JSON (`VantaInc/vanta-control-set` on GitHub) for machine-readable reference |
-| ISO 27001:2022 | 93 controls across 4 themes (Organizational/People/Physical/Technological) | ISO 27001:2022 Annex A (OSCAL-formatted community catalog at `usnistgov/OSCAL` for structure reference) |
-
-**Why static dicts, not a library:**
-- `CISO-Assistant` (intuitem/ciso-assistant-community) stores framework data as YAML but requires a full Django + PostgreSQL deployment — not embeddable
-- `oscal-pydantic` (`pip install oscal-pydantic`) parses OSCAL JSON but NIST's official OSCAL catalogs do not include SOC2 or ISO27001; community-contributed mappings would require hand-authoring the control list anyway, with added library overhead
-- The existing `COMPLIANCE_MAP` pattern (keyed by finding category, `last_verified` + `source_url` + `version` metadata, CI staleness gate) is already correct and enforced; SOC2/ISO27001 entries follow the same structure with zero new infrastructure
-
-**Staleness enforcement:** The existing `STALENESS_THRESHOLD_DAYS = 365` (Phase 49 / COMPLY-08) covers PCI/HIPAA/FIPS. SOC2/ISO27001 entries added in v4.7 use the same `last_verified` field. The quarterly CI gate already gates on this. No new enforcement mechanism needed.
-
-**Confidence:** MEDIUM-HIGH — SOC2 TSC structure verified via AICPA documentation and Vanta Control Set repo; ISO 27001:2022 control count (93) verified via multiple compliance sources. The "embed as static dict" decision is HIGH confidence given existing pattern; specific control IDs to map require framework document review during implementation.
-
----
-
-### 6. CBOM FIPS 140-3 Annotations — COMPLY-10
-
-**Verdict:** No new library. Extend existing `quirk/cbom/classifier.py` and `quirk/cbom/builder.py`.
-
-The CycloneDX 1.6 schema (`cyclonedx-python-lib>=11.7.0`) already supports algorithm components with `cryptoProperties`. The classifier already has a 50+ entry NIST PQC lookup table. FIPS 140-3 annotation is adding a `fips_approved: bool` field and FIPS 140-3 reference to the `cryptoProperties` of each algorithm component.
-
-No FIPS 140-3 parsing library exists or is needed — the approved algorithm list is a finite static set (AES-128/256 CBC/GCM, SHA-256/384/512, RSA-2048+ PSS, ECDSA P-256/P-384, HMAC-SHA-256+, ML-KEM, ML-DSA per FIPS 203/204).
-
-**Confidence:** HIGH — verified against existing classifier structure and `cyclonedx-python-lib` schema capabilities.
-
----
-
-### 7. `quirk doctor` Health-Check CLI Command
-
-**Verdict:** No new library. Implement with existing `rich` (already in core deps at `>=13.0.0`) + Python stdlib `importlib.util.find_spec()` for import probing.
-
-**Pattern:** A `quirk doctor` subcommand runs a checklist of named checks, prints a `rich.table.Table` with Pass/Warn/Fail per check, and exits with code `1` if any check is Fail. This is the established `brew doctor` / `flutter doctor` / `poetry check` pattern.
-
-Recommended checks:
-```
-1. Python version >= 3.11         ← sys.version_info
-2. Config file present + parseable ← Path(config_path).exists() + yaml.safe_load
-3. SQLite DB path writable         ← tempfile write probe to db_path directory
-4. Dashboard extras installed      ← importlib.util.find_spec("fastapi")
-5. CBOM extras installed           ← importlib.util.find_spec("cyclonedx")
-6. Cloud extras installed          ← importlib.util.find_spec("google.cloud")
-7. Compliance map staleness        ← STALENESS_THRESHOLD_DAYS gate in compliance/__init__.py
-8. QRAMM framework staleness       ← qramm_version/last_verified in qramm_framework_meta (v4.7)
+```toml
+smime = []   # zero new pip deps — scanning uses cryptography + asn1crypto (transitive)
 ```
 
-Implementation: `quirk/cli/doctor_cmd.py` registered as `quirk doctor` in `run_scan.py` CLI entry point. Uses `rich.table.Table` + `rich.console.Console` (both already imported in `quirk/cli/banner.py`). Exit code `0` = all pass/warn, `1` = any fail.
-
-**Confidence:** HIGH — `rich` verified in core deps and actively used in `quirk/cli/`; `importlib.util` is Python stdlib; pattern is industry-standard.
+The extras group is declared to allow `quirk[smime]` to appear in documentation and `quirk doctor` output. The implementation note is that this extra is intentionally empty.
 
 ---
 
-## Alternatives Considered
+## Feature Area 2: Windows AD CS Live Connector
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| QRAMM scoring | Pure Python floats | NumPy | 120 scalar values; numpy import cost not justified |
-| Compliance framework data | Static Python dicts | `oscal-pydantic` library | OSCAL official catalogs don't include SOC2/ISO27001; adds dep for no gain |
-| Compliance framework data | Static Python dicts | CISO-Assistant YAML files | Full Django + PostgreSQL app; not embeddable without extraction |
-| Radar chart | Recharts (already bundled) | D3.js | Already in bundle; D3 requires imperative SVG code; no benefit |
-| Radar chart | Recharts (already bundled) | Apache ECharts | Heavier bundle; not already present; same chart types |
-| Assessment wizard state | `useState` / `useReducer` | react-hook-form | Overkill for flat integer map; no validation complexity |
-| Doctor command | `rich` + `importlib` | Custom health check library | `rich` already a core dep; no new dependency justified |
-| SQLAlchemy schema evolution | Additive `CREATE TABLE IF NOT EXISTS` | Alembic | Single-file local SQLite; migration tooling adds complexity with no benefit until SaaS phase |
+### Approach: impacket LDAP (already in `[identity]`) — no certipy-ad
+
+**Decision: Do NOT add certipy-ad as a dependency.** Here is why:
+
+certipy-ad 5.0.4 pins `cryptography~=42.0.8` and requires `Python>=3.12`. QUIRK currently requires `Python>=3.10` and pins `cryptography>=44.0`. The `~=42.0.8` pin from certipy-ad would **downgrade cryptography from 44.x to 42.x**, which is exactly the class of transitive conflict already documented in Key Decisions for the impacket/pyOpenSSL issue. Additionally, certipy-ad's programmatic API surface is CLI-centric — its internal modules are not designed for library import and there is no documented stable API.
+
+**Decision: Use impacket LDAP directly** (already in `[identity]` extras at `impacket>=0.13.0,<0.14`) to query `CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=...` and enumerate CA objects at `CN=Certification Authorities`. This covers ESC1–ESC4 detection (the template-ACL and SAN-supply conditions) without needing certipy-ad. ESC5–ESC8 require either live RPC calls (DCOM/MSRPC) or relaying, which are offensive techniques not appropriate for QUIRK's read-only audit posture.
+
+**What impacket LDAP covers for AD CS (read-only audit):**
+- `msDS-OIDToGroupLink`, `msPKI-Certificate-Name-Flag`, `msPKI-Enrollment-Flag`, `msPKI-RA-Signature`, `pkiExtendedKeyUsage` attributes on template objects — sufficient for ESC1/ESC2/ESC3/ESC4 detection
+- `cACertificate`, `cRLDistributionPoint`, `dNSHostName` on CA objects — CA discovery
+- Enrollment ACLs via `nTSecurityDescriptor` — low-priv enrollment detection (ESC1 condition 3)
+
+**New ldap_result to ADCS finding path:** The existing Kerberos scanner already authenticates via impacket AS-REQ. The AD CS scanner extends that to a subsequent LDAP bind (same credential flow) and performs paged LDAP searches.
+
+### New package needed: None
+
+`impacket>=0.13.0,<0.14` is already in `[identity]`. The AD CS scanner is added to the `identity` scanner surface. No new extras group needed — it is implicitly part of `[identity]`.
+
+### Alternatives evaluated and rejected
+
+| Approach | Problem |
+|----------|---------|
+| certipy-ad | Python 3.12+ required; pins `cryptography~=42.0.8` (would downgrade from 44.x); no stable library API |
+| impacket-ADCS (micahvandeusen fork) | Unmaintained fork; last commit 2021; targets older impacket API; not on PyPI |
+| certihound | Tiny project, no release activity 2024–2025; wraps certipy internals |
+
+---
+
+## Feature Area 3: HTML/PDF Report Injection Hardening
+
+### Approach: `nh3` for HTML sanitization in Jinja2 template pipeline
+
+The existing `_md_escape.py` (Phase 61 / REPORT-SAN-01) covers GFM markdown table cells. The deferred attack surface is adversary-controlled strings being passed to Jinja2 templates as `|safe` or rendered inside `<script>`/`<style>` contexts in `report.html.j2`. The fix has two layers:
+
+**Layer 1 — Input sanitization at `_build_finding` chokepoint:** Add `nh3.clean()` call on `description`, `remediation`, and `service_detail` fields before they enter the finding dict. This is defense-in-depth: even if Jinja2 autoescape is correctly configured, no raw HTML from scanner output reaches the template.
+
+**Layer 2 — Jinja2 autoescape audit:** The existing `html_renderer.py` already passes `select_autoescape(["html", "j2"])` to `Environment`. The audit confirms there are no `|safe` filters applied to scanner-controlled content. Any discovered `|safe` on user-controlled fields is replaced with explicit `nh3.clean()` before the `Markup()` wrapper.
+
+### New Core Dep: `nh3>=0.2.17`
+
+**Why nh3 over bleach:** bleach was officially deprecated January 2023. It continues to receive minimal security updates (latest 6.3.0, October 2025) but sits on top of `html5lib` which is also inactive. `nh3` is a Rust binding to the Ammonia sanitizer — approximately 20x faster than bleach, actively maintained (latest 0.3.3, February 2026), no C compile step needed (ships pre-built wheels for all major platforms including macOS arm64, Linux x86_64/aarch64, Windows). Same allowlist-based API as bleach.
+
+**Why not lxml.html.clean.Cleaner:** `lxml>=6.0` is already in core deps but `lxml.html.clean` was **removed from lxml 5.2** and split into a separate package `lxml_html_cleaner` (which adds a new dep). nh3 is the cleaner path.
+
+**Why not MarkupSafe.escape() alone:** `markupsafe.escape()` HTML-encodes everything including `<`, `>`, `&` — correct for plain-text values injected into HTML attributes. But remediation text may legitimately contain `<code>...</code>` markup in future reports. An allowlist sanitizer (nh3) is the durable choice.
+
+```toml
+# Add to [project.dependencies]
+"nh3>=0.2.17",
+```
+
+No new extras group — this goes in core deps because all reports (TLS-only install) can potentially be injected.
+
+---
+
+## Feature Area 4: CMVP Attestation Feed
+
+### Approach: httpx-based scraper against NIST CSRC HTML + hackIDLE/nist-cmvp-api static JSON as fallback
+
+**Primary:** NIST CSRC does not expose a public JSON/REST API for CMVP. The validated modules search at `csrc.nist.gov/projects/cryptographic-module-validation-program/validated-modules/search/all` serves approximately 1,086 entries as an HTML table. QUIRK will scrape this via `httpx` (already in core deps at `>=0.28.0`) with BeautifulSoup4 for DOM parsing, caching the result locally in a JSON file with a 7-day TTL.
+
+**Fallback / offline mode:** The community-maintained `nist-cmvp-api` project (hackIDLE/nist-cmvp-api) hosts a weekly-refreshed static JSON at `https://hackidle.github.io/nist-cmvp-api/api/modules.json` with per-certificate records including certificate number, vendor, module name, FIPS level, validation date, status (Active/Historical/Revoked), and extracted algorithm list. QUIRK can fall back to this endpoint when the NIST CSRC scrape fails or in offline mode. This is a third-party community scrape — rated MEDIUM confidence for production use, and its cache should be treated as advisory-only when the primary NIST scrape is available.
+
+**What "CMVP attestation" means for QUIRK:** Phase 52 D-01 deferred `certified: true` annotations. The implementation adds a `_cmvp_lookup(vendor: str, module: str) -> Optional[CmvpRecord]` helper that returns certificate number, validation date, FIPS level, and active status when a match is found. Finding dicts get `"cmvp_cert"`, `"cmvp_status"`, `"cmvp_fips_level"` fields. Report templates render a "FIPS Validated" badge vs "FIPS Annotated" distinction.
+
+### New Core Dep: `beautifulsoup4>=4.13.0`
+
+httpx is already in core deps. BeautifulSoup4 is needed to parse the NIST CSRC HTML table.
+
+```toml
+# Add to [project.dependencies]
+"beautifulsoup4>=4.13.0",
+```
+
+Note: `lxml` (already a core dep) can serve as the BS4 parser via `BeautifulSoup(html, "lxml")` — no additional parser package needed.
+
+**Rate limiting:** NIST CSRC has no published rate limit. The scraper will use a single bulk fetch of the `/all` endpoint (one HTTP request) and cache aggressively (7-day TTL, stored in `~/.quirk/cmvp_cache.json`). This is far safer than per-certificate polling.
+
+**Staleness gate:** The CMVP cache file carries a `last_fetched` ISO timestamp. The existing staleness CI pattern from `quirk/compliance/__init__.py` (365-day cadence, `STALENESS_THRESHOLD_DAYS`) is extended to also gate the CMVP cache via `quirk/qramm/model_meta.py`-style enforcement.
+
+---
+
+## Feature Area 5: Release Engineering
+
+### Approach: sigstore + GitHub Actions + towncrier (dev-only tools)
+
+**Artifact signing:** Use `sigstore>=4.2.0` CLI + `gh-action-sigstore-python` GitHub Action. Sigstore 4.2.0 (January 2026) supports Rekor v2 transparency log and keyless OIDC signing via GitHub Actions ambient credentials — no GPG key management, no key rotation ceremony. PyPI's `pypa/gh-action-pypi-publish` automatically attaches Sigstore attestations when publishing from a trusted publisher (zero extra configuration in the publish step).
+
+**Changelog tooling:** Use `towncrier>=24.8.0`. towncrier is used by pip, pytest, attrs, and Twisted — it is the dominant CHANGELOG automation tool in the CPython ecosystem. News fragments go in `changelog.d/`, towncrier merges them into `CHANGELOG.md` at release time. This aligns with the existing `CHANGELOG.md` established in Phase 37.
+
+**Version policy:** `pyproject.toml` already uses `version = "4.4.0"` (static). The release script will use `python -m build` + `twine check dist/*` + `sigstore sign dist/*`. No version plugin needed — static version string is updated by the release script and locked by `tests/test_version.py`.
+
+**SECURITY.md + CODE_OF_CONDUCT.md:** Plain Markdown files at repo root. No tooling needed. SECURITY.md follows the GitHub advisory format; CODE_OF_CONDUCT.md follows Contributor Covenant 2.1.
+
+### New Dev Dependencies (never in `[project.dependencies]`)
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| sigstore | >=4.2.0 | Keyless wheel + sdist signing via Rekor v2 |
+| towncrier | >=24.8.0 | News-fragment-based CHANGELOG generation |
+| build | >=1.2.0 | PEP 517 sdist + wheel builder (`python -m build`) |
+| twine | >=6.1.0 | Pre-publish artifact validation (`twine check`) |
+
+None of these are added to `pyproject.toml` `[project.optional-dependencies]`. They are installed in CI and documented in `docs/release-process.md` for human release engineers.
+
+**Why not hatch/flit as build backend:** `pyproject.toml` already uses `setuptools>=68` as build backend. Switching backends is a v5 concern, not v4.10.
+
+**Homebrew formula:** A private tap (`homebrew-quirk`) is the target. Formula structure wraps `pip install quirk[all]` inside a virtualenv using Homebrew's standard Python formula pattern. The formula references the PyPI-published wheel — it is NOT a source build. Implementation is a single `Formula` Ruby file. No new Python tooling needed.
+
+**Docker image:** Multi-stage Dockerfile: `python:3.11-slim` base, `pip install quirk[all]` in runtime layer, ENTRYPOINT `["quirk"]`. Published to GHCR (`ghcr.io/quantum-apps/quirk`). No new Python deps. The existing `quantum-chaos-enterprise-lab/` lab Dockerfile pattern provides the precedent.
+
+---
+
+## Feature Area 6: Chaos Lab Fidelity (Phase 999.83)
+
+No new Python library additions required. The 4 bugs (gitea root-user crash, minio-seed KMS, vault-seed rsa-1024, mysql `--skip-ssl` removed) are all Docker Compose configuration fixes. The fixes already have full root-cause analysis in `.planning/phases/999.83-chaos-lab-service-config-drift/CONTEXT.md`.
+
+**Docker image pins being formalized:**
+- `gitea/gitea:1.21` (or newer explicit pin, no `:latest`)
+- `minio/minio:RELEASE.2024-*` (explicit release tag)
+- `mysql:8.0` (pinned; avoids 8.4 `--skip-ssl` removal)
+- `hashicorp/vault:1.15` or similar (explicit pin)
+
+These are Docker Compose `image:` values, not Python deps.
+
+---
+
+## Summary: New Python Packages for v4.10
+
+| Package | Version | New/Existing | Extra | Rationale |
+|---------|---------|-------------|-------|-----------|
+| `nh3` | `>=0.2.17` | **NEW core dep** | (core) | HTML sanitization for report injection hardening; replaces deprecated bleach |
+| `beautifulsoup4` | `>=4.13.0` | **NEW core dep** | (core) | CMVP HTML table scraping; uses existing lxml parser backend |
+| `cryptography` | `>=44.0` (existing) | Existing | (core) | S/MIME PKCS7 parsing; pkcs7 module already covers the need |
+| `asn1crypto` | `~=1.5.1` (transitive) | Existing transitive | — | Raw CMS SignedData field access; no explicit dep needed |
+| `impacket` | `>=0.13.0,<0.14` (existing) | Existing | `[identity]` | AD CS LDAP enumeration |
+| `httpx` | `>=0.28.0` (existing) | Existing | (core) | CMVP NIST CSRC HTTP fetch |
+
+**New extras groups:**
+- `smime = []` — declared but empty; zero new pip deps; surface for `quirk doctor` advisory
+
+**Total new pip deps: 2** (`nh3`, `beautifulsoup4`)
+
+---
+
+## Version Compatibility Matrix
+
+| Package | QUIRK Constraint | Conflict Risk |
+|---------|-----------------|--------------|
+| `cryptography>=44.0` | Core dep (existing) | certipy-ad pins `~=42.0.8` — **certipy-ad EXCLUDED for this reason** |
+| `impacket>=0.13.0,<0.14` | `[identity]` extras (existing) | certipy-ad pins `~=0.13.0` — compatible range but moot since certipy-ad is excluded |
+| `nh3>=0.2.17` | New core dep | No known conflicts; pure Rust wheel, no C deps |
+| `beautifulsoup4>=4.13.0` | New core dep | No conflicts; lxml already present as parser backend |
+| `lxml>=6.0` | Core dep (existing) | `lxml.html.clean` removed in 5.2+ — do NOT use lxml for sanitization; use nh3 instead |
 
 ---
 
@@ -174,56 +203,40 @@ Implementation: `quirk/cli/doctor_cmd.py` registered as `quirk doctor` in `run_s
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| NumPy / SciPy / pandas | Maturity math is scalar; adds 50+ MB to install footprint | Pure Python arithmetic in `quirk/qramm/scoring.py` |
-| `oscal-pydantic` | OSCAL doesn't have official SOC2/ISO27001 catalogs; adds dep with no usable data | Static dicts following existing `_pci()` pattern |
-| `react-hook-form` or `formik` | 120 integer inputs with no validation complexity | `useState` + `useReducer` |
-| Chart.js or D3.js | Recharts already bundled; D3 is imperative/verbose | `recharts` `RadarChart` (already present at `^2.15.4`) |
-| Alembic | Local SQLite; additive tables don't need migration tooling | `CREATE TABLE IF NOT EXISTS` in `quirk/db.py` |
-| Full GRC platform SDK | Django + PostgreSQL stack; not embeddable | Hand-authored static compliance dicts |
-| Any new mandatory `pip` dependency | Zero new core deps is an explicit v4.7 constraint per PROJECT.md | Wire against existing `SQLAlchemy`, `FastAPI`, `rich`, `Recharts` |
+| `certipy-ad` | Python 3.12+ required; `cryptography~=42.0.8` pin downgrades from 44.x; CLI-centric, no library API | `impacket` LDAP queries against AD CS LDAP schema directly |
+| `bleach` | Deprecated January 2023; depends on unmaintained `html5lib` | `nh3>=0.2.17` |
+| `lxml.html.clean` / `lxml_html_cleaner` | `lxml.html.clean` removed from lxml 5.2+; separate package adds unnecessary dep | `nh3` |
+| `M2Crypto` | No pre-built wheel for macOS arm64; hostile to offline installs; requires OpenSSL dev headers at build time | `cryptography` pkcs7 module (already in core) |
+| `python-smime`, `smime` PyPI packages | Last released 2017–2019; unmaintained | `cryptography` + `asn1crypto` (already present) |
+| `hatch` / `flit` as build backend | Switching build backend is disruptive; setuptools>=68 is already validated | Keep setuptools; use `python -m build` frontend |
+| `towncrier` in `pyproject.toml` optional-dependencies | It is a dev tool, not a runtime library | Document in `docs/release-process.md`; install via CI step |
+| `impacket-ADCS` (micahvandeusen fork) | Unmaintained since 2021; not on PyPI; targets stale impacket API | Upstream `impacket` LDAP with direct schema queries |
+| Per-certificate CMVP polling | NIST has no documented API; per-cert HTTP polling of ~4000+ certificates would be aggressive and fragile | Bulk fetch of `/all` endpoint (one request), 7-day cache |
 
 ---
 
-## Version Compatibility Notes
+## React Frontend: No Changes
 
-| Package | Current Constraint | v4.7 Impact |
-|---------|--------------------|-------------|
-| `recharts` | `^2.15.4` | RadarChart present since v2.x; no upgrade needed |
-| `SQLAlchemy` | `>=2.0` | `declarative_base` pattern used for new QRAMM tables |
-| `cyclonedx-python-lib` | `>=11.7.0,<12` | FIPS 140-3 annotation extends `cryptoProperties`; no version bump needed |
-| `rich` | `>=13.0.0` | `Table`, `Console`, `Panel` all present since v13; no upgrade |
-| `@radix-ui/react-tabs` | `^1.1.13` | Already in bundle; QRAMM wizard uses it for dimension tabs |
-| `react-router-dom` | `^7.4.0` | Already in bundle; add `/qramm/*` route namespace |
+v4.10 does not introduce new React routes or components beyond integration of AD CS and S/MIME findings into the existing identity tab and findings table. The existing `package.json` stack (React 19, Recharts, Cytoscape, shadcn/ui Radix primitives, Vitest, MSW) is sufficient.
 
----
-
-## Installation
-
-No new `pip install` commands for v4.7 core features. All new capabilities wire against existing dependencies.
-
-```bash
-# Nothing new to install — all stack additions are code, not new packages.
-# Verify existing extras still install cleanly after v4.7 schema additions:
-pip install quirk[all]
-pip install quirk[dashboard]
-```
+AD CS findings surface on the existing `/identity` route. S/MIME findings follow the same `identity_findings[]` Pydantic pattern established in Phase 21. No new npm packages are needed.
 
 ---
 
 ## Sources
 
-- [QRAMM Toolkit Overview](https://qramm.org/toolkit-overview.html) — Dimension structure, scoring formula, 120-question count, 5-level maturity scale (HIGH confidence)
-- [QRAMM Framework Overview on GitHub](https://github.com/csnp/qramm/blob/main/framework/qramm-overview.md) — Confirmed weakest-link Dimension Score formula, Stream A/B weighting (HIGH confidence)
-- [Recharts RadarChart — Context7 `/recharts/recharts`](https://context7.com/recharts/recharts) — Verified `RadarChart`, `PolarGrid`, `PolarAngleAxis`, `ResponsiveContainer` all exported in v2.x (HIGH confidence)
-- [Vanta Control Set](https://github.com/VantaInc/vanta-control-set) — Machine-readable SOC2 + ISO27001 controls in JSON; usable as authoring reference (MEDIUM confidence — low maintenance activity on the repo)
-- [NIST OSCAL](https://github.com/usnistgov/OSCAL) — Official OSCAL catalogs (NIST 800-53, CSF, 800-171); SOC2/ISO27001 not in official catalog (HIGH confidence)
-- [oscal-pydantic on PyPI](https://pypi.org/project/oscal-pydantic/) — Available but only useful for NIST-native catalogs (MEDIUM confidence)
-- [CISO-Assistant Community](https://github.com/intuitem/ciso-assistant-community) — 130+ framework GRC platform; YAML framework data not embeddable standalone (MEDIUM confidence)
-- `src/dashboard/package.json` — Confirmed `recharts@^2.15.4` already in bundle (HIGH confidence — direct file read)
-- `quirk/models.py` — Confirmed `declarative_base()` + `Column` SQLAlchemy 2.0 pattern (HIGH confidence — direct file read)
-- `quirk/compliance/__init__.py` — Confirmed `_pci()`/`_hipaa()`/`_fips()` dict pattern + `last_verified`/`source_url`/`STALENESS_THRESHOLD_DAYS` infrastructure (HIGH confidence — direct file read)
-- `quirk/cli/banner.py` — Confirmed `rich.console.Console` + `rich.panel.Panel` already imported in core CLI (HIGH confidence — direct file read)
+- `/pyca/cryptography` via Context7 — pkcs7 module coverage, PKCS7SignatureBuilder, pkcs7_decrypt_smime confirmed current (HIGH confidence)
+- pypi.org/project/certipy-ad — version 5.0.4, Python >=3.12, `cryptography~=42.0.8` pin confirmed (HIGH confidence)
+- deepwiki.com/ly4k/Certipy/1.1-installation-and-dependencies — full dependency table including impacket~=0.13.0 confirmed (HIGH confidence)
+- pypi.org/project/sigstore — version 4.2.0 (January 2026), Python >=3.10, keyless OIDC signing confirmed (HIGH confidence)
+- pypi.org/project/nh3 — version 0.3.3 (February 2026), Rust binding to Ammonia, replaces deprecated bleach (HIGH confidence)
+- github.com/mozilla/bleach/issues/698 — official deprecation notice January 2023 (HIGH confidence)
+- github.com/hackIDLE/nist-cmvp-api — weekly-refreshed static JSON, latest release May 15 2026, confirmed fields (MEDIUM confidence — community project)
+- csrc.nist.gov validated modules /all endpoint — HTML-only, no API; ~1,086 entries, one bulk request feasible (HIGH confidence)
+- pypi.org/project/asn1crypto — version 1.5.1, no external deps, production/stable (HIGH confidence)
+- pypi.org/project/towncrier — latest August 2025, used by pip/pytest/attrs (HIGH confidence)
 
 ---
-*Stack research for: QU.I.R.K. v4.7 Governance & Compliance Platform*
-*Researched: 2026-05-05*
+
+*Stack research for: QU.I.R.K. v4.10 Launch Readiness*
+*Researched: 2026-05-16*
