@@ -7,6 +7,7 @@ from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.assessment.migration_advisor import recommend_migration_paths
+from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: wrap scanner-controlled cells
 
 # D-07 / WR-09 (Phase 73): fallback bullet when score dict is malformed.
 _INTERPRETATION_UNAVAILABLE = "Score data unavailable for this run."
@@ -167,7 +168,7 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append("### Score Drivers (Top)")
     if score_raw.get("drivers"):
         for d in score_raw["drivers"][:8]:
-            lines.append(f"- {d['reason']} (**-{d['points']}**)")
+            lines.append(f"- {md_cell(d['reason'])} (**-{d['points']}**)")
 
     lines.append("")
     lines.append("## Confidence & Coverage")
@@ -185,7 +186,7 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     if blockers_top:
         lines.append("- **Top visibility blockers:**")
         for category, count in blockers_top:
-            lines.append(f"  - {category}: {count}")
+            lines.append(f"  - {md_cell(category)}: {count}")
 
     lines.append("")
     lines.append("## Discovery and Coverage")
@@ -203,7 +204,7 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append("")
     lines.append("## Interpretation")
     for b in interp.get("bullets", []):
-        lines.append(f"- {b}")
+        lines.append(f"- {md_cell(b)}")
 
     lines.append("")
     lines.append("## Transition Roadmap")
@@ -219,9 +220,9 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
         if phase_items:
             lines.append(f"### {phase_labels[phase_key]}")
             for item in phase_items:
-                lines.append(f"- **{item['title']}** — {item['why']}")
+                lines.append(f"- **{md_cell(item['title'])}** — {md_cell(item['why'])}")
                 lines.append(
-                    f"  - Owner: {item['owner_placeholder']} | Timeframe: {item['timeframe']}"
+                    f"  - Owner: {md_cell(item['owner_placeholder'])} | Timeframe: {md_cell(item['timeframe'])}"
                 )
             lines.append("")
 
@@ -232,10 +233,10 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
         for r in recs:
             if shown >= 10:
                 break
-            lines.append(f"- **{r.get('path')}** — {r.get('recommendation')}")
+            lines.append(f"- **{md_cell(r.get('path'))}** — {md_cell(r.get('recommendation'))}")
             if r.get("host") and r.get("port") is not None:
                 lines.append(
-                    f"  - Target: {r.get('host')}:{r.get('port')} | Severity: {r.get('severity')}"
+                    f"  - Target: {md_cell(r.get('host'))}:{r.get('port')} | Severity: {r.get('severity')}"
                 )
             shown += 1
         # closes cbom-intel-reports/IN-06 (Phase 77 D-12) — make truncation transparent.
