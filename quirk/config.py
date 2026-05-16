@@ -275,8 +275,13 @@ class OutputCfg:
 
 @dataclass
 class IntelligenceCfg:
-    # Intelligence/scoring layer versioning
-    intelligence_version: str = "4.4.0"
+    # Intelligence/scoring layer versioning.
+    # Derives from quirk.__version__ (which resolves from pyproject.toml
+    # [project.version] per D-84-R1 / v4.10 D-02) so we never carry a second
+    # literal that can drift from the canonical SoT.
+    intelligence_version: str = field(
+        default_factory=lambda: __import__("quirk").__version__
+    )
 
     # Score calibration profile used by scoring/reporting.
     # Supported: lenient|balanced|strict
