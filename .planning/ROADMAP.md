@@ -1590,10 +1590,10 @@ Wave A phases are internally independent — they touch fully disjoint code path
   6. `lab.sh` `ALL_PROFILES` runtime-read (from `_derive_all_profiles()`) enumerates both `smime` and `adcs`; `expected_results_v4.md` contains oracle sections for both new profiles with expected scanner findings
 **Plans**: 4 plans
 Plans:
-- [ ] 82-01-PLAN.md — DEF-999.83-A ldaps verification + global image-tag pin sweep (CHAOS-01, CHAOS-05)
-- [ ] 82-02-PLAN.md — DEF-999.83-B rabbitmq-broker Erlang cookie determinism (CHAOS-02)
-- [ ] 82-03-PLAN.md — DEF-999.83-C gitea source seed early-existence short-circuit (CHAOS-03)
-- [ ] 82-04-PLAN.md — Idempotency regression test + lab.sh pin-policy CI gate + smime/adcs parity confirm + UAT/Obsidian close (CHAOS-04, CHAOS-05, CHAOS-06)
+- [x] 82-01-PLAN.md — DEF-999.83-A ldaps verification + global image-tag pin sweep (CHAOS-01, CHAOS-05)
+- [x] 82-02-PLAN.md — DEF-999.83-B rabbitmq-broker Erlang cookie determinism (CHAOS-02)
+- [x] 82-03-PLAN.md — DEF-999.83-C gitea source seed early-existence short-circuit (CHAOS-03)
+- [x] 82-04-PLAN.md — Idempotency regression test + lab.sh pin-policy CI gate + smime/adcs parity confirm + UAT/Obsidian close (CHAOS-04, CHAOS-05, CHAOS-06)
 
 ### Phase 83: Integration Gate + Cleanup
 **Goal**: All Wave A scanner outputs are integrated into a consistent codebase — the `SCORE_WEIGHTS` invariant test reflects the final sum including all four new weight entries from S/MIME and AD CS, the `migration_planner.py` dead module is removed, and a full integration smoke confirms all tests pass green before release engineering begins
