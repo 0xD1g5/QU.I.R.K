@@ -12,6 +12,7 @@
 - ✅ **v4.7 Governance & Compliance Platform** — Phases 51–56 + 56.1, 27 plans (shipped 2026-05-08)
 - ✅ **v4.8 Pre-Primetime Hardening + Operating Model** — Phases 57–68 (shipped 2026-05-14) → `.planning/milestones/v4.8-ROADMAP.md`
 - ✅ **v4.9 Audit Depth** — Phases 69–77 + 69.1, 38 plans (shipped 2026-05-15) → `.planning/milestones/v4.9-ROADMAP.md`
+- 🚧 **v4.10 Launch Readiness — Coverage, Hardening, Release Engineering** — Phases 78–85, 8 phases (opened 2026-05-16)
 
 ## Phases
 
@@ -1473,3 +1474,154 @@ Plans:
 **Plans**: TBD
 **Provenance**: Discovered 2026-05-15 during Phase 999.83 Plan 05 UAT. Per-bug detail in `.planning/phases/999.83-chaos-lab-service-config-drift/deferred-items.md`.
 
+
+---
+
+## v4.10 Launch Readiness — Coverage, Hardening, Release Engineering — Phases 78–85
+
+**Milestone goal:** Close the remaining security/correctness backlog (HTML/PDF injection hardening, CMVP attestation, dead code), expand identity coverage with S/MIME LDAP discovery and Windows AD CS enumeration, fix three outstanding chaos-lab service-config drift bugs, establish signed-artifact release engineering, and polish the public install experience for a future v5.0 GA tag.
+
+**Phase numbering:** Continues from Phase 77.
+
+**Wave structure:**
+
+| Wave | Phases | Gate |
+|------|--------|------|
+| A (parallel) | 78 (start first), 79, 80, 81, 82 | All five complete before Wave B begins |
+| B (sequential) | 83, 84 | Requires Wave A complete; 84 follows 83 |
+| C (sequential) | 85 | Requires Phase 84 complete |
+
+Wave A phases are internally independent — they touch fully disjoint code paths and can execute concurrently. Phase 78 is recommended to start first to ensure all downstream scanner template additions land in a hardened reporting environment.
+
+### Phases Checklist
+
+- [ ] **Phase 78: HTML/PDF Injection Hardening** - Harden all report rendering paths against injection; add `nh3` sanitization at `_build_finding`; CI gate for `| safe` filter usage (closes v4.8 D-06)
+- [ ] **Phase 79: S/MIME LDAP Discovery Scanner** - New S/MIME scanner via AD `userCertificate`/`userSMIMECertificate` LDAP attributes; CBOM integration; `smime` chaos lab profile
+- [ ] **Phase 80: Windows AD CS Scanner** - New AD CS scanner via impacket LDAP enumeration; ESC1–ESC8 crypto-property findings; `[adcs]` extras group; `adcs` chaos lab profile
+- [ ] **Phase 81: CMVP Attestation Feed** - Bundled CMVP coverage table; `quirk compliance cmvp refresh` CLI; 90-day staleness gate; CBOM third tier (coverage list, never `certified: true`)
+- [ ] **Phase 82: Chaos Lab Fidelity** - Fix DEF-999.83-A/B/C (ldaps macOS bind-mount, RabbitMQ Erlang cookie, gitea idempotency); image pin policy; integrate smime/adcs new profiles
+- [ ] **Phase 83: Integration Gate + Cleanup** - `SCORE_WEIGHTS` invariant update (post Phases 79+80); `migration_planner.py` removal; final integration smoke
+- [ ] **Phase 84: Release Engineering** - PyPI name check; Trusted Publishers + Sigstore; `SECURITY.md`; `CODE_OF_CONDUCT.md`; `towncrier`; single version source of truth
+- [ ] **Phase 85: Public-Launch Polish** - Homebrew tap; GHCR Docker image; upgrade guide; marketing README; sample CBOM outputs; quickstart polish
+
+---
+
+### Phase 78: HTML/PDF Injection Hardening
+**Goal**: Every scanner-controlled string that reaches an HTML, PDF, or markdown report passes through a documented sanitization chokepoint — no raw scanner output can inject script tags, HTML entities, or markdown control characters into consultant deliverables
+**Wave**: A (start first — gates downstream scanner template additions)
+**Depends on**: Phase 77
+**Requirements**: HARDEN-01, HARDEN-02, HARDEN-03, HARDEN-04, HARDEN-05, HARDEN-06
+**Success Criteria** (what must be TRUE):
+  1. A scan result containing `<script>alert(1)</script>` in a certificate CN renders as `&lt;script&gt;alert(1)&lt;/script&gt;` in both the HTML report and PDF export — verified by an automated unit test
+  2. Every Jinja2 template has `autoescape=True`; every occurrence of `| safe` in any template is paired with an upstream `nh3.clean()` call documented by an inline justification comment
+  3. The CI `| safe` grep gate exits non-zero if any new `| safe` usage lacks a paired `nh3.clean()` call upstream — modeled on the Phase 59 `safe_str` AST gate
+  4. Playwright PDF generation runs in a no-JavaScript, no-network context; the PDF `<title>` and Author metadata fields are set from constants, never from scan-controlled content
+  5. `nh3>=0.2.17` is listed in `[project.dependencies]` in `pyproject.toml` and `pip install quirk` installs it on a clean environment
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 79: S/MIME LDAP Discovery Scanner
+**Goal**: QU.I.R.K. can enumerate S/MIME signing certificates stored in Active Directory `userCertificate` and `userSMIMECertificate` attributes — detecting weak signing algorithms, expired certificates, and sub-2048-bit RSA keys — with findings surfaced in the Identity tab, CBOM output, and reports; no mailbox content is accessed at any point
+**Wave**: A (parallel with 78, 80, 81, 82)
+**Depends on**: Phase 77
+**Requirements**: SMIME-01, SMIME-02, SMIME-03, SMIME-04, SMIME-05, SMIME-06, SMIME-07, SMIME-08
+**Success Criteria** (what must be TRUE):
+  1. Scanning the `smime` chaos lab OpenLDAP profile produces: a HIGH finding for the RSA-1024 certificate, a HIGH finding for the SHA-1–signed certificate, and no finding (or a SAFE classification) for the RSA-2048-SHA-256 certificate
+  2. S/MIME scan results appear in the `smime_scan_json` database column and produce `protocol="SMIME"` IdentityFinding entries visible in `GET /api/scan/latest`; the React Identity tab renders them without layout change
+  3. CBOM Pass-1 emits algorithm components for each discovered S/MIME certificate; Pass-2/3 skip-list prevents spurious TLS-style protocol components for SMIME endpoints
+  4. A dedicated `test_smime_no_envelope_leak.py` test asserts that no IMAP envelope field (From, To, Subject, Message-ID) appears anywhere in `smime_scan_json` or finding output — even when the scanner is given an IMAP target
+  5. The AST CI gate in SMIME-08 exits non-zero if any import of IMAP envelope fields is found in `quirk/scanners/smime_scanner.py`
+**Plans**: TBD
+
+### Phase 80: Windows AD CS Scanner
+**Goal**: QU.I.R.K. can enumerate Active Directory Certificate Services CA configurations and certificate templates via authenticated LDAP — detecting weak CA signing algorithms, dangerously permissive template configurations (ESC1–ESC8 observable crypto properties), and CA reachability — with results in the Identity tab, CBOM, and reports; no write operations or certificate enrollment is performed
+**Wave**: A (parallel with 78, 79, 81, 82)
+**Depends on**: Phase 77
+**Requirements**: ADCS-01, ADCS-02, ADCS-03, ADCS-04, ADCS-05, ADCS-06, ADCS-07, ADCS-08, ADCS-09
+**Success Criteria** (what must be TRUE):
+  1. Scanning the `adcs` chaos lab OpenLDAP profile (with msPKI-* schema attributes) produces findings for the deliberately misconfigured templates: one ESC1-category finding and one ESC4-category finding; the safe baseline template produces no misconfiguration finding
+  2. When AD CS LDAP authentication fails (e.g., wrong credentials or LDAP unreachable), the scanner emits an `ADCS-UNREACH` coverage-gap finding instead of crashing — no exception propagates to the scan session error log
+  3. `pip install quirk[all]` and `pip install quirk[adcs]` both produce environments where `cryptography.__version__ >= "44.0"` — verified by a CI matrix pip-install test job
+  4. ADCS scan results appear in the `adcs_scan_json` database column and produce `protocol="ADCS"` IdentityFinding entries visible in `GET /api/scan/latest`
+  5. The module header of `quirk/scanners/adcs_scanner.py` includes a documented invariant that the scanner performs read-only LDAP operations only — no certificate enrollment, template creation, or write operation is issued under any code path
+**Plans**: TBD
+
+### Phase 81: CMVP Attestation Feed
+**Goal**: QU.I.R.K. can display which NIST CMVP-validated modules cover each discovered algorithm — as an informational coverage list in the CBOM and HTML/PDF compliance section — with an offline-capable bundled snapshot, a 90-day staleness CI gate, and a CLI refresh command; the system never emits `certified: true` from algorithm-name matching alone
+**Wave**: A (parallel with 78, 79, 80, 82)
+**Depends on**: Phase 77
+**Requirements**: CMVP-01, CMVP-02, CMVP-03, CMVP-04, CMVP-05, CMVP-06, CMVP-07
+**Success Criteria** (what must be TRUE):
+  1. `quirk compliance cmvp refresh` fetches the NIST CSRC CMVP validated-modules page, parses the table into `cmvp_cache.json`, and writes a fresh `last_verified` date — completing in under 30 seconds on a standard internet connection
+  2. Running `quirk` with no network access uses the bundled `cmvp_cache.json` snapshot and produces the same CBOM and report output as when network is available — offline-capable constraint satisfied
+  3. An HTML/PDF report for a scan containing AES-256 shows a "CMVP Coverage" column listing CMVP module names that cover AES-256 — rendered as "Not in CMVP catalog" for algorithms with no matching entry
+  4. The CI staleness gate (`tests/test_cmvp_freshness.py`) fails if `cmvp_cache.json::last_verified` is more than 90 days in the past
+  5. A permanent negative CI test asserts that no code path in `quirk/compliance/cmvp.py` or `quirk/cbom/` emits `certified: true` for any algorithm — this test cannot be removed without explicit documented rationale
+**Plans**: TBD
+
+### Phase 82: Chaos Lab Fidelity
+**Goal**: The three outstanding DEF-999.83 chaos-lab failures on macOS Docker Desktop are fixed; every Docker Compose service in the lab uses a fully-qualified pinned image tag; the two new v4.10 profiles (`smime`, `adcs`) integrate into the lab cleanly with idempotent seeding; and `lab.sh` runtime profile-read continues to pass all parity tests with the updated compose file
+**Wave**: A for DEF-999.83 fixes and image pinning (CHAOS-01..03, CHAOS-05); Wave B gate for new-profile integration (CHAOS-04, CHAOS-06 — complete after Phases 79+80 deliver the new profiles)
+**Depends on**: Phase 77 (Wave A tasks); Phases 79, 80 (Wave B tasks — CHAOS-04, CHAOS-06)
+**Requirements**: CHAOS-01, CHAOS-02, CHAOS-03, CHAOS-04, CHAOS-05, CHAOS-06
+**Success Criteria** (what must be TRUE):
+  1. `./lab.sh down && ./lab.sh up --profile ldaps` on macOS Docker Desktop produces `chaoslab-ldaps-1` in `Up` state with no `chown: Read-only file system` errors — an `ldapsearch` against `localhost:636` succeeds
+  2. `./lab.sh down && ./lab.sh up --profile broker` on macOS Docker Desktop produces `chaoslab-rabbitmq-broker-1` in `Up (healthy)` state with no Erlang cookie errors across both first and subsequent up/down cycles
+  3. `./lab.sh up --profile source` run on an already-seeded gitea volume exits with seed container in `Exited (0)` — no HTTP 409 duplicate-org/duplicate-repo errors; existing crypto-antipattern repos remain intact
+  4. `./lab.sh up --profile smime && ./lab.sh up --profile smime` (two consecutive runs on a persisted volume) produces seed container in `Exited (0)` on both runs; `./lab.sh up --profile adcs && ./lab.sh up --profile adcs` does the same — asserted by `tests/test_chaos_lab_idempotency.py`
+  5. A `docker compose config` parse check in `lab.sh` fails CI if any service in `docker-compose.yml` uses a `:latest` tag or an untagged image reference; all existing and new services pass this check
+  6. `lab.sh` `ALL_PROFILES` runtime-read (from `_derive_all_profiles()`) enumerates both `smime` and `adcs`; `expected_results_v4.md` contains oracle sections for both new profiles with expected scanner findings
+**Plans**: TBD
+
+### Phase 83: Integration Gate + Cleanup
+**Goal**: All Wave A scanner outputs are integrated into a consistent codebase — the `SCORE_WEIGHTS` invariant test reflects the final sum including all four new weight entries from S/MIME and AD CS, the `migration_planner.py` dead module is removed, and a full integration smoke confirms all tests pass green before release engineering begins
+**Wave**: B (requires Wave A complete — specifically Phases 79, 80, and 82)
+**Depends on**: Phase 78, Phase 79, Phase 80, Phase 81, Phase 82
+**Requirements**: CLEAN-01
+**Success Criteria** (what must be TRUE):
+  1. `tests/test_score_weights_invariant.py` passes with the updated `SCORE_WEIGHTS` sum that includes all four new weight entries from the S/MIME and AD CS scanners — the invariant test was updated exactly once, after both scanners landed
+  2. `quirk/intelligence/migration_planner.py` does not exist in the repository; `quirk/reports/writer.py` contains the inlined `categorize_waves` logic (or its equivalent inline expression); all seven test mock paths that previously targeted `migration_planner.py` are updated; `pytest` passes with no import errors
+  3. `pytest` passes with zero failures after all Wave A changes are integrated — no residual red tests from scanner wiring, CBOM updates, or score weight changes
+**Plans**: TBD
+
+### Phase 84: Release Engineering
+**Goal**: QU.I.R.K. has a signed, attestable release pipeline — PyPI distribution name confirmed, GitHub Actions Trusted Publishers configured, Sigstore attestations automatic, CHANGELOG automation via `towncrier`, a single canonical version source of truth, and all public-facing governance documents (`SECURITY.md`, `CODE_OF_CONDUCT.md`, `docs/release-process.md`) published
+**Wave**: B (requires Wave A complete; follows Phase 83)
+**Depends on**: Phase 83
+**Requirements**: RELENG-01, RELENG-02, RELENG-03, RELENG-04, RELENG-05, RELENG-06, RELENG-07, RELENG-08
+**Success Criteria** (what must be TRUE):
+  1. `pip index versions quirk` is run as the first task; if `quirk` is taken on PyPI, the distribution name is changed to the agreed alternate (decision logged to PROJECT.md Key Decisions as v4.10 D-NN) before any packaging automation is written; the chosen name is available on test.pypi.org and a test upload succeeds
+  2. Pushing a `v*` tag triggers `.github/workflows/release.yml` which publishes a wheel and sdist to PyPI via Trusted Publishers (GitHub OIDC — no stored API tokens) and automatically generates Sigstore attestations via `pypa/gh-action-pypi-publish`
+  3. `SECURITY.md` exists at the repo root, defines a 90-day coordinated disclosure SLA, enables GitHub private vulnerability reporting, and documents the Sigstore signing identity used for release artifacts
+  4. `towncrier build` produces a valid `CHANGELOG.md` from news fragments under `news/`; `docs/release-process.md` documents the complete release runbook from tag creation through PyPI publish
+  5. `quirk.__version__` in `quirk/__init__.py` is the single source of truth; `tests/test_version.py` asserts parity across `pyproject.toml`, the CLI `--version` banner, the dashboard footer, and CBOM metadata — the test reads the version via `importlib.metadata`, not a hardcoded literal
+**Plans**: TBD
+
+### Phase 85: Public-Launch Polish
+**Goal**: Installing and evaluating QU.I.R.K. is frictionless for a security consultant encountering the project for the first time — a Homebrew formula, a published Docker image, an upgrade guide, a marketing README with badges and quickstart, and sample CBOM output files are all available before the v4.10 release tag is cut
+**Wave**: C (requires Phase 84 complete — Homebrew formula sha256 references the PyPI sdist; Docker image tag references the published version)
+**Depends on**: Phase 84
+**Requirements**: LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, LAUNCH-07
+**Success Criteria** (what must be TRUE):
+  1. `brew install <org>/quirk/quirk` on macOS arm64 installs QU.I.R.K. in a `pipx`-managed venv and `quirk --version` prints the current version — the Homebrew formula is published in a `homebrew-quirk` org tap
+  2. `docker run ghcr.io/<org>/quirk:latest --help` prints the QU.I.R.K. help text on both `linux/amd64` and `linux/arm64` — the multi-arch image is published to GHCR from a GitHub Actions build
+  3. A returning user upgrading from any v4.x release can follow `docs/upgrade-guide.md` — `quirk db migrate` runs against their existing `quirk.db`, reports all schema columns already present (additive-only), and exits 0 with no data loss
+  4. The repo root `README.md` includes CI/PyPI/license/security badge links, a 3-command quickstart (`pip install quirk[all]` → `quirk init` → `quirk --config quirk.yaml`), a dashboard screenshot, and a one-paragraph value proposition for each of the three user personas (security consultant, IT generalist, compliance officer)
+  5. `examples/` contains at least four sample CBOM JSON files (one per major scan profile: TLS-only, identity, data-at-rest, data-in-motion) checked into the repository as deterministic fixtures; `curl | bash` installation is explicitly documented as a deliberate non-feature in `docs/release-process.md`
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+## Progress — v4.10 Phases
+
+| Phase | Wave | Plans Complete | Status | Completed |
+|-------|------|----------------|--------|-----------|
+| 78. HTML/PDF Injection Hardening | A | 0/? | Not started | - |
+| 79. S/MIME LDAP Discovery Scanner | A | 0/? | Not started | - |
+| 80. Windows AD CS Scanner | A | 0/? | Not started | - |
+| 81. CMVP Attestation Feed | A | 0/? | Not started | - |
+| 82. Chaos Lab Fidelity | A/B | 0/? | Not started | - |
+| 83. Integration Gate + Cleanup | B | 0/? | Not started | - |
+| 84. Release Engineering | B | 0/? | Not started | - |
+| 85. Public-Launch Polish | C | 0/? | Not started | - |

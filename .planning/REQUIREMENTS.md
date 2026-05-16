@@ -125,19 +125,73 @@ Research synthesized at `.planning/research/SUMMARY.md` (committed `c5d1d61`).
 
 ## Traceability
 
-(filled in by the roadmapper when ROADMAP.md is created)
+Finalized by roadmapper 2026-05-16. 52 requirements mapped across 8 phases — 100% coverage, zero orphans.
 
-| Phase | Requirements covered |
-|-------|----------------------|
-| Phase 78 — HTML/PDF Injection Hardening | HARDEN-01 .. HARDEN-06 |
-| Phase 79 — S/MIME LDAP Discovery Scanner | SMIME-01 .. SMIME-08 |
-| Phase 80 — Windows AD CS Scanner | ADCS-01 .. ADCS-09 |
-| Phase 81 — CMVP Attestation Feed | CMVP-01 .. CMVP-07 |
-| Phase 82 — Chaos Lab Fidelity | CHAOS-01 .. CHAOS-06 |
-| Phase 83 — Integration Gate + Cleanup | CLEAN-01 + SCORE_WEIGHTS invariant update (no fresh REQ-IDs — meta-phase) |
-| Phase 84 — Release Engineering | RELENG-01 .. RELENG-08 |
-| Phase 85 — Public-Launch Polish | LAUNCH-01 .. LAUNCH-07 |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| HARDEN-01 | Phase 78 — HTML/PDF Injection Hardening | Pending |
+| HARDEN-02 | Phase 78 — HTML/PDF Injection Hardening | Pending |
+| HARDEN-03 | Phase 78 — HTML/PDF Injection Hardening | Pending |
+| HARDEN-04 | Phase 78 — HTML/PDF Injection Hardening | Pending |
+| HARDEN-05 | Phase 78 — HTML/PDF Injection Hardening | Pending |
+| HARDEN-06 | Phase 78 — HTML/PDF Injection Hardening | Pending |
+| SMIME-01 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| SMIME-02 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| SMIME-03 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| SMIME-04 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| SMIME-05 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| SMIME-06 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| SMIME-07 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| SMIME-08 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
+| ADCS-01 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-02 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-03 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-04 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-05 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-06 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-07 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-08 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-09 | Phase 80 — Windows AD CS Scanner | Pending |
+| CMVP-01 | Phase 81 — CMVP Attestation Feed | Pending |
+| CMVP-02 | Phase 81 — CMVP Attestation Feed | Pending |
+| CMVP-03 | Phase 81 — CMVP Attestation Feed | Pending |
+| CMVP-04 | Phase 81 — CMVP Attestation Feed | Pending |
+| CMVP-05 | Phase 81 — CMVP Attestation Feed | Pending |
+| CMVP-06 | Phase 81 — CMVP Attestation Feed | Pending |
+| CMVP-07 | Phase 81 — CMVP Attestation Feed | Pending |
+| CHAOS-01 | Phase 82 — Chaos Lab Fidelity | Pending |
+| CHAOS-02 | Phase 82 — Chaos Lab Fidelity | Pending |
+| CHAOS-03 | Phase 82 — Chaos Lab Fidelity | Pending |
+| CHAOS-04 | Phase 82 — Chaos Lab Fidelity (Wave B gate — after Phases 79, 80) | Pending |
+| CHAOS-05 | Phase 82 — Chaos Lab Fidelity | Pending |
+| CHAOS-06 | Phase 82 — Chaos Lab Fidelity (Wave B gate — after Phases 79, 80) | Pending |
+| CLEAN-01 | Phase 83 — Integration Gate + Cleanup | Pending |
+| RELENG-01 | Phase 84 — Release Engineering | Pending |
+| RELENG-02 | Phase 84 — Release Engineering | Pending |
+| RELENG-03 | Phase 84 — Release Engineering | Pending |
+| RELENG-04 | Phase 84 — Release Engineering | Pending |
+| RELENG-05 | Phase 84 — Release Engineering | Pending |
+| RELENG-06 | Phase 84 — Release Engineering | Pending |
+| RELENG-07 | Phase 84 — Release Engineering | Pending |
+| RELENG-08 | Phase 84 — Release Engineering | Pending |
+| LAUNCH-01 | Phase 85 — Public-Launch Polish | Pending |
+| LAUNCH-02 | Phase 85 — Public-Launch Polish | Pending |
+| LAUNCH-03 | Phase 85 — Public-Launch Polish | Pending |
+| LAUNCH-04 | Phase 85 — Public-Launch Polish | Pending |
+| LAUNCH-05 | Phase 85 — Public-Launch Polish | Pending |
+| LAUNCH-06 | Phase 85 — Public-Launch Polish | Pending |
+| LAUNCH-07 | Phase 85 — Public-Launch Polish | Pending |
+
+**Coverage:** 52/52 requirements mapped (100%) — no orphans, no duplicates.
+
+**Wave gating summary:**
+
+| Wave | Phases | Gate condition |
+|------|--------|----------------|
+| A | 78, 79, 80, 81, 82 (partial) | Run in parallel; Phase 78 starts first |
+| B | 82 (CHAOS-04, CHAOS-06), 83, 84 | All Wave A phases complete |
+| C | 85 | Phase 84 complete |
 
 ---
 
-*Last updated: 2026-05-16 — v4.10 opened*
+*Last updated: 2026-05-16 — v4.10 roadmap finalized*
