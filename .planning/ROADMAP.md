@@ -1518,11 +1518,11 @@ Wave A phases are internally independent — they touch fully disjoint code path
   4. Playwright PDF generation runs in a no-JavaScript, no-network context; the PDF `<title>` and Author metadata fields are set from constants, never from scan-controlled content
   5. `nh3>=0.2.17` is listed in `[project.dependencies]` in `pyproject.toml` and `pip install quirk` installs it on a clean environment
 **Plans**: 5 plans
-- [ ] 78-01-PLAN.md — Sanitize chokepoint (quirk/util/sanitize.py) + nh3>=0.2.17 dependency + unit tests (HARDEN-06, HARDEN-03 foundation)
-- [ ] 78-02-PLAN.md — Register Jinja sanitize filter + constant PDF title/author meta + sanitize-pipe Cluster B template sites (HARDEN-02, HARDEN-04 template portion)
-- [ ] 78-03-PLAN.md — md_cell rollout to executive.py + writer.py (Cluster A) + escape unit tests (HARDEN-01, HARDEN-03 markdown portion)
-- [ ] 78-04-PLAN.md — Lock Playwright PDF context (JS-off + offline + no CSP bypass) + pypdf metadata verification (HARDEN-04 Python portion)
-- [ ] 78-05-PLAN.md — AST CI gate for | safe pairing + end-to-end XSS regression + markdown→HTML forward guard + UAT-SERIES.md + Obsidian phase note (HARDEN-05, HARDEN-03 regression, phase closure)
+- [x] 78-01-PLAN.md — Sanitize chokepoint (quirk/util/sanitize.py) + nh3>=0.2.17 dependency + unit tests (HARDEN-06, HARDEN-03 foundation)
+- [x] 78-02-PLAN.md — Register Jinja sanitize filter + constant PDF title/author meta + sanitize-pipe Cluster B template sites (HARDEN-02, HARDEN-04 template portion)
+- [x] 78-03-PLAN.md — md_cell rollout to executive.py + writer.py (Cluster A) + escape unit tests (HARDEN-01, HARDEN-03 markdown portion)
+- [x] 78-04-PLAN.md — Lock Playwright PDF context (JS-off + offline + no CSP bypass) + pypdf metadata verification (HARDEN-04 Python portion)
+- [x] 78-05-PLAN.md — AST CI gate for | safe pairing + end-to-end XSS regression + markdown→HTML forward guard + UAT-SERIES.md + Obsidian phase note (HARDEN-05, HARDEN-03 regression, phase closure)
 **UI hint**: yes
 
 ### Phase 79: S/MIME LDAP Discovery Scanner
