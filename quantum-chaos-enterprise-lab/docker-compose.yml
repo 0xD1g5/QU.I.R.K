@@ -950,6 +950,7 @@ services:
       - "25671:5671"
     environment:
       - RABBITMQ_CONFIG_FILE=/etc/rabbitmq/rabbitmq.conf
+      - RABBITMQ_ERLANG_COOKIE=lab-erlang-cookie-do-not-use-in-prod
     volumes:
       - ../labs/broker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ../labs/broker/certs/rabbitmq.crt:/etc/rabbitmq/certs/server.crt:ro
