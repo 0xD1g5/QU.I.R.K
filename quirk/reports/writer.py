@@ -57,7 +57,8 @@ def categorize_waves(findings):
 
 
 SCHEMA_VERSION = 2
-INTELLIGENCE_VERSION = "4.4.0"
+# v4.10 D-02 / Phase 84-01: derive from pyproject.toml SoT via quirk.__version__
+INTELLIGENCE_VERSION = PLATFORM_VERSION
 
 
 def _utc_stamp() -> str:
