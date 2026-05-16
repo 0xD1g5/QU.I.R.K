@@ -10,6 +10,7 @@ from rich.text import Text as RichText
 
 from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
+from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
 from quirk.engine.migration_planner import categorize_waves
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
@@ -72,13 +73,13 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append(f"## Score\n- **Readiness Score:** **{score.get('total')} / 100**\n- **Confidence:** **{conf.get('confidence')} / 100**\n")
     lines.append("## Why this score\n")
     for d in (drivers or []):
-        lines.append(f"- {d}")
+        lines.append(f"- {md_cell(d)}")
     if not drivers:
         lines.append("- Evidence was limited; expand scope and reduce scan errors to improve confidence.")
     lines.append("\n## Next 30–60 days\n")
     if now_actions:
         for a in now_actions:
-            lines.append(f"- **{a.get('title')}** — {a.get('why')}")
+            lines.append(f"- **{md_cell(a.get('title'))}** — {md_cell(a.get('why'))}")
     else:
         lines.append("- Establish ownership + inventory closure for crypto endpoints.\n")
     return "\n".join(lines).rstrip() + "\n"
@@ -93,8 +94,12 @@ def _roadmap_markdown(roadmap: List[Dict[str, Any]]) -> str:
         lines.append(f"## {tf}\n")
         for r in section(tf):
             deps = r.get("dependencies") or []
-            dep_txt = f" _(deps: {', '.join(deps)})_" if deps else ""
-            lines.append(f"- **{r.get('title')}** — {r.get('why')}{dep_txt}")
+            # Phase 78 / HARDEN-01: wrap each scanner-derived dep title in md_cell
+            # before joining, then build the parenthetical wrapper from literals.
+            dep_txt = (
+                f" _(deps: {', '.join(md_cell(d) for d in deps)})_" if deps else ""
+            )
+            lines.append(f"- **{md_cell(r.get('title'))}** — {md_cell(r.get('why'))}{dep_txt}")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
