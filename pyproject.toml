@@ -38,6 +38,7 @@ dashboard = [
     "python-multipart>=0.0.20",
     "playwright>=1.58.0",
     "croniter>=1.4.0",
+    "pypdf>=4.0",  # Phase 78 / HARDEN-04: PDF metadata verification (test-only)
 ]
 identity = [
     "impacket>=0.13.0,<0.14",
