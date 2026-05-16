@@ -567,3 +567,17 @@ docker compose --profile adcs up -d && sleep 12 && quirk scan --adcs-target ldap
 **Fixtures:** Pre-built DER blob committed at `quantum-chaos-enterprise-lab/adcs/certs/ca-weak.der` (RSA-1024, SHA-1, 100-year validity window so it's non-expired; expiry-path detection is exercised by unit-test mocks in Plan 80-04, not by lab fixtures). LDIFs at `adcs/ldif/{00-base,10-ca,20-templates}.ldif`. Regenerate the weak CA via `adcs/certs/regen.sh` (developer tool only, not runtime). D-80-R7 Dockerfile fallback shipped at `adcs/Dockerfile` (preserved per the plan's "ship both branches" contract; not currently active).
 
 **Reference:** `quirk/db.py::_IDENTITY_COLUMNS` (column `adcs_scan_json`), compose blocks `adcs-openldap` + `adcs-seed` (profile `adcs`).
+
+---
+
+## Phase 82 Closure (Chaos Lab Fidelity)
+
+Wave-2 closure summary for Phase 82 — recorded here so the oracle remains the
+single source of truth for chaos-lab state across version bumps.
+
+- **CHAOS-01** — `ldaps` profile migrated to `bitnamilegacy/openldap:2.6.10-debian-12-r4`; clean bring-up on macOS Docker Desktop with no chown / Read-only-file-system errors; verified Plan 82-01 (commit `be425f8`).
+- **CHAOS-02** — `rabbitmq-broker` pinned to `rabbitmq:3.13.7-management`; `RABBITMQ_ERLANG_COOKIE` deterministic env var; survives `lab.sh down/up` cycles with no Erlang cookie-mismatch log lines; verified Plan 82-02 (commit `e725276`).
+- **CHAOS-03** — `gitea` source seed short-circuits when sentinel repo `labadmin/crypto-antipatterns-python` is already present; re-runs exit `0` with no HTTP 409s; verified Plan 82-03 (commit `fdded8e`).
+- **CHAOS-04** — Per-profile re-up regression test at `tests/test_chaos_lab_idempotency.py` discovers every profile via `docker compose config --profiles` and runs `./lab.sh up` twice per profile (one parametrized test per profile); marked `@pytest.mark.slow` and skipped cleanly when Docker is unreachable.
+- **CHAOS-05** — Image-pin CI gate at `tests/test_chaos_lab_image_pinning.py` (runs in default suite; pure `yaml.safe_load` parse); `lab.sh _validate_pinned_tags()` early-exit installed at the top of both `up)` and `all)` cases so adding `:latest` or a bare-image entry fails before any container is created.
+- **CHAOS-06** — `_derive_all_profiles()` enumerates 20 profiles including `smime` and `adcs`; oracle sections for both new profiles present above (Plan 79 + Plan 80 delivered, Plan 82-04 confirmed parity); README Profile Summary table has rows for both with their respective ports (38900, 38910) and links into this oracle.
