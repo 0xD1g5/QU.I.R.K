@@ -2,6 +2,10 @@ from datetime import datetime, timezone
 from typing import Dict, List
 
 from quirk.reports._md_escape import md_cell
+# Phase 81 / CMVP-06: shared Algorithm Inventory builder. The HTML helper consumes
+# coverage_for_algorithm lazily so this module remains import-safe even before
+# Plan 81-02 lands quirk/compliance/cmvp.py.
+from quirk.reports.html_renderer import build_algorithm_inventory
 
 
 def _scan_error_category(scan_error: str) -> str:
@@ -81,6 +85,25 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
         for e, blocker in sorted(tls_blocked, key=lambda x: (x[0].host, x[0].port)):
             lines.append(
                 f"| {md_cell(e.host)} | {e.port} | {md_cell(blocker)} | {md_cell(getattr(e, 'scan_error', '') or '')} |"
+            )
+        lines.append("")
+
+    # === Algorithm Inventory (Phase 81 / CMVP-06) ===
+    # Adds a CMVP Coverage column populated via build_algorithm_inventory, which
+    # delegates to quirk.compliance.cmvp.coverage_for_algorithm (lazy import).
+    # Empty matches render the literal "Not in CMVP catalog" (v4.10-D-01 invariant —
+    # do not introduce alternative wording).
+    algorithms = build_algorithm_inventory(endpoints or [])
+    if algorithms:
+        lines.append("## Algorithm Inventory (FIPS 140-3 Coverage)")
+        lines.append("")
+        lines.append("| Algorithm | NIST Level | FIPS Status | CMVP Coverage |")
+        lines.append("|---|---|---|---|")
+        for a in algorithms:
+            cov = a.get("cmvp_coverage")
+            cov_cell = md_cell(cov) if cov else "Not in CMVP catalog"
+            lines.append(
+                f"| {md_cell(a['name'])} | {a['nist_level']} | {md_cell(a['fips_status'])} | {cov_cell} |"
             )
         lines.append("")
 
