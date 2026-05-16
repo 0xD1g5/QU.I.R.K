@@ -3,7 +3,7 @@ services:
   # MODERN TLS (TLS 1.3)
   # =========================
   tls-modern:
-    image: nginx:stable
+    image: nginx:1.28.0
     volumes:
       - ./nginx/modern/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
@@ -16,7 +16,7 @@ services:
   # Still useful for "legacy protocol enabled" + TLS 1.2 fallback behavior.
   # =========================
   tls-legacy:
-    image: nginx:stable
+    image: nginx:1.28.0
     volumes:
       - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
@@ -27,7 +27,7 @@ services:
   # EXPIRED CERT TLS
   # =========================
   tls-expired:
-    image: nginx:stable
+    image: nginx:1.28.0
     volumes:
       - ./nginx/expired/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
@@ -38,7 +38,7 @@ services:
   # SELFSIGNED CERT TLS
   # =========================
   tls-selfsigned:
-    image: nginx:stable
+    image: nginx:1.28.0
     volumes:
       - ./nginx/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
@@ -50,7 +50,7 @@ services:
   # Great for testing "handshake failure" vs "cert issues"
   # =========================
   tls-mtls-required:
-    image: nginx:stable
+    image: nginx:1.28.0
     volumes:
       - ./nginx/mtls/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
@@ -61,7 +61,7 @@ services:
   # PLAINTEXT HTTP ON A "TLS-LIKE" PORT (wrong version number)
   # =========================
   http-on-8444:
-    image: nginx:stable
+    image: nginx:1.28.0
     command: ["nginx", "-g", "daemon off;"]
     ports:
       - "8444:80"
@@ -70,7 +70,7 @@ services:
   # HTTP ONLY LEGACY APP
   # =========================
   legacy-http:
-    image: httpd:2.4
+    image: httpd:2.4.63
     ports:
       - "8000:80"
 
@@ -78,7 +78,7 @@ services:
   # SSH ON NON-STANDARD PORT
   # =========================
   ssh-alt:
-    image: lscr.io/linuxserver/openssh-server
+    image: lscr.io/linuxserver/openssh-server:9.9_p2-r0-ls180
     environment:
       - PASSWORD_ACCESS=true
       - USER_NAME=test
@@ -93,7 +93,7 @@ services:
   # RANDOM OPEN PORT (unknown service)
   # =========================
   unknown-port:
-    image: alpine
+    image: alpine:3.20
     command:
       [
         "sh",
@@ -107,7 +107,7 @@ services:
   # SLOW TLS HANDSHAKE SIM (proxy adds latency)
   # =========================
   tls-slow-proxy:
-    image: haproxy:latest
+    image: haproxy:3.0.5
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
@@ -119,7 +119,7 @@ services:
   # PHASE A1 — SERVICE INVENTORY EXPANSION (profile: phaseA)
   # =========================
   tls-altport:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["phaseA"]
     volumes:
       - ./nginx/modern/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -128,7 +128,7 @@ services:
       - "15001:443"
 
   http-redirect:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["phaseA"]
     volumes:
       - ./nginx/phaseA/http-redirect/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -136,7 +136,7 @@ services:
       - "18000:80"
 
   unknown-port-2:
-    image: alpine
+    image: alpine:3.20
     profiles: ["phaseA"]
     command:
       [
@@ -148,7 +148,7 @@ services:
       - "5556:5556"
 
   postgres-plain:
-    image: postgres:16
+    image: postgres:16.6
     profiles: ["phaseA"]
     environment:
       POSTGRES_DB: chaos
@@ -158,13 +158,13 @@ services:
       - "15432:5432"
 
   redis-plain:
-    image: redis:7-alpine
+    image: redis:7.4.1-alpine
     profiles: ["phaseA"]
     ports:
       - "16379:6379"
 
   rabbitmq-mgmt:
-    image: rabbitmq:3-management
+    image: rabbitmq:3.13.7-management
     profiles: ["phaseA"]
     ports:
       - "15672:15672"
@@ -173,7 +173,7 @@ services:
   # PHASE A2 — TLS CHAIN SCENARIOS (profile: phaseA)
   # =========================
   tls-missing-intermediate:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["phaseA"]
     volumes:
       - ./nginx/phaseA/tls-missing-intermediate/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -182,7 +182,7 @@ services:
       - "13443:443"
 
   tls-rsa1024:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["phaseA"]
     environment:
       - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
@@ -194,7 +194,7 @@ services:
       - "14443:443"
 
   tls-sha1:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["phaseA"]
     environment:
       - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
@@ -209,7 +209,7 @@ services:
   # PHASE A3 — INGRESS / SNI (multi-vhost behind one TLS port) (profile: phaseA)
   # =========================
   ingress-sni:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["phaseA"]
     depends_on:
       - whoami
@@ -225,7 +225,7 @@ services:
   # PHASE B — CLOUD SIMULATORS (profile: cloud)
   # =========================
   localstack:
-    image: localstack/localstack:3
+    image: localstack/localstack:3.8.1
     profiles: ["cloud"]
     environment:
       - SERVICES=s3,sts,iam
@@ -236,7 +236,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   localstack-tls:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["cloud"]
     depends_on:
       - localstack
@@ -273,7 +273,7 @@ services:
         nginx -g 'daemon off;'
 
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite
+    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
     profiles: ["cloud"]
     command: ["azurite", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0", "--loose"]
     expose:
@@ -282,7 +282,7 @@ services:
       - "10002"
 
   azurite-blob-tls:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["cloud"]
     depends_on:
       - azurite
@@ -319,7 +319,7 @@ services:
         nginx -g 'daemon off;'
 
   azurite-queue-tls:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["cloud"]
     depends_on:
       - azurite
@@ -356,7 +356,7 @@ services:
         nginx -g 'daemon off;'
 
   azurite-table-tls:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["cloud"]
     depends_on:
       - azurite
@@ -396,7 +396,7 @@ services:
   # IDENTITY STACK (profile: identity)
   # =========================
   id-postgres:
-    image: postgres:16
+    image: postgres:16.6
     profiles: ["identity"]
     environment:
       POSTGRES_DB: keycloak
@@ -425,7 +425,7 @@ services:
       - "8080"
 
   keycloak-tls:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["identity"]
     depends_on:
       - keycloak
@@ -436,7 +436,7 @@ services:
       - "15449:443"
 
   step-ca:
-    image: smallstep/step-ca
+    image: smallstep/step-ca:0.28.1
     profiles: ["identity"]
     environment:
       DOCKER_STEPCA_INIT_NAME: ChaosLab-StepCA
@@ -475,7 +475,7 @@ services:
       - "80"
 
   mtls-gateway:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["identity"]
     depends_on:
       - whoami
@@ -491,7 +491,7 @@ services:
   # PHASE C — PKI / step-ca ISSUED mTLS (profile: pki)
   # =========================
   mtls-stepca-gateway:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["pki"]
     volumes:
       - ./certs/stepca:/etc/nginx/stepca:ro
@@ -572,7 +572,7 @@ services:
   # Port: 20005 (safe range — no conflicts with existing lab)
   # =========================
   registry:
-    image: registry:2
+    image: registry:2.8.3
     profiles: ["registry"]
     ports:
       - "20005:5000"
@@ -587,7 +587,7 @@ services:
       retries: 10
 
   registry-seed:
-    image: docker:24-dind
+    image: docker:24.0.9-dind
     profiles: ["registry"]
     restart: "no"
     depends_on:
@@ -606,7 +606,7 @@ services:
   # Port: 20006 (safe range — no conflicts)
   # =========================
   gitea:
-    image: gitea/gitea:1.21
+    image: gitea/gitea:1.21.11
     profiles: ["source"]
     environment:
       GITEA__security__INSTALL_LOCK: "true"
@@ -633,7 +633,7 @@ services:
   # `gitea` service (BACK-90 bug 1, CONTEXT D-1 — keeps admin provisioning
   # declarative, no docker socket, no API bootstrap dance).
   gitea-init:
-    image: gitea/gitea:1.21
+    image: gitea/gitea:1.21.11
     profiles: ["source"]
     restart: "no"
     depends_on:
@@ -893,7 +893,7 @@ services:
 
   # ── SAML Chaos Lab (profile: saml) ────────────────────────
   simplesamlphp:
-    image: kenchan0130/simplesamlphp
+    image: kenchan0130/simplesamlphp:1.19.7
     profiles: ["saml"]
     environment:
       SIMPLESAMLPHP_SP_ENTITY_ID: "https://sp.chaos.local"
@@ -930,7 +930,7 @@ services:
   # PHASE 27 — DATABASE SSL DETECTION (profile: database)
   # =========================
   postgres-ssl-off:
-    image: postgres:15
+    image: postgres:15.10
     profiles: ["database"]
     environment:
       POSTGRES_DB: quirk_db
@@ -941,7 +941,7 @@ services:
       - "25432:5432"
 
   mysql-ssl-off:
-    image: mysql:8.0
+    image: mysql:8.0.40
     profiles: ["database"]
     environment:
       MYSQL_DATABASE: quirk_db
@@ -977,7 +977,7 @@ services:
       start_period: 10s
 
   minio-seed:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
     profiles: ["storage-s3"]
     restart: "no"
     depends_on:
@@ -1082,7 +1082,7 @@ services:
       start_period: 30s
 
   redis-broker:
-    image: redis:7-alpine
+    image: redis:7.4.1-alpine
     profiles: ["broker"]
     hostname: redis-broker
     command: ["redis-server", "/etc/redis/redis.conf"]
@@ -1108,7 +1108,7 @@ services:
   # tls-selfsigned (10443) profiles remain unchanged for back-compat.
   # =========================
   tls-cert-expired:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["tls-cert-defects"]
     volumes:
       - ./nginx/cert-defects/expired/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -1117,7 +1117,7 @@ services:
       - "13444:443"
 
   tls-cert-selfsigned:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["tls-cert-defects"]
     volumes:
       - ./nginx/cert-defects/selfsigned/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -1126,7 +1126,7 @@ services:
       - "13445:443"
 
   tls-cert-untrusted-ca:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["tls-cert-defects"]
     volumes:
       - ./nginx/cert-defects/untrusted-ca/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -1135,7 +1135,7 @@ services:
       - "13446:443"
 
   tls-cert-rsa1024:
-    image: nginx:stable
+    image: nginx:1.28.0
     profiles: ["tls-cert-defects"]
     environment:
       - OPENSSL_CONF=/etc/nginx/openssl-legacy.cnf
