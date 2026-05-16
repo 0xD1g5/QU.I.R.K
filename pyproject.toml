@@ -3,8 +3,8 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "quirk"
-version = "4.4.0"
+name = "qu-i-r-k"
+version = "4.10.0"
 description = "QU.I.R.K. -- Quantum Infrastructure Readiness Kit"
 requires-python = ">=3.10"
 license = {text = "Proprietary"}
@@ -67,20 +67,20 @@ db = [
     "psycopg2-binary>=2.9.0",
     "PyMySQL>=1.1.0",
 ]
-motion = ["quirk[email]", "quirk[broker]", "quirk[kafka]"]
+motion = ["qu-i-r-k[email]", "qu-i-r-k[broker]", "qu-i-r-k[kafka]"]
 email = []
 broker = ["redis>=5.0"]
 kafka = ["kafka-python>=2.0"]
 redis = ["redis>=5.0"]
 cbom = ["cyclonedx-python-lib[json-validation]>=11.7.0,<12"]
 all = [
-    "quirk[cloud]",
-    "quirk[cbom]",
-    "quirk[db]",
-    "quirk[motion]",
-    "quirk[redis]",
-    "quirk[dashboard]",
-    "quirk[adcs]",  # Phase 80 ADCS-07 — ldap3-only, no impacket
+    "qu-i-r-k[cloud]",
+    "qu-i-r-k[cbom]",
+    "qu-i-r-k[db]",
+    "qu-i-r-k[motion]",
+    "qu-i-r-k[redis]",
+    "qu-i-r-k[dashboard]",
+    "qu-i-r-k[adcs]",  # Phase 80 ADCS-07 — ldap3-only, no impacket
 ]
 # NOTE: quirk[identity] is INTENTIONALLY EXCLUDED from [all] -- impacket
 # transitively pulls pyOpenSSL which downgrades cryptography and breaks the

@@ -1,23 +1,58 @@
-"""Regression lock for INFRA-01 — every version-bearing surface returns 4.4.0."""
+"""Version single-source-of-truth parity test (D-84-R1 / v4.10 D-02).
+
+Direction: ``pyproject.toml [project.version]`` is the canonical source. Every
+other version-bearing surface in the codebase must derive from it and match
+exactly. No assertion in this file hardcodes a version string — the truth is
+read dynamically via ``tomllib`` so version bumps need only touch
+``pyproject.toml``.
+
+Originally Phase 37 INFRA-01 (which pinned all surfaces to a 4.4.0 literal in
+the opposite direction); flipped in Phase 84-01 to honor modern PEP 621 +
+importlib.metadata packaging practice.
+"""
 import subprocess
 import sys
+import tomllib
+from pathlib import Path
 
 import pytest
 
+_PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
+_PROJECT = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))["project"]
+TRUTH = _PROJECT["version"]
+DIST_NAME = _PROJECT["name"]
 
-def test_package_version_is_4_4_0():
+
+def test_pyproject_version_is_well_formed():
+    # Guard against a malformed bump (e.g. empty, whitespace) — the SoT itself
+    # must be sane before downstream comparisons are meaningful.
+    assert isinstance(TRUTH, str) and TRUTH.strip() == TRUTH and TRUTH
+
+
+def test_package_version_matches_pyproject():
     import quirk
-    assert quirk.__version__ == "4.4.0"
+    assert quirk.__version__ == TRUTH
 
 
-def test_cbom_platform_version_is_4_4_0():
+def test_cbom_platform_version_matches_pyproject():
     from quirk.cbom.builder import PLATFORM_VERSION
-    assert PLATFORM_VERSION == "4.4.0"
+    assert PLATFORM_VERSION == TRUTH
 
 
-def test_reports_platform_version_is_4_4_0():
+def test_reports_platform_version_matches_pyproject():
     from quirk.reports.writer import PLATFORM_VERSION
-    assert PLATFORM_VERSION == "4.4.0"
+    assert PLATFORM_VERSION == TRUTH
+
+
+def test_intelligence_config_default_matches_pyproject():
+    from quirk.config import IntelligenceCfg
+    assert IntelligenceCfg().intelligence_version == TRUTH
+
+
+def test_distribution_name_is_canonical():
+    # v4.10 D-01: the `quirk` PyPI name was claimed by an unrelated 0.1.x
+    # project, so the canonical distribution name is `qu-i-r-k`.
+    assert DIST_NAME == "qu-i-r-k"
 
 
 @pytest.mark.slow
@@ -34,9 +69,4 @@ def test_cli_version_subprocess():
     if result.returncode != 0:
         pytest.fail("CLI --version returned non-zero")
     output = (result.stdout or "") + (result.stderr or "")
-    assert "4.4.0" in output
-
-
-def test_intelligence_config_default_is_4_4_0():
-    from quirk.config import IntelligenceCfg
-    assert IntelligenceCfg().intelligence_version == "4.4.0"
+    assert TRUTH in output

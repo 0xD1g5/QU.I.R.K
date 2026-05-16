@@ -249,9 +249,11 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | `if (!cancelled)` guard pattern from useTrendsData.ts as canonical (v4.8 Phase 62) | Selecting one hook as canonical prevents per-hook interpretation drift; CI script enforces it | ✓ Good — 4 hooks migrated; 2 Vitest tests; check-cancelled-guards.sh exits 1 on violation |
 | `quirk errors` registry with stable error codes (v4.8 Phase 68) | Operator-facing errors need stable codes for runbook references; raw exceptions are unusable in production | ✓ Good — 50 codes, cause+remediation for each; `format_error()` applied at all exit points |
 | Markdown injection in HTML/PDF deferred to v4.9+ (v4.8 D-06) | REPORT-SAN-01 covers markdown tables only; HTML/PDF injection is a separate attack surface shape | — Pending — deferred intentionally; AUDIT-TASKS.md tracks the open WARNING rows |
+| PyPI distribution name `qu-i-r-k` (v4.10 D-01 / Phase 84-01) | `pip index versions quirk` on 2026-05-16 returned 0.1.1/0.1.2/0.1.3 — the bare `quirk` name is already claimed by an unrelated package on PyPI; fallback `qu-i-r-k` per pre-registered D-84-R1 plan | ✓ Good — `pyproject.toml [project.name]` set to `qu-i-r-k`; `importlib.metadata.version("qu-i-r-k")` is the runtime resolver; README install commands and Trusted Publishers config will derive from this name in subsequent 84-NN plans |
+| pyproject.toml `[project.version]` is canonical version SoT (v4.10 D-02 / D-84-R1 / Phase 84-01) | Modern Python packaging best practice (PEP 621 + importlib.metadata); REVERSES legacy RELENG-08 wording that named `__init__.py` as canonical | ✓ Good — `quirk/__init__.py::__version__` now resolves dynamically via `importlib.metadata.version("qu-i-r-k")` with a `tomllib` fallback for unpackaged dev runs; `quirk/config.py:279` `IntelligenceCfg.intelligence_version` derives from `quirk.__version__`; `tests/test_version.py` enforces parity in the new direction |
 
 ---
-*Last updated: 2026-05-16 — v4.10 milestone opened*
+*Last updated: 2026-05-16 — v4.10 milestone opened; Phase 84-01 logged D-01 (PyPI fallback name) and D-02 (pyproject SoT)*
 
 ## Evolution
 
