@@ -1553,7 +1553,11 @@ Wave A phases are internally independent — they touch fully disjoint code path
   3. `pip install quirk[all]` and `pip install quirk[adcs]` both produce environments where `cryptography.__version__ >= "44.0"` — verified by a CI matrix pip-install test job
   4. ADCS scan results appear in the `adcs_scan_json` database column and produce `protocol="ADCS"` IdentityFinding entries visible in `GET /api/scan/latest`
   5. The module header of `quirk/scanners/adcs_scanner.py` includes a documented invariant that the scanner performs read-only LDAP operations only — no certificate enrollment, template creation, or write operation is issued under any code path
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 80-01-PLAN.md — Foundation: adcs_scan_json ORM column + [adcs] extras group + chaos lab adcs profile (msPKI schema LDIF + 3 templates + weak CA fixture + Dockerfile fallback per D-80-R7)
+- [ ] 80-02-PLAN.md — ADCS scanner module (ldap3 SIMPLE/ANONYMOUS bind, ESC1/2/3/6 misconfigs + ESC4/5/7/8 COVERAGE-GAPs, ADCS-UNREACH coverage) + CBOM Pass-1 emit + Pass-2/3 skip-list at lines 538/622 + run_scan dispatch
+- [ ] 80-03-PLAN.md — SCORE_WEIGHTS (4 entries × 2.0) + identity_trust impacts + evidence counters (sum 267 → 275; invariant test stays red — Phase 83 owns bump)
+- [ ] 80-04-PLAN.md — Unit tests + no-writes runtime invariant + AST gate (D-80-R4) + extras-install matrix (ADCS-07) + UAT-SERIES.md + Obsidian phase note (closure)
 
 ### Phase 81: CMVP Attestation Feed
 **Goal**: QU.I.R.K. can display which NIST CMVP-validated modules cover each discovered algorithm — as an informational coverage list in the CBOM and HTML/PDF compliance section — with an offline-capable bundled snapshot, a 90-day staleness CI gate, and a CLI refresh command; the system never emits `certified: true` from algorithm-name matching alone
