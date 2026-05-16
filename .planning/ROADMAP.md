@@ -1570,7 +1570,11 @@ Wave A phases are internally independent — they touch fully disjoint code path
   3. An HTML/PDF report for a scan containing AES-256 shows a "CMVP Coverage" column listing CMVP module names that cover AES-256 — rendered as "Not in CMVP catalog" for algorithms with no matching entry
   4. The CI staleness gate (`tests/test_cmvp_freshness.py`) fails if `cmvp_cache.json::last_verified` is more than 90 days in the past
   5. A permanent negative CI test asserts that no code path in `quirk/compliance/cmvp.py` or `quirk/cbom/` emits `certified: true` for any algorithm — this test cannot be removed without explicit documented rationale
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 81-01-PLAN.md — Foundation: scrape script + curated CSV + cmvp_cache.json seed + beautifulsoup4 dep + CMVP-* error codes
+- [ ] 81-02-PLAN.md — quirk/compliance/cmvp.py + refresh/status CLI (quirk/cli/cmvp_cmd.py + run_scan.py hook) + CBOM Pass-1 quirk:cmvp-coverage Property (additive, never inside _fips_status)
+- [ ] 81-03-PLAN.md — Algorithm Inventory table in report.html.j2 + CMVP Coverage column in executive/technical markdown reports + html_renderer.py algorithms context
+- [ ] 81-04-PLAN.md — CI gates (staleness + permanent AST invariant) + refresh/coverage/report tests + python-staleness.yml extension + UAT-SERIES.md + Obsidian phase note (closure)
 
 ### Phase 82: Chaos Lab Fidelity
 **Goal**: The three outstanding DEF-999.83 chaos-lab failures on macOS Docker Desktop are fixed; every Docker Compose service in the lab uses a fully-qualified pinned image tag; the two new v4.10 profiles (`smime`, `adcs`) integrate into the lab cleanly with idempotent seeding; and `lab.sh` runtime profile-read continues to pass all parity tests with the updated compose file
