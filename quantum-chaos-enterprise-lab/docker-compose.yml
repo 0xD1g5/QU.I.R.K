@@ -739,19 +739,20 @@ services:
   # Independent of identity profile's openldap (port 13890 — unchanged)
   # =========================
   ldaps:
-    image: osixia/openldap:1.5.0
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
     profiles: ["ldaps"]
     environment:
-      LDAP_ORGANISATION: "ChaosLab"
-      LDAP_DOMAIN: "chaos.local"
+      LDAP_ROOT: "dc=chaos,dc=local"
+      LDAP_ADMIN_USERNAME: "admin"
       LDAP_ADMIN_PASSWORD: "admin"
-      LDAP_TLS: "true"
-      LDAP_TLS_CRT_FILENAME: modern.crt
-      LDAP_TLS_KEY_FILENAME: modern.key
-      LDAP_TLS_CA_CRT_FILENAME: ca.crt
-      LDAP_TLS_VERIFY_CLIENT: "never"
+      LDAP_PORT_NUMBER: 389
+      LDAP_LDAPS_PORT_NUMBER: 636
+      LDAP_ENABLE_TLS: "yes"
+      LDAP_TLS_CERT_FILE: /opt/bitnami/openldap/certs/modern.crt
+      LDAP_TLS_KEY_FILE: /opt/bitnami/openldap/certs/modern.key
+      LDAP_TLS_CA_FILE: /opt/bitnami/openldap/certs/ca.crt
     volumes:
-      - ./certs:/container/service/slapd/assets/certs:ro
+      - ./certs:/opt/bitnami/openldap/certs:ro
     ports:
       - "636:636"
     restart: unless-stopped
