@@ -11,7 +11,6 @@ from rich.text import Text as RichText
 from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
-from quirk.engine.migration_planner import categorize_waves
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
 from quirk.intelligence.evidence import build_evidence_summary
@@ -31,6 +30,30 @@ def _unique_hosts(hosts) -> set:
     entries before deduplicating.
     """
     return {h for h in (hosts or []) if h}
+
+
+def categorize_waves(findings):
+    """Bucket findings into migration waves by severity.
+
+    Phase 83 / CLEAN-01: Inlined from former ``quirk/engine/migration_planner.py``
+    (now deleted). Test mocks at ``quirk.reports.writer.categorize_waves`` continue
+    to resolve via namespace-of-use and remain valid without modification.
+    """
+    waves = {
+        "NOW": [],
+        "NEXT": [],
+        "LATER": []
+    }
+
+    for f in findings:
+        if f["severity"] == "CRITICAL":
+            waves["NOW"].append(f)
+        elif f["severity"] == "HIGH":
+            waves["NEXT"].append(f)
+        else:
+            waves["LATER"].append(f)
+
+    return waves
 
 
 SCHEMA_VERSION = 2
