@@ -19,8 +19,15 @@ def _build_mock_sync_playwright(side_effect):
     browser.close behavior.
     """
     mock_browser = mock.MagicMock(name="browser")
+    mock_context = mock.MagicMock(name="context")
     mock_page = mock.MagicMock(name="page")
     mock_page.pdf.side_effect = side_effect
+    # Phase 78 / HARDEN-04: page now flows through browser.new_context().new_page()
+    mock_context.new_page.return_value = mock_page
+    mock_browser.new_context.return_value = mock_context
+    # Back-compat: keep new_page on browser pointing at the same mock_page so legacy
+    # `...launch.return_value.new_page.return_value.pdf.side_effect = ...` setups still
+    # land on the same page object the production code calls .pdf() on.
     mock_browser.new_page.return_value = mock_page
 
     mock_p = mock.MagicMock(name="p")
