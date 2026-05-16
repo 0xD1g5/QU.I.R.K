@@ -147,17 +147,15 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.9 Audit Depth
+## Current State: v4.9 SHIPPED 2026-05-15
 
-**Goal:** Systematically close the 121 remaining open findings from the 2026-05-08 audit (92 WARNINGs + 29 INFOs + 13 deferred BLOCKERs), hardening correctness, resource management, input validation, and code quality across all six scanner subsystems.
+v4.9 "Audit Depth" shipped 2026-05-15 — 9 phases (69–77) + inserted Phase 69.1, 38 plans, 210 commits, 339 files changed (+37,658 / −2,359). All 169 findings from the 2026-05-08 audit ledger are dispositioned: 166 `[x] closed`, 2 `[ ] deferred-*` with rationale, 4 `[ ] wont-fix` with rationale. The zero-bare-open invariant is locked forward via `tests/test_audit_ledger_zero_open.py` (Phase 77 D-31), which fails CI on any regression and additionally enforces that deferred/wont-fix rows carry inline rationale.
 
-**Target features:**
-- WARNING fixes by subsystem (scanners, API/CLI, CBOM/intelligence, dashboard, scoring)
-- Deferred BLOCKER remediation — nested thread pool resource leak, socket leak on SSH banner branch
-- INFO/code-quality improvements — deprecation warnings, dead-import cleanup, test infrastructure gaps
-- AUDIT-TASKS.md fully triaged to zero bare-open rows
+Subsystem coverage shipped by phase: Phase 69 (scanner/cloud resource correctness — sslyze cleanup, GCP Cloud SQL severity routing, K8s empty-cluster guards, Azure Blob 3-way branch, cache TTL semantics, TokenBucket capacity), Phase 70 (API/QRAMM FK retrofit + DDL allowlist), Phase 71 (protocol scanner WARNINGs — coverage clamp, case-insensitive severity, nmap hardening, identity bounds), Phase 72 (cloud scanner WARNINGs — AWS/Azure/GCP correctness, Cache, profiles mutation guards, Vault PEM hardening), Phase 73 (CBOM/intel/reports — PDF cleanup, weak-crypto helper consolidation via `quirk/util/weak_crypto.py`, SCORE_WEIGHTS normalization), Phase 74 (QRAMM/compliance — practice score validation, TZ-safe evidence bridge, migration advisor precision), Phase 75 (API/CLI/core — doctor actionability, microsecond-safe scan-id window, list_scans grouping, interactive/validate/route input hardening), Phase 76 (React frontend — useScanList error surfacing, localStorage allowlist, PDF unmount cleanup, cert regex, Cytoscape typing, Scorecard math), Phase 77 (29 INFO rows + LEDGER-01 closure + D-31 CI gate).
 
-## Current State: v4.8 SHIPPED 2026-05-14
+**Next milestone (v5.0):** not yet defined. v4.9 closes the 2026-05-08 audit ledger entirely; the next milestone scope should be opened via `/gsd-new-milestone`. Backlog candidates include Phase 999.83 (Chaos Lab Service Config Drift — gitea/minio/vault/mysql config drift bugs filed during BACK-89 verification), plus the standing Future Requirements in REQUIREMENTS.md (HTML/PDF injection hardening, migration_planner.py deletion, CMVP attestation feed, S/MIME, Windows AD CS).
+
+## Previous Milestone: v4.8 SHIPPED 2026-05-14
 
 v4.8 shipped 2026-05-14 — 13 phases (57–68), 53 plans, 122 tasks. All 15 audit blockers closed (Wave A) and 6 operating-model features shipped (Wave B). QU.I.R.K. now supports auth-gated dashboard, scheduled scans, trend regression alerts, dashboard-initiated scans, scan history with clone/compare, resumable partial-failure scans, and a stable error-code registry across all operator-facing surfaces.
 
@@ -238,7 +236,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Markdown injection in HTML/PDF deferred to v4.9+ (v4.8 D-06) | REPORT-SAN-01 covers markdown tables only; HTML/PDF injection is a separate attack surface shape | — Pending — deferred intentionally; AUDIT-TASKS.md tracks the open WARNING rows |
 
 ---
-*Last updated: 2026-05-14 after v4.8 milestone*
+*Last updated: 2026-05-15 after v4.9 milestone*
 
 ## Evolution
 

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.9
 milestone_name: Audit Depth — Phases 69–77
-status: verifying
-stopped_at: Phase 72 complete
-last_updated: "2026-05-15T23:57:32.353Z"
+status: shipped
+stopped_at: v4.9 milestone complete
+last_updated: "2026-05-15T20:10:00.000Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 10
   completed_phases: 10
-  total_plans: 42
-  completed_plans: 42
+  total_plans: 38
+  completed_plans: 38
   percent: 100
 ---
 
@@ -18,91 +18,59 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-14)
+See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 70 — deferred-blockers-api-qramm-model
+**Current focus:** Planning next milestone (v5.0 — not yet defined)
 
 ## Current Position
 
-Phase: 70 (deferred-blockers-api-qramm-model) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-05-15
+Milestone: v4.9 Audit Depth — SHIPPED 2026-05-15
+Next action: `/gsd-new-milestone` to open v5.0
 
-Progress: [██████████] 100%
+Progress: [██████████] 100% (v4.9 complete)
 
-## Phase Overview
+## Milestone Summary (v4.9)
 
-| Phase | Slug | Requirements |
-|-------|------|--------------|
-| 69 | deferred-blockers-scanner-cloud | BLOCK-01..06 |
-| 70 | deferred-blockers-api-qramm | BLOCK-07..08 |
-| 71 | protocol-scanner-warnings | PROTO-01..05 |
-| 72 | cloud-scanner-warnings | CLOUD-01..05 |
-| 73 | cbom-intelligence-reports-warnings | INTEL-01..03 |
-| 74 | qramm-compliance-warnings | QWARN-01..03 |
-| 75 | api-cli-core-warnings | APCL-01..04 |
-| 76 | react-frontend-warnings | REACT-01..03 |
-| 77 | code-quality-audit-closure | INFO-01..04, LEDGER-01 |
+| Phase | Slug | Plans | Status |
+|-------|------|-------|--------|
+| 69 | deferred-blockers-scanner-cloud | 6/6 | Complete 2026-05-15 |
+| 69.1 | k8s-test-fixture-hardening (INSERTED) | 1/1 | Complete 2026-05-15 |
+| 70 | deferred-blockers-api-qramm-model | 3/3 | Complete 2026-05-15 |
+| 71 | protocol-scanner-warnings | 5/5 | Complete 2026-05-15 |
+| 72 | cloud-scanner-warnings | 5/5 | Complete 2026-05-15 |
+| 73 | cbom-intel-reports-warnings | 3/3 | Complete 2026-05-15 |
+| 74 | qramm-compliance-warnings | 3/3 | Complete 2026-05-15 |
+| 75 | api-cli-core-warnings | 4/4 | Complete 2026-05-15 |
+| 76 | react-frontend-warnings | 3/3 | Complete 2026-05-15 |
+| 77 | info-code-quality-audit-ledger | 5/5 | Complete 2026-05-15 |
 
-## Performance Metrics
-
-**Velocity:**
-
-- Total plans completed: 0 (v4.9)
-- Average duration: ~3.5 days/phase across v4.8
-- Total execution time: 0 hours (v4.9)
-
-**By Phase:**
-
-| Phase | Plans | Status |
-|-------|-------|--------|
-| 69 | TBD | Not started |
-| 70 | TBD | Not started |
-| 71 | TBD | Not started |
-| 72 | TBD | Not started |
-| 73 | TBD | Not started |
-| 74 | TBD | Not started |
-| 75 | TBD | Not started |
-| 76 | TBD | Not started |
-| 77 | TBD | Not started |
-| Phase 70 P01 | 25min | 2 tasks | 5 files |
-| Phase 70 P70-03 | 6 min | 3 tasks | 3 files |
-| Phase 70 P70-02 | 12 min | 2 tasks | 2 files |
-| Phase 71 P02 | 3m | 2 tasks | 4 files |
-| Phase 75 P04 | ~25min | 3 tasks | 7 files |
-| Phase 76 P01 | 377 | 3 tasks | 8 files |
-| Phase 77 P05 | 540 | 3 tasks | 3 files |
+**Audit ledger:** zero `[ ] open` rows — 166 closed, 2 deferred-with-rationale, 4 wont-fix-with-rationale; CI gate `tests/test_audit_ledger_zero_open.py` locks the invariant forward.
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- v4.9 roadmap authored 2026-05-14 against 36 requirements derived from `.planning/audit-2026-05-08/AUDIT-TASKS.md` open rows (13 deferred BLOCKERs + 92 WARNINGs + 29 INFOs).
-- 9 phases (69–77): 2 BLOCKER phases, 6 WARNING-by-subsystem phases, 1 INFO+closure phase.
-- Phases group requirements by code locality to minimize merge conflicts.
+- v4.9 shipped 2026-05-15. All 35 requirements satisfied; archive at `.planning/milestones/v4.9-ROADMAP.md` + `.planning/milestones/v4.9-REQUIREMENTS.md`.
+- v5.0 not yet scoped — invoke `/gsd-new-milestone` to begin.
 
-### Decisions
+### Decisions (v4.9 — see archive for full list)
 
-- [v4.9-D-01]: Deferred BLOCKERs split into two phases by code locality: scanner/cloud resource correctness (Phase 69) vs API/QRAMM model integrity (Phase 70). Both are highest priority and unblock WARNING fixes in the same subsystems.
-- [v4.9-D-02]: WARNING phases are strictly subsystem-scoped (protocol scanner, cloud scanner, CBOM/intel/reports, QRAMM/compliance, API/CLI/core, React frontend) to eliminate cross-phase merge conflicts.
-- [v4.9-D-03]: LEDGER-01 (audit closure) folded into Phase 77 as the final step — all finding rows should be dispositioned as phases 69-76 execute.
-- [v4.9-D-04]: INFO/code-quality items (INFO-01..04) batched into Phase 77 alongside LEDGER-01 since they are low-risk, non-interdependent, and a natural final-cleanup sweep.
-- [Phase ?]: [70-01] FK retrofit uses raw DBAPI cursor for PRAGMA hygiene (SQLA 2.x autobegin conflict)
-- [Phase ?]: Plan 77-05 closed LEDGER-01: 29 INFO row flips (27 closed + 2 wont-fix-with-rationale) + 2 D-30 bare-row rationale upgrades + D-31 CI gate. v4.9 SC-5 zero-bare-open invariant ACHIEVED
+- v4.9-D-01..04: subsystem-scoped phase decomposition; LEDGER-01 folded into Phase 77 as final step.
+- Phase 77 D-05: weak-crypto predicates consolidated into `quirk/util/weak_crypto.py`.
+- Phase 77 D-31: CI gate locks zero-bare-open invariant + rationale requirement on deferred/wont-fix rows.
 
 ### Pending Todos
 
-None at roadmap creation.
+None — milestone complete.
 
 ### Blockers/Concerns
 
-None at roadmap creation.
+None.
 
 ## Deferred Items
 
-Items carried forward from v4.8 close (2026-05-14):
+Items carried forward from v4.8 close (still open at v4.9 close):
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -111,9 +79,10 @@ Items carried forward from v4.8 close (2026-05-14):
 | verification_gap | Phase 46: 46-VERIFICATION.md not authored (code verified live) | deferred — retroactive authoring needed |
 | uat_gap | Phase 47: 4 manual TTY tests pending (nmap wizard interactive flow) | deferred — require TTY session |
 | test_infra | test_cbom_schema_validation.py fails when cyclonedx json-validation extra absent | deferred — optional dep, not blocking |
+| chaos_lab | Phase 999.83 — gitea/minio/vault/mysql config drift bugs (BACK-90 promotion) | deferred — standalone phase outside v4.9 scope |
 
 ## Session Continuity
 
-Last session: 2026-05-15T23:57:22.140Z
-Stopped at: Phase 72 complete
-Next action: `/gsd-plan-phase 69` (Deferred BLOCKERs — Scanner + Cloud)
+Last session: 2026-05-15T20:10:00.000Z
+Stopped at: v4.9 milestone complete (archive + tag pending push)
+Next action: `/gsd-new-milestone` to scope v5.0
