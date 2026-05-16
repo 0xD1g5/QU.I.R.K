@@ -29,6 +29,9 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "identity_kerberos_weak_etype_ratio": 10.0,
     "identity_saml_weak_signing_ratio": 8.0,
     "identity_dnssec_weak_algo_ratio": 8.0,
+    "identity_smime_weak_signing_count": 2.0,   # Phase 79 SMIME-04
+    "identity_smime_expired_count":      2.0,   # Phase 79 SMIME-04
+    "identity_smime_weak_key_count":     2.0,   # Phase 79 SMIME-04
     "dar_db_plaintext_ratio": 12.0,
     "dar_db_weak_ssl_ratio": 6.0,
     "dar_storage_unencrypted_ratio": 12.0,   # Phase 28 D-10 — same weight as plaintext DB
@@ -150,6 +153,9 @@ def compute_readiness_score(
     kerberos_weak_count = max(0, _as_int(evidence.get("identity_weak_etype_count", 0)))
     saml_weak_count = max(0, _as_int(evidence.get("saml_weak_signing_count", 0)))
     dnssec_weak_count = max(0, _as_int(evidence.get("dnssec_weak_algo_count", 0)))
+    smime_weak_signing_count = max(0, _as_int(evidence.get("smime_weak_signing_count", 0)))
+    smime_expired_count      = max(0, _as_int(evidence.get("smime_expired_count", 0)))
+    smime_weak_key_count     = max(0, _as_int(evidence.get("smime_weak_key_count", 0)))
     dar_db_plaintext = max(0, _as_int(evidence.get("dar_db_plaintext_count", 0)))
     dar_db_weak_ssl = max(0, _as_int(evidence.get("dar_db_weak_ssl_count", 0)))
     dar_storage_unencrypted = max(0, _as_int(evidence.get("dar_storage_unencrypted_count", 0)))
@@ -180,6 +186,9 @@ def compute_readiness_score(
         ("RC4/DES Kerberos etypes detected", -_ratio(kerberos_weak_count, denom) * w["identity_kerberos_weak_etype_ratio"]),
         ("Weak SAML signing key", -_ratio(saml_weak_count, denom) * w["identity_saml_weak_signing_ratio"]),
         ("Weak DNSSEC signing algorithm", -_ratio(dnssec_weak_count, denom) * w["identity_dnssec_weak_algo_ratio"]),
+        ("Weak S/MIME signing", -_ratio(smime_weak_signing_count, denom) * w["identity_smime_weak_signing_count"]),
+        ("Expired S/MIME cert", -_ratio(smime_expired_count, denom) * w["identity_smime_expired_count"]),
+        ("Weak S/MIME key",     -_ratio(smime_weak_key_count, denom) * w["identity_smime_weak_key_count"]),
     ]
     identity_trust_score, identity_trust_drivers = _apply_weighted_impacts(identity_trust_impacts)
 
