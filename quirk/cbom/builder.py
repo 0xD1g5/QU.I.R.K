@@ -461,6 +461,15 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                     ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size
                 )
 
+        elif ep.protocol == "ADCS":
+            # ADCS: cert_pubkey_alg holds the CA signing algorithm or template
+            # key algorithm. Pass-1 only — Pass-2/3 skip the ADCS literal
+            # (see skip tuples below). Phase 80 ADCS-06.
+            if ep.cert_pubkey_alg:
+                _register_algorithm(
+                    ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size
+                )
+
         elif ep.protocol == "KERBEROS":
             # Kerberos: cert_pubkey_alg holds the etype name (e.g. "rc4-hmac", "aes256-cts-hmac-sha1-96")
             # Exclude "kerberos-unreachable" synthetic finding -- not a real algorithm (per D-18)
@@ -535,7 +544,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # ------------------------------------------------------------------ #
     for ep in endpoints:
         if ep.protocol in (
-            "SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC", "SMIME",
+            "SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC", "SMIME", "ADCS",
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
@@ -619,7 +628,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
 
         elif ep.protocol in (
             "JWT", "CONTAINER", "SOURCE", "AWS", "AZURE",
-            "DNSSEC", "SAML", "KERBEROS", "SMIME",
+            "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS",
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
