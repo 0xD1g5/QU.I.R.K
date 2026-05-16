@@ -1,0 +1,14 @@
+# Phase 80 — AD CS chaos lab — CA enrollment service.
+#
+# One pKIEnrollmentService entry carrying a RSA-1024 SHA-1 cACertificate
+# (DER blob committed under adcs/certs/ca-weak.der; base64 inlined below).
+# Triggers the weak-signing finding (HIGH) per RESEARCH Pattern 3.
+#
+# Regenerate via adcs/certs/regen.sh (developer tool only, not runtime).
+
+dn: cn=QuirkLabCA,cn=Enrollment Services,cn=Public Key Services,cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: pKIEnrollmentService
+cn: QuirkLabCA
+dNSHostName: quirklab.local
+cACertificate;binary:: MIICcjCCAdugAwIBAgIUSyGL8g/aTaeemEWSaV61GLTwCegwDQYJKoZIhvcNAQEFBQAwSjEVMBMGA1UEAwwMUVVJUkstTGFiLUNBMRgwFgYDVQQKDA9RVUlSSyBDaGFvcyBMYWIxFzAVBgNVBAsMDkFEIENTIEZpeHR1cmVzMCAXDTI2MDUxNjE3MzIyNloYDzIxMjYwNDIyMTczMjI2WjBKMRUwEwYDVQQDDAxRVUlSSy1MYWItQ0ExGDAWBgNVBAoMD1FVSVJLIENoYW9zIExhYjEXMBUGA1UECwwOQUQgQ1MgRml4dHVyZXMwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAL3FrqNWVP78tPXdDEcFJpMmQltiFUAnDtK7gDRLoV2cIj7vKB8Jco0GqIFdEDLsV5CCGkyXkhwtUBsuqQRkGwEwAZgLco6RCACdOaN4Fe3EAOv7gQZYCFUgsVIynBzzcU2h7kQVLnNdRnKFG4zmXLr4q5YTtuHNwoMwFP1uaCd7AgMBAAGjUzBRMB0GA1UdDgQWBBRGK21DjyWwCAV6XN/8FZmC4BP+KjAfBgNVHSMEGDAWgBRGK21DjyWwCAV6XN/8FZmC4BP+KjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBBQUAA4GBAHAucwOiKrx6hG6bzHMEv0YcYJGIIn+j4bLDyy1l1coMqb0DnRwYob+vNV8bTiO6wdYldYPsidxHZwDn0KsCnLlik8F/PQP/aNvvJsQUGwgwykda0vy8B9LKFB1CW8BjkDAXpVsOFLvWYEzDoeB6jmIgHVaZetgPjK3+JPf6LBOh
