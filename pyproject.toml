@@ -28,6 +28,7 @@ dependencies = [
     "lxml>=6.0",
     "defusedxml>=0.7.1",
     "signxml>=4.4.0",
+    "nh3>=0.2.17",
 ]
 
 [project.optional-dependencies]
