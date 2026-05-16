@@ -1457,3 +1457,19 @@ Plans:
 
 ✅ 9 phases + Phase 69.1 (inserted), 38 plans, 169 audit findings dispositioned (166 closed + 2 deferred + 4 wont-fix), zero bare-open invariant locked via CI gate `tests/test_audit_ledger_zero_open.py`. Full details: `.planning/milestones/v4.9-ROADMAP.md`. Requirements archive: `.planning/milestones/v4.9-REQUIREMENTS.md`. Milestone audit: `.planning/milestones/v4.9-MILESTONE-AUDIT.md`.
 
+## Out-of-Band Chaos Lab Phases (post-v4.9)
+
+### Phase 999.84: Chaos Lab macOS Host-Mount Compat
+**Goal**: Three pre-existing macOS-host failures (DEF-999.83-A/B/C, captured during Phase 999.83 Plan 05 UAT) are fixed so `./lab.sh down && ./lab.sh all` on macOS Docker Desktop produces zero containers in `Restarting`, `Exited (1)`, or `Exited (22)` state after 60s settle — ldaps stays Up, rabbitmq-broker stays Up (healthy), and gitea-seed exits 0 on both first AND subsequent runs without wiping the gitea_data volume. All three failures share a root-cause class (macOS Docker Desktop bind-mount uid/gid + permission semantics differ from Linux Docker); idempotency fix for gitea-seed is included as a bundled correctness gap surfaced in the same UAT.
+**Depends on**: Phase 999.83 (BACK-90 fixes provide the steady-state baseline this phase verifies against)
+**Requirements**: BACK-91 (see v4.8-ROADMAP.md backlog row for full per-bug log evidence + fix options)
+**Success Criteria** (what must be TRUE):
+  1. `chaoslab-ldaps-1` (profile: ldaps) — stays `Up` for ≥5 minutes with no restart loop; `ldapsearch -H ldaps://localhost:636 -x` succeeds against the lab's CA-signed cert; no `chown: Read-only file system` log lines on startup
+  2. `chaoslab-rabbitmq-broker-1` (profile: broker) — stays `Up (healthy)`; AMQP listener on 25672 accepts connections; no `Error when reading /var/lib/rabbitmq/.erlang.cookie` log lines on startup
+  3. `chaoslab-gitea-seed-1` (profile: source) — `Exited (0)` on first run AND on any subsequent `./lab.sh all` invocation where the `gitea_data` named volume persists. Existing crypto-antipattern repos remain intact; no curl exit-22 on HTTP 409
+  4. `./lab.sh down && ./lab.sh all && sleep 60 && docker compose -p chaoslab ps -a` on macOS Docker Desktop shows zero containers in `Restarting`, `Exited (1)`, `Exited (2)`, `Exited (22)`, or `unhealthy` state. Seeds in `Exited (0)` remain expected and correct
+  5. Same UAT on a Linux Docker host produces no regression — services that were healthy on Linux before still are; ldaps/rabbitmq-broker behavior matches Linux expectations
+  6. CLAUDE.md chaos-lab maintenance rule satisfied: if `ldaps` image is replaced (e.g. `osixia/openldap` → `bitnami/openldap`), README port/service table and `expected_results_v4.md` profile-ldaps section both updated in the same commit
+**Plans**: TBD
+**Provenance**: Discovered 2026-05-15 during Phase 999.83 Plan 05 UAT. Per-bug detail in `.planning/phases/999.83-chaos-lab-service-config-drift/deferred-items.md`.
+
