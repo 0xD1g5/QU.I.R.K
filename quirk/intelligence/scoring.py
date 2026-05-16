@@ -32,6 +32,10 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "identity_smime_weak_signing_count": 2.0,   # Phase 79 SMIME-04
     "identity_smime_expired_count":      2.0,   # Phase 79 SMIME-04
     "identity_smime_weak_key_count":     2.0,   # Phase 79 SMIME-04
+    "identity_adcs_weak_template_count": 2.0,   # Phase 80 ADCS-04
+    "identity_adcs_misconfig_count":     2.0,   # Phase 80 ADCS-04
+    "identity_adcs_weak_signing_count":  2.0,   # Phase 80 ADCS-04
+    "identity_adcs_coverage_gap_count":  2.0,   # Phase 80 D-80-R6 / CONTEXT D-Area-1
     "dar_db_plaintext_ratio": 12.0,
     "dar_db_weak_ssl_ratio": 6.0,
     "dar_storage_unencrypted_ratio": 12.0,   # Phase 28 D-10 — same weight as plaintext DB
@@ -156,6 +160,10 @@ def compute_readiness_score(
     smime_weak_signing_count = max(0, _as_int(evidence.get("smime_weak_signing_count", 0)))
     smime_expired_count      = max(0, _as_int(evidence.get("smime_expired_count", 0)))
     smime_weak_key_count     = max(0, _as_int(evidence.get("smime_weak_key_count", 0)))
+    adcs_weak_template_count = max(0, _as_int(evidence.get("adcs_weak_template_count", 0)))
+    adcs_misconfig_count     = max(0, _as_int(evidence.get("adcs_misconfig_count", 0)))
+    adcs_weak_signing_count  = max(0, _as_int(evidence.get("adcs_weak_signing_count", 0)))
+    adcs_coverage_gap_count  = max(0, _as_int(evidence.get("adcs_coverage_gap_count", 0)))
     dar_db_plaintext = max(0, _as_int(evidence.get("dar_db_plaintext_count", 0)))
     dar_db_weak_ssl = max(0, _as_int(evidence.get("dar_db_weak_ssl_count", 0)))
     dar_storage_unencrypted = max(0, _as_int(evidence.get("dar_storage_unencrypted_count", 0)))
@@ -189,6 +197,10 @@ def compute_readiness_score(
         ("Weak S/MIME signing", -_ratio(smime_weak_signing_count, denom) * w["identity_smime_weak_signing_count"]),
         ("Expired S/MIME cert", -_ratio(smime_expired_count, denom) * w["identity_smime_expired_count"]),
         ("Weak S/MIME key",     -_ratio(smime_weak_key_count, denom) * w["identity_smime_weak_key_count"]),
+        ("Weak AD CS template",         -_ratio(adcs_weak_template_count, denom) * w["identity_adcs_weak_template_count"]),
+        ("AD CS template misconfig",    -_ratio(adcs_misconfig_count, denom)     * w["identity_adcs_misconfig_count"]),
+        ("Weak AD CS signing algo",     -_ratio(adcs_weak_signing_count, denom)  * w["identity_adcs_weak_signing_count"]),
+        ("AD CS coverage gap (ESC4/5/7/8)", -_ratio(adcs_coverage_gap_count, denom) * w["identity_adcs_coverage_gap_count"]),
     ]
     identity_trust_score, identity_trust_drivers = _apply_weighted_impacts(identity_trust_impacts)
 

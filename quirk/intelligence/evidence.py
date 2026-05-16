@@ -90,6 +90,10 @@ def build_evidence_summary(
     smime_weak_signing_count = 0
     smime_expired_count = 0
     smime_weak_key_count = 0
+    adcs_weak_template_count = 0
+    adcs_misconfig_count     = 0
+    adcs_weak_signing_count  = 0
+    adcs_coverage_gap_count  = 0
 
     # DAR protocol counters (Phase 27+)
     dar_db_plaintext_count = 0    # PG ssl=off + MySQL SSL disabled
@@ -193,6 +197,31 @@ def build_evidence_summary(
             # (Plan 79-02 contract).
             if "expired=true" in _smime_detail:
                 smime_expired_count += 1
+
+        elif proto == "ADCS":
+            _adcs_detail  = str(getattr(ep, "service_detail", "") or "").lower()
+            _adcs_sig_raw = getattr(ep, "cert_sig_alg", "") or ""
+
+            # Weak CA signing: scanner tags service_detail with "weak-signing-alg"
+            # and/or populates cert_sig_alg with a weak hash.
+            if "weak-signing-alg" in _adcs_detail or is_weak_cipher(_adcs_sig_raw):
+                adcs_weak_signing_count += 1
+
+            # Weak template: ESC1/ESC2/ESC3 → severe template misconfig.
+            elif any(tag in _adcs_detail for tag in ("esc1-", "esc2-", "esc3-")):
+                adcs_weak_template_count += 1
+
+            # General template misconfig (ESC6 MEDIUM bucket).
+            elif "esc6-" in _adcs_detail:
+                adcs_misconfig_count += 1
+
+            # Coverage-gap (ESC4/5/7/8 — not LDAP-observable per D-80-R8).
+            elif _adcs_detail.startswith("coverage-gap|"):
+                adcs_coverage_gap_count += 1
+
+            # ADCS-UNREACH (adcs-unreachable|base=...) deliberately falls through
+            # to none of the four counters — it is its own scan_error_category
+            # and surfaces as a LOW finding rather than a score-impacting count.
 
         elif proto == "POSTGRESQL":
             if getattr(ep, "scan_error", None) == "insufficient-privilege":
@@ -361,6 +390,10 @@ def build_evidence_summary(
         "smime_weak_signing_count": smime_weak_signing_count,
         "smime_expired_count":      smime_expired_count,
         "smime_weak_key_count":     smime_weak_key_count,
+        "adcs_weak_template_count": adcs_weak_template_count,
+        "adcs_misconfig_count":     adcs_misconfig_count,
+        "adcs_weak_signing_count":  adcs_weak_signing_count,
+        "adcs_coverage_gap_count":  adcs_coverage_gap_count,
         "identity_kerberos_weak_etype_ratio": round(identity_weak_etype_count / total_endpoints, 4) if total_endpoints else 0.0,
         "identity_saml_weak_signing_ratio": round(saml_weak_signing_count / total_endpoints, 4) if total_endpoints else 0.0,
         "identity_dnssec_weak_algo_ratio": round(dnssec_weak_algo_count / total_endpoints, 4) if total_endpoints else 0.0,
