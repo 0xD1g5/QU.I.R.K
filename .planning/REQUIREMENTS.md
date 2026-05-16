@@ -39,7 +39,7 @@ Research synthesized at `.planning/research/SUMMARY.md` (committed `c5d1d61`).
 
 - [ ] **ADCS-01**: New `quirk/scanners/adcs_scanner.py` enumerates AD CS Enrollment Services and Certificate Templates via authenticated LDAP queries to the AD `CN=Configuration,...` partition, using the existing `ldap3` path from `[identity]` extras; **no `certipy-ad` dependency** (would re-trigger the impacket/cryptography conflict).
 - [ ] **ADCS-02**: ESC1, ESC2, ESC3, ESC4, ESC5, ESC6, ESC7, ESC8 misconfiguration findings emitted per template via deterministic LDAP-attribute-driven checks (`msPKI-Certificate-Name-Flag`, `msPKI-Enrollment-Flag`, `pKIExtendedKeyUsage`, etc.); ESC9–ESC16 explicitly out of scope.
-- [ ] **ADCS-03**: New ORM column `adcs_scan_json` added to `ScanSession`.
+- [x] **ADCS-03**: New ORM column `adcs_scan_json` added to `ScanSession`. (Phase 80-01, commit 9ed0cd0)
 - [ ] **ADCS-04**: New evidence counters `identity_adcs_weak_template_count`, `identity_adcs_misconfig_count`, `identity_adcs_weak_signing_count` slot into the existing `identity_trust` subscore.
 - [ ] **ADCS-05**: New `IdentityFinding` entries emitted with `protocol="ADCS"`.
 - [ ] **ADCS-06**: CBOM integration — Pass 1 emits algorithm components for CA signing certs and discovered templates; Pass 2/3 skip-list extended for ADCS endpoints.
@@ -145,7 +145,7 @@ Finalized by roadmapper 2026-05-16. 52 requirements mapped across 8 phases — 1
 | SMIME-08 | Phase 79 — S/MIME LDAP Discovery Scanner | Pending |
 | ADCS-01 | Phase 80 — Windows AD CS Scanner | Pending |
 | ADCS-02 | Phase 80 — Windows AD CS Scanner | Pending |
-| ADCS-03 | Phase 80 — Windows AD CS Scanner | Pending |
+| ADCS-03 | Phase 80 — Windows AD CS Scanner | Complete (80-01) |
 | ADCS-04 | Phase 80 — Windows AD CS Scanner | Pending |
 | ADCS-05 | Phase 80 — Windows AD CS Scanner | Pending |
 | ADCS-06 | Phase 80 — Windows AD CS Scanner | Pending |

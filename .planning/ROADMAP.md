@@ -1632,7 +1632,7 @@ Wave A phases are internally independent — they touch fully disjoint code path
 |-------|------|----------------|--------|-----------|
 | 78. HTML/PDF Injection Hardening | A | 0/? | Not started | - |
 | 79. S/MIME LDAP Discovery Scanner | A | 0/? | Not started | - |
-| 80. Windows AD CS Scanner | A | 0/? | Not started | - |
+| 80. Windows AD CS Scanner | A | 1/4 | In progress | - |
 | 81. CMVP Attestation Feed | A | 0/? | Not started | - |
 | 82. Chaos Lab Fidelity | A/B | 0/? | Not started | - |
 | 83. Integration Gate + Cleanup | B | 0/? | Not started | - |

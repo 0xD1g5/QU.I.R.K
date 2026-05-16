@@ -4,14 +4,14 @@ milestone: v4.10
 milestone_name: Launch Readiness — Coverage, Hardening, Release Engineering
 status: Roadmap ready — run `/gsd-plan-phase 78` to begin Wave A
 stopped_at: Phase 78 complete (6/6 HARDEN; 55 tests pass)
-last_updated: "2026-05-16T13:31:38.351Z"
+last_updated: "2026-05-16T17:52:31.666Z"
 last_activity: 2026-05-16 — Milestone v4.10 roadmap finalized (8 phases, 52 requirements, 100% coverage)
 progress:
   total_phases: 8
-  completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  completed_phases: 2
+  total_plans: 13
+  completed_plans: 10
+  percent: 77
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Current Position
 
-Phase: Not started (roadmap created, awaiting phase planning)
-Plan: —
-Status: Roadmap ready — run `/gsd-plan-phase 78` to begin Wave A
-Last activity: 2026-05-16 — Milestone v4.10 roadmap finalized (8 phases, 52 requirements, 100% coverage)
+Phase: 80 (windows-adcs-scanner) — Wave A
+Plan: 80-02 (next — scanner module)
+Status: 80-01 foundation complete (commit `9ed0cd0`); adcs chaos-lab profile live, ORM column + `[adcs]` extras declared
+Last activity: 2026-05-16 — Phase 80 Plan 01 ADCS foundation landed (3 tasks, 14 files)
 
 ## Milestone Summary (v4.10 — in progress)
 
@@ -73,6 +73,8 @@ Last activity: 2026-05-16 — Milestone v4.10 roadmap finalized (8 phases, 52 re
 
 - v4.10-D-01 (pre-locked by research): CMVP module never emits `certified: true` — only `fips_140_3_coverage` informational list. CMVP-07 is the permanent CI invariant. (Source: SUMMARY.md cross-cutting recommendation 4)
 - v4.10-D-02 (pre-locked by research): `certipy-ad` excluded — pins `cryptography~=42.0.8`, breaks TLS scanner. AD CS via impacket LDAP only. (Source: SUMMARY.md cross-cutting recommendation 2; mirrors v4.2 Key Decision)
+- v4.10-D-03 (Phase 80-01 execution, 2026-05-16): adcs chaos-lab profile uses Bitnami-native `LDAP_CUSTOM_SCHEMA_DIR=/schemas` env hook for msPKI schema loading. Both originally planned branches (seed-time `ldapadd cn=config` + Dockerfile `COPY ... etc/schema/`) rejected at runtime under `bitnamilegacy/openldap:2.6.10`; Dockerfile preserved as tertiary fallback per D-80-R7 "ship both branches" contract.
+- v4.10-D-04 (Phase 80-01 execution, 2026-05-16): msPKI schema overlay uses private OID arc `1.3.6.1.4.1.99999.80.*` rather than Microsoft's real `1.2.840.113556.1.4.20XX` — the latter collides with the bundled `msuser` schema (slapadd "Inconsistent duplicate attributeType"). Scanner keys off attribute NAMES (not OIDs) so the private arc is functionally equivalent; attribute names match Microsoft's real schema verbatim.
 - v4.10-D-03 (pre-locked by research): S/MIME discovery is LDAP-only (`userCertificate`/`userSMIMECertificate`). No IMAP, no mailbox content. AST CI gate (SMIME-08) is preventative for future drift. (Source: SUMMARY.md cross-cutting recommendation 3)
 - v4.10-D-04 (pending Phase 84 task 1): PyPI name `quirk` availability unknown. RELENG-01 is the first task of Phase 84; if taken, distribution name is changed before any packaging automation is written.
 
@@ -100,6 +102,6 @@ Items carried forward from v4.9 close (still open):
 
 ## Session Continuity
 
-Last session: 2026-05-16T13:31:38.340Z
-Stopped at: Phase 78 complete (6/6 HARDEN; 55 tests pass)
-Next action: `/gsd-plan-phase 78` (Wave A — HTML/PDF Injection Hardening, start first)
+Last session: 2026-05-16T18:00:00Z
+Stopped at: Phase 80 Plan 01 complete (commit `9ed0cd0`) — adcs chaos-lab + ORM/extras foundation
+Next action: `/gsd-plan-phase 80` continuation — run Plan 80-02 (scanner module)

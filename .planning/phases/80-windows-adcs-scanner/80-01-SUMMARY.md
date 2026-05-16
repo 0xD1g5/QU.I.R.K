@@ -130,4 +130,4 @@ Verified before writing this Summary:
 
 ## Self-Check: PASSED
 
-Commit SHA to be filled in by orchestrator after final commit.
+**Commit SHA:** `9ed0cd0`
