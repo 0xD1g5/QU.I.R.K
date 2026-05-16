@@ -122,16 +122,24 @@ def render_pdf_report(html_path: str, pdf_path: str) -> bool:
     except ImportError:
         return False
     browser = None
+    context = None
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page()
+            # Phase 78 / HARDEN-04: explicit deny on JS, network, and CSP bypass.
+            context = browser.new_context(
+                java_script_enabled=False,
+                offline=True,
+                bypass_csp=False,
+            )
+            page = context.new_page()
             page.goto(f"file://{os.path.abspath(html_path)}")
             page.pdf(
                 path=pdf_path,
                 format="A4",
                 margin={"top": "15mm", "bottom": "15mm", "left": "12mm", "right": "12mm"},
                 print_background=True,
+                display_header_footer=False,
             )
         return True
     except (PlaywrightError, PlaywrightTimeoutError, OSError, RuntimeError) as e:
@@ -141,6 +149,11 @@ def render_pdf_report(html_path: str, pdf_path: str) -> bool:
         )
         return False
     finally:
+        if context is not None:
+            try:
+                context.close()
+            except Exception:
+                pass
         if browser is not None:
             try:
                 browser.close()
