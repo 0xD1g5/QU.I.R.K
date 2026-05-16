@@ -40,6 +40,94 @@ def _score_color(band: str) -> str:
     }.get(band, "#aaaaaa")
 
 
+def _collect_algorithm_names(endpoints: List[Any]) -> List[str]:
+    """Derive the unique algorithm names observed in this scan from endpoints.
+
+    Sources: cipher_suite, cert_pubkey_alg, tls_supported_ciphers_sample.
+    Returns a sorted list of unique non-empty algorithm/suite strings.
+    """
+    names: set = set()
+    for ep in endpoints or []:
+        for attr in ("cipher_suite", "cert_pubkey_alg"):
+            val = getattr(ep, attr, "") or ""
+            if isinstance(val, str) and val.strip():
+                names.add(val.strip())
+        sample = getattr(ep, "tls_supported_ciphers_sample", "") or ""
+        if isinstance(sample, str) and sample.strip():
+            for tok in sample.split(","):
+                tok = tok.strip()
+                if tok:
+                    names.add(tok)
+    return sorted(names)
+
+
+def build_algorithm_inventory(endpoints: List[Any]) -> List[Dict[str, Any]]:
+    """Build the `algorithms` template context (Phase 81 / CMVP-06).
+
+    Each row carries: name, nist_level, fips_status, cmvp_coverage.
+
+    `cmvp_coverage` is a comma-joined list of CMVP module names that cover the
+    algorithm, or None for empty matches (the template renders the literal
+    "Not in CMVP catalog" in that case).
+
+    Implementation notes:
+    - `quirk.compliance.cmvp.coverage_for_algorithm` is imported LAZILY (inside
+      this function body) so module-import-time isn't broken if Plan 81-02 has
+      not yet committed the cmvp module.
+    - `quirk.cbom.classifier.classify_algorithm` provides the NIST level used
+      by the existing _fips_status helper; both imports are deferred to keep
+      module-load cost low for non-HTML reporting paths.
+    - NEVER emits any `certified` boolean — only informational coverage strings
+      (v4.10-D-01 invariant).
+    """
+    rows: List[Dict[str, Any]] = []
+
+    # Lazy imports — Plan 81-02 lands quirk/compliance/cmvp.py concurrently;
+    # quirk/cbom/builder.py + classifier.py are foundational and always present
+    # but we defer to keep this helper cheap to import.
+    try:
+        from quirk.compliance.cmvp import coverage_for_algorithm
+    except ImportError:
+        # Plan 81-02 hasn't committed yet — render with empty coverage so the
+        # template gracefully falls back to "Not in CMVP catalog" for every row.
+        def coverage_for_algorithm(_name: str):  # type: ignore[no-redef]
+            return []
+
+    try:
+        from quirk.cbom.classifier import classify_algorithm
+        from quirk.cbom.builder import _fips_status
+    except ImportError:
+        def classify_algorithm(_name: str):  # type: ignore[no-redef]
+            return (None, None, None)
+
+        def _fips_status(_lvl):  # type: ignore[no-redef]
+            return "non-approved"
+
+    for name in _collect_algorithm_names(endpoints):
+        try:
+            _, nist_level, _ = classify_algorithm(name)
+        except Exception:
+            nist_level = None
+        fips_status = _fips_status(nist_level) if nist_level is not None or True else "non-approved"
+        try:
+            coverage = coverage_for_algorithm(name) or []
+        except Exception:
+            coverage = []
+        module_names = [
+            (m.get("name") if isinstance(m, dict) else str(m))
+            for m in coverage
+            if (isinstance(m, dict) and m.get("name")) or (not isinstance(m, dict))
+        ]
+        cmvp_coverage = ", ".join(module_names) if module_names else None
+        rows.append({
+            "name": name,
+            "nist_level": nist_level if nist_level is not None else "—",
+            "fips_status": fips_status,
+            "cmvp_coverage": cmvp_coverage,
+        })
+    return rows
+
+
 def _severity_color(severity: str) -> str:
     return {
         "CRITICAL": "#e53935",
@@ -96,6 +184,9 @@ def render_html_report(
     def roadmap_section(tf: str) -> List[Dict]:
         return [r for r in (roadmap_items or []) if r.get("timeframe") == tf or r.get("phase") == tf]
 
+    # Phase 81 / CMVP-06: build the Algorithm Inventory `algorithms` context.
+    algorithms = build_algorithm_inventory(endpoints or [])
+
     html = template.render(
         org_name=getattr(getattr(cfg, "assessment", None), "name", "Unknown"),
         report_owner=getattr(getattr(cfg, "assessment", None), "report_owner", ""),
@@ -109,6 +200,7 @@ def render_html_report(
         drivers=score.get("drivers", []),
         findings=findings or [],
         endpoints=endpoints or [],
+        algorithms=algorithms,
         roadmap_now=roadmap_section("NOW"),
         roadmap_next=roadmap_section("NEXT"),
         roadmap_later=roadmap_section("LATER"),
