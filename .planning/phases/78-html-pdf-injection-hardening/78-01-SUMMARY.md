@@ -83,7 +83,7 @@ No other deviations. No checkpoints triggered. No auth gates.
 
 `feat(78-01): sanitize chokepoint + nh3 dependency` — files: `pyproject.toml`, `quirk/util/sanitize.py`, `tests/test_sanitize_scanner_text.py`.
 
-(Commit SHA filled in below after the atomic commit.)
+Commit SHA: `c40a9bd`
 
 ## Self-Check: PASSED
 
