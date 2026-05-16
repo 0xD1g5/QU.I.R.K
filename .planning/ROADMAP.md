@@ -1617,7 +1617,11 @@ Plans:
   3. `SECURITY.md` exists at the repo root, defines a 90-day coordinated disclosure SLA, enables GitHub private vulnerability reporting, and documents the Sigstore signing identity used for release artifacts
   4. `towncrier build` produces a valid `CHANGELOG.md` from news fragments under `news/`; `docs/release-process.md` documents the complete release runbook from tag creation through PyPI publish
   5. `quirk.__version__` in `quirk/__init__.py` is the single source of truth; `tests/test_version.py` asserts parity across `pyproject.toml`, the CLI `--version` banner, the dashboard footer, and CBOM metadata — the test reads the version via `importlib.metadata`, not a hardcoded literal
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 84-01-PLAN.md — PyPI name verification + version SoT consolidation per D-84-R1 (RELENG-01, RELENG-08)
+- [ ] 84-02-PLAN.md — towncrier setup + changelog.d/ fragments (RELENG-04)
+- [ ] 84-03-PLAN.md — Trusted Publishers release workflow + Sigstore attestations (RELENG-02, RELENG-03)
+- [ ] 84-04-PLAN.md — Governance docs (SECURITY, CODE_OF_CONDUCT, release-process) + UAT update (RELENG-05, RELENG-06, RELENG-07)
 
 ### Phase 85: Public-Launch Polish
 **Goal**: Installing and evaluating QU.I.R.K. is frictionless for a security consultant encountering the project for the first time — a Homebrew formula, a published Docker image, an upgrade guide, a marketing README with badges and quickstart, and sample CBOM output files are all available before the v4.10 release tag is cut
