@@ -69,17 +69,64 @@ _derive_all_profiles() {
   fi
 }
 
+# CHAOS-05 image-pin policy gate. Parses the compose file (pure parse, no
+# daemon required) and fails if any service.image uses `:latest` or a bare
+# untagged reference. Build-only services (no `image:` key) are skipped —
+# pinning for them is enforced via the FROM directive in their Dockerfile.
+# Returns 0 on clean compose file, 1 on policy violation.
+_validate_pinned_tags() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "⚠️  python3 not found; skipping pin-policy gate (CHAOS-05)" >&2
+    return 0
+  fi
+  local violations
+  violations="$(python3 - "${COMPOSE_FILE}" <<'PY'
+import sys
+try:
+    import yaml
+except ImportError:
+    # PyYAML unavailable — defer to pytest gate (tests/test_chaos_lab_image_pinning.py).
+    sys.exit(0)
+data = yaml.safe_load(open(sys.argv[1]).read()) or {}
+bad = []
+for name, svc in (data.get("services") or {}).items():
+    if not isinstance(svc, dict):
+        continue
+    img = svc.get("image")
+    if img is None:
+        continue
+    if img.endswith(":latest") or ":" not in img:
+        bad.append(f"{name}: {img}")
+print("\n".join(bad))
+PY
+)"
+  if [[ -n "${violations}" ]]; then
+    echo "❌ CHAOS-05 violation — chaos-lab images must be pinned (no :latest, no bare names):" >&2
+    echo "${violations}" | sed 's/^/    /' >&2
+    return 1
+  fi
+  return 0
+}
+
 cmd="${1:-}"
 shift || true
 
 case "${cmd}" in
   up)
+    if ! _validate_pinned_tags; then
+      echo "❌ Refusing to start: pin policy violation (CHAOS-05)." >&2
+      exit 1
+    fi
     echo "🚀 Starting lab: project=${PROJECT_NAME} file=${COMPOSE_FILE} profiles='${PROFILE_ARGS}'"
     compose up -d
     echo "✅ Lab started."
     compose ps
     ;;
   all)
+    if ! _validate_pinned_tags; then
+      echo "❌ Refusing to start: pin policy violation (CHAOS-05)." >&2
+      exit 1
+    fi
     # Portable across bash 3.2 (macOS default) — `mapfile` is bash 4+.
     _profiles=()
     while IFS= read -r _p; do
