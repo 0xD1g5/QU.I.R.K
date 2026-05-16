@@ -8,6 +8,7 @@ from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.assessment.migration_advisor import recommend_migration_paths
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: wrap scanner-controlled cells
+from quirk.reports.html_renderer import build_algorithm_inventory  # Phase 81 / CMVP-06: shared inventory builder
 
 # D-07 / WR-09 (Phase 73): fallback bullet when score dict is malformed.
 _INTERPRETATION_UNAVAILABLE = "Score data unavailable for this run."
@@ -195,6 +196,24 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append(f"- **Plaintext HTTP services detected:** {http_plain}")
     lines.append(f"- **Unknown open services detected:** {unknown_open}")
     lines.append("")
+
+    # Phase 81 / CMVP-06: Algorithm Inventory with FIPS 140-3 CMVP Coverage column.
+    # Empty matches render the literal "Not in CMVP catalog" (v4.10-D-01 invariant —
+    # do not introduce alternative wording). coverage_for_algorithm is consumed via the shared
+    # build_algorithm_inventory helper (which imports it lazily).
+    algorithms = build_algorithm_inventory(endpoints or [])
+    if algorithms:
+        lines.append("## Algorithm Inventory (FIPS 140-3 Coverage)")
+        lines.append("")
+        lines.append("| Algorithm | NIST Level | FIPS Status | CMVP Coverage |")
+        lines.append("|---|---|---|---|")
+        for a in algorithms:
+            cov = a.get("cmvp_coverage")
+            cov_cell = md_cell(cov) if cov else "Not in CMVP catalog"
+            lines.append(
+                f"| {md_cell(a['name'])} | {a['nist_level']} | {md_cell(a['fips_status'])} | {cov_cell} |"
+            )
+        lines.append("")
 
     lines.append("## Findings Overview (Executive-Relevant)")
     lines.append(f"- **High-impact items (CRITICAL + HIGH):** {high_crit}")

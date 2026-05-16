@@ -321,6 +321,29 @@
     {% else %}
     <p style="color:var(--text-muted)">No endpoints recorded for this scan.</p>
     {% endif %}
+
+    {# ── Phase 81 / CMVP-06 — Algorithm Inventory with FIPS 140-3 CMVP coverage.
+         Every scanner-controlled cell wraps with `| sanitize` per the Phase 78
+         chokepoint contract (see comment at line 176). The literal
+         `Not in CMVP catalog` is template-static and not sanitized.
+         v4.10-D-01 forbids active certification claims — use the "Not in CMVP catalog"
+         literal only; do not introduce alternative wording. #}
+    <h2>Algorithm Inventory (FIPS 140-3 Coverage)</h2>
+    {% if algorithms %}
+    <table>
+      <thead><tr><th>Algorithm</th><th>NIST Level</th><th>FIPS Status</th><th>CMVP Coverage</th></tr></thead>
+      <tbody>
+      {% for a in algorithms %}
+      <tr>
+        <td>{{ a.name | sanitize }}</td>
+        <td>{{ a.nist_level }}</td>
+        <td>{{ a.fips_status | sanitize }}</td>
+        <td>{{ a.cmvp_coverage | sanitize if a.cmvp_coverage else 'Not in CMVP catalog' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
   </section>
 
 </div><!-- /report-body -->
