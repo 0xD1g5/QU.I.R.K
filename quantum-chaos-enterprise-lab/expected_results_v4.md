@@ -202,6 +202,19 @@ quirk scan --container localhost:20005/image-old-pycrypto localhost:20005/image-
 
 *Gitea + seeded repos with crypto anti-patterns (semgrep target).*
 
+> **Idempotency contract (CHAOS-03 / DEF-999.83-C, 2026-05-16):** The
+> `gitea-seed` sidecar is idempotent — re-running `PROFILE_ARGS="--profile source"
+> ./lab.sh up` against a persisted `gitea_data` volume is a no-op. A
+> sentinel-repo existence probe at the top of `source/seed.sh` checks
+> `/api/v1/repos/labadmin/crypto-antipatterns-python`; if present, the script
+> logs `[seed] sentinel repo crypto-antipatterns-python already present;
+> skipping seed` and exits 0 immediately, avoiding the prior HTTP 409
+> duplicate-repo cascade. The per-repo `repo_exists` checks remain as a
+> defense-in-depth layer for partial-seed states. Verified live on macOS
+> Docker Desktop: two consecutive `up` cycles produced `chaoslab-gitea-seed-1
+> Exited (0)` with the skip message and zero 409s. Scanner findings against
+> the seeded repos unchanged.
+
 ```bash
 PROFILE_ARGS="--profile source" ./lab.sh up
 ```

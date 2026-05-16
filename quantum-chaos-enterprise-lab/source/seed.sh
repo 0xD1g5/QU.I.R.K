@@ -14,6 +14,19 @@ until curl -sf "${GITEA_URL}/" > /dev/null 2>&1; do
 done
 sleep 3  # Extra buffer for full initialization
 
+# ---- Idempotency short-circuit (CHAOS-03 / DEF-999.83-C) ----
+# If the canonical sentinel repo already exists, exit 0 immediately — avoids
+# the per-call 409 cascade on re-up against a persisted gitea_data volume.
+# The seed script provisions repos under the `labadmin` user (not an org), so
+# we probe the first repo the script creates today: crypto-antipatterns-python.
+# The per-repo `repo_exists` checks below remain as a defense-in-depth layer
+# for partial-seed states (e.g. seed killed mid-run).
+if curl -fsSL -o /dev/null -u "${ADMIN_USER}:${ADMIN_PASS}" \
+     "${GITEA_URL}/api/v1/repos/${ADMIN_USER}/crypto-antipatterns-python" 2>/dev/null; then
+  echo "[seed] sentinel repo crypto-antipatterns-python already present; skipping seed"
+  exit 0
+fi
+
 echo "=== Creating repos ==="
 
 # Helper: check whether a repo already exists for ADMIN_USER. Returns 0 (true) if it does.
