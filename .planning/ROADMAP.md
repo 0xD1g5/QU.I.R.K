@@ -1536,7 +1536,11 @@ Wave A phases are internally independent — they touch fully disjoint code path
   3. CBOM Pass-1 emits algorithm components for each discovered S/MIME certificate; Pass-2/3 skip-list prevents spurious TLS-style protocol components for SMIME endpoints
   4. A dedicated `test_smime_no_envelope_leak.py` test asserts that no IMAP envelope field (From, To, Subject, Message-ID) appears anywhere in `smime_scan_json` or finding output — even when the scanner is given an IMAP target
   5. The AST CI gate in SMIME-08 exits non-zero if any import of IMAP envelope fields is found in `quirk/scanners/smime_scanner.py`
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 79-01-PLAN.md — Foundation: smime_scan_json column + smime chaos lab profile (LDIF + DER fixtures + oracle)
+- [ ] 79-02-PLAN.md — SMIME scanner module + CBOM Pass-1 emit + Pass-2/3 skip-list + orchestrator wiring
+- [ ] 79-03-PLAN.md — SCORE_WEIGHTS entries + identity_trust impacts + evidence counters
+- [ ] 79-04-PLAN.md — Unit/privacy/AST tests + UAT-SERIES.md + Obsidian phase note (closure)
 
 ### Phase 80: Windows AD CS Scanner
 **Goal**: QU.I.R.K. can enumerate Active Directory Certificate Services CA configurations and certificate templates via authenticated LDAP — detecting weak CA signing algorithms, dangerously permissive template configurations (ESC1–ESC8 observable crypto properties), and CA reachability — with results in the Identity tab, CBOM, and reports; no write operations or certificate enrollment is performed
