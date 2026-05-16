@@ -4,10 +4,18 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+import pypdf
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
+
+
+# Phase 78 / HARDEN-04: PDF metadata constants. Title flows from HTML <title>;
+# Author is injected post-render via pypdf because Chromium's print-to-PDF does
+# not honor <meta name="author">.
+PDF_TITLE = "QU.I.R.K. Cryptographic Readiness Report"
+PDF_AUTHOR = "QU.I.R.K. Scanner"
 
 
 def _score_band(total: int) -> str:
@@ -111,6 +119,25 @@ def render_html_report(
         f.write(html)
 
 
+def _inject_pdf_metadata(pdf_path: str) -> None:
+    """Post-process a rendered PDF to inject /Title and /Author metadata.
+
+    Phase 78 / HARDEN-04: Chromium's headless print-to-PDF embeds <title> as
+    /Title but ignores <meta name="author">. We open the freshly rendered PDF
+    with pypdf, copy pages into a new writer, set both metadata fields to the
+    locked module-level constants, and overwrite the file. This preserves the
+    locked Playwright context (JS disabled, offline, CSP enforced) and adds
+    Author as a deterministic post-render step.
+    """
+    reader = pypdf.PdfReader(pdf_path)
+    writer = pypdf.PdfWriter()
+    for page in reader.pages:
+        writer.add_page(page)
+    writer.add_metadata({"/Title": PDF_TITLE, "/Author": PDF_AUTHOR})
+    with open(pdf_path, "wb") as f:
+        writer.write(f)
+
+
 def render_pdf_report(html_path: str, pdf_path: str) -> bool:
     """Render html_path to pdf_path using Playwright headless Chromium.
 
@@ -141,6 +168,10 @@ def render_pdf_report(html_path: str, pdf_path: str) -> bool:
                 print_background=True,
                 display_header_footer=False,
             )
+        # Phase 78 / HARDEN-04: post-render metadata injection. Chromium's
+        # print-to-PDF honors <title> but not <meta name="author">, so we
+        # inject /Author (and re-affirm /Title) via pypdf.
+        _inject_pdf_metadata(pdf_path)
         return True
     except (PlaywrightError, PlaywrightTimeoutError, OSError, RuntimeError) as e:
         print(
