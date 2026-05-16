@@ -69,6 +69,7 @@ class CryptoEndpoint(Base):
     saml_scan_json = Column(Text, nullable=True)       # Full SAML scan JSON
     dnssec_scan_json = Column(Text, nullable=True)     # Full DNSSEC scan JSON
     smime_scan_json = Column(Text, nullable=True)      # Full S/MIME scan JSON (Phase 79 SMIME-03)
+    adcs_scan_json = Column(Text, nullable=True)       # Full AD CS scan JSON (Phase 80 ADCS-03)
 
     # ==========================
     # v4.3 GCP connector fields
