@@ -1207,7 +1207,7 @@ def main():
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "data_at_rest")
     # Phase 67 RESUME-01: skip data_at_rest stage if already completed in a prior run.
-    _dar_protocols = ("S3", "AZURE-BLOB", "K8S", "GCS", "VAULT", "DNSSEC", "SAML", "KERBEROS")
+    _dar_protocols = ("S3", "AZURE-BLOB", "K8S", "GCS", "VAULT", "DNSSEC", "SAML", "KERBEROS", "SMIME")
     if _stage_completed(_completed_stages, "data_at_rest"):
         s3_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "S3"]
         blob_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "AZURE-BLOB"]
@@ -1216,12 +1216,14 @@ def main():
         dnssec_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "DNSSEC"]
         saml_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "SAML"]
         kerberos_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "KERBEROS"]
+        smime_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "SMIME"]
         vault_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "VAULT"]
         logger.info(
             f"Resuming: skipping data_at_rest stage "
             f"({len(s3_endpoints)} s3, {len(blob_endpoints)} blob, {len(k8s_endpoints)} k8s, "
             f"{len(gcs_storage_endpoints)} gcs, {len(dnssec_endpoints)} dnssec, "
             f"{len(saml_endpoints)} saml, {len(kerberos_endpoints)} kerberos, "
+            f"{len(smime_endpoints)} smime, "
             f"{len(vault_endpoints)} vault from DB)"
         )
     else:
@@ -1391,6 +1393,27 @@ def main():
             _run_kerberos_phase, error_endpoints, logger,
         ) or []
 
+        # ── S/MIME LDAP scanning (Phase 79 SMIME-01) ──────────────────
+        def _run_smime_phase():
+            if not (getattr(cfg.connectors, "enable_smime", False)
+                    and getattr(cfg.connectors, "smime_targets", None)):
+                return []
+            from quirk.scanner.smime_scanner import scan_smime_targets
+            eps = scan_smime_targets(
+                targets=cfg.connectors.smime_targets,
+                timeout=getattr(cfg.connectors, "smime_timeout", 10),
+                logger=logger,
+                session_start=session_start,
+                search_base=getattr(cfg.connectors, "smime_search_base", None),
+            )
+            logger.info("SMIME scan: %d endpoints from %d targets",
+                        len(eps), len(cfg.connectors.smime_targets))
+            return eps
+        smime_endpoints = _wrapped_phase(
+            run_stats, "smime_scanning", "smime_scanner",
+            _run_smime_phase, error_endpoints, logger,
+        ) or []
+
         # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
         def _run_vault_phase():
             if not cfg.connectors.enable_vault:
@@ -1427,7 +1450,7 @@ def main():
         ) or []
 
         # Phase 67 RESUME-01: flush data_at_rest stage endpoints before broker_email begins
-        _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + vault_endpoints
+        _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + smime_endpoints + vault_endpoints
         _flush_stage_endpoints(cfg.output.db_path, _dar_eps)
         _dar_pf = _collect_stage_partial_failures(run_stats, "data_at_rest", error_endpoints, _err_before_dar)
         if args.db_path:
@@ -1593,6 +1616,7 @@ def main():
                  + s3_endpoints + blob_endpoints + gcs_storage_endpoints
                  + k8s_endpoints
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints
+                 + smime_endpoints
                  + vault_endpoints
                  + email_endpoints
                  + kafka_endpoints + rabbit_endpoints + redis_endpoints
