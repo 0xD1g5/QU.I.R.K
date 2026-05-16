@@ -54,6 +54,8 @@ All services in `docker-compose.yml` carry an explicit version tag because float
 
 Pins enforced this phase: `gitea/gitea:1.21` (unchanged), `minio/minio:RELEASE.2025-09-07T16-13-09Z` (newly pinned from `:latest`), `mysql:8.0` (newly pinned from `:8`), and legacy `hashicorp/vault:1.15` deleted along with the deprecated `storage` profile.
 
+**Phase 82-01 image-pin sweep (2026-05-16, CHAOS-05):** Every remaining floating tag or bare image reference promoted to a specific minor/patch version. Notable changes: `nginx:stable → 1.28.0`, `httpd:2.4 → 2.4.63`, `postgres:16 → 16.6`, `postgres:15 → 15.10`, `mysql:8.0 → 8.0.40`, `redis:7-alpine → 7.4.1-alpine`, `rabbitmq:3-management → 3.13.7-management`, `haproxy:latest → 3.0.5`, `localstack/localstack:3 → 3.8.1`, `azurite → 3.33.0`, `step-ca → 0.28.1`, `registry:2 → 2.8.3`, `docker:24-dind → 24.0.9-dind`, `gitea/gitea:1.21 → 1.21.11`, `alpine → 3.20`, `simplesamlphp → 1.19.7`, `minio/mc:latest → RELEASE.2024-11-21T17-21-54Z`, `lscr.io/linuxserver/openssh-server → 9.9_p2-r0-ls180`. The identity-profile `osixia/openldap:1.5.0` and `osixia/phpldapadmin:0.9.0` pins were left as-is — both upstreams are unmaintained, and migration is out of scope for v4.10. CI gate (no `:latest`, no bare images) lands in Plan 82-04.
+
 ## Documentation
 
 - **Full operator guide:** [`docs/chaos-lab.md`](../docs/chaos-lab.md)
