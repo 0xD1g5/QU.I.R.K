@@ -250,6 +250,8 @@ docker compose --profile ssh-weak up -d && sleep 5 && ssh-audit localhost:20022
 
 ## Profile: ldaps
 
+> **Note:** As of 2026-05-15 the `ldaps` service runs on `bitnamilegacy/openldap:2.6.10-debian-12-r4` (was `osixia/openldap:1.5.0`) for macOS Docker Desktop bind-mount compatibility (BACK-91 / DEF-999.83-A). The osixia entrypoint chowns bind-mounted cert files at startup, which fails on macOS where bind-mounts are read-only; bitnami's entrypoint does not. The `bitnamilegacy/*` namespace hosts the post-2025 free images that used to live under `bitnami/*` before Bitnami migrated to paid Secure Images. TLS cert set and crypto findings are unchanged — verified against the same `./certs/modern.{crt,key}` material and CA.
+
 *OpenLDAP over LDAPS on standard port 636 with self-signed cert.*
 
 ```bash
