@@ -1588,7 +1588,12 @@ Wave A phases are internally independent — they touch fully disjoint code path
   4. `./lab.sh up --profile smime && ./lab.sh up --profile smime` (two consecutive runs on a persisted volume) produces seed container in `Exited (0)` on both runs; `./lab.sh up --profile adcs && ./lab.sh up --profile adcs` does the same — asserted by `tests/test_chaos_lab_idempotency.py`
   5. A `docker compose config` parse check in `lab.sh` fails CI if any service in `docker-compose.yml` uses a `:latest` tag or an untagged image reference; all existing and new services pass this check
   6. `lab.sh` `ALL_PROFILES` runtime-read (from `_derive_all_profiles()`) enumerates both `smime` and `adcs`; `expected_results_v4.md` contains oracle sections for both new profiles with expected scanner findings
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 82-01-PLAN.md — DEF-999.83-A ldaps verification + global image-tag pin sweep (CHAOS-01, CHAOS-05)
+- [ ] 82-02-PLAN.md — DEF-999.83-B rabbitmq-broker Erlang cookie determinism (CHAOS-02)
+- [ ] 82-03-PLAN.md — DEF-999.83-C gitea source seed early-existence short-circuit (CHAOS-03)
+- [ ] 82-04-PLAN.md — Idempotency regression test + lab.sh pin-policy CI gate + smime/adcs parity confirm + UAT/Obsidian close (CHAOS-04, CHAOS-05, CHAOS-06)
 
 ### Phase 83: Integration Gate + Cleanup
 **Goal**: All Wave A scanner outputs are integrated into a consistent codebase — the `SCORE_WEIGHTS` invariant test reflects the final sum including all four new weight entries from S/MIME and AD CS, the `migration_planner.py` dead module is removed, and a full integration smoke confirms all tests pass green before release engineering begins
