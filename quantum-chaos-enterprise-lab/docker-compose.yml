@@ -78,7 +78,7 @@ services:
   # SSH ON NON-STANDARD PORT
   # =========================
   ssh-alt:
-    image: lscr.io/linuxserver/openssh-server:9.9_p2-r0-ls180
+    image: lscr.io/linuxserver/openssh-server:10.2_p1-r0-ls225
     environment:
       - PASSWORD_ACCESS=true
       - USER_NAME=test
