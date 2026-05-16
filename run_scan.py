@@ -1207,7 +1207,7 @@ def main():
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "data_at_rest")
     # Phase 67 RESUME-01: skip data_at_rest stage if already completed in a prior run.
-    _dar_protocols = ("S3", "AZURE-BLOB", "K8S", "GCS", "VAULT", "DNSSEC", "SAML", "KERBEROS", "SMIME")
+    _dar_protocols = ("S3", "AZURE-BLOB", "K8S", "GCS", "VAULT", "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS")
     if _stage_completed(_completed_stages, "data_at_rest"):
         s3_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "S3"]
         blob_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "AZURE-BLOB"]
@@ -1217,13 +1217,14 @@ def main():
         saml_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "SAML"]
         kerberos_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "KERBEROS"]
         smime_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "SMIME"]
+        adcs_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "ADCS"]
         vault_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "VAULT"]
         logger.info(
             f"Resuming: skipping data_at_rest stage "
             f"({len(s3_endpoints)} s3, {len(blob_endpoints)} blob, {len(k8s_endpoints)} k8s, "
             f"{len(gcs_storage_endpoints)} gcs, {len(dnssec_endpoints)} dnssec, "
             f"{len(saml_endpoints)} saml, {len(kerberos_endpoints)} kerberos, "
-            f"{len(smime_endpoints)} smime, "
+            f"{len(smime_endpoints)} smime, {len(adcs_endpoints)} adcs, "
             f"{len(vault_endpoints)} vault from DB)"
         )
     else:
@@ -1414,6 +1415,29 @@ def main():
             _run_smime_phase, error_endpoints, logger,
         ) or []
 
+        # ── AD CS LDAP scanning (Phase 80 ADCS-01) ────────────────────
+        def _run_adcs_phase():
+            if not (getattr(cfg.connectors, "enable_adcs", False)
+                    and getattr(cfg.connectors, "adcs_targets", None)):
+                return []
+            from quirk.scanner.adcs_scanner import scan_adcs_targets
+            eps = scan_adcs_targets(
+                targets=cfg.connectors.adcs_targets,
+                timeout=getattr(cfg.connectors, "adcs_timeout", 10),
+                logger=logger,
+                session_start=session_start,
+                search_base=getattr(cfg.connectors, "adcs_search_base", None),
+                user=getattr(cfg.connectors, "adcs_user", None),
+                password=getattr(cfg.connectors, "adcs_password", None),
+            )
+            logger.info("ADCS scan: %d endpoints from %d targets",
+                        len(eps), len(cfg.connectors.adcs_targets))
+            return eps
+        adcs_endpoints = _wrapped_phase(
+            run_stats, "adcs_scanning", "adcs_scanner",
+            _run_adcs_phase, error_endpoints, logger,
+        ) or []
+
         # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
         def _run_vault_phase():
             if not cfg.connectors.enable_vault:
@@ -1450,7 +1474,7 @@ def main():
         ) or []
 
         # Phase 67 RESUME-01: flush data_at_rest stage endpoints before broker_email begins
-        _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + smime_endpoints + vault_endpoints
+        _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + smime_endpoints + adcs_endpoints + vault_endpoints
         _flush_stage_endpoints(cfg.output.db_path, _dar_eps)
         _dar_pf = _collect_stage_partial_failures(run_stats, "data_at_rest", error_endpoints, _err_before_dar)
         if args.db_path:
@@ -1617,6 +1641,7 @@ def main():
                  + k8s_endpoints
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints
                  + smime_endpoints
+                 + adcs_endpoints
                  + vault_endpoints
                  + email_endpoints
                  + kafka_endpoints + rabbit_endpoints + redis_endpoints
