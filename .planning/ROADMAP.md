@@ -1576,7 +1576,8 @@ Plans:
 **UI hint**: yes
 **Status**: ✅ Complete (2026-05-15) — 11/11 WR rows closed (WR-02/04..13)
 
-### Phase 77: INFO/Code Quality + Audit Ledger Closure
+### Phase 77: INFO/Code Quality + Audit Ledger Closure ✅
+**Status**: ✅ Complete (2026-05-15) — 29 INFO rows closed, LEDGER-01 zero-bare-open invariant achieved + CI gate
 **Goal**: All four INFO/code-quality requirement groups are addressed across the four subsystems (protocol scanner, CBOM/intelligence, API/CLI, React frontend), and AUDIT-TASKS.md is brought to zero bare-open rows — every one of the 169 findings carries an explicit closed, deferred, or wont-fix disposition. Closes audit findings scanners-protocol/IN-01..06, cbom-intel-reports/IN-01..09, api-cli-core/IN-01..07, react-frontend/IN-01..07, and LEDGER-01.
 **Depends on**: Phase 71, Phase 72, Phase 73, Phase 74, Phase 75, Phase 76
 **Requirements**: INFO-01, INFO-02, INFO-03, INFO-04, LEDGER-01
