@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from quirk.util.safe_exc import safe_str
+from quirk.util.sanitize import sanitize_scanner_text
 
 
 def _score_band(total: int) -> str:
@@ -63,6 +64,7 @@ def render_html_report(
         loader=FileSystemLoader(_TEMPLATES_DIR),
         autoescape=select_autoescape(["html", "j2"]),
     )
+    env.filters["sanitize"] = sanitize_scanner_text
     template = env.get_template("report.html.j2")
 
     total_score = score.get("total", 0)

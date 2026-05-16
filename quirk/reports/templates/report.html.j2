@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QU.I.R.K. — {{ org_name }} Quantum Readiness Report</title>
+  {# Phase 78 / HARDEN-04: constant title for PDF metadata — do not interpolate scanner/operator content #}
+  <title>QU.I.R.K. Cryptographic Readiness Report</title>
+  <meta name="author" content="QU.I.R.K. Scanner">
   <style>
     /* === QU.I.R.K. Report Stylesheet — all CSS embedded, no external refs === */
     :root {
@@ -127,7 +129,7 @@
 
 <header class="report-header">
   <span class="wordmark">QU.I.R.K.</span>
-  <span class="report-meta">Quantum Readiness Report &nbsp;|&nbsp; {{ org_name }} &nbsp;|&nbsp; {{ generated_at }}</span>
+  <span class="report-meta">Quantum Readiness Report &nbsp;|&nbsp; {{ org_name | sanitize }} &nbsp;|&nbsp; {{ generated_at }}</span>
 </header>
 
 <div class="report-body">
@@ -137,9 +139,9 @@
     <h1>Executive Summary</h1>
 
     <table class="meta-table" style="width:auto;margin-bottom:24px;">
-      <tr><td>Organization</td><td>{{ org_name }}</td></tr>
-      <tr><td>Report owner</td><td>{{ report_owner }}</td></tr>
-      <tr><td>Data classification</td><td>{{ data_classification }}</td></tr>
+      <tr><td>Organization</td><td>{{ org_name | sanitize }}</td></tr>
+      <tr><td>Report owner</td><td>{{ report_owner | sanitize }}</td></tr>
+      <tr><td>Data classification</td><td>{{ data_classification | sanitize }}</td></tr>
       <tr><td>Generated</td><td>{{ generated_at }}</td></tr>
     </table>
 
@@ -165,21 +167,22 @@
     {% if drivers %}
     <h2>Score Drivers</h2>
     <ul class="drivers-list">
-      {% for d in drivers %}<li>{{ d }}</li>{% endfor %}
+      {% for d in drivers %}<li>{{ d | sanitize }}</li>{% endfor %}
     </ul>
     {% endif %}
 
     {% if findings %}
     <h2>Top Findings</h2>
+    {# Phase 78 / HARDEN-02..03: every scanner-controlled cell piped through | sanitize. autoescape covers metachar escape; sanitize strips embedded tags/URLs. #}
     <table>
       <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Description</th></tr></thead>
       <tbody>
       {% for f in (findings | rejectattr('category', 'equalto', 'coverage_gap') | list)[:10] %}
       <tr>
         <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
-        <td>{{ f.get('title','') }}</td>
-        <td>{{ f.get('host','') }}{% if f.get('port') %}:{{ f.get('port') }}{% endif %}</td>
-        <td>{{ f.get('description','')[:120] }}{% if f.get('description','')|length > 120 %}…{% endif %}</td>
+        <td>{{ f.get('title','') | sanitize }}</td>
+        <td>{{ f.get('host','') | sanitize }}{% if f.get('port') %}:{{ f.get('port') }}{% endif %}</td>
+        <td>{{ f.get('description','')[:120] | sanitize }}{% if f.get('description','')|length > 120 %}…{% endif %}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -193,8 +196,8 @@
       <h3>{{ phase_label }}</h3>
       {% for item in items %}
       <div class="roadmap-item">
-        <strong>{{ item.get('title','') }}</strong><br>
-        <span>{{ item.get('why','') }}</span>
+        <strong>{{ item.get('title','') | sanitize }}</strong><br>
+        <span>{{ item.get('why','') | sanitize }}</span>
       </div>
       {% endfor %}
     </div>
@@ -214,7 +217,7 @@
       <thead><tr><th>Scanner</th><th>Recommendation</th></tr></thead>
       <tbody>
       {% for f in coverage_gaps %}
-      <tr><td>{{ f.get('host','') }}</td><td>{{ f.get('recommendation','') }}</td></tr>
+      <tr><td>{{ f.get('host','') | sanitize }}</td><td>{{ f.get('recommendation','') | sanitize }}</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -228,11 +231,11 @@
       {% for f in findings if f.get('category') != 'coverage_gap' %}
       <tr>
         <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
-        <td>{{ f.get('title','') }}</td>
-        <td>{{ f.get('host','') }}</td>
+        <td>{{ f.get('title','') | sanitize }}</td>
+        <td>{{ f.get('host','') | sanitize }}</td>
         <td>{{ f.get('port','') }}</td>
-        <td>{{ f.get('description','')[:200] }}{% if f.get('description','')|length > 200 %}…{% endif %}</td>
-        <td>{{ f.get('recommendation','')[:200] }}{% if f.get('recommendation','')|length > 200 %}…{% endif %}</td>
+        <td>{{ f.get('description','')[:200] | sanitize }}{% if f.get('description','')|length > 200 %}…{% endif %}</td>
+        <td>{{ f.get('recommendation','')[:200] | sanitize }}{% if f.get('recommendation','')|length > 200 %}…{% endif %}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -264,9 +267,9 @@
         {% for f, c in _rows %}
         <tr>
           <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
-          <td>{{ f.get('title','') }}</td>
+          <td>{{ f.get('title','') | sanitize }}</td>
           <td>{{ c.get('control','') }} ({{ c.get('version','') }})</td>
-          <td><a href="{{ c.get('source_url','') }}">link</a> &middot; verified {{ c.get('last_verified','') }}</td>
+          <td><a href="{{ c.get('source_url','') | sanitize }}">link</a> &middot; verified {{ c.get('last_verified','') }}</td>
         </tr>
         {% endfor %}
         </tbody>
@@ -291,7 +294,7 @@
       rather than a coverage gap in the compliance map.
     </p>
     <ul>
-      {% for f in _unmapped %}<li>{{ f.get('title','') }} ({{ f.get('host','') }})</li>{% endfor %}
+      {% for f in _unmapped %}<li>{{ f.get('title','') | sanitize }} ({{ f.get('host','') | sanitize }})</li>{% endfor %}
     </ul>
     {% else %}
     <h3>Findings without compliance mapping</h3>
@@ -305,12 +308,12 @@
       <tbody>
       {% for ep in endpoints %}
       <tr>
-        <td>{{ ep.host }}</td>
+        <td>{{ ep.host | sanitize }}</td>
         <td>{{ ep.port }}</td>
-        <td>{{ ep.protocol or '' }}</td>
-        <td>{{ ep.tls_version or '' }}</td>
-        <td>{{ ep.cipher_suite or '' }}</td>
-        <td>{{ ep.cert_pubkey_alg or '' }}</td>
+        <td>{{ (ep.protocol or '') | sanitize }}</td>
+        <td>{{ (ep.tls_version or '') | sanitize }}</td>
+        <td>{{ (ep.cipher_suite or '') | sanitize }}</td>
+        <td>{{ (ep.cert_pubkey_alg or '') | sanitize }}</td>
       </tr>
       {% endfor %}
       </tbody>
