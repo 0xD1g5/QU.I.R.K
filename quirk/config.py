@@ -212,10 +212,19 @@ class ConnectorsCfg:
     enable_kerberos: bool = False
     enable_saml: bool = False
     enable_dnssec: bool = False
+    # Phase 79 SMIME-01: S/MIME LDAP discovery scanner enable flag
+    enable_smime: bool = False
     # Identity connector target lists (v4.2, per D-05)
     kerberos_targets: list = field(default_factory=list)
     saml_targets: list = field(default_factory=list)
     dnssec_targets: list = field(default_factory=list)
+    # Phase 79 SMIME-01 / CONTEXT D-Area-1: S/MIME LDAP targets + optional
+    # search-base override. Targets are LDAP URLs (ldap://host:port) or
+    # bare host[:port] strings; search_base defaults to the Kerberos realm
+    # derived DN.
+    smime_targets: list = field(default_factory=list)
+    smime_search_base: Optional[str] = None
+    smime_timeout: int = 10
     # GCP connector config (v4.3, Phase 26, per D-06)
     enable_gcp: bool = False
     gcp_project_id: Optional[str] = None
