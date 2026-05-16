@@ -668,7 +668,7 @@ services:
         fi
 
   gitea-seed:
-    image: alpine:3.19
+    image: alpine:3.20
     profiles: ["source"]
     restart: "no"
     depends_on:
