@@ -513,3 +513,40 @@ docker compose --profile smime up -d && sleep 10 && quirk scan --smime-target ld
 **Cert fixtures:** Pre-built DER blobs committed under `quantum-chaos-enterprise-lab/smime/certs/{alice,bob,carol}.der` — regenerated via `regen.sh` (developer tool only, not runtime). 100-year validity window so all three certs are non-expired; the expiry path is exercised by unit-test mocks in Plan 79-04, not by lab fixtures.
 
 **Reference:** `quirk/db.py::_IDENTITY_COLUMNS` (column `smime_scan_json`), compose blocks `smime-openldap` + `smime-seed` (profile `smime`).
+
+---
+
+## Profile: adcs
+
+*OpenLDAP seeded with a deliberately misconfigured AD CS Configuration partition — three certificate templates (one ESC1-category, one ESC4-category, one safe baseline) plus one RSA-1024 / SHA-1 CA signing cert fixture. Plain LDAP on host port **38910 only** (LDAPS deferred per Phase 80 CONTEXT, matching smime D-79-R9). Authenticated SIMPLE bind supported for real-AD parity; anonymous bind is permitted inside the chaos lab.*
+
+> **Image:** `bitnamilegacy/openldap:2.6.10-debian-12-r4` (parity with the `smime` and `ldaps` profiles).
+>
+> **Schema-load path:** Bitnami-native `LDAP_CUSTOM_SCHEMA_DIR=/schemas` env hook (Plan 80-01 deviation Rule 1, 2026-05-16). The plan's PRIMARY (`ldapadd cn=config` from seed sidecar) returned `Insufficient access (50)` and the D-80-R7 Dockerfile fallback was not auto-loaded by Bitnami's entrypoint; the env-hook activates `slapadd` during initial offline setup, which is the only window cn=config accepts new schemas. `LDAP_EXTRA_SCHEMAS=...,msuser` is also set so the AD-compatible attribute types (`cACertificate`, `nTSecurityDescriptor`, `dNSHostName`, `pKIExtendedKeyUsage`, `pKIKeyUsage`) load before the msPKI overlay's structural classes reference them.
+>
+> **OID arc:** The msPKI overlay uses a private QU.I.R.K. arc `1.3.6.1.4.1.99999.80.*` because Microsoft's real `1.2.840.113556.1.4.20XX` range collides with the bundled `msuser` schema. The scanner keys off attribute NAMES (not OIDs), so this is functionally equivalent.
+
+```bash
+PROFILE_ARGS="--profile adcs" ./lab.sh up
+```
+
+| Object | Class | Key attribute | Expected Finding | Severity | Counter |
+|---|---|---|---|---|---|
+| `CN=QuirkLabCA,CN=Enrollment Services,...` | `pKIEnrollmentService` | `cACertificate;binary::` RSA-1024 SHA-1 | Weak CA signing algorithm | HIGH | `identity_adcs_weak_signing_count` |
+| `CN=BadTemplate-ESC1,CN=Certificate Templates,...` | `pKICertificateTemplate` | `msPKI-Certificate-Name-Flag: 1` (ENROLLEE_SUPPLIES_SUBJECT) + client-auth EKU + `msPKI-RA-Signature: 0` | ESC1 misconfig | HIGH | `identity_adcs_weak_template_count` |
+| `CN=BadTemplate-ESC4,CN=Certificate Templates,...` | `pKICertificateTemplate` | `nTSecurityDescriptor` present (not parsed) | ADCS-COVERAGE-GAP ESC4 | LOW | `identity_adcs_coverage_gap_count` |
+| `CN=SafeTemplate,CN=Certificate Templates,...` | `pKICertificateTemplate` | benign defaults, email-protection EKU only | (none — SAFE) | — | — |
+| ESC5 / ESC7 / ESC8 classes | non-LDAP-observable | (no LDAP attribute) | ADCS-COVERAGE-GAP (one per class) | LOW | `identity_adcs_coverage_gap_count` |
+
+**Scanner validation command** *(Plan 80-02 will wire `--adcs-target` / `--adcs-base`)*:
+```
+docker compose --profile adcs up -d && sleep 12 && quirk scan --adcs-target ldap://localhost:38910 --adcs-base dc=quirk,dc=lab
+```
+
+**Expected:** ADCS scanner returns **1 HIGH weak-signing finding** (QuirkLabCA RSA-1024 SHA-1), **1 HIGH ESC1 finding** (BadTemplate-ESC1), **0 from SafeTemplate**, and exactly **4 LOW ADCS-COVERAGE-GAP findings** (one per non-LDAP-observable ESC class: ESC4, ESC5, ESC7, ESC8 per D-80-R8). Findings appear in the Identity tab (`source="adcs"`, `protocol="ADCS"`). **No certificate enrollment, no CSR generation, no LDAP modify/add/delete operations** (privacy invariant, enforced by `tests/test_adcs_no_writes.py` + `tests/test_adcs_ast_gate.py` per ADCS-09). Idempotent — re-running `./lab.sh up --profile adcs` must not error; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`).
+
+**Ports:** `38910/tcp` (LDAP) — chosen to avoid 38900 (`smime` profile), 636 (`ldaps`), and 389 (`kerberos`). LDAPS intentionally **not** exposed in Phase 80; deferred to a Phase 82 follow-up.
+
+**Fixtures:** Pre-built DER blob committed at `quantum-chaos-enterprise-lab/adcs/certs/ca-weak.der` (RSA-1024, SHA-1, 100-year validity window so it's non-expired; expiry-path detection is exercised by unit-test mocks in Plan 80-04, not by lab fixtures). LDIFs at `adcs/ldif/{00-base,10-ca,20-templates}.ldif`. Regenerate the weak CA via `adcs/certs/regen.sh` (developer tool only, not runtime). D-80-R7 Dockerfile fallback shipped at `adcs/Dockerfile` (preserved per the plan's "ship both branches" contract; not currently active).
+
+**Reference:** `quirk/db.py::_IDENTITY_COLUMNS` (column `adcs_scan_json`), compose blocks `adcs-openldap` + `adcs-seed` (profile `adcs`).

@@ -44,6 +44,15 @@ identity = [
     "impacket>=0.13.0,<0.14",
     "ldap3>=2.9.1",
 ]
+# Phase 80 ADCS-07: dedicated extras group for the AD CS scanner. Lists ONLY
+# ldap3 (NOT impacket) so that quirk[adcs] can safely be included in [all]
+# without re-introducing the pyOpenSSL/cryptography downgrade chain that
+# quirk[identity] would. tests/test_install_all_excludes_impacket.py guards
+# this invariant. cryptography is already a core dep (>=44.0); Plan 80-04
+# adds a CI matrix asserting the floor across [adcs] + [all] combinations.
+adcs = [
+    "ldap3>=2.9.1",
+]
 cloud = [
     "google-api-python-client>=2.0.0",
     "google-auth>=2.36.0",
@@ -70,6 +79,7 @@ all = [
     "quirk[motion]",
     "quirk[redis]",
     "quirk[dashboard]",
+    "quirk[adcs]",  # Phase 80 ADCS-07 — ldap3-only, no impacket
 ]
 # NOTE: quirk[identity] is INTENTIONALLY EXCLUDED from [all] -- impacket
 # transitively pulls pyOpenSSL which downgrades cryptography and breaks the
