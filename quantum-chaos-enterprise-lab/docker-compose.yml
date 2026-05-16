@@ -1060,7 +1060,8 @@ services:
       start_period: 30s
 
   rabbitmq-broker:
-    image: rabbitmq:3.12-management
+    # Pinned to specific 3.13.x patch (3.12.x EOL 2024-06-26). Phase 82-02 / CHAOS-02.
+    image: rabbitmq:3.13.7-management
     profiles: ["broker"]
     hostname: rabbitmq-broker
     ports:
@@ -1068,6 +1069,8 @@ services:
       - "25671:5671"
     environment:
       - RABBITMQ_CONFIG_FILE=/etc/rabbitmq/rabbitmq.conf
+      # [lab-only] Deterministic Erlang cookie — fixes DEF-999.83-B cookie reset
+      # across `lab.sh down/up` cycles. NOT a secret; lab-isolated.
       - RABBITMQ_ERLANG_COOKIE=lab-erlang-cookie-do-not-use-in-prod
     volumes:
       - ../labs/broker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro

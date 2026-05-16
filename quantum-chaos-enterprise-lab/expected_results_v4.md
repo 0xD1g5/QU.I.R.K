@@ -451,6 +451,8 @@ PROFILE_ARGS="--profile broker" ./lab.sh up
 
 **Reference:** Scanner: `quirk/scanner/broker_scanner.py`. Risk titles from `risk_engine.evaluate_broker_endpoints`. Detail in `labs/broker/expected_results.md`. Expected total: 6 HIGH.
 
+**Idempotency contract (Phase 82-02 / CHAOS-02 / DEF-999.83-B):** `rabbitmq-broker` is idempotent across `./lab.sh down && ./lab.sh up --profile broker` cycles. The Erlang cookie is set deterministically via the `RABBITMQ_ERLANG_COOKIE` env var on the service (lab-only value, not a secret; no `.erlang.cookie` bind-mount exists that could override it). Second-cycle bring-up must reach `Up (healthy)` with no "Connection attempt from disallowed node" or "Cookie file ... must be accessible by owner only" lines in `docker logs chaoslab-rabbitmq-broker-1`. The `[warning] Overriding Erlang cookie using the value set in the environment` log line is expected and confirms the env-var is in effect. Image pinned to `rabbitmq:3.13.7-management` (3.12.x reached EOL 2024-06-26).
+
 ---
 
 ## Profile: tls-cert-defects
