@@ -1,0 +1,1043 @@
+{
+  "schema_version": "1.0",
+  "last_verified": "2026-05-16",
+  "source_url": "https://csrc.nist.gov/projects/cryptographic-module-validation-program/validated-modules/search",
+  "modules": [
+    {
+      "certificate_number": "4523",
+      "vendor": "Amazon Web Services",
+      "name": "AWS CloudHSM",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "TripleDES"
+      ]
+    },
+    {
+      "certificate_number": "4884",
+      "vendor": "Amazon Web Services",
+      "name": "AWS Key Management Service HSM",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "3",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "TripleDES"
+      ]
+    },
+    {
+      "certificate_number": "4719",
+      "vendor": "Amazon Web Services",
+      "name": "AWS-LC",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4475",
+      "vendor": "Apple Inc.",
+      "name": "Apple corecrypto Module (Apple silicon)",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "5263",
+      "vendor": "Apple Inc.",
+      "name": "Apple corecrypto Module v14.0 [Apple silicon, Kernel, Software, SL1]",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4476",
+      "vendor": "Apple Inc.",
+      "name": "Apple corecrypto Module (Kernel)",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "5180",
+      "vendor": "Arm Limited",
+      "name": "Fujitsu Enterprise Postgres Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4322",
+      "vendor": "Atos IT Solutions",
+      "name": "Trustway Proteccio HSM",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "TripleDES"
+      ]
+    },
+    {
+      "certificate_number": "4894",
+      "vendor": "Canonical Group Ltd.",
+      "name": "Canonical Ltd. Ubuntu 22.04 Kernel Crypto API Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4794",
+      "vendor": "Canonical Group Ltd.",
+      "name": "Canonical Ltd. Ubuntu 22.04 OpenSSL Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4747",
+      "vendor": "Cisco Systems Inc.",
+      "name": "Cisco FIPS Object Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4615",
+      "vendor": "Crypto4A Technologies Inc.",
+      "name": "QxHSM",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "TripleDES"
+      ]
+    },
+    {
+      "certificate_number": "4335",
+      "vendor": "Entrust Corporation",
+      "name": "nShield Solo XC F3 & nShield Solo XC F3 for nShield Connect XC and for nShield HSMi",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "3",
+      "algorithms": [
+        "",
+        "AES",
+        "CKG",
+        "DRBG",
+        "DSA",
+        "ECDSA",
+        "ENT",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "KTS-RSA",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "5270",
+      "vendor": "F5 Networks Inc.",
+      "name": "CorSSL\u2122 FIPS Object Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "5198",
+      "vendor": "Fortinet Inc.",
+      "name": "HP Endpoint Security Controller Cryptographic Library",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "3933",
+      "vendor": "Frank Denis (libsodium)",
+      "name": "libsodium FIPS",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4407",
+      "vendor": "Google LLC",
+      "name": "BoringCrypto",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4755",
+      "vendor": "IBM Corporation",
+      "name": "IBM\u00ae Crypto for C",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4277",
+      "vendor": "IBM Corporation",
+      "name": "IBM Crypto for Java (ICCJ)",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4243",
+      "vendor": "Infineon Technologies AG",
+      "name": "OPTIGA TPM SLB 9670",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4653",
+      "vendor": "Juniper Networks Inc.",
+      "name": "Juniper FIPS Provider",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "CVL",
+        "DRBG",
+        "DSA",
+        "ECDSA",
+        "HMAC",
+        "KAS-RSA-SSC",
+        "KAS-SSC",
+        "KBKDF",
+        "KDA",
+        "KMAC",
+        "KTS",
+        "KTS-RSA",
+        "PBKDF",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "Triple-DES"
+      ]
+    },
+    {
+      "certificate_number": "4339",
+      "vendor": "Linux Kernel Crypto API",
+      "name": "Linux Kernel Crypto API",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4537",
+      "vendor": "Microsoft Corporation",
+      "name": "Azure Dedicated HSM Luna",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "TripleDES"
+      ]
+    },
+    {
+      "certificate_number": "4634",
+      "vendor": "Microsoft Corporation",
+      "name": "Azure Sphere Pluton",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4640",
+      "vendor": "Microsoft Corporation",
+      "name": "Secure Kernel Code Integrity",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4766",
+      "vendor": "Microsoft Corporation",
+      "name": "Kernel Mode Cryptographic Primitives Library",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "CVL",
+        "DRBG",
+        "DSA",
+        "ECDSA",
+        "ENT",
+        "HMAC",
+        "KAS",
+        "KAS-SSC",
+        "KBKDF",
+        "KTS",
+        "PBKDF",
+        "RSA",
+        "SHS",
+        "Triple-DES"
+      ]
+    },
+    {
+      "certificate_number": "4790",
+      "vendor": "Microsoft Corporation",
+      "name": "Microsoft Kernel Mode Cryptographic Primitives Library",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4825",
+      "vendor": "Microsoft Corporation",
+      "name": "Cryptographic Primitives Library",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "CVL",
+        "DRBG",
+        "DSA",
+        "ECDSA",
+        "ENT",
+        "HMAC",
+        "KAS",
+        "KAS-SSC",
+        "KBKDF",
+        "KTS",
+        "PBKDF",
+        "RSA",
+        "SHS",
+        "Triple-DES"
+      ]
+    },
+    {
+      "certificate_number": "4793",
+      "vendor": "Microsoft Corporation",
+      "name": "Microsoft Windows Cryptographic Primitives Library",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4055",
+      "vendor": "Nitrokey GmbH",
+      "name": "Nitrokey HSM 2",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "TripleDES"
+      ]
+    },
+    {
+      "certificate_number": "4602",
+      "vendor": "NXP Semiconductors",
+      "name": "EdgeLock Secure Enclave",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4215",
+      "vendor": "Oracle Corporation",
+      "name": "Oracle Linux 8 OpenSSL Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CVL",
+        "DRBG",
+        "DSA",
+        "ECDSA",
+        "ENT",
+        "HMAC",
+        "KAS",
+        "KAS-SSC",
+        "KBKDF",
+        "KDA",
+        "KTS",
+        "KTS-RSA",
+        "PBKDF",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "Triple-DES"
+      ]
+    },
+    {
+      "certificate_number": "5036",
+      "vendor": "Oracle Corporation",
+      "name": "Oracle Linux 9 Kernel Crypto API Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4668",
+      "vendor": "Palo Alto Networks",
+      "name": "Prisma SD-WAN Controller's Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "CVL",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KAS-SSC",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "5034",
+      "vendor": "Red Hat Inc.",
+      "name": "Red Hat Enterprise Linux 9 Kernel Cryptographic API",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4857",
+      "vendor": "Red Hat Inc.",
+      "name": "Red Hat Enterprise Linux 9 - OpenSSL FIPS Provider",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4905",
+      "vendor": "Red Hat Inc.",
+      "name": "Red Hat Enterprise Linux 9 OpenSSL",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4684",
+      "vendor": "SafeLogic Inc.",
+      "name": "CryptoComply for Java",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4912",
+      "vendor": "SafeLogic Inc.",
+      "name": "CryptoComply for Java 140-3",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4310",
+      "vendor": "STMicroelectronics",
+      "name": "STSAFE-A110",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "5112",
+      "vendor": "SUSE LLC",
+      "name": "SUSE Linux Enterprise Kernel Crypto API Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "5238",
+      "vendor": "SUSE LLC",
+      "name": "SUSE Linux Enterprise OpenSSL 1 Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4195",
+      "vendor": "Thales DIS CPL USA Inc.",
+      "name": "Thales Luna Backup HSM Cryptographic Module",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "3",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "CVL",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KAS-RSA",
+        "KBKDF",
+        "KDA",
+        "KTS",
+        "KTS-RSA",
+        "PBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4416",
+      "vendor": "The Legion of the Bouncy Castle Inc.",
+      "name": "BC-FNA (Bouncy Castle FIPS .NET API)",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "CVL",
+        "DRBG",
+        "DSA",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KAS-SSC",
+        "KDA",
+        "KTS",
+        "KTS-RSA",
+        "PBKDF",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "Triple-DES"
+      ]
+    },
+    {
+      "certificate_number": "4943",
+      "vendor": "The Legion of the Bouncy Castle Inc.",
+      "name": "BC-FJA (Bouncy Castle FIPS Java API)",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4282",
+      "vendor": "The OpenSSL Project",
+      "name": "OpenSSL FIPS Provider",
+      "module_version": "",
+      "fips_level": "140-2",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "CVL",
+        "DRBG",
+        "DSA",
+        "ECDSA",
+        "HMAC",
+        "KAS-RSA-SSC",
+        "KAS-SSC",
+        "KBKDF",
+        "KDA",
+        "KMAC",
+        "KTS",
+        "KTS-RSA",
+        "PBKDF",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "Triple-DES"
+      ]
+    },
+    {
+      "certificate_number": "4985",
+      "vendor": "The OpenSSL Project",
+      "name": "OpenSSL FIPS Provider",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4811",
+      "vendor": "The OpenSSL Project",
+      "name": "OpenSSL FIPS Provider 3.0.9",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4444",
+      "vendor": "Utimaco IS GmbH",
+      "name": "SecurityServer CryptoServer",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4459",
+      "vendor": "VMware Inc.",
+      "name": "VMware OpenSSL FIPS Object Module",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4718",
+      "vendor": "wolfSSL Inc.",
+      "name": "wolfCrypt",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4885",
+      "vendor": "wolfSSL Inc.",
+      "name": "wolfSSL FIPS Ready",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "RSA",
+        "SHS"
+      ]
+    },
+    {
+      "certificate_number": "4179",
+      "vendor": "Yubico AB",
+      "name": "YubiHSM 2",
+      "module_version": "",
+      "fips_level": "140-3",
+      "overall_level": "1",
+      "algorithms": [
+        "AES",
+        "CKG",
+        "DRBG",
+        "ECDSA",
+        "HMAC",
+        "KAS",
+        "KBKDF",
+        "KTS",
+        "RSA",
+        "SHA-3",
+        "SHS",
+        "TripleDES"
+      ]
+    }
+  ]
+}

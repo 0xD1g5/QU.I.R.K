@@ -1,0 +1,54 @@
+certificate_number,vendor,name,rationale
+4523,Amazon Web Services,AWS CloudHSM,AWS CloudHSM Cavium G5 [fallback]
+4884,Amazon Web Services,AWS Key Management Service HSM,AWS KMS HSM appliance
+4719,Amazon Web Services,AWS-LC,AWS-LC (Rust/C crypto library used in AWS services) [fallback]
+4475,Apple Inc.,Apple corecrypto Module (Apple silicon),macOS arm64 crypto [fallback]
+5263,Apple Inc.,Apple corecrypto Module (Intel User),macOS user-mode crypto
+4476,Apple Inc.,Apple corecrypto Module (Kernel),Kernel-mode macOS crypto [fallback]
+5180,Arm Limited,Mbed TLS Cryptographic Module,mbedTLS for embedded/IoT
+4322,Atos IT Solutions,Trustway Proteccio HSM,Atos HSM [fallback]
+4894,Canonical Group Ltd.,Ubuntu 22.04 Kernel Crypto API,Ubuntu Pro FIPS kernel
+4794,Canonical Group Ltd.,Ubuntu 22.04 OpenSSL Cryptographic Module,Ubuntu Pro FIPS OpenSSL
+4747,Cisco Systems Inc.,Cisco FIPS Object Module,Cisco IOS XE crypto
+4615,Crypto4A Technologies Inc.,QxHSM,Quantum-safe HSM [fallback]
+4335,Entrust Corporation,nShield Connect XC,Entrust nShield (PKI/HSM)
+5270,F5 Networks Inc.,BIG-IP FIPS Object Module,BIG-IP load balancer crypto
+5198,Fortinet Inc.,FortiOS Cryptographic Library,FortiOS crypto
+3933,Frank Denis (libsodium),libsodium FIPS,libsodium-FIPS fork (community FIPS) [fallback]
+4407,Google LLC,BoringCrypto,Google BoringCrypto module [fallback]
+4755,IBM Corporation,IBM Crypto for C (ICC),IBM ICC (used in WebSphere/MQ)
+4277,IBM Corporation,IBM Crypto for Java (ICCJ),IBM Java crypto [fallback]
+4243,Infineon Technologies AG,OPTIGA TPM SLB 9670,Infineon TPM [fallback]
+4653,Juniper Networks Inc.,Juniper FIPS Cryptographic Library,Junos crypto
+4339,Linux Kernel Crypto API,Linux Kernel Crypto API,Linux 5.x kernel crypto on RHEL/SUSE/Ubuntu [fallback]
+4537,Microsoft Corporation,Azure Dedicated HSM Luna,Azure Dedicated HSM Thales Luna [fallback]
+4634,Microsoft Corporation,Azure Sphere Pluton,Azure Sphere HSM [fallback]
+4640,Microsoft Corporation,Code Integrity (ci.dll),Windows secure boot / code integrity
+4766,Microsoft Corporation,Microsoft Kernel Mode Cryptographic Primitives Library,Windows kernel-mode crypto
+4790,Microsoft Corporation,Microsoft Kernel Mode Cryptographic Primitives Library,Anchor cert from RESEARCH.md [fallback]
+4825,Microsoft Corporation,Microsoft Windows Cryptographic Primitives Library,Windows 10/11 user-mode CNG
+4793,Microsoft Corporation,Microsoft Windows Cryptographic Primitives Library,Anchor cert from RESEARCH.md [fallback]
+4055,Nitrokey GmbH,Nitrokey HSM 2,Open-hardware HSM (consultant edge cases) [fallback]
+4602,NXP Semiconductors,EdgeLock Secure Enclave,NXP secure enclave [fallback]
+4215,Oracle Corporation,Oracle Linux 8 OpenSSL,Oracle Linux FIPS OpenSSL
+5036,Oracle Corporation,Oracle Linux 9 Kernel Crypto API,Oracle Linux FIPS kernel
+4668,Palo Alto Networks,PAN-OS FIPS Cryptographic Module,PAN-OS firewall crypto
+5034,Red Hat Inc.,Red Hat Enterprise Linux 9 Kernel Crypto API,RHEL 9 kernel crypto
+4857,Red Hat Inc.,Red Hat Enterprise Linux 9 OpenSSL,RHEL 9 OS-bundled OpenSSL
+4905,Red Hat Inc.,Red Hat Enterprise Linux 9 OpenSSL,Anchor cert from RESEARCH.md [fallback]
+4684,SafeLogic Inc.,CryptoComply for Java,SafeLogic FIPS Java [fallback]
+4912,SafeLogic Inc.,CryptoComply for OpenSSL,SafeLogic FIPS OpenSSL repackage
+4310,STMicroelectronics,STSAFE-A110,ST secure element [fallback]
+5112,SUSE LLC,SUSE Linux Enterprise Server 15 Kernel Crypto API,SLES 15 kernel
+5238,SUSE LLC,SUSE Linux Enterprise Server 15 OpenSSL,SLES 15 OpenSSL
+4195,Thales DIS CPL USA Inc.,Luna HSM 7,Thales Luna 7 (banking/enterprise)
+4416,The Legion of the Bouncy Castle Inc.,Bouncy Castle FIPS .NET,BC-FNA (.NET services)
+4943,The Legion of the Bouncy Castle Inc.,Bouncy Castle FIPS Java API,BC-FJA (Java services)
+4282,The OpenSSL Project,OpenSSL FIPS Provider,Most-deployed FIPS provider in field environments
+4985,The OpenSSL Project,OpenSSL FIPS Provider 3.0.9,Common pinned 3.0.x version
+4811,The OpenSSL Project,OpenSSL FIPS Provider 3.0.9,Anchor cert from RESEARCH.md [fallback]
+4444,Utimaco IS GmbH,SecurityServer CryptoServer,Utimaco HSM (EU enterprise) [fallback]
+4459,VMware Inc.,VMware OpenSSL FIPS Object Module,VMware vSphere crypto [fallback]
+4718,wolfSSL Inc.,wolfCrypt,wolfCrypt (embedded TLS)
+4885,wolfSSL Inc.,wolfSSL FIPS Ready,wolfSSL FIPS (firmware) [fallback]
+4179,Yubico AB,YubiHSM 2,Yubico HSM [fallback]
