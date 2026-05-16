@@ -147,6 +147,21 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
+## Current Milestone: v4.10 Launch Readiness — Coverage, Hardening, Release Engineering
+
+**Goal:** Close the remaining security/correctness backlog, expand identity-protocol coverage with S/MIME and Windows AD CS, and stand up the release-engineering + launch-polish foundation needed for a future v5.0 GA tag.
+
+**Target workstreams:**
+- **Security backlog closure** — HTML/PDF report injection hardening (v4.8 D-06), CMVP attestation feed (Phase 52 D-01), `migration_planner.py` removal
+- **Identity coverage expansion** — S/MIME content scanning (promoted from out-of-scope) and Windows AD CS live connector (promoted from v2 backlog)
+- **Chaos-lab fidelity** — Phase 999.83 gitea/minio/vault/mysql service-config drift fixes (lab.sh / README / expected_results parity)
+- **Release engineering** — signed wheel/sdist artifacts, CHANGELOG-driven release script, public version policy doc, SECURITY.md, CODE_OF_CONDUCT.md
+- **Public-launch polish** — Homebrew formula, published Docker image, v4.x→v4.10 upgrade migrations, quickstart polish, marketing README, demo script, sample CBOM outputs
+
+**Phase numbering:** Continues from Phase 77 (no `--reset-phase-numbers`).
+
+**Research-first:** 4 parallel research agents (Stack / Features / Architecture / Pitfalls) before requirement definition; CMVP attestation and release-engineering tooling are new domains worth domain research.
+
 ## Current State: v4.9 SHIPPED 2026-05-15
 
 v4.9 "Audit Depth" shipped 2026-05-15 — 9 phases (69–77) + inserted Phase 69.1, 38 plans, 210 commits, 339 files changed (+37,658 / −2,359). All 169 findings from the 2026-05-08 audit ledger are dispositioned: 166 `[x] closed`, 2 `[ ] deferred-*` with rationale, 4 `[ ] wont-fix` with rationale. The zero-bare-open invariant is locked forward via `tests/test_audit_ledger_zero_open.py` (Phase 77 D-31), which fails CI on any regression and additionally enforces that deferred/wont-fix rows carry inline rationale.
@@ -236,7 +251,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Markdown injection in HTML/PDF deferred to v4.9+ (v4.8 D-06) | REPORT-SAN-01 covers markdown tables only; HTML/PDF injection is a separate attack surface shape | — Pending — deferred intentionally; AUDIT-TASKS.md tracks the open WARNING rows |
 
 ---
-*Last updated: 2026-05-15 after v4.9 milestone*
+*Last updated: 2026-05-16 — v4.10 milestone opened*
 
 ## Evolution
 
