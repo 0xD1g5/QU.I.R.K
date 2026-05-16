@@ -198,10 +198,8 @@ they preceded Plan 79-04 and are unrelated to SMIME work.
 
 | # | SHA | Subject |
 |---|---|---|
-| 1 | `__CODE_SHA__` | `feat(79-04): smime unit tests + privacy invariant + ast gate (SMIME-04, SMIME-08)` |
-| 2 | `__UAT_SHA__`  | `docs(phase-79): update UAT-SERIES.md` |
-
-(SHAs filled in post-commit; this file is amended into commit #1.)
+| 1 | `6855495` | `feat(79-04): smime unit tests + privacy invariant + ast gate (SMIME-04, SMIME-08)` |
+| 2 | `92c4508` | `docs(phase-79): update UAT-SERIES.md` |
 
 ## Deviations from Plan
 
