@@ -1,0 +1,36 @@
+[
+  {
+    "dn": "CN=BadTemplate-ESC1,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=quirk,DC=lab",
+    "type": "searchResEntry",
+    "raw_attributes": {
+      "cn": ["BadTemplate-ESC1"],
+      "msPKI-Certificate-Name-Flag": [1],
+      "msPKI-Enrollment-Flag": [0],
+      "msPKI-RA-Signature": [0],
+      "pKIExtendedKeyUsage": ["1.3.6.1.5.5.7.3.2"],
+      "msPKI-Certificate-Application-Policy": ["1.3.6.1.5.5.7.3.2"]
+    }
+  },
+  {
+    "dn": "CN=BadTemplate-ESC4,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=quirk,DC=lab",
+    "type": "searchResEntry",
+    "raw_attributes": {
+      "cn": ["BadTemplate-ESC4"],
+      "msPKI-Certificate-Name-Flag": [0],
+      "msPKI-Enrollment-Flag": [0],
+      "msPKI-RA-Signature": [1],
+      "nTSecurityDescriptor": ["<bytes-sentinel>"]
+    }
+  },
+  {
+    "dn": "CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=quirk,DC=lab",
+    "type": "searchResEntry",
+    "raw_attributes": {
+      "cn": ["SafeTemplate"],
+      "msPKI-Certificate-Name-Flag": [0],
+      "msPKI-Enrollment-Flag": [0],
+      "msPKI-RA-Signature": [1],
+      "pKIExtendedKeyUsage": ["1.3.6.1.5.5.7.3.4"]
+    }
+  }
+]
