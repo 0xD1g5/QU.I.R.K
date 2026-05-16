@@ -35,6 +35,7 @@ from cyclonedx.model.crypto import (
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
 from quirk.cbom.classifier import classify_algorithm
+from quirk.compliance.cmvp import coverage_for_algorithm  # Phase 81 CMVP-01: informational coverage list
 from quirk.models import CryptoEndpoint
 from quirk.util.safe_exc import safe_str
 
@@ -307,6 +308,16 @@ def _make_algorithm_component(
         execution_environment=CryptoExecutionEnvironment.SOFTWARE_PLAIN_RAM,
         parameter_set_identifier=str(key_size) if key_size is not None else None,
     )
+    # Phase 81 CMVP-01 / D-81-R3: attach an *additional* informational property
+    # listing CMVP modules that cover this algorithm family. NEVER mutate
+    # _fips_status() — v4.10-D-01 forbids activating the "certified" tier from
+    # algorithm-name matching alone. This Property is alongside, not inside,
+    # the existing quirk:fips140-3-status property.
+    properties = [Property(name="quirk:fips140-3-status", value=_fips_status(nist_level))]
+    _cmvp_coverage = coverage_for_algorithm(name)
+    if _cmvp_coverage:
+        _module_names = ", ".join(m["name"] for m in _cmvp_coverage)
+        properties.append(Property(name="quirk:cmvp-coverage", value=_module_names))
     return Component(
         name=name,
         type=ComponentType.CRYPTOGRAPHIC_ASSET,
@@ -315,7 +326,7 @@ def _make_algorithm_component(
             asset_type=CryptoAssetType.ALGORITHM,
             algorithm_properties=algo_props,
         ),
-        properties=[Property(name="quirk:fips140-3-status", value=_fips_status(nist_level))],
+        properties=properties,
     )
 
 

@@ -422,10 +422,35 @@ def main():
             default="text",
             help="Output format (default: text)",
         )
+        # --- Phase 81 CMVP-03/05: compliance cmvp refresh|status ---
+        cmvp_parser = comp_sub.add_parser(
+            "cmvp",
+            help="Inspect / refresh CMVP attestation cache",
+        )
+        cmvp_sub = cmvp_parser.add_subparsers(dest="cmvp_action", required=True)
+        cmvp_refresh = cmvp_sub.add_parser(
+            "refresh", help="Refresh CMVP cache from NIST"
+        )
+        cmvp_refresh.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Preview changes without writing the cache",
+        )
+        cmvp_status = cmvp_sub.add_parser(
+            "status", help="Print CMVP cache freshness"
+        )
+        cmvp_status.add_argument(
+            "--format", choices=["text", "json"], default="text"
+        )
         comp_args = comp_parser.parse_args(_sys.argv[2:])
         if comp_args.action == "status":
             from quirk.compliance import status_report
             status_report(format=comp_args.format)
+            return
+        if comp_args.action == "cmvp":
+            from quirk.cli.cmvp_cmd import run_cmvp
+            run_cmvp(comp_args)
+            return
         return
 
     # --- doctor subcommand: intercept before scan argparse (Phase 52 DOCS-05 / D-10) ---
