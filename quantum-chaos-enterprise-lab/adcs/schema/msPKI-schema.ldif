@@ -1,0 +1,73 @@
+# Phase 80 — Windows AD CS Scanner — msPKI schema overlay for OpenLDAP cn=config.
+#
+# Mimics enough of the Microsoft AD CS Configuration partition schema for the
+# QU.I.R.K. ADCS scanner (read-only LDAP enumeration, ADCS-09 invariant) to
+# exercise ESC1 / ESC4 / SAFE detection paths against deterministic fixtures.
+#
+# OID arc: private QU.I.R.K. PEN-style arc `1.3.6.1.4.1.99999.80.*`. This
+# departs from Microsoft's real private arc `1.2.840.113556.1.4.20XX`
+# because Bitnami's openldap image already ships the `msuser` schema, which
+# claims that entire OID range (1.4.20XX confirmed via subschema query
+# during Plan 80-01 execution, 2026-05-16). Using Microsoft's real OIDs
+# triggers `Inconsistent duplicate attributeType` at slapadd time. The
+# scanner's detection logic keys off attribute NAMES only, not OIDs, so the
+# private arc is functionally equivalent for chaos-lab purposes.
+# Names match the real Microsoft / RFC schema verbatim.
+#
+# Syntaxes (per 80-RESEARCH Pitfall 1):
+#   1.3.6.1.4.1.1466.115.121.1.27  Integer
+#   1.3.6.1.4.1.1466.115.121.1.38  OID
+#
+# This overlay relies on the Microsoft `msuser` schema being loaded ahead of
+# it (LDAP_EXTRA_SCHEMAS=cosine,inetorgperson,nis,msuser in compose). `msuser`
+# already defines `cACertificate`, `nTSecurityDescriptor`, `dNSHostName`,
+# `pKIExtendedKeyUsage`, `pKIKeyUsage` — re-declaring would duplicate, so
+# they are intentionally omitted here; only the four detection-relevant
+# msPKI-* attributes plus the two structural object classes are added.
+#
+# Load path: Bitnami's entrypoint runs `slapadd -F slapd.d -n 0 -l <file>`
+# for every *.ldif under $LDAP_CUSTOM_SCHEMA_DIR (default /schemas) during
+# initial offline setup. dn `cn=msPKI` is auto-renumbered to `cn={N}msPKI`.
+
+dn: cn=msPKI,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: msPKI
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.80.10
+  NAME 'msPKI-Certificate-Name-Flag'
+  DESC 'Microsoft msPKI certificate name flag (ESC1 ENROLLEE_SUPPLIES_SUBJECT bitmask)'
+  EQUALITY integerMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.80.11
+  NAME 'msPKI-Enrollment-Flag'
+  DESC 'Microsoft msPKI enrollment flag bitmask'
+  EQUALITY integerMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.80.12
+  NAME 'msPKI-RA-Signature'
+  DESC 'Microsoft msPKI required RA signature count'
+  EQUALITY integerMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+  SINGLE-VALUE )
+olcAttributeTypes: ( 1.3.6.1.4.1.99999.80.13
+  NAME 'msPKI-Certificate-Application-Policy'
+  DESC 'Microsoft msPKI certificate application policy OID(s)'
+  EQUALITY objectIdentifierMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.38 )
+olcObjectClasses: ( 1.3.6.1.4.1.99999.80.30
+  NAME 'pKIEnrollmentService'
+  DESC 'AD CS Enrollment Service entry (lab fixture)'
+  SUP top
+  STRUCTURAL
+  MUST ( cn )
+  MAY ( dNSHostName $ cACertificate $ nTSecurityDescriptor ) )
+olcObjectClasses: ( 1.3.6.1.4.1.99999.80.31
+  NAME 'pKICertificateTemplate'
+  DESC 'AD CS Certificate Template entry (lab fixture)'
+  SUP top
+  STRUCTURAL
+  MUST ( cn )
+  MAY ( msPKI-Certificate-Name-Flag $ msPKI-Enrollment-Flag $
+        msPKI-RA-Signature $ msPKI-Certificate-Application-Policy $
+        pKIExtendedKeyUsage $ pKIKeyUsage $ nTSecurityDescriptor ) )

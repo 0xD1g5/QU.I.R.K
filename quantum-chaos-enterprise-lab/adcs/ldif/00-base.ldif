@@ -1,0 +1,29 @@
+# Phase 80 — AD CS chaos lab — Configuration partition base entries.
+#
+# Mirrors the Microsoft AD CS Configuration partition layout sufficient for
+# scanner enumeration. Base DN: dc=quirk,dc=lab (parity with smime profile).
+
+dn: cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: organizationalRole
+cn: Configuration
+
+dn: cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: organizationalRole
+cn: Services
+
+dn: cn=Public Key Services,cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: organizationalRole
+cn: Public Key Services
+
+dn: cn=Enrollment Services,cn=Public Key Services,cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: organizationalRole
+cn: Enrollment Services
+
+dn: cn=Certificate Templates,cn=Public Key Services,cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: organizationalRole
+cn: Certificate Templates

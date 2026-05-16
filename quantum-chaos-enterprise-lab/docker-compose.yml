@@ -800,6 +800,81 @@ services:
       - ./smime/ldif:/ldif:ro
     restart: "no"
 
+  # =========================
+  # PHASE 80 — WINDOWS AD CS LDAP DISCOVERY (profile: adcs)
+  # ADCS-03 / ADCS-08: OpenLDAP seeded with a deliberately misconfigured
+  # AD CS Configuration partition — msPKI schema + 3 deterministic template
+  # fixtures (BadTemplate-ESC1, BadTemplate-ESC4, SafeTemplate) + 1 RSA-1024
+  # SHA-1 CA signing cert (`adcs/certs/ca-weak.der`). Plain LDAP on host port
+  # 38910 only (LDAPS deferred per CONTEXT, mirrors smime D-79-R9 policy).
+  # Read-only enumeration only — no enrollment, no CSR, no writes (ADCS-09).
+  #
+  # Schema loading: Plan 80-01 deviation Rule 1, 2026-05-16. The plan's
+  # PRIMARY path (seed-sidecar `ldapadd` against cn=config) returns
+  # "Insufficient access (50)" under Bitnami openldap because the network
+  # ldap:// listener only honors RootDN/SIMPLE binds, and cn=config writes
+  # require EXTERNAL auth on ldapi:/// (which is only reachable from inside
+  # the container during entrypoint init). The plan's D-80-R7 FALLBACK
+  # (Dockerfile `COPY ... etc/schema/msPKI.ldif`) also failed because
+  # Bitnami's entrypoint does not auto-include arbitrary files dropped into
+  # /opt/bitnami/openldap/etc/schema/ — it only includes the well-known
+  # core/cosine/inetorgperson/nis chain plus `$LDAP_CUSTOM_SCHEMA_FILE`
+  # (default /schema/custom.ldif) and `$LDAP_CUSTOM_SCHEMA_DIR` (/schemas).
+  # Plan 80-01 deviation: use Bitnami's NATIVE schema-mount hook by mounting
+  # adcs/schema/msPKI-schema.ldif at /schemas/msPKI.ldif and pointing
+  # LDAP_CUSTOM_SCHEMA_DIR=/schemas at it; Bitnami's `ldap_add_custom_schemas`
+  # then runs the ldapadd -Y EXTERNAL during init while the privileged
+  # local socket is still active. The Dockerfile and schema LDIF on disk are
+  # both preserved per the plan's "ship both branches" contract — flipping
+  # back to either is a small compose-file diff away.
+  # =========================
+  adcs-openldap:
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+    profiles: ["adcs"]
+    environment:
+      LDAP_ROOT: "dc=quirk,dc=lab"
+      LDAP_ADMIN_USERNAME: "admin"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_PORT_NUMBER: 389
+      LDAP_ALLOW_ANON_BINDING: "yes"
+      # Per Plan 80-01 deviation Rule 1: Bitnami-native schema load path.
+      # The container's entrypoint runs `slapadd -F slapd.d -n 0 -l` for
+      # every *.ldif under LDAP_CUSTOM_SCHEMA_DIR during initial setup
+      # (offline). `msuser` is added to LDAP_EXTRA_SCHEMAS so msuser's
+      # AD-compatible attribute types (cACertificate, nTSecurityDescriptor,
+      # dNSHostName, pKIExtendedKeyUsage, pKIKeyUsage) load BEFORE the
+      # msPKI overlay declares pKIEnrollmentService / pKICertificateTemplate
+      # objectClasses that depend on them.
+      LDAP_EXTRA_SCHEMAS: "cosine,inetorgperson,nis,msuser"
+      LDAP_CUSTOM_SCHEMA_DIR: "/schemas"
+    volumes:
+      - ./adcs/schema:/schemas:ro
+      - ./adcs/ldif:/ldif:ro
+      - ./adcs/certs:/adcs-certs:ro
+    ports:
+      - "38910:389"
+    restart: unless-stopped
+
+  adcs-seed:
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+    profiles: ["adcs"]
+    depends_on:
+      adcs-openldap:
+        condition: service_started
+    # `ldapadd -c` = continue on already-exists errors (idempotency contract
+    # mirrors smime D-79-R2 — re-running `./lab.sh up --profile adcs` must
+    # not error). Schema add is best-effort (`|| true`) so a runtime cn=config
+    # rejection (RESEARCH Pitfall 1) does not block the data adds; flip to the
+    # Dockerfile fallback per D-80-R7 + adcs/README.md if rejection persists.
+    # On re-run, ldapadd returns 68 (LDAP_ALREADY_EXISTS); we swallow it.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "sleep 8 && ldapadd -c -x -H ldap://adcs-openldap:389 -D 'cn=admin,dc=quirk,dc=lab' -w admin -f /ldif/00-base.ldif; ldapadd -c -x -H ldap://adcs-openldap:389 -D 'cn=admin,dc=quirk,dc=lab' -w admin -f /ldif/10-ca.ldif; ldapadd -c -x -H ldap://adcs-openldap:389 -D 'cn=admin,dc=quirk,dc=lab' -w admin -f /ldif/20-templates.ldif; rc=$$?; if [ $$rc -eq 0 ] || [ $$rc -eq 68 ]; then exit 0; else exit $$rc; fi"
+    volumes:
+      - ./adcs/schema:/schema:ro
+      - ./adcs/ldif:/ldif:ro
+    restart: "no"
+
   # ── DNSSEC Chaos Lab (profile: dnssec) ──────────────────
   bind9-dnssec:
     build:

@@ -42,6 +42,7 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | broker | kafka-broker, rabbitmq-broker, redis-broker | 29092, 29093, 25672, 25671, 26379, 26380 | [Expected Findings](expected_results_v4.md#profile-broker) | v4.4 |
 | tls-cert-defects | tls-cert-expired, tls-cert-selfsigned, tls-cert-untrusted-ca, tls-cert-rsa1024 | 13444, 13445, 13446, 13447 | [Expected Findings](expected_results_v4.md#profile-tls-cert-defects) | v4.6 (Phase 46); single-profile target exercising TLS-FIND-01..05 cert-defect findings end-to-end |
 | smime | smime-openldap, smime-seed | 38900 | [Expected Findings](expected_results_v4.md#profile-smime) | v4.10 (Phase 79); OpenLDAP seeded with alice/bob/carol userSMIMECertificate fixtures (RSA-1024/SHA-1, RSA-1024/SHA-256, RSA-2048/SHA-256). Plain LDAP only — LDAPS deferred per D-79-R9. Idempotent seed sidecar (`ldapadd -c`, swallows exit 68). |
+| adcs | adcs-openldap, adcs-seed | 38910 | [Expected Findings](expected_results_v4.md#profile-adcs) | v4.10 (Phase 80); OpenLDAP seeded with msPKI schema + three certificate template fixtures (BadTemplate-ESC1, BadTemplate-ESC4, SafeTemplate) + a SHA-1-signed RSA-1024 fake CA (QuirkLabCA). Schema loaded via Bitnami `LDAP_CUSTOM_SCHEMA_DIR` (Plan 80-01 deviation; ldapadd cn=config + Dockerfile fallbacks committed but inactive). Plain LDAP only. Authenticated SIMPLE bind for real-AD parity; anonymous bind permitted in lab. Idempotent seed sidecar (`ldapadd -c`, swallows exit 68). Read-only enumeration only — no enrollment, no CSR, no writes (ADCS-09). |
 
 ### Image Pin Policy
 

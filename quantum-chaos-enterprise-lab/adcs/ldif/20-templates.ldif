@@ -1,0 +1,41 @@
+# Phase 80 — AD CS chaos lab — three deterministic certificate template
+# fixtures exercising ESC1, ESC4, and SAFE detection paths.
+#
+# Per 80-RESEARCH Pattern 2:
+#   BadTemplate-ESC1: msPKI-Certificate-Name-Flag=1 (ENROLLEE_SUPPLIES_SUBJECT)
+#                     + pKIExtendedKeyUsage=client-auth + msPKI-RA-Signature=0
+#                     -> ESC1 misconfig finding (HIGH).
+#   BadTemplate-ESC4: nTSecurityDescriptor present (scanner reads attribute
+#                     presence only, not contents; emits COVERAGE-GAP per D-80-R8).
+#   SafeTemplate:     benign defaults — no findings.
+
+dn: cn=BadTemplate-ESC1,cn=Certificate Templates,cn=Public Key Services,cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: pKICertificateTemplate
+cn: BadTemplate-ESC1
+msPKI-Certificate-Name-Flag: 1
+msPKI-Enrollment-Flag: 0
+msPKI-RA-Signature: 0
+pKIExtendedKeyUsage: 1.3.6.1.5.5.7.3.2
+pKIKeyUsage: 160
+
+dn: cn=BadTemplate-ESC4,cn=Certificate Templates,cn=Public Key Services,cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: pKICertificateTemplate
+cn: BadTemplate-ESC4
+msPKI-Certificate-Name-Flag: 0
+msPKI-Enrollment-Flag: 0
+msPKI-RA-Signature: 1
+pKIExtendedKeyUsage: 1.3.6.1.5.5.7.3.2
+pKIKeyUsage: 160
+nTSecurityDescriptor:: AQAAAAAAAAA=
+
+dn: cn=SafeTemplate,cn=Certificate Templates,cn=Public Key Services,cn=Services,cn=Configuration,dc=quirk,dc=lab
+objectClass: top
+objectClass: pKICertificateTemplate
+cn: SafeTemplate
+msPKI-Certificate-Name-Flag: 0
+msPKI-Enrollment-Flag: 0
+msPKI-RA-Signature: 1
+pKIExtendedKeyUsage: 1.3.6.1.5.5.7.3.4
+pKIKeyUsage: 160
