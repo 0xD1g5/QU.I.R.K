@@ -166,6 +166,28 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         fix="Re-run the scan with the required scanner extra installed, or mark the host out-of-scope.",
     ),
 
+    # --- CMVP domain (Phase 81) ---
+    "CMVP-REFRESH-NETWORK": ErrorEntry(
+        code="CMVP-REFRESH-NETWORK",
+        cause="Could not fetch CMVP search page (network error).",
+        fix="Verify connectivity to csrc.nist.gov; retry `quirk compliance cmvp refresh`. Offline scans still use the bundled cache.",
+    ),
+    "CMVP-REFRESH-PARSE": ErrorEntry(
+        code="CMVP-REFRESH-PARSE",
+        cause="CMVP search page HTML did not match expected selectors.",
+        fix="NIST page structure may have changed. File an issue and pin to the bundled cache until parser updated.",
+    ),
+    "CMVP-REFRESH-NO-CHANGES": ErrorEntry(
+        code="CMVP-REFRESH-NO-CHANGES",
+        cause="CMVP cache already current; no modules changed.",
+        fix="No action needed. Bump `last_verified` only if re-verifying without content change.",
+    ),
+    "CMVP-STALE": ErrorEntry(
+        code="CMVP-STALE",
+        cause="CMVP cache is older than 90 days.",
+        fix="Run `quirk compliance cmvp refresh` and commit with message `chore: re-verify CMVP catalog (YYYY-MM-DD)`.",
+    ),
+
     # --- Reserved per-domain exception fallback codes (NNN-099) ---
     # Used by render-time CATEGORY_TO_CODE dispatch when scan_error_category == "exception"
     # and the host/scanner_label is one of these domains.
@@ -241,4 +263,13 @@ def format_error(code: str) -> str:
     return f"[QRK-{entry.code}] {entry.cause} Fix: {entry.fix}"
 
 
-__all__ = ["ErrorEntry", "ERROR_REGISTRY", "CATEGORY_TO_CODE", "format_error"]
+def error_for(code: str) -> ErrorEntry | None:
+    """Return the ErrorEntry registered under ``code`` or ``None`` if absent.
+
+    Read-only registry lookup used by callers that need the structured
+    record (e.g. CMVP refresh exit handlers) rather than the rendered string.
+    """
+    return ERROR_REGISTRY.get(code)
+
+
+__all__ = ["ErrorEntry", "ERROR_REGISTRY", "CATEGORY_TO_CODE", "format_error", "error_for"]
