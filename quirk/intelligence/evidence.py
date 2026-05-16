@@ -87,6 +87,9 @@ def build_evidence_summary(
     identity_weak_etype_count = 0
     saml_weak_signing_count = 0
     dnssec_weak_algo_count = 0
+    smime_weak_signing_count = 0
+    smime_expired_count = 0
+    smime_weak_key_count = 0
 
     # DAR protocol counters (Phase 27+)
     dar_db_plaintext_count = 0    # PG ssl=off + MySQL SSL disabled
@@ -174,6 +177,22 @@ def build_evidence_summary(
             elif _dnssec_alg == "NONE":
                 # Unsigned zone — no algorithm weakness but high security concern
                 dnssec_weak_algo_count += 1
+
+        elif proto == "SMIME":
+            _smime_alg     = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
+            _smime_size    = getattr(ep, "cert_pubkey_size", None)
+            _smime_detail  = str(getattr(ep, "service_detail", "") or "").lower()
+            _smime_sig_raw = getattr(ep, "cert_sig_alg", "") or ""
+            # weak signing — prefer cert_sig_alg if scanner sets it; fall back to
+            # is_weak_cipher across both alg+sig fields for resilience.
+            if is_weak_cipher(_smime_sig_raw) or is_weak_cipher(_smime_alg):
+                smime_weak_signing_count += 1
+            if isinstance(_smime_size, int) and _smime_size > 0 and _smime_size < 2048:
+                smime_weak_key_count += 1
+            # The scanner encodes expiry via "|expired=true" sentinel in service_detail
+            # (Plan 79-02 contract).
+            if "expired=true" in _smime_detail:
+                smime_expired_count += 1
 
         elif proto == "POSTGRESQL":
             if getattr(ep, "scan_error", None) == "insufficient-privilege":
@@ -339,6 +358,9 @@ def build_evidence_summary(
         "identity_weak_etype_count": identity_weak_etype_count,
         "saml_weak_signing_count": saml_weak_signing_count,
         "dnssec_weak_algo_count": dnssec_weak_algo_count,
+        "smime_weak_signing_count": smime_weak_signing_count,
+        "smime_expired_count":      smime_expired_count,
+        "smime_weak_key_count":     smime_weak_key_count,
         "identity_kerberos_weak_etype_ratio": round(identity_weak_etype_count / total_endpoints, 4) if total_endpoints else 0.0,
         "identity_saml_weak_signing_ratio": round(saml_weak_signing_count / total_endpoints, 4) if total_endpoints else 0.0,
         "identity_dnssec_weak_algo_ratio": round(dnssec_weak_algo_count / total_endpoints, 4) if total_endpoints else 0.0,
