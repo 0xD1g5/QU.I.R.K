@@ -16,7 +16,18 @@ sleep 3  # Extra buffer for full initialization
 
 echo "=== Creating repos ==="
 
-# Helper: create a file in a repo via Gitea API
+# Helper: check whether a repo already exists for ADMIN_USER. Returns 0 (true) if it does.
+repo_exists() {
+  local repo="$1"
+  curl -sf -o /dev/null -u "${ADMIN_USER}:${ADMIN_PASS}" \
+    "${GITEA_URL}/api/v1/repos/${ADMIN_USER}/${repo}"
+}
+
+# Helper: create a file in a repo via Gitea API. The trailing `|| true` makes the
+# call idempotent on re-runs of the seed against a persisted gitea_data volume —
+# in this seed context, an HTTP 409 from POST /contents means the same path was
+# already committed with identical content (the seed is fully deterministic in
+# both content and commit message), so swallowing it is safe.
 put_file() {
   local repo="$1"
   local path="$2"
@@ -25,15 +36,19 @@ put_file() {
   curl -sf -X POST "${GITEA_URL}/api/v1/repos/${ADMIN_USER}/${repo}/contents/${path}" \
     -H "Content-Type: application/json" \
     -u "${ADMIN_USER}:${ADMIN_PASS}" \
-    -d "{\"message\": \"${msg}\", \"content\": \"${content_b64}\"}" > /dev/null
+    -d "{\"message\": \"${msg}\", \"content\": \"${content_b64}\"}" > /dev/null || true
 }
 
 # ---- REPO 1: crypto-antipatterns-python ----
-curl -sf -X POST "${GITEA_URL}/api/v1/user/repos" \
-  -H "Content-Type: application/json" \
-  -u "${ADMIN_USER}:${ADMIN_PASS}" \
-  -d '{"name": "crypto-antipatterns-python", "private": false, "auto_init": true, "default_branch": "main"}' > /dev/null
-echo "Created repo: crypto-antipatterns-python"
+if repo_exists "crypto-antipatterns-python"; then
+  echo "Repo exists, skipping create: crypto-antipatterns-python"
+else
+  curl -sf -X POST "${GITEA_URL}/api/v1/user/repos" \
+    -H "Content-Type: application/json" \
+    -u "${ADMIN_USER}:${ADMIN_PASS}" \
+    -d '{"name": "crypto-antipatterns-python", "private": false, "auto_init": true, "default_branch": "main"}' > /dev/null
+  echo "Created repo: crypto-antipatterns-python"
+fi
 
 # Category 1: Hardcoded keys (semgrep flags hardcoded RSA private keys and AES keys)
 CONTENT1=$(printf '%s' '
@@ -133,11 +148,15 @@ def sign_message(key: bytes, message: bytes) -> bytes:
 put_file "crypto-antipatterns-python" "crypto/deprecated_protocols.py" "$CONTENT4" "add deprecated protocol anti-patterns"
 
 # ---- REPO 2: crypto-antipatterns-go ----
-curl -sf -X POST "${GITEA_URL}/api/v1/user/repos" \
-  -H "Content-Type: application/json" \
-  -u "${ADMIN_USER}:${ADMIN_PASS}" \
-  -d '{"name": "crypto-antipatterns-go", "private": false, "auto_init": true, "default_branch": "main"}' > /dev/null
-echo "Created repo: crypto-antipatterns-go"
+if repo_exists "crypto-antipatterns-go"; then
+  echo "Repo exists, skipping create: crypto-antipatterns-go"
+else
+  curl -sf -X POST "${GITEA_URL}/api/v1/user/repos" \
+    -H "Content-Type: application/json" \
+    -u "${ADMIN_USER}:${ADMIN_PASS}" \
+    -d '{"name": "crypto-antipatterns-go", "private": false, "auto_init": true, "default_branch": "main"}' > /dev/null
+  echo "Created repo: crypto-antipatterns-go"
+fi
 
 CONTENT_GO=$(printf '%s' '
 package main
@@ -206,11 +225,15 @@ func main() {
 put_file "crypto-antipatterns-go" "main.go" "$CONTENT_GO" "add Go crypto anti-patterns"
 
 # ---- REPO 3: crypto-antipatterns-java ----
-curl -sf -X POST "${GITEA_URL}/api/v1/user/repos" \
-  -H "Content-Type: application/json" \
-  -u "${ADMIN_USER}:${ADMIN_PASS}" \
-  -d '{"name": "crypto-antipatterns-java", "private": false, "auto_init": true, "default_branch": "main"}' > /dev/null
-echo "Created repo: crypto-antipatterns-java"
+if repo_exists "crypto-antipatterns-java"; then
+  echo "Repo exists, skipping create: crypto-antipatterns-java"
+else
+  curl -sf -X POST "${GITEA_URL}/api/v1/user/repos" \
+    -H "Content-Type: application/json" \
+    -u "${ADMIN_USER}:${ADMIN_PASS}" \
+    -d '{"name": "crypto-antipatterns-java", "private": false, "auto_init": true, "default_branch": "main"}' > /dev/null
+  echo "Created repo: crypto-antipatterns-java"
+fi
 
 CONTENT_JAVA=$(printf '%s' '
 import java.security.MessageDigest;
