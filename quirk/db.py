@@ -77,6 +77,7 @@ _IDENTITY_COLUMNS: tuple[tuple[str, str], ...] = (
     ("kerberos_scan_json", "TEXT"),  # Phase v4.2 identity scanner
     ("saml_scan_json",     "TEXT"),
     ("dnssec_scan_json",   "TEXT"),
+    ("smime_scan_json",    "TEXT"),  # Phase 79 SMIME-03
 )
 _GCP_COLUMNS: tuple[tuple[str, str], ...] = (
     ("gcs_scan_json", "TEXT"),  # Phase v4.3 GCP / GCS scanner

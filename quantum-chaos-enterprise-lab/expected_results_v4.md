@@ -480,3 +480,36 @@ quirk scan localhost:13444,localhost:13445,localhost:13446,localhost:13447 --out
 - `lab.sh` auto-discovers this profile via `_derive_all_profiles()` reading docker-compose.yml at runtime — no manual `ALL_PROFILES` edit was needed.
 
 **Reference:** Risk-engine branches in `quirk/engine/risk_engine.py:343–423`. Cert generation in `scripts/gen_phaseA_certs.sh` (`issue_leaf "untrusted-ca" ...`).
+
+---
+
+## Profile: smime
+
+*OpenLDAP seeded with three users carrying `userSMIMECertificate` attributes — exercises weak-signing, weak-key, and SAFE paths. Plain LDAP on host port **38900 only** (LDAPS deferred per D-79-R9 to a Phase 82 follow-up).*
+
+> **Image:** `bitnamilegacy/openldap:2.6.10-debian-12-r4` (parity with the `ldaps` profile after the 2026-05-15 macOS bind-mount migration; supersedes 79-CONTEXT's osixia:1.5.0 pin per D-79-UPDATE).
+>
+> **LDIF attribute syntax:** `userSMIMECertificate::` (RFC 2798 base64, no `;binary` suboption). The `userSMIMECertificate` attribute (OID 2.16.840.1.113730.3.1.40) uses SYNTAX 1.3.6.1.4.1.1466.115.121.1.5 (Binary), which already carries octets directly — OpenLDAP rejects `userSMIMECertificate;binary` with "option binary not supported with type". Phase 79-01 deviation, captured in `smime/certs/regen.sh`.
+
+```bash
+PROFILE_ARGS="--profile smime" ./lab.sh up
+```
+
+| User DN | Certificate | Expected Finding | Severity |
+|---|---|---|---|
+| uid=alice,ou=people,dc=quirk,dc=lab | RSA-1024 / SHA-1   | Weak S/MIME signing + weak key | HIGH |
+| uid=bob,ou=people,dc=quirk,dc=lab   | RSA-1024 / SHA-256 | Weak S/MIME key (RSA-1024)     | HIGH |
+| uid=carol,ou=people,dc=quirk,dc=lab | RSA-2048 / SHA-256 | (none — SAFE)                  | —    |
+
+**Scanner validation command** *(Plan 79-02 will wire `--smime-target` / `--smime-base`)*:
+```
+docker compose --profile smime up -d && sleep 10 && quirk scan --smime-target ldap://localhost:38900 --smime-base dc=quirk,dc=lab
+```
+
+**Expected:** SMIME scanner returns **2 HIGH findings** (alice, bob); **0 findings from carol**. Findings appear in the Identity tab (`source="smime"`). **No IMAP traffic, no mailbox access** (privacy invariant, enforced by SMIME-08 AST gate in Plan 79-04). Idempotent — re-running `./lab.sh up --profile smime` must not produce duplicate LDIF entries; the seed sidecar uses `ldapadd -c` and explicitly swallows exit code 68 (`LDAP_ALREADY_EXISTS`) on subsequent runs.
+
+**Ports:** `38900/tcp` (LDAP) — chosen to avoid 636 (`ldaps` profile) and 389 (`kerberos`/samba-DC profile). LDAPS (38901) intentionally **not** exposed in Phase 79; deferred to Phase 82.
+
+**Cert fixtures:** Pre-built DER blobs committed under `quantum-chaos-enterprise-lab/smime/certs/{alice,bob,carol}.der` — regenerated via `regen.sh` (developer tool only, not runtime). 100-year validity window so all three certs are non-expired; the expiry path is exercised by unit-test mocks in Plan 79-04, not by lab fixtures.
+
+**Reference:** `quirk/db.py::_IDENTITY_COLUMNS` (column `smime_scan_json`), compose blocks `smime-openldap` + `smime-seed` (profile `smime`).

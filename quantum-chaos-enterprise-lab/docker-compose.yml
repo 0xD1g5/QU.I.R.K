@@ -757,6 +757,49 @@ services:
       - "636:636"
     restart: unless-stopped
 
+  # =========================
+  # PHASE 79 — S/MIME LDAP DISCOVERY (profile: smime)
+  # SMIME-03 / SMIME-07: OpenLDAP seeded with three users carrying
+  # userSMIMECertificate values — exercises weak-signing, weak-key, and SAFE
+  # paths. Plain LDAP on host port 38900 only (LDAPS deferred per D-79-R9).
+  # Image is bitnamilegacy/openldap:2.6.10-debian-12-r4 — D-79-UPDATE supersedes
+  # CONTEXT D-Area-3's osixia:1.5.0 for macOS bind-mount compatibility (mirrors
+  # the 2026-05-15 ldaps migration in DEF-999.83-A).
+  # =========================
+  smime-openldap:
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+    profiles: ["smime"]
+    environment:
+      LDAP_ROOT: "dc=quirk,dc=lab"
+      LDAP_ADMIN_USERNAME: "admin"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_PORT_NUMBER: 389
+    volumes:
+      - ./smime/ldif:/ldif:ro
+      - ./smime/certs:/smime-certs:ro
+    ports:
+      - "38900:389"
+    restart: unless-stopped
+
+  smime-seed:
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+    profiles: ["smime"]
+    depends_on:
+      smime-openldap:
+        condition: service_started
+    # `ldapadd -c` = continue on already-exists errors. Idempotency contract
+    # per D-79-R2 — re-running `./lab.sh up --profile smime` must not error.
+    # ldapadd's exit code is the LAST per-entry error, so on re-run it returns
+    # 68 (LDAP_ALREADY_EXISTS) even with -c. We swallow exit 68 explicitly so
+    # the seed sidecar exits 0 on both first and subsequent runs (Phase 79-01
+    # deviation Rule 1, 2026-05-16).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "sleep 5 && ldapadd -c -x -H ldap://smime-openldap:389 -D 'cn=admin,dc=quirk,dc=lab' -w admin -f /ldif/users.ldif; rc=$$?; if [ $$rc -eq 0 ] || [ $$rc -eq 68 ]; then exit 0; else exit $$rc; fi"
+    volumes:
+      - ./smime/ldif:/ldif:ro
+    restart: "no"
+
   # ── DNSSEC Chaos Lab (profile: dnssec) ──────────────────
   bind9-dnssec:
     build:
