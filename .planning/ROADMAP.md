@@ -1495,14 +1495,14 @@ Wave A phases are internally independent — they touch fully disjoint code path
 
 ### Phases Checklist
 
-- [ ] **Phase 78: HTML/PDF Injection Hardening** - Harden all report rendering paths against injection; add `nh3` sanitization at `_build_finding`; CI gate for `| safe` filter usage (closes v4.8 D-06)
-- [ ] **Phase 79: S/MIME LDAP Discovery Scanner** - New S/MIME scanner via AD `userCertificate`/`userSMIMECertificate` LDAP attributes; CBOM integration; `smime` chaos lab profile
-- [ ] **Phase 80: Windows AD CS Scanner** - New AD CS scanner via impacket LDAP enumeration; ESC1–ESC8 crypto-property findings; `[adcs]` extras group; `adcs` chaos lab profile
-- [ ] **Phase 81: CMVP Attestation Feed** - Bundled CMVP coverage table; `quirk compliance cmvp refresh` CLI; 90-day staleness gate; CBOM third tier (coverage list, never `certified: true`)
-- [ ] **Phase 82: Chaos Lab Fidelity** - Fix DEF-999.83-A/B/C (ldaps macOS bind-mount, RabbitMQ Erlang cookie, gitea idempotency); image pin policy; integrate smime/adcs new profiles
-- [ ] **Phase 83: Integration Gate + Cleanup** - `SCORE_WEIGHTS` invariant update (post Phases 79+80); `migration_planner.py` removal; final integration smoke
-- [ ] **Phase 84: Release Engineering** - PyPI name check; Trusted Publishers + Sigstore; `SECURITY.md`; `CODE_OF_CONDUCT.md`; `towncrier`; single version source of truth
-- [ ] **Phase 85: Public-Launch Polish** - Homebrew tap; GHCR Docker image; upgrade guide; marketing README; sample CBOM outputs; quickstart polish
+- [x] **Phase 78: HTML/PDF Injection Hardening** - Harden all report rendering paths against injection; add `nh3` sanitization at `_build_finding`; CI gate for `| safe` filter usage (closes v4.8 D-06)
+- [x] **Phase 79: S/MIME LDAP Discovery Scanner** - New S/MIME scanner via AD `userCertificate`/`userSMIMECertificate` LDAP attributes; CBOM integration; `smime` chaos lab profile
+- [x] **Phase 80: Windows AD CS Scanner** - New AD CS scanner via impacket LDAP enumeration; ESC1–ESC8 crypto-property findings; `[adcs]` extras group; `adcs` chaos lab profile
+- [x] **Phase 81: CMVP Attestation Feed** - Bundled CMVP coverage table; `quirk compliance cmvp refresh` CLI; 90-day staleness gate; CBOM third tier (coverage list, never `certified: true`)
+- [x] **Phase 82: Chaos Lab Fidelity** - Fix DEF-999.83-A/B/C (ldaps macOS bind-mount, RabbitMQ Erlang cookie, gitea idempotency); image pin policy; integrate smime/adcs new profiles
+- [x] **Phase 83: Integration Gate + Cleanup** - `SCORE_WEIGHTS` invariant update (post Phases 79+80); `migration_planner.py` removal; final integration smoke
+- [x] **Phase 84: Release Engineering** - PyPI name check; Trusted Publishers + Sigstore; `SECURITY.md`; `CODE_OF_CONDUCT.md`; `towncrier`; single version source of truth
+- [x] **Phase 85: Public-Launch Polish** - Homebrew tap; GHCR Docker image; upgrade guide; marketing README; sample CBOM outputs; quickstart polish
 
 ---
 
@@ -1634,7 +1634,12 @@ Plans:
   3. A returning user upgrading from any v4.x release can follow `docs/upgrade-guide.md` — `quirk db migrate` runs against their existing `quirk.db`, reports all schema columns already present (additive-only), and exits 0 with no data loss
   4. The repo root `README.md` includes CI/PyPI/license/security badge links, a 3-command quickstart (`pip install quirk[all]` → `quirk init` → `quirk --config quirk.yaml`), a dashboard screenshot, and a one-paragraph value proposition for each of the three user personas (security consultant, IT generalist, compliance officer)
   5. `examples/` contains at least four sample CBOM JSON files (one per major scan profile: TLS-only, identity, data-at-rest, data-in-motion) checked into the repository as deterministic fixtures; `curl | bash` installation is explicitly documented as a deliberate non-feature in `docs/release-process.md`
-**Plans**: TBD
+**Plans**: 5 plans
+- [x] 85-01-PLAN.md — `quirk db migrate` CLI + v4.x→v4.10 upgrade guide (LAUNCH-04)
+- [x] 85-02-PLAN.md — Multi-arch GHCR Docker image via `release-container.yml` (LAUNCH-03)
+- [x] 85-03-PLAN.md — Homebrew tap formula `Formula/quirk.rb` (LAUNCH-02)
+- [x] 85-04-PLAN.md — Deterministic CBOM fixtures under `examples/cbom/` (LAUNCH-05)
+- [x] 85-05-PLAN.md — README polish + getting-started + curl|bash non-decision + closure (LAUNCH-01, 06, 07)
 **UI hint**: yes
 
 ---
@@ -1650,4 +1655,4 @@ Plans:
 | 82. Chaos Lab Fidelity | A/B | 4/4 | Complete | 2026-05-16 |
 | 83. Integration Gate + Cleanup | B | 1/1 | Complete | 2026-05-16 |
 | 84. Release Engineering | B | 4/4 | Complete | 2026-05-21 |
-| 85. Public-Launch Polish | C | 0/? | Not started | - |
+| 85. Public-Launch Polish | C | 5/5 | Complete | 2026-05-21 |
