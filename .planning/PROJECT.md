@@ -147,22 +147,23 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.10 Launch Readiness — Coverage, Hardening, Release Engineering
+## Current State: v4.10 SHIPPED 2026-05-21
 
-**Goal:** Close the remaining security/correctness backlog, expand identity-protocol coverage with S/MIME and Windows AD CS, and stand up the release-engineering + launch-polish foundation needed for a future v5.0 GA tag.
+v4.10 "Launch Readiness" shipped 2026-05-21 — 8 phases (78–85), 31 plans, 52/52 requirements satisfied. Coverage gap closure for S/MIME (LDAP-only `userCertificate`/`userSMIMECertificate`) and Windows AD CS (impacket LDAP enumeration, ESC1–ESC8 observable crypto properties); CMVP attestation feed wired as informational coverage list (never `certified: true`); HTML/PDF injection hardening via `nh3` chokepoint + `| safe` CI gate; SCORE_WEIGHTS invariant flipped green (sum 275.0, count 36).
 
-**Target workstreams:**
-- **Security backlog closure** — HTML/PDF report injection hardening (v4.8 D-06), CMVP attestation feed (Phase 52 D-01), `migration_planner.py` removal
-- **Identity coverage expansion** — S/MIME content scanning (promoted from out-of-scope) and Windows AD CS live connector (promoted from v2 backlog)
-- **Chaos-lab fidelity** — Phase 999.83 gitea/minio/vault/mysql service-config drift fixes (lab.sh / README / expected_results parity)
-- **Release engineering** — signed wheel/sdist artifacts, CHANGELOG-driven release script, public version policy doc, SECURITY.md, CODE_OF_CONDUCT.md
-- **Public-launch polish** — Homebrew formula, published Docker image, v4.x→v4.10 upgrade migrations, quickstart polish, marketing README, demo script, sample CBOM outputs
+**Release engineering foundation:** PyPI distribution name `qu-i-r-k` registered; Trusted Publishers (GitHub OIDC) + Sigstore attestations wired in `release.yml`; multi-arch GHCR image build in `release-container.yml`; Homebrew tap formula at `0xD1g5/homebrew-quirk`; towncrier+changelog.d/; version single-source-of-truth in `pyproject.toml [project.version]`; SECURITY.md (90-day disclosure SLA), CODE_OF_CONDUCT.md (Contributor Covenant v2.1), docs/release-process.md (semver policy + release runbook + attestation verification + curl|bash non-decision).
 
-**Phase numbering:** Continues from Phase 77 (no `--reset-phase-numbers`).
+**Public-launch polish:** README augmented with badge row + persona triptych (security consultant / IT generalist / compliance officer) + 3-command quickstart; v4.x → v4.10 upgrade guide + `quirk db migrate` CLI (idempotent, additive-only); 4 deterministic sample CBOM fixtures under `examples/cbom/`.
 
-**Research-first:** 4 parallel research agents (Stack / Features / Architecture / Pitfalls) before requirement definition; CMVP attestation and release-engineering tooling are new domains worth domain research.
+**Deferred to release dry-run (5 human UAT items):** real dashboard hero screenshot, asciinema demo recording, end-to-end quickstart test on clean macOS arm64, first `v4.10.0` tag-push verification (PyPI/GHCR/Sigstore), Homebrew tap repo bootstrap with real sdist sha256.
 
-## Current State: v4.9 SHIPPED 2026-05-15
+**Tech debt → v4.10.1:** 6 user-facing docs still reference legacy `pip install quirk[…]`; documentation sweep to use `qu-i-r-k`.
+
+Archive: `.planning/milestones/v4.10-ROADMAP.md` + `.planning/milestones/v4.10-REQUIREMENTS.md`.
+
+**Next milestone:** not yet defined — run `/gsd-new-milestone` to open scope.
+
+## Previous Milestone: v4.9 SHIPPED 2026-05-15
 
 v4.9 "Audit Depth" shipped 2026-05-15 — 9 phases (69–77) + inserted Phase 69.1, 38 plans, 210 commits, 339 files changed (+37,658 / −2,359). All 169 findings from the 2026-05-08 audit ledger are dispositioned: 166 `[x] closed`, 2 `[ ] deferred-*` with rationale, 4 `[ ] wont-fix` with rationale. The zero-bare-open invariant is locked forward via `tests/test_audit_ledger_zero_open.py` (Phase 77 D-31), which fails CI on any regression and additionally enforces that deferred/wont-fix rows carry inline rationale.
 
