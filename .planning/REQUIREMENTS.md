@@ -17,79 +17,79 @@ Research synthesized at `.planning/research/SUMMARY.md` (committed `c5d1d61`).
 
 ### HARDEN — Report Injection Hardening (audit D-06 deferred from v4.8)
 
-- [ ] **HARDEN-01**: All markdown table cells emitted in `quirk/reports/executive.py` and any remaining unguarded paths use `md_cell()` for consistent escape parity with `technical.py`.
-- [ ] **HARDEN-02**: All Jinja2 templates run with `autoescape=True`; every `| safe` filter usage is documented with a justification comment AND wraps a value that has already been sanitized through `nh3.clean()` (allowlist policy defined once in `quirk/util/sanitize.py`).
-- [ ] **HARDEN-03**: Scanner-emitted free-text fields (certificate CNs/SANs, target names, error messages, finding descriptions) are run through `nh3` sanitization before reaching HTML / PDF rendering.
-- [ ] **HARDEN-04**: Playwright PDF rendering disables JavaScript execution AND uses a no-network context; PDF metadata (Title/Author) is set from constants, never from scan content.
-- [ ] **HARDEN-05**: CI grep/AST gate enforces no new `| safe` filter usages without a paired `nh3.clean()` call upstream; modeled on Phase 59 `safe_str` AST gate.
-- [ ] **HARDEN-06**: `nh3>=0.2.17` added as core dependency (replaces `bleach` if present); `pyproject.toml` `[project] dependencies` section updated.
+- [x] **HARDEN-01**: All markdown table cells emitted in `quirk/reports/executive.py` and any remaining unguarded paths use `md_cell()` for consistent escape parity with `technical.py`.
+- [x] **HARDEN-02**: All Jinja2 templates run with `autoescape=True`; every `| safe` filter usage is documented with a justification comment AND wraps a value that has already been sanitized through `nh3.clean()` (allowlist policy defined once in `quirk/util/sanitize.py`).
+- [x] **HARDEN-03**: Scanner-emitted free-text fields (certificate CNs/SANs, target names, error messages, finding descriptions) are run through `nh3` sanitization before reaching HTML / PDF rendering.
+- [x] **HARDEN-04**: Playwright PDF rendering disables JavaScript execution AND uses a no-network context; PDF metadata (Title/Author) is set from constants, never from scan content.
+- [x] **HARDEN-05**: CI grep/AST gate enforces no new `| safe` filter usages without a paired `nh3.clean()` call upstream; modeled on Phase 59 `safe_str` AST gate.
+- [x] **HARDEN-06**: `nh3>=0.2.17` added as core dependency (replaces `bleach` if present); `pyproject.toml` `[project] dependencies` section updated.
 
 ### SMIME — S/MIME LDAP Discovery Scanner (promoted from out-of-scope; agentless via LDAP)
 
-- [ ] **SMIME-01**: New `quirk/scanners/smime_scanner.py` scans the AD LDAP `userCertificate` and `userSMIMECertificate` binary attributes via the existing `ldap3` connection used by the Kerberos scanner; no IMAP, no mailbox content access.
-- [ ] **SMIME-02**: Each retrieved certificate is parsed via `cryptography.x509.load_der_x509_certificate`, then classified for signing algorithm, key size, expiry, and NIST PQC quantum-safety using the shared `quirk/util/weak_crypto.py` helper.
-- [ ] **SMIME-03**: New ORM column `smime_scan_json` added to `ScanSession` (additive only — no breaking schema migration).
-- [ ] **SMIME-04**: New evidence counters `identity_smime_weak_signing_count`, `identity_smime_expired_count`, `identity_smime_weak_key_count` slot into the existing `identity_trust` subscore via `quirk/intelligence/scoring.py` `SCORE_WEIGHTS`.
-- [ ] **SMIME-05**: New `IdentityFinding` entries emitted with `protocol="SMIME"` (no new Pydantic model needed); React Identity tab automatically picks them up via the existing list rendering.
-- [ ] **SMIME-06**: CBOM integration — Pass 1 emits algorithm components for each S/MIME certificate; Pass 2/3 skip-list extended for SMIME endpoints to avoid spurious TLS-style components.
-- [ ] **SMIME-07**: Chaos lab profile `smime` — Linux-native OpenLDAP container pre-populated with deterministic test users carrying RSA-1024 (HIGH), SHA-1-signed (HIGH), and RSA-2048-SHA-256 (SAFE) S/MIME certs in `userSMIMECertificate`; `expected_results_v4.md` oracle updated.
-- [ ] **SMIME-08**: AST CI check forbids logging any IMAP envelope fields or mailbox content paths from the S/MIME scanner module (privacy invariant — even though current design doesn't touch IMAP, the gate is preventative for future drift).
+- [x] **SMIME-01**: New `quirk/scanners/smime_scanner.py` scans the AD LDAP `userCertificate` and `userSMIMECertificate` binary attributes via the existing `ldap3` connection used by the Kerberos scanner; no IMAP, no mailbox content access.
+- [x] **SMIME-02**: Each retrieved certificate is parsed via `cryptography.x509.load_der_x509_certificate`, then classified for signing algorithm, key size, expiry, and NIST PQC quantum-safety using the shared `quirk/util/weak_crypto.py` helper.
+- [x] **SMIME-03**: New ORM column `smime_scan_json` added to `ScanSession` (additive only — no breaking schema migration).
+- [x] **SMIME-04**: New evidence counters `identity_smime_weak_signing_count`, `identity_smime_expired_count`, `identity_smime_weak_key_count` slot into the existing `identity_trust` subscore via `quirk/intelligence/scoring.py` `SCORE_WEIGHTS`.
+- [x] **SMIME-05**: New `IdentityFinding` entries emitted with `protocol="SMIME"` (no new Pydantic model needed); React Identity tab automatically picks them up via the existing list rendering.
+- [x] **SMIME-06**: CBOM integration — Pass 1 emits algorithm components for each S/MIME certificate; Pass 2/3 skip-list extended for SMIME endpoints to avoid spurious TLS-style components.
+- [x] **SMIME-07**: Chaos lab profile `smime` — Linux-native OpenLDAP container pre-populated with deterministic test users carrying RSA-1024 (HIGH), SHA-1-signed (HIGH), and RSA-2048-SHA-256 (SAFE) S/MIME certs in `userSMIMECertificate`; `expected_results_v4.md` oracle updated.
+- [x] **SMIME-08**: AST CI check forbids logging any IMAP envelope fields or mailbox content paths from the S/MIME scanner module (privacy invariant — even though current design doesn't touch IMAP, the gate is preventative for future drift).
 
 ### ADCS — Windows AD CS Scanner (promoted from v2 backlog; LDAP enumeration, no certipy-ad)
 
-- [ ] **ADCS-01**: New `quirk/scanners/adcs_scanner.py` enumerates AD CS Enrollment Services and Certificate Templates via authenticated LDAP queries to the AD `CN=Configuration,...` partition, using the existing `ldap3` path from `[identity]` extras; **no `certipy-ad` dependency** (would re-trigger the impacket/cryptography conflict).
-- [ ] **ADCS-02**: ESC1, ESC2, ESC3, ESC4, ESC5, ESC6, ESC7, ESC8 misconfiguration findings emitted per template via deterministic LDAP-attribute-driven checks (`msPKI-Certificate-Name-Flag`, `msPKI-Enrollment-Flag`, `pKIExtendedKeyUsage`, etc.); ESC9–ESC16 explicitly out of scope.
+- [x] **ADCS-01**: New `quirk/scanners/adcs_scanner.py` enumerates AD CS Enrollment Services and Certificate Templates via authenticated LDAP queries to the AD `CN=Configuration,...` partition, using the existing `ldap3` path from `[identity]` extras; **no `certipy-ad` dependency** (would re-trigger the impacket/cryptography conflict).
+- [x] **ADCS-02**: ESC1, ESC2, ESC3, ESC4, ESC5, ESC6, ESC7, ESC8 misconfiguration findings emitted per template via deterministic LDAP-attribute-driven checks (`msPKI-Certificate-Name-Flag`, `msPKI-Enrollment-Flag`, `pKIExtendedKeyUsage`, etc.); ESC9–ESC16 explicitly out of scope.
 - [x] **ADCS-03**: New ORM column `adcs_scan_json` added to `ScanSession`. (Phase 80-01, commit 9ed0cd0)
-- [ ] **ADCS-04**: New evidence counters `identity_adcs_weak_template_count`, `identity_adcs_misconfig_count`, `identity_adcs_weak_signing_count` slot into the existing `identity_trust` subscore.
-- [ ] **ADCS-05**: New `IdentityFinding` entries emitted with `protocol="ADCS"`.
-- [ ] **ADCS-06**: CBOM integration — Pass 1 emits algorithm components for CA signing certs and discovered templates; Pass 2/3 skip-list extended for ADCS endpoints.
-- [ ] **ADCS-07**: New `[adcs]` extras group in `pyproject.toml` (separated from `[identity]`); CI matrix pip-install job asserts `cryptography>=44.0` survives every extras combination including `[all]` + `[adcs]`.
-- [ ] **ADCS-08**: Chaos lab profile `adcs` — Linux-native OpenLDAP container with `msPKI-*` schema attributes mimicking deliberately misconfigured templates (one ESC1, one ESC4, one safe baseline); `expected_results_v4.md` oracle updated; docs note that real Windows AD CS validation requires a customer environment.
-- [ ] **ADCS-09**: Active exploitation simulation (e.g., template enrollment requests, certificate signing requests) explicitly disallowed — scanner is read-only LDAP enumeration only. Documented in scanner module header.
+- [x] **ADCS-04**: New evidence counters `identity_adcs_weak_template_count`, `identity_adcs_misconfig_count`, `identity_adcs_weak_signing_count` slot into the existing `identity_trust` subscore.
+- [x] **ADCS-05**: New `IdentityFinding` entries emitted with `protocol="ADCS"`.
+- [x] **ADCS-06**: CBOM integration — Pass 1 emits algorithm components for CA signing certs and discovered templates; Pass 2/3 skip-list extended for ADCS endpoints.
+- [x] **ADCS-07**: New `[adcs]` extras group in `pyproject.toml` (separated from `[identity]`); CI matrix pip-install job asserts `cryptography>=44.0` survives every extras combination including `[all]` + `[adcs]`.
+- [x] **ADCS-08**: Chaos lab profile `adcs` — Linux-native OpenLDAP container with `msPKI-*` schema attributes mimicking deliberately misconfigured templates (one ESC1, one ESC4, one safe baseline); `expected_results_v4.md` oracle updated; docs note that real Windows AD CS validation requires a customer environment.
+- [x] **ADCS-09**: Active exploitation simulation (e.g., template enrollment requests, certificate signing requests) explicitly disallowed — scanner is read-only LDAP enumeration only. Documented in scanner module header.
 
 ### CMVP — CMVP Attestation Feed (Phase 52 D-01 deferred — third FIPS 140-3 tier)
 
-- [ ] **CMVP-01**: New `quirk/compliance/cmvp.py` module with a curated static JSON table (`cmvp_cache.json`) covering ~50 common cryptographic modules used in the field; module includes `last_verified` date + `STALENESS_THRESHOLD_DAYS = 90` matching `model_meta.py` cadence.
-- [ ] **CMVP-02**: CI staleness gate fails if `cmvp_cache.json::last_verified` is older than 90 days (matches existing QRAMM staleness CI workflow).
-- [ ] **CMVP-03**: `quirk compliance cmvp refresh` CLI fetches the latest NIST CMVP validated-modules HTML page via `httpx` + `beautifulsoup4`, parses into the cache schema, and writes back with a fresh `last_verified` date; offline-capable constraint preserved (bundled cache is always present).
-- [ ] **CMVP-04**: `beautifulsoup4>=4.13.0` added as core dependency (used only by the refresh CLI; LXML parser already present).
-- [ ] **CMVP-05**: CBOM Pass-1 `_fips_status()` in `quirk/cbom/classifier.py` extended to emit `coverage` (informational list of CMVP modules that *cover* the algorithm) — never emits `certified: true`. The decision to omit `certified` is logged to PROJECT.md Key Decisions as v4.10 D-NN before any code is written.
-- [ ] **CMVP-06**: HTML/PDF reports gain a "CMVP Coverage" column in the compliance section showing the coverage list per algorithm; missing-coverage cases render as "Not in CMVP catalog" (never as "Not certified").
-- [ ] **CMVP-07**: Negative test asserts that no code path emits `certified: true` for any algorithm; this is a permanent CI invariant.
+- [x] **CMVP-01**: New `quirk/compliance/cmvp.py` module with a curated static JSON table (`cmvp_cache.json`) covering ~50 common cryptographic modules used in the field; module includes `last_verified` date + `STALENESS_THRESHOLD_DAYS = 90` matching `model_meta.py` cadence.
+- [x] **CMVP-02**: CI staleness gate fails if `cmvp_cache.json::last_verified` is older than 90 days (matches existing QRAMM staleness CI workflow).
+- [x] **CMVP-03**: `quirk compliance cmvp refresh` CLI fetches the latest NIST CMVP validated-modules HTML page via `httpx` + `beautifulsoup4`, parses into the cache schema, and writes back with a fresh `last_verified` date; offline-capable constraint preserved (bundled cache is always present).
+- [x] **CMVP-04**: `beautifulsoup4>=4.13.0` added as core dependency (used only by the refresh CLI; LXML parser already present).
+- [x] **CMVP-05**: CBOM Pass-1 `_fips_status()` in `quirk/cbom/classifier.py` extended to emit `coverage` (informational list of CMVP modules that *cover* the algorithm) — never emits `certified: true`. The decision to omit `certified` is logged to PROJECT.md Key Decisions as v4.10 D-NN before any code is written.
+- [x] **CMVP-06**: HTML/PDF reports gain a "CMVP Coverage" column in the compliance section showing the coverage list per algorithm; missing-coverage cases render as "Not in CMVP catalog" (never as "Not certified").
+- [x] **CMVP-07**: Negative test asserts that no code path emits `certified: true` for any algorithm; this is a permanent CI invariant.
 
 ### CHAOS — Chaos Lab Fidelity (Phase 999.83 deferred items)
 
-- [ ] **CHAOS-01**: DEF-999.83-A — `ldaps` / `openldap` profile macOS bind-mount path resolved (named volume + idempotent seed script); chaos lab `ldaps` and `openldap` profiles bring up cleanly on macOS Docker Desktop with `./lab.sh up` and never produce permission-denied seed errors.
-- [ ] **CHAOS-02**: DEF-999.83-B — `rabbitmq` Erlang cookie reliability fixed; chaos lab `broker` profile RabbitMQ container survives `./lab.sh down && ./lab.sh up` cycles without cookie-mismatch failures.
-- [ ] **CHAOS-03**: DEF-999.83-C — `gitea-seed` made idempotent; re-running `./lab.sh up --profile source` on an already-seeded gitea profile is a no-op (no duplicate-org/duplicate-repo errors).
-- [ ] **CHAOS-04**: New v4.10 chaos lab profiles (`smime`, `adcs`) are seeded idempotently from day one — both pass an explicit "re-up after up" regression test (`tests/test_chaos_lab_idempotency.py`).
-- [ ] **CHAOS-05**: Image pin policy enforced — every new service in `docker-compose.yml` must use a fully qualified image tag with sha256 digest (lab.sh check fails CI on `:latest` or untagged image).
-- [ ] **CHAOS-06**: `lab.sh` `ALL_PROFILES` runtime-read pattern continues to pass all parity tests after the two new profiles land; `expected_results_v4.md` oracle covers `smime` and `adcs`.
+- [x] **CHAOS-01**: DEF-999.83-A — `ldaps` / `openldap` profile macOS bind-mount path resolved (named volume + idempotent seed script); chaos lab `ldaps` and `openldap` profiles bring up cleanly on macOS Docker Desktop with `./lab.sh up` and never produce permission-denied seed errors.
+- [x] **CHAOS-02**: DEF-999.83-B — `rabbitmq` Erlang cookie reliability fixed; chaos lab `broker` profile RabbitMQ container survives `./lab.sh down && ./lab.sh up` cycles without cookie-mismatch failures.
+- [x] **CHAOS-03**: DEF-999.83-C — `gitea-seed` made idempotent; re-running `./lab.sh up --profile source` on an already-seeded gitea profile is a no-op (no duplicate-org/duplicate-repo errors).
+- [x] **CHAOS-04**: New v4.10 chaos lab profiles (`smime`, `adcs`) are seeded idempotently from day one — both pass an explicit "re-up after up" regression test (`tests/test_chaos_lab_idempotency.py`).
+- [x] **CHAOS-05**: Image pin policy enforced — every new service in `docker-compose.yml` must use a fully qualified image tag with sha256 digest (lab.sh check fails CI on `:latest` or untagged image).
+- [x] **CHAOS-06**: `lab.sh` `ALL_PROFILES` runtime-read pattern continues to pass all parity tests after the two new profiles land; `expected_results_v4.md` oracle covers `smime` and `adcs`.
 
 ### CLEAN — Dead Code Removal (standing future requirement)
 
-- [ ] **CLEAN-01**: `quirk/intelligence/migration_planner.py` removed; its single import in `quirk/reports/writer.py` inlined or relocated; seven `quirk.reports.writer.categorize_waves` test mocks updated; no test regressions.
+- [x] **CLEAN-01**: `quirk/intelligence/migration_planner.py` removed; its single import in `quirk/reports/writer.py` inlined or relocated; seven `quirk.reports.writer.categorize_waves` test mocks updated; no test regressions.
 
 ### RELENG — Release Engineering (toward v5.0 GA)
 
-- [ ] **RELENG-01**: PyPI distribution name verified — `pip index versions quirk` checked; if `quirk` is taken, an alternate name (e.g. `quirk-scan`, `qu-i-r-k`) is selected AND a v4.10 D-NN decision is logged before any release commits land.
-- [ ] **RELENG-02**: PyPI Trusted Publishers configured via GitHub OIDC (no stored API tokens); workflow `.github/workflows/release.yml` publishes wheel + sdist on tag push.
-- [ ] **RELENG-03**: Sigstore attestations automatically generated by the PyPI publish action (Trusted Publishers includes attestation by default); attestation verification documented in `docs/release-process.md`.
-- [ ] **RELENG-04**: `towncrier` configured for CHANGELOG automation; per-PR news fragments under `news/`; `towncrier build` is the release-script entry point that consumes `docs/release-notes/*.md` shape into the top-level `CHANGELOG.md`.
-- [ ] **RELENG-05**: `SECURITY.md` published at repo root — defines vuln disclosure SLA (90 days), GitHub private vulnerability reporting enabled, point of contact, scope statement (in-scope vs out-of-scope vulnerability classes).
-- [ ] **RELENG-06**: `CODE_OF_CONDUCT.md` published at repo root (Contributor Covenant v2.1 or equivalent).
-- [ ] **RELENG-07**: `docs/release-process.md` documents the version policy (semver commitments, EOL cadence, what triggers a major/minor/patch bump) and the step-by-step release runbook.
-- [ ] **RELENG-08**: Single source of truth for version string — `quirk/__init__.py::__version__` is the canonical source; `pyproject.toml`, CLI banner, dashboard footer, CBOM metadata, and CHANGELOG all derive from it; `tests/test_version.py` enforces parity.
+- [x] **RELENG-01**: PyPI distribution name verified — `pip index versions quirk` checked; if `quirk` is taken, an alternate name (e.g. `quirk-scan`, `qu-i-r-k`) is selected AND a v4.10 D-NN decision is logged before any release commits land.
+- [x] **RELENG-02**: PyPI Trusted Publishers configured via GitHub OIDC (no stored API tokens); workflow `.github/workflows/release.yml` publishes wheel + sdist on tag push.
+- [x] **RELENG-03**: Sigstore attestations automatically generated by the PyPI publish action (Trusted Publishers includes attestation by default); attestation verification documented in `docs/release-process.md`.
+- [x] **RELENG-04**: `towncrier` configured for CHANGELOG automation; per-PR news fragments under `news/`; `towncrier build` is the release-script entry point that consumes `docs/release-notes/*.md` shape into the top-level `CHANGELOG.md`.
+- [x] **RELENG-05**: `SECURITY.md` published at repo root — defines vuln disclosure SLA (90 days), GitHub private vulnerability reporting enabled, point of contact, scope statement (in-scope vs out-of-scope vulnerability classes).
+- [x] **RELENG-06**: `CODE_OF_CONDUCT.md` published at repo root (Contributor Covenant v2.1 or equivalent).
+- [x] **RELENG-07**: `docs/release-process.md` documents the version policy (semver commitments, EOL cadence, what triggers a major/minor/patch bump) and the step-by-step release runbook.
+- [x] **RELENG-08**: Single source of truth for version string — `quirk/__init__.py::__version__` is the canonical source; `pyproject.toml`, CLI banner, dashboard footer, CBOM metadata, and CHANGELOG all derive from it; `tests/test_version.py` enforces parity.
 
 ### LAUNCH — Public-Launch Polish
 
-- [ ] **LAUNCH-01**: Marketing-grade README at repo root — badges (CI/PyPI/license/security), 3-command quickstart, hero screenshot of dashboard, animated demo asset link, one-paragraph value proposition for each user persona.
-- [ ] **LAUNCH-02**: Homebrew tap formula (personal/org tap, not homebrew-core) — installs latest PyPI release in a `pipx`-managed venv; `brew install <org>/quirk/quirk` runs cleanly on macOS arm64.
-- [ ] **LAUNCH-03**: GHCR-published Docker image — multi-arch (linux/amd64 + linux/arm64); Dockerfile audited against current project structure; `docker run ghcr.io/<org>/quirk:latest --help` works.
-- [ ] **LAUNCH-04**: Upgrade guide `docs/upgrade-guide.md` covers v4.x → v4.10 SQLite schema migrations (additive only — already constrained); includes `quirk db migrate` command that no-ops on already-current schemas.
-- [ ] **LAUNCH-05**: Sample CBOM outputs published under `examples/` — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion); checked into repo as deterministic fixtures.
-- [ ] **LAUNCH-06**: Quickstart polish in `docs/getting-started.md` — three-step path (install → scan → view dashboard) tested end-to-end on a clean macOS arm64 machine before release.
-- [ ] **LAUNCH-07**: `curl | bash` installer explicitly NOT shipped (anti-feature for a security tool); documented in `docs/release-process.md` as a deliberate non-decision.
+- [x] **LAUNCH-01**: Marketing-grade README at repo root — badges (CI/PyPI/license/security), 3-command quickstart, hero screenshot of dashboard, animated demo asset link, one-paragraph value proposition for each user persona.
+- [x] **LAUNCH-02**: Homebrew tap formula (personal/org tap, not homebrew-core) — installs latest PyPI release in a `pipx`-managed venv; `brew install <org>/quirk/quirk` runs cleanly on macOS arm64.
+- [x] **LAUNCH-03**: GHCR-published Docker image — multi-arch (linux/amd64 + linux/arm64); Dockerfile audited against current project structure; `docker run ghcr.io/<org>/quirk:latest --help` works.
+- [x] **LAUNCH-04**: Upgrade guide `docs/upgrade-guide.md` covers v4.x → v4.10 SQLite schema migrations (additive only — already constrained); includes `quirk db migrate` command that no-ops on already-current schemas.
+- [x] **LAUNCH-05**: Sample CBOM outputs published under `examples/` — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion); checked into repo as deterministic fixtures.
+- [x] **LAUNCH-06**: Quickstart polish in `docs/getting-started.md` — three-step path (install → scan → view dashboard) tested end-to-end on a clean macOS arm64 machine before release.
+- [x] **LAUNCH-07**: `curl | bash` installer explicitly NOT shipped (anti-feature for a security tool); documented in `docs/release-process.md` as a deliberate non-decision.
 
 ---
 
