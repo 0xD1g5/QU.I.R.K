@@ -268,3 +268,101 @@ Subsequent publishes inherit the public visibility automatically.
 - **Distroless / Alpine variants** — `python:3.11-slim` is the only base
   (per Phase 85 D-LAUNCH Docker). `alpine` has musl/cryptography wheel
   friction; distroless removes the shell users need for first-run debugging.
+
+## Homebrew Tap (LAUNCH-02)
+
+QU.I.R.K. ships a Homebrew tap formula so macOS consultants can install with a
+single command, with no Python / pip / virtualenv knowledge required. The tap
+is a **personal/org tap** (`0xD1g5/homebrew-quirk`), **not** homebrew-core —
+homebrew-core's submission and review process is too slow for v4.10's launch
+window, and a personal tap lets us iterate without external maintainer review.
+
+**End-user install command** (the only line users need):
+
+```bash
+brew install 0xD1g5/quirk/quirk
+```
+
+The canonical formula source is `Formula/quirk.rb` in this repo. On each
+release, the file is copied verbatim into the tap repo so that code review +
+changelog continuity happen here, not in the (low-traffic) tap repo.
+
+### One-time tap-repo bootstrap
+
+Do this once, before the first v4.10 release ships:
+
+1. Create the GitHub repo `0xD1g5/homebrew-quirk` (public, MIT-licensed, no
+   wiki / no issues — it is a pure formula host). The `homebrew-` prefix is
+   mandatory: `brew tap 0xD1g5/quirk` strips the prefix when resolving.
+2. Initialize the repo with a top-level `Formula/` directory.
+3. Copy `Formula/quirk.rb` from this repo to `Formula/quirk.rb` of the tap repo.
+4. Commit + push with message `chore: bootstrap homebrew-quirk tap`.
+5. Smoke-test the tap: `brew tap 0xD1g5/quirk && brew tap-info 0xD1g5/quirk`
+   (the formula will still fail to install at this stage because the
+   `url`/`sha256` are placeholders pointing at a non-existent 0.0.0 release —
+   that is expected and resolves at the first real release below).
+
+### Per-release formula update procedure
+
+After every PyPI publish (Trusted Publishers workflow per the earlier
+"PyPI Trusted Publishers" section in this document), update the formula:
+
+1. **Wait for PyPI sdist availability.** The sdist must be reachable at:
+
+   ```
+   https://files.pythonhosted.org/packages/source/q/qu-i-r-k/qu-i-r-k-X.Y.Z.tar.gz
+   ```
+
+   (replace `X.Y.Z` with the release version). PyPI's CDN is usually <30s
+   behind the publish step; if `curl -fsSI <url>` 404s, wait and retry.
+
+2. **Compute the sdist sha256:**
+
+   ```bash
+   curl -fsSL https://files.pythonhosted.org/packages/source/q/qu-i-r-k/qu-i-r-k-X.Y.Z.tar.gz \
+     | shasum -a 256
+   ```
+
+3. **Edit `Formula/quirk.rb` in BOTH this repo AND the tap repo.** Update:
+   - `url` → bump `X.Y.Z` in both occurrences of the version segment.
+   - `sha256` → paste the value from step 2.
+   - The formula `version` is implicit from the `url` filename — no separate
+     bump needed.
+
+4. **Commit + push both repos** with message
+   `chore(homebrew): bump quirk to vX.Y.Z`.
+
+5. **Smoke-test the published install** on a clean macOS arm64 machine:
+
+   ```bash
+   brew untap 0xD1g5/quirk 2>/dev/null || true
+   brew tap 0xD1g5/quirk
+   brew install 0xD1g5/quirk/quirk
+   quirk --version   # must print X.Y.Z
+   ```
+
+   This exercises the formula's `test do` block via `brew test quirk` as well
+   as the actual user install path.
+
+### Why pipx-style venv isolation
+
+Homebrew's system Python (`python@3.11`) should never host third-party
+packages — `pip install` into the Homebrew Python is unsupported and breaks
+on every `brew upgrade python@3.11`. The standard Homebrew-idiomatic answer
+for a Python CLI is a virtualenv created under the formula's `libexec`, with
+the entrypoint script symlinked into `bin` via `bin.install_symlink` — that
+is exactly what `Formula/quirk.rb` does via `Language::Python::Virtualenv`.
+The user-facing effect is identical to `pipx install qu-i-r-k`: one isolated
+Python environment per CLI, no cross-contamination, clean `brew uninstall`.
+The formula also `depends_on "pipx"` so users have it available for other
+Python CLIs, matching Homebrew's published guidance for Python tooling.
+
+### What this section deliberately does NOT do
+
+- **Submit to homebrew-core.** Out of scope for v4.10; the personal tap ships
+  immediately and is fully sufficient for the LAUNCH-02 success criterion.
+  Revisit homebrew-core as a future milestone once the formula has been
+  stable across several releases.
+- **Bottle / pre-built binaries.** The formula installs from PyPI sdist on
+  the user's machine. Bottle generation requires a homebrew-core-style build
+  farm and is not justified for the v4.10 audience.
