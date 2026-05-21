@@ -1,0 +1,95 @@
+# Multi-arch GHCR container release for QU.I.R.K.
+#
+# Sibling workflow to release.yml (Phase 84 PyPI publish). Rationale for a
+# separate file (Plan 85-02 <interfaces> choice-point resolution):
+#   1. Permission surfaces differ — this workflow needs `packages: write`
+#      for GHCR push; release.yml needs `id-token: write` for OIDC Trusted
+#      Publisher. Keeping them separate makes each surface auditable.
+#   2. Blast radius — a container build failure must NOT block PyPI artifact
+#      publish. The PyPI wheel is the primary distribution.
+#   3. Cross-workflow dependencies in GitHub Actions are limited — we wait
+#      for PyPI availability by polling the JSON API (step `wait-for-pypi`).
+#
+# Security note: all references to potentially attacker-controlled context
+# (e.g. github.ref_name) are funneled into env vars before being used in any
+# `run:` block, never interpolated directly into the shell.
+#
+# One-time setup AFTER the first successful publish:
+#   The GHCR package `ghcr.io/0xd1g5/quirk` is private by default. Flip it to
+#   public via GitHub UI: Settings -> Packages -> quirk -> Change visibility
+#   -> Public. Subsequent publishes inherit the visibility.
+
+name: release-container
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute version from tag
+        id: ver
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # REF_NAME is e.g. `v4.10.0`; strip the leading `v`.
+          version="${REF_NAME#v}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved QUIRK_VERSION=${version}"
+
+      - name: Wait for PyPI wheel availability
+        # Poll PyPI until the wheel for this version is published by
+        # release.yml. Max ~10 minutes (20 attempts x 30s) -- accommodates
+        # PyPI CDN propagation after a Trusted Publisher push.
+        env:
+          PYPI_VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          url="https://pypi.org/pypi/qu-i-r-k/${PYPI_VERSION}/json"
+          echo "Polling ${url}"
+          for attempt in $(seq 1 20); do
+            if curl -fsS "${url}" > /dev/null; then
+              echo "PyPI version ${PYPI_VERSION} is available (attempt ${attempt})."
+              exit 0
+            fi
+            echo "Attempt ${attempt}/20 -- not yet available; sleeping 30s."
+            sleep 30
+          done
+          echo "PyPI version ${PYPI_VERSION} did not become available after 10 minutes." >&2
+          exit 1
+
+      - name: Set up QEMU (arm64 emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          build-args: |
+            QUIRK_VERSION=${{ steps.ver.outputs.version }}
+          tags: |
+            ghcr.io/0xd1g5/quirk:latest
+            ghcr.io/0xd1g5/quirk:v${{ steps.ver.outputs.version }}

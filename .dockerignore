@@ -1,0 +1,48 @@
+# Keep the build context tight — the Dockerfile installs QU.I.R.K. from PyPI,
+# so almost nothing from the repo needs to ship into the image. Target a
+# build context under 5 MB.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# CI / planning / project meta
+.github
+.planning
+.claude
+.continue-here.md
+
+# Tests + dev tooling
+tests
+chaos-lab
+quantum-chaos-enterprise-lab
+labs
+
+# Docs (the image doesn't need them — they ship via the website / Obsidian)
+docs
+examples
+
+# Python build / cache artifacts
+.venv
+venv
+env
+dist
+build
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.tox
+
+# Editor / OS junk
+.vscode
+.idea
+.DS_Store
+
+# Local-machine paths that should never be in a build context
+vault*
+/Users
