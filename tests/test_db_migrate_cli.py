@@ -36,20 +36,28 @@ def _snapshot_columns(engine) -> dict[str, set[str]]:
     return {t: {c["name"] for c in insp.get_columns(t)} for t in insp.get_table_names()}
 
 
-def test_fresh_db_reports_every_column_added(tmp_path: Path) -> None:
-    """First migrate run against a freshly-created DB reports every additive
-    column as `added`."""
-    from quirk.db import (
-        Base,
-        get_engine,
-        run_additive_migration,
-    )
+def _create_legacy_schema(engine) -> None:
+    """Simulate a pre-v4.x on-disk DB: create `crypto_endpoints` and
+    `qramm_answers` with only their pre-additive-migration column sets.
 
-    db_path = tmp_path / "fresh.db"
+    This is the surface `run_additive_migration` exists to upgrade. A "fresh
+    DB" via `Base.metadata.create_all` would already contain every column
+    declared on the ORM models — defeating the test."""
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE crypto_endpoints (id INTEGER PRIMARY KEY)"))
+        conn.execute(text("CREATE TABLE qramm_answers (id INTEGER PRIMARY KEY)"))
+
+
+def test_fresh_db_reports_every_column_added(tmp_path: Path) -> None:
+    """First migrate run against a legacy (pre-additive-columns) DB reports
+    every additive column as `added`."""
+    from quirk.db import get_engine, run_additive_migration
+
+    db_path = tmp_path / "legacy.db"
     engine = get_engine(str(db_path))
-    # Create base schema only — no _ensure_columns calls yet, so all additive
-    # columns are missing.
-    Base.metadata.create_all(engine, checkfirst=True)
+    _create_legacy_schema(engine)
 
     results = run_additive_migration(engine, dry_run=False)
 
@@ -91,11 +99,11 @@ def test_second_run_reports_already_present(tmp_path: Path) -> None:
 def test_dry_run_does_not_write(tmp_path: Path) -> None:
     """`dry_run=True` returns the same diagnostic shape as a real run but
     issues zero ALTER TABLE statements."""
-    from quirk.db import Base, get_engine, run_additive_migration
+    from quirk.db import get_engine, run_additive_migration
 
     db_path = tmp_path / "dry.db"
     engine = get_engine(str(db_path))
-    Base.metadata.create_all(engine, checkfirst=True)
+    _create_legacy_schema(engine)
 
     before = _snapshot_columns(engine)
 
@@ -110,11 +118,11 @@ def test_dry_run_does_not_write(tmp_path: Path) -> None:
 
 def test_result_shape(tmp_path: Path) -> None:
     """ColumnMigrationResult exposes table, column, status."""
-    from quirk.db import Base, get_engine, run_additive_migration
+    from quirk.db import get_engine, run_additive_migration
 
     db_path = tmp_path / "shape.db"
     engine = get_engine(str(db_path))
-    Base.metadata.create_all(engine, checkfirst=True)
+    _create_legacy_schema(engine)
 
     results = run_additive_migration(engine, dry_run=True)
     sample = results[0]

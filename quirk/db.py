@@ -1,13 +1,31 @@
 import os
 import re
 from contextlib import contextmanager
-from typing import Iterator, Optional
+from dataclasses import dataclass
+from typing import Iterator, Literal, Optional
 
 from sqlalchemy import create_engine, event, inspect as sa_inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from quirk.models import Base  # Declarative Base from quirk/models.py
+
+
+@dataclass(frozen=True)
+class ColumnMigrationResult:
+    """Phase 85-01 LAUNCH-04: per-column outcome from `run_additive_migration`.
+
+    Attributes:
+        table: SQLite table name the column belongs to.
+        column: Column name.
+        status: ``"added"`` if the column was missing (and was either added
+            now or — under ``dry_run=True`` — *would* be added), else
+            ``"already-present"``.
+    """
+
+    table: str
+    column: str
+    status: Literal["added", "already-present"]
 
 
 @event.listens_for(Engine, "connect")
@@ -137,6 +155,83 @@ def _ensure_columns(
             if col not in existing:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
         conn.commit()
+
+
+# ---------- Phase 85-01 LAUNCH-04: public additive-migration registry --------
+#
+# `_ADDITIVE_MIGRATIONS` enumerates every (table, columns) pair already
+# governed by `_ensure_columns` callsites in `init_db`. It is the single
+# source of truth shared by both `init_db` and `run_additive_migration`.
+#
+# Pure tables (those created via `Base.metadata.create_all` — qramm_*,
+# scheduled_*, scan_jobs, scan_checkpoints) are intentionally NOT listed
+# here: they are never "additively migrated", they are created whole or not
+# at all by their `_ensure_*_table` helpers.
+#
+# Ordering preserved exactly from the prior 8-helper chain.
+_ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
+    ("crypto_endpoints", _IDENTITY_COLUMNS),   # v4.2 identity
+    ("crypto_endpoints", _GCP_COLUMNS),         # v4.3 GCP
+    ("crypto_endpoints", _V43_COLUMNS),         # v4.3 DAT
+    ("crypto_endpoints", _EMAIL_COLUMNS),       # Phase 32 email
+    ("crypto_endpoints", _BROKER_COLUMNS),      # Phase 33 broker
+    ("crypto_endpoints", _PHASE41_COLUMNS),     # Phase 41 D-11
+    ("crypto_endpoints", _PHASE46_COLUMNS),     # Phase 46
+    ("qramm_answers",    _PHASE54_QRAMM_ANSWER_COLUMNS),  # Phase 54
+)
+
+
+def run_additive_migration(
+    engine,
+    *,
+    dry_run: bool = False,
+) -> list[ColumnMigrationResult]:
+    """Phase 85-01 LAUNCH-04: idempotent additive-only column migration.
+
+    Walks every (table, column) pair in ``_ADDITIVE_MIGRATIONS``, classifies
+    each as ``"added"`` (currently missing) or ``"already-present"``, and
+    — unless ``dry_run`` is True — invokes the existing allowlist-guarded
+    ``_ensure_columns`` installer to bring the schema current.
+
+    Per D-LAUNCH-04: additive-only — this helper NEVER drops, renames, or
+    retypes columns, and never raises on an `already-present` column. All
+    SQL still flows through the ``_SAFE_COL_RE`` / ``_SAFE_COL_TYPE_RE``
+    allowlists in ``_ensure_columns``; this function does not interpolate
+    any DDL itself.
+
+    Args:
+        engine: SQLAlchemy Engine bound to the target SQLite database.
+            Caller is responsible for ensuring the underlying base tables
+            exist (typically via ``Base.metadata.create_all`` or
+            ``init_db``).
+        dry_run: When True, report what *would* be added but write nothing.
+
+    Returns:
+        One ``ColumnMigrationResult`` per (table, column) pair in
+        ``_ADDITIVE_MIGRATIONS``, in declaration order.
+    """
+    results: list[ColumnMigrationResult] = []
+    insp = sa_inspect(engine)
+    for table, columns in _ADDITIVE_MIGRATIONS:
+        existing = {c["name"] for c in insp.get_columns(table)}
+        missing: list[tuple[str, str]] = []
+        for col, col_type in columns:
+            if col in existing:
+                results.append(
+                    ColumnMigrationResult(table=table, column=col, status="already-present")
+                )
+            else:
+                results.append(
+                    ColumnMigrationResult(table=table, column=col, status="added")
+                )
+                missing.append((col, col_type))
+        if missing and not dry_run:
+            # Reuse the existing allowlist-guarded installer for the
+            # missing-only subset. _ensure_columns is itself idempotent,
+            # but passing only the missing subset keeps the audit trail
+            # tight and avoids a second inspector pass per table.
+            _ensure_columns(engine, table, tuple(missing))
+    return results
 
 
 def _ensure_qramm_profiles_fk(engine) -> None:
@@ -277,16 +372,17 @@ def init_db(db_path: str) -> Engine:
 
     # Create schema (checkfirst=True prevents "table already exists" on restart)
     Base.metadata.create_all(engine, checkfirst=True)
-    # Phase 77 D-21: column-adding migrations now flow through the generic
-    # ``_ensure_columns(engine, table, expected)`` helper. Ordering preserved
-    # exactly from the prior 8-helper chain.
-    _ensure_columns(engine, "crypto_endpoints", _IDENTITY_COLUMNS)   # v4.2 identity
-    _ensure_columns(engine, "crypto_endpoints", _GCP_COLUMNS)         # v4.3 GCP
-    _ensure_columns(engine, "crypto_endpoints", _V43_COLUMNS)         # v4.3 DAT
-    _ensure_columns(engine, "crypto_endpoints", _EMAIL_COLUMNS)       # Phase 32 email
-    _ensure_columns(engine, "crypto_endpoints", _BROKER_COLUMNS)      # Phase 33 broker
-    _ensure_columns(engine, "crypto_endpoints", _PHASE41_COLUMNS)     # Phase 41 D-11
-    _ensure_columns(engine, "crypto_endpoints", _PHASE46_COLUMNS)     # Phase 46
+    # Phase 77 D-21: column-adding migrations flow through the generic
+    # `_ensure_columns(engine, table, expected)` helper.
+    # Phase 85-01 LAUNCH-04: the (table, columns) tuples are now sourced from
+    # `_ADDITIVE_MIGRATIONS` so `init_db` and `run_additive_migration` share
+    # one registry. Ordering is preserved from the prior 8-helper chain.
+    # The qramm_answers migration is split out so `_ensure_qramm_tables`
+    # (which creates the table) runs *before* its ALTER TABLE step.
+    for table, columns in _ADDITIVE_MIGRATIONS:
+        if table == "qramm_answers":
+            continue  # handled after _ensure_qramm_tables below
+        _ensure_columns(engine, table, columns)
     _ensure_qramm_tables(engine)                                       # Phase 51 QRAMM-01
     _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)  # Phase 54
     _ensure_qramm_profiles_fk(engine)    # Phase 70 BLOCK-07/D-01 — FK retrofit
