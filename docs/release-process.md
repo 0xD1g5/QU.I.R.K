@@ -192,3 +192,79 @@ provenance:
 If you encounter instructions on a third-party site that ask you to pipe a
 shell script from the internet directly into `bash` to install QU.I.R.K., do
 not run them — they are not endorsed by the project.
+
+## Container Image (LAUNCH-03)
+
+Multi-arch container images are published to **GitHub Container Registry**
+on every `v*.*.*` tag push, in parallel with — and downstream of — the PyPI
+publish workflow.
+
+### Coordinates
+
+- **Workflow:** `.github/workflows/release-container.yml`
+- **Trigger:** push of a `v*.*.*` tag (the same trigger that drives
+  `release.yml`).
+- **Registry:** `ghcr.io/0xd1g5/quirk` (lowercase per GHCR namespace rules;
+  the GitHub org `0xD1g5` is normalized to `0xd1g5` for the image path).
+- **Tags published per release:** `:latest` and `:vX.Y.Z`.
+- **Platforms:** `linux/amd64`, `linux/arm64` — built via
+  `docker/build-push-action@v6` with QEMU emulation in GitHub Actions.
+
+### How the container stays in lock-step with the PyPI wheel
+
+The Dockerfile installs QU.I.R.K. from PyPI:
+
+```dockerfile
+RUN pip install --no-cache-dir "qu-i-r-k[all]==${QUIRK_VERSION}"
+```
+
+`QUIRK_VERSION` is injected by the workflow from the triggering git tag.
+Before the build runs, the workflow polls
+`https://pypi.org/pypi/qu-i-r-k/${version}/json` for up to 10 minutes so the
+container build only proceeds once the PyPI wheel has propagated. This means
+**the bits inside the container are byte-identical to `pip install qu-i-r-k`
+on the host** — no parallel build path, no source-tree drift.
+
+### Verification after a release
+
+After a tag publish has completed both workflows:
+
+```bash
+docker pull ghcr.io/0xd1g5/quirk:vX.Y.Z
+docker run --rm ghcr.io/0xd1g5/quirk:vX.Y.Z
+```
+
+The container's default `CMD` is `quirk --help`, so a successful run prints
+the CLI help banner including the version string. Confirm the version
+matches the tag.
+
+For multi-arch confirmation:
+
+```bash
+docker buildx imagetools inspect ghcr.io/0xd1g5/quirk:vX.Y.Z
+```
+
+The manifest list MUST contain both `linux/amd64` and `linux/arm64`
+descriptors.
+
+### One-time setup (first publish only)
+
+The GHCR package is created as **private** on first publish. Flip it to
+public so unauthenticated `docker pull` works for evaluators:
+
+1. Open `https://github.com/0xD1g5/QU.I.R.K./pkgs/container/quirk` after the
+   first successful `release-container` workflow run.
+2. Click **Package settings -> Change visibility -> Public**.
+3. Confirm with the package name.
+
+Subsequent publishes inherit the public visibility automatically.
+
+### What this image deliberately does NOT include
+
+- **`playwright` browsers** — `qu-i-r-k[all]` declares `playwright` as an
+  optional extra, but the headless browser binaries are out of scope for the
+  v4.10 GHCR ship to keep the image lean. Pull them at runtime inside the
+  container if a specific scan path needs them.
+- **Distroless / Alpine variants** — `python:3.11-slim` is the only base
+  (per Phase 85 D-LAUNCH Docker). `alpine` has musl/cryptography wheel
+  friction; distroless removes the shell users need for first-run debugging.
