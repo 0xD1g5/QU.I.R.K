@@ -1,0 +1,898 @@
+{
+  "components": [
+    {
+      "bom-ref": "crypto/algorithm/aes-128-cbc",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 128,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 1,
+          "primitive": "block-cipher"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "AES-128-CBC",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/aes-256-gcm",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 256,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 1,
+          "primitive": "ae"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "AES-256-GCM",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/chacha20-poly1305",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 256,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 1,
+          "primitive": "ae"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "ChaCha20-Poly1305",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/rsa",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 112,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "pke"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "RSA",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/rsa-1024",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 80,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "parameterSetIdentifier": "1024",
+          "primitive": "pke"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "RSA-1024",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/rsa-2048",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 112,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "parameterSetIdentifier": "2048",
+          "primitive": "pke"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "RSA-2048",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/rsa-kex",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "executionEnvironment": "software-plain-ram",
+          "primitive": "unknown"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "RSA-kex",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/sha-1",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 80,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "hash"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "SHA-1",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/sha-256",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 128,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "hash"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "SHA-256",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/sha-384",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 192,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 2,
+          "primitive": "hash"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "SHA-384",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/x25519",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 128,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "key-agree"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "X25519",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:13443",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=phaseA.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=phaseA.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:13443",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:14443",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=phaseA.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=phaseA.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-1024"
+        }
+      },
+      "name": "cert:localhost:14443",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:15443",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=phaseA.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha1withrsaencryption",
+          "subjectName": "CN=phaseA.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:15443",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:25671",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=broker.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=broker.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:25671",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:26380",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=broker.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=broker.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:26380",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:29093",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=broker.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=broker.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:29093",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:30025",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=postfix.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=postfix.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:30025",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:30110",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=dovecot.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=dovecot.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:30110",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:30143",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=dovecot.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=dovecot.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:30143",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:30465",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=postfix.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=postfix.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:30465",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:30587",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=postfix.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=postfix.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:30587",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:30993",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=dovecot.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=dovecot.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:30993",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/certificate/localhost:30995",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "certificateFormat": "X.509",
+          "issuerName": "CN=dovecot.chaos.local",
+          "signatureAlgorithmRef": "crypto/algorithm/sha256withrsaencryption",
+          "subjectName": "CN=dovecot.chaos.local",
+          "subjectPublicKeyRef": "crypto/algorithm/rsa-2048"
+        }
+      },
+      "name": "cert:localhost:30995",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:13443",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/aes-256-gcm",
+                "crypto/algorithm/rsa",
+                "crypto/algorithm/sha-384",
+                "crypto/algorithm/x25519"
+              ],
+              "name": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+            }
+          ],
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:13443",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:14443",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/aes-256-gcm",
+                "crypto/algorithm/rsa",
+                "crypto/algorithm/sha-384",
+                "crypto/algorithm/x25519"
+              ],
+              "name": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+            }
+          ],
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:14443",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:15443",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/aes-256-gcm",
+                "crypto/algorithm/rsa",
+                "crypto/algorithm/sha-384",
+                "crypto/algorithm/x25519"
+              ],
+              "name": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+            }
+          ],
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:15443",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:25671",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:25671",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:26380",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:26380",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:29093",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/aes-128-cbc",
+                "crypto/algorithm/rsa-kex",
+                "crypto/algorithm/sha-1"
+              ],
+              "name": "TLS_RSA_WITH_AES_128_CBC_SHA"
+            }
+          ],
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:29093",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:30025",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/rsa-kex",
+                "crypto/algorithm/sha-384"
+              ],
+              "name": "TLS_RSA_WITH_ARIA_256_GCM_SHA384"
+            }
+          ],
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:30025",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:30110",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/chacha20-poly1305",
+                "crypto/algorithm/sha-256"
+              ],
+              "name": "TLS_CHACHA20_POLY1305_SHA256"
+            }
+          ],
+          "type": "tls",
+          "version": "1.3"
+        }
+      },
+      "name": "protocol:tls:localhost:30110",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:30143",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/chacha20-poly1305",
+                "crypto/algorithm/sha-256"
+              ],
+              "name": "TLS_CHACHA20_POLY1305_SHA256"
+            }
+          ],
+          "type": "tls",
+          "version": "1.3"
+        }
+      },
+      "name": "protocol:tls:localhost:30143",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:30465",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/rsa-kex",
+                "crypto/algorithm/sha-384"
+              ],
+              "name": "TLS_RSA_WITH_ARIA_256_GCM_SHA384"
+            }
+          ],
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:30465",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:30587",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/rsa-kex",
+                "crypto/algorithm/sha-384"
+              ],
+              "name": "TLS_RSA_WITH_ARIA_256_GCM_SHA384"
+            }
+          ],
+          "type": "tls",
+          "version": "1.2"
+        }
+      },
+      "name": "protocol:tls:localhost:30587",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:30993",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/chacha20-poly1305",
+                "crypto/algorithm/sha-256"
+              ],
+              "name": "TLS_CHACHA20_POLY1305_SHA256"
+            }
+          ],
+          "type": "tls",
+          "version": "1.3"
+        }
+      },
+      "name": "protocol:tls:localhost:30993",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/protocol/tls/localhost:30995",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "cipherSuites": [
+            {
+              "algorithms": [
+                "crypto/algorithm/chacha20-poly1305",
+                "crypto/algorithm/sha-256"
+              ],
+              "name": "TLS_CHACHA20_POLY1305_SHA256"
+            }
+          ],
+          "type": "tls",
+          "version": "1.3"
+        }
+      },
+      "name": "protocol:tls:localhost:30995",
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/sha1withrsaencryption",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 80,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "signature"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "sha1WithRSAEncryption",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/algorithm/sha256withrsaencryption",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 112,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "signature"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "sha256WithRSAEncryption",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    }
+  ],
+  "dependencies": [
+    {
+      "dependsOn": [
+        "crypto/algorithm/aes-128-cbc",
+        "crypto/algorithm/aes-256-gcm",
+        "crypto/algorithm/chacha20-poly1305",
+        "crypto/algorithm/rsa",
+        "crypto/algorithm/rsa-1024",
+        "crypto/algorithm/rsa-2048",
+        "crypto/algorithm/rsa-kex",
+        "crypto/algorithm/sha-1",
+        "crypto/algorithm/sha-256",
+        "crypto/algorithm/sha-384",
+        "crypto/algorithm/sha1withrsaencryption",
+        "crypto/algorithm/sha256withrsaencryption",
+        "crypto/algorithm/x25519",
+        "crypto/certificate/localhost:13443",
+        "crypto/certificate/localhost:14443",
+        "crypto/certificate/localhost:15443",
+        "crypto/certificate/localhost:25671",
+        "crypto/certificate/localhost:26380",
+        "crypto/certificate/localhost:29093",
+        "crypto/certificate/localhost:30025",
+        "crypto/certificate/localhost:30110",
+        "crypto/certificate/localhost:30143",
+        "crypto/certificate/localhost:30465",
+        "crypto/certificate/localhost:30587",
+        "crypto/certificate/localhost:30993",
+        "crypto/certificate/localhost:30995",
+        "crypto/protocol/tls/localhost:13443",
+        "crypto/protocol/tls/localhost:14443",
+        "crypto/protocol/tls/localhost:15443",
+        "crypto/protocol/tls/localhost:25671",
+        "crypto/protocol/tls/localhost:26380",
+        "crypto/protocol/tls/localhost:29093",
+        "crypto/protocol/tls/localhost:30025",
+        "crypto/protocol/tls/localhost:30110",
+        "crypto/protocol/tls/localhost:30143",
+        "crypto/protocol/tls/localhost:30465",
+        "crypto/protocol/tls/localhost:30587",
+        "crypto/protocol/tls/localhost:30993",
+        "crypto/protocol/tls/localhost:30995"
+      ],
+      "ref": "BomRef.fixture.metadata-component"
+    },
+    {
+      "ref": "crypto/algorithm/aes-128-cbc"
+    },
+    {
+      "ref": "crypto/algorithm/aes-256-gcm"
+    },
+    {
+      "ref": "crypto/algorithm/chacha20-poly1305"
+    },
+    {
+      "ref": "crypto/algorithm/rsa"
+    },
+    {
+      "ref": "crypto/algorithm/rsa-1024"
+    },
+    {
+      "ref": "crypto/algorithm/rsa-2048"
+    },
+    {
+      "ref": "crypto/algorithm/rsa-kex"
+    },
+    {
+      "ref": "crypto/algorithm/sha-1"
+    },
+    {
+      "ref": "crypto/algorithm/sha-256"
+    },
+    {
+      "ref": "crypto/algorithm/sha-384"
+    },
+    {
+      "ref": "crypto/algorithm/sha1withrsaencryption"
+    },
+    {
+      "ref": "crypto/algorithm/sha256withrsaencryption"
+    },
+    {
+      "ref": "crypto/algorithm/x25519"
+    },
+    {
+      "ref": "crypto/certificate/localhost:13443"
+    },
+    {
+      "ref": "crypto/certificate/localhost:14443"
+    },
+    {
+      "ref": "crypto/certificate/localhost:15443"
+    },
+    {
+      "ref": "crypto/certificate/localhost:25671"
+    },
+    {
+      "ref": "crypto/certificate/localhost:26380"
+    },
+    {
+      "ref": "crypto/certificate/localhost:29093"
+    },
+    {
+      "ref": "crypto/certificate/localhost:30025"
+    },
+    {
+      "ref": "crypto/certificate/localhost:30110"
+    },
+    {
+      "ref": "crypto/certificate/localhost:30143"
+    },
+    {
+      "ref": "crypto/certificate/localhost:30465"
+    },
+    {
+      "ref": "crypto/certificate/localhost:30587"
+    },
+    {
+      "ref": "crypto/certificate/localhost:30993"
+    },
+    {
+      "ref": "crypto/certificate/localhost:30995"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:13443"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:14443"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:15443"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:25671"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:26380"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:29093"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:30025"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:30110"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:30143"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:30465"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:30587"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:30993"
+    },
+    {
+      "ref": "crypto/protocol/tls/localhost:30995"
+    }
+  ],
+  "metadata": {
+    "component": {
+      "bom-ref": "BomRef.fixture.metadata-component",
+      "name": "QU.I.R.K.",
+      "type": "application",
+      "version": "4.4.0"
+    },
+    "timestamp": "2026-01-01T00:00:00+00:00"
+  },
+  "serialNumber": "urn:uuid:00000000-0000-0000-0000-000000000000",
+  "version": 1,
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6"
+}

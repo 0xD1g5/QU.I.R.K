@@ -1,0 +1,50 @@
+{
+  "components": [
+    {
+      "bom-ref": "crypto/algorithm/rsa",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 112,
+          "executionEnvironment": "software-plain-ram",
+          "nistQuantumSecurityLevel": 0,
+          "parameterSetIdentifier": "2048",
+          "primitive": "pke"
+        },
+        "assetType": "algorithm"
+      },
+      "name": "RSA",
+      "properties": [
+        {
+          "name": "quirk:fips140-3-status",
+          "value": "non-approved"
+        }
+      ],
+      "type": "cryptographic-asset"
+    }
+  ],
+  "dependencies": [
+    {
+      "dependsOn": [
+        "crypto/algorithm/rsa"
+      ],
+      "ref": "BomRef.fixture.metadata-component"
+    },
+    {
+      "ref": "crypto/algorithm/rsa"
+    }
+  ],
+  "metadata": {
+    "component": {
+      "bom-ref": "BomRef.fixture.metadata-component",
+      "name": "QU.I.R.K.",
+      "type": "application",
+      "version": "4.4.0"
+    },
+    "timestamp": "2026-01-01T00:00:00+00:00"
+  },
+  "serialNumber": "urn:uuid:00000000-0000-0000-0000-000000000000",
+  "version": 1,
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6"
+}
