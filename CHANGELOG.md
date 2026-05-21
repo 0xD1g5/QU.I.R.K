@@ -3,6 +3,8 @@
 All notable changes to QU.I.R.K. (Quantum Infrastructure Readiness Kit) are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+<!-- towncrier release notes start -->
+
 ## 4.4.0 - 2026-04-29
 
 **Milestone:** v4.4 Data in Motion — full release notes: [docs/release-notes/4.4.0.md](docs/release-notes/4.4.0.md)
