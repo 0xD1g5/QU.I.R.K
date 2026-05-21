@@ -61,6 +61,9 @@ broker = ["redis>=5.0"]
 kafka = ["kafka-python>=2.0"]
 redis = ["redis>=5.0"]
 cbom = ["cyclonedx-python-lib[json-validation]>=11.7.0,<12"]
+dev = [
+    "towncrier>=24.7.0",
+]
 all = [
     "quirk[cloud]",
     "quirk[cbom]",
@@ -94,3 +97,40 @@ markers = [
 addopts = "-m 'not slow'"
 testpaths = ["tests"]
 pythonpath = ["."]
+
+# RELENG-04 (Phase 84-02): towncrier CHANGELOG automation.
+# Per-PR fragments live under changelog.d/<id>.<kind>.md. At release time:
+#   towncrier build --version X.Y.Z --yes
+# consumes fragments and prepends a rendered section above the
+# `<!-- towncrier release notes start -->` marker in CHANGELOG.md.
+[tool.towncrier]
+package = "quirk"
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+title_format = "## [{version}] - {project_date}"
+start_string = "<!-- towncrier release notes start -->\n"
+
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "bugfix"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "doc"
+name = "Documentation"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removal"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "misc"
+name = "Misc"
+showcontent = false
