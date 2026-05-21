@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v4.10
 milestone_name: Launch Readiness — Coverage, Hardening, Release Engineering
-status: Roadmap ready — run `/gsd-plan-phase 78` to begin Wave A
-stopped_at: Phase 78 complete (6/6 HARDEN; 55 tests pass)
-last_updated: "2026-05-16T17:52:31.666Z"
-last_activity: 2026-05-16 — Milestone v4.10 roadmap finalized (8 phases, 52 requirements, 100% coverage)
+status: completed
+stopped_at: v4.10 SHIPPED 2026-05-21 — milestone lifecycle complete (audit→complete→cleanup)
+last_updated: "2026-05-21T13:32:42.895Z"
+last_activity: 2026-05-16 — Phase 80 Plan 01 ADCS foundation landed (3 tasks, 14 files)
 progress:
-  total_phases: 8
+  total_phases: 2
   completed_phases: 2
-  total_plans: 13
-  completed_plans: 10
-  percent: 77
+  total_plans: 9
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -102,6 +102,6 @@ Items carried forward from v4.9 close (still open):
 
 ## Session Continuity
 
-Last session: 2026-05-16T18:00:00Z
-Stopped at: Phase 80 Plan 01 complete (commit `9ed0cd0`) — adcs chaos-lab + ORM/extras foundation
+Last session: 2026-05-21T13:32:42.886Z
+Stopped at: v4.10 SHIPPED 2026-05-21 — milestone lifecycle complete (audit→complete→cleanup)
 Next action: `/gsd-plan-phase 80` continuation — run Plan 80-02 (scanner module)
