@@ -485,6 +485,69 @@ def main():
         run_errors(_sys.argv[2:])
         return
 
+    # --- db subcommand: intercept before scan argparse (Phase 85-01 LAUNCH-04) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "db":
+        db_parser = argparse.ArgumentParser(
+            prog="quirk db",
+            description="Database maintenance subcommands",
+        )
+        db_sub = db_parser.add_subparsers(dest="action", required=True)
+        migrate_parser = db_sub.add_parser(
+            "migrate",
+            help="Additive-only schema migration: brings an existing quirk.db current",
+            description=(
+                "Idempotent, additive-only schema migration. Reports each "
+                "additive column as 'added' or 'already-present'. Never drops, "
+                "renames, or retypes columns. Exits 0 on success."
+            ),
+        )
+        migrate_parser.add_argument(
+            "--db",
+            dest="db_path",
+            default=None,
+            help=(
+                "Path to quirk.db. Defaults to cfg.output.db_path from --config "
+                "if provided, otherwise ./quirk.db."
+            ),
+        )
+        migrate_parser.add_argument(
+            "--config",
+            default=None,
+            help="Path to quirk.yaml (used to resolve --db default).",
+        )
+        migrate_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Report what would be added without writing.",
+        )
+        db_args = db_parser.parse_args(_sys.argv[2:])
+        if db_args.action == "migrate":
+            from quirk.db import get_engine, run_additive_migration, init_db
+
+            db_path = db_args.db_path or _resolve_db_path(db_args)
+            if not db_args.dry_run:
+                # Ensure file + base tables exist before introspecting —
+                # init_db is itself idempotent and only adds (never destroys).
+                init_db(db_path)
+            elif not os.path.exists(db_path):
+                # Dry-run against a non-existent DB has no schema to report on.
+                print(
+                    f"error: --dry-run requires an existing database at {db_path}",
+                    file=_sys.stderr,
+                )
+                _sys.exit(2)
+            engine = get_engine(db_path)
+            results = run_additive_migration(engine, dry_run=db_args.dry_run)
+            for r in results:
+                print(f"{r.table}.{r.column}: {r.status}")
+            added = sum(1 for r in results if r.status == "added")
+            present = sum(1 for r in results if r.status == "already-present")
+            footer = f"Summary: {added} added, {present} already-present, {len(results)} total"
+            if db_args.dry_run:
+                footer += " (dry-run; no changes written)"
+            print(footer)
+            return
+
     parser = argparse.ArgumentParser(description="QU.I.R.K. -- Quantum Infrastructure Readiness Kit")
     parser.add_argument("--version", action="version", version=f"QU.I.R.K. v{__version__}")
     parser.add_argument("--quiet", action="store_true", default=False, help="Suppress banner and decorative output")
