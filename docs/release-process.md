@@ -366,3 +366,76 @@ Python CLIs, matching Homebrew's published guidance for Python tooling.
 - **Bottle / pre-built binaries.** The formula installs from PyPI sdist on
   the user's machine. Bottle generation requires a homebrew-core-style build
   farm and is not justified for the v4.10 audience.
+
+---
+
+## curl | bash Non-Decision (LAUNCH-07)
+
+**Decision (anti-feature):** QU.I.R.K. deliberately does not ship a `curl <url> | bash`
+installer, and never will. This is a permanent security posture, not a backlog item
+deferred for later.
+
+### Rationale
+
+Piping HTTP responses directly to a shell defeats the integrity guarantees that the
+rest of the release pipeline is built around:
+
+- **Sigstore attestations end at the wheel/sdist.** The PyPI Trusted Publisher OIDC
+  workflow (`.github/workflows/release.yml`) signs the artifact bytes. A
+  `curl … | bash` trampoline introduces an untrusted intermediary shell script
+  that the attestation chain does not cover — the user has no way to verify that
+  the script they execute is the script we published, and even if it is, the script
+  itself can fetch arbitrary downstream artifacts without further attestation.
+- **No `gh attestation verify` step is possible.** The supported install paths all
+  funnel through artifacts that are verifiable post-fetch and pre-execute. A
+  bash trampoline executes as it streams; verification after the fact is
+  meaningless.
+- **Defense against TLS-stripping / DNS-hijack scenarios.** A compromised mirror,
+  a typosquatted host, or an attacker positioned to MITM HTTPS (for example via a
+  rogue CA in a managed device) can substitute their script. `pip install`
+  against PyPI verifies signatures against the index's PEP 458 manifest; `brew
+  install` verifies the formula sha256 against a tap commit; `docker pull`
+  verifies the manifest digest. `curl | bash` verifies nothing.
+- **No incident-response surface.** If a `curl | bash` script is found
+  compromised, every machine that ever ran it is potentially in scope; there is
+  no version pinning, no rollback narrative, no `pip uninstall` story. The
+  supported install paths all leave a recoverable inventory.
+
+### Supported install paths
+
+Use one of:
+
+- **`pip install qu-i-r-k[all]`** — PyPI, signed with Sigstore + Trusted
+  Publishers (verify with `gh attestation verify`; see the *Attestation
+  Verification* section above).
+- **`brew install 0xD1g5/quirk/quirk`** — Homebrew personal tap; formula sha256
+  pins the PyPI sdist (see the *Homebrew Tap (LAUNCH-02)* section).
+- **`docker run ghcr.io/0xd1g5/quirk:latest`** — Multi-arch GHCR image
+  (`linux/amd64` + `linux/arm64`) built by `release-container.yml` with
+  `provenance: true` (see the *Container Image (LAUNCH-03)* section).
+
+### For consumers who need automated provisioning
+
+The right pattern is to wrap one of the supported install commands in your
+existing configuration-management tooling — Ansible, Chef, Salt, Puppet, or a
+plain shell script you author and review locally — and run `gh attestation
+verify` (for the PyPI path) as a first-class step of the playbook. Examples:
+
+- **Ansible:** `community.general.pip` module with `name: qu-i-r-k[all]`,
+  followed by a `command:` task that runs `gh attestation verify` against the
+  installed wheel.
+- **Chef:** `python_package 'qu-i-r-k'` with an explicit version pin, followed
+  by a verify resource.
+- **Docker-based CI runners:** pull `ghcr.io/0xd1g5/quirk:vX.Y.Z` with a
+  specific tag (not `:latest`) and verify the manifest digest in your
+  pre-execute hook.
+
+All three patterns preserve the attestation chain end-to-end; a `curl … | bash`
+trampoline cannot.
+
+### Status
+
+**Permanent.** This is not revisited on later milestones. `REQUIREMENTS.md`
+explicitly classifies `curl | bash` as an anti-feature for a security tool — never.
+Any future contributor proposing a `curl … | bash` installer should be pointed at
+this section before any code is written.
