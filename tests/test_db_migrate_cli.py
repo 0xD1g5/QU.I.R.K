@@ -149,7 +149,28 @@ def _run_cli(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
     )
 
 
+def _ensure_run_scan_importable() -> None:
+    """Skip CLI subprocess tests when the current interpreter cannot import
+    `run_scan` (typically: optional reporting deps like `pypdf` are missing
+    in a bare dev env). CI environments install `quirk[all]` so the gate
+    is non-issue there. This avoids false failures in minimal local envs
+    while still exercising the actual CLI path when it's available."""
+    probe = subprocess.run(
+        [sys.executable, "-c", "import run_scan"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if probe.returncode != 0:
+        pytest.skip(
+            f"run_scan not importable in this interpreter "
+            f"({sys.executable}): {probe.stderr.strip().splitlines()[-1] if probe.stderr else 'unknown'}"
+        )
+
+
 def test_cli_migrate_help_lists_flags(tmp_path: Path) -> None:
+    _ensure_run_scan_importable()
     proc = _run_cli(["db", "migrate", "--help"], cwd=tmp_path)
     assert proc.returncode == 0, proc.stderr
     out = proc.stdout
@@ -160,6 +181,7 @@ def test_cli_migrate_help_lists_flags(tmp_path: Path) -> None:
 def test_cli_migrate_fresh_db_exit_zero(tmp_path: Path) -> None:
     """`quirk db migrate --db PATH` on a fresh DB exits 0 and prints column
     status lines + a summary footer."""
+    _ensure_run_scan_importable()
     db_path = tmp_path / "cli_fresh.db"
     proc = _run_cli(["db", "migrate", "--db", str(db_path)], cwd=tmp_path)
     assert proc.returncode == 0, f"stderr: {proc.stderr}\nstdout: {proc.stdout}"
@@ -171,6 +193,7 @@ def test_cli_migrate_fresh_db_exit_zero(tmp_path: Path) -> None:
 
 def test_cli_migrate_dry_run_no_write(tmp_path: Path) -> None:
     """`quirk db migrate --dry-run` does not modify the DB file mtime/size."""
+    _ensure_run_scan_importable()
     db_path = tmp_path / "cli_dry.db"
     # Seed an empty DB the same way init_db would create the file path.
     # Use init_db so the DB exists at the current schema first, then dry-run
@@ -196,6 +219,7 @@ def test_cli_migrate_dry_run_no_write(tmp_path: Path) -> None:
 def test_cli_migrate_idempotent_double_run(tmp_path: Path) -> None:
     """Re-running `quirk db migrate` without --dry-run yields all
     `already-present` status lines on the second run."""
+    _ensure_run_scan_importable()
     db_path = tmp_path / "cli_idemp.db"
     first = _run_cli(["db", "migrate", "--db", str(db_path)], cwd=tmp_path)
     assert first.returncode == 0, first.stderr
