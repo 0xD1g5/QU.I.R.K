@@ -59,39 +59,103 @@ DNSSEC_ALG_MAP: dict = {
 }
 
 
-def _resolve_ns(domain: str, timeout: int) -> list:
+def _parse_resolver(resolver: str):
+    """Parse a ``host:port`` resolver string into a ``(host, port)`` tuple.
+
+    Returns ``(host, 53)`` if *resolver* is ``None`` or empty, and
+    ``(host, int(port))`` otherwise.  Supports IPv4 addresses and plain
+    hostnames only (no IPv6 bracket notation required for lab use).
+    """
+    if not resolver:
+        return None, 53
+    if ":" in resolver:
+        host, port_str = resolver.rsplit(":", 1)
+        try:
+            return host, int(port_str)
+        except ValueError:
+            return resolver, 53
+    return resolver, 53
+
+
+def _resolve_ns(domain: str, timeout: int, resolver: str = None) -> list:
     """Resolve authoritative nameserver IPs for a domain.
 
-    Returns list of NS IP strings. Returns [] on any failure.
+    When *resolver* is set (``host:port`` string), queries that specific
+    resolver directly instead of the system resolver — required for lab
+    bind9 instances that listen on a non-standard port (e.g. 15353).
+
+    Returns list of NS IP strings.  Returns [] on any failure.
     """
+    resolver_host, resolver_port = _parse_resolver(resolver)
     try:
-        ns_answer = dns.resolver.resolve(domain, "NS", lifetime=timeout)
-        ips = []
-        for rdata in ns_answer:
-            ns_name = str(rdata.target)
-            try:
-                a_answer = dns.resolver.resolve(ns_name, "A", lifetime=timeout)
-                for a_rdata in a_answer:
-                    ips.append(a_rdata.address)
-            except Exception:
-                pass
-        return ips
+        if resolver_host:
+            # Query the custom resolver directly for NS records
+            request = dns.message.make_query(domain, dns.rdatatype.NS)
+            result = dns.query.udp_with_fallback(
+                request, resolver_host, port=resolver_port, timeout=timeout,
+            )
+            if isinstance(result, tuple):
+                result = result[0]
+            ns_names = []
+            for rrset in result.answer:
+                if rrset.rdtype == dns.rdatatype.NS:
+                    for rdata in rrset:
+                        ns_names.append(str(rdata.target))
+            # Resolve each NS name via the same custom resolver
+            ips = []
+            for ns_name in ns_names:
+                try:
+                    a_request = dns.message.make_query(ns_name, dns.rdatatype.A)
+                    a_result = dns.query.udp_with_fallback(
+                        a_request, resolver_host, port=resolver_port, timeout=timeout,
+                    )
+                    if isinstance(a_result, tuple):
+                        a_result = a_result[0]
+                    for rrset in a_result.answer:
+                        if rrset.rdtype == dns.rdatatype.A:
+                            for a_rdata in rrset:
+                                ips.append(a_rdata.address)
+                except Exception:
+                    pass
+            # Fall back to using the resolver host itself as the NS IP
+            # if no A records were found — lab bind9 is authoritative for
+            # the zone, so direct queries to it work even without A glue.
+            if not ips and resolver_host:
+                ips = [resolver_host]
+            return ips
+        else:
+            ns_answer = dns.resolver.resolve(domain, "NS", lifetime=timeout)
+            ips = []
+            for rdata in ns_answer:
+                ns_name = str(rdata.target)
+                try:
+                    a_answer = dns.resolver.resolve(ns_name, "A", lifetime=timeout)
+                    for a_rdata in a_answer:
+                        ips.append(a_rdata.address)
+                except Exception:
+                    pass
+            return ips
     except Exception:
         return []
 
 
-def _query_rrset(domain: str, rdtype, ns_ip: str, timeout: int):
+def _query_rrset(domain: str, rdtype, ns_ip: str, timeout: int, ns_port: int = 53):
     """Query a specific RR type from an authoritative nameserver.
 
     Creates a query with DO bit (want_dnssec=True) and clears RD flag so
     authoritative servers respond without recursion refusal.
+
+    *ns_port* defaults to 53 but can be overridden for lab resolvers on
+    non-standard ports (e.g. bind9-dnssec on 15353).
 
     Returns the DNS response message, or None on failure.
     """
     try:
         request = dns.message.make_query(domain, rdtype, want_dnssec=True)
         request.flags &= ~dns.flags.RD
-        result = dns.query.udp_with_fallback(request, ns_ip, timeout=timeout)
+        result = dns.query.udp_with_fallback(
+            request, ns_ip, port=ns_port, timeout=timeout,
+        )
         # Real dnspython returns (response, used_tcp) tuple; mocks may return response directly
         if isinstance(result, tuple):
             return result[0]
@@ -181,14 +245,14 @@ def _check_chain(dnskeys: list, ds_records: list) -> bool:
     return bool(dnskey_tags & ds_tags)
 
 
-def _detect_nsec_type(domain: str, ns_ip: str, timeout: int):
+def _detect_nsec_type(domain: str, ns_ip: str, timeout: int, ns_port: int = 53):
     """Detect NSEC vs NSEC3 by sending NXDOMAIN probe query and inspecting authority section.
 
     Returns "NSEC", "NSEC3", or None if neither found.
     """
     try:
         probe_domain = f"_quirk_probe_.{domain}"
-        response = _query_rrset(probe_domain, dns.rdatatype.A, ns_ip, timeout)
+        response = _query_rrset(probe_domain, dns.rdatatype.A, ns_ip, timeout, ns_port=ns_port)
         if response is None:
             return None
         for rrset in response.authority:
@@ -201,12 +265,18 @@ def _detect_nsec_type(domain: str, ns_ip: str, timeout: int):
         return None
 
 
-def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
+def _scan_domain(domain: str, timeout: int, logger, session_start=None, resolver: str = None) -> list:
     """Scan a single domain for DNSSEC posture.
+
+    *resolver* is an optional ``host:port`` string.  When set, all DNS
+    queries (NS resolution + RR queries) are sent to that specific resolver
+    instead of the system resolver.  Required for lab bind9 instances on
+    non-standard ports (e.g. 127.0.0.1:15353).
 
     Returns list of CryptoEndpoint objects for this domain.
     """
-    ns_ips = _resolve_ns(domain, timeout)
+    resolver_host, resolver_port = _parse_resolver(resolver)
+    ns_ips = _resolve_ns(domain, timeout, resolver=resolver)
     if not ns_ips:
         if logger:
             logger.warning("DNSSEC: could not resolve NS for %s", domain)
@@ -214,8 +284,8 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
 
     ns_ip = ns_ips[0]
 
-    # Query DNSKEY
-    dnskey_response = _query_rrset(domain, dns.rdatatype.DNSKEY, ns_ip, timeout)
+    # Query DNSKEY (use resolver_port when a custom resolver is configured)
+    dnskey_response = _query_rrset(domain, dns.rdatatype.DNSKEY, ns_ip, timeout, ns_port=resolver_port)
 
     # Find DNSKEY rrset in answer section
     dnskey_rrset = None
@@ -240,7 +310,7 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
         }
         return [CryptoEndpoint(
             host=domain,
-            port=53,
+            port=resolver_port,
             protocol="DNSSEC",
             cert_pubkey_alg="NONE",
             cert_pubkey_size=None,
@@ -253,7 +323,7 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
     dnskeys = _parse_dnskeys(dnskey_rrset)
 
     # Detect NSEC type
-    nsec_type = _detect_nsec_type(domain, ns_ip, timeout)
+    nsec_type = _detect_nsec_type(domain, ns_ip, timeout, ns_port=resolver_port)
 
     # Query DS records — may be in the same response or separate
     ds_records = []
@@ -264,7 +334,7 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
                 break
 
     if not ds_records:
-        ds_response = _query_rrset(domain, dns.rdatatype.DS, ns_ip, timeout)
+        ds_response = _query_rrset(domain, dns.rdatatype.DS, ns_ip, timeout, ns_port=resolver_port)
         if ds_response:
             for rrset in ds_response.answer:
                 if rrset.rdtype == dns.rdatatype.DS:
@@ -290,7 +360,7 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
         alg_name, _severity = DNSSEC_ALG_MAP.get(key["alg"], (f"UNKNOWN-{key['alg']}", "HIGH"))
         endpoints.append(CryptoEndpoint(
             host=domain,
-            port=53,
+            port=resolver_port,
             protocol="DNSSEC",
             cert_pubkey_alg=alg_name,
             cert_pubkey_size=key["key_size"],
@@ -303,7 +373,7 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
     if nsec_type == "NSEC":
         endpoints.append(CryptoEndpoint(
             host=domain,
-            port=53,
+            port=resolver_port,
             protocol="DNSSEC",
             cert_pubkey_alg="NSEC",
             cert_pubkey_size=None,
@@ -316,7 +386,7 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
     if chain_valid is False:
         endpoints.append(CryptoEndpoint(
             host=domain,
-            port=53,
+            port=resolver_port,
             protocol="DNSSEC",
             cert_pubkey_alg="DS-MISMATCH",
             cert_pubkey_size=None,
@@ -330,7 +400,7 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
         if ds["digest_type"] == 1:
             endpoints.append(CryptoEndpoint(
                 host=domain,
-                port=53,
+                port=resolver_port,
                 protocol="DNSSEC",
                 cert_pubkey_alg="SHA1-DS",
                 cert_pubkey_size=None,
@@ -342,8 +412,19 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None) -> list:
     return endpoints
 
 
-def scan_dnssec_targets(targets: list, timeout: int = 10, logger=None, session_start=None) -> list:
+def scan_dnssec_targets(
+    targets: list,
+    timeout: int = 10,
+    logger=None,
+    session_start=None,
+    resolver: str = None,
+) -> list:
     """Scan DNSSEC posture for a list of domain targets.
+
+    *resolver* is an optional ``host:port`` string.  When set, all DNS
+    queries bypass the system resolver and go directly to the specified
+    host and port.  This is required for lab bind9 instances that listen
+    on non-standard ports (e.g. ``127.0.0.1:15353``).
 
     Returns list of CryptoEndpoint objects — one per DNSKEY record found, plus
     additional entries for unsigned zones, NSEC exposure, and DS chain breaks.
@@ -358,7 +439,9 @@ def scan_dnssec_targets(targets: list, timeout: int = 10, logger=None, session_s
     results = []
     for domain in targets:
         try:
-            results.extend(_scan_domain(domain, timeout, logger, session_start=session_start))
+            results.extend(
+                _scan_domain(domain, timeout, logger, session_start=session_start, resolver=resolver)
+            )
         except Exception as exc:
             if logger:
                 logger.warning("DNSSEC scan failed for %s: %s", domain, exc)

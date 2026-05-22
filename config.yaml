@@ -30,6 +30,23 @@ targets:
 connectors:
   enable_aws: false
   enable_azure: false
+  # -- Identity connectors (Phase 89 LAB-06 / D-04) --
+  # Kerberos KDC: samba-dc on the chaos lab kerberos profile (port 88/389)
+  enable_kerberos: true
+  kerberos_targets:
+    - "127.0.0.1"
+  # SAML IdP: simplesamlphp on the chaos lab saml profile (port 8080)
+  enable_saml: true
+  saml_targets:
+    - "http://localhost:8080/simplesaml/saml2/idp/metadata.php"
+  # DNSSEC: bind9-dnssec on the chaos lab dnssec profile (port 15353)
+  enable_dnssec: true
+  dnssec_targets:
+    - "weak.example.com"
+    - "unsigned.example.com"
+  # Route DNSSEC queries to the lab's bind9 resolver on port 15353
+  # (dnssec_scanner.py port-override support added Phase 89 LAB-06)
+  dnssec_resolver: "127.0.0.1:15353"
 
 output:
   directory: "output"
