@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
 status: executing
-last_updated: "2026-05-22T16:45:47.250Z"
-last_activity: 2026-05-22 -- Phase 88 complete (verifier PASSED 5/5; +15 tests, 0 new failures); 3 visual checks → UAT-88
+last_updated: "2026-05-22T19:36:54.507Z"
+last_activity: 2026-05-22 -- Phase 89 (chaos-lab-profiles) COMPLETE; verifier PASS, 3/3 plans
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 33
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 50
 ---
 
 # Project State
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v5.0 Stabilization + Tech Debt Sweep — Phases 87 & 88 complete; next is Phase 89 (chaos-lab-profiles) ∥ 91 (cleanup).
+**Current focus:** v5.0 Stabilization — Phases 87, 88, 89 complete (3/6); next is Phase 90 (oqs-nginx-pqc-hybrid) ∥ Phase 91 (code-cleanup-bookkeeping).
 
 ## Current Position
 
-Phase: 88 ✅ complete. Phases 89 + 91 DISCUSSED (CONTEXT.md committed for both) — running in parallel per user request.
-Plan: 89 + 91 ready to plan (no plans yet)
-Status: 87 & 88 ✅ complete; 89 (chaos-lab) + 91 (cleanup) contexts gathered, parallel-safe (v5.0-D-07); next is plan→execute both
-Last activity: 2026-05-22 -- 89 & 91 contexts gathered for a parallel run. 89: 4 new TLS profiles (smtp-starttls closed as email-covered), weak configs, custom gRPC image w/ exec-time ALPN-h2 check, identity evidence UAT. 91: Tier-A+B cleanup (listed BACK items only) + vulture report-the-rest + folded carry-ins (conftest QUIRK_DB_PATH fix, stale CONCERNS §1.11). Docker confirmed up.
+Phase: 89 — ✅ COMPLETE (verifier PASS; 3/3 plans merged to main)
+Plan: 3 of 3 complete
+Status: Phase 89 complete. LAB-01..06 closed (LAB-03 closed-covered-by-email; kerberos etype counter deferred to HUMAN-UAT — needs impacket + live KDC). End-to-end identity verification surfaced + fixed a latent custom-Logger crash (quirk/logging_util.py, commit 5d22d98) that silently zeroed identity counters.
+Last activity: 2026-05-22 -- Phase 89 complete. 4 new chaos-lab profiles (postgres-tls/redis-tls/kafka-tls weak-TLS + grpc-tls ALPN-h2); identity evidence (dnssec=2, saml=2) live-verified into the subscore. Next: 90 (discuss OQS strategy before planning) and 91 (cleanup); 90 depends on 88, 91 parallel-safe.
 
 ```
-v5.0 Progress: [██████░░░░░░░░░░░░░░] 33% (2/6 phases)
+v5.0 Progress: [██████████░░░░░░░░░░] 50% (3/6 phases)
 ```
 
 ## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
