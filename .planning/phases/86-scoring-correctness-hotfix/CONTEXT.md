@@ -32,7 +32,11 @@ Fix the marquee overall-readiness score so it stops displaying 100/EXCELLENT whe
 - **D-04:** Add `maxValue?: number` prop to `ScoreGauge` with default `100`. Internal computation uses `score / maxValue` instead of `score / 100`. Default behavior unchanged for any caller that omits the prop.
 - **D-05:** Rewrite `_gaugeColor()` to take a normalized fraction (0.0–1.0), not a raw score. Same thresholds (0.5, 0.8) applied to the fraction.
 - **D-06:** Update `executive.tsx` lines 262-267 to pass `maxValue={25}` to each subscore gauge. The overall-readiness gauge (line 244-250) keeps default `maxValue` (100).
-- **D-07:** No other caller of `ScoreGauge` is updated in this phase. `print.tsx` (line 405) — defer to v5.0 Phase 01 stabilization sweep.
+- **D-07:** Audit of `ScoreGauge` callers (verified via `grep -rn "ScoreGauge" src/dashboard/src/`):
+  - `executive.tsx` lines 245 (overall) + 262–267 (six subscores) — overall gauge keeps default `maxValue=100`; six subscore gauges pass `maxValue={25}` per D-06.
+  - **`data-at-rest.tsx:301`** — standalone Data at Rest tab gauge rendering `score={darScore}` where `darScore = data?.score?.subscores?.data_at_rest ?? 0` (a 0–25 subscore). **In scope:** must pass `maxValue={25}` for the same reason as the executive-page subscore gauges; otherwise this seventh occurrence of the bug class survives the fix.
+  - `print.tsx` — does **not** import or render `ScoreGauge` (verified 2026-05-22; the file is the QRAMM print page). Prior CONTEXT.md erroneously listed print.tsx as a deferred caller — corrected in plan-check iteration 1.
+  - `sidebar.tsx:2` — code comment referencing `ScoreGauge.tsx` token migration history; **not** a caller, no edit needed.
 
 ### Tests (LOCKED)
 - **D-08:** `tests/test_score_weights_invariant.py` audited for any assertion that depends on the broken clamp behavior. Update assertions to reflect normalized formula. Sum-of-weights invariant (currently 275.0, count 36) is independent and stays.

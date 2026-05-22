@@ -1528,11 +1528,14 @@ Archived to: [`.planning/milestones/v4.10-ROADMAP.md`](milestones/v4.10-ROADMAP.
   3. `pytest tests/test_score_weights_invariant.py` passes against the new aggregation formula, and a new normalization-boundary test asserts that `compute_readiness_score` returns 100 only when all six subscores are at their 25 ceiling, and returns 0 only when every subscore is 0.
   4. The module docstring at `quirk/intelligence/scoring.py:1-17` accurately describes the contract — six subscores each on a 0–25 scale, overall = `int(round(sum / 1.5))` — with no remaining "Phase 60 SCORE-04 clamp-to-[0,100] is intentional" wording or other misleading language.
   5. `pyproject.toml` `[project.version]` reads `4.10.1`, and `CHANGELOG.md` / `changelog.d/` has an entry describing the scoring fix in plain operator language including the canonical 25+25+23+3+25+19 before/after example and a note that old stored scores will display lower after upgrade (underlying penalty math unchanged).
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 86-01-PLAN.md — Backend normalization (sum/1.5) + docstring rewrite + boundary tests
+- [ ] 86-02-PLAN.md — ScoreGauge maxValue prop + executive.tsx subscore wiring + vitest coverage
+- [ ] 86-03-PLAN.md — Version bump 4.10.1 + changelog fragment + operator UAT on tls-cert-defects
 **UI hint**: yes
 
 ## Progress — v4.10.1 Phases
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 86. Scoring Correctness Hotfix | 0/TBD | Not started | - |
+| 86. Scoring Correctness Hotfix | 0/3 | Planned | - |
