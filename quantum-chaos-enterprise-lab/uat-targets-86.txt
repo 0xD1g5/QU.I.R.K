@@ -1,0 +1,5 @@
+# UAT-86 targets — tls-cert-defects profile (ports 13444-13447)
+localhost:13444
+localhost:13445
+localhost:13446
+localhost:13447
