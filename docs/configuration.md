@@ -230,6 +230,7 @@ Enables optional scanner extensions for cloud infrastructure, API endpoints, con
 | `azure_subscription_id` | string | `null` | Azure subscription UUID |
 | `azure_keyvault_urls` | list[string] | `[]` | Key Vault base URLs (e.g. `https://myvault.vault.azure.net`) |
 | `jwt_targets` | list[string] | `[]` | REST endpoint URLs for JWT scanner |
+| `allow_insecure_jwks` | bool | `false` | Disable TLS cert verification for JWKS fetches. Use only for internal/dev endpoints with self-signed certs. When `true`, a `HIGH` advisory finding (`ADVISORY_JWKS_VERIFY_DISABLED`) is emitted for every JWKS URL fetched. |
 | `container_targets` | list[string] | `[]` | Docker image refs for container scanner |
 | `source_targets` | list[string] | `[]` | Git repo paths or URLs for source scanner |
 
