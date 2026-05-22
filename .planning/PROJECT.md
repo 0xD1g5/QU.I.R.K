@@ -147,25 +147,19 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v4.10.1 — Scoring Correctness Hotfix
+## Previous Milestone: v4.10.1 SHIPPED 2026-05-22
 
-**Goal:** Patch v4.10 to fix the marquee overall-readiness score (currently displays 100/EXCELLENT when subscores are red and CRITICAL findings are present) via surgical normalization in the aggregator and the dashboard ScoreGauge, without changing the underlying penalty model.
+v4.10.1 "Scoring Correctness Hotfix" shipped 2026-05-22 — 1 phase (86), 3 plans, 8/8 requirements. Patched the marquee overall-readiness score that always rendered `100 / EXCELLENT` regardless of posture — a triple-layer scale collision (backend summed six 0–25 subscores then clamped at 100; the frontend gauge declared its input as 0–100 and colored red < 50). Fixed as a single-phase vertical MVP slice because backend and frontend are physics-coupled — fixing only one half would have displayed a *different* wrong number.
 
-**Target features:**
-- Overall-readiness normalization — replace clamp-at-100 in `quirk/intelligence/scoring.py:253-257` with `sum/1.5` so six 0-25 subscores produce a true 0-100 overall
-- ScoreGauge `maxValue` prop (default 100; subscore callers pass 25) so gauge fill + color thresholds are computed against the real backend scale
-- `_gaugeColor` rewrite to operate on a normalized fraction, not a raw score
-- `scoring.py` docstring rewrite — replace the misleading "Phase 60 SCORE-04 clamp-to-[0,100] is intentional" wording with the actual contract
-- Test invariant updates: audit `tests/test_score_weights_invariant.py`, add a normalization-formula test
-- Release notes documenting the visual jump (old scans display the new math)
+**What changed:** backend aggregator at `quirk/intelligence/scoring.py` rewritten `_clamp(sum, 0, 100)` → `int(round(sum / 1.5))` (canonical `25+25+23+3+25+19 = 120` → **80 GOOD**, not **100 EXCELLENT**); `ScoreGauge.tsx` gained a `maxValue?: number` prop with `_gaugeColor()` rewritten onto a normalized 0–1 fraction (red < 50 %, amber 50–79 %, green ≥ 80 %), wired `maxValue={25}` into six executive subscore radials + the Data at Rest tab gauge; version bumped 4.10.0 → 4.10.1 with an operator-language towncrier changelog documenting the accepted 100 → ~80 visual jump. The underlying penalty model (`SCORE_WEIGHTS`, `_apply_weighted_impacts`) is unchanged. Verifier PASSED 5/5; HUMAN-UAT closed PASS (4/4 criteria, post-hard-refresh).
 
-**Key context:**
-- v4.10 SHIPPED 2026-05-21; tag `v4.10.0` on origin; PyPI `quirk-scanner 4.10.0` live; GHCR multi-arch image public; Sigstore attestation verified.
-- Bug surfaced 2026-05-22 in a live dashboard scan against `tls-cert-defects` chaos lab profile: Overall = 100 / EXCELLENT while subscores 25 + 25 + 23 + 3 + 25 + 19 = 120 (clamped) and severity has 2 CRITICAL + 2 HIGH. Diagnosis: triple-layer scale collision — backend sums 0-25 subscores then clamps at 100; frontend declares input as 0-100 and colors red < 50.
-- **Scope: dashboard renderers only.** CLI / HTML / PDF reports likely have the same display bug but are explicitly deferred to v5.0 Phase 01 (stabilization milestone, theme locked 2026-05-22).
-- **Evidence-tally gap** — 3 of 6 subscores show exactly 25 (no penalties applied) despite HIGH/CRITICAL findings present — deferred to v5.0 Phase 01. Separate root cause in the evidence summarizer.
-- Backwards compat: stored score values unchanged; historical scans display new math after the fix (visual jump from 100 → ~80 for the canonical scan). Documented in release notes.
-- Already-committed post-ship cleanup folded into the same release tag: `5f9b58c` (docs `quirk-scanner` rename), `81deeb9` (lazy `pypdf` import), `ffb6bf3` (install-error test catch-up), `45fd378` + `eb9edcb` (HORIZON refresh, v5.0 theme locked as Stabilization).
+**Backwards compat:** stored SQLite score values untouched; historical scans display the new math when re-rendered (no migration).
+
+**Deferred to v5.0 Phase 01 (Stabilization):** EVIDENCE-TALLY-01 (3 subscores show exactly 25 despite HIGH/CRITICAL findings — separate root cause in the evidence summarizer), RENDER-CLI-01 + RENDER-PDF-01 (same backend-scale vs render-scale audit for the CLI/HTML/PDF report renderers, which likely carry the same bug class). Captured as Future Requirements so the v5.0 plan absorbs them without re-discovery.
+
+Archive: `.planning/milestones/v4.10.1-ROADMAP.md` + `.planning/milestones/v4.10.1-REQUIREMENTS.md`.
+
+**Next milestone (v5.0 — Stabilization):** theme locked 2026-05-22; not yet scoped. Run `/gsd-new-milestone` to open it (Phase 01 should pre-load the three deferred requirements above).
 
 ## Previous Milestone: v4.10 SHIPPED 2026-05-21
 
@@ -273,9 +267,13 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | PyPI distribution name `qu-i-r-k` (v4.10 D-01 / Phase 84-01) | `pip index versions quirk` on 2026-05-16 returned 0.1.1/0.1.2/0.1.3 — the bare `quirk` name is already claimed by an unrelated package on PyPI; fallback `qu-i-r-k` per pre-registered D-84-R1 plan | ⚠ Superseded 2026-05-22 by v4.10-D-06 — PyPI Pending Publisher form rejected `qu-i-r-k` with PEP 541 "too similar to existing project" (the `quirk` squatter); renamed to `quirk-scanner` at release time. See D-06 below. |
 | pyproject.toml `[project.version]` is canonical version SoT (v4.10 D-02 / D-84-R1 / Phase 84-01) | Modern Python packaging best practice (PEP 621 + importlib.metadata); REVERSES legacy RELENG-08 wording that named `__init__.py` as canonical | ✓ Good — `quirk/__init__.py::__version__` resolves dynamically via `importlib.metadata.version(_DIST_NAME)` (currently `quirk-scanner` per D-06) with a `tomllib` fallback for unpackaged dev runs; `quirk/config.py:279` `IntelligenceCfg.intelligence_version` derives from `quirk.__version__`; `tests/test_version.py` enforces parity in the new direction |
 | PyPI distribution name `quirk-scanner` (v4.10 D-06 / supersedes D-01 / UAT-85-11 release-time) | UAT-85-11 Gate 5.5 surfaced PyPI's PEP 541 typosquat rejection of `qu-i-r-k` — too similar to the existing `quirk` squatter project. `quirk-scanner` is a compound name with a semantic suffix; PEP 541 distance is high; Pending Publisher form accepted dry-run on 2026-05-22. Identifiers UNCHANGED: CLI command, Python import name, GHCR image, Homebrew tap repo — D-06 only touches the PyPI namespace identifier. | ✓ Good — Pending Publisher dry-run passed; sweep applied to 15 active production + planning files; archived milestone snapshots under `.planning/milestones/v4.10-*` preserved as historical record (they reflect milestone-close state of `qu-i-r-k`). Lesson for BACK-90 / Phase 86: future PyPI name verification must include Pending Publisher dry-run, not just `pip index versions`. |
+| Overall readiness aggregation `int(round(sum / 1.5))` replaces `_clamp(sum, 0, 100)` (v4.10.1 / 86-01-D-01) | Six 0–25 subscores sum to 0–150; clamping at 100 hid all real posture above the clamp, always rendering `100 / EXCELLENT`. `sum / 1.5` maps 0–150 → 0–100 linearly. Canonical 120 → 80. Penalty model (`SCORE_WEIGHTS`) unchanged — this is an aggregation fix, not a re-weighting. | ✓ Good — boundary tests assert 100 only at all-25 ceiling, 0 only at all-zero; verifier PASSED 5/5; HUMAN-UAT PASS |
+| Single-phase atomic ship — backend + frontend + release coupled (v4.10.1-D-01) | The bug spans backend aggregation and frontend gauge math; fixing only one half displays a *different* wrong number. Splitting would yield contradictory half-fixes. | ✓ Good — one phase, 3 plans, shipped as one unit; gauge value + color matched backend post-fix |
+| No stored-score migration (v4.10.1-D-02) | SQLite score values are untouched; old scans display the new math when re-rendered. The 100 → ~80 visual jump is documented in CHANGELOG.md as an accepted trade-off. | ✓ Good — zero migration risk; release notes set operator expectations |
+| Render-side + evidence-tally fixes deferred to v5.0 Phase 01 (v4.10.1-D-03 / D-04) | Same bug class likely lives in CLI/HTML/PDF renderers (RENDER-CLI-01/PDF-01); the evidence-tally gap (3 subscores at 25 despite findings) is a separate root cause in the summarizer (EVIDENCE-TALLY-01). A full-stack scoring sweep is the right shape; mixing into a hotfix risks new bugs. | — Pending — captured as Future Requirements in archived v4.10.1-REQUIREMENTS.md; v5.0 Phase 01 pre-loads them |
 
 ---
-*Last updated: 2026-05-22 — v4.10.1 milestone opened: scoring correctness hotfix (overall normalization + ScoreGauge maxValue). Folds in already-committed post-ship cleanup (doc sweep, lazy pypdf, test catch-up, HORIZON refresh).*
+*Last updated: 2026-05-22 — v4.10.1 milestone SHIPPED: scoring correctness hotfix (overall normalization `sum/1.5` + ScoreGauge `maxValue` color fix + version bump 4.10.1). Archived to `.planning/milestones/v4.10.1-*`. EVIDENCE-TALLY-01 / RENDER-CLI-01 / RENDER-PDF-01 deferred to v5.0 Phase 01 (Stabilization).*
 
 ## Evolution
 

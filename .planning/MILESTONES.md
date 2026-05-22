@@ -1,5 +1,21 @@
 # Milestones
 
+## v4.10.1 Scoring Correctness Hotfix (Shipped: 2026-05-22)
+
+**Phases completed:** 1 phase, 3 plans, 6 tasks
+
+**Delivered:** Fixed the marquee overall-readiness score that always displayed `100 / EXCELLENT` regardless of posture — a triple-layer bug spanning backend aggregation and frontend gauge math, fixed atomically as a single-phase vertical MVP slice.
+
+**Key accomplishments:**
+
+- Backend aggregator at `quirk/intelligence/scoring.py` rewritten: `_clamp(sum, 0, 100)` → `int(round(sum / 1.5))`. Canonical `25+25+23+3+25+19 = 120` now displays as **80 GOOD**, not **100 EXCELLENT**. Penalty model (`SCORE_WEIGHTS`, `_apply_weighted_impacts`) unchanged; boundary tests assert 100 only at all-25 ceiling, 0 only at all-zero.
+- `ScoreGauge.tsx` gained a `maxValue?: number` prop (default 100) and a `_gaugeColor()` rewrite onto a normalized 0–1 fraction (red < 50 %, amber 50–79 %, green ≥ 80 %); six executive subscore radials + the Data at Rest tab gauge wired to `maxValue={25}`, with vitest coverage.
+- Version bumped 4.10.0 → 4.10.1 (SoT in `pyproject.toml`); towncrier changelog fragment in operator language documenting the accepted 100 → ~80 visual jump; HUMAN-UAT operator walkthrough closed **PASS** (4/4 criteria, post-hard-refresh), verifier PASSED 5/5.
+
+**Deferred to v5.0 Phase 01 (Stabilization):** EVIDENCE-TALLY-01 (evidence-summarizer tally gap), RENDER-CLI-01 + RENDER-PDF-01 (same-bug-class audit of CLI/HTML/PDF renderers).
+
+---
+
 ## v4.8 Pre-Primetime Hardening + Operating Model (Shipped: 2026-05-14)
 
 **Phases completed:** 13 phases, 53 plans, 122 tasks

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v4.10.1
 milestone_name: Scoring Correctness Hotfix — Phase 86 — opened 2026-05-22
-status: completed
-last_updated: "2026-05-22T12:34:04.180Z"
-last_activity: 2026-05-22 -- Phase 86 marked complete
+status: Awaiting next milestone
+last_updated: "2026-05-22T13:00:55.545Z"
+last_activity: 2026-05-22 — Milestone v4.10.1 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
@@ -20,20 +20,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.10.1 — roadmap defined (Phase 86 single-phase MVP hotfix), ready for `/gsd-mvp-phase` stamp + planning
+**Current focus:** v4.10.1 SHIPPED + archived 2026-05-22. Awaiting v5.0 (Stabilization) scope — run `/gsd-new-milestone`.
 
 ## Current Position
 
-Phase: 86 — COMPLETE
-Plan: 86-01 complete; 86-02 and 86-03 pending
-Status: Phase 86 complete
-Last activity: 2026-05-22 -- Phase 86 marked complete
+Phase: Milestone v4.10.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-22 — Milestone v4.10.1 completed and archived
 
-## Milestone Summary (v4.10.1 — in progress)
+## Milestone Summary (v4.10.1 — SHIPPED 2026-05-22)
 
 | Phase | Mode | Slug | Plans | Status |
 |-------|------|------|-------|--------|
-| 86 | mvp | scoring-correctness-hotfix | 3 | In progress (1/3 plans complete) |
+| 86 | mvp | scoring-correctness-hotfix | 3 | Complete 2026-05-22 (3/3 plans) |
+
+**v4.10.1 archive:** `.planning/milestones/v4.10.1-ROADMAP.md` + `.planning/milestones/v4.10.1-REQUIREMENTS.md`. Tag `v4.10.1` (local). Verifier PASSED 5/5; HUMAN-UAT PASS.
 
 **Structure:** Single-phase vertical MVP slice — backend math fix (SCORE-FIX-01..03) + frontend gauge fix (GAUGE-01..03) + release engineering (RELEASE-01..02) are tightly coupled and ship together. Splitting would yield half-fixes that contradict each other (backend without frontend produces a different wrong number; frontend without backend is meaningless).
 
@@ -77,7 +79,7 @@ Last activity: 2026-05-22 -- Phase 86 marked complete
 
 - v4.9 shipped 2026-05-15. All 35 requirements satisfied; archive at `.planning/milestones/v4.9-ROADMAP.md` + `.planning/milestones/v4.9-REQUIREMENTS.md`.
 - v4.10 shipped 2026-05-21. 8 phases (78–85), 31 plans, 52/52 requirements; archived to `.planning/milestones/v4.10-ROADMAP.md`.
-- v4.10.1 roadmap created 2026-05-22. Single phase (86), 8 requirements, 100% coverage. Vertical MVP slice — backend + frontend + release engineering coupled by physics (the wrong-number bug spans backend aggregation and frontend gauge math; fixing only half produces a different wrong number).
+- v4.10.1 shipped 2026-05-22. Single phase (86), 3 plans, 8/8 requirements. Vertical MVP slice — backend + frontend + release engineering coupled by physics (the wrong-number bug spans backend aggregation and frontend gauge math; fixing only half produces a different wrong number). Archived to `.planning/milestones/v4.10.1-ROADMAP.md` + `-REQUIREMENTS.md`.
 
 ### Decisions (v4.10.1)
 
@@ -94,8 +96,7 @@ Last activity: 2026-05-22 -- Phase 86 marked complete
 
 ### Pending Todos
 
-- Execute Plan 86-02: frontend gauge fix (ScoreGauge.tsx maxValue prop, executive.tsx + data-at-rest.tsx maxValue={25}).
-- Execute Plan 86-03: version bump to 4.10.1 + changelog entry.
+- None for v4.10.1 (shipped). For v5.0 Phase 01 (Stabilization): EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01 are pre-captured as Future Requirements.
 
 ### Blockers
 
@@ -103,6 +104,10 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22T12:00:27.577Z
+**Last session:** 2026-05-22 — v4.10.1 milestone closed and archived (ROADMAP + REQUIREMENTS archived, MILESTONES.md + PROJECT.md + RETROSPECTIVE.md updated, REQUIREMENTS.md removed for fresh next milestone).
 
-**Next session:** Execute Plan 86-02 (frontend gauge fix: maxValue prop, _gaugeColor fraction rewrite, executive.tsx + data-at-rest.tsx maxValue={25}).
+**Next session:** Run `/gsd-new-milestone` to scope v5.0 (Stabilization). Phase 01 should pre-load EVIDENCE-TALLY-01 / RENDER-CLI-01 / RENDER-PDF-01.
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

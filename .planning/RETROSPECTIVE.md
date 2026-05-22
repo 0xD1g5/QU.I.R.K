@@ -344,6 +344,47 @@
 
 ---
 
+## Milestone: v4.10.1 — Scoring Correctness Hotfix
+
+**Shipped:** 2026-05-22
+**Phases:** 1 (86) | **Plans:** 3 | **Tasks:** 6
+
+> Note: v4.9 (Audit Depth) and v4.10 (Launch Readiness) retrospective sections were not authored at their closes — a documentation gap in the retrospective ledger. Their records live in `MILESTONES.md` and the `milestones/v4.9-*` / `milestones/v4.10-*` archives.
+
+### What Was Built
+
+- Single-phase vertical MVP slice fixing the marquee overall-readiness score that always rendered `100 / EXCELLENT`. Backend aggregator `_clamp(sum, 0, 100)` → `int(round(sum / 1.5))`; `ScoreGauge.tsx` `maxValue` prop + normalized fraction-based `_gaugeColor()`; six executive subscore radials + Data at Rest tab gauge wired to `maxValue={25}`; version 4.10.0 → 4.10.1 with operator-language changelog.
+
+### What Worked
+
+- Diagnosing the bug as a *triple-layer scale collision* before planning meant the fix scope was correctly bounded — backend + frontend coupled, render-side deferred. The "fixing one half displays a different wrong number" framing justified the single-phase atomic shape and held up through UAT.
+- Pre-locking the deferred work (EVIDENCE-TALLY-01, RENDER-CLI-01/PDF-01) as v5.0 Future Requirements at milestone-open time meant the hotfix stayed surgical without losing the follow-up trail.
+- TDD boundary tests (100 only at all-25, 0 only at all-zero) gave the aggregation change a precise correctness contract.
+
+### What Was Inefficient
+
+- **Recurrence of the v4.8 lesson:** HUMAN-UAT.md closed with `Result: PASS` but the `audit-open` parser still flagged Phase 86 as `[unknown]` at close — the same status-string recognition gap noted in the v4.8 retrospective (line 325) that was never fixed in the SDK. Cost a manual false-positive verification at close.
+- `gsd-sdk query milestone.complete` produced a poor archive: it dumped a raw 1541-line copy of the live ROADMAP into `v4.10.1-ROADMAP.md` and emitted garbled accomplishments (`"One-liner:"`, `"Phase:"`) because the SUMMARY one-liner format didn't match its extractor. Both required full manual rewrite to match the curated archive convention established since v4.10.
+- STATE.md prose body carried stale mid-phase content ("86-02 and 86-03 pending") long after the frontmatter said `completed` — resume relied on HANDOFF.json + git to disambiguate.
+
+### Patterns Established
+
+- **Aggregation-fix vs penalty-model-change distinction:** when a score is wrong, first determine whether the *inputs* (penalties) or the *aggregation* is broken. v4.10.1 was purely aggregation — leaving `SCORE_WEIGHTS` untouched kept the diff surgical and the regression surface tiny.
+- **Physics-coupled MVP slicing:** when a bug spans layers such that a partial fix produces a *different* wrong output, treat the layers as one indivisible phase rather than separate ones.
+
+### Key Lessons
+
+- The HUMAN-UAT `status:` parser gap is now a *repeat* offender across two milestones — it should be filed as an SDK fix (accept `PASS` / `Result: PASS`) rather than re-litigated by hand at every close.
+- Don't trust `milestone.complete`'s ROADMAP archive or accomplishment extraction blindly — always inspect and curate against the established archive format.
+
+### Cost Observations
+
+- Model mix: Opus for the resume + close orchestration; prior phase execution Sonnet-primary
+- Sessions: ~2 (phase execution 2026-05-22 AM; milestone close 2026-05-22 PM)
+- Notable: smallest milestone to date (1 phase) — overhead was dominated by close ceremony, not implementation
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -359,6 +400,9 @@
 | v4.6 Enterprise Readiness | 6 | 24 | Install-day UX, 5 TLS finding types, nmap/multi-target, rich finding context, compliance mapping to PCI-DSS/HIPAA/FIPS 140-3, enterprise docs |
 | v4.7 Governance & Compliance Platform | 7 | 27 | QRAMM data model + evidence bridge, assessment UI, compliance mapping view, PDF governance section, staleness CI gate, `quirk doctor` health check |
 | v4.8 Pre-Primetime Hardening + Operating Model | 13 | 53 | Audit-driven Wave A (15 blockers) + Wave B operating model (scheduled scans, trends, dashboard scan launch, history/compare, resumable scans, error registry); first milestone with subagent-parallel Wave execution |
+| v4.9 Audit Depth | 9 (+69.1) | 38 | Closed the 2026-05-08 audit ledger entirely (166 closed / 2 deferred / 4 wont-fix); zero-bare-open invariant locked via CI gate (retrospective section not authored at close) |
+| v4.10 Launch Readiness | 8 | 31 | S/MIME + AD CS coverage, CMVP feed, HTML/PDF injection hardening, full release engineering (Trusted Publishers + Sigstore + towncrier + multi-arch GHCR + Homebrew); 52/52 reqs (retrospective section not authored at close) |
+| v4.10.1 Scoring Correctness Hotfix | 1 | 3 | Smallest milestone — single physics-coupled MVP slice fixing the overall-readiness clamp bug (backend `sum/1.5` + ScoreGauge `maxValue`); render-side + evidence-tally deferred to v5.0 Phase 01 |
 
 ### Cumulative Quality
 
