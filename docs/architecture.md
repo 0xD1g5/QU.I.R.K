@@ -62,7 +62,7 @@ The database connector row is the only credential source that lands plaintext in
 
 ## 3. Scanner Phase Model
 
-Every scanner runs inside `_phase_timer(run_stats, name)` (run_scan.py:82) and is wrapped by `_wrapped_phase(...)` (run_scan.py:93). The wrapper is the firewall: a `BaseException` raised inside one scanner cannot crash the run, and missing-extra advisories (e.g., `pip install quirk[cloud]` not installed) surface as findings rather than tracebacks. This is what lets QUIRK ship a single CLI that can be partially installed and still produce a coherent report.
+Every scanner runs inside `_phase_timer(run_stats, name)` (run_scan.py:82) and is wrapped by `_wrapped_phase(...)` (run_scan.py:93). The wrapper is the firewall: a `BaseException` raised inside one scanner cannot crash the run, and missing-extra advisories (e.g., `pip install quirk-scanner[cloud]` not installed) surface as findings rather than tracebacks. This is what lets QUIRK ship a single CLI that can be partially installed and still produce a coherent report.
 
 The 12 scanner modules and 1 discovery package are:
 
