@@ -147,6 +147,24 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
+## Current Milestone: v5.0 — Stabilization + Tech Debt Sweep
+
+**Goal:** A deliberate "breathe" milestone after four heavy capability cycles (v4.7 QRAMM, v4.8 Pre-Primetime, v4.9 Audit Depth, v4.10 Launch Readiness). Close chaos-lab coverage gaps, sweep dead code and dependency hygiene, and fix the v4.10/v4.10.1 scoring residuals. No new capability surface. Numbering continues at **Phase 87**; HORIZON guardrail caps scope at **≤6 phases** so v5.1 capability work can start within ~2 weeks.
+
+**Target features (candidate bundles — scoped via requirements pass after research):**
+- **Dependency hygiene (deadline-driven, sequenced FIRST as Phase 87):** Node.js 20→24 in `.github/workflows/release-container.yml` action versions — hard GitHub deadline **2026-06-02**; `defusedxml.lxml` → `lxml` migration with manual XXE controls (BACK-67)
+- **Scoring residuals:** EVIDENCE-TALLY-01 (3 subscores show 25 despite HIGH/CRITICAL findings — evidence-summarizer root cause), RENDER-CLI-01 + RENDER-PDF-01 (CLI/HTML/PDF report same-bug-class scoring audit, deferred from v4.10.1), Phase 42 OBS-1 CBOM Pass-1 fix (5 profiles emit zero algo components), BACK-63 score transparency
+- **Chaos lab targets:** BACK-80 postgres-tls + redis-tls, BACK-81 OQS-nginx PQC-hybrid (scoring-ceiling anchor — the only profile that scores *above* good classical TLS), BACK-82 SMTP/STARTTLS, BACK-83 gRPC TLS, BACK-84 Kafka TLS
+- **Identity lab gap:** BACK-78 identity scoring evidence keys (Kerberos KDC, SAML SP, DNSSEC zone)
+- **Code cleanup:** BACK-49–57 dead code, deprecation, version drift (CI guards against regression)
+- **Bookkeeping:** BACK-62 Nyquist VALIDATION.md updates; BACK-58 JWT `verify=False` docs
+
+**Key context:**
+- Theme locked in `.planning/HORIZON.md` 2026-05-22 (Candidate C, pulled forward from v5.2). Done-when criteria: every listed chaos lab profile up + scanner-verified; BACK-49–57 dead code gone with CI guards; lxml/XXE migration shipped; Node 24 bump landed before 2026-06-02; Phase 42 OBS-1 fix lands so the 5 vacuously-passing profiles emit real algo components.
+- Approach: research-first (full 4-agent sweep) → full-sweep requirements scoping, trimmed per-category to ≤6 phases.
+- BACK-81 OQS-nginx is the strategic centerpiece — grounds the post-quantum side of the score in a concrete demoable artifact.
+- **Risk (from HORIZON):** doesn't move adoption forward; could feel like marking time if customer feedback arrives mid-cycle. Mitigation: tight scope, fast turnaround.
+
 ## Previous Milestone: v4.10.1 SHIPPED 2026-05-22
 
 v4.10.1 "Scoring Correctness Hotfix" shipped 2026-05-22 — 1 phase (86), 3 plans, 8/8 requirements. Patched the marquee overall-readiness score that always rendered `100 / EXCELLENT` regardless of posture — a triple-layer scale collision (backend summed six 0–25 subscores then clamped at 100; the frontend gauge declared its input as 0–100 and colored red < 50). Fixed as a single-phase vertical MVP slice because backend and frontend are physics-coupled — fixing only one half would have displayed a *different* wrong number.
@@ -273,7 +291,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Render-side + evidence-tally fixes deferred to v5.0 Phase 01 (v4.10.1-D-03 / D-04) | Same bug class likely lives in CLI/HTML/PDF renderers (RENDER-CLI-01/PDF-01); the evidence-tally gap (3 subscores at 25 despite findings) is a separate root cause in the summarizer (EVIDENCE-TALLY-01). A full-stack scoring sweep is the right shape; mixing into a hotfix risks new bugs. | — Pending — captured as Future Requirements in archived v4.10.1-REQUIREMENTS.md; v5.0 Phase 01 pre-loads them |
 
 ---
-*Last updated: 2026-05-22 — v4.10.1 milestone SHIPPED: scoring correctness hotfix (overall normalization `sum/1.5` + ScoreGauge `maxValue` color fix + version bump 4.10.1). Archived to `.planning/milestones/v4.10.1-*`. EVIDENCE-TALLY-01 / RENDER-CLI-01 / RENDER-PDF-01 deferred to v5.0 Phase 01 (Stabilization).*
+*Last updated: 2026-05-22 — v5.0 milestone opened: Stabilization + Tech Debt Sweep (chaos lab coverage, dep hygiene, scoring residuals). Numbering continues at Phase 87; ≤6 phases; research-first → full-sweep scoping. Node 20→24 bump sequenced first (2026-06-02 deadline). Previous: v4.10.1 SHIPPED + archived 2026-05-22.*
 
 ## Evolution
 

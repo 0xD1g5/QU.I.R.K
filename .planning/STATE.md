@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.10.1
-milestone_name: Scoring Correctness Hotfix — Phase 86 — opened 2026-05-22
-status: Awaiting next milestone
-last_updated: "2026-05-22T13:00:55.545Z"
-last_activity: 2026-05-22 — Milestone v4.10.1 completed and archived
+milestone: v5.0
+milestone_name: Stabilization + Tech Debt Sweep
+status: planning
+last_updated: "2026-05-22T13:23:32.973Z"
+last_activity: 2026-05-22
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -20,26 +20,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.10.1 SHIPPED + archived 2026-05-22. Awaiting v5.0 (Stabilization) scope — run `/gsd-new-milestone`.
+**Current focus:** v5.0 Stabilization + Tech Debt Sweep — milestone opened 2026-05-22; research-first → requirements → roadmap. Numbering continues at Phase 87; ≤6 phases.
 
 ## Current Position
 
-Phase: Milestone v4.10.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-22 — Milestone v4.10.1 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-22 — Milestone v5.0 started
 
-## Milestone Summary (v4.10.1 — SHIPPED 2026-05-22)
+## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
+
+Theme locked in `.planning/HORIZON.md` (Candidate C, pulled forward from v5.2). Numbering continues at **Phase 87**; HORIZON guardrail **≤6 phases**. Approach: research-first (full 4-agent sweep) → full-sweep requirements scoping, trimmed per-category.
+
+**Candidate bundles:** dependency hygiene (Node 20→24 sequenced FIRST as Phase 87 — hard deadline 2026-06-02; lxml/XXE migration BACK-67), scoring residuals (EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01, Phase 42 OBS-1 CBOM Pass-1, BACK-63), chaos lab targets (BACK-80–84; BACK-81 OQS-nginx PQC-hybrid is the scoring-ceiling anchor), identity lab gap (BACK-78), code cleanup (BACK-49–57), bookkeeping (BACK-62, BACK-58).
+
+**Pre-locked requirements (from v4.10.1 deferral):** EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01 — archived in `.planning/milestones/v4.10.1-REQUIREMENTS.md`, to be absorbed into the v5.0 scoring-residuals phase.
+
+## Previous Milestone Summary (v4.10.1 — SHIPPED 2026-05-22)
 
 | Phase | Mode | Slug | Plans | Status |
 |-------|------|------|-------|--------|
 | 86 | mvp | scoring-correctness-hotfix | 3 | Complete 2026-05-22 (3/3 plans) |
 
 **v4.10.1 archive:** `.planning/milestones/v4.10.1-ROADMAP.md` + `.planning/milestones/v4.10.1-REQUIREMENTS.md`. Tag `v4.10.1` (local). Verifier PASSED 5/5; HUMAN-UAT PASS.
-
-**Structure:** Single-phase vertical MVP slice — backend math fix (SCORE-FIX-01..03) + frontend gauge fix (GAUGE-01..03) + release engineering (RELEASE-01..02) are tightly coupled and ship together. Splitting would yield half-fixes that contradict each other (backend without frontend produces a different wrong number; frontend without backend is meaningless).
-
-**Deferred to v5.0 Phase 01 — Stabilization:** EVIDENCE-TALLY-01 (subscore tally bug — separate root cause in evidence summarizer), RENDER-CLI-01 (CLI report same-bug-class audit), RENDER-PDF-01 (PDF report same-bug-class audit). Captured as Future Requirements in `.planning/REQUIREMENTS.md` so the v5.0 plan absorbs them without re-discovery.
 
 ## Previous Milestone Summary (v4.10 — SHIPPED 2026-05-21)
 
@@ -104,10 +108,10 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22 — v4.10.1 milestone closed and archived (ROADMAP + REQUIREMENTS archived, MILESTONES.md + PROJECT.md + RETROSPECTIVE.md updated, REQUIREMENTS.md removed for fresh next milestone).
+**Last session:** 2026-05-22 — v5.0 milestone opened. PROJECT.md Current Milestone section written, STATE.md reset, Phase 86 archived to `milestones/v4.10.1-phases/`. Decisions locked: research-first (full 4-agent sweep) → full-sweep scoping; Node 20→24 bump = Phase 87 (2026-06-02 deadline).
 
-**Next session:** Run `/gsd-new-milestone` to scope v5.0 (Stabilization). Phase 01 should pre-load EVIDENCE-TALLY-01 / RENDER-CLI-01 / RENDER-PDF-01.
+**Next session:** Continue v5.0 setup — run domain research (4 parallel gsd-project-researcher agents), then define REQUIREMENTS.md, then spawn gsd-roadmapper. After roadmap approval: `/gsd-discuss-phase 87`.
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- v5.0 research → requirements → roadmap in progress.
