@@ -203,6 +203,7 @@ def render_html_report(
         roadmap_now=roadmap_section("NOW"),
         roadmap_next=roadmap_section("NEXT"),
         roadmap_later=roadmap_section("LATER"),
+        subscores=score.get("subscores", {}),  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
         severity_color=_severity_color,
     )
     os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)

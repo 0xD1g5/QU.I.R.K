@@ -95,6 +95,25 @@ def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], driver
     lines.append(f"- **Owner:** {cfg.assessment.report_owner}")
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}\n")
     lines.append(f"## Score\n- **Readiness Score:** **{score.get('total')} / 100**\n- **Confidence:** **{conf.get('confidence')} / 100**\n")
+
+    # D-07 / SCORE-XPARENCY-01: subscore decomposition block
+    _SUBSCORE_LABELS = [
+        ("hygiene",         "Hygiene"),
+        ("modern_tls",      "Modern TLS"),
+        ("identity_trust",  "Identity"),
+        ("agility_signals", "Agility"),
+        ("data_at_rest",    "Data at Rest"),
+        ("data_in_motion",  "Data in Motion"),
+    ]
+    subscores = score.get("subscores") or {}
+    lines.append("## Score Decomposition\n")
+    lines.append("| Category | Score | Budget |")
+    lines.append("|----------|-------|--------|")
+    for key, label in _SUBSCORE_LABELS:
+        lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
+    raw_sum = sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
+    lines.append(f"\n**Rollup:** {raw_sum} ÷ 1.5 = **{score.get('total')} / 100**\n")
+
     lines.append("## Why this score\n")
     for d in (drivers or []):
         lines.append(f"- {md_cell(d)}")
