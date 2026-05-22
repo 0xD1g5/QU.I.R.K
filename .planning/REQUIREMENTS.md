@@ -17,11 +17,11 @@
 
 ### Scoring Residuals (SCORE)
 
-- [ ] **EVIDENCE-TALLY-01**: Resolve whether three subscores (hygiene, modern_tls, data_at_rest) returning 25 while HIGH/CRITICAL findings exist in *other* categories is a defect or correct-by-design. A product-decision gate opens the work; a six-subscore-family parametrized test suite establishes the contract. If a defect, penalty counters fire family-by-family until correct; if intended, the design is documented and the item is closed won't-fix with inline rationale.
-- [ ] **RENDER-CLI-01**: Empirically verify the CLI/markdown report's overall readiness value (and any displayed subscores) match the dashboard for the same scan ID. Apply a fix only if outputs diverge from the Phase 86 normalized 0–100 contract; otherwise close as verified-no-bug with evidence.
-- [ ] **RENDER-PDF-01**: Same empirical verification for the HTML/Playwright-PDF report; fix only on confirmed divergence.
-- [ ] **SCORE-CBOM-01**: `quirk/cbom/builder.py` Pass-1 emits real algorithm components for the five currently-zero-algo profiles (database, registry, source, ssh-weak, storage-s3) — closing Phase 42 OBS-1. Where a profile's zero-algo output is genuinely correct (e.g. plaintext/ssl-off endpoints), that is documented explicitly rather than forced.
-- [ ] **SCORE-XPARENCY-01**: Reports surface the six subscores labeled against their `/25` budget (BACK-63 score transparency), so an operator can see how the overall number decomposes.
+- [x] **EVIDENCE-TALLY-01**: Resolved **correct-by-design / won't-fix** at the subscore level — subscores are orthogonal per-category (`25 + category-local penalties`); `tests/test_scoring_orthogonal_contract.py` forward-locks the 6-family contract. `quirk/intelligence/scoring.py` math unchanged (D-01). Overall critical-cap deferred (separate model change).
+- [x] **RENDER-CLI-01**: **Verified-no-bug** at the data layer (`tests/test_score_render_parity.py`) — CLI markdown matches the canonical engine, anchored to the 0–100 contract. Single engine confirmed (assessment engine deleted); no divergence → no fix (D-04).
+- [x] **RENDER-PDF-01**: Same parity gate covers HTML/PDF (`html_renderer.py` passes `subscores` to the template). Live visual render deferred to human-UAT (UAT-88-01..03).
+- [x] **SCORE-CBOM-01**: All five profiles satisfied — ssh-weak + source emit real algorithm components (D-05); database/registry/storage-s3 emit affirmative hardcoded `quirk:coverage-note` Properties (D-06). Closes Phase 42 OBS-1. No new scanning.
+- [x] **SCORE-XPARENCY-01**: Reports show six subscores as `Label: N/25` + the `sum → ÷1.5 → overall` rollup across writer.py, executive.py, report.html.j2 (`tests/test_score_transparency.py`). Closes BACK-63.
 
 ### Chaos Lab Coverage (LAB)
 
@@ -75,11 +75,11 @@
 |-------------|-------|------|--------|
 | DEP-01 | 87 | 87-01 | ✅ done (989be0c, 326b247; PR #4) |
 | DEP-02 | 87 | 87-02 | ✅ done (eda16ff, d89a4c2, 2e85981) |
-| EVIDENCE-TALLY-01 | 88 | TBD | pending |
-| RENDER-CLI-01 | 88 | TBD | pending |
-| RENDER-PDF-01 | 88 | TBD | pending |
-| SCORE-CBOM-01 | 88 | TBD | pending |
-| SCORE-XPARENCY-01 | 88 | TBD | pending |
+| EVIDENCE-TALLY-01 | 88 | 88-01 | ✅ done — won't-fix/orthogonal lock (3a13c8d, 7c23c55) |
+| RENDER-CLI-01 | 88 | 88-01 | ✅ done — verified-no-bug, parity gate (3a13c8d) |
+| RENDER-PDF-01 | 88 | 88-01 | ✅ done — parity gate; visual → UAT-88 |
+| SCORE-CBOM-01 | 88 | 88-02 | ✅ done (3f0ec45, eb304fc) — OBS-1 closed |
+| SCORE-XPARENCY-01 | 88 | 88-01 | ✅ done — 3-surface decomposition (7c23c55) |
 | LAB-01 | 89 | TBD | pending |
 | LAB-02 | 89 | TBD | pending |
 | LAB-03 | 89 | TBD | pending |

@@ -1521,7 +1521,7 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
 ### v5.0 Phase Summary
 
 - [x] **Phase 87: Dependency Hygiene** — Node 20→24 CI bump (2026-06-16 deadline) and lxml/XXE migration replacing defusedxml ✅ 2026-05-22
-- [ ] **Phase 88: Scoring Residuals** — Evidence-tally product-decision gate, CLI/PDF render verification, CBOM Pass-1 zero-algo fix, score transparency labels
+- [x] **Phase 88: Scoring Residuals** — Evidence-tally product-decision gate, CLI/PDF render verification, CBOM Pass-1 zero-algo fix, score transparency labels ✅ 2026-05-22
 - [ ] **Phase 89: Chaos Lab Profiles** — Five new lab profiles (postgres-tls, redis-tls, smtp-starttls, kafka-tls, grpc-tls) plus identity-lab evidence verification
 - [ ] **Phase 90: OQS-nginx PQC-Hybrid** — Digest-pinned OQS-nginx chaos lab profile, PQC-hybrid detection/advisory, and scoring-ceiling agility bonus
 - [ ] **Phase 91: Code Cleanup + Bookkeeping** — Tier-A then Tier-B dead-code removal, Nyquist VALIDATION.md updates, JWT verify=False advisory
@@ -1548,14 +1548,14 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
 **Entry criterion**: EVIDENCE-TALLY-01 product-decision gate completed AND six-subscore-family parametrized RED test suite exists before any penalty-counter changes begin
 **Requirements**: EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01, SCORE-CBOM-01, SCORE-XPARENCY-01
 **Success Criteria** (what must be TRUE):
-  1. A written product decision (in the phase plan) states whether three subscores returning 25 despite findings is a defect or correct-by-design — and the codebase reflects that decision (either penalty counters corrected, or a won't-fix inline rationale committed)
-  2. The CLI/markdown report's overall readiness value matches the dashboard for the same scan ID (empirically confirmed with evidence); a fix is applied only if divergence is confirmed
-  3. The HTML/Playwright-PDF report's overall readiness value matches the dashboard for the same scan ID; same fix-only-on-divergence rule
-  4. `builder.py` Pass-1 emits non-empty algorithm components for all five previously-zero profiles (database, registry, source, ssh-weak, storage-s3) — or each zero-output profile has explicit documentation that its zero output is correct
-  5. CLI/HTML/PDF reports and the dashboard both display the six subscore labels with their `/25` budgets so an operator can trace how the overall score was calculated
+  1. ✅ Won't-fix/correct-by-design committed inline: subscores are orthogonal per-category (`25 + category-local penalties`); `tests/test_scoring_orthogonal_contract.py` forward-locks the contract (6-family parametrized). `quirk/intelligence/scoring.py` math UNCHANGED (D-01 verified — zero commits).
+  2. ✅ Verified-no-bug at the data layer: `tests/test_score_render_parity.py` proves CLI markdown matches the canonical engine output, anchored to the 0–100 contract. Single engine confirmed (assessment engine deleted). No divergence → no fix needed (D-04).
+  3. ✅ Same parity gate covers the HTML/PDF path (`html_renderer.py` passes `subscores` to the template). Live visual render is a deferred human-UAT item (UAT-88-01..03).
+  4. ✅ All five profiles satisfied: ssh-weak + source emit real algorithm components (D-05); database/registry/storage-s3 emit affirmative hardcoded `quirk:coverage-note` Properties (D-06). Closes Phase 42 OBS-1.
+  5. ✅ Six subscores shown as `Label: N/25` + the `sum → ÷1.5 → overall` rollup in writer.py, executive.py, and report.html.j2 (`tests/test_score_transparency.py`). Dashboard already showed gauges.
 **Plans**: 2 plans (1 wave — disjoint files, fully parallel)
-  - [ ] 88-01-PLAN.md — Orthogonality lock + render parity + subscore transparency (EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01, SCORE-XPARENCY-01)
-  - [ ] 88-02-PLAN.md — CBOM Pass-1 emission + no-crypto markers for the five zero-algo profiles (SCORE-CBOM-01)
+  - [x] 88-01-PLAN.md — Orthogonality lock + render parity + subscore transparency (EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01, SCORE-XPARENCY-01)
+  - [x] 88-02-PLAN.md — CBOM Pass-1 emission + no-crypto markers for the five zero-algo profiles (SCORE-CBOM-01)
 
 #### Phase 89: Chaos Lab Profiles
 **Goal**: Five new chaos-lab profiles covering the remaining TLS-capable services (postgres-tls, redis-tls, smtp-starttls, kafka-tls, grpc-tls) are up and scanner-verified, and the identity-lab evidence gap (BACK-78) is confirmed closed — every new profile satisfies the CLAUDE.md lab-sync obligation in the same change
@@ -1608,7 +1608,7 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 87. Dependency Hygiene | 2/2 | ✅ Complete | 2026-05-22 |
-| 88. Scoring Residuals | 0/TBD | Not started | — |
+| 88. Scoring Residuals | 2/2 | ✅ Complete | 2026-05-22 |
 | 89. Chaos Lab Profiles | 0/TBD | Not started | — |
 | 90. OQS-nginx PQC-Hybrid | 0/TBD | Not started | — |
 | 91. Code Cleanup + Bookkeeping | 0/TBD | Not started | — |
