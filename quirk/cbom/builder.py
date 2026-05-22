@@ -147,6 +147,10 @@ _KEX_MAP: dict[str, str] = {
     "DHE": "DH-GroupExchange",
     "DH": "DH-2048",
     "RSA": "RSA-kex",  # D-08/WR-12 Phase 73: relabel to disambiguate from cert-signature RSA-auth
+    # Phase 90 PQC-02 gap-closure: bare hybrid NamedGroup-4588 name observed by
+    # the raw openssl s_client probe — no _WITH_ separator, single token, maps
+    # directly to the existing classifier alias x25519mlkem768 → (KEM, 3, 192).
+    "X25519MLKEM768": "X25519MLKEM768",
 }
 
 _ENC_MAP: dict[str, str] = {
