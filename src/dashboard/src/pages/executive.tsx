@@ -259,12 +259,12 @@ export function ExecutivePage() {
                   : "No Data"}
               </Badge>
             </div>
-            <ScoreGauge score={score.subscores.hygiene} label="Hygiene" size={120} />
-            <ScoreGauge score={score.subscores.modern_tls} label="Modern TLS" size={120} />
-            <ScoreGauge score={score.subscores.identity_trust} label="Identity" size={120} />
-            <ScoreGauge score={score.subscores.agility_signals} label="Agility" size={120} />
-            <ScoreGauge score={score.subscores.data_at_rest} label="Data at Rest" size={120} />
-            <ScoreGauge score={score.subscores.data_in_motion} label="Data in Motion" size={120} />
+            <ScoreGauge score={score.subscores.hygiene} label="Hygiene" size={120} maxValue={25} />
+            <ScoreGauge score={score.subscores.modern_tls} label="Modern TLS" size={120} maxValue={25} />
+            <ScoreGauge score={score.subscores.identity_trust} label="Identity" size={120} maxValue={25} />
+            <ScoreGauge score={score.subscores.agility_signals} label="Agility" size={120} maxValue={25} />
+            <ScoreGauge score={score.subscores.data_at_rest} label="Data at Rest" size={120} maxValue={25} />
+            <ScoreGauge score={score.subscores.data_in_motion} label="Data in Motion" size={120} maxValue={25} />
           </div>
         </CardContent>
       </Card>
