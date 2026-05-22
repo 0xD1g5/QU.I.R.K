@@ -1109,6 +1109,67 @@ def main():
                 error_summary=_ssh_pf or None)
 
     # ==============================
+    # PQC-hybrid probe phase (Phase 90 PQC-02, D-01)
+    # Runs as a dedicated phase — explicitly NOT inside _run_tls_phase.
+    # sslyze's bundled OpenSSL cannot handshake against the hybrid endpoint;
+    # a raw openssl s_client subprocess probe is the only viable path (D-01).
+    # ==============================
+    def _run_pqc_phase():
+        from quirk.scanner.pqc_probe import probe_pqc_hybrid, host_supports_mlkem
+        if not tls_targets:
+            return []
+        pqc_eps = []
+        capability_ok = host_supports_mlkem()
+        for _host, _port in tls_targets:
+            result = probe_pqc_hybrid(_host, _port, timeout=8)
+            if result["detected"]:
+                # Genuine component path: TLS endpoint with the negotiated PQC group.
+                # The service_detail sentinel "pqc-hybrid-detected" triggers D-05 counter
+                # in build_evidence_summary; the negotiated group drives CBOM classification.
+                ep = CryptoEndpoint(
+                    host=_host,
+                    port=int(_port),
+                    protocol="TLS",
+                    service_detail=f"pqc-hybrid-detected|group=X25519MLKEM768",
+                    tls_version="TLSv1.3",
+                    cipher_suite="X25519MLKEM768",
+                )
+                pqc_eps.append(ep)
+                logger.info(
+                    "PQC probe: X25519MLKEM768 detected on %s:%s (genuine component)",
+                    _host, _port,
+                )
+            elif not capability_ok:
+                # Advisory-fallback path: host OpenSSL lacks ML-KEM support (D-01 graceful
+                # degradation).  Emit a scoped ADVISORY documenting the limitation.  The
+                # "pqc-hybrid-detected" sentinel still increments pqc_hybrid_endpoint_count
+                # (D-05) so PQC-03 scoring works on old-OpenSSL hosts.
+                ep = CryptoEndpoint(
+                    host=_host,
+                    port=int(_port),
+                    protocol="ADVISORY",
+                    scan_error=(
+                        "PQC-hybrid detection requires host OpenSSL >= 3.5 / OQS-compiled "
+                        "tooling (X25519MLKEM768 / NamedGroup 4588). "
+                        "The target may be a PQC-hybrid server but confirmation is unavailable "
+                        "on this host. Upgrade to OpenSSL >= 3.5 for genuine detection."
+                    ),
+                    scan_error_category="coverage_gap",
+                    service_detail="pqc-hybrid-detected|advisory=openssl-too-old",
+                )
+                pqc_eps.append(ep)
+                logger.info(
+                    "PQC probe: advisory fallback for %s:%s (host OpenSSL lacks ML-KEM)",
+                    _host, _port,
+                )
+        return pqc_eps
+
+    pqc_endpoints = _wrapped_phase(
+        run_stats, "pqc_probe", "pqc_probe",
+        _run_pqc_phase, error_endpoints, logger,
+    ) or []
+
+    # ==============================
     # JWT scan phase
     # ==============================
     _err_before_api = len(error_endpoints)  # Phase 67 RESUME-02
@@ -1723,6 +1784,7 @@ def main():
                 error_summary=_broker_pf or None)
 
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
+                 + pqc_endpoints                                    # Phase 90 PQC-02
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + aws_endpoints + azure_endpoints + gcp_endpoints
                  + db_endpoints

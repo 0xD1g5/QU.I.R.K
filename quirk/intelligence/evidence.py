@@ -110,6 +110,12 @@ def build_evidence_summary(
     # Vault DAR counters (Phase 30, per D-11)
     dar_vault_weak_count = 0   # HIGH severity: PKI RSA<4096, PKI SHA-1, token auth, ldap auth
 
+    # PQC-hybrid counter (Phase 90 PQC-02, D-05)
+    # Increments when an endpoint carries service_detail "pqc-hybrid-detected" —
+    # applies to BOTH the genuine-component path (TLS endpoint with X25519MLKEM768)
+    # AND the advisory-fallback path (ADVISORY endpoint emitted on old-OpenSSL hosts).
+    pqc_hybrid_endpoint_count = 0
+
     # Motion / data-in-motion counters (Phase 34)
     motion_email_starttls_missing_count = 0  # *-STARTTLS endpoints with no tls_version (handshake never completed)
     motion_email_plaintext_count = 0          # SMTPS/IMAPS/POP3S endpoints with no tls_version (implicit TLS unresponsive)
@@ -125,6 +131,11 @@ def build_evidence_summary(
         proto = str(getattr(ep, "protocol", "") or "").upper()
         if proto in protocol_counts:
             protocol_counts[proto] += 1
+
+        # PQC-02 D-05: increment on both genuine-component and advisory paths.
+        _ep_sd = str(getattr(ep, "service_detail", "") or "")
+        if "pqc-hybrid-detected" in _ep_sd:
+            pqc_hybrid_endpoint_count += 1
         if proto == "TLS" and (getattr(ep, "tls_supported_versions", "") or ""):
             tls_enum_success_count += 1
 
@@ -429,4 +440,6 @@ def build_evidence_summary(
             motion_broker_weak_tls_count / total_endpoints, 4) if total_endpoints else 0.0,
         "motion_broker_weak_cipher_ratio": round(
             motion_broker_weak_cipher_count / total_endpoints, 4) if total_endpoints else 0.0,
+        # PQC-02 D-05: counter primed for PQC-03 scoring agility bonus.
+        "pqc_hybrid_endpoint_count": pqc_hybrid_endpoint_count,
     }
