@@ -1537,7 +1537,9 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
   2. `defusedxml` no longer appears in `pyproject.toml` or any import statement; `quirk/util/xml_safe.py` is the single hardened lxml parser entry point used by both `nmap_parser.py` and `saml_scanner.py`
   3. A billion-laughs / XXE pytest fixture asserts the payload raises rather than expands or makes a network request — confirming `resolve_entities=False, no_network=True` are active
   4. Full test suite passes with no regressions after both changes
-**Plans**: TBD
+**Plans**: 2 plans
+  - [ ] 87-01-PLAN.md — Bump dashboard-quality CI Node runtime 20 -> 24 (DEP-01); verified by a real GitHub Actions run
+  - [ ] 87-02-PLAN.md — Replace defusedxml with hardened lxml xml_safe chokepoint; migrate nmap/saml; lock XXE invariant (DEP-02)
 
 #### Phase 88: Scoring Residuals
 **Goal**: The scoring system is fully correct and transparent — the evidence-tally gap is resolved by a product decision (not assumed), CLI/PDF renderers are empirically verified against the Phase 86 contract, the five zero-algo CBOM profiles emit real components, and operators can see how the overall score decomposes into its six subscore pillars
