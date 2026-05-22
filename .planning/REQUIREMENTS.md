@@ -40,10 +40,10 @@
 
 ### Code Cleanup & Bookkeeping (CLEAN)
 
-- [ ] **CLEAN-01**: Tier-A dead-code removal (file-/comment-/syntax-level, no call-graph risk): BACK-53 legacy sqlite remnants, BACK-55 stale comments, BACK-56 `datetime.utcnow` deprecation. CI guards against regression where applicable.
+- [x] **CLEAN-01**: Tier-A dead-code removal (file-/comment-/syntax-level, no call-graph risk): BACK-53 legacy sqlite remnants, BACK-55 stale comments, BACK-56 `datetime.utcnow` deprecation. CI guards against regression where applicable.
 - [ ] **CLEAN-02**: Tier-B dead-code removal (function/module deletions): BACK-49/50/51/52/54, each validated by `vulture`/AST call-graph analysis (NOT grep — dynamic imports, `__init__` re-exports, and optional-extra paths can hide reachability) plus a clean-venv smoke test after each deletion batch.
-- [ ] **CLEAN-03**: BACK-62 — Nyquist `VALIDATION.md` bookkeeping updates brought current.
-- [ ] **CLEAN-04**: BACK-58 — JWT `verify=False` documented as an intentional inspection-mode advisory.
+- [x] **CLEAN-03**: BACK-62 — Nyquist `VALIDATION.md` bookkeeping updates brought current.
+- [x] **CLEAN-04**: BACK-58 — JWT `verify=False` documented as an intentional inspection-mode advisory.
 
 ### Release (REL)
 
