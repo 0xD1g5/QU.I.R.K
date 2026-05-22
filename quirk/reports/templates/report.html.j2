@@ -152,6 +152,24 @@
       <div class="score-label">/ 100 &nbsp;|&nbsp; Confidence: {{ confidence }}/100</div>
     </div>
 
+    {% if subscores %}
+    <h3>Score Decomposition</h3>
+    <table>
+      <thead><tr><th>Category</th><th>Score</th><th>Budget</th></tr></thead>
+      <tbody>
+        <tr><td>Hygiene</td><td>{{ subscores.get('hygiene', '—') }}</td><td>/25</td></tr>
+        <tr><td>Modern TLS</td><td>{{ subscores.get('modern_tls', '—') }}</td><td>/25</td></tr>
+        <tr><td>Identity</td><td>{{ subscores.get('identity_trust', '—') }}</td><td>/25</td></tr>
+        <tr><td>Agility</td><td>{{ subscores.get('agility_signals', '—') }}</td><td>/25</td></tr>
+        <tr><td>Data at Rest</td><td>{{ subscores.get('data_at_rest', '—') }}</td><td>/25</td></tr>
+        <tr><td>Data in Motion</td><td>{{ subscores.get('data_in_motion', '—') }}</td><td>/25</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Rollup:</strong>
+      {{ subscores.values() | sum }} &divide; 1.5 = <strong>{{ total_score }} / 100</strong>
+    </p>
+    {% endif %}
+
     <h2>Findings Breakdown</h2>
     <div class="sev-grid">
       {% for sev in ['CRITICAL','HIGH','MEDIUM','LOW','INFO'] %}
