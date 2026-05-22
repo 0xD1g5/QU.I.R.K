@@ -70,6 +70,16 @@ def _fetch_jwks(
         url = base_url + path
         try:
             fetched_urls.append(url)
+            # WHY: verify=verify_tls (not hardcoded False) — this scanner is a passive
+            # inventory tool running in a controlled assessment environment. TLS cert
+            # verification is enabled by default (allow_insecure_jwks: false). When an
+            # operator sets allow_insecure_jwks: true to probe self-signed or expired-cert
+            # JWKS endpoints, verify_tls becomes False here. Accepted-risk threat model:
+            # a MITM on the JWKS URI could inject attacker-supplied key material, but
+            # QUIRK is not a relying party verifying tokens for auth — it is cataloguing
+            # signing algorithms. A HIGH ADVISORY_JWKS_VERIFY_DISABLED finding is always
+            # emitted when allow_insecure_jwks is true (CR-01 / Phase 57 HARDEN-SCAN-01).
+            # validate_external_url() still runs on every JWKS URI before fetching.
             resp = httpx.get(url, timeout=timeout, follow_redirects=True, verify=verify_tls)
             if resp.status_code != 200:
                 continue
@@ -85,6 +95,9 @@ def _fetch_jwks(
                 if not _vr.ok:
                     continue
                 fetched_urls.append(jwks_uri)
+                # WHY: same verify=verify_tls rationale as above — passive inventory
+                # scanner; allow_insecure_jwks defaults false; advisory finding emitted
+                # when enabled; validate_external_url() already ran on jwks_uri above.
                 resp2 = httpx.get(jwks_uri, timeout=timeout, follow_redirects=True, verify=verify_tls)
                 if resp2.status_code != 200:
                     continue
