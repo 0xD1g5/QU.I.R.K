@@ -84,7 +84,7 @@ Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major sca
 ## Install From Other Channels
 
 - **PyPI (recommended):** `pip install qu-i-r-k[all]` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
-- **Homebrew (macOS):** `brew install 0xD1g5/quirk/quirk` — installs into an isolated `pipx`-style venv under `libexec`. See [Homebrew Tap](docs/release-process.md#homebrew-tap-launch-02) for the tap bootstrap.
+- **Homebrew (macOS):** `brew install 0xD1g5/quirk/quirk` — installs into an isolated `pipx`-style venv under `libexec`. *(Tap bootstrap is a manual post-release task; becomes functional once the `0xD1g5/homebrew-quirk` tap repo is published with the first signed sdist sha256.)* See [Homebrew Tap](docs/release-process.md#homebrew-tap-launch-02) for the bootstrap procedure.
 - **Docker (GHCR, multi-arch):** `docker run ghcr.io/0xd1g5/quirk:latest --help` — `linux/amd64` + `linux/arm64`. See [Container Image](docs/release-process.md#container-image-launch-03).
 
 > **No `curl | bash` installer.** This is a deliberate non-feature, not an oversight — see [`docs/release-process.md` → `curl | bash` Non-Decision](docs/release-process.md). Piping HTTP to a shell defeats the integrity guarantees of Sigstore attestations and PyPI Trusted Publishers; install via pip / brew / docker only.
