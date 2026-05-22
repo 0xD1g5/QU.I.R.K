@@ -522,7 +522,7 @@ def main():
         )
         db_args = db_parser.parse_args(_sys.argv[2:])
         if db_args.action == "migrate":
-            from quirk.db import get_engine, run_additive_migration, init_db
+            from quirk.db import get_engine, run_additive_migration
 
             db_path = db_args.db_path or _resolve_db_path(db_args)
             if not db_args.dry_run:
