@@ -9323,7 +9323,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Steps:**
 1. Start the chaos lab against a TLS-defective profile: `cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile tls-cert-defects" ./lab.sh up`
-2. Run a scan: `quirk --config quirk.yaml` (or appropriate config pointing at the chaos lab).
+2. Run a scan: `quirk --config config.yaml` (the canonical config filename written by `quirk init`; edit `targets` to point at the chaos-lab TLS profile — e.g. `127.0.0.1:13444` for `tls-cert-defects`).
 3. Start the dashboard: `quirk dashboard` (default port 8000).
 4. Open in a browser, capture the landing view at 1440×900 (or similar 16:10) showing visible weak findings (sub-2048 RSA, deprecated ciphers).
 5. Save to `docs/images/dashboard-hero.png`.
