@@ -10,7 +10,7 @@ Plans 02 and 03 will turn each test GREEN.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -68,7 +68,7 @@ def _seed_session(TestingSession, scanned_at: datetime, endpoints: list[dict]):
 def test_list_scans_schema():
     """UI-HIST-01: GET /api/scans returns 200 with enriched session schema."""
     client, Session = _make_client_and_session()
-    ts = datetime.utcnow()
+    ts = datetime.now(timezone.utc)
     _seed_session(Session, ts, [
         {"host": "10.0.0.1", "port": 443, "protocol": "tls", "severity": "HIGH"},
         {"host": "10.0.0.2", "port": 443, "protocol": "tls", "severity": "MEDIUM"},
@@ -92,7 +92,7 @@ def test_list_scans_schema():
 def test_list_scans_no_limit():
     """UI-HIST-01: GET /api/scans returns all sessions — no LIMIT 10 cap."""
     client, Session = _make_client_and_session()
-    base_ts = datetime.utcnow()
+    base_ts = datetime.now(timezone.utc)
     for i in range(12):
         ts = base_ts - timedelta(minutes=i)
         _seed_session(Session, ts, [
@@ -112,7 +112,7 @@ def test_list_scans_no_limit():
 def test_clone_data_recovery():
     """UI-HIST-01: GET /api/scans recovers profile/calibration/target from ScanJob."""
     client, Session = _make_client_and_session()
-    ts = datetime.utcnow()
+    ts = datetime.now(timezone.utc)
     scan_run_id = ts.isoformat()
     _seed_session(Session, ts, [
         {"host": "dashboard.example.com", "port": 443, "protocol": "tls",
@@ -153,7 +153,7 @@ def test_clone_data_recovery():
 def test_clone_reconstruction():
     """UI-HIST-01: GET /api/scans reconstructs target from hosts when no ScanJob."""
     client, Session = _make_client_and_session()
-    ts = datetime.utcnow()
+    ts = datetime.now(timezone.utc)
     _seed_session(Session, ts, [
         {"host": "cli-a.example.com", "port": 443, "protocol": "tls", "severity": "HIGH"},
         {"host": "cli-b.example.com", "port": 443, "protocol": "tls", "severity": "MEDIUM"},
@@ -188,7 +188,7 @@ def test_clone_reconstruction():
 def test_compare_schema():
     """UI-HIST-02: GET /api/compare returns 200 with full comparison schema."""
     client, Session = _make_client_and_session()
-    ts_a = datetime.utcnow()
+    ts_a = datetime.now(timezone.utc)
     ts_b = ts_a - timedelta(hours=1)
     _seed_session(Session, ts_a, [
         {"host": "newer.example.com", "port": 443, "protocol": "tls", "severity": "HIGH"},
@@ -220,7 +220,7 @@ def test_compare_schema():
 def test_compare_self():
     """UI-HIST-02: GET /api/compare returns 400 when a == b (same scan)."""
     client, Session = _make_client_and_session()
-    ts = datetime.utcnow()
+    ts = datetime.now(timezone.utc)
     _seed_session(Session, ts, [
         {"host": "self.example.com", "port": 443, "protocol": "tls", "severity": "INFO"},
     ])
@@ -245,7 +245,7 @@ def test_compare_score_delta():
     for both sessions due to the scoring model's additive clamp at 100.
     """
     client, Session = _make_client_and_session()
-    ts_a = datetime.utcnow()
+    ts_a = datetime.now(timezone.utc)
     ts_b = ts_a - timedelta(hours=1)
     # Session A: ECDSA certs (agility bonus)
     _seed_session(Session, ts_a, [
@@ -283,7 +283,7 @@ def test_compare_score_delta():
 def test_compare_finding_diff():
     """UI-HIST-02: added_findings and removed_findings are non-empty for different sessions."""
     client, Session = _make_client_and_session()
-    ts_a = datetime.utcnow()
+    ts_a = datetime.now(timezone.utc)
     ts_b = ts_a - timedelta(hours=1)
     _seed_session(Session, ts_a, [
         {"host": "x.example.com", "port": 443, "protocol": "tls", "severity": "HIGH"},
@@ -311,7 +311,7 @@ def test_compare_finding_diff():
 def test_compare_endpoint_diff():
     """UI-HIST-02: endpoints_only_in_a, endpoints_only_in_b, changed_endpoints correct."""
     client, Session = _make_client_and_session()
-    ts_a = datetime.utcnow()
+    ts_a = datetime.now(timezone.utc)
     ts_b = ts_a - timedelta(hours=1)
     # Session A: shared + only-a
     _seed_session(Session, ts_a, [
