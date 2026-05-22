@@ -1518,9 +1518,9 @@ Archived to: [`.planning/milestones/v4.10-ROADMAP.md`](milestones/v4.10-ROADMAP.
 ## Phase Details — v4.10.1 Scoring Correctness Hotfix
 
 ### Phase 86: Scoring Correctness Hotfix
-**Goal**: As a security consultant, I want the executive-summary overall readiness score to reflect actual scan posture, so that the marquee number doesn't contradict the visible CRITICAL findings and red subscore gauges below it.
+**Goal**: As a security consultant, I want to have the executive-summary overall readiness score reflect actual scan posture, so that the marquee number doesn't contradict the visible CRITICAL findings and red subscore gauges below it.
 **Depends on**: Phase 85 (v4.10 SHIPPED 2026-05-21)
-**Mode**: mvp (will be stamped by `/gsd-mvp-phase` after roadmap approval)
+**Mode**: mvp
 **Requirements**: SCORE-FIX-01, SCORE-FIX-02, SCORE-FIX-03, GAUGE-01, GAUGE-02, GAUGE-03, RELEASE-01, RELEASE-02
 **Success Criteria** (what must be TRUE):
   1. Running a scan against the `tls-cert-defects` chaos lab profile (or any scan that previously hit the clamp) shows an overall-readiness value strictly less than 100, with a corresponding non-EXCELLENT rating — the canonical 25+25+23+3+25+19 sum displays as ~80, not 100.
