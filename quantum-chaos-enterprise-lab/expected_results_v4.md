@@ -443,6 +443,13 @@ PROFILE_ARGS="--profile email" ./lab.sh up
 
 **Reference:** Scanner: `quirk/scanner/email_scanner.py`. Risk titles from `risk_engine.evaluate_email_endpoints`. Detail + TLS 1.3 caveat in `labs/email/expected_results.md`.
 
+**LAB-03 coverage note (D-01):** Port 30587 (Postfix submission / SMTP STARTTLS) satisfies
+requirement LAB-03 ("smtp-starttls coverage"). The scanner emits
+`protocol=SMTP-STARTTLS, service_detail=SMTP-STARTTLS:587` (HIGH, EMAIL-09) for this
+port when the email profile is running. No standalone `smtp-starttls` service exists —
+this coverage is intentional per decision D-01 (already-covered closure). Requirement
+LAB-03 is closed as covered by the `email` profile.
+
 ---
 
 ## Profile: broker
@@ -669,3 +676,44 @@ PROFILE_ARGS="--profile kafka-tls" ./lab.sh up
 profile's `kafka-broker` service is **unchanged**.
 
 **Reference:** Scanner: `quirk/scanner/broker_scanner.py`. Config: `labs/kafka-tls/server.properties`. Requirement: LAB-04.
+
+---
+
+## Profile: grpc-tls
+
+*Phase 89 / LAB-05. Minimal Go gRPC server (grpc-go) with a self-signed RSA-2048 certificate.
+grpc-go automatically advertises ALPN `h2` via `NextProtos: ["h2"]` in the TLS config. Direct
+TLS on port 443 (no STARTTLS). Scanner probe: sslyze `CERTIFICATE_INFO` + `TLS_1_2_CIPHER_SUITES`
++ `TLS_1_3_CIPHER_SUITES` on host port **39443**.*
+
+```bash
+PROFILE_ARGS="--profile grpc-tls" ./lab.sh up
+```
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 39443 | grpc-tls | TLS direct | `cert_subject=CN=grpc-tls.chaos.local, key_size=2048`; risk: "RSA-2048 certificate (quantum-vulnerable)" (MEDIUM, TLS-02) | sslyze CERTIFICATE_INFO |
+| 39443 | grpc-tls | TLS 1.2 ciphers | `accepted_ciphers=[TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256]` — Go TLS defaults (ECDHE-RSA, forward secrecy) | Informational — no HIGH weak-cipher finding (Go's TLS 1.2 defaults are modern) |
+| 39443 | grpc-tls | TLS 1.3 ciphers | `accepted_ciphers=[TLS_CHACHA20_POLY1305_SHA256, TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256]` | Informational |
+
+**D-03 empirical result (confirmed at execution time, Phase 89 Plan 03):**
+sslyze successfully negotiates the TLS handshake against the grpc-go server despite
+the server advertising ALPN `h2` only. `scan_status=ServerScanStatusEnum.COMPLETED`.
+The ALPN constraint does NOT prevent sslyze cipher/cert enumeration at the TLS record
+layer. The openssl s_client fallback (D-03) was NOT needed.
+
+**Expected findings summary:**
+- RSA-2048 cert (quantum-vulnerable) — MEDIUM (TLS-02)
+- TLS cipher suites — informational (Go TLS defaults are ECDHE-RSA + PFS; no HIGH finding)
+
+**Weak TLS profile note:** The grpc-tls service uses Go's default `tls.Config` — TLS 1.2+
+with ECDHE-RSA cipher suites. The intentional weakness is the RSA-2048 key size (D-02
+quantum-vulnerable MEDIUM finding). There is no deliberately weak cipher config (unlike
+redis-tls / kafka-tls which force 3DES/RSA-KX ciphers).
+
+**ALPN h2 note:** grpc-go sets `NextProtos: ["h2"]` automatically. sslyze does not have an
+ALPN ScanCommand but completes the TLS handshake and produces full cipher/cert findings.
+
+**Reference:** Scanner: sslyze direct TLS on port 39443. Lab image: built from
+`labs/grpc-tls/Dockerfile` (FROM golang:1.23-alpine). Config: `labs/grpc-tls/main.go`.
+Requirement: LAB-05.
