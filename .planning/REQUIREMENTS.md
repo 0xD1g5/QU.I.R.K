@@ -25,12 +25,12 @@
 
 ### Chaos Lab Coverage (LAB)
 
-- [ ] **LAB-01**: `postgres-tls` chaos-lab profile (sslyze `--starttls postgres`); `docker-compose.yml`, `lab.sh` ALL_PROFILES, README, and `expected_results_*.md` oracle all updated in the same change (CLAUDE.md rule).
-- [ ] **LAB-02**: `redis-tls` profile (direct-socket TLS on 6380); same lab-sync obligations. Confirm `broker_scanner.py` Redis-TLS probe works against official `redis:7.4.1-alpine`.
+- [x] **LAB-01**: `postgres-tls` chaos-lab profile (sslyze `--starttls postgres`); `docker-compose.yml`, `lab.sh` (auto-derived profiles), README, and `expected_results_*.md` oracle all updated in the same change (CLAUDE.md rule). Closed-lab-01 (89-01): weak `ssl_ciphers=AES128-SHA:AES256-SHA`, TLS 1.2 only.
+- [x] **LAB-02**: `redis-tls` standalone profile (direct-socket TLS); same lab-sync obligations satisfied. Closed-lab-02 (89-01): weak `tls-ciphers "DES-CBC3-SHA:AES128-SHA:AES256-SHA"`, TLS 1.2 only.
 - [x] **LAB-03**: `smtp-starttls` — closed as already-covered by the `email` profile (D-01). Port 30587 (Postfix submission) exposes SMTP STARTTLS; scanner emits `protocol=SMTP-STARTTLS, service_detail=SMTP-STARTTLS:587` (HIGH, EMAIL-09). No standalone smtp-starttls service added. Coverage note added to `expected_results_v4.md` under `## Profile: email`. Requirement: closed-covered-by-email-profile (D-01).
-- [ ] **LAB-04**: `kafka-tls` profile (`apache/kafka:3.9.0`, PEM keystore, TLS listener 9093 with plaintext 9092 healthcheck); same lab-sync obligations.
+- [x] **LAB-04**: `kafka-tls` profile (`apache/kafka:3.9.0`, PEM keystore, TLS listener 39093 with plaintext 39092 healthcheck); same lab-sync obligations satisfied. Closed-lab-04 (89-01): weak `ssl.cipher.suites=TLS_RSA_WITH_AES_128/256_CBC_SHA`, separate-file PEM keystore (RESEARCH Pitfall 2 avoided), TLS 1.2.
 - [x] **LAB-05**: `grpc-tls` profile — custom minimal Go gRPC server (ALPN h2, port 39443). D-03 empirical gate PASSED: sslyze `ServerScanStatusEnum.COMPLETED`, cert CN=grpc-tls.chaos.local RSA-2048, ECDHE-RSA TLS 1.2+1.3 suites detected. Four-file lab-sync complete (docker-compose.yml + lab.sh auto-derive + README + expected_results_v4.md). Requirement: closed-lab-05.
-- [ ] **LAB-06**: Identity-lab evidence verified end-to-end (BACK-78) — Kerberos KDC, SAML SP, and DNSSEC zone targets included in a lab scan config; the existing Kerberos/SAML/DNSSEC evidence counters are confirmed flowing into the identity subscore (research confirms the code is wired; the gap is scan-config + UAT coverage).
+- [x] **LAB-06**: Identity-lab evidence verified end-to-end (BACK-78) — Kerberos/SAML/DNSSEC connectors enabled in `config.yaml` with live lab targets + DNSSEC resolver override (127.0.0.1:15353). Closed-lab-06 (89-02): live scan confirmed `dnssec_weak_algo_count=2` and `saml_weak_signing_count=2` flow non-zero into the identity subscore (`identity_trust=22`). The end-to-end run surfaced + fixed a latent crash (custom Logger lacked stdlib printf/`.warning` API → all three connectors threw inside `_wrapped_phase`, silently zeroing counters; fixed in `quirk/logging_util.py`, commit 5d22d98). **Deferred (human-verify):** `identity_weak_etype_count` (kerberos) needs the `identity` extra/impacket + a live KDC (macOS port-88 caveat) — tracked in HUMAN-UAT, wiring confirmed correct.
 
 ### Post-Quantum Scoring Ceiling (PQC)
 
@@ -80,12 +80,12 @@
 | RENDER-PDF-01 | 88 | 88-01 | ✅ done — parity gate; visual → UAT-88 |
 | SCORE-CBOM-01 | 88 | 88-02 | ✅ done (3f0ec45, eb304fc) — OBS-1 closed |
 | SCORE-XPARENCY-01 | 88 | 88-01 | ✅ done — 3-surface decomposition (7c23c55) |
-| LAB-01 | 89 | 89-01 | pending |
-| LAB-02 | 89 | 89-01 | pending |
+| LAB-01 | 89 | 89-01 | ✅ done — postgres-tls weak-TLS profile |
+| LAB-02 | 89 | 89-01 | ✅ done — redis-tls standalone weak-TLS profile |
 | LAB-03 | 89 | 89-03 | ✅ done — closed-covered-by-email-profile (D-01) |
-| LAB-04 | 89 | 89-01 | pending |
+| LAB-04 | 89 | 89-01 | ✅ done — kafka-tls weak-TLS profile (PEM keystore) |
 | LAB-05 | 89 | 89-03 | ✅ done — grpc-tls lab profile + D-03 ALPN gate PASSED |
-| LAB-06 | 89 | 89-02 | pending |
+| LAB-06 | 89 | 89-02 | ✅ done — identity evidence live-verified (dnssec=2, saml=2); kerberos etype deferred (HUMAN-UAT) |
 | PQC-01 | 90 | TBD | pending |
 | PQC-02 | 90 | TBD | pending |
 | PQC-03 | 90 | TBD | pending |
