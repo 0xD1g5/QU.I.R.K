@@ -416,15 +416,17 @@ def _build_cloud_lab_endpoints() -> list[CryptoEndpoint]:
 def _build_database_lab_endpoints() -> list[CryptoEndpoint]:
     """Database profile — DAR shape (POSTGRESQL ssl-off, port 25432).
 
-    POSTGRESQL/MYSQL are in DAR_SKIP_PROTOCOLS — Pass 2/3 skip. Pass 1 emits
-    an algorithm component for cert_pubkey_alg so the schema validator has a
-    non-trivial Bom. Sourced from expected_results_v3.md Phase 27.
+    POSTGRESQL/MYSQL are in DAR_SKIP_PROTOCOLS — Pass 2/3 skip. Real ssl-off
+    behaviour: db_connector does NOT set cert_pubkey_alg (no TLS negotiation).
+    Phase 88 D-06 / SCORE-CBOM-01: builder emits an affirmative quirk:coverage-note
+    instead of an algorithm component, closing Phase 42 OBS-1 for this profile.
+    Sourced from expected_results_v3.md Phase 27.
     """
     return [
         CryptoEndpoint(
             host="localhost", port=25432, protocol="POSTGRESQL",
             tls_version=None, cipher_suite=None,
-            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_pubkey_alg=None, cert_pubkey_size=None,
             cert_sig_alg=None, cert_subject=None, cert_issuer=None,
             cert_not_before=None, cert_not_after=None,
             tls_capabilities_json=None, ssh_audit_json=None,
@@ -571,15 +573,17 @@ def _build_phaseA_lab_endpoints() -> list[CryptoEndpoint]:
 def _build_registry_lab_endpoints() -> list[CryptoEndpoint]:
     """Registry profile — port 20005, OUTDATED_CRYPTO_LIB observable.
 
-    Sourced from expected_results_v3.md registry section. Defaults to RSA so
-    Pass 1 emits a known algorithm component (the OUTDATED_CRYPTO_LIB string
-    itself is not a Pass-1 observable — it's surfaced via tls_capabilities_json).
+    Sourced from expected_results_v3.md registry section. Real scanner behaviour:
+    container_scanner sets cipher_suite=library_name (e.g. "openssl"). Library names
+    are not algorithm names and would produce UNKNOWN classification.
+    Phase 88 D-06 / SCORE-CBOM-01: builder emits affirmative quirk:coverage-note
+    instead of registering the library string as an algorithm component.
     """
     return [
         CryptoEndpoint(
             host="localhost", port=20005, protocol="CONTAINER",
-            tls_version=None, cipher_suite=None,
-            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            tls_version=None, cipher_suite="openssl",
+            cert_pubkey_alg=None, cert_pubkey_size=None,
             cert_sig_alg=None, cert_subject=None, cert_issuer=None,
             cert_not_before=None, cert_not_after=None,
             tls_capabilities_json=None, ssh_audit_json=None,
@@ -588,16 +592,18 @@ def _build_registry_lab_endpoints() -> list[CryptoEndpoint]:
 
 
 def _build_source_lab_endpoints() -> list[CryptoEndpoint]:
-    """Source profile — port 20006, weak-algorithm anti-pattern (MD5).
+    """Source profile — port 20006, weak-algorithm anti-pattern (MD5 semgrep rule).
 
     Sourced from expected_results_v3.md source-code scanner findings.
-    MD5 is in _ALGORITHM_TABLE so should classify cleanly.
+    Phase 88 D-05 / SCORE-CBOM-01: source scanner sets cipher_suite=rule_id;
+    _extract_algo_from_rule_id extracts "MD5" from the -md5 fragment.
     """
     return [
         CryptoEndpoint(
             host="localhost", port=20006, protocol="SOURCE",
-            tls_version=None, cipher_suite=None,
-            cert_pubkey_alg="MD5", cert_pubkey_size=None,
+            tls_version=None,
+            cipher_suite="python.cryptography.security.insecure-hash-algorithms-md5",
+            cert_pubkey_alg=None, cert_pubkey_size=None,
             cert_sig_alg=None, cert_subject=None, cert_issuer=None,
             cert_not_before=None, cert_not_after=None,
             tls_capabilities_json=None, ssh_audit_json=None,
@@ -606,11 +612,21 @@ def _build_source_lab_endpoints() -> list[CryptoEndpoint]:
 
 
 def _build_ssh_weak_lab_endpoints() -> list[CryptoEndpoint]:
-    """ssh-weak profile — port 20022, ssh-dss hostkey (CRITICAL).
+    """ssh-weak profile — port 20022, weak SSH algorithms (CRITICAL findings).
 
     Sourced from expected_results_v3.md ssh-weak hostkey ssh-dss CRITICAL.
-    NOTE: ssh-dss may surface UNKNOWN — Plan 04 closes.
+    Phase 88 D-05 / SCORE-CBOM-01: realistic ssh_audit_json so the SSH builder
+    branch registers the actual weak algorithms observed by ssh-audit rather than
+    falling back to the cert_pubkey_alg sentinel. All algorithm names must exist
+    in classifier._ALGORITHM_TABLE (added in Phase 88 Plan 02 Task 1).
     """
+    import json as _json
+    _SSH_AUDIT_JSON = _json.dumps({
+        "kex": [{"algorithm": "diffie-hellman-group1-sha1"}],
+        "key": [{"algorithm": "ssh-dss"}],
+        "enc": [{"algorithm": "aes128-ctr"}],
+        "mac": [{"algorithm": "hmac-md5"}],
+    })
     return [
         CryptoEndpoint(
             host="localhost", port=20022, protocol="SSH",
@@ -618,7 +634,7 @@ def _build_ssh_weak_lab_endpoints() -> list[CryptoEndpoint]:
             cert_pubkey_alg="ssh-dss", cert_pubkey_size=None,
             cert_sig_alg=None, cert_subject=None, cert_issuer=None,
             cert_not_before=None, cert_not_after=None,
-            tls_capabilities_json=None, ssh_audit_json=None,
+            tls_capabilities_json=None, ssh_audit_json=_SSH_AUDIT_JSON,
         ),
     ]
 
@@ -650,18 +666,22 @@ def _build_storage_lab_endpoints() -> list[CryptoEndpoint]:
 
 
 def _build_storage_s3_lab_endpoints() -> list[CryptoEndpoint]:
-    """storage-s3 profile — MinIO S3 (port 29000), AES-256 SSE.
+    """storage-s3 profile — MinIO S3 (port 29000), unencrypted bucket.
 
     Sourced from expected_results_v3.md storage-s3 section. S3 is in
-    DAR_SKIP_PROTOCOLS — Pass 2/3 skip; Pass 1 emits algorithm.
+    DAR_SKIP_PROTOCOLS — Pass 2/3 skip. Real unencrypted-bucket observation:
+    aws_connector sets service_detail="S3/unencrypted" with no cert_pubkey_alg.
+    Phase 88 D-06 / SCORE-CBOM-01: builder emits an affirmative quirk:coverage-note
+    instead of an algorithm component, closing Phase 42 OBS-1 for this profile.
     """
     return [
         CryptoEndpoint(
             host="localhost", port=29000, protocol="S3",
             tls_version=None, cipher_suite=None,
-            cert_pubkey_alg="AES-256", cert_pubkey_size=None,
+            cert_pubkey_alg=None, cert_pubkey_size=None,
             cert_sig_alg=None, cert_subject=None, cert_issuer=None,
             cert_not_before=None, cert_not_after=None,
             tls_capabilities_json=None, ssh_audit_json=None,
+            service_detail="S3/unencrypted",
         ),
     ]
