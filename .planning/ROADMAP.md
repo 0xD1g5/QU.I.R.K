@@ -1796,7 +1796,7 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
 - [x] **Phase 89: Chaos Lab Profiles** — Five new lab profiles (postgres-tls, redis-tls, smtp-starttls, kafka-tls, grpc-tls) plus identity-lab evidence verification (completed 2026-05-22)
 - [x] **Phase 90: OQS-nginx PQC-Hybrid** — Digest-pinned OQS-nginx chaos lab profile, PQC-hybrid detection/advisory, and scoring-ceiling agility bonus (completed 2026-05-22)
 - [x] **Phase 91: Code Cleanup + Bookkeeping** — Tier-A then Tier-B dead-code removal, Nyquist VALIDATION.md updates, JWT verify=False advisory (completed 2026-05-22)
-- [ ] **Phase 92: v5.0 Close-out** — Version bump 5.0.0, towncrier, UAT-SERIES.md, Obsidian sync, v5.0.0 tag
+- [x] **Phase 92: v5.0 Close-out** — Version bump 5.0.0, towncrier, UAT-SERIES.md, Obsidian sync, v5.0.0 tag ✅ 2026-05-22
 
 ### v5.0 Phase Details
 
@@ -1907,7 +1907,7 @@ Plans:
 
 **Plans**: 2 plans
 - [x] 92-01-PLAN.md — Version bump to 5.0.0 + towncrier CHANGELOG + release notes
-- [ ] 92-02-PLAN.md — UAT-SERIES + Obsidian sync + local v5.0.0 tag (checkpoint)
+- [x] 92-02-PLAN.md — UAT-SERIES + Obsidian sync + local v5.0.0 tag (checkpoint)
 
 ## Progress — v5.0 Phases
 
@@ -1918,4 +1918,4 @@ Plans:
 | 89. Chaos Lab Profiles | 3/3 | Complete   | 2026-05-22 |
 | 90. OQS-nginx PQC-Hybrid | 4/4 | Complete   | 2026-05-22 |
 | 91. Code Cleanup + Bookkeeping | 3/3 | Complete   | 2026-05-22 |
-| 92. v5.0 Close-out | 1/2 | In Progress|  |
+| 92. v5.0 Close-out | 2/2 | ✅ Complete | 2026-05-22 |
