@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.10.1
 milestone_name: Scoring Correctness Hotfix
-status: planning
-last_updated: "2026-05-22T04:00:00.000Z"
-last_activity: 2026-05-22
+status: In progress — Plan 86-01 complete; Plans 86-02 and 86-03 remaining
+last_updated: "2026-05-22T12:00:00.000Z"
+last_activity: 2026-05-22 — Plan 86-01 complete (backend normalization + boundary tests)
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 86 — Scoring Correctness Hotfix (not started)
-Plan: —
-Status: Roadmap approved; awaiting `/gsd-mvp-phase 86` then `/gsd-plan-phase 86`
-Last activity: 2026-05-22 — Milestone v4.10.1 roadmap created (single phase, all 8 reqs mapped)
+Phase: 86 — Scoring Correctness Hotfix (in progress)
+Plan: 86-01 complete; 86-02 and 86-03 pending
+Status: In progress — Plan 86-01 complete (backend normalization + boundary tests)
+Last activity: 2026-05-22 — Plan 86-01 complete: int(round(sum/1.5)) normalization live, docstring rewritten, 3 boundary tests green
 
 ## Milestone Summary (v4.10.1 — in progress)
 
 | Phase | Mode | Slug | Plans | Status |
 |-------|------|------|-------|--------|
-| 86 | mvp | scoring-correctness-hotfix | TBD | Not started |
+| 86 | mvp | scoring-correctness-hotfix | 3 | In progress (1/3 plans complete) |
 
 **Structure:** Single-phase vertical MVP slice — backend math fix (SCORE-FIX-01..03) + frontend gauge fix (GAUGE-01..03) + release engineering (RELEASE-01..02) are tightly coupled and ship together. Splitting would yield half-fixes that contradict each other (backend without frontend produces a different wrong number; frontend without backend is meaningless).
 
@@ -79,6 +79,12 @@ Last activity: 2026-05-22 — Milestone v4.10.1 roadmap created (single phase, a
 - v4.10 shipped 2026-05-21. 8 phases (78–85), 31 plans, 52/52 requirements; archived to `.planning/milestones/v4.10-ROADMAP.md`.
 - v4.10.1 roadmap created 2026-05-22. Single phase (86), 8 requirements, 100% coverage. Vertical MVP slice — backend + frontend + release engineering coupled by physics (the wrong-number bug spans backend aggregation and frontend gauge math; fixing only half produces a different wrong number).
 
+### Decisions (v4.10.1)
+
+- 86-01-D-01: int(round(sum/1.5)) normalization replaces _clamp(sum,0,100) — canonical 120→80 confirmed
+- 86-01-D-02: SCORE_WEIGHTS and _apply_weighted_impacts unchanged (0-25 subscore budget preserved)
+- 86-01-D-03: Docstring rewritten to remove Phase 60 SCORE-04 clamp-is-intentional language
+
 ### Decisions (v4.10.1 — pre-execution)
 
 - v4.10.1-D-01 (pre-locked by milestone scope): single-phase MVP. Backend math fix, frontend gauge fix, version bump and changelog ship as one atomic unit. Splitting risks shipping a half-fix that displays a different wrong number.
@@ -88,8 +94,8 @@ Last activity: 2026-05-22 — Milestone v4.10.1 roadmap created (single phase, a
 
 ### Pending Todos
 
-- Run `/gsd-mvp-phase 86` to stamp Phase 86 as `mode: mvp` (skips wave structure, single-plan default).
-- Run `/gsd-plan-phase 86` to decompose the phase into plan(s) targeting `quirk/intelligence/scoring.py`, `src/dashboard/src/components/ScoreGauge.tsx`, `src/dashboard/src/pages/executive.tsx`, `tests/test_score_weights_invariant.py`, `pyproject.toml`, and `CHANGELOG.md` / `changelog.d/`.
+- Execute Plan 86-02: frontend gauge fix (ScoreGauge.tsx maxValue prop, executive.tsx + data-at-rest.tsx maxValue={25}).
+- Execute Plan 86-03: version bump to 4.10.1 + changelog entry.
 
 ### Blockers
 
@@ -97,6 +103,6 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22 — v4.10.1 milestone opened. Bug surfaced 2026-05-22 in a live dashboard scan against `tls-cert-defects` chaos lab profile: Overall = 100 / EXCELLENT while subscores 25+25+23+3+25+19 = 120 (clamped) and severity shows 2 CRITICAL + 2 HIGH. Diagnosis: triple-layer scale collision — backend sums 0-25 subscores then clamps at 100; frontend declares input as 0-100 and colors red < 50.
+**Last session:** 2026-05-22 — Plan 86-01 complete. Backend normalization formula in place (`int(round(sum/1.5))`). Docstring rewritten. Three boundary tests (RED→GREEN, canonical 120→80 confirmed). 79 scoring-related tests pass.
 
-**Next session:** `/gsd-mvp-phase 86` then `/gsd-plan-phase 86`.
+**Next session:** Execute Plan 86-02 (frontend gauge fix: maxValue prop, _gaugeColor fraction rewrite, executive.tsx + data-at-rest.tsx maxValue={25}).
