@@ -14,6 +14,7 @@
 - ✅ **v4.9 Audit Depth** — Phases 69–77 + 69.1, 38 plans (shipped 2026-05-15) → `.planning/milestones/v4.9-ROADMAP.md`
 - ✅ **v4.10 Launch Readiness — Coverage, Hardening, Release Engineering** — Phases 78–85, 8 phases (shipped 2026-05-21) → `.planning/milestones/v4.10-ROADMAP.md`
 - ✅ **v4.10.1 Scoring Correctness Hotfix** — Phase 86, 1 phase (shipped 2026-05-22) → `.planning/milestones/v4.10.1-ROADMAP.md`
+- 🔄 **v5.0 Stabilization + Tech Debt Sweep** — Phases 87–92, 6 phases (in progress)
 
 ## Phases
 
@@ -1509,3 +1510,100 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 86. Scoring Correctness Hotfix | 3/3 | Complete | 2026-05-22 |
+
+---
+
+## v5.0 Stabilization + Tech Debt Sweep — Phases 87–92
+
+**Milestone Goal:** A deliberate stabilization cycle after four heavy capability milestones. No new capability surface. Close dependency hygiene gaps (Node 20→24 deadline-driven, lxml/XXE migration), resolve scoring residuals deferred from v4.10.1, fill chaos-lab coverage gaps, anchor the post-quantum scoring ceiling with an OQS-nginx PQC-hybrid profile, sweep dead code and bookkeeping, and ship v5.0.0. Phases 87–92, ≤6 phases per HORIZON guardrail.
+
+### v5.0 Phase Summary
+
+- [ ] **Phase 87: Dependency Hygiene** — Node 20→24 CI bump (2026-06-16 deadline) and lxml/XXE migration replacing defusedxml
+- [ ] **Phase 88: Scoring Residuals** — Evidence-tally product-decision gate, CLI/PDF render verification, CBOM Pass-1 zero-algo fix, score transparency labels
+- [ ] **Phase 89: Chaos Lab Profiles** — Five new lab profiles (postgres-tls, redis-tls, smtp-starttls, kafka-tls, grpc-tls) plus identity-lab evidence verification
+- [ ] **Phase 90: OQS-nginx PQC-Hybrid** — Digest-pinned OQS-nginx chaos lab profile, PQC-hybrid detection/advisory, and scoring-ceiling agility bonus
+- [ ] **Phase 91: Code Cleanup + Bookkeeping** — Tier-A then Tier-B dead-code removal, Nyquist VALIDATION.md updates, JWT verify=False advisory
+- [ ] **Phase 92: v5.0 Close-out** — Version bump 5.0.0, towncrier, UAT-SERIES.md, Obsidian sync, v5.0.0 tag
+
+### v5.0 Phase Details
+
+#### Phase 87: Dependency Hygiene
+**Goal**: Two deadline-adjacent dependency risks are eliminated — the Node 20→24 CI bump lands before GitHub's runner default-switch, and defusedxml is replaced by a hardened lxml parser so the lxml/XXE migration debt is fully closed
+**Depends on**: Nothing (independent of other v5.0 phases; sequenced first by deadline urgency)
+**Requirements**: DEP-01, DEP-02
+**Success Criteria** (what must be TRUE):
+  1. The `dashboard-quality` CI job runs against Node 24 and passes green on a real run; no remaining `node-version: 20` references in any workflow file
+  2. `defusedxml` no longer appears in `pyproject.toml` or any import statement; `quirk/util/xml_safe.py` is the single hardened lxml parser entry point used by both `nmap_parser.py` and `saml_scanner.py`
+  3. A billion-laughs / XXE pytest fixture asserts the payload raises rather than expands or makes a network request — confirming `resolve_entities=False, no_network=True` are active
+  4. Full test suite passes with no regressions after both changes
+**Plans**: TBD
+
+#### Phase 88: Scoring Residuals
+**Goal**: The scoring system is fully correct and transparent — the evidence-tally gap is resolved by a product decision (not assumed), CLI/PDF renderers are empirically verified against the Phase 86 contract, the five zero-algo CBOM profiles emit real components, and operators can see how the overall score decomposes into its six subscore pillars
+**Depends on**: Phase 87 (sequenced after; no hard code dependency, but avoids interleaving score-related changes)
+**Entry criterion**: EVIDENCE-TALLY-01 product-decision gate completed AND six-subscore-family parametrized RED test suite exists before any penalty-counter changes begin
+**Requirements**: EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01, SCORE-CBOM-01, SCORE-XPARENCY-01
+**Success Criteria** (what must be TRUE):
+  1. A written product decision (in the phase plan) states whether three subscores returning 25 despite findings is a defect or correct-by-design — and the codebase reflects that decision (either penalty counters corrected, or a won't-fix inline rationale committed)
+  2. The CLI/markdown report's overall readiness value matches the dashboard for the same scan ID (empirically confirmed with evidence); a fix is applied only if divergence is confirmed
+  3. The HTML/Playwright-PDF report's overall readiness value matches the dashboard for the same scan ID; same fix-only-on-divergence rule
+  4. `builder.py` Pass-1 emits non-empty algorithm components for all five previously-zero profiles (database, registry, source, ssh-weak, storage-s3) — or each zero-output profile has explicit documentation that its zero output is correct
+  5. CLI/HTML/PDF reports and the dashboard both display the six subscore labels with their `/25` budgets so an operator can trace how the overall score was calculated
+**Plans**: TBD
+
+#### Phase 89: Chaos Lab Profiles
+**Goal**: Five new chaos-lab profiles covering the remaining TLS-capable services (postgres-tls, redis-tls, smtp-starttls, kafka-tls, grpc-tls) are up and scanner-verified, and the identity-lab evidence gap (BACK-78) is confirmed closed — every new profile satisfies the CLAUDE.md lab-sync obligation in the same change
+**Depends on**: Nothing (parallel-safe with Phase 91; can run after Phase 87)
+**Requirements**: LAB-01, LAB-02, LAB-03, LAB-04, LAB-05, LAB-06
+**Success Criteria** (what must be TRUE):
+  1. `docker compose --profile postgres-tls up` starts a TLS-enabled PostgreSQL container; `quirk` scans it via `sslyze --starttls postgres` and emits at least one TLS finding or SAFE classification; `expected_results_*.md` and README updated
+  2. `docker compose --profile redis-tls up` starts a TLS-enabled Redis 7.4.1-alpine container on port 6380; `broker_scanner.py` Redis-TLS probe connects and classifies the cipher; lab-sync obligations satisfied
+  3. `docker compose --profile smtp-starttls up` starts a STARTTLS-capable SMTP container on port 587; scanner detects STARTTLS posture; profile confirmed non-redundant with the existing `email` profile (or replaces it with documented rationale)
+  4. `docker compose --profile kafka-tls up` starts Apache Kafka 3.9.0 with TLS listener on 9093 and plaintext healthcheck on 9092; scanner classifies the TLS endpoint; lab-sync obligations satisfied
+  5. `docker compose --profile grpc-tls up` starts a minimal gRPC server with ALPN `h2`; sslyze ALPN negotiation is empirically confirmed before the probe approach is finalized; lab-sync obligations satisfied
+  6. A lab scan config targeting Kerberos KDC, SAML SP, and DNSSEC zone endpoints produces identity evidence counters that flow into the identity subscore — confirming the BACK-78 wiring gap is closed
+**Plans**: TBD
+
+#### Phase 90: OQS-nginx PQC-Hybrid
+**Goal**: The quantum-readiness scoring model has a concrete demoable post-quantum ceiling anchor — a digest-pinned OQS-nginx chaos lab profile serving an X25519MLKEM768 hybrid endpoint is up, the scanner observes and classifies it (as a real quantum-safe component or a clearly-scoped advisory), and the scoring model rewards PQC-hybrid posture with an agility bonus
+**Depends on**: Phase 88 (SCORE_WEIGHTS must be stable before adding a new weight key to avoid double-churning test_score_weights_invariant.py)
+**Requirements**: PQC-01, PQC-02, PQC-03
+**Success Criteria** (what must be TRUE):
+  1. `docker compose --profile oqs-nginx up` starts the OQS-nginx container with a pinned image digest (not `:latest`); the container serves an X25519MLKEM768 hybrid TLS endpoint; lab-sync obligations satisfied in the same commit
+  2. The scanner observes the PQC-hybrid endpoint and produces either a genuine `quantum-safe` CBOM algorithm component or a clearly-scoped advisory finding documenting the detection limitation — the outcome is pre-decided at `/gsd-discuss-phase 90` after the digest is pinned and sslyze output is observed
+  3. `SCORE_WEIGHTS` gains a `pqc_hybrid_endpoint_count` evidence key with an `agility` bonus; `tests/test_score_weights_invariant.py` is updated to the new sum; a scan targeting the OQS-nginx profile scores higher on the agility dimension than an equivalent classical-TLS-only scan
+**Plans**: TBD
+
+#### Phase 91: Code Cleanup + Bookkeeping
+**Goal**: Dead code identified in BACK-49–57 is removed with static analysis confidence, deprecation warnings are eliminated, Nyquist VALIDATION.md files are current, and the JWT verify=False advisory is documented — all with CI guards against regression
+**Depends on**: Nothing (parallel-safe with Phase 89; runs after Phase 87)
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
+**Success Criteria** (what must be TRUE):
+  1. Tier-A removals (BACK-53 sqlite remnants, BACK-55 stale comments, BACK-56 datetime.utcnow deprecation) are applied; `python -W error::DeprecationWarning -m pytest` passes with zero deprecation-related failures
+  2. Tier-B removals (BACK-49/50/51/52/54) each pass a `vulture`/AST call-graph analysis confirming no live caller before deletion; a clean-venv smoke test (`pip install -e . && quirk --version && quirk doctor`) passes after each deletion batch
+  3. All Nyquist `VALIDATION.md` files affected by v5.0 changes are updated; the INFRA-03 Nyquist coverage module passes with no stale references
+  4. `docs/` or a code comment documents the intentional JWT `verify=False` inspection-mode behavior (BACK-58) — an operator reading it understands why this is safe in the scanner's threat model
+**Plans**: TBD
+
+#### Phase 92: v5.0 Close-out
+**Goal**: v5.0.0 is tagged and documented — version string is bumped, release notes are built, UAT-SERIES.md is updated, and Obsidian notes are synced
+**Depends on**: Phases 87, 88, 89, 90, 91 all complete
+**Requirements**: REL-01
+**Success Criteria** (what must be TRUE):
+  1. `pyproject.toml [project.version]` reads `5.0.0`; `quirk --version` and `quirk/__init__.py.__version__` both reflect `5.0.0` via importlib.metadata
+  2. `towncrier build` produces a populated CHANGELOG entry covering all v5.0 work; `docs/release-notes/5.0.0.md` is written
+  3. `docs/UAT-SERIES.md` is updated to reflect v5.0 changes and synced to the Obsidian vault
+  4. Obsidian phase notes and the Roadmap note are synced; the `v5.0.0` tag is created
+**Plans**: TBD
+
+## Progress — v5.0 Phases
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 87. Dependency Hygiene | 0/TBD | Not started | — |
+| 88. Scoring Residuals | 0/TBD | Not started | — |
+| 89. Chaos Lab Profiles | 0/TBD | Not started | — |
+| 90. OQS-nginx PQC-Hybrid | 0/TBD | Not started | — |
+| 91. Code Cleanup + Bookkeeping | 0/TBD | Not started | — |
+| 92. v5.0 Close-out | 0/TBD | Not started | — |
