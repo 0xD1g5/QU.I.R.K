@@ -385,6 +385,38 @@
 
 ---
 
+## Milestone: v5.0 — Stabilization + Tech Debt Sweep
+
+**Shipped:** 2026-05-22
+**Phases:** 6 (87–92) | **Plans:** 16
+
+### What Was Built
+Dependency hygiene (Node 20→24, defusedxml→hardened lxml); scoring correctness + six-subscore /25 transparency across CLI/HTML/PDF + 5 zero-algo CBOM profiles fixed; 5 new weak-TLS chaos-lab profiles + identity evidence verified; a digest-pinned OQS-nginx X25519MLKEM768 PQC-hybrid profile with a raw-openssl probe feeding a genuine quantum-safe CBOM component + agility bonus (the post-quantum scoring ceiling); vulture-confirmed dead-code cleanup + a permanent conftest DB-isolation fix; v5.0.0 release.
+
+### What Worked
+- **Research-shaped-by-phase:** skipping research on Phase 90 (a live spike had already answered every unknown) and running it on Phase 91 (which explicitly deferred file-resolution to a vulture pass) — research earned its place where uncertainty was real, and the 91 researcher *shrank the phase* by finding most BACK items already deleted.
+- **Goal-backward verification caught a real seam break:** Phase 90's verifier found that the classifier alias + agility scoring were green while the probe→CBOM-builder integration was silently severed (no genuine quantum-safe component emitted). Three layers of passing tests had masked it. A one-line `_KEX_MAP` gap-closure fixed it.
+- **The cleanup phase paid down the milestone's own bookkeeping debt:** Phase 91's CLEAN-03 retroactively closed Phase 89's `gaps_found` (unflipped LAB REQUIREMENTS rows).
+
+### What Was Inefficient
+- **Recurring REQUIREMENTS.md row-flip omission:** executors repeatedly left traceability rows `pending` after completing work (89 LAB rows, 90 PQC rows, 92 REL-01) — each needed a manual or gap-closure fix. A standing executor checklist item or a closeout sweep would remove the recurring toil.
+- **Premature tag creation:** the 92-01 executor created the `v5.0.0` tag mid-phase (wrong commit); caught and deleted, recreated correctly at the final close-out HEAD via the human-verify checkpoint. Tag creation belongs only at the gated final step.
+- **milestone.complete raw-dump + garbled accomplishments** required full hand-curation of MILESTONES.md (known issue).
+
+### Patterns Established
+- A demoable capability anchor inside a stabilization milestone (OQS-nginx PQC ceiling) gives an otherwise-internal cycle a customer-facing headline.
+- Sequential-on-main execution (not worktree-parallel) is the right choice for Docker-coupled, human-verify-checkpoint-heavy phases.
+
+### Key Lessons
+- Verify the *integration seam*, not just the unit: passing classifier/scoring/evidence tests did not prove the probe→CBOM path was wired.
+- Reconcile audit-open's literal status-string grep against the milestone audit's content-level judgment — VERIFICATION status strings (88 human_needed, 89 gaps_found) lagged reality.
+
+### Cost Observations
+- Model mix: planning/verification on opus + sonnet; executors + checkers on sonnet.
+- Notable: a true stabilization cycle — bounded ≤6 phases per HORIZON; the value was in paid-down debt + one demoable anchor, not new surface.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
