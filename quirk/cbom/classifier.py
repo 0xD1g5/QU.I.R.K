@@ -64,6 +64,9 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "diffie-hellman-group-exchange-sha256": (CryptoPrimitive.KEY_AGREE, 0, 112),
     "sntrup761x25519-sha512": (CryptoPrimitive.KEM, 3, 128),
     "mlkem768x25519-sha256": (CryptoPrimitive.KEM, 3, 192),
+    # Phase 90 PQC-02 alias — NIST-standardized NamedGroup-4588 name observed by
+    # the raw openssl s_client probe (D-02).  Maps to the same KEM/NIST-L3 entry.
+    "x25519mlkem768": (CryptoPrimitive.KEM, 3, 192),
     # Weak SSH KEX algorithms (ssh-weak profile — Phase 88 SCORE-CBOM-01)
     "diffie-hellman-group1-sha1": (CryptoPrimitive.KEY_AGREE, 0, 80),
     # ------------------------------------------------------------------
