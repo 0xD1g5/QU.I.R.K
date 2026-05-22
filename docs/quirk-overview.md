@@ -184,7 +184,7 @@ The v4.5 milestone closed reliability gaps discovered after the initial feature 
 
 v4.6 makes QUIRK production-ready for enterprise deployments:
 
-- **Install-Day UX** — `pip install quirk` and `pip install quirk[all]` complete without `ImportError` crashes; a centralized optional-extra registry emits advisory notices when a scanner extra is absent rather than raising an exception.
+- **Install-Day UX** — `pip install quirk` and `pip install quirk-scanner[all]` complete without `ImportError` crashes; a centralized optional-extra registry emits advisory notices when a scanner extra is absent rather than raising an exception.
 - **TLS Certificate Findings** — Expired certificates, self-signed certificates, untrusted/private-CA certificates, and weak RSA/EC key sizes now produce explicit findings with severity classification. Previously these conditions produced zero findings.
 - **Multi-Target Wizard and Nmap Discovery** — Users can pass comma-separated hosts, `--targets-file`, or a CIDR range directly. An optional nmap-based port discovery step (`--nmap-discover`) pre-populates the target list without manual port enumeration — enabling real 50-host+ enterprise scans.
 - **Rich Finding Context** — Every finding carries a plain-English risk description. Quantum-relevant findings include the FIPS 203/204/205 remediation path and NIST IR 8547 deprecation deadline. All Kyber/Dilithium pre-standardization terminology is purged.

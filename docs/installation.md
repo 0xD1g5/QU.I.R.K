@@ -9,7 +9,7 @@ Full installation reference for all supported platforms.
 | Requirement | Version | Notes |
 |-------------|---------|-------|
 | Python 3.10 or higher | — | Check: `python3 --version` |
-| pip | 21.3 or higher | Required for self-referential extras resolution (used by `pip install quirk[all]`); pip 22.2+ recommended for the `--report` JSON test in CI |
+| pip | 21.3 or higher | Required for self-referential extras resolution (used by `pip install quirk-scanner[all]`); pip 22.2+ recommended for the `--report` JSON test in CI |
 | git | Any recent version | Required to clone the repo |
 | Docker Desktop | Optional | Required only for the chaos lab |
 | OS (for PDF export) | macOS 10.15+, Ubuntu 20.04+, Windows 10 via WSL2 | Playwright Chromium requirement |
@@ -119,7 +119,7 @@ Install only what you need:
 
 | Capability | Install command |
 |------------|----------------|
-| All optional scanners (recommended for consultants) | `pip install quirk[all]` — installs cloud + db + motion + redis + dashboard. **Excludes `[identity]`** because impacket transitively downgrades the cryptography library and breaks the TLS scanner. Includes Playwright browser binaries via `[dashboard]` (~250 MB). |
+| All optional scanners (recommended for consultants) | `pip install quirk-scanner[all]` — installs cloud + db + motion + redis + dashboard. **Excludes `[identity]`** because impacket transitively downgrades the cryptography library and breaks the TLS scanner. Includes Playwright browser binaries via `[dashboard]` (~250 MB). |
 | Web dashboard + PDF export | `pip install -e '.[dashboard]'` (included in Quick Start) |
 | Identity surface scanners (Kerberos, SAML/OIDC, DNSSEC) | `pip install -e '.[identity]'` — installs `impacket`, `lxml`, `signxml`, `dnspython[dnssec]` |
 | Container scanning | `pip install syft` (requires Syft CLI on PATH) |
@@ -141,18 +141,18 @@ install them in **two separate virtual environments**:
 ```bash
 # venv 1 — full scan surface (recommended default)
 python3 -m venv .venv-quirk && source .venv-quirk/bin/activate
-pip install quirk[all]
+pip install quirk-scanner[all]
 
 # venv 2 — identity-only surface (deactivate the first venv first)
 python3 -m venv .venv-quirk-identity && source .venv-quirk-identity/bin/activate
-pip install quirk[identity]
+pip install quirk-scanner[identity]
 ```
 
 This isolation keeps the cryptography library in venv 1 at the version the TLS scanner
 requires, while venv 2 can carry the older pinned version impacket needs.
 
 A CI regression test (`tests/test_install_all_excludes_impacket.py`) guards this exclusion;
-attempts to add `quirk[identity]` to `[all]` will fail the test.
+attempts to add `quirk-scanner[identity]` to `[all]` will fail the test.
 
 ---
 
@@ -167,7 +167,7 @@ If both commands display help output, the installation is complete.
 
 > **Coverage advisories.** If you enable a scanner whose optional extra is missing,
 > QUIRK emits a single INFO advisory finding per skipped scanner instead of crashing.
-> Each advisory names the exact `pip install quirk[<extra>]` command to run so you
+> Each advisory names the exact `pip install quirk-scanner[<extra>]` command to run so you
 > can opt in to that capability without re-installing the world.
 
 ---
