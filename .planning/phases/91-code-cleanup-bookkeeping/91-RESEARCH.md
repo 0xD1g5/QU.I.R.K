@@ -490,7 +490,7 @@ The `allow_insecure_jwks` flag disables TLS certificate verification for JWKS en
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should older milestone VALIDATION.md files (phases 38, 41, 42, 52, 55, 59, 63–66, 68, 70) be updated?**
    - What we know: 13 files in `.planning/milestones/v4.x-phases/` have `nyquist_compliant: false`; none are checked by any CI test.
