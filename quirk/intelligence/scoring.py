@@ -5,12 +5,14 @@ from typing import Any, Dict, List, Mapping, Tuple
 # SCORE_WEIGHTS invariant (D-04, WR-06 — Phase 73 documentation, NOT normalization)
 # ----------------------------------------------------------------------------
 # These values are ABSOLUTE per-ratio coefficients, NOT probabilities, NOT
-# a normalized PMF. Their sum is 261.0 BY DESIGN.
+# a normalized PMF. Their sum is 275.0 BY DESIGN (Phase 83 rebalance).
 #
-# The total_score arithmetic below already clamps to [0, 100] (closed by
-# Phase 60 SCORE-01) and `_apply_weighted_impacts` shares score caps across
-# these weights — see Phase 60 SCORE-04 / CR-06 closure for the cap-sharing
-# rationale that this docstring deliberately preserves.
+# Scoring contract (v4.10.1, Phase 86 D-01):
+#   Each of the six categories is scored on a 0-25 scale via
+#   `_apply_weighted_impacts(impacts, score_cap=25.0)`.  The overall
+#   readiness score is then:
+#       total_score = int(round((sum of six 0-25 subscores) / 1.5))
+#   mapping the 0-150 subscore range to 0-100, fed through `_rating()`.
 #
 # Any contributor adding, removing, or modifying a weight value MUST update
 # `tests/test_score_weights_invariant.py` to match the new expected sum.
@@ -250,10 +252,9 @@ def compute_readiness_score(
     ]
     motion_score, motion_drivers = _apply_weighted_impacts(motion_impacts)
 
-    total_score = int(_clamp(
-        hygiene_score + modern_tls_score + identity_trust_score +
-        agility_score + dar_score + motion_score,
-        0, 100,
+    total_score = int(round(
+        (hygiene_score + modern_tls_score + identity_trust_score +
+         agility_score + dar_score + motion_score) / 1.5
     ))
     rating = _rating(total_score)
 
