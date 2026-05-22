@@ -11,7 +11,7 @@ For unpackaged dev runs (fresh checkout, never ``pip install -e .``-d), the
 """
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
-_DIST_NAME = "qu-i-r-k"
+_DIST_NAME = "quirk-scanner"
 
 try:
     __version__ = _pkg_version(_DIST_NAME)

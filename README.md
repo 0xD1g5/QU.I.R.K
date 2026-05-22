@@ -1,5 +1,5 @@
 [![Python Staleness Gate](https://img.shields.io/github/actions/workflow/status/0xD1g5/QU.I.R.K./python-staleness.yml?branch=main&label=CI)](https://github.com/0xD1g5/QU.I.R.K./actions/workflows/python-staleness.yml)
-[![PyPI version](https://img.shields.io/pypi/v/qu-i-r-k.svg)](https://pypi.org/project/qu-i-r-k/)
+[![PyPI version](https://img.shields.io/pypi/v/quirk-scanner.svg)](https://pypi.org/project/quirk-scanner/)
 [![License: MIT](https://img.shields.io/github/license/0xD1g5/QU.I.R.K.)](LICENSE)
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
@@ -28,7 +28,7 @@ QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endp
 Three commands to a working scan:
 
 ```bash
-pip install qu-i-r-k[all]
+pip install quirk-scanner[all]
 quirk init
 quirk --config config.yaml
 ```
@@ -83,7 +83,7 @@ Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major sca
 
 ## Install From Other Channels
 
-- **PyPI (recommended):** `pip install qu-i-r-k[all]` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
+- **PyPI (recommended):** `pip install quirk-scanner[all]` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
 - **Homebrew (macOS):** `brew install 0xD1g5/quirk/quirk` — installs into an isolated `pipx`-style venv under `libexec`. *(Tap bootstrap is a manual post-release task; becomes functional once the `0xD1g5/homebrew-quirk` tap repo is published with the first signed sdist sha256.)* See [Homebrew Tap](docs/release-process.md#homebrew-tap-launch-02) for the bootstrap procedure.
 - **Docker (GHCR, multi-arch):** `docker run ghcr.io/0xd1g5/quirk:latest --help` — `linux/amd64` + `linux/arm64`. See [Container Image](docs/release-process.md#container-image-launch-03).
 

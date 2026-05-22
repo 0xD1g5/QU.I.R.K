@@ -3,7 +3,7 @@
 # Multi-arch container image (linux/amd64 + linux/arm64) published to
 # ghcr.io/0xd1g5/quirk by .github/workflows/release-container.yml on every
 # v*.*.* tag push, AFTER the PyPI publish workflow (release.yml) lands the
-# matching `qu-i-r-k` wheel.
+# matching `quirk-scanner` wheel.
 #
 # Base image rationale (Phase 85 D-LAUNCH Docker):
 #   * python:3.11-slim — Debian slim, glibc — full `cryptography` wheel
@@ -49,8 +49,8 @@ RUN groupadd --system --gid 1000 quirk \
 
 # Install QU.I.R.K. from the published PyPI wheel — NOT from the local source
 # tree. This keeps the container in lock-step with the wheel users would get
-# via `pip install qu-i-r-k[all]==X.Y.Z`.
-RUN pip install --no-cache-dir "qu-i-r-k[all]==${QUIRK_VERSION}"
+# via `pip install quirk-scanner[all]==X.Y.Z`.
+RUN pip install --no-cache-dir "quirk-scanner[all]==${QUIRK_VERSION}"
 
 USER quirk
 WORKDIR /home/quirk
