@@ -46,6 +46,7 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | postgres-tls | postgres-tls | 39432 | [Expected Findings](expected_results_v4.md#profile-postgres-tls) | v5.0 Phase 89 (LAB-01); PostgreSQL STARTTLS with weak RSA key-exchange ciphers (AES128-SHA:AES256-SHA, TLS 1.2 only). sslyze POSTGRES STARTTLS probe on 39432. |
 | redis-tls | redis-tls | 39380, 39379 | [Expected Findings](expected_results_v4.md#profile-redis-tls) | v5.0 Phase 89 (LAB-02); Standalone Redis TLS with 3DES+RSA ciphers (DES-CBC3-SHA:AES128-SHA:AES256-SHA, TLS 1.2 only) on TLS port 39380; plaintext port 39379. broker_scanner.py Redis-TLS probe. |
 | kafka-tls | kafka-tls | 39093, 39092 | [Expected Findings](expected_results_v4.md#profile-kafka-tls) | v5.0 Phase 89 (LAB-04); Standalone Kafka (apache/kafka:3.9.0) with RSA key-exchange ciphers (TLS_RSA_WITH_AES_128/256_CBC_SHA, TLS 1.2 only) on TLS port 39093; plaintext listener 39092. broker_scanner.py Kafka probe. |
+| grpc-tls | grpc-tls | 39443 | [Expected Findings](expected_results_v4.md#profile-grpc-tls) | v5.0 Phase 89 (LAB-05); Minimal Go gRPC server (grpc-go ALPN h2) with RSA-2048 self-signed cert. sslyze direct TLS probe on 39443. D-03 empirical gate PASSED — sslyze negotiates ALPN h2 endpoint successfully. |
 
 ### Image Pin Policy
 

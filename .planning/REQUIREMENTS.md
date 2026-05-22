@@ -27,9 +27,9 @@
 
 - [ ] **LAB-01**: `postgres-tls` chaos-lab profile (sslyze `--starttls postgres`); `docker-compose.yml`, `lab.sh` ALL_PROFILES, README, and `expected_results_*.md` oracle all updated in the same change (CLAUDE.md rule).
 - [ ] **LAB-02**: `redis-tls` profile (direct-socket TLS on 6380); same lab-sync obligations. Confirm `broker_scanner.py` Redis-TLS probe works against official `redis:7.4.1-alpine`.
-- [ ] **LAB-03**: `smtp-starttls` profile (STARTTLS on 587); same lab-sync obligations. Confirm whether the existing email profile already covers this before adding a standalone profile.
+- [x] **LAB-03**: `smtp-starttls` — closed as already-covered by the `email` profile (D-01). Port 30587 (Postfix submission) exposes SMTP STARTTLS; scanner emits `protocol=SMTP-STARTTLS, service_detail=SMTP-STARTTLS:587` (HIGH, EMAIL-09). No standalone smtp-starttls service added. Coverage note added to `expected_results_v4.md` under `## Profile: email`. Requirement: closed-covered-by-email-profile (D-01).
 - [ ] **LAB-04**: `kafka-tls` profile (`apache/kafka:3.9.0`, PEM keystore, TLS listener 9093 with plaintext 9092 healthcheck); same lab-sync obligations.
-- [ ] **LAB-05**: `grpc-tls` profile (custom minimal Go image, ALPN `h2`); empirically confirm sslyze negotiates the ALPN-`h2` endpoint before finalizing probe approach; same lab-sync obligations.
+- [x] **LAB-05**: `grpc-tls` profile — custom minimal Go gRPC server (ALPN h2, port 39443). D-03 empirical gate PASSED: sslyze `ServerScanStatusEnum.COMPLETED`, cert CN=grpc-tls.chaos.local RSA-2048, ECDHE-RSA TLS 1.2+1.3 suites detected. Four-file lab-sync complete (docker-compose.yml + lab.sh auto-derive + README + expected_results_v4.md). Requirement: closed-lab-05.
 - [ ] **LAB-06**: Identity-lab evidence verified end-to-end (BACK-78) — Kerberos KDC, SAML SP, and DNSSEC zone targets included in a lab scan config; the existing Kerberos/SAML/DNSSEC evidence counters are confirmed flowing into the identity subscore (research confirms the code is wired; the gap is scan-config + UAT coverage).
 
 ### Post-Quantum Scoring Ceiling (PQC)
@@ -82,9 +82,9 @@
 | SCORE-XPARENCY-01 | 88 | 88-01 | ✅ done — 3-surface decomposition (7c23c55) |
 | LAB-01 | 89 | 89-01 | pending |
 | LAB-02 | 89 | 89-01 | pending |
-| LAB-03 | 89 | 89-03 | pending |
+| LAB-03 | 89 | 89-03 | ✅ done — closed-covered-by-email-profile (D-01) |
 | LAB-04 | 89 | 89-01 | pending |
-| LAB-05 | 89 | 89-03 | pending |
+| LAB-05 | 89 | 89-03 | ✅ done — grpc-tls lab profile + D-03 ALPN gate PASSED |
 | LAB-06 | 89 | 89-02 | pending |
 | PQC-01 | 90 | TBD | pending |
 | PQC-02 | 90 | TBD | pending |
