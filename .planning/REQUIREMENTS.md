@@ -16,9 +16,9 @@
 
 ### Dashboard Gauge Correctness (GAUGE)
 
-- [ ] **GAUGE-01**: `ScoreGauge` accepts a `maxValue?: number` prop (default 100). Arc fill and the displayed numeric label are computed against `score / maxValue`, not `score / 100`. Existing call sites that omit the prop behave unchanged.
-- [ ] **GAUGE-02**: `_gaugeColor()` operates on a normalized fraction (0–1) instead of a raw score. Color thresholds: red < 50 %, amber 50–79 %, green ≥ 80 %. A subscore that maxes out its category budget shows green; a subscore at 0 shows red.
-- [ ] **GAUGE-03**: `executive.tsx` passes `maxValue={25}` to all six subscore gauges (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion). The overall-readiness gauge keeps `maxValue` default (100).
+- [x] **GAUGE-01**: `ScoreGauge` accepts a `maxValue?: number` prop (default 100). Arc fill and the displayed numeric label are computed against `score / maxValue`, not `score / 100`. Existing call sites that omit the prop behave unchanged.
+- [x] **GAUGE-02**: `_gaugeColor()` operates on a normalized fraction (0–1) instead of a raw score. Color thresholds: red < 50 %, amber 50–79 %, green ≥ 80 %. A subscore that maxes out its category budget shows green; a subscore at 0 shows red.
+- [x] **GAUGE-03**: `executive.tsx` passes `maxValue={25}` to all six subscore gauges (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion). The overall-readiness gauge keeps `maxValue` default (100).
 
 ### Release Engineering (RELEASE)
 

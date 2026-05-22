@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.10.1
 milestone_name: Scoring Correctness Hotfix
-status: In progress — Plan 86-01 complete; Plans 86-02 and 86-03 remaining
-last_updated: "2026-05-22T12:00:00.000Z"
-last_activity: 2026-05-22 — Plan 86-01 complete (backend normalization + boundary tests)
+status: executing
+last_updated: "2026-05-22T12:00:27.581Z"
+last_activity: "2026-05-22 — Plan 86-01 complete: int(round(sum/1.5)) normalization live, docstring rewritten, 3 boundary tests green"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -103,6 +103,6 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22 — Plan 86-01 complete. Backend normalization formula in place (`int(round(sum/1.5))`). Docstring rewritten. Three boundary tests (RED→GREEN, canonical 120→80 confirmed). 79 scoring-related tests pass.
+**Last session:** 2026-05-22T12:00:27.577Z
 
 **Next session:** Execute Plan 86-02 (frontend gauge fix: maxValue prop, _gaugeColor fraction rewrite, executive.tsx + data-at-rest.tsx maxValue={25}).
