@@ -1434,6 +1434,7 @@ def main():
                 timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
                 logger=logger,
                 session_start=session_start,
+                resolver=getattr(cfg.connectors, "dnssec_resolver", None),
             )
             logger.info("DNSSEC scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.dnssec_targets))
