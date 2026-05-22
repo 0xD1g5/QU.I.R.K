@@ -218,6 +218,9 @@ class ConnectorsCfg:
     kerberos_targets: list = field(default_factory=list)
     saml_targets: list = field(default_factory=list)
     dnssec_targets: list = field(default_factory=list)
+    # Phase 89 LAB-06: optional resolver override for DNSSEC scanning (host:port, e.g. 127.0.0.1:15353)
+    # Routes all NS resolution and RR queries to the specified resolver instead of the system resolver.
+    dnssec_resolver: Optional[str] = None
     # Phase 79 SMIME-01 / CONTEXT D-Area-1: S/MIME LDAP targets + optional
     # search-base override. Targets are LDAP URLs (ldap://host:port) or
     # bare host[:port] strings; search_base defaults to the Kerberos realm
