@@ -55,6 +55,7 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "agility_unknown_ratio": 6.0,
     "agility_rsa_only_penalty": 8.0,
     "agility_has_ecdsa_bonus": 4.0,
+    "agility_pqc_hybrid_bonus": 8.0,   # Phase 90 PQC-03 — X25519MLKEM768 ceiling anchor
 }
 
 PROFILE_MULTIPLIERS: Dict[str, Dict[str, float]] = {
@@ -206,6 +207,8 @@ def compute_readiness_score(
     ]
     identity_trust_score, identity_trust_drivers = _apply_weighted_impacts(identity_trust_impacts)
 
+    pqc_hybrid_count = max(0, _as_int(evidence.get("pqc_hybrid_endpoint_count", 0)))
+
     agility_impacts: List[Tuple[str, float]] = [
         ("High-impact findings", -_ratio(high_impact, max(findings, 1)) * w["agility_high_impact_ratio"]),
         ("Unknown service inventory", -_ratio(unknown_count, denom) * w["agility_unknown_ratio"]),
@@ -214,6 +217,8 @@ def compute_readiness_score(
         agility_impacts.append(("RSA-only certificate posture", -w["agility_rsa_only_penalty"]))
     elif ecdsa_count > 0:
         agility_impacts.append(("ECDSA adoption signal", w["agility_has_ecdsa_bonus"]))
+    if pqc_hybrid_count > 0:
+        agility_impacts.append(("PQC-hybrid key exchange (X25519MLKEM768)", w["agility_pqc_hybrid_bonus"]))
 
     agility_score, agility_drivers = _apply_weighted_impacts(agility_impacts)
 
