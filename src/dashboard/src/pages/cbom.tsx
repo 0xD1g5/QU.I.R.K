@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ZoomIn, ZoomOut, Maximize2, X } from "lucide-react"
+import { firstNonZeroComp } from "./cbom-utils"
 
 // Register Cytoscape layout extension once.
 // D-24 (IN-02): log via console.error and re-throw genuine failures so
@@ -24,23 +25,6 @@ try {
 } catch (e) {
   console.error('cytoscape.use(coseBilkent) failed:', e)
   if (!(e instanceof Error) || !/already/i.test(e.message)) throw e
-}
-
-// D-27 (IN-05): representative selector for `compByAlg[alg]` lookups.
-// Returns the first component with a non-zero `count` (when the shape
-// carries one), falling back to the first entry to preserve the existing
-// "any representative" semantic (Researcher recommendation; O(1) at call site).
-// Signature is generic-permissive so callers can pass arrays of shapes
-// that may or may not carry a `count` field — CbomComponent lacks one and
-// falls through to [0], matching the pre-D-27 behavior exactly.
-export function firstNonZeroComp<T>(comps: T[] | undefined): T | undefined {
-  if (!comps || comps.length === 0) return undefined
-  return (
-    comps.find((c) => {
-      const n = (c as { count?: number }).count
-      return typeof n === "number" && n > 0
-    }) ?? comps[0]
-  )
 }
 
 const QS_BADGE: Record<string, string> = {
