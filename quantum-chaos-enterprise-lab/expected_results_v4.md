@@ -717,3 +717,55 @@ ALPN ScanCommand but completes the TLS handshake and produces full cipher/cert f
 **Reference:** Scanner: sslyze direct TLS on port 39443. Lab image: built from
 `labs/grpc-tls/Dockerfile` (FROM golang:1.23-alpine). Config: `labs/grpc-tls/main.go`.
 Requirement: LAB-05.
+
+---
+
+## Profile: oqs-nginx
+
+*Phase 90 / PQC-01. Digest-pinned `openquantumsafe/nginx` container serving TLS 1.3 with the
+X25519MLKEM768 (NIST ML-KEM-768 + X25519 hybrid) key-exchange group and an ML-DSA-65 certificate.
+This is the agility ceiling anchor for the v5.0 D-04 consulting before/after demo — the "ideal
+PQC-hybrid endpoint" that Plan 90-04 contrasts against the classical baseline.*
+
+```bash
+PROFILE_ARGS="--profile oqs-nginx" ./lab.sh up
+```
+
+**Image:** `openquantumsafe/nginx@sha256:6ca18ac692f347ea9d4c3fdab4231189f2146570cd03c4d8fb486bba208ef870`
+(built 2026-05-18; pinned by digest — oqs-provider renames group names across releases, so `:latest`
+is permanently forbidden for this service).
+
+**Config:** `quantum-chaos-enterprise-lab/oqs-nginx/nginx.conf` — pins `ssl_ecdh_curve X25519MLKEM768`
+and `ssl_protocols TLSv1.3` on the TLS server block. Mounted read-only into the container.
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 39444 | oqs-nginx | TLS 1.3 direct | Negotiated group: `X25519MLKEM768` (NamedGroup 4588); Peer signature type: `ML-DSA-65` (`mldsa65`) | Host OpenSSL >= 3.5 required for handshake; see advisory note below |
+| 39444 | oqs-nginx | TLS 1.3 cert | ML-DSA-65 certificate (post-quantum signature algorithm) | Quantum-safe cert chain — no classical RSA/ECDSA fallback |
+
+**Loopback bind / live scan note:** Like all lab profiles, `oqs-nginx` binds `127.0.0.1:39444`.
+Live scanner runs against this profile require `--allow-internal-targets`.
+
+**Host OpenSSL compatibility note (advisory case):** The X25519MLKEM768 handshake requires the
+scanning host to have OpenSSL >= 3.5 (or an oqs-provider build) with ML-KEM support compiled in.
+On older hosts (OpenSSL < 3.5), `openssl s_client -groups X25519MLKEM768` will fail the
+handshake — this is a host-side limitation, not a profile defect. Plan 90-02 (detection) handles
+this via the advisory fallback path: when the direct probe fails due to group-name mismatch or
+handshake failure, the scanner emits a `PQC_HYBRID_ADVISORY` finding documenting that the endpoint
+appears to offer PQC-hybrid but the host client cannot complete the negotiation.
+
+**Expected scanner findings (Plan 90-02 detection, Plan 90-03 scoring — finalized in Plan 90-04):**
+
+> **TODO (Plans 90-02, 90-03, 90-04):** The genuine CBOM component entry and quantum-readiness
+> score impact are finalized after detection and scoring plans land. This section will be updated
+> by Plan 90-04 with the complete before/after agility contrast. Placeholder findings below
+> reflect the profile's design intent.
+
+- On a host with OpenSSL >= 3.5:
+  - `PQC_HYBRID_DETECTED` — X25519MLKEM768 negotiated (POSITIVE finding; agility ceiling)
+  - CBOM component: quantum-safe hybrid KEM (X25519 + ML-KEM-768) + ML-DSA-65 cert
+  - Quantum-readiness score: HIGH (this endpoint is the "ceiling" reference in D-04)
+- On a host with OpenSSL < 3.5 (advisory path):
+  - `PQC_HYBRID_ADVISORY` — endpoint presents ML-DSA-65 cert but hybrid KEM handshake could not be completed by scanning host
+
+**Requirement:** PQC-01.
