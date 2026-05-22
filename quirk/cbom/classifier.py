@@ -64,6 +64,8 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "diffie-hellman-group-exchange-sha256": (CryptoPrimitive.KEY_AGREE, 0, 112),
     "sntrup761x25519-sha512": (CryptoPrimitive.KEM, 3, 128),
     "mlkem768x25519-sha256": (CryptoPrimitive.KEM, 3, 192),
+    # Weak SSH KEX algorithms (ssh-weak profile — Phase 88 SCORE-CBOM-01)
+    "diffie-hellman-group1-sha1": (CryptoPrimitive.KEY_AGREE, 0, 80),
     # ------------------------------------------------------------------
     # SSH host key algorithms
     # ------------------------------------------------------------------
@@ -74,6 +76,8 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "ecdsa-sha2-nistp384": (CryptoPrimitive.SIGNATURE, 0, 192),
     "ssh-ed25519": (CryptoPrimitive.SIGNATURE, 0, 128),
     "sk-ssh-ed25519": (CryptoPrimitive.SIGNATURE, 0, 128),
+    # Weak SSH host key algorithms (ssh-weak profile — Phase 88 SCORE-CBOM-01)
+    "ssh-dss": (CryptoPrimitive.SIGNATURE, 0, 80),
     # ------------------------------------------------------------------
     # SSH enc (symmetric cipher) algorithms
     # ------------------------------------------------------------------
@@ -89,6 +93,10 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "hmac-sha2-256": (CryptoPrimitive.HASH, 0, 128),
     "hmac-sha2-512": (CryptoPrimitive.HASH, 2, 256),
     "hmac-sha1": (CryptoPrimitive.HASH, 0, 80),
+    # Weak SSH MAC algorithms (ssh-weak profile — Phase 88 SCORE-CBOM-01)
+    "hmac-md5": (CryptoPrimitive.HASH, 0, 64),
+    "hmac-md5-96": (CryptoPrimitive.HASH, 0, 64),
+    "hmac-sha1-96": (CryptoPrimitive.HASH, 0, 80),
     # ------------------------------------------------------------------
     # CycloneDX canonical names (used by builder for cert/TLS decomposition)
     # ------------------------------------------------------------------
@@ -119,6 +127,12 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "aes-256": (CryptoPrimitive.BLOCK_CIPHER, 1, 256),
     # chacha20-poly1305 already present above (SSH enc form without hyphen variant)
     "3des": (CryptoPrimitive.BLOCK_CIPHER, 0, 112),
+    "des": (CryptoPrimitive.BLOCK_CIPHER, 0, 56),           # DES — deprecated
+    "blowfish": (CryptoPrimitive.BLOCK_CIPHER, 0, 128),     # Blowfish — deprecated
+    "rc4": (CryptoPrimitive.STREAM_CIPHER, 0, 128),         # RC4 — deprecated
+    "md5": (CryptoPrimitive.HASH, 0, 64),                   # MD5 — deprecated
+    "md4": (CryptoPrimitive.HASH, 0, 64),                   # MD4 — deprecated
+    "aes": (CryptoPrimitive.BLOCK_CIPHER, 1, 128),          # bare AES (unspecified key size)
     "sha-1": (CryptoPrimitive.HASH, 0, 80),
     "sha-256": (CryptoPrimitive.HASH, 0, 128),
     "sha-384": (CryptoPrimitive.HASH, 2, 192),

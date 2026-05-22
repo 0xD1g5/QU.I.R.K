@@ -370,6 +370,21 @@ def _register_algorithm(
     return bom_ref_key
 
 
+def _emit_coverage_note(bom_component: Component | None, note: str) -> None:
+    """Attach a quirk:coverage-note property to the Bom root component (D-06).
+
+    Used for genuinely plaintext endpoints or library-level-only observations
+    where no cryptographic algorithm can be catalogued. Note values MUST be
+    hardcoded string literals — never scanner-derived input (T-88-03).
+    """
+    if bom_component is None:
+        return
+    prop = Property(name="quirk:coverage-note", value=note)
+    existing = list(bom_component.properties or [])
+    existing.append(prop)
+    bom_component.properties = existing
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -393,6 +408,8 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     algo_registry: dict[str, Component] = {}
     cert_components: list[Component] = []
     protocol_components: list[Component] = []
+    # D-06: accumulate affirmative no-crypto markers during Pass-1; attach after assembly
+    coverage_notes: list[str] = []
 
     # ------------------------------------------------------------------ #
     # Pass 1 — Algorithm components                                        #
@@ -419,15 +436,27 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
 
         elif ep.protocol == "CONTAINER":
             # Container: cipher_suite=library_name (e.g., "openssl", "libssl")
+            # D-06 / SCORE-CBOM-01: library names are not algorithm names; emit coverage note
+            # instead of registering a library string that would produce UNKNOWN primitive.
             if ep.cipher_suite:
-                _register_algorithm(ep.cipher_suite, algo_registry)
+                # D-06 / T-88-03: affirmative coverage marker (hardcoded literal — not scanner-derived value)
+                coverage_notes.append(
+                    "crypto library/pattern observed; algorithm-level detail not captured"
+                    " by container scanner"
+                )
 
         elif ep.protocol == "SOURCE":
             # Source: cipher_suite=semgrep rule_id, extract algorithm hint
             algo_hint = _extract_algo_from_rule_id(ep.cipher_suite)
-            algo_to_register = algo_hint or ep.cipher_suite  # D-06: fallback to raw rule ID
-            if algo_to_register:
-                _register_algorithm(algo_to_register, algo_registry)
+            if algo_hint:
+                _register_algorithm(algo_hint, algo_registry)
+            elif ep.cipher_suite:
+                # D-06 / T-88-03: raw rule ID does not encode a specific algorithm;
+                # emit affirmative coverage note (hardcoded literal — never scanner-derived value)
+                coverage_notes.append(
+                    "crypto library/pattern observed; algorithm-level detail not captured"
+                    " by source scanner"
+                )
 
         elif ep.protocol in ("AWS", "AZURE", "GCP"):
             # Cloud: parse cloud_scan_json for algorithm/key spec
@@ -505,11 +534,23 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                     cipher_name = cipher_part
                 if cipher_name and cipher_name.upper() not in ("SSL-OFF", "UNSPECIFIED", ""):
                     _register_algorithm(cipher_name, algo_registry)
+                elif cipher_name.upper() == "SSL-OFF":
+                    # D-06 / T-88-03: affirmative no-crypto marker (hardcoded literal)
+                    coverage_notes.append(
+                        "plaintext endpoint — MySQL connection uses no TLS;"
+                        " no cryptographic material observed"
+                    )
 
         elif ep.protocol in ("POSTGRESQL", "RDS"):
             # D-04: Postgres/RDS: cert_pubkey_alg may be set by RDS connector; bare Postgres skips cleanly
             if ep.cert_pubkey_alg:
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+            else:
+                # D-06 / T-88-03: ssl-off endpoint — affirmative no-crypto marker (hardcoded literal)
+                coverage_notes.append(
+                    "plaintext endpoint — PostgreSQL/RDS connection uses no TLS;"
+                    " no cryptographic material observed"
+                )
 
         elif ep.protocol in ("S3", "AZURE_BLOB"):
             # D-05: S3/Azure Blob: service_detail encodes encryption posture
@@ -524,6 +565,14 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             detail_lower = detail.lower()
             if any(posture in detail_lower for posture in _S3_ENCRYPTED_POSTURES):
                 _register_algorithm("AES-256", algo_registry)
+            elif "unencrypted" in detail_lower or (detail and not any(
+                posture in detail_lower for posture in _S3_ENCRYPTED_POSTURES
+            )):
+                # D-06 / T-88-03: unencrypted bucket — affirmative no-crypto marker (hardcoded literal)
+                coverage_notes.append(
+                    "unencrypted S3/Blob endpoint — no server-side encryption observed;"
+                    " no algorithm material to catalog"
+                )
 
         elif ep.protocol == "KUBERNETES":
             # Kubernetes config findings — no key material to catalog.
@@ -699,6 +748,10 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
         type=ComponentType.APPLICATION,
         version=PLATFORM_VERSION,
     )
+
+    # D-06 / SCORE-CBOM-01: attach affirmative no-crypto markers accumulated during Pass-1
+    for note in coverage_notes:
+        _emit_coverage_note(root_component, note)
 
     metadata = BomMetaData(
         timestamp=datetime.now(timezone.utc),
