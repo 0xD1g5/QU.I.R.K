@@ -45,8 +45,8 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 
 | Code | Cause | Fix |
 |------|-------|-----|
-| QRK-INSTALL-001 | Optional scanner package not installed. | Run `pip install quirk[<extra>]` to enable this scanner. |
-| QRK-INSTALL-002 | Dashboard extras not installed. | Run `pip install quirk[dashboard]` then retry `quirk serve`. |
+| QRK-INSTALL-001 | Optional scanner package not installed. | Run `pip install quirk-scanner[<extra>]` to enable this scanner. |
+| QRK-INSTALL-002 | Dashboard extras not installed. | Run `pip install quirk-scanner[dashboard]` then retry `quirk serve`. |
 | QRK-INSTALL-003 | Cannot open the scan database. | Run `quirk doctor` to diagnose. Ensure the configured db path is readable. |
 | QRK-INSTALL-004 | Dashboard port is already in use. | Run `lsof -i :<port>` to find the conflicting process, or use `quirk serve --port <other>`. |
 | QRK-INSTALL-005 | Python interpreter version is below the minimum supported. | Install Python 3.11 or newer; re-run `quirk doctor`. |

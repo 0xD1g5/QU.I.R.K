@@ -15,11 +15,11 @@ to a deeper doc where one exists.)*
 ## 1. Install
 
 QU.I.R.K. installs from PyPI. Use `pip install quirk` for the core scanner (TLS, SSH,
-JWT, Discovery, Fingerprint), or `pip install quirk[all]` for a one-shot install of
+JWT, Discovery, Fingerprint), or `pip install quirk-scanner[all]` for a one-shot install of
 every optional bundle except `[identity]`. The `[identity]` extra (Kerberos, SAML,
 DNSSEC) is intentionally excluded from `[all]` because impacket transitively downgrades
 the `cryptography` package, breaking the TLS scanner (Phase 45-01 D-07). Install
-`pip install quirk[identity]` separately into its own environment if you need
+`pip install quirk-scanner[identity]` separately into its own environment if you need
 identity-protocol coverage.
 
 > See also: [`docs/installation.md`](installation.md) for full install reference,
@@ -51,12 +51,12 @@ quirk --config config.yaml  # use the generated config
 
 | Extra | Adds | Typical use |
 |-------|------|-------------|
-| `quirk[dashboard]` | FastAPI server + Playwright PDF rendering | Local web dashboard, PDF reports |
-| `quirk[identity]` | impacket, dnspython, signxml | Kerberos / SAML / DNSSEC scanners (install separately — not in `[all]`) |
-| `quirk[cloud]` | google-cloud-kms, hvac, kubernetes | GCP KMS, HashiCorp Vault, Kubernetes connectors |
-| `quirk[db]` | psycopg, mysql-connector-python | Postgres / MySQL TLS-mode + RDS scanning |
-| `quirk[motion]` | aiokafka, pika, redis, azure-servicebus, boto3 SQS | Email scanner + broker scanner (Kafka / AMQP / Redis / Service Bus / SQS) |
-| `quirk[all]` | Everything above **except** `[identity]` | One-shot enterprise install |
+| `quirk-scanner[dashboard]` | FastAPI server + Playwright PDF rendering | Local web dashboard, PDF reports |
+| `quirk-scanner[identity]` | impacket, dnspython, signxml | Kerberos / SAML / DNSSEC scanners (install separately — not in `[all]`) |
+| `quirk-scanner[cloud]` | google-cloud-kms, hvac, kubernetes | GCP KMS, HashiCorp Vault, Kubernetes connectors |
+| `quirk-scanner[db]` | psycopg, mysql-connector-python | Postgres / MySQL TLS-mode + RDS scanning |
+| `quirk-scanner[motion]` | aiokafka, pika, redis, azure-servicebus, boto3 SQS | Email scanner + broker scanner (Kafka / AMQP / Redis / Service Bus / SQS) |
+| `quirk-scanner[all]` | Everything above **except** `[identity]` | One-shot enterprise install |
 
 > See also: [`docs/configuration.md`](configuration.md) for the full reference of every
 > config block and flag, [`docs/sample-config.yaml`](sample-config.yaml) for an
@@ -108,10 +108,10 @@ Compose profiles, with an oracle of expected findings per profile.
   (`tls_seconds`, `ssh_seconds`, `dnssec_seconds`, etc.). See
   [`docs/timeout-retry-audit.md`](timeout-retry-audit.md) for per-scanner defaults.
 - **`missing_extra` advisory finding** — install the named extra
-  (e.g. `pip install quirk[identity]` for Kerberos). Phase 45 INSTALL-02 surfaces
+  (e.g. `pip install quirk-scanner[identity]` for Kerberos). Phase 45 INSTALL-02 surfaces
   these instead of silently skipping the scanner.
 - **TLS handshake errors against modern endpoints** — confirm the installed
-  `cryptography` package version. Do not let `quirk[identity]`'s impacket dependency
+  `cryptography` package version. Do not let `quirk-scanner[identity]`'s impacket dependency
   downgrade it (Phase 45-01 D-07); install `[identity]` in a separate environment if
   necessary.
 
@@ -123,7 +123,7 @@ Compose profiles, with an oracle of expected findings per profile.
   in `quirk/db.py`); deleting `quirk.db` is safe but loses scan history.
 - **CBOM file generation** — every run emits `cbom-<ts>.json` and `cbom-<ts>.xml`;
   both must validate against CycloneDX 1.6.
-- **PDF render failure** — install `quirk[dashboard]` (which pulls Playwright) and run
+- **PDF render failure** — install `quirk-scanner[dashboard]` (which pulls Playwright) and run
   `playwright install chromium` once on the host.
 
 ### 5.3 Dashboard
@@ -163,18 +163,18 @@ inline subsection below the table.
 | JWT/API | JWT signing-alg discovery | `connectors.enable_jwt`, `jwt_targets` | (none) | (algorithm-classification findings) |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
 | Source code | semgrep on git repos | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep-rule findings) |
-| DNSSEC | DNSKEY / DS / RRSIG | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | `quirk[identity]` | (algorithm + chain findings) |
-| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk[identity]` | (etype findings) |
-| SAML | SAML IdP signing/digest algorithms | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | `quirk[identity]` | (signature-alg findings) |
-| Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `timeouts.email_seconds` | `quirk[motion]` | "STARTTLS downgrade risk on SMTP" |
-| Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `quirk[motion]` | "Plaintext Kafka listener detected" |
+| DNSSEC | DNSKEY / DS / RRSIG | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | `quirk-scanner[identity]` | (algorithm + chain findings) |
+| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` | (etype findings) |
+| SAML | SAML IdP signing/digest algorithms | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | `quirk-scanner[identity]` | (signature-alg findings) |
+| Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `timeouts.email_seconds` | `quirk-scanner[motion]` | "STARTTLS downgrade risk on SMTP" |
+| Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
 | AWS | ACM certs, KMS keys, CloudFront, ELB | `connectors.enable_aws`, `aws_region`, `aws_profile` | `boto3` (core) | (KMS / cert findings) — see [`docs/connectors/aws.md`](connectors/aws.md) |
 | Azure | Key Vault keys + certs, App Gateway TLS | `connectors.enable_azure`, `azure_subscription_id`, `azure_keyvault_urls` | (varies) | — see [`docs/connectors/azure.md`](connectors/azure.md) |
-| GCP | KMS + GCS storage encryption | `connectors.enable_gcp`, `gcp_project_id` | `quirk[cloud]` | (no dedicated doc yet) |
-| Database | Postgres / MySQL ssl-mode + RDS encryption | `connectors.enable_db`, `pg_targets`, `mysql_targets`, scanner user/password | `quirk[db]` | (no dedicated doc yet) |
-| Object storage | S3 bucket encryption + Azure Blob encryption | `connectors.enable_s3`, `enable_blob` | `quirk[cloud]` | (no dedicated doc yet) |
-| Kubernetes | EKS/GKE/AKS encryption + secret enumeration | `connectors.enable_k8s`, `k8s_provider`, `k8s_cluster_name`, kubeconfig fields | `quirk[cloud]` | (no dedicated doc yet) |
-| Vault | Transit keys + PKI + auth methods | `connectors.enable_vault`, `vault_addr`, `vault_token`, `vault_transit_mount` | `quirk[cloud]` (`hvac`) | (no dedicated doc yet) |
+| GCP | KMS + GCS storage encryption | `connectors.enable_gcp`, `gcp_project_id` | `quirk-scanner[cloud]` | (no dedicated doc yet) |
+| Database | Postgres / MySQL ssl-mode + RDS encryption | `connectors.enable_db`, `pg_targets`, `mysql_targets`, scanner user/password | `quirk-scanner[db]` | (no dedicated doc yet) |
+| Object storage | S3 bucket encryption + Azure Blob encryption | `connectors.enable_s3`, `enable_blob` | `quirk-scanner[cloud]` | (no dedicated doc yet) |
+| Kubernetes | EKS/GKE/AKS encryption + secret enumeration | `connectors.enable_k8s`, `k8s_provider`, `k8s_cluster_name`, kubeconfig fields | `quirk-scanner[cloud]` | (no dedicated doc yet) |
+| Vault | Transit keys + PKI + auth methods | `connectors.enable_vault`, `vault_addr`, `vault_token`, `vault_transit_mount` | `quirk-scanner[cloud]` (`hvac`) | (no dedicated doc yet) |
 | Docker (image SBOM) | (uses container scanner) | (see Container row) | `syft` | [`docs/connectors/docker.md`](connectors/docker.md) |
 | Git (semgrep) | (uses source scanner) | (see Source row) | `semgrep` | [`docs/connectors/git.md`](connectors/git.md) |
 
@@ -224,28 +224,28 @@ Requires `semgrep` on `PATH` and `connectors.enable_source=true`.
 Resolves DNSKEY, DS, and RRSIG records for each domain in `dnssec_targets` and
 classifies the signing algorithms (RSASHA1, RSASHA256, ECDSAP256SHA256, ED25519, etc.)
 against the quantum-readiness rubric. Reports broken chains, missing DS records, and
-signing algorithms misaligned with NIST IR 8547 guidance. Requires `quirk[identity]`.
+signing algorithms misaligned with NIST IR 8547 guidance. Requires `quirk-scanner[identity]`.
 
 #### Kerberos scanner
 
 Connects to KDC port 88 on each entry in `kerberos_targets` and enumerates supported
 encryption types (`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`,
 `des-cbc-md5`, etc.). Findings flag any KDC still offering DES/RC4 enctypes and note
-where AES-only enforcement is missing. Requires `quirk[identity]`.
+where AES-only enforcement is missing. Requires `quirk-scanner[identity]`.
 
 #### SAML scanner
 
 Fetches the SAML IdP metadata for each entry in `saml_targets` and inspects the
 declared SignatureMethod and DigestMethod algorithms (`rsa-sha1`, `rsa-sha256`,
 `ecdsa-sha256`, etc.). Findings flag IdPs still signing with SHA-1 or otherwise
-non-conformant primitives. Requires `quirk[identity]`.
+non-conformant primitives. Requires `quirk-scanner[identity]`.
 
 #### Email scanner
 
 Probes 7 email-TLS ports per target — SMTP `25`/`465`/`587`, IMAP `143`/`993`, POP3
 `110`/`995` — handling both implicit TLS and STARTTLS upgrades. Findings include
 "STARTTLS downgrade risk on SMTP", missing implicit-TLS on submission, and weak
-ciphers on the negotiated channel. Requires `quirk[motion]`.
+ciphers on the negotiated channel. Requires `quirk-scanner[motion]`.
 
 #### Broker scanner
 
@@ -253,7 +253,7 @@ Probes message-broker endpoints across five protocol families: Kafka (configurab
 listeners), AMQP (RabbitMQ), Redis, Azure Service Bus (per `broker_azure_namespaces`),
 and Amazon SQS (per `broker_sqs_regions`). Findings include plaintext-listener
 detection, weak TLS configuration, and missing authentication. Gated by
-`connectors.enable_broker=true` and requires `quirk[motion]`.
+`connectors.enable_broker=true` and requires `quirk-scanner[motion]`.
 
 ### quirk doctor
 
