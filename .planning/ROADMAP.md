@@ -1872,7 +1872,7 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
 Plans:
 - [x] 90-01-PLAN.md — PQC-01: digest-pinned oqs-nginx chaos-lab profile serving X25519MLKEM768 (compose + nginx.conf + lab.sh + README + expected_results)
 - [x] 90-02-PLAN.md — PQC-02: raw openssl s_client probe (capability-gated, advisory fallback), classifier alias, pqc_hybrid_endpoint_count, run_scan wiring
-- [ ] 90-03-PLAN.md — PQC-03: agility PQC-hybrid bonus (+8.0) in SCORE_WEIGHTS, invariant test updated (283.0/37), /25 clamp regression
+- [x] 90-03-PLAN.md — PQC-03: agility PQC-hybrid bonus (+8.0) in SCORE_WEIGHTS, invariant test updated (283.0/37), /25 clamp regression
 - [ ] 90-04-PLAN.md — Before/after demo oracle, discriminator regression test, UAT-SERIES + Obsidian phase-completion sync
 
 #### Phase 91: Code Cleanup + Bookkeeping
@@ -1911,6 +1911,6 @@ Plans:
 | 87. Dependency Hygiene | 2/2 | ✅ Complete | 2026-05-22 |
 | 88. Scoring Residuals | 2/2 | ✅ Complete | 2026-05-22 |
 | 89. Chaos Lab Profiles | 3/3 | Complete   | 2026-05-22 |
-| 90. OQS-nginx PQC-Hybrid | 2/4 | In Progress|  |
+| 90. OQS-nginx PQC-Hybrid | 3/4 | In Progress|  |
 | 91. Code Cleanup + Bookkeeping | 0/TBD | Not started | — |
 | 92. v5.0 Close-out | 0/TBD | Not started | — |
