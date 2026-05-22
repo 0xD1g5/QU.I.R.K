@@ -86,9 +86,9 @@
 | LAB-04 | 89 | 89-01 | ✅ done — kafka-tls weak-TLS profile (PEM keystore) |
 | LAB-05 | 89 | 89-03 | ✅ done — grpc-tls lab profile + D-03 ALPN gate PASSED |
 | LAB-06 | 89 | 89-02 | ✅ done — identity evidence live-verified (dnssec=2, saml=2); kerberos etype deferred (HUMAN-UAT) |
-| PQC-01 | 90 | TBD | pending |
-| PQC-02 | 90 | TBD | pending |
-| PQC-03 | 90 | TBD | pending |
+| PQC-01 | 90 | 90-01 | ✅ done (6491f35, e5c61da) — oqs-nginx profile + four-file lab-sync |
+| PQC-02 | 90 | 90-02 | ✅ done (7b1c0be, 1403254) — PQC probe + classifier alias + evidence counter |
+| PQC-03 | 90 | 90-03 | ✅ done (00e24f5, 41e172d) — agility_pqc_hybrid_bonus weight + invariant 283.0/37 |
 | CLEAN-01 | 91 | TBD | pending |
 | CLEAN-02 | 91 | TBD | pending |
 | CLEAN-03 | 91 | TBD | pending |
