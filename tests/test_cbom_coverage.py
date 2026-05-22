@@ -110,11 +110,38 @@ FAMILIES = [
 ]
 
 
+def _coverage_notes(bom) -> list[str]:
+    """Return quirk:coverage-note values from Bom root component (D-06 markers)."""
+    if bom.metadata and bom.metadata.component:
+        return [
+            p.value
+            for p in (bom.metadata.component.properties or [])
+            if p.name == "quirk:coverage-note"
+        ]
+    return []
+
+
+# Protocol families that emit D-06 affirmative coverage notes instead of
+# algorithm components when no cryptographic algorithm is directly observed
+# (Phase 88 D-05/D-06 / SCORE-CBOM-01). These families are excluded from the
+# algo-component gate and asserted to emit a coverage note instead.
+_COVERAGE_NOTE_FAMILIES = frozenset({"CONTAINER", "SOURCE"})
+
+
 @pytest.mark.parametrize("ep", FAMILIES)
 def test_protocol_family_emits_algo_component(ep):
     bom = build_cbom([ep])
     algos = _algorithm_components(bom)
-    assert len(algos) >= 1, (
-        f"Protocol family {ep.protocol!r} emitted zero algorithm components — "
-        f"Pass-1 branch missing or broken. Components: {[c.name for c in bom.components]}"
-    )
+    if ep.protocol in _COVERAGE_NOTE_FAMILIES:
+        # D-06: these families emit affirmative coverage notes, not algo components
+        notes = _coverage_notes(bom)
+        assert notes, (
+            f"Protocol family {ep.protocol!r} emitted zero algorithm components and "
+            f"no quirk:coverage-note — Pass-1 D-06 branch missing or broken. "
+            f"Components: {[c.name for c in bom.components]}"
+        )
+    else:
+        assert len(algos) >= 1, (
+            f"Protocol family {ep.protocol!r} emitted zero algorithm components — "
+            f"Pass-1 branch missing or broken. Components: {[c.name for c in bom.components]}"
+        )
