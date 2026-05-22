@@ -1918,4 +1918,4 @@ Plans:
 | 89. Chaos Lab Profiles | 3/3 | Complete   | 2026-05-22 |
 | 90. OQS-nginx PQC-Hybrid | 4/4 | Complete   | 2026-05-22 |
 | 91. Code Cleanup + Bookkeeping | 3/3 | Complete   | 2026-05-22 |
-| 92. v5.0 Close-out | 2/2 | ✅ Complete | 2026-05-22 |
+| 92. v5.0 Close-out | 2/2 | Complete   | 2026-05-22 |
