@@ -12,7 +12,8 @@
 - ✅ **v4.7 Governance & Compliance Platform** — Phases 51–56 + 56.1, 27 plans (shipped 2026-05-08)
 - ✅ **v4.8 Pre-Primetime Hardening + Operating Model** — Phases 57–68 (shipped 2026-05-14) → `.planning/milestones/v4.8-ROADMAP.md`
 - ✅ **v4.9 Audit Depth** — Phases 69–77 + 69.1, 38 plans (shipped 2026-05-15) → `.planning/milestones/v4.9-ROADMAP.md`
-- 🚧 **v4.10 Launch Readiness — Coverage, Hardening, Release Engineering** — Phases 78–85, 8 phases (opened 2026-05-16)
+- ✅ **v4.10 Launch Readiness — Coverage, Hardening, Release Engineering** — Phases 78–85, 8 phases (shipped 2026-05-21) → `.planning/milestones/v4.10-ROADMAP.md`
+- 🚧 **v4.10.1 Scoring Correctness Hotfix** — Phase 86, 1 phase (opened 2026-05-22)
 
 ## Phases
 
@@ -1496,3 +1497,42 @@ Archived to: [`.planning/milestones/v4.10-ROADMAP.md`](milestones/v4.10-ROADMAP.
 | 83. Integration Gate + Cleanup | B | 1/1 | Complete | 2026-05-16 |
 | 84. Release Engineering | B | 4/4 | Complete | 2026-05-21 |
 | 85. Public-Launch Polish | C | 5/5 | Complete | 2026-05-21 |
+
+---
+
+## v4.10.1 Scoring Correctness Hotfix — Phase 86 — opened 2026-05-22
+
+**Milestone Goal:** Patch v4.10 to fix the marquee overall-readiness score (currently displays 100/EXCELLENT when subscores are red and CRITICAL findings are present) via surgical normalization in `compute_readiness_score()` and the dashboard `ScoreGauge`, without changing the underlying penalty model.
+
+**Scope:** Single phase, vertical MVP slice. Backend math fix + frontend gauge fix + tests + release engineering are tightly coupled — backend without frontend produces a different wrong number; frontend without backend is meaningless. All 8 requirements map to Phase 86.
+
+**Out of scope (deferred to v5.0 Phase 01 — Stabilization):**
+- EVIDENCE-TALLY-01: investigate why 3 subscores show exactly 25 despite HIGH/CRITICAL findings
+- RENDER-CLI-01: same backend-scale vs render-scale audit for `quirk/reports/executive.py`
+- RENDER-PDF-01: same audit for the Playwright-rendered PDF report
+
+### Phases — v4.10.1
+
+- [ ] **Phase 86: Scoring Correctness Hotfix** - Normalize overall readiness (sum-of-subscores ÷ 1.5), fix ScoreGauge maxValue + color thresholds, bump version to 4.10.1 with release notes documenting the visual jump
+
+## Phase Details — v4.10.1 Scoring Correctness Hotfix
+
+### Phase 86: Scoring Correctness Hotfix
+**Goal**: As a security consultant, I want the executive-summary overall readiness score to reflect actual scan posture, so that the marquee number doesn't contradict the visible CRITICAL findings and red subscore gauges below it.
+**Depends on**: Phase 85 (v4.10 SHIPPED 2026-05-21)
+**Mode**: mvp (will be stamped by `/gsd-mvp-phase` after roadmap approval)
+**Requirements**: SCORE-FIX-01, SCORE-FIX-02, SCORE-FIX-03, GAUGE-01, GAUGE-02, GAUGE-03, RELEASE-01, RELEASE-02
+**Success Criteria** (what must be TRUE):
+  1. Running a scan against the `tls-cert-defects` chaos lab profile (or any scan that previously hit the clamp) shows an overall-readiness value strictly less than 100, with a corresponding non-EXCELLENT rating — the canonical 25+25+23+3+25+19 sum displays as ~80, not 100.
+  2. All six subscore radials in the dashboard display a color matching their penalty state: a subscore at its category max of 25 shows green (≥80 % of 25), a subscore at 0–7 shows red (<50 %), and a subscore in the middle range shows amber. The overall-readiness gauge keeps `maxValue` default (100) and renders unchanged when overall is unchanged.
+  3. `pytest tests/test_score_weights_invariant.py` passes against the new aggregation formula, and a new normalization-boundary test asserts that `compute_readiness_score` returns 100 only when all six subscores are at their 25 ceiling, and returns 0 only when every subscore is 0.
+  4. The module docstring at `quirk/intelligence/scoring.py:1-17` accurately describes the contract — six subscores each on a 0–25 scale, overall = `int(round(sum / 1.5))` — with no remaining "Phase 60 SCORE-04 clamp-to-[0,100] is intentional" wording or other misleading language.
+  5. `pyproject.toml` `[project.version]` reads `4.10.1`, and `CHANGELOG.md` / `changelog.d/` has an entry describing the scoring fix in plain operator language including the canonical 25+25+23+3+25+19 before/after example and a note that old stored scores will display lower after upgrade (underlying penalty math unchanged).
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress — v4.10.1 Phases
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 86. Scoring Correctness Hotfix | 0/TBD | Not started | - |

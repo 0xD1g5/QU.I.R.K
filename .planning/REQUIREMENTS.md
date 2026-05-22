@@ -50,15 +50,15 @@ Captured here so the v5.0 plan absorbs them without re-discovery:
 
 ## Traceability
 
-Will be filled in by the roadmapper when ROADMAP.md phases are defined.
-
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| SCORE-FIX-01 | TBD | TBD | open |
-| SCORE-FIX-02 | TBD | TBD | open |
-| SCORE-FIX-03 | TBD | TBD | open |
-| GAUGE-01 | TBD | TBD | open |
-| GAUGE-02 | TBD | TBD | open |
-| GAUGE-03 | TBD | TBD | open |
-| RELEASE-01 | TBD | TBD | open |
-| RELEASE-02 | TBD | TBD | open |
+| SCORE-FIX-01 | Phase 86 | TBD | open |
+| SCORE-FIX-02 | Phase 86 | TBD | open |
+| SCORE-FIX-03 | Phase 86 | TBD | open |
+| GAUGE-01 | Phase 86 | TBD | open |
+| GAUGE-02 | Phase 86 | TBD | open |
+| GAUGE-03 | Phase 86 | TBD | open |
+| RELEASE-01 | Phase 86 | TBD | open |
+| RELEASE-02 | Phase 86 | TBD | open |
+
+**Coverage:** 8/8 requirements mapped to Phase 86 (100%) ✓

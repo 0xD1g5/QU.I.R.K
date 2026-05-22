@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v4.10.1
 milestone_name: Scoring Correctness Hotfix
 status: planning
-last_updated: "2026-05-22T03:39:11.344Z"
+last_updated: "2026-05-22T04:00:00.000Z"
 last_activity: 2026-05-22
 progress:
-  total_phases: 0
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,32 +17,42 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-16)
+See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v4.10 — roadmap defined, ready for phase planning
+**Current focus:** v4.10.1 — roadmap defined (Phase 86 single-phase MVP hotfix), ready for `/gsd-mvp-phase` stamp + planning
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 86 — Scoring Correctness Hotfix (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-22 — Milestone v4.10.1 started
+Status: Roadmap approved; awaiting `/gsd-mvp-phase 86` then `/gsd-plan-phase 86`
+Last activity: 2026-05-22 — Milestone v4.10.1 roadmap created (single phase, all 8 reqs mapped)
 
-## Milestone Summary (v4.10 — in progress)
+## Milestone Summary (v4.10.1 — in progress)
+
+| Phase | Mode | Slug | Plans | Status |
+|-------|------|------|-------|--------|
+| 86 | mvp | scoring-correctness-hotfix | TBD | Not started |
+
+**Structure:** Single-phase vertical MVP slice — backend math fix (SCORE-FIX-01..03) + frontend gauge fix (GAUGE-01..03) + release engineering (RELEASE-01..02) are tightly coupled and ship together. Splitting would yield half-fixes that contradict each other (backend without frontend produces a different wrong number; frontend without backend is meaningless).
+
+**Deferred to v5.0 Phase 01 — Stabilization:** EVIDENCE-TALLY-01 (subscore tally bug — separate root cause in evidence summarizer), RENDER-CLI-01 (CLI report same-bug-class audit), RENDER-PDF-01 (PDF report same-bug-class audit). Captured as Future Requirements in `.planning/REQUIREMENTS.md` so the v5.0 plan absorbs them without re-discovery.
+
+## Previous Milestone Summary (v4.10 — SHIPPED 2026-05-21)
 
 | Phase | Wave | Slug | Plans | Status |
 |-------|------|------|-------|--------|
-| 78 | A | html-pdf-injection-hardening | TBD | Not started |
-| 79 | A | smime-ldap-discovery-scanner | TBD | Not started |
-| 80 | A | windows-adcs-scanner | TBD | Not started |
-| 81 | A | cmvp-attestation-feed | TBD | Not started |
-| 82 | A/B | chaos-lab-fidelity | TBD | Not started |
-| 83 | B | integration-gate-cleanup | TBD | Not started |
-| 84 | B | release-engineering | TBD | Not started |
-| 85 | C | public-launch-polish | TBD | Not started |
+| 78 | A | html-pdf-injection-hardening | 5/5 | Complete 2026-05-16 |
+| 79 | A | smime-ldap-discovery-scanner | 4/4 | Complete 2026-05-16 |
+| 80 | A | windows-adcs-scanner | 4/4 | Complete 2026-05-16 |
+| 81 | A | cmvp-attestation-feed | 4/4 | Complete 2026-05-16 |
+| 82 | A/B | chaos-lab-fidelity | 4/4 | Complete 2026-05-16 |
+| 83 | B | integration-gate-cleanup | 1/1 | Complete 2026-05-16 |
+| 84 | B | release-engineering | 4/4 | Complete 2026-05-21 |
+| 85 | C | public-launch-polish | 5/5 | Complete 2026-05-21 |
 
-**Wave gating:** Wave A (78–82 parallel, 78 starts first) → Wave B (83, 84) → Wave C (85)
+**v4.10 archive:** `.planning/milestones/v4.10-ROADMAP.md` + `.planning/milestones/v4.10-REQUIREMENTS.md`. Tag `v4.10.0` (local-only; v4.10.0 release tag NOT pushed). PyPI distribution name `quirk-scanner`. 5 deferred human UAT items for release dry-run.
 
 ## Previous Milestone Summary (v4.9 — SHIPPED 2026-05-15)
 
@@ -66,41 +76,27 @@ Last activity: 2026-05-22 — Milestone v4.10.1 started
 ### Roadmap Evolution
 
 - v4.9 shipped 2026-05-15. All 35 requirements satisfied; archive at `.planning/milestones/v4.9-ROADMAP.md` + `.planning/milestones/v4.9-REQUIREMENTS.md`.
-- v4.10 roadmap created 2026-05-16. 8 phases (78–85), 52 requirements, 100% coverage. Three-wave structure mirrors v4.8 Wave A/B discipline.
+- v4.10 shipped 2026-05-21. 8 phases (78–85), 31 plans, 52/52 requirements; archived to `.planning/milestones/v4.10-ROADMAP.md`.
+- v4.10.1 roadmap created 2026-05-22. Single phase (86), 8 requirements, 100% coverage. Vertical MVP slice — backend + frontend + release engineering coupled by physics (the wrong-number bug spans backend aggregation and frontend gauge math; fixing only half produces a different wrong number).
 
-### Decisions (v4.10 — pre-execution)
+### Decisions (v4.10.1 — pre-execution)
 
-- v4.10-D-01 (pre-locked by research): CMVP module never emits `certified: true` — only `fips_140_3_coverage` informational list. CMVP-07 is the permanent CI invariant. (Source: SUMMARY.md cross-cutting recommendation 4)
-- v4.10-D-02 (pre-locked by research): `certipy-ad` excluded — pins `cryptography~=42.0.8`, breaks TLS scanner. AD CS via impacket LDAP only. (Source: SUMMARY.md cross-cutting recommendation 2; mirrors v4.2 Key Decision)
-- v4.10-D-03 (Phase 80-01 execution, 2026-05-16): adcs chaos-lab profile uses Bitnami-native `LDAP_CUSTOM_SCHEMA_DIR=/schemas` env hook for msPKI schema loading. Both originally planned branches (seed-time `ldapadd cn=config` + Dockerfile `COPY ... etc/schema/`) rejected at runtime under `bitnamilegacy/openldap:2.6.10`; Dockerfile preserved as tertiary fallback per D-80-R7 "ship both branches" contract.
-- v4.10-D-04 (Phase 80-01 execution, 2026-05-16): msPKI schema overlay uses private OID arc `1.3.6.1.4.1.99999.80.*` rather than Microsoft's real `1.2.840.113556.1.4.20XX` — the latter collides with the bundled `msuser` schema (slapadd "Inconsistent duplicate attributeType"). Scanner keys off attribute NAMES (not OIDs) so the private arc is functionally equivalent; attribute names match Microsoft's real schema verbatim.
-- v4.10-D-03 (pre-locked by research): S/MIME discovery is LDAP-only (`userCertificate`/`userSMIMECertificate`). No IMAP, no mailbox content. AST CI gate (SMIME-08) is preventative for future drift. (Source: SUMMARY.md cross-cutting recommendation 3)
-- v4.10-D-04 (pending Phase 84 task 1): PyPI name `quirk` availability unknown. RELENG-01 is the first task of Phase 84; if taken, distribution name is changed before any packaging automation is written.
+- v4.10.1-D-01 (pre-locked by milestone scope): single-phase MVP. Backend math fix, frontend gauge fix, version bump and changelog ship as one atomic unit. Splitting risks shipping a half-fix that displays a different wrong number.
+- v4.10.1-D-02 (pre-locked by milestone scope): no stored-score migration. SQLite values are untouched; old scans display the new math when re-rendered. Visual jump from 100 → ~80 for the canonical `tls-cert-defects` scan is documented in CHANGELOG.md as accepted trade-off.
+- v4.10.1-D-03 (pre-locked by milestone scope): CLI / HTML / PDF render-side fixes deferred to v5.0 Phase 01 (Stabilization). Same bug class likely exists there but a full-stack scoring sweep is the right shape; mixing into a hotfix risks shipping new bugs.
+- v4.10.1-D-04 (pre-locked by milestone scope): evidence-tally gap (3 subscores at 25 despite findings) deferred to v5.0 Phase 01. Separate root cause in the evidence summarizer; touching that pipeline expands the diff well beyond a hotfix.
 
 ### Pending Todos
 
-- Phase 78 must start before Phases 79–82 so downstream scanner additions land in a hardened report environment (soft ordering, not a hard dep)
-- CHAOS-04 and CHAOS-06 cannot be fully verified until Phases 79+80 deliver `smime`/`adcs` profiles — Phase 82 has both Wave A tasks (CHAOS-01..03, CHAOS-05) and Wave B tasks (CHAOS-04, CHAOS-06)
-- SCORE_WEIGHTS invariant test must be updated exactly once in Phase 83, after both SMIME and ADCS scanners have landed their four new weight entries
+- Run `/gsd-mvp-phase 86` to stamp Phase 86 as `mode: mvp` (skips wave structure, single-plan default).
+- Run `/gsd-plan-phase 86` to decompose the phase into plan(s) targeting `quirk/intelligence/scoring.py`, `src/dashboard/src/components/ScoreGauge.tsx`, `src/dashboard/src/pages/executive.tsx`, `tests/test_score_weights_invariant.py`, `pyproject.toml`, and `CHANGELOG.md` / `changelog.d/`.
 
-### Blockers/Concerns
+### Blockers
 
-None — roadmap is fully defined. All critical traps documented in SUMMARY.md and encoded as explicit success criteria or CI invariants.
-
-## Deferred Items
-
-Items carried forward from v4.9 close (still open):
-
-| Category | Item | Status |
-|----------|------|--------|
-| uat_gap | Phase 43: 43-HUMAN-UAT.md (2 pending) — loading-state first paint + keyboard focus ring visibility | deferred — require live browser session |
-| uat_gap | Phase 44: 44-HUMAN-UAT.md (1 pending) — Phase 29 K8s cloud-only justification review | deferred — human confirmation needed |
-| verification_gap | Phase 46: 46-VERIFICATION.md not authored (code verified live) | deferred — retroactive authoring needed |
-| uat_gap | Phase 47: 4 manual TTY tests pending (nmap wizard interactive flow) | deferred — require TTY session |
-| test_infra | test_cbom_schema_validation.py fails when cyclonedx json-validation extra absent | deferred — optional dep, not blocking |
+None.
 
 ## Session Continuity
 
-Last session: 2026-05-21T13:32:42.886Z
-Stopped at: v4.10 SHIPPED 2026-05-21 — milestone lifecycle complete (audit→complete→cleanup)
-Next action: `/gsd-plan-phase 80` continuation — run Plan 80-02 (scanner module)
+**Last session:** 2026-05-22 — v4.10.1 milestone opened. Bug surfaced 2026-05-22 in a live dashboard scan against `tls-cert-defects` chaos lab profile: Overall = 100 / EXCELLENT while subscores 25+25+23+3+25+19 = 120 (clamped) and severity shows 2 CRITICAL + 2 HIGH. Diagnosis: triple-layer scale collision — backend sums 0-25 subscores then clamps at 100; frontend declares input as 0-100 and colors red < 50.
+
+**Next session:** `/gsd-mvp-phase 86` then `/gsd-plan-phase 86`.
