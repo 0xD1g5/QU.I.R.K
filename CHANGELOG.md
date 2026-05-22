@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [4.10.1] - 2026-05-22
+
+### Fixed
+
+- Overall readiness no longer caps at 100 on real scans. The previous aggregator summed six 0–25 subscores and clamped at 100, masking real posture issues. Overall readiness is now `int(round(sum_of_subscores / 1.5))`; dashboard subscore radials now render against `maxValue=25` so a perfect category shows green and a depleted category shows red.
+
+  **Before / After (canonical example):**
+
+  | Subscores | Sum | Overall (before) | Rating (before) | Overall (after) | Rating (after) |
+  |-----------|-----|-----------------|-----------------|-----------------|----------------|
+  | 25+25+23+3+25+19 | 120 | **100** | EXCELLENT | **80** | GOOD |
+
+  Old stored scores will display lower after upgrade. The underlying per-category penalty math is unchanged — only the aggregation and dashboard scale are corrected. To refresh a stored score, re-render or re-scan. (v4.10.1)
+
+
 ## 4.4.0 - 2026-04-29
 
 **Milestone:** v4.4 Data in Motion — full release notes: [docs/release-notes/4.4.0.md](docs/release-notes/4.4.0.md)
