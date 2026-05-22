@@ -1,10 +1,11 @@
 ---
 phase: 87
 slug: dependency-hygiene
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-22
+updated: 2026-05-22
 ---
 
 # Phase 87 — Validation Strategy

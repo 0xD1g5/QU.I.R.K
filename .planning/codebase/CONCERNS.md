@@ -8,51 +8,28 @@
 
 ### 1.1 `quirk/connectors/` Directory — Entire Directory Is Dead Code
 
-**Files:**
-- `quirk/connectors/aws_stub.py` — 3 lines, comment only
-- `quirk/connectors/azure_stub.py` — 3 lines, comment only
-- `quirk/connectors/windows_adcs_stub.py` — 3 lines, comment only
-
-**Issue:** These files are never imported by any production module. The real AWS and Azure scan implementations live in `quirk/scanner/aws_connector.py` and `quirk/scanner/azure_connector.py`. The `quirk/connectors/` directory is an artifact of the pre-v4 package layout when these were placeholder stubs; the live connector code was placed in `quirk/scanner/` instead. The stub files contain nothing but a comment.
-
-**Impact:** Misleading to any developer exploring the codebase — the `connectors/` directory looks authoritative but contains zero implementation. A cleanup PR could delete all three files and the `quirk/connectors/__init__.py`.
+**Resolved:** `quirk/connectors/` directory deleted in Phase 91. [CLEAN-03 / BACK-49 resolved]
 
 ---
 
 ### 1.2 `quirk/engine/rules.py` — Reserved File with Zero Implementation
 
-**File:** `quirk/engine/rules.py`
-
-**Issue:** Line 1 reads: `# Reserved for future: load YAML rules to make severity logic configurable.` The file contains nothing else. It is imported nowhere and does nothing. The severity logic it was intended to replace is hardcoded directly in `quirk/engine/risk_engine.py`.
-
-**Impact:** Low, but contributes to perception of an unfinished engine layer.
+**Resolved:** `quirk/engine/rules.py` deleted. No imports reference it. [CLEAN-03 / BACK-49 resolved]
 
 ---
 
 ### 1.3 `quirk/engine/migration_planner.py` — Superseded but Still Called
 
-**File:** `quirk/engine/migration_planner.py`
-
-**Issue:** `categorize_waves()` classifies findings into `NOW/NEXT/LATER` by severity. It is called from `quirk/reports/writer.py` (line 245) only to populate the "Migration Waves" rich table in the terminal output. The real roadmap logic (the one written to files and used in scoring) is `quirk/intelligence/roadmap.py`. These are two separate categorization systems with different logic and different output formats. `categorize_waves()` maps `CRITICAL → NOW`, `HIGH → NEXT`, and everything else to `LATER`, which diverges from the intelligence roadmap's evidence-driven phasing.
-
-**Impact:** The terminal "Migration Waves" table and the written roadmap files produce different categorizations from the same findings. Consulting output is inconsistent.
+**Resolved:** `quirk/engine/migration_planner.py` deleted. `categorize_waves()` inlined into `quirk/reports/writer.py` (Phase 83 CLEAN-01). [CLEAN-03 / BACK-51 resolved]
 
 ---
 
-### 1.4 `quirk/reports/writer.py` — Five Helper Functions Never Called
+### 1.4 `quirk/reports/writer.py` — One Remaining Dead Function
 
-**File:** `quirk/reports/writer.py`, lines 37–102
+**File:** `quirk/reports/writer.py`
 
-**Issue:** Five private helper functions are defined but never invoked anywhere in the file or in any import:
-- `_count_findings()` — line 37
-- `_extract_cert_key_type()` — line 42
-- `_extract_cert_dates()` — line 60
-- `_is_self_signed()` — line 77
-- `_mtls_present()` — line 97
-
-These appear to be holdovers from an earlier draft where the writer was going to compute its own evidence metrics before that logic was moved to `quirk/intelligence/evidence.py`.
-
-**Impact:** Dead code. `_mtls_present()` in particular probes four attribute names (`mtls`, `mtls_present`, `client_auth`, `requires_client_cert`) that do not exist on the `CryptoEndpoint` model, suggesting it was written speculatively and never wired.
+**Status:** Four of five originally-listed dead functions were removed in earlier phases. One remains:
+- `_extract_cert_key_type()` — confirmed dead by vulture 2.16 (60% confidence); targeted for deletion in Plan 91-02 (BACK-50 / CLEAN-02).
 
 ---
 
@@ -60,39 +37,25 @@ These appear to be holdovers from an earlier draft where the writer was going to
 
 **File:** `quirk/intelligence/schema.py`
 
-**Issue:** Defines four frozen dataclasses: `ScoreInputs`, `ScoreResult`, `ConfidenceResult`, `IntelligenceReport`. All are exported from `quirk/intelligence/__init__.py`. None are instantiated anywhere in production code (`run_scan.py`, `quirk/reports/writer.py`, or any intelligence module). They are used only in tests. The actual scoring pipeline returns plain dicts from `quirk/intelligence/scoring.py` and `quirk/intelligence/confidence.py`.
-
-**Impact:** The schema dataclasses represent an aspirational typed API that the implementation does not use. Any code that relies on the exported schema types will silently receive unvalidated dicts instead.
+**Status:** Still present. Targeted for deletion in Plan 91-02 (BACK-52 / CLEAN-02). Vulture confirms `IntelligenceReport` unused. Production code returns plain dicts; schema dataclasses only used in `tests/test_intelligence_schema.py`.
 
 ---
 
-### 1.6 `quirk/intelligence/driver_text.py` — `polish_drivers()` Never Called in Production
+### 1.6 `quirk/intelligence/driver_text.py` — Deleted
 
-**File:** `quirk/intelligence/driver_text.py`
-
-**Issue:** `polish_drivers(ev, raw_drivers)` converts evidence dict keys into polished consulting-grade text. It references keys `expired_cert_count`, `expiring_cert_count`, `self_signed_cert_count`, `scan_error_rate`, and `unknown_service_ratio` — none of which match the keys produced by `quirk/intelligence/evidence.py` (which uses `expired_count`, `expiring_count`, `self_signed_count`, `scan_error.rate`, and no `unknown_service_ratio` key). The function is never imported or called in any production module.
-
-**Impact:** Entirely dead. If wired up, it would silently return empty results because all key lookups would return 0/0.0.
+**Resolved:** `quirk/intelligence/driver_text.py` deleted in a prior phase. [CLEAN-03 / BACK-52 resolved]
 
 ---
 
-### 1.7 `quirk/intelligence/calibration.py` — `get_calibration()` Never Called
+### 1.7 `quirk/intelligence/calibration.py` — Deleted
 
-**File:** `quirk/intelligence/calibration.py`, line 132
-
-**Issue:** `get_calibration(cfg)` reads `cfg.intelligence.calibration_profile` (not `cfg.intelligence.profile`, which is the actual field name as of the rename in `quirk/config.py`) and returns a resolved calibration dict. This function is never imported or called anywhere in production code. The profile-based calibration it describes is not applied to any scoring or confidence calculation at runtime.
-
-**Impact:** The scoring calibration feature (lenient/balanced/strict) described in config is loaded into `cfg.intelligence.profile` but the calibration dict that would propagate profile weights into the scoring engine is never retrieved. The profile flag is effectively cosmetic — it appears in the output JSON but does not alter score weights.
+**Resolved:** `quirk/intelligence/calibration.py` deleted in a prior phase. [CLEAN-03 / BACK-52 resolved]
 
 ---
 
-### 1.8 `quirk/reports/scorecard.py` — `build_scorecard_markdown()` is an Orphan
+### 1.8 `quirk/reports/scorecard.py` — Deleted
 
-**File:** `quirk/reports/scorecard.py`
-
-**Issue:** `build_scorecard_markdown()` is a fully implemented scorecard renderer using the intelligence layer (evidence → score → confidence → roadmap). It is called only from tests (`tests/test_reports_scorecard.py`). `quirk/reports/writer.py` contains its own inline `_scorecard_markdown()` function (line 105) which reads from a different data shape. The `scorecard.py` module's function is not invoked during an actual scan run.
-
-**Impact:** Two separate scorecard implementations exist. The one called during scans (`_scorecard_markdown()` in `writer.py`) reads `score.get('total')` and `conf.get('confidence')` from dict wrappers; the one in `scorecard.py` calls the intelligence layer directly. Output may differ.
+**Resolved:** `quirk/reports/scorecard.py` deleted in a prior phase (BACK-61 / Phase 83). [CLEAN-03 resolved]
 
 ---
 
@@ -264,49 +227,31 @@ And `IntelligenceCfg` is constructed with all defaults (`IntelligenceCfg()`) —
 
 ## 4. Duplicate/Parallel Implementations
 
-### 4.1 Two Parallel Scoring Systems: `quirk/assessment/` vs `quirk/intelligence/`
+### 4.1 Two Parallel Scoring Systems — Resolved
 
-**Directories:**
-- `quirk/assessment/readiness_score.py` — `compute_readiness_score(cfg, endpoints, findings)`
-- `quirk/intelligence/scoring.py` — `compute_readiness_score(evidence, *, weights)`
-
-**Issue:** There are two completely separate readiness scoring implementations. The assessment version takes raw objects and computes directly. The intelligence version takes a pre-built evidence summary dict. Both are called at runtime:
-
-- `quirk/reports/executive.py` (line 5) imports and calls the **assessment** version
-- `quirk/reports/writer.py` (line 16) imports and calls the **intelligence** version
-- The executive summary markdown report and the `intelligence-*.json` output reflect different scores computed by different algorithms with different weights and scaling
-
-The assessment layer (`quirk/assessment/`) also has its own confidence engine (`quirk/assessment/confidence.py`) distinct from `quirk/intelligence/confidence.py`, and its own roadmap (`quirk/assessment/transition_planner.py`) distinct from `quirk/intelligence/roadmap.py`.
-
-**Impact:** Every scan run produces two different readiness scores — one in the executive summary markdown, one in the intelligence JSON and HTML report. A consulting customer who reads both will see different numbers with no explanation.
+**Resolved:** `quirk/assessment/readiness_score.py`, `quirk/assessment/confidence.py`,
+`quirk/assessment/transition_planner.py` were all deleted in prior phases. The codebase
+now has a single scoring engine: `quirk/intelligence/scoring.py`. Both
+`quirk/reports/executive.py` and `quirk/reports/writer.py` import
+`compute_readiness_score` from `quirk.intelligence.scoring`. [CLEAN-03 / BACK-52 resolved]
 
 ---
 
-### 4.2 Two Confidence Engines
+### 4.2 Two Confidence Engines — Resolved
 
-**Files:**
-- `quirk/assessment/confidence.py` — `compute_confidence(cfg, endpoints)` — heuristic, starts at 70
-- `quirk/intelligence/confidence.py` — `compute_confidence(evidence, *, weights)` — weighted formula
-
-Both are called on every scan. The executive summary uses the assessment version; the intelligence JSON and HTML report use the intelligence version.
+**Resolved:** `quirk/assessment/confidence.py` deleted. Single engine: `quirk/intelligence/confidence.py`. [CLEAN-03 resolved]
 
 ---
 
-### 4.3 Two Roadmap Builders
+### 4.3 Two Roadmap Builders — Resolved
 
-**Files:**
-- `quirk/assessment/transition_planner.py` — `build_transition_roadmap(cfg, endpoints, findings)` — wave-based (Wave 1/2/3), context-driven
-- `quirk/intelligence/roadmap.py` — `build_phased_roadmap(evidence, scoring)` — evidence-driven, NOW/NEXT/LATER
-
-The executive summary markdown uses `transition_planner`; the `roadmap-*.md` and `intelligence-*.json` artifacts use `build_phased_roadmap`. They produce structurally different output formats.
+**Resolved:** `quirk/assessment/transition_planner.py` deleted. Single builder: `quirk/intelligence/roadmap.py`. [CLEAN-03 resolved]
 
 ---
 
-### 4.4 Two Interpretation Engines
+### 4.4 Two Interpretation Engines — Resolved
 
-**Files:**
-- `quirk/assessment/interpretation_engine.py` — `build_interpretation()` — used by executive summary markdown
-- `quirk/reports/scorecard.py` — `_interpretation_bullets()` — used by scorecard (but scorecard is orphaned, see §1.8)
+**Resolved:** `quirk/reports/scorecard.py` deleted (see §1.8). `quirk/assessment/interpretation_engine.py` is the only remaining interpretation helper. [CLEAN-03 resolved]
 
 ---
 
@@ -333,29 +278,15 @@ The executive summary markdown uses `transition_planner`; the `roadmap-*.md` and
 
 ## 6. Legacy Naming Artifacts
 
-### 6.1 `data/qcscan-legacy.sqlite`
+### 6.1 `data/qcscan-legacy.sqlite` — Deleted
 
-**File:** `data/qcscan-legacy.sqlite`
-
-**Issue:** A database file using the old package name `qcscan` persists in the `data/` directory. The rename audit (`RESTRUCTURE-AUDIT-2026-03-31.md`) confirms the package was renamed from `qcscan` to `quirk`. This file should be archived or removed.
+**Resolved:** `data/qcscan-legacy.sqlite` removed (commit 708402b). [CLEAN-03 / BACK-53 resolved]
 
 ---
 
-### 6.2 `tqdm = None` Dead Assignment in `run_scan.py`
+### 6.2 `tqdm = None` Dead Assignment in `run_scan.py` — Removed
 
-**File:** `run_scan.py`, lines 161–162
-
-**Issue:**
-```python
-# rich Progress used throughout; tqdm removed (D-04)
-tqdm = None  # kept for any residual references during transition
-```
-Followed immediately by:
-```python
-if tqdm:
-    bar = tqdm(...)
-```
-`tqdm` is always `None` — the branch at line 283–284 can never execute. The assignment and the branch are both dead code left from the migration from tqdm to rich. However, `tqdm>=4.67` is still listed as a production dependency in `pyproject.toml` (line 15) and `quirk/logging_util.py` still optionally imports it for the `--progress` flag.
+**Resolved:** The `tqdm = None; if tqdm:` dead branch was removed from `run_scan.py` pre-v4.10. `quirk/logging_util.py` uses a live lazy import of `tqdm` for the `--progress` flag — this is not dead code. `tqdm>=4.67` is a legitimate production dependency. [CLEAN-03 / BACK-54 resolved]
 
 ---
 
@@ -371,13 +302,9 @@ if tqdm:
 
 ---
 
-### 6.4 `datetime.utcnow()` Deprecation Warnings
+### 6.4 `datetime.utcnow()` Deprecation Warnings — Resolved
 
-**Files:**
-- `quirk/logging_util.py`, line 43: `ts = datetime.utcnow().strftime(...)`
-- `quirk/discovery/nmap_provider.py`, line 50: `stamp = datetime.utcnow().strftime(...)`
-
-**Issue:** `datetime.utcnow()` is deprecated in Python 3.12+ and raises `DeprecationWarning`. The rest of the codebase correctly uses `datetime.now(timezone.utc)`.
+**Resolved:** All `datetime.utcnow()` calls in `quirk/` production code were fixed in earlier phases. The 9 remaining occurrences in `tests/test_dashboard_scan_history.py` were fixed in Phase 91 Plan 01 (CLEAN-01 / BACK-56). [CLEAN-01 resolved]
 
 ---
 
@@ -400,19 +327,14 @@ if tqdm:
 
 ## 8. Security Considerations
 
-### 8.1 JWT Scanner Disables TLS Verification
+### 8.1 JWT Scanner TLS Verification — Documented (CLEAN-04)
 
-**File:** `quirk/scanner/jwt_scanner.py`, lines 56 and 67
-
-**Issue:**
-```python
-resp = httpx.get(url, timeout=timeout, follow_redirects=True, verify=False)
-```
-and
-```python
-resp2 = httpx.get(jwks_uri, timeout=timeout, follow_redirects=True, verify=False)
-```
-TLS certificate verification is disabled for all JWKS endpoint requests. This is appropriate for a security scanner probing unknown/self-signed endpoints, but `verify=False` also suppresses the urllib3 `InsecureRequestWarning`. If QUIRK is ever used in a CI pipeline that treats warnings as errors, this will be silent. More importantly, if a JWKS URI is intercepted (MITM), the scanner will happily process attacker-supplied key material and report it as legitimate. For an active assessment tool, this is an acceptable trade-off but should be documented.
+**Resolved:** Phase 57 (HARDEN-SCAN-01) refactored `jwt_scanner.py` to use `verify=verify_tls`
+(not a hardcoded `verify=False`). `allow_insecure_jwks` defaults to `false`; when enabled, a
+HIGH advisory `ADVISORY_JWKS_VERIFY_DISABLED` finding is emitted and `validate_external_url()`
+still runs on JWKS URIs. Phase 91 Plan 01 (CLEAN-04) added inline `# WHY:` comments at the
+`httpx.get` call sites and documented `allow_insecure_jwks` in `docs/operators-guide.md` and
+`docs/configuration.md`. [CLEAN-04 / BACK-58 resolved]
 
 ---
 
