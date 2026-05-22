@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [5.0.0] - 2026-05-22
+
+### Added
+
+- Added four weak-TLS chaos-lab profiles (postgres-tls port 39432, redis-tls ports 39380/39379, kafka-tls ports 39093/39092, grpc-tls port 39443) with intentional RSA-2048 / RSA-KX ciphers, plus a Go gRPC multi-stage Docker build with empirically-confirmed sslyze ALPN-h2 compatibility (LAB-03 SMTP STARTTLS closed as already covered by the email profile). (v5.0-89)
+- Added OQS-nginx PQC-hybrid chaos-lab profile (port 39444) serving TLS 1.3 with X25519MLKEM768 hybrid KEM and ML-DSA-65 certificate (digest-pinned openquantumsafe/nginx image, sha256:6ca18ac6); live openssl s_client probe detects X25519MLKEM768 group negotiation; agility scoring gains an agility_pqc_hybrid_bonus weight of +8.0 that anchors the scoring ceiling for post-quantum readiness. (v5.0-90)
+
+### Fixed
+
+- Added six-subscore N/25 decomposition block to CLI markdown, executive markdown, and HTML/PDF report surfaces so reviewers can see per-category scores alongside the overall readiness number; CBOM builder now emits affirmative coverage-note properties for five formerly-zero-algorithm profiles (database, registry, source, ssh-weak, storage-s3) closing Phase 42 OBS-1; forward-locking orthogonality and render-parity tests lock the single scoring engine as invariant. (v5.0-88)
+
+### Misc
+
+- v5.0-87, v5.0-91
+
+
 ## [4.10.1] - 2026-05-22
 
 ### Fixed
