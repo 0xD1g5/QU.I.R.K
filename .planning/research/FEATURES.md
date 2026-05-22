@@ -1,380 +1,454 @@
 # Feature Research
 
-**Domain:** Launch Readiness — S/MIME, AD CS, Report Hardening, CMVP Attestation, Release Engineering, Public-Launch Polish for QU.I.R.K. v4.10
-**Researched:** 2026-05-16
-**Confidence:** HIGH (S/MIME RFC/CA-B-Forum primary sources), HIGH (AD CS via Certipy source + ADCS wiki), HIGH (CMVP NIST primary source + third-party JSON API), MEDIUM (release engineering patterns, PyPI trusted publishers), MEDIUM (launch polish conventions)
-
----
-
-## Existing Baseline (Do Not Rebuild)
-
-Already shipped and stable — these are the integration points, not rebuild candidates:
-
-- Email transport scanning (SMTP/SMTPS/IMAP/POP3, STARTTLS detection) — v4.4 Phase 32
-- Identity protocol scanning (SAML/OIDC, Kerberos, DNSSEC) with CBOM integration — v4.2
-- CycloneDX 1.6 CBOM pipeline with Pass-1 algorithm components, Pass-2/3 skip-lists, CI schema validation — v4.5 Phase 42
-- Compliance mapping module (`quirk/compliance/`) with staleness CI gate — v4.6 Phase 49
-- FastAPI dashboard with 6-pillar scoring, HTML/PDF reports — v4.0+
-- `_build_finding` chokepoint enforcing non-empty description/remediation — v4.6 Phase 48
-- Error code registry (`quirk/errors.py`, 50 codes) — v4.8 Phase 68
-- QRAMM maturity assessment with evidence bridge — v4.7 Phases 51–53
-- `safe_str(exc)` credential-leakage scrubber — v4.8 Phase 59
-- Markdown report injection hardening (REPORT-SAN-01 tables only) — v4.9 Phase 61
-- v4.8 D-06 open WARNING rows: HTML/PDF injection for non-table contexts (target names, CNs, error messages in Jinja templates) — **this is the v4.10 starting point**
+**Domain:** Cryptographic inventory scanner — stabilization milestone (gap closure, not net-new capability)
+**Researched:** 2026-05-22
+**Confidence:** HIGH — all findings derived from direct code inspection of `quirk/intelligence/`, `quirk/cbom/`, `quirk/reports/`, and `quantum-chaos-enterprise-lab/`; zero speculation from training data.
 
 ---
 
 ## Feature Landscape
 
-### Workstream 1: S/MIME Content Scanning
+### Table Stakes (Users Expect These)
 
-S/MIME (RFC 8551, CA/B Forum Baseline Requirements v1.0 effective 2023-09-01) is the dominant enterprise standard for signed and encrypted email. Consultants running post-quantum readiness assessments need to know whether email signing keys use quantum-vulnerable algorithms (RSA-2048, ECDSA P-256, SHA-1, MD5) and whether certificates are expiring.
+These are the gap-closure behaviors v5.0 must fix. Missing or wrong = product makes false claims.
 
-**Discovery approach (agentless):** S/MIME user certificates are published to LDAP/Active Directory in the `userCertificate` and `userSMIMECertificate` attributes. This is the same LDAP path QU.I.R.K. already traverses for Kerberos (ldap3, `[identity]` extras). No mailbox access required.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Evidence tally: subscores penalize on findings | Subscores that stay at 25 when HIGH/CRITICAL findings exist are silent lies; a consultant hands a client a score that says "clean" when it isn't | MEDIUM | Root cause traced: Hygiene/Modern TLS/DAR subscores use proxies that miss specific scanner output — see tally analysis below |
+| CLI scorecard renders subscores on 0–25 scale with label | `scorecard-*.md` currently shows `total/100` but does not render subscores — RENDER-CLI-01 is an audit pass, not a confirmed bug; if subscores are absent they cannot mislead | LOW | Code inspection shows `_scorecard_markdown()` only renders `score.get('total')` — subscores stored in intelligence JSON but not displayed in scorecard or HTML template subscore section |
+| HTML/PDF report total score correct | `total_score = score.get("total", 0)` in `html_renderer.py` — already pulls the correctly normalized 0–100 integer from `writer.py::score["total"]` which maps to `score_raw["score"]` (the fixed `int(round(sum/1.5))`) | LOW | No confirmed scale mismatch in the renderer path; audit needed to verify no legacy `score.get("score")` vs `score.get("total")` key confusion exists |
+| CBOM Pass-1 emits >= 1 algo component for every profile | Phase 42 OBS-1: 5 profiles (database, registry, source, ssh-weak, storage-s3) emit zero CBOM algorithm components — they pass the schema-validation gate vacuously | MEDIUM | Classifier has entries for CONTAINER/SOURCE/POSTGRESQL/MYSQL/S3 protocols; builder does handle them; bug is likely upstream in what `cipher_suite`/`cert_pubkey_alg` fields those scanners populate |
+| New chaos lab profiles up and scanner-verified | BACK-80–84: postgres-tls, redis-tls, SMTP/STARTTLS, gRPC TLS, Kafka TLS must exist as Docker Compose profiles, come up cleanly, and produce expected scanner findings | HIGH | Each requires: docker-compose.yml service + profile, cert/config, expected_results_v4.md oracle entry, lab.sh ALL_PROFILES update |
+| OQS-nginx PQC-hybrid profile demoable and scores above classical TLS | BACK-81: the only chaos lab target that should receive a positive quantum-safety signal; anchors the scoring ceiling | HIGH | Requires OQS image config + QUIRK scanner recognizing X25519Kyber768/ML-KEM-768 in TLS extension 0x001d + scoring reward |
+| Identity evidence keys present in intelligence.json when identity scanner runs | BACK-78: `identity_kerberos_weak_etype_ratio`, `identity_saml_weak_signing_ratio`, `identity_dnssec_weak_algo_ratio` absent unless scanner actually scanned identity endpoints | LOW | Code is correct; lab coverage gap — need identity chaos lab targets in scan config |
 
-#### Table Stakes
-
-| Feature | Why Expected | Complexity | Depends On |
-|---------|--------------|------------|------------|
-| LDAP discovery of S/MIME certs from AD `userCertificate` / `userSMIMECertificate` attributes | Agentless model; LDAP path already wired for Kerberos | MEDIUM | Existing ldap3 `[identity]` extras, LDAP connection in Kerberos scanner |
-| Certificate chain extraction (subject, issuer, serial, notBefore/notAfter) | Consultants need to know who issued the cert and when it expires | LOW | Python `cryptography` library already in core deps |
-| Signing algorithm classification (SHA-1, SHA-256, SHA-384, SHA-512, MD5) | SHA-1 and MD5 are MUST-NOT per RFC 8551 S/MIME 4.0; table-stakes finding | LOW | Existing NIST PQC lookup table + weak_crypto.py (v4.9 Phase 73) |
-| Encryption algorithm classification (DES, 3DES, RC2, AES-128, AES-256) | 3DES/RC2 still appear in enterprise S/MIME; critical finding in PCI-DSS scope | LOW | Existing algorithm classifier |
-| Key type and size (RSA key size, EC curve) | RSA<2048 and EC<256 are HIGH findings matching existing TLS rules | LOW | Existing `cert_pubkey_alg` extraction logic |
-| Expiry detection and CRITICAL/HIGH/MEDIUM severity tiering | Consultant handoff requires expired-cert identification | LOW | Existing TLS expiry logic |
-| CBOM integration — Pass-1 algorithm component per S/MIME cert | Consistent with all other identity scanners | MEDIUM | Existing CBOM Pass-1/2/3 pipeline |
-| `[identity]` extras group opt-in (no new top-level dep) | S/MIME discovery reuses ldap3 and impacket-free path | LOW | Existing extras group |
-
-#### Differentiators
+### Differentiators (Competitive Advantage)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Quantum-safety classification per signing/encryption algorithm | Consultant deliverable context — "SHA-1 RSA-2048 is quantum-vulnerable" with NIST PQC tier | LOW | Reuses existing lookup table; no new logic |
-| Weak-cipher S/MIME findings surfaced in Identity tab | Zero new UI work; findings slot into existing IdentityFinding model | LOW | Add smime_weak_* evidence counters like existing identity counters |
-| CA/B Forum S/MIME Baseline Requirements compliance note | Post-2023-09-01 certificates must conform; flag non-conforming legacy certs | MEDIUM | CA/B Forum v1.0 effective date check in classifier |
-| S/MIME capability extension parsing (`smimeCapabilities`) | Lists algorithms the sender can accept for encryption reply; exposes weak preferences | HIGH | OpenSSL CMS / `cryptography` ASN.1 extension parsing |
+| PQC-hybrid TLS classified as quantum-safe (scoring ceiling) | Demonstrates the scanner can distinguish "good classical TLS" from "quantum-ready TLS" — the only tool making this distinction at the endpoint level | MEDIUM | Requires TLS extension parsing for hybrid groups (X25519Kyber768 = IANA group 0x6399); classifier already has `ml-kem-768+x25519` entry at NIST level 3 |
+| CBOM carries algorithm components from ALL protocol families | A CBOM that omits algorithms from container/source/database scanners is not a complete bill of materials; completeness is the core consulting deliverable | MEDIUM | Five profiles currently vacuously pass; Phase 61 fixed 12+ families in v4.8 — OBS-1 residuals are a subset that regressed or were missed |
+| Score transparency (BACK-63) | Consultant needs to explain to client why the score changed — current `drivers` list shows only top 5 reasons; adding subscore breakdowns makes the score auditable | LOW | Already stored in `intelligence.json`; surface in CLI/HTML |
 
-#### Anti-Features
+### Anti-Features (Out of Scope for a Stabilization Milestone)
 
-| Feature | Why Requested | Why Problematic | Alternative |
+| Feature | Why Requested | Why Out of Scope | Alternative |
 |---------|---------------|-----------------|-------------|
-| Mailbox content scanning (reading signed/encrypted emails) | "Full S/MIME audit" | Requires authenticated mailbox access (IMAP/Exchange), breaks agentless model, credential scope creep, PII exposure risk | Cert-level discovery via LDAP covers the cryptographic posture question without touching message content |
-| PGP key discovery | Email security completeness | Different keyserver/WKD infrastructure; separate scanner; doubles complexity | Defer to a dedicated PGP phase if demand emerges |
-| ACME automation audit | S/MIME auto-renewal | Out of scope for readiness scanner; management-plane concern | Document as manual remediation step |
+| Net-new scanner surface (new protocol families) | Always tempting to add capability | v5.0 is explicitly a "breathe" milestone; HORIZON.md caps at <= 6 phases; new protocols go to v5.1 | Capture as BACK items for v5.1 |
+| Score-engine redesign (subscores as 0–100, weighted average) | Current 0–25 model is non-obvious | Architectural change; the surgical v4.10.1 fix preserved the model deliberately; redesign at v5.x when usage data justifies | Document 0–25 model in scorecard header |
+| Authenticated scan mode (credential model) | Deeper findings behind auth walls | HORIZON.md explicitly defers to v5.1 Candidate A | BACK-64 |
+| SIEM/ticketing integrations | Make findings load-bearing in customer workflow | HORIZON.md Candidate B for v5.1 | BACK items |
+| Real mTLS between brokers / full Kafka KRaft cluster | Realistic enterprise Kafka config | Lab fidelity is secondary to scanner coverage; a single TLS listener on 9093 is sufficient | Out of scope for lab profile |
+| S/MIME message-content scanning | Out of scope per PROJECT.md | Agentless model cannot inspect mailbox content | Documented in Out of Scope |
 
 ---
 
-### Workstream 2: Windows AD CS Scanning
+## Correct Behavior Specifications
 
-AD CS (Active Directory Certificate Services) is the PKI backbone for most enterprise Windows environments. It is a critical surface for post-quantum readiness: CA signing algorithms, template key requirements, and enrollment configurations determine whether an org can migrate to PQC without a full PKI rebuild.
+### 1. Evidence Tally — EVIDENCE-TALLY-01
 
-**Discovery approach:** Certipy (Python, `certipy-ad` on PyPI) and the underlying Certify (C#) both use unauthenticated LDAP enumeration of the `CN=Public Key Services,CN=Services` container in AD, querying certificate template objects and CA objects. QU.I.R.K. already uses ldap3 + impacket for Kerberos. AD CS enumeration is the same LDAP path, same credential model.
+**Problem statement:** Three subscores report exactly 25 (the ceiling) despite the scan having HIGH/CRITICAL findings. This occurs because the evidence counters those subscores depend on are not incremented by the relevant findings.
 
-**ESC numbering:** SpecterOps "Certified Pre-Owned" whitepaper (2021) defined ESC1–ESC8; Certipy has since extended to ESC16. ESC1–ESC8 are the established industry baseline; ESC9–ESC16 are post-2022 additions with lower prevalence in field reports.
+**Root cause analysis (from code inspection):**
 
-#### Table Stakes
+**Hygiene subscore** (`hygiene_score`): driven by `plaintext_http_count` and `http_on_tls_port_count`. These come from `_finding_targets(finding_list, "Plaintext HTTP service detected")` and `_finding_targets(finding_list, "HTTP on TLS-designated port")` — both read *finding titles* from the findings list. A scan of TLS-only endpoints with a HIGH finding for "Weak RSA cipher" produces zero `plaintext_http_count`, so hygiene stays at 25. This is correct behavior for a scan that has no HTTP exposure — the hygiene subscore is genuinely good. This is NOT a tally bug for TLS-only scans.
 
-| Feature | Why Expected | Complexity | Depends On |
-|---------|--------------|------------|------------|
-| Enterprise CA discovery via LDAP (`CN=Certification Authorities`) | Every enterprise AD CS audit starts here; CA list + signing algorithm + validity | MEDIUM | ldap3 + impacket (existing `[identity]` extras) |
-| Certificate template enumeration (`CN=Certificate Templates`) — name, EKU, enrollment rights, subject-name flags | Templates define what an org can issue; determines PQC migration scope | MEDIUM | ldap3 LDAP queries |
-| Signing algorithm per CA — SHA-1, SHA-256, RSA key size, EC curve | If the root CA uses SHA-1/RSA-2048, all issued certs are quantum-vulnerable | LOW | Existing cert algorithm classifier |
-| Expiry detection for CA certs (root + intermediate) | Expired CA cert = broken PKI; HIGH finding | LOW | Existing expiry logic |
-| ESC1: template allows requester-supplied SAN + dangerous EKU + low-priv enrollment | Most common privilege-escalation misconfiguration; all consulting tools flag it | HIGH | Template enumeration + rights evaluation |
-| ESC2: any-purpose EKU or no EKU (certificate usable for any purpose) | Broad auth abuse; HIGH severity | MEDIUM | EKU flag check |
-| ESC3: certificate request agent EKU (enrollment-on-behalf-of abuse) | Domain escalation path; HIGH | MEDIUM | EKU flag check |
-| ESC4: template write permissions to low-priv users | Write → modify template to ESC1; HIGH | MEDIUM | ACL enumeration on template objects |
-| ESC6: CA `EDITF_ATTRIBUTESUBJECTALTNAME2` flag enabled | CA-level flag enabling SAN in any template; domain compromise | MEDIUM | CA flags enumeration |
-| ESC8: HTTP enrollment interface without HTTPS (NTLM relay to ADCS) | NTLM relay attack surface; HIGH | MEDIUM | HTTP probe to CA enrollment endpoint |
-| CBOM integration — CA cert algorithm components | Consistent with all other identity scanner outputs | MEDIUM | CBOM Pass-1 pipeline |
-| `[identity]` extras group (no new top-level dep) | Reuses existing ldap3 + impacket path | LOW | Existing extras group |
+**Modern TLS subscore**: driven by `legacy_tls_count = sev.get("LOW", 0)` — it uses ALL LOW-severity findings as a proxy for legacy TLS. If a scan has HIGH/CRITICAL but zero LOW findings, `modern_tls_score` = 25. This proxy is correct for TLS scans (legacy TLS findings are typically LOW severity in the risk engine). The subscore is not broken for TLS-only scans with only HIGH/CRITICAL findings.
 
-#### Differentiators
+**Data at Rest subscore** (`dar_score`): driven by `dar_db_plaintext`, `dar_db_weak_ssl`, `dar_storage_unencrypted`, etc. — these come from `evidence.py` counters which read endpoint `protocol` and `service_detail` fields. A DAR scan result where `postgres-ssl-off` endpoint exists with `service_detail="PostgreSQL/ssl-off"` DOES increment `dar_db_plaintext_count`. If the counter reads 0 despite findings, the bug is that the endpoint's `protocol` field does not match `"POSTGRESQL"` exactly, or `service_detail` does not contain `"ssl-off"`, or the endpoint list passed to `build_evidence_summary` is filtered/truncated upstream.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| ESC5: ACL on AD CS object container itself (AD object write abuse) | Less commonly reported but high impact | HIGH | Requires reading ACLs on `CN=Public Key Services` container |
-| ESC7: CA management role misconfiguration (ManageCA/ManageCertificates) | Grants ability to approve pending requests; audit of role assignments | HIGH | CA role enumeration |
-| Quantum-safety scoring for the CA hierarchy | If root CA is RSA-2048, entire PKI has a PQC migration problem — quantify it | MEDIUM | Existing 6-pillar scoring; add `adcs_*` evidence counters |
-| PQC migration blockers — templates requiring RSA/ECDSA, flag templates that block PQC enrollment | Forward-looking consultant value: "these 7 templates cannot issue ML-DSA certs" | HIGH | Template key spec analysis |
-| BloodHound-compatible JSON output (optional) | Enterprise AD teams already use BloodHound; Certipy outputs BloodHound JSON | HIGH | Separate output path; risky scope expansion |
+**Actual EVIDENCE-TALLY-01 root cause (most likely):** `build_evidence_summary()` receives the endpoint list from the ORM. If any scanner stores findings in the *findings table* only (not the endpoint table), those findings appear in `finding_severity_counts` but the specific evidence counters (which read endpoints) stay zero. The agility subscore's `high_impact` counter reads `sev.get("HIGH") + sev.get("CRITICAL")` from finding_severity_counts — this DOES penalize correctly. The subscores that stay at 25 must be the ones whose penalty paths depend on endpoint-level attributes rather than finding-level severity.
 
-#### Anti-Features
+**Correct behavior — what EVIDENCE-TALLY-01 must produce:**
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| ESC9–ESC16 full coverage | "Complete AD CS audit" | Post-2022 ESCs require increasingly complex attack-chain context (shadow credentials, weak certificate mappings, relay targets); adds 60%+ implementation cost for ~5% additional client coverage | Implement ESC1–ESC8 for v4.10; flag ESC9+ as "extend in v5.0" |
-| Active exploitation / certificate request simulation | Prove the misconfiguration is exploitable | Crosses into offensive tooling; contradicts consulting deliverable model; legal risk for consultants | Report misconfiguration existence with severity; leave exploitation to dedicated pentest tools |
-| NTLM credential capture | ESC8 proof | Offensive only; breaks agentless posture | Flag the HTTP enrollment endpoint existence; severity-map based on CA config |
-| Windows CA agent / DCOM interface | Deep CA health check | Requires local agent on CA server; breaks agentless model | LDAP-only enumeration covers 90% of audit surface |
+Given: A scan of chaos lab "database" profile (postgres-ssl-off on port 25432)
+- Expected: `dar_score < 25`
+- Mechanism: `evidence.dar_db_plaintext_count > 0` because `endpoint.protocol == "POSTGRESQL"` AND `"ssl-off" in endpoint.service_detail`
+- Correct evidence dict: `dar_db_plaintext_count: 1`, `dar_db_plaintext_ratio: > 0` → `dar_score = _apply_weighted_impacts([("DB plaintext", -ratio * 12.0)]) < 25`
+
+Given: A scan with rc4-hmac Kerberos etype (identity weak etype)
+- Expected: `identity_trust_score < 25`
+- Mechanism: `evidence.identity_weak_etype_count > 0` because `endpoint.protocol == "KERBEROS"` AND severity in service_detail parts is "CRITICAL" or "HIGH"
+- Correct: `identity_kerberos_weak_etype_ratio > 0` → -10.0 weight applied
+
+Given: A scan with SAML RSA-1024 signing cert
+- Expected: `identity_trust_score < 25`
+- Mechanism: `evidence.saml_weak_signing_count > 0` because `endpoint.protocol == "SAML"` AND `cert_pubkey_size < 2048`
+
+**Test oracle for EVIDENCE-TALLY-01:**
+- Precondition: chaos lab "kerberos" profile up (rc4-hmac enabled on port 88)
+- Scan result must show `identity_weak_etype_count >= 1` in evidence JSON
+- `identity_trust_score` must be `< 25`
+- Precondition: chaos lab "database" profile up
+- `dar_db_plaintext_count >= 1`, `dar_score < 25`
+- No subscore should report exactly 25 when its penalizing counter has count > 0
 
 ---
 
-### Workstream 3: Report Injection Hardening
+### 2. Render-Side Audit — RENDER-CLI-01 / RENDER-PDF-01
 
-QU.I.R.K. generates HTML reports (Jinja2 templates) and PDFs (Playwright headless Chrome rendering the HTML). The v4.9 audit (D-06) flagged that non-table contexts — target hostnames, certificate CNs, error messages, finding titles — were not escaped in Jinja2 templates. This is an active WARNING row carried into v4.10.
+**Problem statement (deferred from v4.10.1-D-03):** The same backend-scale vs render-scale bug that was fixed in the dashboard might exist in CLI/HTML/PDF renderers.
 
-**Attack surface:** A target hostname like `"><img src=x onerror=alert(1)>` or a certificate CN containing `<script>` is user-supplied data that flows through scan → SQLite → Jinja2 → HTML → PDF. The Playwright PDF renderer runs Chromium; XSS in the HTML template becomes client-side JS execution in the rendered PDF in certain viewers.
+**Findings from code inspection:**
 
-**Industry standard:** Mature reporting tools (Hashicorp Vault audit logs, Burp Suite reports, Nessus XML export) always HTML-entity-encode every data-derived string before rendering. Jinja2 provides `autoescape` but QU.I.R.K. templates currently use `autoescape=False` (common in Markdown-first tools that need `<br>` tags).
+CLI scorecard (`_scorecard_markdown` in `writer.py`): Renders `score.get('total')/100`. `score["total"]` is set from `score_raw["score"]` which is already the correct `int(round(sum/1.5))` 0–100 value. No bug confirmed. Subscores (0–25 each) are not rendered in the scorecard — they appear only in `intelligence-*.json`. No scale mismatch confirmed. Audit should verify `score.get("total")` is never substituted with a raw subscore.
 
-#### Table Stakes
+HTML report (`html_renderer.py`): Renders `total_score = score.get("total", 0)` where the `score` dict is the same wrapper constructed in `writer.py`. `_score_band()` thresholds (85/70/55/35) match `_rating()` thresholds in `scoring.py`. No scale mismatch confirmed. Subscores not rendered in the HTML template (only overall score and drivers are displayed).
 
-| Feature | Why Expected | Complexity | Depends On |
-|---------|--------------|------------|------------|
-| Jinja2 `autoescape=True` for all HTML report templates | Industry baseline; any security tool that generates HTML reports from user-controlled data must escape by default | LOW | Existing Jinja2 template rendering path; audit of which templates use Environment() |
-| Explicit `{{ value \| e }}` or `Markup()` escaping for intentional HTML in templates | Some fields are intentionally rendered as HTML (e.g., markdown-to-HTML finding descriptions); must use `Markup()` whitelist pattern | MEDIUM | Audit of all `{{ }}` usages in report templates |
-| Target hostname / IP address escaping in all report contexts (header, findings table, cert inventory) | Hostile target names are the primary attack vector | LOW | Template variable audit + autoescape enabling |
-| Certificate CN / SAN / issuer escaping | Cert field values can contain angle brackets and quotes; certificate CNs from adversarial test environments may be crafted | LOW | Same autoescape fix |
-| Error message / scan error escaping in error summary sections | `scan_error` strings stored in SQLite are `safe_str(exc)` scrubbed for credentials but not HTML-escaped for rendering | LOW | Apply `| e` filter or autoescape to error display blocks |
-| PDF SSRF prevention (already in v4.8 Phase 58) — verify no regression | Playwright PDF renderer — file:// URI and internal IP ranges blocked | LOW | Existing PDF SSRF clamp; regression test |
+PDF report: Playwright renders the HTML report — no separate scoring logic. Same code path as HTML. No additional bug surface.
 
-#### Differentiators
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Content Security Policy header on dashboard HTML serve path | Defense-in-depth for dashboard XSS; not just reports | MEDIUM | FastAPI middleware; add `Content-Security-Policy` response header |
-| Test fixture with adversarial strings (XSS polyglot, SQL injection attempt, path traversal) as target/cert CN | Regression prevention; proves hardening works against real payloads | LOW | Add to existing pytest fixtures; assert escaped in rendered output |
-| Sanitization applied to CBOM JSON output fields (algorithm names, component names) | CBOM consumers may render component names in their own UI | LOW | CycloneDX component `name` field — algorithm names are internal constants, not user-supplied; low risk but worth noting |
-
-#### Anti-Features
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Stripping HTML tags from all inputs at ingestion time | "Sanitize on write, not on read" | Destroys legitimate data (certificate CNs with angle brackets are valid); breaks round-trip fidelity in CBOM | Escape on render only; store raw values in SQLite |
-| DOMPurify or bleach-based sanitization library | "Belt and suspenders" | Adds a new dependency; the problem is Jinja2 autoescape being disabled, not missing a sanitizer; autoescape fixes the root cause | Enable Jinja2 autoescape + `Markup()` for intentional HTML |
-| HTML-to-PDF renderer replacement (e.g., WeasyPrint instead of Playwright) | Avoid Chromium XSS surface | Major architecture change; Playwright already ships; WeasyPrint has weaker CSS support affecting report layout | Fix the Jinja2 autoescape gap; Playwright PDF SSRF already clamped |
+**Correct behavior — what RENDER-CLI-01 audit must confirm:**
+- `scorecard-*.md` shows `X/100` where X == `intelligence.score.total` == same value the dashboard overall gauge shows
+- No subscore value (0–25) is ever displayed as if it were out of 100
+- If subscores ARE added to the scorecard/HTML in v5.0 for transparency (BACK-63), each must be labeled `/25` not `/100`
 
 ---
 
-### Workstream 4: CMVP Attestation Feed
+### 3. CBOM Pass-1 Zero-Algo Fix — Phase 42 OBS-1
 
-Phase 52 (D-01) deferred FIPS 140-3 `certified` annotation from two-tier (approved/non-approved) to a full CMVP attestation lookup. Consultants presenting CBOM reports to federal or DoD clients need to show whether the cryptographic module implementing an algorithm has an active NIST CMVP certificate.
+**Five profiles currently emitting zero algorithm components:**
 
-**How CMVP works:** NIST maintains the Cryptographic Module Validation Program (CMVP) database at csrc.nist.gov. The authoritative source is a web search UI (not a public REST API). However, a third-party project (`hackIDLE/nist-cmvp-api` on GitHub) auto-updates weekly JSON exports of the CMVP database via GitHub Actions — this is the de-facto programmatic interface used by security tools.
+| Profile | Protocol | Builder branch | Why zero |
+|---------|----------|----------------|----------|
+| database | POSTGRESQL / MYSQL | No Pass-1 branch for POSTGRESQL/MYSQL in builder.py | DB scanner populates `service_detail` ("PostgreSQL/ssl-off") but not `cert_pubkey_alg` or `cipher_suite` — builder has nothing to register |
+| registry | CONTAINER | `if ep.cipher_suite: _register_algorithm(ep.cipher_suite)` | `cipher_suite` holds library name ("openssl") — not in `_ALGORITHM_TABLE`; returns FALLBACK; not registered as algo component |
+| source | SOURCE | `_extract_algo_from_rule_id(ep.cipher_suite)` | Rule ID like `python.cryptography.security.insecure-cipher-des` — hint extraction may return empty for some rule IDs |
+| ssh-weak | SSH | SSH endpoints handled via KEX/hostkey parsing from `ssh_audit_json` | KEX algorithms (group1-sha1, ssh-dss) may not be in classifier table; or `ssh_audit_json` unpopulated |
+| storage-s3 | S3 | No Pass-1 branch for S3 in builder.py | S3 endpoints store bucket encryption mode in `service_detail` ("S3/unencrypted") not an algorithm string |
 
-**Algorithm → module mapping:** The CMVP database is module-centric (a module contains multiple certified algorithms). The mapping direction QU.I.R.K. needs is: "given algorithm string X found in a scan, which CMVP module certificates cover it?" This requires either the third-party JSON API or a curated static table.
+**Correct behavior — what each profile's CBOM must contain:**
 
-**Scope reality check:** CMVP covers the *module* (e.g., "OpenSSL FIPS Object Module 3.0"), not the *algorithm* in isolation. A finding like "AES-256-GCM" maps to multiple CMVP certificates across vendors. The practical consulting output is: "this system uses AES-256-GCM which is covered by CMVP certificate #4735 (OpenSSL FIPS module)."
+| Profile | Required CBOM algo component | Algorithm string | NIST level |
+|---------|------------------------------|-----------------|------------|
+| database (postgres-ssl-off) | A "no-encryption" marker OR postgres-negotiated cipher | "aes-256-gcm" if ssl=on; or a no-encryption marker for ssl-off | 1 (quantum-safe) or 0 |
+| registry | Algorithm from detected crypto library (openssl version maps to DES/3DES/AES depending on version) | "3des" or "aes-128" per detected lib | 0 for legacy, 1 for modern |
+| source | Detected algorithm from semgrep match (MD5, DES, RC4, AES) | "3des", "md5", "rc4" etc. | 0 |
+| ssh-weak | diffie-hellman-group1-sha1, ssh-dss | Need classifier entries: "diffie-hellman-group1-sha1" (CRITICAL legacy DH) | 0 |
+| storage-s3 | AES-256 (SSE-S3) or no-encryption marker | "aes-256" for encrypted bucket | 1 |
 
-#### Table Stakes
-
-| Feature | Why Expected | Complexity | Depends On |
-|---------|--------------|------------|------------|
-| FIPS 140-3 two-tier annotation already in CBOM (`approved` / `non-approved`) | Shipped in Phase 52; this is the baseline that D-01 extends | — | Already exists |
-| Static curated CMVP attestation table (algorithm → representative CMVP cert #, status: active/historical/revoked) | Federal clients expect "cite the certificate number"; static table is offline-capable and covers 95% of cases | MEDIUM | Existing `quirk/compliance/` pattern; mirror staleness gate approach |
-| `certified` tier in CBOM FIPS annotation (`approved` / `certified` / `non-approved`) | Phase 52 D-01 explicitly deferred this third tier | LOW | Existing two-tier annotation in CBOM builder |
-| Staleness CI gate for CMVP table (90-day cadence matching QRAMM model) | CMVP certificates do expire and get revoked; stale table misleads clients | LOW | Existing staleness gate pattern from `model_meta.py` |
-| `quirk compliance status` output includes CMVP attestation coverage | Consultant CLI workflow; shows which algorithms have CMVP citations | LOW | Existing `compliance status` command |
-
-#### Differentiators
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Live CMVP lookup option (cached, offline-fallback) | For clients with internet access, validate certificate status at scan time against NIST CSRC or third-party JSON API | HIGH | `hackIDLE/nist-cmvp-api` weekly JSON — fetch + cache locally; network call gated by config flag |
-| CMVP certificate URLs in CBOM `externalReferences` | CycloneDX supports `externalReferences` per component; link to the NIST certificate page | MEDIUM | CBOM builder Pass-1 enrichment |
-| PQC algorithm CMVP coverage tracking (ML-KEM, ML-DSA, SLH-DSA) | NIST PQC standards (FIPS 203/204/205) are new; CMVP is still validating modules; surface "no CMVP cert yet" status | MEDIUM | Add PQC entries to static table with `status: pending_validation` |
-| Module-level grouping in CBOM — "5 algorithms covered by same module cert" | Reduces CBOM noise; shows common module ancestry | HIGH | CBOM builder restructuring; possible CycloneDX schema constraint |
-
-#### Anti-Features
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Real-time NIST CSRC web scraping | "Always current" | NIST CSRC HTML structure changes without notice; violates offline requirement for air-gapped engagements; brittle | Static table with 90-day staleness gate + optional cached JSON API lookup |
-| Full CMVP database download on install | Comprehensive | CMVP DB is large (thousands of modules); slows install; most entries irrelevant to a given client | Curated static table of ~50 commonly encountered modules + algorithm-to-module mapping |
-| Automatic CMVP status in real-time reports | "Zero-latency attestation" | CMVP web interface is not a public API; scraping rate-limited; breaks air-gapped model | Cache-first with manual refresh (`quirk compliance refresh-cmvp`) |
+**Test oracle for OBS-1 fix:**
+- Scan each profile → `build_cbom()` → `cbom.components` must contain at least one `CryptoComponent` with a non-unknown name
+- Exception: plaintext/unencrypted endpoints may emit a component with nist_level=0 (quantum-vulnerable by omission)
 
 ---
 
-### Workstream 5: Release Engineering
+### 4. New Chaos Lab TLS Profiles — Expected Scanner Findings
 
-Mature Python security tools use a consistent release engineering pattern: signed artifacts, a machine-readable CHANGELOG, a public vulnerability disclosure policy, and supply-chain provenance. This is the foundation for a future v5.0 GA tag.
+#### BACK-80: postgres-tls profile
 
-**Industry standard (2025/2026):** PyPI Trusted Publishers (OIDC-based, no stored tokens) + `sigstore-python` attestations + `pyproject.toml`-driven build. CPython itself adopted Sigstore for artifact signing starting in Python 3.11. Homebrew formulas for Python tools use the `sha256` of the PyPI sdist tarball.
+Docker Compose — new profile `db-tls`:
+- `postgres-tls` on port `25433`: PostgreSQL 16 with `ssl=on`, `ssl_cert_file=modern.crt`, `ssl_key_file=modern.key`
+- `postgres-tls-weak` on port `25434`: PostgreSQL 16 with ssl=on using RSA-1024 or SHA-1 scenario cert
 
-#### Table Stakes
+**Expected scanner findings:**
 
-| Feature | Why Expected | Complexity | Depends On |
-|---------|--------------|------------|------------|
-| `SECURITY.md` with coordinated disclosure policy and contact | GitHub "Security" tab grays out without it; reporters have no channel; standard for any public tool | LOW | None; write-only |
-| `CODE_OF_CONDUCT.md` (Contributor Covenant or equivalent) | Required by most OSS community standards; GitHub shows warning without it | LOW | None; write-only |
-| `CHANGELOG.md` in Keep-a-Changelog format (existing, started in v4.4) | Already exists; needs consistent maintenance and versioning discipline | LOW | Existing `CHANGELOG.md` |
-| Semver version policy document (`docs/version-policy.md`) | Consultants need to know what constitutes a breaking change; clients on older versions need upgrade confidence | LOW | None; write-only |
-| PyPI Trusted Publishers (OIDC, no stored API tokens) | Industry baseline; eliminates long-lived token risk in GitHub Actions secrets | MEDIUM | GitHub Actions release workflow; PyPI project settings |
-| Signed wheel + sdist via `sigstore-python` attestations | Sigstore attestations are now on-by-default for Trusted Publisher releases on PyPI; no extra work beyond Trusted Publishers setup | LOW | Trusted Publishers — attestations are automatic |
-| `tests/test_version.py` version-lock already in CI | Already shipped in v4.4; ensure it gates the release workflow | LOW | Existing test |
+| Port | Protocol label | Finding | Severity |
+|------|---------------|---------|----------|
+| 25433 | POSTGRESQL (TLS via --starttls postgres) | TLS handshake succeeds; cipher + version extracted | No finding (good posture) |
+| 25433 | TLS (sslyze) | Self-signed cert from modern.crt | CERT_SELFSIGNED MEDIUM |
+| 25434 | POSTGRESQL / TLS | RSA-1024 cert detected | WEAK_RSA_KEY_SIZE HIGH |
 
-#### Differentiators
+**Observable crypto properties from PostgreSQL TLS:**
+- `SHOW ssl` returns "on" (vs "off" for plaintext profile)
+- `ssl_cipher` parameter: cipher suite string (e.g., "TLS_AES_256_GCM_SHA384")
+- sslyze `--starttls postgres` probes STARTSSL extension for PostgreSQL wire protocol
+- Server certificate: pubkey algorithm and size, expiry, chain, issuer
+- `pg_stat_ssl` view: shows active SSL connections and cipher for each session
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| GitHub Release automation script (CHANGELOG-driven) | Parse CHANGELOG.md for the current version's section → auto-populate GitHub Release description; reduces manual error | MEDIUM | GitHub CLI or GitHub Actions `gh release create` |
-| GitHub Environments for PyPI production publish (separate from test) | Prevents accidental TestPyPI → PyPI publish; requires reviewer approval gate | LOW | GitHub Actions environment protection rules |
-| GitHub Security Advisories (private reporting enabled) | GitHub-native private vulnerability reporting; researchers can report without emailing | LOW | Repository settings toggle |
-| CycloneDX SBOM for QU.I.R.K. itself (dogfooding) | Ship QU.I.R.K.'s own CBOM as a release artifact — demonstrates the product + supply chain transparency | MEDIUM | Run `quirk` against its own repo source scanner output |
-| `migration_planner.py` removal | Dead module flagged in v4.9 backlog; clean codebase before GA | LOW | Verify no imports; delete + CI gate |
+#### BACK-80: redis-tls profile
 
-#### Anti-Features
+Part of same `db-tls` profile:
+- `redis-tls` on port `26381`: Redis 7 with `tls-port 6381`, using `modern.crt`/`modern.key`
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| GPG key signing (traditional) | "Industry standard signing" | GPG web-of-trust is operationally complex; Sigstore keyless signing is the 2025 Python ecosystem standard; PyPI attestations via Trusted Publishers are automatic | Use Sigstore via PyPI Trusted Publishers; GPG optional addendum only |
-| Semantic Release (automated version bumping from commit messages) | Reduces manual version management | Conventional Commit discipline across all contributors is hard to enforce; false-positive version bumps; opaque to reviewers | Manual version bump in pyproject.toml + `tests/test_version.py` lock — already working |
-| Separate release branch (`release/v4.10`) | "Clean separation" | QU.I.R.K. is single-maintainer; branch-per-release adds merge overhead without value | Tag-based releases from `main`; protect main branch |
+**Expected scanner findings:**
+
+| Port | Protocol label | Finding | Severity |
+|------|---------------|---------|----------|
+| 26381 | REDIS-TLS | TLS handshake; cipher suite and version extracted | No finding (good posture for modern config) |
+| 26381 | REDIS-TLS | If TLSv1.2 with non-PFS suite negotiated | HIGH |
+
+**Observable crypto properties from Redis TLS:**
+- `CONFIG GET tls-port` returns port number
+- `CONFIG GET tls-cert-file`, `tls-key-file` returns cert material paths
+- `CONFIG GET tls-auth-clients` returns "optional", "yes", or "no" (client auth mode)
+- TLS negotiation observable via sslyze direct socket: cipher suite, protocol version
+- No application-layer crypto — TLS is the only crypto surface for Redis
+
+#### BACK-81: OQS-nginx PQC-hybrid profile
+
+Docker Compose — new profile `pqc`:
+- `oqs-nginx` on port `25443`: `openquantumsafe/nginx` image
+- Configured for TLS 1.3 with `ssl_ecdh_curve X25519Kyber768` (hybrid ECDH + ML-KEM)
+- Serving the lab CA-signed cert (modern.crt or a dedicated PQC-lab cert)
+
+**Observable crypto properties from PQC-hybrid TLS handshake:**
+
+The OQS-nginx server presents:
+1. Supported groups extension (TLS 1.3): includes IANA group 0x6399 (X25519Kyber768 hybrid) alongside classical groups
+2. Key share extension: client hello and server hello carry the hybrid key share
+3. sslyze output: `supported_cipher_suites` includes hybrid KEM group; `key_exchange_info` shows `x25519_kyber768`
+4. Certificate: standard RSA or ECDSA cert (authentication is classical; only key exchange is PQC-hybrid)
+5. Cipher suite negotiated: `TLS_AES_256_GCM_SHA384` or similar (cipher suite unchanged; only key exchange group changes)
+
+**Expected scanner output:**
+- `tls_version`: "TLSv1.3"
+- `cipher_suite`: "TLS_AES_256_GCM_SHA384"
+- `key_exchange_group`: "x25519_kyber768" or "X25519Kyber768"
+- `cert_pubkey_alg`: "RSA" or "EC" (classical cert; unaffected by PQC key exchange)
+- `quantum_safety`: "hybrid" (new classification needed)
+
+**Expected finding:** NONE — the hybrid profile is a positive baseline, not a weakness. The scanner detects and reports PQC-hybrid capability as a positive signal.
+
+**CBOM output:**
+- Algorithm component: `ml-kem-768+x25519` -> `CryptoPrimitive.KEM`, `nist_level=3`, `classical_level=192`
+- The classifier already has the entry: `"ml-kem-768+x25519": (CryptoPrimitive.KEM, 3, 192)` at classifier.py line 157
+- `quantum_safety_label(3)` = "quantum-safe"
+- Certificate component: RSA or EC (classical)
+
+#### BACK-82: SMTP/STARTTLS profile
+
+Note: The existing `email` profile (Phase 32) already covers SMTP/STARTTLS on ports 30025/30465/30587. BACK-82 as originally filed refers to a simpler standalone postfix-starttls service or a validation that the email profile satisfies this gap.
+
+**Expected scanner findings (email_scanner.py against SMTP/STARTTLS):**
+
+| Port | Protocol | Expected finding | Severity | Mechanism |
+|------|----------|-----------------|----------|-----------|
+| 30025 (SMTP) | SMTP-STARTTLS | STARTTLS downgrade risk | MEDIUM | Port 25 STARTTLS can be stripped |
+| 30025 (SMTP) | SMTP-STARTTLS | Weak cipher suite on email TLS | HIGH | TLS_RSA_WITH_* cipher negotiated (no PFS) |
+| 30465 (SMTPS) | SMTPS | Weak cipher suite | HIGH | same cipher |
+| 30587 (submission) | SMTP-STARTTLS | Weak cipher suite | HIGH | same cipher |
+
+**Observable crypto properties from SMTP STARTTLS:**
+- EHLO response includes `STARTTLS` capability advertisement
+- `sslyze --starttls smtp` performs full TLS enumeration after STARTTLS upgrade
+- Cipher suite, TLS version, certificate (subject, pubkey alg, size, expiry, chain)
+- Absence of STARTTLS response -> `motion_email_starttls_missing_count` incremented
+
+#### BACK-83: gRPC TLS profile
+
+Docker Compose — new profile `grpc`:
+- `grpc-tls` on port `50051`: minimal gRPC echo server with TLS 1.3, `modern.crt`/`modern.key`
+- `grpc-insecure` on port `50052`: same service without TLS (plaintext HTTP/2)
+
+**Observable crypto properties from gRPC TLS:**
+- TLS handshake is standard TLS 1.3 over TCP — sslyze probes directly with ALPN `h2`
+- ALPN negotiation: server advertises `h2` (HTTP/2 over TLS)
+- Cipher suite: standard TLS 1.3 suite (TLS_AES_256_GCM_SHA384 etc.)
+- Certificate: same as any TLS endpoint (pubkey alg, size, expiry, chain)
+- No application-level crypto (gRPC carries protobufs above TLS)
+- `grpc-insecure` port 50052: TCP connection accepted without TLS -> classified as `UNKNOWN` or `HTTP` -> triggers `PLAINTEXT_HTTP` or `UNKNOWN_OPEN_PORT` finding
+
+**Expected scanner findings:**
+
+| Port | Protocol | Expected finding | Severity |
+|------|----------|-----------------|----------|
+| 50051 | TLS (ALPN h2) | No finding (good posture with modern.crt) | none |
+| 50051 | TLS | CERT_SELFSIGNED if using self-signed cert | MEDIUM |
+| 50052 | UNKNOWN / HTTP | Plaintext gRPC service on application port | HIGH |
+
+**CBOM:** TLS endpoint on 50051 emits RSA/ECDSA cert component and TLS cipher suite component via existing TLS Pass-1 path. No new protocol handlers needed.
+
+#### BACK-84: Kafka TLS profile
+
+Note: The existing `broker` profile (Phase 33) already includes Kafka on ports 29092 (PLAINTEXT) and 29093 (TLS). BACK-84 refers to a standalone `kafka` profile. The expected behavior below applies to either the standalone profile or the existing broker profile's Kafka TLS listener.
+
+**Expected scanner findings (broker_scanner.py Kafka path):**
+
+| Port | Protocol | Expected finding | Severity |
+|------|----------|-----------------|----------|
+| 9092 | KAFKA-PLAIN | Kafka plaintext listener detected | HIGH |
+| 9093 | KAFKA-TLS | No finding (good TLS posture with modern cert) | none |
+| 9093 | KAFKA-TLS | Weak cipher if TLS_RSA_WITH_* configured | HIGH |
+
+**Observable crypto properties from Kafka TLS:**
+- Kafka TLS is standard TLS over TCP — sslyze probes directly
+- `AdminClient` (kafka-python): `ssl.endpoint.identification.algorithm`, `security.protocol=SSL`
+- Broker certificate: standard X.509 (pubkey alg, size, expiry, chain)
+- TLS version and cipher suite negotiated
+- Plaintext listener on 9092: `KAFKA-PLAIN` protocol label -> `motion_broker_plaintext_count` incremented
 
 ---
 
-### Workstream 6: Public-Launch Polish
+### 5. PQC-Hybrid Scoring Ceiling — BACK-81 Scoring Specification
 
-This is the "feel primetime" workstream. Consultants evaluate tools quickly — a broken quickstart or missing Docker image signals amateur tooling. The v4.10 goal is to make `pip install quirk` and `docker pull` paths feel as polished as mature tools like `truffleHog`, `Semgrep`, or `Trivy`.
+**Current scoring model:** The `agility_signals` subscore penalizes RSA-only posture and rewards ECDSA adoption. No reward exists for PQC-hybrid key exchange. Maximum `agility_score` = 25 (ceiling is already the reward).
 
-#### Table Stakes
+**Target behavior for OQS-nginx profile:** The OQS-nginx endpoint signals PQC-hybrid key exchange. The agility subscore remains at 25 (ceiling) — there is no "super-bonus" above 25. The key insight is:
 
-| Feature | Why Expected | Complexity | Depends On |
-|---------|--------------|------------|------------|
-| Published Docker image on Docker Hub or GHCR (`ghcr.io/org/quirk:v4.10.0`) | Consultants on locked-down machines (no pip) need `docker run quirk`; standard for security tools | MEDIUM | Dockerfile (verify current state), GitHub Actions release workflow |
-| `docs/upgrade-guide.md` — v4.x to v4.10 migration path | Database schema changes across milestones (new columns, new tables); consultants upgrading need a single reference | MEDIUM | Audit schema changes since v4.0; `quirk db migrate` command or manual ALTER TABLE instructions |
-| Marketing README — value prop, badges (PyPI version, CI status, license), quickstart in 3 commands | GitHub README is the first impression; security tools without badges and a working quickstart feel abandoned | LOW | Existing README; add shields.io badges + quickstart block |
-| Sample CBOM output files in `examples/` | Consultants want to see the output before running a scan; reduces sales friction | LOW | Run `quirk` against chaos lab; save JSON+XML outputs |
-| Homebrew tap (`homebrew-quirk` repo with formula) | macOS is the dominant consultant laptop OS; `brew install quirk` is a one-command install | MEDIUM | PyPI sdist sha256; Homebrew Ruby formula; separate tap repo |
+- Classical "good TLS" (TLS 1.3, ECDSA cert, modern cipher): `agility_score = 25`, overall possible = 100
+- PQC-hybrid TLS: same 25 for agility (ceiling), same overall possible = 100
 
-#### Differentiators
+**The real differentiator is the CBOM output**, not the numeric score. A hybrid TLS endpoint emits a `quantum-safe` KEM component; all classical endpoints emit `quantum-vulnerable` key exchange components.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Quickstart demo script (`scripts/demo.sh`) that spins up chaos lab + runs scan + opens dashboard | Shows the full product loop in < 2 minutes; conference/sales demo | MEDIUM | Wraps existing chaos lab + `quirk` CLI; requires lab.sh working cleanly |
-| Sample HTML/PDF report in `examples/` | Visual evidence of report quality without running the tool; reduces friction for procurement | LOW | Run against chaos lab; save report artifact |
-| `quirk doctor` upgrade check (version comparison vs PyPI latest) | Operators know when they're behind; reduces support burden | LOW | Existing `quirk doctor`; add `pip index versions quirk` check or PyPI JSON API call |
-| Asciinema / terminal recording for README | Shows real CLI experience; embedding a terminal recording in README is now standard for CLI tools | LOW | Record `quirk` run against chaos lab |
-| `v4.x → v4.10` migration: `quirk db migrate` CLI command | SQLite `ALTER TABLE ADD COLUMN` for new columns; idempotent; safer than manual SQL for operators | MEDIUM | Audit missing columns per version; implement migration runner |
+**Scoring reward path for PQC-hybrid — new evidence key and weight needed:**
 
-#### Anti-Features
+```python
+# New evidence key in build_evidence_summary():
+pqc_hybrid_kem_count: int  # endpoints where PQC-hybrid KEM group was detected
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Homebrew `homebrew-core` submission (official tap) | Maximum discoverability | Review process is slow (weeks), requires formula passes `brew audit --strict`; a third-party tap ships immediately and is simpler to maintain | Ship personal/org tap first; homebrew-core as future milestone |
-| Interactive installer script (`curl | bash`) | Zero-friction install | Security tools should not encourage `curl | bash`; contradicts the tool's security posture messaging | `pip install quirk[all]` + Docker + Homebrew tap covers all install paths |
-| SaaS signup / account registration in launch polish | "Complete product launch" | SaaS platform is explicitly a future milestone; adding registration flow now creates abandoned infrastructure | Document the SaaS roadmap in README; defer account management |
-| Breaking DB migration (DROP/RENAME columns) | "Clean schema" | v4.x users have existing `quirk.db` files; breaking migration destroys scan history | Additive-only migrations (`ADD COLUMN` with defaults); never DROP in v4.x |
-| Windows MSI / NSIS installer | Windows consultant support | Python pip on Windows works fine; MSI adds significant packaging complexity for no meaningful improvement over `pip install` | Document Windows pip install + PowerShell quickstart |
+# New scoring impact in agility_impacts list:
+("PQC hybrid key exchange detected",
+ +_ratio(pqc_hybrid_kem_count, denom) * w["agility_pqc_hybrid_bonus"])
+```
+
+**The scoring ceiling contract:**
+- With PQC hybrid bonus: `agility_score` stays at 25 (already at cap) when no other penalties apply
+- The bonus prevents the agility subscore from dropping below 25 if other penalties are present alongside a PQC-hybrid endpoint — but this is a secondary benefit
+- Primary value: consultant can point to CBOM report and show `quantum-safe` classification for the key exchange algorithm on the PQC-capable endpoint
+
+**Classification mapping (quantum_safety_label) for BACK-81:**
+
+| Scenario | Algorithm | NIST level | quantum_safety_label |
+|----------|-----------|------------|---------------------|
+| Classical RSA-2048 TLS | rsa-2048 | 0 | quantum-vulnerable |
+| Classical ECDSA P-256 TLS | ecdsa | 0 | quantum-vulnerable |
+| TLS 1.3 + X25519 key exchange | x25519 | 0 | quantum-vulnerable |
+| OQS-nginx TLS 1.3 + X25519Kyber768 | ml-kem-768+x25519 | 3 | quantum-safe |
+| ML-KEM-768 standalone | ml-kem-768 | 3 | quantum-safe |
+| AES-256-GCM cipher suite | aes-256-gcm | 1 | quantum-safe (Grover-resistant) |
+
+**OQS-nginx is the scoring ceiling anchor because:**
+- It is the ONLY chaos lab profile where the key exchange algorithm classifies as `quantum-safe`
+- All other profiles use classical RSA/ECDSA/DH/ECDH -> quantum-vulnerable key exchange
+- AES-256 cipher suites are quantum-safe for symmetric encryption, but key exchange vulnerability is the primary PQC concern
+- The "ceiling" is qualitative: the only profile that generates a positive PQC attestation in the CBOM
+
+---
+
+### 6. Identity Evidence Keys — BACK-78
+
+**What observable crypto properties feed each identity subscore counter:**
+
+**Kerberos KDC (`identity_weak_etype_count`):**
+- Scanner sends AS-REQ to KDC port 88 (impacket unauthenticated probe)
+- Response contains `ETYPE-INFO2` pre-auth hints listing all supported encryption types
+- Etype severity map: DES (CRITICAL), RC4-HMAC etype 23 (HIGH), AES128-CTS-SHA1 etype 17 (HIGH), AES256-CTS-SHA1 etype 18 (SAFE), AES256-CTS-SHA384 etype 20 (SAFE)
+- Observable: `etype_id` from AS-REQ response -> `service_detail = "etype:{id}:{name}:{severity}"`
+- Counter increments when `severity in ("CRITICAL", "HIGH")`
+- CBOM component: etype algorithm string (e.g., "rc4-hmac" -> `CryptoPrimitive.BLOCK_CIPHER`, nist_level=0)
+
+**SAML SP (`saml_weak_signing_count`):**
+- Scanner fetches SAML IdP metadata URL (HTTP GET, XML response)
+- Extracts `<ds:X509Certificate>` from `<KeyDescriptor use="signing">`
+- Parses cert: `cert_pubkey_alg` (RSA/ECDSA), `cert_pubkey_size` (bits)
+- Observable: RSA key size (1024 -> CRITICAL, < 2048 -> penalized), SHA-1 algorithm URI in `<ds:SignatureMethod Algorithm="...">`
+- Counter increments when `is_weak_cipher(cert_pubkey_alg)` OR `cert_pubkey_size < 2048` OR SHA-1 URI detected
+- CBOM component: "rsa-1024" -> nist_level=0, classical 80-bit
+
+**DNSSEC zone (`dnssec_weak_algo_count`):**
+- Scanner sends authoritative DNS query with DO-bit set to zone's NS
+- Retrieves DNSKEY RRset -> algorithm field (RFC 4034 algorithm numbers)
+- Algorithm map: RSASHA1 (alg 5, MUST NOT per RFC 8624) -> CRITICAL, RSASHA1-NSEC3-SHA1 (alg 7) -> CRITICAL, ECDSAP256SHA256 (alg 13) -> SAFE, NONE (unsigned zone) -> HIGH
+- Observable: DNSKEY algorithm number -> string name -> severity
+- Counter increments when algorithm in `_DNSSEC_WEAK_ALGS` OR `_dnssec_alg == "NONE"`
+- CBOM component: "rsasha1" -> `CryptoPrimitive.PKE`, nist_level=None
+
+**What BACK-78 requires for lab coverage:**
+
+The scoring counters are correct. The lab gap is that the standard scan config does not include identity port targets (88 for Kerberos, SAML metadata URL, DNSSEC zone). Fix is in scan configuration:
+
+- Add `kerberos`, `saml`, `dnssec` profiles to the test scan target list
+- Verify `intelligence-*.json` shows `identity_kerberos_weak_etype_ratio > 0` after scanning `samba-dc` chaos lab
+- Verify `identity_saml_weak_signing_ratio > 0` after scanning `simplesamlphp` chaos lab
+- Verify `identity_dnssec_weak_algo_ratio > 0` after scanning `bind9-dnssec` chaos lab with `weak.example.com` zone
 
 ---
 
 ## Feature Dependencies
 
 ```
-S/MIME Scanner
-  └──requires──> ldap3 + impacket [identity] extras (existing, Phase 17)
-  └──requires──> Python `cryptography` cert parsing (existing, core)
-  └──requires──> CBOM Pass-1 pipeline (existing, Phase 35/42)
-  └──enhances──> CMVP attestation (S/MIME signing algo → CMVP lookup)
+EVIDENCE-TALLY-01 (evidence.py fix)
+    must precede RENDER-CLI-01 / RENDER-PDF-01 (render audit)
+    (auditing renderers against wrong scores is meaningless)
 
-AD CS Scanner
-  └──requires──> ldap3 + impacket [identity] extras (existing, Phase 17/20)
-  └──requires──> S/MIME cert classifier (shares algorithm classification)
-  └──enhances──> CBOM Pass-1 (CA cert algorithm components)
-  └──enhances──> 6-pillar scoring (new adcs_* evidence counters in identity pillar)
+OBS-1 CBOM Pass-1 fix
+    must precede new chaos lab profile oracle entries
+    (oracle assumes correct CBOM output)
 
-Report Injection Hardening
-  └──requires──> Audit of all Jinja2 templates (one-time analysis task)
-  └──enhances──> all report outputs (HTML, PDF, dashboard API)
-  └──no new deps
+BACK-80 postgres-tls / redis-tls
+    independent of BACK-81 OQS-nginx
 
-CMVP Attestation
-  └──requires──> Existing CBOM Phase-52 two-tier annotation (foundation)
-  └──requires──> Existing compliance staleness gate pattern
-  └──enhances──> CBOM Pass-1 (adds `certified` tier + externalReferences URL)
-  └──enhances──> `quirk compliance status` CLI
+BACK-81 OQS-nginx PQC scoring reward
+    requires: classifier entry ml-kem-768+x25519 (already exists at classifier.py:157)
+    requires: evidence.py new pqc_hybrid_kem_count counter
+    requires: scoring.py new agility_pqc_hybrid_bonus weight
 
-Release Engineering
-  └──requires──> PyPI project admin access
-  └──requires──> GitHub repository settings (trusted publishers, environments, private reporting)
-  └──enhances──> all downstream install paths (Homebrew formula reads PyPI sdist sha256)
+BACK-78 identity lab targets
+    independent of other chaos lab profiles
+    requires: chaos lab kerberos/saml/dnssec profiles running (already exist)
 
-Public-Launch Polish
-  └──requires──> Release Engineering (Docker image + Homebrew formula need signed release first)
-  └──requires──> Upgrade Guide (needs schema audit, done alongside DB migration work)
-  └──enhances──> `quirk doctor` (version check is an additive feature)
+BACK-81 / BACK-80 / BACK-82 / BACK-83 / BACK-84
+    each requires: docker-compose.yml update + lab.sh ALL_PROFILES update
+                   + expected_results_v4.md oracle entry
 ```
 
 ### Dependency Notes
 
-- **AD CS requires S/MIME cert classifier:** Both scanners parse X.509 certs via `cryptography`; implement S/MIME classifier first, then AD CS reuses the shared cert-parsing helper.
-- **CMVP attestation requires Phase 52 baseline:** The two-tier `approved/non-approved` annotation must stay intact; CMVP adds a third tier, not a replacement.
-- **Release Engineering gates Public-Launch Polish:** The Homebrew formula sha256 is computed from the PyPI sdist; Release Engineering must ship first in the milestone.
-- **Report Injection Hardening is independent:** Can be implemented in any order; no scanner dependencies.
+- EVIDENCE-TALLY-01 before render audit: If subscores are still wrong, auditing the render path against them is circular. Fix the tally first, confirm correct values in intelligence JSON, then confirm renderers faithfully pass those values through.
+- OBS-1 before new profile oracles: The new chaos lab profiles need CBOM oracle entries. Those entries assume the CBOM builder correctly emits algo components. Fixing OBS-1 first ensures the oracle reflects correct behavior.
+- PQC hybrid scorer requires new evidence key: `agility_pqc_hybrid_bonus` requires `pqc_hybrid_kem_count` in the evidence dict, which requires `build_evidence_summary()` to detect PQC-hybrid KEM groups from TLS scanner output.
 
 ---
 
-## v4.10 Prioritization Matrix
+## MVP Definition
+
+### Ship in v5.0 (table-stakes gap closure)
+
+- [ ] EVIDENCE-TALLY-01 — fix the three subscores that stay at 25 with findings present; write targeted test per counter
+- [ ] RENDER-CLI-01 / RENDER-PDF-01 — audit CLI/HTML/PDF render paths; confirm no scale mismatch; add labels if subscores are surfaced
+- [ ] OBS-1 CBOM Pass-1 — 5 profiles must emit >= 1 non-unknown algo component; add missing algorithm table entries and scanner field population
+- [ ] BACK-80 postgres-tls + redis-tls — new `db-tls` chaos lab profile; expected_results oracle; scanner verification
+- [ ] BACK-81 OQS-nginx PQC-hybrid — `pqc` chaos lab profile; PQC-hybrid KEM evidence key; agility scoring reward; CBOM quantum-safe classification
+- [ ] BACK-82 SMTP/STARTTLS — verify existing email profile satisfies this or add standalone postfix-starttls variant
+- [ ] BACK-83 gRPC TLS — `grpc` chaos lab profile; verify sslyze ALPN h2 probe works; expected_results oracle
+- [ ] BACK-84 Kafka TLS — verify existing broker profile covers this or add standalone `kafka` profile
+- [ ] BACK-78 identity evidence keys — scan config includes identity port targets; integration test verifies ratios > 0 after chaos lab scan
+
+### Add After Validation (v5.x)
+
+- [ ] BACK-63 score transparency — surface subscores in CLI scorecard and HTML report (labeled `/25`)
+- [ ] BACK-58 JWT verify=False documentation — operator advisory, not a code fix
+
+### Future Consideration (v5.1+)
+
+- [ ] Score-engine redesign (0–100 subscores, weighted average) — deferred explicitly in v4.10.1-D-04
+- [ ] Authenticated scan mode (BACK-64) — HORIZON.md Candidate A for v5.1
+
+---
+
+## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Report Injection Hardening | HIGH (security correctness) | LOW | P1 |
-| SECURITY.md + CODE_OF_CONDUCT.md | HIGH (launch gate) | LOW | P1 |
-| S/MIME LDAP discovery + cert classifier | HIGH (identity coverage gap) | MEDIUM | P1 |
-| AD CS CA discovery + ESC1/ESC2/ESC3/ESC4/ESC6/ESC8 | HIGH (enterprise coverage) | HIGH | P1 |
-| CMVP static attestation table + `certified` CBOM tier | HIGH (federal/compliance client value) | MEDIUM | P1 |
-| PyPI Trusted Publishers + Sigstore attestations | HIGH (supply chain) | MEDIUM | P1 |
-| Marketing README + badges | MEDIUM (launch polish) | LOW | P1 |
-| Sample CBOM outputs in `examples/` | MEDIUM (sales friction) | LOW | P1 |
-| Homebrew tap formula | MEDIUM (macOS install UX) | MEDIUM | P2 |
-| Docker image (GHCR) | MEDIUM (locked-down env support) | MEDIUM | P2 |
-| `docs/upgrade-guide.md` + `quirk db migrate` | MEDIUM (operator UX) | MEDIUM | P2 |
-| CHANGELOG-driven GitHub Release automation | LOW (maintainer UX) | MEDIUM | P2 |
-| Demo script + sample HTML/PDF report | MEDIUM (sales) | LOW | P2 |
-| ESC5/ESC7 AD CS coverage | LOW (rarer in field) | HIGH | P3 |
-| Live CMVP lookup (cached, optional) | LOW (online-only value) | HIGH | P3 |
-| CMVP `externalReferences` URLs in CBOM | LOW | MEDIUM | P3 |
-| CycloneDX SBOM for QU.I.R.K. itself | LOW | MEDIUM | P3 |
-| Asciinema terminal recording | LOW | LOW | P3 |
-| `quirk doctor` version check vs PyPI | LOW | LOW | P3 |
-
-**Priority key:**
-- P1: Must have for v4.10 — blocking launch readiness goal
-- P2: Should have in v4.10 — materially improves consultant and operator experience
-- P3: Nice to have — defer to v5.0 or as a fast follow if bandwidth allows
-
----
-
-## Competitor / Reference Tool Analysis
-
-| Feature | Certipy (AD CS) | DigiCert S/MIME Linter | Trivy (release model) | QU.I.R.K. v4.10 Approach |
-|---------|-----------------|------------------------|----------------------|--------------------------|
-| AD CS template enumeration | Via LDAP, full ESC1–ESC16 | N/A | N/A | LDAP ESC1–ESC8 subset; offensive exploitation excluded |
-| S/MIME cert analysis | No | Yes (linter, web UI) | N/A | LDAP discovery + cryptography lib parsing; agentless |
-| FIPS/CMVP annotation | No | No | No | Static curated table + `certified` CBOM tier |
-| Signing | No | No | Sigstore keyless | Sigstore via PyPI Trusted Publishers (automatic) |
-| Homebrew | No (pip only) | N/A | Yes (homebrew-core) | Personal/org tap first |
-| Docker image | No | N/A | Yes (official image) | GHCR in v4.10 |
-| CHANGELOG | Minimal | N/A | Keep-a-Changelog | Existing `CHANGELOG.md` (started v4.4); enforce discipline |
-| Vulnerability disclosure | No SECURITY.md | N/A | SECURITY.md present | Add SECURITY.md + GitHub private reporting |
+| EVIDENCE-TALLY-01 (score correctness) | HIGH — false-positive "clean" scores destroy trust | MEDIUM | P1 |
+| BACK-81 OQS-nginx PQC scoring ceiling | HIGH — strategic centerpiece; only PQC-positive profile | HIGH | P1 |
+| OBS-1 CBOM Pass-1 fix | HIGH — incomplete CBOM = incomplete deliverable | MEDIUM | P1 |
+| BACK-80 postgres-tls / redis-tls | MEDIUM — closes lab gap; validates DB TLS scanning | MEDIUM | P1 |
+| RENDER-CLI-01 / RENDER-PDF-01 audit | MEDIUM — confirm no bug; low risk if confirmed clean | LOW | P1 |
+| BACK-83 gRPC TLS | MEDIUM — validates HTTP/2 ALPN TLS probing | MEDIUM | P2 |
+| BACK-84 Kafka TLS | MEDIUM — closes broker lab picture | MEDIUM | P2 |
+| BACK-78 identity evidence keys | MEDIUM — integration test correctness | LOW | P2 |
+| BACK-82 SMTP/STARTTLS | LOW — existing email profile may cover this; verify first | LOW | P2 |
+| BACK-63 score transparency | LOW — nice-to-have visibility improvement | LOW | P3 |
 
 ---
 
 ## Sources
 
-- RFC 8551 — S/MIME Version 4.0 Message Specification: https://datatracker.ietf.org/doc/html/rfc8551
-- CA/Browser Forum S/MIME Baseline Requirements v1.0 (2023): https://cabforum.org/smime-br/
-- DigiCert S/MIME Certificate Linter: https://www.digicert.com/smime-certificate-linter
-- LDAP + S/MIME certificate publishing (SSL.com): https://www.ssl.com/how-to/ldap-integration-with-s-mime-certificates/
-- Certipy (Python AD CS tool, certipy-ad on PyPI): https://github.com/ly4k/Certipy
-- Certipy find — certificate enumeration (DeepWiki): https://deepwiki.com/ly4k/Certipy/2.1-find-certificate-enumeration
-- AD CS ESC1–ESC8 (Vaadata blog): https://www.vaadata.com/blog/ad-cs-security-understanding-and-exploiting-esc-techniques/
-- ESC9–ESC15 (SpecterOps GhostPack/Certify wiki + ly4k/Certipy wiki): https://github.com/ly4k/Certipy/wiki/06-%E2%80%90-Privilege-Escalation
-- NIST CMVP validated modules search: https://csrc.nist.gov/projects/cryptographic-module-validation-program/validated-modules
-- Third-party CMVP JSON API (hackIDLE/nist-cmvp-api): https://github.com/hackIDLE/nist-cmvp-api
-- PyPI Trusted Publishers (OIDC): https://docs.pypi.org/trusted-publishers/
-- Sigstore Python artifact signing: https://www.python.org/downloads/metadata/sigstore/
-- PyPA pypi-publish GitHub Action: https://github.com/pypa/gh-action-pypi-publish
-- Homebrew Releaser GitHub Action: https://github.com/marketplace/actions/homebrew-releaser
-- Homebrew formula automation (Simon Willison): https://til.simonwillison.net/homebrew/auto-formulas-github-actions
-- GitHub coordinated vulnerability disclosure: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/about-coordinated-disclosure-of-security-vulnerabilities
-- PDF injection via HTML rendering (HackTricks): https://book.hacktricks.xyz/pentesting-web/xss-cross-site-scripting/pdf-injection
-- SSRF via PDF generators (Intigriti): https://www.intigriti.com/researchers/blog/hacking-tools/exploiting-pdf-generators-a-complete-guide-to-finding-ssrf-vulnerabilities-in-pdf-generators
-- Post-Quantum S/MIME (DEV Community): https://dev.to/certera_/post-quantum-cryptography-for-dkim-pgp-and-smime-3ohm
-- Chainguard FIPS 140-3 overview: https://www.chainguard.dev/supply-chain-security-101/fips-140-3-everything-you-need-to-date
+- `quirk/intelligence/evidence.py` — `build_evidence_summary()` counter logic, all protocol branches (direct inspection)
+- `quirk/intelligence/scoring.py` — `compute_readiness_score()`, `SCORE_WEIGHTS`, subscore penalty paths (direct inspection)
+- `quirk/reports/writer.py` — score dict construction, `_scorecard_markdown()`, `render_html_report()` call (direct inspection)
+- `quirk/reports/html_renderer.py` — `_score_band()`, `total_score = score.get("total", 0)`, no subscore display (direct inspection)
+- `quirk/cbom/classifier.py` — `_ALGORITHM_TABLE` entries including `ml-kem-768+x25519` at nist_level=3 (direct inspection)
+- `quirk/cbom/builder.py` — Pass-1 algo registration per protocol; CONTAINER, SOURCE, S3 branches missing DAR protocols (direct inspection)
+- `quantum-chaos-enterprise-lab/expected_results_v4.md` — existing profile oracle entries confirming current coverage
+- `quantum-chaos-enterprise-lab/docker-compose.yml` — existing service/port assignments
+- `.planning/ROADMAP.md` BACK-78, BACK-80, BACK-81, BACK-82, BACK-83, BACK-84 descriptions
+- `.planning/PROJECT.md` — v5.0 milestone scope, v4.10.1 deferred requirements, scoring decisions log
+- `.planning/milestones/v4.10.1-REQUIREMENTS.md` — EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01 deferred requirements text
+- `.planning/HORIZON.md` — v5.0 theme, done-when criteria, <=6 phases guardrail
 
 ---
-*Feature research for: QU.I.R.K. v4.10 Launch Readiness*
-*Researched: 2026-05-16*
+
+*Feature research for: QU.I.R.K. v5.0 Stabilization — gap closure behavior specifications*
+*Researched: 2026-05-22*

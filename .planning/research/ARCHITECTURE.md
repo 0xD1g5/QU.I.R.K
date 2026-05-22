@@ -1,439 +1,578 @@
-# Architecture Research — v4.10 Launch Readiness Integration
+# Architecture Research
 
-**Domain:** Integration analysis for 5 v4.10 workstreams against mature QUIRK v4.9 architecture
-**Researched:** 2026-05-16
-**Confidence:** HIGH (based on direct codebase inspection of v4.9-shipped code; no speculative claims)
+**Domain:** QU.I.R.K. v5.0 Stabilization — Integration Points
+**Researched:** 2026-05-22
+**Confidence:** HIGH (all findings verified against live codebase)
 
 ---
 
-## Existing Architecture Baseline (v4.9, verified)
+## v5.0 Integration Map
+
+### System Overview (existing data flow, unchanged by v5.0)
 
 ```
 run_scan.py (orchestrator)
-  └── _wrapped_phase() for each scanner → CryptoEndpoint rows → SQLite
-      ├── tls_scanner        → tls_capabilities_json
-      ├── ssh_scanner        → ssh_audit_json
-      ├── jwt_scanner        → jwt_scan_json
-      ├── container_scanner  → container_scan_json
-      ├── source_scanner     → source_scan_json
-      ├── aws/azure/gcp_connector → cloud_scan_json / gcs_scan_json
-      ├── dnssec_scanner     → dnssec_scan_json   (identity family)
-      ├── saml_scanner       → saml_scan_json     (identity family)
-      ├── kerberos_scanner   → kerberos_scan_json (identity family)
-      ├── email_scanner      → email_scan_json
-      ├── broker_scanner     → broker_scan_json
-      └── db_connector + vault_connector + k8s_connector → dat_scan_json
-
-quirk/intelligence/
-  ├── evidence.py       → build_evidence_summary() counts protocol-keyed endpoints
-  │     counters: identity_weak_etype_count, saml_weak_signing_count,
-  │               dnssec_weak_algo_count, dar_*, motion_*
-  └── scoring.py        → compute_readiness_score() reads evidence → 6 subscores
-        SCORE_WEIGHTS sum=261.0 (CI-gated invariant)
-        identity_ prefix → multiplied by PROFILE_MULTIPLIERS[profile]["identity_"]
-
-quirk/cbom/
-  ├── classifier.py     → classify_algorithm() → (primitive, nist_level, classical_level)
-  ├── builder.py        → build_cbom() 3-pass builder
-  │     Pass 1: _make_algorithm_component() for each endpoint
-  │     Pass 2: _make_certificate_component() — skip if in DAR_SKIP_PROTOCOLS
-  │     Pass 3: _make_protocol_component()    — skip if in MOTION_PLAINTEXT_PROTOCOLS
-  │     _fips_status(): nist_level>=1 → "approved", else "non-approved"
-  │     "certified" tier deferred (Phase 52 D-01 — CMVP attestation hook)
-  └── writer.py         → write_cbom_files() JSON+XML output
-
-quirk/reports/
-  ├── _md_escape.py     → md_cell() GFM table-cell escaping (Phase 61 REPORT-SAN-01)
-  │     Neutralizes: CRLF/LF, pipe injection, ASCII control chars
-  │     NOT YET: backtick/asterisk HTML entity escaping (deferred D-11/WR-01)
-  ├── technical.py      → md_cell() applied to all table-cell interpolations
-  ├── executive.py      → (escaping status TBD — check before HTML hardening phase)
-  ├── html_renderer.py  → Jinja2 + autoescape=["html","j2"] for template rendering
-  │     render_html_report() → jinja2 Environment(autoescape=select_autoescape())
-  │     render_pdf_report()  → Playwright headless Chromium
-  └── writer.py         → orchestrates all report types; imports categorize_waves()
-                           from quirk/engine/migration_planner.py
-
-quirk/compliance/__init__.py
-  ├── COMPLIANCE_MAP: 24 categories → PCI-DSS/HIPAA/FIPS/SOC2/ISO27001 controls
-  ├── STALENESS_THRESHOLD_DAYS = 365 (CI gate: tests/test_compliance_freshness.py)
-  └── _fips() helper: {framework, control, version, last_verified, source_url}
-
-quirk/dashboard/api/
-  ├── schemas.py        → Pydantic models: IdentityFinding, DarFinding, MotionFinding
-  │     ScanLatestResponse: identity_findings[], dar_findings[], motion_findings[]
-  └── routes/scan.py    → /api/scan/latest populates all three finding families
-
-quirk/models.py (CryptoEndpoint ORM columns — additive only)
-  tls, ssh, jwt, container, source, cloud, identity (3 cols), dat, email, broker
-  chain_verified (Phase 46)
-  [smime_scan_json, adcs_scan_json — NOT YET, v4.10 additions]
-
-quantum-chaos-enterprise-lab/
-  18 active profiles (storage deprecated in 999.83):
-  broker, cloud, database, dnssec, email, identity, jwt, kerberos, ldaps,
-  phaseA, pki, registry, saml, source, ssh-weak, storage-s3, tls-cert-defects, vault
-  _derive_all_profiles() reads docker-compose.yml at runtime — no hardcoded list
-  Image Pin Policy enforced since 999.83: minor/dated pins required, no floating tags
+  └─ _wrapped_phase() ──► scanner modules (quirk/scanner/*.py)
+                               │
+                               ▼
+                        CryptoEndpoint rows (SQLite via quirk/models.py)
+                               │
+                    ┌──────────┼──────────┐
+                    ▼          ▼          ▼
+            evidence.py    cbom/         reports/
+            (build_evidence  builder.py  writer.py
+             _summary)        │          ├─ executive.py
+                    │         ▼          ├─ html_renderer.py (+ Playwright PDF)
+                    ▼     cbom/          └─ technical.py
+              scoring.py  writer.py
+              (compute_
+               readiness_
+               score)
+                    │
+                    ▼
+           intelligence JSON
+           + HTML/PDF reports
+           + CLI summary table
 ```
 
----
-
-## Workstream 1: S/MIME Content Scanning
-
-### Follows identity-scanner pattern exactly
-
-S/MIME is email content-layer cryptography (signed/encrypted message bodies), distinct from email transport TLS already in `email_scanner.py`. The identity-scanner pattern (DNSSEC/SAML/Kerberos) is the correct template:
-
-**New module:** `quirk/scanner/smime_scanner.py`
-
-Protocol label: `"SMIME"` — matches the `_PROTOCOL_KEYS` tuple in `evidence.py` (needs adding there too).
-
-**Scanner approach:** Agentless IMAP connection via `imaplib` (stdlib) or `httpx`-backed IMAP proxy. Fetch a sample of messages from `INBOX` with `Content-Type: multipart/signed` or `application/pkcs7-mime`. Extract embedded X.509 certificates via `cryptography.x509`. Classify signing algorithm (RSA key size, SHA-1 vs SHA-256, EC). No mailbox write access required.
-
-**Alternative for air-gapped/no-IMAP scenarios:** Accept a directory of `.eml` files as a scan target (source-scanner style). This is the offline-capable path that respects the agentless constraint.
-
-**New ORM column:** `smime_scan_json` on `CryptoEndpoint`. Pattern matches `kerberos_scan_json`, `saml_scan_json`, `dnssec_scan_json` — all added in v4.2 Phase 17 as a batch column addition.
-
-**New evidence counters in `evidence.py`:**
-- `smime_weak_signing_count` — RSA<2048 or SHA-1 message signing key
-- `smime_unencrypted_count` — signed-only (no encryption, quantum-vulnerable data in flight)
-
-These slot naturally into the `identity_` prefix family because PROFILE_MULTIPLIERS already applies `"identity_"` prefix multiplication. No new subscore needed — the identity posture subscore is the correct bucket for message-layer signing keys.
-
-**New SCORE_WEIGHTS entries** (two new weights must be added and the CI invariant test updated):
-- `"identity_smime_weak_signing_ratio": 8.0` — same weight as `identity_saml_weak_signing_ratio`
-- `"identity_smime_unencrypted_ratio": 6.0` — lighter, informational
-
-**New FastAPI schema field:** `IdentityFinding` in `schemas.py` already supports protocol=`"SMIME"` — no new model needed. `ScanLatestResponse.identity_findings` already carries the list.
-
-**Chaos lab profile:** A mock IMAP server (e.g., `dovecot` or `greenmail` Docker image) pre-seeded with signed `.eml` files using RSA-1024 + SHA-1 (weak) and RSA-2048 + SHA-256 (safe) certificates. Profile name: `smime`. Port: choose one not in use (e.g., `21143` for IMAPS). Seed container drops pre-signed `.eml` files into the inbox via `Maildir`.
-
-**CBOM contribution:** Pass-1 `_make_algorithm_component()` for `SMIME` endpoints with signing algorithm (RSA, SHA-1, etc.). Pass-2 certificate components for the signer cert. Pass-3: protocol component labeled `S/MIME`. No additional skip-list entries needed — S/MIME is not in `DAR_SKIP_PROTOCOLS` or `MOTION_PLAINTEXT_PROTOCOLS`.
-
-**Dependency footprint:** `imaplib` is stdlib. `cryptography` is already a core dep. `email` module is stdlib. No new pip extras required for basic operation. The `[identity]` extras group (`impacket`, `ldap3`) is not needed for S/MIME.
-
-**Extras group:** Create `[smime]` optional extra if IMAP library needs pinning, or absorb into `[motion]` since it's email-layer. Recommendation: `[smime]` stays separate to avoid inflating `[motion]`.
+React dashboard reads from FastAPI (quirk/dashboard/server.py) which calls
+`build_evidence_summary` + `compute_readiness_score` at request time from the
+stored endpoints. **The scoring path runs twice per scan: once at scan-completion
+time in writer.py, and once at dashboard-request time in server.py.**
 
 ---
 
-## Workstream 2: Windows AD CS Scanner
+## 1. Scoring Fixes — Exact Files and Blast Radius
 
-### Follows identity-scanner pattern with a critical constraint: Windows-only APIs
+### EVIDENCE-TALLY-01
 
-**New module:** `quirk/scanner/adcs_scanner.py`
+**Root cause (verified):** `quirk/intelligence/scoring.py` derives three
+subscores from evidence counters that do NOT flow from `finding_severity_counts`:
 
-AD CS (Active Directory Certificate Services) is a PKI CA built into Windows Server. The interesting attack surface: misconfigured certificate templates that allow privilege escalation (ESC1–ESC8 patterns from the Certify/Certipy research). The agentless scanner approach:
+- **Hygiene subscore** (lines 177-182) — uses `plaintext_http_count`,
+  `http_on_tls_port_count`, `scan_error_rate` only. A scan with zero plaintext
+  HTTP and zero scan errors scores 25 regardless of HIGH/CRITICAL findings.
+- **Modern TLS subscore** (lines 184-189) — uses `legacy_tls_count =
+  sev.get("LOW", 0)` (maps LOWs, not HIGHs/CRITICALs) and `unknown_count`.
+  A scan with only HIGH/CRITICAL findings and no LOW findings scores 25.
+- **Data at Rest subscore** (lines 220-229) — uses `dar_*` protocol-specific
+  counters only. If no database/storage/k8s/vault endpoints are scanned, all
+  `dar_*` counters are 0 and the subscore is 25.
 
-1. **LDAP enumeration** — AD CS publishes template ACLs, enrollment rights, and `msPKI-*` attributes via LDAP under `CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=...`. This is readable without write access using `ldap3` (already in `[identity]` extras). This is the **primary path**.
+**Blast radius:** `quirk/intelligence/scoring.py` only. The penalty model
+(`SCORE_WEIGHTS`, `_apply_weighted_impacts`) is not the issue — the per-subscore
+evidence reads are. Fix options:
+- Add a cross-cutting `high_critical_penalty` to hygiene/modern_tls/dar impacts
+  weighted against `finding_severity_counts["HIGH"] + ["CRITICAL"]`, OR
+- Document that 25/25 on these subscores is semantically correct ("no evidence
+  of weakness in this category") and close EVIDENCE-TALLY-01 as won't-fix with
+  rationale. Decide which position to take in requirements scoping.
+- If adding the cross-cutting penalty: only `scoring.py` changes; `evidence.py`
+  already emits `finding_severity_counts` so no evidence changes needed.
+- `tests/test_score_weights_invariant.py` must be updated if any `SCORE_WEIGHTS`
+  keys change (CI gate). No other files change.
 
-2. **HTTP/HTTPS enrollment endpoint** — `http://<ca-server>/certsrv/` — NTLM-authenticable. Secondary path; TLS posture of the enrollment endpoint is already covered by `tls_scanner`.
+### RENDER-CLI-01 and RENDER-PDF-01
 
-3. **WinRM/RPC stub** — truly Windows-native and requires Windows. **Do not implement.** Keep as a stub comment.
+**Root cause (verified):** `quirk/reports/writer.py` (lines 166-170) creates a
+`score` dict with `"total": score_raw["score"]` — this is the already-normalized
+0-100 value from `scoring.py`. Then `html_renderer.py` (line 165) reads
+`score.get("total", 0)` and passes it to `_score_band()` which uses the same
+85/70/55/35 thresholds as `scoring._rating()`. The CLI summary table (writer.py
+line 275) renders `total_score/100`.
 
-The LDAP path means the v4.10 scanner can operate on any platform (Linux/macOS/Windows) as long as the target AD is LDAP-reachable. The `ldap3>=2.9.1` dep is already in `[identity]` extras.
+**Verdict:** The scale mismatch that plagued the dashboard (subscores at 25 fed
+to a gauge expecting 0-100) does NOT exist in the CLI/HTML/PDF path. The `total`
+key already holds the normalized 0-100 value. RENDER-CLI-01 / RENDER-PDF-01 may
+be a false alarm — or they may describe a different issue (e.g., subscores in
+the HTML template). The HTML template (`report.html.j2`) does NOT currently
+render subscores, only `total_score`. The `score.get("subscores")` dict is
+passed through to `intelligence.json` but not used in the template.
 
-**New ORM column:** `adcs_scan_json` on `CryptoEndpoint`.
+**Action for v5.0:** Verify empirically. The audit should scan a test target,
+compare CLI output vs dashboard vs HTML report vs PDF for the same scan. If
+values match, close RENDER-CLI-01/PDF-01 as "confirmed no bug — the renderer
+already uses the normalized path." If mismatches found, the fix lives in:
+- `quirk/reports/html_renderer.py` — `render_html_report()`, `_score_band()`
+- `quirk/reports/writer.py` — `write_reports()` summary table section
 
-**New evidence counters:**
-- `adcs_weak_template_count` — templates allowing requestor-supplied SAN (ESC1) or over-permissive enrollment rights (ESC3/4)
-- `adcs_weak_ca_key_count` — CA root key RSA<4096 or using SHA-1
+Blast radius: at most 2 files. No scoring.py changes needed.
 
-**Subscore routing:** Roll into `identity_trust` subscore alongside SAML/Kerberos/DNSSEC. New SCORE_WEIGHTS entries:
-- `"identity_adcs_weak_template_ratio": 10.0` — equivalent to `identity_kerberos_weak_etype_ratio`
-- `"identity_adcs_weak_ca_key_ratio": 8.0`
+### Phase 42 OBS-1 — CBOM Pass-1 Zero Algo Components
 
-**FastAPI schema:** `IdentityFinding` with `protocol="ADCS"`. No new Pydantic model needed.
+**Root cause (verified):** `quirk/cbom/builder.py` has explicit `elif` branches
+for every protocol. Five profiles emit zero CBOM algo components because their
+protocols fall into no branch or into an explicit `pass` branch:
 
-**Chaos lab profile — CRITICAL CONSTRAINT:**
-AD CS requires a Windows Server CA. Fully authentic Windows containers are not available on macOS Docker Desktop (`--platform linux/amd64` only). Two practical approaches:
+| Profile | Protocol | Current Pass-1 behavior |
+|---------|----------|-------------------------|
+| `database` | `POSTGRESQL` (lines 509-512) | Registers `cert_pubkey_alg` if set — but bare PostgreSQL probe leaves `cert_pubkey_alg` empty on plaintext connections. MODIFIED needed: extract cipher from `service_detail` or register `"unencrypted"` sentinel. |
+| `database` | `MYSQL` (lines 497-507) | Extracts cipher from `service_detail` — but `mysql-ssl-off` sets `ssl-off` which is excluded by the `not in ("SSL-OFF",...)` guard. So ssl-off MySQL emits zero algos. MODIFIED needed. |
+| `registry` | `TLS` (falls to `else`) | Goes through the TLS `else` branch (line 536+) which reads `cipher_suite`. The registry scanner must populate `cipher_suite` — verify this is the actual gap. |
+| `source` | `SOURCE` (lines 425-430) | `_extract_algo_from_rule_id` uses `cipher_suite` field. If semgrep rule_id has no recognized fragment, `algo_hint` is None and falls back to raw rule_id. If the rule_id itself is unrecognized by `classify_algorithm()`, it emits an UNKNOWN component. Check if UNKNOWN components count toward the "zero" observation. |
+| `ssh-weak` | `SSH` (lines 401-413) | Reads `ssh_audit_json` — but ssh-weak profile may not populate full KEX/host-key data. Verify ssh_audit_json is non-empty. |
+| `storage-s3` | `S3`, `AZURE_BLOB` | Only registers AES-256 when posture is positively confirmed encrypted. `S3/unencrypted` or `AZURE_BLOB/platform-managed` emit zero algos intentionally (lines 514-526). This may be a design decision, not a bug. |
 
-- Option A (recommended for v4.10): Ship a **mock LDAP dataset** — a containerized `OpenLDAP` pre-populated with AD CS schema attributes (`msPKI-Certificate-Name-Flag`, `msPKI-Enrollment-Flag`, ACLs) that mimic a misconfigured template. The scanner's LDAP path runs against this mock. Profile name: `adcs`. Port: e.g., `21389` (LDAPS mock).
-- Option B (deferred): Samba AD DC (`samba/samba:latest`) extended with AD CS attributes. The kerberos profile already uses Samba DC — this would extend it. However, Samba does not implement AD CS natively; schema-level injection is required. Complexity is high.
+**The actual fix target in builder.py:** Add algorithm registration for the truly
+empty cases (plaintext DB connections, ssl-off MySQL). The S3/storage and
+ssh-weak cases may require separate investigation.
 
-Recommendation: Option A (OpenLDAP mock with AD CS attributes) for v4.10. Document that a real Windows AD CS environment is required for production accuracy. This is consistent with the existing kerberos profile using Samba DC as a controlled substitute.
-
-**CBOM contribution:** Pass-1 algorithm components for CA signing key algorithm. Pass-2 certificate components for the CA certificate. Pass-3: no new protocol type needed; treat enrollment endpoint TLS as `TLS` protocol (already handled by `tls_scanner`).
-
-**Dependency footprint:** `ldap3` is already in `[identity]` extras. No new pip deps for the LDAP path.
+**Blast radius:** `quirk/cbom/builder.py` only. No changes to classifier.py,
+writer.py, or the CycloneDX schema model. Tests: update
+`tests/test_cbom_schema_validation.py` golden snapshots for the affected profiles.
 
 ---
 
-## Workstream 3: Report Injection Hardening
+## 2. Chaos Lab Profile Registration Surface
 
-### Where the gaps are (precise layering)
+### Registration Requirements (CLAUDE.md rule — applies to ALL new profiles)
 
-The current escaping state (from Phase 61 REPORT-SAN-01, deferred D-11/WR-01):
+For each new profile, three files must update in the same commit:
+1. `quantum-chaos-enterprise-lab/docker-compose.yml` — add service(s) with
+   explicit `profiles: ["<name>"]` and pinned image tags (no `:latest` — CHAOS-05
+   pin policy enforced by `lab.sh _validate_pinned_tags` and
+   `tests/test_chaos_lab_image_pinning.py`).
+2. `quantum-chaos-enterprise-lab/lab.sh` — **no manual ALL_PROFILES list** exists
+   anymore (v4.5 Phase 40 fix). `_derive_all_profiles()` reads profile names from
+   docker-compose.yml at runtime via `yq` or grep fallback. Adding a new profile to
+   docker-compose.yml is sufficient for `lab.sh all` to pick it up automatically.
+   Verify `_derive_all_profiles()` grep pattern `[a-zA-Z0-9_-]` handles new names.
+3. `quantum-chaos-enterprise-lab/expected_results_v4.md` — add
+   `## Profile: <name>` section with port/service/expected-finding oracle table
+   in the format established by the v4 oracle.
 
-| Layer | Current State | Gap |
-|-------|--------------|-----|
-| GFM table cells | `md_cell()` in `_md_escape.py` — escapes `\|`, CRLF, control chars | Applied in `technical.py`; NOT yet applied to `executive.py` (verify at phase start) |
-| HTML template | Jinja2 `autoescape=select_autoescape(["html","j2"])` in `html_renderer.py` | Covers template variable interpolation. Gap: any raw `Markup()` bypass or `| safe` filter use in templates |
-| HTML template (finding data) | Finding dicts pass through Jinja2 autoescape | Verify no `| safe` applied to user-controlled fields in `report.html.j2` |
-| PDF (Playwright) | Chromium renders the autoescaped HTML | No additional sanitization needed if HTML layer is clean |
-| Markdown → HTML conversion | N/A — HTML report is generated directly by Jinja2, not by converting Markdown | No `markdown.convert()` call exists; reports are independent codepaths |
+### New Profile Analysis — New vs Modified, Scanner Probe Needs
 
-**Where to add escaping (in phase order):**
+#### BACK-80 — `postgres-tls` + `redis-tls` (profile: `db-tls`)
 
-1. **`executive.py`** — audit for raw f-string interpolation into GFM tables. Apply `md_cell()` to all table-cell strings that contain user-controlled data (org name, domain names, finding titles). `technical.py` is already hardened.
+**docker-compose.yml:** NEW services. PostgreSQL 16 with SSL enabled using
+`modern.crt`/`modern.key` from `./certs/`. Redis 7 with `--tls-port 6380`.
+Port suggestions: postgres-tls at `25433`, postgres-tls-weak at `25434`,
+redis-tls at `26380`.
 
-2. **`report.html.j2` template** — audit for `| safe` filter applied to scanner-emitted strings. All finding `.description`, `.remediation`, `.host`, `.title` fields must flow through Jinja2's autoescaping (no `| safe`). Any template variable that takes raw scanner output needs verification.
+**Scanner probe:** MODIFIED — both scanners already handle TLS ports.
+- `quirk/scanner/db_connector.py` `scan_pg_targets()` probes via `psycopg2`
+  with `sslmode="disable"` to detect plaintext. For TLS detection, it reads
+  `pg_stat_ssl`. TLS cipher enumeration for postgres-tls would require running
+  the TLS scanner separately (adding the postgres-tls host:port to the TLS
+  scanner target list). No new probe logic — just add the port to TLS scan
+  targets in the lab config.yaml.
+- `quirk/scanner/broker_scanner.py` already handles port 6380 for
+  `_probe_redis_tls()` (line 757). Port 6380 is already in `scan_redis_targets()`
+  (line 795). No code change needed — just start a Redis-TLS container on 6380.
 
-3. **`executive.py` HTML section** (if executive.py has an HTML output path distinct from `html_renderer.py`) — verify the call chain.
+**lab.sh:** Automatic pickup via `_derive_all_profiles()`.
+**expected_results:** NEW section for `db-tls` profile.
 
-4. **SSRF clamp for PDF** — `render_pdf_report()` in `html_renderer.py` already exists. Verify no `page.goto()` call can be influenced by scanner-emitted URLs (Playwright PDF renders a local file path, not a network URL — confirm this is enforced).
+#### BACK-81 — `oqs-nginx` PQC-hybrid (profile: `pqc`)
 
-**AST/grep CI gate for regression prevention:**
+**docker-compose.yml:** NEW service using `openquantumsafe/nginx` image (verify
+current pinnable tag). Port: `25443`. Config: `X25519Kyber768` TLS 1.3 cipher
+preference in nginx.conf.
 
-The existing pattern from Phase 59 (credential leakage AST gate) and Phase 62 (check-cancelled-guards.sh) is the model. For injection hardening:
+**Scanner probe:** MODIFIED + NEW logic needed.
+- `quirk/scanner/tls_scanner.py` via sslyze — sslyze may or may not negotiate
+  `X25519Kyber768` depending on the installed OpenSSL/BoringSSL version. If
+  sslyze does negotiate it, `cipher_suite` will contain the hybrid KEM name.
+- `quirk/cbom/classifier.py` — `mlkem768x25519-sha256` is already in
+  `_ALGORITHM_TABLE` (line 66) with NIST level 3. But `X25519Kyber768` (the TLS
+  extension name) may differ from the ssh-audit key name. Verify the sslyze
+  cipher suite string and add it to classifier if missing.
+- `quirk/intelligence/scoring.py` — **NEW bonus weight needed.** Currently the
+  only positive signals are `agility_has_ecdsa_bonus` (+4) and
+  `identity_mtls_ratio_bonus` (+6). A new `agility_pqc_hybrid_bonus` weight
+  (reading a new evidence counter) is needed for OQS-nginx to score above "good
+  classical TLS." This is the strategic centerpiece of BACK-81.
+- `quirk/intelligence/evidence.py` — NEW counter `pqc_hybrid_endpoint_count`
+  that increments when a TLS endpoint's cipher_suite contains a recognized
+  PQC-hybrid KEM string (e.g., `X25519Kyber768`, `mlkem768x25519`).
 
-- **grep gate:** `scripts/check-md-cell-coverage.sh` — enumerate all GFM table-cell interpolation sites in `quirk/reports/*.py` that do NOT call `md_cell()` and fail CI if any are found. This is the same pattern as the Phase 59 AST gate for `scan_error` writes.
-- **template audit test:** `tests/test_report_template_no_safe_filter.py` — grep `report.html.j2` for `| safe` applied to scanner-emitted variables; fail if found.
+**Blast radius:** classifier.py, evidence.py, scoring.py, expected_results. This
+is the most architecturally invasive of the chaos lab additions because it
+requires a new evidence counter and a new SCORE_WEIGHTS entry (which triggers the
+`tests/test_score_weights_invariant.py` CI gate — must update the expected sum).
 
-**Build order note:** Report injection hardening is safe to execute in parallel with CMVP attestation (they touch different files). However, if CMVP attestation adds new fields to the HTML report template (e.g., `fips_certified` badges), those new template variables must also be audited for injection. Schedule injection hardening to run either before or in the same phase wave as CMVP attestation template additions.
+**lab.sh:** Automatic.
+**expected_results:** NEW `pqc` profile section.
+
+#### BACK-82 — SMTP/STARTTLS (profile: `smtp`)
+
+**docker-compose.yml:** NEW services. `postfix-starttls` on port `587` (weak
+TLS: TLS 1.0/1.1 + legacy ciphers) and `postfix-tls-modern` on port `465`
+(implicit TLS). Note: existing `email` profile already has a `postfix-email`
+service — this is a NEW profile (`smtp`) with a different focus (STARTTLS vs
+the existing postfix's configuration).
+
+**Scanner probe:** NO new code needed. `quirk/scanner/email_scanner.py` already
+handles port 587 as `SMTP-STARTTLS` with `ProtocolWithOpportunisticTlsEnum.SMTP`
+sslyze probe (lines 82-86). Port 465 handled as `SMTPS` implicit TLS (line 84).
+The STARTTLS stripping check at port 25 is also already wired. This is config-
+and lab-only work.
+
+**lab.sh:** Automatic.
+**expected_results:** NEW `smtp` profile section.
+
+#### BACK-83 — gRPC TLS (profile: `grpc`)
+
+**docker-compose.yml:** NEW services. `grpc-tls` on port `50051` (TLS 1.3,
+CA-signed cert), `grpc-insecure` on port `50052` (plaintext). Minimal gRPC echo
+server (Python `grpcio` or Go).
+
+**Scanner probe:** MODIFIED — TLS scanner needs HTTP/2 ALPN awareness.
+- sslyze supports ALPN negotiation; gRPC uses `h2` (HTTP/2) as ALPN. The TLS
+  scanner should work if sslyze can complete the TLS handshake without needing a
+  valid gRPC request body. Test empirically.
+- `grpc-insecure` (plaintext) on 50052 — the TLS scanner will detect "no TLS"
+  and create an UNKNOWN or HTTP endpoint. No special handling needed.
+- If sslyze fails on ALPN mismatch, a fallback in `_scan_one_fallback()` via
+  `ssl.SSLContext.wrap_socket()` should work for certificate extraction.
+
+**lab.sh:** Automatic.
+**expected_results:** NEW `grpc` profile section.
+
+#### BACK-84 — Kafka TLS (profile: `kafka`)
+
+**docker-compose.yml:** NEW services. `kafka-tls` with `confluentinc/cp-kafka`
+or `bitnami/kafka` (KRaft mode preferred — avoids Zookeeper dependency).
+Listeners: `PLAINTEXT://9092` and `SSL://9093`, CA cert from `./certs/`.
+
+**Scanner probe:** NO new code needed. `quirk/scanner/broker_scanner.py`
+`scan_one_kafka()` already handles port 9093 as `KAFKA-TLS` with an sslyze
+probe (line 120+). Port 9092 already handled as `KAFKA-PLAIN`. Port 9094
+(mTLS) supported via `enable_kafka_mtls` config flag (line 467). This is
+config- and lab-only work.
+
+**lab.sh:** Automatic.
+**expected_results:** NEW `kafka` profile section.
+
+#### BACK-78 — Identity Scoring Evidence Keys (profile: `identity`)
+
+**Root cause confirmed:** The Kerberos, SAML, and DNSSEC scanners correctly
+emit endpoints and counters when they find weak algorithms. The identity chaos
+lab profiles (kerberos/saml/dnssec) already exist with correct containers
+(samba-dc on ports 88+389, simplesamlphp on 8080, bind9-dnssec on 15353). The
+gap is that UAT ran with a target of `127.0.0.1` against TLS/SSH ports — the
+identity containers were not included in the scan targets.
+
+**Fix:** No code change. Lab config change only — ensure `config.yaml` for the
+identity validation scenario includes:
+- `kerberos_targets: ["127.0.0.1"]` with Kerberos port 88
+- `saml_targets: ["http://localhost:8080/simplesaml/saml2/idp/metadata.php"]`
+- `dnssec_targets: ["weak.example.com", "unsigned.example.com"]` with resolver
+  pointing to `127.0.0.1:15353`
+
+The three evidence keys (`identity_weak_etype_count`, `saml_weak_signing_count`,
+`dnssec_weak_algo_count`) are already computed in `evidence.py` lines 87-89, 165,
+171-183. The ratios are already emitted at lines 397-399. The SCORE_WEIGHTS
+already include the three identity ratio keys (scoring.py lines 31-33). **This
+is a lab scan-target configuration gap, not a code gap.** BACK-78 closes when
+the identity profiles are verified to produce non-zero values for these three
+keys in `intelligence-*.json`.
 
 ---
 
-## Workstream 4: CMVP Attestation Feed
+## 3. Kerberos/SAML/DNSSEC Evidence Key Attachment Points
 
-### Where it lives in the architecture
-
-**New module:** `quirk/compliance/cmvp.py`
-
-CMVP (Cryptographic Module Validation Program) is the NIST/CCCS database of FIPS 140-2/3 validated modules. The NIST feed is available as a public JSON API: `https://csrc.nist.gov/projects/cryptographic-module-validation-program/validated-modules/search/api/` (or the equivalent JSON export).
-
-**Integration point with CBOM Pass-1 `_fips_status()`:**
-
-In `quirk/cbom/builder.py`, the `_fips_status()` function currently emits two tiers: `"approved"` and `"non-approved"`. The comment at line 289 explicitly marks:
-
-> "The 'certified' tier is reserved for a future phase with CMVP attestation support (Phase 52 D-01) and is intentionally never emitted in v4.7."
-
-The v4.10 CMVP phase closes this deferred D-01. The integration is:
-
-1. `quirk/compliance/cmvp.py` loads the NIST CMVP feed and builds a lookup: `algorithm_name → [certificate_numbers]`.
-2. `_fips_status()` in `builder.py` gains a third tier: `"certified"` — emitted when the algorithm name (e.g., `"AES-256-GCM"`, `"SHA-256"`) has one or more active NIST CMVP certificates in the lookup.
-3. The `quirk:fips140-3-status` CBOM `Property` value becomes `"approved"`, `"non-approved"`, or `"certified"`.
-
-**Module design for `cmvp.py`:**
+The attachment chain is complete and correct. For reference:
 
 ```
-quirk/compliance/cmvp.py
-  CMVP_FEED_URL = "https://csrc.nist.gov/..."
-  STALENESS_THRESHOLD_DAYS = 90   # quarterly cadence (same as qramm model_meta.py)
-  last_verified = "YYYY-MM-DD"    # bumped on re-verification
-  source_url = CMVP_FEED_URL
-
-  def get_certified_algorithms() -> frozenset[str]: ...
-  def is_cmvp_certified(algorithm_name: str) -> bool: ...
+Scanner emits CryptoEndpoint with protocol="KERBEROS"/"SAML"/"DNSSEC"
+    |
+    v
+evidence.py::build_evidence_summary() — lines 160-183
+  - KERBEROS: increments identity_weak_etype_count when service_detail
+              has etype:{id}:{name}:HIGH or CRITICAL
+  - SAML:     increments saml_weak_signing_count on is_weak_cipher() or
+              cert_pubkey_size < 2048
+  - DNSSEC:   increments dnssec_weak_algo_count on weak algo names or
+              cert_pubkey_alg == "NONE" (unsigned zone)
+    |
+    v
+evidence dict emits:
+  "identity_weak_etype_count" (line 387)
+  "saml_weak_signing_count"   (line 388)
+  "dnssec_weak_algo_count"    (line 389)
+  "identity_kerberos_weak_etype_ratio" (line 397)
+  "identity_saml_weak_signing_ratio"   (line 398)
+  "identity_dnssec_weak_algo_ratio"    (line 399)
+    |
+    v
+scoring.py::compute_readiness_score() — lines 159-161
+  kerberos_weak_count = evidence.get("identity_weak_etype_count")
+  saml_weak_count     = evidence.get("saml_weak_signing_count")
+  dnssec_weak_count   = evidence.get("dnssec_weak_algo_count")
+    |
+    v
+identity_trust_impacts (lines 196-198) apply weights:
+  "identity_kerberos_weak_etype_ratio": 10.0
+  "identity_saml_weak_signing_ratio":   8.0
+  "identity_dnssec_weak_algo_ratio":    8.0
 ```
 
-**Cache strategy (offline-capable constraint is hard):**
-
-The NIST feed must not be fetched at scan time (breaks air-gapped client engagements). Two-tier approach:
-
-- **Bundled cache:** Ship a `quirk/compliance/cmvp_cache.json` as package data, updated at release time. This is the offline path. The staleness CI gate (`tests/test_cmvp_freshness.py`) fails if `last_verified` is > 90 days old.
-- **Runtime refresh:** `cmvp.py` exposes a `quirk compliance cmvp refresh` CLI subcommand that fetches the current NIST feed and regenerates `cmvp_cache.json`. Online-only; not called during scan.
-
-**Staleness gate pattern:** Identical to `quirk/qramm/model_meta.py` (`STALENESS_THRESHOLD_DAYS = 90`). CI workflow `python-staleness.yml` already runs `pytest tests/test_qramm_staleness.py tests/test_compliance_freshness.py` — add `tests/test_cmvp_freshness.py` to the same workflow step.
-
-**FIPS 140-3 compliance annotation ripple:**
-
-The `quirk/compliance/__init__.py` COMPLIANCE_MAP has `_fips()` control entries. Adding "certified" tier to CBOM output may surface in the compliance summary section of HTML/PDF reports. The compliance module itself needs no changes — the `fips140-3-status` property is a CBOM-level annotation, not a finding-level compliance mapping.
-
-**Build order note:** CMVP attestation must land before (or in the same phase as) any HTML/PDF template that renders a `fips140-3-status` badge. If the badge template uses the `"certified"` value without the module being present, it renders as "approved" (safe fallback, not broken). CMVP can therefore be scheduled independently of the HTML hardening phase.
+No SCORE_WEIGHTS changes needed for BACK-78. No evidence.py changes needed.
 
 ---
 
-## Workstream 5: Release Engineering
+## 4. defusedxml.lxml to lxml Migration (XXE Chokepoint)
 
-### Where each artifact lives
+### Affected Files
 
-**Signed wheel/sdist:** `.github/workflows/release.yml` (new file). The existing `python-staleness.yml` and `dashboard-quality.yml` are the only current CI workflows. Release workflow pattern:
+| File | Import | Usage | Migration action |
+|------|--------|-------|-----------------|
+| `quirk/scanner/saml_scanner.py` | lines 4-24 | `_safe_ET_fromstring()` — try/except block: imports `lxml.etree as ET` first, falls back to `defusedxml.ElementTree` if lxml unavailable | ALREADY MIGRATED to lxml as primary. `defusedxml` is only the fallback. To complete BACK-67: remove the `defusedxml.ElementTree` fallback branch (lines 16-23) and make lxml a hard requirement in `[identity]` extras. |
+| `quirk/discovery/nmap_parser.py` | line 6 | `import defusedxml.ElementTree as ET` — used in `parse_nmap_xml()` | REQUIRES MIGRATION. Replace `defusedxml.ElementTree.parse()` with `lxml.etree.parse()` using `ET.XMLParser(resolve_entities=False, no_network=True)`. |
 
-```yaml
-# .github/workflows/release.yml
-on:
-  push:
-    tags: ['v*']
-jobs:
-  build:   # python -m build → dist/
-  sign:    # sigstore or GPG sign → dist/*.sig
-  publish: # upload to PyPI or GitHub Releases
+### XXE Control Chokepoint
+
+The canonical XXE-safe lxml pattern (already established in saml_scanner.py lines 6-12):
+
+```python
+import lxml.etree as ET
+
+def _safe_parse(xml_source):
+    parser = ET.XMLParser(resolve_entities=False, no_network=True)
+    return ET.parse(xml_source, parser)  # or ET.fromstring(xml_bytes, parser)
 ```
 
-The sigstore approach (keyless signing via OIDC, `sigstore` Python package) is preferred over GPG for open-source packages in 2026 — no key management burden, GitHub Actions OIDC token is sufficient. GPG is the fallback for air-gapped distribution.
+`resolve_entities=False` blocks XXE entity expansion. `no_network=True` blocks
+SSRF via external DTD/entity URLs. Both flags must be present.
 
-**Version policy doc:** `docs/RELEASING.md` (new file). Documents: version bump procedure, which surfaces to update (6 surfaces currently gated by `tests/test_version.py`), tag naming convention, how to trigger the release workflow, how to verify signed artifacts.
+### Migration Scope
 
-**SECURITY.md:** Repo root (standard GitHub convention for vulnerability disclosure). References `docs/RELEASING.md` for the disclosure-to-release pipeline.
+- `nmap_parser.py` — MODIFIED. Change `import defusedxml.ElementTree as ET` to
+  lxml with safe parser. `parse_nmap_xml()` currently calls `ET.parse(xml_path)` —
+  change to `ET.parse(xml_path, parser=ET.XMLParser(resolve_entities=False, no_network=True))`.
+- `saml_scanner.py` — MODIFIED (minor). Remove defusedxml fallback branch (lines
+  16-23), keeping only the lxml primary path. `lxml` is already in
+  `[identity]` extras so the import is safe for identity scans.
+- `pyproject.toml` — verify `lxml` is already a declared dependency (it is, in
+  `[identity]` extras). `defusedxml` remains in extras for any other consumers
+  but the lxml-submodule usage is eliminated.
+- `tests/` — no test changes expected; the external behavior of both functions
+  is identical.
 
-**CODE_OF_CONDUCT.md:** Repo root. Boilerplate Contributor Covenant or equivalent.
-
-**CHANGELOG-driven release script:** The existing `CHANGELOG.md` at repo root + `docs/release-notes/4.4.0.md`, `4.5.0.md`, `4.6.0.md` establish the pattern. A `scripts/generate-release-notes.py` script (or shell script) reads `docs/release-notes/<version>.md` and appends to `CHANGELOG.md`. Used in the release workflow before tagging.
-
-**Version bump surface (currently 6, gated by `tests/test_version.py`):**
-1. `pyproject.toml [project] version`
-2. `quirk/__init__.py __version__`
-3. CBOM `metadata.component.version` (set from `__version__`)
-4. HTML report generated_at header (from `__version__`)
-5. `CHANGELOG.md` latest entry
-6. `docs/release-notes/<version>.md` header
-
-The release engineering phase does not change these surfaces; it adds tooling to update them consistently.
-
----
-
-## Workstream 6: Chaos Lab Fidelity (Phase 999.83 Lessons)
-
-### What Phase 999.83 taught us
-
-From the SUMMARY files and CONTEXT.md, the concrete lessons are:
-
-**Lesson 1 — `_derive_all_profiles()` runtime-read is sound; image pins are the new risk surface.**
-
-The runtime-read pattern (Phase 40) solved the ALL_PROFILES drift problem permanently. Phase 999.83 confirmed it works: no profile-name drift bugs appeared. The new risk surface is **floating image tags** causing silent behavioral changes between `docker pull` invocations. The Image Pin Policy (added to `README.md` in Plan 05) is the mitigation: minor/dated tags only, no major-only tags.
-
-**Lesson 2 — Seed scripts must be idempotent.**
-
-`source/seed.sh` (gitea-seed) exits 22 on re-runs because `POST /api/v1/user/repos` returns 409 when repos already exist. This is a pre-existing bug (DEF-999.83-C) not fixed in 999.83. The pattern: all seed scripts must check existence before creation. Future chaos lab additions should model this from day one.
-
-**Lesson 3 — The `command:` override in docker-compose.yml bypasses the image entrypoint security steps.**
-
-The gitea root-crash (Bug 1) was caused by `command:` overriding the entrypoint that drops privileges. Pattern: avoid overriding `command:` in any service that has a security-significant entrypoint. Use sidecar init containers or environment variables for post-startup initialization.
-
-**Lesson 4 — macOS bind-mount permission model creates false negatives in lab UAT.**
-
-`ldaps` (openldap chown) and `rabbitmq-broker` (erlang cookie eacces) both fail on macOS due to Docker Desktop's bind-mount uid/gid behavior, unrelated to BACK-90. These are filed as DEF-999.83-A/B. The implication: the UAT criterion for new chaos lab profiles should be "four fix sites PASS" not "zero exits anywhere" — macro-level "zero exits" is unachievable on macOS for some profiles.
-
-**Is `_derive_all_profiles()` sufficient, or do we need per-profile config validation?**
-
-The runtime-read is sufficient for profile-name drift. Per-profile config validation (e.g., a CI check that verifies every profile has a healthcheck and an explicit image pin) would add defense-in-depth. This is a good follow-on but not required for v4.10. The existing `docker-compose ... config --profile <name>` command (used in acceptance criteria of Plan 01) validates YAML syntax at the per-profile level — the CI could call this for all profiles.
-
-**New chaos lab profiles in v4.10 (S/MIME, AD CS mock):**
-
-Both must follow the established pattern:
-- `docker-compose.yml`: add profile with explicit image pin (minor/dated tag), healthcheck, seed container dependency chain.
-- `lab.sh`: no changes needed — `_derive_all_profiles()` picks up new profiles automatically.
-- `README.md`: add row to Profile Summary table (port, services, scanner finding summary).
-- `expected_results_v4.md`: add `## Profile: smime` and `## Profile: adcs` sections with expected scanner findings.
+**Blast radius:** 2 files modified. No API changes. No schema changes.
 
 ---
 
-## Component Integration Map
+## 5. Node.js 20 to 24 Actions Bump
 
-### New vs Modified Files per Workstream
+### Affected File
 
-| Workstream | New Files | Modified Files |
-|------------|-----------|----------------|
-| S/MIME scanner | `quirk/scanner/smime_scanner.py` | `quirk/models.py` (+smime_scan_json column), `quirk/intelligence/evidence.py` (+2 counters, +SMIME to _PROTOCOL_KEYS), `quirk/intelligence/scoring.py` (+2 SCORE_WEIGHTS), `quirk/cbom/builder.py` (register SMIME in Pass-1/2/3), `quirk/dashboard/api/schemas.py` (no new model, protocol field covers it), `quantum-chaos-enterprise-lab/docker-compose.yml`, `README.md`, `expected_results_v4.md` |
-| AD CS scanner | `quirk/scanner/adcs_scanner.py`, chaos lab OpenLDAP mock config | `quirk/models.py` (+adcs_scan_json), `quirk/intelligence/evidence.py` (+2 counters, +ADCS to _PROTOCOL_KEYS), `quirk/intelligence/scoring.py` (+2 SCORE_WEIGHTS), `quirk/cbom/builder.py` (Pass-1), `quantum-chaos-enterprise-lab/docker-compose.yml`, `README.md`, `expected_results_v4.md` |
-| Report injection hardening | `scripts/check-md-cell-coverage.sh`, `tests/test_report_template_no_safe_filter.py` | `quirk/reports/executive.py` (apply md_cell to table cells), `report.html.j2` (audit/remove any `| safe` on scanner data), `.github/workflows/dashboard-quality.yml` (add grep gate step) |
-| CMVP attestation | `quirk/compliance/cmvp.py`, `quirk/compliance/cmvp_cache.json`, `tests/test_cmvp_freshness.py` | `quirk/cbom/builder.py` (_fips_status adds "certified" tier), `quirk/compliance/__init__.py` (may need CMVP section), `.github/workflows/python-staleness.yml` (add test_cmvp_freshness.py), `quirk/cli/` (new `compliance cmvp refresh` subcommand) |
-| Release engineering | `.github/workflows/release.yml`, `docs/RELEASING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `scripts/generate-release-notes.py` | `pyproject.toml` (sigstore/build tooling in `[dev]` extras), `.github/workflows/python-staleness.yml` (version check on tag push) |
-| Chaos lab fidelity | Per-bug seed scripts, init containers | `quantum-chaos-enterprise-lab/docker-compose.yml`, seed scripts for DEF-999.83-A/B/C, `expected_results_v4.md`, `README.md` |
+**Only file:** `.github/workflows/dashboard-quality.yml` line 22: `node-version: '20'`
 
-### migration_planner.py Removal
+**Action:** Change to `node-version: '24'`. This is the only GitHub Actions
+workflow that specifies a Node.js version. `release.yml` and
+`release-container.yml` use Python and Docker only — no Node reference.
 
-`quirk/engine/migration_planner.py` contains only one function (`categorize_waves`) with 12 lines. It is imported in exactly one place: `quirk/reports/writer.py`. The function is trivially relocatable to `quirk/intelligence/roadmap.py` (which already handles phased roadmap logic) or inlined into `writer.py`. Tests mock `categorize_waves` at `quirk.reports.writer.categorize_waves` — the mock path must be updated. No architectural risk; pure housekeeping.
+**Blast radius:** Single line in one workflow file. The npm ecosystem in
+`src/dashboard/` will run against Node 24 in CI. Verify `package-lock.json`
+and dependencies are Node 24 compatible (most React/Vite tooling is).
+
+**Deadline:** 2026-06-02. This must be Phase 87 Plan 01, committed before any
+other v5.0 work.
+
+---
+
+## 6. Dependency-Aware Build Order
+
+### Critical Path: Node Deadline First
+
+```
+Phase 87 (single-file fix, minimum viable phase)
+  Plan 87-01: Node 20 to 24 in dashboard-quality.yml
+              defusedxml.lxml to lxml in nmap_parser.py + saml_scanner.py
+              (both are 2-file mechanical changes; combine into one dep-hygiene plan)
+              DEADLINE: merge before 2026-06-02
+              Tests: existing SAML tests + nmap parser tests pass unchanged
+```
+
+### Scoring Fixes Chain
+
+```
+Phase 88 (scoring correctness sweep)
+  Plan 88-01: EVIDENCE-TALLY-01 investigation + decision
+              (fix or close-as-won't-fix with rationale)
+              Files: quirk/intelligence/scoring.py (if fix)
+              Tests: update test_score_weights_invariant.py if SCORE_WEIGHTS changes
+
+  Plan 88-02: RENDER-CLI-01 + RENDER-PDF-01 verification
+              Empirically compare CLI/HTML/PDF scores vs dashboard for same scan
+              Files: quirk/reports/html_renderer.py, quirk/reports/writer.py (if fix needed)
+              Tests: regression test against known-bad scan fixture
+
+  Plan 88-03: CBOM Pass-1 OBS-1 fix
+              Files: quirk/cbom/builder.py
+              Tests: golden snapshots in test_cbom_schema_validation.py
+              Constraint: depends on 88-01/88-02 being settled first (scoring
+              and CBOM are separate subsystems but share a phase for coherence)
+```
+
+### Chaos Lab Chain
+
+```
+Phase 89 (chaos lab — scanner-verified targets, NO scoring changes)
+  Constraint: Phase 89 plans must be independent of each other within the phase.
+              All five lab profiles can be added in parallel plans.
+
+  Plan 89-01: BACK-80 postgres-tls + redis-tls (profile: db-tls)
+              No scanner code change. docker-compose + expected_results only.
+
+  Plan 89-02: BACK-82 SMTP/STARTTLS (profile: smtp)
+              No scanner code change. docker-compose + expected_results only.
+
+  Plan 89-03: BACK-84 Kafka TLS (profile: kafka)
+              No scanner code change. docker-compose + expected_results only.
+
+  Plan 89-04: BACK-83 gRPC TLS (profile: grpc)
+              Possibly scanner-probe verification only. docker-compose + expected_results.
+              Probe compatibility with sslyze needs empirical check.
+
+  Plan 89-05: BACK-78 Identity evidence keys (lab config only)
+              No code change. Verify identity scanner produces non-zero evidence
+              keys against the existing kerberos/saml/dnssec profiles with correct
+              targets in config.yaml. Update expected_results if gap found.
+```
+
+### OQS-nginx — Last (architectural scope)
+
+```
+Phase 90 (BACK-81 OQS-nginx PQC-hybrid)
+  Constraint: Must come AFTER Phase 88 (scoring) because it introduces a NEW
+              SCORE_WEIGHTS key (agility_pqc_hybrid_bonus) and a NEW evidence
+              counter (pqc_hybrid_endpoint_count). The test_score_weights_invariant
+              expected sum changes again — doing this in the same phase as
+              EVIDENCE-TALLY-01 would create conflicting sum expectations.
+
+  Plan 90-01: docker-compose service (oqs-nginx, profile: pqc) + classifier.py
+              (verify/add X25519Kyber768 cipher suite string mapping)
+              Files: docker-compose.yml, quirk/cbom/classifier.py
+
+  Plan 90-02: evidence.py new counter + scoring.py new bonus weight
+              Files: quirk/intelligence/evidence.py, quirk/intelligence/scoring.py,
+                     tests/test_score_weights_invariant.py
+              Test: verify OQS-nginx scan produces overall score above 80 GOOD
+
+  Plan 90-03: expected_results oracle + docs updates
+              Files: expected_results_v4.md
+```
+
+### Code Cleanup — Parallel to Lab Work
+
+```
+Phase 91 (BACK-49-57 dead code + bookkeeping)
+  Can execute in parallel with Phase 89 (no shared files with lab changes).
+  Plans map to individual BACK items — each is a small, independent file change.
+
+  Plan 91-01: BACK-49 remove quirk/engine/rules.py
+  Plan 91-02: BACK-50 dead writer.py helpers + scorecard.py orphan
+  Plan 91-03: BACK-51 migration_planner.py dual categorization
+  Plan 91-04: BACK-52 dead intelligence modules (driver_text, schema, calibration)
+  Plan 91-05: BACK-53 remove data/qcscan-legacy.sqlite
+  Plan 91-06: BACK-54 tqdm dead branch + dependency cleanup
+  Plan 91-07: BACK-55 clean D-reference comments + stale version tags
+  Plan 91-08: BACK-56 datetime.utcnow deprecation fix in logging_util.py + nmap_provider.py
+  Plan 91-09: BACK-58 JWT verify=False documentation
+  Plan 91-10: BACK-62 Nyquist VALIDATION.md updates
+  Plan 91-11: BACK-63 score transparency section in executive summary
+```
+
+### Recommended Phase Structure (at the 6-phase HORIZON cap)
+
+```
+Phase 87 — Dependency Hygiene (Node + lxml) [DEADLINE-DRIVEN, FIRST]
+Phase 88 — Scoring Residuals (EVIDENCE-TALLY, RENDER-CLI/PDF, CBOM OBS-1)
+Phase 89 — Chaos Lab Targets I (db-tls, smtp, kafka, grpc, identity evidence)
+Phase 90 — OQS-nginx PQC-hybrid (scoring ceiling anchor)
+Phase 91 — Code Cleanup + Bookkeeping (BACK-49-63)
+Phase 92 — v5.0 Close-out (version bump, docs, Obsidian sync, release notes)
+```
+
+This is 6 phases, exactly at the HORIZON cap. Phase 91 is the most compressible
+— if scope is tight, BACK-49-63 can be split across two phases or some items
+deferred to v5.1 as low-risk P3 debt.
+
+---
+
+## Component Boundaries — New vs Modified
+
+### What is NEW in v5.0
+
+| Component | File | Nature |
+|-----------|------|--------|
+| `pqc_hybrid_endpoint_count` counter | `quirk/intelligence/evidence.py` | NEW function/branch |
+| `agility_pqc_hybrid_bonus` weight | `quirk/intelligence/scoring.py` + `SCORE_WEIGHTS` | NEW dict key |
+| docker-compose services: postgres-tls, postgres-tls-weak, redis-tls, postfix-starttls, postfix-tls-modern, grpc-tls, grpc-insecure, kafka-tls | `quantum-chaos-enterprise-lab/docker-compose.yml` | NEW services |
+| Oracle sections for new profiles | `expected_results_v4.md` | NEW sections |
+
+### What is MODIFIED in v5.0
+
+| Component | File | What Changes |
+|-----------|------|--------------|
+| Node version | `.github/workflows/dashboard-quality.yml:22` | `'20'` to `'24'` |
+| XXE fallback removal | `quirk/scanner/saml_scanner.py:16-23` | Remove defusedxml fallback branch |
+| lxml migration | `quirk/discovery/nmap_parser.py:6` | `defusedxml.ElementTree` to `lxml.etree` with safe parser |
+| Scoring logic | `quirk/intelligence/scoring.py` | New evidence reads and/or cross-cutting penalty (if EVIDENCE-TALLY-01 gets a code fix) |
+| HTML/PDF renderer | `quirk/reports/html_renderer.py` + `writer.py` | Potentially no-op if audit confirms no bug |
+| CBOM builder Pass-1 | `quirk/cbom/builder.py` | New branches for zero-algo-component protocols (db plaintext, ssl-off MySQL) |
+| Algorithm classifier | `quirk/cbom/classifier.py` | Possibly new entry for OQS TLS cipher suite name |
+| CBOM golden snapshots | `tests/test_cbom_schema_validation.py` | Updated fixture files for affected profiles |
+| Score weights invariant | `tests/test_score_weights_invariant.py` | New expected sum when SCORE_WEIGHTS keys change |
+| Dead code removal | `quirk/engine/rules.py`, `quirk/reports/writer.py`, `quirk/intelligence/*.py` (stubs), `data/qcscan-legacy.sqlite` | Deleted |
+| datetime.utcnow | `quirk/logging_util.py:43`, `quirk/discovery/nmap_provider.py:50` | Replaced with `datetime.now(timezone.utc)` |
+
+### What is UNTOUCHED in v5.0
+
+- `quirk/intelligence/evidence.py` (except OQS counter addition in Phase 90)
+- `run_scan.py` (scanner orchestration unchanged)
+- All scanner modules (tls_scanner, email_scanner, broker_scanner, db_connector)
+- FastAPI server and React dashboard (no v5.0 scope)
+- SQLite schema (no new columns needed)
+- CBOM writer
+- Compliance module, QRAMM module, error registry
+- `quirk/reports/executive.py`, `quirk/reports/technical.py`
 
 ---
 
 ## Data Flow Changes
 
-### S/MIME and AD CS follow the same flow as identity scanners
+### Before v5.0
 
 ```
-run_scan.py
-  └── _wrapped_phase("smime", scan_smime_targets, ...)
-       └── scan_smime_targets(cfg) → [CryptoEndpoint(protocol="SMIME", smime_scan_json=...)]
-
-evidence.py build_evidence_summary()
-  └── proto == "SMIME" → increment smime_weak_signing_count | smime_unencrypted_count
-
-scoring.py compute_readiness_score()
-  └── identity_trust_score -= ratio(smime_weak_signing_count) * w["identity_smime_weak_signing_ratio"]
-
-cbom/builder.py build_cbom()
-  └── Pass 1: SMIME endpoints → _make_algorithm_component(signing algo)
-  └── Pass 2: SMIME endpoints → _make_certificate_component(signer cert)
-  └── Pass 3: SMIME endpoints → _make_protocol_component("S/MIME")
-
-dashboard/api/routes/scan.py /api/scan/latest
-  └── identity_findings: IdentityFinding(protocol="SMIME", algorithm="RSA-1024", severity="HIGH")
+TLS endpoint scan -> cipher_suite -> evidence.py (no PQC signal) -> scoring.py (no PQC bonus)
 ```
 
-### CMVP flow (CBOM annotation only, no scoring impact)
+### After v5.0 (BACK-81)
 
 ```
-quirk/compliance/cmvp.py (loaded at import time, uses bundled cache)
-  └── is_cmvp_certified(algo_name) → bool
-
-quirk/cbom/builder.py _fips_status()
-  └── if is_cmvp_certified(name): return "certified"
-  └── elif nist_level >= 1:       return "approved"
-  └── else:                       return "non-approved"
-
-CycloneDX CBOM output
-  └── <property name="quirk:fips140-3-status">certified</property>
+TLS endpoint scan -> cipher_suite (contains "X25519Kyber768" on OQS-nginx)
+    -> evidence.py: pqc_hybrid_endpoint_count += 1
+    -> scoring.py: agility_impacts += ("PQC-hybrid adoption", +N * weight)
+    -> overall score > 80 for OQS-nginx-only scans
 ```
 
----
-
-## Build Order and Parallelization
-
-### Wave A: Independent (can parallelize)
-
-| Phase | Work | Parallelizable? | Dependency |
-|-------|------|----------------|------------|
-| A1: S/MIME scanner | New scanner module + ORM column + evidence counters | Yes | None |
-| A2: AD CS scanner | New scanner module + ORM column + evidence counters | Yes | None |
-| A3: Report injection hardening | Escaping audit + CI gates | Yes | None |
-| A4: CMVP attestation | New compliance module + CBOM `_fips_status` 3rd tier | Yes | None |
-| A5: Chaos lab fidelity (999.83 deferred) | DEF-999.83-A/B/C fixes | Yes | None |
-
-All five A-wave workstreams touch disjoint code paths. They can execute in parallel across sub-agents.
-
-### Wave B: Integration (requires A-wave completion)
-
-| Phase | Work | Dependency |
-|-------|------|------------|
-| B1: S/MIME + AD CS scoring weight CI gate | Update `tests/test_score_weights_invariant.py` for new SCORE_WEIGHTS sum | A1 + A2 both complete (sum changes twice) |
-| B2: Report template CMVP badge rendering | If HTML report gains a CMVP badge, template change requires both CMVP module (A4) and injection hardening (A3) to be reviewed together | A3 + A4 |
-| B3: Release engineering | Signed artifact workflow should gate on all A-wave work being merged | All A-wave phases complete |
-| B4: Chaos lab profiles for S/MIME + AD CS | New `smime` and `adcs` profiles in docker-compose.yml | A1 + A2 (scanner must exist before expected_results oracle can be written) |
-
-### Wave C: Polish + verification (sequential)
-
-| Phase | Work |
-|-------|------|
-| C1: migration_planner.py removal | Inline/relocate `categorize_waves`, update mock paths in 7 test files |
-| C2: public-launch polish | Homebrew formula, Docker image, quickstart, marketing README, demo script — all require stable release-engineered artifacts |
-| C3: upgrade migration docs | v4.x → v4.10 migration guide; requires knowing what schema columns changed |
-
----
-
-## Scalability and Schema Constraints
-
-The `additive-only schema` constraint (no breaking migrations in v1) means `smime_scan_json` and `adcs_scan_json` follow the exact pattern of every prior column addition: `Column(Text, nullable=True)` appended to `CryptoEndpoint`. SQLite `ALTER TABLE ADD COLUMN` is supported; `quirk/db.py` `init_db()` handles idempotent column additions if it uses `CREATE TABLE IF NOT EXISTS` (confirm pattern before executing).
-
-The SCORE_WEIGHTS sum invariant (`tests/test_score_weights_invariant.py`) currently expects sum=261.0. Adding 4 new weights (2 for S/MIME, 2 for AD CS) changes the expected sum. This test must be updated as a final integration step after both scanner phases complete — or each scanner phase updates it independently with the expected sum after their additions.
+All other data flows are unchanged. The v5.0 scoring fixes are additive to the
+existing penalty-only model — the OQS bonus is the only new positive signal.
 
 ---
 
 ## Sources
 
-- `quirk/intelligence/evidence.py` — direct inspection, evidence counter families
-- `quirk/intelligence/scoring.py` — SCORE_WEIGHTS dict (sum=261.0), PROFILE_MULTIPLIERS
-- `quirk/cbom/builder.py` — `_fips_status()` docstring (Phase 52 D-01 CMVP deferred comment at line 289)
-- `quirk/reports/_md_escape.py` — Phase 61 REPORT-SAN-01 escaping scope and documented deferral of HTML-entity escaping
-- `quirk/reports/html_renderer.py` — Jinja2 autoescape configuration
-- `quirk/models.py` — full CryptoEndpoint column inventory
-- `quirk/dashboard/api/schemas.py` — IdentityFinding, MotionFinding, DarFinding models
-- `quirk/compliance/__init__.py` — COMPLIANCE_MAP, STALENESS_THRESHOLD_DAYS, _fips() helper
-- `.planning/PROJECT.md` — v4.10 milestone context, out-of-scope promotions, key decisions log
-- `.planning/phases/999.83-chaos-lab-service-config-drift/CONTEXT.md` — decisions and root-causes
-- `.planning/phases/999.83-chaos-lab-service-config-drift/999.83-01-SUMMARY.md` — gitea init-sidecar pattern
-- `.planning/phases/999.83-chaos-lab-service-config-drift/999.83-05-SUMMARY.md` — deferred items, image pin policy, macOS bind-mount lessons
-- `run_scan.py` — `_wrapped_phase()` pattern, scanner invocation order
-- `quantum-chaos-enterprise-lab/lab.sh` — `_derive_all_profiles()` runtime-read pattern (confirmed working)
-- `quantum-chaos-enterprise-lab/docker-compose.yml` — 18 active profiles confirmed
+- Live codebase inspection (HIGH confidence — all file paths and line numbers verified)
+- `quirk/intelligence/evidence.py` — complete read
+- `quirk/intelligence/scoring.py` — complete read
+- `quirk/cbom/builder.py` — Pass-1 section (lines 397-550)
+- `quirk/reports/html_renderer.py`, `quirk/reports/writer.py` — score rendering sections
+- `quirk/scanner/saml_scanner.py:1-60` — defusedxml import pattern
+- `quirk/discovery/nmap_parser.py:1-40` — defusedxml usage
+- `quantum-chaos-enterprise-lab/docker-compose.yml` — all service and profile definitions
+- `quantum-chaos-enterprise-lab/lab.sh:56-70` — `_derive_all_profiles()` implementation
+- `quantum-chaos-enterprise-lab/expected_results_v4.md` — oracle format
+- `.github/workflows/dashboard-quality.yml:22` — Node version declaration
+- `.planning/milestones/v4.10.1-REQUIREMENTS.md` — EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01 root cause descriptions
+- `.planning/ROADMAP.md` Backlog — BACK-49 through BACK-84 item descriptions
+- `.planning/HORIZON.md` — v5.0 scope guardrails (6-phase cap)
+
+---
+*Architecture research for: QU.I.R.K. v5.0 Stabilization integration points*
+*Researched: 2026-05-22*
