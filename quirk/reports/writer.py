@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 from rich.table import Table
-from rich.text import Text as RichText
 
 from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
@@ -69,23 +68,6 @@ def _json_dump(path: str, obj: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2, sort_keys=True, default=str)
 
-
-def _extract_cert_key_type(ep: Any) -> Optional[str]:
-    # cert_pubkey_alg is the canonical field on CryptoEndpoint
-    v = getattr(ep, "cert_pubkey_alg", None)
-    if v:
-        return str(v).upper()
-    # Fallback probe for any legacy/duck-typed endpoints
-    for attr in ("cert_key_type", "cert_pubkey_type", "cert_public_key_type", "cert_key_algo", "cert_pubkey_algo"):
-        v = getattr(ep, attr, None)
-        if v:
-            return str(v).upper()
-    cert = getattr(ep, "cert", None)
-    if isinstance(cert, dict):
-        for k in ("key_type", "public_key_type", "pubkey_type", "algo"):
-            if cert.get(k):
-                return str(cert.get(k)).upper()
-    return None
 
 
 def _scorecard_markdown(cfg, score: Dict[str, Any], conf: Dict[str, Any], drivers: List[str], roadmap: List[Dict[str, Any]]) -> str:
