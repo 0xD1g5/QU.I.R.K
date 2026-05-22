@@ -147,7 +147,27 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current State: v4.10 SHIPPED 2026-05-21
+## Current Milestone: v4.10.1 — Scoring Correctness Hotfix
+
+**Goal:** Patch v4.10 to fix the marquee overall-readiness score (currently displays 100/EXCELLENT when subscores are red and CRITICAL findings are present) via surgical normalization in the aggregator and the dashboard ScoreGauge, without changing the underlying penalty model.
+
+**Target features:**
+- Overall-readiness normalization — replace clamp-at-100 in `quirk/intelligence/scoring.py:253-257` with `sum/1.5` so six 0-25 subscores produce a true 0-100 overall
+- ScoreGauge `maxValue` prop (default 100; subscore callers pass 25) so gauge fill + color thresholds are computed against the real backend scale
+- `_gaugeColor` rewrite to operate on a normalized fraction, not a raw score
+- `scoring.py` docstring rewrite — replace the misleading "Phase 60 SCORE-04 clamp-to-[0,100] is intentional" wording with the actual contract
+- Test invariant updates: audit `tests/test_score_weights_invariant.py`, add a normalization-formula test
+- Release notes documenting the visual jump (old scans display the new math)
+
+**Key context:**
+- v4.10 SHIPPED 2026-05-21; tag `v4.10.0` on origin; PyPI `quirk-scanner 4.10.0` live; GHCR multi-arch image public; Sigstore attestation verified.
+- Bug surfaced 2026-05-22 in a live dashboard scan against `tls-cert-defects` chaos lab profile: Overall = 100 / EXCELLENT while subscores 25 + 25 + 23 + 3 + 25 + 19 = 120 (clamped) and severity has 2 CRITICAL + 2 HIGH. Diagnosis: triple-layer scale collision — backend sums 0-25 subscores then clamps at 100; frontend declares input as 0-100 and colors red < 50.
+- **Scope: dashboard renderers only.** CLI / HTML / PDF reports likely have the same display bug but are explicitly deferred to v5.0 Phase 01 (stabilization milestone, theme locked 2026-05-22).
+- **Evidence-tally gap** — 3 of 6 subscores show exactly 25 (no penalties applied) despite HIGH/CRITICAL findings present — deferred to v5.0 Phase 01. Separate root cause in the evidence summarizer.
+- Backwards compat: stored score values unchanged; historical scans display new math after the fix (visual jump from 100 → ~80 for the canonical scan). Documented in release notes.
+- Already-committed post-ship cleanup folded into the same release tag: `5f9b58c` (docs `quirk-scanner` rename), `81deeb9` (lazy `pypdf` import), `ffb6bf3` (install-error test catch-up), `45fd378` + `eb9edcb` (HORIZON refresh, v5.0 theme locked as Stabilization).
+
+## Previous Milestone: v4.10 SHIPPED 2026-05-21
 
 v4.10 "Launch Readiness" shipped 2026-05-21 — 8 phases (78–85), 31 plans, 52/52 requirements satisfied. Coverage gap closure for S/MIME (LDAP-only `userCertificate`/`userSMIMECertificate`) and Windows AD CS (impacket LDAP enumeration, ESC1–ESC8 observable crypto properties); CMVP attestation feed wired as informational coverage list (never `certified: true`); HTML/PDF injection hardening via `nh3` chokepoint + `| safe` CI gate; SCORE_WEIGHTS invariant flipped green (sum 275.0, count 36).
 
@@ -255,7 +275,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | PyPI distribution name `quirk-scanner` (v4.10 D-06 / supersedes D-01 / UAT-85-11 release-time) | UAT-85-11 Gate 5.5 surfaced PyPI's PEP 541 typosquat rejection of `qu-i-r-k` — too similar to the existing `quirk` squatter project. `quirk-scanner` is a compound name with a semantic suffix; PEP 541 distance is high; Pending Publisher form accepted dry-run on 2026-05-22. Identifiers UNCHANGED: CLI command, Python import name, GHCR image, Homebrew tap repo — D-06 only touches the PyPI namespace identifier. | ✓ Good — Pending Publisher dry-run passed; sweep applied to 15 active production + planning files; archived milestone snapshots under `.planning/milestones/v4.10-*` preserved as historical record (they reflect milestone-close state of `qu-i-r-k`). Lesson for BACK-90 / Phase 86: future PyPI name verification must include Pending Publisher dry-run, not just `pip index versions`. |
 
 ---
-*Last updated: 2026-05-22 — v4.10 release-time: D-06 logged (supersedes D-01) — PyPI distribution name changed from `qu-i-r-k` to `quirk-scanner` after PEP 541 typosquat rejection at UAT-85-11 Gate 5.5*
+*Last updated: 2026-05-22 — v4.10.1 milestone opened: scoring correctness hotfix (overall normalization + ScoreGauge maxValue). Folds in already-committed post-ship cleanup (doc sweep, lazy pypdf, test catch-up, HORIZON refresh).*
 
 ## Evolution
 

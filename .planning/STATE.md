@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.10
-milestone_name: Launch Readiness — Coverage, Hardening, Release Engineering
-status: completed
-stopped_at: v4.10 SHIPPED 2026-05-21 — milestone lifecycle complete (audit→complete→cleanup)
-last_updated: "2026-05-21T13:32:42.895Z"
-last_activity: 2026-05-16 — Phase 80 Plan 01 ADCS foundation landed (3 tasks, 14 files)
+milestone: v4.10.1
+milestone_name: Scoring Correctness Hotfix
+status: planning
+last_updated: "2026-05-22T03:39:11.344Z"
+last_activity: 2026-05-22
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Current Position
 
-Phase: 80 (windows-adcs-scanner) — Wave A
-Plan: 80-02 (next — scanner module)
-Status: 80-01 foundation complete (commit `9ed0cd0`); adcs chaos-lab profile live, ORM column + `[adcs]` extras declared
-Last activity: 2026-05-16 — Phase 80 Plan 01 ADCS foundation landed (3 tasks, 14 files)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-22 — Milestone v4.10.1 started
 
 ## Milestone Summary (v4.10 — in progress)
 
