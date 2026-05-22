@@ -80,12 +80,12 @@
 | RENDER-PDF-01 | 88 | 88-01 | ✅ done — parity gate; visual → UAT-88 |
 | SCORE-CBOM-01 | 88 | 88-02 | ✅ done (3f0ec45, eb304fc) — OBS-1 closed |
 | SCORE-XPARENCY-01 | 88 | 88-01 | ✅ done — 3-surface decomposition (7c23c55) |
-| LAB-01 | 89 | TBD | pending |
-| LAB-02 | 89 | TBD | pending |
-| LAB-03 | 89 | TBD | pending |
-| LAB-04 | 89 | TBD | pending |
-| LAB-05 | 89 | TBD | pending |
-| LAB-06 | 89 | TBD | pending |
+| LAB-01 | 89 | 89-01 | pending |
+| LAB-02 | 89 | 89-01 | pending |
+| LAB-03 | 89 | 89-03 | pending |
+| LAB-04 | 89 | 89-01 | pending |
+| LAB-05 | 89 | 89-03 | pending |
+| LAB-06 | 89 | 89-02 | pending |
 | PQC-01 | 90 | TBD | pending |
 | PQC-02 | 90 | TBD | pending |
 | PQC-03 | 90 | TBD | pending |

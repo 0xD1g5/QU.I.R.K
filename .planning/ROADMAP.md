@@ -1568,7 +1568,10 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
   4. `docker compose --profile kafka-tls up` starts Apache Kafka 3.9.0 with TLS listener on 9093 and plaintext healthcheck on 9092; scanner classifies the TLS endpoint; lab-sync obligations satisfied
   5. `docker compose --profile grpc-tls up` starts a minimal gRPC server with ALPN `h2`; sslyze ALPN negotiation is empirically confirmed before the probe approach is finalized; lab-sync obligations satisfied
   6. A lab scan config targeting Kerberos KDC, SAML SP, and DNSSEC zone endpoints produces identity evidence counters that flow into the identity subscore — confirming the BACK-78 wiring gap is closed
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 89-01-PLAN.md — postgres-tls + redis-tls + kafka-tls weak-TLS profiles (LAB-01, LAB-02, LAB-04)
+- [ ] 89-02-PLAN.md — identity-lab evidence end-to-end config + UAT (LAB-06)
+- [ ] 89-03-PLAN.md — grpc-tls profile (ALPN-h2 gate) + LAB-03 email-STARTTLS closure (LAB-05, LAB-03)
 
 #### Phase 90: OQS-nginx PQC-Hybrid
 **Goal**: The quantum-readiness scoring model has a concrete demoable post-quantum ceiling anchor — a digest-pinned OQS-nginx chaos lab profile serving an X25519MLKEM768 hybrid endpoint is up, the scanner observes and classifies it (as a real quantum-safe component or a clearly-scoped advisory), and the scoring model rewards PQC-hybrid posture with an agility bonus
