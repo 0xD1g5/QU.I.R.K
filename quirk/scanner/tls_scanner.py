@@ -438,7 +438,7 @@ def _scan_one_fallback(
                 ep.cert_not_after = na.replace(tzinfo=None)
 
         # ==========================
-        # v3.6 TLS capability enum
+        # TLS capability enumeration
         # ==========================
         # Only run after a successful TLS handshake
         mode = tls_enum_mode if tls_enum_mode in ("fast", "deep") else "fast"

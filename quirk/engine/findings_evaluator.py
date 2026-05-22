@@ -340,7 +340,7 @@ def _dedupe_findings(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def _postprocess_findings(cfg, endpoints, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    v3.7.1 classifier patch companion:
+    Post-processing for findings:
       - If protocol classifier labels HTTP on ports we *expect* to be TLS, treat as MISCONFIG.
       - If TLS is blocked due to MTLS_REQUIRED, avoid calling it plaintext.
     """

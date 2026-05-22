@@ -170,9 +170,9 @@ def _ensure_columns(
 #
 # Ordering preserved exactly from the prior 8-helper chain.
 _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
-    ("crypto_endpoints", _IDENTITY_COLUMNS),   # v4.2 identity
-    ("crypto_endpoints", _GCP_COLUMNS),         # v4.3 GCP
-    ("crypto_endpoints", _V43_COLUMNS),         # v4.3 DAT
+    ("crypto_endpoints", _IDENTITY_COLUMNS),   # identity scanner fields
+    ("crypto_endpoints", _GCP_COLUMNS),         # GCP connector fields
+    ("crypto_endpoints", _V43_COLUMNS),         # data-at-rest fields
     ("crypto_endpoints", _EMAIL_COLUMNS),       # Phase 32 email
     ("crypto_endpoints", _BROKER_COLUMNS),      # Phase 33 broker
     ("crypto_endpoints", _PHASE41_COLUMNS),     # Phase 41 D-11

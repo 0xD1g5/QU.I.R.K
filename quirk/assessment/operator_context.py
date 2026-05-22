@@ -30,7 +30,7 @@ def _prompt_list(prompt: str) -> List[str]:
 
 
 def prompt_for_context() -> OperatorContext:
-    print("\n🧠 Assessment Context (v3.5.1)")
+    print("\n🧠 Assessment Context")
     print("This helps generate a better Quantum Readiness Score + Transition Roadmap.\n")
 
     print("Select data types present (comma-separated). Examples: PCI, PHI, FINANCIAL, TRADE, PUBLIC")
