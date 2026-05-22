@@ -41,7 +41,7 @@
 ### Code Cleanup & Bookkeeping (CLEAN)
 
 - [x] **CLEAN-01**: Tier-A dead-code removal (file-/comment-/syntax-level, no call-graph risk): BACK-53 legacy sqlite remnants, BACK-55 stale comments, BACK-56 `datetime.utcnow` deprecation. CI guards against regression where applicable.
-- [ ] **CLEAN-02**: Tier-B dead-code removal (function/module deletions): BACK-49/50/51/52/54, each validated by `vulture`/AST call-graph analysis (NOT grep — dynamic imports, `__init__` re-exports, and optional-extra paths can hide reachability) plus a clean-venv smoke test after each deletion batch.
+- [x] **CLEAN-02**: Tier-B dead-code removal (function/module deletions): BACK-49/50/51/52/54, each validated by `vulture`/AST call-graph analysis (NOT grep — dynamic imports, `__init__` re-exports, and optional-extra paths can hide reachability) plus a clean-venv smoke test after each deletion batch. ✅ _extract_cert_key_type + RichText deleted (BACK-50); BACK-52 schema portion superseded-by-D-15 (IntelligenceReport preserved per Phase 77 D-15 CI gate); D-02b vulture catalogue at docs/dead-code-candidates.md.
 - [x] **CLEAN-03**: BACK-62 — Nyquist `VALIDATION.md` bookkeeping updates brought current.
 - [x] **CLEAN-04**: BACK-58 — JWT `verify=False` documented as an intentional inspection-mode advisory.
 
@@ -89,10 +89,10 @@
 | PQC-01 | 90 | 90-01 | ✅ done (6491f35, e5c61da) — oqs-nginx profile + four-file lab-sync |
 | PQC-02 | 90 | 90-02 | ✅ done (7b1c0be, 1403254) — PQC probe + classifier alias + evidence counter |
 | PQC-03 | 90 | 90-03 | ✅ done (00e24f5, 41e172d) — agility_pqc_hybrid_bonus weight + invariant 283.0/37 |
-| CLEAN-01 | 91 | TBD | pending |
-| CLEAN-02 | 91 | TBD | pending |
-| CLEAN-03 | 91 | TBD | pending |
-| CLEAN-04 | 91 | TBD | pending |
+| CLEAN-01 | 91 | 91-01 | ✅ done (67786fe) — datetime.utcnow() fixed in tests; v3.x/v4.x comments swept |
+| CLEAN-02 | 91 | 91-02 | ✅ done (d027474, 6fd5f98) — _extract_cert_key_type + RichText deleted (BACK-50); BACK-52 schema portion superseded-by-D-15 (option-a: IntelligenceReport preserved per Phase 77 D-15 CI gate); D-02b vulture catalogue at docs/dead-code-candidates.md |
+| CLEAN-03 | 91 | 91-01 | ✅ done (7ea806a, 89e8063) — conftest DB isolation; VALIDATION.md frontmatter updated; CONCERNS.md stale entries annotated |
+| CLEAN-04 | 91 | 91-01 | ✅ done (89e8063) — JWT allow_insecure_jwks documented in operators-guide.md + configuration.md |
 | REL-01 | 92 | TBD | pending |
 
 **Coverage:** 21 requirements across 6 phases (87–92). Final phase/plan mapping set by the roadmapper.

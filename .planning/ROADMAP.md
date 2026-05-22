@@ -1890,7 +1890,7 @@ Plans:
 **Carry-in from Phase 87 (test-suite ergonomics, low priority):** `pytest tests/` collection errors out with `ValueError: Multiple QU.I.R.K. DBs found` whenever a local working tree has ≥2 stray gitignored scan DBs (`./quirk.db`, `./output/quirk.db`, `./quirk-output/quirk.db`) — the production `_default_db_path()` (`quirk/dashboard/api/deps.py:26`) refuses to guess and 7 DB-backed test modules hit it at collection time. Invisible to CI (clean checkout), but a recurring local-dev annoyance requiring `QUIRK_DB_PATH=...` to work around. **Fix:** add a `conftest.py` autouse fixture that points `QUIRK_DB_PATH` at an isolated `tmp_path` DB so the suite never touches the ambient resolver. NOTE: this is purely the *collection-error* fix — it is unrelated to the ~39 pre-existing test failures (CBOM compose-profile drift, stale v4.1/v4.2 version-string assertions, dashboard themes, qramm), which are DB-independent (proven: identical count against a fresh empty DB) and are the actual cleanup/scoring targets of Phases 88 + 91.
 **Plans**: 3 plans
 - [x] 91-01-PLAN.md — Tier-A cleanup (datetime.utcnow + stale comments), conftest DB isolation, VALIDATION.md currency, stale CONCERNS.md removal, JWT verify=False advisory docs (CLEAN-01, CLEAN-03, CLEAN-04)
-- [ ] 91-02-PLAN.md — Tier-B deletions (_extract_cert_key_type + intelligence schema dataclasses, vulture-confirmed) + D-02b dead-code catalogue; resolves Phase 77 D-15 vs BACK-52 conflict (CLEAN-02)
+- [x] 91-02-PLAN.md — Tier-B deletions (_extract_cert_key_type + intelligence schema dataclasses, vulture-confirmed) + D-02b dead-code catalogue; resolves Phase 77 D-15 vs BACK-52 conflict (CLEAN-02)
 - [ ] 91-03-PLAN.md — Phase-completion bookkeeping: Obsidian phase note + docs/UAT-SERIES.md update/sync/commit
 
 #### Phase 92: v5.0 Close-out
@@ -1915,5 +1915,5 @@ Plans:
 | 88. Scoring Residuals | 2/2 | ✅ Complete | 2026-05-22 |
 | 89. Chaos Lab Profiles | 3/3 | Complete   | 2026-05-22 |
 | 90. OQS-nginx PQC-Hybrid | 4/4 | Complete   | 2026-05-22 |
-| 91. Code Cleanup + Bookkeeping | 1/3 | In Progress|  |
+| 91. Code Cleanup + Bookkeeping | 2/3 | In Progress|  |
 | 92. v5.0 Close-out | 0/TBD | Not started | — |

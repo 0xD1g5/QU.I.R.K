@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
 status: executing
-last_updated: "2026-05-22T22:53:03.846Z"
+last_updated: "2026-05-22T22:59:32.554Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 67
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 ## Current Position
 
 Phase: 91 (code-cleanup-bookkeeping) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-22
 
@@ -112,7 +112,7 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22T22:53:03.843Z
+**Last session:** 2026-05-22T22:59:32.550Z
 
 **Next session:** `/gsd-plan-phase 90` — 90-CONTEXT.md is written (PQC-02 resolved via live spike: genuine raw `openssl s_client -groups X25519MLKEM768` probe, capability-gated with advisory fallback; pinned digest `sha256:6ca18ac6…`; new `pqc_hybrid_endpoint_count` + agility bonus, update test_score_weights_invariant.py sum 275/count 36). Phase 91 context is already written (CLEAN-01..04).
 
