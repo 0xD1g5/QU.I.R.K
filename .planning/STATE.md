@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v4.10.1
-milestone_name: Scoring Correctness Hotfix
-status: executing
-last_updated: "2026-05-22T12:00:27.581Z"
-last_activity: "2026-05-22 — Plan 86-01 complete: int(round(sum/1.5)) normalization live, docstring rewritten, 3 boundary tests green"
+milestone_name: Scoring Correctness Hotfix — Phase 86 — opened 2026-05-22
+status: completed
+last_updated: "2026-05-22T12:25:59.106Z"
+last_activity: 2026-05-22 -- Phase 86 marked complete
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 2
-  percent: 67
+  total_phases: 60
+  completed_phases: 2
+  total_plans: 7
+  completed_plans: 7
+  percent: 3
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 86 — Scoring Correctness Hotfix (in progress)
+Phase: 86 — COMPLETE
 Plan: 86-01 complete; 86-02 and 86-03 pending
-Status: In progress — Plan 86-01 complete (backend normalization + boundary tests)
-Last activity: 2026-05-22 — Plan 86-01 complete: int(round(sum/1.5)) normalization live, docstring rewritten, 3 boundary tests green
+Status: Phase 86 complete
+Last activity: 2026-05-22 -- Phase 86 marked complete
 
 ## Milestone Summary (v4.10.1 — in progress)
 

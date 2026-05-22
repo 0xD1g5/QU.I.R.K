@@ -10,9 +10,9 @@
 
 ### Scoring Correctness (SCORE-FIX)
 
-- [ ] **SCORE-FIX-01**: `compute_readiness_score()` produces an overall score on a 0–100 scale derived by normalizing (sum-of-subscores ÷ 1.5), replacing the broken clamp-at-100 path at `quirk/intelligence/scoring.py:253-257`.
-- [ ] **SCORE-FIX-02**: The module docstring at `quirk/intelligence/scoring.py:1-17` accurately describes the contract — six subscores each on a 0–25 scale, overall = `int(round(sum / 1.5))`, no misleading "clamp [0,100] is intentional" wording.
-- [ ] **SCORE-FIX-03**: `tests/test_score_weights_invariant.py` (and any companion tests) reflect the new aggregation formula. A new test asserts that `compute_readiness_score` returns 100 only when all six subscores are at their 25 ceiling, and returns 0 only when every subscore is 0.
+- [x] **SCORE-FIX-01**: `compute_readiness_score()` produces an overall score on a 0–100 scale derived by normalizing (sum-of-subscores ÷ 1.5), replacing the broken clamp-at-100 path at `quirk/intelligence/scoring.py:253-257`.
+- [x] **SCORE-FIX-02**: The module docstring at `quirk/intelligence/scoring.py:1-17` accurately describes the contract — six subscores each on a 0–25 scale, overall = `int(round(sum / 1.5))`, no misleading "clamp [0,100] is intentional" wording.
+- [x] **SCORE-FIX-03**: `tests/test_score_weights_invariant.py` (and any companion tests) reflect the new aggregation formula. A new test asserts that `compute_readiness_score` returns 100 only when all six subscores are at their 25 ceiling, and returns 0 only when every subscore is 0.
 
 ### Dashboard Gauge Correctness (GAUGE)
 
@@ -22,8 +22,8 @@
 
 ### Release Engineering (RELEASE)
 
-- [ ] **RELEASE-01**: `CHANGELOG.md` / `changelog.d/` entry documents the scoring-correctness fix in plain operator language ("Overall readiness no longer caps at 100 on real scans; old stored scores will display lower after upgrade. The underlying penalty math is unchanged."). Includes the canonical 25+25+23+3+25+19 → before-and-after example.
-- [ ] **RELEASE-02**: `pyproject.toml` `[project.version]` bumped from `4.10.0` to `4.10.1`. Version single-source-of-truth invariant preserved.
+- [x] **RELEASE-01**: `CHANGELOG.md` / `changelog.d/` entry documents the scoring-correctness fix in plain operator language ("Overall readiness no longer caps at 100 on real scans; old stored scores will display lower after upgrade. The underlying penalty math is unchanged."). Includes the canonical 25+25+23+3+25+19 → before-and-after example.
+- [x] **RELEASE-02**: `pyproject.toml` `[project.version]` bumped from `4.10.0` to `4.10.1`. Version single-source-of-truth invariant preserved.
 
 ---
 
@@ -52,13 +52,13 @@ Captured here so the v5.0 plan absorbs them without re-discovery:
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| SCORE-FIX-01 | Phase 86 | TBD | open |
-| SCORE-FIX-02 | Phase 86 | TBD | open |
-| SCORE-FIX-03 | Phase 86 | TBD | open |
-| GAUGE-01 | Phase 86 | TBD | open |
-| GAUGE-02 | Phase 86 | TBD | open |
-| GAUGE-03 | Phase 86 | TBD | open |
-| RELEASE-01 | Phase 86 | TBD | open |
-| RELEASE-02 | Phase 86 | TBD | open |
+| SCORE-FIX-01 | Phase 86 | 86-01 | satisfied |
+| SCORE-FIX-02 | Phase 86 | 86-01 | satisfied |
+| SCORE-FIX-03 | Phase 86 | 86-01 | satisfied |
+| GAUGE-01 | Phase 86 | 86-02 | satisfied |
+| GAUGE-02 | Phase 86 | 86-02 | satisfied |
+| GAUGE-03 | Phase 86 | 86-02 | satisfied |
+| RELEASE-01 | Phase 86 | 86-03 | satisfied |
+| RELEASE-02 | Phase 86 | 86-03 | satisfied |
 
 **Coverage:** 8/8 requirements mapped to Phase 86 (100%) ✓

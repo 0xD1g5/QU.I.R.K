@@ -1513,7 +1513,7 @@ Archived to: [`.planning/milestones/v4.10-ROADMAP.md`](milestones/v4.10-ROADMAP.
 
 ### Phases — v4.10.1
 
-- [ ] **Phase 86: Scoring Correctness Hotfix** - Normalize overall readiness (sum-of-subscores ÷ 1.5), fix ScoreGauge maxValue + color thresholds, bump version to 4.10.1 with release notes documenting the visual jump
+- [x] **Phase 86: Scoring Correctness Hotfix** - Normalize overall readiness (sum-of-subscores ÷ 1.5), fix ScoreGauge maxValue + color thresholds, bump version to 4.10.1 with release notes documenting the visual jump
 
 ## Phase Details — v4.10.1 Scoring Correctness Hotfix
 
@@ -1531,11 +1531,11 @@ Archived to: [`.planning/milestones/v4.10-ROADMAP.md`](milestones/v4.10-ROADMAP.
 **Plans**: 3 plans
 - [x] 86-01-PLAN.md — Backend normalization (sum/1.5) + docstring rewrite + boundary tests
 - [x] 86-02-PLAN.md — ScoreGauge maxValue prop + executive.tsx subscore wiring + vitest coverage
-- [ ] 86-03-PLAN.md — Version bump 4.10.1 + changelog fragment + operator UAT on tls-cert-defects
+- [x] 86-03-PLAN.md — Version bump 4.10.1 + changelog fragment + operator UAT on tls-cert-defects
 **UI hint**: yes
 
 ## Progress — v4.10.1 Phases
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 86. Scoring Correctness Hotfix | 2/3 | In Progress|  |
+| 86. Scoring Correctness Hotfix | 3/3 | Complete | 2026-05-22 |
