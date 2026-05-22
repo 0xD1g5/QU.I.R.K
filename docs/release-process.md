@@ -43,7 +43,7 @@ are explicitly NOT public API and may change without a MAJOR bump.
 version-bearing surface derives from it:
 
 - `quirk/__init__.py::__version__` resolves at import time via
-  `importlib.metadata.version("qu-i-r-k")` (with a `tomllib` fallback for
+  `importlib.metadata.version("quirk-scanner")` (with a `tomllib` fallback for
   unpackaged in-tree dev runs).
 - The CLI banner, dashboard footer, CBOM metadata, and `CHANGELOG.md` heading
   all flow from `quirk.__version__`.
@@ -99,7 +99,7 @@ Step-by-step procedure for cutting a release. All steps are required.
 
 7. **Verify the published release.** Once the workflow is green:
    - Confirm the new version appears on PyPI:
-     `pip index versions qu-i-r-k` should list `X.Y.Z`.
+     `pip index versions quirk-scanner` should list `X.Y.Z`.
    - Confirm the release page on GitHub carries the wheel, sdist, and
      attestation bundle.
    - Run the downstream attestation verification command (see below) against
@@ -121,7 +121,7 @@ publisher with these exact values:
 
 | Field                  | Value                |
 | ---------------------- | -------------------- |
-| PyPI project name      | `qu-i-r-k`           |
+| PyPI project name      | `quirk-scanner`           |
 | Owner                  | `<gh-org-or-user>`   |
 | Repository name        | `<repo-name>`        |
 | Workflow filename      | `release.yml`        |
@@ -151,14 +151,14 @@ downloaded artifact before installing it.
 ### GitHub CLI path
 
 ```bash
-gh attestation verify --owner <gh-org> dist/qu-i-r-k-X.Y.Z-py3-none-any.whl
+gh attestation verify --owner <gh-org> dist/quirk-scanner-X.Y.Z-py3-none-any.whl
 ```
 
 This returns exit code 0 on success and prints the signing identity (the
 GitHub Actions workflow that produced the artifact). Use this for sdists too:
 
 ```bash
-gh attestation verify --owner <gh-org> dist/qu-i-r-k-X.Y.Z.tar.gz
+gh attestation verify --owner <gh-org> dist/quirk-scanner-X.Y.Z.tar.gz
 ```
 
 ### cosign alternative
@@ -168,10 +168,10 @@ bundle:
 
 ```bash
 cosign verify-blob \
-  --bundle qu-i-r-k-X.Y.Z-py3-none-any.whl.sigstore \
+  --bundle quirk-scanner-X.Y.Z-py3-none-any.whl.sigstore \
   --certificate-identity-regexp '^https://github.com/<gh-org>/<repo>/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  qu-i-r-k-X.Y.Z-py3-none-any.whl
+  quirk-scanner-X.Y.Z-py3-none-any.whl
 ```
 
 The `--certificate-identity-regexp` pins the verifier to attestations
@@ -184,7 +184,7 @@ QU.I.R.K. does NOT ship a `curl | bash` installer (per LAUNCH-07 — this is a
 deliberate non-feature). Every supported install path carries verifiable
 provenance:
 
-- **PyPI** (`pip install qu-i-r-k`) — Sigstore attestations via Trusted
+- **PyPI** (`pip install quirk-scanner`) — Sigstore attestations via Trusted
   Publishers.
 - **Homebrew** (planned) — Homebrew's audit + bottle signing.
 - **GHCR** (planned, Phase 85) — cosign-signed container images.
@@ -215,14 +215,14 @@ publish workflow.
 The Dockerfile installs QU.I.R.K. from PyPI:
 
 ```dockerfile
-RUN pip install --no-cache-dir "qu-i-r-k[all]==${QUIRK_VERSION}"
+RUN pip install --no-cache-dir "quirk-scanner[all]==${QUIRK_VERSION}"
 ```
 
 `QUIRK_VERSION` is injected by the workflow from the triggering git tag.
 Before the build runs, the workflow polls
-`https://pypi.org/pypi/qu-i-r-k/${version}/json` for up to 10 minutes so the
+`https://pypi.org/pypi/quirk-scanner/${version}/json` for up to 10 minutes so the
 container build only proceeds once the PyPI wheel has propagated. This means
-**the bits inside the container are byte-identical to `pip install qu-i-r-k`
+**the bits inside the container are byte-identical to `pip install quirk-scanner`
 on the host** — no parallel build path, no source-tree drift.
 
 ### Verification after a release
@@ -261,7 +261,7 @@ Subsequent publishes inherit the public visibility automatically.
 
 ### What this image deliberately does NOT include
 
-- **`playwright` browsers** — `qu-i-r-k[all]` declares `playwright` as an
+- **`playwright` browsers** — `quirk-scanner[all]` declares `playwright` as an
   optional extra, but the headless browser binaries are out of scope for the
   v4.10 GHCR ship to keep the image lean. Pull them at runtime inside the
   container if a specific scan path needs them.
@@ -310,7 +310,7 @@ After every PyPI publish (Trusted Publishers workflow per the earlier
 1. **Wait for PyPI sdist availability.** The sdist must be reachable at:
 
    ```
-   https://files.pythonhosted.org/packages/source/q/qu-i-r-k/qu-i-r-k-X.Y.Z.tar.gz
+   https://files.pythonhosted.org/packages/source/q/quirk-scanner/quirk-scanner-X.Y.Z.tar.gz
    ```
 
    (replace `X.Y.Z` with the release version). PyPI's CDN is usually <30s
@@ -319,7 +319,7 @@ After every PyPI publish (Trusted Publishers workflow per the earlier
 2. **Compute the sdist sha256:**
 
    ```bash
-   curl -fsSL https://files.pythonhosted.org/packages/source/q/qu-i-r-k/qu-i-r-k-X.Y.Z.tar.gz \
+   curl -fsSL https://files.pythonhosted.org/packages/source/q/quirk-scanner/quirk-scanner-X.Y.Z.tar.gz \
      | shasum -a 256
    ```
 
@@ -352,7 +352,7 @@ on every `brew upgrade python@3.11`. The standard Homebrew-idiomatic answer
 for a Python CLI is a virtualenv created under the formula's `libexec`, with
 the entrypoint script symlinked into `bin` via `bin.install_symlink` — that
 is exactly what `Formula/quirk.rb` does via `Language::Python::Virtualenv`.
-The user-facing effect is identical to `pipx install qu-i-r-k`: one isolated
+The user-facing effect is identical to `pipx install quirk-scanner`: one isolated
 Python environment per CLI, no cross-contamination, clean `brew uninstall`.
 The formula also `depends_on "pipx"` so users have it available for other
 Python CLIs, matching Homebrew's published guidance for Python tooling.
@@ -405,7 +405,7 @@ rest of the release pipeline is built around:
 
 Use one of:
 
-- **`pip install qu-i-r-k[all]`** — PyPI, signed with Sigstore + Trusted
+- **`pip install quirk-scanner[all]`** — PyPI, signed with Sigstore + Trusted
   Publishers (verify with `gh attestation verify`; see the *Attestation
   Verification* section above).
 - **`brew install 0xD1g5/quirk/quirk`** — Homebrew personal tap; formula sha256
@@ -421,10 +421,10 @@ existing configuration-management tooling — Ansible, Chef, Salt, Puppet, or a
 plain shell script you author and review locally — and run `gh attestation
 verify` (for the PyPI path) as a first-class step of the playbook. Examples:
 
-- **Ansible:** `community.general.pip` module with `name: qu-i-r-k[all]`,
+- **Ansible:** `community.general.pip` module with `name: quirk-scanner[all]`,
   followed by a `command:` task that runs `gh attestation verify` against the
   installed wheel.
-- **Chef:** `python_package 'qu-i-r-k'` with an explicit version pin, followed
+- **Chef:** `python_package 'quirk-scanner'` with an explicit version pin, followed
   by a verify resource.
 - **Docker-based CI runners:** pull `ghcr.io/0xd1g5/quirk:vX.Y.Z` with a
   specific tag (not `:latest`) and verify the manifest digest in your

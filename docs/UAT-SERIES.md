@@ -9214,7 +9214,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 **Steps:**
 1. `test -f docs/upgrade-guide.md`
 2. `grep -q 'quirk db migrate' docs/upgrade-guide.md`
-3. `grep -q 'pip install -U qu-i-r-k' docs/upgrade-guide.md`
+3. `grep -q 'pip install -U quirk-scanner' docs/upgrade-guide.md`
 4. `grep -qi 'rollback' docs/upgrade-guide.md`
 5. `grep -qi 'additive' docs/upgrade-guide.md`
 
@@ -9233,7 +9233,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 3. `grep -q 'ghcr.io/0xd1g5/quirk' .github/workflows/release-container.yml`
 4. `grep -q 'packages: write' .github/workflows/release-container.yml`
 5. `grep -q 'docker/setup-qemu-action' .github/workflows/release-container.yml`
-6. Dockerfile present and contains `python:3.11-slim`, `qu-i-r-k[all]`, `USER quirk`.
+6. Dockerfile present and contains `python:3.11-slim`, `quirk-scanner[all]`, `USER quirk`.
 
 **Pass criteria:** All checks exit 0.
 
@@ -9249,7 +9249,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 2. `grep -q 'class Quirk < Formula' Formula/quirk.rb`
 3. `grep -q 'depends_on "python@3.11"' Formula/quirk.rb`
 4. `grep -q 'depends_on "pipx"' Formula/quirk.rb`
-5. `grep -q 'qu-i-r-k' Formula/quirk.rb`
+5. `grep -q 'quirk-scanner' Formula/quirk.rb`
 6. `grep -q 'test do' Formula/quirk.rb`
 7. `grep -q 'license "MIT"' Formula/quirk.rb`
 
@@ -9281,7 +9281,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 **Steps:**
 1. `grep -c 'img.shields.io' README.md` is `5` (CI + PyPI + license + Sigstore + security).
 2. `grep -q 'For the security consultant' README.md && grep -q 'For the IT generalist' README.md && grep -q 'For the compliance officer' README.md`
-3. `grep -q 'pip install qu-i-r-k\[all\]' README.md && grep -q 'quirk init' README.md && grep -q 'quirk --config config.yaml' README.md`
+3. `grep -q 'pip install quirk-scanner\[all\]' README.md && grep -q 'quirk init' README.md && grep -q 'quirk --config config.yaml' README.md`
 4. `grep -q 'docs/images/dashboard-hero.png' README.md && test -f docs/images/dashboard-hero.png`
 5. `grep -q 'Develop from source' README.md`
 6. **No stale `pip install quirk[…]`** in README.md: `! grep -E 'pip install quirk\[' README.md`
@@ -9301,7 +9301,7 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 1. `grep -q 'curl | bash Non-Decision' docs/release-process.md`
 2. `grep -qi 'anti-feature' docs/release-process.md`
 3. `grep -q 'Sigstore' docs/release-process.md`
-4. `grep -q 'pip install qu-i-r-k' docs/release-process.md`
+4. `grep -q 'pip install quirk-scanner' docs/release-process.md`
 5. `grep -q 'brew install' docs/release-process.md`
 6. `grep -q 'docker run' docs/release-process.md`
 7. `grep -qi 'permanent' docs/release-process.md`
@@ -9360,7 +9360,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 
 **Steps (run on a fresh macOS arm64 machine — VM, fresh user account, or vanilla colleague laptop):**
 1. `python3 --version` reports 3.11.x or newer.
-2. `pip install qu-i-r-k[all]` succeeds without errors (all wheels resolve, including `cryptography`).
+2. `pip install quirk-scanner[all]` succeeds without errors (all wheels resolve, including `cryptography`).
 3. `quirk --version` prints `4.10.0` (or current).
 4. `quirk init` creates a `config.yaml` in cwd with no manual editing required for a smoke run.
 5. `quirk --config config.yaml` completes a scan against the default targets (or a documented chaos-lab pointer) and exits 0.
@@ -9382,9 +9382,9 @@ These five items require live infrastructure that a CI runner / subagent worktre
 2. Cut release tag: `git tag -a v4.10.0 -m "v4.10.0 — Launch Readiness release"`.
 3. `git push origin v4.10.0`.
 4. GitHub Actions: both `release.yml` and `release-container.yml` start within 2 minutes; both complete successfully (green check).
-5. PyPI: `pip index versions qu-i-r-k` shows `4.10.0` listed within 5 minutes of workflow completion.
-6. `pip install --no-cache qu-i-r-k==4.10.0` in a fresh venv → `quirk --version` reports `4.10.0`.
-7. Sigstore: `gh attestation verify --owner 0xD1g5 dist/qu-i-r-k-4.10.0-*.whl` (after `pip download qu-i-r-k==4.10.0`) exits 0.
+5. PyPI: `pip index versions quirk-scanner` shows `4.10.0` listed within 5 minutes of workflow completion.
+6. `pip install --no-cache quirk-scanner==4.10.0` in a fresh venv → `quirk --version` reports `4.10.0`.
+7. Sigstore: `gh attestation verify --owner 0xD1g5 dist/quirk-scanner-4.10.0-*.whl` (after `pip download quirk-scanner==4.10.0`) exits 0.
 8. GHCR: `docker pull ghcr.io/0xd1g5/quirk:v4.10.0` succeeds for both `linux/amd64` and `linux/arm64` (use `docker buildx imagetools inspect ghcr.io/0xd1g5/quirk:v4.10.0` to confirm both arches).
 9. `docker run ghcr.io/0xd1g5/quirk:v4.10.0` prints the `quirk --help` output.
 
@@ -9402,7 +9402,7 @@ These five items require live infrastructure that a CI runner / subagent worktre
 **Pre-requisite:** UAT-85-11 PASS (PyPI publish must have landed so the sdist sha256 is computable).
 
 **Steps:**
-1. Compute sha256 of the published sdist: `curl -sL https://files.pythonhosted.org/packages/source/q/qu-i-r-k/qu-i-r-k-4.10.0.tar.gz | shasum -a 256` — capture the hex digest.
+1. Compute sha256 of the published sdist: `curl -sL https://files.pythonhosted.org/packages/source/q/quirk-scanner/quirk-scanner-4.10.0.tar.gz | shasum -a 256` — capture the hex digest.
 2. Create empty GitHub repo `0xD1g5/homebrew-quirk` (public, MIT or matching upstream license).
 3. Clone the new repo locally, copy `Formula/quirk.rb` from the QU.I.R.K. main repo into `Formula/quirk.rb` of the tap repo, substitute the placeholder sha256 with the digest from step 1, substitute the placeholder version with `4.10.0`, commit, push.
 4. On the test macOS arm64 machine (same as UAT-85-10 ideally): `brew tap 0xD1g5/quirk` (or `brew tap 0xD1g5/homebrew-quirk` — verify which form Homebrew expects from the install URL).

@@ -55,7 +55,7 @@ jobs:
           PYPI_VERSION: ${{ steps.ver.outputs.version }}
         run: |
           set -euo pipefail
-          url="https://pypi.org/pypi/qu-i-r-k/${PYPI_VERSION}/json"
+          url="https://pypi.org/pypi/quirk-scanner/${PYPI_VERSION}/json"
           echo "Polling ${url}"
           for attempt in $(seq 1 20); do
             if curl -fsS "${url}" > /dev/null; then
