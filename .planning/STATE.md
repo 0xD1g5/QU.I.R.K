@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 92 (v50-close-out) — EXECUTING
+Phase: 92 (v50-close-out) — COMPLETE (verified 4/4)
 Plan: 2 of 2
-Status: Phase complete — ready for verification
+Status: All v5.0 phases complete — entering milestone lifecycle (audit → complete → cleanup)
 Last activity: 2026-05-22
 
 ```
-v5.0 Progress: [████████████████░░░░] 83% (5/6 phases)
+v5.0 Progress: [████████████████████] 100% (6/6 phases)
 ```
 
 ## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
