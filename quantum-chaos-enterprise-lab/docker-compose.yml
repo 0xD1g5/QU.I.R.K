@@ -1221,6 +1221,29 @@ services:
       retries: 6
       start_period: 30s
 
+  # ── Phase 89 / LAB-05 — grpc-tls ──────────────────────────────────────────
+  # Minimal Go gRPC server (grpc-go auto-sets ALPN h2 via TLS credentials).
+  # Self-signed RSA-2048 cert → quantum-vulnerable MEDIUM finding expected.
+  # Scanner probe: sslyze direct TLS on port 39443 (CERTIFICATE_INFO + ciphers).
+  # CHAOS-05: build-only service; Dockerfile FROM golang:1.23-alpine satisfies pin gate.
+  grpc-tls:
+    build:
+      context: ../labs/grpc-tls
+      dockerfile: Dockerfile
+    profiles: ["grpc-tls"]
+    hostname: grpc-tls
+    ports:
+      - "39443:443"
+    volumes:
+      - ../labs/grpc-tls/certs/grpc-tls.crt:/tls/server.crt:ro
+      - ../labs/grpc-tls/certs/grpc-tls.key:/tls/server.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 443 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
 volumes:
   id_postgres_data:
   stepca_data:
