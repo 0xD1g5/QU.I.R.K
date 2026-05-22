@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-22T12:52:56.760Z",
+  "phase": "86",
+  "phase_name": "scoring-correctness-hotfix",
+  "phase_dir": ".planning/phases/86-scoring-correctness-hotfix",
+  "plan": null,
+  "task": null,
+  "total_tasks": 3,
+  "status": "milestone_complete",
+  "milestone": "v4.10.1",
+  "milestone_status": "shipped",
+  "completed_tasks": [
+    {"id": "86-01", "name": "Backend scoring math fix (SCORE-FIX-01..03)", "status": "done", "commit": "see SUMMARY"},
+    {"id": "86-02", "name": "Frontend gauge fix (GAUGE-01..03)", "status": "done", "commit": "see SUMMARY"},
+    {"id": "86-03", "name": "Release engineering + HUMAN-UAT (RELEASE-01..02)", "status": "done", "commit": "bce265b"}
+  ],
+  "remaining_tasks": [],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Single-phase vertical MVP slice", "rationale": "Backend math + frontend gauge + release engineering are tightly coupled; splitting would yield half-fixes that contradict each other", "phase": "86"},
+    {"decision": "Defer EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01 to v5.0 Phase 01 (Stabilization)", "rationale": "Same bug class likely exists in CLI/HTML/PDF and evidence summarizer, but a full-stack scoring sweep is the right shape; mixing into a hotfix risks shipping new bugs", "phase": "86"},
+    {"decision": "Tag v4.10.0 local-only (not pushed)", "rationale": "v4.10 distribution name was rejected by PyPI PEP 541; renamed to quirk-scanner; v4.10.0 remote tag intentionally withheld", "phase": "85"}
+  ],
+  "uncommitted_files": [".planning/STATE.md"],
+  "next_action": "Either: (a) commit STATE.md counter normalization + close the v4.10.1 milestone via /gsd-complete-milestone, OR (b) run /gsd-new-milestone v5.0 to open Stabilization with EVIDENCE-TALLY-01/RENDER-CLI-01/RENDER-PDF-01 already pre-locked as Phase 01 scope.",
+  "context_notes": "Phase 86 is fully verified (VERIFICATION.md PASSED 5/5) and HUMAN-UAT closed (PASS with gauge-color match confirmed post-hard-refresh). The session is at a clean stopping point — nothing is mid-task. STATE.md diff is purely a counter recomputation (state patch normalized total_phases from carry-over 60 → 1 to match v4.10.1's scope). Just ran /gsd-update from 1.41.2 → 1.42.3 (separate from work state). Restart Claude Code to pick up new skill definitions before resuming."
+}
