@@ -41,11 +41,30 @@ QRAMM (Quantum Readiness Assessment & Maturity Model) — 120-question maturity 
 
 ---
 
-## v5.0 — *(unscoped — candidate themes for shaping)*
+## v5.0 — Stabilization + Tech Debt Sweep *(theme selected 2026-05-22; phase decomposition pending)*
 
-The primetime bar is met. v5.0 is the first milestone of a post-launch phase — themes available depend on which value lever to push next. Three credible candidates, picked in detail at `/gsd-new-milestone` time:
+The primetime bar is met. v5.0 is the "breathe" milestone after four heavy capability cycles (v4.7 QRAMM, v4.8 13-phase Pre-Primetime, v4.9 Audit Depth, v4.10 Launch Readiness). Bundles chaos lab coverage gaps, code cleanup, dependency hygiene, and v4.10 residuals into one focused milestone instead of scattering them as tax across feature milestones. Was originally sketched as v5.2; pulled forward because four milestones in 18 days isn't sustainable.
 
-### Candidate A — Authenticated Scanning + API Surface Depth *(was the v4.9 sketch theme)*
+**Anchor items (shape at `/gsd-new-milestone` time)**
+
+| Bundle | Items |
+|---|---|
+| Chaos lab targets | BACK-80 postgres-tls + redis-tls, BACK-81 OQS-nginx PQC-hybrid (the scoring-ceiling target!), BACK-82 SMTP/STARTTLS, BACK-83 gRPC TLS, BACK-84 Kafka TLS |
+| Identity lab gap | BACK-78 identity scoring evidence keys (Kerberos KDC, SAML SP, DNSSEC zone) |
+| Code cleanup | BACK-49–57 dead code, deprecation, version drift |
+| Bookkeeping | BACK-62 Nyquist VALIDATION.md updates |
+| Dependency hygiene | BACK-67 `defusedxml.lxml` → `lxml` with manual XXE controls; Node.js 20 → 24 in `.github/workflows/release-container.yml` action versions (warning surfaced in v4.10.0 release run, deprecation deadline 2026-06-02) |
+| v4.10 residuals | Phase 42 OBS-1 CBOM Pass-1 fix (5 profiles emit zero algo components), BACK-63 score transparency, BACK-58 JWT `verify=False` docs |
+
+**Strategic centerpiece:** BACK-81 (OQS-nginx PQC-hybrid) is the only chaos lab target that scores *above* "good classical TLS" in the readiness model. It grounds the scoring ceiling in a concrete demoable artifact and makes the post-quantum side of the score real, not theoretical.
+
+**Done when:** every chaos lab profile listed above is up + scanner-verified, BACK-49–57 dead-code items are gone (CI test guards regressions), `defusedxml.lxml` migration shipped with XXE controls, Node 20 actions bumped before the 2026-06-02 GitHub deadline, and the Phase 42 OBS-1 CBOM Pass-1 fix lands so the 5 vacuously-passing profiles emit real algo components.
+
+**Risk:** doesn't move adoption forward — could feel like marking time if customer feedback arrives mid-cycle asking for capability. Mitigation: keep milestone scope tight (≤6 phases) so v5.1 capability work starts within ~2 weeks.
+
+### Deferred candidates (now v5.1 sketches) — see below
+
+#### A — Authenticated Scanning + API Surface Depth *(was the v4.9 sketch theme)*
 
 Closes the passive-only-API gap and adds an optional credential model that unlocks deeper findings across multiple scanners.
 
