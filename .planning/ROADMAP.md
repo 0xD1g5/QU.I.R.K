@@ -1867,7 +1867,13 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
   2. The scanner observes the PQC-hybrid endpoint and produces either a genuine `quantum-safe` CBOM algorithm component or a clearly-scoped advisory finding documenting the detection limitation — the outcome is pre-decided at `/gsd-discuss-phase 90` after the digest is pinned and sslyze output is observed
   3. `SCORE_WEIGHTS` gains a `pqc_hybrid_endpoint_count` evidence key with an `agility` bonus; `tests/test_score_weights_invariant.py` is updated to the new sum; a scan targeting the OQS-nginx profile scores higher on the agility dimension than an equivalent classical-TLS-only scan
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 90-01-PLAN.md — PQC-01: digest-pinned oqs-nginx chaos-lab profile serving X25519MLKEM768 (compose + nginx.conf + lab.sh + README + expected_results)
+- [ ] 90-02-PLAN.md — PQC-02: raw openssl s_client probe (capability-gated, advisory fallback), classifier alias, pqc_hybrid_endpoint_count, run_scan wiring
+- [ ] 90-03-PLAN.md — PQC-03: agility PQC-hybrid bonus (+8.0) in SCORE_WEIGHTS, invariant test updated (283.0/37), /25 clamp regression
+- [ ] 90-04-PLAN.md — Before/after demo oracle, discriminator regression test, UAT-SERIES + Obsidian phase-completion sync
 
 #### Phase 91: Code Cleanup + Bookkeeping
 
