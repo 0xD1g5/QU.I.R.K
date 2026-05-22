@@ -12,8 +12,8 @@
 
 ### Dependency Hygiene (DEP)
 
-- [ ] **DEP-01**: `.github/workflows/dashboard-quality.yml` bumps `actions/setup-node` `node-version` from `20` to `24`; the dashboard-quality CI job passes green on a real run. (GitHub runner default-switch 2026-06-16, hard removal 2026-09-16 — `release-container.yml` has no Node step.)
-- [ ] **DEP-02**: `defusedxml` removed from `pyproject.toml`. A shared `quirk/util/xml_safe.py` exposes a hardened lxml parser constant (`resolve_entities=False`, `no_network=True`, `load_dtd=False`, `huge_tree=False`); `nmap_parser.py` and `saml_scanner.py` both use it (saml_scanner's defusedxml fallback branch removed). A billion-laughs / XXE pytest asserts the payload raises rather than expands or fetches.
+- [x] **DEP-01**: `.github/workflows/dashboard-quality.yml` bumps `actions/setup-node` `node-version` from `20` to `24`; the dashboard-quality CI job passes green on a real run. (GitHub runner default-switch 2026-06-16, hard removal 2026-09-16 — `release-container.yml` has no Node step.) ✅ Node 24 verified green through Setup Node + Install + **Build + Lint** on PR #4 run 26297453788; downstream a11y/axe gate (pre-existing baseline drift, node-independent) deferred to `BACK-A11Y-01`.
+- [x] **DEP-02**: `defusedxml` removed from `pyproject.toml`. A shared `quirk/util/xml_safe.py` exposes a hardened lxml parser ~~constant~~ **factory** (`make_safe_parser()`, per decision D-04 — lxml parsers are not thread-safe) with `resolve_entities=False`, `no_network=True`, `load_dtd=False`, `dtd_validation=False`, `huge_tree=False`; `nmap_parser.py` and `saml_scanner.py` both use it (saml_scanner's defusedxml fallback branch removed). A billion-laughs / XXE pytest asserts the payload is neither expanded nor fetched — per lxml 6 (D-07) the assertion is `root.text is None` (entity dropped), the correct encoding of the same guarantee.
 
 ### Scoring Residuals (SCORE)
 
@@ -73,8 +73,8 @@
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| DEP-01 | 87 | TBD | pending |
-| DEP-02 | 87 | TBD | pending |
+| DEP-01 | 87 | 87-01 | ✅ done (989be0c, 326b247; PR #4) |
+| DEP-02 | 87 | 87-02 | ✅ done (eda16ff, d89a4c2, 2e85981) |
 | EVIDENCE-TALLY-01 | 88 | TBD | pending |
 | RENDER-CLI-01 | 88 | TBD | pending |
 | RENDER-PDF-01 | 88 | TBD | pending |

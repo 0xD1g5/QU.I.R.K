@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep
 status: executing
-last_updated: "2026-05-22T14:47:36.125Z"
-last_activity: 2026-05-22 -- Phase 87 planning complete
+last_updated: "2026-05-22T15:50:00.000Z"
+last_activity: 2026-05-22 -- Phase 87 complete (DEP-01 Node 24, DEP-02 lxml/xml_safe; verifier PASSED 6/6)
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 17
 ---
 
 # Project State
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: Not started (roadmap approved; ready to plan Phase 87)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-05-22 -- Phase 87 planning complete
+Phase: 87 (dependency-hygiene) — ✅ complete
+Plan: 87-01 ✅, 87-02 ✅ (2/2)
+Status: Phase 87 complete; next is Phase 88 (scoring-residuals)
+Last activity: 2026-05-22 -- Phase 87 complete (verifier PASSED 6/6); a11y CI gate deferred to BACK-A11Y-01
 
 ```
-v5.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0% (0/6 phases)
+v5.0 Progress: [███░░░░░░░░░░░░░░░░░] 17% (1/6 phases)
 ```
 
 ## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
