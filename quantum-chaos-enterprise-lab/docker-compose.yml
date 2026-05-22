@@ -1237,7 +1237,9 @@ services:
     volumes:
       - ./oqs-nginx/nginx.conf:/opt/nginx/nginx-conf/nginx.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 443 || exit 1"]
+      # Use 127.0.0.1 explicitly — `localhost` may resolve to ::1 in this image's
+      # /etc/hosts, but nginx listens on 0.0.0.0 (IPv4 only), so ::1 fails.
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 443 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
