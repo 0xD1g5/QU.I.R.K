@@ -17,7 +17,6 @@ class CryptoEndpoint(Base):
     protocol = Column(String(32), nullable=True)
     scanned_at = Column(DateTime, nullable=True)
 
-    # Existing fields (kept compatible with your v3.x)
     sni_used = Column(Boolean, default=False)
 
     tls_version = Column(String(64), nullable=True)
@@ -38,7 +37,7 @@ class CryptoEndpoint(Base):
     service_detail = Column(Text, nullable=True)
 
     # ==========================
-    # v3.6 TLS capability fields
+    # TLS capability fields
     # ==========================
     tls_supported_versions = Column(Text, nullable=True)        # e.g. "TLSv1,TLSv1.2,TLSv1.3"
     tls_supported_ciphers_sample = Column(Text, nullable=True)  # pipe or comma delimited
@@ -50,12 +49,12 @@ class CryptoEndpoint(Base):
     tls_capabilities_json = Column(Text, nullable=True)  # sslyze deep scan results (JSON)
 
     # ==========================
-    # v4.0 SSH audit fields
+    # SSH audit fields
     # ==========================
     ssh_audit_json = Column(Text, nullable=True)  # Full ssh-audit JSON output
 
     # ==========================
-    # v4.0 Phase 3 scanner fields
+    # Scanner fields (JWT/container/source/cloud)
     # ==========================
     jwt_scan_json = Column(Text, nullable=True)        # Full JWKS key entry JSON
     container_scan_json = Column(Text, nullable=True)   # Full syft artifact JSON
@@ -63,7 +62,7 @@ class CryptoEndpoint(Base):
     cloud_scan_json = Column(Text, nullable=True)       # Full cloud resource metadata JSON
 
     # ==========================
-    # v4.2 Identity scanner fields
+    # Identity scanner fields
     # ==========================
     kerberos_scan_json = Column(Text, nullable=True)  # Full Kerberos scan JSON
     saml_scan_json = Column(Text, nullable=True)       # Full SAML scan JSON
@@ -72,24 +71,24 @@ class CryptoEndpoint(Base):
     adcs_scan_json = Column(Text, nullable=True)       # Full AD CS scan JSON (Phase 80 ADCS-03)
 
     # ==========================
-    # v4.3 GCP connector fields
+    # GCP connector fields
     # ==========================
     gcs_scan_json = Column(Text, nullable=True)        # GCS bucket list JSON (Phase 28 hand-off)
 
     # ==========================
-    # v4.3 Data-at-Rest fields
+    # Data-at-Rest fields
     # ==========================
     dat_scan_json = Column(Text, nullable=True)  # Universal DAR scan result JSON (Phase 27+)
     severity = Column(String(16), nullable=True)  # Finding severity: HIGH, MEDIUM, LOW, INFO
 
     # ==========================
-    # v4.4 Data in Motion fields
+    # Data in Motion fields
     # ==========================
     email_scan_json = Column(Text, nullable=True)  # Per-host email port scan summary JSON (Phase 32)
     broker_scan_json = Column(Text, nullable=True)  # Phase 33 — BROKER-00 (per-scan nested broker probe summary)
 
     # ==========================
-    # v4.6 TLS finding gap fields (Phase 46)
+    # TLS finding gap fields
     # ==========================
     chain_verified = Column(Boolean, nullable=True)  # TLS-FIND-06: True/False/None per D-01
 

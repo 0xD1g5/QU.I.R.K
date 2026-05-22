@@ -135,7 +135,7 @@ def _http_probe_plain(host: str, port: int, timeout: int) -> tuple[bool, str]:
 
 def fingerprint_service(host: str, port: int, timeout: int = 3) -> Fingerprint:
     """
-    Protocol classifier v3.7.3
+    Protocol classifier
 
     Order:
       1) SSH banner (accurate, cheap)
