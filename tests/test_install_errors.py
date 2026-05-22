@@ -17,25 +17,34 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-QRK_FORMAT = re.compile(r"\[QRK-[A-Z]+-\d{3}\] .+\. Fix: .+")
+QRK_FORMAT = re.compile(r"\[QRK-[A-Z]+-[A-Z0-9-]+\] .+\. Fix: .+")
 
 
 # ---------------- unit tests (no subprocess) ----------------
 
-def test_unreadable_db_format(tmp_path):
-    """doctor_cmd._check_db returns a QRK-INSTALL-003 message for unreadable db."""
+def test_unreadable_db_format(tmp_path, monkeypatch):
+    """doctor_cmd._check_db reports an unreadable QUIRK_DB_PATH via typed dict.
+
+    Phase 75-01 (APCL-01 D-01/D-02) refactored ``_check_db`` from
+    ``(path) -> (ok, msg)`` to ``() -> {ok, detail, remediation}`` and made
+    it honor ``QUIRK_DB_PATH`` first. The QRK-INSTALL-003 string is no
+    longer part of the dict; if the wire-format prefix matters it must be
+    asserted by a separate test against the format_error registry.
+    """
     from quirk.cli import doctor_cmd
 
     db_path = tmp_path / "quirk.db"
     db_path.write_bytes(b"")
     try:
         os.chmod(db_path, 0o000)
-        ok, msg = doctor_cmd._check_db(str(db_path))
+        monkeypatch.setenv("QUIRK_DB_PATH", str(db_path))
+        result = doctor_cmd._check_db()
     finally:
         os.chmod(db_path, 0o644)
 
-    assert ok is False
-    assert "QRK-INSTALL-003" in msg, f"Expected QRK-INSTALL-003 in msg, got: {msg!r}"
+    assert result["ok"] is False
+    assert "not readable" in result["detail"]
+    assert result["remediation"]
 
 
 def test_missing_nmap_format(monkeypatch):
