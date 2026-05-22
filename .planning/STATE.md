@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
-status: verifying
-last_updated: "2026-05-22T23:41:11.996Z"
-last_activity: 2026-05-22
+status: Awaiting next milestone
+last_updated: "2026-05-22T23:52:43.267Z"
+last_activity: 2026-05-22 — Milestone v5.0 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
@@ -20,18 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 92 — v50-close-out
+**Current focus:** Planning next milestone (v5.1 — capability work resumes)
 
 ## Current Position
 
-Phase: 92 (v50-close-out) — COMPLETE (verified 4/4)
-Plan: 2 of 2
-Status: All v5.0 phases complete — entering milestone lifecycle (audit → complete → cleanup)
-Last activity: 2026-05-22
-
-```
-v5.0 Progress: [████████████████████] 100% (6/6 phases)
-```
+Phase: Milestone v5.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-22 — Milestone v5.0 completed and archived
 
 ## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
 
@@ -110,14 +106,25 @@ Theme locked in `.planning/HORIZON.md` (Candidate C, pulled forward from v5.2). 
 
 None.
 
+## Deferred Items
+
+Acknowledged and deferred at v5.0 milestone close (2026-05-22) — all non-blocking, environment-gated human-UAT (run at release dry-run before any public push):
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification (88) | CLI markdown report — Score Decomposition table visual render (six /25 rows + ÷1.5 rollup) | deferred — code 5/5 verified |
+| verification (88) | HTML report — Score Decomposition table visual render in a browser | deferred — Jinja2 context wired |
+| verification (88) | PDF report — Score Decomposition table (Playwright) | deferred — needs running server |
+| verification (89) | kerberos `identity_weak_etype_count` > 0 | deferred — needs `[identity]`/impacket + live KDC; macOS port-88 caveat. DNSSEC+SAML counters verified non-zero; wiring confirmed correct |
+
+89's original `gaps_found` bookkeeping (LAB-01/02/04/06 REQUIREMENTS rows) was retroactively closed by Phase 91 CLEAN-03. The VERIFICATION.md status strings (88 `human_needed`, 89 `gaps_found`) were left as-is for historical accuracy; the v5.0 milestone audit (PASSED) is the authoritative reconciliation.
+
 ## Session Continuity
 
 **Last session:** 2026-05-22T23:41:11.991Z
 
-**Next session:** `/gsd-plan-phase 90` — 90-CONTEXT.md is written (PQC-02 resolved via live spike: genuine raw `openssl s_client -groups X25519MLKEM768` probe, capability-gated with advisory fallback; pinned digest `sha256:6ca18ac6…`; new `pqc_hybrid_endpoint_count` + agility bonus, update test_score_weights_invariant.py sum 275/count 36). Phase 91 context is already written (CLEAN-01..04).
+**Next session:** v5.0 SHIPPED (6/6 phases, audit PASSED, local `v5.0.0` tag). Start v5.1 capability work with `/gsd-new-milestone`. SCORE_WEIGHTS invariant now at sum 283.0 / count 37 (PQC-03 added the agility bonus). 4 human-UAT deferred (see Deferred Items).
 
 ## Operator Next Steps
 
-1. `/clear` then `/gsd-plan-phase 90` (uses 90-CONTEXT.md) — and/or `/gsd-plan-phase 91` (already has context); parallel-safe.
-2. Then `/gsd-execute-phase 90` / `/gsd-execute-phase 91`.
-3. Remaining: 90 ∥ 91 → 92 (v5.0 close-out).
+- Start the next milestone with /gsd-new-milestone

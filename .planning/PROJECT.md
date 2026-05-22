@@ -147,7 +147,11 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.0 — Stabilization + Tech Debt Sweep
+## Previous Milestone: v5.0 — Stabilization + Tech Debt Sweep — SHIPPED 2026-05-22
+
+**Shipped 2026-05-22** — 6 phases (87–92), 16 plans, 21/21 requirements satisfied. Audit PASSED (4/4 integration seams, 0 blockers); local `v5.0.0` tag. Headline: a demoable post-quantum scoring ceiling (digest-pinned OQS-nginx X25519MLKEM768 hybrid profile + raw-openssl PQC probe → genuine quantum-safe CBOM component + agility bonus). Also: Node 20→24 + defusedxml→hardened-lxml; scoring transparency (six /25 subscores + ÷1.5 rollup across CLI/HTML/PDF) and the 5 zero-algo CBOM profiles fixed; 5 new weak-TLS chaos-lab profiles + identity evidence verified; vulture-confirmed dead-code cleanup + permanent conftest DB-isolation. 4 human-UAT deferred (non-blocking, environment-gated). Archive: `.planning/milestones/v5.0-ROADMAP.md` + `v5.0-REQUIREMENTS.md`. **Next:** v5.1 capability work via `/gsd:new-milestone`.
+
+<details><summary>Original v5.0 goal + scoping (historical)</summary>
 
 **Goal:** A deliberate "breathe" milestone after four heavy capability cycles (v4.7 QRAMM, v4.8 Pre-Primetime, v4.9 Audit Depth, v4.10 Launch Readiness). Close chaos-lab coverage gaps, sweep dead code and dependency hygiene, and fix the v4.10/v4.10.1 scoring residuals. No new capability surface. Numbering continues at **Phase 87**; HORIZON guardrail caps scope at **≤6 phases** so v5.1 capability work can start within ~2 weeks.
 
@@ -164,6 +168,8 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - Approach: research-first (full 4-agent sweep) → full-sweep requirements scoping, trimmed per-category to ≤6 phases.
 - BACK-81 OQS-nginx is the strategic centerpiece — grounds the post-quantum side of the score in a concrete demoable artifact.
 - **Risk (from HORIZON):** doesn't move adoption forward; could feel like marking time if customer feedback arrives mid-cycle. Mitigation: tight scope, fast turnaround.
+
+</details>
 
 ## Previous Milestone: v4.10.1 SHIPPED 2026-05-22
 

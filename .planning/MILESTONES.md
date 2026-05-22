@@ -1,5 +1,26 @@
 # Milestones
 
+## v5.0 Stabilization + Tech Debt Sweep (Shipped: 2026-05-22)
+
+**Phases completed:** 6 phases (87–92), 16 plans
+
+**Delivered:** A deliberate stabilization cycle after four heavy capability milestones — dependency hygiene, scoring correctness/transparency, chaos-lab coverage, a demoable post-quantum scoring ceiling, dead-code cleanup, and the v5.0.0 release. No new capability surface.
+
+**Key accomplishments:**
+
+- **Dependency hygiene (87):** Node 20→24 CI bump ahead of GitHub's 2026-06-16 default-switch deadline; `defusedxml` replaced by a hardened lxml `make_safe_parser()` factory (XXE/billion-laughs safe) across `nmap_parser.py` + `saml_scanner.py`.
+- **Scoring correctness + transparency (88):** single canonical scoring engine confirmed; six subscores surfaced against their /25 budget with the ÷1.5 rollup across CLI/HTML/PDF; orthogonal-subscore contract locked; five previously zero-algo CBOM profiles now emit real components or affirmative `quirk:coverage-note` markers (closes Phase 42 OBS-1).
+- **Chaos-lab expansion (89):** five new weak-TLS lab profiles (postgres-tls, redis-tls, kafka-tls, grpc-tls; smtp covered by the existing email profile); identity evidence (DNSSEC=2, SAML=2) verified end-to-end into the identity subscore, surfacing + fixing a latent Logger-API crash.
+- **Post-quantum scoring ceiling (90):** digest-pinned OQS-nginx `X25519MLKEM768` hybrid lab profile + a raw-`openssl s_client` PQC probe (outside the sslyze path) feeding a genuine quantum-safe CBOM component and an `agility` bonus — the milestone's one demoable capability anchor.
+- **Code cleanup + bookkeeping (91):** Tier-A then vulture-confirmed Tier-B dead-code removal; a permanent `conftest.py` DB-isolation fix eliminating the recurring 7-module "Multiple QU.I.R.K. DBs" collection error; JWT `verify=False` inspection-mode advisory documented in code + operator docs.
+- **v5.0.0 release (92):** version bumped to 5.0.0 (single-source pyproject), towncrier CHANGELOG + `docs/release-notes/5.0.0.md` built, UAT-SERIES + Obsidian synced, local `v5.0.0` tag created.
+
+**Audit:** PASSED — 21/21 requirements satisfied, 4/4 cross-phase integration seams verified, 0 blockers.
+
+**Known deferred items at close:** 4 human-UAT (non-blocking, environment-gated) — 88's three rendered-report visual checks (CLI/HTML/PDF Score Decomposition tables) + 89's kerberos `identity_weak_etype_count` (needs impacket + live KDC; macOS port-88 caveat). See STATE.md Deferred Items.
+
+---
+
 ## v4.10.1 Scoring Correctness Hotfix (Shipped: 2026-05-22)
 
 **Phases completed:** 1 phase, 3 plans, 6 tasks
