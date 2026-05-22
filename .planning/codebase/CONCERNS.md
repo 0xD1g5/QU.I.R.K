@@ -28,8 +28,7 @@
 
 **File:** `quirk/reports/writer.py`
 
-**Status:** Four of five originally-listed dead functions were removed in earlier phases. One remains:
-- `_extract_cert_key_type()` — confirmed dead by vulture 2.16 (60% confidence); targeted for deletion in Plan 91-02 (BACK-50 / CLEAN-02).
+**Resolved:** All five originally-listed dead functions removed. `_extract_cert_key_type()` deleted from `quirk/reports/writer.py` and `tests/test_cert_pubkey_fix.py` deleted in Plan 91-02 (BACK-50 / CLEAN-02). Unused `RichText` import also removed from writer.py:9. [CLEAN-02 resolved]
 
 ---
 
@@ -37,7 +36,7 @@
 
 **File:** `quirk/intelligence/schema.py`
 
-**Status:** Still present. Targeted for deletion in Plan 91-02 (BACK-52 / CLEAN-02). Vulture confirms `IntelligenceReport` unused. Production code returns plain dicts; schema dataclasses only used in `tests/test_intelligence_schema.py`.
+**Status:** Superseded-by-D-15 (Plan 91-02, option-a decision). Deletion of the five schema dataclasses (ScoreInputs, ScoreResult, ConfidenceResult, RoadmapItem, IntelligenceReport) was listed in BACK-52/CLEAN-02 but is blocked by the Phase 77 D-15 CI gate (`tests/test_intelligence_public_api.py`), which explicitly asserts IntelligenceReport MUST remain exported from `quirk.intelligence` and MUST NOT be deleted. BACK-52's schema-deletion portion is intentionally not executed; the schema files and their tests are PRESERVED. The D-15 guardrail remains active.
 
 ---
 
