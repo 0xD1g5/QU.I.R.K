@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
 status: executing
-last_updated: "2026-05-22T19:36:54.507Z"
-last_activity: 2026-05-22 -- Phase 89 (chaos-lab-profiles) COMPLETE; verifier PASS, 3/3 plans
+last_updated: "2026-05-22T19:51:29.052Z"
+last_activity: "2026-05-22 -- Phase 90 CONTEXT.md gathered (live OQS spike: sslyze can't see hybrid, host openssl 3.6 negotiates X25519MLKEM768 → genuine raw-probe + advisory fallback). Phase 91 context kept as-is. Phases 87/88/89 complete (3/6). Next: plan 90 ∥ 91."
 progress:
   total_phases: 6
   completed_phases: 3
@@ -112,12 +112,12 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22T16:45:47.238Z
+**Last session:** 2026-05-22T19:51:29.039Z
 
-**Next session:** `/gsd-plan-phase 88` — CONTEXT.md is written (4 areas resolved). Researcher should note CONTEXT D-03: CONCERNS.md dual-engine entry is stale (assessment engine deleted; one canonical engine `quirk/intelligence/scoring.py`).
+**Next session:** `/gsd-plan-phase 90` — 90-CONTEXT.md is written (PQC-02 resolved via live spike: genuine raw `openssl s_client -groups X25519MLKEM768` probe, capability-gated with advisory fallback; pinned digest `sha256:6ca18ac6…`; new `pqc_hybrid_endpoint_count` + agility bonus, update test_score_weights_invariant.py sum 275/count 36). Phase 91 context is already written (CLEAN-01..04).
 
 ## Operator Next Steps
 
-1. `/clear` then `/gsd-plan-phase 88` (uses 88-CONTEXT.md)
-2. Then `/gsd-execute-phase 88`
-3. Remaining: 89 + 91 (parallel) → 90 → 92
+1. `/clear` then `/gsd-plan-phase 90` (uses 90-CONTEXT.md) — and/or `/gsd-plan-phase 91` (already has context); parallel-safe.
+2. Then `/gsd-execute-phase 90` / `/gsd-execute-phase 91`.
+3. Remaining: 90 ∥ 91 → 92 (v5.0 close-out).
