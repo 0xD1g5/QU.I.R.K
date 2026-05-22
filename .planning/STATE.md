@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 91 (code-cleanup-bookkeeping) — EXECUTING
+Phase: 91 (code-cleanup-bookkeeping) — COMPLETE (verified 7/7)
 Plan: 3 of 3
-Status: Phase complete — ready for verification
+Status: Phase complete — VERIFICATION passed
 Last activity: 2026-05-22
 
 ```
-v5.0 Progress: [█████████████░░░░░░░] 67% (4/6 phases)
+v5.0 Progress: [████████████████░░░░] 83% (5/6 phases)
 ```
 
 ## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
