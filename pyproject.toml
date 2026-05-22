@@ -27,7 +27,6 @@ dependencies = [
     "dnspython[dnssec]>=2.8.0",
     "lxml>=6.0",
     "beautifulsoup4>=4.13.0",
-    "defusedxml>=0.7.1",
     "signxml>=4.4.0",
     "nh3>=0.2.17",
 ]
