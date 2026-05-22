@@ -1221,6 +1221,28 @@ services:
       retries: 6
       start_period: 30s
 
+  # ── Phase 90 / PQC-01 — oqs-nginx ─────────────────────────────────────────
+  # Digest-pinned openquantumsafe/nginx serving a TLS 1.3 endpoint that
+  # negotiates the X25519MLKEM768 hybrid KEM group (NamedGroup 4588, NIST ML-KEM).
+  # ML-DSA-65 (Dilithium) certificate from the image's bundled /opt/nginx/pki/.
+  # Scanner probe: raw openssl s_client -connect 127.0.0.1:39444 -groups X25519MLKEM768
+  #   (sslyze cannot handshake with this endpoint — see D-01 in 90-CONTEXT.md).
+  # Requires --allow-internal-targets for live QUIRK scan (loopback bind).
+  oqs-nginx:
+    image: openquantumsafe/nginx@sha256:6ca18ac692f347ea9d4c3fdab4231189f2146570cd03c4d8fb486bba208ef870
+    profiles: ["oqs-nginx"]
+    hostname: oqs-nginx
+    ports:
+      - "127.0.0.1:39444:443"
+    volumes:
+      - ./oqs-nginx/nginx.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 443 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
   # ── Phase 89 / LAB-05 — grpc-tls ──────────────────────────────────────────
   # Minimal Go gRPC server (grpc-go auto-sets ALPN h2 via TLS credentials).
   # Self-signed RSA-2048 cert → quantum-vulnerable MEDIUM finding expected.
