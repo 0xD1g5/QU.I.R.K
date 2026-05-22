@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep
-status: planning
-last_updated: "2026-05-22T00:00:00.000Z"
-last_activity: 2026-05-22
+status: Awaiting `/gsd-discuss-phase 87`
+last_updated: "2026-05-22T14:24:48.312Z"
+last_activity: 2026-05-22 — Roadmap created (6 phases, 21 requirements mapped)
 progress:
   total_phases: 6
   completed_phases: 0
@@ -49,6 +49,7 @@ Theme locked in `.planning/HORIZON.md` (Candidate C, pulled forward from v5.2). 
 | 92 | v5.0-close-out | REL-01 | All prior phases | Version 5.0.0, towncrier, tag |
 
 **Pre-locked decisions:**
+
 - Phase 88 MUST open with EVIDENCE-TALLY-01 product-decision gate + parametrized RED test suite
 - Phase 90 MUST discuss OQS image digest + detection strategy via `/gsd-discuss-phase 90` before planning
 - OQS image MUST be digest-pinned, not `:latest`
@@ -111,7 +112,7 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22 — v5.0 roadmap created. 6 phases (87–92), 21 requirements, 100% coverage. ROADMAP.md appended, STATE.md updated, REQUIREMENTS.md traceability already present.
+**Last session:** 2026-05-22T14:24:48.302Z
 
 **Next session:** `/gsd-discuss-phase 87` to discuss and confirm the two-plan structure (Node 20→24 bump | lxml/XXE migration) before planning.
 
