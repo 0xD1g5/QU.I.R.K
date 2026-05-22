@@ -204,6 +204,22 @@ each algorithm against the `algorithm-classification` ruleset and emits findings
 algorithms that fail post-quantum guidance per FIPS 203 / 204 / 205 and NIST IR 8547.
 Gated by `connectors.enable_jwt`.
 
+**Security note — `allow_insecure_jwks`:** By default the JWT scanner verifies TLS
+certificates when fetching JWKS endpoints (`allow_insecure_jwks: false`). Set
+`allow_insecure_jwks: true` only when scanning internal or dev endpoints that use
+self-signed or expired certificates. When this flag is enabled:
+
+- TLS certificate verification is disabled for JWKS fetches only (other scan phases
+  are unaffected).
+- A `HIGH` severity advisory finding (`ADVISORY_JWKS_VERIFY_DISABLED`) is automatically
+  emitted for every JWKS URL fetched, so the override is always visible in reports.
+- QUIRK remains a passive inventory tool — it does not rely on JWKS key material for
+  any authentication decision, so a MITM on the JWKS URI cannot escalate privileges.
+  The threat model accepts this for controlled assessment environments.
+
+See `docs/configuration.md` §Connectors for the full `allow_insecure_jwks` config key
+reference.
+
 #### Container scanner
 
 For each entry in `container_targets`, generates a Syft SBOM of the named Docker
