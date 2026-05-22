@@ -68,9 +68,11 @@ def test_lxml_in_core_deps():
     assert "lxml" in _core_deps_section(), "lxml not found in core dependencies"
 
 
-def test_defusedxml_in_core_deps():
-    """defusedxml must be in core deps (required by SAML scanner for XXE safety)."""
-    assert "defusedxml" in _core_deps_section(), "defusedxml not found in core dependencies"
+def test_defusedxml_not_in_core_deps():
+    """defusedxml must NOT be in core deps after Phase 87 DEP-02 migration."""
+    assert "defusedxml" not in _core_deps_section(), (
+        "defusedxml found in core dependencies — remove per Phase 87 DEP-02"
+    )
 
 
 def test_signxml_in_core_deps():
