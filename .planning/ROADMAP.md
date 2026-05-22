@@ -1553,7 +1553,9 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
   3. The HTML/Playwright-PDF report's overall readiness value matches the dashboard for the same scan ID; same fix-only-on-divergence rule
   4. `builder.py` Pass-1 emits non-empty algorithm components for all five previously-zero profiles (database, registry, source, ssh-weak, storage-s3) — or each zero-output profile has explicit documentation that its zero output is correct
   5. CLI/HTML/PDF reports and the dashboard both display the six subscore labels with their `/25` budgets so an operator can trace how the overall score was calculated
-**Plans**: TBD
+**Plans**: 2 plans (1 wave — disjoint files, fully parallel)
+  - [ ] 88-01-PLAN.md — Orthogonality lock + render parity + subscore transparency (EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01, SCORE-XPARENCY-01)
+  - [ ] 88-02-PLAN.md — CBOM Pass-1 emission + no-crypto markers for the five zero-algo profiles (SCORE-CBOM-01)
 
 #### Phase 89: Chaos Lab Profiles
 **Goal**: Five new chaos-lab profiles covering the remaining TLS-capable services (postgres-tls, redis-tls, smtp-starttls, kafka-tls, grpc-tls) are up and scanner-verified, and the identity-lab evidence gap (BACK-78) is confirmed closed — every new profile satisfies the CLAUDE.md lab-sync obligation in the same change
