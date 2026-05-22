@@ -30,6 +30,14 @@ Dashboard rebuilt: `quirk/dashboard/static/` mtime 2026-05-22 07:58
 
 ## Pre-Flight Checklist (verify before starting UAT)
 
+> **IMPORTANT — Browser cache:** If a dashboard tab is already open against an earlier
+> revision of `quirk/dashboard/static/`, the browser will keep serving the stale bundle
+> even after `quirk serve` restarts. **Close any existing dashboard tab AND open the new
+> tab with a hard refresh (Cmd+Shift+R on macOS / Ctrl+Shift+R on Linux/Windows)** before
+> running the visual walkthrough below. Encountered in Phase 86 first attempt — initial
+> screenshot showed pre-fix gauges; hard refresh produced the post-fix screenshot.
+
+
 Run each command from the QUIRK project root:
 
 ```bash
@@ -224,21 +232,24 @@ and the HTML/PDF renderers is **expected** in v4.10.1. Do NOT fail this UAT on t
 
 ```
 Date completed:      2026-05-22
-Operator:            ___
-Scan ID:             ___
+Operator:            Digs
+Scan ID:             (tls-cert-defects live scan)
 DB path:             /tmp/uat-86.db
 Dashboard URL:       http://127.0.0.1:8512/
 
-Pass Criterion 1 (Overall gauge < 100, non-EXCELLENT):    PASS / FAIL
-Pass Criterion 2 (Six subscore radials correct colors):   PASS / FAIL
-Pass Criterion 3 (Data at Rest tab parity):               PASS / FAIL
-Pass Criterion 4 (Screenshots captured):                  PASS / FAIL
+Pass Criterion 1 (Overall gauge < 100, non-EXCELLENT):    PASS
+Pass Criterion 2 (Six subscore radials correct colors):   PASS (after hard-refresh)
+Pass Criterion 3 (Data at Rest tab parity):               PASS
+Pass Criterion 4 (Screenshots captured):                  PASS — uat-86-hf2.png (post-hard-refresh)
+```
 
-**Result:** ___
+**Result:** PASS
 
 Notes:
-___
-```
+- Initial screenshot `uat-86-hf1.png` showed subscore radials still rendering with the old (red) color logic — diagnosed live as a stale browser bundle: the dashboard tab was open against the pre-rebuild static assets even though `quirk/dashboard/static/` had been refreshed by commit `620e5db`.
+- After a hard browser refresh (Cmd+Shift+R), all four pass criteria held: overall < 100 / not EXCELLENT, subscore radials correctly colored per fraction-of-25 (Hygiene=25 green, Agility=3 red, etc.), Data at Rest standalone tab gauge matches the Executive Summary radial value AND color.
+- Evidence file: `uat-86-hf2.png` (the canonical "fix verified" screenshot).
+- Follow-up captured into durable memory: the `npm run build` rebuild trap (already in `feedback_dashboard_build_required.md`) has a sibling — already-open browser tabs hold the prior bundle. Future UAT walkthroughs should start with a hard refresh as step 1.
 
 ---
 
