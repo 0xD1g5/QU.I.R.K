@@ -25,13 +25,14 @@ key_files:
     - .planning/ROADMAP.md
 decisions:
   - "D-03 honored: UAT-SERIES.md updated for v5.0 (version strings, oqs-nginx profile, Phase-89 profiles, UAT Series 92 added)"
-  - "D-02 honored: v5.0.0 tag is local annotated only; NOT pushed to origin; gated behind checkpoint:human-verify"
+  - "D-02 honored: v5.0.0 tag is local annotated only; NOT pushed to origin; gated behind checkpoint:human-verify (operator approved)"
   - "CLAUDE.md Step 4 honored: docs/UAT-SERIES.md committed via gsd-tools commit (commit 50c7623)"
   - "T-92-01 honored: Phase-92 note and UAT-SERIES.md contain no secrets or internal absolute paths"
+  - "Canonical v5.0.0 tag points at 9093bed (docs(92-02): update state and roadmap for plan completion) — the final close-out HEAD after all STATE/ROADMAP updates"
 metrics:
-  duration: "~12 minutes"
+  duration: "~20 minutes"
   completed: "2026-05-22"
-  tasks_completed: 2
+  tasks_completed: 3
   files_changed: 4
 ---
 
@@ -39,7 +40,7 @@ metrics:
 
 ## One-liner
 
-docs/UAT-SERIES.md updated to v5.0.0 and vault-synced, Phase-92 Obsidian note and Roadmap note written, and v5.0.0 tag prep confirmed — pending operator approval at the Task 3 checkpoint.
+docs/UAT-SERIES.md updated to v5.0.0 and vault-synced, Phase-92 Obsidian note and Roadmap note written, and local annotated v5.0.0 tag created at the final close-out HEAD (9093bed) — operator-approved, not pushed to origin.
 
 ## What Was Built
 
@@ -82,21 +83,24 @@ Verification:
 - `grep -q 'REL-01' ".../Phase-92-V50-Close-Out.md"` — PASS
 - `test -f "/Users/digs/vaults/Digs/20_Dev-Work/QUIRK/Roadmap.md"` — PASS
 
-### Task 3: Checkpoint prep — v5.0.0 tag (PENDING operator approval)
+### Task 3: Local annotated v5.0.0 tag — COMPLETE (operator approved)
 
-Pre-checkpoint verifications completed:
-
-- `git tag -l v5.0.0` → empty (no existing tag — orchestrator deleted the premature 92-01 tag, none re-created).
+Pre-creation verifications (continuation agent):
+- `git tag -l v5.0.0` → empty (no existing tag — orchestrator deleted the premature 92-01 tag before checkpoint).
 - `grep 'version = "5.0.0"' pyproject.toml` → MATCH.
-- `grep '## \[5.0.0\]' CHANGELOG.md` → MATCH.
-- `git log --oneline -6` → close-out commits visible on HEAD (50c7623 is the final close-out commit before the tag).
-- Working tree: only `.planning/ROADMAP.md` modified (will be committed in final metadata commit before tag).
+- Working tree: clean (no uncommitted changes).
 
-On operator approval, the tag will be created as:
+Tag created at HEAD:
 ```
 git tag -a v5.0.0 -m "QU.I.R.K. v5.0.0 — Stabilization + Tech Debt Sweep (phases 87-91); headline: OQS-nginx PQC-hybrid scoring ceiling"
 ```
-Local-only, NOT pushed. Verification after: `git tag -l v5.0.0` lists it; `git ls-remote --tags origin v5.0.0` returns nothing.
+
+Post-creation verification:
+- `git tag -l v5.0.0` → `v5.0.0` (LISTED)
+- `git rev-list -n1 v5.0.0` → `9093bedab1e8432a3a8aaedaa327e42729ef0df6` == HEAD (MATCHES)
+- `git ls-remote --tags origin v5.0.0` → empty (NOT PUSHED — confirmed local-only)
+
+**Note on tag history:** During plan 92-01 execution, a premature v5.0.0 tag was created before close-out docs were complete. The orchestrator deleted that premature tag before the checkpoint. The canonical tag created here points at `9093bed` — the final close-out commit after all STATE/ROADMAP updates were committed — and is the authoritative v5.0.0 release pointer for this local repo. Matches the established pattern of prior milestone tags (v4.10.1, v4.10.0: local-only annotated).
 
 ## Deviations from Plan
 
@@ -104,7 +108,7 @@ None — plan executed exactly as written. The Phase-89 profiles and oqs-nginx w
 
 ## Known Stubs
 
-None — UAT-92-01 tag verification case is pending the checkpoint:human-verify, which is the intended design (not a stub).
+None — all tasks complete; UAT-92-01 tag verification case is satisfied (local v5.0.0 tag confirmed present and not pushed).
 
 ## Threat Flags
 
@@ -117,6 +121,9 @@ None — Phase-92 Obsidian note and UAT-SERIES.md updates sourced exclusively fr
 - Vault UAT-Series.md exists with 5.0.0: FOUND
 - Phase-92-V50-Close-Out.md exists with REL-01: FOUND
 - Roadmap vault note exists: FOUND
-- `git tag -l v5.0.0` is empty (no premature tag): CONFIRMED
+- `git tag -l v5.0.0` → `v5.0.0`: FOUND
+- `git rev-list -n1 v5.0.0` == HEAD (9093bed): CONFIRMED
+- `git ls-remote --tags origin v5.0.0` → empty (not pushed): CONFIRMED
 - Commit 50c7623 (Task 1 — UAT-SERIES.md): FOUND
+- Commit 79e91ab (Task 2 — Obsidian notes): FOUND
 - `.planning/ROADMAP.md` updated (Phase 92 plan 02 marked complete): CONFIRMED
