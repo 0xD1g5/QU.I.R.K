@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 90 (oqs-nginx-pqc-hybrid) — EXECUTING
+Phase: 90 (oqs-nginx-pqc-hybrid) — COMPLETE (verified 9/9, gap-closed)
 Plan: 4 of 4
-Status: Phase complete — ready for verification
+Status: Phase complete — VERIFICATION passed
 Last activity: 2026-05-22
 
 ```
-v5.0 Progress: [██████████░░░░░░░░░░] 50% (3/6 phases)
+v5.0 Progress: [█████████████░░░░░░░] 67% (4/6 phases)
 ```
 
 ## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
