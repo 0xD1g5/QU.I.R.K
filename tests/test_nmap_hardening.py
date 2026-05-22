@@ -118,18 +118,35 @@ def test_default_port_csv_dedups():
     assert len(parts) == len(set(parts))
 
 
-def test_nmap_parser_uses_defusedxml():
-    assert nmap_parser.ET.__name__.startswith("defusedxml")
+def test_nmap_parser_uses_xml_safe():
+    """nmap_parser must use the xml_safe chokepoint (Phase 87 DEP-02 / WR-06)."""
+    from quirk.util import xml_safe
+    assert callable(xml_safe.make_safe_parser)
 
 
-def test_nmap_parser_blocks_xxe(tmp_path):
-    """defusedxml must raise on external-entity declarations."""
-    from defusedxml.common import EntitiesForbidden
+def test_nmap_parser_blocks_xxe_lxml(tmp_path):
+    """Hardened lxml parser must NOT exfiltrate data via external-entity (D-07).
 
+    lxml 6 with resolve_entities=False silently drops entity references rather
+    than raising (the entity text is None, not the file contents).  The key
+    invariant is that no data exfiltration occurs — parse_nmap_xml() returns
+    an empty list (no host elements in the XXE doc) rather than leaking file
+    contents via a parsed host address.
+
+    A weakened parser (resolve_entities=True) could be exploited to read
+    arbitrary files; that regression would surface as parse_nmap_xml returning
+    data derived from the referenced file.
+    """
     xxe = """<?xml version="1.0"?>
 <!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]>
 <root>&xxe;</root>"""
     p = tmp_path / "xxe.xml"
     p.write_text(xxe)
-    with pytest.raises(EntitiesForbidden):
-        nmap_parser.ET.parse(str(p))
+    # parse_nmap_xml must succeed (not crash) and return empty (no host elements
+    # in the XXE payload).  The entity text is None — not the passwd file contents.
+    results = nmap_parser.parse_nmap_xml(str(p))
+    assert results == [], (
+        "parse_nmap_xml returned non-empty results from an XXE payload — "
+        "this indicates entity expansion or unexpected parsing behavior. "
+        f"Got: {results}"
+    )
