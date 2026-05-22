@@ -581,3 +581,91 @@ single source of truth for chaos-lab state across version bumps.
 - **CHAOS-04** — Per-profile re-up regression test at `tests/test_chaos_lab_idempotency.py` discovers every profile via `docker compose config --profiles` and runs `./lab.sh up` twice per profile (one parametrized test per profile); marked `@pytest.mark.slow` and skipped cleanly when Docker is unreachable.
 - **CHAOS-05** — Image-pin CI gate at `tests/test_chaos_lab_image_pinning.py` (runs in default suite; pure `yaml.safe_load` parse); `lab.sh _validate_pinned_tags()` early-exit installed at the top of both `up)` and `all)` cases so adding `:latest` or a bare-image entry fails before any container is created.
 - **CHAOS-06** — `_derive_all_profiles()` enumerates 20 profiles including `smime` and `adcs`; oracle sections for both new profiles present above (Plan 79 + Plan 80 delivered, Plan 82-04 confirmed parity); README Profile Summary table has rows for both with their respective ports (38900, 38910) and links into this oracle.
+
+---
+
+## Profile: postgres-tls
+
+*Phase 89 / LAB-01. PostgreSQL with intentionally weak TLS — RSA key-exchange ciphers (no PFS),
+TLS 1.2 only. Scanner probe: sslyze `ProtocolWithOpportunisticTlsEnum.POSTGRES` on host port
+**39432**. Expected total: 1 HIGH + 1 MEDIUM finding.*
+
+```bash
+PROFILE_ARGS="--profile postgres-tls" ./lab.sh up
+```
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 39432 | postgres-tls (STARTTLS) | POSTGRES-TLS | `protocol=POSTGRES-TLS, service_detail=POSTGRES-TLS:5432`; risk: "Weak cipher suite on database TLS endpoint" (HIGH, TLS-03) | sslyze ProtocolWithOpportunisticTlsEnum.POSTGRES; ciphers AES128-SHA:AES256-SHA (RSA-KX, no PFS) |
+| 39432 | postgres-tls (cert) | POSTGRES-TLS | `protocol=POSTGRES-TLS`; risk: "RSA-2048 certificate (quantum-vulnerable)" (MEDIUM, TLS-02) | Self-signed RSA-2048 cert CN=postgres-tls.chaos.local |
+
+**Weak TLS knobs (`labs/postgres-tls/postgresql.conf`):**
+- `ssl_ciphers = 'AES128-SHA:AES256-SHA'` — RSA key exchange, no forward secrecy
+- `ssl_min_protocol_version = 'TLSv1.2'` / `ssl_max_protocol_version = 'TLSv1.2'` — TLS 1.2 only
+- RSA-2048 self-signed certificate (`CN=postgres-tls.chaos.local`)
+
+**Cert note:** Key is mounted at `/var/lib/postgresql/postgres-tls.key` (owned by postgres uid 999)
+to satisfy PostgreSQL's SSL key ownership requirement (Pitfall 1 in RESEARCH.md).
+
+**Reference:** Scanner: sslyze `ProtocolWithOpportunisticTlsEnum.POSTGRES`. Config: `labs/postgres-tls/postgresql.conf`. Requirement: LAB-01.
+
+---
+
+## Profile: redis-tls
+
+*Phase 89 / LAB-02. Standalone Redis with intentionally weak TLS — 3DES + RSA key-exchange
+ciphers, TLS 1.2 only. Separate from the `broker` profile. Scanner probe:
+`broker_scanner.py scan_redis_targets()` on host port **39380** (TLS) + **39379** (plaintext).
+Expected total: 2 HIGH findings.*
+
+```bash
+PROFILE_ARGS="--profile redis-tls" ./lab.sh up
+```
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 39380 | redis-tls (TLS port) | REDIS-TLS | `protocol=REDIS-TLS, service_detail=REDIS-TLS:6380`; risk: "Weak cipher suite on broker TLS endpoint" (HIGH, REDIS-01) | 3DES-SHA + RSA-KX; tls-ciphers DES-CBC3-SHA:AES128-SHA:AES256-SHA |
+| 39379 | redis-tls (plaintext port) | REDIS-PLAIN | `protocol=REDIS-PLAIN, service_detail=REDIS-PLAIN:6379`; risk: "Redis plaintext listener (no authentication)" (HIGH, REDIS-02) | broker_scanner.py L674 |
+
+**Weak TLS knobs (`labs/redis-tls/redis.conf` — mirrors `labs/broker/redis/redis.conf`):**
+- `tls-ciphers "DES-CBC3-SHA:AES128-SHA:AES256-SHA"` — 3DES + RSA key exchange
+- `tls-protocols "TLSv1.2"` — TLS 1.2 only
+- `tls-auth-clients no` — no client certificate required
+- Both plaintext port 6379 and TLS port 6380 exposed
+
+**Note:** The `broker` profile's `redis-broker` service is **unchanged**. This is a standalone
+profile providing an isolated Redis-TLS target (D-02).
+
+**Reference:** Scanner: `quirk/scanner/broker_scanner.py`. Config: `labs/redis-tls/redis.conf`. Requirement: LAB-02.
+
+---
+
+## Profile: kafka-tls
+
+*Phase 89 / LAB-04. Standalone Kafka (apache/kafka:3.9.0) with intentionally weak TLS — RSA
+key-exchange ciphers, TLS 1.2 only. KRaft mode. Scanner probe:
+`broker_scanner.py scan_kafka_targets()` on host port **39092** (PLAINTEXT) and **39093** (TLS).
+Expected total: 2 HIGH + 1 MEDIUM finding.*
+
+```bash
+PROFILE_ARGS="--profile kafka-tls" ./lab.sh up
+```
+
+| Port | Service | Expected protocol | Expected condition / tag | Notes |
+|-----:|---------|-------------------|--------------------------|-------|
+| 39092 | kafka-tls (PLAINTEXT) | KAFKA-PLAIN | `protocol=KAFKA-PLAIN, service_detail=KAFKA-PLAIN:9092`; risk: "Kafka plaintext listener detected" (HIGH, KAFKA-02) | broker_scanner.py L390 |
+| 39093 | kafka-tls (SSL) | KAFKA-TLS | `protocol=KAFKA-TLS, service_detail=KAFKA-TLS:9093`; risk: "Weak cipher suite on broker TLS endpoint" (HIGH, KAFKA-01) | TLS_RSA_WITH_AES_128/256_CBC_SHA (RSA-KX, no PFS) |
+| 39093 | kafka-tls (cert) | KAFKA-TLS | `protocol=KAFKA-TLS`; risk: "RSA-2048 certificate (quantum-vulnerable)" (MEDIUM, TLS-02) | Self-signed RSA-2048 cert CN=kafka-tls.chaos.local |
+
+**Weak TLS knobs (`labs/kafka-tls/server.properties`):**
+- `ssl.cipher.suites=TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA` — RSA key exchange, no PFS
+- `ssl.enabled.protocols=TLSv1.2` — TLS 1.2 only
+- `ssl.keystore.type=PEM` — PEM keystore (separate crt + key files)
+- Both PLAINTEXT listener (9092) and SSL listener (9093) active
+
+**Healthcheck note:** Uses PLAINTEXT port 9092 — avoids needing truststore or client cert.
+
+**Image upgrade:** `apache/kafka:3.9.0` (vs `3.7.0` in the `broker` profile). The `broker`
+profile's `kafka-broker` service is **unchanged**.
+
+**Reference:** Scanner: `quirk/scanner/broker_scanner.py`. Config: `labs/kafka-tls/server.properties`. Requirement: LAB-04.

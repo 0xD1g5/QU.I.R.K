@@ -1149,6 +1149,78 @@ services:
     ports:
       - "13447:443"
 
+  # ── Phase 89 / LAB-01 — postgres-tls ──────────────────────────────────────
+  # Weak-TLS PostgreSQL (RSA key-exchange ciphers, no PFS). Scanner probe:
+  # sslyze ProtocolWithOpportunisticTlsEnum.POSTGRES on port 39432.
+  postgres-tls:
+    image: postgres:16.6
+    profiles: ["postgres-tls"]
+    hostname: postgres-tls
+    environment:
+      POSTGRES_DB: chaos
+      POSTGRES_USER: chaos
+      POSTGRES_PASSWORD: chaos
+    volumes:
+      - ../labs/postgres-tls/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../labs/postgres-tls/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../labs/postgres-tls/certs/postgres-tls.crt:/etc/ssl/certs/postgres-tls.crt:ro
+      # Key mounted under /var/lib/postgresql/ (owned by postgres uid 999) to satisfy
+      # PostgreSQL's requirement that the SSL private key is owned by the server user.
+      - ../labs/postgres-tls/certs/postgres-tls.key:/var/lib/postgresql/postgres-tls.key:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    ports:
+      - "39432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chaos || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  # ── Phase 89 / LAB-02 — redis-tls ─────────────────────────────────────────
+  # Standalone Redis with weak TLS (3DES+RSA ciphers). Separate from broker profile.
+  # Scanner probe: broker_scanner.py scan_redis_targets() on port 39380.
+  redis-tls:
+    image: redis:7.4.1-alpine
+    profiles: ["redis-tls"]
+    hostname: redis-tls
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    ports:
+      - "39380:6380"
+      - "39379:6379"
+    volumes:
+      - ../labs/redis-tls/redis.conf:/etc/redis/redis.conf:ro
+      - ../labs/redis-tls/certs/redis-tls.crt:/etc/redis/certs/redis-tls.crt:ro
+      - ../labs/redis-tls/certs/redis-tls.key:/etc/redis/certs/redis-tls.key:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 20s
+
+  # ── Phase 89 / LAB-04 — kafka-tls ─────────────────────────────────────────
+  # Standalone Kafka with weak TLS (RSA key-exchange ciphers). apache/kafka:3.9.0.
+  # Scanner probe: broker_scanner.py scan_kafka_targets() on 39092 (PLAIN) + 39093 (TLS).
+  kafka-tls:
+    image: apache/kafka:3.9.0
+    profiles: ["kafka-tls"]
+    hostname: kafka-tls
+    ports:
+      - "39093:9093"
+      - "39092:9092"
+    volumes:
+      - ../labs/kafka-tls/server.properties:/etc/kafka/server.properties:ro
+      - ../labs/kafka-tls/certs/kafka-tls.crt:/etc/kafka/secrets/kafka-tls.crt:ro
+      - ../labs/kafka-tls/certs/kafka-tls.key:/etc/kafka/secrets/kafka-tls.key:ro
+    healthcheck:
+      # Healthcheck uses PLAINTEXT port 9092 — avoids needing truststore/client-cert.
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
 volumes:
   id_postgres_data:
   stepca_data:
