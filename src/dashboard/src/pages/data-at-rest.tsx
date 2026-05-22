@@ -298,7 +298,7 @@ export function DataAtRestPage() {
       <h1 style={{ fontSize: 20, fontWeight: 600 }}>Data at Rest</h1>
 
       <div>
-        <ScoreGauge score={darScore} label="Data at Rest" size={120} />
+        <ScoreGauge score={darScore} label="Data at Rest" size={120} maxValue={25} />
       </div>
 
       <section aria-labelledby="dar-db-heading">
