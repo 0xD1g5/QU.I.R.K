@@ -10,7 +10,7 @@
 # intentional and point at version 0.0.0 / a zero-hash so the formula is
 # unbuildable until a real release lands.
 #
-# The formula installs from PyPI (distribution name `qu-i-r-k`, NOT `quirk`)
+# The formula installs from PyPI (distribution name `quirk-scanner`, NOT `quirk`)
 # into a virtualenv under `libexec`, then symlinks the `quirk` binary into
 # `bin`. This is the Homebrew-idiomatic equivalent of a pipx-managed venv
 # (per LAUNCH-02 success criterion): one isolated Python environment per CLI,
@@ -21,7 +21,7 @@ class Quirk < Formula
   desc "Quantum Infrastructure Readiness Kit -- crypto inventory + quantum-readiness scanner"
   homepage "https://github.com/0xD1g5/QU.I.R.K."
   # RELEASE: bump url + sha256 + version on each tag
-  url "https://files.pythonhosted.org/packages/source/q/qu-i-r-k/qu-i-r-k-0.0.0.tar.gz"
+  url "https://files.pythonhosted.org/packages/source/q/quirk-scanner/quirk-scanner-0.0.0.tar.gz"
   # RELEASE: bump url + sha256 + version on each tag
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
@@ -31,7 +31,7 @@ class Quirk < Formula
 
   def install
     venv = virtualenv_create(libexec, "python3.11")
-    venv.pip_install "qu-i-r-k[all]==#{version}"
+    venv.pip_install "quirk-scanner[all]==#{version}"
     bin.install_symlink Dir["#{libexec}/bin/quirk"]
   end
 

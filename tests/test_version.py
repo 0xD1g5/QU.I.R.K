@@ -51,8 +51,8 @@ def test_intelligence_config_default_matches_pyproject():
 
 def test_distribution_name_is_canonical():
     # v4.10 D-01: the `quirk` PyPI name was claimed by an unrelated 0.1.x
-    # project, so the canonical distribution name is `qu-i-r-k`.
-    assert DIST_NAME == "qu-i-r-k"
+    # project, so the canonical distribution name is `quirk-scanner`.
+    assert DIST_NAME == "quirk-scanner"
 
 
 @pytest.mark.slow

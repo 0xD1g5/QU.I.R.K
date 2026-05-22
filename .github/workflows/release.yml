@@ -11,7 +11,7 @@
 #   1. Configure a Trusted Publisher at PyPI:
 #        https://pypi.org/manage/account/publishing/
 #      with:
-#        - PyPI project name: `qu-i-r-k` (per v4.10-D-02 in plan 84-01)
+#        - PyPI project name: `quirk-scanner` (per v4.10-D-02 in plan 84-01)
 #        - Repo owner/name:  this repository
 #        - Workflow filename: `release.yml`
 #        - Environment name:  `release`
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: release
-      url: https://pypi.org/p/qu-i-r-k
+      url: https://pypi.org/p/quirk-scanner
     permissions:
       id-token: write
       contents: read
