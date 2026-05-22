@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: 88 (scoring-residuals) — ✅ complete (verifier PASSED 5/5)
-Plan: 88-01 ✅, 88-02 ✅ (2/2)
-Status: Phases 87 & 88 ✅ complete; next is Phase 89 (or 91 — parallel-safe after 87)
-Last activity: 2026-05-22 -- Phase 88 complete; scoring orthogonal-contract locked, CBOM zero-algo closed (OBS-1), subscore transparency shipped; 3 visual render checks deferred to UAT-88-01..03
+Phase: 88 ✅ complete. Phases 89 + 91 DISCUSSED (CONTEXT.md committed for both) — running in parallel per user request.
+Plan: 89 + 91 ready to plan (no plans yet)
+Status: 87 & 88 ✅ complete; 89 (chaos-lab) + 91 (cleanup) contexts gathered, parallel-safe (v5.0-D-07); next is plan→execute both
+Last activity: 2026-05-22 -- 89 & 91 contexts gathered for a parallel run. 89: 4 new TLS profiles (smtp-starttls closed as email-covered), weak configs, custom gRPC image w/ exec-time ALPN-h2 check, identity evidence UAT. 91: Tier-A+B cleanup (listed BACK items only) + vulture report-the-rest + folded carry-ins (conftest QUIRK_DB_PATH fix, stale CONCERNS §1.11). Docker confirmed up.
 
 ```
 v5.0 Progress: [██████░░░░░░░░░░░░░░] 33% (2/6 phases)
