@@ -1,27 +1,19 @@
 """SAML/OIDC scanner module — fetches IdP metadata XML and OIDC discovery endpoints,
 extracts signing/encryption certificates and algorithm declarations."""
 
-try:
-    import lxml.etree as ET
-    def _safe_ET_fromstring(xml_bytes):  # noqa: E306
-        # Phase 52 DEBT-04: raw lxml.etree parser with security flags.
-        # resolve_entities=False blocks XXE; no_network=True blocks SSRF.
-        return ET.fromstring(
-            xml_bytes,
-            parser=ET.XMLParser(resolve_entities=False, no_network=True),
-        )
-    LXML_AVAILABLE = True
-except ImportError:
-    ET = None  # type: ignore[assignment]
-    try:
-        import defusedxml.ElementTree as _defused_stdlib_ET
-        def _safe_ET_fromstring(xml_bytes):  # noqa: E306
-            return _defused_stdlib_ET.fromstring(xml_bytes)
-        LXML_AVAILABLE = True
-    except ImportError:
-        def _safe_ET_fromstring(xml_bytes):  # noqa: E306
-            raise RuntimeError("defusedxml is not installed — SAML parsing unavailable")
-        LXML_AVAILABLE = False
+import lxml.etree as ET
+from quirk.util.xml_safe import make_safe_parser
+
+
+def _safe_ET_fromstring(xml_bytes):
+    # Phase 52 DEBT-04 / Phase 87 DEP-02: hardened lxml parser via xml_safe chokepoint.
+    # resolve_entities=False, no_network=True, load_dtd=False, dtd_validation=False,
+    # huge_tree=False — all five flags active via make_safe_parser().
+    # lxml>=6.0 is a mandatory core dep; missing lxml fails loudly (no silent downgrade).
+    return ET.fromstring(xml_bytes, parser=make_safe_parser())
+
+
+LXML_AVAILABLE = True
 
 import base64
 import json

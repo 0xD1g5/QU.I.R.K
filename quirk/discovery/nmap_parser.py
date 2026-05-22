@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
-# defusedxml per audit WR-06 — defuses XXE/billion-laughs on nmap XML output
-import defusedxml.ElementTree as ET
+from lxml import etree as ET
+from quirk.util.xml_safe import make_safe_parser
+# WR-06 mitigation: XML parsed via quirk/util/xml_safe.py hardened lxml parser
+# (resolve_entities=False, no_network=True, load_dtd=False, dtd_validation=False,
+# huge_tree=False).  Phase 87 DEP-02 migration to the xml_safe chokepoint.
+# Invariant test: tests/test_xml_safe.py::test_nmap_parser_blocks_xxe_lxml (D-07).
+# DO NOT replace make_safe_parser() with a shared parser constant — see D-04.
 
 
 @dataclass
@@ -19,7 +24,7 @@ def parse_nmap_xml(xml_path: str) -> List[NmapOpenPort]:
     Parse Nmap XML output and return a list of open ports.
     Only returns ports with state="open".
     """
-    tree = ET.parse(xml_path)
+    tree = ET.parse(xml_path, parser=make_safe_parser())
     root = tree.getroot()
 
     results: List[NmapOpenPort] = []
