@@ -754,18 +754,64 @@ this via the advisory fallback path: when the direct probe fails due to group-na
 handshake failure, the scanner emits a `PQC_HYBRID_ADVISORY` finding documenting that the endpoint
 appears to offer PQC-hybrid but the host client cannot complete the negotiation.
 
-**Expected scanner findings (Plan 90-02 detection, Plan 90-03 scoring — finalized in Plan 90-04):**
+**Expected scanner findings (finalized Plan 90-04 — D-04 before/after agility demo oracle):**
 
-> **TODO (Plans 90-02, 90-03, 90-04):** The genuine CBOM component entry and quantum-readiness
-> score impact are finalized after detection and scoring plans land. This section will be updated
-> by Plan 90-04 with the complete before/after agility contrast. Placeholder findings below
-> reflect the profile's design intent.
+#### Detection outcomes
 
-- On a host with OpenSSL >= 3.5:
-  - `PQC_HYBRID_DETECTED` — X25519MLKEM768 negotiated (POSITIVE finding; agility ceiling)
-  - CBOM component: quantum-safe hybrid KEM (X25519 + ML-KEM-768) + ML-DSA-65 cert
-  - Quantum-readiness score: HIGH (this endpoint is the "ceiling" reference in D-04)
-- On a host with OpenSSL < 3.5 (advisory path):
-  - `PQC_HYBRID_ADVISORY` — endpoint presents ML-DSA-65 cert but hybrid KEM handshake could not be completed by scanning host
+- **On a host with OpenSSL >= 3.5 (genuine-component path, verified empirically 2026-05-22):**
+  - Probe: `openssl s_client -connect 127.0.0.1:39444 -groups X25519MLKEM768 -tls1_3`
+    emits `Negotiated TLS1.3 group: X25519MLKEM768` + `Peer signature type: mldsa65`.
+  - Scanner endpoint: `protocol="TLS"`, `cipher_suite="X25519MLKEM768"`,
+    `service_detail="pqc-hybrid-detected|group=X25519MLKEM768"`.
+  - CBOM component: `quantum-safe` KEM — `x25519mlkem768` alias → existing classifier
+    entry `mlkem768x25519-sha256` → `(CryptoPrimitive.KEM, NIST Level 3, 192-bit security)`.
+  - Evidence counter: `pqc_hybrid_endpoint_count = 1`.
 
-**Requirement:** PQC-01.
+- **On a host with OpenSSL < 3.5 (advisory-fallback path):**
+  - Probe: `openssl s_client -groups X25519MLKEM768` fails handshake (no shared groups).
+  - Scanner endpoint: `protocol="ADVISORY"`, `scan_error_category="coverage_gap"`,
+    `service_detail="pqc-hybrid-detected|advisory=openssl-too-old"`.
+  - CBOM: advisory finding documenting that full detection requires OpenSSL >= 3.5 or
+    OQS-compiled tooling (non-goal, deferred to v5.1).
+  - Evidence counter: `pqc_hybrid_endpoint_count = 1` (D-05 — counter increments on both
+    genuine and advisory paths so PQC-03 scoring works regardless of host OpenSSL version).
+
+#### D-04 Agility before/after (consulting deliverable — Plan 90-03 scoring, Plan 90-04 oracle)
+
+The headline claim: **a PQC-hybrid scan scores strictly higher on the agility subscore than an
+equivalent classical-TLS-only scan.**  Verified live (2026-05-22, host OpenSSL 3.6.2):
+
+| Scenario | `pqc_hybrid_endpoint_count` | Agility subscore (/25) | Overall score |
+|----------|-----------------------------|------------------------|---------------|
+| Classical TLS only (baseline) | 0 | 18 | 83 (GOOD) |
+| PQC-hybrid endpoint present (oqs-nginx) | 1 | **25** (clamped) | 87 (EXCELLENT) |
+| **Delta** | — | **+7 visible** (+8.0 bonus, clamped at /25) | +4 |
+
+Score engine details:
+- Bonus weight: `agility_pqc_hybrid_bonus = 8.0` (SCORE_WEIGHTS key #37, Phase 90 PQC-03).
+- Invariant: sum=283.0, count=37 (`tests/test_score_weights_invariant.py`).
+- Bonus label in report drivers: `"PQC-hybrid key exchange (X25519MLKEM768)"`.
+- Clamp: existing `_apply_weighted_impacts(score_cap=25.0)` — no second clamp.
+- Orthogonal: five non-agility subscores are identical between the two scenarios.
+
+Evidence dict used for the canonical agility contrast (from `tests/test_pqc_agility_bonus.py`):
+```python
+# 2 HIGH findings out of 4 endpoints → 50% HIGH ratio → −7 agility penalty → baseline 18/25
+_base_evidence = {"finding_severity_counts": {"HIGH": 2}}
+```
+
+#### Discriminator (false-positive-free guarantee — Plan 90-04 regression test)
+
+`tests/test_pqc_discriminator.py` asserts:
+
+- **Positive arm (live, skipped when lab down):** `probe_pqc_hybrid("127.0.0.1", 39444)`
+  returns `detected=True` + `negotiated_group="X25519MLKEM768"` against the running container.
+- **Negative arm (always runs, subprocess mocked):** when `openssl s_client` output contains
+  no "Negotiated TLS1.3 group: X25519MLKEM768" line (classical TLS alert / failed handshake),
+  the probe returns `detected=False`.  A classical endpoint can never emit that line → zero
+  false positives.
+- Note: the negative arm uses mock subprocess output (not a Python `ssl.SSLContext` server)
+  because host OpenSSL 3.6.2 supports X25519MLKEM768 natively and would make a local Python
+  TLS server behaviorally identical to a PQC server.
+
+**Requirements:** PQC-01 (lab profile), PQC-02 (detection), PQC-03 (scoring).
