@@ -10,6 +10,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { LineChart, Line, XAxis, YAxis } from "recharts"
+import type { TooltipProps } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
@@ -24,6 +25,14 @@ const TIMELINE_CHART_CONFIG: ChartConfig = {
   agility_signals: { label: "Agility",        color: "hsl(28 64% 52%)" },
   data_at_rest:    { label: "Data at Rest",   color: "hsl(270 50% 60%)" },
   data_in_motion:  { label: "Data in Motion", color: "hsl(152 47% 45%)" },
+}
+
+// Shape of one timeline datum carried in the Recharts tooltip payload.
+type TimelineRow = {
+  session_ts: string; score: number;
+  hygiene: number; modern_tls: number; identity_trust: number;
+  agility_signals: number; data_at_rest: number; data_in_motion: number;
+  high: number; medium: number; low: number;
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -167,18 +176,13 @@ export function TrendsPage() {
               />
               <YAxis domain={[0, 100]} tickCount={6} />
               <ChartTooltip
-                content={(props: any) => {
+                content={(props: TooltipProps<number, string>) => {
                   if (!props.active || !props.payload || props.payload.length === 0) return null
-                  const row = props.payload[0].payload as {
-                    session_ts: string; score: number;
-                    hygiene: number; modern_tls: number; identity_trust: number;
-                    agility_signals: number; data_at_rest: number; data_in_motion: number;
-                    high: number; medium: number; low: number;
-                  }
+                  const row = props.payload[0].payload as TimelineRow
                   return (
                     <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
                       <div className="mb-1 font-medium">{new Date(row.session_ts).toLocaleString()}</div>
-                      {props.payload.map((entry: any) => (
+                      {props.payload.map((entry) => (
                         <div key={entry.dataKey} className="flex items-center gap-2">
                           <span className="inline-block h-2 w-2 rounded-sm" style={{ background: entry.color }} />
                           <span className="text-muted-foreground">{TIMELINE_CHART_CONFIG[entry.dataKey as keyof typeof TIMELINE_CHART_CONFIG]?.label ?? entry.dataKey}:</span>

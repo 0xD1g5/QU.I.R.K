@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { VALID_THEMES, getStoredTheme } from "@/components/theme-provider"
+import { VALID_THEMES, getStoredTheme } from "@/components/theme-context"
 
 // D-05 (WR-04): theme-provider must validate localStorage value against an
 // allowlist (VALID_THEMES) and silently fall back to defaultTheme on any

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { firstNonZeroComp } from "../cbom"
+import { firstNonZeroComp } from "../cbom-utils"
 
 // D-27 (IN-05): cbom.tsx must expose a firstNonZeroComp helper that
 // returns the first component with count > 0, falling back to the [0]
