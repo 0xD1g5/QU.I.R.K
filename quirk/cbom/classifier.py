@@ -127,6 +127,12 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "aes-256": (CryptoPrimitive.BLOCK_CIPHER, 1, 256),
     # chacha20-poly1305 already present above (SSH enc form without hyphen variant)
     "3des": (CryptoPrimitive.BLOCK_CIPHER, 0, 112),
+    "des": (CryptoPrimitive.BLOCK_CIPHER, 0, 56),           # DES — deprecated
+    "blowfish": (CryptoPrimitive.BLOCK_CIPHER, 0, 128),     # Blowfish — deprecated
+    "rc4": (CryptoPrimitive.STREAM_CIPHER, 0, 128),         # RC4 — deprecated
+    "md5": (CryptoPrimitive.HASH, 0, 64),                   # MD5 — deprecated
+    "md4": (CryptoPrimitive.HASH, 0, 64),                   # MD4 — deprecated
+    "aes": (CryptoPrimitive.BLOCK_CIPHER, 1, 128),          # bare AES (unspecified key size)
     "sha-1": (CryptoPrimitive.HASH, 0, 80),
     "sha-256": (CryptoPrimitive.HASH, 0, 128),
     "sha-384": (CryptoPrimitive.HASH, 2, 192),
