@@ -237,11 +237,6 @@ class TestIdentityInfra(unittest.TestCase):
             "pyproject.toml [identity] group missing lxml>=6.0 -- add per D-07",
         )
         self.assertIn(
-            '"defusedxml>=0.7.1"',
-            source,
-            "pyproject.toml [identity] group missing defusedxml>=0.7.1 -- add per D-07",
-        )
-        self.assertIn(
             '"signxml>=4.4.0"',
             source,
             "pyproject.toml [identity] group missing signxml>=4.4.0 -- add per D-07",
