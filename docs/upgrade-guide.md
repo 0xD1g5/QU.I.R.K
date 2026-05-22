@@ -58,12 +58,12 @@ Before installing the new version, complete each of the following:
 Install or upgrade from PyPI using the canonical distribution name:
 
 ```bash
-pip install -U "qu-i-r-k[all]"
+pip install -U "quirk-scanner[all]"
 ```
 
 The `[all]` extra pulls in the full set of optional connectors and report
 backends. If you previously installed a narrower extras set (for example
-`qu-i-r-k[identity]`), use the same set on upgrade — the migration step
+`quirk-scanner[identity]`), use the same set on upgrade — the migration step
 below is independent of which extras are installed.
 
 Verify the binary resolves to v4.10:
@@ -150,7 +150,7 @@ took in the pre-upgrade checklist and reinstall the previous version:
 cp quirk.db.bak-YYYYMMDD quirk.db
 
 # 3. Reinstall the previous version (replace <prev> with e.g. 4.9.0).
-pip install "qu-i-r-k[all]==<prev>"
+pip install "quirk-scanner[all]==<prev>"
 
 # 4. Confirm.
 quirk --version
