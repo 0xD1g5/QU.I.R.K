@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
-status: verifying
-last_updated: "2026-05-22T23:05:01.686Z"
+status: executing
+last_updated: "2026-05-22T23:28:33.535Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 16
+  completed_plans: 15
   percent: 83
 ---
 
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 91 — code-cleanup-bookkeeping
+**Current focus:** Phase 92 — v50-close-out
 
 ## Current Position
 
-Phase: 91 (code-cleanup-bookkeeping) — COMPLETE (verified 7/7)
-Plan: 3 of 3
-Status: Phase complete — VERIFICATION passed
+Phase: 92 (v50-close-out) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-05-22
 
 ```
@@ -112,7 +112,7 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22T23:05:01.681Z
+**Last session:** 2026-05-22T23:28:33.530Z
 
 **Next session:** `/gsd-plan-phase 90` — 90-CONTEXT.md is written (PQC-02 resolved via live spike: genuine raw `openssl s_client -groups X25519MLKEM768` probe, capability-gated with advisory fallback; pinned digest `sha256:6ca18ac6…`; new `pqc_hybrid_endpoint_count` + agility bonus, update test_score_weights_invariant.py sum 275/count 36). Phase 91 context is already written (CLEAN-01..04).
 

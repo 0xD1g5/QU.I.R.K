@@ -47,7 +47,7 @@
 
 ### Release (REL)
 
-- [ ] **REL-01**: Version bumped to `5.0.0` (SoT `pyproject.toml`); towncrier release notes built; `docs/UAT-SERIES.md` updated and synced to Obsidian; Obsidian phase/roadmap notes synced; `v5.0.0` tag created.
+- [x] **REL-01**: Version bumped to `5.0.0` (SoT `pyproject.toml`); towncrier release notes built; `docs/UAT-SERIES.md` updated and synced to Obsidian; Obsidian phase/roadmap notes synced; `v5.0.0` tag created.
 
 ---
 

@@ -1906,7 +1906,7 @@ Plans:
   4. Obsidian phase notes and the Roadmap note are synced; the `v5.0.0` tag is created
 
 **Plans**: 2 plans
-- [ ] 92-01-PLAN.md — Version bump to 5.0.0 + towncrier CHANGELOG + release notes
+- [x] 92-01-PLAN.md — Version bump to 5.0.0 + towncrier CHANGELOG + release notes
 - [ ] 92-02-PLAN.md — UAT-SERIES + Obsidian sync + local v5.0.0 tag (checkpoint)
 
 ## Progress — v5.0 Phases
@@ -1918,4 +1918,4 @@ Plans:
 | 89. Chaos Lab Profiles | 3/3 | Complete   | 2026-05-22 |
 | 90. OQS-nginx PQC-Hybrid | 4/4 | Complete   | 2026-05-22 |
 | 91. Code Cleanup + Bookkeeping | 3/3 | Complete   | 2026-05-22 |
-| 92. v5.0 Close-out | 0/2 | Not started | — |
+| 92. v5.0 Close-out | 1/2 | In Progress|  |
