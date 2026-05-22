@@ -23,6 +23,7 @@ PROFILES = [
     ("postgres-tls", "39432"),
     ("redis-tls", "39380"),
     ("kafka-tls", "39093"),
+    ("grpc-tls", "39443"),
 ]
 
 
@@ -94,6 +95,45 @@ class TestExpectedResultsSections:
         )
 
 
+class TestGrpcTlsSection:
+    """expected_results_v4.md must have a grpc-tls profile section with port 39443."""
+
+    def test_grpc_tls_section_exists(self):
+        lines = _read_lines(EXPECTED_RESULTS)
+        headers = [l.strip() for l in lines if l.startswith("## Profile:")]
+        assert "## Profile: grpc-tls" in headers, (
+            "expected_results_v4.md is missing '## Profile: grpc-tls'"
+        )
+
+    def test_grpc_tls_section_mentions_port(self):
+        lines = _read_lines(EXPECTED_RESULTS)
+        body = _section_body(lines, "## Profile: grpc-tls")
+        body_text = "\n".join(body)
+        assert "39443" in body_text, (
+            "'## Profile: grpc-tls' section does not mention host port 39443"
+        )
+
+
+class TestLab03EmailCoverage:
+    """LAB-03 STARTTLS coverage note must be present under ## Profile: email."""
+
+    def test_lab03_coverage_note_in_email_section(self):
+        lines = _read_lines(EXPECTED_RESULTS)
+        body = _section_body(lines, "## Profile: email")
+        body_text = "\n".join(body)
+        assert "LAB-03" in body_text, (
+            "'## Profile: email' section is missing the LAB-03 coverage note"
+        )
+
+    def test_lab03_port_30587_in_email_section(self):
+        lines = _read_lines(EXPECTED_RESULTS)
+        body = _section_body(lines, "## Profile: email")
+        body_text = "\n".join(body)
+        assert "30587" in body_text, (
+            "'## Profile: email' section must reference port 30587 for SMTP STARTTLS (LAB-03)"
+        )
+
+
 class TestReadmeProfileTable:
     """README.md Profile Summary table must contain a row for each new profile."""
 
@@ -113,4 +153,10 @@ class TestReadmeProfileTable:
         lines = _read_lines(README)
         assert any("kafka-tls" in l for l in lines), (
             "README.md Profile Summary table is missing a 'kafka-tls' row"
+        )
+
+    def test_grpc_tls_in_readme(self):
+        lines = _read_lines(README)
+        assert any("grpc-tls" in l for l in lines), (
+            "README.md Profile Summary table is missing a 'grpc-tls' row"
         )
