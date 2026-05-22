@@ -1795,7 +1795,7 @@ Archived to: [`.planning/milestones/v4.10.1-ROADMAP.md`](milestones/v4.10.1-ROAD
 - [x] **Phase 88: Scoring Residuals** — Evidence-tally product-decision gate, CLI/PDF render verification, CBOM Pass-1 zero-algo fix, score transparency labels ✅ 2026-05-22
 - [x] **Phase 89: Chaos Lab Profiles** — Five new lab profiles (postgres-tls, redis-tls, smtp-starttls, kafka-tls, grpc-tls) plus identity-lab evidence verification (completed 2026-05-22)
 - [x] **Phase 90: OQS-nginx PQC-Hybrid** — Digest-pinned OQS-nginx chaos lab profile, PQC-hybrid detection/advisory, and scoring-ceiling agility bonus (completed 2026-05-22)
-- [ ] **Phase 91: Code Cleanup + Bookkeeping** — Tier-A then Tier-B dead-code removal, Nyquist VALIDATION.md updates, JWT verify=False advisory
+- [x] **Phase 91: Code Cleanup + Bookkeeping** — Tier-A then Tier-B dead-code removal, Nyquist VALIDATION.md updates, JWT verify=False advisory (completed 2026-05-22)
 - [ ] **Phase 92: v5.0 Close-out** — Version bump 5.0.0, towncrier, UAT-SERIES.md, Obsidian sync, v5.0.0 tag
 
 ### v5.0 Phase Details
@@ -1891,7 +1891,7 @@ Plans:
 **Plans**: 3 plans
 - [x] 91-01-PLAN.md — Tier-A cleanup (datetime.utcnow + stale comments), conftest DB isolation, VALIDATION.md currency, stale CONCERNS.md removal, JWT verify=False advisory docs (CLEAN-01, CLEAN-03, CLEAN-04)
 - [x] 91-02-PLAN.md — Tier-B deletions (_extract_cert_key_type + intelligence schema dataclasses, vulture-confirmed) + D-02b dead-code catalogue; resolves Phase 77 D-15 vs BACK-52 conflict (CLEAN-02)
-- [ ] 91-03-PLAN.md — Phase-completion bookkeeping: Obsidian phase note + docs/UAT-SERIES.md update/sync/commit
+- [x] 91-03-PLAN.md — Phase-completion bookkeeping: Obsidian phase note + docs/UAT-SERIES.md update/sync/commit
 
 #### Phase 92: v5.0 Close-out
 
@@ -1915,5 +1915,5 @@ Plans:
 | 88. Scoring Residuals | 2/2 | ✅ Complete | 2026-05-22 |
 | 89. Chaos Lab Profiles | 3/3 | Complete   | 2026-05-22 |
 | 90. OQS-nginx PQC-Hybrid | 4/4 | Complete   | 2026-05-22 |
-| 91. Code Cleanup + Bookkeeping | 2/3 | In Progress|  |
+| 91. Code Cleanup + Bookkeeping | 3/3 | Complete   | 2026-05-22 |
 | 92. v5.0 Close-out | 0/TBD | Not started | — |
