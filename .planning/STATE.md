@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
 status: executing
-last_updated: "2026-05-22T19:51:29.052Z"
-last_activity: "2026-05-22 -- Phase 90 CONTEXT.md gathered (live OQS spike: sslyze can't see hybrid, host openssl 3.6 negotiates X25519MLKEM768 → genuine raw-probe + advisory fallback). Phase 91 context kept as-is. Phases 87/88/89 complete (3/6). Next: plan 90 ∥ 91."
+last_updated: "2026-05-22T20:37:11.245Z"
+last_activity: 2026-05-22
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 11
+  completed_plans: 8
   percent: 50
 ---
 
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v5.0 Stabilization — Phases 87, 88, 89 complete (3/6); next is Phase 90 (oqs-nginx-pqc-hybrid) ∥ Phase 91 (code-cleanup-bookkeeping).
+**Current focus:** Phase 90 — oqs-nginx-pqc-hybrid
 
 ## Current Position
 
-Phase: 89 — ✅ COMPLETE (verifier PASS; 3/3 plans merged to main)
-Plan: 3 of 3 complete
-Status: Phase 89 complete. LAB-01..06 closed (LAB-03 closed-covered-by-email; kerberos etype counter deferred to HUMAN-UAT — needs impacket + live KDC). End-to-end identity verification surfaced + fixed a latent custom-Logger crash (quirk/logging_util.py, commit 5d22d98) that silently zeroed identity counters.
-Last activity: 2026-05-22 -- Phase 89 complete. 4 new chaos-lab profiles (postgres-tls/redis-tls/kafka-tls weak-TLS + grpc-tls ALPN-h2); identity evidence (dnssec=2, saml=2) live-verified into the subscore. Next: 90 (discuss OQS strategy before planning) and 91 (cleanup); 90 depends on 88, 91 parallel-safe.
+Phase: 90 (oqs-nginx-pqc-hybrid) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-05-22
 
 ```
 v5.0 Progress: [██████████░░░░░░░░░░] 50% (3/6 phases)
@@ -112,7 +112,7 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22T19:51:29.039Z
+**Last session:** 2026-05-22T20:37:11.241Z
 
 **Next session:** `/gsd-plan-phase 90` — 90-CONTEXT.md is written (PQC-02 resolved via live spike: genuine raw `openssl s_client -groups X25519MLKEM768` probe, capability-gated with advisory fallback; pinned digest `sha256:6ca18ac6…`; new `pqc_hybrid_endpoint_count` + agility bonus, update test_score_weights_invariant.py sum 275/count 36). Phase 91 context is already written (CLEAN-01..04).
 

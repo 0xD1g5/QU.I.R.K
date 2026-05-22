@@ -35,7 +35,7 @@
 ### Post-Quantum Scoring Ceiling (PQC)
 
 - [ ] **PQC-01**: `oqs-nginx` chaos-lab profile using `openquantumsafe/nginx` **pinned by image digest** (not `:latest` — group names rename across oqs-provider releases), serving an X25519MLKEM768 hybrid endpoint; same lab-sync obligations.
-- [ ] **PQC-02**: The scanner observes and classifies the PQC-hybrid endpoint. Detection strategy (raw `ssl.SSLContext`/`curl --curves` probe vs. an ADVISORY finding documenting that full detection needs an OQS-compiled sslyze) is resolved at `/gsd-discuss-phase 90` after the image digest is pinned and sslyze's actual output is observed. Outcome: either a genuine `quantum-safe` CBOM component or a clearly-scoped advisory.
+- [x] **PQC-02**: The scanner observes and classifies the PQC-hybrid endpoint. Detection strategy (raw `ssl.SSLContext`/`curl --curves` probe vs. an ADVISORY finding documenting that full detection needs an OQS-compiled sslyze) is resolved at `/gsd-discuss-phase 90` after the image digest is pinned and sslyze's actual output is observed. Outcome: either a genuine `quantum-safe` CBOM component or a clearly-scoped advisory.
 - [ ] **PQC-03**: The readiness model reflects PQC-hybrid as the scoring ceiling — a new `pqc_hybrid_endpoint_count` evidence counter and an `agility` bonus in `SCORE_WEIGHTS`, with `tests/test_score_weights_invariant.py` updated. Sequenced AFTER the SCORE phase so the invariant-sum changes don't collide.
 
 ### Code Cleanup & Bookkeeping (CLEAN)
