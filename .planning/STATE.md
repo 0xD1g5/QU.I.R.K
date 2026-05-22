@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v5.0
-milestone_name: Stabilization + Tech Debt Sweep
+milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
 status: executing
-last_updated: "2026-05-22T15:50:00.000Z"
-last_activity: 2026-05-22 -- Phase 87 complete (DEP-01 Node 24, DEP-02 lxml/xml_safe; verifier PASSED 6/6)
+last_updated: "2026-05-22T16:45:47.250Z"
+last_activity: 2026-05-22 -- Phase 88 context gathered (4 areas; EVIDENCE-TALLY-01 resolved correct-by-design)
 progress:
   total_phases: 6
   completed_phases: 1
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** v5.0 Stabilization + Tech Debt Sweep — roadmap created 2026-05-22; 6 phases (87–92); ready for `/gsd-discuss-phase 87`.
+**Current focus:** v5.0 Stabilization + Tech Debt Sweep — Phase 87 complete; Phase 88 context gathered, ready to plan.
 
 ## Current Position
 
-Phase: 87 (dependency-hygiene) — ✅ complete
-Plan: 87-01 ✅, 87-02 ✅ (2/2)
-Status: Phase 87 complete; next is Phase 88 (scoring-residuals)
-Last activity: 2026-05-22 -- Phase 87 complete (verifier PASSED 6/6); a11y CI gate deferred to BACK-A11Y-01
+Phase: 88 (scoring-residuals) — context gathered (CONTEXT.md written)
+Plan: not yet planned; next is `/gsd-plan-phase 88`
+Status: Phase 87 ✅ complete (2/2); Phase 88 discussed (4 areas resolved)
+Last activity: 2026-05-22 -- Phase 88 context gathered; EVIDENCE-TALLY-01 resolved correct-by-design (orthogonal subscores), overall critical-cap deferred
 
 ```
 v5.0 Progress: [███░░░░░░░░░░░░░░░░░] 17% (1/6 phases)
@@ -112,12 +112,12 @@ None.
 
 ## Session Continuity
 
-**Last session:** 2026-05-22T14:24:48.302Z
+**Last session:** 2026-05-22T16:45:47.238Z
 
-**Next session:** `/gsd-discuss-phase 87` to discuss and confirm the two-plan structure (Node 20→24 bump | lxml/XXE migration) before planning.
+**Next session:** `/gsd-plan-phase 88` — CONTEXT.md is written (4 areas resolved). Researcher should note CONTEXT D-03: CONCERNS.md dual-engine entry is stale (assessment engine deleted; one canonical engine `quirk/intelligence/scoring.py`).
 
 ## Operator Next Steps
 
-1. Run `/gsd-discuss-phase 87` to confirm Phase 87 two-plan structure
-2. Then `/gsd-plan-phase 87` → `/gsd-execute-phase 87`
-3. Phases 88 → 89 + 91 (parallel) → 90 → 92
+1. `/clear` then `/gsd-plan-phase 88` (uses 88-CONTEXT.md)
+2. Then `/gsd-execute-phase 88`
+3. Remaining: 89 + 91 (parallel) → 90 → 92
