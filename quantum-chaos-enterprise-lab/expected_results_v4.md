@@ -787,6 +787,13 @@ equivalent classical-TLS-only scan.**  Verified live (2026-05-22, host OpenSSL 3
 | PQC-hybrid endpoint present (oqs-nginx) | 1 | **25** (clamped) | 87 (EXCELLENT) |
 | **Delta** | — | **+7 visible** (+8.0 bonus, clamped at /25) | +4 |
 
+> **Live-run footnote (2026-05-22):** The human-verified live scan of the `tls-modern` classical
+> baseline measured an agility subscore of **17** (RSA-only TLS posture on that specific scan
+> context), whereas the canonical oracle documents **18** (derived from a 50% HIGH finding ratio
+> with 4 endpoints in `tests/test_pqc_agility_bonus.py`). The PQC uplift claim holds either way:
+> the live oqs-nginx scan returned agility **25**, strictly exceeding both 17 and 18.  The 18 row
+> above remains the canonical documented reference for the before/after demo.
+
 Score engine details:
 - Bonus weight: `agility_pqc_hybrid_bonus = 8.0` (SCORE_WEIGHTS key #37, Phase 90 PQC-03).
 - Invariant: sum=283.0, count=37 (`tests/test_score_weights_invariant.py`).
