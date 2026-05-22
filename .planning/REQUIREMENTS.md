@@ -93,6 +93,6 @@
 | CLEAN-02 | 91 | 91-02 | ✅ done (d027474, 6fd5f98) — _extract_cert_key_type + RichText deleted (BACK-50); BACK-52 schema portion superseded-by-D-15 (option-a: IntelligenceReport preserved per Phase 77 D-15 CI gate); D-02b vulture catalogue at docs/dead-code-candidates.md |
 | CLEAN-03 | 91 | 91-01 | ✅ done (7ea806a, 89e8063) — conftest DB isolation; VALIDATION.md frontmatter updated; CONCERNS.md stale entries annotated |
 | CLEAN-04 | 91 | 91-01 | ✅ done (89e8063) — JWT allow_insecure_jwks documented in operators-guide.md + configuration.md |
-| REL-01 | 92 | TBD | pending |
+| REL-01 | 92 | 92-01, 92-02 | ✅ done — v5.0.0 bump (SoT pyproject) + towncrier CHANGELOG + release-notes/5.0.0.md + UAT-SERIES/Obsidian sync + local v5.0.0 tag |
 
 **Coverage:** 21 requirements across 6 phases (87–92). Final phase/plan mapping set by the roadmapper.
