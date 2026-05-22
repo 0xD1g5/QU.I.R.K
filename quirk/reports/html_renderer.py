@@ -4,7 +4,6 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-import pypdf
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from quirk.util.safe_exc import safe_str
@@ -220,7 +219,13 @@ def _inject_pdf_metadata(pdf_path: str) -> None:
     locked module-level constants, and overwrite the file. This preserves the
     locked Playwright context (JS disabled, offline, CSP enforced) and adds
     Author as a deterministic post-render step.
+
+    pypdf is imported lazily so that `pip install quirk-scanner` (without the
+    `[dashboard]` extra) does not break the always-imported report module
+    chain — this function is only ever called from render_pdf_report, which
+    short-circuits on missing Playwright.
     """
+    import pypdf
     reader = pypdf.PdfReader(pdf_path)
     writer = pypdf.PdfWriter()
     for page in reader.pages:
