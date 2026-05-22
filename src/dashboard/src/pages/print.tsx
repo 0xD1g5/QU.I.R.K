@@ -337,7 +337,6 @@ export function PrintPage() {
 
   // QRAMM hook errors should not block the rest of the PDF — log and render the no-session fallback in that section.
   if (qrammError) {
-    // eslint-disable-next-line no-console
     console.error("QRAMM print data error:", qrammError)
   }
 

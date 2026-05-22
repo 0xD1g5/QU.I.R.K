@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { coerceErrorDetail } from "@/pages/executive"
+import { coerceErrorDetail } from "@/pages/executive-utils"
 
 // D-02 (WR-06): defensive coercion of unknown response body shapes
 // to a non-undefined, non-throwing string suitable for surfacing
