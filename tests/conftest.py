@@ -1,5 +1,38 @@
 """Shared fixtures for dashboard test suite."""
+import os
+import tempfile
+
 import pytest
+
+# ---------------------------------------------------------------------------
+# CLEAN-03 D-03a: Collection-time QUIRK_DB_PATH isolation
+#
+# quirk/dashboard/api/app.py has a module-level `app = create_app()` call that
+# triggers _default_db_path() in quirk/dashboard/api/deps.py during pytest
+# collection (before any fixture can run). When multiple stale *.db files exist
+# in the working tree, _default_db_path() raises ValueError("Multiple QU.I.R.K.
+# DBs found"), causing 7 test modules to fail collection.
+#
+# Setting QUIRK_DB_PATH at conftest.py import time (before test modules are
+# collected) side-steps the resolver entirely. The autouse fixture below then
+# isolates each test to its own tmp_path DB so no test can pollute another.
+# ---------------------------------------------------------------------------
+if not os.environ.get("QUIRK_DB_PATH"):
+    _CONFTEST_TMP_DIR = tempfile.mkdtemp(prefix="quirk_conftest_")
+    os.environ["QUIRK_DB_PATH"] = os.path.join(_CONFTEST_TMP_DIR, "quirk_collection.db")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_quirk_db(tmp_path, monkeypatch):
+    """CLEAN-03 D-03a: Point QUIRK_DB_PATH at an isolated tmp_path DB.
+
+    Prevents _default_db_path() in quirk/dashboard/api/deps.py from raising
+    'Multiple QU.I.R.K. DBs found' when stale scan DBs exist in the working tree.
+    Applies to ALL tests automatically; does not affect tests that mock get_db
+    via FastAPI dependency injection (e.g. dashboard_client()), which bypass
+    _default_db_path() entirely.
+    """
+    monkeypatch.setenv("QUIRK_DB_PATH", str(tmp_path / "quirk_test.db"))
 
 
 # ---------------------------------------------------------------------------
