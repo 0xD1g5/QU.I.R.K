@@ -172,6 +172,28 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
             lines.append(f"- {md_cell(d['reason'])} (**-{d['points']}**)")
 
     lines.append("")
+
+    # D-07 / SCORE-XPARENCY-01: subscore decomposition in executive markdown
+    _SUBSCORE_LABELS = [
+        ("hygiene",         "Hygiene"),
+        ("modern_tls",      "Modern TLS"),
+        ("identity_trust",  "Identity"),
+        ("agility_signals", "Agility"),
+        ("data_at_rest",    "Data at Rest"),
+        ("data_in_motion",  "Data in Motion"),
+    ]
+    subscores = score_raw.get("subscores") or {}
+    lines.append("### Score Decomposition")
+    lines.append("")
+    lines.append("| Category | Score | Budget |")
+    lines.append("|----------|-------|--------|")
+    for key, label in _SUBSCORE_LABELS:
+        lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
+    raw_sum = sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
+    lines.append("")
+    lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
+    lines.append("")
+
     lines.append("## Confidence & Coverage")
     lines.append(
         f"- **Confidence:** **{conf_raw['confidence_rating']}** ({conf_raw['confidence_score']}/100)"
