@@ -43,7 +43,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 ## Phases
 
 - [x] **Phase 93: Credential Infrastructure** - Ephemeral credential model (Bearer/OAuth2, API key, HTTP Basic) with committed security-review gate deliverable (completed 2026-05-23)
-- [ ] **Phase 94: OpenAPI & Bearer Token Analysis** - Passive spec parsing + bearer token classify/decode; `[api]` extras group introduced
+- [x] **Phase 94: OpenAPI & Bearer Token Analysis** - Passive spec parsing + bearer token classify/decode; `[api]` extras group introduced (completed 2026-05-23)
 - [ ] **Phase 95: Code-Signing Certificate Inventory** - LDAP `userCertificate` + TLS EKU code-signing discovery; zero new core deps
 - [ ] **Phase 96: Active REST Fuzzing** - Gated crypto-posture fuzzer with six mandatory guardrails + alg-confusion sub-flag; ships last
 
@@ -79,7 +79,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 **Plans**: 3 plans
 - [x] 94-01-PLAN.md — analyze-token command (TOKEN-01/03) + CBOM bearer classification (TOKEN-02) + SCORE_WEIGHTS +10.0 (SCORE-01) [TOKEN-01, TOKEN-02, TOKEN-03, SCORE-01]
 - [x] 94-02-PLAN.md — OpenAPI scanner with SSRF/DoS/scope hardening (SPEC-01/02/03) + [api] extras & schemathesis CI guard (PKG-01) [SPEC-01, SPEC-02, SPEC-03, PKG-01]
-- [ ] 94-03-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [all]
+- [x] 94-03-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [all]
 
 ### Phase 95: Code-Signing Certificate Inventory
 **Goal**: Users can inventory code-signing certificates discovered from LDAP and from existing TLS cert captures, with weak-algorithm findings and fingerprint-based CBOM de-duplication
@@ -109,6 +109,6 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 93. Credential Infrastructure | v5.1 | 4/4 | Complete   | 2026-05-23 |
-| 94. OpenAPI & Bearer Token Analysis | v5.1 | 2/3 | In Progress|  |
+| 94. OpenAPI & Bearer Token Analysis | v5.1 | 3/3 | Complete   | 2026-05-23 |
 | 95. Code-Signing Certificate Inventory | v5.1 | 0/TBD | Not started | - |
 | 96. Active REST Fuzzing | v5.1 | 0/TBD | Not started | - |
