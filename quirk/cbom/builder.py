@@ -679,6 +679,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
         if ep.protocol in (
             "SSH", "BEARER_TOKEN", "JWT", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC", "SMIME", "ADCS",
             "CODE_SIGNING",
+            "REST_FUZZ",  # Phase 96 FUZZ-01: no X.509 cert — active fuzz findings carry no TLS metadata
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
@@ -686,6 +687,8 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             # their algorithm was already registered in Pass 1.
             # CODE_SIGNING (Phase 95 CSIGN-03): cert components emitted in the fingerprint
             # dedup pass below, not here, to enable TLS-wins cross-source reconciliation.
+            # REST_FUZZ (Phase 96 FUZZ-01): active fuzz findings carry no TLS metadata;
+            # skipped here to prevent phantom crypto/protocol/tls/* components.
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -875,6 +878,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
         elif ep.protocol in (
             "JWT", "BEARER_TOKEN", "CONTAINER", "SOURCE", "AWS", "AZURE",
             "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS", "CODE_SIGNING",
+            "REST_FUZZ",  # Phase 96 FUZZ-01: no ProtocolProperties; skipped to prevent phantom protocol:tls components
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
@@ -882,6 +886,8 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             # BEARER_TOKEN added Phase 94 TOKEN-02: no ProtocolProperties (bearer is not a transport protocol).
             # CODE_SIGNING (Phase 95 CSIGN-03): no ProtocolProperties; cert dedup handled below Pass-2.
+            # REST_FUZZ (Phase 96 FUZZ-01): active fuzz findings carry no TLS metadata; skipped here
+            # to prevent phantom crypto/protocol/tls/{host}:{port} CBOM components.
             continue
 
         else:
