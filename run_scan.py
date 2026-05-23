@@ -480,6 +480,12 @@ def main():
             return
         # Future: other `quirk qramm <action>` subcommands route here.
 
+    # --- analyze-token subcommand: intercept before scan argparse (Phase 94 TOKEN-01) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "analyze-token":
+        from quirk.cli.analyze_token_cmd import run_analyze_token
+        run_analyze_token(_sys.argv[2:])
+        return
+
     # --- errors subcommand: intercept before scan argparse (Phase 68 UX-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "errors":
         from quirk.cli.errors_cmd import run_errors
