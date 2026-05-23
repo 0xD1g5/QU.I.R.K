@@ -80,7 +80,7 @@ def test_local_file_parse(tmp_path):
     """A local OAS 3.0 YAML file yields CryptoEndpoint rows.
 
     Expects:
-    - Security scheme rows (protocol="OpenAPI")
+    - Security scheme rows (protocol="OPENAPI")
     - A plaintext http:// server row (service_detail contains "plaintext_server")
     - An unauthenticated endpoint row (service_detail contains "unauthenticated")
     """
@@ -94,7 +94,7 @@ def test_local_file_parse(tmp_path):
     assert len(endpoints) > 0, "Expected at least one CryptoEndpoint from the spec"
 
     protocols = {ep.protocol for ep in endpoints}
-    assert "OpenAPI" in protocols, f"Expected protocol='OpenAPI' among endpoints; got {protocols}"
+    assert "OPENAPI" in protocols, f"Expected protocol='OPENAPI' among endpoints; got {protocols}"
 
     service_details = {ep.service_detail for ep in endpoints}
 
@@ -201,7 +201,7 @@ def test_missing_extra_degrades():
     assert ep.scan_error_category == "missing_extra", (
         f"Expected scan_error_category='missing_extra', got {ep.scan_error_category!r}"
     )
-    assert ep.protocol == "OpenAPI"
+    assert ep.protocol == "OPENAPI"
 
 
 # ---------------------------------------------------------------------------
@@ -222,3 +222,33 @@ def test_openapi_plaintext_server_evidence_counter(tmp_path):
     assert evidence["openapi_plaintext_server_count"] >= 1, (
         f"Expected openapi_plaintext_server_count >= 1; got {evidence['openapi_plaintext_server_count']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# CR-01 regression: bare-FQDN targets must match a full URL by HOST (not prefix)
+# ---------------------------------------------------------------------------
+
+def test_url_scope_accepts_bare_fqdn_target():
+    """A URL whose host is in bare-FQDN cfg.targets passes the scope gate (CR-01).
+
+    Regression for the prefix-match bug: cfg.targets are bare FQDNs like
+    'api.example.com', which never prefix-match 'https://api.example.com/...'.
+    The scope gate must compare HOSTS. We mock httpx.get so the request is
+    intercepted AFTER the scope gate has been passed.
+    """
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+
+    url = "https://api.example.com/openapi.yaml"
+    cfg_targets = ["api.example.com"]  # bare FQDN — the real cfg.targets.fqdns shape
+
+    mock_resp = MagicMock()
+    mock_resp.content = b"openapi: 3.0.0\ninfo:\n  title: t\n  version: '1'\npaths: {}\n"
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("httpx.get", return_value=mock_resp) as mock_get:
+        # Should NOT raise a scope error; httpx.get must be reached.
+        try:
+            scan_openapi_spec(url, cfg_targets=cfg_targets)
+        except SpecParsingError as exc:
+            assert "scope" not in str(exc).lower(), f"scope gate wrongly rejected in-scope host: {exc}"
+        mock_get.assert_called_once()
