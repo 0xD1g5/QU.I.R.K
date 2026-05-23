@@ -330,8 +330,11 @@ def build_evidence_summary(
             # Increment when the scanner embedded a "weak" token in service_detail —
             # set by codesign_scanner._classify_codesign_severity() for HIGH findings
             # (RSA<2048, EC<256, SHA-1).  SAFE endpoints carry no "weak" token.
-            _cs_detail = str(getattr(ep, "service_detail", "") or "").lower()
-            if "weak" in _cs_detail:
+            # WR-03: match the delimited "|weak" token, not a bare "weak" substring —
+            # otherwise a subject DN like "CN=weak-signing-lab" embedded in service_detail
+            # would false-positive. The scanner appends "|weak" only for HIGH findings.
+            _cs_segments = str(getattr(ep, "service_detail", "") or "").lower().split("|")
+            if "weak" in _cs_segments:
                 codesign_weak_algo_count += 1
 
         # ---- Motion (Phase 34) — broker plaintext listeners ----

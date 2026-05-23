@@ -195,3 +195,53 @@ def test_cbom_tls_plus_codesign_no_dup():
         f"TLS + CODE_SIGNING for same cert (same surrogate key) must produce exactly 1 cert component, "
         f"got {cert_count}. TLS-derived component must win; CODE_SIGNING must annotate, not duplicate."
     )
+
+
+# ---------------------------------------------------------------------------
+# CR-01 regression: cross-source dedup must work on the REAL scanner output
+# shape (not a MagicMock). A TLS endpoint with the CodeSigning EKU, run through
+# scan_codesign_from_tls_endpoints, must dedup against its own TLS cert component.
+# ---------------------------------------------------------------------------
+
+def test_cbom_tls_plus_codesign_real_scanner_shape_no_dup():
+    """The TLS-EKU scanner output must carry cert_subject/cert_not_after so the
+    surrogate-key dedup fires — proving CSIGN-03 works in production, not just
+    with a hand-built mock (CR-01)."""
+    import json
+    from datetime import datetime
+    from quirk.scanner.codesign_scanner import scan_codesign_from_tls_endpoints
+
+    not_after = datetime(2030, 1, 1, 0, 0, 0)
+    tls_ep = CryptoEndpoint(
+        host="signed.corp.com",
+        port=443,
+        protocol="TLS",
+        cert_subject="CN=signed.corp.com,O=Corp",
+        cert_pubkey_alg="RSA",
+        cert_pubkey_size=2048,
+        cert_sig_alg="sha256",
+        cert_not_after=not_after,
+        tls_capabilities_json=json.dumps({"eku_oids": ["1.3.6.1.5.5.7.3.3"]}),
+    )
+
+    # Real scanner path — emits a CODE_SIGNING endpoint carrying the surrogate fields.
+    code_eps = scan_codesign_from_tls_endpoints([tls_ep])
+    assert len(code_eps) == 1, "TLS endpoint with CodeSigning EKU should emit one CODE_SIGNING endpoint"
+    code_ep = code_eps[0]
+    # CR-01: the emitted endpoint must carry the surrogate ORM columns.
+    assert str(code_ep.cert_subject or "") == "CN=signed.corp.com,O=Corp"
+    assert code_ep.cert_not_after == not_after
+
+    # Both endpoints into the CBOM → exactly ONE cert component (TLS wins, annotated).
+    bom = build_cbom([tls_ep, code_ep])
+    cert_components = [
+        c for c in (bom.components or [])
+        if str(getattr(c.bom_ref, "value", "") or "").startswith("crypto/certificate/")
+    ]
+    assert len(cert_components) == 1, (
+        f"expected 1 cert component (cross-source dedup), got {len(cert_components)}: "
+        f"{[getattr(c.bom_ref, 'value', None) for c in cert_components]}"
+    )
+    # The surviving component is annotated with the code-signing EKU property.
+    props = {p.name: p.value for p in (cert_components[0].properties or [])}
+    assert props.get("quirk:code-signing-eku") == "true"
