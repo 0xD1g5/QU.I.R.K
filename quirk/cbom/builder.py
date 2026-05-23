@@ -737,31 +737,20 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     #       CODE_SIGNING endpoint annotates it with a CycloneDX Property
     #       ("quirk:code-signing-eku" = "true") rather than emitting a new
     #       cert component.
+    # Build a surrogate-key → cert-component index from the TLS-derived certs
+    # emitted in Pass 2. Only TLS endpoints carry the (subject, alg, not_after)
+    # metadata used by this dedup; restrict to them with an explicit allow-list
+    # (an exclusion list would silently break if a new cert-emitting protocol
+    # were added — WR-02).
+    _TLS_CERT_SOURCE_PROTOCOLS = ("TLS",)
     _tls_surrogate_index: dict[tuple[str, str, str], Component] = {}
-    for c in cert_components:
-        cert_props_obj = getattr(c.crypto_properties, "certificate_properties", None)
-        if cert_props_obj is None:
-            continue
-        subj = str(getattr(cert_props_obj, "subject_name", "") or "").strip()
-        # Derive alg from component name: "cert:<host>:<port>" — we cannot recover
-        # cert_pubkey_alg from the bom_ref alone, so instead we'll re-scan endpoints.
-    # Re-build from TLS endpoints directly (simpler and authoritative).
-    _tls_surrogate_index = {}
     for ep in endpoints:
-        if ep.protocol not in ("TLS",) and ep.protocol in (
-            "SSH", "BEARER_TOKEN", "JWT", "CONTAINER", "SOURCE", "KERBEROS", "SAML",
-            "DNSSEC", "SMIME", "ADCS", "CODE_SIGNING",
-            *DAR_SKIP_PROTOCOLS,
-            *MOTION_PLAINTEXT_PROTOCOLS,
-        ):
+        if ep.protocol not in _TLS_CERT_SOURCE_PROTOCOLS:
             continue
-        if ep.protocol == "CODE_SIGNING":
-            continue
-        # TLS (and any other cert-emitting protocol from Pass-2)
         key = _tls_surrogate_key(ep)
         if key is None:
             continue
-        # Find the cert component emitted for this TLS endpoint
+        # Map to the cert component emitted for this TLS endpoint
         bom_ref_val = f"crypto/certificate/{ep.host}:{ep.port}"
         for c in cert_components:
             if getattr(c.bom_ref, "value", None) == bom_ref_val:
