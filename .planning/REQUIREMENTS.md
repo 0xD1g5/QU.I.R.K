@@ -52,9 +52,9 @@
 
 ### Code-Signing Certificate Inventory (BACK-24)
 
-- [ ] **CSIGN-01**: User can inventory code-signing certificates discovered via LDAP `userCertificate` and EKU checks on already-captured TLS certs.
-- [ ] **CSIGN-02**: Code-signing certs with weak algorithms (RSA<2048, EC<256, SHA-1) raise a HIGH finding.
-- [ ] **CSIGN-03**: Code-signing CBOM components are de-duplicated by SHA-256 fingerprint against existing TLS-derived components.
+- [x] **CSIGN-01**: User can inventory code-signing certificates discovered via LDAP `userCertificate` and EKU checks on already-captured TLS certs.
+- [x] **CSIGN-02**: Code-signing certs with weak algorithms (RSA<2048, EC<256, SHA-1) raise a HIGH finding.
+- [x] **CSIGN-03**: Code-signing CBOM components are de-duplicated by SHA-256 fingerprint against existing TLS-derived components.
 
 ### Scoring, Packaging & Lab (cross-cutting)
 
@@ -100,9 +100,9 @@
 | TOKEN-03 | Phase 94 | Complete |
 | SCORE-01 | Phase 94 (partial), Phase 95 (partial), Phase 96 (final) | Pending |
 | PKG-01 | Phase 94 | Complete |
-| CSIGN-01 | Phase 95 | Pending |
-| CSIGN-02 | Phase 95 | Pending |
-| CSIGN-03 | Phase 95 | Pending |
+| CSIGN-01 | Phase 95 | Complete |
+| CSIGN-02 | Phase 95 | Complete |
+| CSIGN-03 | Phase 95 | Complete |
 | LAB-01 | Phase 95 (partial), Phase 96 (final) | Pending |
 | FUZZ-01 | Phase 96 | Pending |
 | FUZZ-02 | Phase 96 | Pending |
