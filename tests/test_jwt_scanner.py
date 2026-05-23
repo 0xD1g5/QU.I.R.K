@@ -202,3 +202,51 @@ def test_jwt_no_cred_ctx_unchanged_behavior() -> None:
     assert len(endpoints) == 3
     for ep in endpoints:
         assert ep.protocol == "JWT"
+
+
+# Phase 93 / CR-01 regression: the D-10 log-redaction hook must scrub the query-param
+# secret from request.url, not just pop auth headers.
+httpx = pytest.importorskip("httpx")
+
+
+def test_strip_auth_from_log_redacts_query_param_secret():
+    """_strip_auth_from_log must replace a known key query-param value with REDACTED."""
+    from quirk.scanner.jwt_scanner import _strip_auth_from_log
+
+    request = httpx.Request("GET", "https://api.example.com/jwks?api_key=SUPER_SECRET_VALUE&foo=bar")
+    _strip_auth_from_log(request)
+
+    assert "SUPER_SECRET_VALUE" not in str(request.url)
+    assert request.url.params.get("api_key") == "REDACTED"
+    # Non-secret params are left intact.
+    assert request.url.params.get("foo") == "bar"
+
+
+def test_strip_auth_from_log_pops_auth_headers():
+    """_strip_auth_from_log must remove Authorization / X-Api-Key / X-Auth-Token headers."""
+    from quirk.scanner.jwt_scanner import _strip_auth_from_log
+
+    request = httpx.Request(
+        "GET",
+        "https://api.example.com/jwks",
+        headers={
+            "Authorization": "Bearer SECRET_TOKEN",
+            "X-Api-Key": "SECRET_KEY",
+            "X-Auth-Token": "SECRET_AUTH",
+        },
+    )
+    _strip_auth_from_log(request)
+
+    assert "Authorization" not in request.headers
+    assert "X-Api-Key" not in request.headers
+    assert "X-Auth-Token" not in request.headers
+
+
+def test_strip_auth_from_log_noop_without_secrets():
+    """A URL with no key params is returned unchanged (no spurious rewrite)."""
+    from quirk.scanner.jwt_scanner import _strip_auth_from_log
+
+    request = httpx.Request("GET", "https://api.example.com/jwks?page=2")
+    _strip_auth_from_log(request)
+
+    assert request.url.params.get("page") == "2"
