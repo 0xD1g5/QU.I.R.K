@@ -14,7 +14,7 @@ findings:
   warning: 6
   info: 3
   total: 11
-status: issues_found
+status: remediated
 ---
 
 # Phase 96: Code Review Report
@@ -194,3 +194,10 @@ requires an explicit FQDN target") rather than silently defaulting to localhost.
 _Reviewed: 2026-05-23T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+
+## Remediation (commit bef3c3c)
+
+- **CR-01/CR-02** ✅ fixed — alg-confusion request counted; TLS/cipher socket probes hoisted to run once + counted; total traffic now bounded by budget (regression test added).
+- **WR-01/02/04** ✅ fixed — alg-confusion feeds 5xx cascade; cred decode guarded; per-operation try prevents whole-loop abort.
+- **WR-03** (cascade reset on connection exceptions) + INFO items: noted as minor follow-ups.
