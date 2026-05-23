@@ -690,3 +690,39 @@ class TestBudgetCeilingBoundsAllTraffic:
         assert session_mock.request.call_count <= 5
         # And total dispatched units (2 socket + HTTP) never exceeds the budget.
         assert (tls_p.call_count + cip_p.call_count + session_mock.request.call_count) <= 5
+
+    def test_alg_confusion_request_counts_against_budget(self):
+        """CR-01 regression: with alg-confusion enabled, the forged-token request is
+        counted — total session.request calls never exceed the budget even though each
+        GET iteration would otherwise dispatch a second (forged) request."""
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+
+        session_mock = MagicMock()
+        session_mock.request.return_value = _make_response(200)
+        cfg = MagicMock(); cfg.security = MagicMock(); cfg.security.allow_internal_targets = False
+
+        cred = MagicMock()
+        cred.scheme = "bearer"
+        cred.bearer_declared_alg.return_value = "RS256"
+        cred._secret_buf = bytearray(b"header.payload.sig")
+
+        with patch("quirk.scanner.rest_fuzzer.schemathesis") as mod, \
+             patch("quirk.scanner.rest_fuzzer.validate_external_url", return_value=_ok_scope_result()), \
+             patch("quirk.scanner.rest_fuzzer._fetch_jwks_public_key_pem", return_value=b"-----PUBKEY-----"), \
+             patch("quirk.scanner.rest_fuzzer._forge_hs256_token", return_value=b"forged.jwt.token"):
+            mock_schema = MagicMock()
+            mock_schema.include.return_value.get_all_operations.return_value = self._mock_ops(20)
+            mod.openapi.from_dict.return_value = mock_schema
+
+            run_fuzz_scan(
+                spec_dict={"openapi": "3.0.0"},
+                base_url="http://example.com",   # http → no socket probes; isolate alg-confusion counting
+                cfg=cfg, budget=6, cred_ctx=cred, run_alg_confusion=True,
+                prompt_fn=lambda _: "CONFIRM", is_tty=True,
+                _session=session_mock,
+            )
+
+        # Each GET op would dispatch 1 GET + 1 forged request; with counting, total <= budget.
+        assert session_mock.request.call_count <= 6, (
+            f"budget bypassed: {session_mock.request.call_count} requests > budget 6"
+        )
