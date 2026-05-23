@@ -581,3 +581,36 @@ single source of truth for chaos-lab state across version bumps.
 - **CHAOS-04** — Per-profile re-up regression test at `tests/test_chaos_lab_idempotency.py` discovers every profile via `docker compose config --profiles` and runs `./lab.sh up` twice per profile (one parametrized test per profile); marked `@pytest.mark.slow` and skipped cleanly when Docker is unreachable.
 - **CHAOS-05** — Image-pin CI gate at `tests/test_chaos_lab_image_pinning.py` (runs in default suite; pure `yaml.safe_load` parse); `lab.sh _validate_pinned_tags()` early-exit installed at the top of both `up)` and `all)` cases so adding `:latest` or a bare-image entry fails before any container is created.
 - **CHAOS-06** — `_derive_all_profiles()` enumerates 20 profiles including `smime` and `adcs`; oracle sections for both new profiles present above (Plan 79 + Plan 80 delivered, Plan 82-04 confirmed parity); README Profile Summary table has rows for both with their respective ports (38900, 38910) and links into this oracle.
+
+---
+
+## Profile: fuzz-target
+
+*Deliberately-weak FastAPI REST service for Phase 96 / LAB-01 active REST fuzzer validation. All weaknesses are intentional (T-96-11 — isolated compose profile, off by default, never production).*
+
+```bash
+PROFILE_ARGS="--profile fuzz-target" ./lab.sh up
+```
+
+| Port | Service | Probe | Expected Finding | Severity | Notes |
+|-----:|---------|-------|-----------------|----------|-------|
+| 20100 | fuzz-target | HSTS missing | HSTS_MISSING | HIGH | No `Strict-Transport-Security` header on any response — deliberate |
+| 20100 | fuzz-target | HTTP-only cred | HTTP_ONLY_CRED | HIGH | OpenAPI spec declares `http://localhost:20100` server URL — deliberate |
+| 20100 | fuzz-target | TLS downgrade | TLS_DOWNGRADE | HIGH | Service binds plain HTTP only; TLS downgrade probe fires if TLS later configured |
+| 20100 | fuzz-target | JWT alg-confusion | ALG_CONFUSION | CRITICAL | `/probe` accepts forged HS256 token signed with RS256 public key — deliberate |
+
+**Weak-target design:**
+- `GET /openapi.json` — minimal OpenAPI 3.0 spec with `http://` server URL (HTTP-only cred probe target); schemathesis can consume this spec to enumerate `/probe`
+- `GET /.well-known/jwks.json` — exposes RS256 public key (JWKS fetch for alg-confusion probe)
+- `GET /probe` — accepts ANY `Authorization: Bearer <token>` without algorithm verification (alg-confusion probe target — returns `200 OK` for both legitimate RS256 and forged HS256 tokens)
+- No `Strict-Transport-Security` header on any response (HSTS probe target)
+
+**lab.sh note:** `_derive_all_profiles()` discovers `fuzz-target` dynamically by parsing `docker-compose.yml` — **no `ALL_PROFILES` edit to `lab.sh` was needed** (LAB-01 rationale: dynamic discovery via `yq` or `grep` fallback, per `_derive_all_profiles` at line 58 of `lab.sh`).
+
+**Scanner validation command:**
+```
+quirk scan --targets http://localhost:20100 --fuzz --openapi-spec http://localhost:20100/openapi.json
+```
+**Expected:** REST fuzzer returns >= 2 findings: HSTS_MISSING (HIGH) + ALG_CONFUSION (CRITICAL, when `--fuzz-jwt-alg-confusion` is set and a Bearer RS256 token is supplied via `CredentialContext`).
+
+**Requirements:** LAB-01 (Phase 96 chaos lab fuzz-target profile).
