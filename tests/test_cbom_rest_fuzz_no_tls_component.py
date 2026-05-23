@@ -96,3 +96,16 @@ def test_rest_fuzz_mixed_with_tls_no_phantom_components():
     assert "crypto/protocol/tls/api.x:443" not in tls_refs, (
         "REST_FUZZ endpoint api.x:443 must not produce a phantom TLS component"
     )
+
+
+def test_openapi_endpoint_produces_no_phantom_tls_component():
+    """v5.1 audit fix: an OPENAPI endpoint with bearerFormat (cert_pubkey_alg set) must
+    register its algorithm in Pass-1 but NOT emit phantom crypto/certificate or
+    crypto/protocol/tls components (it carries no real X.509 cert / TLS session)."""
+    bom = build_cbom([CryptoEndpoint(
+        host="api.example.com", port=443, protocol="OPENAPI",
+        cert_pubkey_alg="JWT", service_detail="security_scheme:bearerAuth", severity="INFO",
+    )])
+    refs = [str(getattr(c.bom_ref, "value", "") or "") for c in (bom.components or [])]
+    assert not any(r.startswith("crypto/protocol/tls/") for r in refs), f"phantom TLS protocol component: {refs}"
+    assert not any(r.startswith("crypto/certificate/") for r in refs), f"phantom cert component: {refs}"
