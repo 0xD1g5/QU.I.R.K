@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.0.0
-**Last Updated:** 2026-05-23 (Phase 93 COMPLETE — Credential Infrastructure (AUTH-01..04). Plan 04: docs/configuration.md updated with authenticated scanning section (--auth-bearer/--auth-api-key/--auth-api-key-query/--auth-basic, reference-not-secret model, ephemeral-only invariant, QRK-SCHED-AUTH-001 scheduler rejection); UAT Series 93 added (UAT-93-01 authenticated scan run, UAT-93-02 credential scrubbing verification, UAT-93-03 scheduler rejection); vault sync; Phase-93 Obsidian note and Roadmap note synced. Earlier: Phase 92 COMPLETE — v5.0 Close-out (REL-01). Plan 02: docs/UAT-SERIES.md updated for v5.0 (version strings, oqs-nginx profile, five Phase-89 profiles); vault sync; Phase-92 Obsidian note and Roadmap note synced; UAT-92-01 added for local v5.0.0 tag verification. Plan 01: pyproject.toml bumped to 5.0.0 (all three surfaces agree — importlib.metadata + quirk --version); towncrier built ## [5.0.0] CHANGELOG section from five phase fragments (87-91); docs/release-notes/5.0.0.md written with OQS-nginx PQC-hybrid scoring-ceiling headline. Closes REL-01. Earlier: Phase 91 COMPLETE — Code Cleanup + Bookkeeping (CLEAN-01..04). Plan 03 bookkeeping close-out: Obsidian phase note updated to status: complete; docs/UAT-SERIES.md updated with Phase 91 test coverage and UAT Series 91 section; vault sync to UAT-Series.md via printf-prepend pattern; UAT-SERIES.md committed via docs(phase-91). Earlier: Phase 91 Plan 02 COMPLETE — Code Cleanup Tier-B + D-02b Catalogue (CLEAN-02). UAT-91-06: _extract_cert_key_type() deleted from quirk/reports/writer.py and unused RichText import removed (vulture-confirmed, no production callers; test_cert_pubkey_fix.py deleted); UAT-91-07: Phase 77 D-15 conflict resolved option-a — IntelligenceReport schema dataclasses PRESERVED per CI gate in tests/test_intelligence_public_api.py; BACK-52 schema-deletion portion recorded superseded-by-D-15 in CONCERNS.md + REQUIREMENTS.md; UAT-91-08: docs/dead-code-candidates.md created with full vulture 2.16 repo-wide catalogue separating 100%/90% high-signal from 60% scanner-dispatch false positives (report-only, no deletions); UAT-91-09: clean-venv smoke passed (import quirk, quirk --version, quirk doctor — no import errors); full suite 44 failed/1876 passed (no new failures vs pre-plan baseline). Closes CLEAN-02. Earlier: Phase 91 Plan 01 COMPLETE — Code Cleanup Tier-A (CLEAN-01/03/04). UAT-91-01: conftest QUIRK_DB_PATH isolation eliminates 7 collection errors without QUIRK_DB_PATH set (collection-time + autouse fixture); UAT-91-02: python -W error::DeprecationWarning -m pytest tests/test_dashboard_scan_history.py passes (9 utcnow calls replaced with datetime.now(timezone.utc)); UAT-91-03: v3.5.1 user-visible string removed from operator_context.py; UAT-91-04: phases 87/88/89/90-VALIDATION.md carry nyquist_compliant: true; UAT-91-05: jwt_scanner.py has WHY: advisory at both httpx.get call sites, allow_insecure_jwks documented in operators-guide.md + configuration.md. Closes CLEAN-01, CLEAN-03, CLEAN-04. Earlier: Phase 90 COMPLETE — OQS-Nginx PQC Hybrid (PQC-01/02/03). Plan 01: UAT-90-01-01 added (oqs-nginx chaos-lab profile, digest-pinned, X25519MLKEM768, ML-DSA-65 — human-verify PASSED). Plan 02: UAT-90-02-01 added (PQC probe detects X25519MLKEM768 on OpenSSL >= 3.5; advisory fallback on older hosts; 19 automated tests — all pass). Plan 03: UAT-90-03-01 added (agility PQC-hybrid bonus 8.0 makes oqs-nginx scan score 25 agility vs 18 classical — 12 automated tests pass; score invariant 37/283.0). Plan 04: UAT-90-04-01 added (D-04 consulting before/after demo oracle finalized; discriminator test proves no false positive against classical TLS; 9 tests pass; live before/after human-verified — agility 25 vs 17/18). Closes PQC-01, PQC-02, PQC-03. Earlier: Phase 89 complete — chaos-lab-profiles, LAB-01..06. Plan 01: postgres-tls/redis-tls/kafka-tls weak-TLS profiles (UAT-89-01-01). Plan 02: identity-evidence end-to-end — DNSSEC+SAML counters live-verified non-zero, kerberos etype deferred (UAT-89-02-01..02); live run surfaced + fixed a latent custom-Logger crash that silently zeroed identity counters (quirk/logging_util.py). Plan 03: grpc-tls LAB-05 profile + LAB-03 smtp-starttls already-covered closure (UAT-89-03-01..02).)
+**Last Updated:** 2026-05-23 (Phase 94 COMPLETE — OpenAPI & Bearer Token Analysis (TOKEN-01..03, SPEC-01..03, SCORE-01, PKG-01). Plan 03: docs/getting-started.md updated with §5 analyze-token command and §6 --openapi-spec flag usage; docs/configuration.md updated with OpenAPI Spec Analysis section (openapi_spec_path config block, [api] extras group, security hardening table, findings produced table); UAT Series 94 added (UAT-94-01 analyze-token RS256, UAT-94-02 alg:none CRITICAL exit, UAT-94-03 opaque token, UAT-94-04 OpenAPI local file findings, UAT-94-05 out-of-scope URL rejection, UAT-94-06 $ref SSRF guard, UAT-94-07 oversize spec rejection, UAT-94-08 schemathesis exclusion from [all]); Obsidian Phase-94 note written; UAT-Series synced to vault. Earlier: Phase 93 COMPLETE — Credential Infrastructure (AUTH-01..04). Plan 04: docs/configuration.md updated with authenticated scanning section (--auth-bearer/--auth-api-key/--auth-api-key-query/--auth-basic, reference-not-secret model, ephemeral-only invariant, QRK-SCHED-AUTH-001 scheduler rejection); UAT Series 93 added (UAT-93-01 authenticated scan run, UAT-93-02 credential scrubbing verification, UAT-93-03 scheduler rejection); vault sync; Phase-93 Obsidian note and Roadmap note synced. Earlier: Phase 92 COMPLETE — v5.0 Close-out (REL-01). Plan 02: docs/UAT-SERIES.md updated for v5.0 (version strings, oqs-nginx profile, five Phase-89 profiles); vault sync; Phase-92 Obsidian note and Roadmap note synced; UAT-92-01 added for local v5.0.0 tag verification. Plan 01: pyproject.toml bumped to 5.0.0 (all three surfaces agree — importlib.metadata + quirk --version); towncrier built ## [5.0.0] CHANGELOG section from five phase fragments (87-91); docs/release-notes/5.0.0.md written with OQS-nginx PQC-hybrid scoring-ceiling headline. Closes REL-01. Earlier: Phase 91 COMPLETE — Code Cleanup + Bookkeeping (CLEAN-01..04). Plan 03 bookkeeping close-out: Obsidian phase note updated to status: complete; docs/UAT-SERIES.md updated with Phase 91 test coverage and UAT Series 91 section; vault sync to UAT-Series.md via printf-prepend pattern; UAT-SERIES.md committed via docs(phase-91). Earlier: Phase 91 Plan 02 COMPLETE — Code Cleanup Tier-B + D-02b Catalogue (CLEAN-02). UAT-91-06: _extract_cert_key_type() deleted from quirk/reports/writer.py and unused RichText import removed (vulture-confirmed, no production callers; test_cert_pubkey_fix.py deleted); UAT-91-07: Phase 77 D-15 conflict resolved option-a — IntelligenceReport schema dataclasses PRESERVED per CI gate in tests/test_intelligence_public_api.py; BACK-52 schema-deletion portion recorded superseded-by-D-15 in CONCERNS.md + REQUIREMENTS.md; UAT-91-08: docs/dead-code-candidates.md created with full vulture 2.16 repo-wide catalogue separating 100%/90% high-signal from 60% scanner-dispatch false positives (report-only, no deletions); UAT-91-09: clean-venv smoke passed (import quirk, quirk --version, quirk doctor — no import errors); full suite 44 failed/1876 passed (no new failures vs pre-plan baseline). Closes CLEAN-02. Earlier: Phase 91 Plan 01 COMPLETE — Code Cleanup Tier-A (CLEAN-01/03/04). UAT-91-01: conftest QUIRK_DB_PATH isolation eliminates 7 collection errors without QUIRK_DB_PATH set (collection-time + autouse fixture); UAT-91-02: python -W error::DeprecationWarning -m pytest tests/test_dashboard_scan_history.py passes (9 utcnow calls replaced with datetime.now(timezone.utc)); UAT-91-03: v3.5.1 user-visible string removed from operator_context.py; UAT-91-04: phases 87/88/89/90-VALIDATION.md carry nyquist_compliant: true; UAT-91-05: jwt_scanner.py has WHY: advisory at both httpx.get call sites, allow_insecure_jwks documented in operators-guide.md + configuration.md. Closes CLEAN-01, CLEAN-03, CLEAN-04. Earlier: Phase 90 COMPLETE — OQS-Nginx PQC Hybrid (PQC-01/02/03). Plan 01: UAT-90-01-01 added (oqs-nginx chaos-lab profile, digest-pinned, X25519MLKEM768, ML-DSA-65 — human-verify PASSED). Plan 02: UAT-90-02-01 added (PQC probe detects X25519MLKEM768 on OpenSSL >= 3.5; advisory fallback on older hosts; 19 automated tests — all pass). Plan 03: UAT-90-03-01 added (agility PQC-hybrid bonus 8.0 makes oqs-nginx scan score 25 agility vs 18 classical — 12 automated tests pass; score invariant 37/283.0). Plan 04: UAT-90-04-01 added (D-04 consulting before/after demo oracle finalized; discriminator test proves no false positive against classical TLS; 9 tests pass; live before/after human-verified — agility 25 vs 17/18). Closes PQC-01, PQC-02, PQC-03. Earlier: Phase 89 complete — chaos-lab-profiles, LAB-01..06. Plan 01: postgres-tls/redis-tls/kafka-tls weak-TLS profiles (UAT-89-01-01). Plan 02: identity-evidence end-to-end — DNSSEC+SAML counters live-verified non-zero, kerberos etype deferred (UAT-89-02-01..02); live run surfaced + fixed a latent custom-Logger crash that silently zeroed identity counters (quirk/logging_util.py). Plan 03: grpc-tls LAB-05 profile + LAB-03 smtp-starttls already-covered closure (UAT-89-03-01..02).)
 **Last Updated:** 2026-05-11 (Phase 64.1 wrap: 5 audit BLOCKER code fixes with regression tests — CR-03 algo hints corrected (des→DES, AES-256/AES-128 added), BL-03 staleness date comparison via fromisoformat, BL-04 years clamp at both input sites, CR-05 session window corrected to timedelta(milliseconds=1) matching SQLite strftime('%f') 3-digit ms precision, CR-08 init_db idempotency. 14 remaining BLOCKERs disposed with D-06 rationale (13 deferred-v4.9, 1 wont-fix). Zero bare-open BLOCKERs remain in AUDIT-TASKS.md. UAT-64-01..04 pass criteria and subsection references unchanged — precision fix is internal to backend session grouping. 32/32 regression tests pass. Earlier: Phase 64 wrap: UAT-64-01..04 added for Trend Analysis Foundation — UAT-64-01 multi-scan timeline chart renders on /trends (TREND-01): 7-line LineChart visible with oldest-left/newest-right ordering and tooltip with full timestamp + 7 scores + finding counts; UAT-64-02 regression chip visible on dashboard home / (TREND-02): RegressionAlertChip appears above score gauge with correct message and "View trends →" link when new_high > 0 or score_delta <= -5; UAT-64-03 per-session dismissal persists across page refresh (TREND-02): chip disappears on × click, stays hidden after refresh, localStorage key set to "1"; UAT-64-04 new scan with regression shows fresh chip after prior dismissal (TREND-02): S2 chip appears because localStorage key encodes S1 timestamp. All 4/4 PASS by Digs 2026-05-10. Two bugs fixed during UAT: nassl.set_tlsext_host_name None TypeError on Python 3.14 (tls_scanner.py) and severity=None endpoints causing Pydantic 500 on /api/trends (trends.py). Closes TREND-01, TREND-02. Earlier: Phase 63 wrap: UAT-63-01..04 added for Scheduled / Continuous Scanning — UAT-63-01 quirk schedule add/list CLI round-trip (SCHED-01): schedule row persists to scheduled_scans table and appears in list; UAT-63-02 quirk scheduler run dispatcher (SCHED-02): due schedules dispatched via subprocess, status transitions pending→running→completed, disabled schedules skipped, stale rows recovered on startup; UAT-63-03 /api/schedules REST surface (SCHED-01/SCHED-03): GET returns next_run_at+last_run_status, POST validates cron+name uniqueness, PATCH flips enabled flag, DELETE cascades runs; UAT-63-04 dashboard /schedules page (SCHED-03): table renders all columns, Switch toggle round-trips to PATCH, delete dialog confirmed, Calendar sidebar nav present. 40/40 tests automated (7 CLI + 6 scheduler + 11 API + 16 auth). Manual UAT-63-02 dispatcher + UAT-63-04 browser walkthrough deferred to live session. Closes SCHED-01, SCHED-02, SCHED-03. Earlier: Phase 62 wrap: UAT-62-01..04 added for React Hook Cancellation Pattern — UAT-62-01 scan-switch stale-data safety (HOOK-01): switching scans mid-fetch always displays most-recently-selected scan data; UAT-62-02 QRAMM debounce coalescing (HOOK-02): 20 rapid edits within 300ms result in exactly 1 POST to /api/qramm/assessment/draft; UAT-62-03 auto-fill confirm badge removal (HOOK-03): confirm removes badge without triggering full QRAMM session refetch; UAT-62-04 cancellation guard CI check (HOOK-04): npm run lint:hooks exits 0 on clean hooks directory and exits 1 on broken fixture. All 4 test cases cover HOOK-01..04. Automated via Vitest+MSW tests and check-cancelled-guards.sh CI script. Closes HOOK-01, HOOK-02, HOOK-03, HOOK-04. Audit ledger rows BR-01..BR-06, WR-01, WR-03, WR-14 closed. Earlier: Phase 61 wrap: UAT-61-01..02 added for CBOM Coverage + Report Sanitization — UAT-61-01 CBOM emits algorithm components for all scanned protocol families (CBOM-COVER-01: 14 families, parametrized per-family coverage gate); UAT-61-02 technical report survives adversarial GFM scanner banners (REPORT-SAN-01/02: pipes, newlines, CRLF, control chars all sanitized via md_cell()). All 4/4 tests automated. Closes CBOM-COVER-01, CBOM-COVER-02, REPORT-SAN-01, REPORT-SAN-02. Audit ledger rows CR-01, CR-02, CR-07 closed. Earlier: Phase 60 wrap: UAT-60-01..04 added for Score Arithmetic Correctness — UAT-60-01 score clamping property test (1,000 iterations, SCORE-01); UAT-60-02 zero-TLS confidence fallback produces 0.0 points (SCORE-02/SCORE-03); UAT-60-03 QRAMM multiplier 400 guard fires before DB access (SCORE-02); UAT-60-04 maturity-band parametrized sweep covers all five labels (SCORE-04). All 45/45 tests automated. Closes SCORE-01, SCORE-02, SCORE-03, SCORE-04. Audit ledger rows BL-01, BL-02, CR-04, CR-06, WR-05 closed. Earlier: Phase 59 wrap: UAT-59-01..03 added for Credential Leakage Sweep — UAT-59-01 safe_str scrubs sensitive exception messages (LEAK-01); UAT-59-02 all scanner callsites route through safe_str across 9 files (LEAK-02); UAT-59-03 AST CI gate catches future scan_error bypass attempts (LEAK-03). All 32/32 tests automated. Closes LEAK-01, LEAK-02, LEAK-03. Earlier: Phase 58 wrap: UAT-58-01..07 added for Dashboard API Hardening — UAT-58-01 bearer token auth (HARDEN-API-01); UAT-58-02 CSRF header enforcement (HARDEN-API-01); UAT-58-03 CORS allowlist (HARDEN-API-02); UAT-58-04 rate limiting (HARDEN-API-03); UAT-58-05 quirk init path-traversal guard (HARDEN-API-04); UAT-58-06 PDF SSRF port guard (HARDEN-API-05); UAT-58-07 @file target guard (HARDEN-API-06). Closes audit blockers CR-01, CR-02, CR-03, CR-09. Earlier: Phase 54 wrap: UAT-54-01..05 added for QRAMM Assessment UI + Scorecard — UAT-54-01 end-to-end Org Profile form submission + navigation + Resume card; UAT-54-02 120-question rendering (4 tabs × 3 sections × 10 questions); UAT-54-03 debounced persistence (300ms) + restore-on-reload; UAT-54-04 auto-fill badge state transitions (Auto-filled → Modified → Confirmed); UAT-54-05 Scorecard Calculate Score → RadarChart + dimension table. All 5/5 PASS by Digs 2026-05-08. Closes QRAMM-08, QRAMM-09, QRAMM-10, QRAMM-11. Also: "Organisation Size" label corrected to "Organization Size" in qramm-profile.tsx. Earlier: Phase 56.1 wrap: UAT-56.1-01..03 added for CI Staleness Gate Workflow — UAT-56.1-01 `.github/workflows/python-staleness.yml` exists and parses as valid YAML; UAT-56.1-02 pytest gate trips on stale model under `QUIRK_CI_STALENESS_OVERRIDE_DATE=2030-01-01` override and passes without override (real `today()` within 90 days of `last_verified`); UAT-56.1-03 "Python Staleness Gate" workflow appears in GitHub Actions UI and shows green run on latest commit. Closes QRAMM-06, QRAMM-07, COMPLY-08 (CI-protected). Earlier: Phase 56 wrap: UAT-56-01..03 added for PDF Export QRAMM Section — UAT-56-01 QRAMM Governance section appears in /print PDF (scored session path: radar SVG + Dimension Scorecard + 8-row compliance table + 8 per-framework detail tables); UAT-56-02 no-session placeholder copy when no QRAMM session scored; UAT-56-03 existing /print sections regression-free after Phase 56. Closes QRAMM-16. Earlier: Phase 55 wrap: UAT-55-01..04 added for QRAMM Compliance Mapping View — UAT-55-01 compliance-map API returns 96 rows with correct shape; UAT-55-02 unscored state renders banner + all em-dashes; UAT-55-03 scored state renders CVI numeric scores + SGRM/DPE/ITR em-dashes; UAT-55-04 quirk qramm status CLI exits 0/1. Closes QRAMM-15. Two post-phase bugs fixed: unscored banner CTA (Calculate Score button added to ComplianceMapTab) and Recharts Radar conditional-mount crash (opacity toggle instead of JSX conditional). Earlier: Phase 53 wrap: UAT-Q-53-01..02 added for QRAMM Evidence Bridge — UAT-Q-53-01 evidence_bridge auto-populates 30 CVI suggestions on session create (QRAMM-12); UAT-Q-53-02 confirmation flips badge state and updates maturity score (QRAMM-13/14). Closes QRAMM-12..14. Earlier: Phase 52 human UAT complete: UAT-COMPLY-52-01..02, UAT-DOCS-52-03, UAT-DEBT-52-04..06 all marked PASS by Digs 2026-05-06. D-01 FIPS certified-tier deviation accepted. Phase 52 fully closed. Earlier 2026-05-05: Phase 52 wrap: UAT-COMPLY-52-01..02 added for CBOM FIPS 140-3 status annotation and SOC2+ISO 27001:2022 mapping coverage; UAT-DOCS-52-03 added for quirk doctor exit semantics; UAT-DEBT-52-04..06 added for lab.sh PROFILE_ARGS CLI override, run-stats fields, and SAML lxml migration. Closes COMPLY-10..12, DOCS-05, DEBT-02..04. v4.7 Compliance Uplift & Health Check milestone complete. Earlier: Phase 50 wrap: UAT-50-NN added for Enterprise Documentation — UAT-50-01 architecture.md presence + section coverage; UAT-50-02 operators-guide.md presence + section coverage; UAT-50-03 vault Reference/ sync verification (`Reference/Architecture.md` + `Reference/Operators-Guide.md` with `type: reference` frontmatter and `_QUIRK-Hub.md` wikilinks); UAT-50-04 compliance maintenance citation completeness (PCI SSC + ECFR + NIST CSRC source URLs, `quirk compliance status` CLI, `STALENESS_THRESHOLD_DAYS` constant, `tests/test_compliance_freshness.py` path, and a worked PCI-DSS 4.0.1 → 4.1 upgrade example). Closes DOCS-01..04. v4.6 Enterprise Readiness milestone complete. Earlier: Phase 49 wrap: UAT-49-01..05 added for Compliance Mapping — UAT-49-01 schema gate (every COMPLIANCE_MAP entry has framework + control + version + last_verified + source_url); UAT-49-02 freshness gate (no entry's last_verified older than STALENESS_THRESHOLD_DAYS = 365); UAT-49-03 title-join gate (every emitted finding title is in COMPLIANCE_MAP or UNMAPPED_TITLES); UAT-49-04 `quirk compliance status` CLI smoke (text + JSON formats); UAT-49-05 HTML/PDF Compliance Summary section visual + smoke. Closes COMPLY-01..09. Compliance map maintenance cadence + regulator-revision upgrade procedure are documented in docs/operators-guide.md (Phase 50). Earlier: Phase 48 wrap: UAT-48-01..04 added for Rich Finding Context — UAT-48-01 every finding in `findings-*.json` carries a non-empty `description`; UAT-48-02 HTML All Findings table contains `<th>Description</th>` adjacent to Recommendation; UAT-48-03 every quantum-vulnerable finding's recommendation cites `FIPS 203/204/205` and `Per NIST IR 8547`; UAT-48-04 `tests/test_pqc_terminology_gate.py` passes clean and fails the build when stale terminology is injected into either gated source file. Closes CONTEXT-01..04. Earlier: Phase 47 wrap: UAT-47-01..08 added for Nmap Discovery + Multi-Target Wizard + CBOM JSON Validation — UAT-47-01 CSV targets through wizard; UAT-47-02 @file targets ingestion; UAT-47-03 --targets-file non-interactive; UAT-47-04 nmap y/N prompt appears once; UAT-47-05 missing nmap binary — no crash, ADVISORY row, consulting-ports fallback; UAT-47-06 targets x ports > 10000 shows confirm prompt in TTY mode; UAT-47-07 CBOM JSON validates via post-write JsonStrictValidator; UAT-47-08 pip install quirk[cbom] install_hint actionable. Closes DISCOVER-01..04, MULTI-01..05. Earlier: Phase 46 wrap: UAT-46-01..05 added for TLS Finding Gaps — UAT-46-01 expired-cert produces CRITICAL finding (TLS-FIND-01) at chaos lab `tls-cert-defects` port 13444; UAT-46-02 self-signed cert produces HIGH "TLS certificate is self-signed" finding at port 13445 AND emits NO untrusted-CA finding on the same endpoint (D-04 mutual exclusivity, TLS-FIND-02); UAT-46-03 untrusted-CA cert produces MEDIUM "TLS certificate issued by untrusted CA" finding at port 13446 (TLS-FIND-03); UAT-46-04 RSA-1024 cert produces HIGH "TLS certificate uses undersized RSA key" finding at port 13447 (TLS-FIND-04); UAT-46-05 D-02 multi-defect independence — a single endpoint with multiple cert defects emits one finding per class with no rollup. Closes TLS-FIND-01..07. Earlier: Phase 45 wrap: UAT-1-09/10/11 added for Install-Day UX — UAT-1-09 clean-venv `pip install quirk` (no extras) TLS-only scan against chaos lab `tls-modern` produces zero ImportError/ModuleNotFoundError in HTML report (INSTALL-01); UAT-1-10 Coverage Gaps advisories surface as a dedicated `<h2>` section in the HTML report when `enable_kerberos`/`enable_db`/`enable_gcp`/`enable_k8s`/`enable_vault` are true and matching extras absent — each row's Recommendation column contains the literal `pip install quirk[<extra>]`, advisories are filtered out of the All Findings table, and readiness score is unchanged versus running with the same scanners disabled (INSTALL-02 + INSTALL-04 + D-07 score-exclusion); UAT-1-11 `pip install quirk[all]` in a fresh venv excludes impacket (`python -c "import impacket"` raises ModuleNotFoundError) while `import fastapi, psycopg2, googleapiclient, hvac, kubernetes` all succeed (INSTALL-03). Closes INSTALL-01..04. Earlier: Phase 44 wrap: UAT-44-01..04 added for UAT Debt Automation — UAT-44-01 Phase 27 DB integration tests (PostgreSQL+MySQL ssl-off via `QUIRK_DB_INTEGRATION=1`); UAT-44-02 Phase 25 Kerberos/SAML traceability annotations (existing tests annotated with UAT-25 closure trail); UAT-44-03 Phase 30 Vault live integration test (5-finding spec against vault-30 :28200 via `QUIRK_VAULT_INTEGRATION=1`); UAT-44-04 Phase 31 trends flat-wire-format pytest test (in-memory SQLite, no chaos lab needed). Closes UAT-01..04. v4.5 Reliability & Gap Closure milestone complete. Earlier: Phase 43 gap closure: UAT-43-06..08 added — a11y baseline-delta PASS/FAIL fix, pagination absent on single-page datasets, PDF data-ready sentinel; closes all Phase 43 UAT gaps. Earlier: Phase 43 wrap: UAT-43-01..05 added for Dashboard Polish — UAT-43-01 axe + console sweep (happy fixture) exits 0 across 9 routes; UAT-43-02 axe + console sweep (empty fixture) exits 0 with explicit empty states on every route; UAT-43-03 keyboard focus rings visible on all interactive elements; UAT-43-04 loading-state first paint (skeleton/PageSpinner persists ~3s before content); UAT-43-05 GitHub Actions dashboard-quality workflow turns green on PRs touching src/dashboard/**. Closes DASH-01, DASH-02, DASH-03. Earlier: Phase 42 wrap: UAT-42-01..04 added for CBOM Correctness Audit — UAT-42-01 CycloneDX 1.6 JSON+XML schema validation across 18 chaos lab profiles + drift sentinel; UAT-42-02 classifier coverage gate + `docs/cbom-classifier-coverage.md` regen report; UAT-42-03 shape goldens (pki/vault/saml) + `tests/fixtures/cbom/CHANGELOG.md`; UAT-42-04 parametrized Pass-2/Pass-3 skip-list unit gate (12 parametrized + 1 sanity). Closes CBOM-01..04. Earlier: Phase 41 wrap: UAT-41-01..04 added for CI Stability & Scanner Robustness — UAT-41-01 missing-[motion]-extra stderr advisory format with `category=missing_extra` scan_errors[] entry; UAT-41-02 docs/configuration.md upper-bound formula contains `scan_upper_bound` and `safety_margin` literals; UAT-41-03 `lab.sh down` and `reset` arms sweep profile-tagged services via `compose --profile "*" --remove-orphans`; UAT-41-04 default `pytest -m 'not slow'` finishes in <60s on a developer machine. Closes CI-01..03, ROBUST-01..04. Earlier: Phase 40 wrap: UAT-40-01 added for Chaos Lab v4 Oracle — `expected_results_v4.md` as stable v4 oracle reference for all 18 named chaos-lab profiles + core; `./lab.sh profiles` subcommand; `expected_results_v3.md` superseded notice. Closes LAB-01..04. Earlier: Phase 39 wrap: UAT-39-01..08 added for Dashboard Data at Rest Tab — `/data-at-rest` route load + zero console errors, per-section empty states, four locked-column tables (Database · Object Storage · Kubernetes · Vault), severity sort + em-dash null rendering, sidebar nav order Executive · Findings · Identity · Motion · Data at Rest · Certificates · CBOM · Roadmap · Trends. Closes GAP-04 + DASH-05 (deferred from Phase 27). Earlier: Phase 38 wrap: UAT-38-01/02 added for identity scan-window regression fix — automated regression test for SAML/DNSSEC scan-window bracket fix (`SESSION_BRACKET`) and manual live round-trip against SimpleSAMLphp chaos lab profile. Earlier: Phase 37 wrap: v4.4.0 release closure — INFRA-01 version bump 4.3.0→4.4.0 across 6 surfaces (`__init__.py`, `pyproject.toml`, `cbom/builder.py`, `reports/writer.py`, `config.py` `IntelligenceCfg.intelligence_version`); INFRA-02 `[motion]` meta-extra over flat `[email]/[broker]/[kafka]` sub-extras (`pip install quirk[motion]` is the single happy path); INFRA-03 `tests/test_infra03_nyquist_coverage.py` with 18 tests (6 entry points × happy/refused/plaintext-only); per-phase `VALIDATION.md` Nyquist matrices backfilled across phases 32-37 (phase 36 `wave_0_complete` flip deferred pending unrelated SAML scan-window regression from Phase 24); CHANGELOG.md + docs/release-notes/4.4.0.md added. UAT-1-02 version string bumped to 4.4.0. Phase 36 wrap: UAT-36-01..05 added for Dashboard Motion Tab — /motion route load, STARTTLS badge, plaintext broker badge, 6 ScoreGauges on executive summary, empty-state cards. Earlier: Phase 35 wrap: UAT-35-01..03 added for CBOM integration — golden email + broker CBOM snapshots assert the 6 email TLS labels (SMTP-STARTTLS, SMTPS, IMAP-STARTTLS, IMAPS, POP3-STARTTLS, POP3S), 4 broker TLS labels including AMQPS/Azure-ServiceBus passthrough, and 3 plaintext broker labels (KAFKA-PLAIN/AMQP-PLAIN/REDIS-PLAIN) skipped from Pass 2 + Pass 3 of build_cbom(). Earlier: Phase 34 wrap: UAT-34-01..03 added for motion intelligence — `data_in_motion` 6th subscore in `compute_readiness_score()`, 5 `motion_*_ratio` entries in SCORE_WEIGHTS, `motion_` prefix in PROFILE_MULTIPLIERS strict/balanced/lenient, 6 `motion_*_count` keys in `build_evidence_summary()`. Earlier: Phase 33 wrap (Wave 6, Plan 33-08): UAT-33-01..08 added for broker scanner — config-disabled-by-default, standard-profile-enables, broker_scan_json DB persistence, plus UAT-33-03..07 marked DEFERRED pending scanner custom-port support follow-up plan; 58-test pytest suite provides equivalent end-to-end verification. Earlier: Phase 32 gap closure: UAT-32-07 added for email_scan_json DB persistence (Plan 32-08) — per-host JSON aggregate attached to lowest-port endpoint, mirroring kerberos_scan_json pattern; closes Phase 32 SC-1. Earlier today: Phase 32 added: UAT-32-01..06 for email scanner — 7-port TLS probe (SMTP/IMAP/POP3 STARTTLS + SMTPS/IMAPS/POP3S), STARTTLS-downgrade-on-port-25 MEDIUM finding, weak-cipher HIGH finding, CONNECTION_REFUSED non-fatal, sslyze-absent stdlib fallback, Postfix+Dovecot chaos lab via `--profile email`, and `service_detail` label format. Earlier: Phase 31 code review fixes: UAT-9-09 Expected section corrected to flat wire format matching actual API output — current_session_ts/previous_session_ts/new_high/new_medium/new_low/resolved_high/resolved_medium/resolved_low — replacing incorrect nested sessions/new_finding_counts shape; UAT-9-10 corrected sessions.previous_ts → previous_session_ts; badge label clarification: new_high/resolved_high bucket includes CRITICAL+HIGH; Phase 29 complete: UAT-29-01/02/03 confirmed in docs; Gate Status bumped to v4.3; UAT-1-02 version string updated to v4.3.0; Phase 29: added UAT-29-01/02/03 for Kubernetes Secrets Inspection — EKS encryption + secret-type enumeration, GKE encryption, AKS encryption + RBAC degradation; live-cluster UAT only, no Docker chaos lab; Phase 28: added UAT-28-01/02/03 for object storage audit — S3 chaos lab end-to-end, Azure Blob live subscription, GCS reuse zero-API-call invariant; Phase 27: added UAT-5-25 for DB connector — PostgreSQL/MySQL SSL detection and RDS encryption scanning behind enable_db guard; data_at_rest subscore; Phase 30: added UAT-30-01/02/03 for HashiCorp Vault connector — transit key classification + exportable MEDIUM, PKI root+intermediate CA HIGH on RSA<4096, auth method risk tiering with token always-HIGH unconditional; Phase 31: added UAT-9-09/10 for Trend Analysis — score delta + new/resolved finding counts via /api/trends and React /trends tab)
 **Purpose:** Comprehensive user acceptance testing covering all features — CLI, lab environments, cryptographic findings, web dashboard, reports, and edge cases.
 **Gate Status:** This document is the **release gate** for QU.I.R.K. v5.0. All series must meet minimum pass thresholds (see Series 12: Gating Checklist) before any backlog or roadmap work proceeds.
@@ -10345,3 +10345,345 @@ Expect: both assertions print PASS.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-23  **Tester:** Automated (Phase 93 Plan 04 execution)
+
+---
+
+## UAT Series 94: Phase 94 — OpenAPI & Bearer Token Analysis (TOKEN-01..03, SPEC-01..03, SCORE-01, PKG-01)
+
+---
+
+### UAT-94-01: analyze-token decodes RS256 JWT and reports algorithm + quantum safety (TOKEN-01)
+
+**ID:** UAT-94-01
+**Title:** `quirk analyze-token` decodes a valid RS256 JWT and outputs algorithm, expiry status, and quantum-safety level
+**Maps to:** TOKEN-01
+
+**Description:** Verifies that `quirk analyze-token` correctly decodes a JWT, reports the declared algorithm, expiry status, and quantum-safety assessment. Uses a synthetic placeholder JWT — not a real credential.
+
+**Automated gate:**
+```bash
+python -c "
+import tempfile, os
+from quirk.cli.analyze_token_cmd import run_analyze_token
+
+# Synthetic RS256-header JWT (header only; signature not verified)
+# eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9 = {alg: RS256, typ: JWT}
+token = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjo5OTk5OTk5OTk5fQ.placeholder_sig'
+t = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+t.write(token); t.flush(); t.close()
+
+rc = run_analyze_token(['@' + t.name, '--json'])
+os.unlink(t.name)
+assert rc == 0, f'Expected exit 0 for RS256 token, got {rc}'
+print('PASS: RS256 token exits 0')
+"
+```
+Expect: PASS printed; exit 0.
+
+**Pass Criteria:**
+- `quirk analyze-token @token.txt` exits 0 for a valid RS256 JWT.
+- `quirk analyze-token @token.txt --json` emits a JSON dict containing keys: `alg`, `is_alg_none`, `expired`, `exp`, `nist_level`, `quantum_safety`.
+- `is_alg_none` is `false` for RS256.
+- `quantum_safety` is not `"safe"` (RSA is quantum-vulnerable).
+- No raw token content echoed to stdout.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
+### UAT-94-02: alg:none token produces CRITICAL finding and non-zero exit (TOKEN-01, TOKEN-03)
+
+**ID:** UAT-94-02
+**Title:** A JWT with `alg:none` causes `quirk analyze-token` to print a CRITICAL banner and exit with code 1
+**Maps to:** TOKEN-01, TOKEN-03
+
+**Description:** Verifies the CI-gate behavior. An `alg:none` token must fail with exit code 1 so that a CI pipeline step using `quirk analyze-token` will halt on a dangerous unsigned token.
+
+**Automated gate:**
+```bash
+python -c "
+import tempfile, os, base64, json
+from quirk.cli.analyze_token_cmd import run_analyze_token
+
+for alg_val in ['none', 'NONE', 'None', 'NonE']:
+    header = base64.urlsafe_b64encode(json.dumps({'alg': alg_val, 'typ': 'JWT'}).encode()).rstrip(b'=').decode()
+    token = f'{header}.e30.placeholder'
+    t = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+    t.write(token); t.flush(); t.close()
+    rc = run_analyze_token(['@' + t.name])
+    os.unlink(t.name)
+    assert rc == 1, f'Expected exit 1 for alg={alg_val!r}, got {rc}'
+    print(f'PASS: alg={alg_val!r} exits 1')
+
+print('PASS: all alg:none variants exit 1')
+"
+```
+Expect: all 4 variants print PASS; final PASS line printed.
+
+**Pass Criteria:**
+- `alg:none`, `alg:NONE`, `alg:None`, `alg:NonE` all produce exit code 1.
+- Output contains `CRITICAL` text.
+- Raw token bytes are not echoed to stdout (first JWT segment absent from output).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
+### UAT-94-03: Opaque (non-JWT) token produces INFO message and exit 0 (TOKEN-01)
+
+**ID:** UAT-94-03
+**Title:** An opaque token (not a JWT) causes `quirk analyze-token` to print an INFO message and exit 0
+**Maps to:** TOKEN-01
+
+**Description:** Verifies graceful handling of API keys, session tokens, and other opaque credential strings that are not JWTs. The command must not crash and must exit 0 so that its use in a mixed-token environment does not block CI on non-JWT credentials.
+
+**Automated gate:**
+```bash
+python -c "
+import tempfile, os
+from quirk.cli.analyze_token_cmd import run_analyze_token
+
+token = 'sk-live-abc123XYZ456notaJWTatall'
+t = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+t.write(token); t.flush(); t.close()
+
+rc = run_analyze_token(['@' + t.name])
+os.unlink(t.name)
+assert rc == 0, f'Expected exit 0 for opaque token, got {rc}'
+print('PASS: opaque token exits 0')
+"
+```
+Expect: PASS printed; exit 0.
+
+**Pass Criteria:**
+- Exit code 0 for any input that raises `jwt.exceptions.DecodeError`.
+- Output contains "opaque" (case-insensitive) or equivalent INFO text.
+- No exception traceback printed.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
+### UAT-94-04: --openapi-spec local file produces plaintext-server, unauthenticated-endpoint, and security-scheme findings (SPEC-01)
+
+**ID:** UAT-94-04
+**Title:** `quirk --openapi-spec <local-file>` populates the findings table with security scheme, plaintext server, and unauthenticated endpoint rows
+**Maps to:** SPEC-01
+
+**Description:** Verifies the core OpenAPI scanner output. A spec containing one `http://` server, one JWT bearer security scheme, and one unauthenticated path produces the expected `CryptoEndpoint(protocol="OpenAPI")` rows.
+
+**Automated gate:**
+```bash
+python -c "
+import yaml, tempfile, os
+from quirk.scanner.openapi_scanner import scan_openapi_spec
+
+spec = {
+    'openapi': '3.0.0',
+    'info': {'title': 'Test', 'version': '1.0'},
+    'servers': [{'url': 'http://api.example.com'}],
+    'components': {'securitySchemes': {'bearerAuth': {'type': 'http', 'scheme': 'bearer', 'bearerFormat': 'JWT'}}},
+    'paths': {
+        '/public': {'get': {}},
+        '/secure': {'get': {'security': [{'bearerAuth': []}]}}
+    }
+}
+t = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+yaml.dump(spec, t); t.flush(); t.close()
+
+eps = scan_openapi_spec(t.name, cfg_targets=['api.example.com'])
+os.unlink(t.name)
+details = [ep.service_detail for ep in eps]
+assert any('plaintext_server' in d for d in details), f'No plaintext_server row: {details}'
+assert any('security_scheme' in d for d in details), f'No security_scheme row: {details}'
+assert any('unauthenticated_endpoint' in d for d in details), f'No unauthenticated_endpoint row: {details}'
+print(f'PASS: {len(eps)} OpenAPI endpoints found; all 3 finding types present')
+"
+```
+Expect: PASS printed with finding count >= 3.
+
+**Pass Criteria:**
+- At least one `service_detail="plaintext_server"` endpoint (HIGH severity).
+- At least one `service_detail` containing `"security_scheme"`.
+- At least one `service_detail` containing `"unauthenticated_endpoint"`.
+- All endpoints have `protocol="OpenAPI"`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
+### UAT-94-05: Out-of-scope spec URL rejected before network request (SPEC-02)
+
+**ID:** UAT-94-05
+**Title:** A spec URL outside `targets.fqdns` scope raises `SpecParsingError` without making any network request
+**Maps to:** SPEC-02
+
+**Description:** Verifies the scope gate. When the spec URL does not start with any configured scan target, the scanner rejects it before any HTTP request is made. This prevents QUIRK from fetching specs from unauthorized hosts.
+
+**Automated gate:**
+```bash
+python -c "
+from unittest.mock import patch
+from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+
+with patch('httpx.get') as mock_get:
+    try:
+        eps = scan_openapi_spec('https://evil.example.com/openapi.json', cfg_targets=['api.acme.com'])
+        print(f'FAIL: expected SpecParsingError, got {eps}')
+    except SpecParsingError:
+        assert mock_get.call_count == 0, f'httpx.get was called: {mock_get.call_count} times'
+        print('PASS: out-of-scope URL rejected; httpx.get not called')
+"
+```
+Expect: PASS printed; `httpx.get` not called.
+
+**Pass Criteria:**
+- `SpecParsingError` raised for a URL not in `cfg_targets`.
+- `httpx.get` call count == 0 — no outbound request made.
+- Error message does not expose the raw URL value (redacted preview only).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
+### UAT-94-06: Internal-network $ref raises SpecParsingError with zero outbound requests (SPEC-03 SSRF guard)
+
+**ID:** UAT-94-06
+**Title:** A spec containing `$ref: "http://169.254.169.254/latest/meta-data"` raises `SpecParsingError` before any network call
+**Maps to:** SPEC-03
+
+**Description:** Verifies the SSRF hardening. The scanner calls `_assert_no_external_refs()` before `_oas_validate()`. The OAS validator follows external `$ref` values via urllib — this guard ensures a metadata-service `$ref` is caught and rejected with zero outbound requests.
+
+**Automated gate:**
+```bash
+python -c "
+import yaml, tempfile, os
+from unittest.mock import patch
+from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+
+spec_text = '''openapi: \"3.0.0\"
+info:
+  title: SSRF test
+  version: \"1.0\"
+paths:
+  /x:
+    \$ref: \"http://169.254.169.254/latest/meta-data\"
+'''
+t = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+t.write(spec_text); t.flush(); t.close()
+
+with patch('httpx.get') as mock_http, \
+     patch('quirk.scanner.openapi_scanner._oas_validate') as mock_validate:
+    try:
+        scan_openapi_spec(t.name, cfg_targets=['169.254.169.254'])
+        print('FAIL: expected SpecParsingError')
+    except SpecParsingError:
+        assert mock_http.call_count == 0, f'httpx.get called: {mock_http.call_count}'
+        assert mock_validate.call_count == 0, f'_oas_validate called: {mock_validate.call_count}'
+        print('PASS: 169.254.169.254 ref rejected; httpx.get not called; _oas_validate not called')
+os.unlink(t.name)
+"
+```
+Expect: PASS with zero calls to both `httpx.get` and `_oas_validate`.
+
+**Pass Criteria:**
+- `SpecParsingError` raised for any spec containing a `$ref` not starting with `#`.
+- `httpx.get` call count == 0.
+- `_oas_validate` call count == 0 (SSRF guard fires before validator).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
+### UAT-94-07: Oversized spec rejected before yaml.safe_load (SPEC-03 DoS guard)
+
+**ID:** UAT-94-07
+**Title:** A spec file larger than 10 MB raises `SpecParsingError` without calling `yaml.safe_load`
+**Maps to:** SPEC-03
+
+**Description:** Verifies the 10 MB size gate. Checking file size before parsing prevents billion-laughs YAML bombs and pathologically large specs from consuming unbounded memory.
+
+**Automated gate:**
+```bash
+python -c "
+import tempfile, os
+from unittest.mock import patch
+from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError, MAX_SPEC_BYTES
+
+t = tempfile.NamedTemporaryFile(mode='wb', suffix='.yaml', delete=False)
+t.write(b'x: y\n' * ((MAX_SPEC_BYTES // 5) + 1))
+t.flush(); t.close()
+
+with patch('yaml.safe_load') as mock_yaml:
+    try:
+        scan_openapi_spec(t.name, cfg_targets=[])
+        print('FAIL: expected SpecParsingError')
+    except SpecParsingError:
+        assert mock_yaml.call_count == 0, f'yaml.safe_load called: {mock_yaml.call_count}'
+        print(f'PASS: {os.path.getsize(t.name)} bytes > {MAX_SPEC_BYTES} limit; yaml.safe_load not called')
+os.unlink(t.name)
+"
+```
+Expect: PASS with yaml.safe_load call count == 0.
+
+**Pass Criteria:**
+- `SpecParsingError` raised for files exceeding `MAX_SPEC_BYTES` (10 MB = 10 * 1024 * 1024 bytes).
+- `yaml.safe_load` call count == 0 (size gate fires before parse).
+- `MAX_SPEC_BYTES` constant is accessible from `quirk.scanner.openapi_scanner`.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
+
+---
+
+### UAT-94-08: pip install quirk[all] does not pull schemathesis or openapi-spec-validator (PKG-01)
+
+**ID:** UAT-94-08
+**Title:** `pip install quirk-scanner[all]` dry-run confirms schemathesis and openapi-spec-validator are absent from the resolved dependency set
+**Maps to:** PKG-01
+
+**Description:** Verifies that the `[api]` extras group is not merged into `[all]`. Per v5.1-D-05, schemathesis is deferred to Phase 96 and must not appear as a transitive dependency of `[all]`. The `openapi-spec-validator` package (in `[api]`) must also be absent from `[all]`.
+
+**Automated gate:**
+```bash
+# This is a @pytest.mark.slow test — run manually or in CI
+python -m pytest tests/test_install_all_excludes_schemathesis.py -v -m slow
+```
+Expect: 1 passed, 0 failed.
+
+Additional quick check:
+```bash
+python -c "
+import subprocess, json, sys, tempfile, os
+
+report_file = tempfile.mktemp(suffix='.json')
+result = subprocess.run(
+    [sys.executable, '-m', 'pip', 'install', '--dry-run', '--ignore-installed',
+     '--quiet', '--report', report_file, '-e', '.[all]'],
+    capture_output=True, text=True, cwd='.'
+)
+with open(report_file) as f:
+    report = json.load(f)
+os.unlink(report_file)
+
+installed = {p['metadata']['name'].lower() for p in report.get('install', [])}
+assert 'schemathesis' not in installed, f'schemathesis found in [all] deps'
+assert 'openapi-spec-validator' not in installed, f'openapi-spec-validator found in [all] deps'
+print('PASS: schemathesis and openapi-spec-validator absent from quirk[all] resolved deps')
+"
+```
+Expect: PASS.
+
+**Pass Criteria:**
+- `schemathesis` is not in the resolved dependency set for `quirk-scanner[all]`.
+- `openapi-spec-validator` is not in the resolved dependency set for `quirk-scanner[all]`.
+- `kubernetes`, `psycopg2-binary`, `redis`, `fastapi` are present (sanity check that `[all]` resolved normally).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:**   **Tester:**
