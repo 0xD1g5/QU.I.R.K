@@ -16,7 +16,19 @@ findings:
   warning: 5
   info: 3
   total: 9
-status: issues_found
+status: remediated
+remediation:
+  commit: e31279e
+  resolved: [CR-01, WR-01, WR-03, WR-05, protocol-casing-OPENAPI]
+  deferred_to_verifier: [WR-02]
+  info_deferred: [IN-01, IN-02, IN-03]
+  note: >-
+    CR-01 (scope gate) + WR-01/03/05 fixed with regression tests; protocol casing
+    unified to OPENAPI (activated the dead plaintext-server evidence counter / SCORE-01
+    weight). WR-02 (no scan path emits BEARER_TOKEN, so TOKEN-02 CBOM classification is
+    unexercised end-to-end) is missing feature wiring — surfaced to the goal-backward
+    verifier rather than fixed inline (security-sensitive cred extraction; gap-closure
+    with planning is the right path if the verifier confirms SC-5 is unmet).
 ---
 
 # Phase 94: Code Review Report
