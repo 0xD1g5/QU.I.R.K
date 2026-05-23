@@ -147,6 +147,23 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
+## Current Milestone: v5.1 Authenticated Scanning + API Surface Depth
+
+**Goal:** Add an optional, ephemeral credential model that unlocks deeper crypto findings across the API surface — without QU.I.R.K. ever becoming a secret store.
+
+**Target features:**
+- **Authenticated scan mode (BACK-64, foundational):** credential model supporting Bearer/OAuth2, API key (header/query), and HTTP Basic. Credentials are ephemeral/in-memory only — passed per-run (flag/env/prompt), never persisted. mTLS client certs deferred.
+- **OpenAPI/Swagger spec analysis (BACK-10):** parse spec files to map the API crypto surface (passive, low-risk).
+- **Bearer token interception & analysis (BACK-11):** capture and classify bearer tokens (alg, key size, expiry) on authenticated calls.
+- **Active REST fuzzing (BACK-09):** crafted-traffic crypto probing, gated by opt-in flag + authorization confirmation + bounded request budget (mirrors the nmap probe-budget pattern).
+- **Code signing certificate inventory (BACK-24):** discovery of code-signing certs as part of the API-surface-depth theme.
+
+**Key context:**
+- Ephemeral-only credential storage is a deliberate decision: no scheduled *authenticated* scans (credentials are not persisted); authenticated runs are explicitly interactive/per-invocation. Existing scheduled (unauthenticated) scans are unaffected. Lowest blast radius — QU.I.R.K. is never a stored-secret surface to defend.
+- A security-review gate is baked into this milestone (HORIZON requirement for the credential subsystem). The ephemeral choice shrinks it to two main concerns: credential lifetime in memory, and leakage into logs/CBOM/error messages — the latter reusing the v4.8 `safe_str()` scrubbing helper.
+- Active fuzzing (BACK-09) is the milestone's sharpest edge: non-passive traffic, off by default, defensively gated.
+- Numbering continues at Phase 93 (v5.0 ended at Phase 92). Capability milestone, restoring the 2:1 capability-to-ops ratio after v5.0's stabilization cycle. Selected from HORIZON Candidate A.
+
 ## Previous Milestone: v5.0 — Stabilization + Tech Debt Sweep — SHIPPED 2026-05-22
 
 **Shipped 2026-05-22** — 6 phases (87–92), 16 plans, 21/21 requirements satisfied. Audit PASSED (4/4 integration seams, 0 blockers); local `v5.0.0` tag. Headline: a demoable post-quantum scoring ceiling (digest-pinned OQS-nginx X25519MLKEM768 hybrid profile + raw-openssl PQC probe → genuine quantum-safe CBOM component + agility bonus). Also: Node 20→24 + defusedxml→hardened-lxml; scoring transparency (six /25 subscores + ÷1.5 rollup across CLI/HTML/PDF) and the 5 zero-algo CBOM profiles fixed; 5 new weak-TLS chaos-lab profiles + identity evidence verified; vulture-confirmed dead-code cleanup + permanent conftest DB-isolation. 4 human-UAT deferred (non-blocking, environment-gated). Archive: `.planning/milestones/v5.0-ROADMAP.md` + `v5.0-REQUIREMENTS.md`. **Next:** v5.1 capability work via `/gsd:new-milestone`.
@@ -297,7 +314,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Render-side + evidence-tally fixes deferred to v5.0 Phase 01 (v4.10.1-D-03 / D-04) | Same bug class likely lives in CLI/HTML/PDF renderers (RENDER-CLI-01/PDF-01); the evidence-tally gap (3 subscores at 25 despite findings) is a separate root cause in the summarizer (EVIDENCE-TALLY-01). A full-stack scoring sweep is the right shape; mixing into a hotfix risks new bugs. | — Pending — captured as Future Requirements in archived v4.10.1-REQUIREMENTS.md; v5.0 Phase 01 pre-loads them |
 
 ---
-*Last updated: 2026-05-22 — v5.0 milestone opened: Stabilization + Tech Debt Sweep (chaos lab coverage, dep hygiene, scoring residuals). Numbering continues at Phase 87; ≤6 phases; research-first → full-sweep scoping. Node 20→24 bump sequenced first (2026-06-02 deadline). Previous: v4.10.1 SHIPPED + archived 2026-05-22.*
+*Last updated: 2026-05-22 — v5.1 milestone opened: Authenticated Scanning + API Surface Depth (HORIZON Candidate A). Ephemeral credential model (Bearer/OAuth2 + API key + Basic), OpenAPI analysis, bearer-token interception, gated active REST fuzzing, code-signing cert inventory. Numbering continues at Phase 93; security-review gate baked in. Previous: v5.0 Stabilization SHIPPED + archived 2026-05-22.*
 
 ## Evolution
 

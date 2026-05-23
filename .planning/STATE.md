@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Stabilization + Tech Debt Sweep — Phases 87–92
-status: Awaiting next milestone
-last_updated: "2026-05-22T23:52:43.267Z"
-last_activity: 2026-05-22 — Milestone v5.0 completed and archived
+milestone: v5.1
+milestone_name: Authenticated Scanning + API Surface Depth
+status: planning
+last_updated: "2026-05-23T00:16:40.452Z"
+last_activity: 2026-05-23
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 ## Current Position
 
-Phase: Milestone v5.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-22 — Milestone v5.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-23 — Milestone v5.1 started
 
 ## Milestone Plan (v5.0 — Stabilization + Tech Debt Sweep, opened 2026-05-22)
 
