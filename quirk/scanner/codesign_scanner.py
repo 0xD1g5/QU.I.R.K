@@ -119,12 +119,19 @@ def _parse_codesign_cert(cert_bytes: bytes) -> "dict | None":
     # SHA-256 fingerprint for CBOM dedup — embedded in service_detail
     fingerprint = cert.fingerprint(hashes.SHA256()).hex()
 
+    try:
+        subject = cert.subject.rfc4514_string()
+    except Exception:
+        subject = ""
+
     return {
         "key_alg": key_alg,
         "key_bits": key_bits,
         "sig_hash": sig_hash,
         "serial": format(cert.serial_number, "x"),
+        "subject": subject,
         "not_after": not_after.isoformat(),
+        "not_after_dt": not_after,  # datetime for the cert_not_after ORM column (CR-01)
         "expired": expired,
         "fingerprint": fingerprint,
         "_cert_obj": cert,  # kept in-memory only; not serialised into JSON
@@ -359,7 +366,9 @@ def scan_codesign_from_ldap(
                         f"|weak"
                     )
 
-                    scan_dict = {k: v for k, v in parsed.items() if k != "fingerprint"}
+                    # Exclude non-JSON-serializable keys (cert object + datetime) from the blob.
+                    _skip = {"fingerprint", "_cert_obj", "not_after_dt"}
+                    scan_dict = {k: v for k, v in parsed.items() if k not in _skip}
                     scan_dict["fingerprint"] = fp
                     scan_dict["reasons"] = reasons
                     scan_dict["attr"] = attr_name
@@ -372,6 +381,9 @@ def scan_codesign_from_ldap(
                         cert_pubkey_alg=parsed["key_alg"],
                         cert_pubkey_size=parsed["key_bits"],
                         cert_sig_alg=parsed.get("sig_hash") or None,
+                        # CR-01: populate the ORM columns the CBOM surrogate-key dedup reads.
+                        cert_subject=parsed.get("subject") or None,
+                        cert_not_after=parsed.get("not_after_dt"),
                         service_detail=detail,
                         severity=severity,
                         smime_scan_json=json.dumps(scan_dict),
@@ -454,6 +466,11 @@ def scan_codesign_from_tls_endpoints(
             cert_pubkey_alg=getattr(ep, "cert_pubkey_alg", None),
             cert_pubkey_size=getattr(ep, "cert_pubkey_size", None),
             cert_sig_alg=getattr(ep, "cert_sig_alg", None),
+            # CR-01: carry the subject + not_after ORM columns through so the CBOM
+            # surrogate-key dedup (cert_subject, cert_pubkey_alg, cert_not_after) matches
+            # the TLS-derived component built from this same endpoint (TLS wins, we annotate).
+            cert_subject=getattr(ep, "cert_subject", None),
+            cert_not_after=getattr(ep, "cert_not_after", None),
             service_detail=detail,
             severity=severity,
             smime_scan_json=json.dumps(scan_dict),
