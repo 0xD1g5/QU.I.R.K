@@ -45,10 +45,10 @@
 
 ### Active REST Fuzzing (BACK-09)
 
-- [ ] **FUZZ-01**: User can run opt-in active REST crypto-posture fuzzing (TLS downgrade, cipher acceptance, HSTS, HTTP-only credential transmission), gated behind an explicit flag + authorization confirmation + bounded request budget.
-- [ ] **FUZZ-02**: Fuzzing enforces six safety guardrails: GET-only default, hard budget ceiling, rate cap, `CONFIRM` prompt, target-scope enforcement, and 5xx-cascade pause.
-- [ ] **FUZZ-03**: Fuzzing hard-aborts in non-interactive (non-TTY) contexts — it never runs headless.
-- [ ] **FUZZ-04**: User can enable a JWT alg-confusion probe (RS256→HS256) behind a dedicated `--fuzz-jwt-alg-confusion` sub-flag.
+- [x] **FUZZ-01**: User can run opt-in active REST crypto-posture fuzzing (TLS downgrade, cipher acceptance, HSTS, HTTP-only credential transmission), gated behind an explicit flag + authorization confirmation + bounded request budget.
+- [x] **FUZZ-02**: Fuzzing enforces six safety guardrails: GET-only default, hard budget ceiling, rate cap, `CONFIRM` prompt, target-scope enforcement, and 5xx-cascade pause.
+- [x] **FUZZ-03**: Fuzzing hard-aborts in non-interactive (non-TTY) contexts — it never runs headless.
+- [x] **FUZZ-04**: User can enable a JWT alg-confusion probe (RS256→HS256) behind a dedicated `--fuzz-jwt-alg-confusion` sub-flag.
 
 ### Code-Signing Certificate Inventory (BACK-24)
 
@@ -58,9 +58,9 @@
 
 ### Scoring, Packaging & Lab (cross-cutting)
 
-- [ ] **SCORE-01**: New API / code-signing / fuzzing signals contribute to the readiness score via the existing `agility_signals` subscore — no 7th pillar, no rollup-denominator change.
+- [x] **SCORE-01**: New API / code-signing / fuzzing signals contribute to the readiness score via the existing `agility_signals` subscore — no 7th pillar, no rollup-denominator change.
 - [x] **PKG-01**: A new `[api]` extras group is introduced; `schemathesis` is excluded from `[all]` and enforced by a CI guard test (impacket exclusion pattern).
-- [ ] **LAB-01**: The chaos lab gains validation coverage for the new surfaces (OpenAPI spec endpoint, code-signing cert fixtures, isolated fuzzing target) with `expected_results_*.md` oracle updates.
+- [x] **LAB-01**: The chaos lab gains validation coverage for the new surfaces (OpenAPI spec endpoint, code-signing cert fixtures, isolated fuzzing target) with `expected_results_*.md` oracle updates.
 
 ---
 
@@ -98,13 +98,13 @@
 | TOKEN-01 | Phase 94 | Complete |
 | TOKEN-02 | Phase 94 | Complete |
 | TOKEN-03 | Phase 94 | Complete |
-| SCORE-01 | Phase 94 (partial), Phase 95 (partial), Phase 96 (final) | Pending |
+| SCORE-01 | Phase 94/95/96 | Complete |
 | PKG-01 | Phase 94 | Complete |
 | CSIGN-01 | Phase 95 | Complete |
 | CSIGN-02 | Phase 95 | Complete |
 | CSIGN-03 | Phase 95 | Complete |
-| LAB-01 | Phase 95 (partial), Phase 96 (final) | Pending |
-| FUZZ-01 | Phase 96 | Pending |
-| FUZZ-02 | Phase 96 | Pending |
-| FUZZ-03 | Phase 96 | Pending |
-| FUZZ-04 | Phase 96 | Pending |
+| LAB-01 | Phase 95/96 | Complete |
+| FUZZ-01 | Phase 96 | Complete |
+| FUZZ-02 | Phase 96 | Complete |
+| FUZZ-03 | Phase 96 | Complete |
+| FUZZ-04 | Phase 96 | Complete |
