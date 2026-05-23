@@ -724,6 +724,20 @@ def main():
         ),
     )
 
+    # Phase 94 SPEC-01/02: OpenAPI spec source flag (local file path or scope-gated URL)
+    parser.add_argument(
+        "--openapi-spec",
+        dest="openapi_spec",
+        default=None,
+        metavar="FILE_OR_URL",
+        help=(
+            "Path to a local OpenAPI/Swagger spec file, or an HTTP(S) URL within the "
+            "configured scan targets (SPEC-02 scope gate enforced before any fetch). "
+            "Emits OpenAPI CryptoEndpoint rows for security schemes, plaintext servers, "
+            "and unauthenticated endpoints. Phase 94 SPEC-01/02/03."
+        ),
+    )
+
     args = parser.parse_args()
 
     # Phase 67 RESUME-01: --list-resumable exits after printing table
@@ -798,6 +812,11 @@ def main():
                 pass
         if getattr(cfg, "intelligence", None) is not None:
             cfg.intelligence.profile = args.score_profile  # type: ignore[attr-defined]
+
+    # Phase 94 SPEC-01/02: --openapi-spec CLI flag overrides cfg.scan.openapi_spec_path
+    if getattr(args, "openapi_spec", None):
+        if hasattr(cfg, "scan") and cfg.scan is not None:
+            cfg.scan.openapi_spec_path = args.openapi_spec
 
     # Phase 93 / AUTH-01: build CredentialContext after config load + security overrides.
     # Lazy import prevents circular deps (D-14: credentials.py has zero scanner imports).
@@ -1274,15 +1293,16 @@ def main():
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "api")
     # Phase 67 RESUME-01: skip api stage if already completed in a prior run.
-    _api_protocols = ("JWT", "CONTAINER", "SOURCE", "ADVISORY")
+    _api_protocols = ("JWT", "CONTAINER", "SOURCE", "ADVISORY", "OPENAPI")
     if _stage_completed(_completed_stages, "api"):
         jwt_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "JWT"]
         container_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "CONTAINER"]
         source_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "SOURCE"]
+        openapi_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "OPENAPI"]
         logger.info(
             f"Resuming: skipping api stage "
             f"({len(jwt_endpoints)} jwt, {len(container_endpoints)} container, "
-            f"{len(source_endpoints)} source from DB)"
+            f"{len(source_endpoints)} source, {len(openapi_endpoints)} openapi from DB)"
         )
     else:
         def _run_jwt_phase():
@@ -1332,12 +1352,33 @@ def main():
             _run_source_phase, error_endpoints, logger,
         ) or []
 
-        _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints)  # Phase 67 RESUME-01
+        # ==============================
+        # OpenAPI spec scan phase (Phase 94 SPEC-01/02/03)
+        # ==============================
+        def _run_openapi_phase():
+            _spec_path = getattr(getattr(cfg, "scan", None), "openapi_spec_path", None)
+            if not _spec_path:
+                return []
+            from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+            _target_list = []
+            if hasattr(cfg, "targets") and cfg.targets is not None:
+                _target_list = list(getattr(cfg.targets, "fqdns", []) or [])
+            try:
+                return scan_openapi_spec(_spec_path, cfg_targets=_target_list)
+            except SpecParsingError as exc:
+                logger.error(f"OpenAPI spec parse error: {safe_str(exc)}")
+                return []
+        openapi_endpoints = _wrapped_phase(
+            run_stats, "openapi_scanning", "openapi_scanner",
+            _run_openapi_phase, error_endpoints, logger,
+        ) or []
+
+        _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints)  # Phase 67 RESUME-01
         _api_pf = _collect_stage_partial_failures(run_stats, "api", error_endpoints, _err_before_api)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "api",
                 status="partial" if _api_pf else "completed",
-                endpoint_count=len(jwt_endpoints + container_endpoints + source_endpoints),
+                endpoint_count=len(jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints),
                 partial_failure=bool(_api_pf), error_summary=_api_pf or None)
 
     # ==============================
@@ -1885,6 +1926,7 @@ def main():
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + pqc_endpoints                                    # Phase 90 PQC-02
                  + jwt_endpoints + container_endpoints + source_endpoints
+                 + openapi_endpoints                                # Phase 94 SPEC-01
                  + aws_endpoints + azure_endpoints + gcp_endpoints
                  + db_endpoints
                  + s3_endpoints + blob_endpoints + gcs_storage_endpoints
