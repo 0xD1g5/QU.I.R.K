@@ -1,5 +1,25 @@
 # Milestones
 
+## v5.1 Authenticated Scanning + API Surface Depth (Shipped: 2026-05-23)
+
+**Phases completed:** 4 phases (93–96), 16 plans
+
+**Delivered:** An optional, ephemeral credential model that unlocks deeper crypto findings across the API surface — without QU.I.R.K. ever becoming a secret store. Credentials are in-memory-only and never persisted; the milestone's sharpest edge (active fuzzing) ships off-by-default behind a defensive gate.
+
+**Key accomplishments:**
+
+- **Credential infrastructure (93):** ephemeral `CredentialContext` (bytearray-backed, BaseException-safe zeroization) supporting Bearer/OAuth2 + API-key (header/query) + HTTP Basic via CLI flag/env/prompt; a committed 11-surface security-review gate; `safe_str` scrubbing extended to credential shapes with an AST CI gate; `QRK-SCHED-AUTH-001` hard-rejects authenticated scheduled scans. Code review caught + fixed 4 leakage/SSRF BLOCKERs (query-param log redaction, scan-error log scrub, JWKS-probe SSRF, DB error-message scrub).
+- **OpenAPI & bearer-token analysis (94):** `analyze-token` JWT classifier (alg:none / missing-alg → CRITICAL); OpenAPI spec scanner hardened against `$ref` SSRF (pre-validate raw-ref reject — subclassing the resolver is insufficient), 10 MB pre-parse DoS gate, and scope-gated URL fetch; CBOM bearer classification `declared_algorithm (unverified)` wired end-to-end through the authenticated scan path (TOKEN-02 gap closed).
+- **Code-signing certificate inventory (95):** LDAP `userCertificate` (CodeSigning EKU) + in-process TLS-EKU discovery; RSA<2048 / EC<256 / SHA-1 → HIGH `CODE-SIGN/weak-algorithm`; SHA-256-fingerprint + surrogate-key cross-source CBOM dedup (TLS-derived component wins). Code review caught + fixed a production-dead dedup (scanner wasn't populating the surrogate-key ORM columns).
+- **Active REST fuzzing (96):** schemathesis-driven crypto-posture probes (TLS downgrade, cipher, HSTS, HTTP-only cred) + RS256→HS256 alg-confusion (stdlib-hmac forge); literal `CONFIRM` gate, hard non-TTY abort, six guardrails, and an unbypassable budget ceiling (default 50 / hard max 500) now bounding ALL traffic (two budget-bypass BLOCKERs — uncounted alg-confusion + per-iteration socket probes — found and fixed). New `fuzz-target` chaos profile.
+- **Packaging + scoring:** `[api]` extras group (openapi-spec-validator + schemathesis) excluded from `[all]` with a CI guard; `SCORE_WEIGHTS` walked 283.0/37 → 293.0 → 299.0 → **303.0 / 41** via the existing `agility_signals` subscore (no 7th pillar).
+
+**Audit:** PASSED — 21/21 requirements satisfied, 21/21 cross-phase integration seams wired, 5/5 E2E flows complete, 0 blockers (1 cosmetic OPENAPI-CBOM finding resolved inline).
+
+**Known deferred items at close:** 6 human-UAT (environment/TTY-gated, non-blocking) — getpass TTY prompt + live PDF export (93); live ldaps code-signing scan (95); TTY CONFIRM gate + non-TTY abort + live alg-confusion vs fuzz-target container (96). Minor design-judgment tech-debt tracked for v5.2 (see v5.1-MILESTONE-AUDIT.md).
+
+---
+
 ## v5.0 Stabilization + Tech Debt Sweep (Shipped: 2026-05-22)
 
 **Phases completed:** 6 phases (87–92), 16 plans

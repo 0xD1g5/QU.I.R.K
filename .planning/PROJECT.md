@@ -314,7 +314,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Render-side + evidence-tally fixes deferred to v5.0 Phase 01 (v4.10.1-D-03 / D-04) | Same bug class likely lives in CLI/HTML/PDF renderers (RENDER-CLI-01/PDF-01); the evidence-tally gap (3 subscores at 25 despite findings) is a separate root cause in the summarizer (EVIDENCE-TALLY-01). A full-stack scoring sweep is the right shape; mixing into a hotfix risks new bugs. | — Pending — captured as Future Requirements in archived v4.10.1-REQUIREMENTS.md; v5.0 Phase 01 pre-loads them |
 
 ---
-*Last updated: 2026-05-22 — v5.1 milestone opened: Authenticated Scanning + API Surface Depth (HORIZON Candidate A). Ephemeral credential model (Bearer/OAuth2 + API key + Basic), OpenAPI analysis, bearer-token interception, gated active REST fuzzing, code-signing cert inventory. Numbering continues at Phase 93; security-review gate baked in. Previous: v5.0 Stabilization SHIPPED + archived 2026-05-22.*
+*Last updated: 2026-05-23 — v5.1 Authenticated Scanning + API Surface Depth SHIPPED + archived (Phases 93–96, 16 plans, 21/21 reqs, audit PASSED, local `v5.1.0` tag). Delivered: ephemeral credential model (Bearer/API-key/Basic, never persisted) + 11-surface security-review gate; OpenAPI/JWT analysis; LDAP+TLS-EKU code-signing inventory; gated active REST fuzzing (CONFIRM gate, 6 guardrails, non-TTY hard-abort, alg-confusion); `[api]` extras; SCORE_WEIGHTS → 303.0/41. Next milestone continues at Phase 97 via `/gsd:new-milestone`. Previous: v5.0 Stabilization SHIPPED 2026-05-22.*
 
 ## Evolution
 
