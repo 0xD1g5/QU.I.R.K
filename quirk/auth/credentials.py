@@ -76,6 +76,30 @@ class CredentialContext:
         secret = self._secret_buf.decode("utf-8")
         return (self._query_param or "api_key", secret)
 
+    def bearer_declared_alg(self) -> Optional[str]:
+        """Return the DECLARED JWT algorithm of a bearer token, or None (Phase 94 TOKEN-02).
+
+        For scheme == "bearer" only: decodes the JWT header (UNVERIFIED — signature is
+        never checked) and returns the ``alg`` value (e.g. "RS256", "HS256", "none").
+        Returns None for non-bearer schemes or when the token is not a JWT (opaque).
+
+        Security: only the declared algorithm string is returned — the raw token is
+        never returned, logged, or persisted. The token leaves this object only as
+        metadata (the alg), satisfying TOKEN-02's "declared_algorithm (unverified)"
+        contract without exposing the secret. The classification is non-enforced.
+        """
+        if self.scheme != "bearer":
+            return None
+        try:
+            import jwt  # PyJWT (core dep); lazy import keeps module load light
+            token = self._secret_buf.decode("utf-8")
+            header = jwt.get_unverified_header(token)
+            alg = header.get("alg")
+            return str(alg) if alg else None
+        except Exception:
+            # Opaque (non-JWT) bearer token or malformed header — no declared alg.
+            return None
+
     def close(self) -> None:
         """Zero the secret buffer in place (best-effort, D-04/D-05)."""
         n = len(self._secret_buf)

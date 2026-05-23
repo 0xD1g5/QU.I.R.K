@@ -1927,10 +1927,29 @@ def main():
                 endpoint_count=len(_broker_email_eps), partial_failure=bool(_broker_pf),
                 error_summary=_broker_pf or None)
 
+    # Phase 94 / TOKEN-02: classify the operator-supplied bearer credential into the CBOM.
+    # Passive — the JWT header is decoded UNVERIFIED for its declared algorithm only; the
+    # raw token never reaches a CryptoEndpoint, the DB, or the CBOM (only the alg string).
+    bearer_token_endpoints = []
+    if cred_ctx is not None and getattr(cred_ctx, "scheme", None) == "bearer":
+        _declared_alg = cred_ctx.bearer_declared_alg()
+        if _declared_alg:
+            _bt_host = (cfg.targets.fqdns[0] if getattr(cfg, "targets", None)
+                        and getattr(cfg.targets, "fqdns", None) else "authenticated-scan")
+            bearer_token_endpoints.append(CryptoEndpoint(
+                host=_bt_host,
+                port=443,
+                protocol="BEARER_TOKEN",
+                cert_pubkey_alg=_declared_alg,
+                service_detail="declared_algorithm (unverified)",
+                severity="INFO",
+            ))
+
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + pqc_endpoints                                    # Phase 90 PQC-02
                  + jwt_endpoints + container_endpoints + source_endpoints
                  + openapi_endpoints                                # Phase 94 SPEC-01
+                 + bearer_token_endpoints                           # Phase 94 TOKEN-02
                  + aws_endpoints + azure_endpoints + gcp_endpoints
                  + db_endpoints
                  + s3_endpoints + blob_endpoints + gcs_storage_endpoints
