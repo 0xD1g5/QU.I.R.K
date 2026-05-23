@@ -501,7 +501,12 @@ def run_fuzz_scan(
     if run_alg_confusion and cred_ctx is not None and cred_ctx.scheme == "bearer":
         declared_alg = cred_ctx.bearer_declared_alg()
         if declared_alg and declared_alg.upper() == "RS256":
-            alg_confusion_bearer = cred_ctx._secret_buf.decode("utf-8")
+            # WR-02: guard the secret decode — a corrupt buffer must not abort the phase.
+            try:
+                alg_confusion_bearer = cred_ctx._secret_buf.decode("utf-8")
+            except Exception as exc:
+                logger.debug("Alg-confusion bearer decode failed: %s", safe_str(str(exc)))
+                alg_confusion_bearer = None
             alg_confusion_pub_pem = _fetch_jwks_public_key_pem(
                 base_url, session, allow_internal=allow_internal
             )
@@ -518,6 +523,36 @@ def run_fuzz_scan(
                 alg_confusion_info_emitted = True
                 alg_confusion_bearer = None  # prevent any alg-confusion requests
 
+    # CR-02: TLS-downgrade + weak-cipher probes are CONNECTION-level (host:port), not
+    # per-endpoint. Run them ONCE here (counted against budget + rate-limited) rather than
+    # re-opening raw sockets every loop iteration (which duplicated findings and bypassed
+    # the budget ceiling — the central DoS guardrail).
+    if parsed_base.scheme == "https":
+        if budget_used < effective_budget:
+            limiter.acquire()
+            budget_used += 1
+            try:
+                if _probe_tls_downgrade(host, port):
+                    findings.append(CryptoEndpoint(
+                        host=host, port=port, protocol="REST_FUZZ",
+                        service_detail="tls_downgrade_accepted", severity="HIGH",
+                        scanned_at=_scanned_at,
+                    ))
+            except Exception as exc:
+                logger.debug("TLS downgrade probe error: %s", safe_str(str(exc)))
+        if budget_used < effective_budget:
+            limiter.acquire()
+            budget_used += 1
+            try:
+                if _probe_cipher_weak(host, port):
+                    findings.append(CryptoEndpoint(
+                        host=host, port=port, protocol="REST_FUZZ",
+                        service_detail="cipher_weak", severity="HIGH",
+                        scanned_at=_scanned_at,
+                    ))
+            except Exception as exc:
+                logger.debug("Cipher probe error: %s", safe_str(str(exc)))
+
     # Enumerate GET-only operations via schemathesis (FUZZ-02 guardrail 1)
     try:
         schema = schemathesis.openapi.from_dict(spec_dict)
@@ -532,9 +567,14 @@ def run_fuzz_scan(
             if not isinstance(result, _SchemaOk):
                 continue
 
-            op = result.ok()
-            case = op.as_strategy().example()
-            kwargs = case.as_transport_kwargs(base_url=base_url)
+            # WR-04: one malformed operation must not abort the whole fuzz loop.
+            try:
+                op = result.ok()
+                case = op.as_strategy().example()
+                kwargs = case.as_transport_kwargs(base_url=base_url)
+            except Exception as exc:
+                logger.debug("Skipping operation (case generation failed): %s", safe_str(str(exc)))
+                continue
 
             url = kwargs.get("url", "")
 
@@ -590,35 +630,8 @@ def run_fuzz_scan(
                     scanned_at=_scanned_at,
                 ))
 
-            # TLS downgrade probe (only for https targets — probe at socket level)
-            if parsed_base.scheme == "https":
-                try:
-                    if _probe_tls_downgrade(host, port):
-                        findings.append(CryptoEndpoint(
-                            host=host,
-                            port=port,
-                            protocol="REST_FUZZ",
-                            service_detail="tls_downgrade_accepted",
-                            severity="HIGH",
-                            scanned_at=_scanned_at,
-                        ))
-                except Exception as exc:
-                    logger.debug("TLS downgrade probe error: %s", safe_str(str(exc)))
-
-            # Cipher probe (only for https targets)
-            if parsed_base.scheme == "https":
-                try:
-                    if _probe_cipher_weak(host, port):
-                        findings.append(CryptoEndpoint(
-                            host=host,
-                            port=port,
-                            protocol="REST_FUZZ",
-                            service_detail="cipher_weak",
-                            severity="HIGH",
-                            scanned_at=_scanned_at,
-                        ))
-                except Exception as exc:
-                    logger.debug("Cipher probe error: %s", safe_str(str(exc)))
+            # (TLS-downgrade + cipher probes are connection-level and run once before this
+            # loop — see the CR-02 block above. Not repeated per request.)
 
             # HTTP-only credential probe:
             # ONLY fires for spec-declared http:// endpoints (Open Question 2 resolution).
@@ -638,6 +651,7 @@ def run_fuzz_scan(
                 run_alg_confusion
                 and alg_confusion_bearer is not None
                 and alg_confusion_pub_pem is not None
+                and budget_used < effective_budget  # CR-01: this dispatch counts against budget
             ):
                 forged = _forge_hs256_token(alg_confusion_bearer, alg_confusion_pub_pem)
                 if forged is not None:
@@ -654,7 +668,14 @@ def run_fuzz_scan(
                         limiter.acquire()
                         try:
                             alg_resp = session.request(**alg_kwargs)
+                            # CR-01: count the forged-token request against the budget ceiling.
+                            budget_used += 1
                             alg_status = getattr(alg_resp, "status_code", 0)
+                            # WR-01: alg-confusion responses feed the 5xx cascade tracker too.
+                            if alg_status >= 500:
+                                consecutive_5xx += 1
+                            else:
+                                consecutive_5xx = 0
                             if 200 <= alg_status < 300:
                                 # Server accepted the forged HS256 token — CRITICAL
                                 findings.append(CryptoEndpoint(

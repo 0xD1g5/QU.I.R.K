@@ -635,3 +635,58 @@ class TestAlgConfusionProbeAccepted:
             and getattr(f, "service_detail", None) == "probe_skipped"
         ]
         assert len(info_findings) >= 1
+
+
+class TestBudgetCeilingBoundsAllTraffic:
+    """CR-01/CR-02 regression: the budget ceiling must bound ALL outbound traffic —
+    including the connection-level TLS/cipher socket probes (run once, counted) and
+    (when enabled) the alg-confusion forged-token request."""
+
+    def _mock_ops(self, n):
+        from schemathesis.core.result import Ok as _SchemaOk
+        results = []
+        for _ in range(n):
+            mock_case = MagicMock()
+            mock_case.as_transport_kwargs.return_value = {
+                "method": "GET", "url": "https://example.com/probe",
+                "headers": {}, "cookies": {}, "params": {},
+            }
+            mock_op = MagicMock()
+            mock_op.as_strategy.return_value.example.return_value = mock_case
+            results.append(_SchemaOk(mock_op))
+        return results
+
+    def test_socket_probes_run_once_and_count_budget(self):
+        """TLS-downgrade + cipher probes fire exactly ONCE (not per-operation) and each
+        consumes one unit of budget — so N operations cannot open 2N raw sockets."""
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+
+        session_mock = MagicMock()
+        session_mock.request.return_value = _make_response(200)
+        cfg = MagicMock()
+        cfg.security = MagicMock()
+        cfg.security.allow_internal_targets = False
+
+        with patch("quirk.scanner.rest_fuzzer.schemathesis") as mod, \
+             patch("quirk.scanner.rest_fuzzer.validate_external_url", return_value=_ok_scope_result()), \
+             patch("quirk.scanner.rest_fuzzer._probe_tls_downgrade", return_value=False) as tls_p, \
+             patch("quirk.scanner.rest_fuzzer._probe_cipher_weak", return_value=False) as cip_p:
+            mock_schema = MagicMock()
+            mock_schema.include.return_value.get_all_operations.return_value = self._mock_ops(10)
+            mod.openapi.from_dict.return_value = mock_schema
+
+            run_fuzz_scan(
+                spec_dict={"openapi": "3.0.0"},
+                base_url="https://example.com",   # https → socket probes apply
+                cfg=cfg, budget=5,
+                prompt_fn=lambda _: "CONFIRM", is_tty=True,
+                _session=session_mock,
+            )
+
+        # CR-02: each connection-level probe runs at most ONCE, never per-operation.
+        assert tls_p.call_count == 1
+        assert cip_p.call_count == 1
+        # Total HTTP requests bounded by budget minus the 2 socket-probe units.
+        assert session_mock.request.call_count <= 5
+        # And total dispatched units (2 socket + HTTP) never exceeds the budget.
+        assert (tls_p.call_count + cip_p.call_count + session_mock.request.call_count) <= 5
