@@ -143,19 +143,46 @@ def test_sentinel_not_in_safe_str_basic_shape() -> None:
 
 
 def test_sentinel_not_in_scan_error_json() -> None:
-    """AUTH-02 / D-06: sentinel in a CryptoEndpoint scan_error must not appear in json.dumps output."""
-    from quirk.models import CryptoEndpoint
+    """AUTH-02 / D-04 / WR-05: sentinel in a CryptoEndpoint scan_error must not appear in
+    json.dumps output — REAL-PATH TEST.
 
-    # scan_error is written via safe_str in _wrapped_phase; safe_str must scrub it
-    scrubbed = safe_str(Exception(f"Authorization: Bearer {SENTINEL}"))
-    ep = CryptoEndpoint(
-        host="example.com",
-        port=443,
-        protocol="JWT",
-        scan_error=scrubbed,
-    )
+    This test routes the sentinel through the ACTUAL scanner exception handler in
+    quirk/scanner/tls_scanner.py (_scan_one_fallback). The scrubbing is applied by
+    production code (`ep.scan_error = f"{cat}: {safe_str(e)}"` at tls_scanner.py:465),
+    NOT by this test body. If safe_str were removed from that production path, socket.
+    create_connection would raise with a SENTINEL-bearing message, scan_error would be
+    set directly to the unscrubbed message, and this test would FAIL.
+
+    Approach: mock socket.create_connection to raise an OSError whose message embeds the
+    SENTINEL in Authorization-Bearer shape (matched by safe_str _SENSITIVE_PATTERNS).
+    Call the real _scan_one_fallback so the production except-block sets scan_error via
+    safe_str(e). Assert SENTINEL is absent from json.dumps of the result.
+
+    NOTE: The test does NOT call safe_str anywhere in this body — the scrub is applied
+    exclusively by production code. This is the distinguishing property vs. the prior
+    pre-scrubbed version.
+    """
+    from unittest.mock import patch
+    from quirk.scanner.tls_scanner import _scan_one_fallback
+
+    # The exception message embeds SENTINEL in Authorization-Bearer shape so safe_str
+    # matches _SENSITIVE_PATTERNS and returns class-name-only. No safe_str call here.
+    sentinel_exc = OSError(f"TLS handshake failed: Authorization: Bearer {SENTINEL}")
+
+    with patch("socket.create_connection", side_effect=sentinel_exc):
+        ep = _scan_one_fallback(
+            host="example.com",
+            port=443,
+            timeout=1,
+            include_sni=False,
+        )
+
+    # scan_error must have been set by the production except-block, not by this test
+    assert ep.scan_error is not None, "scan_error should be set after a connection failure"
     dumped = json.dumps({"scan_error": ep.scan_error})
-    assert SENTINEL not in dumped, f"Sentinel leaked into JSON scan_error: {dumped!r}"
+    assert SENTINEL not in dumped, (
+        f"Sentinel leaked into JSON scan_error via real scanner path: {dumped!r}"
+    )
 
 
 def test_sentinel_not_in_db_row(tmp_path) -> None:
@@ -302,6 +329,12 @@ def test_sentinel_not_in_dashboard_api_json(dashboard_client) -> None:
 
 def test_sentinel_not_in_pdf_export_surface(tmp_path) -> None:
     """AUTH-02 / SC-2: sentinel must not appear in the PDF export surface.
+
+    DOCUMENTED COVERAGE GAP (D-04 / WR-05): This test does NOT perform a live
+    Playwright PDF render. A live PDF render requires a running server + Playwright
+    Chromium installation and is therefore not mechanically verified by this test.
+    This test is NOT coverage of the PDF renderer — it is an upstream-linkage
+    assertion only.
 
     PDF export (quirk/dashboard/api/routes/pdf.py) renders via Playwright from
     the /print route, which is populated from the same CBOM JSON / SQLite
