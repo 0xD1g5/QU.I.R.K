@@ -126,8 +126,8 @@ class CredentialContext:
         Each scheme arg is a REFERENCE, not a secret:
           - Empty string or "PROMPT" sentinel: interactive getpass prompt
           - Starts with "@": read file via load_targets_file path-traversal guard
-          - Looks like an env-var name (all-caps, set in environment): read and
-            delete the env var (prevents subprocess inheritance, PITFALLS Pitfall 1)
+          - any name present in the environment (D-01): read and delete the env var
+            (prevents subprocess inheritance, PITFALLS Pitfall 1)
           - Anything else: raise ValueError with reference-usage guidance (teach
             the consultant the correct pattern; error text scrubbed via safe_str)
 
