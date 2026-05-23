@@ -638,15 +638,13 @@ None — this is a greenfield feature addition. No stored data, live service con
 
 ## Open Questions
 
-1. **Public key extraction for alg-confusion probe**
-   - What we know: The chaos lab `jwt-rs256` service exposes `/.well-known/jwks.json` with the RSA public key. Real targets may not.
-   - What's unclear: Should the probe skip gracefully (INFO finding) when no public key is discoverable, or should it attempt to fetch the JWKS URL from the JWT `iss` or `jku` header claim?
-   - Recommendation: Graceful skip with INFO finding. Fetching `jku` is a separate SSRF risk; not worth it for a probe.
+> RESOLVED during planning (Phase 96, 2026-05-23) — both answered by the plan set.
 
-2. **HTTP-only credential transmission probe scope**
-   - What we know: The probe should send the bearer token or API key over an `http://` URL variant of the same endpoint.
-   - What's unclear: Should QUIRK actually construct an `http://` URL by stripping the `s` from `https://`, or only probe endpoints already declared as `http://` in the OpenAPI spec?
-   - Recommendation: Probe only endpoints already declared as `http://` in the spec (Phase 94 already identifies these); do not silently downgrade HTTPS URLs.
+1. **Public key extraction for alg-confusion probe** — RESOLVED
+   - Decision: Graceful skip with an INFO `probe_skipped` finding when no public key is discoverable. The probe only fetches `/.well-known/jwks.json` on the in-scope base_url (still scope-gated); it does NOT follow `iss`/`jku` claims (separate SSRF risk). Implemented in Plan 96-02 Task 2 (T-96-08).
+
+2. **HTTP-only credential transmission probe scope** — RESOLVED
+   - Decision: Probe only endpoints already declared as `http://` in the OpenAPI spec (Phase 94 identifies these). QUIRK never silently downgrades `https://` URLs to `http://`. Implemented in Plan 96-02 Task 1.
 
 ---
 
