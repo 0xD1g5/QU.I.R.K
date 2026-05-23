@@ -35,7 +35,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Next m
 
 **Phases:**
 
-- [ ] **Phase 97: v5.1 Tech-Debt Cleanup** — Close carried WR-02/03/04/06 items before report work begins
+- [x] **Phase 97: v5.1 Tech-Debt Cleanup** — Close carried WR-02/03/04/06 items before report work begins (completed 2026-05-23)
 - [ ] **Phase 98: Executive Narrative + Score Transparency** — The anchor: narrative exec summary, prioritized remediation roadmap, subscore decomposition, consistency fix; all three render surfaces
 - [ ] **Phase 99: Per-Finding Context + Code-Signing Expiry** — Enrich every finding with a quantum-risk "so what" + actionable remediation; surface code-signing cert expiry as a finding
 - [ ] **Phase 100: Professional & Editable Report Delivery** — Client-ready PDF cover/layout/typography, clean table pagination, and DOCX editable export so a consultant can finalize before client delivery
@@ -52,10 +52,10 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Next m
 **Plans**: 4 plans
 
 Plans:
-- [ ] 97-01-PLAN.md — credentials.py doc-only corrections (D-01 env-var docstring + D-02 str-copy proliferation comments)
-- [ ] 97-02-PLAN.md — rest_fuzzer combined failure-cascade counter (D-06 / TD-02) + regression test
-- [ ] 97-03-PLAN.md — JWT pre-existing-param reject (D-03) + scheduler parse-based fail-closed auth-reject (D-05), both with tests
-- [ ] 97-04-PLAN.md — leak-test real-path routing + PDF coverage-gap annotation (D-04) + mandatory docs/UAT/Obsidian sync
+- [x] 97-01-PLAN.md — credentials.py doc-only corrections (D-01 env-var docstring + D-02 str-copy proliferation comments)
+- [x] 97-02-PLAN.md — rest_fuzzer combined failure-cascade counter (D-06 / TD-02) + regression test
+- [x] 97-03-PLAN.md — JWT pre-existing-param reject (D-03) + scheduler parse-based fail-closed auth-reject (D-05), both with tests
+- [x] 97-04-PLAN.md — leak-test real-path routing + PDF coverage-gap annotation (D-04) + mandatory docs/UAT/Obsidian sync
 
 ### Phase 98: Executive Narrative + Score Transparency
 **Goal**: A consultant running any output surface (CLI, HTML, PDF) receives a CISO-readable executive report that leads with the readiness story, shows a prioritized remediation roadmap, and surfaces the full subscore decomposition — all three surfaces carry identical content
@@ -97,7 +97,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 97. v5.1 Tech-Debt Cleanup | 0/4 | Not started | - |
+| 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete   | 2026-05-23 |
 | 98. Executive Narrative + Score Transparency | 0/TBD | Not started | - |
 | 99. Per-Finding Context + Code-Signing Expiry | 0/TBD | Not started | - |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
