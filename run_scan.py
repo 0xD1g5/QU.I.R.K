@@ -737,6 +737,18 @@ def main():
             "and unauthenticated endpoints. Phase 94 SPEC-01/02/03."
         ),
     )
+    # Phase 95 CSIGN-01: code-signing certificate inventory flag
+    parser.add_argument(
+        "--inventory-code-signing",
+        dest="inventory_code_signing",
+        action="store_true",
+        default=False,
+        help=(
+            "Inventory code-signing certificates from LDAP userCertificate attributes "
+            "and TLS endpoint EKU checks (CSIGN-01). Requires codesign_targets in "
+            "connectors config for LDAP discovery."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -1500,7 +1512,8 @@ def main():
     if args.job_id and args.db_path:
         update_job_stage(args.db_path, args.job_id, "data_at_rest")
     # Phase 67 RESUME-01: skip data_at_rest stage if already completed in a prior run.
-    _dar_protocols = ("S3", "AZURE-BLOB", "K8S", "GCS", "VAULT", "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS")
+    _dar_protocols = ("S3", "AZURE-BLOB", "K8S", "GCS", "VAULT", "DNSSEC", "SAML",
+                     "KERBEROS", "SMIME", "ADCS", "CODE_SIGNING")  # Phase 95 CSIGN-01
     if _stage_completed(_completed_stages, "data_at_rest"):
         s3_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "S3"]
         blob_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "AZURE-BLOB"]
@@ -1511,6 +1524,7 @@ def main():
         kerberos_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "KERBEROS"]
         smime_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "SMIME"]
         adcs_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "ADCS"]
+        codesign_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "CODE_SIGNING"]  # Phase 95 CSIGN-01
         vault_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "VAULT"]
         logger.info(
             f"Resuming: skipping data_at_rest stage "
@@ -1518,6 +1532,7 @@ def main():
             f"{len(gcs_storage_endpoints)} gcs, {len(dnssec_endpoints)} dnssec, "
             f"{len(saml_endpoints)} saml, {len(kerberos_endpoints)} kerberos, "
             f"{len(smime_endpoints)} smime, {len(adcs_endpoints)} adcs, "
+            f"{len(codesign_endpoints)} codesign, "
             f"{len(vault_endpoints)} vault from DB)"
         )
     else:
@@ -1730,6 +1745,41 @@ def main():
         adcs_endpoints = _wrapped_phase(
             run_stats, "adcs_scanning", "adcs_scanner",
             _run_adcs_phase, error_endpoints, logger,
+        ) or []
+
+        # ── Code-signing certificate inventory (Phase 95 CSIGN-01) ───────────────
+        # IMPORTANT: runs AFTER tls_endpoints is populated so the TLS EKU path
+        # (scan_codesign_from_tls_endpoints) can operate on already-captured certs.
+        def _run_codesign_phase():
+            if not getattr(args, "inventory_code_signing", False):
+                return []
+            from quirk.scanner.codesign_scanner import (
+                scan_codesign_from_ldap,
+                scan_codesign_from_tls_endpoints,
+            )
+            ldap_eps = []
+            if getattr(cfg.connectors, "codesign_targets", None):
+                ldap_eps = scan_codesign_from_ldap(
+                    targets=cfg.connectors.codesign_targets,
+                    timeout=getattr(cfg.connectors, "codesign_timeout", 10),
+                    logger=logger,
+                    session_start=session_start,
+                    search_base=getattr(cfg.connectors, "codesign_search_base", None),
+                )
+                logger.info("CODE_SIGNING LDAP scan: %d endpoints from %d targets",
+                            len(ldap_eps), len(cfg.connectors.codesign_targets))
+            # In-process TLS EKU check — no new network I/O (CSIGN-01 TLS source)
+            tls_eps = scan_codesign_from_tls_endpoints(
+                tls_endpoints,
+                session_start=session_start,
+                logger=logger,
+            )
+            logger.info("CODE_SIGNING TLS-EKU check: %d CODE_SIGNING endpoints from %d TLS endpoints",
+                        len(tls_eps), len(tls_endpoints))
+            return ldap_eps + tls_eps
+        codesign_endpoints = _wrapped_phase(
+            run_stats, "codesign_scanning", "codesign_scanner",
+            _run_codesign_phase, error_endpoints, logger,
         ) or []
 
         # ── Vault scanning (Phase 30, VAULT-01/02/03) ─────────────────────────────
@@ -1957,6 +2007,7 @@ def main():
                  + dnssec_endpoints + saml_endpoints + kerberos_endpoints
                  + smime_endpoints
                  + adcs_endpoints
+                 + codesign_endpoints                              # Phase 95 CSIGN-01
                  + vault_endpoints
                  + email_endpoints
                  + kafka_endpoints + rabbit_endpoints + redis_endpoints

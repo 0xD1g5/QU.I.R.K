@@ -31,7 +31,7 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | registry | registry, registry-seed | 20005 | [Expected Findings](expected_results_v4.md#profile-registry) | v4.1 |
 | source | gitea, gitea-seed | 20006 | [Expected Findings](expected_results_v4.md#profile-source) | v4.1 |
 | ssh-weak | ssh-weak | 20022 | [Expected Findings](expected_results_v4.md#profile-ssh-weak) | v4.1 |
-| ldaps | ldaps | 636 | [Expected Findings](expected_results_v4.md#profile-ldaps) | v4.1; bitnamilegacy/openldap:2.6.10-debian-12-r4 (macOS-compat 2026-05-15) |
+| ldaps | ldaps, ldaps-codesign-seed | 636 | [Expected Findings](expected_results_v4.md#profile-ldaps) | v4.1; bitnamilegacy/openldap:2.6.10-debian-12-r4 (macOS-compat 2026-05-15). v5.1 Phase 95 (LAB-01): code-signing fixture added — `ldaps-codesign-seed` sidecar seeds `uid=codesign-weak` (RSA-1024/SHA-1 + CodeSigning EKU) under `dc=chaos,dc=local`. Idempotent sidecar (`ldapadd -c`, swallows exit 68). Use `--inventory-code-signing` flag to scan. |
 | dnssec | bind9-dnssec | 15353/udp, 15353/tcp | [Expected Findings](expected_results_v4.md#profile-dnssec) | v4.2 |
 | saml | simplesamlphp | 8080 | [Expected Findings](expected_results_v4.md#profile-saml) | v4.2; note: port 8080 — avoid running alongside `identity` (Keycloak exposes 8080 internally) |
 | kerberos | samba-dc | 88, 389 | [Expected Findings](expected_results_v4.md#profile-kerberos) | v4.2; privileged ports — collides with system DNS/AD if anything else listens on 88/389. **macOS:** `./lab.sh all` skips this profile automatically because the OS-level KDC binds `*:88`. Set `LAB_INCLUDE_KERBEROS=1` to opt in (requires stopping the system KDC first). Tracked for full host-port remap under BACK-89. |
