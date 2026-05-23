@@ -324,7 +324,7 @@ pip install "quirk-scanner[api]"
 
 This installs `openapi-spec-validator>=0.9.0`. The `[api]` group is **not** included in `[all]` — it is opt-in to keep the base install lightweight.
 
-> `schemathesis` fuzzing support is planned for a future phase and is not included in `[api]` or `[all]`.
+> **Phase 96 update:** `schemathesis` is now included in the `[api]` extras group and powers the REST fuzzer (`--fuzz` flag). It is intentionally **excluded from `[all]`** — see [REST Fuzzing](#rest-fuzzing-active-crypto-posture-probes) below.
 
 ### CLI flag
 
@@ -472,6 +472,110 @@ quirk --config config.yaml --auth-api-key-query @/tmp/apikey.txt
 
 ---
 
+## REST Fuzzing (active crypto-posture probes)
+
+Phase 96 (v5.1) introduced active REST endpoint fuzzing for crypto-posture assessment.
+The fuzzer sends a bounded set of probes to discovered OpenAPI endpoints and checks for
+TLS downgrade acceptance, weak cipher negotiation, missing HSTS headers, HTTP-only
+credential transmission, and (behind a dedicated sub-flag) JWT RS256→HS256 algorithm
+confusion. **Fuzzing is off by default and requires explicit opt-in.**
+
+### Installing the `[api]` extras group
+
+```bash
+pip install "quirk-scanner[api]"
+```
+
+This installs `openapi-spec-validator>=0.9.0` and `schemathesis` (the request-dispatch
+engine). The `[api]` group is **not** included in `[all]` — it is opt-in to keep the base
+install lightweight. Running `--fuzz` without `[api]` installed prints a missing-extra
+advisory and exits cleanly.
+
+### CLI flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--fuzz` | `false` | Enable active REST crypto-posture fuzzing. Requires `--openapi-spec` (endpoint source) and an interactive `CONFIRM` prompt before any request is sent. |
+| `--fuzz-jwt-alg-confusion` | `false` | Also run the JWT RS256→HS256 algorithm-confusion probe. Combines a Phase 93 bearer token with the target's JWKS public key to forge a symmetric token; acceptance yields a CRITICAL finding. |
+| `--fuzz-budget N` | `50` | Maximum number of probe requests (hard max 500 — values above 500 are rejected before any request is sent). |
+
+### CONFIRM gate and non-TTY hard-abort (FUZZ-01, FUZZ-03)
+
+When `--fuzz` is set in a TTY session, the scanner prints a budget summary and requires
+the user to type the **literal word `CONFIRM`** before any request is dispatched:
+
+```
+Fuzzing will send up to 50 probe requests to 3 endpoint(s).
+Target: https://api.acme.com
+Type CONFIRM to proceed, or press Enter to abort:
+```
+
+Any input other than `CONFIRM` (including a bare Enter) aborts cleanly with **zero
+requests sent**.
+
+> **Non-TTY hard-abort:** When stdin is not a TTY (piped input, CI/CD, scheduled jobs),
+> the scanner hard-aborts **before sending any request** and prints a clear
+> non-interactive-mode error. Fuzzing **never runs headlessly**. This differs from the
+> nmap discovery prompt, which auto-proceeds in non-TTY mode — the fuzz gate is stricter
+> by design (T-96-03).
+
+### Six safety guardrails (FUZZ-02)
+
+| # | Guardrail | Behavior |
+|---|-----------|----------|
+| 1 | GET-only by default | Only HTTP `GET` endpoints are probed; other methods require explicit future opt-in |
+| 2 | Hard budget ceiling | `--fuzz-budget` default 50, hard max **500** — values above 500 are rejected before any request |
+| 3 | Rate cap 5 req/s | Probe requests are rate-limited to 5 per second using the nmap TokenBucket pattern |
+| 4 | CONFIRM prompt | TTY: user must type the literal word `CONFIRM`; any other input aborts with zero requests sent |
+| 5 | Per-request scope enforcement | Every probe URL is validated via `validate_external_url` + `cfg.targets` before dispatch — out-of-scope URLs are rejected |
+| 6 | 5xx cascade pause | After 3 consecutive HTTP 5xx responses, the fuzzer pauses and emits a warning before continuing |
+
+### Findings produced
+
+REST fuzzing results appear as `CryptoEndpoint(protocol="REST_FUZZ")` rows in the
+standard findings table:
+
+| Finding type | Severity | Description |
+|-------------|----------|-------------|
+| TLS downgrade accepted | HIGH | Server accepted a downgraded TLS version on a REST endpoint |
+| Weak cipher accepted | HIGH | Server negotiated a weak cipher suite on a REST endpoint |
+| HSTS header missing | HIGH | `Strict-Transport-Security` header absent on an HTTPS endpoint |
+| HTTP-only credential transmission | HIGH | Endpoint accepts credentials over plain `http://` — feeds `agility_fuzz_crypto_posture_ratio` scoring penalty |
+| JWT alg-confusion acceptance | CRITICAL | Server accepted an RS256→HS256 forged token (requires `--fuzz-jwt-alg-confusion`) — feeds `agility_fuzz_crypto_posture_ratio` scoring penalty |
+
+> **CBOM note:** REST_FUZZ endpoints are excluded from the CBOM TLS and certificate
+> component builders (Pass-2 and Pass-3 skip lists) to prevent phantom
+> `crypto/protocol/tls/*` and `crypto/certificate/*` components for endpoints that
+> were not TLS-scanned.
+
+### Scoring impact
+
+CRITICAL and HIGH REST fuzz findings feed the `agility_fuzz_crypto_posture_ratio` signal
+in `SCORE_WEIGHTS` (weight: `4.0`, final step in the v5.1 weighted sum). The sum is
+**303.0** across **41 entries** after Phase 96. INFO `probe_skipped` rows are excluded from
+the finding count to prevent score drift when endpoints are unreachable.
+
+### Example: fuzz a local OpenAPI target
+
+```bash
+# Passive OpenAPI spec analysis + active REST fuzzing
+quirk --config config.yaml \
+  --openapi-spec https://api.acme.com/openapi.json \
+  --fuzz
+
+# Include the JWT algorithm-confusion probe
+quirk --config config.yaml \
+  --openapi-spec https://api.acme.com/openapi.json \
+  --fuzz --fuzz-jwt-alg-confusion
+
+# Set a custom request budget (max 500)
+quirk --config config.yaml \
+  --openapi-spec https://api.acme.com/openapi.json \
+  --fuzz --fuzz-budget 100
+```
+
+---
+
 ## Output Block
 
 Controls where QU.I.R.K. writes reports, CBOM files, and its internal database.
@@ -578,6 +682,9 @@ quirk --config config.yaml --profile deep
 | `--resume` | `false` | Reuse cache if valid (skip re-discovery) |
 | `--force-discovery` | `false` | Ignore existing discovery cache and re-run |
 | `--inventory-code-signing` | `false` | Inventory code-signing certificates from LDAP `userCertificate` attributes and in-process TLS EKU check (Phase 95 CSIGN-01) |
+| `--fuzz` | `false` | Enable active REST crypto-posture fuzzing (requires `--openapi-spec`; TTY `CONFIRM` prompt; hard-aborts in non-TTY) |
+| `--fuzz-jwt-alg-confusion` | `false` | Also run JWT RS256→HS256 algorithm-confusion probe; acceptance = CRITICAL |
+| `--fuzz-budget N` | `50` | Maximum probe requests (hard max **500**; values above 500 are rejected) |
 
 ### `quirk serve` — Dashboard Flags
 
