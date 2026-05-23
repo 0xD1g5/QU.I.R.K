@@ -87,7 +87,11 @@ class TestDarProtocolsContainsCodeSigning:
         import ast
         import pathlib
 
-        run_scan_src = pathlib.Path("run_scan.py").read_text()
+        # Use the file co-located with this test module's repo root
+        # (handles both worktree execution and main-repo execution)
+        test_dir = pathlib.Path(__file__).parent
+        run_scan_path = test_dir.parent / "run_scan.py"
+        run_scan_src = run_scan_path.read_text()
         # Parse the file and find the _dar_protocols assignment
         tree = ast.parse(run_scan_src)
         dar_tuple = None
