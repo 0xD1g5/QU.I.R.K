@@ -28,10 +28,11 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 - [ ] **TRANS-02**: Reports explain how the overall score is computed (subscore weighting + ÷1.5 rollup) so the number is defensible to a client
 - [ ] **TRANS-03**: The executive summary's headline score and severity language are consistent with the detailed findings tables — no contradiction [999.82]
 
-### Professional PDF Formatting (FMT)
+### Professional Formatting & Editable Delivery (FMT)
 
-- [ ] **FMT-01**: The PDF report uses a professional client-ready layout (cover, sectioning, consistent typography/branding)
+- [ ] **FMT-01**: The PDF report uses a professional client-ready layout (cover with a configurable logo region, sectioning, consistent typography/branding)
 - [ ] **FMT-02**: Report tables/headings render cleanly in PDF with no overflow, truncation, or broken pagination
+- [ ] **FMT-03**: The report can be exported as an editable document (DOCX, opens in Word/Google Docs) that preserves sections and tables, so a consultant can insert a logo and edit content before producing the final client deliverable
 
 ### v5.1 Tech-Debt Cleanup (TD)
 
@@ -65,26 +66,27 @@ Which phases cover which requirements. Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXEC-01 | TBD | Pending |
-| EXEC-02 | TBD | Pending |
-| EXEC-03 | TBD | Pending |
-| EXEC-04 | TBD | Pending |
-| CTX-01 | TBD | Pending |
-| CTX-02 | TBD | Pending |
-| CTX-03 | TBD | Pending |
-| TRANS-01 | TBD | Pending |
-| TRANS-02 | TBD | Pending |
-| TRANS-03 | TBD | Pending |
-| FMT-01 | TBD | Pending |
-| FMT-02 | TBD | Pending |
-| TD-01 | TBD | Pending |
-| TD-02 | TBD | Pending |
+| EXEC-01 | Phase 98 | Pending |
+| EXEC-02 | Phase 98 | Pending |
+| EXEC-03 | Phase 98 | Pending |
+| EXEC-04 | Phase 98 | Pending |
+| CTX-01 | Phase 99 | Pending |
+| CTX-02 | Phase 99 | Pending |
+| CTX-03 | Phase 99 | Pending |
+| TRANS-01 | Phase 98 | Pending |
+| TRANS-02 | Phase 98 | Pending |
+| TRANS-03 | Phase 98 | Pending |
+| FMT-01 | Phase 100 | Pending |
+| FMT-02 | Phase 100 | Pending |
+| FMT-03 | Phase 100 | Pending |
+| TD-01 | Phase 97 | Pending |
+| TD-02 | Phase 97 | Pending |
 
 **Coverage:**
-- v1 requirements: 14 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 14 ⚠️
+- v1 requirements: 15 total
+- Mapped to phases: 15 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-23*
-*Last updated: 2026-05-23 at milestone v5.2 open*
+*Last updated: 2026-05-23 — FMT-03 (DOCX editable export) added; FMT-01 extended to include configurable logo region; coverage bumped to 15/15*

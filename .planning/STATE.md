@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v5.2
 milestone_name: Consulting-Grade Reporting
 status: planning
-last_updated: "2026-05-23T16:40:25.927Z"
+last_updated: "2026-05-23"
 last_activity: 2026-05-23
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,24 +17,26 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-22)
+See: .planning/PROJECT.md (updated 2026-05-23)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 93 — credential-infrastructure
+**Current focus:** Phase 97 — v5.1 Tech-Debt Cleanup (ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 0 of 4 (roadmap complete, not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-23 — Milestone v5.2 started
+Status: Ready to plan Phase 97
+Last activity: 2026-05-23 — v5.2 roadmap revised: FMT-03 (DOCX editable export) added; FMT-01 extended to include configurable logo region; Phase 100 renamed to "Professional & Editable Report Delivery"; coverage now 15/15
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0 (v5.1)
-- Prior milestone (v5.0): 16 plans across 6 phases
+- Total plans completed: 0 (v5.2)
+- Prior milestone (v5.1): 16 plans across 4 phases
 
 *Updated after each plan completion*
 
@@ -42,20 +44,20 @@ Last activity: 2026-05-23 — Milestone v5.2 started
 
 ### Decisions (pre-locked at roadmap)
 
-- v5.1-D-01: Phase 93 first — credential model is foundational; nothing authenticates against live targets until it ships and is security-reviewed
-- v5.1-D-02: Phase 94 + Phase 95 can execute after Phase 93; Phase 95 is parallel-safe with Phase 94 (disjoint code paths)
-- v5.1-D-03: Phase 96 ships last — requires Phase 93 (creds) + Phase 94 (OpenAPI endpoint discovery); all guardrails must be complete and reviewed before first fuzz request hits a live target
-- v5.1-D-04: No 7th subscore — API/codesign/fuzzing signals fold into existing `agility_signals`; SCORE_WEIGHTS sum 283.0 → 293.0 (Ph94) → 299.0 (Ph95) → 303.0 (Ph96)
-- v5.1-D-05: `schemathesis` in `[api]` extras only, excluded from `[all]` — CI gate required from Phase 94 (when `[api]` group is created), schemathesis dep added in Phase 96
-- v5.1-D-06: `quirk/auth/credentials.py` module path (not `quirk/util/`) — distinct concern boundary, more discoverable; document in Phase 93 CONTEXT.md
-- v5.1-D-07: Code-signing scope = Option A (LDAP `userCertificate` + TLS EKU check only); Sigstore/npm/Authenticode deferred to v5.2
-- v5.1-D-08: OpenAPI URL fetch enabled only when URL is within `cfg.targets`; local file is the air-gapped-safe default; `$ref` SSRF restriction required regardless of input path
+- v5.2-D-01: Phase 97 first — v5.1 tech debt (TD-01/TD-02) is orthogonal to report changes; close it before report work begins so credential and cascade-counter fixes don't interleave with report content model work
+- v5.2-D-02: TRANS reqs group with EXEC (Phase 98) — score transparency IS the executive narrative; the subscore decomposition and ÷1.5 explanation are inseparable from the narrative exec report, not a separate phase
+- v5.2-D-03: CTX-03 (code-signing cert expiry) belongs in Phase 99 with CTX-01/02 — it is finding-content work (surfacing a computed value as a finding), not executive-layer work; keep Phase 98 focused on the narrative/score story
+- v5.2-D-04: Phase 100 (FMT) is time-boxed and last — PDF polish and DOCX export must not gate the must-ship core (exec narrative + remediation roadmap + score transparency); if scope pressure arises, FMT is the deferral candidate
+- v5.2-D-05: Phase 98 must account for all three render surfaces (quirk/reports/executive.py CLI markdown, quirk/reports/html_renderer.py + templates/report.html.j2 HTML, quirk/dashboard/api/routes/pdf.py PDF) — content-model-once / render-per-surface; a change to the narrative must land in all three atomically
+- v5.2-D-06: No new scoring computation in this milestone — TRANS-01/02 are *presentation* of the existing canonical engine (quirk/intelligence/scoring.py, six subscores, ÷1.5 rollup shipped in v5.0); do not re-weight or re-architect the score
+- v5.2-D-07: DOCX exporter (FMT-03) derives from the same `IntelligenceReport` / finding dict content model as CLI/HTML/PDF — single content pipeline, two output artifacts (PDF = immutable as-scanned, DOCX = editable pre-delivery); do not build a parallel hand-assembled document; inherits EXEC-04/TRANS-03 consistency guarantees by construction
 
 ### Pending Todos
 
-- Phase 93: Confirm `bytearray`-plus-`finally` zeroization pattern covers all three credential-entry paths (flag, env, prompt) before first plan ships
-- Phase 94: Verify `jsonschema-path` transitive dep installs cleanly alongside existing `jsonschema 4.25.1` at Phase 94 start (SUMMARY.md gap #2)
-- Phase 96: Verify `schemathesis` `Case.as_transport_kwargs()` httpx dispatch integration (SUMMARY.md gap #1) as Day 1 task
+- Phase 97: Confirm WR-02/04/06 exact module locations before planning (likely quirk/auth/credentials.py + quirk/util/targets.py) — read v5.1-MILESTONE-AUDIT.md at plan time
+- Phase 98: Locate the `_build_interpretation()` content model in quirk/reports/executive.py (lines 17–) as the primary extension point for the narrative; verify all three render surfaces consume the same dict before building
+- Phase 99: Verify code-signing cert `not_after` is already computed in Phase 95 output (quirk/scanners/code_signing.py or similar) — CTX-03 is surfacing, not re-computing
+- Phase 100: Identify DOCX generation library (python-docx is the natural choice given zero-new-dep preference is relaxed for a genuine new output format); confirm it can consume the IntelligenceReport dict without a parallel data-extraction pass
 
 ### Blockers
 
@@ -63,7 +65,7 @@ None.
 
 ## Deferred Items
 
-Carried forward from v5.0 close (2026-05-22) — all non-blocking, environment-gated human-UAT:
+Carried forward from v5.1 close (2026-05-23) — all non-blocking, environment-gated human-UAT:
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -71,9 +73,13 @@ Carried forward from v5.0 close (2026-05-22) — all non-blocking, environment-g
 | verification (88) | HTML report — Score Decomposition table visual render in browser | deferred — Jinja2 context wired |
 | verification (88) | PDF report — Score Decomposition table (Playwright) | deferred — needs running server |
 | verification (89) | kerberos `identity_weak_etype_count` > 0 | deferred — needs `[identity]`/impacket + live KDC |
+| human-UAT (93) | getpass TTY prompt + live PDF export | deferred — TTY-gated |
+| human-UAT (95) | live ldaps code-signing scan | deferred — needs ldaps lab |
+| human-UAT (96) | TTY CONFIRM gate + non-TTY abort + live alg-confusion vs fuzz-target | deferred — TTY/environment-gated |
 
 ## Session Continuity
 
-**Last session:** 2026-05-23T01:19:41.244Z
-
-**Next session:** v5.1 roadmap complete (4 phases, 19/19 requirements mapped). Run `/gsd:plan-phase 93` to begin Phase 93 planning. SCORE_WEIGHTS invariant at sum 283.0 / count 37 entering this milestone.
+Last session: 2026-05-23
+Stopped at: v5.2 roadmap revised — FMT-03 added, Phase 100 expanded to cover editable DOCX delivery, 15/15 requirements mapped
+Resume file: None
+Next: `/gsd:plan-phase 97`
