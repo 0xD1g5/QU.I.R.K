@@ -73,3 +73,18 @@ def test_unparseable_existing_file_fails_closed(tmp_path):
     assert _config_has_authenticated_mode(str(string_yaml)) is True, (
         "Existing YAML that parses to non-dict must fail closed (return True)"
     )
+
+
+def test_sqlite_db_config_not_rejected(tmp_path):
+    """D-05 carve-out: `--config` is overloaded as the scheduler's SQLite DB path
+    (_resolve_db_path). A real SQLite database file is categorically not an
+    authenticated-mode YAML config and must NOT trip the fail-closed reject —
+    otherwise `quirk schedule add --config <db>` exits 2 on a valid DB path."""
+    from quirk.cli.schedule_cmd import _config_has_authenticated_mode
+    from quirk.db import init_db
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)  # materializes a real SQLite file with the magic header
+    assert _config_has_authenticated_mode(db_path) is False, (
+        "A SQLite DB passed via --config must not be treated as an auth config"
+    )
