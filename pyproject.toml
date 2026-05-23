@@ -53,6 +53,15 @@ identity = [
 adcs = [
     "ldap3>=2.9.1",
 ]
+# Phase 94 SPEC-01/02/03 / PKG-01: [api] extras group for OpenAPI spec scanning.
+# Contains openapi-spec-validator only this phase; schemathesis is INTENTIONALLY EXCLUDED
+# (deferred to Phase 96 per v5.1-D-05). [api] is also INTENTIONALLY EXCLUDED from [all]
+# because Phase 96 will add schemathesis to [api], and adding [api] to [all] now would
+# pull schemathesis in before the CI guard (tests/test_install_all_excludes_schemathesis.py)
+# is in place. Do NOT add quirk[api] to [all].
+api = [
+    "openapi-spec-validator>=0.9.0",
+]
 cloud = [
     "google-api-python-client>=2.0.0",
     "google-auth>=2.36.0",
