@@ -649,6 +649,74 @@ def main():
         help="Explicit SQLite path for job progress writes (Phase 65). Required when --job-id is set.",
     )
 
+    # Phase 93 / AUTH-01: authenticated scan flags.
+    # SECURITY MODEL — never pass secrets directly on the command line (avoids argv/ps/history leakage).
+    # Instead, pass a REFERENCE to the secret:
+    #   Bare flag (no value):  triggers an interactive getpass prompt (recommended)
+    #   ENVVAR_NAME:           reads the named env var and deletes it (prevents subprocess inheritance)
+    #   @/path/to/file:        reads the first line of the file (path-traversal guard applied)
+    #
+    # Only one --auth-* flag may be active per run (first provided wins).
+    _auth_group = parser.add_argument_group(
+        "Authenticated scanning (Phase 93 / AUTH-01)",
+        description=(
+            "Attach credentials to JWT/API scanner requests. "
+            "Always supply a REFERENCE (env var name / @file / bare flag for prompt) "
+            "— never the secret value itself (avoids argv/ps/history leakage). "
+            "Credentials are ephemeral: buffer is zeroed in a finally block covering "
+            "the full scan body. Authenticated scans cannot be scheduled (QRK-SCHED-AUTH-001)."
+        ),
+    )
+    _auth_group.add_argument(
+        "--auth-bearer",
+        dest="auth_bearer",
+        nargs="?",
+        const="PROMPT",
+        default=None,
+        metavar="REF",
+        help=(
+            "Bearer token for JWT/API scanner. "
+            "Bare flag triggers getpass prompt; or supply ENVVAR_NAME or @/path/to/token."
+        ),
+    )
+    _auth_group.add_argument(
+        "--auth-api-key",
+        dest="auth_api_key",
+        nargs="?",
+        const="PROMPT",
+        default=None,
+        metavar="REF",
+        help=(
+            "API key sent as X-Api-Key header. "
+            "Bare flag triggers getpass prompt; or supply ENVVAR_NAME or @/path/to/key."
+        ),
+    )
+    _auth_group.add_argument(
+        "--auth-api-key-query",
+        dest="auth_api_key_query",
+        nargs="?",
+        const="PROMPT",
+        default=None,
+        metavar="REF",
+        help=(
+            "API key appended to the JWKS/endpoint fetch URL as a query parameter "
+            "(default param name: api_key). Never sent as a header (D-03). "
+            "Bare flag triggers getpass prompt; or supply ENVVAR_NAME or @/path/to/key."
+        ),
+    )
+    _auth_group.add_argument(
+        "--auth-basic",
+        dest="auth_basic",
+        nargs="?",
+        const="PROMPT",
+        default=None,
+        metavar="REF",
+        help=(
+            "HTTP Basic credentials (base64-encoded user:pass). "
+            "Bare flag triggers getpass prompt; or supply ENVVAR_NAME or @/path/to/creds."
+        ),
+    )
+
     args = parser.parse_args()
 
     # Phase 67 RESUME-01: --list-resumable exits after printing table
@@ -723,6 +791,29 @@ def main():
                 pass
         if getattr(cfg, "intelligence", None) is not None:
             cfg.intelligence.profile = args.score_profile  # type: ignore[attr-defined]
+
+    # Phase 93 / AUTH-01: build CredentialContext after config load + security overrides.
+    # Lazy import prevents circular deps (D-14: credentials.py has zero scanner imports).
+    # cred_ctx is built when either enable_authenticated_mode is set in config OR when
+    # at least one --auth-* CLI flag is present.
+    _any_auth_flag = any([
+        getattr(args, "auth_bearer", None) is not None,
+        getattr(args, "auth_api_key", None) is not None,
+        getattr(args, "auth_api_key_query", None) is not None,
+        getattr(args, "auth_basic", None) is not None,
+    ])
+    cred_ctx = None
+    if cfg.connectors.enable_authenticated_mode or _any_auth_flag:
+        from quirk.auth.credentials import CredentialContext
+        cred_ctx = CredentialContext.from_cli(
+            bearer=getattr(args, "auth_bearer", None),
+            api_key=getattr(args, "auth_api_key", None),
+            api_key_query=getattr(args, "auth_api_key_query", None),
+            basic=getattr(args, "auth_basic", None),
+        )
+    # Phase 93 / AUTH-01: store cred_ctx in module-level _job_report so
+    # _run_main_with_job_guard's finally block can zero the buffer on BaseException paths.
+    _job_report["cred_ctx"] = cred_ctx
 
     init_db(cfg.output.db_path)
 
@@ -1195,6 +1286,7 @@ def main():
                 timeout=cfg.scan.timeouts.jwt_seconds,
                 logger=logger,
                 allow_insecure_jwks=cfg.security.allow_insecure_jwks,
+                cred_ctx=cred_ctx,          # Phase 93 / AUTH-01: None when unauthenticated (D-14 closure capture)
             )
         jwt_endpoints = _wrapped_phase(
             run_stats, "jwt_scanning", "jwt_scanner",
@@ -1864,6 +1956,13 @@ def main():
     # The try/except wraps the full scan body below; this sentinel is never
     # executed — failures are caught in the except clause.
 
+    # Phase 93 / AUTH-01: zeroize credential buffer on normal exit path (best-effort).
+    # The BaseException path is covered by _run_main_with_job_guard's finally block,
+    # which reads _job_report["cred_ctx"] set below.
+    if cred_ctx is not None:
+        cred_ctx.close()
+        _job_report["cred_ctx"] = None
+
 
 # Phase 65: module-level dict allows the __main__ exception handler to
 # write mark_job_failed without access to main()'s local `args`.
@@ -1871,7 +1970,10 @@ _job_report: Dict[str, Any] = {}
 
 
 def _run_main_with_job_guard() -> None:
-    """Phase 65: run main(); on exception write mark_job_failed if --job-id was set."""
+    """Phase 65: run main(); on exception write mark_job_failed if --job-id was set.
+    Phase 93 / AUTH-01: finally block ensures credential buffer is zeroed on any
+    BaseException path (KeyboardInterrupt, SystemExit, unhandled exceptions).
+    """
     try:
         main()
     except Exception as exc:
@@ -1880,6 +1982,18 @@ def _run_main_with_job_guard() -> None:
         if job_id and db_path:
             mark_job_failed(db_path, job_id, f"{type(exc).__name__}: {exc}")
         raise
+    finally:
+        # Phase 93 / AUTH-01: BaseException-safe zeroization.
+        # main() already calls cred_ctx.close() on normal exit and sets
+        # _job_report["cred_ctx"] = None; this finally handles interrupt/exception paths.
+        # D-05: best-effort — Python GC may retain heap copies of the original str.
+        _ctx = _job_report.get("cred_ctx")
+        if _ctx is not None:
+            try:
+                _ctx.close()
+            except Exception:
+                pass
+            _job_report["cred_ctx"] = None
 
 
 if __name__ == "__main__":
