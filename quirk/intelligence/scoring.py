@@ -58,6 +58,7 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "agility_pqc_hybrid_bonus": 8.0,   # Phase 90 PQC-03 — X25519MLKEM768 ceiling anchor
     "agility_weak_jwt_alg_ratio": 6.0,      # Phase 94 SCORE-01 — alg:none / quantum-vulnerable alg in bearer token
     "agility_openapi_plaintext_ratio": 4.0, # Phase 94 SCORE-01 — OpenAPI spec declares http:// servers
+    "agility_codesign_weak_algo_ratio": 6.0,  # Phase 95 SCORE-01 — code-signing cert weak algo (RSA<2048/EC<256/SHA-1)
 }
 
 PROFILE_MULTIPLIERS: Dict[str, Dict[str, float]] = {
@@ -231,6 +232,13 @@ def compute_readiness_score(
         ("OpenAPI plaintext servers (http://)",
          -_ratio(openapi_plaintext, denom) * w["agility_openapi_plaintext_ratio"]),
     ])
+
+    # Phase 95 SCORE-01: code-signing cert weak algorithm agility signal
+    codesign_weak = max(0, _as_int(evidence.get("codesign_weak_algo_count", 0)))
+    agility_impacts.append(
+        ("Code-signing cert weak algorithm",
+         -_ratio(codesign_weak, denom) * w["agility_codesign_weak_algo_ratio"])
+    )
 
     agility_score, agility_drivers = _apply_weighted_impacts(agility_impacts)
 

@@ -1,9 +1,9 @@
-"""D-04 / WR-06: SCORE_WEIGHTS sum invariant (Phase 73; rebalanced Phase 83; PQC-03 Phase 90; SCORE-01 Phase 94)."""
+"""D-04 / WR-06: SCORE_WEIGHTS sum invariant (Phase 73; rebalanced Phase 83; PQC-03 Phase 90; SCORE-01 Phase 94; SCORE-01 Phase 95)."""
 from quirk.intelligence.scoring import SCORE_WEIGHTS
 
 
 def test_score_weights_sum_invariant():
-    """SCORE_WEIGHTS sum must be 293.0 by design (NOT normalized).
+    """SCORE_WEIGHTS sum must be 299.0 by design (NOT normalized).
 
     See quirk/intelligence/scoring.py docstring above SCORE_WEIGHTS for
     rationale (Phase 73 / D-04). Any contributor changing this value must
@@ -23,15 +23,19 @@ def test_score_weights_sum_invariant():
       - agility_weak_jwt_alg_ratio: +1 entry at +6.0
       - agility_openapi_plaintext_ratio: +1 entry at +4.0
     Net delta = +2 entries / +10.0 sum (37 -> 39, 283.0 -> 293.0).
+
+    Phase 95 SCORE-01: bumped from 293.0 -> 299.0 (+6.0) for code-signing weak-algo signal:
+      - agility_codesign_weak_algo_ratio: +1 entry at +6.0
+    Net delta = +1 entry / +6.0 sum (39 -> 40, 293.0 -> 299.0).
     """
-    assert abs(sum(SCORE_WEIGHTS.values()) - 293.0) < 1e-9, (
-        f"SCORE_WEIGHTS sum drifted from 293.0 to {sum(SCORE_WEIGHTS.values())}. "
+    assert abs(sum(SCORE_WEIGHTS.values()) - 299.0) < 1e-9, (
+        f"SCORE_WEIGHTS sum drifted from 299.0 to {sum(SCORE_WEIGHTS.values())}. "
         "Per D-04 this is intentional — update this test ONLY if rebalance is documented."
     )
 
 
 def test_score_weights_count_invariant():
-    """Anchors the 39-weight count alongside the sum invariant.
+    """Anchors the 40-weight count alongside the sum invariant.
 
     Phase 83 rebalance: bumped from 29 -> 36 (+7) absorbing Phase 79 SMIME
     (+3) and Phase 80 ADCS (+4) Wave A scanner expansions.
@@ -40,5 +44,7 @@ def test_score_weights_count_invariant():
 
     Phase 94 SCORE-01: bumped from 37 -> 39 (+2) for agility_weak_jwt_alg_ratio
     and agility_openapi_plaintext_ratio.
+
+    Phase 95 SCORE-01: bumped from 39 -> 40 (+1) for agility_codesign_weak_algo_ratio.
     """
-    assert len(SCORE_WEIGHTS) == 39
+    assert len(SCORE_WEIGHTS) == 40
