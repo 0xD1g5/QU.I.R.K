@@ -95,6 +95,8 @@ def _decode_token(raw: str) -> dict[str, Any]:
 
     # T-94-01: case-insensitive alg:none check on the decoded header dict value
     is_alg_none = alg.lower() == "none"
+    # WR-05: a JWT with NO alg header is as forgeable as alg:none — treat as critical.
+    is_alg_missing = not alg
 
     # Expiry
     exp = claims.get("exp")
@@ -115,6 +117,7 @@ def _decode_token(raw: str) -> dict[str, Any]:
     return {
         "alg": alg if alg else "UNKNOWN",
         "is_alg_none": is_alg_none,
+        "is_alg_missing": is_alg_missing,
         "expired": expired,
         "exp": exp,
         "nist_level": nist_level,
@@ -157,6 +160,7 @@ def _format_json(info: dict[str, Any]) -> str:
     output = {
         "alg": info["alg"],
         "is_alg_none": info["is_alg_none"],
+        "is_alg_missing": info["is_alg_missing"],
         "expired": info["expired"],
         "exp": info["exp"],
         "nist_level": info["nist_level"],
@@ -239,12 +243,19 @@ def run_analyze_token(argv: list[str]) -> None:
     else:
         print(_format_human(info))
 
-    # T-94-01: alg:none → CRITICAL + exit 1
+    # T-94-01: alg:none → CRITICAL + exit 1. WR-05: a missing alg header is equally forgeable.
     if info["is_alg_none"]:
         if not args.json_output:
             print(
                 "CRITICAL: alg:none detected — this JWT is unsigned and trivially "
                 "forgeable. Any party can craft arbitrary claims."
+            )
+        sys.exit(1)
+    if info["is_alg_missing"]:
+        if not args.json_output:
+            print(
+                "CRITICAL: no 'alg' header present — this JWT declares no signing "
+                "algorithm and is as forgeable as an alg:none token."
             )
         sys.exit(1)
 

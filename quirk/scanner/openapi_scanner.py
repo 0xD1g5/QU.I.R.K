@@ -5,7 +5,7 @@ Parses a local or scope-gated-URL OpenAPI spec for crypto posture:
   - Plaintext http:// server declarations
   - Unauthenticated endpoints (paths with no security requirement)
 
-All findings surface as CryptoEndpoint(protocol="OpenAPI") rows — no new
+All findings surface as CryptoEndpoint(protocol="OPENAPI") rows — no new
 findings surface or table introduced.
 
 SSRF hardening (T-94-05):
@@ -123,11 +123,13 @@ def _load_spec_bytes_from_file(path: str) -> bytes:
     return raw
 
 
-def _fetch_spec_bytes_from_url(url: str, cfg_targets: list) -> bytes:
+def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: bool = False) -> bytes:
     """Fetch raw spec bytes from URL — ONLY when within configured scan-target scope.
 
-    Scope gate (SPEC-02): URL must start with one of cfg_targets (T-94-06).
-    Raises SpecParsingError BEFORE any network request if URL is out of scope.
+    Scope gate (SPEC-02): the URL's HOST must match one of cfg_targets (T-94-06).
+    cfg_targets are bare FQDNs (e.g. "api.example.com"); a full URL is also accepted
+    and reduced to its host. Raises SpecParsingError BEFORE any network request if the
+    URL host is out of scope.
 
     Then validate_external_url() (SSRF guard): blocks metadata IPs always,
     blocks private/loopback unless allow_internal. Raises SpecParsingError on not-ok.
@@ -135,17 +137,26 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list) -> bytes:
     Finally fetches with httpx and applies the 10 MB gate on response content.
     """
     import httpx
+    from urllib.parse import urlparse
 
+    # CR-01 fix: compare the URL HOST against target FQDNs, not a string-prefix of the
+    # full URL (a bare FQDN like "api.example.com" never prefix-matches "https://...").
+    url_host = (urlparse(url).hostname or "").lower()
+    allowed_hosts = {
+        (urlparse(t).hostname or t.split("/")[0]).lower().rstrip("/")
+        for t in (cfg_targets or [])
+    }
     # Scope gate — reject before any network request (SPEC-02, T-94-06)
-    if not any(url.startswith(t.rstrip("/")) for t in (cfg_targets or [])):
+    if not url_host or url_host not in allowed_hosts:
         raise SpecParsingError(
             f"OpenAPI spec URL is outside configured scan-target scope — "
-            f"URL fetch is only permitted for URLs within the targets list: "
+            f"URL fetch is only permitted for URLs whose host is in the targets list: "
             f"{_redact_preview(url)!r}"
         )
 
-    # SSRF gate — validate_external_url blocks metadata IPs always (T-94-05/06)
-    vr = validate_external_url(url)
+    # SSRF gate — validate_external_url blocks metadata IPs always; loopback/private
+    # only permitted when allow_internal is set (WR-01: thread --allow-internal-targets).
+    vr = validate_external_url(url, allow_internal=allow_internal)
     if not vr.ok:
         raise SpecParsingError(
             f"OpenAPI spec URL rejected ({vr.reason}): {vr.redacted_preview!r}"
@@ -213,7 +224,7 @@ def _scanned_at() -> datetime:
 def extract_crypto_posture(spec_dict: dict) -> List[CryptoEndpoint]:
     """Extract crypto-relevant findings from a parsed OpenAPI spec dict.
 
-    Returns CryptoEndpoint rows (protocol="OpenAPI"):
+    Returns CryptoEndpoint rows (protocol="OPENAPI"):
       - Security scheme declarations → service_detail "security_scheme:<name>"
         - bearerFormat JWT → cert_pubkey_alg set to the bearerFormat value
       - Plaintext http:// servers → service_detail "plaintext_server", severity HIGH
@@ -255,7 +266,7 @@ def extract_crypto_posture(spec_dict: dict) -> List[CryptoEndpoint]:
         endpoints.append(CryptoEndpoint(
             host=primary_host,
             port=443,
-            protocol="OpenAPI",
+            protocol="OPENAPI",
             cert_pubkey_alg=cert_pubkey_alg,
             service_detail=f"security_scheme:{scheme_name}",
             severity="INFO",
@@ -274,7 +285,7 @@ def extract_crypto_posture(spec_dict: dict) -> List[CryptoEndpoint]:
             endpoints.append(CryptoEndpoint(
                 host=parsed.netloc or url[:64],
                 port=80,
-                protocol="OpenAPI",
+                protocol="OPENAPI",
                 service_detail="plaintext_server",
                 severity="HIGH",
                 scanned_at=_now,
@@ -310,7 +321,7 @@ def extract_crypto_posture(spec_dict: dict) -> List[CryptoEndpoint]:
                 endpoints.append(CryptoEndpoint(
                     host=primary_host,
                     port=443,
-                    protocol="OpenAPI",
+                    protocol="OPENAPI",
                     service_detail=f"unauthenticated_endpoint:{method.upper()} {path_str}",
                     severity="MEDIUM",
                     scanned_at=_now,
@@ -327,6 +338,7 @@ def scan_openapi_spec(
     path_or_url: str,
     *,
     cfg_targets: Optional[list] = None,
+    allow_internal: bool = False,
 ) -> List[CryptoEndpoint]:
     """Parse an OpenAPI spec from a local file or scope-gated URL and return findings.
 
@@ -336,7 +348,7 @@ def scan_openapi_spec(
             path_or_url is a URL (scope gate enforced). Safe to pass [] for local files.
 
     Returns:
-        List of CryptoEndpoint(protocol="OpenAPI") rows.
+        List of CryptoEndpoint(protocol="OPENAPI") rows.
 
     Raises:
         SpecParsingError: On SSRF attempt, oversized spec, out-of-scope URL, or missing file.
@@ -355,7 +367,7 @@ def scan_openapi_spec(
         return [CryptoEndpoint(
             host=path_or_url[:64] if path_or_url else "unknown",
             port=0,
-            protocol="OpenAPI",
+            protocol="OPENAPI",
             service_detail="openapi-spec-validator not installed",
             severity="INFO",
             scan_error_category="missing_extra",
@@ -366,7 +378,7 @@ def scan_openapi_spec(
     is_url = path_or_url.startswith("http://") or path_or_url.startswith("https://")
 
     if is_url:
-        raw_bytes = _fetch_spec_bytes_from_url(path_or_url, _targets)
+        raw_bytes = _fetch_spec_bytes_from_url(path_or_url, _targets, allow_internal=allow_internal)
     else:
         raw_bytes = _load_spec_bytes_from_file(path_or_url)
 

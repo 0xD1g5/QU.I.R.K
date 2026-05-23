@@ -244,3 +244,24 @@ class TestCbomBearerClassification:
                     f"Component {comp.name!r} property {prop.name!r}={prop.value!r} "
                     "must not be marked enforced without unverified caveat"
                 )
+
+
+def test_missing_alg_header_is_critical():
+    """WR-05: a JWT with NO 'alg' header is as forgeable as alg:none → exit 1."""
+    from quirk.cli.analyze_token_cmd import run_analyze_token
+
+    # Header deliberately omits 'alg'
+    token = _make_jwt({"typ": "JWT"}, {"sub": "x"})
+    with pytest.raises(SystemExit) as exc:
+        run_analyze_token([token])
+    assert exc.value.code == 1
+
+
+def test_missing_alg_header_critical_json():
+    """WR-05: --json path also exits 1 for a missing alg header and flags is_alg_missing."""
+    from quirk.cli.analyze_token_cmd import run_analyze_token
+
+    token = _make_jwt({"typ": "JWT"}, {"sub": "x"})
+    with pytest.raises(SystemExit) as exc:
+        run_analyze_token([token, "--json"])
+    assert exc.value.code == 1

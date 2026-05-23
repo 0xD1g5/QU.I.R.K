@@ -1364,7 +1364,11 @@ def main():
             if hasattr(cfg, "targets") and cfg.targets is not None:
                 _target_list = list(getattr(cfg.targets, "fqdns", []) or [])
             try:
-                return scan_openapi_spec(_spec_path, cfg_targets=_target_list)
+                return scan_openapi_spec(
+                    _spec_path,
+                    cfg_targets=_target_list,
+                    allow_internal=cfg.security.allow_internal_targets,
+                )
             except SpecParsingError as exc:
                 logger.error(f"OpenAPI spec parse error: {safe_str(exc)}")
                 return []
