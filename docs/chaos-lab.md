@@ -9,7 +9,7 @@ The QU.I.R.K. Chaos Lab is a Docker Compose environment that simulates a realist
 - **Train new team members** — walk through each vulnerability class hands-on without touching production infrastructure
 - **Validate scanner changes** — run the lab after any code change to confirm no regressions
 
-The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces covering TLS / SSH / HTTP baseline (core), service inventory + cert chain scenarios (phaseA), cloud storage (cloud), identity (identity + pki), JWT misconfigurations (jwt), container registries (registry), source-code crypto anti-patterns (source), legacy storage (storage), legacy SSH (ssh-weak), LDAPS (ldaps), DNSSEC weakness (dnssec), SAML weakness (saml), Kerberos etype enumeration (kerberos), DAR — databases (database), DAR — object storage (storage-s3), DAR — Vault (vault), email transport (email), message brokers (broker), and TLS certificate defects (tls-cert-defects).
+The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces covering TLS / SSH / HTTP baseline (core), service inventory + cert chain scenarios (phaseA), cloud storage (cloud), identity (identity + pki), JWT misconfigurations (jwt), container registries (registry), source-code crypto anti-patterns (source), legacy storage (storage), legacy SSH (ssh-weak), LDAPS (ldaps — including Phase 95 code-signing weak-cert fixture), DNSSEC weakness (dnssec), SAML weakness (saml), Kerberos etype enumeration (kerberos), DAR — databases (database), DAR — object storage (storage-s3), DAR — Vault (vault), email transport (email), message brokers (broker), and TLS certificate defects (tls-cert-defects).
 
 > **For UAT-grade expected scanner findings, see `quantum-chaos-enterprise-lab/expected_results_v4.md`** — the authoritative per-profile oracle used by chaos lab UAT runs and dashboard cross-references.
 
@@ -302,13 +302,20 @@ scan:
 
 ---
 
-### 3.11 ldaps Profile (Phase 4 — LAB-06)
+### 3.11 ldaps Profile (Phase 4 — LAB-06 / Phase 95 — LAB-01)
 
 | Port | Service                                    | Expected Protocol | Finding Tag |
 |------|--------------------------------------------|-------------------|-------------|
 | 636  | OpenLDAP over TLS (osixia/openldap:1.5.0)  | TLS               | LDAPS_TLS   |
 
 Standard LDAPS port (636). QU.I.R.K. scans this using sslyze — add port 636 to `ports_tls` to include it in a scan.
+
+**Phase 95 code-signing fixture (LAB-01):** The `ldaps` profile also seeds an LDAP entry for
+`uid=codesign-weak,ou=people,dc=chaos,dc=local` via the `ldaps-codesign-seed` sidecar.  This
+entry carries a `userCertificate;binary` attribute containing an RSA-1024 / SHA-1 certificate
+with the Code Signing EKU (OID `1.3.6.1.5.5.7.3.3`). Running with `--inventory-code-signing`
+against this profile will produce exactly **one HIGH CODE-SIGN/weak-algorithm finding** with two
+weak-algorithm reasons: `weak-rsa-key` (RSA < 2048-bit) and `weak-signing-alg` (SHA-1).
 
 **Start:**
 
@@ -322,6 +329,36 @@ Add port 636 to your scan config:
 scan:
   ports_tls: [443, 8443, 9443, 10443, 11443, 12443, 8444, 8000, 2222, 5555, 636]
 ```
+
+**Code-signing inventory scan against the ldaps fixture:**
+
+```yaml
+# config-lab-ldaps-codesign.yaml
+assessment:
+  name: "Chaos Lab - ldaps Code-Signing"
+  data_classification: "internal"
+  report_owner: "Lab"
+  timezone: "UTC"
+targets:
+  cidrs: [127.0.0.1]
+scan:
+  ports_tls: [443, 8443, 9443, 10443, 11443, 12443, 8444, 8000, 2222, 5555, 636]
+connectors:
+  codesign_targets:
+    - "ldap://localhost:389"
+  codesign_search_base: "dc=chaos,dc=local"
+  codesign_timeout: 10
+```
+
+```bash
+quirk --config config-lab-ldaps-codesign.yaml --inventory-code-signing
+```
+
+**Expected findings:** 1 × HIGH `CODE-SIGN/weak-algorithm` for `uid=codesign-weak` (RSA-1024 /
+SHA-1 + CodeSigning EKU). The CBOM will contain a `certificate` component with
+`bom_ref = crypto/certificate/codesign/<sha256-fingerprint>`.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-ldaps` for the full oracle row.
 
 ---
 
