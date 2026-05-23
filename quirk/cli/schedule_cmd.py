@@ -78,7 +78,11 @@ def _resolve_db_path(config_arg: str | None) -> str:
     """Resolve DB path in priority order: --config arg > QUIRK_DB_PATH env > ./quirk.db.
 
     For Phase 63 CLI use, --config accepts a raw .db path or :memory: directly.
-    YAML config file parsing is deferred (not needed for SCHED-01 scope).
+    Note (Phase 97 / D-05): the same --config value is also inspected by
+    `_config_has_authenticated_mode`, which now attempts a YAML parse of any
+    existing file to enforce the D-11 authenticated-mode reject. A real SQLite
+    .db path is detected by header magic there and exempted, so passing the DB
+    path here remains valid; this resolver itself does no YAML parsing.
     """
     if config_arg is not None:
         return config_arg
