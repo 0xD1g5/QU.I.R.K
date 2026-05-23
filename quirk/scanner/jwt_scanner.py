@@ -11,6 +11,7 @@ Phase 93 / AUTH-01: optional CredentialContext support.
 """
 import base64
 import json
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
@@ -24,6 +25,8 @@ except ImportError:
 from quirk.models import CryptoEndpoint
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import validate_external_url
+
+logger = logging.getLogger(__name__)
 
 # Phase 93 / IN-01: single source of truth for query-param key names. Referenced by
 # the D-10 log-redaction hook below; CredentialContext.query_param() defaults to "api_key".
@@ -61,9 +64,27 @@ def _append_query_param(url: str, param_name: str, param_value: str) -> str:
 
     Phase 93 / D-03: query-param key placement — secret goes on the URL query
     string, never in a header.
+
+    Phase 97 / D-03 (WR-04): if the URL already carries any key param name
+    (checked case-insensitively against _KEY_PARAM_NAMES), raises ValueError
+    to reject the target rather than silently overwriting an operator-probed
+    value. The caller must catch this and skip (continue) the affected target;
+    remaining targets in the iteration are unaffected.
     """
     parsed = urlparse(url)
     existing = parse_qs(parsed.query, keep_blank_values=True)
+    # D-03 guard: detect any pre-existing key-param name (case-insensitive)
+    for existing_key in existing:
+        if existing_key.lower() in _KEY_PARAM_NAMES:
+            logger.warning(
+                "JWT target rejected — URL already carries a key query parameter; "
+                "skipping to avoid silent overwrite (D-03): %s",
+                safe_str(url),
+            )
+            raise ValueError(
+                f"Target URL already carries a key query parameter ({existing_key!r}); "
+                f"refusing to overwrite (D-03). Target: {safe_str(url)}"
+            )
     existing[param_name] = [param_value]
     new_query = urlencode(existing, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
