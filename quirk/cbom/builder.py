@@ -374,6 +374,55 @@ def _register_algorithm(
     return bom_ref_key
 
 
+def _extract_fp(service_detail: str | None) -> str | None:
+    """Extract the SHA-256 fingerprint hex from a CODE_SIGNING service_detail token.
+
+    service_detail is pipe-delimited; this returns the value of the first
+    "fingerprint=<hex>" token.  Returns None when the token is absent.
+
+    Example: "fingerprint=deadbeef...|weak" → "deadbeef..."
+
+    Security note (T-95-05): only the fixed "fingerprint=" token is parsed;
+    no eval or exec is performed; unrecognised tokens are silently ignored.
+    """
+    if not service_detail:
+        return None
+    for token in service_detail.split("|"):
+        if token.startswith("fingerprint="):
+            value = token[len("fingerprint="):]
+            return value if value else None
+    return None
+
+
+def _codesign_surrogate_key(ep: "CryptoEndpoint") -> tuple[str, str, str] | None:
+    """Compute the cross-source surrogate key for a CODE_SIGNING endpoint.
+
+    Returns (cert_subject, cert_pubkey_alg, cert_not_after) when all three
+    fields are non-empty, else None.  The surrogate key is used to detect
+    certs already emitted via TLS Pass-2 (CSIGN-03 cross-source dedup).
+    """
+    subj = str(getattr(ep, "cert_subject", "") or "").strip()
+    alg = str(getattr(ep, "cert_pubkey_alg", "") or "").strip()
+    not_after = str(getattr(ep, "cert_not_after", "") or "").strip()
+    if subj and alg and not_after:
+        return (subj, alg, not_after)
+    return None
+
+
+def _tls_surrogate_key(ep: "CryptoEndpoint") -> tuple[str, str, str] | None:
+    """Compute the surrogate key for a TLS endpoint's certificate.
+
+    Returns (cert_subject, cert_pubkey_alg, cert_not_after) when all three
+    fields are non-empty, else None.
+    """
+    subj = str(getattr(ep, "cert_subject", "") or "").strip()
+    alg = str(getattr(ep, "cert_pubkey_alg", "") or "").strip()
+    not_after = str(getattr(ep, "cert_not_after", "") or "").strip()
+    if subj and alg and not_after:
+        return (subj, alg, not_after)
+    return None
+
+
 def _emit_coverage_note(bom_component: Component | None, note: str) -> None:
     """Attach a quirk:coverage-note property to the Bom root component (D-06).
 
@@ -524,6 +573,16 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
                     ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size
                 )
 
+        elif ep.protocol == "CODE_SIGNING":
+            # CODE_SIGNING: cert_pubkey_alg holds the signing key algorithm (RSA, ECDSA).
+            # Pass-1 only — Pass-2/3 skip this protocol (cert dedup handled separately
+            # after Pass-2; no ProtocolProperties for a non-transport protocol).
+            # Phase 95 CSIGN-03.
+            if ep.cert_pubkey_alg:
+                _register_algorithm(
+                    ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size
+                )
+
         elif ep.protocol == "KERBEROS":
             # Kerberos: cert_pubkey_alg holds the etype name (e.g. "rc4-hmac", "aes256-cts-hmac-sha1-96")
             # Exclude "kerberos-unreachable" synthetic finding -- not a real algorithm (per D-18)
@@ -619,11 +678,14 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     for ep in endpoints:
         if ep.protocol in (
             "SSH", "BEARER_TOKEN", "JWT", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC", "SMIME", "ADCS",
+            "CODE_SIGNING",
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
             # BEARER_TOKEN (Phase 94 TOKEN-02) and JWT have no X.509 cert components —
             # their algorithm was already registered in Pass 1.
+            # CODE_SIGNING (Phase 95 CSIGN-03): cert components emitted in the fingerprint
+            # dedup pass below, not here, to enable TLS-wins cross-source reconciliation.
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -661,6 +723,125 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             ),
         )
         cert_components.append(cert_component)
+
+    # ------------------------------------------------------------------ #
+    # Pass 2b — CODE_SIGNING certificate dedup (CSIGN-03, Phase 95)       #
+    # ------------------------------------------------------------------ #
+    # Build a surrogate-key index from TLS-derived cert components already
+    # emitted in Pass 2.  Key = (cert_subject, cert_pubkey_alg, cert_not_after).
+    # For each CODE_SIGNING endpoint:
+    #   (a) Fingerprint-based same-source dedup: first occurrence for a given
+    #       SHA-256 fingerprint wins; duplicates are skipped.
+    #   (b) Cross-source surrogate dedup: when the surrogate key matches an
+    #       existing TLS-derived cert component the TLS component wins and the
+    #       CODE_SIGNING endpoint annotates it with a CycloneDX Property
+    #       ("quirk:code-signing-eku" = "true") rather than emitting a new
+    #       cert component.
+    _tls_surrogate_index: dict[tuple[str, str, str], Component] = {}
+    for c in cert_components:
+        cert_props_obj = getattr(c.crypto_properties, "certificate_properties", None)
+        if cert_props_obj is None:
+            continue
+        subj = str(getattr(cert_props_obj, "subject_name", "") or "").strip()
+        # Derive alg from component name: "cert:<host>:<port>" — we cannot recover
+        # cert_pubkey_alg from the bom_ref alone, so instead we'll re-scan endpoints.
+    # Re-build from TLS endpoints directly (simpler and authoritative).
+    _tls_surrogate_index = {}
+    for ep in endpoints:
+        if ep.protocol not in ("TLS",) and ep.protocol in (
+            "SSH", "BEARER_TOKEN", "JWT", "CONTAINER", "SOURCE", "KERBEROS", "SAML",
+            "DNSSEC", "SMIME", "ADCS", "CODE_SIGNING",
+            *DAR_SKIP_PROTOCOLS,
+            *MOTION_PLAINTEXT_PROTOCOLS,
+        ):
+            continue
+        if ep.protocol == "CODE_SIGNING":
+            continue
+        # TLS (and any other cert-emitting protocol from Pass-2)
+        key = _tls_surrogate_key(ep)
+        if key is None:
+            continue
+        # Find the cert component emitted for this TLS endpoint
+        bom_ref_val = f"crypto/certificate/{ep.host}:{ep.port}"
+        for c in cert_components:
+            if getattr(c.bom_ref, "value", None) == bom_ref_val:
+                _tls_surrogate_index[key] = c
+                break
+
+    # Now process CODE_SIGNING endpoints
+    _codesign_fp_seen: dict[str, str] = {}  # fp_hex → bom_ref_value
+    for ep in endpoints:
+        if ep.protocol != "CODE_SIGNING":
+            continue
+        if not ep.cert_pubkey_alg:
+            continue
+
+        fp = _extract_fp(getattr(ep, "service_detail", None))
+        surrogate = _codesign_surrogate_key(ep)
+
+        # Cross-source reconciliation: TLS-derived cert wins
+        if surrogate is not None and surrogate in _tls_surrogate_index:
+            # Annotate the existing TLS cert component
+            tls_cert_component = _tls_surrogate_index[surrogate]
+            existing_props = list(tls_cert_component.properties or [])
+            existing_props.append(
+                Property(name="quirk:code-signing-eku", value="true")
+            )
+            tls_cert_component.properties = existing_props
+            # Record fingerprint as already-seen so same-source dups are also suppressed
+            if fp:
+                _codesign_fp_seen.setdefault(fp, getattr(tls_cert_component.bom_ref, "value", ""))
+            continue
+
+        # Fingerprint-based same-source dedup
+        if fp is not None:
+            if fp in _codesign_fp_seen:
+                continue  # duplicate fingerprint — already emitted
+            bom_ref_val = f"crypto/certificate/codesign/{fp}"
+            _codesign_fp_seen[fp] = bom_ref_val
+        else:
+            # No fingerprint: use host:port as fallback bom_ref (no dedup possible)
+            bom_ref_val = f"crypto/certificate/codesign/{ep.host}:{ep.port}"
+
+        # Determine algorithm refs (mirrors Pass-2 TLS pattern)
+        sig_alg_ref_cs: BomRef | None = None
+        if ep.cert_sig_alg:
+            sig_key = _normalize_bom_ref_key(ep.cert_sig_alg)
+            sig_alg_ref_cs = BomRef(value=f"crypto/algorithm/{sig_key}")
+
+        pubkey_name_cs = ep.cert_pubkey_alg
+        if ep.cert_pubkey_size:
+            pubkey_name_cs = f"{ep.cert_pubkey_alg}-{ep.cert_pubkey_size}"
+        pubkey_key_cs = _normalize_bom_ref_key(pubkey_name_cs)
+        subject_pubkey_ref_cs = BomRef(value=f"crypto/algorithm/{pubkey_key_cs}")
+
+        cs_cert_props = CertificateProperties(
+            subject_name=ep.cert_subject,
+            issuer_name=ep.cert_issuer,
+            not_valid_before=ep.cert_not_before,
+            not_valid_after=ep.cert_not_after,
+            signature_algorithm_ref=sig_alg_ref_cs,
+            subject_public_key_ref=subject_pubkey_ref_cs,
+            certificate_format="X.509",
+        )
+        cs_cert_component = Component(
+            name=f"cert:codesign:{fp or ep.host + ':' + str(ep.port)}",
+            type=ComponentType.CRYPTOGRAPHIC_ASSET,
+            bom_ref=bom_ref_val,
+            crypto_properties=CryptoProperties(
+                asset_type=CryptoAssetType.CERTIFICATE,
+                certificate_properties=cs_cert_props,
+            ),
+        )
+        cs_cert_component.properties = [
+            Property(name="quirk:code-signing-eku", value="true")
+        ]
+        cert_components.append(cs_cert_component)
+        # NOTE: we intentionally do NOT add this CODE_SIGNING-emitted component to
+        # _tls_surrogate_index.  That index is strictly for TLS-derived wins; adding
+        # CODE_SIGNING components there would cause same-metadata but distinct-fingerprint
+        # certs to collapse incorrectly.  Fingerprint is the authoritative identity for
+        # CODE_SIGNING certs; surrogate-key dedup only guards against TLS-source duplicates.
 
     # ------------------------------------------------------------------ #
     # Pass 3 — Protocol components                                         #
@@ -704,13 +885,14 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
 
         elif ep.protocol in (
             "JWT", "BEARER_TOKEN", "CONTAINER", "SOURCE", "AWS", "AZURE",
-            "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS",
+            "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS", "CODE_SIGNING",
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
             # BEARER_TOKEN added Phase 94 TOKEN-02: no ProtocolProperties (bearer is not a transport protocol).
+            # CODE_SIGNING (Phase 95 CSIGN-03): no ProtocolProperties; cert dedup handled below Pass-2.
             continue
 
         else:
