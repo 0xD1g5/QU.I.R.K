@@ -486,10 +486,15 @@ def get_cors_origins() -> list:
     """
     if env_val := os.environ.get("QUIRK_CORS_ORIGINS"):
         return [o.strip() for o in env_val.split(",") if o.strip()]
-    try:
-        cfg = load_config()
-        if cfg.security.cors_origins:
-            return list(cfg.security.cors_origins)
-    except Exception:
-        pass
+    # WR-01: load_config requires a path argument — calling it bare always raised
+    # TypeError into the bare except, making this YAML branch dead code and silently
+    # disabling operator-configured CORS allowlists. Resolve a real path first.
+    config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+    if os.path.isfile(config_path):
+        try:
+            cfg = load_config(config_path)
+            if cfg.security.cors_origins:
+                return list(cfg.security.cors_origins)
+        except Exception:
+            pass
     return ["http://127.0.0.1", "http://localhost"]
