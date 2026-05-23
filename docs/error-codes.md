@@ -80,6 +80,7 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 | QRK-SCHED-002 | Invalid cron expression. | Use a 5-field cron expression (e.g. `0 2 * * *`). See `man 5 crontab`. |
 | QRK-SCHED-003 | Schedule with that name already exists. | Choose a unique name or remove the existing schedule with `quirk schedule remove <name>`. |
 | QRK-SCHED-004 | Schedule not found. | Run `quirk schedule list` to see existing schedule names. |
+| QRK-SCHED-AUTH-001 | Authenticated scan configs cannot be scheduled — credentials are ephemeral and cannot be persisted. | Run an authenticated scan interactively with `quirk --auth-bearer` (or `--auth-api-key` / `--auth-basic`). |
 
 ## SSH
 
