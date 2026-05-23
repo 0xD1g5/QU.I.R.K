@@ -263,6 +263,108 @@ connectors:
 
 ---
 
+## Authenticated Scanning (ephemeral credentials)
+
+Phase 93 (v5.1) introduced per-scan ephemeral credential support, allowing QUIRK to attach an
+HTTP-level credential to JWT/REST endpoint probes for a single scan run. Credentials are never
+persisted to SQLite, the CBOM, log files, or the dashboard — they live only in-process for the
+duration of the run.
+
+### Opt-in config flag
+
+Add `enable_authenticated_mode: true` to the `connectors` block to enable the feature:
+
+```yaml
+connectors:
+  enable_jwt: true
+  jwt_targets:
+    - "https://api.acme.com"
+  enable_authenticated_mode: true
+```
+
+Without this flag (or a CLI `--auth-*` flag), authenticated scanning is disabled and all
+credential-related CLI arguments are silently ignored.
+
+### CLI flags
+
+| Flag | Credential scheme | Description |
+|------|-------------------|-------------|
+| `--auth-bearer [REF]` | Bearer token (OAuth2 / JWT) | Adds `Authorization: Bearer <token>` to probes |
+| `--auth-api-key [REF]` | API-key header (`X-Api-Key`) | Adds `X-Api-Key: <key>` to probes |
+| `--auth-api-key-query [REF]` | API-key query parameter | Appends `?api_key=<key>` to JWKS/probe URLs |
+| `--auth-basic [REF]` | HTTP Basic (`user:password`) | Adds `Authorization: Basic <b64>` to probes |
+
+Each flag accepts an optional `REF` argument. If `REF` is omitted the flag is treated as a bare
+flag and triggers an interactive `getpass` prompt (see "Reference model" below).
+
+### Reference-not-secret model
+
+**Raw credential values must never appear in the CLI argument.** Passing a credential as a bare
+string (e.g. `--auth-bearer eyJhbGci…`) will be rejected with a clear error.
+
+Instead, pass a *reference* to where the credential lives:
+
+| Input form | Example | Resolved from |
+|------------|---------|---------------|
+| `@file` path | `--auth-bearer @/path/to/token.txt` | File contents (first line, stripped) |
+| `ENV_VAR` name | `--auth-bearer QUIRK_AUTH_TOKEN` | Environment variable at resolution time; env var is **deleted after reading** to prevent subprocess inheritance |
+| Bare flag (no REF) | `--auth-bearer` | Interactive `getpass` prompt — credential is never echoed to the terminal |
+
+**Why the reference model?** Inline secrets in `argv` are visible to `ps aux`, the shell history
+(`~/.bash_history`, `~/.zsh_history`), and process-listing tools. The `@file`/`ENV_VAR`/`getpass`
+forms keep the raw credential out of the process argument list entirely.
+
+**Source precedence** (highest to lowest): interactive prompt → environment variable → `@file`/bare-flag reference.
+
+### Ephemeral-only invariant
+
+Credentials are held in a `bytearray` buffer (`CredentialContext`) for the scan run and
+zeroed in-place via `CredentialContext.close()` on both normal exit and on any exception,
+including `KeyboardInterrupt`. They are **never**:
+
+- Written to the SQLite database (`quirk.db`)
+- Included in the CBOM output (`cbom-*.json`)
+- Included in log files
+- Returned by the dashboard API
+- Included in PDF exports
+
+This invariant is enforced by an automated sentinel test suite (`tests/test_credential_leakage.py`,
+25 tests) that injects a synthetic sentinel value across all 11 stored/rendered surfaces and asserts absence.
+
+### Scheduler rejection (QRK-SCHED-AUTH-001)
+
+Scheduled scans cannot use authenticated mode. Running `quirk schedule add` against a config
+file that contains `enable_authenticated_mode: true` exits immediately with:
+
+```
+[QRK-SCHED-AUTH-001] Authenticated scan configs cannot be scheduled.
+Fix: Remove enable_authenticated_mode from config or use a non-authenticated config for scheduled runs.
+```
+
+Exit code: `2`. This is by design — storing scheduled-scan credentials would require persisting
+a secret somewhere, which violates the ephemeral-only invariant.
+
+### Example: authenticated JWT scan
+
+```bash
+# Using a @file reference (preferred for automation)
+echo "eyJhbGciOiJSUzI1NiJ9..." > /tmp/token.txt
+quirk --config config.yaml --auth-bearer @/tmp/token.txt
+
+# Using an environment variable reference
+export QUIRK_AUTH_TOKEN="eyJhbGciOiJSUzI1NiJ9..."
+quirk --config config.yaml --auth-bearer QUIRK_AUTH_TOKEN
+unset QUIRK_AUTH_TOKEN   # QUIRK also deletes it after reading
+
+# Interactive prompt (safest — credential never touches disk or env)
+quirk --config config.yaml --auth-bearer
+
+# API-key query parameter (appended to JWKS/probe URLs)
+quirk --config config.yaml --auth-api-key-query @/tmp/apikey.txt
+```
+
+---
+
 ## Output Block
 
 Controls where QU.I.R.K. writes reports, CBOM files, and its internal database.
