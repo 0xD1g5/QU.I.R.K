@@ -252,6 +252,22 @@ def test_gate_does_not_flag_safe_patterns() -> None:
 # ---------------------------------------------------------------------------
 
 from quirk.util.safe_exc import safe_str  # noqa: E402
+from quirk.errors import format_error  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Phase 93 Task 2: SCHED-AUTH-001 error code registry assertion
+# ---------------------------------------------------------------------------
+
+def test_sched_auth_001_format_error() -> None:
+    """format_error('SCHED-AUTH-001') must emit the QRK-SCHED-AUTH-001 prefix and a Fix clause."""
+    result = format_error("SCHED-AUTH-001")
+    assert "QRK-SCHED-AUTH-001" in result, (
+        f"format_error('SCHED-AUTH-001') did not contain 'QRK-SCHED-AUTH-001': {result!r}"
+    )
+    assert "Fix:" in result, (
+        f"format_error('SCHED-AUTH-001') did not contain 'Fix:': {result!r}"
+    )
+
 
 CORPUS: tuple[tuple[str, type[BaseException]], ...] = (
     ("https://vault.example.com:8200?token=s.AbCdEfGhIjKlMnOpQrSt1234XyZ", Exception),

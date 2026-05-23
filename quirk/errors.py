@@ -158,6 +158,11 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
         cause="Schedule not found.",
         fix="Run `quirk schedule list` to see existing schedule names.",
     ),
+    "SCHED-AUTH-001": ErrorEntry(
+        code="SCHED-AUTH-001",
+        cause="Authenticated scan configs cannot be scheduled — credentials are ephemeral and cannot be persisted.",
+        fix="Run an authenticated scan interactively with `quirk --auth-bearer` (or `--auth-api-key` / `--auth-basic`).",
+    ),
 
     # --- CBOM domain ---
     "CBOM-001": ErrorEntry(
