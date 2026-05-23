@@ -1,9 +1,19 @@
 ---
 phase: 94-openapi-bearer-token-analysis
 verified: 2026-05-23T03:53:00Z
-status: gaps_found
-score: 5/6 must-haves verified
+status: passed
+score: 6/6 must-haves verified (SC-5 closed via gap-closure commit ba17b6e)
 overrides_applied: 0
+gap_closure:
+  commit: ba17b6e
+  closed: SC-5/TOKEN-02
+  evidence: >-
+    run_scan.py now emits CryptoEndpoint(protocol="BEARER_TOKEN",
+    cert_pubkey_alg=<declared_alg>, service_detail="declared_algorithm (unverified)")
+    when an authenticated --auth-bearer scan runs, via the new no-leak
+    CredentialContext.bearer_declared_alg(). Confirmed end-to-end: CBOM registers the
+    declared alg component and bearer_token_weak_alg_count increments (SCORE-01 signal
+    now live). 4 regression tests incl. a no-token-leak assertion.
 gaps:
   - truth: "Bearer tokens captured during an authenticated scan appear in the CBOM with declared_algorithm (unverified); raw token absent from all stored artifacts"
     status: failed

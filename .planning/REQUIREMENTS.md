@@ -40,7 +40,7 @@
 ### Bearer Token Analysis (BACK-11)
 
 - [x] **TOKEN-01**: User can decode and classify a bearer/JWT token (algorithm, key size, expiry, quantum-safety) via a standalone `--analyze-token` command.
-- [ ] **TOKEN-02**: Bearer tokens captured during an authenticated scan are classified into the CBOM with a `declared_algorithm (unverified)` label — never treated as enforced.
+- [x] **TOKEN-02**: Bearer tokens captured during an authenticated scan are classified into the CBOM with a `declared_algorithm (unverified)` label — never treated as enforced.
 - [x] **TOKEN-03**: `alg:none` tokens (any case variant) are flagged CRITICAL.
 
 ### Active REST Fuzzing (BACK-09)
@@ -96,7 +96,7 @@
 | SPEC-02 | Phase 94 | Complete |
 | SPEC-03 | Phase 94 | Complete |
 | TOKEN-01 | Phase 94 | Complete |
-| TOKEN-02 | Phase 94 | Pending |
+| TOKEN-02 | Phase 94 | Complete |
 | TOKEN-03 | Phase 94 | Complete |
 | SCORE-01 | Phase 94 (partial), Phase 95 (partial), Phase 96 (final) | Pending |
 | PKG-01 | Phase 94 | Complete |
