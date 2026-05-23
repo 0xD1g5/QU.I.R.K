@@ -90,7 +90,11 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
   2. A code-signing certificate using RSA < 2048 bits, EC < 256 bits, or a SHA-1 signature hash raises a HIGH severity finding with category `CODE-SIGN/weak-algorithm`
   3. Running the inventory against a target that already has TLS certs captured does not produce duplicate CBOM components — de-duplication by SHA-256 fingerprint is confirmed by an automated test asserting stable component count
   4. Code-signing signals contribute to the `agility_signals` subscore (SCORE_WEIGHTS sum 299.0); existing scans without code-signing data are unaffected by the new weights
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 95-01-PLAN.md — codesign_scanner.py (LDAP userCertificate + TLS EKU) + ConnectorsCfg + weak-algo classification [CSIGN-01, CSIGN-02]
+- [ ] 95-02-PLAN.md — CBOM CODE_SIGNING branch + SHA-256 fingerprint dedup + evidence/scoring +6.0 (299.0/40) [CSIGN-03, SCORE-01]
+- [ ] 95-03-PLAN.md — run_scan.py --inventory-code-signing wiring + ldaps chaos fixture triple-update [CSIGN-01, LAB-01]
+- [ ] 95-04-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [CSIGN-01..03, SCORE-01, LAB-01]
 
 ### Phase 96: Active REST Fuzzing
 **Goal**: Users can opt in to active REST crypto-posture fuzzing — TLS downgrade, cipher acceptance, HSTS, and JWT alg-confusion probes — gated behind an explicit `CONFIRM` prompt, bounded request budget, and hard non-TTY abort
@@ -110,5 +114,5 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 |-------|-----------|----------------|--------|-----------|
 | 93. Credential Infrastructure | v5.1 | 4/4 | Complete   | 2026-05-23 |
 | 94. OpenAPI & Bearer Token Analysis | v5.1 | 3/3 | Complete   | 2026-05-23 |
-| 95. Code-Signing Certificate Inventory | v5.1 | 0/TBD | Not started | - |
+| 95. Code-Signing Certificate Inventory | v5.1 | 0/4 | Planned | - |
 | 96. Active REST Fuzzing | v5.1 | 0/TBD | Not started | - |
