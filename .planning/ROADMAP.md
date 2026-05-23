@@ -44,7 +44,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 
 - [x] **Phase 93: Credential Infrastructure** - Ephemeral credential model (Bearer/OAuth2, API key, HTTP Basic) with committed security-review gate deliverable (completed 2026-05-23)
 - [x] **Phase 94: OpenAPI & Bearer Token Analysis** - Passive spec parsing + bearer token classify/decode; `[api]` extras group introduced (completed 2026-05-23)
-- [ ] **Phase 95: Code-Signing Certificate Inventory** - LDAP `userCertificate` + TLS EKU code-signing discovery; zero new core deps
+- [x] **Phase 95: Code-Signing Certificate Inventory** - LDAP `userCertificate` + TLS EKU code-signing discovery; zero new core deps (completed 2026-05-23)
 - [ ] **Phase 96: Active REST Fuzzing** - Gated crypto-posture fuzzer with six mandatory guardrails + alg-confusion sub-flag; ships last
 
 ## Phase Details
@@ -91,10 +91,10 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
   3. Running the inventory against a target that already has TLS certs captured does not produce duplicate CBOM components — de-duplication by SHA-256 fingerprint is confirmed by an automated test asserting stable component count
   4. Code-signing signals contribute to the `agility_signals` subscore (SCORE_WEIGHTS sum 299.0); existing scans without code-signing data are unaffected by the new weights
 **Plans**: 4 plans
-- [ ] 95-01-PLAN.md — codesign_scanner.py (LDAP userCertificate + TLS EKU) + ConnectorsCfg + weak-algo classification [CSIGN-01, CSIGN-02]
-- [ ] 95-02-PLAN.md — CBOM CODE_SIGNING branch + SHA-256 fingerprint dedup + evidence/scoring +6.0 (299.0/40) [CSIGN-03, SCORE-01]
-- [ ] 95-03-PLAN.md — run_scan.py --inventory-code-signing wiring + ldaps chaos fixture triple-update [CSIGN-01, LAB-01]
-- [ ] 95-04-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [CSIGN-01..03, SCORE-01, LAB-01]
+- [x] 95-01-PLAN.md — codesign_scanner.py (LDAP userCertificate + TLS EKU) + ConnectorsCfg + weak-algo classification [CSIGN-01, CSIGN-02]
+- [x] 95-02-PLAN.md — CBOM CODE_SIGNING branch + SHA-256 fingerprint dedup + evidence/scoring +6.0 (299.0/40) [CSIGN-03, SCORE-01]
+- [x] 95-03-PLAN.md — run_scan.py --inventory-code-signing wiring + ldaps chaos fixture triple-update [CSIGN-01, LAB-01]
+- [x] 95-04-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [CSIGN-01..03, SCORE-01, LAB-01]
 
 ### Phase 96: Active REST Fuzzing
 **Goal**: Users can opt in to active REST crypto-posture fuzzing — TLS downgrade, cipher acceptance, HSTS, and JWT alg-confusion probes — gated behind an explicit `CONFIRM` prompt, bounded request budget, and hard non-TTY abort
@@ -114,5 +114,5 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 |-------|-----------|----------------|--------|-----------|
 | 93. Credential Infrastructure | v5.1 | 4/4 | Complete   | 2026-05-23 |
 | 94. OpenAPI & Bearer Token Analysis | v5.1 | 3/3 | Complete   | 2026-05-23 |
-| 95. Code-Signing Certificate Inventory | v5.1 | 0/4 | Planned | - |
+| 95. Code-Signing Certificate Inventory | v5.1 | 4/4 | Complete   | 2026-05-23 |
 | 96. Active REST Fuzzing | v5.1 | 0/TBD | Not started | - |
