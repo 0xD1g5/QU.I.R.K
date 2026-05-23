@@ -22,7 +22,15 @@ findings:
   warning: 6
   info: 3
   total: 13
-status: issues_found
+status: remediated
+remediation:
+  commit: 624f55a
+  resolved: [CR-01, CR-02, CR-03, CR-04, WR-01, IN-03]
+  deferred: [WR-02, WR-03, WR-04, WR-05, WR-06, IN-01-partial, IN-02]
+  note: >-
+    All 4 BLOCKERs + WR-01 (TypeError CORS bug) fixed and committed with 3 new
+    regression tests for the D-10 hook. Remaining warnings/info are design-judgment
+    follow-ups tracked for v5.1 hardening (see Deferred Follow-ups below).
 ---
 
 # Phase 93: Code Review Report
@@ -308,6 +316,29 @@ future maintainers tracing the credential-lifecycle.
 
 ---
 
+## Remediation (commit 624f55a)
+
+| Finding | Status | Resolution |
+|---------|--------|------------|
+| CR-01 | ✅ fixed | `_strip_auth_from_log` redacts query-param secret via `copy_set_param`; `_KEY_PARAM_NAMES` constant added; 3 regression tests |
+| CR-02 | ✅ fixed | scan-error log routed through `safe_str` |
+| CR-03 | ✅ fixed | `validate_external_url` runs on every base JWKS probe URL; false comment corrected |
+| CR-04 | ✅ fixed | `mark_job_failed` persists `safe_str(exc)` |
+| WR-01 | ✅ fixed | `get_cors_origins` resolves real path (`QUIRK_CONFIG_PATH`/`./config.yaml`) |
+| IN-03 | ✅ fixed | stale comment removed |
+
+### Deferred follow-ups (v5.1 hardening — design-judgment, not blockers)
+
+- **WR-02** env-var all-caps contract vs. behavior — pick enforce-or-document.
+- **WR-03** per-call `str` copy proliferation in `as_headers()`/`query_param()` — bound or document under D-05.
+- **WR-04** `_append_query_param` silent overwrite of pre-existing param — decide reject vs. append.
+- **WR-05** sentinel PDF/dashboard tests assert on pre-scrubbed data — route ≥1 surface through the real write path.
+- **WR-06** scheduler reject keyed on `.yml`/`.yaml` extension heuristic — parse any existing file.
+- **IN-02** multiple `--auth-*` flags silently resolved by precedence — raise on >1.
+
+---
+
 _Reviewed: 2026-05-22_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Remediated: 2026-05-22 (commit 624f55a)_
