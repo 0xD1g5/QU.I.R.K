@@ -250,3 +250,99 @@ def test_strip_auth_from_log_noop_without_secrets():
     _strip_auth_from_log(request)
 
     assert request.url.params.get("page") == "2"
+
+
+# ---------------------------------------------------------------------------
+# Phase 97 / D-03 (WR-04): _append_query_param pre-existing-param guard
+# ---------------------------------------------------------------------------
+
+def test_append_query_param_rejects_preexisting_same_param():
+    """D-03 / Test 1: _append_query_param must reject (ValueError) a URL that already
+    carries the same key-param name rather than silently overwriting the probed value."""
+    from quirk.scanner.jwt_scanner import _append_query_param
+
+    url_with_existing = "https://h/path?api_key=PROBED"
+    # Must raise ValueError (not silently overwrite)
+    with pytest.raises(ValueError):
+        _append_query_param(url_with_existing, "api_key", "NEW_SECRET")
+
+
+def test_append_query_param_reject_message_does_not_leak_preexisting_value():
+    """D-03 / Test 2: the reject message, when run through safe_str, must not contain
+    the pre-existing param value (PROBED)."""
+    from quirk.scanner.jwt_scanner import _append_query_param
+    from quirk.util.safe_exc import safe_str
+
+    url_with_existing = "https://h/path?api_key=PROBED_SECRET_VALUE"
+    exc_caught = None
+    try:
+        _append_query_param(url_with_existing, "api_key", "NEW_SECRET")
+    except ValueError as exc:
+        exc_caught = exc
+
+    assert exc_caught is not None, "Expected ValueError was not raised"
+    scrubbed = safe_str(exc_caught)
+    assert "PROBED_SECRET_VALUE" not in scrubbed, (
+        f"Pre-existing param value leaked into scrubbed message: {scrubbed!r}"
+    )
+
+
+def test_append_query_param_continue_iteration_skips_conflicting_target():
+    """D-03 / Test 3: the caller loop skips the conflicting target (URL with pre-existing
+    param) and still processes the clean target — one rejection must not abort the others."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = SAMPLE_JWKS
+
+    from quirk.auth.credentials import CredentialContext
+    import os
+
+    os.environ["_TEST_D03_KEY"] = "secret-key"
+    try:
+        ctx = CredentialContext.from_cli(api_key_query="_TEST_D03_KEY")
+    finally:
+        os.environ.pop("_TEST_D03_KEY", None)
+
+    # conflicting_url already has api_key; clean_url does not
+    conflicting_url = "https://h1.example.com?api_key=OPERATOR_PROBED"
+    clean_url = "https://h2.example.com"
+
+    with patch("quirk.scanner.jwt_scanner.httpx") as mock_httpx:
+        mock_httpx.get.return_value = mock_response
+
+        class _CapturingClientCM:
+            def __init__(self, **kwargs):
+                pass
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                pass
+            def get(self, url, **kwargs):
+                return mock_response
+
+        mock_httpx.Client = _CapturingClientCM
+
+        results = scan_jwt_targets(
+            [conflicting_url, clean_url],
+            timeout=5,
+            cred_ctx=ctx,
+        )
+
+    ctx.close()
+
+    # The clean_url must have returned results; conflicting URL produced nothing
+    # (SAMPLE_JWKS has 3 keys)
+    assert len(results) >= 3, (
+        f"Expected >=3 endpoints from clean target; got {len(results)}"
+    )
+
+
+def test_append_query_param_happy_path_unchanged():
+    """D-03 / Test 4: a URL with no pre-existing same-named param still gets the param
+    appended exactly as before."""
+    from quirk.scanner.jwt_scanner import _append_query_param
+
+    url_clean = "https://api.example.com/jwks"
+    result = _append_query_param(url_clean, "api_key", "my-secret")
+    assert "api_key=my-secret" in result
+    assert result.startswith("https://api.example.com/jwks")
