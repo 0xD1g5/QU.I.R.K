@@ -438,6 +438,16 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             if ep.cert_pubkey_alg:
                 _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
 
+        elif ep.protocol == "BEARER_TOKEN":
+            # TOKEN-02 (Phase 94): operator-supplied bearer credential, classified passively.
+            # cert_pubkey_alg holds the declared JWT algorithm (e.g. RS256, ES256, HS256).
+            # Label: "declared_algorithm (unverified)" — NEVER treated as enforced.
+            # T-94-03: only the declared algorithm is registered; raw token never reaches CBOM.
+            if ep.cert_pubkey_alg:
+                _register_algorithm(ep.cert_pubkey_alg, algo_registry, key_size=ep.cert_pubkey_size)
+            # Affirmative coverage note — hardcoded literal per T-88-03 (never scanner-derived value)
+            coverage_notes.append("bearer-token-declared-algorithm")
+
         elif ep.protocol == "CONTAINER":
             # Container: cipher_suite=library_name (e.g., "openssl", "libssl")
             # D-06 / SCORE-CBOM-01: library names are not algorithm names; emit coverage note
@@ -608,10 +618,12 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # ------------------------------------------------------------------ #
     for ep in endpoints:
         if ep.protocol in (
-            "SSH", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC", "SMIME", "ADCS",
+            "SSH", "BEARER_TOKEN", "JWT", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC", "SMIME", "ADCS",
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
+            # BEARER_TOKEN (Phase 94 TOKEN-02) and JWT have no X.509 cert components —
+            # their algorithm was already registered in Pass 1.
             continue
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
@@ -691,13 +703,14 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             protocol_components.append(proto_component)
 
         elif ep.protocol in (
-            "JWT", "CONTAINER", "SOURCE", "AWS", "AZURE",
+            "JWT", "BEARER_TOKEN", "CONTAINER", "SOURCE", "AWS", "AZURE",
             "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS",
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
+            # BEARER_TOKEN added Phase 94 TOKEN-02: no ProtocolProperties (bearer is not a transport protocol).
             continue
 
         else:

@@ -56,6 +56,8 @@ SCORE_WEIGHTS: Dict[str, float] = {
     "agility_rsa_only_penalty": 8.0,
     "agility_has_ecdsa_bonus": 4.0,
     "agility_pqc_hybrid_bonus": 8.0,   # Phase 90 PQC-03 — X25519MLKEM768 ceiling anchor
+    "agility_weak_jwt_alg_ratio": 6.0,      # Phase 94 SCORE-01 — alg:none / quantum-vulnerable alg in bearer token
+    "agility_openapi_plaintext_ratio": 4.0, # Phase 94 SCORE-01 — OpenAPI spec declares http:// servers
 }
 
 PROFILE_MULTIPLIERS: Dict[str, Dict[str, float]] = {
@@ -219,6 +221,16 @@ def compute_readiness_score(
         agility_impacts.append(("ECDSA adoption signal", w["agility_has_ecdsa_bonus"]))
     if pqc_hybrid_count > 0:
         agility_impacts.append(("PQC-hybrid key exchange (X25519MLKEM768)", w["agility_pqc_hybrid_bonus"]))
+
+    # Phase 94 SCORE-01: bearer-token weak alg and OpenAPI plaintext signals
+    bearer_weak_jwt_alg = max(0, _as_int(evidence.get("bearer_token_weak_alg_count", 0)))
+    openapi_plaintext = max(0, _as_int(evidence.get("openapi_plaintext_server_count", 0)))
+    agility_impacts.extend([
+        ("Bearer token weak algorithm",
+         -_ratio(bearer_weak_jwt_alg, denom) * w["agility_weak_jwt_alg_ratio"]),
+        ("OpenAPI plaintext servers (http://)",
+         -_ratio(openapi_plaintext, denom) * w["agility_openapi_plaintext_ratio"]),
+    ])
 
     agility_score, agility_drivers = _apply_weighted_impacts(agility_impacts)
 
