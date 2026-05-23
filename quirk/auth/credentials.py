@@ -55,6 +55,10 @@ class CredentialContext:
 
         Returns {} for api_key_query scheme; query placement via query_param() (D-03).
         """
+        # D-02/D-05: This decode materializes a new immortal str the GC controls and
+        # close() cannot zero. The str-copy proliferation is explicitly accepted under
+        # v5.1 D-05 (best-effort zeroization). Call is bounded: as_headers is invoked
+        # once per scan_jwt_endpoint, i.e. once per endpoint per scan. (D-05)
         secret = self._secret_buf.decode("utf-8")
         if self.scheme == "bearer":
             return {"Authorization": f"Bearer {secret}"}
@@ -73,6 +77,10 @@ class CredentialContext:
         """
         if self.scheme != "api_key_query":
             return None
+        # D-02/D-05: This decode materializes a new immortal str the GC controls and
+        # close() cannot zero. The str-copy proliferation is explicitly accepted under
+        # v5.1 D-05 (best-effort zeroization). Call is bounded: query_param is invoked
+        # once per _get, i.e. once per endpoint per scan. (D-05)
         secret = self._secret_buf.decode("utf-8")
         return (self._query_param or "api_key", secret)
 
