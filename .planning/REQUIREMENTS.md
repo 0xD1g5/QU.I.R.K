@@ -36,8 +36,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### v5.1 Tech-Debt Cleanup (TD)
 
-- [ ] **TD-01**: Credential env-var contract + CredentialContext per-call str-copy / `_append_query_param` overwrite behaviors corrected [WR-02/04/06]
-- [ ] **TD-02**: The 5xx cascade counter correctly trips on connection-exception failures (timeout-only servers no longer escape the cascade pause) [WR-03]
+- [x] **TD-01**: Credential env-var contract + CredentialContext per-call str-copy / `_append_query_param` overwrite behaviors corrected [WR-02/04/06]
+- [x] **TD-02**: The 5xx cascade counter correctly trips on connection-exception failures (timeout-only servers no longer escape the cascade pause) [WR-03]
 
 ## Future Requirements
 
@@ -79,8 +79,8 @@ Which phases cover which requirements. Filled during roadmap creation.
 | FMT-01 | Phase 100 | Pending |
 | FMT-02 | Phase 100 | Pending |
 | FMT-03 | Phase 100 | Pending |
-| TD-01 | Phase 97 | Pending |
-| TD-02 | Phase 97 | Pending |
+| TD-01 | Phase 97 | Complete |
+| TD-02 | Phase 97 | Complete |
 
 **Coverage:**
 - v1 requirements: 15 total

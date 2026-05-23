@@ -97,7 +97,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete   | 2026-05-23 |
+| 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
 | 98. Executive Narrative + Score Transparency | 0/TBD | Not started | - |
 | 99. Per-Finding Context + Code-Signing Expiry | 0/TBD | Not started | - |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
