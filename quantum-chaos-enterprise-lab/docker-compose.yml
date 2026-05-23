@@ -1292,6 +1292,21 @@ services:
       timeout: 5s
       retries: 6
       start_period: 15s
+  # =========================
+  # PHASE 96 / LAB-01 — FUZZ-TARGET PROFILE (profile: fuzz-target)
+  # Deliberately-weak REST service for active REST fuzzer validation.
+  # INTENTIONAL WEAKNESSES: no HSTS, http:// server URL, /probe accepts forged JWT.
+  # Port: 20100 (safe range — no conflicts with existing lab profiles).
+  # lab.sh ALL_PROFILES needs NO edit — _derive_all_profiles discovers this
+  # profile dynamically by parsing docker-compose.yml at runtime.
+  # =========================
+  fuzz-target:
+    build:
+      context: ./fuzz-target
+    profiles: ["fuzz-target"]
+    ports:
+      - "20100:8000"
+    restart: unless-stopped
 
 volumes:
   id_postgres_data:
