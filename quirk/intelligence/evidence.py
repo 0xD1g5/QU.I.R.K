@@ -12,7 +12,9 @@ _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
                   # closes cbom-intel-reports/IN-04 (Phase 77 D-10) — 6 scanner-emitted
                   # protocol keys per RESEARCH C-10 inventory.
-                  "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL")
+                  "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL",
+                  # Phase 94 — bearer-token and OpenAPI spec analysis protocols
+                  "BEARER_TOKEN", "OPENAPI")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
@@ -115,6 +117,10 @@ def build_evidence_summary(
     # applies to BOTH the genuine-component path (TLS endpoint with X25519MLKEM768)
     # AND the advisory-fallback path (ADVISORY endpoint emitted on old-OpenSSL hosts).
     pqc_hybrid_endpoint_count = 0
+
+    # Phase 94 — Bearer token and OpenAPI spec analysis counters (TOKEN-02, SCORE-01)
+    bearer_token_weak_alg_count = 0     # BEARER_TOKEN endpoints with quantum-vulnerable declared algorithm
+    openapi_plaintext_server_count = 0  # OpenAPI spec endpoints with http:// server declarations
 
     # Motion / data-in-motion counters (Phase 34)
     motion_email_starttls_missing_count = 0  # *-STARTTLS endpoints with no tls_version (handshake never completed)
@@ -296,6 +302,24 @@ def build_evidence_summary(
                 # does NOT increment.
                 dar_vault_weak_count += 1
 
+        # ---- Phase 94 — Bearer token weak algorithm counter (TOKEN-02, SCORE-01) ----
+        elif proto == "BEARER_TOKEN":
+            # Increment when a bearer token has a declared algorithm that is not alg:none
+            # (alg:none is a separate CRITICAL finding; this counter tracks quantum-vulnerable
+            # conventional algorithms like HS256, RS256, ES256 — all currently quantum-vulnerable).
+            _bt_alg = str(getattr(ep, "cert_pubkey_alg", "") or "")
+            if _bt_alg and _bt_alg.lower() != "none":
+                bearer_token_weak_alg_count += 1
+
+        # ---- Phase 94 — OpenAPI plaintext server counter (SCORE-01) ----
+        elif proto == "OPENAPI":
+            # Increment when an OpenAPI scan finding reports a plaintext http:// server.
+            # The openapi_scanner sets service_detail to "http-server" or similar for
+            # plaintext server declarations.
+            _oa_detail = str(getattr(ep, "service_detail", "") or "").lower()
+            if "http-server" in _oa_detail or "plaintext" in _oa_detail:
+                openapi_plaintext_server_count += 1
+
         # ---- Motion (Phase 34) — broker plaintext listeners ----
         elif proto in {"KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"}:
             motion_broker_plaintext_count += 1
@@ -442,4 +466,9 @@ def build_evidence_summary(
             motion_broker_weak_cipher_count / total_endpoints, 4) if total_endpoints else 0.0,
         # PQC-02 D-05: counter primed for PQC-03 scoring agility bonus.
         "pqc_hybrid_endpoint_count": pqc_hybrid_endpoint_count,
+        # Phase 94 SCORE-01 — bearer token and OpenAPI agility signals
+        "bearer_token_weak_alg_count": bearer_token_weak_alg_count,
+        "openapi_plaintext_server_count": openapi_plaintext_server_count,
+        "agility_weak_jwt_alg_ratio": round(bearer_token_weak_alg_count / total_endpoints, 4) if total_endpoints else 0.0,
+        "agility_openapi_plaintext_ratio": round(openapi_plaintext_server_count / total_endpoints, 4) if total_endpoints else 0.0,
     }
