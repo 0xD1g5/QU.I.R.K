@@ -45,7 +45,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 - [x] **Phase 93: Credential Infrastructure** - Ephemeral credential model (Bearer/OAuth2, API key, HTTP Basic) with committed security-review gate deliverable (completed 2026-05-23)
 - [x] **Phase 94: OpenAPI & Bearer Token Analysis** - Passive spec parsing + bearer token classify/decode; `[api]` extras group introduced (completed 2026-05-23)
 - [x] **Phase 95: Code-Signing Certificate Inventory** - LDAP `userCertificate` + TLS EKU code-signing discovery; zero new core deps (completed 2026-05-23)
-- [ ] **Phase 96: Active REST Fuzzing** - Gated crypto-posture fuzzer with six mandatory guardrails + alg-confusion sub-flag; ships last
+- [x] **Phase 96: Active REST Fuzzing** - Gated crypto-posture fuzzer with six mandatory guardrails + alg-confusion sub-flag; ships last (completed 2026-05-23)
 
 ## Phase Details
 
@@ -107,11 +107,11 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
   4. Running `quirk scan --fuzz --fuzz-jwt-alg-confusion` sends the RS256→HS256 confusion probe and produces a finding when the target server accepts the forged token
   5. SCORE_WEIGHTS sum is 303.0 and `tests/test_score_weights_invariant.py` is green; `schemathesis` is absent from `pip install quirk[all]` and `tests/test_install_all_excludes_schemathesis.py` enforces this in CI
 **Plans**: 5 plans
-- [ ] 96-01-PLAN.md — Wave-0 setup + test-first CONFIRM gate / non-TTY hard-abort / budget ceiling ([api] schemathesis) [FUZZ-02, FUZZ-03]
-- [ ] 96-02-PLAN.md — Fuzzer core: GET-only dispatch + 5 guardrails + TLS/cipher/HSTS/http-cred probes + RS256→HS256 alg-confusion [FUZZ-01, FUZZ-02, FUZZ-04]
-- [ ] 96-03-PLAN.md — run_scan.py --fuzz flags + gated phase + REST_FUZZ evidence/scoring (SCORE_WEIGHTS 303.0/41) [FUZZ-01, FUZZ-02, FUZZ-03, SCORE-01]
-- [ ] 96-04-PLAN.md — fuzz-target chaos profile + compose + expected_results + README triple-update [LAB-01]
-- [ ] 96-05-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [FUZZ-01..04, SCORE-01, LAB-01]
+- [x] 96-01-PLAN.md — Wave-0 setup + test-first CONFIRM gate / non-TTY hard-abort / budget ceiling ([api] schemathesis) [FUZZ-02, FUZZ-03]
+- [x] 96-02-PLAN.md — Fuzzer core: GET-only dispatch + 5 guardrails + TLS/cipher/HSTS/http-cred probes + RS256→HS256 alg-confusion [FUZZ-01, FUZZ-02, FUZZ-04]
+- [x] 96-03-PLAN.md — run_scan.py --fuzz flags + gated phase + REST_FUZZ evidence/scoring (SCORE_WEIGHTS 303.0/41) [FUZZ-01, FUZZ-02, FUZZ-03, SCORE-01]
+- [x] 96-04-PLAN.md — fuzz-target chaos profile + compose + expected_results + README triple-update [LAB-01]
+- [x] 96-05-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [FUZZ-01..04, SCORE-01, LAB-01]
 
 ## Progress
 
@@ -120,4 +120,4 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 | 93. Credential Infrastructure | v5.1 | 4/4 | Complete   | 2026-05-23 |
 | 94. OpenAPI & Bearer Token Analysis | v5.1 | 3/3 | Complete   | 2026-05-23 |
 | 95. Code-Signing Certificate Inventory | v5.1 | 4/4 | Complete   | 2026-05-23 |
-| 96. Active REST Fuzzing | v5.1 | 0/5 | Planned | - |
+| 96. Active REST Fuzzing | v5.1 | 5/5 | Complete   | 2026-05-23 |
