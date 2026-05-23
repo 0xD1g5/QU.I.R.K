@@ -60,8 +60,8 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
   4. A committed security-review gate deliverable documents all 11 credential-leakage surfaces audited, the `safe_str()` extension covering API-key header patterns, and the best-effort (non-provable) nature of in-memory zeroization in Python
   5. The AST CI gate deny-list is extended to flag `bearer`, `api_key`, `authorization`, `token` in `json.dumps()` / `model_dump()` calls, and CI is green
 **Plans**: 4 plans
-- [ ] 93-01-PLAN.md — CredentialContext core (bytearray secret, from_cli reference model, enable_authenticated_mode flag) [AUTH-01]
-- [ ] 93-02-PLAN.md — Scrubbing + regression guards (safe_str ext, AST/schema gates, scheduler QRK-SCHED-AUTH-001) [AUTH-03, AUTH-05]
+- [x] 93-01-PLAN.md — CredentialContext core (bytearray secret, from_cli reference model, enable_authenticated_mode flag) [AUTH-01]
+- [x] 93-02-PLAN.md — Scrubbing + regression guards (safe_str ext, AST/schema gates, scheduler QRK-SCHED-AUTH-001) [AUTH-03, AUTH-05]
 - [ ] 93-03-PLAN.md — Wire JWT/API consumer + sentinel leak-detection suite + committed security-review gate [AUTH-01, AUTH-02, AUTH-04]
 - [ ] 93-04-PLAN.md — Docs + UAT-SERIES + Obsidian sync (CLAUDE.md mandatory per-phase steps) [AUTH-01..04]
 
@@ -106,7 +106,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 93. Credential Infrastructure | v5.1 | 0/4 | Planned | - |
+| 93. Credential Infrastructure | v5.1 | 2/4 | In Progress|  |
 | 94. OpenAPI & Bearer Token Analysis | v5.1 | 0/TBD | Not started | - |
 | 95. Code-Signing Certificate Inventory | v5.1 | 0/TBD | Not started | - |
 | 96. Active REST Fuzzing | v5.1 | 0/TBD | Not started | - |
