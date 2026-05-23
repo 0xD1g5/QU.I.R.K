@@ -79,6 +79,11 @@ class ScanCfg:
     timeouts: TimeoutsCfg = field(default_factory=TimeoutsCfg)
     retry: RetryCfg = field(default_factory=RetryCfg)
 
+    # Phase 94 SPEC-01/02: OpenAPI spec source — local file path or scope-gated URL.
+    # Set via --openapi-spec CLI flag or the openapi: config block.
+    # None means no spec scan.
+    openapi_spec_path: Optional[str] = None
+
     def __init__(
         self,
         concurrency: int,
@@ -99,6 +104,8 @@ class ScanCfg:
         fingerprint_timeout_seconds: Optional[int] = None,
         tls_timeout_seconds: Optional[int] = None,
         ssh_timeout_seconds: Optional[int] = None,
+        # Phase 94 SPEC-01/02: optional OpenAPI spec source
+        openapi_spec_path: Optional[str] = None,
     ) -> None:
         self.concurrency = concurrency
         self.ports_tls = ports_tls
@@ -110,6 +117,7 @@ class ScanCfg:
         self.motion_concurrency = motion_concurrency
         self.timeouts = timeouts if timeouts is not None else TimeoutsCfg()
         self.retry = retry if retry is not None else RetryCfg()
+        self.openapi_spec_path = openapi_spec_path
         # Route legacy flat kwargs into the nested TimeoutsCfg
         legacy_values = {
             "timeout_seconds": timeout_seconds,
