@@ -8,6 +8,7 @@ from collections import Counter
 from typing import List, Tuple, Dict, Any, Optional
 
 from quirk.config import load_config
+from quirk.util.safe_exc import safe_str
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
 from quirk.models import CryptoEndpoint
@@ -1952,10 +1953,6 @@ def main():
     if args.job_id and args.db_path:
         mark_job_completed(args.db_path, args.job_id, scan_run_id)
 
-    # Phase 65: mark scan job failed on any uncaught exception.
-    # The try/except wraps the full scan body below; this sentinel is never
-    # executed — failures are caught in the except clause.
-
     # Phase 93 / AUTH-01: zeroize credential buffer on normal exit path (best-effort).
     # The BaseException path is covered by _run_main_with_job_guard's finally block,
     # which reads _job_report["cred_ctx"] set below.
@@ -1980,7 +1977,9 @@ def _run_main_with_job_guard() -> None:
         job_id = _job_report.get("job_id")
         db_path = _job_report.get("db_path")
         if job_id and db_path:
-            mark_job_failed(db_path, job_id, f"{type(exc).__name__}: {exc}")
+            # CR-04: scrub before persisting — a credential-bearing exception (e.g. an
+            # httpx error carrying ?api_key=<secret>) must not be written to the job row.
+            mark_job_failed(db_path, job_id, f"{type(exc).__name__}: {safe_str(exc)}")
         raise
     finally:
         # Phase 93 / AUTH-01: BaseException-safe zeroization.

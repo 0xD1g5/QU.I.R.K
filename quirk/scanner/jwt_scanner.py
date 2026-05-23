@@ -22,7 +22,14 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import validate_external_url
+
+# Phase 93 / IN-01: single source of truth for query-param key names. Referenced by
+# the D-10 log-redaction hook below; CredentialContext.query_param() defaults to "api_key".
+_KEY_PARAM_NAMES = frozenset({
+    "api_key", "apikey", "key", "token", "auth_token", "access_token",
+})
 
 
 def _strip_auth_from_log(request) -> None:
@@ -30,12 +37,23 @@ def _strip_auth_from_log(request) -> None:
     the query-param key from request.url before any log handler sees them.
 
     Pops Authorization, X-Api-Key, X-Auth-Token from request.headers.
-    Redacts any query parameter whose name matches known key param names from request.url.
+    Redacts any query parameter whose name matches a known key param name (CR-01).
     """
     # Strip auth headers
     request.headers.pop("Authorization", None)
     request.headers.pop("X-Api-Key", None)
     request.headers.pop("X-Auth-Token", None)
+
+    # CR-01: redact query-param secret in request.url before any log handler /
+    # redirect sees it. The api_key_query scheme carries the secret in the URL,
+    # so popping headers alone leaves it intact. httpx event hooks run after the
+    # request is sent, so this protects post-send logging/redirects, not the wire.
+    redacted = request.url
+    for name in request.url.params:
+        if name.lower() in _KEY_PARAM_NAMES:
+            redacted = redacted.copy_set_param(name, "REDACTED")
+    if redacted is not request.url:
+        request.url = redacted
 
 
 def _append_query_param(url: str, param_name: str, param_value: str) -> str:
@@ -128,6 +146,12 @@ def _fetch_jwks(
 
     for path in JWKS_PATHS:
         url = base_url + path
+        # CR-03: validate every base probe URL before fetching — SSRF guard, materially
+        # more important now that credentials are attached. Previously only the
+        # OIDC-followed jwks_uri was validated, leaving the base probe URLs unchecked.
+        _vr_base = validate_external_url(url)
+        if not _vr_base.ok:
+            continue
         try:
             fetched_urls.append(url)
             # WHY: verify=verify_tls (not hardcoded False) — this scanner is a passive
@@ -138,8 +162,8 @@ def _fetch_jwks(
             # a MITM on the JWKS URI could inject attacker-supplied key material, but
             # QUIRK is not a relying party verifying tokens for auth — it is cataloguing
             # signing algorithms. A HIGH ADVISORY_JWKS_VERIFY_DISABLED finding is always
-            # emitted when allow_insecure_jwks is true (CR-01 / Phase 57 HARDEN-SCAN-01).
-            # validate_external_url() still runs on every JWKS URI before fetching.
+            # emitted when allow_insecure_jwks is true (Phase 57 HARDEN-SCAN-01).
+            # validate_external_url() runs on every probe URL above and every jwks_uri below.
             resp = _get(url)
             if resp.status_code != 200:
                 continue
@@ -310,6 +334,8 @@ def scan_jwt_targets(
             results.extend(eps)
         except Exception as exc:
             if logger:
-                logger.v(f"JWT scan error for {base_url}: {exc}")
+                # CR-02: scrub before logging — an httpx exception commonly embeds the
+                # ?api_key=<secret> fetch URL; the LEAK-03 AST gate does not inspect logger.* calls.
+                logger.v(f"JWT scan error for {base_url}: {safe_str(exc)}")
 
     return results
