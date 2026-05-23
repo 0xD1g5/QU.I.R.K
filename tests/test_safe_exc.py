@@ -56,3 +56,37 @@ def test_safe_str_handles_str_raise() -> None:
             raise RuntimeError("boom")
 
     assert safe_str(_BoomStr()) == "_BoomStr"
+
+
+# ---------------------------------------------------------------------------
+# Phase 93 D-08: new credential shape corpus (API-key header, query-param, Basic)
+# ---------------------------------------------------------------------------
+
+def test_safe_str_scrubs_x_api_key_header() -> None:
+    exc = Exception("X-Api-Key: QUIRK_SENTINEL_CRED_d41d8cd9")
+    assert safe_str(exc) == "Exception"
+
+
+def test_safe_str_scrubs_x_auth_token_header() -> None:
+    exc = Exception("X-Auth-Token: QUIRK_SENTINEL_CRED_d41d8cd9")
+    assert safe_str(exc) == "Exception"
+
+
+def test_safe_str_scrubs_query_param_api_key() -> None:
+    exc = Exception("https://api.host/v1?api_key=QUIRK_SENTINEL_CRED_d41d8cd9")
+    assert safe_str(exc) == "Exception"
+
+
+def test_safe_str_scrubs_query_param_token() -> None:
+    exc = Exception("https://api.host/v1?token=QUIRK_SENTINEL_CRED_d41d8cd9")
+    assert safe_str(exc) == "Exception"
+
+
+def test_safe_str_scrubs_http_basic_credential() -> None:
+    exc = Exception("Authorization: Basic dXNlcjpwYXNzd29yZA==")
+    assert safe_str(exc) == "Exception"
+
+
+def test_safe_str_scrubs_x_api_key_case_insensitive() -> None:
+    exc = Exception("x-api-key: QUIRK_SENTINEL_CRED_d41d8cd9")
+    assert safe_str(exc) == "Exception"
