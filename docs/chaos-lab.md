@@ -9,7 +9,7 @@ The QU.I.R.K. Chaos Lab is a Docker Compose environment that simulates a realist
 - **Train new team members** — walk through each vulnerability class hands-on without touching production infrastructure
 - **Validate scanner changes** — run the lab after any code change to confirm no regressions
 
-The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces covering TLS / SSH / HTTP baseline (core), service inventory + cert chain scenarios (phaseA), cloud storage (cloud), identity (identity + pki), JWT misconfigurations (jwt), container registries (registry), source-code crypto anti-patterns (source), legacy storage (storage), legacy SSH (ssh-weak), LDAPS (ldaps — including Phase 95 code-signing weak-cert fixture), DNSSEC weakness (dnssec), SAML weakness (saml), Kerberos etype enumeration (kerberos), DAR — databases (database), DAR — object storage (storage-s3), DAR — Vault (vault), email transport (email), message brokers (broker), and TLS certificate defects (tls-cert-defects).
+The lab is organized into profiles. The **core** profile is always-on and provides 10 services covering TLS, HTTP, and SSH scenarios. Additional profiles add specialized surfaces covering TLS / SSH / HTTP baseline (core), service inventory + cert chain scenarios (phaseA), cloud storage (cloud), identity (identity + pki), JWT misconfigurations (jwt), container registries (registry), source-code crypto anti-patterns (source), legacy storage (storage), legacy SSH (ssh-weak), LDAPS (ldaps — including Phase 95 code-signing weak-cert fixture), DNSSEC weakness (dnssec), SAML weakness (saml), Kerberos etype enumeration (kerberos), DAR — databases (database), DAR — object storage (storage-s3), DAR — Vault (vault), email transport (email), message brokers (broker), TLS certificate defects (tls-cert-defects), and a deliberately-weak REST target for active fuzzing (fuzz-target — Phase 96 LAB-01).
 
 > **For UAT-grade expected scanner findings, see `quantum-chaos-enterprise-lab/expected_results_v4.md`** — the authoritative per-profile oracle used by chaos lab UAT runs and dashboard cross-references.
 
@@ -638,6 +638,52 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-tls-cert-defec
 
 ---
 
+### 3.21 fuzz-target Profile (v5.1 — Phase 96 LAB-01)
+
+The `fuzz-target` profile is a deliberately-weak FastAPI REST service designed as the
+canonical validation target for QU.I.R.K.'s active REST fuzzer (`--fuzz`). It exposes
+three intentional weaknesses: missing `Strict-Transport-Security` header (HSTS), an
+`http://` server URL in its OpenAPI spec (HTTP-only credential transmission), and a
+`/probe` endpoint that accepts JWT tokens **without algorithm verification** (RS256→HS256
+alg-confusion acceptance). All weaknesses are intentional and isolated to this profile.
+
+| Port  | Service      | Expected Finding    | Severity |
+|-------|--------------|---------------------|----------|
+| 20100 | fuzz-target  | `HSTS_MISSING`      | HIGH     |
+| 20100 | fuzz-target  | `HTTP_ONLY_CRED`    | HIGH     |
+| 20100 | fuzz-target  | `TLS_DOWNGRADE`     | HIGH     |
+| 20100 | fuzz-target  | `ALG_CONFUSION`     | CRITICAL |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile fuzz-target" ./lab.sh up
+```
+
+**Validation scan:**
+
+```bash
+quirk scan --targets http://localhost:20100 \
+  --fuzz --openapi-spec http://localhost:20100/openapi.json
+```
+
+> **Expected:** at minimum 2 findings: `HSTS_MISSING` (HIGH) and `ALG_CONFUSION`
+> (CRITICAL) when `--fuzz-jwt-alg-confusion` is also passed.
+
+**Available endpoints:**
+
+- `GET /openapi.json` — Minimal OpenAPI 3.0 spec with `http://localhost:20100` server URL (HTTP-only credential probe)
+- `GET /.well-known/jwks.json` — Exposes RS256 public key for alg-confusion probe
+- `GET /probe` — Accepts any `Authorization: Bearer <token>` without algorithm verification (always returns 200 OK)
+
+> **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —
+> `_derive_all_profiles()` discovers `fuzz-target` dynamically from `docker-compose.yml`
+> at runtime via `yq` or the `grep` fallback.
+
+See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-fuzz-target`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.
@@ -731,6 +777,7 @@ All lab ports across all profiles, sorted by port number:
 | 13445 | tls-cert-selfsigned      | tls-cert-defects | CERT_SELFSIGNED MEDIUM             |
 | 13446 | tls-cert-untrusted-ca    | tls-cert-defects | CERT_UNTRUSTED_CA MEDIUM           |
 | 13447 | tls-cert-rsa1024         | tls-cert-defects | CERT_WEAK_KEY / CERT_RSA1024 HIGH  |
+| 20100 | fuzz-target              | fuzz-target      | HSTS_MISSING HIGH / ALG_CONFUSION CRITICAL |
 
 ---
 
