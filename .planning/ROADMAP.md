@@ -47,9 +47,15 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Next m
 **Depends on**: Nothing (first v5.2 phase; orthogonal to report changes)
 **Requirements**: TD-01, TD-02
 **Success Criteria** (what must be TRUE):
-  1. Credential env-var names follow an all-caps contract and CredentialContext per-call str-copy behavior is corrected — a developer reading the code sees unambiguous, safe credential handling
+  1. The credential env-var contract is documented accurately (no unenforced all-caps claim) and CredentialContext per-call str-copy behavior is documented under D-05 — a developer reading the code sees unambiguous, safe credential handling; the JWT pre-existing-param overwrite and scheduler auth-reject gaps are closed
   2. The 5xx cascade counter trips correctly on connection-exception failures (timeout-only servers no longer escape the cascade pause) — a scan against an unresponsive host observes the back-off pause activate
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 97-01-PLAN.md — credentials.py doc-only corrections (D-01 env-var docstring + D-02 str-copy proliferation comments)
+- [ ] 97-02-PLAN.md — rest_fuzzer combined failure-cascade counter (D-06 / TD-02) + regression test
+- [ ] 97-03-PLAN.md — JWT pre-existing-param reject (D-03) + scheduler parse-based fail-closed auth-reject (D-05), both with tests
+- [ ] 97-04-PLAN.md — leak-test real-path routing + PDF coverage-gap annotation (D-04) + mandatory docs/UAT/Obsidian sync
 
 ### Phase 98: Executive Narrative + Score Transparency
 **Goal**: A consultant running any output surface (CLI, HTML, PDF) receives a CISO-readable executive report that leads with the readiness story, shows a prioritized remediation roadmap, and surfaces the full subscore decomposition — all three surfaces carry identical content
@@ -91,7 +97,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Next m
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 97. v5.1 Tech-Debt Cleanup | 0/TBD | Not started | - |
+| 97. v5.1 Tech-Debt Cleanup | 0/4 | Not started | - |
 | 98. Executive Narrative + Score Transparency | 0/TBD | Not started | - |
 | 99. Per-Finding Context + Code-Signing Expiry | 0/TBD | Not started | - |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
