@@ -30,6 +30,13 @@ _SENSITIVE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"Authorization:\s*(Bearer|Basic)\s+\S+", re.IGNORECASE),
     # Long base64-shaped token (40+ chars, optional = padding)
     re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),
+    # API-key header name + value shapes (D-08)
+    re.compile(r"X-Api-Key\s*:\s*\S+", re.IGNORECASE),
+    re.compile(r"X-Auth-Token\s*:\s*\S+", re.IGNORECASE),
+    # Query-param API key shapes (D-08): ?api_key=<value> or &token=<value>
+    re.compile(r"[?&](api_key|token|key|auth_token)=[^&\s]{8,}", re.IGNORECASE),
+    # HTTP Basic credential payload
+    re.compile(r"Authorization:\s*Basic\s+[A-Za-z0-9+/]{8,}={0,2}", re.IGNORECASE),
 )
 
 
