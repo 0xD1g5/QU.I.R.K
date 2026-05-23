@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.1
 milestone_name: Authenticated Scanning + API Surface Depth
-status: roadmap_complete
-last_updated: "2026-05-23"
-last_activity: 2026-05-23
+status: planning
+last_updated: "2026-05-23T01:19:41.254Z"
+last_activity: 2026-05-23 — v5.1 ROADMAP.md written; 19 requirements mapped across 4 phases
 progress:
   total_phases: 4
   completed_phases: 0
@@ -34,6 +34,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0 (v5.1)
 - Prior milestone (v5.0): 16 plans across 6 phases
 
@@ -75,6 +76,6 @@ Carried forward from v5.0 close (2026-05-22) — all non-blocking, environment-g
 
 ## Session Continuity
 
-**Last session:** 2026-05-23
+**Last session:** 2026-05-23T01:19:41.244Z
 
 **Next session:** v5.1 roadmap complete (4 phases, 19/19 requirements mapped). Run `/gsd:plan-phase 93` to begin Phase 93 planning. SCORE_WEIGHTS invariant at sum 283.0 / count 37 entering this milestone.
