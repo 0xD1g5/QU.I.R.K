@@ -191,3 +191,41 @@ class TestFromCliInlineSecretRejected:
         # contain the actual credential if it was an accidental inline secret)
         err_msg = str(exc_info.value)
         assert len(err_msg) > 0  # some guidance provided
+
+
+# ---------------------------------------------------------------------------
+# Phase 94 / TOKEN-02: bearer_declared_alg() — passive JWT alg classification
+# ---------------------------------------------------------------------------
+
+def _make_jwt(header: dict) -> str:
+    import base64, json
+    b = lambda d: base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
+    return f"{b(header)}.{b({'sub': 'x'})}.sig"
+
+
+def test_bearer_declared_alg_returns_jwt_alg():
+    """TOKEN-02: a bearer JWT yields its declared alg (unverified header decode)."""
+    ctx = _make_ctx("bearer", _make_jwt({"alg": "RS256", "typ": "JWT"}).encode())
+    assert ctx.bearer_declared_alg() == "RS256"
+
+
+def test_bearer_declared_alg_opaque_token_returns_none():
+    """An opaque (non-JWT) bearer token has no declared alg."""
+    ctx = _make_ctx("bearer", b"opaque-not-a-jwt")
+    assert ctx.bearer_declared_alg() is None
+
+
+def test_bearer_declared_alg_non_bearer_returns_none():
+    """Non-bearer schemes never expose a declared alg."""
+    ctx = _make_ctx("api_key_header", b"secret", header_name="X-Api-Key")
+    assert ctx.bearer_declared_alg() is None
+
+
+def test_bearer_declared_alg_does_not_leak_token():
+    """The returned value is the alg string only — never the raw token."""
+    secret = _make_jwt({"alg": "ES256"}).encode()
+    ctx = _make_ctx("bearer", secret)
+    result = ctx.bearer_declared_alg()
+    assert result == "ES256"
+    # The full token string must not be returned.
+    assert secret.decode() not in (result or "")
