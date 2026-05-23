@@ -83,6 +83,7 @@ Agility measures how ready you are to swap out cryptographic algorithms when the
 | Unknown service inventory | −6 pts | Services that couldn't be identified |
 | RSA-only posture | −8 pts | Only RSA key types found, no ECDSA (harder to migrate) |
 | ECDSA adoption | +4 pts | At least one ECDSA certificate found |
+| Code-signing cert weak algorithm | −6 pts | Ratio of code-signing certificates with weak algorithm (RSA < 2048-bit, EC < 256-bit, or SHA-1) to total code-signing certificates found (Phase 95, `agility_codesign_weak_algo_ratio`; SCORE_WEIGHTS sum: 299.0) |
 
 > **Client Conversation — Agility Signals:**
 > "Agility measures how ready you are to swap out cryptographic algorithms when the time comes. RSA is quantum-vulnerable, but it's also harder to migrate than ECDSA because it's more deeply embedded in older infrastructure. Seeing ECDSA adoption is a good signal — it means your engineering team is already comfortable with modern key types, which makes the quantum migration path shorter."
@@ -121,6 +122,7 @@ The table below maps every common finding title to its plain-English explanation
 | SSH quantum planning advisory | INFO | SSH host key or KEX algorithm is quantum-vulnerable (RSA/ECDH) | Plan migration to post-quantum SSH using ML-KEM (FIPS 203) when OpenSSH support lands |
 | Unknown open service | MEDIUM | Open port did not respond to TLS, HTTP, or SSH probes | Inventory this service; close if unneeded |
 | mTLS required | INFO | Service requires client certificate — positive signal | No action; note for zero-trust posture documentation |
+| CODE-SIGN/weak-algorithm | HIGH | Code-signing certificate uses a weak key or hash: RSA < 2048-bit, EC < 256-bit, or SHA-1 signature algorithm | Replace the signing certificate with RSA ≥ 2048-bit / SHA-256 or an ECDSA P-256+ key; re-sign artifacts with the new cert |
 
 ---
 
