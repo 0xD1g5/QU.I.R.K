@@ -82,7 +82,8 @@ DEFAULT_FUZZ_BUDGET: int = 50
 #: quirk/engine/rate_limiter.py (same pattern as the nmap scanner).
 FUZZ_RATE_DEFAULT: float = 5.0
 
-#: Number of consecutive 5xx responses that trigger a cascade pause/abort.
+#: Number of consecutive failures (5xx responses OR connection/request exceptions)
+#: that trigger a cascade pause/abort (D-06 / TD-02).
 _CONSECUTIVE_5XX_LIMIT: int = 3
 
 
@@ -490,7 +491,10 @@ def run_fuzz_scan(
     port = parsed_base.port or (443 if parsed_base.scheme == "https" else 80)
 
     budget_used = 0
-    consecutive_5xx = 0
+    # D-06 (TD-02): combined failure counter — 5xx responses AND connection/request
+    # exceptions both count toward the cascade pause limit (_CONSECUTIVE_5XX_LIMIT).
+    # Resets only on a genuine success response (2xx/3xx/<500, no exception).
+    consecutive_failures = 0
     _scanned_at = _now_utc()
 
     # Alg-confusion pre-check: fetch public key ONCE before the dispatch loop
@@ -599,23 +603,40 @@ def run_fuzz_scan(
                 # Budget counter increments ONLY after successful dispatch (Pitfall 3)
                 budget_used += 1
             except Exception as exc:
-                logger.warning("Fuzz request failed: %s", safe_str(str(exc)))
-                consecutive_5xx = 0
+                # D-06 (TD-02): connection/request exceptions are a cascade-failure
+                # signal — increment toward _CONSECUTIVE_5XX_LIMIT instead of
+                # resetting, so timeout-only servers cannot escape the back-off.
+                # safe_str scrubs any credential-bearing exception text (T-97-04).
+                logger.warning(
+                    "Fuzz request failed (failure %d/%d): %s",
+                    consecutive_failures + 1,
+                    _CONSECUTIVE_5XX_LIMIT,
+                    safe_str(str(exc)),
+                )
+                consecutive_failures += 1
+                if consecutive_failures >= _CONSECUTIVE_5XX_LIMIT:
+                    logger.warning(
+                        "REST fuzzer: %d consecutive failures (exceptions/5xx); pausing scan.",
+                        _CONSECUTIVE_5XX_LIMIT,
+                    )
+                    break
                 continue
 
             resp_status = getattr(response, "status_code", 0)
             resp_headers = dict(getattr(response, "headers", {}))
 
             # 5xx cascade tracker (FUZZ-02 guardrail 6)
+            # D-06 (TD-02): consecutive_failures counts both 5xx and request
+            # exceptions; resets only on genuine success response.
             if resp_status >= 500:
-                consecutive_5xx += 1
-                if consecutive_5xx >= _CONSECUTIVE_5XX_LIMIT:
+                consecutive_failures += 1
+                if consecutive_failures >= _CONSECUTIVE_5XX_LIMIT:
                     logger.warning(
-                        "REST fuzzer: %d consecutive 5xx responses; pausing scan.", _CONSECUTIVE_5XX_LIMIT
+                        "REST fuzzer: %d consecutive failures (exceptions/5xx); pausing scan.", _CONSECUTIVE_5XX_LIMIT
                     )
                     break
             else:
-                consecutive_5xx = 0
+                consecutive_failures = 0
 
             # ---- Crypto probes ----
 
@@ -671,11 +692,12 @@ def run_fuzz_scan(
                             # CR-01: count the forged-token request against the budget ceiling.
                             budget_used += 1
                             alg_status = getattr(alg_resp, "status_code", 0)
-                            # WR-01: alg-confusion responses feed the 5xx cascade tracker too.
+                            # WR-01 / D-06: alg-confusion responses feed the combined
+                            # failure cascade tracker too; consistent with main dispatch path.
                             if alg_status >= 500:
-                                consecutive_5xx += 1
+                                consecutive_failures += 1
                             else:
-                                consecutive_5xx = 0
+                                consecutive_failures = 0
                             if 200 <= alg_status < 300:
                                 # Server accepted the forged HS256 token — CRITICAL
                                 findings.append(CryptoEndpoint(
