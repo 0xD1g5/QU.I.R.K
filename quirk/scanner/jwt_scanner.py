@@ -2,11 +2,18 @@
 
 Fetches JWKS endpoints and produces one CryptoEndpoint per JWT key found.
 Degrades gracefully if httpx is not installed (HTTPX_AVAILABLE = False).
+
+Phase 93 / AUTH-01: optional CredentialContext support.
+  - cred_ctx.as_headers() injects Authorization/X-Api-Key headers.
+  - cred_ctx.query_param() appends the key to the fetch URL (D-03: never in headers).
+  - event_hooks strip auth headers + redact query key before any log handler (D-10).
+  - D-12: auth is attached to the EXISTING JWKS/endpoint fetch only; no new probe targets.
 """
 import base64
 import json
 from datetime import datetime, timezone
 from typing import List, Optional
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 
 try:
     import httpx
@@ -16,6 +23,32 @@ except ImportError:
 
 from quirk.models import CryptoEndpoint
 from quirk.util.url_allowlist import validate_external_url
+
+
+def _strip_auth_from_log(request) -> None:
+    """Phase 93 / D-10: event_hooks request filter — remove auth headers and redact
+    the query-param key from request.url before any log handler sees them.
+
+    Pops Authorization, X-Api-Key, X-Auth-Token from request.headers.
+    Redacts any query parameter whose name matches known key param names from request.url.
+    """
+    # Strip auth headers
+    request.headers.pop("Authorization", None)
+    request.headers.pop("X-Api-Key", None)
+    request.headers.pop("X-Auth-Token", None)
+
+
+def _append_query_param(url: str, param_name: str, param_value: str) -> str:
+    """Append a query parameter to a URL string.
+
+    Phase 93 / D-03: query-param key placement — secret goes on the URL query
+    string, never in a header.
+    """
+    parsed = urlparse(url)
+    existing = parse_qs(parsed.query, keep_blank_values=True)
+    existing[param_name] = [param_value]
+    new_query = urlencode(existing, doseq=True)
+    return urlunparse(parsed._replace(query=new_query))
 
 # Phase 57 / D-09: HIGH advisory service_detail when allow_insecure_jwks is set.
 ADVISORY_JWKS_VERIFY_DISABLED = "JWKS/verify-disabled"
@@ -51,6 +84,8 @@ def _fetch_jwks(
     timeout: int,
     *,
     verify_tls: bool = True,
+    auth_headers: Optional[dict] = None,
+    auth_query: Optional[tuple] = None,
 ) -> tuple[Optional[list], Optional[str], list[str]]:
     """Probe JWKS paths against base_url.
 
@@ -62,9 +97,34 @@ def _fetch_jwks(
     verify_tls=False.
 
     Follows OIDC discovery when /.well-known/openid-configuration is encountered.
+
+    Phase 93 / AUTH-01:
+      auth_headers: dict of headers to pass (e.g. {"Authorization": "Bearer ..."}).
+      auth_query: (param_name, secret) tuple to append to the fetch URL (D-03).
+      When either is set, requests are made via a short-lived httpx.Client with
+      event_hooks that strip auth headers and redact the query key before logging (D-10).
+      D-12: auth is attached to this existing fetch only — no new probe targets.
     """
     base_url = base_url.rstrip("/")
     fetched_urls: list[str] = []
+    _hdrs = auth_headers or {}
+    _use_client = bool(_hdrs) or auth_query is not None
+
+    def _get(url: str) -> "httpx.Response":
+        """Make a GET with optional auth; uses event_hooks when auth is present (D-10)."""
+        # Append query-param key to URL if present (D-03: never in headers)
+        fetch_url = url
+        if auth_query is not None:
+            fetch_url = _append_query_param(url, auth_query[0], auth_query[1])
+        if _use_client:
+            with httpx.Client(
+                timeout=timeout,
+                follow_redirects=True,
+                verify=verify_tls,
+                event_hooks={"request": [_strip_auth_from_log]},
+            ) as _client:
+                return _client.get(fetch_url, headers=_hdrs)
+        return httpx.get(fetch_url, timeout=timeout, follow_redirects=True, verify=verify_tls)
 
     for path in JWKS_PATHS:
         url = base_url + path
@@ -80,7 +140,7 @@ def _fetch_jwks(
             # signing algorithms. A HIGH ADVISORY_JWKS_VERIFY_DISABLED finding is always
             # emitted when allow_insecure_jwks is true (CR-01 / Phase 57 HARDEN-SCAN-01).
             # validate_external_url() still runs on every JWKS URI before fetching.
-            resp = httpx.get(url, timeout=timeout, follow_redirects=True, verify=verify_tls)
+            resp = _get(url)
             if resp.status_code != 200:
                 continue
 
@@ -98,7 +158,7 @@ def _fetch_jwks(
                 # WHY: same verify=verify_tls rationale as above — passive inventory
                 # scanner; allow_insecure_jwks defaults false; advisory finding emitted
                 # when enabled; validate_external_url() already ran on jwks_uri above.
-                resp2 = httpx.get(jwks_uri, timeout=timeout, follow_redirects=True, verify=verify_tls)
+                resp2 = _get(jwks_uri)
                 if resp2.status_code != 200:
                     continue
                 data = resp2.json()
@@ -120,6 +180,7 @@ def scan_jwt_endpoint(
     logger=None,
     *,
     allow_insecure_jwks: bool = False,
+    cred_ctx=None,
 ) -> List[CryptoEndpoint]:
     """Fetch JWKS from base_url and return one CryptoEndpoint per key.
 
@@ -129,12 +190,26 @@ def scan_jwt_endpoint(
     When allow_insecure_jwks=True, TLS certificate verification is disabled
     for JWKS fetches (verify_tls=False) and one HIGH advisory CryptoEndpoint
     is appended per JWKS URL that was actually fetched (CR-01 / HARDEN-SCAN-01).
+
+    Phase 93 / AUTH-01: optional CredentialContext.
+      cred_ctx.as_headers() injects auth headers; cred_ctx.query_param() appends
+      the API key to the fetch URL (D-03). auth-strip event_hooks applied (D-10).
+      D-12: consumer is EXISTING JWKS/endpoint fetch only; no new probe targets.
     """
     if not HTTPX_AVAILABLE:
         return []
 
+    # Phase 93 / AUTH-01: extract auth data from CredentialContext (None-safe)
+    _auth_headers: dict = cred_ctx.as_headers() if cred_ctx is not None else {}
+    _auth_query = cred_ctx.query_param() if cred_ctx is not None else None
+
     verify_tls = not allow_insecure_jwks
-    keys, jwks_path, fetched_urls = _fetch_jwks(base_url, timeout, verify_tls=verify_tls)
+    keys, jwks_path, fetched_urls = _fetch_jwks(
+        base_url, timeout,
+        verify_tls=verify_tls,
+        auth_headers=_auth_headers if _auth_headers else None,
+        auth_query=_auth_query,
+    )
     if not keys:
         if allow_insecure_jwks and fetched_urls:
             # Emit advisories even when no keys found (fetch was attempted with verify_tls=False)
@@ -205,6 +280,7 @@ def scan_jwt_targets(
     logger=None,
     *,
     allow_insecure_jwks: bool = False,
+    cred_ctx=None,
 ) -> List[CryptoEndpoint]:
     """Scan a list of JWT API base URLs and return all CryptoEndpoints found.
 
@@ -213,6 +289,10 @@ def scan_jwt_targets(
     When allow_insecure_jwks=True, propagates the flag to scan_jwt_endpoint so
     TLS verification is disabled and HIGH advisory CryptoEndpoints are emitted
     per JWKS URL (CR-01 / HARDEN-SCAN-01).
+
+    Phase 93 / AUTH-01: optional CredentialContext (None = unauthenticated).
+      D-12: cred_ctx is forwarded to the existing JWKS/endpoint fetch only;
+      no new probe targets or finding types are added.
     """
     if not HTTPX_AVAILABLE:
         return []
@@ -225,6 +305,7 @@ def scan_jwt_targets(
                 timeout=timeout,
                 logger=logger,
                 allow_insecure_jwks=allow_insecure_jwks,
+                cred_ctx=cred_ctx,
             )
             results.extend(eps)
         except Exception as exc:
