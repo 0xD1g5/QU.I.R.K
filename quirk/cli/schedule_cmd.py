@@ -22,28 +22,43 @@ _NAME_RE = re.compile(r"^[A-Za-z0-9_\-\.]{1,255}$")
 
 
 def _config_has_authenticated_mode(config_path: str | None) -> bool:
-    """Return True if the YAML config at config_path has connectors.enable_authenticated_mode set truthy.
+    """Return True if the config at config_path has connectors.enable_authenticated_mode set truthy.
 
     Uses yaml.safe_load only — does NOT import load_config to avoid pulling in scanner deps.
-    Returns False if config_path is None, missing, not YAML, or the key is absent/falsy.
+
+    Phase 97 / D-05 (WR-06): parse-based, fail-closed contract.
+      - config_path is None → False (nothing to parse).
+      - config_path names a non-existent path → False (nothing to parse).
+      - config_path names an existing file → attempt yaml.safe_load regardless of
+        file extension (the former .yml/.yaml extension gate is removed, D-05).
+        • Parses to a dict with connectors.enable_authenticated_mode truthy → True (reject).
+        • Parses to a dict without the auth flag → False (allow).
+        • File exists but cannot be definitively classified as non-authenticated
+          (parse raises, result is not a dict, or structure is ambiguous) → True (fail
+          closed, D-11). This is intentionally stricter than the prior fail-open False.
     """
     if config_path is None:
         return False
-    # Only attempt YAML parse if the path looks like a config file (not a .db path)
-    if not config_path.endswith((".yml", ".yaml")):
+    # D-05: existence check — non-existent path is not authenticated; nothing to parse.
+    if not os.path.exists(config_path):
         return False
+    # D-05: attempt YAML parse for any existing file regardless of extension.
     try:
         import yaml  # stdlib-safe: PyYAML is a base dependency of quirk
         with open(config_path, encoding="utf-8") as fh:
             data: Any = yaml.safe_load(fh)
         if not isinstance(data, dict):
-            return False
+            # Non-dict result (list, scalar, None) — cannot be classified as
+            # non-authenticated; fail closed per D-11.
+            return True
         connectors = data.get("connectors")
         if not isinstance(connectors, dict):
             return False
         return bool(connectors.get("enable_authenticated_mode", False))
     except Exception:
-        return False
+        # D-11: fail closed — an unreadable or unparseable existing config file
+        # cannot be ruled out as authenticated; reject to protect the invariant.
+        return True
 
 
 def _resolve_db_path(config_arg: str | None) -> str:
