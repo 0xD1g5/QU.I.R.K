@@ -85,6 +85,69 @@ In the dashboard, click **Export PDF** in the top-right corner. The report is sa
 
 ---
 
+---
+
+## 5. Analyze a Bearer Token (standalone)
+
+The `quirk analyze-token` command decodes and classifies a JWT or bearer token without running a full scan. Use it to inspect algorithm strength, expiry, and quantum-safety posture — or to gate CI pipelines on dangerous `alg:none` tokens.
+
+```bash
+# Positional token (short-lived use; avoid in scripts where argv is logged)
+quirk analyze-token "eyJhbGciOiJSUzI1NiJ9...."
+
+# @file reference (preferred — keeps the token out of argv / shell history)
+echo "eyJhbGciOiJSUzI1NiJ9...." > /tmp/token.txt
+quirk analyze-token @/tmp/token.txt
+
+# Stdin (e.g. piped from a secrets manager CLI)
+echo "eyJhbGciOiJSUzI1NiJ9...." | quirk analyze-token -
+
+# Machine-readable JSON output (for CI integration)
+quirk analyze-token @/tmp/token.txt --json
+```
+
+**Key behaviors:**
+
+- **`alg:none` detection** — tokens with algorithm `none` (case-insensitive: `none`, `NONE`, `None`, `NonE`) print a **CRITICAL** banner and exit with code `1`. This lets you fail a pipeline on a dangerous unsigned token:
+  ```bash
+  quirk analyze-token @/tmp/token.txt || { echo "Token rejected — CRITICAL finding"; exit 1; }
+  ```
+- **Opaque tokens** — if the input is not a recognizable JWT (e.g. an API key or opaque session token), the command prints an INFO message and exits `0`. It does not error out.
+- **`--json` output** — emits a JSON object with keys: `alg`, `is_alg_none`, `expired`, `exp`, `nist_level`, `quantum_safety`.
+- **No DB writes** — the token is never persisted to `quirk.db`, the CBOM, or log files.
+
+---
+
+## 6. Analyze an OpenAPI Spec
+
+Pass `--openapi-spec` to include an OpenAPI/Swagger spec in a scan. QUIRK inventories the spec's declared security schemes, plaintext `http://` server URLs, and unauthenticated path operations:
+
+```bash
+# Local file (default; no network required)
+quirk --config config.yaml --openapi-spec docs/openapi.yaml
+
+# URL within your configured scan scope (scope-gated; out-of-scope URLs are rejected)
+quirk --config config.yaml --openapi-spec https://api.acme.com/openapi.json
+```
+
+**Security hardening applied by the scanner:**
+
+- **SSRF guard** — any `$ref` pointing to an external or internal-network address (e.g. `http://169.254.169.254/`) raises a `SpecParsingError` *before* the validator sees the document. No outbound request is made.
+- **10 MB size cap** — specs larger than 10 MB are rejected before parsing. This prevents billion-laughs and oversized-YAML denial-of-service attacks.
+- **Scope gate** — spec URLs must start with a configured `targets.fqdns` entry. Out-of-scope URLs are rejected before any network request.
+- **Graceful degradation** — if the `[api]` extras group is not installed, the scanner returns a single advisory finding (`missing_extra`) and continues; no error is raised.
+
+Install the `[api]` extras group to enable spec validation:
+
+```bash
+pip install "quirk-scanner[api]"
+# openapi-spec-validator is the only dependency in this group
+```
+
+> **Note:** `pip install quirk-scanner[all]` does **not** include `[api]` — the `openapi-spec-validator` dependency is opt-in to keep the base install lightweight. `schemathesis` fuzzing support is planned for a future phase and is also excluded from `[all]`.
+
+---
+
 ## Next Steps
 
 - [Installation](installation.md) — full install options, Windows WSL, system requirements
