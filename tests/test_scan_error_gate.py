@@ -29,7 +29,14 @@ SCANNER_DIRS = [
     PROJECT_ROOT / "quirk" / "scanner",
     PROJECT_ROOT / "quirk" / "discovery",
     PROJECT_ROOT / "quirk" / "cbom",
+    PROJECT_ROOT / "quirk" / "auth",      # Phase 93: cover new credential module
 ]
+
+# Phase 93 / D-09: field-name deny-list for json.dumps / model_dump call arguments
+CREDENTIAL_FIELD_NAMES: frozenset[str] = frozenset({
+    "bearer", "api_key", "authorization", "token", "password",
+    "credential", "secret", "key",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +260,129 @@ def test_gate_does_not_flag_safe_patterns() -> None:
 
 from quirk.util.safe_exc import safe_str  # noqa: E402
 from quirk.errors import format_error  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# Phase 93 Task 3: AST gate — credential field names in json.dumps / model_dump
+# ---------------------------------------------------------------------------
+
+def _is_serialization_call(node: ast.Call) -> bool:
+    """True iff node is a call to json.dumps or model_dump / .dumps."""
+    func = node.func
+    if isinstance(func, ast.Name) and func.id == "dumps":
+        return True
+    if isinstance(func, ast.Attribute) and func.attr in {"dumps", "model_dump"}:
+        return True
+    return False
+
+
+def _credential_kwarg_names(call_node: ast.Call) -> list[str]:
+    """Return keyword argument names in call_node that are in CREDENTIAL_FIELD_NAMES."""
+    hits: list[str] = []
+    for kw in call_node.keywords:
+        if kw.arg is not None and kw.arg.lower() in CREDENTIAL_FIELD_NAMES:
+            hits.append(kw.arg)
+    return hits
+
+
+def _credential_dict_keys(call_node: ast.Call) -> list[str]:
+    """Return string literal dict keys passed as first positional arg that are in CREDENTIAL_FIELD_NAMES."""
+    hits: list[str] = []
+    if not call_node.args:
+        return hits
+    first_arg = call_node.args[0]
+    if not isinstance(first_arg, ast.Dict):
+        return hits
+    for key in first_arg.keys:
+        if isinstance(key, ast.Constant) and isinstance(key.value, str):
+            if key.value.lower() in CREDENTIAL_FIELD_NAMES:
+                hits.append(key.value)
+    return hits
+
+
+def test_credential_field_names_not_in_serialization_calls() -> None:
+    """D-09: AST gate — no credential field names must reach json.dumps or model_dump."""
+    violations: list[tuple[str, int, str]] = []
+    for scanner_dir in SCANNER_DIRS:
+        if not scanner_dir.exists():
+            continue
+        for py_file in sorted(scanner_dir.rglob("*.py")):
+            source = py_file.read_text(encoding="utf-8")
+            try:
+                tree = ast.parse(source, filename=str(py_file))
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                if not _is_serialization_call(node):
+                    continue
+                for name in _credential_kwarg_names(node):
+                    violations.append((str(py_file.relative_to(PROJECT_ROOT)), node.lineno, name))
+                for name in _credential_dict_keys(node):
+                    violations.append((str(py_file.relative_to(PROJECT_ROOT)), node.lineno, name))
+    if violations:
+        formatted = "\n".join(f"  {f}:{ln} — credential field {name!r}" for f, ln, name in violations)
+        pytest.fail(f"Credential field names reaching json.dumps/model_dump:\n{formatted}")
+
+
+def test_credential_serialization_gate_catches_synthetic_violation() -> None:
+    """Positive self-test: synthetic credential field in json.dumps is caught."""
+    source = textwrap.dedent("""\
+        import json
+        def bad(tok):
+            return json.dumps(token=tok)
+    """)
+    tree = ast.parse(source, filename="<synthetic>")
+    violations: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not _is_serialization_call(node):
+            continue
+        for name in _credential_kwarg_names(node):
+            violations.append((node.lineno, name))
+        for name in _credential_dict_keys(node):
+            violations.append((node.lineno, name))
+    assert len(violations) >= 1, (
+        f"Positive self-test failed: synthetic json.dumps(token=...) was not flagged"
+    )
+
+
+def test_credential_serialization_gate_negative_self_test() -> None:
+    """Negative self-test: clean serialization calls are not flagged."""
+    source = textwrap.dedent("""\
+        import json
+        def ok(host, port):
+            return json.dumps({"host": host, "port": port})
+        def ok2(host):
+            data = {}
+            data["host"] = host
+            return json.dumps(data)
+    """)
+    tree = ast.parse(source, filename="<synthetic>")
+    violations: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not _is_serialization_call(node):
+            continue
+        for name in _credential_kwarg_names(node):
+            violations.append((node.lineno, name))
+        for name in _credential_dict_keys(node):
+            violations.append((node.lineno, name))
+    assert violations == [], (
+        f"Negative self-test failed: clean code was incorrectly flagged at: {violations}"
+    )
+
+
+def test_no_credential_column_in_schema() -> None:
+    """D-09: schema column-name assertion — no CREDENTIAL_FIELD_NAMES column in scheduler/checkpoint DDL."""
+    source = (PROJECT_ROOT / "quirk" / "db.py").read_text(encoding="utf-8")
+    for field in CREDENTIAL_FIELD_NAMES:
+        assert f'"{field}"' not in source and f"'{field}'" not in source, (
+            f"Column named {field!r} found in quirk/db.py schema — D-09 violation"
+        )
 
 # ---------------------------------------------------------------------------
 # Phase 93 Task 2: SCHED-AUTH-001 error code registry assertion
