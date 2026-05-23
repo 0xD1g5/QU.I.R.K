@@ -602,22 +602,18 @@ def assert_no_external_refs(spec_dict: dict) -> None:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Evidence keys for new agility weights**
-   - What we know: `agility_weak_jwt_alg_ratio` and `agility_openapi_plaintext_ratio` need corresponding evidence keys read from `build_evidence_summary()`.
-   - What's unclear: The exact counter variable names to add to `evidence.py` and how to count "weak JWT alg" from `BEARER_TOKEN` protocol rows vs OpenAPI `http://` server URLs from `OpenAPI` protocol rows.
-   - Recommendation: Add `bearer_token_weak_alg_count` (RS256/HS256/etc — all currently quantum-vulnerable) and `openapi_plaintext_server_count` counters to `build_evidence_summary()`. The scoring function reads these the same way as `dar_db_plaintext_count`.
+All three questions were resolved during planning; Phase 94 plans implement the recommendations.
 
-2. **OpenAPI config block location in AppConfig**
-   - What we know: CONTEXT says `openapi:` config block; `AppConfig` has `assessment`, `scan`, `targets`, `connectors`, `output`, `intelligence`, `security`.
-   - What's unclear: Whether `openapi_spec` goes in `ScanCfg` (scan-time option) or `ConnectorsCfg` (external source).
-   - Recommendation: `ScanCfg` as `openapi_spec_path: Optional[str] = None` — it's a per-scan input like targets, not a persistent connector.
+1. **Evidence keys for new agility weights** — RESOLVED.
+   - Resolution: `evidence.py::build_evidence_summary()` gains `bearer_token_weak_alg_count` (RS256/HS256/etc — all currently quantum-vulnerable) and `openapi_plaintext_server_count` counters, read by scoring the same way as `dar_db_plaintext_count`. Scaffolded in Plan 94-01 (Task 2); OpenAPI counter populated by Plan 94-02.
 
-3. **`--analyze-token` with bearer tokens that are NOT JWTs (opaque tokens)**
-   - What we know: `jwt.get_unverified_header()` will raise `jwt.exceptions.DecodeError` for opaque bearer tokens that are not Base64url-encoded JWTs.
-   - What's unclear: Should the command report "not a JWT — cannot analyze" gracefully, or hard-error?
-   - Recommendation: Catch `DecodeError`, report "token does not appear to be a JWT (opaque token)" with INFO severity and exit 0 (non-CRITICAL). Only JWT-shaped tokens are classified.
+2. **OpenAPI config block location in AppConfig** — RESOLVED.
+   - Resolution: `openapi_spec_path: Optional[str] = None` lives in `ScanCfg` (a per-scan input like targets, not a persistent connector). Implemented in Plan 94-02.
+
+3. **`--analyze-token` with bearer tokens that are NOT JWTs (opaque tokens)** — RESOLVED.
+   - Resolution: catch `jwt.exceptions.DecodeError`, report "token does not appear to be a JWT (opaque token)" at INFO severity, exit 0 (non-CRITICAL). Only JWT-shaped tokens are classified. Implemented in Plan 94-01 (Task 1), test `test_opaque_token_graceful`.
 
 ---
 

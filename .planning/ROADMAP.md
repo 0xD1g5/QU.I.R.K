@@ -70,7 +70,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 **Depends on**: Phase 93
 **Requirements**: SPEC-01, SPEC-02, SPEC-03, TOKEN-01, TOKEN-02, TOKEN-03, SCORE-01 (partial — SCORE_WEIGHTS +10.0 → 293.0), PKG-01
 **Success Criteria** (what must be TRUE):
-  1. User can run `quirk --analyze-token <jwt>` and receive a report showing the algorithm, key size, expiry, quantum-safety classification, and a CRITICAL flag for any `alg: none` token (case-insensitive: none, None, NONE, NonE)
+  1. User can run `quirk analyze-token <jwt>` and receive a report showing the algorithm, key size, expiry, quantum-safety classification, and a CRITICAL flag for any `alg: none` token (case-insensitive: none, None, NONE, NonE)
   2. User can point QUIRK at a local OpenAPI spec file and receive findings for plaintext `servers`, unauthenticated endpoints, and weak or absent security schemes; findings appear in the standard findings table
   3. A spec URL is only fetched when that URL is within the configured scan-target scope; an out-of-scope URL is rejected with a clear error before any network request is made
   4. A spec containing an internal-network `$ref` URL (e.g., `http://169.254.169.254/`) causes a `SpecParsingError` rather than an outbound network request — SSRF prevention verified by a CI fixture test

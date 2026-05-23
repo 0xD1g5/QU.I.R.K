@@ -1,13 +1,13 @@
 ---
 phase: 94
 slug: openapi-bearer-token-analysis
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: ready
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-23
 ---
 
-# Phase {N} — Validation Strategy
+# Phase 94 — Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
 
@@ -17,20 +17,36 @@ created: 2026-05-23
 
 | Property | Value |
 |----------|-------|
-| **Framework** | {pytest 7.x / jest 29.x / vitest / go test / other} |
-| **Config file** | {path or "none — Wave 0 installs"} |
-| **Quick run command** | `{quick command}` |
-| **Full suite command** | `{full command}` |
-| **Estimated runtime** | ~{N} seconds |
+| **Framework** | pytest (configured in `pyproject.toml` `[tool.pytest.ini_options]`) |
+| **Config file** | `pyproject.toml` (no separate pytest.ini) |
+| **Quick run command** | `pytest tests/test_analyze_token.py tests/test_openapi_scanner.py tests/test_score_weights_invariant.py -x` |
+| **Full suite command** | `pytest` |
+| **Estimated runtime** | ~30 seconds (quick); full suite minus the slow-marked install test |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `{quick run command}`
-- **After every plan wave:** Run `{full suite command}`
+- **After every task commit:** Run `pytest tests/test_analyze_token.py tests/test_openapi_scanner.py tests/test_score_weights_invariant.py -x`
+- **After every plan wave:** Run `pytest` (full suite)
 - **Before `/gsd:verify-work`:** Full suite must be green
-- **Max feedback latency:** {N} seconds
+- **Max feedback latency:** ~30 seconds
+
+---
+
+## Wave 0 — Test Infrastructure
+
+No new framework install required (pytest already configured). Test files are created
+test-first as the opening action of each owning TDD task — Wave 0 obligations are
+embedded in the feature tasks rather than a separate plan:
+
+- `tests/test_analyze_token.py` — created in Plan 94-01 Task 1 (covers TOKEN-01/02/03)
+- `tests/test_openapi_scanner.py` — created in Plan 94-02 Task 1 (covers SPEC-01/02/03)
+- `tests/test_install_all_excludes_schemathesis.py` — created in Plan 94-02 Task 2 (PKG-01)
+- `tests/test_score_weights_invariant.py` — already exists; updated in Plan 94-01 Task 2
+
+`wave_0_complete: true` — every required test file has an owning task that creates it
+before the implementation it covers.
 
 ---
 
@@ -38,39 +54,24 @@ created: 2026-05-23
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| {N}-01-01 | 01 | 1 | REQ-{XX} | T-{N}-01 / — | {expected secure behavior or "N/A"} | unit | `{command}` | ✅ / ❌ W0 | ⬜ pending |
-
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
-
----
-
-## Wave 0 Requirements
-
-- [ ] `{tests/test_file.py}` — stubs for REQ-{XX}
-- [ ] `{tests/conftest.py}` — shared fixtures
-- [ ] `{framework install}` — if no framework detected
-
-*If none: "Existing infrastructure covers all phase requirements."*
+| 94-01-01 | 94-01 | 1 | TOKEN-01 | token-leak | Token never written to DB; opaque token handled gracefully | unit | `pytest tests/test_analyze_token.py::test_decode_rs256_token -x` | created in task | pending |
+| 94-01-01 | 94-01 | 1 | TOKEN-01 | — | Opaque (non-JWT) token → INFO, exit 0 | unit | `pytest tests/test_analyze_token.py::test_opaque_token_graceful -x` | created in task | pending |
+| 94-01-01 | 94-01 | 1 | TOKEN-03 | — | `alg:none` (all case variants) → CRITICAL + exit 1 | unit | `pytest tests/test_analyze_token.py::test_alg_none_critical -x` | created in task | pending |
+| 94-01-02 | 94-01 | 1 | TOKEN-02 | — | CBOM bearer component labeled `declared_algorithm (unverified)` | unit | `pytest tests/test_analyze_token.py::test_cbom_bearer_classification -x` | created in task | pending |
+| 94-01-02 | 94-01 | 1 | SCORE-01 | — | SCORE_WEIGHTS sum = 293.0 AND count = 39 (both invariants) | unit | `pytest tests/test_score_weights_invariant.py -x` | exists (updated) | pending |
+| 94-02-01 | 94-02 | 2 | SPEC-01 | — | Local spec parsed; security schemes extracted | unit | `pytest tests/test_openapi_scanner.py::test_local_file_parse -x` | created in task | pending |
+| 94-02-01 | 94-02 | 2 | SPEC-02 | scope-bypass | URL outside scan-target scope rejected before any network request | unit | `pytest tests/test_openapi_scanner.py::test_url_scope_rejected -x` | created in task | pending |
+| 94-02-01 | 94-02 | 2 | SPEC-03 | dos | File > 10 MB → SpecParsingError before parse | unit | `pytest tests/test_openapi_scanner.py::test_oversize_rejected -x` | created in task | pending |
+| 94-02-01 | 94-02 | 2 | SPEC-03 | ssrf | External/internal-network `$ref` → SpecParsingError, zero outbound request | unit | `pytest tests/test_openapi_scanner.py::test_external_ref_ssrf_guard -x` | created in task | pending |
+| 94-02-02 | 94-02 | 2 | PKG-01 | supply-chain | `quirk[all]` resolves without schemathesis | slow | `pytest tests/test_install_all_excludes_schemathesis.py -m slow` | created in task | pending |
+| 94-03-* | 94-03 | 3 | docs | — | Docs + UAT-SERIES + Obsidian sync present | grep | `grep -Eq "169\\.254\\.169\\.254\|SpecParsingError\|schemathesis" docs/UAT-SERIES.md` | n/a | pending |
 
 ---
 
-## Manual-Only Verifications
+## Dimension 8 Compliance
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| {behavior} | REQ-{XX} | {reason} | {steps} |
-
-*If none: "All phase behaviors have automated verification."*
-
----
-
-## Validation Sign-Off
-
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < {N}s
-- [ ] `nyquist_compliant: true` set in frontmatter
-
-**Approval:** {pending / approved YYYY-MM-DD}
+- **8a — every requirement has a test:** ✅ SPEC-01/02/03, TOKEN-01/02/03, SCORE-01, PKG-01 all mapped above.
+- **8b — every test has an automated command:** ✅ all rows carry a `pytest`/`grep` command.
+- **8c — security behaviors mapped:** ✅ SSRF, DoS, scope-bypass, token-leak all have threat refs + tests.
+- **8d — Wave 0 completeness:** ✅ test files created test-first within owning tasks (`wave_0_complete: true`).
+- **8e — VALIDATION.md present and populated:** ✅ this file.
