@@ -750,6 +750,42 @@ def main():
         ),
     )
 
+    # Phase 96 FUZZ-01/02/03/04: active REST crypto-posture fuzzing flags
+    parser.add_argument(
+        "--fuzz",
+        dest="fuzz",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable active REST crypto-posture fuzzing of discovered OpenAPI endpoints "
+            "(FUZZ-01). Requires --openapi-spec. Presents an interactive CONFIRM gate "
+            "before any request is sent; hard-aborts in non-TTY/CI environments (FUZZ-03). "
+            "Schemathesis [api] extra must be installed."
+        ),
+    )
+    parser.add_argument(
+        "--fuzz-jwt-alg-confusion",
+        dest="fuzz_jwt_alg_confusion",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable JWT RS256→HS256 alg-confusion probe during REST fuzzing (FUZZ-04). "
+            "Requires --fuzz. Attempts to forge a HS256 token using the target's RS256 "
+            "public key and reports CRITICAL if the server accepts it."
+        ),
+    )
+    parser.add_argument(
+        "--fuzz-budget",
+        dest="fuzz_budget",
+        type=int,
+        default=50,
+        metavar="N",
+        help=(
+            "Maximum number of HTTP requests dispatched during REST fuzzing "
+            "(FUZZ-02). Default: 50. Hard maximum: 500."
+        ),
+    )
+
     args = parser.parse_args()
 
     # Phase 67 RESUME-01: --list-resumable exits after printing table
@@ -1029,6 +1065,11 @@ def main():
     # double-emitting for those two scanners. See .planning/phases/45-install-day-ux/.
     from quirk.util.optional_extra import probe_missing_extras
     probe_missing_extras(cfg, error_endpoints)
+
+    # Phase 96 FUZZ-01: emit advisory when --fuzz is set but schemathesis [api] extra is absent.
+    if getattr(args, "fuzz", False) and not is_extra_available("schemathesis"):
+        _emit_missing_extra_advisory("rest_fuzzer", "api", error_endpoints)
+
     tls_targets: List[Tuple[str, int]] = []
     ssh_targets: List[Tuple[str, int]] = []
     classified_details: Dict[Tuple[str, int], str] = {}
@@ -1389,12 +1430,60 @@ def main():
             _run_openapi_phase, error_endpoints, logger,
         ) or []
 
-        _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints)  # Phase 67 RESUME-01
+        # ==============================
+        # REST fuzz scan phase (Phase 96 FUZZ-01/02/03/04)
+        # ==============================
+        def _run_fuzz_phase():
+            # Guard: --fuzz must be set and openapi_endpoints must exist (no spec → no fuzz)
+            if not getattr(args, "fuzz", False):
+                return []
+            if not openapi_endpoints:
+                return []
+            _spec_path = getattr(getattr(cfg, "scan", None), "openapi_spec_path", None)
+            if not _spec_path:
+                return []
+            # Derive base_url from the first configured FQDN (prefer https://)
+            _fqdns = []
+            if hasattr(cfg, "targets") and cfg.targets is not None:
+                _fqdns = list(getattr(cfg.targets, "fqdns", []) or [])
+            _base_url = (f"https://{_fqdns[0]}" if _fqdns else "https://localhost")
+            # Re-parse spec dict for the fuzzer (same spec already security-validated above)
+            from quirk.scanner.openapi_scanner import (
+                _load_spec_bytes_from_file,
+                _parse_spec_dict,
+                SpecParsingError,
+            )
+            try:
+                _raw = _load_spec_bytes_from_file(_spec_path)
+                _spec_dict = _parse_spec_dict(_raw)
+            except (SpecParsingError, Exception) as exc:
+                logger.error(f"REST fuzz: spec re-parse error: {safe_str(exc)}")
+                return []
+            from quirk.scanner.rest_fuzzer import run_fuzz_scan
+            # Single gate call: run_fuzz_scan owns confirm_fuzz_gate internally.
+            # The CLI passes prompt_fn=input and is_tty=sys.stdin.isatty() so the
+            # user is prompted EXACTLY ONCE (T-96-09 / DOUBLE-PROMPT RESOLUTION).
+            return run_fuzz_scan(
+                spec_dict=_spec_dict,
+                base_url=_base_url,
+                cfg=cfg,
+                cred_ctx=cred_ctx,
+                budget=getattr(args, "fuzz_budget", 50),
+                prompt_fn=input,
+                is_tty=sys.stdin.isatty(),
+                run_alg_confusion=getattr(args, "fuzz_jwt_alg_confusion", False),
+            )
+        fuzz_endpoints = _wrapped_phase(
+            run_stats, "fuzz_scanning", "rest_fuzzer",
+            _run_fuzz_phase, error_endpoints, logger,
+        ) or []
+
+        _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints + fuzz_endpoints)  # Phase 67 RESUME-01
         _api_pf = _collect_stage_partial_failures(run_stats, "api", error_endpoints, _err_before_api)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "api",
                 status="partial" if _api_pf else "completed",
-                endpoint_count=len(jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints),
+                endpoint_count=len(jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints + fuzz_endpoints),
                 partial_failure=bool(_api_pf), error_summary=_api_pf or None)
 
     # ==============================
