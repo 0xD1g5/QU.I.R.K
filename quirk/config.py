@@ -236,6 +236,12 @@ class ConnectorsCfg:
     smime_targets: list = field(default_factory=list)
     smime_search_base: Optional[str] = None
     smime_timeout: int = 10
+    # Phase 95 CSIGN-01: Code-signing certificate inventory via LDAP userCertificate
+    # filtered to CodeSigning EKU (OID 1.3.6.1.5.5.7.3.3). Opt-in via CLI flag.
+    enable_codesign: bool = False
+    codesign_targets: list = field(default_factory=list)
+    codesign_search_base: Optional[str] = None
+    codesign_timeout: int = 10
     # GCP connector config (v4.3, Phase 26, per D-06)
     enable_gcp: bool = False
     gcp_project_id: Optional[str] = None
