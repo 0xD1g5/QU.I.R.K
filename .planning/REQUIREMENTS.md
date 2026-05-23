@@ -25,11 +25,11 @@
 
 ### Authenticated Scanning — Credential Model (BACK-64)
 
-- [ ] **AUTH-01**: User can supply Bearer/OAuth2 token, API key (header or query), or HTTP Basic credentials for an authenticated scan via CLI flag, env var, or interactive prompt.
-- [ ] **AUTH-02**: Credentials are never persisted — absent from SQLite, CBOM output, logs, error messages, and dashboard API responses (ephemeral / in-memory only).
-- [ ] **AUTH-03**: Scheduled scans reject authenticated-mode configs with a clear error code, since credentials cannot be persisted for later runs.
-- [ ] **AUTH-04**: A security-review gate deliverable audits every credential-leakage surface and documents the best-effort (not provable) nature of in-memory zeroization in Python.
-- [ ] **AUTH-05**: Credential scrubbing (`safe_str()` + AST CI gate) is extended to API-key / token field shapes so leaks cannot regress silently.
+- [x] **AUTH-01**: User can supply Bearer/OAuth2 token, API key (header or query), or HTTP Basic credentials for an authenticated scan via CLI flag, env var, or interactive prompt.
+- [x] **AUTH-02**: Credentials are never persisted — absent from SQLite, CBOM output, logs, error messages, and dashboard API responses (ephemeral / in-memory only).
+- [x] **AUTH-03**: Scheduled scans reject authenticated-mode configs with a clear error code, since credentials cannot be persisted for later runs.
+- [x] **AUTH-04**: A security-review gate deliverable audits every credential-leakage surface and documents the best-effort (not provable) nature of in-memory zeroization in Python.
+- [x] **AUTH-05**: Credential scrubbing (`safe_str()` + AST CI gate) is extended to API-key / token field shapes so leaks cannot regress silently.
 
 ### OpenAPI / Swagger Spec Analysis (BACK-10)
 
@@ -87,11 +87,11 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| AUTH-01 | Phase 93 | Pending |
-| AUTH-02 | Phase 93 | Pending |
-| AUTH-03 | Phase 93 | Pending |
-| AUTH-04 | Phase 93 | Pending |
-| AUTH-05 | Phase 93 | Pending |
+| AUTH-01 | Phase 93 | Complete |
+| AUTH-02 | Phase 93 | Complete |
+| AUTH-03 | Phase 93 | Complete |
+| AUTH-04 | Phase 93 | Complete |
+| AUTH-05 | Phase 93 | Complete |
 | SPEC-01 | Phase 94 | Pending |
 | SPEC-02 | Phase 94 | Pending |
 | SPEC-03 | Phase 94 | Pending |

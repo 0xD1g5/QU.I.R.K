@@ -42,7 +42,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 
 ## Phases
 
-- [ ] **Phase 93: Credential Infrastructure** - Ephemeral credential model (Bearer/OAuth2, API key, HTTP Basic) with committed security-review gate deliverable
+- [x] **Phase 93: Credential Infrastructure** - Ephemeral credential model (Bearer/OAuth2, API key, HTTP Basic) with committed security-review gate deliverable (completed 2026-05-23)
 - [ ] **Phase 94: OpenAPI & Bearer Token Analysis** - Passive spec parsing + bearer token classify/decode; `[api]` extras group introduced
 - [ ] **Phase 95: Code-Signing Certificate Inventory** - LDAP `userCertificate` + TLS EKU code-signing discovery; zero new core deps
 - [ ] **Phase 96: Active REST Fuzzing** - Gated crypto-posture fuzzer with six mandatory guardrails + alg-confusion sub-flag; ships last
@@ -63,7 +63,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 - [x] 93-01-PLAN.md — CredentialContext core (bytearray secret, from_cli reference model, enable_authenticated_mode flag) [AUTH-01]
 - [x] 93-02-PLAN.md — Scrubbing + regression guards (safe_str ext, AST/schema gates, scheduler QRK-SCHED-AUTH-001) [AUTH-03, AUTH-05]
 - [x] 93-03-PLAN.md — Wire JWT/API consumer + sentinel leak-detection suite + committed security-review gate [AUTH-01, AUTH-02, AUTH-04]
-- [ ] 93-04-PLAN.md — Docs + UAT-SERIES + Obsidian sync (CLAUDE.md mandatory per-phase steps) [AUTH-01..04]
+- [x] 93-04-PLAN.md — Docs + UAT-SERIES + Obsidian sync (CLAUDE.md mandatory per-phase steps) [AUTH-01..04]
 
 ### Phase 94: OpenAPI & Bearer Token Analysis
 **Goal**: Users can decode and classify bearer/JWT tokens and analyze OpenAPI/Swagger specs for API crypto posture, both passively and with no active traffic to any target
@@ -106,7 +106,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 93. Credential Infrastructure | v5.1 | 3/4 | In Progress|  |
+| 93. Credential Infrastructure | v5.1 | 4/4 | Complete   | 2026-05-23 |
 | 94. OpenAPI & Bearer Token Analysis | v5.1 | 0/TBD | Not started | - |
 | 95. Code-Signing Certificate Inventory | v5.1 | 0/TBD | Not started | - |
 | 96. Active REST Fuzzing | v5.1 | 0/TBD | Not started | - |
