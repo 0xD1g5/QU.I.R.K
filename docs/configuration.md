@@ -263,6 +263,64 @@ connectors:
 
 ---
 
+## OpenAPI Spec Analysis (`[api]` extras)
+
+Phase 94 (v5.1) introduced passive OpenAPI/Swagger spec analysis. The scanner inventories declared security schemes, plaintext `http://` server URLs, and unauthenticated path operations, with hardened defenses against `$ref` SSRF and oversized-spec DoS.
+
+### Installing the `[api]` extras group
+
+```bash
+pip install "quirk-scanner[api]"
+```
+
+This installs `openapi-spec-validator>=0.9.0`. The `[api]` group is **not** included in `[all]` — it is opt-in to keep the base install lightweight.
+
+> `schemathesis` fuzzing support is planned for a future phase and is not included in `[api]` or `[all]`.
+
+### CLI flag
+
+```bash
+# Local file (no network required)
+quirk --config config.yaml --openapi-spec /path/to/openapi.yaml
+
+# URL within your configured scan targets
+quirk --config config.yaml --openapi-spec https://api.acme.com/openapi.json
+```
+
+The `--openapi-spec` flag accepts either a local file path or a URL. URLs must fall within the configured `targets.fqdns` scope — out-of-scope URLs are rejected before any network request is made.
+
+### `openapi:` config block
+
+The spec path can also be set in `config.yaml` under the `scan` block:
+
+```yaml
+scan:
+  openapi_spec_path: "docs/openapi.yaml"   # local path or scope-gated URL
+```
+
+Setting `openapi_spec_path` in the config is equivalent to passing `--openapi-spec` on the CLI. A CLI flag overrides the config value.
+
+### Security hardening
+
+| Guard | Behavior |
+|-------|----------|
+| **$ref SSRF** | External or internal-network `$ref` values (e.g. `http://169.254.169.254/...`) raise `SpecParsingError` *before* the OAS validator runs. Zero outbound requests on SSRF-shaped input. |
+| **10 MB size cap** | Specs larger than 10 MB are rejected before `yaml.safe_load`. Prevents billion-laughs and oversized-YAML DoS. |
+| **Scope gate** | Spec URLs must start with a configured `targets.fqdns` entry. Rejected before any network request. |
+| **Graceful degradation** | When `[api]` is not installed (`OPENAPI_AVAILABLE = False`), the scanner returns a single `missing_extra` advisory endpoint and continues; no exception is raised. |
+
+### Findings produced
+
+OpenAPI scan results appear in the standard findings table as `CryptoEndpoint(protocol="OpenAPI")` rows:
+
+| Finding type | Severity | Description |
+|-------------|----------|-------------|
+| Security scheme declaration | INFO | JWT/OAuth2/API-key security scheme found in spec |
+| Plaintext server | HIGH | `http://` (non-TLS) server URL declared in spec — feeds `agility_openapi_plaintext_ratio` scoring penalty |
+| Unauthenticated endpoint | MEDIUM | Path operation with no security requirement declared |
+
+---
+
 ## Authenticated Scanning (ephemeral credentials)
 
 Phase 93 (v5.1) introduced per-scan ephemeral credential support, allowing QUIRK to attach an
