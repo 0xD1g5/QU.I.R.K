@@ -134,3 +134,28 @@ def test_install_all_excludes_schemathesis(tmp_path: Path) -> None:
         "If this fails, quirk[api] was added to [all] — revert that change. "
         f"Resolved packages: {sorted(installed)}"
     )
+
+
+def test_install_api_includes_schemathesis() -> None:
+    """Phase 96 FUZZ-01: schemathesis must be present in quirk[api] after Phase 96 adds it.
+
+    Reads pyproject.toml directly (no pip dry-run needed) and asserts that the [api]
+    optional-dependencies list contains a requirement string starting with 'schemathesis'.
+    This is a fast, deterministic check that does not require network access.
+    """
+    try:
+        import tomllib  # Python 3.11+
+    except ImportError:
+        import tomli as tomllib  # type: ignore[no-redef]
+
+    pyproject_path = REPO_ROOT / "pyproject.toml"
+    data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+
+    api_deps = data.get("project", {}).get("optional-dependencies", {}).get("api", [])
+    api_dep_names = [dep.split(">=")[0].split("==")[0].split("[")[0].lower() for dep in api_deps]
+
+    assert "schemathesis" in api_dep_names, (
+        "Phase 96 FUZZ-01: schemathesis is missing from quirk[api] optional-dependencies. "
+        "Add 'schemathesis>=4.4.4' to the [api] group in pyproject.toml. "
+        f"Current [api] deps: {api_deps}"
+    )
