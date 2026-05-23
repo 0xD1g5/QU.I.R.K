@@ -14,7 +14,7 @@ findings:
   warning: 4
   info: 3
   total: 8
-status: issues_found
+status: remediated
 ---
 
 # Phase 95: Code Review Report
@@ -247,3 +247,10 @@ of scope.
 _Reviewed: 2026-05-23T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+
+## Remediation (commit 56884ae)
+
+- **CR-01** ✅ fixed — scanner now sets cert_subject/cert_not_after ORM columns; cross-source dedup verified with a real-scanner-shape test.
+- **WR-01/02/03** ✅ fixed — dead loop removed, explicit TLS allow-list, delimited `|weak` match.
+- **WR-04** deferred — expiry-finding propagation (minor).
