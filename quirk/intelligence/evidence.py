@@ -14,7 +14,9 @@ _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   # protocol keys per RESEARCH C-10 inventory.
                   "CONTAINER", "SOURCE", "AWS", "AZURE", "GCP", "CLOUD_SQL",
                   # Phase 94 — bearer-token and OpenAPI spec analysis protocols
-                  "BEARER_TOKEN", "OPENAPI")
+                  "BEARER_TOKEN", "OPENAPI",
+                  # Phase 95 CSIGN-01 — code-signing certificate inventory
+                  "CODE_SIGNING")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
@@ -121,6 +123,9 @@ def build_evidence_summary(
     # Phase 94 — Bearer token and OpenAPI spec analysis counters (TOKEN-02, SCORE-01)
     bearer_token_weak_alg_count = 0     # BEARER_TOKEN endpoints with quantum-vulnerable declared algorithm
     openapi_plaintext_server_count = 0  # OpenAPI spec endpoints with http:// server declarations
+
+    # Phase 95 — Code-signing certificate weak algorithm counter (CSIGN-01, SCORE-01)
+    codesign_weak_algo_count = 0        # CODE_SIGNING endpoints with RSA<2048/EC<256/SHA-1 (severity HIGH)
 
     # Motion / data-in-motion counters (Phase 34)
     motion_email_starttls_missing_count = 0  # *-STARTTLS endpoints with no tls_version (handshake never completed)
@@ -320,6 +325,15 @@ def build_evidence_summary(
             if "http-server" in _oa_detail or "plaintext" in _oa_detail:
                 openapi_plaintext_server_count += 1
 
+        # ---- Phase 95 — Code-signing weak algorithm counter (CSIGN-01, SCORE-01) ----
+        elif proto == "CODE_SIGNING":
+            # Increment when the scanner embedded a "weak" token in service_detail —
+            # set by codesign_scanner._classify_codesign_severity() for HIGH findings
+            # (RSA<2048, EC<256, SHA-1).  SAFE endpoints carry no "weak" token.
+            _cs_detail = str(getattr(ep, "service_detail", "") or "").lower()
+            if "weak" in _cs_detail:
+                codesign_weak_algo_count += 1
+
         # ---- Motion (Phase 34) — broker plaintext listeners ----
         elif proto in {"KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"}:
             motion_broker_plaintext_count += 1
@@ -471,4 +485,7 @@ def build_evidence_summary(
         "openapi_plaintext_server_count": openapi_plaintext_server_count,
         "agility_weak_jwt_alg_ratio": round(bearer_token_weak_alg_count / total_endpoints, 4) if total_endpoints else 0.0,
         "agility_openapi_plaintext_ratio": round(openapi_plaintext_server_count / total_endpoints, 4) if total_endpoints else 0.0,
+        # Phase 95 SCORE-01 — code-signing cert weak algorithm agility signal
+        "codesign_weak_algo_count": codesign_weak_algo_count,
+        "agility_codesign_weak_algo_ratio": round(codesign_weak_algo_count / total_endpoints, 4) if total_endpoints else 0.0,
     }
