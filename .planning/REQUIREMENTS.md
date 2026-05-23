@@ -85,8 +85,26 @@
 
 ## Traceability
 
-_Filled by the roadmapper — maps each REQ-ID to its phase._
-
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| _(pending roadmap)_ | | |
+| AUTH-01 | Phase 93 | Pending |
+| AUTH-02 | Phase 93 | Pending |
+| AUTH-03 | Phase 93 | Pending |
+| AUTH-04 | Phase 93 | Pending |
+| AUTH-05 | Phase 93 | Pending |
+| SPEC-01 | Phase 94 | Pending |
+| SPEC-02 | Phase 94 | Pending |
+| SPEC-03 | Phase 94 | Pending |
+| TOKEN-01 | Phase 94 | Pending |
+| TOKEN-02 | Phase 94 | Pending |
+| TOKEN-03 | Phase 94 | Pending |
+| SCORE-01 | Phase 94 (partial), Phase 95 (partial), Phase 96 (final) | Pending |
+| PKG-01 | Phase 94 | Pending |
+| CSIGN-01 | Phase 95 | Pending |
+| CSIGN-02 | Phase 95 | Pending |
+| CSIGN-03 | Phase 95 | Pending |
+| LAB-01 | Phase 95 (partial), Phase 96 (final) | Pending |
+| FUZZ-01 | Phase 96 | Pending |
+| FUZZ-02 | Phase 96 | Pending |
+| FUZZ-03 | Phase 96 | Pending |
+| FUZZ-04 | Phase 96 | Pending |
