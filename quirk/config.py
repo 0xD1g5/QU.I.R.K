@@ -265,6 +265,9 @@ class ConnectorsCfg:
     # Cloud broker targets (D-01) — supplied via CLI/config only; no SDK enumeration (D-02)
     broker_azure_namespaces: List[str] = field(default_factory=list)
     broker_sqs_regions: List[str] = field(default_factory=list)
+    # Phase 93 AUTH-01: opt-in flag for authenticated scanning (ephemeral credentials only).
+    # Scheduler rejects configs where this is True (D-11 / QRK-SCHED-AUTH-001).
+    enable_authenticated_mode: bool = False
     # Phase 72 D-02 / WR-11: tracks which keys appeared in the raw YAML connectors block.
     # Used by quirk.engine.profiles to suppress mutation of user-explicit values.
     _user_set_fields: frozenset = field(default_factory=frozenset, repr=False, compare=False)
