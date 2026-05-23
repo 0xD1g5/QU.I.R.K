@@ -58,7 +58,9 @@ Requirements: FUZZ-01, FUZZ-02, FUZZ-03, FUZZ-04, SCORE-01 (final), LAB-01 (fina
 - `schemathesis` added to the `[api]` extras group (v5.1-D-05; excluded from `[all]`);
   the CI guard `tests/test_install_all_excludes_schemathesis.py` already enforces this.
 - Chaos lab (LAB-01 final): a NEW isolated `fuzz-target` profile — a deliberately-weak
-  REST target. Per CLAUDE.md, update `lab.sh` ALL_PROFILES (new profile!), the chaos
+  REST target. Per CLAUDE.md, `lab.sh` needs NO ALL_PROFILES edit — `_derive_all_profiles()`
+  reads `profiles:` from docker-compose.yml dynamically at runtime, so adding the `fuzz-target`
+  profile to compose satisfies CLAUDE.md's intent; update the chaos
   README, and `expected_results_*.md` in the SAME change.
 - Scoring: fuzzing findings feed `agility_signals`; SCORE_WEIGHTS +4.0 → 303.0. Update
   BOTH the sum AND count invariant assertions together (recurring lesson).
