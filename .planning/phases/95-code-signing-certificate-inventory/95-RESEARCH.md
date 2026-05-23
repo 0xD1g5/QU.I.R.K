@@ -571,7 +571,11 @@ None — verified by scope inspection. Phase adds new code paths; does not renam
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+**RESOLVED (OQ1):** CSIGN-03 dedup uses a split contract — LDAP-sourced CODE_SIGNING certs (full DER available) dedup by SHA-256 fingerprint; the TLS-EKU path uses a surrogate compound key `(cert_subject, cert_pubkey_alg, cert_not_after)` to annotate the existing TLS-derived component (TLS wins) rather than emit a duplicate. Plan 95-02 implements both paths and adds `test_cbom_tls_plus_codesign_no_dup` proving a stable component count when the same cert is seen via both sources.
+
+**RESOLVED (OQ2):** `scan_codesign_from_tls_endpoints(tls_endpoints, ...)` is a separate function in `codesign_scanner.py` (testability); `run_scan.py::_run_codesign_phase` calls it AFTER the TLS scan with the captured `tls_endpoints` and folds its CODE_SIGNING endpoints into the final list (Plan 95-03, wired + tested via `test_tls_eku_path_invoked` and `test_tls_eku_check`).
 
 1. **How to embed fingerprint for TLS-path EKU check**
    - What we know: TLS scanner stores parsed metadata (cert_subject, cert_pubkey_alg, cert_not_after) but NOT raw DER bytes in CryptoEndpoint model. SHA-256 fingerprint requires the full DER cert.

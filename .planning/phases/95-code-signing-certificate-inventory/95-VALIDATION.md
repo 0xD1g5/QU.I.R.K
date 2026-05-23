@@ -39,8 +39,8 @@ created: 2026-05-23
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 95-01-01 | 01 | 1 | CSIGN-01, CSIGN-02 | T-95-01/02/03 | LDAP filter is hardcoded literal; DER parse try/except; safe_str logging | unit | `.venv/bin/python -m pytest tests/test_codesign_scanner.py -q` (RED expected) | ❌ W0 | ⬜ pending |
-| 95-01-02 | 01 | 1 | CSIGN-01, CSIGN-02 | T-95-01/02/03 | EKU filter; EC<256 inline; ldap3-only; safe_str | unit | `.venv/bin/python -m pytest tests/test_codesign_scanner.py -x -q` | ❌ W0 | ⬜ pending |
-| 95-02-01 | 02 | 2 | CSIGN-03 | T-95-05/06 | fingerprint token parse only; bounded dedup | unit | `.venv/bin/python -m pytest tests/test_codesign_cbom.py -x -q` | ❌ W0 | ⬜ pending |
+| 95-01-02 | 01 | 1 | CSIGN-01, CSIGN-02 | T-95-01/02/03 | EKU filter; EC<256 inline; ldap3-only; safe_str; BOTH LDAP AND TLS-EKU (`test_tls_eku_check`) sources | unit | `.venv/bin/python -m pytest tests/test_codesign_scanner.py -x -q` | ❌ W0 | ⬜ pending |
+| 95-02-01 | 02 | 2 | CSIGN-03 | T-95-05/06 | fingerprint token parse; bounded dedup; cross-source TLS+codesign stable count (`test_cbom_tls_plus_codesign_no_dup`) | unit | `.venv/bin/python -m pytest tests/test_codesign_cbom.py -x -q` | ❌ W0 | ⬜ pending |
 | 95-02-02 | 02 | 2 | SCORE-01 | — | dual sum+count invariant | unit | `.venv/bin/python -m pytest tests/test_score_weights_invariant.py tests/test_evidence.py -x -q` | ✅ (update) / ❌ W0 | ⬜ pending |
 | 95-03-01 | 03 | 3 | CSIGN-01 | T-95-08 | opt-in gate; lazy import on flag-off | unit | `.venv/bin/python -m pytest tests/test_run_scan_codesign_wiring.py -x -q` | ❌ W0 | ⬜ pending |
 | 95-03-02 | 03 | 3 | LAB-01 | T-95-09 | local throwaway fixture; triple-update | integration/oracle | `test -f .../ldaps/ldif/codesign-users.ldif && grep -q "CODE-SIGN/weak-algorithm" .../expected_results_v4.md` | ❌ W0 | ⬜ pending |
