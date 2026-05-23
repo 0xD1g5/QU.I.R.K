@@ -147,22 +147,28 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.1 Authenticated Scanning + API Surface Depth
+## Current Milestone: v5.2 Consulting-Grade Reporting
 
-**Goal:** Add an optional, ephemeral credential model that unlocks deeper crypto findings across the API surface — without QU.I.R.K. ever becoming a secret store.
+**Goal:** Make the artifact a consultant hands a client genuinely client-ready — a narrative, defensible, professionally-formatted deliverable — rather than a raw finding dump.
 
 **Target features:**
-- **Authenticated scan mode (BACK-64, foundational):** credential model supporting Bearer/OAuth2, API key (header/query), and HTTP Basic. Credentials are ephemeral/in-memory only — passed per-run (flag/env/prompt), never persisted. mTLS client certs deferred.
-- **OpenAPI/Swagger spec analysis (BACK-10):** parse spec files to map the API crypto surface (passive, low-risk).
-- **Bearer token interception & analysis (BACK-11):** capture and classify bearer tokens (alg, key size, expiry) on authenticated calls.
-- **Active REST fuzzing (BACK-09):** crafted-traffic crypto probing, gated by opt-in flag + authorization confirmation + bounded request budget (mirrors the nmap probe-budget pattern).
-- **Code signing certificate inventory (BACK-24):** discovery of code-signing certs as part of the API-surface-depth theme.
+- **Narrative executive report (ANCHOR):** a CISO-readable executive summary that leads with the quantum-readiness *story* (posture, trajectory, top risks, recommended actions) rather than a finding list.
+- **Rich per-finding context (999.72):** every finding carries a quantum-risk "so what" explanation + actionable remediation guidance — turning a finding list into an advisory document a non-cryptographer can act on.
+- **Score-transparency in executive reports (999.56):** show how the readiness number is built (subscore decomposition, weighting) so the client can trust *and understand* the score.
+- **Executive-summary score↔severity consistency (999.82):** fix the latent inconsistency where the exec summary can contradict the detail tables — a correctness/credibility gap for a paid deliverable.
+- **Professional PDF formatting / layout / branding (999.2):** presentation quality as the credibility signal for a billable artifact.
+- **Code-signing cert expiry as a finding (WR-05 carry-over):** v5.1 computed `not_after`/expired but never surfaced it — a report-content gap that folds naturally into the finding-quality theme.
+- **v5.1 tech-debt cleanup (WR-02/03/04/06):** small dedicated phase — env-var all-caps contract, per-call str copies in `CredentialContext`, `_append_query_param` overwrite, sentinel test pre-scrubbed assertions, scheduler `.yml` heuristic, 5xx-cascade-counter connection-exception reset.
 
 **Key context:**
-- Ephemeral-only credential storage is a deliberate decision: no scheduled *authenticated* scans (credentials are not persisted); authenticated runs are explicitly interactive/per-invocation. Existing scheduled (unauthenticated) scans are unaffected. Lowest blast radius — QU.I.R.K. is never a stored-secret surface to defend.
-- A security-review gate is baked into this milestone (HORIZON requirement for the credential subsystem). The ephemeral choice shrinks it to two main concerns: credential lifetime in memory, and leakage into logs/CBOM/error messages — the latter reusing the v4.8 `safe_str()` scrubbing helper.
-- Active fuzzing (BACK-09) is the milestone's sharpest edge: non-passive traffic, off by default, defensively gated.
-- Numbering continues at Phase 93 (v5.0 ended at Phase 92). Capability milestone, restoring the 2:1 capability-to-ops ratio after v5.0's stabilization cycle. Selected from HORIZON Candidate A.
+- **The deliverable IS the product.** v4.x–v5.1 built a deep, broad detection engine across six scanner families; no milestone has owned the *output layer*. Reporting compounds every prior detection investment and is the engagement moment-of-truth. Explicit user-anchored North Star.
+- **Render consistency across three surfaces** (CLI markdown / HTML / PDF) is a hard constraint — the v4.10.1 lesson: report render paths are physics-coupled, so a change to the score narrative must land identically in all three or it displays a *different* wrong story. The existing single-canonical-scoring-engine + ÷1.5 rollup (v5.0/v4.10.1) is the source of truth to render from.
+- **Risk — scope creep into endless visual polish.** Mitigation: anchor on the executive narrative + prioritized remediation roadmap as the must-ship core; treat branding/theming as nice-to-have, time-boxed.
+- Numbering continues at Phase 97 (v5.1 ended at Phase 96). Deliverable/output milestone; holds the HORIZON 2:1 capability/ops cadence (v5.0 ops → v5.1 capability → v5.2 deliverable). Selected via the 2026-05-23 product-lens re-prioritization (see `.planning/HORIZON.md`); next-up after v5.2 is v5.3 Adoption & Integration.
+
+## Previous Milestone: v5.1 Authenticated Scanning + API Surface Depth — SHIPPED 2026-05-23
+
+**Shipped 2026-05-23** — 4 phases (93–96), 16 plans, 21/21 requirements; audit PASSED; local `v5.1.0` tag. Delivered an optional ephemeral credential model (Bearer/OAuth2 + API-key header/query + HTTP Basic, in-memory-only, never persisted) with an 11-surface security-review gate; `analyze-token` JWT classifier; `$ref`-SSRF-hardened OpenAPI spec scanner; LDAP `userCertificate` + TLS-EKU code-signing inventory with cross-source CBOM dedup; and `CONFIRM`-gated/non-TTY-aborted active REST fuzzing (alg-confusion + crypto-posture probes) under an unbypassable budget ceiling. `[api]` extras excluded from `[all]` with a CI guard; `SCORE_WEIGHTS` walked 283.0 → 303.0/41 via the existing `agility_signals` subscore (no 7th pillar). Carried to v5.2: WR-05 (cert-expiry finding) + WR-02/03/04/06 cleanup; 6 environment/TTY-gated human-UAT deferred (non-blocking). Archive: `.planning/v5.1-MILESTONE-AUDIT.md` + `.planning/milestones/v5.1-ROADMAP.md`.
 
 ## Previous Milestone: v5.0 — Stabilization + Tech Debt Sweep — SHIPPED 2026-05-22
 
@@ -314,7 +320,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Render-side + evidence-tally fixes deferred to v5.0 Phase 01 (v4.10.1-D-03 / D-04) | Same bug class likely lives in CLI/HTML/PDF renderers (RENDER-CLI-01/PDF-01); the evidence-tally gap (3 subscores at 25 despite findings) is a separate root cause in the summarizer (EVIDENCE-TALLY-01). A full-stack scoring sweep is the right shape; mixing into a hotfix risks new bugs. | — Pending — captured as Future Requirements in archived v4.10.1-REQUIREMENTS.md; v5.0 Phase 01 pre-loads them |
 
 ---
-*Last updated: 2026-05-23 — v5.1 Authenticated Scanning + API Surface Depth SHIPPED + archived (Phases 93–96, 16 plans, 21/21 reqs, audit PASSED, local `v5.1.0` tag). Delivered: ephemeral credential model (Bearer/API-key/Basic, never persisted) + 11-surface security-review gate; OpenAPI/JWT analysis; LDAP+TLS-EKU code-signing inventory; gated active REST fuzzing (CONFIRM gate, 6 guardrails, non-TTY hard-abort, alg-confusion); `[api]` extras; SCORE_WEIGHTS → 303.0/41. Next milestone continues at Phase 97 via `/gsd:new-milestone`. Previous: v5.0 Stabilization SHIPPED 2026-05-22.*
+*Last updated: 2026-05-23 — v5.2 Consulting-Grade Reporting OPENED (continues at Phase 97). Forward outlook re-prioritized through a product lens (see `.planning/HORIZON.md`): the report deliverable is the chosen anchor since no prior milestone owned the output layer despite a deep detection engine. Scope: narrative exec report + rich per-finding context (999.72) + score transparency (999.56) + exec-summary consistency (999.82) + professional PDF (999.2) + WR-05 cert-expiry finding + WR-02/03/04/06 cleanup. Previous: v5.1 Authenticated Scanning SHIPPED 2026-05-23 (Phases 93–96, local `v5.1.0` tag).*
 
 ## Evolution
 

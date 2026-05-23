@@ -2,8 +2,8 @@
 
 **Purpose:** Themes for the next 5–7 milestones — deep enough to anchor backlog grooming and inter-milestone deferrals, shallow enough to revise after each ship. **Plan the next one or two in detail; sketch the rest.**
 
-**Last updated:** 2026-05-22 (post-v4.10 ship)
-**Current state:** v4.10 Launch Readiness SHIPPED 2026-05-21 — public-registry release pipeline live (PyPI `quirk-scanner`, GHCR multi-arch image, Sigstore attestations, Homebrew tap formula). v4.7 through v4.10 all closed since the last HORIZON revision. Next milestone (v5.0) unscoped — candidate themes below.
+**Last updated:** 2026-05-23 (post-v5.1 ship)
+**Current state:** v5.1 Authenticated Scanning + API Surface Depth SHIPPED 2026-05-23 — ephemeral credential model, OpenAPI/bearer analysis, LDAP/TLS-EKU code-signing inventory, and gated active REST fuzzing all live; `SCORE_WEIGHTS` at 303.0/41. The detection surface is now deep and broad across six scanner families. **Next milestone (v5.2) scoped below — the deliverable (report) layer is the chosen anchor.** The forward outlook has been re-prioritized through a product lens: for a consulting tool, the report a client receives *is* the product, and no milestone has yet owned the output layer.
 
 ---
 
@@ -41,93 +41,65 @@ QRAMM (Quantum Readiness Assessment & Maturity Model) — 120-question maturity 
 
 ---
 
-## v5.0 — Stabilization + Tech Debt Sweep *(theme selected 2026-05-22; phase decomposition pending)*
+## v5.0 — Stabilization + Tech Debt Sweep — SHIPPED 2026-05-22
 
-The primetime bar is met. v5.0 is the "breathe" milestone after four heavy capability cycles (v4.7 QRAMM, v4.8 13-phase Pre-Primetime, v4.9 Audit Depth, v4.10 Launch Readiness). Bundles chaos lab coverage gaps, code cleanup, dependency hygiene, and v4.10 residuals into one focused milestone instead of scattering them as tax across feature milestones. Was originally sketched as v5.2; pulled forward because four milestones in 18 days isn't sustainable.
+6 phases (87–92), 16 plans. The "breathe" milestone after four heavy capability cycles: Node 20→24 CI bump, `defusedxml`→hardened-lxml XXE migration, single canonical scoring engine with six subscores surfaced against budget, five zero-algo CBOM profiles fixed (closed Phase 42 OBS-1), five new weak-TLS chaos profiles + identity evidence, the OQS-nginx `X25519MLKEM768` PQC-hybrid scoring-ceiling target, dead-code sweep, and the v5.0.0 release. Audit: `.planning/milestones/v5.0-MILESTONE-AUDIT.md`.
 
-**Anchor items (shape at `/gsd-new-milestone` time)**
+## v5.1 — Authenticated Scanning + API Surface Depth — SHIPPED 2026-05-23
 
-| Bundle | Items |
-|---|---|
-| Chaos lab targets | BACK-80 postgres-tls + redis-tls, BACK-81 OQS-nginx PQC-hybrid (the scoring-ceiling target!), BACK-82 SMTP/STARTTLS, BACK-83 gRPC TLS, BACK-84 Kafka TLS |
-| Identity lab gap | BACK-78 identity scoring evidence keys (Kerberos KDC, SAML SP, DNSSEC zone) |
-| Code cleanup | BACK-49–57 dead code, deprecation, version drift |
-| Bookkeeping | BACK-62 Nyquist VALIDATION.md updates |
-| Dependency hygiene | BACK-67 `defusedxml.lxml` → `lxml` with manual XXE controls; Node.js 20 → 24 in `.github/workflows/release-container.yml` action versions (warning surfaced in v4.10.0 release run, deprecation deadline 2026-06-02) |
-| v4.10 residuals | Phase 42 OBS-1 CBOM Pass-1 fix (5 profiles emit zero algo components), BACK-63 score transparency, BACK-58 JWT `verify=False` docs |
+4 phases (93–96), 16 plans. An optional ephemeral credential model (`CredentialContext`, in-memory-only, never persisted) unlocking deeper findings across the API surface, plus: `analyze-token` JWT classifier, `$ref`-SSRF-hardened OpenAPI scanner, LDAP `userCertificate` + TLS-EKU code-signing inventory with cross-source CBOM dedup, and `CONFIRM`-gated/non-TTY-aborted active REST fuzzing (alg-confusion + crypto-posture probes) under an unbypassable budget ceiling. `[api]` extras excluded from `[all]` with a CI guard; `SCORE_WEIGHTS` walked 283.0 → 303.0/41 via the existing `agility_signals` subscore. Audit: `.planning/v5.1-MILESTONE-AUDIT.md`.
 
-**Strategic centerpiece:** BACK-81 (OQS-nginx PQC-hybrid) is the only chaos lab target that scores *above* "good classical TLS" in the readiness model. It grounds the scoring ceiling in a concrete demoable artifact and makes the post-quantum side of the score real, not theoretical.
-
-**Done when:** every chaos lab profile listed above is up + scanner-verified, BACK-49–57 dead-code items are gone (CI test guards regressions), `defusedxml.lxml` migration shipped with XXE controls, Node 20 actions bumped before the 2026-06-02 GitHub deadline, and the Phase 42 OBS-1 CBOM Pass-1 fix lands so the 5 vacuously-passing profiles emit real algo components.
-
-**Risk:** doesn't move adoption forward — could feel like marking time if customer feedback arrives mid-cycle asking for capability. Mitigation: keep milestone scope tight (≤6 phases) so v5.1 capability work starts within ~2 weeks.
-
-### Deferred candidates (now v5.1 sketches) — see below
-
-#### A — Authenticated Scanning + API Surface Depth *(was the v4.9 sketch theme)*
-
-Closes the passive-only-API gap and adds an optional credential model that unlocks deeper findings across multiple scanners.
-
-| Backlog | Item |
-|---|---|
-| BACK-64 | Authenticated scan mode (credential model + security review gate) — foundational |
-| BACK-09 | Active REST API fuzzing for crypto posture |
-| BACK-10 | OpenAPI / Swagger spec analysis |
-| BACK-11 | Bearer token interception and analysis |
-| BACK-24 | Code signing certificate inventory |
-
-**Why now:** post-launch users want deeper findings the unauthenticated path can't reach. Credential storage is a platform concern — design once, every scanner adopts uniformly.
-**Risk:** introduces a security-sensitive subsystem (credentials at rest, scoped use); needs a security review gate baked into the milestone.
-
-### Candidate B — Adoption & Integration Surface
-
-Lean into v4.10's public-launch foundation and make QU.I.R.K. load-bearing in a customer workflow. First-party integrations rather than capability breadth.
-
-| Theme | Items |
-|---|---|
-| SIEM / observability export | Splunk HEC, Elastic, generic syslog/CEF — surface findings into existing security stacks |
-| Ticketing integration | Jira / ServiceNow auto-ticket creation per finding with QRAMM evidence |
-| Notification fan-out | Slack/email/webhook from scheduled-scan drift events (currently emitted but not delivered) |
-| API key / token-based dashboard auth | Lets the dashboard be shared across a team (single-tenant) without SaaS multi-tenancy |
-| Public-launch follow-through | Asciinema demo, homebrew tap bootstrap, Path C deferrals (BACK-89/90 release-UAT-automation) |
-
-**Why now:** v4.10 shipped the distribution; v5.0 makes the distributed product *useful in someone else's workflow*. Lower technical risk than authenticated scanning; higher adoption signal.
-**Risk:** without a primary anchor item it can sprawl into a polish-grab-bag — needs one clear North Star integration.
-
-### Candidate C — Stabilization + Tech Debt Sweep *(was v5.2 sketch)*
-
-A deliberate non-feature milestone after four heavy capability milestones. Pulls v5.2 forward to give the codebase a rest cycle before the next big capability push.
-
-| Bundle | Items |
-|---|---|
-| Chaos lab targets | BACK-80 postgres-tls + redis-tls, BACK-81 OQS-nginx PQC-hybrid (the scoring-ceiling target!), BACK-82 SMTP/STARTTLS, BACK-83 gRPC TLS, BACK-84 Kafka TLS |
-| Identity lab gap | BACK-78 identity scoring evidence keys (Kerberos KDC, SAML SP, DNSSEC zone) |
-| Code cleanup | BACK-49–57 dead code, deprecation, version drift |
-| Bookkeeping | BACK-62 Nyquist VALIDATION.md updates |
-| Dependency hygiene | BACK-67 `defusedxml.lxml` → `lxml` with manual XXE controls; Node.js 20 → 24 in release-container action versions |
-| v4.10 residuals | Phase 42 OBS-1 CBOM Pass-1 fix (5 profiles emit zero algo components), BACK-63 score transparency, BACK-58 JWT `verify=False` docs |
-
-**Why now:** four milestones at the rate of one every 4–7 days is unsustainable; this is the "breathe" cycle. The OQS-nginx target is the only chaos lab profile that scores *above* "good classical TLS" — anchors the scoring ceiling in a demoable artifact.
-**Risk:** doesn't move adoption forward — could feel like marking time if user feedback is asking for capability.
+**Carried tech debt → v5.2 scoping:** WR-05 (code-signing cert expiry computed but not surfaced as a finding — *report-content-adjacent, fold into reporting milestone*), WR-03 (5xx cascade counter resets on connection-exception), WR-02/04/06 (design-judgment follow-ups: env-var all-caps contract, per-call str copies, `_append_query_param` overwrite, sentinel test pre-scrubbed assertions, scheduler `.yml` heuristic). 6 environment/TTY-gated human-UAT items deferred, all non-blocking.
 
 ---
 
-## v5.1 — *(sketch, shape after v5.0 close)*
+# Forward Outlook — Re-prioritized 2026-05-23 (product lens)
 
-Whichever candidate above is *not* chosen for v5.0 is the leading sketch for v5.1. The 2:1 capability-to-ops ratio holds either way — if v5.0 is capability (A) or adoption (B), then v5.1 should be the other side of the pair, with the stabilization sweep (C) following.
+**Framing:** v4.x–v5.1 built a deep, broad *detection* engine across six scanner families (TLS, SSH, identity, data-at-rest, data-in-motion, API/auth) plus governance (QRAMM) and a public distribution. **What has never had a dedicated milestone is the output layer** — the report the consultant hands the client. For a consulting-grade tool, that report *is* the product; better detection only creates value if it's communicated defensibly. The forward outlook is therefore re-ordered: **deliverable first, adoption second, scale-out last.**
 
----
+The 2:1 capability/ops cadence still holds: v5.0 (ops) → v5.1 (capability) → **v5.2 (deliverable/capability) → v5.3 (adoption/ops) → v5.4 (stabilization + scale validation).**
 
-## v5.2 — *(sketch — Distributed Architecture & SaaS, pending validation)*
+## v5.2 — Consulting-Grade Reporting *(NEXT — user-anchored North Star)*
 
-Was originally v5.1 (Distributed Architecture & SaaS Foundation). Pushed back because v5.0/v5.1 should validate adoption signal *before* committing to multi-tenant infrastructure. If post-launch adoption stays single-host single-tenant, this milestone gets de-prioritized in favor of more capability work. If multi-segment scanning shows up as a real customer ask, this becomes the next big bet.
+The deliverable layer. Make the document a consultant hands a CISO genuinely client-ready: narrative executive summary, defensible per-finding context, a first-class prioritized remediation roadmap, and consistent, well-formatted PDF/HTML/CLI output. This is the highest-leverage milestone because it monetizes every detection investment already shipped and is the literal moment-of-truth of an engagement.
+
+| Backlog | Item | Why it matters |
+|---|---|---|
+| 999.72 | Rich per-finding context — quantum-risk explanation, "so what," remediation guidance | Turns a finding list into an advisory document a non-cryptographer can act on |
+| 999.56 | Score-transparency executive reports — show how the readiness number is built | Defensibility: the client must trust *and understand* the score |
+| 999.82 | Executive-summary score↔severity consistency | Correctness: exec summary must not contradict the detail tables (latent inconsistency) |
+| 999.2 | PDF report formatting / professional layout / branding | Presentation quality is the credibility signal for a paid deliverable |
+| WR-05 (v5.1) | Surface code-signing cert expiry as a finding | Report-content gap — folds naturally into the finding-quality theme |
+
+**Anchor / North Star:** the **narrative executive report** — a CISO-readable document that leads with the readiness story, not a raw finding dump.
+**Why now:** explicit user priority; compounds all prior detection work; closes the gap between "we detect everything" and "we communicate it like consultants."
+**Risk:** scope creep into endless visual polish. Mitigation: anchor on the executive narrative + remediation roadmap as the must-ship core; treat branding/theming as nice-to-have.
+**Tax to fold in:** WR-02/03/04/06 cleanup as a small dedicated phase.
+
+## v5.3 — Adoption & Integration Surface *(was Candidate B)*
+
+Make QU.I.R.K. load-bearing inside someone else's workflow. First-party integrations over capability breadth.
+
+| Theme | Items | Note |
+|---|---|---|
+| Notification fan-out | Slack / email / webhook from scheduled-scan drift events | **Start here — drift events are already emitted but never delivered (half-built; lowest-risk, highest-signal)** |
+| SIEM / observability export | Splunk HEC, Elastic, generic syslog/CEF | Surface findings into existing security stacks |
+| Ticketing integration | Jira / ServiceNow auto-ticket per finding with QRAMM evidence | Closes the remediation loop |
+| Dashboard team auth | API key / token-based single-tenant dashboard auth | Team sharing without SaaS multi-tenancy |
+
+**Why now:** v4.10 shipped distribution; reporting (v5.2) makes the deliverable excellent; v5.3 makes it *flow into* the customer's existing tooling. Lower technical risk than capability work, higher adoption signal.
+**Risk:** without a North Star it sprawls into a grab-bag. Mitigation: finish notification fan-out first as the anchor, then add one export + one ticketing integration.
+
+## v5.4 — Stabilization + Distributed/SaaS Validation *(was the v5.2 sketch)*
+
+Breather cycle: docs (999.58 comprehensive architecture document, 999.59 operators-guide all-settings coverage), residual tech-debt sweep, dependency hygiene. **Commit to distributed/multi-tenant infrastructure (999.22 multi-node agent/console split, SaaS multi-tenancy) only if v5.3 adoption surfaces a real multi-segment customer ask.** If adoption stays single-host single-tenant, this milestone stays a stabilization cycle and the SaaS bet defers again.
 
 | Backlog | Item |
 |---|---|
-| BACK-26 | Distributed multi-node scanner architecture (agent/console split) |
-| BACK-86 (slice 3) | SaaS-mode dashboard — auth, multi-tenancy, per-tenant data isolation |
-| — | Per-segment topology view in dashboard |
-| — | Agent auth tokens + console registration |
+| 999.58 | Comprehensive architecture document |
+| 999.59 | Operators-guide all-configurations-and-settings coverage |
+| 999.22 | Distributed multi-node scanner architecture (agent/console split) — *gated on adoption signal* |
+| — | SaaS-mode dashboard: auth, multi-tenancy, per-tenant isolation — *gated on adoption signal* |
 
 ---
 
@@ -137,6 +109,9 @@ Track here when the horizon shifts so future-you can see why:
 
 | Item | From | To | Rationale | Date |
 |---|---|---|---|---|
+| Forward outlook re-prioritized: Reporting promoted to NEXT (v5.2) | v5.0/v5.1 candidate sketches A/B/C; Distributed/SaaS at v5.2 | v5.2 Consulting-Grade Reporting → v5.3 Adoption → v5.4 Stabilization+SaaS-validation | v5.0 (stabilization) and v5.1 (auth/API capability) both shipped, consuming candidates A and C. Product-lens review (with the user as PM): for a consulting tool the *report is the product*, and no milestone has owned the output layer despite a now-deep detection engine. Reporting compounds all prior detection work and is the engagement moment-of-truth → promoted to NEXT. Adoption/integration (old Candidate B) follows. Distributed/SaaS pushed one more slot, still gated on a real adoption signal. | 2026-05-23 |
+| v5.1 candidate A (Authenticated Scanning) collapsed to shipped recap | sketch | one-paragraph recap | Shipped 2026-05-23 as Phases 93–96; details in v5.1-MILESTONE-AUDIT.md. | 2026-05-23 |
+| v5.0 candidate C (Stabilization) collapsed to shipped recap | sketch | one-paragraph recap | Shipped 2026-05-22 as Phases 87–92; details in v5.0-MILESTONE-AUDIT.md. | 2026-05-23 |
 | v4.7–v4.10 collapsed to shipped recap | "in progress" + "primetime cutover" + "API depth" sections | one-paragraph audit references each | All four milestones closed since last HORIZON revision; details now live in respective `MILESTONE-AUDIT.md` files. HORIZON is for what's *ahead*, not a log of what shipped. | 2026-05-22 |
 | Primetime bar reframed as ✅✅✅✅✅ | gates 1–5 partial | all 5 met | v4.8's "primetime cutover" goal landed as planned (Phase 63 scheduled, 64 trend, 65 dashboard-initiated). v4.10 added the public-distribution layer (PyPI/GHCR/Homebrew/Sigstore) that closed gate 1 cleanly. The mental model shifts from "make it deployable" to "make it adopted." | 2026-05-22 |
 | v5.0 reshape: 3 candidate themes vs. 1 default | "slot open — QRAMM pulled into v4.7" | 3 explicit candidates A/B/C with trade-offs | The old "TBD after v4.9" placeholder is no longer load-bearing; v4.9 and v4.10 both shipped. v5.0 needs a concrete shaping conversation, not a placeholder. | 2026-05-22 |
