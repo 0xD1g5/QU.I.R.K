@@ -758,6 +758,31 @@ services:
     restart: unless-stopped
 
   # =========================
+  # PHASE 95 — CODE-SIGNING LDAP FIXTURE (profile: ldaps, sidecar)
+  # LAB-01 / CSIGN-01: Seeds the existing ldaps OpenLDAP instance with a user
+  # carrying a userCertificate with CodeSigning EKU (OID 1.3.6.1.5.5.7.3.3)
+  # and weak RSA-1024/SHA-1 — exercises the code-signing scanner HIGH path.
+  # Base DN: dc=chaos,dc=local (NOT dc=quirk,dc=lab — Phase 95 Critical Caveat 4).
+  # Mirrors the smime-seed sidecar pattern (D-79-R2 idempotency contract).
+  # =========================
+  ldaps-codesign-seed:
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+    profiles: ["ldaps"]
+    depends_on:
+      ldaps:
+        condition: service_started
+    # `ldapadd -c` = continue on already-exists errors. Idempotency contract:
+    # re-running `./lab.sh up --profile ldaps` must not error. Exit 68 is
+    # LDAP_ALREADY_EXISTS — swallow explicitly so sidecar exits 0 on re-run
+    # (mirrors smime-seed Phase 79-01 deviation Rule 1, 2026-05-16).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "sleep 5 && ldapadd -c -x -H ldap://ldaps:389 -D 'cn=admin,dc=chaos,dc=local' -w admin -f /ldif/codesign-users.ldif; rc=$$?; if [ $$rc -eq 0 ] || [ $$rc -eq 68 ]; then exit 0; else exit $$rc; fi"
+    volumes:
+      - ./ldaps/ldif:/ldif:ro
+    restart: "no"
+
+  # =========================
   # PHASE 79 — S/MIME LDAP DISCOVERY (profile: smime)
   # SMIME-03 / SMIME-07: OpenLDAP seeded with three users carrying
   # userSMIMECertificate values — exercises weak-signing, weak-key, and SAFE

@@ -1,0 +1,21 @@
+# Phase 95 code-signing chaos lab seed — one user carrying a userCertificate
+# attribute with CodeSigning EKU (OID 1.3.6.1.5.5.7.3.3) and weak RSA-1024/SHA-1.
+#
+# Base DN: dc=chaos,dc=local (ldaps profile — NOT dc=quirk,dc=lab).
+#
+# NOTE: userCertificate uses the ;binary transfer-encoding option per RFC 4523
+# (LDAP syntax Certificate, OID 1.3.6.1.4.1.1466.115.121.1.8). This is correct
+# and differs from userSMIMECertificate which uses base64 directly without ;binary.
+#
+# Re-applied via `ldapadd -c` (continue on already-exists). Idempotent.
+
+dn: ou=people,dc=chaos,dc=local
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=codesign-weak,ou=people,dc=chaos,dc=local
+objectClass: inetOrgPerson
+cn: codesign-weak
+sn: codesign-weak
+uid: codesign-weak
+userCertificate;binary:: MIIClzCCAgCgAwIBAgIUX9OpDsCdIy3Ta8+9gsSEbnNTxJkwDQYJKoZIhvcNAQEFBQAwUjEWMBQGA1UEAwwNY29kZXNpZ24td2VhazEYMBYGA1UECgwPUVVJUksgQ2hhb3MgTGFiMR4wHAYDVQQLDBVDb2RlLVNpZ25pbmcgRml4dHVyZXMwIBcNMjYwNTIzMDUwMDQ5WhgPMjEyNjA0MjkwNTAwNDlaMFIxFjAUBgNVBAMMDWNvZGVzaWduLXdlYWsxGDAWBgNVBAoMD1FVSVJLIENoYW9zIExhYjEeMBwGA1UECwwVQ29kZS1TaWduaW5nIEZpeHR1cmVzMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC0wOmX3MEFSLILEagTpRS3vWgjgchOsXTFDFhiSZq1dHz5mkVGUXNakYQwEMSDiV5RKhv8dvX0/X18pm7aNckdVOTCy4jfRIq+roYeu7GxCpTcsKhJot5ZcSVWT09vk4btXOksmoj83SoO9issbQVW+achfJBUciJ0wkDi0Nl5CQIDAQABo2gwZjAdBgNVHQ4EFgQUjZZjCSnl+mpAqyrUPF8QaCzi9xIwHwYDVR0jBBgwFoAUjZZjCSnl+mpAqyrUPF8QaCzi9xIwDwYDVR0TAQH/BAUwAwEB/zATBgNVHSUEDDAKBggrBgEFBQcDAzANBgkqhkiG9w0BAQUFAAOBgQBy2friQKvYm/N4QjhLZ9RNv7RBgY1udju1mqWy35gEzUAyHptwErlf/DEejUSFuynet/dcyk4o7ciiaow3SKnPGE6sYAf4Y88jxtCqN8iJKqJKMv61exauXDz83Lhjk9877Hh7OEjTIm+zqP1tZ3w/mdY1RniTvfDTooSeiP8npA==

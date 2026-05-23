@@ -285,6 +285,28 @@ docker compose --profile ldaps up -d && sleep 5 && sslyze --targets localhost:63
 ```
 **Expected:** sslyze returns TLS certificate chain findings including self-signed cert detection.
 
+## Profile: ldaps — Code-Signing Fixture
+
+*Added Phase 95 LAB-01 (CSIGN-01): the `ldaps` service now also carries a user with a
+`userCertificate` attribute containing a cert with CodeSigning EKU (OID 1.3.6.1.5.5.7.3.3)
+and a weak RSA-1024 / SHA-1 signature — exercises the code-signing scanner HIGH path.*
+
+*The `ldaps-codesign-seed` sidecar seeds `uid=codesign-weak` into `dc=chaos,dc=local` via
+an idempotent `ldapadd -c` run (mirrors the smime-seed pattern; swallows exit 68).*
+
+| User DN | Certificate | Expected Finding | Severity |
+|---|---|---|---|
+| uid=codesign-weak,ou=people,dc=chaos,dc=local | RSA-1024 / SHA-1 + CodeSigning EKU | CODE-SIGN/weak-algorithm | HIGH |
+
+**Scanner validation command:**
+```bash
+PROFILE_ARGS="--profile ldaps" ./lab.sh up
+# Then run with --inventory-code-signing and codesign_targets pointing at ldaps:636
+python run_scan.py --target localhost --inventory-code-signing \
+  # (configure codesign_targets: ["ldap://localhost:636"] in scan config)
+```
+**Expected:** CODE_SIGNING scanner returns 1 HIGH `CODE-SIGN/weak-algorithm` finding from the ldaps profile.
+
 ---
 
 ## Profile: dnssec
