@@ -680,6 +680,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             "SSH", "BEARER_TOKEN", "JWT", "CONTAINER", "SOURCE", "KERBEROS", "SAML", "DNSSEC", "SMIME", "ADCS",
             "CODE_SIGNING",
             "REST_FUZZ",  # Phase 96 FUZZ-01: no X.509 cert — active fuzz findings carry no TLS metadata
+            "OPENAPI",    # Phase 94 SPEC-01: spec findings carry no X.509 cert — algorithm registered in Pass-1
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
@@ -879,6 +880,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             "JWT", "BEARER_TOKEN", "CONTAINER", "SOURCE", "AWS", "AZURE",
             "DNSSEC", "SAML", "KERBEROS", "SMIME", "ADCS", "CODE_SIGNING",
             "REST_FUZZ",  # Phase 96 FUZZ-01: no ProtocolProperties; skipped to prevent phantom protocol:tls components
+            "OPENAPI",    # Phase 94 SPEC-01: no ProtocolProperties; skipped to prevent phantom protocol:tls components
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
         ):
