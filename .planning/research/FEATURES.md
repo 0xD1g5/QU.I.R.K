@@ -1,454 +1,337 @@
-# Feature Research
+# Feature Research — v5.1 Authenticated Scanning + API Surface Depth
 
-**Domain:** Cryptographic inventory scanner — stabilization milestone (gap closure, not net-new capability)
+**Domain:** Consulting-grade cryptographic inventory scanner — capability milestone adding authenticated scanning and deeper API surface analysis.
 **Researched:** 2026-05-22
-**Confidence:** HIGH — all findings derived from direct code inspection of `quirk/intelligence/`, `quirk/cbom/`, `quirk/reports/`, and `quantum-chaos-enterprise-lab/`; zero speculation from training data.
+**Confidence:** HIGH — all findings derived from direct code inspection of `quirk/scanner/jwt_scanner.py`, `quirk/intelligence/scoring.py`, `quirk/cbom/classifier.py`, `quirk/util/targets.py`, `run_scan.py`, `.planning/ROADMAP.md` BACK items, and `.planning/HORIZON.md`. Web research corroborates industry norms for authenticated scanning and OpenAPI analysis.
+
+---
+
+## Context: What Already Exists (Do Not Re-Build)
+
+These exist and serve as integration seams for v5.1:
+
+- **JWT/JWKS scanner (`quirk/scanner/jwt_scanner.py`):** Passive. Probes `/.well-known/jwks.json`, `/oauth/jwks`, OIDC discovery. Extracts `kty`, `alg`, RSA modulus bits, EC curve bits. Stores raw key entry in `jwt_scan_json` column. Emits one `CryptoEndpoint` per key. Already wired into `run_scan.py` via `_wrapped_phase`, config at `cfg.connectors.enable_jwt` + `cfg.connectors.jwt_targets`. No credential support.
+- **CBOM classifier (`quirk/cbom/classifier.py`):** Master `_ALGORITHM_TABLE` maps normalized algorithm names to `(CryptoPrimitive, nist_quantum_security_level, classical_security_level)`. Already covers JWT algorithms (`RS256`, `ES256`, `HS256`, etc.) where they match TLS/SSH naming conventions; JWT-specific alg names (`RS256`, `RS384`, `RS512`, `ES256`, `ES384`, `PS256`, `HS256`, `HS384`, `HS512`) need explicit entries if not already present.
+- **Probe-budget guard (`quirk/util/targets.py:maybe_confirm_probe_budget`):** TTY-aware y/N gate with 10,000-probe threshold, auto-proceed on non-TTY. Active fuzzing must mirror this exact pattern.
+- **`safe_str()` scrubbing (`quirk/util/safe_exc.py`):** Must wrap any exception that might carry credential material. Already enforced via AST gate (`tests/test_leak_safe_str_gate.py`).
+- **`_wrapped_phase()` in `run_scan.py`:** Uniform error capture for all scanner phases. Any new scanner phase must use it.
+- **SCORE_WEIGHTS invariant test (`tests/test_score_weights_invariant.py`):** Any new scoring weight must update this test. CI fails on sum mismatch.
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+### Table Stakes (Consultants Expect These)
 
-These are the gap-closure behaviors v5.0 must fix. Missing or wrong = product makes false claims.
+Features a security tool in this class must provide. Missing any of these makes the milestone feel half-finished against its own stated goal.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Evidence tally: subscores penalize on findings | Subscores that stay at 25 when HIGH/CRITICAL findings exist are silent lies; a consultant hands a client a score that says "clean" when it isn't | MEDIUM | Root cause traced: Hygiene/Modern TLS/DAR subscores use proxies that miss specific scanner output — see tally analysis below |
-| CLI scorecard renders subscores on 0–25 scale with label | `scorecard-*.md` currently shows `total/100` but does not render subscores — RENDER-CLI-01 is an audit pass, not a confirmed bug; if subscores are absent they cannot mislead | LOW | Code inspection shows `_scorecard_markdown()` only renders `score.get('total')` — subscores stored in intelligence JSON but not displayed in scorecard or HTML template subscore section |
-| HTML/PDF report total score correct | `total_score = score.get("total", 0)` in `html_renderer.py` — already pulls the correctly normalized 0–100 integer from `writer.py::score["total"]` which maps to `score_raw["score"]` (the fixed `int(round(sum/1.5))`) | LOW | No confirmed scale mismatch in the renderer path; audit needed to verify no legacy `score.get("score")` vs `score.get("total")` key confusion exists |
-| CBOM Pass-1 emits >= 1 algo component for every profile | Phase 42 OBS-1: 5 profiles (database, registry, source, ssh-weak, storage-s3) emit zero CBOM algorithm components — they pass the schema-validation gate vacuously | MEDIUM | Classifier has entries for CONTAINER/SOURCE/POSTGRESQL/MYSQL/S3 protocols; builder does handle them; bug is likely upstream in what `cipher_suite`/`cert_pubkey_alg` fields those scanners populate |
-| New chaos lab profiles up and scanner-verified | BACK-80–84: postgres-tls, redis-tls, SMTP/STARTTLS, gRPC TLS, Kafka TLS must exist as Docker Compose profiles, come up cleanly, and produce expected scanner findings | HIGH | Each requires: docker-compose.yml service + profile, cert/config, expected_results_v4.md oracle entry, lab.sh ALL_PROFILES update |
-| OQS-nginx PQC-hybrid profile demoable and scores above classical TLS | BACK-81: the only chaos lab target that should receive a positive quantum-safety signal; anchors the scoring ceiling | HIGH | Requires OQS image config + QUIRK scanner recognizing X25519Kyber768/ML-KEM-768 in TLS extension 0x001d + scoring reward |
-| Identity evidence keys present in intelligence.json when identity scanner runs | BACK-78: `identity_kerberos_weak_etype_ratio`, `identity_saml_weak_signing_ratio`, `identity_dnssec_weak_algo_ratio` absent unless scanner actually scanned identity endpoints | LOW | Code is correct; lab coverage gap — need identity chaos lab targets in scan config |
+| Feature | Why Expected | Complexity | Dependencies |
+|---------|--------------|------------|--------------|
+| Ephemeral credential injection — Bearer/OAuth2, API key, HTTP Basic | Authenticated scanning is the milestone's stated purpose. Without a credential model, nothing else in this milestone unlocks. Consultants pass tokens per-engagement; the tool must accept them at run time without storing them. | MEDIUM | Foundational; all other features depend on it. Config-layer + CLI flag + env-var injection. Must use `safe_str()` on all exc paths. |
+| OpenAPI/Swagger spec parsing — securitySchemes, oauth flows, JWT bearer formats | Security consultants routinely receive spec files from clients as part of an engagement. Parsing a spec to extract `securitySchemes` (type, scheme, bearerFormat, oauth2 flows, scopes) is the lowest-risk way to enumerate API crypto surface without sending any traffic. Industry-standard entry point for API security assessment tools (Veracode, StackHawk, Acunetix all support this). | LOW–MEDIUM | Depends on: no live-scan credential injection. Pure static analysis; works offline. CBOM builder needs spec-origin algorithm components (new `source_type="spec"` origin label). |
+| Bearer token decode and classify — alg, key size, expiry, quantum-safety label | When an authenticated scan returns a token (or the consultant provides a captured token), classifying its `alg` claim against the NIST PQC quantum-safety table is the primary consulting deliverable. RS256/ES256 tokens are quantum-vulnerable. No expiry (`exp` absent) is a HIGH finding regardless of algorithm. This is what "Bearer token interception & analysis" (BACK-11) means in practice — token decode from the Authorization header seen on responses, or from a provided sample. | LOW | Depends on: JWT/JWKS classifier already in `_ALGORITHM_TABLE` (verify entries exist for `RS256`, `RS384`, `RS512`, `ES256`, `ES384`, `PS256`, `HS256`, `HS384`, `HS512`). CBOM builder needs a `JWT-TOKEN` protocol entry distinct from `JWT` (JWKS key). |
+| CBOM integration for new protocol sources | A consulting deliverable CBOM that omits authenticated-endpoint findings or spec-declared algorithms is an incomplete bill of materials. All new findings must emit `CryptoPrimitive` components through the existing `Pass-1/2/3` pipeline. | MEDIUM | Depends on: existing `builder.py` pass structure. New protocol labels need skip-list entries if they emit non-algorithm components. |
+| Findings surface in scoring (agility/api sub-pillar) | Authenticated-scan findings that do not affect the score are invisible to the client's score interpretation. JWT algorithm weakness already feeds `agility_high_impact_ratio` via `finding_severity_counts`. New authenticated-scan findings must flow through the same path or a new `api_*` evidence counter set. | MEDIUM | Depends on: `SCORE_WEIGHTS` invariant test must be updated. If adding new `api_*` weights, sum changes. |
 
 ### Differentiators (Competitive Advantage)
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| PQC-hybrid TLS classified as quantum-safe (scoring ceiling) | Demonstrates the scanner can distinguish "good classical TLS" from "quantum-ready TLS" — the only tool making this distinction at the endpoint level | MEDIUM | Requires TLS extension parsing for hybrid groups (X25519Kyber768 = IANA group 0x6399); classifier already has `ml-kem-768+x25519` entry at NIST level 3 |
-| CBOM carries algorithm components from ALL protocol families | A CBOM that omits algorithms from container/source/database scanners is not a complete bill of materials; completeness is the core consulting deliverable | MEDIUM | Five profiles currently vacuously pass; Phase 61 fixed 12+ families in v4.8 — OBS-1 residuals are a subset that regressed or were missed |
-| Score transparency (BACK-63) | Consultant needs to explain to client why the score changed — current `drivers` list shows only top 5 reasons; adding subscore breakdowns makes the score auditable | LOW | Already stored in `intelligence.json`; surface in CLI/HTML |
-
-### Anti-Features (Out of Scope for a Stabilization Milestone)
-
-| Feature | Why Requested | Why Out of Scope | Alternative |
-|---------|---------------|-----------------|-------------|
-| Net-new scanner surface (new protocol families) | Always tempting to add capability | v5.0 is explicitly a "breathe" milestone; HORIZON.md caps at <= 6 phases; new protocols go to v5.1 | Capture as BACK items for v5.1 |
-| Score-engine redesign (subscores as 0–100, weighted average) | Current 0–25 model is non-obvious | Architectural change; the surgical v4.10.1 fix preserved the model deliberately; redesign at v5.x when usage data justifies | Document 0–25 model in scorecard header |
-| Authenticated scan mode (credential model) | Deeper findings behind auth walls | HORIZON.md explicitly defers to v5.1 Candidate A | BACK-64 |
-| SIEM/ticketing integrations | Make findings load-bearing in customer workflow | HORIZON.md Candidate B for v5.1 | BACK items |
-| Real mTLS between brokers / full Kafka KRaft cluster | Realistic enterprise Kafka config | Lab fidelity is secondary to scanner coverage; a single TLS listener on 9093 is sufficient | Out of scope for lab profile |
-| S/MIME message-content scanning | Out of scope per PROJECT.md | Agentless model cannot inspect mailbox content | Documented in Out of Scope |
-
----
-
-## Correct Behavior Specifications
-
-### 1. Evidence Tally — EVIDENCE-TALLY-01
-
-**Problem statement:** Three subscores report exactly 25 (the ceiling) despite the scan having HIGH/CRITICAL findings. This occurs because the evidence counters those subscores depend on are not incremented by the relevant findings.
-
-**Root cause analysis (from code inspection):**
-
-**Hygiene subscore** (`hygiene_score`): driven by `plaintext_http_count` and `http_on_tls_port_count`. These come from `_finding_targets(finding_list, "Plaintext HTTP service detected")` and `_finding_targets(finding_list, "HTTP on TLS-designated port")` — both read *finding titles* from the findings list. A scan of TLS-only endpoints with a HIGH finding for "Weak RSA cipher" produces zero `plaintext_http_count`, so hygiene stays at 25. This is correct behavior for a scan that has no HTTP exposure — the hygiene subscore is genuinely good. This is NOT a tally bug for TLS-only scans.
-
-**Modern TLS subscore**: driven by `legacy_tls_count = sev.get("LOW", 0)` — it uses ALL LOW-severity findings as a proxy for legacy TLS. If a scan has HIGH/CRITICAL but zero LOW findings, `modern_tls_score` = 25. This proxy is correct for TLS scans (legacy TLS findings are typically LOW severity in the risk engine). The subscore is not broken for TLS-only scans with only HIGH/CRITICAL findings.
-
-**Data at Rest subscore** (`dar_score`): driven by `dar_db_plaintext`, `dar_db_weak_ssl`, `dar_storage_unencrypted`, etc. — these come from `evidence.py` counters which read endpoint `protocol` and `service_detail` fields. A DAR scan result where `postgres-ssl-off` endpoint exists with `service_detail="PostgreSQL/ssl-off"` DOES increment `dar_db_plaintext_count`. If the counter reads 0 despite findings, the bug is that the endpoint's `protocol` field does not match `"POSTGRESQL"` exactly, or `service_detail` does not contain `"ssl-off"`, or the endpoint list passed to `build_evidence_summary` is filtered/truncated upstream.
-
-**Actual EVIDENCE-TALLY-01 root cause (most likely):** `build_evidence_summary()` receives the endpoint list from the ORM. If any scanner stores findings in the *findings table* only (not the endpoint table), those findings appear in `finding_severity_counts` but the specific evidence counters (which read endpoints) stay zero. The agility subscore's `high_impact` counter reads `sev.get("HIGH") + sev.get("CRITICAL")` from finding_severity_counts — this DOES penalize correctly. The subscores that stay at 25 must be the ones whose penalty paths depend on endpoint-level attributes rather than finding-level severity.
-
-**Correct behavior — what EVIDENCE-TALLY-01 must produce:**
-
-Given: A scan of chaos lab "database" profile (postgres-ssl-off on port 25432)
-- Expected: `dar_score < 25`
-- Mechanism: `evidence.dar_db_plaintext_count > 0` because `endpoint.protocol == "POSTGRESQL"` AND `"ssl-off" in endpoint.service_detail`
-- Correct evidence dict: `dar_db_plaintext_count: 1`, `dar_db_plaintext_ratio: > 0` → `dar_score = _apply_weighted_impacts([("DB plaintext", -ratio * 12.0)]) < 25`
-
-Given: A scan with rc4-hmac Kerberos etype (identity weak etype)
-- Expected: `identity_trust_score < 25`
-- Mechanism: `evidence.identity_weak_etype_count > 0` because `endpoint.protocol == "KERBEROS"` AND severity in service_detail parts is "CRITICAL" or "HIGH"
-- Correct: `identity_kerberos_weak_etype_ratio > 0` → -10.0 weight applied
-
-Given: A scan with SAML RSA-1024 signing cert
-- Expected: `identity_trust_score < 25`
-- Mechanism: `evidence.saml_weak_signing_count > 0` because `endpoint.protocol == "SAML"` AND `cert_pubkey_size < 2048`
-
-**Test oracle for EVIDENCE-TALLY-01:**
-- Precondition: chaos lab "kerberos" profile up (rc4-hmac enabled on port 88)
-- Scan result must show `identity_weak_etype_count >= 1` in evidence JSON
-- `identity_trust_score` must be `< 25`
-- Precondition: chaos lab "database" profile up
-- `dar_db_plaintext_count >= 1`, `dar_score < 25`
-- No subscore should report exactly 25 when its penalizing counter has count > 0
-
----
-
-### 2. Render-Side Audit — RENDER-CLI-01 / RENDER-PDF-01
-
-**Problem statement (deferred from v4.10.1-D-03):** The same backend-scale vs render-scale bug that was fixed in the dashboard might exist in CLI/HTML/PDF renderers.
-
-**Findings from code inspection:**
-
-CLI scorecard (`_scorecard_markdown` in `writer.py`): Renders `score.get('total')/100`. `score["total"]` is set from `score_raw["score"]` which is already the correct `int(round(sum/1.5))` 0–100 value. No bug confirmed. Subscores (0–25 each) are not rendered in the scorecard — they appear only in `intelligence-*.json`. No scale mismatch confirmed. Audit should verify `score.get("total")` is never substituted with a raw subscore.
-
-HTML report (`html_renderer.py`): Renders `total_score = score.get("total", 0)` where the `score` dict is the same wrapper constructed in `writer.py`. `_score_band()` thresholds (85/70/55/35) match `_rating()` thresholds in `scoring.py`. No scale mismatch confirmed. Subscores not rendered in the HTML template (only overall score and drivers are displayed).
-
-PDF report: Playwright renders the HTML report — no separate scoring logic. Same code path as HTML. No additional bug surface.
-
-**Correct behavior — what RENDER-CLI-01 audit must confirm:**
-- `scorecard-*.md` shows `X/100` where X == `intelligence.score.total` == same value the dashboard overall gauge shows
-- No subscore value (0–25) is ever displayed as if it were out of 100
-- If subscores ARE added to the scorecard/HTML in v5.0 for transparency (BACK-63), each must be labeled `/25` not `/100`
-
----
-
-### 3. CBOM Pass-1 Zero-Algo Fix — Phase 42 OBS-1
-
-**Five profiles currently emitting zero algorithm components:**
-
-| Profile | Protocol | Builder branch | Why zero |
-|---------|----------|----------------|----------|
-| database | POSTGRESQL / MYSQL | No Pass-1 branch for POSTGRESQL/MYSQL in builder.py | DB scanner populates `service_detail` ("PostgreSQL/ssl-off") but not `cert_pubkey_alg` or `cipher_suite` — builder has nothing to register |
-| registry | CONTAINER | `if ep.cipher_suite: _register_algorithm(ep.cipher_suite)` | `cipher_suite` holds library name ("openssl") — not in `_ALGORITHM_TABLE`; returns FALLBACK; not registered as algo component |
-| source | SOURCE | `_extract_algo_from_rule_id(ep.cipher_suite)` | Rule ID like `python.cryptography.security.insecure-cipher-des` — hint extraction may return empty for some rule IDs |
-| ssh-weak | SSH | SSH endpoints handled via KEX/hostkey parsing from `ssh_audit_json` | KEX algorithms (group1-sha1, ssh-dss) may not be in classifier table; or `ssh_audit_json` unpopulated |
-| storage-s3 | S3 | No Pass-1 branch for S3 in builder.py | S3 endpoints store bucket encryption mode in `service_detail` ("S3/unencrypted") not an algorithm string |
-
-**Correct behavior — what each profile's CBOM must contain:**
-
-| Profile | Required CBOM algo component | Algorithm string | NIST level |
-|---------|------------------------------|-----------------|------------|
-| database (postgres-ssl-off) | A "no-encryption" marker OR postgres-negotiated cipher | "aes-256-gcm" if ssl=on; or a no-encryption marker for ssl-off | 1 (quantum-safe) or 0 |
-| registry | Algorithm from detected crypto library (openssl version maps to DES/3DES/AES depending on version) | "3des" or "aes-128" per detected lib | 0 for legacy, 1 for modern |
-| source | Detected algorithm from semgrep match (MD5, DES, RC4, AES) | "3des", "md5", "rc4" etc. | 0 |
-| ssh-weak | diffie-hellman-group1-sha1, ssh-dss | Need classifier entries: "diffie-hellman-group1-sha1" (CRITICAL legacy DH) | 0 |
-| storage-s3 | AES-256 (SSE-S3) or no-encryption marker | "aes-256" for encrypted bucket | 1 |
-
-**Test oracle for OBS-1 fix:**
-- Scan each profile → `build_cbom()` → `cbom.components` must contain at least one `CryptoComponent` with a non-unknown name
-- Exception: plaintext/unencrypted endpoints may emit a component with nist_level=0 (quantum-vulnerable by omission)
-
----
-
-### 4. New Chaos Lab TLS Profiles — Expected Scanner Findings
-
-#### BACK-80: postgres-tls profile
-
-Docker Compose — new profile `db-tls`:
-- `postgres-tls` on port `25433`: PostgreSQL 16 with `ssl=on`, `ssl_cert_file=modern.crt`, `ssl_key_file=modern.key`
-- `postgres-tls-weak` on port `25434`: PostgreSQL 16 with ssl=on using RSA-1024 or SHA-1 scenario cert
-
-**Expected scanner findings:**
-
-| Port | Protocol label | Finding | Severity |
-|------|---------------|---------|----------|
-| 25433 | POSTGRESQL (TLS via --starttls postgres) | TLS handshake succeeds; cipher + version extracted | No finding (good posture) |
-| 25433 | TLS (sslyze) | Self-signed cert from modern.crt | CERT_SELFSIGNED MEDIUM |
-| 25434 | POSTGRESQL / TLS | RSA-1024 cert detected | WEAK_RSA_KEY_SIZE HIGH |
-
-**Observable crypto properties from PostgreSQL TLS:**
-- `SHOW ssl` returns "on" (vs "off" for plaintext profile)
-- `ssl_cipher` parameter: cipher suite string (e.g., "TLS_AES_256_GCM_SHA384")
-- sslyze `--starttls postgres` probes STARTSSL extension for PostgreSQL wire protocol
-- Server certificate: pubkey algorithm and size, expiry, chain, issuer
-- `pg_stat_ssl` view: shows active SSL connections and cipher for each session
-
-#### BACK-80: redis-tls profile
-
-Part of same `db-tls` profile:
-- `redis-tls` on port `26381`: Redis 7 with `tls-port 6381`, using `modern.crt`/`modern.key`
-
-**Expected scanner findings:**
-
-| Port | Protocol label | Finding | Severity |
-|------|---------------|---------|----------|
-| 26381 | REDIS-TLS | TLS handshake; cipher suite and version extracted | No finding (good posture for modern config) |
-| 26381 | REDIS-TLS | If TLSv1.2 with non-PFS suite negotiated | HIGH |
-
-**Observable crypto properties from Redis TLS:**
-- `CONFIG GET tls-port` returns port number
-- `CONFIG GET tls-cert-file`, `tls-key-file` returns cert material paths
-- `CONFIG GET tls-auth-clients` returns "optional", "yes", or "no" (client auth mode)
-- TLS negotiation observable via sslyze direct socket: cipher suite, protocol version
-- No application-layer crypto — TLS is the only crypto surface for Redis
-
-#### BACK-81: OQS-nginx PQC-hybrid profile
-
-Docker Compose — new profile `pqc`:
-- `oqs-nginx` on port `25443`: `openquantumsafe/nginx` image
-- Configured for TLS 1.3 with `ssl_ecdh_curve X25519Kyber768` (hybrid ECDH + ML-KEM)
-- Serving the lab CA-signed cert (modern.crt or a dedicated PQC-lab cert)
-
-**Observable crypto properties from PQC-hybrid TLS handshake:**
-
-The OQS-nginx server presents:
-1. Supported groups extension (TLS 1.3): includes IANA group 0x6399 (X25519Kyber768 hybrid) alongside classical groups
-2. Key share extension: client hello and server hello carry the hybrid key share
-3. sslyze output: `supported_cipher_suites` includes hybrid KEM group; `key_exchange_info` shows `x25519_kyber768`
-4. Certificate: standard RSA or ECDSA cert (authentication is classical; only key exchange is PQC-hybrid)
-5. Cipher suite negotiated: `TLS_AES_256_GCM_SHA384` or similar (cipher suite unchanged; only key exchange group changes)
-
-**Expected scanner output:**
-- `tls_version`: "TLSv1.3"
-- `cipher_suite`: "TLS_AES_256_GCM_SHA384"
-- `key_exchange_group`: "x25519_kyber768" or "X25519Kyber768"
-- `cert_pubkey_alg`: "RSA" or "EC" (classical cert; unaffected by PQC key exchange)
-- `quantum_safety`: "hybrid" (new classification needed)
-
-**Expected finding:** NONE — the hybrid profile is a positive baseline, not a weakness. The scanner detects and reports PQC-hybrid capability as a positive signal.
-
-**CBOM output:**
-- Algorithm component: `ml-kem-768+x25519` -> `CryptoPrimitive.KEM`, `nist_level=3`, `classical_level=192`
-- The classifier already has the entry: `"ml-kem-768+x25519": (CryptoPrimitive.KEM, 3, 192)` at classifier.py line 157
-- `quantum_safety_label(3)` = "quantum-safe"
-- Certificate component: RSA or EC (classical)
-
-#### BACK-82: SMTP/STARTTLS profile
-
-Note: The existing `email` profile (Phase 32) already covers SMTP/STARTTLS on ports 30025/30465/30587. BACK-82 as originally filed refers to a simpler standalone postfix-starttls service or a validation that the email profile satisfies this gap.
-
-**Expected scanner findings (email_scanner.py against SMTP/STARTTLS):**
-
-| Port | Protocol | Expected finding | Severity | Mechanism |
-|------|----------|-----------------|----------|-----------|
-| 30025 (SMTP) | SMTP-STARTTLS | STARTTLS downgrade risk | MEDIUM | Port 25 STARTTLS can be stripped |
-| 30025 (SMTP) | SMTP-STARTTLS | Weak cipher suite on email TLS | HIGH | TLS_RSA_WITH_* cipher negotiated (no PFS) |
-| 30465 (SMTPS) | SMTPS | Weak cipher suite | HIGH | same cipher |
-| 30587 (submission) | SMTP-STARTTLS | Weak cipher suite | HIGH | same cipher |
-
-**Observable crypto properties from SMTP STARTTLS:**
-- EHLO response includes `STARTTLS` capability advertisement
-- `sslyze --starttls smtp` performs full TLS enumeration after STARTTLS upgrade
-- Cipher suite, TLS version, certificate (subject, pubkey alg, size, expiry, chain)
-- Absence of STARTTLS response -> `motion_email_starttls_missing_count` incremented
-
-#### BACK-83: gRPC TLS profile
-
-Docker Compose — new profile `grpc`:
-- `grpc-tls` on port `50051`: minimal gRPC echo server with TLS 1.3, `modern.crt`/`modern.key`
-- `grpc-insecure` on port `50052`: same service without TLS (plaintext HTTP/2)
-
-**Observable crypto properties from gRPC TLS:**
-- TLS handshake is standard TLS 1.3 over TCP — sslyze probes directly with ALPN `h2`
-- ALPN negotiation: server advertises `h2` (HTTP/2 over TLS)
-- Cipher suite: standard TLS 1.3 suite (TLS_AES_256_GCM_SHA384 etc.)
-- Certificate: same as any TLS endpoint (pubkey alg, size, expiry, chain)
-- No application-level crypto (gRPC carries protobufs above TLS)
-- `grpc-insecure` port 50052: TCP connection accepted without TLS -> classified as `UNKNOWN` or `HTTP` -> triggers `PLAINTEXT_HTTP` or `UNKNOWN_OPEN_PORT` finding
-
-**Expected scanner findings:**
-
-| Port | Protocol | Expected finding | Severity |
-|------|----------|-----------------|----------|
-| 50051 | TLS (ALPN h2) | No finding (good posture with modern.crt) | none |
-| 50051 | TLS | CERT_SELFSIGNED if using self-signed cert | MEDIUM |
-| 50052 | UNKNOWN / HTTP | Plaintext gRPC service on application port | HIGH |
-
-**CBOM:** TLS endpoint on 50051 emits RSA/ECDSA cert component and TLS cipher suite component via existing TLS Pass-1 path. No new protocol handlers needed.
-
-#### BACK-84: Kafka TLS profile
-
-Note: The existing `broker` profile (Phase 33) already includes Kafka on ports 29092 (PLAINTEXT) and 29093 (TLS). BACK-84 refers to a standalone `kafka` profile. The expected behavior below applies to either the standalone profile or the existing broker profile's Kafka TLS listener.
-
-**Expected scanner findings (broker_scanner.py Kafka path):**
-
-| Port | Protocol | Expected finding | Severity |
-|------|----------|-----------------|----------|
-| 9092 | KAFKA-PLAIN | Kafka plaintext listener detected | HIGH |
-| 9093 | KAFKA-TLS | No finding (good TLS posture with modern cert) | none |
-| 9093 | KAFKA-TLS | Weak cipher if TLS_RSA_WITH_* configured | HIGH |
-
-**Observable crypto properties from Kafka TLS:**
-- Kafka TLS is standard TLS over TCP — sslyze probes directly
-- `AdminClient` (kafka-python): `ssl.endpoint.identification.algorithm`, `security.protocol=SSL`
-- Broker certificate: standard X.509 (pubkey alg, size, expiry, chain)
-- TLS version and cipher suite negotiated
-- Plaintext listener on 9092: `KAFKA-PLAIN` protocol label -> `motion_broker_plaintext_count` incremented
-
----
-
-### 5. PQC-Hybrid Scoring Ceiling — BACK-81 Scoring Specification
-
-**Current scoring model:** The `agility_signals` subscore penalizes RSA-only posture and rewards ECDSA adoption. No reward exists for PQC-hybrid key exchange. Maximum `agility_score` = 25 (ceiling is already the reward).
-
-**Target behavior for OQS-nginx profile:** The OQS-nginx endpoint signals PQC-hybrid key exchange. The agility subscore remains at 25 (ceiling) — there is no "super-bonus" above 25. The key insight is:
-
-- Classical "good TLS" (TLS 1.3, ECDSA cert, modern cipher): `agility_score = 25`, overall possible = 100
-- PQC-hybrid TLS: same 25 for agility (ceiling), same overall possible = 100
-
-**The real differentiator is the CBOM output**, not the numeric score. A hybrid TLS endpoint emits a `quantum-safe` KEM component; all classical endpoints emit `quantum-vulnerable` key exchange components.
-
-**Scoring reward path for PQC-hybrid — new evidence key and weight needed:**
-
-```python
-# New evidence key in build_evidence_summary():
-pqc_hybrid_kem_count: int  # endpoints where PQC-hybrid KEM group was detected
-
-# New scoring impact in agility_impacts list:
-("PQC hybrid key exchange detected",
- +_ratio(pqc_hybrid_kem_count, denom) * w["agility_pqc_hybrid_bonus"])
-```
-
-**The scoring ceiling contract:**
-- With PQC hybrid bonus: `agility_score` stays at 25 (already at cap) when no other penalties apply
-- The bonus prevents the agility subscore from dropping below 25 if other penalties are present alongside a PQC-hybrid endpoint — but this is a secondary benefit
-- Primary value: consultant can point to CBOM report and show `quantum-safe` classification for the key exchange algorithm on the PQC-capable endpoint
-
-**Classification mapping (quantum_safety_label) for BACK-81:**
-
-| Scenario | Algorithm | NIST level | quantum_safety_label |
-|----------|-----------|------------|---------------------|
-| Classical RSA-2048 TLS | rsa-2048 | 0 | quantum-vulnerable |
-| Classical ECDSA P-256 TLS | ecdsa | 0 | quantum-vulnerable |
-| TLS 1.3 + X25519 key exchange | x25519 | 0 | quantum-vulnerable |
-| OQS-nginx TLS 1.3 + X25519Kyber768 | ml-kem-768+x25519 | 3 | quantum-safe |
-| ML-KEM-768 standalone | ml-kem-768 | 3 | quantum-safe |
-| AES-256-GCM cipher suite | aes-256-gcm | 1 | quantum-safe (Grover-resistant) |
-
-**OQS-nginx is the scoring ceiling anchor because:**
-- It is the ONLY chaos lab profile where the key exchange algorithm classifies as `quantum-safe`
-- All other profiles use classical RSA/ECDSA/DH/ECDH -> quantum-vulnerable key exchange
-- AES-256 cipher suites are quantum-safe for symmetric encryption, but key exchange vulnerability is the primary PQC concern
-- The "ceiling" is qualitative: the only profile that generates a positive PQC attestation in the CBOM
-
----
-
-### 6. Identity Evidence Keys — BACK-78
-
-**What observable crypto properties feed each identity subscore counter:**
-
-**Kerberos KDC (`identity_weak_etype_count`):**
-- Scanner sends AS-REQ to KDC port 88 (impacket unauthenticated probe)
-- Response contains `ETYPE-INFO2` pre-auth hints listing all supported encryption types
-- Etype severity map: DES (CRITICAL), RC4-HMAC etype 23 (HIGH), AES128-CTS-SHA1 etype 17 (HIGH), AES256-CTS-SHA1 etype 18 (SAFE), AES256-CTS-SHA384 etype 20 (SAFE)
-- Observable: `etype_id` from AS-REQ response -> `service_detail = "etype:{id}:{name}:{severity}"`
-- Counter increments when `severity in ("CRITICAL", "HIGH")`
-- CBOM component: etype algorithm string (e.g., "rc4-hmac" -> `CryptoPrimitive.BLOCK_CIPHER`, nist_level=0)
-
-**SAML SP (`saml_weak_signing_count`):**
-- Scanner fetches SAML IdP metadata URL (HTTP GET, XML response)
-- Extracts `<ds:X509Certificate>` from `<KeyDescriptor use="signing">`
-- Parses cert: `cert_pubkey_alg` (RSA/ECDSA), `cert_pubkey_size` (bits)
-- Observable: RSA key size (1024 -> CRITICAL, < 2048 -> penalized), SHA-1 algorithm URI in `<ds:SignatureMethod Algorithm="...">`
-- Counter increments when `is_weak_cipher(cert_pubkey_alg)` OR `cert_pubkey_size < 2048` OR SHA-1 URI detected
-- CBOM component: "rsa-1024" -> nist_level=0, classical 80-bit
-
-**DNSSEC zone (`dnssec_weak_algo_count`):**
-- Scanner sends authoritative DNS query with DO-bit set to zone's NS
-- Retrieves DNSKEY RRset -> algorithm field (RFC 4034 algorithm numbers)
-- Algorithm map: RSASHA1 (alg 5, MUST NOT per RFC 8624) -> CRITICAL, RSASHA1-NSEC3-SHA1 (alg 7) -> CRITICAL, ECDSAP256SHA256 (alg 13) -> SAFE, NONE (unsigned zone) -> HIGH
-- Observable: DNSKEY algorithm number -> string name -> severity
-- Counter increments when algorithm in `_DNSSEC_WEAK_ALGS` OR `_dnssec_alg == "NONE"`
-- CBOM component: "rsasha1" -> `CryptoPrimitive.PKE`, nist_level=None
-
-**What BACK-78 requires for lab coverage:**
-
-The scoring counters are correct. The lab gap is that the standard scan config does not include identity port targets (88 for Kerberos, SAML metadata URL, DNSSEC zone). Fix is in scan configuration:
-
-- Add `kerberos`, `saml`, `dnssec` profiles to the test scan target list
-- Verify `intelligence-*.json` shows `identity_kerberos_weak_etype_ratio > 0` after scanning `samba-dc` chaos lab
-- Verify `identity_saml_weak_signing_ratio > 0` after scanning `simplesamlphp` chaos lab
-- Verify `identity_dnssec_weak_algo_ratio > 0` after scanning `bind9-dnssec` chaos lab with `weak.example.com` zone
+Features that distinguish QU.I.R.K. in a consulting context against generic API scanners.
+
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| OpenAPI spec analysis produces CBOM components without live traffic | No other lightweight CLI tool emits a CycloneDX CBOM from an OpenAPI spec file. A consultant can run `quirk scan --spec ./openapi.json` against a client's spec before the live scan and have a partial CBOM and finding list to review. "Spec-origin" components in the CBOM carry a clear provenance label. | MEDIUM | `pyyaml` or `jsonschema` parsing; `openapi-spec-validator` (pip-installable) for optional schema validation. No new major dependency needed — httpx already present for live fetching of `/openapi.json`. |
+| Active REST fuzzing for crypto posture — TLS downgrade + header crypto checks — gated by opt-in flag | Sending crafted TLS ClientHello messages to an API endpoint to detect whether it accepts SSLv3/TLS 1.0 is something passive scanning does not catch (TLS scanner already does this for port 443, but API endpoints on non-standard ports or behind load balancers with different TLS termination may have different posture). The key differentiator is the integration: fuzzing results feed the same CBOM + score pipeline, not a separate tool report. | HIGH | Depends on: opt-in `--enable-fuzzing` CLI flag + explicit `--authorize-active-probing` confirmation (mirrors nmap pattern in `maybe_confirm_probe_budget`). sslyze already handles TLS downgrade; the new work is applying it to `cfg.connectors.jwt_targets` (the API endpoint set) with a bounded request budget. |
+| Code signing certificate discovery — CI/CD artifact signing posture | Supply chain crypto posture is an emerging consulting ask (post-SolarWinds, post-Log4Shell). Discovering that a client's artifacts are signed with RSA-1024 or SHA-1 is a HIGH finding that feeds the CBOM and score. Sigstore/cosign (ECDSA P-256) is currently the best practice; ML-DSA hybrid signing is emerging (Trail of Bits / Sigstore cryptographic agility work, published 2026-01). Classifying what a client's pipeline actually uses vs. what NIST recommends is a clear deliverable. | HIGH | Depends on: no single pip-installable library covers all signing formats (Authenticode, GPG, macOS notarization, Sigstore transparency log). Feasibility gate needed per signing format. |
+| Captured bearer token analysis — decode from `Authorization: Bearer` on observed responses | When a consultant runs an authenticated scan and the scanner captures the token sent in the request headers (or extracts it from a provided sample), decoding it (without verification — inventory only) exposes `alg`, `kid`, `iss`, `exp`, `nbf` claims. This is distinct from JWKS (which shows *available* signing keys) — this shows which algorithm was *actually used* for a token in the current session. Quantum-vulnerable algorithm on a live production token is a higher-urgency finding than a JWKS entry for an unused key. | LOW | Depends on: `PyJWT` (already a common transitive dep) or manual base64 decode (no verification needed). Credential must be scrubbed from `CryptoEndpoint.service_detail` via `safe_str()`. |
+
+### Anti-Features (Avoid These)
+
+| Feature | Why Requested | Why Problematic | What to Do Instead |
+|---------|---------------|-----------------|-------------------|
+| Persisted credential store (encrypted vault for scheduled authenticated scans) | Operators want to schedule authenticated scans the same way they schedule unauthenticated ones | QU.I.R.K. is a CLI tool, not a secrets manager. Storing credentials at rest introduces a new attack surface and a security-review scope larger than the entire authenticated-scan feature. PROJECT.md decision: "QU.I.R.K. is never a stored-secret surface to defend." Scheduled authenticated scans are explicitly out of scope for v5.1. | Ephemeral-only: per-run injection via `--bearer-token`, `QUIRK_BEARER_TOKEN` env var, or interactive prompt. Document that scheduled scans remain unauthenticated. |
+| mTLS client certificate injection | Enterprise APIs increasingly require mTLS | mTLS involves managing client key material on disk; same attack-surface objection as persisted credentials. Security review scope expands significantly. | PROJECT.md explicitly defers mTLS to post-v5.1. Accept graceful degradation finding ("mTLS required — unauthenticated path blocked") as a valid inventory result. |
+| Full DAST (dynamic application security testing) mode | Fuzzing is a short hop from "probe cipher suites" to "probe OWASP Top-10 injection vectors" | Scope drift into a full DAST tool changes the product's identity and liability surface. The `--enable-fuzzing` flag must be bounded to *crypto posture* probes only: TLS version negotiation, cipher acceptance, header crypto checks (`Strict-Transport-Security`, `Expect-CT`). Not injection, not auth bypass. | Hard-code the fuzzing probe list. No plugin API. No generic request injection. |
+| Traffic MITM / passive capture mode for token interception | Wireshark-style capture would surface more tokens | Requires elevated OS privileges (raw socket / libpcap), breaks the agentless model, and is scope-equivalent to Zeek — already listed as out of scope in PROJECT.md under "Network traffic capture." | Token interception from `Authorization: Bearer` header on requests *QU.I.R.K. itself sends* (during authenticated scan) is the correct model. Consultant can also provide a captured token via `--analyze-token`. |
+| OpenAPI spec *fuzzing* — generating test inputs from spec to find injection bugs | A logical extension of spec analysis | Moves from crypto-posture inventory into full API security testing. Different scope, different liability. Not the QU.I.R.K. product identity. | OpenAPI analysis scope: securitySchemes extraction, declared algorithm classification, endpoint count per scheme, missing-auth endpoint flagging. No request generation. |
+| OAuth2 client credentials flow (full token acquisition) | Deeper authenticated scanning if scanner can fetch its own tokens | Requires storing `client_secret`; conflicts with the ephemeral-only credential decision. Full OAuth2 flow also means the scanner becomes an OAuth client — adds complexity and security review scope. | Accept Bearer tokens the operator provides (already acquired outside QU.I.R.K.). Emit a finding if the JWKS endpoint's algorithm is quantum-vulnerable. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-EVIDENCE-TALLY-01 (evidence.py fix)
-    must precede RENDER-CLI-01 / RENDER-PDF-01 (render audit)
-    (auditing renderers against wrong scores is meaningless)
+BACK-64: Authenticated credential model (ephemeral)
+    └──enables──> BACK-11: Bearer token capture & classify
+                      └──feeds──> CBOM Pass-1 (JWT-TOKEN protocol components)
+                      └──feeds──> agility subscore (via finding_severity_counts)
+    └──enables──> BACK-09: Active REST fuzzing (crypto probes only)
+                      └──requires──> maybe_confirm_probe_budget gate (existing)
+                      └──requires──> --enable-fuzzing opt-in flag
+                      └──feeds──> CBOM + score (same pipeline)
+    └──enables──> (future) Deeper Kerberos LDAP bind, SSH sshd_config inspect
 
-OBS-1 CBOM Pass-1 fix
-    must precede new chaos lab profile oracle entries
-    (oracle assumes correct CBOM output)
+BACK-10: OpenAPI/Swagger spec analysis
+    └──independent of BACK-64 (passive, no credentials needed)
+    └──feeds──> CBOM Pass-1 (spec-origin algorithm components)
+    └──feeds──> agility subscore
+    └──enhances──> BACK-11 (spec declares expected alg; token analysis validates actual alg matches)
 
-BACK-80 postgres-tls / redis-tls
-    independent of BACK-81 OQS-nginx
-
-BACK-81 OQS-nginx PQC scoring reward
-    requires: classifier entry ml-kem-768+x25519 (already exists at classifier.py:157)
-    requires: evidence.py new pqc_hybrid_kem_count counter
-    requires: scoring.py new agility_pqc_hybrid_bonus weight
-
-BACK-78 identity lab targets
-    independent of other chaos lab profiles
-    requires: chaos lab kerberos/saml/dnssec profiles running (already exist)
-
-BACK-81 / BACK-80 / BACK-82 / BACK-83 / BACK-84
-    each requires: docker-compose.yml update + lab.sh ALL_PROFILES update
-                   + expected_results_v4.md oracle entry
+BACK-24: Code signing cert inventory
+    └──partially independent of BACK-64 (some formats are public: Sigstore transparency log, npm registry sigs)
+    └──partially depends on BACK-64 (CI/CD API auth to fetch signing metadata from private registries)
+    └──feeds──> CBOM Pass-1 (new CODESIGN protocol family)
+    └──feeds──> agility subscore
 ```
 
 ### Dependency Notes
 
-- EVIDENCE-TALLY-01 before render audit: If subscores are still wrong, auditing the render path against them is circular. Fix the tally first, confirm correct values in intelligence JSON, then confirm renderers faithfully pass those values through.
-- OBS-1 before new profile oracles: The new chaos lab profiles need CBOM oracle entries. Those entries assume the CBOM builder correctly emits algo components. Fixing OBS-1 first ensures the oracle reflects correct behavior.
-- PQC hybrid scorer requires new evidence key: `agility_pqc_hybrid_bonus` requires `pqc_hybrid_kem_count` in the evidence dict, which requires `build_evidence_summary()` to detect PQC-hybrid KEM groups from TLS scanner output.
+- **BACK-64 is foundational but BACK-10 is independent:** OpenAPI spec analysis (passive, static) can be implemented and tested entirely without credentials. This means BACK-10 can be a standalone earlier phase while BACK-64 is being designed and security-reviewed.
+- **BACK-11 depends on BACK-64 for the "authenticated call captures token" path** but has a second independent input path: `--analyze-token <token>` (analyst provides a captured token directly). This second path also does not require BACK-64.
+- **BACK-09 (active fuzzing) is the hardest dependency:** it requires BACK-64 (to test authenticated endpoints) and the probe-budget gate. It also requires a security-review gate on what probes are in scope (crypto-only, no injection).
+- **BACK-24 (code signing) has the fewest integration dependencies** of any of the five features — it reads X.509 certificate properties from signing artifacts and classifies them through the existing classifier. The complexity is surface discovery (what signing formats to support), not integration.
 
 ---
 
-## MVP Definition
+## Per-Feature Expected Behavior
 
-### Ship in v5.0 (table-stakes gap closure)
+### BACK-64: Authenticated Scan Mode — Ephemeral Credential Handling
 
-- [ ] EVIDENCE-TALLY-01 — fix the three subscores that stay at 25 with findings present; write targeted test per counter
-- [ ] RENDER-CLI-01 / RENDER-PDF-01 — audit CLI/HTML/PDF render paths; confirm no scale mismatch; add labels if subscores are surfaced
-- [ ] OBS-1 CBOM Pass-1 — 5 profiles must emit >= 1 non-unknown algo component; add missing algorithm table entries and scanner field population
-- [ ] BACK-80 postgres-tls + redis-tls — new `db-tls` chaos lab profile; expected_results oracle; scanner verification
-- [ ] BACK-81 OQS-nginx PQC-hybrid — `pqc` chaos lab profile; PQC-hybrid KEM evidence key; agility scoring reward; CBOM quantum-safe classification
-- [ ] BACK-82 SMTP/STARTTLS — verify existing email profile satisfies this or add standalone postfix-starttls variant
-- [ ] BACK-83 gRPC TLS — `grpc` chaos lab profile; verify sslyze ALPN h2 probe works; expected_results oracle
-- [ ] BACK-84 Kafka TLS — verify existing broker profile covers this or add standalone `kafka` profile
-- [ ] BACK-78 identity evidence keys — scan config includes identity port targets; integration test verifies ratios > 0 after chaos lab scan
+**How it works in comparable tools:** Veracode API scanning, Acunetix, StackHawk all support per-scan credential injection via Authorization header or API key header. Credentials are provided at scan launch, held in memory for the scan's duration, and not persisted. All three tools mask credentials in logs.
 
-### Add After Validation (v5.x)
+**Credential types for v5.1:**
 
-- [ ] BACK-63 score transparency — surface subscores in CLI scorecard and HTML report (labeled `/25`)
-- [ ] BACK-58 JWT verify=False documentation — operator advisory, not a code fix
+| Type | Injection method | HTTP wire format | Scanner use |
+|------|-----------------|-----------------|-------------|
+| Bearer / OAuth2 access token | `--bearer-token TOKEN` or `QUIRK_BEARER_TOKEN` env var or interactive prompt | `Authorization: Bearer <token>` | JWT scanner authenticated path; REST fuzzing; spec validation |
+| API key (header) | `--api-key-header "X-Api-Key: <val>"` or env var | Custom header name:value | REST fuzzing; spec validation |
+| API key (query param) | `--api-key-query "api_key=<val>"` or env var | URL query string (TLS only) | REST fuzzing |
+| HTTP Basic | `--basic-auth user:pass` or env var | `Authorization: Basic <b64>` | REST fuzzing; some identity endpoints |
 
-### Future Consideration (v5.1+)
+**What deeper findings authentication unlocks vs. unauthenticated:**
 
-- [ ] Score-engine redesign (0–100 subscores, weighted average) — deferred explicitly in v4.10.1-D-04
-- [ ] Authenticated scan mode (BACK-64) — HORIZON.md Candidate A for v5.1
+| Finding | Unauthenticated | Authenticated |
+|---------|----------------|---------------|
+| JWKS key algorithm | Available (passive JWKS fetch) | Same, plus token-in-use validation |
+| Actual token algorithm (`alg` claim) | Not available | Available via `Authorization: Bearer` capture on authenticated responses |
+| Token expiry policy (`exp` absent) | Not available | Available via token decode |
+| OpenAPI declared algorithm vs. actual | Spec analysis only (no validation) | Spec + live token comparison |
+| Endpoints requiring auth (403 vs. 200) | Not classified | Authenticated: reachable, unauthenticated: access-denied finding |
+| TLS posture of authenticated API endpoints | Partially available (TLS scanner covers the host, but may not cover the specific API port) | Confirmed for the exact endpoint URL under test |
+
+**Security invariants (non-negotiable for the security-review gate):**
+
+1. Credentials MUST NOT appear in `CryptoEndpoint.service_detail`, `scan_error_category`, or log output. `safe_str()` wraps every exception on credentialed code paths.
+2. Credentials MUST NOT be written to the SQLite database (the `jwt_scan_json` column stores key material from JWKS, not operator-provided credentials).
+3. Credentials MUST NOT appear in the HTML/PDF/CBOM report. The report may reference "authenticated scan" but never the credential value.
+4. `safe_str()` AST gate already enforces (1) for scan_error writes. The v5.1 security-review gate should extend this to `service_detail` writes in the JWT scanner and any new authenticated scanner.
+5. Credentials exist in Python process memory only for the duration of `_wrapped_phase()`. No pickling, no serialization.
+
+### BACK-10: OpenAPI/Swagger Spec Analysis — Crypto Signal
+
+**What crypto-relevant signal lives in a spec:**
+
+| Signal | Location in spec | Finding to emit |
+|--------|-----------------|-----------------|
+| `securitySchemes[].type = "http", scheme = "bearer", bearerFormat = "JWT"` | `components/securitySchemes` | CBOM component for JWT algorithm if bearerFormat specifies one (e.g., `bearerFormat: RS256`). No finding if bearerFormat is absent (informational note only). |
+| `securitySchemes[].type = "oauth2", flows.*.tokenUrl` | `components/securitySchemes` | OAuth2 flow declared; token endpoint URL captured for follow-up live probe. No crypto finding without token algorithm data. |
+| `securitySchemes[].type = "apiKey"` | `components/securitySchemes` | API key scheme declared; HIGH finding if `in: query` (credentials in URL, logged by proxy/CDN). |
+| `securitySchemes[].type = "http", scheme = "basic"` | `components/securitySchemes` | MEDIUM finding — Basic auth is quantum-irrelevant but transmits credentials base64-only; flagged as weak authentication scheme if TLS is not confirmed. |
+| Endpoints with no `security` declaration and no global `security` | `paths[*][method].security = []` | MEDIUM finding "Unauthenticated endpoint declared in spec" — quantum-irrelevant but API surface hygiene. |
+| Declared TLS servers (`servers[].url` scheme = `https` vs `http`) | `servers[]` | HIGH finding if any server URL uses `http://`. |
+| `securitySchemes` that reference deprecated OIDC parameters | `components/securitySchemes` | LOW/MEDIUM if discoverable, but usually too API-specific to classify without live scanning. |
+
+**Spec sources to support:**
+1. Local file path (`--spec ./openapi.yaml` or `--spec ./swagger.json`)
+2. Well-known URL auto-fetch: `/openapi.json`, `/openapi.yaml`, `/swagger.json`, `/swagger/v1/swagger.json`, `/v2/api-docs` (Spring Boot)
+3. No authentication required for spec fetch path (specs should be publicly accessible; authenticated spec fetch is a v5.2+ concern)
+
+**CBOM integration:** Spec-declared algorithms emit `CryptoPrimitive` components with `source_type="spec"` provenance. These are marked clearly in the CBOM as "spec-declared, not live-verified" to distinguish from scanner-observed components.
+
+### BACK-11: Bearer Token Interception and Analysis
+
+**Two input paths:**
+
+1. **Captured from authenticated scan:** During an authenticated REST scan (`--bearer-token TOKEN`), QU.I.R.K. sends the token in the Authorization header. The scanner inspects the token it is about to send (decode-only, no verification) and emits a finding for the decoded `alg`.
+2. **Analyst-provided sample:** `--analyze-token <base64url_or_raw_jwt>` decodes and classifies a token the analyst captured externally. This path has zero dependencies on BACK-64.
+
+**What to extract and classify:**
+
+| Claim | Extraction | Finding |
+|-------|-----------|---------|
+| `alg` header | `header.alg` (JOSE header, base64url decode part 0) | Classify against `_ALGORITHM_TABLE`. RS256/RS384/RS512/ES256/ES384/PS256 → quantum-vulnerable HIGH. HS256/HS384/HS512 → quantum-vulnerable MEDIUM (symmetric, Grover halves strength, but 256-bit HS256 key retains 128-bit quantum security — note complexity). `none` alg → CRITICAL. Unknown alg → MEDIUM (quantum-unknown). |
+| `exp` payload claim | `payload.exp` (Unix timestamp) | Absent `exp` → HIGH "No expiry policy declared." Expired token → MEDIUM "Token used past expiry." Far-future `exp` (> 30 days) → LOW "Long-lived token." |
+| `iss` payload claim | `payload.iss` | Informational only — identifies the issuing authority for the CBOM component. |
+| `kid` header claim | `header.kid` | Cross-reference with JWKS scan: does the `kid` appear in the JWKS? Informational. |
+| Key size | Not available from token alone (key size comes from JWKS `n` modulus) | If JWKS scanner has already run, join on `kid` to get key size. |
+
+**CBOM integration:** Token-observed algorithms emit `CryptoPrimitive` components with `protocol="JWT-TOKEN"` (distinct from `protocol="JWT"` used for JWKS keys). This preserves the distinction between "algorithm available in JWKS" and "algorithm observed in a live token."
+
+**Quantum-safety classification:**
+- RS256 (RSA-2048 signature): NIST level 0 (quantum-vulnerable). Current `_ALGORITHM_TABLE` may not have `rs256` as a key — needs addition.
+- ES256 (ECDSA P-256): NIST level 0 (quantum-vulnerable). Shor's algorithm breaks discrete log on elliptic curves.
+- HS256 (HMAC-SHA256): NIST level 0 by convention in the table (symmetric Grover), but pragmatically 128-bit post-quantum with a 256-bit key. Emit MEDIUM not HIGH for HS256.
+- `none`: CRITICAL (no signature).
+- ML-DSA-44/65/87 (FIPS 204): NIST level 2/3/5 — quantum-safe. Not yet common in JWT but appears in emerging JOSE proposals.
+
+### BACK-09: Active REST Fuzzing for Crypto Posture
+
+**What "crypto fuzzing" means in this context (bounded scope):**
+
+This is NOT generic API fuzzing (no injection, no parameter mutation). It is *crypto posture probing* — sending crafted requests to determine the API endpoint's cryptographic configuration. Specifically:
+
+| Probe type | What it checks | Risk level |
+|-----------|---------------|-----------|
+| TLS downgrade probe | Send ClientHello advertising only SSLv3/TLS1.0/TLS1.1 to the API endpoint's host:port. Does the server accept? | LOW — same traffic sslyze already sends to port 443. New: applies to API endpoint URLs. |
+| Weak cipher acceptance | Offer only RC4/3DES/EXPORT cipher suites. Does the server negotiate? | LOW — same as TLS scanner. New: targeted at JWT endpoint URLs. |
+| `Strict-Transport-Security` header check | Is HSTS present on authenticated API responses? Max-age sufficient (>=31536000)? | ZERO traffic — header inspection on responses already received. |
+| `Expect-CT` / `Public-Key-Pins` (deprecated check) | Informational only — flag if HPKP present (deprecated, conflict risk). | ZERO traffic — header inspection. |
+| HTTP vs HTTPS credential transmission | Does the endpoint accept `Authorization: Bearer <token>` over plaintext HTTP? | LOW — single probe request, token is test-only or operator-provided. |
+| Algorithm downgrade (JWT `alg: none` acceptance) | Send a request with a crafted JWT where `alg` is `none`. Does the API accept it? | MEDIUM — this is an active exploit probe, not passive. Must be explicitly opt-in. |
+
+**Gate structure (mirrors nmap probe budget):**
+
+```
+--enable-fuzzing flag required (default: off)
+    --> on first use: TTY prompt "Fuzzing sends crafted traffic to target systems.
+        Confirm you have authorization to test [targets]? [y/N]:"
+    --> non-TTY: stderr warning + auto-proceed (mirrors maybe_confirm_probe_budget)
+--> per-target probe budget cap: default 50 probes (TLS + header checks per endpoint)
+    --> --max-fuzzing-probes N override (CLI only, not in config)
+```
+
+**The `alg: none` probe is the sharpest edge:** It sends a crafted request that bypasses signature verification if the server is vulnerable. It is technically an exploit attempt. Recommendation: gate this probe behind a separate `--enable-none-alg-probe` flag in addition to `--enable-fuzzing`. Emit a CRITICAL finding if the server accepts it.
+
+**Findings emitted by fuzzing:**
+
+| Finding | Severity | Category |
+|---------|---------|---------|
+| API endpoint accepts SSLv3/TLS1.0 | HIGH | TLS-version weakness |
+| API endpoint accepts RC4/3DES/EXPORT cipher | HIGH | Weak cipher |
+| HSTS absent on authenticated API endpoint | MEDIUM | Transport security header |
+| Bearer token transmitted over plaintext HTTP | CRITICAL | Credential exposure |
+| API accepts `alg: none` JWT | CRITICAL | Auth bypass (opt-in probe only) |
+
+**Safety expectations for consulting use against client networks:**
+- Default off. Consultant must explicitly opt in per-run.
+- Authorization check is the consultant's responsibility; QUIRK cannot verify it. The TTY prompt records that the operator confirmed.
+- Probe budget cap prevents runaway scanning.
+- Fuzzing findings carry a `source="active-fuzzing"` tag in the CBOM to distinguish them from passive findings — client CBOM must clearly show which components were confirmed by active probing.
+
+### BACK-24: Code Signing Certificate Inventory
+
+**What code-signing certs to discover:**
+
+| Source | Discovery method | Availability |
+|--------|-----------------|-------------|
+| Sigstore/Cosign transparency log (Rekor) | Query `rekor.sigstore.dev` API for entries by artifact hash or repo name | PUBLIC API — no auth required |
+| npm package signatures | Registry API `registry.npmjs.org/<pkg>` — `dist.signatures[]` field | PUBLIC — no auth |
+| PyPI PGP signatures | `pypi.org/simple/<pkg>/` — `.asc` files (deprecated) or attestation API (PEP 740) | PUBLIC — no auth |
+| GitHub release assets (`.sig`, `.asc`, `.pem` attachments) | GitHub API `repos/{owner}/{repo}/releases` | PUBLIC repos — no auth; private repos need BACK-64 |
+| macOS notarization | Apple notarization service (requires Apple ID) | NOT agentless — skip |
+| Windows Authenticode | PE binary inspection locally or via NuGet/Chocolatey API | MEDIUM complexity — requires binary download |
+| Maven Central artifact signing | Maven Central API search | PUBLIC — no auth |
+
+**Classification of code-signing certs:**
+
+Use the existing `cryptography` library (already a core dep via sslyze/paramiko):
+- Extract `cert.signature_hash_algorithm.name` → map to `_ALGORITHM_TABLE`
+- Extract `cert.public_key()` type and size (RSA key size, EC curve)
+- Check `not_valid_after` — expired signing cert is a MEDIUM finding (historical artifacts signed with it may be unverifiable)
+- Check extended key usage — must include `codeSigning` OID (`1.3.6.1.5.5.7.3.3`)
+
+**Findings:**
+
+| Finding | Severity |
+|---------|---------|
+| Code signing cert uses RSA < 2048 bits | HIGH |
+| Code signing cert uses SHA-1 signature hash | HIGH |
+| Code signing cert uses RSA (any size) — quantum-vulnerable | MEDIUM (informational: all RSA is quantum-vulnerable, not an immediate risk) |
+| Code signing cert expired | MEDIUM |
+| No code signing evidence found for target repo/package | LOW (coverage gap advisory) |
+| Sigstore/Cosign used with ECDSA P-256 | SAFE — informational, no finding |
+
+**CBOM integration:** Emit `CryptoPrimitive.SIGNATURE` components with `protocol="CODESIGN"`, `service_detail` indicating the source (Sigstore/npm/PyPI/GitHub). This is a new protocol family requiring `classifier.py` entries and `builder.py` Pass-1 handling.
+
+**Complexity note:** Supporting all signing surfaces is HIGH complexity. Recommend phasing: (1) Sigstore transparency log + npm signatures (public, low-effort) in v5.1; (2) Authenticode + Maven in v5.2 or backlog.
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| EVIDENCE-TALLY-01 (score correctness) | HIGH — false-positive "clean" scores destroy trust | MEDIUM | P1 |
-| BACK-81 OQS-nginx PQC scoring ceiling | HIGH — strategic centerpiece; only PQC-positive profile | HIGH | P1 |
-| OBS-1 CBOM Pass-1 fix | HIGH — incomplete CBOM = incomplete deliverable | MEDIUM | P1 |
-| BACK-80 postgres-tls / redis-tls | MEDIUM — closes lab gap; validates DB TLS scanning | MEDIUM | P1 |
-| RENDER-CLI-01 / RENDER-PDF-01 audit | MEDIUM — confirm no bug; low risk if confirmed clean | LOW | P1 |
-| BACK-83 gRPC TLS | MEDIUM — validates HTTP/2 ALPN TLS probing | MEDIUM | P2 |
-| BACK-84 Kafka TLS | MEDIUM — closes broker lab picture | MEDIUM | P2 |
-| BACK-78 identity evidence keys | MEDIUM — integration test correctness | LOW | P2 |
-| BACK-82 SMTP/STARTTLS | LOW — existing email profile may cover this; verify first | LOW | P2 |
-| BACK-63 score transparency | LOW — nice-to-have visibility improvement | LOW | P3 |
+| Feature (BACK#) | Consulting Value | Implementation Cost | Priority | Phase order |
+|----------------|-----------------|--------------------|---------|-----------| 
+| BACK-64: Authenticated credential model | HIGH — nothing else works without it | MEDIUM — but security-review gated | P1 | Phase 93 — first |
+| BACK-10: OpenAPI spec analysis | HIGH — passive, works on any engagement | LOW–MEDIUM — no credential dependency | P1 | Phase 94 — can parallel BACK-64 |
+| BACK-11: Bearer token classify | HIGH — closes gap between JWKS and live token | LOW — BACK-64 enhances it but `--analyze-token` path is standalone | P1 | Phase 95 — after BACK-64 |
+| BACK-09: Active fuzzing | HIGH for engagements where client authorizes active probing | HIGH — opt-in gating, probe budget, security review | P2 | Phase 96 — after BACK-64 and security review |
+| BACK-24: Code signing (Sigstore + npm slice only) | MEDIUM — supply chain ask is growing but niche for current user base | HIGH — multiple source formats, new protocol family | P2 | Phase 97 — partially independent |
+
+---
+
+## MVP Definition for v5.1
+
+### Build First (Required for Milestone)
+
+- BACK-64: Ephemeral credential model — Bearer token, API key (header), HTTP Basic. `safe_str()` on all exception paths. Security-review gate as a Phase 93 deliverable.
+- BACK-10: OpenAPI spec analysis — `securitySchemes` extraction, `servers[]` HTTP detection, unauthenticated endpoint flagging, CBOM `spec-origin` components. Local file + well-known URL auto-fetch.
+- BACK-11: Bearer token decode and classify — `--analyze-token` path (standalone) + authenticated-scan capture path. `alg` + `exp` + quantum-safety. CBOM `JWT-TOKEN` components.
+
+### Add After Core Works
+
+- BACK-09: Active REST fuzzing — TLS downgrade + cipher acceptance + HSTS check. Gate: `--enable-fuzzing` + TTY confirm. `alg: none` probe behind separate sub-flag.
+- BACK-24: Code signing inventory — Sigstore + npm slice only. Defer Authenticode/Maven.
+
+### Defer to Backlog
+
+- BACK-24 full surface (Authenticode, Maven, macOS notarization): complexity exceeds consulting value in v5.1 timeframe.
+- OAuth2 client credentials token acquisition: conflicts with ephemeral-only credential decision.
+- mTLS client cert injection: explicitly deferred in PROJECT.md.
+- Authenticated scheduled scans: explicitly excluded from ephemeral credential model.
+
+---
+
+## Existing Integration Seams (Where New Code Attaches)
+
+| New capability | Attaches to | How |
+|---------------|-------------|-----|
+| Credential injection | `quirk/config.py` — new `[credentials]` config section; `quirk/cli/` — new CLI flags parsed before `_run_jwt_phase` | Pass `credentials: CredentialsCfg` into `_run_jwt_phase` and new scanner phases |
+| OpenAPI spec analysis | New `quirk/scanner/openapi_scanner.py` → `_wrapped_phase` in `run_scan.py` | Emits `CryptoEndpoint` with `protocol="OPENAPI-SPEC"` |
+| Bearer token classify | `quirk/scanner/jwt_scanner.py` — extend `scan_jwt_endpoint` with `auth_token=` kwarg OR new `quirk/scanner/token_analyzer.py` | Emits `CryptoEndpoint` with `protocol="JWT-TOKEN"` |
+| Active fuzzing | New `quirk/scanner/api_fuzzer.py` → `_wrapped_phase` in `run_scan.py` | Emits `CryptoEndpoint` with `protocol="API-FUZZ"`, `source="active-fuzzing"` |
+| Code signing | New `quirk/scanner/codesign_scanner.py` → `_wrapped_phase` in `run_scan.py` | Emits `CryptoEndpoint` with `protocol="CODESIGN"` |
+| CBOM Pass-1 | `quirk/cbom/builder.py` — add protocol handling for `OPENAPI-SPEC`, `JWT-TOKEN`, `API-FUZZ`, `CODESIGN` | Follows same `if ep.protocol == "X": ...` pattern as existing passes |
+| CBOM Pass-2/3 skip-lists | `quirk/cbom/builder.py` — `MOTION_PLAINTEXT_PROTOCOLS` / `DAR_SKIP_PROTOCOLS` pattern | Add `API_SKIP_PROTOCOLS` frozenset for non-algorithm endpoint types |
+| Scoring | `quirk/intelligence/scoring.py` — new `api_*` evidence counters or reuse `agility_high_impact_ratio` via `finding_severity_counts` | Simplest path: HIGH/CRITICAL API findings flow through existing `agility_high_impact_ratio`; new `api_weak_jwt_ratio` weight if a separate pillar is desired |
+| Dashboard | `quirk/dashboard/api/routes/scan.py` + React — new `api_findings` field on `/api/scan/latest` Pydantic model | Mirrors `identity_findings`, `motion_findings` pattern |
+
+---
+
+## Chaos Lab Requirements
+
+Each new scanner family needs a chaos lab profile for CI validation:
+
+| Profile name | What it exercises |
+|-------------|-----------------|
+| `openapi-spec` | Flask/FastAPI container serving `/openapi.json` with `securitySchemes` declaring RS256 bearer + HTTP apiKey; one endpoint with no `security` |
+| `jwt-weak` | Token endpoint returning JWTs signed with RS256/ES256; JWKS at `/.well-known/jwks.json` (already partially covered by existing `jwt` profile — verify coverage) |
+| `api-fuzz` | TLS server accepting TLS 1.0, weak ciphers; HSTS absent; for fuzzing probe validation |
+| `codesign` | Not a Docker service — use fixture files (sample X.509 certs with RSA-1024, SHA-1, and ECDSA P-256 extended key usage `codeSigning`) |
 
 ---
 
 ## Sources
 
-- `quirk/intelligence/evidence.py` — `build_evidence_summary()` counter logic, all protocol branches (direct inspection)
-- `quirk/intelligence/scoring.py` — `compute_readiness_score()`, `SCORE_WEIGHTS`, subscore penalty paths (direct inspection)
-- `quirk/reports/writer.py` — score dict construction, `_scorecard_markdown()`, `render_html_report()` call (direct inspection)
-- `quirk/reports/html_renderer.py` — `_score_band()`, `total_score = score.get("total", 0)`, no subscore display (direct inspection)
-- `quirk/cbom/classifier.py` — `_ALGORITHM_TABLE` entries including `ml-kem-768+x25519` at nist_level=3 (direct inspection)
-- `quirk/cbom/builder.py` — Pass-1 algo registration per protocol; CONTAINER, SOURCE, S3 branches missing DAR protocols (direct inspection)
-- `quantum-chaos-enterprise-lab/expected_results_v4.md` — existing profile oracle entries confirming current coverage
-- `quantum-chaos-enterprise-lab/docker-compose.yml` — existing service/port assignments
-- `.planning/ROADMAP.md` BACK-78, BACK-80, BACK-81, BACK-82, BACK-83, BACK-84 descriptions
-- `.planning/PROJECT.md` — v5.0 milestone scope, v4.10.1 deferred requirements, scoring decisions log
-- `.planning/milestones/v4.10.1-REQUIREMENTS.md` — EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01 deferred requirements text
-- `.planning/HORIZON.md` — v5.0 theme, done-when criteria, <=6 phases guardrail
+- Direct code inspection: `quirk/scanner/jwt_scanner.py`, `quirk/intelligence/scoring.py`, `quirk/cbom/classifier.py`, `quirk/util/targets.py`, `run_scan.py`, `quirk/config.py`
+- `.planning/ROADMAP.md` BACK-09, BACK-10, BACK-11, BACK-24, BACK-64 descriptions
+- `.planning/HORIZON.md` Candidate A rationale
+- `.planning/PROJECT.md` v5.1 milestone scoping and key decisions
+- [Veracode API Scanning Authentication Methods](https://docs.veracode.com/r/API_Scanning_Authentication_Methods) — MEDIUM confidence (industry norm confirmation)
+- [Swagger Bearer Authentication docs](https://swagger.io/docs/specification/v3_0/authentication/bearer-authentication/) — HIGH confidence (spec)
+- [OpenAPI Security specification](https://learn.openapis.org/specification/security.html) — HIGH confidence (spec)
+- [Trail of Bits: Building cryptographic agility into Sigstore](https://blog.trailofbits.com/2026/01/29/building-cryptographic-agility-into-sigstore/) — HIGH confidence (authoritative, 2026-01)
+- [Venari Security: Post-Quantum JWT](https://www.venarisecurity.com/post-quantum-jwt-security/) — MEDIUM confidence (current analysis)
+- [WuppieFuzz: REST API Fuzzing](https://arxiv.org/pdf/2512.15554) — MEDIUM confidence (academic, fuzzing scope reference)
 
 ---
-
-*Feature research for: QU.I.R.K. v5.0 Stabilization — gap closure behavior specifications*
+*Feature research for: QU.I.R.K. v5.1 Authenticated Scanning + API Surface Depth*
 *Researched: 2026-05-22*

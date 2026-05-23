@@ -1,578 +1,646 @@
-# Architecture Research
+# Architecture Research — v5.1 Authenticated Scanning + API Surface Depth
 
-**Domain:** QU.I.R.K. v5.0 Stabilization — Integration Points
+**Domain:** Integration architecture for ephemeral credential model + API crypto analysis
 **Researched:** 2026-05-22
-**Confidence:** HIGH (all findings verified against live codebase)
+**Confidence:** HIGH (direct codebase inspection; all integration points verified against live source)
 
 ---
 
-## v5.0 Integration Map
-
-### System Overview (existing data flow, unchanged by v5.0)
+## System Overview
 
 ```
-run_scan.py (orchestrator)
-  └─ _wrapped_phase() ──► scanner modules (quirk/scanner/*.py)
-                               │
-                               ▼
-                        CryptoEndpoint rows (SQLite via quirk/models.py)
-                               │
-                    ┌──────────┼──────────┐
-                    ▼          ▼          ▼
-            evidence.py    cbom/         reports/
-            (build_evidence  builder.py  writer.py
-             _summary)        │          ├─ executive.py
-                    │         ▼          ├─ html_renderer.py (+ Playwright PDF)
-                    ▼     cbom/          └─ technical.py
-              scoring.py  writer.py
-              (compute_
-               readiness_
-               score)
-                    │
-                    ▼
-           intelligence JSON
-           + HTML/PDF reports
-           + CLI summary table
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           run_scan.py (orchestrator)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │  _wrapped_   │  │  _wrapped_   │  │  _wrapped_   │  │  _wrapped_   │    │
+│  │  phase(...)  │  │  phase(...)  │  │  phase(...)  │  │  phase(...)  │    │
+│  │  jwt_scanner │  │  openapi_    │  │  codesign_   │  │  rest_fuzzer │    │
+│  │  (extended)  │  │  scanner     │  │  scanner     │  │  (gated)     │    │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
+│         │                 │                  │                  │            │
+│  ┌──────┴─────────────────┴──────────────────┴──────────────────┴────────┐  │
+│  │         CredentialContext (in-memory only, never persisted)            │  │
+│  │         captured in lambda closure at each _wrapped_phase call site    │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────┬──────────────────────────────────────────────────────┘
+                       │  List[CryptoEndpoint]
+          ┌────────────▼──────────────────────────┐
+          │         evidence.py / scoring.py        │
+          │  _PROTOCOL_KEYS extended               │
+          │  api_weak_alg_count, codesign_weak_count│
+          │  agility_signals subscore extended      │
+          └────────────┬──────────────────────────┘
+                       │
+          ┌────────────▼──────────────────────────┐
+          │         cbom/builder.py                 │
+          │  Pass-1: OPENAPI/CODE_SIGN/REST_FUZZ   │
+          │  Pass-2/3: no skip-list changes needed  │
+          └────────────┬──────────────────────────┘
+                       │
+          ┌────────────▼──────────────────────────┐
+          │         SQLite (quirk.db)               │
+          │  openapi_scan_json, codesign_scan_json  │
+          │  NO credential data ever written        │
+          └───────────────────────────────────────┘
 ```
 
-React dashboard reads from FastAPI (quirk/dashboard/server.py) which calls
-`build_evidence_summary` + `compute_readiness_score` at request time from the
-stored endpoints. **The scoring path runs twice per scan: once at scan-completion
-time in writer.py, and once at dashboard-request time in server.py.**
-
 ---
 
-## 1. Scoring Fixes — Exact Files and Blast Radius
+## Q1 — Ephemeral Credential Model: Where It Lives and How It Flows
 
-### EVIDENCE-TALLY-01
+### Design Decision: `CredentialContext` Dataclass in `quirk/util/credentials.py`
 
-**Root cause (verified):** `quirk/intelligence/scoring.py` derives three
-subscores from evidence counters that do NOT flow from `finding_severity_counts`:
+The cleanest abstraction is a single module-level dataclass that is constructed
+once at scan startup from CLI flags / environment variables / a one-time TTY prompt,
+then threaded through `run_scan.py` as a plain object — never serialised, never
+persisted, never written to SQLite, logs, CBOM, or error strings.
 
-- **Hygiene subscore** (lines 177-182) — uses `plaintext_http_count`,
-  `http_on_tls_port_count`, `scan_error_rate` only. A scan with zero plaintext
-  HTTP and zero scan errors scores 25 regardless of HIGH/CRITICAL findings.
-- **Modern TLS subscore** (lines 184-189) — uses `legacy_tls_count =
-  sev.get("LOW", 0)` (maps LOWs, not HIGHs/CRITICALs) and `unknown_count`.
-  A scan with only HIGH/CRITICAL findings and no LOW findings scores 25.
-- **Data at Rest subscore** (lines 220-229) — uses `dar_*` protocol-specific
-  counters only. If no database/storage/k8s/vault endpoints are scanned, all
-  `dar_*` counters are 0 and the subscore is 25.
-
-**Blast radius:** `quirk/intelligence/scoring.py` only. The penalty model
-(`SCORE_WEIGHTS`, `_apply_weighted_impacts`) is not the issue — the per-subscore
-evidence reads are. Fix options:
-- Add a cross-cutting `high_critical_penalty` to hygiene/modern_tls/dar impacts
-  weighted against `finding_severity_counts["HIGH"] + ["CRITICAL"]`, OR
-- Document that 25/25 on these subscores is semantically correct ("no evidence
-  of weakness in this category") and close EVIDENCE-TALLY-01 as won't-fix with
-  rationale. Decide which position to take in requirements scoping.
-- If adding the cross-cutting penalty: only `scoring.py` changes; `evidence.py`
-  already emits `finding_severity_counts` so no evidence changes needed.
-- `tests/test_score_weights_invariant.py` must be updated if any `SCORE_WEIGHTS`
-  keys change (CI gate). No other files change.
-
-### RENDER-CLI-01 and RENDER-PDF-01
-
-**Root cause (verified):** `quirk/reports/writer.py` (lines 166-170) creates a
-`score` dict with `"total": score_raw["score"]` — this is the already-normalized
-0-100 value from `scoring.py`. Then `html_renderer.py` (line 165) reads
-`score.get("total", 0)` and passes it to `_score_band()` which uses the same
-85/70/55/35 thresholds as `scoring._rating()`. The CLI summary table (writer.py
-line 275) renders `total_score/100`.
-
-**Verdict:** The scale mismatch that plagued the dashboard (subscores at 25 fed
-to a gauge expecting 0-100) does NOT exist in the CLI/HTML/PDF path. The `total`
-key already holds the normalized 0-100 value. RENDER-CLI-01 / RENDER-PDF-01 may
-be a false alarm — or they may describe a different issue (e.g., subscores in
-the HTML template). The HTML template (`report.html.j2`) does NOT currently
-render subscores, only `total_score`. The `score.get("subscores")` dict is
-passed through to `intelligence.json` but not used in the template.
-
-**Action for v5.0:** Verify empirically. The audit should scan a test target,
-compare CLI output vs dashboard vs HTML report vs PDF for the same scan. If
-values match, close RENDER-CLI-01/PDF-01 as "confirmed no bug — the renderer
-already uses the normalized path." If mismatches found, the fix lives in:
-- `quirk/reports/html_renderer.py` — `render_html_report()`, `_score_band()`
-- `quirk/reports/writer.py` — `write_reports()` summary table section
-
-Blast radius: at most 2 files. No scoring.py changes needed.
-
-### Phase 42 OBS-1 — CBOM Pass-1 Zero Algo Components
-
-**Root cause (verified):** `quirk/cbom/builder.py` has explicit `elif` branches
-for every protocol. Five profiles emit zero CBOM algo components because their
-protocols fall into no branch or into an explicit `pass` branch:
-
-| Profile | Protocol | Current Pass-1 behavior |
-|---------|----------|-------------------------|
-| `database` | `POSTGRESQL` (lines 509-512) | Registers `cert_pubkey_alg` if set — but bare PostgreSQL probe leaves `cert_pubkey_alg` empty on plaintext connections. MODIFIED needed: extract cipher from `service_detail` or register `"unencrypted"` sentinel. |
-| `database` | `MYSQL` (lines 497-507) | Extracts cipher from `service_detail` — but `mysql-ssl-off` sets `ssl-off` which is excluded by the `not in ("SSL-OFF",...)` guard. So ssl-off MySQL emits zero algos. MODIFIED needed. |
-| `registry` | `TLS` (falls to `else`) | Goes through the TLS `else` branch (line 536+) which reads `cipher_suite`. The registry scanner must populate `cipher_suite` — verify this is the actual gap. |
-| `source` | `SOURCE` (lines 425-430) | `_extract_algo_from_rule_id` uses `cipher_suite` field. If semgrep rule_id has no recognized fragment, `algo_hint` is None and falls back to raw rule_id. If the rule_id itself is unrecognized by `classify_algorithm()`, it emits an UNKNOWN component. Check if UNKNOWN components count toward the "zero" observation. |
-| `ssh-weak` | `SSH` (lines 401-413) | Reads `ssh_audit_json` — but ssh-weak profile may not populate full KEX/host-key data. Verify ssh_audit_json is non-empty. |
-| `storage-s3` | `S3`, `AZURE_BLOB` | Only registers AES-256 when posture is positively confirmed encrypted. `S3/unencrypted` or `AZURE_BLOB/platform-managed` emit zero algos intentionally (lines 514-526). This may be a design decision, not a bug. |
-
-**The actual fix target in builder.py:** Add algorithm registration for the truly
-empty cases (plaintext DB connections, ssl-off MySQL). The S3/storage and
-ssh-weak cases may require separate investigation.
-
-**Blast radius:** `quirk/cbom/builder.py` only. No changes to classifier.py,
-writer.py, or the CycloneDX schema model. Tests: update
-`tests/test_cbom_schema_validation.py` golden snapshots for the affected profiles.
-
----
-
-## 2. Chaos Lab Profile Registration Surface
-
-### Registration Requirements (CLAUDE.md rule — applies to ALL new profiles)
-
-For each new profile, three files must update in the same commit:
-1. `quantum-chaos-enterprise-lab/docker-compose.yml` — add service(s) with
-   explicit `profiles: ["<name>"]` and pinned image tags (no `:latest` — CHAOS-05
-   pin policy enforced by `lab.sh _validate_pinned_tags` and
-   `tests/test_chaos_lab_image_pinning.py`).
-2. `quantum-chaos-enterprise-lab/lab.sh` — **no manual ALL_PROFILES list** exists
-   anymore (v4.5 Phase 40 fix). `_derive_all_profiles()` reads profile names from
-   docker-compose.yml at runtime via `yq` or grep fallback. Adding a new profile to
-   docker-compose.yml is sufficient for `lab.sh all` to pick it up automatically.
-   Verify `_derive_all_profiles()` grep pattern `[a-zA-Z0-9_-]` handles new names.
-3. `quantum-chaos-enterprise-lab/expected_results_v4.md` — add
-   `## Profile: <name>` section with port/service/expected-finding oracle table
-   in the format established by the v4 oracle.
-
-### New Profile Analysis — New vs Modified, Scanner Probe Needs
-
-#### BACK-80 — `postgres-tls` + `redis-tls` (profile: `db-tls`)
-
-**docker-compose.yml:** NEW services. PostgreSQL 16 with SSL enabled using
-`modern.crt`/`modern.key` from `./certs/`. Redis 7 with `--tls-port 6380`.
-Port suggestions: postgres-tls at `25433`, postgres-tls-weak at `25434`,
-redis-tls at `26380`.
-
-**Scanner probe:** MODIFIED — both scanners already handle TLS ports.
-- `quirk/scanner/db_connector.py` `scan_pg_targets()` probes via `psycopg2`
-  with `sslmode="disable"` to detect plaintext. For TLS detection, it reads
-  `pg_stat_ssl`. TLS cipher enumeration for postgres-tls would require running
-  the TLS scanner separately (adding the postgres-tls host:port to the TLS
-  scanner target list). No new probe logic — just add the port to TLS scan
-  targets in the lab config.yaml.
-- `quirk/scanner/broker_scanner.py` already handles port 6380 for
-  `_probe_redis_tls()` (line 757). Port 6380 is already in `scan_redis_targets()`
-  (line 795). No code change needed — just start a Redis-TLS container on 6380.
-
-**lab.sh:** Automatic pickup via `_derive_all_profiles()`.
-**expected_results:** NEW section for `db-tls` profile.
-
-#### BACK-81 — `oqs-nginx` PQC-hybrid (profile: `pqc`)
-
-**docker-compose.yml:** NEW service using `openquantumsafe/nginx` image (verify
-current pinnable tag). Port: `25443`. Config: `X25519Kyber768` TLS 1.3 cipher
-preference in nginx.conf.
-
-**Scanner probe:** MODIFIED + NEW logic needed.
-- `quirk/scanner/tls_scanner.py` via sslyze — sslyze may or may not negotiate
-  `X25519Kyber768` depending on the installed OpenSSL/BoringSSL version. If
-  sslyze does negotiate it, `cipher_suite` will contain the hybrid KEM name.
-- `quirk/cbom/classifier.py` — `mlkem768x25519-sha256` is already in
-  `_ALGORITHM_TABLE` (line 66) with NIST level 3. But `X25519Kyber768` (the TLS
-  extension name) may differ from the ssh-audit key name. Verify the sslyze
-  cipher suite string and add it to classifier if missing.
-- `quirk/intelligence/scoring.py` — **NEW bonus weight needed.** Currently the
-  only positive signals are `agility_has_ecdsa_bonus` (+4) and
-  `identity_mtls_ratio_bonus` (+6). A new `agility_pqc_hybrid_bonus` weight
-  (reading a new evidence counter) is needed for OQS-nginx to score above "good
-  classical TLS." This is the strategic centerpiece of BACK-81.
-- `quirk/intelligence/evidence.py` — NEW counter `pqc_hybrid_endpoint_count`
-  that increments when a TLS endpoint's cipher_suite contains a recognized
-  PQC-hybrid KEM string (e.g., `X25519Kyber768`, `mlkem768x25519`).
-
-**Blast radius:** classifier.py, evidence.py, scoring.py, expected_results. This
-is the most architecturally invasive of the chaos lab additions because it
-requires a new evidence counter and a new SCORE_WEIGHTS entry (which triggers the
-`tests/test_score_weights_invariant.py` CI gate — must update the expected sum).
-
-**lab.sh:** Automatic.
-**expected_results:** NEW `pqc` profile section.
-
-#### BACK-82 — SMTP/STARTTLS (profile: `smtp`)
-
-**docker-compose.yml:** NEW services. `postfix-starttls` on port `587` (weak
-TLS: TLS 1.0/1.1 + legacy ciphers) and `postfix-tls-modern` on port `465`
-(implicit TLS). Note: existing `email` profile already has a `postfix-email`
-service — this is a NEW profile (`smtp`) with a different focus (STARTTLS vs
-the existing postfix's configuration).
-
-**Scanner probe:** NO new code needed. `quirk/scanner/email_scanner.py` already
-handles port 587 as `SMTP-STARTTLS` with `ProtocolWithOpportunisticTlsEnum.SMTP`
-sslyze probe (lines 82-86). Port 465 handled as `SMTPS` implicit TLS (line 84).
-The STARTTLS stripping check at port 25 is also already wired. This is config-
-and lab-only work.
-
-**lab.sh:** Automatic.
-**expected_results:** NEW `smtp` profile section.
-
-#### BACK-83 — gRPC TLS (profile: `grpc`)
-
-**docker-compose.yml:** NEW services. `grpc-tls` on port `50051` (TLS 1.3,
-CA-signed cert), `grpc-insecure` on port `50052` (plaintext). Minimal gRPC echo
-server (Python `grpcio` or Go).
-
-**Scanner probe:** MODIFIED — TLS scanner needs HTTP/2 ALPN awareness.
-- sslyze supports ALPN negotiation; gRPC uses `h2` (HTTP/2) as ALPN. The TLS
-  scanner should work if sslyze can complete the TLS handshake without needing a
-  valid gRPC request body. Test empirically.
-- `grpc-insecure` (plaintext) on 50052 — the TLS scanner will detect "no TLS"
-  and create an UNKNOWN or HTTP endpoint. No special handling needed.
-- If sslyze fails on ALPN mismatch, a fallback in `_scan_one_fallback()` via
-  `ssl.SSLContext.wrap_socket()` should work for certificate extraction.
-
-**lab.sh:** Automatic.
-**expected_results:** NEW `grpc` profile section.
-
-#### BACK-84 — Kafka TLS (profile: `kafka`)
-
-**docker-compose.yml:** NEW services. `kafka-tls` with `confluentinc/cp-kafka`
-or `bitnami/kafka` (KRaft mode preferred — avoids Zookeeper dependency).
-Listeners: `PLAINTEXT://9092` and `SSL://9093`, CA cert from `./certs/`.
-
-**Scanner probe:** NO new code needed. `quirk/scanner/broker_scanner.py`
-`scan_one_kafka()` already handles port 9093 as `KAFKA-TLS` with an sslyze
-probe (line 120+). Port 9092 already handled as `KAFKA-PLAIN`. Port 9094
-(mTLS) supported via `enable_kafka_mtls` config flag (line 467). This is
-config- and lab-only work.
-
-**lab.sh:** Automatic.
-**expected_results:** NEW `kafka` profile section.
-
-#### BACK-78 — Identity Scoring Evidence Keys (profile: `identity`)
-
-**Root cause confirmed:** The Kerberos, SAML, and DNSSEC scanners correctly
-emit endpoints and counters when they find weak algorithms. The identity chaos
-lab profiles (kerberos/saml/dnssec) already exist with correct containers
-(samba-dc on ports 88+389, simplesamlphp on 8080, bind9-dnssec on 15353). The
-gap is that UAT ran with a target of `127.0.0.1` against TLS/SSH ports — the
-identity containers were not included in the scan targets.
-
-**Fix:** No code change. Lab config change only — ensure `config.yaml` for the
-identity validation scenario includes:
-- `kerberos_targets: ["127.0.0.1"]` with Kerberos port 88
-- `saml_targets: ["http://localhost:8080/simplesaml/saml2/idp/metadata.php"]`
-- `dnssec_targets: ["weak.example.com", "unsigned.example.com"]` with resolver
-  pointing to `127.0.0.1:15353`
-
-The three evidence keys (`identity_weak_etype_count`, `saml_weak_signing_count`,
-`dnssec_weak_algo_count`) are already computed in `evidence.py` lines 87-89, 165,
-171-183. The ratios are already emitted at lines 397-399. The SCORE_WEIGHTS
-already include the three identity ratio keys (scoring.py lines 31-33). **This
-is a lab scan-target configuration gap, not a code gap.** BACK-78 closes when
-the identity profiles are verified to produce non-zero values for these three
-keys in `intelligence-*.json`.
-
----
-
-## 3. Kerberos/SAML/DNSSEC Evidence Key Attachment Points
-
-The attachment chain is complete and correct. For reference:
-
-```
-Scanner emits CryptoEndpoint with protocol="KERBEROS"/"SAML"/"DNSSEC"
-    |
-    v
-evidence.py::build_evidence_summary() — lines 160-183
-  - KERBEROS: increments identity_weak_etype_count when service_detail
-              has etype:{id}:{name}:HIGH or CRITICAL
-  - SAML:     increments saml_weak_signing_count on is_weak_cipher() or
-              cert_pubkey_size < 2048
-  - DNSSEC:   increments dnssec_weak_algo_count on weak algo names or
-              cert_pubkey_alg == "NONE" (unsigned zone)
-    |
-    v
-evidence dict emits:
-  "identity_weak_etype_count" (line 387)
-  "saml_weak_signing_count"   (line 388)
-  "dnssec_weak_algo_count"    (line 389)
-  "identity_kerberos_weak_etype_ratio" (line 397)
-  "identity_saml_weak_signing_ratio"   (line 398)
-  "identity_dnssec_weak_algo_ratio"    (line 399)
-    |
-    v
-scoring.py::compute_readiness_score() — lines 159-161
-  kerberos_weak_count = evidence.get("identity_weak_etype_count")
-  saml_weak_count     = evidence.get("saml_weak_signing_count")
-  dnssec_weak_count   = evidence.get("dnssec_weak_algo_count")
-    |
-    v
-identity_trust_impacts (lines 196-198) apply weights:
-  "identity_kerberos_weak_etype_ratio": 10.0
-  "identity_saml_weak_signing_ratio":   8.0
-  "identity_dnssec_weak_algo_ratio":    8.0
-```
-
-No SCORE_WEIGHTS changes needed for BACK-78. No evidence.py changes needed.
-
----
-
-## 4. defusedxml.lxml to lxml Migration (XXE Chokepoint)
-
-### Affected Files
-
-| File | Import | Usage | Migration action |
-|------|--------|-------|-----------------|
-| `quirk/scanner/saml_scanner.py` | lines 4-24 | `_safe_ET_fromstring()` — try/except block: imports `lxml.etree as ET` first, falls back to `defusedxml.ElementTree` if lxml unavailable | ALREADY MIGRATED to lxml as primary. `defusedxml` is only the fallback. To complete BACK-67: remove the `defusedxml.ElementTree` fallback branch (lines 16-23) and make lxml a hard requirement in `[identity]` extras. |
-| `quirk/discovery/nmap_parser.py` | line 6 | `import defusedxml.ElementTree as ET` — used in `parse_nmap_xml()` | REQUIRES MIGRATION. Replace `defusedxml.ElementTree.parse()` with `lxml.etree.parse()` using `ET.XMLParser(resolve_entities=False, no_network=True)`. |
-
-### XXE Control Chokepoint
-
-The canonical XXE-safe lxml pattern (already established in saml_scanner.py lines 6-12):
+**New file:** `quirk/util/credentials.py`
 
 ```python
-import lxml.etree as ET
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional
 
-def _safe_parse(xml_source):
-    parser = ET.XMLParser(resolve_entities=False, no_network=True)
-    return ET.parse(xml_source, parser)  # or ET.fromstring(xml_bytes, parser)
+@dataclass
+class CredentialContext:
+    """In-memory-only credential holder for authenticated scan mode.
+
+    Lifecycle:
+      - Constructed once in run_scan.py from CLI args / env / prompt.
+      - Passed as a parameter to every scanner phase that needs it.
+      - Dropped at scan completion; never serialised.
+
+    Supported schemes (BACK-64):
+      bearer  -- Authorization: Bearer <token>
+      api_key -- header/query param injection (header_name + value)
+      basic   -- HTTP Basic (username + password)
+
+    mTLS client certs deferred to a future milestone.
+    """
+    scheme: str = "none"               # "bearer" | "api_key" | "basic" | "none"
+    bearer_token: Optional[str] = None
+    api_key_header: Optional[str] = None   # e.g. "X-API-Key"
+    api_key_query: Optional[str] = None    # e.g. "api_key"
+    api_key_value: Optional[str] = None
+    basic_username: Optional[str] = None
+    basic_password: Optional[str] = None
+
+    def as_headers(self) -> dict[str, str]:
+        """Return a dict of headers for injection into authenticated requests."""
+        if self.scheme == "bearer" and self.bearer_token:
+            return {"Authorization": f"Bearer {self.bearer_token}"}
+        if self.scheme == "api_key" and self.api_key_header and self.api_key_value:
+            return {self.api_key_header: self.api_key_value}
+        if self.scheme == "basic" and self.basic_username and self.basic_password:
+            import base64
+            encoded = base64.b64encode(
+                f"{self.basic_username}:{self.basic_password}".encode()
+            ).decode()
+            return {"Authorization": f"Basic {encoded}"}
+        return {}
+
+    def as_query_params(self) -> dict[str, str]:
+        if self.scheme == "api_key" and self.api_key_query and self.api_key_value:
+            return {self.api_key_query: self.api_key_value}
+        return {}
+
+    @property
+    def is_active(self) -> bool:
+        return self.scheme != "none"
 ```
 
-`resolve_entities=False` blocks XXE entity expansion. `no_network=True` blocks
-SSRF via external DTD/entity URLs. Both flags must be present.
+### Where Construction Happens
 
-### Migration Scope
+`run_scan.py` resolves credentials immediately after config loading, before any
+scanner phase runs. Priority order (highest wins):
 
-- `nmap_parser.py` — MODIFIED. Change `import defusedxml.ElementTree as ET` to
-  lxml with safe parser. `parse_nmap_xml()` currently calls `ET.parse(xml_path)` —
-  change to `ET.parse(xml_path, parser=ET.XMLParser(resolve_entities=False, no_network=True))`.
-- `saml_scanner.py` — MODIFIED (minor). Remove defusedxml fallback branch (lines
-  16-23), keeping only the lxml primary path. `lxml` is already in
-  `[identity]` extras so the import is safe for identity scans.
-- `pyproject.toml` — verify `lxml` is already a declared dependency (it is, in
-  `[identity]` extras). `defusedxml` remains in extras for any other consumers
-  but the lxml-submodule usage is eliminated.
-- `tests/` — no test changes expected; the external behavior of both functions
-  is identical.
+1. CLI flags: `--auth-bearer`, `--auth-api-key-header`, `--auth-api-key-value`,
+   `--auth-api-key-query`, `--auth-basic`, `--auth-prompt`
+2. Env vars: `QUIRK_AUTH_BEARER`, `QUIRK_AUTH_API_KEY_VALUE`, etc.
+3. Interactive TTY prompt (only when `--auth-prompt` flag given)
+4. None (default — unauthenticated mode)
 
-**Blast radius:** 2 files modified. No API changes. No schema changes.
+The result is a `CredentialContext` instance. If no credential input is present,
+`ctx.is_active == False` and no authenticated scanner phase runs. This is the
+zero-impact path — existing unauthenticated scans are completely unaffected.
+
+### How It Threads Through `_wrapped_phase()`
+
+The current `_wrapped_phase` signature:
+
+```python
+def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, logger)
+```
+
+The `fn` argument is already a zero-argument callable (a lambda or `functools.partial`
+created at the call site). Credentials are captured into the closure at that point:
+
+```python
+# run_scan.py call site — credentials captured in closure, NOT passed to _wrapped_phase
+cred_ctx = _build_credential_context(args)   # constructed once above main scan loop
+
+api_endpoints = _wrapped_phase(
+    run_stats, "api_authenticated", "api-scanner",
+    lambda: scan_api_authenticated(
+        targets=cfg.connectors.api_targets,
+        cred_ctx=cred_ctx,          # captured in closure
+        timeout=cfg.scan.timeouts.jwt_seconds,
+        logger=logger,
+    ),
+    error_endpoints, logger,
+)
+```
+
+This design means:
+- `_wrapped_phase()` never sees credential data — its existing signature is unchanged.
+- The `safe_str()` scrubbing helper in `_wrapped_phase`'s exception handler never
+  touches credential values (they are only in the inner `fn` closure).
+- `scan_error` written to SQLite is the output of `safe_str(exc)` — which already
+  strips Authorization headers via `_SENSITIVE_PATTERNS` in `quirk/util/safe_exc.py`.
+  The existing pattern covers bearer and basic schemes. The api_key scheme needs a
+  corresponding pattern added (keyed on the header-value shape, not the header name,
+  since the header name is configurable).
+
+### Memory Lifetime and Leak Surface
+
+| Surface | Risk | Mitigation |
+|---------|------|-----------|
+| SQLite `scan_error` column | Exception message could include cred | `safe_str()` strips; extend pattern for api_key value shapes |
+| CBOM `service_detail` / component names | Scanner emits these | `service_detail` contract is algorithm/protocol label only; scanners never interpolate cred data |
+| Log messages | URL + algorithm are fine; cred must not appear | Convention: log target URLs and algorithm IDs, never headers or tokens |
+| Run stats JSON | Persisted as `run_stats_json` | Credential context never enters `run_stats`; it is local to the lambda |
+| Scheduled scan re-execution | Authenticated runs must not be schedulable | `quirk schedule add` rejects configs where `enable_authenticated_mode: true` with `QRK-SCHED-AUTH-001` error |
 
 ---
 
-## 5. Node.js 20 to 24 Actions Bump
+## Q2 — Authenticated Mode: Extend Existing JWT Scanner vs. New Module
 
-### Affected File
+**Decision: Extend the existing scanner for token-layer work; new sibling modules for OpenAPI/REST/codesign.**
 
-**Only file:** `.github/workflows/dashboard-quality.yml` line 22: `node-version: '20'`
+### What `jwt_scanner.py` Currently Does
 
-**Action:** Change to `node-version: '24'`. This is the only GitHub Actions
-workflow that specifies a Node.js version. `release.yml` and
-`release-container.yml` use Python and Docker only — no Node reference.
+`scan_jwt_endpoint()` probes `/.well-known/jwks.json`, `/oauth/jwks`, and
+`/.well-known/openid-configuration` without credentials, returns one
+`CryptoEndpoint(protocol="JWT")` per public key found. Passive discovery.
 
-**Blast radius:** Single line in one workflow file. The npm ecosystem in
-`src/dashboard/` will run against Node 24 in CI. Verify `package-lock.json`
-and dependencies are Node 24 compatible (most React/Vite tooling is).
+### Module Boundary Map
 
-**Deadline:** 2026-06-02. This must be Phase 87 Plan 01, committed before any
-other v5.0 work.
+| Work | Module | Status |
+|------|--------|--------|
+| JWKS passive discovery | `quirk/scanner/jwt_scanner.py` | Existing — no change |
+| Bearer token decode/classify | `quirk/scanner/jwt_scanner.py` | Extend — add `scan_bearer_token()` |
+| OpenAPI spec analysis | `quirk/scanner/openapi_scanner.py` | New |
+| Authenticated REST calls | Both scanners consume `CredentialContext` via closure | Context injected in closure |
+| Active REST fuzzing | `quirk/scanner/rest_fuzzer.py` | New — gated separately |
+| Code-signing cert inventory | `quirk/scanner/codesign_scanner.py` | New |
+
+### Extended `jwt_scanner.py` Surface
+
+Add one new public function alongside `scan_jwt_targets()`:
+
+```python
+def scan_bearer_token(
+    token: str,
+    *,
+    logger=None,
+) -> CryptoEndpoint:
+    """Decode and classify a bearer JWT without network I/O.
+
+    Returns one CryptoEndpoint(protocol="JWT") with:
+      - cert_pubkey_alg = header["alg"] (e.g. "RS256", "ES256")
+      - cert_pubkey_size derived from alg
+      - service_detail = "bearer-token-analysis"
+      - jwt_scan_json = JSON with {alg, exp, iat, is_expired, key_size}
+    """
+```
+
+This carries zero credential-leak risk — the token is the subject of analysis,
+not a secret to protect; the caller owns any scrubbing needed before passing it.
 
 ---
 
-## 6. Dependency-Aware Build Order
+## Q3 — CBOM Pass-1/2/3 Integration and Scoring Touch-Points
 
-### Critical Path: Node Deadline First
+### New Protocol Labels
 
-```
-Phase 87 (single-file fix, minimum viable phase)
-  Plan 87-01: Node 20 to 24 in dashboard-quality.yml
-              defusedxml.lxml to lxml in nmap_parser.py + saml_scanner.py
-              (both are 2-file mechanical changes; combine into one dep-hygiene plan)
-              DEADLINE: merge before 2026-06-02
-              Tests: existing SAML tests + nmap parser tests pass unchanged
-```
+| Protocol Label | Scanner | CBOM Pass-1 Action |
+|---------------|---------|-------------------|
+| `JWT` | jwt_scanner (existing) | Already registered |
+| `OPENAPI` | openapi_scanner | AlgorithmProperties per security scheme/operation |
+| `CODE_SIGN` | codesign_scanner | CertificateProperties per cert |
+| `REST_FUZZ` | rest_fuzzer | AlgorithmProperties per observed cipher |
 
-### Scoring Fixes Chain
+### CBOM Pass-1 Extension
 
-```
-Phase 88 (scoring correctness sweep)
-  Plan 88-01: EVIDENCE-TALLY-01 investigation + decision
-              (fix or close-as-won't-fix with rationale)
-              Files: quirk/intelligence/scoring.py (if fix)
-              Tests: update test_score_weights_invariant.py if SCORE_WEIGHTS changes
+The builder's Pass-1 loop iterates `endpoint_list` and calls `classify_algorithm()`
+on `cert_pubkey_alg`. This path already handles `JWT` correctly. New protocols:
 
-  Plan 88-02: RENDER-CLI-01 + RENDER-PDF-01 verification
-              Empirically compare CLI/HTML/PDF scores vs dashboard for same scan
-              Files: quirk/reports/html_renderer.py, quirk/reports/writer.py (if fix needed)
-              Tests: regression test against known-bad scan fixture
+- `OPENAPI` endpoints: `cert_pubkey_alg` carries the extracted security scheme alg.
+  A helper `_extract_openapi_alg(ep)` mirrors the existing
+  `_extract_algo_from_rule_id()` for semgrep. Alg strings like `RS256`, `ES256`
+  pass directly to `classify_algorithm()`.
+- `CODE_SIGN` endpoints: `cert_pubkey_alg` carries the cert's public key algorithm.
+  Same classifier path. Subject/issuer populate `CertificateProperties` in Pass-2.
+- `REST_FUZZ` endpoints: cipher suite from the probed TLS response goes in
+  `cipher_suite`; existing `_KEX_MAP` / `_ENC_MAP` / `_AUTH_MAP` decomposition
+  already handles it.
 
-  Plan 88-03: CBOM Pass-1 OBS-1 fix
-              Files: quirk/cbom/builder.py
-              Tests: golden snapshots in test_cbom_schema_validation.py
-              Constraint: depends on 88-01/88-02 being settled first (scoring
-              and CBOM are separate subsystems but share a phase for coherence)
-```
+### CBOM Pass-2/3 Skip-List Extension
 
-### Chaos Lab Chain
+`MOTION_PLAINTEXT_PROTOCOLS` and `DAR_SKIP_PROTOCOLS` in `builder.py` do not
+need changes. `OPENAPI`, `CODE_SIGN`, and `REST_FUZZ` all carry genuine algorithm
+data and participate in Pass-1 normally.
+
+### New SQLite Columns (Additive Only)
 
 ```
-Phase 89 (chaos lab — scanner-verified targets, NO scoring changes)
-  Constraint: Phase 89 plans must be independent of each other within the phase.
-              All five lab profiles can be added in parallel plans.
-
-  Plan 89-01: BACK-80 postgres-tls + redis-tls (profile: db-tls)
-              No scanner code change. docker-compose + expected_results only.
-
-  Plan 89-02: BACK-82 SMTP/STARTTLS (profile: smtp)
-              No scanner code change. docker-compose + expected_results only.
-
-  Plan 89-03: BACK-84 Kafka TLS (profile: kafka)
-              No scanner code change. docker-compose + expected_results only.
-
-  Plan 89-04: BACK-83 gRPC TLS (profile: grpc)
-              Possibly scanner-probe verification only. docker-compose + expected_results.
-              Probe compatibility with sslyze needs empirical check.
-
-  Plan 89-05: BACK-78 Identity evidence keys (lab config only)
-              No code change. Verify identity scanner produces non-zero evidence
-              keys against the existing kerberos/saml/dnssec profiles with correct
-              targets in config.yaml. Update expected_results if gap found.
+openapi_scan_json   TEXT   -- OpenAPI spec analysis result per endpoint
+codesign_scan_json  TEXT   -- Code-signing cert details
 ```
 
-### OQS-nginx — Last (architectural scope)
+`jwt_scan_json` already exists and handles bearer token analysis output
+(the `scan_bearer_token()` result stores there). No new column for `REST_FUZZ` —
+the TLS cipher/version data from fuzzing probes goes into the existing
+`tls_version`, `cipher_suite`, and `tls_capabilities_json` fields.
 
-```
-Phase 90 (BACK-81 OQS-nginx PQC-hybrid)
-  Constraint: Must come AFTER Phase 88 (scoring) because it introduces a NEW
-              SCORE_WEIGHTS key (agility_pqc_hybrid_bonus) and a NEW evidence
-              counter (pqc_hybrid_endpoint_count). The test_score_weights_invariant
-              expected sum changes again — doing this in the same phase as
-              EVIDENCE-TALLY-01 would create conflicting sum expectations.
+### Scoring: Extend `agility_signals` Subscore, Not a New Subscore
 
-  Plan 90-01: docker-compose service (oqs-nginx, profile: pqc) + classifier.py
-              (verify/add X25519Kyber768 cipher suite string mapping)
-              Files: docker-compose.yml, quirk/cbom/classifier.py
+**Decision: Augment the existing `agility_signals` subscore. Do NOT add a 7th subscore.**
 
-  Plan 90-02: evidence.py new counter + scoring.py new bonus weight
-              Files: quirk/intelligence/evidence.py, quirk/intelligence/scoring.py,
-                     tests/test_score_weights_invariant.py
-              Test: verify OQS-nginx scan produces overall score above 80 GOOD
+The 6-pillar formula is `total_score = int(round(sum_of_six / 1.5))`, mapping
+0–150 to 0–100. A 7th subscore changes the denominator and breaks the Phase 86
+fix math, the `SCORE_WEIGHTS` invariant test, all report renderers, and all six
+dashboard `ScoreGauge` components. The API surface features are fundamentally
+agility signals — algorithm choices in tokens, specs, and code-signing certs.
+They belong in `agility_signals`.
 
-  Plan 90-03: expected_results oracle + docs updates
-              Files: expected_results_v4.md
-```
+**New evidence counters in `evidence.py`:**
 
-### Code Cleanup — Parallel to Lab Work
-
-```
-Phase 91 (BACK-49-57 dead code + bookkeeping)
-  Can execute in parallel with Phase 89 (no shared files with lab changes).
-  Plans map to individual BACK items — each is a small, independent file change.
-
-  Plan 91-01: BACK-49 remove quirk/engine/rules.py
-  Plan 91-02: BACK-50 dead writer.py helpers + scorecard.py orphan
-  Plan 91-03: BACK-51 migration_planner.py dual categorization
-  Plan 91-04: BACK-52 dead intelligence modules (driver_text, schema, calibration)
-  Plan 91-05: BACK-53 remove data/qcscan-legacy.sqlite
-  Plan 91-06: BACK-54 tqdm dead branch + dependency cleanup
-  Plan 91-07: BACK-55 clean D-reference comments + stale version tags
-  Plan 91-08: BACK-56 datetime.utcnow deprecation fix in logging_util.py + nmap_provider.py
-  Plan 91-09: BACK-58 JWT verify=False documentation
-  Plan 91-10: BACK-62 Nyquist VALIDATION.md updates
-  Plan 91-11: BACK-63 score transparency section in executive summary
+```python
+api_weak_alg_count = 0              # JWT/OpenAPI endpoints with SHA-1 or RSA<2048
+api_no_expiry_count = 0             # bearer tokens with no exp claim
+api_fuzzing_weak_cipher_count = 0   # REST fuzzing: weak cipher in TLS response
+codesign_weak_count = 0             # code-signing certs with RSA<2048 or SHA-1
 ```
 
-### Recommended Phase Structure (at the 6-phase HORIZON cap)
+**New `_PROTOCOL_KEYS` entries:** `"OPENAPI"`, `"CODE_SIGN"`, `"REST_FUZZ"` appended
+to the existing tuple (mirrors Phase 77 D-10 pattern that added `CONTAINER`,
+`SOURCE`, `AWS`, `AZURE`, `GCP`, `CLOUD_SQL`).
 
-```
-Phase 87 — Dependency Hygiene (Node + lxml) [DEADLINE-DRIVEN, FIRST]
-Phase 88 — Scoring Residuals (EVIDENCE-TALLY, RENDER-CLI/PDF, CBOM OBS-1)
-Phase 89 — Chaos Lab Targets I (db-tls, smtp, kafka, grpc, identity evidence)
-Phase 90 — OQS-nginx PQC-hybrid (scoring ceiling anchor)
-Phase 91 — Code Cleanup + Bookkeeping (BACK-49-63)
-Phase 92 — v5.0 Close-out (version bump, docs, Obsidian sync, release notes)
+**New SCORE_WEIGHTS entries (additive; invariant test updated per phase):**
+
+```python
+"agility_api_weak_alg_ratio":       6.0,
+"agility_api_no_expiry_ratio":      4.0,
+"agility_codesign_weak_ratio":      6.0,
+"agility_fuzz_weak_cipher_ratio":   4.0,
 ```
 
-This is 6 phases, exactly at the HORIZON cap. Phase 91 is the most compressible
-— if scope is tight, BACK-49-63 can be split across two phases or some items
-deferred to v5.1 as low-risk P3 debt.
+New sum: `283.0 + 6.0 + 4.0 + 6.0 + 4.0 = 303.0`.
+
+The `agility_` prefix means `PROFILE_MULTIPLIERS` applies automatically — no
+changes to the multiplier dict needed.
+
+**Backward compatibility:** All four new evidence keys default to 0 when absent.
+Historical scans re-rendered through the new scorer receive no impact from these
+counters. This is the same pattern as `data_in_motion` D-12 backward compat.
 
 ---
 
-## Component Boundaries — New vs Modified
+## Q4 — Active REST Fuzzing Gate: Where It Sits
 
-### What is NEW in v5.0
+### Pattern: Mirror the nmap Probe-Budget Gate, With One Tightening
 
-| Component | File | Nature |
-|-----------|------|--------|
-| `pqc_hybrid_endpoint_count` counter | `quirk/intelligence/evidence.py` | NEW function/branch |
-| `agility_pqc_hybrid_bonus` weight | `quirk/intelligence/scoring.py` + `SCORE_WEIGHTS` | NEW dict key |
-| docker-compose services: postgres-tls, postgres-tls-weak, redis-tls, postfix-starttls, postfix-tls-modern, grpc-tls, grpc-insecure, kafka-tls | `quantum-chaos-enterprise-lab/docker-compose.yml` | NEW services |
-| Oracle sections for new profiles | `expected_results_v4.md` | NEW sections |
+The nmap gate (Phase 47) in `run_scan.py`:
 
-### What is MODIFIED in v5.0
+1. CLI opt-in: `--discovery nmap`
+2. Config flag: `connectors.enable_nmap: true`
+3. Budget: `maybe_confirm_probe_budget(targets, ports, threshold=10_000)`
+   - TTY: print projection + require y/N
+   - non-TTY: warn stderr + auto-proceed
 
-| Component | File | What Changes |
-|-----------|------|--------------|
-| Node version | `.github/workflows/dashboard-quality.yml:22` | `'20'` to `'24'` |
-| XXE fallback removal | `quirk/scanner/saml_scanner.py:16-23` | Remove defusedxml fallback branch |
-| lxml migration | `quirk/discovery/nmap_parser.py:6` | `defusedxml.ElementTree` to `lxml.etree` with safe parser |
-| Scoring logic | `quirk/intelligence/scoring.py` | New evidence reads and/or cross-cutting penalty (if EVIDENCE-TALLY-01 gets a code fix) |
-| HTML/PDF renderer | `quirk/reports/html_renderer.py` + `writer.py` | Potentially no-op if audit confirms no bug |
-| CBOM builder Pass-1 | `quirk/cbom/builder.py` | New branches for zero-algo-component protocols (db plaintext, ssl-off MySQL) |
-| Algorithm classifier | `quirk/cbom/classifier.py` | Possibly new entry for OQS TLS cipher suite name |
-| CBOM golden snapshots | `tests/test_cbom_schema_validation.py` | Updated fixture files for affected profiles |
-| Score weights invariant | `tests/test_score_weights_invariant.py` | New expected sum when SCORE_WEIGHTS keys change |
-| Dead code removal | `quirk/engine/rules.py`, `quirk/reports/writer.py`, `quirk/intelligence/*.py` (stubs), `data/qcscan-legacy.sqlite` | Deleted |
-| datetime.utcnow | `quirk/logging_util.py:43`, `quirk/discovery/nmap_provider.py:50` | Replaced with `datetime.now(timezone.utc)` |
+The REST fuzzing gate mirrors this exactly except at step 3:
 
-### What is UNTOUCHED in v5.0
+1. CLI opt-in: `--enable-fuzzing`
+2. Config flag: `connectors.enable_rest_fuzzing: bool = False`
+3. Budget: `maybe_confirm_fuzz_budget(targets, endpoint_count, threshold=500)`
+   - TTY: display endpoint count + explicit authorization prompt
+     ("I confirm I am authorized to send crafted traffic to these targets")
+     requires literal `yes` (not `y`) to proceed
+   - **non-TTY: HARD ABORT** — fuzzing is never auto-approved in headless mode
 
-- `quirk/intelligence/evidence.py` (except OQS counter addition in Phase 90)
-- `run_scan.py` (scanner orchestration unchanged)
-- All scanner modules (tls_scanner, email_scanner, broker_scanner, db_connector)
-- FastAPI server and React dashboard (no v5.0 scope)
-- SQLite schema (no new columns needed)
-- CBOM writer
-- Compliance module, QRAMM module, error registry
-- `quirk/reports/executive.py`, `quirk/reports/technical.py`
+The non-TTY hard abort is a deliberate tightening relative to nmap. Fuzzing crafts
+active traffic that could trigger IDS alerts or cause state mutations — it must
+never run silently in CI or scheduled contexts.
+
+**New function in `quirk/util/targets.py`:**
+
+```python
+def maybe_confirm_fuzz_budget(
+    targets: list,
+    endpoint_count: int,
+    threshold: int = 500,
+    is_tty: Optional[bool] = None,
+    prompt_fn: Callable = input,
+) -> bool:
+    """Active-fuzzing authorization gate.
+
+    Returns True only if endpoint_count <= threshold AND explicit 'yes' confirmed.
+    endpoint_count > threshold: always False (too large a surface).
+    Non-TTY mode always returns False — fuzzing must not run headless.
+    """
+```
+
+**`ConnectorsCfg` additions (additive fields):**
+
+```python
+enable_rest_fuzzing: bool = False
+rest_fuzzing_budget: int = 500
+rest_fuzzing_targets: list = field(default_factory=list)
+```
+
+**`TimeoutsCfg` addition:**
+
+```python
+rest_fuzzing_seconds: int = 15
+```
+
+**`run_scan.py` call site:**
+
+```python
+if getattr(cfg.connectors, "enable_rest_fuzzing", False):
+    from quirk.util.targets import maybe_confirm_fuzz_budget
+    if not maybe_confirm_fuzz_budget(
+        targets=fuzz_targets,
+        endpoint_count=len(fuzz_targets),
+        threshold=cfg.connectors.rest_fuzzing_budget,
+    ):
+        logger.warning("REST fuzzing aborted — authorization not confirmed.")
+    else:
+        fuzz_endpoints = _wrapped_phase(
+            run_stats, "rest_fuzzing", "rest-fuzzer",
+            lambda: fuzz_rest_targets(
+                targets=fuzz_targets,
+                cred_ctx=cred_ctx,
+                timeout=cfg.scan.timeouts.rest_fuzzing_seconds,
+                logger=logger,
+            ),
+            error_endpoints, logger,
+        )
+```
+
+**Optional extras:** `[api] = ["httpx>=0.27"]`. OpenAPI parsing uses stdlib
+json/yaml (PyYAML is already a transitive dep). No new pip dependencies for
+OpenAPI analysis or bearer token decode.
 
 ---
 
-## Data Flow Changes
+## Q5 — Dependency-Ordered Build Sequence
 
-### Before v5.0
+### Phase 93 — Credential Infrastructure (Foundational)
+
+Must ship first. Every other phase consumes it.
+
+- `quirk/util/credentials.py`: `CredentialContext` dataclass + `build_credential_context(args, env)` factory.
+- `run_scan.py`: credential construction at startup; all `--auth-*` CLI flags; `QUIRK_AUTH_*` env vars.
+- `ConnectorsCfg`: `enable_authenticated_mode: bool = False`.
+- `safe_exc.py`: extend `_SENSITIVE_PATTERNS` to cover api_key header value shapes.
+- `quirk schedule add`: reject configs where `enable_authenticated_mode: true`
+  with `QRK-SCHED-AUTH-001` error code.
+- Security review gate: credential lifetime in memory + leak surface audit
+  (this is the HORIZON-required security review for the credential subsystem).
+- Tests: credential construction from flags/env; scrubbing patterns; schedule
+  rejection; `as_headers()` for all three schemes; `is_active` predicate.
+
+### Phase 94 — Bearer Token Interception + OpenAPI Analysis (BACK-11, BACK-10)
+
+Depends on Phase 93.
+
+- `jwt_scanner.py`: `scan_bearer_token()` (decode-only, no network I/O).
+- `quirk/scanner/openapi_scanner.py`: new; reads local spec or authenticated URL
+  from `cfg.connectors.openapi_spec_path`; emits `CryptoEndpoint(protocol="OPENAPI")`
+  per security scheme; uses `cred_ctx` for authenticated spec fetch if URL.
+- `evidence.py`: `"OPENAPI"` in `_PROTOCOL_KEYS`; `api_weak_alg_count`,
+  `api_no_expiry_count` counters.
+- `scoring.py`: `agility_api_weak_alg_ratio`, `agility_api_no_expiry_ratio` in
+  `SCORE_WEIGHTS`; new entries in `agility_impacts` list.
+- `models.py`: `openapi_scan_json TEXT` column (additive).
+- `builder.py`: Pass-1 handling for `OPENAPI` protocol; `_extract_openapi_alg(ep)` helper.
+- `pyproject.toml`: `[api]` extras group with `httpx>=0.27`.
+- `tests/test_score_weights_invariant.py`: update expected sum (283.0 + 10.0 = 293.0 after Phase 94).
+- Chaos lab: extend existing jwt chaos lab profile with an OpenAPI spec endpoint.
+
+### Phase 95 — Code-Signing Certificate Inventory (BACK-24)
+
+Depends on Phase 93. Independent of Phase 94 (can run in parallel if agent capacity allows).
+
+- `quirk/scanner/codesign_scanner.py`: new; discovers code-signing certs from
+  LDAP `userCertificate` with CodeSigning EKU, or configured PEM/DER paths;
+  emits `CryptoEndpoint(protocol="CODE_SIGN")`.
+- `evidence.py`: `"CODE_SIGN"` in `_PROTOCOL_KEYS`; `codesign_weak_count` counter.
+- `scoring.py`: `agility_codesign_weak_ratio` weight; `agility_impacts` extended.
+- `models.py`: `codesign_scan_json TEXT` column (additive).
+- `builder.py`: Pass-1 handling for `CODE_SIGN` (CertificateProperties path).
+- `ConnectorsCfg`: `enable_codesign: bool = False`, `codesign_targets: list`.
+- `pyproject.toml`: reuses `[api]` extras (httpx already there); Sigstore client deferred.
+- `tests/test_score_weights_invariant.py`: update expected sum again (+6.0).
+
+### Phase 96 — Active REST Fuzzing Gate (BACK-09)
+
+Depends on Phase 93 (credentials) and Phase 94 (OpenAPI — for endpoint discovery).
+Fuzzing probes endpoints discovered by OpenAPI analysis; ship Phase 94 first.
+
+- `quirk/scanner/rest_fuzzer.py`: new; takes endpoint URLs, injects `CredentialContext`
+  headers, sends crafted requests with weak-cipher preference headers, records
+  `tls_version` + `cipher_suite` from response.
+- `quirk/util/targets.py`: `maybe_confirm_fuzz_budget()` (TTY-hard-only gate).
+- `ConnectorsCfg`: `enable_rest_fuzzing`, `rest_fuzzing_budget`, `rest_fuzzing_targets`.
+- `TimeoutsCfg`: `rest_fuzzing_seconds`.
+- `evidence.py`: `"REST_FUZZ"` in `_PROTOCOL_KEYS`; `api_fuzzing_weak_cipher_count`.
+- `scoring.py`: `agility_fuzz_weak_cipher_ratio` weight; `agility_impacts` extended.
+- `run_scan.py`: gate call site (opt-in flag + `maybe_confirm_fuzz_budget` + hard
+  non-TTY abort + `_wrapped_phase` wrapper).
+- `tests/test_score_weights_invariant.py`: final update (sum = 303.0).
+- Chaos lab: extend an existing profile (e.g., jwt) to respond to crafted
+  cipher-preference requests for fuzzing validation.
+
+---
+
+## Component Responsibilities
+
+| Component | Responsibility | New vs Modified |
+|-----------|---------------|----------------|
+| `quirk/util/credentials.py` | In-memory credential holder + factory + header injection | New |
+| `quirk/scanner/jwt_scanner.py` | JWKS passive + bearer token decode | Modified (add `scan_bearer_token`) |
+| `quirk/scanner/openapi_scanner.py` | OpenAPI spec parsing, security scheme extraction | New |
+| `quirk/scanner/codesign_scanner.py` | Code-signing cert discovery and classification | New |
+| `quirk/scanner/rest_fuzzer.py` | Active REST fuzzing behind confirmation gate | New |
+| `quirk/util/targets.py` | `maybe_confirm_fuzz_budget()` guard | Modified (add function) |
+| `quirk/util/safe_exc.py` | `_SENSITIVE_PATTERNS` extended for api_key value shapes | Modified |
+| `quirk/config.py` (ConnectorsCfg) | `enable_authenticated_mode`, fuzzing flags, codesign flags | Modified (additive fields) |
+| `quirk/config.py` (TimeoutsCfg) | `rest_fuzzing_seconds` | Modified (additive field) |
+| `quirk/models.py` | `openapi_scan_json`, `codesign_scan_json` columns | Modified (additive) |
+| `quirk/intelligence/evidence.py` | New protocol keys + api/codesign counters | Modified (additive) |
+| `quirk/intelligence/scoring.py` | New `agility_*` weights + impacts | Modified (additive) |
+| `quirk/cbom/builder.py` | Pass-1 for OPENAPI/CODE_SIGN/REST_FUZZ protocols | Modified (additive) |
+| `run_scan.py` | Credential construction; scanner call sites; fuzzing gate | Modified |
+| `quirk/dashboard/api/schemas.py` | `api_findings`, `codesign_findings` on response model | Modified |
+
+---
+
+## Data Flow: Authenticated Scan
 
 ```
-TLS endpoint scan -> cipher_suite -> evidence.py (no PQC signal) -> scoring.py (no PQC bonus)
+CLI args / env vars / TTY prompt
+    |
+build_credential_context(args, env)  -->  CredentialContext (in-memory only)
+    |
+run_scan.py scan loop
+    |-- _wrapped_phase("jwt_bearer", lambda: scan_bearer_token(token=cred_ctx.bearer_token))
+    |-- _wrapped_phase("openapi", lambda: scan_openapi_targets(..., cred_ctx=cred_ctx))
+    |-- _wrapped_phase("codesign", lambda: scan_codesign_targets(..., cred_ctx=cred_ctx))
+    `-- [if enable_rest_fuzzing AND confirmed]
+        _wrapped_phase("rest_fuzzing", lambda: fuzz_rest_targets(..., cred_ctx=cred_ctx))
+    |
+List[CryptoEndpoint]  (no credential data in any field)
+    |
+evidence.build_evidence_summary()  -->  api_weak_alg_count, codesign_weak_count, ...
+    |
+scoring.compute_readiness_score()  -->  agility_signals subscore (extended)
+    |
+cbom.build_cbom()  -->  OPENAPI/CODE_SIGN algorithm components in CycloneDX CBOM
+    |
+SQLite persist  (openapi_scan_json, codesign_scan_json additive columns)
+    |
+FastAPI /api/scan/latest  -->  React dashboard (api_findings, codesign_findings)
 ```
 
-### After v5.0 (BACK-81)
+---
 
-```
-TLS endpoint scan -> cipher_suite (contains "X25519Kyber768" on OQS-nginx)
-    -> evidence.py: pqc_hybrid_endpoint_count += 1
-    -> scoring.py: agility_impacts += ("PQC-hybrid adoption", +N * weight)
-    -> overall score > 80 for OQS-nginx-only scans
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Credential Fields on `ConnectorsCfg`
+
+**What people do:** Add `bearer_token`, `api_key` fields to `ConnectorsCfg` so
+they load from the YAML config file.
+
+**Why it's wrong:** Config files are typically committed to version control or
+stored on disk. `ConnectorsCfg` is serialized to run stats JSON. This is a hard
+constraint violation for the ephemeral model.
+
+**Do this instead:** Credentials live only in `CredentialContext`, constructed at
+runtime from CLI flags / env vars / TTY prompt. `ConnectorsCfg` carries only
+`enable_authenticated_mode: bool` — no secret data.
+
+### Anti-Pattern 2: Passing `CredentialContext` Through `_wrapped_phase`
+
+**What people do:** Add a `cred_ctx` parameter to `_wrapped_phase()`.
+
+**Why it's wrong:** This puts credential material inside `_wrapped_phase()`'s
+exception handler scope, which calls `safe_str(exc)`. Even with scrubbing, the
+call stack carries credentials through a generic error-handling path.
+
+**Do this instead:** Capture `cred_ctx` in the lambda closure at the call site.
+`_wrapped_phase()` never sees credential data; its signature is unchanged.
+
+### Anti-Pattern 3: Writing Credential Contents to `scan_error` or `service_detail`
+
+**What people do:** Log `f"Authenticated request to {url} with token {token} failed: {exc}"`.
+
+**Why it's wrong:** `scan_error` is written to SQLite. `service_detail` appears in
+CBOM component names and reports. Both are long-lived.
+
+**Do this instead:** Log only the URL and the exception class name via `safe_str(exc)`.
+Token values are never interpolated into any logged or persisted string.
+
+### Anti-Pattern 4: Scheduling Authenticated Scans
+
+**What people do:** Add authenticated credentials to `scheduled_scans` config so
+they run on a cron.
+
+**Why it's wrong:** Scheduled scans persist their configuration to the `scheduled_scans`
+SQLite table. Credentials stored there become a stored-secret surface QUIRK deliberately
+avoids becoming.
+
+**Do this instead:** `quirk schedule add` rejects any config where
+`enable_authenticated_mode: true` with `QRK-SCHED-AUTH-001` error code.
+Authenticated runs are explicitly interactive / per-invocation.
+
+### Anti-Pattern 5: A New 7th Subscore for API/OpenAPI/CodeSign
+
+**What people do:** Add `api_surface` as a 7th subscore alongside the existing six.
+
+**Why it's wrong:** The formula `total_score = int(round(sum_of_six / 1.5))` assumes
+a 0–150 maximum. A 7th subscore changes this to 0–175 and requires updating the
+denominator, the `SCORE_WEIGHTS` invariant test, all report renderers, all dashboard
+`ScoreGauge` components, and the Phase 86 fix math. High blast radius, no user-facing
+benefit (API signals are agility signals).
+
+**Do this instead:** Fold new API/codesign signals into the existing `agility_signals`
+subscore via the `agility_` SCORE_WEIGHTS prefix. Profile multipliers apply
+automatically; no renderer changes needed.
+
+---
+
+## Integration Points Summary
+
+### Schema Touch-Points (Additive Only)
+
+| Column | Table | Phase |
+|--------|-------|-------|
+| `openapi_scan_json TEXT` | `crypto_endpoints` | 94 |
+| `codesign_scan_json TEXT` | `crypto_endpoints` | 95 |
+
+No existing column is modified.
+
+### SCORE_WEIGHTS Invariant
+
+Current sum: **283.0** (post-v5.0 PQC-03 agility bonus).
+After Phase 94: `283.0 + 6.0 + 4.0 = 293.0`
+After Phase 95: `293.0 + 6.0 = 299.0`
+After Phase 96: `299.0 + 4.0 = 303.0`
+
+`tests/test_score_weights_invariant.py` must be updated once per phase that adds
+weights. CI fails loudly on mismatch.
+
+### `_PROTOCOL_KEYS` in `evidence.py`
+
+Current tuple ends with `"CLOUD_SQL"`. Append: `"OPENAPI"`, `"CODE_SIGN"`, `"REST_FUZZ"`.
+Pattern established by Phase 77 D-10 (which added `CONTAINER`, `SOURCE`, `AWS`,
+`AZURE`, `GCP`, `CLOUD_SQL`).
+
+### CBOM `DAR_SKIP_PROTOCOLS` / `MOTION_PLAINTEXT_PROTOCOLS`
+
+No changes. `OPENAPI`, `CODE_SIGN`, `REST_FUZZ` are not in either skip-list.
+
+### FastAPI `/api/scan/latest` Response
+
+New optional fields on the Pydantic schema:
+
+```python
+api_findings: List[ApiFinding] = []
+codesign_findings: List[CodeSignFinding] = []
 ```
 
-All other data flows are unchanged. The v5.0 scoring fixes are additive to the
-existing penalty-only model — the OQS bonus is the only new positive signal.
+Mirrors the existing `identity_findings`, `motion_findings`, `dar_findings` pattern.
 
 ---
 
 ## Sources
 
-- Live codebase inspection (HIGH confidence — all file paths and line numbers verified)
-- `quirk/intelligence/evidence.py` — complete read
-- `quirk/intelligence/scoring.py` — complete read
-- `quirk/cbom/builder.py` — Pass-1 section (lines 397-550)
-- `quirk/reports/html_renderer.py`, `quirk/reports/writer.py` — score rendering sections
-- `quirk/scanner/saml_scanner.py:1-60` — defusedxml import pattern
-- `quirk/discovery/nmap_parser.py:1-40` — defusedxml usage
-- `quantum-chaos-enterprise-lab/docker-compose.yml` — all service and profile definitions
-- `quantum-chaos-enterprise-lab/lab.sh:56-70` — `_derive_all_profiles()` implementation
-- `quantum-chaos-enterprise-lab/expected_results_v4.md` — oracle format
-- `.github/workflows/dashboard-quality.yml:22` — Node version declaration
-- `.planning/milestones/v4.10.1-REQUIREMENTS.md` — EVIDENCE-TALLY-01, RENDER-CLI-01, RENDER-PDF-01 root cause descriptions
-- `.planning/ROADMAP.md` Backlog — BACK-49 through BACK-84 item descriptions
-- `.planning/HORIZON.md` — v5.0 scope guardrails (6-phase cap)
+- Direct inspection: `quirk/scanner/jwt_scanner.py`, `run_scan.py`, `quirk/models.py`,
+  `quirk/config.py`, `quirk/intelligence/evidence.py`, `quirk/intelligence/scoring.py`,
+  `quirk/cbom/builder.py`, `quirk/util/targets.py`, `quirk/util/safe_exc.py`
+  (verified 2026-05-22 against live codebase)
+- Key Decisions in `.planning/PROJECT.md`: `safe_str()` pattern (Phase 59),
+  `_wrapped_phase` pattern (Phase 41), `maybe_confirm_probe_budget` pattern (Phase 47),
+  additive-only schema constraint, 6-pillar scoring formula (Phase 86 D-01)
+- v5.0 milestone context: SCORE_WEIGHTS sum 283.0; `pqc_hybrid_endpoint_count` as
+  precedent for new agility-bonus counter; Phase 77 D-10 as precedent for
+  `_PROTOCOL_KEYS` extension
 
 ---
-*Architecture research for: QU.I.R.K. v5.0 Stabilization integration points*
+
+*Architecture research for: QU.I.R.K. v5.1 Authenticated Scanning + API Surface Depth*
 *Researched: 2026-05-22*
