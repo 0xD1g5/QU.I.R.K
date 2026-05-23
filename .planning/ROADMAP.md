@@ -76,8 +76,10 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
   4. A spec containing an internal-network `$ref` URL (e.g., `http://169.254.169.254/`) causes a `SpecParsingError` rather than an outbound network request — SSRF prevention verified by a CI fixture test
   5. Bearer tokens captured during an authenticated scan appear in the CBOM with a `declared_algorithm (unverified)` label; the raw token value is absent from all stored artifacts (SQLite, CBOM, logs)
   6. `pip install quirk[api]` pulls in `openapi-spec-validator`; `pip install quirk[all]` does not pull in `schemathesis` — enforced by a new CI test mirroring `test_install_all_excludes_impacket.py`
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+- [ ] 94-01-PLAN.md — analyze-token command (TOKEN-01/03) + CBOM bearer classification (TOKEN-02) + SCORE_WEIGHTS +10.0 (SCORE-01) [TOKEN-01, TOKEN-02, TOKEN-03, SCORE-01]
+- [ ] 94-02-PLAN.md — OpenAPI scanner with SSRF/DoS/scope hardening (SPEC-01/02/03) + [api] extras & schemathesis CI guard (PKG-01) [SPEC-01, SPEC-02, SPEC-03, PKG-01]
+- [ ] 94-03-PLAN.md — docs + UAT-SERIES.md + Obsidian sync (CLAUDE.md mandatory) [all]
 
 ### Phase 95: Code-Signing Certificate Inventory
 **Goal**: Users can inventory code-signing certificates discovered from LDAP and from existing TLS cert captures, with weak-algorithm findings and fingerprint-based CBOM de-duplication
@@ -107,6 +109,6 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 93. Credential Infrastructure | v5.1 | 4/4 | Complete   | 2026-05-23 |
-| 94. OpenAPI & Bearer Token Analysis | v5.1 | 0/TBD | Not started | - |
+| 94. OpenAPI & Bearer Token Analysis | v5.1 | 0/3 | Not started | - |
 | 95. Code-Signing Certificate Inventory | v5.1 | 0/TBD | Not started | - |
 | 96. Active REST Fuzzing | v5.1 | 0/TBD | Not started | - |
