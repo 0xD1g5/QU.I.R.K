@@ -33,15 +33,15 @@
 
 ### OpenAPI / Swagger Spec Analysis (BACK-10)
 
-- [ ] **SPEC-01**: User can analyze an OpenAPI/Swagger spec from a local file to inventory declared API crypto posture (security schemes, plaintext `servers`, unauthenticated endpoints).
-- [ ] **SPEC-02**: User can analyze a spec fetched from a URL, but only when that URL is within the configured scan-target scope.
-- [ ] **SPEC-03**: Spec parsing is hardened against `$ref` SSRF (local-only ref resolution) and oversized-spec DoS (size gate before parse).
+- [x] **SPEC-01**: User can analyze an OpenAPI/Swagger spec from a local file to inventory declared API crypto posture (security schemes, plaintext `servers`, unauthenticated endpoints).
+- [x] **SPEC-02**: User can analyze a spec fetched from a URL, but only when that URL is within the configured scan-target scope.
+- [x] **SPEC-03**: Spec parsing is hardened against `$ref` SSRF (local-only ref resolution) and oversized-spec DoS (size gate before parse).
 
 ### Bearer Token Analysis (BACK-11)
 
-- [ ] **TOKEN-01**: User can decode and classify a bearer/JWT token (algorithm, key size, expiry, quantum-safety) via a standalone `--analyze-token` command.
+- [x] **TOKEN-01**: User can decode and classify a bearer/JWT token (algorithm, key size, expiry, quantum-safety) via a standalone `--analyze-token` command.
 - [ ] **TOKEN-02**: Bearer tokens captured during an authenticated scan are classified into the CBOM with a `declared_algorithm (unverified)` label — never treated as enforced.
-- [ ] **TOKEN-03**: `alg:none` tokens (any case variant) are flagged CRITICAL.
+- [x] **TOKEN-03**: `alg:none` tokens (any case variant) are flagged CRITICAL.
 
 ### Active REST Fuzzing (BACK-09)
 
@@ -59,7 +59,7 @@
 ### Scoring, Packaging & Lab (cross-cutting)
 
 - [ ] **SCORE-01**: New API / code-signing / fuzzing signals contribute to the readiness score via the existing `agility_signals` subscore — no 7th pillar, no rollup-denominator change.
-- [ ] **PKG-01**: A new `[api]` extras group is introduced; `schemathesis` is excluded from `[all]` and enforced by a CI guard test (impacket exclusion pattern).
+- [x] **PKG-01**: A new `[api]` extras group is introduced; `schemathesis` is excluded from `[all]` and enforced by a CI guard test (impacket exclusion pattern).
 - [ ] **LAB-01**: The chaos lab gains validation coverage for the new surfaces (OpenAPI spec endpoint, code-signing cert fixtures, isolated fuzzing target) with `expected_results_*.md` oracle updates.
 
 ---
@@ -92,14 +92,14 @@
 | AUTH-03 | Phase 93 | Complete |
 | AUTH-04 | Phase 93 | Complete |
 | AUTH-05 | Phase 93 | Complete |
-| SPEC-01 | Phase 94 | Pending |
-| SPEC-02 | Phase 94 | Pending |
-| SPEC-03 | Phase 94 | Pending |
-| TOKEN-01 | Phase 94 | Pending |
+| SPEC-01 | Phase 94 | Complete |
+| SPEC-02 | Phase 94 | Complete |
+| SPEC-03 | Phase 94 | Complete |
+| TOKEN-01 | Phase 94 | Complete |
 | TOKEN-02 | Phase 94 | Pending |
-| TOKEN-03 | Phase 94 | Pending |
+| TOKEN-03 | Phase 94 | Complete |
 | SCORE-01 | Phase 94 (partial), Phase 95 (partial), Phase 96 (final) | Pending |
-| PKG-01 | Phase 94 | Pending |
+| PKG-01 | Phase 94 | Complete |
 | CSIGN-01 | Phase 95 | Pending |
 | CSIGN-02 | Phase 95 | Pending |
 | CSIGN-03 | Phase 95 | Pending |
