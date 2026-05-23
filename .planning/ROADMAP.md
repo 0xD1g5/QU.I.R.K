@@ -62,7 +62,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 **Plans**: 4 plans
 - [x] 93-01-PLAN.md — CredentialContext core (bytearray secret, from_cli reference model, enable_authenticated_mode flag) [AUTH-01]
 - [x] 93-02-PLAN.md — Scrubbing + regression guards (safe_str ext, AST/schema gates, scheduler QRK-SCHED-AUTH-001) [AUTH-03, AUTH-05]
-- [ ] 93-03-PLAN.md — Wire JWT/API consumer + sentinel leak-detection suite + committed security-review gate [AUTH-01, AUTH-02, AUTH-04]
+- [x] 93-03-PLAN.md — Wire JWT/API consumer + sentinel leak-detection suite + committed security-review gate [AUTH-01, AUTH-02, AUTH-04]
 - [ ] 93-04-PLAN.md — Docs + UAT-SERIES + Obsidian sync (CLAUDE.md mandatory per-phase steps) [AUTH-01..04]
 
 ### Phase 94: OpenAPI & Bearer Token Analysis
@@ -106,7 +106,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Contin
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 93. Credential Infrastructure | v5.1 | 2/4 | In Progress|  |
+| 93. Credential Infrastructure | v5.1 | 3/4 | In Progress|  |
 | 94. OpenAPI & Bearer Token Analysis | v5.1 | 0/TBD | Not started | - |
 | 95. Code-Signing Certificate Inventory | v5.1 | 0/TBD | Not started | - |
 | 96. Active REST Fuzzing | v5.1 | 0/TBD | Not started | - |
