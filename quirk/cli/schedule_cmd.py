@@ -42,6 +42,19 @@ def _config_has_authenticated_mode(config_path: str | None) -> bool:
     # D-05: existence check — non-existent path is not authenticated; nothing to parse.
     if not os.path.exists(config_path):
         return False
+    # D-05 carve-out: `--config` is overloaded — `_resolve_db_path` also accepts a
+    # raw SQLite .db path. A binary SQLite database is categorically NOT an
+    # authenticated-mode YAML config, so it must not trip the fail-closed branch
+    # below (feeding the binary to yaml.safe_load otherwise raises → false reject).
+    # Detect the 16-byte SQLite header magic ("SQLite format 3\x00") and allow.
+    try:
+        with open(config_path, "rb") as bfh:
+            if bfh.read(16) == b"SQLite format 3\x00":
+                return False
+    except OSError:
+        # If we cannot even read the file header, fall through to the YAML
+        # attempt, whose except-clause fails closed per D-11.
+        pass
     # D-05: attempt YAML parse for any existing file regardless of extension.
     try:
         import yaml  # stdlib-safe: PyYAML is a base dependency of quirk
