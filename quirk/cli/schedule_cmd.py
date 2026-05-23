@@ -6,6 +6,7 @@ import os
 import re
 import sys
 from datetime import datetime, timezone
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
@@ -18,6 +19,31 @@ from quirk.models import ScheduledScan
 
 # T-63-02: validate name to prevent path traversal (no path separators, bounded length)
 _NAME_RE = re.compile(r"^[A-Za-z0-9_\-\.]{1,255}$")
+
+
+def _config_has_authenticated_mode(config_path: str | None) -> bool:
+    """Return True if the YAML config at config_path has connectors.enable_authenticated_mode set truthy.
+
+    Uses yaml.safe_load only — does NOT import load_config to avoid pulling in scanner deps.
+    Returns False if config_path is None, missing, not YAML, or the key is absent/falsy.
+    """
+    if config_path is None:
+        return False
+    # Only attempt YAML parse if the path looks like a config file (not a .db path)
+    if not config_path.endswith((".yml", ".yaml")):
+        return False
+    try:
+        import yaml  # stdlib-safe: PyYAML is a base dependency of quirk
+        with open(config_path, encoding="utf-8") as fh:
+            data: Any = yaml.safe_load(fh)
+        if not isinstance(data, dict):
+            return False
+        connectors = data.get("connectors")
+        if not isinstance(connectors, dict):
+            return False
+        return bool(connectors.get("enable_authenticated_mode", False))
+    except Exception:
+        return False
 
 
 def _resolve_db_path(config_arg: str | None) -> str:
@@ -44,6 +70,11 @@ def _cmd_add(args: argparse.Namespace, console: Console) -> None:
     # T-63-01: validate cron expression using croniter before any DB write
     if not croniter.is_valid(args.cron):
         console.print(f"[red]{format_error('SCHED-002')}[/red]")
+        sys.exit(2)
+
+    # T-93-09: reject authenticated-mode configs — credentials are ephemeral (D-11)
+    if _config_has_authenticated_mode(args.config):
+        console.print(f"[red]{format_error('SCHED-AUTH-001')}[/red]")
         sys.exit(2)
 
     db_path = _resolve_db_path(args.config)
