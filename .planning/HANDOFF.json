@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-23T13:35:01Z",
+  "phase": "96",
+  "phase_name": "v5.1 milestone complete (Phases 93-96)",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "milestone_complete",
+  "completed_tasks": [
+    {"id": 1, "name": "v5.1 Phases 93-96 executed and verified", "status": "done", "commit": "b81510b"},
+    {"id": 2, "name": "v5.1 milestone audit — PASSED (21/21 reqs, 4/4 phases, 5/5 flows)", "status": "done", "commit": "eb7a0e6"},
+    {"id": 3, "name": "v5.1 milestone archived to .planning/milestones/v5.1-*", "status": "done", "commit": "cc27abd"},
+    {"id": 4, "name": "v5.1 phase directories (93-96) archived", "status": "done", "commit": "4ff1e9e"}
+  ],
+  "remaining_tasks": [
+    {"id": 5, "name": "Start v5.2 milestone via /gsd-new-milestone (continues from Phase 97)", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "STATE.md progress counters are STALE/WRONG — show v5.1 at 50% (completed_phases 2, percent 50, 'Phase 93 COMPLETE / Plan 1 of 4') while milestone actually shipped 100% (4/4 phases). This is the documented 'state tool clobbers milestone progress' gotcha. Do NOT trust STATE.md counters; trust ROADMAP.md + MILESTONES.md + v5.1-MILESTONE-AUDIT.md.", "type": "technical", "workaround": "/gsd-new-milestone will reinitialize STATE.md for v5.2; counters self-correct at next milestone start. No manual fix needed unless staying on v5.1."}
+  ],
+  "human_actions_pending": [
+    {"action": "Phase 93: confirm bare --auth-bearer triggers interactive getpass TTY prompt + scan completes", "context": "deferred human-UAT from v5.1 audit; needs TTY", "blocking": false},
+    {"action": "Phase 93: confirm live PDF export is credential-free (Playwright render)", "context": "deferred human-UAT; needs running server", "blocking": false},
+    {"action": "Phase 95: live scan against running ldaps Docker profile -> 1 HIGH code-signing finding + stable CBOM + score signal", "context": "deferred human-UAT; needs ldaps lab profile", "blocking": false},
+    {"action": "Phase 96: interactive TTY CONFIRM gate (non-CONFIRM aborts, CONFIRM proceeds)", "context": "deferred human-UAT; needs TTY + fuzz-target container", "blocking": false},
+    {"action": "Phase 96: non-TTY hard-abort sends zero requests with clear error", "context": "deferred human-UAT", "blocking": false},
+    {"action": "Phase 96: live alg-confusion probe against running fuzz-target container -> CRITICAL + HIGH findings", "context": "deferred human-UAT; needs fuzz-target lab profile", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "v5.1 shipped with all locked decisions intact (D-01..D-08)", "rationale": "ephemeral creds only, codesign LDAP+TLS-EKU only, fold into agility_signals (no 7th subscore), schemathesis in [api] only", "phase": "93-96"},
+    {"decision": "SCORE_WEIGHTS walked 283.0 -> 293.0 -> 299.0 -> 303.0 across phases 94/95/96", "rationale": "API/codesign/fuzzing signals fold into existing agility_signals subscore", "phase": "93-96"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd-new-milestone to open v5.2 (continues from Phase 97). Review backlog + HORIZON.md candidates first. Carry v5.1 tech debt (WR-02..06, WR-03, WR-05) into v5.2 scoping.",
+  "context_notes": "Clean milestone boundary — NO in-progress work, working tree clean, v5.1.0 tag exists locally. v5.1 (Authenticated Scanning + API Surface Depth) fully shipped and archived 2026-05-23. The only thing 'paused' is the decision of what to build next. Carried tech debt for v5.2: 5xx cascade counter resets on connection-exception (WR-03), code-signing cert expiry computed but not surfaced as a finding (WR-05), and five design-judgment follow-ups WR-02..06 from the 94-REVIEW. 6 human-UAT items deferred (all environment-gated, non-blocking). Two parked chaos-lab phases (999.83, 999.84) sit in .planning/phases/ — these are a parking lot, not active work; 999.83-05-PLAN.md trips the placeholder scan but it's a deliberately-parked stub, not a false completion."
+}
