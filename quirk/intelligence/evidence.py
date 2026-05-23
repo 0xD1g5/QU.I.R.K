@@ -16,7 +16,9 @@ _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   # Phase 94 — bearer-token and OpenAPI spec analysis protocols
                   "BEARER_TOKEN", "OPENAPI",
                   # Phase 95 CSIGN-01 — code-signing certificate inventory
-                  "CODE_SIGNING")
+                  "CODE_SIGNING",
+                  # Phase 96 FUZZ-01 — active REST crypto-posture fuzzing findings
+                  "REST_FUZZ")
 
 
 def _as_utc_naive(dt: datetime) -> datetime:
@@ -126,6 +128,9 @@ def build_evidence_summary(
 
     # Phase 95 — Code-signing certificate weak algorithm counter (CSIGN-01, SCORE-01)
     codesign_weak_algo_count = 0        # CODE_SIGNING endpoints with RSA<2048/EC<256/SHA-1 (severity HIGH)
+
+    # Phase 96 FUZZ-01/SCORE-01 — REST fuzz finding counter (CRITICAL/HIGH only; INFO excluded)
+    fuzz_finding_count = 0              # REST_FUZZ endpoints with severity CRITICAL or HIGH
 
     # Motion / data-in-motion counters (Phase 34)
     motion_email_starttls_missing_count = 0  # *-STARTTLS endpoints with no tls_version (handshake never completed)
@@ -337,6 +342,15 @@ def build_evidence_summary(
             if "weak" in _cs_segments:
                 codesign_weak_algo_count += 1
 
+        # ---- Phase 96 FUZZ-01/SCORE-01 — REST fuzz finding counter ----
+        elif proto == "REST_FUZZ":
+            # Increment only for CRITICAL or HIGH severity findings.
+            # INFO probe_skipped rows (e.g. no public key for alg-confusion) are excluded
+            # to prevent informational advisory rows from inflating the agility signal.
+            _rf_sev = str(getattr(ep, "severity", "") or "").upper()
+            if _rf_sev in ("CRITICAL", "HIGH"):
+                fuzz_finding_count += 1
+
         # ---- Motion (Phase 34) — broker plaintext listeners ----
         elif proto in {"KAFKA-PLAIN", "AMQP-PLAIN", "REDIS-PLAIN"}:
             motion_broker_plaintext_count += 1
@@ -491,4 +505,7 @@ def build_evidence_summary(
         # Phase 95 SCORE-01 — code-signing cert weak algorithm agility signal
         "codesign_weak_algo_count": codesign_weak_algo_count,
         "agility_codesign_weak_algo_ratio": round(codesign_weak_algo_count / total_endpoints, 4) if total_endpoints else 0.0,
+        # Phase 96 FUZZ-01/SCORE-01 — REST fuzz CRITICAL/HIGH finding count + agility ratio
+        "fuzz_finding_count": fuzz_finding_count,
+        "agility_fuzz_crypto_posture_ratio": round(fuzz_finding_count / total_endpoints, 4) if total_endpoints else 0.0,
     }
