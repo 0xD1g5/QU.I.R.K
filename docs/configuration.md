@@ -232,8 +232,53 @@ Enables optional scanner extensions for cloud infrastructure, API endpoints, con
 | `jwt_targets` | list[string] | `[]` | REST endpoint URLs for JWT scanner |
 | `container_targets` | list[string] | `[]` | Docker image refs for container scanner |
 | `source_targets` | list[string] | `[]` | Git repo paths or URLs for source scanner |
+| `codesign_targets` | list[string] | `[]` | LDAP URLs for code-signing certificate discovery (e.g. `ldap://dc.corp.com:389`) |
+| `codesign_search_base` | string | `null` | LDAP search base DN for `userCertificate` discovery (e.g. `dc=corp,dc=com`) |
+| `codesign_timeout` | int | `10` | Per-connection timeout in seconds for code-signing LDAP queries |
 
 > **Note:** See [Connector Guides](connectors/) for per-connector credential setup and least-privilege templates.
+
+### Code-Signing Certificate Connector (Phase 95)
+
+The code-signing connector discovers X.509 certificates from Active Directory LDAP servers by
+reading the `userCertificate` RFC 4523 attribute. It filters for certificates carrying the
+`Code Signing` Extended Key Usage (EKU OID `1.3.6.1.5.5.7.3.3`) and classifies weak-algorithm
+certificates (RSA < 2048-bit, EC < 256-bit key, or SHA-1 signature) as HIGH-severity findings.
+
+Enable the connector in the `connectors` block and activate it at scan time with the
+`--inventory-code-signing` CLI flag:
+
+```yaml
+connectors:
+  codesign_targets:
+    - "ldap://dc01.corp.com:389"
+  codesign_search_base: "dc=corp,dc=com"
+  codesign_timeout: 10    # seconds; default 10
+```
+
+```bash
+quirk --config config.yaml --inventory-code-signing
+```
+
+The scanner performs an anonymous LDAP bind with a paged search (page size 500). All user DNs
+and certificate subject CNs that appear in log output are sanitized via `safe_str()` (control
+characters and newlines are removed). No certificate content is written or transmitted
+beyond the existing scan database.
+
+**In-process TLS EKU check:** Even without `codesign_targets` configured, the `--inventory-code-signing`
+flag activates an in-process check that inspects TLS certificates already collected by the TLS
+scanner for the Code Signing EKU. This path requires no additional network connections and runs
+against the in-memory `tls_endpoints` list.
+
+**CBOM integration:** Code-signing certificates are emitted as CycloneDX `certificate` components
+with `bom_ref = crypto/certificate/codesign/<sha256-fingerprint>`. If the same certificate was
+already discovered by the TLS scanner, the TLS-derived component wins and gains a
+`quirk:code-signing-eku: true` property rather than creating a duplicate component.
+
+**Scoring impact:** The code-signing connector contributes to the **Agility Signals** subscore.
+Each certificate with a weak algorithm increments the `codesign_weak_algo_count` counter; the
+resulting `agility_codesign_weak_algo_ratio` reduces the subscore by up to −6.0 points
+(SCORE_WEIGHTS sum: 299.0, count: 40 — Phase 95 SCORE-01).
 
 ```yaml
 connectors:
@@ -367,6 +412,7 @@ quirk --config config.yaml --profile deep
 | `--cache-ttl-hours` | `24` | Cache time-to-live in hours |
 | `--resume` | `false` | Reuse cache if valid (skip re-discovery) |
 | `--force-discovery` | `false` | Ignore existing discovery cache and re-run |
+| `--inventory-code-signing` | `false` | Inventory code-signing certificates from LDAP `userCertificate` attributes and in-process TLS EKU check (Phase 95 CSIGN-01) |
 
 ### `quirk serve` — Dashboard Flags
 
@@ -456,6 +502,9 @@ connectors:
   jwt_targets: []
   container_targets: []
   source_targets: []
+  codesign_targets: []
+  codesign_search_base: null
+  codesign_timeout: 10
 
 output:
   directory: "output"
