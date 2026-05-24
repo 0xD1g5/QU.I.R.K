@@ -103,7 +103,22 @@ Plans:
   2. Each finding carries actionable remediation guidance specific to the detected weakness (not generic PQC boilerplate) — a practitioner can follow the guidance to address the finding
   3. A code-signing certificate that is expired or approaching expiry appears as a finding in the report with severity-appropriate classification — a consultant scanning a host with an expired code-signing cert sees it called out explicitly
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 99-01-PLAN.md — content_model foundation: ALGO_IMPACT_MAP 3-tuple extension + REMEDIATION_CATALOG + codesign keys + fix breaking unpacks (CTX-01/02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 99-02-PLAN.md — _build_finding quantum_risk + catalog remediation + conditional NIST; codesign expiry classification (both paths) + evaluate_codesign_endpoints + run_scan wiring (CTX-01/02/03)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 99-03-PLAN.md — renderer trio (markdown column + HTML All Findings column/Top Findings block + CSS); render-parity test; expected_results oracle; UAT-SERIES sync (CTX-01/03)
+
+**UI hint**: yes
 
 ### Phase 100: Professional & Editable Report Delivery
 
@@ -126,5 +141,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
 | 98. Executive Narrative + Score Transparency | 3/3 | Complete   | 2026-05-24 |
-| 99. Per-Finding Context + Code-Signing Expiry | 0/TBD | Not started | - |
+| 99. Per-Finding Context + Code-Signing Expiry | 0/3 | Planned | - |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
