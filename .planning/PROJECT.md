@@ -150,6 +150,23 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
+## Current Milestone: v5.3 Adoption & Integration Surface
+
+**Goal:** Make QU.I.R.K. load-bearing inside someone else's workflow — findings and scheduled-scan drift events flow into the tools security teams already use, rather than living only in QU.I.R.K.'s own reports.
+
+**Target features:**
+- **Notification fan-out (ANCHOR):** Slack / email / webhook delivery of scheduled-scan drift events. Drift events are already emitted internally but never delivered — half-built, so this is the lowest-risk, highest-signal starting point. Finish this first as the North Star before adding breadth.
+- **SIEM / observability export:** one export integration (Splunk HEC / Elastic / generic syslog+CEF) so findings surface in existing security stacks.
+- **Ticketing integration:** one of Jira / ServiceNow — auto-ticket per finding carrying QRAMM evidence, closing the remediation loop.
+- **Dashboard team auth:** API-key / token-based single-tenant dashboard auth for team sharing — explicitly NOT SaaS multi-tenancy (that stays deferred to v5.4, gated on a real adoption signal).
+- **Tax (folded from v5.2):** thread `exec_content.score_total/score_band/subscores` into the CLI executive markdown instead of re-deriving locally, and add a score-number cross-surface parity test.
+
+**Key context:**
+- **Anchor-first to avoid grab-bag sprawl.** HORIZON's explicit risk for this milestone is integration sprawl; mitigation is to finish notification fan-out first, then add exactly ONE export + ONE ticketing integration — not all of everything.
+- **Single-tenant only.** SaaS multi-tenancy / distributed multi-node (999.22) remain deferred to v5.4 unless v5.3 adoption surfaces a multi-segment customer ask.
+- Third-party integration APIs (Slack/webhooks, Splunk HEC/Elastic/CEF, Jira/ServiceNow) are unfamiliar external surfaces with real auth/format/rate-limit pitfalls — research-first milestone.
+- 2:1 cadence holds: v5.2 deliverable → **v5.3 adoption/ops** → v5.4 stabilization + SaaS-validation. Numbering continues at Phase 101. Source of truth for forward outlook: `.planning/HORIZON.md`.
+
 ## Previous Milestone: v5.2 Consulting-Grade Reporting — SHIPPED 2026-05-24
 
 **Delivered:** The report is now a consulting-grade deliverable. From one scan and a single shared content model (`build_exec_content` / `ExecContent` + the findings dict), QU.I.R.K. produces a CISO-readable executive narrative with transparent scoring (subscore decomposition + ÷1.5 rollup), a finding list enriched into an advisory document (per-finding quantum-risk "so what" + weakness-specific remediation), code-signing certificate expiry as a first-class finding, a branded client-ready PDF (configurable logo, clean pagination), and an editable DOCX export — the same story across CLI, HTML, PDF, and DOCX. 4 phases (97–100), 12 plans, audit PASSED (13/13 requirements). Local `v5.2.0` tag. Next-up: v5.3 Adoption & Integration (continues at Phase 101).
@@ -330,7 +347,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Render-side + evidence-tally fixes deferred to v5.0 Phase 01 (v4.10.1-D-03 / D-04) | Same bug class likely lives in CLI/HTML/PDF renderers (RENDER-CLI-01/PDF-01); the evidence-tally gap (3 subscores at 25 despite findings) is a separate root cause in the summarizer (EVIDENCE-TALLY-01). A full-stack scoring sweep is the right shape; mixing into a hotfix risks new bugs. | — Pending — captured as Future Requirements in archived v4.10.1-REQUIREMENTS.md; v5.0 Phase 01 pre-loads them |
 
 ---
-*Last updated: 2026-05-24 — v5.2 Consulting-Grade Reporting SHIPPED (Phases 97–100, 12 plans, local `v5.2.0` tag). The report deliverable now leads with a narrative exec summary, transparent scoring, advisory per-finding context, code-signing expiry findings, a branded PDF, and an editable DOCX — all from one shared content model across CLI/HTML/PDF/DOCX. Audit PASSED 13/13. One non-blocking tech-debt item carried to backlog (CLI score should source `exec_content` rather than re-derive). Next-up: v5.3 Adoption & Integration (continues at Phase 101). Previous: v5.1 Authenticated Scanning SHIPPED 2026-05-23 (Phases 93–96, local `v5.1.0` tag).*
+*Last updated: 2026-05-24 — v5.3 Adoption & Integration Surface OPENED (continues at Phase 101). Theme per HORIZON.md: make QU.I.R.K. load-bearing in others' workflows — notification fan-out (anchor: drift events are emitted but undelivered) + one SIEM export + one ticketing integration + single-tenant dashboard auth; folds in the v5.2 CLI-score-source tax. Research-first (unfamiliar third-party APIs). SaaS/multi-tenant stays deferred to v5.4 pending adoption signal. — v5.2 Consulting-Grade Reporting SHIPPED (Phases 97–100, 12 plans, local `v5.2.0` tag). The report deliverable now leads with a narrative exec summary, transparent scoring, advisory per-finding context, code-signing expiry findings, a branded PDF, and an editable DOCX — all from one shared content model across CLI/HTML/PDF/DOCX. Audit PASSED 13/13. One non-blocking tech-debt item carried to backlog (CLI score should source `exec_content` rather than re-derive). Next-up: v5.3 Adoption & Integration (continues at Phase 101). Previous: v5.1 Authenticated Scanning SHIPPED 2026-05-23 (Phases 93–96, local `v5.1.0` tag).*
 
 ## Evolution
 
