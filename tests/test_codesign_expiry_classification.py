@@ -176,12 +176,14 @@ class TestTlsPathExpiryFields:
         assert "approaching-expiry" in (scan_data.get("reasons") or [])
         assert results[0].severity == "MEDIUM"
 
-    def test_no_expiry_safe_crypto_no_endpoint_emitted(self):
-        """D-09: TLS path with SAFE crypto + no expiry does not emit endpoint."""
+    def test_no_expiry_safe_crypto_emits_no_severity(self):
+        """D-09: TLS path with SAFE crypto + no expiry emits endpoint with severity=None."""
         future = _now_utc() + timedelta(days=365)
         ep = _tls_ep_with_eku(cert_not_after=future)
         results = scan_codesign_from_tls_endpoints([ep])
-        assert len(results) == 0
+        # TLS path always emits a CODE_SIGNING endpoint; evaluator skips severity=None
+        assert len(results) == 1
+        assert results[0].severity is None
 
     def test_none_not_after_defaults_to_not_expired(self):
         """D-09: None cert_not_after → expired defaults to False (no false positive)."""
