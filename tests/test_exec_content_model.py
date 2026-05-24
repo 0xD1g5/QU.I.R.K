@@ -112,7 +112,7 @@ def test_top_risks_populated():
     )
 
     # The impact_sentence must come from ALGO_IMPACT_MAP (not per-finding prose)
-    _, expected_sentence = ALGO_IMPACT_MAP["RSA"]
+    _, expected_sentence, _ = ALGO_IMPACT_MAP["RSA"]
     assert risk.impact_sentence == expected_sentence, (
         f"impact_sentence '{risk.impact_sentence}' does not match ALGO_IMPACT_MAP RSA entry. "
         "EXEC-02 / D-02: sentences come from the static map, not per-finding text."
