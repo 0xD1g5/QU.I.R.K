@@ -132,7 +132,17 @@ Plans:
   3. Running `quirk report --format docx` (or equivalent export path) produces a DOCX file that opens in Word and Google Docs with sections, headings, and tables intact — a consultant can insert a logo and edit narrative text without reconstructing the document structure
 
 **Architecture note (for planner)**: The DOCX exporter must derive from the SAME report content model that drives CLI/HTML/PDF — the same `IntelligenceReport` / finding dict that Phase 98 establishes — so it inherits EXEC-04 and TRANS-03 consistency guarantees rather than being a hand-built parallel document. The PDF is the "as-scanned" immutable artifact; the DOCX is the "pre-delivery editable" artifact the consultant finalizes. Both are generated from one content pipeline, not two.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 100-01-PLAN.md — AssessmentCfg.logo_path + logo base64-embed in html_renderer + cover-page markup + print/pagination CSS + findings-table class (FMT-01/FMT-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 100-02-PLAN.md — docx_renderer.py structural DOCX from shared content model + write_reports auto-emit + [docx] extra + parity/writer tests + docs/Obsidian sync (FMT-03)
+
 **UI hint**: yes
 
 ## Progress
@@ -142,4 +152,4 @@ Plans:
 | 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
 | 98. Executive Narrative + Score Transparency | 3/3 | Complete   | 2026-05-24 |
 | 99. Per-Finding Context + Code-Signing Expiry | 3/3 | Complete   | 2026-05-24 |
-| 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
+| 100. Professional & Editable Report Delivery | 0/2 | Not started | - |
