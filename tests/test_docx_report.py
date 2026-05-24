@@ -189,16 +189,15 @@ def test_docx_skip_advisory(monkeypatch, tmp_path, capsys):
 
 def test_docx_save_failure_returns_false(monkeypatch, tmp_path, capsys):
     """render_docx_report returns False (never raises) when doc.save raises."""
-    from docx import Document
+    import docx.document
     from quirk.reports import docx_renderer
 
-    # Patch Document.save to simulate a write failure (e.g. full filesystem)
-    original_save = Document.save
-
+    # docx.Document is a factory function; the real class is docx.document.Document.
+    # Patch the class method directly so the instance method is replaced.
     def _failing_save(self, path_or_stream):
         raise OSError("No space left on device")
 
-    monkeypatch.setattr(Document, "save", _failing_save)
+    monkeypatch.setattr(docx.document.Document, "save", _failing_save)
 
     result = docx_renderer.render_docx_report(
         path=str(tmp_path / "fail_save.docx"),
