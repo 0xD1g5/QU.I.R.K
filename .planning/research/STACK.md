@@ -1,392 +1,243 @@
-# Stack Research — v5.1 Authenticated Scanning + API Surface Depth (ADDITIONS ONLY)
+# Stack Research — v5.3 Adoption & Integration Surface (ADDITIONS ONLY)
 
-**Domain:** Ephemeral credential model, OpenAPI spec analysis, bearer token interception, active REST fuzzing, code-signing cert inventory — additive to an existing mature Python 3.11+ crypto scanner
-**Researched:** 2026-05-22
-**Confidence:** HIGH (all versions verified against live PyPI index; existing core deps confirmed from pyproject.toml; integration points confirmed from source files)
+**Domain:** Outbound integrations for an existing Python 3.11+ crypto-scanner + FastAPI dashboard — notification fan-out, SIEM export, ticketing, and single-tenant dashboard auth
+**Researched:** 2026-05-24
+**Confidence:** HIGH (all versions verified against live PyPI JSON API; integration points confirmed from source files; auth patterns confirmed from existing quirk/dashboard/api/middleware/auth.py)
 
-> This file covers ONLY stack additions/changes for v5.1. The full existing stack
-> (sslyze, httpx, PyJWT, python-jose, cryptography, PyYAML, lxml, cyclonedx-python-lib,
-> FastAPI, React + shadcn/ui, SQLite, dnspython, signxml, nh3, impacket, etc.) is
-> documented in PROJECT.md Key Decisions and is NOT repeated here.
-
----
-
-## Existing Core Deps Already Available for v5.1 (Zero Additional Cost)
-
-These are already in `pyproject.toml` core and cover most of the v5.1 feature surface.
-Verify before adding anything — the correct answer is often "use what is already there."
-
-| Library | Version Pinned | Latest on PyPI | Relevant v5.1 Use |
-|---------|---------------|---------------|-------------------|
-| `httpx` | `>=0.28.0` | 0.28.1 | HTTP client for authenticated API calls; inject auth headers |
-| `PyJWT` | `>=2.12.0` | 2.13.0 | JWT decode/inspect (alg, exp, kid) for bearer token analysis |
-| `python-jose` | `>=3.5.0` | 3.5.0 | JWE / non-standard alg values that PyJWT refuses to decode |
-| `cryptography` | `>=44.0` | 48.0.0 | X.509 EKU OID extraction for code-signing cert classification |
-| `PyYAML` | `>=6.0` | 6.0.3 | OpenAPI YAML spec loading (use `safe_load`, never `load`) |
-| `lxml` | `>=6.0` | 6.1.1 | XML-based code-signing manifests; already XXE-hardened |
-| `asn1crypto` | transitive via `cryptography` | 1.5.1 | ASN.1 cert field decoding (already available at zero cost) |
-| `rich` | `>=13.0.0` | 15.0.0 | Credential prompt UX (`quirk doctor` already uses it) |
-
-**Implication:** Zero new core dependencies are needed for Features 1, 3, and 5. Only Features 2 and 4 require new pip packages, and those belong in a new `[api]` extras group only.
+> This file covers ONLY stack additions/changes for v5.3. The full existing stack
+> (sslyze, FastAPI + HTTPBearer auth, SQLite, React + shadcn/ui, cyclonedx-python-lib,
+> croniter scheduler, TrendReport dataclass, etc.) is documented in PROJECT.md Key Decisions
+> and is NOT repeated here.
 
 ---
 
-## Feature 1 — Ephemeral Credential Model
+## TL;DR — New Dependency Budget
 
-### Decision: No new pip dependency
+| Extra group | New pip deps | Core impact |
+|---|---|---|
+| `[notify]` | `slack-sdk>=3.42.0` | ZERO — stdlib handles email + webhook |
+| `[siem]` | none (stdlib only) | ZERO |
+| `[tickets]` | `jira>=3.10.5` | ZERO |
+| Dashboard auth | none (already shipped) | ZERO |
 
-Use stdlib `getpass.getpass()` + `os.environ` + a plain `dataclass` in a new `quirk/auth/credentials.py` module. The `safe_exc.py` helper (v4.8 Phase 59 / LEAK-01) already scrubs `Authorization: Bearer` from exception strings — extend its `_SENSITIVE_PATTERNS` with API-key header variants.
-
-**Why no new lib:**
-
-`keyring` (25.7.0) persists credentials to OS Keychain/GNOME Wallet/Windows Credential Manager. That directly contradicts the milestone's "never persisted" invariant stated in PROJECT.md. Adding it would make the ephemeral guarantee impossible to enforce via tests. Do NOT add.
-
-`requests-oauthlib` (2.0.0) handles OAuth2 client-credentials token acquisition (network round-trip, `client_secret` in memory). v5.1 scope is to USE a pre-acquired token — not to acquire one. OAuth2 flow is deferred per PROJECT.md (mTLS + OAuth2 client_credentials). Do NOT add.
-
-`python-dotenv` (1.2.1) loads credentials from `.env` files — a persistence mechanism in disguise. Any tool that reads credentials from a file on disk defeats the ephemeral model. Do NOT add.
-
-### Implementation pattern
-
-```python
-# quirk/auth/credentials.py — pure stdlib, no new deps
-from __future__ import annotations
-import base64, getpass, os, sys
-from dataclasses import dataclass
-from typing import Literal, Optional
-
-CredKind = Literal["bearer", "api_key_header", "api_key_query", "basic"]
-
-@dataclass(frozen=True)
-class EphemeralCredential:
-    kind: CredKind
-    value: str           # bearer token, api key, or "user:pass" for Basic
-    header_name: str = "Authorization"   # override for api_key_header
-    query_param: str = ""                # populated for api_key_query only
-
-    def apply_to_headers(self) -> dict[str, str]:
-        if self.kind == "bearer":
-            return {"Authorization": f"Bearer {self.value}"}
-        if self.kind == "api_key_header":
-            return {self.header_name: self.value}
-        if self.kind == "basic":
-            enc = base64.b64encode(self.value.encode()).decode()
-            return {"Authorization": f"Basic {enc}"}
-        return {}   # api_key_query: applied via URL params, not headers
-
-def credential_from_env_or_prompt(kind: CredKind = "bearer") -> Optional[EphemeralCredential]:
-    """Flag > env > TTY prompt. Never reads from file. Never persists."""
-    token = (
-        os.environ.get("QUIRK_AUTH_TOKEN")
-        or os.environ.get("QUIRK_AUTH_KEY")
-        or os.environ.get("QUIRK_AUTH_BASIC")
-    )
-    if not token and sys.stdin.isatty():
-        token = getpass.getpass("Auth credential (Enter to skip): ").strip() or None
-    return EphemeralCredential(kind=kind, value=token) if token else None
-```
-
-### `safe_exc.py` extension (one-line addition, no new dep)
-
-Extend `_SENSITIVE_PATTERNS` in `quirk/util/safe_exc.py` to cover API-key variants not currently scraped:
-
-```python
-# Add to _SENSITIVE_PATTERNS tuple:
-re.compile(r"\bX-Api-Key:\s*\S+", re.IGNORECASE),
-re.compile(r"\bX-Auth-Token:\s*\S+", re.IGNORECASE),
-re.compile(r"[?&]api[_-]?key=[^&\s]+", re.IGNORECASE),  # query param leakage
-```
+**Three new optional extras, one library each for Slack and Jira. Everything else is stdlib.**
 
 ---
 
-## Feature 2 — OpenAPI / Swagger Spec Analysis
+## 1. Notification Fan-Out
 
-### Decision: Add `openapi-spec-validator>=0.7.2` to `[api]` extras
+### 1a. Slack
 
-| Library | Version | Extras Group | Why |
-|---------|---------|-------------|-----|
-| `openapi-spec-validator` | `>=0.7.2` | `[api]` | Validates and resolves both OAS2 (Swagger) and OAS3 specs. Pure-Python, pip-installable, offline-capable. Handles `$ref` resolution internally via `jsonschema-path`. The canonical validation layer used by the OpenAPI community. Deps: `jsonschema` (already installed at 4.25.1 in env), `referencing` (0.36.2 also present). No new transitive conflicts. |
+**Recommendation: `slack_sdk.webhook.WebhookClient` from `slack-sdk>=3.42.0`**
 
-**`openapi-core` (0.22.0): Do NOT add.** It layers full HTTP request/response validation middleware on top of spec parsing — heavyweight (`werkzeug`, `isodate`, `lazy-object-proxy` in transitive tree). QUIRK needs passive spec analysis for crypto inventory, not a request validator. Brings `werkzeug` which has no scanner role.
+Use incoming webhooks (not the bot-token Web API) because:
+- An incoming webhook URL is the only credential the operator needs — no Slack app OAuth dance, no workspace scopes, no bot user.
+- `WebhookClient` wraps the single `POST https://hooks.slack.com/services/…` call with retry logic and Block Kit support. The raw call is 8 lines of `urllib`; the SDK adds nothing architecturally except Block Kit builder helpers and response assertion sugar.
+- The alternative — bot token (`slack_sdk.WebClient`) — requires creating a Slack app, granting `chat:write` scope, and distributing an `xoxb-…` token. That is the right model when you need dynamic channel selection or multi-workspace support; neither applies here.
+- Classic Incoming Webhooks (legacy, pre-2016 app model) are being sunset; the SDK's `WebhookClient` targets the current Slack app Incoming Webhook URL format, which is stable.
 
-**`prance` (23.6.21.0): Do NOT add.** Primary value is resolving external `$ref` URLs via network. QUIRK's offline constraint makes remote `$ref` resolution a liability; a spec file with external `$ref` to `https://example.com/schemas/…` would fail on an air-gapped engagement. `openapi-spec-validator` handles local `$ref` correctly.
+**Version:** `slack-sdk==3.42.0` (latest as of 2026-05-24, verified against `https://pypi.org/pypi/slack-sdk/json`)
 
-**`jsonref` (1.1.0): Do NOT add separately.** `openapi-spec-validator` handles `$ref` resolution already. No independent value.
+**Auth:** Incoming webhook URL embeds a token — stored in `quirk.yml` under a new `notifications.slack_webhook_url` field. No separate header token. Treat it as a secret: never log it, redact with `safe_str()`.
 
-### What the OpenAPI scanner extracts (passive — no auth needed)
+**Optional extra:** `[notify]` — `slack-sdk>=3.42.0`
 
-Walk `paths` → `operations` → security declarations. Extract:
-- `components/securitySchemes`: type, scheme, `bearerFormat`, OAuth2 flows, API key param name/location
-- Per-operation `security` overrides (some ops may be public, some require auth)
-- Parameters or schema fields using `format: "password"` or `format: "byte"` (base64 creds in request bodies)
-- `x-` extensions advertising JWT `alg` or key ID hints
-- Crypto-weak patterns: HTTP (not HTTPS) `servers` entries, `securitySchemes` with no scheme declared
+**Integration point:** Post-dispatch hook inside `_dispatch_schedule()` in `quirk/cli/scheduler_cmd.py`. After a scheduled run completes and `compute_trend_report()` returns a `TrendReport`, a `quirk.notify.slack` module serializes the report to a Block Kit message and calls `WebhookClient.send()`. If the webhook URL is not configured, the call is a no-op (graceful skip).
 
-All extraction is plain dict-walking after `openapi-spec-validator` loads and resolves. No additional library beyond the validator.
-
-### YAML loading safety
-
-`PyYAML` is already in core. Use `yaml.safe_load()` exclusively — never `yaml.load()`. YAML 1.1 booleans (`on`/`off`, `yes`/`no`) can corrupt boolean OpenAPI field values. Enforce via the existing semgrep ruleset (add a rule targeting `yaml.load\(` without `Loader=yaml.SafeLoader` if not already present).
+**DO NOT** pull in `slack-bolt` (event handling framework — irrelevant) or `slackclient` (legacy, deprecated).
 
 ---
 
-## Feature 3 — Bearer Token Interception and Cryptographic Analysis
+### 1b. Email
 
-### Decision: No new dependency — use existing PyJWT + python-jose (both in core)
+**Recommendation: stdlib `smtplib` + `email` (Python 3.11 standard library) — ZERO new deps**
 
-`PyJWT 2.x` decodes a JWT header/payload without verification:
+Why stdlib is sufficient:
+- SMTP send is a straightforward `SMTP_SSL` or `SMTP` + `starttls()` + `login()` + `sendmail()` call with `email.mime.multipart.MIMEMultipart` for the message body. Python's `ssl.create_default_context()` gives TLS cert validation for free.
+- Third-party libraries like `yagmail`, `flanker`, or `sendgrid` add features QU.I.R.K. does not need (templating engines, DKIM signing, campaign tracking). They would expand the minimal install for zero functional gain.
+- Attachment support (appending an HTML report PDF) is handled by `email.mime.application.MIMEApplication` — no external dep.
 
-```python
-import jwt
-header = jwt.get_unverified_header(token)   # {"alg": "RS256", "kid": "abc", "typ": "JWT"}
-payload = jwt.decode(token, options={"verify_signature": False})  # {"exp": 1748000000, ...}
-```
+**Auth:** SMTP username + password (or app password), stored as `notifications.email.smtp_user` / `notifications.email.smtp_password` in `quirk.yml`. For Office 365 / Google Workspace, the operator uses an app-specific password rather than account password.
 
-Combined with the existing `_rsa_key_bits_from_n()` helper already in `jwt_scanner.py`, all needed crypto fields are extractable without a new dep.
+**Ports / TLS:** `SMTP_SSL` for port 465; `SMTP` + `STARTTLS` for port 587 (recommended default). Both via stdlib. No STARTTLS stripping risk since QU.I.R.K. is the client, not the server.
 
-`python-jose` (already in core) covers JWE (encrypted tokens with `"alg": "RSA-OAEP"` in the outer header) and non-standard `alg` values that `PyJWT` refuses to decode (e.g., deprecated `"alg": "none"`). The `python-jose` path is a fallback for tokens PyJWT rejects.
-
-Token expiry classification uses stdlib: `datetime.fromtimestamp(exp, tz=timezone.utc)`. No new dep.
-
-**`joserfc` (1.6.5): Do NOT add.** More modern library but adds a dependency for capabilities already covered by `python-jose` which is already in core. Redundant.
-
-### Integration point with jwt_scanner.py
-
-Extend `scan_jwt_targets()` with an optional `credential: Optional[EphemeralCredential]` parameter:
-
-1. If credential provided: inject `credential.apply_to_headers()` into the `httpx` request for JWKS fetch (enables fetching protected JWKS endpoints).
-2. After JWKS fetch, also decode the credential's bearer token itself (if `kind == "bearer"` and token is a JWT): extract `alg`, `exp`, `kid`, `iat` and emit an additional `CryptoEndpoint` record for the token's own crypto posture.
-3. Cross-reference decoded `kid` with fetched JWKS keys where available.
-
-Return path is the same `List[CryptoEndpoint]` — no output model changes.
+**Optional extra:** none — ships inside core `[notify]` behaviour with zero additional deps.
 
 ---
 
-## Feature 4 — Active REST Fuzzing for Crypto Posture
+### 1c. Generic Webhook (HTTP POST)
 
-### Decision: Add `schemathesis>=4.4.4` to `[api]` extras; NEVER in `[all]`
+**Recommendation: stdlib `urllib.request` — ZERO new deps**
 
-| Library | Version | Extras Group | In `[all]`? | Why |
-|---------|---------|-------------|-------------|-----|
-| `schemathesis` | `>=4.4.4` | `[api]` | **No** (explicit CI gate) | Spec-aware HTTP fuzzer — generates requests from OAS2/3 specs. Supports `stateful=False` mode for single-shot request generation. The `Case.as_transport_kwargs()` API lets QUIRK control dispatch via its existing `httpx` client. `max_examples` maps directly to the probe-budget constraint. Wraps `hypothesis` — no need to add `hypothesis` directly. |
+Why `urllib` not `requests`:
+- A single outbound `POST` with a JSON body and `Authorization: Bearer <token>` header is 10 lines of `urllib.request.urlopen`. The existing codebase already uses `urllib` patterns (SSRF allowlist, HEC probe).
+- Adding `requests` as a core or `[notify]` dep would bloat every install. The project's pattern is stdlib-first; `requests` is not currently a dependency.
+- If the project ever adds `requests` for other reasons, the webhook module can trivially be rewritten — the interface stays the same.
 
-**Why NOT `hypothesis` directly (6.141.1):** `schemathesis` wraps `hypothesis` with OpenAPI-aware strategies. Using `hypothesis` raw requires writing auth-downgrade strategies manually — that is the work `schemathesis` already did. Wrong abstraction level.
+**Auth:** Configurable. Common patterns: `Authorization: Bearer <token>`, `X-API-Key: <key>`, or `X-Signature-256: hmac-sha256(body)` (GitHub-style webhook verification). All are trivial with `urllib` and `hmac`.
 
-**Why NOT a custom fuzzer:** The budget-guard pattern (mirrors Phase 47 nmap probe budget) needs `max_examples` tracking. `schemathesis` provides this built-in. A custom fuzzer produces the same result with more unvetted surface for the security review gate.
-
-### Critical design constraints (non-negotiable)
-
-1. **Off by default.** Active fuzzing requires `--fuzz` flag + `--fuzz-confirm-authorization` acknowledgement flag + `--fuzz-budget N` (max requests, default 50). Mirrors the nmap `--probe-budget` pattern from Phase 47.
-2. **Lazy import.** `schemathesis` must only be imported inside the fuzzing branch. `pip install quirk-scanner` (without `[api]`) must never crash on import.
-3. **`[api]` not in `[all]`.** Active fuzzing sends crafted traffic. Including it in `[all]` would silently add active-scanning capability to the default install. Gate explicitly. A CI test (`tests/test_install_all_excludes_schemathesis.py`) guards this invariant — mirrors `tests/test_install_all_excludes_impacket.py`.
-
-```python
-# quirk/scanner/fuzz_scanner.py
-try:
-    import schemathesis
-    SCHEMATHESIS_AVAILABLE = True
-except ImportError:
-    SCHEMATHESIS_AVAILABLE = False
-
-def scan_api_fuzz(spec_path: str, credential, budget: int = 50):
-    if not SCHEMATHESIS_AVAILABLE:
-        raise MissingExtraError("api", "active REST fuzzing")
-    ...
-```
-
-### Fuzzing target: crypto-specific attack payloads only
-
-The fuzzer is not general-purpose — it generates specific crypto-attack probes:
-
-1. `alg: "none"` JWT header injection (no-signature bypass)
-2. `alg: "HS256"` with RSA public key as HMAC secret (algorithm confusion attack — CVE class)
-3. Downgraded `alg` value in `Authorization: Bearer` header
-4. Missing `Authorization` header (verify 401 is returned — confirms auth is enforced)
-5. API key in wrong location (header vs query param — tests parameter binding)
-6. HTTP (not HTTPS) downgrade attempt via `http://` prefix substitution in base URL
-
-All probes are crafted as `httpx.Request` objects via `schemathesis`'s `Case` API. No subprocess, no curl.
+**Optional extra:** none — zero new deps.
 
 ---
 
-## Feature 5 — Code Signing Certificate Inventory
+## 2. SIEM / Observability Export
 
-### Decision: No new dependency — use existing `cryptography>=44.0`
+**Recommendation: Splunk HEC via stdlib `urllib.request` — ZERO new deps**
 
-Code-signing certificates are X.509 certs with Extended Key Usage (EKU) OIDs. The `cryptography` library (core, `>=44.0`) exposes them via:
+Reasoning for choosing Splunk HEC over Elastic:
+- Splunk HEC is a single HTTPS POST to `https://<host>:8088/services/collector/event`. The entire integration is `urllib.request.urlopen` with `Authorization: Splunk <token>` header and a JSON body. There is no pagination, no index management, no schema negotiation.
+- The `elasticsearch` Python client (v9.4.0, verified) is a 400KB+ dependency that adds connection pooling, sniffing, and retry logic designed for high-volume indexing. For QU.I.R.K.'s use case — posting ≤hundreds of findings per scan — this is architectural overengineering.
+- Splunk is overwhelmingly the dominant SIEM in enterprise security teams, which is QU.I.R.K.'s primary user segment.
+- Generic Elastic export via the Elasticsearch REST API (`POST /<index>/_doc`) uses the same `urllib` pattern; a `[siem]` module can expose both Splunk HEC and Elastic bulk-index behind a unified `SiemExporter` interface with no new deps.
 
-```python
-from cryptography.x509.oid import ExtendedKeyUsageOID
-from cryptography import x509
+**Splunk HEC specifics:**
+- Endpoint: `POST https://<host>:8088/services/collector/event`
+- Auth: `Authorization: Splunk <hec-token>` header (HEC token, not a username/password)
+- Payload: `{"time": <epoch>, "host": "<scanner host>", "sourcetype": "quirk:finding", "event": {...finding dict...}}`
+- Batch endpoint: `POST .../services/collector` with newline-delimited JSON events for multi-finding flushes
 
-CODE_SIGNING_OIDS = frozenset({
-    ExtendedKeyUsageOID.CODE_SIGNING,                          # 1.3.6.1.5.5.7.3.3 (standard)
-    x509.ObjectIdentifier("1.2.840.113635.100.4.1"),           # Apple Developer ID Application
-    x509.ObjectIdentifier("1.3.6.1.4.1.311.10.3.3"),           # Microsoft Authenticode
-    x509.ObjectIdentifier("1.3.6.1.4.1.311.10.3.6"),           # Microsoft Windows System Component
-})
+**Elastic specifics (secondary path):**
+- Endpoint: `POST https://<host>:9200/<index>/_doc` or bulk `/_bulk`
+- Auth: `Authorization: ApiKey <base64(id:key)>` or `Authorization: Basic <base64(user:pass)>`
+- No SDK required; same `urllib` pattern
 
-def is_code_signing_cert(cert: x509.Certificate) -> bool:
-    try:
-        eku = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage)
-        return bool(CODE_SIGNING_OIDS & set(eku.value))
-    except x509.ExtensionNotFound:
-        return False
-```
+**Syslog + CEF (tertiary path):**
+- stdlib `logging.handlers.SysLogHandler` provides UDP/TCP syslog transport — zero deps.
+- CEF formatting is a string template (`CEF:0|Vendor|Product|Version|SignatureID|Name|Severity|extension`). Implementing a `CefFormatter(logging.Formatter)` subclass is ~30 lines. No external CEF library needed — `syslogcef` / `cefevent` PyPI packages are not worth the dep.
 
-No subprocess, no OS keystore access, no new dependency.
-
-**Discovery sources (agentless, no new deps):**
-
-1. **TLS scanner output** — certs already extracted during `tls_scanner.py`; EKU check is a free pass through existing cert objects.
-2. **SMIME scanner output** — `smime_scanner.py` already retrieves `userCertificate` / `userSMIMECertificate` attributes via LDAP. Apply the same EKU check.
-3. OS certificate stores — out of scope (requires agent on target, violates agentless constraint).
-4. JAR/APK files — out of scope (requires file system access on target).
-5. Sigstore transparency log — deferred to v5.2 (see "What NOT to Add" below).
-
-**New finding type:** `CODE-SIGN/weak-algorithm` — emitted when a code-signing cert uses RSA<2048, EC<256, or SHA-1. Severity: HIGH (same tier as `CERT/weak-key`). Routes through existing `_build_finding()` chokepoint in `risk_engine.py`. Adds to CBOM Pass-1 algorithm components.
-
-**`sigstore` (4.1.0): Do NOT add.** Sigstore verifies Sigstore-format signatures via Rekor transparency log (network-required). v5.1 inventories traditional X.509 code-signing certs already discovered by existing scanners. Sigstore integration is a v5.2 extension.
-
-**`pyhanko` (0.33.0): Do NOT add.** PDF digital signatures, not code-signing cert inventory.
-
-**`oscrypto` (1.3.0): Do NOT add.** Superseded by `cryptography` for everything QUIRK needs.
-
-**`certipy-ad` (4.8.2): Out of scope per PROJECT.md.** Live AD CS connectivity + pyOpenSSL conflict.
+**Optional extra:** none — stdlib only. A `[siem]` extras group is not needed. If the operator wants to use the Splunk or Elastic export, they configure the endpoint + token in `quirk.yml`; no additional `pip install` required.
 
 ---
 
-## New Extras Group: `[api]`
+## 3. Ticketing Integration
+
+**Recommendation: `jira>=3.10.5` behind a `[tickets]` optional extra — ONE new dep**
+
+Why the `jira` library over raw `urllib` REST:
+- Jira Cloud REST API (v3) uses Basic auth with a user email + API token (not password). The `jira` library handles the `basic_auth=('user@domain.com', 'api_token')` contract, pagination, error surfacing, and `create_issue()` / field mapping cleanly. The raw REST equivalent requires constructing field maps, handling Jira's nested `{"project": {"key": "…"}, "issuetype": {"name": "…"}, …}` payload structure, and dealing with 400 error bodies that enumerate field validation failures — all repetitive boilerplate.
+- The library is actively maintained (v3.10.5 released 2025-07-28, verified). It has no transitive conflicts with the existing dep tree (pure Python, no cryptography downgrade risk).
+- For ServiceNow: ServiceNow's Table REST API (`POST /api/now/table/incident`) is straightforward enough that raw `urllib` is the right choice — no ServiceNow SDK needed. Auth is Basic (`Authorization: Basic base64(user:pass)`) or OAuth 2.0 bearer. Start with Basic since the operator is already managing API tokens for QU.I.R.K.
+
+**Jira auth:** `basic_auth=('user@atlassian.net', '<api_token>')` where the API token is a Jira API token from `id.atlassian.com/manage-profile/security/api-tokens`, NOT the user password. Store in `quirk.yml` under `integrations.jira.api_token`.
+
+**ServiceNow auth (if chosen as the one ticketing integration):** `Authorization: Basic base64(user:pass)` via `urllib`. Service account with `incident_manager` role minimum. Store credentials in `quirk.yml`.
+
+**Which one to ship first:** Jira. It is more common in the security-team segment than ServiceNow, and the `jira` library eliminates the field-mapping boilerplate that makes ticket creation fragile. ServiceNow can be the "second ticketing integration" if adoption surfaces demand.
+
+**Optional extra:** `[tickets]` — `jira>=3.10.5`. Zero `[all]` impact (add to `[all]` is fine — no transitive conflicts). QRAMM evidence attaches to the ticket body as structured text (finding dict + `evidence_summary` from `build_evidence_summary()`).
+
+**Version:** `jira==3.10.5` (latest, PyPI-verified 2026-05-24)
+
+---
+
+## 4. Dashboard Team Auth
+
+**Recommendation: NO new dependency — already fully shipped in Phase 58**
+
+The bearer token auth required for v5.3 is already implemented:
+
+- `quirk/dashboard/api/middleware/auth.py` — `require_auth()` FastAPI `Depends()` using `HTTPBearer(auto_error=False)` with constant-time `hmac.compare_digest()` comparison.
+- Configured via `QUIRK_API_TOKEN` env var or `security.api_token` in `quirk.yml`.
+- Applied as a router-level dependency to all `/api/…` routes.
+
+The v5.3 work for "dashboard team auth" is therefore **documentation + UX**, not new code:
+- Document the token-sharing workflow (`QUIRK_API_TOKEN=<shared-token> quirk serve`) in the operators guide.
+- Add a `quirk token generate` CLI subcommand (uses `secrets.token_urlsafe(32)` — stdlib) to make token generation discoverable.
+- Optionally add API key header support (`X-API-Key`) as an alternative to `Authorization: Bearer` for clients that can't set bearer headers (e.g., some webhook validators). `APIKeyHeader(name="X-API-Key")` from `fastapi.security` is a stdlib-equivalent zero-dep addition.
+
+**Do NOT** add session cookies, JWT issuance, refresh tokens, or user tables. Those belong to the SaaS multi-tenant milestone (v5.4+), not single-tenant v5.3.
+
+---
+
+## 5. Optional Extras — Updated Grouping
 
 ```toml
 [project.optional-dependencies]
-api = [
-    "openapi-spec-validator>=0.7.2",
-    "schemathesis>=4.4.4",
+# (existing extras unchanged — shown for context)
+# ... dashboard, cloud, db, motion, email, broker, kafka, cbom, docx, identity, adcs, api ...
+
+# NEW in v5.3:
+notify = [
+    "slack-sdk>=3.42.0",   # Slack incoming webhook delivery
+    # email uses stdlib smtplib — no extra dep
+    # generic webhook uses stdlib urllib — no extra dep
+]
+
+tickets = [
+    "jira>=3.10.5",        # Jira Cloud + Server issue creation
+    # ServiceNow uses stdlib urllib — no extra dep
+]
+
+# siem has ZERO new deps — Splunk HEC, Elastic, syslog/CEF all via stdlib
+# No [siem] extras group needed; export is configured not installed
+
+all = [
+    # ... existing entries ...
+    "quirk-scanner[notify]",   # safe to add — slack-sdk has no conflict risk
+    "quirk-scanner[tickets]",  # safe to add — jira has no conflict risk
+    # [api] remains excluded from [all] per v5.1-D-05
+    # [identity] remains excluded from [all] per v4.6 D-01
 ]
 ```
-
-**`[all]` must NOT include `[api]`.** Guard with `tests/test_install_all_excludes_schemathesis.py`. Rationale: schemathesis sends active crafted traffic; this must never be a silent transitive of `pip install quirk-scanner[all]`.
-
-### Lazy-import pattern (mandatory for both libs)
-
-```python
-# quirk/scanner/openapi_scanner.py
-try:
-    from openapi_spec_validator import validate as _validate_spec
-    OPENAPI_SPEC_VALIDATOR_AVAILABLE = True
-except ImportError:
-    OPENAPI_SPEC_VALIDATOR_AVAILABLE = False
-
-# quirk/scanner/fuzz_scanner.py
-try:
-    import schemathesis as _schemathesis
-    SCHEMATHESIS_AVAILABLE = True
-except ImportError:
-    SCHEMATHESIS_AVAILABLE = False
-```
-
-Mirrors the `HTTPX_AVAILABLE` pattern in `jwt_scanner.py` and the `optional_extra.py` probe registry from Phase 45. Coverage-gap advisory findings must be emitted when `[api]` is absent and these features are requested.
-
----
-
-## Dependency Impact Summary
-
-| Feature | New Pip Deps | Extras Group | In `[all]`? | Confidence |
-|---------|-------------|-------------|-------------|------------|
-| 1. Ephemeral credential model | None (pure stdlib + existing `rich` + `safe_exc.py` extension) | — | — | HIGH |
-| 2. OpenAPI spec analysis | `openapi-spec-validator>=0.7.2` | `[api]` | No | HIGH |
-| 3. Bearer token interception | None (existing `PyJWT` + `python-jose` in core) | — | — | HIGH |
-| 4. Active REST fuzzing | `schemathesis>=4.4.4` | `[api]` | No (CI gate) | HIGH |
-| 5. Code-signing cert inventory | None (existing `cryptography` EKU API in core) | — | — | HIGH |
-
-**Net new pip dependencies: 2** (`openapi-spec-validator`, `schemathesis`), both in `[api]` extras only. Zero core dependency additions.
 
 ---
 
 ## What NOT to Add
 
 | Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| `keyring` | Persists credentials to OS keychain — directly contradicts ephemeral-only invariant | stdlib `getpass.getpass()` + `os.environ` |
-| `requests-oauthlib` | OAuth2 token acquisition (mTLS + client_credentials flow) is deferred; v5.1 uses pre-acquired tokens | Pass token via `--auth-bearer` / env |
-| `python-dotenv` | Reads creds from `.env` on disk — a persistence mechanism; defeats ephemeral model | `os.environ` direct access |
-| `openapi-core` | Full HTTP middleware (`werkzeug`, `isodate`, `lazy-object-proxy`); overkill for passive spec analysis | `openapi-spec-validator` |
-| `prance` | Resolves external `$ref` via network — breaks offline/air-gapped constraint | `openapi-spec-validator` (handles local `$ref`) |
-| `jsonref` | Redundant with `openapi-spec-validator`'s built-in `$ref` resolution | `openapi-spec-validator` |
-| `joserfc` | Duplicates `python-jose` already in core | Existing `python-jose>=3.5.0` |
-| `hypothesis` (direct) | `schemathesis` wraps it with OpenAPI-aware strategies; don't add both | `schemathesis` (pulls hypothesis as dep) |
-| `sigstore` | Sigstore transparency log verification; needs network; not X.509 inventory | `cryptography` EKU OID check (in-process) |
-| `pyhanko` | PDF digital signatures, not code-signing cert inventory | Not applicable in v5.1 scope |
-| `oscrypto` | Superseded by `cryptography` | Existing `cryptography>=44.0` |
-| `certipy-ad` | Live AD CS + pyOpenSSL conflict; explicitly deferred in PROJECT.md | Out of scope v5.1 |
-| `getpass2` / `maskpass` | Third-party wrappers around stdlib `getpass`; no meaningful improvement | stdlib `getpass.getpass()` |
+|---|---|---|
+| `requests` library | Not currently a dep; adding it for webhook/HEC POST would bloat every install for 10 lines of code | `urllib.request` — already used for URL allowlist checks |
+| `slack-bolt` | Slack event-handling framework; needed for slash commands / interactivity, not outbound notifications | `slack_sdk.webhook.WebhookClient` only |
+| `slackclient` | Legacy v1 SDK, deprecated; PyPI page warns against use | `slack-sdk>=3.42.0` |
+| `elasticsearch` Python client | 400KB+; connection pooling / sniffing overkill for ≤hundreds of findings per flush | `urllib.request` direct REST |
+| `pyservicenow` / `servicenow-sdk` | Unofficial or early-stage ServiceNow Python wrappers; API surface unstable | `urllib.request` + Table REST API directly |
+| JWT issuance / refresh tokens for dashboard auth | Implies server-side session state, token rotation, user model — SaaS scope, not single-tenant | Existing `HTTPBearer` + `QUIRK_API_TOKEN` (already shipped) |
+| `sendgrid`, `yagmail`, `mailchimp-transactional` | Email API services with their own SaaS dependency; overkill for alert emails | `smtplib` + `ssl.create_default_context()` |
+| `cefevent`, `syslogcef` PyPI packages | Thin wrappers around a string template; not worth a dep | 30-line `CefFormatter(logging.Formatter)` subclass using stdlib `logging.handlers.SysLogHandler` |
+| `celery` / `rq` / `dramatiq` | Full async task queues; SaaS multi-tenant milestone scope, not v5.3 | Existing `quirk scheduler run` loop (`scheduler_cmd.py`) |
 
 ---
 
-## Integration Points With Existing API/JWT Scanner
+## Integration Points in the Existing Codebase
 
-1. **`quirk/scanner/jwt_scanner.py`** — Add optional `credential: Optional[EphemeralCredential]` parameter to `scan_jwt_targets()`. If provided: (a) inject `credential.apply_to_headers()` into the JWKS `httpx` fetch, (b) decode the credential's bearer token itself for direct `alg`/`exp` classification. Return path unchanged: `List[CryptoEndpoint]`.
-
-2. **`quirk/scanner/tls_scanner.py`** — After cert extraction loop, add `cert_code_signing: bool` flag derived from `is_code_signing_cert(cert)` (EKU OID check, no new import). Feed into `_build_finding()` for `CODE-SIGN/weak-algorithm` findings.
-
-3. **`quirk/scanner/smime_scanner.py`** — After `userCertificate` LDAP retrieval, apply `is_code_signing_cert()` check. Code-signing certs co-reside in directory services (e.g., `Developer ID` certs sometimes stored in LDAP).
-
-4. **`quirk/scanner/openapi_scanner.py`** (new module) — Passive spec analysis. Input: spec file path (local) or URL (fetched via existing `httpx`). Output: `List[CryptoEndpoint]` representing API security surface. Lazy-imports `openapi_spec_validator`. Never requires auth for passive mode.
-
-5. **`quirk/scanner/fuzz_scanner.py`** (new module) — Active fuzzing. Requires `EphemeralCredential` + explicit `--fuzz` + `--fuzz-confirm-authorization` + `--fuzz-budget N`. Emits `Finding` records (server behavior observations), not `CryptoEndpoint` records. Lazy-imports `schemathesis`. Budget tracked in a simple counter; abort on `budget_remaining == 0` before dispatching additional requests.
-
-6. **`quirk/auth/credentials.py`** (new module) — `EphemeralCredential` dataclass + `credential_from_env_or_prompt()`. Zero imports from scanner modules (prevents circular deps). Called from `run_scan.py` to build credential and thread it into scanner calls via kwarg.
-
-7. **`quirk/util/safe_exc.py`** — Extend `_SENSITIVE_PATTERNS` with `X-Api-Key`, `X-Auth-Token`, and query-param API key patterns. One-time addition; existing AST CI gate (`LEAK-03`) enforces no-raw-exc in `scan_error` writes already.
-
-8. **`quirk/util/optional_extra.py`** probe registry — Register `openapi-spec-validator` and `schemathesis` as optional extras under the `api` group. `quirk doctor` will surface advisory findings for missing `[api]` extras when fuzz/spec features are requested.
+| v5.3 Feature | Hook Location | What Feeds It |
+|---|---|---|
+| Slack / email / webhook notifications | `_dispatch_schedule()` in `quirk/cli/scheduler_cmd.py` — post-run hook | `TrendReport` from `quirk/intelligence/trends.py` |
+| SIEM export (Splunk/Elastic/CEF) | New `quirk export siem` CLI subcommand + optional post-scan hook in `run_scan.py` | `findings` dict + `ExecContent` from `build_exec_content()` |
+| Jira ticket creation | New `quirk tickets create` CLI subcommand + optional post-scan flag | `findings` dict + `build_evidence_summary()` from `quirk/intelligence/evidence.py` |
+| Dashboard API key auth (new `X-API-Key` path) | `quirk/dashboard/api/middleware/auth.py` — extend `require_auth()` to check `APIKeyHeader` | `QUIRK_API_TOKEN` env / `security.api_token` YAML (existing) |
+| `quirk token generate` | New subcommand in `quirk/cli/` | `secrets.token_urlsafe(32)` (stdlib) |
 
 ---
 
-## Version Compatibility Notes
+## Version Compatibility
 
-| Package Pair | Compatibility | Notes |
-|-------------|---------------|-------|
-| `schemathesis>=4.4.4` + `hypothesis` | No conflict — `schemathesis` pins `hypothesis>=6.x` as a dep; `hypothesis 6.141.1` is current. | LOW risk |
-| `openapi-spec-validator>=0.7.2` + `jsonschema` | `jsonschema 4.25.1` already installed. `openapi-spec-validator 0.7.2` requires `jsonschema-path` (separate pkg from `jsonschema` — verify not to confuse); `referencing 0.36.2` already present. | LOW risk — verify `jsonschema-path` installs cleanly |
-| `schemathesis>=4.4.4` + `httpx>=0.28` | `schemathesis` can dispatch via its own transport or yield `Case` objects. Use `Case.as_transport_kwargs()` path to keep `httpx` as the single HTTP client in the scanner. Avoid mixing `requests` transport (schemathesis default) with `httpx`. | MEDIUM — test dispatch integration |
-| `cryptography>=44.0` + `ExtendedKeyUsageOID` | `ExtendedKeyUsageOID.CODE_SIGNING` available since `cryptography 2.5`. Floor of 44.0 is far above that. | LOW risk |
-| `PyJWT>=2.12.0` + `options={"verify_signature": False}` | Stable since PyJWT 2.0. Latest 2.13.0 is compatible. | LOW risk |
-| `[api]` exclusion from `[all]` + `impacket` exclusion pattern | Both guard the same `[all]` invariant. CI must have two separate tests: `test_install_all_excludes_impacket.py` (existing) AND `test_install_all_excludes_schemathesis.py` (new). | LOW risk if CI gate is added at phase start |
-
----
-
-## Installation
-
-```bash
-# Passive analysis only (spec parsing, bearer token decode, code-signing inventory)
-# All needed libs are already in core — no extra needed
-pip install "quirk-scanner"
-
-# Spec analysis + active fuzzing (opt-in)
-pip install "quirk-scanner[api]"
-
-# Full suite including identity scanners (impacket excluded from [all] by design)
-pip install "quirk-scanner[all,api]"   # or [api,identity] if Kerberos needed
-
-# Dev / testing
-pip install "quirk-scanner[all,api,dev]"
-```
+| Package | Version | Python | Conflict Risk |
+|---|---|---|---|
+| `slack-sdk` | `>=3.42.0` | 3.8+ | None — pure Python, no cryptography dep |
+| `jira` | `>=3.10.5` | 3.10+ (matches project floor) | None — no pyOpenSSL/cryptography downgrade |
+| `urllib.request` | stdlib | 3.11+ (project floor) | N/A |
+| `smtplib` + `email` | stdlib | 3.11+ | N/A |
+| `logging.handlers.SysLogHandler` | stdlib | 3.11+ | N/A |
+| `fastapi.security.APIKeyHeader` | in `fastapi>=0.128.8` (already pinned in `[dashboard]`) | — | N/A |
 
 ---
 
 ## Sources
 
-- PyPI live index, 2026-05-22 — all version numbers verified via `pip index versions <lib>` (HIGH confidence)
-- `/Volumes/Digs-1TB/Development/quantum-apps/QUIRK/pyproject.toml` — core deps and extras groups verified directly from repo (HIGH confidence)
-- `/Volumes/Digs-1TB/Development/quantum-apps/QUIRK/quirk/scanner/jwt_scanner.py` — `_rsa_key_bits_from_n()`, `HTTPX_AVAILABLE` pattern, `scan_jwt_targets()` signature confirmed (HIGH confidence)
-- `/Volumes/Digs-1TB/Development/quantum-apps/QUIRK/quirk/util/safe_exc.py` — `_SENSITIVE_PATTERNS` tuple confirmed; `Authorization: Bearer` pattern present; API-key variants absent (HIGH confidence)
-- `openapi-spec-validator` PyPI page — OAS2/OAS3 support, `jsonschema-path` dep, offline `$ref` resolution confirmed (MEDIUM — PyPI description + README; no Context7 entry; training-data cross-check consistent)
-- `schemathesis` PyPI / GitHub README — `stateful=False` mode, `max_examples`, `Case.as_transport_kwargs()` API confirmed across 3.x → 4.x series (MEDIUM — PyPI/GitHub; training-data consistent)
-- `cryptography` official docs — `ExtendedKeyUsageOID`, `x509.Certificate.extensions.get_extension_for_class()` API confirmed; available since 2.5; current floor 44.0 (HIGH confidence)
-- PROJECT.md Key Decisions — `certipy-ad` deferred, `[all]` impacket exclusion pattern, ephemeral credential design decision confirmed (HIGH confidence — authoritative source)
+- `https://pypi.org/pypi/slack-sdk/json` — version 3.42.0 confirmed (HIGH confidence)
+- `https://pypi.org/pypi/jira/json` — version 3.10.5 confirmed (HIGH confidence)
+- `https://pypi.org/pypi/elasticsearch/json` — version 9.4.0 confirmed; rejected for this use case (HIGH confidence)
+- Context7 `/slackapi/python-slack-sdk` — `WebhookClient` pattern confirmed (HIGH confidence)
+- Context7 `/pycontribs/jira` — `JIRA(basic_auth=…).create_issue(…)` pattern confirmed (HIGH confidence)
+- Context7 `/fastapi/fastapi` — `APIKeyHeader`, `HTTPBearer` security patterns confirmed (HIGH confidence)
+- `https://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector` — HEC endpoint + `Authorization: Splunk <token>` header confirmed (HIGH confidence, last updated 2026-05-13)
+- `https://docs.python.org/3/library/smtplib.html` — stdlib `smtplib` / `ssl.create_default_context()` confirmed (HIGH confidence)
+- `https://docs.python.org/3/library/logging.handlers.html` — `SysLogHandler` UDP/TCP transport confirmed (HIGH confidence)
+- `quirk/dashboard/api/middleware/auth.py` — Phase 58 bearer auth already complete; confirmed by source read (HIGH confidence)
+- `quirk/pyproject.toml` — existing extras pattern (`[all]`, exclusion invariants) confirmed by source read (HIGH confidence)
 
 ---
 
-*Stack research for: QU.I.R.K. v5.1 Authenticated Scanning + API Surface Depth*
-*Researched: 2026-05-22*
+*Stack research for: v5.3 Adoption & Integration Surface — outbound integrations additive to existing QU.I.R.K. Python scanner + FastAPI dashboard*
+*Researched: 2026-05-24*
