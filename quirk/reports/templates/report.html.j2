@@ -282,17 +282,21 @@
       overflow-wrap: break-word;
       vertical-align: top;
     }
-    /* Per-column width contract (A4 printable width ~170mm after 12mm L/R margins) */
+    /* Column headers are short fixed labels — never let them wrap mid-word
+       ("Severity" → "Severit y"). Data cells keep break-word above. */
+    table.findings-table th { white-space: nowrap; }
+    /* Per-column width contract (A4 printable width ~170mm after 12mm L/R margins).
+       Severity/Port widened so their header labels fit on one line. */
     table.findings-table th:nth-child(1),
-    table.findings-table td:nth-child(1) { width: 8%; }
+    table.findings-table td:nth-child(1) { width: 10%; }
     table.findings-table th:nth-child(2),
-    table.findings-table td:nth-child(2) { width: 22%; }
+    table.findings-table td:nth-child(2) { width: 20%; }
     table.findings-table th:nth-child(3),
-    table.findings-table td:nth-child(3) { width: 12%; }
+    table.findings-table td:nth-child(3) { width: 11%; }
     table.findings-table th:nth-child(4),
-    table.findings-table td:nth-child(4) { width: 5%; }
+    table.findings-table td:nth-child(4) { width: 7%; }
     table.findings-table th:nth-child(5),
-    table.findings-table td:nth-child(5) { width: 23%; }
+    table.findings-table td:nth-child(5) { width: 22%; }
     table.findings-table th:nth-child(6),
     table.findings-table td:nth-child(6) { width: 18%; }
     table.findings-table th:nth-child(7),

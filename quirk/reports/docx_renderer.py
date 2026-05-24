@@ -45,6 +45,27 @@ def _set_table_style(tbl, style_name: str = "Table Grid") -> None:
         pass  # Fall back to python-docx default table style
 
 
+def _set_col_widths(tbl, inches_list) -> None:
+    """Pin explicit column widths (inches) so short headers like "Severity" / "Port"
+    are not squeezed by long text columns and broken mid-word (FMT-02 — no truncation).
+
+    python-docx requires width to be set on every cell in a column and autofit
+    disabled for the widths to hold across Word and Google Docs. Best-effort:
+    any failure (missing docx.shared, etc.) leaves the default sizing in place
+    and never crashes the render (D-11 graceful contract).
+    """
+    try:
+        from docx.shared import Inches
+        tbl.autofit = False
+        tbl.allow_autofit = False
+        for row in tbl.rows:
+            for idx, w in enumerate(inches_list):
+                if idx < len(row.cells):
+                    row.cells[idx].width = Inches(w)
+    except Exception:
+        pass
+
+
 def render_docx_report(
     path: str,
     cfg: Any,
@@ -114,6 +135,20 @@ def render_docx_report(
     # Build Document
     # ---------------------------------------------------------------------------
     doc = Document()
+
+    # FMT-02: the findings table is 7 columns wide — portrait Letter (~6.5" usable)
+    # cannot give long headers ("Recommendation", "Severity") a full line once Word
+    # cell margins are subtracted, forcing ugly mid-word wraps ("Recommendati on").
+    # Landscape (~9.5" usable) gives every column room. Best-effort: never crash the
+    # render if the section API is unavailable (D-11 graceful contract).
+    try:
+        from docx.enum.section import WD_ORIENT
+        section = doc.sections[0]
+        if section.page_width < section.page_height:
+            section.orientation = WD_ORIENT.LANDSCAPE
+            section.page_width, section.page_height = section.page_height, section.page_width
+    except Exception:
+        pass
 
     # ---- Cover block ----
     # 1. Logo placeholder paragraph (D-12 / 100-UI-SPEC.md §C — exact verbatim string)
@@ -206,6 +241,10 @@ def render_docx_report(
         row_cells[2].text = ""
         row_cells[3].text = ""
 
+    # Pin widths so Severity/Host headers are not broken mid-word (FMT-02). 4 cols,
+    # landscape Letter usable width ~9.5".
+    _set_col_widths(top_findings_tbl, [0.9, 2.6, 1.4, 4.6])
+
     # ---- Findings section — 7-col table (100-UI-SPEC.md Word Table Column Contracts) ----
     doc.add_heading("Findings", level=1)
     findings_tbl = doc.add_table(rows=1, cols=7)
@@ -233,6 +272,11 @@ def render_docx_report(
         row_cells[0].text = "No findings recorded for this scan."
         for i in range(1, 7):
             row_cells[i].text = ""
+
+    # Pin widths: every header (incl. "Recommendation"/"Severity"/"Port") stays on
+    # one line (FMT-02). Sums to ~9.5" (landscape Letter usable); long text columns
+    # (Description/Recommendation/Quantum Risk) wrap their data internally.
+    _set_col_widths(findings_tbl, [0.8, 1.5, 1.0, 0.6, 2.3, 1.6, 1.7])
 
     # ---- Remediation Roadmap section ----
     doc.add_heading("Remediation Roadmap", level=1)
