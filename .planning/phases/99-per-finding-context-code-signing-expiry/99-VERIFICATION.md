@@ -1,7 +1,8 @@
 ---
 phase: 99-per-finding-context-code-signing-expiry
 verified: 2026-05-24T00:00:00Z
-status: human_needed
+status: passed
+human_validated: "2026-05-24 — user confirmed HTML + PDF visual render of Quantum Risk column/block and codesign expiry findings (all good); demo rendered via real _build_finding + evaluate_codesign_endpoints paths"
 score: 3/3 must-haves verified
 overrides_applied: 0
 human_verification:
@@ -17,7 +18,7 @@ human_verification:
 
 **Phase Goal:** Every finding in the report carries a quantum-risk explanation and actionable remediation guidance, turning the finding list into an advisory document; code-signing certificate expiry is surfaced as a first-class finding.
 **Verified:** 2026-05-24
-**Status:** human_needed
+**Status:** passed (human-validated 2026-05-24 — both HTML and PDF visual-render items confirmed by user)
 **Re-verification:** No — initial verification
 
 ---
