@@ -307,8 +307,13 @@ _RISK_SEVERITY_INCLUDE: frozenset[str] = frozenset({"CRITICAL", "HIGH", "MEDIUM"
 
 # D-02 / EXEC-02: keywords checked against finding title/category/check_id (case-insensitive).
 # Ordered: first match wins for a given finding.
-# Phase 99: codesign expiry keys added (must precede generic "DES" etc. to avoid false match).
+# Phase 99: codesign expiry keys MUST precede "DES" — "CODESIGN_EXPIRY" contains "DES" as
+# a substring and would false-match if "DES" were checked first.
 _ALGO_KEYWORDS: tuple[str, ...] = (
+    # Phase 99 CTX-03: code-signing expiry — matched via check_id field (A1 route).
+    # Placed first to prevent false-match against "DES" substring.
+    "CODESIGN_APPROACHING_EXPIRY",
+    "CODESIGN_EXPIRY",
     "RSA",
     "ECC",
     "ECDSA",
@@ -323,9 +328,6 @@ _ALGO_KEYWORDS: tuple[str, ...] = (
     "RC4",
     "3DES",
     "DES",
-    # Phase 99 CTX-03: code-signing expiry — matched via check_id field (A1 route)
-    "CODESIGN_EXPIRY",
-    "CODESIGN_APPROACHING_EXPIRY",
 )
 
 # ---------------------------------------------------------------------------
@@ -509,7 +511,7 @@ def _build_top_risks(findings: List[Dict[str, Any]]) -> List[RiskItem]:
         crypto_class = _classify_finding(finding)
         if crypto_class is None:
             continue
-        risk_label, impact_sentence = ALGO_IMPACT_MAP[crypto_class]
+        risk_label, impact_sentence, _ = ALGO_IMPACT_MAP[crypto_class]
         if risk_label in seen_labels:
             continue
         seen_labels.add(risk_label)
