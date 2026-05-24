@@ -115,9 +115,11 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
     # === Findings table ===
     lines.append("## Findings")
     lines.append("")
-    # Phase 99 CTX-01: Quantum Risk column added after Recommendation per UI-SPEC
-    # §Interaction Contract (WR-01 fix: Quantum Risk is the 7th column, after Recommendation).
-    lines.append("| Severity | Host | Port | Title | Description | Recommendation | Quantum Risk |")
+    # Phase 99 CTX-01: Quantum Risk column placed between Description and Recommendation
+    # per UI-SPEC CLI-markdown contract (§Scope point 2, §Interaction table: the markdown
+    # surface places Quantum Risk between Description and Recommendation — distinct from the
+    # HTML "All Findings" table, which puts it 7th after Recommendation).
+    lines.append("| Severity | Host | Port | Title | Description | Quantum Risk | Recommendation |")
     lines.append("|---|---|---:|---|---|---|---|")
     for f in findings:
         sev = f.get("severity", "INFO")
@@ -129,7 +131,7 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
         # Phase 99 CTX-01: read quantum_risk; fall back to FALLBACK_QR, truncate to 120.
         qr = (f.get("quantum_risk") or FALLBACK_QR)[:120]
         lines.append(
-            f"| {sev} | {md_cell(host)} | {port} | {md_cell(title)} | {md_cell(desc)} | {md_cell(rec)} | {md_cell(qr)} |"
+            f"| {sev} | {md_cell(host)} | {port} | {md_cell(title)} | {md_cell(desc)} | {md_cell(qr)} | {md_cell(rec)} |"
         )
 
     lines.append("")
