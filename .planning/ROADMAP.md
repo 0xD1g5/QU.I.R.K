@@ -36,7 +36,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Next m
 **Phases:**
 
 - [x] **Phase 97: v5.1 Tech-Debt Cleanup** — Close carried WR-02/03/04/06 items before report work begins (completed 2026-05-23)
-- [ ] **Phase 98: Executive Narrative + Score Transparency** — The anchor: narrative exec summary, prioritized remediation roadmap, subscore decomposition, consistency fix; all three render surfaces
+- [x] **Phase 98: Executive Narrative + Score Transparency** — The anchor: narrative exec summary, prioritized remediation roadmap, subscore decomposition, consistency fix; all three render surfaces (completed 2026-05-24)
 - [ ] **Phase 99: Per-Finding Context + Code-Signing Expiry** — Enrich every finding with a quantum-risk "so what" + actionable remediation; surface code-signing cert expiry as a finding
 - [ ] **Phase 100: Professional & Editable Report Delivery** — Client-ready PDF cover/layout/typography, clean table pagination, and DOCX editable export so a consultant can finalize before client delivery
 
@@ -88,7 +88,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 98-03-PLAN.md — cross-surface parity test (EXEC-04/D-03a) + UAT-SERIES.md update and Obsidian sync
+- [x] 98-03-PLAN.md — cross-surface parity test (EXEC-04/D-03a) + UAT-SERIES.md update and Obsidian sync
 
 **UI hint**: yes
 
@@ -125,6 +125,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
-| 98. Executive Narrative + Score Transparency | 2/3 | In Progress|  |
+| 98. Executive Narrative + Score Transparency | 3/3 | Complete   | 2026-05-24 |
 | 99. Per-Finding Context + Code-Signing Expiry | 0/TBD | Not started | - |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
