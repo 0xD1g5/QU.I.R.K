@@ -10,6 +10,10 @@ D-03: Shared content object — renderers format, never generate content.
 D-04: Within-bucket roadmap ordering: high-impact/low-effort first.
 D-05: Effort/impact from static EFFORT_IMPACT_MAP keyed on title keyword.
 D-06: _check_congruence() raises ReportCongruenceError before any file I/O.
+
+Phase 99 — Per-finding context (CTX-01 / CTX-02):
+D-01/Phase99: ALGO_IMPACT_MAP extended to 3-tuple adding quantum_risk_sentence.
+D-04/Phase99: REMEDIATION_CATALOG added — same key set, weakness-specific copy.
 """
 from __future__ import annotations
 
@@ -88,69 +92,213 @@ IMPACT_RANK: Dict[str, int] = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
 
 # ---------------------------------------------------------------------------
 # D-02: Algorithm-class → impact-band static map (EXEC-02)
+# Phase 99 D-01/CTX-01: extended to 3-tuple — (risk_label, impact_sentence, quantum_risk_sentence).
+# All quantum_risk_sentence values are verbatim from 99-UI-SPEC.md §Copywriting Contract.
 # ---------------------------------------------------------------------------
 
 # Keyed on crypto class keyword (matches against finding severity ≥ MEDIUM).
-# Tuple: (risk_label, impact_sentence) — values from UI-SPEC Copywriting Contract.
-ALGO_IMPACT_MAP: Dict[str, tuple[str, str]] = {
+# Tuple: (risk_label, impact_sentence, quantum_risk_sentence)
+# Index [0] and [1] are UNCHANGED from Phase 98; index [2] is Phase 99 addition.
+ALGO_IMPACT_MAP: Dict[str, tuple[str, str, str]] = {
     # D-02 / EXEC-02: harvest-now-decrypt-later for asymmetric algorithms
     "RSA": (
         "Harvest-now-decrypt-later exposure",
         "adversaries may already be archiving encrypted traffic for future decryption.",
+        "RSA key material is vulnerable to Shor's algorithm — a sufficiently powerful"
+        " quantum computer can factor the modulus and recover the private key, breaking"
+        " both confidentiality and non-repudiation.",
     ),
     "ECC": (
         "Harvest-now-decrypt-later exposure",
         "adversaries may already be archiving encrypted traffic for future decryption.",
+        "Elliptic-curve key material is vulnerable to Shor's algorithm — quantum computers"
+        " can solve the discrete logarithm problem and recover the private key, compromising"
+        " authentication and forward secrecy.",
     ),
     "ECDSA": (
         "Harvest-now-decrypt-later exposure",
         "adversaries may already be archiving encrypted traffic for future decryption.",
+        "Elliptic-curve key material is vulnerable to Shor's algorithm — quantum computers"
+        " can solve the discrete logarithm problem and recover the private key, compromising"
+        " authentication and forward secrecy.",
     ),
     "DH": (
         "Harvest-now-decrypt-later exposure",
         "adversaries may already be archiving encrypted traffic for future decryption.",
+        "Diffie–Hellman key exchange is vulnerable to Shor's algorithm — a quantum"
+        " adversary can solve the discrete log problem on recorded sessions, retroactively"
+        " decrypting captured traffic.",
     ),
     "DSA": (
         "Harvest-now-decrypt-later exposure",
         "adversaries may already be archiving encrypted traffic for future decryption.",
+        "DSA signatures rely on the discrete logarithm problem, which Shor's algorithm"
+        " breaks — a quantum attacker can forge signatures and impersonate the signing entity.",
     ),
     # D-02 / EXEC-02: weak hashing
     "WEAK_HASH": (
         "Integrity risk",
         "weak hashing algorithms undermine tamper-evidence guarantees.",
+        "MD5 collision resistance is already broken classically; quantum speedups (Grover's"
+        " algorithm) further halve the effective security margin, making collision attacks"
+        " feasible with modest resources.",
     ),
     "MD5": (
         "Integrity risk",
         "weak hashing algorithms undermine tamper-evidence guarantees.",
+        "MD5 collision resistance is already broken classically; quantum speedups (Grover's"
+        " algorithm) further halve the effective security margin, making collision attacks"
+        " feasible with modest resources.",
     ),
     "SHA1": (
         "Integrity risk",
         "weak hashing algorithms undermine tamper-evidence guarantees.",
+        "SHA-1 collision resistance is broken classically; Grover's algorithm halves the"
+        " quantum bit-security to ~40 bits, making pre-image and collision attacks practical"
+        " for state-level adversaries.",
     ),
     "SHA-1": (
         "Integrity risk",
         "weak hashing algorithms undermine tamper-evidence guarantees.",
+        "SHA-1 collision resistance is broken classically; Grover's algorithm halves the"
+        " quantum bit-security to ~40 bits, making pre-image and collision attacks practical"
+        " for state-level adversaries.",
     ),
     # D-02 / EXEC-02: weak key exchange / authentication
     "WEAK_KEY_EXCHANGE": (
         "Authentication exposure",
         "weak key exchange allows credential interception.",
+        "Export-grade and short-parameter key exchange can be broken in real time by a"
+        " classical adversary today; quantum acceleration makes recovery of session keys"
+        " trivially fast.",
     ),
     "DHE_EXPORT": (
         "Authentication exposure",
         "weak key exchange allows credential interception.",
+        "Export-grade and short-parameter key exchange can be broken in real time by a"
+        " classical adversary today; quantum acceleration makes recovery of session keys"
+        " trivially fast.",
     ),
     "RC4": (
         "Authentication exposure",
         "weak key exchange allows credential interception.",
+        "RC4 stream cipher is cryptographically broken classically; even without quantum"
+        " acceleration it provides no meaningful confidentiality — remediation is overdue.",
     ),
     "3DES": (
         "Authentication exposure",
         "weak key exchange allows credential interception.",
+        "Triple-DES and DES use 56–168-bit key lengths that Grover's algorithm reduces"
+        " to at most 84 effective bits — insufficient for any security boundary beyond 2030.",
     ),
     "DES": (
         "Authentication exposure",
         "weak key exchange allows credential interception.",
+        "Triple-DES and DES use 56–168-bit key lengths that Grover's algorithm reduces"
+        " to at most 84 effective bits — insufficient for any security boundary beyond 2030.",
+    ),
+    # Phase 99 CTX-03: code-signing expiry — new keys (D-07/D-08)
+    # quantum_risk_sentence verbatim from 99-UI-SPEC.md §Copywriting Contract.
+    "CODESIGN_EXPIRY": (
+        "Supply-chain trust failure",
+        "expired code-signing certificate breaks software verification chains.",
+        "An expired code-signing certificate breaks the trust chain — any software signed"
+        " by this certificate can no longer be verified as authentic, enabling supply-chain"
+        " attacks or silent malware delivery.",
+    ),
+    "CODESIGN_APPROACHING_EXPIRY": (
+        "Imminent supply-chain risk",
+        "code-signing certificate nearing expiry risks blocking deployments.",
+        "A code-signing certificate expiring within 90 days creates operational risk —"
+        " if not renewed before expiry, software signed by this certificate will fail"
+        " verification, blocking deployments and breaking trust.",
+    ),
+}
+
+# Phase 99 CTX-01: fallback quantum_risk sentence for findings with no crypto-class match.
+# Verbatim from 99-UI-SPEC.md §Field Name Contract default-fallback string.
+FALLBACK_QUANTUM_RISK: str = (
+    "This cryptographic weakness reduces the security margin against quantum-capable"
+    " adversaries. Migrate to NIST-approved post-quantum algorithms per NIST IR 8547."
+)
+
+# Phase 99 D-04/CTX-02: centralized remediation catalog — same key set as ALGO_IMPACT_MAP.
+# Keys mirror ALGO_IMPACT_MAP — same key set, ordered identically.
+# All copy verbatim from 99-UI-SPEC.md §Per-Finding Remediation Catalog (locked).
+REMEDIATION_CATALOG: Dict[str, str] = {
+    "RSA": (
+        "Replace RSA keys with NIST PQC standard algorithms: ML-KEM (FIPS 203) for key"
+        " encapsulation or ML-DSA (FIPS 204) for digital signatures. Prioritize certificates"
+        " and TLS endpoints first."
+    ),
+    "ECC": (
+        "Replace ECDSA/ECDH keys with ML-DSA (FIPS 204) for signatures or ML-KEM (FIPS 203)"
+        " for key encapsulation. During transition, deploy hybrid TLS (X25519+ML-KEM) as an"
+        " intermediate step."
+    ),
+    "ECDSA": (
+        "Replace ECDSA/ECDH keys with ML-DSA (FIPS 204) for signatures or ML-KEM (FIPS 203)"
+        " for key encapsulation. During transition, deploy hybrid TLS (X25519+ML-KEM) as an"
+        " intermediate step."
+    ),
+    "DH": (
+        "Disable finite-field Diffie–Hellman key exchange. Configure TLS to prefer X25519"
+        " (classical) or X25519+ML-KEM hybrid groups; disable DHE cipher suites in the server's"
+        " TLS configuration."
+    ),
+    "DSA": (
+        "Disable DSA. Replace DSA-based SSH host keys and certificates with Ed25519 (short-term)"
+        " or ML-DSA (FIPS 204) when library support is available."
+    ),
+    "WEAK_HASH": (
+        "Replace MD5 in all signing, integrity, and authentication contexts. Use SHA-256 or"
+        " SHA-3-256 as minimum. Reject MD5-signed certificates at the trust-store level."
+    ),
+    "MD5": (
+        "Replace MD5 in all signing, integrity, and authentication contexts. Use SHA-256 or"
+        " SHA-3-256 as minimum. Reject MD5-signed certificates at the trust-store level."
+    ),
+    "SHA1": (
+        "Replace SHA-1 signatures with SHA-256 or stronger. Reissue any SHA-1-signed"
+        " certificates. Configure TLS to reject SHA-1 in the signature_algorithms extension."
+    ),
+    "SHA-1": (
+        "Replace SHA-1 signatures with SHA-256 or stronger. Reissue any SHA-1-signed"
+        " certificates. Configure TLS to reject SHA-1 in the signature_algorithms extension."
+    ),
+    "WEAK_KEY_EXCHANGE": (
+        "Remove all export-grade cipher suites from TLS configuration. Disable DHE_EXPORT and"
+        " similar suites. Apply OS and application TLS hardening guides (e.g., Mozilla SSL"
+        " Config Generator — Intermediate or Modern profile)."
+    ),
+    "DHE_EXPORT": (
+        "Remove all export-grade cipher suites from TLS configuration. Disable DHE_EXPORT and"
+        " similar suites. Apply OS and application TLS hardening guides (e.g., Mozilla SSL"
+        " Config Generator — Intermediate or Modern profile)."
+    ),
+    "RC4": (
+        "Disable RC4 in all TLS and non-TLS contexts. RC4 is prohibited by RFC 7465. Replace"
+        " with AES-128-GCM or AES-256-GCM cipher suites."
+    ),
+    "3DES": (
+        "Disable 3DES and DES cipher suites (Sweet32 / NIST SP 800-131A Rev 2 disallowed after"
+        " 2023). Replace with AES-GCM. Verify no legacy application dependency remains before"
+        " removal."
+    ),
+    "DES": (
+        "Disable 3DES and DES cipher suites (Sweet32 / NIST SP 800-131A Rev 2 disallowed after"
+        " 2023). Replace with AES-GCM. Verify no legacy application dependency remains before"
+        " removal."
+    ),
+    # Phase 99 CTX-03: code-signing expiry remediation (D-07/D-08)
+    "CODESIGN_EXPIRY": (
+        "Renew the expired code-signing certificate immediately and re-sign all artifacts."
+        " Revoke the expired certificate via the issuing CA and update any pinned certificate"
+        " references in build pipelines."
+    ),
+    "CODESIGN_APPROACHING_EXPIRY": (
+        "Renew this code-signing certificate before the not_after date. Update automated renewal"
+        " policy and alert thresholds to trigger at 90 days remaining to prevent future expiry."
     ),
 }
 
@@ -159,6 +307,7 @@ _RISK_SEVERITY_INCLUDE: frozenset[str] = frozenset({"CRITICAL", "HIGH", "MEDIUM"
 
 # D-02 / EXEC-02: keywords checked against finding title/category/check_id (case-insensitive).
 # Ordered: first match wins for a given finding.
+# Phase 99: codesign expiry keys added (must precede generic "DES" etc. to avoid false match).
 _ALGO_KEYWORDS: tuple[str, ...] = (
     "RSA",
     "ECC",
@@ -174,6 +323,9 @@ _ALGO_KEYWORDS: tuple[str, ...] = (
     "RC4",
     "3DES",
     "DES",
+    # Phase 99 CTX-03: code-signing expiry — matched via check_id field (A1 route)
+    "CODESIGN_EXPIRY",
+    "CODESIGN_APPROACHING_EXPIRY",
 )
 
 # ---------------------------------------------------------------------------
@@ -538,9 +690,14 @@ __all__ = [
     "EFFORT_IMPACT_MAP",
     "EFFORT_RANK",
     "IMPACT_RANK",
+    # Phase 99 CTX-01/CTX-02: per-finding context catalog + fallback
+    "REMEDIATION_CATALOG",
+    "FALLBACK_QUANTUM_RISK",
     # Error
     "ReportCongruenceError",
     # Functions
     "_check_congruence",
+    "_classify_finding",
     "build_exec_content",
+    "assert_congruent",
 ]
