@@ -110,8 +110,10 @@ def test_html_all_findings_has_quantum_risk(tmp_path):
     assert "Quantum Risk" in html, (
         "CTX-01: HTML All Findings table must have a Quantum Risk header"
     )
-    # quantum_risk value (first 80 chars) must appear in the rendered HTML
-    assert _QR_TEXT[:80] in html, (
+    # quantum_risk value must appear in the rendered HTML.
+    # Jinja2 autoescape converts ' → &#39; so check a fragment without apostrophes.
+    # "RSA key material is vulnerable to Shor" does not contain special chars.
+    assert "RSA key material is vulnerable to Shor" in html, (
         "CTX-01: HTML must render the quantum_risk field value in All Findings table"
     )
 

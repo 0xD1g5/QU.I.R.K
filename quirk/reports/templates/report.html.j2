@@ -168,6 +168,21 @@
       color: var(--text-muted);
       margin-top: 4px;
     }
+    /* Phase 99 — Quantum Risk inline block (Top Findings summary table) */
+    .quantum-risk-block {
+      margin-top: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+    /* Phase 99 — Quantum Risk label tag (inline prefix) */
+    .quantum-risk-label {
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-right: 4px;
+    }
   </style>
 </head>
 <body>
@@ -283,7 +298,11 @@
         <td><span class="sev-cell sev-{{ f.get('severity','INFO')|upper }}">{{ f.get('severity','INFO')|upper }}</span></td>
         <td>{{ f.get('title','') | sanitize }}</td>
         <td>{{ f.get('host','') | sanitize }}{% if f.get('port') %}:{{ f.get('port') }}{% endif %}</td>
-        <td>{{ f.get('description','')[:120] | sanitize }}{% if f.get('description','')|length > 120 %}…{% endif %}</td>
+        <td>{{ f.get('description','')[:120] | sanitize }}{% if f.get('description','')|length > 120 %}…{% endif %}
+        {# Phase 99 CTX-01 / D-03: quantum_risk block inside Description cell (no new column).
+           Gated on presence of quantum_risk so findings without the field remain unchanged.
+           quantum_risk is scanner-derived text — must pass through | sanitize (T-99-06). #}
+        {% if f.get('quantum_risk') %}<div class="quantum-risk-block"><span class="quantum-risk-label">Quantum Risk:</span>{{ f.get('quantum_risk','')[:120] | sanitize }}</div>{% endif %}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -334,8 +353,10 @@
 
     <h2>All Findings</h2>
     {% if findings %}
+    {# Phase 99 CTX-01 / D-03: FALLBACK_QR constant — mirrors FALLBACK_QUANTUM_RISK in content_model.py. #}
+    {% set FALLBACK_QR = "This cryptographic weakness reduces the security margin against quantum-capable adversaries. Migrate to NIST-approved post-quantum algorithms per NIST IR 8547." %}
     <table>
-      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Description</th><th>Recommendation</th></tr></thead>
+      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Description</th><th>Quantum Risk</th><th>Recommendation</th></tr></thead>
       <tbody>
       {% for f in findings if f.get('category') != 'coverage_gap' %}
       <tr>
@@ -344,6 +365,8 @@
         <td>{{ f.get('host','') | sanitize }}</td>
         <td>{{ f.get('port','') }}</td>
         <td>{{ f.get('description','')[:200] | sanitize }}{% if f.get('description','')|length > 200 %}…{% endif %}</td>
+        {# Phase 99 CTX-01: Quantum Risk column — scanner-derived text, must use | sanitize (T-99-06). #}
+        <td><span class="quantum-risk-label">Quantum Risk:</span>{{ f.get('quantum_risk', FALLBACK_QR)[:200] | sanitize }}</td>
         <td>{{ f.get('recommendation','')[:200] | sanitize }}{% if f.get('recommendation','')|length > 200 %}…{% endif %}</td>
       </tr>
       {% endfor %}
