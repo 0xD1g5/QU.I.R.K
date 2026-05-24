@@ -183,6 +183,133 @@
       color: var(--accent);
       margin-right: 4px;
     }
+
+    /* === Phase 100 — PDF Cover Page (FMT-01) === */
+
+    /* Cover page: full A4-page block, dark background, accent top border */
+    .cover-page {
+      background: var(--bg);
+      border-top: 4px solid var(--accent);
+      min-height: 100vh;           /* fills page in screen view */
+      padding: 48px 40px 32px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    /* Logo region — conditionally rendered (omitted when logo absent, D-03) */
+    .cover-logo-region {
+      margin-bottom: 32px;
+    }
+    .cover-logo-region img {
+      max-width: 200px;
+      max-height: 80px;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Cover title — the report's primary display heading */
+    .cover-title {
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    /* Organization name — directly below title */
+    .cover-org-name {
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 0;
+    }
+
+    /* Lower metadata block — pushed toward the bottom of the cover page */
+    .cover-meta-block {
+      margin-top: auto;         /* flexbox: fills remaining space, pushes block down */
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 16px 24px;
+      border-radius: 4px;
+    }
+    .cover-meta-label {
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: inline-block;
+      width: 160px;
+    }
+    .cover-meta-value {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text);
+    }
+    .cover-meta-row {
+      margin-bottom: 8px;
+    }
+    .cover-meta-row:last-child { margin-bottom: 0; }
+
+    /* Classification banner — full-width badge at the bottom of the cover */
+    .cover-classification-banner {
+      margin-top: 24px;
+      padding: 8px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    /* === Phase 100 — PDF Print & Pagination (FMT-02) === */
+
+    /* 7-column findings table: fixed layout, explicit widths, word-wrap within cells */
+    table.findings-table {
+      table-layout: fixed;
+      width: 100%;
+    }
+    table.findings-table th,
+    table.findings-table td {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      vertical-align: top;
+    }
+    /* Per-column width contract (A4 printable width ~170mm after 12mm L/R margins) */
+    table.findings-table th:nth-child(1),
+    table.findings-table td:nth-child(1) { width: 8%; }
+    table.findings-table th:nth-child(2),
+    table.findings-table td:nth-child(2) { width: 22%; }
+    table.findings-table th:nth-child(3),
+    table.findings-table td:nth-child(3) { width: 12%; }
+    table.findings-table th:nth-child(4),
+    table.findings-table td:nth-child(4) { width: 5%; }
+    table.findings-table th:nth-child(5),
+    table.findings-table td:nth-child(5) { width: 23%; }
+    table.findings-table th:nth-child(6),
+    table.findings-table td:nth-child(6) { width: 18%; }
+    table.findings-table th:nth-child(7),
+    table.findings-table td:nth-child(7) { width: 12%; }
+
+    @media print {
+      @page { size: A4; margin: 15mm 12mm; }
+      .cover-page { break-after: page; }
+      h1 { break-after: avoid; }
+      h2 { break-after: avoid; }
+      tr { break-inside: avoid; }
+      thead { display: table-header-group; }
+      /* Suppress screen-only decorations in print */
+      .report-header { display: none; }
+      .footer { display: none; }
+      .report-body { padding: 0; max-width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -193,6 +320,41 @@
 </header>
 
 <div class="report-body">
+
+  {# Phase 100 / FMT-01 / D-01..D-04: PDF Cover Page — inserted BEFORE all sections.
+     Occupies its own printed page (break-after: page in @media print).
+     logo_b64 is None when logo_path absent/unreadable (D-03): omit logo region entirely.
+     All config values are sanitized — they are user-supplied strings.
+  #}
+  <div class="cover-page">
+
+    {% if logo_b64 %}
+    <div class="cover-logo-region">
+      <img src="data:image/{{ logo_mime }};base64,{{ logo_b64 }}"
+           alt="{{ org_name | sanitize }} logo">
+    </div>
+    {% endif %}
+
+    <div class="cover-title">QU.I.R.K. Cryptographic Readiness Report</div>
+    <div class="cover-org-name">{{ org_name | sanitize }}</div>
+
+    <div class="cover-meta-block">
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Report Owner</span>
+        <span class="cover-meta-value">{{ report_owner | sanitize }}</span>
+      </div>
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Scan Date</span>
+        <span class="cover-meta-value">{{ generated_at }}</span>
+      </div>
+      <div class="cover-meta-row">
+        <span class="cover-meta-label">Data Classification</span>
+        <span class="cover-meta-value">{{ data_classification | sanitize }}</span>
+      </div>
+      <div class="cover-classification-banner">{{ data_classification | upper | sanitize }}</div>
+    </div>
+
+  </div><!-- /cover-page -->
 
   <!-- ===== EXECUTIVE SUMMARY ===== -->
   <section id="executive-summary">
@@ -355,7 +517,7 @@
     {% if findings %}
     {# Phase 99 CTX-01 / D-03: FALLBACK_QR constant — mirrors FALLBACK_QUANTUM_RISK in content_model.py. #}
     {% set FALLBACK_QR = "This cryptographic weakness reduces the security margin against quantum-capable adversaries. Migrate to NIST-approved post-quantum algorithms per NIST IR 8547." %}
-    <table>
+    <table class="findings-table">
       <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Description</th><th>Recommendation</th><th>Quantum Risk</th></tr></thead>
       <tbody>
       {% for f in findings if f.get('category') != 'coverage_gap' %}
