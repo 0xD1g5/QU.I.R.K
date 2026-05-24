@@ -227,7 +227,9 @@
       </tbody>
     </table>
     <p><strong>Rollup:</strong>
-      {{ subscores.values() | sum }} &divide; 1.5 = <strong>{{ total_score }} / 100</strong>
+      {# WR-03 / IN-01: use the shared pre-computed numerator so HTML and CLI agree (and a
+         future 7th subscore can't silently diverge the two surfaces). #}
+      {{ raw_sum }} &divide; 1.5 = <strong>{{ total_score }} / 100</strong>
     </p>
     {# Phase 98 / TRANS-02 / D-03: Rollup formula explanation block — static prose, no sanitize.
        Sourced from UI-SPEC Copywriting Contract exact strings. #}

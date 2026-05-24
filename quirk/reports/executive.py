@@ -10,6 +10,7 @@ from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.assessment.migration_advisor import recommend_migration_paths
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: wrap scanner-controlled cells
+from quirk.reports.content_model import assert_congruent  # WR-05: fail-closed guard on compat path
 from quirk.reports.html_renderer import build_algorithm_inventory  # Phase 81 / CMVP-06: shared inventory builder
 from quirk.reports.content_model import ExecContent  # D-03 / Phase 98: shared content model
 
@@ -190,7 +191,11 @@ def build_exec_markdown(
             lines.append("Key factors: " + drivers + ".")
         lines.append("")
     else:
-        # Backward-compat path: narrative_lead not available; render interpretation bullets
+        # Backward-compat path: narrative_lead not available; render interpretation bullets.
+        # WR-05: keep this path fail-closed — run the same D-06 congruence guard the
+        # shared-model path enforces, so an EXCELLENT/GOOD/MODERATE headline can never be
+        # rendered here alongside a CRITICAL finding.
+        assert_congruent(score_raw["rating"], findings)
         for b in interp.get("bullets", []):
             lines.append(f"- {md_cell(b)}")
         lines.append("")
@@ -221,7 +226,14 @@ def build_exec_markdown(
     lines.append("|----------|-------|--------|")
     for key, label in _SUBSCORE_LABELS:
         lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
-    raw_sum = sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
+    # WR-03 / IN-01: consume the shared model's pre-computed raw_sum so the rollup
+    # numerator is identical to the HTML surface (and survives a future 7th subscore).
+    # Fall back to the six-key local sum only on the compat path (no exec_content).
+    raw_sum = (
+        exec_content.raw_sum
+        if exec_content is not None
+        else sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
+    )
     lines.append("")
     lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
     lines.append("")

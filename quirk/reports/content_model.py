@@ -300,6 +300,20 @@ def _check_congruence(band: str, sev_counts: Dict[str, int]) -> None:
         )
 
 
+def assert_congruent(band: str, findings: List[Dict[str, Any]]) -> None:
+    """Public D-06 guard for callers that render WITHOUT a prebuilt ExecContent.
+
+    WR-05: the backward-compat (`exec_content is None`) paths in both renderers
+    must remain fail-closed — an EXCELLENT/GOOD/MODERATE band rendered alongside a
+    CRITICAL finding is the exact incongruence ReportCongruenceError exists to block.
+    Wraps the severity tally + guard so the rule lives in one place.
+
+    Raises:
+        ReportCongruenceError: if band contradicts the findings' CRITICAL count.
+    """
+    _check_congruence(band, _count_severities(findings))
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
