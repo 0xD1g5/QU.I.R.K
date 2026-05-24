@@ -38,7 +38,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Next m
 - [x] **Phase 97: v5.1 Tech-Debt Cleanup** — Close carried WR-02/03/04/06 items before report work begins (completed 2026-05-23)
 - [x] **Phase 98: Executive Narrative + Score Transparency** — The anchor: narrative exec summary, prioritized remediation roadmap, subscore decomposition, consistency fix; all three render surfaces (completed 2026-05-24)
 - [x] **Phase 99: Per-Finding Context + Code-Signing Expiry** — Enrich every finding with a quantum-risk "so what" + actionable remediation; surface code-signing cert expiry as a finding (completed 2026-05-24)
-- [ ] **Phase 100: Professional & Editable Report Delivery** — Client-ready PDF cover/layout/typography, clean table pagination, and DOCX editable export so a consultant can finalize before client delivery
+- [x] **Phase 100: Professional & Editable Report Delivery** — Client-ready PDF cover/layout/typography, clean table pagination, and DOCX editable export so a consultant can finalize before client delivery (completed 2026-05-24)
 
 ## Phase Details
 
@@ -137,11 +137,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 100-01-PLAN.md — AssessmentCfg.logo_path + logo base64-embed in html_renderer + cover-page markup + print/pagination CSS + findings-table class (FMT-01/FMT-02)
+- [x] 100-01-PLAN.md — AssessmentCfg.logo_path + logo base64-embed in html_renderer + cover-page markup + print/pagination CSS + findings-table class (FMT-01/FMT-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 100-02-PLAN.md — docx_renderer.py structural DOCX from shared content model + write_reports auto-emit + [docx] extra + parity/writer tests + docs/Obsidian sync (FMT-03)
+- [x] 100-02-PLAN.md — docx_renderer.py structural DOCX from shared content model + write_reports auto-emit + [docx] extra + parity/writer tests + docs/Obsidian sync (FMT-03)
 
 **UI hint**: yes
 
@@ -152,4 +152,4 @@ Plans:
 | 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
 | 98. Executive Narrative + Score Transparency | 3/3 | Complete   | 2026-05-24 |
 | 99. Per-Finding Context + Code-Signing Expiry | 3/3 | Complete   | 2026-05-24 |
-| 100. Professional & Editable Report Delivery | 0/2 | Not started | - |
+| 100. Professional & Editable Report Delivery | 2/2 | Complete   | 2026-05-24 |

@@ -30,9 +30,9 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Professional Formatting & Editable Delivery (FMT)
 
-- [ ] **FMT-01**: The PDF report uses a professional client-ready layout (cover with a configurable logo region, sectioning, consistent typography/branding)
-- [ ] **FMT-02**: Report tables/headings render cleanly in PDF with no overflow, truncation, or broken pagination
-- [ ] **FMT-03**: The report can be exported as an editable document (DOCX, opens in Word/Google Docs) that preserves sections and tables, so a consultant can insert a logo and edit content before producing the final client deliverable
+- [x] **FMT-01**: The PDF report uses a professional client-ready layout (cover with a configurable logo region, sectioning, consistent typography/branding)
+- [x] **FMT-02**: Report tables/headings render cleanly in PDF with no overflow, truncation, or broken pagination
+- [x] **FMT-03**: The report can be exported as an editable document (DOCX, opens in Word/Google Docs) that preserves sections and tables, so a consultant can insert a logo and edit content before producing the final client deliverable
 
 ### v5.1 Tech-Debt Cleanup (TD)
 
@@ -76,9 +76,9 @@ Which phases cover which requirements. Filled during roadmap creation.
 | TRANS-01 | Phase 98 | Complete |
 | TRANS-02 | Phase 98 | Complete |
 | TRANS-03 | Phase 98 | Complete |
-| FMT-01 | Phase 100 | Pending |
-| FMT-02 | Phase 100 | Pending |
-| FMT-03 | Phase 100 | Pending |
+| FMT-01 | Phase 100 | Complete |
+| FMT-02 | Phase 100 | Complete |
+| FMT-03 | Phase 100 | Complete |
 | TD-01 | Phase 97 | Complete |
 | TD-02 | Phase 97 | Complete |
 
