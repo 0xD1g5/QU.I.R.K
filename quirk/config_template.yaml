@@ -13,6 +13,7 @@ assessment:
   report_owner: "Security Team"     # Who owns this assessment
   data_classification: "CONFIDENTIAL"  # Data classification label on all reports
   timezone: "UTC"                   # Timezone for report timestamps
+  # logo_path: /path/to/your-org-logo.png   # optional; omit to show org name only
 
 # -- Scan targets ----------------------------------------------------------
 # Add the IPs, CIDRs, or hostnames you want to scan.

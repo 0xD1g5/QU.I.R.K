@@ -13,6 +13,7 @@ class AssessmentCfg:
     data_classification: str
     report_owner: str
     timezone: str
+    logo_path: str | None = None  # Phase 100 / D-01 — optional path to local image file
 
 
 @dataclass
