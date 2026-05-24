@@ -1053,6 +1053,21 @@ def evaluate_codesign_endpoints(endpoints) -> List[Dict[str, Any]]:
         elif reasons:
             # Weak-crypto branch (non-expiry reasons such as weak-rsa-key, weak-ec-key,
             # weak-signing-alg).  Title follows research Open Question 2 resolution.
+            # WR-02 fix: map the dominant reason to a check_id so _classify_finding
+            # routes to the algorithm-specific ALGO_IMPACT_MAP entry and catalog
+            # recommendation, rather than falling back to FALLBACK_QUANTUM_RISK.
+            # "weak-ec-key" → "ECDSA" (ECC key → Shor's discrete-log sentence)
+            # "weak-rsa-key" → "RSA"   (RSA key → Shor's factoring sentence)
+            # "weak-signing-alg" → "SHA-1" (SHA-1 sig hash → Grover sentence)
+            _reason_to_check_id = {
+                "weak-ec-key": "ECDSA",
+                "weak-rsa-key": "RSA",
+                "weak-signing-alg": "SHA-1",
+            }
+            dominant_check_id = next(
+                (_reason_to_check_id[r] for r in reasons if r in _reason_to_check_id),
+                "",
+            )
             reasons_str = ", ".join(reasons)
             findings.append(_build_finding(
                 severity="HIGH",
@@ -1070,6 +1085,7 @@ def evaluate_codesign_endpoints(endpoints) -> List[Dict[str, Any]]:
                     " Plan migration to ML-DSA (FIPS 204) for long-term quantum safety."
                 ),
                 quantum_vulnerable=True,
+                check_id=dominant_check_id,
             ))
 
     return findings
