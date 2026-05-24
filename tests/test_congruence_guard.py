@@ -171,3 +171,92 @@ def test_build_exec_content_calls_guard_internally():
         "build_exec_content must propagate ReportCongruenceError from _check_congruence. "
         "TRANS-03 / D-06."
     )
+
+
+def test_guard_blocks_report_generation(tmp_path):
+    """TRANS-03 / D-06 integration: write_reports raises ReportCongruenceError before any file I/O.
+
+    When the congruence guard fires (GOOD band + CRITICAL findings), write_reports must
+    raise ReportCongruenceError and write no executive report file to disk.
+    The findings JSON is the only file written before the guard fires (step 1 in writer.py).
+    Node ID: test_congruence_guard.py::test_guard_blocks_report_generation
+    """
+    from types import SimpleNamespace
+    from unittest.mock import patch, MagicMock
+
+    from quirk.reports.writer import write_reports
+    from quirk.reports.content_model import ReportCongruenceError
+
+    # Minimal cfg that matches writer.py expectations
+    cfg = SimpleNamespace(
+        assessment=SimpleNamespace(
+            name="Integration Test Org",
+            report_owner="Test Owner",
+            data_classification="CONFIDENTIAL",
+            timezone="UTC",
+        ),
+        output=SimpleNamespace(directory=str(tmp_path / "reports")),
+        intelligence=SimpleNamespace(
+            profile="balanced",
+            calibration_overrides=None,
+        ),
+    )
+
+    # A finding that will produce GOOD band + CRITICAL → guard fires
+    # We mock compute_readiness_score to return GOOD band deterministically
+    mock_score_raw = {
+        "score": 75,
+        "rating": "GOOD",
+        "subscores": {
+            "hygiene": 20, "modern_tls": 18, "identity_trust": 25,
+            "agility_signals": 15, "data_at_rest": 22, "data_in_motion": 21,
+        },
+        "drivers": [],
+    }
+    mock_roadmap_raw = {"items": []}
+    mock_evidence = {}
+    mock_conf_raw = {
+        "confidence_score": 70,
+        "confidence_rating": "HIGH",
+        "factor_breakdown": {},
+    }
+
+    findings = [
+        {
+            "title": "Weak RSA Certificate",
+            "severity": "CRITICAL",
+            "category": "RSA",
+            "description": "RSA-2048 certificate detected",
+            "host": "example.com",
+        }
+    ]
+
+    with patch("quirk.reports.writer.build_evidence_summary", return_value=mock_evidence), \
+         patch("quirk.reports.writer.compute_readiness_score", return_value=mock_score_raw), \
+         patch("quirk.reports.writer.compute_confidence", return_value=mock_conf_raw), \
+         patch("quirk.reports.writer.build_phased_roadmap", return_value=mock_roadmap_raw), \
+         patch("quirk.reports.writer.build_cbom", return_value={}), \
+         patch("quirk.reports.writer.write_cbom_files", return_value=("/tmp/a.json", "/tmp/a.xml")):
+
+        with pytest.raises(ReportCongruenceError) as exc_info:
+            write_reports(cfg, endpoints=[], findings=findings)
+
+    msg = str(exc_info.value)
+    assert "GOOD" in msg, (
+        "ReportCongruenceError from write_reports must include the band 'GOOD'. "
+        "TRANS-03 / D-06 integration gate."
+    )
+    assert "CRITICAL" in msg, (
+        "ReportCongruenceError from write_reports must reference CRITICAL findings. "
+        "TRANS-03 / D-06 integration gate."
+    )
+
+    # Verify no executive markdown was written (guard fired before exec report I/O)
+    import os
+    report_dir = tmp_path / "reports"
+    if report_dir.exists():
+        exec_files = [f for f in os.listdir(report_dir) if f.startswith("executive-summary-")]
+        assert exec_files == [], (
+            f"write_reports wrote an executive-summary file despite guard firing: {exec_files}. "
+            "D-06 requires ReportCongruenceError before any exec report is written."
+        )
