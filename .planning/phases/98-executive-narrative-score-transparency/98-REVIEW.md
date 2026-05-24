@@ -14,8 +14,24 @@ findings:
   warning: 5
   info: 3
   total: 9
-status: issues_found
+status: resolved
+resolved: 2026-05-24
 ---
+
+> **Resolution (2026-05-24):** All findings addressed.
+> - **CR-01** fixed (commit `59b66ab`): `raw_sum` now coerces/skips non-numeric subscores.
+> - **WR-01** fixed (`59b66ab`): markdown drivers wrapped in `md_cell` for chokepoint symmetry.
+> - **WR-02** fixed (`59b66ab`): driver normalization drops empties instead of emitting dict repr.
+> - **WR-03 / IN-01** fixed: both renderers now consume the shared `ExecContent.raw_sum`
+>   (CLI `executive.py`, HTML `report.html.j2`) — no divergent rollup numerator.
+> - **WR-04** fixed: HTML sources `score_band`/`score_total` from the guarded model when present.
+> - **WR-05** fixed: backward-compat (`exec_content is None`) paths in both renderers call the
+>   new public `assert_congruent()` guard — fail-closed. Locked by tests in
+>   `tests/test_congruence_guard.py`.
+> - **IN-02** fixed: dead `... or True` conditional simplified in `html_renderer.py`.
+> - **IN-03** resolved by WR-01 (markdown + HTML now share the same trust posture).
+> - Bonus: `/api/export/pdf` route now degrades render-target-unreachable/timeout to 503
+>   (was an opaque 500), surfaced when Playwright was installed during UAT.
 
 # Phase 98: Code Review Report
 
