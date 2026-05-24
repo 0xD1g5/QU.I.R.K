@@ -252,3 +252,66 @@ def test_pdf_failure_advisory_propagates_via_writer(
     # HTML report still produced even with PDF failure
     html_files = glob.glob(os.path.join(str(tmp_path), "report-*.html"))
     assert html_files, "HTML report should still exist when PDF render fails"
+
+
+# ---------------------------------------------------------------------------
+# Phase 100 Plan 02 / FMT-03 / D-11: DOCX auto-emit in write_reports
+# ---------------------------------------------------------------------------
+
+@patch("quirk.reports.writer.categorize_waves")
+@patch("quirk.reports.writer.build_phased_roadmap")
+@patch("quirk.reports.writer.compute_confidence")
+@patch("quirk.reports.writer.compute_readiness_score")
+@patch("quirk.reports.writer.build_evidence_summary")
+def test_docx_emitted_by_write_reports(
+    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves, tmp_path
+):
+    """write_reports auto-emits a report-*.docx alongside HTML on every run (D-11)."""
+    mock_evidence.side_effect = _stub_evidence
+    mock_score.side_effect = _stub_score
+    mock_conf.side_effect = _stub_confidence
+    mock_roadmap.side_effect = _stub_roadmap
+    mock_waves.side_effect = _stub_waves
+
+    from quirk.reports.writer import write_reports
+
+    write_reports(_make_cfg(tmp_path), endpoints=[], findings=_findings_fixture())
+
+    docx_files = glob.glob(os.path.join(str(tmp_path), "report-*.docx"))
+    assert docx_files, (
+        "No report-*.docx file found in output dir — write_reports must auto-emit DOCX (D-11)"
+    )
+
+
+@patch("quirk.reports.writer.render_docx_report")
+@patch("quirk.reports.writer.categorize_waves")
+@patch("quirk.reports.writer.build_phased_roadmap")
+@patch("quirk.reports.writer.compute_confidence")
+@patch("quirk.reports.writer.compute_readiness_score")
+@patch("quirk.reports.writer.build_evidence_summary")
+def test_docx_none_on_fail_not_in_output_files(
+    mock_evidence, mock_score, mock_conf, mock_roadmap, mock_waves,
+    mock_docx, tmp_path, capsys,
+):
+    """When render_docx_report returns False, docx_path is dropped from output_files.
+
+    The existing `if p` filter on the output_files list must handle docx_path=None.
+    """
+    mock_evidence.side_effect = _stub_evidence
+    mock_score.side_effect = _stub_score
+    mock_conf.side_effect = _stub_confidence
+    mock_roadmap.side_effect = _stub_roadmap
+    mock_waves.side_effect = _stub_waves
+    mock_docx.return_value = False  # simulate python-docx absent
+
+    from quirk.reports.writer import write_reports
+
+    # Should NOT raise; HTML/other artifacts still produced
+    write_reports(_make_cfg(tmp_path), endpoints=[], findings=_findings_fixture())
+
+    # No docx file should exist since render_docx_report returned False
+    docx_files = glob.glob(os.path.join(str(tmp_path), "report-*.docx"))
+    assert not docx_files, (
+        "docx file found but render_docx_report returned False — "
+        "docx_path must be set to None and dropped from output_files"
+    )
