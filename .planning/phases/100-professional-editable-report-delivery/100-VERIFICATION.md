@@ -1,7 +1,8 @@
 ---
 phase: 100-professional-editable-report-delivery
 verified: 2026-05-24T14:00:00Z
-status: human_needed
+status: passed
+human_validated: "2026-05-24 — user confirmed PDF cover/sections + DOCX in Word via real write_reports pipeline. One FMT-02 defect found during UAT (findings-table headers wrapped mid-word) and fixed: HTML th white-space:nowrap + widened Severity/Port columns; DOCX landscape orientation + pinned column widths. Re-confirmed all good."
 score: 3/3 must-haves verified
 overrides_applied: 0
 human_verification:
