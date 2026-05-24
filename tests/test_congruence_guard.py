@@ -14,6 +14,7 @@ import pytest
 from quirk.reports.content_model import (
     ReportCongruenceError,
     _check_congruence,
+    assert_congruent,
     build_exec_content,
 )
 
@@ -260,3 +261,50 @@ def test_guard_blocks_report_generation(tmp_path):
             f"write_reports wrote an executive-summary file despite guard firing: {exec_files}. "
             "D-06 requires ReportCongruenceError before any exec report is written."
         )
+
+
+# ---------------------------------------------------------------------------
+# WR-05 — public assert_congruent() guard + renderer backward-compat paths
+# ---------------------------------------------------------------------------
+
+import pytest as _pytest
+
+
+@_pytest.mark.parametrize("band", ["EXCELLENT", "GOOD", "MODERATE"])
+def test_assert_congruent_raises_for_healthy_band_with_critical(band):
+    """assert_congruent must fail-closed when a healthy band coexists with CRITICAL."""
+    with _pytest.raises(ReportCongruenceError):
+        assert_congruent(band, [{"severity": "CRITICAL", "title": "x"}])
+
+
+@_pytest.mark.parametrize("band", ["FAIR", "POOR"])
+def test_assert_congruent_allows_low_band_with_critical(band):
+    """FAIR / POOR carry no CRITICAL restriction — assert_congruent must not raise."""
+    assert_congruent(band, [{"severity": "CRITICAL", "title": "x"}])
+
+
+def test_assert_congruent_allows_healthy_band_without_critical():
+    assert_congruent("EXCELLENT", [{"severity": "INFO", "title": "y"}])
+
+
+def test_markdown_compat_path_is_fail_closed():
+    """WR-05: build_exec_markdown with exec_content=None must still run the D-06 guard.
+
+    The compat path computes its own score_raw; we force an EXCELLENT band over a
+    CRITICAL finding via calibration so the guard must fire on the legacy path too.
+    """
+    from types import SimpleNamespace
+    from datetime import datetime, timezone
+    from quirk.reports.executive import build_exec_markdown
+
+    cfg = SimpleNamespace(
+        assessment=SimpleNamespace(name="t", report_owner="o", data_classification="c", timezone="UTC"),
+        intelligence=SimpleNamespace(profile="balanced", calibration_overrides={}),
+    )
+    eps = [SimpleNamespace(host=f"10.0.0.{i}", port=443, protocol="TLS",
+                           scanned_at=datetime.now(timezone.utc), scan_error=None) for i in range(1, 5)]
+    crit = {"severity": "CRITICAL", "host": "10.0.0.9", "port": 443,
+            "title": "Quantum-vulnerable key exchange", "category": "tls",
+            "description": "d", "recommendation": "r", "compliance": []}
+    with _pytest.raises(ReportCongruenceError):
+        build_exec_markdown(cfg, eps, [crit], exec_content=None)

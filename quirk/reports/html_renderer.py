@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
-from quirk.reports.content_model import ExecContent  # D-03 / Phase 98: shared content model
+from quirk.reports.content_model import ExecContent, assert_congruent  # D-03 / Phase 98: shared content model
 
 
 # Phase 78 / HARDEN-04: PDF metadata constants. Title flows from HTML <title>;
@@ -108,7 +108,7 @@ def build_algorithm_inventory(endpoints: List[Any]) -> List[Dict[str, Any]]:
             _, nist_level, _ = classify_algorithm(name)
         except Exception:
             nist_level = None
-        fips_status = _fips_status(nist_level) if nist_level is not None or True else "non-approved"
+        fips_status = _fips_status(nist_level)  # IN-02: prior `... or True` made the else branch dead
         try:
             coverage = coverage_for_algorithm(name) or []
         except Exception:
@@ -169,8 +169,15 @@ def render_html_report(
     env.filters["sanitize"] = sanitize_scanner_text
     template = env.get_template("report.html.j2")
 
-    total_score = score.get("total", 0)
-    band = _score_band(total_score)
+    # WR-04: when exec_content is present, source the band/total from the guarded model
+    # (score_band is what _check_congruence validated) instead of recomputing locally —
+    # avoids a duplicated-source-of-truth hazard if _rating()/_score_band() thresholds drift.
+    if exec_content is not None:
+        total_score = exec_content.score_total
+        band = exec_content.score_band
+    else:
+        total_score = score.get("total", 0)
+        band = _score_band(total_score)
 
     # Severity counts
     sev_counts: Dict[str, int] = {}
@@ -207,8 +214,13 @@ def render_html_report(
         roadmap_now_ctx = [r for r in exec_content.roadmap_items if r.phase == "NOW"]
         roadmap_next_ctx = [r for r in exec_content.roadmap_items if r.phase == "NEXT"]
         roadmap_later_ctx = [r for r in exec_content.roadmap_items if r.phase == "LATER"]
+        # WR-03 / IN-01: consume the model's pre-computed numerator so the HTML rollup
+        # matches the CLI markdown exactly (and survives a future 7th subscore).
+        raw_sum = exec_content.raw_sum
     else:
-        # Backward-compat path: no exec_content — source raw dicts from score/roadmap_items
+        # Backward-compat path: no exec_content — source raw dicts from score/roadmap_items.
+        # WR-05: keep this path fail-closed with the same D-06 guard the model path runs.
+        assert_congruent(band, findings or [])
         subscores_ctx = score.get("subscores", {})
         narrative_lead = None
         narrative_drivers = []
@@ -216,6 +228,9 @@ def render_html_report(
         roadmap_now_ctx = roadmap_section("NOW")
         roadmap_next_ctx = roadmap_section("NEXT")
         roadmap_later_ctx = roadmap_section("LATER")
+        # WR-03: mirror the CLI's six-key sum on the compat path (no exec_content available).
+        raw_sum = sum(int(v) for v in subscores_ctx.values()
+                      if isinstance(v, (int, float)) and not isinstance(v, bool))
 
     html = template.render(
         org_name=getattr(getattr(cfg, "assessment", None), "name", "Unknown"),
@@ -235,6 +250,7 @@ def render_html_report(
         roadmap_next=roadmap_next_ctx,
         roadmap_later=roadmap_later_ctx,
         subscores=subscores_ctx,  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
+        raw_sum=raw_sum,  # WR-03 / IN-01: shared rollup numerator (matches CLI markdown)
         severity_color=_severity_color,
         # D-03 / Phase 98: exec_content-derived template vars (None when exec_content absent)
         narrative_lead=narrative_lead,
