@@ -34,7 +34,7 @@ from quirk.discovery.nmap_provider import run_nmap_discovery
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
-from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints
+from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints, evaluate_codesign_endpoints
 from quirk.reports.writer import write_reports
 from quirk.reports.content_model import ReportCongruenceError  # D-06: fail-closed report halt
 
@@ -2122,6 +2122,11 @@ def main():
         broker_findings = evaluate_broker_endpoints(all_broker_eps)
         if broker_findings:
             findings = (findings or []) + broker_findings
+        # Phase 99 CTX-03: code-signing expiry/weak-algo findings (ZERO findings
+        # previously — codesign endpoints were collected but never evaluated).
+        codesign_findings = evaluate_codesign_endpoints(codesign_endpoints)
+        if codesign_findings:
+            findings = (findings or []) + codesign_findings
 
     with _phase_timer(run_stats, "db_persist"):
         with get_session(cfg.output.db_path) as session:
