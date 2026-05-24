@@ -453,8 +453,18 @@ def build_exec_content(
     score_band: str = str(score_raw.get("rating", "POOR"))
     subscores: Dict[str, Any] = dict(score_raw.get("subscores") or {})
 
-    # TRANS-01: raw_sum from subscores; 0 when subscores is empty — no error (Pitfall 3)
-    raw_sum: int = int(sum(subscores.values())) if subscores else 0
+    # TRANS-01: raw_sum from subscores; 0 when subscores is empty — no error (Pitfall 3).
+    # Defensive against malformed/non-numeric subscore values (calibration-injected
+    # strings, None, "—"): sum only numeric entries so build never raises mid-report
+    # after earlier artifacts were already written (CR-01). bool is an int subclass
+    # and is intentionally excluded as non-meaningful.
+    raw_sum: int = int(
+        sum(
+            v
+            for v in subscores.values()
+            if isinstance(v, (int, float)) and not isinstance(v, bool)
+        )
+    )
 
     # D-01 / EXEC-01: narrative lead from band (5→4 collapse per RESEARCH Pattern 4)
     narrative_lead = _NARRATIVE_LEADS.get(score_band, _NARRATIVE_LEAD_FALLBACK)
@@ -462,11 +472,17 @@ def build_exec_content(
     # D-01 / EXEC-01: narrative drivers from score_raw["drivers"]. The canonical
     # scoring schema emits driver dicts ({"reason"/"label": ..., ...}); normalize to
     # the reason clause here so renderers receive plain strings (matches writer.py
-    # compat path `[d["reason"] for d in ...]`). Defensive against str/dict shapes.
-    narrative_drivers: List[str] = [
-        d.get("reason") or d.get("label") or str(d) if isinstance(d, dict) else str(d)
-        for d in (score_raw.get("drivers") or [])
-    ]
+    # compat path `[d["reason"] for d in ...]`). Defensive against str/dict shapes;
+    # a dict lacking both reason and label is dropped rather than rendered as a raw
+    # Python dict repr in the narrative (WR-02).
+    narrative_drivers: List[str] = []
+    for _d in (score_raw.get("drivers") or []):
+        if isinstance(_d, dict):
+            _text = _d.get("reason") or _d.get("label")
+        else:
+            _text = _d
+        if _text:
+            narrative_drivers.append(str(_text))
 
     # TRANS-03 / D-06: severity counts computed ONCE — single source for guard + renderers
     sev_counts = _count_severities(findings)
