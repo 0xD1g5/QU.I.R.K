@@ -105,7 +105,14 @@ def export_pdf() -> Response:
 
     except Exception as exc:
         msg = str(exc).lower()
-        if "chromium" in msg or "executable" in msg or "no such file" in msg:
+        # Chromium not installed → render service unavailable (503).
+        _UNAVAILABLE_SIGNATURES = (
+            "chromium", "executable", "no such file",
+            # Render target unreachable / slow: the PDF service can't reach the /print
+            # view right now — a Service-Unavailable condition, not a code fault (500).
+            "net::err", "err_connection", "connection refused", "timeout", "timed out",
+        )
+        if any(sig in msg for sig in _UNAVAILABLE_SIGNATURES):
             return Response(
                 content=json.dumps({"detail": format_error("DASHBOARD-012")}).encode(),
                 status_code=503,
