@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v5.3
 milestone_name: Adoption & Integration Surface
 status: planning
-last_updated: "2026-05-24T23:09:54.683Z"
+last_updated: "2026-05-24"
 last_activity: 2026-05-24
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,24 +17,26 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-23)
+See: .planning/PROJECT.md (updated 2026-05-24)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 100 — professional-editable-report-delivery
+**Current focus:** Phase 101 — notification fan-out and security foundation (next to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 101 of 105 (Notification Fan-Out + Security Foundation)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-24 — Milestone v5.3 started
+Status: Ready to plan
+Last activity: 2026-05-24 — v5.3 roadmap created (Phases 101–105)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4 (v5.2)
-- Prior milestone (v5.1): 16 plans across 4 phases
+- Total plans completed: 0 (v5.3 not started)
+- Prior milestone (v5.2): 12 plans across 4 phases
 
 *Updated after each plan completion*
 
@@ -42,20 +44,20 @@ Last activity: 2026-05-24 — Milestone v5.3 started
 
 ### Decisions (pre-locked at roadmap)
 
-- v5.2-D-01: Phase 97 first — v5.1 tech debt (TD-01/TD-02) is orthogonal to report changes; close it before report work begins so credential and cascade-counter fixes don't interleave with report content model work
-- v5.2-D-02: TRANS reqs group with EXEC (Phase 98) — score transparency IS the executive narrative; the subscore decomposition and ÷1.5 explanation are inseparable from the narrative exec report, not a separate phase
-- v5.2-D-03: CTX-03 (code-signing cert expiry) belongs in Phase 99 with CTX-01/02 — it is finding-content work (surfacing a computed value as a finding), not executive-layer work; keep Phase 98 focused on the narrative/score story
-- v5.2-D-04: Phase 100 (FMT) is time-boxed and last — PDF polish and DOCX export must not gate the must-ship core (exec narrative + remediation roadmap + score transparency); if scope pressure arises, FMT is the deferral candidate
-- v5.2-D-05: Phase 98 must account for all three render surfaces (quirk/reports/executive.py CLI markdown, quirk/reports/html_renderer.py + templates/report.html.j2 HTML, quirk/dashboard/api/routes/pdf.py PDF) — content-model-once / render-per-surface; a change to the narrative must land in all three atomically
-- v5.2-D-06: No new scoring computation in this milestone — TRANS-01/02 are *presentation* of the existing canonical engine (quirk/intelligence/scoring.py, six subscores, ÷1.5 rollup shipped in v5.0); do not re-weight or re-architect the score
-- v5.2-D-07: DOCX exporter (FMT-03) derives from the same `IntelligenceReport` / finding dict content model as CLI/HTML/PDF — single content pipeline, two output artifacts (PDF = immutable as-scanned, DOCX = editable pre-delivery); do not build a parallel hand-assembled document; inherits EXEC-04/TRANS-03 consistency guarantees by construction
+- v5.3-D-01: Phase 101 is the unambiguous anchor — all seven integration security pitfalls (SSRF, secret leakage, optional-extra import trap, delivery isolation, notification storm, exfiltration whitelist, route-coverage gap) must be addressed HERE before any other integration phase begins
+- v5.3-D-02: ISEC primitives ship in Phase 101 alongside NOTIFY, not as a separate phase — they are prerequisites for every downstream integration; splitting would require retrofitting and is explicitly called out as high-risk by research
+- v5.3-D-03: TRANS-04 (CLI score-source tax) folds into Phase 102 alongside AUTH — it is small, orthogonal, and avoids its own phase; groups naturally with the dashboard polish work
+- v5.3-D-04: SIEM (Phase 103) before Ticketing (Phase 104/105) — stdlib-only, zero dep risk, validates the send_findings_export pattern before Jira/ServiceNow add higher-complexity dedup logic
+- v5.3-D-05: Ticketing is split across two phases (104 Jira + 105 ServiceNow) — TICKET-01..04 requires both backends plus shared abstraction; keeping both in one phase risks >5 plans; Phase 104 builds the TicketingChannel ABC + Jira backend + dedup; Phase 105 adds ServiceNow as the second backend reusing the abstraction
+- v5.3-D-06: ServiceNow uses stdlib urllib Table API — no new pip dep beyond [tickets] extra; jira>=3.10.5 stays the only [tickets] extra dep; ServiceNow access pattern is raw HTTP, not a client library
+- v5.3-D-07: Global notification config only (no per-schedule overrides in v5.3) — per-schedule routing requires a scheduled_scans schema change; global config ships first per research recommendation; per-schedule is v5.3.x
 
 ### Pending Todos
 
-- Phase 97: Confirm WR-02/04/06 exact module locations before planning (likely quirk/auth/credentials.py + quirk/util/targets.py) — read v5.1-MILESTONE-AUDIT.md at plan time
-- Phase 98: Locate the `_build_interpretation()` content model in quirk/reports/executive.py (lines 17–) as the primary extension point for the narrative; verify all three render surfaces consume the same dict before building
-- Phase 99: Verify code-signing cert `not_after` is already computed in Phase 95 output (quirk/scanners/code_signing.py or similar) — CTX-03 is surfacing, not re-computing
-- Phase 100: Identify DOCX generation library (python-docx is the natural choice given zero-new-dep preference is relaxed for a genuine new output format); confirm it can consume the IntelligenceReport dict without a parallel data-extraction pass
+- Phase 101: Confirm exact line number of `_dispatch_schedule()` seam in scheduler_cmd.py before planning (research cites line 162 post-db.commit)
+- Phase 101: Define `integration_deliveries` table schema at plan time (minimum: scan_id, finding_hash, destination, status, attempted_at, error_summary)
+- Phase 103: Verify Splunk HEC raw vs. event endpoint choice at plan time (research recommendation: event endpoint for <=hundreds of findings)
+- Phase 104: Verify Jira Cloud REST v3 JQL label-filter syntax and create_issue() field map at plan time (research flags this as needing plan-time research)
 
 ### Blockers
 
@@ -63,7 +65,7 @@ None.
 
 ## Deferred Items
 
-Carried forward from v5.1 close (2026-05-23) — all non-blocking, environment-gated human-UAT:
+Carried forward from v5.2 close and prior milestones:
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -74,16 +76,10 @@ Carried forward from v5.1 close (2026-05-23) — all non-blocking, environment-g
 | human-UAT (93) | getpass TTY prompt + live PDF export | deferred — TTY-gated |
 | human-UAT (95) | live ldaps code-signing scan | deferred — needs ldaps lab |
 | human-UAT (96) | TTY CONFIRM gate + non-TTY abort + live alg-confusion vs fuzz-target | deferred — TTY/environment-gated |
-| Phase 98-executive-narrative-score-transparency P01 | 4 | 2 tasks | 3 files |
-| Phase 98 P02 | 22 | 2 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-05-24T17:13:28.818Z
-Stopped at: Phase 100 UI-SPEC approved
-Resume file: .planning/phases/100-professional-editable-report-delivery/100-UI-SPEC.md
-Next: `/gsd:plan-phase 97`
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+Last session: 2026-05-24
+Stopped at: v5.3 roadmap written (Phases 101–105, 17 requirements mapped)
+Resume file: None
+Next: `/gsd:plan-phase 101`

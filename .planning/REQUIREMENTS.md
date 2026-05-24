@@ -69,4 +69,24 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _(filled by roadmapper)_ | | |
+| NOTIFY-01 | Phase 101 | Pending |
+| NOTIFY-02 | Phase 101 | Pending |
+| NOTIFY-03 | Phase 101 | Pending |
+| NOTIFY-04 | Phase 101 | Pending |
+| NOTIFY-05 | Phase 101 | Pending |
+| NOTIFY-06 | Phase 101 | Pending |
+| NOTIFY-07 | Phase 101 | Pending |
+| ISEC-01 | Phase 101 | Pending |
+| ISEC-02 | Phase 101 | Pending |
+| ISEC-03 | Phase 101 | Pending |
+| ISEC-04 | Phase 101 | Pending |
+| SIEM-01 | Phase 103 | Pending |
+| SIEM-02 | Phase 103 | Pending |
+| TICKET-01 | Phase 104 | Pending |
+| TICKET-02 | Phase 105 | Pending |
+| TICKET-03 | Phase 104 | Pending |
+| TICKET-04 | Phase 104 | Pending |
+| AUTH-01 | Phase 102 | Pending |
+| AUTH-02 | Phase 102 | Pending |
+| AUTH-03 | Phase 102 | Pending |
+| TRANS-04 | Phase 102 | Pending |
