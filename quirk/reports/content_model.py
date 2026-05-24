@@ -459,8 +459,14 @@ def build_exec_content(
     # D-01 / EXEC-01: narrative lead from band (5→4 collapse per RESEARCH Pattern 4)
     narrative_lead = _NARRATIVE_LEADS.get(score_band, _NARRATIVE_LEAD_FALLBACK)
 
-    # D-01 / EXEC-01: narrative drivers from score_raw["drivers"]
-    narrative_drivers: List[str] = list(score_raw.get("drivers") or [])
+    # D-01 / EXEC-01: narrative drivers from score_raw["drivers"]. The canonical
+    # scoring schema emits driver dicts ({"reason"/"label": ..., ...}); normalize to
+    # the reason clause here so renderers receive plain strings (matches writer.py
+    # compat path `[d["reason"] for d in ...]`). Defensive against str/dict shapes.
+    narrative_drivers: List[str] = [
+        d.get("reason") or d.get("label") or str(d) if isinstance(d, dict) else str(d)
+        for d in (score_raw.get("drivers") or [])
+    ]
 
     # TRANS-03 / D-06: severity counts computed ONCE — single source for guard + renderers
     sev_counts = _count_severities(findings)
