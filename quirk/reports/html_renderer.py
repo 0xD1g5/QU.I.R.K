@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
+from quirk.reports.content_model import ExecContent  # D-03 / Phase 98: shared content model
 
 
 # Phase 78 / HARDEN-04: PDF metadata constants. Title flows from HTML <title>;
@@ -150,10 +151,16 @@ def render_html_report(
     score: Dict[str, Any],
     conf: Dict[str, Any],
     roadmap_items: List[Dict[str, Any]],
+    *,
+    exec_content: "ExecContent | None" = None,
 ) -> None:
     """Render a self-contained HTML report to *path*.
 
     All CSS is inlined. No CDN references. Works offline (D-08).
+
+    D-03 / Phase 98: exec_content carries the shared narrative/risks/roadmap/subscores
+    built by writer.py. When provided, the template context sources exec_content fields
+    for narrative, top_risks, roadmap sections, and subscores (D-07 — extend, not rebuild).
     """
     env = Environment(
         loader=FileSystemLoader(_TEMPLATES_DIR),
@@ -186,6 +193,30 @@ def render_html_report(
     # Phase 81 / CMVP-06: build the Algorithm Inventory `algorithms` context.
     algorithms = build_algorithm_inventory(endpoints or [])
 
+    # D-03 / D-07 / Phase 98: route subscores + narrative/risks/roadmap through exec_content
+    # when available — single source of truth (D-03). Falls back to raw score dict (D-07 compat).
+    if exec_content is not None:
+        # D-07: source subscores from exec_content to guarantee structural identity with CLI
+        subscores_ctx = exec_content.subscores or {}
+        # EXEC-01: narrative lead + drivers for the narrative-block template section
+        narrative_lead = exec_content.narrative_lead
+        narrative_drivers = exec_content.narrative_drivers
+        # EXEC-02: top_risks list for the risks-list template section
+        top_risks = exec_content.top_risks
+        # EXEC-03: roadmap items carry effort/impact; split by phase bucket
+        roadmap_now_ctx = [r for r in exec_content.roadmap_items if r.phase == "NOW"]
+        roadmap_next_ctx = [r for r in exec_content.roadmap_items if r.phase == "NEXT"]
+        roadmap_later_ctx = [r for r in exec_content.roadmap_items if r.phase == "LATER"]
+    else:
+        # Backward-compat path: no exec_content — source raw dicts from score/roadmap_items
+        subscores_ctx = score.get("subscores", {})
+        narrative_lead = None
+        narrative_drivers = []
+        top_risks = []
+        roadmap_now_ctx = roadmap_section("NOW")
+        roadmap_next_ctx = roadmap_section("NEXT")
+        roadmap_later_ctx = roadmap_section("LATER")
+
     html = template.render(
         org_name=getattr(getattr(cfg, "assessment", None), "name", "Unknown"),
         report_owner=getattr(getattr(cfg, "assessment", None), "report_owner", ""),
@@ -200,11 +231,15 @@ def render_html_report(
         findings=findings or [],
         endpoints=endpoints or [],
         algorithms=algorithms,
-        roadmap_now=roadmap_section("NOW"),
-        roadmap_next=roadmap_section("NEXT"),
-        roadmap_later=roadmap_section("LATER"),
-        subscores=score.get("subscores", {}),  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
+        roadmap_now=roadmap_now_ctx,
+        roadmap_next=roadmap_next_ctx,
+        roadmap_later=roadmap_later_ctx,
+        subscores=subscores_ctx,  # D-07 / SCORE-XPARENCY-01 — int values, no sanitize needed
         severity_color=_severity_color,
+        # D-03 / Phase 98: exec_content-derived template vars (None when exec_content absent)
+        narrative_lead=narrative_lead,
+        narrative_drivers=narrative_drivers,
+        top_risks=top_risks,
     )
     os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
