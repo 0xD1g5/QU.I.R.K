@@ -19,6 +19,7 @@ from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.cbom import build_cbom, write_cbom_files
 from quirk.reports.html_renderer import render_html_report, render_pdf_report
+from quirk.reports.docx_renderer import render_docx_report
 
 
 def _unique_hosts(hosts) -> set:
@@ -237,6 +238,17 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     if not pdf_ok:
         pdf_path = None  # Playwright unavailable — HTML report still written
 
+    # Phase 100 / FMT-03 / D-11: DOCX auto-emit every run; skip gracefully if python-docx absent
+    docx_path = os.path.join(outdir, f"report-{stamp}.docx")
+    docx_ok = render_docx_report(
+        path=docx_path,
+        cfg=cfg,
+        findings=findings,
+        exec_content=exec_content,
+    )
+    if not docx_ok:
+        docx_path = None
+
     # 4) Ensure reporting timing exists BEFORE writing run-stats file
     if run_stats is not None:
         run_stats.setdefault("timings_sec", {})
@@ -295,7 +307,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         findings_path, stats_path, exec_path, tech_path,
         scorecard_path, roadmap_path, intelligence_path,
         cbom_json_path, cbom_xml_path,
-        html_path, pdf_path,
+        html_path, pdf_path, docx_path,  # Phase 100 / FMT-03: DOCX joins output files
     ] if p]
     _console.print(f"\n[bold #3b9dff]Output files ({len(output_files)}):[/]")
     for p in output_files:
