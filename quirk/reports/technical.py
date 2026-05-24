@@ -6,6 +6,11 @@ from quirk.reports._md_escape import md_cell
 # coverage_for_algorithm lazily so this module remains import-safe even before
 # Plan 81-02 lands quirk/compliance/cmvp.py.
 from quirk.reports.html_renderer import build_algorithm_inventory
+from quirk.reports.content_model import FALLBACK_QUANTUM_RISK
+
+# Phase 99 CTX-01: fallback for findings with no quantum_risk field.
+# Imported from the shared content model (single source of truth).
+FALLBACK_QR = FALLBACK_QUANTUM_RISK
 
 
 def _scan_error_category(scan_error: str) -> str:
@@ -110,16 +115,22 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
     # === Findings table ===
     lines.append("## Findings")
     lines.append("")
-    lines.append("| Severity | Host | Port | Title | Description | Recommendation |")
-    lines.append("|---|---|---:|---|---|---|")
+    # Phase 99 CTX-01: Quantum Risk column added between Description and Recommendation.
+    # Locked column header from 99-UI-SPEC.md §CLI Markdown Findings Table.
+    lines.append("| Severity | Host | Port | Title | Description | Quantum Risk | Recommendation |")
+    lines.append("|---|---|---:|---|---|---|---|")
     for f in findings:
         sev = f.get("severity", "INFO")
         host = f.get("host", "")
         port = f.get("port", "")
         title = f.get("title", "")
         desc = f.get("description", "")
+        # Phase 99 CTX-01: read quantum_risk; fall back to FALLBACK_QR, truncate to 120.
+        qr = (f.get("quantum_risk") or FALLBACK_QR)[:120]
         rec = f.get("recommendation", "")
-        lines.append(f"| {sev} | {md_cell(host)} | {port} | {md_cell(title)} | {md_cell(desc)} | {md_cell(rec)} |")
+        lines.append(
+            f"| {sev} | {md_cell(host)} | {port} | {md_cell(title)} | {md_cell(desc)} | {md_cell(qr)} | {md_cell(rec)} |"
+        )
 
     lines.append("")
     return "\n".join(lines)
