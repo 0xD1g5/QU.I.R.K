@@ -18,9 +18,9 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Per-Finding Context (CTX)
 
-- [ ] **CTX-01**: Each finding carries a plain-language quantum-risk "so what" explanation (why it matters for PQC)
-- [ ] **CTX-02**: Each finding carries actionable remediation guidance specific to the detected weakness
-- [ ] **CTX-03**: Code-signing certificate expiry (not_after / expired) is surfaced as a finding [WR-05 carry-over from v5.1]
+- [x] **CTX-01**: Each finding carries a plain-language quantum-risk "so what" explanation (why it matters for PQC)
+- [x] **CTX-02**: Each finding carries actionable remediation guidance specific to the detected weakness
+- [x] **CTX-03**: Code-signing certificate expiry (not_after / expired) is surfaced as a finding [WR-05 carry-over from v5.1]
 
 ### Score Transparency & Consistency (TRANS)
 
@@ -70,9 +70,9 @@ Which phases cover which requirements. Filled during roadmap creation.
 | EXEC-02 | Phase 98 | Complete |
 | EXEC-03 | Phase 98 | Complete |
 | EXEC-04 | Phase 98 | Complete |
-| CTX-01 | Phase 99 | Pending |
-| CTX-02 | Phase 99 | Pending |
-| CTX-03 | Phase 99 | Pending |
+| CTX-01 | Phase 99 | Complete |
+| CTX-02 | Phase 99 | Complete |
+| CTX-03 | Phase 99 | Complete |
 | TRANS-01 | Phase 98 | Complete |
 | TRANS-02 | Phase 98 | Complete |
 | TRANS-03 | Phase 98 | Complete |

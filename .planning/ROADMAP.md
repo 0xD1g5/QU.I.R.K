@@ -37,7 +37,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. Next m
 
 - [x] **Phase 97: v5.1 Tech-Debt Cleanup** — Close carried WR-02/03/04/06 items before report work begins (completed 2026-05-23)
 - [x] **Phase 98: Executive Narrative + Score Transparency** — The anchor: narrative exec summary, prioritized remediation roadmap, subscore decomposition, consistency fix; all three render surfaces (completed 2026-05-24)
-- [ ] **Phase 99: Per-Finding Context + Code-Signing Expiry** — Enrich every finding with a quantum-risk "so what" + actionable remediation; surface code-signing cert expiry as a finding
+- [x] **Phase 99: Per-Finding Context + Code-Signing Expiry** — Enrich every finding with a quantum-risk "so what" + actionable remediation; surface code-signing cert expiry as a finding (completed 2026-05-24)
 - [ ] **Phase 100: Professional & Editable Report Delivery** — Client-ready PDF cover/layout/typography, clean table pagination, and DOCX editable export so a consultant can finalize before client delivery
 
 ## Phase Details
@@ -108,15 +108,15 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 99-01-PLAN.md — content_model foundation: ALGO_IMPACT_MAP 3-tuple extension + REMEDIATION_CATALOG + codesign keys + fix breaking unpacks (CTX-01/02)
+- [x] 99-01-PLAN.md — content_model foundation: ALGO_IMPACT_MAP 3-tuple extension + REMEDIATION_CATALOG + codesign keys + fix breaking unpacks (CTX-01/02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 99-02-PLAN.md — _build_finding quantum_risk + catalog remediation + conditional NIST; codesign expiry classification (both paths) + evaluate_codesign_endpoints + run_scan wiring (CTX-01/02/03)
+- [x] 99-02-PLAN.md — _build_finding quantum_risk + catalog remediation + conditional NIST; codesign expiry classification (both paths) + evaluate_codesign_endpoints + run_scan wiring (CTX-01/02/03)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 99-03-PLAN.md — renderer trio (markdown column + HTML All Findings column/Top Findings block + CSS); render-parity test; expected_results oracle; UAT-SERIES sync (CTX-01/03)
+- [x] 99-03-PLAN.md — renderer trio (markdown column + HTML All Findings column/Top Findings block + CSS); render-parity test; expected_results oracle; UAT-SERIES sync (CTX-01/03)
 
 **UI hint**: yes
 
@@ -141,5 +141,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
 | 98. Executive Narrative + Score Transparency | 3/3 | Complete   | 2026-05-24 |
-| 99. Per-Finding Context + Code-Signing Expiry | 0/3 | Planned | - |
+| 99. Per-Finding Context + Code-Signing Expiry | 3/3 | Complete   | 2026-05-24 |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
