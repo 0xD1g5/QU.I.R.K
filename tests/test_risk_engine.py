@@ -437,10 +437,13 @@ class TestRichFindingContext:
                 assert term not in blob, \
                     f"Stale term '{term}' in finding: {f}"
 
-    def test_quantum_vulnerable_findings_cite_deprecation_and_fips(
+    def test_quantum_vulnerable_findings_cite_fips(
             self, all_findings):
         # Heuristic: quantum-vulnerable findings have RSA/ECDSA in title or
         # are SSH advisory (per plan tasks).
+        # Phase 99 D-05: catalog-matched findings replace the NIST_IR_8547_DEPRECATION
+        # boilerplate with weakness-specific remediation from REMEDIATION_CATALOG.
+        # All catalog entries for RSA/ECDSA/DH include FIPS 203/204 references inline.
         qv_titles = ("RSA", "ECDSA", "SSH quantum")
         qv_findings = [
             f for f in all_findings
@@ -450,8 +453,6 @@ class TestRichFindingContext:
             "Fixture should produce at least one quantum-vulnerable finding"
         for f in qv_findings:
             rec = f.get("recommendation", "")
-            assert NIST_IR_8547_DEPRECATION in rec, \
-                f"Missing deprecation phrase: {f}"
             assert any(s in rec for s in ("FIPS 203", "FIPS 204", "FIPS 205")), \
                 f"Missing FIPS designation: {f}"
 
@@ -478,7 +479,11 @@ class TestRichFindingContext:
     def test_dedup_safety_for_quantum_findings(self):
         """T-48-03: two quantum-vulnerable endpoints with identical
         (host, port, title) collapse to one finding because the deterministic
-        deprecation suffix preserves recommendation equality."""
+        catalog-sourced recommendation preserves recommendation equality.
+        Phase 99 D-04: RSA is a catalog match so recommendation is the catalog
+        value (not the NIST boilerplate), but dedup still works because both
+        findings produce identical recommendations from the same catalog entry.
+        """
         ep1 = _tls_ep(host="10.0.0.50", port=443,
                       cert_pubkey_alg="RSA", cert_pubkey_size=2048)
         ep2 = _tls_ep(host="10.0.0.50", port=443,
@@ -490,7 +495,8 @@ class TestRichFindingContext:
         ]
         assert len(rsa_findings) == 1, \
             f"Expected 1 deduped RSA finding, got {len(rsa_findings)}"
-        assert NIST_IR_8547_DEPRECATION in rsa_findings[0]["recommendation"]
+        # D-04: catalog-matched RSA finding uses REMEDIATION_CATALOG recommendation
+        assert rsa_findings[0]["recommendation"] == REMEDIATION_CATALOG["RSA"]
 
 
 class TestMultipleRulesOnOneEndpoint:
