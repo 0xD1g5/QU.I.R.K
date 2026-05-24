@@ -10,6 +10,7 @@ from rich.table import Table
 from quirk.reports.executive import build_exec_markdown
 from quirk.reports.technical import build_tech_markdown
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: scanner-cell escape
+from quirk.reports.content_model import build_exec_content, ReportCongruenceError  # D-03 / D-06
 
 from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/IN-01 (Phase 77 D-07)
 from quirk.intelligence.evidence import build_evidence_summary
@@ -142,12 +143,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     findings_path = os.path.join(outdir, f"findings-{stamp}.json")
     _json_dump(findings_path, findings)
 
-    # 2) Executive + Technical markdowns
-    exec_md = build_exec_markdown(cfg, endpoints, findings)
-    exec_path = os.path.join(outdir, f"executive-summary-{stamp}.md")
-    with open(exec_path, "w", encoding="utf-8") as f:
-        f.write(exec_md)
-
+    # 2) Technical markdown (no score dependency — compute first)
     tech_md = build_tech_markdown(cfg, endpoints, findings)
     tech_path = os.path.join(outdir, f"technical-findings-{stamp}.md")
     with open(tech_path, "w", encoding="utf-8") as f:
@@ -162,6 +158,15 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     )
     conf_raw = compute_confidence(evidence)
     roadmap_raw = build_phased_roadmap(evidence, score_raw)
+
+    # D-03 / D-06: build shared content object BEFORE compat wrapper — score_raw uses
+    # canonical keys ("score", "rating", "subscores"), not the writer compat wrapper keys
+    # ("total"). ReportCongruenceError propagates to CLI before any exec report is written.
+    exec_content = build_exec_content(
+        score_raw=score_raw,
+        findings=findings,
+        roadmap_items=roadmap_raw.get("items", []),
+    )
 
     # Compat wrappers: map intelligence schema to writer's internal format
     score = {
@@ -200,6 +205,12 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     intelligence_path = os.path.join(outdir, f"intelligence-{stamp}.json")
     _json_dump(intelligence_path, intelligence)
 
+    # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model
+    exec_md = build_exec_markdown(cfg, endpoints, findings, exec_content=exec_content)
+    exec_path = os.path.join(outdir, f"executive-summary-{stamp}.md")
+    with open(exec_path, "w", encoding="utf-8") as f:
+        f.write(exec_md)
+
     scorecard_path = os.path.join(outdir, f"scorecard-{stamp}.md")
     with open(scorecard_path, "w", encoding="utf-8") as f:
         f.write(_scorecard_markdown(cfg, score, conf, score.get("drivers", []), roadmap_items))
@@ -218,6 +229,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         score=score,
         conf=conf,
         roadmap_items=roadmap_items,
+        exec_content=exec_content,  # D-03: shared content for narrative/risks/roadmap/subscores
     )
 
     pdf_path = os.path.join(outdir, f"report-{stamp}.pdf")
