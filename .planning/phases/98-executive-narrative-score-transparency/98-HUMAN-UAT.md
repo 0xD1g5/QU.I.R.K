@@ -33,9 +33,8 @@ blocked: 0
 
 ## Notes
 
-- UX observation (NOT a Phase-98 regression, NOT blocking): run_scan.py does not catch
-  ReportCongruenceError specially — it propagates to __main__ via _run_main_with_job_guard
-  (run_scan.py:2194 `raise`), so the operator sees a Python traceback (with the clean message
-  at the bottom) + non-zero exit, rather than a friendly one-line error. The guard message and
-  fail-closed behavior are correct; only the CLI framing is a raw stack trace. Candidate small
-  follow-up: catch ReportCongruenceError in run_scan.py, print the message, and sys.exit(2).
+- UX observation — RESOLVED 2026-05-24: run_scan.py now catches ReportCongruenceError around
+  write_reports, prints a clean `error: <message>` to stderr, marks the job failed (if --job-id),
+  and exits 2 — no more raw traceback. The deferred review findings WR-03/04/05 + IN-01/02 were
+  also fixed in the same pass, and the /api/export/pdf route now degrades an unreachable render
+  target to 503 instead of 500. See 98-REVIEW.md (status: resolved).
