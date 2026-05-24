@@ -294,6 +294,26 @@ and a weak RSA-1024 / SHA-1 signature — exercises the code-signing scanner HIG
 *The `ldaps-codesign-seed` sidecar seeds `uid=codesign-weak` into `dc=chaos,dc=local` via
 an idempotent `ldapadd -c` run (mirrors the smime-seed pattern; swallows exit 68).*
 
+### Detection paths (Phase 99 CTX-03 update)
+
+Phase 99 added an **independent expiry classification branch** to `_classify_codesign_severity`
+(D-07/D-08 in 99-CONTEXT.md). The scanner now detects two distinct failure modes for
+code-signing certificates:
+
+| Detection Path | Trigger Condition | Finding Title | Severity | Notes |
+|---|---|---|---|---|
+| Weak algorithm | RSA<2048, EC<256, or SHA-1/MD5 signing hash | CODE-SIGN/weak-algorithm | HIGH | Lab fixture (`uid=codesign-weak` RSA-1024/SHA-1) exercises this path |
+| Certificate expired | `not_after` date is in the past | "Code-signing certificate expired: {subject}" | HIGH | Expiry stacks with weak-crypto: a weak+expired cert emits HIGH for both reasons |
+| Certificate expiring soon | 0 < days-to-`not_after` ≤ 90 | "Code-signing certificate expiring within 90 days: {subject}" | MEDIUM | Independent of weak-crypto: a SAFE-crypto cert approaching expiry now emits a finding |
+
+**Lab fixture coverage note:** The `ldaps-codesign-seed` cert uses a 100-year validity
+period (`not_after` far in the future), so it exercises only the **weak-algorithm HIGH
+path**. The **expiry HIGH** and **expiry MEDIUM** paths are covered by unit mocks in
+`tests/test_codesign_expiry_classification.py` (expired fixture) and
+`tests/test_codesign_findings_evaluator.py` (approaching-expiry fixture). No lab profile
+change is required — the detection logic change is an independent code path that does not
+alter the existing lab fixture's observable findings.
+
 | User DN | Certificate | Expected Finding | Severity |
 |---|---|---|---|
 | uid=codesign-weak,ou=people,dc=chaos,dc=local | RSA-1024 / SHA-1 + CodeSigning EKU | CODE-SIGN/weak-algorithm | HIGH |
@@ -305,7 +325,9 @@ PROFILE_ARGS="--profile ldaps" ./lab.sh up
 python run_scan.py --target localhost --inventory-code-signing \
   # (configure codesign_targets: ["ldap://localhost:636"] in scan config)
 ```
-**Expected:** CODE_SIGNING scanner returns 1 HIGH `CODE-SIGN/weak-algorithm` finding from the ldaps profile.
+**Expected:** CODE_SIGNING scanner returns 1 HIGH `CODE-SIGN/weak-algorithm` finding from the
+ldaps profile (weak-algorithm path). Expiry paths (expired → HIGH, approaching ≤90 days → MEDIUM)
+are not triggered by the lab fixture but are unit-tested via mock datetimes.
 
 ---
 
