@@ -356,7 +356,7 @@
     {# Phase 99 CTX-01 / D-03: FALLBACK_QR constant — mirrors FALLBACK_QUANTUM_RISK in content_model.py. #}
     {% set FALLBACK_QR = "This cryptographic weakness reduces the security margin against quantum-capable adversaries. Migrate to NIST-approved post-quantum algorithms per NIST IR 8547." %}
     <table>
-      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Description</th><th>Quantum Risk</th><th>Recommendation</th></tr></thead>
+      <thead><tr><th>Severity</th><th>Title</th><th>Host</th><th>Port</th><th>Description</th><th>Recommendation</th><th>Quantum Risk</th></tr></thead>
       <tbody>
       {% for f in findings if f.get('category') != 'coverage_gap' %}
       <tr>
@@ -365,9 +365,9 @@
         <td>{{ f.get('host','') | sanitize }}</td>
         <td>{{ f.get('port','') }}</td>
         <td>{{ f.get('description','')[:200] | sanitize }}{% if f.get('description','')|length > 200 %}…{% endif %}</td>
-        {# Phase 99 CTX-01: Quantum Risk column — scanner-derived text, must use | sanitize (T-99-06). #}
-        <td><span class="quantum-risk-label">Quantum Risk:</span>{{ f.get('quantum_risk', FALLBACK_QR)[:200] | sanitize }}</td>
         <td>{{ f.get('recommendation','')[:200] | sanitize }}{% if f.get('recommendation','')|length > 200 %}…{% endif %}</td>
+        {# Phase 99 CTX-01: Quantum Risk column as 7th column per UI-SPEC §Interaction Contract (WR-01 fix). #}
+        <td><span class="quantum-risk-label">Quantum Risk:</span>{{ f.get('quantum_risk', FALLBACK_QR)[:200] | sanitize }}</td>
       </tr>
       {% endfor %}
       </tbody>
