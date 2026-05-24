@@ -11,10 +11,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Executive Narrative Report (EXEC)
 
-- [ ] **EXEC-01**: Reader sees an executive summary that opens with a plain-language readiness narrative (overall posture + what it means) before any finding tables
+- [x] **EXEC-01**: Reader sees an executive summary that opens with a plain-language readiness narrative (overall posture + what it means) before any finding tables
 - [x] **EXEC-02**: Executive summary surfaces the top prioritized risks framed by business impact, not as raw finding rows
 - [x] **EXEC-03**: Report includes a prioritized remediation roadmap section — ordered actions with rationale and relative effort/impact
-- [ ] **EXEC-04**: The executive narrative renders with consistent content across CLI markdown, HTML, and PDF (format-appropriate, same story)
+- [x] **EXEC-04**: The executive narrative renders with consistent content across CLI markdown, HTML, and PDF (format-appropriate, same story)
 
 ### Per-Finding Context (CTX)
 
@@ -25,7 +25,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 ### Score Transparency & Consistency (TRANS)
 
 - [x] **TRANS-01**: Reports show the six-pillar subscore decomposition against budget that feeds the overall readiness number
-- [ ] **TRANS-02**: Reports explain how the overall score is computed (subscore weighting + ÷1.5 rollup) so the number is defensible to a client
+- [x] **TRANS-02**: Reports explain how the overall score is computed (subscore weighting + ÷1.5 rollup) so the number is defensible to a client
 - [x] **TRANS-03**: The executive summary's headline score and severity language are consistent with the detailed findings tables — no contradiction [999.82]
 
 ### Professional Formatting & Editable Delivery (FMT)
@@ -66,15 +66,15 @@ Which phases cover which requirements. Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXEC-01 | Phase 98 | Pending |
+| EXEC-01 | Phase 98 | Complete |
 | EXEC-02 | Phase 98 | Complete |
 | EXEC-03 | Phase 98 | Complete |
-| EXEC-04 | Phase 98 | Pending |
+| EXEC-04 | Phase 98 | Complete |
 | CTX-01 | Phase 99 | Pending |
 | CTX-02 | Phase 99 | Pending |
 | CTX-03 | Phase 99 | Pending |
 | TRANS-01 | Phase 98 | Complete |
-| TRANS-02 | Phase 98 | Pending |
+| TRANS-02 | Phase 98 | Complete |
 | TRANS-03 | Phase 98 | Complete |
 | FMT-01 | Phase 100 | Pending |
 | FMT-02 | Phase 100 | Pending |

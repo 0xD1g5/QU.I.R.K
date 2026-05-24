@@ -84,7 +84,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 98-02-PLAN.md — writer seam + build-time guard; CLI + HTML/template narrative, top-risks, rollup formula, effort/impact roadmap labels (D-03/D-07) + ordering tests
+- [x] 98-02-PLAN.md — writer seam + build-time guard; CLI + HTML/template narrative, top-risks, rollup formula, effort/impact roadmap labels (D-03/D-07) + ordering tests
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -125,6 +125,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
-| 98. Executive Narrative + Score Transparency | 1/3 | In Progress|  |
+| 98. Executive Narrative + Score Transparency | 2/3 | In Progress|  |
 | 99. Per-Finding Context + Code-Signing Expiry | 0/TBD | Not started | - |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
