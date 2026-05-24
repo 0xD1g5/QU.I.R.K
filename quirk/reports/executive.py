@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections import Counter
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
@@ -9,6 +11,7 @@ from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.assessment.migration_advisor import recommend_migration_paths
 from quirk.reports._md_escape import md_cell  # Phase 78 / HARDEN-01: wrap scanner-controlled cells
 from quirk.reports.html_renderer import build_algorithm_inventory  # Phase 81 / CMVP-06: shared inventory builder
+from quirk.reports.content_model import ExecContent  # D-03 / Phase 98: shared content model
 
 # D-07 / WR-09 (Phase 73): fallback bullet when score dict is malformed.
 _INTERPRETATION_UNAVAILABLE = "Score data unavailable for this run."
@@ -108,7 +111,16 @@ def _count_noninfo(findings: List[Dict]) -> Counter:
     return Counter([f["severity"] for f in findings if f.get("severity") != "INFO"])
 
 
-def build_exec_markdown(cfg, endpoints, findings) -> str:
+def build_exec_markdown(
+    cfg,
+    endpoints,
+    findings,
+    *,
+    exec_content: "ExecContent | None" = None,
+) -> str:
+    # D-03 / Phase 98: exec_content carries shared narrative/risks/roadmap from writer.py seam.
+    # When provided, narrative/risks/roadmap are sourced from exec_content (D-03 guarantee).
+    # When None (backward-compat), compute locally — legacy path without the shared model.
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     evidence = build_evidence_summary(endpoints, findings)
@@ -163,6 +175,23 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append(f"- **Data classification:** {cfg.assessment.data_classification}")
     lines.append("")
 
+    # EXEC-01 / D-03 / Phase 98: Readiness Assessment narrative prose block.
+    # Sourced from exec_content when provided (shared model, guaranteed identical to HTML).
+    # Falls back to _build_interpretation bullets for backward-compat when exec_content is None.
+    lines.append("## Readiness Assessment")
+    lines.append("")
+    if exec_content is not None:
+        lines.append(exec_content.narrative_lead)
+        lines.append("")
+        if exec_content.narrative_drivers:
+            lines.append("Key factors: " + "; ".join(exec_content.narrative_drivers) + ".")
+        lines.append("")
+    else:
+        # Backward-compat path: narrative_lead not available; render interpretation bullets
+        for b in interp.get("bullets", []):
+            lines.append(f"- {md_cell(b)}")
+        lines.append("")
+
     lines.append("## Quantum Readiness Score")
     lines.append(f"**Score:** **{score_raw['score']}/100**  \n**Rating:** **{score_raw['rating']}**")
     lines.append("")
@@ -193,6 +222,18 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
     lines.append("")
     lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
     lines.append("")
+
+    # EXEC-02 / D-03 / Phase 98: Priority Business Risks from shared content model.
+    # Risk labels and impact sentences come from ALGO_IMPACT_MAP (static map, D-02).
+    # Finding-derived bullet labels wrapped with md_cell per HARDEN-01.
+    if exec_content is not None and exec_content.top_risks:
+        lines.append("## Priority Business Risks")
+        lines.append("")
+        for risk in exec_content.top_risks:
+            lines.append(
+                f"- **{md_cell(risk.risk_label)}** — {md_cell(risk.impact_sentence)}"
+            )
+        lines.append("")
 
     lines.append("## Confidence & Coverage")
     lines.append(
@@ -243,29 +284,51 @@ def build_exec_markdown(cfg, endpoints, findings) -> str:
         lines.append(f"- **{sev}:** {sev_counts.get(sev, 0)}")
 
     lines.append("")
-    lines.append("## Interpretation")
-    for b in interp.get("bullets", []):
-        lines.append(f"- {md_cell(b)}")
+    # Pitfall 6 / EXEC-01 / Phase 98: Interpretation section removed per plan 98-02.
+    # Its content is now subsumed into the Readiness Assessment narrative block above
+    # (narrative_lead + narrative_drivers from exec_content, or interp bullets in fallback path).
+    # Do NOT re-add a separate interpretation section.
 
-    lines.append("")
     lines.append("## Transition Roadmap")
     lines.append("")
-    roadmap_items = roadmap_raw.get("items", [])
+    # EXEC-03 / D-03 / Phase 98: roadmap items with effort/impact labels.
+    # When exec_content is provided, use exec_content.roadmap_items (RoadmapItem dataclasses
+    # with effort/impact already attached). When not, fall back to raw roadmap_raw items.
     phase_labels = {
         "NOW": "NOW — Immediate (0-6 months)",
         "NEXT": "NEXT — Near-term (6-18 months)",
         "LATER": "LATER — Strategic (18+ months)",
     }
-    for phase_key in ("NOW", "NEXT", "LATER"):
-        phase_items = [r for r in roadmap_items if r.get("phase") == phase_key]
-        if phase_items:
-            lines.append(f"### {phase_labels[phase_key]}")
-            for item in phase_items:
-                lines.append(f"- **{md_cell(item['title'])}** — {md_cell(item['why'])}")
-                lines.append(
-                    f"  - Owner: {md_cell(item['owner_placeholder'])} | Timeframe: {md_cell(item['timeframe'])}"
-                )
-            lines.append("")
+    if exec_content is not None:
+        for phase_key in ("NOW", "NEXT", "LATER"):
+            phase_items = [r for r in exec_content.roadmap_items if r.phase == phase_key]
+            if phase_items:
+                lines.append(f"### {phase_labels[phase_key]}")
+                for item in phase_items:
+                    # EXEC-03: effort/impact labels appended to each roadmap bullet (HARDEN-01: md_cell on derived text)
+                    effort_label = f"{item.effort} EFFORT"
+                    impact_label = f"{item.impact} IMPACT"
+                    lines.append(
+                        f"- **{md_cell(item.title)}** — {md_cell(item.why)}"
+                        f" [{effort_label} · {impact_label}]"
+                    )
+                    lines.append(
+                        f"  - Owner: {md_cell(item.owner_placeholder)} | Timeframe: {md_cell(item.timeframe)}"
+                    )
+                lines.append("")
+    else:
+        # Backward-compat: no exec_content — render without effort/impact labels
+        roadmap_items_raw = roadmap_raw.get("items", [])
+        for phase_key in ("NOW", "NEXT", "LATER"):
+            phase_items = [r for r in roadmap_items_raw if r.get("phase") == phase_key]
+            if phase_items:
+                lines.append(f"### {phase_labels[phase_key]}")
+                for item in phase_items:
+                    lines.append(f"- **{md_cell(item['title'])}** — {md_cell(item['why'])}")
+                    lines.append(
+                        f"  - Owner: {md_cell(item['owner_placeholder'])} | Timeframe: {md_cell(item['timeframe'])}"
+                    )
+                lines.append("")
 
     if recs:
         lines.append("")
