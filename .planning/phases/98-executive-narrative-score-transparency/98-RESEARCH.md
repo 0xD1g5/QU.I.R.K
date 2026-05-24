@@ -698,22 +698,22 @@ Step 2.6: SKIPPED (no external tool dependencies — Phase 98 is pure Python cod
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`_build_interpretation()` retention vs. removal**
    - What we know: currently produces bullet points under `## Interpretation` (post-findings). EXEC-01 requires narrative before findings.
    - What's unclear: whether the new `ExecContent.narrative_drivers` entirely replaces `_build_interpretation()` bullets, or whether both coexist (narrative prose before + old bullets after).
-   - Recommendation: Remove `_build_interpretation()` from the CLI output path; subsume its content into `ExecContent.narrative_drivers`. The function itself may be kept as a private helper if `build_exec_content()` reuses its logic, but it should not produce a separate section.
+   - **RESOLVED (plan 98-02):** Remove the `## Interpretation` section from the CLI output path and subsume its content into `ExecContent.narrative_drivers`, rendered as the "Readiness Assessment" narrative block before the score section. The helper logic may be reused inside `build_exec_content()` but must not emit a separate post-findings section.
 
 2. **Band label mapping (5 scoring bands → 4 UI-SPEC narrative leads)**
    - What we know: `_rating()` in `scoring.py` produces 5 bands (EXCELLENT/GOOD/MODERATE/FAIR/POOR). The UI-SPEC has 4 narrative leads (GOOD/FAIR/POOR/CRITICAL).
    - What's unclear: whether EXCELLENT should get its own narrative lead or share GOOD's.
-   - Recommendation: EXCELLENT → use GOOD lead. MODERATE → use FAIR lead. POOR → use CRITICAL lead. This is Claude's discretion per CONTEXT.md.
+   - **RESOLVED (plan 98-01, Claude's discretion per CONTEXT.md):** EXCELLENT → GOOD lead, MODERATE → FAIR lead, POOR → CRITICAL lead.
 
 3. **D-06 guard severity threshold granularity**
    - What we know: The UI-SPEC error message is triggered when headline is `GOOD`/`EXCELLENT` while CRITICAL findings exist.
    - What's unclear: whether `MODERATE` + CRITICAL should also be blocked (the table in Pattern 2 above proposes yes).
-   - Recommendation: Block EXCELLENT/GOOD/MODERATE with any CRITICAL findings; allow FAIR/POOR with any mix. This is Claude's discretion.
+   - **RESOLVED (plan 98-01 `_BAND_CRITICAL_THRESHOLD`, Claude's discretion per CONTEXT.md):** Block EXCELLENT/GOOD/MODERATE when any CRITICAL findings are open; allow FAIR/POOR with any severity mix.
 
 ---
 
