@@ -177,6 +177,12 @@ def render_docx_report(
         row_cells[0].text = "No high-priority risks identified."
         row_cells[1].text = ""
 
+    # Cross-surface parity (D-10 / EXEC-04): exclude advisory coverage_gap rows from
+    # the findings tables, exactly as report.html.j2 does (rejectattr coverage_gap),
+    # so a CISO-facing DOCX never shows scanner-advisory rows like "X scanner not
+    # installed". Top Findings is capped at 10 to match the HTML [:10] limit.
+    report_findings = [f for f in findings if f.get("category") != "coverage_gap"]
+
     # Top Findings sub-section (4-col table: Severity | Title | Host | Description)
     doc.add_heading("Top Findings", level=2)
     top_findings_tbl = doc.add_table(rows=1, cols=4)
@@ -186,8 +192,8 @@ def render_docx_report(
     tf_hdr[1].text = "Title"
     tf_hdr[2].text = "Host"
     tf_hdr[3].text = "Description"
-    if findings:
-        for f in findings[:5]:  # top 5
+    if report_findings:
+        for f in report_findings[:10]:  # top 10 (parity with HTML)
             row_cells = top_findings_tbl.add_row().cells
             row_cells[0].text = str(f.get("severity", ""))
             row_cells[1].text = str(f.get("title", ""))
@@ -211,8 +217,8 @@ def render_docx_report(
     ]):
         f_hdr[i].text = col_name
 
-    if findings:
-        for f in findings:
+    if report_findings:
+        for f in report_findings:
             row_cells = findings_tbl.add_row().cells
             row_cells[0].text = str(f.get("severity", ""))
             row_cells[1].text = str(f.get("title", ""))
