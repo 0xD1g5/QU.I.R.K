@@ -417,6 +417,38 @@ Dependency hygiene (Node 20→24, defusedxml→hardened lxml); scoring correctne
 
 ---
 
+## Milestone: v5.2 — Consulting-Grade Reporting
+
+**Shipped:** 2026-05-24
+**Phases:** 4 (97–100) | **Plans:** 12
+
+### What Was Built
+The output layer the detection engine never had: a shared `ExecContent` content model driving a CISO-readable executive narrative + transparent scoring (98), per-finding quantum-risk "so what" + weakness-specific remediation + code-signing expiry findings (99), and a branded PDF + editable DOCX export (100) — identical story across CLI/HTML/PDF/DOCX. Preceded by a focused v5.1 tech-debt cleanup phase (97).
+
+### What Worked
+- **One content model, many surfaces.** Building `build_exec_content` once and feeding all renderers made cross-surface parity structural rather than manual — the DOCX (a brand-new surface) inherited the exec narrative and findings for free, gated by a single parity test.
+- **Research + pattern-mapper caught integration seams pre-plan.** The Phase 99 researcher found that CODE_SIGNING endpoints produced *zero* findings (so CTX-03 was "wire it in," not "tweak severity"); the pattern-mapper surfaced the optional-extra import trap for the DOCX renderer before a line was written.
+- **Sequential-on-main execution for dependency chains.** With one plan per wave and strict data dependencies (catalog → enrichment → render), running executors sequentially on `main` (no worktree isolation) let each wave see the prior's commits — sidestepping this project's documented stale-base worktree-integration hazard with zero downside (no parallelism to lose).
+
+### What Was Inefficient
+- **Render tests assert presence, not appearance.** A column-order regression (99) and a header mid-word-wrap defect (100, FMT-02) both passed green render-parity tests and were only caught by human UAT / the locked UI-SPEC. Presence-not-position/appearance assertions are a recurring blind spot for report surfaces.
+- **The portrait→landscape DOCX fix took two passes.** Pinning column widths can't conjure space a portrait page doesn't have; the structural fix (landscape) should have been the first move for a 7-column data table.
+
+### Patterns Established
+- **Per-surface design contracts can legitimately differ.** The v5.2 UI-SPEC locked *different* findings-table column orders for HTML (after Recommendation) vs CLI markdown (between Description and Recommendation) — an automated reviewer conflated them; the locked spec was the authority.
+- **Code review ≠ goal verification.** The verifier confirmed happy-path success; code review caught the failure-path contract gaps (unbounded logo read, unguarded `doc.save`) that would have aborted a scan. Both gates are load-bearing.
+- **Optional output formats follow the graceful-skip pattern.** python-docx mirrors Playwright: lazy import inside the function, advisory + return False on absence, never abort the scan.
+
+### Key Lessons
+- For report/document phases, gate visual fidelity (column order, wrapping, pagination) on human UAT or add order/appearance assertions — green parity tests are necessary but not sufficient.
+- Wire-in gaps (a scanner that computes a value but never emits a finding) hide behind "passed" unit tests; the integration/research pass is what surfaces them.
+
+### Cost Observations
+- Model mix: planning on opus; research/pattern-mapping/execution/review/verification on sonnet.
+- Notable: two human-UAT round-trips on the report surfaces (99, 100) were the highest-value feedback of the milestone — both caught real client-facing defects automated gates missed.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

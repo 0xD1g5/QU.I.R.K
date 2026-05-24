@@ -1,5 +1,27 @@
 # Milestones
 
+## v5.2 Consulting-Grade Reporting (Shipped: 2026-05-24)
+
+**Phases completed:** 4 phases (97–100), 12 plans, 24 tasks
+**Stats:** 109 commits, ~5,000 source LOC across 34 files (Python/Jinja2/TOML), 2026-05-23 → 2026-05-24
+
+**Delivered:** QU.I.R.K.'s report is now a consulting-grade deliverable. From a single scan and ONE shared content model, a consultant gets a CISO-readable executive narrative with transparent scoring, a finding list that reads like an advisory document, a branded client-ready PDF, and an editable DOCX — the same story across every surface.
+
+**Key accomplishments:**
+
+- **v5.1 tech-debt cleanup (97):** corrected the `from_cli` env-var docstring and added the accepted str-copy proliferation comments (docstring/comment only, zero behavior change); REST-fuzzer combined failure-cascade counter so connection exceptions also count toward `_CONSECUTIVE_5XX_LIMIT` (timeout-only servers can't escape back-off); jwt_scanner query-param guard + fail-closed scheduler auth-reject; real-path credential-leakage sentinel test routed through the actual TLS scanner exception handler.
+- **Executive narrative + score transparency (98):** shared `ExecContent` dataclass + `ALGO_IMPACT_MAP`/`EFFORT_IMPACT_MAP` static maps; a readiness narrative, top business risks, and effort/impact remediation roadmap wired across CLI + HTML; full subscore decomposition with the ÷1.5 rollup explanation; a `_check_congruence` guard that blocks a GOOD/EXCELLENT band from coexisting with CRITICAL findings (exits before any report is written); belt-and-suspenders cross-surface parity test (EXEC-04).
+- **Per-finding context + code-signing expiry (99):** `ALGO_IMPACT_MAP` extended to a 3-tuple + new `REMEDIATION_CATALOG`, making `_build_finding` inject a plain-language quantum-risk "so what" and weakness-specific remediation on every finding (catalog-wins over generic NIST boilerplate); `_classify_codesign_severity` gained an independent expiry branch (expired→HIGH, ≤90d→MEDIUM); `evaluate_codesign_endpoints` turns CODE_SIGNING endpoints into first-class report findings for the first time, wired into run_scan.py; Quantum Risk surfaced across CLI/HTML/PDF with `| sanitize` discipline.
+- **Professional & editable report delivery (100):** branded PDF cover page with a configurable base64-embedded logo (graceful omit) + print CSS (`@media print`, fixed table-layout, no mid-row splits, repeating headers); new `render_docx_report` auto-emitting an editable Word document (cover/exec/findings/roadmap/score, Heading 1/2, native tables, logo placeholder) on every run, derived from the same `exec_content` pipeline, gated behind a `[docx]` optional extra with graceful skip.
+
+**Audit:** PASSED — 13/13 requirements satisfied (EXEC/TRANS/CTX/FMT), 4/4 phases verified, cross-phase integration intact (one shared content model → CLI + HTML + PDF + DOCX), E2E consultant flow complete, 0 blockers.
+
+**Quality gates of note:** code review caught + fixed real robustness gaps the happy-path verifier missed — Phase 100's unbounded logo read + narrow except (could abort a scan) and unguarded `doc.save` (could abort CBOM generation), both now honoring their graceful-degradation contracts. Human UAT caught a PDF/DOCX findings-table header-wrap defect (FMT-02), fixed via HTML `white-space:nowrap`/widened columns and DOCX landscape orientation + pinned column widths.
+
+**Known deferred items at close:** 1 acknowledged audit false-positive (Phase 98 HUMAN-UAT shows as "open" in audit-open because the parser keys on walkthrough checkboxes, not the `**Result:**` line — it is `status: passed`, 0 pending scenarios). 1 non-blocking tech-debt item carried to backlog: CLI executive markdown re-derives the score locally instead of sourcing `exec_content` (de-facto identical / deterministic; thread from `exec_content` + add a score-number parity test in a future milestone).
+
+---
+
 ## v5.1 Authenticated Scanning + API Surface Depth (Shipped: 2026-05-23)
 
 **Phases completed:** 4 phases (93–96), 16 plans

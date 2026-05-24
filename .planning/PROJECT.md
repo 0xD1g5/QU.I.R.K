@@ -128,6 +128,9 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ Rich Finding Context — `_build_finding` chokepoint enforces non-empty `description`/`remediation`; FIPS 203/204/205 algorithm names replace stale Kyber/Dilithium; CI grep gate — Phase 48
 - ✓ Compliance Mapping — `quirk/compliance/` module maps 24 finding categories to PCI-DSS 4.0.1/HIPAA/FIPS 140-3; staleness CI gate; `quirk compliance status` CLI; Compliance Summary in HTML/PDF reports — Phase 49
 - ✓ Enterprise Documentation — `docs/architecture.md` + `docs/operators-guide.md` with compliance runbook; both synced to Obsidian vault Reference/ — Phase 50
+- ✓ Executive Narrative + Score Transparency — shared `ExecContent` model; readiness narrative, top business risks, effort/impact remediation roadmap, subscore decomposition + ÷1.5 rollup; congruence guard; cross-surface parity (EXEC-01..04, TRANS-01..03) — v5.2 Phase 98
+- ✓ Per-Finding Context + Code-Signing Expiry — `ALGO_IMPACT_MAP` 3-tuple + `REMEDIATION_CATALOG`; per-finding quantum-risk "so what" + weakness-specific remediation on every finding; code-signing expiry as a first-class finding via `evaluate_codesign_endpoints` (CTX-01/02/03) — v5.2 Phase 99
+- ✓ Professional & Editable Report Delivery — branded PDF cover (configurable logo) + print CSS / clean pagination; editable DOCX export auto-emitted from the shared content model, `[docx]` optional extra with graceful skip (FMT-01/02/03) — v5.2 Phase 100
 
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
@@ -147,7 +150,12 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.2 Consulting-Grade Reporting
+## Previous Milestone: v5.2 Consulting-Grade Reporting — SHIPPED 2026-05-24
+
+**Delivered:** The report is now a consulting-grade deliverable. From one scan and a single shared content model (`build_exec_content` / `ExecContent` + the findings dict), QU.I.R.K. produces a CISO-readable executive narrative with transparent scoring (subscore decomposition + ÷1.5 rollup), a finding list enriched into an advisory document (per-finding quantum-risk "so what" + weakness-specific remediation), code-signing certificate expiry as a first-class finding, a branded client-ready PDF (configurable logo, clean pagination), and an editable DOCX export — the same story across CLI, HTML, PDF, and DOCX. 4 phases (97–100), 12 plans, audit PASSED (13/13 requirements). Local `v5.2` tag. Next-up: v5.3 Adoption & Integration (continues at Phase 101).
+
+<details>
+<summary>v5.2 original scope (as opened)</summary>
 
 **Goal:** Make the artifact a consultant hands a client genuinely client-ready — a narrative, defensible, professionally-formatted deliverable — rather than a raw finding dump.
 
@@ -165,6 +173,8 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Render consistency across three surfaces** (CLI markdown / HTML / PDF) is a hard constraint — the v4.10.1 lesson: report render paths are physics-coupled, so a change to the score narrative must land identically in all three or it displays a *different* wrong story. The existing single-canonical-scoring-engine + ÷1.5 rollup (v5.0/v4.10.1) is the source of truth to render from.
 - **Risk — scope creep into endless visual polish.** Mitigation: anchor on the executive narrative + prioritized remediation roadmap as the must-ship core; treat branding/theming as nice-to-have, time-boxed.
 - Numbering continues at Phase 97 (v5.1 ended at Phase 96). Deliverable/output milestone; holds the HORIZON 2:1 capability/ops cadence (v5.0 ops → v5.1 capability → v5.2 deliverable). Selected via the 2026-05-23 product-lens re-prioritization (see `.planning/HORIZON.md`); next-up after v5.2 is v5.3 Adoption & Integration.
+
+</details>
 
 ## Previous Milestone: v5.1 Authenticated Scanning + API Surface Depth — SHIPPED 2026-05-23
 
@@ -320,7 +330,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Render-side + evidence-tally fixes deferred to v5.0 Phase 01 (v4.10.1-D-03 / D-04) | Same bug class likely lives in CLI/HTML/PDF renderers (RENDER-CLI-01/PDF-01); the evidence-tally gap (3 subscores at 25 despite findings) is a separate root cause in the summarizer (EVIDENCE-TALLY-01). A full-stack scoring sweep is the right shape; mixing into a hotfix risks new bugs. | — Pending — captured as Future Requirements in archived v4.10.1-REQUIREMENTS.md; v5.0 Phase 01 pre-loads them |
 
 ---
-*Last updated: 2026-05-23 — v5.2 Consulting-Grade Reporting OPENED (continues at Phase 97). Forward outlook re-prioritized through a product lens (see `.planning/HORIZON.md`): the report deliverable is the chosen anchor since no prior milestone owned the output layer despite a deep detection engine. Scope: narrative exec report + rich per-finding context (999.72) + score transparency (999.56) + exec-summary consistency (999.82) + professional PDF (999.2) + WR-05 cert-expiry finding + WR-02/03/04/06 cleanup. Previous: v5.1 Authenticated Scanning SHIPPED 2026-05-23 (Phases 93–96, local `v5.1.0` tag).*
+*Last updated: 2026-05-24 — v5.2 Consulting-Grade Reporting SHIPPED (Phases 97–100, 12 plans, local `v5.2` tag). The report deliverable now leads with a narrative exec summary, transparent scoring, advisory per-finding context, code-signing expiry findings, a branded PDF, and an editable DOCX — all from one shared content model across CLI/HTML/PDF/DOCX. Audit PASSED 13/13. One non-blocking tech-debt item carried to backlog (CLI score should source `exec_content` rather than re-derive). Next-up: v5.3 Adoption & Integration (continues at Phase 101). Previous: v5.1 Authenticated Scanning SHIPPED 2026-05-23 (Phases 93–96, local `v5.1.0` tag).*
 
 ## Evolution
 
