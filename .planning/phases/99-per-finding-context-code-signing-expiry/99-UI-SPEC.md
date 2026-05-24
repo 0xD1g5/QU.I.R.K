@@ -61,6 +61,7 @@ Inherited from project-wide 8-point grid; identical to Phase 98 contract. No new
 **Inherited exceptions (pre-existing — not modified by Phase 99):**
 - Report body horizontal padding: 40px
 - Score card horizontal padding: 40px
+- `56px` section bottom margin: deliberate project-level exception from the original report template (a multiple of 4 but outside the standard `{4, 8, 16, 24, 32, 48, 64}` set). Inherited and locked — not introduced or modifiable by this phase.
 
 **Phase 99 net-new spacing:**
 - `.quantum-risk-block`: `padding: 4px 0 0` (top gap from description only; border-left provides visual separation)
@@ -72,7 +73,7 @@ Inherited from project-wide 8-point grid; identical to Phase 98 contract. No new
 
 ### Pre-existing template scale (FIXED — not modified by Phase 99)
 
-Identical to the Phase 98 contract. Reproduced for executor reference.
+Identical to the Phase 98 contract. Reproduced for executor reference. This is an **inherited locked scale** (established Phase 98) — Phase 99 cannot modify it. The 7-size scale exceeds the 4-size new-UI guideline because this is a static HTML report with distinct document roles, not a React UI; the `56px` value is a standalone score-gauge **display** size, not a running-text size. Not a Phase 99 design decision.
 
 | Role        | Size  | Weight | Line Height | Element                              |
 |-------------|-------|--------|-------------|--------------------------------------|
