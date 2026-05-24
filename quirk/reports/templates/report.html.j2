@@ -123,6 +123,51 @@
       color: var(--text-muted);
       font-size: 11px;
     }
+    /* Phase 98 — Narrative prose block (EXEC-01) */
+    .narrative-block {
+      background: var(--surface);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 4px 4px 0;
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .narrative-block p + p { margin-top: 8px; }
+    /* Phase 98 — Top-risks list (EXEC-02, extends .drivers-list pattern) */
+    .risks-list { list-style: none; margin: 0; padding: 0; }
+    .risks-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .risks-list li:last-child { border-bottom: none; }
+    /* Color differentiates risk label from impact text — no weight change (UI-SPEC) */
+    .risks-list .risk-label { color: var(--text); margin-right: 4px; }
+    .risks-list .risk-impact { color: var(--text-muted); }
+    /* Phase 98 — Rollup formula block (TRANS-02) */
+    .rollup-formula {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 16px;
+      margin: 8px 0 24px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .rollup-formula strong { color: var(--text); }
+    /* Phase 98 — Roadmap priority indicator (EXEC-03) */
+    /* Reuses 12px label/meta size; uppercase + letter-spacing provides visual distinction */
+    .priority-label {
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -144,6 +189,22 @@
       <tr><td>Data classification</td><td>{{ data_classification | sanitize }}</td></tr>
       <tr><td>Generated</td><td>{{ generated_at }}</td></tr>
     </table>
+
+    {# Phase 98 / EXEC-01 / D-03: Narrative prose block from exec_content.narrative_lead.
+       Positioned before the score card per RESEARCH "Required order after Phase 98".
+       narrative_lead is static prose from _NARRATIVE_LEADS — no sanitize needed.
+       narrative_drivers come from score_raw["drivers"] (reason strings) — sanitize applied. #}
+    {% if narrative_lead %}
+    <div class="narrative-block">
+      <h2>Readiness Assessment</h2>
+      {# narrative_lead is static prose from _NARRATIVE_LEADS — mark safe (no user input) #}
+      <p>{{ narrative_lead | safe }}</p>
+      {% if narrative_drivers %}
+      {# narrative_drivers come from score_raw["drivers"] — sanitize scanner-derived text #}
+      <p>Key factors: {{ narrative_drivers | join('; ') | sanitize }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
 
     <h2>Quantum Readiness Score</h2>
     <div class="score-card">
@@ -168,6 +229,26 @@
     <p><strong>Rollup:</strong>
       {{ subscores.values() | sum }} &divide; 1.5 = <strong>{{ total_score }} / 100</strong>
     </p>
+    {# Phase 98 / TRANS-02 / D-03: Rollup formula explanation block — static prose, no sanitize.
+       Sourced from UI-SPEC Copywriting Contract exact strings. #}
+    <div class="rollup-formula">
+      <strong>How this score was computed</strong><br>
+      Six pillar subscores (each /25) are summed and divided by 1.5 to produce a 0&ndash;100 readiness score.
+    </div>
+    {% endif %}
+
+    {# Phase 98 / EXEC-02 / D-03: Priority Business Risks from exec_content.top_risks (D-02 static map).
+       risk_label and impact_sentence come from ALGO_IMPACT_MAP — static strings, no sanitize needed. #}
+    {% if top_risks %}
+    <h2>Priority Business Risks</h2>
+    <ul class="risks-list">
+      {% for risk in top_risks %}
+      <li>
+        <span class="risk-label">{{ risk.risk_label }}</span>
+        <span class="risk-impact">{{ risk.impact_sentence }}</span>
+      </li>
+      {% endfor %}
+    </ul>
     {% endif %}
 
     <h2>Findings Breakdown</h2>
@@ -214,8 +295,16 @@
       <h3>{{ phase_label }}</h3>
       {% for item in items %}
       <div class="roadmap-item">
-        <strong>{{ item.get('title','') | sanitize }}</strong><br>
-        <span>{{ item.get('why','') | sanitize }}</span>
+        {# Phase 98 / EXEC-03 / D-03: item is RoadmapItem dataclass (with .title/.why/.effort/.impact)
+           when exec_content is provided; falls back to raw dict when not. Jinja2 resolves
+           item.title via getattr-then-item-lookup so both cases work transparently. #}
+        <strong>{{ item.title | sanitize }}</strong><br>
+        <span>{{ item.why | sanitize }}</span>
+        {# Priority labels: effort/impact from D-05 EFFORT_IMPACT_MAP — static strings, no sanitize.
+           Only rendered when item carries effort/impact (RoadmapItem dataclass path). #}
+        {% if item.effort is defined and item.effort %}
+        <br><span class="priority-label">{{ item.effort }} EFFORT &nbsp;&middot;&nbsp; {{ item.impact }} IMPACT</span>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
