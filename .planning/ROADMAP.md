@@ -68,7 +68,12 @@ Plans:
   4. The six-pillar subscore decomposition (each subscore against its /25 budget) and the ÷1.5 rollup formula are visible in the report — a client asking "how did you get 72?" receives a complete answer in the document itself
   5. The executive summary's headline score and severity language match the detail findings tables — no contradiction between "GOOD" in the exec summary and "7 CRITICAL" in the body
   6. Running `quirk report`, opening the HTML in a browser, and exporting the PDF all produce the same narrative sections and score story — format-appropriate rendering, identical content
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 98-01-PLAN.md — shared ExecContent content model, D-02/D-05 static maps, D-04 within-bucket ordering, D-06 congruence guard + unit tests
+- [ ] 98-02-PLAN.md — writer seam + build-time guard; CLI + HTML/template narrative, top-risks, rollup formula, effort/impact roadmap labels (D-03/D-07) + ordering tests
+- [ ] 98-03-PLAN.md — cross-surface parity test (EXEC-04/D-03a) + UAT-SERIES.md update and Obsidian sync
 **UI hint**: yes
 
 ### Phase 99: Per-Finding Context + Code-Signing Expiry
@@ -98,6 +103,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 97. v5.1 Tech-Debt Cleanup | 4/4 | Complete    | 2026-05-23 |
-| 98. Executive Narrative + Score Transparency | 0/TBD | Not started | - |
+| 98. Executive Narrative + Score Transparency | 0/3 | Planned | - |
 | 99. Per-Finding Context + Code-Signing Expiry | 0/TBD | Not started | - |
 | 100. Professional & Editable Report Delivery | 0/TBD | Not started | - |
