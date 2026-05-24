@@ -177,6 +177,63 @@ class TestCatalogWinsCodesign:
 
 
 # ---------------------------------------------------------------------------
+# WR-02: weak-crypto codesign findings carry algorithm-specific quantum_risk
+# ---------------------------------------------------------------------------
+
+class TestWeakCryptoQuantumRisk:
+    def test_weak_ec_key_quantum_risk_is_ecdsa_specific(self):
+        """WR-02: weak-ec-key codesign finding must carry the ECDSA quantum_risk, not fallback."""
+        ep = _codesign_ep(
+            smime_scan_json=json.dumps({"reasons": ["weak-ec-key"]}),
+        )
+        findings = evaluate_codesign_endpoints([ep])
+        assert findings, "Expected at least one finding for weak-ec-key"
+        for f in findings:
+            assert f.get("quantum_risk") != FALLBACK_QUANTUM_RISK, (
+                "WR-02: weak-ec-key must yield algorithm-specific quantum_risk, not fallback boilerplate"
+            )
+            assert f.get("quantum_risk") == ALGO_IMPACT_MAP["ECDSA"][2], (
+                f"WR-02: weak-ec-key quantum_risk must equal ALGO_IMPACT_MAP['ECDSA'][2], got: {f.get('quantum_risk')!r}"
+            )
+
+    def test_weak_rsa_key_quantum_risk_is_rsa_specific(self):
+        """WR-02: weak-rsa-key codesign finding must carry the RSA quantum_risk, not fallback."""
+        ep = _codesign_ep(
+            smime_scan_json=json.dumps({"reasons": ["weak-rsa-key"]}),
+        )
+        findings = evaluate_codesign_endpoints([ep])
+        assert findings
+        for f in findings:
+            assert f.get("quantum_risk") == ALGO_IMPACT_MAP["RSA"][2], (
+                f"WR-02: weak-rsa-key quantum_risk must equal ALGO_IMPACT_MAP['RSA'][2]"
+            )
+
+    def test_weak_signing_alg_quantum_risk_is_sha1_specific(self):
+        """WR-02: weak-signing-alg codesign finding must carry the SHA-1 quantum_risk, not fallback."""
+        ep = _codesign_ep(
+            smime_scan_json=json.dumps({"reasons": ["weak-signing-alg"]}),
+        )
+        findings = evaluate_codesign_endpoints([ep])
+        assert findings
+        for f in findings:
+            assert f.get("quantum_risk") == ALGO_IMPACT_MAP["SHA-1"][2], (
+                f"WR-02: weak-signing-alg quantum_risk must equal ALGO_IMPACT_MAP['SHA-1'][2]"
+            )
+
+    def test_weak_crypto_recommendation_comes_from_catalog(self):
+        """WR-02: weak-ec-key recommendation must be the ECDSA catalog entry (not generic)."""
+        ep = _codesign_ep(
+            smime_scan_json=json.dumps({"reasons": ["weak-ec-key"]}),
+        )
+        findings = evaluate_codesign_endpoints([ep])
+        assert findings
+        for f in findings:
+            assert f.get("recommendation") == REMEDIATION_CATALOG["ECDSA"], (
+                f"WR-02: weak-ec-key recommendation must come from REMEDIATION_CATALOG['ECDSA']"
+            )
+
+
+# ---------------------------------------------------------------------------
 # D-06: email-path and broker-path carry quantum_risk
 # ---------------------------------------------------------------------------
 
