@@ -15,6 +15,11 @@ from quirk.engine.findings_evaluator import (
     _build_finding,
     evaluate_endpoints,
 )
+from quirk.reports.content_model import (
+    ALGO_IMPACT_MAP,
+    FALLBACK_QUANTUM_RISK,
+    REMEDIATION_CATALOG,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -106,14 +111,56 @@ class TestBuildFinding:
         )
 
     def test_returns_seven_key_dict(self):
-        # Phase 49 D-02: _build_finding now eagerly attaches a `compliance`
-        # list[dict] key alongside the original six.
+        # Phase 49 D-02: _build_finding eagerly attaches `compliance`.
+        # Phase 99: also attaches `quantum_risk` and `check_id`.
         f = _build_finding(severity="LOW", host="h", port=1, title="t",
                            description="d", recommendation="r")
         assert set(f.keys()) == {"severity", "host", "port", "title",
                                   "description", "recommendation",
-                                  "compliance"}
+                                  "compliance", "quantum_risk", "check_id"}
         assert f["compliance"] == []  # unmapped title → empty list
+
+    # --- Phase 99: quantum_risk injection + catalog remediation (D-02/D-04/D-05) ---
+
+    def test_quantum_risk_rsa_title(self):
+        f = _build_finding(severity="HIGH", host="h", port=1,
+                           title="RSA-2048 weak key",
+                           description="d", recommendation="r")
+        assert f["quantum_risk"] == ALGO_IMPACT_MAP["RSA"][2]
+
+    def test_quantum_risk_fallback_no_match(self):
+        f = _build_finding(severity="HIGH", host="h", port=1,
+                           title="some unknown weakness",
+                           description="d", recommendation="r")
+        assert f["quantum_risk"] == FALLBACK_QUANTUM_RISK
+
+    def test_catalog_wins_recommendation_rsa(self):
+        # D-04: catalog-matched finding uses REMEDIATION_CATALOG recommendation.
+        f = _build_finding(severity="HIGH", host="h", port=1,
+                           title="RSA-2048 weak key",
+                           description="d", recommendation="original rec",
+                           quantum_vulnerable=True)
+        assert f["recommendation"] == REMEDIATION_CATALOG["RSA"]
+        assert NIST_IR_8547_DEPRECATION not in f["recommendation"]
+
+    def test_nist_boilerplate_on_catalog_miss(self):
+        # D-05: quantum_vulnerable=True with NO catalog match → boilerplate appended.
+        f = _build_finding(severity="HIGH", host="h", port=1,
+                           title="unknown-weakness",
+                           description="d",
+                           recommendation="Migrate to ML-KEM.",
+                           quantum_vulnerable=True)
+        assert NIST_IR_8547_DEPRECATION in f["recommendation"]
+
+    def test_check_id_accepted(self):
+        # _build_finding must accept check_id keyword arg without error.
+        f = _build_finding(severity="HIGH", host="h", port=1,
+                           title="Code-signing certificate expired: CN=x",
+                           description="d", recommendation="r",
+                           check_id="CODESIGN_EXPIRY")
+        assert f["check_id"] == "CODESIGN_EXPIRY"
+        # CODESIGN_EXPIRY in catalog → recommendation replaced
+        assert f["recommendation"] == REMEDIATION_CATALOG["CODESIGN_EXPIRY"]
 
 
 # ---------------------------------------------------------------------------
