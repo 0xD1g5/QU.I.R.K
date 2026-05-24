@@ -184,7 +184,10 @@ def build_exec_markdown(
         lines.append(exec_content.narrative_lead)
         lines.append("")
         if exec_content.narrative_drivers:
-            lines.append("Key factors: " + "; ".join(exec_content.narrative_drivers) + ".")
+            # WR-01: wrap scanner-derived driver text in md_cell for parity with the
+            # HTML template's `| sanitize` chokepoint on the same data.
+            drivers = "; ".join(md_cell(d) for d in exec_content.narrative_drivers)
+            lines.append("Key factors: " + drivers + ".")
         lines.append("")
     else:
         # Backward-compat path: narrative_lead not available; render interpretation bullets
