@@ -36,6 +36,7 @@ from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 from quirk.assessment.operator_context import attach_context
 from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints
 from quirk.reports.writer import write_reports
+from quirk.reports.content_model import ReportCongruenceError  # D-06: fail-closed report halt
 
 from quirk.engine.profiles import apply_profile
 from quirk.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets
@@ -2153,7 +2154,16 @@ def main():
     if _stage_completed(_completed_stages, "reports"):
         logger.info("Resuming: reports stage was completed — re-running to regenerate output files.")
     with _phase_timer(run_stats, "reporting"):
-        write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints)
+        try:
+            write_reports(cfg, endpoints, findings, run_stats=run_stats, error_endpoints=error_endpoints)
+        except ReportCongruenceError as exc:
+            # D-06 fail-closed halt: the executive headline contradicts the findings
+            # (e.g. a healthy band alongside a CRITICAL). Surface a clean, actionable
+            # message and a non-zero exit instead of an opaque traceback.
+            if args.job_id and args.db_path:
+                mark_job_failed(args.db_path, args.job_id, f"ReportCongruenceError: {safe_str(exc)}")
+            print(f"error: {exc}", file=sys.stderr)
+            sys.exit(2)
 
     # Phase 67 RESUME-01: checkpoint after reports written
     if args.db_path:
