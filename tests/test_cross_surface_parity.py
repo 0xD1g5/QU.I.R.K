@@ -262,3 +262,88 @@ def test_top_risks_parity(tmp_path):
             f"but not found in HTML output. "
             "D-03 shared model must guarantee identical labels across surfaces."
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 100 Plan 02 / FMT-03 / D-10: DOCX cross-surface parity
+# ---------------------------------------------------------------------------
+
+def test_docx_narrative_parity(tmp_path):
+    """FMT-03 / D-10: DOCX carries the same exec_content.narrative_lead as HTML/CLI.
+
+    The DOCX renderer must consume the shared ExecContent (D-10) — not build
+    its own content. Narrative lead must appear verbatim in all three surfaces.
+    """
+    from quirk.reports.executive import build_exec_markdown
+    from quirk.reports.html_renderer import render_html_report
+    from quirk.reports.docx_renderer import render_docx_report
+
+    exec_content: ExecContent = build_exec_content(
+        score_raw=_SCORE_RAW,
+        findings=_FINDINGS,
+        roadmap_items=_ROADMAP_ITEMS_RAW,
+    )
+    assert exec_content.narrative_lead, (
+        "exec_content.narrative_lead is empty — build_exec_content returned no narrative lead."
+    )
+
+    cfg = _make_minimal_cfg()
+
+    # CLI surface
+    cli_output: str = build_exec_markdown(
+        cfg=cfg,
+        endpoints=[],
+        findings=_FINDINGS,
+        exec_content=exec_content,
+    )
+
+    # HTML surface
+    html_path = os.path.join(str(tmp_path), "parity-docx-test.html")
+    render_html_report(
+        path=html_path,
+        cfg=cfg,
+        endpoints=[],
+        findings=_FINDINGS,
+        score={
+            "total": _SCORE_RAW["score"],
+            "subscores": _SCORE_RAW["subscores"],
+            "drivers": list(_SCORE_RAW["drivers"]),
+        },
+        conf={"confidence": 60, "confidence_factors": {}},
+        roadmap_items=_ROADMAP_ITEMS_RAW,
+        exec_content=exec_content,
+    )
+    html_output: str = open(html_path, encoding="utf-8").read()
+
+    # DOCX surface
+    docx_path = os.path.join(str(tmp_path), "parity-docx-test.docx")
+    result = render_docx_report(
+        path=docx_path,
+        cfg=cfg,
+        findings=_FINDINGS,
+        exec_content=exec_content,
+    )
+
+    # Only assert DOCX parity if python-docx is available (graceful skip)
+    if result is False:
+        import pytest as _pytest
+        _pytest.skip("python-docx not installed — skipping DOCX parity check")
+
+    from docx import Document
+    doc = Document(docx_path)
+    docx_full_text = "\n".join(p.text for p in doc.paragraphs)
+
+    # EXEC-04 assertion: narrative_lead appears verbatim in all three surfaces
+    assert exec_content.narrative_lead in cli_output, (
+        f"FMT-03 VIOLATION: narrative_lead not in CLI output.\n"
+        f"  Expected: {exec_content.narrative_lead!r}"
+    )
+    assert exec_content.narrative_lead in html_output, (
+        f"FMT-03 VIOLATION: narrative_lead not in HTML output.\n"
+        f"  Expected: {exec_content.narrative_lead!r}"
+    )
+    assert exec_content.narrative_lead in docx_full_text, (
+        f"FMT-03 VIOLATION: narrative_lead not in DOCX paragraph text.\n"
+        f"  Expected: {exec_content.narrative_lead!r}\n"
+        f"  DOCX text preview: {docx_full_text[:400]!r}"
+    )
