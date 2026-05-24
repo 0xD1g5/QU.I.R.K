@@ -1,4 +1,5 @@
 """Jinja2-based standalone HTML report renderer for QU.I.R.K. (Phase 7, D-08 to D-12)."""
+import base64
 import os
 import sys
 from datetime import datetime, timezone
@@ -143,6 +144,26 @@ def _severity_color(severity: str) -> str:
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 
+def _load_logo_b64(logo_path):
+    """Return (b64_string, mime_subtype) or (None, 'png') when logo absent/unreadable.
+
+    Phase 100 / D-01 / D-03: base64-embed for offline HTML; None means omit logo region in template.
+    T-100-LOGO: guards against missing/invalid/permission errors with graceful omit.
+    """
+    if not logo_path:
+        return None, "png"
+    try:
+        with open(logo_path, "rb") as f:
+            data = f.read()
+        b64 = base64.b64encode(data).decode("ascii")
+        ext = os.path.splitext(logo_path)[1].lower().lstrip(".")
+        mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png",
+                "gif": "gif", "svg": "svg+xml"}.get(ext, "png")
+        return b64, mime
+    except (OSError, IOError):
+        return None, "png"
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -232,6 +253,10 @@ def render_html_report(
         raw_sum = sum(int(v) for v in subscores_ctx.values()
                       if isinstance(v, (int, float)) and not isinstance(v, bool))
 
+    # Phase 100 / FMT-01 / D-01: extract logo_path and base64-encode for cover page
+    logo_path = getattr(getattr(cfg, "assessment", None), "logo_path", None)
+    logo_b64, logo_mime = _load_logo_b64(logo_path)
+
     html = template.render(
         org_name=getattr(getattr(cfg, "assessment", None), "name", "Unknown"),
         report_owner=getattr(getattr(cfg, "assessment", None), "report_owner", ""),
@@ -256,6 +281,9 @@ def render_html_report(
         narrative_lead=narrative_lead,
         narrative_drivers=narrative_drivers,
         top_risks=top_risks,
+        # Phase 100 / FMT-01 / D-01: logo embed for cover page
+        logo_b64=logo_b64,
+        logo_mime=logo_mime,
     )
     os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
