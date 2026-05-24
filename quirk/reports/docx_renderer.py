@@ -279,6 +279,13 @@ def render_docx_report(
     # Save document
     # ---------------------------------------------------------------------------
     os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
-    doc.save(path)
-    print(f"DOCX report written to {path}")
+    try:
+        doc.save(path)
+    except Exception as e:
+        print(
+            f"DOCX export failed while writing {path}: {e}",
+            file=sys.stderr,
+        )
+        return False
+    print(f"DOCX report written to {path}", file=sys.stderr)
     return True
