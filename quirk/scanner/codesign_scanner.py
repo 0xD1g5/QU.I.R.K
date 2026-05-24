@@ -27,7 +27,7 @@ except ImportError:  # pragma: no cover - import guard
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
 from cryptography.x509 import (
@@ -145,8 +145,12 @@ def _parse_codesign_cert(cert_bytes: bytes) -> "dict | None":
 def _classify_codesign_severity(parsed: dict) -> "tuple[str | None, list[str]]":
     """Classify a parsed cert dict into (severity, reasons).
 
-    HIGH for: SHA-1 sig hash (via is_weak_cipher), RSA<2048, EC<256.
-    SAFE (None) when no weak indicators present.
+    HIGH for: SHA-1 sig hash (via is_weak_cipher), RSA<2048, EC<256, or expired.
+    MEDIUM for: approaching expiry (0–90 days remaining, not yet expired).
+    SAFE (None) when no weak indicators and no expiry concern.
+
+    Phase 99 D-07/D-08: expiry is an independent reason that stacks with
+    weak-crypto reasons. A SAFE-crypto-but-expired cert emits HIGH.
 
     NOTE: EC<256 is handled inline (NOT via is_weak_cipher — adding an
     "ECDSA-256" token to _WEAK_CIPHER_TOKENS would incorrectly match
@@ -169,9 +173,32 @@ def _classify_codesign_severity(parsed: dict) -> "tuple[str | None, list[str]]":
     if key_alg == "ECDSA" and isinstance(key_bits, int) and key_bits < 256:
         reasons.append("weak-ec-key")
 
-    if reasons:
+    # Phase 99 D-07/D-08: independent expiry branch (stacks with weak-crypto).
+    # Normalise datetime to UTC before subtraction (mirror findings_evaluator L544-546).
+    expired: bool = parsed.get("expired") or False
+    not_after_dt = parsed.get("not_after_dt")
+    if expired:
+        reasons.append("expired")
+    elif not_after_dt is not None:
+        # Ensure tz-aware comparison
+        if not_after_dt.tzinfo is None:
+            not_after_utc = not_after_dt.replace(tzinfo=timezone.utc)
+        else:
+            not_after_utc = not_after_dt.astimezone(timezone.utc)
+        now_utc = datetime.now(timezone.utc)
+        days_remaining = (not_after_utc - now_utc).total_seconds() / 86400
+        if 0 <= days_remaining <= 90:
+            reasons.append("approaching-expiry")
+
+    if not reasons:
+        return None, reasons
+
+    # expired or any weak-crypto reason → HIGH; approaching-expiry only → MEDIUM
+    if "expired" in reasons or any(
+        r in reasons for r in ("weak-signing-alg", "weak-rsa-key", "weak-ec-key")
+    ):
         return "HIGH", reasons
-    return None, reasons
+    return "MEDIUM", reasons
 
 
 # ---------------------------------------------------------------------------
@@ -432,11 +459,27 @@ def scan_codesign_from_tls_endpoints(
             continue
 
         # Perform severity classification on TLS endpoint metadata
-        # Build a pseudo-parsed dict matching _classify_codesign_severity's interface
+        # Build a pseudo-parsed dict matching _classify_codesign_severity's interface.
+        # Phase 99 D-09: include not_after_dt + expired so expiry branch fires on TLS path.
+        ep_not_after = getattr(ep, "cert_not_after", None)
+        if ep_not_after is not None:
+            # Normalise to UTC (mirror findings_evaluator L544-546)
+            if ep_not_after.tzinfo is None:
+                ep_not_after_utc = ep_not_after.replace(tzinfo=timezone.utc)
+            else:
+                ep_not_after_utc = ep_not_after.astimezone(timezone.utc)
+            ep_expired = ep_not_after_utc < datetime.now(timezone.utc)
+        else:
+            ep_not_after_utc = None
+            ep_expired = False
+
         pseudo_parsed = {
             "sig_hash": getattr(ep, "cert_sig_alg", None) or "",
             "key_alg": (getattr(ep, "cert_pubkey_alg", None) or "").upper(),
             "key_bits": getattr(ep, "cert_pubkey_size", None),
+            # Phase 99 D-09: expiry fields so _classify_codesign_severity fires
+            "not_after_dt": ep_not_after_utc,
+            "expired": ep_expired,
         }
         severity, reasons = _classify_codesign_severity(pseudo_parsed)
 
@@ -451,13 +494,17 @@ def scan_codesign_from_tls_endpoints(
         if severity == "HIGH":
             detail += "|weak"
 
+        # Phase 99 D-09: exclude not_after_dt (datetime, not JSON-serializable).
+        # The 'expired' bool and reasons list are sufficient for evaluate_codesign_endpoints.
         scan_dict = {
-            **pseudo_parsed,
+            k: v for k, v in pseudo_parsed.items() if k != "not_after_dt"
+        }
+        scan_dict.update({
             "reasons": reasons,
             "source": "tls-eku-check",
             "host": ep.host,
             "port": ep.port,
-        }
+        })
 
         code_ep = CryptoEndpoint(
             host=ep.host,

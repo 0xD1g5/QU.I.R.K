@@ -963,3 +963,113 @@ def evaluate_broker_endpoints(endpoints) -> List[Dict[str, Any]]:
                     quantum_vulnerable=True,
                 ))
     return findings
+
+
+def evaluate_codesign_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Phase 99 CTX-03: emit code-signing expiry / weak-algorithm findings.
+
+    Analogue of evaluate_email_endpoints / evaluate_broker_endpoints for
+    CODE_SIGNING CryptoEndpoints.  Three branches per endpoint:
+
+    1. ``"expired"`` in reasons → HIGH finding with check_id="CODESIGN_EXPIRY"
+       (catalog-wins D-04: _build_finding replaces recommendation with
+       REMEDIATION_CATALOG["CODESIGN_EXPIRY"]).
+    2. ``"approaching-expiry"`` in reasons → MEDIUM finding with
+       check_id="CODESIGN_APPROACHING_EXPIRY".
+    3. Any other weak-crypto reason → HIGH quantum-vulnerable finding.
+
+    T-99-04 mitigated: malformed ``smime_scan_json`` defaults to ``reasons=[]``
+    (no crash; no finding emitted for that endpoint).
+
+    All findings are constructed through ``_build_finding`` so they carry
+    ``quantum_risk`` automatically (D-06).
+    """
+    findings: List[Dict[str, Any]] = []
+
+    for e in endpoints:
+        host = getattr(e, "host", "") or ""
+        port = int(getattr(e, "port", 0) or 0)
+        cert_subject = getattr(e, "cert_subject", None) or "unknown"
+        cert_not_after = getattr(e, "cert_not_after", None)
+
+        # Compute not_after_date string and days_remaining for description interpolation
+        if cert_not_after is not None:
+            if cert_not_after.tzinfo is None:
+                not_after_utc = cert_not_after.replace(tzinfo=timezone.utc)
+            else:
+                not_after_utc = cert_not_after.astimezone(timezone.utc)
+            not_after_date = not_after_utc.strftime("%Y-%m-%d")
+            days_remaining = int((not_after_utc - datetime.now(timezone.utc)).total_seconds() / 86400)
+        else:
+            not_after_date = "unknown"
+            days_remaining = 0
+
+        # T-99-04: guard malformed smime_scan_json
+        reasons: list = []
+        try:
+            raw = getattr(e, "smime_scan_json", None)
+            if raw:
+                parsed = json.loads(raw)
+                reasons = parsed.get("reasons") or []
+        except Exception:
+            reasons = []
+
+        if "expired" in reasons:
+            findings.append(_build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title=f"Code-signing certificate expired: {cert_subject}",
+                description=(
+                    f"The code-signing certificate for '{cert_subject}' expired on"
+                    f" {not_after_date}. Software signed by this certificate can no longer"
+                    " be verified as authentic, creating a supply-chain trust failure."
+                ),
+                # Fallback recommendation — _build_finding will replace this with
+                # REMEDIATION_CATALOG["CODESIGN_EXPIRY"] via _classify_finding (D-04).
+                recommendation=(
+                    "Renew the expired code-signing certificate immediately and re-sign"
+                    " all artifacts."
+                ),
+                check_id="CODESIGN_EXPIRY",
+            ))
+        elif "approaching-expiry" in reasons:
+            findings.append(_build_finding(
+                severity="MEDIUM",
+                host=host,
+                port=port,
+                title=f"Code-signing certificate expiring within 90 days: {cert_subject}",
+                description=(
+                    f"The code-signing certificate for '{cert_subject}' expires on"
+                    f" {not_after_date} ({days_remaining} days remaining). Failure to"
+                    " renew before expiry will break software verification and block"
+                    " deployments."
+                ),
+                recommendation=(
+                    "Renew this code-signing certificate before the not_after date."
+                ),
+                check_id="CODESIGN_APPROACHING_EXPIRY",
+            ))
+        elif reasons:
+            # Weak-crypto branch (non-expiry reasons such as weak-rsa-key, weak-ec-key,
+            # weak-signing-alg).  Title follows research Open Question 2 resolution.
+            reasons_str = ", ".join(reasons)
+            findings.append(_build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title=f"Code-signing certificate uses weak algorithm: {cert_subject}",
+                description=(
+                    f"The code-signing certificate for '{cert_subject}' uses weak"
+                    f" cryptographic algorithm(s): {reasons_str}. This certificate is"
+                    " quantum-vulnerable and should be replaced with a stronger algorithm."
+                ),
+                recommendation=(
+                    "Replace this code-signing certificate with one using a modern"
+                    " algorithm (RSA≥2048, ECDSA P-256 or stronger, SHA-256 or stronger)."
+                    " Plan migration to ML-DSA (FIPS 204) for long-term quantum safety."
+                ),
+                quantum_vulnerable=True,
+            ))
+
+    return findings
