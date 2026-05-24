@@ -1,9 +1,9 @@
 ---
 phase: 99
 slug: per-finding-context-code-signing-expiry
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-24
 ---
 
@@ -40,11 +40,11 @@ created: 2026-05-24
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 99-01-* | 01 | 1 | CTX-01 | — | quantum_risk field populated for every crypto-class finding from ALGO_IMPACT_MAP | unit | `python -m pytest tests/test_content_model.py -q` | ❌ W0 | ⬜ pending |
-| 99-01-* | 01 | 1 | CTX-02 | — | remediation catalog returns weakness-specific copy, no generic-only fallback | unit | `python -m pytest tests/test_findings_evaluator.py -q` | ❌ W0 | ⬜ pending |
-| 99-02-* | 02 | 1 | CTX-03 | — | expired codesign cert (even SAFE-crypto) emits a finding; ≤90d → MEDIUM, expired → HIGH | unit | `python -m pytest tests/test_codesign_scanner.py -q` | ❌ W0 | ⬜ pending |
-| 99-02-* | 02 | 2 | CTX-03 | — | codesign findings flow into report findings list via evaluate_codesign_endpoints (both LDAP + TLS paths) | unit | `python -m pytest tests/test_findings_evaluator.py -q` | ❌ W0 | ⬜ pending |
-| 99-03-* | 03 | 2 | CTX-01 | — | quantum_risk + remediation render across CLI markdown, HTML, PDF surfaces (parity) | unit | `python -m pytest tests/test_report_renderers.py -q` | ❌ W0 | ⬜ pending |
+| 99-01-* | 01 | 1 | CTX-01 | — | quantum_risk field populated for every crypto-class finding from ALGO_IMPACT_MAP (3-tuple); both unpack break-sites fixed | unit | `python -m pytest tests/test_content_model_phase99.py -q` | ❌ W0 | ⬜ pending |
+| 99-01-* | 01 | 1 | CTX-02 | — | REMEDIATION_CATALOG returns weakness-specific copy, no generic-only fallback | unit | `python -m pytest tests/test_content_model_phase99.py -q` | ❌ W0 | ⬜ pending |
+| 99-02-* | 02 | 1 | CTX-03 | — | expired codesign cert (even SAFE-crypto) emits a finding; ≤90d → MEDIUM, expired → HIGH; both LDAP + TLS paths populate expiry | unit | `python -m pytest tests/test_codesign_expiry_classification.py -q` | ❌ W0 | ⬜ pending |
+| 99-02-* | 02 | 1 | CTX-01/02/03 | — | evaluate_codesign_endpoints emits findings into report list; catalog-sourced recommendation (== REMEDIATION_CATALOG['CODESIGN_EXPIRY']); email + broker paths route through _build_finding and carry quantum_risk | unit | `python -m pytest tests/test_codesign_findings_evaluator.py -q` | ❌ W0 | ⬜ pending |
+| 99-03-* | 03 | 2 | CTX-01 | — | quantum_risk + remediation render across CLI markdown, HTML, PDF surfaces (parity), with sanitize on new fields | unit | `python -m pytest tests/test_quantum_risk_render_parity.py -q` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -52,10 +52,11 @@ created: 2026-05-24
 
 ## Wave 0 Requirements
 
-- [ ] Extend `tests/test_content_model.py` — ALGO_IMPACT_MAP 3-tuple unpack + quantum_risk lookup (CTX-01)
-- [ ] Extend `tests/test_findings_evaluator.py` — remediation catalog + evaluate_codesign_endpoints wiring (CTX-02, CTX-03)
-- [ ] Extend `tests/test_codesign_scanner.py` — expiry classification stacking with weak-crypto (CTX-03)
-- [ ] Renderer parity test (extend existing or add) — quantum_risk present in all three surfaces (CTX-01/D-03)
+- [x] `tests/test_content_model_phase99.py` — ALGO_IMPACT_MAP 3-tuple unpack + quantum_risk lookup + REMEDIATION_CATALOG (CTX-01, CTX-02) — created by Plan 01
+- [x] `tests/test_codesign_expiry_classification.py` — expiry classification stacking with weak-crypto, both LDAP + TLS paths (CTX-03) — created by Plan 02
+- [x] `tests/test_codesign_findings_evaluator.py` — evaluate_codesign_endpoints wiring + catalog-sourced recommendation + email/broker path quantum_risk coverage (CTX-01/02/03, D-06) — created by Plan 02
+- [x] `tests/test_quantum_risk_render_parity.py` — quantum_risk present in all three surfaces (CTX-01/D-03) — created by Plan 03
+- [x] Existing tests updated for behavior changes: `tests/test_exec_content_model.py` (3-tuple unpack), `tests/test_risk_engine.py` (conditional NIST boilerplate)
 
 *Existing infrastructure (pytest + conftest) covers framework needs — no new framework install.*
 
@@ -74,11 +75,11 @@ created: 2026-05-24
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-05-24
