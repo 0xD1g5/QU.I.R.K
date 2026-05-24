@@ -181,3 +181,32 @@ def test_docx_skip_advisory(monkeypatch, tmp_path, capsys):
     assert "pip install quirk-scanner[docx]" in captured.err, (
         f"Install hint not in stderr. stderr was: {captured.err!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 100 / CR-02: doc.save failure returns False (no exception escapes)
+# ---------------------------------------------------------------------------
+
+def test_docx_save_failure_returns_false(monkeypatch, tmp_path, capsys):
+    """render_docx_report returns False (never raises) when doc.save raises."""
+    from docx import Document
+    from quirk.reports import docx_renderer
+
+    # Patch Document.save to simulate a write failure (e.g. full filesystem)
+    original_save = Document.save
+
+    def _failing_save(self, path_or_stream):
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(Document, "save", _failing_save)
+
+    result = docx_renderer.render_docx_report(
+        path=str(tmp_path / "fail_save.docx"),
+        cfg=_make_minimal_cfg(),
+        findings=[],
+    )
+    assert result is False, f"Expected False on doc.save failure, got {result!r}"
+    captured = capsys.readouterr()
+    assert "DOCX export failed" in captured.err, (
+        f"Expected failure advisory in stderr; got: {captured.err!r}"
+    )

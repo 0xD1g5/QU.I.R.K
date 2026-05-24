@@ -238,14 +238,21 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     if not pdf_ok:
         pdf_path = None  # Playwright unavailable — HTML report still written
 
-    # Phase 100 / FMT-03 / D-11: DOCX auto-emit every run; skip gracefully if python-docx absent
+    # Phase 100 / FMT-03 / D-11: DOCX auto-emit every run; skip gracefully if python-docx absent.
+    # CR-02: belt-and-suspenders outer guard — any exception that escapes render_docx_report
+    # (e.g. from future changes above the doc.save call) cannot abort CBOM or run-stats flush.
     docx_path = os.path.join(outdir, f"report-{stamp}.docx")
-    docx_ok = render_docx_report(
-        path=docx_path,
-        cfg=cfg,
-        findings=findings,
-        exec_content=exec_content,
-    )
+    try:
+        docx_ok = render_docx_report(
+            path=docx_path,
+            cfg=cfg,
+            findings=findings,
+            exec_content=exec_content,
+        )
+    except Exception as e:
+        import sys as _sys
+        print(f"DOCX export failed unexpectedly: {e}", file=_sys.stderr)
+        docx_ok = False
     if not docx_ok:
         docx_path = None
 
