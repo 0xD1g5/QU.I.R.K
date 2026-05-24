@@ -60,9 +60,15 @@ Source: project-wide 8-point grid; confirmed in existing code patterns (`padding
 | 2xl   | 48px  | Not yet used in report template; available |
 | 3xl   | 56px  | Section bottom margin (`section { margin-bottom: 56px }`) |
 
-**HTML report exceptions:**
+**HTML report exceptions (pre-existing — not modified by Phase 98):**
 - Report body horizontal padding: 40px (report-header and report-body convention — do not change to 32px)
 - Score card horizontal padding: 40px (existing `.score-card` — do not change)
+
+**Phase 98 net-new spacing:**
+- `.narrative-block`: `padding: 16px 24px` — both values on-grid
+- `.risks-list li`: `padding: 8px 0` — on-grid
+- `.rollup-formula`: `padding: 8px 16px` — both values on-grid (sm + md)
+- `.rollup-formula` margin: `margin: 8px 0 24px` — on-grid
 
 **React dashboard exceptions:**
 - None for Phase 98 (no new dashboard layout)
@@ -71,7 +77,9 @@ Source: project-wide 8-point grid; confirmed in existing code patterns (`padding
 
 ## Typography
 
-### HTML Report (embedded stylesheet, no external fonts)
+### Pre-existing template scale (FIXED — not modified by Phase 98)
+
+The embedded stylesheet in `report.html.j2` declares the following type scale. This is a **fixed constraint inherited by Phase 98**, not a net-new declaration. The checker should treat these sizes and weights as an existing system boundary, not as Phase 98 design decisions.
 
 | Role        | Size  | Weight | Line Height | Element                              |
 |-------------|-------|--------|-------------|--------------------------------------|
@@ -80,22 +88,25 @@ Source: project-wide 8-point grid; confirmed in existing code patterns (`padding
 | Heading h1  | 22px  | 900    | 1.2         | Section headings — source: line 59   |
 | Heading h2  | 17px  | 400    | 1.2         | Sub-section headings — source: line 60 |
 | Heading h3  | 14px  | 400    | 1.2         | Phase labels, subsection heads — source: line 61 |
+| Table cell  | 13px  | 400    | 1.5         | `td`, `.drivers-list li` — source: line 65 |
 | Score value | 56px  | 900    | 1.0         | `.score-value` — source: line 72     |
 | Score band  | 16px  | 400    | inherit     | `.score-band` — source: line 73      |
 
-**New in Phase 98 — narrative prose block:**
-- Font size: 14px, weight 400, line-height 1.6 (matches body)
-- Rendered as `<p>` tags inside the `#executive-summary` section, before the score card
-- No new font sizes or weights introduced
+Existing weight axis: **400** (regular) and **900** (black/display). The template applies `font-weight: 600` only inside `.risks-list .risk-label` — see Phase 98 net-new section below, which avoids this by using color differentiation instead.
 
-**New in Phase 98 — top-risks list:**
-- Font size: 13px, weight 400, line-height 1.5 (matches `.drivers-list li` and table cells)
-- Each risk item: `<strong>` for the risk label (inherits 14px bold), `<span>` for business-impact sentence (13px muted)
+### Phase 98 net-new typography
 
-**New in Phase 98 — roadmap priority indicator:**
-- Font size: 11px, weight 600, uppercase letter-spacing 0.08em
-- Used for effort/impact labels (`HIGH IMPACT / LOW EFFORT`) inside `.roadmap-item`
-- Style: `color: var(--text-muted)` — does not introduce a new color
+**Phase 98 adds zero new font sizes and zero new font weights.** All new elements reuse sizes already present in the pre-existing template scale.
+
+| New Element                  | Reuses Size | Reuses Weight | Differentiation Strategy                        |
+|------------------------------|-------------|---------------|-------------------------------------------------|
+| Narrative prose block `<p>`  | 14px (body) | 400           | Matches body — no change needed                 |
+| Top-risks list item text     | 13px (table cell) | 400    | Matches existing `td` / `.drivers-list li`      |
+| Top-risks risk label         | 13px (table cell) | 400    | Color: `--text` (vs `--text-muted` for impact) — color differentiates, not weight |
+| Rollup formula prose         | 13px (table cell) | 400    | Matches existing small prose; `--text-muted`    |
+| Roadmap priority label       | 12px (label/meta) | 400   | Matches existing `.score-label` / `.report-meta`; uppercase + letter-spacing differentiates visually; color: `--text-muted` |
+
+No `font-weight: 600` introduced. No sizes outside `{12, 13, 14, 16, 17, 22, 56}` introduced.
 
 ### React Dashboard (unchanged for Phase 98)
 
@@ -106,7 +117,7 @@ Source: project-wide 8-point grid; confirmed in existing code patterns (`padding
 | Heading | 20px | 600    | 1.2         |
 | Display | 28px | 700    | 1.1         |
 
-Source: existing executive.tsx patterns (`fontSize: 20, fontWeight: 600`), confirmed in index.css token set.
+Source: existing executive.tsx patterns (`fontSize: 20, fontWeight: 600`), confirmed in index.css token set. These are pre-existing; Phase 98 does not modify them.
 
 ---
 
@@ -137,8 +148,8 @@ All existing; Phase 98 adds no new colors to `report.html.j2`.
 
 **Phase 98 additions to HTML report color usage:**
 - Narrative prose block: `--text` (body copy), no new role
-- Top-risks section: `--critical` / `--high` / `--medium` for risk-level indicators matching existing severity palette; `--text-muted` for business-impact sentences
-- Rollup formula: no new color — reuses existing `<strong>` (`--text`) and `--text-muted` prose
+- Top-risks section: `--critical` / `--high` / `--medium` for risk-level indicators matching existing severity palette; `--text-muted` for business-impact sentences; `--text` for risk label (color differentiation in place of weight)
+- Rollup formula: no new color — reuses existing `--text-muted` prose and `--text` for `<strong>`
 - Priority indicator labels: `--text-muted` only; no accent color for effort/impact badges (effort/impact is metadata, not a call to action)
 
 **Congruence guard visual rule (TRANS-03):** If the congruence guard fires and blocks report generation, the **runtime error** surfaces in the CLI with a plain-text message. No new UI color for a guard failure state in the HTML report — a failing guard produces no HTML output.
@@ -245,7 +256,8 @@ These CSS class additions belong inside the existing `<style>` block in `report.
   line-height: 1.5;
 }
 .risks-list li:last-child { border-bottom: none; }
-.risks-list .risk-label { font-weight: 600; color: var(--text); margin-right: 4px; }
+/* Color differentiates risk label from impact text — no weight change */
+.risks-list .risk-label { color: var(--text); margin-right: 4px; }
 .risks-list .risk-impact { color: var(--text-muted); }
 
 /* Phase 98 — Rollup formula block */
@@ -253,18 +265,18 @@ These CSS class additions belong inside the existing `<style>` block in `report.
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 12px 16px;
-  margin: 12px 0 24px;
+  padding: 8px 16px;
+  margin: 8px 0 24px;
   font-size: 13px;
   color: var(--text-muted);
 }
 .rollup-formula strong { color: var(--text); }
 
 /* Phase 98 — Roadmap priority indicator */
+/* Reuses 12px label/meta size; uppercase + letter-spacing provides visual distinction */
 .priority-label {
   display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -272,7 +284,7 @@ These CSS class additions belong inside the existing `<style>` block in `report.
 }
 ```
 
-All new CSS rules extend existing patterns. No new color values — all reference existing CSS variables.
+All new CSS rules extend existing patterns. No new color values — all reference existing CSS variables. No new font sizes or weights introduced.
 
 ---
 
