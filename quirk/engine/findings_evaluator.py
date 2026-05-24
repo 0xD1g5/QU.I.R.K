@@ -10,6 +10,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from quirk.compliance import COMPLIANCE_MAP, TITLE_PREFIX_ALIASES
+from quirk.reports.content_model import (
+    ALGO_IMPACT_MAP,
+    FALLBACK_QUANTUM_RISK,
+    REMEDIATION_CATALOG,
+    _classify_finding,
+)
 
 
 # Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
@@ -71,25 +77,58 @@ def _build_finding(
     description: str,
     recommendation: str,
     quantum_vulnerable: bool = False,
+    check_id: str = "",
 ) -> Dict[str, Any]:
     """Single chokepoint for finding construction (Phase 48 D-02).
 
     Enforces non-empty ``description`` and ``recommendation``. Appends
     :data:`NIST_IR_8547_DEPRECATION` to ``recommendation`` (separated by a
-    single space) when ``quantum_vulnerable`` is ``True`` (D-06). Raises
-    ``ValueError`` if either string is empty or whitespace-only.
+    single space) when ``quantum_vulnerable`` is ``True`` AND no catalog entry
+    exists for the detected crypto class (D-05 / Phase 99). Raises
+    ``ValueError`` if either description or recommendation is empty or
+    whitespace-only.
 
-    The append is deterministic: identical input recommendations produce
-    identical output recommendations, preserving ``_dedupe_findings``
-    correctness (see NOTE at line ~189).
+    Phase 99 (D-02/D-04/D-05):
+    - ``check_id``: optional crypto-class key hint for ``_classify_finding``
+      (used by codesign expiry findings whose titles contain no RSA/SHA keyword).
+    - ``quantum_risk``: populated from ``ALGO_IMPACT_MAP[crypto_class][2]``
+      when a crypto class is matched, else from ``FALLBACK_QUANTUM_RISK``.
+    - Catalog-matched findings (``REMEDIATION_CATALOG``) have their
+      recommendation replaced with the catalog-specific string (D-04).
+    - ``NIST_IR_8547_DEPRECATION`` is appended ONLY when ``quantum_vulnerable``
+      is ``True`` AND the crypto class has no catalog entry (D-05).
+
+    The recommendation is deterministic so ``_dedupe_findings`` correctness
+    is preserved (see NOTE at line ~189).
     """
     if not description or not description.strip():
         raise ValueError("_build_finding requires a non-empty description")
     if not recommendation or not recommendation.strip():
         raise ValueError("_build_finding requires a non-empty recommendation")
     rec = recommendation.strip()
-    if quantum_vulnerable:
+
+    # Phase 99 D-02/D-04/D-05: build intermediate finding dict for _classify_finding
+    proto_finding: Dict[str, Any] = {
+        "severity": severity,
+        "title": title,
+        "description": description.strip(),
+        "check_id": check_id,
+    }
+    crypto_class = _classify_finding(proto_finding)
+
+    # D-04: catalog-matched findings use catalog recommendation (overrides caller-supplied)
+    if crypto_class and crypto_class in REMEDIATION_CATALOG:
+        rec = REMEDIATION_CATALOG[crypto_class]
+    elif quantum_vulnerable:
+        # D-05: no catalog match + quantum_vulnerable → append NIST boilerplate
         rec = f"{rec} {NIST_IR_8547_DEPRECATION}"
+
+    # D-02: attach quantum_risk sentence
+    if crypto_class and crypto_class in ALGO_IMPACT_MAP:
+        quantum_risk = ALGO_IMPACT_MAP[crypto_class][2]
+    else:
+        quantum_risk = FALLBACK_QUANTUM_RISK
+
     return {
         "severity": severity,
         "host": host,
@@ -97,6 +136,8 @@ def _build_finding(
         "title": title,
         "description": description.strip(),
         "recommendation": rec,
+        "check_id": check_id,
+        "quantum_risk": quantum_risk,
         # Phase 49 D-02: eager compliance attachment via the chokepoint.
         "compliance": COMPLIANCE_MAP.get(_normalize_for_compliance(title), []),
     }
