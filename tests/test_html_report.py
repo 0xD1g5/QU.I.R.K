@@ -201,3 +201,42 @@ def test_fixed_table_layout_css(tmp_path):
     """Rendered HTML stylesheet must contain table-layout: fixed."""
     content = _render_html(tmp_path)
     assert "table-layout: fixed" in content
+
+
+# ============================================================
+# Phase 100 / CR-01: _load_logo_b64 graceful-omit failure paths
+# ============================================================
+
+def test_logo_missing_path_returns_none():
+    """_load_logo_b64 returns (None, 'png') when path does not exist."""
+    from quirk.reports.html_renderer import _load_logo_b64
+    b64, mime = _load_logo_b64("/nonexistent/path/logo.png")
+    assert b64 is None
+    assert mime == "png"
+
+
+def test_logo_none_path_returns_none():
+    """_load_logo_b64 returns (None, 'png') when logo_path is None."""
+    from quirk.reports.html_renderer import _load_logo_b64
+    b64, mime = _load_logo_b64(None)
+    assert b64 is None
+    assert mime == "png"
+
+
+def test_logo_oversized_returns_none(tmp_path, monkeypatch, capsys):
+    """_load_logo_b64 returns (None, 'png') and prints stderr advisory for oversized logo."""
+    import os
+    from quirk.reports import html_renderer
+    # Monkeypatch the limit to 10 bytes so we don't need a truly large file
+    monkeypatch.setattr(html_renderer, "_MAX_LOGO_BYTES", 10)
+    # Write a file that exceeds the patched limit
+    logo_file = str(tmp_path / "big_logo.png")
+    with open(logo_file, "wb") as f:
+        f.write(b"\x89PNG" + b"\x00" * 20)  # 24 bytes > 10 byte limit
+    b64, mime = html_renderer._load_logo_b64(logo_file)
+    assert b64 is None, "Expected None for oversized logo"
+    assert mime == "png"
+    captured = capsys.readouterr()
+    assert "exceeds size limit" in captured.err, (
+        f"Expected size-limit advisory in stderr; got: {captured.err!r}"
+    )

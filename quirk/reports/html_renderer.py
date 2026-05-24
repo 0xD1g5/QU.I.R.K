@@ -143,16 +143,30 @@ def _severity_color(severity: str) -> str:
 # This works for both development installs and editable installs without package data rebuild.
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
+# Phase 100 / CR-01: maximum logo file size (bytes) — generous for any real logo.
+# Files larger than this are rejected with a stderr advisory; logo is omitted.
+_MAX_LOGO_BYTES = 5 * 1024 * 1024  # 5 MB
+
 
 def _load_logo_b64(logo_path):
     """Return (b64_string, mime_subtype) or (None, 'png') when logo absent/unreadable.
 
-    Phase 100 / D-01 / D-03: base64-embed for offline HTML; None means omit logo region in template.
-    T-100-LOGO: guards against missing/invalid/permission errors with graceful omit.
+    Phase 100 / D-01 / D-03: base64-embed for offline HTML; None means omit logo region.
+    T-100-LOGO: guards against missing/invalid/permission/large-file errors (graceful omit).
+
+    Raises nothing — any failure path returns (None, 'png') per the D-03 contract.
     """
     if not logo_path:
         return None, "png"
     try:
+        size = os.path.getsize(logo_path)
+        if size > _MAX_LOGO_BYTES:
+            print(
+                f"Logo at {logo_path!r} exceeds size limit ({size} bytes > {_MAX_LOGO_BYTES}); "
+                "logo omitted from report.",
+                file=sys.stderr,
+            )
+            return None, "png"
         with open(logo_path, "rb") as f:
             data = f.read()
         b64 = base64.b64encode(data).decode("ascii")
@@ -160,7 +174,7 @@ def _load_logo_b64(logo_path):
         mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png",
                 "gif": "gif", "svg": "svg+xml"}.get(ext, "png")
         return b64, mime
-    except (OSError, IOError):
+    except Exception:
         return None, "png"
 
 
