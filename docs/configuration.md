@@ -790,6 +790,123 @@ intelligence:
 
 ---
 
+## Notifications (v5.3+)
+
+Phase 101 introduces a global notification system that alerts operators after each scheduled scan when HIGH/CRITICAL findings appear or the quantum-readiness score regresses. Notifications are **off by default** — opt in by adding a `[notifications]` block to your QUIRK YAML config.
+
+### Prerequisites
+
+**Set `QUIRK_CONFIG_PATH`** to the path of your QUIRK YAML config file before starting the scheduler. The scheduler's `--config` argument points to the SQLite database; the notification system reads its YAML config from `QUIRK_CONFIG_PATH`.
+
+```bash
+export QUIRK_CONFIG_PATH=/etc/quirk/config.yaml
+export QUIRK_DB_PATH=/var/lib/quirk/quirk.db
+quirk schedule run --config "$QUIRK_DB_PATH"
+```
+
+Both env vars must be set for scheduled notifications to work (Assumption A2).
+
+### Trigger rules (NOTIFY-02)
+
+A notification fires when **either** of these conditions is met:
+
+| Condition | Threshold |
+|-----------|-----------|
+| New HIGH or CRITICAL findings since the last scan | ≥ 1 new HIGH/CRITICAL |
+| Readiness score regression | Score drops more than `trigger_score_floor` points |
+
+Notifications are **never** sent on:
+- The very first scan (no previous baseline to compare against)
+- MEDIUM-only changes with score delta within the floor
+
+### Notification config block
+
+Add a `notifications:` block at the top level of your QUIRK YAML config:
+
+```yaml
+notifications:
+  trigger_score_floor: -5       # notify when score drops more than 5 points (default -5)
+
+  # Optional: Slack incoming-webhook delivery (NOTIFY-03)
+  slack:
+    slack_webhook_env: QUIRK_SLACK_WEBHOOK      # env var NAME holding the webhook URL
+    dashboard_base_url: https://quirk.internal  # optional link in Slack messages
+
+  # Optional: Email delivery via SMTP (NOTIFY-04)
+  email:
+    smtp_host: smtp.corp.com
+    smtp_port: 587              # 587 = STARTTLS (default), 465 = SSL
+    smtp_from: quirk@corp.com
+    recipients:
+      - security@corp.com
+      - oncall@corp.com
+    smtp_user: quirk-svc        # omit for unauthenticated relay
+    smtp_password_env: QUIRK_SMTP_PASSWORD  # env var NAME holding the password
+    use_ssl: false              # true = SMTP_SSL (port 465); false = STARTTLS (port 587)
+    timeout_seconds: 10
+
+  # Optional: Generic outbound webhook (NOTIFY-05)
+  webhook:
+    url_env: QUIRK_WEBHOOK_URL          # env var NAME holding the target URL
+    hmac_key_env: QUIRK_WEBHOOK_HMAC_KEY  # env var NAME for HMAC-SHA256 signing key (optional)
+    timeout_seconds: 10
+```
+
+### Environment variables for secrets
+
+**Secrets must never appear in the YAML config.** The config stores only the *name* of the environment variable; the actual secret is read from the environment at delivery time and is never persisted.
+
+| Env var name | Purpose | Example value |
+|---|---|---|
+| `QUIRK_SLACK_WEBHOOK` | Slack incoming-webhook URL | `https://hooks.slack.com/services/T.../B.../xxx` |
+| `QUIRK_SMTP_PASSWORD` | SMTP account password | `s3cr3t` |
+| `QUIRK_WEBHOOK_URL` | Target webhook endpoint | `https://siem.corp.com/api/events` |
+| `QUIRK_WEBHOOK_HMAC_KEY` | HMAC-SHA256 signing key | `a-long-random-string` |
+| `QUIRK_CONFIG_PATH` | Path to QUIRK YAML config | `/etc/quirk/config.yaml` |
+
+> **Note on naming:** The config field `slack_webhook_env: QUIRK_SLACK_WEBHOOK` means "read the webhook URL from the env var named `QUIRK_SLACK_WEBHOOK`". You can use any env var name — the convention shown above is recommended.
+
+### Security controls
+
+| Control | Description |
+|---------|-------------|
+| **SSRF protection** | Every channel validates the destination URL/host via `validate_external_url()` before connecting — loopback, RFC1918, and cloud metadata IPs are blocked (ISEC-01). |
+| **Secret scrubbing** | Any exception raised during delivery is passed through `safe_str()` before being written to the `integration_deliveries` audit log — Slack tokens (`xoxb-*`), SMTP passwords, and webhook URLs are redacted (ISEC-02). |
+| **Failure isolation** | A delivery failure on one channel never blocks other channels or corrupts the scan record. The scheduler `_dispatch_schedule` wraps the entire notification call in `try/except` (NOTIFY-07). |
+| **Optional Slack dep** | `slack_sdk` is an optional dependency. Missing `slack_sdk` logs a WARNING instead of raising `ImportError`. Install with `pip install quirk-scanner[notify]` (ISEC-04). |
+| **Outbound whitelist** | Webhook payloads contain only drift-level aggregate fields (scores, counts). Host/IP/protocol topology is excluded from all outbound integration payloads (ISEC-03). |
+
+### Installing the Slack dependency
+
+Slack delivery requires `slack_sdk`:
+
+```bash
+pip install "quirk-scanner[notify]"
+```
+
+This extra is included in `[all]`. Email and webhook delivery use Python stdlib only — no extra installation needed.
+
+### Audit log
+
+Every delivery attempt — successful or failed — writes one row to the `integration_deliveries` SQLite table:
+
+| Column | Description |
+|--------|-------------|
+| `scan_id` | ISO timestamp identifying the scan session |
+| `destination` | `"slack"` / `"email"` / `"webhook"` |
+| `status` | `"ok"` or `"failed"` |
+| `attempted_at` | UTC timestamp of the delivery attempt |
+| `error_summary` | `safe_str(exc)` on failure — secrets are always scrubbed |
+
+Query the audit log from the QUIRK database:
+
+```bash
+sqlite3 "$QUIRK_DB_PATH" \
+  "SELECT attempted_at, destination, status, error_summary FROM integration_deliveries ORDER BY attempted_at DESC LIMIT 20;"
+```
+
+---
+
 ## Compliance Frameworks
 
 QUIRK's `COMPLIANCE_MAP` (in `quirk/compliance/__init__.py`) maps every finding
