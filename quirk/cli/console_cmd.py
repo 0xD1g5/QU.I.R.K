@@ -110,6 +110,92 @@ def run_console(argv: list[str]) -> None:
         _cmd_enroll(args)
 
 
+def _cmd_enroll(args: argparse.Namespace) -> None:
+    """Provision a sensor in the console DB and mint a one-time bearer token.
+
+    Writes exactly two rows atomically:
+      - sensors:       sensor_id, segment, engagement, enrolled_at, expected_cadence_minutes=1440
+      - sensor_tokens: sensor_id (FK), token_hash (SHA-256 hex of raw token), created_at
+
+    The raw bearer token is printed once to stdout; only its SHA-256 hex digest is
+    persisted.  The raw token is never stored or logged (T-109-01 mitigation).
+
+    On IntegrityError (duplicate sensor_id or token_hash collision): rollback first,
+    emit a fixed error string to stderr, exit 1.  The raw exception is never printed
+    (T-109-03 / LEAK-02).
+
+    DB path resolution: QUIRK_DB_PATH env var → canonical quirk-output/quirk.db
+    (via _default_db_path()).  --config is accepted for CLI parity with import-results
+    but DB path is resolved through the env-var / canonical logic, not config.yaml
+    parsing (RESEARCH Open Question 1 recommendation: avoid a YAML dep on the enroll
+    path; operators set QUIRK_DB_PATH for non-default locations).
+    """
+    import hashlib
+    import secrets
+    from datetime import datetime, timezone
+
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.dashboard.api.deps import _default_db_path
+    from quirk.db import init_db
+    from quirk.models import Sensor, SensorToken
+
+    # Resolve sensor_id: use provided value or generate a UUID4
+    sensor_id = args.sensor_id or str(uuid.uuid4())
+    if not args.sensor_id:
+        print(f"Generated sensor_id: {sensor_id}", file=sys.stderr)
+
+    segment: str = args.segment
+    engagement: str | None = args.engagement
+
+    # Mint raw token; derive hash — raw token never persisted (T-109-01)
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    db_path = _default_db_path()
+    engine = init_db(db_path)
+    Session = sessionmaker(
+        bind=engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+    )
+
+    with Session() as db:
+        try:
+            db.add(
+                Sensor(
+                    sensor_id=sensor_id,
+                    segment=segment,
+                    engagement=engagement,
+                    enrolled_at=now,
+                    last_push_at=None,
+                    expected_cadence_minutes=1440,
+                    sensor_version=None,
+                )
+            )
+            db.flush()
+            db.add(
+                SensorToken(
+                    sensor_id=sensor_id,
+                    token_hash=token_hash,
+                    created_at=now,
+                )
+            )
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            print("ERROR: sensor_id already enrolled", file=sys.stderr)
+            sys.exit(1)
+
+    # Print the raw token once to stdout — operator copies this to sensor.yaml
+    print(f"Bearer token (copy to sensor.yaml — shown once, never stored):\n{raw_token}")
+    print(f"sensor_id: {sensor_id}", file=sys.stderr)
+    sys.exit(0)
+
+
 def _cmd_import_results(args: argparse.Namespace) -> None:
     """Import a .qpush air-gap file: decompress, validate, and route to ingest stub.
 
