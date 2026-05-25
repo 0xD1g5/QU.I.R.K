@@ -38,7 +38,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 - [x] **Phase 101: Notification Fan-Out + Security Foundation** — Drift-event delivery (Slack, email, webhook) wired into the scheduler seam, plus all integration security primitives inherited by every downstream phase (completed 2026-05-25)
 - [x] **Phase 102: Dashboard Auth UX + Score Tax** — X-API-Key header support, token generate/rotate CLI, React login form, and CLI exec-score sourced from shared content model (completed 2026-05-25)
-- [ ] **Phase 103: SIEM Export** — Per-scan per-finding batch push to syslog/CEF (vendor-neutral) and Splunk HEC, zero new pip deps
+- [x] **Phase 103: SIEM Export** — Per-scan per-finding batch push to syslog/CEF (vendor-neutral) and Splunk HEC, zero new pip deps (completed 2026-05-25)
 - [ ] **Phase 104: Jira Ticketing** — Per-finding Jira issue creation with shared ticketing abstraction, SHA256 fingerprint dedup, and QRAMM evidence in descriptions
 - [ ] **Phase 105: ServiceNow Ticketing** — ServiceNow incident/record creation reusing the Phase 104 ticketing abstraction and dedup infrastructure
 
@@ -91,7 +91,7 @@ Plans:
 - [x] 103-01-PLAN.md — CEF formatter, escaping, severity map, per-finding whitelist (SIEM-02)
 - [x] 103-02-PLAN.md — SiemCfg loader + stdlib socket transport (UDP/TCP) (SIEM-01)
 - [x] 103-03-PLAN.md — Dispatcher, `quirk export --siem` CLI, run_scan + scheduler after-scan hook (SIEM-01/02)
-- [ ] 103-04-PLAN.md — Config/CLI docs, sample-config [siem], UAT-SERIES + Obsidian sync
+- [x] 103-04-PLAN.md — Config/CLI docs, sample-config [siem], UAT-SERIES + Obsidian sync
 
 ### Phase 104: Jira Ticketing
 **Goal**: A security team can auto-create one Jira issue per finding carrying QRAMM evidence, with idempotent dedup so re-scans never proliferate duplicate tickets
@@ -119,6 +119,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
 | 102. Dashboard Auth UX + Score Tax | 5/5 | Complete   | 2026-05-25 |
-| 103. SIEM Export | 3/4 | In Progress|  |
+| 103. SIEM Export | 4/4 | Complete   | 2026-05-25 |
 | 104. Jira Ticketing | 0/TBD | Not started | - |
 | 105. ServiceNow Ticketing | 0/TBD | Not started | - |
