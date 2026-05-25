@@ -31,3 +31,16 @@ connectors:
 output:
   directory: "tmp/sample_output"
   db_path: "tmp/sample_output/sample.sqlite"
+
+# SIEM Export (syslog/CEF) — Phase 103 (v5.3+)
+# Deliver one CEF:0 event per finding to a syslog collector after each scheduled scan.
+# Requires: QUIRK_CONFIG_PATH env var pointing to this file; QUIRK_DB_PATH for the audit row.
+# TCP framing note: raw TCP only (no octet-count, no TLS). Configure receiver for LF-terminated
+#   or raw-bytes syslog input. TLS-wrapped syslog is deferred to a future release.
+#
+# siem:
+#   host: siem.corp.example.com   # required: hostname or IP of your syslog/CEF collector
+#   port: 514                     # optional: collector port (default 514)
+#   protocol: udp                 # optional: udp (default) or tcp
+#   export_after_scan: false      # optional: set true to export automatically after scheduled scans
+#   timeout_seconds: 5            # optional: socket send timeout in seconds

@@ -989,6 +989,122 @@ sqlite3 "$QUIRK_DB_PATH" \
 
 ---
 
+## SIEM Export (syslog/CEF)
+
+Phase 103 introduces SIEM export via syslog with Common Event Format (CEF). QUIRK formats each
+finding as a CEF:0 event and delivers it to a syslog collector over UDP or TCP. Export is
+**off by default** — opt in by adding a `siem:` block to your QUIRK YAML config.
+
+> **Network placement:** syslog is plaintext (no TLS). Place your syslog collector on a trusted
+> internal network segment. TLS-wrapped syslog (RFC 5425), Splunk HEC, and Elastic-native output
+> are planned for a future release.
+
+### Prerequisites
+
+**Set `QUIRK_CONFIG_PATH`** to the path of your QUIRK YAML config file before running the
+scheduler. The scheduler's `--config` argument points to the SQLite database; the SIEM system
+reads its YAML config from `QUIRK_CONFIG_PATH`.
+
+```bash
+export QUIRK_CONFIG_PATH=/etc/quirk/config.yaml
+export QUIRK_DB_PATH=/var/lib/quirk/quirk.db
+quirk schedule run --config "$QUIRK_DB_PATH"
+```
+
+### `siem:` config block
+
+Add a `siem:` block at the top level of your QUIRK YAML config:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `host` | string | *(required)* | Hostname or IP of your syslog/CEF collector |
+| `port` | int | `514` | UDP or TCP port of the collector |
+| `protocol` | string | `"udp"` | Transport: `"udp"` or `"tcp"` |
+| `export_after_scan` | bool | `false` | Automatically export findings after each scheduled scan completes |
+| `timeout_seconds` | int | `5` | Socket send timeout in seconds |
+
+```yaml
+siem:
+  host: siem.corp.example.com
+  port: 514
+  protocol: udp          # udp (default) or tcp
+  export_after_scan: true
+  timeout_seconds: 5
+```
+
+### CLI usage: `quirk export --siem`
+
+Export findings from the most recent scan to your SIEM at any time:
+
+```bash
+# Export the most recent findings-*.json in the default output directory
+quirk export --siem
+
+# Specify an explicit findings file
+quirk export --siem --input output/findings-2026-05-25-120000.json
+
+# Specify the output directory to search for the latest findings file
+quirk export --siem --output-dir /var/lib/quirk/output
+```
+
+**Prerequisites:**
+- `QUIRK_CONFIG_PATH` must be set and point to a YAML config with a valid `siem:` block.
+- `QUIRK_DB_PATH` must point to the QUIRK SQLite database (used to write the audit row).
+
+Exit codes: `0` = all events delivered; `1` = config/flag error; `2` = no findings file found.
+
+### CEF field mapping
+
+Each finding produces one `CEF:0` event. QUIRK maps finding fields as follows:
+
+| CEF field | Finding field | Notes |
+|-----------|--------------|-------|
+| Header severity | `severity` | `CRITICAL=10`, `HIGH=8`, `MEDIUM=5`, `LOW=3`; unknown defaults to 3 |
+| `name` (header) | `title` | Pipe characters escaped as `\|`; backslash as `\\` |
+| `signature` (header) | `category` → `id` → slugified title | Falls back when `category`/`id` absent |
+| `dhost` | `host` | Scanned host |
+| `dpt` | `port` | Scanned port |
+| `cs1` | `category` | Finding category label |
+| `cs2` | `description` | Truncated at 256 characters |
+| `msg` | `recommendation` | Truncated at 256 characters |
+
+**Payload safety:** The CEF payload contains only the fields listed above. Certificate PEM data,
+certificate SANs, private key material, PKI topology details, and compliance control mappings are
+**never** included in the CEF event. All extension field values are escaped: backslash becomes
+`\\`, equals becomes `\=`, and newlines become the literal two-character sequence `\n`.
+
+### Semantics
+
+- **One event per finding:** Each finding in the findings JSON produces one CEF event. A scan
+  with 30 findings produces 30 events.
+- **After-scan export:** When `export_after_scan: true`, the SIEM export hook fires automatically
+  after each scheduled scan completes. The hook is isolated — a SIEM delivery failure never
+  aborts the scan, corrupts the scan record, or blocks other integrations (NOTIFY-07 / SIEM-01).
+- **Audit log:** Every export attempt — successful or failed — writes one row to the
+  `integration_deliveries` SQLite table with `destination="siem"`, `status="ok"/"failed"`, and
+  a scrubbed `error_summary` on failure.
+- **TCP framing:** Raw TCP (no octet-count prefix, no TLS). Configure your receiver for
+  traditional LF-terminated or raw-bytes syslog input.
+
+### Audit log
+
+Query the audit log from the QUIRK database:
+
+```bash
+sqlite3 "$QUIRK_DB_PATH" \
+  "SELECT attempted_at, destination, status, error_summary FROM integration_deliveries WHERE destination='siem' ORDER BY attempted_at DESC LIMIT 20;"
+```
+
+### Deferred
+
+The following SIEM delivery paths are planned for a future release and are **not** available in
+Phase 103:
+- TLS-wrapped syslog (RFC 5425)
+- Splunk HTTP Event Collector (HEC)
+- Elastic-native output (Elasticsearch ingest API)
+
+---
+
 ## Compliance Frameworks
 
 QUIRK's `COMPLIANCE_MAP` (in `quirk/compliance/__init__.py`) maps every finding
