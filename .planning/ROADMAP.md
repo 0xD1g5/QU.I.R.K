@@ -74,7 +74,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] 102-01-PLAN.md — AUTH-01 token CLI (generate/rotate/show) + YAML write-back
 - [x] 102-02-PLAN.md — AUTH-02 X-API-Key auth extension + route-coverage CI gate
 - [x] 102-03-PLAN.md — TRANS-04 CLI executive score sourced from exec_content + parity test
-- [ ] 102-04-PLAN.md — AUTH-03 React login form, AuthProvider, Sign out + statics rebuild
+- [x] 102-04-PLAN.md — AUTH-03 React login form, AuthProvider, Sign out + statics rebuild
 - [ ] 102-05-PLAN.md — Docs (configuration.md) + UAT-SERIES.md + Obsidian phase note sync
 **UI hint**: yes
 
@@ -113,7 +113,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
-| 102. Dashboard Auth UX + Score Tax | 3/5 | In Progress|  |
+| 102. Dashboard Auth UX + Score Tax | 4/5 | In Progress|  |
 | 103. SIEM Export | 0/TBD | Not started | - |
 | 104. Jira Ticketing | 0/TBD | Not started | - |
 | 105. ServiceNow Ticketing | 0/TBD | Not started | - |
