@@ -84,6 +84,11 @@ cbom = ["cyclonedx-python-lib[json-validation]>=11.7.0,<12"]
 docx = [
     "python-docx>=1.1.0",
 ]
+notify = [
+    "slack-sdk>=3.33.0",  # Phase 101 NOTIFY-03 — Slack incoming-webhook delivery
+    # email: stdlib smtplib — no extra required
+    # webhook: stdlib urllib — no extra required
+]
 dev = [
     "towncrier>=24.7.0",
 ]
@@ -94,8 +99,9 @@ all = [
     "quirk-scanner[motion]",
     "quirk-scanner[redis]",
     "quirk-scanner[dashboard]",
-    "quirk-scanner[adcs]",  # Phase 80 ADCS-07 — ldap3-only, no impacket
-    "quirk-scanner[docx]",  # Phase 100 / FMT-03: DOCX auto-emits every run; bundle with full installs
+    "quirk-scanner[adcs]",     # Phase 80 ADCS-07 — ldap3-only, no impacket
+    "quirk-scanner[docx]",     # Phase 100 / FMT-03: DOCX auto-emits every run; bundle with full installs
+    "quirk-scanner[notify]",   # Phase 101 NOTIFY-03 — slack-sdk; no cryptography downgrade chain
 ]
 # NOTE: quirk[identity] is INTENTIONALLY EXCLUDED from [all] -- impacket
 # transitively pulls pyOpenSSL which downgrades cryptography and breaks the
