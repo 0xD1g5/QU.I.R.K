@@ -20,10 +20,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Architecture & Design (ARCH) — *no-code gating phase*
 
-- [ ] **ARCH-01**: A comprehensive architecture document exists describing the sensor/console split — service roles, the sensor→console wire payload schema (incl. `payload_id`, `pushed_at`, `received_at`, `schema_version`, `sensor_version`), the enrollment/auth model, and the merge pipeline — before any v5.4 code ships. (folds in backlog 999.58)
-- [ ] **ARCH-02**: The architecture document locks the additive data-model design: `sensor_id` and `segment` as nullable columns on `CryptoEndpoint` (NULL = implicit local sensor), and the `(sensor_id, host, port)` uniqueness key that distinguishes the same RFC1918 IP appearing in two segments.
-- [ ] **ARCH-03**: The architecture document records the resolved PM decisions: unified-score methodology (**Option A** — union of findings re-run through the existing scoring engine — as the committed start), enrollment-token expiry policy (**one-time-use** committed default), and the Windows scope decision for v5.4 (floor committed; ceiling — full PyInstaller/Scheduled-Task packaging — decided here as in-v5.4 or split to v5.5).
-- [ ] **ARCH-04**: The architecture document explicitly enumerates the forbidden additions (Celery, Redis, MQTT/RabbitMQ, Postgres, JWT per-sensor tokens, mTLS/PKI infra, `tenant_id`) so no downstream plan can introduce them without a documented violation.
+- [x] **ARCH-01**: A comprehensive architecture document exists describing the sensor/console split — service roles, the sensor→console wire payload schema (incl. `payload_id`, `pushed_at`, `received_at`, `schema_version`, `sensor_version`), the enrollment/auth model, and the merge pipeline — before any v5.4 code ships. (folds in backlog 999.58)
+- [x] **ARCH-02**: The architecture document locks the additive data-model design: `sensor_id` and `segment` as nullable columns on `CryptoEndpoint` (NULL = implicit local sensor), and the `(sensor_id, host, port)` uniqueness key that distinguishes the same RFC1918 IP appearing in two segments.
+- [x] **ARCH-03**: The architecture document records the resolved PM decisions: unified-score methodology (**Option A** — union of findings re-run through the existing scoring engine — as the committed start), enrollment-token expiry policy (**one-time-use** committed default), and the Windows scope decision for v5.4 (floor committed; ceiling — full PyInstaller/Scheduled-Task packaging — decided here as in-v5.4 or split to v5.5).
+- [x] **ARCH-04**: The architecture document explicitly enumerates the forbidden additions (Celery, Redis, MQTT/RabbitMQ, Postgres, JWT per-sensor tokens, mTLS/PKI infra, `tenant_id`) so no downstream plan can introduce them without a documented violation.
 
 ### Distributed Data Model (MODEL)
 
@@ -118,10 +118,10 @@ Which phases cover which requirements.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 106 | Pending |
-| ARCH-02 | Phase 106 | Pending |
-| ARCH-03 | Phase 106 | Pending |
-| ARCH-04 | Phase 106 | Pending |
+| ARCH-01 | Phase 106 | Complete |
+| ARCH-02 | Phase 106 | Complete |
+| ARCH-03 | Phase 106 | Complete |
+| ARCH-04 | Phase 106 | Complete |
 | MODEL-01 | Phase 107 | Pending |
 | MODEL-02 | Phase 107 | Pending |
 | MODEL-03 | Phase 107 | Pending |
