@@ -1053,11 +1053,17 @@ def test_export_filename_contains_payload_id(tmp_path, monkeypatch):
 
 
 def test_export_body_byte_identical_to_push_body(tmp_path, monkeypatch):
-    """SENSOR-04: .qpush compressed-payload bytes are byte-identical to the push request body.
+    """SENSOR-04: compressed-payload body in .qpush is byte-identical to the push request body.
 
     Both export and push call _build_envelope and _build_compressed_payload with identical
-    inputs (monkeypatched fixed payload_id and pushed_at).  The resulting bytes MUST be
-    identical — this is the single shared serialization path invariant.
+    inputs (monkeypatched fixed payload_id and pushed_at).  The resulting compressed bytes
+    MUST be identical — this is the single shared serialization path invariant.
+
+    WR-03 note: the .qpush file now has a framing header prepended:
+        {"hmac-sha256": "hmac-sha256=<hex>"}\\n<compressed-body>
+    This test extracts the compressed body component and asserts it equals the push body.
+    The whole-file bytes differ (header + body vs body-only) because the HMAC signature
+    travels as file framing for air-gap integrity, not inside the compressed payload.
     """
     import zstandard
 
@@ -1097,24 +1103,30 @@ def test_export_body_byte_identical_to_push_body(tmp_path, monkeypatch):
             _cmd_export_results(Args())
     assert exc_info.value.code == 0
 
-    # Read the .qpush file bytes
+    # Read the .qpush file bytes and extract the compressed body component.
+    # WR-03: the file starts with a JSON header line followed by '\n' and the body.
     qpush_file = list(output_dir.glob("*.qpush"))[0]
-    qpush_bytes = qpush_file.read_bytes()
+    qpush_raw = qpush_file.read_bytes()
+
+    assert qpush_raw.startswith(b"{"), (
+        ".qpush file must start with the WR-03 framing header"
+    )
+    newline_pos = qpush_raw.find(b"\n")
+    assert newline_pos != -1, ".qpush framing header must end with a newline"
+    qpush_body = qpush_raw[newline_pos + 1:]
 
     # Reproduce what push would have sent as the request body with same inputs
-    # Build envelope the same way push does, then compress
     expected_envelope = patched_build_envelope(sensor_cfg, [])
     expected_body = _build_compressed_payload(expected_envelope)
 
-    # The .qpush file content must equal the compressed payload exactly
-    # (the payload segment — export stores exactly the compressed payload bytes)
-    assert qpush_bytes == expected_body, (
-        "export .qpush bytes must be byte-identical to the push request body; "
-        "export must reuse _build_compressed_payload, not fork serialization"
+    # The compressed body component of the .qpush file must equal the push request body.
+    assert qpush_body == expected_body, (
+        "export .qpush compressed-body component must be byte-identical to the push "
+        "request body; export must reuse _build_compressed_payload, not fork serialization"
     )
 
-    # Additionally verify it decompresses to a valid envelope
-    raw = zstandard.ZstdDecompressor().decompress(qpush_bytes)
+    # Additionally verify the body decompresses to a valid envelope
+    raw = zstandard.ZstdDecompressor().decompress(qpush_body)
     recovered = json.loads(raw.decode("utf-8"))
     assert recovered["payload_id"] == fixed_payload_id
     assert recovered["sensor_id"] == sensor_cfg["sensor_id"]
@@ -1145,8 +1157,11 @@ def test_export_decompresses_to_canonical_envelope_keys(tmp_path, monkeypatch):
         with pytest.raises(SystemExit):
             _cmd_export_results(Args())
 
-    qpush_bytes = list(output_dir.glob("*.qpush"))[0].read_bytes()
-    raw = zstandard.ZstdDecompressor().decompress(qpush_bytes)
+    # WR-03: strip the framing header line before decompressing
+    qpush_raw = list(output_dir.glob("*.qpush"))[0].read_bytes()
+    newline_pos = qpush_raw.find(b"\n")
+    qpush_body = qpush_raw[newline_pos + 1:] if newline_pos != -1 else qpush_raw
+    raw = zstandard.ZstdDecompressor().decompress(qpush_body)
     envelope = json.loads(raw.decode("utf-8"))
 
     expected_keys = {
