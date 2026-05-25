@@ -29,6 +29,9 @@ dependencies = [
     "beautifulsoup4>=4.13.0",
     "signxml>=4.4.0",
     "nh3>=0.2.17",
+    "platformdirs>=4.3.0",   # Phase 108 SENSOR-05: cross-OS config/data dirs
+    "tenacity>=8.2.0",       # Phase 108 SENSOR-02: retry with exponential backoff
+    "zstandard>=0.22.0",     # Phase 108 SENSOR-02/03/04: zstd payload compression
 ]
 
 [project.optional-dependencies]
