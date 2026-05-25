@@ -1,6 +1,10 @@
 """Phase 57 phase-wide invariants. Single grep gate that asserts no
 regression of the six closed audit blockers reintroduces a forbidden
-pattern."""
+pattern.
+
+Phase 109 extension: INGEST_FILES safe_str gate covers the two new ingest
+modules (console_cmd.py + sensor.py) — CONSOLE-04.
+"""
 import io
 import pathlib
 import re
@@ -15,6 +19,12 @@ SCANNER_FILES = [
     REPO_ROOT / "quirk" / "scanner" / "source_scanner.py",
     REPO_ROOT / "quirk" / "scanner" / "container_scanner.py",
     REPO_ROOT / "quirk" / "scanner" / "broker_scanner.py",
+]
+
+# Phase 109 CONSOLE-04: ingest modules must not use raw str(exc) or repr(exc)
+INGEST_FILES = [
+    REPO_ROOT / "quirk" / "cli" / "console_cmd.py",
+    REPO_ROOT / "quirk" / "dashboard" / "api" / "routes" / "sensor.py",
 ]
 
 
@@ -90,3 +100,26 @@ def test_audit_tasks_six_blockers_closed():
         assert row_pattern.search(ledger), (
             f"AUDIT-TASKS.md row scanners-protocol/{cr} is not [x] closed"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 109 CONSOLE-04: ingest modules must use safe_str(exc), never raw
+# str(exc) or repr(exc) outside comments.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("ingest_file", INGEST_FILES, ids=lambda p: p.name)
+def test_ingest_no_raw_exception_stringification(ingest_file):
+    """CONSOLE-04: no str(exc) or repr(exc) in ingest path outside comments.
+
+    Uses the existing _strip_comments tokenize helper to avoid false-positives
+    from patterns appearing only in comments.
+    """
+    src = _strip_comments(ingest_file.read_text())
+    raw_str_pattern = re.compile(r'\bstr\s*\(\s*exc\b')
+    raw_repr_pattern = re.compile(r'\brepr\s*\(\s*exc\b')
+    assert not raw_str_pattern.search(src), (
+        f"{ingest_file.name}: raw str(exc) found outside comments — use safe_str(exc) (CONSOLE-04)"
+    )
+    assert not raw_repr_pattern.search(src), (
+        f"{ingest_file.name}: raw repr(exc) found outside comments — use safe_str(exc) (CONSOLE-04)"
+    )
