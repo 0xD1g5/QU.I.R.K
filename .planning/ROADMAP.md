@@ -90,7 +90,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 Plans:
 - [x] 103-01-PLAN.md — CEF formatter, escaping, severity map, per-finding whitelist (SIEM-02)
 - [x] 103-02-PLAN.md — SiemCfg loader + stdlib socket transport (UDP/TCP) (SIEM-01)
-- [ ] 103-03-PLAN.md — Dispatcher, `quirk export --siem` CLI, run_scan + scheduler after-scan hook (SIEM-01/02)
+- [x] 103-03-PLAN.md — Dispatcher, `quirk export --siem` CLI, run_scan + scheduler after-scan hook (SIEM-01/02)
 - [ ] 103-04-PLAN.md — Config/CLI docs, sample-config [siem], UAT-SERIES + Obsidian sync
 
 ### Phase 104: Jira Ticketing
@@ -119,6 +119,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
 | 102. Dashboard Auth UX + Score Tax | 5/5 | Complete   | 2026-05-25 |
-| 103. SIEM Export | 2/4 | In Progress|  |
+| 103. SIEM Export | 3/4 | In Progress|  |
 | 104. Jira Ticketing | 0/TBD | Not started | - |
 | 105. ServiceNow Ticketing | 0/TBD | Not started | - |
