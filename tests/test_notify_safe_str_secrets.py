@@ -87,3 +87,26 @@ def test_jira_token_auth_is_redacted() -> None:
     assert short_token not in result, (
         f"Short token_auth value leaked into safe_str output: {result!r}"
     )
+
+
+def test_basic_auth_variable_reference_not_over_redacted():
+    """CR-02 iter-2: a variable-reference repr (no quotes) must NOT be over-redacted.
+
+    basic_auth=(user, token) is a Python variable reference, not a credential
+    literal — safe_str must preserve the error so the cause stays debuggable.
+    """
+    from quirk.util.safe_exc import safe_str
+
+    exc = Exception("TypeError: basic_auth=(user, token) expected str, got tuple")
+    out = safe_str(exc)
+    assert "expected str" in out  # error cause preserved, not collapsed to class name
+
+
+def test_basic_auth_credential_literal_redacted():
+    """CR-02: a credential literal (quoted) IS redacted including short PATs."""
+    from quirk.util.safe_exc import safe_str
+
+    out = safe_str(Exception("JIRAError basic_auth=('alice@co.com', 'shortpat123')"))
+    assert "shortpat123" not in out
+    out2 = safe_str(Exception("auth failed token_auth='shortPAT99'"))
+    assert "shortPAT99" not in out2
