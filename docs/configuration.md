@@ -1105,6 +1105,158 @@ Phase 103:
 
 ---
 
+## Jira Ticketing (v5.3+)
+
+Phase 104 introduces per-finding Jira issue creation. QUIRK opens one Jira issue per
+finding discovered during a scan, tags each issue with a SHA-256 fingerprint label for
+dedup, and adds a rediscovery comment on re-runs instead of creating duplicate issues.
+Ticketing is **off by default** — opt in by adding a `ticketing:` block to your QUIRK
+YAML config.
+
+> **Note:** ServiceNow ticketing (TICKET-02) arrives in Phase 105, reusing the same
+> abstraction. The `ticketing.jira` block documented here does not change when ServiceNow
+> is added.
+
+### Prerequisites
+
+Install the `[tickets]` extras group before using `quirk ticket create`:
+
+```bash
+pip install "quirk-scanner[tickets]"
+```
+
+This installs `jira>=3.10.5`. The `[tickets]` group is included in `[all]`. Running
+`quirk ticket create` without `[tickets]` installed prints a missing-extra advisory and
+exits with code 2 — no ImportError traceback is raised.
+
+**Set `QUIRK_CONFIG_PATH`** to your QUIRK YAML config before running the ticket command:
+
+```bash
+export QUIRK_CONFIG_PATH=/etc/quirk/config.yaml
+export QUIRK_DB_PATH=/var/lib/quirk/quirk.db
+quirk ticket create --input output/findings-2026-05-25-120000.json
+```
+
+### `ticketing.jira` config block
+
+Add a `ticketing:` block at the top level of your QUIRK YAML config:
+
+| Key | Type | Default | Required | Description |
+|-----|------|---------|----------|-------------|
+| `jira_url` | string | *(required)* | Yes | Base URL of your Jira instance (e.g. `https://acme.atlassian.net`) |
+| `jira_user_env` | string | *(required)* | Yes | **Name** of the env var holding your Jira username or email — not the value itself |
+| `jira_token_env` | string | *(required)* | Yes | **Name** of the env var holding your Jira API token or PAT — not the value itself |
+| `project_key` | string | *(required)* | Yes | Jira project key (e.g. `SEC`) |
+| `issue_type` | string | `"Bug"` | No | Jira issue type to create (e.g. `"Bug"`, `"Task"`, `"Security Finding"`) |
+| `auth_mode` | string | `"cloud"` | No | Authentication mode: `"cloud"` or `"server"` |
+| `allow_internal` | bool | `false` | No | Set `true` for self-hosted Jira on RFC1918 networks (see SSRF note below) |
+
+```yaml
+ticketing:
+  jira:
+    jira_url: https://acme.atlassian.net
+    jira_user_env: QUIRK_JIRA_USER      # env var NAME holding your Jira email
+    jira_token_env: QUIRK_JIRA_TOKEN    # env var NAME holding your Jira API token or PAT
+    project_key: SEC
+    issue_type: Bug                     # default
+    auth_mode: cloud                    # cloud (default) or server
+    allow_internal: false               # set true for self-hosted Jira on RFC1918
+```
+
+### Credential isolation model
+
+**Credentials must never appear in the YAML config.** The config stores only the *name*
+of the environment variable; QUIRK reads the actual credential from the environment at
+run time. Credentials are never:
+
+- Written to the YAML config or SQLite database
+- Included in log files or exception messages (safe_str scrubs Authorization headers)
+- Included in CBOM output, PDF exports, or dashboard API responses
+
+| Field | Env var name you set | Example env var value |
+|-------|---------------------|-----------------------|
+| `jira_user_env: QUIRK_JIRA_USER` | `QUIRK_JIRA_USER` | `alice@acme.com` |
+| `jira_token_env: QUIRK_JIRA_TOKEN` | `QUIRK_JIRA_TOKEN` | `ATATT3xFfGF0...` |
+
+### Cloud vs. server authentication
+
+| `auth_mode` | Jira edition | Credential used | SDK call |
+|-------------|-------------|-----------------|----------|
+| `cloud` (default) | Jira Cloud (atlassian.net) | Email + API token → HTTP Basic | `JIRA(basic_auth=(user, token))` |
+| `server` | Jira Data Center / Server (self-hosted) | Personal Access Token (PAT) | `JIRA(token_auth=token)` |
+
+For Jira Cloud, generate an API token at **Account Settings → Security → API tokens**.
+For Jira Data Center/Server, generate a PAT under **Profile → Personal Access Tokens**.
+
+### SSRF protection
+
+`jira_url` is validated by QUIRK's `validate_external_url()` guard before any connection
+is made. Loopback addresses (`127.x.x.x`), RFC1918 ranges (`10.x`, `172.16–31.x`,
+`192.168.x`), and cloud metadata IPs (`169.254.169.254`) are blocked by default.
+
+For self-hosted Jira deployed on an internal network, set `allow_internal: true`. This
+allows RFC1918 `jira_url` values while still blocking cloud metadata IPs.
+
+### CLI usage: `quirk ticket create`
+
+Create Jira issues from a completed scan's findings file:
+
+```bash
+# Create issues from the most recent findings-*.json in the default output directory
+quirk ticket create
+
+# Specify an explicit findings file
+quirk ticket create --input output/findings-2026-05-25-120000.json
+
+# Specify the output directory to search for the latest findings file
+quirk ticket create --output-dir /var/lib/quirk/output
+```
+
+**Prerequisites:**
+- `pip install "quirk-scanner[tickets]"` (or `[all]`)
+- `QUIRK_CONFIG_PATH` set and pointing to a YAML config with a valid `ticketing.jira` block
+- `QUIRK_DB_PATH` set to the QUIRK SQLite database (used to write audit rows)
+- `QUIRK_JIRA_USER` and `QUIRK_JIRA_TOKEN` set in the environment
+
+Exit codes: `0` = all findings dispatched; `1` = config error; `2` = missing `[tickets]`
+extra, no findings file found, or missing config.
+
+### Dedup and rediscovery behavior
+
+QUIRK computes a SHA-256 fingerprint for each finding using the formula
+`SHA256(host:port::title)`. On every `quirk ticket create` run:
+
+- **New finding** (fingerprint not seen): one Jira issue is created and the fingerprint is
+  stored in the `integration_deliveries` audit table.
+- **Rediscovery** (fingerprint already in `integration_deliveries`): a comment is added to
+  the existing Jira issue noting the rediscovery. No duplicate issue is created.
+
+Re-running `quirk ticket create` against the same findings file is safe — it produces
+zero duplicate issues on all subsequent runs.
+
+### Audit log
+
+Every ticket dispatch attempt — successful or failed — writes one row to the
+`integration_deliveries` SQLite table:
+
+| Column | Description |
+|--------|-------------|
+| `scan_id` | Scan session identifier |
+| `finding_hash` | SHA-256 fingerprint of the finding (`host:port::title`) |
+| `destination` | `"jira"` |
+| `status` | `"ok"` or `"failed"` |
+| `attempted_at` | UTC timestamp of the dispatch attempt |
+| `error_summary` | `safe_str(exc)` on failure — Authorization headers always scrubbed |
+
+Query the audit log:
+
+```bash
+sqlite3 "$QUIRK_DB_PATH" \
+  "SELECT finding_hash, status, attempted_at, error_summary FROM integration_deliveries WHERE destination='jira' ORDER BY attempted_at DESC LIMIT 20;"
+```
+
+---
+
 ## Compliance Frameworks
 
 QUIRK's `COMPLIANCE_MAP` (in `quirk/compliance/__init__.py`) maps every finding
