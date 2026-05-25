@@ -138,10 +138,19 @@ def to_cef_finding(finding: dict) -> dict:
     raw_desc = str(finding.get("description") or "")
     raw_rec = str(finding.get("recommendation") or "")
 
+    # Coerce port to a bounded int so str(port) in the extension can NEVER carry
+    # CEF metacharacters (=, space, newline) — a non-numeric/out-of-range port
+    # is dropped to "" rather than risking dpt= extension injection (CR-01 iter-2).
+    try:
+        _port_int = int(finding.get("port"))
+        safe_port = _port_int if 0 < _port_int <= 65535 else ""
+    except (TypeError, ValueError):
+        safe_port = ""
+
     return {
         "severity": str(finding.get("severity") or "LOW").upper(),
         "host": str(finding.get("host") or ""),
-        "port": finding.get("port") or "",
+        "port": safe_port,
         "title": title,
         "category": str(raw_category),
         "description": raw_desc[:256],
