@@ -29,7 +29,7 @@ QU.I.R.K. v5.4 splits the scanner into two cooperating **roles within one packag
 1. **Sensor/console split, single package.** There is **no package split**. `quirk sensor`
    and `quirk console` are new mode flags dispatched via the same subcommand-intercept
    pattern already used by `serve`, `schedule`, `token`, `export`, and `ticket` in
-   `run_scan.py` (subcommand dispatch begins at the `serve` intercept ~L381; `quirk sensor`
+   `run_scan.py` (subcommand dispatch begins at the `serve` intercept ~L382; `quirk sensor`
    / `quirk console` intercept identically, before scan argparse).
 2. **Single-tenant only.** No `tenant_id`, no multi-tenancy. One console serves one
    engagement at a time. (See §9.)
@@ -375,7 +375,8 @@ architecture violation** and must be rejected in review.
 - **POSIX-ism audit** — two concrete targets in `quirk/cli/scheduler_cmd.py`:
   1. The relative `Path("output/scheduled")` (~L136) must become
      `cfg.output_root / "scheduled"` so output is not anchored to a POSIX cwd.
-  2. The `signal.SIGTERM` handler (~L258, alongside `SIGINT` at ~L257) must be made
+  2. The `signal.signal(signal.SIGTERM, ...)` handler (~L259, alongside the
+     `signal.signal(signal.SIGINT, ...)` registration ~L258) must be made
      **platform-conditional** (`SIGTERM` is not available the same way on Windows).
 - **`platformdirs`** for data directories (no hardcoded `~/.config` or `/var` paths).
 - **`windows-latest` CI smoke job as a HARD gate** — it must NOT be `continue-on-error`.
@@ -391,5 +392,20 @@ architecture violation** and must be rejected in review.
 
 - **pywin32 Windows Service** — the Scheduled Task (v5.5 ceiling) covers the v5.4 use case
   without admin elevation, so the Service is never built.
+
+---
+
+## Requirement Coverage
+
+Each v5.4 architecture requirement (REQUIREMENTS.md) maps to the section(s) of this document
+that satisfy it. This linkage is the explicit, grep-checkable contract that downstream phases
+cite by section.
+
+| Requirement | Covered by | Notes |
+|-------------|-----------|-------|
+| **ARCH-01** — sensor/console split, wire payload schema, enrollment/auth model, merge pipeline | §1 (split + invariants), §2 (topology), §3 (wire contract), §4 (push sequence), §6 (enrollment & auth), §7 (merge pipeline) | The wire-payload field set (`payload_id`, `pushed_at`, `received_at`, `schema_version`, `sensor_version`) is the §3.1 envelope table. |
+| **ARCH-02** — additive data-model design (`sensor_id`/`segment` nullable on `CryptoEndpoint`, NULL = implicit local sensor, `(sensor_id, host, port)` uniqueness key) | §5 (data-model keying) | Also reflected in invariants §1.3–§1.4. |
+| **ARCH-03** — committed PM decisions (Option A unified scoring, one-time-use enrollment tokens, Windows floor/ceiling scope) | §8 (committed PM decisions); cross-refs §7 (Option A), §6 (tokens), §10 (Windows floor/ceiling) | §10 carries the Windows half of ARCH-03. |
+| **ARCH-04** — enumerated forbidden additions (Celery, Redis, MQTT/RabbitMQ, Postgres, JWT per-sensor tokens, mTLS/PKI, `tenant_id`) | §9 (forbidden additions) | Each forbidden item lists the v5.4-sanctioned alternative. |
 
 ---
