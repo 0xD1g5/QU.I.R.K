@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.4
 milestone_name: — Distributed On-Prem Scanner Architecture
-status: planning
-stopped_at: Phase 108 Plan 02 complete
-last_updated: "2026-05-25T22:30:00.000Z"
+status: executing
+stopped_at: Phase 108 Plan 03 complete
+last_updated: "2026-05-25T23:00:00.000Z"
 last_activity: 2026-05-25
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 8
-  completed_plans: 7
-  percent: 32
+  completed_plans: 8
+  percent: 35
 ---
 
 # Project State
@@ -26,19 +26,20 @@ See: .planning/PROJECT.md (updated 2026-05-25)
 ## Current Position
 
 Phase: 108
-Plan: 02 (complete)
-Status: In progress — Plan 03 next
+Plan: 03 (complete)
+Status: Phase 108 complete — Phase 109 next
 Last activity: 2026-05-25
 
 ```
-v5.4 Progress: [=         ] 2/7 phases | 32% plans complete
+v5.4 Progress: [==        ] 2/7 phases | 35% plans complete
 ```
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7 (v5.4: 108-01, 108-02 + Phase 107 P01/P02)
+- Total plans completed: 8 (v5.4: 108-01, 108-02, 108-03 + Phase 107 P01/P02)
+- Phase 108 P03: 2 tasks, 4 files, ~25 min
 - Phase 108 P02: 3 tasks, 5 files, ~40 min
 - Phase 108 P01: 3 tasks, 7 files, ~25 min
 - Prior milestone (v5.3): 20 plans across 5 phases
@@ -65,6 +66,9 @@ v5.4 Progress: [=         ] 2/7 phases | 32% plans complete
 - 108-02-D-01: _is_retryable includes httpx.HTTPStatusError so 5xx responses trigger tenacity retry; ConnectError/TimeoutException for network failures
 - 108-02-D-02: _spool_payload calls os.makedirs on spool dir after _spool_dir() to handle monkeypatched test dirs
 - 108-02-D-03: _build_envelope and _build_compressed_payload are the canonical serializers — Plan 03 export-results MUST reuse them byte-for-byte
+- 108-03-D-01: _cmd_export_results stores ONLY the compressed payload bytes in .qpush (no wrapper); HMAC verification on import is Phase 109
+- 108-03-D-02: _ingest_envelope Phase 108 stub validates + prints summary; Phase 109 replaces body with sensor_pushes dedup + CryptoEndpoint write
+- 108-03-D-03: skip_replay_window=True on air-gap import path per D-15; payload_id dedup preserved for Phase 109
 
 ### Pending Todos
 
@@ -103,11 +107,11 @@ Carried forward from v5.3 close (2026-05-25):
 
 ## Session Continuity
 
-Last session: 2026-05-25T22:30:00.000Z
-Stopped at: Phase 108 Plan 02 complete
+Last session: 2026-05-25T23:00:00.000Z
+Stopped at: Phase 108 Plan 03 complete
 Resume file: None
-Next: Phase 108 Plan 03 (export-results / air-gap)
+Next: Phase 109 (console ingest route — sensor_pushes dedup + CryptoEndpoint write)
 
 ## Operator Next Steps
 
-- Continue Phase 108 with Plan 03 (export-results air-gap file + console import stub)
+- Phase 108 complete — continue with Phase 109 (console ingest route)

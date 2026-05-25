@@ -38,7 +38,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 - [ ] **SENSOR-01**: A consultant can enroll a sensor against a console via `quirk sensor enroll`, binding it to a console URL + segment label and receiving a one-time-use token + stable sensor UUID.
 - [ ] **SENSOR-02**: A sensor runs a local scan (reusing `run_scan.py` unchanged) and pushes the resulting endpoints to the console via `quirk sensor push` over authenticated HTTPS, with `tenacity` exponential-backoff retry and `verify=True` enforced.
 - [ ] **SENSOR-03**: A sensor in a degraded/offline segment spools pushes to a bounded file-per-payload directory and retries delivery when connectivity returns (store-and-forward).
-- [ ] **SENSOR-04**: A consultant can export a sensor's results to a transferable file (`quirk sensor export-results`) and import them on the console (`quirk console import-results`) for truly air-gapped segments (sneakernet).
+- [x] **SENSOR-04**: A consultant can export a sensor's results to a transferable file (`quirk sensor export-results`) and import them on the console (`quirk console import-results`) for truly air-gapped segments (sneakernet).
 - [x] **SENSOR-05**: The sensor runtime is OS-agnostic — a POSIX-ism audit removes/guards platform-specific code (at minimum `scheduler_cmd.py:136` relative path → `cfg.output_root`-anchored, and `:258-259` SIGTERM → `sys.platform != 'win32'`-guarded), and `platformdirs` resolves data/config directories on Windows and POSIX.
 - [ ] **SENSOR-06**: A `windows-latest` CI smoke job validates the sensor contract on real Windows (payload serialization has no backslash paths, clean shutdown), and is a hard gate (not `continue-on-error`). The Linux chaos lab does not satisfy this.
 
@@ -130,7 +130,7 @@ Which phases cover which requirements.
 | SENSOR-01 | Phase 108 | Pending |
 | SENSOR-02 | Phase 108 | Pending |
 | SENSOR-03 | Phase 108 | Pending |
-| SENSOR-04 | Phase 108 | Pending |
+| SENSOR-04 | Phase 108 | Complete |
 | SENSOR-05 | Phase 108 | Complete |
 | SENSOR-06 | Phase 108 | Pending |
 | STAB-02 | Phase 108 | Complete |
