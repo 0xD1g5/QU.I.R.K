@@ -106,12 +106,17 @@ def run_sensor(argv: list[str]) -> None:
     export_p.add_argument("--output", default=".", help="Directory to write .qpush file")
 
     args = parser.parse_args(argv)
-    if args.action == "enroll":
-        _cmd_enroll(args)
-    elif args.action == "push":
-        _cmd_push(args)
-    elif args.action == "export-results":
-        _cmd_export_results(args)
+    try:
+        if args.action == "enroll":
+            _cmd_enroll(args)
+        elif args.action == "push":
+            _cmd_push(args)
+        elif args.action == "export-results":
+            _cmd_export_results(args)
+    except KeyboardInterrupt:
+        # Clean shutdown on Ctrl-C / SIGINT (SENSOR-06 Windows clean-shutdown invariant)
+        print("\nInterrupted.", file=sys.stderr)
+        sys.exit(130)
 
 
 # ---------------------------------------------------------------------------
