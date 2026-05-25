@@ -1,0 +1,27 @@
+name: Python CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  windows-sensor-smoke:
+    name: Windows Sensor Smoke
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project (editable) and pytest
+        run: |
+          pip install -e .
+          pip install pytest
+
+      - name: Run Windows sensor smoke tests
+        run: pytest tests/test_sensor_windows_smoke.py tests/test_sensor_no_verify_false.py -v
