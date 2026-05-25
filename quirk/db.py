@@ -122,6 +122,12 @@ _PHASE46_COLUMNS: tuple[tuple[str, str], ...] = (
 _PHASE54_QRAMM_ANSWER_COLUMNS: tuple[tuple[str, str], ...] = (
     ("evidence_note", "TEXT"),  # Phase 54 QRAMM-10
 )
+_V54_SENSOR_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 107 MODEL-01: nullable sensor tracking columns on crypto_endpoints.
+    # NULL sensor_id = implicit local sensor (backward-compatible with pre-v5.4 rows).
+    ("sensor_id", "TEXT"),
+    ("segment",   "TEXT"),
+)
 
 
 def _ensure_columns(
@@ -178,6 +184,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("crypto_endpoints", _PHASE41_COLUMNS),     # Phase 41 D-11
     ("crypto_endpoints", _PHASE46_COLUMNS),     # Phase 46
     ("qramm_answers",    _PHASE54_QRAMM_ANSWER_COLUMNS),  # Phase 54
+    ("crypto_endpoints", _V54_SENSOR_COLUMNS),  # Phase 107 MODEL-01
 )
 
 
@@ -401,6 +408,17 @@ def init_db(db_path: str) -> Engine:
     _ensure_scan_jobs_table(engine)      # Phase 65 — UI-SCAN-01
     _ensure_scan_checkpoints_table(engine)  # Phase 67 — RESUME-01
     _ensure_integration_deliveries_table(engine)  # Phase 101 — NOTIFY-07
+    # Phase 107 D-02: explicit idempotent index on crypto_endpoints.sensor_id.
+    # Column(index=True) + create_all(checkfirst=True) does NOT retro-add an
+    # index to a pre-existing table, so this step is required for backward
+    # compatibility (MODEL-01). Index name, table, and column are hardcoded
+    # literals — no user-controlled interpolation (T-107-02).
+    with engine.connect() as conn:
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_crypto_endpoints_sensor_id"
+            " ON crypto_endpoints (sensor_id)"
+        ))
+        conn.commit()
     return engine
 
 
