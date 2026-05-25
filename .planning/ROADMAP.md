@@ -60,7 +60,9 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
   2. The document locks the additive data-model design: `sensor_id` and `segment` as nullable columns on `CryptoEndpoint`, and the `(sensor_id, host, port)` uniqueness key that distinguishes same RFC1918 IPs across segments
   3. The document records three committed PM decisions: Option A unified scoring (union of findings through existing engine), one-time-use enrollment tokens, and the Windows v5.4 scope (floor vs. ceiling determination)
   4. The document explicitly enumerates forbidden additions (Celery, Redis, MQTT/RabbitMQ, Postgres, JWT per-sensor tokens, mTLS/PKI infra, `tenant_id`) so downstream plans have a concrete violation reference
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 106-01-PLAN.md — Author the 10-section distributed-scanner architecture doc (wire contract, data-model keying, PM decisions, forbidden additions, Windows scope) + 2 Mermaid diagrams
+- [ ] 106-02-PLAN.md — Verify seam citations against current code + ARCH-0N coverage; sync to Obsidian
 
 ### Phase 107: Distributed Data Model
 **Goal**: The database has all tables and columns needed for sensor tracking before any ingestion or merge code is written
@@ -141,7 +143,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 106. Architecture Documentation | 0/? | Not started | - |
+| 106. Architecture Documentation | 0/2 | Not started | - |
 | 107. Distributed Data Model | 0/? | Not started | - |
 | 108. Sensor Push CLI + Windows CI | 0/? | Not started | - |
 | 109. Console Ingestion API | 0/? | Not started | - |
