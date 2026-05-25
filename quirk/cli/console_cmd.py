@@ -93,9 +93,10 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
     file_path: str = args.file
     config_path: str = getattr(args, "config", "config.yaml")
 
-    # Read .qpush file
+    # Read .qpush file (IN-01: use context manager to ensure fd is closed promptly)
     try:
-        raw_file = open(file_path, "rb").read()
+        with open(file_path, "rb") as fh:
+            raw_file = fh.read()
     except OSError as exc:
         print(f"ERROR: cannot read .qpush file: {exc}", file=sys.stderr)
         sys.exit(1)
