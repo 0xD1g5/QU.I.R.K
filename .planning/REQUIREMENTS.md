@@ -28,7 +28,7 @@
 - [x] **SIEM-02**: SIEM export is a findings-push (distinct from drift notifications) with correct CEF field mapping (severity, host, signature/category, evidence), invokable from the CLI and optionally after a scan
 
 ### Ticketing Integration (TICKET)
-- [ ] **TICKET-01**: A user can auto-create a Jira issue per finding, carrying QRAMM evidence in the description, via the `jira` library behind a `[tickets]` extra
+- [x] **TICKET-01**: A user can auto-create a Jira issue per finding, carrying QRAMM evidence in the description, via the `jira` library behind a `[tickets]` extra
 - [ ] **TICKET-02**: A user can auto-create a ServiceNow incident/record per finding (Table API), carrying QRAMM evidence
 - [x] **TICKET-03**: Ticket creation is idempotent across re-scans — a stable finding fingerprint (e.g. `SHA256(host:port:protocol:category)`) is searched before create so re-scans do not proliferate duplicate tickets
 - [x] **TICKET-04**: Jira and ServiceNow share one ticketing abstraction (sink/channel) and the same fingerprint/dedup + evidence-payload logic — not two parallel hand-built code paths
@@ -82,7 +82,7 @@
 | ISEC-04 | Phase 101 | Complete |
 | SIEM-01 | Phase 103 | Complete |
 | SIEM-02 | Phase 103 | Complete |
-| TICKET-01 | Phase 104 | Pending |
+| TICKET-01 | Phase 104 | Complete |
 | TICKET-02 | Phase 105 | Pending |
 | TICKET-03 | Phase 104 | Complete |
 | TICKET-04 | Phase 104 | Complete |

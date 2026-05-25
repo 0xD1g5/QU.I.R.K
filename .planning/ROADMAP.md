@@ -103,7 +103,7 @@ Plans:
   3. Jira credentials are never written to SQLite or logs — they resolve from environment variables; a missing `[tickets]` extra degrades gracefully without an ImportError
 **Plans**: 4 plans
   - [x] 104-01-PLAN.md — TicketingChannel ABC + config + fingerprint/evidence/audit (TICKET-04/03)
-  - [ ] 104-02-PLAN.md — JiraChannel backend + JQL label dedup (TICKET-01/03)
+  - [x] 104-02-PLAN.md — JiraChannel backend + JQL label dedup (TICKET-01/03)
   - [ ] 104-03-PLAN.md — `quirk ticket create` CLI + [tickets] extra + run_scan wiring + CI guard (TICKET-01/03)
   - [ ] 104-04-PLAN.md — docs + UAT-SERIES sync/commit + Obsidian phase note (TICKET-01/03/04)
 
@@ -124,5 +124,5 @@ Plans:
 | 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
 | 102. Dashboard Auth UX + Score Tax | 5/5 | Complete   | 2026-05-25 |
 | 103. SIEM Export | 4/4 | Complete   | 2026-05-25 |
-| 104. Jira Ticketing | 1/4 | In Progress|  |
+| 104. Jira Ticketing | 2/4 | In Progress|  |
 | 105. ServiceNow Ticketing | 0/TBD | Not started | - |
