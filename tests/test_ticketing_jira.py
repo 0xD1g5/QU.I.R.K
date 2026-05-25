@@ -6,6 +6,9 @@ Covers:
   - test_missing_extra_graceful_skip: absent jira package → ImportError with advisory message
   - test_credentials_not_in_logs: planted Bearer token in exc → absent from error_summary (safe_str ISEC-02)
   - test_jql_project_key_quoted: JQL passed to search_issues double-quotes project key (Pitfall 4)
+  - test_invalid_project_key_rejected: project_key with injection chars or lowercase → no channel (CR-01)
+  - test_empty_project_key_rejected: empty project_key → no channel (WR-01)
+  - test_invalid_auth_mode_rejected: unknown auth_mode → no channel (WR-02)
 """
 from __future__ import annotations
 
@@ -16,7 +19,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from quirk.ticketing.config import JiraTicketingCfg
+from quirk.ticketing.config import JiraTicketingCfg, _parse_jira_cfg
 
 
 # ---------------------------------------------------------------------------
@@ -285,3 +288,85 @@ def test_jql_project_key_quoted(monkeypatch: pytest.MonkeyPatch) -> None:
     assert f'labels = "{fp}"' in jql_arg, (
         f"Expected double-quoted labels in JQL; got: {jql_arg!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# CR-01 / WR-01 / WR-02 — config validation regression tests
+# ---------------------------------------------------------------------------
+
+
+def test_invalid_project_key_rejected() -> None:
+    """project_key containing injection chars (e.g. '"') or lowercase must be rejected (CR-01).
+
+    _parse_jira_cfg must return None for any project_key that does not match
+    ^[A-Z][A-Z0-9]{1,99}$ so that no JiraChannel can be constructed with an
+    injectable project_key.
+    """
+    injection_keys = [
+        'SEC" OR project = PRIVATE AND labels = "',  # JQL breakout
+        "sec",            # lowercase — fails regex
+        "123SEC",         # must start with uppercase letter
+        "",               # empty — WR-01
+        "SEC PROJECT",    # spaces
+        "SEC-01",         # hyphens not allowed in Jira keys
+    ]
+    base_raw = {
+        "jira_url": "https://myco.atlassian.net",
+        "jira_user_env": "QUIRK_JIRA_USER",
+        "jira_token_env": "QUIRK_JIRA_TOKEN",
+        "auth_mode": "cloud",
+    }
+    for key in injection_keys:
+        raw = {**base_raw, "project_key": key}
+        result = _parse_jira_cfg(raw)
+        assert result is None, (
+            f"Expected None for project_key={key!r} but got {result!r}"
+        )
+
+
+def test_empty_project_key_rejected() -> None:
+    """Empty project_key must be rejected by _parse_jira_cfg (WR-01).
+
+    An empty project_key produces invalid JQL ('project = ""') that makes
+    all findings silently fail. Validation must catch it at parse time.
+    """
+    raw = {
+        "jira_url": "https://myco.atlassian.net",
+        "jira_user_env": "QUIRK_JIRA_USER",
+        "jira_token_env": "QUIRK_JIRA_TOKEN",
+        "auth_mode": "cloud",
+        # project_key intentionally absent → defaults to ""
+    }
+    result = _parse_jira_cfg(raw)
+    assert result is None, (
+        f"Expected None for missing/empty project_key but got {result!r}"
+    )
+
+
+def test_invalid_auth_mode_rejected() -> None:
+    """auth_mode not in {'cloud', 'server'} must be rejected (WR-02).
+
+    An unrecognised auth_mode silently falls to the wrong auth branch. The
+    config parser must return None for any unknown value.
+    """
+    invalid_modes = ["oauth", "cloud ", "server1", "basic", ""]
+    base_raw = {
+        "jira_url": "https://myco.atlassian.net",
+        "jira_user_env": "QUIRK_JIRA_USER",
+        "jira_token_env": "QUIRK_JIRA_TOKEN",
+        "project_key": "SEC",
+    }
+    for mode in invalid_modes:
+        raw = {**base_raw, "auth_mode": mode}
+        result = _parse_jira_cfg(raw)
+        assert result is None, (
+            f"Expected None for auth_mode={mode!r} but got {result!r}"
+        )
+
+    # Valid modes must still succeed
+    for mode in ("cloud", "server"):
+        raw = {**base_raw, "auth_mode": mode}
+        result = _parse_jira_cfg(raw)
+        assert result is not None, (
+            f"Expected JiraTicketingCfg for valid auth_mode={mode!r} but got None"
+        )
