@@ -32,6 +32,25 @@ output:
   directory: "tmp/sample_output"
   db_path: "tmp/sample_output/sample.sqlite"
 
+# Jira Ticketing — Phase 104 (v5.3+)
+# Create one Jira issue per finding with SHA-256 fingerprint dedup.
+# Requires: pip install "quirk-scanner[tickets]"
+#           QUIRK_CONFIG_PATH env var pointing to this file
+#           QUIRK_DB_PATH for audit rows
+#           QUIRK_JIRA_USER  — set to your Jira email (cloud) or username (server)
+#           QUIRK_JIRA_TOKEN — set to your Jira API token (cloud) or PAT (server)
+# SECURITY: store env var NAMES here only — never credential values.
+#
+# ticketing:
+#   jira:
+#     jira_url: https://acme.atlassian.net    # required: Jira base URL
+#     jira_user_env: QUIRK_JIRA_USER          # env var NAME holding email/username
+#     jira_token_env: QUIRK_JIRA_TOKEN        # env var NAME holding API token or PAT
+#     project_key: SEC                         # required: Jira project key
+#     issue_type: Bug                          # optional: default Bug
+#     auth_mode: cloud                         # cloud (default) or server (PAT)
+#     allow_internal: false                    # set true for self-hosted Jira on RFC1918
+
 # SIEM Export (syslog/CEF) — Phase 103 (v5.3+)
 # Deliver one CEF:0 event per finding to a syslog collector after each scheduled scan.
 # Requires: QUIRK_CONFIG_PATH env var pointing to this file; QUIRK_DB_PATH for the audit row.
