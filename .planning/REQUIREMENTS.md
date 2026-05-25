@@ -24,7 +24,7 @@
 - [x] **ISEC-04**: Every integration client library is an optional extra with lazy import + graceful skip — a missing/absent integration dependency never breaks the minimal install or a scan
 
 ### SIEM / Observability Export (SIEM)
-- [ ] **SIEM-01**: A user can export findings to a SIEM in syslog/CEF format (vendor-neutral) — landing in any syslog-ingesting platform (Splunk, Elastic, QRadar, etc.)
+- [x] **SIEM-01**: A user can export findings to a SIEM in syslog/CEF format (vendor-neutral) — landing in any syslog-ingesting platform (Splunk, Elastic, QRadar, etc.)
 - [x] **SIEM-02**: SIEM export is a findings-push (distinct from drift notifications) with correct CEF field mapping (severity, host, signature/category, evidence), invokable from the CLI and optionally after a scan
 
 ### Ticketing Integration (TICKET)
@@ -80,7 +80,7 @@
 | ISEC-02 | Phase 101 | Complete |
 | ISEC-03 | Phase 101 | Complete |
 | ISEC-04 | Phase 101 | Complete |
-| SIEM-01 | Phase 103 | Pending |
+| SIEM-01 | Phase 103 | Complete |
 | SIEM-02 | Phase 103 | Complete |
 | TICKET-01 | Phase 104 | Pending |
 | TICKET-02 | Phase 105 | Pending |
