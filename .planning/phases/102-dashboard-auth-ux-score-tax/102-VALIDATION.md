@@ -46,8 +46,9 @@ created: 2026-05-24
 | 03-T2 | 102-03 | 1 | TRANS-04 | T-102-10/11 | score sourced from exec_content; numbers unchanged | unit | `python -m pytest tests/test_score_parity.py tests/test_cross_surface_parity.py -q` | ✅ after T1 | ⬜ pending |
 | 04-T1 | 102-04 | 2 | AUTH-03 | T-102-12/15 | localStorage token + X-API-Key + probe /api/scans | typecheck | `cd src/dashboard && npx tsc --noEmit -p tsconfig.json` | N/A | ⬜ pending |
 | 04-T2 | 102-04 | 2 | AUTH-03 | T-102-12/14 | LoginPage per UI-SPEC + Sign out + mount guard | typecheck | `cd src/dashboard && npx tsc --noEmit -p tsconfig.json` | N/A | ⬜ pending |
-| 04-T3 | 102-04 | 2 | AUTH-03 | T-102-16 | rebuilt statics serve the login surface | build | `cd src/dashboard && npm run build` | N/A | ⬜ pending |
-| 04-T4 | 102-04 | 2 | AUTH-03 | T-102-13/14 | login renders, token flow, logout, passthrough | manual UAT | human visual confirmation | N/A | ⬜ pending |
+| 04-T3 | 102-04 | 2 | AUTH-03 | T-102-14 | mid-session 401 → logout via shared lib/api.ts handler (no circular dep) | typecheck | `cd src/dashboard && npx tsc --noEmit -p tsconfig.json` | N/A | ⬜ pending |
+| 04-T4 | 102-04 | 2 | AUTH-03 | T-102-16 | rebuilt statics serve the login surface | build | `cd src/dashboard && npm run build` | N/A | ⬜ pending |
+| 04-T5 | 102-04 | 2 | AUTH-03 | T-102-13/14 | login renders, token flow, logout, mid-session 401, passthrough | manual UAT | human visual confirmation | N/A | ⬜ pending |
 | 05-T1 | 102-05 | 3 | AUTH-01/02/03 | T-102-17 | auth surface documented (no insecure guidance) | doc check | `grep -qi "quirk token" docs/configuration.md` | N/A | ⬜ pending |
 | 05-T2 | 102-05 | 3 | AUTH-01/02/03/TRANS-04 | T-102-17 | UAT-SERIES updated + Obsidian phase note | doc check | `grep -qi "quirk token" docs/UAT-SERIES.md` | N/A | ⬜ pending |
 

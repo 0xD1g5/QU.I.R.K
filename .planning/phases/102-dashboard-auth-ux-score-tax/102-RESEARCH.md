@@ -669,22 +669,16 @@ The `exec_content is None` backward-compat block (lines 192-202 area) remains re
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`quirk token show` — masked vs full output**
-   - What we know: CONTEXT.md does not specify; "show" implies retrieval.
-   - What's unclear: Should the token be printed in full (useful for copy-paste) or masked (security theater since the user runs the command)?
-   - Recommendation: Print in full (the user controls their terminal; masking adds friction with no real security benefit for a local tool).
+1. **`quirk token show` — masked vs full output** — RESOLVED (A1): print the FULL token. The user controls their terminal; masking adds copy-paste friction with no real security benefit for a local single-tenant tool. `token show` reads the YAML value directly and notes when the QUIRK_API_TOKEN env var is set (takes precedence).
+   - What we knew: CONTEXT.md does not specify; "show" implies retrieval.
 
-2. **`window.__QUIRK_CONFIG__` — remove or fallback?**
-   - What we know: `quirk serve` currently injects `apiToken` into the HTML via `__QUIRK_CONFIG__`. After AUTH-03, `fetchApi` reads localStorage instead.
-   - What's unclear: Does the serve command still need to inject the token? If auth is enabled, the user must enter the token in the login form — so no server-side injection is needed.
-   - Recommendation: Remove the `window.__QUIRK_CONFIG__.apiToken` injection from `quirk serve`. Keep `__QUIRK_CONFIG__` for non-auth config (if any) but strip the `apiToken` field.
+2. **`window.__QUIRK_CONFIG__` — remove or fallback?** — RESOLVED (A2): REMOVE the `window.__QUIRK_CONFIG__.apiToken` injection. localStorage is the single token source per CONTEXT.md; with auth enabled the user enters the token in the login form, so no server-side injection is needed. The `__QUIRK_CONFIG__` global declaration may remain for non-auth config but the `apiToken` field is dropped from `_resolveToken`.
+   - What we knew: `quirk serve` currently injects `apiToken` into the HTML via `__QUIRK_CONFIG__`. After AUTH-03, `fetchApi` reads localStorage instead.
 
-3. **401-while-authenticated hook pattern**
-   - What we know: UI-SPEC.md requires treating a 401 while authenticated as a logout trigger.
-   - What's unclear: Whether to implement this in `fetchApi()` (requires access to AuthContext, creating a circular dependency) or in each hook.
-   - Recommendation: Implement in individual hooks (`useScanData`, `useTrendsData`, etc.) using a shared utility `handleAuthError(status, logout)`.
+3. **401-while-authenticated hook pattern** — RESOLVED (A3): handle via a SHARED UTIL in the fetch layer (`lib/api.ts`), NOT inside AuthContext. `lib/api.ts` exposes `setUnauthorizedHandler`; AuthProvider registers `logout` into it on mount. `fetchApi` fires the registered handler on a 401 when a token was sent. This keeps the single intercept point (UI-SPEC line 241), avoids scattering across hooks, and avoids the circular dependency that importing AuthContext into `fetchApi` would create. (Planned as 102-04 Task 3.)
+   - What we knew: UI-SPEC.md requires treating a 401 while authenticated as a logout trigger.
 
 ---
 
@@ -845,11 +839,11 @@ Step 2.6: No missing dependencies. All tools already present in the development 
 | AUTH-03 frontend | HIGH | App.tsx, sidebar.tsx, lib/api.ts fully read; UI-SPEC.md is locked |
 | TRANS-04 score refactor | HIGH | executive.py score section lines identified; ExecContent fields verified |
 
-### Open Questions
+### Open Questions (RESOLVED)
 
-- `quirk token show` — masked vs full output (recommend full; planner decides)
-- `window.__QUIRK_CONFIG__.apiToken` — remove injection from `quirk serve` or keep as fallback (recommend remove)
-- 401-while-authenticated handling pattern — fetchApi callback vs per-hook check (recommend per-hook)
+- `quirk token show` — masked vs full output → RESOLVED (A1): print the FULL token (local tool; no masking benefit).
+- `window.__QUIRK_CONFIG__.apiToken` → RESOLVED (A2): REMOVE the injection from `quirk serve`; localStorage is the single source.
+- 401-while-authenticated handling → RESOLVED (A3): SHARED util in `lib/api.ts` (`setUnauthorizedHandler` registered by AuthProvider), not inside AuthContext — avoids the circular dependency (planned as 102-04 Task 3).
 
 ### Ready for Planning
 
