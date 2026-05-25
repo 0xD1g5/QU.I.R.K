@@ -262,6 +262,72 @@ def test_dispatch_fan_out_creates_delivery_rows(tmp_path, monkeypatch):
     assert statuses == {"ok"}
 
 
+def test_dispatch_email_channel_reaches_transport(tmp_path, monkeypatch):
+    """NOTIFY-04 regression: the email fan-out passes a DriftSummary to the
+    _channel_send_email wrapper, not a pre-built string.
+
+    Guards against the bug where dispatch_notifications passed a `str` body to
+    _channel_send_email(cfg, summary), which then crashed on summary.new_high.
+    Here we let the REAL _channel_send_email wrapper run and stub only the
+    lowest-level send_email transport — so a regression to passing a string
+    re-raises AttributeError and fails this test.
+    """
+    import quirk.notify.channels.email as email_mod
+    from quirk.notify import dispatcher
+    from quirk.notify.config import NotifyCfg, EmailNotifyCfg
+
+    current_ts = datetime(2026, 1, 2, 12, 0, 0)
+    previous_ts = datetime(2026, 1, 1, 12, 0, 0)
+
+    cfg = NotifyCfg(
+        trigger_score_floor=-5,
+        email=EmailNotifyCfg(
+            smtp_host="smtp.example.com",
+            smtp_from="quirk@example.com",
+            recipients=["sec@example.com"],
+        ),
+    )
+    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
+
+    fake_report = _make_trend_report(new_high=2, score_delta=-8, previous_score=80)
+    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+
+    # Stub only the transport — the real _channel_send_email wrapper runs and
+    # reads summary.new_high / summary.current_score from the DriftSummary.
+    captured = {}
+
+    def _fake_send_email(cfg, subject, body):
+        captured["subject"] = subject
+        captured["body"] = body
+
+    monkeypatch.setattr(email_mod, "send_email", _fake_send_email)
+
+    db_path = _make_db(tmp_path)
+    schedule = _add_schedule(db_path)
+
+    with get_session(db_path) as db:
+        run = ScheduledRun(
+            schedule_id=schedule.id,
+            dispatched_at=_utcnow_naive(),
+            status="completed",
+            scan_output_path=None,
+            scan_id=None,
+        )
+        db.add(run)
+        db.commit()
+
+        dispatcher.dispatch_notifications(run=run, schedule=schedule, db=db)
+        rows = db.query(IntegrationDelivery).filter_by(destination="email").all()
+
+    # Transport was reached with a real subject/body derived from the summary.
+    assert "subject" in captured, "send_email was never called — email fan-out broken"
+    assert "2 new HIGH" in captured["subject"]
+    # Exactly one email delivery row, status ok (no AttributeError crash).
+    assert len(rows) == 1
+    assert rows[0].status == "ok"
+
+
 def test_dispatch_delivery_failure_isolated(tmp_path, monkeypatch):
     """NOTIFY-07: A channel raising an exception records 'failed' row; other channels still run.
 

@@ -125,42 +125,6 @@ def should_notify(report: TrendReport, threshold: int = 5) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Per-channel delivery with failure isolation
-# ---------------------------------------------------------------------------
-
-
-def _deliver(channel_label: str, channel_fn, channel_cfg, call_arg, db: Session) -> None:
-    """Invoke one channel sender and write an IntegrationDelivery audit row.
-
-    Per-channel failure isolation (NOTIFY-07, T-101-13):
-    - Any exception from channel_fn is caught.
-    - error_summary is always safe_str(exc) — never raw exception text (ISEC-02, T-101-11).
-    - A WARNING is logged via safe_str (no secret leak into logs).
-    - The delivery row is written regardless of success/failure.
-    - Other channels are unaffected.
-    """
-    row = IntegrationDelivery(
-        scan_id="",  # will be set by caller before this call
-        destination=channel_label,
-        status="ok",
-        attempted_at=datetime.now(timezone.utc).replace(tzinfo=None),
-        error_summary=None,
-    )
-    try:
-        channel_fn(channel_cfg, call_arg)
-    except Exception as exc:
-        row.status = "failed"
-        row.error_summary = safe_str(exc)  # ISEC-02: safe_str always, never str(exc)
-        logger.warning(
-            "Delivery failed (%s): %s",
-            channel_label,
-            safe_str(exc),  # ISEC-02: safe_str in logs too
-        )
-    db.add(row)
-    db.commit()
-
-
-# ---------------------------------------------------------------------------
 # Main fan-out entry point
 # ---------------------------------------------------------------------------
 
@@ -247,21 +211,8 @@ def dispatch_notifications(
         db.commit()
 
     if notify_cfg.email is not None:
-        subject = (
-            f"QUIRK Alert: {report.new_high} new HIGH finding(s) "
-            f"— score {report.current_score}"
-        )
-        body_lines = [
-            "QUIRK Quantum-Readiness Alert",
-            f"Score: {report.current_score} (was {report.previous_score}, "
-            f"delta {report.score_delta:+d})",
-            f"New findings — HIGH: {report.new_high}  MEDIUM: {report.new_medium}"
-            f"  LOW: {report.new_low}",
-        ]
-        if summary.dashboard_url:
-            body_lines.append(f"\nDashboard: {summary.dashboard_url}")
-        body = "\n".join(body_lines) + "\n"
-
+        # _channel_send_email builds subject/body from the shared DriftSummary
+        # (one-content-model pattern) — pass summary, never a pre-built string.
         row_email = IntegrationDelivery(
             scan_id=scan_id,
             destination="email",
@@ -270,7 +221,7 @@ def dispatch_notifications(
             error_summary=None,
         )
         try:
-            _channel_send_email(notify_cfg.email, body)
+            _channel_send_email(notify_cfg.email, summary)
         except Exception as exc:
             row_email.status = "failed"
             row_email.error_summary = safe_str(exc)
