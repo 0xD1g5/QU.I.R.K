@@ -65,6 +65,9 @@ def send_syslog_raw(
     # --- Build payload: <PRI>CEF:0|... encoded as UTF-8 ---
     payload = f"<{_SYSLOG_PRI}>{cef_msg}".encode("utf-8")
 
+    _VALID_PROTOCOLS = {"udp", "tcp"}
+    if protocol not in _VALID_PROTOCOLS:
+        raise ValueError(f"protocol must be 'udp' or 'tcp', got: {protocol!r}")
     socktype = socket.SOCK_STREAM if protocol == "tcp" else socket.SOCK_DGRAM
 
     with socket.socket(socket.AF_INET, socktype) as sock:
