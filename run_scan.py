@@ -505,6 +505,18 @@ def main():
         run_ticket(_sys.argv[2:])
         return
 
+    # --- sensor subcommand: intercept before scan argparse (Phase 108 SENSOR-01/02/03/04) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "sensor":
+        from quirk.cli.sensor_cmd import run_sensor
+        run_sensor(_sys.argv[2:])
+        return
+
+    # --- console subcommand: intercept before scan argparse (Phase 108 SENSOR-04) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "console":
+        from quirk.cli.console_cmd import run_console
+        run_console(_sys.argv[2:])
+        return
+
     # --- errors subcommand: intercept before scan argparse (Phase 68 UX-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "errors":
         from quirk.cli.errors_cmd import run_errors
