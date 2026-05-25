@@ -165,7 +165,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 **Key context:**
 - **Anchor-first to avoid grab-bag sprawl.** HORIZON's explicit risk for this milestone is integration sprawl; mitigation is to finish notification fan-out first, then add exactly ONE export + ONE ticketing integration — not all of everything.
-- **Single-tenant only.** SaaS multi-tenancy / distributed multi-node (999.22) remain deferred to v5.4 unless v5.3 adoption surfaces a multi-segment customer ask.
+- **Single-tenant only.** SaaS multi-tenancy stays parked (gated on a business-model signal). Distributed multi-node (999.22, on-prem agent/console split) was decoupled from the SaaS gate on 2026-05-25 — the multi-segment on-prem ask surfaced and it's now the committed **v5.4 anchor** (network-topology necessity for segmented enterprise engagements, not a SaaS bet). See HORIZON.md.
 - Third-party integration APIs (Slack/webhooks, Splunk HEC/Elastic/CEF, Jira/ServiceNow) are unfamiliar external surfaces with real auth/format/rate-limit pitfalls — research-first milestone.
 - 2:1 cadence holds: v5.2 deliverable → **v5.3 adoption/ops** → v5.4 stabilization + SaaS-validation. Numbering continues at Phase 101. Source of truth for forward outlook: `.planning/HORIZON.md`.
 

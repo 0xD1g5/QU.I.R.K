@@ -2,8 +2,8 @@
 
 **Purpose:** Themes for the next 5–7 milestones — deep enough to anchor backlog grooming and inter-milestone deferrals, shallow enough to revise after each ship. **Plan the next one or two in detail; sketch the rest.**
 
-**Last updated:** 2026-05-23 (post-v5.1 ship)
-**Current state:** v5.1 Authenticated Scanning + API Surface Depth SHIPPED 2026-05-23 — ephemeral credential model, OpenAPI/bearer analysis, LDAP/TLS-EKU code-signing inventory, and gated active REST fuzzing all live; `SCORE_WEIGHTS` at 303.0/41. The detection surface is now deep and broad across six scanner families. **Next milestone (v5.2) scoped below — the deliverable (report) layer is the chosen anchor.** The forward outlook has been re-prioritized through a product lens: for a consulting tool, the report a client receives *is* the product, and no milestone has yet owned the output layer.
+**Last updated:** 2026-05-25 (post-v5.3 ship + distributed-architecture prioritization)
+**Current state:** v5.3 Adoption & Integration Surface SHIPPED 2026-05-25 (Phases 101–105, 20 plans, audit PASSED 21/21, tag `v5.3.0`) — notification fan-out (Slack/email/webhook), SIEM CEF export, and Jira+ServiceNow ticketing on one shared SSRF-safe/secret-scrubbing integration layer, plus single-tenant dashboard token auth. **Next milestone (v5.4) re-scoped below: Distributed On-Prem Scanner Architecture is now the committed anchor** (the "multi-segment ask" gate is satisfied — see PM review 2026-05-25). SaaS multi-tenancy stays parked. The v5.3 live-delivery human-UAT items are parked (no test environment).
 
 ---
 
@@ -57,7 +57,7 @@ QRAMM (Quantum Readiness Assessment & Maturity Model) — 120-question maturity 
 
 **Framing:** v4.x–v5.1 built a deep, broad *detection* engine across six scanner families (TLS, SSH, identity, data-at-rest, data-in-motion, API/auth) plus governance (QRAMM) and a public distribution. **What has never had a dedicated milestone is the output layer** — the report the consultant hands the client. For a consulting-grade tool, that report *is* the product; better detection only creates value if it's communicated defensibly. The forward outlook is therefore re-ordered: **deliverable first, adoption second, scale-out last.**
 
-The 2:1 capability/ops cadence still holds: v5.0 (ops) → v5.1 (capability) → **v5.2 (deliverable/capability) → v5.3 (adoption/ops) → v5.4 (stabilization + scale validation).**
+The 2:1 capability/ops cadence held through v5.3: v5.0 (ops) → v5.1 (capability) → v5.2 (deliverable) → v5.3 (adoption/ops). **v5.4 breaks the breather rhythm deliberately** — distributed on-prem scanning is a capability cliff for the ICP (segmented enterprise networks), and v5.3 closed low-debt, so the breather defers; stabilization items fold into v5.4's tail instead. v5.0 (ops) → v5.1 (capability) → v5.2 (deliverable) → v5.3 (adoption/ops) → **v5.4 (distributed architecture — capability)**.
 
 ## v5.2 — Consulting-Grade Reporting *(NEXT — user-anchored North Star)*
 
@@ -90,16 +90,26 @@ Make QU.I.R.K. load-bearing inside someone else's workflow. First-party integrat
 **Why now:** v4.10 shipped distribution; reporting (v5.2) makes the deliverable excellent; v5.3 makes it *flow into* the customer's existing tooling. Lower technical risk than capability work, higher adoption signal.
 **Risk:** without a North Star it sprawls into a grab-bag. Mitigation: finish notification fan-out first as the anchor, then add one export + one ticketing integration.
 
-## v5.4 — Stabilization + Distributed/SaaS Validation *(was the v5.2 sketch)*
+## v5.4 — Distributed On-Prem Scanner Architecture *(NEXT — anchor; decoupled from SaaS 2026-05-25)*
 
-Breather cycle: docs (999.58 comprehensive architecture document, 999.59 operators-guide all-settings coverage), residual tech-debt sweep, dependency hygiene. **Commit to distributed/multi-tenant infrastructure (999.22 multi-node agent/console split, SaaS multi-tenancy) only if v5.3 adoption surfaces a real multi-segment customer ask.** If adoption stays single-host single-tenant, this milestone stays a stabilization cycle and the SaaS bet defers again.
+**The gate is satisfied.** 999.22 was held pending "a real multi-segment customer ask"; that ask surfaced (2026-05-25 PM review). 999.22 (distributed on-prem, single-tenant) is now **COMMITTED and decoupled from SaaS** — it is a *network-topology/engagement-completeness* necessity, not a business-model bet. **SaaS multi-tenancy stays PARKED** (different problem, bigger lift, gated on a business-model signal that does not yet exist).
 
-| Backlog | Item |
-|---|---|
-| 999.58 | Comprehensive architecture document |
-| 999.59 | Operators-guide all-configurations-and-settings coverage |
-| 999.22 | Distributed multi-node scanner architecture (agent/console split) — *gated on adoption signal* |
-| — | SaaS-mode dashboard: auth, multi-tenancy, per-tenant isolation — *gated on adoption signal* |
+**Why now (not a stabilization breather):** enterprise networks are segmented by design (DMZ, PCI zones, OT/ICS VLANs, air-gapped enclaves). A single-host scanner cannot reach all segments and cannot produce one authoritative score across them — a capability cliff for the ICP (consultants/enterprise teams running real engagements). v5.3 just built the console-side primitives (token-auth ingestion, outbound-push + delivery-audit + SSRF/`safe_str` discipline); a sensor→console push is their mirror image, so the groundwork is freshest now. v5.3 also closed low-debt, so stabilization pressure is low → low cost to defer the breather. The synergistic stabilization item (999.58 architecture doc) folds in as Phase 1 rather than consuming a separate cycle.
+
+**Anchor / North Star:** an **agent/console split** — sensors scan locally inside each segment and push results *outbound* to a single-tenant console that merges them into one CBOM + one quantum-readiness score. No inbound access to segments required.
+
+| Backlog | Item | Status |
+|---|---|---|
+| 999.22 | Distributed multi-node scanner architecture (agent/console split) | **COMMITTED — v5.4 anchor** |
+| 999.58 | Comprehensive architecture document | fold in as Phase 1 (design input for the agent/console split) |
+| 999.59 | Operators-guide all-configurations-and-settings coverage | stabilization tail |
+| (tech-debt) | Extract duplicated `_NoRedirectHandler` → `quirk/util/no_redirect.py`; residual dep hygiene | stabilization tail |
+| — | SaaS-mode dashboard: multi-tenancy, per-tenant isolation | **PARKED — gated on a business-model signal, NOT topology** |
+
+**Likely shape (sketch, confirm at new-milestone):** (1) architecture doc + data-model design — `sensor_id`/segment dimension on `CryptoEndpoint` (same RFC1918 IP can exist in two segments); (2) authenticated results-ingestion API on the console (reuses v5.3 auth + push patterns); (3) sensor mode + enrollment (scan-local, push-outbound); (4) cross-sensor merge → one CBOM + one score; (5) stabilization tail (999.59, dep hygiene, NoRedirectHandler extract).
+**Risk:** biggest architectural change in the project's history (new service role + data-model change). Mitigation: architecture doc first (Phase 1) before any code; single-tenant only; SaaS stays out of scope.
+
+**Parked (not a v5.4 entry condition):** the 19 v5.3 live-delivery human-UAT items (Slack/email/webhook/syslog/Jira/ServiceNow) stay deferred — no test environment available to validate them. Automated coverage is green; live validation resumes if/when an environment exists. Do NOT block v5.4 on them.
 
 ---
 
@@ -109,6 +119,7 @@ Track here when the horizon shifts so future-you can see why:
 
 | Item | From | To | Rationale | Date |
 |---|---|---|---|---|
+| Distributed on-prem scanner (999.22) decoupled from SaaS + promoted to v5.4 anchor | v5.4 = stabilization breather; 999.22 + SaaS both gated on adoption signal | v5.4 = Distributed On-Prem Scanner Architecture (anchor); SaaS stays parked | PM review with the user as PM (2026-05-25, post-v5.3 ship). 999.22 (on-prem, single-tenant, agent/console) was conflated with SaaS multi-tenancy under one "wait for multi-segment demand" gate — but they're different problems: distributed on-prem is a network-topology/engagement-completeness necessity (segmented enterprise nets a single host can't reach), SaaS is a business-model bet. The user surfaced a concrete multi-segment on-prem need → the gate's condition is met. Groundwork is freshest now (v5.3 just built the console-side auth + outbound-push primitives). v5.3 closed low-debt → low cost to defer the breather; 999.58 arch doc folds in as Phase 1. SaaS stays parked (no business-model signal). v5.3 live-delivery human-UAT items parked (no test environment) — explicitly NOT a v5.4 entry condition. | 2026-05-25 |
 | Forward outlook re-prioritized: Reporting promoted to NEXT (v5.2) | v5.0/v5.1 candidate sketches A/B/C; Distributed/SaaS at v5.2 | v5.2 Consulting-Grade Reporting → v5.3 Adoption → v5.4 Stabilization+SaaS-validation | v5.0 (stabilization) and v5.1 (auth/API capability) both shipped, consuming candidates A and C. Product-lens review (with the user as PM): for a consulting tool the *report is the product*, and no milestone has owned the output layer despite a now-deep detection engine. Reporting compounds all prior detection work and is the engagement moment-of-truth → promoted to NEXT. Adoption/integration (old Candidate B) follows. Distributed/SaaS pushed one more slot, still gated on a real adoption signal. | 2026-05-23 |
 | v5.1 candidate A (Authenticated Scanning) collapsed to shipped recap | sketch | one-paragraph recap | Shipped 2026-05-23 as Phases 93–96; details in v5.1-MILESTONE-AUDIT.md. | 2026-05-23 |
 | v5.0 candidate C (Stabilization) collapsed to shipped recap | sketch | one-paragraph recap | Shipped 2026-05-22 as Phases 87–92; details in v5.0-MILESTONE-AUDIT.md. | 2026-05-23 |
