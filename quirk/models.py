@@ -240,3 +240,21 @@ class ScanCheckpoint(Base):
     endpoint_count  = Column(Integer, nullable=False, default=0)
     partial_failure = Column(Boolean, nullable=False, default=False)
     error_summary   = Column(Text, nullable=True)   # JSON array or NULL
+
+
+class IntegrationDelivery(Base):
+    """Phase 101 NOTIFY-07 / ISEC-03: delivery audit log for all integration phases.
+
+    Shared by Phases 103 (SIEM), 104 (Jira), 105 (ServiceNow).
+    error_summary is always safe_str(exc) — never a raw exception.
+    """
+
+    __tablename__ = "integration_deliveries"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    scan_id       = Column(String(64), nullable=False, index=True)  # ISO ts from current_session_ts
+    finding_hash  = Column(String(64), nullable=True)               # SHA256 dedup key (future phases)
+    destination   = Column(String(64), nullable=False)              # "slack" | "email" | "webhook"
+    status        = Column(String(16), nullable=False)              # "ok" | "failed"
+    attempted_at  = Column(DateTime,   nullable=False)
+    error_summary = Column(Text,       nullable=True)               # safe_str(exc) — never raw exc
