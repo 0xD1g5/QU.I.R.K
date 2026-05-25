@@ -40,7 +40,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 ### Phases
 
 - [x] **Phase 106: Architecture Documentation** — No-code gating anchor; locks wire contract, data-model keying, PM decisions, and forbidden-additions list before any v5.4 code ships (completed 2026-05-25)
-- [ ] **Phase 107: Distributed Data Model** — Additive nullable columns + enrollment manifest + token + dedup tables; migration regression test; backward-compatible fixture
+- [x] **Phase 107: Distributed Data Model** — Additive nullable columns + enrollment manifest + token + dedup tables; migration regression test; backward-compatible fixture (completed 2026-05-25)
 - [ ] **Phase 108: Sensor Push CLI + Windows CI** — `quirk sensor enroll/push/export-results`; POSIX-ism audit; `platformdirs`; `tenacity` retry; `_NoRedirectHandler` extraction; `windows-latest` hard-gate CI smoke job
 - [ ] **Phase 109: Console Ingestion API** — `POST /api/sensor/push` with `require_auth`, body-size limit, payload-ID dedup, clock-skew window, delivery audit, `safe_str` coverage
 - [ ] **Phase 110: Cross-Sensor Merge & Scoring** — `quirk/sensor/merge.py`; Option A union scoring; `coverage_warning` for offline sensors; CBOM `sensor_id` component identity; `quirk sensor merge` CLI
@@ -84,7 +84,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 **Plans**: 2 plans
 
 - [x] 107-01-PLAN.md — ORM models (Sensor/SensorToken/SensorPush) + sensor_id/segment columns on CryptoEndpoint; _V54_SENSOR_COLUMNS in _ADDITIVE_MIGRATIONS + CREATE INDEX step in init_db
-- [ ] 107-02-PLAN.md — Backward-compat regression (pre-v5.4 DB migrates, no data loss, score-stable), CASCADE-delete proof, allowlist poison-tuple, smoke-test update
+- [x] 107-02-PLAN.md — Backward-compat regression (pre-v5.4 DB migrates, no data loss, score-stable), CASCADE-delete proof, allowlist poison-tuple, smoke-test update
 
 ### Phase 108: Sensor Push CLI + Windows CI
 
@@ -169,7 +169,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 106. Architecture Documentation | 2/2 | Complete    | 2026-05-25 |
-| 107. Distributed Data Model | 1/2 | In Progress|  |
+| 107. Distributed Data Model | 2/2 | Complete   | 2026-05-25 |
 | 108. Sensor Push CLI + Windows CI | 0/? | Not started | - |
 | 109. Console Ingestion API | 0/? | Not started | - |
 | 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
