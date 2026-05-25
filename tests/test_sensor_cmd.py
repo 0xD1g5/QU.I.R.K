@@ -20,13 +20,11 @@ def test_enroll_writes_sensor_yaml(tmp_path, monkeypatch):
     """SENSOR-01: enroll writes a sensor.yaml with all required keys."""
     sensor_yaml = tmp_path / "sensor.yaml"
 
-    # Patch validate_external_url to always return ok
+    # Patch validate_external_url on the sensor_cmd module (already imported at module top)
     mock_result = MagicMock()
     mock_result.ok = True
-    monkeypatch.setattr(
-        "quirk.util.url_allowlist.validate_external_url",
-        lambda *a, **kw: mock_result,
-    )
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
 
     from quirk.cli.sensor_cmd import _cmd_enroll
 
@@ -66,10 +64,8 @@ def test_enroll_sensor_id_is_uuid(tmp_path, monkeypatch):
 
     mock_result = MagicMock()
     mock_result.ok = True
-    monkeypatch.setattr(
-        "quirk.util.url_allowlist.validate_external_url",
-        lambda *a, **kw: mock_result,
-    )
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
 
     from quirk.cli.sensor_cmd import _cmd_enroll
 
@@ -94,10 +90,8 @@ def test_enroll_hmac_key_is_64_hex_chars(tmp_path, monkeypatch):
 
     mock_result = MagicMock()
     mock_result.ok = True
-    monkeypatch.setattr(
-        "quirk.util.url_allowlist.validate_external_url",
-        lambda *a, **kw: mock_result,
-    )
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
 
     from quirk.cli.sensor_cmd import _cmd_enroll
 
@@ -125,10 +119,8 @@ def test_enroll_token_not_in_yaml(tmp_path, monkeypatch, capsys):
 
     mock_result = MagicMock()
     mock_result.ok = True
-    monkeypatch.setattr(
-        "quirk.util.url_allowlist.validate_external_url",
-        lambda *a, **kw: mock_result,
-    )
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
 
     from quirk.cli.sensor_cmd import _cmd_enroll
 
@@ -173,10 +165,8 @@ def test_enroll_creates_config_dir_if_absent(tmp_path, monkeypatch):
 
     mock_result = MagicMock()
     mock_result.ok = True
-    monkeypatch.setattr(
-        "quirk.util.url_allowlist.validate_external_url",
-        lambda *a, **kw: mock_result,
-    )
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
 
     from quirk.cli.sensor_cmd import _cmd_enroll
 
@@ -199,10 +189,8 @@ def test_enroll_ssrf_guard_exits_nonzero(monkeypatch, capsys):
     mock_result = MagicMock()
     mock_result.ok = False
     mock_result.reason = "internal_ip"
-    monkeypatch.setattr(
-        "quirk.util.url_allowlist.validate_external_url",
-        lambda *a, **kw: mock_result,
-    )
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
 
     from quirk.cli.sensor_cmd import _cmd_enroll
 
@@ -218,7 +206,7 @@ def test_enroll_ssrf_guard_exits_nonzero(monkeypatch, capsys):
 
     assert exc_info.value.code != 0
     captured = capsys.readouterr()
-    assert "console URL" in captured.err.lower() or "console url" in captured.err
+    assert "console url" in captured.err.lower()
 
 
 def test_enroll_atomic_write(tmp_path, monkeypatch):
@@ -227,10 +215,8 @@ def test_enroll_atomic_write(tmp_path, monkeypatch):
 
     mock_result = MagicMock()
     mock_result.ok = True
-    monkeypatch.setattr(
-        "quirk.util.url_allowlist.validate_external_url",
-        lambda *a, **kw: mock_result,
-    )
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
 
     from quirk.cli import sensor_cmd
 
@@ -452,6 +438,10 @@ def test_push_retry_on_5xx(tmp_path, monkeypatch):
     monkeypatch.setattr("quirk.cli.sensor_cmd._flush_spool", lambda *a, **kw: None)
     # Prevent spool write on failure
     monkeypatch.setattr("quirk.cli.sensor_cmd._spool_payload", lambda *a, **kw: None)
+
+    # Speed up retries so test doesn't wait 2-60 seconds per attempt
+    import tenacity
+    monkeypatch.setattr("quirk.cli.sensor_cmd._do_push.retry.wait", tenacity.wait_none())
 
     from quirk.cli.sensor_cmd import _cmd_push
 
