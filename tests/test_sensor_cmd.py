@@ -964,6 +964,241 @@ def test_spool_filename_is_uuid_pattern(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Export-results tests (SENSOR-04)
+# ---------------------------------------------------------------------------
+
+
+def _make_sensor_cfg(tmp_path) -> tuple:
+    """Return (sensor_yaml_path, sensor_cfg_dict) for export tests."""
+    sid = str(uuid.uuid4())
+    hmac_key = os.urandom(32).hex()
+    cfg = {
+        "console_url": "https://console.example",
+        "sensor_id": sid,
+        "segment": "air-gap-dmz",
+        "engagement": "eng-999",
+        "sensor_version": "5.4.0",
+        "hmac_key": hmac_key,
+        "console_api_token": "tok",
+    }
+    sensor_yaml = tmp_path / "sensor.yaml"
+    sensor_yaml.write_text(yaml.dump(cfg))
+    return str(sensor_yaml), cfg
+
+
+def test_export_writes_qpush_file(tmp_path, monkeypatch):
+    """SENSOR-04: export-results writes {sensor_id}-{payload_id}.qpush to --output dir."""
+    sensor_yaml, sensor_cfg = _make_sensor_cfg(tmp_path)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+
+    from quirk.cli.sensor_cmd import _cmd_export_results
+
+    class Args:
+        config = sensor_yaml
+        scan_config = "config.yaml"
+        output = str(output_dir)
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setattr("tempfile.mkdtemp", lambda: td)
+        with pytest.raises(SystemExit) as exc_info:
+            _cmd_export_results(Args())
+
+    assert exc_info.value.code == 0
+    qpush_files = list(output_dir.glob("*.qpush"))
+    assert len(qpush_files) == 1, f"Expected 1 .qpush file, found {len(qpush_files)}"
+    fname = qpush_files[0].name
+    assert fname.startswith(sensor_cfg["sensor_id"]), (
+        f"Filename must start with sensor_id; got {fname}"
+    )
+    assert fname.endswith(".qpush"), f"Filename must end with .qpush; got {fname}"
+
+
+def test_export_filename_contains_payload_id(tmp_path, monkeypatch):
+    """SENSOR-04: .qpush filename is {sensor_id}-{payload_id}.qpush; both are valid UUIDs."""
+    sensor_yaml, sensor_cfg = _make_sensor_cfg(tmp_path)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+
+    from quirk.cli.sensor_cmd import _cmd_export_results
+
+    class Args:
+        config = sensor_yaml
+        scan_config = "config.yaml"
+        output = str(output_dir)
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setattr("tempfile.mkdtemp", lambda: td)
+        with pytest.raises(SystemExit):
+            _cmd_export_results(Args())
+
+    fname = list(output_dir.glob("*.qpush"))[0].name
+    # Format: {sensor_id}-{payload_id}.qpush
+    # Strip the sensor_id prefix + hyphen + payload_id = UUID-UUID.qpush
+    sid = sensor_cfg["sensor_id"]
+    assert fname.startswith(sid + "-")
+    payload_part = fname[len(sid) + 1 : -len(".qpush")]
+    parsed = uuid.UUID(payload_part)
+    assert parsed.version == 4
+
+
+def test_export_body_byte_identical_to_push_body(tmp_path, monkeypatch):
+    """SENSOR-04: .qpush compressed-payload bytes are byte-identical to the push request body.
+
+    Both export and push call _build_envelope and _build_compressed_payload with identical
+    inputs (monkeypatched fixed payload_id and pushed_at).  The resulting bytes MUST be
+    identical — this is the single shared serialization path invariant.
+    """
+    import zstandard
+
+    sensor_yaml, sensor_cfg = _make_sensor_cfg(tmp_path)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    # Fix payload_id and pushed_at so both push and export produce identical envelopes
+    fixed_payload_id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    fixed_pushed_at = "2026-05-25T12:00:00Z"
+
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+
+    original_build_envelope = sensor_cmd_mod._build_envelope
+
+    def patched_build_envelope(sc, endpoints):
+        env = original_build_envelope(sc, endpoints)
+        env["payload_id"] = fixed_payload_id
+        env["pushed_at"] = fixed_pushed_at
+        return env
+
+    monkeypatch.setattr(sensor_cmd_mod, "_build_envelope", patched_build_envelope)
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
+
+    from quirk.cli.sensor_cmd import _cmd_export_results, _build_compressed_payload
+
+    class Args:
+        config = sensor_yaml
+        scan_config = "config.yaml"
+        output = str(output_dir)
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setattr("tempfile.mkdtemp", lambda: td)
+        with pytest.raises(SystemExit) as exc_info:
+            _cmd_export_results(Args())
+    assert exc_info.value.code == 0
+
+    # Read the .qpush file bytes
+    qpush_file = list(output_dir.glob("*.qpush"))[0]
+    qpush_bytes = qpush_file.read_bytes()
+
+    # Reproduce what push would have sent as the request body with same inputs
+    # Build envelope the same way push does, then compress
+    expected_envelope = patched_build_envelope(sensor_cfg, [])
+    expected_body = _build_compressed_payload(expected_envelope)
+
+    # The .qpush file content must equal the compressed payload exactly
+    # (the payload segment — export stores exactly the compressed payload bytes)
+    assert qpush_bytes == expected_body, (
+        "export .qpush bytes must be byte-identical to the push request body; "
+        "export must reuse _build_compressed_payload, not fork serialization"
+    )
+
+    # Additionally verify it decompresses to a valid envelope
+    raw = zstandard.ZstdDecompressor().decompress(qpush_bytes)
+    recovered = json.loads(raw.decode("utf-8"))
+    assert recovered["payload_id"] == fixed_payload_id
+    assert recovered["sensor_id"] == sensor_cfg["sensor_id"]
+
+
+def test_export_decompresses_to_canonical_envelope_keys(tmp_path, monkeypatch):
+    """SENSOR-04: .qpush body decompresses to an envelope with the canonical key set."""
+    import zstandard
+
+    sensor_yaml, sensor_cfg = _make_sensor_cfg(tmp_path)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+
+    from quirk.cli.sensor_cmd import _cmd_export_results
+
+    class Args:
+        config = sensor_yaml
+        scan_config = "config.yaml"
+        output = str(output_dir)
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setattr("tempfile.mkdtemp", lambda: td)
+        with pytest.raises(SystemExit):
+            _cmd_export_results(Args())
+
+    qpush_bytes = list(output_dir.glob("*.qpush"))[0].read_bytes()
+    raw = zstandard.ZstdDecompressor().decompress(qpush_bytes)
+    envelope = json.loads(raw.decode("utf-8"))
+
+    expected_keys = {
+        "payload_id",
+        "pushed_at",
+        "schema_version",
+        "sensor_version",
+        "sensor_id",
+        "segment",
+        "findings",
+    }
+    assert set(envelope.keys()) == expected_keys
+    assert "received_at" not in envelope
+
+
+def test_export_no_network_call(tmp_path, monkeypatch):
+    """SENSOR-04: export-results does NOT make any httpx network calls."""
+    sensor_yaml, _ = _make_sensor_cfg(tmp_path)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    # Make httpx.Client raise if instantiated
+    def _fail_if_httpx_called(*a, **kw):
+        raise AssertionError("export-results must not make any httpx network calls")
+
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+
+    try:
+        import httpx
+        monkeypatch.setattr(httpx, "Client", _fail_if_httpx_called)
+    except ImportError:
+        pass
+
+    from quirk.cli.sensor_cmd import _cmd_export_results
+
+    class Args:
+        config = sensor_yaml
+        scan_config = "config.yaml"
+        output = str(output_dir)
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setattr("tempfile.mkdtemp", lambda: td)
+        with pytest.raises(SystemExit) as exc_info:
+            _cmd_export_results(Args())
+
+    assert exc_info.value.code == 0
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
