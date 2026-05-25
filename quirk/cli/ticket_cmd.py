@@ -135,7 +135,7 @@ def run_ticket(argv: list[str]) -> None:
         from quirk.ticketing.jira import JiraChannel  # noqa: PLC0415
 
         db_path = os.environ.get("QUIRK_DB_PATH") or "quirk.db"
-        scan_id = Path(findings_path).name
+        scan_id = Path(findings_path).stem[:64]  # drop .json, cap at String(64) (WR-03)
         channel = JiraChannel(cfg.jira)
 
         with get_session(db_path) as db:
