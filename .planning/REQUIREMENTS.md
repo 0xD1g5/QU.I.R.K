@@ -28,10 +28,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Distributed Data Model (MODEL)
 
-- [ ] **MODEL-01**: `CryptoEndpoint` gains nullable `sensor_id` and `segment` columns via the existing `_ensure_columns` / `_ADDITIVE_MIGRATIONS` pattern; a pre-v5.4 SQLite fixture loads and scores unchanged (backward-compatible).
-- [ ] **MODEL-02**: A `sensors` enrollment manifest table exists (sensor UUID, segment label, optional engagement label, `last_push_at`, expected cadence) so the console knows which sensors are expected.
-- [ ] **MODEL-03**: A `sensor_tokens` table stores SHA-256 hashes of per-sensor enrollment tokens (mirrors the existing `token_cmd.py` pattern; raw token never persisted).
-- [ ] **MODEL-04**: A `sensor_pushes` dedup table stores accepted `payload_id`s so replayed/duplicate pushes are rejected idempotently.
+- [x] **MODEL-01**: `CryptoEndpoint` gains nullable `sensor_id` and `segment` columns via the existing `_ensure_columns` / `_ADDITIVE_MIGRATIONS` pattern; a pre-v5.4 SQLite fixture loads and scores unchanged (backward-compatible).
+- [x] **MODEL-02**: A `sensors` enrollment manifest table exists (sensor UUID, segment label, optional engagement label, `last_push_at`, expected cadence) so the console knows which sensors are expected.
+- [x] **MODEL-03**: A `sensor_tokens` table stores SHA-256 hashes of per-sensor enrollment tokens (mirrors the existing `token_cmd.py` pattern; raw token never persisted).
+- [x] **MODEL-04**: A `sensor_pushes` dedup table stores accepted `payload_id`s so replayed/duplicate pushes are rejected idempotently.
 
 ### Sensor Mode (SENSOR)
 
@@ -123,10 +123,10 @@ Which phases cover which requirements.
 | ARCH-02 | Phase 106 | Complete |
 | ARCH-03 | Phase 106 | Complete |
 | ARCH-04 | Phase 106 | Complete |
-| MODEL-01 | Phase 107 | Pending |
-| MODEL-02 | Phase 107 | Pending |
-| MODEL-03 | Phase 107 | Pending |
-| MODEL-04 | Phase 107 | Pending |
+| MODEL-01 | Phase 107 | Complete |
+| MODEL-02 | Phase 107 | Complete |
+| MODEL-03 | Phase 107 | Complete |
+| MODEL-04 | Phase 107 | Complete |
 | SENSOR-01 | Phase 108 | Pending |
 | SENSOR-02 | Phase 108 | Pending |
 | SENSOR-03 | Phase 108 | Pending |
