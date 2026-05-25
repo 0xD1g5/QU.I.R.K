@@ -237,11 +237,12 @@ def test_import_results_calls_ingest_with_skip_replay(tmp_path, monkeypatch):
 
     ingest_calls = []
 
-    def fake_ingest(envelope, config_path, skip_replay_window=False):
+    def fake_ingest(envelope, config_path, skip_replay_window=False, qpush_sig=None):
         ingest_calls.append({
             "envelope": envelope,
             "config_path": config_path,
             "skip_replay_window": skip_replay_window,
+            "qpush_sig": qpush_sig,
         })
 
     import quirk.cli.console_cmd as console_cmd_mod
@@ -274,7 +275,7 @@ def test_import_results_single_ingest_entry(tmp_path, monkeypatch):
 
     ingest_calls = []
 
-    def fake_ingest(envelope, config_path, skip_replay_window=False):
+    def fake_ingest(envelope, config_path, skip_replay_window=False, qpush_sig=None):
         ingest_calls.append(True)
 
     import quirk.cli.console_cmd as console_cmd_mod
