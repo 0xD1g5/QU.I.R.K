@@ -57,7 +57,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 **Plans**: 4 plans
 - [x] 101-01-PLAN.md — Foundation: safe_str secret patterns, integration_deliveries table, [notify] extra (ISEC-02, NOTIFY-07)
 - [x] 101-02-PLAN.md — Security primitives: NotifyCfg loader + to_integration_payload whitelist + DriftSummary (NOTIFY-06, ISEC-03)
-- [ ] 101-03-PLAN.md — Channels: Slack/email/webhook senders with delivery-time SSRF + lazy import (NOTIFY-03/04/05, ISEC-01, ISEC-04)
+- [x] 101-03-PLAN.md — Channels: Slack/email/webhook senders with delivery-time SSRF + lazy import (NOTIFY-03/04/05, ISEC-01, ISEC-04)
 - [ ] 101-04-PLAN.md — Dispatcher + scheduler wiring + docs/Obsidian/UAT (NOTIFY-01/02/07, ISEC-02)
 **UI hint**: yes
 
@@ -107,7 +107,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 101. Notification Fan-Out + Security Foundation | 2/4 | In Progress|  |
+| 101. Notification Fan-Out + Security Foundation | 3/4 | In Progress|  |
 | 102. Dashboard Auth UX + Score Tax | 0/TBD | Not started | - |
 | 103. SIEM Export | 0/TBD | Not started | - |
 | 104. Jira Ticketing | 0/TBD | Not started | - |
