@@ -40,7 +40,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] **Phase 102: Dashboard Auth UX + Score Tax** — X-API-Key header support, token generate/rotate CLI, React login form, and CLI exec-score sourced from shared content model (completed 2026-05-25)
 - [x] **Phase 103: SIEM Export** — Per-scan per-finding batch push to syslog/CEF (vendor-neutral) and Splunk HEC, zero new pip deps (completed 2026-05-25)
 - [x] **Phase 104: Jira Ticketing** — Per-finding Jira issue creation with shared ticketing abstraction, SHA256 fingerprint dedup, and QRAMM evidence in descriptions (completed 2026-05-25)
-- [ ] **Phase 105: ServiceNow Ticketing** — ServiceNow incident/record creation reusing the Phase 104 ticketing abstraction and dedup infrastructure
+- [x] **Phase 105: ServiceNow Ticketing** — ServiceNow incident/record creation reusing the Phase 104 ticketing abstraction and dedup infrastructure (completed 2026-05-25)
 
 ## Phase Details
 
@@ -118,7 +118,7 @@ Plans:
 **Plans**: 3 plans
 - [x] 105-01-PLAN.md — ServiceNow backend (ServiceNowChannel subclass + config + Wave 0 tests)
 - [x] 105-02-PLAN.md — CLI --backend dispatch + tests
-- [ ] 105-03-PLAN.md — docs + Obsidian + UAT-SERIES (v5.3 close)
+- [x] 105-03-PLAN.md — docs + Obsidian + UAT-SERIES (v5.3 close)
 
 ## Progress
 
@@ -128,4 +128,4 @@ Plans:
 | 102. Dashboard Auth UX + Score Tax | 5/5 | Complete   | 2026-05-25 |
 | 103. SIEM Export | 4/4 | Complete   | 2026-05-25 |
 | 104. Jira Ticketing | 4/4 | Complete   | 2026-05-25 |
-| 105. ServiceNow Ticketing | 2/3 | In Progress|  |
+| 105. ServiceNow Ticketing | 3/3 | Complete   | 2026-05-25 |
