@@ -152,21 +152,25 @@ class TestHeaderEscaping:
     """CEF header fields escape backslash and pipe; equals is NOT escaped."""
 
     def test_pipe_in_title_escaped(self):
-        """A pipe in the title (name field) becomes \\|."""
+        r"""A pipe in the title (name field) becomes \| in the raw CEF line.
+
+        NOTE: A naive str.split("|") will produce more than 8 parts when the
+        title contains an escaped pipe, because str.split() does not understand
+        CEF escape sequences.  A compliant CEF parser treats \| as a literal
+        pipe in the value, not as a field separator.  We verify that the escaped
+        form \| is present in the raw line (not a bare unescaped pipe inside the
+        name field), not by counting raw splits.
+        """
         from quirk.siem.formatter import build_cef_event
 
         line = build_cef_event(_minimal_finding(title="TLS|Failure"), "1.0.0")
-        # The name field is the 6th field (index 5). We look for \| in the line
-        # but NOT as a raw pipe that would split the header.
-        parts = line.split("|")
-        # After escaping: "TLS\|Failure" — the literal \| appears in the name field,
-        # so splitting on | gives more parts with that specific escaped pipe.
-        # Confirm \| appears in the raw line (not \\\\| double-escape).
+        # The escaped pipe \| must appear in the line
         assert r"\|" in line, f"Expected escaped pipe in line: {line}"
-        # The field count is still 8 (escaped pipes do not count as separators)
-        assert len(parts) == 8, (
-            f"Escaped pipe must not create extra fields. Got {len(parts)} fields: {parts}"
-        )
+        # The title without escaping ("TLS" followed immediately by "|" then "Failure"
+        # as three separate split tokens) must NOT appear — i.e. the bare pipe is escaped
+        # NOTE: we can confirm this by checking the name field directly using _cef_escape_header
+        from quirk.siem.formatter import _cef_escape_header
+        assert _cef_escape_header("TLS|Failure") == r"TLS\|Failure"
 
     def test_backslash_in_title_escaped(self):
         """A backslash in the title becomes \\\\."""
