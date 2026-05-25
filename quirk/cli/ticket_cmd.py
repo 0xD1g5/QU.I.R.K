@@ -146,5 +146,14 @@ def run_ticket(argv: list[str]) -> None:
     except SystemExit:
         raise
     except Exception as exc:
-        print(f"ERROR: ticket command failed: {safe_str(exc)}", file=sys.stderr)
+        # Distinguish audit-row persistence failure (DB error after dispatch loop)
+        # from ticket delivery failure (caught per-finding inside dispatch_finding).
+        # If this path is reached, all per-finding audit rows may have been rolled
+        # back by get_session — no audit records were persisted (WR-04).
+        err_msg = safe_str(exc)
+        print(
+            f"ERROR: ticket command failed — audit-row persistence failed, "
+            f"no audit records were saved: {err_msg}",
+            file=sys.stderr,
+        )
         sys.exit(2)
