@@ -35,10 +35,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import uuid
+from datetime import datetime, timezone
 
 import zstandard
+
+logger = logging.getLogger(__name__)
 
 # 20 MB decompression cap — 2× the 10 MB HTTPS body limit (D-09, CR-01).
 # A .qpush file that expands beyond this is rejected; prevents zstd bomb attacks.
@@ -303,49 +307,154 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
     sys.exit(0)
 
 
+class DuplicatePayloadError(Exception):
+    """Raised when a payload_id already exists in sensor_pushes (dedup gate)."""
+
+
+def _parse_dt(value: object) -> datetime | None:
+    """Parse an ISO-8601 datetime string to tz-naive UTC.
+
+    Returns None on any parse failure — malformed strings must not crash ingest.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return (
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+            .replace(tzinfo=None)
+        )
+    except (ValueError, TypeError):
+        return None
+
+
 def _ingest_envelope(
     envelope: dict,
     config_path: str,
     skip_replay_window: bool = False,
     qpush_sig: str | None = None,
+    db=None,  # Session | None — injected by HTTPS route; created internally for CLI
 ) -> None:
-    """Phase 108 ingest stub — deserialize, validate, and print summary.
+    """Shared ingest path for HTTPS push and air-gap import.
 
-    Phase 109 replaces this body with:
-    - sensor_pushes table dedup (payload_id uniqueness → 409 on replay)
-    - CryptoEndpoint persistence from findings
-    - received_at console timestamp stamping
-    - HMAC-SHA256 verification of qpush_sig against the per-sensor stored key
+    Performs:
+    - sensor_pushes dedup (payload_id UNIQUE → DuplicatePayloadError on replay)
+    - sensors.last_push_at update
+    - CryptoEndpoint row creation per finding (tagged with envelope sensor_id/segment)
 
-    skip_replay_window=True: air-gap transport carve-out per D-15.  The ±15-min
-    clock-window check is skipped; payload_id dedup is preserved for Phase 109.
-    NOTE: payload_id dedup (T-108-10) is NOT enforced here in the Phase 108 stub —
-    Phase 109 will enforce it against the sensor_pushes table.
-
-    qpush_sig: the embedded HMAC-SHA256 from the WR-03 .qpush framing header, or
-    None for HTTPS push paths (signature travels in X-Sensor-Signature header there).
-    Phase 109 will verify qpush_sig against the per-sensor hmac_key stored in the
-    console config before persisting the envelope.
+    Parameters
+    ----------
+    envelope:
+        Decoded push envelope dict (must contain payload_id, sensor_id, segment,
+        findings).
+    config_path:
+        Console config.yaml path (accepted for CLI parity; not currently parsed
+        here — DB path resolved via _default_db_path()).
+    skip_replay_window:
+        When True the ±15-min clock-window is bypassed (air-gap D-15 carve-out).
+        Replay-window enforcement lives in the HTTPS route, not here.
+    qpush_sig:
+        HMAC-SHA256 signature string from WR-03 framing header (air-gap) or the
+        X-Sensor-Signature header (HTTPS path).  Carried as metadata; crypto
+        verification is deferred to v5.5 (T-109-11).
+    db:
+        An injected SQLAlchemy Session (HTTPS path) or None (CLI path, which opens
+        and closes its own session).  When injected the caller owns commit/rollback.
     """
-    sensor_id = envelope.get("sensor_id", "<unknown>")
-    segment = envelope.get("segment", "<unknown>")
-    payload_id = envelope.get("payload_id", "<unknown>")
-    findings = envelope.get("findings", [])
-    finding_count = len(findings) if isinstance(findings, list) else 0
-    schema_version = envelope.get("schema_version", "<unknown>")
-    sensor_version = envelope.get("sensor_version", "<unknown>")
-    sig_status = qpush_sig if qpush_sig is not None else "<none — HTTPS path>"
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.orm import sessionmaker
 
-    print(
-        f"Import summary:\n"
-        f"  sensor_id:      {sensor_id}\n"
-        f"  segment:        {segment}\n"
-        f"  payload_id:     {payload_id}\n"
-        f"  findings:       {finding_count}\n"
-        f"  schema_version: {schema_version}\n"
-        f"  sensor_version: {sensor_version}\n"
-        f"  qpush_sig:      {sig_status}\n"
-        f"  skip_replay_window: {skip_replay_window} (air-gap carve-out, D-15)\n"
-        f"  NOTE: DB ingest (sensor_pushes dedup + CryptoEndpoint write) is Phase 109",
-        flush=True,
-    )
+    from quirk.dashboard.api.deps import _default_db_path
+    from quirk.db import init_db
+    from quirk.models import CryptoEndpoint, Sensor, SensorPush
+    from quirk.util.safe_exc import safe_str
+
+    _own_session = db is None
+    if _own_session:
+        engine = init_db(_default_db_path())
+        _Session = sessionmaker(
+            bind=engine,
+            autoflush=False,
+            autocommit=False,
+            expire_on_commit=False,
+        )
+        db = _Session()
+
+    try:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        sensor_id: str = envelope.get("sensor_id", "")
+        segment: str = envelope.get("segment", "")
+        payload_id: str = envelope.get("payload_id", "")
+        findings: list = envelope.get("findings", []) or []
+
+        # --- Dedup: insert SensorPush row; flush to trigger UNIQUE constraint ---
+        try:
+            db.add(SensorPush(
+                payload_id=payload_id,
+                sensor_id=sensor_id,
+                received_at=now,
+            ))
+            db.flush()
+        except IntegrityError:
+            db.rollback()
+            raise DuplicatePayloadError(payload_id)
+
+        # --- Update sensors.last_push_at ---
+        sensor_row = db.query(Sensor).filter(Sensor.sensor_id == sensor_id).first()
+        if sensor_row is not None:
+            sensor_row.last_push_at = now
+
+        # --- Persist CryptoEndpoint rows (envelope sensor_id/segment are authoritative) ---
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+            ep = CryptoEndpoint(
+                host=finding.get("host") or "",
+                port=finding.get("port") or 0,
+                protocol=finding.get("protocol"),
+                scanned_at=_parse_dt(finding.get("scanned_at")),
+                tls_version=finding.get("tls_version"),
+                cipher_suite=finding.get("cipher_suite"),
+                cert_subject=finding.get("cert_subject"),
+                cert_issuer=finding.get("cert_issuer"),
+                cert_sans=finding.get("cert_sans"),
+                cert_sig_alg=finding.get("cert_sig_alg"),
+                cert_pubkey_alg=finding.get("cert_pubkey_alg"),
+                cert_pubkey_size=finding.get("cert_pubkey_size"),
+                cert_not_before=_parse_dt(finding.get("cert_not_before")),
+                cert_not_after=_parse_dt(finding.get("cert_not_after")),
+                # Envelope top-level values override per-finding sensor_id/segment
+                # (forward-compat — older sensors may emit None in per-finding dict)
+                sensor_id=sensor_id,
+                segment=segment,
+            )
+            db.add(ep)
+
+        if _own_session:
+            db.commit()
+        else:
+            # Injected session: flush so rows are visible; caller owns final commit
+            db.flush()
+
+    except DuplicatePayloadError:
+        # Re-raise after rollback already done above (or by outer caller)
+        if _own_session:
+            # Air-gap path: surface as operator message
+            print(
+                f"ERROR: payload_id already imported: {envelope.get('payload_id', '')}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        raise
+    except Exception as exc:
+        if _own_session:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            logger.warning("Ingest failed: %s", safe_str(exc))
+            print(f"ERROR: ingest failed", file=sys.stderr)
+            sys.exit(1)
+        raise
+    finally:
+        if _own_session:
+            db.close()
