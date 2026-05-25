@@ -7,10 +7,18 @@ Config failure MUST NEVER abort a running scan. All exceptions silently return N
 from __future__ import annotations
 
 import os
+import re as _re
 from dataclasses import dataclass
 from typing import Optional
 
 import yaml
+
+# Jira project keys: uppercase letter followed by 1-99 uppercase letters/digits.
+# Validates at config parse time to prevent JQL injection via project_key (CR-01).
+_PROJECT_KEY_RE = _re.compile(r"^[A-Z][A-Z0-9]{1,99}$")
+
+# Allowed auth_mode values — any other value is a misconfiguration (WR-02).
+_VALID_AUTH_MODES = frozenset({"cloud", "server"})
 
 
 @dataclass
@@ -75,18 +83,30 @@ def _parse_ticketing_cfg(raw: dict) -> TicketingCfg:
 
 
 def _parse_jira_cfg(raw: dict) -> Optional[JiraTicketingCfg]:
-    """Parse the jira sub-block dict into a JiraTicketingCfg. Returns None if missing."""
+    """Parse the jira sub-block dict into a JiraTicketingCfg. Returns None if missing or invalid.
+
+    Validation guards (treat any failure as misconfigured — same path as missing jira_url):
+      - project_key must match ^[A-Z][A-Z0-9]{1,99}$ to prevent JQL injection (CR-01/WR-01).
+      - auth_mode must be "cloud" or "server"; unknown values are rejected (WR-02).
+    """
     if not raw:
         return None
     jira_url = raw.get("jira_url")
     if not jira_url:
         return None
+    project_key = str(raw.get("project_key", ""))
+    if not _PROJECT_KEY_RE.match(project_key):
+        # Empty string, lowercase, or injection chars (e.g. ") fail the regex.
+        return None
+    auth_mode = str(raw.get("auth_mode", "cloud")).lower()
+    if auth_mode not in _VALID_AUTH_MODES:
+        return None
     return JiraTicketingCfg(
         jira_url=str(jira_url),
         jira_user_env=str(raw.get("jira_user_env", "")),
         jira_token_env=str(raw.get("jira_token_env", "")),
-        project_key=str(raw.get("project_key", "")),
+        project_key=project_key,
         issue_type=str(raw.get("issue_type", "Bug")),
-        auth_mode=str(raw.get("auth_mode", "cloud")).lower(),
+        auth_mode=auth_mode,
         allow_internal=bool(raw.get("allow_internal", False)),
     )
