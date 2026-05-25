@@ -96,12 +96,14 @@ Exceptions: none for the login surface. The Card primitive uses its built-in `p-
 
 All values match established patterns detected in `scan-new.tsx`, `sidebar.tsx`, and `label.tsx`. No new sizes or weights.
 
+**This spec declares exactly 2 font weights for the login surface: font-normal (400) and font-semibold (600).**
+
 | Role | Size | Weight | Line Height | Used For |
 |------|------|--------|-------------|----------|
-| Page heading | text-xl (20px) | font-semibold (600) | leading-none | "Dashboard Login" card title |
-| Body / description | text-sm (14px) | font-normal (400) | leading-normal (~1.5) | CardDescription, helper text, muted copy |
-| Label | text-sm (14px) | font-medium (500) | leading-none | `<Label>` for the token input (from labelVariants) |
-| Error | text-sm (14px) | font-normal (400) | leading-normal | Inline error copy (matches scan-new.tsx error pattern) |
+| Page heading / wordmark | text-xl (20px) / text-base (16px) | font-semibold (600) | leading-none | "Dashboard Login" CardTitle; QU.I.R.K. wordmark |
+| Body / description / label / error | text-sm (14px) | font-normal (400) | leading-normal (~1.5) | CardDescription, helper text, muted copy, error copy |
+
+> **shadcn Label note:** The `<Label>` primitive applies `font-medium` via its own `labelVariants` class definition. This is an **inherited shadcn component default**, not a typography decision declared by this spec. It does not count against this surface's 2-weight budget. The executor must not override the Label's internal weight.
 
 Font stack for all login surface text: system UI (Tailwind default). JetBrains Mono is NOT used on the login surface — it is reserved for data/numeric display inside the authenticated dashboard.
 
@@ -134,12 +136,16 @@ Destructive (`--destructive`) reserved for: the inline invalid-token error text.
 <div class="flex min-h-screen items-center justify-center bg-background">
   <Card class="w-full max-w-sm shadow-lg">
     <CardHeader>
-      <span class="text-accent font-black text-base tracking-widest font-mono">QU.I.R.K.</span>
+      <!-- Wordmark: text-base font-semibold (600) — reuses heading weight; teal accent color -->
+      <span class="text-accent font-semibold text-base tracking-widest font-mono">QU.I.R.K.</span>
+      <!-- Card title: text-xl font-semibold (600) -->
       <CardTitle class="text-xl font-semibold mt-2">Dashboard Login</CardTitle>
+      <!-- Description: text-sm font-normal (400) via CardDescription default -->
       <CardDescription>Enter your dashboard token to continue.</CardDescription>
     </CardHeader>
     <CardContent class="space-y-4">
       <div class="space-y-2">
+        <!-- Label: font-medium applied by shadcn labelVariants — INHERITED component default, not a spec weight -->
         <Label htmlFor="token-input">API Token</Label>
         <Input
           id="token-input"
@@ -148,13 +154,14 @@ Destructive (`--destructive`) reserved for: the inline invalid-token error text.
           autoComplete="current-password"
         />
       </div>
-      <!-- Error slot: conditionally rendered, never layout-shifting -->
-      <p class="text-sm text-destructive" role="alert" aria-live="polite">
+      <!-- Error slot: text-sm font-normal (400); conditionally rendered, never layout-shifting -->
+      <p class="text-sm font-normal text-destructive" role="alert" aria-live="polite">
         Invalid token. Check your token and try again.
       </p>
       <Button type="submit" class="w-full">Unlock Dashboard</Button>
     </CardContent>
     <CardFooter>
+      <!-- Helper: text-xs font-normal (400) -->
       <p class="text-xs text-muted-foreground">
         Generate a token with: <code class="font-mono">quirk token generate</code>
       </p>
@@ -200,7 +207,7 @@ Placed at the bottom of the Sidebar `<aside>`, after existing nav and `ModeToggl
   </TooltipTrigger>
   <TooltipContent side="right">Sign out</TooltipContent>
 </Tooltip>
-<!-- Expanded (lg:flex): icon + label -->
+<!-- Expanded (lg:flex): icon + label; button text inherits font-normal (400) from ghost variant -->
 <Button variant="ghost" class="w-full justify-start gap-2 hidden lg:flex" onClick={logout}>
   <LogOut class="h-4 w-4" />
   Sign out
