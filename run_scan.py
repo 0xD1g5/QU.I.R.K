@@ -487,6 +487,12 @@ def main():
         run_analyze_token(_sys.argv[2:])
         return
 
+    # --- token subcommand: intercept before scan argparse (Phase 102 AUTH-01) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "token":
+        from quirk.cli.token_cmd import run_token
+        run_token(_sys.argv[2:])
+        return
+
     # --- errors subcommand: intercept before scan argparse (Phase 68 UX-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "errors":
         from quirk.cli.errors_cmd import run_errors
