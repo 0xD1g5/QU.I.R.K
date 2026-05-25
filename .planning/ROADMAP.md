@@ -86,7 +86,12 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
   1. Running `quirk export --siem` against a completed scan submits one CEF-formatted event per finding to the configured syslog target or Splunk HEC endpoint — verifiable in the receiving platform's event log
   2. A SIEM export triggered after a scheduled scan completes delivers findings with correct CEF field mapping (severity, host, signature/category, evidence) — no raw cert PEM or internal PKI topology is included in the payload
   3. A misconfigured or unreachable SIEM endpoint produces a clear error message and does not abort or corrupt the scan record
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 103-01-PLAN.md — CEF formatter, escaping, severity map, per-finding whitelist (SIEM-02)
+- [ ] 103-02-PLAN.md — SiemCfg loader + stdlib socket transport (UDP/TCP) (SIEM-01)
+- [ ] 103-03-PLAN.md — Dispatcher, `quirk export --siem` CLI, run_scan + scheduler after-scan hook (SIEM-01/02)
+- [ ] 103-04-PLAN.md — Config/CLI docs, sample-config [siem], UAT-SERIES + Obsidian sync
 
 ### Phase 104: Jira Ticketing
 **Goal**: A security team can auto-create one Jira issue per finding carrying QRAMM evidence, with idempotent dedup so re-scans never proliferate duplicate tickets
