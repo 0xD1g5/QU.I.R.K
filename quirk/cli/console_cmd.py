@@ -1,7 +1,11 @@
-"""quirk console — Phase 108 SENSOR-04: console-side air-gap import CLI.
+"""quirk console — Phase 108 SENSOR-04 / Phase 109 CONSOLE-01: console-side CLI.
 
 Subcommands
 -----------
+enroll          Provision a sensor: write a sensors row + a sensor_tokens row
+                (SHA-256 hash of the minted bearer token) to the console DB,
+                and print the raw bearer token once to stdout.
+
 import-results  Read a .qpush air-gap file, decompress and validate the wire
                 envelope, and route through the single ingest entry point
                 (_ingest_envelope).  The ±15-min replay window is SKIPPED for
@@ -10,6 +14,11 @@ import-results  Read a .qpush air-gap file, decompress and validate the wire
 
 Security contract
 -----------------
+* enroll: raw bearer token is printed once to stdout; only the SHA-256 hex
+  digest is stored in sensor_tokens.token_hash — raw token NEVER persisted
+  (T-109-01 mitigation).  IntegrityError on duplicate sensor_id triggers a
+  clean rollback + fixed error message + sys.exit(1); exception text is never
+  printed (T-109-03 / LEAK-02 mitigation).
 * All decompress + envelope key validation is wrapped in try/except →
   clean SystemExit(1) on malformed/oversized input; never a raw traceback
   (T-108-09 mitigation).
@@ -27,6 +36,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import uuid
 
 import zstandard
 
@@ -68,9 +78,36 @@ def run_console(argv: list[str]) -> None:
         help="Console config.yaml path",
     )
 
+    enroll_p = sub.add_parser(
+        "enroll",
+        help="Provision a new sensor: write sensors + sensor_tokens rows and mint bearer token",
+    )
+    enroll_p.add_argument(
+        "--sensor-id",
+        default=None,
+        help="Sensor UUID (generated if omitted; printed to stderr so operator can copy to sensor.yaml)",
+    )
+    enroll_p.add_argument(
+        "--segment",
+        required=True,
+        help="Network segment label (e.g. dmz, corp, prod)",
+    )
+    enroll_p.add_argument(
+        "--engagement",
+        default=None,
+        help="Optional engagement tag",
+    )
+    enroll_p.add_argument(
+        "--config",
+        default="config.yaml",
+        help="Console config.yaml path",
+    )
+
     args = parser.parse_args(argv)
     if args.action == "import-results":
         _cmd_import_results(args)
+    elif args.action == "enroll":
+        _cmd_enroll(args)
 
 
 def _cmd_import_results(args: argparse.Namespace) -> None:
