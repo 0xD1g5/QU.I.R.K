@@ -115,7 +115,11 @@ class ServiceNowChannel(TicketingChannel):
         opener = urllib.request.build_opener(_NoRedirectHandler)
         try:
             with opener.open(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+                raw = resp.read().decode("utf-8")
+            try:
+                data = json.loads(raw)
+            except ValueError as exc:
+                raise RuntimeError("ServiceNow GET returned non-JSON response") from exc
             results = data.get("result", [])
             return results[0]["sys_id"] if results else None
         except urllib.error.HTTPError as exc:
@@ -157,8 +161,19 @@ class ServiceNowChannel(TicketingChannel):
         opener = urllib.request.build_opener(_NoRedirectHandler)
         try:
             with opener.open(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-            return data["result"]["sys_id"]  # 32-char hex — NOT INC-number (Pitfall 2)
+                raw = resp.read().decode("utf-8")
+            try:
+                data = json.loads(raw)
+            except ValueError as exc:
+                raise RuntimeError("ServiceNow POST returned non-JSON response") from exc
+            result = data.get("result") or {}
+            sys_id = result.get("sys_id") if isinstance(result, dict) else None
+            if not sys_id:
+                raise RuntimeError(
+                    f"ServiceNow POST response missing result.sys_id; "
+                    f"body snippet: {raw[:120]!r}"
+                )
+            return sys_id  # 32-char hex — NOT INC-number (Pitfall 2)
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"ServiceNow POST failed: HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:

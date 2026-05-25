@@ -426,3 +426,75 @@ def test_table_valid_custom_accepted() -> None:
     result = _parse_servicenow_cfg(raw)
     assert result is not None, "valid custom table name must be accepted"
     assert result.table == "u_quirk_findings"
+
+
+# ---------------------------------------------------------------------------
+# WR-03 regression: malformed POST response raises descriptive RuntimeError
+# ---------------------------------------------------------------------------
+
+
+def test_create_issue_missing_sys_id_raises_runtime_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST returning 201 with missing result.sys_id raises RuntimeError, not bare KeyError (WR-03)."""
+    monkeypatch.setenv("QUIRK_SNOW_USER", "admin")
+    monkeypatch.setenv("QUIRK_SNOW_PASSWORD", "secret")
+
+    from quirk.ticketing.servicenow import ServiceNowChannel  # noqa: PLC0415
+
+    cfg = _make_cfg()
+    finding = _sample_finding()
+
+    # Malformed: 201 with no result.sys_id
+    malformed_body = {"result": {"number": "INC0000001"}}  # sys_id absent
+
+    def _fake_open(req, timeout=None):
+        return _FakeHTTPResponse(status=201, body=malformed_body)
+
+    with patch(
+        "quirk.ticketing.servicenow.urllib.request.build_opener",
+        return_value=_FakeOpener(_fake_open),
+    ):
+        channel = ServiceNowChannel(cfg)
+        fp = channel.compute_fingerprint(finding)
+        evidence = channel.build_ticket_evidence(finding)
+        with pytest.raises(RuntimeError, match="result.sys_id"):
+            channel.create_issue_from_finding(finding, fp, evidence)
+
+
+def test_create_issue_non_json_response_raises_runtime_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST returning non-JSON body raises RuntimeError, not bare JSONDecodeError (WR-03)."""
+    monkeypatch.setenv("QUIRK_SNOW_USER", "admin")
+    monkeypatch.setenv("QUIRK_SNOW_PASSWORD", "secret")
+
+    from quirk.ticketing.servicenow import ServiceNowChannel  # noqa: PLC0415
+
+    cfg = _make_cfg()
+    finding = _sample_finding()
+
+    class _NonJSONResponse:
+        status = 201
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def read(self):
+            return b"<html>Service Unavailable</html>"
+
+    def _fake_open(req, timeout=None):
+        return _NonJSONResponse()
+
+    with patch(
+        "quirk.ticketing.servicenow.urllib.request.build_opener",
+        return_value=_FakeOpener(_fake_open),
+    ):
+        channel = ServiceNowChannel(cfg)
+        fp = channel.compute_fingerprint(finding)
+        evidence = channel.build_ticket_evidence(finding)
+        with pytest.raises(RuntimeError, match="non-JSON"):
+            channel.create_issue_from_finding(finding, fp, evidence)
