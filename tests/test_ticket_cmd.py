@@ -255,3 +255,40 @@ def test_default_backend_uses_jira(tmp_path: Path) -> None:
     mock_channel_cls.assert_called_once_with(mock_cfg.jira)
     # ServiceNowChannel must NOT have been constructed
     mock_snow_cls.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Test 9: ServiceNowChannel init ValueError (SSRF) → correct error message (WR-02)
+# ---------------------------------------------------------------------------
+
+
+def test_servicenow_init_error_labelled_correctly(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """ValueError from ServiceNowChannel.__init__ (SSRF) must produce 'ticketing backend init
+    failed', NOT 'audit-row persistence failed' (WR-02 regression).
+    """
+    findings = [{"host": "h", "port": 443, "title": "T", "severity": "high"}]
+    findings_file = tmp_path / "findings-20260525-120000.json"
+    findings_file.write_text(json.dumps(findings), encoding="utf-8")
+
+    mock_cfg = MagicMock()
+    mock_cfg.servicenow = MagicMock()  # servicenow block present
+
+    def _raising_init(cfg):
+        raise ValueError("SSRF blocked (loopback) for ServiceNow URL")
+
+    with patch("quirk.cli.ticket_cmd.is_extra_available", return_value=True), \
+         patch("quirk.cli.ticket_cmd.load_ticketing_config", return_value=mock_cfg), \
+         patch("quirk.ticketing.servicenow.ServiceNowChannel", side_effect=_raising_init):
+        with pytest.raises(SystemExit) as exc_info:
+            run_ticket(["create", "--input", str(findings_file), "--backend", "servicenow"])
+        assert exc_info.value.code == 2
+
+    captured = capsys.readouterr()
+    assert "ticketing backend init failed" in captured.err, (
+        f"Expected 'ticketing backend init failed' in stderr, got: {captured.err!r}"
+    )
+    assert "audit-row persistence" not in captured.err, (
+        f"'audit-row persistence' must not appear for an init error: {captured.err!r}"
+    )
