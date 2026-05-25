@@ -4,11 +4,13 @@ Public re-exports:
   NotifyCfg, load_notifications_config  — config loader (NOTIFY-06)
   DriftSummary, build_drift_summary     — shared content model (mirrors ExecContent)
   to_integration_payload                — outbound field whitelist (ISEC-03)
+  dispatch_notifications                — fan-out entry point (NOTIFY-01)
 """
 from __future__ import annotations
 
 from quirk.notify.config import NotifyCfg, load_notifications_config
 from quirk.notify.payload import DriftSummary, build_drift_summary, to_integration_payload
+from quirk.notify.dispatcher import dispatch_notifications
 
 __all__ = [
     "NotifyCfg",
@@ -16,4 +18,5 @@ __all__ = [
     "DriftSummary",
     "build_drift_summary",
     "to_integration_payload",
+    "dispatch_notifications",
 ]
