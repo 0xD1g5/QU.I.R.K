@@ -101,7 +101,11 @@ Plans:
   1. Running `quirk ticket create` against a completed scan opens one Jira issue per finding, each carrying the relevant QRAMM dimension evidence in the description
   2. Running `quirk ticket create` a second time against the same scan (or a follow-up scan with the same findings) does not create duplicate issues — the SHA256 fingerprint label is found via JQL and the existing ticket is updated with a rediscovery comment instead
   3. Jira credentials are never written to SQLite or logs — they resolve from environment variables; a missing `[tickets]` extra degrades gracefully without an ImportError
-**Plans**: TBD
+**Plans**: 4 plans
+  - [ ] 104-01-PLAN.md — TicketingChannel ABC + config + fingerprint/evidence/audit (TICKET-04/03)
+  - [ ] 104-02-PLAN.md — JiraChannel backend + JQL label dedup (TICKET-01/03)
+  - [ ] 104-03-PLAN.md — `quirk ticket create` CLI + [tickets] extra + run_scan wiring + CI guard (TICKET-01/03)
+  - [ ] 104-04-PLAN.md — docs + UAT-SERIES sync/commit + Obsidian phase note (TICKET-01/03/04)
 
 ### Phase 105: ServiceNow Ticketing
 **Goal**: A security team using ServiceNow can auto-create incidents per finding via the same ticketing abstraction and dedup logic established in Phase 104 — no parallel code path
