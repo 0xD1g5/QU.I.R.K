@@ -169,7 +169,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 106. Architecture Documentation | 2/2 | Complete    | 2026-05-25 |
-| 107. Distributed Data Model | 2/2 | Complete   | 2026-05-25 |
+| 107. Distributed Data Model | 2/2 | Complete    | 2026-05-25 |
 | 108. Sensor Push CLI + Windows CI | 0/? | Not started | - |
 | 109. Console Ingestion API | 0/? | Not started | - |
 | 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
