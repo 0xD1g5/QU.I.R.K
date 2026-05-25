@@ -37,7 +37,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 ## Phases
 
 - [x] **Phase 101: Notification Fan-Out + Security Foundation** — Drift-event delivery (Slack, email, webhook) wired into the scheduler seam, plus all integration security primitives inherited by every downstream phase (completed 2026-05-25)
-- [ ] **Phase 102: Dashboard Auth UX + Score Tax** — X-API-Key header support, token generate/rotate CLI, React login form, and CLI exec-score sourced from shared content model
+- [x] **Phase 102: Dashboard Auth UX + Score Tax** — X-API-Key header support, token generate/rotate CLI, React login form, and CLI exec-score sourced from shared content model (completed 2026-05-25)
 - [ ] **Phase 103: SIEM Export** — Per-scan per-finding batch push to syslog/CEF (vendor-neutral) and Splunk HEC, zero new pip deps
 - [ ] **Phase 104: Jira Ticketing** — Per-finding Jira issue creation with shared ticketing abstraction, SHA256 fingerprint dedup, and QRAMM evidence in descriptions
 - [ ] **Phase 105: ServiceNow Ticketing** — ServiceNow incident/record creation reusing the Phase 104 ticketing abstraction and dedup infrastructure
@@ -75,7 +75,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] 102-02-PLAN.md — AUTH-02 X-API-Key auth extension + route-coverage CI gate
 - [x] 102-03-PLAN.md — TRANS-04 CLI executive score sourced from exec_content + parity test
 - [x] 102-04-PLAN.md — AUTH-03 React login form, AuthProvider, Sign out + statics rebuild
-- [ ] 102-05-PLAN.md — Docs (configuration.md) + UAT-SERIES.md + Obsidian phase note sync
+- [x] 102-05-PLAN.md — Docs (configuration.md) + UAT-SERIES.md + Obsidian phase note sync
 **UI hint**: yes
 
 ### Phase 103: SIEM Export
@@ -113,7 +113,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
-| 102. Dashboard Auth UX + Score Tax | 4/5 | In Progress|  |
+| 102. Dashboard Auth UX + Score Tax | 5/5 | Complete   | 2026-05-25 |
 | 103. SIEM Export | 0/TBD | Not started | - |
 | 104. Jira Ticketing | 0/TBD | Not started | - |
 | 105. ServiceNow Ticketing | 0/TBD | Not started | - |
