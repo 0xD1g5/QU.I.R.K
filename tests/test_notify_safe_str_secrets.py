@@ -1,9 +1,13 @@
 """Guard tests: safe_str redacts integration-secret shapes (Phase 101 / ISEC-02).
 
-Three new patterns added to _SENSITIVE_PATTERNS:
+Three new patterns added to _SENSITIVE_PATTERNS in Phase 101:
   1. Slack bot/user tokens: xox[bpoa]-<10+ alphanumeric/dash chars>
   2. Slack incoming webhook URLs: hooks.slack.com/services/<path>
   3. SMTP connection strings with embedded credentials: smtp[s]://user:pass@host
+
+Phase 104 (CR-02):
+  4. Jira auth tuple repr: basic_auth=('user', 'shortpat') / token_auth=<value>
+     Covers short Jira Server PATs that are < 40 chars and bypass the base64 pattern.
 
 A plain non-secret message must pass through unredacted (no over-redaction).
 """
@@ -54,4 +58,32 @@ def test_ordinary_message_not_redacted() -> None:
     result = safe_str(exc)
     assert "ordinary connection refused" in result, (
         f"Non-secret message was incorrectly redacted: {result!r}"
+    )
+
+
+def test_jira_basic_auth_short_pat_is_redacted() -> None:
+    """ISEC-02 / CR-02: short Jira Server PAT in basic_auth= repr must be scrubbed.
+
+    Jira Server PATs can be < 40 chars and bypass the base64 pattern.
+    The basic_auth=('user', 'token') shape in exception messages must be caught.
+    """
+    short_token = "ABCDEFGHIJKLMNabcdefghij"  # 24 chars — typical Jira Server PAT
+    exc = Exception(
+        f"JIRAError: 401 Unauthorized, basic_auth=('user@co.com', '{short_token}')"
+    )
+    result = safe_str(exc)
+    assert short_token not in result, (
+        f"Short Jira PAT leaked into safe_str output: {result!r}"
+    )
+
+
+def test_jira_token_auth_is_redacted() -> None:
+    """ISEC-02 / CR-02: token_auth= shape in Jira exception repr must be scrubbed."""
+    short_token = "myshortpat123"  # 13 chars — well below 40-char floor
+    exc = Exception(
+        f"Connection error: token_auth='{short_token}' rejected by server"
+    )
+    result = safe_str(exc)
+    assert short_token not in result, (
+        f"Short token_auth value leaked into safe_str output: {result!r}"
     )

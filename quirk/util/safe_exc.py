@@ -43,6 +43,9 @@ _SENSITIVE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"hooks\.slack\.com/services/[A-Za-z0-9/]+"),
     # Phase 101 ISEC-02: SMTP connection strings with embedded credentials
     re.compile(r"smtps?://[^:@\s]+:[^@\s]+@"),
+    # Phase 104 ISEC-02: Jira/generic auth tuple repr — catches short PATs that
+    # bypass the 40-char base64 pattern (e.g. basic_auth=('user', 'shortpat')).
+    re.compile(r"(basic_auth|token_auth)\s*=\s*[\('\"]\S+", re.IGNORECASE),
 )
 
 
