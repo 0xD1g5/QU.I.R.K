@@ -160,6 +160,22 @@ def _dispatch_schedule(
     run.scan_output_path = str(output_dir)
     schedule.last_run_at = now
     db.commit()
+
+    # Phase 101 NOTIFY-01: dispatch notifications for this completed run.
+    # Deferred import avoids circular-import between scheduler_cmd and dispatcher.
+    # Full try/except: notification failure must NEVER propagate or corrupt the
+    # scan record — the run row is already committed above (NOTIFY-07, T-101-10).
+    try:
+        from quirk.notify.dispatcher import dispatch_notifications
+        dispatch_notifications(run=run, schedule=schedule, db=db)
+    except Exception as exc:  # noqa: BLE001
+        import logging as _logging
+        from quirk.util.safe_exc import safe_str as _safe_str
+        _logging.getLogger(__name__).warning(
+            "Notification dispatch error (scan record unaffected): %s",
+            _safe_str(exc),
+        )
+
     return run
 
 
