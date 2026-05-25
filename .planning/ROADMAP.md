@@ -41,7 +41,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 - [x] **Phase 106: Architecture Documentation** — No-code gating anchor; locks wire contract, data-model keying, PM decisions, and forbidden-additions list before any v5.4 code ships (completed 2026-05-25)
 - [x] **Phase 107: Distributed Data Model** — Additive nullable columns + enrollment manifest + token + dedup tables; migration regression test; backward-compatible fixture (completed 2026-05-25)
-- [ ] **Phase 108: Sensor Push CLI + Windows CI** — `quirk sensor enroll/push/export-results`; POSIX-ism audit; `platformdirs`; `tenacity` retry; `_NoRedirectHandler` extraction; `windows-latest` hard-gate CI smoke job
+- [x] **Phase 108: Sensor Push CLI + Windows CI** — `quirk sensor enroll/push/export-results`; POSIX-ism audit; `platformdirs`; `tenacity` retry; `_NoRedirectHandler` extraction; `windows-latest` hard-gate CI smoke job (completed 2026-05-25)
 - [ ] **Phase 109: Console Ingestion API** — `POST /api/sensor/push` with `require_auth`, body-size limit, payload-ID dedup, clock-skew window, delivery audit, `safe_str` coverage
 - [ ] **Phase 110: Cross-Sensor Merge & Scoring** — `quirk/sensor/merge.py`; Option A union scoring; `coverage_warning` for offline sensors; CBOM `sensor_id` component identity; `quirk sensor merge` CLI
 - [ ] **Phase 111: Console Dashboard Awareness** — Sensor registry UI; per-segment filter on findings/CBOM/score APIs; per-segment score gauges; `coverage_warning` banner; `sensor_id`/`segment` Pydantic fields
@@ -103,9 +103,9 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 **Plans**: 4 plans
 
 - [x] 108-01-PLAN.md — STAB-02 _NoRedirectHandler extraction + platformdirs/tenacity/zstandard deps + scheduler POSIX-ism fixes
-- [ ] 108-02-PLAN.md — quirk sensor enroll/push: bound sensor.yaml + one-time token, wire envelope + HMAC + tenacity HTTPS push, bounded store-and-forward spool
-- [ ] 108-03-PLAN.md — air-gap: quirk sensor export-results (byte-identical .qpush) + quirk console import-results ingest stub
-- [ ] 108-04-PLAN.md — windows-latest hard-gate CI smoke job + no-backslash/clean-shutdown tests + docs/UAT-SERIES.md update & Obsidian sync
+- [x] 108-02-PLAN.md — quirk sensor enroll/push: bound sensor.yaml + one-time token, wire envelope + HMAC + tenacity HTTPS push, bounded store-and-forward spool
+- [x] 108-03-PLAN.md — air-gap: quirk sensor export-results (byte-identical .qpush) + quirk console import-results ingest stub
+- [x] 108-04-PLAN.md — windows-latest hard-gate CI smoke job + no-backslash/clean-shutdown tests + docs/UAT-SERIES.md update & Obsidian sync
 **UI hint**: no
 
 ### Phase 109: Console Ingestion API
@@ -175,7 +175,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 |-------|----------------|--------|-----------|
 | 106. Architecture Documentation | 2/2 | Complete    | 2026-05-25 |
 | 107. Distributed Data Model | 2/2 | Complete    | 2026-05-25 |
-| 108. Sensor Push CLI + Windows CI | 1/4 | In Progress|  |
+| 108. Sensor Push CLI + Windows CI | 4/4 | Complete   | 2026-05-25 |
 | 109. Console Ingestion API | 0/? | Not started | - |
 | 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
 | 111. Console Dashboard Awareness | 0/? | Not started | - |

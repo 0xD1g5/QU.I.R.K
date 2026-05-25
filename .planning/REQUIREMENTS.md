@@ -40,7 +40,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 - [ ] **SENSOR-03**: A sensor in a degraded/offline segment spools pushes to a bounded file-per-payload directory and retries delivery when connectivity returns (store-and-forward).
 - [x] **SENSOR-04**: A consultant can export a sensor's results to a transferable file (`quirk sensor export-results`) and import them on the console (`quirk console import-results`) for truly air-gapped segments (sneakernet).
 - [x] **SENSOR-05**: The sensor runtime is OS-agnostic — a POSIX-ism audit removes/guards platform-specific code (at minimum `scheduler_cmd.py:136` relative path → `cfg.output_root`-anchored, and `:258-259` SIGTERM → `sys.platform != 'win32'`-guarded), and `platformdirs` resolves data/config directories on Windows and POSIX.
-- [ ] **SENSOR-06**: A `windows-latest` CI smoke job validates the sensor contract on real Windows (payload serialization has no backslash paths, clean shutdown), and is a hard gate (not `continue-on-error`). The Linux chaos lab does not satisfy this.
+- [x] **SENSOR-06**: A `windows-latest` CI smoke job validates the sensor contract on real Windows (payload serialization has no backslash paths, clean shutdown), and is a hard gate (not `continue-on-error`). The Linux chaos lab does not satisfy this.
 
 ### Console Ingestion (CONSOLE)
 
@@ -132,7 +132,7 @@ Which phases cover which requirements.
 | SENSOR-03 | Phase 108 | Pending |
 | SENSOR-04 | Phase 108 | Complete |
 | SENSOR-05 | Phase 108 | Complete |
-| SENSOR-06 | Phase 108 | Pending |
+| SENSOR-06 | Phase 108 | Complete |
 | STAB-02 | Phase 108 | Complete |
 | CONSOLE-01 | Phase 109 | Pending |
 | CONSOLE-02 | Phase 109 | Pending |
