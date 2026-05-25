@@ -9,9 +9,12 @@ Usage:
   quirk export --siem [--input PATH] [--output-dir DIR]
 
 Exit codes:
-  0  Success — findings exported.
+  0  Success — all findings exported.
   1  Usage error — no destination flag supplied.
-  2  Runtime error — missing file, bad config, or transport error.
+  2  Total failure — no findings sent (bad config, missing file, or all
+     transport errors).
+  3  Partial failure — at least one finding sent, but not all (e.g. one
+     transient delivery error).  Automation can distinguish 99/100 from 0/100.
 """
 from __future__ import annotations
 
@@ -46,9 +49,10 @@ def run_export(argv: list[str]) -> None:
     """quirk export entry point. argv is sys.argv[2:] (after the subcommand name).
 
     Exit codes:
-      0 — success
+      0 — all findings exported successfully
       1 — usage error (no destination flag)
-      2 — runtime error (missing file, bad config, transport failure)
+      2 — total failure (missing file, bad config, or zero findings sent)
+      3 — partial failure (some findings sent, some failed)
     """
     parser = argparse.ArgumentParser(
         prog="quirk export",
@@ -149,8 +153,10 @@ def run_export(argv: list[str]) -> None:
                 count = export_findings(findings, cfg, db, scan_id=scan_id)
 
             print(f"SIEM export complete: {count}/{len(findings)} findings sent.")
-            if count < len(findings):
-                sys.exit(2)
+            if count == 0:
+                sys.exit(2)    # total failure — no findings sent
+            elif count < len(findings):
+                sys.exit(3)    # partial failure — some findings not sent
 
         except SystemExit:
             raise
