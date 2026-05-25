@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v5.3
 milestone_name: Adoption & Integration Surface
-status: verifying
+status: Awaiting next milestone
 stopped_at: Completed 104-02-PLAN.md
-last_updated: "2026-05-25T13:10:00.343Z"
-last_activity: 2026-05-25
+last_updated: "2026-05-25T13:35:45.115Z"
+last_activity: 2026-05-25 — Milestone v5.3 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-24)
 
 ## Current Position
 
-Phase: 105 (servicenow-ticketing) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-05-25
-
-Progress: [██████████] 100%
+Phase: Milestone v5.3 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-25 — Milestone v5.3 completed and archived
 
 ## Performance Metrics
 
@@ -77,21 +75,17 @@ Carried forward from v5.2 close and prior milestones:
 | human-UAT (93) | getpass TTY prompt + live PDF export | deferred — TTY-gated |
 | human-UAT (95) | live ldaps code-signing scan | deferred — needs ldaps lab |
 | human-UAT (96) | TTY CONFIRM gate + non-TTY abort + live alg-confusion vs fuzz-target | deferred — TTY/environment-gated |
-| Phase 101 P01 | 4 | 3 tasks | 7 files |
-| Phase 101 P02 | 8 minutes | 2 tasks | 5 files |
-| Phase 101 P04 | 30 | 3 tasks | 6 files |
-| Phase 102-dashboard-auth-ux-score-tax P01 | 5 minutes | 2 tasks | 3 files |
-| Phase 102-dashboard-auth-ux-score-tax P02 | 115 | 2 tasks | 3 files |
-| Phase 102-dashboard-auth-ux-score-tax P03 | 8 minutes | 2 tasks | 2 files |
-| Phase 102-dashboard-auth-ux-score-tax P04 | 420 | 4 tasks | 6 files |
-| Phase 102-dashboard-auth-ux-score-tax P05 | 10 | 2 tasks | 4 files |
-| Phase 103-siem-export P02 | 2 | 2 tasks | 4 files |
-| Phase 103 P04 | 5 | 3 tasks | 5 files |
-| Phase 104-jira-ticketing P01 | 15 | 2 tasks | 4 files |
-| Phase 104-jira-ticketing P02 | 20 | 2 tasks | 3 files |
-| Phase 104-jira-ticketing P04 | 12 | 2 tasks | 3 files |
-| Phase 105-servicenow-ticketing P02 | 5 | 2 tasks | 2 files |
-| Phase 105 P03 | 15 | 2 tasks | 3 files |
+
+Acknowledged and deferred at v5.3 milestone close (2026-05-25) — all are live-endpoint deliveries (network sends are unit-tested with mocked transports); tracked per-phase in `*-HUMAN-UAT.md`:
+
+| Category | Item | Status |
+|----------|------|--------|
+| human-UAT (101) | Slack / email / generic-webhook live delivery + end-to-end scheduler dispatch (4 scenarios) | deferred — needs live Slack/SMTP/webhook endpoints |
+| human-UAT (102) | Login form render, wrong/correct token flow, Sign out, mid-session 401 logout, auth-disabled passthrough, live token CLI (7 scenarios) | deferred — needs running dashboard in a browser |
+| human-UAT (103) | Live syslog/CEF delivery to a real SIEM + after-scan SIEM hook (2 scenarios) | deferred — needs a syslog-ingesting platform |
+| human-UAT (104) | Live Jira issue creation + dedup, missing-extra skip, self-hosted token_auth (4 scenarios) | deferred — needs a real Jira instance |
+| human-UAT (105) | Live ServiceNow incident creation + work_notes dedup (2 scenarios) | deferred — needs a real ServiceNow instance |
+| tech-debt (105) | Extract duplicated `_NoRedirectHandler` (webhook.py + servicenow.py) to `quirk/util/no_redirect.py` | LOW — design-documented (T-105-04), no runtime impact |
 
 ## Session Continuity
 
@@ -99,3 +93,7 @@ Last session: 2026-05-25T13:09:56.616Z
 Stopped at: Completed 104-02-PLAN.md
 Resume file: None
 Next: `/gsd:plan-phase 101`
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

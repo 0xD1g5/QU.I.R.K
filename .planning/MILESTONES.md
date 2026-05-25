@@ -1,5 +1,23 @@
 # Milestones
 
+## v5.3 Adoption & Integration Surface (Shipped: 2026-05-25)
+
+**Phases completed:** 5 phases (101–105), 20 plans, 50 tasks
+**Delivered:** QU.I.R.K. became load-bearing in others' workflows — scheduled-scan drift events now fan out to Slack/email/webhook, findings push to any SIEM as CEF, and per-finding tickets auto-open in both Jira and ServiceNow with idempotent dedup — all on one shared, SSRF-safe, secret-scrubbing delivery layer. Audit PASSED (21/21 requirements, 18/18 integration, 3/3 E2E flows).
+
+**Key accomplishments:**
+
+- **Phase 101 (ANCHOR) — Notification fan-out + the 7 integration-security primitives.** Scheduled-scan drift now delivers to Slack/email/webhook via a shared `DriftSummary` content model + per-channel fan-out, with the conservative trigger (new HIGH/CRITICAL OR score regression beyond −5, never on first scan). Shipped the primitives every later phase inherits: the `integration_deliveries` audit table, `safe_str` secret-scrubbing patterns, delivery-time SSRF (`validate_external_url`), the outbound-field whitelist, and the optional-extra lazy-import discipline. Delivery failures never touch the committed scan record.
+- **Phase 102 — Dashboard auth UX + score-tax.** `quirk token` CLI (generate/rotate/show, atomic YAML round-trip); `require_auth` extended to accept `X-API-Key` (timing-safe) alongside bearer, with a CI route-coverage gate guarding every data route; a React login form with localStorage token + mid-session 401→logout. TRANS-04 repointed the CLI executive score to the shared `exec_content` — which surfaced and fixed a real cross-surface bug (CLI had shown 91/EXCELLENT vs the canonical 42/FAIR).
+- **Phase 103 — SIEM export.** `quirk export --siem` pushes one CEF event per finding over stdlib syslog (UDP/TCP), vendor-neutral (Splunk/Elastic/QRadar), zero new pip deps; an explicit `to_cef_finding` whitelist keeps cert PEM / PKI topology out of the payload.
+- **Phase 104 — Jira ticketing + the shared `TicketingChannel` abstraction.** Per-finding Jira issues carry QRAMM evidence; `SHA256(host:port::title)` fingerprint stored as a label, JQL-searched before create so re-scans add a rediscovery comment instead of duplicates. `jira` lives behind a lazy `[tickets]` extra (joined `[all]` + CI guard).
+- **Phase 105 — ServiceNow ticketing as a pure second backend.** `quirk ticket create --backend servicenow` creates incidents via the stdlib `urllib` Table API (correlation_id dedup → work_notes rediscovery), proving TICKET-04: a second backend dropped in with **zero changes to `base.py` or `jira.py`** (git-verified).
+- **Hardening via layered review gates.** Code review caught and fixed bugs that passed unit tests: an SSRF redirect-bypass (webhook urllib following 302→cloud-metadata), CEF header newline log-forgery + missing TCP framing, and JQL/URL-path injection via config-controlled `project_key`/`table`.
+
+**Known deferred items at close:** 19 live-delivery human-UAT scenarios across 5 phases (Slack/email/webhook/syslog/Jira/ServiceNow against real servers — network sends are unit-tested with mocked transports), tracked in per-phase `*-HUMAN-UAT.md`. 1 LOW tech-debt item (extract the duplicated `_NoRedirectHandler` to a shared util). See STATE.md Deferred Items.
+
+---
+
 ## v5.2 Consulting-Grade Reporting (Shipped: 2026-05-24)
 
 **Phases completed:** 4 phases (97–100), 12 plans, 24 tasks
