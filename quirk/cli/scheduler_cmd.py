@@ -15,6 +15,7 @@ from typing import Optional
 from croniter import croniter
 from sqlalchemy.orm import Session
 
+from quirk.config import load_config
 from quirk.db import get_session, init_db
 from quirk.models import ScheduledScan, ScheduledRun
 
@@ -108,12 +109,19 @@ def _recover_stale_runs(db: Session) -> int:
 
 
 def _dispatch_schedule(
-    schedule: ScheduledScan, db: Session, config_path: str
+    schedule: ScheduledScan,
+    db: Session,
+    config_path: str,
+    scan_config_path: Optional[str] = None,
 ) -> ScheduledRun:
     """Create a scheduled_runs row and invoke the scan subprocess.
 
     Status transitions: pending → running → completed/failed.
     Uses sys.executable + -m run_scan to avoid PATH issues (Pitfall 5 / T-63-07).
+
+    scan_config_path: path to config.yaml for the scan subprocess. When provided,
+    the output directory is anchored to cfg.output.directory (SENSOR-05 Fix 1).
+    When absent, falls back to QUIRK_OUTPUT_DIR env var or "output" directory.
     """
     now = _utcnow_naive()
     run = ScheduledRun(
@@ -132,9 +140,12 @@ def _dispatch_schedule(
     # fall back to "unnamed" so mkdir never traverses outside output/scheduled/.
     _SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
     safe_name = schedule.name if _SAFE_NAME_RE.match(schedule.name) else "unnamed"
-    output_dir = (
-        Path("output/scheduled") / safe_name / now.strftime("%Y%m%d-%H%M%S")
-    )
+    if scan_config_path is not None:
+        cfg = load_config(scan_config_path)
+        output_base = Path(cfg.output.directory)
+    else:
+        output_base = Path(os.environ.get("QUIRK_OUTPUT_DIR", "output"))
+    output_dir = output_base / "scheduled" / safe_name / now.strftime("%Y%m%d-%H%M%S")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # T-63-07: list-form Popen — no shell=True, no metacharacter expansion
@@ -143,8 +154,10 @@ def _dispatch_schedule(
         sys.executable,
         "-m",
         "run_scan",
-        "--config",
-        config_path,
+    ]
+    if scan_config_path is not None:
+        cmd += ["--config", scan_config_path]
+    cmd += [
         "--target",
         schedule.target,
         "--profile",
@@ -204,7 +217,11 @@ def _dispatch_schedule(
 # ---------------------------------------------------------------------------
 
 
-def _check_and_dispatch_due(db: Session, config_path: str) -> int:
+def _check_and_dispatch_due(
+    db: Session,
+    config_path: str,
+    scan_config_path: Optional[str] = None,
+) -> int:
     """Query enabled schedules, compute next_run_at, dispatch any that are past due.
 
     Returns the count of schedules dispatched this iteration.
@@ -218,7 +235,7 @@ def _check_and_dispatch_due(db: Session, config_path: str) -> int:
     for s in schedules:
         next_run = _compute_next_run(s)
         if next_run <= now:
-            _dispatch_schedule(s, db, config_path)
+            _dispatch_schedule(s, db, config_path, scan_config_path=scan_config_path)
             dispatched += 1
     return dispatched
 
@@ -243,6 +260,12 @@ def run_scheduler(argv: list[str]) -> None:
     p_run = sub.add_parser("run", help="Start the scheduler dispatch loop")
     p_run.add_argument("--config", default=None, help="Path to quirk.db or :memory:")
     p_run.add_argument(
+        "--scan-config",
+        default=None,
+        dest="scan_config",
+        help="Path to config.yaml for scan subprocess (anchors output to cfg.output.directory)",
+    )
+    p_run.add_argument(
         "--once",
         action="store_true",
         help="Run a single iteration then exit (for tests and smoke checks).",
@@ -250,13 +273,15 @@ def run_scheduler(argv: list[str]) -> None:
 
     args = parser.parse_args(argv)
     db_path = _resolve_db_path(args.config)
+    scan_config_path = args.scan_config
 
     # Ensure tables exist before first session (idempotent)
     init_db(db_path)
 
     # Install signal handlers (Pattern 7 — must run in main thread)
     signal.signal(signal.SIGINT, _handle_signal)
-    signal.signal(signal.SIGTERM, _handle_signal)
+    if sys.platform != "win32":
+        signal.signal(signal.SIGTERM, _handle_signal)
 
     # Startup recovery: mark stale runs from a prior crashed scheduler as failed
     with get_session(db_path) as db:
@@ -265,14 +290,14 @@ def run_scheduler(argv: list[str]) -> None:
     if args.once:
         # Test / smoke-check mode: dispatch due schedules once and return
         with get_session(db_path) as db:
-            _check_and_dispatch_due(db, db_path)
+            _check_and_dispatch_due(db, db_path, scan_config_path=scan_config_path)
         return
 
     # Long-running loop (D-05): sleep in 1-second increments for SIGINT responsiveness
     global _stop_flag
     while not _stop_flag:
         with get_session(db_path) as db:
-            _check_and_dispatch_due(db, db_path)
+            _check_and_dispatch_due(db, db_path, scan_config_path=scan_config_path)
         # 60 × 1-second sleep — allows _stop_flag to be checked each second
         for _ in range(60):
             if _stop_flag:
