@@ -2,295 +2,150 @@
 phase: 101-notification-fan-out-security-foundation
 reviewed: 2026-05-24T00:00:00Z
 depth: standard
-files_reviewed: 11
+iteration: 2
+files_reviewed: 4
 files_reviewed_list:
-  - quirk/notify/dispatcher.py
-  - quirk/notify/config.py
-  - quirk/notify/payload.py
-  - quirk/notify/channels/slack.py
-  - quirk/notify/channels/email.py
   - quirk/notify/channels/webhook.py
+  - quirk/notify/dispatcher.py
   - quirk/cli/scheduler_cmd.py
-  - quirk/db.py
-  - quirk/models.py
-  - quirk/util/safe_exc.py
-  - pyproject.toml
+  - quirk/notify/channels/email.py
 findings:
-  critical: 2
-  warning: 2
-  info: 1
-  total: 5
-status: issues_found
+  critical: 0
+  warning: 0
+  info: 2
+  total: 2
+status: clean
 ---
 
-# Phase 101: Code Review Report
+# Phase 101: Code Review Report (Iteration 2 — Post-Fix Verification)
 
 **Reviewed:** 2026-05-24T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 11
-**Status:** issues_found
+**Iteration:** 2 (--auto fix/re-review loop)
+**Files Reviewed:** 4
+**Status:** clean
 
 ## Summary
 
-Reviewed the Phase 101 ANCHOR integration-security foundation: dispatcher fan-out
-orchestrator, notification config loader, payload whitelisting, all three channel
-senders (Slack, email, webhook), the scheduler hook integration, DB/model additions,
-safe_exc, and pyproject.toml.
-
-The overall architecture is sound — QUIRK_CONFIG_PATH isolation is correctly implemented,
-safe_str is consistently used for error_summary, the per-channel failure isolation pattern
-is correctly structured, and the HMAC signing and env-var-name indirection for secrets are
-correctly implemented.
-
-Two blockers require fixes before ship: a redirect-following SSRF bypass in the webhook
-channel that defeats the validate_external_url gate, and a TypeError crash in the email
-body formatter when score_delta is None on the first-scan-with-new-HIGH-findings scenario.
-Two warnings cover a DB commit ordering issue that silently aborts downstream audit rows on
-commit failure, and a pre-existing path traversal in the scheduler output directory
-construction.
-
-## Critical Issues
-
-### CR-01: SSRF Bypass via HTTP Redirect in webhook.py
-
-**File:** `quirk/notify/channels/webhook.py:70`
-
-**Issue:** `urllib.request.urlopen(req, timeout=cfg.timeout_seconds)` uses the default
-urllib opener which installs `HTTPRedirectHandler`. This follows HTTP 301/302/307 redirects
-automatically, *after* the `validate_external_url()` check at line 47 has already passed.
-An attacker who controls the webhook endpoint (or a compromised CDN in front of it) can
-return `HTTP 302 Location: http://169.254.169.254/latest/meta-data/iam/security-credentials/`
-and urllib will follow the redirect to the cloud metadata service, bypassing SSRF protection
-entirely and potentially exfiltrating instance credentials.
-
-Attack chain:
-1. Operator configures `WEBHOOK_URL=https://trusted-external-host.example.com/hook`
-2. `validate_external_url("https://trusted-external-host.example.com/hook")` → `ok=True`
-3. `urlopen(POST to trusted-external-host...)` → server responds `302 → http://169.254.169.254/...`
-4. `HTTPRedirectHandler` follows redirect → AWS/GCP metadata service returns IAM credentials
-5. Response body is available to the caller; scan audit row records `status=ok`
-
-**Fix:** Build a no-redirect opener before calling `urlopen`:
-
-```python
-import urllib.error
-import urllib.request
-
-class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Block all HTTP redirects to prevent post-validation SSRF bypass."""
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise urllib.error.HTTPError(req.full_url, code, "Redirect blocked (SSRF guard)", headers, fp)
-
-def send_webhook(cfg, payload: dict) -> None:
-    url = os.environ.get(cfg.url_env, "")
-    if not url:
-        raise ValueError(f"Webhook URL env var {cfg.url_env!r} not set")
-
-    result = validate_external_url(url)
-    if not result.ok:
-        raise ValueError(f"SSRF blocked ({result.reason}) for webhook URL")
-
-    body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=body,
-                                  headers={"Content-Type": "application/json"},
-                                  method="POST")
-    if cfg.hmac_key_env:
-        key = os.environ.get(cfg.hmac_key_env, "").encode("utf-8")
-        if key:
-            sig = hmac.new(key, body, hashlib.sha256).hexdigest()
-            req.add_header("X-QUIRK-Signature", f"sha256={sig}")
-
-    # Use no-redirect opener so a post-validation redirect cannot bypass SSRF check
-    opener = urllib.request.build_opener(_NoRedirectHandler)
-    with opener.open(req, timeout=cfg.timeout_seconds) as resp:
-        if resp.status not in (200, 201, 202, 204):
-            raise RuntimeError(f"Webhook returned HTTP {resp.status}")
-```
-
-Note: The Slack channel uses `slack_sdk.WebhookClient` which may also follow redirects;
-verify that `slack_sdk >= 3.33.0` does not follow redirects or apply the same guard there.
+This is the iteration-2 re-review verifying the four fixes applied after the iteration-1 findings
+(CR-01 SSRF redirect bypass, CR-02 score_delta=None TypeError, WR-01 audit-commit isolation,
+WR-02 path traversal). All four fixes are confirmed correct and complete. No new Critical or
+Warning issues were introduced. Two Info-level observations remain; neither is blocking.
 
 ---
 
-### CR-02: TypeError Crash in Email Body When score_delta Is None on First HIGH Finding
+### CR-01 — webhook.py SSRF redirect bypass (FIXED, CONFIRMED)
 
-**File:** `quirk/notify/dispatcher.py:55`
+`_NoRedirectHandler` overrides `redirect_request()` and raises `urllib.error.HTTPError`
+unconditionally. `urllib.request.HTTPRedirectHandler` routes every 3xx status code (301, 302, 303,
+307, 308) through `redirect_request()` before following the redirect, so raising there blocks all
+redirect variants without needing to enumerate individual codes.
 
-**Issue:** The email body f-string uses `{summary.score_delta:+d}` without a None guard.
-`DriftSummary.score_delta` is `Optional[int]` (payload.py line 46). `should_notify()`
-can return `True` via the `report.new_high > 0` branch (dispatcher.py line 120) even
-when `score_delta is None` — specifically on the very first scan if it discovers HIGH
-findings. In this scenario `_channel_send_email` is called with `summary.score_delta = None`,
-and `f"{None:+d}"` raises `TypeError: unsupported format string passed to NoneType.__format__`.
-
-Verified:
-```python
->>> score_delta = None
->>> f"{score_delta:+d}"
-TypeError: unsupported format string passed to NoneType.__format__
-```
-
-The TypeError is caught by the per-channel except in dispatcher.py, so it does not corrupt
-the scan record, but the email notification is silently suppressed (audit row shows `status=failed`)
-precisely on the most important alert — the first scan that finds HIGH-severity findings.
-
-The Slack formatter at `slack.py:91` correctly guards against this:
-`f"{summary.score_delta:+d}" if summary.score_delta is not None else "N/A"`.
-The email body builder is the only site that is unguarded.
-
-**Fix:** Apply the same guard used in `_format_slack_text`:
-
-```python
-def _channel_send_email(cfg, summary) -> None:
-    from quirk.notify.channels.email import send_email
-    delta_str = f"{summary.score_delta:+d}" if summary.score_delta is not None else "N/A"
-    subject = f"QUIRK Alert: {summary.new_high} new HIGH finding(s) — score {summary.current_score}"
-    body = (
-        f"QUIRK Quantum-Readiness Alert\n"
-        f"Score: {summary.current_score} (was {summary.previous_score}, "
-        f"delta {delta_str})\n"
-        f"New findings — HIGH: {summary.new_high}  MEDIUM: {summary.new_medium}  "
-        f"LOW: {summary.new_low}\n"
-    )
-    if summary.dashboard_url:
-        body += f"\nDashboard: {summary.dashboard_url}\n"
-    send_email(cfg, subject=subject, body=body)
-```
+The opener is constructed with `urllib.request.build_opener(_NoRedirectHandler)` which replaces
+the default `HTTPRedirectHandler` with the blocking variant, and the actual request is issued via
+`opener.open(req, timeout=cfg.timeout_seconds)` — not via the default `urlopen`. There is no
+fallback path to the redirect-following opener. Fix is correct and complete.
 
 ---
 
-## Warnings
+### CR-02 — dispatcher.py score_delta=None email TypeError (FIXED, CONFIRMED)
 
-### WR-01: db.commit() for IntegrationDelivery Rows Is Outside Per-Channel Try/Except
-
-**File:** `quirk/notify/dispatcher.py:210-211,232-233,252-253`
-
-**Issue:** The pattern for each channel is:
+`_channel_send_email` now guards `score_delta` before formatting (dispatcher.py lines 52-54):
 
 ```python
-row_X = IntegrationDelivery(...)
-try:
-    _channel_send_X(...)
-except Exception as exc:
-    row_X.status = "failed"
-    row_X.error_summary = safe_str(exc)
-    logger.warning(...)
-db.add(row_X)    # ← outside try/except
-db.commit()      # ← outside try/except
-```
-
-`db.add()` and `db.commit()` are outside the per-channel try/except block. If `db.commit()`
-raises (e.g., a transient SQLite lock, connection reset, or schema constraint violation),
-the exception propagates out of `dispatch_notifications`. The outer try/except in
-`scheduler_cmd.py:168-176` catches it and logs it — so the scan record is safe — but all
-*subsequent* channel audit rows are skipped entirely. A DB failure during the Slack commit
-silently abandons the email and webhook audit rows (and their delivery attempts).
-
-Additionally, if a channel delivery raises and the session enters a partial error state,
-the subsequent `db.commit()` for the *next* channel's row may encounter a dirty session
-depending on SQLAlchemy's internal state tracking.
-
-**Fix:** Wrap both `db.add()` and `db.commit()` inside a per-channel nested try/except, or
-use `db.add()` for all three rows first and commit once at the end (also reduces round-trips):
-
-```python
-# Option A: commit all rows in one shot after all channels
-rows = []
-if notify_cfg.slack is not None:
-    row_slack = IntegrationDelivery(scan_id=scan_id, destination="slack", status="ok", ...)
-    try:
-        _channel_send_slack(notify_cfg.slack, summary)
-    except Exception as exc:
-        row_slack.status = "failed"
-        row_slack.error_summary = safe_str(exc)
-        logger.warning("Delivery failed (slack): %s", safe_str(exc))
-    rows.append(row_slack)
-
-# ... repeat for email, webhook ...
-
-for row in rows:
-    db.add(row)
-try:
-    db.commit()
-except Exception as exc:
-    logger.warning("Audit row commit failed: %s", safe_str(exc))
-```
-
----
-
-### WR-02: schedule.name Used Unvalidated in Output Directory Path (Path Traversal)
-
-**File:** `quirk/cli/scheduler_cmd.py:129`
-
-**Issue:** The output directory is constructed as:
-
-```python
-output_dir = (
-    Path("output/scheduled") / schedule.name / now.strftime("%Y%m%d-%H%M%S")
+delta_str = (
+    f"{summary.score_delta:+d}" if summary.score_delta is not None else "N/A"
 )
-output_dir.mkdir(parents=True, exist_ok=True)
 ```
 
-`schedule.name` is a `String(255)` column read from the database without sanitization.
-If a schedule name contains path-traversal sequences (`../../../etc/cron.d`), `Path` will
-resolve them and `mkdir(parents=True)` will create directories outside the intended
-`output/scheduled/` tree:
+No other `{...:+d}` or `{...:d}` format specifiers appear on Optional fields in the email
+subject or body. `current_score` and `previous_score` appear in the body with bare interpolation
+only (no format spec), which renders safely as `"None"` string rather than raising TypeError.
+Fix is correct and complete.
 
-```python
->>> from pathlib import Path
->>> (Path("output/scheduled") / "../../../etc" / "20240101-120000")
-PosixPath('output/scheduled/../../../etc/20240101-120000')
-```
+---
 
-While this requires DB write access (which implies prior compromise), the `--config` DB path
-is operator-supplied, and the scheduler runs as the application user in potentially privileged
-environments. This is pre-existing Phase 63 code but is included in the review scope file.
+### WR-01 — dispatcher.py audit-commit isolation (FIXED, CONFIRMED)
 
-**Fix:** Sanitize `schedule.name` before use in the path, or resolve and check that the result
-stays within the expected prefix:
+All three per-channel audit rows are collected into an `audit_rows` list after their respective
+delivery attempts. Delivery failures are caught per-channel and set `row.status = "failed"` /
+`row.error_summary = safe_str(exc)` without touching the DB. After all channels have been
+attempted, the rows are bulk-added with `db.add(row)` and committed once in a single
+`try/except`-wrapped `db.commit()` (dispatcher.py lines 264-269). A commit failure logs a warning
+but cannot skip any channel's delivery — deliveries have already completed at that point.
 
-```python
-import re
-_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
+The scan record commit (line 169) precedes the entire fan-out block. The bonus `run.scan_id`
+assignment (lines 179-181) only fires when `run.scan_id is None` and commits only the already-
+persisted run row, not audit rows. NOTIFY-07 scan-record isolation is intact. Fix is correct and
+complete.
 
-safe_name = schedule.name if _SAFE_NAME_RE.match(schedule.name) else "unnamed"
-output_dir = Path("output/scheduled") / safe_name / now.strftime("%Y%m%d-%H%M%S")
-# Optionally: assert output_dir.resolve().is_relative_to(Path("output/scheduled").resolve())
-```
+---
+
+### WR-02 — scheduler_cmd.py path traversal via schedule.name (FIXED, CONFIRMED)
+
+The allowlist regex `r"^[a-zA-Z0-9_\-]{1,128}$"` (line 133) accepts only alphanumerics,
+underscores, and hyphens up to 128 characters. Names failing the check are replaced with the
+literal string `"unnamed"` — no truncation, no partial substitution, no character-by-character
+transform that could smuggle a traversal sequence through. Valid names pass unchanged, so no
+valid name can collide with another valid name through the sanitization step. Fix is correct and
+complete. One edge case for multiple invalid-named schedules is noted below as IN-01.
 
 ---
 
 ## Info
 
-### IN-01: SMTP SSRF Validation Silently Degrades for Bare IPv6 smtp_host Values
+### IN-01: Multiple invalid-named schedules share an output directory within the same second
 
-**File:** `quirk/notify/channels/email.py:37`
+**File:** `quirk/cli/scheduler_cmd.py:134-137`
 
-**Issue:** The SSRF check constructs a URL as `f"https://{cfg.smtp_host}:{cfg.smtp_port}"`.
-When `smtp_host` is a bare IPv6 address without brackets (e.g., `::1` instead of `[::1]`),
-`urlparse` produces `hostname=None` from the malformed URL `https://::1:587`. The validator
-then falls through to the DNS path with an empty string host, which resolves to `0.0.0.0`
-via `socket.gethostbyname("")`, which is classified as private and correctly blocked — but
-the block is accidental, not intentional. The error message would name the wrong reason code,
-and the behavior could change across OS or Python versions.
+**Issue:** When more than one `ScheduledScan` has a name that fails the `_SAFE_NAME_RE`
+allowlist, all of them map to the directory component `"unnamed"`. The timestamp suffix uses
+`%Y%m%d-%H%M%S` (one-second precision). If two such schedules are dispatched in the same
+calendar second — possible if the due-schedules loop has many back-logged entries — both call
+`mkdir("output/scheduled/unnamed/<same-timestamp>", exist_ok=True)` and write scan output into
+the same directory. The `--output` argument for both subprocesses is identical, so artifacts
+co-mingle silently. This is not a security issue (no path escapes `output/scheduled/`), but
+post-hoc audit of outputs becomes ambiguous.
 
-The `smtplib.SMTP` constructor accepts bare IPv6 natively, so an operator-supplied
-`smtp_host = "::1"` would be blocked (via the accidental 0.0.0.0 path), but the SSRF
-check's intent and the actual network connection target are misaligned.
-
-**Fix:** Normalize the SMTP host before constructing the validation URL:
-
+**Fix:** Append the schedule's integer primary key to the fallback to guarantee uniqueness:
 ```python
-def _smtp_ssrf_url(smtp_host: str, smtp_port: int) -> str:
-    """Build a validatable URL from smtp_host, bracketing IPv6 literals."""
-    import ipaddress
-    try:
-        ip = ipaddress.ip_address(smtp_host)
-        if isinstance(ip, ipaddress.IPv6Address):
-            return f"https://[{smtp_host}]:{smtp_port}"
-    except ValueError:
-        pass
-    return f"https://{smtp_host}:{smtp_port}"
+safe_name = (
+    schedule.name
+    if _SAFE_NAME_RE.match(schedule.name)
+    else f"unnamed-{schedule.id}"
+)
+```
+
+---
+
+### IN-02: Email subject renders current_score as literal `None` string when score is absent
+
+**File:** `quirk/notify/dispatcher.py:55`
+
+**Issue:** The email subject is:
+```python
+subject = f"QUIRK Alert: {summary.new_high} new HIGH finding(s) — score {summary.current_score}"
+```
+`DriftSummary.current_score` is `Optional[int]`. On a first-ever scan, `current_score` can be
+`None`, producing `"QUIRK Alert: 1 new HIGH finding(s) — score None"` — visually broken for
+recipients. The Slack formatter in `slack.py:_format_slack_text` already applies the correct
+guard (`str(summary.current_score) if summary.current_score is not None else "N/A"`); the email
+formatter should be consistent.
+
+This is not a crash — bare interpolation of `None` does not raise — but the rendered string is
+user-visible and looks like a bug.
+
+**Fix:** Mirror the Slack formatter's guard in `_channel_send_email`:
+```python
+score_str = str(summary.current_score) if summary.current_score is not None else "N/A"
+prev_str  = str(summary.previous_score) if summary.previous_score is not None else "N/A"
+subject = f"QUIRK Alert: {summary.new_high} new HIGH finding(s) — score {score_str}"
+body = (
+    f"QUIRK Quantum-Readiness Alert\n"
+    f"Score: {score_str} (was {prev_str}, delta {delta_str})\n"
+    f"New findings — HIGH: {summary.new_high}  MEDIUM: {summary.new_medium}  "
+    f"LOW: {summary.new_low}\n"
+)
 ```
 
 ---
@@ -298,3 +153,4 @@ def _smtp_ssrf_url(smtp_host: str, smtp_port: int) -> str:
 _Reviewed: 2026-05-24T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Iteration: 2 — all CR/WR findings from iteration 1 confirmed resolved; status: clean_
