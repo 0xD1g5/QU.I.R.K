@@ -12,9 +12,12 @@
  * 401 (while a token is present) automatically bounces the user back to the login form.
  * Unregisters on unmount to prevent stale callbacks.
  *
- * NOTE: This file must NOT import from lib/api fetchApi for the probe because that would
- * create a bootstrap ordering issue — we use the raw fetch() for the mount probe so the
- * 401 handler registration in useEffect fires AFTER the probe resolves.
+ * NOTE: The probe uses raw fetch() — NOT fetchApi() — to avoid triggering the
+ * _onUnauthorized callback registered in the second useEffect.  Both useEffect
+ * callbacks fire synchronously after the first render (before any async response
+ * arrives), so the handler IS registered before the probe 401 response arrives.
+ * Correctness is safe regardless of ordering because the probe bypasses fetchApi
+ * entirely and therefore never invokes _onUnauthorized.
  * (setUnauthorizedHandler IS imported for the handler registration, not for the probe.)
  */
 
