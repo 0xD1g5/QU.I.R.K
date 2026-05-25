@@ -183,6 +183,19 @@ def _dispatch_schedule(
             _safe_str(exc),
         )
 
+    # Phase 103 SIEM-01: after-scan SIEM export (when export_after_scan: true in [siem] config).
+    # Same deferred-import + try/except isolation: SIEM failure must NEVER propagate.
+    try:
+        from quirk.siem.dispatcher import export_after_scan_hook
+        export_after_scan_hook(run=run, schedule=schedule, db=db)
+    except Exception as exc:  # noqa: BLE001
+        import logging as _logging
+        from quirk.util.safe_exc import safe_str as _safe_str
+        _logging.getLogger(__name__).warning(
+            "SIEM export error (scan record unaffected): %s",
+            _safe_str(exc),
+        )
+
     return run
 
 
