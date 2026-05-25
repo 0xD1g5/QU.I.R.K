@@ -200,16 +200,6 @@ def build_exec_markdown(
             lines.append(f"- {md_cell(b)}")
         lines.append("")
 
-    lines.append("## Quantum Readiness Score")
-    lines.append(f"**Score:** **{score_raw['score']}/100**  \n**Rating:** **{score_raw['rating']}**")
-    lines.append("")
-    lines.append("### Score Drivers (Top)")
-    if score_raw.get("drivers"):
-        for d in score_raw["drivers"][:8]:
-            lines.append(f"- {md_cell(d['reason'])} (**-{d['points']}**)")
-
-    lines.append("")
-
     # D-07 / SCORE-XPARENCY-01: subscore decomposition in executive markdown
     _SUBSCORE_LABELS = [
         ("hygiene",         "Hygiene"),
@@ -219,23 +209,51 @@ def build_exec_markdown(
         ("data_at_rest",    "Data at Rest"),
         ("data_in_motion",  "Data in Motion"),
     ]
-    subscores = score_raw.get("subscores") or {}
-    lines.append("### Score Decomposition")
-    lines.append("")
-    lines.append("| Category | Score | Budget |")
-    lines.append("|----------|-------|--------|")
-    for key, label in _SUBSCORE_LABELS:
-        lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
-    # WR-03 / IN-01: consume the shared model's pre-computed raw_sum so the rollup
-    # numerator is identical to the HTML surface (and survives a future 7th subscore).
-    # Fall back to the six-key local sum only on the compat path (no exec_content).
-    raw_sum = (
-        exec_content.raw_sum
-        if exec_content is not None
-        else sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
-    )
-    lines.append("")
-    lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
+
+    lines.append("## Quantum Readiness Score")
+    if exec_content is not None:
+        # TRANS-04 / Phase 102: source score total/band/subscores/rollup from the shared
+        # exec_content model so CLI output is numerically identical to HTML/PDF/DOCX.
+        lines.append(
+            f"**Score:** **{exec_content.score_total}/100**  \n"
+            f"**Rating:** **{exec_content.score_band}**"
+        )
+        lines.append("")
+        lines.append("### Score Drivers (Top)")
+        if score_raw.get("drivers"):
+            for d in score_raw["drivers"][:8]:
+                lines.append(f"- {md_cell(d['reason'])} (**-{d['points']}**)")
+        lines.append("")
+        subscores = exec_content.subscores  # replaces score_raw.get("subscores") or {}
+        lines.append("### Score Decomposition")
+        lines.append("")
+        lines.append("| Category | Score | Budget |")
+        lines.append("|----------|-------|--------|")
+        for key, label in _SUBSCORE_LABELS:
+            lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
+        # WR-03 / IN-01: raw_sum from shared model (identical to HTML surface).
+        lines.append("")
+        lines.append(f"**Rollup:** {exec_content.raw_sum} ÷ 1.5 = **{exec_content.score_total} / 100**")
+    else:
+        # Backward-compat path: exec_content not available (external callers only).
+        # writer.py always passes exec_content, so this path is legacy only.
+        lines.append(f"**Score:** **{score_raw['score']}/100**  \n**Rating:** **{score_raw['rating']}**")
+        lines.append("")
+        lines.append("### Score Drivers (Top)")
+        if score_raw.get("drivers"):
+            for d in score_raw["drivers"][:8]:
+                lines.append(f"- {md_cell(d['reason'])} (**-{d['points']}**)")
+        lines.append("")
+        subscores = score_raw.get("subscores") or {}
+        lines.append("### Score Decomposition")
+        lines.append("")
+        lines.append("| Category | Score | Budget |")
+        lines.append("|----------|-------|--------|")
+        for key, label in _SUBSCORE_LABELS:
+            lines.append(f"| {label} | {subscores.get(key, '—')} | /25 |")
+        raw_sum = sum(subscores.get(k, 0) for k, _ in _SUBSCORE_LABELS)
+        lines.append("")
+        lines.append(f"**Rollup:** {raw_sum} ÷ 1.5 = **{score_raw['score']} / 100**")
     lines.append("")
 
     # EXEC-02 / D-03 / Phase 98: Priority Business Risks from shared content model.
