@@ -54,7 +54,11 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
   3. A delivery failure (misconfigured Slack URL, SMTP timeout, unreachable webhook) is logged at WARNING level and the scan record remains clean — the scan completes successfully regardless
   4. Secrets (Slack webhook URL, SMTP password, HMAC signing key) are never written to SQLite, scan JSON, or log output — they resolve from environment variables at dispatch time
   5. A missing `[notify]` extra (slack-sdk absent) degrades gracefully with an advisory log line rather than an ImportError that breaks the minimal install
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 101-01-PLAN.md — Foundation: safe_str secret patterns, integration_deliveries table, [notify] extra (ISEC-02, NOTIFY-07)
+- [ ] 101-02-PLAN.md — Security primitives: NotifyCfg loader + to_integration_payload whitelist + DriftSummary (NOTIFY-06, ISEC-03)
+- [ ] 101-03-PLAN.md — Channels: Slack/email/webhook senders with delivery-time SSRF + lazy import (NOTIFY-03/04/05, ISEC-01, ISEC-04)
+- [ ] 101-04-PLAN.md — Dispatcher + scheduler wiring + docs/Obsidian/UAT (NOTIFY-01/02/07, ISEC-02)
 **UI hint**: yes
 
 ### Phase 102: Dashboard Auth UX + Score Tax
