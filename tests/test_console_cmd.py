@@ -1,7 +1,10 @@
 """Tests for quirk.cli.console_cmd — Phase 108 SENSOR-04 import-results."""
 from __future__ import annotations
 
+import hashlib
+import hmac as _hmac
 import json
+import os
 import uuid
 from pathlib import Path
 from unittest.mock import patch
@@ -336,3 +339,238 @@ def test_run_scan_console_dispatch(monkeypatch, capsys):
     assert "from quirk.cli.console_cmd import run_console" in src, (
         "run_scan.py console block must lazy-import run_console"
     )
+
+
+# ---------------------------------------------------------------------------
+# WR-03a: HMAC-framed .qpush parsing path — happy path + error branches
+# ---------------------------------------------------------------------------
+
+
+def _make_framed_qpush_file(
+    tmp_path: Path,
+    hmac_key_hex: str = None,
+    body: bytes = None,
+) -> tuple:
+    """Build a WR-03-framed .qpush file with an embedded HMAC-SHA256 header.
+
+    Returns (path, expected_sig_string) so callers can assert the extracted sig.
+    """
+    if body is None:
+        body = _make_qpush_bytes()
+    if hmac_key_hex is None:
+        hmac_key_hex = os.urandom(32).hex()
+    key = bytes.fromhex(hmac_key_hex)
+    sig = "hmac-sha256=" + _hmac.new(key, body, hashlib.sha256).hexdigest()
+    header_line = json.dumps({"hmac-sha256": sig}, ensure_ascii=True).encode("ascii") + b"\n"
+    qpush = tmp_path / f"framed-{uuid.uuid4()}.qpush"
+    qpush.write_bytes(header_line + body)
+    return qpush, sig
+
+
+def test_import_results_framed_happy_path(tmp_path, monkeypatch):
+    """WR-03a: framed .qpush parses correctly — sig extracted and forwarded to ingest."""
+    qpush, expected_sig = _make_framed_qpush_file(tmp_path)
+
+    ingest_calls = []
+
+    def fake_ingest(envelope, config_path, skip_replay_window=False, qpush_sig=None):
+        ingest_calls.append({"qpush_sig": qpush_sig, "envelope": envelope})
+
+    import quirk.cli.console_cmd as m
+    monkeypatch.setattr(m, "_ingest_envelope", fake_ingest)
+
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_import_results(Args())
+
+    assert exc_info.value.code == 0, f"Expected exit 0 for valid framed .qpush, got {exc_info.value.code}"
+    assert len(ingest_calls) == 1, f"_ingest_envelope must be called once; got {len(ingest_calls)}"
+    assert ingest_calls[0]["qpush_sig"] == expected_sig, (
+        f"Expected qpush_sig {expected_sig!r}, got {ingest_calls[0]['qpush_sig']!r}"
+    )
+
+
+def test_import_results_framing_no_newline(tmp_path, capsys):
+    """WR-03a: framed file with no newline → clean SystemExit non-zero (no traceback)."""
+    qpush = tmp_path / "no-nl.qpush"
+    # Starts with '{' so framing branch triggers, but no '\n' present
+    qpush.write_bytes(b'{"hmac-sha256":"hmac-sha256=abcdef"}')
+
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_import_results(Args())
+
+    assert exc_info.value.code != 0, "Expected non-zero exit for no-newline framing"
+    stderr = capsys.readouterr().err
+    assert stderr.strip(), "A clear error message must be written to stderr"
+    assert "Traceback" not in stderr, f"Raw traceback in stderr: {stderr!r}"
+
+
+def test_import_results_framing_invalid_json_header(tmp_path, capsys):
+    """WR-03a: framed file whose header line is not valid JSON → clean SystemExit non-zero."""
+    qpush = tmp_path / "bad-json.qpush"
+    body = _make_qpush_bytes()
+    # Header is not valid JSON
+    qpush.write_bytes(b"{not: valid json}\n" + body)
+
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_import_results(Args())
+
+    assert exc_info.value.code != 0, "Expected non-zero exit for invalid JSON header"
+    stderr = capsys.readouterr().err
+    assert stderr.strip(), "A clear error message must be written to stderr"
+    assert "Traceback" not in stderr, f"Raw traceback in stderr: {stderr!r}"
+
+
+def test_import_results_framing_missing_hmac_key(tmp_path, capsys):
+    """WR-03a: framed file with JSON header but no 'hmac-sha256' key → clean SystemExit non-zero."""
+    qpush = tmp_path / "no-hmac-key.qpush"
+    body = _make_qpush_bytes()
+    # Valid JSON header but missing the required 'hmac-sha256' field
+    header_line = json.dumps({"signature": "some-other-field"}).encode("ascii") + b"\n"
+    qpush.write_bytes(header_line + body)
+
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_import_results(Args())
+
+    assert exc_info.value.code != 0, "Expected non-zero exit for missing 'hmac-sha256' field"
+    stderr = capsys.readouterr().err
+    assert stderr.strip(), "A clear error message must be written to stderr"
+    assert "Traceback" not in stderr, f"Raw traceback in stderr: {stderr!r}"
+
+
+def test_import_results_framing_invalid_sig_format(tmp_path, capsys):
+    """WR-03a: 'hmac-sha256' value without 'hmac-sha256=' prefix → clean SystemExit non-zero."""
+    qpush = tmp_path / "bad-sig-format.qpush"
+    body = _make_qpush_bytes()
+    # Value is a string but doesn't start with 'hmac-sha256='
+    header_line = json.dumps({"hmac-sha256": "sha256=nottherightalgo"}).encode("ascii") + b"\n"
+    qpush.write_bytes(header_line + body)
+
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_import_results(Args())
+
+    assert exc_info.value.code != 0, "Expected non-zero exit for wrong sig prefix"
+    stderr = capsys.readouterr().err
+    assert stderr.strip(), "A clear error message must be written to stderr"
+    assert "Traceback" not in stderr, f"Raw traceback in stderr: {stderr!r}"
+
+
+def test_import_results_framing_sig_not_a_string(tmp_path, capsys):
+    """WR-03a: 'hmac-sha256' value is not a string (e.g. int) → clean SystemExit non-zero."""
+    qpush = tmp_path / "sig-not-string.qpush"
+    body = _make_qpush_bytes()
+    # Value is an integer, not a string
+    header_line = json.dumps({"hmac-sha256": 12345}).encode("ascii") + b"\n"
+    qpush.write_bytes(header_line + body)
+
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_import_results(Args())
+
+    assert exc_info.value.code != 0, "Expected non-zero exit for non-string sig value"
+    stderr = capsys.readouterr().err
+    assert stderr.strip(), "A clear error message must be written to stderr"
+    assert "Traceback" not in stderr, f"Raw traceback in stderr: {stderr!r}"
+
+
+def test_import_results_framing_body_contains_newline_byte(tmp_path, monkeypatch):
+    """WR-03a: highest-risk case — compressed body containing 0x0A bytes must round-trip intact.
+
+    The parser must split only on the FIRST newline (the one terminating the JSON header
+    line) and treat all subsequent bytes as the opaque compressed body.  If the body is
+    split on every 0x0A the decompressor receives truncated input and raises an exception.
+    """
+    # Craft an envelope whose JSON text contains lots of embedded newlines so the
+    # compressed output is very likely to contain 0x0A bytes.  We force the issue
+    # by building a body known to contain 0x0A after compression: use a payload
+    # with many repeated newline-heavy strings and verify the compressed body
+    # actually contains 0x0A so the test is meaningful.
+    envelope = {
+        "payload_id": str(uuid.uuid4()),
+        "pushed_at": "2026-05-25T12:00:00Z",
+        "schema_version": "1.0.0",
+        "sensor_version": "5.4.0",
+        "sensor_id": str(uuid.uuid4()),
+        "segment": "air-gap",
+        "findings": [{"note": "line\nbreak\nrich\ndata\n" * 20}],
+    }
+    raw = json.dumps(envelope, ensure_ascii=False).encode("utf-8")
+    body = zstandard.ZstdCompressor(level=3).compress(raw)
+
+    # Build the framed file
+    hmac_key_hex = os.urandom(32).hex()
+    key = bytes.fromhex(hmac_key_hex)
+    sig = "hmac-sha256=" + _hmac.new(key, body, hashlib.sha256).hexdigest()
+    header_line = json.dumps({"hmac-sha256": sig}, ensure_ascii=True).encode("ascii") + b"\n"
+    framed = header_line + body
+
+    qpush = tmp_path / f"framed-newline-{uuid.uuid4()}.qpush"
+    qpush.write_bytes(framed)
+
+    # Verify the compressed body DOES contain 0x0A so the test is not vacuous.
+    # (If zstd somehow produces a body with no 0x0A we still test parser logic,
+    # but log a note so a future maintainer can adjust the payload if needed.)
+    if b"\n" not in body:
+        import warnings
+        warnings.warn(
+            "Compressed body contained no 0x0A byte; test still exercises parser "
+            "logic but 0x0A-in-body case was not hit",
+            stacklevel=2,
+        )
+
+    ingest_calls = []
+
+    def fake_ingest(envelope, config_path, skip_replay_window=False, qpush_sig=None):
+        ingest_calls.append({"envelope": envelope, "qpush_sig": qpush_sig})
+
+    import quirk.cli.console_cmd as m
+    monkeypatch.setattr(m, "_ingest_envelope", fake_ingest)
+
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_import_results(Args())
+
+    assert exc_info.value.code == 0, (
+        "Parser must handle 0x0A bytes in compressed body — only split on first newline"
+    )
+    assert len(ingest_calls) == 1, "Ingest must be called exactly once"
+    assert ingest_calls[0]["qpush_sig"] == sig, "Signature must match even with 0x0A in body"
