@@ -493,6 +493,12 @@ def main():
         run_token(_sys.argv[2:])
         return
 
+    # --- export subcommand: intercept before scan argparse (Phase 103 SIEM-01/02) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "export":
+        from quirk.cli.export_cmd import run_export
+        run_export(_sys.argv[2:])
+        return
+
     # --- errors subcommand: intercept before scan argparse (Phase 68 UX-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "errors":
         from quirk.cli.errors_cmd import run_errors
