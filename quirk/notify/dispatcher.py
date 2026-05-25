@@ -192,8 +192,14 @@ def dispatch_notifications(
     )
     payload = to_integration_payload(report)
 
-    # Fan out to each enabled channel with per-channel failure isolation
-    # Each _deliver call writes one IntegrationDelivery row (status ok/failed).
+    # Fan out to each enabled channel with per-channel failure isolation.
+    # Each channel attempt produces one IntegrationDelivery row (status ok/failed).
+    # All rows are collected first, then committed in a single db.commit() at the end
+    # (WR-01): a per-channel db.commit() outside the try/except means a transient DB
+    # error on one channel's commit propagates and skips subsequent channels entirely.
+    # Collecting rows and committing once keeps the audit writes isolated from delivery.
+    audit_rows = []
+
     if notify_cfg.slack is not None:
         row_slack = IntegrationDelivery(
             scan_id=scan_id,
@@ -211,8 +217,7 @@ def dispatch_notifications(
                 "Delivery failed (slack): %s",
                 safe_str(exc),
             )
-        db.add(row_slack)
-        db.commit()
+        audit_rows.append(row_slack)
 
     if notify_cfg.email is not None:
         # _channel_send_email builds subject/body from the shared DriftSummary
@@ -233,8 +238,7 @@ def dispatch_notifications(
                 "Delivery failed (email): %s",
                 safe_str(exc),
             )
-        db.add(row_email)
-        db.commit()
+        audit_rows.append(row_email)
 
     if notify_cfg.webhook is not None:
         row_webhook = IntegrationDelivery(
@@ -253,5 +257,13 @@ def dispatch_notifications(
                 "Delivery failed (webhook): %s",
                 safe_str(exc),
             )
-        db.add(row_webhook)
+        audit_rows.append(row_webhook)
+
+    # Commit all audit rows in a single transaction (WR-01).
+    # A failure here is isolated — it does not affect the scan record (already committed).
+    for row in audit_rows:
+        db.add(row)
+    try:
         db.commit()
+    except Exception as exc:
+        logger.warning("Audit row commit failed: %s", safe_str(exc))
