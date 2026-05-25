@@ -391,10 +391,14 @@ def _evict_if_full(spool_dir: Path) -> None:
     glob and the unlink (the spool dir is in user_data_dir, accessible to any
     process running as the same user).
     """
-    files = sorted(
-        ((p, p.stat().st_size, p.stat().st_mtime) for p in spool_dir.glob("*.json.zst")),
-        key=lambda t: t[2],
-    )
+    files: list = []
+    for p in spool_dir.glob("*.json.zst"):
+        try:
+            st = p.stat()
+            files.append((p, st.st_size, st.st_mtime))
+        except FileNotFoundError:
+            pass  # file removed by another process between glob and stat — skip it
+    files.sort(key=lambda t: t[2])
     total_bytes = sum(sz for _, sz, _ in files)
     while (len(files) >= _SPOOL_MAX_FILES or total_bytes > _SPOOL_MAX_BYTES) and files:
         path, size, _ = files.pop(0)
