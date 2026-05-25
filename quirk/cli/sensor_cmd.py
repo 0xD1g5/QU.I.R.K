@@ -569,13 +569,21 @@ def _cmd_export_results(args: argparse.Namespace) -> None:
     """Export scan results to a .qpush file for air-gap transfer (SENSOR-04).
 
     Reuses _build_envelope and _build_compressed_payload BYTE-FOR-BYTE so the
-    .qpush body is identical to an HTTPS push request body.  No network I/O —
-    no httpx, no validate_external_url call.
+    compressed payload body is identical to an HTTPS push request body.
+    No network I/O — no httpx, no validate_external_url call.
+
+    .qpush file format (WR-03):
+        <JSON header line>\\n<compressed payload bytes>
+
+    The JSON header line carries the HMAC-SHA256 signature so Phase 109
+    import-results can verify file integrity without out-of-band key transport:
+        {"hmac-sha256": "hmac-sha256=<hex>"}\\n
+
+    The compressed payload bytes that follow the header are byte-for-byte
+    identical to the HTTPS push request body — _build_compressed_payload is
+    shared by both paths (byte-identity invariant, T-108-06).
 
     Output file: {output}/{sensor_id}-{payload_id}.qpush
-    The file body contains ONLY the compressed payload bytes (same bytes as the
-    HTTPS push body).  The HMAC signature travels in the push header for HTTPS;
-    for air-gap, Phase 109 import-results will verify using the stored hmac_key.
     """
     config_path: str = args.config or _default_sensor_yaml_path()
 
@@ -600,6 +608,22 @@ def _cmd_export_results(args: argparse.Namespace) -> None:
         )
         sys.exit(1)
 
+    # WR-03: read hmac_key so the signature can be embedded in the .qpush file.
+    # The key is validated here (same rules as _cmd_push CR-03 gate) before use.
+    hmac_key_hex: str = sensor_cfg.get("hmac_key", "")
+    if not hmac_key_hex or len(hmac_key_hex) != 64:
+        print(
+            "ERROR: sensor.yaml is missing or has invalid hmac_key (must be 64-char hex)",
+            file=sys.stderr,
+        )
+        print("Re-run 'quirk sensor enroll' to regenerate credentials.", file=sys.stderr)
+        sys.exit(1)
+    try:
+        hmac_key_bytes = bytes.fromhex(hmac_key_hex)
+    except ValueError:
+        print("ERROR: sensor.yaml hmac_key is not valid hex", file=sys.stderr)
+        sys.exit(1)
+
     scan_config: str = args.scan_config
 
     # Run local scan in a temp output dir
@@ -620,14 +644,23 @@ def _cmd_export_results(args: argparse.Namespace) -> None:
         envelope = _build_envelope(sensor_cfg, endpoints)
         payload_id = envelope["payload_id"]
 
-        # Compress — SAME helper as push (byte-identity invariant)
+        # Compress — SAME helper as push (body byte-identity invariant)
         body = _build_compressed_payload(envelope)
+
+        # WR-03: embed HMAC signature in a JSON header line prepended to the file.
+        # The header is a single newline-terminated JSON object; the compressed body
+        # follows immediately after. This keeps the compressed body bytes unchanged
+        # (preserving the byte-identity invariant) while adding verifiable integrity
+        # for the air-gap transport path.
+        signature = _sign(body, hmac_key_bytes)
+        header_line = json.dumps({"hmac-sha256": signature}, ensure_ascii=True).encode("ascii") + b"\n"
+        qpush_content = header_line + body
 
         # Write to output file: {sensor_id}-{payload_id}.qpush
         output_path = Path(args.output)
         output_path.mkdir(parents=True, exist_ok=True)
         dest = output_path / f"{sensor_id}-{payload_id}.qpush"
-        dest.write_bytes(body)
+        dest.write_bytes(qpush_content)
 
         print(str(dest), flush=True)
         print(
