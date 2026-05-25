@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -125,8 +126,14 @@ def _dispatch_schedule(
     db.add(run)
     db.flush()  # obtain run.id without closing session
 
+    # WR-02: sanitize schedule.name before using it as a path component.
+    # A name like '../../../etc/cron.d' would escape the output tree via Path().
+    # Accept only alphanumerics, underscores, and hyphens (max 128 chars);
+    # fall back to "unnamed" so mkdir never traverses outside output/scheduled/.
+    _SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
+    safe_name = schedule.name if _SAFE_NAME_RE.match(schedule.name) else "unnamed"
     output_dir = (
-        Path("output/scheduled") / schedule.name / now.strftime("%Y%m%d-%H%M%S")
+        Path("output/scheduled") / safe_name / now.strftime("%Y%m%d-%H%M%S")
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
