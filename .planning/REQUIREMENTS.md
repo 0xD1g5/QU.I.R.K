@@ -14,13 +14,13 @@
 - [ ] **NOTIFY-03**: A user can deliver notifications to Slack via an incoming-webhook URL (one summary message per scan, not one per finding)
 - [ ] **NOTIFY-04**: A user can deliver notifications via email (stdlib SMTP) to one or more recipients
 - [ ] **NOTIFY-05**: A user can deliver notifications to a generic outbound webhook (JSON POST) for custom integrations
-- [ ] **NOTIFY-06**: Notification channels and trigger thresholds are configured in one global config block (applies to all scheduled scans); secrets are referenced by env-var name, never stored in config or persisted state
+- [x] **NOTIFY-06**: Notification channels and trigger thresholds are configured in one global config block (applies to all scheduled scans); secrets are referenced by env-var name, never stored in config or persisted state
 - [x] **NOTIFY-07**: A delivery failure (unreachable endpoint, auth error, timeout) is logged and isolated — it never aborts or corrupts the scan/report run, and each delivery attempt is recorded for observability
 
 ### Integration Security Foundation (ISEC) — load-bearing for all integration phases
 - [ ] **ISEC-01**: Every user-configured outbound URL (webhook, SIEM, ticketing) is validated against SSRF at DELIVERY time (not only config-load), rejecting internal/loopback/metadata targets
 - [x] **ISEC-02**: Integration secret shapes (Slack `xoxb-`/webhook URLs, `Authorization: Splunk`, SMTP auth errors, Jira/ServiceNow tokens) are scrubbed from logs and error messages by the existing `safe_str` discipline
-- [ ] **ISEC-03**: A single whitelist defines exactly which finding/cert/drift fields are safe to send to a third party — sensitive material is redacted before any outbound payload is built
+- [x] **ISEC-03**: A single whitelist defines exactly which finding/cert/drift fields are safe to send to a third party — sensitive material is redacted before any outbound payload is built
 - [ ] **ISEC-04**: Every integration client library is an optional extra with lazy import + graceful skip — a missing/absent integration dependency never breaks the minimal install or a scan
 
 ### SIEM / Observability Export (SIEM)
@@ -74,11 +74,11 @@
 | NOTIFY-03 | Phase 101 | Pending |
 | NOTIFY-04 | Phase 101 | Pending |
 | NOTIFY-05 | Phase 101 | Pending |
-| NOTIFY-06 | Phase 101 | Pending |
+| NOTIFY-06 | Phase 101 | Complete |
 | NOTIFY-07 | Phase 101 | Complete |
 | ISEC-01 | Phase 101 | Pending |
 | ISEC-02 | Phase 101 | Complete |
-| ISEC-03 | Phase 101 | Pending |
+| ISEC-03 | Phase 101 | Complete |
 | ISEC-04 | Phase 101 | Pending |
 | SIEM-01 | Phase 103 | Pending |
 | SIEM-02 | Phase 103 | Pending |
