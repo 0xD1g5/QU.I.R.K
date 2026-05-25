@@ -1,17 +1,19 @@
 # Project Research Summary
 
-**Project:** QU.I.R.K. v5.3 — Adoption & Integration Surface
-**Domain:** Outbound integration layer on an existing Python CLI crypto-scanner + FastAPI dashboard
-**Researched:** 2026-05-24
+**Project:** QU.I.R.K. v5.4 — Distributed On-Prem Scanner Architecture
+**Domain:** Agent/console split for segmented-network cryptographic inventory scanning
+**Researched:** 2026-05-25
 **Confidence:** HIGH
+
+---
 
 ## Executive Summary
 
-QU.I.R.K. v5.3 adds the outbound integration surface that turns a silent scheduled scanner into an operationally visible tool: drift-triggered notifications (Slack, email, generic webhook), SIEM findings export (Splunk HEC), per-finding ticket creation (Jira), and dashboard API-key auth polish. All four researchers converge on the same architectural anchor: the gap in `scheduler_cmd.py::_dispatch_schedule()` (line 162, post-`db.commit()`) where `compute_trend_report()` is never called after a scheduled run completes. Closing this gap is the load-bearing first move of the milestone — every downstream integration phase inherits the `NotificationChannel` ABC, the `NotificationCfg` config dataclasses, and the security primitives (`safe_str` extension, `validate_external_url()` at delivery time, `to_integration_payload()` whitelist, `integration_deliveries` idempotency table) that must be established here.
+v5.4 extends QUIRK from a single-host scanner into a distributed sensor-and-console system where lightweight sensors run in isolated network segments (DMZ, PCI zones, OT/ICS VLANs, air-gapped enclaves), push results outbound over HTTPS to a central console, and the console merges all sensor findings through the existing canonical scoring and CBOM engines to produce one authoritative quantum-readiness score and one aggregate CBOM. All four research streams converged on a single design principle: this is an additive, single-tenant, no-new-infra extension of what already exists. The sensor is a thin wrapper around `run_scan.py`; the console is the existing FastAPI dashboard with one new ingestion route; the data model gains exactly two nullable columns; and the scoring/CBOM/evidence engines are called unchanged over the union of pushed endpoints.
 
-The dependency budget is deliberately minimal: `slack-sdk>=3.42.0` for the `[notify]` extra, `jira>=3.10.5` for the `[tickets]` extra, and stdlib (`smtplib`, `urllib.request`, `logging.handlers.SysLogHandler`) for everything else. The `elasticsearch` Python client is explicitly rejected as over-engineered for this use case; Splunk HEC requires no new dep. Dashboard auth is ~90% already shipped (Phase 58 `HTTPBearer` + `hmac.compare_digest`); v5.3 adds `X-API-Key` header support, a `quirk token generate/rotate` CLI, and a React login form — additive polish, not a new mechanism.
+The single highest-risk item — identified independently by every researcher — is the `(sensor_id, host, port)` uniqueness problem. The existing `CryptoEndpoint` fingerprint formula treats `(host, port)` as globally unique, which is correct for a single-node scanner but catastrophically wrong in a distributed deployment where two sensors in different segments can scan different machines at the same RFC1918 address. This data-model migration must be fully designed and locked in the architecture-doc phase before a single line of ingestion code is written; every other v5.4 feature is downstream of it. The architecture doc is therefore not optional groundwork — it is the gating deliverable for the entire milestone.
 
-The primary execution risk is the constellation of security pitfalls that must all be locked in at Phase 101 rather than retrofitted: SSRF via operator-configured delivery URLs (DNS-rebinding gap exists between config-load and delivery), secret leakage via exception messages into `scan_error` columns (`safe_str` patterns need extension for Splunk/Slack/SMTP token shapes), sensitive finding data exfiltration (a `to_integration_payload()` field whitelist must gate all integration serializers), notification storms (one summary per scan, not per finding; `integration_deliveries` idempotency table from day one), optional-extra import trap (lazy imports only — the `pypdf` v4.10 post-ship breakage is the reference failure), and delivery failure isolation (integration calls must never abort a scan or corrupt a `ScheduledRun` record). All seven pitfalls must be designed in at Phase 101; none can be retrofitted without high risk.
+Three open questions require PM confirmation before the requirements doc is finalized: (1) which scoring methodology to use when merging findings from multiple sensors — Option A (union of findings through the existing engine, recommended to start) vs. Option B (weighted average of per-segment scores by host count, more complex, deferred) vs. Option C (weakest-link, not recommended); (2) whether full Windows sensor packaging (PyInstaller frozen EXE + Windows Scheduled Task) lands in v5.4 or the v5.5 fast-follow, with v5.4's non-negotiable floor being an OS-agnostic sensor/console contract that works on Python 3.11+ on Windows without POSIX dependencies; and (3) the enrollment token expiry policy — one-time-use (recommended for a consulting tool) vs. time-windowed (e.g., 60-minute window as Rapid7 uses). These are not implementation details; getting them wrong late in the milestone is expensive.
 
 ---
 
@@ -19,217 +21,204 @@ The primary execution risk is the constellation of security pitfalls that must a
 
 ### Recommended Stack
 
-The v5.3 stack is nearly zero-delta from the existing platform. Three optional extras are added: `[notify]` (one dep: `slack-sdk>=3.42.0`), `[tickets]` (one dep: `jira>=3.10.5`), and no extra at all for SIEM (Splunk HEC is a stdlib `urllib.request` POST). Dashboard auth needs no new dep — `fastapi.security.APIKeyHeader` is already in the pinned `fastapi>=0.128.8`. The decision not to add `requests`, `elasticsearch-py`, `celery`, or `sendgrid` is as important as what is added: each would introduce blast radius with no functional gain for this single-tenant consulting-deploy model.
+The stack addition for v5.4 is deliberately minimal: exactly two new runtime pip dependencies (`platformdirs>=4.3.7` for OS-appropriate data directory resolution; `tenacity>=9.1.4` for sensor push retry with exponential backoff) plus one build-time tool (`PyInstaller>=6.20.0` for the Windows frozen EXE, if the arch-doc phase decides full Windows packaging lands in v5.4). Everything else — httpx, zstandard, cyclonedx-python-lib, FastAPI, SQLite/SQLAlchemy, `secrets`/`hmac`/`hashlib` — is already present in the codebase and is directly reused. The explicit prohibitions (Celery, Redis, RabbitMQ, MQTT, PostgreSQL, JWT per-sensor tokens, mTLS/PKI infrastructure, sbommerge, `tenant_id`) are as important as the additions; they enforce the single-tenant, no-new-infra constraint that all researchers agreed was the central design invariant.
 
-**Core technology additions:**
-- `slack-sdk>=3.42.0` (`[notify]` extra) — `WebhookClient` for Slack incoming webhooks; no bot-token OAuth dance; Block Kit message builder; PyPI-verified 2026-05-24
-- `jira>=3.10.5` (`[tickets]` extra) — Jira Cloud REST v3 issue create + JQL search; `basic_auth=(email, api_token)` pattern; no transitive dep conflicts; PyPI-verified 2026-05-24
-- `stdlib smtplib + email` — zero deps; `SMTP_SSL` (port 465) or `SMTP + STARTTLS` (port 587); `ssl.create_default_context()` for cert validation
-- `stdlib urllib.request` — generic webhook POST; Splunk HEC POST; already used in existing SSRF allowlist code
-- `stdlib logging.handlers.SysLogHandler` — CEF/syslog tertiary SIEM path; zero deps; 30-line `CefFormatter` subclass
-- `fastapi.security.APIKeyHeader` — `X-API-Key` header alternative to `Authorization: Bearer`; already in pinned fastapi dep
-- `secrets.token_urlsafe(32)` (stdlib) — `quirk token generate/rotate` CLI
+**Core new technologies:**
+- `platformdirs>=4.3.7` — OS-appropriate data/config directories (`user_data_dir`) — replaces the implicit `./quirk.db` assumption that breaks on Windows; zero transitive deps; add to core `dependencies`
+- `tenacity>=9.1.4` — exponential-backoff retry decorator for sensor->console HTTPS push — composable, async-compatible, no transitive deps; add to `[sensor]` extras group
+- `PyInstaller>=6.20.0` — frozen EXE for locked-down Windows sensor deployment — build-time only (not in `pyproject.toml` dependencies), runs on `windows-latest` GitHub Actions runner
+- `pywin32>=311` — Windows Service Control Manager integration — Windows-only optional, explicitly a **v5.5 candidate**; do NOT add in v5.4
 
-**Explicit rejects:** `elasticsearch` Python client (400KB+, overkill for <=hundreds of findings), `requests` library (not currently a dep; 10-line urllib equivalent), `slack-bolt` (event handling, not outbound push), `celery`/`rq` (SaaS-milestone async queues, not v5.3).
+**Wire transport:** httpx (already in core) + zstandard level-3 compression (already in codebase) + `X-Sensor-Signature: hmac-sha256=<hex>` header for application-layer integrity. Single POST per scan session; file-per-payload spool directory (not SQLite) for store-and-forward.
 
----
+**Sensor enrollment:** stdlib `secrets.token_urlsafe(32)` + SHA-256 hash stored in `sensor_tokens` table — exact mirror of `token_cmd.py` pattern. Per-sensor tokens, not a shared bearer token. No JWT (clock-sync hostile to air-gapped sensors). No mTLS for v5.4.
 
 ### Expected Features
 
-**Must have (table stakes):**
-- Post-run hook wired in `_dispatch_schedule()` calling `compute_trend_report()` after every `ScheduledRun` commits — closes the documented "half-built" scheduler gap
-- Trigger guard — no-op delivery when `new_high == 0 AND new_medium == 0 AND abs(score_delta) < threshold` (default: -5); fires on first new CRITICAL/HIGH
-- Slack drift-event delivery — Block Kit message with score band + delta, finding counts by severity, dashboard link; one summary per scan, never per finding
-- Email drift-event delivery — `smtplib` STARTTLS; zero new deps; plaintext + HTML MIME
-- Generic outbound webhook — JSON POST with `X-QUIRK-Signature: sha256=<HMAC>` authentication header
-- Splunk HEC export — per-finding JSON events batched per scan; `sourcetype: quirk:finding`; zero new deps
-- Jira auto-ticket — one ticket per `(finding_category, host, port)` tuple; SHA256 label fingerprint dedup; JQL search before create; QRAMM evidence in description
-- Dashboard `X-API-Key` header support — additive to Phase 58 bearer auth; same constant-time compare; same `QUIRK_API_TOKEN` value
-- `quirk token generate` + `quirk token rotate` CLI — `secrets.token_urlsafe(32)`, print-once to stdout
+All four research streams independently flagged `(sensor_id, host, port)` data-model keying as a blocking prerequisite for every other v5.4 feature. Nothing downstream can be built until the data model is locked.
 
-**Should have (differentiators):**
-- Score band + subscore delta in Slack messages (`Readiness: 62 FAIR (-8 from last scan)`) — leaders recognize regression immediately
-- QRAMM maturity evidence in Jira ticket description — governance-ready context a security team can cite in a sprint
-- `X-QUIRK-Signature` HMAC-SHA256 on generic webhook — allows consumers to verify authenticity
-- Configurable trigger threshold per schedule (`notify_threshold` column) — mirrors Alertmanager severity-routing conventions
-- `GET /api/notifications/status` + `POST /api/notifications/test` dashboard routes — show configured state without exposing secrets
-- React login form for token-gated dashboard — replaces silent 401 on unauthenticated access
-- `GET /api/auth/status` unprotected endpoint — lets SPA decide whether to show login prompt
+**Must ship (table stakes, blocking):**
+- `(sensor_id, host, port)` data model — blocks all downstream v5.4 work; arch-doc phase locks the design
+- Sensor enrollment: one-time token + stable UUID assigned at enrollment (mirrors Rapid7/Qualys/Wazuh pattern)
+- Outbound-push results endpoint (`POST /api/sensor/push`) with idempotent re-push by `(sensor_id, scan_job_id)`
+- Per-sensor CBOM stored per push; unified org-wide CBOM merged via canonical `build_cbom()` engine
+- Unified org-wide quantum-readiness score via Option A (union of findings through existing `compute_readiness_score()` — needs PM confirmation)
+- Heartbeat last-seen tracking + sensor status/registry page on console
+- De-registration (explicit sensor removal from console)
+- Segment filter on all existing dashboard views
+- Manual export/import for air-gapped sneakernet (`quirk sensor export-results` + `quirk console import-results`)
+- Windows sensor: POSIX-ism audit (at minimum `scheduler_cmd.py:136` relative path + `:258-259` SIGTERM) + Windows CI `windows-latest` smoke job
+- Store-and-forward spool (file-per-payload spool directory, bounded depth)
+- Version skew warning on heartbeat (non-blocking)
 
-**Defer to v5.3.x or v5.4+:**
-- Configurable per-schedule threshold (add after first user reports notification fatigue)
-- Retry with `ScheduledRun.notify_status` delivery log (at-least-once guarantee)
-- Jira auto-close/comment-on-resolve
-- ServiceNow ticketing (after Jira validates the ticketing pattern)
-- Elastic/OpenSearch SIEM export (after Splunk HEC validates the SIEM pattern)
-- Multi-channel fan-out per schedule
-- SQLite dead-letter queue for failed deliveries
-- Inbound webhook from SIEM (bidirectional sync) — SaaS milestone
-- Session cookies, JWT issuance, user tables — v5.4+ SaaS multi-tenant
+**Should add once merge semantics confirmed:**
+- Per-segment score gauges in dashboard alongside org-wide score
+- Cross-segment algorithm frequency map ("algorithm X appears in 4 of 5 segments")
+- Offline sensor alert (configurable last-seen threshold)
+- Scan result staleness flag (default 30-day window)
+- Segment coverage table in PDF report
+- Engagement-label field on sensor enrollment
 
-**Confirmed anti-features (do not implement):**
-- Notify on every scan completion (heartbeat-as-notification leads to alert fatigue within days)
-- One Jira ticket per scan (no assignee, no acceptance criteria, no done condition)
-- Real-time websocket push (incompatible with local/offline consulting-deploy model)
-- Store raw webhook payloads or response bodies in SQLite (credential leakage risk)
-
----
+**Defer to v5.5:**
+- MSI/MSIX installer — needs explicit enterprise demand signal
+- Weighted scoring by host count (Option B) — validate Option A with real consultants first
+- Windows Service via pywin32 — Scheduled Task covers v5.4 use case without admin elevation
+- Windows Event Log integration
+- Full PyInstaller frozen EXE packaging (if the arch-doc phase decides to defer it)
 
 ### Architecture Approach
 
-The integration layer attaches to a single seam: `_dispatch_schedule()` in `quirk/cli/scheduler_cmd.py` at line 162 (post-`db.commit()`). A `NotificationChannel` ABC (in `quirk/notifications/__init__.py`) defines the contract; `drift_helper.py` wraps `compute_trend_report()` for the scheduler; pluggable backends implement `send_drift_event(report, schedule)` with a strict "catch all, log at WARNING, never raise" contract. SIEM export gets a second method `send_findings_export(findings, scan_meta)` on the same ABC. Ticketing gets a separate `TicketingChannel` in `quirk/integrations/` with `open_ticket_for_finding(finding, qramm_evidence)`. Config follows the `BrokerCredential.pass_env` precedent — YAML holds env-var names, secrets resolve at dispatch time, never persisted to SQLite or scan JSON.
+The architecture follows a "same package, new mode flags" pattern: `quirk sensor` and `quirk console` are two new subcommand intercepts in `run_scan.py` using the identical dispatch pattern already used for `serve`, `schedule`, `token`, `export`, `ticket`, and all other subcommands. No package split. The sensor is a thin wrapper that invokes `run_scan.py` locally (exactly as the scheduler does via `sys.executable -m run_scan`), reads the resulting `CryptoEndpoint` rows, serializes them, and POSTs to the console. Scoring, CBOM building, and evidence collection never run on the sensor; they run only on the console after the merge step re-feeds the union of pushed endpoints through the unchanged canonical engines.
 
 **Major components:**
-1. `quirk/notifications/__init__.py` — `NotificationChannel` ABC; no imports from scanner or dashboard
-2. `quirk/notifications/drift_helper.py` — `_compute_post_run_trend()` wrapper; owns session-timestamp resolution logic
-3. `quirk/notifications/{slack,email,webhook}_channel.py` — concrete backends; stdlib only; Phase 101
-4. `quirk/notifications/siem_channel.py` — Splunk HEC + Elastic + syslog/CEF; Phase 103
-5. `quirk/integrations/ticketing_channel.py` — Jira (`jira>=3.10.5`); fingerprint dedup; Phase 104
-6. `quirk/config.py` additions — `NotificationCfg` / `SlackNotifCfg` / `EmailNotifCfg` / `WebhookNotifCfg` / `SIEMCfg` / `TicketingCfg`; `pass_env` secret indirection
-7. `quirk/dashboard/api/routes/notifications.py` — status + test endpoints; auth-gated; Phase 102
-8. `integration_deliveries` SQLite table — idempotency key per `(scan_id, finding_hash, destination)`; Phase 101
-9. Dashboard React login form + `GET /api/auth/status` — Phase 102
 
-**Key patterns to follow:**
-- Lazy import guard (`importlib.util.find_spec` probe) for all optional extras — never top-level import of `slack_sdk` or `jira`
-- `validate_external_url()` at delivery time (not only at config load) — closes DNS-rebinding SSRF window
-- `safe_str(exc)` wrapping all integration exception paths — extend `_SENSITIVE_PATTERNS` for Splunk/Slack/SMTP token shapes
-- `to_integration_payload(finding, *, include_host=False)` canonical field whitelist for all integration serializers
-- `integration_deliveries` table for idempotency (Jira dedup + delivery-failure audit trail)
-- Fan-out loop post-scan, never inside `_wrapped_phase()` — delivery failure must never abort or corrupt a `ScheduledRun`
-- Route-coverage CI test enumerating all FastAPI routes against `PUBLIC_ROUTES` allowlist
+1. **`quirk/cli/sensor_cmd.py`** (net-new) — sensor subcommand: `enroll`, `push`, `merge`, `export-results`, `check-clock`; OS-agnostic throughout; `pathlib.Path` everywhere
+2. **`quirk/dashboard/api/routes/sensor.py`** (net-new) — `POST /api/sensor/push` ingestion endpoint; `Depends(require_auth)` applied at router level; idempotent upsert on `(host, port, sensor_id, scan_id)`; writes `IntegrationDelivery` audit row via `safe_str()` pattern
+3. **`quirk/sensor/merge.py`** (net-new) — console merge pipeline: gathers `CryptoEndpoint` rows by `sensor_id` + time window, feeds `build_evidence_summary()` -> `compute_readiness_score()` -> `build_cbom()` unchanged; checks enrollment manifest for partial-result warning; triggers existing notification/SIEM hooks
+4. **`quirk/models.py`** (modified, additive) — two new nullable columns: `sensor_id = Column(String(128), nullable=True, index=True)` and `segment = Column(String(255), nullable=True)`; NULL = implicit local sensor; backward-compatible
+5. **`quirk/db.py`** (modified, additive) — one new entry in `_ADDITIVE_MIGRATIONS` using the Phase 77 `_ensure_columns` helper; no Alembic needed
+6. **Windows CI smoke job** (net-new, `.github/workflows/`) — `windows-latest` runner; distinct from and not replaceable by the Linux chaos lab
 
----
+**Key canonical engine invariant:** The merge pipeline re-runs `build_evidence_summary()` + `compute_readiness_score()` + `build_cbom()` over the full union of sensor endpoints. It never merges pre-scored sub-results. Averaging sensor scores is mathematically wrong because the six subscores use ratio-based penalties over the full endpoint population as denominator; a partial-population score is not comparable to a full-population score.
+
+**Untouched by v5.4:** `scoring.py`, `evidence.py`, `cbom/builder.py`, `cbom/writer.py`, `middleware/auth.py`, `models.py:IntegrationDelivery`, `util/safe_exc.py`, `util/url_allowlist.py`, `scheduler_cmd.py`, `notify/dispatcher.py`.
 
 ### Critical Pitfalls
 
-1. **SSRF via operator-configured delivery URLs** — `validate_external_url()` must be called at delivery time, not only at config load; DNS rebinding is a real attack path; `--allow-internal-targets` must never apply to integration URLs; enforce `https://` only for webhook/HEC/Jira
+1. **(Segment, host) collision — same RFC1918 IP in two segments** — The single highest data-model risk. `CryptoEndpoint` currently keys on `(host, port)`; two sensors scanning different machines at `10.0.0.5:443` collide and corrupt the merged CBOM. Prevention: add `sensor_id` (nullable, indexed) and `segment` (nullable) columns before any ingestion code; change all dedup/merge queries to include `sensor_id` in the uniqueness key; update CBOM builder Pass 1 component identity hash to include `sensor_id`; write regression test (two sensors, same RFC1918 host/port, different `sensor_id` -> two distinct CBOM components). Must be locked in architecture-doc phase.
 
-2. **Secret leakage via exception messages into `scan_error` / logs** — `safe_str(exc)` must wrap all integration exception paths; extend `_SENSITIVE_PATTERNS` for Splunk `Authorization: Splunk\s+\S+`, Slack `xoxb-`/`xoxp-` prefixes, SMTP `SMTPAuthenticationError` text; Slack incoming webhook URL contains token in path — store and display as `[configured]`, never log raw
+2. **Ingest endpoint bypasses `require_auth` + `safe_str`** — A new route file in a separate module can fail to inherit the existing `require_auth` dependency, opening unauthenticated result injection. Prevention: apply `Depends(require_auth)` at the `APIRouter(dependencies=[...])` level; write a gating test that calls the ingest endpoint without credentials and asserts 401; extend the `safe_str()` AST gate to the new module paths.
 
-3. **Optional-extra import trap breaking minimal install** — never top-level import `slack_sdk`, `jira`, or any optional dep; use `importlib.util.find_spec` probe + lazy import; the `pypdf` v4.10 post-ship breakage is the project's reference failure; add minimal-install smoke test to CI
+3. **Merge scores partial sensor data without warning** — When one enrolled sensor is offline, the console silently merges two-of-three sensors and presents the result as the org-wide score. Prevention: maintain a `sensors` enrollment manifest with `last_push_at` and expected cadence; emit a `coverage_warning` field in score JSON listing overdue sensor IDs; do NOT score partial data as if complete.
 
-4. **Delivery failure corrupting scan records** — all integration delivery calls must execute outside `_wrapped_phase()` in a strictly isolated `try/except`; `ScheduledRun.status = 'completed'` must be committed before any delivery attempt; delivery timeout <=5s; a failed delivery writes to `integration_deliveries`, never to `scan_error` with exception class
+4. **Windows POSIX-isms break the sensor service** — `scheduler_cmd.py:258-259` registers `signal.SIGTERM` (not meaningful for arbitrary Windows processes); `:136` uses a relative path `output/scheduled` (wrong CWD when running as a Windows service); `os.kill(pid, SIGTERM)` in `jobs.py:204` does not work as expected on Windows. Prevention: POSIX-ism audit as an explicit phase task; wrap SIGTERM with `sys.platform != 'win32'`; replace relative path with `cfg.output_root / "scheduled"`.
 
-5. **Notification storm + Jira duplicate tickets** — deliver one drift summary per scan, not per finding; `integration_deliveries` idempotency table with `(scan_id, finding_hash, destination)` key; exponential backoff with jitter on 429; Jira JQL dedup check before create; batch Splunk HEC events per scan
+5. **Replay and oversized-payload attacks on the ingest surface** — FastAPI has no default body-size limit; a sensor (or impersonator) can DoS the console or replay stale results to re-roll a remediated score. Prevention: enforce 10 MB body limit (413 on excess); add `payload_id` UUID field in sensor push schema; persist accepted IDs in a `sensor_pushes` dedup table (409 on replay); include `pushed_at` + `received_at`; ±15-minute replay window for clock-skew tolerance.
 
-6. **Sensitive finding data exfiltrated to third-party SaaS** — `to_integration_payload()` whitelist in Phase 101; all integration serializers must call it; never `**finding.__dict__` or CBOM JSON blobs; raw cert PEM and internal PKI topology must never leave the operator's SQLite
+6. **Backward compatibility break for single-node local scans** — If `sensor_id` is added as `NOT NULL`, all existing rows in SQLite fail the constraint. Prevention: `sensor_id` must be `nullable=True`; `compute_readiness_score()` signature must not change; write migration regression test with pre-v5.4 SQLite fixture.
 
-7. **Dashboard auth gaps on new routes** — new routes must explicitly include `dependencies=[Depends(require_auth)]`; add route-coverage CI test in Phase 101; no `?token=` query params; `hmac.compare_digest()` in all new HMAC verification paths
+7. **Over-engineering toward SaaS/multi-tenant patterns** — Distributed-system tutorials lead to Celery + Redis; `tenant_id` feels forward-compatible. Prevention: arch-doc phase explicitly enumerates forbidden additions; every subsequent phase plan reviewed against it.
 
 ---
 
 ## Implications for Roadmap
 
-Based on combined research, a four-phase structure is well-supported and should be adopted directly. Phase 101 is the unambiguous anchor; it is load-bearing for the security posture of all downstream phases and must ship first.
+All four researchers independently converged on the same phase ordering: architecture doc first (no exceptions), then additive data model, then sensor push and console ingestion, then merge pipeline, then dashboard exposure, with Windows CI validation threaded through the sensor phase and a stabilization tail for pre-existing housekeeping. The rationale is dependency-driven: every downstream deliverable is blocked by the data-model keying decision, and the data-model keying decision cannot be safely made without the architecture doc locking the wire contract.
+
+### Phase 1: Architecture Documentation (arch-doc anchor, no code)
+
+**Rationale:** Every researcher and the existing HORIZON.md entry (`999.58`) agree this comes first. The data-model keying decision, the wire contract shape, the enrollment token design, the Windows floor/ceiling decision, and the scoring methodology choice are all interconnected. Making any one of them in a coding phase without the others locked creates rework debt.
+
+**Delivers:** Locked decisions on (a) `sensor_id`/`segment` nullable column names and types, (b) the sensor->console wire payload schema including `payload_id`, `pushed_at`, `schema_version`, and `sensor_version` fields, (c) Windows scope floor vs. ceiling, (d) scoring methodology (Option A/B confirmation from PM), (e) enrollment token expiry policy, (f) enrollment manifest and partial-result `coverage_warning` contract, (g) explicit enumeration of forbidden infra additions. No code ships.
+
+**Avoids:** Premature code that must be refactored when keying or wire contract changes; SaaS over-engineering (Pitfall 8); scope creep (Pitfall 14).
+
+**Research flag:** This phase IS the research materialization — no further research needed; execute directly.
 
 ---
 
-### Phase 101 — Notification Fan-Out Foundation (ANCHOR)
+### Phase 2: Data Model Migration
 
-**Rationale:** Closes the confirmed "half-built" gap in `_dispatch_schedule()`. Establishes the `NotificationChannel` ABC, `NotificationCfg` config schema, `drift_helper.py` seam, and all security primitives that downstream phases must inherit. All seven pitfalls must be addressed here — none can be retrofitted.
+**Rationale:** Purely additive; zero risk to existing functionality; blocks all ingestion and merge code. Ships immediately after the arch doc locks the column names and types.
 
-**Delivers:**
-- `quirk/notifications/` package: ABC + `drift_helper.py` + Slack + email + generic webhook backends
-- `NotificationCfg` family in `config.py` using `pass_env` secret indirection
-- `_dispatch_schedule()` seam wired with fan-out loop and regression gate (score_delta <= -5 OR new_high > 0)
-- `integration_deliveries` SQLite table (idempotency + delivery audit)
-- `to_integration_payload()` field whitelist primitive
-- `safe_str` extension for Splunk/Slack/SMTP token shapes
-- `validate_external_url()` called at delivery time
-- `REGISTRY` entries for `[notify]` extra with lazy import guards
-- Route-coverage CI test for all FastAPI routes
-- Minimal-install smoke test (integration extras absent)
+**Delivers:** `sensor_id` and `segment` nullable columns on `crypto_endpoints`; one new `_ADDITIVE_MIGRATIONS` entry using `_ensure_columns` helper; `sensors` enrollment manifest table; `sensor_tokens` table; `sensor_pushes` dedup table; migration regression test with pre-v5.4 SQLite fixture.
 
-**Addresses:** Drift-event Slack, email, webhook delivery (table stakes); trigger guard; notification-storm prevention; dedup guard via `last_notify_hash`
+**Uses:** Existing `_ensure_columns` / `_ADDITIVE_MIGRATIONS` pattern (Phase 77 helper); `SQLite ALTER TABLE ADD COLUMN` — no Alembic.
 
-**Avoids:** All seven pitfalls — must be complete before Phase 102 begins
+**Avoids:** Pitfall 4 (segment/host collision — keying established before ingestion writes rows), Pitfall 5 (backward compat — nullable columns, existing rows unaffected).
 
-**Research flag:** Skip research phase. Seam location confirmed by direct code inspection; patterns confirmed by existing project precedents.
+**Research flag:** Well-documented pattern in this codebase; skip research phase.
 
 ---
 
-### Phase 102 — Dashboard Auth UX + Notification Management
+### Phase 3: Sensor Push CLI + Windows CI Smoke Test
 
-**Rationale:** Independent of the notification delivery path. Can run in parallel with Phase 101 but is logically cohesive with the dashboard and UX surface. Small surface — Phase 58 already shipped 90% of the mechanism.
+**Rationale:** The sensor is the value-delivery unit; the Windows CI smoke test belongs in the same phase because it validates the POSIX-ism audit on a real Windows runner, and deferring it guarantees regression.
 
-**Delivers:**
-- `quirk token generate` + `quirk token rotate` CLI (stdlib `secrets.token_urlsafe`)
-- `X-API-Key` header acceptance in `auth.py` (2-line additive change)
-- `GET /api/auth/status` unprotected endpoint (SPA login prompt trigger)
-- React login form (token stored in `localStorage.quirk_api_token`)
-- `GET /api/notifications/status` + `POST /api/notifications/test` routes (auth-gated)
+**Delivers:** `quirk/cli/sensor_cmd.py` with `enroll`, `push`, `export-results`, and `check-clock` subcommands; subcommand dispatch intercept in `run_scan.py`; `platformdirs` integration; `tenacity` retry in push client; POSIX-ism fixes (`scheduler_cmd.py:136` relative path -> `cfg.output_root / "scheduled"`; `:258-259` SIGTERM -> platform-conditional); `verify=True` enforced with CI grep gate; `windows-latest` CI smoke job (not `continue-on-error: true`) validating payload serialization (no backslash paths) and clean shutdown.
 
-**Addresses:** Dashboard API-key header variant; `quirk token rotate` CLI; login UX
+**Uses:** `platformdirs>=4.3.7` (new, core dep); `tenacity>=9.1.4` (new, `[sensor]` extras); httpx + zstandard (existing); `validate_external_url()` (existing SSRF guard); `safe_str()` (existing).
 
-**Avoids:** JWT issuance, user tables, per-scope tokens, session cookies — v5.4 SaaS scope
+**Avoids:** Pitfall 11 (SIGTERM on Windows), Pitfall 12 (relative paths), Pitfall 13 (chaos lab cannot validate Windows — this phase creates the real Windows validation path), Pitfall 3 (console impersonation — `verify=True` and CI grep gate).
 
-**Research flag:** Skip research phase. All patterns well-documented (Phase 58 is the template).
+**Research flag:** POSIX-ism audit scope is well-understood from research; Windows CI job is straightforward. Skip research phase.
 
 ---
 
-### Phase 103 — SIEM Export (Splunk HEC)
+### Phase 4: Console Ingestion API
 
-**Rationale:** Semantically distinct from drift-event notifications — a per-scan, per-finding batch push to the security team's primary triage surface. Uses the `SIEMChannel` extension of the abstraction established in Phase 101. Zero new pip deps.
+**Rationale:** Depends on Phase 2 (columns exist) and Phase 3 (wire format is defined and tested).
 
-**Delivers:**
-- `quirk/notifications/siem_channel.py` — Splunk HEC `sourcetype: quirk:finding` per-finding events batched per scan
-- `quirk export --siem` CLI (on-demand + post-scheduled-scan trigger)
-- `SIEMCfg` dataclass; `[siem]` optional extra (empty — stdlib only)
-- `CryptoEndpoint` to Splunk HEC JSON event serializer using `to_integration_payload()` from Phase 101
-- CEF/syslog tertiary path if capacity allows
+**Delivers:** `quirk/dashboard/api/routes/sensor.py` with `POST /api/sensor/push`; `Depends(require_auth)` applied at `APIRouter` level; 10 MB body size limit (413 on excess); payload deserialization with `extra='ignore'` and `schema_version` field; idempotent upsert on `(host, port, sensor_id, scan_id)`; `payload_id` dedup against `sensor_pushes` table (409 on replay); `pushed_at` + `received_at` stored; `console_utc` included in rejection responses for clock-skew diagnosis; `IntegrationDelivery` audit row per push; `safe_str()` on all exception stringification; 401-without-credentials test as gating success criterion.
 
-**Addresses:** Splunk HEC export (enterprise table stakes); reduces "check yet another tool" friction
+**Avoids:** Pitfall 1 (ingest auth bypass), Pitfall 2 (replay + DoS), Pitfall 9 (clock skew), Pitfall 10 (version skew — `extra='ignore'` + `schema_version`).
 
-**Avoids:** `elasticsearch` client (explicitly rejected); Elastic export deferred to v5.4
-
-**Research flag:** Needs plan-time verification of Splunk HEC raw vs. event endpoint choice and batch payload size limits. HEC endpoint shape is confirmed; optimal batching strategy should be confirmed against current Splunk HEC docs at planning.
+**Research flag:** All patterns established. Skip research phase.
 
 ---
 
-### Phase 104 — Ticketing Integration (Jira)
+### Phase 5: Cross-Sensor Merge Pipeline
 
-**Rationale:** Highest complexity of the four phases; depends on Phase 101 for the `to_integration_payload()` whitelist and `integration_deliveries` idempotency table. The fingerprint dedup design warrants deeper plan-time research.
+**Rationale:** Depends on Phase 4 (endpoints being pushed and stored with `sensor_id` set). The merge pipeline is the core product value of v5.4; CBOM correctness invariants must be rigorously enforced here.
 
-**Delivers:**
-- `quirk/integrations/ticketing_channel.py` — Jira Cloud REST v3 issue create + JQL dedup check
-- `TicketingCfg` dataclass; `[tickets]` optional extra (`jira>=3.10.5`)
-- Per-finding ticket with QRAMM `evidence_bridge.py` dimension scores in description
-- `quirk ticket create / list / sync` CLI subcommands
-- Label fingerprint dedup: `quirk-fp-<sha256(host:port:protocol:category)>` + `quirk-last-seen-<YYYYMMDD>`
-- Rediscovery comment on existing open tickets (Rapid7 InsightVM pattern)
+**Delivers:** `quirk/sensor/merge.py` with `merge_scan()` feeding `build_evidence_summary()` -> `compute_readiness_score()` -> `build_cbom()` unchanged; enrollment manifest check before scoring; `coverage_warning` field in score JSON (list of overdue sensor IDs, or null); `quirk sensor merge` subcommand; CBOM regression tests (two sensors, same RFC1918 host/port, different `sensor_id` -> two distinct CBOM components); offline-sensor test (`coverage_warning` non-null).
 
-**Addresses:** Per-finding Jira ticket creation (table stakes); fingerprint dedup (differentiator); QRAMM evidence in tickets (differentiator)
+**Avoids:** Pitfall 6 (CBOM over/under-merge — `sensor_id` included in component identity hash), Pitfall 7 (partial-result score — `coverage_warning` and enrollment manifest check).
 
-**Avoids:** ServiceNow (deferred — no free sandbox, complex OAuth2); one-ticket-per-scan anti-pattern; parallel ticket creation (serial only, <=10 req/s Jira Cloud)
+**Research flag:** CBOM identity hash change (Pass 1 skip logic in `builder.py`) needs careful implementation review at plan time. Not full research, but flag for explicit seam audit.
 
-**Research flag:** Needs plan-time research. Jira Cloud REST v3 JQL label filter syntax, `jira>=3.10.5` `create_issue()` field map for priority + labels, and Jira Cloud vs Server/DC field schema differences should all be verified at planning time.
+---
+
+### Phase 6: Console Dashboard Awareness
+
+**Rationale:** First phase touching the frontend; depends on Phase 5 delivering a working merged result. Keep frontend changes batched to one phase to avoid React build churn.
+
+**Delivers:** `sensor_id`/`segment` fields added to `FindingItem` Pydantic schema (nullable, backward-compat); scan route populates those fields; React findings table adds sensor/segment column with segment filter; sensor registry page showing sensor ID, segment label, version, last-seen, status badge; per-segment filter on `/api/scan/latest`, `/api/findings`, `/api/cbom`; offline sensor alert; scan result staleness flag; per-segment score gauges alongside org-wide gauge.
+
+**Research flag:** Established React + shadcn/ui + FastAPI patterns in this codebase. Skip research phase.
+
+---
+
+### Phase 7: Stabilization Tail
+
+**Rationale:** Pre-existing housekeeping items from HORIZON (`999.59` operators-guide all-configurations coverage, `_NoRedirectHandler` extraction to `quirk/util/no_redirect.py`, residual dep hygiene) that are independent of the sensor feature train. Note: `_NoRedirectHandler` extraction should ship no later than Phase 3 (the sensor push client needs it); if it slips, treat it as a Phase 3 blocker.
+
+**Delivers:** `docs/operators-guide.md` expanded to cover Windows sensor install; `quirk/util/no_redirect.py` extracted; dep hygiene; UAT-SERIES.md updated for all v5.4 phases.
+
+**Research flag:** No research needed.
 
 ---
 
 ### Phase Ordering Rationale
 
-- Phase 101 must come first: it is the only phase that can define the `NotificationChannel` ABC and security primitives that all subsequent phases inherit
-- Phase 102 can run in parallel with Phase 101 but is grouped after because `POST /api/notifications/test` requires channel backends from Phase 101
-- Phase 103 before Phase 104 because SIEM export is stdlib-only (zero risk of dep conflicts) and validates the `send_findings_export` pattern before Jira adds higher-complexity dedup logic
-- Phase 104 last because it has the highest complexity (fingerprint dedup, JQL, QRAMM evidence threading, rate limiting) and benefits from Phase 101 delivery isolation and idempotency infrastructure
+The ordering is entirely dependency-driven. The data-model keying decision (arch-doc -> data-model phase) gates everything. The sensor push (Phase 3) must exist before the ingest endpoint (Phase 4) has something to send. The merge pipeline (Phase 5) requires ingested data with `sensor_id` set. The dashboard (Phase 6) requires a working merged result to display. This is a strict linear dependency chain with one parallel opportunity: the Windows CI smoke test work in Phase 3 can be developed concurrently with Phase 4 ingest work once the wire format is locked in the arch-doc.
 
-### Open Questions for Milestone Scoping
-
-1. **Per-schedule vs. global notification config** — recommend global config in `quirk.toml` with per-schedule override columns as v5.3.x addition; confirm at Phase 101 planning
-2. **Splunk HEC raw vs. event endpoint** — event endpoint (`/services/collector/event`) is simpler and more debuggable for <=hundreds of findings; confirm at Phase 103 planning
-3. **httpx vs. urllib standardization** — research recommends `urllib.request` (already used in SSRF allowlist, no new dep); confirm at Phase 101 planning
-4. **Jira vs. ServiceNow** — research clearly recommends Jira first; ServiceNow deferred to v5.4; confirm if there is an active ServiceNow customer commitment before Phase 104 planning
+The grouping of Windows CI into Phase 3 (not a separate phase) is deliberate: the POSIX-ism audit and the Windows smoke test are part of the same correctness concern as the sensor push client. Separating them would allow the sensor to ship without Windows validation, which all researchers flagged as a recurrence risk.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 103 (SIEM):** Splunk HEC raw vs. event endpoint batching strategy — verify against current Splunk docs
-- **Phase 104 (Ticketing):** Jira Cloud REST v3 JQL label filter syntax; `jira>=3.10.5` `create_issue()` field map; Jira Cloud vs Server/DC schema differences
+Phases with established patterns (skip research phase):
+- **Phase 2 (Data Model):** `_ensure_columns` / `_ADDITIVE_MIGRATIONS` is the documented pattern.
+- **Phase 3 (Sensor CLI):** Modeled exactly on `scheduler_cmd.py` dispatch; POSIX-ism scope is enumerated.
+- **Phase 4 (Ingestion API):** All patterns established (auth middleware, delivery audit, `safe_str`).
+- **Phase 6 (Dashboard):** Established React + FastAPI patterns in this codebase.
+- **Phase 7 (Stabilization):** Housekeeping.
 
-Phases with standard patterns (skip research phase):
-- **Phase 101 (Anchor):** All patterns confirmed by direct source inspection; seam location pinned to line 162
-- **Phase 102 (Auth UX):** Phase 58 is the template; `fastapi.security.APIKeyHeader` is in pinned dep
+Phases needing careful implementation review (not full research, but explicit seam audit at plan time):
+- **Phase 5 (Merge Pipeline):** CBOM builder Pass 1 component identity hash must include `sensor_id` — review `builder.py` Pass 1 skip logic before writing the Phase 5 plan.
+
+Phases requiring PM decision confirmation before planning:
+- **Phase 1 (Arch-Doc):** Three open PM questions must be resolved as outputs: (a) scoring Option A vs. B, (b) Windows floor/ceiling scope, (c) enrollment token expiry policy.
+
+---
+
+## Open PM Decisions Required
+
+| Decision | Options | Recommendation | Risk of Deferring |
+|----------|---------|----------------|-------------------|
+| **Unified score methodology** | Option A: union of findings through existing engine (recommended); Option B: weighted average of per-segment scores by host count; Option C: weakest-link (not recommended) | Start with Option A — zero changes to existing engine; add `per_segment_scores` breakdown in report for context | If deferred past arch-doc, merge pipeline is built for the wrong model and must be reworked |
+| **Windows packaging scope for v5.4** | Floor only (OS-agnostic contract + pip install + Windows CI smoke); ceiling (full PyInstaller frozen EXE + Scheduled Task + signed packaging) | Arch-doc phase decides; STACK research recommends Scheduled Task (not pywin32 Service) in v5.4 if full packaging is in scope | If unconstrained, Windows work balloons and slips the milestone |
+| **Enrollment token expiry** | One-time-use (consumed on enrollment, recommended); time-windowed (e.g., 60-minute window as Rapid7 uses) | One-time-use — simpler, more secure for a consulting tool where deployment timelines are controlled | If not decided, sensor enrollment UX is ambiguous and must be retro-fitted |
 
 ---
 
@@ -237,55 +226,55 @@ Phases with standard patterns (skip research phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All versions PyPI-verified 2026-05-24; integration points confirmed by direct source read; rejects confirmed by source analysis |
-| Features | HIGH | Seam location confirmed by direct code inspection of `scheduler_cmd.py:109-163`; drift data model from `trends.py`; auth state from `auth.py` |
-| Architecture | HIGH | All source files read directly; ABC design derived from existing `BrokerCredential.pass_env`, `optional_extra.py` REGISTRY patterns; no training-data inference |
-| Pitfalls | HIGH | Every pitfall cross-referenced to existing project patterns and prior incidents (`pypdf` v4.10, Phase 59 LEAK-01) |
+| Stack | HIGH | Versions verified against live PyPI; integration points confirmed from source review of `auth.py`, `token_cmd.py`, `safe_exc.py`, `dispatcher.py`; no speculative additions |
+| Features | HIGH | Grounded in official docs from Tenable, Rapid7/InsightVM, Qualys, Wazuh; dependency graph is deterministic |
+| Architecture | HIGH | Grounded in real repo symbols (line numbers cited for all seams); patterns traced from existing subcommand dispatch, `_ensure_columns`, `_dispatch_schedule` |
+| Pitfalls | HIGH | All pitfalls grounded in existing codebase inspection and confirmed line references; v5.x security posture review; zero speculative risks |
 
-**Overall confidence: HIGH**
+**Overall confidence:** HIGH
 
-All four researchers read source files directly and cross-referenced against each other. Strong cross-researcher consensus on: Phase 101 as anchor, `NotificationChannel` ABC shape, `pass_env` secret indirection pattern, lazy import guard requirement, delivery isolation requirement, and Jira label-fingerprint dedup approach.
+### Gaps to Address During Planning
 
-### Gaps to Address
-
-- **Splunk HEC batching strategy** — event endpoint vs. raw endpoint; confirm at Phase 103 planning
-- **Jira `create_issue()` field map** — labels + priority on Jira Cloud REST v3; confirm at Phase 104 planning via `jira>=3.10.5` docs
-- **Per-schedule notify config scope** — confirm whether per-schedule overrides are in v5.3 or deferred to v5.3.x at Phase 101 planning
-- **`integration_deliveries` table schema** — minimum fields: `scan_id`, `finding_hash`, `destination`, `status`, `attempted_at`, `error_summary`; define at Phase 101 plan time
+- **CBOM Pass 1 `sensor_id` hash inclusion:** The exact change needed in `builder.py` is known (include `sensor_id` in the component identity key), but the specific line and data structure must be reviewed at Phase 5 plan time.
+- **`_NoRedirectHandler` extraction timing:** Sensor push client needs `_NoRedirectHandler` from `quirk/util/no_redirect.py` before or concurrent with Phase 3. If not yet extracted, treat it as a Phase 3 prerequisite task, not Phase 7.
+- **`sensor_pushes` table schema:** The exact dedup table design (`payload_id`, `sensor_id`, `received_at`, TTL/cleanup policy) is sketched but not fully specified. Phase 1 arch-doc should nail this so Phase 2 can create it in the same migration pass.
+- **Merge trigger mechanism:** The arch-doc must decide between manual `quirk sensor merge` (simpler, v5.4 floor) and automatic console-side poll when all expected sensors have checked in (possible v5.5). Research recommends manual trigger for v5.4.
 
 ---
 
 ## Sources
 
-### Primary (HIGH confidence)
+### Primary (HIGH confidence — official docs + codebase source review)
 
-- Direct code inspection: `quirk/cli/scheduler_cmd.py` lines 109-163 — seam location confirmed
-- Direct code inspection: `quirk/intelligence/trends.py` — `TrendReport` dataclass + `compute_trend_report()` confirmed
-- Direct code inspection: `quirk/dashboard/api/middleware/auth.py` — Phase 58 bearer auth + `hmac.compare_digest` confirmed
-- Direct code inspection: `quirk/config.py` — `BrokerCredential.pass_env` secret pattern confirmed
-- Direct code inspection: `quirk/util/optional_extra.py` — `REGISTRY`, lazy-import guard pattern confirmed
-- `https://pypi.org/pypi/slack-sdk/json` — version 3.42.0 confirmed
-- `https://pypi.org/pypi/jira/json` — version 3.10.5 confirmed
-- `https://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector` — HEC endpoint confirmed
-- `https://docs.python.org/3/library/smtplib.html` — stdlib SMTP confirmed
-- Context7 `/slackapi/python-slack-sdk` — `WebhookClient` pattern confirmed
-- Context7 `/pycontribs/jira` — `JIRA(basic_auth=...).create_issue(...)` pattern confirmed
-- Context7 `/fastapi/fastapi` — `APIKeyHeader`, `HTTPBearer` confirmed
-- Rapid7 InsightVM ticketing docs — Jira label fingerprint dedup (rediscovery + comment) pattern confirmed
-- `src/dashboard/src/components/RegressionAlertChip.tsx` — regression threshold (score_delta <= -5 OR new_high > 0) confirmed
+- `quirk/dashboard/api/middleware/auth.py` — `require_auth` pattern, `hmac.compare_digest`, `HTTPBearer` + `X-API-Key` dual-header support
+- `quirk/cli/token_cmd.py` — `secrets.token_urlsafe(32)` enrollment pattern
+- `quirk/cli/scheduler_cmd.py` — `_dispatch_schedule` subcommand pattern; `signal.SIGTERM` at lines 258-259; relative path `output/scheduled` at line 136
+- `quirk/intelligence/scoring.py` — six-subscore rollup `/1.5` at lines 288-291; `compute_readiness_score` signature
+- `quirk/cbom/builder.py` — three-pass architecture; Pass 1 `algo_registry` dedup at line 461
+- `quirk/db.py` — `_ensure_columns` helper (lines 127-157); `_ADDITIVE_MIGRATIONS` registry
+- `quirk/models.py` — `CryptoEndpoint` schema (lines 9-94); `IntegrationDelivery` (lines 245-260)
+- `quirk/util/safe_exc.py` — `safe_str()` ISEC-02 pattern
+- `quirk/util/url_allowlist.py` — `validate_external_url()` SSRF guard
+- `run_scan.py` — subcommand dispatch (lines 381-514); `scan_run_id` (line 913)
+- `.planning/HORIZON.md` — v5.4 scope, Windows sizing-risk note, SaaS parked constraint
+- [pypi.org/project/tenacity/](https://pypi.org/project/tenacity/) — version 9.1.4 confirmed
+- [pypi.org/project/platformdirs/](https://pypi.org/project/platformdirs/) — version 4.3.7 confirmed
+- [pyinstaller.org/en/stable/](https://pyinstaller.org/en/stable/) — version 6.20.0 confirmed
+- [Rapid7 InsightVM — Configuring Distributed Scan Engines](https://docs.rapid7.com/insightvm/configuring-distributed-scan-engines/) — pairing key, engine status, version matching
+- [Rapid7 InsightVM — Linking Assets Across Sites](https://docs.rapid7.com/insightvm/linking-assets-across-sites/) — same-IP problem, per-site dedup
+- [Qualys — Heartbeat interval](https://success.qualys.com/support/s/article/000006611) — 15-minute default
+- [Wazuh — Agent Enrollment](https://documentation.wazuh.com/current/user-manual/agent/agent-enrollment/index.html) — enrollment token pattern
+- [Tenable — Export a Scan](https://docs.tenable.com/nessus/Content/ExportAScan.htm) — air-gap file export pattern
+- [sqlite.org/wal.html](https://sqlite.org/wal.html) — WAL shared-memory on Windows local filesystem
+- [sqlite.org/useovernet.html](https://sqlite.org/useovernet.html) — WAL on network shares explicitly unsupported
 
-### Secondary (MEDIUM confidence)
+### Secondary (MEDIUM confidence — evaluated and rejected)
 
-- `https://api.slack.com/incoming-webhooks` — Slack incoming webhook URL format + rate limits
-- `https://hookdeck.com/webhooks/platforms/guide-to-slack-webhooks-features-and-best-practices` — Block Kit `attachments` with `color` sidebar pattern
-- `https://hookdeck.com/outpost/guides/outbound-webhook-retry-best-practices` — exponential backoff + jitter for webhook retry
-- `https://defectdojo.com/blog/auto-triage-and-deduplicate-security-findings-to-reduce-alert-fatigue` — per-finding dedup strategy
-- `https://community.developer.atlassian.com/t/rate-limiting-guide-for-jira-and-confluence/43360` — Jira Cloud rate limits (400 req/10 min)
-- `https://blog.gitguardian.com/hmac-secrets-explained-authentication/` — HMAC-SHA256 webhook signature verification
-- OWASP SSRF Prevention Cheat Sheet — DNS rebinding attack path
-- Project memory: `feedback_optional_extra_import_trap.md` — `pypdf` v4.10 post-ship breakage (reference failure for Pitfall 5)
-- Project memory: Phase 59 / LEAK-01 — credential leakage sweep; `safe_str()` origin
+- [pypi.org/project/sbommerge/](https://pypi.org/project/sbommerge/) — evaluated; rejected (file-based, not Python model API)
+- [CycloneDX CLI](https://github.com/CycloneDX/cyclonedx-cli) — merge subcommand evaluated; known issue: does not remove duplicates; rejected in favor of in-process merge
+- PyInstaller + pywin32 Windows Service combination — documented as "not well maintained" in PyInstaller issues; pywin32 Windows Service deferred to v5.5
 
 ---
-*Research completed: 2026-05-24*
+
+*Research completed: 2026-05-25*
 *Ready for roadmap: yes*

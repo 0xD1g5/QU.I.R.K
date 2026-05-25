@@ -1,299 +1,735 @@
-# Pitfalls Research
+# Pitfalls Research — v5.4 Distributed On-Prem Scanner Architecture
 
-**Domain:** Outbound notification/SIEM/ticketing integrations + dashboard auth on a Python CLI security scanner (QU.I.R.K. v5.3)
-**Researched:** 2026-05-24
-**Confidence:** HIGH — every pitfall verified against existing project code patterns and official sources
+**Domain:** Adding a distributed agent/console scanning layer with Windows sensor support to a mature, single-tenant Python scanner (FastAPI + React + SQLite)
+**Researched:** 2026-05-25
+**Confidence:** HIGH — grounded in existing codebase inspection + v5.x security posture review
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: SSRF via User-Configured Outbound URLs (Webhook / Splunk HEC / Jira / SMTP Relay)
+### Pitfall 1: Ingestion Endpoint Bypasses the Existing Auth + SSRF Posture
 
 **What goes wrong:**
-An operator configures a webhook URL, Splunk HEC endpoint, or Jira base URL pointing at an internal service (e.g., `http://169.254.169.254/latest/meta-data/`, `http://10.0.0.5:8080/admin`, or a hostname that DNS-resolves to RFC1918 space). When QU.I.R.K. fires a notification after a scheduled-scan drift event, the outbound HTTP client dutifully fetches that internal URL — exfiltrating cloud IAM credentials or probing internal APIs. This is the same attack class already hardened in v5.1 OpenAPI scanner (`$ref`-SSRF) and the SAML URL allowlist (Phase 57).
+The sensor→console push endpoint (`POST /api/sensors/{id}/results` or similar) is built as a new
+FastAPI route without wiring in `require_auth` from `quirk/dashboard/api/middleware/auth.py`. The
+existing `require_auth` dependency enforces bearer or X-API-Key via `hmac.compare_digest` — any
+new inbound route that omits `Depends(require_auth)` is open to unauthenticated result injection.
+An attacker inside any network segment reachable from the console can POST fabricated scan results
+and poison the merged CBOM and quantum-readiness score without ever compromising a real sensor.
+
+A parallel failure mode: the ingest path accepts the raw sensor payload and passes it through JSON
+deserialization without calling `safe_str()` on exception text, re-introducing the credential
+leakage class (Phase 59 LEAK-01) that the AST gate at `tests/test_safe_str_gate.py` was built to
+prevent. If the sensor payload contains a malformed JWT or bearer token in an exception field and
+the ingest path logs `str(exc)` directly, the token leaks to logs.
 
 **Why it happens:**
-Integration URLs are typically operator-supplied via the YAML config file (e.g., `notifications.webhook_url`, `siem.hec_url`, `ticketing.jira_base_url`). Without the same validation applied to scan targets, every new outbound fetch site is an SSRF entry point. DNS rebinding adds a second dimension: even a URL that passes allowlist validation at config-load time can be re-pointed to an internal IP by the time the HTTP request fires (TTL expiry between validate-time and fetch-time).
+New routes added in a new file often omit the dependency that lives in a different module. The
+existing dashboard routes all wire auth through the FastAPI app factory, but a new "sensor API"
+router registered separately may not inherit those dependencies, especially if it is registered
+on a different prefix or sub-application.
 
 **How to avoid:**
-Re-use `quirk.util.url_allowlist.validate_external_url()` — the existing function already handles RFC1918, loopback, link-local, and cloud metadata IPs (`169.254.169.254`, `fd00:ec2::254`). Call it at **two** points: (1) config validation at `quirk serve` / `quirk schedule` startup; (2) immediately before each outbound HTTP call. Do NOT rely solely on config-time validation — DNS rebinding between config load and delivery is a real attack path. The existing helper returns a typed `ValidationResult` — on `ok=False`, log only `result.redacted_preview`, never the raw URL, and abort the delivery attempt (not the scan run). For webhook/HEC/Jira, also enforce `https://` only (the existing `_ALLOWED_SCHEMES` frozenset handles this). Never follow HTTP redirects that lead to internal IPs — disable redirect following or re-validate each redirect target.
+- Apply `Depends(require_auth)` at the router level using FastAPI's `dependencies=[...]` on
+  `APIRouter(...)` so every route in the sensor ingestion router inherits auth automatically —
+  no per-route forgetting possible.
+- Write a test that calls the ingest endpoint with no credentials and asserts 401, before any
+  ingest logic is implemented. Fail-open is caught immediately.
+- Pipe all ingest-path exception stringification through `safe_str()` — same rule as Phase 59.
+  The AST gate (`grep -r "str(exc)"`) must cover the new module files.
+- Require mTLS (sensor-to-console TLS with client certificate) OR a sensor-enrollment token as a
+  second factor alongside the bearer token — bearer alone is a single credential; a stolen sensor
+  token can be used from any IP without mTLS. The architecture doc phase must decide the auth model
+  and document it; the ingestion phase implements exactly what the arch doc specifies.
 
 **Warning signs:**
-- Any new `httpx.get(url)` / `requests.post(url)` call where `url` sources from config or user input without a preceding `validate_external_url()` call.
-- A `SSRF_ALLOW_INTERNAL` or `--allow-internal-targets` flag being applied to integration URLs (that flag is for scanner targets, not notification delivery).
-- Integration tests that hardcode `http://localhost` as the webhook URL without a test-mode bypass that is never activated in production.
+- Ingest route file does not `import require_auth`.
+- `curl -X POST /api/sensors/1/results -d '{...}'` without Authorization header returns 200 or 422
+  instead of 401.
+- `git grep "str(exc)"` in the new ingest module returns results.
 
-**Phase to address:**
-Phase 101 (notification fan-out) — must implement before the first outbound delivery call. Shared allowlist utility already exists; applying it is a wiring task.
+**Phase to address:** Architecture doc phase (define auth model, enrollment protocol, and the
+requirement that `require_auth` or its sensor-equivalent must be applied); Ingestion API phase
+(implement, with the 401-without-credentials test as a gating success criterion).
 
 ---
 
-### Pitfall 2: Secret Leakage — Bot Tokens, SMTP Creds, and HEC Tokens in Logs / Error Messages / Persisted State
+### Pitfall 2: Replay and Oversized-Payload Attacks on the Ingest Surface
 
 **What goes wrong:**
-A Slack bot token (`xoxb-...`), SMTP password, Splunk HEC token, or Jira API token appears in:
-- A `scan_error` column in SQLite (if `str(exc)` includes the credential in the exception message from a failed HTTP call)
-- A log line emitted before or after a failed delivery
-- The `quirk doctor` health-check output that surfaces connection errors
-- The persisted config YAML if the user pastes the token directly into `quirk.toml`
+A sensor that has been compromised (or a network adversary with a captured token) replays a
+previously accepted payload, re-inserting stale findings or re-rolling back a remediated score.
+The existing `IntegrationDelivery` table (Phase 101) uses a `finding_hash` / `scan_id` dedup key
+for outbound integrations — an equivalent inbound dedup key does not yet exist for sensor
+payloads. Without replay protection, the same payload accepted twice silently double-counts
+findings in the merge.
 
-This is the same failure mode that drove the v4.8 Phase 59 credential leakage sweep: `safe_str()` was built precisely because exception messages from scanners like `hvac` and cloud SDKs were including auth tokens in their text.
+Separately, a sensor (or impersonator) pushes a 500 MB JSON body. FastAPI's default body size
+limit is unbounded — the console process hits an OOM or a slow-read stall, a DoS on a tool that
+may be running on a consultant's laptop.
 
 **Why it happens:**
-HTTP client libraries (httpx, requests, aiohttp) often include the full request URL (with query-param tokens), response headers, or auth headers in their exception text. `ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))` is safe; `HTTPError: 401 Unauthorized — URL: https://hooks.slack.com/services/T.../B.../xyz... — Headers: {Authorization: Bearer xoxb-...}` is not. The existing `safe_str()` regex battery already catches base64-shaped tokens ≥ 40 chars, `Authorization: Bearer` patterns, and `X-Api-Key` header shapes — but Splunk's `Authorization: Splunk <token>` header shape and SMTP `smtplib.SMTPAuthenticationError` messages (which embed `535 5.7.8 Username and Password not accepted`) need explicit coverage.
+Replay protection is treated as an advanced concern and added after the happy path works.
+Body size limits are rarely configured on internal-facing APIs where the client is trusted.
+In a distributed model the ingest endpoint is, by definition, reachable from sensors on different
+network segments — the threat model for that endpoint is closer to "semi-public API" than
+"localhost."
 
 **How to avoid:**
-- Extend `_SENSITIVE_PATTERNS` in `quirk/util/safe_exc.py` to cover: Splunk HEC token shape (`Authorization: Splunk\s+\S+`), SMTP auth failure messages embedding credentials, and Slack bot token prefix (`xoxb-`, `xoxp-`).
-- Wrap every outbound delivery attempt in `safe_str(exc)` before writing to `scan_error` or any log sink — the same discipline as the Phase 59 scanner callsites.
-- Integration tokens stored in the YAML config must be treated as credential material: when `quirk doctor` checks connectivity, it must never echo the token value — log `[configured]` vs `[not configured]` only.
-- Store integration tokens via env var first (`QUIRK_SLACK_TOKEN`, `QUIRK_HEC_TOKEN`, etc.), YAML config second. The existing `_get_configured_token()` pattern in `auth.py` is the model to replicate for each integration.
-- Never log the raw `webhook_url`, `hec_url`, or `jira_base_url` from config in debug output — these URLs often embed tokens as path components (Slack incoming webhooks embed the token in the URL path itself: `hooks.slack.com/services/T.../B.../secret`).
+- Give each sensor push a monotonic sequence number (or a `payload_id` UUID generated by the
+  sensor at push time) and persist accepted payload IDs in a `sensor_pushes` table. Reject
+  re-used payload IDs with 409 Conflict. This is additive schema only.
+- Enforce a body size limit in the FastAPI app (`app.add_middleware(TrustedHostMiddleware, ...)` or
+  a Starlette `max_body_size` middleware) for the ingest router. 10 MB is a generous ceiling for a
+  scan result; reject with 413.
+- Include a `pushed_at` timestamp in the sensor payload (sensor's local UTC clock) and reject
+  payloads older than a configurable window (e.g., 15 minutes — generous enough for clock skew,
+  see Pitfall 9). Log the rejection reason without echoing the payload content.
+- The `pushed_at` timestamp also surfaces the clock-skew problem — a payload rejected as "too old"
+  when the sensor clock is merely wrong is a warning sign, not a silent data-loss.
 
 **Warning signs:**
-- `scan_error` column contains a string ≥ 40 alphanumeric characters (existing AST gate looks for raw exception writes — same gate must cover integration delivery paths).
-- The `quirk doctor` connectivity check prints the raw integration URL.
-- A new `except Exception as e: log.error(str(e))` callsite in any integration module.
+- Sending the same POST twice returns 200 both times and creates duplicate DB rows.
+- No `Content-Length` or body-size check in the ingest route.
+- The ingest table has no `payload_id` or sequence column.
 
-**Phase to address:**
-Phase 101 (anchor: notification fan-out). Extend `safe_str` in the same phase. Do not defer secret-leakage hardening to a later phase — once tokens are in SQLite they are hard to redact.
+**Phase to address:** Architecture doc phase (define the payload schema including `payload_id` and
+`pushed_at`); Ingestion API phase (implement body-size limit, replay guard, and dedup table).
 
 ---
 
-### Pitfall 3: Sensitive Finding Data Exfiltrated to Third-Party Integrations
+### Pitfall 3: Console Impersonation — Sensor Trusts Any TLS Certificate
 
 **What goes wrong:**
-A Jira ticket created per-finding includes the raw cert PEM, private key material (if QU.I.R.K. ever surfaces one), full CBOM JSON blob, or internal hostnames / IP addresses of the scanned target in the ticket description. The same data lands in a Slack notification body or SIEM event. This data now lives in a third-party SaaS outside the operator's control — a problem if:
-- The scanned organization is a QU.I.R.K. consulting customer (confidentiality obligation)
-- Jira / Slack / Splunk is shared across teams or organizations
-- The CBOM contains algorithm inventory details about internal PKI that are themselves sensitive
+The sensor is configured with a console URL and pushes results outbound using `requests` (or
+`httpx`) without TLS certificate verification, accepting any certificate. An adversary in the
+segment can MITM the console URL with a self-signed cert, intercept all sensor scan results
+(full cryptographic inventory of the segment — high-value intelligence), and optionally feed
+forged acknowledgment responses back to the sensor.
+
+This is the mirror image of the existing SSRF concern: `validate_external_url` guards the
+console from being used to fetch arbitrary internal URLs, but the sensor has no equivalent guard
+against pushing results to an arbitrary server masquerading as the console.
 
 **Why it happens:**
-When building a "rich" integration, developers include all available context to make tickets/alerts actionable. A `Finding` object in QU.I.R.K. carries `service_detail` (which can include `host:port:path` specifics), `raw_evidence` JSON, and sometimes cert chain data. Dumping the full object into a Jira description or Slack block is tempting and common.
+`requests` defaults `verify=True`, but sensor code often sets `verify=False` during development
+to avoid self-signed certificate friction when the console uses a self-signed cert, and that
+default is committed. The project has documented `verify=False` as a recurring trap (MEMORY.md
+v5.1 lock: schemathesis excluded from [all]).
 
 **How to avoid:**
-Define an explicit **integration payload schema** for each channel — a whitelist of fields that MAY be included. Safe to send: severity, finding category/title, recommendation text, score impact, scan timestamp, a local scan-ID reference (not the full CBOM). Requires care: target hostnames/IPs (operator must opt-in). Never send: raw certificate PEM or DER bytes, CBOM JSON blobs, internal PKI topology details, `tls_capabilities_json` raw data, full `raw_scan_json` columns, any field passing through `safe_str` scrubbing. Implement a `to_integration_payload(finding, *, include_host=False)` canonical method so all integrations pull from the same sanitized shape rather than each independently cherry-picking fields.
+- The sensor's outbound push must always use `verify=True` with a configured CA bundle (either
+  the system truststore or an explicitly pinned console certificate path).
+- If the console uses a self-signed cert, the enrollment step provisions the CA cert to the
+  sensor — never `verify=False` in committed code.
+- Add the same `# verify=False is forbidden` CI grep gate that exists for other scanner modules
+  to the new sensor module files.
+- The existing `_NoRedirectHandler` utility (earmarked for extraction to `quirk/util/` in the
+  v5.4 stabilization tail) should also apply to the sensor's outbound push — the console URL
+  should not silently follow a redirect to an attacker-controlled endpoint. The stabilization
+  extraction must ship before or with the sensor code.
 
 **Warning signs:**
-- Any integration serializer doing `**finding.__dict__` or `finding.to_dict()` without field filtering.
-- CBOM writer output being attached as a Jira attachment.
-- Slack notification body exceeding ~500 characters (a sign more data than needed is included).
+- `verify=False` anywhere in the sensor push client code.
+- No `console_ca_cert` field in the sensor configuration schema.
+- Enrollment step does not provision a CA cert or pin.
 
-**Phase to address:**
-Phase 102 (SIEM export) and Phase 103 (ticketing) — define `to_integration_payload()` in Phase 101 as a shared primitive and enforce its use in all subsequent integration phases.
+**Phase to address:** Architecture doc phase (specify TLS posture in the sensor→console contract);
+Sensor mode phase (implement with `verify=True` and a CI grep gate against `verify=False`).
 
 ---
 
-### Pitfall 4: Notification Storm / No Throttling / Retry Amplification
+### Pitfall 4: (Segment, Host) Collision — Same RFC1918 IP in Two Segments
 
 **What goes wrong:**
-QU.I.R.K. runs a scheduled scan against a target with 200 findings. All 200 fire as individual Slack messages or Jira tickets within 30 seconds. Slack rate-limits the bot (Tier 1: 1 msg/sec; Tier 2: 20 msg/min per channel); messages start getting 429 errors. The retry logic has no backoff and no jitter — it immediately requeues all 200 failed deliveries. Each retry batch triggers more 429s. Slack temporarily deactivates the webhook. Jira creates duplicate tickets on the next attempt because idempotency keys were not tracked.
+`CryptoEndpoint` is currently keyed by `(host, port)` — the `host` column is a plain `String(255)`
+IP or hostname. When a sensor in segment A scans `10.0.0.5:443` and a sensor in segment B scans a
+different machine that also has the IP `10.0.0.5:443`, both rows land in the same console DB with
+identical `(host, port)` values. Merge logic that deduplicates by `(host, port)` fuses two
+distinct physical endpoints into one finding, producing a corrupted CBOM: one machine's cipher
+suite is attributed to the other machine's certificate.
+
+This is the most common correctness bug in distributed network inventory tools. RFC1918 space
+reuse across segments is the rule, not the exception, in enterprise networks.
 
 **Why it happens:**
-Notification integrations are commonly built "per-finding-event" without thinking about fan-out. Scheduled scans can produce large finding sets. API rate limits from Slack (tier-dependent), Jira (400 req/10 min for REST v2 cloud), and Splunk HEC (token-level throughput limits) are real operational constraints that are invisible until production traffic arrives.
+The existing single-node scanner never needs a segment dimension — the scanner is always in the
+same network as its targets, so `(host, port)` is unambiguous. Adding sensors without adding a
+`sensor_id` / `segment_id` discriminator to the uniqueness key is the natural but wrong extension.
 
 **How to avoid:**
-- Deliver **drift summaries, not per-finding blasts**: the scheduler already emits drift events (finding deltas since the last scan). A single "N new findings, M resolved" summary message with a link to the dashboard is correct for Slack/email. Individual findings are appropriate only for Jira ticket creation (one ticket per new finding), not for real-time notifications.
-- Implement per-channel **token-bucket throttling** with configurable rate caps. Slack: max 1 message per channel per second. Jira: honor `Retry-After` headers on 429. Splunk HEC: batch events into a single POST rather than one POST per event.
-- **Exponential backoff with full jitter** (not linear) on retry. Cap max retries at 3. Log delivery failure with `safe_str(exc)` and move on — do not loop indefinitely.
-- **Idempotency keys for Jira tickets**: track `(scan_id, finding_hash)` in a lightweight table (`integration_deliveries`) so duplicate runs cannot create duplicate tickets.
-- The `scheduled_scans`/`scheduled_runs` tables already exist — add an `integration_deliveries` table to track delivery status per destination per finding per scan run.
+- Add `sensor_id` (String, nullable, indexed) and `segment_label` (String, nullable) columns to
+  `crypto_endpoints` as part of the data-model design phase. Both columns default NULL for existing
+  local scans — backward compatible, additive schema only.
+- Change ALL dedup/merge queries from `WHERE host = ? AND port = ?` to include sensor_id in the
+  uniqueness key (in SQLite: `(sensor_id = ? OR (sensor_id IS NULL AND ? IS NULL))`).
+- The CBOM builder's Pass 1 component identity hash must include `sensor_id` — two components
+  with the same algorithm from different sensors are distinct inventory items.
+- The confidence score input (`endpoints` count used in `compute_confidence()`) must count
+  distinct `(sensor_id, host, port)` triples, not distinct `(host, port)` pairs.
+- Write a regression test: insert two rows with identical `(host, port)` but distinct `sensor_id`
+  values and assert the merge produces two CBOM components, not one.
 
 **Warning signs:**
-- Integration delivery loop that calls the API inside the scanner's `_wrapped_phase()` path without a separate delivery queue or at-most-once guard.
-- No `time.sleep` / backoff in the retry path.
-- No `Retry-After` header inspection.
-- No configured per-channel rate cap.
+- No `sensor_id` column on `crypto_endpoints` after the data-model phase.
+- Merge/dedup SQL uses `GROUP BY host, port` without `sensor_id`.
+- CBOM component count drops when two sensors scan overlapping RFC1918 space.
 
-**Phase to address:**
-Phase 101 (notification fan-out). Rate limiting and idempotency must be designed in from the start — retrofitting after a storm burns the Slack bot's reputation.
+**Phase to address:** Architecture doc + data-model design phase (define the schema change and the
+new uniqueness key). This is a hard prerequisite for every downstream phase — no ingest code
+before this is locked.
 
 ---
 
-### Pitfall 5: Optional-Extra Import Trap — Integration Lib at Module Level Breaks Minimal Install
+### Pitfall 5: Breaking Backward Compatibility for Single-Node (Local) Scans
 
 **What goes wrong:**
-The Slack integration is implemented in `quirk/integrations/slack.py`. At the top of the file: `import slack_sdk`. `slack_sdk` is declared in `[notifications]` extras only. A user doing `pip install quirk-scanner` (no extras) runs `quirk scan ...`. Python imports `quirk.integrations.slack` transitively (even if Slack is not configured), crashes with `ModuleNotFoundError: No module named 'slack_sdk'`, and the entire scan aborts before any target is touched.
+The `sensor_id` column is added as `NOT NULL` with no default, or the merge/score path requires a
+non-NULL `sensor_id` to function. All existing scans stored in SQLite have NULL `sensor_id`. The
+upgrade path breaks: `quirk db migrate` adds the column but existing rows fail a NOT-NULL
+constraint, or the new scoring path filters `WHERE sensor_id IS NOT NULL` and returns zero
+findings for a local scan, producing a score of 0.
 
-This is the exact failure mode documented in project memory under `feedback_optional_extra_import_trap.md` — specifically the `pypdf` module-level import that broke the minimal install post-v4.10 ship. The pattern cost a post-ship hotfix.
+A second mode: the `compute_readiness_score` function gains a new required `sensor_id` parameter
+that breaks all call sites in `run_scan.py` and the dashboard API routes that call it without the
+new parameter.
 
 **Why it happens:**
-Integration modules are imported at initialization time (e.g., in `__init__.py`, in the module-level `from quirk.integrations import slack, siem, ticketing`). Each integration depends on a third-party SDK (`slack_sdk`, `httpx` extras, `jira`, `splunk-sdk`). When these are in `[extras]`, they are absent on minimal installs.
+The new sensor concept naturally suggests `sensor_id` is mandatory, but the local scanner is
+always implicitly "the local sensor" — it is not wrong that it has no sensor ID, just unregistered.
+The urge to enforce schema integrity via NOT NULL is correct for multi-sensor rows but wrong for
+the local-scanner case.
 
 **How to avoid:**
-- **Never top-level import** integration SDK libraries. Use the same `importlib.util.find_spec()` probe pattern from `quirk/util/optional_extra.py`: check availability before importing.
-- Each integration module must use **lazy imports inside the function that uses them**, wrapped in a `try/except ImportError` that emits an advisory finding (the existing `probe_missing_extras` / `missing_extra` scan_error_category pattern).
-- Add each integration extra (`notifications`, `siem`, `ticketing`) to `REGISTRY` in `quirk/util/optional_extra.py` following the established `OptionalExtra` dataclass pattern — with `enabled_attrs` tied to the config flag that enables the integration (e.g., `enable_slack`, `enable_siem`).
-- Add a CI guard (analogous to the existing `[api]` extras exclusion guard) that verifies the integration extras are **not** transitively imported by the minimal install path.
-- Integration delivery paths must be gated by `if not is_extra_available("notifications"): return` before any SDK call.
+- `sensor_id` column: `nullable=True`, default NULL. NULL semantically means "local/implicit
+  sensor" and is always valid. Add `quirk db migrate` idempotent migration that adds the column
+  with `ALTER TABLE ... ADD COLUMN sensor_id VARCHAR(64) DEFAULT NULL`.
+- `compute_readiness_score` signature must not change — sensor-awareness belongs in the merge
+  layer above scoring, not inside the scoring engine. The scoring engine scores a flat list of
+  endpoints; the merge layer is responsible for deduplicating and assembling that list.
+- Write a migration regression test: load a pre-v5.4 SQLite fixture (no `sensor_id` column),
+  run `quirk db migrate`, assert all existing rows are still queryable and score correctly.
 
 **Warning signs:**
-- Any `import slack_sdk`, `import jira`, `import splunk_sdk` at module top-level in a file that is transitively imported during `run_scan.py` startup.
-- A new extras group not added to `REGISTRY`.
-- `pip install quirk-scanner` + `quirk scan --targets 127.0.0.1` fails with `ModuleNotFoundError` in CI (add a minimal-install smoke test).
+- `sensor_id = Column(String, nullable=False)` in models.py.
+- `compute_readiness_score` signature gains a `sensor_id` parameter.
+- Any query in the scoring or evidence path contains `WHERE sensor_id IS NOT NULL`.
 
-**Phase to address:**
-Phase 101 (notification fan-out) — establish the extras pattern before any SDK is introduced. All subsequent integration phases inherit the pattern.
+**Phase to address:** Architecture doc + data-model design phase (specify nullable with NULL =
+implicit local, and assert this constraint in the schema design); Ingestion API phase must not
+alter this contract.
 
 ---
 
-### Pitfall 6: Dashboard Auth Pitfalls — Default-Open Routes, Key in URL/Logs, Weak Comparison
+### Pitfall 6: CBOM Over-Merge and Under-Merge Across Sensors
 
-**What goes wrong — three sub-variants:**
+**What goes wrong:**
+Over-merge: the CBOM builder deduplicates by algorithm name + protocol family without considering
+`sensor_id`. A TLS-1.2 + AES-128-GCM-SHA256 component found in segment A and an identically
+classified component in segment B collapse into one CBOM component. The merged CBOM understates
+the true distribution — the remediation impact is misrepresented.
 
-**6a. Default-open routes after adding team auth:**
-New routes added for integration management (webhook config, HEC endpoint, Jira credentials) are registered after the `require_auth` middleware and accidentally bypass it, or are registered before the auth middleware mounts. The dashboard is then accessible without a token on the new routes.
+Under-merge: the builder creates one component per sensor per finding with no deduplication at all.
+A single host with 12 TLS endpoints that all use RSA-2048 generates 12 CBOM components. The CBOM
+correctly represents the inventory but is unusable — the "affected component count" in the
+remediation roadmap is inflated.
 
-**6b. API key or token in URL / access logs:**
-An operator or documentation example passes the dashboard API key as a query parameter: `curl http://localhost:8000/api/scan/latest?token=abc123`. The token appears in FastAPI's uvicorn access log, any reverse proxy log, and browser history. Slack or Jira integration config UIs that display the configured integration URLs (for "test connection" features) risk exposing embedded webhook tokens in the Slack URL path.
-
-**6c. Non-timing-safe comparison:**
-A new auth path for integration callbacks (e.g., a Slack event subscription verification endpoint) uses `==` to compare the Slack signing secret against the computed HMAC. Python's `==` on strings short-circuits on first differing byte — exploitable as a timing oracle to brute-force the secret byte-by-byte under low-latency conditions.
+The correct behavior: component identity is `(algorithm_name, algorithm_type, sensor_id, host,
+port)` — unique per endpoint; summary-level grouping by algorithm across sensors is a reporting
+artifact, not a CBOM dedup key.
 
 **Why it happens:**
-6a: FastAPI route registration order matters and new phases add routes incrementally. Without a test asserting every route is auth-protected, gaps slip in.
-6b: Query-param tokens are documented as "convenient for testing" but copied into production configs.
-6c: `hmac.compare_digest()` is not widely known; `==` is the default mental model.
+The existing CBOM builder (Phase 42) deduplicates within a single scan by algorithm+protocol to
+avoid exact duplicates from multiple scanner passes hitting the same endpoint. That rule is correct
+for a single sensor and wrong for cross-sensor merge because it collapses distinct endpoints from
+different segments.
 
 **How to avoid:**
-- **6a:** The existing `require_auth` Depends() pattern in `auth.py` is route-level, not middleware-level — each new router must explicitly include `dependencies=[Depends(require_auth)]`. Add a CI test that enumerates all registered routes and asserts each one is covered by `require_auth` (or is explicitly listed in a `PUBLIC_ROUTES` allowlist like `/`, `/health`).
-- **6b:** Never accept the dashboard token as a query parameter. The existing `HTTPBearer` extraction reads `Authorization: Bearer <token>` from headers only — preserve this. For integration config display, show `[configured]` not the raw value. For outbound URLs that embed secrets (Slack webhook URLs), store and display them as `[configured]` and only use the value at delivery time.
-- **6c:** All secret comparisons must use `hmac.compare_digest()`. The existing `auth.py` already does this for the bearer token — replicate the pattern for any new HMAC verification (Slack signing secret, webhook payload signature). Add the pattern to the project's SECURITY.md style guide.
-- The existing `QUIRK_API_TOKEN` env-var-first pattern handles single-tenant API key storage correctly — extend it to `QUIRK_SLACK_TOKEN`, `QUIRK_HEC_TOKEN`, `QUIRK_JIRA_TOKEN` with the same precedence (env var wins over YAML).
+- Review `quirk/cbom/builder.py` Pass 1 skip logic and ensure the component identity hash
+  includes `sensor_id` (can be "local" for pre-v5.4 scans). Document this invariant with a
+  comment referencing v5.4.
+- The reporting layer (executive summary, remediation roadmap) groups and counts by algorithm
+  across all sensors; the CBOM layer does not. These are different concerns; keep them separate.
+- Add a CBOM regression test: two sensors each contributing one RSA-2048 endpoint → merged CBOM
+  has two components (not one, not twelve).
 
 **Warning signs:**
-- A new `@router.get(...)` without `Depends(require_auth)` in its signature or router-level dependency.
-- Any `?token=` or `?api_key=` query parameter in API documentation examples.
-- A string comparison `credentials == configured_token` anywhere in the auth path (not `hmac.compare_digest`).
-- `quirk doctor` printing the raw value of any integration token.
+- CBOM component count is identical regardless of whether one or two sensors contributed.
+- `builder.py` skip-list logic references only `(host, port)` and not `sensor_id`.
+- The merged CBOM has fewer components than either sensor's individual CBOM.
 
-**Phase to address:**
-Phase 104 (dashboard team auth). The route-coverage CI test should be added in Phase 101 when the first new routes are registered, not deferred to the auth phase.
+**Phase to address:** Cross-sensor merge phase — the CBOM builder changes must ship in the same
+phase as the merge logic, tested together.
 
 ---
 
-### Pitfall 7: Delivery Failure Must Never Abort or Corrupt a Scan / Report Run
+### Pitfall 7: Merge Score Misleads When Sensors Are Partially Offline
 
 **What goes wrong:**
-A Slack delivery fails with a network timeout (30 seconds) during a scheduled scan. Because the notification call is inside the scan pipeline's `_wrapped_phase()` path, the `BaseException` wrapper catches the timeout and marks the entire scan as `scan_error_category='exception'`. The scan result is never written to SQLite. The CBOM is not emitted. The scheduled_runs row shows `status='failed'`. An operator investigating the failure finds no findings, no CBOM, and a cryptic exception — the scan data is lost entirely because a notification side-effect failed.
+Three sensors are enrolled; one is offline for a scan cycle. The console merges results from two
+sensors and calls `compute_readiness_score` on the partial set. The missing segment happens to be
+the highest-risk zone (OT/ICS VLAN with RC4-enabled Kerberos). The merged score reads GOOD (78)
+when the true score including the offline segment would be POOR (42). The console presents the
+partial score with no indication that one segment is missing.
 
-Alternatively: the Jira client raises `jira.exceptions.JIRAError` during ticket creation (rate limit). This exception propagates up through `run_scan.py` and causes the PDF report export to be skipped.
+The inverse: a sensor re-pushes results from a previous scan cycle (idempotency failure). The
+re-push is accepted and findings are double-counted, lowering the score artificially.
 
 **Why it happens:**
-The existing `_wrapped_phase()` pattern correctly isolates scanner phases from each other, but notifications and integrations are typically bolted on as "post-scan hooks" or wired directly into the scan pipeline without their own isolation boundary. Any unhandled exception in an integration call that executes inside the scan pipeline corrupts the scan outcome.
+The existing `compute_readiness_score` is designed to score whatever endpoints it is given — it
+has no concept of expected sensors or expected coverage. Partial coverage is indistinguishable from
+"no findings in those segments" without an explicit enrollment manifest.
 
 **How to avoid:**
-- **Strict isolation:** All outbound integration delivery (Slack, HEC, Jira, email) must execute in a **separate, isolated try/except block** that is entirely outside the scanner `_wrapped_phase()` call chain. Delivery is a side-effect, not a scan phase.
-- The correct architecture: scanner phases write results to SQLite and emit CBOM as normal; a post-scan integration step reads from the completed scan record and delivers notifications. If delivery fails, the scan record is unaffected — the delivery failure is recorded in the `integration_deliveries` table (or equivalent), and the operator is informed via `quirk doctor` status.
-- Delivery timeouts must be short (default 5s, configurable) and must not block the scan completion path.
-- An integration delivery failure must produce a `scan_error_category='integration_delivery_failed'` advisory finding (not `'exception'`) so it is excluded from trend regression counts (following the existing `missing_extra` exclusion in `trends.py`).
-- The `scheduled_runs` record must be written with `status='complete'` before any integration delivery is attempted. Delivery status is separate metadata.
+- Maintain an enrollment manifest: a `sensors` table recording each enrolled sensor's
+  `last_push_at` and expected push cadence. Before a merge computation, assert all enrolled
+  sensors have pushed within `now - 2 * cadence`. If any are overdue, the console must emit a
+  `partial_result: true` flag on the score output and surface a dashboard warning.
+- The quantum-readiness score JSON output (currently `{"total": N, "subscores": {...}}`) gains a
+  `coverage_warning` field: `null` when all sensors have pushed, or a list of sensor IDs that
+  missed their window.
+- Do NOT silently score partial data as if it were complete. The existing `compute_confidence()`
+  already has a `scan_error_ratio` penalty mechanism — partial coverage from offline sensors
+  should feed into this mechanism rather than being ignored.
+- For idempotency: the `sensor_pushes` dedup table (Pitfall 2) ensures a re-push is rejected
+  at 409 before it ever reaches the merge logic.
 
 **Warning signs:**
-- Any integration API call inside a `with _wrapped_phase(...)` context.
-- Integration delivery code that does not have its own `try/except Exception` with `safe_str(exc)` logging.
-- A test that fails the scheduled scan when the mock Slack endpoint returns 500.
-- No timeout set on integration HTTP calls (default `httpx` / `requests` timeout is infinite or very long).
+- Deleting one sensor's rows from the DB does not change the score AND does not trigger a warning.
+- A re-pushed payload changes the score (double-count).
+- `coverage_warning` field is absent from the score JSON schema.
 
-**Phase to address:**
-Phase 101 (notification fan-out). The delivery isolation architecture must be established before any integration delivery code is written — retrofitting after the first integration ships is high-risk.
+**Phase to address:** Architecture doc phase (define the enrollment manifest and partial-result
+semantics); Cross-sensor merge phase (implement `coverage_warning` and the cadence check).
+
+---
+
+### Pitfall 8: Over-Engineering Toward SaaS / Multi-Tenant Patterns
+
+**What goes wrong:**
+The team adds Celery + Redis for async task queuing "because distributed systems need a queue."
+Or the sensor enrollment database uses a `tenant_id` column "to make multi-tenancy easy later."
+Or the console is designed to serve N organizations with per-tenant data isolation. None of this
+is in scope for v5.4, and each addition brings new infrastructure dependencies, new security
+surfaces (Redis auth, Celery worker auth), and new failure modes — while providing zero value to
+the actual single-tenant use case.
+
+The constraint is explicit in HORIZON.md and PROJECT.md: no Celery/Redis/Postgres, no new heavy
+infra, single-tenant only, SaaS stays parked.
+
+**Why it happens:**
+Distributed-system literature and tutorials universally assume multi-tenancy. A developer
+researching "how to build a distributed scanner" lands on Celery + Redis examples. The impulse
+to make the schema forward-compatible with multi-tenancy is reasonable but premature.
+
+**How to avoid:**
+- The architecture doc (Phase 1) must explicitly state the single-tenant invariant and enumerate
+  the forbidden infrastructure additions. Every subsequent phase can reference this invariant.
+- Sensor enrollment uses a simple `sensors` SQLite table with a pre-shared enrollment token (one
+  row per sensor, rotatable). No message broker, no separate auth service.
+- The sensor push is a direct HTTPS POST to the console, not a queue. The sensor retries on
+  failure with exponential backoff — that is sufficient for single-tenant on-prem.
+- If someone proposes Celery or Redis in a plan, reject it with a reference to the constraint.
+
+**Warning signs:**
+- Any `requirements.txt` / `pyproject.toml` diff that adds `celery`, `redis`, `kombu`, or
+  `pika` outside the existing `[broker]` extras.
+- A `tenant_id` column appearing anywhere in the new schema.
+- A new FastAPI sub-app with its own auth store.
+
+**Phase to address:** Architecture doc phase (lock and document the constraint); every subsequent
+phase plan should be reviewed against it before approval.
+
+---
+
+### Pitfall 9: Clock Skew Across Sensors Breaks `pushed_at` Validation and Trend Analysis
+
+**What goes wrong:**
+A sensor in a locked-down OT segment has its system clock 40 minutes behind UTC (NTP is blocked
+by segment policy). The console's replay guard rejects the sensor's push because `pushed_at` is
+"too old." The sensor retries, gets rejected again, and the operator has no visibility into why
+— the error message says "payload expired" with no clock-skew hint.
+
+Alternatively, the sensor clock is 20 minutes ahead. The sensor's `scanned_at` timestamps land
+in the future relative to the console, confusing the trend-analysis timeline (`/api/trends/timeline`
+groups scans by session timestamp — a future timestamp creates a "future session" artifact in the
+chart).
+
+**Why it happens:**
+The `scheduler_cmd.py` already documents "ALL datetimes are timezone-naive UTC" as Pitfall 1 in
+the module header — clock discipline is a known concern. But it applies only to the local
+scheduler. Sensors on different hosts introduce a second clock that the console cannot control.
+
+**How to avoid:**
+- The replay window for `pushed_at` must be generous (±15 minutes rather than ±5) to tolerate
+  reasonable clock skew. Document this in the sensor push spec.
+- The console should include the console's UTC timestamp in the 409/400 rejection response so
+  the sensor operator can diagnose the skew: `{"error": "payload_expired", "console_utc": "..."}`.
+- `scanned_at` timestamps stored in the DB should always be the sensor's reported timestamp —
+  but the console should also record `received_at` (its own clock) in `sensor_pushes`. Trend
+  analysis uses `received_at` for grouping, not `scanned_at`, to avoid future-date artifacts.
+- Add a sensor diagnostic command (`quirk sensor check-clock --console-url ...`) that asks the
+  console for its current UTC and reports the delta.
+
+**Warning signs:**
+- A sensor push silently fails with no error detail when the sensor clock is wrong.
+- `/api/trends/timeline` shows a scan session dated in the future.
+- The replay window is < 5 minutes.
+
+**Phase to address:** Architecture doc phase (define `pushed_at` + `received_at` schema and the
+replay window); Sensor mode phase (implement the clock-check diagnostic); Ingestion API phase
+(include `console_utc` in rejection responses).
+
+---
+
+### Pitfall 10: Sensor/Console Version Skew — Protocol Contract Drift
+
+**What goes wrong:**
+The console is upgraded to v5.5. A sensor still running v5.4 pushes a payload in the v5.4 schema.
+The console's v5.5 ingest deserializer expects a `segment_metadata` field added in v5.5 and raises
+a Pydantic `ValidationError`. The sensor's push is rejected with 422. The operator does not realize
+the sensor needs upgrading — the error message says "Unprocessable Entity" with a Pydantic field
+path that means nothing without reading the source.
+
+The reverse: a v5.5 sensor pushes to a v5.4 console, sending extra fields the console does not
+know about. The console raises 422 on unexpected fields if `model_config = ConfigDict(extra='forbid')`.
+
+**Why it happens:**
+FastAPI + Pydantic's default behavior when extra fields are present depends on the model
+configuration. The existing dashboard API models are not explicitly documented as
+forward-compatible. The sensor→console protocol is a versioned contract but is not treated as one.
+
+**How to avoid:**
+- The sensor payload Pydantic model must be configured with `extra='ignore'` (not `extra='forbid'`)
+  so a newer sensor can push to an older console without breaking.
+- The payload schema must include a `schema_version` string field (e.g., `"v5.4.0"`). The console
+  logs a warning (not an error) when the version mismatches, and accepts the payload if the
+  required fields are present.
+- Write a compatibility test: load a v5.4 payload fixture and parse it with the v5.5 model class
+  — assert no ValidationError.
+- The `quirk sensor status` command (or `quirk doctor`) reports the sensor schema version and
+  whether it is compatible with the enrolled console version.
+
+**Warning signs:**
+- Sensor payload Pydantic model uses `extra='forbid'`.
+- No `schema_version` field in the payload.
+- A sensor push from a previous version returns 422 after a console upgrade.
+
+**Phase to address:** Architecture doc phase (define the versioned payload schema and the
+`extra='ignore'` + `schema_version` contract); Ingestion API phase (implement and test
+backward-compatible deserialization).
+
+---
+
+### Pitfall 11: Windows POSIX-isms — Signal Handling Breaks the Sensor Service
+
+**What goes wrong:**
+`scheduler_cmd.py` registers `signal.SIGTERM` at lines 258–259. `SIGTERM` does not exist on
+Windows (`signal.SIGTERM` is defined but cannot be raised for arbitrary processes — only
+`signal.CTRL_C_EVENT` and `signal.CTRL_BREAK_EVENT` are meaningful for Windows processes). A
+Windows sensor running `quirk scheduler run` will not gracefully stop when the Windows Service
+Control Manager sends a stop signal — it either hangs or must be killed hard, leaving
+`ScheduledRun` rows in "running" state (the stale-run recovery in `_recover_stale_runs` mitigates
+this on next startup, but operator UX is poor).
+
+Similarly, `jobs.py` line 204 calls `os.kill(row.pid, signal.SIGTERM)` to cancel a running scan.
+`os.kill` on Windows does not support `SIGTERM` for arbitrary processes — it either raises
+`OSError` or sends `CTRL_C_EVENT` which kills the entire process group, not just the target pid.
+
+**Why it happens:**
+The Linux/macOS mental model for graceful process termination is `SIGTERM`. The code was written
+on macOS/Linux and the signal handling was never tested on Windows because all CI is Linux-based.
+
+**How to avoid:**
+- Wrap all `signal.SIGTERM` registrations with `if sys.platform != 'win32'`, and on Windows
+  register `signal.CTRL_C_EVENT` with equivalent semantics, or use a `threading.Event`-based stop
+  flag driven by the Windows SCM stop notification if running as a service.
+- Wrap `os.kill(pid, signal.SIGTERM)` in a platform check: on Windows use
+  `subprocess.Popen.terminate()` (which calls `TerminateProcess`) or store the process handle and
+  call `.terminate()` on it rather than using `os.kill` with a signal number.
+- The POSIX-ism audit (see Pitfall 12) must include a grep for `signal.SIGTERM`, `signal.SIGKILL`,
+  and `os.kill` and flag each usage for platform-conditional treatment.
+- If running as a Windows Service (via `pywin32` or `nssm`), the service host receives stop
+  notifications through the SCM API, not through signals — the sensor mode implementation must
+  support both the SCM path (Windows) and the signal path (Linux/macOS).
+
+**Warning signs:**
+- `signal.SIGTERM` registration without a `sys.platform` guard.
+- `os.kill(pid, signal.SIGTERM)` without a platform branch.
+- The sensor process on Windows cannot be stopped via the Service Control Manager without a
+  hard kill.
+
+**Phase to address:** POSIX-ism audit (a dedicated task in the architecture doc or sensor mode
+phase, before any Windows CI smoke test is written); Windows CI smoke test must verify clean
+shutdown.
+
+---
+
+### Pitfall 12: Windows POSIX-isms — Paths, `/tmp`, and SQLite File Locking
+
+**What goes wrong:**
+`scheduler_cmd.py` writes output to `Path("output/scheduled") / safe_name / ...` — a relative
+path resolved against the current working directory. On a Windows Service, the CWD is
+`C:\Windows\System32` (or wherever the SCM starts the service), not the repo root. The
+`output/scheduled` directory is created in the wrong place — or fails to create if the service
+account lacks write permission there.
+
+Any code that uses `/tmp` directly (e.g., `tempfile.mkstemp()` with an explicit `dir="/tmp"`)
+fails on Windows where the temp directory is `%TEMP%` (`C:\Users\...\AppData\Local\Temp`).
+The correct cross-platform call is `tempfile.mkstemp()` with no `dir` argument, or
+`tempfile.gettempdir()`.
+
+SQLite on Windows uses mandatory file locking (through `LockFileEx`) rather than POSIX advisory
+locking. Multiple processes opening the same SQLite file simultaneously (a sensor subprocess
+launched by the scheduler while the dashboard API has the DB open) can hit `OperationalError:
+database is locked` more frequently than on Linux, where SQLite uses `fcntl` advisory locks that
+are more cooperative.
+
+**Why it happens:**
+All development and chaos-lab testing is Linux-container based. Path and temp-dir assumptions
+built up over 100+ phases are never surfaced by the CI environment. The relative `output/scheduled`
+path has been in `scheduler_cmd.py` since Phase 63 with no reason to question it on Linux.
+
+**How to avoid:**
+- All output paths must be absolute, resolved from a configured `output_root` setting in the
+  QUIRK config file, defaulting to `Path.home() / ".quirk" / "output"` (cross-platform and
+  writable by the service account). Replace the hardcoded `"output/scheduled"` at
+  `scheduler_cmd.py:136` with `cfg.output_root / "scheduled"`.
+- Replace any hardcoded `/tmp` paths with `tempfile.gettempdir()` or `tempfile.mkdtemp()`.
+  The POSIX-ism audit must grep for `"/tmp"`, `'"/tmp"'`, and `Path("/tmp")`.
+- For SQLite locking on Windows: use WAL mode (`PRAGMA journal_mode=WAL`) — it dramatically
+  reduces writer contention by allowing concurrent readers and a single writer without blocking.
+  WAL mode is cross-platform and is the recommended SQLite mode for multi-process access. Add
+  this to the `init_db()` call if not already set.
+- The Windows CI smoke test must run the sensor, dashboard API, and scheduler as separate
+  processes against the same DB file to catch locking issues.
+
+**Warning signs:**
+- `Path("output/scheduled")` in `scheduler_cmd.py` (relative path, confirmed at line 136).
+- `"/tmp"` anywhere in the codebase outside test fixtures.
+- `OperationalError: database is locked` in Windows CI logs.
+
+**Phase to address:** POSIX-ism audit task (architecture doc phase or sensor mode phase, before
+Windows packaging); Windows CI smoke test phase (validates the fix).
+
+---
+
+### Pitfall 13: Linux Chaos Lab Cannot Validate a Windows Sensor — Skipped Windows CI
+
+**What goes wrong:**
+The architecture doc phase specifies Windows sensor support. The sensor mode phase ships the
+sensor code. The chaos lab profiles validate the scanner via Docker Compose on Linux. Tests pass.
+v5.4 ships. A consultant drops the Windows sensor into a segmented environment and it fails
+immediately because the POSIX-ism audit was incomplete or the packaging step was skipped.
+
+The chaos lab (`quantum-chaos-enterprise-lab/`) is Linux containers — it validates the scanner's
+detection logic, not the sensor's Windows runtime. These are separate validation concerns and
+cannot substitute for each other.
+
+**Why it happens:**
+The `lab.sh` + chaos lab + `expected_results_*.md` validation loop is the established UAT
+pattern for every prior phase. Developers naturally reach for the same pattern for v5.4. But the
+chaos lab validates *what the scanner finds*, not *whether the sensor starts, registers,
+schedules, and pushes on Windows*.
+
+**How to avoid:**
+- Create a dedicated Windows CI job in `.github/workflows/` (e.g., `windows-sensor-smoke.yml`)
+  that runs on `windows-latest` GitHub Actions runner. The smoke test: installs quirk-scanner,
+  starts a sensor process pointing at a mock console endpoint, verifies the sensor successfully
+  pushes a health ping (or a minimal scan result), and exits cleanly.
+- The Windows CI smoke test is explicitly NOT the same as the chaos lab. Document this
+  distinction in the v5.4 arch doc: "chaos lab = detection fidelity, Windows CI = runtime
+  correctness."
+- Do NOT claim Windows sensor support is validated if the Windows CI job does not exist or is
+  marked `continue-on-error: true` (which effectively disables it).
+- The chaos lab `lab.sh` `ALL_PROFILES` rule (CLAUDE.md) still applies — if a new chaos lab
+  profile is added for v5.4 (e.g., a multi-sensor demo profile), `lab.sh` must reflect it. The
+  Windows smoke test lives in CI, not in the chaos lab.
+
+**Warning signs:**
+- No `windows-latest` runner job in `.github/workflows/` after the sensor mode phase.
+- The only validation reference for "Windows sensor" points to a Docker Compose chaos lab profile.
+- Windows CI job exists but has `continue-on-error: true`.
+
+**Phase to address:** Architecture doc phase (specify the Windows validation path explicitly);
+Sensor mode phase (create the Windows CI smoke test job as part of the phase deliverable — not
+deferred to a "stabilization tail").
+
+---
+
+### Pitfall 14: Windows Scope Creep — Full Windows Support Balloons v5.4
+
+**What goes wrong:**
+"Windows sensor support" starts as a sensor runtime (runs the QUIRK scanner, pushes results).
+It expands to: packaging as a signed Windows executable (PyInstaller + code-signing cert), a
+Windows MSI installer, Windows Defender exclusion documentation, a Windows Event Log integration
+for service status, and full dashboard support on Windows. The milestone takes twice as long.
+
+The explicit HORIZON.md constraint: "Sizing risk — the arch-doc phase decides whether full Windows
+sensor support lands in v5.4 or splits to a v5.5 fast-follow, with v5.4 at minimum NOT making
+the sensor design Linux-only."
+
+**Why it happens:**
+Once Windows support is on the table, every Windows-specific convenience feature feels like a
+natural addition. Consultants who work on Windows ask for features that make their workflow
+easier. The floor/ceiling distinction in the HORIZON note is easy to forget during execution.
+
+**How to avoid:**
+- The architecture doc phase produces an explicit Windows scope decision with two tiers:
+  - **v5.4 floor (non-negotiable):** sensor↔console protocol is OS-agnostic; a Python 3.11+
+    sensor can be installed via `pip install quirk-scanner[sensor]` and run on Windows without
+    modification. POSIX-isms removed. Windows CI smoke test passes.
+  - **v5.4 ceiling (aspirational, defers to v5.5 if floor slips):** frozen executable
+    (PyInstaller), Windows Service hosting via `nssm` or `pywin32`, and signed packaging.
+- Frozen-exe packaging is NOT a v5.4 floor requirement unless the arch doc decides otherwise.
+  PyInstaller has non-trivial complexity (hidden imports, anti-virus false positives, code signing)
+  and is a v5.5 candidate.
+- Track Windows-specific work items separately in the requirements doc with a `[windows-floor]`
+  vs `[windows-ceiling]` tag. If the milestone is running long, the ceiling items defer first.
+
+**Warning signs:**
+- PyInstaller or `pywin32` appears in scope before the arch doc phase is complete.
+- The arch doc phase does not produce an explicit floor/ceiling decision.
+- Windows-related issues appear in more than 30% of the phase plan tasks.
+
+**Phase to address:** Architecture doc phase (produce the floor/ceiling decision); this decision
+gates whether Windows packaging work enters subsequent phases at all.
 
 ---
 
 ## Technical Debt Patterns
 
+Shortcuts that seem reasonable during v5.4 but create long-term problems.
+
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|---|---|---|---|
-| Top-level `import slack_sdk` in integration module | Simple, familiar | Breaks minimal install silently — caught post-ship (pypdf precedent) | Never — use `find_spec` guard |
-| Per-finding Slack message (not drift summary) | Richer context per alert | Notification storm; Slack rate-limit ban; alert fatigue | Never for real-time; OK for async digest |
-| Jira tickets without `(scan_id, finding_hash)` idempotency key | Simpler first pass | Duplicate tickets on every retry or re-run | Never — add idempotency from day one |
-| Hardcoded HTTP timeout of `None` on integration calls | No timeout boilerplate | Scan completion hangs on dead endpoint | Never — always set explicit timeout <= 10s |
-| Config-time-only SSRF validation | Single validation point | DNS rebinding attack window between config load and delivery | Never — validate at delivery time too |
-| `str(exc)` in integration error log | Full error context | Leaks auth tokens, URLs with embedded secrets | Never — always `safe_str(exc)` |
-| API token in YAML config file only (no env var path) | Simple for development | Token in source control / shared configs | Acceptable only if env-var alternative is documented as preferred |
-| `==` for token comparison in webhook verification | Familiar Python | Timing oracle for HMAC brute-force | Never in auth paths — always `hmac.compare_digest()` |
+|----------|-------------------|----------------|-----------------|
+| Single shared bearer token for all sensors | Simple enrollment — no per-sensor token management | A stolen token gives access to ALL sensors; no per-sensor revocation | Never — each sensor should have its own rotatable enrollment token from day one |
+| `sensor_id` as a free-form string with no format validation | Easy to set up | Two sensors with typo'd IDs look like separate segments; no uniqueness enforcement | Never — validate `sensor_id` format at enrollment time and enforce uniqueness in the `sensors` table |
+| Scoring the merged result in-process on every sensor push | Simple architecture; no async needed | Console CPU spike on large segment scans | Acceptable for v5.4 single-tenant; document as a known scaling constraint |
+| Skipping the `sensor_pushes` dedup table and relying on upserts only | Simpler schema | Upsert dedup requires a stable upsert key — collapses with the (segment, host) collision problem if key omits `sensor_id` | Only if the upsert key includes `(sensor_id, host, port, scanned_at)` exactly |
+| Hardcoding `verify=False` for sensor→console TLS during development | Avoids certificate setup friction | Gets committed; sensor forever trusts any cert | Never — use `QUIRK_SENSOR_INSECURE_TLS=1` env var that is prohibited from production configs and CI-grepped |
+| Relative `output/scheduled` path inherited from Phase 63 | Zero migration cost | Breaks Windows Service runtime; breaks any deployment where CWD is not the repo root | Never for new sensor code — fix in the POSIX-ism audit |
 
 ---
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
-|---|---|---|
-| Slack incoming webhook | URL contains the token as a path segment — logged raw | Store URL as credential (env var, never log raw); display `[configured]` in UI |
-| Slack incoming webhook | Send one message per finding | Send drift summary (N new, M resolved) with dashboard link |
-| Slack API rate limit | Linear retry on 429 | Exponential backoff + jitter; honor `Retry-After` header |
-| Splunk HEC | One POST per event | Batch events array in a single HEC POST |
-| Splunk HEC | `Authorization: Splunk <token>` header in exception text | Extend `safe_str` patterns to cover `Splunk\s+\S+` shape |
-| Jira REST API | Create ticket without dedup key | Track `(scan_id, finding_hash)` in `integration_deliveries`; skip if already delivered |
-| Jira REST API | Include full `service_detail` / raw CBOM in description | Use `to_integration_payload()` whitelist — severity, category, remediation, scan-ID only |
-| SMTP (email notification) | `smtplib.SMTP(host)` without explicit SSL context | Use `smtplib.SMTP_SSL` or `SMTP` + `starttls()` with verified SSL context; never disable cert verification |
-| SMTP credentials | Password in exception text from `SMTPAuthenticationError` | Wrap all smtplib calls in `safe_str(exc)`; `SMTPAuthenticationError` embeds server response which may echo credentials |
-| Webhook (generic) | No HTTPS enforcement | Validate scheme with `_ALLOWED_SCHEMES = {"https"}` — plain HTTP rejected outright |
-| Webhook (generic) | URL accepted at config time only | Re-validate with `validate_external_url()` immediately before each delivery call |
-| Webhook DNS rebinding | Domain passes allowlist at config load, re-resolves to internal IP at delivery time | Re-resolve and re-validate at delivery time; optionally pin the resolved IP at config time |
+|-------------|----------------|------------------|
+| Sensor → Console (ingest auth) | Register the route without `Depends(require_auth)` | Apply `require_auth` at the `APIRouter(dependencies=[...])` level, not per-route |
+| Sensor → Console (schema compat) | Accept the raw Pydantic model with `extra='forbid'` | Use `extra='ignore'` + `schema_version` field for forward/backward compat |
+| Windows SCM → Sensor stop | Register only `signal.SIGTERM`; Windows SCM sends stop through the service API | Implement a platform-conditional stop path: SCM API on Windows, `SIGTERM` on Linux/macOS |
+| Console ← Multiple sensors (merge) | Run `compute_readiness_score` on whatever endpoints exist without checking enrollment coverage | Check enrollment manifest before scoring; set `partial_result: true` if any sensor is overdue |
+| Existing single-node scan → Console upgrade | `sensor_id NOT NULL` constraint breaks existing rows | `sensor_id` must be `nullable=True`, NULL = implicit local sensor |
+| CBOM builder → Multi-sensor merge | Dedup by `(algorithm, protocol)` silently collapses components from different segments | Include `sensor_id` in the component identity hash |
+| Sensor push client → Console URL | Follow HTTP redirects silently | Apply `_NoRedirectHandler` (or `allow_redirects=False`); the `_NoRedirectHandler` extraction (stabilization tail) must ship before or with the sensor |
+
+---
+
+## Performance Traps
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Re-computing the full merged score on every sensor push | Console CPU spike; slow push acknowledgment | Score computation is cheap for single-tenant scale; accept for v5.4 but document | If a single push triggers scoring 10,000+ endpoints — unlikely for v5.4 single-tenant |
+| No WAL mode on SQLite with concurrent sensor + dashboard + scheduler | `OperationalError: database is locked` under concurrent access | Enable WAL mode in `init_db()` via `PRAGMA journal_mode=WAL` | Any environment with >1 process accessing the DB simultaneously — i.e., every multi-process sensor deployment |
+| Storing full sensor scan results as a JSON blob in a single DB row | Simple ingestion | Row size grows unbounded as scan scope grows; query performance degrades on large TEXT columns | Sensor scanning a /16 CIDR with deep TLS enumeration; size at arch doc phase |
+| Enrolling sensors with no cadence / heartbeat expectation | Simple — no background checks needed | Console cannot distinguish "no new findings" from "sensor is down"; `partial_result` flag never fires | Any production engagement where segment coverage is a billable deliverable |
 
 ---
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
-|---|---|---|
-| Outbound fetch to user-configured URL without `validate_external_url()` | SSRF to cloud metadata (credential theft), internal service probe | Re-use `quirk.util.url_allowlist.validate_external_url()` at delivery time; never allow `allow_internal=True` for integration URLs |
-| Embedding full CBOM or cert chain in Jira/Slack payload | Sensitive cryptographic inventory leaves operator's control | `to_integration_payload()` whitelist — no PEM, no raw JSON blobs |
-| Bot token / HEC token / SMTP password in scan_error column | Credential persistence in SQLite (SQLite file may be shared/backed up) | `safe_str(exc)` on all integration exceptions before any write; extend `_SENSITIVE_PATTERNS` for new token shapes |
-| Integration delivery inside `_wrapped_phase()` scan pipeline | Delivery failure kills scan; no findings, no CBOM | Strict isolation: delivery runs post-scan, reads from completed SQLite record |
-| New dashboard route without `Depends(require_auth)` | Auth bypass for integration management endpoints | Route-coverage CI test enumerated against `PUBLIC_ROUTES` allowlist |
-| API key in URL query param | Token in access logs, browser history, reverse proxy logs | `Authorization: Bearer` header only; no query-param token acceptance |
-| Non-`compare_digest` comparison in webhook signature verification | Timing oracle enables HMAC brute-force of signing secret | `hmac.compare_digest()` — already in `auth.py`, replicate for all new verification paths |
+|---------|------|------------|
+| Ingest route omits `Depends(require_auth)` | Unauthenticated result injection → poisoned CBOM + false score | Apply auth at `APIRouter` level; 401-without-credentials test as gating criterion |
+| Sensor token stored in plaintext in `quirk.yaml` | Token leaked via config file exfil or log of config load | Document that sensor tokens should be stored in env vars (`QUIRK_SENSOR_TOKEN`); verify the sensor token format matches an existing `safe_str()` pattern so it is redacted in exception logs |
+| `validate_external_url` not called on the console URL provided to a sensor | Sensor used as an SSRF pivot: attacker sets `console_url` to `http://169.254.169.254/` in the enrollment config | Call `validate_external_url(console_url)` in the sensor's push client (metadata IP is always blocked even with `allow_internal=True`) |
+| Logging the full sensor payload on ingest failure | Scan results (full crypto inventory of a segment) leak to console logs | Log only the `payload_id`, `sensor_id`, and error type on failure; never log the findings payload |
+| `safe_str()` AST gate not extended to cover new sensor + ingest modules | Credential leakage regression in the new code path | Extend the grep pattern in `tests/test_safe_str_gate.py` to include the new module paths before the ingest phase ships |
+| Console URL redirect followed by sensor push client | Sensor follows a redirect to an attacker-controlled endpoint | Apply `_NoRedirectHandler` (or `allow_redirects=False`) to the sensor's outbound push |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Outbound SSRF guard:** `validate_external_url()` called at delivery time (not only at config-load time). DNS rebinding window closed.
-- [ ] **Slack webhook URL:** Stored and logged as `[configured]`, not raw. URL contains the token in its path — treat as credential.
-- [ ] **safe_str coverage:** `_SENSITIVE_PATTERNS` extended to cover Splunk `Authorization: Splunk <token>`, Slack `xoxb-`/`xoxp-` prefixes, SMTP auth error text.
-- [ ] **Minimal install smoke test:** `pip install quirk-scanner && quirk scan --targets 127.0.0.1` passes without `ModuleNotFoundError` when integration extras are absent.
-- [ ] **`REGISTRY` updated:** Each new integration extra (`notifications`, `siem`, `ticketing`) has an `OptionalExtra` entry with correct `enabled_attrs`.
-- [ ] **Delivery isolation test:** A mock that returns 500 from the Slack/HEC/Jira endpoint does NOT cause the scan SQLite record to be absent or the CBOM to be missing.
-- [ ] **`integration_deliveries` idempotency:** Re-running a scheduled scan with the same findings does not create duplicate Jira tickets.
-- [ ] **Route-coverage CI test:** All new FastAPI routes are either in `PUBLIC_ROUTES` or have `Depends(require_auth)` — automated assertion, not a manual check.
-- [ ] **Rate-limit test:** Mock Slack endpoint returning `429 Retry-After: 2` triggers backoff, not an immediate retry storm.
-- [ ] **`to_integration_payload()` field whitelist:** All integration serializers call this — no `**finding.__dict__` or raw CBOM attachment paths.
+- [ ] **Ingest auth:** Sensor push endpoint requires authentication — verify with `curl` without
+  credentials → must return 401, not 200 or 422.
+- [ ] **Segment collision:** Two sensors with the same RFC1918 IP produce two distinct CBOM
+  components — verify by inserting synthetic sensor data and running the merge.
+- [ ] **Local scan backward compat:** A pre-v5.4 SQLite DB (no `sensor_id` column) passes
+  `quirk db migrate` and scores correctly — run the migration regression test.
+- [ ] **Partial-result warning:** Enrolling 2 sensors, taking 1 offline, and triggering a merge
+  produces `coverage_warning` in the score JSON — verify the field is present and non-null.
+- [ ] **Replay guard:** POSTing the same sensor payload twice returns 409 on the second request.
+- [ ] **Body size limit:** POSTing a 50 MB payload to the ingest endpoint returns 413.
+- [ ] **Windows SIGTERM:** A Windows sensor process receiving a Service Stop signal from the SCM
+  exits cleanly within 30 seconds without leaving `ScheduledRun` rows in "running" state.
+- [ ] **Windows output path:** Sensor output is written to an absolute path based on
+  `cfg.output_root`, not `"output/scheduled"` relative to CWD.
+- [ ] **Windows CI:** The `windows-sensor-smoke.yml` CI job passes on the `windows-latest`
+  runner — not marked `continue-on-error: true`.
+- [ ] **CBOM schema validation:** Merged CBOM passes CycloneDX 1.6 schema validation (the Phase
+  42 gate) with two sensors contributing.
+- [ ] **safe_str AST gate:** `git grep "str(exc)"` in the new sensor and ingest modules returns
+  zero results (all exception stringification goes through `safe_str()`).
+- [ ] **sensor_id in CBOM hash:** Two sensors contributing the same algorithm on the same port
+  produce two CBOM components — not one (over-merge).
+- [ ] **No SaaS infra:** `pyproject.toml` diff from v5.3 baseline contains no `celery`, `redis`,
+  `kombu`, or `pika` additions outside the existing `[broker]` extras.
+- [ ] **_NoRedirectHandler extracted:** `quirk/util/no_redirect.py` exists and sensor push client
+  imports from it — not from a copy-pasted duplicate.
+
+---
+
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Ingest auth bypass shipped | HIGH | Emergency patch: add `Depends(require_auth)` to ingest router; rotate all sensor tokens; audit `integration_deliveries` table for suspicious injections since the bypass window |
+| (Segment, host) collision in production DB | HIGH | Data loss — merged findings must be discarded and sensors re-pushed with correct `sensor_id`; the `sensor_id` column must be back-filled manually or via enrollment re-run |
+| Score computed on partial sensor set (no warning) | MEDIUM | Re-trigger merge after all sensors are online; add `coverage_warning` field to output; no data loss but report credibility is compromised for the engagement |
+| POSIX-ism breaks Windows sensor | MEDIUM | Targeted fix of the specific POSIX call; Windows CI smoke test catches recurrence; no data loss |
+| Windows scope creep delays milestone | MEDIUM | Invoke the floor/ceiling decision from the arch doc; defer ceiling items to v5.5; the floor (OS-agnostic protocol + pip install + CI smoke test) is always achievable |
+| Replay injection of stale findings | MEDIUM | Reject via `sensor_pushes` dedup on redeploy; re-run merge; audit `crypto_endpoints` for `scanned_at` timestamps outside expected scan windows |
 
 ---
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
-|---|---|---|
-| SSRF via outbound URL (Pitfall 1) | Phase 101 (notification fan-out) | Unit test: `validate_external_url("http://169.254.169.254")` called at delivery time; test with a URL that passes config-time but resolves to RFC1918 after config load |
-| Secret leakage in logs/SQLite (Pitfall 2) | Phase 101 — extend `safe_str` before first SDK integration | AST gate (existing) must cover integration module paths; `safe_str` pattern test for Splunk/Slack token shapes |
-| Sensitive finding data exfiltration (Pitfall 3) | Phase 101 — define `to_integration_payload()` | Review that no integration module accesses `finding.tls_capabilities_json` or CBOM builder output directly |
-| Notification storm / no throttling (Pitfall 4) | Phase 101 | Integration test: 50-finding scan triggers exactly 1 Slack message (summary), not 50; Jira path creates at most N tickets with idempotency guard |
-| Optional-extra import trap (Pitfall 5) | Phase 101 | CI smoke test: minimal install path does not import `slack_sdk`/`jira`/`splunk_sdk`; `REGISTRY` entry present |
-| Dashboard auth gaps (Pitfall 6) | Phase 101 (route-coverage test) + Phase 104 (auth) | Automated route enumeration test; no `?token=` in API docs; `hmac.compare_digest` used in all new auth paths |
-| Delivery failure corrupts scan (Pitfall 7) | Phase 101 | Test: mock delivery endpoint returns 500; scan SQLite record and CBOM are present and complete; `integration_deliveries` row shows `failed` |
+|---------|------------------|--------------|
+| Ingest auth bypass (Pitfall 1) | Architecture doc (define auth model) + Ingestion API phase (implement + 401 test) | `curl` without credentials → 401; `test_ingest_auth.py` gating test |
+| Replay + DoS (Pitfall 2) | Architecture doc (payload schema with `payload_id`) + Ingestion API phase | Double-POST → 409; 50 MB body → 413 |
+| Console impersonation (Pitfall 3) | Architecture doc (TLS posture) + Sensor mode phase | CI grep for `verify=False`; enrollment provisions CA cert |
+| (Segment, host) collision (Pitfall 4) | Architecture doc + data-model phase — **hard prerequisite for all downstream phases** | Synthetic 2-sensor CBOM dedup regression test |
+| Local scan backward compat (Pitfall 5) | Data-model phase (nullable `sensor_id`, migration) | Migration regression test with pre-v5.4 SQLite fixture |
+| CBOM over/under-merge (Pitfall 6) | Cross-sensor merge phase | 2-sensor CBOM component count assertion |
+| Partial offline sensor score (Pitfall 7) | Architecture doc (enrollment manifest + partial-result flag) + Merge phase | Offline-sensor → `coverage_warning` non-null |
+| SaaS over-engineering (Pitfall 8) | Architecture doc phase — lock constraint in writing | No Celery/Redis/tenant_id in any phase plan or `pyproject.toml` diff |
+| Clock skew (Pitfall 9) | Architecture doc (replay window + `received_at`) + Sensor + Ingest phases | Wrong-clock push → actionable rejection with `console_utc` |
+| Version skew (Pitfall 10) | Architecture doc (versioned schema + `extra='ignore'`) + Ingest phase | v5.4 payload fixture parses with v5.5 model class |
+| SIGTERM on Windows (Pitfall 11) | POSIX-ism audit task + Sensor mode phase | Windows CI smoke test: clean SCM stop |
+| Paths + `/tmp` + SQLite locking (Pitfall 12) | POSIX-ism audit task | CI grep for `/tmp`; WAL mode in `init_db`; Windows CI output-path check |
+| Chaos lab cannot validate Windows (Pitfall 13) | Architecture doc (define validation path) + Sensor mode phase | `windows-sensor-smoke.yml` exists and passes on `windows-latest` |
+| Windows scope creep (Pitfall 14) | Architecture doc (floor/ceiling decision) | Floor items tracked with `[windows-floor]` tag; ceiling items in a separate backlog row |
 
 ---
 
 ## Sources
 
-- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
-- [Webhook Vulnerabilities in Automation Pipelines](https://infosecwriteups.com/webhook-vulnerabilities-hidden-vulnerabilities-in-automation-pipelines-724d09ec6130)
-- [Slack Security Best Practices](https://api.slack.com/authentication/best-practices)
-- [Designing for Webhook Consumer Failures](https://gethook.to/blog/webhook-consumer-graceful-degradation)
-- [Splunk HEC Token Security](https://w9.com.tr/en/article/what-is-the-hec-code)
-- [FastAPI HTTP Basic Auth / compare_digest](https://fastapi.tiangolo.com/advanced/security/http-basic-auth/)
-- [Atlassian Rate Limiting Guide](https://community.developer.atlassian.com/t/rate-limiting-guide-for-jira-and-confluence/43360)
-- [Python smtplib TLS stripping vulnerability](https://python-security.readthedocs.io/vuln/smtplib-tls-stripping.html)
-- [SSRF DNS Rebinding Attack](https://aydinnyunus.github.io/2026/03/14/ssrf-dns-rebinding-vulnerability/)
-- Project: `quirk/util/url_allowlist.py` (validate_external_url, existing SSRF guard)
-- Project: `quirk/util/safe_exc.py` (safe_str, existing credential scrubbing)
-- Project: `quirk/util/optional_extra.py` (REGISTRY, find_spec probe pattern)
-- Project: `quirk/dashboard/api/middleware/auth.py` (hmac.compare_digest, bearer pattern)
-- Project memory: `feedback_optional_extra_import_trap.md` (pypdf post-ship minimal-install breakage, v4.10)
+- Existing codebase: `quirk/dashboard/api/middleware/auth.py` (bearer auth pattern, `require_auth` — Phase 58 CR-03 / HARDEN-API-01 / AUTH-02)
+- Existing codebase: `quirk/util/safe_exc.py` (Phase 59 LEAK-01 `safe_str()` implementation and `_SENSITIVE_PATTERNS`)
+- Existing codebase: `quirk/util/url_allowlist.py` (Phase 57 SSRF guard, `validate_external_url`, metadata-IP always-blocked rule)
+- Existing codebase: `quirk/cli/scheduler_cmd.py` (Phase 63 SCHED-02 — `signal.SIGTERM` at lines 258–259; relative path `output/scheduled` at line 136; datetime-naive UTC convention in module header Pitfall 1; stale-run recovery `_recover_stale_runs`)
+- Existing codebase: `quirk/dashboard/api/routes/jobs.py` (line 204 — `os.kill(pid, SIGTERM)`)
+- Existing codebase: `quirk/models.py` — `CryptoEndpoint` (no `sensor_id` column, confirmed); `IntegrationDelivery` (Phase 101 delivery audit with `finding_hash` / `scan_id` dedup key)
+- Existing codebase: `quirk/intelligence/scoring.py` — `compute_readiness_score` signature (must not change for backward compat); ÷1.5 rollup; `SCORE_WEIGHTS` invariant
+- Project planning: `.planning/HORIZON.md` v5.4 section (Windows sizing-risk note; SaaS parked; single-tenant constraint; floor/ceiling framing; no Celery/Redis/Postgres)
+- Project planning: `.planning/PROJECT.md` v5.4 current milestone section (arch-doc first; no heavy infra; additive schema only; `sensor_id`/segment dimension requirement)
+- CLAUDE.md: chaos lab `lab.sh` maintenance rule (basis for Pitfall 13 distinction between chaos lab and Windows CI)
+- MEMORY.md: v5.3 SSRF-safe/secret-scrubbing/`IntegrationDelivery` anchor (Phase 101); additive-SQLite-schema-only constraint (recurring project invariant)
 
 ---
-*Pitfalls research for: QU.I.R.K. v5.3 Adoption & Integration Surface — outbound notifications, SIEM export, ticketing, dashboard auth*
-*Researched: 2026-05-24*
+*Pitfalls research for: v5.4 Distributed On-Prem Scanner Architecture — sensor→console ingest security, (segment,host) keying, merge correctness, single-tenant constraints, Windows runtime*
+*Researched: 2026-05-25*
