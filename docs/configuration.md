@@ -705,6 +705,88 @@ quirk serve --port 9000 --no-open
 quirk serve --host 0.0.0.0 --port 8512
 ```
 
+### `quirk token` — Dashboard API Token CLI (Phase 102, AUTH-01)
+
+The `quirk token` subcommand manages the `security.api_token` key in your QUIRK YAML config. The token is used to authenticate requests to the dashboard API and browser login form.
+
+| Subcommand | Description |
+|------------|-------------|
+| `quirk token generate` | Mint a new CSPRNG token (`secrets.token_urlsafe(32)`) and write it to `security.api_token` in your config file. Prints the token to stdout so you can copy it for browser login. |
+| `quirk token rotate` | Identical to `generate` — overwrites `security.api_token` with a new token, immediately invalidating the previous one. Any active dashboard session using the old token will be returned to the login form on the next API request. |
+| `quirk token show` | Print the currently persisted token from the YAML config file. Reads the raw YAML value; does **not** read `QUIRK_API_TOKEN`. Exits 1 if the config file is not found. |
+
+Pass `--config /path/to/config.yaml` to any subcommand to target a non-default config location.
+
+```bash
+# Generate a token and write it to config.yaml
+quirk token generate --config config.yaml
+
+# Rotate the token (invalidates the old one immediately)
+quirk token rotate --config config.yaml
+
+# Show the currently configured token (reads YAML, not env var)
+quirk token show --config config.yaml
+```
+
+> **Precedence note:** If `QUIRK_API_TOKEN` is set in the environment, it takes precedence over the `security.api_token` YAML value at runtime. `quirk token show` always displays the YAML-persisted value; if the env var is set, a reminder is printed indicating that the env var overrides the file value for the running dashboard process.
+
+> **Security note:** `quirk token show` echoes the raw token to the terminal, which may appear in terminal scrollback. This is a local-operator tool convenience — the token is never transmitted over the network by this command. Never embed the token value in shell scripts, version-controlled config files, or URLs.
+
+---
+
+## Dashboard Authentication (Phase 102, AUTH-01..03)
+
+The QUIRK dashboard (served by `quirk serve`) optionally enforces token-based authentication on all `/api/*` routes. Authentication is **off by default** — an empty or absent `security.api_token` means the dashboard is accessible without credentials (suitable for local development only).
+
+### Enabling authentication
+
+Add a `security:` block to your QUIRK YAML config and populate `api_token`:
+
+```yaml
+security:
+  api_token: ""   # populated by: quirk token generate --config config.yaml
+```
+
+Run `quirk token generate --config config.yaml` to write a random token into this field. Once the token is non-empty, the dashboard requires authentication on every `/api/*` request.
+
+### Token precedence
+
+| Source | Precedence | Notes |
+|--------|-----------|-------|
+| `QUIRK_API_TOKEN` env var | **Highest** | Set this in production deployments; overrides YAML at startup |
+| `security.api_token` in YAML | Default | Written by `quirk token generate` / `quirk token rotate` |
+
+### API authentication (programmatic clients)
+
+All `/api/*` endpoints accept a token via two equivalent headers. **`X-API-Key` takes precedence** — if it is present, `Authorization: Bearer` is not consulted.
+
+| Header | Format | Notes |
+|--------|--------|-------|
+| `X-API-Key` | `X-API-Key: <token>` | Preferred for API clients |
+| `Authorization` | `Authorization: Bearer <token>` | Fallback; supported for compatibility |
+
+Both paths use `hmac.compare_digest` for timing-safe comparison. An invalid or absent token on a protected route returns HTTP 401 with error code `DASHBOARD-001`.
+
+```bash
+# Using X-API-Key (preferred)
+curl -H "X-API-Key: <your-token>" http://localhost:8512/api/scans
+
+# Using bearer token (fallback)
+curl -H "Authorization: Bearer <your-token>" http://localhost:8512/api/scans
+```
+
+### Browser login flow
+
+1. Open the dashboard in a browser (`http://localhost:8512` by default).
+2. If authentication is enabled, you are presented with a "Dashboard Login" card. Paste your token (from `quirk token show`) into the password field and click **Unlock Dashboard**.
+3. A correct token loads the full dashboard. An incorrect token shows an inline error ("Invalid token. Check your token and try again.") and clears the input — no page redirect occurs.
+4. Click **Sign out** in the sidebar to clear the session and return to the login form. The token is removed from browser storage immediately.
+5. **Mid-session token rotation:** If you run `quirk token rotate` while a browser session is open, the next API request from that session returns HTTP 401 and the dashboard automatically returns you to the login form. Re-enter the new token to resume.
+
+### Auth-disabled passthrough (development convenience)
+
+When `security.api_token` is empty and `QUIRK_API_TOKEN` is not set, the dashboard serves all routes without authentication. This is intentional for local development and single-operator use. Do not deploy the dashboard on a network-accessible interface without setting a token.
+
 ---
 
 ## Minimal Valid Configuration
