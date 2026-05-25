@@ -198,6 +198,41 @@ class TestHeaderEscaping:
 
         assert _cef_escape_header("a\\b") == r"a\\b"
 
+    def test_header_newline_stripped_lf(self):
+        """CR-01: bare LF in a header value is stripped (CWE-117 log injection guard)."""
+        from quirk.siem.formatter import _cef_escape_header
+
+        result = _cef_escape_header("Legit Finding\nCEF:0|EVIL|forged")
+        assert "\n" not in result, f"LF must be stripped from header: {result!r}"
+        assert "Legit Finding" in result
+
+    def test_header_newline_stripped_cr(self):
+        """CR-01: bare CR in a header value is stripped."""
+        from quirk.siem.formatter import _cef_escape_header
+
+        result = _cef_escape_header("Finding\rEvil")
+        assert "\r" not in result
+
+    def test_header_newline_stripped_crlf(self):
+        """CR-01: CRLF in a header value is stripped."""
+        from quirk.siem.formatter import _cef_escape_header
+
+        result = _cef_escape_header("Finding\r\nEvil")
+        assert "\r" not in result and "\n" not in result
+
+    def test_build_cef_event_newline_in_title_is_single_line(self):
+        """CR-01: a title containing \\n does NOT produce two physical CEF lines."""
+        from quirk.siem.formatter import build_cef_event
+
+        finding = _minimal_finding(title="Weak TLS\nCEF:0|EVIL|forged|9.9|EVIL-001|Injected|10|dhost=attacker")
+        result = build_cef_event(finding, "1.0.0")
+        # The result must be a single physical line — no newline characters
+        assert "\n" not in result, (
+            f"build_cef_event must return a single line even when title contains newline. "
+            f"Got: {result!r}"
+        )
+        assert "\r" not in result
+
 
 # ---------------------------------------------------------------------------
 # Tests — Extension escaping

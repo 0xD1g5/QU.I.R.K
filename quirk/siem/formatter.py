@@ -43,10 +43,22 @@ def _cef_escape_header(value: str) -> str:
     CEF header rules (ArcSight CEF Implementation Standard):
       - Backslash (\\) -> \\\\   MUST be escaped FIRST (avoids double-escape)
       - Pipe (|)       -> \\|
+      - Newlines       -> stripped (no valid CEF header value contains a newline;
+                          a bare \\n in a header splits the syslog line into two
+                          physical lines — log injection / CWE-117)
       - Equals (=)     is NOT escaped in header fields (only in extension values)
     """
     # Backslash MUST be replaced first — see RESEARCH.md Pitfall 1
-    return value.replace("\\", "\\\\").replace("|", "\\|")
+    # NOTE: '=' is intentionally NOT escaped in header fields per CEF spec
+    # (section 5, ArcSight CEF Implementation Standard). Only extension values escape '='.
+    return (
+        value
+        .replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\r\n", "")
+        .replace("\r", "")
+        .replace("\n", "")
+    )
 
 
 def _cef_escape_extension(value: str) -> str:
