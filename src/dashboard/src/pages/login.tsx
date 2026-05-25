@@ -53,7 +53,7 @@ export function LoginPage() {
         // Successful authentication — hand off to AuthProvider
         setToken(tokenValue)
       } else {
-        // 401 (or other error): show inline error, clear input, refocus
+        // 401 (or other non-OK): token was sent but rejected — clear + refocus
         setError("Invalid token. Check your token and try again.")
         if (inputRef.current) {
           inputRef.current.value = ""
@@ -61,9 +61,12 @@ export function LoginPage() {
         }
       }
     } catch {
-      setError("Invalid token. Check your token and try again.")
+      // Network/fetch error (server down, DNS, CORS) — token may still be valid;
+      // preserve the input value so the user can retry without re-typing.
+      setError(
+        "Could not reach the dashboard server. Check that it is running and try again.",
+      )
       if (inputRef.current) {
-        inputRef.current.value = ""
         inputRef.current.focus()
       }
     }
