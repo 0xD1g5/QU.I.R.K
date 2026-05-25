@@ -36,7 +36,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 ## Phases
 
-- [ ] **Phase 101: Notification Fan-Out + Security Foundation** — Drift-event delivery (Slack, email, webhook) wired into the scheduler seam, plus all integration security primitives inherited by every downstream phase
+- [x] **Phase 101: Notification Fan-Out + Security Foundation** — Drift-event delivery (Slack, email, webhook) wired into the scheduler seam, plus all integration security primitives inherited by every downstream phase (completed 2026-05-25)
 - [ ] **Phase 102: Dashboard Auth UX + Score Tax** — X-API-Key header support, token generate/rotate CLI, React login form, and CLI exec-score sourced from shared content model
 - [ ] **Phase 103: SIEM Export** — Per-scan per-finding batch push to syslog/CEF (vendor-neutral) and Splunk HEC, zero new pip deps
 - [ ] **Phase 104: Jira Ticketing** — Per-finding Jira issue creation with shared ticketing abstraction, SHA256 fingerprint dedup, and QRAMM evidence in descriptions
@@ -58,7 +58,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] 101-01-PLAN.md — Foundation: safe_str secret patterns, integration_deliveries table, [notify] extra (ISEC-02, NOTIFY-07)
 - [x] 101-02-PLAN.md — Security primitives: NotifyCfg loader + to_integration_payload whitelist + DriftSummary (NOTIFY-06, ISEC-03)
 - [x] 101-03-PLAN.md — Channels: Slack/email/webhook senders with delivery-time SSRF + lazy import (NOTIFY-03/04/05, ISEC-01, ISEC-04)
-- [ ] 101-04-PLAN.md — Dispatcher + scheduler wiring + docs/Obsidian/UAT (NOTIFY-01/02/07, ISEC-02)
+- [x] 101-04-PLAN.md — Dispatcher + scheduler wiring + docs/Obsidian/UAT (NOTIFY-01/02/07, ISEC-02)
 **UI hint**: yes
 
 ### Phase 102: Dashboard Auth UX + Score Tax
@@ -107,7 +107,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 101. Notification Fan-Out + Security Foundation | 3/4 | In Progress|  |
+| 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
 | 102. Dashboard Auth UX + Score Tax | 0/TBD | Not started | - |
 | 103. SIEM Export | 0/TBD | Not started | - |
 | 104. Jira Ticketing | 0/TBD | Not started | - |

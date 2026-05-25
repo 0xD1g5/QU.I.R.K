@@ -9,8 +9,8 @@
 ## v5.3 Requirements
 
 ### Notification Fan-Out (NOTIFY) — ANCHOR
-- [ ] **NOTIFY-01**: A completed scheduled scan computes its drift (`TrendReport`) and dispatches a notification when the configured trigger fires — closing the gap where drift events are emitted but never delivered
-- [ ] **NOTIFY-02**: Notifications fire on a conservative default trigger — a new HIGH/CRITICAL finding OR a score regression beyond a configurable floor (default −5) — never on every scan and never on MEDIUM-only by default
+- [x] **NOTIFY-01**: A completed scheduled scan computes its drift (`TrendReport`) and dispatches a notification when the configured trigger fires — closing the gap where drift events are emitted but never delivered
+- [x] **NOTIFY-02**: Notifications fire on a conservative default trigger — a new HIGH/CRITICAL finding OR a score regression beyond a configurable floor (default −5) — never on every scan and never on MEDIUM-only by default
 - [x] **NOTIFY-03**: A user can deliver notifications to Slack via an incoming-webhook URL (one summary message per scan, not one per finding)
 - [x] **NOTIFY-04**: A user can deliver notifications via email (stdlib SMTP) to one or more recipients
 - [x] **NOTIFY-05**: A user can deliver notifications to a generic outbound webhook (JSON POST) for custom integrations
@@ -69,8 +69,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOTIFY-01 | Phase 101 | Pending |
-| NOTIFY-02 | Phase 101 | Pending |
+| NOTIFY-01 | Phase 101 | Complete |
+| NOTIFY-02 | Phase 101 | Complete |
 | NOTIFY-03 | Phase 101 | Complete |
 | NOTIFY-04 | Phase 101 | Complete |
 | NOTIFY-05 | Phase 101 | Complete |
