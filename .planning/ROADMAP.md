@@ -121,7 +121,12 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
   4. Each push attempt — success or failure — writes an `IntegrationDelivery` audit row with all exception text passed through `safe_str()`; the extended AST gate covers the new module
   5. A sensor running a newer schema version than the console (or vice versa) gets a degraded-graceful response (not an unhandled 422/500) due to `extra='ignore'` and `schema_version` awareness
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 109-01-PLAN.md — `quirk console enroll` provisioning command (writes sensors + sensor_tokens, mints bearer token)
+- [ ] 109-02-PLAN.md — POST /api/sensor/push route + PushEnvelope model + failure-mode ladder + audit-per-attempt + real _ingest_envelope
+- [ ] 109-03-PLAN.md — ingestion + enroll tests, safe_str AST gate extension, docs/UAT-SERIES.md update & Obsidian sync
 
 ### Phase 110: Cross-Sensor Merge & Scoring
 
