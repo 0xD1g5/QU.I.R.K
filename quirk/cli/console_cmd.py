@@ -13,6 +13,8 @@ Security contract
 * All decompress + envelope key validation is wrapped in try/except →
   clean SystemExit(1) on malformed/oversized input; never a raw traceback
   (T-108-09 mitigation).
+* Decompression is bounded by _MAX_DECOMPRESS_BYTES (20 MB) to prevent zstd
+  decompression-bomb attacks (CR-01).  2× the 10 MB HTTPS body limit (D-09).
 * payload_id dedup intent preserved: skip_replay_window=True skips only the
   ±15-min clock window; Phase 109 will enforce the payload_id uniqueness check
   against the sensor_pushes table (T-108-10 mitigation).
@@ -28,9 +30,14 @@ import sys
 
 import zstandard
 
+# 20 MB decompression cap — 2× the 10 MB HTTPS body limit (D-09, CR-01).
+# A .qpush file that expands beyond this is rejected; prevents zstd bomb attacks.
+_MAX_DECOMPRESS_BYTES = 20 * 1024 * 1024
+
 # Required envelope keys (subset that must be present for Phase 108 validation)
 _REQUIRED_ENVELOPE_KEYS = frozenset({
     "payload_id",
+    "pushed_at",          # required by §3.1; needed for D-08 replay window (WR-02)
     "schema_version",
     "sensor_version",
     "sensor_id",
@@ -83,9 +90,20 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
         print(f"ERROR: cannot read .qpush file: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    # Decompress (T-108-09: wrapped; never a raw traceback)
+    # Decompress with output-size cap (CR-01: prevent zstd decompression bomb).
+    # stream_reader().read(N+1) reads at most N+1 bytes; if we get more than
+    # _MAX_DECOMPRESS_BYTES the file is maliciously oversized — reject cleanly.
     try:
-        raw = zstandard.ZstdDecompressor().decompress(data)
+        dctx = zstandard.ZstdDecompressor()
+        raw = dctx.stream_reader(data).read(_MAX_DECOMPRESS_BYTES + 1)
+        if len(raw) > _MAX_DECOMPRESS_BYTES:
+            print(
+                f"ERROR: .qpush decompressed size exceeds {_MAX_DECOMPRESS_BYTES} bytes",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    except SystemExit:
+        raise
     except Exception as exc:
         print(
             f"ERROR: .qpush file is not valid zstd-compressed data: {exc}",
