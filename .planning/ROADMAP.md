@@ -102,7 +102,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 **Plans**: 4 plans
 
-- [ ] 108-01-PLAN.md — STAB-02 _NoRedirectHandler extraction + platformdirs/tenacity/zstandard deps + scheduler POSIX-ism fixes
+- [x] 108-01-PLAN.md — STAB-02 _NoRedirectHandler extraction + platformdirs/tenacity/zstandard deps + scheduler POSIX-ism fixes
 - [ ] 108-02-PLAN.md — quirk sensor enroll/push: bound sensor.yaml + one-time token, wire envelope + HMAC + tenacity HTTPS push, bounded store-and-forward spool
 - [ ] 108-03-PLAN.md — air-gap: quirk sensor export-results (byte-identical .qpush) + quirk console import-results ingest stub
 - [ ] 108-04-PLAN.md — windows-latest hard-gate CI smoke job + no-backslash/clean-shutdown tests + docs/UAT-SERIES.md update & Obsidian sync
@@ -175,7 +175,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 |-------|----------------|--------|-----------|
 | 106. Architecture Documentation | 2/2 | Complete    | 2026-05-25 |
 | 107. Distributed Data Model | 2/2 | Complete    | 2026-05-25 |
-| 108. Sensor Push CLI + Windows CI | 0/4 | Planned     | - |
+| 108. Sensor Push CLI + Windows CI | 1/4 | In Progress|  |
 | 109. Console Ingestion API | 0/? | Not started | - |
 | 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
 | 111. Console Dashboard Awareness | 0/? | Not started | - |

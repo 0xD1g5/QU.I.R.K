@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.4
 milestone_name: — Distributed On-Prem Scanner Architecture
-status: ready_to_plan
-stopped_at: Phase 107 complete (2/2) — ready to discuss Phase 108
-last_updated: 2026-05-25T21:05:44.828Z
+status: planning
+stopped_at: Phase 107 context gathered
+last_updated: "2026-05-25T21:48:05.672Z"
 last_activity: 2026-05-25
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 13
+  total_plans: 8
+  completed_plans: 5
   percent: 29
 ---
 
@@ -58,6 +58,8 @@ v5.4 Progress: [          ] 0/7 phases | 0% complete
 - v5.4-D-08: `sensor_id` must be `nullable=True` on `CryptoEndpoint` (NULL = implicit local sensor); existing single-host scans are unaffected — backward compatibility is non-negotiable
 - v5.4-D-09: Scoring/CBOM/evidence engines (`scoring.py`, `evidence.py`, `cbom/builder.py`, `cbom/writer.py`) are NOT forked or modified; the merge pipeline re-runs them over the union of sensor endpoints
 - v5.4-D-10: The Windows chaos lab cannot validate Windows sensor correctness (Linux containers only); Windows validation is owned exclusively by the `windows-latest` CI smoke job in Phase 108
+- 108-01-D-01: STAB-02 shipped — _NoRedirectHandler single-sourced in quirk/util/no_redirect.py; webhook.py and servicenow.py import from there
+- 108-01-D-02: SENSOR-05 scheduler fix — added --scan-config arg to separate YAML config from SQLite DB path; scheduler output anchored to cfg.output.directory when --scan-config provided
 
 ### Pending Todos
 
@@ -92,13 +94,14 @@ Carried forward from v5.3 close (2026-05-25):
 | human-UAT (104) | Live Jira issue creation + dedup, missing-extra skip, self-hosted token_auth (4 scenarios) | deferred — needs a real Jira instance |
 | human-UAT (105) | Live ServiceNow incident creation + work_notes dedup (2 scenarios) | deferred — needs a real ServiceNow instance |
 | Phase 107-distributed-data-model P02 | 5 | 1 tasks | 1 files |
+| Phase 108 P01 | 25 | 3 tasks | 7 files |
 
 ## Session Continuity
 
-Last session: 2026-05-25T21:02:35.549Z
-Stopped at: Phase 107 context gathered
+Last session: 2026-05-25T21:47:53.505Z
+Stopped at: Phase 108 Plan 01 complete
 Resume file: None
-Next: `/gsd:plan-phase 106`
+Next: Phase 108 Plan 02 (sensor runtime)
 
 ## Operator Next Steps
 

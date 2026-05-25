@@ -39,7 +39,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 - [ ] **SENSOR-02**: A sensor runs a local scan (reusing `run_scan.py` unchanged) and pushes the resulting endpoints to the console via `quirk sensor push` over authenticated HTTPS, with `tenacity` exponential-backoff retry and `verify=True` enforced.
 - [ ] **SENSOR-03**: A sensor in a degraded/offline segment spools pushes to a bounded file-per-payload directory and retries delivery when connectivity returns (store-and-forward).
 - [ ] **SENSOR-04**: A consultant can export a sensor's results to a transferable file (`quirk sensor export-results`) and import them on the console (`quirk console import-results`) for truly air-gapped segments (sneakernet).
-- [ ] **SENSOR-05**: The sensor runtime is OS-agnostic — a POSIX-ism audit removes/guards platform-specific code (at minimum `scheduler_cmd.py:136` relative path → `cfg.output_root`-anchored, and `:258-259` SIGTERM → `sys.platform != 'win32'`-guarded), and `platformdirs` resolves data/config directories on Windows and POSIX.
+- [x] **SENSOR-05**: The sensor runtime is OS-agnostic — a POSIX-ism audit removes/guards platform-specific code (at minimum `scheduler_cmd.py:136` relative path → `cfg.output_root`-anchored, and `:258-259` SIGTERM → `sys.platform != 'win32'`-guarded), and `platformdirs` resolves data/config directories on Windows and POSIX.
 - [ ] **SENSOR-06**: A `windows-latest` CI smoke job validates the sensor contract on real Windows (payload serialization has no backslash paths, clean shutdown), and is a hard gate (not `continue-on-error`). The Linux chaos lab does not satisfy this.
 
 ### Console Ingestion (CONSOLE)
@@ -73,7 +73,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 ### Stabilization Tail (STAB)
 
 - [ ] **STAB-01**: `docs/operators-guide.md` covers the full distributed workflow (enroll → push → merge), including Windows sensor install, and the operators-guide all-configurations/settings coverage gap is closed. (folds in backlog 999.59)
-- [ ] **STAB-02**: The duplicated `_NoRedirectHandler` is extracted to `quirk/util/no_redirect.py` and reused by the sensor push client (ship no later than the sensor phase — treat as a sensor-phase prerequisite if it slips).
+- [x] **STAB-02**: The duplicated `_NoRedirectHandler` is extracted to `quirk/util/no_redirect.py` and reused by the sensor push client (ship no later than the sensor phase — treat as a sensor-phase prerequisite if it slips).
 - [ ] **STAB-03**: Residual dependency hygiene is resolved and `docs/UAT-SERIES.md` is updated to cover all v5.4 phases.
 
 ---
@@ -131,9 +131,9 @@ Which phases cover which requirements.
 | SENSOR-02 | Phase 108 | Pending |
 | SENSOR-03 | Phase 108 | Pending |
 | SENSOR-04 | Phase 108 | Pending |
-| SENSOR-05 | Phase 108 | Pending |
+| SENSOR-05 | Phase 108 | Complete |
 | SENSOR-06 | Phase 108 | Pending |
-| STAB-02 | Phase 108 | Pending |
+| STAB-02 | Phase 108 | Complete |
 | CONSOLE-01 | Phase 109 | Pending |
 | CONSOLE-02 | Phase 109 | Pending |
 | CONSOLE-03 | Phase 109 | Pending |
