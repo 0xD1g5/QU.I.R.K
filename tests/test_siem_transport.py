@@ -205,6 +205,20 @@ class TestSendSyslogRawValidation:
         with pytest.raises(ValueError, match="port"):
             send_syslog_raw("CEF:0|test", "127.0.0.1", -1)
 
+    def test_rejects_unknown_protocol(self):
+        """WR-01: unknown protocol raises ValueError instead of silently falling through to UDP."""
+        from quirk.siem.transport import send_syslog_raw
+
+        with pytest.raises(ValueError, match="protocol"):
+            send_syslog_raw("CEF:0|test", "127.0.0.1", 514, protocol="tls")
+
+    def test_rejects_invalid_protocol_string(self):
+        """WR-01: an arbitrary unknown string raises ValueError."""
+        from quirk.siem.transport import send_syslog_raw
+
+        with pytest.raises(ValueError, match="protocol"):
+            send_syslog_raw("CEF:0|test", "127.0.0.1", 514, protocol="sctp")
+
 
 # ---------------------------------------------------------------------------
 # Tests — Loopback NOT blocked (CONTEXT.md D-02)
