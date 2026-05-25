@@ -66,6 +66,29 @@ class _FakeHTTPResponse:
         return b"ok"
 
 
+class _FakeOpener:
+    """Fake opener returned by build_opener; intercepts opener.open() calls.
+
+    Used by tests that previously patched urllib.request.urlopen directly.
+    The CR-01 fix changed send_webhook to use build_opener(_NoRedirectHandler)
+    so tests must intercept at the opener level instead.
+    """
+
+    def __init__(self, callback):
+        self._callback = callback
+
+    def open(self, req, timeout=None):
+        return self._callback(req, timeout=timeout)
+
+
+def _make_fake_build_opener(captured_list, status=200):
+    """Return a build_opener replacement that appends (req, timeout) to captured_list."""
+    def _fake_urlopen(req, timeout=None):
+        captured_list.append({"req": req, "timeout": timeout})
+        return _FakeHTTPResponse(status)
+    return lambda *handlers: _FakeOpener(_fake_urlopen)
+
+
 # ---------------------------------------------------------------------------
 # ValueError when URL env var is unset
 # ---------------------------------------------------------------------------
@@ -115,16 +138,12 @@ def test_no_hmac_when_key_env_not_set(monkeypatch):
 
     captured_requests = []
 
-    def _fake_urlopen(req, timeout=None):
-        captured_requests.append({"req": req, "timeout": timeout})
-        return _FakeHTTPResponse(200)
-
-    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(urllib.request, "build_opener", _make_fake_build_opener(captured_requests))
     monkeypatch.setenv("QUIRK_WEBHOOK_URL", "https://hooks.example.com/notify")
 
     send_webhook(cfg=_make_cfg(hmac_key_env=None, timeout_seconds=12), payload=_make_payload())
 
-    assert len(captured_requests) == 1, "urlopen must be called exactly once"
+    assert len(captured_requests) == 1, "opener.open must be called exactly once"
     req = captured_requests[0]["req"]
     assert captured_requests[0]["timeout"] == 12, \
         f"Expected timeout=12, got {captured_requests[0]['timeout']}"
@@ -143,11 +162,7 @@ def test_hmac_header_present_when_key_set(monkeypatch):
 
     captured_requests = []
 
-    def _fake_urlopen(req, timeout=None):
-        captured_requests.append({"req": req, "timeout": timeout})
-        return _FakeHTTPResponse(200)
-
-    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(urllib.request, "build_opener", _make_fake_build_opener(captured_requests))
     monkeypatch.setenv("QUIRK_WEBHOOK_URL", "https://hooks.example.com/notify")
     monkeypatch.setenv("QUIRK_HMAC_KEY", "super-secret-key")
 
@@ -185,11 +200,7 @@ def test_hmac_absent_when_key_env_empty(monkeypatch):
 
     captured_requests = []
 
-    def _fake_urlopen(req, timeout=None):
-        captured_requests.append({"req": req, "timeout": timeout})
-        return _FakeHTTPResponse(200)
-
-    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(urllib.request, "build_opener", _make_fake_build_opener(captured_requests))
     monkeypatch.setenv("QUIRK_WEBHOOK_URL", "https://hooks.example.com/notify")
     monkeypatch.setenv("QUIRK_HMAC_KEY", "")  # empty — no signing
 
@@ -214,11 +225,13 @@ def test_body_omits_topology_keys(monkeypatch):
 
     captured_bodies = []
 
-    def _fake_urlopen(req, timeout=None):
-        captured_bodies.append(req.data)
-        return _FakeHTTPResponse(200)
+    def _fake_build_opener(*handlers):
+        def _intercept(req, timeout=None):
+            captured_bodies.append(req.data)
+            return _FakeHTTPResponse(200)
+        return _FakeOpener(_intercept)
 
-    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(urllib.request, "build_opener", _fake_build_opener)
     monkeypatch.setenv("QUIRK_WEBHOOK_URL", "https://hooks.example.com/notify")
 
     payload = _make_payload()
@@ -239,10 +252,10 @@ def test_non_2xx_raises_runtime_error(monkeypatch):
     """A non-2xx HTTP response from the webhook raises RuntimeError."""
     from quirk.notify.channels.webhook import send_webhook
 
-    def _fake_urlopen(req, timeout=None):
-        return _FakeHTTPResponse(500)
-
-    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+    captured_500 = []
+    monkeypatch.setattr(
+        urllib.request, "build_opener", _make_fake_build_opener(captured_500, status=500)
+    )
     monkeypatch.setenv("QUIRK_WEBHOOK_URL", "https://hooks.example.com/notify")
 
     with pytest.raises(RuntimeError, match="500"):
