@@ -2,7 +2,10 @@
 
 Security controls:
   ISEC-01: validate_external_url() called at construction time, before any connection.
-  ISEC-02: safe_str(exc) on all exception surfaces — never str(exc) or repr(exc).
+  ISEC-02: safe_str() wraps all exception detail in raised RuntimeErrors so that
+           server-controlled strings (exc.reason) cannot carry credential material.
+           exc.code (int) is always safe; safe_str provides defense-in-depth for
+           any future addition of exc.reason or other server-controlled fields (WR-01).
   T-105-01: self._auth_header is NEVER logged — safe_str scrubs it if it leaks in exc.
   T-105-02: _parse_servicenow_cfg rejects http:// instance_url at parse time (returns None).
   T-105-03: validate_external_url blocks RFC1918/loopback/metadata IPs at __init__.
@@ -22,7 +25,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 from quirk.ticketing.base import TicketingChannel
-from quirk.util.safe_exc import safe_str  # noqa: F401 — imported for subclass-context use
+from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import validate_external_url
 
 logger = logging.getLogger(__name__)
@@ -118,7 +121,7 @@ class ServiceNowChannel(TicketingChannel):
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"ServiceNow GET failed: HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError("ServiceNow GET failed: connection error") from exc
+            raise RuntimeError(f"ServiceNow GET failed: {safe_str(exc)}") from exc
 
     def create_issue_from_finding(self, finding: dict, fp: str, evidence: str) -> str:
         """Create a ServiceNow incident carrying QRAMM evidence and the correlation_id.
@@ -159,7 +162,7 @@ class ServiceNowChannel(TicketingChannel):
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"ServiceNow POST failed: HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError("ServiceNow POST failed: connection error") from exc
+            raise RuntimeError(f"ServiceNow POST failed: {safe_str(exc)}") from exc
 
     def add_rediscovery_comment(self, issue_key: str, fp: str) -> None:
         """Append a rediscovery work_notes journal entry to an existing ServiceNow incident.
@@ -197,4 +200,4 @@ class ServiceNowChannel(TicketingChannel):
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"ServiceNow PATCH failed: HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError("ServiceNow PATCH failed: connection error") from exc
+            raise RuntimeError(f"ServiceNow PATCH failed: {safe_str(exc)}") from exc
