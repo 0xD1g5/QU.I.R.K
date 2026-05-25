@@ -1,0 +1,263 @@
+"""POST /api/sensor/push — Phase 109 CONSOLE-01: sensor push ingestion endpoint.
+
+Security contract (§6 locked failure ladder)
+---------------------------------------------
+Auth (401)      Router-level require_auth; no require_csrf (M2M, never browser).
+Body size (413) Content-Length header check + actual body length check → 413 + audit.
+Parse           zstd decompress (capped at _MAX_DECOMPRESS_BYTES) + PushEnvelope parse;
+                schema_version / sensor_version mismatch is warn-only, never 422/500.
+Replay (422)    pushed_at outside ±15 min of received_at → 422 + console_utc + audit.
+Sensor (4xx)    Unknown sensor_id → 404 + audit.
+Dedup (409)     DuplicatePayloadError from _ingest_envelope → 409 fixed string + audit.
+OK (200)        Persists SensorPush + CryptoEndpoint rows; audit status="ok".
+
+Threat mitigations
+------------------
+T-109-04  Router-level Depends(require_auth) — no per-handler bypass possible.
+T-109-05  ±15-min replay window + payload_id UNIQUE constraint.
+T-109-06  _BODY_LIMIT=10MB Content-Length + body-length checks + _MAX_DECOMPRESS_BYTES cap.
+T-109-07  safe_str(exc) on all error paths; fixed strings for 409/unknown-sensor.
+T-109-08  IntegrationDelivery row written on EVERY attempt, committed outside ingest try.
+T-109-09  Sensor lookup before any persistence; unknown → 4xx + audit.
+T-109-10  UNIQUE constraint + rollback-first → 409 fixed string (never stringify exc).
+T-109-11  X-Sensor-Signature header read + structurally validated; carried as qpush_sig;
+          crypto verification deferred v5.5 (hmac_key column absent in Phase 107 schema).
+"""
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timedelta, timezone
+
+import zstandard
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
+
+from quirk.cli.console_cmd import DuplicatePayloadError, _ingest_envelope
+from quirk.dashboard.api.deps import get_db
+from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.models import IntegrationDelivery, Sensor
+from quirk.util.safe_exc import safe_str
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Router — router-level auth (M2M: NO require_csrf — Pitfall 1 / T-109-04)
+# ---------------------------------------------------------------------------
+router = APIRouter(dependencies=[Depends(require_auth)])
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+_BODY_LIMIT = 10 * 1024 * 1024           # 10 MB — Content-Length + body guard
+_MAX_DECOMPRESS_BYTES = 20 * 1024 * 1024  # zstd cap (mirrors console_cmd.py D-09)
+_REPLAY_WINDOW = timedelta(minutes=15)    # pushed_at must be within ±15 min of received_at
+
+# X-Sensor-Signature structural prefix (T-109-11 — crypto verify deferred v5.5)
+_SIG_PREFIX = "hmac-sha256="
+
+
+# ---------------------------------------------------------------------------
+# Pydantic model
+# ---------------------------------------------------------------------------
+class PushEnvelope(BaseModel):
+    """Wire model for a sensor push payload.
+
+    extra='ignore': unknown fields from newer sensor versions are dropped
+    silently (D-11, version-skew warn-only policy).
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    payload_id: str
+    pushed_at: str
+    schema_version: str
+    sensor_version: str
+    sensor_id: str
+    segment: str
+    findings: list = []
+
+
+# ---------------------------------------------------------------------------
+# Audit helper
+# ---------------------------------------------------------------------------
+def _audit(
+    db: Session,
+    scan_id: str,
+    status: str,
+    error_summary: str | None = None,
+) -> None:
+    """Write one IntegrationDelivery row for this push attempt.
+
+    Commit is OUTSIDE the ingest try-block (base.py L149 WR-01 pattern).
+    If the audit write itself fails we log and continue — never mask the
+    original error.
+    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    row = IntegrationDelivery(
+        scan_id=scan_id,
+        finding_hash=None,
+        destination="sensor_push",
+        status=status,
+        attempted_at=now,
+        error_summary=error_summary,
+    )
+    db.add(row)
+    try:
+        db.commit()
+    except Exception as exc:
+        logger.warning("Audit row commit failed: %s", safe_str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Route handler
+# ---------------------------------------------------------------------------
+@router.post("/sensor/push")
+async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
+    """POST /api/sensor/push — ingest a sensor push envelope.
+
+    Full §6 failure ladder with IntegrationDelivery audit on every branch.
+    """
+    received_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    # scan_id used for audit rows — use received_at ISO string as surrogate
+    scan_id = received_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # ------------------------------------------------------------------
+    # T-109-06 — Body size guard (Content-Length header check)
+    # ------------------------------------------------------------------
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            cl_int = int(content_length)
+        except ValueError:
+            cl_int = 0
+        if cl_int > _BODY_LIMIT:
+            _audit(db, scan_id, "failed", "payload_too_large")
+            raise HTTPException(status_code=413, detail="Payload too large (10 MB limit)")
+
+    body = await request.body()
+    if len(body) > _BODY_LIMIT:
+        _audit(db, scan_id, "failed", "payload_too_large")
+        raise HTTPException(status_code=413, detail="Payload too large (10 MB limit)")
+
+    # ------------------------------------------------------------------
+    # T-109-11 — X-Sensor-Signature: read + structural validate; carry as qpush_sig
+    # (crypto verify deferred v5.5 — hmac_key column absent from Phase 107 schema)
+    # ------------------------------------------------------------------
+    qpush_sig: str | None = None
+    raw_sig = request.headers.get("X-Sensor-Signature")
+    if raw_sig is not None:
+        if isinstance(raw_sig, str) and raw_sig.startswith(_SIG_PREFIX):
+            qpush_sig = raw_sig
+        else:
+            logger.warning(
+                "X-Sensor-Signature present but malformed (expected '%s<hex>'): dropping",
+                _SIG_PREFIX,
+            )
+
+    # ------------------------------------------------------------------
+    # Decompress body (zstd cap — T-109-06)
+    # ------------------------------------------------------------------
+    try:
+        dctx = zstandard.ZstdDecompressor()
+        raw = dctx.stream_reader(body).read(_MAX_DECOMPRESS_BYTES + 1)
+        if len(raw) > _MAX_DECOMPRESS_BYTES:
+            _audit(db, scan_id, "failed", "decompressed_payload_too_large")
+            raise HTTPException(
+                status_code=413,
+                detail="Decompressed payload exceeds 20 MB limit",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _audit(db, scan_id, "failed", safe_str(exc))
+        raise HTTPException(status_code=400, detail="Body is not valid zstd-compressed data")
+
+    # ------------------------------------------------------------------
+    # Parse JSON + PushEnvelope (extra='ignore' — version-skew warn-only)
+    # ------------------------------------------------------------------
+    try:
+        import json
+
+        envelope_dict = json.loads(raw.decode("utf-8"))
+        envelope = PushEnvelope(**envelope_dict)
+    except Exception as exc:
+        _audit(db, scan_id, "failed", safe_str(exc))
+        raise HTTPException(status_code=400, detail="Body could not be parsed as a push envelope")
+
+    # Update scan_id to pushed_at once parsed (better traceability)
+    scan_id = envelope.pushed_at or scan_id
+
+    # schema_version / sensor_version mismatch → warn-only, never block
+    # (logged at DEBUG so integration tests don't surface noise)
+    logger.debug(
+        "sensor_push: sensor_id=%s schema_version=%s sensor_version=%s",
+        envelope.sensor_id,
+        envelope.schema_version,
+        envelope.sensor_version,
+    )
+
+    # ------------------------------------------------------------------
+    # T-109-05 — Replay window check: pushed_at must be within ±15 min
+    # ------------------------------------------------------------------
+    pushed_at_dt: datetime | None = None
+    try:
+        pushed_at_dt = (
+            datetime.fromisoformat(envelope.pushed_at.replace("Z", "+00:00"))
+            .replace(tzinfo=None)
+        )
+    except (ValueError, AttributeError):
+        pass
+
+    if pushed_at_dt is None:
+        _audit(db, scan_id, "failed", "unparseable_pushed_at")
+        raise HTTPException(status_code=422, detail="pushed_at is not a valid ISO-8601 timestamp")
+
+    delta = abs(received_at - pushed_at_dt)
+    if delta > _REPLAY_WINDOW:
+        console_utc = received_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+        _audit(db, scan_id, "failed", "replay_window_exceeded")
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "replay_window_exceeded", "console_utc": console_utc},
+        )
+
+    # ------------------------------------------------------------------
+    # T-109-09 — Sensor lookup: unknown sensor_id → 404
+    # ------------------------------------------------------------------
+    sensor_row = db.query(Sensor).filter(Sensor.sensor_id == envelope.sensor_id).first()
+    if sensor_row is None:
+        _audit(db, scan_id, "failed", "unknown_sensor_id")
+        raise HTTPException(status_code=404, detail="Unknown sensor_id")
+
+    # ------------------------------------------------------------------
+    # Ingest: dedup + last_push_at + CryptoEndpoint rows
+    # ------------------------------------------------------------------
+    try:
+        _ingest_envelope(
+            envelope_dict,
+            config_path="config.yaml",
+            skip_replay_window=False,
+            qpush_sig=qpush_sig,
+            db=db,
+        )
+    except DuplicatePayloadError:
+        # T-109-10 — fixed string, never stringify exception (LEAK-02)
+        _audit(db, scan_id, "failed", "duplicate_payload_id")
+        raise HTTPException(status_code=409, detail="Duplicate payload_id")
+    except Exception as exc:
+        _audit(db, scan_id, "failed", safe_str(exc))
+        raise HTTPException(status_code=500, detail="Ingest failed")
+
+    # ------------------------------------------------------------------
+    # Commit (ingest used flush-only; audit already committed per branch)
+    # ------------------------------------------------------------------
+    try:
+        db.commit()
+    except Exception as exc:
+        logger.warning("Final commit failed: %s", safe_str(exc))
+        _audit(db, scan_id, "failed", safe_str(exc))
+        raise HTTPException(status_code=500, detail="Ingest commit failed")
+
+    _audit(db, scan_id, "ok", None)
+    return {"status": "accepted", "sensor_id": envelope.sensor_id, "payload_id": envelope.payload_id}
