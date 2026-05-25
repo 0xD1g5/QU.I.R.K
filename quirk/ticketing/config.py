@@ -41,10 +41,29 @@ class JiraTicketingCfg:
 
 
 @dataclass
+class ServiceNowTicketingCfg:
+    """ServiceNow ticketing configuration (TICKET-02).
+
+    instance_url  — ServiceNow instance URL (MUST be https://)
+    user_env      — NAME of env var holding ServiceNow username (not the value)
+    password_env  — NAME of env var holding ServiceNow password/token (not the value)
+    table         — Table to create incidents in (default: "incident")
+    allow_internal — False for external instances; True for internal test instances
+    """
+
+    instance_url: str         # e.g. https://myco.service-now.com — MUST be https://
+    user_env: str             # env-var NAME, not the credential value
+    password_env: str         # env-var NAME, not the credential value
+    table: str = "incident"   # default table — locked by CONTEXT.md
+    allow_internal: bool = False
+
+
+@dataclass
 class TicketingCfg:
     """Top-level ticketing config container."""
 
     jira: Optional[JiraTicketingCfg] = None
+    servicenow: Optional[ServiceNowTicketingCfg] = None
 
 
 def load_ticketing_config(path: str | None = None) -> "TicketingCfg | None":
@@ -79,7 +98,11 @@ def load_ticketing_config(path: str | None = None) -> "TicketingCfg | None":
 def _parse_ticketing_cfg(raw: dict) -> TicketingCfg:
     """Parse the ticketing block dict into a TicketingCfg."""
     jira_raw = raw.get("jira") or {}
-    return TicketingCfg(jira=_parse_jira_cfg(jira_raw))
+    servicenow_raw = raw.get("servicenow") or {}
+    return TicketingCfg(
+        jira=_parse_jira_cfg(jira_raw),
+        servicenow=_parse_servicenow_cfg(servicenow_raw),
+    )
 
 
 def _parse_jira_cfg(raw: dict) -> Optional[JiraTicketingCfg]:
@@ -108,5 +131,35 @@ def _parse_jira_cfg(raw: dict) -> Optional[JiraTicketingCfg]:
         project_key=project_key,
         issue_type=str(raw.get("issue_type", "Bug")),
         auth_mode=auth_mode,
+        allow_internal=bool(raw.get("allow_internal", False)),
+    )
+
+
+def _parse_servicenow_cfg(raw: dict) -> Optional[ServiceNowTicketingCfg]:
+    """Parse the servicenow sub-block dict into a ServiceNowTicketingCfg.
+
+    Returns None if missing or invalid.
+
+    Validation guards:
+      - instance_url must start with https:// (cleartext Basic auth is a security failure).
+      - user_env and password_env must be non-empty strings.
+    """
+    if not raw:
+        return None
+    instance_url = raw.get("instance_url")
+    if not instance_url:
+        return None
+    # Reject http:// at parse time — creds in Authorization header must not transit plaintext
+    if not str(instance_url).startswith("https://"):
+        return None
+    user_env = str(raw.get("user_env", ""))
+    password_env = str(raw.get("password_env", ""))
+    if not user_env or not password_env:
+        return None
+    return ServiceNowTicketingCfg(
+        instance_url=str(instance_url),
+        user_env=user_env,
+        password_env=password_env,
+        table=str(raw.get("table", "incident")),
         allow_internal=bool(raw.get("allow_internal", False)),
     )
