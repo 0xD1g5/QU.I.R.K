@@ -90,7 +90,10 @@ def export_findings(findings: list, cfg, db, scan_id: str) -> int:
 
     # Write ONE audit row for this entire batch (T-103-09).
     status = "failed" if errors else "ok"
-    error_summary = safe_str("; ".join(errors)) if errors else None
+    # Each element of `errors` was already sanitised via safe_str(exc) when collected
+    # (line 87). Wrapping the joined str in safe_str() again violates its type contract
+    # (safe_str expects BaseException, not str) and is a no-op at runtime.
+    error_summary = "; ".join(errors) if errors else None
 
     row = IntegrationDelivery(
         scan_id=scan_id,
