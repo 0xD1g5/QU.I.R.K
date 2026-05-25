@@ -317,3 +317,79 @@ never as a scoring input.
 - **Sensor-local `scanned_at` timestamps are preserved**, never rewritten during merge.
 
 ---
+
+## 8. Committed PM decisions
+
+These three were decided by the PM before/at planning and are locked here as the canonical
+record (ARCH-03). Each cross-references the section that implements it.
+
+1. **Option A — unified scoring (D-01).** The merge re-runs the **union** of all sensor
+   findings through the **unchanged** `compute_readiness_score` engine. This is **NOT** Option
+   B (weighted-average of per-segment scores) and **NOT** Option C (weakest-link / minimum).
+   Rationale: ratio penalties use full-population denominators, so pre-scored sub-results
+   cannot be averaged without producing a wrong number. `per_segment_scores` is kept for
+   context only. *(See §7.)*
+2. **One-time-use enrollment tokens (D-02).** Tokens are `secrets.token_urlsafe(32)`,
+   SHA-256-hashed in `sensor_tokens`, consumed at enrollment. They are **one-time-use**, NOT
+   time-windowed. Rationale: a consumed-on-use token cannot be replayed and needs no expiry
+   clock to reason about. *(See §6.)*
+3. **Windows v5.4 scope = floor-in / ceiling→v5.5 (D-05).** v5.4 commits the Windows
+   **floor** (OS-agnostic wire contract + pip-installable, POSIX-free sensor); the Windows
+   **ceiling** (frozen EXE, Scheduled Task registration, signed packaging) is deferred to
+   v5.5. Rationale: the floor de-risks Windows now without the packaging cost; the ceiling
+   waits for an enterprise demand signal. *(See §10.)*
+
+---
+
+## 9. Forbidden additions
+
+Each item below is a **documented architecture violation** if introduced by any downstream
+phase. The right column states what v5.4 uses instead.
+
+| Forbidden | Used instead |
+|-----------|--------------|
+| **Celery** | No async task queue. Merge is the manual `quirk sensor merge` command (§7). |
+| **Redis** | No external broker/cache. SQLite + file-per-payload spool. |
+| **MQTT / RabbitMQ** | No message bus. Sensors push over HTTPS or spool to file. |
+| **PostgreSQL** (Postgres) | SQLite + additive `_ensure_columns` migrations (§5). |
+| **JWT per-sensor tokens** | SHA-256-hashed one-time enrollment tokens in `sensor_tokens` (§6). |
+| **mTLS / PKI infra** | HMAC-SHA256 application-layer `X-Sensor-Signature` (§3). |
+| **`tenant_id`** | Single-tenant only — one console per engagement (§1). |
+| **sbommerge** | Re-run `build_cbom` over the union of findings (§7). |
+| **CycloneDX CLI merge** | Re-run `build_cbom` over the union of findings (§7). |
+| **pywin32 Windows Service** | Windows Scheduled Task in the v5.5 ceiling; OUT entirely for the Service (§10). |
+
+Any downstream phase that introduces one of the left-column items is a **documented
+architecture violation** and must be rejected in review.
+
+---
+
+## 10. Windows scope (floor / ceiling)
+
+### Floor (v5.4 — committed)
+
+- **OS-agnostic wire contract** — the §3 payload carries no OS-specific assumptions; a
+  Windows sensor pushes the identical envelope as a Linux/macOS sensor.
+- **`pip install` on Python 3.11+ with no POSIX dependencies.** The sensor must run on
+  stock Windows Python without WSL or Cygwin.
+- **POSIX-ism audit** — two concrete targets in `quirk/cli/scheduler_cmd.py`:
+  1. The relative `Path("output/scheduled")` (~L136) must become
+     `cfg.output_root / "scheduled"` so output is not anchored to a POSIX cwd.
+  2. The `signal.SIGTERM` handler (~L258, alongside `SIGINT` at ~L257) must be made
+     **platform-conditional** (`SIGTERM` is not available the same way on Windows).
+- **`platformdirs`** for data directories (no hardcoded `~/.config` or `/var` paths).
+- **`windows-latest` CI smoke job as a HARD gate** — it must NOT be `continue-on-error`.
+  A failing Windows smoke job blocks the merge.
+
+### Ceiling (→ v5.5 — deferred)
+
+- Full **PyInstaller** frozen EXE.
+- **Windows Scheduled Task** registration for cadence-driven sensor runs.
+- Signed packaging.
+
+### Out entirely
+
+- **pywin32 Windows Service** — the Scheduled Task (v5.5 ceiling) covers the v5.4 use case
+  without admin elevation, so the Service is never built.
+
+---
