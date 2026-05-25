@@ -71,7 +71,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
   3. An unauthenticated browser opening the dashboard sees a login form rather than a silent 401 — after entering the correct token the full dashboard loads
   4. The score totals, band, and subscore breakdowns in the CLI executive markdown are numerically identical to the HTML and PDF report for the same scan
 **Plans**: 5 plans
-- [ ] 102-01-PLAN.md — AUTH-01 token CLI (generate/rotate/show) + YAML write-back
+- [x] 102-01-PLAN.md — AUTH-01 token CLI (generate/rotate/show) + YAML write-back
 - [ ] 102-02-PLAN.md — AUTH-02 X-API-Key auth extension + route-coverage CI gate
 - [ ] 102-03-PLAN.md — TRANS-04 CLI executive score sourced from exec_content + parity test
 - [ ] 102-04-PLAN.md — AUTH-03 React login form, AuthProvider, Sign out + statics rebuild
@@ -113,7 +113,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
-| 102. Dashboard Auth UX + Score Tax | 0/TBD | Not started | - |
+| 102. Dashboard Auth UX + Score Tax | 1/5 | In Progress|  |
 | 103. SIEM Export | 0/TBD | Not started | - |
 | 104. Jira Ticketing | 0/TBD | Not started | - |
 | 105. ServiceNow Ticketing | 0/TBD | Not started | - |
