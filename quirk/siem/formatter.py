@@ -190,7 +190,6 @@ def build_cef_event(finding: dict, version: str) -> str:
 
     # --- Extension field values (escape backslash, equals, and newlines) ---
     dhost = _cef_escape_extension(safe["host"])
-    dpt = str(safe["port"])
     cs1 = _cef_escape_extension(safe["category"])
     cs2 = _cef_escape_extension(safe["description"])
     msg_raw = safe["recommendation"] if safe["recommendation"] else safe["description"]
@@ -198,9 +197,14 @@ def build_cef_event(finding: dict, version: str) -> str:
 
     # --- Assemble the 8-field CEF:0 line ---
     # Fields: CEF:0 | Vendor | Product | Version | SignatureID | Name | Severity | Extension
+    # NOTE: spaces inside extension values are intentionally NOT escaped (CEF spec);
+    # injection is prevented because every dynamic value is escaped/int-cast above.
     header = f"CEF:0|QUIRK|scanner|{escaped_version}|{signature}|{name}|{cef_sev}"
+    # Omit dpt entirely when the port is unknown — an empty `dpt=` is rejected/
+    # warned-on by some SIEM ingest pipelines (Splunk cef sourcetype, QRadar DSM).
+    dpt_part = f"dpt={safe['port']} " if safe["port"] != "" else ""
     ext = (
-        f"dhost={dhost} dpt={dpt} "
+        f"dhost={dhost} {dpt_part}"
         f"cs1={cs1} cs1Label=Category "
         f"cs2={cs2} cs2Label=EvidenceSummary "
         f"msg={msg}"

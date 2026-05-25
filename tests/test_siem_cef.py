@@ -407,7 +407,7 @@ class TestPortExtensionInjection:
         line = build_cef_event(finding, "1.0.0")
         assert "cs9=injected" not in line
         assert "msg=forged" not in line
-        assert "dpt= " in line or "dpt=\x00" not in line  # dpt empty, no injected pairs
+        assert "dpt=" not in line  # unknown port → dpt omitted entirely (no injected pairs)
 
     def test_port_out_of_range_dropped(self):
         from quirk.siem.formatter import to_cef_finding
