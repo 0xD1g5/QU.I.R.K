@@ -50,6 +50,20 @@ output:
 #     issue_type: Bug                          # optional: default Bug
 #     auth_mode: cloud                         # cloud (default) or server (PAT)
 #     allow_internal: false                    # set true for self-hosted Jira on RFC1918
+#
+# ServiceNow Ticketing (v5.3+ / Phase 105) — use with: quirk ticket create --backend servicenow
+# Requires: QUIRK_CONFIG_PATH env var pointing to this file; QUIRK_DB_PATH for audit rows.
+#           QUIRK_SNOW_USER  — set to your ServiceNow username
+#           QUIRK_SNOW_PASSWORD — set to your ServiceNow password
+# SECURITY: store env var NAMES here only — never credential values.
+#           instance_url MUST be https://; http:// is rejected at parse time (SSRF guard).
+#
+#   servicenow:
+#     instance_url: https://acme.service-now.com  # required: MUST be https://
+#     user_env: QUIRK_SNOW_USER                   # env var NAME holding your username
+#     password_env: QUIRK_SNOW_PASSWORD           # env var NAME holding your password
+#     table: incident                             # optional: default incident
+#     allow_internal: false                       # set true for self-hosted on RFC1918
 
 # SIEM Export (syslog/CEF) — Phase 103 (v5.3+)
 # Deliver one CEF:0 event per finding to a syslog collector after each scheduled scan.

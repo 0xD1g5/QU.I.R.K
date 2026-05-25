@@ -1257,6 +1257,161 @@ sqlite3 "$QUIRK_DB_PATH" \
 
 ---
 
+## ServiceNow Ticketing (v5.3+)
+
+Phase 105 adds ServiceNow incident creation as a second ticketing backend, reusing the
+same `TicketingChannel` abstraction as Jira. QUIRK opens one ServiceNow incident per
+finding, stores a SHA-256 fingerprint in the `correlation_id` field for dedup, and
+appends a `work_notes` journal entry on re-runs instead of creating duplicate incidents.
+Ticketing is **off by default** — opt in by adding a `ticketing.servicenow` block to
+your QUIRK YAML config.
+
+> **Note:** Both `ticketing.jira` and `ticketing.servicenow` blocks can coexist in the
+> same config file; the `--backend` flag selects which backend is used at runtime.
+
+### Prerequisites
+
+Install the `[tickets]` extras group before using `quirk ticket create --backend servicenow`:
+
+```bash
+pip install "quirk-scanner[tickets]"
+```
+
+The `[tickets]` group is included in `[all]`. The ServiceNow backend uses only stdlib
+`urllib` — no additional packages beyond `[tickets]` are required. Running
+`quirk ticket create` without `[tickets]` installed prints a missing-extra advisory and
+exits with code 2 — no ImportError traceback is raised.
+
+**Set `QUIRK_CONFIG_PATH`** to your QUIRK YAML config before running the ticket command:
+
+```bash
+export QUIRK_CONFIG_PATH=/etc/quirk/config.yaml
+export QUIRK_DB_PATH=/var/lib/quirk/quirk.db
+quirk ticket create --backend servicenow --input output/findings-2026-05-25-120000.json
+```
+
+### `ticketing.servicenow` config block
+
+Add a `servicenow:` sub-block under the `ticketing:` section of your QUIRK YAML config:
+
+| Key | Type | Default | Required | Description |
+|-----|------|---------|----------|-------------|
+| `instance_url` | string | *(required)* | Yes | Base URL of your ServiceNow instance — **must use `https://`** (http:// is rejected at parse time) |
+| `user_env` | string | *(required)* | Yes | **Name** of the env var holding your ServiceNow username — not the value itself |
+| `password_env` | string | *(required)* | Yes | **Name** of the env var holding your ServiceNow password — not the value itself |
+| `table` | string | `"incident"` | No | ServiceNow table to create records in (default: `incident`) |
+| `allow_internal` | bool | `false` | No | Set `true` for self-hosted ServiceNow on RFC1918 networks (see SSRF note below) |
+
+```yaml
+ticketing:
+  servicenow:
+    instance_url: https://acme.service-now.com  # MUST be https://; http:// is rejected
+    user_env: QUIRK_SNOW_USER                   # env var NAME holding your ServiceNow username
+    password_env: QUIRK_SNOW_PASSWORD           # env var NAME holding your ServiceNow password
+    table: incident                             # optional; default is incident
+    allow_internal: false                       # set true for self-hosted on RFC1918
+```
+
+### Credential isolation model
+
+**Credentials must never appear in the YAML config.** The config stores only the *name*
+of the environment variable; QUIRK reads the actual credential from the environment at
+run time. Credentials are never:
+
+- Written to the YAML config or SQLite database
+- Included in log files or exception messages (safe_str scrubs Authorization headers)
+- Included in CBOM output, PDF exports, or dashboard API responses
+
+| Field | Env var name you set | Example env var value |
+|-------|---------------------|-----------------------|
+| `user_env: QUIRK_SNOW_USER` | `QUIRK_SNOW_USER` | `quirk_scanner` |
+| `password_env: QUIRK_SNOW_PASSWORD` | `QUIRK_SNOW_PASSWORD` | `S3cr3tP@ss!` |
+
+Set these before running `quirk ticket create`:
+
+```bash
+export QUIRK_SNOW_USER=quirk_scanner
+export QUIRK_SNOW_PASSWORD=S3cr3tP@ss!
+quirk ticket create --backend servicenow
+```
+
+### SSRF protection and https-only enforcement
+
+`instance_url` is validated by two guards before any connection is made:
+
+1. **https-only parse-time check** — `_parse_servicenow_cfg` returns `None` (config load
+   fails) if `instance_url` does not start with `https://`. This check fires before any
+   DNS lookup or TCP connection.
+2. **`validate_external_url()` runtime guard** — Loopback addresses (`127.x.x.x`), RFC1918
+   ranges (`10.x`, `172.16–31.x`, `192.168.x`), and cloud metadata IPs (`169.254.169.254`)
+   are blocked by default.
+
+For self-hosted ServiceNow deployed on an internal network, set `allow_internal: true`.
+This allows RFC1918 `instance_url` values while still blocking cloud metadata IPs.
+
+### CLI usage: `quirk ticket create --backend servicenow`
+
+Create ServiceNow incidents from a completed scan's findings file:
+
+```bash
+# Create incidents using the ServiceNow backend (default backend is jira)
+quirk ticket create --backend servicenow
+
+# Specify an explicit findings file
+quirk ticket create --backend servicenow --input output/findings-2026-05-25-120000.json
+
+# Specify the output directory to search for the latest findings file
+quirk ticket create --backend servicenow --output-dir /var/lib/quirk/output
+```
+
+**Prerequisites:**
+- `pip install "quirk-scanner[tickets]"` (or `[all]`)
+- `QUIRK_CONFIG_PATH` set and pointing to a YAML config with a valid `ticketing.servicenow` block
+- `QUIRK_DB_PATH` set to the QUIRK SQLite database (used to write audit rows)
+- `QUIRK_SNOW_USER` and `QUIRK_SNOW_PASSWORD` set in the environment
+
+Exit codes: `0` = all findings dispatched; `1` = config error; `2` = missing `[tickets]`
+extra, no findings file found, or missing config.
+
+### Dedup and rediscovery behavior
+
+QUIRK computes a SHA-256 fingerprint for each finding using the formula
+`SHA256(host:port::title)` — identical to the Jira backend, ensuring cross-backend
+identity consistency. On every `quirk ticket create --backend servicenow` run:
+
+- **New finding** (fingerprint not seen): one ServiceNow incident is created, with the
+  SHA-256 fingerprint stored in the `correlation_id` field. The incident's `sys_id`
+  (not the INC-number) is used for subsequent PATCH operations.
+- **Rediscovery** (fingerprint already in `integration_deliveries`): QUIRK issues a
+  `PATCH` to the existing incident's `work_notes` field, appending a journal entry
+  noting the rediscovery date and QUIRK run context. No duplicate incident is created.
+
+Re-running `quirk ticket create --backend servicenow` against the same findings file is
+safe — it produces zero duplicate incidents on all subsequent runs.
+
+### Audit log
+
+Every ticket dispatch attempt — successful or failed — writes one row to the
+`integration_deliveries` SQLite table:
+
+| Column | Description |
+|--------|-------------|
+| `scan_id` | Scan session identifier |
+| `finding_hash` | SHA-256 fingerprint of the finding (`host:port::title`) |
+| `destination` | `"servicenow"` |
+| `status` | `"ok"` or `"failed"` |
+| `attempted_at` | UTC timestamp of the dispatch attempt |
+| `error_summary` | `safe_str(exc)` on failure — Authorization headers always scrubbed |
+
+Query the audit log:
+
+```bash
+sqlite3 "$QUIRK_DB_PATH" \
+  "SELECT finding_hash, status, attempted_at, error_summary FROM integration_deliveries WHERE destination='servicenow' ORDER BY attempted_at DESC LIMIT 20;"
+```
+
+---
+
 ## Compliance Frameworks
 
 QUIRK's `COMPLIANCE_MAP` (in `quirk/compliance/__init__.py`) maps every finding
