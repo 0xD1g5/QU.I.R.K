@@ -37,6 +37,12 @@ _SENSITIVE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"[?&](api_key|token|key|auth_token)=[^&\s]{8,}", re.IGNORECASE),
     # HTTP Basic credential payload
     re.compile(r"Authorization:\s*Basic\s+[A-Za-z0-9+/]{8,}={0,2}", re.IGNORECASE),
+    # Phase 101 ISEC-02: Slack bot/user/app tokens
+    re.compile(r"xox[bpoa]-[0-9A-Za-z\-]{10,}"),
+    # Phase 101 ISEC-02: Slack incoming webhook URLs
+    re.compile(r"hooks\.slack\.com/services/[A-Za-z0-9/]+"),
+    # Phase 101 ISEC-02: SMTP connection strings with embedded credentials
+    re.compile(r"smtps?://[^:@\s]+:[^@\s]+@"),
 )
 
 
