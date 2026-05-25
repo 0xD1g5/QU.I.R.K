@@ -470,3 +470,75 @@ def test_scheduler_dispatch_raises_scan_record_unaffected(tmp_path, monkeypatch)
 
     assert run is not None
     assert run.status == "completed", f"Expected 'completed', got {run.status!r}"
+
+
+# ---------------------------------------------------------------------------
+# CR-02 regression: email delivery must not crash when score_delta is None
+# ---------------------------------------------------------------------------
+
+
+def test_email_score_delta_none_does_not_crash(tmp_path, monkeypatch):
+    """CR-02 regression: email channel with new_high>0 and score_delta=None produces
+    status 'ok' delivery row (no TypeError from f'{None:+d}').
+
+    This is the first-scan scenario: there is no previous session, so score_delta is
+    None, but new_high > 0 fires the should_notify trigger.  Prior to the fix,
+    _channel_send_email raised TypeError which was caught and silently became a
+    'failed' delivery row — suppressing the most important alert.
+    """
+    import quirk.notify.channels.email as email_mod
+    from quirk.notify import dispatcher
+    from quirk.notify.config import NotifyCfg, EmailNotifyCfg
+
+    current_ts = datetime(2026, 1, 2, 12, 0, 0)
+
+    cfg = NotifyCfg(
+        trigger_score_floor=-5,
+        email=EmailNotifyCfg(
+            smtp_host="smtp.example.com",
+            smtp_from="quirk@example.com",
+            recipients=["sec@example.com"],
+        ),
+    )
+    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, None))
+
+    # First-scan report: score_delta is None, new_high > 0
+    fake_report = _make_trend_report(new_high=3, score_delta=None, previous_score=None)
+    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+
+    captured = {}
+
+    def _fake_send_email(cfg, subject, body):
+        captured["subject"] = subject
+        captured["body"] = body
+
+    monkeypatch.setattr(email_mod, "send_email", _fake_send_email)
+
+    db_path = _make_db(tmp_path)
+    schedule = _add_schedule(db_path)
+
+    with get_session(db_path) as db:
+        run = ScheduledRun(
+            schedule_id=schedule.id,
+            dispatched_at=_utcnow_naive(),
+            status="completed",
+            scan_output_path=None,
+            scan_id=None,
+        )
+        db.add(run)
+        db.commit()
+
+        # Must not raise TypeError on score_delta=None
+        dispatcher.dispatch_notifications(run=run, schedule=schedule, db=db)
+        rows = db.query(IntegrationDelivery).filter_by(destination="email").all()
+
+    assert len(rows) == 1, "Expected one email delivery row"
+    assert rows[0].status == "ok", (
+        f"Expected status 'ok', got {rows[0].status!r} — "
+        f"error_summary: {rows[0].error_summary!r}"
+    )
+    assert "subject" in captured, "send_email transport was never reached"
+    assert "N/A" in captured["body"], (
+        "Email body must contain 'N/A' for score_delta when it is None"
+    )
