@@ -35,7 +35,7 @@
 
 ### Dashboard Team Auth (AUTH)
 - [x] **AUTH-01**: A user can generate and rotate a dashboard API token via the CLI (`quirk token`/`auth` command, stdlib `secrets`)
-- [ ] **AUTH-02**: The dashboard accepts an `X-API-Key` header (in addition to the existing bearer token), with timing-safe comparison; all data-returning routes are protected and a CI test enforces route coverage so new routes can't ship unprotected
+- [x] **AUTH-02**: The dashboard accepts an `X-API-Key` header (in addition to the existing bearer token), with timing-safe comparison; all data-returning routes are protected and a CI test enforces route coverage so new routes can't ship unprotected
 - [ ] **AUTH-03**: The dashboard presents a login form and a clear authenticated/unauthenticated state so a team can share a single-tenant instance
 
 ### Report Consistency Tax (TRANS) — folded from v5.2
@@ -87,6 +87,6 @@
 | TICKET-03 | Phase 104 | Pending |
 | TICKET-04 | Phase 104 | Pending |
 | AUTH-01 | Phase 102 | Complete |
-| AUTH-02 | Phase 102 | Pending |
+| AUTH-02 | Phase 102 | Complete |
 | AUTH-03 | Phase 102 | Pending |
 | TRANS-04 | Phase 102 | Pending |
