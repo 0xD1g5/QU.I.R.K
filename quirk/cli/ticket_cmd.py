@@ -1,9 +1,9 @@
-"""quirk.cli.ticket_cmd — `quirk ticket` CLI entrypoint (Phase 104 TICKET-01).
+"""quirk.cli.ticket_cmd — `quirk ticket` CLI entrypoint (Phase 104 TICKET-01, 105 TICKET-02).
 
-Entry point for creating Jira tickets from scan findings.
+Entry point for creating tickets from scan findings.
 
 Usage:
-  quirk ticket create [--input PATH] [--output-dir DIR]
+  quirk ticket create [--input PATH] [--output-dir DIR] [--backend {jira,servicenow}]
 
 Exit codes:
   0  Success — tickets created/updated for all findings.
@@ -49,7 +49,7 @@ def run_ticket(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         prog="quirk ticket",
         description=(
-            "Create Jira tickets from scan findings. "
+            "Create tickets from scan findings. "
             "Requires [tickets] extra and a [ticketing] block in QUIRK_CONFIG_PATH."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -60,7 +60,9 @@ def run_ticket(argv: list[str]) -> None:
             "  quirk ticket create --input /path/to/findings-20260524-120000.json\n"
             "      Create tickets from a specific findings file.\n\n"
             "  quirk ticket create --output-dir /data/quirk/output\n"
-            "      Search for findings-*.json in a custom output directory.\n"
+            "      Search for findings-*.json in a custom output directory.\n\n"
+            "  quirk ticket create --backend servicenow\n"
+            "      Create tickets in ServiceNow instead of Jira.\n"
         ),
     )
     parser.add_argument(
@@ -80,13 +82,19 @@ def run_ticket(argv: list[str]) -> None:
         metavar="DIR",
         help="Directory to search for the latest findings-*.json (default: output)",
     )
+    parser.add_argument(
+        "--backend",
+        choices=["jira", "servicenow"],
+        default="jira",
+        help="Ticketing backend to use (default: jira)",
+    )
 
     args = parser.parse_args(argv)
 
     # ISEC-04: advisory + graceful skip if [tickets] not installed
     if not is_extra_available("tickets"):
         print(
-            "ERROR: Jira ticketing skipped — run `pip install quirk[tickets]` to enable.",
+            "ERROR: Ticketing skipped — run `pip install quirk[tickets]` to enable.",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -121,22 +129,41 @@ def run_ticket(argv: list[str]) -> None:
 
     # --- Load ticketing config ---
     cfg = load_ticketing_config()
-    if cfg is None or cfg.jira is None:
+    if cfg is None:
         print(
             "ERROR: ticketing config not found. Set QUIRK_CONFIG_PATH.",
             file=sys.stderr,
         )
         sys.exit(2)
 
-    # --- Dispatch findings through JiraChannel ---
+    # --- Dispatch findings through selected backend ---
     try:
         from quirk.db import get_session  # noqa: PLC0415
         import os  # noqa: PLC0415
-        from quirk.ticketing.jira import JiraChannel  # noqa: PLC0415
 
         db_path = os.environ.get("QUIRK_DB_PATH") or "quirk.db"
         scan_id = Path(findings_path).stem[:64]  # drop .json, cap at String(64) (WR-03)
-        channel = JiraChannel(cfg.jira)
+
+        if args.backend == "servicenow":
+            if cfg.servicenow is None:
+                print(
+                    "ERROR: [ticketing.servicenow] block not configured. "
+                    "Add a servicenow sub-block to QUIRK_CONFIG_PATH.",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+            from quirk.ticketing.servicenow import ServiceNowChannel  # noqa: PLC0415
+            channel = ServiceNowChannel(cfg.servicenow)
+        else:  # default: jira
+            if cfg.jira is None:
+                print(
+                    "ERROR: [ticketing.jira] block not configured. "
+                    "Add a jira sub-block to QUIRK_CONFIG_PATH.",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+            from quirk.ticketing.jira import JiraChannel  # noqa: PLC0415
+            channel = JiraChannel(cfg.jira)
 
         with get_session(db_path) as db:
             for finding in findings:
