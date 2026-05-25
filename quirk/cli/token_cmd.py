@@ -5,6 +5,7 @@ import argparse
 import os
 import secrets
 import sys
+import tempfile
 
 import yaml
 
@@ -14,6 +15,14 @@ def _write_token_to_config(config_path: str, token: str) -> None:
 
     Never writes a partial dict — always loads the full file first so
     other config keys (assessment, targets, scan, etc.) are preserved.
+
+    The write is atomic on POSIX (temp file + os.replace) so a mid-write
+    crash or disk-full condition cannot corrupt config.yaml.
+
+    Limitation: yaml.safe_load + yaml.dump is a lossy round-trip — YAML
+    comments, blank lines used for readability, and original key ordering
+    are not preserved.  A warning is printed so operators are aware before
+    running this command on an annotated config.
     """
     try:
         with open(config_path, "r", encoding="utf-8") as f:
@@ -23,8 +32,22 @@ def _write_token_to_config(config_path: str, token: str) -> None:
     if not isinstance(raw.get("security"), dict):
         raw["security"] = {}
     raw["security"]["api_token"] = token
-    with open(config_path, "w", encoding="utf-8") as f:
-        yaml.dump(raw, f, default_flow_style=False, allow_unicode=True)
+    print(
+        "Warning: config.yaml comments and key ordering will be normalized by this operation.",
+        file=sys.stderr,
+    )
+    dir_ = os.path.dirname(os.path.abspath(config_path))
+    fd, tmp = tempfile.mkstemp(dir=dir_, prefix=".quirk_config_")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            yaml.dump(raw, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        os.replace(tmp, config_path)  # atomic on POSIX; best-effort on Windows
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def run_token(argv: list[str]) -> None:
