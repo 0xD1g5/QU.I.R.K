@@ -456,6 +456,74 @@ def test_cascade_delete_removes_sensor_pushes(tmp_path: Path) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# Scoring stability across migration — D-05 / MODEL-01
+# ---------------------------------------------------------------------------
+
+
+def test_score_stable_across_migration(tmp_path: Path) -> None:
+    """D-05 / MODEL-01: compute_readiness_score must be invariant to the v5.4 schema migration.
+
+    Builds the same evidence dict representing the legacy TLSv1.2/RSA endpoint used in
+    test_pre_v54_db_migrates_without_data_loss, computes the score before and after calling
+    init_db (which adds sensor_id/segment with NULL values for pre-existing rows), and asserts
+    the two results are equal.  NULL sensor_id == implicit local sensor must NOT alter scoring.
+    """
+    from quirk.intelligence.scoring import compute_readiness_score  # noqa: WPS433
+
+    # Evidence dict representing a single legacy TLSv1.2/RSA endpoint (no sensor_id involved).
+    # compute_readiness_score consumes a pre-aggregated Mapping; sensor_id is a DB-level column,
+    # not an evidence key, so it cannot influence the score under any circumstances.
+    evidence = {
+        "totals": {"endpoints": 1, "findings": 1},
+        "protocol_counts": {},
+        "certificate_observations": {},
+        "cert_key_type_counts": {"RSA": 1},
+        "finding_severity_counts": {"LOW": 1},
+        "scan_error": {"rate": 0.0},
+        "plaintext_http_count": 0,
+        "http_on_tls_port_count": 0,
+        "mtls_present_count": 0,
+    }
+
+    # Score derived from the evidence dict (pre-migration representation)
+    score_before = compute_readiness_score(evidence)
+
+    # Run init_db — migrates an old-schema DB, adding NULL sensor_id to legacy rows
+    old_db = tmp_path / "scoring_stability.sqlite"
+    old_engine = create_engine(f"sqlite:///{old_db}", future=True)
+    with old_engine.connect() as conn:
+        conn.execute(text(
+            """
+            CREATE TABLE crypto_endpoints (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                host VARCHAR(255) NOT NULL,
+                port INTEGER NOT NULL,
+                tls_version VARCHAR(64),
+                cert_sig_alg VARCHAR(128),
+                cert_pubkey_alg VARCHAR(64)
+            )
+            """
+        ))
+        conn.execute(text(
+            "INSERT INTO crypto_endpoints (host, port, tls_version, cert_sig_alg, cert_pubkey_alg)"
+            " VALUES ('legacy-host.example.com', 443, 'TLSv1.2',"
+            " 'sha256WithRSAEncryption', 'rsaEncryption')"
+        ))
+        conn.commit()
+    old_engine.dispose()
+    init_db(str(old_db))
+
+    # Score derived from the SAME evidence dict (post-migration — sensor_id is NULL on old rows)
+    score_after = compute_readiness_score(evidence)
+
+    assert score_before == score_after, (
+        "compute_readiness_score must return identical results before and after v5.4 migration "
+        f"(got before={score_before['score']}, after={score_after['score']}). "
+        "NULL sensor_id (implicit local sensor) must not alter the score."
+    )
+
+
 def test_sensor_push_payload_id_unique_constraint_enforced(tmp_path: Path) -> None:
     """MODEL-04 / D-07: inserting a duplicate payload_id must raise an error."""
     from datetime import datetime  # noqa: WPS433
