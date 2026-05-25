@@ -6,6 +6,7 @@
 **Milestone goal:** An agent/console split — lightweight sensors scan locally inside each network segment and push results *outbound* to a single-tenant console that merges them into one CBOM + one quantum-readiness score. No inbound access to any segment required.
 
 **Locked constraints (apply to every requirement below):**
+
 - **Single-tenant only.** No `tenant_id`, no per-tenant isolation. SaaS multi-tenancy is PARKED.
 - **No new heavy infra.** No Celery, Redis, RabbitMQ, MQTT, Postgres. SQLite stays the store; FastAPI stays the server.
 - **Additive schema only.** New columns/tables must be nullable/independent; existing single-host scans keep working unchanged (NULL `sensor_id` = implicit local sensor).
@@ -153,6 +154,7 @@ Which phases cover which requirements.
 | STAB-03 | Phase 112 | Pending |
 
 **Coverage:**
+
 - v1 (v5.4) requirements: 33 total (ARCH 4, MODEL 4, SENSOR 6, CONSOLE 5, MERGE 5, LAB 3, DASH 3, STAB 3)
 - Mapped to phases: 33 ✓
 - Unmapped: 0 ✓
