@@ -4,13 +4,13 @@ milestone: v5.4
 milestone_name: — Distributed On-Prem Scanner Architecture
 status: completed
 stopped_at: Phase 108 Plan 03 complete
-last_updated: "2026-05-25T22:11:59.525Z"
+last_updated: "2026-05-25T23:49:00.752Z"
 last_activity: 2026-05-25
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 11
+  completed_plans: 9
   percent: 43
 ---
 
@@ -25,20 +25,21 @@ See: .planning/PROJECT.md (updated 2026-05-25)
 
 ## Current Position
 
-Phase: 108
-Plan: 03 (complete)
-Status: Phase 108 complete — Phase 109 next
+Phase: 109
+Plan: 01 (complete)
+Status: Phase 109 Plan 01 complete — Plan 02 next
 Last activity: 2026-05-25
 
 ```
-v5.4 Progress: [==        ] 2/7 phases | 35% plans complete
+v5.4 Progress: [===       ] 3/7 phases in progress | 82% plans complete
 ```
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 8 (v5.4: 108-01, 108-02, 108-03 + Phase 107 P01/P02)
+- Total plans completed: 9 (v5.4: 108-01, 108-02, 108-03, 109-01 + Phase 107 P01/P02)
+- Phase 109 P01: 2 tasks, 1 file, ~12 min
 - Phase 108 P03: 2 tasks, 4 files, ~25 min
 - Phase 108 P02: 3 tasks, 5 files, ~40 min
 - Phase 108 P01: 3 tasks, 7 files, ~25 min
@@ -69,6 +70,8 @@ v5.4 Progress: [==        ] 2/7 phases | 35% plans complete
 - 108-03-D-01: _cmd_export_results stores ONLY the compressed payload bytes in .qpush (no wrapper); HMAC verification on import is Phase 109
 - 108-03-D-02: _ingest_envelope Phase 108 stub validates + prints summary; Phase 109 replaces body with sensor_pushes dedup + CryptoEndpoint write
 - 108-03-D-03: skip_replay_window=True on air-gap import path per D-15; payload_id dedup preserved for Phase 109
+- 109-01-D-01: DB path for enroll resolved via _default_db_path() (QUIRK_DB_PATH / canonical) — no YAML parse dependency on enroll path (RESEARCH Open Question 1)
+- 109-01-D-02: Generated sensor_id printed to stderr, raw bearer token printed to stdout — consistent with one-time-display convention
 
 ### Pending Todos
 
@@ -107,11 +110,11 @@ Carried forward from v5.3 close (2026-05-25):
 
 ## Session Continuity
 
-Last session: 2026-05-25T22:11:59.521Z
-Stopped at: Phase 108 Plan 03 complete
+Last session: 2026-05-25T23:49:00Z
+Stopped at: Phase 109 Plan 01 complete
 Resume file: None
-Next: Phase 109 (console ingest route — sensor_pushes dedup + CryptoEndpoint write)
+Next: Phase 109 Plan 02 (console ingest route — sensor_pushes dedup + CryptoEndpoint write)
 
 ## Operator Next Steps
 
-- Phase 108 complete — continue with Phase 109 (console ingest route)
+- Phase 109 Plan 01 complete — continue with Phase 109 Plan 02 (HTTPS push endpoint + ingest)

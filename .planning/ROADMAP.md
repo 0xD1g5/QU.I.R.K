@@ -124,7 +124,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 **Plans**: 3 plans
 
 Plans:
-- [ ] 109-01-PLAN.md — `quirk console enroll` provisioning command (writes sensors + sensor_tokens, mints bearer token)
+- [x] 109-01-PLAN.md — `quirk console enroll` provisioning command (writes sensors + sensor_tokens, mints bearer token)
 - [ ] 109-02-PLAN.md — POST /api/sensor/push route + PushEnvelope model + failure-mode ladder + audit-per-attempt + real _ingest_envelope
 - [ ] 109-03-PLAN.md — ingestion + enroll tests, safe_str AST gate extension, docs/UAT-SERIES.md update & Obsidian sync
 
@@ -181,7 +181,7 @@ Plans:
 | 106. Architecture Documentation | 2/2 | Complete    | 2026-05-25 |
 | 107. Distributed Data Model | 2/2 | Complete    | 2026-05-25 |
 | 108. Sensor Push CLI + Windows CI | 4/4 | Complete   | 2026-05-25 |
-| 109. Console Ingestion API | 0/? | Not started | - |
+| 109. Console Ingestion API | 1/3 | In Progress|  |
 | 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
 | 111. Console Dashboard Awareness | 0/? | Not started | - |
 | 112. Distributed Chaos-Lab + Stabilization | 0/? | Not started | - |
