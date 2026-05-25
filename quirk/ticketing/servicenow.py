@@ -9,7 +9,7 @@ Security controls:
   T-105-01: self._auth_header is NEVER logged — safe_str scrubs it if it leaks in exc.
   T-105-02: _parse_servicenow_cfg rejects http:// instance_url at parse time (returns None).
   T-105-03: validate_external_url blocks RFC1918/loopback/metadata IPs at __init__.
-  T-105-04: _NoRedirectHandler copied verbatim from webhook.py blocks post-validation redirects.
+  T-105-04: _NoRedirectHandler (imported from quirk.util.no_redirect) blocks post-validation redirects.
 
 Phase 105 adds this file only — zero changes to base.py or jira.py (TICKET-04).
 """
@@ -25,26 +25,11 @@ from typing import Optional
 from urllib.parse import urlencode
 
 from quirk.ticketing.base import TicketingChannel
+from quirk.util.no_redirect import _NoRedirectHandler
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import validate_external_url
 
 logger = logging.getLogger(__name__)
-
-
-class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Block all HTTP redirects to prevent post-validation SSRF bypass.
-
-    Copied verbatim from quirk/notify/channels/webhook.py (T-105-04).
-    urllib.request.urlopen follows 3xx redirects by default via HTTPRedirectHandler.
-    An attacker-controlled endpoint returning 302 → http://169.254.169.254/... would
-    bypass the validate_external_url() pre-connection check. This handler refuses
-    any redirect by raising HTTPError, keeping the connection to the validated URL.
-    """
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise urllib.error.HTTPError(
-            req.full_url, code, "Redirect blocked (SSRF guard)", headers, fp
-        )
 
 
 class ServiceNowChannel(TicketingChannel):
