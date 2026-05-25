@@ -249,3 +249,36 @@ def test_hook_never_raises_on_bad_config(tmp_path, monkeypatch):
         dispatcher.export_after_scan_hook(run=run_stub, schedule=schedule_stub, db=db)
 
     assert calls == []
+
+
+def test_hook_skips_non_list_findings(tmp_path, monkeypatch):
+    """WR-02: after-scan hook skips and logs when findings JSON is not a list."""
+    from quirk.siem import dispatcher
+
+    calls = []
+    monkeypatch.setattr(dispatcher, "_send_raw", lambda *a, **kw: calls.append(a))
+
+    db_path = _make_db(tmp_path)
+    cfg = _make_siem_cfg(export_after_scan=True)
+    monkeypatch.setattr(dispatcher, "load_siem_config", lambda: cfg)
+
+    # Write a JSON object (not a list) as the findings file
+    findings_path = tmp_path / "findings-20260524-000000.json"
+    findings_path.write_text(json.dumps({"severity": "HIGH", "title": "Not a list"}))
+
+    run_stub = MagicMock()
+    run_stub.scan_output_path = str(tmp_path)
+    run_stub.scan_id = "scan-hook-04"
+    schedule_stub = MagicMock()
+
+    with get_session(db_path) as db:
+        # Must not raise
+        dispatcher.export_after_scan_hook(run=run_stub, schedule=schedule_stub, db=db)
+
+    # No CEF events should have been sent
+    assert calls == [], "No findings should be sent when JSON root is a dict, not a list"
+
+    # No audit rows should be written (hook returned before calling export_findings)
+    with get_session(db_path) as db:
+        rows = db.query(IntegrationDelivery).filter_by(destination="siem").all()
+    assert rows == []

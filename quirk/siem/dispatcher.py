@@ -149,6 +149,13 @@ def export_after_scan_hook(run, schedule, db) -> None:
             logger.warning("SIEM after-scan hook: could not load findings from %s: %s", findings_path, safe_str(exc))
             return
 
+        if not isinstance(findings, list):
+            logger.warning(
+                "SIEM after-scan hook: findings file %s does not contain a list — skipping",
+                findings_path,
+            )
+            return
+
         # Derive scan_id from run.scan_id if available, else use the path basename
         scan_id = getattr(run, "scan_id", None) or __import__("os").path.basename(output_path)
 
