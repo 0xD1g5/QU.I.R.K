@@ -39,7 +39,7 @@
 - [ ] **AUTH-03**: The dashboard presents a login form and a clear authenticated/unauthenticated state so a team can share a single-tenant instance
 
 ### Report Consistency Tax (TRANS) — folded from v5.2
-- [ ] **TRANS-04**: The CLI executive markdown sources its score (total, band, subscores) from the shared `exec_content` rather than re-deriving it locally, and a cross-surface parity test asserts the score number is identical across CLI/HTML/PDF/DOCX
+- [x] **TRANS-04**: The CLI executive markdown sources its score (total, band, subscores) from the shared `exec_content` rather than re-deriving it locally, and a cross-surface parity test asserts the score number is identical across CLI/HTML/PDF/DOCX
 
 ---
 
@@ -89,4 +89,4 @@
 | AUTH-01 | Phase 102 | Complete |
 | AUTH-02 | Phase 102 | Complete |
 | AUTH-03 | Phase 102 | Pending |
-| TRANS-04 | Phase 102 | Pending |
+| TRANS-04 | Phase 102 | Complete |
