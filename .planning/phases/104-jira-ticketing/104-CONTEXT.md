@@ -41,7 +41,7 @@ project/issuetype.
 - One Jira issue per finding (criterion 1)
 
 ### Idempotent Dedup (TICKET-03)
-- Fingerprint = `SHA256(host:port:protocol:category)` (hex), stored as a Jira **label** AND in `integration_deliveries.finding_hash`
+- Fingerprint = `SHA256(host:port::title)` (hex), stored as a Jira **label** AND in `integration_deliveries.finding_hash`. **CORRECTION (from research):** the original `SHA256(host:port:protocol:category)` cannot be used literally — real `findings-*.json` dicts have no `protocol` or `category` keys; `title` is the category proxy and protocol is empty. Phase 105 MUST use this identical formula.
 - Dedup: JQL label search before create; if a matching ticket is found → update it with a "rediscovery" comment instead of creating a duplicate (criterion 2)
 - Second run against the same scan / same findings adds rediscovery comments, creates zero new issues
 - Each attempt writes an `integration_deliveries` row (destination="jira", finding_hash=fingerprint, status ok/failed)
@@ -84,7 +84,7 @@ project/issuetype.
 
 - jira-lib API needs plan-time research: verify Jira Cloud REST v3 JQL label-filter syntax and the create_issue() field map (STATE.md pending todo for Phase 104).
 - The TicketingChannel ABC is the load-bearing artifact for Phase 105 — design it so ServiceNow drops in as a subclass with ONLY its Table API calls differing. Phase 105 must require no changes to base.py or jira.py.
-- Fingerprint must be identical to whatever Phase 105 uses (SHA256(host:port:protocol:category)) so a finding ticketed in Jira and ServiceNow shares the same fingerprint semantics.
+- Fingerprint must be identical to whatever Phase 105 uses — `SHA256(host:port::title)` (corrected per research; the finding schema has no protocol/category) — so a finding ticketed in Jira and ServiceNow shares the same fingerprint semantics.
 
 </specifics>
 
