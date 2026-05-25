@@ -89,9 +89,18 @@ def test_init_db_creates_expected_columns_smoke() -> None:
             "scan_error_category",
             # _PHASE46_COLUMN_DDLS
             "chain_verified",
+            # _V54_SENSOR_COLUMNS (Phase 107 MODEL-01)
+            "sensor_id",
+            "segment",
         }
         missing = expected_crypto - crypto_cols
         assert not missing, f"D-21: crypto_endpoints missing columns after init_db: {missing}"
 
         qramm_cols = {c["name"] for c in insp.get_columns("qramm_answers")}
         assert "evidence_note" in qramm_cols, "D-21: evidence_note missing on qramm_answers"
+
+        # Phase 107 MODEL-02..04: sensor tables must exist
+        sensor_tables = {"sensors", "sensor_tokens", "sensor_pushes"}
+        actual_tables = set(insp.get_table_names())
+        missing_tables = sensor_tables - actual_tables
+        assert not missing_tables, f"Phase 107: sensor tables missing after init_db: {missing_tables}"
