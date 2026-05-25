@@ -107,6 +107,13 @@ class TicketingChannel(ABC):
         Never raises — all failures captured in audit row (NOTIFY-07 pattern).
         Commit is always outside the try block (WR-01): the row is committed
         even on delivery failure so the audit record is never lost.
+
+        Commit-deferral note (WR-04): db.commit() is called once per row.
+        If that commit fails (e.g. disk full), the row remains in the session
+        and will be committed by the next successful per-row commit or by the
+        get_session exit commit. If ALL per-row commits fail and the exit commit
+        also fails, get_session rolls back all rows and re-raises; ticket_cmd.py
+        catches this with a descriptive "audit-row persistence failed" message.
         """
         fp = self.compute_fingerprint(finding)
         evidence = self.build_ticket_evidence(finding)
