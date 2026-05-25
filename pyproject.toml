@@ -89,6 +89,9 @@ notify = [
     # email: stdlib smtplib — no extra required
     # webhook: stdlib urllib — no extra required
 ]
+tickets = [
+    "jira>=3.10.5",  # Phase 104 TICKET-01 — Jira issue creation; Cloud/Server auth
+]
 dev = [
     "towncrier>=24.7.0",
 ]
@@ -102,6 +105,7 @@ all = [
     "quirk-scanner[adcs]",     # Phase 80 ADCS-07 — ldap3-only, no impacket
     "quirk-scanner[docx]",     # Phase 100 / FMT-03: DOCX auto-emits every run; bundle with full installs
     "quirk-scanner[notify]",   # Phase 101 NOTIFY-03 — slack-sdk; no cryptography downgrade chain
+    "quirk-scanner[tickets]",  # Phase 104 TICKET-01 — jira>=3.10.5; no cryptography downgrade chain
 ]
 # NOTE: quirk[identity] is INTENTIONALLY EXCLUDED from [all] -- impacket
 # transitively pulls pyOpenSSL which downgrades cryptography and breaks the

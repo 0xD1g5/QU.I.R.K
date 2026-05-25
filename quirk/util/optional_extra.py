@@ -145,6 +145,18 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
         ),
         enabled_attrs=(),  # always probe — CBOM is always written
     ),
+    # Phase 104 / TICKET-01: Jira ticketing backend.
+    # enabled_attrs=() means "always probe" — ticketing is a CLI-invoked command,
+    # not gated by a scan-time enable_* flag (mirrors dashboard/cbom pattern).
+    OptionalExtra(
+        extra="tickets",
+        modules=("jira",),
+        scanner_label="jira_ticketing",
+        install_hint=(
+            "Jira ticketing skipped — run `pip install quirk[tickets]` to enable"
+        ),
+        enabled_attrs=(),  # always probe — CLI command, not a scan-time flag
+    ),
 )
 
 
