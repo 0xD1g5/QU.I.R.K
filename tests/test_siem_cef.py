@@ -388,3 +388,42 @@ class TestCategoryFallback:
         assert _slugify("") == "unknown"
         assert _slugify("   ") == "unknown"
         assert _slugify("---") == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# CEF extension injection via port (CR-01 iteration-2 regression)
+# ---------------------------------------------------------------------------
+
+class TestPortExtensionInjection:
+    """A malicious/non-numeric port must never inject extra CEF extension pairs."""
+
+    def test_port_injection_string_dropped(self):
+        from quirk.siem.formatter import build_cef_event, to_cef_finding
+
+        finding = _minimal_finding(port="443 cs9=injected msg=forged")
+        safe = to_cef_finding(finding)
+        # Non-numeric port is coerced to "" — cannot carry =, space, or newline.
+        assert safe["port"] == ""
+        line = build_cef_event(finding, "1.0.0")
+        assert "cs9=injected" not in line
+        assert "msg=forged" not in line
+        assert "dpt= " in line or "dpt=\x00" not in line  # dpt empty, no injected pairs
+
+    def test_port_out_of_range_dropped(self):
+        from quirk.siem.formatter import to_cef_finding
+
+        assert to_cef_finding(_minimal_finding(port=99999))["port"] == ""
+        assert to_cef_finding(_minimal_finding(port=0))["port"] == ""
+        assert to_cef_finding(_minimal_finding(port=-1))["port"] == ""
+
+    def test_valid_port_preserved(self):
+        from quirk.siem.formatter import build_cef_event, to_cef_finding
+
+        assert to_cef_finding(_minimal_finding(port=443))["port"] == 443
+        assert "dpt=443 " in build_cef_event(_minimal_finding(port=443), "1.0.0")
+
+    def test_numeric_string_port_coerced(self):
+        from quirk.siem.formatter import to_cef_finding
+
+        # A clean numeric string is accepted and normalized to int.
+        assert to_cef_finding(_minimal_finding(port="8443"))["port"] == 8443
