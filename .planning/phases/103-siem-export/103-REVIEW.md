@@ -1,340 +1,195 @@
 ---
 phase: 103-siem-export
-reviewed: 2026-05-24T00:00:00Z
+reviewed: 2026-05-25T00:00:00Z
 depth: standard
-files_reviewed: 5
+files_reviewed: 4
 files_reviewed_list:
   - quirk/siem/formatter.py
   - quirk/siem/transport.py
-  - quirk/siem/config.py
   - quirk/siem/dispatcher.py
   - quirk/cli/export_cmd.py
 findings:
-  critical: 2
-  warning: 4
+  critical: 1
+  warning: 0
   info: 3
-  total: 9
+  total: 4
 status: issues_found
 ---
 
-# Phase 103: Code Review Report
+# Phase 103: Code Review Report (Iteration 2)
 
-**Reviewed:** 2026-05-24T00:00:00Z
+**Reviewed:** 2026-05-25T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 5
+**Files Reviewed:** 4
 **Status:** issues_found
 
 ## Summary
 
-The SIEM export implementation is structurally sound: the ISEC-03 whitelist is correctly
-enforced via explicit `.get()` extractions, `yaml.safe_load` is used, `safe_str` guards
-exception strings in the audit path, and the scheduler hook is properly isolated so that
-SIEM failure cannot corrupt a committed scan record. The config loader correctly reads
-from `QUIRK_CONFIG_PATH`, never from the scheduler's SQLite `--config` path.
+All six prior findings (CR-01, CR-02, WR-01 through WR-04) are correctly fixed and verified
+via runtime execution. The CEF header escaper strips all newline forms in the correct order
+(backslash first, pipe second, then `\r\n` before `\r` before `\n`), TCP framing appends
+exactly one LF after the encoded payload, the protocol validator raises `ValueError` for any
+value outside `{"udp","tcp"}`, the `isinstance(findings, list)` guard is present in the
+after-scan hook, the redundant `safe_str` double-wrap is removed, and exit codes 2 (total
+failure) and 3 (partial failure) are correctly discriminated.
 
-Two critical defects were found. The most serious is a **log-injection / CEF event forgery**
-vulnerability: `_cef_escape_header()` does not strip or encode newline characters (`\n`,
-`\r`), so a finding whose `title` or `category` field contains a newline injects a
-second, fully-formed CEF line into the syslog stream, allowing an attacker who controls
-finding metadata to forge arbitrary SIEM events. The second critical defect is **missing
-TCP framing**: the transport sends raw bytes over TCP with no newline terminator and no
-octet-count prefix, which violates RFC 6587 and will cause most TCP syslog receivers to
-either discard messages or concatenate all events into one unparseable blob.
-
-Four warnings cover: silent protocol fallthrough for unrecognised protocol strings,
-missing list-type validation in the after-scan hook before calling `export_findings`, a
-type mismatch where `safe_str(BaseException)` is called with a plain `str` argument, and
-partial-success being indistinguishable from total failure via the CLI exit code.
-
----
+One new Critical issue was found during runtime verification: the `dpt` extension field in
+`build_cef_event` is assembled from `str(safe["port"])` without calling `_cef_escape_extension`.
+Because `to_cef_finding` passes `port` through as-is from the finding dict (no int cast, no
+validation), a crafted or malformed `port` value such as `"injected=val next=field"` injects
+arbitrary key=value pairs into the CEF extension string — a concrete log-injection / CEF
+event forgery vector. Three Info-level quality issues are also noted.
 
 ## Critical Issues
 
-### CR-01: Newline injection in CEF header fields allows event forgery (log injection)
+### CR-01: CEF extension injection via unsanitized `dpt` field
 
-**File:** `quirk/siem/formatter.py:40-49`
+**File:** `quirk/siem/formatter.py:144,184`
 
-**Issue:** `_cef_escape_header()` escapes backslash and pipe but does **not** strip or
-encode newline characters (`\n`, `\r\n`, `\r`). The CEF header fields `name` (from
-`finding["title"]`) and `signature` (from `finding["category"]`) are passed through this
-function. If a finding's `title` contains a newline, the assembled CEF line is split into
-two physical lines at the syslog layer, and everything after the newline is interpreted by
-the SIEM as a new, independent log event.
+**Issue:** `to_cef_finding` returns `port` from the finding dict without type-checking or
+sanitizing it (line 144: `finding.get("port") or ""`). In `build_cef_event`, line 184
+converts it with plain `str(safe["port"])` and drops it directly into the extension string —
+no call to `_cef_escape_extension`. Because CEF extensions are space-delimited `key=value`
+pairs, a crafted port value containing spaces or `=` characters injects additional fields
+that the SIEM receiver parses as independent extension attributes.
 
-Concrete attack: a scanner finding whose `title` is
-`Weak TLS\nCEF:0|EVIL|forged|9.9|EVIL-001|Injected|10|dhost=attacker`
-produces two CEF lines from a single call to `build_cef_event`. The injected second line
-carries arbitrary header and extension content chosen by whoever controls finding metadata
-(e.g. a hostile target that influences scan results via a crafted TLS certificate CN).
-
-The same defect exists in `_cef_escape_extension()` for the `\r` case — `\r\n` and bare
-`\r` are handled, but a bare `\n` without a preceding `\r` is also handled correctly
-there. The extension escaping is therefore correct; **only the header function is
-missing newline handling**.
-
-Verified with:
-```
-_cef_escape_header("Legit Finding\nCEF:0|EVIL|...")
-# -> 'Legit Finding\nCEF:0\\|EVIL\\|...'   <- newline is NOT removed
+Runtime confirmation:
+```python
+>>> build_cef_event(
+...     {'title': 'Test', 'severity': 'HIGH', 'host': '10.0.0.1',
+...      'port': 'injected=val next=field', 'category': 'cat',
+...      'description': 'desc', 'recommendation': 'rec'},
+...     '1.0.0'
+... )
+'CEF:0|QUIRK|scanner|1.0.0|cat|Test|8|dhost=10.0.0.1 dpt=injected=val next=field cs1=cat ...'
 ```
 
-**Fix:** Add newline stripping (or encoding) to `_cef_escape_header()`. Stripping is
-safest because newlines carry no meaningful information in a CEF header field name:
+Findings files come from disk (`findings-*.json`). Any process that can write a crafted
+`port` field — including a scanner module operating against a hostile target that returns
+crafted data, or a symlinked/world-writable output directory — can inject CEF fields that
+alter SIEM parsing or override legitimate fields. This is CWE-117 / CEF extension injection.
+
+Note: the extension escaper `_cef_escape_extension` correctly handles newlines for all other
+extension fields (`dhost`, `cs1`, `cs2`, `msg`). The `dpt` field is the sole bypass because
+it skips that call entirely.
+
+**Fix (two-part):**
+
+Part 1 — Cast and validate `port` to `int | ""` inside `to_cef_finding`. An `int`'s `str()`
+representation can only contain digits and an optional leading minus sign — it is provably
+injection-safe without a secondary escape call:
 
 ```python
-def _cef_escape_header(value: str) -> str:
-    """Escape a CEF header field value.
-
-    CEF header rules (ArcSight CEF Implementation Standard):
-      - Backslash (\\) -> \\\\   MUST be escaped FIRST
-      - Pipe (|)       -> \\|
-      - Newlines       -> stripped (no valid CEF header value contains a newline)
-    """
-    return (
-        value
-        .replace("\\", "\\\\")
-        .replace("|", "\\|")
-        .replace("\r\n", "")
-        .replace("\r", "")
-        .replace("\n", "")
-    )
+# In to_cef_finding, replace line 144:
+raw_port = finding.get("port")
+try:
+    port_val: int | str = int(raw_port) if raw_port is not None and raw_port != "" else ""
+except (TypeError, ValueError):
+    port_val = ""   # discard non-numeric port value
 ```
 
-If encoding is preferred over stripping (to preserve evidence content for review):
+Part 2 — If the int-cast approach is adopted, `str(int)` is safe and no escaping is needed.
+If any string passthrough remains, add the escape call to match all other extension fields:
 
 ```python
-        .replace("\r\n", "\\n")
-        .replace("\r", "\\n")
-        .replace("\n", "\\n")
+# In build_cef_event, line 184 — defensive form if part 1 is not applied:
+dpt = _cef_escape_extension(str(safe["port"]))
 ```
 
----
-
-### CR-02: TCP transport sends raw bytes with no RFC 6587 message framing
-
-**File:** `quirk/siem/transport.py:72-74`
-
-**Issue:** When `protocol="tcp"`, the transport calls `sock.sendall(payload)` where
-`payload` is the raw UTF-8 encoded CEF string with a `<PRI>` prefix. No message
-delimiter is appended and no octet-count prefix is prepended.
-
-RFC 6587 ("Transmission of Syslog Messages over TCP") defines two framing methods:
-- **Octet Counting (section 3.4.1):** prepend `len(msg)` as ASCII decimal followed by
-  a space: `"123 <12>CEF:0|..."`.
-- **Non-Transparent Framing (section 3.4.2):** append a trailing `LF` (byte `0x0a`).
-
-Without either framing method the TCP receiver has no way to determine message
-boundaries. Most production syslog receivers (rsyslog, syslog-ng, Splunk HEC TCP,
-ArcSight SmartConnector) default to non-transparent framing and expect a trailing
-newline. Without it, the receiver either:
-- Buffers indefinitely waiting for the frame boundary, then times out and discards, or
-- Concatenates multiple sequential QUIRK sends into one unparseable super-event.
-
-UDP (`sock.sendto`) is unaffected — each datagram is a self-delimiting message.
-
-**Fix:** Apply Non-Transparent Framing (trailing `\n`) for TCP, which is the most
-broadly compatible default. Octet-counting can be added later if needed for strict
-RFC 5425 TLS syslog:
-
-```python
-if socktype == socket.SOCK_STREAM:
-    sock.connect((host, port))
-    # RFC 6587 section 3.4.2: Non-Transparent-Framing — append LF
-    sock.sendall(payload + b"\n")
-else:
-    sock.sendto(payload, (host, port))
-```
-
----
+The cleanest single fix is Part 1 alone: enforce the type contract in `to_cef_finding` so
+callers downstream never need to second-guess what `port` contains.
 
 ## Warnings
 
-### WR-01: Unrecognised `protocol` values silently fall through to UDP
-
-**File:** `quirk/siem/transport.py:68`
-
-**Issue:** The protocol selection expression is:
-```python
-socktype = socket.SOCK_STREAM if protocol == "tcp" else socket.SOCK_DGRAM
-```
-Any value that is not exactly `"tcp"` (e.g. `"TCP"`, `"tls"`, `"invalid"`) silently
-produces a UDP socket. The config loader lowercases the protocol string at parse time
-(`str(raw.get("protocol", "udp")).lower()`), which makes typos like `"TCP"` safe in
-practice, but `"tls"` or any other non-`"tcp"` string would silently degrade to
-unencrypted UDP with no error or log message. This is especially confusing if a future
-operator configures `protocol: tls` expecting encrypted transport.
-
-**Fix:** Raise `ValueError` for unrecognised protocols instead of falling through:
-
-```python
-_VALID_PROTOCOLS = {"udp", "tcp"}
-if protocol not in _VALID_PROTOCOLS:
-    raise ValueError(f"protocol must be 'udp' or 'tcp', got: {protocol!r}")
-socktype = socket.SOCK_STREAM if protocol == "tcp" else socket.SOCK_DGRAM
-```
-
----
-
-### WR-02: `export_after_scan_hook` does not validate that `findings` is a list before calling `export_findings`
-
-**File:** `quirk/siem/dispatcher.py:146-155`
-
-**Issue:** `export_after_scan_hook` loads findings from the JSON file and passes the
-result directly to `export_findings` without checking `isinstance(findings, list)`:
-
-```python
-findings = json.load(f)
-# ... no type check ...
-export_findings(findings, cfg, db, scan_id=str(scan_id))
-```
-
-`export_cmd.py` does perform this check (line 118). The after-scan hook does not.
-
-If `findings-*.json` contains a JSON object (`{}`) rather than an array, iterating
-over it yields the object's keys as plain strings. Each string is then passed to
-`build_cef_event(str_key, version)`, which calls `to_cef_finding(str)`, which calls
-`str.get(...)` — `AttributeError`. Each iteration raises, the per-finding `except
-Exception` clause catches it and appends an error string, `success_count` stays 0,
-and the batch is written to the audit table as `status="failed"` with no indication of
-the root cause (malformed file vs. network error vs. type mismatch). The failure is
-entirely silent from the operator's perspective.
-
-**Fix:** Add the same guard that `export_cmd.py` already has, immediately after loading:
-
-```python
-findings = json.load(f)
-if not isinstance(findings, list):
-    logger.warning(
-        "SIEM after-scan hook: findings file %s does not contain a list — skipping",
-        findings_path,
-    )
-    return
-```
-
----
-
-### WR-03: `safe_str` called with a plain `str` argument, violating its type contract
-
-**File:** `quirk/siem/dispatcher.py:93`
-
-**Issue:**
-```python
-error_summary = safe_str("; ".join(errors)) if errors else None
-```
-`safe_str` is typed and documented as `safe_str(exc: BaseException) -> str`. It is
-called here with a plain `str` — the joined error messages. This works at runtime
-because `type(str_val).__name__` returns `"str"` and `str(str_val)` returns the
-string itself, so the function effectively becomes a no-op passthrough. However:
-
-1. It is a type violation that will produce a `mypy` error if type-checking is ever
-   enabled on this module.
-2. The double-wrapping is unnecessary and misleading — `errors` is already a
-   `list[str]` where each element was already `safe_str(exc)` at line 87.
-
-**Fix:** Remove the redundant `safe_str` wrapper since each individual error string was
-already sanitised when it was appended:
-
-```python
-error_summary = "; ".join(errors) if errors else None
-```
-
----
-
-### WR-04: Partial SIEM export success is indistinguishable from total failure via CLI exit code
-
-**File:** `quirk/cli/export_cmd.py:151-153`
-
-**Issue:**
-```python
-print(f"SIEM export complete: {count}/{len(findings)} findings sent.")
-if count < len(findings):
-    sys.exit(2)
-```
-Exit code `2` is used for both "zero findings sent" (total failure) and "99 of 100
-findings sent" (partial success). Operators using the exit code in automation pipelines
-(cron, CI, monitoring) cannot distinguish between a total endpoint failure and a single
-transient delivery error that dropped one event.
-
-**Fix:** Either document that exit code `2` means "at least one finding was not
-delivered" (and make this explicit in the epilog and docstring), or introduce an
-exit code `3` for partial success:
-
-```python
-if count == 0:
-    sys.exit(2)    # total failure — no findings sent
-elif count < len(findings):
-    sys.exit(3)    # partial failure — some findings not sent
-# else: sys.exit(0) implicit — all findings sent
-```
-
-Update the exit-code table in the module docstring to match.
-
----
+None.
 
 ## Info
 
-### IN-01: `os` imported twice inside a conditional block in `export_cmd.py`; `_version` imported but never used
+### IN-01: Duplicate `import os` and dead `_version` import in `export_cmd.py`
 
-**File:** `quirk/cli/export_cmd.py:136-145`
+**File:** `quirk/cli/export_cmd.py:140,143,149`
 
-**Issue:** Inside the `if args.siem:` block, `os` is imported twice under different
-aliases (`import os` at line 136, `import os as _os` at line 145), and `__version__`
-is imported as `_version` at line 139 but never referenced again. All three should be
-module-level imports; `_version` should be removed entirely since `build_cef_event`
-receives the version from inside `dispatcher.export_findings` (via `from quirk import
-__version__` at its own deferred import).
+**Issue:** Inside the `if args.siem:` block's `try` clause, `os` is imported twice under
+different names — `import os` at line 140 (used for `os.environ.get`) and `import os as
+_os` at line 149 (used for `_os.path.basename`). Python deduplicates the module load, but
+the dual alias is confusing. Additionally, `from quirk import __version__ as _version` at
+line 143 is imported but never referenced; the version is consumed inside `dispatcher.py`
+via its own deferred `from quirk import __version__` import.
 
-**Fix:**
+**Fix:** Move `import os` to the module top-level, use a single binding throughout, and
+remove the dead `_version` import:
+
 ```python
-import os  # move to top of file; remove 'import os as _os' and the duplicate
-# Remove: from quirk import __version__ as _version  (dead import)
+# Module top-level (add alongside existing top-level imports):
+import os
+
+# Inside the try block, replace lines 140-143:
+db_path = os.environ.get("QUIRK_DB_PATH") or "quirk.db"
+# (remove: from quirk import __version__ as _version)
+...
+scan_id = os.path.basename(findings_path)  # replace _os.path.basename
+```
+
+### IN-02: `__import__("os")` inline pattern in `dispatcher.py`
+
+**File:** `quirk/siem/dispatcher.py:53,163`
+
+**Issue:** Two locations call `__import__("os")` inline rather than using a module-level
+`import os`:
+- Line 53 (lambda in `_find_latest_findings_in`): `__import__("os").path.getmtime(p)`
+- Line 163 (`export_after_scan_hook`): `__import__("os").path.basename(output_path)`
+
+The pattern works at runtime (the module cache is shared), but it is unconventional, bypasses
+static analysis tools, and is inconsistent with the rest of the codebase.
+
+**Fix:** Add `import os` at the top of `dispatcher.py` alongside existing stdlib imports and
+replace both inline patterns:
+
+```python
+# Top of dispatcher.py, after existing imports:
+import os
+
+# Line 53:
+return max(candidates, key=lambda p: os.path.getmtime(p))
+
+# Line 163:
+scan_id = getattr(run, "scan_id", None) or os.path.basename(output_path)
+```
+
+### IN-03: CEF extension `cs1` uses the same value as the header `signature` field without note
+
+**File:** `quirk/siem/formatter.py:185,192-196`
+
+**Issue:** `build_cef_event` places `safe["category"]` in both the CEF header `SignatureID`
+position (line 192, escaped via `_cef_escape_header`) and in the `cs1` extension field
+(line 185, escaped via `_cef_escape_extension`). The duplication is not wrong — many SIEM
+integrations echo the signature into a custom string field for easier SPL/KQL searching —
+but there is no comment explaining why `cs1` repeats `SignatureID`. A future maintainer
+might eliminate what appears to be accidental duplication.
+
+**Fix:** Add a one-line comment in `build_cef_event` to make the intent explicit:
+
+```python
+# cs1 echoes SignatureID for SIEM search convenience (SPL: cs1="CVE-..." works without
+# parsing the pipe-delimited header fields).
+cs1 = _cef_escape_extension(safe["category"])
 ```
 
 ---
 
-### IN-02: `__import__('os')` inline pattern in `dispatcher.py` instead of a module-level import
+## Prior Findings — Iteration 1 Verification
 
-**File:** `quirk/siem/dispatcher.py:53, 153`
-
-**Issue:** Two locations use the `__import__('os')` pattern inline rather than a
-module-level `import os`:
-- Line 53: `__import__("os").path.getmtime(p)` inside `_find_latest_findings_in`
-- Line 153: `__import__("os").path.basename(output_path)` inside `export_after_scan_hook`
-
-`os` is already implicitly available (it is a stdlib module and the import cache is
-shared), but the inline `__import__` pattern is unconventional, harder to read, and
-will confuse linters.
-
-**Fix:** Add `import os` at the top of `dispatcher.py` alongside the other stdlib
-imports and replace both inline patterns with `os.path.getmtime(p)` and
-`os.path.basename(output_path)`.
+| Finding | Status | Evidence |
+|---------|--------|---------|
+| CR-01 (header newline strip) | FIXED | `_cef_escape_header` strips `\r\n` then `\r` then `\n` after backslash+pipe escape (lines 54-61). Runtime: `build_cef_event` with `\n` in title/category produces a single-line result with no bare newlines. Extension escaper correctly converts newlines to `\\n` literals (not stripped) per CEF extension spec. |
+| CR-02 (TCP LF framing) | FIXED | `sock.sendall(payload + b"\n")` on SOCK_STREAM path only (line 81). UDP path uses `sock.sendto` without appended byte (line 83). |
+| WR-01 (protocol validation) | FIXED | `_VALID_PROTOCOLS = {"udp","tcp"}` check at lines 68-70; `ValueError` raised before socket creation for any other value. |
+| WR-02 (isinstance list guard in hook) | FIXED | Lines 155-160 in `dispatcher.py`; returns early with `logger.warning` if `findings` is not a list. |
+| WR-03 (redundant safe_str) | FIXED | `error_summary = "; ".join(errors) if errors else None` (line 96). Comment at lines 93-95 documents why the second `safe_str` wrap was removed. |
+| WR-04 (exit codes 2/3) | FIXED | `count == 0` → `sys.exit(2)`, `count < len(findings)` → `sys.exit(3)` (lines 156-159). `SystemExit` re-raised at line 161 before the outer `except`. Module docstring updated to list all exit codes. |
 
 ---
 
-### IN-03: `_cef_escape_header` does not escape `=` — confirm this is intentional
-
-**File:** `quirk/siem/formatter.py:40-49`
-
-**Issue:** The function's docstring correctly states that `=` is not escaped in header
-fields per the CEF specification ("Equals (=) is NOT escaped in header fields — only in
-extension values"). This is correct per the ArcSight CEF Implementation Standard.
-However, the code comment says only "Backslash MUST be replaced first"; the rationale
-for omitting `=` escaping is only in the docstring, not inline. A future maintainer
-editing the escaping logic could add `=` escaping to the header function erroneously
-(it would produce double-escaping for extension fields that also pass through
-`_cef_escape_header`).
-
-**Fix:** Add a brief inline comment in `_cef_escape_header` to make the omission
-explicit and intentional:
-
-```python
-# NOTE: '=' is intentionally NOT escaped in header fields per CEF spec
-# (section 5, ArcSight CEF Implementation Standard). Only extension values escape '='.
-return value.replace("\\", "\\\\").replace("|", "\\|")
-```
-
----
-
-_Reviewed: 2026-05-24T00:00:00Z_
+_Reviewed: 2026-05-25T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
