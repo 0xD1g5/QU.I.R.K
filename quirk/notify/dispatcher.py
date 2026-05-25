@@ -48,11 +48,15 @@ def _channel_send_slack(cfg, summary) -> None:
 def _channel_send_email(cfg, summary) -> None:
     """Call send_email — indirected for test monkeypatching."""
     from quirk.notify.channels.email import send_email
+    # Mirror the slack.py guard: score_delta is Optional[int] and may be None on first scan
+    delta_str = (
+        f"{summary.score_delta:+d}" if summary.score_delta is not None else "N/A"
+    )
     subject = f"QUIRK Alert: {summary.new_high} new HIGH finding(s) — score {summary.current_score}"
     body = (
         f"QUIRK Quantum-Readiness Alert\n"
         f"Score: {summary.current_score} (was {summary.previous_score}, "
-        f"delta {summary.score_delta:+d})\n"
+        f"delta {delta_str})\n"
         f"New findings — HIGH: {summary.new_high}  MEDIUM: {summary.new_medium}  "
         f"LOW: {summary.new_low}\n"
     )
