@@ -116,7 +116,7 @@ Plans:
   2. Re-running against the same findings does not open duplicate incidents — the same SHA256 fingerprint dedup logic from Phase 104 is applied via the shared TicketingChannel abstraction
   3. ServiceNow credentials (instance URL, username, password/token) resolve from environment variables and are never written to SQLite, scan JSON, or logs
 **Plans**: 3 plans
-- [ ] 105-01-PLAN.md — ServiceNow backend (ServiceNowChannel subclass + config + Wave 0 tests)
+- [x] 105-01-PLAN.md — ServiceNow backend (ServiceNowChannel subclass + config + Wave 0 tests)
 - [ ] 105-02-PLAN.md — CLI --backend dispatch + tests
 - [ ] 105-03-PLAN.md — docs + Obsidian + UAT-SERIES (v5.3 close)
 
@@ -128,4 +128,4 @@ Plans:
 | 102. Dashboard Auth UX + Score Tax | 5/5 | Complete   | 2026-05-25 |
 | 103. SIEM Export | 4/4 | Complete   | 2026-05-25 |
 | 104. Jira Ticketing | 4/4 | Complete   | 2026-05-25 |
-| 105. ServiceNow Ticketing | 0/3 | Not started | - |
+| 105. ServiceNow Ticketing | 1/3 | In Progress|  |
