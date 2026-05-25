@@ -262,3 +262,37 @@ def test_source_has_signature_header_and_timeout():
     text = src.read_text(encoding="utf-8")
     assert "X-QUIRK-Signature" in text, "webhook.py must contain X-QUIRK-Signature"
     assert "timeout=" in text, "webhook.py must contain timeout="
+
+
+# ---------------------------------------------------------------------------
+# CR-01 regression: 302 redirect must NOT be followed (SSRF guard)
+# ---------------------------------------------------------------------------
+
+
+def test_redirect_blocked_by_no_redirect_handler(monkeypatch):
+    """CR-01 regression: a 302 redirect from the webhook endpoint raises HTTPError.
+
+    The _NoRedirectHandler installed by send_webhook must refuse any 3xx redirect
+    rather than following it.  This prevents a post-validation SSRF bypass where
+    a compromised CDN could redirect to http://169.254.169.254/.
+    """
+    import urllib.error
+    from quirk.notify.channels.webhook import send_webhook, _NoRedirectHandler
+
+    # Confirm _NoRedirectHandler raises on redirect_request
+    handler = _NoRedirectHandler()
+
+    class _FakeReq:
+        full_url = "https://hooks.example.com/notify"
+
+    class _FakeHeaders:
+        pass
+
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        handler.redirect_request(
+            _FakeReq(), fp=None, code=302, msg="Found",
+            headers=_FakeHeaders(), newurl="http://169.254.169.254/latest/meta-data/"
+        )
+
+    assert exc_info.value.code == 302
+    assert "Redirect blocked" in exc_info.value.reason
