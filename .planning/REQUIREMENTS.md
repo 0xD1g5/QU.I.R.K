@@ -114,24 +114,49 @@ Explicitly excluded for v5.4. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Filled by the roadmapper.
+Which phases cover which requirements.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01..04 | TBD | Pending |
-| MODEL-01..04 | TBD | Pending |
-| SENSOR-01..06 | TBD | Pending |
-| CONSOLE-01..05 | TBD | Pending |
-| MERGE-01..05 | TBD | Pending |
-| LAB-01..03 | TBD | Pending |
-| DASH-01..03 | TBD | Pending |
-| STAB-01..03 | TBD | Pending |
+| ARCH-01 | Phase 106 | Pending |
+| ARCH-02 | Phase 106 | Pending |
+| ARCH-03 | Phase 106 | Pending |
+| ARCH-04 | Phase 106 | Pending |
+| MODEL-01 | Phase 107 | Pending |
+| MODEL-02 | Phase 107 | Pending |
+| MODEL-03 | Phase 107 | Pending |
+| MODEL-04 | Phase 107 | Pending |
+| SENSOR-01 | Phase 108 | Pending |
+| SENSOR-02 | Phase 108 | Pending |
+| SENSOR-03 | Phase 108 | Pending |
+| SENSOR-04 | Phase 108 | Pending |
+| SENSOR-05 | Phase 108 | Pending |
+| SENSOR-06 | Phase 108 | Pending |
+| STAB-02 | Phase 108 | Pending |
+| CONSOLE-01 | Phase 109 | Pending |
+| CONSOLE-02 | Phase 109 | Pending |
+| CONSOLE-03 | Phase 109 | Pending |
+| CONSOLE-04 | Phase 109 | Pending |
+| CONSOLE-05 | Phase 109 | Pending |
+| MERGE-01 | Phase 110 | Pending |
+| MERGE-02 | Phase 110 | Pending |
+| MERGE-03 | Phase 110 | Pending |
+| MERGE-04 | Phase 110 | Pending |
+| MERGE-05 | Phase 110 | Pending |
+| DASH-01 | Phase 111 | Pending |
+| DASH-02 | Phase 111 | Pending |
+| DASH-03 | Phase 111 | Pending |
+| LAB-01 | Phase 112 | Pending |
+| LAB-02 | Phase 112 | Pending |
+| LAB-03 | Phase 112 | Pending |
+| STAB-01 | Phase 112 | Pending |
+| STAB-03 | Phase 112 | Pending |
 
 **Coverage:**
 - v1 (v5.4) requirements: 33 total (ARCH 4, MODEL 4, SENSOR 6, CONSOLE 5, MERGE 5, LAB 3, DASH 3, STAB 3)
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 33 ⚠️ (filled by roadmapper)
+- Mapped to phases: 33 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-25*
-*Last updated: 2026-05-25 — v5.4 milestone opened (research-first; HIGH-confidence converged research in `.planning/research/`)*
+*Last updated: 2026-05-25 — v5.4 roadmap complete; all 33 requirements mapped to Phases 106–112*

@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v5.4
 milestone_name: Distributed On-Prem Scanner Architecture
 status: planning
-last_updated: "2026-05-25T14:52:33.274Z"
+last_updated: "2026-05-25"
 last_activity: 2026-05-25
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,23 +17,28 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-24)
+See: .planning/PROJECT.md (updated 2026-05-25)
 
-**Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours
-**Current focus:** Phase 105 — servicenow-ticketing
+**Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now across every segment of a segmented enterprise network
+**Current focus:** Phase 106 — Architecture Documentation (roadmap drafted; ready for planning)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 106 — Architecture Documentation
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-25 — Milestone v5.4 started
+Status: Roadmap created; awaiting `/gsd:plan-phase 106`
+Last activity: 2026-05-25 — Milestone v5.4 roadmap written (7 phases, 33 requirements, 100% coverage)
+
+```
+v5.4 Progress: [          ] 0/7 phases | 0% complete
+```
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0 (v5.3 not started)
+- Total plans completed: 0 (v5.4 not started)
+- Prior milestone (v5.3): 20 plans across 5 phases
 - Prior milestone (v5.2): 12 plans across 4 phases
 
 *Updated after each plan completion*
@@ -42,20 +47,26 @@ Last activity: 2026-05-25 — Milestone v5.4 started
 
 ### Decisions (pre-locked at roadmap)
 
-- v5.3-D-01: Phase 101 is the unambiguous anchor — all seven integration security pitfalls (SSRF, secret leakage, optional-extra import trap, delivery isolation, notification storm, exfiltration whitelist, route-coverage gap) must be addressed HERE before any other integration phase begins
-- v5.3-D-02: ISEC primitives ship in Phase 101 alongside NOTIFY, not as a separate phase — they are prerequisites for every downstream integration; splitting would require retrofitting and is explicitly called out as high-risk by research
-- v5.3-D-03: TRANS-04 (CLI score-source tax) folds into Phase 102 alongside AUTH — it is small, orthogonal, and avoids its own phase; groups naturally with the dashboard polish work
-- v5.3-D-04: SIEM (Phase 103) before Ticketing (Phase 104/105) — stdlib-only, zero dep risk, validates the send_findings_export pattern before Jira/ServiceNow add higher-complexity dedup logic
-- v5.3-D-05: Ticketing is split across two phases (104 Jira + 105 ServiceNow) — TICKET-01..04 requires both backends plus shared abstraction; keeping both in one phase risks >5 plans; Phase 104 builds the TicketingChannel ABC + Jira backend + dedup; Phase 105 adds ServiceNow as the second backend reusing the abstraction
-- v5.3-D-06: ServiceNow uses stdlib urllib Table API — no new pip dep beyond [tickets] extra; jira>=3.10.5 stays the only [tickets] extra dep; ServiceNow access pattern is raw HTTP, not a client library
-- v5.3-D-07: Global notification config only (no per-schedule overrides in v5.3) — per-schedule routing requires a scheduled_scans schema change; global config ships first per research recommendation; per-schedule is v5.3.x
+- v5.4-D-01: Phase 106 (Architecture Documentation) is the mandatory no-code gating anchor per HORIZON 999.58 and research convergence — no v5.4 code ships until the wire contract, data-model keying, PM decisions, and forbidden-additions list are written and reviewed
+- v5.4-D-02: Unified scoring methodology is Option A (union of pushed endpoints through the existing `compute_readiness_score()` / `build_cbom()` engines unchanged) — committed; Option B (weighted average) deferred to v5.5 after real-consultant validation
+- v5.4-D-03: Enrollment tokens are one-time-use (consumed on successful enrollment) — committed; time-windowed tokens deferred to v5.5
+- v5.4-D-04: Windows v5.4 floor is committed (OS-agnostic wire contract + pip install + `windows-latest` CI smoke job); ceiling (full PyInstaller frozen EXE + Scheduled Task packaging) to be decided during Phase 106 arch-doc and recorded in ARCH-03
+- v5.4-D-05: STAB-02 (`_NoRedirectHandler` extraction to `quirk/util/no_redirect.py`) ships in Phase 108 (SENSOR) as a prerequisite for the sensor push client — not deferred to Phase 112 stabilization tail
+- v5.4-D-06: Store-and-forward spool uses file-per-payload directory (not SQLite) — bounded depth, retried on next push invocation
+- v5.4-D-07: The merge trigger is manual (`quirk sensor merge`) for v5.4; automatic console-side poll when all sensors check in is deferred to v5.5
+- v5.4-D-08: `sensor_id` must be `nullable=True` on `CryptoEndpoint` (NULL = implicit local sensor); existing single-host scans are unaffected — backward compatibility is non-negotiable
+- v5.4-D-09: Scoring/CBOM/evidence engines (`scoring.py`, `evidence.py`, `cbom/builder.py`, `cbom/writer.py`) are NOT forked or modified; the merge pipeline re-runs them over the union of sensor endpoints
+- v5.4-D-10: The Windows chaos lab cannot validate Windows sensor correctness (Linux containers only); Windows validation is owned exclusively by the `windows-latest` CI smoke job in Phase 108
 
 ### Pending Todos
 
-- Phase 101: Confirm exact line number of `_dispatch_schedule()` seam in scheduler_cmd.py before planning (research cites line 162 post-db.commit)
-- Phase 101: Define `integration_deliveries` table schema at plan time (minimum: scan_id, finding_hash, destination, status, attempted_at, error_summary)
-- Phase 103: Verify Splunk HEC raw vs. event endpoint choice at plan time (research recommendation: event endpoint for <=hundreds of findings)
-- Phase 104: Verify Jira Cloud REST v3 JQL label-filter syntax and create_issue() field map at plan time (research flags this as needing plan-time research)
+- Phase 106: Resolve Windows packaging ceiling decision (in-v5.4 full PyInstaller/Scheduled-Task, or floor-only with v5.5 fast-follow) — output must be written into ARCH-03
+- Phase 106: Nail `sensor_pushes` dedup table schema at arch-doc time (payload_id, sensor_id, received_at, TTL/cleanup policy) so Phase 107 can create it in the same migration pass
+- Phase 107: Write migration regression test using a pre-v5.4 SQLite fixture before any ingestion code touches the schema
+- Phase 108: Audit `scheduler_cmd.py:136` (relative path → `cfg.output_root`-anchored) and `:258-259` (SIGTERM → `sys.platform != 'win32'`-guarded) — exact line numbers from research, verify before planning
+- Phase 109: Extend the `safe_str()` AST gate to cover `quirk/dashboard/api/routes/sensor.py` explicitly
+- Phase 110: Review `cbom/builder.py` Pass 1 `algo_registry` dedup logic (line 461 per research) to determine exact change needed to include `sensor_id` in component identity hash — flag as explicit seam audit at plan time
+- Phase 112: Verify `lab.sh` ALL_PROFILES sync after adding distributed profiles (per CLAUDE.md chaos-lab maintenance rule)
 
 ### Blockers
 
@@ -63,7 +74,7 @@ None.
 
 ## Deferred Items
 
-Carried forward from v5.2 close and prior milestones:
+Carried forward from v5.3 close (2026-05-25):
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -74,25 +85,19 @@ Carried forward from v5.2 close and prior milestones:
 | human-UAT (93) | getpass TTY prompt + live PDF export | deferred — TTY-gated |
 | human-UAT (95) | live ldaps code-signing scan | deferred — needs ldaps lab |
 | human-UAT (96) | TTY CONFIRM gate + non-TTY abort + live alg-confusion vs fuzz-target | deferred — TTY/environment-gated |
-
-Acknowledged and deferred at v5.3 milestone close (2026-05-25) — all are live-endpoint deliveries (network sends are unit-tested with mocked transports); tracked per-phase in `*-HUMAN-UAT.md`:
-
-| Category | Item | Status |
-|----------|------|--------|
 | human-UAT (101) | Slack / email / generic-webhook live delivery + end-to-end scheduler dispatch (4 scenarios) | deferred — needs live Slack/SMTP/webhook endpoints |
 | human-UAT (102) | Login form render, wrong/correct token flow, Sign out, mid-session 401 logout, auth-disabled passthrough, live token CLI (7 scenarios) | deferred — needs running dashboard in a browser |
 | human-UAT (103) | Live syslog/CEF delivery to a real SIEM + after-scan SIEM hook (2 scenarios) | deferred — needs a syslog-ingesting platform |
 | human-UAT (104) | Live Jira issue creation + dedup, missing-extra skip, self-hosted token_auth (4 scenarios) | deferred — needs a real Jira instance |
 | human-UAT (105) | Live ServiceNow incident creation + work_notes dedup (2 scenarios) | deferred — needs a real ServiceNow instance |
-| tech-debt (105) | Extract duplicated `_NoRedirectHandler` (webhook.py + servicenow.py) to `quirk/util/no_redirect.py` | LOW — design-documented (T-105-04), no runtime impact |
 
 ## Session Continuity
 
-Last session: 2026-05-25T13:09:56.616Z
-Stopped at: Completed 104-02-PLAN.md
+Last session: 2026-05-25
+Stopped at: Roadmap created for v5.4
 Resume file: None
-Next: `/gsd:plan-phase 101`
+Next: `/gsd:plan-phase 106`
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan Phase 106 with `/gsd:plan-phase 106`
