@@ -70,7 +70,12 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
   2. The dashboard accepts `X-API-Key: <token>` as an alternative to `Authorization: Bearer <token>` on all protected routes, and a CI test confirms no data-returning route is unprotected
   3. An unauthenticated browser opening the dashboard sees a login form rather than a silent 401 — after entering the correct token the full dashboard loads
   4. The score totals, band, and subscore breakdowns in the CLI executive markdown are numerically identical to the HTML and PDF report for the same scan
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 102-01-PLAN.md — AUTH-01 token CLI (generate/rotate/show) + YAML write-back
+- [ ] 102-02-PLAN.md — AUTH-02 X-API-Key auth extension + route-coverage CI gate
+- [ ] 102-03-PLAN.md — TRANS-04 CLI executive score sourced from exec_content + parity test
+- [ ] 102-04-PLAN.md — AUTH-03 React login form, AuthProvider, Sign out + statics rebuild
+- [ ] 102-05-PLAN.md — Docs (configuration.md) + UAT-SERIES.md + Obsidian phase note sync
 **UI hint**: yes
 
 ### Phase 103: SIEM Export
