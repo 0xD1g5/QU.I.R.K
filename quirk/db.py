@@ -355,6 +355,17 @@ def _ensure_scan_checkpoints_table(engine) -> None:
     Base.metadata.create_all(engine, checkfirst=True)
 
 
+def _ensure_integration_deliveries_table(engine) -> None:
+    """Phase 101 NOTIFY-07: create integration_deliveries table if absent (idempotent).
+
+    IntegrationDelivery is registered on Base.metadata via import of quirk.models.
+    Uses Base.metadata.create_all with checkfirst=True — same pattern as
+    _ensure_scheduled_tables. New table only — not new columns — so create_all is correct.
+    Shared primitive for Phases 103 (SIEM), 104 (Jira), 105 (ServiceNow).
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -389,6 +400,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_scheduled_tables(engine)     # Phase 63 — SCHED-01
     _ensure_scan_jobs_table(engine)      # Phase 65 — UI-SCAN-01
     _ensure_scan_checkpoints_table(engine)  # Phase 67 — RESUME-01
+    _ensure_integration_deliveries_table(engine)  # Phase 101 — NOTIFY-07
     return engine
 
 
