@@ -134,6 +134,24 @@ class TestSendSyslogRawTCP:
             f"Expected TCP payload to start with b'<12>', got: {server.captured[0][:10]!r}"
         )
 
+    def test_send_cef_tcp_ends_with_lf(self):
+        """CR-02: TCP payload ends with LF (RFC 6587 non-transparent framing)."""
+        from quirk.siem.transport import send_syslog_raw
+
+        server = _TCPCapture("127.0.0.1", 0)
+        port = server.server_address[1]
+        t = threading.Thread(target=server.handle_request, daemon=True)
+        t.start()
+
+        send_syslog_raw("CEF:0|QUIRK|scanner|1.0.0|test|Test|5|dhost=localhost", "127.0.0.1", port, "tcp")
+
+        t.join(timeout=3)
+        assert server.captured, "No TCP data received"
+        assert server.captured[0].endswith(b"\n"), (
+            f"TCP payload must end with LF (RFC 6587 non-transparent framing). "
+            f"Got tail: {server.captured[0][-4:]!r}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Tests — Unreachable endpoint raises OSError

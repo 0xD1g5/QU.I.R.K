@@ -71,7 +71,11 @@ def send_syslog_raw(
         sock.settimeout(timeout)
         if socktype == socket.SOCK_STREAM:
             sock.connect((host, port))
-            sock.sendall(payload)
+            # RFC 6587 section 3.4.2: Non-Transparent-Framing — append LF so
+            # the TCP receiver can determine message boundaries.  Without this
+            # delimiter, most syslog daemons (rsyslog, syslog-ng, Splunk) either
+            # buffer indefinitely or concatenate successive sends into one blob.
+            sock.sendall(payload + b"\n")
         else:
             sock.sendto(payload, (host, port))
 
