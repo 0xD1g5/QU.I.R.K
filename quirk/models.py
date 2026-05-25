@@ -92,6 +92,12 @@ class CryptoEndpoint(Base):
     # ==========================
     chain_verified = Column(Boolean, nullable=True)  # TLS-FIND-06: True/False/None per D-01
 
+    # ==========================
+    # Distributed sensor fields (Phase 107 MODEL-01)
+    # ==========================
+    sensor_id = Column(String(255), nullable=True)   # NULL = implicit local sensor; NO FK (D-03)
+    segment   = Column(String(255), nullable=True)
+
 
 class QRAMMSession(Base):
     """QRAMM assessment session (Phase 51 — QRAMM-01).
@@ -258,3 +264,72 @@ class IntegrationDelivery(Base):
     status        = Column(String(16), nullable=False)              # "ok" | "failed"
     attempted_at  = Column(DateTime,   nullable=False)
     error_summary = Column(Text,       nullable=True)               # safe_str(exc) — never raw exc
+
+
+class Sensor(Base):
+    """Distributed sensor registration record (Phase 107 — MODEL-02).
+
+    One row per enrolled remote sensor. sensor_id is a UUID generated at
+    enrollment time (Phase 108). last_push_at is updated on each accepted push
+    (Phase 109). expected_cadence_minutes is set at enrollment and used by the
+    console to detect silent sensors.
+
+    No relationship() declarations — project uses plain Column style exclusively.
+    """
+
+    __tablename__ = "sensors"
+
+    sensor_id                = Column(String(36), primary_key=True)        # UUID4 minted at enrollment
+    segment                  = Column(String(255), nullable=False)          # network segment label
+    engagement               = Column(String(255), nullable=True)           # optional engagement tag
+    enrolled_at              = Column(DateTime,    nullable=False)           # enrollment timestamp
+    last_push_at             = Column(DateTime,    nullable=True)            # None until first push
+    expected_cadence_minutes = Column(Integer,     nullable=False)           # heartbeat interval
+    sensor_version           = Column(String(255), nullable=True)            # sensor software version
+
+
+class SensorToken(Base):
+    """One-time enrollment token hash for a sensor (Phase 107 — MODEL-03).
+
+    Stores only the SHA-256 hex digest of the raw token; the raw token is
+    printed once at enrollment time and never persisted (Phase 108 / D-02).
+    token_hash is 64 characters — the exact hex width of SHA-256.
+
+    sensor_id FK uses ON DELETE CASCADE (D-04): token records are removed
+    automatically when the parent sensor is deleted (re-enrollment mints a
+    fresh sensor_id).
+    """
+
+    __tablename__ = "sensor_tokens"
+
+    id         = Column(Integer,     primary_key=True, autoincrement=True)
+    sensor_id  = Column(
+        String(36),
+        ForeignKey("sensors.sensor_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token_hash = Column(String(64),  nullable=False, unique=True)  # SHA-256 hex; raw token never stored
+    created_at = Column(DateTime,    nullable=False)
+
+
+class SensorPush(Base):
+    """Accepted push deduplication record (Phase 107 — MODEL-04).
+
+    One row per accepted payload_id. payload_id is unique (D-07): the ingestion
+    endpoint (Phase 109) returns 409 Conflict on a duplicate payload_id.
+    Rows are retained indefinitely in v5.4 (no TTL/cleanup job — D-10).
+
+    sensor_id FK uses ON DELETE CASCADE (D-04): push records are removed
+    automatically when the parent sensor is deleted.
+    """
+
+    __tablename__ = "sensor_pushes"
+
+    id          = Column(Integer,    primary_key=True, autoincrement=True)
+    payload_id  = Column(String(64), nullable=False, unique=True)   # unique → 409 dedup in Phase 109
+    sensor_id   = Column(
+        String(36),
+        ForeignKey("sensors.sensor_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    received_at = Column(DateTime,   nullable=False)
