@@ -39,7 +39,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] **Phase 101: Notification Fan-Out + Security Foundation** — Drift-event delivery (Slack, email, webhook) wired into the scheduler seam, plus all integration security primitives inherited by every downstream phase (completed 2026-05-25)
 - [x] **Phase 102: Dashboard Auth UX + Score Tax** — X-API-Key header support, token generate/rotate CLI, React login form, and CLI exec-score sourced from shared content model (completed 2026-05-25)
 - [x] **Phase 103: SIEM Export** — Per-scan per-finding batch push to syslog/CEF (vendor-neutral) and Splunk HEC, zero new pip deps (completed 2026-05-25)
-- [ ] **Phase 104: Jira Ticketing** — Per-finding Jira issue creation with shared ticketing abstraction, SHA256 fingerprint dedup, and QRAMM evidence in descriptions
+- [x] **Phase 104: Jira Ticketing** — Per-finding Jira issue creation with shared ticketing abstraction, SHA256 fingerprint dedup, and QRAMM evidence in descriptions (completed 2026-05-25)
 - [ ] **Phase 105: ServiceNow Ticketing** — ServiceNow incident/record creation reusing the Phase 104 ticketing abstraction and dedup infrastructure
 
 ## Phase Details
@@ -105,7 +105,7 @@ Plans:
   - [x] 104-01-PLAN.md — TicketingChannel ABC + config + fingerprint/evidence/audit (TICKET-04/03)
   - [x] 104-02-PLAN.md — JiraChannel backend + JQL label dedup (TICKET-01/03)
   - [x] 104-03-PLAN.md — `quirk ticket create` CLI + [tickets] extra + run_scan wiring + CI guard (TICKET-01/03)
-  - [ ] 104-04-PLAN.md — docs + UAT-SERIES sync/commit + Obsidian phase note (TICKET-01/03/04)
+  - [x] 104-04-PLAN.md — docs + UAT-SERIES sync/commit + Obsidian phase note (TICKET-01/03/04)
 
 ### Phase 105: ServiceNow Ticketing
 **Goal**: A security team using ServiceNow can auto-create incidents per finding via the same ticketing abstraction and dedup logic established in Phase 104 — no parallel code path
@@ -124,5 +124,5 @@ Plans:
 | 101. Notification Fan-Out + Security Foundation | 4/4 | Complete   | 2026-05-25 |
 | 102. Dashboard Auth UX + Score Tax | 5/5 | Complete   | 2026-05-25 |
 | 103. SIEM Export | 4/4 | Complete   | 2026-05-25 |
-| 104. Jira Ticketing | 3/4 | In Progress|  |
+| 104. Jira Ticketing | 4/4 | Complete   | 2026-05-25 |
 | 105. ServiceNow Ticketing | 0/TBD | Not started | - |
