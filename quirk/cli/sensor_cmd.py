@@ -521,18 +521,70 @@ def _cmd_push(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
-# SENSOR-04 stub: export-results (Plan 03 will implement)
+# SENSOR-04: export-results — air-gap .qpush file
 # ---------------------------------------------------------------------------
 
 
 def _cmd_export_results(args: argparse.Namespace) -> None:
-    """Export results to .qpush file (stub — Plan 03 implements full logic).
+    """Export scan results to a .qpush file for air-gap transfer (SENSOR-04).
 
-    The full implementation MUST reuse _build_envelope and _build_compressed_payload
-    byte-for-byte so the air-gap export is identical to the HTTPS push payload.
+    Reuses _build_envelope and _build_compressed_payload BYTE-FOR-BYTE so the
+    .qpush body is identical to an HTTPS push request body.  No network I/O —
+    no httpx, no validate_external_url call.
+
+    Output file: {output}/{sensor_id}-{payload_id}.qpush
+    The file body contains ONLY the compressed payload bytes (same bytes as the
+    HTTPS push body).  The HMAC signature travels in the push header for HTTPS;
+    for air-gap, Phase 109 import-results will verify using the stored hmac_key.
     """
-    print(
-        "quirk sensor export-results: not yet implemented (Phase 108 Plan 03)",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    config_path: str = args.config or _default_sensor_yaml_path()
+
+    # Read sensor.yaml
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            sensor_cfg = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        print(f"ERROR: sensor.yaml not found: {config_path}", file=sys.stderr)
+        print("Run 'quirk sensor enroll' first.", file=sys.stderr)
+        sys.exit(1)
+
+    sensor_id: str = sensor_cfg.get("sensor_id", "")
+    scan_config: str = args.scan_config
+
+    # Run local scan in a temp output dir
+    output_dir_path = Path(tempfile.mkdtemp())
+    try:
+        rc = _run_local_scan(scan_config, output_dir_path)
+        if rc != 0:
+            print(f"WARNING: local scan exited with code {rc}", file=sys.stderr)
+
+        # Read scan endpoints from DB
+        db_files = list(output_dir_path.rglob("*.db"))
+        if db_files:
+            endpoints = _read_scan_endpoints(str(db_files[0]))
+        else:
+            endpoints = []
+
+        # Build canonical wire envelope — SAME helpers as push (byte-identity invariant)
+        envelope = _build_envelope(sensor_cfg, endpoints)
+        payload_id = envelope["payload_id"]
+
+        # Compress — SAME helper as push (byte-identity invariant)
+        body = _build_compressed_payload(envelope)
+
+        # Write to output file: {sensor_id}-{payload_id}.qpush
+        output_path = Path(args.output)
+        output_path.mkdir(parents=True, exist_ok=True)
+        dest = output_path / f"{sensor_id}-{payload_id}.qpush"
+        dest.write_bytes(body)
+
+        print(str(dest), flush=True)
+        print(
+            f"Exported {len(endpoints)} finding(s) to: {dest}",
+            file=sys.stderr,
+        )
+    finally:
+        import shutil
+        shutil.rmtree(output_dir_path, ignore_errors=True)
+
+    sys.exit(0)
