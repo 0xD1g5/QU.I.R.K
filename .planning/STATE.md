@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.4
 milestone_name: — Distributed On-Prem Scanner Architecture
 status: planning
-stopped_at: Phase 107 context gathered
-last_updated: "2026-05-25T21:48:05.672Z"
+stopped_at: Phase 108 Plan 02 complete
+last_updated: "2026-05-25T22:30:00.000Z"
 last_activity: 2026-05-25
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 8
-  completed_plans: 5
-  percent: 29
+  completed_plans: 7
+  percent: 32
 ---
 
 # Project State
@@ -26,19 +26,21 @@ See: .planning/PROJECT.md (updated 2026-05-25)
 ## Current Position
 
 Phase: 108
-Plan: Not started
-Status: Ready to plan
+Plan: 02 (complete)
+Status: In progress — Plan 03 next
 Last activity: 2026-05-25
 
 ```
-v5.4 Progress: [          ] 0/7 phases | 0% complete
+v5.4 Progress: [=         ] 2/7 phases | 32% plans complete
 ```
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4 (v5.4 not started)
+- Total plans completed: 7 (v5.4: 108-01, 108-02 + Phase 107 P01/P02)
+- Phase 108 P02: 3 tasks, 5 files, ~40 min
+- Phase 108 P01: 3 tasks, 7 files, ~25 min
 - Prior milestone (v5.3): 20 plans across 5 phases
 - Prior milestone (v5.2): 12 plans across 4 phases
 
@@ -60,6 +62,9 @@ v5.4 Progress: [          ] 0/7 phases | 0% complete
 - v5.4-D-10: The Windows chaos lab cannot validate Windows sensor correctness (Linux containers only); Windows validation is owned exclusively by the `windows-latest` CI smoke job in Phase 108
 - 108-01-D-01: STAB-02 shipped — _NoRedirectHandler single-sourced in quirk/util/no_redirect.py; webhook.py and servicenow.py import from there
 - 108-01-D-02: SENSOR-05 scheduler fix — added --scan-config arg to separate YAML config from SQLite DB path; scheduler output anchored to cfg.output.directory when --scan-config provided
+- 108-02-D-01: _is_retryable includes httpx.HTTPStatusError so 5xx responses trigger tenacity retry; ConnectError/TimeoutException for network failures
+- 108-02-D-02: _spool_payload calls os.makedirs on spool dir after _spool_dir() to handle monkeypatched test dirs
+- 108-02-D-03: _build_envelope and _build_compressed_payload are the canonical serializers — Plan 03 export-results MUST reuse them byte-for-byte
 
 ### Pending Todos
 
@@ -98,11 +103,11 @@ Carried forward from v5.3 close (2026-05-25):
 
 ## Session Continuity
 
-Last session: 2026-05-25T21:47:53.505Z
-Stopped at: Phase 108 Plan 01 complete
+Last session: 2026-05-25T22:30:00.000Z
+Stopped at: Phase 108 Plan 02 complete
 Resume file: None
-Next: Phase 108 Plan 02 (sensor runtime)
+Next: Phase 108 Plan 03 (export-results / air-gap)
 
 ## Operator Next Steps
 
-- Plan Phase 106 with `/gsd:plan-phase 106`
+- Continue Phase 108 with Plan 03 (export-results air-gap file + console import stub)
