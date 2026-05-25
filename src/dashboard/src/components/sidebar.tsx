@@ -16,12 +16,15 @@ import {
   Calendar,
   Scan,
   History,
+  LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ScanSelector } from "@/components/ScanSelector"
+import { useAuth } from "@/context/AuthProvider"
 
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },
@@ -41,6 +44,7 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   return (
     <aside
@@ -120,6 +124,35 @@ export function Sidebar() {
       {/* Theme toggle at bottom */}
       <div className="px-2 py-4 border-t border-border">
         <ModeToggle />
+      </div>
+
+      {/* Sign out control — below ModeToggle, pushed to bottom */}
+      <Separator />
+      <div className="px-2 py-2">
+        {/* Collapsed (icon-only) state: icon Button with tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={logout}
+              aria-label="Sign out"
+              className="w-full lg:hidden"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="lg:hidden">Sign out</TooltipContent>
+        </Tooltip>
+        {/* Expanded state: full-width ghost button with icon + label */}
+        <Button
+          variant="ghost"
+          onClick={logout}
+          className="w-full justify-start gap-2 hidden lg:flex"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </Button>
       </div>
     </aside>
   )
