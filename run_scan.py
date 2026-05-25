@@ -499,6 +499,12 @@ def main():
         run_export(_sys.argv[2:])
         return
 
+    # --- ticket subcommand: intercept before scan argparse (Phase 104 TICKET-01) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "ticket":
+        from quirk.cli.ticket_cmd import run_ticket
+        run_ticket(_sys.argv[2:])
+        return
+
     # --- errors subcommand: intercept before scan argparse (Phase 68 UX-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "errors":
         from quirk.cli.errors_cmd import run_errors
