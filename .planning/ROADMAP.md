@@ -81,7 +81,10 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
   4. A `sensor_tokens` table exists storing SHA-256 hashes of per-sensor enrollment tokens (raw token never persisted)
   5. A `sensor_pushes` dedup table exists storing accepted `payload_id`s with `sensor_id` and `received_at`
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+- [ ] 107-01-PLAN.md — ORM models (Sensor/SensorToken/SensorPush) + sensor_id/segment columns on CryptoEndpoint; _V54_SENSOR_COLUMNS in _ADDITIVE_MIGRATIONS + CREATE INDEX step in init_db
+- [ ] 107-02-PLAN.md — Backward-compat regression (pre-v5.4 DB migrates, no data loss, score-stable), CASCADE-delete proof, allowlist poison-tuple, smoke-test update
 
 ### Phase 108: Sensor Push CLI + Windows CI
 
@@ -166,7 +169,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 106. Architecture Documentation | 2/2 | Complete    | 2026-05-25 |
-| 107. Distributed Data Model | 0/? | Not started | - |
+| 107. Distributed Data Model | 0/2 | Planned     | - |
 | 108. Sensor Push CLI + Windows CI | 0/? | Not started | - |
 | 109. Console Ingestion API | 0/? | Not started | - |
 | 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
