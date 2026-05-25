@@ -597,7 +597,7 @@ ticketing:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Extra gate message for `--backend servicenow`**
    - What we know: Current gate says "Jira ticketing skipped" even for `--backend servicenow`.
