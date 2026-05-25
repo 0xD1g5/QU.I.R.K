@@ -136,34 +136,52 @@ def run_ticket(argv: list[str]) -> None:
         )
         sys.exit(2)
 
-    # --- Dispatch findings through selected backend ---
-    try:
-        from quirk.db import get_session  # noqa: PLC0415
-        import os  # noqa: PLC0415
+    # --- Construct the backend channel (separate from dispatch — WR-02) ---
+    # Channel construction is isolated so that ValueError (SSRF), ImportError, or other
+    # init errors produce a clearly-labelled message, not "audit-row persistence failed".
+    import os  # noqa: PLC0415
 
-        db_path = os.environ.get("QUIRK_DB_PATH") or "quirk.db"
-        scan_id = Path(findings_path).stem[:64]  # drop .json, cap at String(64) (WR-03)
+    db_path = os.environ.get("QUIRK_DB_PATH") or "quirk.db"
+    scan_id = Path(findings_path).stem[:64]  # drop .json, cap at String(64) (WR-03)
 
-        if args.backend == "servicenow":
-            if cfg.servicenow is None:
-                print(
-                    "ERROR: [ticketing.servicenow] block not configured. "
-                    "Add a servicenow sub-block to QUIRK_CONFIG_PATH.",
-                    file=sys.stderr,
-                )
-                sys.exit(2)
+    if args.backend == "servicenow":
+        if cfg.servicenow is None:
+            print(
+                "ERROR: [ticketing.servicenow] block not configured. "
+                "Add a servicenow sub-block to QUIRK_CONFIG_PATH.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        try:
             from quirk.ticketing.servicenow import ServiceNowChannel  # noqa: PLC0415
             channel = ServiceNowChannel(cfg.servicenow)
-        else:  # default: jira
-            if cfg.jira is None:
-                print(
-                    "ERROR: [ticketing.jira] block not configured. "
-                    "Add a jira sub-block to QUIRK_CONFIG_PATH.",
-                    file=sys.stderr,
-                )
-                sys.exit(2)
+        except (ValueError, ImportError) as exc:
+            print(
+                f"ERROR: ticketing backend init failed: {safe_str(exc)}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+    else:  # default: jira
+        if cfg.jira is None:
+            print(
+                "ERROR: [ticketing.jira] block not configured. "
+                "Add a jira sub-block to QUIRK_CONFIG_PATH.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        try:
             from quirk.ticketing.jira import JiraChannel  # noqa: PLC0415
             channel = JiraChannel(cfg.jira)
+        except (ValueError, ImportError) as exc:
+            print(
+                f"ERROR: ticketing backend init failed: {safe_str(exc)}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+    # --- Dispatch findings through the constructed channel ---
+    try:
+        from quirk.db import get_session  # noqa: PLC0415
 
         with get_session(db_path) as db:
             for finding in findings:
@@ -173,14 +191,12 @@ def run_ticket(argv: list[str]) -> None:
     except SystemExit:
         raise
     except Exception as exc:
-        # Distinguish audit-row persistence failure (DB error after dispatch loop)
-        # from ticket delivery failure (caught per-finding inside dispatch_finding).
+        # Catches DB-level failures after channel construction and dispatch.
         # If this path is reached, all per-finding audit rows may have been rolled
         # back by get_session — no audit records were persisted (WR-04).
         err_msg = safe_str(exc)
         print(
-            f"ERROR: ticket command failed — audit-row persistence failed, "
-            f"no audit records were saved: {err_msg}",
+            f"ERROR: audit-row persistence failed, no audit records were saved: {err_msg}",
             file=sys.stderr,
         )
         sys.exit(2)
