@@ -1,21 +1,20 @@
 /**
  * Shared fetch wrapper — Phase 58 / HARDEN-API-01 / D-08.
+ * Updated Phase 102 / AUTH-03: localStorage token source + X-API-Key header + 401 handler.
  *
  * Single enforcement point for:
  *   - X-Quirk-Request: 1 (CSRF header — injected on every call)
  *   - Content-Type: application/json (injected on mutating calls if not set)
- *   - Authorization: Bearer {token} (injected when token is configured)
+ *   - X-API-Key: {token} (injected when token is configured — AUTH-03)
  *
  * All components MUST call fetchApi() instead of fetch() directly.
- * The token is resolved from window.__QUIRK_CONFIG__.apiToken at call time.
+ * The token is resolved from localStorage.getItem("quirk_api_token") at call time.
  * fetchApi() does NOT accept a token parameter — prevents token scatter (D-08).
  */
 
 declare global {
   interface Window {
-    __QUIRK_CONFIG__?: {
-      apiToken?: string
-    }
+    __QUIRK_CONFIG__?: Record<string, unknown>
   }
 }
 
@@ -23,15 +22,26 @@ const CSRF_HEADER = "X-Quirk-Request"
 const _MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"])
 
 /**
- * Resolve API token from runtime config.
- * Priority: window.__QUIRK_CONFIG__.apiToken -> "" (auth disabled).
+ * Resolve API token from localStorage.
+ * Falls back to "" in SSR/test environments where localStorage is unavailable.
  */
 function _resolveToken(): string {
   try {
-    return window.__QUIRK_CONFIG__?.apiToken ?? ""
+    return localStorage.getItem("quirk_api_token") ?? ""
   } catch {
     return ""
   }
+}
+
+/**
+ * Module-level registration for a 401 callback.
+ * AuthProvider registers logout() here on mount and unregisters on unmount.
+ * This avoids importing AuthContext into api.ts (no circular dependency).
+ */
+let _onUnauthorized: (() => void) | null = null
+
+export function setUnauthorizedHandler(fn: (() => void) | null): void {
+  _onUnauthorized = fn
 }
 
 /**
@@ -43,7 +53,7 @@ function _resolveToken(): string {
  */
 export async function fetchApi(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const method = ((options.method ?? "GET") as string).toUpperCase()
   const isMutating = _MUTATING_METHODS.has(method)
@@ -63,11 +73,18 @@ export async function fetchApi(
     headers["Content-Type"] = "application/json"
   }
 
-  // Authorization — set when token is configured
+  // X-API-Key — set when token is configured (AUTH-03: localStorage source)
   const token = _resolveToken()
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`
+    headers["X-API-Key"] = token
   }
 
-  return fetch(path, { ...options, headers })
+  const response = await fetch(path, { ...options, headers })
+
+  // Mid-session 401 handling: only fire when a token was sent (preserves auth-disabled passthrough)
+  if (response.status === 401 && token && _onUnauthorized) {
+    _onUnauthorized()
+  }
+
+  return response
 }
