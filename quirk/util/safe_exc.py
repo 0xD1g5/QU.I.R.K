@@ -44,8 +44,11 @@ _SENSITIVE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     # Phase 101 ISEC-02: SMTP connection strings with embedded credentials
     re.compile(r"smtps?://[^:@\s]+:[^@\s]+@"),
     # Phase 104 ISEC-02: Jira/generic auth tuple repr — catches short PATs that
-    # bypass the 40-char base64 pattern (e.g. basic_auth=('user', 'shortpat')).
-    re.compile(r"(basic_auth|token_auth)\s*=\s*[\('\"]\S+", re.IGNORECASE),
+    # bypass the 40-char base64 pattern (e.g. basic_auth=('user', 'shortpat'),
+    # token_auth='shortpat'). Requires a QUOTE as the first inner character so a
+    # variable-reference repr (basic_auth=(user, token)) is NOT over-redacted —
+    # only credential literals are scrubbed. Consumes through to the closing paren.
+    re.compile(r"(basic_auth|token_auth)\s*=\s*\(?\s*['\"][^)\n]*", re.IGNORECASE),
 )
 
 
