@@ -367,3 +367,62 @@ def test_credentials_not_in_logs(
     assert fake_creds_b64 not in row.error_summary, (
         f"Credential leaked into error_summary: {row.error_summary!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# CR-01 regression: table name validation rejects injection strings
+# ---------------------------------------------------------------------------
+
+
+def test_table_path_traversal_rejected() -> None:
+    """table value with path traversal (../../) must be rejected by _parse_servicenow_cfg (CR-01)."""
+    from quirk.ticketing.config import _parse_servicenow_cfg  # noqa: PLC0415
+
+    raw = {
+        "instance_url": "https://myco.service-now.com",
+        "user_env": "U",
+        "password_env": "P",
+        "table": "incident/../../admin",
+    }
+    assert _parse_servicenow_cfg(raw) is None, "path traversal table must be rejected"
+
+
+def test_table_query_injection_rejected() -> None:
+    """table value with query injection (?) must be rejected by _parse_servicenow_cfg (CR-01)."""
+    from quirk.ticketing.config import _parse_servicenow_cfg  # noqa: PLC0415
+
+    raw = {
+        "instance_url": "https://myco.service-now.com",
+        "user_env": "U",
+        "password_env": "P",
+        "table": "incident?sysparm_query=active=true",
+    }
+    assert _parse_servicenow_cfg(raw) is None, "query-injection table must be rejected"
+
+
+def test_table_uppercase_rejected() -> None:
+    """table value with uppercase letters must be rejected by _parse_servicenow_cfg (CR-01)."""
+    from quirk.ticketing.config import _parse_servicenow_cfg  # noqa: PLC0415
+
+    raw = {
+        "instance_url": "https://myco.service-now.com",
+        "user_env": "U",
+        "password_env": "P",
+        "table": "Incident",
+    }
+    assert _parse_servicenow_cfg(raw) is None, "uppercase table name must be rejected"
+
+
+def test_table_valid_custom_accepted() -> None:
+    """Valid lowercase_underscore table name is accepted by _parse_servicenow_cfg (CR-01)."""
+    from quirk.ticketing.config import _parse_servicenow_cfg  # noqa: PLC0415
+
+    raw = {
+        "instance_url": "https://myco.service-now.com",
+        "user_env": "U",
+        "password_env": "P",
+        "table": "u_quirk_findings",
+    }
+    result = _parse_servicenow_cfg(raw)
+    assert result is not None, "valid custom table name must be accepted"
+    assert result.table == "u_quirk_findings"

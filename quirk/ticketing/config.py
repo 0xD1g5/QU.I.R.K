@@ -20,6 +20,10 @@ _PROJECT_KEY_RE = _re.compile(r"^[A-Z][A-Z0-9]{1,99}$")
 # Allowed auth_mode values — any other value is a misconfiguration (WR-02).
 _VALID_AUTH_MODES = frozenset({"cloud", "server"})
 
+# ServiceNow table names: lowercase letter or underscore, then lowercase letters/digits/underscores.
+# 1-80 chars total. Prevents URL path injection via config-controlled table value (CR-01).
+_TABLE_NAME_RE = _re.compile(r"^[a-z_][a-z0-9_]{0,79}$")
+
 
 @dataclass
 class JiraTicketingCfg:
@@ -143,6 +147,7 @@ def _parse_servicenow_cfg(raw: dict) -> Optional[ServiceNowTicketingCfg]:
     Validation guards:
       - instance_url must start with https:// (cleartext Basic auth is a security failure).
       - user_env and password_env must be non-empty strings.
+      - table must match _TABLE_NAME_RE to prevent URL path injection (CR-01).
     """
     if not raw:
         return None
@@ -156,10 +161,14 @@ def _parse_servicenow_cfg(raw: dict) -> Optional[ServiceNowTicketingCfg]:
     password_env = str(raw.get("password_env", ""))
     if not user_env or not password_env:
         return None
+    table = str(raw.get("table", "incident"))
+    if not _TABLE_NAME_RE.match(table):
+        # path traversal (../../), query injection (?), uppercase, or other invalid chars
+        return None
     return ServiceNowTicketingCfg(
         instance_url=str(instance_url),
         user_env=user_env,
         password_env=password_env,
-        table=str(raw.get("table", "incident")),
+        table=table,
         allow_internal=bool(raw.get("allow_internal", False)),
     )
