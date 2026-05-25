@@ -30,6 +30,7 @@ import hashlib
 import hmac as _hmac
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -46,6 +47,15 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 import quirk
 from quirk.util.no_redirect import _NoRedirectHandler          # STAB-02 prerequisite
 from quirk.util.url_allowlist import validate_external_url
+
+# ---------------------------------------------------------------------------
+# UUID validation regex (CR-02: sensor_id from sensor.yaml used in filenames)
+# ---------------------------------------------------------------------------
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 
 # ---------------------------------------------------------------------------
 # Spool constants (T-108-07: bounded dir prevents DoS via disk fill)
@@ -374,15 +384,24 @@ def _evict_if_full(spool_dir: Path) -> None:
     """Evict oldest spool file(s) when max-file-count or max-total-bytes is exceeded.
 
     Emits a stderr warning per eviction so operators notice spool pressure.
+
+    WR-01: sizes are captured in a single stat pass during the initial sort so
+    a second stat() is never called after the loop starts.  unlink(missing_ok=True)
+    prevents FileNotFoundError if another process removes the file between the
+    glob and the unlink (the spool dir is in user_data_dir, accessible to any
+    process running as the same user).
     """
-    files = sorted(spool_dir.glob("*.json.zst"), key=lambda p: p.stat().st_mtime)
-    total_bytes = sum(f.stat().st_size for f in files)
+    files = sorted(
+        ((p, p.stat().st_size, p.stat().st_mtime) for p in spool_dir.glob("*.json.zst")),
+        key=lambda t: t[2],
+    )
+    total_bytes = sum(sz for _, sz, _ in files)
     while (len(files) >= _SPOOL_MAX_FILES or total_bytes > _SPOOL_MAX_BYTES) and files:
-        evicted = files.pop(0)
-        total_bytes -= evicted.stat().st_size
-        evicted.unlink()
+        path, size, _ = files.pop(0)
+        total_bytes -= size
+        path.unlink(missing_ok=True)
         print(
-            f"WARNING: spool full — evicted oldest payload: {evicted.name}",
+            f"WARNING: spool full — evicted oldest payload: {path.name}",
             file=sys.stderr,
         )
 
@@ -456,6 +475,22 @@ def _cmd_push(args: argparse.Namespace) -> None:
 
     push_url = console_url.rstrip("/") + "/api/sensor/push"
     hmac_key_hex: str = sensor_cfg.get("hmac_key", "")
+
+    # CR-03: validate hmac_key before use — bytes.fromhex("") raises ValueError
+    # which propagates as an unhandled traceback from _make_headers at line ~488.
+    if not hmac_key_hex or len(hmac_key_hex) != 64:
+        print(
+            "ERROR: sensor.yaml is missing or has invalid hmac_key (must be 64-char hex)",
+            file=sys.stderr,
+        )
+        print("Re-run 'quirk sensor enroll' to regenerate credentials.", file=sys.stderr)
+        sys.exit(1)
+    try:
+        bytes.fromhex(hmac_key_hex)
+    except ValueError:
+        print("ERROR: sensor.yaml hmac_key is not valid hex", file=sys.stderr)
+        sys.exit(1)
+
     api_token: str = sensor_cfg.get("console_api_token", "")
 
     # Run local scan in a temp output dir
@@ -554,6 +589,17 @@ def _cmd_export_results(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     sensor_id: str = sensor_cfg.get("sensor_id", "")
+
+    # CR-02: validate sensor_id is a well-formed UUID before using it in the
+    # output filename.  A tampered sensor.yaml with sensor_id: "../etc/evil"
+    # would otherwise write the .qpush file to an arbitrary path outside --output.
+    if not _UUID_RE.match(sensor_id):
+        print(
+            "ERROR: sensor.yaml contains an invalid sensor_id (must be UUID)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     scan_config: str = args.scan_config
 
     # Run local scan in a temp output dir
