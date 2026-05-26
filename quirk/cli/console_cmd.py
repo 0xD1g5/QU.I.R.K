@@ -47,6 +47,12 @@ logger = logging.getLogger(__name__)
 # 20 MB decompression cap — 2× the 10 MB HTTPS body limit (D-09, CR-01).
 # A .qpush file that expands beyond this is rejected; prevents zstd bomb attacks.
 _MAX_DECOMPRESS_BYTES = 20 * 1024 * 1024
+# C-layer zstd window cap. Must be a power of two — zstd rounds max_window_size
+# up to the next window-log exponent, so a non-power-of-two (e.g. 20 MB) would
+# silently become 32 MB. We set it explicitly to 32 MB (the next valid window
+# above the 20 MB application cap); the authoritative 20 MB limit is still
+# enforced by the post-read length check below (WR-01).
+_ZSTD_MAX_WINDOW = 32 * 1024 * 1024
 
 # Required envelope keys (subset that must be present for Phase 108 validation)
 _REQUIRED_ENVELOPE_KEYS = frozenset({
@@ -266,7 +272,7 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
     # WR-01: max_window_size enforces the cap at the C layer before Python allocates.
     # stream_reader().read(N+1) is a secondary Python-level check.
     try:
-        dctx = zstandard.ZstdDecompressor(max_window_size=_MAX_DECOMPRESS_BYTES)
+        dctx = zstandard.ZstdDecompressor(max_window_size=_ZSTD_MAX_WINDOW)
         raw = dctx.stream_reader(data).read(_MAX_DECOMPRESS_BYTES + 1)
         if len(raw) > _MAX_DECOMPRESS_BYTES:
             print(
