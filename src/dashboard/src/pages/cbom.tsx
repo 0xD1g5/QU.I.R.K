@@ -46,14 +46,24 @@ const QS_NODE_COLOR: Record<string, string> = {
 function CbomTable({ components }: { components: CbomComponent[] }) {
   const [qsFilter, setQsFilter] = useState<string>("all")
   const [search, setSearch] = useState("")
+  const [segmentFilter, setSegmentFilter] = useState("all")
+
+  // Derive sorted, deduped list of segments from CBOM components
+  const distinctSegments = useMemo(() => {
+    const segs = components
+      .map((c) => c.segment)
+      .filter((s): s is string => typeof s === "string" && s.length > 0)
+    return Array.from(new Set(segs)).sort()
+  }, [components])
 
   const filtered = useMemo(() => {
     return components.filter((c) => {
       const matchQs = qsFilter === "all" || c.quantum_safety === qsFilter
       const matchSearch = !search || c.algorithm.toLowerCase().includes(search.toLowerCase())
-      return matchQs && matchSearch
+      const matchSegment = segmentFilter === "all" || c.segment === segmentFilter
+      return matchQs && matchSearch && matchSegment
     })
-  }, [components, qsFilter, search])
+  }, [components, qsFilter, search, segmentFilter])
 
   if (!components.length) {
     return (
@@ -80,6 +90,17 @@ function CbomTable({ components }: { components: CbomComponent[] }) {
             <SelectItem value="At Risk">At Risk</SelectItem>
             <SelectItem value="Vulnerable">Vulnerable</SelectItem>
             <SelectItem value="Unknown">Unknown</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+          <SelectTrigger className="w-40 h-8 text-sm" aria-label="Filter by segment">
+            <SelectValue placeholder="All segments" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All segments</SelectItem>
+            {distinctSegments.map((seg) => (
+              <SelectItem key={seg} value={seg}>{seg}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
