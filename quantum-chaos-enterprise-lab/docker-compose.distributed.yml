@@ -1,0 +1,168 @@
+# QU.I.R.K. — Distributed Multi-Segment Chaos Lab
+#
+# Topology: two isolated bridge networks (segment-a, segment-b) + console-net.
+# Reproduces the same-host:port-in-two-segments scenario (MERGE-03) via a
+# shared Docker DNS alias `crypto.internal` — each segment's TLS target carries
+# the alias on its OWN network, so per-network DNS resolves `crypto.internal`
+# to each segment's own reachable target.  Both sensors scan `crypto.internal:443`
+# and therefore record identical host:port strings (differing only by sensor_id /
+# segment).
+#
+# LAB-02 linchpin (confirmed in-code):
+#   quirk/scanner/tls_scanner.py:188-189 — CryptoEndpoint(host=host, ...)
+#   quirk/scanner/tls_scanner.py:351-352 — fallback path, same pattern
+#   The scanner records the CONFIGURED host string verbatim, not a resolved IP.
+#
+# Network layout:
+#   segment-a  10.10.0.0/24  — tls-target-a + sensor-a
+#   segment-b  10.20.0.0/24  — tls-target-b + sensor-b
+#   console-net 10.30.0.0/24 — console (+ sensors for push connectivity)
+#
+# CHAOS-05: All image: keys are pinned; build-only services are exempt at the
+# compose level — FROM python:3.11.12-slim in sensor.Dockerfile covers them.
+#
+# Usage:
+#   ./lab.sh distributed up
+#   ./lab.sh distributed e2e
+#   ./lab.sh distributed down
+
+services:
+
+  # -----------------------------------------------------------------------
+  # TLS TARGET — Segment A
+  # Carries the crypto.internal alias on segment-a only.
+  # sensor-a (also on segment-a) resolves crypto.internal → this service.
+  # -----------------------------------------------------------------------
+  tls-target-a:
+    image: nginx:1.28.0
+    volumes:
+      - ./nginx/modern/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      segment-a:
+        ipv4_address: "10.10.0.10"
+        aliases:
+          - crypto.internal
+
+  # -----------------------------------------------------------------------
+  # TLS TARGET — Segment B
+  # Carries the crypto.internal alias on segment-b only.
+  # sensor-b (also on segment-b) resolves crypto.internal → this service.
+  # -----------------------------------------------------------------------
+  tls-target-b:
+    image: nginx:1.28.0
+    volumes:
+      - ./nginx/modern/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      segment-b:
+        ipv4_address: "10.20.0.10"
+        aliases:
+          - crypto.internal
+
+  # -----------------------------------------------------------------------
+  # SENSOR A — scans segment-a's crypto.internal target
+  # Joins segment-a (for DNS resolution + TLS scan) + console-net (for push).
+  # Does NOT join segment-b — intentional isolation.
+  # -----------------------------------------------------------------------
+  sensor-a:
+    build:
+      context: ../..
+      dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
+    command: ["sensor", "push", "--target", "crypto.internal:443", "--allow-self-signed"]
+    environment:
+      - QUIRK_SENSOR_SEGMENT=segment-a
+    volumes:
+      - sensor-a-data:/home/quirk
+    networks:
+      - segment-a
+      - console-net
+    depends_on:
+      tls-target-a:
+        condition: service_started
+      console:
+        condition: service_healthy
+
+  # -----------------------------------------------------------------------
+  # SENSOR B — scans segment-b's crypto.internal target
+  # Joins segment-b (for DNS resolution + TLS scan) + console-net (for push).
+  # Does NOT join segment-a — intentional isolation.
+  # -----------------------------------------------------------------------
+  sensor-b:
+    build:
+      context: ../..
+      dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
+    command: ["sensor", "push", "--target", "crypto.internal:443", "--allow-self-signed"]
+    environment:
+      - QUIRK_SENSOR_SEGMENT=segment-b
+    volumes:
+      - sensor-b-data:/home/quirk
+    networks:
+      - segment-b
+      - console-net
+    depends_on:
+      tls-target-b:
+        condition: service_started
+      console:
+        condition: service_healthy
+
+  # -----------------------------------------------------------------------
+  # CONSOLE — runs quirk serve, aggregates pushed findings
+  # Binds 0.0.0.0 (default is loopback — must override for container access).
+  # Joins console-net only; sensors push over console-net.
+  # Named volume console-data persists the SQLite DB across e2e steps.
+  # -----------------------------------------------------------------------
+  console:
+    build:
+      context: ../..
+      dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
+    command: ["serve", "--host", "0.0.0.0", "--port", "8512"]
+    volumes:
+      - console-data:/home/quirk
+    networks:
+      - console-net
+    ports:
+      - "8512:8512"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8512/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+# -----------------------------------------------------------------------
+# Networks — three distinct bridge networks (Docker enforces no overlap)
+# -----------------------------------------------------------------------
+networks:
+  segment-a:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.10.0.0/24"
+
+  segment-b:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.20.0.0/24"
+
+  console-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.30.0.0/24"
+
+# -----------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------
+volumes:
+  console-data:
+  sensor-a-data:
+  sensor-b-data:
