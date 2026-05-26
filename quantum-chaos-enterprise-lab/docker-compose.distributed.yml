@@ -68,19 +68,32 @@ services:
   # SENSOR A — scans segment-a's crypto.internal target
   # Joins segment-a (for DNS resolution + TLS scan) + console-net (for push).
   # Does NOT join segment-b — intentional isolation.
+  #
+  # The container idles so the e2e script drives the full workflow via
+  # `docker compose exec`:
+  #   1. quirk sensor enroll    (writes sensor.yaml with console URL + token)
+  #   2. quirk sensor push      (scans then pushes to console)
+  # sensor-config.yaml supplies the scan target (crypto.internal:443);
+  # `quirk sensor push` has no --target flag — the target comes from the
+  # scan config referenced by --scan-config.
+  # cap_add NET_RAW is required for nmap TCP/SYN scanning without root.
   # -----------------------------------------------------------------------
   sensor-a:
     build:
       context: ../..
       dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
-    command: ["sensor", "push", "--target", "crypto.internal:443", "--allow-self-signed"]
+    entrypoint: []
+    command: ["tail", "-f", "/dev/null"]
     environment:
       - QUIRK_SENSOR_SEGMENT=segment-a
     volumes:
       - sensor-a-data:/home/quirk
+      - ./sensor-config.yaml:/quirk/sensor-config.yaml:ro
     networks:
       - segment-a
       - console-net
+    cap_add:
+      - NET_RAW
     depends_on:
       tls-target-a:
         condition: service_started
@@ -91,19 +104,25 @@ services:
   # SENSOR B — scans segment-b's crypto.internal target
   # Joins segment-b (for DNS resolution + TLS scan) + console-net (for push).
   # Does NOT join segment-a — intentional isolation.
+  #
+  # Same idle-container approach as sensor-a (see above).
   # -----------------------------------------------------------------------
   sensor-b:
     build:
       context: ../..
       dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
-    command: ["sensor", "push", "--target", "crypto.internal:443", "--allow-self-signed"]
+    entrypoint: []
+    command: ["tail", "-f", "/dev/null"]
     environment:
       - QUIRK_SENSOR_SEGMENT=segment-b
     volumes:
       - sensor-b-data:/home/quirk
+      - ./sensor-config.yaml:/quirk/sensor-config.yaml:ro
     networks:
       - segment-b
       - console-net
+    cap_add:
+      - NET_RAW
     depends_on:
       tls-target-b:
         condition: service_started
@@ -128,7 +147,7 @@ services:
     ports:
       - "8512:8512"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8512/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8512/api/health"]
       interval: 5s
       timeout: 5s
       retries: 10
