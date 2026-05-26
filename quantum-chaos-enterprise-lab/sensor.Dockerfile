@@ -35,8 +35,18 @@ WORKDIR /quirk
 COPY . /quirk/
 RUN pip install --no-cache-dir ".[all]"
 
+# Run as a non-root user.
+# nmap TCP/SYN scanning requires raw socket access — this is granted via
+# cap_add: [NET_RAW] in docker-compose.distributed.yml instead of running
+# as root.  This keeps the blast radius minimal if the container is
+# compromised or if the image is inadvertently reused in a non-lab context.
+RUN useradd --create-home --shell /bin/bash quirk
+
+USER quirk
+WORKDIR /home/quirk
+
 # Default CMD is informative — compose overrides `command:` per service:
 #   console:  ["serve", "--host", "0.0.0.0", "--port", "8512"]
-#   sensor-*: ["sensor", "push"]
+#   sensor-*: idle (tail -f /dev/null); e2e script drives via docker compose exec
 ENTRYPOINT ["quirk"]
 CMD ["--help"]
