@@ -104,6 +104,7 @@ echo "--- Step 2: push (scan local target + push findings to console) ---"
 echo "  Configuring + pushing sensor-a..."
 ${DC} exec -T sensor-a \
   quirk sensor enroll "${CONSOLE_URL}" --segment segment-a \
+  --sensor-id sensor-a \
   --api-token "${CONSOLE_SHARED_TOKEN}" \
   --allow-internal-console
 ${DC} exec -T sensor-a \
@@ -113,6 +114,7 @@ echo "  sensor-a push complete."
 echo "  Configuring + pushing sensor-b..."
 ${DC} exec -T sensor-b \
   quirk sensor enroll "${CONSOLE_URL}" --segment segment-b \
+  --sensor-id sensor-b \
   --api-token "${CONSOLE_SHARED_TOKEN}" \
   --allow-internal-console
 ${DC} exec -T sensor-b \
