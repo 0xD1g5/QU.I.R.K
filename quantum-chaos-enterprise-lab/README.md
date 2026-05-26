@@ -50,6 +50,61 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | oqs-nginx | oqs-nginx | 39444 | [Expected Findings](expected_results_v4.md#profile-oqs-nginx) | v5.0 Phase 90 (PQC-01); digest-pinned openquantumsafe/nginx serving TLS 1.3 with X25519MLKEM768 hybrid key-exchange and ML-DSA-65 certificate. Agility ceiling anchor for D-04 before/after demo. Needs `--allow-internal-targets` for live scan (loopback bind). |
 | fuzz-target | fuzz-target | 20100 | [Expected Findings](expected_results_v4.md#profile-fuzz-target) | v5.1 (Phase 96 LAB-01); Deliberately-weak FastAPI REST service: no HSTS, http:// server URL in OpenAPI spec, /probe accepts forged HS256 JWT (alg-confusion target), /.well-known/jwks.json exposes RS256 public key. lab.sh ALL_PROFILES needs no edit — _derive_all_profiles discovers fuzz-target dynamically. |
 
+## Distributed Topology
+
+The distributed topology (`docker-compose.distributed.yml`) validates the v5.4 multi-segment
+distributed sensor architecture (MERGE-03). It is NOT a named profile in `docker-compose.yml`
+and does NOT appear in `ALL_PROFILES` — it is a structurally separate compose file with its
+own `lab.sh distributed` command arm.
+
+### Network Layout
+
+Three distinct bridge networks are used. Docker enforces that no two user-defined bridge
+networks may share a subnet on a single daemon, so each segment uses a distinct CIDR:
+
+| Network | Subnet | Purpose |
+|---------|--------|---------|
+| `segment-a` | `10.10.0.0/24` | Segment A — `tls-target-a` + `sensor-a` |
+| `segment-b` | `10.20.0.0/24` | Segment B — `tls-target-b` + `sensor-b` |
+| `console-net` | `10.30.0.0/24` | Console management — `console` + sensor push paths |
+
+Each TLS target carries the DNS alias `crypto.internal` on **its own segment network only**.
+Docker per-network embedded DNS means `sensor-a` (on segment-a) resolves `crypto.internal`
+to `tls-target-a`, and `sensor-b` (on segment-b) resolves it to `tls-target-b` — neither
+sensor can reach the other segment's target. Both sensors scan `crypto.internal:443` and
+record `host="crypto.internal"` verbatim (`tls_scanner.py:188-189`, `:351-352`), producing
+two distinct `CryptoEndpoint` rows in the merged CBOM differing only by `sensor_id`.
+
+### Commands
+
+```bash
+# Build images and start all distributed services
+./lab.sh distributed up
+
+# Run enroll→push→merge end-to-end orchestration
+./lab.sh distributed e2e
+
+# Stop and remove distributed containers
+./lab.sh distributed down
+
+# Show running distributed container status
+./lab.sh distributed status
+
+# Tail logs for a specific service
+./lab.sh distributed logs console
+./lab.sh distributed logs sensor-a
+./lab.sh distributed logs sensor-b
+```
+
+### Expected Findings
+
+See the full oracle (service table, E2E outcome, MERGE-03 rationale):
+[Expected Findings — Distributed Topology](expected_results_distributed.md#topology-distributed)
+
+The `ALL_PROFILES` sweep in `lab.sh all` is unaffected — it covers only `docker-compose.yml`.
+
+---
+
 ### Image Pin Policy
 
 All services in `docker-compose.yml` carry an explicit version tag because floating tags (`:latest`, `:8`, `:3`) are silently advanced by Docker Hub, which is exactly what broke four services at once and was discovered under Phase 999.83 / BACK-90.
