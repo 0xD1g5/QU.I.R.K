@@ -69,18 +69,16 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | _TBD (roadmap)_ | pending |
-| AUTH-02 | _TBD (roadmap)_ | pending |
-| AUTH-03 | _TBD (roadmap)_ | pending |
-| AUTH-04 | _TBD (roadmap)_ | pending |
-| AUTOMERGE-01 | _TBD (roadmap)_ | pending |
-| AUTOMERGE-02 | _TBD (roadmap)_ | pending |
-| AUTOMERGE-03 | _TBD (roadmap)_ | pending |
-| STAB-01 | _TBD (roadmap)_ | pending |
-| STAB-02 | _TBD (roadmap)_ | pending |
-| STAB-03 | _TBD (roadmap)_ | pending |
-| STAB-04 | _TBD (roadmap)_ | pending |
-| LAB-01 | _TBD (roadmap)_ | pending |
-| WINPKG-01 | _TBD (roadmap)_ | pending |
-
-*Traceability filled by the roadmapper — every requirement maps to exactly one phase.*
+| AUTH-01 | Phase 113 | pending |
+| AUTH-02 | Phase 113 | pending |
+| AUTH-03 | Phase 113 | pending |
+| AUTH-04 | Phase 113 | pending |
+| AUTOMERGE-01 | Phase 114 | pending |
+| AUTOMERGE-02 | Phase 114 | pending |
+| AUTOMERGE-03 | Phase 114 | pending |
+| STAB-01 | Phase 115 | pending |
+| STAB-02 | Phase 115 | pending |
+| STAB-03 | Phase 115 | pending |
+| STAB-04 | Phase 115 | pending |
+| LAB-01 | Phase 115 | pending |
+| WINPKG-01 | Phase 116 | pending |
