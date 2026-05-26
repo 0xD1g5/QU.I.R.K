@@ -43,7 +43,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] **Phase 107: Distributed Data Model** — Additive nullable columns + enrollment manifest + token + dedup tables; migration regression test; backward-compatible fixture (completed 2026-05-25)
 - [x] **Phase 108: Sensor Push CLI + Windows CI** — `quirk sensor enroll/push/export-results`; POSIX-ism audit; `platformdirs`; `tenacity` retry; `_NoRedirectHandler` extraction; `windows-latest` hard-gate CI smoke job (completed 2026-05-25)
 - [x] **Phase 109: Console Ingestion API** — `POST /api/sensor/push` with `require_auth`, body-size limit, payload-ID dedup, clock-skew window, delivery audit, `safe_str` coverage (completed 2026-05-26)
-- [ ] **Phase 110: Cross-Sensor Merge & Scoring** — `quirk/sensor/merge.py`; Option A union scoring; `coverage_warning` for offline sensors; CBOM `sensor_id` component identity; `quirk sensor merge` CLI
+- [x] **Phase 110: Cross-Sensor Merge & Scoring** — `quirk/sensor/merge.py`; Option A union scoring; `coverage_warning` for offline sensors; CBOM `sensor_id` component identity; `quirk sensor merge` CLI (completed 2026-05-26)
 - [ ] **Phase 111: Console Dashboard Awareness** — Sensor registry UI; per-segment filter on findings/CBOM/score APIs; per-segment score gauges; `coverage_warning` banner; `sensor_id`/`segment` Pydantic fields
 - [ ] **Phase 112: Distributed Chaos-Lab + Stabilization** — Multi-segment Docker topology; overlapping RFC1918 lab validation; `lab.sh`/README/oracle updates; operators-guide; dep hygiene; UAT-SERIES.md close-out
 
@@ -145,7 +145,7 @@ Plans:
 
 - [x] 110-01-PLAN.md — Sensor-aware CBOM identity: `_sensor_prefix(ep)` threaded through 4 bom_ref sites in builder.py + MERGE-03 two-segment regression & NULL backward-compat tests
 - [x] 110-02-PLAN.md — `merge_scan()` standalone callable (union query, Option A union scoring, coverage_warning) + MergeRun model + merge_runs table; source `scanned_at` preserved
-- [ ] 110-03-PLAN.md — `quirk sensor merge` CLI thin wrapper + CLI dispatch test + docs/UAT-SERIES.md update & Obsidian sync
+- [x] 110-03-PLAN.md — `quirk sensor merge` CLI thin wrapper + CLI dispatch test + docs/UAT-SERIES.md update & Obsidian sync
 
 ### Phase 111: Console Dashboard Awareness
 
@@ -186,6 +186,6 @@ Plans:
 | 107. Distributed Data Model | 2/2 | Complete    | 2026-05-25 |
 | 108. Sensor Push CLI + Windows CI | 4/4 | Complete   | 2026-05-25 |
 | 109. Console Ingestion API | 3/3 | Complete   | 2026-05-26 |
-| 110. Cross-Sensor Merge & Scoring | 2/3 | In Progress|  |
+| 110. Cross-Sensor Merge & Scoring | 3/3 | Complete   | 2026-05-26 |
 | 111. Console Dashboard Awareness | 0/? | Not started | - |
 | 112. Distributed Chaos-Lab + Stabilization | 0/? | Not started | - |
