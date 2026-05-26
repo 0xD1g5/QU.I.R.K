@@ -178,7 +178,12 @@ Plans:
   4. `docs/operators-guide.md` covers the full distributed workflow (enroll → push → merge) including Windows sensor installation steps; the all-configurations/settings coverage gap noted in backlog 999.59 is closed
   5. `docs/UAT-SERIES.md` is updated to cover all v5.4 phases (106–112) and dep hygiene is resolved
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 112-01-PLAN.md — Distributed lab topology: compose + sensor.Dockerfile + distributed-e2e.sh + lab.sh distributed arm + topology test (LAB-01/02/03)
+- [ ] 112-02-PLAN.md — expected_results_distributed.md oracle + chaos-lab README + operators-guide §8 (LAB-03/STAB-01)
+- [ ] 112-03-PLAN.md — datetime.utcnow fix + dep audit + UAT Series 112 + Obsidian sync + final phase note (STAB-03)
 
 ---
 
