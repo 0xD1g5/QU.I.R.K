@@ -43,27 +43,26 @@ const QS_NODE_COLOR: Record<string, string> = {
 
 // ── Table Tab ──────────────────────────────────────────────────────────────
 
-function CbomTable({ components }: { components: CbomComponent[] }) {
+interface CbomTableProps {
+  components: CbomComponent[]
+  // Segment filter is lifted to CbomPage so CbomGraph shares the same filtered
+  // data (IN-03: both tabs must respect the segment selection).
+  segmentFilter: string
+  setSegmentFilter: (v: string) => void
+  distinctSegments: string[]
+}
+
+function CbomTable({ components, segmentFilter, setSegmentFilter, distinctSegments }: CbomTableProps) {
   const [qsFilter, setQsFilter] = useState<string>("all")
   const [search, setSearch] = useState("")
-  const [segmentFilter, setSegmentFilter] = useState("all")
-
-  // Derive sorted, deduped list of segments from CBOM components
-  const distinctSegments = useMemo(() => {
-    const segs = components
-      .map((c) => c.segment)
-      .filter((s): s is string => typeof s === "string" && s.length > 0)
-    return Array.from(new Set(segs)).sort()
-  }, [components])
 
   const filtered = useMemo(() => {
     return components.filter((c) => {
       const matchQs = qsFilter === "all" || c.quantum_safety === qsFilter
       const matchSearch = !search || c.algorithm.toLowerCase().includes(search.toLowerCase())
-      const matchSegment = segmentFilter === "all" || c.segment === segmentFilter
-      return matchQs && matchSearch && matchSegment
+      return matchQs && matchSearch
     })
-  }, [components, qsFilter, search, segmentFilter])
+  }, [components, qsFilter, search])
 
   if (!components.length) {
     return (
@@ -445,6 +444,26 @@ export function CbomPage() {
   // Stabilize reference so CbomGraph's useEffect dep array doesn't trigger on every parent render
   const components = useMemo(() => data?.cbom_components ?? [], [data])
 
+  // Lift segment filter to page scope so BOTH the Table and Graph tabs share
+  // the same filtered dataset (IN-03: segment filter applies to the whole page,
+  // not just the table tab).
+  const [segmentFilter, setSegmentFilter] = useState("all")
+
+  const distinctSegments = useMemo(() => {
+    const segs = components
+      .map((c) => c.segment)
+      .filter((s): s is string => typeof s === "string" && s.length > 0)
+    return Array.from(new Set(segs)).sort()
+  }, [components])
+
+  const filteredComponents = useMemo(
+    () =>
+      segmentFilter === "all"
+        ? components
+        : components.filter((c) => c.segment === segmentFilter),
+    [components, segmentFilter],
+  )
+
   if (loading) return <CbomSkeleton />
 
   if (error) return <p className="text-muted-foreground text-sm">{error}</p>
@@ -458,10 +477,15 @@ export function CbomPage() {
           <TabsTrigger value="graph">Graph</TabsTrigger>
         </TabsList>
         <TabsContent value="table" className="mt-4">
-          <CbomTable components={components} />
+          <CbomTable
+            components={filteredComponents}
+            segmentFilter={segmentFilter}
+            setSegmentFilter={setSegmentFilter}
+            distinctSegments={distinctSegments}
+          />
         </TabsContent>
         <TabsContent value="graph" className="mt-4">
-          <CbomGraph components={components} />
+          <CbomGraph components={filteredComponents} />
         </TabsContent>
       </Tabs>
     </div>
