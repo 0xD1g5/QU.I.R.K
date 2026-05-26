@@ -200,8 +200,28 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
             print("ERROR: sensor_id already enrolled", file=sys.stderr)
             sys.exit(1)
 
-    # Print the raw token once to stdout — operator copies this to sensor.yaml
-    print(f"Bearer token (copy to sensor.yaml — shown once, never stored):\n{raw_token}")
+    # Print the raw enrollment token once to stdout.
+    #
+    # v5.4 SHARED-TOKEN MODEL — important operator guidance:
+    #   This token is a ONE-TIME ENROLLMENT token.  It is stored (as its SHA-256
+    #   hash) in the sensor_tokens table for provisioning/audit purposes ONLY.
+    #   It is NOT used to authenticate subsequent sensor pushes.
+    #
+    #   Sensor pushes to POST /api/sensor/push are authenticated by the
+    #   CONSOLE'S SHARED API TOKEN — the value of the QUIRK_API_TOKEN environment
+    #   variable (or security.api_token in config.yaml) on the console host.
+    #   Set that same shared token as console_api_token in sensor.yaml (or pass it
+    #   via `quirk sensor enroll --api-token <console-api-token>`).
+    #
+    #   Per-sensor token auth + revocation is planned for v5.5.
+    print(f"Enrollment token (one-time, for provisioning audit only — shown once):\n{raw_token}")
+    print(
+        "\nNOTE: This enrollment token is NOT the push credential.\n"
+        "      Sensor push authentication uses the CONSOLE'S shared API token\n"
+        "      (QUIRK_API_TOKEN env var / security.api_token in config.yaml).\n"
+        "      Pass that shared token via: quirk sensor enroll ... --api-token <console-api-token>",
+        file=sys.stderr,
+    )
     print(f"sensor_id: {sensor_id}", file=sys.stderr)
     # WR-04: return normally — run_console returns after dispatch; sys.exit(0) is
     # unnecessary and prevents atexit handlers + unit test without SystemExit monkeypatching.
