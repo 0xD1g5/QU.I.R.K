@@ -333,3 +333,25 @@ class SensorPush(Base):
         nullable=False,
     )
     received_at = Column(DateTime,   nullable=False)
+
+
+class MergeRun(Base):
+    """Merged scan result record (Phase 110 — MERGE-05).
+
+    One row per merge_scan() execution. coverage_warning_json is NULL when
+    all enrolled sensors are current, else a JSON object with missing_sensors
+    and reason. Phase 111 dashboard reads this table to display the coverage
+    banner.
+
+    No relationship() declarations — project uses plain Column style exclusively.
+    """
+
+    __tablename__ = "merge_runs"
+
+    id                    = Column(Integer,    primary_key=True, autoincrement=True)
+    scan_id               = Column(String(64), nullable=False, index=True)   # ISO merge timestamp
+    merged_at             = Column(DateTime,   nullable=False)
+    endpoint_count        = Column(Integer,    nullable=False, default=0)
+    sensor_count          = Column(Integer,    nullable=False, default=0)
+    score                 = Column(Integer,    nullable=True)
+    coverage_warning_json = Column(Text,       nullable=True)  # JSON or NULL
