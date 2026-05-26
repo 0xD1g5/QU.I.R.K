@@ -50,6 +50,7 @@ def test_enroll_writes_sensor_yaml(tmp_path, monkeypatch):
         "sensor_version",
         "hmac_key",
         "console_api_token",
+        "allow_internal_console",  # CR-03: persisted so push honours it automatically
     }
     assert required_keys == set(data.keys())
     assert data["console_url"] == "https://console.example"
@@ -200,6 +201,7 @@ def test_enroll_ssrf_guard_exits_nonzero(monkeypatch, capsys):
         engagement = None
         config = "/tmp/nonexistent/sensor.yaml"
         api_token = "tok"
+        allow_internal_console = False
 
     with pytest.raises(SystemExit) as exc_info:
         _cmd_enroll(Args())
@@ -207,6 +209,119 @@ def test_enroll_ssrf_guard_exits_nonzero(monkeypatch, capsys):
     assert exc_info.value.code != 0
     captured = capsys.readouterr()
     assert "console url" in captured.err.lower()
+
+
+def test_enroll_allow_internal_console_passes_rfc1918(tmp_path):
+    """CR-03: enroll with --allow-internal-console accepts an RFC1918 console URL.
+
+    This is the on-prem/lab scenario where the console lives on a private network
+    (e.g. Docker console-net 10.30.0.x).  validate_external_url must be called
+    with allow_internal=True so the URL is accepted.  Metadata service IPs are
+    ALWAYS blocked — this test uses a plain RFC1918 address.
+    """
+    from quirk.util.url_allowlist import validate_external_url
+    from quirk.cli.sensor_cmd import _cmd_enroll
+
+    sensor_yaml = tmp_path / "sensor.yaml"
+
+    class Args:
+        console_url = "http://10.30.0.5:8512"
+        segment = "segment-a"
+        engagement = None
+        config = str(sensor_yaml)
+        api_token = "lab-token"
+        allow_internal_console = True
+
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_enroll(Args())
+
+    assert exc_info.value.code == 0, "enroll with --allow-internal-console must exit 0 for RFC1918 URL"
+    assert sensor_yaml.exists()
+
+    import yaml as _yaml
+    data = _yaml.safe_load(sensor_yaml.read_text())
+    assert data["console_url"] == "http://10.30.0.5:8512"
+    # allow_internal_console must be persisted in sensor.yaml so push honours it
+    assert data.get("allow_internal_console") is True, (
+        "allow_internal_console=True must be written to sensor.yaml "
+        "so subsequent push calls also accept the private console URL"
+    )
+
+
+def test_enroll_allow_internal_console_persisted_for_push(tmp_path, monkeypatch):
+    """CR-03: push reads allow_internal_console from sensor.yaml and calls validate with allow_internal=True."""
+    import yaml as _yaml
+    from quirk.cli.sensor_cmd import _cmd_push
+
+    sensor_yaml = tmp_path / "sensor.yaml"
+    hmac_key = os.urandom(32).hex()
+    cfg = {
+        "console_url": "http://10.30.0.5:8512",
+        "sensor_id": str(uuid.uuid4()),
+        "segment": "segment-a",
+        "engagement": None,
+        "sensor_version": "5.4.0",
+        "hmac_key": hmac_key,
+        "console_api_token": "lab-token",
+        "allow_internal_console": True,
+    }
+    sensor_yaml.write_text(_yaml.dump(cfg))
+
+    validate_calls = []
+
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+
+    original_validate = sensor_cmd_mod.validate_external_url
+
+    def capturing_validate(url, *, allow_internal=False):
+        validate_calls.append({"url": url, "allow_internal": allow_internal})
+        return original_validate(url, allow_internal=allow_internal)
+
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", capturing_validate)
+
+    # Mock network + scan so the test doesn't need real infrastructure
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            pass
+
+        def post(self, url, headers, content):
+            return FakeResponse()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            pass
+
+    monkeypatch.setattr("httpx.Client", FakeClient)
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+    monkeypatch.setattr(sensor_cmd_mod, "_flush_spool", lambda *a, **kw: None)
+
+    class Args:
+        config = str(sensor_yaml)
+        scan_config = "config.yaml"
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setattr("tempfile.mkdtemp", lambda: td)
+        with pytest.raises(SystemExit) as exc_info:
+            _cmd_push(Args())
+
+    assert exc_info.value.code == 0
+    # validate_external_url must have been called with allow_internal=True
+    assert validate_calls, "validate_external_url was not called"
+    assert validate_calls[0]["allow_internal"] is True, (
+        "push must call validate_external_url(allow_internal=True) when "
+        "sensor.yaml has allow_internal_console: true"
+    )
 
 
 def test_enroll_atomic_write(tmp_path, monkeypatch):
