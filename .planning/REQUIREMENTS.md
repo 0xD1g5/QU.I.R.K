@@ -52,11 +52,11 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Cross-Sensor Merge & Scoring (MERGE)
 
-- [ ] **MERGE-01**: The console merges endpoints from N sensors into one CBOM by re-running the canonical `build_evidence_summary()` → `build_cbom()` pipeline over the union of pushed endpoints — the scoring/CBOM/evidence engines are not forked or modified.
-- [ ] **MERGE-02**: The merged quantum-readiness score is computed by re-running `compute_readiness_score()` over the union (Option A), never by averaging pre-scored per-segment results.
+- [x] **MERGE-01**: The console merges endpoints from N sensors into one CBOM by re-running the canonical `build_evidence_summary()` → `build_cbom()` pipeline over the union of pushed endpoints — the scoring/CBOM/evidence engines are not forked or modified.
+- [x] **MERGE-02**: The merged quantum-readiness score is computed by re-running `compute_readiness_score()` over the union (Option A), never by averaging pre-scored per-segment results.
 - [x] **MERGE-03**: The CBOM correctly emits two distinct components when two sensors report the same RFC1918 `host:port` in different segments (`sensor_id` included in the component identity), proven by a regression test.
-- [ ] **MERGE-04**: When an enrolled sensor is overdue/offline, the merged score JSON carries a non-null `coverage_warning` listing the missing sensor(s); partial data is never silently presented as complete.
-- [ ] **MERGE-05**: A consultant triggers a merge via `quirk sensor merge`, producing the unified CBOM + score as a normal scan result (new merged `scan_id`; sensor-local `scanned_at` not rewritten).
+- [x] **MERGE-04**: When an enrolled sensor is overdue/offline, the merged score JSON carries a non-null `coverage_warning` listing the missing sensor(s); partial data is never silently presented as complete.
+- [x] **MERGE-05**: A consultant triggers a merge via `quirk sensor merge`, producing the unified CBOM + score as a normal scan result (new merged `scan_id`; sensor-local `scanned_at` not rewritten).
 
 ### Console Dashboard Awareness (DASH)
 
@@ -139,11 +139,11 @@ Which phases cover which requirements.
 | CONSOLE-03 | Phase 109 | Complete |
 | CONSOLE-04 | Phase 109 | Complete |
 | CONSOLE-05 | Phase 109 | Complete |
-| MERGE-01 | Phase 110 | Pending |
-| MERGE-02 | Phase 110 | Pending |
+| MERGE-01 | Phase 110 | Complete |
+| MERGE-02 | Phase 110 | Complete |
 | MERGE-03 | Phase 110 | Complete |
-| MERGE-04 | Phase 110 | Pending |
-| MERGE-05 | Phase 110 | Pending |
+| MERGE-04 | Phase 110 | Complete |
+| MERGE-05 | Phase 110 | Complete |
 | DASH-01 | Phase 111 | Pending |
 | DASH-02 | Phase 111 | Pending |
 | DASH-03 | Phase 111 | Pending |
