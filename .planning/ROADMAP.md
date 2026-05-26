@@ -141,7 +141,11 @@ Plans:
   4. When an enrolled sensor has not pushed within its expected cadence, the score JSON carries a non-null `coverage_warning` listing the missing sensor IDs; the merge does not silently proceed as if complete
   5. Sensor-local `scanned_at` timestamps are preserved in the merged result; the merge command does not rewrite them to its own execution time
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+- [ ] 110-01-PLAN.md — Sensor-aware CBOM identity: `_sensor_prefix(ep)` threaded through 4 bom_ref sites in builder.py + MERGE-03 two-segment regression & NULL backward-compat tests
+- [ ] 110-02-PLAN.md — `merge_scan()` standalone callable (union query, Option A union scoring, coverage_warning) + MergeRun model + merge_runs table; source `scanned_at` preserved
+- [ ] 110-03-PLAN.md — `quirk sensor merge` CLI thin wrapper + CLI dispatch test + docs/UAT-SERIES.md update & Obsidian sync
 
 ### Phase 111: Console Dashboard Awareness
 
