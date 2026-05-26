@@ -158,7 +158,11 @@ Plans:
   2. The findings table and CBOM view expose a `sensor_id`/`segment` dimension with a working per-segment filter on `/api/scan/latest`, `/api/findings`, and `/api/cbom`
   3. The dashboard displays per-segment score gauges alongside the org-wide score gauge; if a merge ran with sensors missing, a `coverage_warning` banner is visible on the dashboard
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+- [ ] 111-01-PLAN.md — Backend read-layer: sensor-registry + merge/latest (per-segment Option-A recompute) endpoints, `?segment=` filter on /api/scan/latest, nullable sensor_id/segment on findings/CBOM schemas + TestClient tests
+- [ ] 111-02-PLAN.md — Frontend: TS type mirror + hooks, Sensors page + nav, shared segment filter on Findings/CBOM, per-segment gauges + coverage banner on Executive, npm build + vitest
+- [ ] 111-03-PLAN.md — Series 111 UAT-SERIES.md + Obsidian sync + phase note + full-suite verify + human-UAT checkpoint
 **UI hint**: yes
 
 ### Phase 112: Distributed Chaos-Lab + Stabilization
