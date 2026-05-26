@@ -17,6 +17,7 @@ import {
   Scan,
   History,
   LogOut,
+  Radio,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { path: "/roadmap", label: "Migration Roadmap", Icon: GitBranch },
   { path: "/trends", label: "Trends", Icon: TrendingUp },
   { path: "/scans", label: "Scan History", Icon: History },
+  { path: "/sensors", label: "Sensors", Icon: Radio },
   { path: "/schedules", label: "Schedules", Icon: Calendar },
   { path: "/qramm", label: "QRAMM Assessment", Icon: ClipboardList },
 ]

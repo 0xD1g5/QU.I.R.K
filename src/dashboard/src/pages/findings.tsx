@@ -36,7 +36,17 @@ export function FindingsPage() {
   const [globalFilter, setGlobalFilter] = useState("")
   const [severityFilter, setSeverityFilter] = useState("ALL")
   const [protocolFilter, setProtocolFilter] = useState("ALL")
+  const [segmentFilter, setSegmentFilter] = useState("all")
   const [selectedFinding, setSelectedFinding] = useState<FindingItem | null>(null)
+
+  // Derive sorted, deduped list of segments from findings
+  const distinctSegments = useMemo(() => {
+    if (!data?.findings) return []
+    const segs = data.findings
+      .map((f) => f.segment)
+      .filter((s): s is string => typeof s === "string" && s.length > 0)
+    return Array.from(new Set(segs)).sort()
+  }, [data])
 
   const findings = useMemo(() => {
     if (!data?.findings) return []
@@ -47,8 +57,11 @@ export function FindingsPage() {
     if (protocolFilter !== "ALL") {
       filtered = filtered.filter((f) => f.protocol === protocolFilter)
     }
+    if (segmentFilter !== "all") {
+      filtered = filtered.filter((f) => f.segment === segmentFilter)
+    }
     return filtered
-  }, [data, severityFilter, protocolFilter])
+  }, [data, severityFilter, protocolFilter, segmentFilter])
 
   // D-25 (IN-03): memoize columns for stable reference identity across renders
   // (TanStack Table relies on referential stability of the columns array).
@@ -130,6 +143,17 @@ export function FindingsPage() {
             <SelectItem value="ALL">All Protocols</SelectItem>
             {["TLS", "SSH", "HTTP", "KERBEROS", "SAML", "DNSSEC"].map((p) => (
               <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+          <SelectTrigger className="w-40 h-8 text-sm" aria-label="Filter by segment">
+            <SelectValue placeholder="All segments" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All segments</SelectItem>
+            {distinctSegments.map((seg) => (
+              <SelectItem key={seg} value={seg}>{seg}</SelectItem>
             ))}
           </SelectContent>
         </Select>
