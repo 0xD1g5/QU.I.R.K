@@ -92,6 +92,19 @@ def run_sensor(argv: list[str]) -> None:
         default=None,
         help="Operator-provided console Bearer token for ongoing pushes",
     )
+    enroll_p.add_argument(
+        "--allow-internal-console",
+        dest="allow_internal_console",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow the console URL to resolve to a private/RFC1918 IP address. "
+            "Use this only when the console is on a trusted on-prem or lab network. "
+            "Cloud metadata service IPs (169.254.169.254) are ALWAYS blocked. "
+            "This flag is persisted in sensor.yaml so subsequent `push` calls "
+            "also allow the internal console URL without repeating the flag."
+        ),
+    )
 
     push_p = sub.add_parser("push", help="Run local scan and push results to console")
     push_p.add_argument("--config", default=None, help="Override sensor.yaml path")
@@ -182,14 +195,25 @@ def _default_sensor_yaml_path() -> str:
 def _cmd_enroll(args: argparse.Namespace) -> None:
     """Enroll sensor: write bound sensor.yaml + print one-time token."""
     console_url: str = args.console_url
+    allow_internal: bool = bool(getattr(args, "allow_internal_console", False))
 
-    # T-108-04: SSRF guard — validate before any network I/O
-    result = validate_external_url(console_url)
+    # T-108-04: SSRF guard — validate before any network I/O.
+    # allow_internal=True is permitted only when the operator explicitly opts in
+    # via --allow-internal-console (on-prem / lab deployments where the console
+    # is on a trusted private network).  Cloud metadata service IPs are ALWAYS
+    # blocked regardless of allow_internal.
+    result = validate_external_url(console_url, allow_internal=allow_internal)
     if not result.ok:
         print(
             f"ERROR: console URL blocked by SSRF allowlist — {result.reason}",
             file=sys.stderr,
         )
+        if not allow_internal and result.reason == "internal_ip":
+            print(
+                "HINT: if the console is on a trusted private network (on-prem/lab), "
+                "re-run with --allow-internal-console to permit RFC1918 console URLs.",
+                file=sys.stderr,
+            )
         sys.exit(1)
 
     # Resolve config path
@@ -213,7 +237,10 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     # Persistent push credentials
     hmac_key = secrets.token_bytes(32).hex()
 
-    # Build sensor.yaml dict — enrollment token is NEVER included
+    # Build sensor.yaml dict — enrollment token is NEVER included.
+    # allow_internal_console is persisted so subsequent `quirk sensor push`
+    # calls automatically allow the internal console URL without requiring the
+    # operator to pass --allow-internal-console on every invocation.
     sensor_cfg = {
         "console_url": console_url,
         "sensor_id": sensor_id,
@@ -222,6 +249,7 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
         "sensor_version": quirk.__version__,
         "hmac_key": hmac_key,
         "console_api_token": api_token,
+        "allow_internal_console": allow_internal,
     }
 
     # Atomic write
@@ -482,9 +510,13 @@ def _cmd_push(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     console_url: str = sensor_cfg.get("console_url", "")
+    # allow_internal_console is persisted by `quirk sensor enroll --allow-internal-console`
+    # so on-prem/lab deployments that enrolled with a private console URL automatically
+    # honour the same bypass on every subsequent push (no repeated flag required).
+    allow_internal: bool = bool(sensor_cfg.get("allow_internal_console", False))
 
-    # T-108-04: SSRF guard
-    result = validate_external_url(console_url)
+    # T-108-04: SSRF guard — honours allow_internal when operator opted in at enroll time
+    result = validate_external_url(console_url, allow_internal=allow_internal)
     if not result.ok:
         print(
             f"ERROR: console URL blocked by SSRF allowlist — {result.reason}",
