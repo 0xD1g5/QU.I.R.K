@@ -197,7 +197,8 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     # Print the raw token once to stdout — operator copies this to sensor.yaml
     print(f"Bearer token (copy to sensor.yaml — shown once, never stored):\n{raw_token}")
     print(f"sensor_id: {sensor_id}", file=sys.stderr)
-    sys.exit(0)
+    # WR-04: return normally — run_console returns after dispatch; sys.exit(0) is
+    # unnecessary and prevents atexit handlers + unit test without SystemExit monkeypatching.
 
 
 def _cmd_import_results(args: argparse.Namespace) -> None:
@@ -262,10 +263,10 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
         data = raw_file
 
     # Decompress with output-size cap (CR-01: prevent zstd decompression bomb).
-    # stream_reader().read(N+1) reads at most N+1 bytes; if we get more than
-    # _MAX_DECOMPRESS_BYTES the file is maliciously oversized — reject cleanly.
+    # WR-01: max_window_size enforces the cap at the C layer before Python allocates.
+    # stream_reader().read(N+1) is a secondary Python-level check.
     try:
-        dctx = zstandard.ZstdDecompressor()
+        dctx = zstandard.ZstdDecompressor(max_window_size=_MAX_DECOMPRESS_BYTES)
         raw = dctx.stream_reader(data).read(_MAX_DECOMPRESS_BYTES + 1)
         if len(raw) > _MAX_DECOMPRESS_BYTES:
             print(
@@ -314,8 +315,8 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
             n=finding_count,
         )
     )
-
-    sys.exit(0)
+    # WR-04: return normally — run_console returns after dispatch; sys.exit(0) is
+    # unnecessary and prevents atexit handlers + unit test without SystemExit monkeypatching.
 
 
 class DuplicatePayloadError(Exception):
