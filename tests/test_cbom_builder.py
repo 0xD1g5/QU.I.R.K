@@ -559,3 +559,72 @@ def test_algorithm_component_has_fips_property():
         assert fips_val in ("approved", "non-approved"), (
             f"quirk:fips140-3-status must be 'approved' or 'non-approved', got '{fips_val}'"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 110 MERGE-03 — sensor-aware bom_ref identity (RED until Task 2)
+# ---------------------------------------------------------------------------
+
+def test_two_sensors_same_ip_two_components():
+    """MERGE-03: two sensors reporting same RFC1918 host:port in different segments must
+    produce two distinct CBOM certificate components (not collapsed into one).
+    RED: fails until _sensor_prefix is threaded through builder.py bom_ref sites.
+    """
+    ep_a = _tls_endpoint(host="10.0.0.5", port=443, sensor_id="sensor-a", segment="prod-east")
+    ep_b = _tls_endpoint(host="10.0.0.5", port=443, sensor_id="sensor-b", segment="prod-west")
+    bom = build_cbom([ep_a, ep_b])
+
+    cert_refs = [
+        getattr(c.bom_ref, "value", None)
+        for c in bom.components
+        if c.crypto_properties and c.crypto_properties.asset_type == CryptoAssetType.CERTIFICATE
+    ]
+    assert "crypto/certificate/sensor-a:10.0.0.5:443" in cert_refs, (
+        f"Missing sensor-a cert ref; got: {cert_refs}"
+    )
+    assert "crypto/certificate/sensor-b:10.0.0.5:443" in cert_refs, (
+        f"Missing sensor-b cert ref; got: {cert_refs}"
+    )
+    assert len(cert_refs) == 2, (
+        f"Expected exactly 2 certificate components (one per sensor), got {len(cert_refs)}: {cert_refs}"
+    )
+
+    # TLS protocol components must also be sensor-separated
+    tls_proto_refs = [
+        getattr(c.bom_ref, "value", None)
+        for c in bom.components
+        if c.crypto_properties and c.crypto_properties.asset_type == CryptoAssetType.PROTOCOL
+    ]
+    assert "crypto/protocol/tls/sensor-a:10.0.0.5:443" in tls_proto_refs, (
+        f"Missing sensor-a TLS proto ref; got: {tls_proto_refs}"
+    )
+    assert "crypto/protocol/tls/sensor-b:10.0.0.5:443" in tls_proto_refs, (
+        f"Missing sensor-b TLS proto ref; got: {tls_proto_refs}"
+    )
+
+
+def test_null_sensor_id_backward_compat():
+    """MERGE-03: NULL sensor_id must produce byte-identical bom_refs to the pre-110 format.
+    GREEN: passes even before Task 2 is implemented (NULL prefix = empty string).
+    After Task 2: still passes with _sensor_prefix returning '' for None.
+    """
+    ep_local = _tls_endpoint(host="10.0.0.5", port=443, sensor_id=None)
+    bom_local = build_cbom([ep_local])
+
+    cert_refs = [
+        getattr(c.bom_ref, "value", None)
+        for c in bom_local.components
+        if c.crypto_properties and c.crypto_properties.asset_type == CryptoAssetType.CERTIFICATE
+    ]
+    assert cert_refs == ["crypto/certificate/10.0.0.5:443"], (
+        f"NULL sensor_id must produce pre-110 byte-identical bom_ref; got: {cert_refs}"
+    )
+
+    tls_proto_refs = [
+        getattr(c.bom_ref, "value", None)
+        for c in bom_local.components
+        if c.crypto_properties and c.crypto_properties.asset_type == CryptoAssetType.PROTOCOL
+    ]
+    assert "crypto/protocol/tls/10.0.0.5:443" in tls_proto_refs, (
+        f"NULL sensor_id TLS proto ref must be pre-110 format; got: {tls_proto_refs}"
+    )
