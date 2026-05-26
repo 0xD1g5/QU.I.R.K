@@ -47,19 +47,15 @@ def test_console_enroll(tmp_path, monkeypatch, capsys):
       1. One sensors row with sensor_id="S1" and segment="dmz".
       2. One sensor_tokens row whose token_hash == SHA-256(raw_token).
       3. The raw token does not appear in sensors.* or sensor_tokens.* columns.
-      4. run_console exits 0 (SystemExit code 0).
+      4. run_console enroll returns normally (no SystemExit — WR-04).
     """
     db_path, engine, Session = _make_db(tmp_path)
     monkeypatch.setenv("QUIRK_DB_PATH", db_path)
 
     from quirk.cli.console_cmd import run_console
 
-    with pytest.raises(SystemExit) as exc_info:
-        run_console(["enroll", "--sensor-id", "S1", "--segment", "dmz"])
-
-    assert exc_info.value.code == 0, (
-        f"run_console enroll should exit 0, got {exc_info.value.code}"
-    )
+    # WR-04: enroll success path no longer calls sys.exit(0) — returns normally
+    run_console(["enroll", "--sensor-id", "S1", "--segment", "dmz"])
 
     # Capture stdout — raw token is printed there
     captured = capsys.readouterr()
@@ -130,12 +126,8 @@ def test_console_enroll_duplicate(tmp_path, monkeypatch, capsys):
 
     from quirk.cli.console_cmd import run_console
 
-    # --- First enroll: expect success (exit 0) ---
-    with pytest.raises(SystemExit) as exc_info_first:
-        run_console(["enroll", "--sensor-id", "S-DUP", "--segment", "corp"])
-    assert exc_info_first.value.code == 0, (
-        f"First enroll should exit 0, got {exc_info_first.value.code}"
-    )
+    # --- First enroll: expect success (WR-04: returns normally, no SystemExit) ---
+    run_console(["enroll", "--sensor-id", "S-DUP", "--segment", "corp"])
 
     # --- Second enroll: same sensor_id → must exit non-zero ---
     with pytest.raises(SystemExit) as exc_info_dup:
