@@ -63,6 +63,10 @@ class FindingItem(BaseModel):
     # finding dict directly). Each entry: {framework, control, version,
     # last_verified, source_url}.
     compliance: List[Dict[str, Any]] = []
+    # Phase 111 DASH-01: distributed sensor provenance fields (nullable for
+    # backward compat — NULL-sensor local scans are unaffected).
+    sensor_id: Optional[str] = None
+    segment: Optional[str] = None
 
 
 # ---- Certificates ----
@@ -86,6 +90,10 @@ class CbomComponent(BaseModel):
     key_size: Optional[int] = None
     quantum_safety: Optional[str] = None
     source_systems: List[str] = []    # ["host:port", "file/path.py", ...]
+    # Phase 111 DASH-01: distributed sensor provenance fields (nullable for
+    # backward compat — NULL-sensor local scans are unaffected).
+    sensor_id: Optional[str] = None
+    segment: Optional[str] = None
 
 
 # ---- Identity Findings ----
@@ -365,3 +373,38 @@ class JobStatusResponse(BaseModel):
     error_message: Optional[str] = None
     stage_index: int       # 0..7, backend-computed
     stage_total: int = 7
+
+
+# ---- Phase 111 DASH-02 / DASH-03: Sensor registry + merge endpoints ----
+
+class SensorRegistryItem(BaseModel):
+    """One enrolled sensor with its current push status."""
+    sensor_id: str
+    segment: str
+    sensor_version: Optional[str] = None
+    last_push_at: Optional[datetime] = None
+    status: str  # "current" | "stale" | "unknown"
+
+
+class SensorRegistryResponse(BaseModel):
+    """GET /api/sensor/registry response body."""
+    sensors: List[SensorRegistryItem]
+
+
+class MergeLatestData(BaseModel):
+    """Payload inside MergeLatestResponse when a merge_run row exists."""
+    scan_id: Optional[str] = None
+    merged_at: Optional[datetime] = None
+    score: Optional[int] = None
+    endpoint_count: int = 0
+    sensor_count: int = 0
+    coverage_warning: Optional[Dict[str, Any]] = None
+    per_segment_scores: Dict[str, int] = {}
+
+
+class MergeLatestResponse(BaseModel):
+    """GET /api/merge/latest response body.
+
+    merge is null when no merge_run row exists yet (first-boot / no merges run).
+    """
+    merge: Optional[MergeLatestData] = None

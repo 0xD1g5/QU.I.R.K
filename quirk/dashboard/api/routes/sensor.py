@@ -1,4 +1,9 @@
-"""POST /api/sensor/push — Phase 109 CONSOLE-01: sensor push ingestion endpoint.
+"""Phase 109 CONSOLE-01: sensor push ingestion endpoint + Phase 111 DASH-02: sensor registry.
+
+POST /api/sensor/push — ingest a sensor push envelope.
+GET  /api/sensor/registry — return all enrolled sensors with push-status.
+
+POST /api/sensor/push — Phase 109 CONSOLE-01: sensor push ingestion endpoint.
 
 Security contract (§6 locked failure ladder)
 ---------------------------------------------
@@ -28,6 +33,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import List
 
 import zstandard
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -37,6 +43,7 @@ from sqlalchemy.orm import Session
 from quirk.cli.console_cmd import DuplicatePayloadError, UnknownSensorError, _ingest_envelope
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.dashboard.api.schemas import SensorRegistryItem, SensorRegistryResponse
 from quirk.models import IntegrationDelivery, Sensor
 from quirk.util.safe_exc import safe_str
 
@@ -60,6 +67,70 @@ _REPLAY_WINDOW = timedelta(minutes=15)    # pushed_at must be within ±15 min of
 
 # X-Sensor-Signature structural prefix (T-109-11 — crypto verify deferred v5.5)
 _SIG_PREFIX = "hmac-sha256="
+
+# ---------------------------------------------------------------------------
+# Phase 111 DASH-02: sensor push-status constants + helper
+# ---------------------------------------------------------------------------
+# Sensors silent for more than _STALE_DAYS without any push are treated as
+# decommissioned / forgotten — they become "unknown" rather than "stale" so
+# the UI does not surface decade-old enrollments as perpetually overdue.
+_STALE_DAYS = 30
+
+
+def _sensor_status(s, now: datetime) -> str:
+    """Compute push-status for a single Sensor row.
+
+    Rules (replicate the per-sensor overdue logic from merge.scan._build_coverage_warning,
+    but return a per-sensor string rather than an aggregate dict — Trap T7):
+
+    - last_push_at is None → "unknown"  (never pushed, regardless of enrollment age)
+    - last_push_at is set, now > last_push_at + 2×cadence → "stale"
+    - otherwise → "current"
+
+    ``expected_cadence_minutes`` defaults to 1440 (24h) when None.
+    The 30-day decommissioned threshold from _build_coverage_warning is intentionally
+    NOT applied here — _sensor_status reports each sensor's own status without
+    suppressing old sensors (the UI can filter/sort as needed).
+    """
+    if s.last_push_at is None:
+        return "unknown"
+
+    cadence_minutes = s.expected_cadence_minutes
+    if cadence_minutes is None:
+        cadence_minutes = 1440  # 24h fallback — architecture §6
+    cadence = timedelta(minutes=cadence_minutes)
+
+    if now > s.last_push_at + 2 * cadence:
+        return "stale"
+    return "current"
+
+
+# ---------------------------------------------------------------------------
+# Phase 111 DASH-02: GET /api/sensor/registry
+# ---------------------------------------------------------------------------
+
+@router.get("/sensor/registry")  # type: ignore[misc]
+def get_sensor_registry(db: Session = Depends(get_db)) -> dict:
+    """GET /api/sensor/registry — list all enrolled sensors with push status.
+
+    Returns each Sensor row with a computed status: "current" | "stale" | "unknown".
+    Read-only — no db.add/flush/commit.
+    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    sensors: List[Sensor] = (
+        db.query(Sensor).order_by(Sensor.enrolled_at.desc()).all()
+    )
+    items: List[SensorRegistryItem] = [
+        SensorRegistryItem(
+            sensor_id=s.sensor_id,
+            segment=s.segment,
+            sensor_version=s.sensor_version,
+            last_push_at=s.last_push_at,
+            status=_sensor_status(s, now),
+        )
+        for s in sensors
+    ]
+    return SensorRegistryResponse(sensors=items).model_dump()
 
 
 # ---------------------------------------------------------------------------
