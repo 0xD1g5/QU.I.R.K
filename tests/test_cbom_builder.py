@@ -628,3 +628,97 @@ def test_null_sensor_id_backward_compat():
     assert "crypto/protocol/tls/10.0.0.5:443" in tls_proto_refs, (
         f"NULL sensor_id TLS proto ref must be pre-110 format; got: {tls_proto_refs}"
     )
+
+
+# ---------------------------------------------------------------------------
+# CR-02 — surrogate key is sensor-scoped; same wildcard cert from two sensors
+#          must annotate the correct per-sensor TLS component
+# ---------------------------------------------------------------------------
+
+def test_codesign_surrogate_attaches_to_correct_sensor_cert():
+    """CR-02: two sensors present the same wildcard cert; CODE_SIGNING annotation
+    must attach to the correct per-sensor TLS cert component, not collide.
+
+    Setup:
+      - sensor-a TLS endpoint: *.internal.example.com, RSA-2048, same not_after
+      - sensor-b TLS endpoint: same cert metadata
+      - One CODE_SIGNING endpoint for sensor-a with the same surrogate metadata
+
+    Expected:
+      - The quirk:code-signing-eku property is on sensor-a's cert component only.
+      - sensor-b's cert component has no such property.
+    """
+    not_after = "2027-01-01"
+
+    ep_tls_a = _tls_endpoint(
+        host="10.0.1.5", port=443,
+        sensor_id="sensor-a",
+        cert_subject="CN=*.internal.example.com",
+        cert_pubkey_alg="RSA",
+        cert_pubkey_size=2048,
+        cert_sig_alg="sha256WithRSAEncryption",
+        cert_issuer="CN=Internal CA",
+        cert_not_after=not_after,
+    )
+    ep_tls_b = _tls_endpoint(
+        host="10.0.2.5", port=443,
+        sensor_id="sensor-b",
+        cert_subject="CN=*.internal.example.com",
+        cert_pubkey_alg="RSA",
+        cert_pubkey_size=2048,
+        cert_sig_alg="sha256WithRSAEncryption",
+        cert_issuer="CN=Internal CA",
+        cert_not_after=not_after,
+    )
+    # CODE_SIGNING endpoint from sensor-a matching the same surrogate key
+    ep_cs_a = CryptoEndpoint(
+        host="10.0.1.5", port=0,
+        protocol="CODE_SIGNING",
+        cert_subject="CN=*.internal.example.com",
+        cert_pubkey_alg="RSA",
+        cert_pubkey_size=2048,
+        cert_sig_alg="sha256WithRSAEncryption",
+        cert_issuer="CN=Internal CA",
+        cert_not_after=not_after,
+        sensor_id="sensor-a",
+        segment="prod-east",
+        tls_version=None,
+        cipher_suite=None,
+        cert_not_before=None,
+        tls_capabilities_json=None,
+        ssh_audit_json=None,
+    )
+
+    bom = build_cbom([ep_tls_a, ep_tls_b, ep_cs_a])
+
+    cert_components = [
+        c for c in bom.components
+        if c.crypto_properties and c.crypto_properties.asset_type == CryptoAssetType.CERTIFICATE
+    ]
+
+    # Find sensor-a and sensor-b cert components by bom_ref
+    cert_a = next(
+        (c for c in cert_components
+         if getattr(c.bom_ref, "value", "") == "crypto/certificate/sensor-a:10.0.1.5:443"),
+        None
+    )
+    cert_b = next(
+        (c for c in cert_components
+         if getattr(c.bom_ref, "value", "") == "crypto/certificate/sensor-b:10.0.2.5:443"),
+        None
+    )
+
+    assert cert_a is not None, "sensor-a cert component must be present"
+    assert cert_b is not None, "sensor-b cert component must be present"
+
+    # sensor-a cert should carry the code-signing annotation
+    prop_names_a = {p.name for p in (cert_a.properties or [])}
+    assert "quirk:code-signing-eku" in prop_names_a, (
+        f"sensor-a cert should have quirk:code-signing-eku; props={prop_names_a}"
+    )
+
+    # sensor-b cert must NOT carry the annotation (different sensor, no CODE_SIGNING ep)
+    prop_names_b = {p.name for p in (cert_b.properties or [])}
+    assert "quirk:code-signing-eku" not in prop_names_b, (
+        f"sensor-b cert must NOT have quirk:code-signing-eku (CR-02 collision); props={prop_names_b}"
+    )
