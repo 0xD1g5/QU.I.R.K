@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { PageSpinner } from "@/components/PageSpinner"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Button } from "@/components/ui/button"
-import { Download, Loader2 } from "lucide-react"
+import { Download, Loader2, AlertTriangle } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { useMergeLatest } from "@/hooks/useMergeLatest"
 import { RegressionAlertChip } from "@/components/RegressionAlertChip"
 import { coerceErrorDetail } from "./executive-utils"
 import type { PartialFailureEntry } from "@/types/api"
@@ -94,6 +95,7 @@ function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[] }) {
 
 export function ExecutivePage() {
   const { data, loading, error } = useScanData()
+  const { merge } = useMergeLatest()
   const [pdfExporting, setPdfExporting] = useState(false)
   const [pdfMessage, setPdfMessage] = useState<string | null>(null)
 
@@ -223,6 +225,38 @@ export function ExecutivePage() {
         </div>
       </div>
 
+      {/* Phase 111: Coverage warning banner — non-dismissible, amber, role=alert */}
+      {merge?.coverage_warning && (() => {
+        const warning = merge.coverage_warning as { missing_sensors?: string[]; reason?: string }
+        const missingSensors: string[] = Array.isArray(warning.missing_sensors)
+          ? (warning.missing_sensors as string[])
+          : []
+        const missingCount = missingSensors.length
+        return (
+          <div
+            className="flex items-start gap-3 rounded-md border px-4 py-3 mb-6"
+            style={{
+              background: "var(--ds-high-dim)",
+              borderColor: "var(--ds-high-bdr)",
+            }}
+            role="alert"
+            aria-live="polite"
+          >
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#d4893a" }} aria-hidden="true" />
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold">Incomplete sensor coverage</span>
+              <span className="text-sm text-muted-foreground">
+                {missingCount} sensor{missingCount !== 1 ? "s" : ""} did not contribute to this merge.
+                Scores may understate risk in uncovered segments.
+                {missingSensors.length > 0 && (
+                  <> Missing: <span className="font-mono text-xs">{missingSensors.join(", ")}</span>.</>
+                )}
+              </span>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Phase 64 TREND-02: Regression alert (above score gauge) */}
       <RegressionAlertChip />
 
@@ -254,6 +288,19 @@ export function ExecutivePage() {
             <ScoreGauge score={score.subscores.agility_signals} label="Agility" size={120} maxValue={25} />
             <ScoreGauge score={score.subscores.data_at_rest} label="Data at Rest" size={120} maxValue={25} />
             <ScoreGauge score={score.subscores.data_in_motion} label="Data in Motion" size={120} maxValue={25} />
+            {/* Phase 111: Per-segment gauges — only rendered when merge data present */}
+            {merge?.per_segment_scores && Object.entries(merge.per_segment_scores).map(([seg, segScore]) => {
+              const truncatedLabel = seg.length > 16 ? seg.slice(0, 15) + "…" : seg
+              return (
+                <ScoreGauge
+                  key={seg}
+                  score={segScore}
+                  label={truncatedLabel}
+                  size={120}
+                  maxValue={100}
+                />
+              )
+            })}
           </div>
         </CardContent>
       </Card>
