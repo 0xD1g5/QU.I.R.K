@@ -438,6 +438,20 @@ def _emit_coverage_note(bom_component: Component | None, note: str) -> None:
     bom_component.properties = existing
 
 
+def _sensor_prefix(ep) -> str:
+    """Return 'sensor_id:' prefix for bom_ref when ep has a non-null sensor_id.
+
+    NULL sensor_id (implicit local sensor, backward-compat path) returns ''.
+    Threaded through 4 host:port-keyed bom_ref derivation sites (MERGE-03):
+      cert bom_ref (Pass 2), TLS surrogate index lookup (Pass 2b),
+      SSH proto bom_ref (Pass 3), TLS proto bom_ref (Pass 3).
+    NOT applied to the CODE_SIGNING codesign/ fallback — no cross-segment
+    code-sign scenario in v5.4 scope.
+    """
+    sid = getattr(ep, "sensor_id", None)
+    return f"{sid}:" if sid else ""
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -694,7 +708,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
         if not ep.cert_pubkey_alg:
             continue  # no cert info available
 
-        cert_bom_ref = f"crypto/certificate/{ep.host}:{ep.port}"
+        cert_bom_ref = f"crypto/certificate/{_sensor_prefix(ep)}{ep.host}:{ep.port}"
 
         # Determine bom_ref keys for sig alg and pubkey alg
         sig_alg_ref: BomRef | None = None
@@ -755,7 +769,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
         if key is None:
             continue
         # Map to the cert component emitted for this TLS endpoint
-        bom_ref_val = f"crypto/certificate/{ep.host}:{ep.port}"
+        bom_ref_val = f"crypto/certificate/{_sensor_prefix(ep)}{ep.host}:{ep.port}"
         for c in cert_components:
             if getattr(c.bom_ref, "value", None) == bom_ref_val:
                 _tls_surrogate_index[key] = c
@@ -841,7 +855,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # ------------------------------------------------------------------ #
     for ep in endpoints:
         if ep.protocol == "SSH":
-            proto_bom_ref = f"crypto/protocol/ssh/{ep.host}:{ep.port}"
+            proto_bom_ref = f"crypto/protocol/ssh/{_sensor_prefix(ep)}{ep.host}:{ep.port}"
 
             # Reference KEX algorithm components as cipher suites
             ssh_data = _extract_ssh_algorithms(ep.ssh_audit_json)
@@ -894,7 +908,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
 
         else:
             # TLS (default)
-            proto_bom_ref = f"crypto/protocol/tls/{ep.host}:{ep.port}"
+            proto_bom_ref = f"crypto/protocol/tls/{_sensor_prefix(ep)}{ep.host}:{ep.port}"
 
             # Build algorithm refs from cipher suite decomposition
             suite_algo_refs: list[BomRef] = []
