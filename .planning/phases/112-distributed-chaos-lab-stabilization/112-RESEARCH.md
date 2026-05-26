@@ -864,17 +864,20 @@ def test_e2e_script_enroll_push_merge_order():
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Readiness polling vs. fixed sleep in distributed-e2e.sh**
-   - What we know: nginx containers start fast; the console's FastAPI takes a few seconds to bind
-   - What's unclear: whether a `curl` readiness poll or `depends_on: condition: service_healthy` is more reliable across platforms
-   - Recommendation: Add a `healthcheck:` on the console container (`curl -sf http://localhost:8512/api/health`) and use `depends_on: condition: service_healthy` for sensor services in compose; fall back to `sleep 5` in e2e.sh for simplicity
+> NOTE (2026-05-25): Claim A1 (same-last-octet IP) is SUPERSEDED by the user's topology decision and
+> the plan-checker reachability finding. A sensor records the configured scan-target string verbatim
+> (tls_scanner.py), but it must REACH the target to record a crypto finding — and sensor-b on
+> 10.20.0.0/24 cannot reach 10.10.0.10. The correct mechanism is a **shared Docker DNS alias**
+> (`crypto.internal`) on each segment's own target, so both sensors scan `crypto.internal:443`
+> (locally reachable) and record an identical host:port. Same-last-octet IP is NOT used.
 
-2. **CHAOS-05 image-pin policy for sensor.Dockerfile**
-   - What we know: `_validate_pinned_tags` checks `image:` keys in compose files; build-only services (no `image:` key) are exempt, but only if `Dockerfile` has a pinned `FROM`
-   - What's unclear: whether `sensor.Dockerfile`'s `FROM python:3.11-slim` satisfies the CHAOS-05 gate (it's not a digest pin)
-   - Recommendation: Pin to `python:3.11-slim` with a specific patch version, e.g. `FROM python:3.11.12-slim` to satisfy the spirit of CHAOS-05 [ASSUMED]
+1. **RESOLVED — Readiness:** console container gets a `healthcheck:` (`curl -sf .../api/health`);
+   sensor services use `depends_on: condition: service_healthy`. (Recommendation adopted.)
+
+2. **RESOLVED — CHAOS-05 image pin:** `sensor.Dockerfile` uses `FROM python:3.11.12-slim`
+   (patch-pinned) to satisfy the pin gate. (Recommendation adopted.)
 
 ---
 
