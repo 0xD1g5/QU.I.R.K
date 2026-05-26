@@ -80,7 +80,7 @@ services:
   # -----------------------------------------------------------------------
   sensor-a:
     build:
-      context: ../..
+      context: ..
       dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
     entrypoint: []
     command: ["tail", "-f", "/dev/null"]
@@ -109,7 +109,7 @@ services:
   # -----------------------------------------------------------------------
   sensor-b:
     build:
-      context: ../..
+      context: ..
       dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
     entrypoint: []
     command: ["tail", "-f", "/dev/null"]
@@ -137,7 +137,7 @@ services:
   # -----------------------------------------------------------------------
   console:
     build:
-      context: ../..
+      context: ..
       dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
     command: ["serve", "--host", "0.0.0.0", "--port", "8512"]
     environment:

@@ -27,3 +27,11 @@ targets:
   cidrs: []
   include_ips: []
   exclude_ips: []
+
+# Output paths are RELATIVE so the scan DB lands in the subprocess CWD that
+# `quirk sensor push` sets (a per-push temp dir), where the push step's
+# CryptoEndpoint reader (rglob *.db) can find it. run_scan writes the scan DB
+# to output.db_path resolved against the process working directory.
+output:
+  directory: "."
+  db_path: "./scan.db"
