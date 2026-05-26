@@ -45,6 +45,41 @@ def _make_qpush_file(tmp_path: Path, **kwargs) -> Path:
     return qpush
 
 
+def _enroll_default(sensor_id: str, segment: str = "air-gap") -> None:
+    """Provision a Sensor row in the import path's default DB.
+
+    Phase 109 ingest enforces the FOREIGN KEY: an air-gap import of an
+    unenrolled sensor_id now fails (UnknownSensorError) — same invariant as
+    HTTPS push. Tests must enroll the sensor first, mirroring the real
+    `quirk console enroll` precondition.
+    """
+    from datetime import datetime, timezone
+
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.dashboard.api.deps import _default_db_path
+    from quirk.db import init_db
+    from quirk.models import Sensor
+
+    engine = init_db(_default_db_path())
+    Session = sessionmaker(bind=engine)
+    db = Session()
+    try:
+        if db.query(Sensor).filter(Sensor.sensor_id == sensor_id).first() is None:
+            db.add(Sensor(
+                sensor_id=sensor_id,
+                segment=segment,
+                engagement=None,
+                enrolled_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                last_push_at=None,
+                expected_cadence_minutes=1440,
+                sensor_version="5.4.0",
+            ))
+            db.commit()
+    finally:
+        db.close()
+
+
 # ---------------------------------------------------------------------------
 # Happy-path: import-results reads, decompresses, validates, prints summary
 # ---------------------------------------------------------------------------
@@ -52,7 +87,9 @@ def _make_qpush_file(tmp_path: Path, **kwargs) -> Path:
 
 def test_import_results_success_exit_zero(tmp_path):
     """SENSOR-04: import-results exits 0 on a valid .qpush file."""
-    qpush = _make_qpush_file(tmp_path)
+    sid = str(uuid.uuid4())
+    _enroll_default(sid)
+    qpush = _make_qpush_file(tmp_path, sensor_id=sid)
 
     from quirk.cli.console_cmd import _cmd_import_results
 
@@ -69,6 +106,7 @@ def test_import_results_success_exit_zero(tmp_path):
 def test_import_results_prints_summary(tmp_path, capsys):
     """SENSOR-04: import-results prints sensor_id, segment, payload_id, finding count."""
     sid = str(uuid.uuid4())
+    _enroll_default(sid, segment="dmz-air")
     qpush = _make_qpush_file(tmp_path, sensor_id=sid, segment="dmz-air")
 
     # Read the envelope to get payload_id for assertion
@@ -97,6 +135,7 @@ def test_import_results_prints_summary(tmp_path, capsys):
 def test_import_results_finding_count_nonzero(tmp_path, capsys):
     """SENSOR-04: import-results reports correct finding count when findings > 0."""
     sid = str(uuid.uuid4())
+    _enroll_default(sid)
     findings = [
         {"host": "10.0.0.1", "port": 443, "protocol": "tls"},
         {"host": "10.0.0.2", "port": 22, "protocol": "ssh"},
