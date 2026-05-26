@@ -115,6 +115,19 @@ def run_sensor(argv: list[str]) -> None:
     )
     export_p.add_argument("--output", default=".", help="Directory to write .qpush file")
 
+    merge_p = sub.add_parser(
+        "merge",
+        help="Merge all sensor data and produce unified CBOM + score",
+    )
+    merge_p.add_argument("--db", default=None, help="Override console DB path")
+    merge_p.add_argument(
+        "--stale-days",
+        type=int,
+        default=30,
+        dest="stale_days",
+        help="Exclude sensors silent for longer than this many days",
+    )
+
     args = parser.parse_args(argv)
     try:
         if args.action == "enroll":
@@ -123,6 +136,8 @@ def run_sensor(argv: list[str]) -> None:
             _cmd_push(args)
         elif args.action == "export-results":
             _cmd_export_results(args)
+        elif args.action == "merge":
+            _cmd_merge(args)
     except KeyboardInterrupt:
         # Clean shutdown on Ctrl-C / SIGINT (SENSOR-06 Windows clean-shutdown invariant)
         print("\nInterrupted.", file=sys.stderr)
@@ -675,4 +690,34 @@ def _cmd_export_results(args: argparse.Namespace) -> None:
         import shutil
         shutil.rmtree(output_dir_path, ignore_errors=True)
 
+    sys.exit(0)
+
+
+# ---------------------------------------------------------------------------
+# MERGE-05: merge — thin wrapper over merge_scan() (D-06 auto-trigger seam)
+# ---------------------------------------------------------------------------
+
+
+def _cmd_merge(args: argparse.Namespace) -> None:
+    """Merge all sensor data and produce a unified CBOM + score (MERGE-05).
+
+    Thin wrapper over merge_scan() — no merge logic duplicated here.
+    The standalone merge_scan() callable remains the v5.5 auto-trigger seam (D-06).
+    """
+    from quirk.merge.scan import merge_scan
+    from quirk.dashboard.api.deps import _default_db_path
+    from quirk.db import get_session, init_db
+
+    db_path = args.db or _default_db_path()
+    init_db(db_path)
+    with get_session(db_path) as db:
+        result = merge_scan(db, stale_days=args.stale_days)
+
+    print(f"Merged scan_id: {result['scan_id']}")
+    print(f"Score: {result['score']} ({result['rating']})")
+    if result.get("coverage_warning"):
+        w = result["coverage_warning"]
+        print(f"WARNING: {w['reason']}")
+        for sid in w["missing_sensors"]:
+            print(f"  - {sid}")
     sys.exit(0)
