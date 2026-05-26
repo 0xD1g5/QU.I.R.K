@@ -435,10 +435,15 @@ def _ingest_envelope(
                 raise UnknownSensorError(sensor_id)
             raise
 
-        # --- Update sensors.last_push_at ---
+        # --- Update sensors.last_push_at (+ sensor_version from the push) ---
         sensor_row = db.query(Sensor).filter(Sensor.sensor_id == sensor_id).first()
         if sensor_row is not None:
             sensor_row.last_push_at = now
+            # DASH-02: populate sensor_version from the push envelope so the
+            # registry shows a real version instead of always "—".
+            _sv = envelope.get("sensor_version")
+            if isinstance(_sv, str) and _sv:
+                sensor_row.sensor_version = _sv
 
         # --- Persist CryptoEndpoint rows (envelope sensor_id/segment are authoritative) ---
         for finding in findings:
