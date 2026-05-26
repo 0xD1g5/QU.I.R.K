@@ -383,3 +383,60 @@ def test_merge_run_persisted(tmp_path):
     assert row.endpoint_count >= 0
     assert row.sensor_count >= 0
     assert row.merged_at is not None
+
+
+# ---------------------------------------------------------------------------
+# CR-01: CBOM artifact is written to disk when output_dir is supplied
+# ---------------------------------------------------------------------------
+
+def test_cbom_artifact_written_on_merge_run(tmp_path):
+    """CR-01: merge_scan() must write the CBOM artifacts to disk and return
+    cbom_json_path / cbom_xml_path in the result dict.
+    """
+    from quirk.merge.scan import merge_scan
+
+    ts = datetime(2026, 5, 25, 12, 0, 0)
+    eps = [_tls_ep(host="10.0.1.1", sensor_id="s1", scanned_at=ts)]
+    sensors = [_sensor("s1", last_push_at=datetime(2026, 5, 25, 11, 55, 0), cadence_minutes=60)]
+
+    db_path, _ = _setup_real_db(tmp_path, eps, sensors)
+    now = datetime(2026, 5, 25, 12, 30, 0)
+    out_dir = str(tmp_path / "cbom_out")
+    os.makedirs(out_dir, exist_ok=True)
+
+    from quirk.db import get_session
+    with get_session(db_path) as db:
+        result = merge_scan(db, now=now, output_dir=out_dir)
+
+    # Result dict must expose paths
+    assert "cbom_json_path" in result, "result must have cbom_json_path key"
+    assert "cbom_xml_path" in result, "result must have cbom_xml_path key"
+    assert result["cbom_json_path"] is not None, "cbom_json_path must be set when output_dir supplied"
+    assert result["cbom_xml_path"] is not None, "cbom_xml_path must be set when output_dir supplied"
+
+    # Files must exist on disk
+    assert os.path.isfile(result["cbom_json_path"]), (
+        f"CBOM JSON file not found at {result['cbom_json_path']}"
+    )
+    assert os.path.isfile(result["cbom_xml_path"]), (
+        f"CBOM XML file not found at {result['cbom_xml_path']}"
+    )
+
+
+def test_cbom_paths_none_without_output_dir(tmp_path):
+    """CR-01: when output_dir is not supplied, cbom paths in result dict are None."""
+    from quirk.merge.scan import merge_scan
+
+    ts = datetime(2026, 5, 25, 12, 0, 0)
+    eps = [_tls_ep(host="10.0.1.1", sensor_id="s1", scanned_at=ts)]
+    sensors = [_sensor("s1", last_push_at=datetime(2026, 5, 25, 11, 55, 0), cadence_minutes=60)]
+
+    db_path, _ = _setup_real_db(tmp_path, eps, sensors)
+    now = datetime(2026, 5, 25, 12, 30, 0)
+
+    from quirk.db import get_session
+    with get_session(db_path) as db:
+        result = merge_scan(db, now=now)  # no output_dir
+
+    assert result.get("cbom_json_path") is None
+    assert result.get("cbom_xml_path") is None
