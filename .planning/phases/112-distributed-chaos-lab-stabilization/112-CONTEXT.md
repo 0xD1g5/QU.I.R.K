@@ -23,17 +23,28 @@ test + the existing Phase 110 unit MERGE-03 regression.
 <decisions>
 ## Implementation Decisions
 
-### Distributed Lab Topology (LAB-01 / LAB-02)
-- **Separate `quantum-chaos-enterprise-lab/docker-compose.distributed.yml`** — the explicit-network /
-  overlapping-subnet topology is structurally different from the existing port-mapped single-network
-  lab; keeping it separate avoids polluting the main compose and its `ALL_PROFILES` sweep.
-- **Two explicit bridge networks** `segment-a` and `segment-b`, **each with the SAME subnet
-  `10.10.0.0/24`** (overlapping RFC1918) — this is what makes MERGE-03 reproducible.
-- **Same static IP (e.g. `10.10.0.10`) assigned to a crypto target in BOTH networks**, so the two
-  per-segment sensors report an identical `host:port` that must yield two distinct CBOM components.
+### Distributed Lab Topology (LAB-01 / LAB-02) — REVISED per research (Docker constraint)
+- **Separate `quantum-chaos-enterprise-lab/docker-compose.distributed.yml`** — the explicit-network
+  topology is structurally different from the existing port-mapped single-network lab; keeping it
+  separate avoids polluting the main compose and its `ALL_PROFILES` sweep.
+- **CRITICAL CORRECTION (research-verified):** Docker REFUSES two bridge networks sharing a subnet on
+  one daemon (`Pool overlaps with other one on this address space`, Docker 29.4.3). The original
+  "same subnet 10.10.0.0/24 in both" decision is **technically infeasible** and is REPLACED below.
+- **Two explicit bridge networks** `segment-a` (`10.10.0.0/24`) and `segment-b` (`10.20.0.0/24`) —
+  distinct subnets (Docker requirement), genuinely isolated.
+- **Same-host:port reproduction via a shared HOSTNAME ALIAS (user decision):** each segment's crypto
+  target is reachable at the **same hostname** (e.g. `crypto.internal:443`) within its network, and
+  both per-segment sensors are configured to scan **that hostname**. Both sensors therefore record an
+  **identical `host:port` string** (`crypto.internal:443`), differing only by `sensor_id`/`segment` —
+  so the merge emits two distinct CBOM components (MERGE-03) under real Docker networking.
+  - **DEPENDS ON (planner/research MUST confirm):** that QUIRK records the **configured host string**
+    on `CryptoEndpoint.host` (not a resolved IP). If the scanner resolves the hostname to an IP and
+    records the IP, fall back to: configure both sensors' scan-target list with the same literal host
+    token via an alias mechanism that preserves the recorded string. Confirm before building the oracle.
 - Crypto targets reuse the existing nginx TLS images; at least one target per segment.
-- **One sensor container per segment** (installs the repo via `pip install`, runs
-  `quirk sensor enroll`/`push`) + **one console container** running `quirk serve`.
+- **One sensor container per segment** (built from `sensor.Dockerfile`, `FROM python:3.11.12-slim`,
+  `pip install ".[all]"` — `.[all]` because the console needs `[dashboard]` for `quirk serve`) +
+  **one console container** running `quirk serve --host 0.0.0.0` (default bind is loopback).
 
 ### E2E Orchestration & Oracle (LAB-03)
 - **`quantum-chaos-enterprise-lab/scripts/distributed-e2e.sh`** orchestrates
