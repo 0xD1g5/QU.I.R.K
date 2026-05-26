@@ -972,7 +972,7 @@ def _load_partial_failures(db: Session, scan_run_id_str: str) -> list[PartialFai
 @router.get("/scan/latest", response_model=ScanLatestResponse)
 def get_latest_scan(
     scan_id: Optional[str] = Query(default=None, description="ISO timestamp scan_id to load; omit for latest"),
-    segment: Optional[str] = Query(default=None, description="Filter by segment label; omit for all"),
+    segment: Optional[str] = Query(default=None, description="Filter by segment label; omit for all", min_length=1),
     db: Session = Depends(get_db),
 ) -> ScanLatestResponse:
     """GET /api/scan/latest — returns a scan session's full results.
