@@ -115,6 +115,22 @@ Make QU.I.R.K. load-bearing inside someone else's workflow. First-party integrat
 
 ---
 
+## v5.5 — Stabilization candidates (from v5.4 live UAT) *(added 2026-05-26)*
+
+v5.4 shipped, then the deferred **live distributed E2E (UAT-112-03)** finally ran against real Docker. The headline path now works (enroll→push→merge→CBOM, Score 95, MERGE-03 proven), but the live run found defects — **3 already fixed + committed this session** (compose build-context `../..`, `sensor enroll --sensor-id` enroll-contract, `_run_local_scan` `--output`), and **5 follow-ups parked to the backlog** for a v5.5 stabilization pass:
+
+| Backlog | Item | Type |
+|---|---|---|
+| 999.85 | Distributed lab needs a weak-crypto target so the Phase 111 segment filter can be exercised E2E (Test 7 blocked — not a product bug) | testability |
+| 999.86 | `quirk console enroll` not idempotent → `lab.sh distributed e2e` not re-runnable without `down -v` | bug |
+| 999.87 | `cmvp_cache.json` missing from installed package → repeated "CMVP cache unavailable" warnings on merge | bug |
+| 999.88 | `quirk scheduler` likely passes unsupported `--output`/`--target` to `run_scan` (same class as the fixed sensor bug) — scheduled scans may exit 2 | bug |
+| 999.89 | Stray `scanned_at=None` / port-0 `email_scanner`/`broker_scanner` rows in console DB after e2e | investigate |
+
+**Lesson reinforced:** live human-UAT keeps catching real bugs that automated verification (which injected matching in-memory rows) missed — consistent with every v5.4 phase. Full results: `.planning/v5.4-deferred-uat.md`; root-cause detail: `.planning/debug/sensor-enroll-id-mismatch.md`.
+
+---
+
 ## Items Pulled Forward (rationale log)
 
 Track here when the horizon shifts so future-you can see why:
