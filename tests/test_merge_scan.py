@@ -218,22 +218,30 @@ def test_coverage_warning_overdue_sensor(tmp_path):
     from quirk.merge.scan import merge_scan
 
     ts = datetime(2026, 5, 25, 12, 0, 0)
+    now = datetime(2026, 5, 25, 12, 30, 0)
     eps = [_tls_ep(host="10.0.1.1", sensor_id="s1", scanned_at=ts)]
-    # s2 is enrolled but has never pushed
+    # s2 was enrolled recently (today), has never pushed — should be flagged as overdue
+    # (WR-02: stale check uses enrolled_at; enrolled today is well within stale_days=30)
     sensors = [
         _sensor("s1", last_push_at=datetime(2026, 5, 25, 11, 55, 0), cadence_minutes=60),
-        _sensor("s2", last_push_at=None, cadence_minutes=60),  # never pushed
+        Sensor(
+            sensor_id="s2",
+            segment="test-seg",
+            enrolled_at=datetime(2026, 5, 25, 12, 0, 0),  # enrolled today — not stale
+            last_push_at=None,
+            expected_cadence_minutes=60,
+            sensor_version="test",
+        ),
     ]
 
     db_path, _ = _setup_real_db(tmp_path, eps, sensors)
-    now = datetime(2026, 5, 25, 12, 30, 0)
 
     from quirk.db import get_session
     with get_session(db_path) as db:
         result = merge_scan(db, now=now)
 
     cw = result["coverage_warning"]
-    assert cw is not None, "Expected coverage_warning for never-pushed sensor"
+    assert cw is not None, "Expected coverage_warning for never-pushed sensor enrolled today"
     assert "s2" in cw["missing_sensors"]
     assert cw["reason"]
 

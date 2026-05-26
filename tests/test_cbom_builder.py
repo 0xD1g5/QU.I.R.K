@@ -650,8 +650,10 @@ def test_codesign_surrogate_attaches_to_correct_sensor_cert():
     """
     not_after = "2027-01-01"
 
+    # protocol="TLS" required so _tls_surrogate_index is built for these endpoints
     ep_tls_a = _tls_endpoint(
         host="10.0.1.5", port=443,
+        protocol="TLS",
         sensor_id="sensor-a",
         cert_subject="CN=*.internal.example.com",
         cert_pubkey_alg="RSA",
@@ -662,6 +664,7 @@ def test_codesign_surrogate_attaches_to_correct_sensor_cert():
     )
     ep_tls_b = _tls_endpoint(
         host="10.0.2.5", port=443,
+        protocol="TLS",
         sensor_id="sensor-b",
         cert_subject="CN=*.internal.example.com",
         cert_pubkey_alg="RSA",
