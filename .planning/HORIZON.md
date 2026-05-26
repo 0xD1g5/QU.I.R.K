@@ -2,8 +2,8 @@
 
 **Purpose:** Themes for the next 5–7 milestones — deep enough to anchor backlog grooming and inter-milestone deferrals, shallow enough to revise after each ship. **Plan the next one or two in detail; sketch the rest.**
 
-**Last updated:** 2026-05-25 (post-v5.3 ship + distributed-architecture prioritization)
-**Current state:** v5.3 Adoption & Integration Surface SHIPPED 2026-05-25 (Phases 101–105, 20 plans, audit PASSED 21/21, tag `v5.3.0`) — notification fan-out (Slack/email/webhook), SIEM CEF export, and Jira+ServiceNow ticketing on one shared SSRF-safe/secret-scrubbing integration layer, plus single-tenant dashboard token auth. **Next milestone (v5.4) re-scoped below: Distributed On-Prem Scanner Architecture is now the committed anchor** (the "multi-segment ask" gate is satisfied — see PM review 2026-05-25). SaaS multi-tenancy stays parked. The v5.3 live-delivery human-UAT items are parked (no test environment).
+**Last updated:** 2026-05-26 (post-v5.4 ship + v5.5 opened)
+**Current state:** v5.4 Distributed On-Prem Scanner Architecture SHIPPED 2026-05-26 (Phases 106–112, 20 plans, audit PASSED 33/33, tag `v5.4.0`) — sensors scan per-segment and push outbound to a single-tenant console that merges into one CBOM + one score. **v5.5 Distributed Hardening + Stabilization is now OPENED (Phases 113–116, 13 requirements — see section below):** per-sensor token auth + revocation (TD-1), automatic merge-trigger (106 D-06), the 999.85–89 live-UAT defect sweep, and a Windows-packaging spike. The owed 2:1 stabilization breather. SaaS multi-tenancy stays parked; public-repo cutover and the full Windows binary build are deferred to v5.6.
 
 ---
 
@@ -115,7 +115,23 @@ Make QU.I.R.K. load-bearing inside someone else's workflow. First-party integrat
 
 ---
 
-## v5.5 — Stabilization candidates (from v5.4 live UAT) *(added 2026-05-26)*
+## v5.5 — Distributed Hardening + Stabilization *(OPENED 2026-05-26 — Phases 113–116)*
+
+**Committed scope (PM review with the user as PM, 2026-05-26):** the owed 2:1 stabilization breather v5.4 deliberately deferred, expanded from a pure bug-sweep into *hardening* because the meatier carry-forward items were ready. 4 phases, 13 requirements:
+- **Phase 113 Per-Sensor Authentication (AUTH, TD-1)** — per-sensor opaque tokens + revocation replacing the v5.4 shared-token model (no per-sensor JWT — forbidden-additions list still applies; hashed in the existing `sensor_tokens` table). The one net-new security surface.
+- **Phase 114 Automatic Merge Trigger (AUTOMERGE, 106 D-06)** — console auto-merges on full sensor check-in; no Celery/Redis/queue (forbidden infra); manual `quirk sensor merge` unregressed.
+- **Phase 115 Live-UAT Stabilization + Lab Testability (STAB 999.86/87/88/89 + LAB 999.85)** — idempotent console enroll, `cmvp_cache.json` packaging, scheduler `--output/--target` arg-passthrough, phantom port-0/`scanned_at=None` rows, + a weak-crypto distributed-lab target so the Phase 111 segment filter is E2E-exercisable.
+- **Phase 116 Windows Packaging SPIKE (WINPKG, 106 D-05)** — feasibility + sizing for a PyInstaller frozen EXE + Windows Scheduled Task, validated on `windows-latest` CI, ending in a go/no-go. **No production binary ships** — the full build splits to v5.6 if the spike finds it deep.
+
+**Scope decisions locked at new-milestone time:**
+- **Windows packaging = spike-only**, not full build (caps the documented balloon risk; full build → v5.6 conditional on the spike).
+- **Public-repo cutover stays OUT** — repo stays private; `windows-sensor-smoke` stays non-blocking CI; enforcing it as a required check is deferred to the public-repo launch decision.
+- **Per-sensor auth (TD-1) is IN as a core item**, not deferred — real multi-sensor security hardening.
+- **SaaS multi-tenancy stays PARKED** (unchanged).
+
+**v5.6 candidates seeded by this milestone:** full Windows frozen-binary build (if WINPKG-01 says go); public-repo cutover + required-status-check enforcement (re-run UAT-112-03 item 3).
+
+### Origin — stabilization candidates from the v5.4 live UAT *(captured 2026-05-26)*
 
 v5.4 shipped, then the deferred **live distributed E2E (UAT-112-03)** finally ran against real Docker. The headline path now works (enroll→push→merge→CBOM, Score 95, MERGE-03 proven), but the live run found defects — **3 already fixed + committed this session** (compose build-context `../..`, `sensor enroll --sensor-id` enroll-contract, `_run_local_scan` `--output`), and **5 follow-ups parked to the backlog** for a v5.5 stabilization pass:
 
@@ -138,6 +154,7 @@ Track here when the horizon shifts so future-you can see why:
 
 | Item | From | To | Rationale | Date |
 |---|---|---|---|---|
+| v5.5 opened as Distributed Hardening + Stabilization; Windows packaging cut to spike-only; public-repo cutover deferred | v5.5 sketched as a pure live-UAT bug-sweep | v5.5 = 4 phases (113–116): per-sensor auth (TD-1) + auto-merge (106 D-06) + STAB sweep (999.85–89) + Windows SPIKE | PM review with the user as PM (2026-05-26, post-v5.4 ship). The owed 2:1 breather, expanded from bug-sweep to *hardening* because the carry-forward items (per-sensor auth, auto-merge) were ready and reuse fresh v5.4 primitives. Windows packaging held to a spike (not full build) to cap the documented balloon risk → full build conditional on the spike → v5.6. Public-repo cutover kept OUT (repo stays private; `windows-sensor-smoke` non-blocking) — deferred to the launch decision. Per-sensor auth promoted to core. SaaS still parked. Research skipped (internal hardening; the one unknown — Windows freezing — is the spike itself). | 2026-05-26 |
 | Distributed on-prem scanner (999.22) decoupled from SaaS + promoted to v5.4 anchor | v5.4 = stabilization breather; 999.22 + SaaS both gated on adoption signal | v5.4 = Distributed On-Prem Scanner Architecture (anchor); SaaS stays parked | PM review with the user as PM (2026-05-25, post-v5.3 ship). 999.22 (on-prem, single-tenant, agent/console) was conflated with SaaS multi-tenancy under one "wait for multi-segment demand" gate — but they're different problems: distributed on-prem is a network-topology/engagement-completeness necessity (segmented enterprise nets a single host can't reach), SaaS is a business-model bet. The user surfaced a concrete multi-segment on-prem need → the gate's condition is met. Groundwork is freshest now (v5.3 just built the console-side auth + outbound-push primitives). v5.3 closed low-debt → low cost to defer the breather; 999.58 arch doc folds in as Phase 1. SaaS stays parked (no business-model signal). v5.3 live-delivery human-UAT items parked (no test environment) — explicitly NOT a v5.4 entry condition. | 2026-05-25 |
 | Forward outlook re-prioritized: Reporting promoted to NEXT (v5.2) | v5.0/v5.1 candidate sketches A/B/C; Distributed/SaaS at v5.2 | v5.2 Consulting-Grade Reporting → v5.3 Adoption → v5.4 Stabilization+SaaS-validation | v5.0 (stabilization) and v5.1 (auth/API capability) both shipped, consuming candidates A and C. Product-lens review (with the user as PM): for a consulting tool the *report is the product*, and no milestone has owned the output layer despite a now-deep detection engine. Reporting compounds all prior detection work and is the engagement moment-of-truth → promoted to NEXT. Adoption/integration (old Candidate B) follows. Distributed/SaaS pushed one more slot, still gated on a real adoption signal. | 2026-05-23 |
 | v5.1 candidate A (Authenticated Scanning) collapsed to shipped recap | sketch | one-paragraph recap | Shipped 2026-05-23 as Phases 93–96; details in v5.1-MILESTONE-AUDIT.md. | 2026-05-23 |
