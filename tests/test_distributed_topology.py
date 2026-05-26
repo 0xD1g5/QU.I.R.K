@@ -14,6 +14,7 @@ LAB-02 linchpin (confirmed in-code during planning):
 """
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -26,6 +27,7 @@ import yaml
 LAB_DIR = Path(__file__).resolve().parent.parent / "quantum-chaos-enterprise-lab"
 DIST_COMPOSE = LAB_DIR / "docker-compose.distributed.yml"
 SENSOR_DOCKERFILE = LAB_DIR / "sensor.Dockerfile"
+SENSOR_CONFIG = LAB_DIR / "sensor-config.yaml"
 E2E_SCRIPT = LAB_DIR / "scripts" / "distributed-e2e.sh"
 
 
@@ -129,8 +131,25 @@ def test_crypto_internal_alias_per_segment():
 
 # ---------------------------------------------------------------------------
 # test_both_sensors_scan_crypto_internal
+#
+# The scan target is configured via sensor-config.yaml (mounted into each
+# sensor container), NOT via CLI flags on `quirk sensor push`.  The
+# `quirk sensor push` subparser has no --target flag; the target comes from
+# the config.yaml file passed to --scan-config.
 # ---------------------------------------------------------------------------
 def test_both_sensors_scan_crypto_internal():
+    # 1. sensor-config.yaml must exist and declare crypto.internal as the target
+    assert SENSOR_CONFIG.exists(), (
+        f"sensor-config.yaml not found: {SENSOR_CONFIG}. "
+        "Each sensor container mounts this file to supply the scan target."
+    )
+    cfg = yaml.safe_load(SENSOR_CONFIG.read_text())
+    fqdns = (cfg.get("targets") or {}).get("fqdns") or []
+    assert "crypto.internal" in fqdns, (
+        f"sensor-config.yaml targets.fqdns must include 'crypto.internal'; got: {fqdns}"
+    )
+
+    # 2. Each sensor service must mount sensor-config.yaml (not hard-code an IP via CLI)
     data = yaml.safe_load(DIST_COMPOSE.read_text())
     services = data.get("services") or {}
 
@@ -142,25 +161,34 @@ def test_both_sensors_scan_crypto_internal():
         f"Expected >= 2 sensor services, found: {list(sensor_services.keys())}"
     )
 
+    ip_pattern = re.compile(r'10\.\d+\.\d+\.\d+:443')
+
     for name, svc in sensor_services.items():
+        # Command must NOT contain a literal IP target or non-existent CLI flags
         cmd = svc.get("command") or []
-        # command may be a list or a string
         if isinstance(cmd, list):
             cmd_str = " ".join(cmd)
         else:
             cmd_str = str(cmd)
 
-        # The scan target must reference crypto.internal:443
-        assert "crypto.internal:443" in cmd_str, (
-            f"Sensor '{name}' does not scan crypto.internal:443; command: {cmd}"
+        assert "--target" not in cmd_str, (
+            f"Sensor '{name}' command uses --target which does not exist in "
+            f"`quirk sensor push`; scan target must come from sensor-config.yaml: {cmd}"
+        )
+        assert not ip_pattern.search(cmd_str), (
+            f"Sensor '{name}' hard-codes a literal IP scan target — must use "
+            f"crypto.internal:443 via sensor-config.yaml: {cmd}"
         )
 
-        # Must NOT contain a literal IP address as the scan target
-        import re
-        # Look for 10.x.x.x patterns in the scan target portion
-        ip_pattern = re.compile(r'10\.\d+\.\d+\.\d+:443')
-        assert not ip_pattern.search(cmd_str), (
-            f"Sensor '{name}' uses a literal IP scan target — must use crypto.internal:443"
+        # sensor-config.yaml must be mounted into the sensor container
+        volumes = svc.get("volumes") or []
+        config_mounted = any(
+            "sensor-config.yaml" in (str(v) if not isinstance(v, dict) else str(v))
+            for v in volumes
+        )
+        assert config_mounted, (
+            f"Sensor '{name}' does not mount sensor-config.yaml; "
+            f"the scan target is supplied via config, not CLI flags. volumes: {volumes}"
         )
 
 
@@ -254,22 +282,45 @@ def test_sensor_dockerfile_base_pinned():
 
 # ---------------------------------------------------------------------------
 # test_e2e_script_enroll_push_merge_order
+#
+# Anchors the ordering assertion to actual command invocations, NOT the
+# header comment that mentions all three words on one line.  str.index()
+# returns the first occurrence — the header "enroll → push → merge" would
+# satisfy the assertion even if the actual exec calls were in the wrong order.
+# This version uses a regex that matches lines with actual `quirk sensor` /
+# `${DC} exec` invocations so the check fires on the executable statements.
 # ---------------------------------------------------------------------------
 def test_e2e_script_enroll_push_merge_order():
     assert E2E_SCRIPT.exists(), f"distributed-e2e.sh not found: {E2E_SCRIPT}"
     text = E2E_SCRIPT.read_text()
 
-    assert "enroll" in text, "distributed-e2e.sh must reference 'enroll'"
-    assert "push" in text, "distributed-e2e.sh must reference 'push'"
-    assert "merge" in text, "distributed-e2e.sh must reference 'merge'"
+    def _first_cmd_pos(keyword: str) -> int:
+        """Return the start position of the first command line invoking keyword.
 
-    ei = text.index("enroll")
-    pi = text.index("push")
-    mi = text.index("merge")
+        Matches lines that actually run the commands (quirk or ${DC} exec lines),
+        not comment lines.  Uses MULTILINE so ^ anchors at each line start.
+        """
+        # Match a line that: starts with optional whitespace (not #), then
+        # contains quirk or ${DC} followed by arbitrary content including keyword.
+        pattern = re.compile(
+            r'^\s*(?!\s*#).*quirk\s+.*' + re.escape(keyword),
+            re.MULTILINE,
+        )
+        m = pattern.search(text)
+        assert m is not None, (
+            f"No 'quirk ... {keyword}' command invocation found in distributed-e2e.sh"
+        )
+        return m.start()
+
+    ei = _first_cmd_pos("enroll")
+    pi = _first_cmd_pos("push")
+    mi = _first_cmd_pos("merge")
 
     assert ei < pi, (
-        f"'enroll' (pos {ei}) must appear before 'push' (pos {pi}) in distributed-e2e.sh"
+        f"'quirk ... enroll' (pos {ei}) must precede 'quirk ... push' (pos {pi}) "
+        f"in distributed-e2e.sh"
     )
     assert pi < mi, (
-        f"'push' (pos {pi}) must appear before 'merge' (pos {mi}) in distributed-e2e.sh"
+        f"'quirk ... push' (pos {pi}) must precede 'quirk ... merge' (pos {mi}) "
+        f"in distributed-e2e.sh"
     )

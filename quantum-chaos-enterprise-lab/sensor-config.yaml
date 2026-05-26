@@ -1,0 +1,29 @@
+# QU.I.R.K. sensor scan config — distributed chaos lab
+#
+# Both sensor-a and sensor-b use this config.yaml.
+# Each sensor's Docker network resolves "crypto.internal" to its own
+# segment's TLS target (10.10.0.10 for segment-a, 10.20.0.10 for
+# segment-b) via the DNS alias set in docker-compose.distributed.yml.
+# The scanner records the CONFIGURED host string verbatim (not a
+# resolved IP), so both sensors record host=crypto.internal:443 in
+# their findings — this is the MERGE-03 reproduction scenario.
+
+assessment:
+  name: "Distributed Chaos Lab — sensor scan"
+  data_classification: "internal"
+  report_owner: "quirk-lab"
+  timezone: "UTC"
+
+scan:
+  timeout_seconds: 10
+  concurrency: 4
+  ports_tls: [443]
+  include_sni: true
+  tls_enum_mode: fast
+
+targets:
+  fqdns:
+    - crypto.internal
+  cidrs: []
+  include_ips: []
+  exclude_ips: []
