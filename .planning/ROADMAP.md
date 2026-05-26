@@ -42,7 +42,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] **Phase 106: Architecture Documentation** — No-code gating anchor; locks wire contract, data-model keying, PM decisions, and forbidden-additions list before any v5.4 code ships (completed 2026-05-25)
 - [x] **Phase 107: Distributed Data Model** — Additive nullable columns + enrollment manifest + token + dedup tables; migration regression test; backward-compatible fixture (completed 2026-05-25)
 - [x] **Phase 108: Sensor Push CLI + Windows CI** — `quirk sensor enroll/push/export-results`; POSIX-ism audit; `platformdirs`; `tenacity` retry; `_NoRedirectHandler` extraction; `windows-latest` hard-gate CI smoke job (completed 2026-05-25)
-- [ ] **Phase 109: Console Ingestion API** — `POST /api/sensor/push` with `require_auth`, body-size limit, payload-ID dedup, clock-skew window, delivery audit, `safe_str` coverage
+- [x] **Phase 109: Console Ingestion API** — `POST /api/sensor/push` with `require_auth`, body-size limit, payload-ID dedup, clock-skew window, delivery audit, `safe_str` coverage (completed 2026-05-26)
 - [ ] **Phase 110: Cross-Sensor Merge & Scoring** — `quirk/sensor/merge.py`; Option A union scoring; `coverage_warning` for offline sensors; CBOM `sensor_id` component identity; `quirk sensor merge` CLI
 - [ ] **Phase 111: Console Dashboard Awareness** — Sensor registry UI; per-segment filter on findings/CBOM/score APIs; per-segment score gauges; `coverage_warning` banner; `sensor_id`/`segment` Pydantic fields
 - [ ] **Phase 112: Distributed Chaos-Lab + Stabilization** — Multi-segment Docker topology; overlapping RFC1918 lab validation; `lab.sh`/README/oracle updates; operators-guide; dep hygiene; UAT-SERIES.md close-out
@@ -125,8 +125,8 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 
 Plans:
 - [x] 109-01-PLAN.md — `quirk console enroll` provisioning command (writes sensors + sensor_tokens, mints bearer token)
-- [ ] 109-02-PLAN.md — POST /api/sensor/push route + PushEnvelope model + failure-mode ladder + audit-per-attempt + real _ingest_envelope
-- [ ] 109-03-PLAN.md — ingestion + enroll tests, safe_str AST gate extension, docs/UAT-SERIES.md update & Obsidian sync
+- [x] 109-02-PLAN.md — POST /api/sensor/push route + PushEnvelope model + failure-mode ladder + audit-per-attempt + real _ingest_envelope
+- [x] 109-03-PLAN.md — ingestion + enroll tests, safe_str AST gate extension, docs/UAT-SERIES.md update & Obsidian sync
 
 ### Phase 110: Cross-Sensor Merge & Scoring
 
@@ -181,7 +181,7 @@ Plans:
 | 106. Architecture Documentation | 2/2 | Complete    | 2026-05-25 |
 | 107. Distributed Data Model | 2/2 | Complete    | 2026-05-25 |
 | 108. Sensor Push CLI + Windows CI | 4/4 | Complete   | 2026-05-25 |
-| 109. Console Ingestion API | 1/3 | In Progress|  |
+| 109. Console Ingestion API | 3/3 | Complete   | 2026-05-26 |
 | 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
 | 111. Console Dashboard Awareness | 0/? | Not started | - |
 | 112. Distributed Chaos-Lab + Stabilization | 0/? | Not started | - |

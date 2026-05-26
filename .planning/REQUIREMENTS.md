@@ -45,10 +45,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 ### Console Ingestion (CONSOLE)
 
 - [x] **CONSOLE-01**: The console exposes `POST /api/sensor/push` on the existing `quirk serve` FastAPI app, accepting a pushed sensor scan payload.
-- [ ] **CONSOLE-02**: The ingestion endpoint requires authentication via router-level `Depends(require_auth)`; an unauthenticated request returns 401 (gating test).
-- [ ] **CONSOLE-03**: The ingestion endpoint enforces a body-size limit (413 on excess), rejects replayed `payload_id`s against `sensor_pushes` (409), and tolerates clock skew within a ±15-minute window (returning `console_utc` on rejection for diagnosis).
-- [ ] **CONSOLE-04**: Each push attempt writes an `IntegrationDelivery` audit row, with all exception text passed through `safe_str()` (extended AST gate covers the new module).
-- [ ] **CONSOLE-05**: The payload schema deserializes with `extra='ignore'` and honors `schema_version`, so a newer sensor pushing to an older console (or vice-versa) degrades gracefully rather than erroring.
+- [x] **CONSOLE-02**: The ingestion endpoint requires authentication via router-level `Depends(require_auth)`; an unauthenticated request returns 401 (gating test).
+- [x] **CONSOLE-03**: The ingestion endpoint enforces a body-size limit (413 on excess), rejects replayed `payload_id`s against `sensor_pushes` (409), and tolerates clock skew within a ±15-minute window (returning `console_utc` on rejection for diagnosis).
+- [x] **CONSOLE-04**: Each push attempt writes an `IntegrationDelivery` audit row, with all exception text passed through `safe_str()` (extended AST gate covers the new module).
+- [x] **CONSOLE-05**: The payload schema deserializes with `extra='ignore'` and honors `schema_version`, so a newer sensor pushing to an older console (or vice-versa) degrades gracefully rather than erroring.
 
 ### Cross-Sensor Merge & Scoring (MERGE)
 
@@ -135,10 +135,10 @@ Which phases cover which requirements.
 | SENSOR-06 | Phase 108 | Complete |
 | STAB-02 | Phase 108 | Complete |
 | CONSOLE-01 | Phase 109 | Complete |
-| CONSOLE-02 | Phase 109 | Pending |
-| CONSOLE-03 | Phase 109 | Pending |
-| CONSOLE-04 | Phase 109 | Pending |
-| CONSOLE-05 | Phase 109 | Pending |
+| CONSOLE-02 | Phase 109 | Complete |
+| CONSOLE-03 | Phase 109 | Complete |
+| CONSOLE-04 | Phase 109 | Complete |
+| CONSOLE-05 | Phase 109 | Complete |
 | MERGE-01 | Phase 110 | Pending |
 | MERGE-02 | Phase 110 | Pending |
 | MERGE-03 | Phase 110 | Pending |
