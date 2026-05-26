@@ -1,4 +1,3 @@
-import { useMemo } from "react"
 import { useSensorRegistry } from "@/hooks/useSensorRegistry"
 import type { SensorRegistryItem } from "@/types/api"
 import { Card, CardContent } from "@/components/ui/card"
@@ -104,9 +103,6 @@ function SensorsTable({ sensors }: { sensors: SensorRegistryItem[] }) {
 export function SensorsPage() {
   const { sensors, loading, error } = useSensorRegistry()
 
-  // Stable reference to the sensors list
-  const sensorList = useMemo(() => sensors, [sensors])
-
   if (loading) {
     return (
       <div role="status" aria-label="Loading sensors" className="space-y-6">
@@ -125,10 +121,10 @@ export function SensorsPage() {
     <div className="space-y-6">
       <h1 style={{ fontSize: 20, fontWeight: 600 }}>Sensors</h1>
 
-      {sensorList.length === 0 ? (
+      {sensors.length === 0 ? (
         <EmptyStateCard message="No sensors enrolled. Run: quirk sensor enroll --console <url> to register a sensor." />
       ) : (
-        <SensorsTable sensors={sensorList} />
+        <SensorsTable sensors={sensors} />
       )}
     </div>
   )
