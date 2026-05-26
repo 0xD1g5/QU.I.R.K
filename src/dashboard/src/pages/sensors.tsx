@@ -15,6 +15,9 @@ function relativeTime(isoString: string | null | undefined): string {
   const then = new Date(isoString).getTime()
   if (isNaN(then)) return "Never"
   const diffMs = Date.now() - then
+  // Clamp negative deltas (sensor clock slightly ahead of console) to "Just now"
+  // so a future timestamp never renders as "−N seconds ago" (WR-01).
+  if (diffMs < 0) return "Just now"
   const diffSec = Math.floor(diffMs / 1000)
   if (diffSec < 60) return `${diffSec} second${diffSec !== 1 ? "s" : ""} ago`
   const diffMin = Math.floor(diffSec / 60)
