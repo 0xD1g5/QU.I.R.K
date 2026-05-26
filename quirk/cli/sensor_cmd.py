@@ -710,11 +710,16 @@ def _cmd_merge(args: argparse.Namespace) -> None:
 
     db_path = args.db or _default_db_path()
     init_db(db_path)
+    output_dir = os.path.dirname(os.path.abspath(db_path))
     with get_session(db_path) as db:
-        result = merge_scan(db, stale_days=args.stale_days)
+        result = merge_scan(db, stale_days=args.stale_days, output_dir=output_dir)
 
     print(f"Merged scan_id: {result['scan_id']}")
     print(f"Score: {result['score']} ({result['rating']})")
+    if result.get("cbom_json_path"):
+        print(f"CBOM (JSON): {result['cbom_json_path']}")
+    if result.get("cbom_xml_path"):
+        print(f"CBOM (XML):  {result['cbom_xml_path']}")
     if result.get("coverage_warning"):
         w = result["coverage_warning"]
         print(f"WARNING: {w['reason']}")
