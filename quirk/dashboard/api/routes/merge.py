@@ -89,8 +89,32 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
             evidence = build_evidence_summary(eps, findings=None)
             result = compute_readiness_score(evidence)
             per_segment_scores[seg] = int(result["score"]) if result.get("score") is not None else 0
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "merge/latest: per-segment score failed for seg=%r: %s",
+                seg,
+                exc,
+            )
             per_segment_scores[seg] = 0
+
+    # ------------------------------------------------------------------
+    # Recompute overall score from the SAME live union so overall and
+    # per-segment gauges are always derived from one consistent dataset
+    # (WR-04 / IN-02 consistency fix).  latest_run.score is the
+    # point-in-time snapshot written at merge time — we keep it available
+    # on the model but the displayed score comes from the live union.
+    # ------------------------------------------------------------------
+    live_score: int = latest_run.score if latest_run.score is not None else 0
+    if endpoints:
+        try:
+            overall_evidence = build_evidence_summary(endpoints, findings=None)
+            overall_result = compute_readiness_score(overall_evidence)
+            live_score = int(overall_result["score"]) if overall_result.get("score") is not None else 0
+        except Exception as exc:
+            logger.warning(
+                "merge/latest: overall score recompute failed, falling back to merge-time snapshot: %s",
+                exc,
+            )
 
     # ------------------------------------------------------------------
     # Build response
@@ -98,7 +122,7 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
     merge_data = MergeLatestData(
         scan_id=latest_run.scan_id,
         merged_at=latest_run.merged_at,
-        score=latest_run.score,
+        score=live_score,
         endpoint_count=latest_run.endpoint_count or 0,
         sensor_count=latest_run.sensor_count or 0,
         coverage_warning=coverage_warning,
