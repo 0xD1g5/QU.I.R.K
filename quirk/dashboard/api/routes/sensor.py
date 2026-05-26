@@ -25,15 +25,16 @@ T-109-11  X-Sensor-Signature header read + structurally validated; carried as qp
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 
 import zstandard
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from quirk.cli.console_cmd import DuplicatePayloadError, _ingest_envelope
+from quirk.cli.console_cmd import DuplicatePayloadError, UnknownSensorError, _ingest_envelope
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.models import IntegrationDelivery, Sensor
@@ -75,7 +76,7 @@ class PushEnvelope(BaseModel):
     sensor_version: str
     sensor_id: str
     segment: str
-    findings: list = []
+    findings: list = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +160,7 @@ async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
     # Decompress body (zstd cap — T-109-06)
     # ------------------------------------------------------------------
     try:
-        dctx = zstandard.ZstdDecompressor()
+        dctx = zstandard.ZstdDecompressor(max_window_size=_MAX_DECOMPRESS_BYTES)
         raw = dctx.stream_reader(body).read(_MAX_DECOMPRESS_BYTES + 1)
         if len(raw) > _MAX_DECOMPRESS_BYTES:
             _audit(db, scan_id, "failed", "decompressed_payload_too_large")
@@ -177,16 +178,16 @@ async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
     # Parse JSON + PushEnvelope (extra='ignore' — version-skew warn-only)
     # ------------------------------------------------------------------
     try:
-        import json
-
         envelope_dict = json.loads(raw.decode("utf-8"))
         envelope = PushEnvelope(**envelope_dict)
     except Exception as exc:
         _audit(db, scan_id, "failed", safe_str(exc))
         raise HTTPException(status_code=400, detail="Body could not be parsed as a push envelope")
 
-    # Update scan_id to pushed_at once parsed (better traceability)
-    scan_id = envelope.pushed_at or scan_id
+    # Update scan_id to pushed_at once parsed (better traceability).
+    # WR-03: clamp to 64 chars so untrusted pushed_at cannot overflow
+    # IntegrationDelivery.scan_id String(64) or inject long strings into audit rows.
+    scan_id = (envelope.pushed_at or scan_id)[:64]
 
     # schema_version / sensor_version mismatch → warn-only, never block
     # (logged at DEBUG so integration tests don't surface noise)
@@ -243,21 +244,45 @@ async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
         )
     except DuplicatePayloadError:
         # T-109-10 — fixed string, never stringify exception (LEAK-02)
+        # CR-01: call db.rollback() before _audit so the session is in a clean state
+        db.rollback()
         _audit(db, scan_id, "failed", "duplicate_payload_id")
         raise HTTPException(status_code=409, detail="Duplicate payload_id")
+    except UnknownSensorError:
+        # CR-02: FK race — sensor deleted between route SELECT and _ingest_envelope INSERT.
+        # Catch explicitly so this returns 404, not 500 (bare except).
+        db.rollback()
+        _audit(db, scan_id, "failed", "unknown_sensor_id")
+        raise HTTPException(status_code=404, detail="Unknown sensor_id")
     except Exception as exc:
+        # CR-01: db.rollback() before _audit to ensure clean session state
+        db.rollback()
         _audit(db, scan_id, "failed", safe_str(exc))
         raise HTTPException(status_code=500, detail="Ingest failed")
 
     # ------------------------------------------------------------------
-    # Commit (ingest used flush-only; audit already committed per branch)
+    # WR-02: write the "ok" audit row BEFORE the final commit so both the
+    # ingest data and the audit row are committed atomically in one transaction.
+    # _audit() calls db.add(); the final db.commit() below persists everything.
     # ------------------------------------------------------------------
+    now_audit = datetime.now(timezone.utc).replace(tzinfo=None)
+    ok_row = IntegrationDelivery(
+        scan_id=scan_id,
+        finding_hash=None,
+        destination="sensor_push",
+        status="ok",
+        attempted_at=now_audit,
+        error_summary=None,
+    )
+    db.add(ok_row)
+
+    # Commit (ingest used flush-only; ok audit row added above — single commit)
     try:
         db.commit()
     except Exception as exc:
         logger.warning("Final commit failed: %s", safe_str(exc))
+        db.rollback()
         _audit(db, scan_id, "failed", safe_str(exc))
         raise HTTPException(status_code=500, detail="Ingest commit failed")
 
-    _audit(db, scan_id, "ok", None)
     return {"status": "accepted", "sensor_id": envelope.sensor_id, "payload_id": envelope.payload_id}
