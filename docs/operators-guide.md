@@ -442,8 +442,8 @@ quantum-readiness score.)*
 ```
 
 Each sensor is a standard `pip install quirk-scanner[all]` deployment. Sensors
-communicate with the console over HTTPS using a shared HMAC key and a per-push bearer
-token provisioned at enrollment time.
+communicate with the console over HTTPS using a shared HMAC key and a shared console
+API token set at enrollment time.
 
 ### 8.1 Provision the console
 
@@ -454,50 +454,76 @@ routable address so sensors can reach it over the network:
 # Console host (Linux / macOS)
 pip install "quirk-scanner[all]"
 
+# Set the shared API token BEFORE starting the server.
+# Sensors must send this same token in every push request.
+export QUIRK_API_TOKEN="<your-strong-random-token>"
+
 # Start the server — bind to a specific interface or 0.0.0.0 for all interfaces.
 # The console binds loopback by default; override for multi-host use.
 quirk serve --host 0.0.0.0 --port 8512
 ```
 
 > **Security note:** Do not expose the console port to untrusted networks without an
-> HTTPS reverse proxy and IP allowlist in front of it. Bearer tokens printed by
-> `quirk console enroll` are one-time-use and shown once — store them securely.
+> HTTPS reverse proxy and IP allowlist in front of it. Set `QUIRK_API_TOKEN` to a
+> strong random value before starting the server; `quirk serve` without this variable
+> runs with authentication disabled (appropriate only for local dev/testing).
+
+### 8.1.1 v5.4 shared-token authentication model
+
+In v5.4, push authentication uses a **shared API token** on the console.
+
+| Component | Role |
+|-----------|------|
+| `QUIRK_API_TOKEN` env var (or `security.api_token` in `config.yaml`) | The console's shared token; authenticates every `POST /api/sensor/push` request |
+| `console_api_token` in `sensor.yaml` | Must equal the console's `QUIRK_API_TOKEN`; set via `quirk sensor enroll --api-token <value>` |
+| Enrollment token from `quirk console enroll` | One-time provisioning record stored (as SHA-256 hash) in `sensor_tokens` for audit; **NOT the push credential** |
+
+The enrollment token printed by `quirk console enroll` identifies the sensor row and is
+shown once for your records. It does **not** authenticate push requests — that is the
+console's shared `QUIRK_API_TOKEN`.
+
+Per-sensor token auth (where each sensor has its own revocable credential validated
+against `sensor_tokens`) is planned for v5.5.
 
 ### 8.2 Enroll each sensor
 
-On the **console host**, provision a credential for each sensor. Each invocation creates
-a new `sensors` row in the console database and prints a **one-time bearer token** to
-stdout. The token is never written to disk on the console side; copy it immediately.
+On the **console host**, provision a sensor row for each sensor. Each invocation creates
+a new `sensors` row in the console database and prints a **one-time enrollment token** to
+stdout. This token is a provisioning/audit record — it is stored as its SHA-256 hash in
+`sensor_tokens`. It is **not** the push credential (see §8.1.1).
 
 ```bash
 # Console host — run once per sensor
 quirk console enroll --segment <label>
 # e.g.:
 quirk console enroll --segment segment-a
-# → prints a one-time bearer token; copy it before proceeding
+# → prints a one-time enrollment token (provisioning audit record — not the push credential)
 quirk console enroll --segment segment-b
 ```
 
-On each **sensor host**, run `quirk sensor enroll` with the token printed above:
+On each **sensor host**, run `quirk sensor enroll` with the **console's shared API token**
+(the value of `QUIRK_API_TOKEN` on the console), not the enrollment token above:
 
 ```bash
 # Sensor host — Linux / macOS
+# --api-token is the CONSOLE'S SHARED API TOKEN (QUIRK_API_TOKEN on the console),
+# NOT the enrollment token printed above.
 quirk sensor enroll https://<console-host>:8512 \
   --segment <label> \
-  --api-token <one-time-token>
+  --api-token <console-QUIRK_API_TOKEN>
 # e.g.:
 quirk sensor enroll https://console.corp:8512 \
   --segment segment-a \
-  --api-token eyJhbGc...
+  --api-token my-strong-shared-token
 ```
 
 Enrollment writes `sensor.yaml` to the default platform config directory:
 - **Linux / macOS:** `~/.config/quirk/sensor.yaml` (XDG `user_config_dir`)
 - **Windows:** `%APPDATA%\quirk\sensor.yaml`
 
-The file stores the `sensor_id` (UUID), `segment` label, HMAC key, and console URL.
-The one-time enrollment token is **never** written to `sensor.yaml`; push authentication
-uses the persistent HMAC key provisioned at enroll time.
+The file stores the `sensor_id` (UUID), `segment` label, HMAC key, console URL, and the
+`console_api_token` used to authenticate push requests. The one-time enrollment token
+from `quirk console enroll` is **never** written to `sensor.yaml`.
 
 Use `--config <path>` to place `sensor.yaml` at a custom location (useful in CI or when
 running multiple sensors on the same host).
@@ -564,10 +590,10 @@ pip install "quirk-scanner[all]"
 **Enroll and push (PowerShell):**
 
 ```powershell
-# Enroll (one-time — token comes from the console operator)
+# Enroll (one-time — --api-token is the CONSOLE'S QUIRK_API_TOKEN, not the enrollment token)
 quirk sensor enroll https://<console-host>:8512 `
   --segment segment-windows `
-  --api-token <one-time-token>
+  --api-token <console-QUIRK_API_TOKEN>
 
 # sensor.yaml written to: $env:APPDATA\quirk\sensor.yaml
 
