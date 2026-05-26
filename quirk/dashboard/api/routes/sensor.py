@@ -52,6 +52,10 @@ router = APIRouter(dependencies=[Depends(require_auth)])
 # ---------------------------------------------------------------------------
 _BODY_LIMIT = 10 * 1024 * 1024           # 10 MB — Content-Length + body guard
 _MAX_DECOMPRESS_BYTES = 20 * 1024 * 1024  # zstd cap (mirrors console_cmd.py D-09)
+# Power-of-two C-layer window cap (zstd rounds max_window_size up to a window-log
+# exponent; 20 MB would silently become 32 MB). The authoritative 20 MB limit is
+# enforced by the post-read length check (WR-01).
+_ZSTD_MAX_WINDOW = 32 * 1024 * 1024
 _REPLAY_WINDOW = timedelta(minutes=15)    # pushed_at must be within ±15 min of received_at
 
 # X-Sensor-Signature structural prefix (T-109-11 — crypto verify deferred v5.5)
@@ -160,7 +164,7 @@ async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
     # Decompress body (zstd cap — T-109-06)
     # ------------------------------------------------------------------
     try:
-        dctx = zstandard.ZstdDecompressor(max_window_size=_MAX_DECOMPRESS_BYTES)
+        dctx = zstandard.ZstdDecompressor(max_window_size=_ZSTD_MAX_WINDOW)
         raw = dctx.stream_reader(body).read(_MAX_DECOMPRESS_BYTES + 1)
         if len(raw) > _MAX_DECOMPRESS_BYTES:
             _audit(db, scan_id, "failed", "decompressed_payload_too_large")
