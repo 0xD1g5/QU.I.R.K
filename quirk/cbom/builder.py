@@ -394,32 +394,42 @@ def _extract_fp(service_detail: str | None) -> str | None:
     return None
 
 
-def _codesign_surrogate_key(ep: "CryptoEndpoint") -> tuple[str, str, str] | None:
+def _codesign_surrogate_key(ep: "CryptoEndpoint") -> tuple[str, str, str, str] | None:
     """Compute the cross-source surrogate key for a CODE_SIGNING endpoint.
 
-    Returns (cert_subject, cert_pubkey_alg, cert_not_after) when all three
-    fields are non-empty, else None.  The surrogate key is used to detect
-    certs already emitted via TLS Pass-2 (CSIGN-03 cross-source dedup).
+    Returns (sensor_id, cert_subject, cert_pubkey_alg, cert_not_after) when all
+    three cert fields are non-empty, else None.  The surrogate key is used to
+    detect certs already emitted via TLS Pass-2 (CSIGN-03 cross-source dedup).
+
+    sensor_id is the first element so the index is sensor-scoped and two sensors
+    presenting the same wildcard cert do not collapse into each other (CR-02).
+    NULL/missing sensor_id maps to "" (backward-compatible single-sensor path).
     """
+    sid = str(getattr(ep, "sensor_id", None) or "")
     subj = str(getattr(ep, "cert_subject", "") or "").strip()
     alg = str(getattr(ep, "cert_pubkey_alg", "") or "").strip()
     not_after = str(getattr(ep, "cert_not_after", "") or "").strip()
     if subj and alg and not_after:
-        return (subj, alg, not_after)
+        return (sid, subj, alg, not_after)
     return None
 
 
-def _tls_surrogate_key(ep: "CryptoEndpoint") -> tuple[str, str, str] | None:
+def _tls_surrogate_key(ep: "CryptoEndpoint") -> tuple[str, str, str, str] | None:
     """Compute the surrogate key for a TLS endpoint's certificate.
 
-    Returns (cert_subject, cert_pubkey_alg, cert_not_after) when all three
-    fields are non-empty, else None.
+    Returns (sensor_id, cert_subject, cert_pubkey_alg, cert_not_after) when all
+    three cert fields are non-empty, else None.
+
+    sensor_id is the first element so the index is sensor-scoped and two sensors
+    presenting the same wildcard cert do not overwrite each other's index entry
+    (CR-02).  NULL/missing sensor_id maps to "" (backward-compatible).
     """
+    sid = str(getattr(ep, "sensor_id", None) or "")
     subj = str(getattr(ep, "cert_subject", "") or "").strip()
     alg = str(getattr(ep, "cert_pubkey_alg", "") or "").strip()
     not_after = str(getattr(ep, "cert_not_after", "") or "").strip()
     if subj and alg and not_after:
-        return (subj, alg, not_after)
+        return (sid, subj, alg, not_after)
     return None
 
 
@@ -761,7 +771,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     # (an exclusion list would silently break if a new cert-emitting protocol
     # were added — WR-02).
     _TLS_CERT_SOURCE_PROTOCOLS = ("TLS",)
-    _tls_surrogate_index: dict[tuple[str, str, str], Component] = {}
+    _tls_surrogate_index: dict[tuple[str, str, str, str], Component] = {}
     for ep in endpoints:
         if ep.protocol not in _TLS_CERT_SOURCE_PROTOCOLS:
             continue
