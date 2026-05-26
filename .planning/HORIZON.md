@@ -126,6 +126,7 @@ v5.4 shipped, then the deferred **live distributed E2E (UAT-112-03)** finally ra
 | 999.87 | `cmvp_cache.json` missing from installed package → repeated "CMVP cache unavailable" warnings on merge | bug |
 | 999.88 | `quirk scheduler` likely passes unsupported `--output`/`--target` to `run_scan` (same class as the fixed sensor bug) — scheduled scans may exit 2 | bug |
 | 999.89 | Stray `scanned_at=None` / port-0 `email_scanner`/`broker_scanner` rows in console DB after e2e | investigate |
+| (ops decision) | Windows hard-gate (UAT-112-03 item 3) cannot be enforced: branch protection needs GitHub Pro or a public repo (repo is private/free → 403). `windows-sensor-smoke` CI job exists + runs but is non-blocking. Decide: upgrade to Pro, go public, or accept informational CI | decision |
 
 **Lesson reinforced:** live human-UAT keeps catching real bugs that automated verification (which injected matching in-memory rows) missed — consistent with every v5.4 phase. Full results: `.planning/v5.4-deferred-uat.md`; root-cause detail: `.planning/debug/sensor-enroll-id-mismatch.md`.
 
