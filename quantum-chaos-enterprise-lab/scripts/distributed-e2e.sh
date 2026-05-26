@@ -10,9 +10,21 @@
 #   bash quantum-chaos-enterprise-lab/scripts/distributed-e2e.sh
 #
 # Orchestration steps:
-#   1. enroll  — provision each sensor in the console DB; capture bearer tokens
-#   2. push    — each sensor scans crypto.internal:443 locally and pushes to console
+#   1. enroll  — provision each sensor in the console DB (enrollment tokens are
+#                one-time provisioning records, NOT the push credential)
+#   2. push    — each sensor writes sensor.yaml with the CONSOLE'S SHARED API TOKEN
+#                (QUIRK_API_TOKEN=lab-shared-token set on the console container),
+#                scans crypto.internal:443, and pushes authenticated findings
 #   3. merge   — console merges all pushed findings into a unified CBOM + score
+#
+# v5.4 SHARED-TOKEN MODEL:
+#   - The console runs with QUIRK_API_TOKEN=lab-shared-token (set in
+#     docker-compose.distributed.yml), so POST /api/sensor/push requires auth.
+#   - Sensors authenticate pushes with that same shared token, passed via
+#     `quirk sensor enroll --api-token lab-shared-token`.
+#   - The one-time enrollment tokens printed by `quirk console enroll` are
+#     provisioning/audit records only — they do NOT authenticate pushes.
+#   - Per-sensor token auth + revocation is planned for v5.5.
 #
 # The live run is human-UAT; this script delivers a runnable orchestrator.
 # Automated verification floor: tests/test_distributed_topology.py.
@@ -27,14 +39,22 @@ DC="docker compose -p ${PROJECT} -f ${DIST_COMPOSE}"
 
 CONSOLE_URL="http://console:8512"
 
+# v5.4 shared token: must match QUIRK_API_TOKEN in docker-compose.distributed.yml.
+CONSOLE_SHARED_TOKEN="lab-shared-token"
+
 echo "==> Distributed E2E: enroll → push → merge"
 echo "    Project:  ${PROJECT}"
 echo "    Compose:  ${DIST_COMPOSE}"
+echo "    Auth:     ENABLED (shared console API token)"
 
 # -----------------------------------------------------------------------
-# Step 1: enroll — provision each sensor in the console DB
+# Step 1: enroll — provision each sensor row in the console DB.
 # -T disables TTY allocation so $() captures stdout cleanly.
-# The bearer token is on the last line of stdout; extract it.
+#
+# The enrollment token printed to stdout is a ONE-TIME PROVISIONING RECORD
+# stored (hashed) in sensor_tokens for audit.  It does NOT authenticate
+# pushes; push auth uses CONSOLE_SHARED_TOKEN (v5.4 shared-token model).
+# We capture and discard the enrollment token output.
 # -----------------------------------------------------------------------
 echo ""
 echo "--- Step 1: enroll (provision sensors in console DB) ---"
@@ -42,28 +62,29 @@ echo "--- Step 1: enroll (provision sensors in console DB) ---"
 echo "  Enrolling sensor-a (segment-a)..."
 ENROLL_OUT_A=$(${DC} exec -T console \
   quirk console enroll --segment segment-a --sensor-id sensor-a 2>/dev/null)
-TOKEN_A=$(echo "${ENROLL_OUT_A}" | tail -n1)
-# WR-03: command-substitution failures do NOT trigger set -e; guard explicitly.
-if [[ -z "${TOKEN_A}" ]]; then
-  echo "ERROR: enrollment failed for sensor-a (empty token — console may not be ready)" >&2
+# Guard: enrollment stdout must be non-empty (indicates console is ready)
+if [[ -z "${ENROLL_OUT_A}" ]]; then
+  echo "ERROR: enrollment failed for sensor-a (empty output — console may not be ready)" >&2
   exit 1
 fi
-echo "  sensor-a enrolled."
+echo "  sensor-a enrolled (provisioning record written)."
 
 echo "  Enrolling sensor-b (segment-b)..."
 ENROLL_OUT_B=$(${DC} exec -T console \
   quirk console enroll --segment segment-b --sensor-id sensor-b 2>/dev/null)
-TOKEN_B=$(echo "${ENROLL_OUT_B}" | tail -n1)
-# WR-03: same empty-token guard for sensor-b.
-if [[ -z "${TOKEN_B}" ]]; then
-  echo "ERROR: enrollment failed for sensor-b (empty token — console may not be ready)" >&2
+if [[ -z "${ENROLL_OUT_B}" ]]; then
+  echo "ERROR: enrollment failed for sensor-b (empty output — console may not be ready)" >&2
   exit 1
 fi
-echo "  sensor-b enrolled."
+echo "  sensor-b enrolled (provisioning record written)."
 
 # -----------------------------------------------------------------------
-# Step 2: push — write sensor config then run scan + push to console
-# Each sensor enrolls with its bearer token, then pushes its local scan.
+# Step 2: push — write sensor.yaml using the CONSOLE'S SHARED API TOKEN,
+# then run scan + authenticated push to the console.
+#
+# --api-token "${CONSOLE_SHARED_TOKEN}": this is the push credential that
+# matches QUIRK_API_TOKEN on the console (v5.4 shared-token model).
+# NOT the enrollment token — that is provisioning-only.
 #
 # CR-03: CONSOLE_URL resolves to a private RFC1918 IP inside the container
 # (console is on console-net 10.30.0.x).  --allow-internal-console opts in
@@ -82,7 +103,8 @@ echo "--- Step 2: push (scan local target + push findings to console) ---"
 
 echo "  Configuring + pushing sensor-a..."
 ${DC} exec -T sensor-a \
-  quirk sensor enroll "${CONSOLE_URL}" --segment segment-a --api-token "${TOKEN_A}" \
+  quirk sensor enroll "${CONSOLE_URL}" --segment segment-a \
+  --api-token "${CONSOLE_SHARED_TOKEN}" \
   --allow-internal-console
 ${DC} exec -T sensor-a \
   quirk sensor push --scan-config /quirk/sensor-config.yaml
@@ -90,7 +112,8 @@ echo "  sensor-a push complete."
 
 echo "  Configuring + pushing sensor-b..."
 ${DC} exec -T sensor-b \
-  quirk sensor enroll "${CONSOLE_URL}" --segment segment-b --api-token "${TOKEN_B}" \
+  quirk sensor enroll "${CONSOLE_URL}" --segment segment-b \
+  --api-token "${CONSOLE_SHARED_TOKEN}" \
   --allow-internal-console
 ${DC} exec -T sensor-b \
   quirk sensor push --scan-config /quirk/sensor-config.yaml

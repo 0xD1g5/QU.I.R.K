@@ -80,13 +80,20 @@ resolved Docker bridge IP — for both sensors. This is the invariant that makes
 reproducible across real segmented networks: operators configure the same logical hostname
 in both segments; the scanner records what it was told to scan.
 
+**Authentication:** The lab runs with auth **ENABLED**. The console container sets
+`QUIRK_API_TOKEN=lab-shared-token`; sensors pass `--api-token lab-shared-token` at
+enroll time so `console_api_token` in `sensor.yaml` matches the console's shared token.
+This is the v5.4 shared-token model: all sensors authenticate with the same console
+token; per-sensor token auth is v5.5. The enrollment tokens printed by
+`quirk console enroll` are provisioning/audit records only, not push credentials.
+
 | Step | Expected Outcome |
 |------|-----------------|
-| `quirk console enroll` (×2, one per sensor) | Prints a one-time bearer token per enrollment; token consumed on successful enroll |
-| `quirk sensor enroll <console_url> --segment segment-a --api-token <token>` | Writes `sensor.yaml` with `sensor_id` (UUID), `segment: segment-a`, push credentials |
-| `quirk sensor enroll <console_url> --segment segment-b --api-token <token>` | Writes `sensor.yaml` with distinct `sensor_id` (UUID), `segment: segment-b`, push credentials |
-| `quirk sensor push` on sensor-a | HTTP 200 from console; scan results for `crypto.internal:443` persisted |
-| `quirk sensor push` on sensor-b | HTTP 200 from console; scan results for `crypto.internal:443` persisted |
+| `quirk console enroll` (×2, one per sensor) | Prints a one-time enrollment token (provisioning/audit record); sensor row written to DB |
+| `quirk sensor enroll <console_url> --segment segment-a --api-token lab-shared-token` | Writes `sensor.yaml` with `sensor_id` (UUID), `segment: segment-a`, `console_api_token: lab-shared-token` |
+| `quirk sensor enroll <console_url> --segment segment-b --api-token lab-shared-token` | Writes `sensor.yaml` with distinct `sensor_id` (UUID), `segment: segment-b`, `console_api_token: lab-shared-token` |
+| `quirk sensor push` on sensor-a | HTTP 200 from console (authenticated); scan results for `crypto.internal:443` persisted |
+| `quirk sensor push` on sensor-b | HTTP 200 from console (authenticated); scan results for `crypto.internal:443` persisted |
 | `quirk sensor merge` on console | Produces one merged CBOM + one readiness score across union of sensor endpoints |
 | Merged CBOM component count for `crypto.internal:443` | **2 distinct `CryptoEndpoint` rows**, each with `host="crypto.internal"`, `port=443`, differing only by `sensor_id` |
 | `coverage_warning` | `null` — both sensors have pushed within the merge window |

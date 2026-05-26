@@ -140,6 +140,12 @@ services:
       context: ../..
       dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
     command: ["serve", "--host", "0.0.0.0", "--port", "8512"]
+    environment:
+      # v5.4 shared-token model: QUIRK_API_TOKEN enables Bearer auth on the
+      # console.  Sensors authenticate POST /api/sensor/push with this same
+      # shared token (set as console_api_token in sensor.yaml via --api-token).
+      # Per-sensor token auth is planned for v5.5.
+      - QUIRK_API_TOKEN=lab-shared-token
     volumes:
       - console-data:/home/quirk
     networks:
