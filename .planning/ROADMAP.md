@@ -44,7 +44,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] **Phase 108: Sensor Push CLI + Windows CI** — `quirk sensor enroll/push/export-results`; POSIX-ism audit; `platformdirs`; `tenacity` retry; `_NoRedirectHandler` extraction; `windows-latest` hard-gate CI smoke job (completed 2026-05-25)
 - [x] **Phase 109: Console Ingestion API** — `POST /api/sensor/push` with `require_auth`, body-size limit, payload-ID dedup, clock-skew window, delivery audit, `safe_str` coverage (completed 2026-05-26)
 - [x] **Phase 110: Cross-Sensor Merge & Scoring** — `quirk/sensor/merge.py`; Option A union scoring; `coverage_warning` for offline sensors; CBOM `sensor_id` component identity; `quirk sensor merge` CLI (completed 2026-05-26)
-- [ ] **Phase 111: Console Dashboard Awareness** — Sensor registry UI; per-segment filter on findings/CBOM/score APIs; per-segment score gauges; `coverage_warning` banner; `sensor_id`/`segment` Pydantic fields
+- [x] **Phase 111: Console Dashboard Awareness** — Sensor registry UI; per-segment filter on findings/CBOM/score APIs; per-segment score gauges; `coverage_warning` banner; `sensor_id`/`segment` Pydantic fields (completed 2026-05-26)
 - [ ] **Phase 112: Distributed Chaos-Lab + Stabilization** — Multi-segment Docker topology; overlapping RFC1918 lab validation; `lab.sh`/README/oracle updates; operators-guide; dep hygiene; UAT-SERIES.md close-out
 
 ---
@@ -161,8 +161,8 @@ Plans:
 **Plans**: 3 plans
 
 - [x] 111-01-PLAN.md — Backend read-layer: sensor-registry + merge/latest (per-segment Option-A recompute) endpoints, `?segment=` filter on /api/scan/latest, nullable sensor_id/segment on findings/CBOM schemas + TestClient tests
-- [ ] 111-02-PLAN.md — Frontend: TS type mirror + hooks, Sensors page + nav, shared segment filter on Findings/CBOM, per-segment gauges + coverage banner on Executive, npm build + vitest
-- [ ] 111-03-PLAN.md — Series 111 UAT-SERIES.md + Obsidian sync + phase note + full-suite verify + human-UAT checkpoint
+- [x] 111-02-PLAN.md — Frontend: TS type mirror + hooks, Sensors page + nav, shared segment filter on Findings/CBOM, per-segment gauges + coverage banner on Executive, npm build + vitest
+- [x] 111-03-PLAN.md — Series 111 UAT-SERIES.md + Obsidian sync + phase note + full-suite verify + human-UAT checkpoint
 **UI hint**: yes
 
 ### Phase 112: Distributed Chaos-Lab + Stabilization
@@ -191,5 +191,5 @@ Plans:
 | 108. Sensor Push CLI + Windows CI | 4/4 | Complete   | 2026-05-25 |
 | 109. Console Ingestion API | 3/3 | Complete   | 2026-05-26 |
 | 110. Cross-Sensor Merge & Scoring | 3/3 | Complete   | 2026-05-26 |
-| 111. Console Dashboard Awareness | 1/3 | In Progress|  |
+| 111. Console Dashboard Awareness | 3/3 | Complete   | 2026-05-26 |
 | 112. Distributed Chaos-Lab + Stabilization | 0/? | Not started | - |
