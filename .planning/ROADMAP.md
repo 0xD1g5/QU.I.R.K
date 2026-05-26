@@ -182,7 +182,7 @@ Plans:
 
 Plans:
 - [x] 112-01-PLAN.md — Distributed lab topology: compose + sensor.Dockerfile + distributed-e2e.sh + lab.sh distributed arm + topology test (LAB-01/02/03)
-- [ ] 112-02-PLAN.md — expected_results_distributed.md oracle + chaos-lab README + operators-guide §8 (LAB-03/STAB-01)
+- [x] 112-02-PLAN.md — expected_results_distributed.md oracle + chaos-lab README + operators-guide §8 (LAB-03/STAB-01)
 - [ ] 112-03-PLAN.md — datetime.utcnow fix + dep audit + UAT Series 112 + Obsidian sync + final phase note (STAB-03)
 
 ---
@@ -197,4 +197,4 @@ Plans:
 | 109. Console Ingestion API | 3/3 | Complete   | 2026-05-26 |
 | 110. Cross-Sensor Merge & Scoring | 3/3 | Complete   | 2026-05-26 |
 | 111. Console Dashboard Awareness | 3/3 | Complete   | 2026-05-26 |
-| 112. Distributed Chaos-Lab + Stabilization | 0/? | Not started | - |
+| 112. Distributed Chaos-Lab + Stabilization | 2/3 | In Progress|  |
