@@ -45,14 +45,9 @@ const QS_NODE_COLOR: Record<string, string> = {
 
 interface CbomTableProps {
   components: CbomComponent[]
-  // Segment filter is lifted to CbomPage so CbomGraph shares the same filtered
-  // data (IN-03: both tabs must respect the segment selection).
-  segmentFilter: string
-  setSegmentFilter: (v: string) => void
-  distinctSegments: string[]
 }
 
-function CbomTable({ components, segmentFilter, setSegmentFilter, distinctSegments }: CbomTableProps) {
+function CbomTable({ components }: CbomTableProps) {
   const [qsFilter, setQsFilter] = useState<string>("all")
   const [search, setSearch] = useState("")
 
@@ -89,17 +84,6 @@ function CbomTable({ components, segmentFilter, setSegmentFilter, distinctSegmen
             <SelectItem value="At Risk">At Risk</SelectItem>
             <SelectItem value="Vulnerable">Vulnerable</SelectItem>
             <SelectItem value="Unknown">Unknown</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-          <SelectTrigger className="w-40 h-8 text-sm" aria-label="Filter by segment">
-            <SelectValue placeholder="All segments" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All segments</SelectItem>
-            {distinctSegments.map((seg) => (
-              <SelectItem key={seg} value={seg}>{seg}</SelectItem>
-            ))}
           </SelectContent>
         </Select>
       </div>
@@ -471,18 +455,27 @@ export function CbomPage() {
   return (
     <div className="space-y-4">
       <h1 style={{ fontSize: 20, fontWeight: 600 }}>CBOM Viewer</h1>
+      {/* UI-FIX-1: segment filter lives above <Tabs> so it is visible on both
+          the Table and Graph tabs. State + filtered dataset remain lifted to
+          CbomPage scope (IN-03); only the Select JSX moved here. */}
+      <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+        <SelectTrigger className="w-40 h-8 text-sm" aria-label="Filter by segment">
+          <SelectValue placeholder="All segments" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All segments</SelectItem>
+          {distinctSegments.map((seg) => (
+            <SelectItem key={seg} value={seg}>{seg}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Tabs defaultValue="table">
         <TabsList>
           <TabsTrigger value="table">Table</TabsTrigger>
           <TabsTrigger value="graph">Graph</TabsTrigger>
         </TabsList>
         <TabsContent value="table" className="mt-4">
-          <CbomTable
-            components={filteredComponents}
-            segmentFilter={segmentFilter}
-            setSegmentFilter={setSegmentFilter}
-            distinctSegments={distinctSegments}
-          />
+          <CbomTable components={filteredComponents} />
         </TabsContent>
         <TabsContent value="graph" className="mt-4">
           <CbomGraph components={filteredComponents} />
