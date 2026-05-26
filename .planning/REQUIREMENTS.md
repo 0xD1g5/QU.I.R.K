@@ -147,9 +147,9 @@ Which phases cover which requirements.
 | DASH-01 | Phase 111 | Complete |
 | DASH-02 | Phase 111 | Complete |
 | DASH-03 | Phase 111 | Complete |
-| LAB-01 | Phase 112 | Pending |
-| LAB-02 | Phase 112 | Pending |
-| LAB-03 | Phase 112 | Pending |
+| LAB-01 | Phase 112 Plan 01 | In Progress (topology built; live run is human-UAT) |
+| LAB-02 | Phase 112 Plan 01 | In Progress (alias mechanism + linchpin confirmed; live run is human-UAT) |
+| LAB-03 | Phase 112 Plan 02 | Pending (lab.sh arm done; README + oracle in Plan 02) |
 | STAB-01 | Phase 112 | Pending |
 | STAB-03 | Phase 112 | Pending |
 

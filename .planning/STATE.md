@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.4
 milestone_name: — Distributed On-Prem Scanner Architecture
 status: completed
-stopped_at: Phase 111 Plan 02 complete
-last_updated: "2026-05-26T02:16:10.085Z"
-last_activity: 2026-05-25
+stopped_at: Phase 112 Plan 01 complete
+last_updated: "2026-05-26T03:30:49.743Z"
+last_activity: 2026-05-26
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 17
-  completed_plans: 17
-  percent: 86
+  total_plans: 20
+  completed_plans: 19
+  percent: 90
 ---
 
 # Project State
@@ -25,20 +25,21 @@ See: .planning/PROJECT.md (updated 2026-05-25)
 
 ## Current Position
 
-Phase: 109
-Plan: 02 (complete)
-Status: Phase 109 Plan 02 complete — Plan 03 next
-Last activity: 2026-05-25
+Phase: 112
+Plan: 01 (complete)
+Status: Phase 112 Plan 01 complete — Plan 02 next
+Last activity: 2026-05-26
 
 ```
-v5.4 Progress: [===       ] 3/7 phases in progress | 82% plans complete
+v5.4 Progress: [======    ] 6/7 phases in progress | 90% plans complete
 ```
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 12 (v5.4: 108-01, 108-02, 108-03, 109-01, 109-02 + Phase 107 P01/P02 + Phase 111 P01/P02)
+- Total plans completed: 13 (v5.4: 108-01, 108-02, 108-03, 109-01, 109-02 + Phase 107 P01/P02 + Phase 111 P01/P02 + Phase 112 P01)
+- Phase 112 P01: 3 tasks, 5 files, ~3 min
 - Phase 111 P02: 3 tasks, 11 files, ~15 min
 - Phase 111 P01: 3 tasks, 10 files, ~7 min
 - Phase 109 P02: 3 tasks, 3 files, ~25 min
@@ -78,6 +79,8 @@ v5.4 Progress: [===       ] 3/7 phases in progress | 82% plans complete
 - 109-02-D-01: _audit() commits in its own try/except so audit-write failure cannot mask original error (WR-01)
 - 109-02-D-02: Injected db session uses flush-only inside _ingest_envelope; route owns final db.commit() after ingest
 - 109-02-D-03: scan_id for audit rows uses pushed_at once parsed (received_at ISO string as fallback before parse)
+- 112-01-D-01: LAB-02 linchpin confirmed in-code — tls_scanner.py:188-189 and :351-352 record CryptoEndpoint(host=host) with the configured string verbatim; crypto.internal alias mechanism delivers identical host:port from both sensors
+- 112-01-D-02: lab.sh distributed arm scopes COMPOSE_FILE+PROJECT_NAME locally — ALL_PROFILES/all path byte-for-byte unchanged (LAB-03 no-drift)
 
 ### Pending Todos
 
@@ -116,10 +119,10 @@ Carried forward from v5.3 close (2026-05-25):
 
 ## Session Continuity
 
-Last session: 2026-05-26T02:16:10.081Z
-Stopped at: Phase 111 Plan 02 complete
+Last session: 2026-05-26T03:30:00Z
+Stopped at: Phase 112 Plan 01 complete
 Resume file: None
-Next: Phase 111 Plan 03 (human UAT)
+Next: Phase 112 Plan 02 (oracle + docs)
 
 ## Operator Next Steps
 
