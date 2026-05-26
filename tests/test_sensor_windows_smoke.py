@@ -238,7 +238,7 @@ sc._run_local_scan = _raise_kbi
 
 # Also patch validate_external_url to always pass
 from unittest.mock import MagicMock
-sc.validate_external_url = lambda url: MagicMock(ok=True)
+sc.validate_external_url = lambda url, **kwargs: MagicMock(ok=True)
 
 try:
     sc.run_sensor(["push", "--config", sensor_yaml_path])
@@ -284,7 +284,7 @@ def _raise_kbi(*a, **kw):
     raise KeyboardInterrupt
 
 sc._run_local_scan = _raise_kbi
-sc.validate_external_url = lambda url: MagicMock(ok=True)
+sc.validate_external_url = lambda url, **kwargs: MagicMock(ok=True)
 
 try:
     sc.run_sensor(["push", "--config", sensor_yaml_path])
