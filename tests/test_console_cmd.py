@@ -86,7 +86,10 @@ def _enroll_default(sensor_id: str, segment: str = "air-gap") -> None:
 
 
 def test_import_results_success_exit_zero(tmp_path):
-    """SENSOR-04: import-results exits 0 on a valid .qpush file."""
+    """SENSOR-04: import-results returns normally (no SystemExit) on a valid .qpush file.
+
+    WR-04: sys.exit(0) removed from success path — run_console returns after dispatch.
+    """
     sid = str(uuid.uuid4())
     _enroll_default(sid)
     qpush = _make_qpush_file(tmp_path, sensor_id=sid)
@@ -97,10 +100,8 @@ def test_import_results_success_exit_zero(tmp_path):
         file = str(qpush)
         config = "config.yaml"
 
-    with pytest.raises(SystemExit) as exc_info:
-        _cmd_import_results(Args())
-
-    assert exc_info.value.code == 0
+    # Must NOT raise SystemExit on success (WR-04)
+    _cmd_import_results(Args())
 
 
 def test_import_results_prints_summary(tmp_path, capsys):
@@ -120,8 +121,8 @@ def test_import_results_prints_summary(tmp_path, capsys):
         file = str(qpush)
         config = "config.yaml"
 
-    with pytest.raises(SystemExit):
-        _cmd_import_results(Args())
+    # WR-04: success path no longer calls sys.exit(0); call directly
+    _cmd_import_results(Args())
 
     captured = capsys.readouterr()
     output = captured.out + captured.err
@@ -133,15 +134,16 @@ def test_import_results_prints_summary(tmp_path, capsys):
 
 
 def test_import_results_finding_count_nonzero(tmp_path, capsys):
-    """SENSOR-04: import-results reports correct finding count when findings > 0."""
+    """SENSOR-04: import-results reports correct finding count when findings > 0.
+
+    WR-04: success path no longer calls sys.exit(0) — call directly, check stdout.
+    """
     sid = str(uuid.uuid4())
     _enroll_default(sid)
     findings = [
         {"host": "10.0.0.1", "port": 443, "protocol": "tls"},
         {"host": "10.0.0.2", "port": 22, "protocol": "ssh"},
     ]
-    qpush = _make_qpush_file(tmp_path, sensor_id=sid)
-    # Rebuild with findings
     envelope = {
         "payload_id": str(uuid.uuid4()),
         "pushed_at": "2026-05-25T12:00:00Z",
@@ -152,6 +154,7 @@ def test_import_results_finding_count_nonzero(tmp_path, capsys):
         "findings": findings,
     }
     raw = json.dumps(envelope).encode()
+    qpush = tmp_path / "findings.qpush"
     qpush.write_bytes(zstandard.ZstdCompressor(level=3).compress(raw))
 
     from quirk.cli.console_cmd import _cmd_import_results
@@ -160,25 +163,10 @@ def test_import_results_finding_count_nonzero(tmp_path, capsys):
         file = str(qpush)
         config = "config.yaml"
 
-    with pytest.raises(SystemExit):
-        _cmd_import_results(Args())
+    # WR-04: success path returns normally (no SystemExit)
+    _cmd_import_results(Args())
 
-    output = capsys.readouterr().out + capsys.readouterr().err
-    # "2" should appear in the output as the finding count
-    # (re-run capsys if needed — just check 2 is present somewhere)
-    # We capture via sys.stdout/stderr directly
-    import io, sys
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
-    sys.stdout = io.StringIO()
-    sys.stderr = io.StringIO()
-    try:
-        with pytest.raises(SystemExit):
-            _cmd_import_results(Args())
-        out = sys.stdout.getvalue() + sys.stderr.getvalue()
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
+    out = capsys.readouterr().out
     assert "2" in out, f"finding count '2' not found in output: {out!r}"
 
 
@@ -296,10 +284,9 @@ def test_import_results_calls_ingest_with_skip_replay(tmp_path, monkeypatch):
         file = str(qpush)
         config = "myconfig.yaml"
 
-    with pytest.raises(SystemExit) as exc_info:
-        _cmd_import_results(Args())
+    # WR-04: success path returns normally (no SystemExit)
+    _cmd_import_results(Args())
 
-    assert exc_info.value.code == 0
     assert len(ingest_calls) == 1, f"_ingest_envelope must be called once; got {len(ingest_calls)}"
     call = ingest_calls[0]
     assert call["skip_replay_window"] is True, (
@@ -312,7 +299,10 @@ def test_import_results_calls_ingest_with_skip_replay(tmp_path, monkeypatch):
 
 
 def test_import_results_single_ingest_entry(tmp_path, monkeypatch):
-    """SENSOR-04: _cmd_import_results routes through exactly one _ingest_envelope call (Phase 109 seam)."""
+    """SENSOR-04: _cmd_import_results routes through exactly one _ingest_envelope call (Phase 109 seam).
+
+    WR-04: success path returns normally — no SystemExit on success.
+    """
     qpush = _make_qpush_file(tmp_path)
 
     ingest_calls = []
@@ -329,8 +319,8 @@ def test_import_results_single_ingest_entry(tmp_path, monkeypatch):
         file = str(qpush)
         config = "config.yaml"
 
-    with pytest.raises(SystemExit):
-        _cmd_import_results(Args())
+    # WR-04: success path returns normally (no SystemExit)
+    _cmd_import_results(Args())
 
     assert len(ingest_calls) == 1
 
@@ -424,10 +414,9 @@ def test_import_results_framed_happy_path(tmp_path, monkeypatch):
         file = str(qpush)
         config = "config.yaml"
 
-    with pytest.raises(SystemExit) as exc_info:
-        _cmd_import_results(Args())
+    # WR-04: success path returns normally (no SystemExit)
+    _cmd_import_results(Args())
 
-    assert exc_info.value.code == 0, f"Expected exit 0 for valid framed .qpush, got {exc_info.value.code}"
     assert len(ingest_calls) == 1, f"_ingest_envelope must be called once; got {len(ingest_calls)}"
     assert ingest_calls[0]["qpush_sig"] == expected_sig, (
         f"Expected qpush_sig {expected_sig!r}, got {ingest_calls[0]['qpush_sig']!r}"
@@ -605,11 +594,11 @@ def test_import_results_framing_body_contains_newline_byte(tmp_path, monkeypatch
         file = str(qpush)
         config = "config.yaml"
 
-    with pytest.raises(SystemExit) as exc_info:
-        _cmd_import_results(Args())
+    # WR-04: success path returns normally (no SystemExit)
+    _cmd_import_results(Args())
 
-    assert exc_info.value.code == 0, (
-        "Parser must handle 0x0A bytes in compressed body — only split on first newline"
+    # The assertion message is preserved for context
+    assert len(ingest_calls) == 1, (
+        "Parser must handle 0x0A bytes in compressed body — ingest must be called exactly once"
     )
-    assert len(ingest_calls) == 1, "Ingest must be called exactly once"
     assert ingest_calls[0]["qpush_sig"] == sig, "Signature must match even with 0x0A in body"
