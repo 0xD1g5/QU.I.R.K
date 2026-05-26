@@ -95,12 +95,20 @@ def _sensor_status(s, now: datetime) -> str:
     if s.last_push_at is None:
         return "unknown"
 
+    last_push = s.last_push_at
+    # Normalize: strip tzinfo if aware so comparison is always naive-UTC vs naive-UTC.
+    # ``now`` is constructed as datetime.now(timezone.utc).replace(tzinfo=None) in the
+    # caller — always naive.  If a future code path stores an aware datetime in
+    # last_push_at, the mixed-tz comparison would raise TypeError at runtime (WR-01).
+    if getattr(last_push, "tzinfo", None) is not None:
+        last_push = last_push.replace(tzinfo=None)
+
     cadence_minutes = s.expected_cadence_minutes
     if cadence_minutes is None:
         cadence_minutes = 1440  # 24h fallback — architecture §6
     cadence = timedelta(minutes=cadence_minutes)
 
-    if now > s.last_push_at + 2 * cadence:
+    if now > last_push + 2 * cadence:
         return "stale"
     return "current"
 
