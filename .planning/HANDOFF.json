@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-26T11:08:38.094Z",
+  "timestamp": "2026-05-26T12:28:17.000Z",
   "phase": null,
-  "phase_name": "between milestones — v5.4 shipped",
+  "phase_name": "between milestones — v5.4 shipped + pushed",
   "phase_dir": null,
   "plan": null,
   "task": null,
@@ -11,24 +11,24 @@
   "completed_tasks": [
     {"id": 1, "name": "v5.4 phases 106-112 (20 plans) executed, verified, code-reviewed, UI-audited", "status": "done"},
     {"id": 2, "name": "Milestone audit PASSED (0 blockers, 7/7 phases, 33/33 reqs); TD-1 fixed in close-out", "status": "done", "commit": "1223a1e"},
-    {"id": 3, "name": "Milestone archived + tagged v5.4.0 (local); phases archived to v5.4-phases/", "status": "done", "commit": "1161e46"}
+    {"id": 3, "name": "Milestone archived + tagged v5.4.0 (local); phases archived to v5.4-phases/", "status": "done", "commit": "1161e46"},
+    {"id": 4, "name": "Pushed v5.4.0 to origin", "status": "done", "note": "2026-05-26: main in sync with origin/main (163 commits); tag v5.4.0 published. Only v5.4.0 pushed — older local milestone tags (v3.9-v5.3) left untouched per user choice. .planning/ui-reviews/ left untracked intentionally."}
   ],
   "remaining_tasks": [
-    {"id": 4, "name": "Push v5.4.0 tag + 162 commits to origin (git push origin main --tags)", "status": "not_started"},
     {"id": 5, "name": "Run 5 deferred live human-UAT items (need running infra)", "status": "not_started"},
     {"id": 6, "name": "Start next milestone at Phase 113 (/gsd:new-milestone)", "status": "not_started"}
   ],
   "blockers": [],
   "human_actions_pending": [
-    {"action": "Push local tag v5.4.0 + main (162 commits ahead of origin)", "context": "Tag is local-only; user decides when to publish", "blocking": false},
-    {"action": "Live UAT: enroll/spool (108), merge+2-component CBOM (110), dashboard visual vs UI-SPEC (111), lab.sh distributed e2e (112), GitHub branch-protection for windows-smoke gate", "context": "No test environment available this session; all exercise running infrastructure", "blocking": false}
+    {"action": "Live UAT: enroll/spool (108), merge+2-component CBOM (110), dashboard visual vs UI-SPEC (111), lab.sh distributed e2e (112), GitHub branch-protection for windows-smoke gate", "context": "No test environment available these sessions; all exercise running infrastructure", "blocking": false}
   ],
   "decisions": [
+    {"decision": "Push only the v5.4.0 tag, not all local tags", "rationale": "git push --tags would publish older local-only milestone tags (v3.9-v5.3); user wanted just v5.4.0 out", "phase": "post-v5.4"},
     {"decision": "crypto.internal hostname-alias topology for LAB-02", "rationale": "Docker forbids two bridge networks sharing a subnet; alias reproduces same host:port across isolated segments", "phase": "112"},
     {"decision": "Fix TD-1 (shared-token auth model) during close-out", "rationale": "User chose to fix now; enroll output was misleading + lab relied on auth-disabled", "phase": "112"},
     {"decision": "merge_runs row (not scanned_at rewrite) for merged result", "rationale": "MERGE-05 preserves per-endpoint scanned_at; dashboard reads merge_runs", "phase": "110"}
   ],
-  "uncommitted_files": [".planning/ui-reviews/ (untracked, pre-existing — not part of v5.4)", ".planning/HANDOFF.json (this file)"],
-  "next_action": "If continuing v5.4: push the tag (git push origin main --tags) or run the deferred live UAT. If moving on: /gsd:new-milestone to plan from Phase 113.",
-  "context_notes": "v5.4 Distributed On-Prem Scanner shipped via a full /gsd-autonomous run. All automated gates green; only live-infra UAT remains (deferred, no env). Tag v5.4.0 is LOCAL — not pushed. No active phase; .planning/phases/ holds only the unrelated 999.83/999.84 chaos-lab maintenance dirs. Recurring lesson banked to memory: code-review --fix --auto after every phase (caught real bugs verification missed)."
+  "uncommitted_files": [".planning/ui-reviews/ (untracked, pre-existing — not part of v5.4, leave as-is)"],
+  "next_action": "Pick one: (a) run the 5 deferred live human-UAT items against running infra; or (b) /gsd:new-milestone to plan from Phase 113. Push is DONE.",
+  "context_notes": "v5.4 Distributed On-Prem Scanner shipped via /gsd-autonomous and is now PUBLISHED — main + tag v5.4.0 on origin (0xD1g5/QU.I.R.K.). All automated gates green; only live-infra UAT remains (deferred, no env). No active phase; .planning/phases/ holds only the unrelated 999.83/999.84 chaos-lab maintenance dirs. Recurring lesson banked to memory: gsd-code-review --fix --auto after every phase (caught real bugs verification missed)."
 }

@@ -121,10 +121,10 @@ Carried forward from v5.3 close (2026-05-25):
 
 ## Session Continuity
 
-Last session: 2026-05-26T03:38:06Z
-Stopped at: Phase 112 Plan 03 complete — v5.4 milestone COMPLETE
+Last session: 2026-05-26 (resume) — pushed v5.4.0 to origin
+Stopped at: v5.4 published — main in sync with origin/main; tag v5.4.0 on origin (only v5.4.0 pushed; older local tags left untouched per user choice)
 Resume file: None
-Next: v5.4 COMPLETE — start new milestone via /gsd-new-milestone
+Next: v5.4 COMPLETE + PUSHED — start new milestone via /gsd-new-milestone (Phase 113). Still outstanding: 5 deferred live human-UAT items (need running infra)
 
 ## Operator Next Steps
 
