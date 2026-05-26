@@ -36,7 +36,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -293,7 +293,7 @@ def _build_envelope(sensor_cfg: dict, endpoints: list) -> dict:
     """
     return {
         "payload_id": str(uuid.uuid4()),
-        "pushed_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "pushed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "schema_version": "1.0.0",
         "sensor_version": sensor_cfg["sensor_version"],
         "sensor_id": sensor_cfg["sensor_id"],
