@@ -304,11 +304,31 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
     # Phase 109 will perform cryptographic verification against the stored key.
     _ingest_envelope(envelope, config_path, skip_replay_window=True, qpush_sig=qpush_sig)
 
+    # Success summary (SENSOR-04 operator confirmation of what was ingested).
+    finding_count = len(envelope.get("findings", []) or [])
+    print(
+        "Imported: sensor_id={sid} segment={seg} payload_id={pid} findings={n}".format(
+            sid=envelope.get("sensor_id", ""),
+            seg=envelope.get("segment", ""),
+            pid=envelope.get("payload_id", ""),
+            n=finding_count,
+        )
+    )
+
     sys.exit(0)
 
 
 class DuplicatePayloadError(Exception):
     """Raised when a payload_id already exists in sensor_pushes (dedup gate)."""
+
+
+class UnknownSensorError(Exception):
+    """Raised when a push/import references a sensor_id with no enrolled row.
+
+    Surfaced when the SensorPush insert trips the FOREIGN KEY constraint —
+    the sensor must be provisioned via `quirk console enroll` before its data
+    can be ingested (HTTPS push or air-gap import alike).
+    """
 
 
 def _parse_dt(value: object) -> datetime | None:
@@ -387,6 +407,11 @@ def _ingest_envelope(
         findings: list = envelope.get("findings", []) or []
 
         # --- Dedup: insert SensorPush row; flush to trigger UNIQUE constraint ---
+        # SQLite enforces PRAGMA foreign_keys=ON (quirk/db.py), so an unenrolled
+        # sensor_id raises an FK IntegrityError here too. Discriminate: only the
+        # UNIQUE(payload_id) violation is a true duplicate; an FK failure means the
+        # sensor was never enrolled and must surface as UnknownSensorError, not a
+        # misleading "payload_id already imported".
         try:
             db.add(SensorPush(
                 payload_id=payload_id,
@@ -394,9 +419,14 @@ def _ingest_envelope(
                 received_at=now,
             ))
             db.flush()
-        except IntegrityError:
+        except IntegrityError as exc:
             db.rollback()
-            raise DuplicatePayloadError(payload_id)
+            orig = str(getattr(exc, "orig", "") or exc).upper()
+            if "UNIQUE" in orig:
+                raise DuplicatePayloadError(payload_id)
+            if "FOREIGN KEY" in orig:
+                raise UnknownSensorError(sensor_id)
+            raise
 
         # --- Update sensors.last_push_at ---
         sensor_row = db.query(Sensor).filter(Sensor.sensor_id == sensor_id).first()
@@ -441,6 +471,16 @@ def _ingest_envelope(
             # Air-gap path: surface as operator message
             print(
                 f"ERROR: payload_id already imported: {envelope.get('payload_id', '')}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        raise
+    except UnknownSensorError:
+        # Rollback already done at the FK catch above.
+        if _own_session:
+            # Air-gap path: surface as operator message
+            print(
+                f"ERROR: sensor not enrolled: {envelope.get('sensor_id', '')}",
                 file=sys.stderr,
             )
             sys.exit(1)
