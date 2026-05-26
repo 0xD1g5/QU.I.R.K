@@ -66,15 +66,15 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Distributed Chaos-Lab Validation (LAB)
 
-- [ ] **LAB-01**: A multi-segment chaos-lab topology (≥2 isolated Docker networks with overlapping RFC1918 space, crypto targets per segment, one sensor per segment, one console) validates the end-to-end distributed flow on Linux: enroll → scan-local → push → merge → one CBOM + one score.
-- [ ] **LAB-02**: The same-IP-in-two-segments scenario is physically reproduced in the lab topology, proving MERGE-03 end-to-end (a real two-network deployment, not only the unit regression test).
+- [x] **LAB-01**: A multi-segment chaos-lab topology (≥2 isolated Docker networks with overlapping RFC1918 space, crypto targets per segment, one sensor per segment, one console) validates the end-to-end distributed flow on Linux: enroll → scan-local → push → merge → one CBOM + one score.
+- [x] **LAB-02**: The same-IP-in-two-segments scenario is physically reproduced in the lab topology, proving MERGE-03 end-to-end (a real two-network deployment, not only the unit regression test).
 - [x] **LAB-03**: `quantum-chaos-enterprise-lab/lab.sh` `ALL_PROFILES`, the chaos-lab `README.md`, and the `expected_results_*.md` oracle are updated for the new distributed profile(s), per the CLAUDE.md chaos-lab maintenance rule (no profile/script drift).
 
 ### Stabilization Tail (STAB)
 
 - [x] **STAB-01**: `docs/operators-guide.md` covers the full distributed workflow (enroll → push → merge), including Windows sensor install, and the operators-guide all-configurations/settings coverage gap is closed. (folds in backlog 999.59)
 - [x] **STAB-02**: The duplicated `_NoRedirectHandler` is extracted to `quirk/util/no_redirect.py` and reused by the sensor push client (ship no later than the sensor phase — treat as a sensor-phase prerequisite if it slips).
-- [ ] **STAB-03**: Residual dependency hygiene is resolved and `docs/UAT-SERIES.md` is updated to cover all v5.4 phases.
+- [x] **STAB-03**: Residual dependency hygiene is resolved and `docs/UAT-SERIES.md` is updated to cover all v5.4 phases.
 
 ---
 

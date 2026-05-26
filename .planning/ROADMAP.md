@@ -45,7 +45,7 @@ All completed milestone roadmaps are archived in `.planning/milestones/`. The ne
 - [x] **Phase 109: Console Ingestion API** — `POST /api/sensor/push` with `require_auth`, body-size limit, payload-ID dedup, clock-skew window, delivery audit, `safe_str` coverage (completed 2026-05-26)
 - [x] **Phase 110: Cross-Sensor Merge & Scoring** — `quirk/sensor/merge.py`; Option A union scoring; `coverage_warning` for offline sensors; CBOM `sensor_id` component identity; `quirk sensor merge` CLI (completed 2026-05-26)
 - [x] **Phase 111: Console Dashboard Awareness** — Sensor registry UI; per-segment filter on findings/CBOM/score APIs; per-segment score gauges; `coverage_warning` banner; `sensor_id`/`segment` Pydantic fields (completed 2026-05-26)
-- [ ] **Phase 112: Distributed Chaos-Lab + Stabilization** — Multi-segment Docker topology; overlapping RFC1918 lab validation; `lab.sh`/README/oracle updates; operators-guide; dep hygiene; UAT-SERIES.md close-out
+- [x] **Phase 112: Distributed Chaos-Lab + Stabilization** — Multi-segment Docker topology; overlapping RFC1918 lab validation; `lab.sh`/README/oracle updates; operators-guide; dep hygiene; UAT-SERIES.md close-out (completed 2026-05-26)
 
 ---
 
@@ -183,7 +183,7 @@ Plans:
 Plans:
 - [x] 112-01-PLAN.md — Distributed lab topology: compose + sensor.Dockerfile + distributed-e2e.sh + lab.sh distributed arm + topology test (LAB-01/02/03)
 - [x] 112-02-PLAN.md — expected_results_distributed.md oracle + chaos-lab README + operators-guide §8 (LAB-03/STAB-01)
-- [ ] 112-03-PLAN.md — datetime.utcnow fix + dep audit + UAT Series 112 + Obsidian sync + final phase note (STAB-03)
+- [x] 112-03-PLAN.md — datetime.utcnow fix + dep audit + UAT Series 112 + Obsidian sync + final phase note (STAB-03)
 
 ---
 
