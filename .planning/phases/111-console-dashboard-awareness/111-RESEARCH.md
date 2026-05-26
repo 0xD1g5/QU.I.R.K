@@ -734,17 +734,15 @@ const findings = useMemo(() => {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should `/api/merge/latest` trigger a new `_assemble_union` call on every page load?**
-   - What we know: The Executive page calls this on mount. For a single user, one call per page visit is fine.
-   - What's unclear: If the dashboard auto-refreshes (e.g., polling), repeated calls could stack up.
-   - Recommendation: No polling on the merge endpoint for Phase 111. Manual refresh (page reload) is sufficient. Phase 112+ can add auto-refresh.
+1. **RESOLVED — `/api/merge/latest` recompute frequency:** No polling on the merge endpoint for
+   Phase 111 — fetch-once-on-mount; manual page reload refreshes. Phase 112+ may add auto-refresh.
+   (Embodied in Plan 02 — no polling added.)
 
-2. **Should the segment filter also apply to `identity_findings`, `motion_findings`, `dar_findings` in `ScanLatestResponse`?**
-   - What we know: The CONTEXT.md locks the filter to findings and CBOM views. `get_latest_scan` drives all of these from the same `endpoints` list.
-   - What's unclear: Whether the locked decision intends the filter to flow through to the sub-finding types or only to `findings` and `cbom_components`.
-   - Recommendation: Apply the filter at the `endpoints` list level (before any `_derive_*` call). This naturally filters all derived views consistently. If the CONTEXT means only findings + CBOM should be filtered, the filter must be applied inside `_derive_findings` / `_derive_cbom` only. The consistent approach (filter the source list) is cleaner and produces no surprises.
+2. **RESOLVED — segment filter scope:** Apply the filter at the `endpoints` list level (before any
+   `_derive_*` call), so all derived views (findings, cbom, identity/motion/dar) filter consistently.
+   (Embodied in Plan 01-T3 — single post-load NULL-safe filter on the shared `endpoints` list.)
 
 ---
 
