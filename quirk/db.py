@@ -373,6 +373,16 @@ def _ensure_integration_deliveries_table(engine) -> None:
     Base.metadata.create_all(engine, checkfirst=True)
 
 
+def _ensure_merge_runs_table(engine) -> None:
+    """Phase 110 MERGE-05: create merge_runs table if absent (idempotent).
+
+    MergeRun is registered on Base.metadata via import of quirk.models.
+    Uses Base.metadata.create_all with checkfirst=True — same pattern as
+    _ensure_integration_deliveries_table. New table only — not new columns.
+    """
+    Base.metadata.create_all(engine, checkfirst=True)
+
+
 def init_db(db_path: str) -> Engine:
     """
     Ensure the sqlite DB file exists on disk and all tables are created.
@@ -408,6 +418,7 @@ def init_db(db_path: str) -> Engine:
     _ensure_scan_jobs_table(engine)      # Phase 65 — UI-SCAN-01
     _ensure_scan_checkpoints_table(engine)  # Phase 67 — RESUME-01
     _ensure_integration_deliveries_table(engine)  # Phase 101 — NOTIFY-07
+    _ensure_merge_runs_table(engine)              # Phase 110 — MERGE-05
     # Phase 107 D-02: explicit idempotent index on crypto_endpoints.sensor_id.
     # Column(index=True) + create_all(checkfirst=True) does NOT retro-add an
     # index to a pre-existing table, so this step is required for backward
