@@ -419,3 +419,251 @@ The same shape applies to HIPAA 45 CFR §164.312 revisions (edit `_HIPAA_164_312
 entries).
 
 ---
+
+## 8. Distributed Sensor Deployment
+
+*(Audience: operators deploying QU.I.R.K. across segmented enterprise networks where a single
+scanner host cannot reach all segments. Two or more sensor nodes push their per-segment
+findings to a shared console; the console merges them into one unified CBOM and one
+quantum-readiness score.)*
+
+**Architecture overview:**
+
+```
+[segment-a host]                 [console host]
+  quirk sensor push ──────────→  quirk serve --host 0.0.0.0
+                     HTTPS
+[segment-b host]
+  quirk sensor push ──────────→  (same console)
+                                   │
+                              quirk sensor merge
+                                   │
+                           one CBOM + one score
+```
+
+Each sensor is a standard `pip install quirk-scanner[all]` deployment. Sensors
+communicate with the console over HTTPS using a shared HMAC key and a per-push bearer
+token provisioned at enrollment time.
+
+### 8.1 Provision the console
+
+Install QU.I.R.K. on the console host and start the server. The console must bind a
+routable address so sensors can reach it over the network:
+
+```bash
+# Console host (Linux / macOS)
+pip install "quirk-scanner[all]"
+
+# Start the server — bind to a specific interface or 0.0.0.0 for all interfaces.
+# The console binds loopback by default; override for multi-host use.
+quirk serve --host 0.0.0.0 --port 8512
+```
+
+> **Security note:** Do not expose the console port to untrusted networks without an
+> HTTPS reverse proxy and IP allowlist in front of it. Bearer tokens printed by
+> `quirk console enroll` are one-time-use and shown once — store them securely.
+
+### 8.2 Enroll each sensor
+
+On the **console host**, provision a credential for each sensor. Each invocation creates
+a new `sensors` row in the console database and prints a **one-time bearer token** to
+stdout. The token is never written to disk on the console side; copy it immediately.
+
+```bash
+# Console host — run once per sensor
+quirk console enroll --segment <label>
+# e.g.:
+quirk console enroll --segment segment-a
+# → prints a one-time bearer token; copy it before proceeding
+quirk console enroll --segment segment-b
+```
+
+On each **sensor host**, run `quirk sensor enroll` with the token printed above:
+
+```bash
+# Sensor host — Linux / macOS
+quirk sensor enroll https://<console-host>:8512 \
+  --segment <label> \
+  --api-token <one-time-token>
+# e.g.:
+quirk sensor enroll https://console.corp:8512 \
+  --segment segment-a \
+  --api-token eyJhbGc...
+```
+
+Enrollment writes `sensor.yaml` to the default platform config directory:
+- **Linux / macOS:** `~/.config/quirk/sensor.yaml` (XDG `user_config_dir`)
+- **Windows:** `%APPDATA%\quirk\sensor.yaml`
+
+The file stores the `sensor_id` (UUID), `segment` label, HMAC key, and console URL.
+The one-time enrollment token is **never** written to `sensor.yaml`; push authentication
+uses the persistent HMAC key provisioned at enroll time.
+
+Use `--config <path>` to place `sensor.yaml` at a custom location (useful in CI or when
+running multiple sensors on the same host).
+
+### 8.3 Push findings
+
+On each sensor host, run a local scan and push the results to the console in a single
+command:
+
+```bash
+# Sensor host
+quirk sensor push
+# With a custom scan config (recommended for enterprise targets):
+quirk sensor push --scan-config /etc/quirk/sensor-scan.yaml
+```
+
+`quirk sensor push` runs a local scan using the target list in the scan config,
+serialises the findings into a signed, compressed `.qpush` envelope, and delivers it to
+the console over HTTPS. The console responds HTTP 200 on success.
+
+If the console is temporarily unreachable, the payload is spooled to
+`user_data_dir("quirk")/spool/` and retried automatically on the next invocation.
+
+### 8.4 Merge into a unified CBOM
+
+On the **console host**, run the merge after all sensors have pushed:
+
+```bash
+# Console host
+quirk sensor merge
+
+# Optional flags:
+quirk sensor merge --stale-days 7       # ignore sensors silent > 7 days
+quirk sensor merge --output-dir ./out   # write CBOM / reports here
+```
+
+`quirk sensor merge` re-runs `compute_readiness_score()` and `build_cbom()` over the
+union of all pushed `CryptoEndpoint` rows, producing:
+
+- One merged CBOM (`cbom-<ts>.json` + `cbom-<ts>.xml`)
+- One unified quantum-readiness score
+- A `coverage_warning` if any enrolled sensor has not pushed within `stale_days`
+
+**MERGE-03 behaviour:** If two or more sensors scanned the same logical hostname and port
+(e.g. `crypto.internal:443` appearing in both a DMZ and a PCI segment), the CBOM will
+contain **one component per sensor** — distinct by `sensor_id` — not a de-duplicated
+single entry. The `(sensor_id, host, port)` uniqueness key is the correct model for
+segmented networks where the same address exists in multiple security zones.
+
+### 8.5 Windows sensor installation
+
+QU.I.R.K. sensors run on Windows with no additional configuration beyond the standard
+Python install.
+
+**Prerequisites:** Python 3.11+ for Windows, available from https://www.python.org/downloads/
+
+**Install:**
+
+```powershell
+# PowerShell (run as the service account that will run the sensor)
+pip install "quirk-scanner[all]"
+```
+
+**Enroll and push (PowerShell):**
+
+```powershell
+# Enroll (one-time — token comes from the console operator)
+quirk sensor enroll https://<console-host>:8512 `
+  --segment segment-windows `
+  --api-token <one-time-token>
+
+# sensor.yaml written to: $env:APPDATA\quirk\sensor.yaml
+
+# Push findings
+quirk sensor push --scan-config C:\quirk\sensor-scan.yaml
+```
+
+**`sensor.yaml` path on Windows:** `%APPDATA%\quirk\sensor.yaml`
+(resolved via `platformdirs.user_config_dir("quirk")` at runtime).
+
+**SIGTERM note:** The QU.I.R.K. scheduler uses `signal.SIGTERM` for graceful shutdown on
+Linux/macOS but guards it with `sys.platform != 'win32'` (`scheduler_cmd.py:283-284`).
+On Windows, use Ctrl+C or the Windows Service stop API instead of SIGTERM.
+
+**nmap dependency:** The TLS scanner requires `nmap` on `PATH`. Download the Windows
+installer from https://nmap.org/download.html and confirm `nmap.exe` is accessible:
+
+```powershell
+nmap --version
+```
+
+### 8.6 Air-gap path (offline sensor → console)
+
+For sensors with no network path to the console, use file-based export/import:
+
+```bash
+# Sensor host (no console connectivity)
+quirk sensor export-results
+# → writes <sensor_id>-<payload_id>.qpush to the current directory (or --output-dir)
+```
+
+Transfer the `.qpush` file to the console host via USB, secure file share, or any
+out-of-band channel, then import:
+
+```bash
+# Console host
+quirk console import-results /path/to/<sensor_id>-<payload_id>.qpush
+```
+
+The console validates the HMAC signature, decompresses the envelope, deduplicates by
+`payload_id` (idempotent re-import is safe), and ingests the findings. Run
+`quirk sensor merge` afterwards to produce the unified CBOM.
+
+---
+
+### 8.7 All-configurations / settings reference (999.59)
+
+The table below covers every knob relevant to distributed sensor deployments, closing
+the settings-coverage gap (999.59). For the full single-host config reference see
+[`docs/configuration.md`](configuration.md).
+
+#### `scan.timeouts.*` — per-scanner timeout knobs
+
+Set in `config.yaml` under the `scan.timeouts` block. All values are in seconds.
+
+| Key | Default (s) | Scanner |
+|-----|-------------|---------|
+| `scan.timeouts.tls_seconds` | 6 | TLS / sslyze |
+| `scan.timeouts.ssh_seconds` | 6 | SSH |
+| `scan.timeouts.jwt_seconds` | 10 | JWT / API |
+| `scan.timeouts.container_seconds` | 120 | Container (Syft) |
+| `scan.timeouts.source_seconds` | 300 | Source code (Semgrep) |
+| `scan.timeouts.dnssec_seconds` | 10 | DNSSEC |
+| `scan.timeouts.saml_seconds` | 10 | SAML |
+| `scan.timeouts.kerberos_seconds` | 10 | Kerberos |
+| `scan.timeouts.vault_seconds` | 10 | HashiCorp Vault |
+| `scan.timeouts.db_connect_seconds` | 5 | Postgres / MySQL |
+| `scan.timeouts.broker_seconds` | 10 | Kafka / RabbitMQ / Redis |
+| `scan.timeouts.email_seconds` | 10 | Email (SMTP / IMAP / POP3) |
+| `scan.timeouts.fingerprint_seconds` | 4 | Fingerprint probe |
+| `scan.timeouts.default_seconds` | 5 | Fallback for unlisted scanners |
+
+See [`docs/timeout-retry-audit.md`](timeout-retry-audit.md) for retry policies and jitter.
+
+#### `output.directory` — report output path
+
+```yaml
+output:
+  directory: "./quirk-output"   # default; relative to CWD or absolute
+```
+
+All scan outputs (HTML/PDF/DOCX reports, CBOM JSON/XML, findings JSON,
+`executive.md`, `technical.md`, `intelligence-*.json`) land here. On sensor nodes,
+`quirk sensor push` uses a temporary directory for the local scan and discards it after
+push; set `--scan-config` and a stable `output.directory` if you want per-push
+artefacts retained on the sensor host.
+
+#### Sensor identity fields in scan output
+
+| Field | Location | Description |
+|-------|----------|-------------|
+| `sensor_id` | `CryptoEndpoint` DB column; CBOM component metadata | UUID assigned at `quirk sensor enroll`; `nullable=True` (NULL = implicit local sensor, backward-compatible with pre-v5.4 scans) |
+| `segment` | `CryptoEndpoint` DB column; findings JSON | Network-segment label passed via `--segment` at enroll time; appears in `findings-<ts>.json` per-finding and in the merged CBOM |
+
+These two fields are the differentiators for MERGE-03 — two findings with identical
+`host:port` but different `sensor_id` values are intentional and correct; they represent
+the same logical endpoint discovered independently in two network segments.
+
+---
