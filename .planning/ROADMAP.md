@@ -143,7 +143,7 @@ Plans:
 
 **Plans**: 3 plans
 
-- [ ] 110-01-PLAN.md — Sensor-aware CBOM identity: `_sensor_prefix(ep)` threaded through 4 bom_ref sites in builder.py + MERGE-03 two-segment regression & NULL backward-compat tests
+- [x] 110-01-PLAN.md — Sensor-aware CBOM identity: `_sensor_prefix(ep)` threaded through 4 bom_ref sites in builder.py + MERGE-03 two-segment regression & NULL backward-compat tests
 - [ ] 110-02-PLAN.md — `merge_scan()` standalone callable (union query, Option A union scoring, coverage_warning) + MergeRun model + merge_runs table; source `scanned_at` preserved
 - [ ] 110-03-PLAN.md — `quirk sensor merge` CLI thin wrapper + CLI dispatch test + docs/UAT-SERIES.md update & Obsidian sync
 
@@ -186,6 +186,6 @@ Plans:
 | 107. Distributed Data Model | 2/2 | Complete    | 2026-05-25 |
 | 108. Sensor Push CLI + Windows CI | 4/4 | Complete   | 2026-05-25 |
 | 109. Console Ingestion API | 3/3 | Complete   | 2026-05-26 |
-| 110. Cross-Sensor Merge & Scoring | 0/? | Not started | - |
+| 110. Cross-Sensor Merge & Scoring | 1/3 | In Progress|  |
 | 111. Console Dashboard Awareness | 0/? | Not started | - |
 | 112. Distributed Chaos-Lab + Stabilization | 0/? | Not started | - |
