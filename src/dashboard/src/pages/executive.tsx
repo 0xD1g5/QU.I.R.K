@@ -232,6 +232,11 @@ export function ExecutivePage() {
           ? (warning.missing_sensors as string[])
           : []
         const missingCount = missingSensors.length
+        // Guard: never render "0 sensors did not contribute" — empty missing_sensors
+        // means coverage is complete.  An empty coverage_warning_json object ({})
+        // or a future migration row with no missing_sensors must not fire this banner
+        // (WR-03).
+        if (missingCount === 0) return null
         return (
           <div
             className="flex items-start gap-3 rounded-md border px-4 py-3 mb-6"
