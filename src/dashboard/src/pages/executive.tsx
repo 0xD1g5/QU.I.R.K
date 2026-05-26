@@ -225,7 +225,12 @@ export function ExecutivePage() {
         </div>
       </div>
 
-      {/* Phase 111: Coverage warning banner — non-dismissible, amber, role=alert */}
+      {/* Phase 64 TREND-02: Regression alert (above score gauge) */}
+      <RegressionAlertChip />
+
+      {/* UI-FIX-2: Coverage warning banner sits immediately above the score
+          gauges Card (per UI-SPEC §4) so the coverage caveat is visually
+          adjacent to the scores it qualifies. Moved after RegressionAlertChip. */}
       {merge?.coverage_warning && (() => {
         const warning = merge.coverage_warning as { missing_sensors?: string[]; reason?: string }
         const missingSensors: string[] = Array.isArray(warning.missing_sensors)
@@ -261,9 +266,6 @@ export function ExecutivePage() {
           </div>
         )
       })()}
-
-      {/* Phase 64 TREND-02: Regression alert (above score gauge) */}
-      <RegressionAlertChip />
 
       {/* Score gauges row */}
       <Card>
