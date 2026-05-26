@@ -708,18 +708,35 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
     algo_map: dict[str, dict] = {}  # algorithm -> {quantum_safety, source_systems: set}
 
     for ep in endpoints:
+        # Normalize segment: accept only str values; anything else (None, mock,
+        # unexpected type) is treated as unattributed (None).
+        ep_segment: str | None = ep.segment if isinstance(ep.segment, str) else None
         if ep.cert_pubkey_alg:
             alg = ep.cert_pubkey_alg
             qs = _qs_for_alg(alg)
             if alg not in algo_map:
-                algo_map[alg] = {"quantum_safety": qs, "key_size": ep.cert_pubkey_size, "type": "signature", "sources": set()}
+                algo_map[alg] = {
+                    "quantum_safety": qs,
+                    "key_size": ep.cert_pubkey_size,
+                    "type": "signature",
+                    "sources": set(),
+                    "segments": set(),
+                }
             algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
+            algo_map[alg]["segments"].add(ep_segment)
 
         if ep.tls_version:
             alg = f"TLS-{ep.tls_version}"
             if alg not in algo_map:
-                algo_map[alg] = {"quantum_safety": "Unknown", "key_size": None, "type": "protocol", "sources": set()}
+                algo_map[alg] = {
+                    "quantum_safety": "Unknown",
+                    "key_size": None,
+                    "type": "protocol",
+                    "sources": set(),
+                    "segments": set(),
+                }
             algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
+            algo_map[alg]["segments"].add(ep_segment)
 
         # Parse SSH audit JSON for algorithm inventory
         if ep.ssh_audit_json:
@@ -740,8 +757,10 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
                             "key_size": entry.get("keysize"),
                             "type": alg_type,
                             "sources": set(),
+                            "segments": set(),
                         }
                     algo_map[alg]["sources"].add(f"{ep.host}:{ep.port}")
+                    algo_map[alg]["segments"].add(ep_segment)
 
         # Parse JWT/cloud/container scan JSON for algorithms
         for json_col in (ep.jwt_scan_json, ep.cloud_scan_json):
@@ -753,8 +772,15 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
                 if alg_field:
                     qs = _qs_for_alg(str(alg_field))
                     if alg_field not in algo_map:
-                        algo_map[alg_field] = {"quantum_safety": qs, "key_size": None, "type": "signature", "sources": set()}
+                        algo_map[alg_field] = {
+                            "quantum_safety": qs,
+                            "key_size": None,
+                            "type": "signature",
+                            "sources": set(),
+                            "segments": set(),
+                        }
                     algo_map[alg_field]["sources"].add(f"{ep.host}:{ep.port}")
+                    algo_map[alg_field]["segments"].add(ep_segment)
             except (json.JSONDecodeError, AttributeError):
                 pass
 
@@ -765,6 +791,11 @@ def _derive_cbom(endpoints: list[CryptoEndpoint]) -> list[CbomComponent]:
             key_size=info.get("key_size"),
             quantum_safety=info["quantum_safety"],
             source_systems=sorted(info["sources"]),
+            segment=(
+                next(iter(_segs))
+                if len(_segs := info.get("segments", set()) - {None}) == 1
+                else None
+            ),
         )
         for alg, info in sorted(algo_map.items())
     ]
