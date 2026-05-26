@@ -29,6 +29,12 @@ Commands:
   status          Show running containers/ports for this lab project
   logs [service]  Tail logs (all services or one service)
   clean           Remove stopped containers with this project name + prune dangling items
+  distributed     Manage the distributed multi-segment topology (separate compose file)
+                  Subcommands: up, down, status, logs [service], e2e
+                  Examples:
+                    ./lab.sh distributed up
+                    ./lab.sh distributed e2e
+                    ./lab.sh distributed down
 
 Options (via env vars):
   PROJECT_NAME    Compose project name (default: chaoslab)
@@ -45,6 +51,8 @@ Examples:
   ./lab.sh status
   ./lab.sh logs tls-modern
   ./lab.sh reset
+  ./lab.sh distributed up
+  ./lab.sh distributed e2e
 EOF
 }
 
@@ -204,6 +212,58 @@ case "${cmd}" in
     echo "🧽 Pruning dangling images/networks (safe):"
     docker system prune -f
     echo "✅ Clean complete."
+    ;;
+  distributed)
+    # Distributed multi-segment topology — separate compose file + project name.
+    # COMPOSE_FILE and PROJECT_NAME are reassigned here so the compose() helper
+    # and _validate_pinned_tags both pick up the distributed file.
+    # These reassignments are scoped to this arm only; they do NOT affect
+    # the main up/all/ALL_PROFILES paths (LAB-03 no-drift guarantee).
+    COMPOSE_FILE="$(dirname "$0")/docker-compose.distributed.yml"
+    PROJECT_NAME="quirk-dist"
+    PROFILE_ARGS=""  # no --profile flags for distributed topology
+    subcmd="${1:-up}"
+    shift || true
+    case "${subcmd}" in
+      up)
+        if ! _validate_pinned_tags; then
+          echo "❌ Refusing to start: pin policy violation (CHAOS-05)." >&2
+          exit 1
+        fi
+        echo "🚀 Starting distributed lab: project=${PROJECT_NAME} file=${COMPOSE_FILE}"
+        compose up -d "$@"
+        echo "✅ Distributed lab started."
+        compose ps
+        ;;
+      down)
+        echo "🧯 Stopping distributed lab: project=${PROJECT_NAME}"
+        compose down --remove-orphans "$@"
+        echo "✅ Distributed lab stopped."
+        ;;
+      status)
+        echo "📦 Distributed lab status: project=${PROJECT_NAME}"
+        compose ps
+        ;;
+      logs)
+        svc="${1:-}"
+        if [[ -n "${svc}" ]]; then
+          echo "📜 Tailing logs for service: ${svc} (project=${PROJECT_NAME})"
+          compose logs -f --tail=200 "${svc}"
+        else
+          echo "📜 Tailing logs for all services (project=${PROJECT_NAME})"
+          compose logs -f --tail=200
+        fi
+        ;;
+      e2e)
+        echo "🧪 Running distributed E2E: enroll → push → merge"
+        bash "$(dirname "$0")/scripts/distributed-e2e.sh" "$@"
+        ;;
+      *)
+        echo "❌ Unknown distributed subcommand: ${subcmd}"
+        echo "  Valid subcommands: up, down, status, logs [service], e2e"
+        exit 1
+        ;;
+    esac
     ;;
   ""|-h|--help|help)
     usage
