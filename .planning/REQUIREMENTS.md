@@ -60,9 +60,9 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Console Dashboard Awareness (DASH)
 
-- [ ] **DASH-01**: A consultant sees a sensor registry on the console dashboard — each sensor's ID, segment label, version, last-seen, and status badge (green/stale/unknown).
-- [ ] **DASH-02**: Findings and CBOM views expose the `sensor_id`/`segment` dimension (nullable, backward-compatible Pydantic fields) and offer a per-segment filter across `/api/scan/latest`, `/api/findings`, and `/api/cbom`.
-- [ ] **DASH-03**: The dashboard surfaces per-segment score gauges alongside the org-wide score, and a `coverage_warning` banner when a merge ran with sensors missing.
+- [x] **DASH-01**: A consultant sees a sensor registry on the console dashboard — each sensor's ID, segment label, version, last-seen, and status badge (green/stale/unknown).
+- [x] **DASH-02**: Findings and CBOM views expose the `sensor_id`/`segment` dimension (nullable, backward-compatible Pydantic fields) and offer a per-segment filter across `/api/scan/latest`, `/api/findings`, and `/api/cbom`.
+- [x] **DASH-03**: The dashboard surfaces per-segment score gauges alongside the org-wide score, and a `coverage_warning` banner when a merge ran with sensors missing.
 
 ### Distributed Chaos-Lab Validation (LAB)
 
@@ -144,9 +144,9 @@ Which phases cover which requirements.
 | MERGE-03 | Phase 110 | Complete |
 | MERGE-04 | Phase 110 | Complete |
 | MERGE-05 | Phase 110 | Complete |
-| DASH-01 | Phase 111 | Pending |
-| DASH-02 | Phase 111 | Pending |
-| DASH-03 | Phase 111 | Pending |
+| DASH-01 | Phase 111 | Complete |
+| DASH-02 | Phase 111 | Complete |
+| DASH-03 | Phase 111 | Complete |
 | LAB-01 | Phase 112 | Pending |
 | LAB-02 | Phase 112 | Pending |
 | LAB-03 | Phase 112 | Pending |

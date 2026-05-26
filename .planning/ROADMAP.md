@@ -160,7 +160,7 @@ Plans:
 
 **Plans**: 3 plans
 
-- [ ] 111-01-PLAN.md — Backend read-layer: sensor-registry + merge/latest (per-segment Option-A recompute) endpoints, `?segment=` filter on /api/scan/latest, nullable sensor_id/segment on findings/CBOM schemas + TestClient tests
+- [x] 111-01-PLAN.md — Backend read-layer: sensor-registry + merge/latest (per-segment Option-A recompute) endpoints, `?segment=` filter on /api/scan/latest, nullable sensor_id/segment on findings/CBOM schemas + TestClient tests
 - [ ] 111-02-PLAN.md — Frontend: TS type mirror + hooks, Sensors page + nav, shared segment filter on Findings/CBOM, per-segment gauges + coverage banner on Executive, npm build + vitest
 - [ ] 111-03-PLAN.md — Series 111 UAT-SERIES.md + Obsidian sync + phase note + full-suite verify + human-UAT checkpoint
 **UI hint**: yes
@@ -191,5 +191,5 @@ Plans:
 | 108. Sensor Push CLI + Windows CI | 4/4 | Complete   | 2026-05-25 |
 | 109. Console Ingestion API | 3/3 | Complete   | 2026-05-26 |
 | 110. Cross-Sensor Merge & Scoring | 3/3 | Complete   | 2026-05-26 |
-| 111. Console Dashboard Awareness | 0/? | Not started | - |
+| 111. Console Dashboard Awareness | 1/3 | In Progress|  |
 | 112. Distributed Chaos-Lab + Stabilization | 0/? | Not started | - |
