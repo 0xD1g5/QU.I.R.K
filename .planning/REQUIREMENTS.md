@@ -147,11 +147,11 @@ Which phases cover which requirements.
 | DASH-01 | Phase 111 | Complete |
 | DASH-02 | Phase 111 | Complete |
 | DASH-03 | Phase 111 | Complete |
-| LAB-01 | Phase 112 Plan 01 | In Progress (topology built; live run is human-UAT) |
-| LAB-02 | Phase 112 Plan 01 | In Progress (alias mechanism + linchpin confirmed; live run is human-UAT) |
-| LAB-03 | Phase 112 Plan 02 | Pending (lab.sh arm done; README + oracle in Plan 02) |
+| LAB-01 | Phase 112 | Complete (topology + e2e script built, `compose config -q` + topology tests green; live multi-container run is human-UAT) |
+| LAB-02 | Phase 112 | Complete (crypto.internal alias mechanism + scanner host-recording linchpin confirmed; live two-component reproduction is human-UAT) |
+| LAB-03 | Phase 112 | Complete (lab.sh distributed arm + README + expected_results_distributed.md — CLAUDE.md triple-update satisfied) |
 | STAB-01 | Phase 112 | Complete |
-| STAB-03 | Phase 112 | Pending |
+| STAB-03 | Phase 112 | Complete (datetime.utcnow() removed from quirk/; deps pinned; UAT-SERIES covers 106–112) |
 
 **Coverage:**
 
