@@ -121,6 +121,8 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                 remediation="Enable TLS and redirect HTTP to HTTPS.",
                 quantum_risk=None,
                 source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
             ))
 
         # Legacy TLS version
@@ -136,6 +138,8 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                 remediation="Disable TLSv1.0 and TLSv1.1. Enforce TLS 1.2 minimum, prefer TLS 1.3.",
                 quantum_risk=None,
                 source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
             ))
 
         # Weak cipher suites
@@ -151,6 +155,8 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                 remediation="Restrict cipher suites to ECDHE/DHE forward-secret suites with AES-GCM or ChaCha20.",
                 quantum_risk=None,
                 source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
             ))
 
         # Expired certificate
@@ -171,6 +177,8 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                     remediation="Renew the certificate immediately.",
                     quantum_risk=None,
                     source="tls",
+                    sensor_id=ep.sensor_id,
+                    segment=ep.segment,
                 ))
             elif days_to_expiry < 30:
                 findings.append(FindingItem(
@@ -184,6 +192,8 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                     remediation="Renew certificate before expiry to avoid service interruption.",
                     quantum_risk=None,
                     source="tls",
+                    sensor_id=ep.sensor_id,
+                    segment=ep.segment,
                 ))
 
         # Weak RSA key
@@ -204,6 +214,8 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                 remediation="Replace certificate with RSA-2048 minimum or switch to ECDSA P-256.",
                 quantum_risk="Vulnerable",
                 source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
             ))
 
         # Quantum-vulnerable algorithm (non-RSA)
@@ -224,6 +236,8 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                         remediation="Plan migration to a post-quantum algorithm per the NIST PQC roadmap.",
                         quantum_risk=qs,
                         source="tls",
+                        sensor_id=ep.sensor_id,
+                        segment=ep.segment,
                     ))
             except Exception:
                 pass
@@ -958,12 +972,15 @@ def _load_partial_failures(db: Session, scan_run_id_str: str) -> list[PartialFai
 @router.get("/scan/latest", response_model=ScanLatestResponse)
 def get_latest_scan(
     scan_id: Optional[str] = Query(default=None, description="ISO timestamp scan_id to load; omit for latest"),
+    segment: Optional[str] = Query(default=None, description="Filter by segment label; omit for all"),
     db: Session = Depends(get_db),
 ) -> ScanLatestResponse:
     """GET /api/scan/latest — returns a scan session's full results.
 
     Without ?scan_id=: returns the most recent scan (MAX scanned_at).
     With ?scan_id=<ISO timestamp>: returns that specific scan session.
+    With ?segment=<label>: filters findings/CBOM to that segment only.
+      Omitting the segment param leaves NULL-segment local scans unaffected (Trap T4).
     """
     if scan_id is not None:
         try:
@@ -1008,6 +1025,15 @@ def get_latest_scan(
         )
 
     if not endpoints:
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-006"))
+
+    # Phase 111 DASH-01: NULL-safe segment filter.
+    # Applied BEFORE all _derive_* calls so all views share the same filtered list.
+    # The `if segment is not None:` guard is MANDATORY (Trap T4): without it, an
+    # omitted `?segment=` param would filter out NULL-segment local scan endpoints.
+    if segment is not None:
+        endpoints = [ep for ep in endpoints if ep.segment == segment]
+    if segment is not None and not endpoints:
         raise HTTPException(status_code=404, detail=format_error("DASHBOARD-006"))
 
     # Derive findings first — needed by evidence summary
