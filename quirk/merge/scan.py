@@ -9,13 +9,15 @@ result as a MergeRun row — without rewriting the source endpoints' scanned_at.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.cbom.builder import build_cbom
+from quirk.cbom.writer import write_cbom_files
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.models import CryptoEndpoint, MergeRun, Sensor
@@ -47,7 +49,14 @@ def _build_coverage_warning(
 
     for s in sensors:
         if s.last_push_at is None:
-            # Never pushed — enrolled but no data yet
+            # Never pushed — check enrollment age.  If enrolled long ago (past
+            # stale_days) with no push ever, treat as decommissioned and exclude
+            # rather than warning forever (WR-02).
+            ref_ts = s.enrolled_at
+            if ref_ts is not None:
+                silent_duration = now - ref_ts
+                if silent_duration > stale_cutoff:
+                    continue  # decommissioned / forgotten enrollment — exclude
             overdue.append(s.sensor_id)
         else:
             # Exclude sensors silent for > stale_days (decommissioned / intentionally offline)
@@ -55,7 +64,11 @@ def _build_coverage_warning(
             if silent_duration > stale_cutoff:
                 continue
             # Overdue: now > last_push_at + 2 × expected cadence
-            cadence = timedelta(minutes=s.expected_cadence_minutes)
+            # Guard against NULL expected_cadence_minutes (WR-03)
+            cadence_minutes = s.expected_cadence_minutes
+            if cadence_minutes is None:
+                cadence_minutes = 1440  # fallback to 24h (architecture §6)
+            cadence = timedelta(minutes=cadence_minutes)
             if now > s.last_push_at + 2 * cadence:
                 overdue.append(s.sensor_id)
 
@@ -73,7 +86,6 @@ def _build_coverage_warning(
 
 def _assemble_union(
     db: Session,
-    now: datetime,
 ) -> List[CryptoEndpoint]:
     """Assemble the union of:
     1. Latest-push-per-sensor rows (func.max(scanned_at) per non-null sensor_id).
@@ -133,6 +145,7 @@ def merge_scan(
     stale_days: int = _DEFAULT_STALE_DAYS,
     profile: str = "balanced",
     weights: Optional[Dict[str, float]] = None,
+    output_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run the cross-sensor merge pipeline and return a result dict.
 
@@ -140,27 +153,32 @@ def merge_scan(
     1. Assemble the union (latest-per-sensor + NULL-sensor local window).
     2. Compute coverage_warning from Sensor.last_push_at recency.
     3. Option A: ONE call to build_evidence_summary(union) → compute_readiness_score(evidence).
-    4. build_cbom(union) for the Bom artifact.
+    4. build_cbom(union) → write_cbom_files() for the CBOM artifacts on disk.
     5. Guard empty union: return a coverage_warning noting no data rather than a clean 100.
     6. Persist a MergeRun row (scan_id, merged_at, endpoint_count, sensor_count, score,
        coverage_warning_json). Source CryptoEndpoint.scanned_at is NEVER rewritten.
 
     Args:
         db: SQLAlchemy session (caller manages lifecycle via get_session or similar).
-        now: Injectable reference time (defaults to datetime.utcnow()) for testing.
+            The caller (or get_session context manager) is responsible for commit.
+        now: Injectable reference time (defaults to datetime.now(timezone.utc) naive)
+            for testing.
         stale_days: Sensors silent for longer than this are excluded from coverage checks.
         profile: Scoring profile — "balanced" | "aggressive" | "conservative".
         weights: Optional per-weight override dict for compute_readiness_score.
+        output_dir: Directory for CBOM artifact output.  When None, CBOM artifacts
+            are not written and cbom_json_path / cbom_xml_path will be None in the
+            result dict.
 
     Returns:
         Dict with keys: scan_id, score, rating, subscores, drivers, coverage_warning,
-        endpoint_count, sensor_count.
+        endpoint_count, sensor_count, cbom_json_path, cbom_xml_path.
     """
     if now is None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # 1. Assemble union (READ ONLY — never mutate scanned_at)
-    union = _assemble_union(db, now)
+    union = _assemble_union(db)
 
     # 2. Coverage warning from enrolled sensor push recency
     sensors = db.query(Sensor).all()
@@ -174,7 +192,7 @@ def merge_scan(
                 "reason": "No endpoints found — no sensors enrolled and no local scan data.",
             }
         scan_id = now.isoformat(sep=" ")
-        # Persist empty merge result
+        # Persist empty merge result — commit is caller's responsibility (WR-04)
         merge_row = MergeRun(
             scan_id=scan_id,
             merged_at=now,
@@ -184,7 +202,7 @@ def merge_scan(
             coverage_warning_json=json.dumps(coverage_warning),
         )
         db.add(merge_row)
-        db.commit()
+        db.flush()
         return {
             "scan_id": scan_id,
             "score": None,
@@ -194,16 +212,25 @@ def merge_scan(
             "coverage_warning": coverage_warning,
             "endpoint_count": 0,
             "sensor_count": len(sensors),
+            "cbom_json_path": None,
+            "cbom_xml_path": None,
         }
 
     # 4. Option A: ONE call over the FULL UNION (MERGE-02 — never average per-segment)
     evidence = build_evidence_summary(union, findings=None)
     score_result = compute_readiness_score(evidence, profile=profile, weights=weights)
 
-    # 5. Build CBOM over the full union
-    build_cbom(union)
+    # 5. Build CBOM over the full union and write artifacts (CR-01)
+    bom = build_cbom(union)
+    cbom_json_path: Optional[str] = None
+    cbom_xml_path: Optional[str] = None
+    if output_dir is not None:
+        stamp = now.strftime("%Y%m%dT%H%M%S")
+        cbom_json_path, cbom_xml_path = write_cbom_files(bom, output_dir, stamp)
 
     # 6. Persist merge result as a MergeRun row (source scanned_at NOT mutated)
+    # Commit is the caller's responsibility (WR-04); flush ensures the row is
+    # visible within the same session without committing mid-unit-of-work.
     scan_id = now.isoformat(sep=" ")
     cw_json = json.dumps(coverage_warning) if coverage_warning is not None else None
 
@@ -216,7 +243,7 @@ def merge_scan(
         coverage_warning_json=cw_json,
     )
     db.add(merge_row)
-    db.commit()
+    db.flush()
 
     return {
         "scan_id": scan_id,
@@ -227,4 +254,6 @@ def merge_scan(
         "coverage_warning": coverage_warning,
         "endpoint_count": len(union),
         "sensor_count": len(sensors),
+        "cbom_json_path": cbom_json_path,
+        "cbom_xml_path": cbom_xml_path,
     }
