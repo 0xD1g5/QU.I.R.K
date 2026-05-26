@@ -31,6 +31,8 @@ export interface FindingItem {
   remediation?: string
   quantum_risk?: string
   source?: string
+  sensor_id?: string | null
+  segment?: string | null
 }
 
 export interface CertItem {
@@ -50,6 +52,8 @@ export interface CbomComponent {
   key_size?: number
   quantum_safety?: string
   source_systems: string[]
+  sensor_id?: string | null
+  segment?: string | null
 }
 
 export interface RoadmapNode {
@@ -325,4 +329,32 @@ export interface JobStatus {
   error_message: string | null
   stage_index: number
   stage_total: number
+}
+
+// Phase 111 — Distributed On-Prem Scanner types
+
+export interface SensorRegistryItem {
+  sensor_id: string
+  segment: string
+  sensor_version?: string | null
+  last_push_at?: string | null  // ISO datetime string
+  status: "current" | "stale" | "unknown"
+}
+
+export interface SensorRegistryResponse {
+  sensors: SensorRegistryItem[]
+}
+
+export interface MergeLatestData {
+  scan_id?: string | null
+  merged_at?: string | null   // ISO datetime string
+  score?: number | null
+  endpoint_count: number
+  sensor_count: number
+  coverage_warning?: Record<string, unknown> | null
+  per_segment_scores: Record<string, number>
+}
+
+export interface MergeLatestResponse {
+  merge: MergeLatestData | null
 }
