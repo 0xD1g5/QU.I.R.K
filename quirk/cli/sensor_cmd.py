@@ -84,6 +84,17 @@ def run_sensor(argv: list[str]) -> None:
     enroll_p = sub.add_parser("enroll", help="Enroll sensor against a console")
     enroll_p.add_argument("console_url", help="Console base URL (https://...)")
     enroll_p.add_argument("--segment", required=True, help="Network segment label")
+    enroll_p.add_argument(
+        "--sensor-id",
+        dest="sensor_id",
+        default=None,
+        help=(
+            "Console-provisioned sensor UUID to bind this sensor to. Must match the "
+            "sensor_id created by `quirk console enroll` so the console recognizes "
+            "pushes from this sensor. If omitted, a random UUID is generated (the "
+            "operator must then enroll that UUID console-side)."
+        ),
+    )
     enroll_p.add_argument("--engagement", default=None, help="Optional engagement tag")
     enroll_p.add_argument("--config", default=None, help="Override sensor.yaml path")
     enroll_p.add_argument(
@@ -226,8 +237,13 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     # Prompt for api_token if not supplied
     api_token: str = getattr(args, "api_token", None) or ""
 
-    # Mint sensor identity
-    sensor_id = str(uuid.uuid4())
+    # Bind sensor identity. The console provisions the authoritative sensor_id
+    # (via `quirk console enroll`); the operator passes it here with --sensor-id
+    # so the console recognizes pushes from this sensor. If omitted, generate a
+    # random UUID (operator must then enroll that UUID console-side).
+    sensor_id = getattr(args, "sensor_id", None) or str(uuid.uuid4())
+    if not getattr(args, "sensor_id", None):
+        print(f"Generated sensor_id: {sensor_id}", file=sys.stderr)
 
     # One-time enrollment token (T-108-05: raw token printed once, never stored)
     raw_token = secrets.token_urlsafe(32)
@@ -379,11 +395,22 @@ def _do_push(client, url: str, headers: dict, content: bytes):
     return resp
 
 
-def _run_local_scan(scan_config: str, output_dir: Path) -> int:
+def _run_local_scan(
+    scan_config: str, output_dir: Path, allow_internal: bool = False
+) -> int:
     """Invoke run_scan as subprocess. Returns proc.returncode.
 
     Uses list-form Popen — no shell=True, no metacharacter expansion (T-63-07 pattern).
     Never calls the run_scan main function directly — subprocess only (test-gated invariant).
+
+    run_scan writes the scan DB to ``cfg.output.db_path`` resolved relative to the
+    process CWD (it has no ``--output`` flag).  We therefore run the subprocess with
+    ``cwd=output_dir`` so a relative ``output.db_path`` in the sensor scan config lands
+    inside ``output_dir`` where ``_read_scan_endpoints`` (rglob ``*.db``) can find it.
+
+    ``allow_internal`` (sourced from the sensor's persisted ``allow_internal_console``)
+    forwards ``--allow-internal-targets`` so on-prem / lab sensors can scan private
+    RFC1918 segment targets.  Cloud metadata IPs remain blocked by run_scan regardless.
     """
     cmd = [
         sys.executable,
@@ -391,10 +418,12 @@ def _run_local_scan(scan_config: str, output_dir: Path) -> int:
         "run_scan",
         "--config",
         scan_config,
-        "--output",
-        str(output_dir),
     ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if allow_internal:
+        cmd.append("--allow-internal-targets")
+    proc = subprocess.Popen(
+        cmd, cwd=str(output_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     _stdout, _stderr = proc.communicate()
     return proc.returncode
 
@@ -548,7 +577,7 @@ def _cmd_push(args: argparse.Namespace) -> None:
     output_dir = Path(tempfile.mkdtemp())
     try:
         scan_config: str = args.scan_config
-        rc = _run_local_scan(scan_config, output_dir)
+        rc = _run_local_scan(scan_config, output_dir, allow_internal=allow_internal)
         if rc != 0:
             print(f"WARNING: local scan exited with code {rc}", file=sys.stderr)
 
@@ -680,7 +709,11 @@ def _cmd_export_results(args: argparse.Namespace) -> None:
     # Run local scan in a temp output dir
     output_dir_path = Path(tempfile.mkdtemp())
     try:
-        rc = _run_local_scan(scan_config, output_dir_path)
+        rc = _run_local_scan(
+            scan_config,
+            output_dir_path,
+            allow_internal=bool(sensor_cfg.get("allow_internal_console", False)),
+        )
         if rc != 0:
             print(f"WARNING: local scan exited with code {rc}", file=sys.stderr)
 

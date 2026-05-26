@@ -85,6 +85,34 @@ def test_enroll_sensor_id_is_uuid(tmp_path, monkeypatch):
     assert parsed.version == 4
 
 
+def test_enroll_binds_provided_sensor_id(tmp_path, monkeypatch):
+    """v5.4 enroll contract: --sensor-id binds the sensor to the console-provisioned
+    identity so pushes are recognized (regression for sensor-enroll-id-mismatch 404).
+    """
+    sensor_yaml = tmp_path / "sensor.yaml"
+
+    mock_result = MagicMock()
+    mock_result.ok = True
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+
+    from quirk.cli.sensor_cmd import _cmd_enroll
+
+    class Args:
+        console_url = "https://console.example"
+        segment = "segment-a"
+        sensor_id = "sensor-a"
+        engagement = None
+        config = str(sensor_yaml)
+        api_token = "token"
+
+    with pytest.raises(SystemExit):
+        _cmd_enroll(Args())
+
+    data = yaml.safe_load(sensor_yaml.read_text())
+    assert data["sensor_id"] == "sensor-a"
+
+
 def test_enroll_hmac_key_is_64_hex_chars(tmp_path, monkeypatch):
     """SENSOR-01: hmac_key in sensor.yaml is 64 hex characters (32 raw bytes)."""
     sensor_yaml = tmp_path / "sensor.yaml"
