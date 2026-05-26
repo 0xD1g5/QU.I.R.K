@@ -1,5 +1,27 @@
 # Milestones
 
+## v5.4 Distributed On-Prem Scanner Architecture (Shipped: 2026-05-26)
+
+**Phases completed:** 7 phases (106–112), 20 plans
+**Delivered:** QU.I.R.K. now scans a segmented enterprise network segment-by-segment — lightweight sensors scan locally and push results *outbound* to a single-tenant console that merges them into one authoritative CBOM + one quantum-readiness score, with no inbound access to any segment required. Milestone audit PASSED (0 blockers, 7/7 phases verified, 33/33 requirements delivered, cross-phase E2E chain wired). Single-tenant, additive-schema-only, OS-agnostic wire contract, reusing v5.3 security primitives throughout.
+
+**Key accomplishments:**
+
+- **Phase 106 (ANCHOR, no-code) — Architecture lock.** A single `docs/architecture-distributed.md` locks every expensive-to-change decision before code shipped: the sensor→console wire payload (`payload_id`/`pushed_at`/`received_at`/`schema_version`/`sensor_version`), `(sensor_id, host, port)` data-model keying with NULL=implicit-local, **Option A** unified scoring (union re-scored through the existing engine, never averaged), one-time-use enrollment tokens, the Windows floor-vs-ceiling split, and an explicit forbidden-additions list (no Celery/Redis/MQTT/Postgres/per-sensor-JWT/mTLS/tenant_id).
+- **Phase 107 — Additive data model.** `CryptoEndpoint` gained nullable indexed `sensor_id` + `segment`; new `sensors` / `sensor_tokens` (SHA-256 hashes) / `sensor_pushes` (payload_id dedup) tables — all via the existing `_ADDITIVE_MIGRATIONS` path. A pre-v5.4 SQLite fixture migrates with no data loss and scores identically.
+- **Phase 108 — Sensor CLI + Windows CI.** `quirk sensor enroll/push/export-results` (atomic `sensor.yaml`, `tenacity` retry, hardcoded `verify=True` + grep gate, bounded store-and-forward spool, byte-identical air-gap `.qpush`); `_NoRedirectHandler` extracted to `quirk/util/no_redirect.py` (STAB-02); POSIX-ism audit + `platformdirs`; a hard-gated `windows-latest` CI smoke job (no `continue-on-error`).
+- **Phase 109 — Console ingestion.** `POST /api/sensor/push` on the existing FastAPI app with router-level `require_auth` (401 anti-bypass gating test), the full failure ladder (413/422+`console_utc`/409 dedup), an `IntegrationDelivery` audit row per attempt with `safe_str` scrubbing + AST gate, `extra='ignore'` version-skew tolerance, and `quirk console enroll` provisioning. One shared `_ingest_envelope` path for HTTPS push + air-gap import.
+- **Phase 110 — Cross-sensor merge.** `quirk sensor merge` → one canonical CBOM + one score via Option-A union scoring; `coverage_warning` for overdue sensors (`2×cadence`); CBOM component identity threaded with `sensor_id` at four `bom_ref` sites so the same `host:port` in two segments yields two components; `merge_runs` persistence with per-endpoint `scanned_at` preserved (no rewrite).
+- **Phase 111 — Console dashboard awareness.** Sensor registry page (green/stale/unknown badges), a shared per-segment filter, per-segment score gauges alongside the org-wide gauge, and a `coverage_warning` banner — backed by `GET /api/sensor/registry` + `GET /api/merge/latest` (per-segment recompute on read) + a NULL-safe `?segment=` filter.
+- **Phase 112 — Distributed chaos-lab + stabilization.** A multi-segment `docker-compose.distributed.yml` (two isolated networks, `crypto.internal` hostname-alias reproducing the same-`host:port`-across-segments scenario after the Docker same-subnet constraint was discovered), `lab.sh distributed` arm + oracle + README (CLAUDE.md no-drift), operators-guide §8 (distributed workflow + Windows install + settings gap closed), and dependency/`datetime.utcnow()` hygiene.
+- **Hardening via layered review gates.** Code review caught bugs that passed unit tests + verification across every phase: a zstd decompression bomb + path traversal + missing air-gap HMAC framing (108); audit-on-rolled-back-session + `UnknownSensorError`→404 (109); a *discarded CBOM artifact* and a cross-sensor dedup collision (110); an empty-`?segment=` 404 trap + a non-functional CBOM segment filter (111); and three lab showstoppers including an **SSRF allowlist that blocked the internal on-prem console** — a real product bug fixed via opt-in `--allow-internal-console` (112). The milestone-audit integration check then surfaced and fixed the `sensor_version` registry-display gap and reconciled the shared-token auth model (TD-1).
+
+**Deferred (human-UAT, live infrastructure):** live enroll/spool round-trip (108), live merge + two-component CBOM inspection (110), dashboard visual fidelity vs UI-SPEC (111), the live multi-container `enroll→push→merge` E2E + MERGE-03 physical reproduction (112), GitHub branch-protection for the windows-smoke gate.
+
+**Carry-forward to v5.5:** per-sensor token authentication + revocation (TD-1), automatic merge-trigger / poll-on-full-check-in (106 D-06), full Windows packaging ceiling — PyInstaller EXE + Scheduled Task (106 D-05).
+
+Local tag `v5.4.0`.
+
 ## v5.3 Adoption & Integration Surface (Shipped: 2026-05-25)
 
 **Phases completed:** 5 phases (101–105), 20 plans, 50 tasks

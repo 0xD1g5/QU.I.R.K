@@ -150,7 +150,14 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.4 Distributed On-Prem Scanner Architecture
+## Current State
+
+**v5.4 Distributed On-Prem Scanner Architecture — SHIPPED 2026-05-26** (Phases 106–112, 20 plans, local tag `v5.4.0`). QU.I.R.K. now scans a segmented enterprise network segment-by-segment: lightweight sensors scan locally and push results outbound to a single-tenant console that merges them into one authoritative CBOM + one quantum-readiness score (Option A union scoring), with `coverage_warning` when sensors are missing, sensor/segment awareness across the dashboard, an OS-agnostic wire contract validated on `windows-latest`, and a multi-segment chaos-lab. Milestone audit PASSED (0 blockers, 7/7 phases, 33/33 requirements). Full record: `.planning/MILESTONES.md` + `.planning/milestones/v5.4-ROADMAP.md`.
+
+**Next milestone continues from Phase 113** (run `/gsd:new-milestone`). Carry-forward: per-sensor token auth + revocation (TD-1), automatic merge-trigger (106 D-06), Windows packaging ceiling (106 D-05).
+
+<details>
+<summary>v5.4 milestone goal + target features (shipped — archived detail)</summary>
 
 **Goal:** An agent/console split — sensors scan locally inside each network segment and push results *outbound* to a single-tenant console that merges them into one CBOM + one quantum-readiness score, with no inbound access to any segment required.
 
@@ -169,6 +176,8 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - **Cadence note:** v5.4 deliberately breaks the 2:1 capability/ops rhythm — it's a capability cliff for the ICP, and v5.3 closed low-debt, so the stabilization breather defers and its items fold into v5.4's tail instead.
 - **Parked, NOT entry conditions:** the 19 v5.3 live-delivery human-UAT items (Slack/email/webhook/syslog/Jira/ServiceNow) stay deferred — no test environment. Do not block v5.4 on them.
 - Numbering continues at **Phase 106**. Source of truth for forward outlook: `.planning/HORIZON.md`.
+
+</details>
 
 ## Previous Milestone: v5.3 Adoption & Integration Surface — SHIPPED 2026-05-25
 
