@@ -726,21 +726,27 @@ All dependencies already installed in the project environment. No new external t
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Where does `build_cbom` get called with merged findings — inside merge_scan() or only via write_reports()?**
-   - What we know: `write_reports()` calls `build_cbom(endpoints)` and writes files to `cfg.output.directory`. `merge_scan()` needs a `Bom` object for CBOM output.
-   - What's unclear: Does Phase 110 need to write CBOM files to disk, or only produce the Bom in memory for the return dict?
-   - Recommendation: Phase 110 writes the Bom to a file. The simplest path is calling `write_cbom_files(bom, outdir, stamp)` directly, without going through `write_reports()` (which requires a full `cfg` object). `write_cbom_files` is already importable from `quirk.cbom`.
+> Resolution note (2026-05-25): the merged-result persistence path was reconciled with the LOCKED
+> MERGE-05 decision during planning. MERGE-05 (preserve per-endpoint `scanned_at`, no rewrite to
+> merge time) SUPERSEDES the Architectural-Summary suggestion to write merged `CryptoEndpoint` rows
+> with `scanned_at = merge_ts`. Chosen path: `merge_scan()` computes over the union IN PLACE and
+> persists the merged result ONLY as a `merge_runs` row (new merged `scan_id`, score JSON,
+> `coverage_warning`, CBOM artifact path). **Consequence captured for Phase 111:** the dashboard must
+> read `merge_runs` directly — the merged result is NOT surfaced via `MAX(scanned_at)`.
 
-2. **findings parameter for build_evidence_summary in merge_scan()**
-   - What we know: findings (risk_engine output) are not stored in the DB — only CryptoEndpoint rows are persisted after Phase 109 ingest.
-   - What's unclear: Should merge_scan() call risk_engine on the union to regenerate findings?
-   - Recommendation: Pass `findings=None` to `build_evidence_summary()`. The evidence summary correctly computes all scoring signals from endpoint fields alone (evidence.py reads `severity`, `scan_error`, `cert_pubkey_alg`, etc. directly from endpoint rows). Risk_engine re-run is not needed for scoring.
+1. **RESOLVED — Where does `build_cbom` get called?** Inside `merge_scan()`, which writes the Bom to a
+   file via `write_cbom_files(bom, outdir, stamp)` directly (no full `cfg` needed; importable from
+   `quirk.cbom`). The CBOM artifact path is recorded on the `merge_runs` row.
 
-3. **Does `merge_scan()` need access to a `cfg` object for profile/calibration?**
-   - What we know: `compute_readiness_score()` accepts `profile` and `weights`. The normal scan uses `cfg.intelligence.profile`.
-   - Recommendation: Accept optional `profile: str = "balanced"` and `weights: dict | None = None` in `merge_scan()` signature. The CLI can expose `--profile` and `--calibration` flags in a follow-up; for Phase 110, defaults are sufficient.
+2. **RESOLVED — `findings` parameter for `build_evidence_summary`:** pass `findings=None`. The evidence
+   summary computes all scoring signals from endpoint fields alone (`severity`, `scan_error`,
+   `cert_pubkey_alg`, etc.); no risk_engine re-run is needed for scoring.
+
+3. **RESOLVED — Does `merge_scan()` need a `cfg` object?** No. It accepts optional
+   `profile: str = "balanced"` and `weights: dict | None = None`. CLI `--profile`/`--calibration`
+   flags are a follow-up; Phase 110 defaults suffice.
 
 ---
 
