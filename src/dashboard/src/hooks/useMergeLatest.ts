@@ -36,6 +36,14 @@ export function useMergeLatest(): UseMergeLatestResult {
               setError("Request blocked")
               return
             }
+            if (resp.status === 404) {
+              // Route not registered or prefix mismatch — treat as clean empty
+              // state with an actionable hint, consistent with useScanData 404
+              // pattern (WR-05).
+              setMerge(null)
+              setError("Merge endpoint not found. Check dashboard routing configuration.")
+              return
+            }
             setError(`Failed to fetch ${url}: ${resp.status} ${resp.statusText}`)
           }
           return
