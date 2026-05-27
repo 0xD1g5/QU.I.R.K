@@ -372,7 +372,16 @@ def _check_and_dispatch_due(
         db.query(ScheduledScan).filter(ScheduledScan.enabled == True).all()  # noqa: E712
     )
     for s in schedules:
-        next_run = _compute_next_run(s)
+        try:
+            next_run = _compute_next_run(s)
+        except Exception as _exc:
+            import logging as _logging
+            from quirk.util.safe_exc import safe_str as _safe_str
+            _logging.getLogger(__name__).error(
+                "Schedule %r has invalid cron_expr %r — skipping this iteration: %s",
+                s.name, s.cron_expr, _safe_str(_exc),
+            )
+            continue
         if next_run <= now:
             _dispatch_schedule(s, db, config_path, scan_config_path=scan_config_path)
             dispatched += 1
