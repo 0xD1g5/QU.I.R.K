@@ -113,11 +113,24 @@ def run_console(argv: list[str]) -> None:
         help="Console config.yaml path",
     )
 
+    revoke_p = sub.add_parser(
+        "revoke-sensor",
+        help="Revoke the active token(s) for a sensor (AUTH-02 / D-07)",
+    )
+    revoke_p.add_argument("sensor_id", help="Sensor UUID to revoke")
+    revoke_p.add_argument(
+        "--config",
+        default="config.yaml",
+        help="Console config.yaml path",
+    )
+
     args = parser.parse_args(argv)
     if args.action == "import-results":
         _cmd_import_results(args)
     elif args.action == "enroll":
         _cmd_enroll(args)
+    elif args.action == "revoke-sensor":
+        _cmd_revoke_sensor(args)
 
 
 def _cmd_enroll(args: argparse.Namespace) -> None:
@@ -225,6 +238,64 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     print(f"sensor_id: {sensor_id}", file=sys.stderr)
     # WR-04: return normally — run_console returns after dispatch; sys.exit(0) is
     # unnecessary and prevents atexit handlers + unit test without SystemExit monkeypatching.
+
+
+def _cmd_revoke_sensor(args: argparse.Namespace) -> None:
+    """Stamp revoked_at = now on active token row(s) for the target sensor.
+
+    AUTH-02 / D-07: Revocation is isolated to a single sensor's active token
+    row(s); other sensors' token rows are untouched.
+
+    D-08: Revocation only — there is no token-reissue path. A revoked sensor
+    must be re-enrolled as a fresh sensor to resume pushes.
+
+    On no active (non-revoked) token: prints an error to stderr and exits 1
+    (mirrors _cmd_enroll's IntegrityError/sys.exit(1) pattern — T-109-03).
+
+    WR-04: return normally on success — no sys.exit(0).
+    """
+    from datetime import datetime, timezone
+
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.dashboard.api.deps import _default_db_path
+    from quirk.db import init_db
+    from quirk.models import SensorToken
+
+    sensor_id: str = args.sensor_id
+
+    db_path = _default_db_path()
+    engine = init_db(db_path)
+    Session = sessionmaker(
+        bind=engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+    )
+
+    with Session() as db:
+        active_rows = (
+            db.query(SensorToken)
+            .filter(
+                SensorToken.sensor_id == sensor_id,
+                SensorToken.revoked_at.is_(None),
+            )
+            .all()
+        )
+        if not active_rows:
+            print(
+                f"ERROR: no active token found for sensor_id {sensor_id!r}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        for row in active_rows:
+            row.revoked_at = now
+        db.commit()
+
+    print(f"Revoked token(s) for sensor_id: {sensor_id}")
+    # WR-04: return normally
 
 
 def _cmd_import_results(args: argparse.Namespace) -> None:

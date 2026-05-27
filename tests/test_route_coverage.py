@@ -16,20 +16,25 @@ from quirk.dashboard.api.app import create_app
 
 
 def test_all_data_routes_have_auth_dependency(monkeypatch):
-    """AUTH-02 gate: every APIRoute except /api/health must have require_auth.
+    """AUTH-02 gate: every APIRoute except /api/health must have an auth dependency.
 
     Introspects app.routes and collects all APIRoute instances that are not
-    the health endpoint. Any route missing require_auth in its dependency list
-    causes this test to fail, preventing the route from shipping without auth.
+    the health endpoint. Any route missing an auth dependency in its dependency
+    list causes this test to fail, preventing the route from shipping without auth.
 
-    Expected to PASS immediately — all 7 data routers already use router-level
-    Depends(require_auth). This is a regression guard, not net-new coverage.
+    Phase 113 D-01/D-02 split: POST /api/sensor/push intentionally uses
+    require_sensor_auth (per-sensor token) rather than require_auth (operator token).
+    Both are valid auth dependencies for this gate — the invariant is that EVERY
+    route has SOME authentication, not that they all share the same auth mechanism.
     """
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     from fastapi.routing import APIRoute
     from quirk.dashboard.api.middleware.auth import require_auth
+    from quirk.dashboard.api.middleware.sensor_auth import require_sensor_auth
 
     app = create_app()
+    # Accepted auth dependencies: operator auth OR per-sensor auth (D-01/D-02 split)
+    auth_deps = {require_auth, require_sensor_auth}
     violations: list[str] = []
 
     for route in app.routes:
@@ -42,7 +47,7 @@ def test_all_data_routes_have_auth_dependency(monkeypatch):
         if route.path in {"/api/health", "/api/health/"}:
             continue
         dep_callables = {dep.dependency for dep in route.dependencies}
-        if require_auth not in dep_callables:
+        if not (dep_callables & auth_deps):
             violations.append(
                 f"{sorted(route.methods or set())} {route.path} — missing require_auth"
             )
