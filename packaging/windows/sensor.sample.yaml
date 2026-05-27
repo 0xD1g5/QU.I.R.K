@@ -1,0 +1,43 @@
+# QUIRK Sensor Config — SAMPLE
+#
+# This file documents the fields that install.ps1 generates via
+# 'quirk.exe sensor enroll'.  Do NOT use this file directly as a working
+# sensor config — it contains placeholder values only.
+#
+# Generated location (default):
+#   %LOCALAPPDATA%\Programs\QUIRK\config\sensor.yaml
+#
+# Fields written by 'quirk.exe sensor enroll':
+
+# Base URL of the QUIRK console this sensor reports to.
+console_url: https://quirk.example.com
+
+# UUID that uniquely identifies this sensor to the console.
+# Provisioned by 'quirk console enroll' and passed here via --sensor-id,
+# or auto-generated on first enroll if --sensor-id is omitted.
+sensor_id: 00000000-0000-0000-0000-000000000000
+
+# Network segment label (value of --segment passed to install.ps1).
+segment: windows
+
+# Optional engagement tag (--engagement).  Null when omitted.
+engagement: null
+
+# Version of the quirk-scanner package that wrote this config.
+sensor_version: "5.6.0"
+
+# HMAC key used to sign scan envelopes sent to the console.
+# Generated fresh on each enroll; 64-hex-character random value.
+hmac_key: "REPLACE_WITH_GENERATED_VALUE"
+
+# Per-sensor opaque Bearer token used for authenticated pushes
+# (Phase 113 require_sensor_auth wire contract).
+# Set from --api-token (the -EnrollmentToken passed to install.ps1).
+# T-118-CFG: this file is ACL-restricted to the current user by install.ps1
+# ('icacls /inheritance:r /grant:r <user>:(R,W)').
+# Never share or log this value.
+console_api_token: "REPLACE_WITH_ENROLLMENT_TOKEN"
+
+# Persisted from --allow-internal-console so subsequent 'sensor push' calls
+# can reach a console on a private/RFC1918 network without re-specifying the flag.
+allow_internal_console: false
