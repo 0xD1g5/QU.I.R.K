@@ -215,24 +215,22 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
 
     # Print the raw enrollment token once to stdout.
     #
-    # v5.4 SHARED-TOKEN MODEL — important operator guidance:
-    #   This token is a ONE-TIME ENROLLMENT token.  It is stored (as its SHA-256
-    #   hash) in the sensor_tokens table for provisioning/audit purposes ONLY.
-    #   It is NOT used to authenticate subsequent sensor pushes.
+    # v5.5 PER-SENSOR TOKEN MODEL (T-113-09):
+    #   This token IS the per-sensor push credential.  It is shown ONCE and never
+    #   recoverable — only its SHA-256 hash is persisted in sensor_tokens.
+    #   Place this raw value in the sensor's `console_api_token` field in
+    #   sensor.yaml on the sensor host.
     #
-    #   Sensor pushes to POST /api/sensor/push are authenticated by the
-    #   CONSOLE'S SHARED API TOKEN — the value of the QUIRK_API_TOKEN environment
-    #   variable (or security.api_token in config.yaml) on the console host.
-    #   Set that same shared token as console_api_token in sensor.yaml (or pass it
-    #   via `quirk sensor enroll --api-token <console-api-token>`).
+    #   If this token is lost, run `quirk console revoke-sensor <sensor_id>` and
+    #   then re-enroll (`quirk console enroll`) to mint a fresh token + sensor_id.
     #
-    #   Per-sensor token auth + revocation is planned for v5.5.
-    print(f"Enrollment token (one-time, for provisioning audit only — shown once):\n{raw_token}")
+    #   The shared QUIRK_API_TOKEN still governs operator/dashboard auth; it is
+    #   unaffected by this per-sensor push credential (D-02).
+    print(f"Bearer token (copy now — shown once, never recoverable):\n{raw_token}")
     print(
-        "\nNOTE: This enrollment token is NOT the push credential.\n"
-        "      Sensor push authentication uses the CONSOLE'S shared API token\n"
-        "      (QUIRK_API_TOKEN env var / security.api_token in config.yaml).\n"
-        "      Pass that shared token via: quirk sensor enroll ... --api-token <console-api-token>",
+        "\nNOTE: This token IS the per-sensor push credential (v5.5 per-sensor auth).\n"
+        "      Place this raw value in console_api_token in the sensor's sensor.yaml.\n"
+        "      If lost: quirk console revoke-sensor <sensor_id> then re-enroll.",
         file=sys.stderr,
     )
     print(f"sensor_id: {sensor_id}", file=sys.stderr)
