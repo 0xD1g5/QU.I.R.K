@@ -83,6 +83,11 @@ def test_console_enroll(tmp_path, monkeypatch, capsys):
         token_row = db.query(SensorToken).filter(SensorToken.sensor_id == "S1").first()
         assert token_row is not None, "sensor_tokens row not written by enroll"
 
+        # AUTH-03: freshly enrolled token must be active (revoked_at IS NULL)
+        assert token_row.revoked_at is None, (
+            f"New enrollment must have revoked_at=NULL (active token); got {token_row.revoked_at!r}"
+        )
+
         # Hash of the printed token must match the stored hash (token_hash = SHA-256(raw_token))
         expected_hash = hashlib.sha256(raw_token.encode()).hexdigest()
         assert token_row.token_hash == expected_hash, (
