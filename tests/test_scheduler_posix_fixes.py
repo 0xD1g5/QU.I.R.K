@@ -31,6 +31,23 @@ def _strip_comments(src: str) -> str:
     return "".join(chars)
 
 
+def test_scheduler_cmd_drops_target_and_output():
+    """STAB-03 regression: scheduler subprocess cmd must not pass --target or --output.
+
+    run_scan.py does not accept either argument; passing them causes
+    'unrecognized arguments' and a non-zero exit (verified by source read).
+    Target + output directory are driven by --config (cfg.target +
+    cfg.output.directory, SENSOR-05 anchoring).
+    """
+    src = _strip_comments(SCHEDULER_SRC.read_text())
+    assert '"--target"' not in src, (
+        "scheduler_cmd.py still passes --target to run_scan — regression of STAB-03"
+    )
+    assert '"--output"' not in src, (
+        "scheduler_cmd.py still passes --output to run_scan — regression of STAB-03"
+    )
+
+
 def test_output_dir_anchored():
     """SENSOR-05 Fix 1: output_dir must be anchored to cfg.output.directory, not CWD-relative."""
     src = _strip_comments(SCHEDULER_SRC.read_text())
