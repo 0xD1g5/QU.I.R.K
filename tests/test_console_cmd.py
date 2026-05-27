@@ -81,6 +81,41 @@ def _enroll_default(sensor_id: str, segment: str = "air-gap") -> None:
 
 
 # ---------------------------------------------------------------------------
+# STAB-01: enroll idempotency
+# ---------------------------------------------------------------------------
+
+
+def test_enroll_idempotent_console(capsys):
+    """STAB-01: re-enrolling an already-provisioned sensor_id returns normally
+    (no SystemExit), prints no bearer token to stdout, and emits 'already enrolled'
+    plus the sensor_id to stderr.  No duplicate row is created.
+    """
+    sensor_id = str(uuid.uuid4())
+    _enroll_default(sensor_id, segment="test-seg")
+
+    from quirk.cli.console_cmd import _cmd_enroll
+
+    class Args:
+        pass
+
+    a = Args()
+    a.sensor_id = sensor_id
+    a.segment = "test-seg"
+    a.engagement = None
+    a.config = "config.yaml"
+
+    # Must NOT raise SystemExit; must return normally (WR-04)
+    _cmd_enroll(a)
+
+    captured = capsys.readouterr()
+    # D-01: no raw token printed to stdout on idempotent path
+    assert "Bearer" not in captured.out
+    # INFO message goes to stderr
+    assert "already enrolled" in captured.err
+    assert sensor_id in captured.err
+
+
+# ---------------------------------------------------------------------------
 # Happy-path: import-results reads, decompresses, validates, prints summary
 # ---------------------------------------------------------------------------
 
