@@ -449,6 +449,37 @@ The output layer the detection engine never had: a shared `ExecContent` content 
 
 ---
 
+## Milestone: v5.5 — Distributed Hardening + Stabilization
+
+**Shipped:** 2026-05-27
+**Phases:** 4 (113–116) | **Plans:** 11
+
+### What Was Built
+Per-sensor Bearer-token auth + revocation (113); failure-isolated auto-merge on full sensor check-in (114); live-UAT stabilization sweep — idempotent enroll, importlib.resources cmvp packaging, scheduler arg fix with target preservation, phantom-row elimination + weak-TLS segment-b lab target (115); GO-conditional PyInstaller Windows packaging spike (116).
+
+### What Worked
+- **The review→fix→re-verify chain earned its keep.** Code review and the phase verifier caught three real defects that passed their own green tests: 114's inverted revoked-sensor filter (would mis-fire auto-merge and break the re-key flow), 115's malformed-cron scheduler-loop crash, and 116's overbroad Phase-108 hardgate test. Verification confirms must-haves; review catches what the tests don't assert.
+- **Retroactive secure-phase + integration check before close** surfaced 113's missing SECURITY.md (threats_open 0 once verified) and proved the 113→114 auth/revocation seam end-to-end.
+- **Deferring the version bump to milestone close** (rather than mid-115) avoided thrashing the version-string UAT tests; the bump touched only pyproject + two stale hardcoded literals.
+
+### What Was Inefficient
+- A stray uncommitted dashboard rebuild caused a `git stash`-pop conflict on build artifacts mid-execution — had to resolve to committed HEAD. Build artifacts with local drift are a recurring hazard.
+- STAB-03 needed two passes: a NameError fix exposed a deeper target-orphaning gap (removing `--target` orphaned `schedule.target`), closed by generating a per-schedule config.
+
+### Patterns Established
+- Generated per-schedule scan config preserves `schedule.target` while conforming to run_scan's actual arg surface (no `--target`/`--output`).
+- Downstream advisory-row filtering with a mandatory `IS NULL` clause (SQLite three-valued logic) keeps local trends data intact while cleaning merged output.
+
+### Key Lessons
+- A guardrail can be *too broad*: Phase 108's file-wide `continue-on-error` ban blocked a legitimately non-blocking spike job. Scope guardrails to the entity they protect.
+- "Redundant" findings deserve a control-flow second look (the spike build's `continue-on-error` was load-bearing for the report step until `if: always()` was added).
+
+### Cost Observations
+- Model mix: orchestration on Opus; researcher/planner/executor/reviewer/verifier subagents on Sonnet.
+- Notable: empty `requirements_completed` SUMMARY frontmatter recurred again (10/11 plans) — a standing executor-hygiene gap, non-blocking since traceability + VERIFICATION cover it.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
