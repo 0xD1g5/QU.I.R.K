@@ -37,10 +37,18 @@ on:
     tags:
       - 'v*.*.*'
 
+# Workflow-level least-privilege default (WR-04). Each job that needs broader
+# scope declares its own permissions: block below; this default prevents the
+# GITHUB_TOKEN from silently receiving write-all on unscoped jobs.
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build wheel + sdist
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # checkout only — no release or package write needed (WR-04)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
