@@ -101,11 +101,35 @@ services:
         condition: service_healthy
 
   # -----------------------------------------------------------------------
+  # WEAK-TLS TARGET — Segment B only (LAB-01)
+  # Reuses the tls-legacy image/config pattern from docker-compose.yml (D-10):
+  #   nginx:1.28.0 + nginx/legacy/nginx.conf (TLS 1.0/1.1 + HIGH:MEDIUM ciphers).
+  # Static IP 10.20.0.20 on segment-b; no crypto.internal alias — distinct from
+  # the modern tls-target-b at 10.20.0.10.  No host-port binding (expose only) —
+  # sensor-b scans it internally.  Not reachable from segment-a (isolation preserved).
+  # CHAOS-05: pinned to nginx:1.28.0 (no :latest).
+  # -----------------------------------------------------------------------
+  tls-weak-b:
+    image: nginx:1.28.0
+    volumes:
+      - ./nginx/legacy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    expose:
+      - "443"
+    networks:
+      segment-b:
+        ipv4_address: "10.20.0.20"
+
+  # -----------------------------------------------------------------------
   # SENSOR B — scans segment-b's crypto.internal target
   # Joins segment-b (for DNS resolution + TLS scan) + console-net (for push).
   # Does NOT join segment-a — intentional isolation.
   #
   # Same idle-container approach as sensor-a (see above).
+  #
+  # LAB-01: mounts sensor-config-b.yaml (not the shared sensor-config.yaml)
+  # so sensor-b also scans the weak-TLS target at 10.20.0.20:443 while
+  # sensor-a's config is unchanged (preserves segment-a isolation).
   # -----------------------------------------------------------------------
   sensor-b:
     build:
@@ -117,7 +141,7 @@ services:
       - QUIRK_SENSOR_SEGMENT=segment-b
     volumes:
       - sensor-b-data:/home/quirk
-      - ./sensor-config.yaml:/quirk/sensor-config.yaml:ro
+      - ./sensor-config-b.yaml:/quirk/sensor-config.yaml:ro
     networks:
       - segment-b
       - console-net
@@ -125,6 +149,8 @@ services:
       - NET_RAW
     depends_on:
       tls-target-b:
+        condition: service_started
+      tls-weak-b:
         condition: service_started
       console:
         condition: service_healthy

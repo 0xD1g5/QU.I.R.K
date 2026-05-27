@@ -1,0 +1,41 @@
+# QU.I.R.K. sensor scan config — distributed chaos lab, sensor-b only
+#
+# Mounted into sensor-b ONLY (preserves segment-a isolation: sensor-a cannot
+# reach 10.20.0.20 and its config is unchanged).
+#
+# LAB-01: extends the shared sensor-config.yaml target list with the weak-TLS
+# target at 10.20.0.20:443 (tls-weak-b service, nginx:1.28.0 + legacy TLS config).
+#
+# sensor-b resolves crypto.internal → 10.20.0.10 (tls-target-b, modern TLS)
+# via the per-network DNS alias on segment-b.
+# sensor-b also scans 10.20.0.20 directly (tls-weak-b, TLS 1.0/1.1 + weak ciphers)
+# via include_ips — no DNS alias needed for the weak target.
+
+assessment:
+  name: "Distributed Chaos Lab — sensor-b scan (LAB-01)"
+  data_classification: "internal"
+  report_owner: "quirk-lab"
+  timezone: "UTC"
+
+scan:
+  timeout_seconds: 10
+  concurrency: 4
+  ports_tls: [443]
+  include_sni: true
+  tls_enum_mode: fast
+
+targets:
+  fqdns:
+    - crypto.internal   # segment-b DNS alias → 10.20.0.10 (modern TLS target)
+  cidrs: []
+  include_ips:
+    - "10.20.0.20"      # LAB-01: weak-TLS target (tls-weak-b, port 443)
+  exclude_ips: []
+
+# Output paths are RELATIVE so the scan DB lands in the subprocess CWD that
+# `quirk sensor push` sets (a per-push temp dir), where the push step's
+# CryptoEndpoint reader (rglob *.db) can find it. run_scan writes the scan DB
+# to output.db_path resolved against the process working directory.
+output:
+  directory: "."
+  db_path: "./scan.db"
