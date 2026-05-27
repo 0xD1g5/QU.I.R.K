@@ -23,10 +23,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Per-Sensor Authentication (AUTH) — *replaces the v5.4 shared-token model (TD-1)*
 
-- [ ] **AUTH-01**: Each sensor authenticates to the console with its own per-sensor token (not a single shared console token); the console identifies which sensor a push came from based on the presented token.
-- [ ] **AUTH-02**: A console operator can revoke an individual sensor's token (e.g. `quirk console revoke-sensor <id>`) so a compromised or decommissioned sensor is immediately rejected at ingestion, with no effect on any other enrolled sensor's ability to push.
-- [ ] **AUTH-03**: Enrollment issues a per-sensor token bound to the sensor UUID; the raw token is never persisted (SHA-256 hash only, reusing the existing `sensor_tokens` table and `token_cmd.py` hashing pattern).
-- [ ] **AUTH-04**: A revoked or unknown per-sensor token returns 401 at `POST /api/sensor/push` (gating test); migration off the v5.4 shared-token model is backward-compatible and documented in the operators guide.
+- [x] **AUTH-01**: Each sensor authenticates to the console with its own per-sensor token (not a single shared console token); the console identifies which sensor a push came from based on the presented token.
+- [x] **AUTH-02**: A console operator can revoke an individual sensor's token (e.g. `quirk console revoke-sensor <id>`) so a compromised or decommissioned sensor is immediately rejected at ingestion, with no effect on any other enrolled sensor's ability to push.
+- [x] **AUTH-03**: Enrollment issues a per-sensor token bound to the sensor UUID; the raw token is never persisted (SHA-256 hash only, reusing the existing `sensor_tokens` table and `token_cmd.py` hashing pattern).
+- [x] **AUTH-04**: A revoked or unknown per-sensor token returns 401 at `POST /api/sensor/push` (gating test); migration off the v5.4 shared-token model is backward-compatible and documented in the operators guide.
 
 ### Automatic Merge (AUTOMERGE) — *106 D-06 carry-forward*
 
@@ -69,10 +69,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 113 | pending |
-| AUTH-02 | Phase 113 | pending |
-| AUTH-03 | Phase 113 | pending |
-| AUTH-04 | Phase 113 | pending |
+| AUTH-01 | Phase 113 | Complete |
+| AUTH-02 | Phase 113 | Complete |
+| AUTH-03 | Phase 113 | Complete |
+| AUTH-04 | Phase 113 | Complete |
 | AUTOMERGE-01 | Phase 114 | pending |
 | AUTOMERGE-02 | Phase 114 | pending |
 | AUTOMERGE-03 | Phase 114 | pending |

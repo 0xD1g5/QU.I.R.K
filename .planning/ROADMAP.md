@@ -110,7 +110,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete   | 2026-05-27 |
+| 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete    | 2026-05-27 |
 | 114. Automatic Merge Trigger | v5.5 | 0/TBD | Not started | - |
 | 115. Live-UAT Stabilization + Lab Testability | v5.5 | 0/TBD | Not started | - |
 | 116. Windows Packaging Spike | v5.5 | 0/TBD | Not started | - |
