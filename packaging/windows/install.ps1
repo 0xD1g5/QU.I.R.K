@@ -179,15 +179,15 @@ $Trigger = New-ScheduledTaskTrigger -Daily -At $Time
 # Register-ScheduledTask defaults to the current-user security principal when no
 # -Principal is provided and the shell is not elevated.  -RunLevel Limited ensures
 # the task does NOT request admin elevation at runtime (per CONTEXT D-04).
-Register-ScheduledTask `
-    -TaskName $TaskName `
-    -Action   $Action `
-    -Trigger  $Trigger `
-    -RunLevel Limited `
-    -Force | Out-Null
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Register-ScheduledTask failed (exit $LASTEXITCODE)."
+try {
+    Register-ScheduledTask `
+        -TaskName $TaskName `
+        -Action   $Action `
+        -Trigger  $Trigger `
+        -RunLevel Limited `
+        -Force -ErrorAction Stop | Out-Null
+} catch {
+    Write-Error "Register-ScheduledTask failed: $_"
     exit 1
 }
 
