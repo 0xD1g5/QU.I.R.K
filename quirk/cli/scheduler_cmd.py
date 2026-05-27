@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import os
 import re
 import signal
@@ -12,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
+import yaml
 from croniter import croniter
 from sqlalchemy.orm import Session
 
@@ -104,6 +106,115 @@ def _recover_stale_runs(db: Session) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Config materialisation for config-less schedules (STAB-03 / Phase 115)
+# ---------------------------------------------------------------------------
+
+#: Minimal YAML dict skeleton that satisfies config_from_dict / load_config.
+#: All required top-level sections are present; scanner connectors and
+#: concurrency are set to safe, inert defaults so run_scan can load the
+#: file without error even when the schedule has no external config.
+_MINIMAL_SCAN_CONFIG: dict = {
+    "assessment": {
+        "name": "scheduled-scan",
+        "data_classification": "internal",
+        "report_owner": "quirk-scheduler",
+        "timezone": "UTC",
+    },
+    "scan": {
+        "concurrency": 10,
+        "ports_tls": [443, 8443],
+    },
+    "targets": {
+        "fqdns": [],
+        "cidrs": [],
+        "include_ips": [],
+        "exclude_ips": [],
+    },
+    "connectors": {},
+    "output": {
+        "directory": "output",
+        "db_path": "quirk.db",
+    },
+}
+
+
+def _classify_target(target: str) -> str:
+    """Return the TargetsCfg key that `target` belongs to.
+
+    Returns one of: "include_ips", "cidrs", "fqdns".
+    Uses the ipaddress module for IP / CIDR detection (no regex guessing).
+    """
+    # Strip surrounding whitespace so " 127.0.0.1 " still parses correctly.
+    t = target.strip()
+    if "/" in t:
+        try:
+            ipaddress.ip_network(t, strict=False)
+            return "cidrs"
+        except ValueError:
+            pass
+    try:
+        ipaddress.ip_address(t)
+        return "include_ips"
+    except ValueError:
+        pass
+    return "fqdns"
+
+
+def _materialize_scan_config(
+    schedule: ScheduledScan,
+    scan_config_path: Optional[str],
+    output_dir: Path,
+) -> str:
+    """Build (or augment) a scan config YAML that includes schedule.target.
+
+    - If `scan_config_path` is provided, load it via yaml.safe_load and merge
+      schedule.target into the appropriate targets sub-key (append, never clobber).
+    - Otherwise start from the minimal inert skeleton _MINIMAL_SCAN_CONFIG.
+    - Always set output.directory to str(output_dir) so artifacts land under the
+      scheduled output tree (SENSOR-05 anchoring).
+    - Write the merged dict to output_dir/scan-config.generated.yaml and return
+      its absolute path as a str.
+
+    Security: schedule.target goes into a YAML *value* (never a shell arg) and
+    output_dir is derived from sanitized safe_name + timestamp inside the output
+    tree (T-63-07 / STAB-03 threat note).
+    """
+    import copy
+
+    if scan_config_path is not None:
+        with open(scan_config_path, "r", encoding="utf-8") as fh:
+            base: dict = yaml.safe_load(fh) or {}
+    else:
+        base = copy.deepcopy(_MINIMAL_SCAN_CONFIG)
+
+    # Ensure required top-level sections exist (defensive merge for partial configs)
+    for key, default in _MINIMAL_SCAN_CONFIG.items():
+        if key not in base:
+            base[key] = copy.deepcopy(default)
+
+    # Inject schedule.target into the correct targets sub-key (merge, not replace)
+    target = (schedule.target or "").strip()
+    if target:
+        targets_section = base.setdefault("targets", {})
+        bucket = _classify_target(target)
+        existing = targets_section.get(bucket) or []
+        if not isinstance(existing, list):
+            existing = [str(existing)]
+        if target not in existing:
+            existing = list(existing) + [target]
+        targets_section[bucket] = existing
+
+    # Anchor output.directory to the scheduled output dir (SENSOR-05 Fix 1)
+    base.setdefault("output", {})["directory"] = str(output_dir)
+
+    generated_path = output_dir / "scan-config.generated.yaml"
+    with open(generated_path, "w", encoding="utf-8") as fh:
+        yaml.safe_dump(base, fh, default_flow_style=False, allow_unicode=True)
+
+    return str(generated_path)
+
+
+# ---------------------------------------------------------------------------
 # Dispatch one due schedule
 # ---------------------------------------------------------------------------
 
@@ -119,9 +230,15 @@ def _dispatch_schedule(
     Status transitions: pending → running → completed/failed.
     Uses sys.executable + -m run_scan to avoid PATH issues (Pitfall 5 / T-63-07).
 
-    scan_config_path: path to config.yaml for the scan subprocess. When provided,
-    the output directory is anchored to cfg.output.directory (SENSOR-05 Fix 1).
-    When absent, falls back to QUIRK_OUTPUT_DIR env var or "output" directory.
+    scan_config_path: optional path to a base config.yaml for the scan subprocess.
+    When provided it is used as the starting point for the generated config and
+    output.directory is anchored to cfg.output.directory (SENSOR-05 Fix 1).
+    When absent, a minimal inert config is generated from schedule.target so that
+    config-less schedules still run (STAB-03 gap-closure, Phase 115).
+
+    A schedule is only rejected (marked failed, no Popen) when both
+    scan_config_path is None AND schedule.target is empty/falsy — there is
+    genuinely nothing to scan.
     """
     now = _utcnow_naive()
     run = ScheduledRun(
@@ -134,18 +251,16 @@ def _dispatch_schedule(
     db.add(run)
     db.flush()  # obtain run.id without closing session
 
-    # STAB-03 / open-Q1: a schedule without a config file has no target — fail fast
-    # rather than launching run_scan with no target (which would error out or hang).
-    # Target + output directory are both driven by --config (cfg.target +
-    # cfg.output.directory per SENSOR-05 anchoring). Do NOT widen run_scan.py's
-    # arg surface with --target / --output.
-    if scan_config_path is None:
+    # STAB-03 gap-closure: fail fast only when there is genuinely nothing to scan.
+    # A schedule with a non-empty target can always produce a generated config, so
+    # we only bail here when both the explicit config and the target column are absent.
+    if scan_config_path is None and not (schedule.target or "").strip():
         run.status = "failed"
         run.completed_at = _utcnow_naive()
         db.commit()
         import logging as _logging
         _logging.getLogger(__name__).error(
-            "Schedule %r has no config file; cannot determine target — marking failed",
+            "Schedule %r has no config file and no target — marking failed",
             schedule.name,
         )
         return run
@@ -156,20 +271,32 @@ def _dispatch_schedule(
     # fall back to "unnamed" so mkdir never traverses outside output/scheduled/.
     _SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
     safe_name = schedule.name if _SAFE_NAME_RE.match(schedule.name) else "unnamed"
-    cfg = load_config(scan_config_path)
-    output_base = Path(cfg.output.directory)
+
+    # Determine output base: prefer cfg.output.directory from an explicit scan_config;
+    # fall back to QUIRK_OUTPUT_DIR env var or "output" directory (SENSOR-05 Fix 1).
+    if scan_config_path is not None:
+        cfg = load_config(scan_config_path)
+        output_base = Path(cfg.output.directory)
+    else:
+        output_base = Path(os.environ.get("QUIRK_OUTPUT_DIR", "output"))
+
     output_dir = output_base / "scheduled" / safe_name / now.strftime("%Y%m%d-%H%M%S")
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Generate (or augment) a scan config that includes schedule.target.
+    # The generated file is passed as --config to run_scan so target + output
+    # directory are both conveyed without widening run_scan.py's arg surface
+    # with --target or --output (STAB-03 invariant).
+    generated_config = _materialize_scan_config(schedule, scan_config_path, output_dir)
+
     # T-63-07: list-form Popen — no shell=True, no metacharacter expansion
     # Pitfall 5: sys.executable + -m run_scan (not "quirk" which may not be on PATH)
-    cmd = [sys.executable, "-m", "run_scan", "--config", scan_config_path]
+    cmd = [sys.executable, "-m", "run_scan", "--config", generated_config]
     cmd += [
         "--profile",
         schedule.profile or "balanced",
     ]
-    # NOTE: target + output_dir are driven by --config (cfg.target +
-    # cfg.output.directory, SENSOR-05 anchoring already present).
+    # NOTE: target + output_dir are conveyed via the generated --config.
     # Do NOT add --target or --output — run_scan.py does not accept them (STAB-03).
 
     run.status = "running"
