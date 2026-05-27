@@ -53,7 +53,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 
 - [x] **Phase 113: Per-Sensor Authentication** - Replace the v5.4 shared-token model with per-sensor opaque tokens, full revocation, and documented migration (completed 2026-05-27)
 - [x] **Phase 114: Automatic Merge Trigger** - Console auto-merges once all enrolled sensors have checked in, with configurable trigger and no regression to manual merge (completed 2026-05-27)
-- [ ] **Phase 115: Live-UAT Stabilization + Lab Testability** - Sweep the four E2E-surfaced defects and add a weak-crypto distributed lab target so the Phase 111 segment filter is exercisable end-to-end
+- [x] **Phase 115: Live-UAT Stabilization + Lab Testability** - Sweep the four E2E-surfaced defects and add a weak-crypto distributed lab target so the Phase 111 segment filter is exercisable end-to-end (completed 2026-05-27)
 - [ ] **Phase 116: Windows Packaging Spike** - Produce a written feasibility and sizing assessment for PyInstaller frozen EXE + Windows Scheduled Task; go/no-go recommendation for v5.6
 
 ### Phase Details
@@ -99,7 +99,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 **Plans**: 3 plans
 - [x] 115-01-PLAN.md — Idempotent enroll (STAB-01) + phantom-row filter (STAB-04)
 - [x] 115-02-PLAN.md — CMVP packaging (STAB-02) + scheduler arg fix (STAB-03)
-- [ ] 115-03-PLAN.md — Weak-TLS segment-b lab target + no-drift docs (LAB-01)
+- [x] 115-03-PLAN.md — Weak-TLS segment-b lab target + no-drift docs (LAB-01)
 
 ### Phase 116: Windows Packaging Spike
 **Goal**: Produce a written, evidence-backed feasibility and sizing assessment for packaging the QUIRK sensor as a PyInstaller frozen EXE hosted as a Windows Scheduled Task (or Service), ending in an explicit go/no-go recommendation and effort estimate for v5.6
@@ -118,7 +118,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 |-------|-----------|----------------|--------|-----------|
 | 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete    | 2026-05-27 |
 | 114. Automatic Merge Trigger | v5.5 | 3/3 | Complete   | 2026-05-27 |
-| 115. Live-UAT Stabilization + Lab Testability | v5.5 | 2/3 | In Progress|  |
+| 115. Live-UAT Stabilization + Lab Testability | v5.5 | 3/3 | Complete   | 2026-05-27 |
 | 116. Windows Packaging Spike | v5.5 | 0/TBD | Not started | - |
 
 ---

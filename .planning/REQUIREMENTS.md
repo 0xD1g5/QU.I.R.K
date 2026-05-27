@@ -43,7 +43,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Distributed Lab Testability (LAB) — *999.85*
 
-- [ ] **LAB-01**: The distributed chaos lab includes a weak-crypto target in a non-default segment so the Phase 111 per-segment score/filter can be exercised end-to-end (previously blocked Test 7); `lab.sh distributed`, the `expected_results_*.md` oracle, and the chaos-lab README are all updated in the same change per the CLAUDE.md no-drift rule.
+- [x] **LAB-01**: The distributed chaos lab includes a weak-crypto target in a non-default segment so the Phase 111 per-segment score/filter can be exercised end-to-end (previously blocked Test 7); `lab.sh distributed`, the `expected_results_*.md` oracle, and the chaos-lab README are all updated in the same change per the CLAUDE.md no-drift rule.
 
 ### Windows Packaging Spike (WINPKG) — *106 D-05, spike-only*
 
@@ -80,5 +80,5 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 | STAB-02 | Phase 115 | Complete |
 | STAB-03 | Phase 115 | Complete |
 | STAB-04 | Phase 115 | Complete |
-| LAB-01 | Phase 115 | pending |
+| LAB-01 | Phase 115 | Complete |
 | WINPKG-01 | Phase 116 | pending |

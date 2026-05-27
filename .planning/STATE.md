@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.5
 milestone_name: Distributed Hardening + Stabilization
 status: executing
-stopped_at: Phase 115 Plan 02 complete
-last_updated: "2026-05-27T11:12:14.900Z"
+stopped_at: Phase 115 Plan 03 complete — all plans done
+last_updated: "2026-05-27T11:19:34.156Z"
 last_activity: 2026-05-27
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
-  percent: 89
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: 115
-Plan: 02 complete; Plan 03 ready
-Status: Executing
+Plan: 03 complete — all 3 plans done; phase complete
+Status: Complete
 Last activity: 2026-05-27
 
-Progress: [█████████░] 89%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -55,10 +55,11 @@ Progress: [█████████░] 89%
 - STAB-02: importlib.resources for _load_cache read path; monkeypatch override hook preserves test isolation; _CACHE_PATH write path kept for refresh_cache (dev tool only)
 - STAB-03: scheduler drops --target/--output from run_scan subprocess; fail-fast guard marks run failed when scan_config_path is None; static regression test in test_scheduler_posix_fixes.py
 - STAB-04: advisory filter at _read_scan_endpoints boundary (IS NULL clause mandatory for SQLite 3VL); advisory rows stay in local DB for trends.py
+- LAB-01: tls-weak-b reuses nginx:1.28.0 + nginx/legacy/nginx.conf on segment-b at 10.20.0.20 (no new image or cert, D-10); separate sensor-config-b.yaml mounted to sensor-b only (O-Q3); lab.sh ALL_PROFILES unchanged (distributed arm is generic)
 
 ### Pending Todos
 
-- Phase 115 Plan 03: LAB-01 — add weak-TLS target on segment-b; update lab.sh + expected_results_distributed.md + README (CLAUDE.md no-drift rule)
+None. Phase 115 all plans complete (STAB-01..04, LAB-01 delivered).
 
 ### Blockers
 
@@ -79,7 +80,7 @@ Carried forward from v5.4/v5.3 close:
 
 ## Session Continuity
 
-Last session: 2026-05-27T11:12:14.896Z
-Stopped at: Phase 115 Plan 02 complete
+Last session: 2026-05-27T11:19:34.153Z
+Stopped at: Phase 115 Plan 03 complete — all plans done
 Resume file: None
-Next: `/gsd-autonomous 115` (Plan 03: LAB-01 — weak-TLS target on segment-b)
+Next: Phase 115 complete — run `/gsd-complete-phase 115` or proceed to next milestone
