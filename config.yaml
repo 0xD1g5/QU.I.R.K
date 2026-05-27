@@ -56,3 +56,11 @@ intelligence:
   intelligence_version: "3.9.0"
   profile: "balanced"        # lenient|balanced|strict
   calibration_overrides: {}
+
+# Console behavior settings (Phase 114 AUTOMERGE-02)
+console:
+  auto_merge:
+    enabled: true                        # default: ON (D-07); set false to require manual `quirk sensor merge`
+    trigger_condition: all-sensors-in    # "all-sensors-in" | "cadence-window" (D-08)
+    # cadence_window_minutes: 1440       # used only when trigger_condition: cadence-window
+    #                                    # defaults to per-sensor expected_cadence_minutes (D-09)
