@@ -97,6 +97,7 @@ tickets = [
 ]
 dev = [
     "towncrier>=24.7.0",
+    "pyinstaller==6.20.0",  # Phase 117 WINBUILD-01: pinned build dep (resolves 116-01-D-03)
 ]
 all = [
     "quirk-scanner[cloud]",
