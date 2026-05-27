@@ -54,7 +54,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 - [x] **Phase 113: Per-Sensor Authentication** - Replace the v5.4 shared-token model with per-sensor opaque tokens, full revocation, and documented migration (completed 2026-05-27)
 - [x] **Phase 114: Automatic Merge Trigger** - Console auto-merges once all enrolled sensors have checked in, with configurable trigger and no regression to manual merge (completed 2026-05-27)
 - [x] **Phase 115: Live-UAT Stabilization + Lab Testability** - Sweep the four E2E-surfaced defects and add a weak-crypto distributed lab target so the Phase 111 segment filter is exercisable end-to-end (completed 2026-05-27)
-- [ ] **Phase 116: Windows Packaging Spike** - Produce a written feasibility and sizing assessment for PyInstaller frozen EXE + Windows Scheduled Task; go/no-go recommendation for v5.6
+- [x] **Phase 116: Windows Packaging Spike** - Produce a written feasibility and sizing assessment for PyInstaller frozen EXE + Windows Scheduled Task; go/no-go recommendation for v5.6 (completed 2026-05-27)
 
 ### Phase Details
 
@@ -112,7 +112,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   4. No production packaging artifact (frozen EXE, installer, NSIS script) is committed or published; the phase deliverable is the assessment only
 **Plans**: 2 plans
   - [x] 116-01-PLAN.md — Add non-blocking windows-packaging-spike CI job (pyinstaller --onefile build of run_scan.py) + freeze_support guard
-  - [ ] 116-02-PLAN.md — Author docs/windows-packaging-spike.md assessment (5 topics + go/no-go) + UAT Series 116 + Obsidian sync
+  - [x] 116-02-PLAN.md — Author docs/windows-packaging-spike.md assessment (5 topics + go/no-go) + UAT Series 116 + Obsidian sync
 
 ## Progress
 
@@ -121,7 +121,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 | 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete    | 2026-05-27 |
 | 114. Automatic Merge Trigger | v5.5 | 3/3 | Complete   | 2026-05-27 |
 | 115. Live-UAT Stabilization + Lab Testability | v5.5 | 3/3 | Complete   | 2026-05-27 |
-| 116. Windows Packaging Spike | v5.5 | 1/2 | In Progress|  |
+| 116. Windows Packaging Spike | v5.5 | 2/2 | Complete   | 2026-05-27 |
 
 ---
 
