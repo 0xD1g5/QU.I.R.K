@@ -112,6 +112,11 @@ jobs:
             --collect-all quirk `
             --collect-all sqlalchemy `
             --collect-all fastapi `
+            --collect-all cyclonedx `
+            --collect-all jsonschema `
+            --collect-all jsonschema_specifications `
+            --collect-all rfc3987_syntax `
+            --collect-all lark `
             --copy-metadata quirk-scanner `
             --hidden-import sqlalchemy.dialects.sqlite `
             --hidden-import sqlalchemy.dialects.sqlite.pysqlite `
