@@ -19,10 +19,15 @@ from pathlib import Path
 
 import pytest
 
+import yaml
+
 from quirk.db import init_db, get_session
 from quirk.models import ScheduledScan, ScheduledRun
 from quirk.cli.scheduler_cmd import (
+    _classify_target,
     _compute_next_run,
+    _dispatch_schedule,
+    _materialize_scan_config,
     _recover_stale_runs,
     _utcnow_naive,
     run_scheduler,
@@ -109,9 +114,13 @@ class FakePopen:
 
 
 def test_dispatch_lifecycle(tmp_path, monkeypatch):
-    """An enabled schedule with last_run_at=None is dispatched; run ends completed."""
+    """An enabled schedule with last_run_at=None is dispatched; run ends completed.
+
+    Covers STAB-03 gap-closure: a config-less schedule (no --scan-config) now
+    completes via a generated config that embeds schedule.target.
+    """
     db_path = _make_db(tmp_path)
-    _add_schedule(db_path, name="scan-a", cron_expr="* * * * *")
+    _add_schedule(db_path, name="scan-a", cron_expr="* * * * *", target="127.0.0.1")
 
     captured_cmds: list[list[str]] = []
 
@@ -120,6 +129,8 @@ def test_dispatch_lifecycle(tmp_path, monkeypatch):
         return FakePopen(returncode=0)
 
     monkeypatch.setattr("quirk.cli.scheduler_cmd.subprocess.Popen", fake_popen)
+    # Route output tree under tmp_path to avoid CWD-relative writes in test
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
 
     run_scheduler(["run", "--once", "--config", db_path])
 
@@ -133,7 +144,7 @@ def test_dispatch_lifecycle(tmp_path, monkeypatch):
 
     # scan_output_path should contain "output/scheduled/scan-a/"
     assert run.scan_output_path is not None
-    assert "output/scheduled" in run.scan_output_path
+    assert "scheduled" in run.scan_output_path
     assert "scan-a" in run.scan_output_path
 
     # Verify sys.executable + -m run_scan was used (Pitfall 5)
@@ -142,6 +153,26 @@ def test_dispatch_lifecycle(tmp_path, monkeypatch):
     assert cmd[0] == sys.executable
     assert cmd[1] == "-m"
     assert cmd[2] == "run_scan"
+
+    # STAB-03: cmd must contain --config (generated path), NOT --target or --output
+    assert "--config" in cmd, "cmd missing --config flag"
+    assert "--target" not in cmd, "cmd must not pass --target to run_scan (STAB-03)"
+    assert "--output" not in cmd, "cmd must not pass --output to run_scan (STAB-03)"
+
+    # The generated config path is the value after --config
+    config_idx = cmd.index("--config")
+    generated_config_path = Path(cmd[config_idx + 1])
+    assert generated_config_path.exists(), (
+        f"Generated config file not found: {generated_config_path}"
+    )
+    assert generated_config_path.name == "scan-config.generated.yaml"
+
+    # The generated config must embed schedule.target under targets.include_ips
+    with open(generated_config_path, encoding="utf-8") as fh:
+        config_data = yaml.safe_load(fh)
+    assert "127.0.0.1" in config_data.get("targets", {}).get("include_ips", []), (
+        "schedule.target (127.0.0.1) not found in generated config targets.include_ips"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +192,7 @@ def test_disabled_schedule_skipped(tmp_path, monkeypatch):
         return FakePopen(returncode=0)
 
     monkeypatch.setattr("quirk.cli.scheduler_cmd.subprocess.Popen", fake_popen)
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
 
     run_scheduler(["run", "--once", "--config", db_path])
 
@@ -193,8 +225,7 @@ def test_startup_recovery(tmp_path, monkeypatch):
         db.flush()
         stale_run_id = stale_run.id
 
-    # No new scans should be dispatched (cron not yet due after seeding)
-    # Monkeypatch Popen to track calls anyway
+    # Monkeypatch Popen to avoid real subprocess; route output under tmp_path
     fake_calls: list = []
 
     def fake_popen(cmd, **kwargs):
@@ -202,6 +233,7 @@ def test_startup_recovery(tmp_path, monkeypatch):
         return FakePopen(returncode=0)
 
     monkeypatch.setattr("quirk.cli.scheduler_cmd.subprocess.Popen", fake_popen)
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
 
     run_scheduler(["run", "--once", "--config", db_path])
 
@@ -230,6 +262,7 @@ def test_dispatch_failure_marks_failed(tmp_path, monkeypatch):
         return FakePopen(returncode=1)
 
     monkeypatch.setattr("quirk.cli.scheduler_cmd.subprocess.Popen", fake_popen)
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
 
     run_scheduler(["run", "--once", "--config", db_path])
 
@@ -316,3 +349,100 @@ def test_signal_sets_stop_flag(tmp_path, monkeypatch):
 
     # Reset stop flag so other tests are not affected
     sched_mod._stop_flag = False
+
+
+# ---------------------------------------------------------------------------
+# Test 7: _materialize_scan_config preserves schedule.target (STAB-03 Phase 115)
+# ---------------------------------------------------------------------------
+
+
+def test_scheduler_preserves_schedule_target(tmp_path):
+    """_materialize_scan_config embeds schedule.target in the generated YAML.
+
+    Verifies the STAB-03 gap-closure: a config-less schedule uses schedule.target
+    to construct a valid scan config that run_scan can load.
+    """
+    db_path = _make_db(tmp_path)
+    schedule = _add_schedule(db_path, name="target-test", target="127.0.0.1")
+
+    output_dir = tmp_path / "output" / "scheduled" / "target-test"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    generated_path = _materialize_scan_config(schedule, None, output_dir)
+
+    assert Path(generated_path).exists(), "Generated config file not created"
+    assert Path(generated_path).name == "scan-config.generated.yaml"
+
+    with open(generated_path, encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
+
+    targets = data.get("targets", {})
+    assert "127.0.0.1" in targets.get("include_ips", []), (
+        f"schedule.target '127.0.0.1' not found in targets.include_ips; got {targets}"
+    )
+    # output.directory must be anchored to the provided output_dir
+    assert data.get("output", {}).get("directory") == str(output_dir), (
+        "output.directory in generated config does not match output_dir"
+    )
+
+
+def test_classify_target_ip():
+    """_classify_target routes bare IPv4 addresses to include_ips."""
+    assert _classify_target("127.0.0.1") == "include_ips"
+    assert _classify_target("10.0.0.1") == "include_ips"
+    assert _classify_target("::1") == "include_ips"
+
+
+def test_classify_target_cidr():
+    """_classify_target routes CIDR notation to cidrs."""
+    assert _classify_target("192.168.0.0/24") == "cidrs"
+    assert _classify_target("10.0.0.0/8") == "cidrs"
+
+
+def test_classify_target_hostname():
+    """_classify_target routes hostnames/FQDNs to fqdns."""
+    assert _classify_target("example.com") == "fqdns"
+    assert _classify_target("api.example.internal") == "fqdns"
+
+
+# ---------------------------------------------------------------------------
+# Test 8: fail-fast for genuinely empty target (STAB-03)
+# ---------------------------------------------------------------------------
+
+
+def test_dispatch_empty_target_marks_failed(tmp_path, monkeypatch):
+    """When scan_config_path is None AND schedule.target is empty, run is marked failed.
+
+    This is the only scenario where _dispatch_schedule should bail without Popen.
+    """
+    db_path = _make_db(tmp_path)
+
+    popen_called: list = []
+
+    def fake_popen(cmd, **kwargs):
+        popen_called.append(cmd)
+        return FakePopen(returncode=0)
+
+    monkeypatch.setattr("quirk.cli.scheduler_cmd.subprocess.Popen", fake_popen)
+
+    # Insert a schedule with empty target directly (bypasses _add_schedule default)
+    row = ScheduledScan(
+        name="empty-target",
+        cron_expr="* * * * *",
+        target="",
+        profile=None,
+        enabled=True,
+        last_run_at=None,
+        created_at=_utcnow_naive(),
+    )
+    with get_session(db_path) as db:
+        db.add(row)
+        db.flush()
+        schedule = db.query(ScheduledScan).filter_by(id=row.id).one()
+        from quirk.cli.scheduler_cmd import _dispatch_schedule
+        run = _dispatch_schedule(schedule=schedule, db=db, config_path=db_path)
+
+    assert run.status == "failed", (
+        f"Expected status=failed for empty target + no config, got {run.status!r}"
+    )
+    assert len(popen_called) == 0, "Popen must not be called when target is empty"

@@ -460,6 +460,8 @@ def test_scheduler_dispatch_raises_scan_record_unaffected(tmp_path, monkeypatch)
             return b"", b""
 
     monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: FakePopen())
+    # Route output under tmp_path so _materialize_scan_config can create dirs safely
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
 
     db_path = _make_db(tmp_path)
     schedule = _add_schedule(db_path)
