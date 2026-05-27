@@ -626,9 +626,13 @@ behaviour]
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **STAB-03 — Schedules without a config file**
+> All three resolved by the accepted recommendations and reflected in the plans:
+> O-Q1 (STAB-03 fail-fast) → Plan 115-02 Task 2; O-Q2 (export-results filter) →
+> Plan 115-01 Task 3; O-Q3 (separate sensor-config-b.yaml) → Plan 115-03 Task 1.
+
+1. **STAB-03 — Schedules without a config file** — RESOLVED: fail-fast (Plan 02 T2)
    - What we know: removing `--target` from the cmd means run_scan has no target when `scan_config_path is None`
    - What's unclear: should the scheduler fail-fast on schedules with no config, or silently mark the run failed?
    - Recommendation: fail-fast (log error + mark run `failed`) if `scan_config_path is None`; do not attempt to launch run_scan with no target
