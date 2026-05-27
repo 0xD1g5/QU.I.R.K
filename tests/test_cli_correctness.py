@@ -39,7 +39,7 @@ def test_version_consistency():
     from quirk.cbom.builder import PLATFORM_VERSION as CBOM_VERSION
     from quirk.config import IntelligenceCfg
 
-    TARGET = "4.4.0"
+    TARGET = "5.5.0"
     assert quirk.__version__ == TARGET, (
         f"quirk.__version__ is {quirk.__version__!r}, expected {TARGET!r}"
     )
