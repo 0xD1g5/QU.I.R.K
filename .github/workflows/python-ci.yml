@@ -43,6 +43,7 @@ jobs:
           pip install pyinstaller==6.20.0
 
       - name: Build onefile EXE
+        shell: pwsh
         run: |
           pyinstaller --onefile --name quirk `
             --collect-all quirk `
@@ -58,9 +59,9 @@ jobs:
             --add-data "quirk/compliance/cmvp_curated.csv;quirk/compliance" `
             --add-data "quirk/reports/templates;quirk/reports/templates" `
             run_scan.py 2>&1 | Tee-Object -FilePath pyinstaller-build.log
-        continue-on-error: true
 
       - name: Report build outcome
+        if: always()
         shell: pwsh
         run: |
           if (Test-Path dist/quirk.exe) {
@@ -79,3 +80,4 @@ jobs:
             build/quirk/warn-quirk.txt
             dist/quirk.exe
           retention-days: 30
+          if-no-files-found: ignore

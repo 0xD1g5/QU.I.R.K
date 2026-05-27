@@ -109,7 +109,11 @@ def test_no_continue_on_error_literal_in_smoke_job():
     end = len(lines)
     for j in range(start + 1, len(lines)):
         line = lines[j]
-        if line.startswith("  ") and not line.startswith("   ") and line.strip().endswith(":"):
+        # Terminate at the next sibling job key: a non-blank, non-comment line
+        # indented exactly two spaces (the jobs.* level). Do not require a
+        # trailing ':' — a sibling key with an inline mapping would otherwise
+        # never terminate the block and fold the spike job into the smoke block.
+        if line.startswith("  ") and not line.startswith("   ") and line.strip() and not line.lstrip().startswith("#"):
             end = j
             break
     smoke_block = "\n".join(lines[start:end]).lower()
