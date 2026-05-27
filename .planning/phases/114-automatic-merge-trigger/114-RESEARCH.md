@@ -540,7 +540,7 @@ except Exception:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Revoked-sensor exclusion: sensor with no tokens**
    - What we know: `SensorToken` rows exist for each enrolled sensor (Phase 113 enrollment mints exactly one token per enrollment). A sensor may have its token revoked via `revoke-sensor`.
