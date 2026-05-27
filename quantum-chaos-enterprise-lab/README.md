@@ -65,7 +65,7 @@ networks may share a subnet on a single daemon, so each segment uses a distinct 
 | Network | Subnet | Purpose |
 |---------|--------|---------|
 | `segment-a` | `10.10.0.0/24` | Segment A — `tls-target-a` + `sensor-a` |
-| `segment-b` | `10.20.0.0/24` | Segment B — `tls-target-b` + `sensor-b` |
+| `segment-b` | `10.20.0.0/24` | Segment B — `tls-target-b` + `tls-weak-b` + `sensor-b` |
 | `console-net` | `10.30.0.0/24` | Console management — `console` + sensor push paths |
 
 Each TLS target carries the DNS alias `crypto.internal` on **its own segment network only**.
@@ -74,6 +74,13 @@ to `tls-target-a`, and `sensor-b` (on segment-b) resolves it to `tls-target-b` �
 sensor can reach the other segment's target. Both sensors scan `crypto.internal:443` and
 record `host="crypto.internal"` verbatim (`tls_scanner.py:188-189`, `:351-352`), producing
 two distinct `CryptoEndpoint` rows in the merged CBOM differing only by `sensor_id`.
+
+**v5.5 LAB-01 addition:** `segment-b` gains a second target, `tls-weak-b` (`10.20.0.20`),
+running nginx:1.28.0 with `nginx/legacy/nginx.conf` (TLS 1.0/1.1 + HIGH:MEDIUM ciphers).
+sensor-b mounts `sensor-config-b.yaml` which includes `10.20.0.20` in `include_ips`, so
+sensor-b scans both the modern (`crypto.internal:443`) and weak-TLS (`10.20.0.20:443`)
+targets. sensor-a cannot reach `10.20.0.20` — segment isolation is preserved. This enables
+the Phase 111 per-segment score/filter to be exercised end-to-end (Test 7 in `distributed-e2e.sh`).
 
 ### Commands
 
