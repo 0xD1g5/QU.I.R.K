@@ -446,3 +446,60 @@ def test_dispatch_empty_target_marks_failed(tmp_path, monkeypatch):
         f"Expected status=failed for empty target + no config, got {run.status!r}"
     )
     assert len(popen_called) == 0, "Popen must not be called when target is empty"
+
+
+# ---------------------------------------------------------------------------
+# Test 9: CR-01 regression — malformed cron_expr does not crash dispatch loop
+# ---------------------------------------------------------------------------
+
+
+def test_malformed_cron_expr_does_not_crash_loop(tmp_path, monkeypatch):
+    """CR-01 regression: a schedule with an invalid cron_expr is skipped, not fatal.
+
+    A second schedule with a valid cron_expr must still be dispatched on the
+    same iteration, proving the loop continues after the bad schedule.
+    """
+    db_path = _make_db(tmp_path)
+
+    # Bad schedule: cron_expr is clearly invalid
+    _add_schedule(
+        db_path,
+        name="bad-cron",
+        cron_expr="not-a-cron-expr",
+        target="127.0.0.1",
+        enabled=True,
+        last_run_at=None,
+    )
+    # Good schedule: valid every-minute expression
+    _add_schedule(
+        db_path,
+        name="good-cron",
+        cron_expr="* * * * *",
+        target="127.0.0.1",
+        enabled=True,
+        last_run_at=None,
+    )
+
+    popen_calls: list[list[str]] = []
+
+    def fake_popen(cmd, **kwargs):
+        popen_calls.append(cmd)
+        return FakePopen(returncode=0)
+
+    monkeypatch.setattr("quirk.cli.scheduler_cmd.subprocess.Popen", fake_popen)
+    monkeypatch.setenv("QUIRK_OUTPUT_DIR", str(tmp_path / "output"))
+
+    # Must not raise; the bad schedule should be skipped, the good one dispatched
+    run_scheduler(["run", "--once", "--config", db_path])
+
+    runs = _all_runs(db_path)
+    # Only the good schedule should have produced a run row
+    assert len(runs) == 1, (
+        f"Expected 1 run row (good-cron only), got {len(runs)}"
+    )
+    assert runs[0].status == "completed", (
+        f"Expected good-cron run to complete, got {runs[0].status!r}"
+    )
+    assert len(popen_calls) == 1, (
+        f"Expected exactly 1 Popen call (good-cron), got {len(popen_calls)}"
+    )
