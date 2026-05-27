@@ -96,7 +96,10 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   3. `quirk scheduler` runs to completion with exit code 0; it passes no unsupported `--output` / `--target` arguments to `run_scan`, and a regression test locks this invariant alongside the existing sensor fix
   4. Merged console output contains no phantom `email_scanner` / `broker_scanner` rows with `scanned_at=None` or port 0; the root cause is identified and eliminated at the source
   5. The distributed chaos lab includes a weak-crypto target reachable from at least one non-default segment; `lab.sh distributed`, the `expected_results_*.md` oracle, and the chaos-lab README are all updated in the same change per the CLAUDE.md no-drift rule
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 115-01-PLAN.md — Idempotent enroll (STAB-01) + phantom-row filter (STAB-04)
+- [ ] 115-02-PLAN.md — CMVP packaging (STAB-02) + scheduler arg fix (STAB-03)
+- [ ] 115-03-PLAN.md — Weak-TLS segment-b lab target + no-drift docs (LAB-01)
 
 ### Phase 116: Windows Packaging Spike
 **Goal**: Produce a written, evidence-backed feasibility and sizing assessment for packaging the QUIRK sensor as a PyInstaller frozen EXE hosted as a Windows Scheduled Task (or Service), ending in an explicit go/no-go recommendation and effort estimate for v5.6
