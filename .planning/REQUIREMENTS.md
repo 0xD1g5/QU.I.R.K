@@ -30,8 +30,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Automatic Merge (AUTOMERGE) — *106 D-06 carry-forward*
 
-- [ ] **AUTOMERGE-01**: The console automatically merges pushed results into one CBOM + one quantum-readiness score once all enrolled sensors have checked in (poll-on-full-check-in or equivalent trigger), without requiring a manual `quirk sensor merge`.
-- [ ] **AUTOMERGE-02**: Auto-merge is configurable — it can be enabled/disabled and its trigger condition selected (e.g. all-sensors-in vs cadence-window) — and a merge failure never blocks, fails, or rolls back an in-flight sensor push.
+- [x] **AUTOMERGE-01**: The console automatically merges pushed results into one CBOM + one quantum-readiness score once all enrolled sensors have checked in (poll-on-full-check-in or equivalent trigger), without requiring a manual `quirk sensor merge`.
+- [x] **AUTOMERGE-02**: Auto-merge is configurable — it can be enabled/disabled and its trigger condition selected (e.g. all-sensors-in vs cadence-window) — and a merge failure never blocks, fails, or rolls back an in-flight sensor push.
 - [ ] **AUTOMERGE-03**: The manual `quirk sensor merge` command still works and coexists with auto-merge with no regression to v5.4 merge behavior (Option-A union scoring, `coverage_warning`, sensor-local `scanned_at` preserved).
 
 ### Live-UAT Stabilization (STAB) — *999.86 / 999.87 / 999.88 / 999.89*
@@ -73,8 +73,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 | AUTH-02 | Phase 113 | Complete |
 | AUTH-03 | Phase 113 | Complete |
 | AUTH-04 | Phase 113 | Complete |
-| AUTOMERGE-01 | Phase 114 | pending |
-| AUTOMERGE-02 | Phase 114 | pending |
+| AUTOMERGE-01 | Phase 114 | Complete |
+| AUTOMERGE-02 | Phase 114 | Complete |
 | AUTOMERGE-03 | Phase 114 | pending |
 | STAB-01 | Phase 115 | pending |
 | STAB-02 | Phase 115 | pending |
