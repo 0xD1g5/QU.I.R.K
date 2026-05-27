@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.5
 milestone_name: Distributed Hardening + Stabilization
-status: executing
+status: completed
 stopped_at: Phase 115 Plan 03 complete — all plans done
-last_updated: "2026-05-27T11:19:34.156Z"
+last_updated: "2026-05-27T12:58:04.171Z"
 last_activity: 2026-05-27
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 75
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 115
-Plan: 03 complete — all 3 plans done; phase complete
-Status: Complete
+Phase: 116
+Plan: 01 complete
+Status: Executing
 Last activity: 2026-05-27
 
-Progress: [██████████] 100%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -56,6 +56,9 @@ Progress: [██████████] 100%
 - STAB-03: scheduler drops --target/--output from run_scan subprocess; fail-fast guard marks run failed when scan_config_path is None; static regression test in test_scheduler_posix_fixes.py
 - STAB-04: advisory filter at _read_scan_endpoints boundary (IS NULL clause mandatory for SQLite 3VL); advisory rows stay in local DB for trends.py
 - LAB-01: tls-weak-b reuses nginx:1.28.0 + nginx/legacy/nginx.conf on segment-b at 10.20.0.20 (no new image or cert, D-10); separate sensor-config-b.yaml mounted to sensor-b only (O-Q3); lab.sh ALL_PROFILES unchanged (distributed arm is generic)
+- 116-01-D-03: pyinstaller==6.20.0 installed CI-only inline in windows-packaging-spike job; absent from pyproject.toml
+- 116-01-D-02: windows-packaging-spike job and build-step both have continue-on-error:true; spike cannot gate pipeline
+- 116-01-D-06: no .spec/EXE/installer/NSIS committed; EXE is transient CI artifact only (retention-days: 30)
 
 ### Pending Todos
 
@@ -80,7 +83,7 @@ Carried forward from v5.4/v5.3 close:
 
 ## Session Continuity
 
-Last session: 2026-05-27T11:19:34.153Z
-Stopped at: Phase 115 Plan 03 complete — all plans done
+Last session: 2026-05-27
+Stopped at: Phase 116 Plan 01 complete
 Resume file: None
-Next: Phase 115 complete — run `/gsd-complete-phase 115` or proceed to next milestone
+Next: Phase 116 Plan 02 (windows-packaging-spike assessment document)

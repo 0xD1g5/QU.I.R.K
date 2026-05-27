@@ -111,7 +111,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   3. The assessment ends with an unambiguous go/no-go recommendation: "go" if the spike finds a clean PyInstaller path with bounded effort, "no-go" or "defer" if blockers are found, with rationale
   4. No production packaging artifact (frozen EXE, installer, NSIS script) is committed or published; the phase deliverable is the assessment only
 **Plans**: 2 plans
-  - [ ] 116-01-PLAN.md — Add non-blocking windows-packaging-spike CI job (pyinstaller --onefile build of run_scan.py) + freeze_support guard
+  - [x] 116-01-PLAN.md — Add non-blocking windows-packaging-spike CI job (pyinstaller --onefile build of run_scan.py) + freeze_support guard
   - [ ] 116-02-PLAN.md — Author docs/windows-packaging-spike.md assessment (5 topics + go/no-go) + UAT Series 116 + Obsidian sync
 
 ## Progress
@@ -121,7 +121,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 | 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete    | 2026-05-27 |
 | 114. Automatic Merge Trigger | v5.5 | 3/3 | Complete   | 2026-05-27 |
 | 115. Live-UAT Stabilization + Lab Testability | v5.5 | 3/3 | Complete   | 2026-05-27 |
-| 116. Windows Packaging Spike | v5.5 | 0/2 | Not started | - |
+| 116. Windows Packaging Spike | v5.5 | 1/2 | In Progress|  |
 
 ---
 

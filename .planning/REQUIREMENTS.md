@@ -47,7 +47,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Windows Packaging Spike (WINPKG) — *106 D-05, spike-only*
 
-- [ ] **WINPKG-01**: A spike phase produces a written feasibility and sizing assessment for packaging the sensor as a PyInstaller frozen EXE hosted as a Windows Scheduled Task (or Service), validated against the existing `windows-latest` CI runner, ending in a go/no-go recommendation and effort estimate for the full build in v5.6. No production packaging artifact ships in v5.5.
+- [x] **WINPKG-01**: A spike phase produces a written feasibility and sizing assessment for packaging the sensor as a PyInstaller frozen EXE hosted as a Windows Scheduled Task (or Service), validated against the existing `windows-latest` CI runner, ending in a go/no-go recommendation and effort estimate for the full build in v5.6. No production packaging artifact ships in v5.5.
 
 ---
 
@@ -81,4 +81,4 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 | STAB-03 | Phase 115 | Complete |
 | STAB-04 | Phase 115 | Complete |
 | LAB-01 | Phase 115 | Complete |
-| WINPKG-01 | Phase 116 | pending |
+| WINPKG-01 | Phase 116 | Complete |
