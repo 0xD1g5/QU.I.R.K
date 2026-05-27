@@ -43,6 +43,7 @@ from sqlalchemy.orm import Session
 from quirk.cli.console_cmd import DuplicatePayloadError, UnknownSensorError, _ingest_envelope
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.dashboard.api.middleware.sensor_auth import require_sensor_auth
 from quirk.dashboard.api.schemas import SensorRegistryItem, SensorRegistryResponse
 from quirk.models import IntegrationDelivery, Sensor
 from quirk.util.safe_exc import safe_str
@@ -50,9 +51,12 @@ from quirk.util.safe_exc import safe_str
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Router — router-level auth (M2M: NO require_csrf — Pitfall 1 / T-109-04)
+# Routers — D-01/D-02: split push (sensor token) vs operator routes
+# router           : operator require_auth — registry, merge, dashboard (D-02)
+# sensor_push_router: per-sensor require_sensor_auth — POST /sensor/push only (D-01)
 # ---------------------------------------------------------------------------
 router = APIRouter(dependencies=[Depends(require_auth)])
+sensor_push_router = APIRouter(dependencies=[Depends(require_sensor_auth)])
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -194,9 +198,9 @@ def _audit(
 
 
 # ---------------------------------------------------------------------------
-# Route handler
+# Route handler — on sensor_push_router (require_sensor_auth, not require_auth)
 # ---------------------------------------------------------------------------
-@router.post("/sensor/push")
+@sensor_push_router.post("/sensor/push")
 async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
     """POST /api/sensor/push — ingest a sensor push envelope.
 
@@ -307,12 +311,19 @@ async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
         )
 
     # ------------------------------------------------------------------
-    # T-109-09 — Sensor lookup: unknown sensor_id → 404
+    # T-109-09 — Sensor lookup: use token-resolved sensor_id (D-04)
+    # Token identity is authoritative; envelope.sensor_id is informational only.
     # ------------------------------------------------------------------
-    sensor_row = db.query(Sensor).filter(Sensor.sensor_id == envelope.sensor_id).first()
+    token_sensor_id = request.state.sensor_id  # resolved by require_sensor_auth (D-04)
+    sensor_row = db.query(Sensor).filter(Sensor.sensor_id == token_sensor_id).first()
     if sensor_row is None:
         _audit(db, scan_id, "failed", "unknown_sensor_id")
         raise HTTPException(status_code=404, detail="Unknown sensor_id")
+
+    # D-05: Envelope sensor_id mismatch check — token wins; body mismatch → 403
+    if envelope.sensor_id != token_sensor_id:
+        _audit(db, scan_id, "failed", "sensor_id_mismatch")
+        raise HTTPException(status_code=403, detail="sensor_id mismatch: token does not match envelope")
 
     # ------------------------------------------------------------------
     # Ingest: dedup + last_push_at + CryptoEndpoint rows

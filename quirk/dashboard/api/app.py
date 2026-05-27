@@ -115,6 +115,7 @@ def create_app(db_path: str | None = None) -> FastAPI:
     application.include_router(jobs.write_router, prefix="/api")
     application.include_router(merge.router, prefix="/api")
     application.include_router(sensor.router, prefix="/api")
+    application.include_router(sensor.sensor_push_router, prefix="/api")
 
     # 2. Root-level static files — registered before the SPA catch-all so the
     #    wildcard route does not intercept favicon.ico / favicon.svg / favicon.png.

@@ -301,19 +301,28 @@ def test_health_exempt_from_rate_limit(monkeypatch):
 # --------------------------------------------------------------------------
 
 def test_all_mutating_routes_have_auth_dependency(monkeypatch):
-    """D-06 gate: every POST/PUT/DELETE/PATCH (except /api/health) must have require_auth.
+    """D-06 gate: every POST/PUT/DELETE/PATCH (except /api/health) must have an auth dependency.
 
-    This test enumerates app.routes and asserts that require_auth is present in
-    the dependency chain of every mutating route. It fails CI automatically if
-    any future developer adds a mutating route without wiring require_auth.
+    This test enumerates app.routes and asserts that either require_auth (operator auth)
+    or require_sensor_auth (per-sensor auth, Phase 113) is present in the dependency
+    chain of every mutating route. It fails CI automatically if any future developer
+    adds a mutating route without wiring auth.
+
+    Phase 113 split (D-01/D-02):
+    - POST /api/sensor/push intentionally uses require_sensor_auth (not require_auth).
+      Operator tokens do not authenticate sensor pushes; sensor tokens do not authorize
+      operator routes. Both are valid auth dependencies for the D-06 gate.
     """
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     from fastapi.routing import APIRoute
     from quirk.dashboard.api.middleware.auth import require_auth
+    from quirk.dashboard.api.middleware.sensor_auth import require_sensor_auth
 
     app = create_app()
     mutating_methods = {"POST", "PUT", "DELETE", "PATCH"}
     violations: list[str] = []
+    # Accepted auth dependencies: operator auth OR per-sensor auth (D-01/D-02 split)
+    auth_deps = {require_auth, require_sensor_auth}
 
     for route in app.routes:
         if not isinstance(route, APIRoute):
@@ -327,7 +336,7 @@ def test_all_mutating_routes_have_auth_dependency(monkeypatch):
 
         # Collect dependency callables from the route's dependency list
         dep_callables = {dep.dependency for dep in route.dependencies}
-        if require_auth not in dep_callables:
+        if not (dep_callables & auth_deps):
             violations.append(
                 f"{sorted(route_methods & mutating_methods)} {route.path} — missing require_auth"
             )
