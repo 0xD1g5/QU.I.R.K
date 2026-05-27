@@ -662,6 +662,121 @@ The console validates the HMAC signature, decompresses the envelope, deduplicate
 
 ---
 
+### 8.9 Automatic Merge
+
+*(v5.5+)*
+
+When every enrolled (non-revoked) sensor has pushed its latest results, the console can
+merge them automatically — eliminating the need to run `quirk sensor merge` manually in
+the common deployment case.
+
+#### Default behaviour
+
+Auto-merge is **ON by default**. After each successful `POST /api/sensor/push`, the
+console re-evaluates the trigger condition. When it is satisfied, a merge runs in the
+background via a FastAPI `BackgroundTask` after the push response is already sent —
+so push latency is unaffected and a merge failure can never block or roll back a
+sensor push (AUTOMERGE-02).
+
+#### Disabling auto-merge
+
+Add the `console.auto_merge` block to your console `config.yaml`. Set `enabled` to
+`false` for explicit manual-only control (v5.4 behaviour):
+
+```yaml
+console:
+  auto_merge:
+    enabled: false          # set to false to require manual 'quirk sensor merge'
+    trigger_condition: all-sensors-in
+    # cadence_window_minutes: 1440
+```
+
+The toggle is read at evaluation time (per push). Changing the setting takes effect on
+the next push; any in-flight pushes or merge tasks that have already started are
+unaffected.
+
+#### Trigger conditions
+
+`trigger_condition` selects how the console decides it is time to merge. Two values are
+available:
+
+**`all-sensors-in`** (default)
+
+The merge fires once every non-revoked enrolled sensor has checked in with a push newer
+than the latest `MergeRun`. This is the safest choice for fixed-fleet deployments — you
+always get a full-coverage CBOM. Revoked sensors are excluded from the "all in" set
+(Phase 113 `revoked_at`), so revoking a decommissioned sensor does not block the merge.
+
+**`cadence-window`**
+
+The merge fires when the elapsed time since the last `MergeRun` exceeds a configured
+window. The push that crosses the window boundary triggers the merge with whatever has
+arrived at that moment. Sensors that have not pushed by the window deadline are listed in
+a `coverage_warning` on the merged CBOM. This mode suits deployments where not all
+sensors push on the same cadence or where time-bounded merges are preferred over
+full-coverage guarantees.
+
+Set the window explicitly with `cadence_window_minutes` (integer, minutes). If omitted,
+the console defaults to the per-sensor `expected_cadence_minutes` value (default 1440
+— 24 hours).
+
+```yaml
+console:
+  auto_merge:
+    enabled: true
+    trigger_condition: cadence-window
+    cadence_window_minutes: 720    # merge every 12 hours
+```
+
+#### Idempotency and duplicate merges
+
+On single-tenant deployments, a narrow race between two simultaneous final pushes can
+produce a second `MergeRun` row before the first has committed. This is harmless — the
+rows are identical and the `scanned_at` timestamps on sensor findings are never
+rewritten. The background task re-checks the condition before merging, so most
+near-simultaneous pushes coalesce to one merge.
+
+#### Reading auto-merge outcomes
+
+Every auto-merge writes an `IntegrationDelivery` audit row:
+
+| Field | Success value | Failure value |
+|-------|--------------|---------------|
+| `destination` | `auto_merge` | `auto_merge` |
+| `status` | `ok` | `failed` |
+| `error_summary` | *(empty)* | Sanitised error message |
+
+Query via the dashboard or directly in SQLite:
+
+```sql
+SELECT destination, status, error_summary, created_at
+FROM integration_deliveries
+WHERE destination = 'auto_merge'
+ORDER BY created_at DESC
+LIMIT 10;
+```
+
+A `status='failed'` row means the merge raised an exception after the sensor push
+response was already sent — the push data is safe and fully ingested. Check the console
+log (`logger.warning` is emitted alongside the audit row) to diagnose the merge failure,
+then run `quirk sensor merge` manually to retry.
+
+#### Manual merge is unchanged (AUTOMERGE-03)
+
+The `quirk sensor merge` command remains available and works identically to v5.4 — the
+same Option-A union CBOM, `coverage_warning`, and sensor-local `scanned_at`. Auto-merge
+and manual merge call the same underlying `merge_scan()` function. Operators who need
+explicit control, scripted post-push merge verification, or a one-off merge after
+enabling `all-sensors-in` with auto-merge disabled can always run:
+
+```bash
+quirk sensor merge
+# Or with custom options:
+quirk sensor merge --stale-days 7 --output-dir /var/quirk/merge-out
+```
+
+---
+
 ### 8.7 All-configurations / settings reference (999.59)
 
 The table below covers every knob relevant to distributed sensor deployments, closing
