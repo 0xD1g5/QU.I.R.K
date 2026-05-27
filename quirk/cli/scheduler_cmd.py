@@ -134,37 +134,42 @@ def _dispatch_schedule(
     db.add(run)
     db.flush()  # obtain run.id without closing session
 
+    # STAB-03 / open-Q1: a schedule without a config file has no target — fail fast
+    # rather than launching run_scan with no target (which would error out or hang).
+    # Target + output directory are both driven by --config (cfg.target +
+    # cfg.output.directory per SENSOR-05 anchoring). Do NOT widen run_scan.py's
+    # arg surface with --target / --output.
+    if scan_config_path is None:
+        run.status = "failed"
+        run.completed_at = _utcnow_naive()
+        db.commit()
+        logger.error(
+            "Schedule %r has no config file; cannot determine target — marking failed",
+            schedule.name,
+        )
+        return run
+
     # WR-02: sanitize schedule.name before using it as a path component.
     # A name like '../../../etc/cron.d' would escape the output tree via Path().
     # Accept only alphanumerics, underscores, and hyphens (max 128 chars);
     # fall back to "unnamed" so mkdir never traverses outside output/scheduled/.
     _SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
     safe_name = schedule.name if _SAFE_NAME_RE.match(schedule.name) else "unnamed"
-    if scan_config_path is not None:
-        cfg = load_config(scan_config_path)
-        output_base = Path(cfg.output.directory)
-    else:
-        output_base = Path(os.environ.get("QUIRK_OUTPUT_DIR", "output"))
+    cfg = load_config(scan_config_path)
+    output_base = Path(cfg.output.directory)
     output_dir = output_base / "scheduled" / safe_name / now.strftime("%Y%m%d-%H%M%S")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # T-63-07: list-form Popen — no shell=True, no metacharacter expansion
     # Pitfall 5: sys.executable + -m run_scan (not "quirk" which may not be on PATH)
-    cmd = [
-        sys.executable,
-        "-m",
-        "run_scan",
-    ]
-    if scan_config_path is not None:
-        cmd += ["--config", scan_config_path]
+    cmd = [sys.executable, "-m", "run_scan", "--config", scan_config_path]
     cmd += [
-        "--target",
-        schedule.target,
         "--profile",
         schedule.profile or "balanced",
-        "--output",
-        str(output_dir),
     ]
+    # NOTE: target + output_dir are driven by --config (cfg.target +
+    # cfg.output.directory, SENSOR-05 anchoring already present).
+    # Do NOT add --target or --output — run_scan.py does not accept them (STAB-03).
 
     run.status = "running"
     db.commit()
