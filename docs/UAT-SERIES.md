@@ -13906,6 +13906,6 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 - No runtime missing-import or missing-data-file errors.
 - `quirk-windows-onedir` artifact present with full onedir bundle.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:**   **Tester:**
-**Notes:** DEFERRED — requires live windows-latest CI run. Push to origin to trigger.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-05-27  **Tester:** live CI (run 26543032560)
+**Notes:** CONFIRMED. `windows-sensor-build` GREEN on `0xD1g5/QU.I.R.K` (repo renamed from `QU.I.R.K.` — trailing dot broke Windows checkout). Smoke log: `quirk.exe --version output: QU.I.R.K. v5.5.0`, `SMOKE_PASS: --version and --help both exited 0`. Artifact `quirk-windows-onedir` (57 MB) attached. Three Windows-only defects fixed to reach green: repo rename; `--collect-all cyclonedx jsonschema jsonschema_specifications rfc3987_syntax lark` (missing `.lark` data file at import); UTF-8 stdout reconfigure on win32 (`--help` cp1252 UnicodeEncodeError on `→`).
