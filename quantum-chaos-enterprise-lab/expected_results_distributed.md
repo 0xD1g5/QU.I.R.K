@@ -80,20 +80,19 @@ resolved Docker bridge IP — for both sensors. This is the invariant that makes
 reproducible across real segmented networks: operators configure the same logical hostname
 in both segments; the scanner records what it was told to scan.
 
-**Authentication:** The lab runs with auth **ENABLED**. The console container sets
-`QUIRK_API_TOKEN=lab-shared-token`; sensors pass `--api-token lab-shared-token` at
-enroll time so `console_api_token` in `sensor.yaml` matches the console's shared token.
-This is the v5.4 shared-token model: all sensors authenticate with the same console
-token; per-sensor token auth is v5.5. The enrollment tokens printed by
-`quirk console enroll` are provisioning/audit records only, not push credentials.
+**Authentication:** The lab runs with auth **ENABLED** using the v5.5 **per-sensor token
+model**. Each sensor gets its own push credential from `quirk console enroll`. The
+console's `QUIRK_API_TOKEN` governs operator/dashboard auth only; sensor pushes use the
+per-sensor enrollment tokens placed in `console_api_token` in each sensor's `sensor.yaml`.
 
 | Step | Expected Outcome |
 |------|-----------------|
-| `quirk console enroll` (×2, one per sensor) | Prints a one-time enrollment token (provisioning/audit record); sensor row written to DB |
-| `quirk sensor enroll <console_url> --segment segment-a --api-token lab-shared-token` | Writes `sensor.yaml` with `sensor_id` (UUID), `segment: segment-a`, `console_api_token: lab-shared-token` |
-| `quirk sensor enroll <console_url> --segment segment-b --api-token lab-shared-token` | Writes `sensor.yaml` with distinct `sensor_id` (UUID), `segment: segment-b`, `console_api_token: lab-shared-token` |
-| `quirk sensor push` on sensor-a | HTTP 200 from console (authenticated); scan results for `crypto.internal:443` persisted |
-| `quirk sensor push` on sensor-b | HTTP 200 from console (authenticated); scan results for `crypto.internal:443` persisted |
+| `quirk console enroll --segment segment-a` | Prints per-sensor Bearer token (shown once); sensor row written to DB with `revoked_at=NULL` |
+| `quirk console enroll --segment segment-b` | Prints distinct per-sensor Bearer token; second sensor row written to DB |
+| Edit `sensor.yaml` on sensor-a host: set `console_api_token: <enrollment-token-a>` | `sensor.yaml` contains `sensor_id` (UUID), `segment: segment-a`, `console_api_token: <per-sensor-token-a>` |
+| Edit `sensor.yaml` on sensor-b host: set `console_api_token: <enrollment-token-b>` | `sensor.yaml` contains distinct `sensor_id` (UUID), `segment: segment-b`, `console_api_token: <per-sensor-token-b>` |
+| `quirk sensor push` on sensor-a | HTTP 200 from console (per-sensor token validated via SHA-256 hash match); scan results for `crypto.internal:443` persisted |
+| `quirk sensor push` on sensor-b | HTTP 200 from console (per-sensor token validated); scan results for `crypto.internal:443` persisted |
 | `quirk sensor merge` on console | Produces one merged CBOM + one readiness score across union of sensor endpoints |
 | Merged CBOM component count for `crypto.internal:443` | **2 distinct `CryptoEndpoint` rows**, each with `host="crypto.internal"`, `port=443`, differing only by `sensor_id` |
 | `coverage_warning` | `null` — both sensors have pushed within the merge window |
