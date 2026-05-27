@@ -159,15 +159,20 @@ def _eval_trigger_condition(db: Session, config_path: str) -> bool:
     condition = cfg.get("trigger_condition", "all-sensors-in")
 
     if condition == "all-sensors-in":
-        # Active sensors: Sensor rows NOT in the subquery of revoked SensorToken sensor_ids
-        # (D-04 + Pitfall 2): a sensor whose only token is revoked is excluded from "all in"
-        revoked_sensor_ids = (
+        # Active sensors: Sensor rows that have AT LEAST ONE non-revoked SensorToken.
+        # (D-04 + Pitfall 2): inclusion subquery — a sensor is "active" only when it has
+        # a token with revoked_at IS NULL.  This correctly handles the re-key case where a
+        # sensor has BOTH a revoked token (old) AND an active token (new) — the old exclusion
+        # subquery would put such sensors in the excluded set even though they are still live.
+        # Sensors with zero tokens produce no row in the inclusion set and are also
+        # excluded, eliminating "ghost" enrollment half-rows that would block all merges.
+        active_token_sensor_ids = (
             db.query(SensorToken.sensor_id)
-            .filter(SensorToken.revoked_at.isnot(None))
+            .filter(SensorToken.revoked_at.is_(None))
         )
         active_sensors = (
             db.query(Sensor)
-            .filter(~Sensor.sensor_id.in_(revoked_sensor_ids))
+            .filter(Sensor.sensor_id.in_(active_token_sensor_ids))
             .all()
         )
         if not active_sensors:
@@ -177,8 +182,13 @@ def _eval_trigger_condition(db: Session, config_path: str) -> bool:
         latest_merge = db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
         if latest_merge is None:
             return True  # no prior merge — always trigger when all in
+        # Normalize merged_at: strip tzinfo if aware (mirrors _sensor_status L111-112)
+        # so a future code path that writes an aware datetime cannot raise TypeError.
+        merged_at = latest_merge.merged_at
+        if getattr(merged_at, "tzinfo", None) is not None:
+            merged_at = merged_at.replace(tzinfo=None)
         latest_push = max(s.last_push_at for s in active_sensors)
-        return latest_push > latest_merge.merged_at
+        return latest_push > merged_at
 
     elif condition == "cadence-window":
         latest_merge = db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
@@ -191,7 +201,12 @@ def _eval_trigger_condition(db: Session, config_path: str) -> bool:
                 (first_sensor.expected_cadence_minutes or 1440) if first_sensor else 1440
             )
         now = datetime.now(timezone.utc).replace(tzinfo=None)  # Pitfall 3: always naive UTC
-        elapsed = (now - latest_merge.merged_at).total_seconds() / 60
+        # Normalize merged_at: strip tzinfo if aware (mirrors _sensor_status L111-112)
+        # so a future code path that writes an aware datetime cannot raise TypeError.
+        merged_at_cw = latest_merge.merged_at
+        if getattr(merged_at_cw, "tzinfo", None) is not None:
+            merged_at_cw = merged_at_cw.replace(tzinfo=None)
+        elapsed = (now - merged_at_cw).total_seconds() / 60
         return elapsed >= window_minutes
 
     return False  # unknown condition → safe default off (V5 input-validation)
@@ -320,9 +335,15 @@ def _audit(
 ) -> None:
     """Write one IntegrationDelivery row for this push attempt.
 
-    Commit is OUTSIDE the ingest try-block (base.py L149 WR-01 pattern).
-    If the audit write itself fails we log and continue — never mask the
-    original error.
+    **Transactional contract:** This function ALWAYS calls ``db.commit()``
+    internally.  Callers on the error path MUST call ``db.rollback()`` first
+    (or otherwise be in a clean session state) so the audit row is not
+    entangled with the failed transaction.  Callers on the success path add
+    the ok row directly and commit outside this helper — two patterns exist
+    intentionally so the success path commits ingest data + audit atomically.
+
+    If the audit commit itself fails we log a WARNING and swallow the error —
+    never mask the original error that triggered the audit write.
     """
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     row = IntegrationDelivery(
@@ -475,10 +496,13 @@ async def sensor_push(
     # ------------------------------------------------------------------
     # Ingest: dedup + last_push_at + CryptoEndpoint rows
     # ------------------------------------------------------------------
+    # Resolve config_path once here so _ingest_envelope, _eval_trigger_condition,
+    # and run_auto_merge all read from the same file (WR-01).
+    ingest_config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
     try:
         _ingest_envelope(
             envelope_dict,
-            config_path="config.yaml",
+            config_path=ingest_config_path,
             skip_replay_window=False,
             qpush_sig=qpush_sig,
             db=db,
