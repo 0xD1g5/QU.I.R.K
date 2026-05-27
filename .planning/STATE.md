@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.5
 milestone_name: Distributed Hardening + Stabilization
-status: ready_to_plan
-stopped_at: Phase 113 complete (3/3) — ready to discuss Phase 114
-last_updated: 2026-05-27T01:30:51.371Z
-last_activity: 2026-05-27 -- Phase 113 execution started
+status: planning
+stopped_at: Phase 114 context gathered
+last_updated: "2026-05-27T02:07:40.120Z"
+last_activity: 2026-05-27
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 12
-  percent: 0
+  completed_plans: 3
+  percent: 25
 ---
 
 # Project State
@@ -74,7 +74,7 @@ Carried forward from v5.4/v5.3 close:
 
 ## Session Continuity
 
-Last session: 2026-05-26T23:59:13.166Z
-Stopped at: Phase 113 context gathered
-Resume file: .planning/phases/113-per-sensor-authentication/113-CONTEXT.md
+Last session: 2026-05-27T02:07:40.108Z
+Stopped at: Phase 114 context gathered
+Resume file: .planning/phases/114-automatic-merge-trigger/114-CONTEXT.md
 Next: `/gsd-autonomous 113` or `/gsd-plan-phase 113`
