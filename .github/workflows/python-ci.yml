@@ -197,3 +197,158 @@ jobs:
           name: quirk-windows-zip
           path: quirk-windows-*.zip
           retention-days: 30
+
+  windows-sensor-e2e:
+    name: Windows Sensor E2E (frozen -> Linux-built console)
+    runs-on: windows-latest
+    needs: windows-sensor-build
+    # No continue-on-error — this job must gate (WINBUILD-04 acceptance criterion)
+    env:
+      # QUIRK_DB_PATH set at job level so ALL steps in this job (console enroll,
+      # uvicorn background process, and sensor push) share ONE SQLite DB file.
+      # Windows Start-Process inherits the parent env by default, so the uvicorn
+      # background process will also see this value without any extra wiring.
+      # Set to an absolute runner-temp path to avoid cwd-relative ambiguity.
+      QUIRK_DB_PATH: ${{ runner.temp }}\quirk-e2e.db
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install console dependencies (runner Python)
+        shell: pwsh
+        run: |
+          # Install all extras so quirk.dashboard.api.app + uvicorn are importable
+          pip install -e ".[all]"
+          if ($LASTEXITCODE -ne 0) { Write-Error "pip install -e .[all] failed (exit $LASTEXITCODE)"; exit 1 }
+
+      - name: Download frozen onedir artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quirk-windows-onedir
+          path: frozen
+
+      - name: Verify frozen exe exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "frozen\quirk.exe")) {
+            Write-Error "frozen\quirk.exe not found after artifact download — onedir layout unexpected"
+            Get-ChildItem frozen -Recurse | Select-Object FullName
+            exit 1
+          }
+          Write-Output "Frozen exe confirmed: frozen\quirk.exe"
+
+      - name: Provision sensor via console enroll (runner Python)
+        shell: pwsh
+        run: |
+          # QUIRK_DB_PATH is inherited from the job-level env block.
+          # Run console enroll: token → stdout, sensor_id → stderr.
+          # Capture both streams separately; NEVER echo the raw token.
+          $stdout = & python -m quirk console enroll --segment e2e 2>$env:RUNNER_TEMP\enroll_stderr.txt
+          $stderr_content = Get-Content "$env:RUNNER_TEMP\enroll_stderr.txt" -Raw -ErrorAction SilentlyContinue
+
+          # Parse Bearer token from stdout (line after "Bearer token (copy now...")
+          $token_line = ($stdout -split "`n") | Where-Object { $_ -match '^\S' -and $_ -notmatch '^Bearer token' -and $_ -notmatch '^NOTE' } | Select-Object -First 1
+          if (-not $token_line) {
+            Write-Error "Could not parse Bearer token from console enroll stdout"; exit 1
+          }
+          $raw_token = $token_line.Trim()
+
+          # Parse sensor_id from stderr ("sensor_id: <uuid>")
+          $sensor_id_line = ($stderr_content -split "`n") | Where-Object { $_ -match 'sensor_id:' } | Select-Object -Last 1
+          if (-not $sensor_id_line) {
+            Write-Error "Could not parse sensor_id from console enroll stderr"; exit 1
+          }
+          $sensor_id = ($sensor_id_line -replace '.*sensor_id:\s*', '').Trim()
+
+          # Mask the token so it never appears in the job log (T-118-E2E-LEAK)
+          Write-Output "::add-mask::$raw_token"
+
+          # Persist to runner temp for use in subsequent steps
+          Set-Content "$env:RUNNER_TEMP\e2e_token.txt" $raw_token
+          Set-Content "$env:RUNNER_TEMP\e2e_sensor_id.txt" $sensor_id
+          Write-Output "Console enroll OK — sensor_id=$sensor_id token=[masked]"
+
+      - name: Start FastAPI console (uvicorn background, port 8512)
+        shell: pwsh
+        run: |
+          # QUIRK_DB_PATH is inherited — the Start-Process child inherits the
+          # parent process env by default on Windows, so uvicorn shares the same
+          # DB without any additional -Environment or scriptblock wrapping.
+          # Port 8512 chosen to avoid common conflicts.
+          $proc = Start-Process python `
+            -ArgumentList '-m','uvicorn','quirk.dashboard.api.app:app','--host','127.0.0.1','--port','8512' `
+            -PassThru -WindowStyle Hidden
+          Write-Output "uvicorn PID=$($proc.Id)"
+
+          # Poll GET /api/health (returns HTTP 200 {"status":"ok"}) until responsive.
+          # /api/health is the deterministic readiness route — it returns exactly 200
+          # once the app is up; it never 404s or redirects ambiguously.
+          # Using /api/sensor/push (405 Method Not Allowed) as a fallback is not
+          # needed here since /api/health always returns 200 when listening.
+          $timeout = 30
+          $elapsed = 0
+          $ready = $false
+          while ($elapsed -lt $timeout) {
+            Start-Sleep -Seconds 1
+            $elapsed++
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:8512/api/health" `
+                -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+              if ($r.StatusCode -eq 200) { $ready = $true; break }
+            } catch { <# not ready yet — keep polling #> }
+          }
+          if (-not $ready) {
+            Write-Error "uvicorn did not become ready within ${timeout}s"; exit 1
+          }
+          Write-Output "Console ready (uvicorn responding on :8512 after ${elapsed}s)"
+
+      - name: Frozen sensor enroll -> push auth round-trip
+        shell: pwsh
+        run: |
+          $raw_token  = Get-Content "$env:RUNNER_TEMP\e2e_token.txt"  -Raw | ForEach-Object { $_.Trim() }
+          $sensor_id  = Get-Content "$env:RUNNER_TEMP\e2e_sensor_id.txt" -Raw | ForEach-Object { $_.Trim() }
+          $sensor_cfg = "$env:RUNNER_TEMP\e2e-sensor.yaml"
+          $scan_cfg   = "$env:RUNNER_TEMP\e2e-scan-config.yaml"
+
+          # Write a minimal scan config — empty targets list so the scan completes
+          # instantly with zero findings; the auth wire is the subject under test.
+          Set-Content $scan_cfg @"
+          targets: []
+          scan_options:
+            tls: false
+            ssh: false
+            jwt: false
+            containers: false
+            source: false
+          "@
+
+          # Step 1: frozen sensor enroll (writes e2e-sensor.yaml with the token)
+          # --allow-internal-console is REQUIRED because 127.0.0.1 is loopback/RFC1918;
+          # without it the SSRF allowlist blocks the console URL (sensor_cmd.py url_allowlist).
+          & "frozen\quirk.exe" sensor enroll `
+            "http://127.0.0.1:8512" `
+            --segment e2e `
+            --sensor-id $sensor_id `
+            --api-token $raw_token `
+            --config $sensor_cfg `
+            --allow-internal-console
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "frozen quirk.exe sensor enroll exited $LASTEXITCODE"; exit 1
+          }
+          Write-Output "Frozen sensor enroll: OK (exit 0)"
+
+          # Step 2: frozen sensor push (exercises the full Bearer auth wire)
+          # Exit code 0 = HTTP 200/409 delivered under require_sensor_auth.
+          # Non-zero exits: 2=4xx reject, 3=offline, 4=other error.
+          & "frozen\quirk.exe" sensor push `
+            --config $sensor_cfg `
+            --scan-config $scan_cfg
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "frozen quirk.exe sensor push exited $LASTEXITCODE — push rejected or failed"; exit 1
+          }
+          Write-Output "E2E_PASS: frozen sensor authenticated + push accepted"
