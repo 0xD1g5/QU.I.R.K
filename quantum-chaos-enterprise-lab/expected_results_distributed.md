@@ -92,8 +92,9 @@ per-sensor enrollment tokens placed in `console_api_token` in each sensor's `sen
 | Edit `sensor.yaml` on sensor-a host: set `console_api_token: <enrollment-token-a>` | `sensor.yaml` contains `sensor_id` (UUID), `segment: segment-a`, `console_api_token: <per-sensor-token-a>` |
 | Edit `sensor.yaml` on sensor-b host: set `console_api_token: <enrollment-token-b>` | `sensor.yaml` contains distinct `sensor_id` (UUID), `segment: segment-b`, `console_api_token: <per-sensor-token-b>` |
 | `quirk sensor push` on sensor-a | HTTP 200 from console (per-sensor token validated via SHA-256 hash match); scan results for `crypto.internal:443` persisted |
-| `quirk sensor push` on sensor-b | HTTP 200 from console (per-sensor token validated); scan results for `crypto.internal:443` persisted |
-| `quirk sensor merge` on console | Produces one merged CBOM + one readiness score across union of sensor endpoints |
+| `quirk sensor push` on sensor-b | HTTP 200 from console (per-sensor token validated); scan results for `crypto.internal:443` persisted; **auto-merge fires** — all-sensors-in condition is met once sensor-b (the final non-revoked sensor) pushes |
+| Auto-merge `MergeRun` (background task, after sensor-b push) | One `MergeRun` row written by the background task; one `IntegrationDelivery` row written with `destination="auto_merge"`, `status="ok"` |
+| `quirk sensor merge` on console (Step 3 — manual path, regression proof) | Produces a second `MergeRun` row (harmless duplicate per D-06 — idempotent merge artifact; `scanned_at` is never rewritten); exit 0 with score printed. This step is retained to confirm AUTOMERGE-03: the manual merge path is regression-free and coexists with auto-merge. |
 | Merged CBOM component count for `crypto.internal:443` | **2 distinct `CryptoEndpoint` rows**, each with `host="crypto.internal"`, `port=443`, differing only by `sensor_id` |
 | `coverage_warning` | `null` — both sensors have pushed within the merge window |
 
