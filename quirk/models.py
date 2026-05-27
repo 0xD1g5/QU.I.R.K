@@ -310,6 +310,7 @@ class SensorToken(Base):
     )
     token_hash = Column(String(64),  nullable=False, unique=True)  # SHA-256 hex; raw token never stored
     created_at = Column(DateTime,    nullable=False)
+    revoked_at = Column(DateTime,    nullable=True)   # None = active; set = revoked (Phase 113 AUTH-02 / D-06)
 
 
 class SensorPush(Base):
