@@ -143,7 +143,8 @@ def _dispatch_schedule(
         run.status = "failed"
         run.completed_at = _utcnow_naive()
         db.commit()
-        logger.error(
+        import logging as _logging
+        _logging.getLogger(__name__).error(
             "Schedule %r has no config file; cannot determine target — marking failed",
             schedule.name,
         )
