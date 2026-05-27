@@ -83,3 +83,133 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           attestations: true
+
+  windows-package:
+    name: Build Windows zip + attach GitHub Release asset
+    runs-on: windows-latest
+    permissions:
+      contents: write  # Required to create/update GitHub Release assets (T-118-REL-PERM)
+    # NOTE: This job does NOT use id-token or PyPI scopes — it only accesses the
+    # GitHub Release via GITHUB_TOKEN (T-118-NS). PyPI publish is handled by the
+    # separate 'publish' job above.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project and PyInstaller
+        shell: pwsh
+        run: |
+          pip install -e .
+          if ($LASTEXITCODE -ne 0) { Write-Error "pip install -e . failed (exit $LASTEXITCODE)"; exit 1 }
+          pip install pyinstaller==6.20.0
+          if ($LASTEXITCODE -ne 0) { Write-Error "pip install pyinstaller failed (exit $LASTEXITCODE)"; exit 1 }
+
+      - name: Build onedir EXE
+        shell: pwsh
+        run: |
+          # Exact Phase 117 flag set proven on windows-latest runner (T-118-SC: PyInstaller pinned above)
+          pyinstaller --onedir --name quirk `
+            --collect-all quirk `
+            --collect-all sqlalchemy `
+            --collect-all fastapi `
+            --collect-all cyclonedx `
+            --collect-all jsonschema `
+            --collect-all jsonschema_specifications `
+            --collect-all rfc3987_syntax `
+            --collect-all lark `
+            --copy-metadata quirk-scanner `
+            --hidden-import sqlalchemy.dialects.sqlite `
+            --hidden-import sqlalchemy.dialects.sqlite.pysqlite `
+            --hidden-import uvicorn.logging `
+            --hidden-import uvicorn.loops.auto `
+            --hidden-import uvicorn.protocols.http.auto `
+            --add-data "quirk/compliance/cmvp_cache.json;quirk/compliance" `
+            --add-data "quirk/compliance/cmvp_curated.csv;quirk/compliance" `
+            --add-data "quirk/reports/templates;quirk/reports/templates" `
+            run_scan.py
+          if ($LASTEXITCODE -ne 0) { Write-Error "PyInstaller build failed (exit $LASTEXITCODE)"; exit 1 }
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $v = python -c "from quirk import __version__; print(__version__)"
+          if ($LASTEXITCODE -ne 0 -or -not $v) {
+            Write-Error "Failed to read version (LASTEXITCODE=$LASTEXITCODE, value='$v')"; exit 1
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$v"
+          Write-Output "Read version: $v"
+
+      - name: Assemble Windows operator zip
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Write-Output "Assembling quirk-windows-$version.zip ..."
+
+          # Staging layout mirrors the 118-01 zip assembly:
+          #   staging\
+          #     quirk\            <- onedir bundle (quirk.exe + _internal\)
+          #     install.ps1
+          #     uninstall.ps1
+          #     sensor.sample.yaml
+          $staging = "quirk-windows-staging"
+          if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
+          New-Item -ItemType Directory -Path $staging | Out-Null
+
+          Copy-Item -Path "dist\quirk" -Destination "$staging\quirk" -Recurse
+          Copy-Item "packaging\windows\install.ps1"        "$staging\"
+          Copy-Item "packaging\windows\uninstall.ps1"      "$staging\"
+          Copy-Item "packaging\windows\sensor.sample.yaml" "$staging\"
+
+          $zipName = "quirk-windows-$version.zip"
+          Compress-Archive -Path "$staging\*" -DestinationPath $zipName -Force
+          if ($LASTEXITCODE -ne 0) { Write-Error "Compress-Archive failed (exit $LASTEXITCODE)"; exit 1 }
+
+          $mb = [math]::Round((Get-Item $zipName).Length / 1MB, 1)
+          Write-Output "ZIP_ASSEMBLED: $zipName ($mb MB)"
+
+      - name: Attach zip to GitHub Release
+        # T-118-SC: action pinned to @v2; uses GITHUB_TOKEN only (T-118-NS, T-118-REL-PERM)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: quirk-windows-*.zip
+          # Release notes documenting unsigned status + Authenticode deferral
+          # T-118-SIGN: accepted risk; explicitly documented per v5.6 milestone decision
+          body: |
+            ## Windows Sensor Asset
+
+            ### UNSIGNED BINARY NOTICE
+
+            The `quirk-windows-*.zip` asset contains a Windows onedir bundle (`quirk.exe`)
+            that is **NOT Authenticode-signed**.
+
+            - **SmartScreen warning:** Windows may display a "Windows protected your PC"
+              prompt when running `install.ps1` or `quirk.exe` for the first time.
+              Click "More info" and then "Run anyway" to proceed.
+            - **Authenticode signing is DEFERRED** to a future milestone spike.
+              The binary is built reproducibly from source via this GitHub Actions
+              workflow — operators who require signed binaries should build from source
+              until Authenticode signing is implemented.
+
+            ### Quick install (PowerShell, no admin required)
+
+            ```powershell
+            # 1. Download and unpack the zip
+            Expand-Archive -Path quirk-windows-<version>.zip -DestinationPath C:\quirk-install
+
+            # 2. Install — registers per-user Scheduled Task
+            cd C:\quirk-install
+            pwsh -File install.ps1 `
+              -ConsoleUrl https://<console-host>:8512 `
+              -EnrollmentToken <per-sensor-token>
+            ```
+
+            See the Windows sensor deployment section in the Operators Guide
+            (docs/operators-guide.md §8.8) for full install / Scheduled Task /
+            uninstall documentation.
+          token: ${{ secrets.GITHUB_TOKEN }}
