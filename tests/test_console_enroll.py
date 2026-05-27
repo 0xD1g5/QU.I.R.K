@@ -119,12 +119,18 @@ def test_console_enroll(tmp_path, monkeypatch, capsys):
 # ---------------------------------------------------------------------------
 
 def test_console_enroll_duplicate(tmp_path, monkeypatch, capsys):
-    """Re-running enroll with the same sensor_id exits non-zero and writes no second row pair.
+    """Re-running enroll with the same sensor_id is idempotent: exits 0, prints no
+    new token, and leaves exactly 1 sensors row + 1 sensor_tokens row.
+
+    STAB-01 (D-01, WR-04): the second enroll must NOT exit non-zero.  It returns
+    normally with an INFO notice to stderr so the lab can re-run without teardown.
 
     Asserts:
-      1. First enroll exits 0, writes 1 sensors row + 1 sensor_tokens row.
-      2. Second enroll with same sensor_id raises SystemExit with non-zero code.
-      3. After the second attempt, row counts are still 1/1 (no partial second write).
+      1. First enroll returns normally (WR-04), writes 1 sensors row + 1 sensor_tokens row.
+      2. Second enroll with same sensor_id also returns normally (idempotent success).
+      3. No bearer token printed on the second enroll (D-01: no token churn).
+      4. 'already enrolled' appears in stderr on the second enroll.
+      5. After the second attempt, row counts are still 1/1 (no partial second write).
     """
     db_path, engine, Session = _make_db(tmp_path)
     monkeypatch.setenv("QUIRK_DB_PATH", db_path)
@@ -133,13 +139,16 @@ def test_console_enroll_duplicate(tmp_path, monkeypatch, capsys):
 
     # --- First enroll: expect success (WR-04: returns normally, no SystemExit) ---
     run_console(["enroll", "--sensor-id", "S-DUP", "--segment", "corp"])
+    capsys.readouterr()  # Clear captured output from first enroll
 
-    # --- Second enroll: same sensor_id → must exit non-zero ---
-    with pytest.raises(SystemExit) as exc_info_dup:
-        run_console(["enroll", "--sensor-id", "S-DUP", "--segment", "corp"])
-    assert exc_info_dup.value.code != 0, (
-        f"Duplicate enroll should exit non-zero, got {exc_info_dup.value.code}"
-    )
+    # --- Second enroll: same sensor_id → idempotent success (STAB-01 D-01) ---
+    # Must return normally (no SystemExit) — WR-04
+    run_console(["enroll", "--sensor-id", "S-DUP", "--segment", "corp"])
+    captured_dup = capsys.readouterr()
+    # D-01: no new bearer token printed on idempotent path
+    assert "Bearer" not in captured_dup.out, "Duplicate enroll must not print a bearer token"
+    # INFO message goes to stderr
+    assert "already enrolled" in captured_dup.err, "Duplicate enroll must print 'already enrolled' to stderr"
 
     # --- Row counts must still be exactly 1/1 ---
     db = Session()
