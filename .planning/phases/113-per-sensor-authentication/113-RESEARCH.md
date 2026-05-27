@@ -610,17 +610,15 @@ app.include_router(sensor_push_router, prefix="/api")
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`create_app()` include_router signature**
+1. **`create_app()` include_router signature** — RESOLVED in planning.
    - What we know: `routes/sensor.py` exports `router`; `create_app()` imports and includes it.
-   - What's unclear: Whether `sensor_push_router` can be added with the same prefix in `create_app()`, or whether it needs a different registration pattern.
-   - Recommendation: Read `quirk/dashboard/api/app.py` during planning to confirm before writing the Plan.
+   - Resolution: `quirk/dashboard/api/app.py:117` includes `sensor.router` with `prefix="/api"`; the `jobs.read_router` + `jobs.write_router` dual-include at L114-115 is the confirmed precedent for registering `sensor_push_router` alongside `router` at the same prefix. Captured in Plan 113-02 Task 2 interfaces block.
 
-2. **Existing push tests use shared token — need update**
+2. **Existing push tests use shared token — need update** — RESOLVED in planning.
    - What we know: `test_sensor_ingest.py` sets `QUIRK_API_TOKEN="test-token"` and sends `Authorization: Bearer test-token` directly. After this phase, those requests will hit `require_sensor_auth` which will not find a `sensor_tokens` row for the shared token's hash.
-   - What's unclear: Whether existing push tests should be updated to use seeded `sensor_tokens` rows, or whether the existing tests should be left unchanged (they test the old path) and the new `test_sensor_auth_per_sensor.py` tests only the new path.
-   - Recommendation: Update `test_sensor_ingest.py` to seed a `SensorToken` row and use the enrollment token as the Bearer token. Otherwise all existing push tests will fail after the auth swap.
+   - Resolution: Plan 113-01 Task 2 creates `test_sensor_auth_per_sensor.py` using seeded enrollment tokens (Wave 0); Plan 113-03 Task 1 updates the existing `test_sensor_ingest.py` push tests to seed a `SensorToken` row and use the enrollment token as the Bearer header, after the auth swap lands in 113-02.
 
 ---
 
