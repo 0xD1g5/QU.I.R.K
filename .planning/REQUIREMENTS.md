@@ -37,8 +37,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 ### Live-UAT Stabilization (STAB) — *999.86 / 999.87 / 999.88 / 999.89*
 
 - [x] **STAB-01**: `quirk console enroll` is idempotent — re-running it for an already-provisioned console/sensor succeeds (no error, no duplicate rows) so `lab.sh distributed e2e` is re-runnable without `docker compose down -v`. (999.86)
-- [ ] **STAB-02**: `cmvp_cache.json` ships inside the installed package (declared as package data), eliminating the repeated "CMVP cache unavailable" warning on merge in an installed (non-source-tree) environment. (999.87)
-- [ ] **STAB-03**: `quirk scheduler` no longer passes unsupported `--output` / `--target` arguments to `run_scan`; scheduled scans complete with exit code 0, guarded by a regression test in the same class as the fixed `sensor`/`_run_local_scan` bug. (999.88)
+- [x] **STAB-02**: `cmvp_cache.json` ships inside the installed package (declared as package data), eliminating the repeated "CMVP cache unavailable" warning on merge in an installed (non-source-tree) environment. (999.87)
+- [x] **STAB-03**: `quirk scheduler` no longer passes unsupported `--output` / `--target` arguments to `run_scan`; scheduled scans complete with exit code 0, guarded by a regression test in the same class as the fixed `sensor`/`_run_local_scan` bug. (999.88)
 - [x] **STAB-04**: The stray `scanned_at=None` / port-0 `email_scanner` / `broker_scanner` rows that appear in the console DB after the distributed e2e are root-caused and eliminated, so merged output contains no phantom endpoints. (999.89)
 
 ### Distributed Lab Testability (LAB) — *999.85*
@@ -77,8 +77,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 | AUTOMERGE-02 | Phase 114 | Complete |
 | AUTOMERGE-03 | Phase 114 | Complete |
 | STAB-01 | Phase 115 | Complete |
-| STAB-02 | Phase 115 | pending |
-| STAB-03 | Phase 115 | pending |
+| STAB-02 | Phase 115 | Complete |
+| STAB-03 | Phase 115 | Complete |
 | STAB-04 | Phase 115 | Complete |
 | LAB-01 | Phase 115 | pending |
 | WINPKG-01 | Phase 116 | pending |

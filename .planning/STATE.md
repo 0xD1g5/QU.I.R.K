@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.5
 milestone_name: Distributed Hardening + Stabilization
 status: executing
-stopped_at: Phase 115 Plan 01 complete
-last_updated: "2026-05-27T12:00:00.000Z"
+stopped_at: Phase 115 Plan 02 complete
+last_updated: "2026-05-27T11:12:14.900Z"
 last_activity: 2026-05-27
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 9
   completed_plans: 8
-  percent: 56
+  percent: 89
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 ## Current Position
 
 Phase: 115
-Plan: 01 complete; Plan 02 ready
+Plan: 02 complete; Plan 03 ready
 Status: Executing
 Last activity: 2026-05-27
 
-Progress: [██████░░░░] 56%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -52,11 +52,12 @@ Progress: [██████░░░░] 56%
 - AUTOMERGE: poll-on-full-check-in on existing FastAPI app; no Celery/Redis/queue (forbidden infra)
 - WINPKG: spike/sizing ONLY — no frozen EXE ships in v5.5; `windows-latest` CI validates feasibility
 - STAB-01: idempotent enroll exits 0, no token churn; console_cmd uses return (WR-04), sensor_cmd uses sys.exit(0); pre-check before secret generation (Pitfall 1 prevention)
+- STAB-02: importlib.resources for _load_cache read path; monkeypatch override hook preserves test isolation; _CACHE_PATH write path kept for refresh_cache (dev tool only)
+- STAB-03: scheduler drops --target/--output from run_scan subprocess; fail-fast guard marks run failed when scan_config_path is None; static regression test in test_scheduler_posix_fixes.py
 - STAB-04: advisory filter at _read_scan_endpoints boundary (IS NULL clause mandatory for SQLite 3VL); advisory rows stay in local DB for trends.py
 
 ### Pending Todos
 
-- Phase 115 Plan 02: STAB-02 (cmvp_cache.json packaging + importlib.resources load path) + STAB-03 (scheduler --target/--output drop)
 - Phase 115 Plan 03: LAB-01 — add weak-TLS target on segment-b; update lab.sh + expected_results_distributed.md + README (CLAUDE.md no-drift rule)
 
 ### Blockers
@@ -73,11 +74,12 @@ Carried forward from v5.4/v5.3 close:
 | human-UAT (95) | live ldaps code-signing scan | deferred — needs ldaps lab |
 | human-UAT (96) | TTY CONFIRM gate + non-TTY abort + live alg-confusion | deferred — TTY/environment-gated |
 | human-UAT (101–105) | Live Slack/email/webhook/syslog/Jira/ServiceNow delivery | deferred — needs live infra |
-| Phase 114 P01 | 25 | 3 tasks | 2 files |
+| Phase 114 P01 | 25 min | 3 tasks | 2 files |
+| Phase 115 P02 | 12 min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-05-27T12:00:00.000Z
-Stopped at: Phase 115 Plan 01 complete (STAB-01 + STAB-04)
+Last session: 2026-05-27T11:12:14.896Z
+Stopped at: Phase 115 Plan 02 complete
 Resume file: None
-Next: `/gsd-autonomous 115` (Plan 02: STAB-02 + STAB-03)
+Next: `/gsd-autonomous 115` (Plan 03: LAB-01 — weak-TLS target on segment-b)
