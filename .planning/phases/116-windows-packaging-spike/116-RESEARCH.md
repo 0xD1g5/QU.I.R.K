@@ -650,9 +650,11 @@ datas = (
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `pip install -e .` on windows-latest pull in botocore?**
+> Resolved by plan design: Q1 (botocore size) → captured as CI build evidence + assessment EXE-size note (Plan 116-02); Q2 (uvicorn/multiprocessing) → `multiprocessing.freeze_support()` added in Plan 116-01 Task 1; Q3 (EXE size acceptability) → captured as assessment evidence and folded into the go/no-go (Plan 116-02). A spike legitimately resolves discovery questions via CI evidence rather than pre-analysis.
+
+1. **Does `pip install -e .` on windows-latest pull in botocore?** — RESOLVED: CI evidence captures size; doc notes `--exclude`/`--collect-all` trade-off
    - What we know: botocore is a dependency of boto3 which is in `[project]` core deps (not optional)
    - What's unclear: botocore's service data JSON corpus is ~50-100 MB; if included in the freeze the EXE will be very large
    - Recommendation: In the CI job, check `pip show botocore` size and add `--exclude botocore` if sensor-only mode is desired; OR use `--collect-all botocore` but document EXE size implication
