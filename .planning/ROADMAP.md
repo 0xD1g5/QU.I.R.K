@@ -68,7 +68,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   3. `POST /api/sensor/push` with an unknown or revoked token returns 401 and logs the rejection; a valid per-sensor token is accepted and the push is attributed to the correct sensor UUID
   4. Operators running the v5.4 shared-token model can migrate to per-sensor tokens following the updated operators guide without re-enrolling from scratch
 **Plans**: 3 plans
-- [ ] 113-01-PLAN.md — Add nullable revoked_at column + AUTH-01..04 gating test scaffold (Wave 0)
+- [x] 113-01-PLAN.md — Add nullable revoked_at column + AUTH-01..04 gating test scaffold (Wave 0)
 - [ ] 113-02-PLAN.md — require_sensor_auth dependency + push-route split + token-authoritative identity + revoke-sensor CLI (cutover)
 - [ ] 113-03-PLAN.md — Update existing push tests + enroll printout/sensor semantics + operators-guide migration + lab oracle + Obsidian/UAT sync
 
@@ -110,7 +110,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 113. Per-Sensor Authentication | v5.5 | 0/TBD | Not started | - |
+| 113. Per-Sensor Authentication | v5.5 | 1/3 | In Progress|  |
 | 114. Automatic Merge Trigger | v5.5 | 0/TBD | Not started | - |
 | 115. Live-UAT Stabilization + Lab Testability | v5.5 | 0/TBD | Not started | - |
 | 116. Windows Packaging Spike | v5.5 | 0/TBD | Not started | - |
