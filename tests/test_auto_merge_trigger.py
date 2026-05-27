@@ -300,6 +300,102 @@ def test_revoked_sensor_excluded(monkeypatch, tmp_path):
 
 
 # ===========================================================================
+# CR-01 regression: mixed-token sensor + zero-token sensor (inclusion subquery)
+# ===========================================================================
+
+
+def test_mixed_token_sensor_is_required_for_all_in(monkeypatch, tmp_path):
+    """CR-01 regression: a sensor with BOTH a revoked token AND an active token must
+    still be counted as an active sensor.  Auto-merge must NOT fire until that sensor
+    pushes (the re-keyed sensor's data is still required).
+
+    The bug: the old exclusion-subquery logic matched any sensor with a revoked token,
+    so a re-keyed sensor (old token revoked + new token active) was incorrectly excluded
+    from the all-in set, causing merges that silently omitted a live sensor.
+    """
+    db_path = str(tmp_path / "quirk_test.db")
+    monkeypatch.setenv("QUIRK_DB_PATH", db_path)
+    config_path = _write_auto_merge_config(tmp_path, enabled=True, trigger_condition="all-sensors-in")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", config_path)
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+
+    app, client, engine, TestingSession = _app_with_file_db(db_path)
+
+    # sensor-a: normal active token
+    _seed_sensor(TestingSession, "sensor-a", "dmz")
+    tok_a = _seed_token(TestingSession, "sensor-a")
+
+    # sensor-b: re-keyed — has a revoked token AND an active token (new key)
+    _seed_sensor(TestingSession, "sensor-b", "corp")
+    _seed_token(TestingSession, "sensor-b", revoked=True)   # old, revoked
+    tok_b_new = _seed_token(TestingSession, "sensor-b")     # new, active
+
+    # Push only sensor-a — sensor-b (mixed-token, active) is still required → no merge
+    _do_push(client, "sensor-a", tok_a)
+
+    db = TestingSession()
+    try:
+        count = db.query(MergeRun).count()
+        assert count == 0, (
+            f"MergeRun fired before mixed-token sensor-b pushed (CR-01 regression): "
+            f"got {count} MergeRun row(s)"
+        )
+    finally:
+        db.close()
+
+    # Push sensor-b using the new active token — now all active sensors are in → merge fires
+    _do_push(client, "sensor-b", tok_b_new)
+
+    db = TestingSession()
+    try:
+        count = db.query(MergeRun).count()
+        assert count >= 1, (
+            f"Expected MergeRun after mixed-token sensor-b pushed, got {count}"
+        )
+    finally:
+        db.close()
+
+
+def test_zero_token_sensor_not_counted_as_active(monkeypatch, tmp_path):
+    """CR-01 regression: a Sensor row with NO SensorToken rows at all must NOT be
+    counted in the active set (it has no valid auth credential and can never push).
+
+    The bug: the old exclusion subquery only excluded sensors appearing in the
+    revoked-token set; a sensor with zero tokens had no entry in either set, so it
+    was silently included in active_sensors with last_push_at=None, blocking all
+    merges indefinitely.
+    """
+    db_path = str(tmp_path / "quirk_test.db")
+    monkeypatch.setenv("QUIRK_DB_PATH", db_path)
+    config_path = _write_auto_merge_config(tmp_path, enabled=True, trigger_condition="all-sensors-in")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", config_path)
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+
+    app, client, engine, TestingSession = _app_with_file_db(db_path)
+
+    # sensor-a: has an active token and will push
+    _seed_sensor(TestingSession, "sensor-a", "dmz")
+    tok_a = _seed_token(TestingSession, "sensor-a")
+
+    # sensor-ghost: enrolled but has ZERO SensorToken rows — cannot push, must not block
+    _seed_sensor(TestingSession, "sensor-ghost", "isolated")
+    # intentionally no _seed_token call for sensor-ghost
+
+    # Push sensor-a — sensor-ghost has no tokens so is NOT in the active set → merge fires
+    _do_push(client, "sensor-a", tok_a)
+
+    db = TestingSession()
+    try:
+        count = db.query(MergeRun).count()
+        assert count >= 1, (
+            f"Expected MergeRun (zero-token ghost sensor should not block merge), "
+            f"got {count} MergeRun row(s)"
+        )
+    finally:
+        db.close()
+
+
+# ===========================================================================
 # Task 2: failure-isolation and double-fire tests (AUTOMERGE-02b / D-05)
 # ===========================================================================
 
@@ -384,9 +480,9 @@ def test_double_fire_harmless(monkeypatch, tmp_path):
 
     count_before_second = count_after_first
 
-    # Second push: same payload_id would be rejected (409). Use a fresh envelope.
-    # BUT the idempotent re-check inside run_auto_merge should prevent a new MergeRun
-    # because last_push_at (updated by the second push) equals or is before merged_at.
+    # Send a second push with a fresh payload_id (uuid4 ensures no 409).
+    # The D-05 re-check in run_auto_merge should suppress a redundant MergeRun because
+    # last_push_at will be <= merged_at from the first merge.
     # The key assertion: after the second push completes, MergeRun count is <= count+1.
     # D-06 accepts a duplicate MergeRun from TOCTOU, so we only assert the count is
     # bounded (not more than 2), not that it's exactly unchanged.
