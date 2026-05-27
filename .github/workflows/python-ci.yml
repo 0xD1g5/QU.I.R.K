@@ -152,3 +152,48 @@ jobs:
           name: quirk-windows-onedir
           path: dist/quirk
           retention-days: 30
+
+      - name: Assemble Windows operator zip
+        shell: pwsh
+        run: |
+          $version = python -c "from quirk import __version__; print(__version__)"
+          if ($LASTEXITCODE -ne 0 -or -not $version) {
+            Write-Error "Failed to read version from package (LASTEXITCODE=$LASTEXITCODE, value='$version')"; exit 1
+          }
+          Write-Output "Assembling quirk-windows-$version.zip ..."
+
+          # Build a staging directory with a predictable layout so that
+          # $PSScriptRoot inside install.ps1 resolves quirk\ alongside the scripts.
+          #
+          # Staging layout:
+          #   staging\
+          #     quirk\          <- onedir bundle (quirk.exe + _internal\)
+          #     install.ps1
+          #     uninstall.ps1
+          #     sensor.sample.yaml
+          $staging = "quirk-windows-staging"
+          if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
+          New-Item -ItemType Directory -Path $staging | Out-Null
+
+          # Copy the onedir bundle (preserving quirk\ sub-directory name)
+          Copy-Item -Path "dist\quirk" -Destination "$staging\quirk" -Recurse
+
+          # Copy the PowerShell packaging scripts and sample config
+          Copy-Item "packaging\windows\install.ps1"      "$staging\"
+          Copy-Item "packaging\windows\uninstall.ps1"    "$staging\"
+          Copy-Item "packaging\windows\sensor.sample.yaml" "$staging\"
+
+          # Compress into a single versioned zip
+          $zipName = "quirk-windows-$version.zip"
+          Compress-Archive -Path "$staging\*" -DestinationPath $zipName -Force
+          if ($LASTEXITCODE -ne 0) { Write-Error "Compress-Archive failed (exit $LASTEXITCODE)"; exit 1 }
+
+          $mb = [math]::Round((Get-Item $zipName).Length / 1MB, 1)
+          Write-Output "ZIP_ASSEMBLED: $zipName ($mb MB)"
+
+      - name: Upload Windows operator zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: quirk-windows-zip
+          path: quirk-windows-*.zip
+          retention-days: 30
