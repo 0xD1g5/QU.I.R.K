@@ -128,6 +128,11 @@ _V54_SENSOR_COLUMNS: tuple[tuple[str, str], ...] = (
     ("sensor_id", "TEXT"),
     ("segment",   "TEXT"),
 )
+_V55_SENSOR_TOKEN_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 113 AUTH-02 / D-06: soft-revoke via additive nullable column.
+    # None = active; set = revoked. No data rewrite, no destructive DDL.
+    ("revoked_at", "DATETIME"),
+)
 
 
 def _ensure_columns(
@@ -185,6 +190,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("crypto_endpoints", _PHASE46_COLUMNS),     # Phase 46
     ("qramm_answers",    _PHASE54_QRAMM_ANSWER_COLUMNS),  # Phase 54
     ("crypto_endpoints", _V54_SENSOR_COLUMNS),  # Phase 107 MODEL-01
+    ("sensor_tokens",    _V55_SENSOR_TOKEN_COLUMNS),  # Phase 113 AUTH-02
 )
 
 
