@@ -1,5 +1,21 @@
 # Milestones
 
+## v5.5 Distributed Hardening + Stabilization (Shipped: 2026-05-27)
+
+**Phases completed:** 4 phases (113–116), 11 plans, 26 tasks. Audit: 13/13 requirements satisfied, 0 blockers, integration 12/12 + 3/3 E2E flows clean.
+
+**Key accomplishments:**
+
+- **Per-sensor authentication (Phase 113):** opaque per-sensor Bearer tokens (SHA-256 hash, `hmac.compare_digest`) replacing the v5.4 shared token; `revoke-sensor` CLI + `revoked_at` additive migration; two-router split keeps operator routes on `require_auth`. Security audit: threats_open 0 (10 mitigate + 3 accept).
+- **Automatic merge trigger (Phase 114):** console auto-merges once every non-revoked enrolled sensor has checked in, via a FastAPI BackgroundTask scheduled after the push commit (structural failure isolation); config toggle + two trigger conditions (`all-sensors-in`, `cadence-window`); manual `quirk sensor merge` regression-free. Code review caught + fixed an inverted revoked-sensor filter (CR-01).
+- **Live-UAT stabilization (Phase 115):** idempotent enroll (lab re-runnable without `down -v`), `cmvp_cache.json` shipped via importlib.resources, scheduler no longer passes unsupported `--target`/`--output` to run_scan (target preserved via a generated config), phantom `email/broker_scanner` rows eliminated at the read/export boundary.
+- **Distributed lab testability (LAB-01):** weak-TLS `tls-weak-b` target on segment-b so the Phase 111 per-segment filter is exercisable end-to-end; lab.sh/oracle/README updated together (no-drift).
+- **Windows packaging spike (Phase 116):** evidence-backed PyInstaller feasibility assessment + non-blocking `windows-packaging-spike` CI job (onefile build of run_scan.py) → **GO (conditional on live CI build)**, Scheduled Task host model, ~4–5 day v5.6 estimate. No artifact ships.
+
+**Known deferred items at close:** 2 human-UAT (UAT-114-03 doc review, UAT-116-02 live windows-latest CI build) + cosmetic empty SUMMARY frontmatter — see STATE.md Deferred Items.
+
+---
+
 ## v5.4 Distributed On-Prem Scanner Architecture (Shipped: 2026-05-26)
 
 **Phases completed:** 7 phases (106–112), 20 plans

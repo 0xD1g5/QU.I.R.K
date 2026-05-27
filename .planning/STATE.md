@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v5.5
 milestone_name: Distributed Hardening + Stabilization
-status: executing
-stopped_at: Phase 116 Plan 02 complete — all plans done
-last_updated: "2026-05-27T13:05:11.131Z"
-last_activity: 2026-05-27
+status: Awaiting next milestone
+stopped_at: Phase 116 Plan 02 complete — v5.5 milestone complete
+last_updated: "2026-05-27T19:04:09.275Z"
+last_activity: 2026-05-27 — Milestone v5.5 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 116
-Plan: 02 complete — phase complete
-Status: Complete
-Last activity: 2026-05-27
-
-Progress: [██████████] 100%
+Phase: Milestone v5.5 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-27 — Milestone v5.5 completed and archived
 
 ## Performance Metrics
 
@@ -71,6 +69,14 @@ None.
 
 ## Deferred Items
 
+Acknowledged and deferred at v5.5 milestone close on 2026-05-27:
+
+| Category | Item | Status |
+|----------|------|--------|
+| human-UAT (114) | UAT-114-03 — operators-guide §8.9 auto-merge visual review | deferred — non-blocking; 114-HUMAN-UAT.md partial |
+| human-UAT (116) | UAT-116-02 — live windows-latest spike CI build (runs on push); confirms WINPKG-01 GO + updates spike-doc RESULT placeholder | deferred — needs push/CI; 116-HUMAN-UAT.md partial |
+| tech-debt (cross) | Empty requirements_completed SUMMARY frontmatter on 10/11 v5.5 plans | cosmetic — reqs verified via VERIFICATION + traceability |
+
 Carried forward from v5.4/v5.3 close:
 
 | Category | Item | Status |
@@ -79,8 +85,6 @@ Carried forward from v5.4/v5.3 close:
 | human-UAT (95) | live ldaps code-signing scan | deferred — needs ldaps lab |
 | human-UAT (96) | TTY CONFIRM gate + non-TTY abort + live alg-confusion | deferred — TTY/environment-gated |
 | human-UAT (101–105) | Live Slack/email/webhook/syslog/Jira/ServiceNow delivery | deferred — needs live infra |
-| Phase 114 P01 | 25 min | 3 tasks | 2 files |
-| Phase 115 P02 | 12 min | 2 tasks | 4 files |
 
 ## Session Continuity
 
@@ -88,3 +92,7 @@ Last session: 2026-05-27
 Stopped at: Phase 116 Plan 02 complete — v5.5 milestone complete
 Resume file: None
 Next: v5.5 milestone close / v5.6 planning
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
