@@ -87,11 +87,33 @@ def test_smoke_test_file_is_run():
     )
 
 
-def test_no_continue_on_error_literal_in_file():
-    """The CI file must not contain the literal string 'continue-on-error: true' anywhere."""
-    ci_text = CI_FILE.read_text(encoding="utf-8").lower()
-    # Only flag 'continue-on-error: true' — not just the key presence
-    assert "continue-on-error: true" not in ci_text, (
-        f"Literal 'continue-on-error: true' found in {CI_FILE.name} — "
-        "this disables the SENSOR-06 hard gate. Remove it."
+def test_no_continue_on_error_literal_in_smoke_job():
+    """The windows-sensor-smoke job's text block must not contain 'continue-on-error: true'.
+
+    Scoped to the smoke job only (not the whole file): other jobs — e.g. the
+    Phase 116 `windows-packaging-spike` job — are legitimately non-blocking and
+    set `continue-on-error: true` by design. SENSOR-06 only requires that the
+    *smoke* hard gate is never softened. This is a defense-in-depth text check
+    complementing the YAML-parsed job/step assertions above.
+    """
+    ci_text = CI_FILE.read_text(encoding="utf-8")
+    lines = ci_text.splitlines()
+    # Find the smoke job's line span: from its 2-space-indented key to the next
+    # 2-space-indented job key (or EOF).
+    start = None
+    for i, line in enumerate(lines):
+        if line.strip().startswith(f"{JOB_NAME}:") and line.startswith("  ") and not line.startswith("   "):
+            start = i
+            break
+    assert start is not None, f"Could not locate job '{JOB_NAME}' block in {CI_FILE.name}"
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        line = lines[j]
+        if line.startswith("  ") and not line.startswith("   ") and line.strip().endswith(":"):
+            end = j
+            break
+    smoke_block = "\n".join(lines[start:end]).lower()
+    assert "continue-on-error: true" not in smoke_block, (
+        f"Literal 'continue-on-error: true' found inside the '{JOB_NAME}' job block in "
+        f"{CI_FILE.name} — this disables the SENSOR-06 hard gate. Remove it."
     )
