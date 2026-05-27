@@ -358,3 +358,28 @@ jobs:
             Write-Error "frozen quirk.exe sensor push exited $LASTEXITCODE — push rejected or failed"; exit 1
           }
           Write-Output "E2E_PASS: frozen sensor authenticated + push accepted"
+
+      - name: Negative auth assertion — bogus token must be rejected (IN-02)
+        shell: pwsh
+        run: |
+          # Prove that require_sensor_auth actually rejects unauthorized pushes.
+          # Without this assertion, a middleware ordering regression (accidentally
+          # disabling require_sensor_auth) would leave the E2E green on the happy
+          # path while accepting ANY token.
+          #
+          # Strategy: copy the valid sensor config, overwrite the token with a
+          # known-bogus value, run sensor push — it MUST exit non-zero (exit 2 = 4xx).
+          # If it exits 0 the security guarantee is broken; fail the job.
+          $sensor_cfg = "$env:RUNNER_TEMP\e2e-sensor.yaml"
+          $scan_cfg   = "$env:RUNNER_TEMP\e2e-scan-config.yaml"
+          $bogus_cfg  = "$env:RUNNER_TEMP\e2e-bogus.yaml"
+
+          Copy-Item $sensor_cfg $bogus_cfg
+          (Get-Content $bogus_cfg) -replace 'console_api_token:.*', 'console_api_token: "bogus-token-reject-me"' |
+            Set-Content $bogus_cfg
+
+          & "frozen\quirk.exe" sensor push --config $bogus_cfg --scan-config $scan_cfg
+          if ($LASTEXITCODE -eq 0) {
+            Write-Error "SECURITY: bogus token was accepted (exit 0) — require_sensor_auth may be disabled"; exit 1
+          }
+          Write-Output "Negative auth assertion OK: bogus token rejected (exit $LASTEXITCODE)"
