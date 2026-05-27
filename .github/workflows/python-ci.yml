@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   windows-sensor-smoke:
@@ -81,3 +82,58 @@ jobs:
             dist/quirk.exe
           retention-days: 30
           if-no-files-found: ignore
+
+  windows-sensor-build:
+    name: Windows Sensor Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project and PyInstaller
+        run: |
+          pip install -e .
+          pip install pyinstaller==6.20.0
+
+      - name: Build onedir EXE
+        shell: pwsh
+        run: |
+          pyinstaller --onedir --name quirk `
+            --collect-all quirk `
+            --collect-all sqlalchemy `
+            --collect-all fastapi `
+            --copy-metadata quirk-scanner `
+            --hidden-import sqlalchemy.dialects.sqlite `
+            --hidden-import sqlalchemy.dialects.sqlite.pysqlite `
+            --hidden-import uvicorn.logging `
+            --hidden-import uvicorn.loops.auto `
+            --hidden-import uvicorn.protocols.http.auto `
+            --add-data "quirk/compliance/cmvp_cache.json;quirk/compliance" `
+            --add-data "quirk/compliance/cmvp_curated.csv;quirk/compliance" `
+            --add-data "quirk/reports/templates;quirk/reports/templates" `
+            run_scan.py
+
+      - name: Smoke-test frozen EXE (--version and --help)
+        shell: pwsh
+        run: |
+          $expected = python -c "from quirk import __version__; print(__version__)"
+          Write-Output "Expected version: $expected"
+          $ver_out = & "dist\quirk\quirk.exe" --version
+          if ($LASTEXITCODE -ne 0) { Write-Error "quirk.exe --version exited $LASTEXITCODE"; exit 1 }
+          Write-Output "quirk.exe --version output: $ver_out"
+          if (-not ($ver_out -match [regex]::Escape($expected))) {
+            Write-Error "Version mismatch: expected '$expected', got '$ver_out'"; exit 1
+          }
+          & "dist\quirk\quirk.exe" --help
+          if ($LASTEXITCODE -ne 0) { Write-Error "quirk.exe --help exited $LASTEXITCODE"; exit 1 }
+          Write-Output "SMOKE_PASS: --version and --help both exited 0"
+
+      - name: Upload onedir bundle as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quirk-windows-onedir
+          path: dist/quirk
+          retention-days: 30
