@@ -52,7 +52,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 ### Phases
 
 - [x] **Phase 113: Per-Sensor Authentication** - Replace the v5.4 shared-token model with per-sensor opaque tokens, full revocation, and documented migration (completed 2026-05-27)
-- [ ] **Phase 114: Automatic Merge Trigger** - Console auto-merges once all enrolled sensors have checked in, with configurable trigger and no regression to manual merge
+- [x] **Phase 114: Automatic Merge Trigger** - Console auto-merges once all enrolled sensors have checked in, with configurable trigger and no regression to manual merge (completed 2026-05-27)
 - [ ] **Phase 115: Live-UAT Stabilization + Lab Testability** - Sweep the four E2E-surfaced defects and add a weak-crypto distributed lab target so the Phase 111 segment filter is exercisable end-to-end
 - [ ] **Phase 116: Windows Packaging Spike** - Produce a written feasibility and sizing assessment for PyInstaller frozen EXE + Windows Scheduled Task; go/no-go recommendation for v5.6
 
@@ -84,7 +84,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 **Plans**: 3 plans
 - [x] 114-01-PLAN.md — Auto-merge core: config loader, trigger evaluator, BackgroundTask wired into sensor_push (AUTOMERGE-01, -02)
 - [x] 114-02-PLAN.md — 6 acceptance tests: all-sensors-in, disabled, failure-isolated, double-fire, cadence-window, manual-merge regression (AUTOMERGE-01, -02, -03)
-- [ ] 114-03-PLAN.md — Operator docs, distributed lab e2e oracle, UAT-SERIES + Obsidian sync (AUTOMERGE-03)
+- [x] 114-03-PLAN.md — Operator docs, distributed lab e2e oracle, UAT-SERIES + Obsidian sync (AUTOMERGE-03)
 
 ### Phase 115: Live-UAT Stabilization + Lab Testability
 **Goal**: The four defects surfaced by the distributed E2E are root-caused and eliminated so the lab is re-runnable without teardown, and the Phase 111 per-segment filter is exercisable end-to-end against a real weak-crypto target in the distributed lab
@@ -114,7 +114,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete    | 2026-05-27 |
-| 114. Automatic Merge Trigger | v5.5 | 2/3 | In Progress|  |
+| 114. Automatic Merge Trigger | v5.5 | 3/3 | Complete   | 2026-05-27 |
 | 115. Live-UAT Stabilization + Lab Testability | v5.5 | 0/TBD | Not started | - |
 | 116. Windows Packaging Spike | v5.5 | 0/TBD | Not started | - |
 
