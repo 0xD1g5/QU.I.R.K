@@ -245,6 +245,23 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     if not getattr(args, "sensor_id", None):
         print(f"Generated sensor_id: {sensor_id}", file=sys.stderr)
 
+    # STAB-01 / Pitfall 6: pre-check BEFORE generating hmac_key.
+    # If sensor.yaml already exists with the same sensor_id, exit 0 without
+    # regenerating credentials — prevents breaking existing pushes that rely on
+    # the current hmac_key (D-02).  A malformed sensor.yaml falls through to a
+    # fresh enroll.  T-115-02: fixed-string message; no exception text.
+    if os.path.exists(config_path):
+        try:
+            _existing_cfg = yaml.safe_load(Path(config_path).read_text()) or {}
+            if _existing_cfg.get("sensor_id") == sensor_id:
+                print(
+                    f"INFO: sensor already enrolled — sensor.yaml unchanged ({config_path})",
+                    file=sys.stderr,
+                )
+                sys.exit(0)
+        except Exception:
+            pass  # Malformed sensor.yaml — fall through to fresh enroll
+
     # One-time enrollment token (T-108-05: raw token printed once, never stored)
     raw_token = secrets.token_urlsafe(32)
     # token_hash is available for context/logging only — console-side storage is Phase 109
