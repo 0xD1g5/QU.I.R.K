@@ -114,3 +114,20 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 | 114. Automatic Merge Trigger | v5.5 | 0/TBD | Not started | - |
 | 115. Live-UAT Stabilization + Lab Testability | v5.5 | 0/TBD | Not started | - |
 | 116. Windows Packaging Spike | v5.5 | 0/TBD | Not started | - |
+
+---
+
+## Backlog
+
+Items to be organized into future milestones. Organized by theme.
+
+### Hardware Compatibility & Lifecycle Remediation
+
+Post-v5.5 initiative: make PQC readiness advisory when hardware cannot be upgraded, guide operators toward mitigation (crypto-bridge, replacement timeline, or decommissioning). Scope includes on-prem appliances (F5, Palo Alto, Fortinet, Juniper, HPE iLO, IPMI, Veeam, legacy HSMs) from MVP; cloud load balancers secondary.
+
+- **HWCOMPAT-01** — Hardware fingerprinting layer — detect device type / firmware version from SSH banners, SNMP, HTTP management interfaces
+- **HWCOMPAT-02** — Hardware-PQC compatibility matrix — vendor support status, EOL dates, known gaps, CI staleness gate (90-day cadence, similar to model_meta.py)
+- **HWCOMPAT-03** — Crypto-bridge detection — identify incompatible endpoints behind compatible gateways (TLS proxy, cloud LB, WAF); classify risk as "mitigated upstream"
+- **HWCOMPAT-04** — Remediation roadmap tiers per endpoint — Tier 1 (0–6mo replacement), Tier 2 (6–18mo firmware pending), Tier 3 (18mo+ accept risk), Tier N/A (EOL before PQC relevance)
+- **HWCOMPAT-05** — Supply-chain CBOM variants — hardware fingerprint as component (e.g., "F5 BIG-IP v15.1.0 firmware lacks PQC") for procurement visibility
+- **HWCOMPAT-06** — Report + operators-guide addendum — surface hardware findings, lifecycle tiers, and bridging strategies

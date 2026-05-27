@@ -129,7 +129,34 @@ Make QU.I.R.K. load-bearing inside someone else's workflow. First-party integrat
 - **Per-sensor auth (TD-1) is IN as a core item**, not deferred — real multi-sensor security hardening.
 - **SaaS multi-tenancy stays PARKED** (unchanged).
 
-**v5.6 candidates seeded by this milestone:** full Windows frozen-binary build (if WINPKG-01 says go); public-repo cutover + required-status-check enforcement (re-run UAT-112-03 item 3).
+**v5.6 candidates seeded by this milestone:** full Windows frozen-binary build (if WINPKG-01 says go); public-repo cutover + required-status-check enforcement (re-run UAT-112-03 item 3); hardware-compatibility advisory layer (post-v5.5 backlog).
+
+---
+
+## v5.6+ — Hardware Compatibility & Lifecycle Remediation *(post-v5.5 backlog item)*
+
+**Backlog seeded by exploratory conversation (2026-05-26).** Make PQC readiness advisory when the endpoint's hardware cannot be upgraded to support post-quantum algorithms, and guide operators toward bridging or decommissioning strategies.
+
+| Backlog | Item | Why it matters |
+|---|---|---|
+| HWCOMPAT-01 | Hardware fingerprinting layer — detect device type / firmware version from SSH banners, SNMP, HTTP management interfaces | Inventory signal: not all "systems" are software-updatable — appliances, HSMs, TPMs, firmware-locked devices need a separate remediation path |
+| HWCOMPAT-02 | Hardware-PQC compatibility matrix (on-prem appliances + cloud load balancers) — similar to `model_meta.py` with versioned vendor support status, EOL dates, known gaps | Ground truth: vendors release PQC support at different times; some devices have no public PQC roadmap (esp. legacy appliances, specialized network gear) |
+| HWCOMPAT-03 | Crypto-bridge detection — identify when an incompatible endpoint sits *behind* a compatible gateway (TLS termination proxy, cloud LB, WAF) and classify risk as "mitigated upstream" | Risk stratification: a legacy appliance terminating TLS via nginx PQC-hybrid is lower urgency than a directly-exposed legacy accelerator |
+| HWCOMPAT-04 | Remediation roadmap tiers per endpoint — classify as Tier 1 (0–6mo hardware replacement), Tier 2 (6–18mo firmware update pending), Tier 3 (18mo+ accept residual risk + monitor), or Tier N/A (device EOL before PQC relevance, risk naturally expires) | Consulting-grade guidance: operators need a timeline, not a binary pass/fail. Inventory-wide prioritization surfaces which hardware to budget for replacement first. |
+| HWCOMPAT-05 | Supply-chain visibility in CBOM — hardware fingerprint as a component variant (e.g. "F5 BIG-IP v15.1.0 firmware lacks PQC") so procurement and architecture teams can see sourcing / fleet risks | Transparency: the CBOM becomes an advisory tool for procurement decisions, not just a crypto-findings dump. |
+| HWCOMPAT-06 | Metadata staleness gate — `hardware_meta.py` with `last_verified` + `source_url` + CI 90-day cadence (similar to `model_meta.py`, `compliance/__init__.py`) | Maintenance: vendor PQC roadmaps change; gates keep the hardware matrix from becoming guidance debt |
+
+**Anchor / North Star:** **Hardware lifecycle visibility** — operators can see which devices *cannot* run PQC, why, and what their migration timeline should be. Fits QUIRK's consulting-grade positioning (advisory depth, not just tech debt flagging).
+
+**Likely shape (sketch, confirm at new-milestone):** (1) hardware fingerprinting on scan endpoints (extend the scanner's device-classification heuristics); (2) vendor + firmware-version curation in a public hardware-compatibility matrix; (3) per-endpoint remediation tier assignment in the report and CBOM; (4) bridge-detection heuristics (scan results behind a proxy gateway with PQC cert); (5) supply-chain CBOM variants.
+
+**Scope note:** On-prem appliances (F5, Palo Alto, Fortinet, Juniper, HPE iLO, IPMI, Veeam backups, etc.) in scope from MVP. Cloud load balancers (AWS ALB/NLB, Azure Application Gateway, GCP Cloud Load Balancing) secondary (cloud vendors release PQC faster, coverage already good in most cases — but should still be discoverable in the inventory).
+
+**Risk:** hardware matrix curation burden (vendor roadmaps are opaque; "no public PQC timeline" is often a non-answer). Mitigation: start with appliances most likely to block customer networks (F5, Cisco ASA, legacy HSMs); defer niche hardware; accept "vendor silent on PQC" as a data point (classified as higher-priority for replacement).
+
+**Tax to fold in:** HWCOMPAT data model (new `hardware` table or device-type annotation on `CryptoEndpoint`); report-template changes to surface hardware remediation; operators-guide addendum (how to interpret hardware findings + lifecycle tiers).
+
+---
 
 ### Origin — stabilization candidates from the v5.4 live UAT *(captured 2026-05-26)*
 
