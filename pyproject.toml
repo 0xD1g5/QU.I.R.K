@@ -125,7 +125,12 @@ include = ["quirk*"]
 py-modules = ["run_scan"]
 
 [tool.setuptools.package-data]
-quirk = ["reports/templates/*.j2", "config_template.yaml", "dashboard/static/**/*"]
+quirk = [
+    "reports/templates/*.j2",
+    "config_template.yaml",
+    "dashboard/static/**/*",
+    "compliance/*.json",
+]
 
 [tool.pytest.ini_options]
 markers = [

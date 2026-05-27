@@ -26,6 +26,7 @@ import os
 import re
 import tempfile
 import time
+from importlib.resources import files as _ir_files
 from pathlib import Path
 from typing import Optional
 
@@ -73,11 +74,33 @@ class CMVPRefreshParseError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 def _load_cache(force_reload: bool = False) -> dict:
-    """Load and validate cmvp_cache.json. Cached at module scope after first call."""
+    """Load and validate cmvp_cache.json. Cached at module scope after first call.
+
+    Uses importlib.resources for the read path so the cache file is accessible
+    from both source-checkout and wheel installs (STAB-02 / D-08).
+
+    Override hook: if the module-level _CACHE_PATH has been replaced (e.g. by a
+    test monkeypatch) we fall back to reading it directly so that unit tests can
+    supply a temporary cache without touching the real package resource.
+    The write path (refresh_cache) always uses _CACHE_PATH — refresh is a
+    developer-only tool intended for source-checkout use (Pitfall 2).
+    """
     global _CACHE
     if _CACHE is not None and not force_reload:
         return _CACHE
-    data = json.loads(_CACHE_PATH.read_text())
+    # Use _CACHE_PATH directly when it has been patched away from the package
+    # default (e.g. in tests); otherwise prefer importlib.resources for
+    # wheel-safe resource loading.
+    _default_path = Path(__file__).parent / "cmvp_cache.json"
+    if _CACHE_PATH != _default_path and _CACHE_PATH.exists():
+        _text = _CACHE_PATH.read_text(encoding="utf-8")
+    else:
+        _text = (
+            _ir_files("quirk.compliance")
+            .joinpath("cmvp_cache.json")
+            .read_text(encoding="utf-8")
+        )
+    data = json.loads(_text)
     assert "last_verified" in data, "cmvp_cache missing 'last_verified'"
     assert "source_url" in data, "cmvp_cache missing 'source_url'"
     assert "modules" in data, "cmvp_cache missing 'modules'"
