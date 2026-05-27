@@ -17,7 +17,9 @@ pytest -k "sensor_push or ingest or valid or unauth or size or replay or skew or
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -29,7 +31,7 @@ from fastapi.testclient import TestClient
 
 from quirk.dashboard.api.app import create_app
 from quirk.dashboard.api.deps import get_db
-from quirk.models import Base, IntegrationDelivery, Sensor, SensorPush, CryptoEndpoint
+from quirk.models import Base, IntegrationDelivery, Sensor, SensorPush, CryptoEndpoint, SensorToken
 
 # ---------------------------------------------------------------------------
 # Shared DB + TestClient factory
@@ -123,6 +125,35 @@ def _seed_sensor(
         db.close()
 
 
+def _seed_token(
+    TestingSession,
+    sensor_id: str,
+    raw_token: str | None = None,
+    revoked: bool = False,
+) -> str:
+    """Write a SensorToken row and return the raw token string.
+
+    Mints a secrets.token_urlsafe(32) when no raw_token is given.
+    Only the SHA-256 hex digest is persisted (T-109-01 / T-113-02).
+    """
+    if raw_token is None:
+        raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    db = TestingSession()
+    try:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.add(SensorToken(
+            sensor_id=sensor_id,
+            token_hash=token_hash,
+            created_at=now,
+            revoked_at=now if revoked else None,
+        ))
+        db.commit()
+    finally:
+        db.close()
+    return raw_token
+
+
 # ---------------------------------------------------------------------------
 # (a) test_push_endpoint_exists — CONSOLE-01
 # ---------------------------------------------------------------------------
@@ -144,7 +175,7 @@ def test_push_endpoint_exists(monkeypatch):
 
 def test_push_requires_auth(monkeypatch):
     """CONSOLE-02: POST /api/sensor/push without auth header returns 401."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, _ = _app_with_db()
     # No Authorization header supplied
     resp = client.post("/api/sensor/push", content=b"data")
@@ -159,15 +190,18 @@ def test_push_requires_auth(monkeypatch):
 
 def test_push_413_body_too_large(monkeypatch):
     """CONSOLE-03: POST /api/sensor/push with Content-Length > 10 MB returns 413."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
-    _, client, _, _ = _app_with_db()
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, client, _, TestingSession = _app_with_db()
+    # Seed any sensor + token so the auth check passes; 413 fires before body processing.
+    _seed_sensor(TestingSession, sensor_id="sensor-413-01")
+    raw_token = _seed_token(TestingSession, sensor_id="sensor-413-01")
     # Lie about Content-Length — easier than sending 10+ MB in tests
     oversized_bytes = 11 * 1024 * 1024
     resp = client.post(
         "/api/sensor/push",
         content=b"x",
         headers={
-            "Authorization": "Bearer test-token",
+            "Authorization": f"Bearer {raw_token}",
             "Content-Length": str(oversized_bytes),
         },
     )
@@ -182,9 +216,10 @@ def test_push_413_body_too_large(monkeypatch):
 
 def test_push_409_duplicate_payload(monkeypatch):
     """CONSOLE-03: Pushing the same payload_id twice returns 200 then 409."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
     _seed_sensor(TestingSession, sensor_id="sensor-dedup-01")
+    raw_token = _seed_token(TestingSession, sensor_id="sensor-dedup-01")
 
     payload_id = str(uuid.uuid4())
     env = _build_envelope(sensor_id="sensor-dedup-01", payload_id=payload_id)
@@ -193,7 +228,7 @@ def test_push_409_duplicate_payload(monkeypatch):
     resp1 = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token}"},
     )
     assert resp1.status_code == 200, (
         f"First push should be 200, got {resp1.status_code}: {resp1.text}"
@@ -202,7 +237,7 @@ def test_push_409_duplicate_payload(monkeypatch):
     resp2 = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token}"},
     )
     assert resp2.status_code == 409, (
         f"Second push with same payload_id should be 409, got {resp2.status_code}: {resp2.text}"
@@ -215,19 +250,22 @@ def test_push_409_duplicate_payload(monkeypatch):
 
 def test_push_422_replay_window(monkeypatch):
     """CONSOLE-03: pushed_at > 15 min from now returns 422 with console_utc in body."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
-    _, client, _, _ = _app_with_db()
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, client, _, TestingSession = _app_with_db()
+    # Seed a real sensor + token; envelope uses a stale pushed_at so 422 fires after auth.
+    _seed_sensor(TestingSession, sensor_id="sensor-replay-01")
+    raw_token = _seed_token(TestingSession, sensor_id="sensor-replay-01")
 
     stale_pushed_at = (
         datetime.utcnow() - timedelta(minutes=30)
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
-    env = _build_envelope(sensor_id="nonexistent-sensor", pushed_at=stale_pushed_at)
+    env = _build_envelope(sensor_id="sensor-replay-01", pushed_at=stale_pushed_at)
     body = _compress(env)
 
     resp = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token}"},
     )
     assert resp.status_code == 422, (
         f"Expected 422 for replay window violation, got {resp.status_code}: {resp.text}"
@@ -247,9 +285,10 @@ def test_push_422_replay_window(monkeypatch):
 def test_push_200_accepted(monkeypatch):
     """CONSOLE-03: Valid authenticated push returns 200; persists SensorPush,
     updates sensors.last_push_at, and writes CryptoEndpoint rows for findings."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
     _seed_sensor(TestingSession, sensor_id="sensor-ok-01")
+    raw_token = _seed_token(TestingSession, sensor_id="sensor-ok-01")
 
     finding = {
         "host": "10.0.0.1",
@@ -278,7 +317,7 @@ def test_push_200_accepted(monkeypatch):
     resp = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token}"},
     )
     assert resp.status_code == 200, (
         f"Expected 200 for valid push, got {resp.status_code}: {resp.text}"
@@ -316,9 +355,10 @@ def test_push_200_accepted(monkeypatch):
 def test_audit_row_written(monkeypatch):
     """CONSOLE-04: IntegrationDelivery row with destination='sensor_push' is written
     on both a success (status='ok') and a failure (status='failed', e.g. 422)."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
     _seed_sensor(TestingSession, sensor_id="sensor-audit-01")
+    raw_token = _seed_token(TestingSession, sensor_id="sensor-audit-01")
 
     # --- Success path → status="ok" ---
     payload_id = str(uuid.uuid4())
@@ -328,7 +368,7 @@ def test_audit_row_written(monkeypatch):
     resp = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token}"},
     )
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
 
@@ -349,16 +389,19 @@ def test_audit_row_written(monkeypatch):
         db.close()
 
     # --- Failure path (422 replay window) → status="failed" ---
+    # Seed a second sensor + token; stale pushed_at triggers 422 after auth passes.
+    _seed_sensor(TestingSession, sensor_id="sensor-audit-stale-01")
+    raw_token_stale = _seed_token(TestingSession, sensor_id="sensor-audit-stale-01")
     stale_pushed_at = (
         datetime.utcnow() - timedelta(minutes=30)
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
-    env_fail = _build_envelope(sensor_id="nonexistent-sensor", pushed_at=stale_pushed_at)
+    env_fail = _build_envelope(sensor_id="sensor-audit-stale-01", pushed_at=stale_pushed_at)
     body_fail = _compress(env_fail)
 
     resp_fail = client.post(
         "/api/sensor/push",
         content=body_fail,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token_stale}"},
     )
     assert resp_fail.status_code == 422, (
         f"Expected 422 for failure path, got {resp_fail.status_code}: {resp_fail.text}"
@@ -387,9 +430,10 @@ def test_audit_row_written(monkeypatch):
 
 def test_extra_fields_ignored(monkeypatch):
     """CONSOLE-05: Envelope with an unknown extra field still parses and returns 200."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
     _seed_sensor(TestingSession, sensor_id="sensor-extra-01")
+    raw_token = _seed_token(TestingSession, sensor_id="sensor-extra-01")
 
     env = _build_envelope(
         sensor_id="sensor-extra-01",
@@ -400,7 +444,7 @@ def test_extra_fields_ignored(monkeypatch):
     resp = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token}"},
     )
     assert resp.status_code == 200, (
         f"Extra fields should be silently ignored (extra='ignore'), got {resp.status_code}: {resp.text}"
@@ -413,9 +457,10 @@ def test_extra_fields_ignored(monkeypatch):
 
 def test_version_skew_graceful(monkeypatch):
     """CONSOLE-05: Mismatched schema_version is warn-only — must not return 422 or 500."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
     _seed_sensor(TestingSession, sensor_id="sensor-skew-01")
+    raw_token = _seed_token(TestingSession, sensor_id="sensor-skew-01")
 
     env = _build_envelope(
         sensor_id="sensor-skew-01",
@@ -427,7 +472,7 @@ def test_version_skew_graceful(monkeypatch):
     resp = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": f"Bearer {raw_token}"},
     )
     assert resp.status_code not in (422, 500), (
         f"Version skew must not cause 422 or 500; got {resp.status_code}: {resp.text}"
@@ -439,10 +484,14 @@ def test_version_skew_graceful(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_unknown_sensor_id_4xx(monkeypatch):
-    """Push with an unregistered sensor_id returns 4xx and writes a failed audit row."""
-    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    """Push with an unregistered sensor_id returns 4xx (now 401) and writes a failed audit row.
+
+    Per-sensor auth: no token row for sensor-id → require_sensor_auth returns 401.
+    The assertion 400 <= status < 500 still holds; 401 is the expected status code.
+    """
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
-    # Do NOT seed a sensor for this test
+    # Do NOT seed a sensor or token for this test — no token row → 401.
 
     env = _build_envelope(sensor_id="no-such-sensor-xyz")
     body = _compress(env)
@@ -450,7 +499,7 @@ def test_unknown_sensor_id_4xx(monkeypatch):
     resp = client.post(
         "/api/sensor/push",
         content=body,
-        headers={"Authorization": "Bearer test-token"},
+        headers={"Authorization": "Bearer unknown-raw-token"},
     )
     assert 400 <= resp.status_code < 500, (
         f"Unknown sensor_id should return 4xx, got {resp.status_code}: {resp.text}"
