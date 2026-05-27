@@ -547,10 +547,30 @@ def _flush_spool(client, push_url: str, headers_fn) -> None:
         try:
             resp = _do_push(client, push_url, headers, body)
             if resp.status_code in (200, 409):
-                f.unlink()
-        except (httpx.ConnectError, httpx.TimeoutException, Exception):
-            # Leave spooled file; will retry on next push
+                f.unlink(missing_ok=True)
+            else:
+                # 4xx/5xx permanent rejection after retries: log and leave file,
+                # but do not retry forever — operator must investigate.
+                import logging as _log
+                _log.getLogger(__name__).warning(
+                    "Spool re-push permanently rejected HTTP %d — leaving %s",
+                    resp.status_code, f.name,
+                )
+        except (httpx.ConnectError, httpx.TimeoutException):
+            # Transient network error — leave file for next push attempt
             pass
+        except Exception as _exc:
+            from tenacity import RetryError
+            import logging as _log
+            if isinstance(_exc, RetryError):
+                _log.getLogger(__name__).warning(
+                    "Spool re-push exhausted retries for %s: %s", f.name, _exc,
+                )
+            else:
+                from quirk.util.safe_exc import safe_str as _safe_str
+                _log.getLogger(__name__).warning(
+                    "Spool re-push error for %s: %s", f.name, _safe_str(_exc),
+                )
 
 
 # ---------------------------------------------------------------------------
