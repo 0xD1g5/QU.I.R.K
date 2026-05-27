@@ -67,7 +67,10 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   2. `quirk console revoke-sensor <sensor-id>` succeeds and immediately causes that sensor's next `POST /api/sensor/push` to return 401, while other enrolled sensors continue to push without interruption
   3. `POST /api/sensor/push` with an unknown or revoked token returns 401 and logs the rejection; a valid per-sensor token is accepted and the push is attributed to the correct sensor UUID
   4. Operators running the v5.4 shared-token model can migrate to per-sensor tokens following the updated operators guide without re-enrolling from scratch
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 113-01-PLAN.md — Add nullable revoked_at column + AUTH-01..04 gating test scaffold (Wave 0)
+- [ ] 113-02-PLAN.md — require_sensor_auth dependency + push-route split + token-authoritative identity + revoke-sensor CLI (cutover)
+- [ ] 113-03-PLAN.md — Update existing push tests + enroll printout/sensor semantics + operators-guide migration + lab oracle + Obsidian/UAT sync
 
 ### Phase 114: Automatic Merge Trigger
 **Goal**: The console automatically merges all pushed sensor results once every enrolled sensor has checked in, eliminating the mandatory manual `quirk sensor merge` step for the common deployment case
