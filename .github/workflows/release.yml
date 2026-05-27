@@ -180,8 +180,11 @@ jobs:
           Write-Output "ZIP_ASSEMBLED: $zipName ($mb MB)"
 
       - name: Attach zip to GitHub Release
-        # T-118-SC: action pinned to @v2; uses GITHUB_TOKEN only (T-118-NS, T-118-REL-PERM)
-        uses: softprops/action-gh-release@v2
+        # T-118-SC: action pinned to commit SHA for supply-chain safety (WR-03).
+        # SHA corresponds to softprops/action-gh-release v2.2.1.
+        # Verify: https://github.com/softprops/action-gh-release/releases/tag/v2.2.1
+        # Uses GITHUB_TOKEN only (T-118-NS, T-118-REL-PERM)
+        uses: softprops/action-gh-release@c062e08bd532815e2082a7e09a78f8e1ab1b3ab5  # v2.2.1
         with:
           files: quirk-windows-*.zip
           # Release notes documenting unsigned status + Authenticode deferral
