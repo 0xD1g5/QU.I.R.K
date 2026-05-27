@@ -6,6 +6,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# IN-01: Least-privilege token — this workflow only needs to check out code.
+permissions:
+  contents: read
+
 jobs:
   windows-sensor-smoke:
     name: Windows Sensor Smoke
@@ -94,9 +98,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install project and PyInstaller
+        shell: pwsh
         run: |
           pip install -e .
+          if ($LASTEXITCODE -ne 0) { Write-Error "pip install -e . failed"; exit 1 }
           pip install pyinstaller==6.20.0
+          if ($LASTEXITCODE -ne 0) { Write-Error "pip install pyinstaller failed"; exit 1 }
 
       - name: Build onedir EXE
         shell: pwsh
@@ -120,6 +127,9 @@ jobs:
         shell: pwsh
         run: |
           $expected = python -c "from quirk import __version__; print(__version__)"
+          if ($LASTEXITCODE -ne 0 -or -not $expected) {
+            Write-Error "Failed to read expected version from package (LASTEXITCODE=$LASTEXITCODE, value='$expected')"; exit 1
+          }
           Write-Output "Expected version: $expected"
           $ver_out = & "dist\quirk\quirk.exe" --version
           if ($LASTEXITCODE -ne 0) { Write-Error "quirk.exe --version exited $LASTEXITCODE"; exit 1 }
