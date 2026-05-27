@@ -97,7 +97,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   4. Merged console output contains no phantom `email_scanner` / `broker_scanner` rows with `scanned_at=None` or port 0; the root cause is identified and eliminated at the source
   5. The distributed chaos lab includes a weak-crypto target reachable from at least one non-default segment; `lab.sh distributed`, the `expected_results_*.md` oracle, and the chaos-lab README are all updated in the same change per the CLAUDE.md no-drift rule
 **Plans**: 3 plans
-- [ ] 115-01-PLAN.md — Idempotent enroll (STAB-01) + phantom-row filter (STAB-04)
+- [x] 115-01-PLAN.md — Idempotent enroll (STAB-01) + phantom-row filter (STAB-04)
 - [ ] 115-02-PLAN.md — CMVP packaging (STAB-02) + scheduler arg fix (STAB-03)
 - [ ] 115-03-PLAN.md — Weak-TLS segment-b lab target + no-drift docs (LAB-01)
 
@@ -118,7 +118,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 |-------|-----------|----------------|--------|-----------|
 | 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete    | 2026-05-27 |
 | 114. Automatic Merge Trigger | v5.5 | 3/3 | Complete   | 2026-05-27 |
-| 115. Live-UAT Stabilization + Lab Testability | v5.5 | 0/TBD | Not started | - |
+| 115. Live-UAT Stabilization + Lab Testability | v5.5 | 1/3 | In progress | 2026-05-27 |
 | 116. Windows Packaging Spike | v5.5 | 0/TBD | Not started | - |
 
 ---

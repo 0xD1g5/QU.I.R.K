@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.5
 milestone_name: Distributed Hardening + Stabilization
-status: planning
-stopped_at: Phase 114 context gathered
-last_updated: "2026-05-27T02:47:11.929Z"
+status: executing
+stopped_at: Phase 115 Plan 01 complete
+last_updated: "2026-05-27T12:00:00.000Z"
 last_activity: 2026-05-27
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 50
+  total_plans: 9
+  completed_plans: 8
+  percent: 56
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-26)
 
 ## Current Position
 
-Phase: 114
-Plan: Not started
-Status: Ready to plan
+Phase: 115
+Plan: 01 complete; Plan 02 ready
+Status: Executing
 Last activity: 2026-05-27
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 56%
 
 ## Performance Metrics
 
@@ -51,11 +51,13 @@ Progress: [██████████] 100%
 - Per-sensor model: opaque tokens hashed SHA-256 in existing `sensor_tokens` table; reuse `token_cmd.py` pattern; NO per-sensor JWT (v5.4 forbidden-additions list still applies)
 - AUTOMERGE: poll-on-full-check-in on existing FastAPI app; no Celery/Redis/queue (forbidden infra)
 - WINPKG: spike/sizing ONLY — no frozen EXE ships in v5.5; `windows-latest` CI validates feasibility
+- STAB-01: idempotent enroll exits 0, no token churn; console_cmd uses return (WR-04), sensor_cmd uses sys.exit(0); pre-check before secret generation (Pitfall 1 prevention)
+- STAB-04: advisory filter at _read_scan_endpoints boundary (IS NULL clause mandatory for SQLite 3VL); advisory rows stay in local DB for trends.py
 
 ### Pending Todos
 
-- Phase 115: STAB-04 root-cause investigation — `email_scanner`/`broker_scanner` phantom rows with `scanned_at=None` / port-0 in console DB after distributed e2e; likely scanner init path writing before scan completes
-- Phase 115: LAB-01 — identify which distributed lab segment gets the weak-crypto target; update lab.sh ALL_PROFILES + expected_results + README in the same change (CLAUDE.md no-drift rule)
+- Phase 115 Plan 02: STAB-02 (cmvp_cache.json packaging + importlib.resources load path) + STAB-03 (scheduler --target/--output drop)
+- Phase 115 Plan 03: LAB-01 — add weak-TLS target on segment-b; update lab.sh + expected_results_distributed.md + README (CLAUDE.md no-drift rule)
 
 ### Blockers
 
@@ -75,7 +77,7 @@ Carried forward from v5.4/v5.3 close:
 
 ## Session Continuity
 
-Last session: 2026-05-27T02:47:11.926Z
-Stopped at: Phase 114 context gathered
+Last session: 2026-05-27T12:00:00.000Z
+Stopped at: Phase 115 Plan 01 complete (STAB-01 + STAB-04)
 Resume file: None
-Next: `/gsd-autonomous 113` or `/gsd-plan-phase 113`
+Next: `/gsd-autonomous 115` (Plan 02: STAB-02 + STAB-03)
