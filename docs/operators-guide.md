@@ -662,6 +662,141 @@ The console validates the HMAC signature, decompresses the envelope, deduplicate
 
 ---
 
+### 8.8 Windows sensor deployment (zip + Scheduled Task)
+
+*(v5.6+ — frozen binary; no Python required on the sensor host)*
+
+For Windows sensor hosts where a Python runtime is not available (or not desired),
+download the pre-built `quirk-windows-<version>.zip` asset from the [GitHub Release](
+https://github.com/0xD1g5/QU.I.R.K/releases) for your target version. The zip bundles
+the frozen `quirk.exe` onedir executable together with `install.ps1`, `uninstall.ps1`,
+and a `sensor.sample.yaml` reference config — no Python install required on the sensor
+host.
+
+#### Unsigned binary notice
+
+The zip asset is **NOT Authenticode-signed**. Authenticode signing is deferred to a
+future milestone. Operators may see a Windows SmartScreen prompt ("Windows protected your
+PC") when running `install.ps1` or `quirk.exe` for the first time. To proceed: click
+**More info**, then **Run anyway**. Operators who require signed binaries should build
+from source until Authenticode signing is implemented.
+
+#### Prerequisites
+
+- **PowerShell 5.1+** (built in to Windows 10/11 and Windows Server 2016+).
+- An enrollment token issued by `quirk console enroll` on the console host. See
+  §8.1.1 for how to provision per-sensor push credentials via
+  `quirk console enroll --segment <label>`.
+- Network access from the Windows host to the QUIRK console on its listen port
+  (default 8512).
+
+#### Install
+
+1. Download `quirk-windows-<version>.zip` from the GitHub Release and unpack it:
+
+   ```powershell
+   Expand-Archive -Path quirk-windows-<version>.zip -DestinationPath C:\quirk-install
+   cd C:\quirk-install
+   ```
+
+2. Run `install.ps1`. The installer copies the bundle to
+   `%LOCALAPPDATA%\Programs\QUIRK` (**no admin elevation required**), enrolls the
+   sensor against the console, tightens the sensor config ACL to the current user,
+   and registers a daily Scheduled Task named **"QUIRK Sensor Push"** that runs
+   `quirk.exe sensor push` on the chosen cadence.
+
+   Mandatory parameters:
+
+   | Parameter | Description |
+   |-----------|-------------|
+   | `-ConsoleUrl` | Base URL of the QUIRK console (e.g. `https://quirk.example.com` or `https://10.0.0.5:8512`). |
+   | `-EnrollmentToken` | Per-sensor opaque Bearer token from `quirk console enroll`. Passed directly to `quirk.exe sensor enroll --api-token`; never echoed to console or logs. |
+
+   Optional parameters:
+
+   | Parameter | Default | Description |
+   |-----------|---------|-------------|
+   | `-Segment` | `"windows"` | Network segment label written to the sensor config. |
+   | `-Time` | `"03:00"` | Daily trigger time for the Scheduled Task (HH:MM format). |
+   | `-AllowInternalConsole` | *(switch)* | Pass to allow the sensor to reach a console on a private/RFC1918 address (on-prem or lab). |
+
+   Example — production console:
+
+   ```powershell
+   pwsh -File install.ps1 `
+     -ConsoleUrl https://quirk.example.com `
+     -EnrollmentToken <per-sensor-token>
+   ```
+
+   Example — on-prem lab console on a private IP, custom cadence and segment:
+
+   ```powershell
+   pwsh -File install.ps1 `
+     -ConsoleUrl https://10.0.0.5:8512 `
+     -EnrollmentToken <per-sensor-token> `
+     -AllowInternalConsole `
+     -Time 02:00 `
+     -Segment corp-windows
+   ```
+
+   After `install.ps1` completes, the sensor is installed at
+   `%LOCALAPPDATA%\Programs\QUIRK\quirk\quirk.exe` and the sensor config is written to
+   `%LOCALAPPDATA%\Programs\QUIRK\config\sensor.yaml`. The config file is ACL-restricted
+   to the current user immediately after enrollment.
+
+#### Scheduled Task
+
+`install.ps1` registers a Windows Scheduled Task named **"QUIRK Sensor Push"** that runs
+`quirk.exe sensor push` daily at the configured time under the current user account
+(**no admin elevation** — `RunLevel Limited`). To inspect or manage the task:
+
+```powershell
+# Confirm the task exists and its next run time
+Get-ScheduledTask -TaskName "QUIRK Sensor Push" | Get-ScheduledTaskInfo
+
+# Disable the task (without removing it)
+Disable-ScheduledTask -TaskName "QUIRK Sensor Push"
+
+# Run the push immediately (outside the schedule)
+& "$env:LOCALAPPDATA\Programs\QUIRK\quirk\quirk.exe" sensor push `
+    --config "$env:LOCALAPPDATA\Programs\QUIRK\config\sensor.yaml"
+```
+
+#### Uninstall
+
+Run `uninstall.ps1` from any working directory (it does not need to be in the unpack
+root — it always targets `%LOCALAPPDATA%\Programs\QUIRK`):
+
+```powershell
+# Full removal — unregisters the Scheduled Task and removes all installed files
+pwsh -File uninstall.ps1
+
+# Preserve the sensor config (re-install without re-enrolling)
+pwsh -File uninstall.ps1 -KeepConfig
+```
+
+`-KeepConfig` removes the binary bundle but leaves `%LOCALAPPDATA%\Programs\QUIRK\config\`
+intact so a future `install.ps1` run can reuse the existing sensor identity without
+re-enrolling.
+
+#### Security note — sensor config at rest
+
+The sensor config file (`%LOCALAPPDATA%\Programs\QUIRK\config\sensor.yaml`) holds the
+per-sensor push credential (`console_api_token`). `install.ps1` tightens its ACL to
+grant **Read + Write to the current user only** immediately after enrollment. Do not
+commit or share this file. If the token is compromised, revoke it on the console host
+and re-enroll:
+
+```bash
+# Console host
+quirk console revoke-sensor <sensor_id>
+quirk console enroll --segment <label>
+```
+
+Then re-run `install.ps1` on the Windows host with the new enrollment token.
+
+---
+
 ### 8.9 Automatic Merge
 
 *(v5.5+)*
