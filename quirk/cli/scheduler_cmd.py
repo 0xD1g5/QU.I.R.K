@@ -306,8 +306,14 @@ def _dispatch_schedule(
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _stdout, _stderr = proc.communicate()
         run.status = "completed" if proc.returncode == 0 else "failed"
-    except Exception:
+    except Exception as _exc:
         run.status = "failed"
+        import logging as _logging
+        from quirk.util.safe_exc import safe_str as _safe_str
+        _logging.getLogger(__name__).error(
+            "Subprocess launch failed for schedule %r: %s",
+            schedule.name, _safe_str(_exc),
+        )
 
     run.completed_at = _utcnow_naive()
     run.scan_output_path = str(output_dir)
