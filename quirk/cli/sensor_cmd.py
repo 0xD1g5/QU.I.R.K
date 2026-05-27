@@ -446,7 +446,18 @@ def _run_local_scan(
 
 
 def _read_scan_endpoints(db_path: str) -> list:
-    """Open the scan SQLite DB produced by the local scan and return CryptoEndpoint rows."""
+    """Open the scan SQLite DB produced by the local scan and return non-advisory CryptoEndpoint rows.
+
+    STAB-04: filters out advisory sentinel rows with scan_error_category='missing_extra'.
+    These rows are written by run_scan._emit_missing_extra_advisory when an optional
+    scanner extra (e.g. [motion]) is absent.  They carry host=<scanner_name>, port=0,
+    scanned_at=None and must NOT enter the push envelope or export payload.
+    Advisory rows remain in the local DB so trends.py can track missing-extra incidents.
+
+    NULL guard: SQLite's != operator does NOT match NULL (SQL three-valued logic).
+    The explicit IS NULL or-clause is MANDATORY to include normal finding rows whose
+    scan_error_category is not set (Pitfall 3 / T-115-04).
+    """
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
@@ -454,7 +465,14 @@ def _read_scan_endpoints(db_path: str) -> list:
 
     engine = create_engine(f"sqlite:///{db_path}")
     with Session(engine) as session:
-        return session.query(CryptoEndpoint).all()
+        return (
+            session.query(CryptoEndpoint)
+            .filter(
+                (CryptoEndpoint.scan_error_category != "missing_extra")
+                | CryptoEndpoint.scan_error_category.is_(None)
+            )
+            .all()
+        )
 
 
 # ---------------------------------------------------------------------------
