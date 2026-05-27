@@ -172,6 +172,29 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     segment: str = args.segment
     engagement: str | None = args.engagement
 
+    # STAB-01: pre-check for existing sensor_id BEFORE minting any token.
+    # D-01: if already enrolled, exit 0 without printing a token (no token churn).
+    # D-02: retain IntegrityError backstop below for the pre-check/insert race window.
+    # WR-04: return normally (not sys.exit(0)) — avoids SystemExit in unit tests.
+    # T-115-02: fixed-string message; no exception text serialised.
+    db_path_precheck = _default_db_path()
+    engine_precheck = init_db(db_path_precheck)
+    _SessionPrecheck = sessionmaker(
+        bind=engine_precheck,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+    )
+    with _SessionPrecheck() as _pre_db:
+        _existing = _pre_db.query(Sensor).filter(Sensor.sensor_id == sensor_id).first()
+        if _existing is not None:
+            print(
+                f"INFO: sensor already enrolled — sensor_id={sensor_id}",
+                file=sys.stderr,
+            )
+            print(f"sensor_id: {sensor_id}", file=sys.stderr)
+            return  # D-01: no new token minted; WR-04: return, not sys.exit(0)
+
     # Mint raw token; derive hash — raw token never persisted (T-109-01)
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
