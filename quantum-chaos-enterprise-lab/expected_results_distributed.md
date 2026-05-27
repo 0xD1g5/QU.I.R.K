@@ -50,8 +50,9 @@ real-world network segmentation.
 |---------|-------|----------|-----------|----------------|-------|------|
 | `tls-target-a` | `nginx:1.28.0` | `segment-a` | `10.10.0.10` on segment-a | — (expose 443 only) | `crypto.internal` (segment-a) | TLS target for sensor-a |
 | `tls-target-b` | `nginx:1.28.0` | `segment-b` | `10.20.0.10` on segment-b | — (expose 443 only) | `crypto.internal` (segment-b) | TLS target for sensor-b |
+| `tls-weak-b` | `nginx:1.28.0` | `segment-b` | `10.20.0.20` on segment-b | — (expose 443 only) | — | Weak-TLS target for sensor-b only (TLS 1.0/1.1 + HIGH:MEDIUM ciphers); LAB-01 |
 | `sensor-a` | sensor.Dockerfile | `segment-a`, `console-net` | — | — | — | Scans `crypto.internal:443` on segment-a, pushes to console |
-| `sensor-b` | sensor.Dockerfile | `segment-b`, `console-net` | — | — | — | Scans `crypto.internal:443` on segment-b, pushes to console |
+| `sensor-b` | sensor.Dockerfile | `segment-b`, `console-net` | — | — | — | Scans `crypto.internal:443` + `10.20.0.20:443` on segment-b, pushes to console |
 | `console` | sensor.Dockerfile | `console-net` | — | `8512:8512` | — | Runs `quirk serve --host 0.0.0.0 --port 8512`; aggregates pushed findings |
 
 **Image pin note:** `nginx:1.28.0` is a minor/patch pin per the chaos-lab Image Pin Policy.
@@ -149,6 +150,50 @@ production pattern.
 **Human-UAT gate:** The live enroll→push→merge run against the running containers is
 human-UAT (deferred by design; see `distributed-e2e.sh` for the orchestration script).
 Automated CI floor: `tests/test_distributed_topology.py` (10 static assertions).
+
+---
+
+---
+
+### LAB-01: Per-Segment Weak-TLS Filter Validation
+
+**Introduced:** v5.5 Phase 115
+
+**Purpose:** Exercises the Phase 111 per-segment score/filter end-to-end using a real
+weak-crypto target on segment-b. sensor-b scans both `crypto.internal:443` (modern TLS,
+`tls-target-b`) and `10.20.0.20:443` (weak TLS 1.0/1.1, `tls-weak-b`). sensor-a does NOT
+join segment-b and cannot reach `10.20.0.20` — the segment isolation boundary holds.
+
+**Scan config:** sensor-b mounts `sensor-config-b.yaml` (not the shared `sensor-config.yaml`).
+`sensor-config-b.yaml` lists `crypto.internal` in `fqdns` and `10.20.0.20` in `include_ips`.
+sensor-a's `sensor-config.yaml` is unchanged (`crypto.internal` only).
+
+#### Expected Findings — sensor-b, host `10.20.0.20`
+
+| Field | Expected Value |
+|-------|---------------|
+| `host` | `10.20.0.20` |
+| `port` | `443` |
+| `tls_version` | `TLS 1.0` or `TLS 1.1` (legacy protocol reported) |
+| `cipher_suite` | HIGH:MEDIUM legacy cipher (e.g., `AES128-SHA`, `ECDHE-RSA-AES128-SHA`) |
+| `quantum_risk` | elevated (legacy protocol penalty; no PFS on weak ciphers) |
+| `scanned_at` | non-null (sensor-b successfully reached the target) |
+| `segment` | `segment-b` |
+
+**nginx/legacy/nginx.conf** configures `ssl_protocols TLSv1 TLSv1.1 TLSv1.2` and
+`ssl_ciphers HIGH:MEDIUM:!aNULL:!MD5`. The scanner will report at minimum TLS 1.0/1.1
+availability and the absence of forward-secrecy-only cipher restrictions as findings.
+
+#### Segment Isolation Assertion (Test 7)
+
+| Assertion | Expected |
+|-----------|----------|
+| sensor-a merged output: rows with `host=10.20.0.20` | **0 rows** (sensor-a cannot reach segment-b's `10.20.0.20`) |
+| sensor-b merged output: rows with `host=10.20.0.20` | **≥ 1 row** with `scanned_at` non-null and `segment='segment-b'` |
+
+`distributed-e2e.sh` Step 7 (Test 7) queries the console DB after merge to assert both
+conditions. A Test 7 failure indicates a segment isolation breach and must be investigated
+before trusting the per-segment filter results.
 
 ---
 
