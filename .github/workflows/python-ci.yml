@@ -25,3 +25,57 @@ jobs:
 
       - name: Run Windows sensor smoke tests
         run: pytest tests/test_sensor_windows_smoke.py tests/test_sensor_no_verify_false.py -v
+
+  windows-packaging-spike:
+    name: Windows Packaging Spike
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project and PyInstaller
+        run: |
+          pip install -e .
+          pip install pyinstaller==6.20.0
+
+      - name: Build onefile EXE
+        run: |
+          pyinstaller --onefile --name quirk `
+            --collect-all quirk `
+            --collect-all sqlalchemy `
+            --collect-all fastapi `
+            --copy-metadata quirk-scanner `
+            --hidden-import sqlalchemy.dialects.sqlite `
+            --hidden-import sqlalchemy.dialects.sqlite.pysqlite `
+            --hidden-import uvicorn.logging `
+            --hidden-import uvicorn.loops.auto `
+            --hidden-import uvicorn.protocols.http.auto `
+            --add-data "quirk/compliance/cmvp_cache.json;quirk/compliance" `
+            --add-data "quirk/compliance/cmvp_curated.csv;quirk/compliance" `
+            --add-data "quirk/reports/templates;quirk/reports/templates" `
+            run_scan.py 2>&1 | Tee-Object -FilePath pyinstaller-build.log
+        continue-on-error: true
+
+      - name: Report build outcome
+        shell: pwsh
+        run: |
+          if (Test-Path dist/quirk.exe) {
+            $mb = [math]::Round((Get-Item dist/quirk.exe).Length / 1MB, 1)
+            Write-Output "RESULT: BUILD_SUCCESS --- EXE size: $mb MB"
+          } else {
+            Write-Output "RESULT: BUILD_FAILED --- see pyinstaller-build.log artifact"
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pyinstaller-spike-evidence
+          path: |
+            pyinstaller-build.log
+            build/quirk/warn-quirk.txt
+            dist/quirk.exe
+          retention-days: 30
