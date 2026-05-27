@@ -1,5 +1,6 @@
 import argparse
 import json
+import multiprocessing
 import os
 import sys
 import time
@@ -2252,4 +2253,5 @@ def _run_main_with_job_guard() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     _run_main_with_job_guard()
