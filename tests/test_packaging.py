@@ -17,7 +17,7 @@ def test_version_is_4_2_0():
     Superseded by tests/test_version.py.
     """
     from quirk import __version__
-    assert __version__ == "4.4.0", f"Expected 4.4.0, got {__version__!r}"
+    assert __version__ == "5.5.0", f"Expected 5.5.0, got {__version__!r}"
 
 
 def test_package_data_templates():
