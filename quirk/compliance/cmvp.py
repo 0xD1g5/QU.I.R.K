@@ -92,7 +92,13 @@ def _load_cache(force_reload: bool = False) -> dict:
     # default (e.g. in tests); otherwise prefer importlib.resources for
     # wheel-safe resource loading.
     _default_path = Path(__file__).parent / "cmvp_cache.json"
-    if _CACHE_PATH != _default_path and _CACHE_PATH.exists():
+    if _CACHE_PATH != _default_path:
+        # Monkeypatched path — must exist; if absent the patch is incorrect,
+        # not a signal to fall through to the real production cache (IN-03).
+        if not _CACHE_PATH.exists():
+            raise FileNotFoundError(
+                f"Monkeypatched _CACHE_PATH does not exist: {_CACHE_PATH}"
+            )
         _text = _CACHE_PATH.read_text(encoding="utf-8")
     else:
         _text = (
