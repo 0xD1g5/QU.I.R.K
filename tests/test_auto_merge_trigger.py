@@ -239,7 +239,7 @@ def test_all_sensors_in_triggers_merge(monkeypatch, tmp_path):
         merge_runs = db.query(MergeRun).all()
         assert len(merge_runs) == 1, f"Expected 1 MergeRun, got {len(merge_runs)}"
         mr = merge_runs[0]
-        assert mr.sensor_count >= 0  # merge ran; sensor_count depends on data
+        assert mr.sensor_count >= 2  # both sensor-a and sensor-b were merged
     finally:
         db.close()
 
