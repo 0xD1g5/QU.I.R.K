@@ -35,17 +35,21 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List
 
+import os
+
+import yaml
 import zstandard
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.cli.console_cmd import DuplicatePayloadError, UnknownSensorError, _ingest_envelope
-from quirk.dashboard.api.deps import get_db
+from quirk.dashboard.api.deps import _default_db_path, get_db
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.sensor_auth import require_sensor_auth
 from quirk.dashboard.api.schemas import SensorRegistryItem, SensorRegistryResponse
-from quirk.models import IntegrationDelivery, Sensor
+from quirk.models import IntegrationDelivery, MergeRun, Sensor, SensorToken
 from quirk.util.safe_exc import safe_str
 
 logger = logging.getLogger(__name__)
@@ -115,6 +119,145 @@ def _sensor_status(s, now: datetime) -> str:
     if now > last_push + 2 * cadence:
         return "stale"
     return "current"
+
+
+# ---------------------------------------------------------------------------
+# Phase 114 AUTOMERGE-02: auto-merge config loader + trigger evaluator
+# ---------------------------------------------------------------------------
+
+def _load_auto_merge_config(config_path: str) -> dict:
+    """Load console.auto_merge block from config.yaml.
+
+    Priority: explicit path > QUIRK_CONFIG_PATH env var > ./config.yaml.
+    Returns defaults when file absent, missing key, or malformed — never raises.
+    Source: quirk/notify/config.py load_notifications_config L172-L184 pattern.
+    """
+    defaults: dict = {"enabled": True, "trigger_condition": "all-sensors-in"}
+    effective_path = config_path or os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+    if not effective_path or not os.path.isfile(effective_path):
+        return defaults
+    try:
+        with open(effective_path, encoding="utf-8") as f:
+            raw = yaml.safe_load(f) or {}
+        block = (raw.get("console") or {}).get("auto_merge") or {}
+        return {**defaults, **block}
+    except Exception:
+        return defaults
+
+
+def _eval_trigger_condition(db: Session, config_path: str) -> bool:
+    """Return True if auto-merge should be scheduled for this push (D-03/D-04/D-09).
+
+    Reads config first (fast exit when disabled). Evaluates against current DB
+    state using the just-committed push (last_push_at is fresh).
+    Source: _sensor_status (L84) + merge/scan._build_coverage_warning (L34) patterns.
+    """
+    cfg = _load_auto_merge_config(config_path)
+    if not cfg.get("enabled", True):
+        return False
+
+    condition = cfg.get("trigger_condition", "all-sensors-in")
+
+    if condition == "all-sensors-in":
+        # Active sensors: Sensor rows NOT in the subquery of revoked SensorToken sensor_ids
+        # (D-04 + Pitfall 2): a sensor whose only token is revoked is excluded from "all in"
+        revoked_sensor_ids = (
+            db.query(SensorToken.sensor_id)
+            .filter(SensorToken.revoked_at.isnot(None))
+        )
+        active_sensors = (
+            db.query(Sensor)
+            .filter(~Sensor.sensor_id.in_(revoked_sensor_ids))
+            .all()
+        )
+        if not active_sensors:
+            return False
+        if any(s.last_push_at is None for s in active_sensors):
+            return False
+        latest_merge = db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
+        if latest_merge is None:
+            return True  # no prior merge — always trigger when all in
+        latest_push = max(s.last_push_at for s in active_sensors)
+        return latest_push > latest_merge.merged_at
+
+    elif condition == "cadence-window":
+        latest_merge = db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
+        if latest_merge is None:
+            return True  # no prior merge — trigger immediately
+        window_minutes = cfg.get("cadence_window_minutes")
+        if window_minutes is None:
+            first_sensor = db.query(Sensor).first()
+            window_minutes = (
+                (first_sensor.expected_cadence_minutes or 1440) if first_sensor else 1440
+            )
+        now = datetime.now(timezone.utc).replace(tzinfo=None)  # Pitfall 3: always naive UTC
+        elapsed = (now - latest_merge.merged_at).total_seconds() / 60
+        return elapsed >= window_minutes
+
+    return False  # unknown condition → safe default off (V5 input-validation)
+
+
+# ---------------------------------------------------------------------------
+# Phase 114 AUTOMERGE-01: auto-merge background task
+# ---------------------------------------------------------------------------
+
+def run_auto_merge(db_path: str, config_path: str) -> None:
+    """Auto-merge background task — own session, own output_dir (D-02/D-11).
+
+    Mirrors _cmd_merge's db_path/output_dir resolution exactly.
+    Source: quirk/cli/sensor_cmd.py _cmd_merge L770-L797.
+    All exceptions caught and surfaced via IntegrationDelivery audit row (D-10).
+    Never propagates to the push transaction (D-11 structural isolation).
+    """
+    from quirk.db import get_session, init_db
+    from quirk.merge.scan import merge_scan
+
+    # Mirror _cmd_merge exactly (D-02)
+    init_db(db_path)
+    output_dir = os.path.dirname(os.path.abspath(db_path))
+
+    try:
+        with get_session(db_path) as db:
+            # D-05: idempotent re-check — no-op if a MergeRun already covers latest pushes
+            latest_merge = db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
+            if latest_merge is not None:
+                latest_push = db.query(func.max(Sensor.last_push_at)).scalar()
+                if latest_push is not None and latest_push <= latest_merge.merged_at:
+                    return  # already covered — no-op (D-05)
+
+            # D-12: reuse merge_scan() unchanged
+            result = merge_scan(db, output_dir=output_dir)
+            # get_session commit-on-exit persists MergeRun (merge_scan used flush)
+
+            # D-10: success audit row in SAME session (Pitfall 6)
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            db.add(IntegrationDelivery(
+                scan_id=result["scan_id"],
+                finding_hash=None,
+                destination="auto_merge",
+                status="ok",
+                attempted_at=now,
+                error_summary=None,
+            ))
+            # get_session commit-on-exit persists both MergeRun + audit row atomically
+
+    except Exception as exc:
+        # D-10/D-11: failure surfaced via audit row; never touches push transaction
+        logger.warning("Auto-merge failed: %s", safe_str(exc))
+        try:
+            init_db(db_path)
+            with get_session(db_path) as audit_db:
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
+                audit_db.add(IntegrationDelivery(
+                    scan_id=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    finding_hash=None,
+                    destination="auto_merge",
+                    status="failed",
+                    attempted_at=now,
+                    error_summary=safe_str(exc),  # T-109-07: never str(exc)
+                ))
+        except Exception as audit_exc:
+            logger.warning("Auto-merge audit row failed: %s", safe_str(audit_exc))
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +344,11 @@ def _audit(
 # Route handler — on sensor_push_router (require_sensor_auth, not require_auth)
 # ---------------------------------------------------------------------------
 @sensor_push_router.post("/sensor/push")
-async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
+async def sensor_push(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> dict:
     """POST /api/sensor/push — ingest a sensor push envelope.
 
     Full §6 failure ladder with IntegrationDelivery audit on every branch.
@@ -378,5 +525,15 @@ async def sensor_push(request: Request, db: Session = Depends(get_db)) -> dict:
         db.rollback()
         _audit(db, scan_id, "failed", safe_str(exc))
         raise HTTPException(status_code=500, detail="Ingest commit failed")
+
+    # ------------------------------------------------------------------
+    # D-01/D-03: evaluate trigger AFTER final commit, BEFORE return.
+    # Uses request-scoped db (still open; last_push_at just committed).
+    # Pass only scalar str args — never ORM objects or request session (Pitfall 1).
+    # ------------------------------------------------------------------
+    db_path = _default_db_path()
+    config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+    if _eval_trigger_condition(db, config_path):
+        background_tasks.add_task(run_auto_merge, db_path, config_path)
 
     return {"status": "accepted", "sensor_id": envelope.sensor_id, "payload_id": envelope.payload_id}
