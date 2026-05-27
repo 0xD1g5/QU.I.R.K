@@ -528,7 +528,8 @@ async def sensor_push(
     # ------------------------------------------------------------------
     # WR-02: write the "ok" audit row BEFORE the final commit so both the
     # ingest data and the audit row are committed atomically in one transaction.
-    # _audit() calls db.add(); the final db.commit() below persists everything.
+    # The ok row is added directly via db.add() (success path does not call
+    # _audit, which commits on its own); the final db.commit() below persists it.
     # ------------------------------------------------------------------
     now_audit = datetime.now(timezone.utc).replace(tzinfo=None)
     ok_row = IntegrationDelivery(
@@ -556,7 +557,7 @@ async def sensor_push(
     # Pass only scalar str args — never ORM objects or request session (Pitfall 1).
     # ------------------------------------------------------------------
     db_path = _default_db_path()
-    config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+    config_path = ingest_config_path  # IN-02: reuse the single resolution above
     if _eval_trigger_condition(db, config_path):
         background_tasks.add_task(run_auto_merge, db_path, config_path)
 
