@@ -83,7 +83,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   4. `quirk sensor merge` still executes correctly and produces the same Option-A union CBOM + `coverage_warning` + sensor-local `scanned_at` output as in v5.4, with no regression
 **Plans**: 3 plans
 - [x] 114-01-PLAN.md — Auto-merge core: config loader, trigger evaluator, BackgroundTask wired into sensor_push (AUTOMERGE-01, -02)
-- [ ] 114-02-PLAN.md — 6 acceptance tests: all-sensors-in, disabled, failure-isolated, double-fire, cadence-window, manual-merge regression (AUTOMERGE-01, -02, -03)
+- [x] 114-02-PLAN.md — 6 acceptance tests: all-sensors-in, disabled, failure-isolated, double-fire, cadence-window, manual-merge regression (AUTOMERGE-01, -02, -03)
 - [ ] 114-03-PLAN.md — Operator docs, distributed lab e2e oracle, UAT-SERIES + Obsidian sync (AUTOMERGE-03)
 
 ### Phase 115: Live-UAT Stabilization + Lab Testability
@@ -114,7 +114,7 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 113. Per-Sensor Authentication | v5.5 | 3/3 | Complete    | 2026-05-27 |
-| 114. Automatic Merge Trigger | v5.5 | 1/3 | In Progress|  |
+| 114. Automatic Merge Trigger | v5.5 | 2/3 | In Progress|  |
 | 115. Live-UAT Stabilization + Lab Testability | v5.5 | 0/TBD | Not started | - |
 | 116. Windows Packaging Spike | v5.5 | 0/TBD | Not started | - |
 
