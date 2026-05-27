@@ -185,8 +185,14 @@ jobs:
 
           # Compress into a single versioned zip
           $zipName = "quirk-windows-$version.zip"
-          Compress-Archive -Path "$staging\*" -DestinationPath $zipName -Force
-          if ($LASTEXITCODE -ne 0) { Write-Error "Compress-Archive failed (exit $LASTEXITCODE)"; exit 1 }
+          try {
+            Compress-Archive -Path "$staging\*" -DestinationPath $zipName -Force -ErrorAction Stop
+          } catch {
+            Write-Error "zip assembly failed: $_"; exit 1
+          }
+          if (-not (Test-Path $zipName)) {
+            Write-Error "Compress-Archive reported success but '$zipName' was not found on disk."; exit 1
+          }
 
           $mb = [math]::Round((Get-Item $zipName).Length / 1MB, 1)
           Write-Output "ZIP_ASSEMBLED: $zipName ($mb MB)"
