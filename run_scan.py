@@ -8,6 +8,18 @@ from datetime import datetime, timezone
 from collections import Counter
 from typing import List, Tuple, Dict, Any, Optional
 
+# Windows consoles default to the cp1252 codec, which cannot encode the Unicode
+# glyphs QUIRK emits (e.g. the "→" arrow in --help, score gauges, roadmap output).
+# Reconfigure stdout/stderr to UTF-8 on Windows so the frozen sensor binary and
+# the CLI render correctly instead of raising UnicodeEncodeError. No-op on
+# POSIX, where stdout is already UTF-8.
+if sys.platform == "win32":
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):  # stream replaced or not a TextIOWrapper
+            pass
+
 from quirk.config import load_config
 from quirk.util.safe_exc import safe_str
 from quirk.interactive import interactive_config
