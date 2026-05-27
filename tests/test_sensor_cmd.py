@@ -213,6 +213,50 @@ def test_enroll_creates_config_dir_if_absent(tmp_path, monkeypatch):
     assert sensor_yaml.exists()
 
 
+def test_enroll_idempotent_sensor_yaml(tmp_path, monkeypatch, capsys):
+    """STAB-01 / Pitfall 6: re-running enroll with the same sensor_id must not
+    regenerate hmac_key, must exit 0, and must print 'already enrolled' to stderr.
+    """
+    sensor_yaml = tmp_path / "sensor.yaml"
+
+    mock_result = MagicMock()
+    mock_result.ok = True
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+
+    from quirk.cli.sensor_cmd import _cmd_enroll
+
+    sid = str(uuid.uuid4())
+
+    class Args:
+        console_url = "https://console.example"
+        segment = "dmz"
+        engagement = None
+        config = str(sensor_yaml)
+        api_token = "tok1"
+        sensor_id = sid
+        allow_internal_console = False
+
+    # First enroll
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_enroll(Args())
+    assert exc_info.value.code == 0
+    first_cfg = yaml.safe_load(sensor_yaml.read_text())
+    first_hmac = first_cfg["hmac_key"]
+
+    # Second enroll — same sensor_id
+    with pytest.raises(SystemExit) as exc_info2:
+        _cmd_enroll(Args())
+    assert exc_info2.value.code == 0
+
+    captured = capsys.readouterr()
+    assert "already enrolled" in captured.err
+
+    # hmac_key must be unchanged (Pitfall 6)
+    second_cfg = yaml.safe_load(sensor_yaml.read_text())
+    assert second_cfg["hmac_key"] == first_hmac
+
+
 def test_enroll_ssrf_guard_exits_nonzero(monkeypatch, capsys):
     """SENSOR-01: enroll exits non-zero with a stderr message when URL is blocked."""
     mock_result = MagicMock()
