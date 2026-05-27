@@ -571,6 +571,10 @@ def _cmd_push(args: argparse.Namespace) -> None:
         print("ERROR: sensor.yaml hmac_key is not valid hex", file=sys.stderr)
         sys.exit(1)
 
+    # v5.5 per-sensor auth: console_api_token holds the per-sensor enrollment token
+    # (printed once by `quirk console enroll`), NOT the shared QUIRK_API_TOKEN.
+    # Place the enrollment token value here; it is sent as Authorization: Bearer.
+    # Wire contract (Authorization: Bearer <token>) is unchanged (OS-agnostic).
     api_token: str = sensor_cfg.get("console_api_token", "")
 
     # Run local scan in a temp output dir
