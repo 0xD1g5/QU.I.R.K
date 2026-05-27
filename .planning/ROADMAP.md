@@ -81,7 +81,10 @@ Full details: `.planning/milestones/v5.4-ROADMAP.md`.
   2. Auto-merge can be disabled in config so operators who prefer explicit control keep the manual-only workflow; toggling does not affect in-flight pushes
   3. A merge failure (e.g. bad payload from one sensor) is logged and surfaced to the operator but does not block or roll back other sensors' successful pushes
   4. `quirk sensor merge` still executes correctly and produces the same Option-A union CBOM + `coverage_warning` + sensor-local `scanned_at` output as in v5.4, with no regression
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 114-01-PLAN.md — Auto-merge core: config loader, trigger evaluator, BackgroundTask wired into sensor_push (AUTOMERGE-01, -02)
+- [ ] 114-02-PLAN.md — 6 acceptance tests: all-sensors-in, disabled, failure-isolated, double-fire, cadence-window, manual-merge regression (AUTOMERGE-01, -02, -03)
+- [ ] 114-03-PLAN.md — Operator docs, distributed lab e2e oracle, UAT-SERIES + Obsidian sync (AUTOMERGE-03)
 
 ### Phase 115: Live-UAT Stabilization + Lab Testability
 **Goal**: The four defects surfaced by the distributed E2E are root-caused and eliminated so the lab is re-runnable without teardown, and the Phase 111 per-segment filter is exercisable end-to-end against a real weak-crypto target in the distributed lab
