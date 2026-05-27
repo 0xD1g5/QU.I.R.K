@@ -78,6 +78,7 @@ def _compute_next_run(schedule: ScheduledScan) -> datetime:
 # ---------------------------------------------------------------------------
 
 _STALE_THRESHOLD = timedelta(hours=2)
+_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
 
 
 def _recover_stale_runs(db: Session) -> int:
@@ -265,11 +266,10 @@ def _dispatch_schedule(
         )
         return run
 
-    # WR-02: sanitize schedule.name before using it as a path component.
+    # Sanitize schedule.name before using it as a path component.
     # A name like '../../../etc/cron.d' would escape the output tree via Path().
     # Accept only alphanumerics, underscores, and hyphens (max 128 chars);
     # fall back to "unnamed" so mkdir never traverses outside output/scheduled/.
-    _SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
     safe_name = schedule.name if _SAFE_NAME_RE.match(schedule.name) else "unnamed"
 
     # Determine output base: prefer cfg.output.directory from an explicit scan_config;
