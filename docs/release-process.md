@@ -252,7 +252,7 @@ descriptors.
 The GHCR package is created as **private** on first publish. Flip it to
 public so unauthenticated `docker pull` works for evaluators:
 
-1. Open `https://github.com/0xD1g5/QU.I.R.K./pkgs/container/quirk` after the
+1. Open `https://github.com/0xD1g5/QU.I.R.K/pkgs/container/quirk` after the
    first successful `release-container` workflow run.
 2. Click **Package settings -> Change visibility -> Public**.
 3. Confirm with the package name.

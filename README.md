@@ -1,6 +1,6 @@
-[![Python Staleness Gate](https://img.shields.io/github/actions/workflow/status/0xD1g5/QU.I.R.K./python-staleness.yml?branch=main&label=CI)](https://github.com/0xD1g5/QU.I.R.K./actions/workflows/python-staleness.yml)
+[![Python Staleness Gate](https://img.shields.io/github/actions/workflow/status/0xD1g5/QU.I.R.K/python-staleness.yml?branch=main&label=CI)](https://github.com/0xD1g5/QU.I.R.K/actions/workflows/python-staleness.yml)
 [![PyPI version](https://img.shields.io/pypi/v/quirk-scanner.svg)](https://pypi.org/project/quirk-scanner/)
-[![License: MIT](https://img.shields.io/github/license/0xD1g5/QU.I.R.K.)](LICENSE)
+[![License: MIT](https://img.shields.io/github/license/0xD1g5/QU.I.R.K)](LICENSE)
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
@@ -93,7 +93,7 @@ Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major sca
 <summary>Develop from source</summary>
 
 ```bash
-git clone https://github.com/0xD1g5/QU.I.R.K.
+git clone https://github.com/0xD1g5/QU.I.R.K
 cd QU.I.R.K.
 python -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
