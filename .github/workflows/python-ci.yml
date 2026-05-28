@@ -390,3 +390,7 @@ jobs:
             Write-Error "SECURITY: bogus token was accepted (exit 0) — require_sensor_auth may be disabled"; exit 1
           }
           Write-Output "Negative auth assertion OK: bogus token rejected (exit $LASTEXITCODE)"
+          # Rejection is the DESIRED outcome — explicitly succeed the step. Without this,
+          # the bogus push's non-zero $LASTEXITCODE (exit 2 = 4xx) would propagate as the
+          # step's exit code and fail the job even though the security check passed.
+          exit 0
