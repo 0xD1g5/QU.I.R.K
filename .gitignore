@@ -65,3 +65,18 @@ coverage.xml
 # Phase 120 / PUBREPO-PLANNING-EXCL — internal planning artifacts excluded from public repo.
 # History rewrite to remove prior tracked copies happens in Plan 120-04.
 .planning/
+
+# Phase 120 / PUBREPO-DEV-ONLY — dev-only artifacts excluded from public repo.
+# History stripped in Plan 120-04's second filter-repo pass.
+# Visual Studio / VS Code IDE auto-generated state
+.vs/
+.vscode/extensions.json
+# Local scan output cache (working dir for ./run_scan.py)
+output/
+# UAT runner output blob
+uat-auto-results.json
+# Historical / internal-only top-level memos
+RESTRUCTURE-AUDIT-2026-03-31.md
+SECURITY_TEAM_MEMO.md
+# Design exploration (preserved in pre-rewrite mirror clone)
+design/
