@@ -160,9 +160,24 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     db.add(row)
     db.flush()
 
+    # Phase 120 / AC-03: server-policy only; client-supplied value (if any) is
+    # dropped by ScanSubmitRequest extra="ignore". We source the flag from the
+    # server-side config — QUIRK_CONFIG_PATH env wins, falling back to
+    # ./config.yaml. Any resolution failure defaults to False (fail-safe deny).
+    allow_internal = False
+    try:
+        from quirk.config import load_config  # lazy import — avoids cycles
+        cfg_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+        cfg = load_config(cfg_path)
+        allow_internal = bool(getattr(cfg.security, "allow_internal_targets", False))
+    except Exception:
+        # Fail-safe default: deny internal targeting when config is missing or
+        # broken. Production callers can opt in only via valid server config.
+        allow_internal = False
+
     config_path = _write_job_config(
         output_dir, payload.targets, db_path, payload.calibration,
-        allow_internal_targets=payload.allow_internal_targets,
+        allow_internal_targets=allow_internal,
     )
 
     cmd = [

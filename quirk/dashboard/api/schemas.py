@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class HealthResponse(BaseModel):
@@ -342,12 +342,18 @@ class TrendTimelineResponse(BaseModel):
 
 # Phase 65 UI-SCAN-01: dashboard-initiated scan submission
 class ScanSubmitRequest(BaseModel):
-    """POST /api/jobs request body. Pydantic is authoritative validation."""
+    """POST /api/jobs request body. Pydantic is authoritative validation.
+
+    Per Phase 120 / AC-03, ``allow_internal_targets`` is server-policy only and
+    sourced from ``quirk.config.SecurityConfig.allow_internal_targets``; any
+    client-supplied value is silently dropped via ``extra="ignore"``.
+    """
+    model_config = ConfigDict(extra="ignore")
+
     targets: str = Field(..., min_length=1, max_length=1024)
     profile: Literal["quick", "standard", "deep"] = "standard"
     calibration: Literal["strict", "balanced", "lenient"] = "balanced"
     enable_nmap: bool = False
-    allow_internal_targets: bool = False
 
     @field_validator("targets")
     @classmethod
