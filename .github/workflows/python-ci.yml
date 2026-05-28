@@ -214,8 +214,9 @@ jobs:
       # uvicorn background process, and sensor push) share ONE SQLite DB file.
       # Windows Start-Process inherits the parent env by default, so the uvicorn
       # background process will also see this value without any extra wiring.
-      # Set to an absolute runner-temp path to avoid cwd-relative ambiguity.
-      QUIRK_DB_PATH: ${{ runner.temp }}\quirk-e2e.db
+      # Use github.workspace (NOT runner.temp — the runner context is unavailable
+      # in a job-level env: block and makes GitHub reject the whole workflow).
+      QUIRK_DB_PATH: ${{ github.workspace }}\quirk-e2e.db
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
