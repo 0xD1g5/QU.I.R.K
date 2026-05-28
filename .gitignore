@@ -61,3 +61,7 @@ coverage.xml
 # Environment variables
 .env
 .env.*
+
+# Phase 120 / PUBREPO-PLANNING-EXCL — internal planning artifacts excluded from public repo.
+# History rewrite to remove prior tracked copies happens in Plan 120-04.
+.planning/
