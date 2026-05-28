@@ -1,0 +1,96 @@
+================================================================================
+QU.I.R.K. v5.6.0 — SECURITY TEAM QUICK REFERENCE CHECKLIST
+================================================================================
+
+PROJECT IDENTITY
+  Name:           QU.I.R.K. (Quantum Infrastructure Readiness Kit)
+  Version:        5.6.0
+  Type:           Cryptographic audit scanner (legitimate security tool)
+  License:        Proprietary / Open Source
+  Repository:     https://github.com/0xD1g5/QU.I.R.K
+  PyPI Package:   https://pypi.org/project/quirk-scanner/
+
+INSTALLATION METHOD
+  ✓ Standard pip install from PyPI (most secure)
+  ✓ Isolated Python venv (no system-wide changes)
+  ✓ No system drivers, daemons, or kernel modules
+  ✓ Zero persistence after uninstall
+
+LEGITIMATE PURPOSES
+  ✓ Security consulting: cryptographic readiness assessment
+  ✓ Compliance auditing: quantum-readiness scoring
+  ✓ Infrastructure inventory: TLS/SSH/JWT/cloud crypto discovery
+  ✓ Report generation: CycloneDX CBOM + PDF deliverables
+
+CORE PYTHON DEPENDENCIES (32 packages)
+────────────────────────────────────────────────────────────────────────────
+CRYPTO/AUTH:        cryptography, PyJWT, python-jose, signxml
+CLOUD:              boto3, azure-identity, azure-keyvault-*, azure-mgmt-*
+DATA:               SQLAlchemy, PyYAML, jinja2
+NETWORK:            httpx, dnspython, lxml, beautifulsoup4
+SBOM/OUTPUT:        cyclonedx-python-lib, python-docx
+UTILS:              tqdm, rich, nh3, platformdirs, tenacity, zstandard
+
+OPTIONAL EXTRAS (installed with [all])
+────────────────────────────────────────────────────────────────────────────
+DASHBOARD:          fastapi, uvicorn, python-multipart, croniter
+BROWSER:            playwright, pypdf (testing only)
+CLOUD APIS:         google-cloud-container, kubernetes, hvac, etc.
+DATABASE:           psycopg2-binary, PyMySQL
+NOTIFICATIONS:      slack-sdk, jira (optional)
+BUILD:              pyinstaller==6.20.0 (Windows frozen binary)
+
+FRONTEND DEPENDENCIES (51 npm packages)
+────────────────────────────────────────────────────────────────────────────
+FRAMEWORK:          react, react-dom, react-router-dom
+UI:                 @radix-ui/*, tailwindcss, lucide-react
+DATA VIZ:           recharts, cytoscape, dagre
+BUILD:              vite, typescript, eslint, vitest
+TESTING:            @testing-library/*, puppeteer-core, msw
+
+WHAT TO EXPECT (AV ALERT TRIGGERS)
+────────────────────────────────────────────────────────────────────────────
+✓ Cryptography libraries (cryptography, OpenSSL)
+  → Normal for crypto tools; FIPS-approved, not malware
+
+✓ Network scanning libraries (httpx, dnspython, lxml)
+  → Normal for audit tools; high-level HTTP/DNS, not raw exploits
+
+✓ Browser automation (playwright, puppeteer-core)
+  → Normal for testing; no keylogging/capture/exfil logic
+
+✓ Build tools (pyinstaller)
+  → Legitimate code packaging; used by 1000s of projects
+
+✓ SSH/TLS enumeration code
+  → All Python source code, human-readable, not obfuscated
+
+DO NOT EXPECT (red flags if seen)
+────────────────────────────────────────────────────────────────────────────
+✗ Reverse shells / C2 communication
+✗ Rootkits, kernel modules, drivers
+✗ Outbound connections to external servers (dashboard = localhost:8512)
+✗ Data exfiltration beyond local SQLite database
+✗ Privilege escalation attempts
+✗ Persistence mechanisms after uninstall
+
+CLEANUP
+────────────────────────────────────────────────────────────────────────────
+To remove: rm -rf ~/quirk_env
+(isolated venv, no system files left behind)
+
+REFERENCES
+────────────────────────────────────────────────────────────────────────────
+Full details:  SECURITY_TEAM_MEMO.md (this repository)
+Source code:   https://github.com/0xD1g5/QU.I.R.K (GitHub)
+Docs:          https://github.com/0xD1g5/QU.I.R.K/tree/main/docs
+Security:      https://github.com/0xD1g5/QU.I.R.K/blob/main/SECURITY.md
+PyPI:          https://pypi.org/project/quirk-scanner/
+
+CONTACT
+────────────────────────────────────────────────────────────────────────────
+Prepared by:   Digs
+Email:         robdigirolamo@gmail.com
+Date:          2026-05-28
+
+================================================================================
