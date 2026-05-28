@@ -253,14 +253,20 @@ jobs:
         shell: pwsh
         run: |
           # QUIRK_DB_PATH is inherited from the job-level env block.
-          # Run console enroll: token → stdout, sensor_id → stderr.
-          # Capture both streams separately; NEVER echo the raw token.
-          $stdout = & python -m quirk console enroll --segment e2e 2>$env:RUNNER_TEMP\enroll_stderr.txt
+          # Run console enroll via run_scan.py — the `quirk` console_scripts entry
+          # point is run_scan:_run_main_with_job_guard, and run_scan.py intercepts the
+          # `console` subcommand (there is NO quirk/__main__.py, so `python -m quirk`
+          # does not work). Routing through run_scan.py also applies its win32 UTF-8
+          # stdout reconfigure, so the em-dash in the token banner won't crash on the
+          # runner's cp1252 stdout. token → stdout, sensor_id → stderr.
+          $stdout = & python run_scan.py console enroll --segment e2e 2>$env:RUNNER_TEMP\enroll_stderr.txt
           $stderr_content = Get-Content "$env:RUNNER_TEMP\enroll_stderr.txt" -Raw -ErrorAction SilentlyContinue
 
           # Parse Bearer token from stdout (line after "Bearer token (copy now...")
           $token_line = ($stdout -split "`n") | Where-Object { $_ -match '^\S' -and $_ -notmatch '^Bearer token' -and $_ -notmatch '^NOTE' } | Select-Object -First 1
           if (-not $token_line) {
+            Write-Output "--- console enroll stderr (for debugging; token is on stdout, not here) ---"
+            Write-Output $stderr_content
             Write-Error "Could not parse Bearer token from console enroll stdout"; exit 1
           }
           $raw_token = $token_line.Trim()
