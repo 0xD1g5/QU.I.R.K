@@ -2,6 +2,24 @@
 
 A Docker-Compose-based crypto-misconfiguration playground used by QU.I.R.K. for end-to-end scanner UAT. Nineteen named profiles plus an always-on core baseline cover TLS / SSH / JWT / container / source / cloud / DAR / messaging / PQC chaos scenarios — each with an expected-findings oracle in `expected_results_v4.md` and detailed prose in `docs/chaos-lab.md`.
 
+## Lab certificates
+
+`ca.key`, `ca.crt`, `client.key`, and `client.crt` are **not committed** to the
+repository (Phase 120-02, PUBREPO-LAB-KEYS). They are generated on first
+`./lab.sh up` (or `./lab.sh all`) by the `ensure_lab_certs` function in
+`lab.sh` as self-signed fixtures — functionally equivalent to the prior
+committed pair. Regeneration is idempotent: subsequent `up` invocations
+re-use the existing files. To force a re-roll, delete the four files (plus
+`ca.srl`) and re-run `./lab.sh up`.
+
+These are self-signed lab fixtures only; they have **no production trust
+path** and must never be reused outside the chaos lab.
+
+Other scenario keys (`modern.key`, `legacy.key`, `expired.key`, `mtls.key`,
+`keycloak.key`, `selfsigned.key`, `scenarios/**/*.key`) remain tracked as
+intentional chaos fixtures (weak RSA, expired validity, SHA-1, etc.) with
+no real-world security value.
+
 ## Quick Start
 
 ```bash
