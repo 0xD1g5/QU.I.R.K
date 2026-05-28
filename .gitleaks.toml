@@ -1,0 +1,60 @@
+# .gitleaks.toml — gitleaks allowlist for QUIRK repository
+#
+# All entries here are confirmed-safe. Every finding was triaged as part of the
+# Phase 119 PUBREPO-01 secret sweep (2026-05-27) before the repository was made public.
+# See .planning/phases/119-public-repo-cutover/119-01-SWEEP-REPORT.md for full triage.
+#
+# CATEGORIES:
+#   A - Chaos lab self-signed TLS certificates (Docker localhost only)
+#   B - Chaos lab seed anti-pattern examples (intentional scanner targets in seed.sh)
+#   C - Test suite fixtures (scrubber / auth-gate / format-detection tests)
+#   D - Planning/documentation examples (lab admin:admin, field examples, descriptive text)
+#   E - Removed Ghost_Weight historical simulation keys (not in working tree)
+
+title = "QUIRK gitleaks allowlist"
+
+[allowlist]
+description = "Confirmed-safe test fixtures, lab certs, and documentation examples — triaged 2026-05-27 (Phase 119 PUBREPO-01)"
+
+# --------------------------------------------------------------------------
+# Category A: Chaos lab self-signed TLS private keys
+# These are self-signed certs generated for Docker Compose lab services.
+# They protect localhost-only containers and are not registered anywhere.
+# --------------------------------------------------------------------------
+paths = [
+  # Current working-tree lab cert files
+  "quantum-chaos-enterprise-lab/certs/ca\\.key",
+  "quantum-chaos-enterprise-lab/certs/client\\.key",
+  "quantum-chaos-enterprise-lab/certs/expired\\.key",
+  "quantum-chaos-enterprise-lab/certs/keycloak\\.key",
+  "quantum-chaos-enterprise-lab/certs/legacy\\.key",
+  "quantum-chaos-enterprise-lab/certs/modern\\.key",
+  "quantum-chaos-enterprise-lab/certs/mtls\\.key",
+  "quantum-chaos-enterprise-lab/certs/selfsigned\\.key",
+  "quantum-chaos-enterprise-lab/certs/scenarios/.*\\.key",
+  "quantum-chaos-enterprise-lab/certs/stepca/.*\\.key",
+  "quantum-chaos-enterprise-lab/simplesamlphp/cert/server\\.key",
+  "quantum-chaos-enterprise-lab/scripts/certs/.*\\.key",
+  # Category B: seed.sh contains base64-encoded Python/Java anti-pattern code
+  # fragments that are seeded into a local Gitea instance as scanner targets.
+  # API_SECRET, HARDCODED_RSA_KEY, SECRET_KEY, API_TOKEN are all synthetic.
+  "quantum-chaos-enterprise-lab/source/seed\\.sh",
+  # Category B: MinIO KMS key — protects localhost Docker MinIO only
+  "quantum-chaos-enterprise-lab/docker-compose\\.yml",
+  # Category C: Test suite — all values are synthetic fixtures
+  "tests/test_sensor_auth_per_sensor\\.py",
+  "tests/test_notify_safe_str_secrets\\.py",
+  "tests/test_ticketing_servicenow\\.py",
+  "tests/test_notify_dispatcher\\.py",
+  "tests/test_credential_leakage\\.py",
+  "tests/test_safe_exc\\.py",
+  "tests/test_scan_error_gate\\.py",
+  # Category C: Documentation examples — truncated/fake tokens in docs
+  "docs/configuration\\.md",
+  "docs/UAT-SERIES\\.md",
+  "docs/quirk-overview\\.md",
+  # Category D: Planning docs — lab admin:admin curl examples, field names, descriptive text
+  "\\.planning/.*",
+  # Category E: Removed Ghost_Weight directory (historical commits only)
+  "Ghost_Weight/.*",
+]
