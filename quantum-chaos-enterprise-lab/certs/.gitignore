@@ -1,0 +1,11 @@
+# Defense-in-depth: PEM keys must not be committed to the chaos-lab repo path.
+# Phase 120-02 (PUBREPO-LAB-KEYS) — `ca.key` and `client.key` are now generated
+# on first `./lab.sh up` by `ensure_lab_certs` in lab.sh; do not check them in.
+#
+# Note: scenario fixtures (modern/legacy/expired/selfsigned/keycloak/mtls/
+# scenarios/* .key files) are pre-tracked intentional chaos fixtures and are
+# NOT covered by this exclusion at HEAD — git ignore only applies to untracked
+# paths. New .key/.crt/.srl files in this directory will be ignored by default.
+*.key
+*.crt
+*.srl

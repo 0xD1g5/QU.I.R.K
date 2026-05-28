@@ -61,6 +61,51 @@ compose() {
   docker compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" ${PROFILE_ARGS} "$@"
 }
 
+# Idempotently materialize the chaos-lab root CA (ca.key/ca.crt) and the mTLS
+# client cert (client.key/client.crt). These two PEM keys are NOT committed to
+# the repo (Phase 120-02, PUBREPO-LAB-KEYS). On first `up`/`all` invocation
+# they're generated as self-signed fixtures — equivalent to the prior committed
+# pair. The other lab certs (modern/legacy/expired/selfsigned/mtls/keycloak/
+# scenarios/*) remain tracked because the 2026-05-27 posture review flagged
+# only ca.key + client.key as the go-public blocker; those scenario keys carry
+# no real-world trust path and are intentional chaos fixtures (weak RSA,
+# expired validity, SHA-1, etc.).
+#
+# Idempotent: if both .key files exist, return 0 with no output.
+# Re-entrant: callable from `up` and `all` without side effects on second run.
+ensure_lab_certs() {
+  local CERT_DIR
+  CERT_DIR="$(dirname "$0")/certs"
+  mkdir -p "${CERT_DIR}"
+
+  # CA pair (root of trust for the lab's mTLS scenarios)
+  if [[ ! -f "${CERT_DIR}/ca.key" || ! -f "${CERT_DIR}/ca.crt" ]]; then
+    echo "🔐 Generating chaos-lab root CA (ca.key + ca.crt) — first-run regen"
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 \
+      -out "${CERT_DIR}/ca.key" >/dev/null 2>&1
+    chmod 600 "${CERT_DIR}/ca.key"
+    openssl req -x509 -new -key "${CERT_DIR}/ca.key" -sha256 -days 3650 \
+      -subj "/CN=QUIRK Chaos Lab Root CA" \
+      -out "${CERT_DIR}/ca.crt" >/dev/null 2>&1
+  fi
+
+  # Client pair (mTLS test client; signed by the CA above)
+  if [[ ! -f "${CERT_DIR}/client.key" || ! -f "${CERT_DIR}/client.crt" ]]; then
+    echo "🔐 Generating chaos-lab mTLS client cert (client.key + client.crt) — first-run regen"
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+      -out "${CERT_DIR}/client.key" >/dev/null 2>&1
+    chmod 600 "${CERT_DIR}/client.key"
+    openssl req -new -key "${CERT_DIR}/client.key" \
+      -subj "/CN=quirk-lab-client" \
+      -out "${CERT_DIR}/client.csr" >/dev/null 2>&1
+    openssl x509 -req -in "${CERT_DIR}/client.csr" \
+      -CA "${CERT_DIR}/ca.crt" -CAkey "${CERT_DIR}/ca.key" -CAcreateserial \
+      -days 825 -sha256 \
+      -out "${CERT_DIR}/client.crt" >/dev/null 2>&1
+    rm -f "${CERT_DIR}/client.csr"
+  fi
+}
+
 # Derive ALL profiles from docker-compose.yml. Output: alphabetized, deduped, one per line.
 # Preserves set -euo pipefail (no unbound vars; pipefail-safe — sort handles empty input).
 _derive_all_profiles() {
@@ -125,6 +170,7 @@ case "${cmd}" in
       echo "❌ Refusing to start: pin policy violation (CHAOS-05)." >&2
       exit 1
     fi
+    ensure_lab_certs
     echo "🚀 Starting lab: project=${PROJECT_NAME} file=${COMPOSE_FILE} profiles='${PROFILE_ARGS}'"
     compose up -d
     echo "✅ Lab started."
@@ -135,6 +181,7 @@ case "${cmd}" in
       echo "❌ Refusing to start: pin policy violation (CHAOS-05)." >&2
       exit 1
     fi
+    ensure_lab_certs
     # Portable across bash 3.2 (macOS default) — `mapfile` is bash 4+.
     _profiles=()
     while IFS= read -r _p; do
