@@ -51,7 +51,7 @@ filters results to the following crypto-relevant packages:
 
 | Package Name | Category |
 |--------------|----------|
-| `openssl`, `libssl`, `libssl3`, `libssl1.1` | TLS/SSL library |
+| `openssl`, `libssl`, `libssl1.0`, `libssl1.0.0`, `libssl1.1`, `libssl3` | TLS/SSL library |
 | `libcrypto`, `libcrypto3` | Cryptographic primitives |
 | `botan`, `libgcrypt`, `libgcrypt20` | Crypto toolkit |
 | `nss`, `libnss3` | Network Security Services |

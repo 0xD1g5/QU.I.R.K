@@ -1,7 +1,8 @@
 # Azure Connector Setup
 
 QU.I.R.K.'s Azure connector discovers cryptographic material across Key Vault keys and
-certificates, and Application Gateway TLS policies.
+certificates, Application Gateway TLS policies, and Storage Account / Blob encryption posture
+(`keySource` — CMK vs. platform-managed).
 
 ## RBAC Role Assignment
 
@@ -36,6 +37,16 @@ For App Gateway TLS policy scanning, the service principal needs
   ```
 
   If `azure-mgmt-network` is not installed, App Gateway scanning is skipped silently.
+
+- For Blob storage encryption scanning (optional):
+
+  ```bash
+  pip install azure-mgmt-storage
+  ```
+
+  If `azure-mgmt-storage` is not installed, Blob scanning is skipped silently.
+
+All three optional packages are included in `pip install quirk-scanner[cloud]` and `[all]`.
 
 ## Service Principal Credentials
 
@@ -75,6 +86,7 @@ and scan only App Gateways.
 | Key Vault | Keys | Key type (RSA, EC, oct/AES), key size, enabled/disabled state |
 | Key Vault | Key metadata | Name, version, vault URL |
 | App Gateway | TLS policies | Minimum TLS version, cipher suites, named policy |
+| Storage Account / Blob | Encryption posture | `encryption.keySource` per storage account; one CryptoEndpoint per container with parent account setting. `Microsoft.Keyvault` → BLOB/cmk (no finding), `Microsoft.Storage` → BLOB/platform-managed (MEDIUM), absent/null → BLOB/unknown (MEDIUM). Feeds the `data_at_rest` subscore. |
 
 **Key types recognised:** `RSA`, `RSA-HSM` → RSA; `EC`, `EC-HSM` → ECDSA; `oct`, `oct-HSM` → AES.
 

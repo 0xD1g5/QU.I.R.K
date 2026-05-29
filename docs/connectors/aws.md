@@ -1,7 +1,8 @@
 # AWS Connector Setup
 
 QU.I.R.K.'s AWS connector discovers cryptographic material across ACM certificates, KMS keys,
-CloudFront distributions, and Elastic Load Balancers.
+CloudFront distributions, Elastic Load Balancers, RDS instance encryption, EKS cluster
+encryption, and S3 bucket encryption.
 
 ## Minimum IAM Policy
 
@@ -44,6 +45,32 @@ the boto3 API calls the scanner makes — no wildcards, no write access.
       "Action": [
         "elasticloadbalancing:DescribeLoadBalancers",
         "elasticloadbalancing:DescribeListeners"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "QuirkRDSReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "rds:DescribeDBInstances"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "QuirkEKSReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "eks:ListClusters",
+        "eks:DescribeCluster"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "QuirkS3EncryptionReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketEncryption"
       ],
       "Resource": "*"
     }
@@ -95,6 +122,9 @@ The `aws_profile` key is optional. If omitted, QU.I.R.K. uses the default creden
 | KMS | Symmetric and asymmetric keys | Key spec (AES_256, RSA_2048, ECC_NIST_P256, etc.) |
 | CloudFront | Distributions | Minimum TLS protocol version, associated certificate |
 | ELBv2 | HTTPS/TLS listeners | SSL policy name, listener port |
+| RDS | DB instances | `StorageEncrypted` flag, KMS key id, encryption algorithm — feeds the `data_at_rest` subscore |
+| EKS | Managed clusters | etcd encryption provider, KMS key id, secrets encryption configuration — feeds the `data_at_rest` subscore |
+| S3 | Buckets | SSE mode (SSE-S3 / SSE-KMS / CMK / none) per `GetBucketEncryption` — feeds the `data_at_rest` subscore |
 
 **KMS key specs recognised:** `RSA_2048`, `RSA_3072`, `RSA_4096`, `ECC_NIST_P256`,
 `ECC_NIST_P384`, `ECC_NIST_P521`, `ECC_SECG_P256K1`, `SYMMETRIC_DEFAULT` (AES-256),

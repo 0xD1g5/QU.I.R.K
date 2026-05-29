@@ -424,7 +424,20 @@ block of each algorithm component in the CBOM.
 
 ---
 
-*Guide version: Phase 52 (2026-05-06) — covers QU.I.R.K. v4.7 (in progress); last materially updated for v4.6 (Phase 49–52 compliance framework additions)*
+## Additions in v5.x
+
+The five-step pipeline above is unchanged; the v5.x series extended which component types the CBOM surfaces and how merged scans are represented.
+
+- **PQC-hybrid components (v5.0, Phase 90)** — `X25519MLKEM768` is recognised by the classifier (`PQC probe module`) and emitted as a genuine quantum-safe KEM component in the CBOM, not as a classical fallback. The agility subscore gains a `+8.0` PQC-hybrid bonus when such a component is present.
+- **BEARER_TOKEN branch (v5.1, Phase 94)** — JWT / opaque-bearer auth endpoints now produce a dedicated CBOM branch with evidence counters; `SCORE_WEIGHTS` adds `+10.0` for this surface.
+- **CODE_SIGNING branch (v5.1, Phase 95)** — LDAP+TLS-EKU code-signing certificates are emitted as their own CBOM branch with cross-source fingerprint deduplication.
+- **REST_FUZZ skip (v5.1, Phase 96)** — fuzz-only API probes no longer pollute the CBOM as phantom TLS components; an evidence counter records the skipped surface.
+- **Distributed-mode merge keys (v5.4, Phase 110, MERGE-03)** — when multiple sensors push findings to a central console, the builder threads a `_sensor_prefix` through TLS and codesign surrogate keys, and `sensor_id` is added to `_tls_surrogate_key` / `_codesign_surrogate_key` so per-sensor findings are preserved through merge without cross-sensor collision.
+- **Coverage of zero-algorithm profiles (v5.0, Phase 42 OBS-1)** — five formerly-zero-algorithm chaos-lab profiles (`database`, `registry`, `source`, `ssh-weak`, `storage-s3`) now emit affirmative coverage-note properties so the CBOM records "scanned but no algorithms surfaced" rather than appearing as a silent gap.
+
+---
+
+*Guide version: 2026-05-28 (updated for v5.5; v5.x additions section above documents CBOM-relevant Phases 90, 94, 95, 96, 110)*
 
 *Canonical references: `quirk/cbom/classifier.py` (`quantum_safety_label()`, `_ALGORITHM_TABLE`),
 `quirk/cbom/builder.py` (`build_cbom()`), `quirk/compliance/` (framework mappings)*
