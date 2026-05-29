@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.5.0
+# QU.I.R.K. — v5.5.0 - Beta
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
