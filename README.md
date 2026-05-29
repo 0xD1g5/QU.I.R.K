@@ -4,15 +4,15 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v4.10.0
+# QU.I.R.K. — v5.5.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
-QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endpoints, SSH services, JWT-issuing APIs, container images, Git repositories, AWS cloud resources, and Azure cloud resources. It produces a Cryptography Bill of Materials (CBOM) in CycloneDX JSON and XML, computes a quantum-readiness score (0–100), and generates a professional PDF report a consultant can hand directly to a client.
+QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endpoints, SSH services, JWT-issuing APIs, container images, Git repositories, and major cloud providers (AWS, Azure, GCP, HashiCorp Vault, Kubernetes). It produces a Cryptography Bill of Materials (CBOM) in CycloneDX JSON and XML, computes a quantum-readiness score (0–100) with six subscores, and generates client-ready PDF / DOCX / HTML reports. Distributed mode (v5.4+) splits scanning across on-prem sensors that push findings to a central console for merged reporting.
 
 ## For your role
 
-**For the security consultant.** QU.I.R.K. produces the deliverable you bill for: a CycloneDX CBOM, a 0–100 quantum-readiness score with four subscores (Hygiene, Modern TLS, Identity, Agility), and a client-ready PDF report. Point it at a client's TLS endpoints, SSH services, JWT-issuing APIs, and cloud accounts; hand back the findings and the prioritized remediation roadmap. No agents to deploy, no software for the client to install.
+**For the security consultant.** QU.I.R.K. produces the deliverable you bill for: a CycloneDX CBOM, a 0–100 quantum-readiness score with six subscores (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion), and client-ready PDF / DOCX / HTML reports. Point it at a client's TLS endpoints, SSH services, JWT-issuing APIs, and cloud accounts; hand back the findings, the prioritized remediation roadmap, and a written executive narrative. No agents to deploy, no software for the client to install.
 
 **For the IT generalist.** Start with the simple question — *what crypto do we even have running?* — and end with an answerable inventory. QU.I.R.K. walks your environment, names every TLS endpoint, SSH host, container image, and KMS key it can reach, and tells you which ones are quantum-vulnerable. The dashboard at `http://localhost:8512` lets you browse the findings interactively before you commit to any remediation work.
 
@@ -20,8 +20,6 @@ QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endp
 
 ![QU.I.R.K. dashboard against the chaos lab](docs/images/dashboard-hero.png)
 *Dashboard view of a scan against the chaos lab — quantum-readiness score, subscores, findings, and CBOM browser.*
-
-<!-- TODO(LAUNCH-01): replace docs/images/dashboard-hero.png with a real screenshot captured against a running dashboard. The current file is a placeholder (1×1 transparent PNG) per Phase 85-05 deviation; capture a real screenshot post-merge from a live macOS arm64 run against the chaos lab `phaseA` (tls-weak) profile. -->
 
 ## Quick Start
 
@@ -33,9 +31,7 @@ quirk init
 quirk --config config.yaml
 ```
 
-Watch a 60-second run: `<asciinema-link-here>` *(recording is a manual post-merge task — see `.planning/phases/85-public-launch-polish/85-05-SUMMARY.md`)*.
-
-Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrough of the 3-step quickstart with explanations of each command.
+Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrough with explanations of each command.
 
 ## Documentation
 
@@ -49,37 +45,48 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 | [CBOM Guide](docs/cbom-guide.md) | What a CBOM is and how to cite it as compliance evidence |
 | [Chaos Lab Operator Guide](docs/chaos-lab.md) | Lab profiles, port matrix, expected findings |
 | [Intelligence Schema](docs/intelligence-schema.md) | `intelligence-*.json` output format reference |
-| [Upgrade Guide](docs/upgrade-guide.md) | v4.x → v4.10 upgrade procedure with `quirk db migrate` |
+| [Upgrade Guide](docs/upgrade-guide.md) | Cross-version upgrade procedure with `quirk db migrate` |
 | [Release Process](docs/release-process.md) | PyPI / GHCR / Homebrew tap publish procedure + Sigstore attestation verification |
 | [UAT Test Series](docs/UAT-SERIES.md) | Full user acceptance testing guide — CLI, lab, dashboard |
 
 ## What QU.I.R.K. Scans
 
-- **TLS/HTTPS endpoints** — certificate metadata, cipher suites, TLS version, chain trust
+- **TLS/HTTPS endpoints** — certificate metadata, cipher suites, TLS version, chain trust, PQC-hybrid KEM detection
 - **SSH services** — host key algorithms, KEX algorithms, MAC algorithms, cipher suites
-- **JWT-issuing APIs** — algorithm discovery via JWKS and OIDC endpoints
-- **Docker container images** — crypto libraries detected via Syft SBOM analysis
+- **JWT-issuing APIs** — algorithm discovery via JWKS and OIDC endpoints; query-param API-key auth supported
+- **Email protocols** — SMTP/SMTPS, submission, IMAP/IMAPS, POP3/POP3S with STARTTLS-stripping detection
+- **Message brokers** — Kafka, RabbitMQ AMQPS, Redis TLS
+- **Docker container images** — crypto libraries detected via Syft SBOM analysis; signature/attestation verification
 - **Git repositories / source code** — cryptographic API usage via Semgrep analysis
+- **Code-signing posture** — LDAP-based certificate discovery + EKU classification
 - **AWS** — ACM certificates, KMS key specs, CloudFront distributions, ELBv2 listeners
 - **Azure** — Key Vault keys and certificates, Application Gateway TLS policies
+- **GCP** — Cloud KMS algorithm classification (incl. PQC), Cloud SQL TLS enforcement, GCS CMEK
+- **HashiCorp Vault** — Transit key types (incl. ml-dsa / slh-dsa), PKI mounts, auth method risk
+- **Kubernetes** — EKS / GKE / AKS managed cluster encryption APIs
+- **Databases & object storage** — PostgreSQL / MySQL / RDS at-rest encryption; S3 / Blob / GCS CMEK posture
 
 ## Output Artifacts
 
-- **Quantum-readiness score** (0–100) — overall score with four subscores: Hygiene, Modern TLS, Identity, Agility
+- **Quantum-readiness score** (0–100) — overall score with six subscores: Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion
 - **CBOM** in CycloneDX JSON + XML — inventory of all discovered cryptographic components
-- **Web dashboard** at `http://localhost:8512` — interactive findings browser and CBOM graph
-- **PDF report** — client-ready export from the dashboard
+- **Web dashboard** at `http://localhost:8512` — interactive findings browser, CBOM graph, trend analysis, score breakdowns
+- **Reports** — client-ready PDF / DOCX / HTML / CLI markdown from one shared content model; written executive narrative for consultant deliverables
+- **Distributed mode** — on-prem sensors scan isolated network segments, push findings to a central console which merges into a single CBOM + score (v5.4+)
+- **Integrations** — notification fan-out, SIEM CEF dispatch, Jira / ServiceNow ticket creation on findings (v5.3+)
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v4.3
+## What's New in v5.5
 
-- **GCP Connector (Phase 26)** — Cloud KMS key classification (47-entry algorithm map including PQC), Cloud SQL TLS enforcement, and GCS CMEK detection.
-- **Database Encryption Detection (Phase 27)** — PostgreSQL, MySQL, and RDS encryption posture surfaced via a new `data_at_rest` subscore.
-- **Object Storage Audit (Phase 28)** — S3 SSE-S3/SSE-KMS/CMK, Azure Blob CMK/platform-managed, GCS CMEK using zero duplicate API calls.
-- **Kubernetes Secrets Inspection (Phase 29)** — EKS/GKE/AKS managed cluster encryption APIs; RBAC-403 graceful degradation.
-- **HashiCorp Vault Connector (Phase 30)** — Transit key type classification (including ml-dsa/slh-dsa PQC positive), PKI mount CA cert auditing, and auth method risk tiering.
-- **Trend Analysis (v4.3, Phase 31)** — `quirk/intelligence/trends.py` produces a session-over-session score delta plus per-severity new/resolved finding counts between the two most recent scan sessions. Surfaced via `GET /api/trends` and a new dashboard `/trends` tab. No new SQLite table — uses existing scanned_at grouping.
+Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
+
+- **Distributed sensor hardening (v5.5)** — per-sensor opaque Bearer tokens, sensor revocation, failure-isolated auto-merge across sensors, weak-TLS chaos-lab targets.
+- **On-prem sensor / console split (v5.4)** — scan per segment, push findings, merged into one CBOM + score; sensor / console enroll workflow.
+- **Notification & integration surface (v5.3)** — notification fan-out, SIEM CEF dispatch, Jira / ServiceNow ticket integration on one shared SSRF-safe / secret-scrubbing layer; dashboard token auth.
+- **Consulting-grade reporting (v5.2)** — one shared content model drives CLI / HTML / PDF / DOCX renderers; written executive narrative; corrected score sourcing across surfaces.
+- **Authenticated scanning (v5.1)** — ephemeral credentials for cloud + JWT-issuing API scans; LDAP+TLS-EKU code-signing posture; folded into agility subscore.
+- **PQC-hybrid scoring ceiling (v5.0)** — OQS-nginx PQC-hybrid chaos-lab profile with X25519MLKEM768 + ML-DSA-65; agility scoring gains a `+8.0` PQC-hybrid bonus that anchors the ceiling for post-quantum readiness.
 
 ## Install From Other Channels
 
@@ -94,7 +101,7 @@ Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major sca
 
 ```bash
 git clone https://github.com/0xD1g5/QU.I.R.K
-cd QU.I.R.K.
+cd QU.I.R.K
 python -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium

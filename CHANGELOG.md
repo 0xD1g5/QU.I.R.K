@@ -5,6 +5,78 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [5.5.0] - 2026-05-27
+
+### Added
+
+- **Per-sensor authentication & revocation** (Phase 113) — distributed-mode sensors now enroll with opaque Bearer tokens individually issued and individually revocable via `quirk revoke-sensor`; new `revoked_at` migration on the sensors table; console rejects requests from revoked tokens.
+- **Failure-isolated auto-merge** (Phase 114) — when one sensor fails mid-scan, the console merges the remaining successful results into a CBOM and final score rather than discarding the batch; operators guide §8.9 documents the partial-merge contract.
+- **Weak-TLS chaos-lab target** (Phase 115) — added intentionally-weak TLS profile to widen scanner regression surface; live-UAT stabilization sweep cleared 4 follow-up items.
+
+### Fixed
+
+- Phase 114 inverted revoked-filter caught in code review pre-ship.
+- Phase 115 cron crash on absent schedule resolved.
+- Phase 116 over-broad hard-gate narrowed.
+
+### Misc
+
+- Windows packaging spike (Phase 116) — onedir frozen sensor build confirmed GO via live windows-latest CI run.
+
+## [5.4.0] - 2026-05-26
+
+### Added
+
+- **Distributed on-prem scanner** (Phases 106–112) — sensor / console architecture: scan-per-segment on isolated sensors, push findings to a central console, merge into one CBOM + final score (Option A merge: keep newest-per-fingerprint, never rewrite `scanned_at`).
+- **`enroll` + `--sensor-id` CLI surface** for sensor-to-console pairing.
+- **`crypto.internal` hostname-alias** pattern for same-subnet docker compose validation (compose forbids same-subnet networks; alias works around).
+- **Sensor SSRF mitigation** corrected to allow internal console targets while still blocking external SSRF paths.
+
+### Fixed
+
+- Discarded CBOM artifact on partial-success scans (caught by code review, not unit verification).
+- `_run_local_scan --output` path resolution (caught by live E2E).
+
+## [5.3.0] - 2026-05-25
+
+### Added
+
+- **Notification fan-out** (Phase 101) — webhook + email + Slack dispatch on schedule completion or finding severity threshold.
+- **SIEM CEF dispatch** (Phase 102) — Common Event Format export for Splunk / QRadar / ArcSight ingestion.
+- **Jira / ServiceNow ticketing** (Phase 103) — automatic ticket creation on high-severity findings with secret-scrubbing applied to ticket bodies.
+- **Dashboard token auth** (Phase 105) — bearer-token gate on dashboard API to prevent unauthenticated query of stored scans.
+
+### Fixed
+
+- Fingerprint formula corrected to `SHA256(host:port::title)` for finding deduplication.
+- Shared SSRF-safe / secret-scrubbing layer (Phase 101 anchor) unifies outbound HTTP across notification / SIEM / ticketing surfaces.
+
+## [5.2.0] - 2026-05-24
+
+### Added
+
+- **Consulting-grade reporting** (Phases 97–100) — one shared content model drives CLI markdown, HTML, PDF, and new DOCX renderers; eliminates render-divergence across surfaces.
+- **DOCX renderer** (`quirk/reports/docx_renderer.py`) — client-deliverable Word format with consultant-editable narrative blocks.
+- **Code-signing endpoint evaluation** — LDAP+TLS-EKU based codesign certificate posture wired into agility scoring.
+
+### Fixed
+
+- CLI score sourcing aligned with executive narrative content (logged backlog item v5.2-TD-1 closed in v5.3).
+
+## [5.1.0] - 2026-05-22
+
+### Added
+
+- **Authenticated scanning** (Phases 93–96) — ephemeral credentials for JWT API + cloud connector scans; no long-lived secret storage in scheduled scan rows.
+- **Query-param API-key CLI flag** + JWT-scanner URL credential consumption (Phase 93 D-1, full delivery in 93 not 94).
+- **Code-signing posture** (Phase 95) — LDAP+TLS-EKU only; fuzzing non-TTY hard-abort guard; schemathesis excluded from `[all]` extra.
+- **Agility subscore** absorbs codesign signals; no separate 7th subscore.
+
+### Fixed
+
+- SCORE_WEIGHTS walks 283 → 293 → 299 → 303 across the v5.1 milestone.
+
+
 ## [5.0.0] - 2026-05-22
 
 ### Added
