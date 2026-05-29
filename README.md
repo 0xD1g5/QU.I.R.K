@@ -12,7 +12,7 @@ QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endp
 
 ## For your role
 
-**For the security consultant.** QU.I.R.K. produces the deliverable you bill for: a CycloneDX CBOM, a 0–100 quantum-readiness score with six subscores (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion), and client-ready PDF / DOCX / HTML reports. Point it at a client's TLS endpoints, SSH services, JWT-issuing APIs, and cloud accounts; hand back the findings, the prioritized remediation roadmap, and a written executive narrative. No agents to deploy, no software for the client to install.
+**For the security consultant.** QU.I.R.K. produces the deliverable: a CycloneDX CBOM, a 0–100 quantum-readiness score with six subscores (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion), and client-ready PDF / DOCX / HTML reports. Point it at a client's TLS endpoints, SSH services, JWT-issuing APIs, and cloud accounts; hand back the findings, the prioritized remediation roadmap, and a written executive narrative. No agents to deploy, no software for the client to install.
 
 **For the IT generalist.** Start with the simple question — *what crypto do we even have running?* — and end with an answerable inventory. QU.I.R.K. walks your environment, names every TLS endpoint, SSH host, container image, and KMS key it can reach, and tells you which ones are quantum-vulnerable. The dashboard at `http://localhost:8512` lets you browse the findings interactively before you commit to any remediation work.
 
