@@ -80,3 +80,6 @@ RESTRUCTURE-AUDIT-2026-03-31.md
 SECURITY_TEAM_MEMO.md
 # Design exploration (preserved in pre-rewrite mirror clone)
 design/
+# AI / Claude instruction files (kept on disk for local dev; not for public repo)
+CLAUDE.md
+AGENTS.md
