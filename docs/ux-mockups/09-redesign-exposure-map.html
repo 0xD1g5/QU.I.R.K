@@ -1,0 +1,143 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<style>
+:root{--bg:#080a0f;--card:#0d0f14;--fg:#f0f2f8;--muted:#6e7a95;--teal:#4ba8a8;--border:#252d3e;--red:#e05555;--amber:#e0a955;--green:#5bbf8a}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--fg);width:1360px;height:884px;display:flex}
+.side{width:230px;flex:0 0 230px;background:#0a0c11;border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.logo{font-weight:800;font-size:19px;letter-spacing:.04em;margin-bottom:18px}.logo b{color:var(--teal)}
+.newbtn{background:var(--teal);color:#04141a;font-weight:700;border:none;border-radius:7px;padding:9px;font-size:13px;margin-bottom:14px}
+.nav{font-size:13px;color:var(--muted);padding:8px 10px;border-radius:6px;display:flex;gap:9px;align-items:center}
+.nav.active{color:var(--fg);background:#11161f;border-left:2px solid var(--teal)}
+.dot{width:14px;height:14px;border-radius:3px;background:#1b2230;flex:0 0 14px}.nav.active .dot{background:var(--teal)}
+.main{flex:1;padding:24px 28px;overflow:hidden}
+.h1{font-size:22px;font-weight:700;margin-bottom:3px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+/* tabs to show this lives inside Roadmap */
+.tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border)}
+.tab{font-size:13px;color:var(--muted);padding:9px 14px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--fg);border-bottom-color:var(--teal);font-weight:600}
+.layout{display:flex;gap:18px}
+.graph{flex:0 0 690px;width:690px;height:640px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:0;position:relative;overflow:hidden}
+.ghead{position:absolute;top:0;left:0;right:0;padding:16px 20px;z-index:5}
+.ghead .t{font-size:13px;font-weight:650}
+.ghead .c{font-size:12px;color:var(--muted);margin-top:2px}
+.legend{position:absolute;bottom:14px;left:20px;display:flex;gap:14px;font-size:11px;color:var(--muted);z-index:5;background:rgba(8,10,15,.7);padding:7px 11px;border-radius:8px;border:1px solid var(--border)}
+.lg{display:inline-flex;align-items:center;gap:6px}.lgd{width:9px;height:9px;border-radius:50%}
+svg.canvas{position:absolute;inset:0;width:100%;height:100%}
+.node{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:4}
+.ncircle{width:46px;height:46px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:17px;background:#11161f;border:2px solid var(--border)}
+.n-red .ncircle{border-color:var(--red);background:rgba(224,85,85,.16);box-shadow:0 0 16px rgba(224,85,85,.25)}
+.n-amber .ncircle{border-color:var(--amber);background:rgba(224,169,85,.14)}
+.n-crown .ncircle{width:60px;height:60px;border-color:var(--red);background:rgba(224,85,85,.22);box-shadow:0 0 26px rgba(224,85,85,.45);font-size:22px}
+.n-key .ncircle{border-color:var(--teal);background:rgba(75,168,168,.16);box-shadow:0 0 20px rgba(75,168,168,.4)}
+.nlbl{font-size:11px;color:#dde2ec;margin-top:6px;line-height:1.25;font-weight:600;white-space:nowrap}
+.nmeta{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap}
+.qwbadge{position:absolute;transform:translate(-50%,-50%);background:var(--teal);color:#04141a;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:20px;z-index:6;letter-spacing:.03em}
+/* right rail */
+.rail{flex:1;display:flex;flex-direction:column;gap:14px}
+.exp{background:linear-gradient(135deg,rgba(224,85,85,.14),var(--card));border:1px solid rgba(224,85,85,.4);border-radius:13px;padding:18px}
+.exp .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#ff9a9a;font-weight:700}
+.exp .big{font-size:34px;font-weight:800;margin:7px 0 3px}
+.exp .d{font-size:12.5px;color:#c3cad9;line-height:1.45}
+.qw{background:linear-gradient(135deg,rgba(75,168,168,.14),var(--card));border:1px solid rgba(75,168,168,.45);border-radius:13px;padding:16px 18px}
+.qw .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7fd0d0;font-weight:700;display:flex;align-items:center;gap:7px}
+.qw .t{font-size:14px;font-weight:650;margin:8px 0 4px;line-height:1.35}
+.qw .d{font-size:12px;color:#aeb6c7;line-height:1.45}
+.qw .row{display:flex;gap:8px;margin-top:11px}
+.chip{font-size:10.5px;padding:3px 8px;border-radius:5px;background:#11161f;border:1px solid var(--border);color:#9aa6bd}
+.chip.lift{color:#7fd6a6;border-color:rgba(91,191,138,.3)}.chip.sev{color:#ff9a9a;border-color:rgba(224,85,85,.3)}
+.qwbtn{margin-top:13px;width:100%;background:var(--teal);color:#04141a;font-weight:700;border:none;border-radius:8px;padding:10px;font-size:13px}
+.chains{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 18px;flex:1}
+.chains .t{font-size:13px;font-weight:650;margin-bottom:12px}
+.citem{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid #161b26}.citem:last-child{border:none}
+.cnum{flex:0 0 22px;height:22px;border-radius:6px;background:rgba(224,85,85,.16);color:#ff9a9a;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.cpath{font-size:12px;color:#dde2ec;font-weight:600;line-height:1.4}
+.cpath span{color:var(--muted);font-weight:400}
+.cd{font-size:11px;color:var(--muted);margin-top:3px}
+</style></head><body>
+<div class="side">
+  <div class="logo">QU<b>.I.R.K</b></div><button class="newbtn">+ New Scan</button>
+  <div class="nav"><span class="dot"></span>Executive</div>
+  <div class="nav"><span class="dot"></span>Findings</div>
+  <div class="nav"><span class="dot"></span>Identity</div>
+  <div class="nav"><span class="dot"></span>Data in Motion</div>
+  <div class="nav"><span class="dot"></span>Data at Rest</div>
+  <div class="nav"><span class="dot"></span>Certificates</div>
+  <div class="nav"><span class="dot"></span>CBOM</div>
+  <div class="nav active"><span class="dot"></span>Roadmap</div>
+  <div class="nav"><span class="dot"></span>Trends</div>
+</div>
+<div class="main">
+  <div class="h1">Migration Roadmap</div>
+  <div class="sub">prod-datacenter · scan #1487</div>
+  <div class="tabs">
+    <div class="tab">Timeline</div>
+    <div class="tab active">Exposure Map</div>
+    <div class="tab">Compliance</div>
+  </div>
+  <div class="layout">
+    <div class="graph">
+      <div class="ghead"><div class="t">Quantum exposure paths · Internet → long-retention data</div><div class="c">Each node is a real finding. The <b>chain</b> is what's exploitable — fix the chain, not the list.</div></div>
+      <svg class="canvas" viewBox="0 0 690 640">
+        <defs>
+          <marker id="ar" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#e05555"/></marker>
+          <marker id="art" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#4ba8a8"/></marker>
+        </defs>
+        <!-- chain A: checkout -> payments -> PII -->
+        <path d="M120,180 C210,190 230,200 280,210" stroke="#e05555" stroke-width="2.2" fill="none" opacity=".75" marker-end="url(#ar)"/>
+        <path d="M330,225 C440,260 470,300 510,330" stroke="#e05555" stroke-width="2.2" fill="none" opacity=".75" marker-end="url(#ar)"/>
+        <!-- shared key (teal, quick win) -> payments  AND -> authGW (blast radius) -->
+        <path d="M135,360 C200,300 230,250 280,222" stroke="#4ba8a8" stroke-width="2.4" fill="none" opacity=".85" marker-end="url(#art)"/>
+        <path d="M135,375 C200,400 230,410 280,415" stroke="#4ba8a8" stroke-width="2.4" fill="none" opacity=".85" marker-end="url(#art)"/>
+        <!-- authGW -> PII -->
+        <path d="M330,420 C430,400 470,370 505,348" stroke="#e05555" stroke-width="2.2" fill="none" opacity=".75" marker-end="url(#ar)"/>
+        <!-- postgres -> billing -> PII -->
+        <path d="M125,545 C200,540 235,535 280,530" stroke="#e05555" stroke-width="2.2" fill="none" opacity=".6" marker-end="url(#ar)"/>
+        <path d="M330,520 C440,470 480,410 515,372" stroke="#e05555" stroke-width="2.2" fill="none" opacity=".6" marker-end="url(#ar)"/>
+      </svg>
+
+      <div class="node n-red" style="left:110px;top:180px"><div class="ncircle">🌐</div><div class="nlbl">checkout.prod</div><div class="nmeta">TLS · RSA-2048</div></div>
+      <div class="node n-key" style="left:110px;top:368px"><div class="ncircle">🔑</div><div class="nlbl">Shared RSA-2048 cert</div><div class="nmeta">reused across 6 assets</div></div>
+      <div class="qwbadge" style="left:110px;top:333px">QUICK WIN</div>
+      <div class="node n-amber" style="left:110px;top:545px"><div class="ncircle">🗄</div><div class="nlbl">Postgres</div><div class="nmeta">TLS optional</div></div>
+
+      <div class="node n-red" style="left:300px;top:212px"><div class="ncircle">⚙</div><div class="nlbl">Payments API</div></div>
+      <div class="node n-amber" style="left:300px;top:418px"><div class="ncircle">🪪</div><div class="nlbl">Auth Gateway</div><div class="nmeta">JWT · RS256</div></div>
+      <div class="node n-amber" style="left:300px;top:522px"><div class="ncircle">💳</div><div class="nlbl">Billing svc</div></div>
+
+      <div class="node n-crown" style="left:540px;top:345px"><div class="ncircle">💎</div><div class="nlbl">Customer PII store</div><div class="nmeta">4.2M records · 10-yr retention</div></div>
+
+      <div class="legend">
+        <span class="lg"><span class="lgd" style="background:#e05555"></span>quantum-vulnerable</span>
+        <span class="lg"><span class="lgd" style="background:#e0a955"></span>at-risk</span>
+        <span class="lg"><span class="lgd" style="background:#4ba8a8"></span>quick-win node</span>
+        <span class="lg"><span class="lgd" style="background:#e05555;box-shadow:0 0 6px #e05555"></span>crown-jewel data</span>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="exp">
+        <div class="k">⚠ Critical exposure</div>
+        <div class="big">4 paths</div>
+        <div class="d">reach data with a <b>10-yr+ confidentiality requirement</b> using quantum-vulnerable crypto. These are harvest-now-decrypt-later chains — capture today, decrypt later.</div>
+      </div>
+
+      <div class="qw">
+        <div class="k">◎ Highest-leverage fix</div>
+        <div class="t">Re-key 1 shared RSA-2048 certificate</div>
+        <div class="d">One cert is reused across 6 assets. Re-keying it to a PQC-capable cert <b>severs 3 of the 4 exposure paths</b> at once.</div>
+        <div class="row"><span class="chip lift">+14 score</span><span class="chip sev">−3 paths</span><span class="chip">~2 days</span></div>
+        <button class="qwbtn">Add to NOW phase →</button>
+      </div>
+
+      <div class="chains">
+        <div class="t">Exposure chains, ranked</div>
+        <div class="citem"><div class="cnum">1</div><div><div class="cpath">checkout.prod <span>→</span> Payments API <span>→</span> PII store</div><div class="cd">RSA-2048 TLS terminates customer traffic → reaches PII.</div></div></div>
+        <div class="citem"><div class="cnum">2</div><div><div class="cpath">Shared cert <span>→</span> Auth Gateway <span>→</span> PII store</div><div class="cd">Reused key + forgeable RS256 tokens → identity bypass.</div></div></div>
+        <div class="citem"><div class="cnum">3</div><div><div class="cpath">Shared cert <span>→</span> Payments API <span>→</span> PII store</div><div class="cd">Same key, second blast-radius path.</div></div></div>
+        <div class="citem"><div class="cnum">4</div><div><div class="cpath">Postgres <span>→</span> Billing svc <span>→</span> PII store</div><div class="cd">Plaintext-capable DB link inside the trust boundary.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

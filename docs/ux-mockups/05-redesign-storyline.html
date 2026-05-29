@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<style>
+:root{--bg:#080a0f;--card:#0d0f14;--fg:#f0f2f8;--muted:#6e7a95;--teal:#4ba8a8;--border:#252d3e;--red:#e05555;--amber:#e0a955;--green:#5bbf8a}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--fg);width:1360px;height:880px;display:flex}
+.side{width:230px;flex:0 0 230px;background:#0a0c11;border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.logo{font-weight:800;font-size:19px;letter-spacing:.04em;margin-bottom:18px}.logo b{color:var(--teal)}
+.newbtn{background:var(--teal);color:#04141a;font-weight:700;border:none;border-radius:7px;padding:9px;font-size:13px;margin-bottom:14px}
+.nav{font-size:13px;color:var(--muted);padding:8px 10px;border-radius:6px;display:flex;gap:9px;align-items:center}
+.nav.active{color:var(--fg);background:#11161f;border-left:2px solid var(--teal)}
+.dot{width:14px;height:14px;border-radius:3px;background:#1b2230;flex:0 0 14px}.nav.active .dot{background:var(--teal)}
+.main{flex:1;position:relative}
+/* dimmed table behind */
+.bg{padding:26px 30px;filter:saturate(.6);opacity:.32}
+.h1{font-size:22px;font-weight:700;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:12px 16px;border-bottom:1px solid var(--border)}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid #161b26;color:#cdd3e0}
+.scrim{position:absolute;inset:0;background:rgba(4,6,10,.55)}
+/* drawer */
+.drawer{position:absolute;top:0;right:0;bottom:0;width:560px;background:#0b0d12;border-left:1px solid var(--border);box-shadow:-30px 0 60px rgba(0,0,0,.5);padding:26px 28px;overflow:hidden}
+.dclose{position:absolute;top:20px;right:22px;color:var(--muted);font-size:18px}
+.sevline{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sev{font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;background:rgba(224,85,85,.16);color:#ff8080}
+.qb{font-size:11px;font-weight:600;padding:3px 9px;border-radius:5px;background:rgba(224,85,85,.14);color:#ff8080}
+.dtitle{font-size:19px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.dasset{font-family:'SF Mono',Menlo,monospace;font-size:12.5px;color:#9aa6bd;margin-bottom:20px}
+.stl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:22px 0 12px}
+/* storyline */
+.story{position:relative;padding-left:26px}
+.story::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.step{position:relative;margin-bottom:16px}
+.step::before{content:"";position:absolute;left:-26px;top:3px;width:16px;height:16px;border-radius:50%;background:#0b0d12;border:2px solid var(--teal)}
+.step.alarm::before{border-color:var(--red)}
+.step .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.step .txt{font-size:13.5px;color:#dde2ec;margin-top:3px;line-height:1.45}
+.step .txt b{color:var(--fg)}
+.step .link{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--teal);margin-top:6px;background:#11161f;border:1px solid var(--border);padding:5px 10px;border-radius:6px}
+.fixbox{background:linear-gradient(135deg,rgba(91,191,138,.1),transparent);border:1px solid rgba(91,191,138,.3);border-radius:10px;padding:16px;margin-top:8px}
+.fixbox .t{font-size:13px;font-weight:650;color:#9fe0bc}
+.fixbox .d{font-size:12.5px;color:#aeb6c7;margin-top:6px;line-height:1.45}
+.fixbtn{margin-top:12px;background:var(--teal);color:#04141a;font-weight:700;border:none;border-radius:7px;padding:9px 16px;font-size:13px}
+.hl{outline:2px solid var(--teal);outline-offset:2px;border-radius:6px}
+</style></head><body>
+<div class="side">
+  <div class="logo">QU<b>.I.R.K</b></div><button class="newbtn">+ New Scan</button>
+  <div class="nav"><span class="dot"></span>Executive</div>
+  <div class="nav active"><span class="dot"></span>Findings</div>
+  <div class="nav"><span class="dot"></span>Identity</div>
+  <div class="nav"><span class="dot"></span>Data in Motion</div>
+  <div class="nav"><span class="dot"></span>Certificates</div>
+  <div class="nav"><span class="dot"></span>CBOM</div>
+  <div class="nav"><span class="dot"></span>Roadmap</div>
+</div>
+<div class="main">
+  <div class="bg">
+    <div class="h1">Findings</div>
+    <table>
+      <tr><th>Severity</th><th>Finding</th><th>Asset</th><th>Risk</th></tr>
+      <tr class="hl"><td>CRITICAL</td><td>RSA-2048 cert, no PQC fallback</td><td>api.prod.internal</td><td>harvest-now</td></tr>
+      <tr><td>CRITICAL</td><td>TLS 1.0 enabled</td><td>10.4.2.17:443</td><td>harvest-now</td></tr>
+      <tr><td>HIGH</td><td>JWT RS256 static key</td><td>auth-gateway</td><td>at-risk</td></tr>
+      <tr><td>HIGH</td><td>Kerberos RC4-HMAC</td><td>dc01.corp.local</td><td>at-risk</td></tr>
+      <tr><td>MEDIUM</td><td>ECDSA P-256 base image</td><td>payments:1.9</td><td>at-risk</td></tr>
+    </table>
+  </div>
+  <div class="scrim"></div>
+  <div class="drawer">
+    <div class="dclose">✕</div>
+    <div class="sevline"><span class="sev">CRITICAL</span><span class="qb">harvest-now-decrypt-later</span></div>
+    <div class="dtitle">RSA-2048 certificate with no PQC fallback</div>
+    <div class="dasset">api.prod.internal · TLS :443 · cert SHA 9f:2c:…:b1</div>
+
+    <div class="stl">Storyline — how this finding connects</div>
+    <div class="story">
+      <div class="step alarm"><div class="lbl">Detected</div><div class="txt">TLS handshake offers only <b>RSA-2048 key exchange</b>. No hybrid ML-KEM group advertised.</div></div>
+      <div class="step"><div class="lbl">Where this crypto lives</div><div class="txt">The same RSA-2048 key backs <b>6 other assets</b> in your inventory.</div><span class="link">⬡ View in CBOM graph →</span></div>
+      <div class="step"><div class="lbl">Why it matters</div><div class="txt">api.prod terminates <b>customer + partner traffic</b>. Captured ciphertext is decryptable retroactively once a CRQC exists — data has a 10-yr confidentiality requirement.</div></div>
+      <div class="step"><div class="lbl">Remediation</div><div class="txt">Mapped to roadmap item <b>NOW-1</b>.</div><span class="link">→ Open in Roadmap</span></div>
+    </div>
+
+    <div class="fixbox">
+      <div class="t">✓ Recommended fix</div>
+      <div class="d">Enable hybrid key exchange (X25519 + ML-KEM-768) at the load balancer and reissue the leaf cert from a PQC-capable CA. Closes this finding and 6 linked assets.</div>
+      <button class="fixbtn">View fix path →</button>
+    </div>
+  </div>
+</div>
+</body></html>

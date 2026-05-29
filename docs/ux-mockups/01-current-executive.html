@@ -1,0 +1,94 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<style>
+:root{--bg:#080a0f;--card:#0d0f14;--fg:#f0f2f8;--muted:#6e7a95;--teal:#4ba8a8;--border:#252d3e;--red:#e05555;--amber:#e0a955;--green:#5bbf8a}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--fg);width:1360px;height:880px;display:flex}
+.side{width:230px;flex:0 0 230px;background:#0a0c11;border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.logo{font-weight:800;font-size:19px;letter-spacing:.04em;margin-bottom:18px;color:var(--fg)}
+.logo b{color:var(--teal)}
+.newbtn{background:var(--teal);color:#04141a;font-weight:700;border:none;border-radius:7px;padding:9px;font-size:13px;margin-bottom:14px;cursor:pointer}
+.nav{font-size:13px;color:var(--muted);padding:8px 10px;border-radius:6px;display:flex;gap:9px;align-items:center}
+.nav.active{color:var(--fg);background:#11161f;border-left:2px solid var(--teal)}
+.dot{width:14px;height:14px;border-radius:3px;background:#1b2230;flex:0 0 14px}
+.nav.active .dot{background:var(--teal)}
+.main{flex:1;padding:26px 30px;overflow:hidden}
+.h1{font-size:22px;font-weight:700;margin-bottom:3px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+.row{display:flex;gap:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:20px}
+.gauges{flex:0 0 430px;display:flex;gap:14px;justify-content:space-between}
+.gcard{flex:1;text-align:center}
+.glabel{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:10px}
+.gnum{font-size:13px;color:var(--muted);margin-top:3px}
+.bars{flex:1}
+.ctitle{font-size:13px;font-weight:600;color:var(--fg);margin-bottom:18px}
+.bar{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:12px}
+.bar .lbl{width:62px;color:var(--muted)}
+.bar .track{flex:1;height:18px;background:#11161f;border-radius:4px;overflow:hidden}
+.bar .fill{height:100%;border-radius:4px}
+.bar .v{width:26px;text-align:right;color:var(--fg);font-weight:600}
+.scanners{margin-top:18px}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+.scell{background:#0a0c11;border:1px solid var(--border);border-radius:8px;padding:12px}
+.scell .n{font-size:12px;color:var(--fg);font-weight:600}
+.scell .s{font-size:11px;margin-top:5px;display:flex;align-items:center;gap:6px;color:var(--muted)}
+.pill{width:7px;height:7px;border-radius:50%}
+.exp{float:right;background:#11161f;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:7px 13px;border-radius:7px}
+</style></head><body>
+<div class="side">
+  <div class="logo">QU<b>.I.R.K</b></div>
+  <button class="newbtn">+ New Scan</button>
+  <div class="nav active"><span class="dot"></span>Executive</div>
+  <div class="nav"><span class="dot"></span>Findings</div>
+  <div class="nav"><span class="dot"></span>Identity</div>
+  <div class="nav"><span class="dot"></span>Data in Motion</div>
+  <div class="nav"><span class="dot"></span>Data at Rest</div>
+  <div class="nav"><span class="dot"></span>Certificates</div>
+  <div class="nav"><span class="dot"></span>CBOM</div>
+  <div class="nav"><span class="dot"></span>Roadmap</div>
+  <div class="nav"><span class="dot"></span>Trends</div>
+</div>
+<div class="main">
+  <button class="exp">⬇ Export PDF</button>
+  <div class="h1">Executive Summary</div>
+  <div class="sub">Scan #1487 · prod-datacenter · standard profile · 2026-05-27 14:02</div>
+
+  <div class="row">
+    <div class="card gauges">
+      <div class="gcard">
+        <svg width="92" height="92" viewBox="0 0 92 92"><circle cx="46" cy="46" r="38" fill="none" stroke="#1b2230" stroke-width="9"/><circle cx="46" cy="46" r="38" fill="none" stroke="#e0a955" stroke-width="9" stroke-dasharray="238.7" stroke-dashoffset="100.3" stroke-linecap="round" transform="rotate(-90 46 46)"/><text x="46" y="52" text-anchor="middle" fill="#f0f2f8" font-size="22" font-weight="700">58</text></svg>
+        <div class="glabel">Quantum Score</div><div class="gnum">/ 100</div>
+      </div>
+      <div class="gcard">
+        <svg width="92" height="92" viewBox="0 0 92 92"><circle cx="46" cy="46" r="38" fill="none" stroke="#1b2230" stroke-width="9"/><circle cx="46" cy="46" r="38" fill="none" stroke="#4ba8a8" stroke-width="9" stroke-dasharray="238.7" stroke-dashoffset="35.8" stroke-linecap="round" transform="rotate(-90 46 46)"/><text x="46" y="52" text-anchor="middle" fill="#f0f2f8" font-size="22" font-weight="700">85</text></svg>
+        <div class="glabel">Confidence</div><div class="gnum">high</div>
+      </div>
+      <div class="gcard">
+        <svg width="92" height="92" viewBox="0 0 92 92"><circle cx="46" cy="46" r="38" fill="none" stroke="#1b2230" stroke-width="9"/><circle cx="46" cy="46" r="38" fill="none" stroke="#e05555" stroke-width="9" stroke-dasharray="238.7" stroke-dashoffset="200" stroke-linecap="round" transform="rotate(-90 46 46)"/><text x="46" y="52" text-anchor="middle" fill="#f0f2f8" font-size="20" font-weight="700">−4</text></svg>
+        <div class="glabel">Regression</div><div class="gnum">vs #1462</div>
+      </div>
+    </div>
+    <div class="card bars">
+      <div class="ctitle">Findings by severity</div>
+      <div class="bar"><span class="lbl">Critical</span><span class="track"><span class="fill" style="width:34%;background:var(--red)"></span></span><span class="v">12</span></div>
+      <div class="bar"><span class="lbl">High</span><span class="track"><span class="fill" style="width:58%;background:#e07a55"></span></span><span class="v">23</span></div>
+      <div class="bar"><span class="lbl">Medium</span><span class="track"><span class="fill" style="width:80%;background:var(--amber)"></span></span><span class="v">41</span></div>
+      <div class="bar"><span class="lbl">Low</span><span class="track"><span class="fill" style="width:46%;background:var(--teal)"></span></span><span class="v">19</span></div>
+    </div>
+  </div>
+
+  <div class="card scanners">
+    <div class="ctitle">Scanner coverage</div>
+    <div class="sgrid">
+      <div class="scell"><div class="n">TLS / Motion</div><div class="s"><span class="pill" style="background:var(--green)"></span>complete · 214 hosts</div></div>
+      <div class="scell"><div class="n">SSH</div><div class="s"><span class="pill" style="background:var(--green)"></span>complete · 88 hosts</div></div>
+      <div class="scell"><div class="n">Identity</div><div class="s"><span class="pill" style="background:var(--green)"></span>complete · 3 IdPs</div></div>
+      <div class="scell"><div class="n">Data at Rest</div><div class="s"><span class="pill" style="background:var(--amber)"></span>partial · 2 skipped</div></div>
+      <div class="scell"><div class="n">Certificates</div><div class="s"><span class="pill" style="background:var(--green)"></span>complete · 196 certs</div></div>
+      <div class="scell"><div class="n">Containers</div><div class="s"><span class="pill" style="background:var(--green)"></span>complete · 47 images</div></div>
+      <div class="scell"><div class="n">Cloud KMS</div><div class="s"><span class="pill" style="background:var(--muted)"></span>not configured</div></div>
+      <div class="scell"><div class="n">Source Code</div><div class="s"><span class="pill" style="background:var(--green)"></span>complete · 11 repos</div></div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,81 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<style>
+:root{--bg:#f7f7fb;--card:#ffffff;--fg:#16131f;--muted:#6b6880;--purple:#6d4aff;--purpleb:#efeaff;--border:#e7e5f0;--green:#16a571;--amber:#e0922f;--red:#e0444a}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--fg);width:1360px;height:840px;display:flex}
+.side{width:218px;flex:0 0 218px;background:#fff;border-right:1px solid var(--border);padding:18px 14px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;margin-bottom:20px}
+.llogo{width:24px;height:24px;border-radius:7px;background:var(--purple)}
+.nav{font-size:13px;color:var(--muted);padding:8px 11px;border-radius:8px;display:flex;gap:9px;align-items:center;margin-bottom:3px}
+.nav.active{color:var(--purple);background:var(--purpleb);font-weight:600}
+.ndot{width:14px;height:14px;border-radius:4px;background:#e7e5f0}.nav.active .ndot{background:var(--purple)}
+.main{flex:1;padding:24px 30px;overflow:hidden}
+.ref{display:inline-block;font-size:10.5px;color:var(--purple);background:var(--purpleb);border:1px solid #d9d0ff;padding:3px 9px;border-radius:20px;margin-bottom:14px}
+.h1{font-size:21px;font-weight:700;letter-spacing:-.01em}.sub{font-size:13px;color:var(--muted);margin:3px 0 20px}
+.kpis{display:flex;gap:14px;margin-bottom:20px}
+.kpi{flex:1;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 18px}
+.kpi .k{font-size:12px;color:var(--muted)}
+.kpi .v{font-size:26px;font-weight:750;margin-top:7px;letter-spacing:-.02em}
+.kpi .delta{font-size:11.5px;font-weight:600;margin-top:5px}
+.up{color:var(--green)}.down{color:var(--red)}
+.sparkline{margin-top:8px}
+.cols{display:flex;gap:16px}
+.chart{flex:1.5;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px}
+.ctitle{font-size:13px;font-weight:650;margin-bottom:2px}.ccap{font-size:12px;color:var(--muted);margin-bottom:16px}
+.legend{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.lg{display:inline-flex;align-items:center;gap:6px}.lgd{width:9px;height:9px;border-radius:3px}
+.logs{flex:1;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px}
+.lrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0eef7;font-size:12.5px}
+.lrow:last-child{border:none}
+.lstatus{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.s-ok{background:var(--green)}.s-warn{background:var(--amber)}.s-err{background:var(--red)}
+.lmodel{font-weight:600;flex:1}.llat{color:var(--muted);font-size:11.5px}.lcost{color:var(--muted);font-size:11.5px;width:54px;text-align:right}
+.tag{font-size:10px;padding:2px 7px;border-radius:5px;background:#f0eef7;color:#6b6880}
+</style></head><body>
+<div class="side">
+  <div class="logo"><div class="llogo"></div>Gateway</div>
+  <div class="nav active"><span class="ndot"></span>Observability</div>
+  <div class="nav"><span class="ndot"></span>Logs</div>
+  <div class="nav"><span class="ndot"></span>Analytics</div>
+  <div class="nav"><span class="ndot"></span>Prompts</div>
+  <div class="nav"><span class="ndot"></span>Configs</div>
+  <div class="nav"><span class="ndot"></span>Guardrails</div>
+</div>
+<div class="main">
+  <div class="ref">REFERENCE PATTERN — Portkey-style observability (clean KPI + trend + live feed)</div>
+  <div class="h1">Observability</div>
+  <div class="sub">Last 24h · all providers · prod environment</div>
+  <div class="kpis">
+    <div class="kpi"><div class="k">Requests</div><div class="v">1.24M</div><div class="delta up">▲ 8.2% vs yesterday</div></div>
+    <div class="kpi"><div class="k">Avg latency</div><div class="v">412ms</div><div class="delta down">▼ 31ms slower</div></div>
+    <div class="kpi"><div class="k">Error rate</div><div class="v">0.34%</div><div class="delta up">▲ within SLO</div></div>
+    <div class="kpi"><div class="k">Spend</div><div class="v">$2,841</div><div class="delta down">▲ 12% vs budget pace</div></div>
+  </div>
+  <div class="cols">
+    <div class="chart">
+      <div class="ctitle">Requests & latency</div>
+      <div class="ccap">Hourly, last 24h</div>
+      <div class="legend"><span class="lg"><span class="lgd" style="background:#6d4aff"></span>requests</span><span class="lg"><span class="lgd" style="background:#16a571"></span>p50 latency</span><span class="lg"><span class="lgd" style="background:#e0922f"></span>p95 latency</span></div>
+      <svg width="100%" height="250" viewBox="0 0 560 250" preserveAspectRatio="none">
+        <line x1="0" y1="60" x2="560" y2="60" stroke="#f0eef7"/><line x1="0" y1="120" x2="560" y2="120" stroke="#f0eef7"/><line x1="0" y1="180" x2="560" y2="180" stroke="#f0eef7"/>
+        <polygon points="0,200 0,150 56,140 112,155 168,120 224,130 280,95 336,110 392,80 448,100 504,70 560,85 560,200" fill="rgba(109,74,255,.12)"/>
+        <polyline points="0,150 56,140 112,155 168,120 224,130 280,95 336,110 392,80 448,100 504,70 560,85" fill="none" stroke="#6d4aff" stroke-width="2.5"/>
+        <polyline points="0,180 56,178 112,182 168,170 224,176 280,165 336,170 392,158 448,168 504,160 560,166" fill="none" stroke="#16a571" stroke-width="2"/>
+        <polyline points="0,120 56,128 112,110 168,100 224,118 280,90 336,105 392,82 448,96 504,78 560,92" fill="none" stroke="#e0922f" stroke-width="2" stroke-dasharray="4 3"/>
+      </svg>
+    </div>
+    <div class="logs">
+      <div class="ctitle">Live request feed</div>
+      <div class="ccap">Streaming</div>
+      <div class="lrow"><span class="lstatus s-ok"></span><span class="lmodel">claude-opus-4-8</span><span class="tag">tools</span><span class="lcost">$0.04</span></div>
+      <div class="lrow"><span class="lstatus s-ok"></span><span class="lmodel">gpt-4o</span><span class="lcost">$0.01</span></div>
+      <div class="lrow"><span class="lstatus s-warn"></span><span class="lmodel">claude-sonnet-4-6</span><span class="tag">retry</span><span class="lcost">$0.02</span></div>
+      <div class="lrow"><span class="lstatus s-ok"></span><span class="lmodel">claude-haiku-4-5</span><span class="lcost">$0.00</span></div>
+      <div class="lrow"><span class="lstatus s-err"></span><span class="lmodel">gpt-4o-mini</span><span class="tag">429</span><span class="lcost">—</span></div>
+      <div class="lrow"><span class="lstatus s-ok"></span><span class="lmodel">claude-opus-4-8</span><span class="lcost">$0.06</span></div>
+      <div class="lrow"><span class="lstatus s-ok"></span><span class="lmodel">embed-3-large</span><span class="lcost">$0.00</span></div>
+      <div class="lrow"><span class="lstatus s-ok"></span><span class="lmodel">claude-sonnet-4-6</span><span class="lcost">$0.02</span></div>
+    </div>
+  </div>
+</div>
+</body></html>

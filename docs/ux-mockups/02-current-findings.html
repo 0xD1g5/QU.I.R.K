@@ -1,0 +1,62 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<style>
+:root{--bg:#080a0f;--card:#0d0f14;--fg:#f0f2f8;--muted:#6e7a95;--teal:#4ba8a8;--border:#252d3e;--red:#e05555;--amber:#e0a955;--green:#5bbf8a}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--fg);width:1360px;height:880px;display:flex}
+.side{width:230px;flex:0 0 230px;background:#0a0c11;border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.logo{font-weight:800;font-size:19px;letter-spacing:.04em;margin-bottom:18px}.logo b{color:var(--teal)}
+.newbtn{background:var(--teal);color:#04141a;font-weight:700;border:none;border-radius:7px;padding:9px;font-size:13px;margin-bottom:14px}
+.nav{font-size:13px;color:var(--muted);padding:8px 10px;border-radius:6px;display:flex;gap:9px;align-items:center}
+.nav.active{color:var(--fg);background:#11161f;border-left:2px solid var(--teal)}
+.dot{width:14px;height:14px;border-radius:3px;background:#1b2230;flex:0 0 14px}.nav.active .dot{background:var(--teal)}
+.main{flex:1;padding:26px 30px}
+.h1{font-size:22px;font-weight:700;margin-bottom:3px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.controls{display:flex;gap:10px;margin-bottom:16px}
+.search{flex:1;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--muted);font-size:13px}
+.fbtn{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:9px 14px;color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:13px 16px;border-bottom:1px solid var(--border);font-weight:600}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid #161b26;color:#cdd3e0}
+tr:last-child td{border-bottom:none}
+.sev{font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px}
+.s-crit{background:rgba(224,85,85,.16);color:#ff8080}
+.s-high{background:rgba(224,122,85,.16);color:#ffa173}
+.s-med{background:rgba(224,169,85,.16);color:#f0c179}
+.q{font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px}
+.q-vuln{background:rgba(224,85,85,.14);color:#ff8080}.q-risk{background:rgba(224,169,85,.14);color:#f0c179}
+.mono{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:#9aa6bd}
+</style></head><body>
+<div class="side">
+  <div class="logo">QU<b>.I.R.K</b></div><button class="newbtn">+ New Scan</button>
+  <div class="nav"><span class="dot"></span>Executive</div>
+  <div class="nav active"><span class="dot"></span>Findings</div>
+  <div class="nav"><span class="dot"></span>Identity</div>
+  <div class="nav"><span class="dot"></span>Data in Motion</div>
+  <div class="nav"><span class="dot"></span>Data at Rest</div>
+  <div class="nav"><span class="dot"></span>Certificates</div>
+  <div class="nav"><span class="dot"></span>CBOM</div>
+  <div class="nav"><span class="dot"></span>Roadmap</div>
+</div>
+<div class="main">
+  <div class="h1">Findings</div>
+  <div class="sub">95 findings · scan #1487</div>
+  <div class="controls">
+    <div class="search">🔍 Search findings…</div>
+    <div class="fbtn">Severity ▾</div><div class="fbtn">Quantum risk ▾</div><div class="fbtn">Protocol ▾</div><div class="fbtn">Segment ▾</div>
+  </div>
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Asset</th><th>Quantum risk</th><th>Protocol</th></tr>
+    <tr><td><span class="sev s-crit">CRITICAL</span></td><td>TLS 1.0 enabled with RSA key exchange</td><td class="mono">10.4.2.17:443</td><td><span class="q q-vuln">harvest-now</span></td><td>TLS</td></tr>
+    <tr><td><span class="sev s-crit">CRITICAL</span></td><td>RSA-2048 cert, no PQC fallback</td><td class="mono">api.prod.internal</td><td><span class="q q-vuln">harvest-now</span></td><td>TLS</td></tr>
+    <tr><td><span class="sev s-crit">CRITICAL</span></td><td>SSH host key uses RSA-1024</td><td class="mono">10.4.9.30:22</td><td><span class="q q-vuln">harvest-now</span></td><td>SSH</td></tr>
+    <tr><td><span class="sev s-high">HIGH</span></td><td>JWT signed with RS256, static key</td><td class="mono">auth-gateway</td><td><span class="q q-risk">at-risk</span></td><td>JWT</td></tr>
+    <tr><td><span class="sev s-high">HIGH</span></td><td>Kerberos RC4-HMAC etype permitted</td><td class="mono">dc01.corp.local</td><td><span class="q q-risk">at-risk</span></td><td>KERBEROS</td></tr>
+    <tr><td><span class="sev s-high">HIGH</span></td><td>Postgres TLS optional, plaintext allowed</td><td class="mono">10.4.6.5:5432</td><td><span class="q q-risk">at-risk</span></td><td>DB</td></tr>
+    <tr><td><span class="sev s-med">MEDIUM</span></td><td>ECDSA P-256 in container base image</td><td class="mono">payments:1.9</td><td><span class="q q-risk">at-risk</span></td><td>X.509</td></tr>
+    <tr><td><span class="sev s-med">MEDIUM</span></td><td>S3 bucket SSE-S3 (not KMS)</td><td class="mono">s3://billing-archive</td><td><span class="q q-risk">at-risk</span></td><td>KMS</td></tr>
+    <tr><td><span class="sev s-med">MEDIUM</span></td><td>DNSSEC zone signed with RSASHA1</td><td class="mono">corp.local</td><td><span class="q q-risk">at-risk</span></td><td>DNSSEC</td></tr>
+    <tr><td><span class="sev s-med">MEDIUM</span></td><td>Vault transit key type rsa-2048</td><td class="mono">vault.prod:8200</td><td><span class="q q-risk">at-risk</span></td><td>VAULT</td></tr>
+  </table>
+</div>
+</body></html>

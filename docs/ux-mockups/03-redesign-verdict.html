@@ -1,0 +1,107 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<style>
+:root{--bg:#080a0f;--card:#0d0f14;--fg:#f0f2f8;--muted:#6e7a95;--teal:#4ba8a8;--border:#252d3e;--red:#e05555;--amber:#e0a955;--green:#5bbf8a}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Segoe UI',system-ui,sans-serif}
+body{background:var(--bg);color:var(--fg);width:1360px;height:900px;display:flex}
+.side{width:230px;flex:0 0 230px;background:#0a0c11;border-right:1px solid var(--border);padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.logo{font-weight:800;font-size:19px;letter-spacing:.04em;margin-bottom:18px}.logo b{color:var(--teal)}
+.newbtn{background:var(--teal);color:#04141a;font-weight:700;border:none;border-radius:7px;padding:9px;font-size:13px;margin-bottom:14px}
+.nav{font-size:13px;color:var(--muted);padding:8px 10px;border-radius:6px;display:flex;gap:9px;align-items:center}
+.nav.active{color:var(--fg);background:#11161f;border-left:2px solid var(--teal)}
+.dot{width:14px;height:14px;border-radius:3px;background:#1b2230;flex:0 0 14px}.nav.active .dot{background:var(--teal)}
+.main{flex:1;padding:26px 30px;overflow:hidden}
+.tag{display:inline-block;font-size:11px;color:var(--muted);background:#11161f;border:1px solid var(--border);padding:4px 10px;border-radius:20px;margin-bottom:14px}
+/* verdict hero */
+.verdict{background:linear-gradient(135deg,rgba(224,85,85,.13),rgba(13,15,20,.4));border:1px solid rgba(224,85,85,.35);border-radius:14px;padding:24px 26px;display:flex;gap:26px;align-items:center;margin-bottom:22px}
+.vscore{flex:0 0 120px;text-align:center}
+.vscore .num{font-size:54px;font-weight:800;line-height:1;color:#ff8080}
+.vscore .of{font-size:13px;color:var(--muted);margin-top:2px}
+.vscore .band{font-size:11px;font-weight:700;color:#ff8080;letter-spacing:.08em;margin-top:8px}
+.vtext .lead{font-size:24px;font-weight:700;line-height:1.25;letter-spacing:-.01em}
+.vtext .lead em{color:#ff8080;font-style:normal}
+.vtext .why{font-size:14px;color:#aeb6c7;margin-top:9px;line-height:1.5;max-width:640px}
+.vtext .meta{font-size:12px;color:var(--muted);margin-top:12px;display:flex;gap:18px}
+.vtext .meta b{color:#cdd3e0;font-weight:600}
+/* priorities */
+.sec{font-size:13px;font-weight:600;color:var(--fg);margin:0 0 13px;display:flex;justify-content:space-between}
+.sec a{font-size:12px;color:var(--teal);font-weight:500}
+.prio{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.pcard{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:10px;padding:16px 18px;display:flex;gap:18px;align-items:center}
+.pcard.p2{border-left-color:#e07a55}.pcard.p3{border-left-color:var(--amber)}
+.prank{flex:0 0 26px;font-size:18px;font-weight:800;color:var(--muted)}
+.pbody{flex:1}
+.pbody .t{font-size:15px;font-weight:650}
+.pbody .d{font-size:12.5px;color:#9aa6bd;margin-top:4px;line-height:1.45}
+.pbody .d b{color:#e0a955;font-weight:600}
+.pimpact{flex:0 0 150px;text-align:right}
+.pimpact .lift{font-size:13px;color:var(--green);font-weight:700}
+.pimpact .lbl{font-size:11px;color:var(--muted)}
+.pgo{flex:0 0 90px}
+.pgo button{width:100%;background:#11161f;border:1px solid var(--border);color:var(--fg);font-size:12px;font-weight:600;padding:8px;border-radius:7px}
+/* supporting strip */
+.strip{display:flex;gap:14px}
+.scard{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.scard .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.scard .v{font-size:22px;font-weight:700;margin-top:6px}
+.scard .v span{font-size:12px;color:var(--muted);font-weight:500}
+.minibar{height:5px;background:#1b2230;border-radius:3px;margin-top:10px;overflow:hidden}
+.minibar i{display:block;height:100%}
+</style></head><body>
+<div class="side">
+  <div class="logo">QU<b>.I.R.K</b></div><button class="newbtn">+ New Scan</button>
+  <div class="nav active"><span class="dot"></span>Executive</div>
+  <div class="nav"><span class="dot"></span>Findings</div>
+  <div class="nav"><span class="dot"></span>Identity</div>
+  <div class="nav"><span class="dot"></span>Data in Motion</div>
+  <div class="nav"><span class="dot"></span>Data at Rest</div>
+  <div class="nav"><span class="dot"></span>Certificates</div>
+  <div class="nav"><span class="dot"></span>CBOM</div>
+  <div class="nav"><span class="dot"></span>Roadmap</div>
+  <div class="nav"><span class="dot"></span>Trends</div>
+</div>
+<div class="main">
+  <span class="tag">Scan #1487 · prod-datacenter · 2026-05-27</span>
+  <div class="verdict">
+    <div class="vscore"><div class="num">58</div><div class="of">/ 100</div><div class="band">NOT QUANTUM-READY</div></div>
+    <div class="vtext">
+      <div class="lead">This environment is <em>exposed to harvest-now-decrypt-later</em> attacks today.</div>
+      <div class="why">35 of your 95 findings are <b>harvest-now</b> risks — long-lived data is protected by RSA/ECDSA that a quantum adversary could retroactively break. The biggest single exposure is <b>3 internet-reachable TLS endpoints on RSA-2048 with no PQC fallback.</b> Fixing the top 3 items raises your score to an estimated 79.</div>
+      <div class="meta"><span><b>12</b> critical</span><span><b>23</b> high</span><span><b>↓ 4 pts</b> vs last scan</span><span>confidence: <b>high</b></span></div>
+    </div>
+  </div>
+
+  <div class="sec">Start here — highest impact first <a>View full roadmap →</a></div>
+  <div class="prio">
+    <div class="pcard p1">
+      <div class="prank">1</div>
+      <div class="pbody"><div class="t">Migrate 3 public TLS endpoints to hybrid PQC (X25519+ML-KEM)</div>
+        <div class="d">api.prod, checkout.prod, auth-gw · RSA-2048 key exchange. <b>If you do nothing:</b> captured traffic is decryptable the day a CRQC arrives.</div></div>
+      <div class="pimpact"><div class="lift">+14 pts</div><div class="lbl">score lift</div></div>
+      <div class="pgo"><button>Fix path →</button></div>
+    </div>
+    <div class="pcard p2">
+      <div class="prank">2</div>
+      <div class="pbody"><div class="t">Rotate 4 SSH host keys off RSA-1024</div>
+        <div class="d">Bastion + 3 jump hosts. <b>If you do nothing:</b> below NIST minimums today, fully breakable near-term.</div></div>
+      <div class="pimpact"><div class="lift">+5 pts</div><div class="lbl">score lift</div></div>
+      <div class="pgo"><button>Fix path →</button></div>
+    </div>
+    <div class="pcard p3">
+      <div class="prank">3</div>
+      <div class="pbody"><div class="t">Enforce TLS on Postgres + retire RC4 Kerberos etypes</div>
+        <div class="d">Data-at-rest + identity plane. <b>If you do nothing:</b> plaintext-capable links inside the trust boundary.</div></div>
+      <div class="pimpact"><div class="lift">+2 pts</div><div class="lbl">score lift</div></div>
+      <div class="pgo"><button>Fix path →</button></div>
+    </div>
+  </div>
+
+  <div class="sec">Posture breakdown</div>
+  <div class="strip">
+    <div class="scard"><div class="k">Crypto hygiene</div><div class="v">61<span>/100</span></div><div class="minibar"><i style="width:61%;background:var(--amber)"></i></div></div>
+    <div class="scard"><div class="k">TLS / motion</div><div class="v">44<span>/100</span></div><div class="minibar"><i style="width:44%;background:var(--red)"></i></div></div>
+    <div class="scard"><div class="k">Identity</div><div class="v">67<span>/100</span></div><div class="minibar"><i style="width:67%;background:var(--amber)"></i></div></div>
+    <div class="scard"><div class="k">Crypto agility</div><div class="v">39<span>/100</span></div><div class="minibar"><i style="width:39%;background:var(--red)"></i></div></div>
+    <div class="scard"><div class="k">Data at rest</div><div class="v">72<span>/100</span></div><div class="minibar"><i style="width:72%;background:var(--green)"></i></div></div>
+  </div>
+</div>
+</body></html>
