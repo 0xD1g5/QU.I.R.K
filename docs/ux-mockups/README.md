@@ -42,6 +42,18 @@ data or rebuilding the surface.
 | `07-ref-crowdstrike.html` | Falcon-style severity-first triage queue + one-screen what/how-bad/what-now |
 | `08-ref-portkey.html` | Portkey-style observability — KPI row + trend + live feed |
 
+### Built — live render of the implemented component
+| File | What it is |
+|------|------------|
+| `renders/10-verdict-live.png` | Screenshot of the **real** `ExecutiveVerdict` React component (not a mockup), rendered with `VITE_VERDICT_LAYER=1` against the a11y scan fixture. Shows the verdict layer composed above the existing regression chip, gauges, and severity chart. Implemented in `src/dashboard/src/components/ExecutiveVerdict.tsx` (flag-gated; default dashboard unchanged). |
+
+To reproduce the live render:
+
+```sh
+cd src/dashboard
+VITE_VERDICT_LAYER=1 VITE_A11Y_FIXTURE=1 npm run dev   # then screenshot http://localhost:5173/
+```
+
 ## Re-rendering the PNGs
 
 The PNGs were captured with headless Chrome at 2x scale:
