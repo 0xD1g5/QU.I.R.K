@@ -3,7 +3,7 @@ project: QU.I.R.K.
 type: reference
 status: active
 source: docs/quirk-overview.md
-updated: 2026-05-06
+updated: 2026-05-28
 ---
 
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
@@ -52,9 +52,9 @@ U.S. Office of Management and Budget (OMB) Memorandum M-23-02, NSA's Commercial 
 
 ---
 
-## Current Capabilities — v4.6
+## Current Capabilities — v5.5
 
-QU.I.R.K. v4.6 represents the Enterprise Readiness milestone, delivering a production-hardened platform with full cryptographic inventory across every major protocol surface, structured compliance mappings, enterprise-scale multi-target workflows, and rich finding context for remediation planning.
+QU.I.R.K. v5.5 builds on the v4.x enterprise foundation with the v5.x series of milestones: PQC-hybrid scoring ceiling (v5.0), authenticated scanning (v5.1), consulting-grade reporting (v5.2), notification / SIEM / ticketing integrations (v5.3), distributed on-prem sensor / console architecture (v5.4), and per-sensor authentication + revocation (v5.5). The result is a production-hardened platform with full cryptographic inventory across every major protocol surface, structured compliance mappings, enterprise-scale multi-target workflows, distributed scanning across isolated network segments, and rich finding context for remediation planning.
 
 ### Cryptographic Discovery Engine
 
@@ -131,12 +131,14 @@ The CBOM is the primary compliance artifact. It answers the audit question "show
 
 ### Quantum-Readiness Scoring
 
-The intelligence layer produces a composite quantum-readiness score from four weighted subscores:
+The intelligence layer produces a composite quantum-readiness score from six weighted subscores, each contributing 0–25 points (sum / 1.5 = overall 0–100):
 
-1. **Cryptographic Hygiene** — algorithm strength, key sizes, protocol versions
-2. **Certificate Health** — expiry, chain validity, public key quality
-3. **Configuration Posture** — cipher suite selection, deprecated protocol usage
-4. **Identity & Access Cryptography** — Kerberos etype exposure, SAML signing strength, DNSSEC integrity
+1. **Hygiene** — algorithm strength, key sizes, protocol versions
+2. **Modern TLS** — cipher suite modernity, TLS 1.3 adoption, deprecated protocol usage
+3. **Identity** — Kerberos etype exposure, SAML / OIDC signing strength, DNSSEC integrity, JWT algorithm posture
+4. **Agility** — code-signing posture, cryptographic agility signals, **+8.0 PQC-hybrid bonus** when X25519MLKEM768 / ML-DSA endpoints are detected (v5.0 ceiling)
+5. **Data at Rest** — database, object storage, Kubernetes, Vault encryption posture
+6. **Data in Motion** — email / message broker TLS posture (SMTPS, IMAPS, AMQPS, Kafka SSL)
 
 Scores are calibrated against three organizational profiles — *strict*, *balanced*, and *lenient* — to account for different risk tolerances and regulatory obligations. Each profile applies weighted multipliers to the subscores, producing a final readiness rating on a 0–100 scale with an associated risk tier (LOW / MEDIUM / HIGH / CRITICAL).
 
@@ -163,7 +165,7 @@ QUIRK added full TLS posture scanning for email and message broker protocols, co
 
 The local web dashboard provides immediate visual access to scan results without requiring any additional configuration. Seven core views are available:
 
-- **Executive Summary** — overall readiness score with gauge visualization, six subscores (TLS, SSH, API, Identity, Data at Rest, Data in Motion), severity breakdown, and scan metadata
+- **Executive Summary** — overall readiness score with gauge visualization, six subscores (Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion), severity breakdown, and scan metadata
 - **Findings** — full findings table with severity filtering, algorithm detail, compliance framework tag, and per-host drill-down
 - **Certificate Inventory** — all discovered TLS certificates with expiry countdown, key algorithm, and quantum safety status
 - **CBOM Viewer** — interactive bipartite graph of the cryptographic bill of materials, linking systems to algorithms and components
@@ -207,32 +209,39 @@ QUIRK produces HTML and PDF reports suitable for direct client delivery. The PDF
 
 ---
 
-## What's Coming
+## What Shipped Since v4.6
 
-### v4.7 — Governance & Compliance Platform (in progress)
+### v4.7 — Governance & Compliance Platform (shipped)
 
-v4.7 integrates the **CSNP QRAMM (Quantum Readiness Assurance Maturity Model)** framework as a first-class governance layer alongside the existing technical inventory.
+v4.7 integrated the **CSNP QRAMM (Quantum Readiness Assurance Maturity Model)** framework as a first-class governance layer alongside the technical inventory: 120-question maturity catalog, weakest-link scoring, QRAMM evidence bridge (auto-populating CVI dimension answers from scanner findings), QRAMM assessment UI with radar-chart scorecard, an 8-framework compliance coverage table (NIST PQC, CNSA 2.0, PCI DSS 4.0.1, HIPAA, FIPS 140-3, SOC 2, ISO 27001:2022, CMMC 2.0), and a combined PDF export merging technical CBOM and QRAMM scorecard. *(QRAMM v1.0 framework by CSNP — qramm.org. Used with attribution.)*
 
-**QRAMM Core** (Phase 51 — shipped) introduces the 120-question maturity catalog, a weakest-link scoring engine, and the SQLite tables and FastAPI CRUD endpoints that all QRAMM phases depend on. QRAMM evaluates organizational maturity across four governance dimensions — Cryptographic Visibility & Inventory, Strategic Governance & Risk Management, Data Protection Engineering, and Implementation & Technical Readiness.
+### v5.0 — PQC-Hybrid Scoring Ceiling (shipped)
 
-**Compliance Uplift & Health Check** (Phase 52 — shipped) extends the compliance module with SOC 2 CC6 and ISO 27001:2022 control references; CBOM algorithm components now carry `quirk:fips140-3-status` annotations; and `quirk doctor` gives operators a pre-engagement health dashboard.
+OQS-nginx PQC-hybrid chaos-lab profile (port 39444) serving TLS 1.3 with X25519MLKEM768 hybrid KEM and ML-DSA-65 certificates; agility scoring gains a `+8.0` PQC-hybrid bonus that anchors the scoring ceiling for post-quantum readiness. Six-subscore N/25 decomposition exposed across CLI, executive markdown, and HTML/PDF report surfaces. Four weak-TLS chaos-lab profiles added (postgres-tls, redis-tls, kafka-tls, grpc-tls).
 
-**Coming in v4.7:**
+### v5.1 — Authenticated Scanning (shipped)
 
-- **QRAMM Evidence Bridge** (Phase 53) — Auto-populate CVI dimension answers from live scanner findings using a scan-session bracket. An organization running QUIRK at Level 3 automated discovery automatically satisfies multiple CVI criteria without manual questionnaire work.
-- **QRAMM Assessment UI & Scorecard** (Phase 54) — An Org Profile wizard, 120-question dimension tabs with answer persistence, and a radar-chart scorecard in the React dashboard.
-- **QRAMM Compliance Mapping View** (Phase 55) — An 8-framework coverage table (NIST PQC, CNSA 2.0, PCI DSS 4.0.1, HIPAA, FIPS 140-3, SOC 2, ISO 27001:2022, CMMC 2.0) with per-practice relevance scores and a CI staleness gate.
-- **Combined PDF Export** (Phase 56) — A single professional PDF combining the technical CBOM report and the QRAMM governance scorecard, with a quarterly staleness enforcement gate.
+Ephemeral credential model for cloud connector and JWT-issuing API scans (no long-lived secret storage in scheduled scan rows). Query-param API-key CLI flag wired through to JWT scanner URL credential consumption. Code-signing posture via LDAP+TLS-EKU classification, folded into the agility subscore.
 
-*(QRAMM v1.0 framework by CSNP — qramm.org. Used with attribution.)*
+### v5.2 — Consulting-Grade Reporting (shipped)
 
-### Authenticated Scan Mode
+One shared content model now drives CLI markdown, HTML, PDF, and a new DOCX renderer for client-editable Word deliverables. Executive narrative blocks added across all surfaces; render-parity tests lock invariant content across renderers.
 
-A first-class optional credential model will enable deeper probing where credentials are available. Kerberos scanners will access per-account encryption type bitmaps via authenticated LDAP bind. SSH scanners will retrieve `sshd_config` directly from authenticated hosts. All credentials are stored with environment variable substitution — no plaintext secrets in configuration files.
+### v5.3 — Adoption & Integration Surface (shipped)
 
-### SaaS Platform
+Notification fan-out (webhook / email / Slack), SIEM CEF dispatch (Splunk / QRadar / ArcSight ingestion), and Jira / ServiceNow ticketing on a single shared SSRF-safe / secret-scrubbing layer. Dashboard token authentication added. Finding fingerprint formula = `SHA256(host:port::title)`.
 
-The long-term roadmap includes a multi-tenant SaaS platform for organizations that need centralized scan management, hosted reporting, and multi-site visibility — the operational model most enterprise clients need for sustained post-quantum assurance programs.
+### v5.4 — Distributed On-Prem Scanner (shipped)
+
+Sensor / console architecture for isolated network segments. On-prem sensors scan per segment and push findings to a central console; console performs Option-A merge (keep newest-per-fingerprint, never rewrite `scanned_at`) into a single CBOM + readiness score. Sensor enrollment via `quirk enroll --sensor-id` workflow.
+
+### v5.5 — Distributed Hardening (current)
+
+Per-sensor opaque Bearer tokens with individual issuance + revocation via `quirk revoke-sensor`; `revoked_at` migration on the sensors table. Failure-isolated auto-merge: when one sensor fails mid-scan the console merges the remaining successful results rather than discarding the batch. Live-UAT stabilization sweep + new weak-TLS chaos-lab target.
+
+### SaaS Platform (long-term roadmap)
+
+A multi-tenant SaaS platform for organizations that need centralized scan management, hosted reporting, and multi-site visibility remains on the long-term roadmap.
 
 ---
 

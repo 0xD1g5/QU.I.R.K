@@ -5,9 +5,12 @@ Each scan writes `intelligence-<timestamp>.json` in the configured output direct
 ## Versioning
 
 - `intelligence_version`: schema/version marker for this file.
-- Current version: `1.0.0`.
+- Sourced from `INTELLIGENCE_VERSION = PLATFORM_VERSION` in `quirk/reports/writer.py` — tracks the QUIRK release version.
+- Current version: `5.5.0`.
 
 ## Top-level fields
+
+The authoritative schema check is `quirk/validate.py` (`intelligence` validator). Required top-level keys:
 
 - `intelligence_version`: string
 - `generated_utc`: UTC timestamp when the file was generated
@@ -20,10 +23,11 @@ Each scan writes `intelligence-<timestamp>.json` in the configured output direct
   - protocol counts, plaintext HTTP counts, mTLS signals
   - certificate observation counts (expired/expiring/self-signed, key type counts)
   - scan error and TLS enum coverage metrics
-- `score_breakdown`: readiness score output
+- `score`: readiness score output (renamed from `score_breakdown` in v5.0)
   - `score`, `rating`, `subscores`, `drivers`
-- `confidence_factors`: confidence output
-  - `confidence_score`, `confidence_rating`, `factor_breakdown`
+  - `subscores` contains six entries: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, `data_in_motion` (each 0–25)
+- `confidence`: confidence output (renamed from `confidence_factors` in v5.0)
+  - `confidence_score`, `confidence_rating`, `coverage_pct`, `tls_enum_coverage_pct`, `blockers_top`
 - `roadmap`: phased roadmap output
   - `roadmap_version`, `item_count`, `phase_counts`, `items`
 
@@ -113,3 +117,9 @@ Findings are matched across sessions by the tuple `(host, port, protocol, severi
 ### Sample arrays (D-08)
 
 Sample arrays are capped at 5 entries. Sort order is severity descending (high → medium → low) then host ascending then port ascending. Sample entries contain only `host`, `port`, `protocol`, and `severity` — no remediation text, no algorithm details.
+
+## Trends Timeline (v5.x, TREND-01)
+
+A second endpoint `GET /api/trends/timeline` returns a multi-session sequence (not just a two-session diff). Use it to drive sparkline / line-chart visualizations of overall readiness across many scans. Lives at `quirk/dashboard/api/routes/trends.py:get_trends_timeline`; response model is `TrendTimelineResponse` in `quirk/dashboard/api/schemas.py`.
+
+The two-session `/api/trends` endpoint described above is unchanged in v5.x — `/timeline` is additive.

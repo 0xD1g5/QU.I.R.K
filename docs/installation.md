@@ -27,14 +27,16 @@ brew install python@3.12
 **Clone and install:**
 
 ```bash
-git clone <repo-url>
-cd quirk
+git clone https://github.com/0xD1g5/QU.I.R.K
+cd QU.I.R.K
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
 ```
 
 Playwright installs Chromium to `~/.local/share/ms-playwright/` (one-time, approximately 150 MB).
+
+> **Note:** The repository name has no trailing dot (`QU.I.R.K`, not `QU.I.R.K.`). The trailing-dot form caused a Windows checkout failure (Phase 117); the repo was renamed and the remote URL is the form shown above.
 
 **Troubleshooting:**
 
@@ -61,8 +63,8 @@ sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv 
 **Clone and install:**
 
 ```bash
-git clone <repo-url>
-cd quirk
+git clone https://github.com/0xD1g5/QU.I.R.K
+cd QU.I.R.K
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
