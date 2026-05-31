@@ -9,7 +9,7 @@ Full installation reference for all supported platforms.
 | Requirement | Version | Notes |
 |-------------|---------|-------|
 | Python 3.10 or higher | — | Check: `python3 --version` |
-| pip | 21.3 or higher | Required for self-referential extras resolution (used by `pip install quirk-scanner[all]`); pip 22.2+ recommended for the `--report` JSON test in CI |
+| pip | 21.3 or higher | Required for self-referential extras resolution (used by `pip install 'quirk-scanner[all]'`); pip 22.2+ recommended for the `--report` JSON test in CI |
 | git | Any recent version | Required to clone the repo |
 | Docker Desktop | Optional | Required only for the chaos lab |
 | OS (for PDF export) | macOS 10.15+, Ubuntu 20.04+, Windows 10 via WSL2 | Playwright Chromium requirement |
@@ -34,14 +34,15 @@ pip install -e '.[dashboard]'
 playwright install chromium
 ```
 
-Playwright installs Chromium to `~/.local/share/ms-playwright/` (one-time, approximately 150 MB).
+Playwright installs Chromium to `~/Library/Caches/ms-playwright/` on macOS (one-time, approximately 150 MB).
 
 > **Note:** The repository name has no trailing dot (`QU.I.R.K`, not `QU.I.R.K.`). The trailing-dot form caused a Windows checkout failure (Phase 117); the repo was renamed and the remote URL is the form shown above.
 
 **Troubleshooting:**
 
 - If `quirk` is not found after install, confirm your venv is activated: `source .venv/bin/activate`
-- If `python3` is not found, ensure Homebrew Python is in your PATH: `export PATH="/opt/homebrew/bin:$PATH"`
+- If `python3` is not found, ensure Homebrew Python is in your PATH. On Apple Silicon: `export PATH="/opt/homebrew/bin:$PATH"`; on Intel Macs: `export PATH="/usr/local/bin:$PATH"`
+- macOS uses zsh by default, which treats `[...]` as a glob. Always quote extras in install commands (e.g. `pip install '.[dashboard]'`, `pip install 'quirk-scanner[all]'`) or zsh fails with `no matches found`.
 
 **Verify:**
 
@@ -68,10 +69,15 @@ cd QU.I.R.K
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
-playwright install-deps chromium   # Installs required system libraries
+sudo playwright install-deps chromium   # Installs required system libraries (uses apt; needs sudo)
 ```
 
 > **Note:** Playwright requires glibc 2.17 or higher. Ubuntu 20.04 and later meet this requirement. Ubuntu 18.04 is not supported for PDF export.
+
+> **Debian / Kali / Parrot (PEP 668):** Recent Debian-based distros mark the system Python as
+> *externally managed* and refuse `pip install` outside a virtual environment (error:
+> `externally-managed-environment`). The `.venv` step above is therefore **mandatory**, not optional —
+> always activate the venv before any `pip` or `quirk` command.
 
 **Verify:**
 
@@ -79,6 +85,76 @@ playwright install-deps chromium   # Installs required system libraries
 quirk --help
 quirk serve --help
 ```
+
+---
+
+## Parrot OS / Kali / Debian (PEP 668)
+
+Debian-based security distros (Parrot, Kali) enforce [PEP 668](https://peps.python.org/pep-0668/):
+the system Python is *externally managed*, so a bare `pip install quirk-scanner[all]` fails with
+`error: externally-managed-environment`. The default shell on these distros is **zsh**, which also
+glob-expands an unquoted `[all]` and fails with `zsh: no matches found`. Both problems are solved by
+installing into a virtual environment and quoting the extras.
+
+**1. System prerequisites:**
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip python3-full git build-essential libffi-dev
+```
+
+`build-essential` and `libffi-dev` are only needed if a dependency has to compile from source
+(e.g. `cryptography` on an architecture without a prebuilt wheel); they are harmless to install
+otherwise.
+
+**2. Create and activate a virtual environment:**
+
+```bash
+mkdir -p ~/quirk && cd ~/quirk
+python3 -m venv .venv
+source .venv/bin/activate          # prompt now starts with (.venv)
+```
+
+Every `pip` and `quirk` command below must run with the venv active. In a new terminal, re-run
+`cd ~/quirk && source .venv/bin/activate` first.
+
+**3. Install from PyPI** (keep the quotes — required under zsh):
+
+```bash
+pip install --upgrade pip
+pip install 'quirk-scanner[all]'
+```
+
+**4. Verify:**
+
+```bash
+quirk --version      # → QU.I.R.K. v5.5.0
+quirk doctor         # health check: confirms the environment and lists optional tools
+```
+
+**5. Chromium + system libraries for PDF export:**
+
+```bash
+playwright install chromium
+sudo playwright install-deps chromium
+```
+
+**Optional external tools** (`quirk doctor` flags these as missing — each is opt-in):
+
+```bash
+sudo apt install -y nmap     # richer host discovery (--discovery nmap)
+pip install semgrep          # source-code crypto scanning
+# syft (container scanning): https://github.com/anchore/syft#installation
+```
+
+**Common errors:**
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| `error: externally-managed-environment` | venv not active — re-run step 2 and confirm the `(.venv)` prefix |
+| `zsh: no matches found: quirk-scanner[all]` | quotes dropped — use `'quirk-scanner[all]'` |
+| `command not found: quirk` | venv not active in this terminal — `source ~/quirk/.venv/bin/activate` |
+| `cryptography` / Rust build failure | install `build-essential libffi-dev` (step 1) and retry |
 
 ---
 
@@ -121,7 +197,7 @@ Install only what you need:
 
 | Capability | Install command |
 |------------|----------------|
-| All optional scanners (recommended for consultants) | `pip install quirk-scanner[all]` — installs cloud + db + motion + redis + dashboard. **Excludes `[identity]`** because impacket transitively downgrades the cryptography library and breaks the TLS scanner. Includes Playwright browser binaries via `[dashboard]` (~250 MB). |
+| All optional scanners (recommended for consultants) | `pip install 'quirk-scanner[all]'` — installs cloud + cbom + db + motion + redis + dashboard + adcs + docx + notify + tickets. **Excludes `[identity]`** because impacket transitively downgrades the cryptography library and breaks the TLS scanner, and **excludes `[api]`** because the schemathesis active fuzzer requires explicit opt-in. Includes Playwright browser binaries via `[dashboard]` (~250 MB). |
 | Web dashboard + PDF export | `pip install -e '.[dashboard]'` (included in Quick Start) |
 | Identity surface scanners (Kerberos, SAML/OIDC, DNSSEC) | `pip install -e '.[identity]'` — installs `impacket`, `lxml`, `signxml`, `dnspython[dnssec]` |
 | Container scanning | `pip install syft` (requires Syft CLI on PATH) |
@@ -143,11 +219,11 @@ install them in **two separate virtual environments**:
 ```bash
 # venv 1 — full scan surface (recommended default)
 python3 -m venv .venv-quirk && source .venv-quirk/bin/activate
-pip install quirk-scanner[all]
+pip install 'quirk-scanner[all]'
 
 # venv 2 — identity-only surface (deactivate the first venv first)
 python3 -m venv .venv-quirk-identity && source .venv-quirk-identity/bin/activate
-pip install quirk-scanner[identity]
+pip install 'quirk-scanner[identity]'
 ```
 
 This isolation keeps the cryptography library in venv 1 at the version the TLS scanner

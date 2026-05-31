@@ -23,13 +23,16 @@ QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endp
 
 ## Quick Start
 
-Three commands to a working scan:
+From a virtual environment (recommended on every platform, **required** on Debian/Ubuntu/Kali/Parrot — see note below):
 
 ```bash
-pip install quirk-scanner[all]
+python3 -m venv .venv && source .venv/bin/activate
+pip install 'quirk-scanner[all]'
 quirk init
 quirk --config config.yaml
 ```
+
+> **Use a venv.** Modern Debian-based distros (Ubuntu 23.04+, Kali, Parrot) enforce [PEP 668](https://peps.python.org/pep-0668/) and reject a bare `pip install` into the system Python with `error: externally-managed-environment`. Installing into the `.venv` above avoids this. Keep the quotes around `'quirk-scanner[all]'` — zsh (the default shell on macOS, Kali, and Parrot) otherwise treats `[all]` as a glob and fails with `no matches found`. Full Parrot/Kali walkthrough: [Installation → Parrot OS / Kali / Debian](docs/installation.md#parrot-os--kali--debian-pep-668).
 
 Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrough with explanations of each command.
 
@@ -90,7 +93,7 @@ Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the ful
 
 ## Install From Other Channels
 
-- **PyPI (recommended):** `pip install quirk-scanner[all]` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
+- **PyPI (recommended):** `pip install 'quirk-scanner[all]'` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
 - **Homebrew (macOS):** `brew install 0xD1g5/quirk/quirk` — installs into an isolated `pipx`-style venv under `libexec`. *(Tap bootstrap is a manual post-release task; becomes functional once the `0xD1g5/homebrew-quirk` tap repo is published with the first signed sdist sha256.)* See [Homebrew Tap](docs/release-process.md#homebrew-tap-launch-02) for the bootstrap procedure.
 - **Docker (GHCR, multi-arch):** `docker run ghcr.io/0xd1g5/quirk:latest --help` — `linux/amd64` + `linux/arm64`. See [Container Image](docs/release-process.md#container-image-launch-03).
 
