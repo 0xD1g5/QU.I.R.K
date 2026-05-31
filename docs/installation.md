@@ -69,10 +69,15 @@ cd QU.I.R.K
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
-playwright install-deps chromium   # Installs required system libraries
+sudo playwright install-deps chromium   # Installs required system libraries (uses apt; needs sudo)
 ```
 
 > **Note:** Playwright requires glibc 2.17 or higher. Ubuntu 20.04 and later meet this requirement. Ubuntu 18.04 is not supported for PDF export.
+
+> **Debian / Kali / Parrot (PEP 668):** Recent Debian-based distros mark the system Python as
+> *externally managed* and refuse `pip install` outside a virtual environment (error:
+> `externally-managed-environment`). The `.venv` step above is therefore **mandatory**, not optional —
+> always activate the venv before any `pip` or `quirk` command.
 
 **Verify:**
 
@@ -80,6 +85,76 @@ playwright install-deps chromium   # Installs required system libraries
 quirk --help
 quirk serve --help
 ```
+
+---
+
+## Parrot OS / Kali / Debian (PEP 668)
+
+Debian-based security distros (Parrot, Kali) enforce [PEP 668](https://peps.python.org/pep-0668/):
+the system Python is *externally managed*, so a bare `pip install quirk-scanner[all]` fails with
+`error: externally-managed-environment`. The default shell on these distros is **zsh**, which also
+glob-expands an unquoted `[all]` and fails with `zsh: no matches found`. Both problems are solved by
+installing into a virtual environment and quoting the extras.
+
+**1. System prerequisites:**
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip python3-full git build-essential libffi-dev
+```
+
+`build-essential` and `libffi-dev` are only needed if a dependency has to compile from source
+(e.g. `cryptography` on an architecture without a prebuilt wheel); they are harmless to install
+otherwise.
+
+**2. Create and activate a virtual environment:**
+
+```bash
+mkdir -p ~/quirk && cd ~/quirk
+python3 -m venv .venv
+source .venv/bin/activate          # prompt now starts with (.venv)
+```
+
+Every `pip` and `quirk` command below must run with the venv active. In a new terminal, re-run
+`cd ~/quirk && source .venv/bin/activate` first.
+
+**3. Install from PyPI** (keep the quotes — required under zsh):
+
+```bash
+pip install --upgrade pip
+pip install 'quirk-scanner[all]'
+```
+
+**4. Verify:**
+
+```bash
+quirk --version      # → QU.I.R.K. v5.5.0
+quirk doctor         # health check: confirms the environment and lists optional tools
+```
+
+**5. Chromium + system libraries for PDF export:**
+
+```bash
+playwright install chromium
+sudo playwright install-deps chromium
+```
+
+**Optional external tools** (`quirk doctor` flags these as missing — each is opt-in):
+
+```bash
+sudo apt install -y nmap     # richer host discovery (--discovery nmap)
+pip install semgrep          # source-code crypto scanning
+# syft (container scanning): https://github.com/anchore/syft#installation
+```
+
+**Common errors:**
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| `error: externally-managed-environment` | venv not active — re-run step 2 and confirm the `(.venv)` prefix |
+| `zsh: no matches found: quirk-scanner[all]` | quotes dropped — use `'quirk-scanner[all]'` |
+| `command not found: quirk` | venv not active in this terminal — `source ~/quirk/.venv/bin/activate` |
+| `cryptography` / Rust build failure | install `build-essential libffi-dev` (step 1) and retry |
 
 ---
 

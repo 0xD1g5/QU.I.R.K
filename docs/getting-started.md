@@ -7,12 +7,13 @@ Zero to first scan in under 10 minutes.
 ## 3-step quickstart
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install 'quirk-scanner[all]'
 quirk init
 quirk --config config.yaml
 ```
 
-> **macOS/zsh:** quote the extras (`'quirk-scanner[all]'`) — zsh otherwise treats `[all]` as a glob and fails with `no matches found`.
+> **Use a venv + quote the extras.** Debian-based distros (Ubuntu 23.04+, Kali, Parrot) enforce [PEP 668](https://peps.python.org/pep-0668/) and reject a bare `pip install` with `externally-managed-environment`; the `.venv` avoids this. zsh (default on macOS, Kali, Parrot) treats an unquoted `[all]` as a glob and fails with `no matches found`, so keep the quotes. Full Parrot/Kali steps: [Installation → Parrot OS / Kali / Debian](installation.md#parrot-os--kali--debian-pep-668).
 
 What each command does:
 
