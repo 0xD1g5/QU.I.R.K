@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider, useAuth } from "@/context/AuthProvider"
+import { AuthProvider } from "@/context/AuthProvider"
+import { useAuth } from "@/context/auth-context"
 import { ScanProvider } from "@/context/ScanProvider"
 import { QRAMMProvider } from "@/context/QRAMMProvider"
 import { Sidebar } from "@/components/sidebar"
