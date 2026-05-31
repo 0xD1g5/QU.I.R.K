@@ -26,10 +26,12 @@ QU.I.R.K. is an agentless scanner that discovers crypto material across TLS endp
 Three commands to a working scan:
 
 ```bash
-pip install quirk-scanner[all]
+pip install 'quirk-scanner[all]'
 quirk init
 quirk --config config.yaml
 ```
+
+> **macOS/zsh:** quote the extras (`'quirk-scanner[all]'`) — zsh otherwise treats `[all]` as a glob and fails with `no matches found`.
 
 Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrough with explanations of each command.
 
@@ -90,7 +92,7 @@ Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the ful
 
 ## Install From Other Channels
 
-- **PyPI (recommended):** `pip install quirk-scanner[all]` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
+- **PyPI (recommended):** `pip install 'quirk-scanner[all]'` — see Quick Start above. The release is signed and attestation-verified via Sigstore + PyPI Trusted Publishers (`gh attestation verify`).
 - **Homebrew (macOS):** `brew install 0xD1g5/quirk/quirk` — installs into an isolated `pipx`-style venv under `libexec`. *(Tap bootstrap is a manual post-release task; becomes functional once the `0xD1g5/homebrew-quirk` tap repo is published with the first signed sdist sha256.)* See [Homebrew Tap](docs/release-process.md#homebrew-tap-launch-02) for the bootstrap procedure.
 - **Docker (GHCR, multi-arch):** `docker run ghcr.io/0xd1g5/quirk:latest --help` — `linux/amd64` + `linux/arm64`. See [Container Image](docs/release-process.md#container-image-launch-03).
 

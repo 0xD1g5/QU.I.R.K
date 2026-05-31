@@ -7,14 +7,16 @@ Zero to first scan in under 10 minutes.
 ## 3-step quickstart
 
 ```bash
-pip install quirk-scanner[all]
+pip install 'quirk-scanner[all]'
 quirk init
 quirk --config config.yaml
 ```
 
+> **macOS/zsh:** quote the extras (`'quirk-scanner[all]'`) — zsh otherwise treats `[all]` as a glob and fails with `no matches found`.
+
 What each command does:
 
-1. **`pip install quirk-scanner[all]`** — installs the QU.I.R.K. distribution from PyPI (distribution name is `quirk-scanner`; the installed CLI binary is `quirk`). The `[all]` extra pulls in cloud (AWS, Azure, GCP), database, motion (SMTP/IMAP/AMQP/Kafka TLS), Redis, and dashboard support. Wheels are Sigstore-attested via PyPI Trusted Publishers; verify with `gh attestation verify` (see [release-process.md](release-process.md)).
+1. **`pip install 'quirk-scanner[all]'`** — installs the QU.I.R.K. distribution from PyPI (distribution name is `quirk-scanner`; the installed CLI binary is `quirk`). The `[all]` extra pulls in cloud (AWS, Azure, GCP), CBOM, database, motion (SMTP/IMAP/AMQP/Kafka TLS), Redis, dashboard, AD CS, DOCX, notification, and ticketing support. It excludes `[identity]` (impacket downgrades cryptography) and `[api]` (schemathesis active fuzzer is opt-in). Wheels are Sigstore-attested via PyPI Trusted Publishers; verify with `gh attestation verify` (see [release-process.md](release-process.md)).
 2. **`quirk init`** — writes a starter `config.yaml` to the current directory with sensible defaults pre-populated with the `127.0.0.1` loopback target. Edit the `targets` section to point at your network before running a real scan.
 3. **`quirk --config config.yaml`** — runs the scan against the configured targets. For a single host this completes in under 30 seconds; cloud scans take longer depending on account size. Results are written to `./quirk-output/`.
 
@@ -39,7 +41,7 @@ The PyPI install in the 3-step quickstart above is the recommended path. For dev
 For dashboard support and PDF export (already included in `[all]`):
 
 ```bash
-pip install quirk-scanner[all]
+pip install 'quirk-scanner[all]'
 playwright install chromium   # Required for PDF export — one-time step
 ```
 
@@ -141,10 +143,10 @@ Install the `[api]` extras group to enable spec validation:
 
 ```bash
 pip install "quirk-scanner[api]"
-# openapi-spec-validator is the only dependency in this group
+# installs openapi-spec-validator (spec validation) + schemathesis (active REST fuzzing)
 ```
 
-> **Note:** `pip install quirk-scanner[all]` does **not** include `[api]` — the `openapi-spec-validator` dependency is opt-in to keep the base install lightweight. `schemathesis` fuzzing support is planned for a future phase and is also excluded from `[all]`.
+> **Note:** `pip install 'quirk-scanner[all]'` does **not** include `[api]` — the `[api]` group bundles `schemathesis`, an active REST fuzzer that requires explicit operator opt-in, so it is deliberately kept out of `[all]`. A CI guard (`tests/test_install_all_excludes_schemathesis.py`) enforces this boundary.
 
 ---
 
