@@ -1,0 +1,127 @@
+#cloud-config
+# =============================================================================
+# QU.I.R.K. console — cloud-init for a fresh Debian/Ubuntu VM (Linode, EC2, GCP…)
+# =============================================================================
+# Paste into the provider's "user data" / metadata field when creating the VM.
+# It installs the console as a loopback service behind Caddy (automatic HTTPS),
+# locks the firewall down to SSH + web, and generates a random operator token.
+#
+# AFTER FIRST BOOT you must:
+#   1. Point a DNS A/AAAA record at this VM's public IP.
+#   2. Edit /etc/caddy/Caddyfile  — set your real domain + ACME email.
+#   3. Edit /etc/quirk/console.env — set QUIRK_CORS_ORIGINS to your https URL.
+#   4. sudo systemctl reload caddy && sudo systemctl restart quirk-console
+#   5. Read the generated operator token:  sudo grep QUIRK_API_TOKEN /etc/quirk/console.env
+#
+# See docs/deployment-cloud-console.md for the full walkthrough.
+# =============================================================================
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - python3
+  - python3-pip
+  - python3-venv
+  - ufw
+  - debian-keyring
+  - debian-archive-keyring
+  - apt-transport-https
+  - curl
+
+groups:
+  - quirk
+
+users:
+  - default
+  - name: quirk
+    gecos: QU.I.R.K. console service account
+    system: true
+    primary_group: quirk
+    shell: /usr/sbin/nologin
+
+write_files:
+  # systemd unit (mirrors deploy/systemd/quirk-console.service)
+  - path: /etc/systemd/system/quirk-console.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=QU.I.R.K. console (dashboard + sensor ingest)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=quirk
+      Group=quirk
+      EnvironmentFile=/etc/quirk/console.env
+      ExecStart=/usr/local/bin/quirk serve --host 127.0.0.1 --port 8512 --no-open
+      Restart=on-failure
+      RestartSec=3
+      NoNewPrivileges=true
+      ProtectSystem=strict
+      ProtectHome=true
+      PrivateTmp=true
+      RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+      StateDirectory=quirk
+      WorkingDirectory=/var/lib/quirk
+      ReadWritePaths=/var/lib/quirk
+
+      [Install]
+      WantedBy=multi-user.target
+
+  # Console environment — token is filled in by runcmd below.
+  - path: /etc/quirk/console.env
+    permissions: "0640"
+    content: |
+      QUIRK_API_TOKEN=__GENERATED_AT_BOOT__
+      QUIRK_TRUST_PROXY=127.0.0.1
+      QUIRK_HSTS=1
+      QUIRK_CORS_ORIGINS=https://quirk.example.com
+      QUIRK_CONFIG_PATH=/etc/quirk/config.yaml
+
+  # Caddy reverse proxy with automatic HTTPS (edit domain + email after boot).
+  - path: /etc/caddy/Caddyfile
+    permissions: "0644"
+    content: |
+      {
+        email admin@example.com
+      }
+      quirk.example.com {
+        reverse_proxy 127.0.0.1:8512
+        request_body {
+          max_size 12MB
+        }
+        encode gzip
+      }
+
+runcmd:
+  # --- Install Caddy from its official repo ---
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  - apt-get update
+  - apt-get install -y caddy
+
+  # --- Install QU.I.R.K. console ---
+  - pip3 install --break-system-packages "quirk-scanner[all]"
+
+  # --- Generate a strong operator token and write it into the env file ---
+  - QUIRK_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+  - sed -i "s|__GENERATED_AT_BOOT__|${QUIRK_TOKEN}|" /etc/quirk/console.env
+  - chown -R quirk:quirk /etc/quirk /var/lib/quirk
+  - chmod 640 /etc/quirk/console.env
+
+  # --- Firewall: SSH + web only. 8512 stays loopback-only (never opened). ---
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+
+  # --- Start services ---
+  - systemctl daemon-reload
+  - systemctl enable --now quirk-console
+  - systemctl reload caddy || systemctl restart caddy
+
+final_message: "QU.I.R.K. console provisioned. Edit /etc/caddy/Caddyfile + /etc/quirk/console.env, then reload. Token: sudo grep QUIRK_API_TOKEN /etc/quirk/console.env"

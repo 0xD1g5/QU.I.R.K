@@ -1,0 +1,47 @@
+[Unit]
+# QU.I.R.K. console — distributed-sensor ingest + dashboard.
+# Binds loopback only; a TLS-terminating reverse proxy (Caddy/nginx) sits in
+# front on :443 and forwards to 127.0.0.1:8512. See
+# docs/deployment-cloud-console.md.
+Description=QU.I.R.K. console (dashboard + sensor ingest)
+Documentation=https://github.com/0xd1g5/qu.i.r.k
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=quirk
+Group=quirk
+
+# Operator token, proxy trust, HSTS, CORS, optional IP allowlist.
+EnvironmentFile=/etc/quirk/console.env
+
+# Loopback bind — never expose 8512 directly; the reverse proxy is the only
+# public listener. --no-open suppresses the browser launch on a headless host.
+# Installed via `pip install "quirk-scanner[all]"` (entry point: quirk).
+ExecStart=/usr/local/bin/quirk serve --host 127.0.0.1 --port 8512 --no-open
+
+Restart=on-failure
+RestartSec=3
+
+# ---- sandboxing / least privilege ----
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Persistent state (SQLite DB, spool) lives under /var/lib/quirk.
+StateDirectory=quirk
+WorkingDirectory=/var/lib/quirk
+ReadWritePaths=/var/lib/quirk
+
+[Install]
+WantedBy=multi-user.target

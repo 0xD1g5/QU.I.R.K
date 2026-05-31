@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -32,6 +34,47 @@ from quirk.util.safe_exc import safe_str
 logger = logging.getLogger(__name__)
 
 _bearer = HTTPBearer(auto_error=False)
+
+
+def _ip_allowlist() -> list:
+    """Parse QUIRK_SENSOR_IP_ALLOWLIST into a list of ip_network objects.
+
+    Comma-separated IPs or CIDRs (e.g. "203.0.113.4, 198.51.100.0/24"). Empty /
+    unset → empty list, which disables the allowlist (allow all). Malformed
+    entries are skipped (logged once at WARNING) so a single typo cannot lock
+    out every sensor silently — but a fully unparseable value yields an empty
+    list and is therefore fail-OPEN by design: this is defense-in-depth layered
+    on top of mandatory per-sensor token auth, not the primary control.
+    """
+    raw = os.environ.get("QUIRK_SENSOR_IP_ALLOWLIST", "").strip()
+    if not raw:
+        return []
+    nets = []
+    for entry in (e.strip() for e in raw.split(",")):
+        if not entry:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(entry, strict=False))
+        except ValueError:
+            logger.warning("Ignoring malformed QUIRK_SENSOR_IP_ALLOWLIST entry: %r", entry)
+    return nets
+
+
+def _ip_allowed(client_host: Optional[str], nets: list) -> bool:
+    """True when *client_host* falls inside any network in *nets*.
+
+    No allowlist configured (empty nets) → always allowed. An unparseable or
+    missing client address with an allowlist in force is denied (fail closed).
+    """
+    if not nets:
+        return True
+    if not client_host:
+        return False
+    try:
+        ip = ipaddress.ip_address(client_host)
+    except ValueError:
+        return False
+    return any(ip in net for net in nets)
 
 
 def require_sensor_auth(
@@ -70,6 +113,16 @@ def require_sensor_auth(
         except Exception as exc:
             logger.warning("Audit row commit failed: %s", safe_str(exc))
         raise HTTPException(status_code=status_code, detail=detail)
+
+    # 0. Optional network allowlist (defense-in-depth, off by default). Checked
+    #    before token validation so an off-allowlist source never reaches token
+    #    handling. request.client.host is the real sensor IP when the console
+    #    runs behind a trusted reverse proxy (uvicorn proxy_headers).
+    allow_nets = _ip_allowlist()
+    if allow_nets:
+        client_host = request.client.host if request.client else None
+        if not _ip_allowed(client_host, allow_nets):
+            _audit_and_raise(403, "sensor_ip_not_allowed", "Sensor source IP not permitted")
 
     # 1. Missing Authorization header
     if credentials is None:

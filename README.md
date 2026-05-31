@@ -44,6 +44,7 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 | [Installation](docs/installation.md) | System requirements, macOS, Linux, Windows WSL |
 | [Configuration Reference](docs/configuration.md) | All config.yaml options and CLI flags |
 | [Connector Guides](docs/connectors/) | AWS, Azure, Docker, Git setup with credential templates |
+| [Cloud Console Deployment](docs/deployment-cloud-console.md) | Run the console on a cloud VM (Linode/EC2/GCP) with internal sensors pushing in — hardened, with ready-to-use `deploy/` files |
 | [Report Interpretation](docs/report-interpretation.md) | What every score and finding means, client conversation guide |
 | [CBOM Guide](docs/cbom-guide.md) | What a CBOM is and how to cite it as compliance evidence |
 | [Chaos Lab Operator Guide](docs/chaos-lab.md) | Lab profiles, port matrix, expected findings |
