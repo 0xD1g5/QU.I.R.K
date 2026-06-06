@@ -18,6 +18,7 @@ import {
   History,
   LogOut,
   Radio,
+  HeartPulse,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -30,6 +31,7 @@ import { useAuth } from "@/context/AuthProvider"
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },
   { path: "/findings", label: "Findings", Icon: AlertTriangle },
+  { path: "/healthcare", label: "Healthcare Posture", Icon: HeartPulse, highlight: true },
   { path: "/identity", label: "Identity", Icon: Fingerprint },
   { path: "/motion", label: "Motion", Icon: Activity },
   { path: "/data-at-rest", label: "Data at Rest", Icon: HardDrive },
@@ -59,13 +61,25 @@ export function Sidebar() {
       )}
     >
       {/* Logo / title */}
-      <div className="flex items-center gap-2 px-3 lg:px-5 py-4 border-b border-border">
-        {/* Full wordmark on wide sidebar */}
-        <span className="text-accent font-black text-base hidden lg:block tracking-widest font-mono leading-none">
-          QU.I.R.K.
-        </span>
-        {/* Monogram on narrow sidebar */}
-        <span className="text-accent font-black text-lg lg:hidden font-mono leading-none">Q</span>
+      <div className="flex flex-col justify-center px-3 lg:px-5 py-4 border-b border-border gap-1">
+        <div className="flex items-center gap-2">
+          {/* Full wordmark on wide sidebar */}
+          <span className="text-accent font-black text-base hidden lg:block tracking-widest font-mono leading-none">
+            QU.I.R.K.
+          </span>
+          {/* Monogram on narrow sidebar */}
+          <span className="text-accent font-black text-lg lg:hidden font-mono leading-none">Q</span>
+        </div>
+        {/* Healthcare vertical badge — expanded sidebar only */}
+        <div className="hidden lg:flex items-center gap-1">
+          <HeartPulse className="h-3 w-3" style={{ color: "#4ba8a8" }} aria-hidden="true" />
+          <span
+            className="text-[9px] font-bold uppercase tracking-widest"
+            style={{ color: "#4ba8a8" }}
+          >
+            Healthcare Edition
+          </span>
+        </div>
       </div>
 
       {/* New Scan CTA — above all nav items, below wordmark */}
@@ -88,7 +102,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-1 py-4 px-2" aria-label="Dashboard navigation">
-        {NAV_ITEMS.map(({ path, label, Icon }) => {
+        {NAV_ITEMS.map(({ path, label, Icon, highlight }) => {
           const isActive = path === "/qramm"
             ? location.pathname.startsWith("/qramm")
             : location.pathname === path
@@ -104,7 +118,9 @@ export function Sidebar() {
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     isActive
                       ? "text-foreground border-b-2 lg:border-b-0 lg:border-l-2 border-accent bg-accent/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/5",
+                      : highlight
+                        ? "text-accent hover:text-foreground hover:bg-accent/5"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/5",
                   )}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />

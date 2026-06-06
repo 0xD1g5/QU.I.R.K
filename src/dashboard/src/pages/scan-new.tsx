@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import type { ScanSubmitRequest } from "@/types/api"
+import { HeartPulse } from "lucide-react"
 
 export function ScanNewPage() {
   const navigate = useNavigate()
@@ -72,10 +73,40 @@ export function ScanNewPage() {
     }
   }
 
+  function applyHealthcarePreset() {
+    setTargets("ehr.hospital.internal, pacs.hospital.internal, portal.hospital.internal, pharmacy.hospital.internal")
+    setProfile("standard")
+    setCalibration("strict")
+  }
+
   return (
     <Card className="max-w-[640px] mx-auto mt-16 px-6 py-6">
       <h1 className="text-xl font-semibold">New Scan</h1>
       <p className="text-sm text-muted-foreground mt-1">Configure and run a scan from the dashboard.</p>
+
+      {/* Healthcare preset */}
+      <div
+        className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 mt-3"
+        style={{ background: "var(--ds-accent-dim)", borderColor: "var(--ds-accent-bdr)" }}
+      >
+        <div className="flex items-center gap-2">
+          <HeartPulse className="h-4 w-4 flex-shrink-0" style={{ color: "#4ba8a8" }} aria-hidden="true" />
+          <span className="text-xs text-muted-foreground">
+            <span className="font-semibold" style={{ color: "#4ba8a8" }}>Healthcare preset</span>
+            {" — "}Standard depth, strict calibration, EHR / PACS / portal targets
+          </span>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="flex-shrink-0 text-xs h-7 px-2 border-accent/40 hover:bg-accent/10"
+          style={{ color: "#4ba8a8" }}
+          onClick={applyHealthcarePreset}
+        >
+          Apply
+        </Button>
+      </div>
 
       <Separator className="my-4" />
 
