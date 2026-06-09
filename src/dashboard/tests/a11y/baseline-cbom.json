@@ -5,7 +5,7 @@
       "nodes": [
         {
           "target": [
-            ".justify-between"
+            "button[aria-controls=\"radix-_r_m_\"]"
           ]
         }
       ]
@@ -15,12 +15,97 @@
       "nodes": [
         {
           "target": [
+            "#radix-_r_j_-trigger-graph"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(1)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(3)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(4)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(5)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(1) > td:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(1) > td:nth-child(3)"
+          ]
+        },
+        {
+          "target": [
+            "tbody > tr:nth-child(1) > .text-xs:nth-child(5)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(2) > td:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(2) > td:nth-child(3)"
+          ]
+        },
+        {
+          "target": [
             "tr:nth-child(2) > td:nth-child(4) > .bg-\\[hsl\\(142_71\\%_45\\%\\)\\].text-white.px-2\\.5"
           ]
         },
         {
           "target": [
+            "tr:nth-child(2) > .text-xs:nth-child(5)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(3) > td:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
             "tr:nth-child(3) > td:nth-child(4) > .bg-\\[hsl\\(142_71\\%_45\\%\\)\\].text-white.px-2\\.5"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(3) > .text-xs:nth-child(5)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(4) > td:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(4) > td:nth-child(3)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(4) > .text-xs:nth-child(5)"
           ]
         }
       ]

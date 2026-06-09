@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ScanSelector } from "@/components/ScanSelector"
-import { useAuth } from "@/context/AuthProvider"
+import { useAuth } from "@/context/auth-context"
 
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },
@@ -86,8 +86,12 @@ export function Sidebar() {
         </Tooltip>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-1 py-4 px-2" aria-label="Dashboard navigation">
+      {/* Navigation — scrollable so all items remain reachable on short/small screens.
+          min-h-0 lets this flex child shrink below its content height so overflow-y-auto can kick in. */}
+      <nav
+        className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1 py-4 px-2"
+        aria-label="Dashboard navigation"
+      >
         {NAV_ITEMS.map(({ path, label, Icon }) => {
           const isActive = path === "/qramm"
             ? location.pathname.startsWith("/qramm")

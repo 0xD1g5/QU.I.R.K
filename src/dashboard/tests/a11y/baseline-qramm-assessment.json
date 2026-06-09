@@ -1,0 +1,959 @@
+{
+  "violations": [
+    {
+      "id": "color-contrast",
+      "nodes": [
+        {
+          "target": [
+            "#radix-_r_i_-trigger-sgrm"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_i_-trigger-dpe"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_i_-trigger-itr"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_i_-trigger-scorecard"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_i_-trigger-compliance"
+          ]
+        },
+        {
+          "target": [
+            ".space-y-1\\.5 > p"
+          ]
+        },
+        {
+          "target": [
+            "button[aria-controls=\"radix-_r_p_\"] > .items-center.gap-3.shrink-0 > span"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(1) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q1-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q1-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q1-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q1-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q1-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(2) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q2-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q2-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q2-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q2-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "button[aria-label=\"Confirm answer for question 2\"]"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q2-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(3) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q3-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q3-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q3-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q3-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q3-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(4) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q4-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q4-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q4-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q4-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q4-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(5) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q5-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q5-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q5-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q5-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q5-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(6) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q6-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q6-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q6-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q6-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q6-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(7) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q7-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q7-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q7-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q7-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q7-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(8) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q8-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q8-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q8-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q8-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q8-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(9) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q9-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q9-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q9-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q9-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q9-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_p_ > .rounded-xl.text-card-foreground.bg-card:nth-child(10) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q10-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q10-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q10-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q10-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q10-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "button[aria-controls=\"radix-_r_22_\"] > .items-center.gap-3.shrink-0 > span"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(1) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q11-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q11-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q11-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q11-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q11-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(2) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q12-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q12-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q12-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q12-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q12-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(3) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q13-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q13-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q13-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q13-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q13-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(4) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q14-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q14-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q14-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q14-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q14-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(5) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q15-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q15-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q15-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q15-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q15-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(6) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q16-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q16-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q16-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q16-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q16-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(7) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q17-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q17-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q17-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q17-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q17-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(8) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q18-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q18-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q18-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q18-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q18-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(9) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q19-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q19-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q19-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q19-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q19-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_22_ > .rounded-xl.text-card-foreground.bg-card:nth-child(10) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q20-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q20-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q20-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q20-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q20-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "button[aria-controls=\"radix-_r_3b_\"] > .items-center.gap-3.shrink-0 > span"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(1) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q21-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q21-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q21-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q21-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q21-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(2) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q22-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q22-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q22-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q22-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q22-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(3) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q23-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q23-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q23-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q23-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q23-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(4) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q24-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q24-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q24-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q24-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q24-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(5) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q25-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q25-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q25-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q25-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q25-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(6) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q26-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q26-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q26-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q26-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q26-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(7) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q27-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q27-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q27-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q27-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q27-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(8) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q28-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q28-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q28-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q28-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q28-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(9) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q29-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q29-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q29-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q29-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q29-evidence\"]"
+          ]
+        },
+        {
+          "target": [
+            "#radix-_r_3b_ > .rounded-xl.text-card-foreground.bg-card:nth-child(10) > .p-6 > .justify-between.gap-3.mb-4 > .flex-1 > .block.mb-1.font-semibold"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q30-opt-1\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q30-opt-2\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q30-opt-3\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q30-opt-4\"] > span"
+          ]
+        },
+        {
+          "target": [
+            "label[for=\"q30-evidence\"]"
+          ]
+        }
+      ]
+    }
+  ]
+}

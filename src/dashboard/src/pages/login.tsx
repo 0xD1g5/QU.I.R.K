@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/context/AuthProvider"
+import { useAuth } from "@/context/auth-context"
 
 export function LoginPage() {
   const { setToken } = useAuth()

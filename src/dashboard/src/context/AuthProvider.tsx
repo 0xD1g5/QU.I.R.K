@@ -1,7 +1,8 @@
 /**
  * AuthProvider — Phase 102 / AUTH-03.
  *
- * Single file: AuthContext + AuthProvider + useAuth hook.
+ * Provider component only. AuthContext + useAuth hook live in ./auth-context
+ * so this file exports a single component (keeps react-refresh / Fast Refresh happy).
  *
  * On mount, probes GET /api/scans (a protected route) with the stored localStorage
  * token as X-API-Key:
@@ -21,37 +22,11 @@
  * (setUnauthorizedHandler IS imported for the handler registration, not for the probe.)
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { setUnauthorizedHandler } from "@/lib/api"
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type AuthStatus = "loading" | "authenticated" | "unauthenticated"
-
-interface AuthState {
-  status: AuthStatus
-  setToken: (token: string) => void
-  logout: () => void
-}
-
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
-export const AuthContext = createContext<AuthState>({
-  status: "loading",
-  setToken: () => {},
-  logout: () => {},
-})
+import { AuthContext } from "@/context/auth-context"
+import type { AuthStatus } from "@/context/auth-context"
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -134,12 +109,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
-export function useAuth(): AuthState {
-  return useContext(AuthContext)
 }

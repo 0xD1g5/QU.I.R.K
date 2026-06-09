@@ -5,12 +5,72 @@
       "nodes": [
         {
           "target": [
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(1) > .space-y-1\\.5.pb-2.flex-col > .tracking-tight.font-medium.text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
             ".justify-between.flex.items-center > .bg-\\[hsl\\(24_95\\%_53\\%\\)\\].text-white.px-2\\.5"
           ]
         },
         {
           "target": [
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(1) > .pt-0.p-6 > p"
+          ]
+        },
+        {
+          "target": [
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(2) > .space-y-1\\.5.pb-2.flex-col > .tracking-tight.font-medium.text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(2) > .pt-0.p-6 > p"
+          ]
+        },
+        {
+          "target": [
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(3) > .space-y-1\\.5.pb-2.flex-col > .tracking-tight.font-medium.text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
             ".bg-\\[hsl\\(142_71\\%_45\\%\\)\\]"
+          ]
+        },
+        {
+          "target": [
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(3) > .pt-0.p-6 > p"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"ascending\"]"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(3)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(4)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(5)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(6)"
           ]
         },
         {

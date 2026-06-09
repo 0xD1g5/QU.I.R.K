@@ -5,22 +5,17 @@
       "nodes": [
         {
           "target": [
-            ".gap-1\\.5:nth-child(1)"
+            "p:nth-child(1)"
           ]
         },
         {
           "target": [
-            ".gap-1\\.5:nth-child(2)"
+            "p:nth-child(2)"
           ]
         },
         {
           "target": [
-            ".gap-1\\.5:nth-child(3)"
-          ]
-        },
-        {
-          "target": [
-            "p"
+            ".pt-0 > div > .bg-primary.text-primary-foreground.hover\\:bg-primary\\/90"
           ]
         }
       ]

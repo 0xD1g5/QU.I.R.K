@@ -1,3 +1,54 @@
 {
-  "violations": []
+  "violations": [
+    {
+      "id": "color-contrast",
+      "nodes": [
+        {
+          "target": [
+            "th:nth-child(1)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(3)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(4)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(5)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(6)"
+          ]
+        },
+        {
+          "target": [
+            "th:nth-child(7)"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(1) > .gap-1"
+          ]
+        },
+        {
+          "target": [
+            "tr:nth-child(2) > .gap-1"
+          ]
+        }
+      ]
+    }
+  ]
 }
