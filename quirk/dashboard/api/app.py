@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from quirk.config import get_cors_origins
 from quirk.dashboard.api.deps import _default_db_path
 from quirk.dashboard.api.middleware.rate_limit import RateLimitMiddleware
+from quirk.dashboard.api.middleware.security_headers import SecurityHeadersMiddleware
 from quirk.dashboard.api.routes import health, jobs, merge, pdf, qramm, scan, schedules, sensor, trends
 
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
@@ -88,13 +89,16 @@ def create_app(db_path: str | None = None) -> FastAPI:
     # -------------------------------------------------------------------------
     # Middleware — Phase 58 / HARDEN-API-02, HARDEN-API-03
     # FastAPI applies add_middleware in REVERSE registration order.
-    # Execution order: CORS (outermost) -> RateLimit -> route dispatch.
+    # Execution order: CORS (outermost) -> SecurityHeaders -> RateLimit -> route dispatch.
     # Auth + CSRF are Depends()-injected at router level (Plan 03).
     # CORS origins are configurable via QUIRK_CORS_ORIGINS env var or
     # security.cors_origins YAML field (defaults: 127.0.0.1 + localhost).
     # -------------------------------------------------------------------------
     application.add_middleware(
         RateLimitMiddleware,  # registered first = innermost (runs after CORS)
+    )
+    application.add_middleware(
+        SecurityHeadersMiddleware,  # defensive response headers on every response
     )
     application.add_middleware(
         CORSMiddleware,  # registered last = outermost (runs first on every request)

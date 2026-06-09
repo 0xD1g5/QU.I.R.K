@@ -1,0 +1,35 @@
+# QU.I.R.K. console — Caddy reverse proxy (recommended: automatic HTTPS).
+#
+# Caddy obtains and renews a Let's Encrypt certificate automatically — no
+# certbot, no renewal cron. Replace quirk.example.com with your real DNS name
+# (an A/AAAA record must already point at this host) and the email with yours.
+#
+# Install:  sudo cp deploy/caddy/Caddyfile /etc/caddy/Caddyfile
+#           sudo systemctl reload caddy
+# See docs/deployment-cloud-console.md.
+
+{
+	# Contact address for the ACME account / expiry notices.
+	email admin@example.com
+}
+
+quirk.example.com {
+	# Forward to the loopback-only console. Caddy passes X-Forwarded-For /
+	# X-Forwarded-Proto by default, which uvicorn (proxy_headers, trusting
+	# 127.0.0.1) uses to recover the real sensor IP.
+	reverse_proxy 127.0.0.1:8512
+
+	# Cap request bodies a little above the console's 10 MB push limit.
+	request_body {
+		max_size 12MB
+	}
+
+	# Caddy sets secure TLS defaults automatically. HSTS is emitted by the
+	# console (QUIRK_HSTS=1); add it here too if you prefer the proxy to own it:
+	# header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	encode gzip
+	log {
+		output file /var/log/caddy/quirk-console.log
+	}
+}

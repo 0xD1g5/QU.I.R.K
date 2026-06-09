@@ -414,10 +414,26 @@ def main():
             default=False,
             help="Do not automatically open the browser",
         )
+        serve_parser.add_argument(
+            "--insecure",
+            action="store_true",
+            default=False,
+            help=(
+                "Allow binding a network-reachable interface with no "
+                "QUIRK_API_TOKEN set. Off by default; the server refuses such a "
+                "bind so a public console cannot be left auth-disabled by "
+                "accident. Use only on trusted, firewalled segments."
+            ),
+        )
         serve_args = serve_parser.parse_args(_sys.argv[2:])
         print_banner(__version__, quiet=False)
         from quirk.dashboard.server import serve as _serve
-        _serve(port=serve_args.port, host=serve_args.host, no_open=serve_args.no_open)
+        _serve(
+            port=serve_args.port,
+            host=serve_args.host,
+            no_open=serve_args.no_open,
+            insecure=serve_args.insecure,
+        )
         return
 
     # --- compliance subcommand: intercept before scan argparse (Phase 49 D-05) ---

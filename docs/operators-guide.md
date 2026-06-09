@@ -467,6 +467,16 @@ quirk serve --host 0.0.0.0 --port 8512
 > HTTPS reverse proxy and IP allowlist in front of it. Set `QUIRK_API_TOKEN` to a
 > strong random value before starting the server; `quirk serve` without this variable
 > runs with authentication disabled (appropriate only for local dev/testing).
+>
+> As a guardrail, `quirk serve` now **refuses to start** on a network-reachable
+> interface when no `QUIRK_API_TOKEN` is configured, unless you pass `--insecure` to
+> explicitly acknowledge a token-less bind on a trusted, firewalled segment. When the
+> console runs behind a reverse proxy, set `QUIRK_TRUST_PROXY` (default `127.0.0.1`)
+> so per-IP rate limiting and the audit log see the real sensor address rather than
+> the proxy's. For a **cloud-hosted console** (e.g. on Linode) with internal sensors
+> pushing in, follow the hardened, end-to-end walkthrough in
+> [`deployment-cloud-console.md`](deployment-cloud-console.md) and the ready-to-use
+> files under [`deploy/`](../deploy/).
 
 ### 8.1.1 v5.5 per-sensor authentication model (migration from v5.4)
 
