@@ -5,7 +5,47 @@
       "nodes": [
         {
           "target": [
-            ".h-9"
+            ".bg-accent"
+          ]
+        },
+        {
+          "target": [
+            ".gap-1.flex-col.flex > .flex-col.gap-2.flex > .text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".flex-col.gap-2.flex:nth-child(2) > .text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".flex-col.gap-2.flex:nth-child(3) > .text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".flex-col.gap-2.flex:nth-child(4) > .text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".flex-col.gap-2.flex:nth-child(5) > .text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".flex-col.gap-2.flex:nth-child(6) > .text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".flex-col.gap-2.flex:nth-child(7) > .text-muted-foreground"
+          ]
+        },
+        {
+          "target": [
+            ".space-y-8 > p"
           ]
         }
       ]

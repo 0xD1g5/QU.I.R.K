@@ -5,7 +5,27 @@
       "nodes": [
         {
           "target": [
+            ".items-baseline > p"
+          ]
+        },
+        {
+          "target": [
+            "section > p"
+          ]
+        },
+        {
+          "target": [
+            ".gap-4.pt-0.p-6 > span"
+          ]
+        },
+        {
+          "target": [
             ".bg-\\[hsl\\(var\\(--quantum-safe\\)\\)\\]"
+          ]
+        },
+        {
+          "target": [
+            ".max-w-\\[1200px\\] > .space-y-4 > p"
           ]
         }
       ]

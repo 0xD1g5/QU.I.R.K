@@ -5,12 +5,12 @@
       "nodes": [
         {
           "target": [
-            "button[aria-controls=\"radix-_r_c_\"]"
+            "button[aria-controls=\"radix-_r_i_\"]"
           ]
         },
         {
           "target": [
-            "button[aria-controls=\"radix-_r_d_\"]"
+            "button[aria-controls=\"radix-_r_j_\"]"
           ]
         }
       ]
@@ -18,6 +18,41 @@
     {
       "id": "color-contrast",
       "nodes": [
+        {
+          "target": [
+            "th[aria-sort=\"ascending\"]"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(2)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(3)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(4)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(5)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(6)"
+          ]
+        },
+        {
+          "target": [
+            "th[aria-sort=\"none\"]:nth-child(7)"
+          ]
+        },
         {
           "target": [
             "tr:nth-child(1) > td:nth-child(1) > .bg-\\[hsl\\(24_95\\%_53\\%\\)\\].text-white.px-2\\.5"
