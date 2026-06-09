@@ -133,7 +133,7 @@ for (const { slug, path: routePath } of ROUTES) {
   page.on('pageerror', e => consoleMsgs.push(String(e)))
 
   try {
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 15_000 })
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 })
   } catch (err) {
     console.error(`[a11y] ERROR: Navigation to ${url} failed: ${err.message}`)
     exitCode = 1

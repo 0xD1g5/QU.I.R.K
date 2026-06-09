@@ -33,6 +33,7 @@ jobs:
         run: npm run lint
 
       - name: Install Chrome
+        id: setup-chrome
         uses: browser-actions/setup-chrome@c785b87e244131f27c9f19c1a33e2ead956ab7ce  # v1.7.3
         with:
           chrome-version: stable
@@ -40,9 +41,9 @@ jobs:
       - name: Run axe + console sweep (happy fixture)
         run: npm run a11y:check
         env:
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
 
       - name: Run axe + console sweep (empty fixture)
         run: npm run a11y:check:empty
         env:
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
