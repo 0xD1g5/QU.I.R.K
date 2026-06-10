@@ -192,8 +192,11 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
         cmd += ["--discovery", "nmap"]
 
     # Pitfall 2: non-blocking — do not call communicate or proc.wait.
+    # stdin=DEVNULL prevents the subprocess from inheriting the server's TTY;
+    # without this, probe-budget and fuzz-gate input() prompts block silently.
     proc = subprocess.Popen(
         cmd,
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
