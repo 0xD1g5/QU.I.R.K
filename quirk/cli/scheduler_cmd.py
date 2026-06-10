@@ -303,7 +303,7 @@ def _dispatch_schedule(
     db.commit()
 
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _stdout, _stderr = proc.communicate()
         run.status = "completed" if proc.returncode == 0 else "failed"
     except Exception as _exc:
