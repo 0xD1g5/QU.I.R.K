@@ -189,7 +189,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
         "--job-id", job_id,
     ]
     if payload.enable_nmap:
-        cmd += ["--discovery", "nmap"]
+        cmd += ["--discovery", "nmap", "--nmap-timeout", "300"]
 
     # Pitfall 2: non-blocking — do not call communicate or proc.wait.
     # stdin=DEVNULL prevents the subprocess from inheriting the server's TTY;
