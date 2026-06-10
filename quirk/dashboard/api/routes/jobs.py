@@ -181,7 +181,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     )
 
     cmd = [
-        sys.executable, "run_scan.py",
+        sys.executable, "-m", "run_scan",
         "--config", config_path,
         "--profile", payload.profile,
         "--quiet",
