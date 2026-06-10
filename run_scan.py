@@ -1091,6 +1091,7 @@ def main():
 
         if not targets:
             logger.info("⚠️ Nmap discovery found no open ports in scope. Nothing to scan.")
+            mark_job_completed(args.db_path, args.job_id, scan_run_id)
             return
 
         logger.stamp(f"Using Nmap-discovered targets only: {len(targets)} endpoint(s)")
@@ -1100,6 +1101,7 @@ def main():
             targets = expand_targets(cfg)
         if not targets:
             logger.info("⚠️ No targets provided. Add CIDRs/FQDNs/IPs and re-run.")
+            mark_job_completed(args.db_path, args.job_id, scan_run_id)
             return
 
     # ==============================
