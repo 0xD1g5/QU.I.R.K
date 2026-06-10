@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quirk-scanner"
-version = "5.5.4"
+version = "5.5.2.3"
 description = "QU.I.R.K. -- Quantum Infrastructure Readiness Kit"
 readme = "README.md"
 requires-python = ">=3.10"
