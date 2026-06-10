@@ -1039,6 +1039,7 @@ def main():
         nmap_targets = _build_nmap_target_list(cfg)
         if not nmap_targets:
             logger.info("⚠️ No CIDRs/FQDNs/IPs provided for Nmap discovery. Add targets and re-run.")
+            mark_job_completed(args.db_path, args.job_id, scan_run_id)
             return
 
         # D-08: check if nmap binary is available; fall back to CONSULTING_TLS_PORTS if not.
@@ -1056,6 +1057,7 @@ def main():
             is_tty=sys.stdin.isatty(),  # stdin.isatty(): correct check for "can user provide input"
         ):
             logger.info("Aborted by user — projected probe count exceeded threshold.")
+            mark_job_failed(args.db_path, args.job_id, "Scan aborted: projected probe count exceeded the 10,000 limit. Reduce scope and try again.")
             return
 
         d_key = f"discovery-{scope_hash(cfg, 'nmap', nmap_extra_args=extra_args, ports=ports_for_nmap)}"

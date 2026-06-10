@@ -50,7 +50,9 @@ export function useScanData(): UseScanDataResult {
               return
             }
             if (resp.status === 404) {
-              setError("No scan data available. Run a scan first: quirk scan <target>")
+              setError(selectedScanId
+                ? "Scan completed but no TLS/crypto endpoints were discovered. Try a target with HTTPS or SSH exposed (e.g. a domain name or known HTTPS server)."
+                : "No scan data available. Run a scan first.")
             } else {
               setError(`Failed to fetch ${url}: ${resp.status} ${resp.statusText}`)
             }
