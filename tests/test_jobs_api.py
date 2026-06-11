@@ -595,3 +595,37 @@ def test_reconcile_does_not_clobber_terminal_status(monkeypatch):
     assert final.status == "completed"
     assert final.error_message is None
     db.close()
+
+
+# --------------------------------------------------------------------------
+# Test 19: dead-job error message points at the real, absolute run.log path
+# --------------------------------------------------------------------------
+
+def test_dead_job_error_message_points_at_real_log(monkeypatch, tmp_path):
+    """The reconcile hint must be the absolute path of the run.log actually
+    created at spawn — a CWD-relative string is useless to an operator whose
+    shell is not in the server's working directory."""
+    import quirk.dashboard.api.routes.jobs as jobs_mod
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+    fake = _FakeProc(returncode=2)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", lambda *a, **k: fake)
+
+    _app, tc, _ = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "example.com", "profile": "quick"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
+
+    real_log = (tmp_path / "output" / "jobs" / job_id / "run.log").resolve()
+    assert real_log.exists()
+
+    resp = tc.get(f"/api/jobs/{job_id}")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["status"] == "failed"
+    assert str(real_log) in data["error_message"]

@@ -134,6 +134,11 @@ def _to_response(row: ScanJob) -> JobStatusResponse:
     )
 
 
+def _job_output_dir(job_id: str) -> Path:
+    """Single owner of the per-job output layout (config.yaml, run.log)."""
+    return Path("output/jobs") / job_id
+
+
 def _get_or_404(db: Session, job_id: str) -> ScanJob:
     row = db.get(ScanJob, job_id)
     if row is None:
@@ -175,7 +180,10 @@ def _reconcile_if_dead(db: Session, row: ScanJob) -> None:
         return
     with _PROCS_LOCK:
         _PROCS.pop(row.job_id, None)
-    log_hint = Path("output/jobs") / row.job_id / "run.log"
+    # Absolute path: the operator reading this message is rarely in the
+    # server's CWD. Same process as the spawn, so resolve() matches the file
+    # actually created in create_job.
+    log_hint = (_job_output_dir(row.job_id) / "run.log").resolve()
     # Guarded update, not a blind write: the child commits its own terminal
     # status (completed/failed) just before exiting, and this poll may hold a
     # row read from before that commit. WHERE status='running' makes the
@@ -202,7 +210,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     """Create a scan_jobs row and spawn run_scan.py as a subprocess. Non-blocking."""
     job_id = str(uuid.uuid4())
     db_path = _default_db_path()
-    output_dir = Path("output/jobs") / job_id
+    output_dir = _job_output_dir(job_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     row = ScanJob(
