@@ -1322,3 +1322,34 @@ def compare_scans(
         endpoints_only_in_b=only_in_b,
         changed_endpoints=changed_endpoints,
     )
+
+
+@router.get("/jobs/{job_id}/result-summary")
+def get_job_result_summary(job_id: str, db: Session = Depends(get_db)) -> dict:
+    """GET /api/jobs/{job_id}/result-summary — endpoint count for zero-result detection.
+
+    Returns {endpoint_count: int} for the job's scan window derived from
+    ScanJob.scan_run_id (the started_utc ISO timestamp).  Fail-safe: returns
+    {endpoint_count: 0} when scan_run_id is None or not ISO-parseable rather
+    than raising (T-121-I-07 — read-only COUNT bounded to one scan window).
+    """
+    row = db.get(ScanJob, job_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=format_error("DASHBOARD-008"))
+    if row.scan_run_id is None:
+        return {"endpoint_count": 0}
+    try:
+        target_ts = datetime.fromisoformat(row.scan_run_id)
+    except ValueError:
+        return {"endpoint_count": 0}
+    window_start = target_ts.replace(microsecond=0)
+    window_end = target_ts.replace(microsecond=999_999)
+    count = (
+        db.query(CryptoEndpoint)
+        .filter(
+            CryptoEndpoint.scanned_at >= window_start,
+            CryptoEndpoint.scanned_at <= window_end,
+        )
+        .count()
+    )
+    return {"endpoint_count": count}

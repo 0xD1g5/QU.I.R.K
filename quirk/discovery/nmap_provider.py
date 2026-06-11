@@ -61,11 +61,17 @@ def run_nmap_discovery(
     nmap_path: str = "nmap",
     extra_args: Optional[List[str]] = None,
     timeout_seconds: int = 1800,
+    port_spec_override: Optional[str] = None,  # Phase 121: "--top-ports 1000" or "-p-"
 ) -> List[NmapOpenPort]:
     """
     Run nmap discovery scan and parse XML output for open ports.
 
     Returns a list of NmapOpenPort items.
+
+    port_spec_override: when set, replaces the ``-p <csv>`` argument entirely.
+    The override string is split on whitespace; each token is validated against
+    ``_SAFE_NMAP_ARG_RE`` before use.  Example values: ``"--top-ports 1000"``
+    (top1000 scope) or ``"-p-"`` (all-ports scope).
     """
     if not targets:
         return []
@@ -74,17 +80,33 @@ def run_nmap_discovery(
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     xml_path = os.path.join(output_dir, f"nmap-discovery-{stamp}.xml")
 
-    # D-03 / WR-04 — when caller passes no explicit port list, fall back to
-    # the consulting-grade union (cfg.scan.ports_tls + fixed protocol set).
-    # The default here hardcodes the canonical TLS list (Phase 47 consulting
-    # set: 443, 8443, 9443, 10443, 5001) since this fallback runs without a
-    # cfg handle; callers with a cfg should pass `ports` explicitly.
-    if ports:
-        ports_csv = ",".join(str(p) for p in sorted(set(ports)))
+    if port_spec_override is not None:
+        # Phase 121 / T-121-T-05: top1000 or all scope — replace -p <csv> entirely.
+        # Split on whitespace and validate EACH token through the same allowlist
+        # used for extra_args.  ValueError aborts before subprocess.run is reached.
+        override_tokens = port_spec_override.split()
+        for token in override_tokens:
+            if not _SAFE_NMAP_ARG_RE.fullmatch(token):
+                raise ValueError(f"Unsafe port_spec_override token: {token!r}")
+        base_args = [
+            "-sT", "-n", "-Pn", "--open",
+            "--max-retries", "1",
+            "--host-timeout", "10s",
+            "--max-parallelism", "100",
+        ]
+        args = [nmap_path] + base_args + override_tokens
+        ports_csv = port_spec_override  # for logger only
     else:
-        ports_csv = default_nmap_ports_csv((443, 8443, 9443, 10443, 5001))
-
-    args = [nmap_path] + _default_nmap_args(ports_csv)
+        # D-03 / WR-04 — when caller passes no explicit port list, fall back to
+        # the consulting-grade union (cfg.scan.ports_tls + fixed protocol set).
+        # The default here hardcodes the canonical TLS list (Phase 47 consulting
+        # set: 443, 8443, 9443, 10443, 5001) since this fallback runs without a
+        # cfg handle; callers with a cfg should pass `ports` explicitly.
+        if ports:
+            ports_csv = ",".join(str(p) for p in sorted(set(ports)))
+        else:
+            ports_csv = default_nmap_ports_csv((443, 8443, 9443, 10443, 5001))
+        args = [nmap_path] + _default_nmap_args(ports_csv)
 
     if extra_args:
         # D-04 / WR-05 — validate every extra_args token against the allowlist
@@ -104,7 +126,7 @@ def run_nmap_discovery(
 
     if logger:
         logger.stamp(f"Running Nmap discovery on {len(targets)} target(s) (ports={ports_csv})")
-        logger.v(f"🧾 Nmap cmd: {' '.join(args)}")
+        logger.v(f"Nmap cmd: {' '.join(args)}")
 
     try:
         proc = subprocess.run(
