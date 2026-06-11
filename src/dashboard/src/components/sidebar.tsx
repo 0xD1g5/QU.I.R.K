@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ScanSelector } from "@/components/ScanSelector"
 import { useAuth } from "@/context/auth-context"
-import { useVertical } from "@/context/VerticalProvider"
+import { useVertical } from "@/context/vertical-context"
 
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },

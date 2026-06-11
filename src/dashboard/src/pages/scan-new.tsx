@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import type { ScanSubmitRequest } from "@/types/api"
-import { useVertical } from "@/context/VerticalProvider"
+import { useVertical } from "@/context/vertical-context"
 
 export function ScanNewPage() {
   const navigate = useNavigate()

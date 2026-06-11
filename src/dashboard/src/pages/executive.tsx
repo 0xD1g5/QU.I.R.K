@@ -13,7 +13,7 @@ import { useMergeLatest } from "@/hooks/useMergeLatest"
 import { RegressionAlertChip } from "@/components/RegressionAlertChip"
 import { coerceErrorDetail } from "./executive-utils"
 import type { PartialFailureEntry } from "@/types/api"
-import { useVertical } from "@/context/VerticalProvider"
+import { useVertical } from "@/context/vertical-context"
 
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "hsl(0 72% 51%)",
