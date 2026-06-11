@@ -85,6 +85,10 @@ class ScanCfg:
     # None means no spec scan.
     openapi_spec_path: Optional[str] = None
 
+    # Phase 121: port-scope hint written by _write_job_config for top1000/all scopes.
+    # Values: "top1000" | "all" | None  (common/custom scopes write ports_tls directly).
+    nmap_port_scope: Optional[str] = None
+
     def __init__(
         self,
         concurrency: int,
@@ -107,6 +111,8 @@ class ScanCfg:
         ssh_timeout_seconds: Optional[int] = None,
         # Phase 94 SPEC-01/02: optional OpenAPI spec source
         openapi_spec_path: Optional[str] = None,
+        # Phase 121: port-scope hint for nmap-native scopes (top1000/all)
+        nmap_port_scope: Optional[str] = None,
     ) -> None:
         self.concurrency = concurrency
         self.ports_tls = ports_tls
@@ -119,6 +125,7 @@ class ScanCfg:
         self.timeouts = timeouts if timeouts is not None else TimeoutsCfg()
         self.retry = retry if retry is not None else RetryCfg()
         self.openapi_spec_path = openapi_spec_path
+        self.nmap_port_scope = nmap_port_scope
         # Route legacy flat kwargs into the nested TimeoutsCfg
         legacy_values = {
             "timeout_seconds": timeout_seconds,
