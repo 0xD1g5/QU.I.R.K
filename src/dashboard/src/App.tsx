@@ -25,6 +25,7 @@ import { ScanJobPage } from "@/pages/scan-job"
 import { ScanHistoryPage } from "@/pages/scan-history"
 import { ComparePage } from "@/pages/compare"
 import { SensorsPage } from "@/pages/sensors"
+import { HealthcarePage } from "@/pages/healthcare"
 
 /**
  * AppShell — AUTH-03 mount guard.
@@ -75,6 +76,7 @@ function AppShell() {
             <Route path="/scans" element={<ScanHistoryPage />} />
             <Route path="/sensors" element={<SensorsPage />} />
             <Route path="/compare" element={<ComparePage />} />
+            <Route path="/healthcare" element={<HealthcarePage />} />
           </Routes>
         </div>
       </main>

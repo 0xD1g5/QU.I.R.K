@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { PageSpinner } from "@/components/PageSpinner"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Button } from "@/components/ui/button"
-import { Download, Loader2, AlertTriangle } from "lucide-react"
+import { Download, Loader2, AlertTriangle, HeartPulse } from "lucide-react"
+import { Link } from "react-router-dom"
 import { useEffect, useRef, useState } from "react"
 import { useMergeLatest } from "@/hooks/useMergeLatest"
 import { RegressionAlertChip } from "@/components/RegressionAlertChip"
@@ -201,9 +202,18 @@ export function ExecutivePage() {
     <div className="space-y-8">
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <h1 style={{ fontSize: 20, fontWeight: 600 }} className="text-foreground">
-          QU.I.R.K. — Scan Results
-        </h1>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 600 }} className="text-foreground">
+            QU.I.R.K. — Scan Results
+          </h1>
+          <span
+            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest mt-0.5"
+            style={{ color: "#4ba8a8" }}
+          >
+            <HeartPulse className="h-3 w-3" aria-hidden="true" />
+            Healthcare Edition
+          </span>
+        </div>
         <div className="flex items-center gap-3">
           {pdfMessage && (
             <span className="text-sm text-muted-foreground">{pdfMessage}</span>
@@ -227,6 +237,29 @@ export function ExecutivePage() {
 
       {/* Phase 64 TREND-02: Regression alert (above score gauge) */}
       <RegressionAlertChip />
+
+      {/* Healthcare HIPAA context callout */}
+      <div
+        className="flex items-center justify-between gap-3 rounded-md border px-4 py-3"
+        style={{ background: "var(--ds-accent-dim)", borderColor: "var(--ds-accent-bdr)" }}
+      >
+        <div className="flex items-center gap-2">
+          <HeartPulse className="h-4 w-4 flex-shrink-0" style={{ color: "#4ba8a8" }} aria-hidden="true" />
+          <span className="text-sm">
+            <span className="font-semibold" style={{ color: "#4ba8a8" }}>Healthcare Edition</span>
+            <span className="text-muted-foreground ml-2">
+              View HIPAA § 164.312 Technical Safeguard mapping and PHI risk analysis for this scan.
+            </span>
+          </span>
+        </div>
+        <Link
+          to="/healthcare"
+          className="text-sm font-semibold flex-shrink-0 hover:underline"
+          style={{ color: "#4ba8a8" }}
+        >
+          Healthcare Posture →
+        </Link>
+      </div>
 
       {/* UI-FIX-2: Coverage warning banner sits immediately above the score
           gauges Card (per UI-SPEC §4) so the coverage caveat is visually
