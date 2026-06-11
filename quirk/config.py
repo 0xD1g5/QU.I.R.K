@@ -494,6 +494,33 @@ def load_config(path: str) -> AppConfig:
     return config_from_dict(raw)
 
 
+_ALLOWED_VERTICALS = {"general", "healthcare"}
+_DEFAULT_VERTICAL = "general"
+
+
+def get_vertical() -> str:
+    """Return active vertical: QUIRK_VERTICAL env var wins over YAML `vertical` key.
+
+    Default when neither is set: "general".
+    Unknown/invalid values fall back to "general".
+    Allowed values: general, healthcare.
+    """
+    if env_val := os.environ.get("QUIRK_VERTICAL"):
+        candidate = env_val.strip().lower()
+        return candidate if candidate in _ALLOWED_VERTICALS else _DEFAULT_VERTICAL
+    config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+    if os.path.isfile(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as _f:
+                raw = yaml.safe_load(_f) or {}
+            candidate = str(raw.get("vertical") or "").strip().lower()
+            if candidate in _ALLOWED_VERTICALS:
+                return candidate
+        except Exception:
+            pass
+    return _DEFAULT_VERTICAL
+
+
 def get_cors_origins() -> list:
     """Return CORS allowlist: QUIRK_CORS_ORIGINS env var (comma-separated) wins over YAML.
 

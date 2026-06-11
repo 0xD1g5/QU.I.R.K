@@ -23,7 +23,7 @@ from quirk.config import get_cors_origins
 from quirk.dashboard.api.deps import _default_db_path
 from quirk.dashboard.api.middleware.rate_limit import RateLimitMiddleware
 from quirk.dashboard.api.middleware.security_headers import SecurityHeadersMiddleware
-from quirk.dashboard.api.routes import health, jobs, merge, pdf, qramm, scan, schedules, sensor, trends
+from quirk.dashboard.api.routes import config, health, jobs, merge, pdf, qramm, scan, schedules, sensor, trends
 
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 
@@ -110,6 +110,7 @@ def create_app(db_path: str | None = None) -> FastAPI:
 
     # 1. API routes
     application.include_router(health.router, prefix="/api")
+    application.include_router(config.router, prefix="/api")
     application.include_router(pdf.router, prefix="/api")
     application.include_router(scan.router, prefix="/api")
     application.include_router(trends.router, prefix="/api")

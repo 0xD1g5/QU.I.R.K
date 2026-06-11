@@ -8,10 +8,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import type { ScanSubmitRequest } from "@/types/api"
+import { useVertical } from "@/context/VerticalProvider"
 
 export function ScanNewPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const vertical = useVertical()
   const isReconstructed = searchParams.get("reconstructed") === "1"
   const [targets, setTargets] = useState(() => searchParams.get("target") ?? "")
   const [profile, setProfile] = useState<ScanSubmitRequest["profile"]>(
@@ -72,10 +74,49 @@ export function ScanNewPage() {
     }
   }
 
+  function applyPreset() {
+    if (!vertical.preset) return
+    setTargets(vertical.preset.targets)
+    setProfile(vertical.preset.profile as ScanSubmitRequest["profile"])
+    setCalibration(vertical.preset.calibration as ScanSubmitRequest["calibration"])
+  }
+
   return (
     <Card className="max-w-[640px] mx-auto mt-16 px-6 py-6">
       <h1 className="text-xl font-semibold">New Scan</h1>
       <p className="text-sm text-muted-foreground mt-1">Configure and run a scan from the dashboard.</p>
+
+      {/* Vertical preset banner — only rendered when active vertical has a preset */}
+      {vertical.preset !== null && (
+        <div
+          className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 mt-3"
+          style={{ background: "var(--ds-accent-dim)", borderColor: "var(--ds-accent-bdr)" }}
+        >
+          <div className="flex items-center gap-2">
+            <vertical.Icon
+              className="h-4 w-4 flex-shrink-0"
+              style={{ color: vertical.accentColor }}
+              aria-hidden="true"
+            />
+            <span className="text-xs text-muted-foreground">
+              <span className="font-semibold" style={{ color: vertical.accentColor }}>
+                {vertical.label} preset
+              </span>
+              {" — "}{vertical.preset.description}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-shrink-0 text-xs h-7 px-2 border-accent/40 hover:bg-accent/10"
+            style={{ color: vertical.accentColor }}
+            onClick={applyPreset}
+          >
+            Apply
+          </Button>
+        </div>
+      )}
 
       <Separator className="my-4" />
 

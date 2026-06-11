@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/AuthProvider"
 import { useAuth } from "@/context/auth-context"
+import { VerticalProvider, useVertical } from "@/context/VerticalProvider"
 import { ScanProvider } from "@/context/ScanProvider"
 import { QRAMMProvider } from "@/context/QRAMMProvider"
 import { Sidebar } from "@/components/sidebar"
@@ -40,6 +41,7 @@ import { SensorsPage } from "@/pages/sensors"
  */
 function AppShell() {
   const { status } = useAuth()
+  const vertical = useVertical()
 
   if (status === "loading") {
     return <div className="min-h-screen bg-background" />
@@ -75,6 +77,13 @@ function AppShell() {
             <Route path="/scans" element={<ScanHistoryPage />} />
             <Route path="/sensors" element={<SensorsPage />} />
             <Route path="/compare" element={<ComparePage />} />
+            {/* Vertical-specific routes — only registered when the vertical has a page */}
+            {vertical.PageComponent !== null && vertical.navItem !== null && (
+              <Route
+                path={vertical.navItem.path}
+                element={<vertical.PageComponent />}
+              />
+            )}
           </Routes>
         </div>
       </main>
@@ -86,15 +95,17 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="quirk-ui-theme">
       <AuthProvider>
-        <ScanProvider>
-          <QRAMMProvider>
-            <TooltipProvider>
-              <BrowserRouter>
-                <AppShell />
-              </BrowserRouter>
-            </TooltipProvider>
-          </QRAMMProvider>
-        </ScanProvider>
+        <VerticalProvider>
+          <ScanProvider>
+            <QRAMMProvider>
+              <TooltipProvider>
+                <BrowserRouter>
+                  <AppShell />
+                </BrowserRouter>
+              </TooltipProvider>
+            </QRAMMProvider>
+          </ScanProvider>
+        </VerticalProvider>
       </AuthProvider>
     </ThemeProvider>
   )

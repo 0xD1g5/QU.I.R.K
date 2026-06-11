@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ScanSelector } from "@/components/ScanSelector"
 import { useAuth } from "@/context/auth-context"
+import { useVertical } from "@/context/VerticalProvider"
 
 const NAV_ITEMS = [
   { path: "/", label: "Executive Summary", Icon: LayoutDashboard },
@@ -47,6 +48,21 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const vertical = useVertical()
+
+  // Build the rendered nav list: base items + optional vertical-specific item
+  const navItems = vertical.navItem
+    ? [
+        ...NAV_ITEMS,
+        {
+          path: vertical.navItem.path,
+          label: vertical.navItem.label,
+          Icon: vertical.Icon,
+          highlight: true,
+          accentColor: vertical.accentColor,
+        },
+      ]
+    : NAV_ITEMS
 
   return (
     <aside
@@ -66,6 +82,17 @@ export function Sidebar() {
         </span>
         {/* Monogram on narrow sidebar */}
         <span className="text-accent font-black text-lg lg:hidden font-mono leading-none">Q</span>
+
+        {/* Edition badge — only rendered for non-general verticals */}
+        {vertical.id !== "general" && (
+          <span
+            className="hidden lg:flex items-center gap-1 text-[10px] font-semibold ml-auto"
+            style={{ color: vertical.accentColor }}
+          >
+            <vertical.Icon className="h-3 w-3" aria-hidden="true" />
+            {vertical.label}
+          </span>
+        )}
       </div>
 
       {/* New Scan CTA — above all nav items, below wordmark */}
@@ -92,7 +119,9 @@ export function Sidebar() {
         className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1 py-4 px-2"
         aria-label="Dashboard navigation"
       >
-        {NAV_ITEMS.map(({ path, label, Icon }) => {
+        {navItems.map(({ path, label, Icon, ...rest }) => {
+          const highlight = "highlight" in rest ? (rest as { highlight: boolean }).highlight : false
+          const accentColor = "accentColor" in rest ? (rest as { accentColor: string }).accentColor : undefined
           const isActive = path === "/qramm"
             ? location.pathname.startsWith("/qramm")
             : location.pathname === path
@@ -110,8 +139,12 @@ export function Sidebar() {
                       ? "text-foreground border-b-2 lg:border-b-0 lg:border-l-2 border-accent bg-accent/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/5",
                   )}
+                  style={highlight && accentColor ? { color: isActive ? accentColor : undefined } : undefined}
                 >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <Icon
+                    className="h-5 w-5 flex-shrink-0"
+                    style={highlight && accentColor ? { color: accentColor } : undefined}
+                  />
                   <span className="hidden lg:block">{label}</span>
                 </Link>
               </TooltipTrigger>
