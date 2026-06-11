@@ -660,6 +660,61 @@ quirk --config config.yaml --profile deep
 
 ---
 
+## Port Scope (v5.6+ — Phase 121)
+
+Dashboard-initiated scans gain control over **port coverage** via a per-scan "port scope". Port scope controls which TCP ports are probed during the discovery phase. It is orthogonal to the scan profile (which controls timeout depth and TLS enumeration) — the two axes are independent.
+
+> **TCP only.** Port scope applies to TCP discovery. UDP scanning is not supported.
+
+### Four scope values
+
+| Scope | Description | nmap required? | Default? |
+|-------|-------------|---------------|---------|
+| `top1000` | nmap `--top-ports 1000` — most common 1000 TCP ports | Yes (forces nmap) | **Yes** |
+| `common` | 17 curated `CONSULTING_TLS_PORTS` — fast, targets web/TLS/SSH services | No (builtin or nmap) | No |
+| `all` | nmap `-p-` — all 65535 TCP ports; exhaustive, slow | Yes (forces nmap) | No |
+| `custom` | User-specified port list (e.g. `443,8000-9000,15449`) | Honors nmap checkbox | No |
+
+**Default is `top1000`** — it covers the most common services via nmap and works well for typical enterprise networks. The `common` scope is suitable when nmap is not installed or speed is the priority.
+
+### Wide scopes without nmap installed
+
+If you select `top1000` or `all` but nmap is not available on the system PATH, the scan **fails with an advisory finding** and an actionable error message (install nmap or switch to the Common TLS scope). There is **no silent fallback** to a narrower port list — you always know what was actually scanned.
+
+### Custom port spec
+
+The `custom` scope accepts a comma-separated list of ports and port ranges:
+
+```
+443,8000-9000,15449,16443
+```
+
+Rules:
+- Ports must be in the range 1–65535.
+- Ranges must be `low-high` with `low <= high`.
+- The expansion cap is 2048 unique ports — specs that expand to more than 2048 ports are rejected with a 422 error (guards against accidentally specifying `1-65535` in the custom field).
+- The nmap checkbox is honored: if you also enable nmap, custom ports are passed to nmap as `-p <csv>`; if nmap is off, the builtin fingerprinter probes each listed port directly.
+
+### `security.allow_internal_targets`
+
+Added in Phase 121, the QUIRK config supports an explicit operator flag that controls whether internal/loopback targets (RFC1918 ranges, `127.x.x.x`) are allowed when submitting scans from the dashboard:
+
+```yaml
+security:
+  allow_internal_targets: true   # Set to false on machines that also scan untrusted client environments
+```
+
+> **Operator note:** `allow_internal_targets: true` is the correct setting for a QUIRK instance
+> that only ever scans your own infrastructure (e.g., a chaos lab or internal assessment server).
+> If the same QUIRK instance is used to scan **untrusted client environments**, set this back to
+> `false` — it prevents accidental scans of loopback or RFC1918 addresses on the client's network.
+
+### Port scope in the dashboard
+
+The New Scan page exposes a "Port Scope" selector with the four options described above. Selecting `top1000` or `all` automatically checks and locks the "Enable nmap discovery" checkbox (nmap is required for those scopes). Selecting `common` or `custom` leaves the checkbox user-controlled.
+
+---
+
 ## CLI Flag Reference
 
 ### `quirk` — Scan Flags
