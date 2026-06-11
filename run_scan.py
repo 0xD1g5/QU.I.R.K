@@ -1044,15 +1044,29 @@ def main():
 
         # D-08: check if nmap binary is available; fall back to CONSULTING_TLS_PORTS if not.
         nmap_binary_available = is_extra_available("nmap")
-        # D-11: use post-config resolved port list; select_nmap_port_list handles fallback.
-        ports_for_nmap = sorted(set(select_nmap_port_list(cfg, nmap_binary_available) + [22, 80, 8080, 8000]))  # D-08/D-11
+        # Phase 121: scope-aware nmap arg construction.
+        # top1000 -> --top-ports 1000; all -> -p-; else -> existing -p <csv> path.
+        nmap_port_scope = getattr(cfg.scan, "nmap_port_scope", None)
+        if nmap_port_scope == "top1000":
+            port_spec_override = "--top-ports 1000"
+            ports_for_probe_guard = list(range(1000))   # synthetic for budget guard (Pitfall 3)
+            ports_for_nmap: List[int] = []
+        elif nmap_port_scope == "all":
+            port_spec_override = "-p-"
+            ports_for_probe_guard = list(range(65535))  # synthetic for budget guard (Pitfall 3)
+            ports_for_nmap = []
+        else:
+            # D-11: use post-config resolved port list; select_nmap_port_list handles fallback.
+            port_spec_override = None
+            ports_for_nmap = sorted(set(select_nmap_port_list(cfg, nmap_binary_available) + [22, 80, 8080, 8000]))  # D-08/D-11
+            ports_for_probe_guard = ports_for_nmap
         extra_args = args.nmap_extra_args.strip()
 
         # D-10/D-11/D-12: TTY-aware probe-budget guard (inserted Task 3)
         from quirk.util.targets import maybe_confirm_probe_budget
         if not maybe_confirm_probe_budget(
             targets=nmap_targets,
-            ports=ports_for_nmap,
+            ports=ports_for_probe_guard,
             threshold=10_000,  # D-12: threshold locked to 10,000 by roadmap success criterion #5; not configurable
             is_tty=sys.stdin.isatty(),  # stdin.isatty(): correct check for "can user provide input"
         ):
@@ -1068,6 +1082,16 @@ def main():
                 logger.stamp(f"♻️ Using cached discovery results ({d_key})")
                 targets = serial_to_targets(cached.get("targets", []))
             elif not nmap_binary_available:
+                # Phase 121: gate fallback on scope — wide scope (top1000/all) must
+                # hard-fail with advisory; never silently downgrade to 6-port builtin.
+                if nmap_port_scope in ("top1000", "all"):
+                    advisory_msg = (
+                        f"nmap is required for '{nmap_port_scope}' port scope but was not "
+                        "found. Install nmap and ensure it is in PATH, or select "
+                        "'Common TLS' scope instead."
+                    )
+                    mark_job_failed(args.db_path, args.job_id, advisory_msg)
+                    return
                 # D-08: nmap binary absent — advisory already emitted by probe_missing_extras;
                 # fall back to builtin discovery using CONSULTING_TLS_PORTS.
                 logger.info(
@@ -1079,12 +1103,13 @@ def main():
             else:
                 open_ports = run_nmap_discovery(
                     targets=nmap_targets,
-                    ports=ports_for_nmap,
+                    ports=ports_for_nmap if port_spec_override is None else [],
                     output_dir=cfg.output.directory,
                     logger=logger,
                     nmap_path=args.nmap_path,
                     extra_args=extra_args.split() if extra_args else None,
                     timeout_seconds=args.nmap_timeout,
+                    port_spec_override=port_spec_override,  # Phase 121
                 )
                 targets = nmap_to_targets(open_ports, tcp_only=True)
                 targets = _filter_excludes(targets, cfg.targets.exclude_ips or [])
