@@ -57,6 +57,11 @@ intelligence:
   profile: "balanced"        # lenient|balanced|strict
   calibration_overrides: {}
 
+# Phase 121: Server-policy flag for internal target scanning.
+# Set to false on machines that also scan untrusted client environments.
+security:
+  allow_internal_targets: true
+
 # Console behavior settings (Phase 114 AUTOMERGE-02)
 console:
   auto_merge:

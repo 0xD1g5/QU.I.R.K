@@ -56,16 +56,47 @@ def _write_job_config(
     db_path: str,
     calibration: str,
     allow_internal_targets: bool = False,
+    port_scope: str = "top1000",
+    custom_ports: Optional[str] = None,
 ) -> str:
     """Write a minimal config YAML for a dashboard-dispatched scan.
 
     run_scan.py has no --target CLI flag; all target/output config must live
     in a YAML file passed via --config. Targets are classified as cidrs (if
     they contain '/') or fqdns (hostnames and bare IPs).
+
+    Phase 121: port_scope controls the scan.ports_tls (common/custom) or
+    scan.nmap_port_scope (top1000/all) written to the job YAML. ValueError
+    from parse_port_spec propagates to the caller (create_job wraps it as 422).
     """
+    from quirk.interactive import CONSULTING_TLS_PORTS  # importable side-effect-free
+    from quirk.util.port_spec import parse_port_spec
+
     target_list = [t.strip() for t in targets.split(",") if t.strip()]
     fqdns = [t for t in target_list if "/" not in t]
     cidrs = [t for t in target_list if "/" in t]
+
+    # Phase 121: resolve scan block from port_scope
+    if port_scope == "common":
+        scan_block: dict = {
+            "concurrency": 100,
+            "ports_tls": list(CONSULTING_TLS_PORTS),
+            "include_sni": True,
+        }
+    elif port_scope == "custom":
+        scan_block = {
+            "concurrency": 100,
+            "ports_tls": parse_port_spec(custom_ports or ""),
+            "include_sni": True,
+        }
+    else:
+        # top1000 or all — nmap-native scopes; write hint for run_scan.py
+        scan_block = {
+            "concurrency": 100,
+            "ports_tls": list(CONSULTING_TLS_PORTS),
+            "include_sni": True,
+            "nmap_port_scope": port_scope,
+        }
 
     config = {
         "assessment": {
@@ -74,11 +105,7 @@ def _write_job_config(
             "report_owner": "Dashboard",
             "timezone": "UTC",
         },
-        "scan": {
-            "concurrency": 100,
-            "ports_tls": [443, 8443, 9443, 10443, 2222, 8000],
-            "include_sni": True,
-        },
+        "scan": scan_block,
         "targets": {
             "fqdns": fqdns,
             "cidrs": cidrs,
@@ -240,10 +267,15 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
         # broken. Production callers can opt in only via valid server config.
         allow_internal = False
 
-    config_path = _write_job_config(
-        output_dir, payload.targets, db_path, payload.calibration,
-        allow_internal_targets=allow_internal,
-    )
+    try:
+        config_path = _write_job_config(
+            output_dir, payload.targets, db_path, payload.calibration,
+            allow_internal_targets=allow_internal,
+            port_scope=payload.port_scope,
+            custom_ports=payload.custom_ports,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     cmd = [
         sys.executable, "-m", "run_scan",
@@ -253,7 +285,10 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
         "--db-path", db_path,
         "--job-id", job_id,
     ]
-    if payload.enable_nmap:
+    # Phase 121: auto-enable nmap for wide port scopes; honor user's explicit
+    # enable_nmap checkbox for common/custom scopes (RESEARCH Pitfall 5).
+    force_nmap = payload.port_scope in ("top1000", "all")
+    if payload.enable_nmap or force_nmap:
         cmd += ["--discovery", "nmap", "--nmap-timeout", "300"]
 
     # Pitfall 2: non-blocking — do not call communicate or proc.wait.
