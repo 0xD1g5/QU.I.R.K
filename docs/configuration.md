@@ -789,6 +789,66 @@ When `security.api_token` is empty and `QUIRK_API_TOKEN` is not set, the dashboa
 
 ---
 
+## Vertical Editions (v5.6+)
+
+The dashboard can run as a vertical-specific "edition" that tailors the UI for an
+industry deployment. This is an **operator-side deployment setting, not a user-facing
+picker** — the active vertical is resolved once at server startup and every browser
+session sees the same edition. General installs are visually identical to
+pre-vertical QU.I.R.K.
+
+### Allowed values
+
+| Vertical | Effect |
+|----------|--------|
+| `general` | Default. No vertical-specific UI; identical to pre-vertical QU.I.R.K. |
+| `healthcare` | Adds a "Healthcare Posture" sidebar nav item + HIPAA posture page (`/healthcare`), a "Healthcare Edition" badge under the wordmark, and an EHR/PACS/portal scan preset on the New Scan page |
+
+### Resolution order
+
+| Source | Precedence | Notes |
+|--------|-----------|-------|
+| `QUIRK_VERTICAL` env var | **Highest** | Case-insensitive; whitespace trimmed |
+| `vertical:` key in YAML config | Default | Read from the file at `QUIRK_CONFIG_PATH` (default `./config.yaml`) — **not** the `--config` CLI flag |
+| Neither set | Fallback | `general` |
+
+Unknown or invalid values **fall back silently to `general`** — they do not raise an
+error. If you set `QUIRK_VERTICAL=healthcre` (typo), you get a general-edition
+dashboard with no warning, so verify with the endpoint below after startup.
+
+```yaml
+# In config.yaml (must be the file QUIRK_CONFIG_PATH points at):
+vertical: healthcare   # top-level key; allowed: general | healthcare
+```
+
+```bash
+# Env var wins over YAML — useful for one-off sessions:
+QUIRK_VERTICAL=healthcare quirk serve
+```
+
+### Verifying the active vertical
+
+`GET /api/config` returns the resolved vertical. Like `/api/health`, this endpoint is
+**unauthenticated** (the frontend needs it before login) and exposes only the vertical
+name — no secrets or scan data.
+
+```bash
+curl http://127.0.0.1:8512/api/config
+# {"vertical":"healthcare"}
+```
+
+### Adding a new vertical (developers)
+
+All vertical UI reads from a single descriptor registry — there are no scattered
+conditionals. A new vertical (e.g. Manufacturing, Retail) requires only:
+
+1. A descriptor entry in `src/dashboard/src/lib/verticals.ts` (label, icon, accent
+   color, optional nav item / scan preset / page component).
+2. A page component, if the vertical has a dedicated route.
+3. The vertical name added to `_ALLOWED_VERTICALS` in `quirk/config.py`.
+
+---
+
 ## Minimal Valid Configuration
 
 The minimum configuration to run a first scan. All other keys use their defaults.

@@ -58,6 +58,19 @@ quirk --config config.yaml  # use the generated config
 | `quirk-scanner[motion]` | aiokafka, pika, redis, azure-servicebus, boto3 SQS | Email scanner + broker scanner (Kafka / AMQP / Redis / Service Bus / SQS) |
 | `quirk-scanner[all]` | Everything above **except** `[identity]` | One-shot enterprise install |
 
+### 2.3 Vertical editions (v5.6+)
+
+The dashboard can run as an industry-specific edition (currently `general` or
+`healthcare`). Set `QUIRK_VERTICAL=healthcare` in the server environment, or add a
+top-level `vertical: healthcare` key to the YAML file `QUIRK_CONFIG_PATH` points at.
+The env var wins; unknown values fall back silently to `general`. Verify the active
+edition after startup with `curl http://127.0.0.1:8512/api/config` (unauthenticated,
+returns `{"vertical": "..."}`).
+
+The healthcare edition adds a "Healthcare Posture" page, sidebar badge, and an
+EHR/PACS/portal scan preset; general installs are unchanged. See
+[`docs/configuration.md`](configuration.md) § Vertical Editions for the full reference.
+
 > See also: [`docs/configuration.md`](configuration.md) for the full reference of every
 > config block and flag, [`docs/sample-config.yaml`](sample-config.yaml) for an
 > annotated example.

@@ -77,3 +77,13 @@ output:
 #   protocol: udp                 # optional: udp (default) or tcp
 #   export_after_scan: false      # optional: set true to export automatically after scheduled scans
 #   timeout_seconds: 5            # optional: socket send timeout in seconds
+
+# Vertical Editions — quick task 260611-g0b (v5.6+)
+# Run the dashboard as an industry-specific edition. Operator-side deployment
+# setting — resolved once at server startup, no user-facing picker.
+# Resolution order: QUIRK_VERTICAL env var > this key > "general" default.
+# NOTE: this key is read from the file QUIRK_CONFIG_PATH points at (default
+#   ./config.yaml), NOT the --config CLI flag. Invalid values fall back
+#   silently to "general" — verify with: curl http://127.0.0.1:8512/api/config
+#
+# vertical: healthcare   # allowed: general (default) | healthcare
