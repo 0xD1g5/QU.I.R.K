@@ -83,3 +83,6 @@ design/
 # AI / Claude instruction files (kept on disk for local dev; not for public repo)
 CLAUDE.md
 AGENTS.md
+
+# Local browser-automation artifacts (Claude Code Playwright MCP)
+.playwright-mcp/

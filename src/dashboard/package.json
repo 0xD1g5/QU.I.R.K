@@ -10,6 +10,7 @@
     "lint:hooks": "bash ../../scripts/check-cancelled-guards.sh",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e:smoke": "node tests/e2e/run-e2e.mjs",
     "preview": "vite preview",
     "a11y:check": "node tests/a11y/run-a11y.mjs",
     "a11y:check:empty": "VITE_A11Y_FIXTURE=1 VITE_A11Y_FIXTURE_VARIANT=empty node tests/a11y/run-a11y.mjs",
