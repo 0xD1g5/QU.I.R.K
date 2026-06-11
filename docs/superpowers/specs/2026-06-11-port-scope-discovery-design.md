@@ -42,9 +42,10 @@ set — so GUI lab scans always find nothing.
 
 ## Non-Goals
 
-- Changing the stale-anchor UX in this work (tracked separately as a follow-up:
-  the dashboard could banner "showing last successful scan: <date>" when a fresh
-  scan returns zero endpoints). Noted here so it is not lost.
+- The persistent "showing scan from <date>" badge across all dashboard views —
+  deferred to its own dashboard-polish follow-up. (The *zero-result completion
+  signal* IS in scope — see Design §5 — because it is the direct failure mode of
+  this feature.)
 - UDP scanning. TCP only, consistent with current `nmap_to_targets(tcp_only=True)`.
 
 ## Key architecture finding
@@ -74,7 +75,7 @@ A new per-scan "port scope" flows from form → request → job config → disco
 | **Common TLS** | curated `CONSULTING_TLS_PORTS` (17 ports) | builtin or nmap | Fast, no nmap required |
 | **Top 1000** (default) | nmap `--top-ports 1000` | forces nmap | Seconds–minutes/host |
 | **All ports** | nmap `-p-` (all 65535) | forces nmap | Slow, exhaustive |
-| **Custom** | user spec, e.g. `443,8000-9000,15449` | builtin if ≤ 25 discrete ports, else nmap | Depends |
+| **Custom** | user spec, e.g. `443,8000-9000,15449` | honors the nmap checkbox (no auto-switch) | Depends |
 
 Default scope is **Top 1000**.
 
@@ -92,7 +93,11 @@ Default scope is **Top 1000**.
   - `common` → `cfg.scan.ports_tls = CONSULTING_TLS_PORTS`
   - `custom` → `cfg.scan.ports_tls = parse_port_spec(custom_ports)`
   - `top1000` / `all` → write a new `scan.nmap_port_scope` hint into the YAML
-  - Auto-enable nmap when scope is `top1000`/`all`, or `custom` with > 25 ports.
+  - Auto-enable nmap when scope is `top1000`/`all`. **Custom honors the user's
+    nmap checkbox with no auto-switch** (no port-count threshold — the only scopes
+    that force nmap are top1000/all, which require discovery by definition). A
+    soft UI hint may warn that a large custom list against a CIDR will be slow
+    without nmap, but the system honors the explicit choice.
 - **`run_scan.py`** (nmap block ~L1048): replace the `select_nmap_port_list()`
   collapse with scope-aware arg construction:
   - `top1000` → append `--top-ports 1000` to nmap extra args
@@ -130,6 +135,23 @@ Unblocks loopback/lab scans from the GUI. **Operator note:** set this back to
 `false` on a machine that also scans untrusted client environments — internal
 targeting should be off by default there.
 
+### 5. Zero-result completion signal (folded in from stale-anchor analysis)
+
+The scan-job completion flow must distinguish "completed with N endpoints" from
+"completed, 0 endpoints." Today a zero-endpoint scan navigates to a dashboard
+that silently anchors on `MAX(scanned_at)` and shows a *prior* session, making a
+failed discovery look like the scanner ignored the input.
+
+- `scan-job.tsx` (job-status view): when a job reaches `completed`, check the
+  resulting endpoint count for that scan. If zero, show an explicit terminal
+  message ("Scan completed but discovered no crypto endpoints — check target
+  reachability and port scope") instead of routing to stale dashboard data.
+- Endpoint count for the job's scan is available via `scan_run_id` → query that
+  specific session, not `latest`.
+
+Out of scope (separate follow-up): a persistent "showing scan from <date>" badge
+on every dashboard view.
+
 ## Data flow
 
 ```
@@ -159,8 +181,39 @@ scan-new.tsx (port_scope + custom_ports)
 - nmap arg construction per scope (mock `run_nmap_discovery`).
 - Frontend: scan-new renders selector, custom field toggles, forces-nmap states;
   vitest in `src/dashboard/src/pages/__tests__/`.
+- Frontend: scan-job completion shows the zero-result terminal message when a
+  finished job has zero endpoints, and the normal results path when non-zero (§5).
 - Manual UAT: GUI scan of `127.0.0.1` Top 1000 against running chaos lab returns
-  non-zero endpoints; Custom `15449,16443` finds those specific lab services.
+  non-zero endpoints; Custom `15449,16443` finds those specific lab services; a
+  deliberately-unreachable target surfaces the zero-result message, not stale data.
+
+## Future follow-ups (out of scope for this phase)
+
+These are intentionally deferred to keep this phase focused on discovery breadth.
+Recorded here so they are not lost.
+
+1. **Persistent "showing scan from \<date\>" badge.** A dashboard-wide indicator
+   of which scan session is currently displayed, on every view (not just the
+   zero-result completion case handled in §5). Pure display/messaging polish,
+   no backend coupling. Own small phase.
+
+2. **Scoped trusted-targets allowlist for internal scanning (security phase).**
+   Replace the coarse global `allow_internal_targets: true` with an operator-
+   declared allowlist of internal ranges that are scannable (e.g. the lab subnet,
+   or a client's authorized internal scope for an internal engagement). Everything
+   outside the allowlist stays guarded even when internal scanning is enabled.
+
+   *Why this and not a per-scan toggle:* a per-request flag was deliberately
+   removed in Phase 120 / AC-03 as an SSRF-escalation mitigation (a network-
+   reachable dashboard must not let an arbitrary caller flip the internal-range
+   guard). A two-key per-scan opt-in would partially reverse that hardening. A
+   scoped allowlist is strictly *tighter* than today's global `true` (which
+   permits all internal ranges) — it improves both ergonomics and security
+   posture rather than trading one for the other, and it matches the consulting
+   "rules of engagement = these subnets only" mental model.
+
+   *Requires its own threat-model review and updates to the Phase 120 security
+   posture — must not be folded into a feature phase.*
 
 ## Mandatory phase-completion follow-ups (GSD)
 
