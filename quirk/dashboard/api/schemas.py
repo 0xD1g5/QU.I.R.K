@@ -15,6 +15,10 @@ class HealthResponse(BaseModel):
     status: str  # "ok"
 
 
+class ConfigResponse(BaseModel):
+    vertical: str  # "general" | "healthcare"
+
+
 # ---- Score / Confidence ----
 
 class SubScores(BaseModel):
