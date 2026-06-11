@@ -545,3 +545,53 @@ def test_get_job_reconciles_real_zombie(monkeypatch, tmp_path):
         "zombie child must reconcile to failed — pid-based liveness cannot see it"
     )
     assert "exit code 7" in data["error_message"]
+
+
+# --------------------------------------------------------------------------
+# Test 18: reconcile must not clobber a terminal status committed elsewhere
+# --------------------------------------------------------------------------
+
+def test_reconcile_does_not_clobber_terminal_status(monkeypatch):
+    """Lost-update race guard: run_scan commits `completed` between the status
+    poll's row read and the reconcile write. The child's terminal status must
+    win — a successfully completed scan must never be reported as failed."""
+    import quirk.dashboard.api.routes.jobs as jobs_mod
+    from quirk.dashboard.api.routes.jobs import _reconcile_if_dead
+
+    dead = _FakeProc(pid=424242, returncode=0)
+    monkeypatch.setattr(jobs_mod, "_PROCS", {"race-1": dead}, raising=False)
+
+    _app, _tc, TestingSession = _app_with_db()
+    db = TestingSession()
+    db.add(ScanJob(
+        job_id="race-1", pid=424242, status="running", target="x.com",
+        profile="quick", calibration="balanced", enable_nmap=False,
+    ))
+    db.commit()
+    db.close()
+
+    # Session A (the API request) reads the row while it is still `running`.
+    db_a = TestingSession()
+    row = db_a.get(ScanJob, "race-1")
+    assert row.status == "running"
+
+    # The child commits its terminal status via its own session, then exits.
+    db_b = TestingSession()
+    child_row = db_b.get(ScanJob, "race-1")
+    child_row.status = "completed"
+    db_b.commit()
+    db_b.close()
+
+    # Reconcile now runs with the stale row object and a dead process.
+    _reconcile_if_dead(db_a, row)
+
+    # The in-memory row must reflect reality for the response being built.
+    assert row.status == "completed"
+    db_a.close()
+
+    # And the DB must keep the child's terminal status untouched.
+    db = TestingSession()
+    final = db.get(ScanJob, "race-1")
+    assert final.status == "completed"
+    assert final.error_message is None
+    db.close()

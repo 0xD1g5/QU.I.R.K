@@ -176,13 +176,25 @@ def _reconcile_if_dead(db: Session, row: ScanJob) -> None:
     with _PROCS_LOCK:
         _PROCS.pop(row.job_id, None)
     log_hint = Path("output/jobs") / row.job_id / "run.log"
-    row.status = "failed"
-    row.completed_at = _utcnow_naive()
-    row.error_message = (
-        f"Scan process (pid {row.pid}) exited without completing "
-        f"(exit code {returncode}). See {log_hint} for captured output."
+    # Guarded update, not a blind write: the child commits its own terminal
+    # status (completed/failed) just before exiting, and this poll may hold a
+    # row read from before that commit. WHERE status='running' makes the
+    # child's terminal status win the race.
+    db.query(ScanJob).filter(
+        ScanJob.job_id == row.job_id, ScanJob.status == "running"
+    ).update(
+        {
+            "status": "failed",
+            "completed_at": _utcnow_naive(),
+            "error_message": (
+                f"Scan process (pid {row.pid}) exited without completing "
+                f"(exit code {returncode}). See {log_hint} for captured output."
+            ),
+        },
+        synchronize_session=False,
     )
     db.commit()
+    db.refresh(row)
 
 
 @write_router.post("/jobs", status_code=201)
