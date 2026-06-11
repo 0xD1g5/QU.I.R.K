@@ -3,10 +3,14 @@
  *
  * Polls every 3000ms (CONTEXT.md D-07). Stops on terminal status
  * (completed | failed | cancelled). On completed with scan_run_id,
- * calls setSelectedScanId + navigate("/").
+ * fetches result-summary to check endpoint_count before navigating.
+ * If endpoint_count === 0, stays on scan-job with zeroResult=true.
+ * If endpoint_count > 0 (or summary fetch fails), navigates to dashboard.
  *
  * Cancellation-safe per Phase 62 HOOK-01 pattern: let cancelled = false +
  * return () => { cancelled = true } in useEffect cleanup.
+ *
+ * Phase 121 PORT-09/10: zero-result detection via GET /api/jobs/{id}/result-summary.
  */
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -18,7 +22,7 @@ export type JobStatusResult =
   | { kind: "loading" }
   | { kind: "not_found" }
   | { kind: "error"; message: string }
-  | { kind: "ok"; data: JobStatus }
+  | { kind: "ok"; data: JobStatus; zeroResult: boolean }
 
 const TERMINAL = new Set(["completed", "failed", "cancelled"])
 const POLL_INTERVAL_MS = 3000
@@ -58,9 +62,30 @@ export function useJobStatus(jobId: string): JobStatusResult {
         }
         const data: JobStatus = await resp.json()
         if (cancelled) return
-        setResult({ kind: "ok", data })
+        // Set initial ok state (zeroResult=false until summary check below)
+        setResult({ kind: "ok", data, zeroResult: false })
 
         if (data.status === "completed" && data.scan_run_id) {
+          // Phase 121: fetch result-summary before navigating to detect zero-endpoint scans
+          let endpointCount = 1 // fail-safe: assume non-zero if fetch fails
+          try {
+            const summaryResp = await fetchApi(`/api/jobs/${jobId}/result-summary`)
+            if (cancelled) return
+            if (summaryResp.ok) {
+              const summary: { endpoint_count: number } = await summaryResp.json()
+              if (cancelled) return
+              endpointCount = summary.endpoint_count
+            }
+          } catch {
+            // fail-safe: treat fetch error as non-zero (navigate to dashboard)
+          }
+          if (cancelled) return
+          if (endpointCount === 0) {
+            // Zero endpoints: stay on scan-job with zero-result message
+            setResult({ kind: "ok", data, zeroResult: true })
+            return
+          }
+          // Non-zero: navigate to dashboard as normal
           setSelectedScanId(data.scan_run_id)
           navigate("/")
           return

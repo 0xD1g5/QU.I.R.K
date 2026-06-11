@@ -78,7 +78,7 @@ export function ScanJobPage() {
     )
   }
 
-  const { data } = result
+  const { data, zeroResult } = result
 
   return (
     <Card className="max-w-[640px] mx-auto mt-16 px-6 py-6">
@@ -201,6 +201,19 @@ export function ScanJobPage() {
             </Link>
             .
           </p>
+        </div>
+      )}
+
+      {data.status === "completed" && zeroResult && (
+        <div className="mt-4 space-y-3">
+          <h2 className="text-base font-semibold">Scan completed — no endpoints found</h2>
+          <p className="text-sm text-muted-foreground">
+            No crypto endpoints were discovered. Check that the target is reachable from the server
+            and that the selected port scope covers the ports your services listen on.
+          </p>
+          <Link to="/scan/new" className="text-sm text-primary underline underline-offset-4">
+            Start a new scan
+          </Link>
         </div>
       )}
     </Card>
