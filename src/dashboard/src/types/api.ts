@@ -312,11 +312,14 @@ export interface QRAMMComplianceMapRow {
 }
 
 // Phase 65 UI-SCAN-01/02: dashboard-initiated scan job types
+// Phase 121 PORT-07/08: port_scope + custom_ports added
 export interface ScanSubmitRequest {
   targets: string
   profile: "quick" | "standard" | "deep"
   calibration: "strict" | "balanced" | "lenient"
   enable_nmap: boolean
+  port_scope: "common" | "top1000" | "all" | "custom"
+  custom_ports?: string
 }
 
 export interface JobStatus {

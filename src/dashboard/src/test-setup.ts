@@ -1,5 +1,21 @@
 import "@testing-library/jest-dom/vitest"
 
+// ResizeObserver is used by Radix UI components (RadioGroup, Checkbox, etc.)
+// but is not available in jsdom. Provide a no-op stub so component tests
+// that render Radix UI controls can run without crashing.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    value: ResizeObserverStub,
+    writable: true,
+    configurable: true,
+  })
+}
+
 // jsdom 25 does not expose `localStorage` on the global by default (it's
 // flagged behind --localstorage-file). Provide a minimal in-memory shim so
 // tests that exercise localStorage-backed code (theme-provider, regression

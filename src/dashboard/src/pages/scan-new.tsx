@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { fetchApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -22,13 +23,19 @@ export function ScanNewPage() {
   const [calibration, setCalibration] = useState<ScanSubmitRequest["calibration"]>(
     () => (searchParams.get("calibration") as ScanSubmitRequest["calibration"]) ?? "balanced",
   )
+  const [portScope, setPortScope] = useState<ScanSubmitRequest["port_scope"]>("top1000")
+  const [customPorts, setCustomPorts] = useState("")
+  const [customPortsError, setCustomPortsError] = useState<string | null>(null)
   const [enableNmap, setEnableNmap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const nmapForced = portScope === "top1000" || portScope === "all"
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setCustomPortsError(null)
     const trimmed = targets.trim()
     if (!trimmed) {
       setError("Targets field is required.")
@@ -43,7 +50,9 @@ export function ScanNewPage() {
           targets: trimmed,
           profile,
           calibration,
-          enable_nmap: enableNmap,
+          enable_nmap: enableNmap || nmapForced,
+          port_scope: portScope,
+          ...(portScope === "custom" ? { custom_ports: customPorts } : {}),
         } satisfies ScanSubmitRequest),
       })
       if (resp.status === 422) {
@@ -53,6 +62,8 @@ export function ScanNewPage() {
           const msg = detail[0]?.msg ?? "Validation failed."
           if (trimmed.startsWith("@")) {
             setError("@file paths are not supported from the dashboard. Use the CLI to run file-based scans.")
+          } else if (detail[0]?.loc?.includes("custom_ports") || msg.toLowerCase().includes("custom_ports")) {
+            setCustomPortsError(msg)
           } else {
             setError(msg)
           }
@@ -87,7 +98,7 @@ export function ScanNewPage() {
       <p className="text-sm text-muted-foreground mt-1">Configure and run a scan from the dashboard.</p>
 
       {/* Vertical preset banner — only rendered when active vertical has a preset */}
-      {vertical.preset !== null && (
+      {vertical.preset != null && (
         <div
           className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 mt-3"
           style={{ background: "var(--ds-accent-dim)", borderColor: "var(--ds-accent-bdr)" }}
@@ -222,20 +233,78 @@ export function ScanNewPage() {
           </RadioGroup>
         </div>
 
+        {/* Port Scope selector */}
+        <div className="space-y-2">
+          <Label>Port Scope</Label>
+          <RadioGroup
+            value={portScope}
+            onValueChange={(v) => setPortScope(v as ScanSubmitRequest["port_scope"])}
+            className="space-y-2"
+          >
+            <div className="flex items-start gap-3">
+              <RadioGroupItem value="top1000" id="scope-top1000" className="mt-0.5" />
+              <div>
+                <Label htmlFor="scope-top1000" className="font-medium cursor-pointer">Top 1000 ports</Label>
+                <p className="text-xs text-muted-foreground">nmap --top-ports 1000; recommended default</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <RadioGroupItem value="common" id="scope-common" className="mt-0.5" />
+              <div>
+                <Label htmlFor="scope-common" className="font-medium cursor-pointer">Common TLS ports</Label>
+                <p className="text-xs text-muted-foreground">17 curated TLS ports; fast, no nmap required</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <RadioGroupItem value="all" id="scope-all" className="mt-0.5" />
+              <div>
+                <Label htmlFor="scope-all" className="font-medium cursor-pointer">All ports</Label>
+                <p className="text-xs text-muted-foreground">All 65535 TCP ports (-p-); exhaustive, slow</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <RadioGroupItem value="custom" id="scope-custom" className="mt-0.5" />
+              <div>
+                <Label htmlFor="scope-custom" className="font-medium cursor-pointer">Custom</Label>
+                <p className="text-xs text-muted-foreground">Specify ports, e.g. 443,8000-9000,15449</p>
+              </div>
+            </div>
+          </RadioGroup>
+          {portScope === "custom" && (
+            <div className="mt-2">
+              <Input
+                id="custom_ports"
+                placeholder="443,8000-9000,15449"
+                value={customPorts}
+                onChange={(e) => setCustomPorts(e.target.value)}
+                disabled={submitting}
+              />
+              {customPortsError && (
+                <p className="text-sm text-destructive mt-1">{customPortsError}</p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Options: nmap */}
         <div className="space-y-2">
           <Label>Options</Label>
           <div className="flex items-start gap-3">
             <Checkbox
               id="enable_nmap"
-              checked={enableNmap}
-              onCheckedChange={(checked: boolean | "indeterminate") => setEnableNmap(checked === true)}
+              checked={enableNmap || nmapForced}
+              onCheckedChange={(checked: boolean | "indeterminate") => {
+                if (!nmapForced) setEnableNmap(checked === true)
+              }}
+              disabled={submitting || nmapForced}
               className="mt-0.5"
             />
             <div>
               <Label htmlFor="enable_nmap" className="font-medium cursor-pointer">Enable nmap discovery</Label>
               <p className="text-xs text-muted-foreground">
-                Requires nmap installed on the server. Adds network-layer host discovery.
+                {nmapForced
+                  ? "Required for Top 1000 / All ports coverage"
+                  : "Requires nmap installed on the server. Adds network-layer host discovery."}
               </p>
             </div>
           </div>
