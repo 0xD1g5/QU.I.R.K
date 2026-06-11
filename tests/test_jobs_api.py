@@ -5,6 +5,8 @@ a skip stub until Plan 04 lands the lifespan _recover_stale_jobs function.
 """
 from __future__ import annotations
 
+import sys
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -45,8 +47,12 @@ def _app_with_db():
 # --------------------------------------------------------------------------
 
 class _FakeProc:
-    def __init__(self, pid=99999):
+    def __init__(self, pid=99999, returncode=None):
         self.pid = pid
+        self.returncode = returncode
+
+    def poll(self):
+        return self.returncode
 
 
 def _fake_popen(*args, **kwargs):
@@ -333,3 +339,209 @@ def test_stale_job_recovery(tmp_path):
         # Completed row must NOT be touched
         assert done.status == "completed"
         assert done.error_message is None
+
+
+# --------------------------------------------------------------------------
+# Test 12: POST /api/jobs captures subprocess output to a per-job log file
+# --------------------------------------------------------------------------
+
+def test_post_job_captures_subprocess_output(monkeypatch, tmp_path):
+    """Popen must receive a real stdout file (not DEVNULL) and create run.log."""
+    import subprocess as _sp
+
+    monkeypatch.chdir(tmp_path)  # keep output/jobs/ inside the tmp dir
+    captured = {}
+
+    def _recording_popen(cmd, **kwargs):
+        captured.update(kwargs)
+        return _FakeProc()
+
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _recording_popen)
+
+    _app, tc, _ = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "example.com", "profile": "quick"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
+
+    # stdout is a writable file object, stderr folds into it — not DEVNULL.
+    assert captured["stdout"] is not _sp.DEVNULL
+    assert hasattr(captured["stdout"], "write")
+    assert captured["stderr"] == _sp.STDOUT
+
+    log_path = tmp_path / "output" / "jobs" / job_id / "run.log"
+    assert log_path.exists()
+
+
+# --------------------------------------------------------------------------
+# Test 13: GET /api/jobs/{id} reconciles a dead subprocess to `failed`
+# --------------------------------------------------------------------------
+
+def test_get_job_reconciles_dead_process(monkeypatch):
+    """A `running` job whose registered subprocess has exited flips to `failed`."""
+    import quirk.dashboard.api.routes.jobs as jobs_mod
+
+    dead = _FakeProc(pid=424242, returncode=3)
+    monkeypatch.setattr(jobs_mod, "_PROCS", {"dead-1": dead}, raising=False)
+
+    _app, tc, TestingSession = _app_with_db()
+    db = TestingSession()
+    db.add(ScanJob(
+        job_id="dead-1", pid=424242, status="running", target="x.com",
+        profile="quick", calibration="balanced", enable_nmap=False,
+    ))
+    db.commit()
+    db.close()
+
+    response = tc.get("/api/jobs/dead-1")
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["status"] == "failed"
+    assert data["completed_at"] is not None
+    assert "run.log" in data["error_message"]
+    assert "exit code 3" in data["error_message"]
+    # Reconciled procs leave the registry so the handle is not held forever.
+    assert "dead-1" not in jobs_mod._PROCS
+
+
+# --------------------------------------------------------------------------
+# Test 14: GET /api/jobs/{id} keeps `running` while the subprocess is alive
+# --------------------------------------------------------------------------
+
+def test_get_job_keeps_running_when_alive(monkeypatch):
+    """A registered subprocess with poll() == None must not be reconciled away."""
+    import quirk.dashboard.api.routes.jobs as jobs_mod
+
+    alive = _FakeProc(pid=12345, returncode=None)
+    monkeypatch.setattr(jobs_mod, "_PROCS", {"alive-1": alive}, raising=False)
+
+    _app, tc, TestingSession = _app_with_db()
+    db = TestingSession()
+    db.add(ScanJob(
+        job_id="alive-1", pid=12345, status="running", target="x.com",
+        profile="quick", calibration="balanced", enable_nmap=False,
+    ))
+    db.commit()
+    db.close()
+
+    response = tc.get("/api/jobs/alive-1")
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "running"
+    assert "alive-1" in jobs_mod._PROCS
+
+
+# --------------------------------------------------------------------------
+# Test 15: GET /api/jobs/{id} leaves unregistered running jobs alone
+# --------------------------------------------------------------------------
+
+def test_get_job_unregistered_proc_left_to_startup_sweep(monkeypatch):
+    """A `running` row with no registry entry (API restarted since spawn) is
+    not reconciled here — the startup sweep (_recover_stale_jobs) owns it."""
+    import quirk.dashboard.api.routes.jobs as jobs_mod
+
+    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+
+    _app, tc, TestingSession = _app_with_db()
+    db = TestingSession()
+    db.add(ScanJob(
+        job_id="orphan-1", pid=424242, status="running", target="x.com",
+        profile="quick", calibration="balanced", enable_nmap=False,
+    ))
+    db.commit()
+    db.close()
+
+    response = tc.get("/api/jobs/orphan-1")
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "running"
+
+
+# --------------------------------------------------------------------------
+# Test 16: POST /api/jobs registers the Popen handle for liveness checks
+# --------------------------------------------------------------------------
+
+def test_create_job_registers_proc(monkeypatch, tmp_path):
+    """create_job must keep the Popen handle in _PROCS keyed by job_id."""
+    import quirk.dashboard.api.routes.jobs as jobs_mod
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+    fake = _FakeProc()
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", lambda *a, **k: fake)
+
+    _app, tc, _ = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "example.com", "profile": "quick"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
+    assert jobs_mod._PROCS.get(job_id) is fake
+
+
+# --------------------------------------------------------------------------
+# Test 17: zombie regression — an exited-but-unreaped child must reconcile
+# --------------------------------------------------------------------------
+
+@pytest.mark.skipif(sys.platform != "linux", reason="zombie-state check reads /proc")
+def test_get_job_reconciles_real_zombie(monkeypatch, tmp_path):
+    """Regression for the zombie bug: the server never wait()s its children, so
+    a crashed scan sits as a zombie. os.kill(zombie, 0) succeeds — pid-based
+    liveness reports it alive forever. poll()-based liveness must reap it and
+    flip the job to failed."""
+    import subprocess as _sp
+    import time
+
+    import quirk.dashboard.api.routes.jobs as jobs_mod
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+
+    spawned = {}
+    # jobs.py imports the subprocess *module*, so patching its Popen mutates the
+    # shared module — grab the real constructor first to avoid self-recursion.
+    real_popen = _sp.Popen
+
+    def _spawn_short_lived(cmd, **kwargs):
+        proc = real_popen(
+            [sys.executable, "-c", "import sys; sys.exit(7)"],
+            stdin=kwargs.get("stdin"),
+            stdout=kwargs.get("stdout"),
+            stderr=kwargs.get("stderr"),
+        )
+        spawned["proc"] = proc
+        return proc
+
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _spawn_short_lived)
+
+    _app, tc, _ = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "example.com", "profile": "quick"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
+    pid = spawned["proc"].pid
+
+    # Wait for the child to exit WITHOUT reaping it (no wait/poll here): its
+    # /proc stat state must reach Z (zombie).
+    for _ in range(100):
+        with open(f"/proc/{pid}/stat") as fh:
+            state = fh.read().rsplit(")", 1)[1].split()[0]
+        if state == "Z":
+            break
+        time.sleep(0.05)
+    else:
+        pytest.fail("child never reached zombie state")
+
+    resp = tc.get(f"/api/jobs/{job_id}")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["status"] == "failed", (
+        "zombie child must reconcile to failed — pid-based liveness cannot see it"
+    )
+    assert "exit code 7" in data["error_message"]

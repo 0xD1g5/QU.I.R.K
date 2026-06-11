@@ -17,6 +17,7 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import uuid
 import yaml
 from datetime import datetime, timezone
@@ -140,6 +141,50 @@ def _get_or_404(db: Session, job_id: str) -> ScanJob:
     return row
 
 
+# Popen handles for scans spawned by THIS server process, keyed by job_id.
+# Liveness must come from the handle (proc.poll()), never from the bare pid:
+# os.kill(pid, 0) reports zombies as alive (the server never wait()s its
+# children, so a crashed scan stays a zombie until the next Popen), can be
+# fooled by pid reuse, and on Windows sig 0 is CTRL_C_EVENT — it would
+# interrupt the scan it was meant to observe. poll() has none of these
+# problems and reaps the child as a side effect.
+_PROCS: dict[str, subprocess.Popen] = {}
+_PROCS_LOCK = threading.Lock()
+
+
+def _reconcile_if_dead(db: Session, row: ScanJob) -> None:
+    """Flip a `running` job to `failed` when its subprocess has already exited.
+
+    On clean completion run_scan sets status to `completed` itself; on a crash
+    (bad config, missing dependency, systemd sandbox denial) it dies without
+    updating the row, which otherwise leaves the UI polling `running` forever.
+    This reconciles such rows live, on the next status poll, and points the
+    operator at the captured subprocess log.
+
+    Rows whose handle is not in `_PROCS` were spawned by a previous server
+    process; the startup sweep (`_recover_stale_jobs`) owns those.
+    """
+    if row.status != "running":
+        return
+    with _PROCS_LOCK:
+        proc = _PROCS.get(row.job_id)
+    if proc is None:
+        return
+    returncode = proc.poll()  # reaps the child if it exited
+    if returncode is None:
+        return
+    with _PROCS_LOCK:
+        _PROCS.pop(row.job_id, None)
+    log_hint = Path("output/jobs") / row.job_id / "run.log"
+    row.status = "failed"
+    row.completed_at = _utcnow_naive()
+    row.error_message = (
+        f"Scan process (pid {row.pid}) exited without completing "
+        f"(exit code {returncode}). See {log_hint} for captured output."
+    )
+    db.commit()
+
+
 @write_router.post("/jobs", status_code=201)
 def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dict:
     """Create a scan_jobs row and spawn run_scan.py as a subprocess. Non-blocking."""
@@ -194,12 +239,25 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     # Pitfall 2: non-blocking — do not call communicate or proc.wait.
     # stdin=DEVNULL prevents the subprocess from inheriting the server's TTY;
     # without this, probe-budget and fuzz-gate input() prompts block silently.
-    proc = subprocess.Popen(
-        cmd,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    #
+    # Capture stdout+stderr to a per-job log file rather than discarding them.
+    # When run_scan dies on startup (bad config, missing dep, systemd sandbox
+    # denial) the error lands here instead of /dev/null, so the failure is
+    # diagnosable. The child dups the fd at exec, so the parent closes its own
+    # handle immediately after Popen.
+    log_path = output_dir / "run.log"
+    log_fh = open(log_path, "wb")
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=log_fh,
+            stderr=subprocess.STDOUT,
+        )
+    finally:
+        log_fh.close()
+    with _PROCS_LOCK:
+        _PROCS[job_id] = proc
     row.pid = proc.pid
     row.status = "running"
     db.commit()
@@ -211,6 +269,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
 @read_router.get("/jobs/{job_id}", response_model=JobStatusResponse)
 def get_job(job_id: str, db: Session = Depends(get_db)) -> JobStatusResponse:
     row = _get_or_404(db, job_id)
+    _reconcile_if_dead(db, row)
     return _to_response(row)
 
 
