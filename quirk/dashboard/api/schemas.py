@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class HealthResponse(BaseModel):
@@ -359,6 +359,10 @@ class ScanSubmitRequest(BaseModel):
     calibration: Literal["strict", "balanced", "lenient"] = "balanced"
     enable_nmap: bool = False
 
+    # Phase 121: per-scan port scope control (PORT-03, PORT-04)
+    port_scope: Literal["common", "top1000", "all", "custom"] = "top1000"
+    custom_ports: Optional[str] = None
+
     @field_validator("targets")
     @classmethod
     def no_file_paths(cls, v: str) -> str:
@@ -369,6 +373,16 @@ class ScanSubmitRequest(BaseModel):
         if stripped.startswith("@"):
             raise ValueError("@file paths are not supported from the dashboard — use the CLI")
         return v
+
+    @model_validator(mode="after")
+    def validate_custom_ports(self) -> "ScanSubmitRequest":
+        """Require custom_ports when port_scope is 'custom' (PORT-04)."""
+        if self.port_scope == "custom":
+            if not self.custom_ports or not self.custom_ports.strip():
+                raise ValueError(
+                    "custom_ports is required when port_scope is 'custom'"
+                )
+        return self
 
 
 # Phase 65 UI-SCAN-02: live scan job status
