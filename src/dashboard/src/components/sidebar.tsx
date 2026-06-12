@@ -18,6 +18,7 @@ import {
   History,
   LogOut,
   Radio,
+  BookOpen,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -156,6 +157,30 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* User Guide — external docs link, opens in a new tab */}
+      <div className="px-2 py-2 border-t border-border">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <a
+              href="https://github.com/0xD1g5/QU.I.R.K/blob/main/docs/getting-started.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="User Guide"
+              className={cn(
+                "flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors",
+                "min-h-[44px]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "text-muted-foreground hover:text-foreground hover:bg-accent/5",
+              )}
+            >
+              <BookOpen className="h-5 w-5 flex-shrink-0" />
+              <span className="hidden lg:block">User Guide</span>
+            </a>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="lg:hidden">User Guide</TooltipContent>
+        </Tooltip>
+      </div>
 
       {/* Scan history selector — only shown when >1 scan exists */}
       <ScanSelector />
