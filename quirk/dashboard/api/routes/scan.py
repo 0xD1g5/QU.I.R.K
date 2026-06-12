@@ -1328,22 +1328,23 @@ def compare_scans(
 def get_job_result_summary(job_id: str, db: Session = Depends(get_db)) -> dict:
     """GET /api/jobs/{job_id}/result-summary — endpoint count for zero-result detection.
 
-    Returns {endpoint_count: int} for the job's scan window derived from
-    ScanJob.scan_run_id (the started_utc ISO timestamp).  Fail-safe: returns
-    {endpoint_count: 0} when scan_run_id is None or not ISO-parseable rather
-    than raising (T-121-I-07 — read-only COUNT bounded to one scan window).
+    Returns {endpoint_count: int} for the job's own lifetime window
+    [started_at, completed_at]. Endpoints carry per-probe scanned_at values
+    spread across the whole run, so a same-second window on the run-start
+    timestamp (the /api/scan/latest?scan_id= pattern) undercounts to zero
+    for any scan longer than one second (live-UAT defect, Phase 121).
+    Fail-safe: returns {endpoint_count: 0} when started_at is None rather
+    than raising (T-121-I-07 — read-only COUNT bounded to one job window).
     """
     row = db.get(ScanJob, job_id)
     if row is None:
         raise HTTPException(status_code=404, detail=format_error("DASHBOARD-008"))
-    if row.scan_run_id is None:
+    if row.started_at is None:
         return {"endpoint_count": 0}
-    try:
-        target_ts = datetime.fromisoformat(row.scan_run_id)
-    except ValueError:
-        return {"endpoint_count": 0}
-    window_start = target_ts.replace(microsecond=0)
-    window_end = target_ts.replace(microsecond=999_999)
+    window_start = row.started_at
+    # completed_at is None while the job is still running; bound at "now"
+    # (naive UTC to match the DB's naive-UTC scanned_at storage).
+    window_end = row.completed_at or datetime.now(timezone.utc).replace(tzinfo=None)
     count = (
         db.query(CryptoEndpoint)
         .filter(
