@@ -3709,10 +3709,11 @@ Each finding object contains:
 **Type:** Human (manual — requires live chaos lab + GUI)
 
 > Added Phase 121 (2026-06-11): custom scope parses user port spec and probes only those ports.
+> Refined Phase 121 follow-up (2026-06-11): custom scope now also disables the fixed-port email/broker connectors so a custom scan covers *exactly* the listed ports (these connectors carry their own service-port tables that the deep profile auto-enables independently of ports_tls).
 
 **Prerequisites:**
 - Chaos lab running: `./lab.sh up` (profile with services on 15449 and 16443)
-- QUIRK dashboard running with `security.allow_internal_targets: true`
+- QUIRK dashboard running with `security.allow_internal_targets: true` — **restart `quirk serve` after the 2026-06-11 connector-suppression fix**
 - Dashboard authenticated
 
 **Steps:**
@@ -3724,16 +3725,16 @@ Each finding object contains:
 6. Wait for the scan job to complete
 7. Inspect results
 
-**Expected:** The scan finds crypto endpoints on exactly ports 15449 and/or 16443 (the custom lab ports), not on the standard TLS ports.
+**Expected:** The scan finds crypto endpoints on exactly ports 15449 and/or 16443 (the custom lab ports) — and no others. The deep profile's email connector ports (25/110/143/465/587/993/995) must NOT appear.
 
 **Pass Criteria:**
 - Scan job completes with status "completed"
 - Results include at least one endpoint on port 15449 or 16443
-- No unexpected endpoints on unrelated ports (confirms custom spec was used, not a broad scan)
+- No unexpected endpoints on unrelated ports (confirms custom spec was used, not a broad scan, and that fixed-port connectors were suppressed)
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
-**Notes:** Manual verification required. Check which chaos lab profiles expose ports 15449 and 16443.
+**Notes:** First run (job 090591ba) found 15449+16443 correctly but ALSO leaked the deep profile's 7 fixed email ports (18 endpoints, 9 ports) — the lab-service-discovery half of PORT-12 passed but "exactly these ports" did not. Root cause: email/broker connectors probe their own hardcoded port tables independent of port scope. Fixed by writing an explicit `connectors: {enable_email: false, enable_broker: false}` block for custom scope (survives `apply_profile(deep)` via `_user_set_fields`). RE-RUN after restarting `quirk serve`: expect exactly 2 ports (15449, 16443), no email ports.
 
 ---
 

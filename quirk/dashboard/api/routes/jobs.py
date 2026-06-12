@@ -68,6 +68,18 @@ def _write_job_config(
     Phase 121: port_scope controls the scan.ports_tls (common/custom) or
     scan.nmap_port_scope (top1000/all) written to the job YAML. ValueError
     from parse_port_spec propagates to the caller (create_job wraps it as 422).
+
+    Phase 121 follow-up: a Custom port spec means "scan exactly these ports".
+    The email/broker connectors carry their own fixed service-port tables
+    (email_scanner.EMAIL_PORTS etc.) that the standard/deep profiles auto-enable
+    independently of ports_tls, so a custom scan leaks ~7 email ports the user
+    never asked for. For custom scope only, write an explicit connectors block
+    disabling them. Because config loading records these keys in
+    ConnectorsCfg._user_set_fields, apply_profile() honors the explicit False
+    and will NOT re-enable them under the deep profile (Phase 72 D-02/WR-11).
+    Common scope is intentionally left alone — CONSULTING_TLS_PORTS already
+    curates in the implicit-TLS email ports (993/995/465), so its connector
+    coverage is by design, not a leak.
     """
     from quirk.interactive import CONSULTING_TLS_PORTS  # importable side-effect-free
     from quirk.util.port_spec import parse_port_spec
@@ -76,7 +88,9 @@ def _write_job_config(
     fqdns = [t for t in target_list if "/" not in t]
     cidrs = [t for t in target_list if "/" in t]
 
-    # Phase 121: resolve scan block from port_scope
+    # Phase 121: resolve scan block from port_scope. connectors_block stays None
+    # for every scope except custom (explicit fixed-port-connector suppression).
+    connectors_block: Optional[dict] = None
     if port_scope == "common":
         scan_block: dict = {
             "concurrency": 100,
@@ -88,6 +102,10 @@ def _write_job_config(
             "concurrency": 100,
             "ports_tls": parse_port_spec(custom_ports or ""),
             "include_sni": True,
+        }
+        connectors_block = {
+            "enable_email": False,
+            "enable_broker": False,
         }
     else:
         # top1000 or all — nmap-native scopes; write hint for run_scan.py
@@ -124,6 +142,8 @@ def _write_job_config(
             "allow_internal_targets": allow_internal_targets,
         },
     }
+    if connectors_block is not None:
+        config["connectors"] = connectors_block
     config_path = str(output_dir / "config.yaml")
     with open(config_path, "w") as fh:
         yaml.dump(config, fh, default_flow_style=False)

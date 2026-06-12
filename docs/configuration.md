@@ -694,6 +694,7 @@ Rules:
 - Ranges must be `low-high` with `low <= high`.
 - The expansion cap is 2048 unique ports — specs that expand to more than 2048 ports are rejected with a 422 error (guards against accidentally specifying `1-65535` in the custom field).
 - The nmap checkbox is honored: if you also enable nmap, custom ports are passed to nmap as `-p <csv>`; if nmap is off, the builtin fingerprinter probes each listed port directly.
+- **Custom scope means exactly these ports.** The email and broker connectors (SMTP/IMAP/POP3 and Kafka/AMQP/Redis) probe their own fixed service-port tables, which the `standard` and `deep` profiles normally auto-enable independently of the port list. Under custom scope these connectors are explicitly disabled so the scan covers only the ports you specified — otherwise a 2-port custom scan would also probe the ~7 fixed email ports. To scan email/broker crypto, use the `common`, `top1000`, or `all` scope (the `common`/Consulting list already curates in the implicit-TLS email ports 993/995/465 by design).
 
 ### `security.allow_internal_targets`
 
