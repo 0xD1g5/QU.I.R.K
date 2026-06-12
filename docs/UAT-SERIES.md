@@ -3768,9 +3768,9 @@ Each finding object contains:
 - The dashboard does NOT navigate to the findings/executive page
 - Dashboard does NOT show stale data from a previous scan session
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:** Manual verification required. Target 192.0.2.1 (TEST-NET-1) is the recommended test target -- RFC 5737 reserves this range for documentation/test purposes, so it should never be reachable on real networks.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-06-12  **Tester:** Digs
+**Notes:** PASS on job 77af0816 — target 203.0.113.1 (TEST-NET-3, RFC 5737), scan completed with 0 endpoints in the job window (DB-verified), zero-result terminal message displayed, no stale-data navigation. Proves the zero-result signal correctly distinguishes genuinely-empty scans now that the two window defects (e393a0a, 49b75bf) are fixed.
 
 ---
 
