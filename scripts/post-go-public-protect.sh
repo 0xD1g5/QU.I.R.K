@@ -45,7 +45,7 @@ PAYLOAD=$(cat <<'JSON'
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["windows-sensor-smoke"]
+    "contexts": ["Windows Sensor Smoke"]
   },
   "enforce_admins": false,
   "required_pull_request_reviews": {
@@ -96,8 +96,8 @@ case "$MODE" in
       fi
     }
 
-    assert "required_status_checks.contexts includes windows-sensor-smoke" \
-      '(.required_status_checks.contexts | index("windows-sensor-smoke")) != null'
+    assert "required_status_checks.contexts includes Windows Sensor Smoke" \
+      '(.required_status_checks.contexts | index("Windows Sensor Smoke")) != null'
     assert "enforce_admins.enabled == false" \
       '.enforce_admins.enabled == false'
     assert "allow_force_pushes.enabled == false" \
