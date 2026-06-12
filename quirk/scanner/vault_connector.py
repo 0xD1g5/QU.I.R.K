@@ -212,9 +212,16 @@ def _classify_pki_cert(pem_str: str):
     else:
         # ECDSA / EdDSA public key types -- name resolved from class
         alg_name = type(pub_key).__name__.replace("PublicKey", "") or "UNKNOWN"
-    if severity is None and "sha1" in sig_alg_name.lower():
+    # CE-03: SHA-1 check must be independent of whether a prior severity was set.
+    # A cert that is both RSA-below-4096 AND SHA-1-signed should surface both
+    # weaknesses; the reason must always mention SHA-1 when detected.
+    if "sha1" in sig_alg_name.lower():
         severity = "HIGH"
-        reason = f"SHA-1 signing algorithm ({sig_alg_name})"
+        sha1_cause = f"SHA-1 signing algorithm ({sig_alg_name})"
+        if reason and reason != "ok":
+            reason = f"{reason}; {sha1_cause}"
+        else:
+            reason = sha1_cause
     return alg_name, key_size, severity, reason, sig_alg_name
 
 

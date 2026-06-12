@@ -28,8 +28,15 @@ _SENSITIVE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"gcloud[\\/]application_default_credentials"),
     # Authorization header leaked into exception text
     re.compile(r"Authorization:\s*(Bearer|Basic)\s+\S+", re.IGNORECASE),
-    # Long base64-shaped token (40+ chars, optional = padding)
-    re.compile(r"\b[A-Za-z0-9+/]{40,}={0,2}\b"),
+    # CE-02: tighten so ARN path segments (e.g. role/MyLongRoleName) are not
+    # over-redacted.  Two changes from the original r"\b[A-Za-z0-9+/]{40,}={0,2}\b":
+    #   1. Require the run to START with [A-Za-z0-9] (not '/'), preventing matches
+    #      that begin at the slash delimiter between ARN resource type and resource ID.
+    #   2. Negative lookbehind (?<![:/]) excludes runs that immediately follow ':' or '/'
+    #      — ARN colon-separated segments and slash-delimited paths are skipped.
+    # Standalone tokens (API keys, AWS secret keys, base64 strings) remain redacted
+    # because they start at a true word boundary not preceded by ':' or '/'.
+    re.compile(r"(?<![:/])\b[A-Za-z0-9][A-Za-z0-9+/]{39,}={0,2}\b"),
     # API-key header name + value shapes (D-08)
     re.compile(r"X-Api-Key\s*:\s*\S+", re.IGNORECASE),
     re.compile(r"X-Auth-Token\s*:\s*\S+", re.IGNORECASE),
