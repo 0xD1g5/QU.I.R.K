@@ -104,7 +104,9 @@ def populate_cvi_suggestions(session_id: int, db: Session) -> None:
 
     # D-02 (WR-04): scale by log10(endpoint_count)/3 in [0.25, 1.0].
     # A scan that found nothing cannot claim Discovery maturity.
-    score_1_1 = round(score_1_1 * _discovery_factor(total_endpoints), 4)
+    # QC-01: cast to int() so the Integer-typed suggested_answer column receives an
+    # explicit truncation rather than a silent SQLite float→integer coercion.
+    score_1_1 = int(score_1_1 * _discovery_factor(total_endpoints))
 
     # D-05 — Practice 1.2 (Vulnerability Assessment): % endpoints with nist_level == 0
     # D-03 (WR-05): when zero algorithms classified, vuln_pct is INDETERMINATE
