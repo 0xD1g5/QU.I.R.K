@@ -3732,9 +3732,9 @@ Each finding object contains:
 - Results include at least one endpoint on port 15449 or 16443
 - No unexpected endpoints on unrelated ports (confirms custom spec was used, not a broad scan, and that fixed-port connectors were suppressed)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:** First run (job 090591ba) found 15449+16443 correctly but ALSO leaked the deep profile's 7 fixed email ports (18 endpoints, 9 ports) — the lab-service-discovery half of PORT-12 passed but "exactly these ports" did not. Root cause: email/broker connectors probe their own hardcoded port tables independent of port scope. Fixed by writing an explicit `connectors: {enable_email: false, enable_broker: false}` block for custom scope (survives `apply_profile(deep)` via `_user_set_fields`). RE-RUN after restarting `quirk serve`: expect exactly 2 ports (15449, 16443), no email ports.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-06-12  **Tester:** Digs
+**Notes:** PASS on re-run job 26c028bd — exactly 2 ports (15449 TLS 1.3, 16443 TLS 1.3 = keycloak-tls + mtls-gateway), 4 endpoint rows, 0 unexpected ports, job config carries the connectors suppression block. First run (job 090591ba, 2026-06-11) found 15449+16443 correctly but ALSO leaked the deep profile's 7 fixed email ports (18 endpoints, 9 ports) — root cause: email/broker connectors probe their own hardcoded port tables independent of port scope. Fixed in 5c08490 by writing an explicit `connectors: {enable_email: false, enable_broker: false}` block for custom scope (survives `apply_profile(deep)` via `_user_set_fields`).
 
 ---
 
