@@ -1033,6 +1033,24 @@ def get_latest_scan(
             .all()
         )
         if not endpoints:
+            # Phase 121 live-UAT fix: job completion sets selectedScanId to
+            # ScanJob.scan_run_id — the run START timestamp. Per-probe
+            # scanned_at values are spread across the run and never share
+            # that second, so the same-second window (built for history
+            # scan_ids, which ARE endpoint-second timestamps) is empty for
+            # job scan_ids. Fall back to the owning job's lifetime window.
+            job = db.query(ScanJob).filter(ScanJob.scan_run_id == scan_id).first()
+            if job is not None and job.started_at is not None:
+                job_end = job.completed_at or datetime.now(timezone.utc).replace(tzinfo=None)
+                endpoints = (
+                    db.query(CryptoEndpoint)
+                    .filter(
+                        CryptoEndpoint.scanned_at >= job.started_at,
+                        CryptoEndpoint.scanned_at <= job_end,
+                    )
+                    .all()
+                )
+        if not endpoints:
             raise HTTPException(status_code=404, detail=format_error("DASHBOARD-005"))
         latest_ts = target_ts
     else:

@@ -134,3 +134,48 @@ def test_failsafe_zero_when_started_at_missing():
 def test_unknown_job_404():
     _, client, _ = _app_with_db()
     assert client.get("/api/jobs/nope/result-summary").status_code == 404
+
+
+def test_scan_latest_falls_back_to_job_window_for_scan_run_id():
+    """/api/scan/latest?scan_id=<scan_run_id> must not 404 for real jobs.
+
+    useJobStatus sets selectedScanId = scan_run_id (run START) on completion.
+    No endpoint shares that second, so the same-second window is empty; the
+    endpoint must fall back to the owning job's [started_at, completed_at]
+    window (second live-UAT defect, Phase 121 — old useScanData 404 message).
+    """
+    _, client, Session = _app_with_db()
+    scan_run_id = "2026-06-12T00:17:36.889351+00:00"
+    start = datetime(2026, 6, 12, 0, 17, 35, 670448)
+    end = datetime(2026, 6, 12, 0, 19, 29, 327216)
+    with Session() as s:
+        _seed_job(
+            s,
+            job_id="job-nav",
+            started_at=start,
+            completed_at=end,
+            scan_run_id=scan_run_id,
+        )
+        # Endpoint probed ~80s after run start — outside the scan_run_id second.
+        s.add(CryptoEndpoint(
+            host="127.0.0.1",
+            port=443,
+            protocol="TLS",
+            scanned_at=start + timedelta(seconds=80),
+            tls_version="TLSv1.3",
+        ))
+        s.commit()
+
+    resp = client.get(f"/api/scan/latest?scan_id={scan_run_id.replace('+', '%2B')}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["meta"]["total_endpoints"] == 1
+
+
+def test_scan_latest_unknown_scan_id_still_404():
+    """A scan_id matching neither endpoints nor any job keeps the 404 contract."""
+    _, client, Session = _app_with_db()
+    with Session() as s:
+        s.commit()
+    resp = client.get("/api/scan/latest?scan_id=2030-01-01T00:00:00")
+    assert resp.status_code == 404
