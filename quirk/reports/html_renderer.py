@@ -211,7 +211,7 @@ def render_html_report(
         total_score = exec_content.score_total
         band = exec_content.score_band
     else:
-        total_score = score.get("total", 0)
+        total_score = score.get("score", 0)  # WR-06: canonical key is "score", not "total"
         band = _score_band(total_score)
 
     # Severity counts

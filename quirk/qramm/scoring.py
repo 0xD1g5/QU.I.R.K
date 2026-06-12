@@ -61,7 +61,10 @@ def compute_overall_score(
     """
     dims = ["CVI", "SGRM", "DPE", "ITR"]
     weighted = {d: round(min(4.0, dimension_scores.get(d, 0.0) * multiplier), 4) for d in dims}
-    overall = round(sum(weighted.values()) / len(dims), 4)
+    # QC-04: clamp the overall average at the function level so compute_overall_score
+    # can never return a value above 4.0 regardless of multiplier, matching the
+    # per-dimension min(4.0, ...) clamp applied to weighted above.
+    overall = round(min(4.0, sum(weighted.values()) / len(dims)), 4)
     return {
         "overall": overall,
         "dimensions": weighted,

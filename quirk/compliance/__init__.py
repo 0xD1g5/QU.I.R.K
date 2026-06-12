@@ -249,10 +249,94 @@ UNMAPPED_TITLES: FrozenSet[str] = frozenset({
 })
 
 
+def check_compliance_staleness(
+    today: datetime.date | None = None,
+) -> List[Dict[str, Any]]:
+    """QC-05: Production compliance staleness gate (365-day cadence).
+
+    Iterates every entry in COMPLIANCE_MAP and checks whether its
+    ``last_verified`` date is older than ``STALENESS_THRESHOLD_DAYS``.
+
+    A MALFORMED or unparseable ``last_verified`` value is treated as a
+    FAILURE (it appears in the returned stale list with ``malformed=True``)
+    so that corrupt entries cannot silently escape the gate.
+
+    Args:
+        today: reference date (default: datetime.date.today()).  Injected
+               in tests to avoid calendar drift.
+
+    Returns:
+        A list of dicts describing each stale or malformed entry::
+
+            [{"title": str, "framework": str, "last_verified": str,
+              "age_days": int,  # -1 when malformed
+              "malformed": bool}]
+
+        An empty list means all entries are fresh.
+
+    Raises:
+        RuntimeError: when any stale or malformed entry is found, so that
+                      callers such as ``status_report`` can surface the
+                      problem.  The exception message lists all violations.
+    """
+    reference = today or datetime.date.today()
+    violations: List[Dict[str, Any]] = []
+    for title, entries in COMPLIANCE_MAP.items():
+        for entry in entries:
+            raw = entry.get("last_verified", "")
+            try:
+                verified = datetime.date.fromisoformat(raw)
+            except (TypeError, ValueError):
+                violations.append(
+                    {
+                        "title": title,
+                        "framework": entry.get("framework", ""),
+                        "last_verified": raw,
+                        "age_days": -1,
+                        "malformed": True,
+                    }
+                )
+                continue
+            age = (reference - verified).days
+            if age > STALENESS_THRESHOLD_DAYS:
+                violations.append(
+                    {
+                        "title": title,
+                        "framework": entry.get("framework", ""),
+                        "last_verified": raw,
+                        "age_days": age,
+                        "malformed": False,
+                    }
+                )
+    if violations:
+        lines = []
+        for v in violations:
+            detail = "malformed date" if v["malformed"] else f"{v['age_days']} days old"
+            lines.append(f"  {v['framework']} / {v['title']!r}: {detail}")
+        raise RuntimeError(
+            f"Compliance map has {len(violations)} stale or malformed "
+            f"entr{'y' if len(violations) == 1 else 'ies'} "
+            f"(threshold: {STALENESS_THRESHOLD_DAYS} days):\n"
+            + "\n".join(lines)
+        )
+    return violations
+
+
 def status_report(format: str = "text") -> None:
     """Print per-framework version + last_verified + source_url to stdout.
 
+    Also runs the compliance staleness gate (QC-05) so stale or malformed
+    entries are surfaced at `quirk compliance status` time.
+
     Used by `quirk compliance status` (D-05, COMPLY-09)."""
+    # QC-05: surface staleness in the production CLI path.  Exceptions are
+    # caught and printed as warnings rather than aborting the status display,
+    # so operators still see the full table alongside the staleness alert.
+    try:
+        check_compliance_staleness()
+    except RuntimeError as exc:
+        print(f"WARNING: {exc}\n")
+
     seen: Dict[str, Dict[str, Any]] = {}
     for entries in COMPLIANCE_MAP.values():
         for e in entries:
@@ -288,5 +372,6 @@ __all__ = [
     "UNMAPPED_TITLES",
     "TITLE_PREFIX_ALIASES",
     "STALENESS_THRESHOLD_DAYS",
+    "check_compliance_staleness",
     "status_report",
 ]
