@@ -499,20 +499,20 @@ def test_aks_credential_failure_no_clusters_still_emits_one_inaccessible():
 # ---------------------------------------------------------------------------
 
 def test_aks_empty_cluster_list_returns_empty():
-    """CR-09 / D-09: valid azure_cred + empty aks_clusters returns [] cleanly.
+    """CE-01 / K8S-03: valid azure_cred + empty aks_clusters emits an advisory finding.
 
-    Pre-fix, _scan_aks_encryption was called with cluster_configs=[] and raised
-    AttributeError. Post-fix, the function short-circuits to [] without calling
-    _scan_aks_encryption and without emitting an inaccessible finding for this
-    path (inaccessible findings are reserved for the credential=None branch,
-    which is Phase 29 work).
+    Pre-CE-01, the function short-circuited to [] without any finding, violating
+    the K8S-03 "at least one finding per provider" invariant. Post-CE-01, an
+    advisory (INFO) CryptoEndpoint is emitted so the operator can see WHY the
+    result appears empty — valid creds but no clusters configured.
+    _scan_aks_encryption must still NOT be called on the empty path.
     """
     sentinel_cred = MagicMock(name="azure-credential")
 
     def _should_not_be_called(*_args, **_kwargs):
         raise AssertionError(
             "_scan_aks_encryption must NOT be called when aks_clusters is empty "
-            "(CR-09 / D-09 short-circuit)"
+            "(CE-01 short-circuit)"
         )
 
     with patch("quirk.scanner.k8s_connector.AKS_AVAILABLE", True):
@@ -535,12 +535,16 @@ def test_aks_empty_cluster_list_returns_empty():
                 logger=None,
             )
 
-    # D-09: returns [] for the empty-aks_clusters + valid-credential case.
-    # No inaccessible finding must be emitted from THIS path (that path is
-    # reserved for the credential=None branch — Phase 29).
-    assert results == [], (
-        f"CR-09 / D-09: expected [] for valid azure_cred + empty aks_clusters; "
-        f"got {results}"
+    # CE-01 / K8S-03: must return a non-empty list with an advisory finding that
+    # mentions the "no aks_clusters configured" cause.
+    assert len(results) >= 1, (
+        f"CE-01: expected advisory finding for valid azure_cred + empty aks_clusters; "
+        f"got empty list"
+    )
+    advisory_text = str(getattr(results[0], "service_detail", "") or "").lower()
+    assert "aks_clusters" in advisory_text or "no cluster" in advisory_text or "not configured" in advisory_text or "no aks" in advisory_text, (
+        f"CE-01: advisory finding service_detail should mention missing aks_clusters; "
+        f"got {advisory_text!r}"
     )
 
 
