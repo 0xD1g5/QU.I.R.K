@@ -3696,9 +3696,9 @@ Each finding object contains:
 - At least 1 crypto endpoint appears in the results sourced from a chaos lab port (not port 443/8443 only)
 - Zero-result terminal message ("Scan completed -- no endpoints found") does NOT appear
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________
-**Notes:** Manual verification required. Start chaos lab before running. Nmap must be installed.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-06-11  **Tester:** Digs
+**Notes:** PASS on job 2b746345 — 42 endpoints across 21 ports incl. lab services (636 LDAPS, 2222 SSH, email STARTTLS suite 25/110/143/465/587/993/995); results page rendered (score 80, 6 findings); zero-result message did not appear. Two same-class window defects were found and fixed during this UAT before the pass: e393a0a (result-summary anchored on run-start second → always 0) and 49b75bf (/api/scan/latest 404 for scan_run_id scan_ids → legacy error message). Both pinned by tests/test_job_result_summary.py.
 
 ---
 
