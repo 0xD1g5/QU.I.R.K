@@ -16,7 +16,8 @@ def md_cell(value) -> str:
       2. Coerce non-str via str().
       3. CRLF / LF / CR → single space (row-break injection).
       4. "|" → "\\|" (column-break injection).
-      5. Strip ASCII control chars (< 0x20) except space (0x20).
+      5. Strip ASCII control chars: below 0x20 (except space 0x20),
+         DEL (0x7f), and C1 control range (0x80–0x9f).  WR-01.
 
     The function deliberately does NOT escape backticks, asterisks, or
     HTML entities — those are not table-row break vectors in GFM. The
@@ -29,6 +30,10 @@ def md_cell(value) -> str:
     # Collapse CRLF first, then any remaining CR or LF singletons.
     text = text.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
     text = text.replace("|", "\\|")
-    # Strip ASCII control chars (< 0x20) but keep space (0x20).
-    text = "".join(c for c in text if c == " " or c >= "\x20")
+    # Strip ASCII control chars (< 0x20, except space 0x20), DEL (0x7f),
+    # and C1 control range (0x80–0x9f).  WR-01.
+    text = "".join(
+        c for c in text
+        if c == " " or ("\x20" < c < "\x7f") or c > "\x9f"
+    )
     return text
