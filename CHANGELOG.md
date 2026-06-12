@@ -5,6 +5,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [5.6.0] - 2026-06-12
+
+### Added
+
+- **Public launch** (Phase 119–120) — QU.I.R.K. is now an open-source public repository on GitHub with branch protection on `main` and `windows-sensor-smoke` enforced as a required CI status check. A full git-history secret scan (gitleaks, 0 findings across 2652+ commits) preceded the visibility flip; Actions SHA-pinning (all 30 uses:) and SECURITY_CHECKLIST canonicalization completed the posture sweep (Phase 120).
+- **Windows production build — frozen sensor binary** (Phase 117) — production PyInstaller `--onedir` build of the QUIRK sensor on `windows-latest` CI; `quirk.exe --version` and `quirk.exe --help` confirmed on a runner with no Python installed; data-file and hidden-import set locked from the WINPKG-01 spike.
+- **Windows packaging + Scheduled Task installer** (Phase 118) — zip + PowerShell `install.ps1` / `uninstall.ps1` pair; registers a Windows Scheduled Task for periodic sensor cadence; frozen sensor passes Phase 113 per-sensor Bearer-token wire contract in E2E CI; Windows zip published as a GitHub Release asset alongside PyPI/GHCR/Homebrew. (Unsigned — Authenticode deferred.)
+- **Port-scope discovery control** (Phase 121) — dashboard scan-new form offers four port-scope options (Common TLS / Top 1000 / All ports / Custom); nmap discovery decoupled from the hardcoded 6-port TLS list; wide-scope jobs hard-fail without nmap rather than silently using 6 ports; custom port specs cap at 2048 expanded ports with strict nmap-style parse/validation; `GET /api/jobs/{id}/result-summary` returns an explicit zero-endpoints completion signal so stale data is never displayed.
+
+### Fixed
+
+- **Phase 122 tech-debt sweep** (11 audit items from 2026-05-27 codebase audit):
+  - CR-01: Phantom +20 TLS-enum confidence bonus guarded on `tls_count > 0` — zero-TLS scans no longer receive unearned coverage credit (commit c60d1bd).
+  - CE-01: AKS scanner now emits an advisory finding (K8S-03 invariant) instead of silently returning `[]` when valid credentials yield an empty cluster list (commit c20245e).
+  - CE-02: `safe_str` base64 redaction regex tightened with a negative lookbehind + first-char guard; ARNs and resource IDs no longer over-redacted (commit ef6aeab).
+  - CE-03: Vault PKI SHA-1 reason field always populated when detected, even on dual-weakness (RSA+SHA-1) certificates (commit ef6aeab).
+  - CE-05: Engine safe-mode concurrency default aligned to 200 baseline — was erroneously 100 (a 2× divergence) (commit ef6aeab).
+  - QC-01: Explicit `int()` cast on QRAMM `suggested_answer` — eliminates silent SQLite float→integer coercion (commit b14cdd9).
+  - QC-04: `compute_overall_score` itself now clamped at 4.0 — prior BL-01 fix was router-only (commit b14cdd9).
+  - QC-05: Compliance staleness gate moved to production code path (`check_compliance_staleness()` in `quirk/compliance/__init__.py`); malformed `last_verified` dates raise `RuntimeError` instead of silently continuing (commit 8539f99).
+  - WR-01: `md_cell` now strips DEL (0x7f) and C1 control range (0x80–0x9f); previously kept by `c >= "\\x20"` guard (commit eba210a).
+  - WR-06: `html_renderer` no-`exec_content` fallback reads canonical `score["score"]` key, not the non-existent `"total"` key (commit eba210a).
+  - Stub-label: AWS and Azure connector prompts in `quirk/interactive.py` confirmed production-grade (stub labeling already absent from prior phase work).
+
+### Misc
+
+- Windows distribution is unsigned — Authenticode code-signing deferred to a future spike (needs certificate + CI secret handling).
+- Phase 120 git-history rewrite: 12 sensitive path categories stripped from history; 989 → 901 tracked files, 6260 → 2952 commits after empty-commit pruning.
+
 ## [5.5.0] - 2026-05-27
 
 ### Added
