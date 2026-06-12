@@ -514,17 +514,23 @@ def scan_k8s_targets(
                         session_start=session_start,
                     ))
             if credential is not None:
-                # CR-09 (Phase 69 / locked decision D-09): when credentials are
-                # valid but no AKS clusters were configured, short-circuit to []
-                # WITHOUT calling _scan_aks_encryption (which would receive
-                # cluster_configs=[] and could raise AttributeError on the empty
-                # path) and WITHOUT emitting an inaccessible finding. The K8S-03
-                # "at least one finding" invariant applies at the per-provider
-                # level, not for an empty cluster list when credentials are valid
-                # — the inaccessible-finding path is reserved for the
-                # credential=None branch above (Phase 29 / CR-03).
+                # CE-01: when credentials are valid but no AKS clusters were
+                # configured, emit an advisory (INFO) finding so the operator
+                # knows WHY the result is empty — K8S-03 invariant requires at
+                # least one finding per provider invocation.
+                # _scan_aks_encryption is NOT called on the empty path (Phase 69 /
+                # CR-09: cluster_configs=[] can raise AttributeError).
                 if not (aks_clusters or []):
-                    return []
+                    results.append(_emit_inaccessible_finding(
+                        provider="aks",
+                        cluster_name=cluster_name or "aks",
+                        reason=(
+                            "valid AKS credentials supplied but no aks_clusters configured"
+                            " — no cluster encryption posture could be evaluated"
+                        ),
+                        session_start=session_start,
+                    ))
+                    return results
                 results.extend(_scan_aks_encryption(
                     credential=credential,
                     subscription_id=azure_subscription_id or "",

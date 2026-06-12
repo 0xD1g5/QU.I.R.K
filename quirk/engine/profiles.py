@@ -155,9 +155,12 @@ def apply_profile(cfg, profile: str, safe_mode: bool = False) -> None:
     # -------------------------
     if safe_mode:
         # dial concurrency down and increase timeouts slightly
-        scan.fingerprint_concurrency = max(25, _get_int(getattr(scan, "fingerprint_concurrency", 100), 100) // 2)
-        scan.tls_concurrency = max(25, _get_int(getattr(scan, "tls_concurrency", 100), 100) // 2)
-        scan.ssh_concurrency = max(25, _get_int(getattr(scan, "ssh_concurrency", 100), 100) // 2)
+        # CE-05: align fallback default from 100 to 200 to match baseline_concurrency_default
+        # (lines 49–84); the old 100 default caused safe-mode to halve from 100 → 50 instead
+        # of from the true baseline 200 → 100 (a latent 2x divergence).
+        scan.fingerprint_concurrency = max(25, _get_int(getattr(scan, "fingerprint_concurrency", 200), 200) // 2)
+        scan.tls_concurrency = max(25, _get_int(getattr(scan, "tls_concurrency", 200), 200) // 2)
+        scan.ssh_concurrency = max(25, _get_int(getattr(scan, "ssh_concurrency", 200), 200) // 2)
 
         scan.fingerprint_timeout_seconds = max(4, _get_int(getattr(scan, "fingerprint_timeout_seconds", 4), 4))
         scan.tls_timeout_seconds = max(6, _get_int(getattr(scan, "tls_timeout_seconds", 6), 6))

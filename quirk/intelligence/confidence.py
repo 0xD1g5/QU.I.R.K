@@ -102,7 +102,14 @@ def compute_confidence(
     points_coverage = 100.0 * w["coverage_ratio"] * coverage_ratio
     points_scan_error = 100.0 * w["scan_error_ratio"] * (1.0 - scan_error_ratio)
     points_unknown = 100.0 * w["unknown_ratio"] * (1.0 - unknown_ratio)
-    points_tls_enum = 100.0 * w["tls_enum_coverage_ratio"] * tls_enum_coverage_ratio
+    # CR-01: guard TLS-enum bonus so zero-TLS scans don't earn phantom +20 points.
+    # tls_enum_coverage_ratio defaults to 1.0 (vacuously complete) in evidence.py
+    # when tls_total == 0; confine the bonus to runs with at least one real TLS endpoint.
+    points_tls_enum = (
+        100.0 * w["tls_enum_coverage_ratio"] * tls_enum_coverage_ratio
+        if tls_count > 0
+        else 0.0
+    )
 
     score = int(round(_clamp(points_coverage + points_scan_error + points_unknown + points_tls_enum, 0.0, 100.0)))
     rating = _rating(score)
