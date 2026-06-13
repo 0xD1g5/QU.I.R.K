@@ -159,6 +159,7 @@ def serve(
         threading.Thread(target=_open, daemon=True).start()
 
     os.environ["QUIRK_SERVE_PORT"] = str(port)
+    os.environ["QUIRK_SERVE_HOST"] = host  # SSRF-04 / D-02: lets url_allowlist self-block the console addr:port
     try:
         uvicorn.run(
             "quirk.dashboard.api.app:app",

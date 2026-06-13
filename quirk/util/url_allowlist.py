@@ -53,11 +53,15 @@ class ValidationResult:
         reason: Empty string when ok=True; a reason-code constant otherwise.
         redacted_preview: Empty string when ok=True; a <= 32-char, control-char-
             stripped preview of the rejected input otherwise.
+        resolved_ip: The validated IP the caller should connect to (the first
+            resolved address, or the IP literal). Empty string on rejection.
+            Callers pin to this to close the DNS-rebinding TOCTOU window (SSRF-05).
     """
 
     ok: bool
     reason: str            # "" when ok=True; reason-code constant otherwise
     redacted_preview: str  # "" when ok=True; <=32-char preview otherwise
+    resolved_ip: str = ""  # validated IP for caller pinning (SSRF-05); "" on reject
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +74,7 @@ RC_LINK_LOCAL: Final[str] = "link_local"
 RC_METADATA_SERVICE_IP: Final[str] = "metadata_service_ip"
 RC_SCHEME_PREFIX: Final[str] = "scheme_prefix"
 RC_DNS_FAILURE: Final[str] = "dns_failure"  # Phase 120: fail-closed on resolver error
+RC_CONSOLE_ENDPOINT: Final[str] = "console_endpoint"  # SSRF-04 / D-01: reflective self-SSRF onto the console's own bind addr:port
 
 
 # ---------------------------------------------------------------------------
@@ -130,20 +135,65 @@ def _strip_zone_id(addr: str) -> str:
     return addr[:pct] if pct >= 0 else addr
 
 
+def _get_console_endpoint() -> tuple[str | None, int | None]:
+    """Return the dashboard/console's own bind ``(host, port)`` for self-SSRF blocking.
+
+    Sourced from the ``QUIRK_SERVE_HOST`` / ``QUIRK_SERVE_PORT`` env vars that
+    ``quirk/dashboard/server.py`` sets when it starts serving (SSRF-04 / D-02).
+    Returns ``(None, None)`` — a graceful no-op — when either var is unset or the
+    port is non-integer, so standalone CLI scans and the chaos lab's loopback
+    targets are unaffected when no console is running.
+    """
+    import os
+
+    host = os.environ.get("QUIRK_SERVE_HOST", "").strip()
+    port_raw = os.environ.get("QUIRK_SERVE_PORT", "").strip()
+    if not host or not port_raw:
+        return (None, None)
+    try:
+        return (host, int(port_raw))
+    except ValueError:
+        return (None, None)
+
+
 def _classify_ip(
     ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
     url: str,
     *,
     allow_internal: bool,
+    url_port: int | None = None,
 ) -> ValidationResult | None:
     """Apply the IP-class blocklist to one address.
 
     Returns a rejecting ``ValidationResult`` on hit, or ``None`` on pass-through.
-    Metadata IPs are ALWAYS rejected — ``allow_internal`` cannot bypass them.
+    Metadata IPs and the console's own endpoint are ALWAYS rejected —
+    ``allow_internal`` cannot bypass them.
     """
     # Metadata — always blocked.
     if ip in _METADATA_IPS:
         return ValidationResult(False, RC_METADATA_SERVICE_IP, _redact_preview(url))
+
+    # Console self-SSRF — always blocked (SSRF-04 / D-01), BEFORE the
+    # allow_internal early-return. Blocks ONLY the console's own addr:port, not
+    # loopback in general, so the chaos lab's --allow-internal-targets loopback
+    # scanning keeps working. Cheap short-circuit on port before any resolution.
+    console_host, console_port = _get_console_endpoint()
+    if console_host is not None and url_port is not None and url_port == console_port:
+        try:
+            console_ips = {
+                ipaddress.ip_address(_strip_zone_id(entry[4][0]))
+                for entry in socket.getaddrinfo(console_host, None, family=socket.AF_UNSPEC)
+                if entry[4] and isinstance(entry[4][0], str)
+            }
+        except (socket.gaierror, OSError, UnicodeError, ValueError):
+            console_ips = set()
+        try:
+            console_ips.add(ipaddress.ip_address(console_host))
+        except ValueError:
+            pass
+        if ip in console_ips:
+            # Mirrors the metadata block's no-log, redacted-return style.
+            return ValidationResult(False, RC_CONSOLE_ENDPOINT, _redact_preview(url))
 
     # allow_internal suppresses loopback / link-local / private / reserved only.
     if allow_internal:
@@ -238,9 +288,17 @@ def validate_external_url(url: str, *, allow_internal: bool = False) -> Validati
             return ValidationResult(False, RC_DNS_FAILURE, _redact_preview(url))
 
     # 4. Apply blocklist to EVERY resolved address. Any single hit rejects.
+    # url_port (scheme default when absent) feeds the console self-SSRF check.
+    url_port = parsed.port if parsed.port is not None else (
+        443 if parsed.scheme == "https" else 80
+    )
     for ip in addresses:
-        rejection = _classify_ip(ip, url, allow_internal=allow_internal)
+        rejection = _classify_ip(
+            ip, url, allow_internal=allow_internal, url_port=url_port
+        )
         if rejection is not None:
             return rejection
 
-    return ValidationResult(True, "", "")
+    # SSRF-05: return the validated IP so callers pin to it (close DNS-rebind TOCTOU).
+    first_ip = str(addresses[0]) if addresses else ""
+    return ValidationResult(True, "", "", resolved_ip=first_ip)
