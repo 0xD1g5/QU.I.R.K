@@ -284,10 +284,15 @@ class FindingCounts(BaseModel):
 
 # Phase 66 UI-HIST-02: compare endpoint schemas
 
+def _zero_subscores() -> "SubScores":
+    return SubScores(hygiene=0, modern_tls=0, identity_trust=0, agility_signals=0)
+
+
 class CompareScanSummary(BaseModel):
     scan_id: str
     scanned_at: datetime
     score: int
+    subscores: SubScores = Field(default_factory=_zero_subscores)
 
 
 class SubscoreDelta(BaseModel):

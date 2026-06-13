@@ -1330,8 +1330,22 @@ def compare_scans(
             changed_endpoints.append(CompareEndpoint(host=host, reason="; ".join(reasons)))
 
     return CompareResponse(
-        scan_a=CompareScanSummary(scan_id=a, scanned_at=ts_a, score=score_a),
-        scan_b=CompareScanSummary(scan_id=b, scanned_at=ts_b, score=score_b),
+        scan_a=CompareScanSummary(scan_id=a, scanned_at=ts_a, score=score_a, subscores=SubScores(
+            hygiene=int(sub_a.get("hygiene", 0)),
+            modern_tls=int(sub_a.get("modern_tls", 0)),
+            identity_trust=int(sub_a.get("identity_trust", 0)),
+            agility_signals=int(sub_a.get("agility_signals", 0)),
+            data_at_rest=int(sub_a.get("data_at_rest", 0)),
+            data_in_motion=int(sub_a.get("data_in_motion", 0)),
+        )),
+        scan_b=CompareScanSummary(scan_id=b, scanned_at=ts_b, score=score_b, subscores=SubScores(
+            hygiene=int(sub_b.get("hygiene", 0)),
+            modern_tls=int(sub_b.get("modern_tls", 0)),
+            identity_trust=int(sub_b.get("identity_trust", 0)),
+            agility_signals=int(sub_b.get("agility_signals", 0)),
+            data_at_rest=int(sub_b.get("data_at_rest", 0)),
+            data_in_motion=int(sub_b.get("data_in_motion", 0)),
+        )),
         score_delta=score_a - score_b,
         subscore_deltas=subscore_deltas,
         added_findings=added_findings,

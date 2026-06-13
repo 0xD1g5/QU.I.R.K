@@ -166,6 +166,7 @@ export interface CompareScanSummary {
   scan_id: string
   scanned_at: string
   score: number
+  subscores: SubScores
 }
 
 export interface SubscoreDelta {

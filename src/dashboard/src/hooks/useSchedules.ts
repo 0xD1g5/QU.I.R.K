@@ -132,23 +132,20 @@ export function useSchedules(): UseSchedulesResult {
    * Removes from local data on success; leaves row on failure.
    */
   const deleteSchedule = useCallback(async (id: number) => {
-    try {
-      const resp = await fetchApi(`/api/schedules/${id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      })
-      if (resp.ok) {
-        setData((prev) => {
-          if (!prev) return prev
-          return {
-            schedules: prev.schedules.filter((s) => s.id !== id),
-          }
-        })
-      }
-    } catch {
-      // Leave row in place on network error — caller surfaces the error via dialog
+    const resp = await fetchApi(`/api/schedules/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
+    if (!resp.ok) {
+      throw new Error(`Delete failed: ${resp.status} ${resp.statusText}`)
     }
+    setData((prev) => {
+      if (!prev) return prev
+      return {
+        schedules: prev.schedules.filter((s) => s.id !== id),
+      }
+    })
   }, [])
 
   return { data, loading, error, patchEnabled, deleteSchedule, refetch }

@@ -61,7 +61,7 @@ export function ScoreGauge({ score, label, size = 120, strokeColor, isOverall = 
               strokeLinecap="round"
             />
           )}
-          {/* Score number */}
+          {/* Score number — clamped to maxValue so arc and numeral agree */}
           <text
             x={cx}
             y={cy - 2}
@@ -72,7 +72,7 @@ export function ScoreGauge({ score, label, size = 120, strokeColor, isOverall = 
             fontWeight={600}
             fontFamily="Inter, sans-serif"
           >
-            {score}
+            {Math.min(score, maxValue)}
           </text>
         </svg>
       </div>

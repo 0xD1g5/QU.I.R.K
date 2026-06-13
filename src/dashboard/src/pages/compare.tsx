@@ -207,8 +207,8 @@ export function ComparePage() {
                 return (
                   <TableRow key={key}>
                     <TableCell>{PILLAR_LABELS[key]}</TableCell>
-                    <TableCell className="font-data">—</TableCell>
-                    <TableCell className="font-data">—</TableCell>
+                    <TableCell className="font-data">{data.scan_a.subscores[key]}</TableCell>
+                    <TableCell className="font-data">{data.scan_b.subscores[key]}</TableCell>
                     <TableCell className={`font-data ${colorClass}`}>
                       {d === 0 ? "±0" : d > 0 ? `+${d}` : `${d}`}
                     </TableCell>

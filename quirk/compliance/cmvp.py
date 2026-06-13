@@ -315,21 +315,6 @@ def coverage_for_algorithm(name: str) -> list[dict]:
         logger.warning("CMVP cache unavailable: %s", e)
         return []
     matches = [m for m in cache.get("modules", []) if family in m.get("algorithms", [])]
-    matches.sort(
-        key=lambda m: (
-            m.get("fips_level") != "140-3",
-            # Descending lexicographic by module_version: invert via tuple negation trick
-            # using a sortable wrapper — simpler to sort then reverse on a secondary pass.
-            -len(m.get("module_version", "")),
-            m.get("module_version", ""),
-        )
-    )
-    # Stable re-sort by module_version descending within fips tier.
-    matches.sort(
-        key=lambda m: (m.get("fips_level") != "140-3", m.get("module_version", "") or ""),
-        reverse=False,
-    )
-    # Final ordering: fips=140-3 first (False<True), then by module_version desc.
     fips_first = [m for m in matches if m.get("fips_level") == "140-3"]
     fips_first.sort(key=lambda m: m.get("module_version", "") or "", reverse=True)
     others = [m for m in matches if m.get("fips_level") != "140-3"]
