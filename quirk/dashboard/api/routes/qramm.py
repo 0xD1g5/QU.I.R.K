@@ -295,7 +295,7 @@ def create_session(
     # (D-02) when no scan data exists. Errors are logged but do NOT prevent the
     # 201 response; the session is valid and caller always receives a session_id.
     try:
-        populate_cvi_suggestions(session.id, db)
+        populate_cvi_suggestions(session.id, db, session_created_at=session.created_at)
     except Exception:  # noqa: BLE001
         logger.exception(
             "evidence_bridge: failed to populate CVI suggestions for session %s; "

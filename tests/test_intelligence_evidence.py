@@ -108,9 +108,9 @@ def test_ecdsa_alias_ecdsa():
     assert _ecdsa_count("ECDSA") == 1
 
 
-def test_ecdsa_negative_ed25519():
-    """WR-04 / D-03: ED25519 input does NOT increment ECDSA counter."""
-    assert _ecdsa_count("ED25519") == 0
+def test_ecdsa_ed25519_credits_ecdsa_bucket():
+    """SCOREFIX-03 / WR-05: EdDSA (Ed25519) folds into ECDSA agility bucket."""
+    assert _ecdsa_count("ED25519") == 1
 
 
 def _saml_count(alg: str) -> int:

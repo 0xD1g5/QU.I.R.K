@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+from datetime import datetime
 from typing import Any, Iterable
 
 from sqlalchemy import func
@@ -44,15 +45,28 @@ def _discovery_factor(endpoint_count: int) -> float:
     return min(1.0, max(0.25, math.log10(max(endpoint_count, 1)) / 3.0))
 
 
-def populate_cvi_suggestions(session_id: int, db: Session) -> None:
+def populate_cvi_suggestions(
+    session_id: int,
+    db: Session,
+    *,
+    session_created_at: datetime | None = None,
+) -> None:
     """Derive CVI suggested_answer values from the SESSION_BRACKET scan cohort.
 
     Updates the 30 CVI QRAMMAnswer rows (pre-created by `create_session`) with
     `suggested_answer` and `evidence_source`. Skips silently if no scan data exists
     (D-02). Does not touch `answer_value` or `confirmed_at`.
+
+    SCOREFIX-05 (D-03): when session_created_at is provided, the cohort is scoped
+    to endpoints where scanned_at <= session_created_at so that scans from later
+    engagements cannot contaminate this session's evidence.  When None, the original
+    global MAX(date) behavior is preserved (back-compat).
     """
     # SESSION_BRACKET (D-01): all rows where date(scanned_at) == MAX(date(scanned_at))
-    max_date_str = db.query(func.date(func.max(CryptoEndpoint.scanned_at))).scalar()
+    cohort_q = db.query(func.date(func.max(CryptoEndpoint.scanned_at)))
+    if session_created_at is not None:
+        cohort_q = cohort_q.filter(CryptoEndpoint.scanned_at <= session_created_at)
+    max_date_str = cohort_q.scalar()
     if max_date_str is None:
         logger.info("evidence_bridge: no scan data found, skipping")
         return
@@ -61,11 +75,12 @@ def populate_cvi_suggestions(session_id: int, db: Session) -> None:
     # by the same engine, so neither side carries an implicit local-TZ offset. Any
     # downstream Python-side use of max_date_str must parse via
     # datetime.date.fromisoformat(max_date_str) before equality compare.
-    endpoints = (
-        db.query(CryptoEndpoint)
-        .filter(func.date(CryptoEndpoint.scanned_at) == max_date_str)
-        .all()
+    endpoints_q = db.query(CryptoEndpoint).filter(
+        func.date(CryptoEndpoint.scanned_at) == max_date_str
     )
+    if session_created_at is not None:
+        endpoints_q = endpoints_q.filter(CryptoEndpoint.scanned_at <= session_created_at)
+    endpoints = endpoints_q.all()
     if not endpoints:
         logger.info("evidence_bridge: no scan data found, skipping")
         return
