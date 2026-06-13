@@ -47,10 +47,12 @@ def _make_db():
 # ---------- Scoring seam helpers ----------
 
 def _score_dimension_current(db, session_id: int, dim: str) -> float:
-    """Replicate the CURRENT (buggy) scorer — mirrors qramm.py:416-446.
+    """Mirror the FIXED scorer — mirrors qramm.py:416-446 post SCOREFIX-02.
 
-    Filters .filter(answer_value.isnot(None)) then passes ONLY the answered
-    practices to compute_dimension_score. This is the seam Wave 1 must fix.
+    Filters .filter(answer_value.isnot(None)) then injects 0.0 for every
+    expected practice not present, so compute_dimension_score receives the
+    full practice dict. A partially-answered dimension scores at its worst-case
+    gap (D-02). This is the seam Wave 1 fixes in the actual router.
     """
     rows = (
         db.query(QRAMMAnswer)
@@ -68,6 +70,12 @@ def _score_dimension_current(db, session_id: int, dim: str) -> float:
     practice_scores: dict[str, float] = {
         pa: compute_practice_score(vals) for pa, vals in practice_buckets.items()
     }
+
+    # SCOREFIX-02: inject 0.0 for every expected practice that was not answered.
+    for pa in EXPECTED_PRACTICES.get(dim, set()):
+        if pa not in practice_scores:
+            practice_scores[pa] = 0.0
+
     return compute_dimension_score(list(practice_scores.values())) if practice_scores else 0.0
 
 

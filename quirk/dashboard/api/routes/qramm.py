@@ -64,6 +64,13 @@ MULTIPLIER_MAX: float = 1.5
 MULTIPLIER_LOW_STEP: float = 0.10
 MULTIPLIER_HIGH_STEP: float = 0.20
 
+# SCOREFIX-02 (D-02): full expected practice set per dimension, derived once at
+# import time so the score endpoint can inject 0.0 for unanswered practices.
+_EXPECTED_PRACTICES_PER_DIM: Dict[str, set] = {"CVI": set(), "SGRM": set(), "DPE": set(), "ITR": set()}
+for _q in QRAMM_QUESTIONS:
+    if _q["dimension"] in _EXPECTED_PRACTICES_PER_DIM:
+        _EXPECTED_PRACTICES_PER_DIM[_q["dimension"]].add(_q["practice_area"])
+
 
 # ---------- Pydantic models (inline per D-11) ----------
 
@@ -440,6 +447,14 @@ def score_session(
         dim = practice_to_dim.get(pa)
         if dim in dim_to_practices:
             dim_to_practices[dim][pa] = score
+
+    # SCOREFIX-02 (D-02): inject 0.0 for every expected practice not in the
+    # answered set so compute_dimension_score receives the full practice dict.
+    # A partially-answered dimension can never score above its worst-case gap.
+    for dim, expected in _EXPECTED_PRACTICES_PER_DIM.items():
+        for pa in expected:
+            if pa not in dim_to_practices[dim]:
+                dim_to_practices[dim][pa] = 0.0
 
     dimension_scores: Dict[str, float] = {}
     for dim, pmap in dim_to_practices.items():
