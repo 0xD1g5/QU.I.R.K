@@ -71,6 +71,100 @@ def _rejected_scope_result():
     return result
 
 
+def _ok_scope_result_with_ip(ip: str = "8.8.8.8"):
+    """Mock validate_external_url result that passes and carries a pinned IP (SSRF-05)."""
+    result = MagicMock()
+    result.ok = True
+    result.reason = ""
+    result.resolved_ip = ip
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Phase 123 SSRF-01/SSRF-05: raw-socket TLS probes validate + pin the target
+# (RED until Plan 03 routes the probe block through validate_external_url and
+#  passes the pinned resolved_ip + server_hostname into the probes)
+# ---------------------------------------------------------------------------
+
+class TestRawSocketProbePreventsSSRF:
+    """SSRF-01: raw-socket TLS probes validate the target URL before create_connection."""
+
+    def test_probe_skipped_when_url_rejected(self):
+        """When validate_external_url rejects the URL, raw socket probes are NOT called."""
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+
+        session_mock = MagicMock()
+        cfg = MagicMock()
+        cfg.security = MagicMock()
+        cfg.security.allow_internal_targets = False
+
+        with patch("quirk.scanner.rest_fuzzer.validate_external_url",
+                   return_value=_rejected_scope_result()) as mock_validate, \
+             patch("quirk.scanner.rest_fuzzer._probe_tls_downgrade") as mock_tls, \
+             patch("quirk.scanner.rest_fuzzer._probe_cipher_weak") as mock_cipher, \
+             patch("quirk.scanner.rest_fuzzer.schemathesis") as mock_sch:
+            mock_schema = MagicMock()
+            mock_schema.include.return_value.get_all_operations.return_value = []
+            mock_sch.openapi.from_dict.return_value = mock_schema
+
+            run_fuzz_scan(
+                spec_dict={"openapi": "3.0.0"},
+                base_url="https://127.0.0.1:8080",
+                cfg=cfg, budget=5,
+                prompt_fn=lambda _: "CONFIRM", is_tty=True,
+                _session=session_mock,
+            )
+
+        # validate_external_url must have been called (not skipped)
+        assert mock_validate.call_count >= 1
+        # Probes must NOT have been called (rejected URL)
+        assert mock_tls.call_count == 0
+        assert mock_cipher.call_count == 0
+
+
+class TestRawProbeUsesPinnedIP:
+    """SSRF-01/SSRF-05: raw-socket probes use resolved_ip from ValidationResult, not hostname."""
+
+    def test_probe_receives_pinned_ip(self):
+        """_probe_tls_downgrade is called with the pinned IP, not the original hostname."""
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+
+        session_mock = MagicMock()
+        cfg = MagicMock()
+        cfg.security = MagicMock()
+        cfg.security.allow_internal_targets = False
+
+        pinned = "93.184.216.34"  # example.com IP
+
+        with patch("quirk.scanner.rest_fuzzer.validate_external_url",
+                   return_value=_ok_scope_result_with_ip(pinned)), \
+             patch("quirk.scanner.rest_fuzzer._probe_tls_downgrade",
+                   return_value=False) as mock_tls, \
+             patch("quirk.scanner.rest_fuzzer._probe_cipher_weak",
+                   return_value=False), \
+             patch("quirk.scanner.rest_fuzzer.schemathesis") as mock_sch:
+            mock_schema = MagicMock()
+            mock_schema.include.return_value.get_all_operations.return_value = []
+            mock_sch.openapi.from_dict.return_value = mock_schema
+
+            run_fuzz_scan(
+                spec_dict={"openapi": "3.0.0"},
+                base_url="https://example.com",
+                cfg=cfg, budget=5,
+                prompt_fn=lambda _: "CONFIRM", is_tty=True,
+                _session=session_mock,
+            )
+
+        # The first positional arg to _probe_tls_downgrade must be the pinned IP
+        assert mock_tls.called
+        call_host_arg = mock_tls.call_args[0][0]
+        assert call_host_arg == pinned
+
+        # The original hostname must be passed as server_hostname kwarg (SNI)
+        call_kwargs = mock_tls.call_args[1]
+        assert call_kwargs.get("server_hostname") == "example.com"
+
+
 # ---------------------------------------------------------------------------
 # Task 1: Dispatch loop tests
 # ---------------------------------------------------------------------------

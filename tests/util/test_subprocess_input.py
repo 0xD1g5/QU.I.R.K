@@ -32,6 +32,7 @@ from quirk.util.subprocess_input import (
     RC_NONEXISTENT_PATH,
     RC_INVALID_IMAGE_REF,
     RC_LEADING_DASH,
+    RC_PATH_SHAPED_REF,  # Phase 123 SSRF-03 — does not exist yet; import fails until Plan 02
 )
 
 
@@ -105,6 +106,15 @@ def test_validate_repo_path_existing_dir(tmp_path):
     ("alpine`whoami`", False, RC_SHELL_METACHAR),
     # Empty string
     ("", False, RC_INVALID_IMAGE_REF),
+    # Phase 123 SSRF-03: path-shaped refs must be rejected (RED until Plan 02)
+    ("etc/passwd", False, RC_PATH_SHAPED_REF),
+    ("home/user/.ssh/id_rsa", False, RC_PATH_SHAPED_REF),
+    ("tmp/evil", False, RC_PATH_SHAPED_REF),
+    # Phase 123: valid refs with registry authority still pass
+    ("registry.io/img:latest", True, ""),
+    ("localhost/img:tag", True, ""),
+    ("localhost:5000/img", True, ""),
+    ("docker.io/library/nginx", True, ""),
 ], ids=[
     "valid_registry_tag",
     "valid_alpine",
@@ -116,6 +126,13 @@ def test_validate_repo_path_existing_dir(tmp_path):
     "metachar_semicolon",
     "metachar_backtick",
     "empty_string",
+    "path_shaped_etc_passwd",
+    "path_shaped_home",
+    "path_shaped_tmp",
+    "valid_registry_io",
+    "valid_localhost_img",
+    "valid_localhost_port",
+    "valid_dockerio_library",
 ])
 def test_validate_image_ref(ref, expected_ok, expected_reason):
     result = validate_image_ref(ref)
