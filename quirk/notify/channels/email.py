@@ -5,6 +5,17 @@ Security controls:
            at delivery time, before any connection is made.
   Pitfall 3: timeout is ALWAYS passed to both SMTP and SMTP_SSL constructors so a
            hung SMTP server can never stall the scheduler loop indefinitely.
+
+  SSRF-05 / D-03 — DNS-rebinding compensating control (NOT IP-pinned):
+    smtplib re-resolves the SMTP host at connect time, leaving a TOCTOU window
+    between the ISEC-01 validation and the actual connection. Unlike the
+    rest_fuzzer requests/raw-socket paths (which pin the validated IP via
+    PinnedIPAdapter / server_hostname), full smtplib IP-pinning is explicitly
+    OUT OF SCOPE for Phase 123 per decision D-03. The residual risk is accepted
+    as a *documented compensating control* because: (1) the SMTP host is
+    operator-configured, not attacker-controlled; (2) notification delivery is
+    opt-in; (3) connections are TLS-verified (SMTP_SSL / STARTTLS), so a TCP
+    misdirection to a rebind target fails certificate hostname verification.
 """
 from __future__ import annotations
 

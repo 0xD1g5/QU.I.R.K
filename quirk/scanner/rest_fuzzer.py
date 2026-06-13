@@ -50,6 +50,7 @@ from quirk.engine.rate_limiter import TokenBucket
 from quirk.models import CryptoEndpoint
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import validate_external_url
+from quirk.util.pinned_adapter import PinnedIPAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +193,7 @@ def probe_hsts(response_headers: dict) -> bool:
     return not bool(hsts)
 
 
-def _probe_tls_downgrade(host: str, port: int) -> bool:
+def _probe_tls_downgrade(host: str, port: int, *, server_hostname: str = "") -> bool:
     """Return True if the server accepts TLS 1.0 or TLS 1.1 (a crypto weakness).
 
     Attempts to open a TLS connection with each legacy version. Returns True
@@ -202,12 +203,17 @@ def _probe_tls_downgrade(host: str, port: int) -> bool:
     suppress DeprecationWarning on Python 3.12+ (Pitfall 7).
 
     Args:
-        host: Target hostname.
+        host: Target connect address — the pinned/validated IP when supplied by
+            the caller (SSRF-01/05), so the socket goes to the address the scope
+            gate approved, not a re-resolved one.
         port: Target port.
+        server_hostname: Original hostname for TLS SNI. When empty, falls back to
+            ``host`` (preserves behavior for IP-literal targets).
 
     Returns:
         True if TLS 1.0 or 1.1 is accepted; False otherwise.
     """
+    sni = server_hostname or host
     for tls_ver in (ssl.TLSVersion.TLSv1_1, ssl.TLSVersion.TLSv1):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         with warnings.catch_warnings():
@@ -221,26 +227,30 @@ def _probe_tls_downgrade(host: str, port: int) -> bool:
         ctx.verify_mode = ssl.CERT_NONE
         try:
             with socket.create_connection((host, port), timeout=5) as sock:
-                with ctx.wrap_socket(sock, server_hostname=host):
+                with ctx.wrap_socket(sock, server_hostname=sni):
                     return True  # accepted legacy TLS version
         except (ssl.SSLError, OSError):
             continue  # refused or unsupported
     return False
 
 
-def _probe_cipher_weak(host: str, port: int) -> bool:
+def _probe_cipher_weak(host: str, port: int, *, server_hostname: str = "") -> bool:
     """Return True if the server accepts a known weak cipher suite.
 
     Uses stdlib ssl to attempt a connection with an explicit weak cipher list.
     Currently targets RC4, NULL, EXPORT, anon, and DES/3DES suites.
 
     Args:
-        host: Target hostname.
+        host: Target connect address — the pinned/validated IP when supplied by
+            the caller (SSRF-01/05).
         port: Target port.
+        server_hostname: Original hostname for TLS SNI. Falls back to ``host``
+            when empty.
 
     Returns:
         True if any weak cipher is negotiated; False otherwise.
     """
+    sni = server_hostname or host
     # Known weak cipher patterns (matches openssl cipher string format)
     weak_cipher_string = "RC4:NULL:EXPORT:aNULL:LOW:3DES:DES"
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -253,7 +263,7 @@ def _probe_cipher_weak(host: str, port: int) -> bool:
         return False
     try:
         with socket.create_connection((host, port), timeout=5) as sock:
-            with ctx.wrap_socket(sock, server_hostname=host) as tls_sock:
+            with ctx.wrap_socket(sock, server_hostname=sni) as tls_sock:
                 negotiated = tls_sock.cipher()
                 return negotiated is not None  # any cipher negotiated from the weak set
     except (ssl.SSLError, OSError):
@@ -362,6 +372,11 @@ def _fetch_jwks_public_key_pem(
     if not scope_result.ok:
         logger.debug("JWKS URL %s rejected by scope gate: %s", safe_str(jwks_url), scope_result.reason)
         return None
+
+    # SSRF-05 / D-03: pin to the validated IP so connect-time DNS cannot rebind.
+    _jwks_pinned = getattr(scope_result, "resolved_ip", "")
+    if _jwks_pinned:
+        session.mount(jwks_url, PinnedIPAdapter(_jwks_pinned))
 
     try:
         resp = session.request("GET", jwks_url, timeout=10)
@@ -531,12 +546,24 @@ def run_fuzz_scan(
     # per-endpoint. Run them ONCE here (counted against budget + rate-limited) rather than
     # re-opening raw sockets every loop iteration (which duplicated findings and bypassed
     # the budget ceiling — the central DoS guardrail).
-    if parsed_base.scheme == "https":
+    # SSRF-01 / SSRF-05 (D-04+D-03): the raw-socket TLS probes are CONNECTION-level.
+    # Validate base_url through the same scope gate as every session dispatch BEFORE
+    # opening any socket, then connect to the pinned resolved_ip (closing the
+    # DNS-rebinding TOCTOU on the raw-socket path) while preserving the original
+    # hostname as TLS SNI. One validation, shared by both probes.
+    _probe_scope = validate_external_url(base_url, allow_internal=allow_internal)
+    if parsed_base.scheme == "https" and not _probe_scope.ok:
+        logger.warning(
+            "Raw TLS probes skipped — target rejected by scope gate (%s): %s",
+            _probe_scope.reason, safe_str(host),
+        )
+    elif parsed_base.scheme == "https":
+        _pinned_ip = getattr(_probe_scope, "resolved_ip", "") or host
         if budget_used < effective_budget:
             limiter.acquire()
             budget_used += 1
             try:
-                if _probe_tls_downgrade(host, port):
+                if _probe_tls_downgrade(_pinned_ip, port, server_hostname=host):
                     findings.append(CryptoEndpoint(
                         host=host, port=port, protocol="REST_FUZZ",
                         service_detail="tls_downgrade_accepted", severity="HIGH",
@@ -548,7 +575,7 @@ def run_fuzz_scan(
             limiter.acquire()
             budget_used += 1
             try:
-                if _probe_cipher_weak(host, port):
+                if _probe_cipher_weak(_pinned_ip, port, server_hostname=host):
                     findings.append(CryptoEndpoint(
                         host=host, port=port, protocol="REST_FUZZ",
                         service_detail="cipher_weak", severity="HIGH",
@@ -597,6 +624,11 @@ def run_fuzz_scan(
 
             # Ensure a timeout is set
             kwargs.setdefault("timeout", 10)
+
+            # SSRF-05 / D-03: pin to the validated IP so connect-time DNS cannot rebind.
+            _dispatch_pinned = getattr(scope_result, "resolved_ip", "")
+            if _dispatch_pinned:
+                session.mount(url, PinnedIPAdapter(_dispatch_pinned))
 
             try:
                 response = session.request(**kwargs)
@@ -687,6 +719,10 @@ def run_fuzz_scan(
                     alg_scope = validate_external_url(url, allow_internal=allow_internal)
                     if alg_scope.ok:
                         limiter.acquire()
+                        # SSRF-05 / D-03: pin to the validated IP (no connect-time rebind).
+                        _alg_pinned = getattr(alg_scope, "resolved_ip", "")
+                        if _alg_pinned:
+                            session.mount(url, PinnedIPAdapter(_alg_pinned))
                         try:
                             alg_resp = session.request(**alg_kwargs)
                             # CR-01: count the forged-token request against the budget ceiling.
