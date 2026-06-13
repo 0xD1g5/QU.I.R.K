@@ -168,6 +168,8 @@ def build_evidence_summary(
             cert_key_type_counts["RSA"] += 1
         elif key_alg.startswith(("EC", "ECDSA")):
             cert_key_type_counts["ECDSA"] += 1
+        elif key_alg.startswith(("ED25519", "ED448", "EDDSA")):
+            cert_key_type_counts["ECDSA"] += 1
 
         cert_not_after = getattr(ep, "cert_not_after", None)
         if isinstance(cert_not_after, datetime):

@@ -120,6 +120,8 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "x448": (CryptoPrimitive.KEY_AGREE, 0, 224),
     "aes-256-gcm": (CryptoPrimitive.AE, 1, 256),
     "aes-128-gcm": (CryptoPrimitive.AE, 1, 128),
+    "aes-256-ccm-8": (CryptoPrimitive.AE, 1, 256),
+    "aes-128-ccm-8": (CryptoPrimitive.AE, 1, 128),
     "aes-256-ccm": (CryptoPrimitive.AE, 1, 256),
     "aes-128-ccm": (CryptoPrimitive.AE, 1, 128),
     "aes-256-cbc": (CryptoPrimitive.BLOCK_CIPHER, 3, 256),
