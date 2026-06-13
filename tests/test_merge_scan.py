@@ -448,3 +448,38 @@ def test_cbom_paths_none_without_output_dir(tmp_path):
 
     assert result.get("cbom_json_path") is None
     assert result.get("cbom_xml_path") is None
+
+
+# ---------------------------------------------------------------------------
+# DIST-01 / CD-05 (Phase 125): same-second scanned_at tiebreak
+# ---------------------------------------------------------------------------
+
+def test_same_second_scanned_at_tie_returns_one_row_per_sensor(tmp_path):
+    """DIST-01: when two rows for the same sensor share the same scanned_at,
+    _collect_union_endpoints must return exactly ONE row per sensor (highest id).
+
+    RED: currently the subquery JOIN on scanned_at == max_ts returns ALL rows
+    with the same max_ts — both tie candidates appear in the union, producing
+    non-deterministic merged CBOM content on repeated runs.
+    """
+    from quirk.merge.scan import _assemble_union
+    from quirk.db import get_session
+
+    T = datetime(2026, 6, 1, 12, 0, 0)  # same-second tie
+
+    eps = [
+        _tls_ep(host="host-a.example", sensor_id="s1", scanned_at=T),
+        _tls_ep(host="host-b.example", sensor_id="s1", scanned_at=T),  # same sensor, same ts
+    ]
+    db_path, _ = _setup_real_db(tmp_path, eps, sensors=[
+        _sensor("s1", last_push_at=T, cadence_minutes=60)
+    ])
+
+    with get_session(db_path) as db:
+        union = _assemble_union(db)
+
+    sensor_rows = [ep for ep in union if ep.sensor_id == "s1"]
+    assert len(sensor_rows) == 1, (
+        f"DIST-01: same-second tie must yield exactly ONE row per sensor (highest id), "
+        f"got {len(sensor_rows)}. DIST-01 not yet fixed — subquery lacks id tiebreak."
+    )
