@@ -7,6 +7,10 @@ Covers SP-01 / AC-01 / AC-02 / CD-01 / CD-02 from the 2026-05-27 audit:
   3. Metadata HOSTNAME aliases (metadata.google.internal etc.) rejected before resolution.
   4. Dual-stack hostname where ANY returned address is blocked → reject.
   5. Genuine public IP still passes.
+
+Phase 123 additions (SSRF-02, SSRF-05):
+  6. SSRF-02 regression lock — metadata aliases blocked even with allow_internal=True (tagged ssrf02).
+  7. SSRF-05 — resolved_ip populated on ValidationResult; single-resolution rebinding mitigation.
 """
 from __future__ import annotations
 
@@ -177,3 +181,74 @@ def test_result_type_is_validation_result():
     """API contract: return type is the frozen ValidationResult dataclass."""
     r = validate_external_url("http://8.8.8.8/")
     assert isinstance(r, ValidationResult)
+
+
+# ---------------------------------------------------------------------------
+# Phase 123 SSRF-02: regression-lock — metadata aliases blocked with allow_internal=True
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("url", [
+    "http://metadata.google.internal/computeMetadata/v1/",
+    "http://metadata/latest/",
+    "http://metadata.goog/",
+    "http://169.254.169.254/latest/meta-data/",
+], ids=["ssrf02_gcp_alias", "ssrf02_bare_alias", "ssrf02_goog_alias", "ssrf02_ip"])
+def test_ssrf02_metadata_blocked_with_allow_internal(url):
+    """SSRF-02 regression lock: metadata aliases + IPs rejected even allow_internal=True.
+
+    Phase 120 implemented the blocking; this test locks the invariant under the
+    SSRF-02/SP-03 requirement ID so it is selected by '-k ssrf02'.
+    """
+    r = validate_external_url(url, allow_internal=True)
+    assert r.ok is False
+    assert r.reason == RC_METADATA_SERVICE_IP
+
+
+# ---------------------------------------------------------------------------
+# Phase 123 SSRF-05: resolved_ip field + DNS-rebinding single-resolution invariant
+# ---------------------------------------------------------------------------
+
+@patch("quirk.util.url_allowlist.socket.getaddrinfo")
+def test_resolved_ip_populated(mock_gai):
+    """SSRF-05: ValidationResult.resolved_ip is non-empty for a resolved hostname.
+
+    Phase 123 RED test: fails until Plan 01 adds the resolved_ip field to
+    ValidationResult and populates it in validate_external_url.
+    """
+    mock_gai.return_value = [_ai_v4("8.8.8.8")]
+    r = validate_external_url("http://dns.google/")
+    assert r.ok is True
+    assert r.resolved_ip == "8.8.8.8"
+
+
+def test_resolved_ip_populated_for_ip_literal():
+    """SSRF-05: IP-literal URL also populates resolved_ip (no DNS call needed).
+
+    Phase 123 RED test: fails until Plan 01 adds resolved_ip field and populates
+    it for the IP-literal branch of validate_external_url.
+    """
+    r = validate_external_url("http://8.8.8.8/")
+    assert r.ok is True
+    assert r.resolved_ip == "8.8.8.8"
+
+
+@patch("quirk.util.url_allowlist.socket.getaddrinfo")
+def test_rebinding_mitigated_by_pinning(mock_gai):
+    """SSRF-05: caller that uses resolved_ip cannot be redirected to a blocked IP on re-resolve.
+
+    The validator resolves once; the returned resolved_ip is the IP the caller
+    must connect to. We verify the returned IP matches the first resolution
+    (public IP) and that getaddrinfo was called exactly once — confirming the
+    validate_external_url implementation resolves once and returns the pinned IP
+    for callers to use, rather than leaving resolution to the caller.
+
+    Phase 123 RED test: fails until Plan 01 adds resolved_ip to ValidationResult.
+    """
+    # Single (and only) call to getaddrinfo returns a public IP.
+    mock_gai.return_value = [_ai_v4("8.8.8.8")]
+    r = validate_external_url("http://target.example/")
+    assert r.ok is True
+    assert r.resolved_ip == "8.8.8.8"
+    # validate_external_url must resolve exactly once; callers connect to r.resolved_ip
+    # instead of re-resolving (which a DNS-rebinding attacker could hijack).
+    assert mock_gai.call_count == 1

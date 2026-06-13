@@ -10,6 +10,7 @@ Covers:
   - allow_internal=True allows RFC1918/loopback/link-local but not metadata IPs
   - redacted_preview control-char stripping
   - ValidationResult type assertions
+  - Phase 123 SSRF-04: console endpoint blocked even with allow_internal=True
 """
 import pytest
 
@@ -21,6 +22,7 @@ from quirk.util.url_allowlist import (
     RC_LINK_LOCAL,
     RC_METADATA_SERVICE_IP,
     RC_SCHEME_PREFIX,
+    RC_CONSOLE_ENDPOINT,  # Phase 123 — does not exist yet; import fails until Plan 01
 )
 
 
@@ -133,3 +135,49 @@ def test_ok_result_has_empty_reason_and_preview():
     assert result.ok is True
     assert result.reason == ""
     assert result.redacted_preview == ""
+
+
+# ---------------------------------------------------------------------------
+# Phase 123 SSRF-04: console endpoint blocked even with allow_internal=True
+# ---------------------------------------------------------------------------
+
+def test_console_endpoint_blocked_with_allow_internal(monkeypatch):
+    """SSRF-04 D-01: console addr blocked even when allow_internal=True.
+
+    Phase 123 RED test: fails until Plan 01 adds RC_CONSOLE_ENDPOINT and
+    the console-address always-block in _classify_ip.
+    """
+    monkeypatch.setenv("QUIRK_SERVE_HOST", "127.0.0.1")
+    monkeypatch.setenv("QUIRK_SERVE_PORT", "8512")
+    r = validate_external_url("http://127.0.0.1:8512/api/scan", allow_internal=True)
+    assert r.ok is False
+    assert r.reason == RC_CONSOLE_ENDPOINT
+
+
+def test_non_console_loopback_allowed_with_allow_internal(monkeypatch):
+    """SSRF-04 D-01: non-console loopback (different port) still passes with allow_internal.
+
+    Preserves chaos-lab behaviour: other loopback services are reachable.
+    Phase 123 RED test: may pass today if the console check is not yet blocking;
+    the primary RED signal comes from test_console_endpoint_blocked_with_allow_internal.
+    """
+    monkeypatch.setenv("QUIRK_SERVE_HOST", "127.0.0.1")
+    monkeypatch.setenv("QUIRK_SERVE_PORT", "8512")
+    r = validate_external_url("http://127.0.0.1:9090/", allow_internal=True)
+    assert r.ok is True
+
+
+def test_console_check_noop_when_not_serving(monkeypatch):
+    """SSRF-04 D-02 graceful degrade: no QUIRK_SERVE_HOST = console check is a no-op.
+
+    When the dashboard is not running, the console check must not block
+    allow_internal loopback traffic (standalone CLI scans must still work).
+    Phase 123 RED test: may pass today; primary RED signal from
+    test_console_endpoint_blocked_with_allow_internal.
+    """
+    monkeypatch.delenv("QUIRK_SERVE_HOST", raising=False)
+    monkeypatch.delenv("QUIRK_SERVE_PORT", raising=False)
+    # Would normally be blocked by loopback check, but allow_internal=True + no
+    # console env vars → console check is a no-op; allow_internal suppresses loopback.
+    r = validate_external_url("http://127.0.0.1:8512/", allow_internal=True)
+    assert r.ok is True
