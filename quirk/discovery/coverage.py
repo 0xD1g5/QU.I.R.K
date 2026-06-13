@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def calculate_coverage(target_count, reachable_hosts, tls_endpoints):
     if target_count == 0:
         return 0.0
@@ -15,7 +20,18 @@ def quantum_readiness_score(findings, endpoints):
     # Penalize deprecated TLS
     for f in findings:
         # Normalize severity case per audit WR-02 (Phase 71): uppercase comparison.
-        severity = str(f["severity"]).upper()
+        # D-01: guard against missing/None severity (SCOREFIX-01).
+        raw_sev = f.get("severity")
+        if raw_sev is None or str(raw_sev).upper() not in (
+            "CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"
+        ):
+            logger.warning(
+                "quantum_readiness_score: finding missing/invalid severity %r"
+                " — treating as LOW",
+                raw_sev,
+            )
+            raw_sev = "LOW"
+        severity = str(raw_sev).upper()
         if severity == "CRITICAL":
             score -= 25
         elif severity == "HIGH":
