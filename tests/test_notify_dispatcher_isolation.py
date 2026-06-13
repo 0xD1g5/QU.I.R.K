@@ -70,7 +70,10 @@ def test_scan_id_commit_failure_does_not_drop_slack_fanout():
     slack_cfg = SlackNotifyCfg(slack_webhook_env="QUIRK_SLACK_WEBHOOK_TEST", dashboard_base_url=None)
     notify_cfg = NotifyCfg(slack=slack_cfg, email=None, webhook=None, trigger_score_floor=5)
 
+    _some_dt = datetime(2026, 6, 13, 12, 0, 0, tzinfo=timezone.utc)
     with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+         patch.object(dispatcher, "_find_two_sessions", return_value=(_some_dt, None)), \
+         patch.object(dispatcher, "compute_trend_report", return_value=report), \
          patch.object(dispatcher, "should_notify", return_value=True), \
          patch.object(dispatcher, "_channel_send_slack") as mock_slack, \
          patch.object(dispatcher, "build_drift_summary", return_value=MagicMock()), \

@@ -23,11 +23,13 @@ from quirk.util.safe_exc import safe_str
 # ---------------------------------------------------------------------------
 try:
     from googleapiclient.discovery import build as _gcp_build
+    from googleapiclient.errors import HttpError as _GcpHttpError
     import google.auth
     from google.auth.exceptions import DefaultCredentialsError
     GCP_AVAILABLE = True
 except ImportError:
     _gcp_build = None           # type: ignore[assignment]
+    _GcpHttpError = None        # type: ignore[assignment]
     google = None               # type: ignore[assignment]
     DefaultCredentialsError = None  # type: ignore[assignment]
     GCP_AVAILABLE = False
@@ -269,7 +271,22 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
                 previous_request=loc_request, previous_response=loc_response
             )
     except Exception as exc:
-        if logger:
+        iam_denied = (
+            _GcpHttpError is not None
+            and isinstance(exc, _GcpHttpError)
+            and int(exc.resp.status) == 403
+        )
+        if iam_denied:
+            err_msg = f"gcp-iam-denied:cloudkms:{safe_str(exc)}"
+            if logger:
+                logger.v(err_msg)
+            results.append(CryptoEndpoint(
+                host=f"gcp://{project_id}/cloudkms",
+                port=0,
+                protocol="GCP",
+                scan_error=err_msg,
+            ))
+        elif logger:
             logger.v(f"Cloud KMS scan error: {exc}")
     return results
 
@@ -335,7 +352,22 @@ def _scan_cloud_sql(service, project_id: str, logger) -> List[CryptoEndpoint]:
                 previous_request=request, previous_response=response
             )
     except Exception as exc:
-        if logger:
+        iam_denied = (
+            _GcpHttpError is not None
+            and isinstance(exc, _GcpHttpError)
+            and int(exc.resp.status) == 403
+        )
+        if iam_denied:
+            err_msg = f"gcp-iam-denied:sqladmin:{safe_str(exc)}"
+            if logger:
+                logger.v(err_msg)
+            results.append(CryptoEndpoint(
+                host=f"gcp://{project_id}/sqladmin",
+                port=0,
+                protocol="GCP",
+                scan_error=err_msg,
+            ))
+        elif logger:
             logger.v(f"Cloud SQL scan error: {exc}")
     return results
 
@@ -393,7 +425,22 @@ def _scan_gcs(service, project_id: str, logger) -> List[CryptoEndpoint]:
                     logger.v(f"GCS bucket scan error for {bucket_name}: {exc}")
 
     except Exception as exc:
-        if logger:
+        iam_denied = (
+            _GcpHttpError is not None
+            and isinstance(exc, _GcpHttpError)
+            and int(exc.resp.status) == 403
+        )
+        if iam_denied:
+            err_msg = f"gcp-iam-denied:storage:{safe_str(exc)}"
+            if logger:
+                logger.v(err_msg)
+            results.append(CryptoEndpoint(
+                host=f"gcp://{project_id}/storage",
+                port=0,
+                protocol="GCP",
+                scan_error=err_msg,
+            ))
+        elif logger:
             logger.v(f"GCS scan error: {exc}")
     return results
 

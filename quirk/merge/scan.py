@@ -96,11 +96,14 @@ def _assemble_union(
     union: List[CryptoEndpoint] = []
 
     # --- Part 1: Latest push per enrolled sensor ----------------------------
-    # Subquery: (sensor_id, max(scanned_at)) for rows with a non-null sensor_id.
+    # Subquery: (sensor_id, max(scanned_at), max(id)) for rows with a non-null sensor_id.
+    # MAX(id) is a secondary tiebreak: when two rows share the same scanned_at,
+    # only the highest-id row is selected — guarantees exactly one row per sensor.
     sub = (
         db.query(
             CryptoEndpoint.sensor_id,
             func.max(CryptoEndpoint.scanned_at).label("max_ts"),
+            func.max(CryptoEndpoint.id).label("max_id"),
         )
         .filter(CryptoEndpoint.sensor_id.isnot(None))
         .group_by(CryptoEndpoint.sensor_id)
@@ -111,7 +114,8 @@ def _assemble_union(
         .join(
             sub,
             (CryptoEndpoint.sensor_id == sub.c.sensor_id)
-            & (CryptoEndpoint.scanned_at == sub.c.max_ts),
+            & (CryptoEndpoint.scanned_at == sub.c.max_ts)
+            & (CryptoEndpoint.id == sub.c.max_id),
         )
         .all()
     )

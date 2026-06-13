@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
 
 # Phase 72 D-08: KMS key states that cannot encrypt new data — skip during scan.
 _KMS_SKIP_STATES = frozenset({"Disabled", "PendingDeletion", "PendingImport", "Unavailable"})
@@ -383,8 +384,24 @@ def _scan_kms(session, logger) -> List[CryptoEndpoint]:
                     if logger:
                         logger.v(f"KMS describe_key failed for {key_id}: {exc}")
     except Exception as exc:
-        if logger:
-            logger.v(f"KMS scan error: {exc}")
+        try:
+            from botocore.exceptions import ClientError as _BotoClientError
+            _IAM_CODES = frozenset({"AccessDeniedException", "AccessDenied", "UnauthorizedOperation"})
+            if isinstance(exc, _BotoClientError) and exc.response["Error"]["Code"] in _IAM_CODES:
+                err_msg = f"aws-iam-denied:kms:{safe_str(exc)}"
+                if logger:
+                    logger.v(err_msg)
+                results.append(CryptoEndpoint(
+                    host="aws://kms",
+                    port=0,
+                    protocol="AWS",
+                    scan_error=err_msg,
+                ))
+            elif logger:
+                logger.v(f"KMS scan error: {exc}")
+        except ImportError:
+            if logger:
+                logger.v(f"KMS scan error: {exc}")
     return results
 
 

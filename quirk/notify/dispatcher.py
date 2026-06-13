@@ -175,10 +175,18 @@ def dispatch_notifications(
     # Derive the canonical scan_id from the current session timestamp
     scan_id = current_ts.isoformat()
 
-    # Bonus: populate run.scan_id when not already set (useful for audit queries)
+    # Bonus: populate run.scan_id when not already set (useful for audit queries).
+    # Isolated try/except so a transient DB error never aborts the fan-out (DIST-02).
     if run.scan_id is None:
-        run.scan_id = scan_id
-        db.commit()
+        try:
+            run.scan_id = scan_id
+            db.commit()
+        except Exception as _scan_id_exc:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "dispatch_notifications: run.scan_id commit failed (non-fatal): %s",
+                _scan_id_exc,
+            )
 
     # Build the shared content model once — all channel formatters consume this
     dashboard_base_url: Optional[str] = None
