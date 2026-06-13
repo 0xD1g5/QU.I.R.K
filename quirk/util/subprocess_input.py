@@ -51,6 +51,7 @@ RC_PATH_TRAVERSAL: Final[str] = "path_traversal"
 RC_NONEXISTENT_PATH: Final[str] = "nonexistent_path"
 RC_INVALID_IMAGE_REF: Final[str] = "invalid_image_ref"
 RC_LEADING_DASH: Final[str] = "leading_dash"
+RC_PATH_SHAPED_REF: Final[str] = "path_shaped_ref"  # SSRF-03 / SP-04: path-shaped ref (e.g. etc/passwd) to syft
 
 
 # ---------------------------------------------------------------------------
@@ -171,5 +172,18 @@ def validate_image_ref(r: str) -> ValidationResult:
 
     if not _IMAGE_REF_RE.match(r):
         return ValidationResult(False, RC_INVALID_IMAGE_REF, _redact_preview(r))
+
+    # SSRF-03 / SP-04: reject path-shaped refs (e.g. ``etc/passwd``) before syft.
+    # OCI Distribution Spec registry-authority rule: when a ref contains ``/``, the
+    # first segment is the registry host and MUST look like one — contain a ``.``
+    # (domain) or ``:`` (host:port), or be the literal ``localhost``. A first
+    # segment that is a bare word (``etc``, ``home``, ``tmp``, ``library``) is a
+    # filesystem path, not a registry. Docker Hub two-part short-form
+    # (``library/ubuntu``) is intentionally blocked here — use the bare name
+    # (``ubuntu``) or a fully-qualified ref (``docker.io/library/ubuntu``).
+    if "/" in r:
+        first_seg = r.split("/", 1)[0]
+        if "." not in first_seg and ":" not in first_seg and first_seg != "localhost":
+            return ValidationResult(False, RC_PATH_SHAPED_REF, _redact_preview(r))
 
     return ValidationResult(True, "", "")
