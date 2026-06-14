@@ -1308,6 +1308,35 @@ services:
       - "20100:8000"
     restart: unless-stopped
 
+  # =========================
+  # PHASE 127 / HWCOMPAT-02 — HWCOMPAT PROFILE (profile: hwcompat)
+  # Hardware fingerprinting validation lab:
+  #   hwcompat-ssh:  OpenSSH server — unrecognized banner path (port 20221)
+  #   hwcompat-http: HPE-iLO HTTP management header server (port 20222)
+  # lab.sh ALL_PROFILES needs NO edit — _derive_all_profiles discovers this
+  # profile dynamically by parsing docker-compose.yml at runtime.
+  # =========================
+  hwcompat-ssh:
+    image: lscr.io/linuxserver/openssh-server:10.2_p1-r0-ls225
+    environment:
+      - PASSWORD_ACCESS=true
+      - USER_NAME=test
+      - USER_PASSWORD=test
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    profiles: ["hwcompat"]
+    ports:
+      - "20221:2222"
+
+  hwcompat-http:
+    image: nginx:1.28.0
+    profiles: ["hwcompat"]
+    ports:
+      - "20222:80"
+    volumes:
+      - ./hwcompat/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
 volumes:
   id_postgres_data:
   stepca_data:
