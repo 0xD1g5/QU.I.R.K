@@ -3650,9 +3650,9 @@ Each finding object contains:
 - Output contains `(see full report for details)`
 - No hardware counter appears in the score section
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________  
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-06-14  **Tester:** Rob DiGirolamo  
+**Notes:** `[Hardware Advisory — not scored]` block appeared with correct tier counts.
 
 ---
 
@@ -3676,9 +3676,9 @@ Each finding object contains:
 - Section label indicates "not included in readiness score"
 - No `<script>` injection possible (scanner values are HTML-escaped)
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** __________  **Tester:** __________  
-**Notes:**
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-06-14  **Tester:** Rob DiGirolamo  
+**Notes:** Collapsible "Hardware PQC Advisory" section appeared with tier-colored Tier 2 badge and CNSA 2.0 timeline. Two bugs required fixes: (1) wrong import path `quirk.util.db` → `quirk.db` in writer.py silently failed inside except block; (2) missing `| safe` filter in report.html.j2 caused Jinja2 autoescape to render HTML as literal text.
 
 ---
 
