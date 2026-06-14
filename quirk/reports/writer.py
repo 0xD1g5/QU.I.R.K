@@ -18,6 +18,7 @@ from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.cbom import build_cbom, write_cbom_files
+from quirk.cbom.bridge import _detect_crypto_bridges  # Phase 129 HWCOMPAT-03
 from quirk.reports.html_renderer import render_html_report, render_pdf_report
 from quirk.reports.docx_renderer import render_docx_report
 
@@ -246,7 +247,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     except Exception:
         import logging as _log
         _log.getLogger(__name__).warning("hardware advisory section skipped (non-fatal)", exc_info=True)
-    exec_content.hardware_devices = hardware_devices
+    exec_content.hardware_devices = _detect_crypto_bridges(hardware_devices)
 
     # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model
     exec_md = build_exec_markdown(cfg, endpoints, findings, exec_content=exec_content)
@@ -311,7 +312,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         _json_dump(stats_path, run_stats)
 
     # 5) CBOM artifacts
-    cbom = build_cbom(endpoints)
+    cbom = build_cbom(endpoints, hw_devices=exec_content.hardware_devices)
     cbom_json_path, cbom_xml_path = write_cbom_files(
         cbom, outdir, stamp, error_endpoints=error_endpoints
     )

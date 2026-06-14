@@ -422,5 +422,13 @@ def build_exec_markdown(
             f"See full report for device-level detail."
         )
         lines.append("")
+        # Phase 129 D-05: bridge topology disclaimer — fires only when bridge pairs detected.
+        if any(d.get("bridge_status") == "partial_only" for d in hw_devs):
+            lines.append(
+                "> Gateway-level PQC mitigation is partial only (backend directly "
+                "reachable in this scan window); upstream_mitigated classification "
+                "requires SNMP topology data (planned for v5.8)."
+            )
+            lines.append("")
 
     return "\n".join(lines)

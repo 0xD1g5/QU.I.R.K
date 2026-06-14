@@ -81,3 +81,29 @@ def test_no_hw_backward_compat():
     """HWCOMPAT-05: build_cbom() with no hw_devices kwarg must produce zero FIRMWARE components (backward compat)."""
     bom = build_cbom([])
     assert not any(c.type == ComponentType.FIRMWARE for c in bom.components)
+
+
+def test_bridge_status_property_emitted():
+    """HWCOMPAT-05: when bridge_status='partial_only' in dict, quirk:hw-bridge-status property must be present."""
+    bom = build_cbom([], hw_devices=[_hw_dict(bridge_status="partial_only")])
+    fw_comp = next(
+        (c for c in bom.components if c.type == ComponentType.FIRMWARE), None
+    )
+    assert fw_comp is not None
+    prop_names = {p.name for p in fw_comp.properties}
+    assert "quirk:hw-bridge-status" in prop_names
+    bridge_val = next(
+        p.value for p in fw_comp.properties if p.name == "quirk:hw-bridge-status"
+    )
+    assert bridge_val == "partial_only"
+
+
+def test_no_bridge_status_property_when_none():
+    """HWCOMPAT-05: when bridge_status is absent from dict, quirk:hw-bridge-status property must NOT be emitted."""
+    bom = build_cbom([], hw_devices=[_hw_dict(bridge_status=None)])
+    fw_comp = next(
+        (c for c in bom.components if c.type == ComponentType.FIRMWARE), None
+    )
+    assert fw_comp is not None
+    prop_names = {p.name for p in fw_comp.properties}
+    assert "quirk:hw-bridge-status" not in prop_names

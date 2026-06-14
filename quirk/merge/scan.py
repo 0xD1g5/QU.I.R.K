@@ -9,6 +9,7 @@ result as a MergeRun row — without rewriting the source endpoints' scanned_at.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -16,8 +17,11 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from quirk.cbom.bridge import _detect_crypto_bridges  # Phase 129 HWCOMPAT-03
 from quirk.cbom.builder import build_cbom
 from quirk.cbom.writer import write_cbom_files
+
+logger = logging.getLogger(__name__)
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.models import CryptoEndpoint, MergeRun, Sensor
@@ -225,7 +229,35 @@ def merge_scan(
     score_result = compute_readiness_score(evidence, profile=profile, weights=weights)
 
     # 5. Build CBOM over the full union and write artifacts (CR-01)
-    bom = build_cbom(union)
+    # Phase 129 HWCOMPAT-03/05: load HardwareDevice rows for bridge detection + CBOM Pass 4.
+    # Mirrors writer.py lines 209-248 pattern. Convert to dicts INSIDE this scope to
+    # avoid DetachedInstanceError (Pitfall 6 in RESEARCH.md).
+    hw_devices_for_cbom: list[dict] = []
+    try:
+        from datetime import timedelta as _td
+        from sqlalchemy import func as _sqla_func
+        from quirk.models import HardwareDevice as _HWDev
+        latest_hw_ts = db.query(_sqla_func.max(_HWDev.scanned_at)).scalar()
+        if latest_hw_ts is not None:
+            _window = _td(seconds=1)
+            _hw_rows = db.query(_HWDev).filter(
+                _HWDev.scanned_at >= latest_hw_ts - _window,
+                _HWDev.scanned_at <= latest_hw_ts + _window,
+            ).all()
+            for _d in _hw_rows:
+                _tier = getattr(_d, "remediation_tier", "Tier N/A") or "Tier N/A"
+                hw_devices_for_cbom.append({
+                    "vendor": _d.vendor,
+                    "model": _d.model,
+                    "host": _d.host,
+                    "port": _d.port,
+                    "pqc_status": _d.pqc_status,
+                    "remediation_tier": _tier,
+                    "confidence": _d.confidence,
+                })
+    except Exception:
+        logger.warning("hw_devices load for CBOM skipped (non-fatal)", exc_info=True)
+    bom = build_cbom(union, hw_devices=_detect_crypto_bridges(hw_devices_for_cbom))
     cbom_json_path: Optional[str] = None
     cbom_xml_path: Optional[str] = None
     if output_dir is not None:
