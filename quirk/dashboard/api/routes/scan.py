@@ -711,10 +711,18 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
     Advisory-only (Phase 128 HWCOMPAT-SCORE-LOCK) — wrapped in try/except so
     any DB or mapping error is non-fatal and returns an empty list.  Mirrors the
     _derive_motion_findings timedelta(seconds=1) window pattern.
+
+    Uses MAX(HardwareDevice.scanned_at) as the window anchor rather than the
+    passed latest_ts (which is anchored on CryptoEndpoint.scanned_at). Hardware
+    fingerprinting runs after SSH endpoint collection, so hw timestamps are
+    typically later; using the crypto anchor risks missing all devices under load.
     """
     try:
-        window_start = latest_ts - timedelta(seconds=1)
-        window_end = latest_ts + timedelta(seconds=1)
+        hw_anchor = db.query(func.max(HardwareDevice.scanned_at)).scalar()
+        if hw_anchor is None:
+            return []
+        window_start = hw_anchor - timedelta(seconds=1)
+        window_end = hw_anchor + timedelta(seconds=1)
         devices = (
             db.query(HardwareDevice)
             .filter(

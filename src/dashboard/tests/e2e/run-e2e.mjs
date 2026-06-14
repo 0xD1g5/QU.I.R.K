@@ -46,6 +46,7 @@ const CONNECT_POLL_MS = 250
 const ROUTES = [
   '/', '/findings', '/identity', '/motion', '/data-at-rest', '/certificates',
   '/cbom', '/roadmap', '/trends', '/scans', '/sensors', '/schedules', '/qramm',
+  '/hardware', '/compare',
 ]
 
 // Shared third-party console allowlist (same file the a11y harness uses).
