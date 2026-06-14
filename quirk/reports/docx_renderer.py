@@ -12,10 +12,13 @@ D-12: structural fidelity (cover / exec / findings / roadmap / score sections,
        Word Heading 1/2 styles, native tables, editable default styles) and a
        clearly-marked logo placeholder paragraph for consultant editing.
 """
+import logging
 import os
 import sys
 from datetime import datetime, timezone
 from typing import Any, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -42,7 +45,11 @@ def _set_table_style(tbl, style_name: str = "Table Grid") -> None:
     try:
         tbl.style = style_name
     except (KeyError, Exception):
-        pass  # Fall back to python-docx default table style
+        logger.warning(
+            "Failed to apply table style %r — using default table style.",
+            style_name,
+            exc_info=True,
+        )
 
 
 def _set_col_widths(tbl, inches_list) -> None:
@@ -63,7 +70,10 @@ def _set_col_widths(tbl, inches_list) -> None:
                 if idx < len(row.cells):
                     row.cells[idx].width = Inches(w)
     except Exception:
-        pass
+        logger.warning(
+            "Failed to set column widths on table — using default sizing.",
+            exc_info=True,
+        )
 
 
 def render_docx_report(
@@ -151,7 +161,10 @@ def render_docx_report(
             section.orientation = WD_ORIENT.LANDSCAPE
             section.page_width, section.page_height = section.page_height, section.page_width
     except Exception:
-        pass
+        logger.warning(
+            "Failed to set landscape orientation — using default page orientation.",
+            exc_info=True,
+        )
 
     # ---- Cover block ----
     # 1. Logo placeholder paragraph (D-12 / 100-UI-SPEC.md §C — exact verbatim string)
@@ -363,6 +376,10 @@ def render_docx_report(
     try:
         doc.save(path)
     except Exception as e:
+        logger.warning(
+            "DOCX export failed while writing to output path.",
+            exc_info=True,
+        )
         print(
             f"DOCX export failed while writing {path}: {e}",
             file=sys.stderr,
