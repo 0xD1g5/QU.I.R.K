@@ -60,6 +60,10 @@ DAR_SKIP_PROTOCOLS: frozenset[str] = frozenset({
     "GCP", "CLOUD_SQL",
 })
 
+HARDWARE_PROTOCOLS: frozenset[str] = frozenset({
+    "HARDWARE",  # defensive sentinel — HWCOMPAT-05 (Phase 129)
+})
+
 
 # ---------------------------------------------------------------------------
 # New-protocol helper functions
@@ -468,17 +472,23 @@ def _sensor_prefix(ep) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
-def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
+def build_cbom(
+    endpoints: list[CryptoEndpoint],
+    hw_devices: list[dict] | None = None,
+) -> Bom:
     """Convert a list of CryptoEndpoint scan results into a CycloneDX Bom.
 
     Processing order:
     1. Pass 1 — collect deduplicated algorithm components (keyed by bom_ref)
     2. Pass 2 — build certificate components (one per TLS endpoint with cert info)
     3. Pass 3 — build protocol components (one per endpoint)
-    4. Assemble Bom with metadata
+    4. Pass 4 (NEW, Phase 129): Hardware FIRMWARE components from hw_devices.
+    5. Assemble Bom with metadata
 
     Args:
         endpoints: List of CryptoEndpoint ORM objects from a scan run.
+        hw_devices: list of annotated hw_device dicts (from _detect_crypto_bridges()).
+                    None or [] skips Pass 4 entirely (backward-compatible).
 
     Returns:
         A CycloneDX Bom instance with CRYPTOGRAPHIC_ASSET components.
@@ -487,6 +497,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
     algo_registry: dict[str, Component] = {}
     cert_components: list[Component] = []
     protocol_components: list[Component] = []
+    hw_components: list[Component] = []
     # D-06: accumulate affirmative no-crypto markers during Pass-1; attach after assembly
     coverage_notes: list[str] = []
 
@@ -709,6 +720,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             "OPENAPI",    # Phase 94 SPEC-01: spec findings carry no X.509 cert — algorithm registered in Pass-1
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
+            *HARDWARE_PROTOCOLS,  # HWCOMPAT-05: defensive skip for hardware endpoints (Phase 129)
         ):
             # BEARER_TOKEN (Phase 94 TOKEN-02) and JWT have no X.509 cert components —
             # their algorithm was already registered in Pass 1.
@@ -909,6 +921,7 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             "OPENAPI",    # Phase 94 SPEC-01: no ProtocolProperties; skipped to prevent phantom protocol:tls components
             *DAR_SKIP_PROTOCOLS,
             *MOTION_PLAINTEXT_PROTOCOLS,
+            *HARDWARE_PROTOCOLS,  # HWCOMPAT-05: defensive skip for hardware endpoints (Phase 129)
         ):
             # These are not TLS/SSH network protocols — no ProtocolProperties component.
             # Their cryptographic assets are captured in Pass 1 (algorithms) and Pass 2 (certificates).
@@ -959,10 +972,34 @@ def build_cbom(endpoints: list[CryptoEndpoint]) -> Bom:
             protocol_components.append(proto_component)
 
     # ------------------------------------------------------------------ #
+    # Pass 4 — Hardware FIRMWARE components (HWCOMPAT-05, Phase 129)      #
+    # ------------------------------------------------------------------ #
+    if hw_devices:
+        for dev in hw_devices:
+            host = str(dev.get("host", "unknown"))
+            port = str(dev.get("port", "0"))
+            props = [
+                Property(name="quirk:hw-vendor",           value=safe_str(str(dev.get("vendor", "Unknown")))),
+                Property(name="quirk:hw-pqc-supported",    value=str(dev.get("pqc_status", "unknown"))),
+                Property(name="quirk:hw-remediation-tier", value=str(dev.get("remediation_tier", "Tier N/A"))),
+            ]
+            bridge = dev.get("bridge_status")
+            if bridge is not None:
+                props.append(Property(name="quirk:hw-bridge-status", value=str(bridge)))
+            hw_components.append(
+                Component(
+                    name=f"hw:{host}:{port}",
+                    type=ComponentType.FIRMWARE,
+                    bom_ref=f"hw/{host}:{port}",
+                    properties=props,
+                )
+            )
+
+    # ------------------------------------------------------------------ #
     # Assemble Bom                                                         #
     # ------------------------------------------------------------------ #
     all_components = (
-        list(algo_registry.values()) + cert_components + protocol_components
+        list(algo_registry.values()) + cert_components + protocol_components + hw_components
     )
 
     root_component = Component(

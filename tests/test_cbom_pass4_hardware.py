@@ -57,7 +57,7 @@ def test_firmware_properties_present():
     """HWCOMPAT-05: FIRMWARE component must carry quirk:hw-vendor, quirk:hw-pqc-supported, quirk:hw-remediation-tier properties."""
     bom = build_cbom([], hw_devices=[_hw_dict()])
     fw_comp = next(
-        (c for c in bom.components if c.bom_ref == "hw/192.168.1.22:22"), None
+        (c for c in bom.components if str(c.bom_ref) == "hw/192.168.1.22:22"), None
     )
     assert fw_comp is not None
     prop_names = {p.name for p in fw_comp.properties}

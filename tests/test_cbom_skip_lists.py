@@ -17,6 +17,7 @@ import pytest
 
 from quirk.cbom.builder import (
     DAR_SKIP_PROTOCOLS,
+    HARDWARE_PROTOCOLS,   # Phase 129 HWCOMPAT-05
     MOTION_PLAINTEXT_PROTOCOLS,
     build_cbom,
 )
@@ -51,11 +52,14 @@ def test_skip_list_constants_are_nonempty():
     assert len(DAR_SKIP_PROTOCOLS) > 0, (
         "DAR_SKIP_PROTOCOLS is empty — Pass 2/3 skip coverage is now zero."
     )
+    assert len(HARDWARE_PROTOCOLS) > 0, (
+        "HARDWARE_PROTOCOLS is empty — HWCOMPAT-05 Pass 2/3 hardware skip coverage is zero."
+    )
 
 
 @pytest.mark.parametrize(
     "protocol",
-    sorted(MOTION_PLAINTEXT_PROTOCOLS | DAR_SKIP_PROTOCOLS),
+    sorted(MOTION_PLAINTEXT_PROTOCOLS | DAR_SKIP_PROTOCOLS | HARDWARE_PROTOCOLS),
 )
 def test_skip_protocol_emits_no_cert_or_proto_component(protocol):
     """Pass 2 (cert) AND Pass 3 (protocol) must both skip the listed
