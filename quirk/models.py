@@ -384,3 +384,4 @@ class HardwareDevice(Base):
     fingerprint_method = Column(String(32),  nullable=False)      # enum: see class docstring
     raw_banner         = Column(Text,        nullable=True)
     scanned_at         = Column(DateTime,    nullable=False)
+    remediation_tier   = Column(String(16),  nullable=False, default="N/A")  # Phase 128 D-02
