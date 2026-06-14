@@ -206,6 +206,30 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     intelligence_path = os.path.join(outdir, f"intelligence-{stamp}.json")
     _json_dump(intelligence_path, intelligence)
 
+    # Phase 128 D-08: load HardwareDevice rows for hardware advisory section.
+    # Advisory-only — non-fatal; uses advisory path (NOT _build_finding / findings_evaluator).
+    hardware_devices: list = []
+    try:
+        from quirk.models import HardwareDevice as _HWDev
+        from quirk.util.db import get_session as _get_session
+        with _get_session(cfg.output.db_path) as _hw_sess:
+            _hw_rows = _hw_sess.query(_HWDev).all()
+            for _d in _hw_rows:
+                hardware_devices.append({
+                    "vendor":             _d.vendor,
+                    "model":              _d.model,
+                    "host":               _d.host,
+                    "port":               _d.port,
+                    "pqc_status":         _d.pqc_status,
+                    "remediation_tier":   getattr(_d, "remediation_tier", "N/A") or "N/A",
+                    "confidence":         _d.confidence,
+                    "fingerprint_method": _d.fingerprint_method,
+                    "eol_date":           _d.eol_date.isoformat() if _d.eol_date else None,
+                })
+    except Exception:
+        pass  # advisory-only, non-fatal
+    exec_content.hardware_devices = hardware_devices
+
     # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model
     exec_md = build_exec_markdown(cfg, endpoints, findings, exec_content=exec_content)
     exec_path = os.path.join(outdir, f"executive-summary-{stamp}.md")

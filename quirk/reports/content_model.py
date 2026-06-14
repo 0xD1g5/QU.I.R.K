@@ -79,6 +79,10 @@ class ExecContent:
     # TRANS-03 / D-06: severity counts computed once; feeds congruence guard + both renderers
     sev_counts: Dict[str, int]  # {"CRITICAL": n, "HIGH": n, ...}
 
+    # Phase 128 D-08: hardware advisory — populated by writer.py from HardwareDevice rows
+    # Advisory-only; never routed through _build_finding() / findings_evaluator.py (D-08 DISPOSITION).
+    hardware_devices: List[dict] = field(default_factory=list)
+
 
 # ---------------------------------------------------------------------------
 # D-04: Ordering dicts for within-bucket priority sort
