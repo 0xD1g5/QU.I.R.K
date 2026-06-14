@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Date, DateTime, Text, Float, ForeignKey
 
 Base = declarative_base()
 
@@ -356,3 +356,31 @@ class MergeRun(Base):
     sensor_count          = Column(Integer,    nullable=False, default=0)
     score                 = Column(Integer,    nullable=True)
     coverage_warning_json = Column(Text,       nullable=True)  # JSON or NULL
+
+
+class HardwareDevice(Base):
+    """Agentless hardware fingerprint record (Phase 127 — HWCOMPAT-01).
+
+    Populated by quirk/scanner/hardware_scanner.py from SSH banners and HTTP
+    management interface probes. Advisory-only: no score impact (D-01).
+
+    No relationship() declarations — project uses plain Column style exclusively.
+    pqc_status values: supported | partial | unsupported | unknown | VENDOR-SILENT
+    confidence values: high | medium | low | unknown
+    fingerprint_method values: ssh_banner | http_mgmt | unknown
+    """
+
+    __tablename__ = "hardware_devices"
+
+    id                 = Column(Integer,     primary_key=True, autoincrement=True)
+    scan_id            = Column(Integer,     nullable=True)       # FK -> crypto_endpoints.id (no DB constraint; SQLite)
+    host               = Column(String(255), nullable=False)
+    port               = Column(Integer,     nullable=False)
+    vendor             = Column(String(255), nullable=False)      # "Unknown" when unrecognized (D-06)
+    model              = Column(String(255), nullable=True)
+    pqc_status         = Column(String(32),  nullable=False)      # enum: see class docstring
+    eol_date           = Column(Date,        nullable=True)
+    confidence         = Column(String(16),  nullable=False)      # enum: see class docstring
+    fingerprint_method = Column(String(32),  nullable=False)      # enum: see class docstring
+    raw_banner         = Column(Text,        nullable=True)
+    scanned_at         = Column(DateTime,    nullable=False)
