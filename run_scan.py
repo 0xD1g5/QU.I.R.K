@@ -195,6 +195,37 @@ def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
         pass
 
 
+def _print_hardware_summary(devices: list, log) -> None:
+    """Print advisory-only hardware tier summary to logger (Phase 128 D-07).
+
+    Format::
+
+        [Hardware Advisory — not scored]
+          Devices: N | Tier 1: X | Tier 2: Y | Tier 3: Z | N/A: W
+          (see full report for details)
+
+    Called after the HardwareDevice DB persist block in run_scan. No-op when
+    ``devices`` is empty. Hardware findings are advisory-only and do not affect
+    the readiness score (D-01/D-06 HWCOMPAT-SCORE-LOCK).
+    """
+    if not devices:
+        return
+    tier_counts: dict = {}
+    for dev in devices:
+        t = getattr(dev, "remediation_tier", "N/A") or "N/A"
+        tier_counts[t] = tier_counts.get(t, 0) + 1
+    log.info(
+        "[Hardware Advisory — not scored]\n"
+        "  Devices: %d | Tier 1: %d | Tier 2: %d | Tier 3: %d | N/A: %d\n"
+        "  (see full report for details)",
+        len(devices),
+        tier_counts.get("Tier 1", 0),
+        tier_counts.get("Tier 2", 0),
+        tier_counts.get("Tier 3", 0),
+        tier_counts.get("Tier N/A", 0),
+    )
+
+
 def _collect_stage_partial_failures(
     run_stats: dict,
     stage: str,
@@ -1358,6 +1389,10 @@ def main():
             # (before classified_details overwrite — D-03)
             hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
             _hw_batch.extend(fingerprint_hardware(eps, timeout=hw_timeout, logger=logger))
+            # Phase 128 HWCOMPAT-04: assign remediation tier to each fingerprinted device
+            from quirk.scanner.hardware_tier import assign_tier
+            for _dev in _hw_batch:
+                _dev.remediation_tier = assign_tier(_dev)
             for ep in eps:
                 key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
                 ep.service_detail = classified_details.get(key, "")
@@ -1379,6 +1414,7 @@ def main():
                     f"Hardware fingerprint DB write failed (advisory-only, non-fatal): "
                     f"{safe_str(_hw_err)}"
                 )
+            _print_hardware_summary(_hw_batch, logger)  # Phase 128 D-07
         _ssh_pf = _collect_stage_partial_failures(run_stats, "ssh", error_endpoints, _err_before_ssh)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "ssh",
