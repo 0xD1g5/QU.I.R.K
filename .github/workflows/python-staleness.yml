@@ -31,6 +31,7 @@ jobs:
             tests/test_compliance_freshness.py \
             tests/test_error_codes_freshness.py \
             tests/test_cmvp_freshness.py \
+            tests/test_hardware_staleness.py \
             -v
 
       - name: Run install-error unit checks
