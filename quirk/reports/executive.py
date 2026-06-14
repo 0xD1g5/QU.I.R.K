@@ -425,9 +425,16 @@ def build_exec_markdown(
         # Phase 129 D-05: bridge topology disclaimer — fires only when bridge pairs detected.
         if any(d.get("bridge_status") == "partial_only" for d in hw_devs):
             lines.append(
-                "> Gateway-level PQC mitigation is partial only (backend directly "
-                "reachable in this scan window); upstream_mitigated classification "
-                "requires SNMP topology data (planned for v5.8)."
+                "> **Important — Partial Protection Detected.** This scan identified "
+                "network devices where quantum-safe encryption is in place at one point "
+                "in the connection path, but legacy (non-quantum-safe) devices on the "
+                "same network segment remain directly reachable. This means an attacker "
+                "could bypass the quantum-safe device and target the unprotected backend "
+                "directly. The protection shown above should be considered **incomplete** "
+                "until all devices on each network segment are upgraded. A full network "
+                "topology assessment (including routing and SNMP data) is required to "
+                "confirm end-to-end quantum-safe coverage — this capability is on "
+                "the roadmap for the next assessment cycle."
             )
             lines.append("")
 
