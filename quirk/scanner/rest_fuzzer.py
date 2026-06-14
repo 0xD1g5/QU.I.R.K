@@ -584,6 +584,12 @@ def run_fuzz_scan(
             except Exception as exc:
                 logger.debug("Cipher probe error: %s", safe_str(str(exc)))
 
+    # AUDIT-02: per-scan dedup set — each finding type is emitted at most once per
+    # run_fuzz_scan call, regardless of how many operations match.  Keyed by the
+    # service_detail literal so hsts_missing and http_creds are deduplicated
+    # independently and cannot suppress each other.
+    _dedup_seen: set = set()
+
     # Enumerate GET-only operations via schemathesis (FUZZ-02 guardrail 1)
     try:
         schema = schemathesis.openapi.from_dict(spec_dict)
@@ -672,8 +678,9 @@ def run_fuzz_scan(
 
             # ---- Crypto probes ----
 
-            # HSTS probe
-            if probe_hsts(resp_headers):
+            # HSTS probe (AUDIT-02: emit at most once per scan via _dedup_seen)
+            if probe_hsts(resp_headers) and "hsts_missing" not in _dedup_seen:
+                _dedup_seen.add("hsts_missing")
                 findings.append(CryptoEndpoint(
                     host=host,
                     port=port,
@@ -686,10 +693,11 @@ def run_fuzz_scan(
             # (TLS-downgrade + cipher probes are connection-level and run once before this
             # loop — see the CR-02 block above. Not repeated per request.)
 
-            # HTTP-only credential probe:
+            # HTTP-only credential probe (AUDIT-02: emit at most once per scan via _dedup_seen):
             # ONLY fires for spec-declared http:// endpoints (Open Question 2 resolution).
             # NEVER downgrades https:// URLs to http://.
-            if _is_http_url(url) and cred_ctx is not None:
+            if _is_http_url(url) and cred_ctx is not None and "http_creds" not in _dedup_seen:
+                _dedup_seen.add("http_creds")
                 findings.append(CryptoEndpoint(
                     host=host,
                     port=port,
