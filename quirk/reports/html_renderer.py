@@ -178,6 +178,87 @@ def _load_logo_b64(logo_path):
         return None, "png"
 
 
+def render_hardware_section(devices: list) -> str:
+    """Generate HTML advisory table for hardware devices (Phase 128 D-10).
+
+    Returns a collapsible <details> block with tier-colored badges.
+    Tier 1 = red, Tier 2 = orange, Tier 3 = blue, N/A = gray.
+    Advisory-only — clearly labeled; never in the score section.
+    Returns "" when no devices are present.
+    """
+    if not devices:
+        return ""
+
+    TIER_ORDER = {"Tier 1": 0, "Tier 2": 1, "Tier 3": 2, "Tier N/A": 3}
+    TIER_COLORS = {
+        "Tier 1":   "#dc2626",  # red
+        "Tier 2":   "#ea580c",  # orange
+        "Tier 3":   "#3b82f6",  # blue
+        "Tier N/A": "#6b7280",  # gray
+    }
+    CNSA_DEADLINE = {
+        "Tier 1":   "Replace by 2030 (CNSA 2.0 deadline)",
+        "Tier 2":   "Firmware upgrade target: 2030-2033",
+        "Tier 3":   "Accept and monitor; re-evaluate by 2033",
+        "Tier N/A": "EOL before PQC migration window",
+    }
+
+    sorted_devs = sorted(
+        devices,
+        key=lambda d: TIER_ORDER.get(d.get("remediation_tier", ""), 99),
+    )
+
+    rows_html = []
+    for d in sorted_devs:
+        tier = d.get("remediation_tier", "Tier N/A")
+        color = TIER_COLORS.get(tier, "#6b7280")
+        badge = (
+            f'<span style="background:{color};color:#fff;padding:2px 7px;'
+            f'border-radius:4px;font-size:11px;font-weight:600">{tier}</span>'
+        )
+        host_port = f"{d.get('host', '')}:{d.get('port', '')}"
+        eol = d.get("eol_date") or "—"
+        cnsa = CNSA_DEADLINE.get(tier, "")
+        rows_html.append(
+            f"<tr>"
+            f"<td>{badge}</td>"
+            f"<td>{d.get('vendor', '')}</td>"
+            f"<td>{d.get('model') or 'Unknown'}</td>"
+            f"<td><code>{host_port}</code></td>"
+            f"<td>{d.get('pqc_status', '')}</td>"
+            f"<td>{d.get('confidence', '')}</td>"
+            f"<td>{eol}</td>"
+            f"<td>{cnsa}</td>"
+            f"</tr>"
+        )
+
+    rows_joined = "\n".join(rows_html)
+    return (
+        '<details style="margin:24px 0">'
+        '<summary style="cursor:pointer;font-weight:600;color:#3b9dff">'
+        "Hardware PQC Advisory &#x25BC; &nbsp;"
+        '<span style="font-weight:400;color:#888;font-size:12px">'
+        "not included in readiness score</span></summary>"
+        '<div style="margin-top:12px">'
+        '<p style="font-size:12px;color:#888;margin-bottom:8px">'
+        "Advisory only — hardware findings are not scored and do not affect the"
+        " readiness score. Listed for CNSA 2.0 migration planning purposes only.</p>"
+        '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+        "<thead><tr>"
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Tier</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Vendor</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Model</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Host:Port</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">PQC Status</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Confidence</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">EOL Date</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">CNSA 2.0 Timeline</th>'
+        "</tr></thead>"
+        f"<tbody>{rows_joined}</tbody>"
+        "</table></div></details>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -271,6 +352,11 @@ def render_html_report(
     logo_path = getattr(getattr(cfg, "assessment", None), "logo_path", None)
     logo_b64, logo_mime = _load_logo_b64(logo_path)
 
+    # Phase 128 D-10: render hardware advisory section (advisory-only, not scored)
+    hardware_section = render_hardware_section(
+        exec_content.hardware_devices if exec_content is not None else []
+    )
+
     html = template.render(
         org_name=getattr(getattr(cfg, "assessment", None), "name", "Unknown"),
         report_owner=getattr(getattr(cfg, "assessment", None), "report_owner", ""),
@@ -295,6 +381,8 @@ def render_html_report(
         narrative_lead=narrative_lead,
         narrative_drivers=narrative_drivers,
         top_risks=top_risks,
+        # Phase 128 D-10: hardware advisory section (pre-rendered HTML string)
+        hardware_section=hardware_section,
         # Phase 100 / FMT-01 / D-01: logo embed for cover page
         logo_b64=logo_b64,
         logo_mime=logo_mime,

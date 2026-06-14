@@ -497,6 +497,8 @@
     </div>
     {% endif %}
     {% endfor %}
+    {# Phase 128 D-10: hardware advisory section — advisory-only, not scored #}
+    {% if hardware_section %}{{ hardware_section }}{% endif %}
   </section>
 
   <!-- ===== TECHNICAL APPENDIX ===== -->

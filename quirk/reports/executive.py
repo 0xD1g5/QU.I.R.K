@@ -401,4 +401,26 @@ def build_exec_markdown(
     )
     lines.append("")
 
+    # Phase 128 D-09: Hardware PQC Advisory paragraph — advisory-only, not scored.
+    # Appended as a sub-section under Strategic Recommendations.
+    # Guard: only emit when hardware_devices is non-empty.
+    if exec_content is not None and getattr(exec_content, "hardware_devices", []):
+        hw_devs = exec_content.hardware_devices
+        tier_counts: dict = {}
+        for _hw in hw_devs:
+            _t = _hw.get("remediation_tier", "Tier N/A")
+            tier_counts[_t] = tier_counts.get(_t, 0) + 1
+        lines.append("### Hardware PQC Advisory")
+        lines.append("")
+        lines.append(
+            f"> **Advisory only — not included in readiness score.** "
+            f"{len(hw_devs)} hardware device(s) fingerprinted. "
+            f"Tier 1 (replace by 2030): {tier_counts.get('Tier 1', 0)}, "
+            f"Tier 2 (firmware upgrade 2030–2033): {tier_counts.get('Tier 2', 0)}, "
+            f"Tier 3 (monitor, re-evaluate 2033+): {tier_counts.get('Tier 3', 0)}, "
+            f"N/A (EOL before migration window): {tier_counts.get('Tier N/A', 0)}. "
+            f"See full report for device-level detail."
+        )
+        lines.append("")
+
     return "\n".join(lines)

@@ -123,6 +123,9 @@ def render_docx_report(
         score_total = 0
         raw_sum = 0
 
+    # Phase 128 D-10: hardware advisory devices list — advisory-only, not scored
+    hardware_devices = getattr(exec_content, "hardware_devices", []) if exec_content else []
+
     # ---------------------------------------------------------------------------
     # cfg access — double-getattr pattern (mirrors html_renderer.py lines 236-238)
     # ---------------------------------------------------------------------------
@@ -324,6 +327,34 @@ def render_docx_report(
         row_cells[0].text = label
         row_cells[1].text = str(subscores.get(key, "—"))
         row_cells[2].text = "/25"
+
+    # ---- Hardware PQC Advisory section (Phase 128 D-10) ----
+    # Advisory-only — hardware findings do not affect the readiness score.
+    # 7 columns: Tier | Vendor | Model | Host:Port | PQC Status | Confidence | EOL Date
+    if hardware_devices:
+        doc.add_heading("Hardware PQC Advisory (Not Scored)", level=2)
+        doc.add_paragraph(
+            "Advisory only — hardware findings do not affect the readiness score."
+            " Listed for CNSA 2.0 migration planning purposes only.",
+            style="Normal",
+        )
+        hw_tbl = doc.add_table(rows=1, cols=7)
+        _set_table_style(hw_tbl)
+        hw_hdr = hw_tbl.rows[0].cells
+        for _i, _h in enumerate(
+            ["Tier", "Vendor", "Model", "Host:Port", "PQC Status", "Confidence", "EOL Date"]
+        ):
+            hw_hdr[_i].text = _h
+        for _d in hardware_devices:
+            _row = hw_tbl.add_row().cells
+            _row[0].text = _d.get("remediation_tier", "")
+            _row[1].text = _d.get("vendor", "")
+            _row[2].text = _d.get("model") or "Unknown"
+            _row[3].text = f"{_d.get('host', '')}:{_d.get('port', '')}"
+            _row[4].text = _d.get("pqc_status", "")
+            _row[5].text = _d.get("confidence", "")
+            _row[6].text = _d.get("eol_date") or "—"
+        _set_col_widths(hw_tbl, [0.9, 1.4, 1.4, 1.5, 1.1, 1.1, 0.9])
 
     # ---------------------------------------------------------------------------
     # Save document
