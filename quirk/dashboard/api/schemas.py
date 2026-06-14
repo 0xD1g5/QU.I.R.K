@@ -172,6 +172,28 @@ class DarFinding(BaseModel):
     mount_type: Optional[str] = None
 
 
+# ---- Hardware Findings (Phase 128 HWCOMPAT-07) ----
+
+class HardwareFinding(BaseModel):
+    # Universal baseline (mirrors MotionFinding / DarFinding baseline)
+    host: str
+    port: int
+    severity: str
+    title: str
+    description: Optional[str] = None
+    remediation: Optional[str] = None
+    quantum_risk: Optional[str] = None
+
+    # Hardware-specific fields (D-11)
+    vendor: str
+    model: Optional[str] = None
+    pqc_status: str
+    remediation_tier: str
+    confidence: str
+    fingerprint_method: str
+    eol_date: Optional[str] = None
+
+
 # ---- Roadmap ----
 
 class RoadmapEdge(BaseModel):
@@ -227,6 +249,7 @@ class ScanLatestResponse(BaseModel):
     identity_findings: List[IdentityFinding] = []
     motion_findings: List[MotionFinding] = []   # NEW — Phase 36 DASH-05
     dar_findings: List[DarFinding] = []          # Phase 39 GAP-04
+    hardware_findings: List[HardwareFinding] = []  # Phase 128 HWCOMPAT-07
     partial_failures: List[PartialFailureEntry] = []  # Phase 67 RESUME-02
 
 
