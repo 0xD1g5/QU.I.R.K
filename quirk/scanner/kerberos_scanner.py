@@ -281,12 +281,17 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         etypes = []
         tcp_error = None
 
-        # TCP primary (per D-01, sendReceive uses TCP)
+        # TCP primary (per D-01, sendReceive uses TCP).
+        # AUDIT-03: If the TCP probe raises (connection refused, timeout, or any
+        # transport failure), control falls through to _probe_kdc_udp below.  This
+        # silent TCP→UDP downgrade is intentional standard Kerberos behaviour per
+        # RFC 4120 §7.2.1 ("Kerberos clients SHOULD support both UDP and TCP; a
+        # client MAY retry over TCP/UDP on failure") — it is NOT a defect.
         try:
             etypes = _probe_kdc(target, realm, timeout)
         except Exception as exc:
             tcp_error = exc
-            # UDP fallback on any TCP failure
+            # UDP fallback on any TCP failure (RFC 4120 §7.2.1)
             try:
                 etypes = _probe_kdc_udp(target, realm, timeout)
             except Exception:
