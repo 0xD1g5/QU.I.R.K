@@ -255,8 +255,12 @@ def merge_scan(
                     "remediation_tier": _tier,
                     "confidence": _d.confidence,
                 })
-    except Exception:
-        logger.warning("hw_devices load for CBOM skipped (non-fatal)", exc_info=True)
+    except Exception as _hw_exc:
+        logger.warning(
+            "hw_devices load for CBOM skipped (non-fatal): %s",
+            type(_hw_exc).__name__,
+            exc_info=True,
+        )
     bom = build_cbom(union, hw_devices=_detect_crypto_bridges(hw_devices_for_cbom))
     cbom_json_path: Optional[str] = None
     cbom_xml_path: Optional[str] = None

@@ -37,11 +37,25 @@ from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/I
 from quirk.cbom.classifier import classify_algorithm
 from quirk.compliance.cmvp import coverage_for_algorithm  # Phase 81 CMVP-01: informational coverage list
 from quirk.models import CryptoEndpoint
-from quirk.util.safe_exc import safe_str
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_hw_str(value: str, maxlen: int = 256) -> str:
+    """Strip control characters and truncate scanner-derived hardware strings.
+
+    CR-01 (Phase 129): safe_str() is designed for BaseException objects only.
+    Use this purpose-built helper for plain hw_device dict values.
+    """
+    return re.sub(r"[\x00-\x1f\x7f]", "", value)[:maxlen]
+
+
+def _safe_bom_ref_host(host: str) -> str:
+    """Normalize host for use in bom_ref — replace colons/slashes to avoid
+    IPv6 ambiguity and namespace-prefix collisions (CR-02, Phase 129)."""
+    return host.replace(":", "_").replace("/", "_")
 
 
 # ---------------------------------------------------------------------------
@@ -978,19 +992,27 @@ def build_cbom(
         for dev in hw_devices:
             host = str(dev.get("host", "unknown"))
             port = str(dev.get("port", "0"))
+            # CR-02: bracket IPv6 hosts in the display name to avoid ambiguous colons.
+            comp_name = f"hw:[{host}]:{port}" if ":" in host else f"hw:{host}:{port}"
+            # CR-02: normalize host in bom_ref so IPv6 colons don't break uniqueness.
+            safe_host = _safe_bom_ref_host(host)
+            bom_ref_val = f"hw/{safe_host}:{port}"
             props = [
-                Property(name="quirk:hw-vendor",           value=safe_str(str(dev.get("vendor", "Unknown")))),
-                Property(name="quirk:hw-pqc-supported",    value=str(dev.get("pqc_status", "unknown"))),
-                Property(name="quirk:hw-remediation-tier", value=str(dev.get("remediation_tier", "Tier N/A"))),
+                # CR-01: use _sanitize_hw_str() not safe_str() — safe_str() is for
+                # BaseException objects only and corrupts plain strings.
+                Property(name="quirk:hw-vendor",           value=_sanitize_hw_str(str(dev.get("vendor", "Unknown")))),
+                Property(name="quirk:hw-model",            value=_sanitize_hw_str(str(dev.get("model", "Unknown")))),
+                Property(name="quirk:hw-pqc-supported",    value=_sanitize_hw_str(str(dev.get("pqc_status", "unknown")))),
+                Property(name="quirk:hw-remediation-tier", value=_sanitize_hw_str(str(dev.get("remediation_tier", "Tier N/A")))),
             ]
             bridge = dev.get("bridge_status")
             if bridge is not None:
                 props.append(Property(name="quirk:hw-bridge-status", value=str(bridge)))
             hw_components.append(
                 Component(
-                    name=f"hw:{host}:{port}",
+                    name=comp_name,
                     type=ComponentType.FIRMWARE,
-                    bom_ref=f"hw/{host}:{port}",
+                    bom_ref=bom_ref_val,
                     properties=props,
                 )
             )

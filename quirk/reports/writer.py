@@ -312,7 +312,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         _json_dump(stats_path, run_stats)
 
     # 5) CBOM artifacts
-    cbom = build_cbom(endpoints, hw_devices=exec_content.hardware_devices)
+    # WR-03 (Phase 129): guard against AttributeError if ExecContent was constructed
+    # without hardware_devices (e.g. unit tests or future backward-compat paths).
+    _hw_for_cbom = getattr(exec_content, "hardware_devices", None) or []
+    cbom = build_cbom(endpoints, hw_devices=_hw_for_cbom)
     cbom_json_path, cbom_xml_path = write_cbom_files(
         cbom, outdir, stamp, error_endpoints=error_endpoints
     )

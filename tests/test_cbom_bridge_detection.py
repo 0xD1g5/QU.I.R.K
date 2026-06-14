@@ -79,6 +79,5 @@ def test_empty_devices_returns_empty():
 def test_input_dicts_not_mutated():
     """HWCOMPAT-03 / D-02: input dicts must not be mutated; callers share them with HTML/PDF renderers."""
     device = _make_hw_dict("192.168.1.1", "supported")
-    original_dict = device.copy()
     _detect_crypto_bridges([device])
-    assert "bridge_status" not in original_dict
+    assert "bridge_status" not in device  # IN-01: check device itself, not a copy
