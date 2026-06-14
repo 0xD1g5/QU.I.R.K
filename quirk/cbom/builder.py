@@ -98,8 +98,12 @@ def _extract_algo_from_rule_id(rule_id: str | None) -> str | None:
         ("ecdsa", "ECDSA"), ("sha-1", "SHA-1"), ("sha1", "SHA-1"),
         ("blowfish", "Blowfish"), ("3des", "3DES"),
         ("md5", "MD5"), ("md4", "MD4"), ("rc4", "RC4"),
+        # RSA key-size variants before bare "rsa" fallback (AUDIT-05)
+        ("rsa-1024", "RSA-1024"), ("rsa-2048", "RSA-2048"),
+        ("rsa-3072", "RSA-3072"), ("rsa-4096", "RSA-4096"),
         ("rsa", "RSA"), ("dsa", "DSA"), ("des", "DES"),
-        ("aes-256", "AES-256"), ("aes-128", "AES-128"),
+        # AES key-size variants (incl. aes-192 gap) before bare "aes" fallback (AUDIT-05)
+        ("aes-256", "AES-256"), ("aes-192", "AES-192"), ("aes-128", "AES-128"),
         ("aes", "AES"),
     ]
     for fragment, canonical in algo_hints:
