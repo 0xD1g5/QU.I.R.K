@@ -216,7 +216,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         from datetime import timedelta
         from sqlalchemy import func as _sqla_func
         from quirk.models import HardwareDevice as _HWDev
-        from quirk.util.db import get_session as _get_session
+        from quirk.db import get_session as _get_session
         with _get_session(cfg.output.db_path) as _hw_sess:
             latest_hw_ts = _hw_sess.query(_sqla_func.max(_HWDev.scanned_at)).scalar()
             if latest_hw_ts is not None:
