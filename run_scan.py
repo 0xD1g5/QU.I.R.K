@@ -31,6 +31,7 @@ from quirk.scanner.target_expander import expand_targets
 from quirk.scanner.fingerprint import fingerprint_service
 from quirk.scanner.tls_scanner import scan_tls_targets
 from quirk.scanner.ssh_scanner import scan_ssh_targets
+from quirk.scanner.hardware_scanner import fingerprint_hardware  # Phase 127 HWCOMPAT-01
 from quirk.scanner.jwt_scanner import scan_jwt_targets
 from quirk.scanner.container_scanner import scan_container_targets
 from quirk.scanner.source_scanner import scan_source_targets
@@ -1342,6 +1343,8 @@ def main():
         ]
         logger.info(f"Resuming: skipping ssh stage ({len(ssh_endpoints)} endpoints from DB)")
     else:
+        _hw_batch: list = []  # Phase 127 HWCOMPAT-01 — hardware fingerprint accumulator
+
         def _run_ssh_phase():
             if not ssh_targets:
                 return []
@@ -1351,6 +1354,10 @@ def main():
                 logger=logger,
                 progress_cb=None,
             )
+            # Hardware fingerprint while banner is still in service_detail
+            # (before classified_details overwrite — D-03)
+            hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
+            _hw_batch.extend(fingerprint_hardware(eps, timeout=hw_timeout, logger=logger))
             for ep in eps:
                 key = (getattr(ep, "host", ""), int(getattr(ep, "port", 0)))
                 ep.service_detail = classified_details.get(key, "")
@@ -1360,6 +1367,18 @@ def main():
             _run_ssh_phase, error_endpoints, logger,
         ) or []
         _flush_stage_endpoints(cfg.output.db_path, ssh_endpoints)   # Phase 67 RESUME-01
+        if _hw_batch:
+            try:
+                with get_session(cfg.output.db_path) as _hw_sess:
+                    for _dev in _hw_batch:
+                        _hw_sess.add(_dev)
+                    _hw_sess.commit()
+                logger.info(f"Hardware fingerprint: {len(_hw_batch)} device(s) recorded")
+            except Exception as _hw_err:
+                logger.warning(
+                    f"Hardware fingerprint DB write failed (advisory-only, non-fatal): "
+                    f"{safe_str(_hw_err)}"
+                )
         _ssh_pf = _collect_stage_partial_failures(run_stats, "ssh", error_endpoints, _err_before_ssh)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "ssh",
