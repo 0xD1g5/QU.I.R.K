@@ -413,7 +413,7 @@ def scan_codesign_from_ldap(
                         cert_not_after=parsed.get("not_after_dt"),
                         service_detail=detail,
                         severity=severity,
-                        smime_scan_json=json.dumps(scan_dict),
+                        codesign_scan_json=json.dumps(scan_dict),
                         scanned_at=now,
                     )
                     results.append(ep)
@@ -520,7 +520,7 @@ def scan_codesign_from_tls_endpoints(
             cert_not_after=getattr(ep, "cert_not_after", None),
             service_detail=detail,
             severity=severity,
-            smime_scan_json=json.dumps(scan_dict),
+            codesign_scan_json=json.dumps(scan_dict),
             scanned_at=now,
         )
         results.append(code_ep)

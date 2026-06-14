@@ -40,7 +40,7 @@ def _codesign_ep(**kwargs):
         severity="HIGH",
         cert_subject="CN=Code Signer",
         cert_not_after=_now_utc() - timedelta(days=1),  # expired by default
-        smime_scan_json=json.dumps({"reasons": ["expired"]}),
+        codesign_scan_json=json.dumps({"reasons": ["expired"]}),  # AUDIT-01: dedicated column
     )
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
@@ -89,7 +89,7 @@ class TestEvaluateCodesignEndpoints:
         assert evaluate_codesign_endpoints([]) == []
 
     def test_expired_finding_severity_is_high(self):
-        ep = _codesign_ep(smime_scan_json=json.dumps({"reasons": ["expired"]}))
+        ep = _codesign_ep(codesign_scan_json=json.dumps({"reasons": ["expired"]}))
         findings = evaluate_codesign_endpoints([ep])
         assert any(f["severity"] == "HIGH" for f in findings)
 
@@ -97,14 +97,14 @@ class TestEvaluateCodesignEndpoints:
         future_30 = _now_utc() + timedelta(days=30)
         ep = _codesign_ep(
             cert_not_after=future_30,
-            smime_scan_json=json.dumps({"reasons": ["approaching-expiry"]}),
+            codesign_scan_json=json.dumps({"reasons": ["approaching-expiry"]}),
         )
         findings = evaluate_codesign_endpoints([ep])
         assert any(f["severity"] == "MEDIUM" for f in findings)
 
     def test_weak_crypto_only_finding_severity_is_high(self):
         ep = _codesign_ep(
-            smime_scan_json=json.dumps({"reasons": ["weak-rsa-key"]}),
+            codesign_scan_json=json.dumps({"reasons": ["weak-rsa-key"]}),
         )
         findings = evaluate_codesign_endpoints([ep])
         assert any(f["severity"] == "HIGH" for f in findings)
@@ -116,16 +116,16 @@ class TestEvaluateCodesignEndpoints:
             assert "quantum_risk" in f
             assert f["quantum_risk"]  # non-empty
 
-    def test_malformed_smime_scan_json_does_not_crash(self):
+    def test_malformed_codesign_scan_json_does_not_crash(self):
         """T-99-04: malformed JSON → reasons=[] → no codesign finding (not a crash)."""
-        ep = _codesign_ep(smime_scan_json="not-valid-json}")
+        ep = _codesign_ep(codesign_scan_json="not-valid-json}")
         result = evaluate_codesign_endpoints([ep])
         # Should return empty (no reasons → no expired/approaching/weak branch fires)
         assert isinstance(result, list)
 
     def test_expired_finding_title_contains_subject(self):
         ep = _codesign_ep(cert_subject="CN=MySigner",
-                          smime_scan_json=json.dumps({"reasons": ["expired"]}))
+                          codesign_scan_json=json.dumps({"reasons": ["expired"]}))
         findings = evaluate_codesign_endpoints([ep])
         assert any("CN=MySigner" in f["title"] for f in findings)
 
@@ -133,7 +133,7 @@ class TestEvaluateCodesignEndpoints:
         future_30 = _now_utc() + timedelta(days=30)
         ep = _codesign_ep(cert_subject="CN=ApproachingSigner",
                           cert_not_after=future_30,
-                          smime_scan_json=json.dumps({"reasons": ["approaching-expiry"]}))
+                          codesign_scan_json=json.dumps({"reasons": ["approaching-expiry"]}))
         findings = evaluate_codesign_endpoints([ep])
         assert any("CN=ApproachingSigner" in f["title"] for f in findings)
 
@@ -145,7 +145,7 @@ class TestEvaluateCodesignEndpoints:
 class TestCatalogWinsCodesign:
     def test_expired_finding_recommendation_equals_catalog(self):
         """D-04: expired-path codesign recommendation == REMEDIATION_CATALOG['CODESIGN_EXPIRY']."""
-        ep = _codesign_ep(smime_scan_json=json.dumps({"reasons": ["expired"]}))
+        ep = _codesign_ep(codesign_scan_json=json.dumps({"reasons": ["expired"]}))
         findings = evaluate_codesign_endpoints([ep])
         expired_findings = [f for f in findings if f.get("severity") == "HIGH"
                             and "expired" in f.get("title", "").lower()]
@@ -159,7 +159,7 @@ class TestCatalogWinsCodesign:
         """D-04: approaching-path codesign recommendation == REMEDIATION_CATALOG['CODESIGN_APPROACHING_EXPIRY']."""
         future_30 = _now_utc() + timedelta(days=30)
         ep = _codesign_ep(cert_not_after=future_30,
-                          smime_scan_json=json.dumps({"reasons": ["approaching-expiry"]}))
+                          codesign_scan_json=json.dumps({"reasons": ["approaching-expiry"]}))
         findings = evaluate_codesign_endpoints([ep])
         approaching = [f for f in findings if f.get("severity") == "MEDIUM"]
         assert approaching, "Expected at least one approaching-branch finding"
@@ -168,7 +168,7 @@ class TestCatalogWinsCodesign:
 
     def test_expired_finding_quantum_risk_equals_algo_map(self):
         """CODESIGN_EXPIRY quantum_risk comes from ALGO_IMPACT_MAP."""
-        ep = _codesign_ep(smime_scan_json=json.dumps({"reasons": ["expired"]}))
+        ep = _codesign_ep(codesign_scan_json=json.dumps({"reasons": ["expired"]}))
         findings = evaluate_codesign_endpoints([ep])
         expired_findings = [f for f in findings if "expired" in f.get("title", "").lower()]
         assert expired_findings
@@ -184,7 +184,7 @@ class TestWeakCryptoQuantumRisk:
     def test_weak_ec_key_quantum_risk_is_ecdsa_specific(self):
         """WR-02: weak-ec-key codesign finding must carry the ECDSA quantum_risk, not fallback."""
         ep = _codesign_ep(
-            smime_scan_json=json.dumps({"reasons": ["weak-ec-key"]}),
+            codesign_scan_json=json.dumps({"reasons": ["weak-ec-key"]}),
         )
         findings = evaluate_codesign_endpoints([ep])
         assert findings, "Expected at least one finding for weak-ec-key"
@@ -199,7 +199,7 @@ class TestWeakCryptoQuantumRisk:
     def test_weak_rsa_key_quantum_risk_is_rsa_specific(self):
         """WR-02: weak-rsa-key codesign finding must carry the RSA quantum_risk, not fallback."""
         ep = _codesign_ep(
-            smime_scan_json=json.dumps({"reasons": ["weak-rsa-key"]}),
+            codesign_scan_json=json.dumps({"reasons": ["weak-rsa-key"]}),
         )
         findings = evaluate_codesign_endpoints([ep])
         assert findings
@@ -211,7 +211,7 @@ class TestWeakCryptoQuantumRisk:
     def test_weak_signing_alg_quantum_risk_is_sha1_specific(self):
         """WR-02: weak-signing-alg codesign finding must carry the SHA-1 quantum_risk, not fallback."""
         ep = _codesign_ep(
-            smime_scan_json=json.dumps({"reasons": ["weak-signing-alg"]}),
+            codesign_scan_json=json.dumps({"reasons": ["weak-signing-alg"]}),
         )
         findings = evaluate_codesign_endpoints([ep])
         assert findings
@@ -223,7 +223,7 @@ class TestWeakCryptoQuantumRisk:
     def test_weak_crypto_recommendation_comes_from_catalog(self):
         """WR-02: weak-ec-key recommendation must be the ECDSA catalog entry (not generic)."""
         ep = _codesign_ep(
-            smime_scan_json=json.dumps({"reasons": ["weak-ec-key"]}),
+            codesign_scan_json=json.dumps({"reasons": ["weak-ec-key"]}),
         )
         findings = evaluate_codesign_endpoints([ep])
         assert findings

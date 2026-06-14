@@ -978,7 +978,7 @@ def evaluate_codesign_endpoints(endpoints) -> List[Dict[str, Any]]:
        check_id="CODESIGN_APPROACHING_EXPIRY".
     3. Any other weak-crypto reason → HIGH quantum-vulnerable finding.
 
-    T-99-04 mitigated: malformed ``smime_scan_json`` defaults to ``reasons=[]``
+    T-99-04 mitigated: malformed ``codesign_scan_json`` defaults to ``reasons=[]``
     (no crash; no finding emitted for that endpoint).
 
     All findings are constructed through ``_build_finding`` so they carry
@@ -1004,10 +1004,10 @@ def evaluate_codesign_endpoints(endpoints) -> List[Dict[str, Any]]:
             not_after_date = "unknown"
             days_remaining = 0
 
-        # T-99-04: guard malformed smime_scan_json
+        # T-99-04: guard malformed codesign_scan_json (AUDIT-01: reads dedicated column)
         reasons: list = []
         try:
-            raw = getattr(e, "smime_scan_json", None)
+            raw = getattr(e, "codesign_scan_json", None)
             if raw:
                 parsed = json.loads(raw)
                 reasons = parsed.get("reasons") or []

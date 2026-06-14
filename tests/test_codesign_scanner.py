@@ -24,7 +24,7 @@ Asserts the contract from Phase 95 Plan 95-01:
       → filtered out, zero endpoints
 
 Every emitted CryptoEndpoint must carry ``protocol="CODE_SIGNING"`` and a
-populated ``smime_scan_json`` (reuses the existing column per 95-01 plan).
+populated ``codesign_scan_json`` (reuses the existing column per 95-01 plan).
 """
 from __future__ import annotations
 
@@ -95,8 +95,8 @@ def test_rsa1024_sha1_emits_high():
     assert ep.severity == "HIGH"
     assert ep.cert_pubkey_alg == "RSA"
     assert ep.cert_pubkey_size == 1024
-    assert ep.smime_scan_json, "smime_scan_json must be populated"
-    blob = json.loads(ep.smime_scan_json)
+    assert ep.codesign_scan_json, "codesign_scan_json must be populated"
+    blob = json.loads(ep.codesign_scan_json)
     assert "weak-signing-alg" in blob["reasons"]
     assert "weak-rsa-key" in blob["reasons"]
 
@@ -109,8 +109,8 @@ def test_ec192_emits_high():
     assert ep.protocol == "CODE_SIGNING"
     assert ep.severity == "HIGH"
     assert ep.cert_pubkey_alg == "ECDSA"
-    assert ep.smime_scan_json, "smime_scan_json must be populated"
-    blob = json.loads(ep.smime_scan_json)
+    assert ep.codesign_scan_json, "codesign_scan_json must be populated"
+    blob = json.loads(ep.codesign_scan_json)
     assert "weak-ec-key" in blob["reasons"]
 
 
