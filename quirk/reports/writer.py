@@ -207,27 +207,45 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     _json_dump(intelligence_path, intelligence)
 
     # Phase 128 D-08: load HardwareDevice rows for hardware advisory section.
+    # Scoped to the most recent scan via MAX(scanned_at) ± 1s (same pattern as
+    # _derive_hardware_findings in scan.py) — prevents cross-run data bleed.
     # Advisory-only — non-fatal; uses advisory path (NOT _build_finding / findings_evaluator).
     hardware_devices: list = []
     try:
+        from datetime import timedelta
+        from sqlalchemy import func as _sqla_func
         from quirk.models import HardwareDevice as _HWDev
         from quirk.util.db import get_session as _get_session
         with _get_session(cfg.output.db_path) as _hw_sess:
-            _hw_rows = _hw_sess.query(_HWDev).all()
-            for _d in _hw_rows:
-                hardware_devices.append({
-                    "vendor":             _d.vendor,
-                    "model":              _d.model,
-                    "host":               _d.host,
-                    "port":               _d.port,
-                    "pqc_status":         _d.pqc_status,
-                    "remediation_tier":   getattr(_d, "remediation_tier", "N/A") or "N/A",
-                    "confidence":         _d.confidence,
-                    "fingerprint_method": _d.fingerprint_method,
-                    "eol_date":           _d.eol_date.isoformat() if _d.eol_date else None,
-                })
+            latest_hw_ts = _hw_sess.query(_sqla_func.max(_HWDev.scanned_at)).scalar()
+            if latest_hw_ts is not None:
+                _window = timedelta(seconds=1)
+                _hw_rows = _hw_sess.query(_HWDev).filter(
+                    _HWDev.scanned_at >= latest_hw_ts - _window,
+                    _HWDev.scanned_at <= latest_hw_ts + _window,
+                ).all()
+                for _d in _hw_rows:
+                    _tier = getattr(_d, "remediation_tier", "Tier N/A") or "Tier N/A"
+                    hardware_devices.append({
+                        "vendor":             _d.vendor,
+                        "model":              _d.model,
+                        "host":               _d.host,
+                        "port":               _d.port,
+                        "pqc_status":         _d.pqc_status,
+                        "remediation_tier":   _tier,
+                        "confidence":         _d.confidence,
+                        "fingerprint_method": _d.fingerprint_method,
+                        "eol_date":           _d.eol_date.isoformat() if _d.eol_date else None,
+                        "cnsa_deadline":      {
+                            "Tier 1": "Replace by 2030",
+                            "Tier 2": "Upgrade firmware 2030–2033",
+                            "Tier 3": "Accept + monitor, re-evaluate 2033+",
+                            "Tier N/A": "EOL before PQC migration window",
+                        }.get(_tier, ""),
+                    })
     except Exception:
-        pass  # advisory-only, non-fatal
+        import logging as _log
+        _log.getLogger(__name__).warning("hardware advisory section skipped (non-fatal)", exc_info=True)
     exec_content.hardware_devices = hardware_devices
 
     # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model

@@ -1,5 +1,6 @@
 """Jinja2-based standalone HTML report renderer for QU.I.R.K. (Phase 7, D-08 to D-12)."""
 import base64
+import html as _html
 import os
 import sys
 from datetime import datetime, timezone
@@ -212,21 +213,22 @@ def render_hardware_section(devices: list) -> str:
     for d in sorted_devs:
         tier = d.get("remediation_tier", "Tier N/A")
         color = TIER_COLORS.get(tier, "#6b7280")
+        # tier is from our own lookup table — safe; scanner values below need escaping
         badge = (
             f'<span style="background:{color};color:#fff;padding:2px 7px;'
-            f'border-radius:4px;font-size:11px;font-weight:600">{tier}</span>'
+            f'border-radius:4px;font-size:11px;font-weight:600">{_html.escape(tier)}</span>'
         )
-        host_port = f"{d.get('host', '')}:{d.get('port', '')}"
-        eol = d.get("eol_date") or "—"
-        cnsa = CNSA_DEADLINE.get(tier, "")
+        host_port = f"{_html.escape(str(d.get('host', '')))}:{_html.escape(str(d.get('port', '')))}"
+        eol = _html.escape(str(d.get("eol_date") or "—"))
+        cnsa = _html.escape(CNSA_DEADLINE.get(tier, ""))
         rows_html.append(
             f"<tr>"
             f"<td>{badge}</td>"
-            f"<td>{d.get('vendor', '')}</td>"
-            f"<td>{d.get('model') or 'Unknown'}</td>"
+            f"<td>{_html.escape(str(d.get('vendor', '')))}</td>"
+            f"<td>{_html.escape(str(d.get('model') or 'Unknown'))}</td>"
             f"<td><code>{host_port}</code></td>"
-            f"<td>{d.get('pqc_status', '')}</td>"
-            f"<td>{d.get('confidence', '')}</td>"
+            f"<td>{_html.escape(str(d.get('pqc_status', '')))}</td>"
+            f"<td>{_html.escape(str(d.get('confidence', '')))}</td>"
             f"<td>{eol}</td>"
             f"<td>{cnsa}</td>"
             f"</tr>"
