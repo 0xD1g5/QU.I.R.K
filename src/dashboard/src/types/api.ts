@@ -121,6 +121,25 @@ export interface PartialFailureEntry {
   endpoint_count: number
 }
 
+// Phase 128 HWCOMPAT-07
+export interface HardwareFinding {
+  host: string
+  port: number
+  severity: string       // "HIGH" | "MEDIUM" | "LOW" | "INFO" — derived from tier
+  title: string
+  description?: string
+  remediation?: string
+  quantum_risk?: string
+  // Hardware-specific
+  vendor: string
+  model?: string | null
+  pqc_status: string     // "supported" | "partial" | "unsupported" | "VENDOR-SILENT"
+  remediation_tier: string  // "Tier 1" | "Tier 2" | "Tier 3" | "Tier N/A"
+  confidence: string     // "high" | "medium" | "low" | "unknown"
+  fingerprint_method: string  // "ssh_banner" | "http_mgmt" | "unknown"
+  eol_date?: string | null
+}
+
 // Phase 39 GAP-04
 export interface DarFinding {
   host: string
@@ -213,6 +232,7 @@ export interface ScanLatestResponse {
   identity_findings: IdentityFinding[]
   motion_findings: MotionFinding[]
   dar_findings: DarFinding[]
+  hardware_findings: HardwareFinding[]  // Phase 128 HWCOMPAT-07
   partial_failures?: PartialFailureEntry[]  // Phase 67 RESUME-02
 }
 

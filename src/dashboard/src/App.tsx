@@ -14,6 +14,7 @@ import { ExecutivePage } from "@/pages/executive"
 import { FindingsPage } from "@/pages/findings"
 import { IdentityPage } from "@/pages/identity"
 import { MotionPage } from "@/pages/motion"
+import { HardwarePage } from "@/pages/hardware"
 import { DataAtRestPage } from "@/pages/data-at-rest"
 import { CertificatesPage } from "@/pages/certificates"
 import { CbomPage } from "@/pages/cbom"
@@ -64,6 +65,7 @@ function AppShell() {
             <Route path="/findings" element={<FindingsPage />} />
             <Route path="/identity" element={<IdentityPage />} />
             <Route path="/motion" element={<MotionPage />} />
+            <Route path="/hardware" element={<HardwarePage />} />
             <Route path="/data-at-rest" element={<DataAtRestPage />} />
             <Route path="/certificates" element={<CertificatesPage />} />
             <Route path="/cbom" element={<CbomPage />} />
