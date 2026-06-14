@@ -44,7 +44,7 @@ def _set_table_style(tbl, style_name: str = "Table Grid") -> None:
     """
     try:
         tbl.style = style_name
-    except (KeyError, Exception):
+    except Exception:
         logger.warning(
             "Failed to apply table style %r — using default table style.",
             style_name,
