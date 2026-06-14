@@ -3,22 +3,33 @@
 No network connections are made. CryptoEndpoint fixtures have service_detail
 set directly to simulate SSH banner data already captured by ssh_scanner.py.
 HTTP mgmt path is out of scope for these unit tests (no live socket/HTTP).
+
+Fixture note: CryptoEndpoint.__new__(CryptoEndpoint) creates an uninstrumented
+SQLAlchemy object. Attributes are set via ep.__dict__ to bypass ORM
+instrumentation (avoids AttributeError on NoneType in SQLAlchemy 2.x when
+there is no active mapper state — the conftest DB session is not required for
+these pure-logic tests).
 """
 from __future__ import annotations
+
+
+def _make_ep(host: str, port: int, service_detail: str):
+    """Create a CryptoEndpoint fixture without DB/ORM setup."""
+    from quirk.models import CryptoEndpoint
+    ep = CryptoEndpoint.__new__(CryptoEndpoint)
+    ep.__dict__["host"] = host
+    ep.__dict__["port"] = port
+    ep.__dict__["protocol"] = "SSH"
+    ep.__dict__["service_detail"] = service_detail
+    return ep
 
 
 # ------------ Cisco SSH banner: high-confidence match ------------
 
 def test_cisco_ssh_banner_high_confidence() -> None:
     from quirk.scanner.hardware_scanner import fingerprint_one
-    from quirk.models import CryptoEndpoint
 
-    ep = CryptoEndpoint.__new__(CryptoEndpoint)
-    ep.host = "10.0.0.1"
-    ep.port = 22
-    ep.protocol = "SSH"
-    ep.service_detail = "SSH-2.0-Cisco-1.25"
-
+    ep = _make_ep("10.0.0.1", 22, "SSH-2.0-Cisco-1.25")
     device = fingerprint_one(ep, timeout=3)
 
     assert device.vendor == "Cisco"
@@ -30,14 +41,8 @@ def test_cisco_ssh_banner_high_confidence() -> None:
 
 def test_unknown_banner_not_suppressed() -> None:
     from quirk.scanner.hardware_scanner import fingerprint_one
-    from quirk.models import CryptoEndpoint
 
-    ep = CryptoEndpoint.__new__(CryptoEndpoint)
-    ep.host = "10.0.0.2"
-    ep.port = 22
-    ep.protocol = "SSH"
-    ep.service_detail = "SSH-2.0-OpenSSH_9.6"
-
+    ep = _make_ep("10.0.0.2", 22, "SSH-2.0-OpenSSH_9.6")
     device = fingerprint_one(ep)
 
     # D-06: vendor=Unknown rows are never suppressed
@@ -49,19 +54,9 @@ def test_unknown_banner_not_suppressed() -> None:
 
 def test_fingerprint_hardware_returns_one_per_endpoint() -> None:
     from quirk.scanner.hardware_scanner import fingerprint_hardware
-    from quirk.models import CryptoEndpoint
 
-    ep_cisco = CryptoEndpoint.__new__(CryptoEndpoint)
-    ep_cisco.host = "10.0.0.1"
-    ep_cisco.port = 22
-    ep_cisco.protocol = "SSH"
-    ep_cisco.service_detail = "SSH-2.0-Cisco-1.25"
-
-    ep_unknown = CryptoEndpoint.__new__(CryptoEndpoint)
-    ep_unknown.host = "10.0.0.3"
-    ep_unknown.port = 22
-    ep_unknown.protocol = "SSH"
-    ep_unknown.service_detail = "SSH-2.0-dropbear_2022.83"
+    ep_cisco = _make_ep("10.0.0.1", 22, "SSH-2.0-Cisco-1.25")
+    ep_unknown = _make_ep("10.0.0.3", 22, "SSH-2.0-dropbear_2022.83")
 
     results = fingerprint_hardware([ep_cisco, ep_unknown])
 
