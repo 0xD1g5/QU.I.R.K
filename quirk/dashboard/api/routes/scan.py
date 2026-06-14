@@ -26,6 +26,7 @@ from quirk.dashboard.api.schemas import (
     DarFinding,
     FindingCounts,
     FindingItem,
+    HardwareFinding,
     IdentityFinding,
     MotionFinding,
     PartialFailureEntry,
@@ -39,7 +40,7 @@ from quirk.dashboard.api.schemas import (
     SubScores,
     SubscoreDelta,
 )
-from quirk.models import CryptoEndpoint, ScanJob
+from quirk.models import CryptoEndpoint, HardwareDevice, ScanJob
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import _count_by_bucket
@@ -680,6 +681,97 @@ def _dar_vault(host, port, severity, dat):
     )
 
 
+# ---- Hardware Findings (Phase 128 HWCOMPAT-07) ----
+
+_TIER_SEVERITY = {
+    "Tier 1": "HIGH",
+    "Tier 2": "MEDIUM",
+    "Tier 3": "LOW",
+    "Tier N/A": "INFO",
+}
+
+_CNSA_DEADLINE = {
+    "Tier 1": "Replace by 2030",
+    "Tier 2": "Upgrade firmware 2030-2033",
+    "Tier 3": "Accept + monitor, re-evaluate 2033+",
+    "Tier N/A": "EOL before PQC migration window",
+}
+
+_TIER_ORDER = {"Tier 1": 0, "Tier 2": 1, "Tier 3": 2, "Tier N/A": 3}
+
+_METHOD_LABEL = {
+    "ssh_banner": "SSH Banner",
+    "http_mgmt": "HTTP Mgmt",
+}
+
+
+def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[HardwareFinding]:
+    """Synthesize HardwareFinding list from HardwareDevice rows for the latest scan.
+
+    Advisory-only (Phase 128 HWCOMPAT-SCORE-LOCK) — wrapped in try/except so
+    any DB or mapping error is non-fatal and returns an empty list.  Mirrors the
+    _derive_motion_findings timedelta(seconds=1) window pattern.
+    """
+    try:
+        window_start = latest_ts - timedelta(seconds=1)
+        window_end = latest_ts + timedelta(seconds=1)
+        devices = (
+            db.query(HardwareDevice)
+            .filter(
+                HardwareDevice.scanned_at >= window_start,
+                HardwareDevice.scanned_at <= window_end,
+            )
+            .all()
+        )
+        results: list[HardwareFinding] = []
+        for d in devices:
+            tier = getattr(d, "remediation_tier", None) or "Tier N/A"
+            vendor = getattr(d, "vendor", "Unknown") or "Unknown"
+            model = getattr(d, "model", None) or None
+            pqc_status = getattr(d, "pqc_status", "unknown") or "unknown"
+            confidence = getattr(d, "confidence", "unknown") or "unknown"
+            fp_method = getattr(d, "fingerprint_method", "unknown") or "unknown"
+            eol_raw = getattr(d, "eol_date", None)
+            eol_iso = eol_raw.isoformat() if eol_raw is not None else None
+            host = getattr(d, "host", "") or ""
+            port = getattr(d, "port", 0) or 0
+
+            severity = _TIER_SEVERITY.get(tier, "INFO")
+            title = f"{vendor} {model or 'Device'} - Hardware PQC Advisory"
+            description = (
+                f"PQC status: {pqc_status}. "
+                f"Confidence: {confidence}. "
+                f"Method: {_METHOD_LABEL.get(fp_method, fp_method)}."
+            )
+            remediation = _CNSA_DEADLINE.get(tier, "Review device PQC roadmap")
+            quantum_risk = (
+                "quantum-safe" if pqc_status == "supported" else "quantum-vulnerable"
+            )
+
+            results.append(HardwareFinding(
+                host=host,
+                port=port,
+                severity=severity,
+                title=title,
+                description=description,
+                remediation=remediation,
+                quantum_risk=quantum_risk,
+                vendor=vendor,
+                model=model,
+                pqc_status=pqc_status,
+                remediation_tier=tier,
+                confidence=confidence,
+                fingerprint_method=fp_method,
+                eol_date=eol_iso,
+            ))
+
+        results.sort(key=lambda f: _TIER_ORDER.get(f.remediation_tier, 99))
+        return results
+    except Exception:
+        logger.exception("_derive_hardware_findings failed (advisory-only, skipping)")
+        return []
+
+
 def _qs_for_alg(alg: str) -> str:
     """Map an algorithm string to its quantum-safety display label.
 
@@ -1227,6 +1319,7 @@ def get_latest_scan(
         identity_findings=identity_findings,
         motion_findings=_derive_motion_findings(endpoints),   # NEW — Phase 36 DASH-05
         dar_findings=_derive_dar_findings(endpoints),          # Phase 39 GAP-04
+        hardware_findings=_derive_hardware_findings(db, latest_ts),  # Phase 128 HWCOMPAT-07
         partial_failures=partial_failures,                     # Phase 67 RESUME-02
     )
 
