@@ -27,6 +27,21 @@ Residual risk — TOCTOU / DNS rebinding (accepted, Phase 120 T-120-04):
   fix is "resolve-then-connect-to-IP with explicit SNI"; that is deferred to a future
   phase. See SECURITY.md for the formal acceptance.
 
+  CWE-367 (TOCTOU — Time-of-check Time-of-use Race Condition) — ACCEPTED RISK (AUDIT-09):
+  The gap between validate_external_url's resolution check and the downstream connect is
+  formally acknowledged here and accepted for the following reasons:
+    (1) On-prem threat model: QUIRK targets operator-controlled networks; the operator
+        administers both the network and the set of scan targets, reducing DNS-rebind
+        attack surface compared to a multi-tenant SaaS deployment.
+    (2) Phase 123 SSRF-05 (PinnedIPAdapter): HTTP/HTTPS fetch callers receive
+        resolved_ip from ValidationResult and pin their connection via PinnedIPAdapter
+        (or equivalent), closing the requests/httpx TOCTOU window by forcing connect
+        to the validated IP rather than re-resolving.
+    (3) smtplib compensating control: the SMTP notification path is operator-configured
+        and protected by TLS certificate verification, which provides a compensating
+        control against connect-time redirect to an attacker-controlled host.
+  No logic change — this comment documents the accepted-risk posture only.
+
 Public surface:
   validate_external_url(url, *, allow_internal=False) -> ValidationResult
 """
