@@ -243,6 +243,11 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                             "Tier 3": "Accept + monitor, re-evaluate 2033+",
                             "Tier N/A": "EOL before PQC migration window",
                         }.get(_tier, ""),
+                        # SNMP-02 / Phase 133: nullable SNMP fingerprint fields
+                        "snmp_sysdescr":      getattr(_d, "snmp_sysdescr", None),
+                        "snmp_sysname":       getattr(_d, "snmp_sysname", None),
+                        "snmp_sysobjectid":   getattr(_d, "snmp_sysobjectid", None),
+                        "snmp_vendor":        getattr(_d, "snmp_vendor", None),
                     })
     except Exception:
         import logging as _log

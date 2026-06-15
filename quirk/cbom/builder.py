@@ -1044,6 +1044,13 @@ def build_cbom(
             bridge = dev.get("bridge_status")
             if bridge is not None:
                 props.append(Property(name="quirk:hw-bridge-status", value=str(bridge)))
+            # SNMP-03 / D-11: emit sysObjectID as hw-snmp-oid when SNMP data present.
+            # Only devices fingerprinted via SNMP will have snmp_sysdescr set.
+            if dev.get("snmp_sysdescr") is not None:
+                props.append(Property(
+                    name="quirk:hw-snmp-oid",
+                    value=dev.get("snmp_sysobjectid") or "",
+                ))
             hw_components.append(
                 Component(
                     name=comp_name,
