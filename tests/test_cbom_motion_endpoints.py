@@ -224,20 +224,21 @@ def test_plaintext_broker_skipped_from_protocol_pass(label, port):
 
 def test_classify_tls_rsa_aes_128_cbc_sha_components_quantum_vulnerable():
     """TLS_RSA_WITH_AES_128_CBC_SHA decomposes to algorithms that include at
-    least one nist_level==0 (quantum-vulnerable) component — namely RSA.
+    least one nist_level==0 (quantum-vulnerable) component — namely the RSA
+    key-transport, labeled 'RSA-kex' by builder _KEX_MAP (Phase 73 D-08/WR-12).
 
-    Verify, don't redefine: classifier already maps 'rsa' -> level 0.
+    Verify, don't redefine: classifier maps 'rsa-kex' -> level 0.
     """
     decomposed = _decompose_cipher_suite("TLS_RSA_WITH_AES_128_CBC_SHA")
     assert decomposed, "Cipher decomposition returned empty list"
 
     levels = {algo: classify_algorithm(algo)[1] for algo in decomposed}
 
-    # RSA must be present and classified quantum-vulnerable.
-    rsa_levels = [lvl for algo, lvl in levels.items() if algo.lower() == "rsa"]
-    assert rsa_levels, f"RSA missing from decomposition: {decomposed}"
+    # RSA key-transport must be present and classified quantum-vulnerable.
+    rsa_levels = [lvl for algo, lvl in levels.items() if algo.lower() == "rsa-kex"]
+    assert rsa_levels, f"RSA-kex missing from decomposition: {decomposed}"
     assert rsa_levels[0] == 0, (
-        f"RSA expected nist_level=0 (quantum-vulnerable); got {rsa_levels[0]} "
+        f"RSA-kex expected nist_level=0 (quantum-vulnerable); got {rsa_levels[0]} "
         f"with full decomposition {levels}"
     )
     assert quantum_safety_label(rsa_levels[0]) == "quantum-vulnerable"

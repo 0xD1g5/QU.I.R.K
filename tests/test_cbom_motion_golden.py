@@ -410,7 +410,8 @@ def test_amqps_azure_servicebus_protocol_component_present():
 
 def test_kafka_tls_rsa_cipher_decomposes_to_quantum_vulnerable():
     """CBOM-04: KAFKA-TLS uses TLS_RSA_WITH_AES_128_CBC_SHA, which decomposes
-    to RSA + AES-128-CBC + SHA-1. The RSA component must be classified as
+    to RSA-kex + AES-128-CBC + SHA-1. The RSA key-transport component (labeled
+    'RSA-kex' by builder _KEX_MAP, Phase 73 D-08/WR-12) must be classified as
     quantum-vulnerable (nist_level=0).
     """
     bom = build_cbom(_build_broker_lab_endpoints())
@@ -420,9 +421,9 @@ def test_kafka_tls_rsa_cipher_decomposes_to_quantum_vulnerable():
         and c.crypto_properties.asset_type
         and c.crypto_properties.asset_type.value == "algorithm"
     }
-    assert "crypto/algorithm/rsa" in algo_refs, (
-        f"RSA algorithm component missing; algo_refs={sorted(algo_refs)}"
+    assert "crypto/algorithm/rsa-kex" in algo_refs, (
+        f"RSA-kex algorithm component missing; algo_refs={sorted(algo_refs)}"
     )
-    _, nist_level, _ = classify_algorithm("rsa")
+    _, nist_level, _ = classify_algorithm("rsa-kex")
     assert nist_level == 0
     assert quantum_safety_label(nist_level) == "quantum-vulnerable"

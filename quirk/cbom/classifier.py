@@ -108,6 +108,10 @@ _ALGORITHM_TABLE: dict[str, tuple[CryptoPrimitive, int | None, int | None]] = {
     "rsa-2048": (CryptoPrimitive.PKE, 0, 112),    # RSA with 2048-bit modulus — quantum-vulnerable
     "rsa-3072": (CryptoPrimitive.PKE, 0, 128),    # RSA with 3072-bit modulus — quantum-vulnerable
     "rsa-4096": (CryptoPrimitive.PKE, 0, 152),    # RSA with 4096-bit modulus — quantum-vulnerable
+    # RSA key transport (cipher-suite key-exchange). Emitted by builder _KEX_MAP
+    # as "RSA-kex" (Phase 73 D-08/WR-12) to disambiguate from cert-signature RSA.
+    # Public-key key transport — Shor-breakable; RSA-2048 baseline security.
+    "rsa-kex": (CryptoPrimitive.PKE, 0, 112),
     "ecdsa": (CryptoPrimitive.SIGNATURE, 0, 128),
     "ec": (CryptoPrimitive.SIGNATURE, 0, 128),
     "ed25519": (CryptoPrimitive.SIGNATURE, 0, 128),

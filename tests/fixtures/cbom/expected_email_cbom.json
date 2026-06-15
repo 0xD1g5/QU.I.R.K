@@ -11,18 +11,18 @@
     },
     {
       "asset_type": "algorithm",
-      "bom_ref": "crypto/algorithm/rsa",
+      "bom_ref": "crypto/algorithm/rsa-2048",
       "cipher_suite_names": [],
-      "name": "RSA",
+      "name": "RSA-2048",
       "protocol_type": null,
       "protocol_version": null,
       "type": "cryptographic-asset"
     },
     {
       "asset_type": "algorithm",
-      "bom_ref": "crypto/algorithm/rsa-2048",
+      "bom_ref": "crypto/algorithm/rsa-kex",
       "cipher_suite_names": [],
-      "name": "RSA-2048",
+      "name": "RSA-kex",
       "protocol_type": null,
       "protocol_version": null,
       "type": "cryptographic-asset"
