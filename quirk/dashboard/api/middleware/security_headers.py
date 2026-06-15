@@ -29,8 +29,9 @@ _STATIC_HEADERS: dict[str, str] = {
     "Referrer-Policy": "no-referrer",
     # Lock down powerful browser features the dashboard never uses.
     "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
-    # Restrict script execution to same origin; block plugins (AUDIT-14 / D-04/05).
-    "Content-Security-Policy": "script-src 'self'; object-src 'none'",
+    # Restrict all fetch directives to same origin; block plugins (AUDIT-14 / D-04/05).
+    # default-src 'self' covers connect-src/img-src/font-src so exfil via fetch is blocked.
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'",
 }
 
 # HSTS value used when QUIRK_HSTS is truthy: 1 year + subdomains.

@@ -53,7 +53,7 @@ def test_cover_meta_block_no_margin_auto(tmp_path):
         conf={"confidence": 80, "confidence_factors": {}},
         roadmap_items=[],
     )
-    content = open(out).read()
+    content = open(out, encoding="utf-8").read()
     # Extract the .cover-meta-block CSS rule body
     block = re.search(r'\.cover-meta-block\s*\{([^}]+)\}', content)
     assert block is not None, ".cover-meta-block rule not found in rendered output"
