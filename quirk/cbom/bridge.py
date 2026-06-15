@@ -37,7 +37,7 @@ def _subnet_24(ip: str) -> str:
         _subnet_24("bad")          -> "bad"
     """
     parts = ip.split(".")
-    if len(parts) == 4:
+    if len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts):
         return ".".join(parts[:3])
     return ip
 

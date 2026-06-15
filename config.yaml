@@ -1,3 +1,5 @@
+# vertical: healthcare
+
 assessment:
   name: "Quantum Crypto Readiness - CLIENT NAME"
   data_classification: "confidential"   # public|internal|confidential|regulated

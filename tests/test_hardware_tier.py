@@ -106,3 +106,25 @@ def test_vendor_silent_medium() -> None:
     """
     dev = _make_device(pqc_status="VENDOR-SILENT", confidence="medium", eol_date=None)
     assert assign_tier(dev) == "Tier 2"
+
+
+# ------------ D-04 cap bypass: pqc_status=supported always Tier 3 (WR-03 Phase 128) ------------
+
+def test_confidence_cap_bypass_supported_low() -> None:
+    """pqc_status=supported, confidence=low → Tier 3, NOT Tier 2 (D-04 cap bypass).
+
+    The confidence cap (low/unknown → max Tier 2) has an explicit exception: when the
+    device is confirmed PQC-ready (pqc_status=supported) it earns Tier 3 regardless of
+    confidence level. See assign_tier lines 54-56.
+    """
+    dev = _make_device(pqc_status="supported", confidence="low", eol_date=None)
+    assert assign_tier(dev) == "Tier 3"
+
+
+def test_confidence_cap_bypass_supported_unknown() -> None:
+    """pqc_status=supported, confidence=unknown → Tier 3, NOT Tier 2 (D-04 cap bypass).
+
+    Same exception as above — confirmed PQC support overrides the confidence cap.
+    """
+    dev = _make_device(pqc_status="supported", confidence="unknown", eol_date=None)
+    assert assign_tier(dev) == "Tier 3"
