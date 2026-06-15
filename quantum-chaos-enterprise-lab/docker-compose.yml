@@ -1337,6 +1337,20 @@ services:
     volumes:
       - ./hwcompat/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
+  # =========================
+  # PHASE 133 / HWCOMPAT-SNMP — SNMP Cisco IOS simulation (profile: hwcompat)
+  # hwcompat-snmp: Net-SNMP serving Cisco IOS sysDescr → vendor=Cisco, fingerprint_method=snmp
+  # Port 20223 UDP (sequential: 20221=ssh, 20222=http, 20223=snmp)
+  # Local build — FROM alpine:3.19 satisfies CHAOS-05 pin gate.
+  # Scan with: python run_scan.py --target 127.0.0.1 --enable-snmp --snmp-community public
+  # lab.sh ALL_PROFILES needs NO edit — _derive_all_profiles discovers hwcompat dynamically.
+  # =========================
+  hwcompat-snmp:
+    build: ./hwcompat-snmp/
+    profiles: ["hwcompat"]
+    ports:
+      - "20223:161/udp"
+
 volumes:
   id_postgres_data:
   stepca_data:

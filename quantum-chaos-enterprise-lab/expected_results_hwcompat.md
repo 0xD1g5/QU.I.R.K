@@ -24,6 +24,7 @@ PROFILE_ARGS="--profile hwcompat" ./lab.sh up
 |---------|-----------|----------------|----------|---------|
 | hwcompat-ssh | 20221 | 2222 | SSH | OpenSSH banner — unrecognized pattern → vendor=Unknown |
 | hwcompat-http | 20222 | 80 | HTTP | HPE-iLO5 management headers → vendor=HPE, model=iLO5 |
+| hwcompat-snmp | 20223 | 161/udp | SNMP | Cisco IOS sysDescr → vendor=Cisco, fingerprint_method=snmp |
 
 ---
 
@@ -99,14 +100,55 @@ This service exercises the **known-vendor positive code path** (HTTP management 
 
 ---
 
+### hwcompat-snmp — Port 20223/UDP (SNMP, Cisco positive-vendor path)
+
+**Expected result:**
+
+| Field | Expected Value |
+|-------|---------------|
+| host | 127.0.0.1 |
+| port | 20223 |
+| vendor | Cisco |
+| model | (per HARDWARE_MATRIX Cisco IOS entry, or null if not mapped) |
+| fingerprint_method | snmp |
+| confidence | high |
+| pqc_status | unsupported |
+| eol_date | (per HARDWARE_MATRIX Cisco IOS 15.x entry) |
+
+**sysDescr OID (1.3.6.1.2.1.1.1.0):** `"Cisco IOS Software, Version 15.2(4)M3, RELEASE SOFTWARE (fc2)"`
+**sysName OID (1.3.6.1.2.1.1.5.0):** `"cisco-sim-hwcompat"`
+**sysObjectID OID (1.3.6.1.2.1.1.2.0):** `1.3.6.1.4.1.9.1.1` (Cisco Enterprise OID)
+
+**Rationale:**
+The Net-SNMP container (alpine:3.19 + net-snmp) serves the standard SNMP MIB-II OIDs on UDP port 161
+(mapped to host port 20223). The sysDescr string `"Cisco IOS Software, Version 15.2(4)M3..."` matches
+the `HARDWARE_MATRIX` Cisco pattern (substring `"Cisco IOS Software"` or vendor OID prefix `1.3.6.1.4.1.9`).
+
+The scanner (queried with `--enable-snmp --snmp-community public`) retrieves sysDescr via GET
+on OID `1.3.6.1.2.1.1.1.0` → `vendor="Cisco"`, `fingerprint_method="snmp"`, `confidence="high"`.
+
+Cisco IOS 15.2 does not support PQC algorithms → `pqc_status="unsupported"`.
+
+This service exercises the **SNMP positive code path** (sysDescr OID match → Cisco vendor detection).
+Scan command:
+```bash
+python run_scan.py --target 127.0.0.1 --ports 20223 --enable-snmp --snmp-community public
+```
+
+**Community string:** `public` (read-only, hardcoded in snmpd.conf for lab-only use)
+**Build:** Local (`build: ./hwcompat-snmp/`), `FROM alpine:3.19` — CHAOS-05 compliant (pinned base image)
+
+---
+
 ## Advisory-Only Note
 
 Hardware findings do not enter `SCORE_WEIGHTS` or `compute_readiness_score()` (D-01).
 They appear in the advisory section of the QUIRK report only.
 
-The hwcompat lab profile validates both code paths in `hardware_scanner.py`:
+The hwcompat lab profile validates all three code paths in `hardware_scanner.py`:
 1. **Unknown path** (hwcompat-ssh): unrecognized banner → `vendor=Unknown`, never suppressed
-2. **Known-vendor path** (hwcompat-http): HTTP header match → `vendor=HPE`, `model=iLO5`
+2. **Known-vendor path via HTTP** (hwcompat-http): HTTP header match → `vendor=HPE`, `model=iLO5`
+3. **Known-vendor path via SNMP** (hwcompat-snmp): sysDescr OID match → `vendor=Cisco`, `fingerprint_method=snmp`
 
 ---
 
@@ -116,3 +158,4 @@ The hwcompat lab profile validates both code paths in `hardware_scanner.py`:
 |---------|-------|-----|---------------------|
 | hwcompat-ssh | lscr.io/linuxserver/openssh-server | 10.2_p1-r0-ls225 | Yes (pinned) |
 | hwcompat-http | nginx | 1.28.0 | Yes (pinned) |
+| hwcompat-snmp | local build (`./hwcompat-snmp/`) | FROM alpine:3.19 | Yes (pinned base image in Dockerfile) |
