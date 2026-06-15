@@ -203,6 +203,38 @@ def fingerprint_one(
                     )
                     break  # First match wins
 
+        # ── Step 3: SNMP probe (Phase 133 SNMP-01 / D-01/D-02) ─────────────
+        # Only attempt if SSH banner + HTTP mgmt both failed to identify a known vendor.
+        if device.vendor == "Unknown":
+            from quirk.scanner.snmp_scanner import probe_snmp_target, parse_sysdescr as _parse_sd
+            host = getattr(ep, "host", "")
+            _snmp_result = probe_snmp_target(host, community="public", timeout=timeout)
+            _raw = _snmp_result.get("snmp_sysdescr")
+            if _raw:
+                _parsed = _parse_sd(_raw)
+                if _parsed.get("vendor") and _parsed["vendor"] != "Unknown":
+                    device.vendor = _parsed["vendor"]
+                    device.model = _parsed.get("model")
+                    device.fingerprint_method = "snmp"
+                    device.confidence = "medium"
+                    # Attempt HARDWARE_MATRIX match for pqc_status
+                    _entry = _match_matrix(_raw)
+                    if _entry:
+                        _apply_entry(device, _entry, method="snmp", body=_raw)
+            # Store raw SNMP fields; ORM columns added in Plan 133-02
+            try:
+                device.snmp_sysdescr = _raw
+                device.snmp_sysname = _snmp_result.get("snmp_sysname")
+                device.snmp_sysobjectid = _snmp_result.get("snmp_sysobjectid")
+                device.snmp_vendor = (
+                    _parsed.get("vendor", "Unknown")
+                    if _raw
+                    else None
+                )
+            except AttributeError:
+                # ORM columns not yet migrated (Plan 133-02) — skip assignment
+                pass
+
     except Exception as e:
         if logger:
             logger.v(

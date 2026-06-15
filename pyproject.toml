@@ -57,6 +57,14 @@ identity = [
 adcs = [
     "ldap3>=2.9.1",
 ]
+# Phase 133 SNMP-01/D-08: [hw] extras for SNMP hardware fingerprinting.
+# INTENTIONALLY EXCLUDED from [all] — pysnmp requires explicit operator opt-in.
+# Operators who need SNMP scanning must install quirk-scanner[hw] separately.
+# tests/test_install_all_excludes_pysnmp.py guards this; do NOT add quirk[hw] to [all].
+hw = [
+    "pysnmp>=7.1.0,<8",
+    "sysdescrparser>=0.0.8",
+]
 # Phase 94 SPEC-01/02/03 / PKG-01: [api] extras group for OpenAPI spec scanning.
 # [api] is INTENTIONALLY EXCLUDED from [all] — quirk[api] must never appear in [all]
 # because schemathesis (active REST fuzzer) requires explicit operator opt-in and the
