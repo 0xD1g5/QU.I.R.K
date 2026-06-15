@@ -33,7 +33,9 @@ def test_minio_seed_creates_two_buckets():
 def test_minio_compose_profile_storage_s3():
     """docker-compose.yml must declare a storage-s3 profile with minio + minio-seed."""
     compose = (LAB_DIR / "docker-compose.yml").read_text()
-    assert "minio/minio:latest" in compose
+    # Version-agnostic: the minio image is pinned to a dated RELEASE tag
+    # (digest/version pinning, v5.6), so assert the prefix not a literal :latest.
+    assert "minio/minio:" in compose
     assert "storage-s3" in compose
     assert "minio-seed" in compose
 

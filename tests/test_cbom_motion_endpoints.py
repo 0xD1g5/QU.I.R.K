@@ -686,3 +686,220 @@ def _build_storage_s3_lab_endpoints() -> list[CryptoEndpoint]:
             service_detail="S3/unencrypted",
         ),
     ]
+
+
+# --- Phase 46/79/80/89/90/96/127 profile synthesizers (chaos-lab drift sync) --
+# Added to close the PROFILE_ENDPOINTS ↔ docker-compose.yml drift (CLAUDE.md
+# Chaos Lab Maintenance). Each profile below was added to docker-compose.yml
+# after the Phase 42 synthesizer map was written. Ports/shapes sourced from the
+# compose service definitions cited in each docstring.
+
+
+def _build_smime_lab_endpoints() -> list[CryptoEndpoint]:
+    """smime profile — S/MIME LDAP cert discovery (port 38900, Phase 79).
+
+    smime-openldap seeds userSMIMECertificate values exercising weak-key /
+    weak-signing paths. Cert-only shape (no TLS) — the signing key is the
+    observable. RSA-1024 captures the deliberately weak SMIME key.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=38900, protocol="SMIME",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject="CN=smime-user,dc=quirk,dc=lab",
+            cert_issuer="CN=smime-ca,dc=quirk,dc=lab",
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_adcs_lab_endpoints() -> list[CryptoEndpoint]:
+    """adcs profile — Windows AD CS LDAP discovery (port 38910, Phase 80).
+
+    adcs-openldap seeds a misconfigured AD CS partition with an RSA-1024 SHA-1
+    CA signing cert (adcs/certs/ca-weak.der). Modeled as the code-signing CA
+    cert observable (CODE_SIGNING Pass-1 registers cert_pubkey_alg).
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=38910, protocol="CODE_SIGNING",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject="CN=adcs-ca,dc=quirk,dc=lab",
+            cert_issuer="CN=adcs-ca,dc=quirk,dc=lab",
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+            service_detail="fingerprint=" + ("ad" * 32) + "|weak",
+        ),
+    ]
+
+
+def _build_tls_cert_defects_lab_endpoints() -> list[CryptoEndpoint]:
+    """tls-cert-defects profile — nginx cert-defect targets (ports 13444-13447,
+    Phase 46). Representative subset: expired (13444, RSA-2048) and the
+    deliberately weak rsa1024 target (13447, RSA-1024).
+    """
+    subj = "CN=cert-defects.chaos.local"
+    rows = [(13444, 2048), (13447, 1024)]
+    return [
+        CryptoEndpoint(
+            host="localhost", port=port, protocol="HTTPS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=size,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        )
+        for (port, size) in rows
+    ]
+
+
+def _build_postgres_tls_lab_endpoints() -> list[CryptoEndpoint]:
+    """postgres-tls profile — weak-TLS PostgreSQL (port 39432, Phase 89 LAB-01).
+
+    RSA key-exchange ciphers, no PFS. The weak suite decomposes to the
+    quantum-vulnerable RSA-kex + AES-128-CBC + SHA-1 components.
+    """
+    subj = "CN=postgres-tls.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=39432, protocol="POSTGRES-TLS",
+            tls_version="TLSv1.2", cipher_suite="TLS_RSA_WITH_AES_128_CBC_SHA",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_redis_tls_lab_endpoints() -> list[CryptoEndpoint]:
+    """redis-tls profile — weak-TLS Redis (port 39380, Phase 89 LAB-02).
+
+    3DES + RSA ciphers. DES-CBC3-SHA decomposes to the weak 3DES + RSA-kex
+    + SHA-1 components (mirrors the broker AMQPS/REDIS-TLS rows).
+    """
+    subj = "CN=redis-tls.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=39380, protocol="REDIS-TLS",
+            tls_version="TLSv1.2", cipher_suite="DES-CBC3-SHA",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_kafka_tls_lab_endpoints() -> list[CryptoEndpoint]:
+    """kafka-tls profile — weak-TLS Kafka (port 39093, Phase 89 LAB-04).
+
+    RSA key-exchange ciphers. TLS_RSA_WITH_AES_128_CBC_SHA decomposes to the
+    quantum-vulnerable RSA-kex + AES-128-CBC + SHA-1 components.
+    """
+    subj = "CN=kafka-tls.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=39093, protocol="KAFKA-TLS",
+            tls_version="TLSv1.2", cipher_suite="TLS_RSA_WITH_AES_128_CBC_SHA",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_grpc_tls_lab_endpoints() -> list[CryptoEndpoint]:
+    """grpc-tls profile — Go gRPC server, self-signed RSA-2048 (port 39443,
+    Phase 89 LAB-05). Quantum-vulnerable MEDIUM finding expected.
+    """
+    subj = "CN=grpc-tls.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=39443, protocol="GRPC-TLS",
+            tls_version="TLSv1.3",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_oqs_nginx_lab_endpoints() -> list[CryptoEndpoint]:
+    """oqs-nginx profile — PQC-hybrid nginx (port 39444, Phase 90 PQC-01).
+
+    Negotiates the X25519MLKEM768 hybrid KEM (NamedGroup 4588) and serves an
+    ML-DSA-65 (Dilithium) certificate. Both are quantum-safe (NIST level 3).
+    The bare hybrid group name is observed by the raw openssl s_client probe
+    (Phase 90 PQC-02) and maps through builder _KEX_MAP directly.
+    """
+    subj = "CN=oqs-nginx.chaos.local"
+    return [
+        CryptoEndpoint(
+            host="localhost", port=39444, protocol="HTTPS",
+            tls_version="TLSv1.3", cipher_suite="X25519MLKEM768",
+            cert_pubkey_alg="ML-DSA-65", cert_pubkey_size=None,
+            cert_sig_alg=None,
+            cert_subject=subj, cert_issuer=subj,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_fuzz_target_lab_endpoints() -> list[CryptoEndpoint]:
+    """fuzz-target profile — deliberately-weak REST service (port 20100,
+    Phase 96 LAB-01). /probe accepts a forged JWT; the observed crypto is the
+    RS256-signed JWT (RSA-based, quantum-vulnerable). Mirrors the jwt profile.
+    """
+    return [
+        CryptoEndpoint(
+            host="localhost", port=20100, protocol="JWT",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=None,
+        ),
+    ]
+
+
+def _build_hwcompat_lab_endpoints() -> list[CryptoEndpoint]:
+    """hwcompat profile — hardware fingerprinting lab (Phase 127 HWCOMPAT-02).
+
+    hwcompat-ssh (port 20221) is an OpenSSH server exercising the
+    banner-fingerprinting path; the incidental SSH crypto (modern, standard
+    algorithms) is the CBOM observable here. hwcompat-http (20222) emits HTTP
+    management headers only — no cataloguable algorithm.
+    """
+    import json as _json
+    _SSH_AUDIT_JSON = _json.dumps({
+        "kex": [{"algorithm": "curve25519-sha256"}],
+        "key": [{"algorithm": "ssh-ed25519"}],
+        "enc": [{"algorithm": "aes256-gcm"}],
+        "mac": [{"algorithm": "hmac-sha2-256"}],
+    })
+    return [
+        CryptoEndpoint(
+            host="localhost", port=20221, protocol="SSH",
+            tls_version=None, cipher_suite=None,
+            cert_pubkey_alg="ssh-ed25519", cert_pubkey_size=None,
+            cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+            cert_not_before=None, cert_not_after=None,
+            tls_capabilities_json=None, ssh_audit_json=_SSH_AUDIT_JSON,
+        ),
+    ]
