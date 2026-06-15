@@ -29,6 +29,23 @@ from quirk.dashboard.api.deps import get_db
 from quirk.models import Base, IntegrationDelivery, Sensor, SensorToken
 
 # ---------------------------------------------------------------------------
+# Fixed UUID sensor IDs — enrollment validates UUID shape; tests must use the
+# same format so AUDIT-08's re-validation guard in sensor.py passes legitimate
+# sensor_ids resolved from the token store.
+# ---------------------------------------------------------------------------
+_SENSOR_VALID = "b0000001-0000-4000-8000-000000000001"
+_SENSOR_IDENTITY = "b0000002-0000-4000-8000-000000000002"
+_SENSOR_REVOKED = "b0000003-0000-4000-8000-000000000003"
+_SENSOR_ISO_A = "b0000004-0000-4000-8000-000000000004"
+_SENSOR_ISO_B = "b0000005-0000-4000-8000-000000000005"
+_SENSOR_MISMATCH_A = "b0000006-0000-4000-8000-000000000006"
+_SENSOR_MISMATCH_B = "b0000007-0000-4000-8000-000000000007"
+_SENSOR_AUDIT_OK = "b0000008-0000-4000-8000-000000000008"
+_SENSOR_AUDIT_REV = "b0000009-0000-4000-8000-000000000009"
+_SENSOR_AUDIT_MIS = "b000000a-0000-4000-8000-00000000000a"
+_SENSOR_AUDIT_MIS2 = "b000000b-0000-4000-8000-00000000000b"
+
+# ---------------------------------------------------------------------------
 # Shared DB + TestClient factory (verbatim from test_sensor_ingest.py)
 # ---------------------------------------------------------------------------
 
@@ -161,7 +178,7 @@ def test_valid_sensor_token_accepted(monkeypatch):
     """AUTH-01: A valid sensor token in Authorization: Bearer → 200 accepted."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
-    sensor_id = "sensor-valid-01"
+    sensor_id = _SENSOR_VALID
     _seed_sensor(TestingSession, sensor_id=sensor_id)
     raw_token = _seed_token(TestingSession, sensor_id=sensor_id)
 
@@ -191,7 +208,7 @@ def test_token_identity_is_authoritative(monkeypatch):
     """
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
-    sensor_id = "sensor-identity-01"
+    sensor_id = _SENSOR_IDENTITY
     _seed_sensor(TestingSession, sensor_id=sensor_id)
     raw_token = _seed_token(TestingSession, sensor_id=sensor_id)
 
@@ -218,7 +235,7 @@ def test_revoked_token_returns_401(monkeypatch):
     """AUTH-02 / AUTH-04: A token with revoked_at set must be rejected with 401."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
-    sensor_id = "sensor-revoked-01"
+    sensor_id = _SENSOR_REVOKED
     _seed_sensor(TestingSession, sensor_id=sensor_id)
     raw_token = _seed_token(TestingSession, sensor_id=sensor_id, revoked=True)
 
@@ -245,8 +262,8 @@ def test_revoke_isolates_to_one_sensor(monkeypatch):
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
 
-    sensor_a = "sensor-iso-a"
-    sensor_b = "sensor-iso-b"
+    sensor_a = _SENSOR_ISO_A
+    sensor_b = _SENSOR_ISO_B
     _seed_sensor(TestingSession, sensor_id=sensor_a)
     _seed_sensor(TestingSession, sensor_id=sensor_b)
     revoked_token = _seed_token(TestingSession, sensor_id=sensor_a, revoked=True)
@@ -307,8 +324,8 @@ def test_sensor_id_mismatch_returns_403(monkeypatch):
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
 
-    sensor_a = "sensor-mismatch-a"
-    sensor_b = "sensor-mismatch-b"
+    sensor_a = _SENSOR_MISMATCH_A
+    sensor_b = _SENSOR_MISMATCH_B
     _seed_sensor(TestingSession, sensor_id=sensor_a)
     _seed_sensor(TestingSession, sensor_id=sensor_b)
     raw_token = _seed_token(TestingSession, sensor_id=sensor_a)
@@ -345,10 +362,10 @@ def test_all_branches_write_audit_rows(monkeypatch):
     _, client, _, TestingSession = _app_with_db()
 
     # Seed sensors and tokens
-    sensor_ok = "sensor-audit-ok"
-    sensor_rev = "sensor-audit-rev"
-    sensor_mis = "sensor-audit-mis"
-    sensor_mis2 = "sensor-audit-mis2"
+    sensor_ok = _SENSOR_AUDIT_OK
+    sensor_rev = _SENSOR_AUDIT_REV
+    sensor_mis = _SENSOR_AUDIT_MIS
+    sensor_mis2 = _SENSOR_AUDIT_MIS2
     _seed_sensor(TestingSession, sensor_id=sensor_ok)
     _seed_sensor(TestingSession, sensor_id=sensor_rev)
     _seed_sensor(TestingSession, sensor_id=sensor_mis)

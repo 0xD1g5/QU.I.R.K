@@ -45,6 +45,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.cli.console_cmd import DuplicatePayloadError, UnknownSensorError, _ingest_envelope
+from quirk.cli.sensor_cmd import _UUID_RE
 from quirk.dashboard.api.deps import _default_db_path, get_db
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.sensor_auth import require_sensor_auth
@@ -483,6 +484,15 @@ async def sensor_push(
     # Token identity is authoritative; envelope.sensor_id is informational only.
     # ------------------------------------------------------------------
     token_sensor_id = request.state.sensor_id  # resolved by require_sensor_auth (D-04)
+
+    # AUDIT-08: defense-in-depth — re-validate UUID shape before any DB access.
+    # Enrollment already validates shape; this guard catches pathological edge cases
+    # (legacy data, token store corruption) before they reach the ingest path.
+    if not _UUID_RE.match(token_sensor_id):
+        db.rollback()
+        _audit(db, scan_id, "failed", "invalid_sensor_id_shape")
+        raise HTTPException(status_code=400, detail="Invalid sensor_id shape")
+
     sensor_row = db.query(Sensor).filter(Sensor.sensor_id == token_sensor_id).first()
     if sensor_row is None:
         _audit(db, scan_id, "failed", "unknown_sensor_id")

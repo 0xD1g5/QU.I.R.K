@@ -34,6 +34,20 @@ from quirk.dashboard.api.deps import get_db
 from quirk.models import Base, IntegrationDelivery, Sensor, SensorPush, CryptoEndpoint, SensorToken
 
 # ---------------------------------------------------------------------------
+# Fixed UUID sensor IDs — enrollment validates UUID shape; tests must use the
+# same format so AUDIT-08's re-validation guard in sensor.py does not block
+# legitimate sensor_ids resolved from the token store.
+# ---------------------------------------------------------------------------
+_SENSOR_413 = "a0000001-0000-4000-8000-000000000413"
+_SENSOR_DEDUP = "a0000002-0000-4000-8000-000000000409"
+_SENSOR_REPLAY = "a0000003-0000-4000-8000-000000000422"
+_SENSOR_OK = "a0000004-0000-4000-8000-000000000200"
+_SENSOR_AUDIT = "a0000005-0000-4000-8000-000000000a01"
+_SENSOR_AUDIT_STALE = "a0000006-0000-4000-8000-000000000a02"
+_SENSOR_EXTRA = "a0000007-0000-4000-8000-000000000700"
+_SENSOR_SKEW = "a0000008-0000-4000-8000-000000000800"
+
+# ---------------------------------------------------------------------------
 # Shared DB + TestClient factory
 # ---------------------------------------------------------------------------
 
@@ -193,8 +207,8 @@ def test_push_413_body_too_large(monkeypatch):
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
     # Seed any sensor + token so the auth check passes; 413 fires before body processing.
-    _seed_sensor(TestingSession, sensor_id="sensor-413-01")
-    raw_token = _seed_token(TestingSession, sensor_id="sensor-413-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_413)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_413)
     # Lie about Content-Length — easier than sending 10+ MB in tests
     oversized_bytes = 11 * 1024 * 1024
     resp = client.post(
@@ -218,11 +232,11 @@ def test_push_409_duplicate_payload(monkeypatch):
     """CONSOLE-03: Pushing the same payload_id twice returns 200 then 409."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
-    _seed_sensor(TestingSession, sensor_id="sensor-dedup-01")
-    raw_token = _seed_token(TestingSession, sensor_id="sensor-dedup-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_DEDUP)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_DEDUP)
 
     payload_id = str(uuid.uuid4())
-    env = _build_envelope(sensor_id="sensor-dedup-01", payload_id=payload_id)
+    env = _build_envelope(sensor_id=_SENSOR_DEDUP, payload_id=payload_id)
     body = _compress(env)
 
     resp1 = client.post(
@@ -253,13 +267,13 @@ def test_push_422_replay_window(monkeypatch):
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, _, TestingSession = _app_with_db()
     # Seed a real sensor + token; envelope uses a stale pushed_at so 422 fires after auth.
-    _seed_sensor(TestingSession, sensor_id="sensor-replay-01")
-    raw_token = _seed_token(TestingSession, sensor_id="sensor-replay-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_REPLAY)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_REPLAY)
 
     stale_pushed_at = (
         datetime.utcnow() - timedelta(minutes=30)
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
-    env = _build_envelope(sensor_id="sensor-replay-01", pushed_at=stale_pushed_at)
+    env = _build_envelope(sensor_id=_SENSOR_REPLAY, pushed_at=stale_pushed_at)
     body = _compress(env)
 
     resp = client.post(
@@ -287,8 +301,8 @@ def test_push_200_accepted(monkeypatch):
     updates sensors.last_push_at, and writes CryptoEndpoint rows for findings."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
-    _seed_sensor(TestingSession, sensor_id="sensor-ok-01")
-    raw_token = _seed_token(TestingSession, sensor_id="sensor-ok-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_OK)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_OK)
 
     finding = {
         "host": "10.0.0.1",
@@ -308,7 +322,7 @@ def test_push_200_accepted(monkeypatch):
     }
     payload_id = str(uuid.uuid4())
     env = _build_envelope(
-        sensor_id="sensor-ok-01",
+        sensor_id=_SENSOR_OK,
         payload_id=payload_id,
         findings=[finding],
     )
@@ -332,7 +346,7 @@ def test_push_200_accepted(monkeypatch):
         assert push_row is not None, "SensorPush row missing after accepted push"
 
         # Assert sensors.last_push_at was updated
-        sensor_row = db.query(Sensor).filter(Sensor.sensor_id == "sensor-ok-01").first()
+        sensor_row = db.query(Sensor).filter(Sensor.sensor_id == _SENSOR_OK).first()
         assert sensor_row is not None
         assert sensor_row.last_push_at is not None, (
             "sensors.last_push_at not updated after accepted push"
@@ -340,7 +354,7 @@ def test_push_200_accepted(monkeypatch):
 
         # Assert CryptoEndpoint row exists tagged with sensor_id and segment
         ep_row = db.query(CryptoEndpoint).filter(
-            CryptoEndpoint.sensor_id == "sensor-ok-01"
+            CryptoEndpoint.sensor_id == _SENSOR_OK
         ).first()
         assert ep_row is not None, "CryptoEndpoint row missing after accepted push"
         assert ep_row.segment == "dmz", f"CryptoEndpoint.segment expected 'dmz', got {ep_row.segment}"
@@ -357,12 +371,12 @@ def test_audit_row_written(monkeypatch):
     on both a success (status='ok') and a failure (status='failed', e.g. 422)."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
-    _seed_sensor(TestingSession, sensor_id="sensor-audit-01")
-    raw_token = _seed_token(TestingSession, sensor_id="sensor-audit-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_AUDIT)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_AUDIT)
 
     # --- Success path → status="ok" ---
     payload_id = str(uuid.uuid4())
-    env = _build_envelope(sensor_id="sensor-audit-01", payload_id=payload_id)
+    env = _build_envelope(sensor_id=_SENSOR_AUDIT, payload_id=payload_id)
     body = _compress(env)
 
     resp = client.post(
@@ -390,12 +404,12 @@ def test_audit_row_written(monkeypatch):
 
     # --- Failure path (422 replay window) → status="failed" ---
     # Seed a second sensor + token; stale pushed_at triggers 422 after auth passes.
-    _seed_sensor(TestingSession, sensor_id="sensor-audit-stale-01")
-    raw_token_stale = _seed_token(TestingSession, sensor_id="sensor-audit-stale-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_AUDIT_STALE)
+    raw_token_stale = _seed_token(TestingSession, sensor_id=_SENSOR_AUDIT_STALE)
     stale_pushed_at = (
         datetime.utcnow() - timedelta(minutes=30)
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
-    env_fail = _build_envelope(sensor_id="sensor-audit-stale-01", pushed_at=stale_pushed_at)
+    env_fail = _build_envelope(sensor_id=_SENSOR_AUDIT_STALE, pushed_at=stale_pushed_at)
     body_fail = _compress(env_fail)
 
     resp_fail = client.post(
@@ -432,11 +446,11 @@ def test_extra_fields_ignored(monkeypatch):
     """CONSOLE-05: Envelope with an unknown extra field still parses and returns 200."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
-    _seed_sensor(TestingSession, sensor_id="sensor-extra-01")
-    raw_token = _seed_token(TestingSession, sensor_id="sensor-extra-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_EXTRA)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_EXTRA)
 
     env = _build_envelope(
-        sensor_id="sensor-extra-01",
+        sensor_id=_SENSOR_EXTRA,
         extra_field="some-future-field-from-newer-sensor",
     )
     body = _compress(env)
@@ -459,11 +473,11 @@ def test_version_skew_graceful(monkeypatch):
     """CONSOLE-05: Mismatched schema_version is warn-only — must not return 422 or 500."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, client, engine, TestingSession = _app_with_db()
-    _seed_sensor(TestingSession, sensor_id="sensor-skew-01")
-    raw_token = _seed_token(TestingSession, sensor_id="sensor-skew-01")
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_SKEW)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_SKEW)
 
     env = _build_envelope(
-        sensor_id="sensor-skew-01",
+        sensor_id=_SENSOR_SKEW,
         schema_version="99.99.99",   # far-future version skew
         sensor_version="99.0.0",
     )
