@@ -136,7 +136,7 @@ def run_console(argv: list[str]) -> None:
 def _cmd_enroll(args: argparse.Namespace) -> None:
     """Provision a sensor in the console DB and mint a one-time bearer token.
 
-    Writes exactly two rows atomically:
+    Writes exactly two rows atomically within a SINGLE session/transaction:
       - sensors:       sensor_id, segment, engagement, enrolled_at, expected_cadence_minutes=1440
       - sensor_tokens: sensor_id (FK), token_hash (SHA-256 hex of raw token), created_at
 
@@ -152,6 +152,12 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     but DB path is resolved through the env-var / canonical logic, not config.yaml
     parsing (RESEARCH Open Question 1 recommendation: avoid a YAML dep on the enroll
     path; operators set QUIRK_DB_PATH for non-default locations).
+
+    Single-session design (AUDIT-12):
+      The existence check (STAB-01 / D-01) and the two-row insert run in ONE session
+      so that check + write are atomic.  The IntegrityError backstop (D-02) is retained
+      as the final guard for the true-concurrent race that SQLite serialisation does not
+      prevent at the application layer.
     """
     import hashlib
     import secrets
@@ -172,34 +178,19 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     segment: str = args.segment
     engagement: str | None = args.engagement
 
-    # STAB-01: pre-check for existing sensor_id BEFORE minting any token.
-    # D-01: if already enrolled, exit 0 without printing a token (no token churn).
-    # D-02: retain IntegrityError backstop below for the pre-check/insert race window.
-    # WR-04: return normally (not sys.exit(0)) — avoids SystemExit in unit tests.
-    # T-115-02: fixed-string message; no exception text serialised.
-    db_path_precheck = _default_db_path()
-    engine_precheck = init_db(db_path_precheck)
-    _SessionPrecheck = sessionmaker(
-        bind=engine_precheck,
-        autoflush=False,
-        autocommit=False,
-        expire_on_commit=False,
-    )
-    with _SessionPrecheck() as _pre_db:
-        _existing = _pre_db.query(Sensor).filter(Sensor.sensor_id == sensor_id).first()
-        if _existing is not None:
-            print(
-                f"INFO: sensor already enrolled — sensor_id={sensor_id}",
-                file=sys.stderr,
-            )
-            print(f"sensor_id: {sensor_id}", file=sys.stderr)
-            return  # D-01: no new token minted; WR-04: return, not sys.exit(0)
-
-    # Mint raw token; derive hash — raw token never persisted (T-109-01)
+    # Mint raw token; derive hash — raw token never persisted (T-109-01).
+    # Minted before the session so the value is available for both the early-return
+    # path (D-01) and the success output path without re-entering the session.
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
+    # AUDIT-12: single init_db() call → one engine → one session.
+    # STAB-01 existence check and the two-row insert are both in this session so
+    # check + write are atomic (no separate pre-check engine / TOCTOU window).
+    # D-02: IntegrityError backstop retained for the true-concurrent race.
+    # WR-04: return normally on "already enrolled" (no SystemExit in unit tests).
+    # T-115-02: fixed-string messages; no exception text serialised.
     db_path = _default_db_path()
     engine = init_db(db_path)
     Session = sessionmaker(
@@ -210,6 +201,16 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     )
 
     with Session() as db:
+        # D-01: if sensor_id already exists, return without minting a new token.
+        _existing = db.query(Sensor).filter(Sensor.sensor_id == sensor_id).first()
+        if _existing is not None:
+            print(
+                f"INFO: sensor already enrolled — sensor_id={sensor_id}",
+                file=sys.stderr,
+            )
+            print(f"sensor_id: {sensor_id}", file=sys.stderr)
+            return  # D-01: no new token minted; WR-04: return, not sys.exit(0)
+
         try:
             db.add(
                 Sensor(
