@@ -78,9 +78,7 @@ def test_idle_bucket_evicted_after_window(monkeypatch):
 
     # --- t = 0: IP-A makes a POST (mutating) request ---
     req_a = _FakeRequest(method="POST", path="/api/jobs", host="192.168.1.1")
-    asyncio.get_event_loop().run_until_complete(
-        middleware.dispatch(req_a, _dummy_call_next)
-    )
+    asyncio.run(middleware.dispatch(req_a, _dummy_call_next))
 
     # IP-A must be in _buckets at t=0 with one timestamp entry
     assert "192.168.1.1" in middleware._buckets, (
@@ -93,9 +91,7 @@ def test_idle_bucket_evicted_after_window(monkeypatch):
     # --- t = 120 (2× window): IP-B makes a POST ---
     monotonic_clock[0] = float(_WINDOW_SECONDS * 2)
     req_b = _FakeRequest(method="POST", path="/api/jobs", host="10.0.0.2")
-    asyncio.get_event_loop().run_until_complete(
-        middleware.dispatch(req_b, _dummy_call_next)
-    )
+    asyncio.run(middleware.dispatch(req_b, _dummy_call_next))
 
     # After IP-B's dispatch at t=120, IP-A's single timestamp (at t=0)
     # is 120 seconds old — well outside the 60-second window.

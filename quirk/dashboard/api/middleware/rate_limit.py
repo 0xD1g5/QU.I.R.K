@@ -54,6 +54,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             while bucket and bucket[0] <= cutoff:
                 bucket.popleft()
 
+            # AUDIT-06: evict idle buckets to bound memory under unique-IP load.
+            # Collect keys first (never mutate dict during iteration), then delete.
+            idle_ips = [
+                ip for ip, bkt in self._buckets.items()
+                if not bkt or bkt[-1] <= cutoff
+            ]
+            for ip in idle_ips:
+                del self._buckets[ip]
+
+            # Re-fetch (or re-create via defaultdict) after eviction sweep so
+            # the current client's bucket is still accessible for the rate check.
+            bucket = self._buckets[client_ip]
+
             if len(bucket) >= _MAX_REQUESTS:
                 oldest: float = bucket[0]
                 retry_after: int = math.ceil(_WINDOW_SECONDS - (now - oldest))
