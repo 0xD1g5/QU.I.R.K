@@ -593,6 +593,18 @@ def _cmd_push(args: argparse.Namespace) -> None:
         print("Run 'quirk sensor enroll' first.", file=sys.stderr)
         sys.exit(1)
 
+    sensor_id: str = sensor_cfg.get("sensor_id", "")
+
+    # AUDIT-10 / CR-02: re-validate sensor_id shape on the CLI push network path.
+    # A tampered sensor.yaml with sensor_id: "../etc/evil" must not reach the wire.
+    # Mirrors the guard in _cmd_export_results (~L743-745).
+    if not _UUID_RE.match(sensor_id):
+        print(
+            "ERROR: sensor.yaml contains an invalid sensor_id (must be UUID)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     console_url: str = sensor_cfg.get("console_url", "")
     # allow_internal_console is persisted by `quirk sensor enroll --allow-internal-console`
     # so on-prem/lab deployments that enrolled with a private console URL automatically
