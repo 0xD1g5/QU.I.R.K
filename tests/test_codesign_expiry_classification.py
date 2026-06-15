@@ -159,8 +159,8 @@ class TestTlsPathExpiryFields:
         results = scan_codesign_from_tls_endpoints([ep])
         # Must produce a CODE_SIGNING endpoint
         assert len(results) == 1
-        # smime_scan_json must reflect expiry
-        scan_data = json.loads(results[0].smime_scan_json)
+        # codesign_scan_json must reflect expiry (AUDIT-01: dedicated column)
+        scan_data = json.loads(results[0].codesign_scan_json)
         assert scan_data.get("expired") is True
         assert "approaching-expiry" not in (scan_data.get("reasons") or [])
         # severity on the resulting endpoint must be HIGH
@@ -172,7 +172,7 @@ class TestTlsPathExpiryFields:
         ep = _tls_ep_with_eku(cert_not_after=future_30)
         results = scan_codesign_from_tls_endpoints([ep])
         assert len(results) == 1
-        scan_data = json.loads(results[0].smime_scan_json)
+        scan_data = json.loads(results[0].codesign_scan_json)
         assert "approaching-expiry" in (scan_data.get("reasons") or [])
         assert results[0].severity == "MEDIUM"
 
@@ -192,5 +192,5 @@ class TestTlsPathExpiryFields:
                                cert_pubkey_alg="RSA", cert_pubkey_size=1024)
         results = scan_codesign_from_tls_endpoints([ep])
         assert len(results) == 1
-        scan_data = json.loads(results[0].smime_scan_json)
+        scan_data = json.loads(results[0].codesign_scan_json)
         assert scan_data.get("expired") is False
