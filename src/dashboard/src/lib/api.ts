@@ -1,6 +1,6 @@
 /**
  * Shared fetch wrapper — Phase 58 / HARDEN-API-01 / D-08.
- * Updated Phase 102 / AUTH-03: localStorage token source + X-API-Key header + 401 handler.
+ * Updated Phase 102 / AUTH-03: sessionStorage token source + X-API-Key header + 401 handler.
  *
  * Single enforcement point for:
  *   - X-Quirk-Request: 1 (CSRF header — injected on every call)
@@ -8,7 +8,7 @@
  *   - X-API-Key: {token} (injected when token is configured — AUTH-03)
  *
  * All components MUST call fetchApi() instead of fetch() directly.
- * The token is resolved from localStorage.getItem("quirk_api_token") at call time.
+ * The token is resolved from sessionStorage.getItem("quirk_api_token") at call time.
  * fetchApi() does NOT accept a token parameter — prevents token scatter (D-08).
  */
 
@@ -22,12 +22,12 @@ const CSRF_HEADER = "X-Quirk-Request"
 const _MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"])
 
 /**
- * Resolve API token from localStorage.
- * Falls back to "" in SSR/test environments where localStorage is unavailable.
+ * Resolve API token from sessionStorage.
+ * Falls back to "" in SSR/test environments where sessionStorage is unavailable.
  */
 function _resolveToken(): string {
   try {
-    return localStorage.getItem("quirk_api_token") ?? ""
+    return sessionStorage.getItem("quirk_api_token") ?? ""
   } catch {
     return ""
   }
@@ -73,7 +73,7 @@ export async function fetchApi(
     headers["Content-Type"] = "application/json"
   }
 
-  // X-API-Key — set when token is configured (AUTH-03: localStorage source)
+  // X-API-Key — set when token is configured (AUTH-03: sessionStorage source)
   const token = _resolveToken()
   if (token) {
     headers["X-API-Key"] = token
