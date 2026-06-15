@@ -1004,10 +1004,14 @@ def evaluate_codesign_endpoints(endpoints) -> List[Dict[str, Any]]:
             not_after_date = "unknown"
             days_remaining = 0
 
-        # T-99-04: guard malformed codesign_scan_json (AUDIT-01: reads dedicated column)
+        # T-99-04: guard malformed codesign_scan_json (AUDIT-01: reads dedicated column).
+        # WR-01: dual-read fallback to the legacy smime_scan_json column rescues
+        # CODE_SIGNING rows checkpointed under v5.7 (pre-rename) and resumed under v5.8.
+        # Safe from S/MIME conflation: this loop only ever sees protocol=="CODE_SIGNING"
+        # endpoints (run_scan.py filter), whose legacy column held codesign payload.
         reasons: list = []
         try:
-            raw = getattr(e, "codesign_scan_json", None)
+            raw = getattr(e, "codesign_scan_json", None) or getattr(e, "smime_scan_json", None)
             if raw:
                 parsed = json.loads(raw)
                 reasons = parsed.get("reasons") or []
