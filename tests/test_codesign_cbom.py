@@ -61,6 +61,10 @@ def _make_codesign_ep(
     ep.scan_error = None
     ep.smime_scan_json = None
     ep.cert_sans = None
+    # Pin sensor_id: MagicMock(spec=) auto-vivifies a unique truthy child mock
+    # otherwise, which poisons the (sensor_id, subject, alg, not_after) surrogate
+    # key (CR-02, Phase 107) and breaks cross-source dedup. None == single-sensor.
+    ep.sensor_id = None
     return ep
 
 
@@ -92,6 +96,9 @@ def _make_tls_ep(
     ep.scan_error = None
     ep.smime_scan_json = None
     ep.cert_sans = None
+    # Pin sensor_id (see _make_codesign_ep): unset spec attrs auto-vivify a
+    # unique truthy mock that poisons the cross-source surrogate key.
+    ep.sensor_id = None
     return ep
 
 
