@@ -186,15 +186,15 @@
 
     /* === Phase 100 — PDF Cover Page (FMT-01) === */
 
-    /* Cover page: full A4-page block, dark background, accent top border */
+    /* Cover page: dark background, accent top border; print uses break-after:page */
     .cover-page {
       background: var(--bg);
       border-top: 4px solid var(--accent);
-      min-height: 100vh;           /* fills page in screen view */
       padding: 48px 40px 32px;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
+      margin-bottom: 48px;
     }
 
     /* Logo region — conditionally rendered (omitted when logo absent, D-03) */
