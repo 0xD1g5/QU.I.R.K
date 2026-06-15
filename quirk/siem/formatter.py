@@ -64,14 +64,19 @@ def _cef_escape_header(value: str) -> str:
 def _cef_escape_extension(value: str) -> str:
     """Escape a CEF extension key-value pair's value.
 
-    CEF extension rules (ArcSight CEF Implementation Standard):
+    CEF extension rules (ArcSight CEF Implementation Standard / CISA guidance):
       - Backslash (\\)   -> \\\\   MUST be escaped FIRST
       - Equals (=)       -> \\=
       - CRLF (\\r\\n)   -> literal \\n   (CRLF checked before CR to avoid double-replace)
       - CR (\\r)         -> literal \\n
       - LF (\\n)         -> literal \\n
+      - Space ( )        -> \\s    LAST — space is a token delimiter in CEF extension
+                           strings; escaping as \\s per CISA ArcSight CEF guidance
+                           (AUDIT-13).  Applied last to avoid interfering with the
+                           backslash escape above.
     """
     # Backslash MUST be replaced first — see RESEARCH.md Pitfall 1
+    # Space replacement is LAST — it must not disturb the \\ sequences above
     return (
         value
         .replace("\\", "\\\\")
@@ -79,6 +84,7 @@ def _cef_escape_extension(value: str) -> str:
         .replace("\r\n", "\\n")
         .replace("\r", "\\n")
         .replace("\n", "\\n")
+        .replace(" ", "\\s")
     )
 
 
@@ -197,8 +203,8 @@ def build_cef_event(finding: dict, version: str) -> str:
 
     # --- Assemble the 8-field CEF:0 line ---
     # Fields: CEF:0 | Vendor | Product | Version | SignatureID | Name | Severity | Extension
-    # NOTE: spaces inside extension values are intentionally NOT escaped (CEF spec);
-    # injection is prevented because every dynamic value is escaped/int-cast above.
+    # NOTE: spaces inside extension values are escaped as \\s (AUDIT-13, CISA CEF guidance);
+    # _cef_escape_extension handles this — every dynamic value is escaped/int-cast above.
     header = f"CEF:0|QUIRK|scanner|{escaped_version}|{signature}|{name}|{cef_sev}"
     # Omit dpt entirely when the port is unknown — an empty `dpt=` is rejected/
     # warned-on by some SIEM ingest pipelines (Splunk cef sourcetype, QRadar DSM).
