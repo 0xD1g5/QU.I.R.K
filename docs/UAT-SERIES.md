@@ -14669,3 +14669,69 @@ revoke-sensor CLI, revoked_at on sensor_tokens.*
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-06-14  **Tester:** automated (pytest — Phase 130 Plan 03)
 **Notes:** 58/58 tests GREEN. Added rsa-1024/rsa-2048/rsa-3072/rsa-4096 entries before bare "rsa" fallback; added aes-192 alongside existing aes-256/aes-128 entries. All non-AES/RSA entries regression-free.
+
+---
+
+## UAT Series 131 — Dashboard Delivery Hardening (Phase 131 — v5.8)
+
+**Last Updated:** 2026-06-15
+
+### UAT-131-01: CLI sensor push rejects malformed sensor_id before network contact (AUDIT-10)
+
+**ID:** UAT-131-01
+**Requirement:** AUDIT-10
+**Type:** Automated (pytest)
+
+> Added Phase 131 (2026-06-15): _UUID_RE guard added to _cmd_push in quirk/cli/sensor_cmd.py before any network call, mirroring the CR-02 guard already present in _cmd_export_results.
+
+**Setup:** Run `python -m pytest tests/test_sensor_cmd_push_id_revalidation.py -v`.
+
+**Steps:**
+1. Feed sensor.yaml with `sensor_id: "../etc/evil"` to `_cmd_push`.
+2. Verify `SystemExit` is raised with a non-zero exit code.
+3. Verify `_do_push` (the network call) was never invoked.
+4. Repeat with `sensor_id: "evil/path"` (slash variant).
+5. Verify a valid UUID sensor_id passes the guard and reaches `_run_local_scan`.
+
+**Pass Criteria:**
+- `test_path_traversal_sensor_id_rejected_before_network` PASS — non-zero exit, `_do_push` sentinel NOT called.
+- `test_slash_in_sensor_id_rejected_before_network` PASS — non-zero exit, `_do_push` sentinel NOT called.
+- `test_valid_uuid_sensor_id_reaches_push` PASS — `_run_local_scan` sentinel called (valid UUID not rejected).
+- `python -m compileall quirk/cli/sensor_cmd.py` exits 0.
+
+**Automated gate:** `python -m pytest tests/test_sensor_cmd_push_id_revalidation.py -q` — 3 passed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-06-15  **Tester:** automated (pytest — Phase 131 Plan 02)
+**Notes:** AUDIT-10 closed. _UUID_RE guard inserted in _cmd_push after sensor.yaml read, before SSRF check and network client construction. Malformed sensor_id (path-traversal or slash chars) exits 1 before any network contact. 3/3 tests GREEN.
+
+---
+
+### UAT-131-02: Console enroll uses single-session transaction; concurrent duplicate yields one row (AUDIT-12)
+
+**ID:** UAT-131-02
+**Requirement:** AUDIT-12
+**Type:** Automated (pytest)
+
+> Added Phase 131 (2026-06-15): _cmd_enroll in quirk/cli/console_cmd.py refactored to use a single init_db() call and single session/transaction for both the existence check and the two-row insert, eliminating the TOCTOU race window. IntegrityError backstop retained (D-02).
+
+**Setup:** Run `python -m pytest tests/test_console_enroll_race.py tests/test_console_enroll.py -v`.
+
+**Steps:**
+1. Patch `quirk.db.init_db` with a tracking wrapper; call `_cmd_enroll` for a new sensor_id.
+2. Assert `init_db` was called exactly once (single-session contract).
+3. Call `_cmd_enroll` twice for the same sensor_id; verify `sensors` count == 1 and `sensor_tokens` count == 1.
+4. Verify existing enroll tests (new enrollment + duplicate rejection) still pass.
+
+**Pass Criteria:**
+- `test_cmd_enroll_uses_single_session` PASS — `init_db()` called exactly 1 time.
+- `test_duplicate_enroll_yields_one_row_pair` PASS — 1 sensors row, 1 sensor_tokens row after two enroll calls for same id.
+- `test_console_enroll` PASS — no regression on happy-path enrollment.
+- `test_console_enroll_duplicate` PASS — no regression on duplicate rejection.
+- `python -m compileall quirk/cli/console_cmd.py` exits 0.
+
+**Automated gate:** `python -m pytest tests/test_console_enroll_race.py tests/test_console_enroll.py -q` — 4 passed.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-06-15  **Tester:** automated (pytest — Phase 131 Plan 02)
+**Notes:** AUDIT-12 closed. Separate engine_precheck / _SessionPrecheck block removed; existence check and insert now occur in a single Session() block. IntegrityError backstop (D-02) retained. 4/4 tests GREEN including all pre-existing enroll tests.
