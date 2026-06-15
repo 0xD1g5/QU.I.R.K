@@ -134,6 +134,14 @@ _V55_SENSOR_TOKEN_COLUMNS: tuple[tuple[str, str], ...] = (
     # None = active; set = revoked. No data rewrite, no destructive DDL.
     ("revoked_at", "DATETIME"),
 )
+_SNMP_HW_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 133 SNMP-03: SNMP fingerprint fields on hardware_devices.
+    # All nullable — null when SNMP disabled or target unreachable.
+    ("snmp_sysdescr",    "TEXT"),
+    ("snmp_sysname",     "VARCHAR(255)"),
+    ("snmp_sysobjectid", "VARCHAR(255)"),
+    ("snmp_vendor",      "VARCHAR(255)"),
+)
 
 
 def _ensure_columns(
@@ -192,6 +200,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("qramm_answers",    _PHASE54_QRAMM_ANSWER_COLUMNS),  # Phase 54
     ("crypto_endpoints", _V54_SENSOR_COLUMNS),  # Phase 107 MODEL-01
     ("sensor_tokens",    _V55_SENSOR_TOKEN_COLUMNS),  # Phase 113 AUTH-02
+    ("hardware_devices", _SNMP_HW_COLUMNS),           # Phase 133 SNMP-03
 )
 
 

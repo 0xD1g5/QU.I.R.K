@@ -878,6 +878,21 @@ def main():
         ),
     )
 
+    # Phase 133 SNMP-01/D-04: opt-in SNMP hardware fingerprinting flag.
+    # Requires quirk[hw] extras (pysnmp). Off by default — no behavior change for
+    # existing scans. Advisory import guard in snmp_scanner.py catches missing pysnmp.
+    parser.add_argument(
+        "--enable-snmp",
+        dest="enable_snmp",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable SNMP hardware fingerprinting (Phase 133 SNMP-01). "
+            "Probes discovered hosts on UDP/161 using SNMP v2c to collect "
+            "sysDescr/sysName/sysObjectID. Requires quirk-scanner[hw] extras."
+        ),
+    )
+
     args = parser.parse_args()
 
     # Phase 67 RESUME-01: --list-resumable exits after printing table
@@ -935,6 +950,12 @@ def main():
 
     # Phase 57 / D-04: CLI flags override YAML security block per-run (opt-in only, never opt-out).
     apply_security_cli_overrides(cfg, args)
+
+    # Phase 133 SNMP-01/D-04: --enable-snmp CLI flag overrides config.
+    # getattr guard for backwards compatibility with older config.yaml files
+    # that pre-date the enable_snmp field.
+    if getattr(args, "enable_snmp", False):
+        cfg.connectors.enable_snmp = True
 
     # Phase 47 / D-09: reflect --discovery flag onto cfg.connectors.enable_nmap for
     # --config / CLI mode. In interactive mode the wizard already set enable_nmap via
@@ -1367,6 +1388,7 @@ def main():
     # cfg.scan.timeouts.ssh_seconds and cfg.scan.ssh_concurrency directly.
     # Phase 41 / D-14: SSH phase runs under _wrapped_phase BaseException protection.
     # Phase 67 RESUME-01: skip if already completed in a prior run.
+    _hw_batch: list = []  # Phase 127 HWCOMPAT-01 / Phase 133 SNMP-01: hardware fingerprint accumulator
     if _stage_completed(_completed_stages, "ssh"):
         ssh_endpoints = [
             e for e in _resumed_endpoints
@@ -1374,7 +1396,6 @@ def main():
         ]
         logger.info(f"Resuming: skipping ssh stage ({len(ssh_endpoints)} endpoints from DB)")
     else:
-        _hw_batch: list = []  # Phase 127 HWCOMPAT-01 — hardware fingerprint accumulator
 
         def _run_ssh_phase():
             if not ssh_targets:
@@ -1482,6 +1503,104 @@ def main():
         run_stats, "pqc_probe", "pqc_probe",
         _run_pqc_phase, error_endpoints, logger,
     ) or []
+
+    # ==============================
+    # SNMP hardware fingerprint phase (Phase 133 SNMP-01/D-04/D-05/D-06)
+    # Runs after all TLS + SSH + PQC phases so unique_hosts is complete.
+    # Only fires when cfg.connectors.enable_snmp is True (--enable-snmp flag).
+    # Advisory import guard in snmp_scanner.py handles missing pysnmp gracefully.
+    # ==============================
+    if getattr(cfg.connectors, "enable_snmp", False):
+        # D-04: collect unique host IPs from all scanned endpoints
+        _snmp_unique_hosts: set = set()
+        for _ep in list(tls_endpoints) + list(ssh_endpoints) + list(pqc_endpoints):
+            _h = getattr(_ep, "host", "")
+            if _h:
+                _snmp_unique_hosts.add(_h)
+
+        hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
+        _snmp_community = getattr(cfg.connectors, "snmp_community", "public")
+
+        try:
+            # D-05: lazy import — avoids ImportError at module load when pysnmp not installed
+            from quirk.scanner.snmp_scanner import scan_snmp_targets as _scan_snmp_targets
+            _snmp_results = _scan_snmp_targets(
+                list(_snmp_unique_hosts),
+                community=_snmp_community,
+                timeout=hw_timeout,
+                logger=logger,
+            )
+        except ImportError as _snmp_import_err:
+            logger.info(
+                f"SNMP fingerprint: pysnmp not installed (advisory); "
+                f"install quirk-scanner[hw] to enable. ({safe_str(_snmp_import_err)})"
+            )
+            _snmp_results = []
+
+        if _snmp_results:
+            # D-06: build lookup of existing HardwareDevice rows by host
+            _snmp_hw_lookup: dict = {}
+            for _dev in _hw_batch:
+                _snmp_hw_lookup[getattr(_dev, "host", "")] = _dev
+
+            _snmp_new_batch: list = []
+            for _snmp_res in _snmp_results:
+                _snmp_host = _snmp_res.get("host", "")
+                _existing_dev = _snmp_hw_lookup.get(_snmp_host)
+                if _existing_dev is not None:
+                    # Update existing row if vendor is still Unknown
+                    if getattr(_existing_dev, "vendor", "Unknown") == "Unknown":
+                        _existing_dev.snmp_sysdescr    = _snmp_res.get("snmp_sysdescr")
+                        _existing_dev.snmp_sysname     = _snmp_res.get("snmp_sysname")
+                        _existing_dev.snmp_sysobjectid = _snmp_res.get("snmp_sysobjectid")
+                        _existing_dev.snmp_vendor      = _snmp_res.get("vendor", "Unknown")
+                        _snmp_parsed_vendor = _snmp_res.get("vendor", "Unknown")
+                        if _snmp_parsed_vendor and _snmp_parsed_vendor != "Unknown":
+                            _existing_dev.vendor = _snmp_parsed_vendor
+                            if _snmp_res.get("model"):
+                                _existing_dev.model = _snmp_res.get("model")
+                else:
+                    # SNMP-only hit: create new HardwareDevice row
+                    from quirk.models import HardwareDevice as _HWDevice
+                    _snmp_dev = _HWDevice(
+                        host=_snmp_host,
+                        port=161,
+                        vendor=_snmp_res.get("vendor", "Unknown"),
+                        model=_snmp_res.get("model"),
+                        pqc_status="unknown",
+                        confidence="medium",
+                        fingerprint_method="snmp",
+                        scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                        raw_banner=_snmp_res.get("snmp_sysdescr"),
+                        snmp_sysdescr=_snmp_res.get("snmp_sysdescr"),
+                        snmp_sysname=_snmp_res.get("snmp_sysname"),
+                        snmp_sysobjectid=_snmp_res.get("snmp_sysobjectid"),
+                        snmp_vendor=_snmp_res.get("vendor", "Unknown"),
+                        remediation_tier="Tier N/A",
+                    )
+                    _snmp_new_batch.append(_snmp_dev)
+
+            # Flush new/updated SNMP rows to DB
+            _snmp_flush_batch = _snmp_new_batch + [
+                _dev for _dev in _hw_batch
+                if getattr(_dev, "snmp_sysdescr", None) is not None
+                and _dev not in _snmp_new_batch
+            ]
+            if _snmp_flush_batch or _snmp_new_batch:
+                try:
+                    with get_session(cfg.output.db_path) as _snmp_sess:
+                        for _dev in _snmp_new_batch:
+                            _snmp_sess.add(_dev)
+                        _snmp_sess.commit()
+                except Exception as _snmp_db_err:
+                    logger.warning(
+                        f"SNMP fingerprint DB write failed (advisory-only, non-fatal): "
+                        f"{safe_str(_snmp_db_err)}"
+                    )
+
+        logger.info(f"SNMP fingerprint: {len(_snmp_results)} host(s) probed")
+    else:
+        logger.debug("SNMP probe disabled; skipping (enable_snmp=False)")
 
     # ==============================
     # JWT scan phase

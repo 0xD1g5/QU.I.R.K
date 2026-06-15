@@ -386,3 +386,10 @@ class HardwareDevice(Base):
     raw_banner         = Column(Text,        nullable=True)
     scanned_at         = Column(DateTime,    nullable=False)
     remediation_tier   = Column(String(16),  nullable=False, default="Tier N/A")  # Phase 128 D-02
+    # Phase 133 SNMP-01/SNMP-03: SNMP fingerprint fields
+    # Populated by quirk/scanner/snmp_scanner.py when enable_snmp=True.
+    # All fields are nullable — null when SNMP not enabled or target unreachable.
+    snmp_sysdescr    = Column(Text,        nullable=True)   # raw sysDescr OID 1.3.6.1.2.1.1.1.0
+    snmp_sysname     = Column(String(255), nullable=True)   # sysName OID 1.3.6.1.2.1.1.5.0
+    snmp_sysobjectid = Column(String(255), nullable=True)   # sysObjectID OID 1.3.6.1.2.1.1.2.0
+    snmp_vendor      = Column(String(255), nullable=True)   # parsed vendor from sysDescr
