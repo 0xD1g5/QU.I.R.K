@@ -4,10 +4,10 @@
  * Provider component only. AuthContext + useAuth hook live in ./auth-context
  * so this file exports a single component (keeps react-refresh / Fast Refresh happy).
  *
- * On mount, probes GET /api/scans (a protected route) with the stored localStorage
+ * On mount, probes GET /api/scans (a protected route) with the stored sessionStorage
  * token as X-API-Key:
  *   - 200 → status = "authenticated"  (covers auth-disabled passthrough: no token + 200)
- *   - 401 → clear stale token from localStorage, status = "unauthenticated"
+ *   - 401 → clear stale token from sessionStorage, status = "unauthenticated"
  *
  * Registers logout as the lib/api setUnauthorizedHandler on mount so any fetchApi
  * 401 (while a token is present) automatically bounces the user back to the login form.
@@ -35,20 +35,20 @@ import type { AuthStatus } from "@/context/auth-context"
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading")
 
-  // setToken: write localStorage + set status to authenticated
+  // setToken: write sessionStorage + set status to authenticated
   const setToken = useCallback((token: string) => {
     try {
-      localStorage.setItem("quirk_api_token", token)
+      sessionStorage.setItem("quirk_api_token", token)
     } catch {
-      // localStorage unavailable — still transition state in memory
+      // sessionStorage unavailable — still transition state in memory
     }
     setStatus("authenticated")
   }, [])
 
-  // logout: clear localStorage + set status to unauthenticated
+  // logout: clear sessionStorage + set status to unauthenticated
   const logout = useCallback(() => {
     try {
-      localStorage.removeItem("quirk_api_token")
+      sessionStorage.removeItem("quirk_api_token")
     } catch {
       // ignore
     }
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedToken = (() => {
       try {
-        return localStorage.getItem("quirk_api_token") ?? ""
+        return sessionStorage.getItem("quirk_api_token") ?? ""
       } catch {
         return ""
       }
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.status === 401) {
           // Stale/invalid token — clear it
           try {
-            localStorage.removeItem("quirk_api_token")
+            sessionStorage.removeItem("quirk_api_token")
           } catch {
             // ignore
           }
