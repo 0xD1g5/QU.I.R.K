@@ -255,6 +255,22 @@ def _reconcile_if_dead(db: Session, row: ScanJob) -> None:
 @write_router.post("/jobs", status_code=201)
 def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dict:
     """Create a scan_jobs row and spawn run_scan.py as a subprocess. Non-blocking."""
+    # AUDIT-07: validate and normalize targets before any DB write or subprocess spawn.
+    from quirk.util.targets import parse_target_tokens
+    try:
+        valid_fqdns, valid_cidrs = parse_target_tokens(payload.targets)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    all_valid_tokens = valid_fqdns + valid_cidrs
+    if not all_valid_tokens:
+        raise HTTPException(
+            status_code=422,
+            detail="No valid targets provided — targets must not be empty or whitespace-only",
+        )
+    # Re-join stripped tokens; this is what gets stored and passed to the scanner.
+    normalized_targets = ",".join(all_valid_tokens)
+
     job_id = str(uuid.uuid4())
     db_path = _default_db_path()
     output_dir = _job_output_dir(job_id)
@@ -263,7 +279,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     row = ScanJob(
         job_id=job_id,
         status="queued",
-        target=payload.targets,
+        target=normalized_targets,
         profile=payload.profile,
         calibration=payload.calibration,
         enable_nmap=payload.enable_nmap,
@@ -289,7 +305,7 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
 
     try:
         config_path = _write_job_config(
-            output_dir, payload.targets, db_path, payload.calibration,
+            output_dir, normalized_targets, db_path, payload.calibration,
             allow_internal_targets=allow_internal,
             port_scope=payload.port_scope,
             custom_ports=payload.custom_ports,
