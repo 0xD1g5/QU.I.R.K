@@ -122,3 +122,43 @@ def test_non_aes_non_rsa_regression(rule_id: str, expected: str) -> None:
         f"Regression: _extract_algo_from_rule_id({rule_id!r}) = {result!r}, "
         f"expected {expected!r}. AUDIT-05 must not break existing mappings."
     )
+
+
+# ---------------------------------------------------------------------------
+# WR-02 (Phase 130 code review): the matcher must tokenize the rule_id and
+# match whole tokens, not unanchored substrings. An algorithm token embedded
+# inside an unrelated word must NOT produce a phantom hint, and a key-size
+# token must bind only when it is ADJACENT to its algorithm token.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("rule_id", [
+    "crypto.tls-versa-config",      # "ve(rsa)" must not yield RSA
+    "crypto.cipher-modes-review",   # "mo(des)" must not yield DES
+    "policy.candidates-review",     # "candi(des)" must not yield DES
+    "audit.usages-summary",         # contains no whole crypto token
+])
+def test_substring_collisions_yield_no_hint(rule_id: str) -> None:
+    """Algorithm names embedded inside unrelated words must not produce a hint (WR-02).
+
+    The legacy unanchored ``fragment in rule_lower`` test fired on "ve(rsa)" and
+    "mo(des)"; tokenizing on '.'/'-'/'_' eliminates these phantom CBOM components.
+    """
+    result = _extract_algo_from_rule_id(rule_id)
+    assert result is None, (
+        f"WR-02: _extract_algo_from_rule_id({rule_id!r}) = {result!r}, expected None. "
+        f"A crypto name embedded in an unrelated word must not yield a hint."
+    )
+
+
+@pytest.mark.parametrize("rule_id, expected", [
+    # Size token present but NOT adjacent to its algorithm -> bare family only.
+    ("rsa.policy-2048-minimum-key",  "RSA"),
+    ("aes.review-256-bit-guidance",  "AES"),
+])
+def test_non_adjacent_size_token_falls_back_to_bare_family(rule_id: str, expected: str) -> None:
+    """A size token only binds to an algorithm when it is the immediately following token (WR-02)."""
+    result = _extract_algo_from_rule_id(rule_id)
+    assert result == expected, (
+        f"WR-02: _extract_algo_from_rule_id({rule_id!r}) = {result!r}, expected {expected!r}. "
+        f"A non-adjacent size token must not fabricate a granular hint."
+    )

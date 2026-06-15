@@ -90,25 +90,56 @@ def _extract_algo_from_rule_id(rule_id: str | None) -> str | None:
     """
     if not rule_id:
         return None
-    rule_lower = rule_id.lower()
-    # Map known algorithm names found in semgrep crypto rules.
-    # Ordered list — longer/more-specific patterns checked first to avoid
-    # false positives (e.g. "ecdsa" must match before "dsa", "3des" before "des").
-    algo_hints = [
-        ("ecdsa", "ECDSA"), ("sha-1", "SHA-1"), ("sha1", "SHA-1"),
-        ("blowfish", "Blowfish"), ("3des", "3DES"),
-        ("md5", "MD5"), ("md4", "MD4"), ("rc4", "RC4"),
-        # RSA key-size variants before bare "rsa" fallback (AUDIT-05)
-        ("rsa-1024", "RSA-1024"), ("rsa-2048", "RSA-2048"),
-        ("rsa-3072", "RSA-3072"), ("rsa-4096", "RSA-4096"),
-        ("rsa", "RSA"), ("dsa", "DSA"), ("des", "DES"),
-        # AES key-size variants (incl. aes-192 gap) before bare "aes" fallback (AUDIT-05)
-        ("aes-256", "AES-256"), ("aes-192", "AES-192"), ("aes-128", "AES-128"),
-        ("aes", "AES"),
-    ]
-    for fragment, canonical in algo_hints:
-        if fragment in rule_lower:
-            return canonical
+    # Tokenize on '.'/'-'/'_' and match whole tokens rather than unanchored
+    # substrings (WR-02, Phase 130). Substring matching fired phantom hints when
+    # an algorithm name was embedded in an unrelated word ("ve(rsa)", "mo(des)").
+    # A size token ("2048", "256", ...) only yields a granular hint when it is
+    # the token immediately following its algorithm token. This matcher returns a
+    # single best-effort hint and is order-sensitive: it does NOT exhaustively
+    # extract every algorithm named in a multi-algorithm rule.
+    tokens = [t for t in re.split(r"[.\-_]+", rule_id.lower()) if t]
+    token_set = set(tokens)
+
+    def _size_after(algo: str, sizes: frozenset[str]) -> Optional[str]:
+        """Return the size token if `algo` is immediately followed by one of `sizes`."""
+        for i, tok in enumerate(tokens):
+            if tok == algo and i + 1 < len(tokens) and tokens[i + 1] in sizes:
+                return tokens[i + 1]
+        return None
+
+    # Priority order — most specific first. Distinct tokens mean "ecdsa" can no
+    # longer be shadowed by "dsa" (or "3des" by "des"); the order now only fixes
+    # which single hint a multi-algorithm rule resolves to.
+    if "sha1" in token_set or _size_after("sha", frozenset({"1"})):
+        return "SHA-1"
+    if "ecdsa" in token_set:
+        return "ECDSA"
+    if "blowfish" in token_set:
+        return "Blowfish"
+    if "3des" in token_set:
+        return "3DES"
+    if "md5" in token_set:
+        return "MD5"
+    if "md4" in token_set:
+        return "MD4"
+    if "rc4" in token_set:
+        return "RC4"
+    # RSA: granular key-size variant before bare "rsa" fallback (AUDIT-05)
+    rsa_size = _size_after("rsa", frozenset({"1024", "2048", "3072", "4096"}))
+    if rsa_size:
+        return f"RSA-{rsa_size}"
+    if "rsa" in token_set:
+        return "RSA"
+    if "dsa" in token_set:
+        return "DSA"
+    if "des" in token_set:
+        return "DES"
+    # AES: granular key-size variant (incl. aes-192) before bare "aes" (AUDIT-05)
+    aes_size = _size_after("aes", frozenset({"128", "192", "256"}))
+    if aes_size:
+        return f"AES-{aes_size}"
+    if "aes" in token_set:
+        return "AES"
     return None
 
 
