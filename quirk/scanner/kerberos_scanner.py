@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from quirk.errors import format_error
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str  # IN-01: sanitize tcp_error onto unreachable endpoint
 
 # Module-level logger
 logger = logging.getLogger(__name__)
@@ -306,6 +307,10 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 cert_pubkey_alg="kerberos-unreachable",
                 service_detail="kerberos-unreachable",
                 scanned_at=now,
+                # IN-01: thread the TCP failure into the endpoint for operator
+                # diagnostics instead of leaving tcp_error as dead state.
+                scan_error=safe_str(tcp_error) if tcp_error is not None else None,
+                scan_error_category="exception" if tcp_error is not None else None,
             )
             ldap_result = _probe_ldap_anon(target, timeout, logger)
             scan_json = json.dumps({

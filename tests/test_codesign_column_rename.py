@@ -140,7 +140,7 @@ def test_codesign_scanner_writes_codesign_scan_json() -> None:
         cert_issuer="CN=TestCA",
         cert_sig_alg="sha256WithRSAEncryption",
         cert_pubkey_alg="RSA",
-        cert_pubkey_size=2048,
+        cert_pubkey_size=1024,  # IN-03: force a weak-rsa-key finding so an endpoint is guaranteed
         cert_not_before=None,
         cert_not_after=None,
         scan_error=None,
@@ -148,8 +148,13 @@ def test_codesign_scanner_writes_codesign_scan_json() -> None:
 
     results = scan_codesign_from_tls_endpoints([tls_ep])
 
-    if not results:
-        pytest.skip("No codesign endpoints returned for this fixture — check EKU matching logic.")
+    # IN-03: hard assertion, not skip — a code-signing EKU + weak 1024-bit key must
+    # always emit an endpoint. A green-by-skip here would silently disable the
+    # AUDIT-01 write-path regression guard.
+    assert results, (
+        "scan_codesign_from_tls_endpoints returned no endpoints for a code-signing "
+        "EKU cert with a weak 1024-bit key — the write path is not firing."
+    )
 
     ep = results[0]
 

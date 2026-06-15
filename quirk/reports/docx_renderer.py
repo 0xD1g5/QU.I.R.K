@@ -39,8 +39,8 @@ def _set_table_style(tbl, style_name: str = "Table Grid") -> None:
     """Assign a named style to a python-docx table, ignoring unknown-style errors.
 
     Research note A3: 'Table Grid' is a standard Word style but may be absent in
-    some minimal document contexts. On KeyError or any style-assignment error,
-    leave the default table style in place — never crash on a missing style.
+    some minimal document contexts. On any style-assignment error, leave the
+    default table style in place — never crash on a missing style.
     """
     try:
         tbl.style = style_name

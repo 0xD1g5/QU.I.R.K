@@ -202,6 +202,29 @@ def test_as_req_both_fail_graceful():
     assert results[0].port == 88
 
 
+def test_as_req_both_fail_surfaces_tcp_error():
+    """IN-01 (Phase 130): when both TCP and UDP fail, the unreachable endpoint
+    must surface the TCP failure detail in scan_error for operator diagnostics,
+    rather than capturing it as dead state. Mirrors the codesign scanner's
+    error-endpoint pattern (sanitized via safe_str).
+    """
+    import quirk.scanner.kerberos_scanner as kmod
+    ldap_skip = {"ldap_status": "skipped"}
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc_raises(kmod, OSError("TCP connection refused")), \
+         _patch_probe_ldap(kmod, ldap_skip):
+        with patch.object(kmod, '_probe_kdc_udp', side_effect=OSError("UDP timeout")):
+            results = scan_kerberos_targets(["unreachable.host"], timeout=1)
+    assert len(results) == 1
+    ep = results[0]
+    assert ep.service_detail == "kerberos-unreachable"
+    assert ep.scan_error and "TCP connection refused" in ep.scan_error, (
+        f"unreachable endpoint must carry the TCP failure detail in scan_error; "
+        f"got {ep.scan_error!r}"
+    )
+    assert ep.scan_error_category == "exception"
+
+
 def test_as_req_no_preauth_response():
     """KERB-01: If KDC returns AS-REP (no preauth required -- unexpected),
     scan_kerberos_targets returns a placeholder endpoint with no etype endpoints.
