@@ -37,6 +37,7 @@ from quirk import __version__ as PLATFORM_VERSION  # closes cbom-intel-reports/I
 from quirk.cbom.classifier import classify_algorithm
 from quirk.compliance.cmvp import coverage_for_algorithm  # Phase 81 CMVP-01: informational coverage list
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str  # JSONDecodeError sanitization in _extract_ssh_algorithms
 
 import logging
 
