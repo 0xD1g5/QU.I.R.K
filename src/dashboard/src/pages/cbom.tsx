@@ -133,10 +133,7 @@ function CbomTable({ components }: CbomTableProps) {
 
 // ── Hardware Inventory ─────────────────────────────────────────────────────
 
-const HW_TYPE_BADGE: Record<string, string> = {
-  DEVICE: "bg-[hsl(220_60%_40%)] text-white",
-  FIRMWARE: "bg-[hsl(240_5%_60%)] text-white",
-}
+const HW_DEVICE_BADGE = "bg-[hsl(220_60%_40%)] text-white"
 
 const TIER_BADGE: Record<string, string> = {
   "Tier 1": "bg-[hsl(0_72%_51%)] text-white",
@@ -166,38 +163,25 @@ function HardwareInventory({ devices }: { devices: HardwareComponent[] }) {
           </TableHeader>
           <TableBody>
             {devices.map((d, i) => (
-              <>
-                <TableRow key={`device-${i}`}>
-                  <TableCell>
-                    <Badge className={`${HW_TYPE_BADGE["DEVICE"]} text-xs`}>[DEVICE]</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{d.host}</TableCell>
-                  <TableCell className="text-sm">{d.port}</TableCell>
-                  <TableCell className="text-sm">{d.vendor}</TableCell>
-                  <TableCell className="text-sm">{d.model}</TableCell>
-                  <TableCell>
-                    <Badge className={`${QS_BADGE[d.pqc_status] ?? QS_BADGE["Unknown"]} text-xs`}>
-                      {d.pqc_status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`${TIER_BADGE[d.remediation_tier] ?? TIER_BADGE["Tier N/A"]} text-xs`}>
-                      {d.remediation_tier}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-                <TableRow key={`firmware-${i}`} className="bg-muted/30">
-                  <TableCell>
-                    <Badge className={`${HW_TYPE_BADGE["FIRMWARE"]} text-xs`}>[FIRMWARE]</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{d.host}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{d.port}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{d.vendor}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{d.model}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{d.pqc_status}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{d.remediation_tier}</TableCell>
-                </TableRow>
-              </>
+              <TableRow key={`device-${i}`}>
+                <TableCell>
+                  <Badge className={`${HW_DEVICE_BADGE} text-xs`}>[DEVICE]</Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs">{d.host}</TableCell>
+                <TableCell className="text-sm">{d.port}</TableCell>
+                <TableCell className="text-sm">{d.vendor}</TableCell>
+                <TableCell className="text-sm">{d.model}</TableCell>
+                <TableCell>
+                  <Badge className={`${QS_BADGE[d.pqc_status] ?? QS_BADGE["Unknown"]} text-xs`}>
+                    {d.pqc_status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={`${TIER_BADGE[d.remediation_tier] ?? TIER_BADGE["Tier N/A"]} text-xs`}>
+                    {d.remediation_tier}
+                  </Badge>
+                </TableCell>
+              </TableRow>
             ))}
           </TableBody>
         </Table>

@@ -1047,13 +1047,15 @@ def build_cbom(
             ]
             bridge = dev.get("bridge_status")
             if bridge is not None:
-                fw_props.append(Property(name="quirk:hw-bridge-status", value=str(bridge)))
-            # SNMP-03 / D-11: emit sysObjectID as hw-snmp-oid when SNMP data present.
-            # Only devices fingerprinted via SNMP will have snmp_sysdescr set.
-            if dev.get("snmp_sysdescr") is not None:
+                fw_props.append(Property(name="quirk:hw-bridge-status", value=_sanitize_hw_str(str(bridge))))
+            # SNMP-03 / D-11: emit sysObjectID only when both sysdescr and a non-empty
+            # sysobjectid are present — avoids an empty-string property that consumers
+            # cannot distinguish from a device with a blank OID.
+            snmp_oid = dev.get("snmp_sysobjectid")
+            if dev.get("snmp_sysdescr") is not None and snmp_oid:
                 fw_props.append(Property(
                     name="quirk:hw-snmp-oid",
-                    value=dev.get("snmp_sysobjectid") or "",
+                    value=snmp_oid,
                 ))
             firmware_child = Component(
                 name=fw_name,
@@ -1109,12 +1111,19 @@ def build_cbom(
         component=root_component,
     )
 
-    # Build dependency graph: root component depends on all crypto components
+    # Build dependency graph: root depends on all top-level components;
+    # each DEVICE depends on its nested FIRMWARE child so CycloneDX consumers
+    # traversing the dependency graph don't see FIRMWARE nodes as orphans.
     child_deps = [Dependency(ref=c.bom_ref) for c in all_components]
     root_dep = Dependency(ref=root_component.bom_ref, dependencies=child_deps)
+    device_fw_deps = [
+        Dependency(ref=c.bom_ref, dependencies=[Dependency(ref=fw.bom_ref) for fw in c.components])
+        for c in all_components
+        if getattr(c, "type", None) == ComponentType.DEVICE and c.components
+    ]
 
     return Bom(
         components=all_components,
         metadata=metadata,
-        dependencies=[root_dep],
+        dependencies=[root_dep] + device_fw_deps,
     )
