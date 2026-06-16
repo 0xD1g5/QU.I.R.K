@@ -208,11 +208,19 @@ def _build_cbom_for_hw(hw_device_dict: dict[str, Any]) -> Any:
 
 
 def _all_property_names(bom: Any) -> list[str]:
-    """Extract all Property.name values across all BOM components."""
+    """Extract all Property.name values across all BOM components (including nested).
+
+    Phase 134 (CBOM-01): FIRMWARE is now nested inside DEVICE via Component.components;
+    descend one level so SNMP contract tests still find quirk:hw-snmp-oid on the child.
+    """
     names: list[str] = []
     for component in getattr(bom, "components", []):
         for prop in getattr(component, "properties", []):
             names.append(getattr(prop, "name", ""))
+        # Descend into nested children (e.g., FIRMWARE child inside DEVICE parent)
+        for child in getattr(component, "components", []):
+            for prop in getattr(child, "properties", []):
+                names.append(getattr(prop, "name", ""))
     return names
 
 
