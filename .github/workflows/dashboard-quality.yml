@@ -70,6 +70,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: src/dashboard/package-lock.json
 
+      - name: Install nmap (required for top1000 port scope in E2E scan)
+        run: sudo apt-get install -y nmap
+
       - name: Install project (editable, dashboard extra)
         run: pip install -e ".[dashboard]"
 
