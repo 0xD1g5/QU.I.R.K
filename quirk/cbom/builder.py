@@ -1022,18 +1022,22 @@ def build_cbom(
             protocol_components.append(proto_component)
 
     # ------------------------------------------------------------------ #
-    # Pass 4 — Hardware FIRMWARE components (HWCOMPAT-05, Phase 129)      #
+    # Pass 4 — Hardware DEVICE parent + FIRMWARE child (CBOM-01, Ph134)   #
+    # Each hw endpoint becomes a ComponentType.DEVICE (identity layer)    #
+    # with one nested ComponentType.FIRMWARE child (operational detail).  #
     # ------------------------------------------------------------------ #
     if hw_devices:
         for dev in hw_devices:
             host = str(dev.get("host", "unknown"))
             port = str(dev.get("port", "0"))
-            # CR-02: bracket IPv6 hosts in the display name to avoid ambiguous colons.
-            comp_name = f"hw:[{host}]:{port}" if ":" in host else f"hw:{host}:{port}"
             # CR-02: normalize host in bom_ref so IPv6 colons don't break uniqueness.
             safe_host = _safe_bom_ref_host(host)
-            bom_ref_val = f"hw/{safe_host}:{port}"
-            props = [
+
+            # --- Build FIRMWARE child first (operational detail layer) ---
+            # CR-02: bracket IPv6 hosts in the display name to avoid ambiguous colons.
+            fw_name = f"hw:[{host}]:{port}" if ":" in host else f"hw:{host}:{port}"
+            fw_bom_ref = f"hw/firmware/{safe_host}:{port}"
+            fw_props = [
                 # CR-01: use _sanitize_hw_str() not safe_str() — safe_str() is for
                 # BaseException objects only and corrupts plain strings.
                 Property(name="quirk:hw-vendor",           value=_sanitize_hw_str(str(dev.get("vendor", "Unknown")))),
@@ -1043,22 +1047,45 @@ def build_cbom(
             ]
             bridge = dev.get("bridge_status")
             if bridge is not None:
-                props.append(Property(name="quirk:hw-bridge-status", value=str(bridge)))
+                fw_props.append(Property(name="quirk:hw-bridge-status", value=str(bridge)))
             # SNMP-03 / D-11: emit sysObjectID as hw-snmp-oid when SNMP data present.
             # Only devices fingerprinted via SNMP will have snmp_sysdescr set.
             if dev.get("snmp_sysdescr") is not None:
-                props.append(Property(
+                fw_props.append(Property(
                     name="quirk:hw-snmp-oid",
                     value=dev.get("snmp_sysobjectid") or "",
                 ))
-            hw_components.append(
-                Component(
-                    name=comp_name,
-                    type=ComponentType.FIRMWARE,
-                    bom_ref=bom_ref_val,
-                    properties=props,
-                )
+            firmware_child = Component(
+                name=fw_name,
+                type=ComponentType.FIRMWARE,
+                bom_ref=fw_bom_ref,
+                properties=fw_props,
             )
+
+            # --- Build DEVICE parent (identity/summary layer) ---
+            # D-05: name = "Vendor Model"; fallback when both are "Unknown" (D-05).
+            vendor_raw = str(dev.get("vendor", "Unknown"))
+            model_raw = str(dev.get("model", "Unknown"))
+            if vendor_raw == "Unknown" and model_raw == "Unknown":
+                device_name = f"Unknown Device at {host}:{port}"
+            else:
+                device_name = f"{vendor_raw} {model_raw}"
+            # D-08: DEVICE carries only quirk:hw-tier — the summary tier property.
+            tier_val = _sanitize_hw_str(str(dev.get("remediation_tier", "Tier N/A")))
+            device_props = [Property(name="quirk:hw-tier", value=tier_val)]
+            device_bom_ref = f"hw/device/{safe_host}:{port}"
+            # D-07: include version only when non-empty.
+            version_raw = dev.get("version")
+            device_version = version_raw if version_raw else None
+            device = Component(
+                name=device_name,
+                type=ComponentType.DEVICE,
+                bom_ref=device_bom_ref,
+                version=device_version,
+                properties=device_props,
+                components=[firmware_child],
+            )
+            hw_components.append(device)
 
     # ------------------------------------------------------------------ #
     # Assemble Bom                                                         #
