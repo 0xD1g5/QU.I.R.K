@@ -56,6 +56,15 @@ export interface CbomComponent {
   segment?: string | null
 }
 
+export interface HardwareComponent {
+  host: string
+  port: number
+  vendor: string
+  model: string
+  pqc_status: string
+  remediation_tier: string
+}
+
 export interface RoadmapNode {
   id: string
   title: string
@@ -233,6 +242,7 @@ export interface ScanLatestResponse {
   motion_findings: MotionFinding[]
   dar_findings: DarFinding[]
   hardware_findings: HardwareFinding[]  // Phase 128 HWCOMPAT-07
+  hardware_devices: HardwareComponent[]  // Phase 134 CBOM-02
   partial_failures?: PartialFailureEntry[]  // Phase 67 RESUME-02
 }
 
