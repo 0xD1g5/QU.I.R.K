@@ -89,7 +89,7 @@ export function FindingsPage() {
         const colors: Record<string, string> = {
           "Vulnerable": "bg-[hsl(0_72%_51%)] text-white",
           "At Risk": "bg-[hsl(38_92%_50%)] text-black",
-          "Safe": "bg-[hsl(142_71%_45%)] text-white",
+          "Safe": "bg-[hsl(142_71%_30%)] text-white",
         }
         return <Badge className={`${colors[qr] ?? ""} text-xs`}>{qr}</Badge>
       },
@@ -125,7 +125,7 @@ export function FindingsPage() {
       <h1 style={{ fontSize: 20, fontWeight: 600 }}>Findings</h1>
       <div className="flex gap-3 items-center">
         <Select value={severityFilter} onValueChange={setSeverityFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Filter by severity">
             <SelectValue placeholder="Severity" />
           </SelectTrigger>
           <SelectContent>
@@ -136,7 +136,7 @@ export function FindingsPage() {
           </SelectContent>
         </Select>
         <Select value={protocolFilter} onValueChange={setProtocolFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Filter by protocol">
             <SelectValue placeholder="Protocol" />
           </SelectTrigger>
           <SelectContent>

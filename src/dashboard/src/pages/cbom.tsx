@@ -28,7 +28,7 @@ try {
 }
 
 const QS_BADGE: Record<string, string> = {
-  Safe: "bg-[hsl(142_71%_45%)] text-white",
+  Safe: "bg-[hsl(142_71%_30%)] text-white",
   "At Risk": "bg-[hsl(38_92%_50%)] text-black",
   Vulnerable: "bg-[hsl(0_72%_51%)] text-white",
   Unknown: "bg-[hsl(240_5%_46%)] text-white",
@@ -75,7 +75,7 @@ function CbomTable({ components }: CbomTableProps) {
           className="max-w-xs h-8 text-sm"
         />
         <Select value={qsFilter} onValueChange={setQsFilter}>
-          <SelectTrigger className="w-40 h-8 text-sm">
+          <SelectTrigger className="w-40 h-8 text-sm" aria-label="Filter by quantum safety">
             <SelectValue placeholder="Quantum Safety" />
           </SelectTrigger>
           <SelectContent>
@@ -92,11 +92,11 @@ function CbomTable({ components }: CbomTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead scope="col" className="text-xs font-semibold">Algorithm</TableHead>
-              <TableHead scope="col" className="text-xs font-semibold">Type</TableHead>
-              <TableHead scope="col" className="text-xs font-semibold">Key Size</TableHead>
-              <TableHead scope="col" className="text-xs font-semibold">Quantum Safety</TableHead>
-              <TableHead scope="col" className="text-xs font-semibold">Source Systems</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Algorithm</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Type</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Key Size</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Quantum Safety</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Source Systems</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -106,8 +106,8 @@ function CbomTable({ components }: CbomTableProps) {
               return (
                 <TableRow key={i}>
                   <TableCell className="font-mono text-xs">{c.algorithm}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{c.type ?? "—"}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm">{c.type ?? "—"}</TableCell>
+                  <TableCell className="text-sm">
                     {c.key_size ? `${c.key_size} bits` : "—"}
                   </TableCell>
                   <TableCell>
@@ -117,7 +117,7 @@ function CbomTable({ components }: CbomTableProps) {
                       </Badge>
                     ) : <span className="text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-xs">
                     {sources.join(", ")}
                     {overflow > 0 && <span className="ml-1 text-accent">+{overflow} more</span>}
                   </TableCell>
