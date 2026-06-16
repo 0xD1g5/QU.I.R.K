@@ -26,6 +26,7 @@ from quirk.dashboard.api.schemas import (
     DarFinding,
     FindingCounts,
     FindingItem,
+    HardwareComponent,
     HardwareFinding,
     IdentityFinding,
     MotionFinding,
@@ -780,6 +781,45 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
         return []
 
 
+def _derive_hw_components(db: Session, latest_ts: datetime) -> list[HardwareComponent]:
+    """Build HardwareComponent list from HardwareDevice rows for the latest scan.
+
+    Advisory-only (CBOM-02) — wrapped in try/except so any DB or mapping error
+    is non-fatal and returns an empty list.  Mirrors _derive_hardware_findings:
+    anchors on MAX(HardwareDevice.scanned_at) with a 1-second window so hardware
+    timestamps (collected after crypto endpoints) are always captured.
+    """
+    try:
+        hw_anchor = db.query(func.max(HardwareDevice.scanned_at)).scalar()
+        if hw_anchor is None:
+            return []
+        window_start = hw_anchor - timedelta(seconds=1)
+        window_end = hw_anchor + timedelta(seconds=1)
+        devices = (
+            db.query(HardwareDevice)
+            .filter(
+                HardwareDevice.scanned_at >= window_start,
+                HardwareDevice.scanned_at <= window_end,
+            )
+            .all()
+        )
+        results: list[HardwareComponent] = []
+        for d in devices:
+            results.append(HardwareComponent(
+                host=getattr(d, "host", "") or "",
+                port=getattr(d, "port", 0) or 0,
+                vendor=getattr(d, "vendor", "Unknown") or "Unknown",
+                model=getattr(d, "model", None) or "Unknown",
+                pqc_status=getattr(d, "pqc_status", "unknown") or "unknown",
+                remediation_tier=getattr(d, "remediation_tier", None) or "Tier N/A",
+            ))
+        results.sort(key=lambda c: _TIER_ORDER.get(c.remediation_tier, 99))
+        return results
+    except Exception:
+        logger.exception("_derive_hw_components failed (advisory-only, skipping)")
+        return []
+
+
 def _qs_for_alg(alg: str) -> str:
     """Map an algorithm string to its quantum-safety display label.
 
@@ -1279,6 +1319,7 @@ def get_latest_scan(
     certificates.sort(key=_cert_expiry_key)
 
     cbom_components = _derive_cbom(endpoints)
+    hardware_devices = _derive_hw_components(db, latest_ts)   # Phase 134 CBOM-02
     roadmap = _derive_roadmap(evidence, score_raw)
 
     response_scan_id = latest_ts.isoformat() if hasattr(latest_ts, "isoformat") else str(latest_ts)
@@ -1328,6 +1369,7 @@ def get_latest_scan(
         motion_findings=_derive_motion_findings(endpoints),   # NEW — Phase 36 DASH-05
         dar_findings=_derive_dar_findings(endpoints),          # Phase 39 GAP-04
         hardware_findings=_derive_hardware_findings(db, latest_ts),  # Phase 128 HWCOMPAT-07
+        hardware_devices=hardware_devices,                     # Phase 134 CBOM-02
         partial_failures=partial_failures,                     # Phase 67 RESUME-02
     )
 
