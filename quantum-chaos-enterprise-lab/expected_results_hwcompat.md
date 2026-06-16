@@ -140,6 +140,55 @@ python run_scan.py --target 127.0.0.1 --ports 20223 --enable-snmp --snmp-communi
 
 ---
 
+## CBOM Component Hierarchy
+
+As of Phase 134 (CBOM-01), each hardware endpoint in the CBOM is represented as a
+**DEVICE → FIRMWARE** component pair rather than a flat FIRMWARE component.
+
+### Structure
+
+```
+ComponentType.DEVICE  (identity/summary layer)
+  bom_ref:    hw/device/{host}:{port}
+  name:       "{vendor} {model}"  e.g. "Cisco ASA-5506"
+              (fallback: "Unknown Device at {host}:{port}" when both vendor and model are "Unknown")
+  properties: quirk:hw-tier = remediation_tier value
+  components:
+    ComponentType.FIRMWARE  (operational-detail layer)
+      bom_ref:    hw/firmware/{host}:{port}
+      name:       hw:{host}:{port}  (IPv6: hw:[{host}]:{port})
+      properties: quirk:hw-vendor
+                  quirk:hw-model
+                  quirk:hw-pqc-supported
+                  quirk:hw-remediation-tier
+                  quirk:hw-bridge-status   (conditional — only when bridge_status is non-null)
+                  quirk:hw-snmp-oid        (conditional — only when snmp_sysdescr is non-null)
+```
+
+### Example (hwcompat-http HPE iLO5)
+
+DEVICE bom_ref: `hw/device/127.0.0.1:20222`
+DEVICE name: `HPE iLO5`
+FIRMWARE bom_ref: `hw/firmware/127.0.0.1:20222`
+FIRMWARE name: `hw:127.0.0.1:20222`
+
+### Example (hwcompat-snmp Cisco IOS)
+
+DEVICE bom_ref: `hw/device/127.0.0.1:20223`
+DEVICE name: `Cisco <model>` (or model from HARDWARE_MATRIX Cisco entry)
+FIRMWARE bom_ref: `hw/firmware/127.0.0.1:20223`
+FIRMWARE name: `hw:127.0.0.1:20223`
+FIRMWARE property `quirk:hw-snmp-oid`: `1.3.6.1.4.1.9.1.1` (Cisco Enterprise OID)
+
+### Example (hwcompat-ssh Unknown vendor)
+
+DEVICE bom_ref: `hw/device/127.0.0.1:20221`
+DEVICE name: `Unknown Device at 127.0.0.1:20221`
+FIRMWARE bom_ref: `hw/firmware/127.0.0.1:20221`
+FIRMWARE name: `hw:127.0.0.1:20221`
+
+---
+
 ## Advisory-Only Note
 
 Hardware findings do not enter `SCORE_WEIGHTS` or `compute_readiness_score()` (D-01).
