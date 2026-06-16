@@ -2,7 +2,7 @@ import { useRef, useEffect, useMemo, useState } from "react"
 import cytoscape from "cytoscape"
 import coseBilkent from "cytoscape-cose-bilkent"
 import { useScanData } from "@/hooks/useScanData"
-import type { CbomComponent } from "@/types/api"
+import type { CbomComponent, HardwareComponent } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -124,6 +124,81 @@ function CbomTable({ components }: CbomTableProps) {
                 </TableRow>
               )
             })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
+
+// ── Hardware Inventory ─────────────────────────────────────────────────────
+
+const HW_TYPE_BADGE: Record<string, string> = {
+  DEVICE: "bg-[hsl(220_60%_40%)] text-white",
+  FIRMWARE: "bg-[hsl(240_5%_60%)] text-white",
+}
+
+const TIER_BADGE: Record<string, string> = {
+  "Tier 1": "bg-[hsl(0_72%_51%)] text-white",
+  "Tier 2": "bg-[hsl(38_92%_50%)] text-black",
+  "Tier 3": "bg-[hsl(142_71%_30%)] text-white",
+  "Tier N/A": "bg-[hsl(240_5%_46%)] text-white",
+}
+
+function HardwareInventory({ devices }: { devices: HardwareComponent[] }) {
+  if (!devices.length) return null
+
+  return (
+    <div className="space-y-3 mt-6">
+      <h2 style={{ fontSize: 16, fontWeight: 600 }}>Hardware Inventory</h2>
+      <div className="rounded-md border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Type</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Host</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Port</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Vendor</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Model</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">PQC Status</TableHead>
+              <TableHead scope="col" className="text-xs font-semibold text-foreground">Remediation Tier</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {devices.map((d, i) => (
+              <>
+                <TableRow key={`device-${i}`}>
+                  <TableCell>
+                    <Badge className={`${HW_TYPE_BADGE["DEVICE"]} text-xs`}>[DEVICE]</Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{d.host}</TableCell>
+                  <TableCell className="text-sm">{d.port}</TableCell>
+                  <TableCell className="text-sm">{d.vendor}</TableCell>
+                  <TableCell className="text-sm">{d.model}</TableCell>
+                  <TableCell>
+                    <Badge className={`${QS_BADGE[d.pqc_status] ?? QS_BADGE["Unknown"]} text-xs`}>
+                      {d.pqc_status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`${TIER_BADGE[d.remediation_tier] ?? TIER_BADGE["Tier N/A"]} text-xs`}>
+                      {d.remediation_tier}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+                <TableRow key={`firmware-${i}`} className="bg-muted/30">
+                  <TableCell>
+                    <Badge className={`${HW_TYPE_BADGE["FIRMWARE"]} text-xs`}>[FIRMWARE]</Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{d.host}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{d.port}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{d.vendor}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{d.model}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{d.pqc_status}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{d.remediation_tier}</TableCell>
+                </TableRow>
+              </>
+            ))}
           </TableBody>
         </Table>
       </div>
@@ -427,6 +502,7 @@ export function CbomPage() {
   const { data, loading, error } = useScanData()
   // Stabilize reference so CbomGraph's useEffect dep array doesn't trigger on every parent render
   const components = useMemo(() => data?.cbom_components ?? [], [data])
+  const hardwareDevices = useMemo(() => data?.hardware_devices ?? [], [data])
 
   // Lift segment filter to page scope so BOTH the Table and Graph tabs share
   // the same filtered dataset (IN-03: segment filter applies to the whole page,
@@ -476,6 +552,7 @@ export function CbomPage() {
         </TabsList>
         <TabsContent value="table" className="mt-4">
           <CbomTable components={filteredComponents} />
+          <HardwareInventory devices={hardwareDevices} />
         </TabsContent>
         <TabsContent value="graph" className="mt-4">
           <CbomGraph components={filteredComponents} />
