@@ -100,6 +100,22 @@ class CbomComponent(BaseModel):
     segment: Optional[str] = None
 
 
+class HardwareComponent(BaseModel):
+    """Minimal hardware device entry for the CBOM tab Hardware Inventory section.
+
+    CBOM-02 D-02: exactly six fields — no SNMP fields, no confidence,
+    no fingerprint_method.  sensor_id/segment deferred (HardwareDevice has
+    no sensor_id column yet).
+    """
+
+    host: str
+    port: int
+    vendor: str
+    model: str
+    pqc_status: str
+    remediation_tier: str
+
+
 # ---- Identity Findings ----
 
 class IdentityFinding(BaseModel):
@@ -250,6 +266,7 @@ class ScanLatestResponse(BaseModel):
     motion_findings: List[MotionFinding] = []   # NEW — Phase 36 DASH-05
     dar_findings: List[DarFinding] = []          # Phase 39 GAP-04
     hardware_findings: List[HardwareFinding] = []  # Phase 128 HWCOMPAT-07
+    hardware_devices: List[HardwareComponent] = []   # Phase 134 CBOM-02
     partial_failures: List[PartialFailureEntry] = []  # Phase 67 RESUME-02
 
 
