@@ -31,7 +31,10 @@ _STATIC_HEADERS: dict[str, str] = {
     "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
     # Restrict all fetch directives to same origin; block plugins (AUDIT-14 / D-04/05).
     # default-src 'self' covers connect-src/img-src/font-src so exfil via fetch is blocked.
-    "Content-Security-Policy": "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'",
+    # style-src allows 'unsafe-inline': Cytoscape.js (CBOM graph) applies inline styles
+    # to SVG elements at runtime; blocking them makes the graph canvas blank.
+    # Inline styles are lower-risk than inline scripts (no code execution).
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'",
 }
 
 # HSTS value used when QUIRK_HSTS is truthy: 1 year + subdomains.
