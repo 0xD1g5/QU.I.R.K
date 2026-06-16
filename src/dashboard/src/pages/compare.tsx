@@ -60,12 +60,22 @@ function EndpointRow({ ep }: { ep: CompareEndpoint | string }) {
   )
 }
 
+const EmptyCompareState = () => (
+  <Card>
+    <CardContent className="py-8 text-sm text-foreground/70 text-center">
+      Select two scans from Scan History to compare them.
+    </CardContent>
+  </Card>
+)
+
 export function ComparePage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const scanA = searchParams.get("a")
   const scanB = searchParams.get("b")
   const { data, loading, error } = useCompareData(scanA, scanB)
+
+  if (!scanA || !scanB) return <EmptyCompareState />
 
   if (loading) return <PageSpinner ariaLabel="Loading comparison" />
 
@@ -81,7 +91,7 @@ export function ComparePage() {
     )
   }
 
-  if (!data) return null
+  if (!data) return <EmptyCompareState />
 
   const delta = data.score_delta
   const totalFindings = data.added_findings.length + data.removed_findings.length

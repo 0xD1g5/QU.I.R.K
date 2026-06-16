@@ -81,7 +81,7 @@ export function QuestionCard({
         {/* Header row: question label + text + badge */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex-1">
-            <span className="text-xs text-muted-foreground font-semibold block mb-1">
+            <span className="text-xs text-foreground/70 font-semibold block mb-1">
               Q{questionNumber}
             </span>
             <p className="text-sm leading-relaxed">{questionText}</p>
@@ -121,7 +121,7 @@ export function QuestionCard({
                 <RadioGroupItem value={value} id={id} className="mt-0.5 shrink-0" />
                 <Label htmlFor={id} className="text-sm cursor-pointer leading-snug">
                   {label}
-                  <span className="text-xs text-muted-foreground"> ({idx + 1})</span>
+                  <span className="text-xs text-foreground/70"> ({idx + 1})</span>
                 </Label>
               </div>
             )
@@ -146,7 +146,7 @@ export function QuestionCard({
         <div className="space-y-1">
           <label
             htmlFor={`q${questionNumber}-evidence`}
-            className="text-xs text-muted-foreground"
+            className="text-xs text-foreground/70"
           >
             Evidence note (optional):
           </label>

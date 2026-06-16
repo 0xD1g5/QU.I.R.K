@@ -45,10 +45,10 @@ export function PracticeAreaSection({
       <CollapsibleTrigger className="flex items-center justify-between w-full py-3 px-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
         <span className="text-base font-semibold text-left">{practiceAreaName}</span>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-foreground/70">
             {answered}/{questions.length} answered
           </span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 data-[state=open]:rotate-180" />
+          <ChevronDown className="h-4 w-4 text-foreground/70 transition-transform duration-200 data-[state=open]:rotate-180" />
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-6 pt-4">

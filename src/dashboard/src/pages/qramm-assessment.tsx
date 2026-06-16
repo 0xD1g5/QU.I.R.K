@@ -55,7 +55,7 @@ function DimensionTab({
           value={total > 0 ? (answered / total) * 100 : 0}
           aria-label={`${answered} of ${total} questions answered`}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-foreground/70">
           {answered} of {total} answered
         </p>
       </div>
