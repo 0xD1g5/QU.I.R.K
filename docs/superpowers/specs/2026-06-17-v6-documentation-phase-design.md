@@ -1,0 +1,147 @@
+# QUIRK v6.0 — Documentation Phase Design
+
+**Date:** 2026-06-17
+**Status:** Proposed
+**Scope:** v6.0 milestone — full documentation refresh following the v4.x–v5.x feature build-out
+
+---
+
+## Context
+
+QU.I.R.K. shipped five major feature milestones (v4.1–v4.5) covering Foundation Polish,
+Identity Crypto, Data at Rest, Data in Motion, and API Depth, then crossed into v5.x with
+distributed scanning, distributed on-prem sensors, Windows packaging, and the public launch
+(v5.6). Across this span the feature surface grew substantially while documentation was
+updated incrementally and opportunistically — sufficient to ship, but not holistically reviewed
+against what a net-new user, operator, or integrator now needs to succeed.
+
+The v5.7 deferred list includes security-review test infrastructure work, QRAMM cross-tenant
+hardening, and report-quality items. Those are correctness fixes. The v6.0 slot is the right
+home for the documentation phase: all v5.x work is complete and the public-launch audience
+has a realistic path to finding gaps.
+
+**Primary driver:** Documentation users depend on — getting-started, operators guide,
+configuration reference, connector guides, report interpretation, CBOM guide — was last
+comprehensively reviewed before the distributed-architecture and Windows-sensor work shipped.
+New users arriving from the public launch encounter a codebase that has significantly
+outpaced its user-facing documentation.
+
+---
+
+## Scope
+
+The documentation phase covers every artifact users, operators, and integrators depend on
+directly. Internal planning files, chaos-lab engineering notes, and CHANGELOG entries are
+out of scope.
+
+| Document | What Needs Updating |
+|----------|---------------------|
+| `docs/getting-started.md` | Reflect current CLI surface (`quirk init`, `quirk scan`, scan profiles, connector prompts); remove any v3.x/v4.x artifacts |
+| `docs/installation.md` | Add Windows sensor install path (Scheduled Task, `install.ps1`); Homebrew + GHCR channels; PyPI extras (`quirk[all]`, macOS Apple Silicon caveat) |
+| `docs/configuration.md` | All config fields current; scan profile options (`quick/standard/deep`); port-scope control; distributed-mode sensor/console config |
+| `docs/operators-guide.md` | Expand Windows section (signed vs unsigned binary, SmartScreen workaround, upgrade path); sensor enrollment, revocation, partial-merge behavior; port-scope discovery control |
+| `docs/cbom-guide.md` | All source types current (`IDENTITY`, `DATA_AT_REST`, `EMAIL`, `BROKER` alongside `TLS`, `SSH`, `JWT`, `CONTAINER`, `SOURCE`, `AWS`, `AZURE`); CBOM output for v5.x scanner surfaces |
+| `docs/intelligence-schema.md` | Evidence dictionary keys added in v4.x–v5.x (`pqc_hybrid_endpoint_count`, `tls_enum_coverage_ratio`, distributed-merge fields, port-scope fields) |
+| `docs/report-interpretation.md` | Score decomposition table explanation; Data at Rest / Data in Motion / API Depth / Identity finding sections; subscore arithmetic visible since v5.0 |
+| `docs/connectors/` | Connector guides for Kerberos, SAML/OAuth, DNSSEC, PostgreSQL/MySQL/RDS, S3/Blob, Kubernetes secrets at rest, HashiCorp Vault, email protocols (SMTP/IMAP/POP3), message brokers (Kafka/RabbitMQ/Redis) |
+| `docs/cbom-classifier-coverage.md` | Classifier coverage table updated to reflect all v4.x–v5.x algorithm source types and new scanner surfaces |
+| `docs/upgrade-guide.md` | Migration notes for v4.x → v5.x config changes; distributed-mode introduction; Windows-sensor upgrade path |
+| `docs/error-codes.md` | Any error codes introduced in v4.x–v5.x (distributed errors, sensor enrollment errors, port-scope validation errors) |
+
+---
+
+## Phase Structure
+
+### Phase 1 — Audit and Gap Register
+
+Systematically walk every document in the scope table above and produce a gap register: one
+row per documentation gap with severity (P0 = incorrect/misleading, P1 = missing required
+information, P2 = incomplete or outdated). This phase produces no finished prose — only the
+register that drives sequencing in Phases 2–4.
+
+Deliverable: `docs/doc-gap-register.md` — gap register with severity, owning document, and
+one-sentence description of what is missing or wrong.
+
+### Phase 2 — Core User Docs (Getting Started, Installation, Configuration)
+
+Fix P0 and P1 gaps in the three documents new users hit first. These are the highest-traffic
+documents after public launch and the most likely to block first-run success.
+
+- `docs/getting-started.md` — end-to-end first-run walkthrough accurate for v5.6 CLI surface
+- `docs/installation.md` — all distribution channels documented; Windows path complete
+- `docs/configuration.md` — all config fields current; port-scope and distributed-mode sections
+
+### Phase 3 — Operator and Scanner Docs
+
+Fix P0 and P1 gaps in the documents operators and integrators depend on.
+
+- `docs/operators-guide.md` — Windows, distributed-mode, and sensor lifecycle complete
+- `docs/connectors/` — all v4.x–v5.x connector guides (new files where none exist)
+- `docs/report-interpretation.md` — finding sections for all v4.x–v5.x scanner surfaces
+- `docs/upgrade-guide.md` — migration notes current through v5.x
+
+### Phase 4 — Reference Docs
+
+Fix P0 and P1 gaps in the reference documents that support advanced users and integrators.
+
+- `docs/cbom-guide.md` — source types and CBOM schema current
+- `docs/intelligence-schema.md` — evidence dictionary complete
+- `docs/cbom-classifier-coverage.md` — classifier coverage table current
+- `docs/error-codes.md` — error code registry complete
+
+### Phase 5 — P2 Sweep and UAT-Series Update
+
+Address remaining P2 gaps across all documents, then update `docs/UAT-SERIES.md` to
+include user-acceptance test cases covering the documentation phase itself: can a net-new
+user complete first-run using only the updated getting-started guide? Does the operators
+guide have enough to install and enroll a Windows sensor?
+
+---
+
+## Explicit Out of Scope
+
+- `changelog.d/`, `CHANGELOG.md`, `.planning/` files — not user-facing documentation
+- Chaos lab engineering notes (`quantum-chaos-enterprise-lab/`, `labs/`) — engineering artifacts
+- Architecture design docs (`docs/architecture.md`, `docs/architecture-distributed.md`) — internal reference; update only if a P0 factual error is found
+- New features — this milestone ships no new scanning surfaces or behavioral changes
+- `docs/dead-code-candidates.md` — internal maintenance artifact
+
+---
+
+## Success Criteria
+
+A net-new user arriving from GitHub after v6.0 ships should be able to:
+
+1. Install QUIRK (Linux, macOS, Windows) using only `docs/installation.md`
+2. Complete a first scan against a local target using only `docs/getting-started.md`
+3. Configure and enroll a distributed sensor using only `docs/operators-guide.md`
+4. Interpret any finding type in a v5.6+ report using only `docs/report-interpretation.md`
+5. Locate the CBOM source type for any scanner surface using only `docs/cbom-guide.md`
+
+Each criterion maps directly to a UAT-series test case added in Phase 5.
+
+---
+
+## Documentation as Standard Practice (Going Forward)
+
+The v6.0 milestone addresses accumulated debt. To prevent the same gap from
+reopening, the release process (`docs/release-process.md`, step 8) now includes
+an explicit documentation review gate: every new scanner, connector, CLI surface,
+config field, or behavioral change must have its corresponding user-facing document
+current before a release tag is cut. Phase plans for new features should include a
+docs task so the release-time check is a confirmation, not a catch-up.
+
+---
+
+## Relation to Backlog
+
+- **BACK-08** (narrative report onboarding guide) — addressed in Phase 2 (`getting-started.md` expansion)
+- v5.6 Known Issues deferred items (SP-02..09, QC-02, QC-03, CD-04..09, WR-02..05) — correctness fixes, not documentation; remain in v5.7 scope
+
+---
+
+## Cross-Cutting Constraints
+
+- No documentation changes introduce new behavioral commitments that have not shipped
+- All examples and code snippets must be tested against the v5.6+ CLI before merging
+- Every new connector guide follows the existing `docs/connectors/aws.md` structure (Overview, Prerequisites, Config Fields, Example Output, Known Limitations)

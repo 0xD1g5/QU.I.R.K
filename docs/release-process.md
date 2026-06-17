@@ -105,7 +105,25 @@ Step-by-step procedure for cutting a release. All steps are required.
    - Run the downstream attestation verification command (see below) against
      the published artifact as a sanity check.
 
-8. **Update the milestone documentation.** Mark the corresponding milestone
+8. **Review user-facing documentation.** For every new scanner, connector,
+   CLI surface, config field, or behavioral change included in this release,
+   confirm the relevant user-facing document is current:
+
+   | What shipped | Document(s) to check |
+   |---|---|
+   | New scanner or connector | `docs/connectors/<name>.md` (create if absent), `docs/cbom-guide.md`, `docs/report-interpretation.md` |
+   | New CLI flag or subcommand | `docs/getting-started.md`, `docs/configuration.md` |
+   | New config field | `docs/configuration.md` |
+   | Distributed / sensor changes | `docs/operators-guide.md` |
+   | New evidence key | `docs/intelligence-schema.md` |
+   | Behavioral change visible to users | `docs/upgrade-guide.md` |
+
+   This check happens at release time rather than in CI because documentation
+   completeness is a judgment call, not a parse gate. The phase plan for any
+   work that introduces a new user-visible surface should include a docs task
+   so this step is a final confirmation, not a catch-up.
+
+9. **Update the milestone tracker.** Mark the corresponding milestone
    complete in `.planning/ROADMAP.md` and propagate the release version into
    the README badges if the badge URL embeds the version.
 
