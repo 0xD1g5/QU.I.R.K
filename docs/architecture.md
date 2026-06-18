@@ -16,7 +16,9 @@ flowchart LR
   CLI --> Wizard[interactive.py wizard]
   CLI --> Discovery[quirk/discovery/ nmap]
   CLI --> Scanners[quirk/scanner/* 12 modules]
+  CLI --> HardwareScan[quirk/hwcompat/* SSH/HTTP/SNMP]
   Scanners --> DB[(SQLite: quirk.db<br/>CryptoEndpoint table)]
+  HardwareScan --> DB
   DB --> Risk[quirk.engine.risk_engine<br/>_build_finding + _normalize_for_compliance]
   Risk --> Intel[quirk.intelligence<br/>scoring + roadmap + evidence]
   Risk --> CBOM[quirk.cbom.builder<br/>build_cbom + write_cbom_files]
@@ -211,3 +213,38 @@ Phase 50 ships under the v4.6 milestone; version-constant bumps are out of scope
 - [`docs/intelligence-schema.md`](intelligence-schema.md) — finding / scoring schema.
 - [`docs/timeout-retry-audit.md`](timeout-retry-audit.md) — per-phase timeout / retry policy.
 - [`docs/operators-guide.md`](operators-guide.md) — install, configure, scan, troubleshoot, per-scanner reference.
+
+---
+
+## 12. Hardware Scanning
+
+QU.I.R.K. identifies network infrastructure devices — routers, firewalls, load balancers, HSMs, and management controllers — using a three-signal cascade, each requiring progressively more network access. Hardware scanning is a parallel signal path to the cryptographic protocol scanners; its findings are stored in the same SQLite database and emitted in the same CBOM output, but through a dedicated `quirk/hwcompat/` package that requires the optional `[hw]` extras (`pip install 'quirk-scanner[hw]'`).
+
+### Signal Chain
+
+The scanner attempts identification in order, stopping at the first successful match:
+
+1. **SSH banner** — SSH server version strings (e.g., `SSH-2.0-Cisco-1.25`) are matched against a curated vendor/model pattern table. Requires only TCP/22 access; no credentials needed.
+2. **HTTP management interface** — HTTP responses from well-known management ports are fingerprinted against vendor header and title patterns. Requires TCP access to management ports; no credentials needed.
+3. **SNMP probe** — Three OIDs are retrieved via SNMPv2c: `sysDescr` (full device description string), `sysName` (configured hostname), and `sysObjectID` (enterprise OID tree). The response is parsed first by the `sysdescrparser` library and then by a vendor regex fallback when library parsing yields no match. Requires UDP/161 access and a read-only community string (configured via the `snmp_community` key in `config.yaml`). The read-only community string is the trust-boundary contract: QUIRK never issues SNMP write or inform operations.
+
+Each matched device receives a confidence grade (`high`, `medium`, `low`, or `unknown`) based on which signal produced the match. SSH banner matches are graded `high`; SNMP-only matches are graded `medium` or `low` depending on the specificity of the sysObjectID match.
+
+### CNSA 2.0 Remediation Tiers
+
+Every identified device is classified into a CNSA 2.0 remediation tier that reflects its quantum-readiness migration path:
+
+- **Tier 1** — PQC-capable hardware with an active CNSA 2.0 migration path already available.
+- **Tier 2** — Hardware that can be upgraded to PQC via firmware or configuration change without hardware replacement.
+- **Tier 3** — End-of-life hardware requiring physical replacement before CNSA 2.0 deadlines.
+- **N/A** — Devices where PQC applicability has not been established in the vendor catalog.
+
+Low- and unknown-confidence matches are capped at Tier 2 (conservative default) to avoid over-crediting uncertain identification.
+
+**Crypto-bridge detection.** When a PQC-capable gateway sits in front of a quantum-vulnerable backend device, QU.I.R.K. classifies the backend as `partial_only` rather than `upstream_mitigated` unless the backend is directly unreachable during the scan. This reflects a conservative trust model: crypto-bridge coverage is credited only when the protected path is confirmed unreachable, not merely assumed.
+
+### CBOM Integration
+
+Hardware devices are emitted as first-class components in the CycloneDX CBOM (Pass 4 of the CBOM build pipeline). Each identified device appears as a `ComponentType.DEVICE` parent component. Beneath it, a `ComponentType.FIRMWARE` child component carries the vendor PQC compatibility metadata — specifically, the `quirk:hw-pqc-supported` and `quirk:hw-remediation-tier` properties that encode the CNSA 2.0 classification.
+
+Hardware inventory appears in the CBOM output and in the dashboard `/hardware` tab. **It does not contribute to the quantum-readiness score** — hardware findings are advisory and are reported separately from the cryptographic posture score. The score reflects cryptographic algorithm posture on observed protocol connections; hardware device classification is a complementary infrastructure signal, not a scored finding.
