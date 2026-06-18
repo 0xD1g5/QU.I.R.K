@@ -241,7 +241,7 @@ Every identified device is classified into a CNSA 2.0 remediation tier that refl
 
 Low- and unknown-confidence matches are capped at Tier 2 (conservative default) to avoid over-crediting uncertain identification.
 
-**Crypto-bridge detection.** When a PQC-capable gateway sits in front of a quantum-vulnerable backend device, QU.I.R.K. classifies the backend as `partial_only` rather than `upstream_mitigated` unless the backend is directly unreachable during the scan. This reflects a conservative trust model: crypto-bridge coverage is credited only when the protected path is confirmed unreachable, not merely assumed.
+**Crypto-bridge detection.** When a PQC-capable gateway and a quantum-vulnerable backend share the same `/24` subnet and both are directly reachable during the scan, QU.I.R.K. classifies both devices as `partial_only`. The `upstream_mitigated` status is reserved and is never automatically assigned — it requires explicit manual operator confirmation that the backend is genuinely unreachable from the network being assessed.
 
 ### CBOM Integration
 
