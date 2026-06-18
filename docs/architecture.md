@@ -181,7 +181,7 @@ Reports are rendered through a single orchestrator and a single Jinja template.
 - **Orchestrator.** `quirk/reports/writer.py::write_reports()` is the only entry point that builds report artifacts. It owns the output directory layout and timestamps.
 - **Template.** `quirk/reports/templates/report.html.j2` is the single Jinja template shared by HTML and PDF outputs. PDF is rendered by Playwright headless Chromium against the same HTML — there is no second template to drift.
 - **Markdown outputs.** `executive.md` and `technical.md` render alongside HTML / PDF for paste-into-Confluence / paste-into-Jira workflows.
-- **Versioned constants.** `quirk/reports/writer.py` declares `PLATFORM_VERSION = "4.4.0"` and `SCHEMA_VERSION = 2` at module top. Reports embed these so consumers can detect schema-incompatible changes without parsing the body.
+- **Versioned constants.** `quirk/reports/writer.py` imports `PLATFORM_VERSION` dynamically from the package (`from quirk import __version__ as PLATFORM_VERSION`) so it always reflects the installed package version. `SCHEMA_VERSION = 2` is a hardcoded integer bumped only on incompatible structural changes. Reports embed these so consumers can detect schema-incompatible changes without parsing the body.
 
 ---
 
@@ -195,13 +195,11 @@ The practical implication for operators: every `quirk <subcommand>` invocation g
 
 ## 10. Versioning and Versioned Constants
 
-QUIRK keeps three versioned constants at the top of `quirk/reports/writer.py`:
+QUIRK keeps three versioned constants in `quirk/reports/writer.py`:
 
-- `PLATFORM_VERSION = "4.4.0"` — overall platform release.
+- `PLATFORM_VERSION` — dynamically imported from the package (`from quirk import __version__ as PLATFORM_VERSION`); resolves to the installed package version at runtime (e.g., `5.8.0`).
 - `SCHEMA_VERSION = 2` — report JSON schema. Bumped on incompatible structural changes.
-- `INTELLIGENCE_VERSION = "4.4.0"` — intelligence subscore engine version.
-
-Phase 50 ships under the v4.6 milestone; version-constant bumps are out of scope for this phase and remain owned by the release-management plan.
+- `INTELLIGENCE_VERSION` — assigned from `PLATFORM_VERSION` so it tracks the platform version automatically.
 
 ---
 
