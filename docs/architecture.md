@@ -16,7 +16,9 @@ flowchart LR
   CLI --> Wizard[interactive.py wizard]
   CLI --> Discovery[quirk/discovery/ nmap]
   CLI --> Scanners[quirk/scanner/* 12 modules]
+  CLI --> HardwareScan[quirk/hwcompat/* SSH/HTTP/SNMP]
   Scanners --> DB[(SQLite: quirk.db<br/>CryptoEndpoint table)]
+  HardwareScan --> DB
   DB --> Risk[quirk.engine.risk_engine<br/>_build_finding + _normalize_for_compliance]
   Risk --> Intel[quirk.intelligence<br/>scoring + roadmap + evidence]
   Risk --> CBOM[quirk.cbom.builder<br/>build_cbom + write_cbom_files]
