@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 <!-- towncrier release notes start -->
 
+## [5.8.0] - 2026-06-16
+
+### Added
+
+- **SNMP hardware fingerprinting** (Phase 133) — pysnmp 7 HLAPI 3-OID probe (sysDescr / sysName / sysObjectID) with sysdescrparser dual-path parsing (structured MIB + regex fallback) to extract vendor, model, and hardware family from raw SNMP responses. Signal cascade ordering: SSH banner → HTTP management interface → SNMP (last resort, requires read-only community string). New `[hw]` extras group (`pysnmp`, `sysdescrparser`); **not included in `[all]`** — opt-in required (`pip install 'quirk-scanner[hw]'`). Cisco IOS chaos-lab profile added on port 20223.
+- **CBOM DEVICE/FIRMWARE component hierarchy** (Phase 134) — hardware endpoints promoted to a CycloneDX `ComponentType.DEVICE` parent component with a `ComponentType.FIRMWARE` child; separates the hardware platform from its firmware crypto posture in the CBOM graph. Dashboard "Hardware Inventory" section added to the CBOM tab. Hardware inventory is advisory-only and does not contribute to the quantum-readiness score.
+
+## [5.7.0] - 2026-06-14
+
+### Added
+
+- **Hardening + Hardware Compatibility milestone** (Phases 123–129) — SSRF cluster hardening across all outbound HTTP surfaces, scoring correctness fixes (clamp/aggregation alignment), and full audit drain of the 2026-05-27 codebase audit findings.
+- **Hardware fingerprinting via SSH/HTTP banner** — SSH host-key banner and HTTP management-interface response classify network hardware vendor, model, and CNSA 2.0 remediation tier (quantum-safe / PQC-migration-required / quantum-vulnerable). Crypto-bridge detection identifies hardware devices where an upstream TLS terminator mitigates a quantum-vulnerable on-device cipher suite.
+
 ## [5.6.0] - 2026-06-12
 
 ### Added
