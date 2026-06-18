@@ -139,7 +139,7 @@ The dashboard is a two-tier read-only viewer over `quirk.db`.
 ```mermaid
 flowchart TB
   subgraph Frontend [src/dashboard - React 19 + Vite 8 + TypeScript + Tailwind + shadcn/ui]
-    SPA[SPA: 9 pages]
+    SPA[SPA: 19 routes]
   end
   subgraph Backend [quirk/dashboard - FastAPI + uvicorn loopback :8512]
     App[api/app.py factory]
@@ -153,7 +153,7 @@ flowchart TB
   DTO --> DB
 ```
 
-- **Frontend.** `src/dashboard/` is a Vite 8 + React 19 + TypeScript + Tailwind + shadcn/ui SPA with nine routes: `/executive`, `/findings`, `/identity`, `/motion`, `/data-at-rest`, `/certificates`, `/cbom`, `/roadmap`, `/trends`. The built bundle is **committed under `quirk/dashboard/static/`** so `quirk serve` ships the UI without requiring a node toolchain on the target host — air-gap friendly.
+- **Frontend.** `src/dashboard/` is a Vite 8 + React 19 + TypeScript + Tailwind + shadcn/ui SPA with 19 routes: `/` (executive), `/findings`, `/identity`, `/motion`, `/hardware`, `/data-at-rest`, `/certificates`, `/cbom`, `/roadmap`, `/trends`, `/print`, `/qramm`, `/qramm/assessment`, `/schedules`, `/scan/new`, `/scan/job/:jobId`, `/scans`, `/sensors`, `/compare`. A conditional vertical-specific route is also registered at runtime when the active vertical provides a page component. The built bundle is **committed under `quirk/dashboard/static/`** so `quirk serve` ships the UI without requiring a node toolchain on the target host — air-gap friendly.
 - **Backend.** `quirk/dashboard/server.py` exposes `quirk serve` via `run_scan.py:220`. `quirk/dashboard/api/app.py` is the FastAPI factory; routes live in four modules (`health.py`, `scan.py`, `trends.py`, `pdf.py`). DTOs (`FindingItem`, `IdentityFinding`, `MotionFinding`, `DarFinding`, etc.) are Pydantic models that shape the SQLite rows for SPA consumption.
 - **Persistence.** The dashboard opens `quirk.db` read-only. Mutations only happen during `quirk` scan runs.
 - **Bind address.** uvicorn defaults to `127.0.0.1:8512`. Loopback is the security boundary.
