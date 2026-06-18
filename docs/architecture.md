@@ -143,8 +143,8 @@ flowchart TB
   end
   subgraph Backend [quirk/dashboard - FastAPI + uvicorn loopback :8512]
     App[api/app.py factory]
-    Routes[routes: health, scan, trends, pdf]
-    DTO[Pydantic DTOs: FindingItem, IdentityFinding, MotionFinding, DarFinding]
+    Routes[routes: health, scan, trends, pdf, schedules, jobs, sensor, merge, qramm, config]
+    DTO[Pydantic DTOs: FindingItem, IdentityFinding, MotionFinding, DarFinding, HardwareFinding]
   end
   DB[(quirk.db SQLite)]
   SPA -->|fetch /api/scan/latest| Routes
@@ -154,7 +154,7 @@ flowchart TB
 ```
 
 - **Frontend.** `src/dashboard/` is a Vite 8 + React 19 + TypeScript + Tailwind + shadcn/ui SPA with 19 routes: `/` (executive), `/findings`, `/identity`, `/motion`, `/hardware`, `/data-at-rest`, `/certificates`, `/cbom`, `/roadmap`, `/trends`, `/print`, `/qramm`, `/qramm/assessment`, `/schedules`, `/scan/new`, `/scan/job/:jobId`, `/scans`, `/sensors`, `/compare`. A conditional vertical-specific route is also registered at runtime when the active vertical provides a page component. The built bundle is **committed under `quirk/dashboard/static/`** so `quirk serve` ships the UI without requiring a node toolchain on the target host — air-gap friendly.
-- **Backend.** `quirk/dashboard/server.py` exposes `quirk serve` via `run_scan.py:220`. `quirk/dashboard/api/app.py` is the FastAPI factory; routes live in four modules (`health.py`, `scan.py`, `trends.py`, `pdf.py`). DTOs (`FindingItem`, `IdentityFinding`, `MotionFinding`, `DarFinding`, etc.) are Pydantic models that shape the SQLite rows for SPA consumption.
+- **Backend.** `quirk/dashboard/server.py` exposes `quirk serve` via `run_scan.py:220`. `quirk/dashboard/api/app.py` is the FastAPI factory; routes live in ten modules (`health.py`, `scan.py`, `trends.py`, `pdf.py`, `schedules.py`, `jobs.py`, `sensor.py`, `merge.py`, `qramm.py`, `config.py`). DTOs (`FindingItem`, `IdentityFinding`, `MotionFinding`, `DarFinding`, `HardwareFinding`, etc.) are Pydantic models that shape the SQLite rows for SPA consumption.
 - **Persistence.** The dashboard opens `quirk.db` read-only. Mutations only happen during `quirk` scan runs.
 - **Bind address.** uvicorn defaults to `127.0.0.1:8512`. Loopback is the security boundary.
 
