@@ -16,7 +16,7 @@ flowchart LR
   CLI --> Wizard[interactive.py wizard]
   CLI --> Discovery[quirk/discovery/ nmap]
   CLI --> Scanners[quirk/scanner/* 12 modules]
-  CLI --> HardwareScan[quirk/hwcompat/* SSH/HTTP/SNMP]
+  CLI --> HardwareScan[quirk/scanner/hardware_scanner.py SSH/HTTP/SNMP]
   Scanners --> DB[(SQLite: quirk.db<br/>CryptoEndpoint table)]
   HardwareScan --> DB
   DB --> Risk[quirk.engine.risk_engine<br/>_build_finding + _normalize_for_compliance]
@@ -218,7 +218,7 @@ Phase 50 ships under the v4.6 milestone; version-constant bumps are out of scope
 
 ## 12. Hardware Scanning
 
-QU.I.R.K. identifies network infrastructure devices — routers, firewalls, load balancers, HSMs, and management controllers — using a three-signal cascade, each requiring progressively more network access. Hardware scanning is a parallel signal path to the cryptographic protocol scanners; its findings are stored in the same SQLite database and emitted in the same CBOM output, but through a dedicated `quirk/hwcompat/` package that requires the optional `[hw]` extras (`pip install 'quirk-scanner[hw]'`).
+QU.I.R.K. identifies network infrastructure devices — routers, firewalls, load balancers, HSMs, and management controllers — using a three-signal cascade, each requiring progressively more network access. Hardware scanning is a parallel signal path to the cryptographic protocol scanners; its findings are stored in the same SQLite database and emitted in the same CBOM output, but through dedicated modules in `quirk/scanner/` (`hardware_scanner.py`, `hardware_meta.py`, `hardware_tier.py`) that require the optional `[hw]` extras (`pip install 'quirk-scanner[hw]'`).
 
 ### Signal Chain
 
