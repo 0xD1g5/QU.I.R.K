@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.5.2.5 - Beta
+# QU.I.R.K. — v5.8.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -69,11 +69,12 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 - **HashiCorp Vault** — Transit key types (incl. ml-dsa / slh-dsa), PKI mounts, auth method risk
 - **Kubernetes** — EKS / GKE / AKS managed cluster encryption APIs
 - **Databases & object storage** — PostgreSQL / MySQL / RDS at-rest encryption; S3 / Blob / GCS CMEK posture
+- **Network devices / hardware fingerprinting** — SSH banner, HTTP management interface, and SNMP probes (pysnmp, requires `[hw]` extras) classify hardware vendor, model, and CNSA 2.0 remediation tier; crypto-bridge detection flags hardware devices where upstream TLS mitigates a quantum-vulnerable on-device cipher
 
 ## Output Artifacts
 
 - **Quantum-readiness score** (0–100) — overall score with six subscores: Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion
-- **CBOM** in CycloneDX JSON + XML — inventory of all discovered cryptographic components
+- **CBOM** in CycloneDX JSON + XML — inventory of all discovered cryptographic components; hardware endpoints are promoted to a CycloneDX DEVICE parent component with FIRMWARE children for hardware/firmware crypto separation
 - **Web dashboard** at `http://localhost:8512` — interactive findings browser, CBOM graph, trend analysis, score breakdowns
 - **Reports** — client-ready PDF / DOCX / HTML / CLI markdown from one shared content model; written executive narrative for consultant deliverables
 - **Distributed mode** — on-prem sensors scan isolated network segments, push findings to a central console which merges into a single CBOM + score (v5.4+)
@@ -81,10 +82,13 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v5.5
+## What's New in v5.8
 
 Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
 
+- **SNMP hardware fingerprinting + CBOM DEVICE/FIRMWARE hierarchy (v5.8)** — SSH banner → HTTP management interface → SNMP cascade classifies network hardware vendor, model, and CNSA 2.0 remediation tier; crypto-bridge detection; CBOM now emits a DEVICE parent component with FIRMWARE children; dashboard "Hardware Inventory" section in the CBOM tab; requires `[hw]` extras (pysnmp, not included in `[all]`).
+- **Hardening + Hardware Compatibility (v5.7)** — SSRF cluster hardening, scoring correctness fixes, audit drain; hardware fingerprinting via SSH/HTTP banner with CNSA 2.0 remediation tier classification and crypto-bridge detection.
+- **Public launch + Windows frozen build (v5.6)** — open-source public repo on GitHub with branch protection and gitleaks history scan; frozen Windows sensor binary (`quirk.exe`) + PowerShell Scheduled Task installer as a GitHub Release asset; port-scope discovery control (Common TLS / Top 1000 / All ports / Custom).
 - **Distributed sensor hardening (v5.5)** — per-sensor opaque Bearer tokens, sensor revocation, failure-isolated auto-merge across sensors, weak-TLS chaos-lab targets.
 - **On-prem sensor / console split (v5.4)** — scan per segment, push findings, merged into one CBOM + score; sensor / console enroll workflow.
 - **Notification & integration surface (v5.3)** — notification fan-out, SIEM CEF dispatch, Jira / ServiceNow ticket integration on one shared SSRF-safe / secret-scrubbing layer; dashboard token auth.
