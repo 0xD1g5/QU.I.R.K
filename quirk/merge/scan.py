@@ -254,6 +254,10 @@ def merge_scan(
                     "pqc_status": _d.pqc_status,
                     "remediation_tier": _tier,
                     "confidence": _d.confidence,
+                    "snmp_sysdescr": getattr(_d, "snmp_sysdescr", None),
+                    "snmp_sysname": getattr(_d, "snmp_sysname", None),
+                    "snmp_sysobjectid": getattr(_d, "snmp_sysobjectid", None),
+                    "snmp_vendor": getattr(_d, "snmp_vendor", None),
                 })
     except Exception as _hw_exc:
         logger.warning(
