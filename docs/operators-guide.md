@@ -989,3 +989,117 @@ These two fields are the differentiators for MERGE-03 — two findings with iden
 the same logical endpoint discovered independently in two network segments.
 
 ---
+
+## 9. Hardware Scanning
+
+Hardware scanning is an advanced, opt-in capability that fingerprints network devices
+(switches, routers, access points) via SNMP, assigns CNSA 2.0 remediation tiers, and
+annotates crypto-bridge topology. Operators who have not installed the `[hw]` extra and
+do not manage network hardware can complete §1–§8 without interruption — the scanner
+runs cleanly with the extra absent.
+
+### 9.1 Enable SNMP Scanning
+
+**Step 1 — Install the `[hw]` extra.**
+
+```bash
+pip install 'quirk-scanner[hw]'
+```
+
+This extra adds `pysnmp` and the hardware fingerprinting engine. See the §2.2 optional
+extras matrix for a full dependency list.
+
+**Step 2 — Enable SNMP in your config.**
+
+Add the following two keys under the `scan:` block in `config.yaml`:
+
+```yaml
+scan:
+  enable_snmp: true          # default: false — must be explicitly set to opt in
+  snmp_community: "public"   # SNMPv2c community string; default: "public"
+```
+
+`enable_snmp` defaults to `false`. If you omit the key or leave it as `false`, the
+scan runs cleanly with no error and no hardware devices appear in the output — this is
+the expected behaviour when `[hw]` is not installed or when SNMP coverage is not needed.
+
+**Step 3 — Run the scan.** The SNMP probe executes **after all endpoint scans complete**
+and targets every unique host IP discovered during the full scan (TLS, SSH, fingerprint,
+etc.), not just SSH endpoints. No additional target list is required.
+
+**What QUIRK probes.** Three SNMP OIDs are queried per host:
+
+| OID | Name | Purpose |
+|-----|------|---------|
+| `1.3.6.1.2.1.1.1.0` | `sysDescr` | Vendor and model string — primary parse target |
+| `1.3.6.1.2.1.1.5.0` | `sysName` | Device hostname |
+| `1.3.6.1.2.1.1.2.0` | `sysObjectID` | Enterprise OID — fallback vendor identification |
+
+**Sample output.** Discovered hardware devices appear as a separate findings block:
+
+```text
+Hardware Devices Found: 3
+
+  192.168.1.1   Cisco Catalyst 9300    Tier 1  HIGH   Replace by 2030
+  192.168.1.254 Juniper EX2300         Tier 2  MEDIUM Upgrade firmware 2030-2033
+  10.0.0.1      Aruba 2930F            Tier 3  LOW    Accept + monitor, re-evaluate 2033+
+```
+
+For the full config-key reference (all `scan.*` defaults, type constraints, and
+advanced options), see [`docs/configuration.md`](configuration.md).
+
+---
+
+### 9.2 CNSA 2.0 Remediation Tiers
+
+Each discovered hardware device is assigned a tier derived from CNSA 2.0 (Commercial
+National Security Algorithm Suite 2.0) guidance on post-quantum migration timelines.
+
+| Tier | Severity | Deadline | Meaning |
+|------|----------|----------|---------|
+| Tier 1 | HIGH | Replace by 2030 | No PQC upgrade path — device must be replaced |
+| Tier 2 | MEDIUM | Upgrade firmware 2030-2033 | PQC firmware upgrade path exists |
+| Tier 3 | LOW | Accept + monitor, re-evaluate 2033+ | PQC roadmap exists but upgrade is distant |
+| Tier N/A | INFO | EOL before PQC migration window | Device won't survive to the migration deadline |
+
+**Client-facing action.** When presenting findings: Tier 1 devices require an active
+replacement plan — no firmware path exists, so budget and procurement lead time need to
+be on the remediation roadmap before 2030. Tier 2 devices need a vendor firmware roadmap
+conversation; coordinate with the vendor to confirm the PQC upgrade timeline and track
+it as a dated commitment. Tier N/A devices should be documented in the client's
+decommission plan rather than the remediation backlog — they will reach end-of-life
+before the PQC migration window opens, so a replacement is already warranted on standard
+refresh cadence.
+
+> **Note:** Hardware devices appear in the CBOM and on the dashboard hardware panel, but
+> are advisory-only — they do not affect the quantum-readiness score. CNSA tiers are
+> informational findings that inform the remediation roadmap.
+
+---
+
+### 9.3 Crypto-Bridge Detection
+
+A **crypto bridge** is a network topology where a PQC-capable gateway (e.g. a TLS
+terminator or reverse proxy with hybrid-mode support) sits in front of a legacy backend
+device that is itself still running quantum-vulnerable cipher suites. The gateway
+mitigates the backend's exposure to the wider network, but the backend's own cipher
+posture remains unremediated.
+
+**`partial_only` — what it means and when it fires.** QUIRK flags a device with
+`bridge_status: partial_only` when both a PQC-capable gateway and a legacy backend are
+directly reachable on the same /24 subnet. QUIRK uses a proximity heuristic to detect
+this condition: a `partial_only` assignment means both a PQC-capable device (with
+`pqc_status: partial` or `supported`) and a legacy device (with `pqc_status:
+unsupported`, `vendor-silent`, or `unknown`) appear within the same /24 subnet — a
+proximity heuristic, not confirmed traffic-flow analysis. This is the answer to the
+"how did you determine this?" question during client review.
+
+**`upstream_mitigated` — a reserved status.** `upstream_mitigated` is a reserved
+status for future active-path verification. QUIRK does not auto-assign it because
+confirming that traffic actually flows through the PQC gateway requires active tracing
+beyond passive scanning — this capability is deferred to a future release.
+
+**Action.** A `partial_only` finding does **not** reduce the device's remediation
+requirement. The device still needs replacement or firmware upgrade per its CNSA tier
+(see §9.2 above). The bridge annotation is advisory context about network topology — it
+is not a mitigation credit and should not be presented to a client as one.
