@@ -210,4 +210,49 @@ QUIRK's scanner directly informs the CVI dimension (cryptographic visibility fro
 
 ---
 
-*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`.*
+## 10. Hardware Inventory
+
+When hardware scanning is enabled, QUIRK fingerprints network and IoT devices — switches, routers, and similar equipment — via SSH, HTTP, and SNMP probes. Fingerprinted devices are recorded in the CBOM and surfaced in the dashboard as a structured DEVICE/FIRMWARE component hierarchy alongside the algorithm inventory.
+
+### 10.1 The DEVICE / FIRMWARE Component Hierarchy
+
+Each hardware device found during a scan is represented by two linked components in the CBOM:
+
+**DEVICE parent component** — the device identity. The CBOM component name is formatted as `"{vendor} {model}"` (for example, `"Cisco Catalyst 9300"` or `"Unknown Unknown"` when fingerprinting is incomplete). The DEVICE component carries the `quirk:hw-tier` property, which holds the CNSA 2.0 remediation tier assigned to that device class.
+
+**FIRMWARE child component** — the endpoint detail found at the probe address. The CBOM component name is formatted as `"hw:{host}:{port}"` (for example, `"hw:192.168.1.1:443"`). The FIRMWARE component carries these properties:
+
+- `quirk:hw-vendor` — vendor name from SNMP fingerprinting
+- `quirk:hw-model` — model name from SNMP fingerprinting
+- `quirk:hw-pqc-supported` — whether the device has a known PQC firmware upgrade path
+- `quirk:hw-remediation-tier` — CNSA 2.0 tier assigned to this endpoint
+- `quirk:hw-bridge-status` — crypto-bridge status, when crypto-bridge detection applies
+- `quirk:hw-snmp-oid` — raw sysObjectID OID string, when SNMP fingerprinting was used
+
+**Reading the Hardware Inventory section of the dashboard CBOM tab**
+
+The Hardware Inventory section appears on the CBOM tab, below the existing algorithm table on the same scrollable page (there is no separate sub-tab). It is omitted entirely when no hardware devices were found in the scan. Each row is tagged with a `[DEVICE]` badge (showing device identity) or a `[FIRMWARE]` badge (showing nested endpoint detail).
+
+| Field | Meaning |
+|-------|---------|
+| `host` | IP address or hostname of the probed endpoint |
+| `port` | Port number of the probed endpoint |
+| `vendor` | Device vendor from SNMP fingerprinting (e.g., `"Cisco"`, `"Juniper"`, `"Unknown"`) |
+| `model` | Device model from SNMP fingerprinting (e.g., `"Catalyst 9300"`, `"Unknown"`) |
+| `pqc_status` | Whether the device has a known PQC upgrade path: `"supported"`, `"unsupported"`, or `"unknown"` |
+| `remediation_tier` | CNSA 2.0 remediation tier: `"Tier 1"`, `"Tier 2"`, `"Tier 3"`, or `"Tier N/A"` |
+
+### 10.2 Hardware Findings Are Advisory-Only
+
+Hardware devices appear in the CBOM and on the dashboard, but **do not contribute points to any of the four subscores**. They are advisory-only findings. CNSA 2.0 remediation tiers are informational guidance that informs the remediation roadmap — not inputs to the numeric quantum-readiness score. The score measures the cryptographic posture of scanned services and endpoints; hardware device tiers are informational guidance layered on top of that posture.
+
+> **Client Conversation — Hardware Devices Detected:**
+> "The hardware devices we found are captured in the CBOM and assigned CNSA 2.0 remediation tiers — those are the Tier 1 through Tier N/A labels you see in the Hardware Inventory section. They're advisory findings, which means they inform your remediation roadmap but they don't change the quantum-readiness score. The score measures your services' and endpoints' cryptographic posture — TLS health, certificate validity, algorithm agility. Hardware device tiers are a separate informational layer that tells you which network devices need to be replaced or upgraded on the quantum timeline, but they don't feed into the four subscores. So yes, the score stayed the same when we found those devices — that's by design."
+
+### 10.3 Enabling Hardware Scanning
+
+Hardware scanning is disabled by default and requires the `[hw]` optional extra. For configuration steps — including enabling SNMP, setting the community string, understanding CNSA 2.0 tier definitions, and crypto-bridge detection — see `docs/operators-guide.md §9` (§9.1 Enable SNMP Scanning, §9.2 CNSA 2.0 Remediation Tiers, §9.3 Crypto-Bridge Detection).
+
+---
+
+*For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*
