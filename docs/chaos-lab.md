@@ -18,6 +18,7 @@ The lab is organized into profiles. The **core** profile is always-on and provid
 - Docker Desktop (macOS/Windows) or Docker Engine + Docker Compose plugin (Linux)
 - Docker socket accessible at `/var/run/docker.sock`
 - `lab.sh` script in the lab directory (wraps `docker compose` with standard project name `chaoslab`)
+- For hardware scanning profiles (`hwcompat`): `pip install quirk-scanner[hw]` — installs the SNMP probe libraries (`pysnmp` 7)
 
 ---
 
@@ -684,6 +685,60 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-fuzz-target`
 
 ---
 
+### 3.22 hwcompat Profile (v5.7/v5.8 — Phase 127 + Phase 133 LAB-01)
+
+The `hwcompat` profile (introduced in Phase 127, extended in Phase 133) ships three services that
+exercise QU.I.R.K.'s agentless hardware fingerprinting capability across all three fingerprint
+paths: SSH banner (unknown-vendor fallback), HTTP management headers (HPE positive path), and SNMP
+sysDescr (Cisco positive path). Hardware findings are **advisory-only** — they appear in the CBOM
+and HardwareInventory dashboard tab but do not affect the quantum-readiness score.
+
+> **Prerequisites:** Hardware scanning requires the `[hw]` extras group. Install before running
+> this profile: `pip install quirk-scanner[hw]`
+
+| Host Port  | Service       | Protocol | Purpose                                  | Expected Finding                                |
+|------------|---------------|----------|------------------------------------------|-------------------------------------------------|
+| 20221      | hwcompat-ssh  | SSH      | OpenSSH banner → unrecognized pattern    | vendor=Unknown, fingerprint_method=ssh_banner   |
+| 20222      | hwcompat-http | HTTP     | nginx with HPE-iLO5 mgmt headers         | vendor=HPE, model=iLO5, fingerprint_method=http_mgmt |
+| 20223/udp  | hwcompat-snmp | SNMP/UDP | Net-SNMP serving Cisco IOS sysDescr OID  | vendor=Cisco, fingerprint_method=snmp, confidence=high |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile hwcompat" ./lab.sh up
+```
+
+**SNMP scan command:**
+
+```bash
+python run_scan.py --target 127.0.0.1 --ports 20223 --enable-snmp --snmp-community public
+```
+
+**hwcompat-snmp container details:**
+
+The `hwcompat-snmp` service is a Net-SNMP container simulating a Cisco IOS device, built locally
+from `FROM alpine:3.19` (CHAOS-05 compliant pinned base image). It listens on UDP port 161
+(mapped to host port 20223) with community string `public` (read-only, lab use only).
+
+SNMP MIB-II OIDs served:
+- `sysDescr (1.3.6.1.2.1.1.1.0)`: `"Cisco IOS Software, Version 15.2(4)M3, RELEASE SOFTWARE (fc2)"`
+- `sysName (1.3.6.1.2.1.1.5.0)`: `"cisco-sim-hwcompat"`
+- `sysObjectID (1.3.6.1.2.1.1.2.0)`: `1.3.6.1.4.1.9.1.1` (Cisco Enterprise OID)
+
+**Expected scanner findings:**
+
+- **hwcompat-ssh (port 20221):** `vendor=Unknown`, `fingerprint_method=ssh_banner`, `confidence=unknown`, `pqc_status=unknown` — the generic OpenSSH banner does not match any vendor pattern in `HARDWARE_MATRIX`; `vendor=Unknown` rows are never suppressed (D-06)
+- **hwcompat-http (port 20222):** `vendor=HPE`, `model=iLO5`, `fingerprint_method=http_mgmt`, `confidence=high`, `pqc_status=unsupported` — nginx serves `X-Device-Model: HPE-iLO5` and `Server: iLO/5.0` headers matching the HPE iLO5 HARDWARE_MATRIX entry
+- **hwcompat-snmp (port 20223):** `vendor=Cisco`, `fingerprint_method=snmp`, `confidence=high`, `pqc_status=unsupported` — sysDescr OID match on `"Cisco IOS Software"` substring + sysObjectID Cisco enterprise prefix `1.3.6.1.4.1.9`
+
+> **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —
+> `_derive_all_profiles()` discovers `hwcompat` dynamically from `docker-compose.yml`
+> at runtime via `yq` or the `grep` fallback.
+
+See: `quantum-chaos-enterprise-lab/expected_results_hwcompat.md`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.
@@ -745,6 +800,9 @@ All lab ports across all profiles, sorted by port number:
 | 20009 | vault                    | storage   | HashiCorp Vault crypto inventory          |
 | 20010 | postgres-pgcrypto        | storage   | pgcrypto weak passphrase                  |
 | 20022 | ssh-weak                 | ssh-weak  | SSH_WEAK_ALGORITHMS                       |
+| 20221 | hwcompat-ssh             | hwcompat  | vendor=Unknown (SSH banner)               |
+| 20222 | hwcompat-http            | hwcompat  | vendor=HPE model=iLO5 (HTTP mgmt)         |
+| 20223 | hwcompat-snmp            | hwcompat  | vendor=Cisco fingerprint_method=snmp      |
 | 21000 | azurite-blob-tls         | cloud     | CLOUD_AZURITE_BLOB_TLS                    |
 | 21001 | azurite-queue-tls        | cloud     | CLOUD_AZURITE_QUEUE_TLS                   |
 | 21002 | azurite-table-tls        | cloud     | CLOUD_AZURITE_TABLE_TLS                   |
