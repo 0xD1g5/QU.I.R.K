@@ -230,12 +230,12 @@ Each matched device receives a confidence grade (`high`, `medium`, `low`, or `un
 
 ### CNSA 2.0 Remediation Tiers
 
-Every identified device is classified into a CNSA 2.0 remediation tier that reflects its quantum-readiness migration path:
+Every identified device is classified into a CNSA 2.0 remediation tier that reflects its quantum-readiness migration path. Lower tier numbers are more urgent:
 
-- **Tier 1** — PQC-capable hardware with an active CNSA 2.0 migration path already available.
-- **Tier 2** — Hardware that can be upgraded to PQC via firmware or configuration change without hardware replacement.
-- **Tier 3** — End-of-life hardware requiring physical replacement before CNSA 2.0 deadlines.
-- **N/A** — Devices where PQC applicability has not been established in the vendor catalog.
+- **Tier 1 (HIGH — replace by 2030)** — No PQC upgrade path (`pqc_status = unsupported`). The device cannot be made quantum-safe by firmware and must be physically replaced before the CNSA 2.0 deadline.
+- **Tier 2 (MEDIUM — upgrade firmware 2030–2033)** — Hardware with a PQC firmware or configuration upgrade path (`pqc_status = partial`) that avoids hardware replacement. Also the conservative default for low-/unknown-confidence matches and for vendor-silent devices below high confidence.
+- **Tier 3 (LOW — accept + monitor, re-evaluate 2033+)** — Hardware that is already PQC-capable (`pqc_status = supported`), or a vendor-silent device identified with high confidence.
+- **Tier N/A (INFO — no remediation deadline)** — Devices whose end-of-life date falls before the PQC migration window opens (2030-01-01). They reach end-of-life before the CNSA 2.0 deadline arrives, so they belong in the client's decommission plan rather than the remediation backlog.
 
 Low- and unknown-confidence matches are capped at Tier 2 (conservative default) to avoid over-crediting uncertain identification.
 
