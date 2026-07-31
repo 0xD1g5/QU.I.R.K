@@ -39,9 +39,15 @@ class _Scan:
 
 
 @dataclass
+class _Connectors:
+    enable_modbus: bool = False
+
+
+@dataclass
 class _Cfg:
     targets: _Targets = field(default_factory=_Targets)
     scan: _Scan = field(default_factory=_Scan)
+    connectors: _Connectors = field(default_factory=_Connectors)
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +142,48 @@ def test_expand_targets_at_22_boundary_allowed():
     out = target_expander.expand_targets(cfg)
     # /22 -> 1022 usable hosts
     assert 1000 <= len(out) <= 1022
+
+
+# ---------------------------------------------------------------------------
+# Phase 141 OTICS-01/D-04: 502 (Modbus/TCP) port injection
+# ---------------------------------------------------------------------------
+
+def test_expand_targets_injects_502_when_modbus_enabled():
+    """Regression test: hardware_scanner.py Step 4 gates Modbus fingerprinting
+    on `_port == 502`, but the run_scan.py 502-injection only wired into the
+    optional nmap-discovery path. expand_targets() is the port list actually
+    used whenever nmap discovery is skipped (the default, config.yaml-driven
+    scan mode) — without this injection, no candidate at port 502 is ever
+    generated, so Modbus fingerprinting silently never activates in that mode.
+    Confirmed live against the otics-modbus chaos-lab simulator.
+    """
+    cfg = _Cfg(
+        targets=_Targets(include_ips=["127.0.0.1"]),
+        connectors=_Connectors(enable_modbus=True),
+    )
+    out = target_expander.expand_targets(cfg)
+    assert ("127.0.0.1", 502) in out
+
+
+def test_expand_targets_omits_502_when_modbus_disabled():
+    """502 must NOT be injected when enable_modbus is False (default) — no
+    unsolicited OT/ICS port probing without explicit opt-in (OTICS-01)."""
+    cfg = _Cfg(targets=_Targets(include_ips=["127.0.0.1"]))
+    out = target_expander.expand_targets(cfg)
+    assert ("127.0.0.1", 502) not in out
+
+
+def test_expand_targets_no_duplicate_502_already_in_ports_tls():
+    """If 502 is already in ports_tls, injection must not create a duplicate
+    (target_expander's stable dedup wouldn't catch a double-append here since
+    the append happens before the per-host expansion, not after)."""
+    cfg = _Cfg(
+        targets=_Targets(include_ips=["127.0.0.1"]),
+        scan=_Scan(ports_tls=[443, 502]),
+        connectors=_Connectors(enable_modbus=True),
+    )
+    out = target_expander.expand_targets(cfg)
+    assert out.count(("127.0.0.1", 502)) == 1
 
 
 # ---------------------------------------------------------------------------

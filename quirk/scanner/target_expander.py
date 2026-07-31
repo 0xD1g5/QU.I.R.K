@@ -30,9 +30,20 @@ def expand_targets(cfg) -> List[Tuple[str, int]]:
             # caller may have stuffed into exclude_ips).
             exclude_set.add(str(x))
 
+    # Phase 141 OTICS-01/D-04: inject 502 (Modbus/TCP) into the candidate
+    # port list when --enable-modbus is set, so hardware_scanner.py Step 4's
+    # port-502 open-port gate has an endpoint to actually check. This mirrors
+    # the equivalent injection in run_scan.py's nmap-discovery path — that
+    # injection only affects the optional nmap pre-scan; expand_targets() is
+    # the port list used whenever nmap discovery is skipped (the default),
+    # so without this, Modbus fingerprinting never activates in that mode.
+    ports = list(cfg.scan.ports_tls)
+    if getattr(getattr(cfg, "connectors", None), "enable_modbus", False) and 502 not in ports:
+        ports.append(502)
+
     # FQDNs
     for fqdn in (cfg.targets.fqdns or []):
-        for p in cfg.scan.ports_tls:
+        for p in ports:
             targets.append((fqdn, p))
 
     # IPs from CIDRs — validate size BEFORE enumeration (D-01).
@@ -48,7 +59,7 @@ def expand_targets(cfg) -> List[Tuple[str, int]]:
             ip_str = _norm_ip(ip)
             if ip_str in exclude_set:
                 continue
-            for p in cfg.scan.ports_tls:
+            for p in ports:
                 targets.append((ip_str, p))
 
     # Explicit IPs — normalize each entry so exclude filters match
@@ -61,7 +72,7 @@ def expand_targets(cfg) -> List[Tuple[str, int]]:
             ip_str = str(ip)
         if ip_str in exclude_set:
             continue
-        for p in cfg.scan.ports_tls:
+        for p in ports:
             targets.append((ip_str, p))
 
     # Stable dedup — preserve first-seen order (D-14). dict.fromkeys()
