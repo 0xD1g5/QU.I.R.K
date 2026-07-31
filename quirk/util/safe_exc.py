@@ -56,6 +56,10 @@ _SENSITIVE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     # variable-reference repr (basic_auth=(user, token)) is NOT over-redacted —
     # only credential literals are scrubbed. Consumes through to the closing paren.
     re.compile(r"(basic_auth|token_auth)\s*=\s*\(?\s*['\"][^)\n]*", re.IGNORECASE),
+    # Phase 139 SNMPV3-03: SNMPv3 USM auth/priv passphrase shapes echoed in
+    # errorIndication text (e.g. usmStatsWrongDigests: authKey=..., or
+    # usmStatsDecryptionErrors: privKey=...).
+    re.compile(r"(authKey|privKey)\s*=\s*\S+", re.IGNORECASE),
 )
 
 

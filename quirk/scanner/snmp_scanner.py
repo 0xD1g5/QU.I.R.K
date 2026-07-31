@@ -515,7 +515,7 @@ def scan_snmp_targets(
                 results.append(f.result())
             except Exception as exc:
                 host = futures[f]
-                _LOG.debug("scan_snmp_targets %s error: %s", host, exc)
+                _LOG.debug("scan_snmp_targets %s error: %s", host, safe_str(exc))
                 results.append({
                     "host": host,
                     "snmp_sysdescr": None,
