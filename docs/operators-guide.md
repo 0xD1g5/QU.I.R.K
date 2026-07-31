@@ -1050,6 +1050,47 @@ advanced options), see [`docs/configuration.md`](configuration.md).
 
 ---
 
+### 9.1.1 SNMPv3 Auth+Priv Scanning (Phase 139)
+
+QUIRK also supports authenticated, encrypted SNMPv3 scanning as an upgrade path alongside
+the SNMPv2c community-string scanning above. SNMPv3 credentials are configured per-host, not
+globally — a network may have a mix of v3-capable and v2c-only devices.
+
+**Configure a v3 credential.** Add a `connectors.snmp_v3_credentials` entry keyed by host
+(see `docs/configuration.md` for the full field reference):
+
+```yaml
+connectors:
+  snmp_v3_credentials:
+    "192.168.1.1":
+      username: "quirk-readonly"
+      auth_key_env: "QUIRK_SNMP_AUTH_KEY"
+      priv_key_env: "QUIRK_SNMP_PRIV_KEY"
+      auth_protocol: "SHA256"
+      priv_protocol: "AES256"
+```
+
+Set the referenced env vars, then run the scan exactly as in Step 3 above (`--enable-snmp`).
+No secret CLI flags exist for v3 credentials — passphrases come only from config + the
+environment, never from the command line.
+
+**The v3 → v2c → none fallback ladder.** For each host, QUIRK attempts SNMP in this order:
+
+1. **v3 attempted** — if a `snmp_v3_credentials` entry exists for the host, QUIRK probes with
+   those USM credentials first.
+2. **v2c fallback** — if v3 fails (wrong credentials) or the host offers a weaker protocol
+   than requested, QUIRK falls back to the SNMPv2c community-string probe (§9.1) so the
+   vendor/model identification can still succeed.
+3. **none** — if neither v3 nor v2c gets a response, no SNMP finding is recorded for that
+   host.
+
+Each outcome is recorded honestly, not collapsed into a generic "SNMP succeeded" label — see
+`docs/report-interpretation.md` for the five distinct labels this produces in reports and the
+dashboard, including the important distinction between an intentional v2c-only scan and a
+genuine v3 credential failure (`v3-failed-fell-back`).
+
+---
+
 ### 9.2 CNSA 2.0 Remediation Tiers
 
 Each discovered hardware device is assigned a tier derived from CNSA 2.0 (Commercial

@@ -243,6 +243,43 @@ Enables optional scanner extensions for cloud infrastructure, API endpoints, con
 
 > **Note:** See [Connector Guides](connectors/) for per-connector credential setup and least-privilege templates.
 
+### SNMPv3 Credentials (Phase 139, `[hw]` extras)
+
+`connectors.snmp_v3_credentials` configures per-host SNMPv3 USM (User-based Security Model)
+credentials for authenticated, encrypted SNMP scanning — an upgrade path alongside the
+existing SNMPv2c `scan.snmp_community` string documented in `docs/operators-guide.md` §9.
+Mirrors the shape of `broker_credentials`: only environment-variable **names** are stored in
+config, never the passphrases themselves.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `username` | string | *(required)* | SNMPv3 USM username configured on the target device |
+| `auth_key_env` | string | *(required)* | Name of the environment variable holding the authentication passphrase |
+| `priv_key_env` | string | `""` | Name of the environment variable holding the privacy (encryption) passphrase. Omit or leave empty for `authNoPriv` mode |
+| `auth_protocol` | string | `"SHA"` | Authentication protocol — SHA-family only (D-02): `SHA`, `SHA224`, `SHA256`, `SHA384`, `SHA512` |
+| `priv_protocol` | string | `"AES"` | Privacy protocol — AES-family only (D-02): `AES`, `AES128`, `AES192`, `AES256` |
+
+**D-02 (SHA/AES-only):** Weaker legacy USM protocols (MD5 auth, DES priv) are rejected at
+config-load time with a `ValueError` naming the offending host and protocol — QUIRK never
+silently falls back to a weaker negotiated protocol on your behalf.
+
+```yaml
+connectors:
+  snmp_v3_credentials:
+    "192.168.1.1":
+      username: "quirk-readonly"
+      auth_key_env: "QUIRK_SNMP_AUTH_KEY"    # env var NAME, not the passphrase
+      priv_key_env: "QUIRK_SNMP_PRIV_KEY"    # env var NAME, not the passphrase
+      auth_protocol: "SHA256"
+      priv_protocol: "AES256"
+```
+
+Set the referenced environment variables before scanning (e.g.
+`export QUIRK_SNMP_AUTH_KEY=...`) — passphrases must never appear inline in YAML. Hosts
+without a `snmp_v3_credentials` entry are scanned with the existing SNMPv2c
+`scan.snmp_community` path unchanged; see `docs/operators-guide.md` §9 for the full
+v3→v2c→none fallback ladder and the SNMP version labels in `docs/report-interpretation.md`.
+
 ### Code-Signing Certificate Connector (Phase 95)
 
 The code-signing connector discovers X.509 certificates from Active Directory LDAP servers by

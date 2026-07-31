@@ -253,6 +253,26 @@ Hardware devices appear in the CBOM and on the dashboard, but **do not contribut
 
 Hardware scanning is disabled by default and requires the `[hw]` optional extra. For configuration steps — including enabling SNMP, setting the community string, understanding CNSA 2.0 tier definitions, and crypto-bridge detection — see `docs/operators-guide.md §9` (§9.1 Enable SNMP Scanning, §9.2 CNSA 2.0 Remediation Tiers, §9.3 Crypto-Bridge Detection).
 
+### 10.4 SNMP Version / Security-Level Column (Phase 139)
+
+As of Phase 139, HTML and DOCX Hardware Inventory tables (and the dashboard hardware view)
+include an **SNMP** column showing the negotiated SNMP version and security level for each
+probed endpoint. This reflects the v3 → v2c → none fallback ladder documented in
+`docs/operators-guide.md` §9.1.1, and is distinct from — and independent of — the
+`pqc_status`/`remediation_tier` advisory columns.
+
+| Label | Meaning |
+|-------|---------|
+| `v3 auth+priv` | SNMPv3 succeeded with **both** authentication and encryption (privacy) negotiated — the strongest supported mode. Only this label writes the `snmp_auth_protocol`/`snmp_priv_protocol` values shown elsewhere in the report. |
+| `v3 noAuthNoPriv` | SNMPv3 succeeded but **without** authentication or encryption negotiated. **This is NOT authenticated v3** — it carries essentially the same trust posture as an SNMPv2c community-string scan, despite using the v3 protocol version. Do not read this label as "v3 was secured." |
+| `v2c` | The endpoint was scanned with plain SNMPv2c (community string) — either no `snmp_v3_credentials` entry was configured for this host, or v3 was never attempted. This is the original, still-fully-supported scanning path from v5.8. |
+| `v3 failed → v2c` | A `snmp_v3_credentials` entry **was** configured for this host, but the v3 authentication attempt failed (bad username/passphrase/protocol mismatch), and QUIRK fell back to v2c. **This signals a real credential problem worth investigating** — it is not the same as an intentional v2c-only scan and should not be dismissed as normal. |
+| `No SNMP` | SNMP was attempted (v3 and/or v2c) but the host produced no response at all. |
+| `—` (em-dash) | SNMP was never attempted against this host (e.g. `--enable-snmp` was not set, or hardware scanning found this device via SSH/HTTP only). |
+
+> **Client Conversation — SNMPv3 vs SNMPv2c:**
+> "The SNMP column tells you how strongly each device's management interface was authenticated during the scan. `v3 auth+priv` is the gold standard — encrypted and authenticated. `v3 noAuthNoPriv` looks like v3 but offers no real security improvement over the plain community-string scan, so don't read too much into the version number alone. And if you see `v3 failed → v2c`, that's worth a follow-up — it means we had credentials configured for that device and they didn't work, which is different from simply not having configured v3 credentials at all."
+
 ---
 
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*
