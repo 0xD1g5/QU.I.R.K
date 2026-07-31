@@ -273,6 +273,51 @@ probed endpoint. This reflects the v3 → v2c → none fallback ladder documente
 > **Client Conversation — SNMPv3 vs SNMPv2c:**
 > "The SNMP column tells you how strongly each device's management interface was authenticated during the scan. `v3 auth+priv` is the gold standard — encrypted and authenticated. `v3 noAuthNoPriv` looks like v3 but offers no real security improvement over the plain community-string scan, so don't read too much into the version number alone. And if you see `v3 failed → v2c`, that's worth a follow-up — it means we had credentials configured for that device and they didn't work, which is different from simply not having configured v3 credentials at all."
 
+### 10.5 SNMP-Confirmed Bridge Mitigation (Phase 140)
+
+As of Phase 140, the crypto-bridge annotation introduced in §9.3 of `docs/operators-guide.md`
+has a second, stronger status alongside `partial_only`: `upstream_mitigated`. Both values are
+advisory-only and both appear in the same Bridge Status column/badge across the HTML, PDF, DOCX,
+and dashboard `/hardware` surfaces.
+
+| `bridge_status` | Badge label | Color | What it means |
+|------------------|-------------|-------|----------------|
+| `partial_only` | "Partial (assumed)" | Amber | A PQC-capable gateway and a legacy backend were both found on the same /24 subnet (proximity heuristic — see §9.3). No confirmation that traffic actually flows through the gateway. |
+| `upstream_mitigated` | "SNMP-confirmed" | Blue | The paired gateway's own ARP table (`ipNetToMediaTable`, walked via SNMP) was found to list the legacy backend's IP address — a stronger, evidence-gated signal that the legacy device sits behind the gateway on this network segment. |
+
+**`upstream_mitigated` is never auto-assigned from subnet co-presence alone.** It requires SNMP
+evidence collected from the gateway itself (a sensor-side ARP-table walk against
+`ipNetToMediaTable`, OID `1.3.6.1.2.1.4.22.1.2`) that lists the legacy device's IP. If that
+evidence is absent or doesn't match, the pair stays `partial_only` — QUIRK never guesses.
+
+**The mandatory caveat.** Every surface where `upstream_mitigated` renders — HTML, PDF, DOCX,
+and the dashboard `/hardware` tab (as a tooltip and an inline banner) — carries this verbatim
+sentence:
+
+> "Based on SNMP-derived network-path evidence; not independently confirmed by traffic inspection."
+
+This is intentional: SNMP ARP-table evidence is a network-path signal, not a traffic-inspection
+confirmation (e.g. packet capture or flow analysis). Treat `upstream_mitigated` as a stronger
+signal than `partial_only`, not as an unqualified guarantee of end-to-end quantum-safe coverage.
+
+**Blue, never green.** The `upstream_mitigated` badge uses blue, deliberately never the green
+"fully resolved" color used elsewhere in the report — a confirmed bridge is still advisory
+context, not a clean bill of health.
+
+**Score impact: none.** Like `partial_only`, `upstream_mitigated` does **not** reduce the
+device's remediation requirement and does **not** affect the quantum-readiness score. The legacy
+backend still needs replacement or firmware upgrade per its CNSA 2.0 tier (§9.2). The bridge
+annotation — at either status — is advisory context about network topology, never a mitigation
+credit.
+
+> **Client Conversation — `upstream_mitigated`:**
+> "You'll notice some devices show a blue 'SNMP-confirmed' badge instead of the amber 'Partial
+> (assumed)' one. That means we found direct SNMP evidence — the gateway's own ARP table lists
+> that legacy device — rather than just inferring it from subnet proximity. It's a stronger
+> signal, but it's still based on network-path evidence, not traffic inspection, and it doesn't
+> change the readiness score or the remediation timeline. The legacy device still needs to be
+> replaced or upgraded on schedule."
+
 ---
 
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*

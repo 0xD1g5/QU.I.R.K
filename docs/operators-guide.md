@@ -1135,12 +1135,38 @@ unsupported`, `vendor-silent`, or `unknown`) appear within the same /24 subnet �
 proximity heuristic, not confirmed traffic-flow analysis. This is the answer to the
 "how did you determine this?" question during client review.
 
-**`upstream_mitigated` — a reserved status.** `upstream_mitigated` is a reserved
-status for future active-path verification. QUIRK does not auto-assign it because
-confirming that traffic actually flows through the PQC gateway requires active tracing
-beyond passive scanning — this capability is deferred to a future release.
+**`upstream_mitigated` — SNMP-confirmed bridge evidence (Phase 140).** As of Phase 140,
+`upstream_mitigated` is a reachable, evidence-gated status, not a reserved placeholder. It
+is assigned when the sensor collects direct SNMP evidence from the PQC-capable gateway
+itself: a bounded, credential-scrubbed walk of the gateway's `ipNetToMediaTable` (ARP
+table, OID `1.3.6.1.2.1.4.22.1.2`) that lists the legacy backend's IP address. This is a
+network-path signal, not active traffic tracing or packet-level flow confirmation — QUIRK
+still does not perform active path verification (e.g. traceroute-style probing or traffic
+inspection) to confirm data actually crosses the gateway.
 
-**Action.** A `partial_only` finding does **not** reduce the device's remediation
-requirement. The device still needs replacement or firmware upgrade per its CNSA tier
-(see §9.2 above). The bridge annotation is advisory context about network topology — it
-is not a mitigation credit and should not be presented to a client as one.
+The confirmation probe is **targeted, not exhaustive** (D-03): it only runs against
+devices the sensor's own scan batch has already pre-flagged as a `partial_only` gateway
+candidate (a PQC-capable device sharing a /24 with a legacy backend in the same batch) —
+it does not walk the ARP table of every SNMP-enabled device on every scan. It reuses the
+same SNMPv3 USM transport introduced in Phase 139 (`§9.1.1` fallback ladder) when v3
+credentials are configured for that host, falling back to v2c otherwise. Each walk is
+bounded by both an overall wall-clock timeout and a hard cap on the number of ARP entries
+collected, so a large or adversarial ARP table cannot turn the probe into a denial-of-service
+vector. If the walk returns no entries, or the evidence doesn't list the legacy backend's
+IP, the pair silently stays `partial_only` — QUIRK never promotes on subnet co-presence
+alone, and never fails a scan because evidence wasn't collected.
+
+Every device carrying SNMP-derived evidence gets a per-device audit trail: the raw
+(IP, MAC) facts observed on the gateway's ARP table are stored (never the community string
+or SNMPv3 passphrase) alongside a timestamp of when the evidence was collected, so an
+operator can trace exactly what evidence justified the `upstream_mitigated` promotion.
+
+**Action.** Both `partial_only` and `upstream_mitigated` findings do **not** reduce the
+device's remediation requirement. The device still needs replacement or firmware upgrade
+per its CNSA tier (see §9.2 above). The bridge annotation — at either status — is advisory
+context about network topology; it is not a mitigation credit and should not be presented
+to a client as one. `upstream_mitigated` is a stronger signal than `partial_only`, but it
+still carries a mandatory caveat on every rendered surface: "Based on SNMP-derived
+network-path evidence; not independently confirmed by traffic inspection." See
+`docs/report-interpretation.md` §10.5 for the full rendering/badge contract across HTML,
+PDF, DOCX, and the dashboard `/hardware` tab.
