@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from quirk.cbom.bridge import _detect_crypto_bridges  # Phase 129 HWCOMPAT-03
+from quirk.cbom.bridge import _detect_crypto_bridges, _confirm_upstream_mitigation  # Phase 129 HWCOMPAT-03 / Phase 140 BRIDGE-01
 from quirk.cbom.builder import build_cbom
 from quirk.cbom.writer import write_cbom_files
 
@@ -261,6 +261,8 @@ def merge_scan(
                     "snmp_version": getattr(_d, "snmp_version", None),
                     "snmp_auth_protocol": getattr(_d, "snmp_auth_protocol", None),
                     "snmp_priv_protocol": getattr(_d, "snmp_priv_protocol", None),
+                    "bridge_evidence_json": getattr(_d, "bridge_evidence_json", None),
+                    "bridge_confirmed_at": getattr(_d, "bridge_confirmed_at", None),
                 })
     except Exception as _hw_exc:
         logger.warning(
@@ -268,7 +270,10 @@ def merge_scan(
             type(_hw_exc).__name__,
             exc_info=True,
         )
-    bom = build_cbom(union, hw_devices=_detect_crypto_bridges(hw_devices_for_cbom))
+    bom = build_cbom(
+        union,
+        hw_devices=_confirm_upstream_mitigation(_detect_crypto_bridges(hw_devices_for_cbom)),
+    )
     cbom_json_path: Optional[str] = None
     cbom_xml_path: Optional[str] = None
     if output_dir is not None:
