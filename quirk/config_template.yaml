@@ -108,6 +108,22 @@ connectors:
   # broker_azure_namespaces: []
   # AWS SQS regions — repeatable; produces probes against sqs.{region}.amazonaws.com:443
   # broker_sqs_regions: []
+  # -- SNMP hardware fingerprinting (Phase 133 / 139, optional, requires: pip install quirk[hw]) --
+  # enable_snmp: false
+  # snmp_community: "public"    # v1/v2c community string
+  # Phase 139 SNMPV3-01 / D-01/D-02: per-host SNMPv3 USM credentials.
+  # Keyed by BARE HOST (not host:port). auth_key_env/priv_key_env are the NAMES of
+  # environment variables holding the auth/priv passphrases — passphrases MUST NOT
+  # appear inline here. auth_protocol/priv_protocol must be SHA-family / AES-family
+  # (SHA|SHA224|SHA256|SHA384|SHA512, AES|AES128|AES192|AES256) — any other value
+  # (e.g. MD5, DES) is rejected at config-load time, never silently downgraded.
+  # snmp_v3_credentials:
+  #   "10.0.0.1":
+  #     username: "quirk_ro"
+  #     auth_key_env: "SNMP_V3_AUTH_KEY"    # os.environ["SNMP_V3_AUTH_KEY"] at scan time
+  #     priv_key_env: "SNMP_V3_PRIV_KEY"    # os.environ["SNMP_V3_PRIV_KEY"] at scan time
+  #     auth_protocol: "SHA256"             # richer allowlist honored, not narrowed to base SHA
+  #     priv_protocol: "AES256"
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.

@@ -294,6 +294,10 @@ class ConnectorsCfg:
     # Default False — zero behavior change for existing scans without [hw] installed.
     enable_snmp: bool = False
     snmp_community: str = "public"
+    # Phase 139 SNMPV3-01 / D-01: per-host SNMPv3 USM credentials (mirrors BrokerCredential).
+    # Env-var NAMES only, never inline secrets. Keyed by bare host (D-01 / RESEARCH Open
+    # Question 2), not host:port — mirrors the single-value-per-scan snmp_community precedent.
+    snmp_v3_credentials: Dict[str, "SnmpV3Credential"] = field(default_factory=dict)
     # Phase 72 D-02 / WR-11: tracks which keys appeared in the raw YAML connectors block.
     # Used by quirk.engine.profiles to suppress mutation of user-explicit values.
     _user_set_fields: frozenset = field(default_factory=frozenset, repr=False, compare=False)
@@ -350,6 +354,29 @@ class BrokerCredential:
     """
     user: str
     pass_env: str
+
+
+@dataclass(frozen=True)
+class SnmpV3Credential:
+    """Phase 139 SNMPV3-01 / D-01: per-host SNMPv3 USM credential entry.
+
+    `auth_key_env` / `priv_key_env` are the NAMES of environment variables
+    holding the auth/priv passphrases, NOT the passphrases themselves.
+    Passphrases MUST NOT appear inline in YAML (mirrors BrokerCredential.pass_env).
+    """
+    username: str
+    auth_key_env: str
+    priv_key_env: str = ""
+    auth_protocol: str = "SHA"
+    priv_protocol: str = "AES"
+
+
+# D-02: single source of truth for accepted SNMPv3 auth/priv protocol strings.
+# 139-02's probe protocol-maps (_SNMP_V3_AUTH_PROTO_MAP / _SNMP_V3_PRIV_PROTO_MAP)
+# MUST map every value in these sets to a concrete pysnmp protocol object — a
+# validated protocol here must never be silently unusable at probe time.
+_SNMP_V3_AUTH_ALLOWED = {"SHA", "SHA224", "SHA256", "SHA384", "SHA512"}
+_SNMP_V3_PRIV_ALLOWED = {"AES", "AES128", "AES192", "AES256"}
 
 
 @dataclass
@@ -481,6 +508,40 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
             user=str(cred.get("user", "")),
             pass_env=str(cred.get("pass_env", "")),
         )
+
+    # Phase 139 SNMPV3-01 / D-01/D-02: per-host SNMPv3 USM credentials, keyed by bare
+    # host. auth_key_env/priv_key_env are env-var NAMES only, never inline secrets.
+    # D-02: reject any credential whose auth/priv protocol falls outside the
+    # SHA-family / AES-family allowlist at load time — never substitute a default.
+    if "snmp_v3_credentials" in conn_raw:
+        snmp_v3_creds_raw = conn_raw.pop("snmp_v3_credentials") or {}
+        snmp_v3_credentials: Dict[str, SnmpV3Credential] = {}
+        for host, cred in snmp_v3_creds_raw.items():
+            if not isinstance(cred, dict):
+                continue
+            auth_protocol = str(cred.get("auth_protocol", "SHA"))
+            priv_key_env = str(cred.get("priv_key_env", ""))
+            priv_protocol = str(cred.get("priv_protocol", "AES"))
+            if auth_protocol not in _SNMP_V3_AUTH_ALLOWED:
+                raise ValueError(
+                    f"snmp_v3_credentials['{host}'].auth_protocol={auth_protocol!r} is not "
+                    f"SHA-family; allowed values are {sorted(_SNMP_V3_AUTH_ALLOWED)} (D-02 — "
+                    "no silent downgrade to a weaker digest)."
+                )
+            if priv_key_env and priv_protocol not in _SNMP_V3_PRIV_ALLOWED:
+                raise ValueError(
+                    f"snmp_v3_credentials['{host}'].priv_protocol={priv_protocol!r} is not "
+                    f"AES-family; allowed values are {sorted(_SNMP_V3_PRIV_ALLOWED)} (D-02 — "
+                    "no silent downgrade to a weaker cipher)."
+                )
+            snmp_v3_credentials[str(host)] = SnmpV3Credential(
+                username=str(cred.get("username", "")),
+                auth_key_env=str(cred.get("auth_key_env", "")),
+                priv_key_env=priv_key_env,
+                auth_protocol=auth_protocol,
+                priv_protocol=priv_protocol,
+            )
+        conn_raw["snmp_v3_credentials"] = snmp_v3_credentials
 
     # Phase 72 D-02 / WR-11: build connectors then stamp user-set field set so the
     # profile-application code can distinguish user-explicit values from defaults.
