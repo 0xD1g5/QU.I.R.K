@@ -17,7 +17,7 @@ import logging
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from quirk.util.safe_exc import safe_str
 
@@ -37,6 +37,7 @@ try:
         SnmpDispatcher,
         UdpTransportTarget,
         get_cmd,
+        walk_cmd,
     )
     # Phase 139 SNMPV3-01/02/04: v3arch sibling import block. Both v1arch
     # (v2c) and v3arch (v3 USM) live in the SAME pysnmp package/pin — one
@@ -49,6 +50,7 @@ try:
         UdpTransportTarget as UdpTransportTargetV3,
         UsmUserData,
         get_cmd as get_cmd_v3,
+        walk_cmd as walk_cmd_v3,
         usmAesCfb128Protocol,
         usmAesCfb192Protocol,
         usmAesCfb256Protocol,
@@ -89,6 +91,24 @@ except ImportError:
 _OID_SYSDESCR = "1.3.6.1.2.1.1.1.0"
 _OID_SYSNAME = "1.3.6.1.2.1.1.5.0"
 _OID_SYSOBJECTID = "1.3.6.1.2.1.1.2.0"
+
+# ---------------------------------------------------------------------------
+# Phase 140 BRIDGE-04: gateway ARP/forwarding-table walk probe.
+#
+# ipNetToMediaPhysAddress (RFC 1213) — the last 4 OID sub-identifiers of each
+# returned varbind ARE the target IPv4 address (RFC1213 INDEX convention).
+# ---------------------------------------------------------------------------
+_OID_IP_NET_TO_MEDIA_PHYS_ADDRESS = "1.3.6.1.2.1.4.22.1.2"
+
+# Hard cap on collected (target_ip, mac) facts — a huge/malicious ARP table
+# must never be allowed to stall a sensor scan batch (Pitfall 4 / T-140-04).
+_ARP_WALK_MAX_ENTRIES = 500
+
+# Overall wall-clock budget multiplier applied on top of the per-OID timeout
+# via asyncio.wait_for — a table walk issues many more round-trips than the 3
+# fixed GETs the existing probes perform, so its cost profile differs and
+# needs its own explicit bound (Pitfall 4 / T-140-04).
+_ARP_WALK_TIMEOUT_FACTOR = 5
 
 _NULL_RESULT: Dict[str, Optional[str]] = {
     "snmp_sysdescr": None,
@@ -423,6 +443,182 @@ async def _async_probe_v3(
         except Exception as exc:
             _LOG.debug("SNMPv3 engine close %s failed: %s", host, safe_str(exc))
     return result
+
+
+async def _walk_arp_table_v2c(
+    host: str,
+    community: str,
+    timeout: int,
+) -> List[Tuple[str, str]]:
+    """Async v2c walk of the gateway's ipNetToMediaTable (ARP/forwarding table).
+
+    Returns a list of (target_ip, mac) tuples derived from
+    ipNetToMediaPhysAddress. Returns [] on any failure. Bounded by
+    ``_ARP_WALK_MAX_ENTRIES`` — never returns more than that many entries.
+    Stores only IP/MAC/OID facts — never the community string.
+    """
+    entries: List[Tuple[str, str]] = []
+    dispatcher = SnmpDispatcher()
+    try:
+        target = await UdpTransportTarget.create((host, 161), timeout=timeout, retries=1)
+        async for err_indication, err_status, _err_index, var_binds in walk_cmd(
+            dispatcher,
+            CommunityData(community),
+            target,
+            ObjectType(ObjectIdentity(_OID_IP_NET_TO_MEDIA_PHYS_ADDRESS)),
+            lexicographicMode=False,
+        ):
+            if err_indication or err_status:
+                break
+            for oid, val in var_binds:
+                target_ip = ".".join(str(oid).split(".")[-4:])
+                mac = str(val) if val is not None else None
+                if mac:
+                    entries.append((target_ip, mac))
+                if len(entries) >= _ARP_WALK_MAX_ENTRIES:
+                    break
+            if len(entries) >= _ARP_WALK_MAX_ENTRIES:
+                break
+    except Exception as exc:
+        _LOG.debug("SNMP ARP-table walk %s failed: %s", host, safe_str(exc))
+    finally:
+        try:
+            dispatcher.transport_dispatcher.close_dispatcher()
+        except Exception:
+            pass
+    return entries[:_ARP_WALK_MAX_ENTRIES]
+
+
+async def _walk_arp_table_v3(
+    host: str,
+    credential: "SnmpV3Credential",
+    timeout: int,
+) -> List[Tuple[str, str]]:
+    """Async SNMPv3 USM walk of the gateway's ipNetToMediaTable.
+
+    Mirrors ``_walk_arp_table_v2c`` exactly except: uses USM (UsmUserData)
+    selecting the operator's CONFIGURED auth/priv protocol objects, and
+    re-derives the timeout budget (SNMPV3-04 precedent). Resolved
+    auth_key/priv_key values never leave this function's scope.
+    """
+    entries: List[Tuple[str, str]] = []
+    engine = SnmpEngine()
+    try:
+        auth_key = os.environ.get(credential.auth_key_env, "") if credential.auth_key_env else ""
+        priv_key = os.environ.get(credential.priv_key_env, "") if credential.priv_key_env else ""
+        auth_proto = _SNMP_V3_AUTH_PROTO_MAP[credential.auth_protocol]
+        priv_proto = _SNMP_V3_PRIV_PROTO_MAP[credential.priv_protocol] if priv_key else None
+        usm_data = UsmUserData(
+            credential.username,
+            authKey=auth_key or None,
+            authProtocol=auth_proto if auth_key else None,
+            privKey=priv_key or None,
+            privProtocol=priv_proto,
+        )
+        target = await UdpTransportTargetV3.create(
+            (host, 161),
+            timeout=_derive_v3_timeout(timeout),
+            retries=1,
+        )
+        async for err_indication, err_status, _err_index, var_binds in walk_cmd_v3(
+            engine,
+            usm_data,
+            target,
+            ContextData(),
+            ObjectTypeV3(ObjectIdentityV3(_OID_IP_NET_TO_MEDIA_PHYS_ADDRESS)),
+            lexicographicMode=False,
+        ):
+            if err_indication or err_status:
+                break
+            for oid, val in var_binds:
+                target_ip = ".".join(str(oid).split(".")[-4:])
+                mac = str(val) if val is not None else None
+                if mac:
+                    entries.append((target_ip, mac))
+                if len(entries) >= _ARP_WALK_MAX_ENTRIES:
+                    break
+            if len(entries) >= _ARP_WALK_MAX_ENTRIES:
+                break
+    except Exception as exc:
+        _LOG.debug("SNMPv3 ARP-table walk %s failed: %s", host, safe_str(exc))
+    finally:
+        try:
+            engine.close_dispatcher()
+        except Exception as exc:
+            _LOG.debug("SNMPv3 ARP-table walk engine close %s failed: %s", host, safe_str(exc))
+    return entries[:_ARP_WALK_MAX_ENTRIES]
+
+
+async def _async_walk_arp_table(
+    host: str,
+    community: Optional[str],
+    v3_credential: Optional["SnmpV3Credential"],
+    timeout: int = 3,
+) -> List[Tuple[str, str]]:
+    """Bounded, credential-scrubbed walk of a gateway's ARP/forwarding table.
+
+    Dispatches to the v2c path (community string) when ``v3_credential`` is
+    None, else the v3 USM path. The whole walk is wrapped in
+    ``asyncio.wait_for`` with an explicit overall wall-clock budget AND
+    capped at ``_ARP_WALK_MAX_ENTRIES`` — a huge/malicious ARP table must
+    never stall a sensor scan batch (Pitfall 4 / T-140-04). Returns [] on any
+    failure, on timeout, or when pysnmp is absent (advisory no-op, D-03).
+    Stores only OID/IP/MAC facts — never community strings or USM secrets
+    (T-140-03).
+    """
+    if not _PYSNMP_AVAILABLE:
+        return []
+
+    try:
+        if v3_credential is not None:
+            overall_budget = _derive_v3_timeout(timeout) * _ARP_WALK_TIMEOUT_FACTOR
+            return await asyncio.wait_for(
+                _walk_arp_table_v3(host, v3_credential, timeout),
+                timeout=overall_budget,
+            )
+        overall_budget = timeout * _ARP_WALK_TIMEOUT_FACTOR
+        return await asyncio.wait_for(
+            _walk_arp_table_v2c(host, community or "public", timeout),
+            timeout=overall_budget,
+        )
+    except asyncio.TimeoutError:
+        _LOG.debug("SNMP ARP-table walk %s exceeded bounded wall-clock budget", host)
+        return []
+    except Exception as exc:
+        _LOG.debug("SNMP ARP-table walk %s failed: %s", host, safe_str(exc))
+        return []
+
+
+def walk_arp_table(
+    host: str,
+    community: Optional[str] = "public",
+    timeout: int = 3,
+    v3_credential: Optional["SnmpV3Credential"] = None,
+) -> List[Tuple[str, str]]:
+    """Sync entry point for ``_async_walk_arp_table`` — mirrors ``probe_snmp_target``.
+
+    Advisory guard: if pysnmp is not installed, returns [] — never raises
+    ImportError (D-03).
+
+    Args:
+        host:          Gateway IP address or hostname to walk (UDP port 161).
+        community:     SNMPv2c community string; ignored when
+                        ``v3_credential`` is provided.
+        timeout:       Per-OID timeout budget in seconds (default 3);
+                        re-derived internally for the overall wait_for budget.
+        v3_credential: SnmpV3Credential to use SNMPv3 USM instead of v2c.
+
+    Returns:
+        List of (target_ip, mac) tuples. Empty list on any failure or when
+        pysnmp is absent.
+    """
+    if not _PYSNMP_AVAILABLE:
+        return []
+    try:
+        return asyncio.run(_async_walk_arp_table(host, community, v3_credential, timeout))
+    except Exception as exc:
+        _LOG.debug("ARP-table walk %s failed: %s", host, safe_str(exc))
+        return []
 
 
 def probe_snmp_target(
