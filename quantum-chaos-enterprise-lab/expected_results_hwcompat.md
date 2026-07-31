@@ -140,6 +140,49 @@ python run_scan.py --target 127.0.0.1 --ports 20223 --enable-snmp --snmp-communi
 
 ---
 
+### hwcompat-snmp — SNMPv3 auth+priv path (Phase 139 SNMPV3-01..04)
+
+As of Phase 139, `hwcompat-snmp` additionally serves a SNMPv3 USM user alongside the
+v2c `rocommunity` line above, so both the v3 and v2c-fallback code paths are exercisable
+against the same container.
+
+**USM user:** `quirkv3user` — auth protocol `SHA`, priv protocol `AES` (D-02 SHA/AES-only).
+Lab-only passphrases are hardcoded in `snmpd.conf` for reproducibility (non-secret test
+values, same posture as the `public` community string).
+
+**Expected result — scan configured with the lab's v3 credentials:**
+
+| Field | Expected Value |
+|-------|---------------|
+| host | 127.0.0.1 |
+| port | 20223 |
+| vendor | Cisco |
+| fingerprint_method | snmp |
+| snmp_version | `v3 auth+priv` |
+| snmp_auth_protocol | `SHA` |
+| snmp_priv_protocol | `AES` |
+| confidence | high |
+
+Scan command (with a `connectors.snmp_v3_credentials` entry for `127.0.0.1` pointing at
+env vars holding `quirklabauthpass1`/`quirklabprivpass1`):
+
+```bash
+python run_scan.py --target 127.0.0.1 --ports 20223 --enable-snmp
+```
+
+**Expected result — scan run WITHOUT v3 credentials configured (v2c fallback, unchanged
+from the table above):** `snmp_version = "v2c"`, no `snmp_auth_protocol`/`snmp_priv_protocol`
+recorded. This is the original, still-supported code path — `hwcompat-snmp` never requires
+v3 credentials to produce a positive vendor match.
+
+**Expected result — scan configured with WRONG v3 credentials against this container:**
+`snmp_version = "v3-failed-fell-back"` (D-03) — a real authentication failure, distinct from
+both `"v2c"` (no v3 attempted) and `"v3-protocol-mismatch"` (target only offers a weaker
+protocol than requested; not reproducible against this container, which only offers
+SHA/AES — that state is exercised via unit tests / mocked probes per 139-02/139-03).
+
+---
+
 ## CBOM Component Hierarchy
 
 As of Phase 134 (CBOM-01), each hardware endpoint in the CBOM is represented as a

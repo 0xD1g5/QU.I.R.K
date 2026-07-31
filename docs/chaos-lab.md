@@ -685,7 +685,7 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-fuzz-target`
 
 ---
 
-### 3.22 hwcompat Profile (v5.7/v5.8 — Phase 127 + Phase 133 LAB-01)
+### 3.22 hwcompat Profile (v5.7/v5.8/v5.10 — Phase 127 + Phase 133 LAB-01 + Phase 139 SNMPV3-01..04)
 
 The `hwcompat` profile (introduced in Phase 127, extended in Phase 133) ships three services that
 exercise QU.I.R.K.'s agentless hardware fingerprinting capability across all three fingerprint
@@ -708,28 +708,45 @@ and HardwareInventory dashboard tab but do not affect the quantum-readiness scor
 PROFILE_ARGS="--profile hwcompat" ./lab.sh up
 ```
 
-**SNMP scan command:**
+**SNMP scan command (v2c, unchanged):**
 
 ```bash
 python run_scan.py --target 127.0.0.1 --ports 20223 --enable-snmp --snmp-community public
+```
+
+**SNMPv3 auth+priv scan command (Phase 139):** requires a `connectors.snmp_v3_credentials`
+entry for `127.0.0.1` (see `docs/configuration.md`) pointing at env vars holding the lab
+passphrases below, then the same `--enable-snmp` flag — the scanner attempts v3 first and
+only falls back to v2c/none per host:
+
+```bash
+python run_scan.py --target 127.0.0.1 --ports 20223 --enable-snmp
 ```
 
 **hwcompat-snmp container details:**
 
 The `hwcompat-snmp` service is a Net-SNMP container simulating a Cisco IOS device, built locally
 from `FROM alpine:3.19` (CHAOS-05 compliant pinned base image). It listens on UDP port 161
-(mapped to host port 20223) with community string `public` (read-only, lab use only).
+(mapped to host port 20223) with community string `public` (read-only, lab use only) **and**,
+as of Phase 139, a SNMPv3 USM user for live auth+priv scan testing.
 
 SNMP MIB-II OIDs served:
 - `sysDescr (1.3.6.1.2.1.1.1.0)`: `"Cisco IOS Software, Version 15.2(4)M3, RELEASE SOFTWARE (fc2)"`
 - `sysName (1.3.6.1.2.1.1.5.0)`: `"cisco-sim-hwcompat"`
 - `sysObjectID (1.3.6.1.2.1.1.2.0)`: `1.3.6.1.4.1.9.1.1` (Cisco Enterprise OID)
 
+**SNMPv3 USM user (Phase 139 SNMPV3-01..04):** `quirkv3user` — auth protocol `SHA`, priv
+protocol `AES` (D-02 SHA/AES-only). Lab passphrases (`quirklabauthpass1` / `quirklabprivpass1`)
+are hardcoded in `snmpd.conf` as non-secret test values (same posture as the `public`
+community string) — set them as the values of whatever env vars your `snmp_v3_credentials`
+config entry names for `auth_key_env`/`priv_key_env`.
+
 **Expected scanner findings:**
 
 - **hwcompat-ssh (port 20221):** `vendor=Unknown`, `fingerprint_method=ssh_banner`, `confidence=unknown`, `pqc_status=unknown` — the generic OpenSSH banner does not match any vendor pattern in `HARDWARE_MATRIX`; `vendor=Unknown` rows are never suppressed (D-06)
 - **hwcompat-http (port 20222):** `vendor=HPE`, `model=iLO5`, `fingerprint_method=http_mgmt`, `confidence=high`, `pqc_status=unsupported` — nginx serves `X-Device-Model: HPE-iLO5` and `Server: iLO/5.0` headers matching the HPE iLO5 HARDWARE_MATRIX entry
-- **hwcompat-snmp (port 20223):** `vendor=Cisco`, `fingerprint_method=snmp`, `confidence=high`, `pqc_status=unsupported` — sysDescr OID match on `"Cisco IOS Software"` substring + sysObjectID Cisco enterprise prefix `1.3.6.1.4.1.9`
+- **hwcompat-snmp (port 20223), v2c path:** `vendor=Cisco`, `fingerprint_method=snmp`, `confidence=high`, `pqc_status=unsupported`, `snmp_version="v2c"` — sysDescr OID match on `"Cisco IOS Software"` substring + sysObjectID Cisco enterprise prefix `1.3.6.1.4.1.9`
+- **hwcompat-snmp (port 20223), v3 auth+priv path (Phase 139):** same vendor/model match, plus `snmp_version="v3 auth+priv"`, `snmp_auth_protocol="SHA"`, `snmp_priv_protocol="AES"` when a valid `quirkv3user` credential is configured; a scan with wrong v3 credentials against this container yields `snmp_version="v3-failed-fell-back"` (D-03) rather than silently reporting v2c
 
 > **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —
 > `_derive_all_profiles()` discovers `hwcompat` dynamically from `docker-compose.yml`
