@@ -1520,16 +1520,98 @@ def main():
 
         hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
         _snmp_community = getattr(cfg.connectors, "snmp_community", "public")
+        # Phase 139 SNMPV3-02: per-host v3 credentials (second required call
+        # site — RESEARCH Anti-Pattern; hardware_scanner.py's Step 3 is the
+        # other one, wired in this same plan).
+        _snmp_v3_creds = getattr(cfg.connectors, "snmp_v3_credentials", None) or {}
 
+        _snmp_results = []
         try:
             # D-05: lazy import — avoids ImportError at module load when pysnmp not installed
-            from quirk.scanner.snmp_scanner import scan_snmp_targets as _scan_snmp_targets
-            _snmp_results = _scan_snmp_targets(
-                list(_snmp_unique_hosts),
-                community=_snmp_community,
-                timeout=hw_timeout,
-                logger=logger,
+            from quirk.scanner.snmp_scanner import (
+                scan_snmp_targets as _scan_snmp_targets,
+                probe_snmp_target as _probe_snmp_target,
+                parse_sysdescr as _parse_snmp_sysdescr,
+                SNMP_MODE_V3_AUTH_PRIV,
+                SNMP_MODE_V3_NOAUTH,
+                SNMP_MODE_V2C,
+                SNMP_MODE_V3_FAILED,
+                SNMP_MODE_V3_PROTOCOL_MISMATCH,
+                SNMP_MODE_NONE,
             )
+
+            # Hosts with a configured per-host v3 credential run the
+            # v3 -> v2c -> none ladder individually; hosts without one keep
+            # the existing bulk v2c-only scan_snmp_targets path unchanged.
+            _v3_hosts = [h for h in _snmp_unique_hosts if h in _snmp_v3_creds]
+            _v2c_only_hosts = [h for h in _snmp_unique_hosts if h not in _snmp_v3_creds]
+
+            for _v3_host in _v3_hosts:
+                _cred = _snmp_v3_creds[_v3_host]
+                try:
+                    _v3_result = _probe_snmp_target(
+                        _v3_host, version="v3", v3_credential=_cred, timeout=hw_timeout
+                    )
+                except Exception as _v3_probe_err:
+                    logger.debug(
+                        f"SNMPv3 probe {_v3_host} raised (advisory): {safe_str(_v3_probe_err)}"
+                    )
+                    _v3_result = {}
+
+                _auth_proto = None
+                _priv_proto = None
+                if _v3_result.get("snmp_version_used") == "v3":
+                    # SUCCESS — never collapse noAuthNoPriv into authPriv (D-02/Pitfall 3).
+                    _version_label = (
+                        SNMP_MODE_V3_AUTH_PRIV
+                        if _v3_result.get("snmp_security_level") == "authPriv"
+                        else SNMP_MODE_V3_NOAUTH
+                    )
+                    _final_result = _v3_result
+                    _auth_proto = getattr(_cred, "auth_protocol", None)
+                    _priv_proto = getattr(_cred, "priv_protocol", None)
+                elif _v3_result.get("snmp_v3_failure_kind") == "protocol-mismatch":
+                    # D-02: distinct crypto-hygiene state; still probe v2c for continuity.
+                    _version_label = SNMP_MODE_V3_PROTOCOL_MISMATCH
+                    _final_result = _probe_snmp_target(
+                        _v3_host, community=_snmp_community, timeout=hw_timeout
+                    )
+                else:
+                    # Generic v3 failure — v3 WAS attempted, so a v2c success
+                    # must not masquerade as an intentional v2c-only scan (D-03).
+                    _version_label = SNMP_MODE_V3_FAILED
+                    _final_result = _probe_snmp_target(
+                        _v3_host, community=_snmp_community, timeout=hw_timeout
+                    )
+
+                _raw_descr = _final_result.get("snmp_sysdescr")
+                _parsed_v3 = _parse_snmp_sysdescr(_raw_descr)
+                _snmp_results.append({
+                    "host": _v3_host,
+                    "snmp_sysdescr": _raw_descr,
+                    "snmp_sysname": _final_result.get("snmp_sysname"),
+                    "snmp_sysobjectid": _final_result.get("snmp_sysobjectid"),
+                    "vendor": _parsed_v3.get("vendor", "Unknown"),
+                    "model": _parsed_v3.get("model"),
+                    "snmp_version": _version_label,
+                    "snmp_auth_protocol": _auth_proto,
+                    "snmp_priv_protocol": _priv_proto,
+                })
+
+            if _v2c_only_hosts:
+                _v2c_results = _scan_snmp_targets(
+                    _v2c_only_hosts,
+                    community=_snmp_community,
+                    timeout=hw_timeout,
+                    logger=logger,
+                )
+                for _v2c_res in _v2c_results:
+                    _v2c_res["snmp_version"] = (
+                        SNMP_MODE_V2C if _v2c_res.get("snmp_sysdescr") else SNMP_MODE_NONE
+                    )
+                    _v2c_res["snmp_auth_protocol"] = None
+                    _v2c_res["snmp_priv_protocol"] = None
+                _snmp_results.extend(_v2c_results)
         except ImportError as _snmp_import_err:
             logger.info(
                 f"SNMP fingerprint: pysnmp not installed (advisory); "
@@ -1554,6 +1636,12 @@ def main():
                         _existing_dev.snmp_sysname     = _snmp_res.get("snmp_sysname")
                         _existing_dev.snmp_sysobjectid = _snmp_res.get("snmp_sysobjectid")
                         _existing_dev.snmp_vendor      = _snmp_res.get("vendor", "Unknown")
+                        # Phase 139 SNMPV3-02: honest fallback-ladder labeling;
+                        # protocol columns only ever populated on v3 success
+                        # (see the ladder above — mismatch/failure leave them None).
+                        _existing_dev.snmp_version = _snmp_res.get("snmp_version")
+                        _existing_dev.snmp_auth_protocol = _snmp_res.get("snmp_auth_protocol")
+                        _existing_dev.snmp_priv_protocol = _snmp_res.get("snmp_priv_protocol")
                         _snmp_parsed_vendor = _snmp_res.get("vendor", "Unknown")
                         if _snmp_parsed_vendor and _snmp_parsed_vendor != "Unknown":
                             _existing_dev.vendor = _snmp_parsed_vendor
@@ -1576,6 +1664,9 @@ def main():
                         snmp_sysname=_snmp_res.get("snmp_sysname"),
                         snmp_sysobjectid=_snmp_res.get("snmp_sysobjectid"),
                         snmp_vendor=_snmp_res.get("vendor", "Unknown"),
+                        snmp_version=_snmp_res.get("snmp_version"),
+                        snmp_auth_protocol=_snmp_res.get("snmp_auth_protocol"),
+                        snmp_priv_protocol=_snmp_res.get("snmp_priv_protocol"),
                         remediation_tier="Tier N/A",
                     )
                     _snmp_new_batch.append(_snmp_dev)
