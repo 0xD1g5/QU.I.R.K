@@ -48,6 +48,62 @@ def _snmp_badge_label(d: Dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Bridge status badge label map — independent copy mirroring html_renderer.py
+# verbatim (UI-SPEC Copywriting Contract, Phase 140 BRIDGE-03). Renderers keep
+# independent copies by established convention (see _snmp_badge_label above).
+# ---------------------------------------------------------------------------
+
+_BRIDGE_LABEL_MAP = {
+    "upstream_mitigated": "SNMP-confirmed",
+    "partial_only": "Partial (assumed)",
+}
+
+# DOCX cell-shading fill colors (hex, no '#') matching the UI-SPEC hsl() hues:
+# amber = hsl(38 92% 50%), blue = hsl(213 94% 68%). NEVER green for confirmed.
+_BRIDGE_SHADING = {
+    "upstream_mitigated": "60A5FA",  # blue
+    "partial_only": "F59E0B",  # amber
+}
+
+_BRIDGE_CAVEAT = (
+    "Based on SNMP-derived network-path evidence; not independently confirmed"
+    " by traffic inspection."
+)
+
+
+def _bridge_badge_label(d: Dict[str, Any]) -> str:
+    """Map the projected bridge_status field to the verbatim UI-SPEC label.
+
+    Returns "—" (em dash) when bridge_status is absent/null (device is not
+    part of a detected bridge pair). Never surfaces the raw enum string.
+    """
+    raw = d.get("bridge_status")
+    if not raw:
+        return "—"
+    return _BRIDGE_LABEL_MAP.get(raw, "—")
+
+
+def _set_cell_shading(cell, hex_color: str) -> None:
+    """Best-effort DOCX cell background shading via raw oxml.
+
+    python-docx has no native cell-shading API; mirrors the graceful,
+    never-crash contract used by _set_table_style/_set_col_widths above —
+    any failure leaves the default (unshaded) cell background in place.
+    """
+    try:
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+        shd = OxmlElement("w:shd")
+        shd.set(qn("w:fill"), hex_color)
+        cell._tc.get_or_add_tcPr().append(shd)
+    except Exception:
+        logger.warning(
+            "Failed to apply cell shading — using default cell background.",
+            exc_info=True,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Subscore label order — mirrors writer.py / html_renderer.py
 # ---------------------------------------------------------------------------
 
@@ -367,9 +423,10 @@ def render_docx_report(
         row_cells[1].text = str(subscores.get(key, "—"))
         row_cells[2].text = "/25"
 
-    # ---- Hardware PQC Advisory section (Phase 128 D-10) ----
+    # ---- Hardware PQC Advisory section (Phase 128 D-10, Phase 140 BRIDGE-03) ----
     # Advisory-only — hardware findings do not affect the readiness score.
-    # 7 columns: Tier | Vendor | Model | Host:Port | PQC Status | Confidence | EOL Date
+    # 9 columns: Tier | Vendor | Model | Host:Port | PQC Status | Confidence
+    #            | EOL Date | SNMP | Bridge Status
     if hardware_devices:
         doc.add_heading("Hardware PQC Advisory (Not Scored)", level=2)
         doc.add_paragraph(
@@ -377,11 +434,14 @@ def render_docx_report(
             " Listed for CNSA 2.0 migration planning purposes only.",
             style="Normal",
         )
-        hw_tbl = doc.add_table(rows=1, cols=8)
+        hw_tbl = doc.add_table(rows=1, cols=9)
         _set_table_style(hw_tbl)
         hw_hdr = hw_tbl.rows[0].cells
         for _i, _h in enumerate(
-            ["Tier", "Vendor", "Model", "Host:Port", "PQC Status", "Confidence", "EOL Date", "SNMP"]
+            [
+                "Tier", "Vendor", "Model", "Host:Port", "PQC Status",
+                "Confidence", "EOL Date", "SNMP", "Bridge Status",
+            ]
         ):
             hw_hdr[_i].text = _h
         for _d in hardware_devices:
@@ -394,7 +454,13 @@ def render_docx_report(
             _row[5].text = _d.get("confidence", "")
             _row[6].text = _d.get("eol_date") or "—"
             _row[7].text = _snmp_badge_label(_d)
-        _set_col_widths(hw_tbl, [0.8, 1.2, 1.2, 1.3, 1.0, 1.0, 0.8, 1.0])
+            _bridge_status = _d.get("bridge_status")
+            _row[8].text = _bridge_badge_label(_d)
+            if _bridge_status in _BRIDGE_SHADING:
+                _set_cell_shading(_row[8], _BRIDGE_SHADING[_bridge_status])
+        _set_col_widths(hw_tbl, [0.8, 1.2, 1.2, 1.3, 1.0, 1.0, 0.8, 0.9, 1.1])
+        if any(_d.get("bridge_status") == "upstream_mitigated" for _d in hardware_devices):
+            doc.add_paragraph(_BRIDGE_CAVEAT, style="Normal")
 
     # ---------------------------------------------------------------------------
     # Save document

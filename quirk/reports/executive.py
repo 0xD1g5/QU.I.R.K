@@ -437,5 +437,24 @@ def build_exec_markdown(
                 "the roadmap for the next assessment cycle."
             )
             lines.append("")
+        # Phase 140 BRIDGE-03: SNMP-confirmed upstream mitigation narrative —
+        # fires only when at least one device has been evidence-gated-promoted.
+        _upstream_mitigated_count = sum(
+            1 for d in hw_devs if d.get("bridge_status") == "upstream_mitigated"
+        )
+        if _upstream_mitigated_count:
+            lines.append(
+                f"> **SNMP-Confirmed Upstream Mitigation.** For "
+                f"{_upstream_mitigated_count} device(s), SNMP evidence collected "
+                "from the gateway (ARP/forwarding-table data) confirms the legacy "
+                "device is reachable only through a PQC-capable upstream gateway "
+                "on this network segment. This is based on SNMP-derived "
+                "network-path evidence and has not been independently confirmed "
+                "by traffic inspection — treat as a stronger signal than 'partial "
+                "protection' but not as an unqualified guarantee of end-to-end "
+                "quantum-safe coverage. This designation does not affect the "
+                "readiness score."
+            )
+            lines.append("")
 
     return "\n".join(lines)
