@@ -790,6 +790,15 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
                 eol_date=eol_iso,
                 snmp_version=getattr(d, "snmp_version", None),  # Phase 139 SNMPV3-02
                 bridge_status=bridge_status_by_host.get(host),  # Phase 140 BRIDGE-03
+                # Phase 141 OTICS-05: nullable Modbus/BACnet fingerprint fields
+                modbus_vendor=getattr(d, "modbus_vendor", None),
+                modbus_model=getattr(d, "modbus_model", None),
+                modbus_firmware=getattr(d, "modbus_firmware", None),
+                modbus_probe_state=getattr(d, "modbus_probe_state", None),
+                bacnet_vendor=getattr(d, "bacnet_vendor", None),
+                bacnet_model=getattr(d, "bacnet_model", None),
+                bacnet_firmware=getattr(d, "bacnet_firmware", None),
+                bacnet_probe_state=getattr(d, "bacnet_probe_state", None),
             ))
 
         results.sort(key=lambda f: _TIER_ORDER.get(f.remediation_tier, 99))
@@ -850,6 +859,15 @@ def _derive_hw_components(db: Session, latest_ts: datetime) -> list[HardwareComp
                 snmp_auth_protocol=getattr(d, "snmp_auth_protocol", None),
                 snmp_priv_protocol=getattr(d, "snmp_priv_protocol", None),
                 bridge_status=bridge_status_by_host.get(host),  # Phase 140 BRIDGE-03
+                # Phase 141 OTICS-05: nullable Modbus/BACnet fingerprint fields
+                modbus_vendor=getattr(d, "modbus_vendor", None),
+                modbus_model=getattr(d, "modbus_model", None),
+                modbus_firmware=getattr(d, "modbus_firmware", None),
+                modbus_probe_state=getattr(d, "modbus_probe_state", None),
+                bacnet_vendor=getattr(d, "bacnet_vendor", None),
+                bacnet_model=getattr(d, "bacnet_model", None),
+                bacnet_firmware=getattr(d, "bacnet_firmware", None),
+                bacnet_probe_state=getattr(d, "bacnet_probe_state", None),
             ))
         results.sort(key=lambda c: _TIER_ORDER.get(c.remediation_tier, 99))
         return results

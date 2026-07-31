@@ -59,7 +59,7 @@ def _firmware_child(bom):
     return fw, device
 
 
-def test_cbom_firmware_emits_modbus_bacnet_props():
+def test_cbom_firmware_emits_modbus_or_bacnet_props():
     """OTICS-05: hw_devices dict with modbus_*/bacnet_* fields produces a
     FIRMWARE component whose properties include quirk:hw-modbus-vendor/model/
     firmware and quirk:hw-bacnet-vendor/model/firmware, with the DEVICE/
@@ -86,7 +86,7 @@ def test_cbom_firmware_emits_modbus_bacnet_props():
     assert prop_by_name.get("quirk:hw-bacnet-firmware") == "2.0"
 
 
-def test_cbom_firmware_omits_modbus_bacnet_props_when_absent():
+def test_cbom_firmware_omits_modbus_or_bacnet_props_when_absent():
     """When a device has no modbus_*/bacnet_* fields (e.g. SSH/HTTP/SNMP-only
     fingerprint), no quirk:hw-modbus-*/hw-bacnet-* properties are emitted."""
     dev = _hw_dict()

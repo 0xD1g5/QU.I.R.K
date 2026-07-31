@@ -123,6 +123,15 @@ class HardwareComponent(BaseModel):
     snmp_auth_protocol: Optional[str] = None
     snmp_priv_protocol: Optional[str] = None
     bridge_status: Optional[str] = None  # Phase 140 BRIDGE-03 — dashboard bridge badge
+    # Phase 141 OTICS-05/D-12: nullable Modbus/BACnet fingerprint metadata
+    modbus_vendor: Optional[str] = None
+    modbus_model: Optional[str] = None
+    modbus_firmware: Optional[str] = None
+    modbus_probe_state: Optional[str] = None
+    bacnet_vendor: Optional[str] = None
+    bacnet_model: Optional[str] = None
+    bacnet_firmware: Optional[str] = None
+    bacnet_probe_state: Optional[str] = None
 
 
 # ---- Identity Findings ----
@@ -219,6 +228,15 @@ class HardwareFinding(BaseModel):
     eol_date: Optional[str] = None
     snmp_version: Optional[str] = None  # Phase 139 SNMPV3-02 — dashboard SNMP badge
     bridge_status: Optional[str] = None  # Phase 140 BRIDGE-03 — dashboard bridge badge
+    # Phase 141 OTICS-05/D-12: nullable Modbus/BACnet fingerprint metadata
+    modbus_vendor: Optional[str] = None
+    modbus_model: Optional[str] = None
+    modbus_firmware: Optional[str] = None
+    modbus_probe_state: Optional[str] = None
+    bacnet_vendor: Optional[str] = None
+    bacnet_model: Optional[str] = None
+    bacnet_firmware: Optional[str] = None
+    bacnet_probe_state: Optional[str] = None
 
 
 # ---- Roadmap ----

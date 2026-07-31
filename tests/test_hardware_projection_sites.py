@@ -131,6 +131,16 @@ def test_merge_projection_carries_otics_keys(tmp_path, monkeypatch):
         scanned_at=scanned_at,
         **_OTICS_FIELDS,
     ))
+    # merge_scan() guards an empty union — seed one NULL-sensor CryptoEndpoint
+    # so the union is non-empty and build_cbom() is reached.
+    from quirk.models import CryptoEndpoint
+
+    session.add(CryptoEndpoint(
+        host="10.0.5.6",
+        port=502,
+        protocol="TLS",
+        scanned_at=scanned_at,
+    ))
     session.commit()
     session.close()
 

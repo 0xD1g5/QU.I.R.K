@@ -254,6 +254,15 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                         "snmp_priv_protocol": getattr(_d, "snmp_priv_protocol", None),
                         "bridge_evidence_json": getattr(_d, "bridge_evidence_json", None),
                         "bridge_confirmed_at": getattr(_d, "bridge_confirmed_at", None),
+                        # OTICS-06 / Phase 141: nullable Modbus/BACnet fingerprint fields
+                        "modbus_vendor":       getattr(_d, "modbus_vendor", None),
+                        "modbus_model":        getattr(_d, "modbus_model", None),
+                        "modbus_firmware":     getattr(_d, "modbus_firmware", None),
+                        "modbus_probe_state":  getattr(_d, "modbus_probe_state", None),
+                        "bacnet_vendor":       getattr(_d, "bacnet_vendor", None),
+                        "bacnet_model":        getattr(_d, "bacnet_model", None),
+                        "bacnet_firmware":     getattr(_d, "bacnet_firmware", None),
+                        "bacnet_probe_state":  getattr(_d, "bacnet_probe_state", None),
                     })
     except Exception:
         import logging as _log

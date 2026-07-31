@@ -1077,6 +1077,45 @@ def build_cbom(
                         name="quirk:hw-snmp-priv-protocol",
                         value=_sanitize_hw_str(str(snmp_priv_protocol)),
                     ))
+            # OTICS-05 / Phase 141: emit Modbus/BACnet vendor/model/firmware
+            # metadata only when present, mirroring the SNMP conditional-emit
+            # pattern above (CR-01: use _sanitize_hw_str, not safe_str).
+            modbus_vendor = dev.get("modbus_vendor")
+            if modbus_vendor:
+                fw_props.append(Property(
+                    name="quirk:hw-modbus-vendor",
+                    value=_sanitize_hw_str(str(modbus_vendor)),
+                ))
+                modbus_model = dev.get("modbus_model")
+                if modbus_model:
+                    fw_props.append(Property(
+                        name="quirk:hw-modbus-model",
+                        value=_sanitize_hw_str(str(modbus_model)),
+                    ))
+                modbus_firmware = dev.get("modbus_firmware")
+                if modbus_firmware:
+                    fw_props.append(Property(
+                        name="quirk:hw-modbus-firmware",
+                        value=_sanitize_hw_str(str(modbus_firmware)),
+                    ))
+            bacnet_vendor = dev.get("bacnet_vendor")
+            if bacnet_vendor:
+                fw_props.append(Property(
+                    name="quirk:hw-bacnet-vendor",
+                    value=_sanitize_hw_str(str(bacnet_vendor)),
+                ))
+                bacnet_model = dev.get("bacnet_model")
+                if bacnet_model:
+                    fw_props.append(Property(
+                        name="quirk:hw-bacnet-model",
+                        value=_sanitize_hw_str(str(bacnet_model)),
+                    ))
+                bacnet_firmware = dev.get("bacnet_firmware")
+                if bacnet_firmware:
+                    fw_props.append(Property(
+                        name="quirk:hw-bacnet-firmware",
+                        value=_sanitize_hw_str(str(bacnet_firmware)),
+                    ))
             firmware_child = Component(
                 name=fw_name,
                 type=ComponentType.FIRMWARE,
