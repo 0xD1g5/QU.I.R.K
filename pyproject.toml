@@ -64,6 +64,12 @@ adcs = [
 hw = [
     "pysnmp>=7.1.0,<8",
     "sysdescrparser>=0.0.8",
+    # Phase 141 OTICS-01/02: OT/ICS fingerprinting (Modbus + BACnet).
+    # Package legitimacy confirmed via human-verify checkpoint (141-01 Task 1):
+    # pymodbus == github.com/pymodbus-dev/pymodbus, bacpypes3 == github.com/JoelBender/bacpypes3.
+    # NEVER add to [all] — same opt-in posture as pysnmp above.
+    "pymodbus>=3.8.0,<4",
+    "bacpypes3>=0.0.100,<0.1",
 ]
 # Phase 94 SPEC-01/02/03 / PKG-01: [api] extras group for OpenAPI spec scanning.
 # [api] is INTENTIONALLY EXCLUDED from [all] — quirk[api] must never appear in [all]

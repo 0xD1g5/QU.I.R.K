@@ -294,6 +294,11 @@ class ConnectorsCfg:
     # Default False — zero behavior change for existing scans without [hw] installed.
     enable_snmp: bool = False
     snmp_community: str = "public"
+    # Phase 141 OTICS-01/02 / D-06: opt-in OT/ICS protocol fingerprinting; requires
+    # quirk-scanner[hw] extras (pymodbus / bacpypes3). Default False — zero behavior
+    # change for existing scans. Scan-wide only — no per-host allowlist (RESEARCH Pitfall 3).
+    enable_modbus: bool = False
+    enable_bacnet: bool = False
     # Phase 139 SNMPV3-01 / D-01: per-host SNMPv3 USM credentials (mirrors BrokerCredential).
     # Env-var NAMES only, never inline secrets. Keyed by bare host (D-01 / RESEARCH Open
     # Question 2), not host:port — mirrors the single-value-per-scan snmp_community precedent.
