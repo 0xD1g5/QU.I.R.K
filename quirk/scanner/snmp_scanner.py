@@ -42,6 +42,7 @@ try:
     # (v2c) and v3arch (v3 USM) live in the SAME pysnmp package/pin — one
     # _PYSNMP_AVAILABLE flag covers both.
     from pysnmp.hlapi.v3arch.asyncio import (
+        ContextData,
         ObjectIdentity as ObjectIdentityV3,
         ObjectType as ObjectTypeV3,
         SnmpEngine,
@@ -374,6 +375,7 @@ async def _async_probe_v3(
                     engine,
                     usm_data,
                     target,
+                    ContextData(),
                     ObjectTypeV3(ObjectIdentityV3(oid_str)),
                 )
                 if err_indication:
