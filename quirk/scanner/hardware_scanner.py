@@ -13,6 +13,7 @@ Phase 127 — HWCOMPAT-01.
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import urllib.request
@@ -34,6 +35,23 @@ _HTTP_MGMT_PATHS = ("/api/system/info", "/mgmt/", "/")
 
 # Read a bounded body slice to avoid consuming large responses (T-127-04)
 _BODY_SLICE = 4096
+
+# ---------------------------------------------------------------------------
+# Phase 140 BRIDGE-04 D-03: sensor-local /24 gateway pre-check.
+#
+# Replicates the pairing predicate from the cbom bridge module's
+# _detect_crypto_bridges as a SCOPED LOCAL helper — the scanner layer must
+# never depend on the cbom layer (cross-layer import direction prohibited,
+# RESEARCH Open Question 2). This is
+# a pre-filtering optimization only; it makes NO cross-device promotion
+# decision (that stays console-side in _confirm_upstream_mitigation, 140-02).
+# ---------------------------------------------------------------------------
+_BRIDGE_PQC_CAPABLE: frozenset[str] = frozenset({"partial", "supported"})
+_BRIDGE_LEGACY_STATUS: frozenset[str] = frozenset({"unsupported", "vendor-silent", "unknown"})
+
+# Bound the stored bridge_evidence_json size before writing (V5 input
+# validation) — an oversized/malicious ARP table must not bloat the DB row.
+_BRIDGE_EVIDENCE_MAX_BYTES = 8192
 
 
 def _match_matrix(text: str) -> Optional[dict]:
@@ -144,6 +162,92 @@ def _probe_http_mgmt(host: str, port: int, timeout: int) -> Optional[dict]:
             # is silently swallowed — D-04: best-effort, fail to Unknown.
             continue
     return None
+
+
+def _subnet_24(ip: str) -> str:
+    """Return the /24 prefix of *ip*, or *ip* unchanged for non-IPv4 addresses.
+
+    Duplicated verbatim from ``quirk.cbom.bridge._subnet_24`` — do not import
+    across the scanner/cbom layer boundary (see module-level comment above).
+    """
+    parts = ip.split(".")
+    if len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts):
+        return ".".join(parts[:3])
+    return ip
+
+
+def _local_gateway_candidates(devices: List[HardwareDevice]) -> List[HardwareDevice]:
+    """D-03 sensor-local pre-check: flag PQC-capable gateway devices sharing a
+    /24 subnet with a legacy backend, scoped to this sensor's own scan batch.
+
+    This is a pre-filtering optimization only — it performs NO cross-device
+    promotion decision (that stays console-side in
+    ``quirk.cbom.bridge._confirm_upstream_mitigation``, plan 140-02). If a
+    sensor's local batch misses a cross-sensor pair, that device simply never
+    gets probed and stays ``partial_only`` — no correctness regression.
+    """
+    subnet_to_devices: dict[str, list[int]] = {}
+    for i, dev in enumerate(devices):
+        prefix = _subnet_24(getattr(dev, "host", "") or "")
+        subnet_to_devices.setdefault(prefix, []).append(i)
+
+    gateway_indices: set[int] = set()
+    for _prefix, indices in subnet_to_devices.items():
+        if len(indices) < 2:
+            continue
+        pqc_indices = [
+            i for i in indices
+            if (devices[i].pqc_status or "").lower() in _BRIDGE_PQC_CAPABLE
+        ]
+        legacy_indices = [
+            i for i in indices
+            if (devices[i].pqc_status or "").lower() in _BRIDGE_LEGACY_STATUS
+        ]
+        if pqc_indices and legacy_indices:
+            gateway_indices.update(pqc_indices)
+
+    return [devices[i] for i in sorted(gateway_indices)]
+
+
+def _confirm_bridge_evidence(device: HardwareDevice, timeout: int, cfg=None) -> None:
+    """Walk *device*'s (a pre-check-flagged gateway candidate's) ARP table and
+    persist raw evidence into ``bridge_evidence_json``/``bridge_confirmed_at``
+    ONLY when the walk returned a non-empty table (BRIDGE-02).
+
+    Zero cross-device promotion decision happens here — pure per-device
+    evidence collection; the console decides promotion in the cbom bridge
+    module's ``_confirm_upstream_mitigation`` (plan 140-02). Stores only
+    IP/MAC/OID
+    facts — never the community string or USM passphrase (T-140-03). Bounds
+    the stored JSON size before writing (V5 input validation / T-140-04).
+    """
+    try:
+        from quirk.scanner.snmp_scanner import walk_arp_table
+
+        host = getattr(device, "host", "")
+        _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
+        _v3_creds_map = getattr(_connectors, "snmp_v3_credentials", None) or {}
+        _v3_cred = _v3_creds_map.get(host)
+
+        entries = walk_arp_table(host, community="public", timeout=timeout, v3_credential=_v3_cred)
+        if not entries:
+            return  # D-05: silently stays partial_only — no evidence collected
+
+        payload = json.dumps(entries)
+        if len(payload.encode("utf-8")) > _BRIDGE_EVIDENCE_MAX_BYTES:
+            # Truncate oversized evidence before persisting (V5 input validation).
+            while entries and len(json.dumps(entries).encode("utf-8")) > _BRIDGE_EVIDENCE_MAX_BYTES:
+                entries = entries[: len(entries) // 2] if len(entries) > 1 else []
+            if not entries:
+                return  # still oversized after truncation — reject silently
+            payload = json.dumps(entries)
+
+        device.bridge_evidence_json = payload
+        device.bridge_confirmed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    except Exception as exc:
+        _LOG.debug(
+            "Bridge-evidence ARP walk %s failed: %s", getattr(device, "host", "?"), safe_str(exc)
+        )
 
 
 def fingerprint_one(
@@ -353,6 +457,13 @@ def fingerprint_hardware(
         }
         for f in as_completed(futures):
             results.append(f.result())
+
+    # ── Phase 140 BRIDGE-04 D-03: sensor-local gateway pre-check + ARP walk ──
+    # Targeted, not run for every SNMP-enabled device — only gateway
+    # candidates the local /24 pre-check flags get the extra ARP-table walk.
+    _gateway_candidates = _local_gateway_candidates(results)
+    for _gw in _gateway_candidates:
+        _confirm_bridge_evidence(_gw, timeout=timeout, cfg=cfg)
 
     if logger:
         identified = sum(1 for d in results if d.vendor != "Unknown")
