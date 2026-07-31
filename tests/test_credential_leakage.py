@@ -28,6 +28,7 @@ MODIFIED_FILES = [
     # quirk/discovery/tls_scanner.py removed in Phase 71 (WR-13, dead duplicate)
     "quirk/cbom/writer.py",
     "quirk/auth/credentials.py",  # Phase 93: credential module must import safe_str
+    "quirk/scanner/snmp_scanner.py",  # Phase 139 SNMPV3-03: v3 USM auth/priv exception paths
 ]
 
 # ---------------------------------------------------------------------------
@@ -387,6 +388,32 @@ def test_sentinel_not_in_pdf_export_surface(tmp_path) -> None:
     assert SENTINEL not in cbom_text, (
         f"Sentinel found in CBOM JSON (PDF upstream source) at {json_path}"
     )
+
+
+def test_sentinel_not_in_safe_str_snmpv3_authkey() -> None:
+    """Phase 139 SNMPV3-03: SNMPv3 auth-passphrase sentinel must never survive safe_str().
+
+    Simulates a UsmStatsWrongDigests-style USM error message that could echo the
+    configured auth passphrase. If _SENSITIVE_PATTERNS does not yet match this
+    shape, this test stays RED — safe_exc pattern extension (if needed) is
+    Plan 139-02's job, not this Wave-0 scaffold.
+    """
+    exc = Exception(f"usmStatsWrongDigests: authKey={SENTINEL} engineID mismatch")
+    result = safe_str(exc)
+    assert SENTINEL not in result, f"Sentinel leaked through safe_str (SNMPv3 authKey): {result!r}"
+
+
+def test_sentinel_not_in_safe_str_snmpv3_privkey() -> None:
+    """Phase 139 SNMPV3-03: SNMPv3 priv-passphrase sentinel must never survive safe_str().
+
+    Simulates a UsmStatsDecryptionErrors-style USM error message that could echo
+    the configured priv passphrase. If _SENSITIVE_PATTERNS does not yet match
+    this shape, this test stays RED — safe_exc pattern extension (if needed) is
+    Plan 139-02's job, not this Wave-0 scaffold.
+    """
+    exc = Exception(f"usmStatsDecryptionErrors: privKey={SENTINEL} decryption failed")
+    result = safe_str(exc)
+    assert SENTINEL not in result, f"Sentinel leaked through safe_str (SNMPv3 privKey): {result!r}"
 
 
 def test_credential_context_buffer_zeroed_after_close() -> None:
