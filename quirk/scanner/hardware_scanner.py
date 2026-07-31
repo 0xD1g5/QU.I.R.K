@@ -417,6 +417,61 @@ def fingerprint_one(
                 # ORM columns not yet migrated — skip assignment
                 pass
 
+        # ── Step 4: Modbus/TCP probe (Phase 141 OTICS-01 / D-01/D-04) ────
+        # NOT gated on device.vendor == "Unknown" — the trigger is the
+        # opt-in enable_modbus flag plus port-502 evidence (D-04), never
+        # vendor-identification state (D-01). Both raw modbus_* fields and
+        # any first-match-wins headline promotion are independent of
+        # whether Steps 1-3 already identified a vendor.
+        _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
+        _enable_modbus = getattr(_connectors, "enable_modbus", False)
+        _host = getattr(ep, "host", "")
+        _port = getattr(ep, "port", 0)
+        if _enable_modbus and _port == 502:
+            from quirk.scanner.modbus_scanner import probe_modbus_target
+
+            _modbus_result = probe_modbus_target(_host)
+            try:
+                device.modbus_vendor = _modbus_result.get("modbus_vendor")
+                device.modbus_model = _modbus_result.get("modbus_model")
+                device.modbus_firmware = _modbus_result.get("modbus_firmware")
+                device.modbus_probe_state = _modbus_result.get("modbus_probe_state")
+            except AttributeError:
+                # ORM columns not yet migrated — skip assignment
+                pass
+            if device.vendor == "Unknown" and _modbus_result.get("modbus_vendor"):
+                device.vendor = _modbus_result["modbus_vendor"]
+                device.model = _modbus_result.get("modbus_model")
+                device.fingerprint_method = "modbus"
+                device.confidence = "medium"
+
+        # ── Step 5: BACnet/IP probe (Phase 141 OTICS-02 / D-01/D-04) ─────
+        # Gated by enable_bacnet only — the directed-unicast Who-Is/I-Am
+        # round-trip is its own confirmed-open signal for this UDP-only
+        # protocol (bacnet_scanner's D-04 reinterpretation); no prior
+        # port-open evidence is required or available. NOT gated on
+        # device.vendor == "Unknown" (D-01, same rationale as Step 4).
+        _enable_bacnet = getattr(_connectors, "enable_bacnet", False)
+        if _enable_bacnet:
+            from quirk.scanner.bacnet_scanner import probe_bacnet_target
+
+            _bacnet_result = probe_bacnet_target(_host)
+            try:
+                device.bacnet_vendor = _bacnet_result.get("bacnet_vendor")
+                device.bacnet_model = _bacnet_result.get("bacnet_model")
+                device.bacnet_firmware = _bacnet_result.get("bacnet_firmware")
+                device.bacnet_probe_state = _bacnet_result.get("bacnet_probe_state")
+            except AttributeError:
+                # ORM columns not yet migrated — skip assignment
+                pass
+            # D-03: first-match-wins — only promote headline if Modbus (Step 4)
+            # did not already claim it.
+            if device.vendor == "Unknown" and _bacnet_result.get("bacnet_vendor"):
+                device.vendor = _bacnet_result["bacnet_vendor"]
+                device.model = _bacnet_result.get("bacnet_model")
+                device.fingerprint_method = "bacnet"
+                device.confidence = "medium"
+
     except Exception as e:
         if logger:
             logger.v(
