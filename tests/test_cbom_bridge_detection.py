@@ -163,6 +163,31 @@ def test_confirm_upstream_stays_partial_only_when_evidence_lacks_ip():
         assert d["bridge_status"] == "partial_only"
 
 
+def test_confirm_upstream_does_not_promote_unrelated_devices_sharing_subnet():
+    """CR-01 regression: with 2 gateways + 2 legacy backends on the same /24
+    where only ONE gateway<->backend pair has matching evidence, only that
+    specific pair promotes — an unrelated gateway with zero evidence and an
+    unrelated legacy backend never referenced in any evidence must both stay
+    partial_only. Promotion must be scoped to the specific proven pair, not
+    the whole subnet group (BRIDGE-01/D-01)."""
+    proven_gateway = _make_gateway_dict(
+        "192.168.1.1", "supported", evidence=[{"target_ip": "192.168.1.2", "mac": "aa:bb:cc:dd:ee:ff"}]
+    )
+    unproven_gateway = _make_gateway_dict("192.168.1.5", "supported", evidence=None)
+    proven_legacy = _make_gateway_dict("192.168.1.2", "unsupported", evidence=None)
+    unproven_legacy = _make_gateway_dict("192.168.1.9", "unsupported", evidence=None)
+    devices = [proven_gateway, unproven_gateway, proven_legacy, unproven_legacy]
+
+    paired = _detect_crypto_bridges(devices)
+    result = _confirm_upstream_mitigation(paired)
+
+    by_host = {d["host"]: d for d in result}
+    assert by_host["192.168.1.1"]["bridge_status"] == "upstream_mitigated"
+    assert by_host["192.168.1.2"]["bridge_status"] == "upstream_mitigated"
+    assert by_host["192.168.1.5"]["bridge_status"] == "partial_only"
+    assert by_host["192.168.1.9"]["bridge_status"] == "partial_only"
+
+
 def test_confirm_upstream_mitigation_does_not_mutate_input():
     """Non-mutation contract: input dicts (post _detect_crypto_bridges) are
     never modified by _confirm_upstream_mitigation."""

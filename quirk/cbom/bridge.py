@@ -142,17 +142,16 @@ def _has_sufficient_evidence(dev: dict, hw_devices: list[dict]) -> bool:
         A gateway's ``bridge_evidence_json`` column stores a JSON list of
         raw ARP-table facts collected by the sensor-side walk probe, each
         shaped like ``{"target_ip": "...", "mac": "..."}``. This helper
-        looks at every device sharing *dev*'s /24 subnet: it collects the
-        PQC-capable gateway(s)' evidence facts and the legacy backend(s)'
-        host IPs in that same subnet group, and returns True as soon as any
-        gateway's evidence list contains any legacy backend's IP as a
-        ``target_ip``. This mirrors ``_detect_crypto_bridges``' symmetric
-        group-level "partial_only" assignment (D-04) — once evidence proves
-        the bridge is real for the pair, both the gateway and the backend
-        promote together. Subnet co-presence alone (i.e. both devices merely
-        being paired by ``_detect_crypto_bridges``) is NEVER sufficient by
-        itself — the IP must actually appear in a gateway's own collected
-        ARP-table evidence.
+        checks *dev* specifically, not the subnet group as a whole: if
+        *dev* is itself a PQC-capable gateway, its OWN evidence must list
+        at least one legacy backend's IP from the group; if *dev* is a
+        legacy backend, at least one gateway in the group must have
+        evidence listing *dev*'s own host IP. Subnet co-presence alone
+        (i.e. two devices merely being paired by ``_detect_crypto_bridges``
+        or sharing a /24 with an unrelated proven pair) is NEVER sufficient
+        by itself — the IP must actually appear in a specific gateway's own
+        collected ARP-table evidence, and the promotion is scoped to that
+        specific gateway↔backend pair, not the whole subnet group.
 
     Zero network I/O: this function only reads already-collected dict data.
 
@@ -179,6 +178,9 @@ def _has_sufficient_evidence(dev: dict, hw_devices: list[dict]) -> bool:
     if not gateways or not legacy_ips:
         return False
 
+    is_gateway = dev.get("pqc_status", "").lower() in _PQC_CAPABLE
+    dev_host = dev.get("host", "")
+
     for gw in gateways:
         evidence_raw = gw.get("bridge_evidence_json")
         if not evidence_raw:
@@ -189,8 +191,16 @@ def _has_sufficient_evidence(dev: dict, hw_devices: list[dict]) -> bool:
             continue
         if not isinstance(facts, list):
             continue
-        for fact in facts:
-            if isinstance(fact, dict) and fact.get("target_ip") in legacy_ips:
+        fact_ips = {
+            fact.get("target_ip") for fact in facts if isinstance(fact, dict)
+        }
+        if is_gateway:
+            # dev is itself a gateway: only ITS OWN evidence can prove a pair.
+            if gw.get("host") == dev_host and (fact_ips & legacy_ips):
+                return True
+        else:
+            # dev is a legacy backend: some gateway's evidence must name dev's own IP.
+            if dev_host in fact_ips:
                 return True
 
     return False
