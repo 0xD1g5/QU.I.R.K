@@ -147,6 +147,12 @@ export interface HardwareFinding {
   confidence: string     // "high" | "medium" | "low" | "unknown"
   fingerprint_method: string  // "ssh_banner" | "http_mgmt" | "unknown"
   eol_date?: string | null
+  // Phase 139 SNMPV3-02 — carries the full negotiated-state label (e.g.
+  // "v3 auth+priv" | "v3 noAuthNoPriv" | "v2c" | "v3-failed-fell-back" | "none");
+  // matches quirk/dashboard/api/schemas.py HardwareComponent.snmp_version wire name.
+  // No separate snmp_security_level field exists on the wire schema — snmp_version
+  // alone carries the state the badge renders.
+  snmp_version?: string | null
 }
 
 // Phase 39 GAP-04

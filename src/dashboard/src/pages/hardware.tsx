@@ -45,6 +45,43 @@ const METHOD_LABEL: Record<string, string> = {
   "http_mgmt":  "HTTP Mgmt",
 }
 
+// Phase 139 SNMPV3-02 — SNMP version/security-level badge colors.
+// noAuthNoPriv (amber) must never render identically to auth+priv (green) — D-04.
+const SNMP_STYLES: Record<string, string> = {
+  "v3 auth+priv":      "bg-[hsl(142_71%_45%)] text-white",
+  "v3 noAuthNoPriv":   "bg-[hsl(38_92%_50%)] text-black",
+  "v2c":               "bg-[hsl(240_5%_46%)] text-white",
+  "v3 failed → v2c":   "bg-[hsl(0_72%_51%)] text-white",
+  "v3 failed → none":  "bg-[hsl(0_72%_51%)] text-white",
+  "No SNMP":           "bg-[hsl(240_5%_46%)] text-white",
+}
+
+const SNMP_FAILED_TOOLTIP =
+  "SNMPv3 was configured for this host but authentication failed; the scanner fell back to a lower tier. Verify credentials."
+
+// Maps the raw wire snmp_version to the verbatim UI-SPEC label. Returns "—"
+// (never attempted) for null/undefined; mirrors quirk/reports/html_renderer.py
+// and docx_renderer.py's `_snmp_badge_label` raw-fallback so an unmapped state
+// (e.g. "v3-protocol-mismatch") renders its raw value rather than going blank.
+function snmpLabel(f: HardwareFinding): string {
+  const raw = f.snmp_version
+  if (!raw) return "—"
+  switch (raw) {
+    case "v3 auth+priv":
+      return "v3 auth+priv"
+    case "v3 noAuthNoPriv":
+      return "v3 noAuthNoPriv"
+    case "v2c":
+      return "v2c"
+    case "v3-failed-fell-back":
+      return "v3 failed → v2c"
+    case "none":
+      return "No SNMP"
+    default:
+      return raw
+  }
+}
+
 export function HardwarePage() {
   const { data, loading, error } = useScanData()
 
@@ -107,6 +144,7 @@ export function HardwarePage() {
                   <TableHead scope="col" className="text-xs font-semibold">Confidence</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">EOL Date</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">Method</TableHead>
+                  <TableHead scope="col" className="text-xs font-semibold">SNMP</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -137,6 +175,22 @@ export function HardwarePage() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {METHOD_LABEL[f.fingerprint_method] ?? f.fingerprint_method}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {(() => {
+                        const label = snmpLabel(f)
+                        if (label === "—") {
+                          return <span className="text-muted-foreground">—</span>
+                        }
+                        return (
+                          <Badge
+                            className={`${SNMP_STYLES[label] ?? "bg-muted text-muted-foreground"} font-semibold text-xs`}
+                            title={label === "v3 failed → v2c" || label === "v3 failed → none" ? SNMP_FAILED_TOOLTIP : undefined}
+                          >
+                            {label}
+                          </Badge>
+                        )
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))}
