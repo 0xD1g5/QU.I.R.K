@@ -893,6 +893,41 @@ def main():
         ),
     )
 
+    # Phase 141 OTICS-01/02/D-07: opt-in OT/ICS fingerprinting flags. These probe a
+    # MATERIALLY DIFFERENT risk class than IT/network scanning — PLCs, RTUs, and building
+    # controllers are industry-documented to crash or enter fail-safe states from even
+    # benign read-only Modbus/BACnet queries. Off by default. Requires quirk[hw] extras
+    # (pymodbus / bacpypes3). Strongly recommend written authorization from the OT network
+    # owner before enabling on production OT networks.
+    parser.add_argument(
+        "--enable-modbus",
+        dest="enable_modbus",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable Modbus/TCP fingerprinting (Phase 141 OTICS-01). WARNING: Modbus/TCP "
+            "targets PLCs and RTUs — a materially different risk class than IT scanning; "
+            "industry-documented incidents include PLC/RTU crashes from benign read-only "
+            "queries. Recommend written authorization before enabling on production OT "
+            "networks. Probes port 502 with a single read-only Read Device Identification "
+            "request. Requires quirk-scanner[hw] extras."
+        ),
+    )
+    parser.add_argument(
+        "--enable-bacnet",
+        dest="enable_bacnet",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable BACnet/IP fingerprinting (Phase 141 OTICS-02). WARNING: BACnet/IP "
+            "targets building automation controllers — a materially different risk class "
+            "than IT scanning; industry-documented incidents include controller crashes "
+            "from benign read-only queries. Recommend written authorization before "
+            "enabling on production OT networks. Sends a single directed-unicast Who-Is "
+            "probe over the standard BACnet/IP UDP port. Requires quirk-scanner[hw] extras."
+        ),
+    )
+
     args = parser.parse_args()
 
     # Phase 67 RESUME-01: --list-resumable exits after printing table
@@ -956,6 +991,14 @@ def main():
     # that pre-date the enable_snmp field.
     if getattr(args, "enable_snmp", False):
         cfg.connectors.enable_snmp = True
+
+    # Phase 141 OTICS-01/02: --enable-modbus / --enable-bacnet CLI flags override config,
+    # mirroring --enable-snmp's getattr guard for backwards compatibility with older
+    # config.yaml files that pre-date these fields.
+    if getattr(args, "enable_modbus", False):
+        cfg.connectors.enable_modbus = True
+    if getattr(args, "enable_bacnet", False):
+        cfg.connectors.enable_bacnet = True
 
     # Phase 47 / D-09: reflect --discovery flag onto cfg.connectors.enable_nmap for
     # --config / CLI mode. In interactive mode the wizard already set enable_nmap via
@@ -1111,7 +1154,15 @@ def main():
         else:
             # D-11: use post-config resolved port list; select_nmap_port_list handles fallback.
             port_spec_override = None
-            ports_for_nmap = sorted(set(select_nmap_port_list(cfg, nmap_binary_available) + [22, 80, 8080, 8000]))  # D-08/D-11
+            _base_ports = select_nmap_port_list(cfg, nmap_binary_available) + [22, 80, 8080, 8000]
+            # Phase 141 OTICS-01/D-04: inject 502 (Modbus/TCP) into the TCP scan list only
+            # when --enable-modbus is set, so Step 4's port-502 open-port gate has evidence
+            # to check. The BACnet/IP UDP port is deliberately NOT added — it is UDP and
+            # the TCP scanner cannot observe it; BACnet gating is handled entirely by the
+            # Who-Is/I-Am round-trip in Step 5.
+            if getattr(cfg.connectors, "enable_modbus", False):
+                _base_ports = _base_ports + [502]
+            ports_for_nmap = sorted(set(_base_ports))  # D-08/D-11
             ports_for_probe_guard = ports_for_nmap
         extra_args = args.nmap_extra_args.strip()
 
