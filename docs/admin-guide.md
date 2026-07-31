@@ -249,7 +249,10 @@ see [Operator's Guide §9.1](operators-guide.md#91-enable-snmp-scanning).
   Using `"public"` on networks with a custom community string will cause all probes
   to fail silently.
 
-QUIRK uses SNMPv2c read-only probes. SNMPv3 authentication is not currently supported.
+QUIRK attempts SNMPv3 auth+priv first (when a per-host credential is configured), falls
+back to SNMPv2c, then to no-SNMP, and always reports which tier actually succeeded — see
+[Operator's Guide §9.1.1](operators-guide.md#911-snmpv3-authpriv-scanning-phase-139) for
+configuring per-host SNMPv3 credentials.
 
 ### 4.2 Troubleshooting SNMP Probes
 
@@ -268,5 +271,6 @@ Use the checklist below to diagnose a missing or incomplete hardware inventory.
 | No hardware rows appear at all | Verify `[hw]` extras are installed: `pip show pysnmp` | Run `pip install 'quirk-scanner[hw]'` |
 | Devices appear with `vendor: unknown` / `model: unknown` | UDP 161 may be blocked between the QUIRK host and scan targets | Open a firewall rule permitting UDP 161 from the QUIRK scan host to each scan target |
 | Devices missing despite reachable network | Wrong community string — probes reach devices but are rejected | Set `snmp_community` to the device's configured read-only community (see [operators-guide.md §9.1](operators-guide.md#91-enable-snmp-scanning)) |
-| Probes fail on SNMPv3-only devices | QUIRK speaks only SNMPv2c — SNMPv3 devices will not respond to v2c probes | Enable an SNMPv2c read-only community on the device (SNMPv3 is not supported) |
+| Probes fail on SNMPv3-only devices (no v2c community enabled) | No `snmp_v3_credentials` entry configured for this host | Configure a per-host SNMPv3 USM credential (see [operators-guide.md §9.1.1](operators-guide.md#911-snmpv3-authpriv-scanning-phase-139)) |
+| SNMP column shows `v3 failed → v2c` | SNMPv3 was attempted but authentication failed | Verify the configured `auth_key_env`/`priv_key_env` passphrases match the device's USM user |
 | Target absent entirely from hardware results | Scan target is unreachable at layer 3 | Verify routing and confirm the host is reachable from the QUIRK scan host, and that the host is included in the configured scan scope |
