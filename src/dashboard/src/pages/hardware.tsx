@@ -59,6 +59,39 @@ const SNMP_STYLES: Record<string, string> = {
 const SNMP_FAILED_TOOLTIP =
   "SNMPv3 was configured for this host but authentication failed; the scanner fell back to a lower tier. Verify credentials."
 
+// Phase 140 BRIDGE-03 — bridge-status badge colors. Blue "SNMP-confirmed" must
+// NEVER reuse the green success hue (hsl(142_71%_45%)) — green implies a clean
+// bill of health, which would misrepresent an advisory-only, topology-inferred
+// confirmation. Amber "Partial (assumed)" matches the existing PQC_STYLES.partial
+// / SNMP_STYLES."v3 noAuthNoPriv" amber convention.
+const BRIDGE_STYLES: Record<string, string> = {
+  "Partial (assumed)": "bg-[hsl(38_92%_50%)] text-black",
+  "SNMP-confirmed":    "bg-[hsl(213_94%_68%)] text-black",
+}
+
+// Verbatim Pitfall-3 caveat text (UI-SPEC Copywriting Contract) — must appear
+// as both the badge tooltip and the persistent inline banner sentence below
+// the table whenever any row is upstream_mitigated.
+const BRIDGE_CAVEAT =
+  "Based on SNMP-derived network-path evidence; not independently confirmed by traffic inspection."
+
+const BRIDGE_CONFIRMED_TOOLTIP =
+  `SNMP-confirmed: gateway ARP-table evidence shows this device is reachable behind a PQC-capable gateway. ${BRIDGE_CAVEAT}`
+
+// Maps the raw wire bridge_status to the verbatim UI-SPEC label. Returns ""
+// for null/absent (not a detected bridge pair) — the table cell renders a
+// muted em-dash for that case, matching the existing SNMP-column convention.
+function bridgeLabel(f: HardwareFinding): string {
+  switch (f.bridge_status) {
+    case "upstream_mitigated":
+      return "SNMP-confirmed"
+    case "partial_only":
+      return "Partial (assumed)"
+    default:
+      return ""
+  }
+}
+
 // Maps the raw wire snmp_version to the verbatim UI-SPEC label. Returns "—"
 // (never attempted) for null/undefined; mirrors quirk/reports/html_renderer.py
 // and docx_renderer.py's `_snmp_badge_label` raw-fallback so an unmapped state
@@ -94,6 +127,13 @@ export function HardwarePage() {
     )
   }, [data])
 
+  // Phase 140 BRIDGE-03 — drives the persistent inline caveat banner (D-06:
+  // caveat must not be tooltip-only).
+  const hasBridgeConfirmed = useMemo(
+    () => sorted.some((f) => f.bridge_status === "upstream_mitigated"),
+    [sorted],
+  )
+
   if (loading) {
     return (
       <div role="status" aria-label="Loading hardware findings" className="space-y-6">
@@ -128,6 +168,15 @@ export function HardwarePage() {
         Hardware findings are advisory-only and do not affect the readiness score.
       </div>
 
+      {hasBridgeConfirmed && (
+        <div
+          role="note"
+          className="rounded-md border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-700 dark:text-yellow-300"
+        >
+          {BRIDGE_CAVEAT}
+        </div>
+      )}
+
       {sorted.length === 0 ? (
         <EmptyStateCard message="No hardware devices detected. Run a scan with SSH targets to fingerprint hardware." />
       ) : (
@@ -145,6 +194,7 @@ export function HardwarePage() {
                   <TableHead scope="col" className="text-xs font-semibold">EOL Date</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">Method</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">SNMP</TableHead>
+                  <TableHead scope="col" className="text-xs font-semibold">Bridge Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -186,6 +236,22 @@ export function HardwarePage() {
                           <Badge
                             className={`${SNMP_STYLES[label] ?? "bg-muted text-muted-foreground"} font-semibold text-xs`}
                             title={label === "v3 failed → v2c" || label === "v3 failed → none" ? SNMP_FAILED_TOOLTIP : undefined}
+                          >
+                            {label}
+                          </Badge>
+                        )
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {(() => {
+                        const label = bridgeLabel(f)
+                        if (!label) {
+                          return <span className="text-muted-foreground">—</span>
+                        }
+                        return (
+                          <Badge
+                            className={`${BRIDGE_STYLES[label] ?? "bg-muted text-muted-foreground"} font-semibold text-xs`}
+                            title={label === "SNMP-confirmed" ? BRIDGE_CONFIRMED_TOOLTIP : BRIDGE_CAVEAT}
                           >
                             {label}
                           </Badge>

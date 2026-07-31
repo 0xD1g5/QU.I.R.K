@@ -63,6 +63,9 @@ export interface HardwareComponent {
   model: string
   pqc_status: string
   remediation_tier: string
+  // Phase 140 BRIDGE-03 — matches quirk/dashboard/api/schemas.py
+  // HardwareComponent.bridge_status wire name.
+  bridge_status?: string | null
 }
 
 export interface RoadmapNode {
@@ -153,6 +156,9 @@ export interface HardwareFinding {
   // No separate snmp_security_level field exists on the wire schema — snmp_version
   // alone carries the state the badge renders.
   snmp_version?: string | null
+  // Phase 140 BRIDGE-03 — matches quirk/dashboard/api/schemas.py
+  // HardwareFinding.bridge_status wire name. "partial_only" | "upstream_mitigated" | null.
+  bridge_status?: string | null
 }
 
 // Phase 39 GAP-04
