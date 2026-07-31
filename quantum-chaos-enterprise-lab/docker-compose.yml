@@ -1350,6 +1350,16 @@ services:
     profiles: ["hwcompat"]
     ports:
       - "20223:161/udp"
+      # 139-08 live-validation fix: quirk/scanner/snmp_scanner.py's probe
+      # functions hardcode UDP port 161 (real-world hardware convention) with
+      # no per-host port override, so `run_scan.py --enable-snmp` can only
+      # ever reach this container on host port 161 — the 20223 mapping alone
+      # is unreachable from the scanner despite being the documented "SNMP
+      # lab port". Additive second mapping onto host 161/udp (unused on this
+      # host, confirmed via lsof) lets the documented run_scan.py command
+      # actually reach the container end-to-end without changing the scanner
+      # contract or any other doc reference to port 20223.
+      - "161:161/udp"
 
 volumes:
   id_postgres_data:
