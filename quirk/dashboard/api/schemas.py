@@ -216,6 +216,7 @@ class HardwareFinding(BaseModel):
     confidence: str
     fingerprint_method: str
     eol_date: Optional[str] = None
+    snmp_version: Optional[str] = None  # Phase 139 SNMPV3-02 — dashboard SNMP badge
 
 
 # ---- Roadmap ----

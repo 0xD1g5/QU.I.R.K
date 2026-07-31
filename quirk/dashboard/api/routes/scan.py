@@ -772,6 +772,7 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
                 confidence=confidence,
                 fingerprint_method=fp_method,
                 eol_date=eol_iso,
+                snmp_version=getattr(d, "snmp_version", None),  # Phase 139 SNMPV3-02
             ))
 
         results.sort(key=lambda f: _TIER_ORDER.get(f.remediation_tier, 99))
