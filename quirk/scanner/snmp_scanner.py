@@ -119,6 +119,13 @@ SNMP_MODE_NONE = "none"
 # ---------------------------------------------------------------------------
 # Phase 139 SNMPV3-04: v3 USM engine-ID discovery round-trip needs a larger
 # per-OID timeout budget than the v2c path.
+#
+# Empirically confirmed 2026-07-31 against the live hwcompat-snmp chaos-lab
+# target (127.0.0.1:20223, SHA+AES USM user): observed v3 USM discovery
+# round-trip was ~0.05s, well within the 2x multiplier's budget (3s * 2 = 6s).
+# No spurious v3 timeouts occurred across multiple v3 probes vs v2c probes
+# against the same target — the default value of 2 is sufficient and is kept
+# as-is (no longer an assumption; see 139-08-SUMMARY.md for measurement detail).
 # ---------------------------------------------------------------------------
 SNMP_V3_TIMEOUT_MULTIPLIER = 2
 
