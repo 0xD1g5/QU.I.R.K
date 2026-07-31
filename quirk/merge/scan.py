@@ -258,6 +258,9 @@ def merge_scan(
                     "snmp_sysname": getattr(_d, "snmp_sysname", None),
                     "snmp_sysobjectid": getattr(_d, "snmp_sysobjectid", None),
                     "snmp_vendor": getattr(_d, "snmp_vendor", None),
+                    "snmp_version": getattr(_d, "snmp_version", None),
+                    "snmp_auth_protocol": getattr(_d, "snmp_auth_protocol", None),
+                    "snmp_priv_protocol": getattr(_d, "snmp_priv_protocol", None),
                 })
     except Exception as _hw_exc:
         logger.warning(

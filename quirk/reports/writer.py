@@ -248,6 +248,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                         "snmp_sysname":       getattr(_d, "snmp_sysname", None),
                         "snmp_sysobjectid":   getattr(_d, "snmp_sysobjectid", None),
                         "snmp_vendor":        getattr(_d, "snmp_vendor", None),
+                        # SNMPV3-02 / Phase 139: nullable SNMPv3 negotiation fields
+                        "snmp_version":       getattr(_d, "snmp_version", None),
+                        "snmp_auth_protocol": getattr(_d, "snmp_auth_protocol", None),
+                        "snmp_priv_protocol": getattr(_d, "snmp_priv_protocol", None),
                     })
     except Exception:
         import logging as _log
