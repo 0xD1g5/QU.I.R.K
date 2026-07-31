@@ -562,3 +562,166 @@ def test_v3_security_level_labels_distinct() -> None:
         f"All five SNMP mode labels must be distinct strings; got {len(labels)} unique "
         f"values out of 5: {labels}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Contract N — ARP-table walk probe (Phase 140 BRIDGE-04) — mocked
+# ---------------------------------------------------------------------------
+#
+# Plan 140-01 must turn these tests GREEN. All network I/O is mocked —
+# _async_walk_arp_table/walk_arp_table must never touch a real socket here.
+
+
+class _FakeOid:
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return self._text
+
+
+class _FakeVal:
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return self._text
+
+
+def test_arp_walk_v2c_happy_path_parses_last_octet_ip() -> None:
+    """v2c ARP-table walk parses the last-4-octet IP from a mocked varbind OID."""
+    import asyncio
+
+    import quirk.scanner.snmp_scanner as mod
+
+    if not mod._PYSNMP_AVAILABLE:
+        pytest.skip("pysnmp not installed in this environment")
+
+    fake_varbind = (
+        _FakeOid("1.3.6.1.2.1.4.22.1.2.1.192.168.1.42"),
+        _FakeVal("aa:bb:cc:dd:ee:ff"),
+    )
+
+    async def fake_walk_cmd(*args, **kwargs):
+        yield (None, 0, 0, [fake_varbind])
+
+    async def fake_create(*args, **kwargs):
+        return MagicMock()
+
+    with patch.object(mod, "walk_cmd", fake_walk_cmd), \
+         patch.object(mod.UdpTransportTarget, "create", fake_create), \
+         patch.object(mod, "SnmpDispatcher") as mock_dispatcher_cls:
+        mock_dispatcher_cls.return_value = MagicMock()
+
+        result = asyncio.run(mod._async_walk_arp_table("127.0.0.1", "public", None, timeout=1))
+
+    assert result == [("192.168.1.42", "aa:bb:cc:dd:ee:ff")], (
+        f"Expected the last-4-octet IP parsed from the mocked OID, got: {result}"
+    )
+
+
+def test_arp_walk_v3_path_uses_usm_and_v3arch_walk_cmd() -> None:
+    """Supplying an SnmpV3Credential must route through the v3arch walk_cmd + UsmUserData path."""
+    import asyncio
+
+    from quirk.config import SnmpV3Credential
+    import quirk.scanner.snmp_scanner as mod
+
+    if not mod._PYSNMP_AVAILABLE:
+        pytest.skip("pysnmp not installed in this environment")
+
+    credential = SnmpV3Credential(
+        username="quirk-test",
+        auth_key_env="_QUIRK_TEST_SNMP_AUTH_KEY",
+        priv_key_env="_QUIRK_TEST_SNMP_PRIV_KEY",
+    )
+
+    fake_varbind = (
+        _FakeOid("1.3.6.1.2.1.4.22.1.2.1.10.0.0.99"),
+        _FakeVal("11:22:33:44:55:66"),
+    )
+
+    v3_walk_called = {"count": 0}
+
+    async def fake_walk_cmd_v3(*args, **kwargs):
+        v3_walk_called["count"] += 1
+        yield (None, 0, 0, [fake_varbind])
+
+    async def fake_create(*args, **kwargs):
+        return MagicMock()
+
+    with patch.object(mod, "walk_cmd_v3", fake_walk_cmd_v3), \
+         patch.object(mod.UdpTransportTargetV3, "create", fake_create), \
+         patch.object(mod, "SnmpEngine") as mock_engine_cls:
+        mock_engine_cls.return_value = MagicMock()
+
+        result = asyncio.run(
+            mod._async_walk_arp_table("127.0.0.1", None, credential, timeout=1)
+        )
+
+    assert v3_walk_called["count"] == 1, "v3arch walk_cmd must be invoked exactly once"
+    assert result == [("10.0.0.99", "11:22:33:44:55:66")]
+
+
+def test_arp_walk_bounds_oversized_table_at_max_entries() -> None:
+    """An oversized/malicious mocked ARP table must be capped at _ARP_WALK_MAX_ENTRIES."""
+    import asyncio
+
+    import quirk.scanner.snmp_scanner as mod
+
+    if not mod._PYSNMP_AVAILABLE:
+        pytest.skip("pysnmp not installed in this environment")
+
+    oversized_count = mod._ARP_WALK_MAX_ENTRIES + 50
+    fake_varbinds = [
+        (_FakeOid(f"1.3.6.1.2.1.4.22.1.2.1.10.0.{i // 256}.{i % 256}"), _FakeVal(f"aa:bb:cc:dd:ee:{i % 100:02x}"))
+        for i in range(oversized_count)
+    ]
+
+    async def fake_walk_cmd(*args, **kwargs):
+        # Yield everything in a single table page — the probe itself must
+        # bound iteration, not rely on the mock chunking pages.
+        yield (None, 0, 0, fake_varbinds)
+
+    async def fake_create(*args, **kwargs):
+        return MagicMock()
+
+    with patch.object(mod, "walk_cmd", fake_walk_cmd), \
+         patch.object(mod.UdpTransportTarget, "create", fake_create), \
+         patch.object(mod, "SnmpDispatcher") as mock_dispatcher_cls:
+        mock_dispatcher_cls.return_value = MagicMock()
+
+        result = asyncio.run(mod._async_walk_arp_table("127.0.0.1", "public", None, timeout=1))
+
+    assert len(result) <= mod._ARP_WALK_MAX_ENTRIES, (
+        f"ARP-table walk must be capped at _ARP_WALK_MAX_ENTRIES "
+        f"({mod._ARP_WALK_MAX_ENTRIES}); got {len(result)} entries from an "
+        f"oversized {oversized_count}-entry mocked table"
+    )
+
+
+def test_arp_walk_import_guard_returns_empty_with_zero_network_calls() -> None:
+    """With _PYSNMP_AVAILABLE patched False, the probe must return [] and never touch the network."""
+    import asyncio
+
+    import quirk.scanner.snmp_scanner as mod
+
+    with patch.object(mod, "_PYSNMP_AVAILABLE", False), \
+         patch.object(mod, "SnmpDispatcher") as mock_dispatcher_cls, \
+         patch.object(mod, "SnmpEngine") as mock_engine_cls:
+        result = asyncio.run(mod._async_walk_arp_table("127.0.0.1", "public", None, timeout=1))
+
+        assert result == [], "Import-guard fallback must return [] when pysnmp is unavailable"
+        mock_dispatcher_cls.assert_not_called()
+        mock_engine_cls.assert_not_called()
+
+
+def test_walk_arp_table_sync_wrapper_returns_list() -> None:
+    """The sync walk_arp_table() entry point must return a list without raising,
+    mirroring probe_snmp_target's null-safe contract, against an unreachable host.
+    """
+    from quirk.scanner.snmp_scanner import walk_arp_table
+
+    result = walk_arp_table("127.0.0.1", community="public", timeout=1)
+
+    assert isinstance(result, list), f"walk_arp_table must return a list, got {type(result)}"
