@@ -78,6 +78,58 @@ const BRIDGE_CAVEAT =
 const BRIDGE_CONFIRMED_TOOLTIP =
   `SNMP-confirmed: gateway ARP-table evidence shows this device is reachable behind a PQC-capable gateway. ${BRIDGE_CAVEAT}`
 
+// Phase 141 OTICS-05 — Modbus/TCP + BACnet/IP fingerprint badge colors.
+// Modbus (blue) and BACnet (purple) carry distinct hues per D-12 so the two
+// protocol sources are visually distinguishable at a glance, and neither
+// collides with the existing green/amber/gray badge hues. aborted_anomalous_response
+// (red) must never look like no_response/no_match (gray) — D-13.
+const MODBUS_STYLES: Record<string, string> = {
+  "Modbus":         "bg-[hsl(199_89%_48%)] text-white",
+  "No response":    "bg-[hsl(240_5%_46%)] text-white",
+  "No match":       "bg-[hsl(240_5%_46%)] text-white",
+  "Probe aborted":  "bg-[hsl(0_72%_51%)] text-white",
+}
+
+const BACNET_STYLES: Record<string, string> = {
+  "BACnet":         "bg-[hsl(271_81%_56%)] text-white",
+  "No response":    "bg-[hsl(240_5%_46%)] text-white",
+  "No match":       "bg-[hsl(240_5%_46%)] text-white",
+  "Probe aborted":  "bg-[hsl(0_72%_51%)] text-white",
+}
+
+const MODBUS_ABORT_TOOLTIP =
+  "Modbus probe aborted — anomalous response. The device returned a malformed frame, reset the connection, or timed out; QU.I.R.K. stopped probing this host per its one-strike safety policy. Worth a closer manual look."
+
+const BACNET_ABORT_TOOLTIP =
+  "BACnet probe aborted — anomalous response. The device returned a malformed frame, reset the connection, or timed out; QU.I.R.K. stopped probing this host per its one-strike safety policy. Worth a closer manual look."
+
+// Maps a raw probe_state wire value to the verbatim UI-SPEC label. Returns
+// "—" (never attempted) for null/undefined, mirroring snmpLabel's raw-fallback
+// convention. identifiedLabel is column-specific ("Modbus" or "BACnet").
+function probeStateLabel(rawState: string | null | undefined, identifiedLabel: string): string {
+  if (!rawState) return "—"
+  switch (rawState) {
+    case "identified":
+      return identifiedLabel
+    case "no_response":
+      return "No response"
+    case "no_match":
+      return "No match"
+    case "aborted_anomalous_response":
+      return "Probe aborted"
+    default:
+      return rawState
+  }
+}
+
+function modbusLabel(f: HardwareFinding): string {
+  return probeStateLabel(f.modbus_probe_state, "Modbus")
+}
+
+function bacnetLabel(f: HardwareFinding): string {
+  return probeStateLabel(f.bacnet_probe_state, "BACnet")
+}
+
 // Maps the raw wire bridge_status to the verbatim UI-SPEC label. Returns ""
 // for null/absent (not a detected bridge pair) — the table cell renders a
 // muted em-dash for that case, matching the existing SNMP-column convention.
@@ -194,6 +246,8 @@ export function HardwarePage() {
                   <TableHead scope="col" className="text-xs font-semibold">EOL Date</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">Method</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">SNMP</TableHead>
+                  <TableHead scope="col" className="text-xs font-semibold">Modbus</TableHead>
+                  <TableHead scope="col" className="text-xs font-semibold">BACnet</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">Bridge Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -236,6 +290,50 @@ export function HardwarePage() {
                           <Badge
                             className={`${SNMP_STYLES[label] ?? "bg-muted text-muted-foreground"} font-semibold text-xs`}
                             title={label === "v3 failed → v2c" || label === "v3 failed → none" ? SNMP_FAILED_TOOLTIP : undefined}
+                          >
+                            {label}
+                          </Badge>
+                        )
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {(() => {
+                        const label = modbusLabel(f)
+                        if (label === "—") {
+                          return <span className="text-muted-foreground">—</span>
+                        }
+                        const isIdentified = label === "Modbus"
+                        const title = label === "Probe aborted"
+                          ? MODBUS_ABORT_TOOLTIP
+                          : (isIdentified && (f.modbus_vendor || f.modbus_model))
+                            ? `${f.modbus_vendor ?? ""} ${f.modbus_model ?? ""}`.trim()
+                            : undefined
+                        return (
+                          <Badge
+                            className={`${MODBUS_STYLES[label] ?? "bg-muted text-muted-foreground"} font-semibold text-xs`}
+                            title={title}
+                          >
+                            {label}
+                          </Badge>
+                        )
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {(() => {
+                        const label = bacnetLabel(f)
+                        if (label === "—") {
+                          return <span className="text-muted-foreground">—</span>
+                        }
+                        const isIdentified = label === "BACnet"
+                        const title = label === "Probe aborted"
+                          ? BACNET_ABORT_TOOLTIP
+                          : (isIdentified && (f.bacnet_vendor || f.bacnet_model))
+                            ? `${f.bacnet_vendor ?? ""} ${f.bacnet_model ?? ""}`.trim()
+                            : undefined
+                        return (
+                          <Badge
+                            className={`${BACNET_STYLES[label] ?? "bg-muted text-muted-foreground"} font-semibold text-xs`}
+                            title={title}
                           >
                             {label}
                           </Badge>

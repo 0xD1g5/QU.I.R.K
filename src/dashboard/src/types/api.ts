@@ -159,6 +159,17 @@ export interface HardwareFinding {
   // Phase 140 BRIDGE-03 — matches quirk/dashboard/api/schemas.py
   // HardwareFinding.bridge_status wire name. "partial_only" | "upstream_mitigated" | null.
   bridge_status?: string | null
+  // Phase 141 OTICS-05 — Modbus/TCP + BACnet/IP fingerprint fields; matches
+  // quirk/dashboard/api/schemas.py HardwareFinding modbus_*/bacnet_* wire names.
+  // probe_state: "identified" | "no_response" | "no_match" | "aborted_anomalous_response" | null.
+  modbus_vendor?: string | null
+  modbus_model?: string | null
+  modbus_firmware?: string | null
+  modbus_probe_state?: string | null
+  bacnet_vendor?: string | null
+  bacnet_model?: string | null
+  bacnet_firmware?: string | null
+  bacnet_probe_state?: string | null
 }
 
 // Phase 39 GAP-04
