@@ -83,6 +83,47 @@ def _bridge_badge_label(d: Dict[str, Any]) -> str:
     return _BRIDGE_LABEL_MAP.get(raw, "—")
 
 
+# ---------------------------------------------------------------------------
+# Modbus/BACnet probe-state badge label map — Phase 141 OTICS-05. Independent
+# copy mirroring html_renderer.py verbatim (UI-SPEC Copywriting Contract),
+# by the same established per-renderer-copy convention as SNMP/bridge above.
+# ---------------------------------------------------------------------------
+
+_PROBE_STATE_LABEL_MAP = {
+    "no_response": "No response",
+    "no_match": "No match",
+    "aborted_anomalous_response": "Probe aborted",
+}
+
+_OTICS_ABORT_CAVEAT = (
+    "Modbus/BACnet probe aborted — anomalous response. The device returned a"
+    " malformed frame, reset the connection, or timed out; QU.I.R.K. stopped"
+    " probing this host per its one-strike safety policy. Worth a closer"
+    " manual look."
+)
+
+
+def _probe_state_label(raw: Any, identified_label: str) -> str:
+    """Map a raw modbus_probe_state/bacnet_probe_state value to its UI-SPEC label.
+
+    Returns "—" (em dash) when the probe was never attempted for this device
+    (null/absent).
+    """
+    if not raw:
+        return "—"
+    if raw == "identified":
+        return identified_label
+    return _PROBE_STATE_LABEL_MAP.get(raw, str(raw))
+
+
+def _modbus_badge_label(d: Dict[str, Any]) -> str:
+    return _probe_state_label(d.get("modbus_probe_state"), "Modbus")
+
+
+def _bacnet_badge_label(d: Dict[str, Any]) -> str:
+    return _probe_state_label(d.get("bacnet_probe_state"), "BACnet")
+
+
 def _set_cell_shading(cell, hex_color: str) -> None:
     """Best-effort DOCX cell background shading via raw oxml.
 
@@ -423,10 +464,11 @@ def render_docx_report(
         row_cells[1].text = str(subscores.get(key, "—"))
         row_cells[2].text = "/25"
 
-    # ---- Hardware PQC Advisory section (Phase 128 D-10, Phase 140 BRIDGE-03) ----
+    # ---- Hardware PQC Advisory section (Phase 128 D-10, Phase 140 BRIDGE-03,
+    #      Phase 141 OTICS-05) ----
     # Advisory-only — hardware findings do not affect the readiness score.
-    # 9 columns: Tier | Vendor | Model | Host:Port | PQC Status | Confidence
-    #            | EOL Date | SNMP | Bridge Status
+    # 11 columns: Tier | Vendor | Model | Host:Port | PQC Status | Confidence
+    #             | EOL Date | SNMP | Modbus | BACnet | Bridge Status
     if hardware_devices:
         doc.add_heading("Hardware PQC Advisory (Not Scored)", level=2)
         doc.add_paragraph(
@@ -434,13 +476,14 @@ def render_docx_report(
             " Listed for CNSA 2.0 migration planning purposes only.",
             style="Normal",
         )
-        hw_tbl = doc.add_table(rows=1, cols=9)
+        hw_tbl = doc.add_table(rows=1, cols=11)
         _set_table_style(hw_tbl)
         hw_hdr = hw_tbl.rows[0].cells
         for _i, _h in enumerate(
             [
                 "Tier", "Vendor", "Model", "Host:Port", "PQC Status",
-                "Confidence", "EOL Date", "SNMP", "Bridge Status",
+                "Confidence", "EOL Date", "SNMP", "Modbus", "BACnet",
+                "Bridge Status",
             ]
         ):
             hw_hdr[_i].text = _h
@@ -454,13 +497,21 @@ def render_docx_report(
             _row[5].text = _d.get("confidence", "")
             _row[6].text = _d.get("eol_date") or "—"
             _row[7].text = _snmp_badge_label(_d)
+            _row[8].text = _modbus_badge_label(_d)
+            _row[9].text = _bacnet_badge_label(_d)
             _bridge_status = _d.get("bridge_status")
-            _row[8].text = _bridge_badge_label(_d)
+            _row[10].text = _bridge_badge_label(_d)
             if _bridge_status in _BRIDGE_SHADING:
-                _set_cell_shading(_row[8], _BRIDGE_SHADING[_bridge_status])
-        _set_col_widths(hw_tbl, [0.8, 1.2, 1.2, 1.3, 1.0, 1.0, 0.8, 0.9, 1.1])
+                _set_cell_shading(_row[10], _BRIDGE_SHADING[_bridge_status])
+        _set_col_widths(hw_tbl, [0.7, 1.0, 1.0, 1.1, 0.9, 0.9, 0.7, 0.8, 0.8, 0.8, 1.0])
         if any(_d.get("bridge_status") == "upstream_mitigated" for _d in hardware_devices):
             doc.add_paragraph(_BRIDGE_CAVEAT, style="Normal")
+        if any(
+            _d.get("modbus_probe_state") == "aborted_anomalous_response"
+            or _d.get("bacnet_probe_state") == "aborted_anomalous_response"
+            for _d in hardware_devices
+        ):
+            doc.add_paragraph(_OTICS_ABORT_CAVEAT, style="Normal")
 
     # ---------------------------------------------------------------------------
     # Save document

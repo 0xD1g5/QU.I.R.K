@@ -231,6 +231,45 @@ def _bridge_badge_label(d: Dict[str, Any]) -> str:
     return _BRIDGE_LABEL_MAP.get(raw, "")
 
 
+# Phase 141 OTICS-05 — Modbus/TCP + BACnet/IP fingerprint badge labels.
+# Both columns share one probe_state vocabulary (UI-SPEC); the "identified"
+# label is column-specific ("Modbus" or "BACnet").
+_PROBE_STATE_LABEL_MAP = {
+    "no_response": "No response",
+    "no_match": "No match",
+    "aborted_anomalous_response": "Probe aborted",
+}
+
+_OTICS_ABORT_CAVEAT = (
+    "Modbus/BACnet probe aborted — anomalous response. The device returned a"
+    " malformed frame, reset the connection, or timed out; QU.I.R.K. stopped"
+    " probing this host per its one-strike safety policy. Worth a closer"
+    " manual look."
+)
+
+
+def _probe_state_label(raw: Any, identified_label: str) -> str:
+    """Map a raw modbus_probe_state/bacnet_probe_state value to its UI-SPEC label.
+
+    Returns "—" (em dash) when the probe was never attempted for this device
+    (null/absent) — distinct from "No response"/"No match" (attempted, no
+    usable answer) and from "Probe aborted" (D-13 circuit-breaker state).
+    """
+    if not raw:
+        return "—"
+    if raw == "identified":
+        return identified_label
+    return _PROBE_STATE_LABEL_MAP.get(raw, str(raw))
+
+
+def _modbus_badge_label(d: Dict[str, Any]) -> str:
+    return _probe_state_label(d.get("modbus_probe_state"), "Modbus")
+
+
+def _bacnet_badge_label(d: Dict[str, Any]) -> str:
+    return _probe_state_label(d.get("bacnet_probe_state"), "BACnet")
+
+
 def render_hardware_section(devices: list) -> str:
     """Generate HTML advisory table for hardware devices (Phase 128 D-10).
 
@@ -274,6 +313,8 @@ def render_hardware_section(devices: list) -> str:
         eol = _html.escape(str(d.get("eol_date") or "—"))
         cnsa = _html.escape(CNSA_DEADLINE.get(tier, ""))
         snmp_label = _html.escape(_snmp_badge_label(d))
+        modbus_label = _html.escape(_modbus_badge_label(d))
+        bacnet_label = _html.escape(_bacnet_badge_label(d))
         bridge_raw = d.get("bridge_status")
         bridge_label = _bridge_badge_label(d)
         if bridge_label:
@@ -296,6 +337,8 @@ def render_hardware_section(devices: list) -> str:
             f"<td>{eol}</td>"
             f"<td>{cnsa}</td>"
             f"<td>{snmp_label}</td>"
+            f"<td>{modbus_label}</td>"
+            f"<td>{bacnet_label}</td>"
             f"<td>{bridge_cell}</td>"
             f"</tr>"
         )
@@ -304,6 +347,16 @@ def render_hardware_section(devices: list) -> str:
     caveat_html = ""
     if any(d.get("bridge_status") == "upstream_mitigated" for d in devices):
         caveat_html = f" {_html.escape(_BRIDGE_CAVEAT)}"
+    otics_caveat_html = ""
+    if any(
+        d.get("modbus_probe_state") == "aborted_anomalous_response"
+        or d.get("bacnet_probe_state") == "aborted_anomalous_response"
+        for d in devices
+    ):
+        otics_caveat_html = (
+            f'<p style="font-size:12px;color:#888;margin-bottom:8px">'
+            f"{_html.escape(_OTICS_ABORT_CAVEAT)}</p>"
+        )
     return (
         '<details style="margin:24px 0">'
         '<summary style="cursor:pointer;font-weight:600;color:#3b9dff">'
@@ -315,6 +368,7 @@ def render_hardware_section(devices: list) -> str:
         "Advisory only — hardware findings are not scored and do not affect the"
         " readiness score. Listed for CNSA 2.0 migration planning purposes only."
         f"{caveat_html}</p>"
+        f"{otics_caveat_html}"
         '<table style="width:100%;border-collapse:collapse;font-size:13px">'
         "<thead><tr>"
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Tier</th>'
@@ -326,6 +380,8 @@ def render_hardware_section(devices: list) -> str:
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">EOL Date</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">CNSA 2.0 Timeline</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">SNMP</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Modbus</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">BACnet</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Bridge Status</th>'
         "</tr></thead>"
         f"<tbody>{rows_joined}</tbody>"
