@@ -51,8 +51,8 @@ _OPS03_SECTIONS: tuple[str, ...] = (
     "partial_only",
     "/24",
     "upstream_mitigated",
-    "reserved status",
-    "does **not** reduce the device's remediation",
+    "evidence-gated",
+    "do **not** reduce the",
 )
 
 # Deferred topics that must NOT leak into §9 (Phase 137 scope).
@@ -125,14 +125,18 @@ def test_ops03_crypto_bridge_section_present():
     assert not missing, f"§9.3 crypto-bridge section missing required substrings: {missing}"
 
 
-def test_ops03_upstream_mitigated_never_auto_assigned():
-    """§9.3 must explicitly state QUIRK does not auto-assign upstream_mitigated."""
+def test_ops03_upstream_mitigated_evidence_gated():
+    """§9.3 must explicitly state upstream_mitigated is evidence-gated (Phase
+    140 SNMP-confirmed bridge mitigation) — never promoted on subnet
+    co-presence alone. As of Phase 140 this status IS reachable (unlike the
+    Phase 129/136 placeholder), so the doc must describe the evidence bar
+    rather than claim the status is never auto-assigned."""
     text = _read(_OPS_GUIDE)
+    assert "evidence-gated" in text, "§9.3 does not describe upstream_mitigated as evidence-gated"
     assert (
-        "does not auto-assign" in text
-        or "quirk does not auto-assign it" in text
-        or "never auto-assign" in text
-    ), "§9.3 does not explicitly state upstream_mitigated is never auto-assigned"
+        "never promotes on subnet co-presence" in text
+        or "never promotes on subnet co-presence alone" in text
+    ), "§9.3 does not explicitly state QUIRK never promotes on subnet co-presence alone"
 
 
 def test_section9_deferred_topics_absent():
