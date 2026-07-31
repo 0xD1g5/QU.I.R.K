@@ -812,6 +812,9 @@ def _derive_hw_components(db: Session, latest_ts: datetime) -> list[HardwareComp
                 model=getattr(d, "model", None) or "Unknown",
                 pqc_status=getattr(d, "pqc_status", "unknown") or "unknown",
                 remediation_tier=getattr(d, "remediation_tier", None) or "Tier N/A",
+                snmp_version=getattr(d, "snmp_version", None),
+                snmp_auth_protocol=getattr(d, "snmp_auth_protocol", None),
+                snmp_priv_protocol=getattr(d, "snmp_priv_protocol", None),
             ))
         results.sort(key=lambda c: _TIER_ORDER.get(c.remediation_tier, 99))
         return results

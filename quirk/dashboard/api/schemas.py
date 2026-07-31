@@ -103,9 +103,14 @@ class CbomComponent(BaseModel):
 class HardwareComponent(BaseModel):
     """Minimal hardware device entry for the CBOM tab Hardware Inventory section.
 
-    CBOM-02 D-02: exactly six fields — no SNMP fields, no confidence,
-    no fingerprint_method.  sensor_id/segment deferred (HardwareDevice has
-    no sensor_id column yet).
+    CBOM-02 D-02: originally exactly six fields — no SNMP fields, no
+    confidence, no fingerprint_method.  sensor_id/segment deferred
+    (HardwareDevice has no sensor_id column yet).
+
+    Phase 139 SNMPV3-02: intentionally extends the six-field lock with three
+    optional SNMPv3 metadata fields (protocol NAMES only, never secrets) —
+    all Optional[str] = None, so existing six-field construction call sites
+    remain fully backward-compatible.
     """
 
     host: str
@@ -114,6 +119,9 @@ class HardwareComponent(BaseModel):
     model: str
     pqc_status: str
     remediation_tier: str
+    snmp_version: Optional[str] = None
+    snmp_auth_protocol: Optional[str] = None
+    snmp_priv_protocol: Optional[str] = None
 
 
 # ---- Identity Findings ----
