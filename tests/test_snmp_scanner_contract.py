@@ -466,3 +466,99 @@ def test_install_all_excludes_pysnmp(tmp_path: "Path") -> None:  # type: ignore[
         "sysdescrparser must only be in the [hw] extras group, never in [all]. "
         f"Resolved packages: {sorted(installed)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Contract 7 — SNMPv3 auth+priv dispatch (Phase 139 SNMPV3-01/02/04)
+#
+# These tests define the v3 dispatch contract. ALL FAIL against the
+# pre-Phase-139 codebase because:
+#   - quirk.config.SnmpV3Credential does not exist yet (Plan 139-01)
+#   - probe_snmp_target() has no version=/v3_credential= params yet (Plan 139-02/03)
+#   - _derive_v3_timeout / SNMP_V3_TIMEOUT_MULTIPLIER don't exist yet (Plan 139-02)
+#   - SNMP_MODE_* label constants don't exist yet (Plan 139-02/03)
+#
+# Plans 139-01/02/03 must turn these tests GREEN. Do NOT add implementation here.
+# ---------------------------------------------------------------------------
+
+
+def test_probe_snmp_target_v3_returns_null_safe_dict() -> None:
+    """probe_snmp_target(version='v3', ...) must return the same null-safe dict
+    shape as the existing v2c path, PLUS snmp_version_used/snmp_security_level
+    keys, without raising — even against an unreachable host (SNMPV3-01/02).
+    """
+    from quirk.config import SnmpV3Credential  # noqa — will fail until Plan 139-01
+    from quirk.scanner.snmp_scanner import probe_snmp_target
+
+    credential = SnmpV3Credential(
+        username="quirk-test",
+        auth_key_env="_QUIRK_TEST_SNMP_AUTH_KEY",
+        priv_key_env="_QUIRK_TEST_SNMP_PRIV_KEY",
+    )
+
+    result = probe_snmp_target(
+        "127.0.0.1",
+        version="v3",
+        v3_credential=credential,
+        timeout=1,
+    )
+
+    assert isinstance(result, dict), (
+        f"probe_snmp_target(version='v3') must return a dict, got {type(result)}"
+    )
+    for key in (
+        "snmp_sysdescr",
+        "snmp_sysname",
+        "snmp_sysobjectid",
+        "snmp_version_used",
+        "snmp_security_level",
+    ):
+        assert key in result, (
+            f"v3 result dict is missing required key '{key}'. Got keys: {sorted(result)}"
+        )
+
+
+def test_v3_timeout_budget_differs_from_v2c() -> None:
+    """The v3 per-OID timeout budget must differ from the v2c budget (SNMPV3-04).
+
+    RESEARCH Pitfall 2 / Assumption A1 recommends timeout_v3 = timeout_v2c * 2
+    (accounts for the USM engine-ID discovery round-trip).
+    """
+    from quirk.scanner.snmp_scanner import _derive_v3_timeout  # noqa — will fail until Plan 139-02
+
+    v2c_timeout = 3
+    v3_timeout = _derive_v3_timeout(v2c_timeout)
+
+    assert v3_timeout != v2c_timeout, (
+        "v3 timeout budget must differ from the v2c budget (SNMPV3-04)"
+    )
+    assert _derive_v3_timeout(3) == 6, (
+        f"_derive_v3_timeout(3) must equal 6 (2x multiplier per RESEARCH Pitfall 2 A1), "
+        f"got: {v3_timeout}"
+    )
+
+
+def test_v3_security_level_labels_distinct() -> None:
+    """The five SNMP mode labels the scanner exposes must be five distinct strings
+    (SNMPV3-02 / Pitfall 3) — noAuthNoPriv must never equal authPriv, and a
+    failed-fallback state must be distinguishable from every other state.
+    """
+    from quirk.scanner.snmp_scanner import (  # noqa — will fail until Plan 139-02/03
+        SNMP_MODE_V3_AUTH_PRIV,
+        SNMP_MODE_V3_NO_AUTH_PRIV,
+        SNMP_MODE_V2C,
+        SNMP_MODE_NONE,
+        SNMP_MODE_V3_FAILED,
+    )
+
+    labels = {
+        SNMP_MODE_V3_AUTH_PRIV,
+        SNMP_MODE_V3_NO_AUTH_PRIV,
+        SNMP_MODE_V2C,
+        SNMP_MODE_NONE,
+        SNMP_MODE_V3_FAILED,
+    }
+    assert len(labels) == 5, (
+        f"All five SNMP mode labels must be distinct strings; got {len(labels)} unique "
+        f"values out of 5: {labels}"
+    )
