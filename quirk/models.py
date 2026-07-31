@@ -399,3 +399,8 @@ class HardwareDevice(Base):
     snmp_version        = Column(String(24), nullable=True)   # e.g. "v1"|"v2c"|"v3"
     snmp_auth_protocol  = Column(String(16), nullable=True)   # e.g. "SHA256" (name only)
     snmp_priv_protocol  = Column(String(16), nullable=True)   # e.g. "AES256" (name only)
+    # Phase 140 BRIDGE-02: SNMP-confirmed bridge-mitigation evidence. Both
+    # null until a confirmation probe succeeds; populated by the sensor,
+    # read by the console annotation and downstream projection sites.
+    bridge_evidence_json = Column(Text,     nullable=True)
+    bridge_confirmed_at  = Column(DateTime, nullable=True)
