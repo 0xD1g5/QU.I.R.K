@@ -132,3 +132,112 @@ def test_derive_motion_findings_azure():
                                        protocol="AMQPS/Azure-ServiceBus")])
     assert len(out) == 1
     assert out[0].protocol == "AMQPS/Azure-ServiceBus"
+
+
+# ---- Phase 140 BRIDGE-03 — dashboard bridge_status wiring ----
+
+def _make_hw_bridge_session():
+    """Fresh in-memory SQLite session with HardwareDevice rows for a bridge
+    scenario: a PQC-capable gateway with confirming ARP evidence (promotes to
+    upstream_mitigated), its paired legacy backend (promotes alongside it —
+    symmetric group promotion per 140-02), and an isolated device with no
+    subnet pairing at all (bridge_status stays null/absent).
+    """
+    import datetime
+    import json
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    import quirk.models as m
+    from quirk.models import HardwareDevice
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    scanned_at = datetime.datetime.utcnow()
+
+    gateway = HardwareDevice(
+        host="10.0.0.1",
+        port=22,
+        vendor="Cisco",
+        pqc_status="supported",
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        scanned_at=scanned_at,
+        bridge_evidence_json=json.dumps([{"target_ip": "10.0.0.2", "mac": "aa:bb:cc:dd:ee:ff"}]),
+    )
+    legacy_backend = HardwareDevice(
+        host="10.0.0.2",
+        port=22,
+        vendor="Legacy Corp",
+        pqc_status="unsupported",
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        scanned_at=scanned_at,
+    )
+    isolated = HardwareDevice(
+        host="192.168.9.9",
+        port=22,
+        vendor="Standalone Inc",
+        pqc_status="unsupported",
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        scanned_at=scanned_at,
+    )
+    session.add_all([gateway, legacy_backend, isolated])
+    session.commit()
+    return session, scanned_at
+
+
+def test_derive_hardware_findings_bridge_status_promoted_and_null():
+    """BRIDGE-03: _derive_hardware_findings projects bridge_status —
+    upstream_mitigated for an evidence-confirmed pair, and null/absent for a
+    device with no detected bridge pairing at all."""
+    from quirk.dashboard.api.routes.scan import _derive_hardware_findings
+
+    session, scanned_at = _make_hw_bridge_session()
+    try:
+        out = _derive_hardware_findings(session, scanned_at)
+        by_host = {f.host: f for f in out}
+        assert by_host["10.0.0.1"].bridge_status == "upstream_mitigated"
+        assert by_host["10.0.0.2"].bridge_status == "upstream_mitigated"
+        assert by_host["192.168.9.9"].bridge_status is None
+    finally:
+        session.close()
+
+
+def test_derive_hw_components_bridge_status_promoted_and_null():
+    """BRIDGE-03: _derive_hw_components (CBOM tab) mirrors the same
+    bridge_status projection as _derive_hardware_findings."""
+    from quirk.dashboard.api.routes.scan import _derive_hw_components
+
+    session, scanned_at = _make_hw_bridge_session()
+    try:
+        out = _derive_hw_components(session, scanned_at)
+        by_host = {c.host: c for c in out}
+        assert by_host["10.0.0.1"].bridge_status == "upstream_mitigated"
+        assert by_host["10.0.0.2"].bridge_status == "upstream_mitigated"
+        assert by_host["192.168.9.9"].bridge_status is None
+    finally:
+        session.close()
+
+
+def test_derive_hardware_findings_bridge_pairing_error_stays_advisory_empty(monkeypatch):
+    """BRIDGE-03 / T-140-11: a pairing-derive error degrades to an advisory-
+    empty list (never a 500) — the new bridge pipeline stays inside the
+    existing try/except -> logger.exception -> return [] guard."""
+    from quirk.dashboard.api.routes import scan as scan_module
+
+    session, scanned_at = _make_hw_bridge_session()
+    try:
+        def _boom(*args, **kwargs):
+            raise RuntimeError("simulated bridge-pairing failure")
+
+        monkeypatch.setattr(scan_module, "_detect_crypto_bridges", _boom)
+        out = scan_module._derive_hardware_findings(session, scanned_at)
+        assert out == []
+    finally:
+        session.close()
