@@ -176,3 +176,66 @@ def test_bridge_evidence_columns_migrate_additively(tmp_path: Path) -> None:
 
     cols_after = _table_info_names()
     assert cols_after == cols
+
+
+# ---------------------------------------------------------------------------
+# Phase 141 OTICS-06: modbus/bacnet columns migrate additively onto a
+# pre-existing hardware_devices table (the exact scenario that silently
+# broke live — a DB created before Phase 141 landed).
+# ---------------------------------------------------------------------------
+
+
+def test_otics_columns_migrate_onto_pre_existing_table(tmp_path: Path) -> None:
+    """modbus_*/bacnet_* columns must retrofit onto a hardware_devices table
+    that predates Phase 141 (not just get created fresh via create_all).
+
+    Regression test: _OTICS_HW_COLUMNS was added to quirk/models.py (141-01)
+    but not registered in _ADDITIVE_MIGRATIONS, so init_db() against an
+    existing database never added the columns — the Modbus/BACnet scanner's
+    DB write silently failed with 'no such column: modbus_vendor' on any
+    database created before this migration entry existed.
+    """
+    import sqlite3
+
+    from quirk.db import _OTICS_HW_COLUMNS
+
+    db_path = tmp_path / "otics.db"
+
+    # Simulate a pre-Phase-141 database: init_db(), then drop the OTICS
+    # columns back out so the table matches what a real legacy DB looks like.
+    init_db(str(db_path))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        for col, _ in _OTICS_HW_COLUMNS:
+            conn.execute(f"ALTER TABLE hardware_devices DROP COLUMN {col}")
+        conn.commit()
+    finally:
+        conn.close()
+
+    def _table_info_names() -> set[str]:
+        conn = sqlite3.connect(str(db_path))
+        try:
+            rows = conn.execute("PRAGMA table_info(hardware_devices)").fetchall()
+        finally:
+            conn.close()
+        return {row[1] for row in rows}
+
+    assert "modbus_vendor" not in _table_info_names()
+
+    # Re-running init_db (as any CLI/dashboard invocation does at startup)
+    # must retrofit the missing columns onto the existing table.
+    init_db(str(db_path))
+
+    cols = _table_info_names()
+    for col, _ in _OTICS_HW_COLUMNS:
+        assert col in cols, f"{col} not retrofitted onto pre-existing hardware_devices table"
+
+    # Idempotent: a second run reports already-present, not an error.
+    engine = get_engine(str(db_path))
+    results = run_additive_migration(engine, dry_run=False)
+    otics_results = [
+        r for r in results
+        if r.table == "hardware_devices" and (r.column.startswith("modbus_") or r.column.startswith("bacnet_"))
+    ]
+    assert len(otics_results) == len(_OTICS_HW_COLUMNS)
+    assert all(r.status == "already-present" for r in otics_results)

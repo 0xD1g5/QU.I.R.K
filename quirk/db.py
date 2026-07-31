@@ -156,6 +156,19 @@ _BRIDGE_EVIDENCE_COLUMNS: tuple[tuple[str, str], ...] = (
     ("bridge_evidence_json", "TEXT"),
     ("bridge_confirmed_at",  "DATETIME"),
 )
+_OTICS_HW_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 141 OTICS-06 / D-14: Modbus/BACnet fingerprint fields on
+    # hardware_devices. All nullable — null when disabled or target
+    # unreachable/unidentified.
+    ("modbus_vendor",      "VARCHAR(255)"),
+    ("modbus_model",       "VARCHAR(255)"),
+    ("modbus_firmware",    "VARCHAR(255)"),
+    ("modbus_probe_state", "VARCHAR(32)"),
+    ("bacnet_vendor",      "VARCHAR(255)"),
+    ("bacnet_model",       "VARCHAR(255)"),
+    ("bacnet_firmware",    "VARCHAR(255)"),
+    ("bacnet_probe_state", "VARCHAR(32)"),
+)
 
 
 def _ensure_columns(
@@ -217,6 +230,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("hardware_devices", _SNMP_HW_COLUMNS),           # Phase 133 SNMP-03
     ("hardware_devices", _SNMPV3_HW_COLUMNS),         # Phase 139 SNMPV3-01
     ("hardware_devices", _BRIDGE_EVIDENCE_COLUMNS),   # Phase 140 BRIDGE-02
+    ("hardware_devices", _OTICS_HW_COLUMNS),          # Phase 141 OTICS-06
 )
 
 
