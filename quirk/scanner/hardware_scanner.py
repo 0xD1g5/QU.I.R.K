@@ -150,6 +150,7 @@ def fingerprint_one(
     ep: CryptoEndpoint,
     timeout: int = 3,
     logger: Optional[Logger] = None,
+    cfg=None,
 ) -> HardwareDevice:
     """Fingerprint a single ``CryptoEndpoint`` against the HARDWARE_MATRIX.
 
@@ -161,6 +162,12 @@ def fingerprint_one(
     2. Match against HARDWARE_MATRIX; assign confidence grade (D-05).
     3. If banner yielded no known vendor, probe HTTP management interfaces (D-04).
     4. Return device — never raises (exceptions are logged via safe_str).
+
+    Args:
+        cfg: Optional ``AppConfig``. When present, ``cfg.connectors.
+            snmp_v3_credentials`` drives the Step 3 SNMPv3-first fallback
+            ladder (Phase 139 SNMPV3-02); when absent, Step 3 behaves exactly
+            as before (v2c-only, unauthenticated).
     """
     # Default: Unknown device — always returned on any code path (D-06)
     device = HardwareDevice(
@@ -206,10 +213,69 @@ def fingerprint_one(
         # ── Step 3: SNMP probe (Phase 133 SNMP-01 / D-01/D-02) ─────────────
         # Only attempt if SSH banner + HTTP mgmt both failed to identify a known vendor.
         if device.vendor == "Unknown":
-            from quirk.scanner.snmp_scanner import probe_snmp_target, parse_sysdescr as _parse_sd
+            from quirk.scanner.snmp_scanner import (
+                probe_snmp_target,
+                parse_sysdescr as _parse_sd,
+                SNMP_MODE_V3_AUTH_PRIV,
+                SNMP_MODE_V3_NOAUTH,
+                SNMP_MODE_V2C,
+                SNMP_MODE_V3_FAILED,
+                SNMP_MODE_V3_PROTOCOL_MISMATCH,
+                SNMP_MODE_NONE,
+            )
             host = getattr(ep, "host", "")
-            _snmp_result = probe_snmp_target(host, community="public", timeout=timeout)
-            _raw = _snmp_result.get("snmp_sysdescr")
+
+            # Phase 139 SNMPV3-02: v3 -> v2c -> none fallback ladder. A
+            # per-host credential (cfg.connectors.snmp_v3_credentials)
+            # triggers a v3 attempt first; the outcome dictates whether v2c
+            # still runs and which distinct snmp_version state is recorded
+            # (D-02 protocol-mismatch vs D-03 failed-fell-back vs plain v2c).
+            _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
+            _v3_creds_map = getattr(_connectors, "snmp_v3_credentials", None) or {}
+            _v3_cred = _v3_creds_map.get(host)
+
+            _snmp_version_label = None
+            _snmp_result = None
+
+            if _v3_cred is not None:
+                _v3_result = probe_snmp_target(
+                    host, version="v3", v3_credential=_v3_cred, timeout=timeout
+                )
+                if _v3_result.get("snmp_version_used") == "v3":
+                    # SUCCESS — never collapse noAuthNoPriv into authPriv (D-02/Pitfall 3).
+                    _snmp_result = _v3_result
+                    _snmp_version_label = (
+                        SNMP_MODE_V3_AUTH_PRIV
+                        if _v3_result.get("snmp_security_level") == "authPriv"
+                        else SNMP_MODE_V3_NOAUTH
+                    )
+                    # Protocol names are accurate because 139-02's probe used
+                    # exactly these protocol objects — only on success.
+                    try:
+                        device.snmp_auth_protocol = _v3_cred.auth_protocol
+                        device.snmp_priv_protocol = _v3_cred.priv_protocol
+                    except AttributeError:
+                        pass
+                    # Do NOT run the v2c fallback on v3 success.
+                elif _v3_result.get("snmp_v3_failure_kind") == "protocol-mismatch":
+                    # D-02: target offered only weaker-than-configured protocols.
+                    # Distinct crypto-hygiene state takes precedence over the
+                    # benign v2c fallback outcome; still probe v2c for continuity.
+                    _snmp_version_label = SNMP_MODE_V3_PROTOCOL_MISMATCH
+                    _snmp_result = probe_snmp_target(host, community="public", timeout=timeout)
+                else:
+                    # Generic v3 failure (auth-failed or unset). v3 WAS
+                    # configured and attempted, so a v2c success must not
+                    # masquerade as an intentional v2c-only scan (D-03).
+                    _snmp_version_label = SNMP_MODE_V3_FAILED
+                    _snmp_result = probe_snmp_target(host, community="public", timeout=timeout)
+            else:
+                _snmp_result = probe_snmp_target(host, community="public", timeout=timeout)
+                _snmp_version_label = (
+                    SNMP_MODE_V2C if _snmp_result.get("snmp_sysdescr") else SNMP_MODE_NONE
+                )
+
+            _raw = _snmp_result.get("snmp_sysdescr") if _snmp_result else None
             if _raw:
                 _parsed = _parse_sd(_raw)
                 if _parsed.get("vendor") and _parsed["vendor"] != "Unknown":
@@ -221,18 +287,21 @@ def fingerprint_one(
                     _entry = _match_matrix(_raw)
                     if _entry:
                         _apply_entry(device, _entry, method="snmp", body=_raw)
-            # Store raw SNMP fields; ORM columns added in Plan 133-02
+            # Store raw SNMP fields; ORM columns added in Plan 133-02 / 139-01
             try:
                 device.snmp_sysdescr = _raw
-                device.snmp_sysname = _snmp_result.get("snmp_sysname")
-                device.snmp_sysobjectid = _snmp_result.get("snmp_sysobjectid")
+                device.snmp_sysname = _snmp_result.get("snmp_sysname") if _snmp_result else None
+                device.snmp_sysobjectid = (
+                    _snmp_result.get("snmp_sysobjectid") if _snmp_result else None
+                )
                 device.snmp_vendor = (
                     _parsed.get("vendor", "Unknown")
                     if _raw
                     else None
                 )
+                device.snmp_version = _snmp_version_label
             except AttributeError:
-                # ORM columns not yet migrated (Plan 133-02) — skip assignment
+                # ORM columns not yet migrated — skip assignment
                 pass
 
     except Exception as e:
@@ -250,6 +319,7 @@ def fingerprint_hardware(
     endpoints: List[CryptoEndpoint],
     timeout: int = 3,
     logger: Optional[Logger] = None,
+    cfg=None,
 ) -> List[HardwareDevice]:
     """Fingerprint a batch of ``CryptoEndpoint`` objects concurrently.
 
@@ -261,6 +331,9 @@ def fingerprint_hardware(
         endpoints: Pre-scanned SSH endpoints with ``service_detail`` set.
         timeout:   Per-probe timeout in seconds (default 3 s).
         logger:    Optional structured logger for verbose output.
+        cfg:       Optional ``AppConfig`` — forwarded to ``fingerprint_one``
+                   so Step 3's SNMPv3-first ladder (Phase 139) can look up
+                   per-host credentials.
 
     Returns:
         List of ``HardwareDevice`` rows, same length as ``endpoints``.
@@ -275,7 +348,7 @@ def fingerprint_hardware(
 
     with ThreadPoolExecutor(max_workers=min(8, len(endpoints))) as ex:
         futures = {
-            ex.submit(fingerprint_one, ep, timeout, logger): ep
+            ex.submit(fingerprint_one, ep, timeout, logger, cfg): ep
             for ep in endpoints
         }
         for f in as_completed(futures):

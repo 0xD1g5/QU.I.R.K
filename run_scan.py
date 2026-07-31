@@ -1409,7 +1409,7 @@ def main():
             # Hardware fingerprint while banner is still in service_detail
             # (before classified_details overwrite — D-03)
             hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
-            _hw_batch.extend(fingerprint_hardware(eps, timeout=hw_timeout, logger=logger))
+            _hw_batch.extend(fingerprint_hardware(eps, timeout=hw_timeout, logger=logger, cfg=cfg))
             # Phase 128 HWCOMPAT-04: assign remediation tier to each fingerprinted device
             from quirk.scanner.hardware_tier import assign_tier
             for _dev in _hw_batch:
