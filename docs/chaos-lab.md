@@ -756,6 +756,75 @@ See: `quantum-chaos-enterprise-lab/expected_results_hwcompat.md`
 
 ---
 
+### 3.23 otics Profile (v5.10 — Phase 141 OTICS-04)
+
+The `otics` profile (D-09: a standalone profile, not folded into `hwcompat` — OT/ICS is a
+genuinely distinct risk/protocol category) ships two **deliberately fragile** simulators
+that validate QU.I.R.K.'s agentless OT/ICS fingerprinting (Modbus/TCP and BACnet/IP) end
+to end. Hardware findings are **advisory-only** — they appear in the CBOM and
+HardwareInventory dashboard tab but do not affect the quantum-readiness score.
+
+> **Prerequisites:** OT/ICS scanning requires the `[hw]` extras group. Install before
+> running this profile: `pip install quirk-scanner[hw]`
+>
+> **Risk note:** unlike the other chaos-lab profiles, these two simulators are
+> intentionally fragile (D-10) — they enforce single-in-flight-only and
+> reset/drop malformed input, mirroring documented real-world PLC/RTU fragility. This is
+> by design: it is exactly what lets this profile empirically prove the scanner's D-05
+> one-strike circuit breaker keeps a real fragile device healthy. See
+> `docs/operators-guide.md` §9.4 for the full OT/ICS risk-warning and authorization
+> guidance before pointing `--enable-modbus`/`--enable-bacnet` at anything outside this lab.
+
+| Host Port    | Service       | Protocol    | Purpose                                            | Expected Finding |
+|--------------|---------------|-------------|-----------------------------------------------------|-------------------|
+| 502          | otics-modbus  | Modbus/TCP  | Fragile Schneider Electric M221 PLC simulator        | modbus_vendor=Schneider Electric, modbus_model=M221, modbus_probe_state=identified |
+| 47808/udp    | otics-bacnet  | BACnet/IP   | Fragile Johnson Controls FX16 controller simulator   | bacnet_vendor=5 (Johnson Controls), bacnet_model=FX16, bacnet_probe_state=identified |
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile otics" ./lab.sh up
+```
+
+**Scan command:**
+
+```bash
+python run_scan.py --target 127.0.0.1 --enable-modbus --enable-bacnet
+```
+
+(Add `--allow-internal-targets` if the loopback-bind guard requires it, per prior lab runs.)
+
+**Simulator architecture.** Each container runs a small asyncio "gatekeeper" (custom code
+that enforces only the D-10 fragility admission policy — single-in-flight tracking and
+malformed-header rejection) in front of a real protocol library: `pymodbus`'s
+`ModbusTcpServer` handles all actual Modbus/TCP framing and FC 43/14 encode/decode for
+`otics-modbus`; a real `bacpypes3` `Application` handles all actual BACnet/IP framing and
+Who-Is/I-Am/ReadProperty for `otics-bacnet`. Neither hand-rolls the underlying protocol.
+
+**Expected scanner findings:**
+
+- **otics-modbus (port 502):** `modbus_vendor=Schneider Electric`, `modbus_model=M221`,
+  `modbus_firmware=1.6.2.0`, `modbus_probe_state=identified` — FC 43/14 Read Device
+  Identification (Basic category) match on the simulator's VendorName/ProductCode/
+  MajorMinorRevision objects
+- **otics-bacnet (port 47808/udp):** `bacnet_vendor=5`, `bacnet_model=FX16`,
+  `bacnet_firmware=9.0.1`, `bacnet_probe_state=identified` — directed-unicast Who-Is/I-Am
+  plus ReadProperty(model-name, firmware-revision) on the simulator's Device object
+- **Forced concurrent probe (manual verification):** a second connection/datagram sent to
+  either simulator while a probe is already in flight is reset/dropped by the simulator;
+  if the scanner's own probe observes the resulting anomalous response, it records
+  `modbus_probe_state="aborted_anomalous_response"` or
+  `bacnet_probe_state="aborted_anomalous_response"` — the distinct D-13 abort state, never
+  masquerading as "no response"
+
+> **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —
+> `_derive_all_profiles()` discovers `otics` dynamically from `docker-compose.yml` at
+> runtime via `yq` or the `grep` fallback.
+
+See: `quantum-chaos-enterprise-lab/expected_results_otics.md`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.
@@ -853,6 +922,8 @@ All lab ports across all profiles, sorted by port number:
 | 13446 | tls-cert-untrusted-ca    | tls-cert-defects | CERT_UNTRUSTED_CA MEDIUM           |
 | 13447 | tls-cert-rsa1024         | tls-cert-defects | CERT_WEAK_KEY / CERT_RSA1024 HIGH  |
 | 20100 | fuzz-target              | fuzz-target      | HSTS_MISSING HIGH / ALG_CONFUSION CRITICAL |
+| 502   | otics-modbus             | otics            | modbus_vendor=Schneider Electric, modbus_model=M221 |
+| 47808/udp | otics-bacnet         | otics            | bacnet_vendor=5 (Johnson Controls), bacnet_model=FX16 |
 
 ---
 

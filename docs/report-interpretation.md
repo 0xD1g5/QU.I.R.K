@@ -318,6 +318,49 @@ credit.
 > change the readiness score or the remediation timeline. The legacy device still needs to be
 > replaced or upgraded on schedule."
 
+### 10.6 Modbus / BACnet OT-ICS Columns (Phase 141)
+
+As of Phase 141, HTML/PDF/DOCX Hardware Inventory tables (and the dashboard `/hardware`
+table) include two additional columns — **Modbus** and **BACnet** — placed immediately
+after the SNMP column (§10.4) and before the Bridge Status column (§10.5). Each renders
+one of the same five-state vocabulary independently for its own protocol:
+
+| State | Badge | Meaning |
+|-------|-------|---------|
+| Identified | Modbus: blue. BACnet: purple. | Vendor/model/firmware successfully read via that protocol's fingerprint probe. Hover for the vendor/model string. |
+| No response | Gray | The probe was attempted (flag on, port/Who-Is gate satisfied) but the host never responded within the timeout. |
+| No match | Gray | A response was received but carried no usable vendor identity. |
+| **Probe aborted** | Red | The scanner's one-strike circuit breaker (`docs/operators-guide.md` §9.4) fired — a real anomalous response (timeout mid-exchange, malformed frame, connection reset), not "nothing happened." |
+| — (em dash) | none | Not attempted — the corresponding `--enable-modbus`/`--enable-bacnet` flag was off, or (Modbus only) port 502 was never observed open on that host. |
+
+**The "Probe aborted" state is deliberately distinct** from both "No response" and the
+em-dash not-attempted state — mirroring the Phase 139 SNMPv3 `v3 failed → v2c` precedent
+(§10.4) of never letting a real signal (the device may be fragile or misbehaving) look
+identical to "nothing happened." A red "Probe aborted" badge is operationally useful: it
+tells the consultant this specific device is worth a closer, more careful manual look
+before any follow-up querying, rather than being dismissed as simply unreachable.
+
+**Abort caveat.** When any row in the Hardware Inventory table carries a "Probe aborted"
+Modbus or BACnet state, a persistent caveat sentence renders near the table on every
+surface (HTML, PDF, DOCX) — not hidden behind a hover-only tooltip, since PDF has no
+hover:
+
+> "Modbus/BACnet probe aborted — anomalous response. This device may be fragile or
+> misbehaving; a closer manual look is recommended before further querying."
+
+**Score impact: none.** Like all hardware fingerprinting signals (§10.2, §9.4 of
+`docs/operators-guide.md`), Modbus and BACnet findings are advisory-only and never affect
+the quantum-readiness score.
+
+> **Client Conversation — Modbus / BACnet Columns:**
+> "The Modbus and BACnet columns identify OT/ICS devices we found using their own
+> industrial protocols, separate from the IT-facing SNMP column next to them. If you see a
+> red 'Probe aborted' badge, that's a signal worth flagging to the operations team — it
+> means the device gave an unexpected response to our single, read-only identification
+> query, which can indicate a fragile or already-stressed device. It doesn't mean anything
+> was broken by the scan — QUIRK stops immediately on any anomaly and never retries — but
+> it's worth a closer look."
+
 ---
 
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*

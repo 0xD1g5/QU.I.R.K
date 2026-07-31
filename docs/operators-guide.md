@@ -1170,3 +1170,86 @@ still carries a mandatory caveat on every rendered surface: "Based on SNMP-deriv
 network-path evidence; not independently confirmed by traffic inspection." See
 `docs/report-interpretation.md` §10.5 for the full rendering/badge contract across HTML,
 PDF, DOCX, and the dashboard `/hardware` tab.
+
+---
+
+### 9.4 OT/ICS Fingerprinting (Modbus + BACnet, Phase 141)
+
+> ## ⚠️ Risk Warning — Read Before Enabling
+>
+> **OT/ICS scanning is a materially different risk class than SNMP/SSH/HTTP hardware
+> fingerprinting.** Industrial control gear — PLCs, RTUs, building-automation
+> controllers — has a well-documented, industry-wide history of crashing, hanging, or
+> otherwise misbehaving in response to even benign, read-only network queries. This is
+> not a theoretical concern; it is the reason OT/ICS environments are conventionally
+> scanned with far more caution than IT networks, if at all.
+>
+> **Obtain written authorization from the OT/ICS system owner before enabling
+> `--enable-modbus` or `--enable-bacnet` against any production OT network.** QUIRK's
+> read-only-only design and one-strike circuit breaker (below) reduce — but do not
+> eliminate — this risk. Treat OT/ICS scanning as you would any other engagement
+> requiring explicit, scoped, written client authorization, distinct from your general
+> IT-network scanning authorization.
+
+**What QUIRK probes.** Two independently-flagged, off-by-default protocols:
+
+| Flag | Protocol | Port | What is sent |
+|------|----------|------|---------------|
+| `--enable-modbus` | Modbus/TCP | 502 (must be observed open) | A single FC 43/14 Read Device Identification request (Basic category — vendor/model/firmware strings only) |
+| `--enable-bacnet` | BACnet/IP | 47808/UDP | A single directed-unicast Who-Is, followed by ReadProperty(model-name) and ReadProperty(firmware-revision) on the responding Device object |
+
+Both flags default to `false` and must be explicitly set — QUIRK never probes Modbus or
+BACnet unless the operator opts in. Modbus additionally requires port 502 to already be
+observed open on the target (from the scan's own port-discovery phase) before the probe
+fires at all; BACnet's single Who-Is/I-Am round trip is itself the confirmation signal
+for this UDP-only protocol (there is no TCP-equivalent "confirmed open port" check for
+UDP).
+
+**Safety model.**
+
+- **Read-only only.** Neither probe ever issues a write function/service code. Modbus
+  sends only FC 43/14 (Read Device Identification); BACnet sends only Who-Is/I-Am
+  discovery plus ReadProperty — no WriteProperty, no broadcast beyond the single
+  directed-unicast Who-Is.
+- **Single in-flight per host.** QUIRK never has more than one OT/ICS probe outstanding
+  against a given host at a time.
+- **One-strike circuit breaker.** Any anomalous response — timeout, malformed frame,
+  connection reset, or exception — immediately aborts further OT/ICS probing of that host
+  for the rest of the scan. There is no retry and no backoff, deliberately stricter than
+  QUIRK's standard scan retry policy elsewhere.
+- **Short, dedicated timeout.** Both probes use a conservative default timeout (2s),
+  shorter than QUIRK's general scan timeout, to minimize the time spent holding a
+  connection open against fragile embedded devices.
+
+**Enable the flags:**
+
+```bash
+python run_scan.py --target 10.0.5.0/24 --enable-modbus --enable-bacnet
+```
+
+**Result labeling.** Every OT/ICS probe attempt resolves to one of five states, shown
+distinctly in reports and the dashboard (never collapsed into a generic "scanned"/"not
+scanned" binary):
+
+| State | Meaning |
+|-------|---------|
+| Identified (Modbus / BACnet badge) | Vendor/model/firmware successfully read |
+| No response | Host did not respond within the timeout |
+| No match | A response was received but carried no usable vendor identity |
+| **Probe aborted** | The one-strike circuit breaker fired — a real anomalous response, not "nothing happened" |
+| Not attempted (em dash) | The flag was off, or (Modbus only) port 502 was never observed open |
+
+The **"Probe aborted" state is operationally significant** — it tells the consultant the
+device may be fragile or misbehaving and is worth a closer, more careful manual look,
+rather than being silently indistinguishable from "no response." See
+`docs/report-interpretation.md` for the full badge/column contract across the dashboard
+and HTML/PDF/DOCX reports.
+
+**Advisory-only.** Like all hardware fingerprinting signals (§9.1–§9.3), Modbus/BACnet
+findings never affect the quantum-readiness score — they appear only in the advisory
+hardware section of the report.
+
+**Validate against the chaos lab.** `PROFILE_ARGS="--profile otics" ./lab.sh up` starts
+two deliberately fragile Modbus/BACnet simulators that empirically exercise the safety
+model above — see `docs/chaos-lab.md` and
+`quantum-chaos-enterprise-lab/expected_results_otics.md`.
