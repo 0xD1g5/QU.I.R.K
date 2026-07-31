@@ -229,9 +229,18 @@ def _confirm_bridge_evidence(device: HardwareDevice, timeout: int, cfg=None) -> 
         _v3_creds_map = getattr(_connectors, "snmp_v3_credentials", None) or {}
         _v3_cred = _v3_creds_map.get(host)
 
-        entries = walk_arp_table(host, community="public", timeout=timeout, v3_credential=_v3_cred)
-        if not entries:
+        raw_entries = walk_arp_table(host, community="public", timeout=timeout, v3_credential=_v3_cred)
+        if not raw_entries:
             return  # D-05: silently stays partial_only — no evidence collected
+
+        # Rule 1 fix (140-05 empirical validation): walk_arp_table returns
+        # (ip, mac) tuples, but the console-side reader
+        # (quirk.cbom.bridge._has_sufficient_evidence, plan 140-02) only
+        # recognizes {"target_ip": ..., "mac": ...} dicts — a tuple/list-shaped
+        # payload silently never matches, so upstream_mitigated could never be
+        # reached from real sensor-collected evidence. Normalize to the dict
+        # shape the reader expects.
+        entries = [{"target_ip": ip, "mac": mac} for ip, mac in raw_entries]
 
         payload = json.dumps(entries)
         if len(payload.encode("utf-8")) > _BRIDGE_EVIDENCE_MAX_BYTES:
