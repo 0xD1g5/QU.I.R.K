@@ -202,6 +202,35 @@ def _snmp_badge_label(d: Dict[str, Any]) -> str:
     return _SNMP_LABEL_MAP.get(raw, str(raw))
 
 
+_BRIDGE_LABEL_MAP = {
+    "upstream_mitigated": "SNMP-confirmed",
+    "partial_only": "Partial (assumed)",
+}
+
+_BRIDGE_COLORS = {
+    "upstream_mitigated": "hsl(213 94% 68%)",  # blue — NEVER the green success hue
+    "partial_only": "hsl(38 92% 50%)",  # amber
+}
+
+_BRIDGE_CAVEAT = (
+    "Based on SNMP-derived network-path evidence; not independently confirmed"
+    " by traffic inspection."
+)
+
+
+def _bridge_badge_label(d: Dict[str, Any]) -> str:
+    """Map the projected bridge_status field to the verbatim UI-SPEC label.
+
+    Returns "" when bridge_status is absent/null (device is not part of a
+    detected bridge pair) — callers render an em-dash cell in that case.
+    Never surfaces the raw enum string ("partial_only" / "upstream_mitigated").
+    """
+    raw = d.get("bridge_status")
+    if not raw:
+        return ""
+    return _BRIDGE_LABEL_MAP.get(raw, "")
+
+
 def render_hardware_section(devices: list) -> str:
     """Generate HTML advisory table for hardware devices (Phase 128 D-10).
 
@@ -245,6 +274,17 @@ def render_hardware_section(devices: list) -> str:
         eol = _html.escape(str(d.get("eol_date") or "—"))
         cnsa = _html.escape(CNSA_DEADLINE.get(tier, ""))
         snmp_label = _html.escape(_snmp_badge_label(d))
+        bridge_raw = d.get("bridge_status")
+        bridge_label = _bridge_badge_label(d)
+        if bridge_label:
+            bridge_color = _BRIDGE_COLORS.get(bridge_raw, "#6b7280")
+            bridge_cell = (
+                f'<span style="background:{bridge_color};color:#000;padding:2px 7px;'
+                f'border-radius:4px;font-size:11px;font-weight:600">'
+                f"{_html.escape(bridge_label)}</span>"
+            )
+        else:
+            bridge_cell = "—"
         rows_html.append(
             f"<tr>"
             f"<td>{badge}</td>"
@@ -256,10 +296,14 @@ def render_hardware_section(devices: list) -> str:
             f"<td>{eol}</td>"
             f"<td>{cnsa}</td>"
             f"<td>{snmp_label}</td>"
+            f"<td>{bridge_cell}</td>"
             f"</tr>"
         )
 
     rows_joined = "\n".join(rows_html)
+    caveat_html = ""
+    if any(d.get("bridge_status") == "upstream_mitigated" for d in devices):
+        caveat_html = f" {_html.escape(_BRIDGE_CAVEAT)}"
     return (
         '<details style="margin:24px 0">'
         '<summary style="cursor:pointer;font-weight:600;color:#3b9dff">'
@@ -269,7 +313,8 @@ def render_hardware_section(devices: list) -> str:
         '<div style="margin-top:12px">'
         '<p style="font-size:12px;color:#888;margin-bottom:8px">'
         "Advisory only — hardware findings are not scored and do not affect the"
-        " readiness score. Listed for CNSA 2.0 migration planning purposes only.</p>"
+        " readiness score. Listed for CNSA 2.0 migration planning purposes only."
+        f"{caveat_html}</p>"
         '<table style="width:100%;border-collapse:collapse;font-size:13px">'
         "<thead><tr>"
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Tier</th>'
@@ -281,6 +326,7 @@ def render_hardware_section(devices: list) -> str:
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">EOL Date</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">CNSA 2.0 Timeline</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">SNMP</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Bridge Status</th>'
         "</tr></thead>"
         f"<tbody>{rows_joined}</tbody>"
         "</table></div></details>"
