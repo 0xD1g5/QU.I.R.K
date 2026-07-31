@@ -41,6 +41,7 @@ from quirk.dashboard.api.schemas import (
     SubScores,
     SubscoreDelta,
 )
+from quirk.cbom.bridge import _confirm_upstream_mitigation, _detect_crypto_bridges
 from quirk.models import CryptoEndpoint, HardwareDevice, ScanJob
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
@@ -732,6 +733,21 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
             )
             .all()
         )
+
+        # Phase 140 BRIDGE-03: bridge-pairing + evidence-gated promotion pipeline.
+        # Stays inside this try/except so a pairing error degrades to
+        # advisory-empty (return []), never a 500.
+        bridge_dicts = [
+            {
+                "host": getattr(d, "host", "") or "",
+                "pqc_status": getattr(d, "pqc_status", "unknown") or "unknown",
+                "bridge_evidence_json": getattr(d, "bridge_evidence_json", None),
+            }
+            for d in devices
+        ]
+        confirmed = _confirm_upstream_mitigation(_detect_crypto_bridges(bridge_dicts))
+        bridge_status_by_host = {c["host"]: c.get("bridge_status") for c in confirmed}
+
         results: list[HardwareFinding] = []
         for d in devices:
             tier = getattr(d, "remediation_tier", None) or "Tier N/A"
@@ -773,6 +789,7 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
                 fingerprint_method=fp_method,
                 eol_date=eol_iso,
                 snmp_version=getattr(d, "snmp_version", None),  # Phase 139 SNMPV3-02
+                bridge_status=bridge_status_by_host.get(host),  # Phase 140 BRIDGE-03
             ))
 
         results.sort(key=lambda f: _TIER_ORDER.get(f.remediation_tier, 99))
@@ -804,10 +821,26 @@ def _derive_hw_components(db: Session, latest_ts: datetime) -> list[HardwareComp
             )
             .all()
         )
+
+        # Phase 140 BRIDGE-03: bridge-pairing + evidence-gated promotion pipeline.
+        # Stays inside this try/except so a pairing error degrades to
+        # advisory-empty (return []), never a 500.
+        bridge_dicts = [
+            {
+                "host": getattr(d, "host", "") or "",
+                "pqc_status": getattr(d, "pqc_status", "unknown") or "unknown",
+                "bridge_evidence_json": getattr(d, "bridge_evidence_json", None),
+            }
+            for d in devices
+        ]
+        confirmed = _confirm_upstream_mitigation(_detect_crypto_bridges(bridge_dicts))
+        bridge_status_by_host = {c["host"]: c.get("bridge_status") for c in confirmed}
+
         results: list[HardwareComponent] = []
         for d in devices:
+            host = getattr(d, "host", "") or ""
             results.append(HardwareComponent(
-                host=getattr(d, "host", "") or "",
+                host=host,
                 port=getattr(d, "port", 0) or 0,
                 vendor=getattr(d, "vendor", "Unknown") or "Unknown",
                 model=getattr(d, "model", None) or "Unknown",
@@ -816,6 +849,7 @@ def _derive_hw_components(db: Session, latest_ts: datetime) -> list[HardwareComp
                 snmp_version=getattr(d, "snmp_version", None),
                 snmp_auth_protocol=getattr(d, "snmp_auth_protocol", None),
                 snmp_priv_protocol=getattr(d, "snmp_priv_protocol", None),
+                bridge_status=bridge_status_by_host.get(host),  # Phase 140 BRIDGE-03
             ))
         results.sort(key=lambda c: _TIER_ORDER.get(c.remediation_tier, 99))
         return results

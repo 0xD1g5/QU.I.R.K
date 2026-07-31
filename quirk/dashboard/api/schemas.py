@@ -122,6 +122,7 @@ class HardwareComponent(BaseModel):
     snmp_version: Optional[str] = None
     snmp_auth_protocol: Optional[str] = None
     snmp_priv_protocol: Optional[str] = None
+    bridge_status: Optional[str] = None  # Phase 140 BRIDGE-03 — dashboard bridge badge
 
 
 # ---- Identity Findings ----
@@ -217,6 +218,7 @@ class HardwareFinding(BaseModel):
     fingerprint_method: str
     eol_date: Optional[str] = None
     snmp_version: Optional[str] = None  # Phase 139 SNMPV3-02 — dashboard SNMP badge
+    bridge_status: Optional[str] = None  # Phase 140 BRIDGE-03 — dashboard bridge badge
 
 
 # ---- Roadmap ----
