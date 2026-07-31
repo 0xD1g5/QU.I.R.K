@@ -19,10 +19,17 @@ def _get_configured_token() -> str:
     """
     if val := os.environ.get("QUIRK_API_TOKEN"):
         return val
-    # YAML fallback: import lazily to avoid circular import with app factory
+    # YAML fallback: import lazily to avoid circular import with app factory.
+    # WR-01: load_config requires a path argument — calling it bare always raised
+    # TypeError into the bare except, making this YAML branch dead code and silently
+    # disabling operator-configured api_token values. Resolve a real path first
+    # (same fix already applied to get_cors_origins() in quirk/config.py).
+    config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+    if not os.path.isfile(config_path):
+        return ""
     try:
         from quirk.config import load_config
-        cfg = load_config()
+        cfg = load_config(config_path)
         return cfg.security.api_token or ""
     except Exception:
         return ""

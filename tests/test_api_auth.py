@@ -11,6 +11,8 @@ Covers:
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -145,6 +147,52 @@ def test_auth_disabled_when_no_token_configured(client):
     )
     assert response.status_code != 401, (
         f"Auth disabled — should not be 401, got {response.status_code}"
+    )
+
+
+def test_yaml_configured_token_enforced_without_env_var(tmp_path, monkeypatch):
+    """POST returns 401 when security.api_token is set in config.yaml and QUIRK_API_TOKEN is unset.
+
+    Regression test: _get_configured_token() previously called load_config() with no
+    path argument, which always raised TypeError into a bare except and silently made
+    this YAML branch dead code (same class of bug already fixed in get_cors_origins(),
+    documented there as WR-01).
+    """
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    # config_from_dict() requires the full top-level schema (assessment/scan/targets/...),
+    # so derive the fixture from the repo's real config.yaml rather than a minimal stub.
+    repo_config = Path(__file__).resolve().parent.parent / "config.yaml"
+    config_text = repo_config.read_text()
+    assert "api_token" not in config_text, "fixture assumes repo config.yaml has no api_token set"
+    config_text = config_text.replace(
+        "security:\n  allow_internal_targets: true",
+        "security:\n  allow_internal_targets: true\n  api_token: yaml-configured-token",
+    )
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_text)
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(config_path))
+
+    _, tc = _app_with_db()
+
+    response = tc.post(
+        "/api/qramm/sessions",
+        json={},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 401, (
+        f"YAML-configured token should enforce auth, got {response.status_code}: {response.text}"
+    )
+
+    response = tc.post(
+        "/api/qramm/sessions",
+        json={},
+        headers={
+            "Authorization": "Bearer yaml-configured-token",
+            "X-Quirk-Request": "1",
+        },
+    )
+    assert response.status_code != 401, (
+        f"Correct YAML-configured token should not be 401, got {response.status_code}: {response.text}"
     )
 
 
