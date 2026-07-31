@@ -183,6 +183,43 @@ SHA/AES — that state is exercised via unit tests / mocked probes per 139-02/13
 
 ---
 
+### hwcompat-snmp — ARP-walk / SNMP-confirmed bridge evidence (Phase 140 BRIDGE-01/04)
+
+As of Phase 140, `quirk.scanner.snmp_scanner.walk_arp_table` / `_confirm_bridge_evidence`
+can be empirically exercised against this same container — no new lab service, port, or
+config was required (A3 resolved: the container's kernel ARP cache is **not** empty even
+on a freshly started container, because Docker's bridge networking establishes an ARP
+entry for the default gateway as soon as the container's network namespace is created).
+
+**Empirical result (live run, 2026-07-31, against the running `hwcompat` profile):**
+
+```python
+walk_arp_table('127.0.0.1', community='public', v3_credential=None, timeout=2)
+# -> [('172.18.0.1', '<6-byte MAC octet string, hex 7ef16ee1cac0>')]
+```
+
+| Metric | Observed |
+|--------|----------|
+| `ipNetToMediaTable` entries returned | 1 (the container's default-gateway ARP entry, `172.18.0.1`) |
+| Raw walk latency (`walk_arp_table`) | ~0.022s |
+| End-to-end latency (`_confirm_bridge_evidence`, includes JSON encode + persist) | ~0.041s |
+| Configured per-probe `timeout` | 2s |
+| Overall wall-clock budget (`timeout * _ARP_WALK_TIMEOUT_FACTOR`) | 10s |
+| Headroom | ~244x under budget |
+
+**Calibration outcome:** No change to `_ARP_WALK_MAX_ENTRIES` (500) or
+`_ARP_WALK_TIMEOUT_FACTOR` (5) was needed — observed latency against the live lab target
+is two orders of magnitude below the existing budget. `bridge_evidence_json` populates
+correctly (non-empty, single ARP entry, JSON-serializable, well under the 8192-byte cap)
+and `bridge_confirmed_at` is stamped. **No hwcompat-snmp compose/port/service/seed change
+was required for this validation** — lab.sh and the compose profile set are unchanged.
+
+This validates BRIDGE-01/BRIDGE-04's sensor-side evidence-collection leg end-to-end against
+a live target, closing assumptions A2 (walk-boundary behavior) and A3 (lab ARP-table
+availability) from `140-RESEARCH.md`.
+
+---
+
 ## CBOM Component Hierarchy
 
 As of Phase 134 (CBOM-01), each hardware endpoint in the CBOM is represented as a
