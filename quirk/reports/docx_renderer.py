@@ -16,9 +16,35 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# SNMP badge label map — mirrors html_renderer.py verbatim (UI-SPEC Copywriting
+# Contract, Phase 139 SNMPV3-02). No report-only synonyms across surfaces.
+# ---------------------------------------------------------------------------
+
+_SNMP_LABEL_MAP = {
+    "v3 auth+priv": "v3 auth+priv",
+    "v3 noAuthNoPriv": "v3 noAuthNoPriv",
+    "v2c": "v2c",
+    "v3-failed-fell-back": "v3 failed → v2c",
+    "none": "No SNMP",
+}
+
+
+def _snmp_badge_label(d: Dict[str, Any]) -> str:
+    """Map the projected snmp_version field to the verbatim UI-SPEC label.
+
+    Returns "—" (em dash) when snmp_version is absent/null (SNMP never
+    attempted for this device), reserving "No SNMP" for attempted-no-response.
+    """
+    raw = d.get("snmp_version")
+    if not raw:
+        return "—"
+    return _SNMP_LABEL_MAP.get(raw, str(raw))
 
 
 # ---------------------------------------------------------------------------
@@ -351,11 +377,11 @@ def render_docx_report(
             " Listed for CNSA 2.0 migration planning purposes only.",
             style="Normal",
         )
-        hw_tbl = doc.add_table(rows=1, cols=7)
+        hw_tbl = doc.add_table(rows=1, cols=8)
         _set_table_style(hw_tbl)
         hw_hdr = hw_tbl.rows[0].cells
         for _i, _h in enumerate(
-            ["Tier", "Vendor", "Model", "Host:Port", "PQC Status", "Confidence", "EOL Date"]
+            ["Tier", "Vendor", "Model", "Host:Port", "PQC Status", "Confidence", "EOL Date", "SNMP"]
         ):
             hw_hdr[_i].text = _h
         for _d in hardware_devices:
@@ -367,7 +393,8 @@ def render_docx_report(
             _row[4].text = _d.get("pqc_status", "")
             _row[5].text = _d.get("confidence", "")
             _row[6].text = _d.get("eol_date") or "—"
-        _set_col_widths(hw_tbl, [0.9, 1.4, 1.4, 1.5, 1.1, 1.1, 0.9])
+            _row[7].text = _snmp_badge_label(_d)
+        _set_col_widths(hw_tbl, [0.8, 1.2, 1.2, 1.3, 1.0, 1.0, 0.8, 1.0])
 
     # ---------------------------------------------------------------------------
     # Save document

@@ -179,6 +179,29 @@ def _load_logo_b64(logo_path):
         return None, "png"
 
 
+_SNMP_LABEL_MAP = {
+    "v3 auth+priv": "v3 auth+priv",
+    "v3 noAuthNoPriv": "v3 noAuthNoPriv",
+    "v2c": "v2c",
+    "v3-failed-fell-back": "v3 failed → v2c",
+    "none": "No SNMP",
+}
+
+
+def _snmp_badge_label(d: Dict[str, Any]) -> str:
+    """Map the projected snmp_version field to the verbatim UI-SPEC label.
+
+    Returns "—" (em dash) when snmp_version is absent/null (SNMP never
+    attempted for this device), reserving "No SNMP" for attempted-no-response.
+    Reuses the exact five label strings from the UI-SPEC Copywriting Contract
+    (Phase 139 SNMPV3-02) — no report-only synonyms.
+    """
+    raw = d.get("snmp_version")
+    if not raw:
+        return "—"
+    return _SNMP_LABEL_MAP.get(raw, str(raw))
+
+
 def render_hardware_section(devices: list) -> str:
     """Generate HTML advisory table for hardware devices (Phase 128 D-10).
 
@@ -221,6 +244,7 @@ def render_hardware_section(devices: list) -> str:
         host_port = f"{_html.escape(str(d.get('host', '')))}:{_html.escape(str(d.get('port', '')))}"
         eol = _html.escape(str(d.get("eol_date") or "—"))
         cnsa = _html.escape(CNSA_DEADLINE.get(tier, ""))
+        snmp_label = _html.escape(_snmp_badge_label(d))
         rows_html.append(
             f"<tr>"
             f"<td>{badge}</td>"
@@ -231,6 +255,7 @@ def render_hardware_section(devices: list) -> str:
             f"<td>{_html.escape(str(d.get('confidence', '')))}</td>"
             f"<td>{eol}</td>"
             f"<td>{cnsa}</td>"
+            f"<td>{snmp_label}</td>"
             f"</tr>"
         )
 
@@ -255,6 +280,7 @@ def render_hardware_section(devices: list) -> str:
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Confidence</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">EOL Date</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">CNSA 2.0 Timeline</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">SNMP</th>'
         "</tr></thead>"
         f"<tbody>{rows_joined}</tbody>"
         "</table></div></details>"
