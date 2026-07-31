@@ -209,3 +209,13 @@ def test_docx_save_failure_returns_false(monkeypatch, tmp_path, capsys):
     assert "DOCX export failed" in captured.err, (
         f"Expected failure advisory in stderr; got: {captured.err!r}"
     )
+
+
+def test_bridge_badge_label_maps_status_to_verbatim_labels():
+    """_bridge_badge_label maps bridge_status -> UI-SPEC label, never the raw enum (BRIDGE-03)."""
+    from quirk.reports.docx_renderer import _bridge_badge_label
+
+    assert _bridge_badge_label({"bridge_status": "partial_only"}) == "Partial (assumed)"
+    assert _bridge_badge_label({"bridge_status": "upstream_mitigated"}) == "SNMP-confirmed"
+    assert _bridge_badge_label({}) == "—"
+    assert _bridge_badge_label({"bridge_status": None}) == "—"
