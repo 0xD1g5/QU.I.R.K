@@ -404,3 +404,18 @@ class HardwareDevice(Base):
     # read by the console annotation and downstream projection sites.
     bridge_evidence_json = Column(Text,     nullable=True)
     bridge_confirmed_at  = Column(DateTime, nullable=True)
+    # Phase 141 OTICS-06 / D-14: Modbus/BACnet OT-ICS fingerprint fields.
+    # Populated by quirk/scanner/modbus_scanner.py and bacnet_scanner.py when
+    # enable_modbus/enable_bacnet=True. All nullable — null when the relevant
+    # protocol is not enabled or the target didn't respond. *_firmware columns
+    # feed the CBOM FIRMWARE component (D-15). *_probe_state values: see
+    # RESEARCH Open Question #3 — identified | no_response | no_match |
+    # aborted_anomalous_response (sized 32 to fit the longest label).
+    modbus_vendor       = Column(String(255), nullable=True)
+    modbus_model        = Column(String(255), nullable=True)
+    modbus_firmware     = Column(String(255), nullable=True)
+    modbus_probe_state  = Column(String(32),  nullable=True)
+    bacnet_vendor       = Column(String(255), nullable=True)
+    bacnet_model        = Column(String(255), nullable=True)
+    bacnet_firmware     = Column(String(255), nullable=True)
+    bacnet_probe_state  = Column(String(32),  nullable=True)
