@@ -53,6 +53,7 @@ _LOG = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 try:
     from bacpypes3.app import Application
+    from bacpypes3.argparse import SimpleArgumentParser
     from bacpypes3.pdu import Address
 
     _PYBACNET_AVAILABLE = True
@@ -76,6 +77,31 @@ _PROP_MODEL_NAME = "model-name"
 _PROP_FIRMWARE_REVISION = "firmware-revision"
 
 
+def _build_ephemeral_application() -> "Application":
+    """Construct a throwaway bacpypes3 Application for a single probe.
+
+    Bare ``Application()`` never wires up the request-routing stack (ASAP/
+    NSAP/binding) that ``from_args``/``from_object_list`` perform — any call
+    that routes through it raises ``AttributeError: 'Application' object has
+    no attribute 'elementService'``. ``from_args`` requires an
+    ``argparse.Namespace``; ``SimpleArgumentParser().parse_args([])`` builds
+    one with library defaults without touching real CLI argv.
+
+    ``address="0.0.0.0:0"`` (wildcard interface, ephemeral port) rather than
+    the library default (``"host"``, which resolves to the machine's primary
+    LAN interface IP) — binding to a specific interface IP causes the OS to
+    silently drop replies from loopback/other-interface targets, since a
+    connected UDP socket only accepts datagrams from the exact peer address
+    it sent to. Confirmed live: a Who-Is sent from a "host"-bound socket to
+    127.0.0.1:47808 reached the target and got a real I-Am reply from
+    127.0.0.1:47808, but the reply was silently discarded because the socket
+    only accepted replies from the LAN IP's own address family match.
+    """
+    args = SimpleArgumentParser().parse_args([])
+    args.address = "0.0.0.0:0"
+    return Application.from_args(args)
+
+
 async def _async_probe(host: str, timeout: int) -> Dict[str, Optional[str]]:
     """Async BACnet/IP Who-Is/I-Am + ReadProperty probe.
 
@@ -85,15 +111,25 @@ async def _async_probe(host: str, timeout: int) -> Dict[str, Optional[str]]:
     one-strike abort — no retry, no backoff (D-05).
     """
     result: Dict[str, Optional[str]] = dict(_NULL_RESULT)
-    app = Application()
+    app = _build_ephemeral_application()
     try:
         address = Address(host)
 
         # Single bounded, directed-unicast Who-Is — this round-trip itself IS
         # the D-04 port-gating confirmation for BACnet (see module docstring).
-        i_ams = await asyncio.wait_for(
-            app.who_is(address=address, timeout=timeout), timeout=timeout
-        )
+        #
+        # who_is() is NOT a coroutine function — it sends the request
+        # synchronously and returns a pre-built asyncio.Future that a
+        # call_later(timeout, ...) callback resolves internally. Wrapping
+        # that Future in an outer asyncio.wait_for(..., timeout=timeout)
+        # races two independent timers against the same Future: wait_for's
+        # own cancellation can fire the instant before/after the Future's
+        # internal timeout resolves it, non-deterministically aborting a
+        # request that was already sent and legitimately answered. Await
+        # the Future directly — who_is()'s own `timeout` arg is already the
+        # single bounded wait (confirmed live: identical code wrapped in
+        # wait_for silently lost real I-Am replies; unwrapped, it does not).
+        i_ams = await app.who_is(address=address, timeout=timeout)
         if not i_ams:
             return result
 

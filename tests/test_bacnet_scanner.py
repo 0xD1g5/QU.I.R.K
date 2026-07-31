@@ -58,8 +58,8 @@ def test_disabled_by_default() -> None:
     import quirk.scanner.bacnet_scanner as bacnet_mod
 
     with patch.object(bacnet_mod, "_PYBACNET_AVAILABLE", False), patch.object(
-        bacnet_mod, "Application"
-    ) as mock_application_cls:
+        bacnet_mod, "_build_ephemeral_application"
+    ) as mock_build_app:
         result = bacnet_mod.probe_bacnet_target("127.0.0.1")
 
     assert isinstance(result, dict)
@@ -67,7 +67,7 @@ def test_disabled_by_default() -> None:
     assert result["bacnet_vendor"] is None
     assert result["bacnet_model"] is None
     assert result["bacnet_firmware"] is None
-    mock_application_cls.assert_not_called()
+    mock_build_app.assert_not_called()
 
 
 def test_parse_device_object() -> None:
@@ -85,7 +85,7 @@ def test_parse_device_object() -> None:
     mock_app.close = MagicMock()
 
     with patch.object(bacnet_mod, "_PYBACNET_AVAILABLE", True), patch.object(
-        bacnet_mod, "Application", return_value=mock_app
+        bacnet_mod, "_build_ephemeral_application", return_value=mock_app
     ):
         result = bacnet_mod.probe_bacnet_target("127.0.0.1")
 
@@ -120,7 +120,7 @@ def test_single_inflight_no_writes_unicast() -> None:
     mock_app.close = MagicMock()
 
     with patch.object(bacnet_mod, "_PYBACNET_AVAILABLE", True), patch.object(
-        bacnet_mod, "Application", return_value=mock_app
+        bacnet_mod, "_build_ephemeral_application", return_value=mock_app
     ):
         result = bacnet_mod.probe_bacnet_target("127.0.0.1")
 

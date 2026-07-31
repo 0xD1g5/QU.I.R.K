@@ -85,6 +85,43 @@ def test_parse_device_id() -> None:
     assert mock_client.execute.await_count == 1
 
 
+def test_parse_device_id_decodes_bytes() -> None:
+    """pymodbus returns Basic-category identification fields as raw bytes.
+
+    Regression test: str(bytes) yields the Python repr (e.g.
+    "b'Schneider Electric'") rather than the decoded text. Confirmed live
+    against the otics-modbus chaos-lab simulator — the prior implementation
+    reported modbus_vendor="b'Schneider Electric'" on real pymodbus 3.14.0
+    responses, which the string-fixture unit test above never caught.
+    """
+    import quirk.scanner.modbus_scanner as modbus_mod
+
+    mock_response = MagicMock()
+    mock_response.isError.return_value = False
+    mock_response.information = {
+        0: b"Schneider Electric",
+        1: b"M221",
+        2: b"1.6.2.0",
+    }
+
+    mock_client = MagicMock()
+    mock_client.connect = AsyncMock(return_value=True)
+    mock_client.connected = True
+    mock_client.execute = AsyncMock(return_value=mock_response)
+    mock_client.close = MagicMock()
+
+    with patch.object(modbus_mod, "_PYMODBUS_AVAILABLE", True), patch.object(
+        modbus_mod, "AsyncModbusTcpClient", return_value=mock_client
+    ):
+        result = modbus_mod.probe_modbus_target("127.0.0.1")
+
+    assert result["modbus_vendor"] == "Schneider Electric"
+    assert result["modbus_model"] == "M221"
+    assert result["modbus_firmware"] == "1.6.2.0"
+    assert result["modbus_probe_state"] == "identified"
+    assert "b'" not in result["modbus_vendor"]
+
+
 def test_single_inflight_no_writes() -> None:
     """No write function-code symbols in source; one anomalous response aborts with no retry."""
     source_text = _MODULE_PATH.read_text(encoding="utf-8")

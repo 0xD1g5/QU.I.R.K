@@ -72,6 +72,7 @@ class _GatekeeperProtocol(asyncio.DatagramProtocol):
         self.transport: asyncio.DatagramTransport | None = None
         self._internal_transport: asyncio.DatagramTransport | None = None
         self._client_addr: tuple[str, int] | None = None
+        self._reply_received: asyncio.Event | None = None
 
     def connection_made(self, transport: asyncio.DatagramTransport) -> None:  # type: ignore[override]
         self.transport = transport
@@ -94,6 +95,7 @@ class _GatekeeperProtocol(asyncio.DatagramProtocol):
     async def _forward(self, data: bytes, addr: tuple[str, int]) -> None:
         global _busy
         loop = asyncio.get_event_loop()
+        self._reply_received = asyncio.Event()
         try:
             transport, _protocol = await loop.create_datagram_endpoint(
                 lambda: _InternalReplyProtocol(self),
@@ -101,19 +103,30 @@ class _GatekeeperProtocol(asyncio.DatagramProtocol):
             )
             self._internal_transport = transport
             transport.sendto(data)
-            # Bound how long a single in-flight slot can be held — protects
-            # the simulator from a permanently wedged _busy flag if the
-            # internal Application never replies.
-            await asyncio.sleep(2.5)
+            # Release the single-in-flight slot as soon as the reply is
+            # relayed, rather than always holding it for the full window —
+            # a real BACnet identification is 3 sequential round trips
+            # (Who-Is + 2x ReadProperty), each with its own bounded scanner
+            # timeout (D-08); an unconditional hold here would always
+            # outlast a fast reply and starve every subsequent step. The
+            # 2.5s sleep remains a safety-net ceiling for a genuinely
+            # wedged internal Application that never replies at all.
+            try:
+                await asyncio.wait_for(self._reply_received.wait(), timeout=2.5)
+            except asyncio.TimeoutError:
+                pass
         finally:
             if self._internal_transport is not None:
                 self._internal_transport.close()
                 self._internal_transport = None
+            self._reply_received = None
             _busy = False
 
     def relay_reply(self, data: bytes) -> None:
         if self.transport is not None and self._client_addr is not None:
             self.transport.sendto(data, self._client_addr)
+        if self._reply_received is not None:
+            self._reply_received.set()
 
 
 class _InternalReplyProtocol(asyncio.DatagramProtocol):

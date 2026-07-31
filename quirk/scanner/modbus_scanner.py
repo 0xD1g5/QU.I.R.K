@@ -69,6 +69,21 @@ _OBJ_MODEL = 1
 _OBJ_FIRMWARE = 2
 
 
+def _decode_identification_field(value: object) -> Optional[str]:
+    """Decode a pymodbus Read Device Identification field to a display string.
+
+    pymodbus returns Basic-category identification objects (VendorName,
+    ProductCode, MajorMinorRevision) as raw bytes; str(bytes) yields the
+    Python repr (e.g. "b'Schneider Electric'") rather than the text.
+    """
+    if not value:
+        return None
+    if isinstance(value, bytes):
+        decoded = value.decode("utf-8", errors="replace").strip()
+        return decoded or None
+    return str(value) or None
+
+
 async def _async_probe(host: str, timeout: int) -> Dict[str, Optional[str]]:
     """Async Modbus/TCP FC 43/14 Read Device Identification probe.
 
@@ -99,9 +114,9 @@ async def _async_probe(host: str, timeout: int) -> Dict[str, Optional[str]]:
         model = information.get(_OBJ_MODEL)
         firmware = information.get(_OBJ_FIRMWARE)
 
-        result["modbus_vendor"] = str(vendor) if vendor else None
-        result["modbus_model"] = str(model) if model else None
-        result["modbus_firmware"] = str(firmware) if firmware else None
+        result["modbus_vendor"] = _decode_identification_field(vendor)
+        result["modbus_model"] = _decode_identification_field(model)
+        result["modbus_firmware"] = _decode_identification_field(firmware)
         result["modbus_probe_state"] = "identified" if result["modbus_vendor"] else "no_match"
     except (asyncio.TimeoutError, ConnectionResetError, OSError, Exception) as exc:
         _LOG.debug("Modbus probe %s failed: %s", host, safe_str(exc))
