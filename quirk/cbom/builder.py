@@ -1057,6 +1057,26 @@ def build_cbom(
                     name="quirk:hw-snmp-oid",
                     value=snmp_oid,
                 ))
+            # SNMPV3-02 / Phase 139: emit SNMPv3 negotiated version/protocol
+            # metadata only when present — protocol NAMES only, never secrets.
+            snmp_version = dev.get("snmp_version")
+            if snmp_version:
+                fw_props.append(Property(
+                    name="quirk:hw-snmp-version",
+                    value=_sanitize_hw_str(str(snmp_version)),
+                ))
+                snmp_auth_protocol = dev.get("snmp_auth_protocol")
+                if snmp_auth_protocol:
+                    fw_props.append(Property(
+                        name="quirk:hw-snmp-auth-protocol",
+                        value=_sanitize_hw_str(str(snmp_auth_protocol)),
+                    ))
+                snmp_priv_protocol = dev.get("snmp_priv_protocol")
+                if snmp_priv_protocol:
+                    fw_props.append(Property(
+                        name="quirk:hw-snmp-priv-protocol",
+                        value=_sanitize_hw_str(str(snmp_priv_protocol)),
+                    ))
             firmware_child = Component(
                 name=fw_name,
                 type=ComponentType.FIRMWARE,
