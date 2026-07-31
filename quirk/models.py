@@ -393,3 +393,9 @@ class HardwareDevice(Base):
     snmp_sysname     = Column(String(255), nullable=True)   # sysName OID 1.3.6.1.2.1.1.5.0
     snmp_sysobjectid = Column(String(255), nullable=True)   # sysObjectID OID 1.3.6.1.2.1.1.2.0
     snmp_vendor      = Column(String(255), nullable=True)   # parsed vendor from sysDescr
+    # Phase 139 SNMPV3-01: negotiated SNMPv3 session metadata. Protocol NAMES
+    # only — never keys/passphrases. snmp_version sized at 24 chars to fit the
+    # longest mode label (e.g. "v3-protocol-mismatch", added in 139-02/139-03).
+    snmp_version        = Column(String(24), nullable=True)   # e.g. "v1"|"v2c"|"v3"
+    snmp_auth_protocol  = Column(String(16), nullable=True)   # e.g. "SHA256" (name only)
+    snmp_priv_protocol  = Column(String(16), nullable=True)   # e.g. "AES256" (name only)

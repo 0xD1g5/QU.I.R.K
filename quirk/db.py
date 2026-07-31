@@ -142,6 +142,13 @@ _SNMP_HW_COLUMNS: tuple[tuple[str, str], ...] = (
     ("snmp_sysobjectid", "VARCHAR(255)"),
     ("snmp_vendor",      "VARCHAR(255)"),
 )
+_SNMPV3_HW_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 139 SNMPV3-01: negotiated SNMPv3 session metadata on hardware_devices.
+    # All nullable — null until an SNMPv3-capable probe negotiates a session.
+    ("snmp_version",       "VARCHAR(24)"),
+    ("snmp_auth_protocol", "VARCHAR(16)"),
+    ("snmp_priv_protocol", "VARCHAR(16)"),
+)
 
 
 def _ensure_columns(
@@ -201,6 +208,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("crypto_endpoints", _V54_SENSOR_COLUMNS),  # Phase 107 MODEL-01
     ("sensor_tokens",    _V55_SENSOR_TOKEN_COLUMNS),  # Phase 113 AUTH-02
     ("hardware_devices", _SNMP_HW_COLUMNS),           # Phase 133 SNMP-03
+    ("hardware_devices", _SNMPV3_HW_COLUMNS),         # Phase 139 SNMPV3-01
 )
 
 
