@@ -1,7 +1,14 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.6.0
-**Last Updated:** 2026-07-31 (Phase 139 COMPLETE — SNMPv3 Auth+Priv Support: added UAT-139 series
+**Last Updated:** 2026-07-31 (Phase 140 COMPLETE — SNMP-Confirmed Bridge Mitigation: added UAT-140
+series (5 test cases) covering the bridge-evidence storage migration (BRIDGE-02), the sensor-side
+ARP-table walk probe empirically confirmed against hwcompat-snmp (BRIDGE-04/BRIDGE-01),
+evidence-gated `upstream_mitigated` promotion scoped to the specific gateway<->backend pair
+(BRIDGE-01/04/05, hardened by a code-review-caught CR-01 over-promotion fix), badge+caveat
+rendering across HTML/PDF/DOCX/dashboard human-verified visually distinct (BRIDGE-03), and docs+
+Obsidian sync correcting the stale "reserved status" language. Closes BRIDGE-01..05.
+Earlier: Phase 139 COMPLETE — SNMPv3 Auth+Priv Support: added UAT-139 series
 (6 test cases) covering per-host SNMPv3 USM credential config (SNMPV3-01), the v3->v2c->none
 fallback ladder + version/security-level labeling (SNMPV3-02, live-confirmed), credential
 scrubbing (SNMPV3-03), and the empirically-confirmed v3 timeout multiplier (SNMPV3-04). Live
@@ -15660,3 +15667,146 @@ user-facing documentation.
 **Date:** 2026-07-31  **Tester:** automated (grep verification — Phase 139 Plan 07)
 **Notes:** Guides re-synced to Obsidian vault `Digs` per CLAUDE.md LIVE-03. `lab.sh` left unmodified
 (profiles auto-discover from `docker-compose.yml`).
+
+---
+
+## UAT-140 Series — SNMP-Confirmed Bridge Mitigation (Phase 140)
+
+### UAT-140-01: Bridge-evidence storage foundation (BRIDGE-02) — Automated
+
+**What to test:** `HardwareDevice` gains two nullable columns (`bridge_evidence_json` TEXT,
+`bridge_confirmed_at` DATETIME) via an additive, idempotent migration.
+
+**Steps:**
+1. Run the additive migration against a fresh DB and confirm both columns exist via `PRAGMA table_info`.
+2. Run the migration a second time and confirm it is a no-op (idempotent).
+
+**Pass criteria:**
+- Both columns present with correct types after migration
+- Running the migration twice produces no error and no duplicate columns
+
+**Automated gate:** `python -m pytest tests/test_db_migrations.py -k bridge_evidence -v` → PASSED.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest — Phase 140 Plan 00)
+**Notes:** BRIDGE-02. Mirrors the Phase 139 SNMPv3-column additive-migration precedent.
+
+---
+
+### UAT-140-02: Sensor-side ARP-table walk probe (BRIDGE-04, BRIDGE-01) — Automated + Human
+
+**What to test:** A bounded, credential-scrubbed SNMP walk of the gateway's `ipNetToMediaTable`
+(v2c + v3) runs only against sensor-local, pre-check-flagged gateway candidates (D-03) — not every
+SNMP-enabled device — and persists raw `(target_ip, mac)` facts, never community strings or USM
+secrets.
+
+**Steps:**
+1. Run the mocked ARP-walk contract tests (v2c happy path, v3 USM dispatch, oversized-table capping,
+   import-guard fallback, sync wrapper).
+2. (Human, Phase 140 Plan 05) Run the probe against the live `hwcompat-snmp` chaos-lab target and
+   confirm real evidence is captured and the wall-clock timeout has adequate headroom.
+
+**Pass criteria:**
+- All 5 ARP-walk contract tests pass
+- The walk is bounded by both `asyncio.wait_for` and `_ARP_WALK_MAX_ENTRIES` (500)
+- Live confirmation: evidence captured, latency well under budget
+
+**Automated gate:** `python -m pytest tests/test_snmp_scanner_contract.py -k arp -v` → 5 PASSED (21 total in file).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest — Phase 140 Plan 01) + human/empirical (chaos-lab, Phase 140 Plan 05)
+**Notes:** BRIDGE-04, BRIDGE-01. Live run against `hwcompat-snmp`: 1 ARP entry returned, ~0.041s
+latency vs. a 10s budget (244x headroom) — no timeout/cap calibration needed, no lab config change
+required (Docker's bridge networking seeds the gateway ARP entry automatically).
+
+---
+
+### UAT-140-03: Evidence-gated upstream_mitigated promotion, pair-scoped (BRIDGE-01, BRIDGE-04, BRIDGE-05) — Automated
+
+**What to test:** `_confirm_upstream_mitigation()` promotes `bridge_status` from `partial_only` to
+`upstream_mitigated` ONLY when the *specific* paired gateway's stored ARP evidence proves the
+*specific* legacy backend's own IP — never on subnet co-presence alone, and never for an unrelated
+device merely sharing a /24 with a proven pair. Zero network I/O. Never enters `SCORE_WEIGHTS`.
+
+**Steps:**
+1. Run the promotion/no-promotion/zero-I/O/no-score test suite in `test_cbom_bridge_detection.py`.
+2. Run the CR-01 regression test: 2 gateways + 2 legacy backends on the same /24, only one
+   gateway↔backend pair has matching evidence — assert only that pair promotes, the unrelated
+   gateway (zero evidence) and unrelated legacy backend (never referenced) both stay `partial_only`.
+
+**Pass criteria:**
+- Matching-IP evidence promotes both sides of the *specific* proven pair
+- Absent/non-matching evidence leaves devices at `partial_only` (D-05 — no third state)
+- Unrelated devices sharing only a subnet with a proven pair are never promoted
+- `_confirm_upstream_mitigation` makes zero network calls
+- `upstream_mitigated` never appears as a `SCORE_WEIGHTS` key
+
+**Automated gate:** `python -m pytest tests/test_cbom_bridge_detection.py -v` → 13 PASSED.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest — Phase 140 Plan 02, hardened post-code-review)
+**Notes:** BRIDGE-01, BRIDGE-04, BRIDGE-05. A code-review pass found (CR-01) that the initial
+implementation scoped evidence sufficiency to the whole /24 subnet group rather than the specific
+gateway↔backend pair, silently over-promoting unrelated devices. Fixed in commit `40de937` with a
+new regression test (`test_confirm_upstream_does_not_promote_unrelated_devices_sharing_subnet`)
+before this phase closed — the fix and test are what UAT-140-03 exercises.
+
+---
+
+### UAT-140-04: Bridge-status badge + caveat across HTML/PDF/DOCX and dashboard (BRIDGE-03) — Automated + Human
+
+**What to test:** All report surfaces (HTML, PDF-via-HTML-template, DOCX) and the `/hardware`
+dashboard tab render a distinct badge for `partial_only` ("Partial (assumed)") vs `upstream_mitigated`
+("SNMP-confirmed") — never the raw enum string — with the mandatory caveat ("Based on SNMP-derived
+network-path evidence; not independently confirmed by traffic inspection.") always visible, never
+placed next to the score gauge.
+
+**Steps:**
+1. Run the report-render-parity + HTML/DOCX presence tests for the bridge badge and caveat.
+2. Run the dashboard API test asserting `bridge_status` reaches the `/hardware` API response.
+3. (Human, Phase 140 Plan 05) Visually confirm on the live dashboard: blue "SNMP-confirmed" badge
+   is distinct from amber "Partial (assumed)", caveat visible as tooltip + inline banner, no badge
+   adjacent to the readiness-score gauge.
+
+**Pass criteria:**
+- HTML/DOCX/executive narrative all render the two distinct labels + caveat
+- Dashboard `/hardware` tab renders a Bridge Status badge column (amber/blue/em-dash)
+- Human visually confirms the two states are unambiguously distinguishable
+
+**Automated gate:** `python -m pytest tests/test_html_report.py tests/test_docx_report.py tests/test_report_render_parity.py tests/test_dashboard_api.py -k bridge -v` → all PASSED.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest — Phase 140 Plans 03/04) + human (visual, Phase 140 Plan 05)
+**Notes:** BRIDGE-03. Human UAT confirmed blue vs. amber badges are visually distinct on an isolated
+seeded UAT database; caveat present as both `title=` tooltip and an always-visible inline advisory
+banner (not collapsed-only), satisfying the DOCX/PDF "always-visible body text" requirement too.
+
+---
+
+### UAT-140-05: Docs + Obsidian sync for the SNMP-confirmed bridge signal (BRIDGE-01, BRIDGE-04) — Automated
+
+**What to test:** `docs/report-interpretation.md` and `docs/operators-guide.md` document the new
+signal, the stale Phase-129/136 "reserved status" language is corrected to reflect the now-reachable
+evidence-gated status, and both are synced to the Obsidian `Digs` vault.
+
+**Steps:**
+1. Confirm `docs/report-interpretation.md` §10.5 documents `upstream_mitigated` vs `partial_only`,
+   the badge, and the caveat.
+2. Confirm `docs/operators-guide.md` §9.3 describes the evidence-gated confirmation probe (not the
+   old "reserved for future active-path verification" placeholder language).
+3. Confirm both are synced to `20_Dev-Work/QUIRK/Guides/Report-Interpretation.md` and
+   `20_Dev-Work/QUIRK/Guides/Operators-Guide.md` in vault `Digs`.
+
+**Pass criteria:**
+- `grep -q "upstream_mitigated" docs/report-interpretation.md` → 0 exit
+- `grep -q "evidence-gated" docs/operators-guide.md` → 0 exit
+- Neither doc contains the stale "reserved status" claim
+
+**Automated gate:** `python -m pytest tests/test_phase136_docs_presence.py -k ops03 -v` → PASSED (fixture updated to match the corrected, accurate §9.3 language — see commit `f4f10e4`).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest + grep)
+**Notes:** BRIDGE-01, BRIDGE-04. The Phase-136 doc-presence gate originally asserted the OLD "reserved
+status / never auto-assign" literal substrings; since Phase 140 correctly made `upstream_mitigated`
+reachable, that gate was updated (not the doc reverted) to assert the new, accurate "evidence-gated /
+never promotes on subnet co-presence alone" language.
