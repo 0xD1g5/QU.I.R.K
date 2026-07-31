@@ -32,7 +32,9 @@ from quirk.db import (
     _SAFE_COL_TYPE_RE,
     _V43_COLUMNS,
     _ensure_columns,
+    get_engine,
     init_db,
+    run_additive_migration,
 )
 
 
@@ -136,3 +138,41 @@ def test_all_guarded_paths_accept_real_values(tmp_path: Path) -> None:
     _ensure_columns(engine, "crypto_endpoints", _PHASE41_COLUMNS)
     _ensure_columns(engine, "crypto_endpoints", _PHASE46_COLUMNS)
     _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)
+
+
+# ---------------------------------------------------------------------------
+# Phase 140 BRIDGE-02: bridge-evidence columns migrate additively/idempotently.
+# ---------------------------------------------------------------------------
+
+
+def test_bridge_evidence_columns_migrate_additively(tmp_path: Path) -> None:
+    """`bridge_evidence_json`/`bridge_confirmed_at` land on hardware_devices
+    via the additive migration and re-running it is a safe no-op."""
+    import sqlite3
+
+    db_path = tmp_path / "bridge.db"
+    init_db(str(db_path))
+
+    def _table_info_names() -> set[str]:
+        conn = sqlite3.connect(str(db_path))
+        try:
+            rows = conn.execute("PRAGMA table_info(hardware_devices)").fetchall()
+        finally:
+            conn.close()
+        return {row[1] for row in rows}
+
+    cols = _table_info_names()
+    assert "bridge_evidence_json" in cols
+    assert "bridge_confirmed_at" in cols
+
+    # Second run must be a no-op: no exception, columns unchanged.
+    engine = get_engine(str(db_path))
+    results = run_additive_migration(engine, dry_run=False)
+    bridge_results = [
+        r for r in results if r.table == "hardware_devices" and r.column.startswith("bridge_")
+    ]
+    assert len(bridge_results) == 2
+    assert all(r.status == "already-present" for r in bridge_results)
+
+    cols_after = _table_info_names()
+    assert cols_after == cols
