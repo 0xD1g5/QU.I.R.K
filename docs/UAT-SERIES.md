@@ -1,7 +1,20 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.6.0
-**Last Updated:** 2026-07-31 (Phase 140 COMPLETE — SNMP-Confirmed Bridge Mitigation: added UAT-140
+**Last Updated:** 2026-07-31 (Phase 141 COMPLETE, BACnet-scoped — OT/ICS Fingerprinting: added
+UAT-141 series (7 test cases) covering the pymodbus/bacpypes3 foundation (OTICS-01/02/06), the
+Modbus/TCP and BACnet/IP scanners (OTICS-01/02/03), waterfall wiring (OTICS-01/02), three-site
+projection + CBOM (OTICS-06), dashboard/report badge columns (OTICS-05), and the live `otics`
+chaos-lab profile (OTICS-04). Live checkpoint validation found and fixed 5 real bugs none of the
+mocked unit tests caught — a dashboard auth YAML-token dead-code bug, the OTICS columns never
+migrating onto pre-existing databases, Modbus's identification fields returned as undecoded bytes,
+a BACnet client construction/binding bug plus a chaos-lab simulator busy-hold timing bug that
+together made BACnet identification impossible, and a missing default-path port-502 injection.
+BACnet now identifies live 5/5 reliably. **Modbus does not activate end-to-end** — a structural
+gate bug in `hardware_scanner.py` Step 4 was found and deliberately left for a dedicated follow-up
+per explicit user direction rather than patched mid-checkpoint. Checkpoints 141-06/07 approved
+BACnet-scoped only.
+Earlier: Phase 140 COMPLETE — SNMP-Confirmed Bridge Mitigation: added UAT-140
 series (5 test cases) covering the bridge-evidence storage migration (BRIDGE-02), the sensor-side
 ARP-table walk probe empirically confirmed against hwcompat-snmp (BRIDGE-04/BRIDGE-01),
 evidence-gated `upstream_mitigated` promotion scoped to the specific gateway<->backend pair
@@ -15810,3 +15823,211 @@ evidence-gated status, and both are synced to the Obsidian `Digs` vault.
 status / never auto-assign" literal substrings; since Phase 140 correctly made `upstream_mitigated`
 reachable, that gate was updated (not the doc reverted) to assert the new, accurate "evidence-gated /
 never promotes on subnet co-presence alone" language.
+
+---
+
+## UAT-141 Series — OT/ICS Fingerprinting: Modbus + BACnet (Phase 141)
+
+**Last Updated:** 2026-07-31
+
+### UAT-141-01: Foundation — extras, config flags, persistence columns (OTICS-01, OTICS-02, OTICS-06) — Automated + Human
+
+**What to test:** `pymodbus`/`bacpypes3` land in `[hw]` extras only (never `[all]`), behind a
+package-legitimacy human-verify checkpoint; `enable_modbus`/`enable_bacnet` default False; eight
+nullable `modbus_*`/`bacnet_*` columns exist on `HardwareDevice`.
+
+**Steps:**
+1. Human confirms both PyPI packages match their expected source repos/maintainers before install.
+2. Run `python -c "import pymodbus, bacpypes3; from quirk.config import ConnectorsCfg; c=ConnectorsCfg(); assert c.enable_modbus is False and c.enable_bacnet is False"`.
+3. Confirm all eight columns present on `HardwareDevice.__table__.columns`.
+
+**Pass criteria:**
+- Both libraries import cleanly; neither appears under `[all]` in `pyproject.toml`
+- Both flags default False
+- All eight columns present, sized correctly (`*_probe_state` = VARCHAR(32))
+
+**Automated gate:** `python -c "from quirk.models import HardwareDevice as H; ..."` → PASSED (Plan 01 Task 3).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** human (PyPI legitimacy, verified live via `pypi.org/pypi/<pkg>/json`) + automated (pytest — Phase 141 Plan 01)
+**Notes:** OTICS-01, OTICS-02, OTICS-06. pymodbus → `github.com/pymodbus-dev/pymodbus` (v3.14.0);
+bacpypes3 → `github.com/JoelBender/bacpypes3` (v0.0.106). Both matched expected provenance.
+
+---
+
+### UAT-141-02: Modbus/TCP fingerprint scanner (OTICS-01, OTICS-03) — Automated + Human (live)
+
+**What to test:** `probe_modbus_target()` sends a single FC 43/14 Read Device Identification
+request and returns decoded vendor/model/firmware text, never a Python bytes repr.
+
+**Steps:**
+1. Run `pytest tests/test_modbus_scanner.py -v` (mocked contract tests, including the bytes-decode
+   regression added post-checkpoint).
+2. Human (live, checkpoint validation): run `probe_modbus_target('127.0.0.1')` against the
+   `otics-modbus` chaos-lab container and confirm clean `vendor="Schneider Electric"`,
+   `model="M221"`, `firmware="1.6.2.0"`.
+
+**Pass criteria:**
+- No write function code ever appears in the module (deny-list grep)
+- A malformed/anomalous response sets `modbus_probe_state="aborted_anomalous_response"`, no retry
+- Live: decoded strings, not `"b'...'"` reprs
+
+**Automated gate:** `python -m pytest tests/test_modbus_scanner.py -v` → PASSED (4 tests, incl. new `test_parse_device_id_decodes_bytes`).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest) + human (live, checkpoint 141-06/07 prep)
+**Notes:** OTICS-01, OTICS-03. **Real bug found live**: pymodbus returns identification fields as
+raw bytes; `str(bytes)` produced `"b'Schneider Electric'"` instead of decoded text — the original
+mocked unit test used plain-`str` fixtures and never caught it. Fixed (commit `574c771`) with a
+`_decode_identification_field()` helper and a bytes-fixture regression test.
+
+---
+
+### UAT-141-03: BACnet/IP fingerprint scanner (OTICS-02, OTICS-03) — Automated + Human (live)
+
+**What to test:** `probe_bacnet_target()` sends a single directed-unicast Who-Is at `Address(host)`
+followed by ReadProperty(model-name, firmware-revision), never a subnet broadcast, never a write.
+
+**Steps:**
+1. Run `pytest tests/test_bacnet_scanner.py -v`.
+2. Human (live, checkpoint validation): run `probe_bacnet_target('127.0.0.1')` against the
+   `otics-bacnet` chaos-lab container repeatedly and confirm reliable identification.
+
+**Pass criteria:**
+- No `GlobalBroadcast`/`LocalBroadcast`/write-property symbols anywhere in the module
+- A single anomalous who_is triggers the one-strike abort, no retry
+- Live: `bacnet_vendor="5"`, `bacnet_model="FX16"`, `bacnet_firmware="9.0.1"`,
+  `bacnet_probe_state="identified"`, reproducible across repeated runs
+
+**Automated gate:** `python -m pytest tests/test_bacnet_scanner.py -v` → PASSED (6 tests, mocks updated to patch `_build_ephemeral_application`).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest) + human (live, checkpoint 141-06/07)
+**Notes:** OTICS-02, OTICS-03. **Two real bugs found live**: (1) bare `Application()` never wires
+up bacpypes3's request-routing stack (`AttributeError: no attribute 'elementService'`); (2) its
+replacement's library-default `"host"` binding bound to the LAN interface instead of loopback,
+silently dropping real I-Am replies from a `127.0.0.1` target (a connected UDP socket only accepts
+datagrams from the exact peer it sent to — confirmed via raw packet tracing showing a legitimate
+reply from `127.0.0.1:47808` being discarded). Fixed via a wildcard-bind (`"0.0.0.0:0"`) ephemeral
+Application (commit `574c771`). Reproduced 5/5 clean live identifications after the fix.
+
+---
+
+### UAT-141-04: Waterfall wiring + CLI flags (OTICS-01, OTICS-02, D-01, D-03, D-04) — Automated + Deferred (Modbus e2e)
+
+**What to test:** `--enable-modbus`/`--enable-bacnet` flow through config to `fingerprint_one()`'s
+Steps 4/5, neither gated on prior vendor-identification state, Modbus headline wins over BACnet on
+a tie (first-match-wins, D-03), and Modbus's port-502 evidence gate has an actual endpoint to check.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_scanner_otics.py -v` (5 tests, waterfall wiring).
+2. Live: run `python run_scan.py --config config.yaml --enable-modbus --enable-bacnet --allow-internal-targets` against the `otics` chaos-lab profile and inspect `hardware_devices`.
+
+**Pass criteria:**
+- Both steps run independently of `device.vendor == "Unknown"` state
+- Modbus promotion beats BACnet promotion when both identify (D-03)
+- Live: both `modbus_probe_state` and `bacnet_probe_state` populate as `identified` on the same row
+
+**Automated gate:** `python -m pytest tests/test_hardware_scanner_otics.py -v` → 5 PASSED (unit level, mocked).
+
+**Result:** - [x] PASS (unit)  - [ ] FAIL  - [x] SKIP (live Modbus half, deferred)
+**Date:** 2026-07-31  **Tester:** automated (pytest, unit-level PASS) + human (live, checkpoint — BACnet half PASS, Modbus half BLOCKED)
+**Notes:** OTICS-01, OTICS-02, D-01, D-03, D-04. Unit-level waterfall wiring is correct and passes.
+**Live end-to-end Modbus fingerprinting does not activate**, discovered during checkpoint
+validation: `hardware_scanner.py` Step 4's gate `if _enable_modbus and _port == 502:` can never be
+satisfied — `fingerprint_hardware()` only ever receives SSH-classified `CryptoEndpoint` objects,
+whose port is by construction never `502` (Modbus doesn't speak SSH). A necessary-but-insufficient
+fix (injecting port 502 into the default non-nmap candidate list, commit `7d95d90`) was applied,
+but the Step 4 gate itself remains unsatisfiable and was deliberately left unfixed per user
+direction — see `141-07-SUMMARY.md` for the full root-cause chain and recommended fix (mirror
+Step 5's `enable_bacnet`-only gate, no port check). BACnet's live end-to-end path (Step 5, no port
+gate) works correctly — see UAT-141-07.
+
+---
+
+### UAT-141-05: Projection sites — reports, merge/CBOM, dashboard (OTICS-06) — Automated
+
+**What to test:** All eight `modbus_*`/`bacnet_*` fields propagate through `writer.py`,
+`merge/scan.py`, `dashboard/api/routes/scan.py` + `schemas.py`, and the CBOM FIRMWARE component.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_projection_sites.py tests/test_cbom_hardware_device.py -v`.
+
+**Pass criteria:**
+- All three named projection sites carry all eight fields
+- CBOM FIRMWARE component emits `quirk:hw-modbus-*`/`quirk:hw-bacnet-*` properties when populated
+
+**Automated gate:** `python -m pytest tests/test_hardware_projection_sites.py tests/test_cbom_hardware_device.py -v` → PASSED (6 tests).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31  **Tester:** automated (pytest — Phase 141 Plan 05)
+**Notes:** OTICS-06. Mirrors the existing SNMP three-site projection precedent exactly.
+
+---
+
+### UAT-141-06: Dashboard + report badge columns, five-state vocabulary (OTICS-05, D-12, D-13) — Automated + Human
+
+**What to test:** `/hardware` renders two new badge columns (Modbus blue, BACnet purple) with a
+five-state vocabulary (identified / no_response / no_match / aborted_anomalous_response red /
+not-attempted em-dash), matched in HTML/PDF/DOCX reports with a persistent abort caveat.
+
+**Steps:**
+1. Run `pytest tests/test_report_render_otics_columns.py -v`.
+2. Human: open the live dashboard `/hardware` page and confirm badge hues/labels are correct and
+   visually distinct; open a generated HTML report and confirm the same.
+
+**Pass criteria:**
+- `npm run build`/`npm run lint` clean; both style maps use the exact UI-SPEC HSL values
+- Human confirms distinct hues, the abort state is unmistakable, report columns + caveat present
+
+**Automated gate:** `python -m pytest tests/test_report_render_otics_columns.py -v` → 6 PASSED.
+
+**Result:** - [x] PASS (BACnet)  - [ ] FAIL  - [x] SKIP (Modbus visual, deferred — no live-identified Modbus data exists yet)
+**Date:** 2026-07-31  **Tester:** automated (pytest — Phase 141 Plan 06) + human (visual, checkpoint — approved BACnet-scoped)
+**Notes:** OTICS-05, D-12, D-13. Human approved the checkpoint scoped to BACnet only: the dashboard
+was verified live showing a purple "identified" BACnet badge for `127.0.0.1` sourced from a real
+otics chaos-lab scan. The Modbus column was not visually verified with real identified data — see
+UAT-141-04's note on the Step 4 gate blocker. Two unrelated real bugs were also found and fixed
+during this checkpoint's prep: dashboard auth's YAML `api_token` was dead code (`load_config()`
+called with no path argument, commit `8d48a3a`), and the OTICS columns were never registered in
+`quirk/db.py`'s additive-migration registry, so any pre-existing database silently failed every
+Modbus/BACnet `INSERT` (commit `af69844`).
+
+---
+
+### UAT-141-07: Chaos-lab `otics` profile — live end-to-end validation (OTICS-04, D-10) — Human (live)
+
+**What to test:** The `otics` compose profile's two fragile simulators (`otics-modbus` on real
+port 502/TCP, `otics-bacnet` on real port 47808/UDP) validate both scanners end-to-end without
+ever tripping their own crash/hang detection.
+
+**Steps:**
+1. `cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile otics" ./lab.sh up`.
+2. `python run_scan.py --config config.yaml --enable-modbus --enable-bacnet --allow-internal-targets`.
+3. Confirm expected vendor/model/firmware values per `expected_results_otics.md`; confirm both
+   containers stay healthy (`./lab.sh status`).
+4. `PROFILE_ARGS="--profile otics" ./lab.sh down`.
+
+**Pass criteria:**
+- BACnet: `bacnet_vendor=5`, `bacnet_model=FX16`, `bacnet_firmware=9.0.1`, `probe_state=identified`
+- Modbus: `modbus_vendor=Schneider Electric`, `modbus_model=M221`, `probe_state=identified`
+- Both containers remain healthy through the scan; a forced concurrent probe records
+  `aborted_anomalous_response` distinctly rather than hanging/crashing the simulator
+
+**Automated gate:** N/A — this UAT is inherently live/manual (real Docker + real network traffic).
+
+**Result:** - [x] PASS (BACnet)  - [ ] FAIL  - [x] SKIP (Modbus, deferred)
+**Date:** 2026-07-31  **Tester:** human (live, `chaoslab-otics-bacnet-1`/`chaoslab-otics-modbus-1`)
+**Notes:** OTICS-04, D-10. BACnet reproduced live 5/5 clean identifications
+(`vendor=5, model=FX16, firmware=9.0.1`) after fixing two real bugs (UAT-141-03) plus a chaos-lab
+simulator busy-hold timing bug: the gatekeeper's single-in-flight lock held unconditionally for
+2.5s regardless of reply speed, but a full BACnet identification is 3 sequential round trips
+(Who-Is + 2× ReadProperty) each bounded by the scanner's own 2s per-step timeout — the busy-hold
+always outlasted the next step, making the exchange structurally impossible. Fixed
+`bacnet_sim.py` to release the lock as soon as the reply is relayed, keeping 2.5s only as a
+safety-net ceiling for a genuinely wedged internal Application (commit `574c771`). Neither
+container crashed or hung across dozens of manual and automated probes this session. **Modbus was
+not validated** — deferred per user direction; see UAT-141-04's note for the root cause
+(`hardware_scanner.py` Step 4's `_port == 502` gate is unsatisfiable by the current architecture).
+Recommended follow-up: remove that condition (mirror Step 5's unconditional `enable_bacnet` gate),
+then re-run this UAT for the Modbus half.
