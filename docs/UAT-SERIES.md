@@ -1,7 +1,15 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.6.0
-**Last Updated:** 2026-08-02 (Phase 142 COMPLETE — Firmware CVE Correlation: added UAT-142
+**Last Updated:** 2026-08-02 (Phase 143 COMPLETE — Dashboard & Security Tail: added UAT-143
+series (3 test cases) covering the persistent sidebar scan-date badge (TAIL-01, automated
+Vitest coverage across every route + collapsed sidebar + empty state), the
+`security.trusted_targets` scan-consent allowlist (TAIL-02, automated pytest coverage for
+CLI `ValueError` + dashboard HTTP 422 rejection with zero `ScanJob` rows created, plus
+empty-allowlist allow-all default), and the Windows Authenticode signing CI mechanism (TAIL-03,
+static YAML/structure verification only — **UAT-143-03's live `windows-latest` Actions run is
+OUTSTANDING**, not yet performed).
+Earlier: Phase 142 COMPLETE — Firmware CVE Correlation: added UAT-142
 series (1 test case) covering the curated NVD-cited firmware CVE catalog end-to-end —
 `quirk cve status` freshness CLI, the neutral advisory-only CVE badge with per-CVE NVD links on
 a fingerprinted device's report/dashboard row, and the "no CVE correlation attempted" caveat for
@@ -16081,3 +16089,128 @@ reports; a device with an unidentified vendor shows no CVE annotation (renders t
 regression test. Live dashboard/report visual confirmation (steps 3–4) is deferred human-UAT,
 consistent with this project's standing pattern of gating final visual fidelity on a live
 walkthrough rather than automated render-presence checks alone.
+
+---
+
+## UAT-143 Series — Dashboard & Security Tail (Phase 143)
+
+**Last Updated:** 2026-08-02
+
+### UAT-143-01: Persistent scan-date badge — every route, collapsed sidebar, empty state (TAIL-01) — Automated + Human
+
+**What to test:** The sidebar's "Last scan: {date} {time}" badge is visible on every dashboard
+route (not just the overview page), degrades to an icon+tooltip in the collapsed sidebar, and
+shows "No scan yet" when zero scans exist — never hidden entirely.
+
+**Steps:**
+1. Run `npm test -- ScanDateBadge` in `src/dashboard/` — confirm all three states pass
+   (loading/empty/has-scan).
+2. Human: with a zero-scan database, open the dashboard and confirm the sidebar shows
+   "No scan yet" rather than nothing.
+3. Human: run a scan, then navigate across several dashboard routes (Overview, Hardware,
+   Schedules, etc.) and confirm the badge's "Last scan: ..." text is present and identical on
+   every route.
+4. Human: collapse the sidebar (`<lg` viewport or the collapse toggle) and confirm a calendar
+   icon appears with the same "Last scan" text in a hover tooltip.
+
+**Pass criteria:**
+- `npm run build` and `npm run lint` exit 0
+- All 3 Vitest states pass
+- Badge renders identically on every authenticated route (single `<Sidebar>` mount point)
+- Collapsed-sidebar icon+tooltip matches the existing sidebar row collapse pattern
+- Badge is never absent — no scan count or viewport-width gate hides it entirely
+
+**Automated gate:** `npm test -- ScanDateBadge` (Vitest, 3 tests) → PASSED (Phase 143 Plan 01).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP (browser viewport-resize + zero-scan-database click-through — human, pending live session)
+**Date:** 2026-08-02  **Tester:** automated (Vitest — Phase 143 Plan 01)
+**Notes:** TAIL-01, D-01, D-02. Mount-point confirmed by static read of `App.tsx` (single
+`<Sidebar>` wrapping all authenticated routes) rather than a live click-through across routes.
+Literal browser-viewport-resize and zero-scan-database visual confirmation deferred to a human
+session — no running dev server/browser available in the executing environment.
+
+---
+
+### UAT-143-02: `security.trusted_targets` allowlist rejects out-of-scope targets on both entry points (TAIL-02) — Automated
+
+**What to test:** A target outside a configured `security.trusted_targets` allowlist is
+rejected before any scan begins — `ValueError` on the CLI, HTTP 422 with no `ScanJob` row
+created on the dashboard — while an empty/absent allowlist allows all targets (backward
+compatible default).
+
+**Steps:**
+1. Run `pytest tests/test_target_trust.py -v` — confirm the matcher's empty-allow-all,
+   exact-match, and CIDR-containment cases all pass, plus the CLI chokepoint raise/no-raise
+   cases.
+2. Run `pytest tests/test_job_trusted_targets.py -v` — confirm the dashboard `POST /api/jobs`
+   returns 422 for an out-of-allowlist target with **zero** `ScanJob` rows created, and 201 when
+   the allowlist is empty or the target matches.
+3. Human (optional, live confirmation): configure `security.trusted_targets` with one host,
+   attempt a CLI scan against a different host, and confirm the `ValueError` fires before any
+   network probe; attempt a dashboard "New Scan" against the same out-of-scope host and confirm
+   a 422 with no job row appearing in scan history.
+
+**Pass criteria:**
+- `is_target_trusted()` returns `True` for every target when `trusted_targets` is empty
+- Exact host/IP matches and CIDR-containment matches both pass; wildcard subdomains are NOT
+  matched
+- CLI: `enforce_trusted_targets()` raises `ValueError` naming the redacted target before
+  `init_db()`/scan execution
+- Dashboard: out-of-allowlist target returns HTTP 422, asserted via a job-id-keyed DB lookup
+  that no `ScanJob` row was created (not a global count, per the shared in-memory SQLite gotcha
+  documented in 143-02-SUMMARY.md)
+
+**Automated gate:** `pytest tests/test_target_trust.py tests/test_job_trusted_targets.py -q` → 6/6 PASSED (Phase 143 Plan 02).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP (live CLI/dashboard round-trip — human, optional)
+**Date:** 2026-08-02  **Tester:** automated (pytest — Phase 143 Plan 02)
+**Notes:** TAIL-02, D-03..D-07. This plan is one of two `/gsd-secure-phase 143` review targets
+(D-12) — see 143-02-SUMMARY.md's "Security Review Still Required" note for the review-sequencing
+gate that must run before Wave 2 (signing CI) work is considered fully closed.
+
+---
+
+### UAT-143-03: Windows Authenticode signing CI — self-test wiring + clean no-op without secrets (TAIL-03) — Static + Live (OUTSTANDING)
+
+**What to test:** The `windows-package` release CI job's Authenticode-signing steps: (a) the
+CI self-test signs an ephemeral throwaway copy of the exe with a self-signed certificate and
+prints `SELF_TEST_SIGNING: OK`, proving the `signtool`/decode/verify wiring end-to-end without
+any real secret; (b) production signing is a clean no-op (skips cleanly, no error) when
+`QUIRK_SIGNING_CERT_BASE64`/`QUIRK_SIGNING_CERT_PASSWORD` secrets are absent; (c) both cleanup
+steps run unconditionally (`if: always()`) and leave no `.pfx` or `selftest_target.exe` in the
+job's artifact list, regardless of success/failure.
+
+**Steps:**
+1. `python -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"` — confirm
+   valid YAML.
+2. Static inspection: confirm step order (`Read version` → `Determine signing capability` →
+   `Sign with production certificate` → `Clean up production signing artifacts` → `CI self-test`
+   → `Clean up self-test artifacts` → `Assemble Windows operator zip` → `Attach zip to GitHub
+   Release`), confirm both signing steps target `dist\quirk\quirk.exe`, confirm no raw
+   `secrets.*` appears in any step-level `if:`, confirm no `run:` block echoes decoded PFX bytes
+   or password strings.
+3. **Live (OUTSTANDING — not yet performed):** push a branch/tag that triggers the `windows-package`
+   job on a real `windows-latest` GitHub Actions runner. Inspect the job log for
+   `SELF_TEST_SIGNING: OK`, confirm production signing skips cleanly with no secrets configured,
+   confirm both cleanup steps ran, and confirm the run's artifact list contains no leaked `.pfx`
+   or `selftest_target.exe`.
+
+**Pass criteria:**
+- YAML parses cleanly; step ordering and target-path assertions all hold (static)
+- Exactly two `if: always()` cleanup steps; exactly one conditional gated on
+  `steps.signcap.outputs.has_prod_cert == 'true'`; zero raw `secrets.*` in any `if:`
+- **Live run required:** `SELF_TEST_SIGNING: OK` actually appears in a real Actions log, both
+  cleanup steps execute, and no `.pfx`/`selftest_target.exe` survive in the run's artifacts
+
+**Automated gate:** N/A for the live-execution assertions — this UAT is inherently a live CI
+run. Static YAML/structure checks were scripted inline during Plan 03 execution (see
+143-03-SUMMARY.md).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (live `windows-latest` Actions run — OUTSTANDING, not performed this session)
+**Date:** 2026-08-02  **Tester:** static inspection only (no interactive human, no live Actions run available in this execution environment)
+**Notes:** TAIL-03, D-08..D-11. **This is the one Phase 143 UAT that is NOT closed.** Per
+143-03-SUMMARY.md: "a live CI run (push a branch/tag that triggers this workflow and inspect the
+`windows-package` job log) is still required before TAIL-03's checkpoint can be considered truly
+closed." Source-level correctness (YAML validity, step ordering, conditional wiring, no secret
+echo) was verified; runtime behavior on a real Windows Actions runner was not exercised. Push a
+branch/tag and inspect the live log to close this row.
