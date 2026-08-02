@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.6.0
-**Last Updated:** 2026-07-31 (Phase 141 COMPLETE, BACnet-scoped — OT/ICS Fingerprinting: added
+**Last Updated:** 2026-08-02 (Phase 142 COMPLETE — Firmware CVE Correlation: added UAT-142
+series (1 test case) covering the curated NVD-cited firmware CVE catalog end-to-end —
+`quirk cve status` freshness CLI, the neutral advisory-only CVE badge with per-CVE NVD links on
+a fingerprinted device's report/dashboard row, and the "no CVE correlation attempted" caveat for
+unidentified-vendor devices. Score/tier isolation (CVE-01/CVE-04) reconfirmed via the dedicated
+`tests/test_cve_score_guard.py` regression gate.
+Earlier: Phase 141 COMPLETE, BACnet-scoped — OT/ICS Fingerprinting: added
 UAT-141 series (7 test cases) covering the pymodbus/bacpypes3 foundation (OTICS-01/02/06), the
 Modbus/TCP and BACnet/IP scanners (OTICS-01/02/03), waterfall wiring (OTICS-01/02), three-site
 projection + CBOM (OTICS-06), dashboard/report badge columns (OTICS-05), and the live `otics`
@@ -16031,3 +16037,47 @@ not validated** — deferred per user direction; see UAT-141-04's note for the r
 (`hardware_scanner.py` Step 4's `_port == 502` gate is unsatisfiable by the current architecture).
 Recommended follow-up: remove that condition (mirror Step 5's unconditional `enable_bacnet` gate),
 then re-run this UAT for the Modbus half.
+
+---
+
+## UAT-142 Series — Firmware CVE Correlation (Phase 142)
+
+**Last Updated:** 2026-08-02
+
+### UAT-142-01: `quirk cve status` freshness + advisory-only report/dashboard CVE surface (CVE-01, CVE-02, CVE-03, CVE-04) — Automated + Human
+
+**What to test:** The curated firmware CVE catalog's staleness CLI reports FRESH; a
+fingerprinted device with a known vendor/model shows a neutral (non-severity) CVE badge with
+clickable NVD links on both the dashboard `/hardware` table and generated HTML/PDF/DOCX
+reports; a device with an unidentified vendor shows no CVE annotation (renders the explicit
+"no CVE correlation attempted" caveat, never a blank cell or a false "0 CVEs found").
+
+**Steps:**
+1. Run `python run_scan.py cve status` — confirm output contains `"CVE Source"` and `"FRESH"`,
+   exit code `0`.
+2. Run `pytest tests/test_hw_cve_parsing.py tests/test_hw_cve_correlation.py tests/test_cve_staleness.py tests/test_html_renderer_cve.py tests/test_cve_score_guard.py -q`.
+3. Human: open the live dashboard `/hardware` page for a scan with a fingerprinted device
+   (e.g. against the `otics` or `hwcompat` chaos-lab profile) and confirm the CVEs column
+   shows a blue "N CVEs" badge that expands to per-CVE NVD links; confirm a device with vendor
+   `Unknown` shows an em dash, not a badge.
+4. Human: generate an HTML report for the same scan and confirm the Hardware Inventory CVE
+   column and advisory-only section note render, plus the staleness caveat if the local catalog
+   snapshot has aged past 30 days.
+
+**Pass criteria:**
+- `quirk cve status` exits 0 and prints FRESH against the shipped `last_verified` date
+- All 5 automated test modules pass with no regressions
+- Dashboard badge is a single neutral hue (never green/red/amber) regardless of match count
+- `tests/test_cve_score_guard.py` confirms zero references to `hw_cve`/`correlate_device` from
+  `intelligence/scoring.py` or `hardware_tier.py` (CVE-01/CVE-04 isolation)
+- Unidentified-vendor devices render "no CVE correlation attempted", not a blank/empty cell
+
+**Automated gate:** `pytest tests/test_hw_cve_parsing.py tests/test_hw_cve_correlation.py tests/test_cve_staleness.py tests/test_html_renderer_cve.py tests/test_cve_score_guard.py -q` → PASSED (Phase 142 Plans 01–04).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP (dashboard/report visual walkthrough — human, pending live session)
+**Date:** 2026-08-02  **Tester:** automated (pytest — Phase 142 Plans 01–04)
+**Notes:** CVE-01, CVE-02, CVE-03, CVE-04. Advisory-only framing verified structurally (no
+`scoring.py`/`hardware_tier.py` imports in `hw_cve.py`) and via the dedicated score-guard
+regression test. Live dashboard/report visual confirmation (steps 3–4) is deferred human-UAT,
+consistent with this project's standing pattern of gating final visual fidelity on a live
+walkthrough rather than automated render-presence checks alone.

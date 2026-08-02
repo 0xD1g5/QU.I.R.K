@@ -361,6 +361,45 @@ the quantum-readiness score.
 > was broken by the scan — QUIRK stops immediately on any anomaly and never retries — but
 > it's worth a closer look."
 
+### 10.7 Firmware CVE Advisory (Phase 142)
+
+As of Phase 142, every fingerprinted hardware device (§10.1–§10.6) is additionally checked
+against QUIRK's curated, NVD-cited firmware CVE catalog. This surfaces in two places:
+
+**HTML/PDF/DOCX report.** A per-device collapsible caveat block in the Hardware Inventory
+section lists matched CVE IDs (with clickable NVD detail links in HTML/PDF —
+`https://nvd.nist.gov/vuln/detail/<CVE-ID>` — plain text with a "verify at nvd.nist.gov"
+instruction in DOCX, since DOCX cells are plain text), plus a section-level advisory-only
+note. A separate staleness caveat paragraph appears whenever the local CVE snapshot has aged
+past its 30-day freshness window (`docs/configuration.md`), telling the reader the shown CVE
+list may be outdated without blocking report generation.
+
+**Dashboard `/hardware` tab.** A neutral, never-severity-colored "N CVEs" badge (the same
+blue hue already used for the SNMP-confirmed bridge badge — deliberately not red/amber/green)
+appears in a new CVEs column. Clicking/expanding the badge (a `Collapsible`) reveals each
+matched CVE as a link to its NVD detail page plus the overall confidence label.
+
+**Confidence vocabulary:**
+
+| Confidence | Meaning |
+|------------|---------|
+| high | The device's parsed firmware version falls inside a curated CVE entry's documented affected-version range. |
+| medium | Only a vendor+model match exists — either the curated entry carries no version boundary, or the device's firmware string could not be parsed into a comparable form. QUIRK never guesses whether the specific firmware is actually affected. |
+| *(no badge — "no CVE correlation attempted")* | The device's vendor is unidentified ("Unknown") or absent, so no lookup was attempted at all. Report/dashboard cells explicitly render the caveat text **"no CVE correlation attempted"** rather than a blank cell or a false "no CVEs found," distinguishing "we checked and found none" from "we couldn't check." |
+
+**Advisory-only — never a score or remediation-tier input.** Like every other hardware
+fingerprinting signal in this guide, firmware CVE matches never affect the quantum-readiness
+score or the CNSA 2.0 remediation tier (§10.2). They exist purely to give the consultant a
+starting point for a deeper, out-of-band vulnerability conversation with the client.
+
+> **Client Conversation — Firmware CVE Advisory:**
+> "The CVE badge on a hardware device means we found a published vulnerability associated
+> with that device's vendor/model — and, where we could parse the firmware version, its
+> specific firmware range. This is informational, not a scored finding: it doesn't change your
+> readiness score, and we deliberately don't guess when we can't confirm the exact firmware
+> in range. Click through to the NVD link to read the official advisory and confirm
+> applicability against your asset inventory before prioritizing remediation."
+
 ---
 
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*
