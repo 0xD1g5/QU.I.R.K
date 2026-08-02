@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.10
 milestone_name: Hardware Lifecycle Depth
 status: executing
-stopped_at: Completed 142-04-PLAN.md
-last_updated: "2026-08-02T13:42:13.492Z"
+stopped_at: Completed 142-05-PLAN.md
+last_updated: "2026-08-02T13:50:47.242Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 29
-  completed_plans: 27
+  completed_plans: 28
   percent: 60
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 142 (firmware-cve-correlation) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-08-02
 
-Progress: [█████████░] 93%
+Progress: [██████████] 97%
 
 ## v5.10 Phase Map
 
@@ -114,6 +114,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 142] run_cve_status() accepts an optional argv list (unlike qramm_cmd's zero-arg signature) to support --format json pass-through to hw_cve.status_report
 - [Phase 142]: 142-03: cve_snapshot_stale computed once on exec_content in writer.py, then stamped onto every device dict at the html_renderer call site rather than passed as a second render_hardware_section parameter, keeping the render function a pure devices-list contract matching its test
 - [Phase 142]: 142-04: cve_matches serialized as reduced {cve_id, severity, source_url}; CVE_BADGE_STYLE reuses the existing SNMP-confirmed blue hue rather than a new color
+- [Phase 142]: 142-05: docs/getting-started.md had no pre-existing catalog-status command list; added a new Catalog Status Commands section for compliance/qramm/cve
 
 ### Pending Todos
 
@@ -168,11 +169,12 @@ Carried forward from v5.9 close (2026-07-30):
 | Phase 142 P02 | ~10min | 2 tasks | 3 files |
 | Phase 142 P03 | ~20min | 3 tasks | 4 files |
 | Phase 142 P04 | 20min | 2 tasks | 4 files |
+| Phase 142 P05 | 15min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-08-02T13:42:13.487Z
-Stopped at: Completed 142-04-PLAN.md
+Last session: 2026-08-02T13:50:47.236Z
+Stopped at: Completed 142-05-PLAN.md
 
   1. 141-06-PLAN.md Task 3 — Modbus/BACnet badge colors + abort-state distinctness + report caveat (dashboard/report visual review)
   2. 141-07-PLAN.md Task 3 — otics chaos-lab profile live end-to-end validation (Docker + real network traffic against the fragile Modbus/BACnet simulators)
