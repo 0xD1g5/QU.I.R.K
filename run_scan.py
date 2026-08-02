@@ -542,6 +542,14 @@ def main():
             return
         # Future: other `quirk qramm <action>` subcommands route here.
 
+    # --- cve subcommand: intercept before scan argparse (Phase 142 CVE-02) ---
+    if len(_sys.argv) > 1 and _sys.argv[1] == "cve":
+        if len(_sys.argv) > 2 and _sys.argv[2] == "status":
+            from quirk.cli.cve_cmd import run_cve_status
+            run_cve_status(_sys.argv[3:])
+            return
+        # Future: other `quirk cve <action>` subcommands route here.
+
     # --- analyze-token subcommand: intercept before scan argparse (Phase 94 TOKEN-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "analyze-token":
         from quirk.cli.analyze_token_cmd import run_analyze_token
