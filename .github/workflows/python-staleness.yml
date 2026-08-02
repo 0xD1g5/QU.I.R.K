@@ -33,6 +33,7 @@ jobs:
             tests/test_cmvp_freshness.py \
             tests/test_hardware_staleness.py \
             tests/test_snmp_scanner_contract.py \
+            tests/test_cve_staleness.py \
             -v -k "staleness or freshness"
 
       - name: Run install-error unit checks
