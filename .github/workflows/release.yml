@@ -158,6 +158,67 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$v"
           Write-Output "Read version: $v"
 
+      - name: Determine signing capability
+        id: signcap
+        shell: pwsh
+        run: |
+          $has = "${{ secrets.QUIRK_SIGNING_CERT_BASE64 }}" -ne "" -and "${{ secrets.QUIRK_SIGNING_CERT_PASSWORD }}" -ne ""
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "has_prod_cert=$has"
+
+      - name: Sign with production certificate (if configured)
+        # Signs the standalone onedir exe BEFORE it is staged/zipped (dist\quirk\quirk.exe,
+        # not quirk-windows-staging\quirk\quirk.exe — the staging dir does not exist yet at
+        # this point in the job). No-ops cleanly when signing secrets are absent (D-08).
+        if: steps.signcap.outputs.has_prod_cert == 'true'
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String("${{ secrets.QUIRK_SIGNING_CERT_BASE64 }}")
+          [IO.File]::WriteAllBytes("prod_signing_cert.pfx", $bytes)
+          $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" |
+                       Sort-Object VersionInfo.FileVersion -Descending | Select-Object -First 1).FullName
+          & $signtool sign /f prod_signing_cert.pfx /p "${{ secrets.QUIRK_SIGNING_CERT_PASSWORD }}" `
+            /fd sha256 /tr http://timestamp.digicert.com /td sha256 `
+            "dist\quirk\quirk.exe"
+          if ($LASTEXITCODE -ne 0) { Write-Error "signtool sign failed (exit $LASTEXITCODE)"; exit 1 }
+          & $signtool verify /pa /v "dist\quirk\quirk.exe"
+          if ($LASTEXITCODE -ne 0) { Write-Error "signtool verify failed (exit $LASTEXITCODE)"; exit 1 }
+
+      - name: Clean up production signing artifacts
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "prod_signing_cert.pfx") { Remove-Item "prod_signing_cert.pfx" -Force }
+
+      - name: CI self-test — ephemeral cert signing round-trip
+        # Proves the signtool/decode/cleanup wiring end-to-end without any real secret (D-10).
+        # Signs a THROWAWAY copy of the exe, never dist\quirk\quirk.exe itself, so no
+        # self-signed signature ever lands on the shipped binary (T-143-SELFSIGN).
+        shell: pwsh
+        run: |
+          $testCert = New-SelfSignedCertificate -Subject "CN=QUIRK CI Self-Test" `
+            -Type CodeSigningCert -KeyUsage DigitalSignature `
+            -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddDays(1)
+          $testPw = ConvertTo-SecureString -String "ci-selftest-only" -Force -AsPlainText
+          Export-PfxCertificate -Cert $testCert -FilePath "selftest_cert.pfx" -Password $testPw | Out-Null
+
+          $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" |
+                       Sort-Object VersionInfo.FileVersion -Descending | Select-Object -First 1).FullName
+          Copy-Item "dist\quirk\quirk.exe" "selftest_target.exe"
+          & $signtool sign /f selftest_cert.pfx /p "ci-selftest-only" /fd sha256 "selftest_target.exe"
+          if ($LASTEXITCODE -ne 0) { Write-Error "Self-test signing failed (exit $LASTEXITCODE)"; exit 1 }
+          & $signtool verify /pa /v "selftest_target.exe"
+          if ($LASTEXITCODE -ne 0) { Write-Error "Self-test signature verification failed"; exit 1 }
+          Write-Output "SELF_TEST_SIGNING: OK — signtool wiring verified end-to-end"
+
+      - name: Clean up self-test artifacts
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item "selftest_cert.pfx" -Force -ErrorAction SilentlyContinue
+          Remove-Item "selftest_target.exe" -Force -ErrorAction SilentlyContinue
+          Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq "CN=QUIRK CI Self-Test" } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+
       - name: Assemble Windows operator zip
         shell: pwsh
         run: |
