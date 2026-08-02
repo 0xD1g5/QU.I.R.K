@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.10
 milestone_name: Hardware Lifecycle Depth
-status: planning
-stopped_at: Phase 141 context gathered
-last_updated: "2026-07-31T18:10:53.108Z"
-last_activity: 2026-07-31
+status: executing
+stopped_at: Completed 142-00-PLAN.md
+last_updated: "2026-08-02T13:16:11.480Z"
+last_activity: 2026-08-02
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 15
-  completed_plans: 15
-  percent: 40
+  completed_phases: 3
+  total_plans: 29
+  completed_plans: 23
+  percent: 60
 ---
 
 # Project State
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 141 — ot/ics fingerprinting (modbus + bacnet)
+**Current focus:** Phase 142 — firmware-cve-correlation
 
 ## Current Position
 
-Phase: 141
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-31
+Phase: 142 (firmware-cve-correlation) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-08-02
 
-Progress: [██████████] 100%
+Progress: [████████░░] 79%
 
 ## v5.10 Phase Map
 
@@ -39,7 +39,7 @@ Progress: [██████████] 100%
 |-------|------|--------------|------|--------|
 | 139 | SNMPv3 Auth+Priv Support | SNMPV3-01..04 | None (first) | Complete |
 | 140 | SNMP-Confirmed Bridge Mitigation | BRIDGE-01..05 | Phase 139 | Not started |
-| 141 | OT/ICS Fingerprinting (Modbus + BACnet) | OTICS-01..06 | None new (sequenced after 139) | Not started |
+| 141 | OT/ICS Fingerprinting (Modbus + BACnet) | OTICS-01..06 | None new (sequenced after 139) | Complete (BACnet-scoped; Modbus e2e deferred, see follow-up note) |
 | 142 | Firmware CVE Correlation | CVE-01..04 | Phase 141 | Not started |
 | 143 | Dashboard & Security Tail | TAIL-01..04 | None (independent) | Not started |
 
@@ -99,6 +99,16 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 140]: [Phase 140] 140-04: bridge_status dashboard lookup keyed by host, matching _detect_crypto_bridges'/_confirm_upstream_mitigation's own host-based subnet grouping
 - [Phase 140]: No lab compose/port/service/seed change was required for BRIDGE-01/04 empirical validation — Docker's bridge networking seeds the gateway ARP entry automatically, resolving Assumption A3. — Resolves 140-RESEARCH.md assumptions A2/A3 without new lab config
 - [Phase 140]: Fixed a Rule 1 evidence-shape mismatch: sensor writer persisted (ip, mac) tuples while the console reader expected {target_ip, mac} dicts, silently blocking upstream_mitigated promotion from real sensor data. — Caught during Task 3 checkpoint prep; writer normalized to match the more broadly tested reader contract
+- [Phase 141]: pip install must target .venv explicitly — default PATH pip/python3 resolve to a stray Python 3.9 user install that fails the project's requires-python >=3.10 gate
+- [Phase 141]: pymodbus pinned <4 and bacpypes3 pinned <0.1; both in [hw] extras only, never [all]
+- [Phase 141]: No modbus_port/bacnet_port or per-host allowlist config field — ports 502/47808 hardcoded in scanner modules per D-06/RESEARCH Pitfall 3
+- [Phase 141]: pymodbus 3.14.0 moved mei_message under pymodbus.pdu — resolved with nested try/except import fallback covering both layouts within the >=3.8.0,<4 pin
+- [Phase 141]: bacpypes3 who_is(address=, timeout=) + read_property(source, objid, prop) signatures confirmed live against installed 0.0.106 source before implementation
+- [Phase 141]: BACnet safety docstring prose rewritten to avoid literal write_property/broadcast substrings so documentary text doesn't trip its own acceptance-criteria grep
+- [Phase 141]: OTICS-01/02/05: Modbus Step 4 gates on enable_modbus+port==502 (D-04); BACnet Step 5 gates on enable_bacnet only (Who-Is is its own gate); neither nested under vendor==Unknown (D-01); first-match-wins Modbus-before-BACnet headline (D-03)
+- [Phase ?]: [Phase 141]: Test harness pattern for embedded (non-extracted) projection dict code — spy-wrap the real downstream function (_confirm_upstream_mitigation) via monkeypatch to capture the dict without perturbing behavior, instead of mocking/extracting
+- [Phase 141]: 141-06 Tasks 1-2 complete (Modbus blue/BACnet purple badge columns on /hardware + matching HTML/DOCX report columns + D-13 abort caveat); Task 3 human-verify checkpoint is open — dashboard/report visual colors and abort-state distinctness await explicit user approval before 141-06 is marked done
+- [Phase 141]: 141-07 Tasks 1-2 complete — new `otics` chaos-lab compose profile (D-09 standalone, not folded into hwcompat) with two fragile simulators: otics-modbus (port 502/TCP, pymodbus-backed FC 43/14 Read Device Identification, Schneider Electric M221) and otics-bacnet (port 47808/UDP, bacpypes3-backed Who-Is/I-Am + ReadProperty, Johnson Controls FX16). Both simulators sit behind a custom asyncio "gatekeeper" (raw-socket admission layer only — protocol framing/encode/decode is real pymodbus/bacpypes3, never hand-rolled) enforcing D-10 fragility: single-in-flight-only (second concurrent connection/datagram reset/dropped) and malformed-header reset/drop. Locally verified (not via Docker) against real pymodbus/bacpypes3 clients: normal round trip returns correct vendor/model/firmware, concurrent connection gets reset, malformed frame gets reset/dropped. expected_results_otics.md oracle + README.md otics row + operators-guide.md §9.4 (D-07 risk warning) + report-interpretation.md §10.6 (five-state vocabulary + Probe aborted) + chaos-lab.md §3.23 all added and synced to Obsidian vault Digs. Task 3 (live Docker end-to-end validation) is a blocking-human-verify checkpoint — NOT executed by the agent per plan instructions.
 
 ### Pending Todos
 
@@ -143,9 +153,20 @@ Carried forward from v5.9 close (2026-07-30):
 | Phase 140 P03 | 25min | 3 tasks | 6 files |
 | Phase 140 P04 | 18min | 3 tasks | 7 files |
 | Phase 140 P05 | 10min | 3 tasks | 4 files |
+| Phase 141 P01 | 12min | 2 tasks | 3 files |
+| Phase 141 P02 | 12min | 2 tasks | 2 files |
+| Phase 141 P03 | 18min | 2 tasks | 2 files |
+| Phase 141 P04 | 25min | 3 tasks | 3 files |
+| Phase 141 P05 | 20min | 2 tasks | 7 files |
+| Phase 142 P00 | 25min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-07-31T18:10:53.103Z
-Stopped at: Phase 141 context gathered
-Resume file: .planning/phases/141-ot-ics-fingerprinting-modbus-bacnet/141-CONTEXT.md
+Last session: 2026-08-02T13:16:11.475Z
+Stopped at: Completed 142-00-PLAN.md
+
+  1. 141-06-PLAN.md Task 3 — Modbus/BACnet badge colors + abort-state distinctness + report caveat (dashboard/report visual review)
+  2. 141-07-PLAN.md Task 3 — otics chaos-lab profile live end-to-end validation (Docker + real network traffic against the fragile Modbus/BACnet simulators)
+
+Resume files: .planning/phases/141-ot-ics-fingerprinting-modbus-bacnet/141-06-SUMMARY.md,
+  .planning/phases/141-ot-ics-fingerprinting-modbus-bacnet/141-07-SUMMARY.md
