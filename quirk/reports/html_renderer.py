@@ -11,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from quirk.util.safe_exc import safe_str
 from quirk.util.sanitize import sanitize_scanner_text
 from quirk.reports.content_model import ExecContent, assert_congruent  # D-03 / Phase 98: shared content model
+from quirk.scanner import hw_cve  # Phase 142 CVE-01: NVD link helper
 
 
 # Phase 78 / HARDEN-04: PDF metadata constants. Title flows from HTML <title>;
@@ -270,6 +271,54 @@ def _bacnet_badge_label(d: Dict[str, Any]) -> str:
     return _probe_state_label(d.get("bacnet_probe_state"), "BACnet")
 
 
+# Phase 142 CVE-01/D-13/D-14/D-15 — curated firmware CVE advisory column.
+# Neutral badge only — never the green success hue nor a red severity hue
+# (this is advisory correlation, not a scored/severity finding, CVE-01).
+_CVE_BADGE_COLOR = "hsl(213 94% 68%)"  # blue — same approved hue as bridge upstream_mitigated
+
+_CVE_NO_CORRELATION_CAVEAT = "no CVE correlation attempted"
+
+_CVE_STALENESS_CAVEAT = (
+    "CVE snapshot last verified {last_verified} — may be outdated (re-verified"
+    " every {threshold} days)."
+)
+
+_CVE_SECTION_NOTE = (
+    "CVE correlation is advisory — not a severity finding or score input."
+    " Verify each CVE against the linked NVD entry before acting on it."
+)
+
+
+def _cve_cell_html(d: Dict[str, Any]) -> str:
+    """Renders the per-device CVE advisory cell (D-13/D-14/D-15).
+
+    Three distinguishable states (Pitfall 4 — never collapsed):
+    (a) cve_attempted falsy -> "" (D-03 silent skip, vendor unidentified —
+        callers render an em-dash cell in that case, matching other columns).
+    (b) cve_attempted True and matches empty -> literal caveat text (CVE-03).
+    (c) matches present -> neutral badge + per-CVE clickable NVD links.
+    """
+    if not d.get("cve_attempted"):
+        return ""
+
+    matches = d.get("cve_matches") or []
+    if not matches:
+        return f'<span style="color:#888;font-size:11px">{_html.escape(_CVE_NO_CORRELATION_CAVEAT)}</span>'
+
+    confidence = _html.escape(str(d.get("cve_confidence") or ""))
+    badge = (
+        f'<span style="background:{_CVE_BADGE_COLOR};color:#000;padding:2px 7px;'
+        f'border-radius:4px;font-size:11px;font-weight:600">'
+        f"{len(matches)} CVEs ({confidence})</span>"
+    )
+    links = []
+    for m in matches:
+        cve_id = _html.escape(str(m.get("cve_id", "")))
+        href = _html.escape(hw_cve.nvd_url(str(m.get("cve_id", ""))))
+        links.append(f'<a href="{href}" target="_blank" rel="noopener">{cve_id}</a>')
+    return f'{badge}<br/><span style="font-size:11px">{", ".join(links)}</span>'
+
+
 def render_hardware_section(devices: list) -> str:
     """Generate HTML advisory table for hardware devices (Phase 128 D-10).
 
@@ -326,6 +375,7 @@ def render_hardware_section(devices: list) -> str:
             )
         else:
             bridge_cell = "—"
+        cve_cell = _cve_cell_html(d) or "—"
         rows_html.append(
             f"<tr>"
             f"<td>{badge}</td>"
@@ -340,6 +390,7 @@ def render_hardware_section(devices: list) -> str:
             f"<td>{modbus_label}</td>"
             f"<td>{bacnet_label}</td>"
             f"<td>{bridge_cell}</td>"
+            f"<td>{cve_cell}</td>"
             f"</tr>"
         )
 
@@ -357,6 +408,22 @@ def render_hardware_section(devices: list) -> str:
             f'<p style="font-size:12px;color:#888;margin-bottom:8px">'
             f"{_html.escape(_OTICS_ABORT_CAVEAT)}</p>"
         )
+    cve_staleness_caveat_html = ""
+    if any(d.get("cve_snapshot_stale") for d in devices):
+        staleness_text = _CVE_STALENESS_CAVEAT.format(
+            last_verified=hw_cve.CVE_TABLE_META["last_verified"],
+            threshold=hw_cve.STALENESS_THRESHOLD_DAYS,
+        )
+        cve_staleness_caveat_html = (
+            f'<p style="font-size:12px;color:#888;margin-bottom:8px">'
+            f"{_html.escape(staleness_text)}</p>"
+        )
+    cve_note_html = ""
+    if any(d.get("cve_attempted") for d in devices):
+        cve_note_html = (
+            f'<p style="font-size:12px;color:#888;margin-bottom:8px">'
+            f"{_html.escape(_CVE_SECTION_NOTE)}</p>"
+        )
     return (
         '<details style="margin:24px 0">'
         '<summary style="cursor:pointer;font-weight:600;color:#3b9dff">'
@@ -369,6 +436,8 @@ def render_hardware_section(devices: list) -> str:
         " readiness score. Listed for CNSA 2.0 migration planning purposes only."
         f"{caveat_html}</p>"
         f"{otics_caveat_html}"
+        f"{cve_note_html}"
+        f"{cve_staleness_caveat_html}"
         '<table style="width:100%;border-collapse:collapse;font-size:13px">'
         "<thead><tr>"
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Tier</th>'
@@ -383,6 +452,7 @@ def render_hardware_section(devices: list) -> str:
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Modbus</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">BACnet</th>'
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Bridge Status</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">CVEs</th>'
         "</tr></thead>"
         f"<tbody>{rows_joined}</tbody>"
         "</table></div></details>"
@@ -483,9 +553,14 @@ def render_html_report(
     logo_b64, logo_mime = _load_logo_b64(logo_path)
 
     # Phase 128 D-10: render hardware advisory section (advisory-only, not scored)
-    hardware_section = render_hardware_section(
-        exec_content.hardware_devices if exec_content is not None else []
-    )
+    _hw_devices_for_render = exec_content.hardware_devices if exec_content is not None else []
+    # Phase 142 D-11: propagate the exec_content-level snapshot-stale flag onto
+    # each device dict so render_hardware_section (a pure devices-list function)
+    # can surface the staleness caveat without needing exec_content directly.
+    if exec_content is not None and getattr(exec_content, "cve_snapshot_stale", False):
+        for _hw_d in _hw_devices_for_render:
+            _hw_d["cve_snapshot_stale"] = True
+    hardware_section = render_hardware_section(_hw_devices_for_render)
 
     html = template.render(
         org_name=getattr(getattr(cfg, "assessment", None), "name", "Unknown"),
