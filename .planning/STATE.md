@@ -4,13 +4,13 @@ milestone: v5.10
 milestone_name: Hardware Lifecycle Depth
 status: executing
 stopped_at: Completed 142-00-PLAN.md
-last_updated: "2026-08-02T13:20:53.544Z"
+last_updated: "2026-08-02T13:24:48.913Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 29
-  completed_plans: 24
+  completed_plans: 25
   percent: 60
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 142 (firmware-cve-correlation) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-08-02
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 86%
 
 ## v5.10 Phase Map
 
@@ -111,6 +111,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 141]: 141-07 Tasks 1-2 complete — new `otics` chaos-lab compose profile (D-09 standalone, not folded into hwcompat) with two fragile simulators: otics-modbus (port 502/TCP, pymodbus-backed FC 43/14 Read Device Identification, Schneider Electric M221) and otics-bacnet (port 47808/UDP, bacpypes3-backed Who-Is/I-Am + ReadProperty, Johnson Controls FX16). Both simulators sit behind a custom asyncio "gatekeeper" (raw-socket admission layer only — protocol framing/encode/decode is real pymodbus/bacpypes3, never hand-rolled) enforcing D-10 fragility: single-in-flight-only (second concurrent connection/datagram reset/dropped) and malformed-header reset/drop. Locally verified (not via Docker) against real pymodbus/bacpypes3 clients: normal round trip returns correct vendor/model/firmware, concurrent connection gets reset, malformed frame gets reset/dropped. expected_results_otics.md oracle + README.md otics row + operators-guide.md §9.4 (D-07 risk warning) + report-interpretation.md §10.6 (five-state vocabulary + Probe aborted) + chaos-lab.md §3.23 all added and synced to Obsidian vault Digs. Task 3 (live Docker end-to-end validation) is a blocking-human-verify checkpoint — NOT executed by the agent per plan instructions.
 - [Phase 142]: Combined Task 1 (table/staleness) and Task 2 (comparator/correlation) into a single commit — verified together as one cohesive module before the first commit
 - [Phase 142]: RESEARCH.md illustrative regex fixed: [A-Za-z]* widened to [A-Za-z0-9]* so Cisco's parenthetical+train-letter suffix (e.g. '(4)M3') parses; added explicit R<release> capture group so Juniper's '12.3R12-S19' correctly compares greater than '12.3R12'
+- [Phase ?]: [Phase 142] run_cve_status() accepts an optional argv list (unlike qramm_cmd's zero-arg signature) to support --format json pass-through to hw_cve.status_report
 
 ### Pending Todos
 
@@ -162,10 +163,11 @@ Carried forward from v5.9 close (2026-07-30):
 | Phase 141 P05 | 20min | 2 tasks | 7 files |
 | Phase 142 P00 | 25min | 3 tasks | 5 files |
 | Phase 142 P01 | 20min | 2 tasks | 1 files |
+| Phase 142 P02 | ~10min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-08-02T13:20:07.711Z
+Last session: 2026-08-02T13:23:59.858Z
 Stopped at: Completed 142-00-PLAN.md
 
   1. 141-06-PLAN.md Task 3 — Modbus/BACnet badge colors + abort-state distinctness + report caveat (dashboard/report visual review)
