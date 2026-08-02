@@ -274,7 +274,9 @@ def _bacnet_badge_label(d: Dict[str, Any]) -> str:
 # Phase 142 CVE-01/D-13/D-14/D-15 — curated firmware CVE advisory column.
 # Neutral badge only — never the green success hue nor a red severity hue
 # (this is advisory correlation, not a scored/severity finding, CVE-01).
-_CVE_BADGE_COLOR = "hsl(213 94% 68%)"  # blue — same approved hue as bridge upstream_mitigated
+_CVE_BADGE_COLOR = "hsl(38 92% 50%)"  # amber — distinct from --accent blue (report links/headings
+# use the same blue family as the old badge hue, hsl(213...), so the badge blended into the CVE-ID
+# links directly beneath it; amber matches the docx_renderer palette precedent and stays non-severity
 
 _CVE_NO_CORRELATION_CAVEAT = "no CVE correlation attempted"
 

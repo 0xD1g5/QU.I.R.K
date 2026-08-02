@@ -107,7 +107,10 @@ const BACNET_ABORT_TOOLTIP =
 // Phase 142 CVE-01/D-14 — single neutral CVE-count badge color, regardless of
 // match count or severity. NEVER green (hsl(142_71%_45%)) or a red severity
 // hue — the badge is advisory-only, not a severity signal (T-142-CVE01).
-const CVE_BADGE_STYLE = "bg-[hsl(213_94%_68%)] text-black"
+// Amber, not blue: the original hsl(213...) sat in the same hue family as the
+// per-CVE NVD links rendered directly beneath it, so the badge didn't read as
+// a distinct element (human UAT, 142-06).
+const CVE_BADGE_STYLE = "bg-[hsl(38_92%_50%)] text-black"
 
 // Maps a raw probe_state wire value to the verbatim UI-SPEC label. Returns
 // "—" (never attempted) for null/undefined, mirroring snmpLabel's raw-fallback

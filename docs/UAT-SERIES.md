@@ -16058,7 +16058,7 @@ reports; a device with an unidentified vendor shows no CVE annotation (renders t
 2. Run `pytest tests/test_hw_cve_parsing.py tests/test_hw_cve_correlation.py tests/test_cve_staleness.py tests/test_html_renderer_cve.py tests/test_cve_score_guard.py -q`.
 3. Human: open the live dashboard `/hardware` page for a scan with a fingerprinted device
    (e.g. against the `otics` or `hwcompat` chaos-lab profile) and confirm the CVEs column
-   shows a blue "N CVEs" badge that expands to per-CVE NVD links; confirm a device with vendor
+   shows an amber "N CVEs" badge that expands to per-CVE NVD links; confirm a device with vendor
    `Unknown` shows an em dash, not a badge.
 4. Human: generate an HTML report for the same scan and confirm the Hardware Inventory CVE
    column and advisory-only section note render, plus the staleness caveat if the local catalog
