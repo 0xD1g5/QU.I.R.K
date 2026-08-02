@@ -18,6 +18,8 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from quirk.scanner import hw_cve  # Phase 142 CVE-01: staleness caveat metadata
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,6 +70,17 @@ _BRIDGE_SHADING = {
 _BRIDGE_CAVEAT = (
     "Based on SNMP-derived network-path evidence; not independently confirmed"
     " by traffic inspection."
+)
+
+# Phase 142 CVE-01/D-13/D-15 — curated firmware CVE advisory caveat.
+_CVE_CAVEAT = (
+    "CVE correlation is advisory — not a severity finding or score input."
+    " Verify each CVE at https://nvd.nist.gov/vuln/detail/<id> before acting on it."
+)
+
+_CVE_STALENESS_CAVEAT = (
+    "CVE snapshot last verified {last_verified} — may be outdated (re-verified"
+    " every {threshold} days)."
 )
 
 
@@ -467,8 +480,8 @@ def render_docx_report(
     # ---- Hardware PQC Advisory section (Phase 128 D-10, Phase 140 BRIDGE-03,
     #      Phase 141 OTICS-05) ----
     # Advisory-only — hardware findings do not affect the readiness score.
-    # 11 columns: Tier | Vendor | Model | Host:Port | PQC Status | Confidence
-    #             | EOL Date | SNMP | Modbus | BACnet | Bridge Status
+    # 12 columns: Tier | Vendor | Model | Host:Port | PQC Status | Confidence
+    #             | EOL Date | SNMP | Modbus | BACnet | Bridge Status | CVEs
     if hardware_devices:
         doc.add_heading("Hardware PQC Advisory (Not Scored)", level=2)
         doc.add_paragraph(
@@ -476,14 +489,14 @@ def render_docx_report(
             " Listed for CNSA 2.0 migration planning purposes only.",
             style="Normal",
         )
-        hw_tbl = doc.add_table(rows=1, cols=11)
+        hw_tbl = doc.add_table(rows=1, cols=12)
         _set_table_style(hw_tbl)
         hw_hdr = hw_tbl.rows[0].cells
         for _i, _h in enumerate(
             [
                 "Tier", "Vendor", "Model", "Host:Port", "PQC Status",
                 "Confidence", "EOL Date", "SNMP", "Modbus", "BACnet",
-                "Bridge Status",
+                "Bridge Status", "CVEs",
             ]
         ):
             hw_hdr[_i].text = _h
@@ -503,7 +516,17 @@ def render_docx_report(
             _row[10].text = _bridge_badge_label(_d)
             if _bridge_status in _BRIDGE_SHADING:
                 _set_cell_shading(_row[10], _BRIDGE_SHADING[_bridge_status])
-        _set_col_widths(hw_tbl, [0.7, 1.0, 1.0, 1.1, 0.9, 0.9, 0.7, 0.8, 0.8, 0.8, 1.0])
+            if _d.get("cve_matches"):
+                _row[11].text = ", ".join(
+                    m["cve_id"] for m in _d.get("cve_matches", []) or []
+                )
+            elif _d.get("cve_attempted"):
+                _row[11].text = "no CVE correlation attempted"
+            else:
+                _row[11].text = "—"
+        _set_col_widths(
+            hw_tbl, [0.7, 1.0, 1.0, 1.1, 0.9, 0.9, 0.7, 0.8, 0.8, 0.8, 1.0, 1.0]
+        )
         if any(_d.get("bridge_status") == "upstream_mitigated" for _d in hardware_devices):
             doc.add_paragraph(_BRIDGE_CAVEAT, style="Normal")
         if any(
@@ -512,6 +535,18 @@ def render_docx_report(
             for _d in hardware_devices
         ):
             doc.add_paragraph(_OTICS_ABORT_CAVEAT, style="Normal")
+        if any(_d.get("cve_attempted") for _d in hardware_devices):
+            doc.add_paragraph(_CVE_CAVEAT, style="Normal")
+        if any(_d.get("cve_snapshot_stale") for _d in hardware_devices) or getattr(
+            exec_content, "cve_snapshot_stale", False
+        ):
+            doc.add_paragraph(
+                _CVE_STALENESS_CAVEAT.format(
+                    last_verified=hw_cve.CVE_TABLE_META["last_verified"],
+                    threshold=hw_cve.STALENESS_THRESHOLD_DAYS,
+                ),
+                style="Normal",
+            )
 
     # ---------------------------------------------------------------------------
     # Save document

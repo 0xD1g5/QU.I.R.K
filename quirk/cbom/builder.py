@@ -1116,6 +1116,21 @@ def build_cbom(
                         name="quirk:hw-bacnet-firmware",
                         value=_sanitize_hw_str(str(bacnet_firmware)),
                     ))
+            # CVE-01 / Phase 142: emit curated CVE correlation metadata only
+            # when present, mirroring the Modbus/BACnet conditional-emit
+            # pattern above (CR-01: use _sanitize_hw_str, not safe_str).
+            cve_matches = dev.get("cve_matches")
+            if cve_matches:
+                fw_props.append(Property(
+                    name="quirk:hw-cve-ids",
+                    value=_sanitize_hw_str(",".join(m["cve_id"] for m in cve_matches)),
+                ))
+                cve_confidence = dev.get("cve_confidence")
+                if cve_confidence:
+                    fw_props.append(Property(
+                        name="quirk:hw-cve-confidence",
+                        value=_sanitize_hw_str(str(cve_confidence)),
+                    ))
             firmware_child = Component(
                 name=fw_name,
                 type=ComponentType.FIRMWARE,
