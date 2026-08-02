@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.10
 milestone_name: Hardware Lifecycle Depth
 status: executing
-stopped_at: Completed 142-00-PLAN.md
-last_updated: "2026-08-02T13:34:38.480Z"
+stopped_at: Completed 142-04-PLAN.md
+last_updated: "2026-08-02T13:42:13.492Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 29
-  completed_plans: 26
+  completed_plans: 27
   percent: 60
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 142 (firmware-cve-correlation) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-08-02
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 ## v5.10 Phase Map
 
@@ -113,6 +113,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 142]: RESEARCH.md illustrative regex fixed: [A-Za-z]* widened to [A-Za-z0-9]* so Cisco's parenthetical+train-letter suffix (e.g. '(4)M3') parses; added explicit R<release> capture group so Juniper's '12.3R12-S19' correctly compares greater than '12.3R12'
 - [Phase ?]: [Phase 142] run_cve_status() accepts an optional argv list (unlike qramm_cmd's zero-arg signature) to support --format json pass-through to hw_cve.status_report
 - [Phase 142]: 142-03: cve_snapshot_stale computed once on exec_content in writer.py, then stamped onto every device dict at the html_renderer call site rather than passed as a second render_hardware_section parameter, keeping the render function a pure devices-list contract matching its test
+- [Phase 142]: 142-04: cve_matches serialized as reduced {cve_id, severity, source_url}; CVE_BADGE_STYLE reuses the existing SNMP-confirmed blue hue rather than a new color
 
 ### Pending Todos
 
@@ -166,11 +167,12 @@ Carried forward from v5.9 close (2026-07-30):
 | Phase 142 P01 | 20min | 2 tasks | 1 files |
 | Phase 142 P02 | ~10min | 2 tasks | 3 files |
 | Phase 142 P03 | ~20min | 3 tasks | 4 files |
+| Phase 142 P04 | 20min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-08-02T13:33:10.744Z
-Stopped at: Completed 142-00-PLAN.md
+Last session: 2026-08-02T13:42:13.487Z
+Stopped at: Completed 142-04-PLAN.md
 
   1. 141-06-PLAN.md Task 3 — Modbus/BACnet badge colors + abort-state distinctness + report caveat (dashboard/report visual review)
   2. 141-07-PLAN.md Task 3 — otics chaos-lab profile live end-to-end validation (Docker + real network traffic against the fragile Modbus/BACnet simulators)
