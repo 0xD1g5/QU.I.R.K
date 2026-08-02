@@ -402,4 +402,27 @@ starting point for a deeper, out-of-band vulnerability conversation with the cli
 
 ---
 
+## 11. Dashboard Sidebar Scan-Date Badge (Phase 143)
+
+As of Phase 143, the dashboard sidebar carries a persistent scan-date badge — a small
+`role="status"` row rendered directly below the scan selector — showing the recency of the
+most recent scan on **every** dashboard view, including the collapsed icon-only sidebar
+(unlike other sidebar rows, it is never gated on scan count or viewport width).
+
+| State | Rendering |
+|-------|-----------|
+| At least one completed scan exists | `Last scan: {date} {time}` for the newest session, expanded sidebar. Collapsed (`<lg`) sidebar shows a calendar icon with the same text in a hover tooltip. |
+| No scan has ever been run | `No scan yet` placeholder text, following the same empty-state convention used elsewhere in the dashboard (`EmptyStateCard.tsx`). |
+
+The badge sources data from the existing `useScanList()` hook — no new API endpoint was added.
+It exists purely to give an operator a quick "is this data current?" answer without navigating
+into the scan history page.
+
+> **Client Conversation — Scan-Date Badge:**
+> "The date in the sidebar tells you exactly how fresh the data you're looking at is —
+> useful when reviewing a report days or weeks after the scan actually ran, or when
+> multiple people share the same QUIRK instance."
+
+---
+
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*

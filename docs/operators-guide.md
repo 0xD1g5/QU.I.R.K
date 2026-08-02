@@ -75,6 +75,26 @@ EHR/PACS/portal scan preset; general installs are unchanged. See
 > config block and flag, [`docs/sample-config.yaml`](sample-config.yaml) for an
 > annotated example.
 
+### 2.4 Dashboard security tail (v5.10+ — Phase 143)
+
+Three small operator-facing additions shipped in Phase 143:
+
+- **Scan-date badge** — every dashboard view now shows a persistent "Last scan: {date} {time}"
+  (or "No scan yet") badge in the sidebar, so you always know at a glance how current the data
+  you're looking at is. See [`docs/report-interpretation.md`](report-interpretation.md) §11.
+- **`security.trusted_targets` scan-consent allowlist** — an opt-in list of exact hosts/IPs and
+  CIDR ranges QUIRK is authorized to scan, enforced identically at both the CLI and the
+  dashboard's "New Scan" entry point. Empty/absent = allow-all (backward compatible). See
+  [`docs/configuration.md`](configuration.md) § `security.trusted_targets`.
+- **Windows Authenticode signing (build mechanism, not yet activated)** — the
+  `windows-package` release CI job now contains the wiring to Authenticode-sign the Windows
+  sensor `.exe` via `signtool.exe`, gated cleanly on the presence of
+  `QUIRK_SIGNING_CERT_BASE64`/`QUIRK_SIGNING_CERT_PASSWORD` repo secrets. **No real signing
+  certificate exists yet** — until one is provisioned and those secrets are added, released
+  Windows binaries remain unsigned (the release notes' "UNSIGNED BINARY NOTICE" is accurate and
+  unchanged). The mechanism activates automatically, with no code changes, the moment a real
+  certificate secret is configured.
+
 ---
 
 ## 3. Scan

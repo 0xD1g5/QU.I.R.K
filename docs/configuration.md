@@ -753,6 +753,36 @@ The New Scan page exposes a "Port Scope" selector with the four options describe
 
 ---
 
+### `security.trusted_targets` (v5.10+ — Phase 143, TAIL-02)
+
+Added in Phase 143, `security.trusted_targets` is a server-enforced scan-consent allowlist —
+a list of exact hosts/IPs and CIDR ranges QU.I.R.K. is authorized to scan. It is enforced at a
+single shared chokepoint used by **both** the CLI (`quirk`/`run_scan.py`) and the dashboard's
+"New Scan" (`/scan/new`) entry point — neither can bypass the gate.
+
+```yaml
+security:
+  trusted_targets:
+    - api.acme.com
+    - 10.0.0.5
+    - 10.0.0.0/24
+```
+
+| Behavior | Rule |
+|----------|------|
+| **Empty or absent (default)** | Allow-all — backward compatible with every existing scan config/CLI invocation. No enforcement happens. |
+| **Populated** | Only the listed hosts/IPs/CIDRs may be scanned. Any target outside the list is rejected **before any scan begins**. |
+| **Matching semantics** | Exact host/IP string match, or CIDR containment for entries written as `a.b.c.d/nn`. No wildcard subdomain matching — `*.acme.com` is not supported; list every FQDN explicitly. |
+| **CLI rejection** | `run_scan.py` raises `ValueError` naming the redacted out-of-allowlist target, aborting before `init_db()`/scan execution. |
+| **Dashboard rejection** | The `/scan/new` → `POST /api/jobs` endpoint returns **HTTP 422** for an out-of-allowlist target — no `ScanJob` database row is created and no subprocess is spawned. |
+
+> **Operator note:** This is an opt-in consent gate, not a security boundary against a malicious
+> operator — it exists to prevent an operator (or an automated scheduler) from accidentally
+> pointing a shared QUIRK instance at a host outside its authorized engagement scope. Leave it
+> empty for single-engagement or lab use where every target is already trusted.
+
+---
+
 ## CLI Flag Reference
 
 ### `quirk` — Scan Flags
