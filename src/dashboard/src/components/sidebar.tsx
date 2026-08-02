@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ScanSelector } from "@/components/ScanSelector"
+import { ScanDateBadge } from "@/components/ScanDateBadge"
 import { useAuth } from "@/context/auth-context"
 import { useVertical } from "@/context/vertical-context"
 
@@ -186,6 +187,9 @@ export function Sidebar() {
 
       {/* Scan history selector — only shown when >1 scan exists */}
       <ScanSelector />
+
+      {/* Persistent scan-date badge — TAIL-01, always rendered, every viewport */}
+      <ScanDateBadge />
 
       {/* Theme toggle at bottom */}
       <div className="px-2 py-4 border-t border-border">
