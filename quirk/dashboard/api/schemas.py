@@ -237,6 +237,10 @@ class HardwareFinding(BaseModel):
     bacnet_model: Optional[str] = None
     bacnet_firmware: Optional[str] = None
     bacnet_probe_state: Optional[str] = None
+    # Phase 142 CVE-01/D-04/D-08: nullable CVE correlation metadata (advisory-only)
+    cve_matches: Optional[list[dict]] = None
+    cve_confidence: Optional[str] = None
+    cve_attempted: Optional[bool] = None
 
 
 # ---- Roadmap ----

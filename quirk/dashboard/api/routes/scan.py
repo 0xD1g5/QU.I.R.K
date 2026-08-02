@@ -15,6 +15,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
+from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
 from quirk.dashboard.api.schemas import (
     CbomComponent,
     CertItem,
@@ -773,6 +774,29 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
                 "quantum-safe" if pqc_status == "supported" else "quantum-vulnerable"
             )
 
+            # Phase 142 CVE-01/D-03/Pitfall 4: skip correlation entirely for
+            # unidentified vendors — call-site gate, never inside correlate_device().
+            cve_matches = None
+            cve_confidence = None
+            cve_attempted = None
+            if vendor and vendor != "Unknown":
+                cve_firmware = (
+                    getattr(d, "modbus_firmware", None)
+                    or getattr(d, "bacnet_firmware", None)
+                    or None
+                )
+                cve_result = hw_cve.correlate_device(vendor, model, cve_firmware)
+                cve_matches = [
+                    {
+                        "cve_id": m["cve_id"],
+                        "severity": m["severity"],
+                        "source_url": m.get("source_url") or hw_cve.nvd_url(m["cve_id"]),
+                    }
+                    for m in cve_result.matches
+                ]
+                cve_confidence = cve_result.confidence
+                cve_attempted = cve_result.attempted
+
             results.append(HardwareFinding(
                 host=host,
                 port=port,
@@ -799,6 +823,10 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
                 bacnet_model=getattr(d, "bacnet_model", None),
                 bacnet_firmware=getattr(d, "bacnet_firmware", None),
                 bacnet_probe_state=getattr(d, "bacnet_probe_state", None),
+                # Phase 142 CVE-01: per-device curated CVE correlation
+                cve_matches=cve_matches,
+                cve_confidence=cve_confidence,
+                cve_attempted=cve_attempted,
             ))
 
         results.sort(key=lambda f: _TIER_ORDER.get(f.remediation_tier, 99))
