@@ -348,6 +348,10 @@ class SecurityCfg:
     allow_insecure_jwks: bool = False
     api_token: str = ""  # Phase 58 / CR-03: bearer token for dashboard API; "" = auth disabled (D-02)
     cors_origins: list = dataclasses.field(default_factory=lambda: ["http://127.0.0.1", "http://localhost"])  # Phase 58 / HARDEN-API-02: CORS allowlist; overridden by QUIRK_CORS_ORIGINS env var (comma-separated)
+    # Phase 143 / TAIL-02 / D-03,D-06: empty list = allow-all (backward compatible with every
+    # existing scan config). Populated = exact host/IP + CIDR allowlist — same fqdns/cidrs token
+    # vocabulary as quirk/util/targets.py's parse_target_tokens(). No wildcard-subdomain matching.
+    trusted_targets: list = dataclasses.field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -501,6 +505,7 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         allow_insecure_jwks=bool(security_raw.get("allow_insecure_jwks", False)),
         api_token=str(security_raw.get("api_token", "") or ""),
         cors_origins=list(security_raw.get("cors_origins") or []),
+        trusted_targets=list(security_raw.get("trusted_targets") or []),
     )
 
     # Phase 57 / D-05: per-host broker credentials (pass_env is env-var name, never inline password)
