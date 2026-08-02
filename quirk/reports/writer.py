@@ -19,6 +19,7 @@ from quirk.intelligence.confidence import compute_confidence
 from quirk.intelligence.roadmap import build_phased_roadmap
 from quirk.cbom import build_cbom, write_cbom_files
 from quirk.cbom.bridge import _detect_crypto_bridges, _confirm_upstream_mitigation  # Phase 129 HWCOMPAT-03 / Phase 140 BRIDGE-01
+from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
 from quirk.reports.html_renderer import render_html_report, render_pdf_report
 from quirk.reports.docx_renderer import render_docx_report
 
@@ -227,6 +228,22 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                 ).all()
                 for _d in _hw_rows:
                     _tier = getattr(_d, "remediation_tier", "Tier N/A") or "Tier N/A"
+                    # Phase 142 CVE-01/D-03: skip correlation entirely for
+                    # unidentified vendors — no cve_* keys are set, so the
+                    # renderer emits no CVE cell (call-site gate, D-03/Pitfall 4).
+                    _cve_matches = None
+                    _cve_confidence = None
+                    _cve_attempted = None
+                    if _d.vendor and _d.vendor != "Unknown":
+                        _cve_firmware = (
+                            getattr(_d, "modbus_firmware", None)
+                            or getattr(_d, "bacnet_firmware", None)
+                            or None
+                        )
+                        _cve_result = hw_cve.correlate_device(_d.vendor, _d.model, _cve_firmware)
+                        _cve_matches = _cve_result.matches
+                        _cve_confidence = _cve_result.confidence
+                        _cve_attempted = _cve_result.attempted
                     hardware_devices.append({
                         "vendor":             _d.vendor,
                         "model":              _d.model,
@@ -263,11 +280,17 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                         "bacnet_model":        getattr(_d, "bacnet_model", None),
                         "bacnet_firmware":     getattr(_d, "bacnet_firmware", None),
                         "bacnet_probe_state":  getattr(_d, "bacnet_probe_state", None),
+                        # Phase 142 CVE-01: per-device curated CVE correlation
+                        "cve_matches":         _cve_matches,
+                        "cve_confidence":      _cve_confidence,
+                        "cve_attempted":       _cve_attempted,
                     })
     except Exception:
         import logging as _log
         _log.getLogger(__name__).warning("hardware advisory section skipped (non-fatal)", exc_info=True)
     exec_content.hardware_devices = _confirm_upstream_mitigation(_detect_crypto_bridges(hardware_devices))
+    # Phase 142 D-11: snapshot-stale flag for renderers' staleness caveat.
+    exec_content.cve_snapshot_stale = hw_cve.is_cve_table_stale()
 
     # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model
     exec_md = build_exec_markdown(cfg, endpoints, findings, exec_content=exec_content)
