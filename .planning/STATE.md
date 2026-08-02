@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.10
 milestone_name: Hardware Lifecycle Depth
 status: executing
-stopped_at: Completed 142-05-PLAN.md
-last_updated: "2026-08-02T13:50:47.242Z"
-last_activity: 2026-08-02
+stopped_at: Completed 142-06-PLAN.md
+last_updated: "2026-08-02T14:10:18.583Z"
+last_activity: 2026-08-02 -- Phase 142 complete (human UAT approved after amber-badge fix); Phase 143 remains
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 29
-  completed_plans: 28
-  percent: 60
+  completed_plans: 29
+  percent: 80
 ---
 
 # Project State
@@ -22,25 +22,25 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 142 — firmware-cve-correlation
+**Current focus:** Phase 143 — dashboard-security-tail (next; Phase 142 complete)
 
 ## Current Position
 
-Phase: 142 (firmware-cve-correlation) — EXECUTING
+Phase: 142 — COMPLETE. Next: Phase 143 (dashboard-security-tail), the final phase of v5.10.
 Plan: 7 of 7
-Status: Ready to execute
-Last activity: 2026-08-02
+Status: Phase 142 complete
+Last activity: 2026-08-02 -- Phase 142 complete (human UAT approved after amber-badge fix)
 
-Progress: [██████████] 97%
+Progress: [████████░░] 80%
 
 ## v5.10 Phase Map
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
 | 139 | SNMPv3 Auth+Priv Support | SNMPV3-01..04 | None (first) | Complete |
-| 140 | SNMP-Confirmed Bridge Mitigation | BRIDGE-01..05 | Phase 139 | Not started |
+| 140 | SNMP-Confirmed Bridge Mitigation | BRIDGE-01..05 | Phase 139 | Complete |
 | 141 | OT/ICS Fingerprinting (Modbus + BACnet) | OTICS-01..06 | None new (sequenced after 139) | Complete (BACnet-scoped; Modbus e2e deferred, see follow-up note) |
-| 142 | Firmware CVE Correlation | CVE-01..04 | Phase 141 | Not started |
+| 142 | Firmware CVE Correlation | CVE-01..04 | Phase 141 | Complete |
 | 143 | Dashboard & Security Tail | TAIL-01..04 | None (independent) | Not started |
 
 ## v5.9 Final State
