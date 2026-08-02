@@ -102,9 +102,10 @@ def test_post_jobs_allows_when_trusted_targets_empty(monkeypatch):
         headers={"X-Quirk-Request": "1"},
     )
     assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
 
     db = TestingSession()
-    assert db.query(ScanJob).count() == 1
+    assert db.get(ScanJob, job_id) is not None
     db.close()
 
 
@@ -121,7 +122,8 @@ def test_post_jobs_allows_when_target_matches_trusted_targets(monkeypatch):
         headers={"X-Quirk-Request": "1"},
     )
     assert response.status_code == 201, response.text
+    job_id = response.json()["job_id"]
 
     db = TestingSession()
-    assert db.query(ScanJob).count() == 1
+    assert db.get(ScanJob, job_id) is not None
     db.close()

@@ -994,6 +994,11 @@ def main():
     # Phase 57 / D-04: CLI flags override YAML security block per-run (opt-in only, never opt-out).
     apply_security_cli_overrides(cfg, args)
 
+    # Phase 143 / TAIL-02 / D-04: single chokepoint gate — raises ValueError before any
+    # scan execution begins if a target is outside security.trusted_targets (empty = allow-all).
+    from quirk.util.target_trust import enforce_trusted_targets
+    enforce_trusted_targets(cfg)
+
     # Phase 133 SNMP-01/D-04: --enable-snmp CLI flag overrides config.
     # getattr guard for backwards compatibility with older config.yaml files
     # that pre-date the enable_snmp field.

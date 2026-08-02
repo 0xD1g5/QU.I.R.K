@@ -269,6 +269,34 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
             detail="No valid targets provided — targets must not be empty or whitespace-only",
         )
 
+    # Phase 143 / TAIL-02 / D-04: server-enforced trusted-targets consent gate — same
+    # chokepoint function run_scan.py's CLI path calls, per D-04's dual-entry-point wording.
+    # Fail-safe: mirrors the allow_internal_targets load pattern below — load server-side
+    # SecurityCfg fresh, fail-open-to-empty-allowlist only on load error (an unreachable/missing
+    # config.yaml must not accidentally BLOCK all scans; D-03's "empty = allow-all" posture
+    # applies symmetrically to the fail-safe path here, unlike allow_internal_targets's
+    # fail-CLOSED posture — trusted_targets' own default IS "allow all").
+    from quirk.util.target_trust import is_target_trusted
+    trusted_targets_cfg: list = []
+    try:
+        from quirk.config import load_config  # lazy import — avoids cycles
+        _cfg_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
+        _cfg = load_config(_cfg_path)
+        trusted_targets_cfg = list(getattr(_cfg.security, "trusted_targets", None) or [])
+    except Exception:
+        trusted_targets_cfg = []
+    if trusted_targets_cfg:
+        for _target in all_valid_tokens:
+            _result = is_target_trusted(_target, trusted_targets_cfg)
+            if not _result.ok:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Target {_result.redacted_preview!r} is not in the trusted-targets "
+                        f"allowlist (security.trusted_targets in config.yaml)."
+                    ),
+                )
+
     # Reject oversized CIDRs BEFORE spawning nmap discovery. target_expander.py's
     # expand_targets() already caps CIDR expansion at _MAX_HOSTS_PER_CIDR for the
     # main scan phase, but nmap discovery runs as an earlier, separate subprocess
