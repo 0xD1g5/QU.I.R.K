@@ -170,6 +170,11 @@ export interface HardwareFinding {
   bacnet_model?: string | null
   bacnet_firmware?: string | null
   bacnet_probe_state?: string | null
+  // Phase 142 CVE-01 — curated CVE correlation; matches
+  // quirk/dashboard/api/schemas.py HardwareFinding cve_* wire names.
+  cve_matches?: { cve_id: string; severity: string; source_url: string }[] | null
+  cve_confidence?: string | null
+  cve_attempted?: boolean | null
 }
 
 // Phase 39 GAP-04

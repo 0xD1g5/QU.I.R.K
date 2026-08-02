@@ -8,6 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 // Tier badge colors — Tier 1 red, Tier 2 orange, Tier 3 blue, N/A gray
 const TIER_STYLES: Record<string, string> = {
@@ -102,6 +103,11 @@ const MODBUS_ABORT_TOOLTIP =
 
 const BACNET_ABORT_TOOLTIP =
   "BACnet probe aborted — anomalous response. The device returned a malformed frame, reset the connection, or timed out; QU.I.R.K. stopped probing this host per its one-strike safety policy. Worth a closer manual look."
+
+// Phase 142 CVE-01/D-14 — single neutral CVE-count badge color, regardless of
+// match count or severity. NEVER green (hsl(142_71%_45%)) or a red severity
+// hue — the badge is advisory-only, not a severity signal (T-142-CVE01).
+const CVE_BADGE_STYLE = "bg-[hsl(213_94%_68%)] text-black"
 
 // Maps a raw probe_state wire value to the verbatim UI-SPEC label. Returns
 // "—" (never attempted) for null/undefined, mirroring snmpLabel's raw-fallback
@@ -249,6 +255,7 @@ export function HardwarePage() {
                   <TableHead scope="col" className="text-xs font-semibold">Modbus</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">BACnet</TableHead>
                   <TableHead scope="col" className="text-xs font-semibold">Bridge Status</TableHead>
+                  <TableHead scope="col" className="text-xs font-semibold">CVEs</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -355,6 +362,38 @@ export function HardwarePage() {
                           </Badge>
                         )
                       })()}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {f.cve_matches?.length ? (
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <button type="button" className="cursor-pointer">
+                              <Badge className={`${CVE_BADGE_STYLE} font-semibold text-xs`}>
+                                {f.cve_matches.length} CVEs
+                              </Badge>
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <ul className="mt-1 space-y-0.5 text-xs">
+                              {f.cve_matches.map((m) => (
+                                <li key={m.cve_id}>
+                                  <a
+                                    href={m.source_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 underline"
+                                  >
+                                    {m.cve_id}
+                                  </a>
+                                  {f.cve_confidence ? ` (${f.cve_confidence} confidence)` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
