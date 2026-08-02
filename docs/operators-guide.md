@@ -1253,3 +1253,47 @@ hardware section of the report.
 two deliberately fragile Modbus/BACnet simulators that empirically exercise the safety
 model above — see `docs/chaos-lab.md` and
 `quantum-chaos-enterprise-lab/expected_results_otics.md`.
+
+### 9.5 Firmware CVE Correlation (Phase 142)
+
+QUIRK correlates each fingerprinted device's `(vendor, model, firmware)` triple against a
+small, curated, NVD-cited local CVE catalog (`quirk/scanner/hw_cve.py::CVE_TABLE`) — never a
+live NVD API call, so correlation works fully offline and cannot be used to fingerprint the
+scanning host to an external service. This is the fourth advisory-only hardware signal after
+SNMP (§9.1), CNSA 2.0 tiers (§9.2), and Modbus/BACnet (§9.4).
+
+**`quirk cve status` — catalog freshness.** Mirrors `quirk qramm status`/`quirk compliance
+status` exactly:
+
+```bash
+quirk cve status
+quirk cve status --format json
+```
+
+Reports the CVE snapshot's `last_verified` date, days elapsed, days remaining before the
+30-day staleness threshold, and a FRESH/STALE verdict. Exit code `0` when fresh, `1` when
+stale — the same 0/1 convention used by `quirk qramm status` (§7) so CI and pre-engagement
+scripts can gate on it. Like the QRAMM and compliance catalogs, `QUIRK_CI_STALENESS_OVERRIDE_DATE`
+overrides "today" for staleness-gate testing; a malformed override value is logged as a warning
+and ignored, falling back to the real system date rather than crashing the command.
+
+**The CVE advisory scanner signal.** During report/dashboard generation, QUIRK calls
+`correlate_device(vendor, model, firmware)` for every device with a known (non-"Unknown")
+vendor. Firmware comes from whatever protocol already fingerprinted the device (Modbus/BACnet
+firmware strings preferred, SNMP/SSH/HTTP vendor+model otherwise). Two confidence levels:
+
+- **high confidence** — the device's parsed firmware version falls inside a CVE entry's
+  documented affected range (an NVD "prior to X" boundary, exclusive `<`).
+- **medium confidence** — only a vendor+model match exists (the curated entry has no
+  version boundary, or the device's firmware string could not be parsed); QUIRK does not
+  guess whether the specific firmware is actually affected.
+
+**Firmware CVE matches are advisory-only — never a severity finding, and never a score or
+remediation-tier input.** This is a hard architectural boundary (CVE-01/CVE-04): the CVE
+correlation module imports nothing from `intelligence/scoring.py` or `hardware_tier.py`, and
+a dedicated regression test (`tests/test_cve_score_guard.py`) enforces this in CI. Operators
+should treat CVE matches as "worth investigating," not as a scored risk the readiness score
+already accounts for.
+
+See `docs/report-interpretation.md` §10.7 for the report/dashboard rendering contract, and
+`docs/configuration.md` for the 30-day staleness cadence and re-verification procedure.

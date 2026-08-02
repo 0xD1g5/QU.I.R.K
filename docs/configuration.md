@@ -1593,3 +1593,29 @@ CBOM algorithm components carry a `quirk:fips140-3-status` property
 (`approved` or `non-approved`) derived from the NIST quantum security level.
 The `certified` tier is reserved for a future phase that will ingest CMVP
 module attestation.
+
+## Firmware CVE Catalog Staleness Cadence (Phase 142)
+
+QUIRK's curated firmware-CVE catalog (`quirk/scanner/hw_cve.py::CVE_TABLE`, backing the
+advisory-only CVE correlation described in `docs/operators-guide.md` §9.5) is gated by its
+own `STALENESS_THRESHOLD_DAYS = 30` — deliberately shorter than QRAMM's 90-day cadence
+(`quirk/qramm/model_meta.py`) and the compliance-mapping module's 365-day cadence
+(`quirk/compliance/__init__.py`), because CVE data churns far faster than governance
+frameworks or CSNP model revisions do.
+
+**CI enforcement.** `.github/workflows/python-staleness.yml`'s single "Run staleness gates"
+step includes `tests/test_cve_staleness.py` as its third assertion, alongside the existing
+QRAMM and compliance staleness tests — no new job or CI step was added, just one more test
+file in the existing pytest invocation. The workflow runs on every PR, every push to `main`,
+and a weekly Monday 09:00 UTC cron, so a stale CVE catalog cannot silently ship.
+
+**Bump procedure** (matches CLAUDE.md's Staleness Review Cadence exactly):
+
+1. Re-verify each `CVE_TABLE` entry against its NVD source (`source_url` on the entry).
+2. Bump `last_verified` in `CVE_TABLE_META` to today's ISO date.
+3. Commit with message `chore: re-verify CVE catalog (YYYY-MM-DD)`.
+4. Confirm `quirk cve status` prints `FRESH` and `pytest tests/test_cve_staleness.py -q`
+   passes.
+
+Operators can check current freshness at any time with `quirk cve status` (§9.5 of
+`docs/operators-guide.md`) — no network access required, since the catalog is entirely local.

@@ -165,6 +165,27 @@ With `[hw]` installed, QU.I.R.K. will probe network devices via SNMP (sysDescr, 
 sysObjectID) in addition to SSH banner and HTTP management interface fingerprinting, classifying
 each discovered device with a CNSA 2.0 remediation tier.
 
+Fingerprinted devices are also checked against QU.I.R.K.'s curated, NVD-cited firmware CVE
+catalog — an advisory-only signal that never affects your readiness score. See
+`docs/operators-guide.md` §9.5 for details.
+
+---
+
+## Catalog Status Commands
+
+QU.I.R.K. ships several curated data catalogs (compliance mappings, QRAMM governance model,
+firmware CVE table), each with its own `status` command to confirm freshness before a client
+engagement:
+
+```bash
+quirk compliance status   # PCI-DSS/HIPAA/FIPS 140-3/SOC2/ISO 27001 mapping freshness
+quirk qramm status        # QRAMM CSNP governance model freshness
+quirk cve status          # firmware CVE catalog freshness (30-day cadence)
+```
+
+All three print a `Last Verified` date and a FRESH/STALE verdict, and exit `1` if stale — safe
+to wire into pre-engagement scripts or CI.
+
 ---
 
 ## Next Steps
