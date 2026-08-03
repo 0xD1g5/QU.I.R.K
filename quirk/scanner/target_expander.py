@@ -1,10 +1,15 @@
 import ipaddress
-from typing import List, Tuple
+import itertools
+from typing import Iterator, List, Optional, Tuple
 
-# Phase 71 / D-01 / WR-14: per-CIDR host-count cap. A misconfigured /8
-# (16M addresses) would burn memory before any failure surfaced — fail
-# loud BEFORE iterating .hosts(). Cap is num_addresses > 1024 (/22 IPv4).
-_MAX_HOSTS_PER_CIDR = 1024  # /22 in IPv4
+# Phase 71 / D-01 / WR-14 (relaxed Phase 144 / D-01/D-02/D-05): this constant
+# was originally a hard per-CIDR reject ceiling for expand_targets() — a
+# misconfigured /8 (16M addresses) would burn memory before any failure
+# surfaced. Phase 144 removes that reject behavior entirely (no total-range
+# ceiling — see CONTEXT.md D-02) and repurposes this same constant, value
+# unchanged, as the per-batch CHUNK SIZE the nmap discovery batch loop
+# (run_scan.py, Plan 144-02) consumes via `_chunked()` below.
+_MAX_HOSTS_PER_CIDR = 1024  # /22 in IPv4 — now a chunk size, not a reject cap
 
 
 def _norm_ip(x) -> str:
@@ -80,3 +85,72 @@ def expand_targets(cfg) -> List[Tuple[str, int]]:
     # swap in a set-then-list pattern; that loses order and produces
     # report drift across runs.
     return list(dict.fromkeys(targets))
+
+
+def _chunked(iterable, size: int) -> Iterator[List]:
+    """Yield successive `size`-length lists from `iterable` (Phase 144 / D-01
+    / D-03). The final list may be shorter than `size`. Empty iterables yield
+    nothing.
+
+    Deliberately hand-rolled via `itertools.islice` rather than
+    `itertools.batched` — the project floor is Python 3.11 per CLAUDE.md and
+    `batched` is 3.12+ (RESEARCH Assumption A3).
+    """
+    it = iter(iterable)
+    while True:
+        batch = list(itertools.islice(it, size))
+        if not batch:
+            return
+        yield batch
+
+
+def _expand_and_dedup_hosts(
+    tokens: List[str], exclude_ips: Optional[List[str]] = None
+) -> Iterator[str]:
+    """Lazily yield unique host strings (first-seen order) from raw
+    CIDR/FQDN/IP tokens (Phase 144 / D-06).
+
+    Mirrors expand_targets()'s CIDR-expansion loop MINUS the removed
+    cap-check `raise` — but never materializes a full `.hosts()` list, since
+    D-02 removes the total-range ceiling entirely (a /8 is ~16.7M hosts).
+    Output is a flat sequence of host STRINGS, never (host, port) tuples.
+    """
+    exclude_set = set()
+    for x in (exclude_ips or []):
+        try:
+            exclude_set.add(_norm_ip(x))
+        except ValueError:
+            # Preserve original string for non-IP entries (e.g. hostnames the
+            # caller may have stuffed into exclude_ips) — mirrors
+            # expand_targets()'s exclude-set normalization (lines 26-36).
+            exclude_set.add(str(x))
+
+    seen: set = set()
+
+    for token in tokens:
+        try:
+            net = ipaddress.ip_network(token, strict=False)
+        except ValueError:
+            net = None
+
+        if net is not None and net.num_addresses > 1:
+            # CIDR — expand lazily, never fully materialize net.hosts() into
+            # a list (Pitfall 4 / T-144-01: the seen-set memory growth for
+            # very large ranges is the accepted DoS tradeoff the user
+            # locked; no size ceiling).
+            for ip in net.hosts():
+                ip_str = _norm_ip(ip)
+                if ip_str in exclude_set or ip_str in seen:
+                    continue
+                seen.add(ip_str)
+                yield ip_str
+        else:
+            # Single host — FQDN or bare IP, passed through unchanged.
+            try:
+                host_str = _norm_ip(token)
+            except ValueError:
+                host_str = str(token)
+            if host_str in exclude_set or host_str in seen:
+                continue
+            seen.add(host_str)
+            yield host_str

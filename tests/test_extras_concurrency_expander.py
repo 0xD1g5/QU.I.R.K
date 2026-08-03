@@ -187,6 +187,59 @@ def test_expand_targets_no_duplicate_502_already_in_ports_tls():
 
 
 # ---------------------------------------------------------------------------
+# Phase 144 / D-01/D-03/D-06: _chunked() + _expand_and_dedup_hosts() helpers
+# ---------------------------------------------------------------------------
+
+def test_chunked_empty_iterable_yields_nothing():
+    assert list(target_expander._chunked(range(0), 1024)) == []
+
+
+def test_chunked_yields_correct_batch_sizes():
+    batches = list(target_expander._chunked(range(2050), 1024))
+    assert [len(b) for b in batches] == [1024, 1024, 2]
+
+
+def test_chunked_final_batch_may_be_shorter():
+    batches = list(target_expander._chunked(range(5), 2))
+    assert batches == [[0, 1], [2, 3], [4]]
+
+
+def test_expand_and_dedup_hosts_small_cidr_ascending_no_dupes():
+    out = list(target_expander._expand_and_dedup_hosts(["192.168.1.0/30"]))
+    # /30 -> 2 usable hosts: .1, .2
+    assert out == ["192.168.1.1", "192.168.1.2"]
+    assert len(out) == len(set(out))
+
+
+def test_expand_and_dedup_hosts_fqdn_and_bare_ip_passthrough():
+    out = list(target_expander._expand_and_dedup_hosts(["example.com", "192.168.1.5"]))
+    assert out == ["example.com", "192.168.1.5"]
+
+
+def test_expand_and_dedup_hosts_cidr_and_explicit_ip_overlap_deduped():
+    out = list(target_expander._expand_and_dedup_hosts(["192.168.1.0/30", "192.168.1.1"]))
+    assert out.count("192.168.1.1") == 1
+
+
+def test_expand_and_dedup_hosts_exclude_ips_omitted():
+    out = list(target_expander._expand_and_dedup_hosts(
+        ["192.168.1.0/30"], exclude_ips=["192.168.1.1"]
+    ))
+    assert "192.168.1.1" not in out
+    assert "192.168.1.2" in out
+
+
+def test_expand_and_dedup_hosts_yields_flat_host_strings_not_tuples():
+    out = list(target_expander._expand_and_dedup_hosts(["192.168.1.0/29"]))
+    assert all(isinstance(h, str) for h in out)
+
+
+def test_expand_and_dedup_hosts_never_materializes_full_hosts_list():
+    src = inspect.getsource(target_expander)
+    assert "list(net.hosts())" not in src
+
+
+# ---------------------------------------------------------------------------
 # AUDIT-TASKS ledger flip verification
 # ---------------------------------------------------------------------------
 
