@@ -1,7 +1,11 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.6.0
-**Last Updated:** 2026-08-02 (Phase 143 COMPLETE — Dashboard & Security Tail: added UAT-143
+**Last Updated:** 2026-08-03 (Phase 141 gap closure — 141-09: Modbus end-to-end fingerprinting
+live re-validated against the real `otics-modbus` chaos-lab simulator on a host with zero SSH
+candidates, after 141-08/141-11 fixed the inner and outer scanner gate bugs. UAT-141-04/06/07
+updated from Modbus-deferred to full PASS; OTICS-04 flipped to Complete.)
+Earlier: 2026-08-02 (Phase 143 COMPLETE — Dashboard & Security Tail: added UAT-143
 series (3 test cases) covering the persistent sidebar scan-date badge (TAIL-01, automated
 Vitest coverage across every route + collapsed sidebar + empty state), the
 `security.trusted_targets` scan-consent allowlist (TAIL-02, automated pytest coverage for
@@ -15,7 +19,7 @@ series (1 test case) covering the curated NVD-cited firmware CVE catalog end-to-
 a fingerprinted device's report/dashboard row, and the "no CVE correlation attempted" caveat for
 unidentified-vendor devices. Score/tier isolation (CVE-01/CVE-04) reconfirmed via the dedicated
 `tests/test_cve_score_guard.py` regression gate.
-Earlier: Phase 141 COMPLETE, BACnet-scoped — OT/ICS Fingerprinting: added
+Earlier: Phase 141 COMPLETE, both scanners validated end-to-end — OT/ICS Fingerprinting: added
 UAT-141 series (7 test cases) covering the pymodbus/bacpypes3 foundation (OTICS-01/02/06), the
 Modbus/TCP and BACnet/IP scanners (OTICS-01/02/03), waterfall wiring (OTICS-01/02), three-site
 projection + CBOM (OTICS-06), dashboard/report badge columns (OTICS-05), and the live `otics`
@@ -24,10 +28,17 @@ mocked unit tests caught — a dashboard auth YAML-token dead-code bug, the OTIC
 migrating onto pre-existing databases, Modbus's identification fields returned as undecoded bytes,
 a BACnet client construction/binding bug plus a chaos-lab simulator busy-hold timing bug that
 together made BACnet identification impossible, and a missing default-path port-502 injection.
-BACnet now identifies live 5/5 reliably. **Modbus does not activate end-to-end** — a structural
-gate bug in `hardware_scanner.py` Step 4 was found and deliberately left for a dedicated follow-up
-per explicit user direction rather than patched mid-checkpoint. Checkpoints 141-06/07 approved
-BACnet-scoped only.
+BACnet identified live 5/5 reliably in the original checkpoint (141-06/07). **Modbus's structural
+gate bug in `hardware_scanner.py` Step 4** (found during that checkpoint and deliberately deferred
+per explicit user direction) was fixed by a two-part gap-closure follow-up: 141-08 corrected the
+inner Step 4 gate to key on confirmed-open-502 evidence rather than the SSH endpoint's own port,
+and 141-11 fixed an outer orchestration bug where hardware fingerprinting was only ever reachable
+from inside the SSH phase's early-return guard — meaning it silently never ran for any host with
+zero SSH-classified endpoints. 141-09 then live re-validated Modbus end-to-end against the real
+`otics-modbus` simulator on a host with **zero** SSH candidates (`SSH candidates: 0`), confirming
+`modbus_vendor=Schneider Electric`, `modbus_model=M221`, `modbus_probe_state=identified`, and the
+`/hardware` dashboard's blue Modbus badge rendering correctly. Both Modbus and BACnet now activate
+end-to-end independent of any incidental SSH endpoint.
 Earlier: Phase 140 COMPLETE — SNMP-Confirmed Bridge Mitigation: added UAT-140
 series (5 test cases) covering the bridge-evidence storage migration (BRIDGE-02), the sensor-side
 ARP-table walk probe empirically confirmed against hwcompat-snmp (BRIDGE-04/BRIDGE-01),
@@ -15927,7 +15938,7 @@ Application (commit `574c771`). Reproduced 5/5 clean live identifications after 
 
 ---
 
-### UAT-141-04: Waterfall wiring + CLI flags (OTICS-01, OTICS-02, D-01, D-03, D-04) — Automated + Deferred (Modbus e2e)
+### UAT-141-04: Waterfall wiring + CLI flags (OTICS-01, OTICS-02, D-01, D-03, D-04) — Automated + Human (live)
 
 **What to test:** `--enable-modbus`/`--enable-bacnet` flow through config to `fingerprint_one()`'s
 Steps 4/5, neither gated on prior vendor-identification state, Modbus headline wins over BACnet on
@@ -15944,18 +15955,22 @@ a tie (first-match-wins, D-03), and Modbus's port-502 evidence gate has an actua
 
 **Automated gate:** `python -m pytest tests/test_hardware_scanner_otics.py -v` → 5 PASSED (unit level, mocked).
 
-**Result:** - [x] PASS (unit)  - [ ] FAIL  - [x] SKIP (live Modbus half, deferred)
-**Date:** 2026-07-31  **Tester:** automated (pytest, unit-level PASS) + human (live, checkpoint — BACnet half PASS, Modbus half BLOCKED)
+**Result:** - [x] PASS (unit)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31 (unit); 2026-08-03 (live re-validation)  **Tester:** automated (pytest, unit-level PASS) + human (live, checkpoint — BACnet PASS 2026-07-31, Modbus PASS 2026-08-03 post-fix)
 **Notes:** OTICS-01, OTICS-02, D-01, D-03, D-04. Unit-level waterfall wiring is correct and passes.
-**Live end-to-end Modbus fingerprinting does not activate**, discovered during checkpoint
-validation: `hardware_scanner.py` Step 4's gate `if _enable_modbus and _port == 502:` can never be
-satisfied — `fingerprint_hardware()` only ever receives SSH-classified `CryptoEndpoint` objects,
-whose port is by construction never `502` (Modbus doesn't speak SSH). A necessary-but-insufficient
-fix (injecting port 502 into the default non-nmap candidate list, commit `7d95d90`) was applied,
-but the Step 4 gate itself remains unsatisfiable and was deliberately left unfixed per user
-direction — see `141-07-SUMMARY.md` for the full root-cause chain and recommended fix (mirror
-Step 5's `enable_bacnet`-only gate, no port check). BACnet's live end-to-end path (Step 5, no port
-gate) works correctly — see UAT-141-07.
+**Live end-to-end Modbus fingerprinting originally did not activate**, discovered during the
+2026-07-31 checkpoint: `hardware_scanner.py` Step 4's gate `if _enable_modbus and _port == 502:`
+could never be satisfied — `fingerprint_hardware()` only ever received SSH-classified
+`CryptoEndpoint` objects, whose port is by construction never `502` (Modbus doesn't speak SSH). A
+necessary-but-insufficient fix (injecting port 502 into the default non-nmap candidate list, commit
+`7d95d90`) was applied at the time, but the Step 4 gate itself remained unsatisfiable and was
+deliberately left unfixed per user direction pending a dedicated follow-up (see `141-07-SUMMARY.md`
+for the original root-cause chain). That follow-up landed as a two-part gap closure: 141-08 fixed
+the inner Step 4 gate to key on confirmed-open-502 evidence (not the SSH endpoint's own port), and
+141-11 fixed an outer orchestration bug where `fingerprint_hardware()` was only ever reachable from
+inside the SSH phase's early-return guard. Re-validated live 2026-08-03 (141-09) against a host with
+`SSH candidates: 0` — Modbus now identifies correctly with zero dependency on any SSH endpoint. Both
+Modbus and BACnet live end-to-end paths now work — see UAT-141-07.
 
 ---
 
@@ -15996,16 +16011,18 @@ not-attempted em-dash), matched in HTML/PDF/DOCX reports with a persistent abort
 
 **Automated gate:** `python -m pytest tests/test_report_render_otics_columns.py -v` → 6 PASSED.
 
-**Result:** - [x] PASS (BACnet)  - [ ] FAIL  - [x] SKIP (Modbus visual, deferred — no live-identified Modbus data exists yet)
-**Date:** 2026-07-31  **Tester:** automated (pytest — Phase 141 Plan 06) + human (visual, checkpoint — approved BACnet-scoped)
-**Notes:** OTICS-05, D-12, D-13. Human approved the checkpoint scoped to BACnet only: the dashboard
-was verified live showing a purple "identified" BACnet badge for `127.0.0.1` sourced from a real
-otics chaos-lab scan. The Modbus column was not visually verified with real identified data — see
-UAT-141-04's note on the Step 4 gate blocker. Two unrelated real bugs were also found and fixed
-during this checkpoint's prep: dashboard auth's YAML `api_token` was dead code (`load_config()`
-called with no path argument, commit `8d48a3a`), and the OTICS columns were never registered in
-`quirk/db.py`'s additive-migration registry, so any pre-existing database silently failed every
-Modbus/BACnet `INSERT` (commit `af69844`).
+**Result:** - [x] PASS (BACnet)  - [x] PASS (Modbus)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31 (BACnet); 2026-08-03 (Modbus)  **Tester:** automated (pytest — Phase 141 Plan 06) + human (visual, checkpoint)
+**Notes:** OTICS-05, D-12, D-13. Human approved the 2026-07-31 checkpoint scoped to BACnet only: the
+dashboard was verified live showing a purple "identified" BACnet badge for `127.0.0.1` sourced from
+a real otics chaos-lab scan. The Modbus column could not be visually verified at that time — see
+UAT-141-04's note on the (then-unfixed) Step 4 gate blocker. Two unrelated real bugs were also found
+and fixed during that checkpoint's prep: dashboard auth's YAML `api_token` was dead code
+(`load_config()` called with no path argument, commit `8d48a3a`), and the OTICS columns were never
+registered in `quirk/db.py`'s additive-migration registry, so any pre-existing database silently
+failed every Modbus/BACnet `INSERT` (commit `af69844`). After 141-08/141-11's gate fixes, the
+2026-08-03 checkpoint (141-09) confirmed the Modbus badge renders BLUE for the identified device,
+visually distinct from the purple BACnet badge, with a correct "Schneider Electric M221" tooltip.
 
 ---
 
@@ -16030,8 +16047,8 @@ ever tripping their own crash/hang detection.
 
 **Automated gate:** N/A — this UAT is inherently live/manual (real Docker + real network traffic).
 
-**Result:** - [x] PASS (BACnet)  - [ ] FAIL  - [x] SKIP (Modbus, deferred)
-**Date:** 2026-07-31  **Tester:** human (live, `chaoslab-otics-bacnet-1`/`chaoslab-otics-modbus-1`)
+**Result:** - [x] PASS (BACnet)  - [x] PASS (Modbus)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-07-31 (BACnet); 2026-08-03 (Modbus)  **Tester:** human (live, `chaoslab-otics-bacnet-1`/`chaoslab-otics-modbus-1`)
 **Notes:** OTICS-04, D-10. BACnet reproduced live 5/5 clean identifications
 (`vendor=5, model=FX16, firmware=9.0.1`) after fixing two real bugs (UAT-141-03) plus a chaos-lab
 simulator busy-hold timing bug: the gatekeeper's single-in-flight lock held unconditionally for
@@ -16041,10 +16058,14 @@ always outlasted the next step, making the exchange structurally impossible. Fix
 `bacnet_sim.py` to release the lock as soon as the reply is relayed, keeping 2.5s only as a
 safety-net ceiling for a genuinely wedged internal Application (commit `574c771`). Neither
 container crashed or hung across dozens of manual and automated probes this session. **Modbus was
-not validated** — deferred per user direction; see UAT-141-04's note for the root cause
-(`hardware_scanner.py` Step 4's `_port == 502` gate is unsatisfiable by the current architecture).
-Recommended follow-up: remove that condition (mirror Step 5's unconditional `enable_bacnet` gate),
-then re-run this UAT for the Modbus half.
+not validated at the time** — deferred per user direction; see UAT-141-04's note for the root cause
+(`hardware_scanner.py` Step 4's `_port == 502` gate was unsatisfiable by the then-current
+architecture). Gap closure landed as planned: 141-08 fixed the inner Step 4 gate (confirmed-open-502
+evidence, not the SSH endpoint's own port) and 141-11 fixed an outer orchestration bug where hardware
+fingerprinting was unreachable for any host with zero SSH-classified endpoints. Re-run 2026-08-03
+(141-09) against the real `otics-modbus` simulator on a host with zero SSH candidates:
+`modbus_vendor=Schneider Electric`, `modbus_model=M221`, `modbus_probe_state=identified` — matching
+`expected_results_otics.md` exactly. Both simulator containers stayed healthy throughout.
 
 ---
 

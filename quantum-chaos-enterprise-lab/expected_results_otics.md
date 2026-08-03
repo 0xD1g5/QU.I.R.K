@@ -63,8 +63,21 @@ ProductCode=`M221`, MajorMinorRevision=`1.6.2.0`. `quirk/scanner/modbus_scanner.
 object 0 -> `modbus_vendor`, object 1 -> `modbus_model`, object 2 -> `modbus_firmware`. Since
 `modbus_vendor` is non-empty, `modbus_probe_state="identified"`.
 
-This is the port-gated (D-04) Step 4 waterfall entry: `enable_modbus=True AND ep.port==502`
-must both hold for the probe to fire.
+This is the port-gated (D-04) Step 4 waterfall entry: `enable_modbus=True AND 502 in
+confirmed_open_ports[host]` must both hold for the probe to fire — i.e. port 502 confirmed open
+for that host by the existing port/service scan, not the SSH endpoint's own port (fixed in
+141-08/141-11; see live-validation note below).
+
+**Live-validation note (2026-08-03):** Re-validated end-to-end against the real `otics-modbus`
+Docker container after 141-11's outer-gate fix landed, running `python run_scan.py
+--enable-modbus --enable-bacnet --allow-internal-targets` against a host with **zero** SSH
+candidates (`TLS candidates: 5 | SSH candidates: 0 | Other inventory: 13`). Hardware
+fingerprinting still ran (`Starting hardware fingerprint: 1 endpoints` /
+`hardware fingerprint complete: 1/1 identified` / `Hardware fingerprint: 1 device(s) recorded`)
+and the database (`hardware_devices`, id=2, host=127.0.0.1, scanned_at=2026-08-03 14:32:28)
+recorded `modbus_vendor=Schneider Electric`, `modbus_model=M221`, `modbus_probe_state=identified`
+— matching this oracle exactly. This is a stronger proof than the original 141-07 validation,
+which (per 141-10-RESEARCH.md) accidentally relied on an incidental SSH endpoint riding along.
 
 ---
 
@@ -88,6 +101,10 @@ Device object. `quirk/scanner/bacnet_scanner.py`'s Step 5 gates on `enable_bacne
 Who-Is/I-Am round trip itself is the D-04 port-gating confirmation for this UDP-only protocol
 (no TCP-scan equivalent exists). Since `bacnet_vendor` is non-empty,
 `bacnet_probe_state="identified"`.
+
+**Live-validation note (2026-08-03):** Re-confirmed in the same 141-09 live run described in the
+Modbus section above — `bacnet_vendor=5`, `bacnet_model=FX16`, `bacnet_probe_state=identified`
+against a host with zero SSH candidates, alongside the Modbus identification.
 
 ---
 
