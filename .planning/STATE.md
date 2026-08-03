@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.10
-milestone_name: Hardware Lifecycle Depth
-status: executing
-stopped_at: Completed 142-06-PLAN.md
-last_updated: "2026-08-02T14:10:18.583Z"
-last_activity: 2026-08-02 -- Phase 142 complete (human UAT approved after amber-badge fix); Phase 143 remains
+milestone: v5.11
+milestone_name: Discovery at Scale + Backlog Drain
+status: "Roadmap created, ready for /gsd:plan-phase 144"
+stopped_at: Phase 144 context gathered
+last_updated: "2026-08-03T19:44:44.058Z"
+last_activity: 2026-08-03 — v5.11 ROADMAP.md + REQUIREMENTS.md traceability written (Phases 144-147)
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 29
-  completed_plans: 29
-  percent: 80
+  total_phases: 11
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -22,16 +22,23 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 143 — dashboard-security-tail (next; Phase 142 complete)
+**Current focus:** v5.11 Discovery at Scale + Backlog Drain — roadmap created, awaiting plan-phase
 
 ## Current Position
 
-Phase: 142 — COMPLETE. Next: Phase 143 (dashboard-security-tail), the final phase of v5.10.
-Plan: 7 of 7
-Status: Phase 142 complete
-Last activity: 2026-08-02 -- Phase 142 complete (human UAT approved after amber-badge fix)
+Phase: 144 (not yet planned)
+Plan: —
+Status: Roadmap created, ready for /gsd:plan-phase 144
+Last activity: 2026-08-03 — v5.11 ROADMAP.md + REQUIREMENTS.md traceability written (Phases 144-147)
 
-Progress: [████████░░] 80%
+## v5.11 Phase Map
+
+| Phase | Name | Requirements | Gate | Status |
+|-------|------|--------------|------|--------|
+| 144 | Chunked Discovery Core | DISC-01, DISC-02 | None (first, anchor) | Not started |
+| 145 | Liveness Pre-Pass | DISC-03 | Phase 144 | Not started |
+| 146 | Progress, Scaling & Disclosure | DISC-04, DISC-05, DISC-06, DISC-07 | Phase 144 | Not started |
+| 147 | Backlog Drain — Lifecycle & Ledger Tail | DRAIN-01, DRAIN-02, DRAIN-03, DRAIN-04 | None (independent) | Not started |
 
 ## v5.10 Phase Map
 
@@ -39,9 +46,9 @@ Progress: [████████░░] 80%
 |-------|------|--------------|------|--------|
 | 139 | SNMPv3 Auth+Priv Support | SNMPV3-01..04 | None (first) | Complete |
 | 140 | SNMP-Confirmed Bridge Mitigation | BRIDGE-01..05 | Phase 139 | Complete |
-| 141 | OT/ICS Fingerprinting (Modbus + BACnet) | OTICS-01..06 | None new (sequenced after 139) | Complete (BACnet-scoped; Modbus e2e deferred, see follow-up note) |
+| 141 | OT/ICS Fingerprinting (Modbus + BACnet) | OTICS-01..06 | None new (sequenced after 139) | Complete (both Modbus and BACnet validated end-to-end, live-verified 2026-08-03) |
 | 142 | Firmware CVE Correlation | CVE-01..04 | Phase 141 | Complete |
-| 143 | Dashboard & Security Tail | TAIL-01..04 | None (independent) | Not started |
+| 143 | Dashboard & Security Tail | TAIL-01..04 | None (independent) | Complete (human_needed 12/13 — 2 items approved-to-continue, see Deferred Items) |
 
 ## v5.9 Final State
 
@@ -60,6 +67,16 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 ## Accumulated Context
 
 ### Decisions
+
+- Numbering continues at Phase 144 (v5.10 ended at 143). Phase order is dependency-driven:
+  chunked discovery core (144) must land before liveness pre-pass (145) or progress/scaling (146)
+  since both depend on batches existing. 144 explicitly bundles the gate-relaxation work
+  (`target_expander.py::_MAX_HOSTS_PER_CIDR` + `jobs.py`'s 422 stopgap) with the chunking core
+  itself — per research PITFALLS.md, splitting them risks a repeat of the Phase 141 outer-gating
+  bug shape (feature built, never reachable). Liveness pre-pass (145) gets its own phase for
+  isolated non-root privilege-fallback verification. Progress/scaling/CLI-parity/disclosure (146)
+  groups DISC-04/05/06/07 as one phase per explicit instruction. Backlog drain (147) is fully
+  independent of the DISC phases — different code paths, sequenced last but not blocking.
 
 - Numbering continues at Phase 139 (v5.9 ended at 138 + gap-closures 138.1/138.2).
 - Phase order is dependency-driven, not feature-list order: SNMPv3 (139) must precede bridge
@@ -146,6 +163,14 @@ Carried forward from v5.9 close (2026-07-30):
 | human-UAT (93/95/96) | getpass/live PDF, ldaps code-signing, fuzzing TTY gates | deferred — environment-gated |
 | human-UAT (101–105) | Live Slack/email/webhook/syslog/Jira/ServiceNow delivery | deferred — needs live infra |
 | horizon | Continuous hardware lifecycle monitoring | deferred — v5.11+, needs its own research pass |
+
+Acknowledged at v5.10 milestone close (2026-08-03):
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Phase 143: 143-HUMAN-UAT.md (2 pending scenarios) | partial — user approved continuing 2026-08-03; live windows-latest CI run + browser click-through remain outstanding, both have strong automated/static substitutes in place |
+| verification_gap | Phase 143: 143-VERIFICATION.md | human_needed — same reason as above, user-approved |
+| quick_task | 260611-g0b-merge-healthcare-vertical-branch-into-ma | missing (audit flag) — PLAN + SUMMARY exist on disk and the healthcare vertical merge (commit 9967d8a) is documented as completed 2026-06-11; treated as stale bookkeeping, no further action needed |
 | Phase 139 P00 | 12min | 3 tasks | 3 files |
 | Phase 139 P01 | 15min | 2 tasks | 4 files |
 | Phase 139 P02 | 25min | 2 tasks | 2 files |
@@ -173,11 +198,13 @@ Carried forward from v5.9 close (2026-07-30):
 
 ## Session Continuity
 
-Last session: 2026-08-02T13:50:47.236Z
-Stopped at: Completed 142-05-PLAN.md
+Last session: 2026-08-03T19:44:44.044Z
+Stopped at: Phase 144 context gathered
 
-  1. 141-06-PLAN.md Task 3 — Modbus/BACnet badge colors + abort-state distinctness + report caveat (dashboard/report visual review)
-  2. 141-07-PLAN.md Task 3 — otics chaos-lab profile live end-to-end validation (Docker + real network traffic against the fragile Modbus/BACnet simulators)
+Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
+141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
+rounds (141-09) on 2026-08-03 — no longer pending.
 
-Resume files: .planning/phases/141-ot-ics-fingerprinting-modbus-bacnet/141-06-SUMMARY.md,
-  .planning/phases/141-ot-ics-fingerprinting-modbus-bacnet/141-07-SUMMARY.md
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
