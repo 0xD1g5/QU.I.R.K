@@ -1329,6 +1329,20 @@ def main():
                 if args.cache:
                     save_cache(cfg.output.directory, d_key, {"targets": targets_to_serial(targets), "ports": ports_for_nmap, "mode": "nmap"})
 
+        # Phase 144 / D-04: discovery-stage ScanCheckpoint, mirroring the
+        # existing _tls_pf/_ssh_pf/etc. per-stage precedent exactly. Only
+        # fires on the nmap batch-loop path (it has no per-batch failure
+        # semantics on the cache-hit or nmap-unavailable-fallback
+        # sub-branches — D-05 explicitly excludes the non-nmap expand_targets()
+        # branch from this bookkeeping).
+        if _discovery_batch_loop_ran:
+            _discovery_pf = _collect_stage_partial_failures(run_stats, "discovery", error_endpoints, _err_before_discovery)
+            if args.db_path:
+                write_scan_checkpoint(args.db_path, scan_run_id, "discovery",
+                    status="partial" if _discovery_pf else "completed",
+                    endpoint_count=len(targets), partial_failure=bool(_discovery_pf),
+                    error_summary=_discovery_pf or None)
+
         if not targets:
             logger.info("⚠️ Nmap discovery found no open ports in scope. Nothing to scan.")
             mark_job_completed(args.db_path, args.job_id, scan_run_id)

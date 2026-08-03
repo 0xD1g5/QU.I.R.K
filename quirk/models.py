@@ -234,7 +234,7 @@ class ScanCheckpoint(Base):
     One row per stage per scan_run_id. Stage completes → row written.
     Resume reads completed rows to skip already-finished stages.
     status values: completed | partial | failed | skipped
-    stage values:  inventory | tls | ssh | api | identity |
+    stage values:  discovery | inventory | tls | ssh | api | identity |
                    data_at_rest | broker_email | reports
     """
     __tablename__ = "scan_checkpoints"

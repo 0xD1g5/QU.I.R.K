@@ -115,6 +115,101 @@ def test_multi_batch_cidr_produces_more_than_one_batch():
     assert len(results) == 254
 
 
+# ---------------------------------------------------------------------------
+# Phase 144 / Plan 02, Task 2 (D-04): discovery-stage ScanCheckpoint row shape
+# ---------------------------------------------------------------------------
+
+def _write_discovery_checkpoint(tmp_path, discovery_pf):
+    """Mirrors run_scan.py's discovery-stage checkpoint write exactly."""
+    from quirk.db import init_db
+    from quirk.cli.job_progress import write_scan_checkpoint
+
+    db_path = str(tmp_path / "checkpoint_test.db")
+    init_db(db_path)
+    write_scan_checkpoint(
+        db_path, "scan-run-1", "discovery",
+        status="partial" if discovery_pf else "completed",
+        endpoint_count=3, partial_failure=bool(discovery_pf),
+        error_summary=discovery_pf or None,
+    )
+    return db_path
+
+
+def test_discovery_checkpoint_partial_on_batch_failure(tmp_path):
+    """After a discovery run where at least one batch failed, a
+    ScanCheckpoint row exists with stage='discovery' and status='partial'."""
+    from quirk.db import get_session
+    from quirk.models import ScanCheckpoint
+
+    fake_pf = [{"stage": "discovery", "scanner": "discovery-batch-2",
+                "error_category": "exception", "error_message": "boom", "endpoint_count": 0}]
+    db_path = _write_discovery_checkpoint(tmp_path, fake_pf)
+
+    with get_session(db_path) as db:
+        row = db.query(ScanCheckpoint).filter_by(scan_run_id="scan-run-1", stage="discovery").one()
+        assert row.status == "partial"
+        assert row.partial_failure is True
+
+
+def test_discovery_checkpoint_completed_when_all_batches_succeed(tmp_path):
+    """After a discovery run where all batches succeeded, the stage='discovery'
+    row has status='completed'."""
+    from quirk.db import get_session
+    from quirk.models import ScanCheckpoint
+
+    db_path = _write_discovery_checkpoint(tmp_path, [])
+
+    with get_session(db_path) as db:
+        row = db.query(ScanCheckpoint).filter_by(scan_run_id="scan-run-1", stage="discovery").one()
+        assert row.status == "completed"
+        assert row.partial_failure is False
+
+
+def test_discovery_checkpoint_pf_derived_from_collect_stage_partial_failures():
+    """_collect_stage_partial_failures("discovery", ...) correctly derives the
+    partial-failure list from new error_endpoints appended during the batch
+    loop, matching the exact pattern run_scan.py uses for every other stage."""
+    import sys
+    sys.path.insert(0, ".") if "." not in sys.path else None
+    from run_scan import _collect_stage_partial_failures
+
+    error_endpoints: List[CryptoEndpoint] = []
+    err_before = len(error_endpoints)
+
+    def fake_discover(batch):
+        if batch == ["10.0.0.2"]:
+            raise RuntimeError("simulated batch failure")
+        return [f"open:{batch[0]}"]
+
+    def _loop():
+        for batch in _chunked(_expand_and_dedup_hosts(["10.0.0.1", "10.0.0.2", "10.0.0.3"]), 1):
+            try:
+                fake_discover(batch)
+            except RuntimeError as exc:
+                error_endpoints.append(CryptoEndpoint(
+                    host="discovery-batch-x", port=0, protocol="ERROR",
+                    scan_error=str(exc), scan_error_category="exception",
+                ))
+                continue
+
+    run_stats: dict = {}
+    _loop()
+    discovery_pf = _collect_stage_partial_failures(run_stats, "discovery", error_endpoints, err_before)
+
+    assert len(discovery_pf) == 1
+    assert discovery_pf[0]["stage"] == "discovery"
+    assert run_stats["partial_failures"] == discovery_pf
+
+
+def test_models_scancheckpoint_docstring_documents_discovery_stage():
+    """quirk/models.py's ScanCheckpoint docstring must list 'discovery' among
+    stage values (doc-only, no schema change)."""
+    import inspect
+    from quirk.models import ScanCheckpoint
+
+    assert "discovery" in inspect.getdoc(ScanCheckpoint)
+
+
 def test_default_args_includes_max_parallelism():
     """_default_nmap_args must include '--max-parallelism' followed by '100' (D-07)."""
     from quirk.discovery.nmap_provider import _default_nmap_args
