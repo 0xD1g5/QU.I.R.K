@@ -4,7 +4,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.8.0
+# QU.I.R.K. — v5.10.0
 
 **Quantum Infrastructure Readiness Kit** — consulting-grade cryptographic inventory and quantum-readiness assessment.
 
@@ -82,10 +82,11 @@ Then follow the [Getting Started guide](docs/getting-started.md) for a walkthrou
 
 Sample CBOM fixtures live in [`examples/cbom/`](examples/) — one per major scan profile (TLS-only, identity, data-at-rest, data-in-motion), deterministic and committed to the repo.
 
-## What's New in v5.8
+## What's New in v5.10
 
 Highlights from the v5.x series — see [CHANGELOG.md](CHANGELOG.md) for the full per-release breakdown.
 
+- **Hardware Lifecycle Depth (v5.10)** — SNMPv3 auth+priv fingerprinting with a safe v2c/none fallback ladder; SNMP-confirmed bridge mitigation (`upstream_mitigated`, evidence-backed, never scored); OT/ICS fingerprinting for Modbus/TCP + BACnet/IP (opt-in, read-only, circuit-breakered) via a new `otics` chaos-lab profile; advisory-only firmware CVE correlation against fingerprinted hardware; a persistent dashboard scan-date badge, server-enforced trusted-targets allowlist, and Windows Authenticode signing CI mechanism.
 - **SNMP hardware fingerprinting + CBOM DEVICE/FIRMWARE hierarchy (v5.8)** — SSH banner → HTTP management interface → SNMP cascade classifies network hardware vendor, model, and CNSA 2.0 remediation tier; crypto-bridge detection; CBOM now emits a DEVICE parent component with FIRMWARE children; dashboard "Hardware Inventory" section in the CBOM tab; requires `[hw]` extras (pysnmp, not included in `[all]`).
 - **Hardening + Hardware Compatibility (v5.7)** — SSRF cluster hardening, scoring correctness fixes, audit drain; hardware fingerprinting via SSH/HTTP banner with CNSA 2.0 remediation tier classification and crypto-bridge detection.
 - **Public launch + Windows frozen build (v5.6)** — open-source public repo on GitHub with branch protection and gitleaks history scan; frozen Windows sensor binary (`quirk.exe`) + PowerShell Scheduled Task installer as a GitHub Release asset; port-scope discovery control (Common TLS / Top 1000 / All ports / Custom).

@@ -106,6 +106,17 @@ Who-Is/I-Am round trip itself is the D-04 port-gating confirmation for this UDP-
 Modbus section above — `bacnet_vendor=5`, `bacnet_model=FX16`, `bacnet_probe_state=identified`
 against a host with zero SSH candidates, alongside the Modbus identification.
 
+**Expected CVE correlation outcome for this device: `cve_matches: []` (no badge) — not a bug.**
+Phase 142's `quirk/scanner/hw_cve.py` `CVE_TABLE` keys the Johnson Controls entry on
+`("Johnson Controls", "Facility Explorer")` (a real product with a real published CVE,
+CVE-2017-16744), not on `"FX16"` — the simulator's literal `ReadProperty(model-name)` fixture
+value. This is a deliberate, documented tradeoff (see `.planning/phases/142-firmware-cve-correlation/142-RESEARCH.md`
+Open Question 1): the curated CVE table favors real-world CVE accuracy over matching this lab's
+synthetic model string, per CVE-03's "no fuzzy matching" requirement. The Modbus device above
+(`Schneider Electric` / `M221`) DOES get a live CVE badge in this same scan, since its vendor/model
+pair is a genuine entry in the curated table — this asymmetry (Modbus fires, BACnet doesn't) is
+expected lab behavior, not a regression.
+
 ---
 
 ## Fragility / Circuit-Breaker Empirical Validation (D-10, OTICS-03)

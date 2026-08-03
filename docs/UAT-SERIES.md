@@ -1,6 +1,6 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 5.6.0
+**Version:** 5.10.0
 **Last Updated:** 2026-08-03 (Phase 141 gap closure — 141-09: Modbus end-to-end fingerprinting
 live re-validated against the real `otics-modbus` chaos-lab simulator on a host with zero SSH
 candidates, after 141-08/141-11 fixed the inner and outer scanner gate bugs. UAT-141-04/06/07
@@ -144,12 +144,12 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `QU.I.R.K. v5.6.0`
+- Output matches format: `QU.I.R.K. v5.10.0`
 - Exit code 0
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
-**Notes:** Version bumped to v5.6.0 at Phase 122 Plan 03 (pyproject.toml sole SoT; importlib.metadata derives it). Re-test required against v5.6.0 install.
+**Notes:** Version bumped to v5.10.0 at v5.10 milestone close (pyproject.toml sole SoT; importlib.metadata derives it). Re-test required against v5.10.0 install.
 
 ---
 
