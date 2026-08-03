@@ -1,12 +1,16 @@
-"""Phase 141 Plan 04 — OTICS-01/02/05 fingerprint waterfall gating contract.
+"""Phase 141 Plan 04/08 — OTICS-01/02/05 fingerprint waterfall gating contract.
 
 Verifies that Modbus (Step 4) and BACnet (Step 5) probes in
 ``fingerprint_one`` are independently flag-gated (D-01/D-02), that Modbus
-additionally requires port-502 evidence (D-04), that BACnet's Who-Is/I-Am is
-its own gate (no prior port evidence needed), that Modbus wins the headline
-vendor/model over BACnet when both identify a device (first-match-wins,
-D-03), and that neither step is nested under a vendor=="Unknown" gate
-(D-01 — OT trigger is port/flag-based, not vendor-Unknown-based).
+additionally requires the target HOST's port 502 to be confirmed open by the
+existing port/service scan (threaded in via ``confirmed_open_ports``) — D-04's
+locked confirmed-open-port gate, keyed on the host rather than the
+SSH-classified endpoint's own port — that BACnet's Who-Is/I-Am is its own gate
+(no prior port evidence needed, a deliberate UDP-only exception to D-04), that
+Modbus wins the headline vendor/model over BACnet when both identify a device
+(first-match-wins, D-03), and that neither step is nested under a
+vendor=="Unknown" gate (D-01 — OT trigger is port/flag-based, not
+vendor-Unknown-based).
 
 No network connections are made — probe_modbus_target/probe_bacnet_target
 are patched at their import site inside quirk.scanner.hardware_scanner.
@@ -55,24 +59,31 @@ def test_modbus_gated_off_by_default() -> None:
     assert device.modbus_probe_state is None
 
 
-# ------------ Modbus requires port-502 evidence (D-04) ------------
+# ------------ Modbus requires the HOST's confirmed-open port 502 (D-04) ------------
 
-def test_modbus_requires_open_port() -> None:
+def test_modbus_requires_confirmed_open_502() -> None:
     from quirk.scanner.hardware_scanner import fingerprint_one
 
     cfg = _make_cfg(enable_modbus=True)
 
-    # Non-502 endpoint: flag on, but no 502 port evidence -> not called
-    ep_other = _make_ep("10.0.0.11", 22)
+    # NEGATIVE: flag on, but no confirmed-open evidence for this host -> not
+    # called, even though the endpoint happens to be labeled 502. D-04 demands
+    # real confirmed-open evidence, not just the flag.
+    ep_no_evidence = _make_ep("10.0.0.11", 22)
     with patch(
         "quirk.scanner.modbus_scanner.probe_modbus_target"
     ) as mock_probe:
-        device_other = fingerprint_one(ep_other, timeout=1, cfg=cfg)
+        device_no_evidence = fingerprint_one(
+            ep_no_evidence, timeout=1, cfg=cfg, confirmed_open_ports={}
+        )
     mock_probe.assert_not_called()
-    assert device_other.modbus_probe_state is None
+    assert device_no_evidence.modbus_probe_state is None
 
-    # 502 endpoint: flag on + port evidence -> called, fields populated
-    ep_502 = _make_ep("10.0.0.12", 502)
+    # POSITIVE: the HOST's port 502 is confirmed open, but the endpoint under
+    # test is a non-502 (port-22 SSH) endpoint -- the only kind
+    # fingerprint_hardware ever receives. Proves the gate keys on the host's
+    # confirmed-open evidence, not the endpoint's own port.
+    ep_ssh = _make_ep("10.0.0.12", 22)
     with patch(
         "quirk.scanner.modbus_scanner.probe_modbus_target"
     ) as mock_probe:
@@ -82,12 +93,14 @@ def test_modbus_requires_open_port() -> None:
             "modbus_firmware": "1.6",
             "modbus_probe_state": "identified",
         }
-        device_502 = fingerprint_one(ep_502, timeout=1, cfg=cfg)
+        device_confirmed = fingerprint_one(
+            ep_ssh, timeout=1, cfg=cfg, confirmed_open_ports={"10.0.0.12": {502}}
+        )
 
-    mock_probe.assert_called_once()
-    assert device_502.modbus_vendor == "Schneider Electric"
-    assert device_502.modbus_model == "M221"
-    assert device_502.modbus_probe_state == "identified"
+    mock_probe.assert_called_once_with("10.0.0.12")
+    assert device_confirmed.modbus_vendor == "Schneider Electric"
+    assert device_confirmed.modbus_model == "M221"
+    assert device_confirmed.modbus_probe_state == "identified"
 
 
 # ------------ BACnet gated by flag only (Who-Is is its own gate) ------------
@@ -146,7 +159,9 @@ def test_first_match_wins_headline() -> None:
             "bacnet_firmware": "2.3",
             "bacnet_probe_state": "identified",
         }
-        device = fingerprint_one(ep, timeout=1, cfg=cfg)
+        device = fingerprint_one(
+            ep, timeout=1, cfg=cfg, confirmed_open_ports={"10.0.0.30": {502}}
+        )
 
     # Headline comes from Modbus (runs first)
     assert device.vendor == "Schneider Electric"
@@ -184,7 +199,9 @@ def test_step4_5_not_gated_on_unknown() -> None:
             "bacnet_firmware": None,
             "bacnet_probe_state": "no_response",
         }
-        device = fingerprint_one(ep, timeout=1, cfg=cfg)
+        device = fingerprint_one(
+            ep, timeout=1, cfg=cfg, confirmed_open_ports={"10.0.0.40": {502}}
+        )
 
     # Step 1 already found a known vendor; Steps 4/5 must still run (D-01)
     assert device.vendor == "Cisco"
