@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: "Roadmap created, ready for /gsd:plan-phase 144"
-stopped_at: Phase 144 context gathered
-last_updated: "2026-08-03T19:44:44.058Z"
-last_activity: 2026-08-03 — v5.11 ROADMAP.md + REQUIREMENTS.md traceability written (Phases 144-147)
+status: executing
+stopped_at: Completed 144-02-PLAN.md
+last_updated: "2026-08-03T20:39:00.418Z"
+last_activity: 2026-08-03
 progress:
   total_phases: 11
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 2
   percent: 0
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** v5.11 Discovery at Scale + Backlog Drain — roadmap created, awaiting plan-phase
+**Current focus:** Phase 144 — chunked-discovery-core
 
 ## Current Position
 
-Phase: 144 (not yet planned)
-Plan: —
-Status: Roadmap created, ready for /gsd:plan-phase 144
-Last activity: 2026-08-03 — v5.11 ROADMAP.md + REQUIREMENTS.md traceability written (Phases 144-147)
+Phase: 144 (chunked-discovery-core) — EXECUTING
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-08-03
 
 ## v5.11 Phase Map
 
@@ -132,6 +132,10 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 142]: 142-03: cve_snapshot_stale computed once on exec_content in writer.py, then stamped onto every device dict at the html_renderer call site rather than passed as a second render_hardware_section parameter, keeping the render function a pure devices-list contract matching its test
 - [Phase 142]: 142-04: cve_matches serialized as reduced {cve_id, severity, source_url}; CVE_BADGE_STYLE reuses the existing SNMP-confirmed blue hue rather than a new color
 - [Phase 142]: 142-05: docs/getting-started.md had no pre-existing catalog-status command list; added a new Catalog Status Commands section for compliance/qramm/cve
+- [Phase 144]: Split Task 1's combined helper+cap-removal edit into two atomic commits (helpers-only, then cap-removal+test-rewrites) to preserve the plan's intended per-task checkpoint granularity
+- [Phase ?]: [Phase 144]: Relocated error_endpoints init to before the discovery block (Pitfall 1) rather than inventing a parallel discovery-only bookkeeping list
+- [Phase ?]: [Phase 144]: Guarded the discovery ScanCheckpoint write with a _discovery_batch_loop_ran flag so it fires only on the nmap batch-loop path, not cache-hit/fallback sub-branches
+- [Phase ?]: [Phase 144]: Batch-loop failure-isolation tests exercise the loop's exact shape directly (mirroring inline run_scan.py code) rather than invoking full main(), per RESEARCH.md's stated fallback
 
 ### Pending Todos
 
@@ -195,11 +199,13 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 | Phase 142 P03 | ~20min | 3 tasks | 4 files |
 | Phase 142 P04 | 20min | 2 tasks | 4 files |
 | Phase 142 P05 | 15min | 3 tasks | 5 files |
+| Phase 144 P01 | 12min | 2 tasks | 4 files |
+| Phase 144 P02 | 35min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-08-03T19:44:44.044Z
-Stopped at: Phase 144 context gathered
+Last session: 2026-08-03T20:38:51.357Z
+Stopped at: Completed 144-02-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
