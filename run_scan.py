@@ -1279,6 +1279,11 @@ def main():
     tls_targets: List[Tuple[str, int]] = []
     ssh_targets: List[Tuple[str, int]] = []
     classified_details: Dict[Tuple[str, int], str] = {}
+    # Phase 141 Plan 08 (OTICS-01/D-04): host -> set of TCP ports confirmed
+    # open by the existing port/service scan. Reused (not re-probed) to gate
+    # Modbus fingerprinting on a real "port 502 confirmed open for this host"
+    # signal — forwarded to fingerprint_hardware below.
+    confirmed_open_ports: Dict[str, set] = {}
 
     # Phase 67 RESUME-01: if inventory stage was completed in a prior run, restore
     # inventory_endpoints, tls_targets, and ssh_targets from the DB snapshot.
@@ -1300,6 +1305,15 @@ def main():
             for e in _resumed_endpoints
             if getattr(e, "protocol", "") == "SSH"
         ]
+        # Phase 141 Plan 08 (D-04): reconstruct confirmed_open_ports from the
+        # resumed endpoints — any endpoint whose protocol is not "CLOSED" was
+        # confirmed open by the original port/service scan (this captures a
+        # resumed-open 502/UNKNOWN endpoint as well as SSH/TLS/HTTP ports).
+        for e in _resumed_endpoints:
+            if getattr(e, "protocol", "") != "CLOSED":
+                _host = getattr(e, "host", "")
+                _port = int(getattr(e, "port", 0) or 0)
+                confirmed_open_ports.setdefault(_host, set()).add(_port)
         logger.info(
             f"Resuming: skipping inventory/fingerprint stage "
             f"({len(inventory_endpoints)} inventory, {len(tls_targets)} tls, {len(ssh_targets)} ssh from DB)"
@@ -1338,6 +1352,12 @@ def main():
             is_open = bool(r.get("is_open"))
             key = (host, port)
             classified_details[key] = detail or ""
+
+            # Phase 141 Plan 08 (D-04): record confirmed-open evidence from
+            # the same generic TCP-connect fingerprint stage that already
+            # confirms SSH/TLS/HTTP ports — no new probe is introduced.
+            if is_open:
+                confirmed_open_ports.setdefault(host, set()).add(port)
 
             ep = CryptoEndpoint(
                 host=host,
@@ -1473,7 +1493,10 @@ def main():
             # Hardware fingerprint while banner is still in service_detail
             # (before classified_details overwrite — D-03)
             hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
-            _hw_batch.extend(fingerprint_hardware(eps, timeout=hw_timeout, logger=logger, cfg=cfg))
+            _hw_batch.extend(fingerprint_hardware(
+                eps, timeout=hw_timeout, logger=logger, cfg=cfg,
+                confirmed_open_ports=confirmed_open_ports,
+            ))
             # Phase 128 HWCOMPAT-04: assign remediation tier to each fingerprinted device
             from quirk.scanner.hardware_tier import assign_tier
             for _dev in _hw_batch:
