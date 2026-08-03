@@ -27,7 +27,12 @@ from quirk.db import init_db, get_session
 from quirk.models import CryptoEndpoint
 
 from quirk.logging_util import Logger
-from quirk.scanner.target_expander import expand_targets
+from quirk.scanner.target_expander import (
+    expand_targets,
+    _chunked,
+    _expand_and_dedup_hosts,
+    _MAX_HOSTS_PER_CIDR,
+)
 from quirk.scanner.fingerprint import fingerprint_service
 from quirk.scanner.tls_scanner import scan_tls_targets
 from quirk.scanner.ssh_scanner import scan_ssh_targets
@@ -1188,6 +1193,17 @@ def main():
 
     limiter = TokenBucket(args.rate_limit, capacity=max(1.0, args.rate_limit)) if args.rate_limit and args.rate_limit > 0 else None
 
+    # Phase 41 / D-12 + D-14: scanner-phase failure surface — both missing-extra
+    # advisory rows (category='missing_extra') and BaseException-captured rows
+    # (category='exception') flow through this list and merge into the main
+    # endpoints list before risk_engine / db_persist / write_reports.
+    # Phase 144 / RESEARCH.md Pitfall 1: relocated here (was previously
+    # initialized after the discovery block) so discovery can reuse the same
+    # _err_before_X / _collect_stage_partial_failures / write_scan_checkpoint
+    # bookkeeping pattern every other stage already uses, instead of a
+    # parallel ad-hoc mechanism.
+    error_endpoints: List[CryptoEndpoint] = []
+
     # ==============================
     # Discovery targets
     # ==============================
@@ -1245,6 +1261,8 @@ def main():
         d_key = f"discovery-{scope_hash(cfg, 'nmap', nmap_extra_args=extra_args, ports=ports_for_nmap)}"
         cached = load_cache(cfg.output.directory, d_key, args.cache_ttl_hours) if args.cache and args.resume and not args.force_discovery else None
 
+        _err_before_discovery = len(error_endpoints)
+        _discovery_batch_loop_ran = False
         with _phase_timer(run_stats, "discovery"):
             if cached:
                 logger.stamp(f"♻️ Using cached discovery results ({d_key})")
@@ -1269,16 +1287,43 @@ def main():
                 targets = expand_targets(cfg)
                 targets = _filter_excludes(targets, cfg.targets.exclude_ips or [])
             else:
-                open_ports = run_nmap_discovery(
-                    targets=nmap_targets,
-                    ports=ports_for_nmap if port_spec_override is None else [],
-                    output_dir=cfg.output.directory,
-                    logger=logger,
-                    nmap_path=args.nmap_path,
-                    extra_args=extra_args.split() if extra_args else None,
-                    timeout_seconds=args.nmap_timeout,
-                    port_spec_override=port_spec_override,  # Phase 121
-                )
+                # Phase 144 / D-01/D-03/D-06: strictly sequential per-batch nmap
+                # discovery loop. `nmap_targets` (raw CIDR/FQDN/IP tokens) is
+                # first expanded + deduplicated into a flat lazy host stream
+                # (Pitfall 4 — nmap itself no longer sees un-expanded CIDRs
+                # here), then sliced into <=_MAX_HOSTS_PER_CIDR-sized batches.
+                # A batch that raises RuntimeError is recorded as an error
+                # CryptoEndpoint and the loop continues (DISC-02) — it must
+                # NOT abort subsequent batches (Pitfall 2).
+                _discovery_batch_loop_ran = True
+                all_open_ports: List = []
+                batch_num = 0
+                host_iter = _expand_and_dedup_hosts(nmap_targets, cfg.targets.exclude_ips or [])
+                for batch in _chunked(host_iter, _MAX_HOSTS_PER_CIDR):
+                    batch_num += 1
+                    try:
+                        batch_open_ports = run_nmap_discovery(
+                            targets=batch,
+                            ports=ports_for_nmap if port_spec_override is None else [],
+                            output_dir=cfg.output.directory,
+                            logger=logger,
+                            nmap_path=args.nmap_path,
+                            extra_args=extra_args.split() if extra_args else None,
+                            timeout_seconds=args.nmap_timeout,
+                            port_spec_override=port_spec_override,  # Phase 121
+                        )
+                        all_open_ports.extend(batch_open_ports)
+                    except RuntimeError as exc:
+                        logger.error(f"discovery batch {batch_num} failed: {exc!r}")
+                        error_endpoints.append(CryptoEndpoint(
+                            host=f"discovery-batch-{batch_num}",
+                            port=0,
+                            protocol="ERROR",
+                            scan_error=str(exc) or exc.__class__.__name__,
+                            scan_error_category="exception",
+                        ))
+                        continue
+                open_ports = all_open_ports
                 targets = nmap_to_targets(open_ports, tcp_only=True)
                 targets = _filter_excludes(targets, cfg.targets.exclude_ips or [])
                 if args.cache:
@@ -1310,11 +1355,6 @@ def main():
     fp_cached = load_cache(cfg.output.directory, fp_key, args.cache_ttl_hours) if args.cache and args.resume else None
 
     inventory_endpoints: List[CryptoEndpoint] = []
-    # Phase 41 / D-12 + D-14: scanner-phase failure surface — both missing-extra
-    # advisory rows (category='missing_extra') and BaseException-captured rows
-    # (category='exception') flow through this list and merge into the main
-    # endpoints list before risk_engine / db_persist / write_reports.
-    error_endpoints: List[CryptoEndpoint] = []
     # Phase 45 / D-08: centralized optional-extra probe. For each enabled scanner
     # whose optional extra is unavailable, emit one ADVISORY CryptoEndpoint into
     # error_endpoints. Phase 41 inline calls at lines ~782 (email) and ~827 (broker)
