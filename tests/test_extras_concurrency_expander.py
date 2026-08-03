@@ -106,10 +106,16 @@ def test_scanner_tls_scanner_still_imports():
 # WR-14: target_expander cap + stable dedup + IP normalization
 # ---------------------------------------------------------------------------
 
-def test_expand_targets_caps_large_cidr():
-    cfg = _Cfg(targets=_Targets(cidrs=["10.0.0.0/8"]))
-    with pytest.raises(ValueError, match="refusing to scan more than 1024"):
-        target_expander.expand_targets(cfg)
+def test_expand_targets_no_longer_caps_large_cidr():
+    """Phase 144 / D-05 policy reversal: expand_targets() no longer rejects
+    oversized CIDRs — the reject-ceiling was removed in lockstep with the
+    nmap-discovery-path cap (D-02). Uses a /20 (~4094 hosts) rather than a
+    real /8/16 to keep this unit test fast."""
+    cfg = _Cfg(targets=_Targets(cidrs=["10.0.0.0/20"]))
+    out = target_expander.expand_targets(cfg)
+    # /20 -> 4094 usable hosts x 1 port, no exception raised.
+    assert 4000 <= len(out) <= 4094
+    assert all(p == 443 for _, p in out)
 
 
 def test_expand_targets_allows_small_cidr():

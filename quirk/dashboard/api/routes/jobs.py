@@ -297,49 +297,31 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
                     ),
                 )
 
-    # Reject oversized CIDRs BEFORE spawning nmap discovery. target_expander.py's
-    # expand_targets() already caps CIDR expansion at _MAX_HOSTS_PER_CIDR for the
-    # main scan phase, but nmap discovery runs as an earlier, separate subprocess
-    # with its own hardcoded 300s timeout (jobs.py force_nmap below) — an
-    # oversized CIDR there doesn't hit expand_targets' cap at all, it just grinds
-    # through nmap's --host-timeout 10s per unreachable host until the 300s wall
-    # clock kills it, surfacing a confusing "Nmap discovery timed out" error
-    # instead of an immediate, actionable one.
+    # Phase 144 / D-02: large ranges are now chunked, not rejected. nmap
+    # discovery used to run as a single subprocess covering the entire target
+    # set with one hardcoded 300s timeout — an oversized CIDR would grind
+    # through nmap's --host-timeout 10s per unreachable host until that wall
+    # clock killed it. The discovery batch loop (run_scan.py, Plan 144-02)
+    # now splits the deduplicated host list into _MAX_HOSTS_PER_CIDR-sized
+    # sequential batches, each with its own fresh timeout, so no total-range
+    # ceiling is needed here anymore — this block is informational-only
+    # (logs the projected batch count) and never raises for host count.
     _force_nmap = payload.enable_nmap or payload.port_scope in ("top1000", "all")
     if _force_nmap and valid_cidrs:
         import ipaddress as _ipaddress
+        import math as _math
         from quirk.scanner.target_expander import _MAX_HOSTS_PER_CIDR
         _total_nmap_hosts = len(valid_fqdns)
         for _cidr in valid_cidrs:
             _net = _ipaddress.ip_network(_cidr, strict=False)
-            if _net.num_addresses > _MAX_HOSTS_PER_CIDR:
-                raise HTTPException(
-                    status_code=422,
-                    detail=(
-                        f"CIDR {_cidr} expands to {_net.num_addresses} hosts; nmap "
-                        f"discovery (port scope '{payload.port_scope}') refuses to scan "
-                        f"more than {_MAX_HOSTS_PER_CIDR} hosts per CIDR — split it, use "
-                        f"a narrower range, or switch port scope to 'common'/'custom' to "
-                        f"skip nmap discovery."
-                    ),
-                )
             _total_nmap_hosts += _net.num_addresses
-        # Multiple CIDRs can each pass the per-CIDR cap yet still sum past what
-        # nmap's 300s discovery timeout can realistically cover (--max-parallelism
-        # 100 x --host-timeout 10s worst case ~= 3000 hosts in 300s, zero margin).
-        # Cap the combined total at the same per-CIDR ceiling for a comfortable
-        # margin rather than running right up against the wall-clock limit.
-        if _total_nmap_hosts > _MAX_HOSTS_PER_CIDR:
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    f"Combined targets expand to {_total_nmap_hosts} hosts; nmap "
-                    f"discovery (port scope '{payload.port_scope}') refuses to scan "
-                    f"more than {_MAX_HOSTS_PER_CIDR} hosts total — split into multiple "
-                    f"scans, or switch port scope to 'common'/'custom' to skip nmap "
-                    f"discovery."
-                ),
-            )
+        _projected_batches = _math.ceil(_total_nmap_hosts / _MAX_HOSTS_PER_CIDR) or 1
+        logger.info(
+            "new job: %d nmap discovery hosts projected across %d sequential "
+            "batch(es) of up to %d hosts each (Phase 144 chunked discovery, "
+            "no reject ceiling)",
+            _total_nmap_hosts, _projected_batches, _MAX_HOSTS_PER_CIDR,
+        )
 
     # Re-join stripped tokens; this is what gets stored and passed to the scanner.
     normalized_targets = ",".join(all_valid_tokens)

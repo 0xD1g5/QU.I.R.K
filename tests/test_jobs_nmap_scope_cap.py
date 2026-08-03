@@ -1,16 +1,18 @@
-"""Regression test — oversized CIDR + forced nmap discovery must fail fast (422),
-not grind through nmap's hardcoded 300s discovery timeout and crash mid-scan.
+"""Regression test — oversized CIDR + forced nmap discovery must be ACCEPTED
+(201) and chunked into sequential batches, not rejected 422.
 
-Root cause: the dashboard's "New Scan" form defaults port_scope to "top1000",
-which forces nmap discovery (jobs.py force_nmap) with a hardcoded 300s timeout.
-target_expander.py's expand_targets() already caps CIDR expansion at
-_MAX_HOSTS_PER_CIDR (1024) for the main scan phase, but nmap discovery runs as
-an earlier, separate subprocess that never consults that cap — an oversized
-CIDR sails straight into `subprocess.run(..., timeout=300)`, which is
-essentially guaranteed to time out against thousands of unreachable hosts
-(--host-timeout 10s / --max-parallelism 100 means worst case ~=
-(hosts / 100) * 10s). Reported live: "RuntimeError: Nmap discovery timed out
-after 300s" every time a user submitted a large CIDR via the dashboard.
+Phase 144 / D-02 policy change: this test file originally asserted a 422
+fail-fast reject for oversized CIDRs (Phase 71/121-era stopgap), because nmap
+discovery ran as a single subprocess covering the whole target set with one
+hardcoded 300s timeout — an oversized CIDR would grind through nmap's
+--host-timeout 10s per unreachable host until that wall clock killed it.
+
+Phase 144 replaces the single-shot subprocess with a sequential batch loop
+(run_scan.py, Plan 144-02) over a deduplicated host list, chunked at
+_MAX_HOSTS_PER_CIDR (1024) hosts per batch, each batch getting its own fresh
+timeout. There is no longer a total-range ceiling (D-02) — large ranges are
+chunked, not rejected. These tests are rewritten to assert 201 acceptance for
+the same oversized-CIDR POST bodies that used to assert 422.
 
 pytest -q tests/test_jobs_nmap_scope_cap.py
 """
@@ -63,10 +65,11 @@ def _fake_popen(*args, **kwargs):
     return _FakeProc()
 
 
-def test_oversized_cidr_rejected_422_when_nmap_forced(monkeypatch, tmp_path):
-    """A /16 CIDR (65534 usable hosts) with the default port_scope="top1000"
-    (which forces nmap) must be rejected with 422 before any subprocess spawns —
-    not accepted and left to time out 300s later."""
+def test_oversized_cidr_accepted_and_chunked_when_nmap_forced(monkeypatch, tmp_path):
+    """Phase 144 / D-02: a /16 CIDR (65534 usable hosts) with the default
+    port_scope="top1000" (which forces nmap) must now be ACCEPTED (201) —
+    the batch loop chunks it into ~64 sequential batches instead of the old
+    422 fail-fast reject."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
@@ -78,10 +81,10 @@ def test_oversized_cidr_rejected_422_when_nmap_forced(monkeypatch, tmp_path):
         headers={"X-Quirk-Request": "1"},
     )
 
-    assert response.status_code == 422, (
-        f"Oversized CIDR with nmap forced must be 422, got {response.status_code}: {response.text}"
+    assert response.status_code == 201, (
+        f"Oversized CIDR with nmap forced must now be 201 (chunked, Phase 144 "
+        f"D-02), got {response.status_code}: {response.text}"
     )
-    assert "1024" in response.text or "hosts" in response.text.lower()
 
 
 def test_oversized_cidr_allowed_when_nmap_not_forced(monkeypatch, tmp_path):
@@ -124,10 +127,10 @@ def test_small_cidr_allowed_with_nmap_forced(monkeypatch, tmp_path):
     )
 
 
-def test_multiple_small_cidrs_summing_over_cap_rejected(monkeypatch, tmp_path):
-    """Two /22 CIDRs (1022 hosts each) each pass the per-CIDR cap individually
-    but sum to over 2000 hosts — must be rejected as a combined-total guard,
-    not silently accepted and left to grind past the 300s nmap budget."""
+def test_multiple_small_cidrs_summing_over_cap_accepted_and_chunked(monkeypatch, tmp_path):
+    """Phase 144 / D-02: two /22 CIDRs (1022 hosts each) sum to over 2000
+    hosts combined — previously rejected by a combined-total guard, now
+    ACCEPTED (201) and split into separate sequential batches."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
@@ -139,6 +142,7 @@ def test_multiple_small_cidrs_summing_over_cap_rejected(monkeypatch, tmp_path):
         headers={"X-Quirk-Request": "1"},
     )
 
-    assert response.status_code == 422, (
-        f"Combined CIDRs over the total cap must be 422, got {response.status_code}: {response.text}"
+    assert response.status_code == 201, (
+        f"Combined CIDRs over the old total cap must now be 201 (chunked, "
+        f"Phase 144 D-02), got {response.status_code}: {response.text}"
     )

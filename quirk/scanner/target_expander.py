@@ -51,15 +51,14 @@ def expand_targets(cfg) -> List[Tuple[str, int]]:
         for p in ports:
             targets.append((fqdn, p))
 
-    # IPs from CIDRs — validate size BEFORE enumeration (D-01).
+    # IPs from CIDRs. Phase 144 / D-05: the reject-on-oversized-CIDR check
+    # that used to live here has been removed — expand_targets() now expands
+    # any CIDR size without a ceiling. No batch-loop machinery is added here:
+    # this builtin path has no subprocess and no wall-clock timeout, so it has
+    # no "one bad batch kills the job" failure mode to fix (D-05) — only the
+    # reject needed removing, in lockstep with the nmap-discovery path (D-02).
     for cidr in (cfg.targets.cidrs or []):
         net = ipaddress.ip_network(cidr, strict=False)
-        if net.num_addresses > _MAX_HOSTS_PER_CIDR:
-            raise ValueError(
-                f"CIDR {cidr} expands to {net.num_addresses} hosts; "
-                f"refusing to scan more than {_MAX_HOSTS_PER_CIDR} hosts per CIDR "
-                f"(split it or use --include-ips)"
-            )
         for ip in net.hosts():
             ip_str = _norm_ip(ip)
             if ip_str in exclude_set:
