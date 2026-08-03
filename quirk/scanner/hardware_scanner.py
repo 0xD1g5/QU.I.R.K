@@ -20,7 +20,7 @@ import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date as _date, timezone
-from typing import List, Optional
+from typing import Dict, List, Optional, Set
 
 from quirk.models import CryptoEndpoint, HardwareDevice
 from quirk.scanner.hardware_meta import HARDWARE_MATRIX
@@ -264,6 +264,7 @@ def fingerprint_one(
     timeout: int = 3,
     logger: Optional[Logger] = None,
     cfg=None,
+    confirmed_open_ports: Optional[Dict[str, Set[int]]] = None,
 ) -> HardwareDevice:
     """Fingerprint a single ``CryptoEndpoint`` against the HARDWARE_MATRIX.
 
@@ -281,6 +282,11 @@ def fingerprint_one(
             snmp_v3_credentials`` drives the Step 3 SNMPv3-first fallback
             ladder (Phase 139 SNMPV3-02); when absent, Step 3 behaves exactly
             as before (v2c-only, unauthenticated).
+        confirmed_open_ports: Optional ``dict[host -> set(open TCP ports)]``
+            built from the existing port/service scan (Phase 141 Plan 08,
+            D-04). Used by Step 4 to gate Modbus fingerprinting on the
+            target HOST's port 502 having already been confirmed open —
+            never on the SSH-classified endpoint's own port.
     """
     # Default: Unknown device — always returned on any code path (D-06)
     device = HardwareDevice(
@@ -419,15 +425,28 @@ def fingerprint_one(
 
         # ── Step 4: Modbus/TCP probe (Phase 141 OTICS-01 / D-01/D-04) ────
         # NOT gated on device.vendor == "Unknown" — the trigger is the
-        # opt-in enable_modbus flag plus port-502 evidence (D-04), never
+        # opt-in enable_modbus flag plus host-level confirmed-open-port-502
+        # evidence (D-04, locked in 141-CONTEXT.md L38-42), never
         # vendor-identification state (D-01). Both raw modbus_* fields and
         # any first-match-wins headline promotion are independent of
         # whether Steps 1-3 already identified a vendor.
+        #
+        # Port 502 must already have been confirmed open for THIS HOST by the
+        # existing port/service scan (target_expander.py injects (host, 502)
+        # into the candidate list when enable_modbus is set; run_scan.py's
+        # fingerprint stage confirms it open and threads a host->open-ports
+        # map in via confirmed_open_ports). This is NOT Step 5's flag-only
+        # gate: BACnet's flag-only gate is a UDP-transport-specific D-04
+        # exception, while Modbus is TCP and D-04 demands real confirmed-open
+        # evidence for it by name. An earlier version of this gate keyed on
+        # the SSH endpoint's own port equaling 502, which was structurally
+        # unsatisfiable — fingerprint_hardware only ever receives
+        # SSH-classified endpoints, whose port is never 502.
         _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
         _enable_modbus = getattr(_connectors, "enable_modbus", False)
         _host = getattr(ep, "host", "")
-        _port = getattr(ep, "port", 0)
-        if _enable_modbus and _port == 502:
+        _open_ports = (confirmed_open_ports or {}).get(_host, set())
+        if _enable_modbus and 502 in _open_ports:
             from quirk.scanner.modbus_scanner import probe_modbus_target
 
             _modbus_result = probe_modbus_target(_host)
@@ -488,6 +507,7 @@ def fingerprint_hardware(
     timeout: int = 3,
     logger: Optional[Logger] = None,
     cfg=None,
+    confirmed_open_ports: Optional[Dict[str, Set[int]]] = None,
 ) -> List[HardwareDevice]:
     """Fingerprint a batch of ``CryptoEndpoint`` objects concurrently.
 
@@ -502,6 +522,11 @@ def fingerprint_hardware(
         cfg:       Optional ``AppConfig`` — forwarded to ``fingerprint_one``
                    so Step 3's SNMPv3-first ladder (Phase 139) can look up
                    per-host credentials.
+        confirmed_open_ports: Optional ``dict[host -> set(open TCP ports)]``
+                   built from the existing port/service scan (Phase 141 Plan
+                   08, D-04); forwarded to ``fingerprint_one`` so Step 4's
+                   Modbus gate can check host-level confirmed-open-502
+                   evidence.
 
     Returns:
         List of ``HardwareDevice`` rows, same length as ``endpoints``.
@@ -516,7 +541,7 @@ def fingerprint_hardware(
 
     with ThreadPoolExecutor(max_workers=min(8, len(endpoints))) as ex:
         futures = {
-            ex.submit(fingerprint_one, ep, timeout, logger, cfg): ep
+            ex.submit(fingerprint_one, ep, timeout, logger, cfg, confirmed_open_ports): ep
             for ep in endpoints
         }
         for f in as_completed(futures):
