@@ -195,6 +195,57 @@ def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
         pass
 
 
+def build_ot_supplemental_endpoints(
+    targets: List[Tuple[str, int]],
+    ssh_targets: List[Tuple[str, int]],
+    confirmed_open_ports: Dict[str, set],
+    cfg,
+) -> List[CryptoEndpoint]:
+    """Phase 141 Plan 11 (OTICS-01/02 outer-gate fix): build the supplemental
+    OT/ICS-only host set that must reach ``fingerprint_hardware()`` even when
+    ``ssh_targets`` is empty.
+
+    ``_run_ssh_phase()``'s ``if not ssh_targets: return []`` guard means a
+    host with zero SSH-classified endpoints — the realistic pure-Modbus/
+    BACnet OT device — never reached the hardware-fingerprint call at all,
+    regardless of 141-08's inner Modbus gate or `--enable-modbus`/
+    `--enable-bacnet`. This helper computes the host set that needs a
+    supplemental pass OUTSIDE that guard: hosts with confirmed-open port 502
+    when `enable_modbus` is set (D-04 real evidence), plus every scanned
+    host when `enable_bacnet` is set (D-04's flag-only UDP exception) —
+    MINUS hosts already covered by an SSH endpoint, to avoid double-probing
+    a host that will already be fingerprinted via the SSH-driven path.
+
+    Returns synthesized ``CryptoEndpoint(host=h, port=0, service_detail="")``
+    objects — port=0 signals "no SSH endpoint," and Step 1 self-skips on the
+    empty banner.
+    """
+    _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
+    enable_modbus = getattr(_connectors, "enable_modbus", False)
+    enable_bacnet = getattr(_connectors, "enable_bacnet", False)
+    if not enable_modbus and not enable_bacnet:
+        return []
+
+    ssh_hosts = {h for h, _ in ssh_targets}
+    ot_hosts: set = set()
+    if enable_modbus:
+        ot_hosts |= {
+            h for h, ports in (confirmed_open_ports or {}).items() if 502 in ports
+        }
+    if enable_bacnet:
+        # BACnet's D-04 exception is flag-only (no confirmed-port evidence
+        # available/required for a UDP broadcast protocol) — every scanned
+        # host is a legitimate candidate.
+        ot_hosts |= {h for h, _ in targets}
+
+    ot_only_hosts = ot_hosts - ssh_hosts  # never double-probe (Pitfall 2)
+
+    return [
+        CryptoEndpoint(host=h, port=0, service_detail="")
+        for h in sorted(ot_only_hosts)
+    ]
+
+
 def _print_hardware_summary(devices: list, log) -> None:
     """Print advisory-only hardware tier summary to logger (Phase 128 D-07).
 
@@ -1510,6 +1561,40 @@ def main():
             _run_ssh_phase, error_endpoints, logger,
         ) or []
         _flush_stage_endpoints(cfg.output.db_path, ssh_endpoints)   # Phase 67 RESUME-01
+
+        # ==============================
+        # OT/ICS supplemental hardware-fingerprint pass (Phase 141 Plan 11)
+        # ==============================
+        # Runs as a SIBLING step — deliberately OUTSIDE _run_ssh_phase()'s
+        # `if not ssh_targets: return []` guard above (Pitfall 1) — so a host
+        # with zero SSH-classified endpoints but confirmed Modbus/BACnet
+        # evidence still reaches fingerprint_hardware(). ot_only=True skips
+        # Steps 2/3 (HTTP mgmt/SNMP) for these bare fieldbus devices
+        # (minimal footprint, D-04/D-05). Extends the same _hw_batch list
+        # feeding the single existing DB-write block below — no second
+        # persist path (Don't-Hand-Roll).
+        def _run_ot_supplemental_phase():
+            hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
+            ot_eps = build_ot_supplemental_endpoints(
+                targets, ssh_targets, confirmed_open_ports, cfg,
+            )
+            if not ot_eps:
+                return []
+            _ot_devs = fingerprint_hardware(
+                ot_eps, timeout=hw_timeout, logger=logger, cfg=cfg,
+                confirmed_open_ports=confirmed_open_ports, ot_only=True,
+            )
+            from quirk.scanner.hardware_tier import assign_tier
+            for _dev in _ot_devs:
+                _dev.remediation_tier = assign_tier(_dev)
+            _hw_batch.extend(_ot_devs)
+            return _ot_devs
+
+        _wrapped_phase(
+            run_stats, "ot_ics_supplemental", "hardware_scanner",
+            _run_ot_supplemental_phase, error_endpoints, logger,
+        )
+
         if _hw_batch:
             try:
                 with get_session(cfg.output.db_path) as _hw_sess:

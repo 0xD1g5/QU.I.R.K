@@ -265,6 +265,7 @@ def fingerprint_one(
     logger: Optional[Logger] = None,
     cfg=None,
     confirmed_open_ports: Optional[Dict[str, Set[int]]] = None,
+    ot_only: bool = False,
 ) -> HardwareDevice:
     """Fingerprint a single ``CryptoEndpoint`` against the HARDWARE_MATRIX.
 
@@ -287,6 +288,11 @@ def fingerprint_one(
             D-04). Used by Step 4 to gate Modbus fingerprinting on the
             target HOST's port 502 having already been confirmed open —
             never on the SSH-classified endpoint's own port.
+        ot_only: Phase 141 Plan 11. When ``True``, restricts the waterfall to
+            Steps 4/5 (Modbus/BACnet) — skipping Steps 2 (HTTP management)
+            and 3 (SNMP) — for supplemental OT-only hosts that have no
+            SSH/IT-management endpoint at all, honoring D-04/D-05's
+            minimal-footprint posture against fragile fieldbus gear.
     """
     # Default: Unknown device — always returned on any code path (D-06)
     device = HardwareDevice(
@@ -316,7 +322,10 @@ def fingerprint_one(
         # ── Step 2: HTTP management probe (D-04) ────────────────────────
         # Only attempt if the SSH banner path did not already identify a known vendor.
         # This avoids redundant network calls when the banner is sufficient.
-        if device.vendor == "Unknown":
+        # Phase 141 Plan 11: skipped entirely for ot_only supplemental
+        # endpoints (minimal-footprint, D-04/D-05) — these are bare fieldbus
+        # devices with no SSH/IT-management endpoint at all.
+        if device.vendor == "Unknown" and not ot_only:
             host = getattr(ep, "host", "")
             for port in _HTTP_MGMT_PORTS:
                 result = _probe_http_mgmt(host, port, timeout)
@@ -331,7 +340,9 @@ def fingerprint_one(
 
         # ── Step 3: SNMP probe (Phase 133 SNMP-01 / D-01/D-02) ─────────────
         # Only attempt if SSH banner + HTTP mgmt both failed to identify a known vendor.
-        if device.vendor == "Unknown":
+        # Phase 141 Plan 11: skipped entirely for ot_only supplemental
+        # endpoints (minimal-footprint, D-04/D-05).
+        if device.vendor == "Unknown" and not ot_only:
             from quirk.scanner.snmp_scanner import (
                 probe_snmp_target,
                 parse_sysdescr as _parse_sd,
@@ -508,6 +519,7 @@ def fingerprint_hardware(
     logger: Optional[Logger] = None,
     cfg=None,
     confirmed_open_ports: Optional[Dict[str, Set[int]]] = None,
+    ot_only: bool = False,
 ) -> List[HardwareDevice]:
     """Fingerprint a batch of ``CryptoEndpoint`` objects concurrently.
 
@@ -527,6 +539,9 @@ def fingerprint_hardware(
                    08, D-04); forwarded to ``fingerprint_one`` so Step 4's
                    Modbus gate can check host-level confirmed-open-502
                    evidence.
+        ot_only: Phase 141 Plan 11 — forwarded to ``fingerprint_one`` so
+                   supplemental OT-only endpoints skip Steps 2/3 (minimal
+                   footprint per D-04/D-05).
 
     Returns:
         List of ``HardwareDevice`` rows, same length as ``endpoints``.
@@ -541,7 +556,9 @@ def fingerprint_hardware(
 
     with ThreadPoolExecutor(max_workers=min(8, len(endpoints))) as ex:
         futures = {
-            ex.submit(fingerprint_one, ep, timeout, logger, cfg, confirmed_open_ports): ep
+            ex.submit(
+                fingerprint_one, ep, timeout, logger, cfg, confirmed_open_ports, ot_only
+            ): ep
             for ep in endpoints
         }
         for f in as_completed(futures):
