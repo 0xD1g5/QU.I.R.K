@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.10.0
-**Last Updated:** 2026-08-03 (Phase 141 gap closure — 141-09: Modbus end-to-end fingerprinting
+**Last Updated:** 2026-08-10 (Phase 144 wrap — Chunked Discovery Core: DISC-01/DISC-02, host-count reject gates removed and replaced with sequential 1024-host per-batch discovery loop with failure isolation + discovery-stage ScanCheckpoint. UAT-144-01/02 automated (54/54 tests), UAT-144-03 live end-to-end confirmed with one documented, root-caused, non-blocking environment caveat around nmap's timing engine on mostly-silent host lists — see deferred-items.md. Closes DISC-01, DISC-02.)
 live re-validated against the real `otics-modbus` chaos-lab simulator on a host with zero SSH
 candidates, after 141-08/141-11 fixed the inner and outer scanner gate bugs. UAT-141-04/06/07
 updated from Modbus-deferred to full PASS; OTICS-04 flipped to Complete.)
@@ -16235,3 +16235,122 @@ run. Static YAML/structure checks were scripted inline during Plan 03 execution 
 closed." Source-level correctness (YAML validity, step ordering, conditional wiring, no secret
 echo) was verified; runtime behavior on a real Windows Actions runner was not exercised. Push a
 branch/tag and inspect the live log to close this row.
+
+
+### UAT-144-01: Chunked discovery — host-count reject gates removed (DISC-01) — Automated
+
+**What to test:** A CIDR expanding to more than 1024 hosts is accepted through both entry
+points (`target_expander.expand_targets()` and the dashboard `POST /api/jobs` endpoint) instead
+of being rejected with a `ValueError`/HTTP 422, while the trust-boundary gates
+(`is_target_trusted()`/`allow_internal_targets`) remain fully enforced.
+
+**Steps:**
+1. Run `pytest tests/test_extras_concurrency_expander.py -q` — confirm the oversized-CIDR test
+   asserts acceptance (not `pytest.raises(ValueError, match="refusing to scan")`), and the new
+   `_expand_and_dedup_hosts`/`_chunked` helper tests all pass.
+2. Run `pytest tests/test_jobs_nmap_scope_cap.py -q` — confirm both previously-422 tests now
+   assert `response.status_code == 201`.
+3. Grep gate: `grep -c "refusing to scan more than" quirk/scanner/target_expander.py` and
+   `grep -c "refuses to scan" quirk/dashboard/api/routes/jobs.py` both return 0; `grep -c
+   "is_target_trusted" quirk/dashboard/api/routes/jobs.py` returns >= 1 (trust gate preserved).
+
+**Pass criteria:**
+- No test in the suite asserts a 422/`ValueError` host-count rejection
+- `_MAX_HOSTS_PER_CIDR = 1024` (target_expander.py) unchanged in name/value — repurposed as chunk
+  size, not a reject ceiling
+- Trust gates and `--nmap-timeout 300` literal in jobs.py are unaffected
+
+**Automated gate:** `pytest -q tests/test_extras_concurrency_expander.py tests/test_jobs_nmap_scope_cap.py` → 33/33 PASSED (Phase 144 Plan 01).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-03  **Tester:** automated (pytest — Phase 144 Plan 01)
+**Notes:** DISC-01, D-01, D-02, D-05, D-06. See 144-01-SUMMARY.md.
+
+---
+
+### UAT-144-02: Sequential per-batch discovery with failure isolation (DISC-02) — Automated
+
+**What to test:** nmap discovery runs as a strictly sequential loop over 1024-host batches; a
+`RuntimeError` from one batch is caught, recorded as an error `CryptoEndpoint`, and does not
+prevent subsequent batches from running; the job still reaches `mark_job_completed` (never
+`mark_job_failed`) and a `stage="discovery"` `ScanCheckpoint` row is written
+(`status="partial"` if any batch failed, else `"completed"`).
+
+**Steps:**
+1. Run `pytest tests/test_nmap_provider.py -k batch -q` — confirm a monkeypatched batch-2
+   failure does not stop batch 3, and the merged results contain batch 1's and batch 3's ports.
+2. Run `pytest tests/test_nmap_provider.py -q` (full file) — confirm no regression, including the
+   `stage="discovery"` checkpoint-row-shape tests.
+3. Grep gate: `grep -n "for batch in _chunked" run_scan.py` and `grep -n "except RuntimeError"
+   run_scan.py` both match inside the discovery block; `grep -c "error_endpoints: List\[CryptoEndpoint\] = \[\]" run_scan.py` returns 1 (relocated, not duplicated).
+
+**Pass criteria:**
+- The `try/except RuntimeError` wraps only the single `run_nmap_discovery()` call inside the
+  loop, not the whole loop (batch N failing must not skip batch N+1)
+- `quirk/models.py` `ScanCheckpoint` docstring lists `discovery` among stage values (doc-only)
+- Full suite green: no cross-stage regression from the `error_endpoints` relocation
+
+**Automated gate:** `pytest -q tests/test_extras_concurrency_expander.py tests/test_nmap_provider.py tests/test_jobs_nmap_scope_cap.py` → 54/54 PASSED (Phase 144 Plan 02).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-03  **Tester:** automated (pytest — Phase 144 Plan 02)
+**Notes:** DISC-02, D-03, D-04. See 144-02-SUMMARY.md. 102 pre-existing full-suite failures in
+unrelated modules (version-string drift, notify/webhook/servicenow/jwt/sensor tests) confirmed
+not caused by this plan — see deferred-items.md.
+
+---
+
+### UAT-144-03: Live end-to-end chunked discovery against a real >1024-host range (DISC-01, DISC-02) — Human (live)
+
+**What to test:** The composed DISC-01/DISC-02 path against a real >1024-host range through
+`run_scan.py`'s actual nmap discovery block (CLI-equivalent of the dashboard job-creation
+path), with real `--job-id`/`--db-path` job tracking — not a mock.
+
+**Steps performed (2026-08-09/10, live session):**
+1. Submitted `172.18.0.0/21` (containing CIDR over the chaos lab's Docker bridge subnet) via
+   `run_scan.py --discovery nmap --allow-internal-targets`. Result: accepted (no 422), ran two
+   sequential 1024/1022-host batches; batch 1 timed out and failed, batch 2 still ran to
+   completion — confirming failure isolation live. Root cause of the timeout: `172.18.x`
+   container IPs are not routable from the macOS Docker Desktop host at all (independently
+   confirmed via `nc`/routing table inspection) — an environment constraint, not a code defect.
+2. Switched target to `127.0.0.0/22` + `127.0.4.0/28` (loopback range containing `127.0.0.1`,
+   where the chaos lab's real published ports live), with a real `ScanJob` row for
+   `--job-id`/`--db-path` tracking. Result: both batches completed cleanly within the timeout
+   budget (no `RuntimeError`), job reached `completed` (`scan_jobs.status`), and the
+   `discovery`-stage `ScanCheckpoint` was written correctly (`status=completed`,
+   `partial_failure=0`) — but `endpoint_count=0`: nmap reported zero open ports, including on
+   `127.0.0.1`, which independently had 5 real open ports at scan time (`curl` + `docker ps`
+   confirmed).
+3. Root-caused the zero-hosts result: isolated `nmap` run against `127.0.0.1` alone (identical
+   flags) found all 5 open ports correctly in 0.02s. Inspecting the raw `-oX` XML from the full
+   batch run showed `127.0.0.1`'s host entry had no `<ports>` block at all — the identical empty
+   shape as every confirmed-dead host in the same scan. This rules out a QUIRK XML-parsing bug
+   (nothing was in the XML to lose) and points to nmap's own adaptive RTT/timing-estimation
+   engine suppressing port probing across an entire scan group when ~99.9% of the group is
+   silent/unresponsive — a documented category of nmap behavior, not representative of a real
+   routed network (where dead hosts return RST/ICMP-unreachable rather than staying silent).
+
+**Pass criteria:**
+- [x] `>1024`-host range accepted, not rejected with 422
+- [x] Discovery runs in strict sequential batches (verified via nmap command logs + process
+  inspection)
+- [x] A failed batch does not stop subsequent batches (batch 1 failed → batch 2 still ran)
+- [x] Job reaches `completed`, never `failed`
+- [x] `discovery`-stage `ScanCheckpoint` written correctly
+- [ ] Real hosts from the scanned range appear in persisted results — **not achieved**; see
+  root-cause above. Accepted as an environment-specific, fully root-caused, non-blocking finding
+  per explicit human sign-off (2026-08-10) rather than routed to gap-closure rework of this
+  phase's code.
+
+**Automated gate:** N/A — this UAT is inherently a live, human-verify checkpoint
+(`checkpoint:human-verify`, blocking gate per 144-03-PLAN.md). See 144-03-SUMMARY.md for full
+verification-environment detail and command transcripts.
+
+**Result:** - [x] PASS (with documented caveat)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** Digs (live session, interactive troubleshooting)
+**Notes:** DISC-01, DISC-02. Candidate follow-up (not a Phase 144 blocker, own review/tradeoffs
+required): add timing-template/RTT-bound tuning (e.g. `-T4`, `--initial-rtt-timeout`,
+`--max-rtt-timeout`) to `quirk/discovery/nmap_provider.py`'s hardcoded nmap args, and/or
+re-verify this exact scenario against a real routed network segment (not loopback aliases) where
+dead hosts return RST/ICMP-unreachable instead of staying silent. Logged in this phase's
+deferred-items.md.
