@@ -169,6 +169,13 @@ _OTICS_HW_COLUMNS: tuple[tuple[str, str], ...] = (
     ("bacnet_firmware",    "VARCHAR(255)"),
     ("bacnet_probe_state", "VARCHAR(32)"),
 )
+_PHASE146_SCANJOB_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 146 DISC-04: nmap discovery batch-progress fields on scan_jobs.
+    # All nullable — null until the first nmap discovery batch completes.
+    ("discovery_batch_index", "INTEGER"),
+    ("discovery_batch_total", "INTEGER"),
+    ("discovery_hosts_checked", "INTEGER"),
+)
 
 
 def _ensure_columns(
@@ -211,9 +218,11 @@ def _ensure_columns(
 # source of truth shared by both `init_db` and `run_additive_migration`.
 #
 # Pure tables (those created via `Base.metadata.create_all` — qramm_*,
-# scheduled_*, scan_jobs, scan_checkpoints) are intentionally NOT listed
-# here: they are never "additively migrated", they are created whole or not
-# at all by their `_ensure_*_table` helpers.
+# scheduled_*, scan_checkpoints) are intentionally NOT listed here: they are
+# never "additively migrated", they are created whole or not at all by their
+# `_ensure_*_table` helpers. Phase 146 DISC-04 made `scan_jobs` the first
+# such pure table to also require an additive migration (three new nullable
+# batch-progress columns), so it now appears below.
 #
 # Ordering preserved exactly from the prior 8-helper chain.
 _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
@@ -231,6 +240,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("hardware_devices", _SNMPV3_HW_COLUMNS),         # Phase 139 SNMPV3-01
     ("hardware_devices", _BRIDGE_EVIDENCE_COLUMNS),   # Phase 140 BRIDGE-02
     ("hardware_devices", _OTICS_HW_COLUMNS),          # Phase 141 OTICS-06
+    ("scan_jobs",        _PHASE146_SCANJOB_COLUMNS),  # Phase 146 DISC-04
 )
 
 

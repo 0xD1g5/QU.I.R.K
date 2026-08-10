@@ -29,6 +29,7 @@ from quirk.db import (
     _PHASE41_COLUMNS,
     _PHASE46_COLUMNS,
     _PHASE54_QRAMM_ANSWER_COLUMNS,
+    _PHASE146_SCANJOB_COLUMNS,
     _SAFE_COL_TYPE_RE,
     _V43_COLUMNS,
     _ensure_columns,
@@ -118,6 +119,12 @@ def test_phase54_qramm_path_rejects_poisoned_col_type(tmp_path: Path) -> None:
         _ensure_columns(engine, "qramm_answers", _POISON)
 
 
+def test_phase146_scanjob_path_rejects_poisoned_col_type(tmp_path: Path) -> None:
+    engine = init_db(str(tmp_path / "poison_p146.db"))
+    with pytest.raises(ValueError, match="Unsafe column type"):
+        _ensure_columns(engine, "scan_jobs", _POISON)
+
+
 # ---------------------------------------------------------------------------
 # Regression: real values still pass after the guard lands.
 # ---------------------------------------------------------------------------
@@ -138,6 +145,7 @@ def test_all_guarded_paths_accept_real_values(tmp_path: Path) -> None:
     _ensure_columns(engine, "crypto_endpoints", _PHASE41_COLUMNS)
     _ensure_columns(engine, "crypto_endpoints", _PHASE46_COLUMNS)
     _ensure_columns(engine, "qramm_answers", _PHASE54_QRAMM_ANSWER_COLUMNS)
+    _ensure_columns(engine, "scan_jobs", _PHASE146_SCANJOB_COLUMNS)
 
 
 # ---------------------------------------------------------------------------
@@ -239,3 +247,72 @@ def test_otics_columns_migrate_onto_pre_existing_table(tmp_path: Path) -> None:
     ]
     assert len(otics_results) == len(_OTICS_HW_COLUMNS)
     assert all(r.status == "already-present" for r in otics_results)
+
+
+# ---------------------------------------------------------------------------
+# Phase 146 DISC-04: scan_jobs is the first "pure" table (created only via
+# Base.metadata.create_all, never a bespoke ALTER TABLE) to also require an
+# additive migration — a legacy pre-Phase-146 scan_jobs table must gain the
+# three new batch-progress columns via init_db(), without data loss.
+# ---------------------------------------------------------------------------
+
+
+def test_legacy_scan_jobs_table_gains_batch_progress_columns(tmp_path: Path) -> None:
+    """A hand-created legacy scan_jobs table (no batch-progress columns)
+    gains all three Phase 146 columns after init_db(), with prior rows intact."""
+    import sqlite3
+
+    from sqlalchemy import inspect as sa_inspect
+
+    db_path = tmp_path / "legacy_scan_jobs.db"
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute(
+            """
+            CREATE TABLE scan_jobs (
+                job_id TEXT PRIMARY KEY,
+                status TEXT,
+                target TEXT,
+                profile TEXT,
+                calibration TEXT,
+                enable_nmap INTEGER
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO scan_jobs (job_id, status, target, profile, calibration, enable_nmap) "
+            "VALUES ('job-1', 'queued', '10.0.0.0/24', 'standard', 'balanced', 1)"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    engine = init_db(str(db_path))
+
+    columns = {c["name"] for c in sa_inspect(engine).get_columns("scan_jobs")}
+    for col, _ in _PHASE146_SCANJOB_COLUMNS:
+        assert col in columns, f"{col} not migrated onto legacy scan_jobs table"
+
+    # No data loss: the pre-existing row survives with its original values.
+    conn = sqlite3.connect(str(db_path))
+    try:
+        row = conn.execute(
+            "SELECT job_id, status, target FROM scan_jobs WHERE job_id = 'job-1'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row == ("job-1", "queued", "10.0.0.0/24")
+
+
+def test_scan_jobs_migration_idempotent(tmp_path: Path) -> None:
+    """A second init_db() call is a safe no-op; run_additive_migration then
+    reports all three scan_jobs columns as already-present."""
+    db_path = tmp_path / "scan_jobs_idempotent.db"
+    init_db(str(db_path))
+    init_db(str(db_path))  # second call must not raise
+
+    engine = get_engine(str(db_path))
+    results = run_additive_migration(engine, dry_run=False)
+    scanjob_results = [r for r in results if r.table == "scan_jobs"]
+    assert len(scanjob_results) == len(_PHASE146_SCANJOB_COLUMNS)
+    assert all(r.status == "already-present" for r in scanjob_results)

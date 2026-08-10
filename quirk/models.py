@@ -226,6 +226,12 @@ class ScanJob(Base):
     completed_at = Column(DateTime, nullable=True)
     scan_run_id = Column(String, nullable=True)           # CryptoEndpoint scan_run_id on completion
     error_message = Column(Text, nullable=True)
+    # Phase 146 DISC-04: nmap discovery batch-progress fields. All nullable —
+    # null until the first discovery batch completes; never overload
+    # current_stage (jobs.py::_stage_index does an exact-match lookup on it).
+    discovery_batch_index = Column(Integer, nullable=True)
+    discovery_batch_total = Column(Integer, nullable=True)
+    discovery_hosts_checked = Column(Integer, nullable=True)
 
 
 class ScanCheckpoint(Base):
