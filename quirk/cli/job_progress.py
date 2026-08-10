@@ -41,6 +41,34 @@ def update_job_stage(db_path: str, job_id: str, stage: str) -> None:
         pass
 
 
+def update_batch_progress(
+    db_path: str,
+    job_id: str,
+    batch_index: int,
+    batch_total: int,
+    hosts_checked: int,
+) -> None:
+    """Update scan_jobs discovery batch-progress columns. Silent no-op on any failure.
+
+    Phase 146 DISC-04: records nmap discovery-batch progress (which batch is
+    currently running, how many batches total, cumulative hosts checked so
+    far) so the dashboard can render a per-batch progress indicator instead
+    of a binary pass/fail. Like every other function in this module, this is
+    observational only — a failure here must never crash the scan.
+    """
+    try:
+        from quirk.models import ScanJob
+        with _open_session(db_path) as db:
+            row = db.get(ScanJob, job_id)
+            if row is not None:
+                row.discovery_batch_index = batch_index
+                row.discovery_batch_total = batch_total
+                row.discovery_hosts_checked = hosts_checked
+                db.commit()
+    except Exception:
+        pass
+
+
 def mark_job_completed(db_path: str, job_id: str, scan_run_id: Optional[str]) -> None:
     """Flip scan_jobs row to status=completed with scan_run_id set."""
     try:
