@@ -24,6 +24,33 @@ from quirk.reports.html_renderer import render_html_report, render_pdf_report
 from quirk.reports.docx_renderer import render_docx_report
 
 
+def _compute_undetermined_hosts(endpoints) -> tuple:
+    """Phase 146 D-08/D-09 (DISC-07): pure count of hosts that could not be determined.
+
+    Filters `endpoints` to rows where `port == 0` AND `scan_error_category` is one of
+    ("exception", "liveness_skip") — the two Phase 144/145 discovery-stage advisory
+    categories. Returns `(count, breakdown)` where breakdown always carries both keys,
+    even when zero.
+
+    Pitfall-3 invariant: `error_endpoints` (which feeds `endpoints`) accumulates
+    advisory rows from EVERY scan stage, not just discovery — a bare
+    `len(error_endpoints)` would overcount. The `port == 0` conjunct is load-bearing:
+    a TLS/SSH/API handshake error on a live, fully-scanned host (port != 0) must NOT
+    be counted as undetermined.
+    """
+    breakdown = {"exception": 0, "liveness_skip": 0}
+    count = 0
+    for ep in (endpoints or []):
+        if getattr(ep, "port", None) != 0:
+            continue
+        category = getattr(ep, "scan_error_category", None)
+        if category not in ("exception", "liveness_skip"):
+            continue
+        breakdown[category] += 1
+        count += 1
+    return count, breakdown
+
+
 def _unique_hosts(hosts) -> set:
     """Deduplicate hosts, filtering falsy entries (None, '').
 
@@ -292,6 +319,12 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # Phase 142 D-11: snapshot-stale flag for renderers' staleness caveat.
     exec_content.cve_snapshot_stale = hw_cve.is_cve_table_stale()
 
+    # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — one shared computation
+    # feeds markdown/HTML/DOCX/terminal summary; no renderer recomputes this.
+    _undetermined_count, _undetermined_breakdown = _compute_undetermined_hosts(endpoints)
+    exec_content.undetermined_hosts_count = _undetermined_count
+    exec_content.undetermined_hosts_breakdown = _undetermined_breakdown
+
     # 3a) Executive markdown — built here (after score_raw/exec_content) with shared model
     exec_md = build_exec_markdown(cfg, endpoints, findings, exec_content=exec_content)
     exec_path = os.path.join(outdir, f"executive-summary-{stamp}.md")
@@ -393,6 +426,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     total_conf = conf.get("confidence", 0)
 
     summary_table.add_row("Hosts scanned", str(hosts_count))
+    summary_table.add_row("Hosts undetermined", str(exec_content.undetermined_hosts_count))
     summary_table.add_row("CRITICAL findings", f"[red]{crit_count}[/red]" if crit_count else "0")
     summary_table.add_row("HIGH findings", f"[orange1]{high_count}[/orange1]" if high_count else "0")
     summary_table.add_row("MEDIUM findings", f"[yellow]{medium_count}[/yellow]" if medium_count else "0")

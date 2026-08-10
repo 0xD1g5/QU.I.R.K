@@ -311,3 +311,73 @@ def test_narrative_lead_band_collapse():
     assert moderate_result.narrative_lead == _NARRATIVE_LEADS["MODERATE"], (
         "MODERATE band must use its own narrative lead. EXEC-01 / RESEARCH Pattern 4."
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
+# ---------------------------------------------------------------------------
+
+
+def test_exec_content_undetermined_defaults():
+    """ExecContent constructed without the new kwargs defaults to zero/empty.
+
+    Phase 146 D-08: every pre-existing ExecContent(...) construction in the test
+    suite must keep working unmodified.
+    """
+    result = build_exec_content(
+        score_raw=_make_score_raw(),
+        findings=[],
+        roadmap_items=[],
+    )
+    assert result.undetermined_hosts_count == 0
+    assert result.undetermined_hosts_breakdown == {}
+
+
+def test_exec_content_manual_construction_defaults():
+    """A directly-constructed ExecContent (bypassing build_exec_content) also defaults safely."""
+    result = ExecContent(
+        narrative_lead="lead",
+        narrative_drivers=[],
+        top_risks=[],
+        roadmap_items=[],
+        score_total=0,
+        score_band="FAIR",
+        subscores={},
+        raw_sum=0,
+        sev_counts={},
+    )
+    assert result.undetermined_hosts_count == 0
+    assert result.undetermined_hosts_breakdown == {}
+
+
+def test_compute_undetermined_hosts_mixed_list():
+    """Phase 146 D-08/D-09 / Pitfall-3: only port==0 discovery-stage rows count.
+
+    (a) port=0, liveness_skip -> counted
+    (b) port=0, exception -> counted
+    (c) port=443, exception -> excluded (live host with a scan error, not undetermined)
+    (d) port=0, missing_extra -> excluded (not a discovery-stage category)
+    (e) normal scanned endpoint, no scan_error_category -> excluded
+    """
+    from types import SimpleNamespace
+
+    from quirk.reports.writer import _compute_undetermined_hosts
+
+    endpoints = [
+        SimpleNamespace(port=0, scan_error_category="liveness_skip"),
+        SimpleNamespace(port=0, scan_error_category="exception"),
+        SimpleNamespace(port=443, scan_error_category="exception"),
+        SimpleNamespace(port=0, scan_error_category="missing_extra"),
+        SimpleNamespace(port=443),
+    ]
+    count, breakdown = _compute_undetermined_hosts(endpoints)
+    assert count == 2
+    assert breakdown == {"exception": 1, "liveness_skip": 1}
+
+
+def test_compute_undetermined_hosts_empty_and_none():
+    """Empty/None input returns zero count and a fully-keyed zero breakdown."""
+    from quirk.reports.writer import _compute_undetermined_hosts
+
+    assert _compute_undetermined_hosts(None) == (0, {"exception": 0, "liveness_skip": 0})
+    assert _compute_undetermined_hosts([]) == (0, {"exception": 0, "liveness_skip": 0})
