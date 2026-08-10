@@ -115,6 +115,7 @@ unreliable
 **Plans**: 3 plans
 
 Plans:
+
 - [x] 145-01-PLAN.md — Host-status XML parser + `-sn -PS` liveness probe primitives
 - [x] 145-02-PLAN.md — Batch-loop pre-pass wiring, privilege detection + fallback/skip disclosure
 - [x] 145-03-PLAN.md — Docs, Obsidian sync, UAT Series 145 + D-06 non-root human verification
@@ -143,7 +144,24 @@ independent of Phase 145's liveness pre-pass)
   4. The scan report/summary discloses a count of undetermined (unreachable/filtered) hosts
      alongside successfully scanned hosts, for both CLI and dashboard-triggered scans
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+
+- [x] 146-01-PLAN.md — ScanJob batch-progress columns, additive migration, best-effort progress writer, JobStatusResponse passthrough (DISC-04)
+- [x] 146-02-PLAN.md — Batch-size-scaled nmap timeout + -T timing-template helpers; DISC-06 single-call-site parity regression test (DISC-05, DISC-06)
+- [x] 146-03-PLAN.md — Undetermined-host disclosure through the shared report content model (CLI markdown / HTML / DOCX / terminal summary) (DISC-07)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 146-04-PLAN.md — Wire progress writes, per-batch timeout/timing, and CLI stdout progress into run_scan.py's batch loop; remove jobs.py's static --nmap-timeout 300 (DISC-04, DISC-05, DISC-06)
+- [ ] 146-05-PLAN.md — Dashboard scan-job discovery batch sub-line + JobStatus TS type (DISC-04)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 146-06-PLAN.md — Docs + Obsidian vault sync + human verification checkpoint (DISC-04, DISC-05, DISC-06, DISC-07)
+
 **UI hint**: yes
 
 #### Phase 147: Backlog Drain — Lifecycle & Ledger Tail
@@ -177,7 +195,7 @@ milestones — independent of the discovery-at-scale work, safe to sequence in p
 |-------|----------------|--------|-----------|
 | 144. Chunked Discovery Core | 3/3 | Complete   | 2026-08-10 |
 | 145. Liveness Pre-Pass | 3/3 | Complete   | 2026-08-10 |
-| 146. Progress, Scaling & Disclosure | 0/TBD | Not started | - |
+| 146. Progress, Scaling & Disclosure | 3/6 | In Progress|  |
 | 147. Backlog Drain — Lifecycle & Ledger Tail | 0/TBD | Not started | - |
 
 ---

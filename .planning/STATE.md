@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: completed
-stopped_at: Completed 145-02-PLAN.md
-last_updated: "2026-08-10T15:35:49.920Z"
-last_activity: 2026-08-10 -- Phase 145 marked complete
+status: executing
+stopped_at: Completed 146-03-PLAN.md
+last_updated: "2026-08-10T20:53:04.213Z"
+last_activity: 2026-08-10
 progress:
   total_phases: 11
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 12
+  completed_plans: 9
   percent: 18
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 145 — liveness-pre-pass
+**Current focus:** Phase 146 — progress-scaling-disclosure
 
 ## Current Position
 
-Phase: 145 — COMPLETE
-Plan: 3 of 3
-Status: Phase 145 complete
-Last activity: 2026-08-10 -- Phase 145 marked complete
+Phase: 146 (progress-scaling-disclosure) — EXECUTING
+Plan: 4 of 6
+Status: Ready to execute
+Last activity: 2026-08-10
 
 ## v5.11 Phase Map
 
@@ -140,6 +140,10 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 145]: _resolve_liveness_port_spec narrowed the plan's literal any-other-override-to-dash wording to a startswith(--top-ports) check with pass-through for unrecognized overrides — makes the mandated _SAFE_NMAP_ARG_RE allowlist gate reachable/testable instead of dead code
 - [Phase 145]: liveness_endpoints kept as a dedicated accumulator separate from error_endpoints, merged in only after the discovery ScanCheckpoint partial-failure snapshot, so normal liveness_skip/privilege_fallback rows never flip discovery status to partial
 - [Phase 145]: Survivor set for the sweep computed by excluding known-down hosts from the batch (not including known-up hosts), so a host nmap omits entirely from the liveness XML defaults to being swept rather than silently dropped
+- [Phase 146]: named tuple _PHASE146_SCANJOB_COLUMNS to avoid _PHASE46_COLUMNS collision; corrected _ADDITIVE_MIGRATIONS header comment since scan_jobs is now the first pure table to require a migration
+- [Phase ?]: Phase 146-02: Both discovery helpers degrade to base/T4 default on non-int input rather than raising, since they feed directly into subprocess timeout/argv
+- [Phase ?]: Phase 146-02: discovery_timing_template_for_batch returns only hardcoded -T4/-T3 literals via if/else per threat T-146-01 - never config/input-built
+- [Phase 146]: 146-03: _compute_undetermined_hosts() gates on port==0 AND scan_error_category in ('exception','liveness_skip') — port==0 conjunct is load-bearing so a live-host TLS/SSH/API handshake error is never counted as undetermined
 
 ### Pending Todos
 
@@ -207,11 +211,14 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 | Phase 144 P02 | 35min | 2 tasks | 3 files |
 | Phase 145 P01 | 8min | 2 tasks | 4 files |
 | Phase 145 P02 | 20min | 2 tasks | 3 files |
+| Phase 146 P01 | 20min | 3 tasks | 8 files |
+| Phase 146 P02 | 15min | 2 tasks | 3 files |
+| Phase 146 P03 | 18min | 3 tasks | 8 files |
 
 ## Session Continuity
 
-Last session: 2026-08-10T14:01:49.292Z
-Stopped at: Completed 145-02-PLAN.md
+Last session: 2026-08-10T20:53:04.207Z
+Stopped at: Completed 146-03-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
