@@ -49,7 +49,7 @@ from quirk.scanner.broker_scanner import (
     scan_kafka_targets, scan_rabbitmq_targets, scan_redis_targets,
 )
 
-from quirk.discovery.nmap_provider import run_nmap_discovery
+from quirk.discovery.nmap_provider import run_nmap_discovery, run_nmap_liveness_check
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
@@ -1340,12 +1340,77 @@ def main():
                 _discovery_batch_loop_ran = True
                 all_open_ports: List = []
                 batch_num = 0
+                # Phase 145 / D-01/D-02/D-04/D-05: liveness_endpoints is a
+                # SEPARATE accumulator from error_endpoints. This is
+                # load-bearing: _collect_stage_partial_failures (below) turns
+                # EVERY endpoint appended to error_endpoints during the stage
+                # into a partial-failure entry, which would flip the discovery
+                # ScanCheckpoint to "partial" for any scan containing a single
+                # dead IP. Liveness skips are normal outcomes, not failures —
+                # they are merged into error_endpoints only AFTER the
+                # partial-failure snapshot is taken (see below).
+                liveness_endpoints: List[CryptoEndpoint] = []
+                # D-02: privilege determined exactly once per scan, only on
+                # this branch (cache-hit / nmap-absent branches never run a
+                # pre-pass and must never emit this advisory).
+                _liveness_privileged = _is_privileged()
+                if _liveness_privileged is not True:
+                    # D-01: the None (undeterminable, e.g. Windows) case also
+                    # discloses the degradation — never silently assume
+                    # best-case privileged behavior when it cannot be verified.
+                    _emit_liveness_fallback_advisory(liveness_endpoints, logger)
                 host_iter = _expand_and_dedup_hosts(nmap_targets, cfg.targets.exclude_ips or [])
                 for batch in _chunked(host_iter, _MAX_HOSTS_PER_CIDR):
                     batch_num += 1
+
+                    # Phase 145 / DISC-03: cheap liveness pre-pass ahead of
+                    # the expensive full port sweep. Fails open on error —
+                    # a pre-pass failure must never cost sweep coverage.
+                    try:
+                        statuses = run_nmap_liveness_check(
+                            targets=batch,
+                            ports=ports_for_nmap if port_spec_override is None else [],
+                            output_dir=cfg.output.directory,
+                            logger=logger,
+                            nmap_path=args.nmap_path,
+                            timeout_seconds=args.nmap_timeout,
+                            port_spec_override=port_spec_override,
+                        )
+                    except RuntimeError as exc:
+                        logger.info(
+                            f"liveness pre-pass for batch {batch_num} failed "
+                            f"({exc!r}) — sweeping all hosts in batch"
+                        )
+                        sweep_targets = batch
+                    else:
+                        # RESEARCH.md A1: derive survivors by EXCLUDING known-down
+                        # hosts (not by including known-up hosts) so a host nmap
+                        # omitted entirely from the XML defaults to being swept
+                        # instead of vanishing.
+                        down_hosts = {s.host for s in statuses if not s.up}
+                        sweep_targets = [h for h in batch if h not in down_hosts]
+                        for h in batch:
+                            if h in down_hosts:
+                                liveness_endpoints.append(CryptoEndpoint(
+                                    host=h,
+                                    port=0,
+                                    protocol="ADVISORY",
+                                    scan_error="liveness pre-pass: no response",
+                                    scan_error_category="liveness_skip",
+                                ))
+                        logger.stamp(
+                            f"liveness pre-pass batch {batch_num}: "
+                            f"{len(sweep_targets)} responsive, {len(down_hosts)} skipped"
+                        )
+
+                    if not sweep_targets:
+                        # RESEARCH.md Pitfall 4: a fully-dead batch spawns no
+                        # sweep subprocess at all.
+                        continue
+
                     try:
                         batch_open_ports = run_nmap_discovery(
-                            targets=batch,
+                            targets=sweep_targets,
                             ports=ports_for_nmap if port_spec_override is None else [],
                             output_dir=cfg.output.directory,
                             logger=logger,
@@ -1384,6 +1449,11 @@ def main():
                     status="partial" if _discovery_pf else "completed",
                     endpoint_count=len(targets), partial_failure=bool(_discovery_pf),
                     error_summary=_discovery_pf or None)
+            # Phase 145 / D-05: merge liveness_skip/privilege_fallback rows into
+            # error_endpoints only AFTER the partial-failure snapshot above, so
+            # normal liveness skips reach the DB/report as scan artifacts but
+            # never mark discovery as partially failed.
+            error_endpoints.extend(liveness_endpoints)
 
         if not targets:
             logger.info("⚠️ Nmap discovery found no open ports in scope. Nothing to scan.")
