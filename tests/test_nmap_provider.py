@@ -298,3 +298,72 @@ def test_liveness_port_spec_validated(tmp_path):
             output_dir=str(tmp_path),
             port_spec_override="443;rm",
         )
+
+
+def _write_fake_liveness_xml(args: List[str], body: str) -> None:
+    xml_path = args[args.index("-oX") + 1]
+    with open(xml_path, "w") as f:
+        f.write(f'<?xml version="1.0"?><nmaprun>{body}</nmaprun>')
+
+
+class _FakeCompletedProcess:
+    returncode = 0
+    stdout = ""
+    stderr = ""
+
+
+def test_liveness_synthesizes_down_hosts_when_runstats_trustworthy(tmp_path, monkeypatch):
+    """Bugfix regression (Phase 145 D-06 human-UAT, 2026-08-10): a real -sn -PS
+    subnet sweep only emits a <host> element for up hosts. Down hosts must be
+    inferred from <runstats><hosts total up down/> when it fully accounts for
+    every target, otherwise run_scan.py's batch filter never skips anyone."""
+    from quirk.discovery import nmap_provider
+
+    targets = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+
+    def _fake_run(args, **kwargs):
+        _write_fake_liveness_xml(
+            args,
+            '<host><status state="up" reason="syn-ack"/>'
+            '<address addr="10.0.0.1" addrtype="ipv4"/></host>'
+            '<runstats><finished exit="success"/>'
+            '<hosts up="1" down="2" total="3"/></runstats>',
+        )
+        return _FakeCompletedProcess()
+
+    monkeypatch.setattr(nmap_provider.subprocess, "run", _fake_run)
+
+    result = nmap_provider.run_nmap_liveness_check(targets=targets, ports=[443], output_dir=str(tmp_path))
+
+    by_host = {r.host: r for r in result}
+    assert by_host["10.0.0.1"].up is True
+    assert by_host["10.0.0.2"].up is False
+    assert by_host["10.0.0.2"].reason == "no-response (inferred from runstats)"
+    assert by_host["10.0.0.3"].up is False
+
+
+def test_liveness_does_not_synthesize_down_hosts_when_runstats_untrustworthy(tmp_path, monkeypatch):
+    """When <runstats> total doesn't reconcile with the batch (e.g. truncated
+    output), do NOT infer down hosts — fail open exactly like a RuntimeError,
+    so run_scan.py's batch filter sweeps every host in the batch."""
+    from quirk.discovery import nmap_provider
+
+    targets = ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+
+    def _fake_run(args, **kwargs):
+        _write_fake_liveness_xml(
+            args,
+            '<host><status state="up" reason="syn-ack"/>'
+            '<address addr="10.0.0.1" addrtype="ipv4"/></host>'
+            '<runstats><finished exit="success"/>'
+            '<hosts up="1" down="0" total="1"/></runstats>',
+        )
+        return _FakeCompletedProcess()
+
+    monkeypatch.setattr(nmap_provider.subprocess, "run", _fake_run)
+
+    result = nmap_provider.run_nmap_liveness_check(targets=targets, ports=[443], output_dir=str(tmp_path))
+
+    assert len(result) == 1
+    assert result[0].host == "10.0.0.1"
+    assert result[0].up is True

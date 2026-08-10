@@ -12,6 +12,7 @@ from quirk.discovery.nmap_parser import (
     NmapOpenPort,
     parse_nmap_host_status,
     NmapHostStatus,
+    parse_nmap_run_summary,
 )
 
 # D-04 / WR-05 — defense-in-depth allowlist for nmap extra_args tokens.
@@ -179,6 +180,32 @@ def run_nmap_liveness_check(
         logger.stamp(f"Nmap liveness pre-pass complete. Parsing XML: {xml_path}")
 
     host_statuses = parse_nmap_host_status(xml_path)
+
+    # Bugfix (Phase 145 / DISC-03, found via D-06 human-UAT): a real subnet
+    # sweep does not get an individual <host state="down"> element per
+    # non-responsive address -- only hosts nmap can positively report on do.
+    # Without this, the caller's "exclude explicitly-down hosts" filter in
+    # run_scan.py's batch loop stays empty and nothing is ever skipped.
+    # Synthesize an explicit down NmapHostStatus for every target absent
+    # from host_statuses, but ONLY when the run's <runstats> summary proves
+    # nmap fully and successfully accounted for every target in this batch
+    # (exit="success" and total == len(targets)). If the summary is missing
+    # or doesn't reconcile, leave host_statuses as-is so the caller fails
+    # open (sweeps every host) -- same safety net as a RuntimeError.
+    summary = parse_nmap_run_summary(xml_path)
+    if summary is not None and summary.exit_status == "success" and summary.total == len(targets):
+        reported = {h.host for h in host_statuses}
+        for t in targets:
+            if t not in reported:
+                host_statuses.append(
+                    NmapHostStatus(host=t, up=False, reason="no-response (inferred from runstats)")
+                )
+    elif logger:
+        logger.v(
+            f"liveness pre-pass: runstats summary missing/incomplete "
+            f"(summary={summary!r}, targets={len(targets)}) -- not inferring "
+            "down hosts; unreported hosts will be swept (fail-open)"
+        )
 
     if logger:
         up_count = sum(1 for h in host_statuses if h.up)

@@ -7,7 +7,12 @@ silently drop non-responsive hosts).
 """
 from __future__ import annotations
 
-from quirk.discovery.nmap_parser import parse_nmap_host_status, NmapHostStatus
+from quirk.discovery.nmap_parser import (
+    parse_nmap_host_status,
+    NmapHostStatus,
+    parse_nmap_run_summary,
+    NmapRunSummary,
+)
 
 
 _XML_HEADER = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -120,3 +125,48 @@ def test_parse_host_status_blocks_xxe(tmp_path):
         "parse_nmap_host_status returned non-empty results from an XXE payload — "
         f"got: {results}"
     )
+
+
+def test_parse_run_summary_reads_runstats(tmp_path):
+    """Reproduces the real nmap -sn -PS subnet-sweep XML shape (Phase 145
+    D-06 human-UAT, 2026-08-10): only up hosts get a <host> element; the
+    down count is exposed solely via <runstats><hosts total up down/>."""
+    body = """
+    <host>
+      <status state="up" reason="syn-ack" reason_ttl="0"/>
+      <address addr="10.0.0.1" addrtype="ipv4"/>
+    </host>
+    <runstats>
+      <finished time="1786372704" exit="success"/>
+      <hosts up="1" down="254" total="255"/>
+    </runstats>
+    """
+    xml_path = _write_xml(tmp_path, body)
+
+    summary = parse_nmap_run_summary(xml_path)
+
+    assert summary == NmapRunSummary(exit_status="success", total=255, up=1, down=254)
+
+
+def test_parse_run_summary_missing_runstats_returns_none(tmp_path):
+    body = """
+    <host>
+      <status state="up" reason="syn-ack" reason_ttl="0"/>
+      <address addr="10.0.0.1" addrtype="ipv4"/>
+    </host>
+    """
+    xml_path = _write_xml(tmp_path, body)
+
+    assert parse_nmap_run_summary(xml_path) is None
+
+
+def test_parse_run_summary_malformed_counts_returns_none(tmp_path):
+    body = """
+    <runstats>
+      <finished time="1786372704" exit="success"/>
+      <hosts up="not-a-number" down="254" total="255"/>
+    </runstats>
+    """
+    xml_path = _write_xml(tmp_path, body)
+
+    assert parse_nmap_run_summary(xml_path) is None
