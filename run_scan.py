@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 import multiprocessing
 import os
 import sys
@@ -49,7 +50,12 @@ from quirk.scanner.broker_scanner import (
     scan_kafka_targets, scan_rabbitmq_targets, scan_redis_targets,
 )
 
-from quirk.discovery.nmap_provider import run_nmap_discovery, run_nmap_liveness_check
+from quirk.discovery.nmap_provider import (
+    run_nmap_discovery,
+    run_nmap_liveness_check,
+    discovery_timeout_for_batch,    # Phase 146 DISC-05
+    discovery_timing_template_for_batch,  # Phase 146 DISC-05
+)
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
@@ -71,6 +77,7 @@ from quirk.cli.job_progress import (  # Phase 65 — best-effort job progress up
     mark_job_completed,
     mark_job_failed,
     write_scan_checkpoint,   # Phase 67 RESUME-01
+    update_batch_progress,   # Phase 146 DISC-04
 )
 
 
@@ -770,7 +777,16 @@ def main():
     parser.add_argument("--discovery", choices=["builtin", "nmap"], default="builtin",
                         help="Discovery mode: builtin fingerprinting or nmap pre-scan")
     parser.add_argument("--nmap-path", default="nmap", help="Path to nmap executable (default: nmap)")
-    parser.add_argument("--nmap-timeout", type=int, default=1800, help="Nmap discovery timeout seconds")
+    parser.add_argument(
+        "--nmap-timeout", type=int, default=1800,
+        help=(
+            "Nmap discovery timeout seconds. Phase 146 DISC-05: no longer "
+            "applies to the chunked nmap discovery batch loop, where the "
+            "per-batch timeout budget is derived from batch size via "
+            "discovery_timeout_for_batch(); it remains in effect only for "
+            "any non-batched discovery code path."
+        ),
+    )
     parser.add_argument("--nmap-extra-args", default="", help='Extra nmap args (quoted), e.g. "-sS" if admin')
 
     # v3.7: profiles + caching + safety
@@ -1340,6 +1356,22 @@ def main():
                 _discovery_batch_loop_ran = True
                 all_open_ports: List = []
                 batch_num = 0
+                # Phase 146 / DISC-04, RESEARCH.md Open Questions 2/3: accept
+                # one throwaway O(n) pre-count pass over a SEPARATE generator
+                # (built from the same tokens) so the batch total is known
+                # and correct from the very first progress write, rather than
+                # showing "batch 1 of ?" in the dashboard. This double
+                # iteration is O(n) over an in-memory expansion and is
+                # negligible against the O(n) nmap subprocess cost that
+                # follows; Phase 144 D-06's laziness is preserved because
+                # neither pass materializes a list. The pre-count generator
+                # is exhausted here and must never be reused — `host_iter`
+                # below is a fresh generator.
+                _discovery_total_hosts = sum(
+                    1 for _ in _expand_and_dedup_hosts(nmap_targets, cfg.targets.exclude_ips or [])
+                )
+                _discovery_batch_total = math.ceil(_discovery_total_hosts / _MAX_HOSTS_PER_CIDR) or 1
+                _discovery_hosts_checked = 0
                 # Phase 145 / D-01/D-02/D-04/D-05: liveness_endpoints is a
                 # SEPARATE accumulator from error_endpoints. This is
                 # load-bearing: _collect_stage_partial_failures (below) turns
@@ -1363,6 +1395,20 @@ def main():
                 for batch in _chunked(host_iter, _MAX_HOSTS_PER_CIDR):
                     batch_num += 1
 
+                    # Phase 146 / D-05/D-06/D-07, RESEARCH.md Pitfall 2, Open
+                    # Question 1: the formula's output REPLACES
+                    # args.nmap_timeout entirely inside this loop — a tiny
+                    # liveness-remainder batch must not sit on a 600s/1800s
+                    # default (D-05). Per verified nmap behavior, the
+                    # explicitly-specified `--max-retries 1`,
+                    # `--host-timeout 10s`, `--max-parallelism 100` flags in
+                    # `_default_nmap_args` override the -T template for those
+                    # specific values regardless of argv order — a future
+                    # editor must not reorder args assuming positional
+                    # precedence.
+                    _batch_timeout = discovery_timeout_for_batch(len(batch))
+                    _batch_timing_template = discovery_timing_template_for_batch(len(batch))
+
                     # Phase 145 / DISC-03: cheap liveness pre-pass ahead of
                     # the expensive full port sweep. Fails open on error —
                     # a pre-pass failure must never cost sweep coverage.
@@ -1373,7 +1419,7 @@ def main():
                             output_dir=cfg.output.directory,
                             logger=logger,
                             nmap_path=args.nmap_path,
-                            timeout_seconds=args.nmap_timeout,
+                            timeout_seconds=_batch_timeout,
                             port_spec_override=port_spec_override,
                         )
                     except RuntimeError as exc:
@@ -1403,33 +1449,50 @@ def main():
                             f"{len(sweep_targets)} responsive, {len(down_hosts)} skipped"
                         )
 
-                    if not sweep_targets:
+                    if sweep_targets:
                         # RESEARCH.md Pitfall 4: a fully-dead batch spawns no
                         # sweep subprocess at all.
-                        continue
+                        try:
+                            _batch_extra_args = list(extra_args.split()) if extra_args else []
+                            _batch_extra_args.append(_batch_timing_template)
+                            batch_open_ports = run_nmap_discovery(
+                                targets=sweep_targets,
+                                ports=ports_for_nmap if port_spec_override is None else [],
+                                output_dir=cfg.output.directory,
+                                logger=logger,
+                                nmap_path=args.nmap_path,
+                                extra_args=_batch_extra_args,
+                                timeout_seconds=_batch_timeout,
+                                port_spec_override=port_spec_override,  # Phase 121
+                            )
+                            all_open_ports.extend(batch_open_ports)
+                        except RuntimeError as exc:
+                            logger.error(f"discovery batch {batch_num} failed: {exc!r}")
+                            error_endpoints.append(CryptoEndpoint(
+                                host=f"discovery-batch-{batch_num}",
+                                port=0,
+                                protocol="ERROR",
+                                scan_error=str(exc) or exc.__class__.__name__,
+                                scan_error_category="exception",
+                            ))
 
-                    try:
-                        batch_open_ports = run_nmap_discovery(
-                            targets=sweep_targets,
-                            ports=ports_for_nmap if port_spec_override is None else [],
-                            output_dir=cfg.output.directory,
-                            logger=logger,
-                            nmap_path=args.nmap_path,
-                            extra_args=extra_args.split() if extra_args else None,
-                            timeout_seconds=args.nmap_timeout,
-                            port_spec_override=port_spec_override,  # Phase 121
+                    # Phase 146 / DISC-04/DISC-05/DISC-06, D-02/D-03/D-13:
+                    # per-batch bookkeeping runs on every path — normal,
+                    # fully-dead batch, and failed batch. hosts_checked is
+                    # the actual batch length (never batch_num times the max
+                    # per-batch size), so
+                    # the count stays exact on the final partial batch.
+                    _discovery_hosts_checked += len(batch)
+                    if args.db_path and args.job_id:
+                        update_batch_progress(
+                            args.db_path, args.job_id,
+                            batch_num, _discovery_batch_total, _discovery_hosts_checked,
                         )
-                        all_open_ports.extend(batch_open_ports)
-                    except RuntimeError as exc:
-                        logger.error(f"discovery batch {batch_num} failed: {exc!r}")
-                        error_endpoints.append(CryptoEndpoint(
-                            host=f"discovery-batch-{batch_num}",
-                            port=0,
-                            protocol="ERROR",
-                            scan_error=str(exc) or exc.__class__.__name__,
-                            scan_error_category="exception",
-                        ))
-                        continue
+                    if not args.quiet:
+                        print(
+                            f"Discovery: batch {batch_num}/{_discovery_batch_total} "
+                            f"({_discovery_hosts_checked:,} hosts checked)"
+                        )
                 open_ports = all_open_ports
                 targets = nmap_to_targets(open_ports, tcp_only=True)
                 targets = _filter_excludes(targets, cfg.targets.exclude_ips or [])

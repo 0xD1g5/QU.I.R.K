@@ -383,7 +383,12 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     # enable_nmap checkbox for common/custom scopes (RESEARCH Pitfall 5).
     force_nmap = payload.port_scope in ("top1000", "all")
     if payload.enable_nmap or force_nmap:
-        cmd += ["--discovery", "nmap", "--nmap-timeout", "300"]
+        # Phase 146 / DISC-05, Pitfall 2: no static timeout is passed here —
+        # the spawned run_scan.py process computes a per-batch timeout via
+        # discovery_timeout_for_batch(), which is the only place that knows
+        # batch sizes. That helper's hard min(..., 300) clamp is what
+        # enforces the 300s ceiling now, not a static CLI flag.
+        cmd += ["--discovery", "nmap"]
 
     # Pitfall 2: non-blocking — do not call communicate or proc.wait.
     # stdin=DEVNULL prevents the subprocess from inheriting the server's TTY;
