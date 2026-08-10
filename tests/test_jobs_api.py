@@ -629,3 +629,78 @@ def test_dead_job_error_message_points_at_real_log(monkeypatch, tmp_path):
     data = resp.json()
     assert data["status"] == "failed"
     assert str(real_log) in data["error_message"]
+
+
+# --------------------------------------------------------------------------
+# Test 20: Phase 146 DISC-04 — _to_response round-trips batch-progress fields
+# --------------------------------------------------------------------------
+
+def test_to_response_roundtrips_batch_progress_fields():
+    """_to_response passes discovery_batch_index/_total/_hosts_checked straight
+    through from the ScanJob row, with no derivation from current_stage."""
+    from quirk.dashboard.api.routes.jobs import _to_response
+
+    row = ScanJob(
+        job_id="batch-1",
+        status="running",
+        current_stage="discovery",
+        target="10.0.0.0/24",
+        profile="standard",
+        calibration="balanced",
+        enable_nmap=True,
+        discovery_batch_index=3,
+        discovery_batch_total=12,
+        discovery_hosts_checked=2048,
+    )
+    result = _to_response(row)
+    assert result.discovery_batch_index == 3
+    assert result.discovery_batch_total == 12
+    assert result.discovery_hosts_checked == 2048
+
+
+def test_to_response_batch_progress_none_on_fresh_job():
+    """A freshly queued job (no discovery batches yet) reports all three
+    batch-progress fields as None."""
+    from quirk.dashboard.api.routes.jobs import _to_response
+
+    row = ScanJob(
+        job_id="fresh-1",
+        status="queued",
+        target="example.com",
+        profile="quick",
+        calibration="balanced",
+        enable_nmap=False,
+    )
+    result = _to_response(row)
+    assert result.discovery_batch_index is None
+    assert result.discovery_batch_total is None
+    assert result.discovery_hosts_checked is None
+
+
+def test_get_job_status_includes_batch_progress_keys():
+    """GET /api/jobs/{id} JSON body contains the three Phase 146 keys."""
+    app, tc, TestingSession = _app_with_db()
+
+    db = TestingSession()
+    job_id = "batch-http-1"
+    db.add(ScanJob(
+        job_id=job_id,
+        status="running",
+        current_stage="discovery",
+        target="10.0.0.0/24",
+        profile="standard",
+        calibration="balanced",
+        enable_nmap=True,
+        discovery_batch_index=2,
+        discovery_batch_total=8,
+        discovery_hosts_checked=512,
+    ))
+    db.commit()
+    db.close()
+
+    response = tc.get(f"/api/jobs/{job_id}")
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["discovery_batch_index"] == 2
+    assert data["discovery_batch_total"] == 8
+    assert data["discovery_hosts_checked"] == 512

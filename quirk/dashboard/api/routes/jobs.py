@@ -178,6 +178,9 @@ def _to_response(row: ScanJob) -> JobStatusResponse:
         error_message=row.error_message,
         stage_index=_stage_index(row.current_stage, row.status),
         stage_total=_STAGE_TOTAL,
+        discovery_batch_index=getattr(row, "discovery_batch_index", None),
+        discovery_batch_total=getattr(row, "discovery_batch_total", None),
+        discovery_hosts_checked=getattr(row, "discovery_hosts_checked", None),
     )
 
 

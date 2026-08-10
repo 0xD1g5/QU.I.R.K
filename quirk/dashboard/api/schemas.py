@@ -475,6 +475,11 @@ class JobStatusResponse(BaseModel):
     error_message: Optional[str] = None
     stage_index: int       # 0..7, backend-computed
     stage_total: int = 7
+    # Phase 146 DISC-04: nmap discovery batch-progress fields. None until the
+    # first discovery batch completes.
+    discovery_batch_index: Optional[int] = None
+    discovery_batch_total: Optional[int] = None
+    discovery_hosts_checked: Optional[int] = None
 
 
 # ---- Phase 111 DASH-02 / DASH-03: Sensor registry + merge endpoints ----
