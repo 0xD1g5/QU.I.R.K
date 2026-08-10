@@ -112,3 +112,8 @@ None - no external service configuration required.
 ---
 *Phase: 146-progress-scaling-disclosure*
 *Completed: 2026-08-10*
+
+## Self-Check: PASSED
+
+All created/modified files verified present on disk; all 4 task/summary commit hashes
+(9ed43b6, 6c4f2b7, 74e99b4, 7ad3327) verified present in `git log`.
