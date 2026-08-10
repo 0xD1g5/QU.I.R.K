@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: executing
-stopped_at: Completed 145-01-PLAN.md
-last_updated: "2026-08-10T13:51:29.652Z"
-last_activity: 2026-08-10
+status: completed
+stopped_at: Completed 145-02-PLAN.md
+last_updated: "2026-08-10T15:35:49.920Z"
+last_activity: 2026-08-10 -- Phase 145 marked complete
 progress:
   total_phases: 11
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 4
-  percent: 9
+  completed_plans: 6
+  percent: 18
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 145 (liveness-pre-pass) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-08-10
+Phase: 145 — COMPLETE
+Plan: 3 of 3
+Status: Phase 145 complete
+Last activity: 2026-08-10 -- Phase 145 marked complete
 
 ## v5.11 Phase Map
 
@@ -138,6 +138,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 144]: Batch-loop failure-isolation tests exercise the loop's exact shape directly (mirroring inline run_scan.py code) rather than invoking full main(), per RESEARCH.md's stated fallback
 - [Phase 145]: parse_nmap_host_status() deliberately omits parse_nmap_xml's skip-if-not-up filter so down hosts survive as up=False rows — D-04: record don't drop non-responsive hosts
 - [Phase 145]: _resolve_liveness_port_spec narrowed the plan's literal any-other-override-to-dash wording to a startswith(--top-ports) check with pass-through for unrecognized overrides — makes the mandated _SAFE_NMAP_ARG_RE allowlist gate reachable/testable instead of dead code
+- [Phase 145]: liveness_endpoints kept as a dedicated accumulator separate from error_endpoints, merged in only after the discovery ScanCheckpoint partial-failure snapshot, so normal liveness_skip/privilege_fallback rows never flip discovery status to partial
+- [Phase 145]: Survivor set for the sweep computed by excluding known-down hosts from the batch (not including known-up hosts), so a host nmap omits entirely from the liveness XML defaults to being swept rather than silently dropped
 
 ### Pending Todos
 
@@ -204,11 +206,12 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 | Phase 144 P01 | 12min | 2 tasks | 4 files |
 | Phase 144 P02 | 35min | 2 tasks | 3 files |
 | Phase 145 P01 | 8min | 2 tasks | 4 files |
+| Phase 145 P02 | 20min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-08-10T13:51:29.646Z
-Stopped at: Completed 145-01-PLAN.md
+Last session: 2026-08-10T14:01:49.292Z
+Stopped at: Completed 145-02-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
