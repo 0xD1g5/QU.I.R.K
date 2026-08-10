@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: completed
-stopped_at: Phase 145 context gathered
-last_updated: "2026-08-10T13:16:35.179Z"
-last_activity: 2026-08-10 -- Phase 144 marked complete
+status: executing
+stopped_at: Completed 145-01-PLAN.md
+last_updated: "2026-08-10T13:51:29.652Z"
+last_activity: 2026-08-10
 progress:
   total_phases: 11
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 9
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 144 — chunked-discovery-core
+**Current focus:** Phase 145 — liveness-pre-pass
 
 ## Current Position
 
-Phase: 144 — COMPLETE
-Plan: 3 of 3
-Status: Phase 144 complete
-Last activity: 2026-08-10 -- Phase 144 marked complete
+Phase: 145 (liveness-pre-pass) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-08-10
 
 ## v5.11 Phase Map
 
@@ -136,6 +136,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 144]: Relocated error_endpoints init to before the discovery block (Pitfall 1) rather than inventing a parallel discovery-only bookkeeping list
 - [Phase ?]: [Phase 144]: Guarded the discovery ScanCheckpoint write with a _discovery_batch_loop_ran flag so it fires only on the nmap batch-loop path, not cache-hit/fallback sub-branches
 - [Phase ?]: [Phase 144]: Batch-loop failure-isolation tests exercise the loop's exact shape directly (mirroring inline run_scan.py code) rather than invoking full main(), per RESEARCH.md's stated fallback
+- [Phase 145]: parse_nmap_host_status() deliberately omits parse_nmap_xml's skip-if-not-up filter so down hosts survive as up=False rows — D-04: record don't drop non-responsive hosts
+- [Phase 145]: _resolve_liveness_port_spec narrowed the plan's literal any-other-override-to-dash wording to a startswith(--top-ports) check with pass-through for unrecognized overrides — makes the mandated _SAFE_NMAP_ARG_RE allowlist gate reachable/testable instead of dead code
 
 ### Pending Todos
 
@@ -201,11 +203,12 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 | Phase 142 P05 | 15min | 3 tasks | 5 files |
 | Phase 144 P01 | 12min | 2 tasks | 4 files |
 | Phase 144 P02 | 35min | 2 tasks | 3 files |
+| Phase 145 P01 | 8min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-08-10T13:16:35.172Z
-Stopped at: Phase 145 context gathered
+Last session: 2026-08-10T13:51:29.646Z
+Stopped at: Completed 145-01-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

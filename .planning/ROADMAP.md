@@ -115,7 +115,7 @@ unreliable
 **Plans**: 3 plans
 
 Plans:
-- [ ] 145-01-PLAN.md — Host-status XML parser + `-sn -PS` liveness probe primitives
+- [x] 145-01-PLAN.md — Host-status XML parser + `-sn -PS` liveness probe primitives
 - [ ] 145-02-PLAN.md — Batch-loop pre-pass wiring, privilege detection + fallback/skip disclosure
 - [ ] 145-03-PLAN.md — Docs, Obsidian sync, UAT Series 145 + D-06 non-root human verification
 
@@ -176,7 +176,7 @@ milestones — independent of the discovery-at-scale work, safe to sequence in p
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 144. Chunked Discovery Core | 3/3 | Complete   | 2026-08-10 |
-| 145. Liveness Pre-Pass | 0/TBD | Not started | - |
+| 145. Liveness Pre-Pass | 1/3 | In Progress|  |
 | 146. Progress, Scaling & Disclosure | 0/TBD | Not started | - |
 | 147. Backlog Drain — Lifecycle & Ledger Tail | 0/TBD | Not started | - |
 
