@@ -409,7 +409,7 @@ within an established file.
 this session** (CLI flag behavior, XML shape, fallback-indistinguishability, `--unprivileged` test
 flag) or cited directly from `man nmap`.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the liveness-skip advisory (D-01's CryptoEndpoint fallback row) fire once per scan or
    once per batch?**
@@ -423,6 +423,8 @@ flag) or cited directly from `man nmap`.
      call-once-per-condition pattern exactly) — planner should write this as a single task, gated
      by the pre-computed `is_privileged` flag, executed right after that flag is computed and before
      the batch loop starts.
+   - **RESOLVED: once per scan.** Plan 145-02 Task 1 computes the privilege flag once before the
+     batch loop and fires the advisory exactly once, gated on that flag — matches the recommendation.
 
 2. **Does `port_spec_override == "--top-ports 1000"` deserve a real resolved top-1000 port list
    for `-PS`, or is `-PS-` (full range) an acceptable simplification for v1?**
@@ -435,6 +437,9 @@ flag) or cited directly from `man nmap`.
    - Recommendation: Ship `-PS-` for both wide-scope overrides in this phase (matches D-03's
      reliability-first framing, keeps the phase small); flag as a possible Phase 146+ optimization
      if wide-scope scan times regress noticeably.
+   - **RESOLVED: ship `-PS-` for v1.** Plan 145-01's `_resolve_liveness_port_spec()` returns `"-"`
+     for both wide-scope overrides (`-p-` and `--top-ports 1000`) — matches the recommendation.
+     Revisit only if wide-scope scan times regress noticeably (deferred, not blocking).
 
 ## Environment Availability
 
