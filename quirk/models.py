@@ -32,7 +32,7 @@ class CryptoEndpoint(Base):
     cert_not_after = Column(DateTime, nullable=True)
 
     scan_error = Column(Text, nullable=True)
-    scan_error_category = Column(String(32), nullable=True)  # Phase 41 D-11 + Phase 57 D-06: missing_extra|timeout|exception|config|invalid_input
+    scan_error_category = Column(String(32), nullable=True)  # Phase 41 D-11 + Phase 57 D-06 + Phase 145 D-05: missing_extra|timeout|exception|config|invalid_input|liveness_skip|privilege_fallback
     tls_blocker_reason = Column(String(64), nullable=True)
     service_detail = Column(Text, nullable=True)
 

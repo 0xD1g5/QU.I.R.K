@@ -182,6 +182,48 @@ def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endp
     ))
 
 
+def _is_privileged() -> Optional[bool]:
+    """Phase 145 / D-02: detect raw-socket (root/CAP_NET_RAW) privilege once per scan.
+
+    Returns True when running as euid 0 (root), False when euid is non-zero,
+    and None when privilege cannot be determined at all (os.geteuid does not
+    exist on this platform — e.g. the Windows sensor build). Callers MUST
+    treat None the same as "not privileged": we never silently assume
+    best-case privileged behavior when it cannot be verified.
+    """
+    geteuid = getattr(os, "geteuid", None)
+    if geteuid is None:
+        return None
+    return geteuid() == 0
+
+
+def _emit_liveness_fallback_advisory(error_endpoints, logger) -> None:
+    """Phase 145 / D-01: disclose a SYN->connect liveness pre-pass downgrade.
+
+    Called when raw-socket privilege is not confirmed (False or undeterminable).
+    Without CAP_NET_RAW/root, nmap's `-sn -PS<ports>` liveness probe silently
+    falls back from a SYN probe to a slower TCP connect probe. Results remain
+    valid, but this is disclosed via a logger message plus a persisted
+    CryptoEndpoint advisory row (T-145-05: repudiation — never console-only).
+
+    Fires once per scan; the caller is responsible for once-per-scan gating
+    (matches `_emit_missing_extra_advisory`'s contract — calling this twice
+    appends two rows).
+    """
+    logger.info(
+        "liveness pre-pass may have silently degraded from a SYN probe to a "
+        "TCP connect probe (no raw-socket privileges detected) — results "
+        "remain valid but the pre-pass will run slower than intended"
+    )
+    error_endpoints.append(CryptoEndpoint(
+        host="liveness-prepass",
+        port=0,
+        protocol="ADVISORY",
+        scan_error="liveness pre-pass SYN probe may have degraded to TCP connect (no raw-socket privileges)",
+        scan_error_category="privilege_fallback",
+    ))
+
+
 def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
     """Phase 67 RESUME-01: flush a stage's CryptoEndpoint rows to SQLite immediately.
 
