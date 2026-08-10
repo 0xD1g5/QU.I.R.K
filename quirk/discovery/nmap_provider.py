@@ -59,6 +59,72 @@ def _default_nmap_args(ports_csv: str) -> List[str]:
     ]
 
 
+# Phase 146 / D-05: batch-size-scaled discovery timeout. The per-host
+# figure is derived by solving `300 = 30 + x * 1024`, rounded down to leave
+# slack for XML write/parse (RESEARCH.md Pattern 3).
+_DISCOVERY_TIMEOUT_BASE_SECONDS = 30
+_DISCOVERY_TIMEOUT_PER_HOST_SECONDS = 0.26
+_DISCOVERY_TIMEOUT_CEILING_SECONDS = 300
+# Phase 146 / D-06 + D-07: batches at or below this size use nmap's
+# aggressive -T4 timing template; larger batches fall back to -T3.
+_DISCOVERY_T4_MAX_BATCH_SIZE = 256
+
+
+def discovery_timeout_for_batch(batch_size: int) -> int:
+    """
+    Compute a batch-size-scaled nmap discovery timeout in seconds
+    (Phase 146 / D-05).
+
+    A 1-host batch gets a timeout far below the pre-existing 300s ceiling;
+    a full `_MAX_HOSTS_PER_CIDR`-sized (1024-host) batch gets a timeout at
+    or below that same ceiling. Per verified nmap documentation, the
+    already-hardcoded `--max-retries 1`, `--host-timeout 10s`, and
+    `--max-parallelism 100` in `_default_nmap_args` override the -T
+    template's own defaults for those specific values regardless of argv
+    order, so this timeout only bounds the overall subprocess wall-clock
+    budget, not per-probe timing. The base/per-host/ceiling constants are
+    RESEARCH.md-derived starting values, adjustable if live UAT shows
+    different real-world timing.
+
+    A non-positive or non-int `batch_size` degrades to the base value
+    rather than raising, since this feeds directly into a subprocess
+    timeout and must never abort a scan on a bad input.
+    """
+    try:
+        size = int(batch_size)
+    except (TypeError, ValueError):
+        size = 0
+    return min(
+        _DISCOVERY_TIMEOUT_CEILING_SECONDS,
+        int(_DISCOVERY_TIMEOUT_BASE_SECONDS + _DISCOVERY_TIMEOUT_PER_HOST_SECONDS * max(0, size)),
+    )
+
+
+def discovery_timing_template_for_batch(batch_size: int) -> str:
+    """
+    Select nmap's `-T` timing template based on batch size
+    (Phase 146 / D-06 + D-07).
+
+    Returns the literal string "-T4" (aggressive) for batches at or below
+    `_DISCOVERY_T4_MAX_BATCH_SIZE`, else the literal "-T3" (normal) for
+    larger batches. Per verified nmap documentation, the already-hardcoded
+    `--max-retries 1`, `--host-timeout 10s`, and `--max-parallelism 100` in
+    `_default_nmap_args` override the template's own defaults for those
+    specific values regardless of argv order, so this choice only changes
+    RTT-probe timing. Always a hardcoded literal selected by if/else — never
+    a string built from config or any external input, since the returned
+    token is later passed through `run_nmap_discovery(extra_args=...)`,
+    which validates against `_SAFE_NMAP_ARG_RE`.
+    """
+    try:
+        size = int(batch_size)
+    except (TypeError, ValueError):
+        size = 0
+    if size <= _DISCOVERY_T4_MAX_BATCH_SIZE:
+        return "-T4"
+    return "-T3"
+
+
 def _resolve_liveness_port_spec(
     ports: List[int], port_spec_override: Optional[str]
 ) -> str:

@@ -342,6 +342,49 @@ def test_liveness_synthesizes_down_hosts_when_runstats_trustworthy(tmp_path, mon
     assert by_host["10.0.0.3"].up is False
 
 
+# ---------------------------------------------------------------------------
+# Phase 146 / Plan 02 (DISC-05/DISC-06): batch-size-scaled timeout + timing
+# template helpers.
+# ---------------------------------------------------------------------------
+
+def test_discovery_timeout_for_batch_boundaries():
+    from quirk.discovery.nmap_provider import discovery_timeout_for_batch
+
+    values = {size: discovery_timeout_for_batch(size) for size in (0, 1, 256, 257, 1024, 5000)}
+
+    assert values[1] < 60, "a 1-host batch must get a timeout well under 300s"
+    assert values[1024] <= 300, "a full 1024-host batch must not exceed the pre-existing 300s ceiling"
+    assert values[5000] == 300, "an oversized batch must clamp to exactly the 300s ceiling"
+
+    sizes_in_order = (0, 1, 256, 257, 1024, 5000)
+    ordered_values = [values[s] for s in sizes_in_order]
+    assert ordered_values == sorted(ordered_values), "timeout must be monotonically non-decreasing"
+
+
+def test_discovery_timeout_for_batch_degrades_on_bad_input():
+    from quirk.discovery.nmap_provider import discovery_timeout_for_batch, _DISCOVERY_TIMEOUT_BASE_SECONDS
+
+    assert discovery_timeout_for_batch("not-an-int") == _DISCOVERY_TIMEOUT_BASE_SECONDS
+    assert discovery_timeout_for_batch(-5) == _DISCOVERY_TIMEOUT_BASE_SECONDS
+    assert discovery_timeout_for_batch(0) == _DISCOVERY_TIMEOUT_BASE_SECONDS
+
+
+def test_discovery_timing_template_for_batch_flips_at_256_257():
+    from quirk.discovery.nmap_provider import discovery_timing_template_for_batch
+
+    assert discovery_timing_template_for_batch(1) == "-T4"
+    assert discovery_timing_template_for_batch(256) == "-T4"
+    assert discovery_timing_template_for_batch(257) == "-T3"
+    assert discovery_timing_template_for_batch(1024) == "-T3"
+
+
+def test_discovery_timing_template_for_batch_matches_safe_arg_re():
+    from quirk.discovery.nmap_provider import discovery_timing_template_for_batch, _SAFE_NMAP_ARG_RE
+
+    assert _SAFE_NMAP_ARG_RE.fullmatch(discovery_timing_template_for_batch(1))
+    assert _SAFE_NMAP_ARG_RE.fullmatch(discovery_timing_template_for_batch(1024))
+
+
 def test_liveness_does_not_synthesize_down_hosts_when_runstats_untrustworthy(tmp_path, monkeypatch):
     """When <runstats> total doesn't reconcile with the batch (e.g. truncated
     output), do NOT infer down hosts — fail open exactly like a RuntimeError,
