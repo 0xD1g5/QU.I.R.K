@@ -425,4 +425,40 @@ into the scan history page.
 
 ---
 
+---
+
+## 12. Discovery Liveness Pre-Pass Rows (Phase 145)
+
+As of Phase 145 (DISC-03), a discovery scan can include two new `scan_error_category`
+values that do not represent scan failures — they are the byproduct of a cheap
+liveness pre-pass that runs ahead of the full port sweep on every nmap-discovery batch
+(see `docs/operators-guide.md` §10 for the full mechanism). Both appear as
+`CryptoEndpoint` rows with `protocol="ADVISORY"` and are excluded from the readiness
+score and from every severity-ranked findings table — they are informational, not
+findings.
+
+| `scan_error_category` | Cardinality | `host` value | `port` | Meaning |
+|------------------------|-------------|--------------|--------|---------|
+| `liveness_skip` | One row per non-responsive host | The real host address | `0` | The host did not answer the TCP-based liveness probe on any of the sweep's ports and was excluded from the port sweep. This is a normal outcome for a sparse range — not a scan failure — and does not mark the discovery stage as partially failed. |
+| `privilege_fallback` | At most one row per scan | `"liveness-prepass"` (a sentinel, not a real host) | `0` | The scanning process could not confirm raw-socket privilege, so nmap's SYN-ping probe may have silently degraded to a slower TCP connect probe. Results remain valid; this row only discloses that the pre-pass ran without the intended privilege level. Absent when the scan ran as root/`sudo`. |
+
+Because these rows use `protocol="ADVISORY"` and `port=0`, they follow the same
+rendering convention as other advisory rows in the report (e.g. `missing_extra`) — they
+are informational context, not part of the scored findings surface.
+
+> **Client Conversation — Liveness Pre-Pass Rows:**
+> "Before we sweep a range of addresses for open ports, we run a much cheaper check to
+> see which addresses actually respond at all — that saves a lot of time on large,
+> sparse ranges where most addresses are unused. Any address that didn't respond shows
+> up here as a `liveness_skip` row, which just means 'nothing home,' not a scan
+> failure. If you also see a single `privilege_fallback` row, that just means the scan
+> process didn't have elevated privileges when it ran, so that pre-check step used a
+> slightly slower method — your results are still complete and valid either way."
+
+A report-level count of undetermined/skipped hosts in the executive summary is Phase
+146 work (DISC-07) — this phase produces the underlying per-host rows that summary will
+consume; it is not yet surfaced as an aggregate in the report itself.
+
+---
+
 *For scoring implementation details, see `quirk/intelligence/scoring.py`. For finding severity logic, see `quirk/engine/risk_engine.py`. For CBOM classification, see `quirk/cbom/classifier.py`. For the compliance mapping module, see `quirk/compliance/__init__.py`. For QRAMM implementation details, see `quirk/qramm/` and `src/dashboard/src/pages/print.tsx`. For hardware scanning and CBOM device hierarchy, see `quirk/scanner/hardware/` and `quirk/cbom/builder.py`.*

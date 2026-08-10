@@ -1317,3 +1317,78 @@ already accounts for.
 
 See `docs/report-interpretation.md` §10.7 for the report/dashboard rendering contract, and
 `docs/configuration.md` for the 30-day staleness cadence and re-verification procedure.
+
+---
+
+## 10. Discovery Liveness Pre-Pass
+
+As of Phase 145 (DISC-03), every nmap-discovery batch runs a cheap TCP-based liveness
+pre-pass before its full port sweep. This shrinks scan time on large, sparse ranges by
+skipping the expensive `-sT` sweep against hosts that never answer.
+
+### 10.1 What it does
+
+Before `run_nmap_discovery()` sweeps a batch, QUIRK runs `run_nmap_liveness_check()`
+against that same batch: an `nmap -sn -PS<ports>` probe (host discovery only — `-sn` —
+using a TCP SYN ping on the given ports, `-PS`, with `-n` to skip DNS resolution). Hosts
+that respond are swept normally; hosts that do not respond are excluded from the sweep
+and recorded as `liveness_skip` rows (see §10.4 and `docs/report-interpretation.md`).
+
+This is **TCP-based, not ICMP-based** — `-PS` sends a TCP packet with the SYN flag to
+the probed ports rather than an ICMP echo request. That matters because segmented
+enterprise networks routinely filter ICMP but still route TCP, so a TCP-based liveness
+probe correctly detects hosts that an ICMP `ping`-style check would wrongly report as
+dead.
+
+### 10.2 Which ports it probes (D-03)
+
+The pre-pass reuses the same port list the sweep itself will use — a host that is
+"live" only means it answered on at least one of those ports, which is exactly what the
+sweep needs. For the `top1000` and `all` port scopes (see §3), `-PS` has no
+`--top-ports` equivalent, so the pre-pass falls back to the full `-PS-` (1–65535) range
+instead. A superset can never wrongly mark a host non-responsive, so this fallback is a
+safe, reliability-first default (D-03) rather than a narrower approximation.
+
+### 10.3 Privilege fallback
+
+nmap's SYN-ping probe (`-PS`) normally requires raw-socket privileges. When those
+privileges are not available, nmap silently substitutes a TCP connect probe for the SYN
+probe — and its XML output is byte-identical either way, so there is no way to detect
+the substitution from the probe's own results.
+
+QUIRK checks `os.geteuid()` exactly once per scan (via `_is_privileged()` in
+`run_scan.py`) and, whenever the process is **not** confirmed to be running as root —
+including on platforms that provide no way to check at all, such as the Windows sensor
+build, where `os.geteuid` does not exist — it treats that as "not privileged" and
+discloses the possible downgrade two ways:
+
+- A logger message: *"liveness pre-pass may have silently degraded from a SYN probe to
+  a TCP connect probe (no raw-socket privileges detected) — results remain valid but the
+  pre-pass will run slower than intended."*
+- A single persisted `privilege_fallback` advisory row in the scan artifact (one per
+  scan, not one per batch — see §10.4).
+
+**Results remain valid either way** — a TCP connect probe still correctly determines
+host liveness, it is just slower than a raw SYN probe. Running the scan as root (or via
+`sudo`) removes the advisory entirely, because `_is_privileged()` then returns `True`
+and the fallback-disclosure call never fires.
+
+### 10.4 What happens on failure
+
+If the pre-pass itself fails (nmap errors, times out, or is missing) for a batch, QUIRK
+does not lose that batch's hosts: it logs the failure and sweeps the entire batch
+unfiltered, exactly as if no pre-pass had run. A batch where every host is
+non-responsive short-circuits entirely — the sweep subprocess is never spawned for a
+fully-dead batch.
+
+### 10.5 Where to look afterward
+
+Every liveness-skipped host produces its own `CryptoEndpoint` row in the scan artifact
+with `scan_error_category="liveness_skip"` and the real host address, so a skipped host
+is never silently dropped from the record. See `docs/report-interpretation.md` for how
+to interpret `liveness_skip` and `privilege_fallback` rows in a delivered report.
+
+> **Operator note:** counting/surfacing the total number of undetermined (skipped)
+> hosts in the report summary itself is Phase 146 work (DISC-07) — this phase only
+> produces the underlying `liveness_skip`/`privilege_fallback` rows that Phase 146
+> consumes.
