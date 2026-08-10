@@ -291,6 +291,18 @@ def build_exec_markdown(
     lines.append(f"- **SSH endpoints successfully scanned:** {ssh_ok}")
     lines.append(f"- **Plaintext HTTP services detected:** {http_plain}")
     lines.append(f"- **Unknown open services detected:** {unknown_open}")
+    # Phase 146 D-08/D-09/D-10 (DISC-07): undetermined-host disclosure — reads the
+    # shared ExecContent field only; never recomputes from raw endpoints/error category.
+    _undetermined_n = getattr(exec_content, "undetermined_hosts_count", 0) if exec_content is not None else 0
+    _undetermined_breakdown = (
+        getattr(exec_content, "undetermined_hosts_breakdown", {}) if exec_content is not None else {}
+    )
+    lines.append(f"- **Hosts undetermined (unreachable/filtered):** {_undetermined_n}")
+    if _undetermined_n > 0:
+        _liveness_skip_n = _undetermined_breakdown.get("liveness_skip", 0)
+        _exception_n = _undetermined_breakdown.get("exception", 0)
+        lines.append(f"  - no response to liveness pre-pass: {_liveness_skip_n}")
+        lines.append(f"  - discovery batch errors: {_exception_n}")
     lines.append("")
 
     # Phase 81 / CMVP-06: Algorithm Inventory with FIPS 140-3 CMVP Coverage column.

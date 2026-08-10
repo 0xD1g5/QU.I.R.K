@@ -272,6 +272,15 @@ def render_docx_report(
     # Phase 128 D-10: hardware advisory devices list — advisory-only, not scored
     hardware_devices = getattr(exec_content, "hardware_devices", []) if exec_content else []
 
+    # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same shared field
+    # read by markdown/HTML; DOCX never recomputes it.
+    undetermined_hosts_count = (
+        getattr(exec_content, "undetermined_hosts_count", 0) if exec_content else 0
+    )
+    undetermined_hosts_breakdown = (
+        getattr(exec_content, "undetermined_hosts_breakdown", {}) if exec_content else {}
+    )
+
     # ---------------------------------------------------------------------------
     # cfg access — double-getattr pattern (mirrors html_renderer.py lines 236-238)
     # ---------------------------------------------------------------------------
@@ -324,6 +333,20 @@ def render_docx_report(
 
     if narrative_lead:
         doc.add_paragraph(narrative_lead, style="Normal")
+
+    # Phase 146 D-08/D-09/D-10 (DISC-07): undetermined-host disclosure paragraph
+    doc.add_paragraph(
+        f"Hosts undetermined (unreachable/filtered): {undetermined_hosts_count}",
+        style="Normal",
+    )
+    if undetermined_hosts_count > 0:
+        _liveness_skip_n = undetermined_hosts_breakdown.get("liveness_skip", 0)
+        _exception_n = undetermined_hosts_breakdown.get("exception", 0)
+        doc.add_paragraph(
+            f"  no response to liveness pre-pass: {_liveness_skip_n}; "
+            f"discovery batch errors: {_exception_n}",
+            style="Normal",
+        )
 
     # Readiness Assessment sub-section
     doc.add_heading("Readiness Assessment", level=2)

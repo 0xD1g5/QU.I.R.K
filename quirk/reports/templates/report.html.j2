@@ -369,6 +369,13 @@
       <tr><td>Report owner</td><td>{{ report_owner | sanitize }}</td></tr>
       <tr><td>Data classification</td><td>{{ data_classification | sanitize }}</td></tr>
       <tr><td>Generated</td><td>{{ generated_at }}</td></tr>
+      {# Phase 146 D-08/D-09/D-10 (DISC-07): undetermined-host disclosure. Both values are
+         QUIRK-computed integers from the shared ExecContent field — no sanitize needed;
+         row labels are plain literal text. #}
+      <tr><td>Hosts undetermined</td><td>{{ undetermined_hosts_count }}</td></tr>
+      {% if undetermined_hosts_count > 0 %}
+      <tr><td>Undetermined breakdown</td><td>no response to liveness pre-pass: {{ undetermined_hosts_breakdown.liveness_skip | default(0) }}; discovery batch errors: {{ undetermined_hosts_breakdown.exception | default(0) }}</td></tr>
+      {% endif %}
     </table>
 
     {# Phase 98 / EXEC-01 / D-03: Narrative prose block from exec_content.narrative_lead.

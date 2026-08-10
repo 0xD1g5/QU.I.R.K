@@ -564,6 +564,15 @@ def render_html_report(
             _hw_d["cve_snapshot_stale"] = True
     hardware_section = render_hardware_section(_hw_devices_for_render)
 
+    # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
+    # hardware_section above; the template renders these, it never recomputes them.
+    undetermined_hosts_count = (
+        getattr(exec_content, "undetermined_hosts_count", 0) if exec_content is not None else 0
+    )
+    undetermined_hosts_breakdown = (
+        getattr(exec_content, "undetermined_hosts_breakdown", {}) if exec_content is not None else {}
+    )
+
     html = template.render(
         org_name=getattr(getattr(cfg, "assessment", None), "name", "Unknown"),
         report_owner=getattr(getattr(cfg, "assessment", None), "report_owner", ""),
@@ -590,6 +599,9 @@ def render_html_report(
         top_risks=top_risks,
         # Phase 128 D-10: hardware advisory section (pre-rendered HTML string)
         hardware_section=hardware_section,
+        # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
+        undetermined_hosts_count=undetermined_hosts_count,
+        undetermined_hosts_breakdown=undetermined_hosts_breakdown,
         # Phase 100 / FMT-01 / D-01: logo embed for cover page
         logo_b64=logo_b64,
         logo_mime=logo_mime,
