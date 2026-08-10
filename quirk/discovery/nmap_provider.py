@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 from typing import Iterable, List, Optional
 
 from quirk.logging_util import Logger
-from quirk.discovery.nmap_parser import parse_nmap_xml, NmapOpenPort
+from quirk.discovery.nmap_parser import (
+    parse_nmap_xml,
+    NmapOpenPort,
+    parse_nmap_host_status,
+    NmapHostStatus,
+)
 
 # D-04 / WR-05 — defense-in-depth allowlist for nmap extra_args tokens.
 # Mirrors the Phase 70 `_SAFE_COL_TYPE_RE` pattern (quirk/db.py:34).
@@ -51,6 +56,136 @@ def _default_nmap_args(ports_csv: str) -> List[str]:
         "--host-timeout", "10s",
         "--max-parallelism", "100",  # D-07: hard-coded; not configurable in Phase 47.
     ]
+
+
+def _resolve_liveness_port_spec(
+    ports: List[int], port_spec_override: Optional[str]
+) -> str:
+    """
+    Resolve the bare port-list argument for the liveness pre-pass's `-PS`
+    token (WITHOUT the `-PS` prefix itself).
+
+    Phase 145 / DISC-03 / RESEARCH.md Pitfall 1: `-PS` shares `-p`'s grammar
+    minus type specifiers, but has no `--top-ports` equivalent. Rules:
+    - override is None, ports non-empty -> same sorted/deduped CSV the sweep
+      uses (D-03 parity).
+    - override is None, ports empty -> the consulting-grade default CSV.
+    - override == "-p-" -> "-" (verified equivalent full 1-65535 range).
+    - override starts with "--top-ports" -> "-": `-PS` has no `--top-ports`
+      equivalent; the full range is a strict superset of every supported
+      sweep scope so it can never wrongly mark a host non-responsive (D-03
+      reliability-first).
+    - any other override -> returned unchanged (pass-through); the caller
+      (`run_nmap_liveness_check`) allowlist-validates the assembled
+      `-PS<spec>` token before subprocess.run, so an unsafe pass-through
+      value is rejected there (T-145-01) rather than silently coerced here.
+    """
+    if port_spec_override is None:
+        if ports:
+            return ",".join(str(p) for p in sorted(set(ports)))
+        return default_nmap_ports_csv((443, 8443, 9443, 10443, 5001))
+
+    if port_spec_override == "-p-":
+        return "-"
+
+    if port_spec_override.startswith("--top-ports"):
+        return "-"
+
+    return port_spec_override
+
+
+def _liveness_nmap_args(port_spec: str) -> List[str]:
+    """
+    Args for the `-sn` liveness pre-pass (host discovery only, no port scan).
+
+    - `-sn`: host discovery only, skip port scanning entirely.
+    - `-PS<port_spec>`: TCP SYN ping probe on the given ports — this is what
+      actually determines up/down state.
+    - `-n`: no DNS resolution (speed; matches the sweep's own `-n`).
+    Deliberately omits `-Pn` (treat-hosts-as-up), which would defeat the
+    entire point of a liveness check. Retry/timeout/parallelism caps carried
+    over unchanged from `_default_nmap_args` for consistency (D-07).
+    """
+    return [
+        "-sn",
+        f"-PS{port_spec}",
+        "-n",
+        "--max-retries", "1",
+        "--host-timeout", "10s",
+        "--max-parallelism", "100",
+    ]
+
+
+def run_nmap_liveness_check(
+    targets: List[str],
+    ports: List[int],
+    output_dir: str,
+    logger: Optional[Logger] = None,
+    nmap_path: str = "nmap",
+    timeout_seconds: int = 600,
+    port_spec_override: Optional[str] = None,
+) -> List[NmapHostStatus]:
+    """
+    Run a cheap `-sn -PS<ports>` nmap liveness pre-pass and return per-host
+    up/down status (Phase 145 / DISC-03).
+
+    Unlike `run_nmap_discovery`, this function accepts no `extra_args` —
+    the liveness probe's argv is fully QUIRK-controlled, keeping the new
+    subprocess surface minimal (T-145-01).
+    """
+    if not targets:
+        return []
+
+    os.makedirs(output_dir, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    xml_path = os.path.join(output_dir, f"nmap-liveness-{stamp}.xml")
+
+    port_spec = _resolve_liveness_port_spec(ports, port_spec_override)
+
+    # T-145-01 — validate the assembled -PS<spec> token against the same
+    # defense-in-depth allowlist used for extra_args/port_spec_override
+    # elsewhere in this module, BEFORE any subprocess call.
+    ps_token = f"-PS{port_spec}"
+    if not _SAFE_NMAP_ARG_RE.fullmatch(ps_token):
+        raise ValueError(f"Unsafe liveness port spec: {port_spec!r}")
+
+    args = [nmap_path] + _liveness_nmap_args(port_spec) + ["-oX", xml_path] + targets
+
+    if logger:
+        logger.stamp(f"Running Nmap liveness pre-pass on {len(targets)} target(s) (ports={port_spec})")
+        logger.v(f"Nmap cmd: {' '.join(args)}")
+
+    try:
+        proc = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except FileNotFoundError as e:
+        raise RuntimeError(
+            "Nmap not found. Install Nmap and ensure 'nmap' is in PATH, or pass --nmap-path."
+        ) from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(
+            f"Nmap liveness pre-pass timed out after {timeout_seconds}s. Consider reducing scope or increasing timeout."
+        ) from e
+
+    if proc.returncode != 0:
+        msg = (proc.stderr or proc.stdout or "").strip()
+        raise RuntimeError(f"Nmap liveness pre-pass failed (exit {proc.returncode}). Output:\n{msg}")
+
+    if logger:
+        logger.stamp(f"Nmap liveness pre-pass complete. Parsing XML: {xml_path}")
+
+    host_statuses = parse_nmap_host_status(xml_path)
+
+    if logger:
+        up_count = sum(1 for h in host_statuses if h.up)
+        down_count = len(host_statuses) - up_count
+        logger.stamp(f"Nmap liveness pre-pass: {up_count} up, {down_count} down.")
+
+    return host_statuses
 
 
 def run_nmap_discovery(

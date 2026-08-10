@@ -12,6 +12,11 @@ _expand_and_dedup_hosts, try/except RuntimeError around the per-batch call,
 continue on failure) — per RESEARCH.md's guidance to test the failure-
 isolation behavior against a fake failing callable when a full main() run is
 too heavy to construct in a unit test.
+
+Phase 145 / Plan 01 (DISC-03): tests for the `-sn -PS<ports>` liveness
+pre-pass arg builder, port-spec resolution (including the `--top-ports`
+Pitfall-1 full-range fallback), and the allowlist gate on the assembled
+`-PS<spec>` token before subprocess invocation.
 """
 from __future__ import annotations
 
@@ -223,3 +228,73 @@ def test_default_args_includes_max_parallelism():
     assert args[idx + 1] == "100", (
         f"Expected '100' after --max-parallelism, got {args[idx + 1]!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 145 / Plan 01 (DISC-03): liveness pre-pass arg/port-spec builders
+# ---------------------------------------------------------------------------
+
+def test_liveness_args_use_sn_and_ps():
+    from quirk.discovery.nmap_provider import _liveness_nmap_args
+
+    args = _liveness_nmap_args("443,8443")
+
+    assert args[0] == "-sn"
+    assert "-PS443,8443" in args
+    assert "-sT" not in args
+    assert "-Pn" not in args
+    assert "--open" not in args
+
+
+def test_liveness_args_carry_retry_and_parallelism_defaults():
+    from quirk.discovery.nmap_provider import _liveness_nmap_args
+
+    args = _liveness_nmap_args("443")
+
+    for flag, value in (
+        ("--max-retries", "1"),
+        ("--host-timeout", "10s"),
+        ("--max-parallelism", "100"),
+    ):
+        assert flag in args, f"{flag} missing from liveness args"
+        idx = args.index(flag)
+        assert args[idx + 1] == value, f"Expected {value!r} after {flag}, got {args[idx + 1]!r}"
+
+
+def test_liveness_port_spec_matches_sweep_ports():
+    from quirk.discovery.nmap_provider import _resolve_liveness_port_spec
+
+    assert _resolve_liveness_port_spec([443, 22, 443], None) == "22,443"
+
+
+def test_liveness_port_spec_resolves_full_range_for_wide_scopes():
+    from quirk.discovery.nmap_provider import (
+        _resolve_liveness_port_spec,
+        default_nmap_ports_csv,
+    )
+
+    assert _resolve_liveness_port_spec([], None) == default_nmap_ports_csv(
+        (443, 8443, 9443, 10443, 5001)
+    )
+    assert _resolve_liveness_port_spec([], "-p-") == "-"
+    assert _resolve_liveness_port_spec([], "--top-ports 1000") == "-"
+
+
+def test_liveness_check_empty_targets_returns_empty():
+    from quirk.discovery.nmap_provider import run_nmap_liveness_check
+
+    result = run_nmap_liveness_check(targets=[], ports=[443], output_dir="/tmp/does-not-matter")
+
+    assert result == []
+
+
+def test_liveness_port_spec_validated(tmp_path):
+    from quirk.discovery.nmap_provider import run_nmap_liveness_check
+
+    with pytest.raises(ValueError):
+        run_nmap_liveness_check(
+            targets=["10.0.0.1"],
+            ports=[],
+            output_dir=str(tmp_path),
+            port_spec_override="443;rm",
+        )
