@@ -391,6 +391,9 @@ export interface JobStatus {
   error_message: string | null
   stage_index: number
   stage_total: number
+  discovery_batch_index: number | null
+  discovery_batch_total: number | null
+  discovery_hosts_checked: number | null
 }
 
 // Phase 111 — Distributed On-Prem Scanner types

@@ -154,6 +154,13 @@ export function ScanJobPage() {
         Stage {data.stage_index} of 7 — {STAGE_DISPLAY_NAMES[data.current_stage ?? ""] ?? "—"}
       </p>
 
+      {data.current_stage === "discovery" && data.discovery_batch_total != null && (
+        <p className="text-sm text-muted-foreground">
+          Batch {data.discovery_batch_index} of {data.discovery_batch_total} —{" "}
+          {data.discovery_hosts_checked?.toLocaleString()} hosts checked
+        </p>
+      )}
+
       <Separator className="my-4" />
 
       {/* Metadata row */}
