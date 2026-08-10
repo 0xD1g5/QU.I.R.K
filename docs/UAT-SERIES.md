@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.10.0
-**Last Updated:** 2026-08-10 (Phase 144 wrap — Chunked Discovery Core: DISC-01/DISC-02, host-count reject gates removed and replaced with sequential 1024-host per-batch discovery loop with failure isolation + discovery-stage ScanCheckpoint. UAT-144-01/02 automated (54/54 tests), UAT-144-03 live end-to-end confirmed with one documented, root-caused, non-blocking environment caveat around nmap's timing engine on mostly-silent host lists — see deferred-items.md. Closes DISC-01, DISC-02.)
+**Last Updated:** 2026-08-10 (Phase 145 wrap — Liveness Pre-Pass: DISC-03, a cheap TCP-based
+`nmap -sn -PS<ports>` liveness probe now runs ahead of each discovery batch's full port sweep,
+skipping non-responsive hosts and recording them as `liveness_skip` rows, with a once-per-scan
+`privilege_fallback` advisory when raw-socket privilege cannot be confirmed. UAT-145-01/02
+automated (38/38 tests across the primitive and batch-loop layers); UAT-145-03 is the D-06
+non-root human-UAT gate. Closes DISC-03. Earlier: Phase 144 wrap — Chunked Discovery Core:
+DISC-01/DISC-02, host-count reject gates removed and replaced with sequential 1024-host
+per-batch discovery loop with failure isolation + discovery-stage ScanCheckpoint. UAT-144-01/02
+automated (54/54 tests), UAT-144-03 live end-to-end confirmed with one documented, root-caused,
+non-blocking environment caveat around nmap's timing engine on mostly-silent host lists — see
+deferred-items.md. Closes DISC-01, DISC-02.)
 live re-validated against the real `otics-modbus` chaos-lab simulator on a host with zero SSH
 candidates, after 141-08/141-11 fixed the inner and outer scanner gate bugs. UAT-141-04/06/07
 updated from Modbus-deferred to full PASS; OTICS-04 flipped to Complete.)
@@ -16354,3 +16364,111 @@ required): add timing-template/RTT-bound tuning (e.g. `-T4`, `--initial-rtt-time
 re-verify this exact scenario against a real routed network segment (not loopback aliases) where
 dead hosts return RST/ICMP-unreachable instead of staying silent. Logged in this phase's
 deferred-items.md.
+
+---
+
+## Series 145: Liveness Pre-Pass (Phase 145 — v5.11)
+
+**Last Updated:** 2026-08-10
+
+### UAT-145-01: Host-status parser + liveness probe primitives (DISC-03) — Automated
+
+**What to test:** `parse_nmap_host_status()` returns a row for every host nmap reports on
+(including `up=False` hosts that the existing sweep parser structurally drops), and the
+`-PS<ports>` liveness probe argument construction is allowlist-gated before any subprocess call.
+
+**Steps:**
+1. Run `pytest tests/test_nmap_parser.py tests/test_nmap_provider.py -x` — confirm all tests
+   pass, including `test_parse_host_status_up_and_down` and `test_liveness_port_spec_validated`.
+2. Confirm `parse_nmap_host_status()` returns a `NmapHostStatus(up=False, ...)` row for a
+   down host in a fixture XML, rather than omitting it (D-04: record, don't drop).
+3. Confirm an unsafe `port_spec_override` (e.g. `"443;rm"`) raises `ValueError` via
+   `_SAFE_NMAP_ARG_RE.fullmatch()` before `subprocess.run` is ever invoked.
+
+**Pass criteria:**
+- `pytest tests/test_nmap_parser.py tests/test_nmap_provider.py -x` exits 0
+- Down hosts survive parsing as `up=False` rows, not silently dropped
+- A crafted unsafe port-spec override raises `ValueError` pre-subprocess
+
+**Automated gate:** `pytest tests/test_nmap_parser.py tests/test_nmap_provider.py -x` → all
+green (Phase 145 Plan 01).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** automated (pytest — Phase 145 Plan 01)
+**Notes:** DISC-03, T-145-01, T-145-02. See 145-01-SUMMARY.md.
+
+---
+
+### UAT-145-02: Batch-loop pre-pass filtering, skip rows and privilege advisory (DISC-03, D-01/D-02/D-04/D-05) — Automated
+
+**What to test:** The Phase 144 nmap batch loop runs the liveness pre-pass ahead of each
+batch's sweep, produces one `liveness_skip` `CryptoEndpoint` row per non-responsive host, emits
+exactly one `privilege_fallback` advisory row per scan when raw-socket privilege cannot be
+confirmed, short-circuits a fully-dead batch before spawning a sweep subprocess, and never flips
+the discovery-stage `ScanCheckpoint` to `partial` because of normal liveness skips.
+
+**Steps:**
+1. Run `pytest tests/test_liveness_prepass.py -x` — confirm all 11 tests pass.
+2. Confirm `test_liveness_skip_appends_liveness_skip_category` shows per-host
+   `scan_error_category="liveness_skip"` rows with the real host address and `port=0`.
+3. Confirm `test_fallback_advisory_row_shape` shows a single `privilege_fallback` row with
+   `host="liveness-prepass"`, and that `_is_privileged()` is evaluated once per scan.
+4. Confirm `test_all_dead_batch_skips_sweep_call` shows zero sweep subprocess calls for a
+   fully non-responsive batch.
+5. Confirm `test_liveness_rows_excluded_from_discovery_partial_failures` shows liveness rows
+   never appear in `_collect_stage_partial_failures`'s snapshot.
+
+**Pass criteria:**
+- `pytest tests/test_liveness_prepass.py -x` exits 0 (11/11)
+- `liveness_endpoints` is merged into `error_endpoints` only after the discovery
+  `ScanCheckpoint` partial-failure snapshot is taken
+- A pre-pass `RuntimeError` sweeps the batch unfiltered (fail-open) rather than losing hosts
+
+**Automated gate:** `pytest tests/test_liveness_prepass.py -x` → 11/11 PASSED (Phase 145 Plan
+02).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** automated (pytest — Phase 145 Plan 02)
+**Notes:** DISC-03, D-01, D-02, D-04, D-05. See 145-02-SUMMARY.md.
+
+---
+
+### UAT-145-03: Real non-root liveness pre-pass + fallback disclosure (DISC-03, D-06) — Human (live)
+
+**What to test:** A real non-root `run_scan.py` process run against a live chaos-lab target
+confirms the privilege-fallback disclosure and per-host liveness-skip rows actually fire in
+practice — no automated signal exists that can distinguish nmap's SYN-probe fallback from its
+own output, so this is the D-06 human-run confirmation gate.
+
+**Steps:**
+1. Bring up the chaos lab `common` profile (`PROFILE_ARGS="--profile common" ./lab.sh up`) from
+   `quantum-chaos-enterprise-lab/` — no new lab profile is required for this test.
+2. From the repo root, in a **non-root shell** (confirm with `id -u` returning non-zero), run
+   `python run_scan.py` with nmap discovery enabled and `--allow-internal-targets`, scoped to a
+   range that includes both a live lab container address and at least one address known to be
+   dead.
+3. Confirm the console output shows the logger line disclosing the possible SYN→TCP-connect
+   degradation, plus per-batch `liveness pre-pass batch N: X responsive, Y skipped` lines.
+4. Query the scan DB:
+   `sqlite3 <db> "SELECT host, scan_error_category FROM crypto_endpoints WHERE scan_error_category IN ('liveness_skip','privilege_fallback');"`
+   — expect exactly one `privilege_fallback` row (`host='liveness-prepass'`) and one
+   `liveness_skip` row per dead address (real host address, `port=0`).
+5. Confirm the scan still completed and produced results for the live lab host — the pre-pass
+   must not cost coverage.
+6. Re-run the same scan with `sudo` and confirm the `privilege_fallback` row is **absent** while
+   the `liveness_skip` rows still appear.
+
+**Pass criteria:**
+- Non-root run produces exactly one `privilege_fallback` row (`host='liveness-prepass'`)
+- Non-root run produces one `liveness_skip` row per dead in-scope address (real host address,
+  `port=0`)
+- The scan completes and returns results for the live lab host
+- The `sudo` re-run produces zero `privilege_fallback` rows
+- This row's **Result** below records the observed outcome
+
+**Automated gate:** N/A — this UAT is inherently a live, human-verify checkpoint
+(`checkpoint:human-verify`, blocking gate per 145-03-PLAN.md Task 3).
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP — pending Task 3 human sign-off
+**Date:** pending  **Tester:** pending
+**Notes:** DISC-03, D-06, T-145-05. See 145-03-PLAN.md Task 3 for the full manual walkthrough.
