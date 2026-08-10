@@ -16,7 +16,7 @@ Requirements for this milestone. Each maps to roadmap phases.
       entire discovery job — other batches still complete and get scanned
 - [x] **DISC-03**: Discovery uses a TCP-SYN/ACK liveness pre-pass (not ICMP) to skip full port
       sweeps on non-responsive hosts, preserving reliability in segmented/firewalled networks
-- [ ] **DISC-04**: Operator sees incremental discovery progress (batch N of M / hosts checked)
+- [x] **DISC-04**: Operator sees incremental discovery progress (batch N of M / hosts checked)
       while a large-range scan runs, instead of silence until success or failure
 - [x] **DISC-05**: Discovery timeout and parallelism scale to each batch's size rather than one
       fixed value guessed for any range size
@@ -73,7 +73,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-01 | Phase 144 | Complete |
 | DISC-02 | Phase 144 | Complete |
 | DISC-03 | Phase 145 | Complete |
-| DISC-04 | Phase 146 | Pending |
+| DISC-04 | Phase 146 | Complete |
 | DISC-05 | Phase 146 | Complete |
 | DISC-06 | Phase 146 | Complete |
 | DISC-07 | Phase 146 | Complete |

@@ -155,7 +155,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 146-04-PLAN.md — Wire progress writes, per-batch timeout/timing, and CLI stdout progress into run_scan.py's batch loop; remove jobs.py's static --nmap-timeout 300 (DISC-04, DISC-05, DISC-06)
+- [x] 146-04-PLAN.md — Wire progress writes, per-batch timeout/timing, and CLI stdout progress into run_scan.py's batch loop; remove jobs.py's static --nmap-timeout 300 (DISC-04, DISC-05, DISC-06)
 - [ ] 146-05-PLAN.md — Dashboard scan-job discovery batch sub-line + JobStatus TS type (DISC-04)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -195,7 +195,7 @@ milestones — independent of the discovery-at-scale work, safe to sequence in p
 |-------|----------------|--------|-----------|
 | 144. Chunked Discovery Core | 3/3 | Complete   | 2026-08-10 |
 | 145. Liveness Pre-Pass | 3/3 | Complete   | 2026-08-10 |
-| 146. Progress, Scaling & Disclosure | 3/6 | In Progress|  |
+| 146. Progress, Scaling & Disclosure | 4/6 | In Progress|  |
 | 147. Backlog Drain — Lifecycle & Ledger Tail | 0/TBD | Not started | - |
 
 ---
