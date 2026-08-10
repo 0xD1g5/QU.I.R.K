@@ -1388,7 +1388,75 @@ with `scan_error_category="liveness_skip"` and the real host address, so a skipp
 is never silently dropped from the record. See `docs/report-interpretation.md` for how
 to interpret `liveness_skip` and `privilege_fallback` rows in a delivered report.
 
-> **Operator note:** counting/surfacing the total number of undetermined (skipped)
-> hosts in the report summary itself is Phase 146 work (DISC-07) — this phase only
-> produces the underlying `liveness_skip`/`privilege_fallback` rows that Phase 146
-> consumes.
+> **Operator note:** the total number of undetermined (skipped) hosts is now surfaced
+> as an aggregate "Hosts undetermined" count in every report surface — see
+> `docs/report-interpretation.md` §13.
+
+## 11. Chunked Discovery Progress and Per-Batch Scaling
+
+As of Phase 146 (DISC-04/DISC-05/DISC-06), the chunked nmap discovery batch loop
+introduced in Phase 144 reports its own progress in real time and scales each batch's
+nmap subprocess timeout and timing aggressiveness to that batch's own size.
+
+### 11.1 Where batch progress appears (DISC-04)
+
+- **Dashboard:** the scan-job page renders a muted sub-line beneath the stage progress
+  bar — "Batch N of M — X hosts checked" — while the current stage is `discovery`. It
+  appears only after the first batch completes and disappears once discovery finishes.
+  This is driven entirely by the existing job-status poll; no separate endpoint or
+  websocket is used.
+- **CLI:** on `--discovery nmap` runs, a line prints to stdout once per completed batch:
+
+  ```
+  Discovery: batch N/M (X hosts checked)
+  ```
+
+  This line is suppressed when `--quiet` is set. Both the dashboard fields and the CLI
+  line are written from the exact same batch-loop bookkeeping in `run_scan.py`, so the
+  numbers always agree.
+
+### 11.2 Per-batch timeout scaling (DISC-05)
+
+Each nmap subprocess call inside the batch loop (both the Phase 145 liveness pre-pass
+and the full discovery sweep) now receives a timeout computed per batch instead of a
+single fixed value for the whole scan:
+
+```
+timeout_seconds = min(300, 30 + 0.26 * batch_size)
+```
+
+- **Base:** 30 seconds.
+- **Per-host scaling:** 0.26 seconds added per host in the batch.
+- **Ceiling:** clamped to 300 seconds — the same ceiling the pre-Phase-146 fixed timeout
+  used, so no batch can run longer than before. A small batch (e.g. one host) finishes
+  its timeout budget in well under a second over the base; a full 1024-host batch stays
+  at or below the 300s ceiling.
+
+### 11.3 Per-batch timing template (DISC-05/DISC-06/DISC-07)
+
+Alongside the timeout, each batch also selects an nmap `-T` timing template based on its
+own size: `-T4` (aggressive) for batches at or below 256 hosts, `-T3` (normal) for
+batches larger than that. In practice this only changes nmap's RTT-probe timing —
+`_default_nmap_args` already hardcodes `--max-retries 1`, `--host-timeout 10s`, and
+`--max-parallelism 100`, and per verified nmap documentation those explicit flags
+override the `-T` template's own defaults for those specific values regardless of argv
+order.
+
+### 11.4 `--nmap-timeout` no longer governs chunked discovery
+
+The CLI's `--nmap-timeout` flag no longer applies inside the Phase 144 chunked discovery
+batch loop — the per-batch formula in §11.2 fully replaces it there. The dashboard's
+spawned `run_scan.py` subprocess also no longer passes a static `--nmap-timeout 300`
+argument, since that static value could otherwise silently override the per-batch
+formula; the 300s ceiling is now enforced entirely by the formula's own clamp. The flag
+remains meaningful for any future non-batched discovery code path and its `--help` text
+reflects this.
+
+### 11.5 CLI and dashboard share one discovery implementation (DISC-06)
+
+The dashboard does not run its own separate discovery logic — it spawns the same
+`run_scan.py` CLI entry point as a subprocess, so both surfaces execute exactly one
+discovery code path. This is locked by a static/AST-based regression test
+(`tests/test_cli_dashboard_discovery_parity.py`) asserting a single call site each for
+`run_nmap_discovery()` and `run_nmap_liveness_check()`, both lexically inside the Phase
+144 batch loop, and confirming `jobs.py` never calls `run_nmap_discovery(` directly.

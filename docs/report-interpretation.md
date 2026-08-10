@@ -455,9 +455,53 @@ are informational context, not part of the scored findings surface.
 > process didn't have elevated privileges when it ran, so that pre-check step used a
 > slightly slower method — your results are still complete and valid either way."
 
-A report-level count of undetermined/skipped hosts in the executive summary is Phase
-146 work (DISC-07) — this phase produces the underlying per-host rows that summary will
-consume; it is not yet surfaced as an aggregate in the report itself.
+See §13 below for the aggregate "Hosts undetermined" count that these per-host rows
+feed into the executive summary.
+
+## 13. Undetermined-Host Disclosure (Phase 146)
+
+As of Phase 146 (DISC-07), every report surface — the CLI markdown executive summary,
+the HTML report, the DOCX report, and the end-of-scan terminal summary table — discloses
+one combined **"Hosts undetermined (unreachable/filtered)"** count. This is the sum of
+two `scan_error_category` values recorded against port-0 `CryptoEndpoint` rows:
+
+- `exception` — a discovery batch raised an exception during the port sweep (Phase 144).
+- `liveness_skip` — a host did not respond to the liveness pre-pass and was excluded
+  from the sweep entirely (Phase 145, see §12 above).
+
+All four surfaces read this count (and, where space allows, its `exception`/
+`liveness_skip` breakdown) from one shared field —
+`ExecContent.undetermined_hosts_count` / `.undetermined_hosts_breakdown` — computed once
+in `quirk/reports/writer.py` and never recomputed per-renderer. In the CLI markdown
+executive summary it appears as a bullet in the "Discovery and Coverage" section; in the
+HTML report as a `meta-table` row (with the breakdown shown when non-empty); in the DOCX
+report as an Executive Summary paragraph; and in the terminal summary table as a "Hosts
+undetermined" row directly beneath "Hosts scanned".
+
+**This count is not a scan-health signal.** A high `liveness_skip` count is a normal,
+expected outcome on a sparse or segmented range — most addresses in a large CIDR often
+simply have nothing listening — and is unrelated to whether the discovery stage's
+`ScanCheckpoint` recorded a partial failure. Only the `exception` portion of the
+breakdown indicates something the discovery batch loop could not complete; even then, a
+non-zero `exception` count does not by itself mean the overall scan failed, since a
+single batch's exception is isolated from the batches around it.
+
+> **Client Conversation — Undetermined Hosts:**
+> "This report tells you exactly how many addresses in the scanned range we could not
+> get a definitive answer from — either because a sweep batch hit an internal error, or
+> because the address never responded to our liveness check in the first place. On a
+> large, mostly-empty range that second number is usually the biggest contributor, and
+> that's completely expected — it doesn't mean anything went wrong with the scan, it
+> just means those addresses have nothing running on them (or are filtered from
+> reaching us at all)."
+
+### Dashboard discovery batch sub-line
+
+While a scan is in the discovery stage, the dashboard's job page renders a muted
+sub-line beneath the stage progress bar reading "Batch N of M — X hosts checked". It
+appears only once the first discovery batch has completed (so there is never a "batch 1
+of ?" state) and disappears entirely once the job advances past the discovery stage. See
+`docs/operators-guide.md` §11 for the underlying batch-progress mechanism.
 
 ---
 
