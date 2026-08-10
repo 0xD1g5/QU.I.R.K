@@ -19,6 +19,13 @@ class NmapOpenPort:
     service: Optional[str] = None
 
 
+@dataclass
+class NmapHostStatus:
+    host: str
+    up: bool
+    reason: str
+
+
 def parse_nmap_xml(xml_path: str) -> List[NmapOpenPort]:
     """
     Parse Nmap XML output and return a list of open ports.
@@ -73,6 +80,45 @@ def parse_nmap_xml(xml_path: str) -> List[NmapOpenPort]:
                 continue
 
             results.append(NmapOpenPort(host=addr, port=p, protocol=proto, service=svc_name))
+
+    return results
+
+
+def parse_nmap_host_status(xml_path: str) -> List[NmapHostStatus]:
+    """
+    Parse Nmap XML output (typically from a `-sn -PS<ports>` liveness pre-pass)
+    and return one NmapHostStatus row for EVERY host nmap reported on, up or
+    down. Unlike `parse_nmap_xml()`, this function deliberately does NOT skip
+    down hosts — Phase 145 / DISC-03 / D-04 requires the liveness pre-pass to
+    record non-responsive hosts rather than silently drop them.
+    """
+    tree = ET.parse(xml_path, parser=make_safe_parser())
+    root = tree.getroot()
+
+    results: List[NmapHostStatus] = []
+
+    for host_el in root.findall("host"):
+        status_el = host_el.find("status")
+        if status_el is None:
+            continue
+
+        up = status_el.get("state") == "up"
+        reason = status_el.get("reason") or ""
+
+        # Prefer IPv4, then any address
+        addr = None
+        for addr_el in host_el.findall("address"):
+            if addr_el.get("addrtype") == "ipv4":
+                addr = addr_el.get("addr")
+                break
+        if addr is None:
+            addr_el = host_el.find("address")
+            addr = addr_el.get("addr") if addr_el is not None else None
+
+        if not addr:
+            continue
+
+        results.append(NmapHostStatus(host=addr, up=up, reason=reason))
 
     return results
 
