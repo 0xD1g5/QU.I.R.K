@@ -5,8 +5,13 @@
 `nmap -sn -PS<ports>` liveness probe now runs ahead of each discovery batch's full port sweep,
 skipping non-responsive hosts and recording them as `liveness_skip` rows, with a once-per-scan
 `privilege_fallback` advisory when raw-socket privilege cannot be confirmed. UAT-145-01/02
-automated (38/38 tests across the primitive and batch-loop layers); UAT-145-03 is the D-06
-non-root human-UAT gate. Closes DISC-03. Earlier: Phase 144 wrap — Chunked Discovery Core:
+automated (38/38 tests across the primitive and batch-loop layers, now 40/40 post-bugfix);
+UAT-145-03 is the D-06 non-root human-UAT gate — PASSED live 2026-08-10 against a real dev-machine
+loopback range (non-root + sudo re-run). Live verification surfaced and fixed a real defect: nmap's
+`-sn -PS` down-host accounting is only exposed via the aggregate `<runstats>` summary, not
+per-host `<host state="down">` elements, so the original implementation silently skipped nothing
+on any real subnet sweep — see `quirk/discovery/nmap_parser.py::parse_nmap_run_summary`. Closes
+DISC-03. Earlier: Phase 144 wrap — Chunked Discovery Core:
 DISC-01/DISC-02, host-count reject gates removed and replaced with sequential 1024-host
 per-batch discovery loop with failure isolation + discovery-stage ScanCheckpoint. UAT-144-01/02
 automated (54/54 tests), UAT-144-03 live end-to-end confirmed with one documented, root-caused,
@@ -16469,6 +16474,19 @@ own output, so this is the D-06 human-run confirmation gate.
 **Automated gate:** N/A — this UAT is inherently a live, human-verify checkpoint
 (`checkpoint:human-verify`, blocking gate per 145-03-PLAN.md Task 3).
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP — pending Task 3 human sign-off
-**Date:** pending  **Tester:** pending
-**Notes:** DISC-03, D-06, T-145-05. See 145-03-PLAN.md Task 3 for the full manual walkthrough.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** human (live, non-root + sudo re-run against real dev-machine
+loopback range — chaos lab `common` profile not required for this pass since the loopback range
+already provided both live and dead addresses)
+**Notes:** DISC-03, D-06, T-145-05. Live verification against `127.0.0.1/24, 172.0.0.1` surfaced a
+real bugfix mid-verification: the first non-root run showed `255 responsive, 0 skipped` despite
+nmap's own summary reporting `2 up, 253 down` — `run_nmap_liveness_check()` was building its
+down-host set exclusively from explicit `<host state="down">` XML elements, which real nmap does
+NOT emit for non-responsive hosts in a `-sn -PS` subnet sweep (only up hosts get an individual
+`<host>` block; the down count is only in the aggregate `<runstats><hosts total up down/>`
+summary). Fixed by cross-checking `parse_nmap_run_summary()`'s runstats data — see
+`quirk/discovery/nmap_parser.py::parse_nmap_run_summary` and the updated
+`run_nmap_liveness_check()`. Re-verified post-fix: non-root run correctly reported
+`2 responsive, 253 skipped` with matching DB rows (253 `liveness_skip` + 1 `privilege_fallback`,
+host=`liveness-prepass`); sudo re-run added zero new `privilege_fallback` rows and the console
+advisory line did not print. See 145-03-PLAN.md Task 3 for the full manual walkthrough.
