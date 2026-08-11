@@ -137,7 +137,7 @@ Plans:
 - [x] 148-01-PLAN.md — Dry-run mechanism in release.yml (workflow_dispatch + tag-ref guards + dry-run artifact) [RELEASE-02]
 - [x] 148-02-PLAN.md — Scheduled tag-hygiene guard + testable decision script + baseline [RELEASE-03]
 - [x] 148-03-PLAN.md — v5.11.0 PyPI-only disposition notes + GitHub Release body [RELEASE-04]
-- [ ] 148-04-PLAN.md — Live proof: green dry-run, live guard run, bare v5.11.0 Release [RELEASE-02/03/04]
+- [x] 148-04-PLAN.md — Live proof: green dry-run, live guard run, bare v5.11.0 Release [RELEASE-02/03/04]
 
 #### Phase 149: Test Suite Triage
 
@@ -266,7 +266,7 @@ dogfooding it immediately)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 148. Release Pipeline Repair + Windows Asset Backfill | 3/4 | In Progress|  |
+| 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete   | 2026-08-11 |
 | 149. Test Suite Triage | 0/TBD | Not started | - |
 | 150. Test Suite Green Baseline + CI Gate | 0/TBD | Not started | - |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
