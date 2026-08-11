@@ -465,11 +465,14 @@ the HTML report, the DOCX report, and the end-of-scan terminal summary table —
 one combined **"Hosts undetermined (unreachable/filtered)"** count. This is the sum of
 two `scan_error_category` values recorded against port-0 `CryptoEndpoint` rows:
 
-- `exception` — a discovery batch raised an exception during the port sweep (Phase 144).
+- `discovery_exception` — a discovery batch raised an exception during the port sweep
+  (Phase 144). This is intentionally a distinct category from the generic `exception`
+  value used elsewhere in the scanner for unrelated stage crashes (TLS, SSH, JWT, and so
+  on) — those never count toward "hosts undetermined" (CR-01).
 - `liveness_skip` — a host did not respond to the liveness pre-pass and was excluded
   from the sweep entirely (Phase 145, see §12 above).
 
-All four surfaces read this count (and, where space allows, its `exception`/
+All four surfaces read this count (and, where space allows, its `discovery_exception`/
 `liveness_skip` breakdown) from one shared field —
 `ExecContent.undetermined_hosts_count` / `.undetermined_hosts_breakdown` — computed once
 in `quirk/reports/writer.py` and never recomputed per-renderer. In the CLI markdown
@@ -481,10 +484,10 @@ undetermined" row directly beneath "Hosts scanned".
 **This count is not a scan-health signal.** A high `liveness_skip` count is a normal,
 expected outcome on a sparse or segmented range — most addresses in a large CIDR often
 simply have nothing listening — and is unrelated to whether the discovery stage's
-`ScanCheckpoint` recorded a partial failure. Only the `exception` portion of the
-breakdown indicates something the discovery batch loop could not complete; even then, a
-non-zero `exception` count does not by itself mean the overall scan failed, since a
-single batch's exception is isolated from the batches around it.
+`ScanCheckpoint` recorded a partial failure. Only the `discovery_exception` portion of
+the breakdown indicates something the discovery batch loop could not complete; even
+then, a non-zero `discovery_exception` count does not by itself mean the overall scan
+failed, since a single batch's exception is isolated from the batches around it.
 
 > **Client Conversation — Undetermined Hosts:**
 > "This report tells you exactly how many addresses in the scanned range we could not

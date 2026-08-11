@@ -354,8 +354,8 @@ def test_compute_undetermined_hosts_mixed_list():
     """Phase 146 D-08/D-09 / Pitfall-3: only port==0 discovery-stage rows count.
 
     (a) port=0, liveness_skip -> counted
-    (b) port=0, exception -> counted
-    (c) port=443, exception -> excluded (live host with a scan error, not undetermined)
+    (b) port=0, discovery_exception -> counted
+    (c) port=443, discovery_exception -> excluded (live host with a scan error, not undetermined)
     (d) port=0, missing_extra -> excluded (not a discovery-stage category)
     (e) normal scanned endpoint, no scan_error_category -> excluded
     """
@@ -365,19 +365,38 @@ def test_compute_undetermined_hosts_mixed_list():
 
     endpoints = [
         SimpleNamespace(port=0, scan_error_category="liveness_skip"),
-        SimpleNamespace(port=0, scan_error_category="exception"),
-        SimpleNamespace(port=443, scan_error_category="exception"),
+        SimpleNamespace(port=0, scan_error_category="discovery_exception"),
+        SimpleNamespace(port=443, scan_error_category="discovery_exception"),
         SimpleNamespace(port=0, scan_error_category="missing_extra"),
         SimpleNamespace(port=443),
     ]
     count, breakdown = _compute_undetermined_hosts(endpoints)
     assert count == 2
-    assert breakdown == {"exception": 1, "liveness_skip": 1}
+    assert breakdown == {"discovery_exception": 1, "liveness_skip": 1}
+
+
+def test_compute_undetermined_hosts_excludes_generic_wrapped_phase_exception():
+    """CR-01 regression: _wrapped_phase()'s generic "exception" category (used by every
+    non-discovery scanner stage — TLS, SSH, JWT, container, ...) must NEVER be counted as
+    an undetermined host, even at port=0, since its host field is a scanner label
+    (e.g. "tls_scanner"), not a target host.
+    """
+    from types import SimpleNamespace
+
+    from quirk.reports.writer import _compute_undetermined_hosts
+
+    endpoints = [
+        SimpleNamespace(host="tls_scanner", port=0, scan_error_category="exception"),
+        SimpleNamespace(host="discovery-batch-3", port=0, scan_error_category="discovery_exception"),
+    ]
+    count, breakdown = _compute_undetermined_hosts(endpoints)
+    assert count == 1
+    assert breakdown == {"discovery_exception": 1, "liveness_skip": 0}
 
 
 def test_compute_undetermined_hosts_empty_and_none():
     """Empty/None input returns zero count and a fully-keyed zero breakdown."""
     from quirk.reports.writer import _compute_undetermined_hosts
 
-    assert _compute_undetermined_hosts(None) == (0, {"exception": 0, "liveness_skip": 0})
-    assert _compute_undetermined_hosts([]) == (0, {"exception": 0, "liveness_skip": 0})
+    assert _compute_undetermined_hosts(None) == (0, {"discovery_exception": 0, "liveness_skip": 0})
+    assert _compute_undetermined_hosts([]) == (0, {"discovery_exception": 0, "liveness_skip": 0})

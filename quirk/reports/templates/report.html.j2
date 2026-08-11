@@ -374,7 +374,7 @@
          row labels are plain literal text. #}
       <tr><td>Hosts undetermined</td><td>{{ undetermined_hosts_count }}</td></tr>
       {% if undetermined_hosts_count > 0 %}
-      <tr><td>Undetermined breakdown</td><td>no response to liveness pre-pass: {{ undetermined_hosts_breakdown.liveness_skip | default(0) }}; discovery batch errors: {{ undetermined_hosts_breakdown.exception | default(0) }}</td></tr>
+      <tr><td>Undetermined breakdown</td><td>no response to liveness pre-pass: {{ undetermined_hosts_breakdown.liveness_skip | default(0) }}; discovery batch errors: {{ undetermined_hosts_breakdown.discovery_exception | default(0) }}</td></tr>
       {% endif %}
     </table>
 

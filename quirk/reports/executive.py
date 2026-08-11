@@ -300,7 +300,7 @@ def build_exec_markdown(
     lines.append(f"- **Hosts undetermined (unreachable/filtered):** {_undetermined_n}")
     if _undetermined_n > 0:
         _liveness_skip_n = _undetermined_breakdown.get("liveness_skip", 0)
-        _exception_n = _undetermined_breakdown.get("exception", 0)
+        _exception_n = _undetermined_breakdown.get("discovery_exception", 0)
         lines.append(f"  - no response to liveness pre-pass: {_liveness_skip_n}")
         lines.append(f"  - discovery batch errors: {_exception_n}")
     lines.append("")

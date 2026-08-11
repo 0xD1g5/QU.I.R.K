@@ -85,9 +85,11 @@ class ExecContent:
 
     # Phase 146 D-08/D-09: undetermined-host disclosure (DISC-07). Populated by writer.py's
     # _compute_undetermined_hosts() from the in-memory endpoints list — no DB query. Breakdown
-    # keys are "exception" (Phase 144 discovery-batch errors) and "liveness_skip" (Phase 145
-    # no-response-to-liveness-pre-pass rows). Defaults keep every pre-existing ExecContent(...)
-    # construction in the test suite working unmodified.
+    # keys are "discovery_exception" (Phase 144 discovery-batch errors — CR-01: deliberately
+    # distinct from _wrapped_phase()'s generic "exception" category used by every other
+    # scanner stage) and "liveness_skip" (Phase 145 no-response-to-liveness-pre-pass rows).
+    # Defaults keep every pre-existing ExecContent(...) construction in the test suite
+    # working unmodified.
     undetermined_hosts_count: int = 0
     undetermined_hosts_breakdown: Dict[str, int] = field(default_factory=dict)
 

@@ -341,7 +341,7 @@ def render_docx_report(
     )
     if undetermined_hosts_count > 0:
         _liveness_skip_n = undetermined_hosts_breakdown.get("liveness_skip", 0)
-        _exception_n = undetermined_hosts_breakdown.get("exception", 0)
+        _exception_n = undetermined_hosts_breakdown.get("discovery_exception", 0)
         doc.add_paragraph(
             f"  no response to liveness pre-pass: {_liveness_skip_n}; "
             f"discovery batch errors: {_exception_n}",

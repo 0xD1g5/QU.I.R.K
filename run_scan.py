@@ -780,11 +780,11 @@ def main():
     parser.add_argument(
         "--nmap-timeout", type=int, default=1800,
         help=(
-            "Nmap discovery timeout seconds. Phase 146 DISC-05: no longer "
-            "applies to the chunked nmap discovery batch loop, where the "
+            "Deprecated, currently has no effect. Phase 146 DISC-05: nmap "
+            "discovery always runs through the chunked batch loop, whose "
             "per-batch timeout budget is derived from batch size via "
-            "discovery_timeout_for_batch(); it remains in effect only for "
-            "any non-batched discovery code path."
+            "discovery_timeout_for_batch() (min(300, 30 + 0.26 * batch_size) "
+            "seconds); there is no remaining code path that reads this flag."
         ),
     )
     parser.add_argument("--nmap-extra-args", default="", help='Extra nmap args (quoted), e.g. "-sS" if admin')
@@ -1473,7 +1473,10 @@ def main():
                                 port=0,
                                 protocol="ERROR",
                                 scan_error=str(exc) or exc.__class__.__name__,
-                                scan_error_category="exception",
+                                # Phase 146 CR-01: distinct from _wrapped_phase()'s generic
+                                # "exception" category (20+ non-discovery call sites) so a
+                                # TLS/SSH/etc. crash can never inflate "hosts undetermined".
+                                scan_error_category="discovery_exception",
                             ))
 
                     # Phase 146 / DISC-04/DISC-05/DISC-06, D-02/D-03/D-13:

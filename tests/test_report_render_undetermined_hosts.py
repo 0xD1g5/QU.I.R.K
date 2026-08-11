@@ -68,7 +68,7 @@ def test_markdown_shows_undetermined_headline_and_breakdown():
     """build_exec_markdown renders the headline + count and both breakdown sub-bullets."""
     from quirk.reports.executive import build_exec_markdown
 
-    exec_content = _make_exec_content(3, {"exception": 1, "liveness_skip": 2})
+    exec_content = _make_exec_content(3, {"discovery_exception": 1, "liveness_skip": 2})
     cfg = _make_minimal_cfg()
 
     output = build_exec_markdown(
@@ -91,7 +91,7 @@ def test_markdown_zero_count_omits_breakdown():
     but omits the breakdown sub-bullets."""
     from quirk.reports.executive import build_exec_markdown
 
-    exec_content = _make_exec_content(0, {"exception": 0, "liveness_skip": 0})
+    exec_content = _make_exec_content(0, {"discovery_exception": 0, "liveness_skip": 0})
     cfg = _make_minimal_cfg()
 
     output = build_exec_markdown(
@@ -115,7 +115,7 @@ def test_html_shows_undetermined_headline_and_count(tmp_path):
     """render_html_report writes a file whose text contains the label and the count."""
     from quirk.reports.html_renderer import render_html_report
 
-    exec_content = _make_exec_content(2, {"exception": 2, "liveness_skip": 0})
+    exec_content = _make_exec_content(2, {"discovery_exception": 2, "liveness_skip": 0})
     cfg = _make_minimal_cfg()
     html_path = os.path.join(str(tmp_path), "undetermined-test.html")
 
@@ -151,7 +151,7 @@ def test_docx_shows_undetermined_headline_and_count(tmp_path):
 
     from quirk.reports.docx_renderer import render_docx_report
 
-    exec_content = _make_exec_content(5, {"exception": 1, "liveness_skip": 4})
+    exec_content = _make_exec_content(5, {"discovery_exception": 1, "liveness_skip": 4})
     cfg = _make_minimal_cfg()
     docx_path = os.path.join(str(tmp_path), "undetermined-test.docx")
 
@@ -183,7 +183,7 @@ def test_cross_surface_parity_undetermined_count(tmp_path):
     from quirk.reports.html_renderer import render_html_report
     from quirk.reports.docx_renderer import render_docx_report
 
-    exec_content = _make_exec_content(7, {"exception": 3, "liveness_skip": 4})
+    exec_content = _make_exec_content(7, {"discovery_exception": 3, "liveness_skip": 4})
     cfg = _make_minimal_cfg()
 
     md_output = build_exec_markdown(
@@ -233,9 +233,23 @@ def test_compute_undetermined_hosts_excludes_non_discovery_rows():
     from quirk.reports.writer import _compute_undetermined_hosts
 
     endpoints = [
-        SimpleNamespace(port=443, scan_error_category="exception"),
+        SimpleNamespace(port=443, scan_error_category="discovery_exception"),
         SimpleNamespace(port=0, scan_error_category="missing_extra"),
     ]
     count, breakdown = _compute_undetermined_hosts(endpoints)
     assert count == 0
-    assert breakdown == {"exception": 0, "liveness_skip": 0}
+    assert breakdown == {"discovery_exception": 0, "liveness_skip": 0}
+
+
+def test_compute_undetermined_hosts_excludes_generic_wrapped_phase_exception():
+    """CR-01 regression: _wrapped_phase()'s generic "exception" category — used by every
+    non-discovery scanner stage (TLS, SSH, JWT, container, ...) — must NOT be counted as
+    undetermined, even at port=0, since its host field is a scanner label, not a target host."""
+    from quirk.reports.writer import _compute_undetermined_hosts
+
+    endpoints = [
+        SimpleNamespace(host="tls_scanner", port=0, scan_error_category="exception"),
+    ]
+    count, breakdown = _compute_undetermined_hosts(endpoints)
+    assert count == 0
+    assert breakdown == {"discovery_exception": 0, "liveness_skip": 0}

@@ -28,23 +28,31 @@ def _compute_undetermined_hosts(endpoints) -> tuple:
     """Phase 146 D-08/D-09 (DISC-07): pure count of hosts that could not be determined.
 
     Filters `endpoints` to rows where `port == 0` AND `scan_error_category` is one of
-    ("exception", "liveness_skip") — the two Phase 144/145 discovery-stage advisory
-    categories. Returns `(count, breakdown)` where breakdown always carries both keys,
-    even when zero.
+    ("discovery_exception", "liveness_skip") — the two Phase 144/145 discovery-stage
+    advisory categories. Returns `(count, breakdown)` where breakdown always carries
+    both keys, even when zero.
 
     Pitfall-3 invariant: `error_endpoints` (which feeds `endpoints`) accumulates
     advisory rows from EVERY scan stage, not just discovery — a bare
     `len(error_endpoints)` would overcount. The `port == 0` conjunct is load-bearing:
     a TLS/SSH/API handshake error on a live, fully-scanned host (port != 0) must NOT
     be counted as undetermined.
+
+    CR-01: `scan_error_category` MUST NOT be the generic `"exception"` value that
+    `_wrapped_phase()` in run_scan.py uses for uncaught exceptions in every other
+    scanner stage (TLS, SSH, JWT, container, ...) — that value's `port=0` rows use
+    a scanner-name label (e.g. "tls_scanner"), not a target host, and filtering on
+    it here would conflate an unrelated scanner crash with host unreachability.
+    Discovery-batch failures use the dedicated "discovery_exception" category
+    instead (see run_scan.py's discovery batch loop).
     """
-    breakdown = {"exception": 0, "liveness_skip": 0}
+    breakdown = {"discovery_exception": 0, "liveness_skip": 0}
     count = 0
     for ep in (endpoints or []):
         if getattr(ep, "port", None) != 0:
             continue
         category = getattr(ep, "scan_error_category", None)
-        if category not in ("exception", "liveness_skip"):
+        if category not in ("discovery_exception", "liveness_skip"):
             continue
         breakdown[category] += 1
         count += 1
