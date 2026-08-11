@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
 status: executing
-stopped_at: Completed 147-01-PLAN.md
-last_updated: "2026-08-11T12:22:20.350Z"
+stopped_at: Completed 147-02-PLAN.md
+last_updated: "2026-08-11T13:39:47.358Z"
 last_activity: 2026-08-11
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 27
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 147 (backlog-drain-lifecycle-ledger-tail) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-11
 
@@ -147,6 +147,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 146]: 146-04: Combined Tasks 1+2 into one commit since both edit the exact same discovery-loop-body statements (pre-count/progress-write + timeout/timing scaling); resolved Open Q1 as batch formula fully replacing args.nmap_timeout inside the loop, and Open Qs 2/3 as accepting one throwaway O(n) pre-count pass so the dashboard batch total is correct from batch 1
 - [Phase 146]: 146-05 executed exactly per PATTERNS.md conditional shape — no deviations
 - [Phase 147]: DRAIN-01 — hoisted run_ot_supplemental_and_persist() above run_scan.py's ssh-stage if/else so a --resume-scan-id continuation still fingerprints OT-only (Modbus/BACnet) hosts; ssh-stage checkpoint write stays fresh-run-branch-only, reordered before the hoisted (advisory) hardware persist
+- [Phase 147]: D-147-02-A: build-catalog (option a) — user confirmed via orchestrator checkpoint before plan dispatch
 
 ### Pending Todos
 
@@ -220,11 +221,12 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 | Phase 146 P04 | 20min | 3 tasks | 3 files |
 | Phase 146 P05 | 10min | 1 tasks | 4 files |
 | Phase 147 P01 | 12min | 3 tasks | 2 files |
+| Phase 147 P02 | 35min | 5 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-08-11T12:22:20.344Z
-Stopped at: Completed 147-01-PLAN.md
+Last session: 2026-08-11T13:39:47.352Z
+Stopped at: Completed 147-02-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

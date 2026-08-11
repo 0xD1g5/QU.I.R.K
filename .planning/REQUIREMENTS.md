@@ -29,7 +29,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **DRAIN-01**: A `--resume-scan-id` continuation no longer skips OT-only hosts when the
       SSH stage was already checkpointed complete
-- [ ] **DRAIN-02**: The hardware CVE table has an explicit, documented decision on BACnet key
+- [x] **DRAIN-02**: The hardware CVE table has an explicit, documented decision on BACnet key
       coverage (real vendor entry added, or formally marked lab-only/out of scope)
 - [ ] **DRAIN-03**: The 2026-05-27 audit ledger has zero rows with an undecided or stale
       disposition — already-fixed rows flipped to `[x] closed` with commit citations, WR-02/CD-03
@@ -78,6 +78,6 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-06 | Phase 146 | Complete |
 | DISC-07 | Phase 146 | Complete |
 | DRAIN-01 | Phase 147 | Complete |
-| DRAIN-02 | Phase 147 | Pending |
+| DRAIN-02 | Phase 147 | Complete |
 | DRAIN-03 | Phase 147 | Pending |
 | DRAIN-04 | Phase 147 | Pending |

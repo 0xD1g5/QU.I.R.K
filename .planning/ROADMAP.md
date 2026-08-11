@@ -193,7 +193,7 @@ Plans:
 **Wave 1**
 
 - [x] 147-01-PLAN.md — Hoist the OT/ICS supplemental pass out of the ssh-stage if/else so `--resume-scan-id` covers OT-only hosts (DRAIN-01)
-- [ ] 147-02-PLAN.md — Curated BACnet vendor-ID + model-family resolution making the Facility Explorer CVE entry reachable (DRAIN-02)
+- [x] 147-02-PLAN.md — Curated BACnet vendor-ID + model-family resolution making the Facility Explorer CVE entry reachable (DRAIN-02)
 - [ ] 147-03-PLAN.md — Port-aware CORS default (WR-02) + full 2026-05-27 audit-ledger reconciliation incl. CD-03 disposition (DRAIN-03)
 - [ ] 147-04-PLAN.md — STATE.md deferred-item re-triage + Authenticode item folded in with user confirmation (DRAIN-04)
 
@@ -204,7 +204,7 @@ Plans:
 | 144. Chunked Discovery Core | 3/3 | Complete   | 2026-08-10 |
 | 145. Liveness Pre-Pass | 3/3 | Complete   | 2026-08-10 |
 | 146. Progress, Scaling & Disclosure | 6/6 | Complete    | 2026-08-11 |
-| 147. Backlog Drain — Lifecycle & Ledger Tail | 1/4 | In Progress|  |
+| 147. Backlog Drain — Lifecycle & Ledger Tail | 2/4 | In Progress|  |
 
 ---
 
