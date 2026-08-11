@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: verifying
-stopped_at: Completed 147-04-PLAN.md
-last_updated: "2026-08-11T14:05:00.037Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 147 was final phase)
+last_updated: 2026-08-11T14:09:28.367Z
 last_activity: 2026-08-11
 progress:
   total_phases: 11
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 147 — backlog-drain-lifecycle-ledger-tail
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 147 (backlog-drain-lifecycle-ledger-tail) — COMPLETE (4 of 4 plans)
-Plan: 4 of 4 (147-04 complete)
-Status: Phase complete — ready for verification
+Phase: 147 of 4 (backlog-drain-lifecycle-ledger-tail)
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-08-11
 
 ## v5.11 Phase Map

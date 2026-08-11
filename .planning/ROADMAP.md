@@ -204,7 +204,7 @@ Plans:
 | 144. Chunked Discovery Core | 3/3 | Complete   | 2026-08-10 |
 | 145. Liveness Pre-Pass | 3/3 | Complete   | 2026-08-10 |
 | 146. Progress, Scaling & Disclosure | 6/6 | Complete    | 2026-08-11 |
-| 147. Backlog Drain — Lifecycle & Ledger Tail | 4/4 | Complete   | 2026-08-11 |
+| 147. Backlog Drain — Lifecycle & Ledger Tail | 4/4 | Complete    | 2026-08-11 |
 
 ---
 
