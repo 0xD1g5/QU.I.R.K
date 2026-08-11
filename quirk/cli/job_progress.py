@@ -7,6 +7,7 @@ progress is observational only.
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -16,8 +17,17 @@ def _utcnow_naive() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+@contextmanager
 def _open_session(db_path: str):
-    """Open a short-lived SQLAlchemy session against the given SQLite file."""
+    """Open a short-lived SQLAlchemy session against the given SQLite file.
+
+    Disposes the engine on exit (v5.11 audit WR-02). `update_batch_progress`
+    is called once per discovery batch, and Phase 144 removed the host-count
+    ceiling, so this is now an O(batches) path rather than the O(1) path the
+    other helpers use. Closing only the Session would leave each engine's
+    connection pool holding its SQLite handle until CPython's refcounting
+    happened to reclaim it — deterministic disposal instead of an assumption.
+    """
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     engine = create_engine(
@@ -25,7 +35,12 @@ def _open_session(db_path: str):
         connect_args={"check_same_thread": False},
     )
     Session = sessionmaker(bind=engine, expire_on_commit=False)
-    return Session()
+    session = Session()
+    try:
+        yield session
+    finally:
+        session.close()
+        engine.dispose()
 
 
 def update_job_stage(db_path: str, job_id: str, stage: str) -> None:
