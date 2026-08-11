@@ -160,6 +160,7 @@ def serve(
 
     os.environ["QUIRK_SERVE_PORT"] = str(port)
     os.environ["QUIRK_SERVE_HOST"] = host  # SSRF-04 / D-02: lets url_allowlist self-block the console addr:port
+    os.environ["QUIRK_DASHBOARD_PORT"] = str(port)  # D-147-03-WR02: default CORS allowlist matches the real bound port
     try:
         uvicorn.run(
             "quirk.dashboard.api.app:app",

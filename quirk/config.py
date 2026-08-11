@@ -606,7 +606,15 @@ def get_vertical() -> str:
 def get_cors_origins() -> list:
     """Return CORS allowlist: QUIRK_CORS_ORIGINS env var (comma-separated) wins over YAML.
 
-    Default when neither is set: ["http://127.0.0.1", "http://localhost"].
+    Default when neither is set: port-aware loopback origins (D-147-03-WR02 /
+    AC WR-02). A browser's ``Origin`` header always carries the port for a
+    non-80 bind, so a port-less-only default could never match the
+    dashboard's own default origin (``http://127.0.0.1:8512``). The default
+    list is built from ``QUIRK_DASHBOARD_PORT`` (set by
+    ``quirk/dashboard/server.py::serve()`` to the actual bound port) or falls
+    back to the documented default port 8512 (D-06). The port-less loopback
+    entries are kept at the end so reverse-proxy-on-80 deployments keep
+    working unchanged.
     """
     if env_val := os.environ.get("QUIRK_CORS_ORIGINS"):
         return [o.strip() for o in env_val.split(",") if o.strip()]
@@ -621,4 +629,18 @@ def get_cors_origins() -> list:
                 return list(cfg.security.cors_origins)
         except Exception:
             pass
-    return ["http://127.0.0.1", "http://localhost"]
+    port = 8512
+    raw_port = os.environ.get("QUIRK_DASHBOARD_PORT")
+    if raw_port:
+        try:
+            candidate = int(raw_port)
+            if 1 <= candidate <= 65535:
+                port = candidate
+        except (TypeError, ValueError):
+            pass
+    return [
+        f"http://127.0.0.1:{port}",
+        f"http://localhost:{port}",
+        "http://127.0.0.1",
+        "http://localhost",
+    ]
