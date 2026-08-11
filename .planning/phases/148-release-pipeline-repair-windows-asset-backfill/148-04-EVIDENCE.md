@@ -142,7 +142,15 @@ PyPI-only disposition respectively).
 - **Release URL:** https://github.com/0xD1g5/QU.I.R.K/releases/tag/v5.11.0
 - **Command used:** `gh release create v5.11.0 --title "v5.11.0 — PyPI-only release (no Windows asset)" --notes-file docs/release-notes/5.11.0-github-release-body.md --latest=false --verify-tag`
 
-### Verification output
+### Pre-create check (confirmed before creating)
+
+- `gh release view v5.11.0` → "release not found" (exit 1) — confirmed no pre-existing Release.
+- `git ls-remote --tags origin refs/tags/v5.11.0` → `ae33e380fcae71db20f0ff01583c45a4f89bbaf4`
+  (tag present on origin).
+- `gh api "repos/0xD1g5/QU.I.R.K/contents/docs/release-notes/5.11.0.md?ref=main"` → returned
+  `docs/release-notes/5.11.0.md` (file present on `origin/main`, body link will resolve).
+
+### Verification output (post-create)
 
 `gh release view v5.11.0 --json tagName,assets,isDraft,isPrerelease -q '.tagName, (.assets|length), .isDraft, .isPrerelease'`:
 ```
@@ -152,20 +160,26 @@ false
 false
 ```
 
-`gh release view v5.11.0 --json body -q .body` — first lines of published body (full text
-confirmed to contain `PyPI-only`, `1a6effc`, `v5.12.0`, and a link ending
-`/docs/release-notes/5.11.0.md`):
+`gh release view v5.11.0 --json body -q .body` — first lines of published body:
 ```
-## v5.11.0 — PyPI-only release, no Windows asset
+## QU.I.R.K. 5.11.0 — PyPI-only release (no Windows asset)
 
-This release was published to PyPI but **no Windows operator zip was attached** to this
-GitHub Release...
-[full body confirmed to include: PyPI-only / 1a6effc / v5.12.0 / docs/release-notes/5.11.0.md link]
+This release is **PyPI-only**. `pip install quirk-scanner==5.11.0` works, but the
+`windows-package` job failed at the "CI self-test — ephemeral cert signing round-trip" step —
+before the Release-creation step ever ran — so no Windows asset was ever produced or attached to
+this release.
 ```
+
+Full body confirmed via grep to contain all required substrings:
+- `1a6effc` — found
+- `v5.12.0` — found
+- `PyPI-only` — found
+- `docs/release-notes/5.11.0.md` — found
 
 `gh release list --json tagName -q '.[].tagName'` now includes `v5.11.0` and still excludes
 `v5.9` and `v5.10.0` (no Release objects were created for those tags, per D-01/D-148-RELEASE04
-scope).
+scope). `isDraft: false`, and `--latest=false` was used at creation so `v5.8.0` (the actual
+current-latest tag) is not displaced as GitHub's "Latest" designation.
 
 **Conclusion:** SC-4 proven — a published (non-draft, non-prerelease), non-latest v5.11.0 Release
 exists with zero attached assets and a body stating the PyPI-only disposition, root cause, fix
