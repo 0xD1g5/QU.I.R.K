@@ -94,10 +94,30 @@ risk mitigation that an integrity milestone is easy to defer without a visible e
      dry-run — not by code inspection alone
   3. A malformed tag (e.g. `v5.9`, which never matched `v*.*.*`) or an unpushed tag is detectably
      different from a successful release run via a documented check or workflow guard
-  4. The GitHub Releases page shows a Windows operator zip attached to the `v5.11.0` release — or,
-     if genuinely infeasible without cutting a new tag, an explicit written disposition on the
-     Releases page or in `docs/release-notes/` states the gap and why it is not being closed
-     retroactively
+  4. The v5.11.0 Windows-asset gap is resolved per the D-148-RELEASE04 decision below — either a
+     Windows operator zip is attached to a `v5.11.0` GitHub Release, or an explicit written
+     disposition in `docs/release-notes/` and on the Releases page records that v5.11.0 is
+     PyPI-only and why. Either way, an operator reading the Releases page can tell without
+     guessing whether a Windows artifact exists for that version.
+
+**Open decisions — resolve at `/gsd-discuss-phase 148`, do NOT let an executor pick silently:**
+
+- **D-148-RELEASE04 — how to close the v5.11.0 Windows-asset gap.** This is a *provenance*
+  judgment call, not a feasibility one. Attaching the zip is technically trivial
+  (`gh release create v5.11.0` + `gh release upload`), but the binary would be built **now**, from
+  a `release.yml` that has since changed (`1a6effc` repaired the signing self-test). That attaches
+  an artifact to a version tag which the actual v5.11.0 pipeline never produced and could not
+  reproduce — on a project that ships Sigstore attestations and PyPI Trusted Publishers, that is a
+  supply-chain posture question, not a chore.
+  - **Option A — backfill the asset:** build from the `v5.11.0` tag, attach, and note in the
+    release body that the artifact was produced post-hoc with the repaired workflow. Operators get
+    a Windows binary for the version; provenance is documented rather than implied.
+  - **Option B — disposition the gap:** leave v5.11.0 PyPI-only, state it explicitly in the
+    release notes and Releases page, and let `v5.12.0` (Phase 153) be the first version with a
+    verified Windows artifact. Release history stays strictly reproducible-from-tag.
+  - Both are defensible. The requirement (RELEASE-04) deliberately does not pick, because the
+    right answer depends on how strictly the project wants "release artifact" to mean
+    "reproducible from that tag's pipeline."
 
 **Plans**: TBD
 

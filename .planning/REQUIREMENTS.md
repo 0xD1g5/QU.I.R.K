@@ -28,7 +28,11 @@ Requirements for this milestone. Each maps to roadmap phases.
       Windows build with zero signal)
 - [ ] **RELEASE-04**: The v5.11.0 release is retroactively completed or explicitly dispositioned
       — the operator can tell from the GitHub Releases page whether a Windows artifact exists for
-      a given shipped version, with no silent gaps in the release history
+      a given shipped version, with no silent gaps in the release history.
+      **⚠ Requires a user decision before implementation (D-148-RELEASE04, see ROADMAP Phase 148).**
+      Backfilling the asset is trivial to *do* but attaches a binary built from a since-changed
+      workflow (`1a6effc`) to a tag whose pipeline never produced it — a provenance/supply-chain
+      posture call on a project shipping Sigstore attestations. An executor must not pick silently.
 
 ### Test Signal Integrity
 
