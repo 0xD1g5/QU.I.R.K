@@ -318,11 +318,11 @@ requirements satisfied, tech_debt disposition (0 blockers, 4 tracked non-blockin
 
 Items to be organized into future milestones. Organized by theme.
 
-### Hardware Compatibility & Lifecycle Remediation (v5.11+)
+### Hardware Compatibility & Lifecycle Remediation (v5.13 candidate)
 
 - **Continuous hardware lifecycle monitoring** — least-scoped backlog item; needs its own research pass; explicitly deferred past v5.10
-- **OT/ICS resume-checkpoint gap** — Phase 141's outer-gate fix (`_run_ot_supplemental_phase()`) only runs in `run_scan.py`'s non-resume code path; a `--resume-scan-id` continuation from a checkpoint where the SSH stage was already marked complete could still skip OT-only hosts. Narrow edge case, tracked in v5.10-MILESTONE-AUDIT.md.
-- **CVE table BACnet key coverage** — `hw_cve.py`'s CVE_TABLE has no entry keyed on the chaos-lab's synthetic BACnet fixture model string ("FX16"); consider whether real-world Johnson Controls FX-series devices need their own table entry beyond the "Facility Explorer" one, or whether this stays a lab-only cosmetic gap.
+- ~~**OT/ICS resume-checkpoint gap**~~ — **CLOSED in v5.11 Phase 147 as DRAIN-01** (`0b4aa19`): `run_ot_supplemental_and_persist()` hoisted above `run_scan.py`'s ssh-stage if/else so a `--resume-scan-id` continuation still fingerprints OT-only hosts.
+- ~~**CVE table BACnet key coverage**~~ — **CLOSED in v5.11 Phase 147 as DRAIN-02** (`84e8fce`, `24c7aed`): curated `bacnet_vendors.py` vendor-ID + model-family resolution makes the existing "Johnson Controls / Facility Explorer" CVE_TABLE entry reachable from real device probes.
 
 ### Discovery & Scanning UX
 
@@ -333,6 +333,27 @@ Items to be organized into future milestones. Organized by theme.
   consecutive interactive-setup scans both took the default and never touched nmap discovery,
   wasting two verification attempts. Flip `default=True` so interactive setup opts users into the
   recommended path by default; users who want a bare fingerprint-only scan can still say `n`.
+
+### Release & Verification Integrity (v5.12 candidates)
+
+- **Windows release asset missing from v5.11.0** — the `windows-package` job's "CI self-test —
+  ephemeral cert signing round-trip" step verifies a self-signed cert with `signtool verify /pa`,
+  which requires a trusted root, so it failed by construction and skipped both the zip assembly and
+  the Release attach. Fixed in `1a6effc` (trust the ephemeral root, remove it in cleanup) but
+  **unexercised** — the next tag is the only thing that proves it.
+- **Release tag hygiene** — `release.yml` triggers only on `v*.*.*`. The `v5.9` tag has two
+  components and never matched; `v5.10.0` was created locally and never pushed. Result: three
+  consecutive milestones shipped with no Windows build and no signal. Consider a tag-format guard
+  and/or a pre-release dry-run that fails before the tag is cut.
+- **Phase-completion artifact enforcement** — v5.11 had three of four phases ship missing an
+  artifact (145 no VERIFICATION.md, 147 VALIDATION.md never left draft, 144 no UAT series). All
+  were repaired retroactively at milestone-audit time. Gate at phase close instead
+  (RETROSPECTIVE.md lesson 15).
+- **~102 pre-existing test failures** — red since roughly Phase 97 (version-locked assertions,
+  Python 3.14 dev-env drift). A permanently-red suite cannot surface a new regression.
+- **DISC-09 segmented-network chaos lab profile** — deferred from v5.11; also the only environment
+  that can settle the Phase 144 nmap timing-engine artifact (adaptive RTT suppressing port probes
+  across a ~99.9%-silent scan group). Schedule the two together.
 
 ### SaaS Platform (Future Milestone)
 
