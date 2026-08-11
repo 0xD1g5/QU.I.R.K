@@ -1,7 +1,12 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.11.0
-**Last Updated:** 2026-08-11 (v5.11 milestone close — **Series 144 backfilled**: the anchor phase
+**Last Updated:** 2026-08-11 (Phase 148 wrap — Release Pipeline Repair + Windows Asset Backfill:
+RELEASE-02 pre-tag dry-run guard, RELEASE-03 scheduled tag-hygiene guard, and RELEASE-04 v5.11.0
+Windows-asset disposition all proven against live GitHub Actions runs (not code inspection).
+UAT-148-01/02/03 all PASS — automated + live-run evidence, 02 additionally gated by a live
+push-approval checkpoint. First phase of the v5.12 milestone (Release & Verification Integrity).
+Earlier: v5.11 milestone close — **Series 144 backfilled**: the anchor phase
 shipped DISC-01/DISC-02 without a UAT series entry, caught by the v5.11 milestone audit. Added
 UAT-144-01 (both host-count reject gates relaxed + lazy chunking primitives, 32/32 automated),
 UAT-144-02 (per-batch failure isolation + discovery-stage ScanCheckpoint, 12/12 automated), and
@@ -17028,3 +17033,117 @@ before the next `/gsd-audit-milestone`. See 147-04-SUMMARY.md.
 **Phase 147 verification:** `gsd-verifier` ran a goal-backward check against the live codebase
 (not SUMMARY claims): 4/4 must-haves verified, no blockers. See 147-VERIFICATION.md. Phase 147
 is the final phase of the v5.11 milestone (Discovery at Scale + Backlog Drain).
+
+---
+
+## Series 148: Release Pipeline Repair + Windows Asset Backfill (Phase 148 — v5.12)
+
+### UAT-148-01: Pre-tag dry-run mechanism (RELEASE-02) — Automated + Live
+
+**What to test:** A `workflow_dispatch` run of `release.yml` builds, signs, self-tests, and
+assembles the Windows zip end-to-end, and leaves it downloadable as a workflow artifact — but can
+never publish to PyPI or create/mutate a GitHub Release, including when dispatched against a tag
+ref.
+
+**Steps:**
+1. Run `pytest tests/test_release_workflow_dryrun_guards.py -x` — confirm all pass (11/11).
+2. Confirm the `publish` job and the `Attach zip to GitHub Release` step are both gated on
+   `github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')` — the event-name
+   conjunct is load-bearing (a dispatch can target a tag ref).
+3. Live: `gh workflow run release.yml --ref main`, wait for completion, assert job/step
+   conclusions and zero side effects.
+
+**Pass criteria:**
+- `tests/test_release_workflow_dryrun_guards.py` exits 0 (11/11)
+- Live run `31524058796`: overall `success`; `publish` job `skipped`; `windows-package` job
+  `success` including `CI self-test — ephemeral cert signing round-trip` → `success` (the
+  `1a6effc` repair, D-08) with log line `SELF_TEST_SIGNING: OK`; `Upload dry-run zip artifact` →
+  `success` (artifact `quirk-windows-dry-run`, 57,330,823 bytes); `Attach zip to GitHub Release`
+  → `skipped`
+- `gh release list` and the `quirk-scanner` PyPI version list byte-identical before/after the run
+
+**Automated gate:** See Steps above (Phase 148 Plan 01). **Live gate:** Phase 148 Plan 04, Task 2.
+
+**Result:** - [x] PASS (automated + live)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 148 Plan 01) + live `workflow_dispatch`
+run (Phase 148 Plan 04)
+**Notes:** RELEASE-02. Run URL: https://github.com/0xD1g5/QU.I.R.K/actions/runs/31524058796. See
+148-01-SUMMARY.md and 148-04-EVIDENCE.md.
+
+---
+
+### UAT-148-02: Scheduled tag-hygiene guard (RELEASE-03) — Automated + Live + Checkpoint
+
+**What to test:** A scheduled guard cross-references `git tag --list` against release-run history
+and a curated baseline, flagging any tag that never produced a successful release run and isn't
+explicitly exempted — catching the class of defect where `v5.9` silently never matched
+`release.yml`'s `v*.*.*` glob.
+
+**Steps:**
+1. Run `pytest tests/test_release_tag_hygiene.py -x` — confirm all pass (25/25: 15 script-level +
+   10 static workflow/baseline guards). TDD RED verified before the GREEN implementation commit.
+2. Confirm `.github/tag-hygiene-baseline.txt` is seeded with all 32 pre-existing tags (count
+   matches `git tag --list`), with `v5.9`/`v5.10.0`/`v5.11.0` carrying incident-specific reasons.
+3. Live: `gh workflow run release-tag-hygiene.yml --ref main`, wait for completion, confirm the
+   job summary names `v5.9`, `v5.10.0`, `v5.11.0` in the EXEMPT section and flags nothing new.
+
+**Pass criteria:**
+- `tests/test_release_tag_hygiene.py` exits 0 (25/25)
+- Live run `31524420671`: overall `success`; job summary correctly categorizes all 32 tags with
+  zero flagged
+
+**Checkpoint:** Task 1 of Plan 148-04 (pushing the phase's workflow changes to `origin/main`,
+which is what makes `workflow_dispatch` available for both this guard and UAT-148-01) is a
+blocking `checkpoint:human-action` gate — confirmed live by the user with the orchestrator
+after diff review and a green local suite, before any push.
+
+**Automated gate:** See Steps above (Phase 148 Plan 02). **Live gate:** Phase 148 Plan 04, Task 2.
+
+**Result:** - [x] PASS (automated + live + checkpoint)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 148 Plan 02) + live
+`workflow_dispatch` run (Phase 148 Plan 04) + user checkpoint (orchestrator-relayed push
+approval)
+**Notes:** RELEASE-03. Run URL: https://github.com/0xD1g5/QU.I.R.K/actions/runs/31524420671. See
+148-02-SUMMARY.md and 148-04-EVIDENCE.md.
+
+---
+
+### UAT-148-03: v5.11.0 Windows-asset gap disposition (RELEASE-04) — Automated + Live
+
+**What to test:** The v5.11.0 release notes and GitHub Release body explicitly state the
+Windows-asset gap (root cause, fix commit `1a6effc`, first-fixed version `v5.12.0`), and a real
+GitHub Release object exists for the tag with zero attached assets rather than a fabricated or
+silently-missing artifact.
+
+**Steps:**
+1. Run `pytest tests/test_release_notes_5_11_0.py -x` — confirm all pass (15/15 drift-guard
+   tests locking the disposition facts).
+2. Live: confirm no pre-existing `v5.11.0` Release, then
+   `gh release create v5.11.0 --notes-file docs/release-notes/5.11.0-github-release-body.md
+   --latest=false --verify-tag`.
+3. Confirm `gh release view v5.11.0 --json assets,body,isDraft,tagName` shows 0 assets, `isDraft:
+   false`, `tagName: v5.11.0`, and a body containing `PyPI-only`, `1a6effc`, `v5.12.0`, and a link
+   to `docs/release-notes/5.11.0.md`.
+
+**Pass criteria:**
+- `tests/test_release_notes_5_11_0.py` exits 0 (15/15)
+- Live: `gh release view v5.11.0 --json assets -q '.assets | length'` returns `0`; body contains
+  all four required substrings; `isDraft` is `false`; `--latest=false` so `v5.8.0` stays
+  GitHub's "Latest"; no Release objects created for `v5.9`/`v5.10.0`
+
+**Automated gate:** See Steps above (Phase 148 Plan 03). **Live gate:** Phase 148 Plan 04, Task 3.
+
+**Result:** - [x] PASS (automated + live)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 148 Plan 03) + live `gh release
+create` (Phase 148 Plan 04)
+**Notes:** RELEASE-04, decision D-148-RELEASE04. Release URL:
+https://github.com/0xD1g5/QU.I.R.K/releases/tag/v5.11.0. See 148-03-SUMMARY.md and
+148-04-EVIDENCE.md.
+
+---
+
+**Phase 148 verification:** `gsd-verifier` ran a goal-backward check against the live codebase
+and independently re-executed the live-GitHub evidence (not just SUMMARY/EVIDENCE claims): 5/5
+must-haves verified, no blockers. RELEASE-02/03/04 all satisfied; RELEASE-01 correctly deferred
+to Phase 153. See 148-VERIFICATION.md. Phase 148 is the first phase of the v5.12 milestone
+(Release & Verification Integrity).
