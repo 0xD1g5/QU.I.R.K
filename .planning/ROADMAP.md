@@ -27,27 +27,229 @@
 - ✅ **v5.10 Hardware Lifecycle Depth** — Phases 139–143, 36 plans (shipped 2026-08-03) → `.planning/milestones/v5.10-ROADMAP.md`
 - ✅ **v5.11 Discovery at Scale + Backlog Drain** — Phases 144–147, 16 plans (shipped 2026-08-11) → `.planning/milestones/v5.11-ROADMAP.md`
 
+- **v5.12 Release & Verification Integrity** — Phases 148–153 (in progress, opened 2026-08-11)
+
 ---
 
-## Phases
+## Current Milestone: v5.12 Release & Verification Integrity
+
+**Goal:** Make QU.I.R.K.'s own signals trustworthy again — cutting a tag produces a complete,
+verified artifact set without supervision; a phase cannot be marked complete while its
+verification artifacts are missing; and a green test suite means something.
+
+**Why this shape:** every requirement in this milestone fixes a *measurement* failure rather than
+a capability gap. The v5.11 cycle surfaced five independent measurement failures in one milestone
+— a release pipeline that produced no Windows build for three consecutive milestones, a signing
+self-test that could never pass and had never run, three of four phases shipping without a
+completion artifact, a deferred item's rationale that decayed within a day, and ~102 test
+failures red since roughly Phase 97 — and they compound: a saturated test signal cannot flag a
+regression, a silent release pipeline cannot flag a missing artifact, absent verification
+artifacts cannot flag an unproven phase. Full rationale: `.planning/HORIZON.md`.
+
+**Explicitly out of scope:** continuous hardware lifecycle monitoring (v5.13 capability anchor —
+needs a research pass); SaaS multi-tenancy (still parked); DISC-08 sub-batch checkpoint/resume
+granularity (accepted boundary, revisit only if batch cost grows).
+
+**Per-phase requirement:** every phase below includes documentation updates and an Obsidian vault
+sync as part of its close-out, and a `docs/UAT-SERIES.md` entry, per `CLAUDE.md`'s Per-Phase
+Documentation Checklist.
+
+### Phases
+
+- [ ] **Phase 148: Release Pipeline Repair + Windows Asset Backfill** — Prove the repaired
+      signing self-test with a real run, add a pre-tag dry-run mechanism, add a tag-format guard,
+      and close the v5.11.0 Windows-asset gap
+
+- [ ] **Phase 149: Test Suite Triage** — Give every one of the ~102 pre-existing failing tests an
+      explicit written disposition (fixed / quarantined / deleted)
+
+- [ ] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean
+      environment, held by a CI gate that fails the build on any new failure
+
+- [ ] **Phase 151: Phase-Completion Artifact Gates** — A phase cannot close with a missing
+      VERIFICATION.md, a stale VALIDATION.md, or a missing UAT-SERIES.md entry; a destructive
+      planning operation cannot run against an unarchived milestone
+
+- [ ] **Phase 152: Discovery Empirical Closure** — Segmented-network chaos lab profile, empirical
+      resolution of the Phase 144 nmap timing artifact, and the interactive nmap-discovery-first
+      default flipped to Y
+
+- [ ] **Phase 153: Release Tag Cut** — Cut the real v5.12.0 tag and prove every repaired signal
+      end-to-end, including the new phase-artifact gates applied to itself
+
+### Phase Details
+
+#### Phase 148: Release Pipeline Repair + Windows Asset Backfill
+
+**Goal**: A release job that is broken can be caught before a tag is cut, and the specific
+Windows-asset gap left by v5.11.0 is closed with a real, verified artifact
+**Depends on**: Nothing (first phase — concrete, demonstrable deliverable early, per the milestone
+risk mitigation that an integrity milestone is easy to defer without a visible early win)
+**Requirements**: RELEASE-02, RELEASE-03, RELEASE-04
+**Success Criteria** (what must be TRUE):
+
+  1. A manually-triggered dry-run of the release workflow (e.g. `workflow_dispatch`) exercises the
+     `windows-package` job end-to-end without requiring a git tag, and reports pass/fail
+  2. The repaired signing self-test (`1a6effc`) is proven passing by an actual green CI run of that
+     dry-run — not by code inspection alone
+  3. A malformed tag (e.g. `v5.9`, which never matched `v*.*.*`) or an unpushed tag is detectably
+     different from a successful release run via a documented check or workflow guard
+  4. The GitHub Releases page shows a Windows operator zip attached to the `v5.11.0` release — or,
+     if genuinely infeasible without cutting a new tag, an explicit written disposition on the
+     Releases page or in `docs/release-notes/` states the gap and why it is not being closed
+     retroactively
+
+**Plans**: TBD
+
+#### Phase 149: Test Suite Triage
+
+**Goal**: Every pre-existing full-suite test failure has an explicit, written disposition, so the
+scope of the green-baseline work in Phase 150 is known rather than guessed
+**Depends on**: Nothing (independent of release and artifact-gate work; highest-variance item in
+the milestone, sequenced early and alone so its output can re-scope what follows)
+**Requirements**: SUITE-01
+**Success Criteria** (what must be TRUE):
+
+  1. Every test failing in a clean full-suite run (not just the `-m 'not slow'` default) appears in
+     a written triage ledger with one of: fixed / quarantined-with-reason / deleted-as-obsolete
+  2. The ledger's total failure count matches the actual full-suite run — no failure is left
+     unclassified
+  3. Quarantined tests are marked in a machine-checkable way (explicit skip/xfail referencing the
+     ledger), not silently passing or invisibly excluded
+
+**Plans**: TBD
+
+#### Phase 150: Test Suite Green Baseline + CI Gate
+
+**Goal**: `pytest -q` produces a green baseline on a clean supported environment, and CI holds that
+baseline so a newly introduced failure is visible as a new failure instead of joining the red
+background
+**Depends on**: Phase 149 (the triage output determines whether this phase is small — mostly
+quarantines already applied — or large; cannot be scoped before triage completes)
+**Requirements**: SUITE-02, SUITE-03
+**Success Criteria** (what must be TRUE):
+
+  1. `pytest -q` run on a clean environment matching CI's Python version exits 0
+  2. CI runs the same full-suite gate (not a narrower `-m 'not slow'` subset that silently
+     deselects known failures) on every PR and every push to `main`
+  3. A newly introduced failing test, added deliberately as a smoke check during this phase, fails
+     the CI build
+  4. The green-baseline standard and how to run it locally are documented for future contributors
+
+**Plans**: TBD
+
+#### Phase 151: Phase-Completion Artifact Gates
+
+**Goal**: A phase cannot be reported complete while its verification artifacts are missing or
+stale, and a destructive planning operation refuses to run against an unarchived milestone —
+closing the exact gap that let three of four v5.11 phases ship without a completion artifact and
+let `phases.clear` delete ~39 unrecoverable v5.11 phase files
+**Depends on**: Nothing (independent of release/test-suite work; same workflow surface as
+ARTIFACT-01..03, plus the destructive-operation guard from the same incident class)
+**Requirements**: ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04
+**Success Criteria** (what must be TRUE):
+
+  1. Attempting to report a phase complete with a missing `VERIFICATION.md` is blocked or clearly
+     flagged before the phase is recorded as done — reproducing and closing the exact Phase 145 gap
+  2. Attempting to close a phase whose `VALIDATION.md` still has pending task rows or
+     `nyquist_compliant: false` is blocked or clearly flagged — reproducing and closing the exact
+     Phase 147 gap
+  3. A phase that shipped user-facing behavior cannot close without a corresponding
+     `docs/UAT-SERIES.md` entry — enforced by the workflow, not left to a documentation checklist
+     alone — reproducing and closing the exact Phase 144 gap
+  4. `phases.clear` (or the equivalent destructive planning operation) refuses to run when the
+     current milestone's `.planning/milestones/v<X.Y>-phases/` archive is absent or empty,
+     verified against the exact scenario recorded in
+     `.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md`
+
+**Plans**: TBD
+
+#### Phase 152: Discovery Empirical Closure
+
+**Goal**: The Phase 144 nmap timing-engine artifact is settled against a realistic segmented
+network instead of remaining an open question forever, and interactive setup opts users into the
+recommended discovery path by default
+**Depends on**: Nothing structurally at the milestone level (independent of release/test-suite/
+artifact-gate work), but DISC-10 depends on DISC-09 within this phase — the lab profile must exist
+before the artifact can be re-verified against it
+**Requirements**: DISC-09, DISC-10, DISC-11
+**Success Criteria** (what must be TRUE):
+
+  1. A segmented-network chaos lab profile exists, is listed in `lab.sh`'s `ALL_PROFILES`, and
+     produces realistic unreachable hosts (RST/ICMP-unreachable on a routed segment) rather than
+     unassigned loopback aliases
+  2. Running chunked discovery + partial-result tolerance against that profile produces a written
+     finding on the Phase 144 nmap timing artifact: either it does not reproduce (closed) or it
+     does and a scoped mitigation is chosen with its false-negative tradeoffs documented
+  3. Interactive setup's "Run nmap port discovery first?" prompt (`quirk/interactive.py:176-179`)
+     defaults to Yes; a user who accepts the default gets nmap discovery and the Phase 145 liveness
+     pre-pass without having to opt in explicitly
+  4. `docs/chaos-lab.md`, `README.md`, and the profile's `expected_results_*.md` oracle all
+     reflect the new profile in the same change, per `CLAUDE.md`'s Chaos Lab Maintenance rule
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+#### Phase 153: Release Tag Cut
+
+**Goal**: Cutting the real `v5.12.0` release tag proves every repaired signal end-to-end on an
+actual immutable tag — the only proof RELEASE-01 admits — and the milestone's own close-out is the
+first phase gated by the new ARTIFACT enforcement
+**Depends on**: Phase 148 (pipeline repair + dry-run mechanism must exist first), Phase 150 (the
+CI gate this tag's build runs under must already be green and enforced), Phase 151 (this phase's
+own completion is the first to be gated by the new VERIFICATION/VALIDATION/UAT-SERIES enforcement,
+dogfooding it immediately)
+**Requirements**: RELEASE-01
+**Success Criteria** (what must be TRUE):
+
+  1. Pushing the `v5.12.0` tag triggers `release.yml`, and the `windows-package` job completes with
+     a green signing self-test — not the dry-run from Phase 148, an actual tagged run
+  2. The GitHub Release for `v5.12.0` has a Windows operator zip attached and downloadable
+  3. The Phase 148 tag-hygiene guard does not flag `v5.12.0` as malformed or missing
+  4. Phase 153 itself closes with a `VERIFICATION.md`, a post-execution `VALIDATION.md`, and a
+     `docs/UAT-SERIES.md` entry — the Phase 151 gates applied to the phase that ships them, proving
+     the enforcement machinery works in practice and not just on paper
+
+**Plans**: TBD
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 148. Release Pipeline Repair + Windows Asset Backfill | 0/TBD | Not started | - |
+| 149. Test Suite Triage | 0/TBD | Not started | - |
+| 150. Test Suite Green Baseline + CI Gate | 0/TBD | Not started | - |
+| 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
+| 152. Discovery Empirical Closure | 0/TBD | Not started | - |
+| 153. Release Tag Cut | 0/TBD | Not started | - |
+
+---
 
 <details>
 <summary>✅ v5.11 Discovery at Scale + Backlog Drain (Phases 144–147) — SHIPPED 2026-08-11</summary>
 
-**v5.11** made chunked, partial-result-tolerant nmap discovery reachable end-to-end from the
-dashboard for large (>1024-host) ranges — relaxing both hard-reject gates in the same phase as the
-chunking that replaces them, adding a TCP liveness pre-pass, per-batch progress and batch-size-scaled
-timeouts, CLI/dashboard call-site parity, and undetermined-host disclosure — while draining the debt
-tail accumulated since v5.8/v5.10 to zero. 4 phases, 16 plans, 11/11 requirements. Version 5.11.0.
+**v5.11** made large (>1024-host) range scans reachable end-to-end from the dashboard's
+nmap-discovery path — chunked batches with per-batch failure isolation, a TCP-SYN/ACK liveness
+pre-pass with explicit privilege-fallback detection, per-batch progress on the dashboard,
+batch-scaled timeouts, one shared CLI/dashboard chunking call site, and undetermined-host
+disclosure across all report surfaces — while draining the small debt tail accumulated since
+v5.8/v5.10 (OT/ICS resume-checkpoint gap, BACnet CVE key coverage, 2026-05-27 audit ledger
+reconciliation, deferred human-UAT re-triage). 4 phases, 16 plans, 11/11 requirements, audit
+`passed`. Full phase details archived to `.planning/milestones/v5.11-ROADMAP.md`; audit
+`.planning/milestones/v5.11-MILESTONE-AUDIT.md`.
 
 - [x] Phase 144: Chunked Discovery Core (3/3 plans) — completed 2026-08-10
 - [x] Phase 145: Liveness Pre-Pass (3/3 plans) — completed 2026-08-10
 - [x] Phase 146: Progress, Scaling & Disclosure (6/6 plans) — completed 2026-08-11
 - [x] Phase 147: Backlog Drain — Lifecycle & Ledger Tail (4/4 plans) — completed 2026-08-11
 
-Audit: 11/11 requirements, 0 blockers, all six audit findings closed
-(`.planning/milestones/v5.11-MILESTONE-AUDIT.md`). Full details:
-`.planning/milestones/v5.11-ROADMAP.md`.
+**Note:** approximately 39 of ~58 v5.11 phase artifact files (`.planning/phases/144-147/*`) were
+permanently lost during the v5.12 `/gsd-new-milestone` opening when a destructive `phases.clear`
+call ran without checking that `milestone.complete` had reported `archived.phases: false`. Code
+and the decision record are unaffected — see
+`.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md`. This incident is the direct source of
+v5.12's ARTIFACT-04 requirement.
 
 </details>
 
@@ -314,46 +516,44 @@ requirements satisfied, tech_debt disposition (0 blockers, 4 tracked non-blockin
 ---
 
 ## Backlog
-## Backlog
 
 Items to be organized into future milestones. Organized by theme.
 
-### Hardware Compatibility & Lifecycle Remediation (v5.13 candidate)
-
-- **Continuous hardware lifecycle monitoring** — least-scoped backlog item; needs its own research pass; explicitly deferred past v5.10
-- ~~**OT/ICS resume-checkpoint gap**~~ — **CLOSED in v5.11 Phase 147 as DRAIN-01** (`0b4aa19`): `run_ot_supplemental_and_persist()` hoisted above `run_scan.py`'s ssh-stage if/else so a `--resume-scan-id` continuation still fingerprints OT-only hosts.
-- ~~**CVE table BACnet key coverage**~~ — **CLOSED in v5.11 Phase 147 as DRAIN-02** (`84e8fce`, `24c7aed`): curated `bacnet_vendors.py` vendor-ID + model-family resolution makes the existing "Johnson Controls / Facility Explorer" CVE_TABLE entry reachable from real device probes.
-
-### Discovery & Scanning UX
-
-- **Flip interactive setup's nmap-discovery-first default from N to Y** — `quirk/interactive.py:176-179`
-  (`_prompt_bool("Run nmap port discovery first? (recommended for >10 hosts)", default=False)`)
-  defaults to no, so users hitting enter/default silently skip the nmap batch-discovery path (and
-  the Phase 145 liveness pre-pass) entirely. Discovered during Phase 145 D-06 human-UAT: two
-  consecutive interactive-setup scans both took the default and never touched nmap discovery,
-  wasting two verification attempts. Flip `default=True` so interactive setup opts users into the
-  recommended path by default; users who want a bare fingerprint-only scan can still say `n`.
-
 ### Release & Verification Integrity (v5.12 candidates)
 
-- **Windows release asset missing from v5.11.0** — the `windows-package` job's "CI self-test —
-  ephemeral cert signing round-trip" step verifies a self-signed cert with `signtool verify /pa`,
-  which requires a trusted root, so it failed by construction and skipped both the zip assembly and
-  the Release attach. Fixed in `1a6effc` (trust the ephemeral root, remove it in cleanup) but
-  **unexercised** — the next tag is the only thing that proves it.
-- **Release tag hygiene** — `release.yml` triggers only on `v*.*.*`. The `v5.9` tag has two
-  components and never matched; `v5.10.0` was created locally and never pushed. Result: three
-  consecutive milestones shipped with no Windows build and no signal. Consider a tag-format guard
-  and/or a pre-release dry-run that fails before the tag is cut.
-- **Phase-completion artifact enforcement** — v5.11 had three of four phases ship missing an
-  artifact (145 no VERIFICATION.md, 147 VALIDATION.md never left draft, 144 no UAT series). All
-  were repaired retroactively at milestone-audit time. Gate at phase close instead
-  (RETROSPECTIVE.md lesson 15).
-- **~102 pre-existing test failures** — red since roughly Phase 97 (version-locked assertions,
-  Python 3.14 dev-env drift). A permanently-red suite cannot surface a new regression.
-- **DISC-09 segmented-network chaos lab profile** — deferred from v5.11; also the only environment
-  that can settle the Phase 144 nmap timing-engine artifact (adaptive RTT suppressing port probes
-  across a ~99.9%-silent scan group). Schedule the two together.
+Promoted into the v5.12 milestone (see Current Milestone section above) — kept here for
+backlog-history continuity:
+
+- Windows release asset gap (v5.11.0 shipped no Windows build) → RELEASE-04 (Phase 148)
+- Release dry-run / pre-tag validation → RELEASE-02 (Phase 148)
+- Tag hygiene guard (`v5.9`/`v5.10.0` tag drift) → RELEASE-03 (Phase 148)
+- Actual tag cut proving the repaired pipeline → RELEASE-01 (Phase 153)
+- ~102 pre-existing suite failures → SUITE-01/02/03 (Phases 149–150)
+- Phase-completion artifact enforcement (VERIFICATION.md/VALIDATION.md/UAT-SERIES.md gaps) →
+  ARTIFACT-01/02/03 (Phase 151)
+- `phases.clear` destructive-op guard — see `.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md`
+  incident → ARTIFACT-04 (Phase 151)
+- DISC-09 segmented-network chaos lab profile + Phase 144 nmap timing artifact → DISC-09/DISC-10
+  (Phase 152)
+- Interactive nmap-discovery-first default N→Y → DISC-11 (Phase 152)
+
+**Explicitly out of scope for v5.12:**
+
+- DISC-08 sub-batch (mid-discovery) checkpoint/resume granularity — accepted boundary; batches are
+  cheap (~30–60s) relative to what the checkpoint system protects. Revisit only if batch cost
+  grows.
+- Continuous hardware lifecycle monitoring — v5.13 capability anchor, needs its own research pass
+  first.
+- SaaS multi-tenancy — still parked, no business-model signal.
+
+### Hardware Compatibility & Lifecycle Remediation (v5.13+)
+
+- **Continuous hardware lifecycle monitoring** — least-scoped backlog item; needs its own research
+  pass to determine whether it is a new scanner surface or a scheduling/diffing layer over data
+  QUIRK already collects (the answer changes its size roughly 3x); v5.13 capability anchor.
+
+~~OT/ICS resume-checkpoint gap~~ and ~~CVE table BACnet key coverage~~ — both closed by v5.11
+Phase 147 as DRAIN-01/DRAIN-02; struck from this list 2026-08-11.
 
 ### SaaS Platform (Future Milestone)
 
@@ -362,3 +562,4 @@ Items to be organized into future milestones. Organized by theme.
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
+</content>

@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-08-11T17:06:31.860Z"
 last_activity: 2026-08-11
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,10 +25,21 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 148 (Release Pipeline Repair + Windows Asset Backfill) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-08-11 — Milestone v5.12 started
+Status: Roadmap created, ready for /gsd-plan-phase 148
+Last activity: 2026-08-11 — Milestone v5.12 roadmap created (Phases 148-153, 14/14 requirements mapped)
+
+## v5.12 Phase Map
+
+| Phase | Name | Requirements | Gate | Status |
+|-------|------|--------------|------|--------|
+| 148 | Release Pipeline Repair + Windows Asset Backfill | RELEASE-02, RELEASE-03, RELEASE-04 | None (first, demonstrable early win) | Not started |
+| 149 | Test Suite Triage | SUITE-01 | None (independent, highest-variance item run early/alone) | Not started |
+| 150 | Test Suite Green Baseline + CI Gate | SUITE-02, SUITE-03 | Phase 149 (scope depends on triage output) | Not started |
+| 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Not started |
+| 152 | Discovery Empirical Closure | DISC-09, DISC-10, DISC-11 | None (DISC-10 depends on DISC-09 within-phase) | Not started |
+| 153 | Release Tag Cut | RELEASE-01 | Phases 148, 150, 151 | Not started |
 
 ## v5.11 Phase Map (SHIPPED 2026-08-11)
 

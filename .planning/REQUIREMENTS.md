@@ -93,17 +93,17 @@ Deferred to a later milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RELEASE-01 | TBD | Pending |
-| RELEASE-02 | TBD | Pending |
-| RELEASE-03 | TBD | Pending |
-| RELEASE-04 | TBD | Pending |
-| SUITE-01 | TBD | Pending |
-| SUITE-02 | TBD | Pending |
-| SUITE-03 | TBD | Pending |
-| ARTIFACT-01 | TBD | Pending |
-| ARTIFACT-02 | TBD | Pending |
-| ARTIFACT-03 | TBD | Pending |
-| ARTIFACT-04 | TBD | Pending |
-| DISC-09 | TBD | Pending |
-| DISC-10 | TBD | Pending |
-| DISC-11 | TBD | Pending |
+| RELEASE-01 | Phase 153 | Pending |
+| RELEASE-02 | Phase 148 | Pending |
+| RELEASE-03 | Phase 148 | Pending |
+| RELEASE-04 | Phase 148 | Pending |
+| SUITE-01 | Phase 149 | Pending |
+| SUITE-02 | Phase 150 | Pending |
+| SUITE-03 | Phase 150 | Pending |
+| ARTIFACT-01 | Phase 151 | Pending |
+| ARTIFACT-02 | Phase 151 | Pending |
+| ARTIFACT-03 | Phase 151 | Pending |
+| ARTIFACT-04 | Phase 151 | Pending |
+| DISC-09 | Phase 152 | Pending |
+| DISC-10 | Phase 152 | Pending |
+| DISC-11 | Phase 152 | Pending |
