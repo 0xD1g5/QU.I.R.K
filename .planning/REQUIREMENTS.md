@@ -27,7 +27,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Backlog Drain (stabilization tail)
 
-- [ ] **DRAIN-01**: A `--resume-scan-id` continuation no longer skips OT-only hosts when the
+- [x] **DRAIN-01**: A `--resume-scan-id` continuation no longer skips OT-only hosts when the
       SSH stage was already checkpointed complete
 - [ ] **DRAIN-02**: The hardware CVE table has an explicit, documented decision on BACnet key
       coverage (real vendor entry added, or formally marked lab-only/out of scope)
@@ -77,7 +77,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-05 | Phase 146 | Complete |
 | DISC-06 | Phase 146 | Complete |
 | DISC-07 | Phase 146 | Complete |
-| DRAIN-01 | Phase 147 | Pending |
+| DRAIN-01 | Phase 147 | Complete |
 | DRAIN-02 | Phase 147 | Pending |
 | DRAIN-03 | Phase 147 | Pending |
 | DRAIN-04 | Phase 147 | Pending |
