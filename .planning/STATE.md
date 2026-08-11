@@ -64,6 +64,47 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - v5.7: 24 plans, 7 phases (2026-06-13 → 2026-06-14, 2 days)
 - v5.6: 20 plans, 6 phases (2026-06-12)
 
+**Per-plan execution metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 139 P00 | 12min | 3 tasks | 3 files |
+| Phase 139 P01 | 15min | 2 tasks | 4 files |
+| Phase 139 P02 | 25min | 2 tasks | 2 files |
+| Phase 139 P04 | 12min | 3 tasks | 5 files |
+| Phase 139 P03 | 20min | 2 tasks | 2 files |
+| Phase 139 P06 | 15min | 3 tasks | 4 files |
+| Phase 139 P07 | 20min | 2 tasks | 7 files |
+| Phase 139 P08 | 45min | 2 tasks | 3 files |
+| Phase 140 P00 | 6min | 2 tasks | 3 files |
+| Phase 140 P02 | 20min | 3 tasks | 4 files |
+| Phase 140 P03 | 25min | 3 tasks | 6 files |
+| Phase 140 P04 | 18min | 3 tasks | 7 files |
+| Phase 140 P05 | 10min | 3 tasks | 4 files |
+| Phase 141 P01 | 12min | 2 tasks | 3 files |
+| Phase 141 P02 | 12min | 2 tasks | 2 files |
+| Phase 141 P03 | 18min | 2 tasks | 2 files |
+| Phase 141 P04 | 25min | 3 tasks | 3 files |
+| Phase 141 P05 | 20min | 2 tasks | 7 files |
+| Phase 142 P00 | 25min | 3 tasks | 5 files |
+| Phase 142 P01 | 20min | 2 tasks | 1 files |
+| Phase 142 P02 | ~10min | 2 tasks | 3 files |
+| Phase 142 P03 | ~20min | 3 tasks | 4 files |
+| Phase 142 P04 | 20min | 2 tasks | 4 files |
+| Phase 142 P05 | 15min | 3 tasks | 5 files |
+| Phase 144 P01 | 12min | 2 tasks | 4 files |
+| Phase 144 P02 | 35min | 2 tasks | 3 files |
+| Phase 145 P01 | 8min | 2 tasks | 4 files |
+| Phase 145 P02 | 20min | 2 tasks | 3 files |
+| Phase 146 P01 | 20min | 3 tasks | 8 files |
+| Phase 146 P02 | 15min | 2 tasks | 3 files |
+| Phase 146 P03 | 18min | 3 tasks | 8 files |
+| Phase 146 P04 | 20min | 3 tasks | 3 files |
+| Phase 146 P05 | 10min | 1 tasks | 4 files |
+| Phase 147 P01 | 12min | 3 tasks | 2 files |
+| Phase 147 P02 | 35min | 5 tasks | 6 files |
+| Phase 147 P03 | 25min | 3 tasks | 4 files |
+
 ## Accumulated Context
 
 ### Decisions
@@ -169,62 +210,32 @@ None yet.
 
 ## Deferred Items
 
+**Last re-triaged:** 2026-08-10 (Phase 147 DRAIN-04)
+
 Carried forward from v5.9 close (2026-07-30):
 
-| Category | Item | Status |
-|----------|------|--------|
-| verification_gap | Phase 132: 132-VERIFICATION.md | human_needed — pre-existing, already shipped/tagged |
-| verification_gap | Phase 135: 135-VERIFICATION.md | human_needed — README What's New visual render check |
-| verification_gap | Phase 137: 137-VERIFICATION.md | human_needed — prose quality/live enroll walkthrough |
-| human-UAT (118) | UAT-118-01 — live Windows-host install + Scheduled Task walkthrough | deferred — needs a real Windows host |
-| human-UAT (114) | UAT-114-03 — operators-guide §8.9 auto-merge visual review | deferred — non-blocking |
-| human-UAT (93/95/96) | getpass/live PDF, ldaps code-signing, fuzzing TTY gates | deferred — environment-gated |
-| human-UAT (101–105) | Live Slack/email/webhook/syslog/Jira/ServiceNow delivery | deferred — needs live infra |
-| horizon | Continuous hardware lifecycle monitoring | deferred — v5.11+, needs its own research pass |
+| Category | Item | Status | Re-triaged (2026-08-10) |
+|----------|------|--------|--------------------------|
+| verification_gap | Phase 132: 132-VERIFICATION.md | human_needed — pre-existing, already shipped/tagged | STILL BLOCKED — visual/prose human review, no codebase evidence can close it |
+| verification_gap | Phase 135: 135-VERIFICATION.md | human_needed — README What's New visual render check | STILL BLOCKED — visual/prose human review, no codebase evidence can close it |
+| verification_gap | Phase 137: 137-VERIFICATION.md | human_needed — prose quality/live enroll walkthrough | STILL BLOCKED — visual/prose human review, no codebase evidence can close it |
+| human-UAT (118) | UAT-118-01 — live Windows-host install + Scheduled Task walkthrough | deferred — needs a real Windows host | STILL BLOCKED — requires a physical or VM Windows host |
+| human-UAT (114) | UAT-114-03 — operators-guide §8.9 auto-merge visual review | deferred — non-blocking | STILL BLOCKED — non-blocking visual doc review of operators-guide §8.9 |
+| human-UAT (93/95/96) | getpass/live PDF, ldaps code-signing, fuzzing TTY gates | deferred — environment-gated | STILL BLOCKED — environment-gated by design (TTY, live LDAPS server) |
+| human-UAT (101–105) | Live Slack/email/webhook/syslog/Jira/ServiceNow delivery | deferred — needs live infra | STILL BLOCKED — requires live Slack/email/webhook/syslog/Jira/ServiceNow endpoints |
+| horizon | Continuous hardware lifecycle monitoring | deferred — v5.11+, needs its own research pass | NOT A DEFERRED UAT — feature-horizon item, v5.11+ |
 
 Acknowledged at v5.10 milestone close (2026-08-03):
 
-| Category | Item | Status |
-|----------|------|--------|
-| uat_gap | Phase 143: 143-HUMAN-UAT.md (2 pending scenarios) | partial — user approved continuing 2026-08-03; live windows-latest CI run + browser click-through remain outstanding, both have strong automated/static substitutes in place |
-| verification_gap | Phase 143: 143-VERIFICATION.md | human_needed — same reason as above, user-approved |
-| quick_task | 260611-g0b-merge-healthcare-vertical-branch-into-ma | missing (audit flag) — PLAN + SUMMARY exist on disk and the healthcare vertical merge (commit 9967d8a) is documented as completed 2026-06-11; treated as stale bookkeeping, no further action needed |
-| Phase 139 P00 | 12min | 3 tasks | 3 files |
-| Phase 139 P01 | 15min | 2 tasks | 4 files |
-| Phase 139 P02 | 25min | 2 tasks | 2 files |
-| Phase 139 P04 | 12min | 3 tasks | 5 files |
-| Phase 139 P03 | 20min | 2 tasks | 2 files |
-| Phase 139 P06 | 15min | 3 tasks | 4 files |
-| Phase 139 P07 | 20min | 2 tasks | 7 files |
-| Phase 139 P08 | 45min | 2 tasks | 3 files |
-| Phase 140 P00 | 6min | 2 tasks | 3 files |
-| Phase 140 P02 | 20min | 3 tasks | 4 files |
-| Phase 140 P03 | 25min | 3 tasks | 6 files |
-| Phase 140 P04 | 18min | 3 tasks | 7 files |
-| Phase 140 P05 | 10min | 3 tasks | 4 files |
-| Phase 141 P01 | 12min | 2 tasks | 3 files |
-| Phase 141 P02 | 12min | 2 tasks | 2 files |
-| Phase 141 P03 | 18min | 2 tasks | 2 files |
-| Phase 141 P04 | 25min | 3 tasks | 3 files |
-| Phase 141 P05 | 20min | 2 tasks | 7 files |
-| Phase 142 P00 | 25min | 3 tasks | 5 files |
-| Phase 142 P01 | 20min | 2 tasks | 1 files |
-| Phase 142 P02 | ~10min | 2 tasks | 3 files |
-| Phase 142 P03 | ~20min | 3 tasks | 4 files |
-| Phase 142 P04 | 20min | 2 tasks | 4 files |
-| Phase 142 P05 | 15min | 3 tasks | 5 files |
-| Phase 144 P01 | 12min | 2 tasks | 4 files |
-| Phase 144 P02 | 35min | 2 tasks | 3 files |
-| Phase 145 P01 | 8min | 2 tasks | 4 files |
-| Phase 145 P02 | 20min | 2 tasks | 3 files |
-| Phase 146 P01 | 20min | 3 tasks | 8 files |
-| Phase 146 P02 | 15min | 2 tasks | 3 files |
-| Phase 146 P03 | 18min | 3 tasks | 8 files |
-| Phase 146 P04 | 20min | 3 tasks | 3 files |
-| Phase 146 P05 | 10min | 1 tasks | 4 files |
-| Phase 147 P01 | 12min | 3 tasks | 2 files |
-| Phase 147 P02 | 35min | 5 tasks | 6 files |
-| Phase 147 P03 | 25min | 3 tasks | 4 files |
+| Category | Item | Status | Re-triaged (2026-08-10) |
+|----------|------|--------|--------------------------|
+| uat_gap | Phase 143: 143-HUMAN-UAT.md (2 pending scenarios) | partial — user approved continuing 2026-08-03; live windows-latest CI run + browser click-through remain outstanding, both have strong automated/static substitutes in place | STILL BLOCKED — evidence gathered via `gh run list --limit 50` (2026-08-11): origin/main's last push was 2026-06-18 (commit `8dd8b21`, "docs(phase-135): update UAT-SERIES.md"), while local HEAD is at `29e9c8f` (Phase 147); zero GitHub Actions runs exist for any commit after 2026-06-18, so no live windows-latest run has occurred for the Phase 139–147 work including the Authenticode signing mechanism |
+| verification_gap | Phase 143: 143-VERIFICATION.md | human_needed — same reason as above, user-approved | STILL BLOCKED — browser click-through still requires human execution; no new evidence since v5.10 close |
+| human-UAT (143) | UAT-143-03 — Windows Authenticode signing CI (production signing cert) | BLOCKED — awaiting real production signing secrets; mechanism SECURED 7/7 threats via /gsd-secure-phase, signing step no-ops cleanly until secrets exist | PENDING USER CONFIRMATION (Task 2) |
+
+Resolved and removed (2026-08-10): one stale `quick_task` bookkeeping row (healthcare-vertical
+merge) confirmed complete via git history and removed — see 147-04-SUMMARY.md for the commit hash
+and disposition detail.
 
 ## Session Continuity
 
