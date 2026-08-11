@@ -179,13 +179,22 @@ def test_default_path_still_runs_http_snmp() -> None:
 # ============================================================
 
 def _make_device(host: str = "10.0.0.5"):
+    from datetime import datetime, timezone
     from quirk.models import HardwareDevice
 
-    dev = HardwareDevice.__new__(HardwareDevice)
-    dev.__dict__["host"] = host
-    dev.__dict__["vendor"] = "Unknown"
-    dev.__dict__["model"] = "Unknown"
-    return dev
+    # Real constructor (not __new__) so SQLAlchemy instrumentation is present —
+    # production code (assign_tier assignment) does a normal attribute set on
+    # returned devices, which requires a mapped/instrumented instance.
+    return HardwareDevice(
+        host=host,
+        port=0,
+        vendor="Unknown",
+        model="Unknown",
+        pqc_status="unknown",
+        confidence="unknown",
+        fingerprint_method="unknown",
+        scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
 
 
 def test_resume_path_helper_appends_devices_to_hw_batch() -> None:
@@ -196,7 +205,7 @@ def test_resume_path_helper_appends_devices_to_hw_batch() -> None:
 
     cfg = _make_cfg(enable_modbus=True)
     hw_batch: list = []
-    run_stats: dict = {}
+    run_stats: dict = {"timings_sec": {}}
     error_endpoints: list = []
     logger = Logger(verbose=False, use_tqdm=False)
     device = _make_device("10.0.0.5")
@@ -229,7 +238,7 @@ def test_resume_path_helper_routes_through_wrapped_phase() -> None:
 
     cfg = _make_cfg(enable_modbus=True)
     hw_batch: list = []
-    run_stats: dict = {}
+    run_stats: dict = {"timings_sec": {}}
     error_endpoints: list = []
     logger = Logger(verbose=False, use_tqdm=False)
 
@@ -264,7 +273,7 @@ def test_resume_path_helper_noop_when_flags_off() -> None:
 
     cfg = _make_cfg(enable_modbus=False, enable_bacnet=False)
     hw_batch: list = []
-    run_stats: dict = {}
+    run_stats: dict = {"timings_sec": {}}
     error_endpoints: list = []
     logger = Logger(verbose=False, use_tqdm=False)
 
@@ -297,7 +306,7 @@ def test_resume_path_helper_never_writes_ssh_checkpoint() -> None:
 
     cfg = _make_cfg(enable_bacnet=True)
     hw_batch: list = []
-    run_stats: dict = {}
+    run_stats: dict = {"timings_sec": {}}
     error_endpoints: list = []
     logger = Logger(verbose=False, use_tqdm=False)
     device = _make_device("10.0.0.6")

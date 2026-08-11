@@ -300,6 +300,75 @@ def build_ot_supplemental_endpoints(
     ]
 
 
+def run_ot_supplemental_and_persist(
+    *,
+    targets: List[Tuple[str, int]],
+    ssh_targets: List[Tuple[str, int]],
+    confirmed_open_ports: Dict[str, set],
+    cfg,
+    hw_batch: list,
+    run_stats: dict,
+    error_endpoints: list,
+    logger,
+    db_path,
+) -> list:
+    """Phase 147 DRAIN-01: hoisted OT/ICS supplemental fingerprint pass +
+    hardware-device persist, called ONCE outside the ssh-stage if/else so a
+    ``--resume-scan-id`` continuation (ssh stage already checkpointed
+    complete) still fingerprints OT-only (Modbus/BACnet, no-SSH) hosts.
+
+    141-11 wired this pass into ``main()``'s fresh-run ``else`` branch only —
+    a resume continuation took the ``if`` branch and silently skipped it.
+    This helper is the single call site for both paths; it does NOT write
+    the ssh-stage checkpoint (that stays the fresh-run-branch-only
+    responsibility of the caller, to avoid resetting endpoint_count/
+    partial_failure using only the OT-only subset).
+
+    Runs under ``_wrapped_phase`` BaseException protection (Phase 41 D-14).
+    Extends ``hw_batch`` in place and also returns the fingerprinted device
+    list. Persist is advisory-only and try/except-guarded — a DB write
+    failure here must never abort the scan.
+    """
+    def _ot_supplemental_fn():
+        hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
+        ot_eps = build_ot_supplemental_endpoints(
+            targets, ssh_targets, confirmed_open_ports, cfg,
+        )
+        if not ot_eps:
+            return []
+        _ot_devs = fingerprint_hardware(
+            ot_eps, timeout=hw_timeout, logger=logger, cfg=cfg,
+            confirmed_open_ports=confirmed_open_ports, ot_only=True,
+        )
+        from quirk.scanner.hardware_tier import assign_tier
+        for _dev in _ot_devs:
+            _dev.remediation_tier = assign_tier(_dev)
+        hw_batch.extend(_ot_devs)
+        return _ot_devs
+
+    ot_devices = _wrapped_phase(
+        run_stats, "ot_ics_supplemental", "hardware_scanner",
+        _ot_supplemental_fn, error_endpoints, logger,
+    )
+
+    if hw_batch and db_path:
+        try:
+            with get_session(db_path) as _hw_sess:
+                for _dev in hw_batch:
+                    _hw_sess.add(_dev)
+                _hw_sess.commit()
+            logger.info(f"Hardware fingerprint: {len(hw_batch)} device(s) recorded")
+        except Exception as _hw_err:
+            logger.warning(
+                f"Hardware fingerprint DB write failed (advisory-only, non-fatal): "
+                f"{safe_str(_hw_err)}"
+            )
+    if hw_batch:
+        _print_hardware_summary(hw_batch, logger)  # Phase 128 D-07
+
+    return ot_devices
+
+
 def _print_hardware_summary(devices: list, log) -> None:
     """Print advisory-only hardware tier summary to logger (Phase 128 D-07).
 
@@ -1794,58 +1863,41 @@ def main():
         ) or []
         _flush_stage_endpoints(cfg.output.db_path, ssh_endpoints)   # Phase 67 RESUME-01
 
-        # ==============================
-        # OT/ICS supplemental hardware-fingerprint pass (Phase 141 Plan 11)
-        # ==============================
-        # Runs as a SIBLING step — deliberately OUTSIDE _run_ssh_phase()'s
-        # `if not ssh_targets: return []` guard above (Pitfall 1) — so a host
-        # with zero SSH-classified endpoints but confirmed Modbus/BACnet
-        # evidence still reaches fingerprint_hardware(). ot_only=True skips
-        # Steps 2/3 (HTTP mgmt/SNMP) for these bare fieldbus devices
-        # (minimal footprint, D-04/D-05). Extends the same _hw_batch list
-        # feeding the single existing DB-write block below — no second
-        # persist path (Don't-Hand-Roll).
-        def _run_ot_supplemental_phase():
-            hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
-            ot_eps = build_ot_supplemental_endpoints(
-                targets, ssh_targets, confirmed_open_ports, cfg,
-            )
-            if not ot_eps:
-                return []
-            _ot_devs = fingerprint_hardware(
-                ot_eps, timeout=hw_timeout, logger=logger, cfg=cfg,
-                confirmed_open_ports=confirmed_open_ports, ot_only=True,
-            )
-            from quirk.scanner.hardware_tier import assign_tier
-            for _dev in _ot_devs:
-                _dev.remediation_tier = assign_tier(_dev)
-            _hw_batch.extend(_ot_devs)
-            return _ot_devs
-
-        _wrapped_phase(
-            run_stats, "ot_ics_supplemental", "hardware_scanner",
-            _run_ot_supplemental_phase, error_endpoints, logger,
-        )
-
-        if _hw_batch:
-            try:
-                with get_session(cfg.output.db_path) as _hw_sess:
-                    for _dev in _hw_batch:
-                        _hw_sess.add(_dev)
-                    _hw_sess.commit()
-                logger.info(f"Hardware fingerprint: {len(_hw_batch)} device(s) recorded")
-            except Exception as _hw_err:
-                logger.warning(
-                    f"Hardware fingerprint DB write failed (advisory-only, non-fatal): "
-                    f"{safe_str(_hw_err)}"
-                )
-            _print_hardware_summary(_hw_batch, logger)  # Phase 128 D-07
+        # Fresh-run path: write the ssh checkpoint here (BEFORE the hoisted
+        # hardware persist below — Phase 147 DRAIN-01 reordering note: the
+        # persist is advisory-only and already try/except-wrapped, so this
+        # ordering is safe and keeps the checkpoint write scoped to this
+        # branch only, never re-written on resume).
         _ssh_pf = _collect_stage_partial_failures(run_stats, "ssh", error_endpoints, _err_before_ssh)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "ssh",
                 status="partial" if _ssh_pf else "completed",
                 endpoint_count=len(ssh_endpoints), partial_failure=bool(_ssh_pf),
                 error_summary=_ssh_pf or None)
+
+    # ==============================
+    # OT/ICS supplemental hardware-fingerprint pass (Phase 141 Plan 11 /
+    # Phase 147 DRAIN-01)
+    # ==============================
+    # Runs OUTSIDE the ssh-stage if/else above (on BOTH the resume and
+    # fresh-run paths) — 141-11 only wired this into the fresh-run `else`
+    # branch, so a `--resume-scan-id` continuation whose ssh stage was
+    # already checkpointed complete silently skipped OT-only (Modbus/BACnet,
+    # no-SSH) hosts. targets/ssh_targets/confirmed_open_ports are already
+    # reconstructed on both paths above the ssh-stage if/else. ot_only=True
+    # skips Steps 2/3 (HTTP mgmt/SNMP) for these bare fieldbus devices
+    # (minimal footprint, D-04/D-05).
+    run_ot_supplemental_and_persist(
+        targets=targets,
+        ssh_targets=ssh_targets,
+        confirmed_open_ports=confirmed_open_ports,
+        cfg=cfg,
+        hw_batch=_hw_batch,
+        run_stats=run_stats,
+        error_endpoints=error_endpoints,
+        logger=logger,
+        db_path=cfg.output.db_path,
+    )
 
     # ==============================
     # PQC-hybrid probe phase (Phase 90 PQC-02, D-01)
