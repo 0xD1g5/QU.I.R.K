@@ -29,6 +29,7 @@ key-files:
     - CLAUDE.md (gitignored, not tracked by git)
 decisions:
   - "D-147-02-A: build-catalog (option a) — user confirmed via orchestrator checkpoint before plan dispatch"
+requirements-completed: [DRAIN-02]
 metrics:
   duration: "~35min"
   completed: 2026-08-11

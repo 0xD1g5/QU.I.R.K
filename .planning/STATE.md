@@ -213,7 +213,9 @@ None yet.
 
 ## Deferred Items
 
-**Last re-triaged:** 2026-08-10 (Phase 147 DRAIN-04)
+**Last re-triaged:** 2026-08-11 (v5.11 milestone-audit closeout; supersedes the 2026-08-10
+Phase 147 DRAIN-04 pass, whose Phase 143 `uat_gap` rationale went stale within a day — see that
+row's `Re-triaged (2026-08-11)` note)
 
 Carried forward from v5.9 close (2026-07-30):
 
@@ -232,9 +234,9 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 
 | Category | Item | Status | Re-triaged (2026-08-10) |
 |----------|------|--------|--------------------------|
-| uat_gap | Phase 143: 143-HUMAN-UAT.md (2 pending scenarios) | partial — user approved continuing 2026-08-03; live windows-latest CI run + browser click-through remain outstanding, both have strong automated/static substitutes in place | STILL BLOCKED — evidence gathered via `gh run list --limit 50` (2026-08-11): origin/main's last push was 2026-06-18 (commit `8dd8b21`, "docs(phase-135): update UAT-SERIES.md"), while local HEAD is at `29e9c8f` (Phase 147); zero GitHub Actions runs exist for any commit after 2026-06-18, so no live windows-latest run has occurred for the Phase 139–147 work including the Authenticode signing mechanism |
+| uat_gap | Phase 143: 143-HUMAN-UAT.md (2 pending scenarios) | partial — user approved continuing 2026-08-03; live windows-latest CI run + browser click-through remain outstanding, both have strong automated/static substitutes in place | **STILL BLOCKED, corrected rationale (2026-08-11).** The 2026-08-10 basis for this row is now factually wrong and has been replaced: `git ls-remote` confirms `origin/main` is `83ba306` — identical to local HEAD — so the Phase 139–147 work IS pushed, and `gh run list` shows Python CI, Dashboard Quality and Python Staleness Gate all green on it. The real blocker is narrower and structural: the `windows-package` job (and its Authenticode signing step) lives in `.github/workflows/release.yml`, which triggers **only** on `push: tags: ['v*.*.*']`. The newest remote tag is `v5.9` — no `v5.10` or `v5.11` tag exists — so no windows-latest release build has run for this work regardless of push state, and none will until a release tag is cut. Unblocks automatically at the next tagged release; the browser click-through remains separately human-gated. |
 | verification_gap | Phase 143: 143-VERIFICATION.md | human_needed — same reason as above, user-approved | STILL BLOCKED — browser click-through still requires human execution; no new evidence since v5.10 close |
-| human-UAT (143) | UAT-143-03 — Windows Authenticode signing CI (production signing cert) | BLOCKED — awaiting real production signing secrets; mechanism SECURED 7/7 threats via /gsd-secure-phase, signing step no-ops cleanly until secrets exist | STILL BLOCKED — no production signing cert acquired; signing step no-ops cleanly by design; re-triage at next milestone close |
+| human-UAT (143) | UAT-143-03 — Windows Authenticode signing CI (production signing cert) | BLOCKED — awaiting real production signing secrets; mechanism SECURED 7/7 threats via /gsd-secure-phase, signing step no-ops cleanly until secrets exist | STILL BLOCKED — no production signing cert acquired (user-confirmed, D-147-04-AUTHENTICODE); signing step no-ops cleanly by design, gated on `secrets.QUIRK_SIGNING_CERT_BASE64`/`_PASSWORD` being non-empty (`release.yml` "Determine signing capability"). Note this item has **two** independent gates, not one: the missing cert, and the fact that `release.yml` only runs on a `v*.*.*` tag push (newest remote tag: `v5.9`). Both must clear before it can be exercised. Re-triage at next milestone close. |
 
 Resolved and removed (2026-08-10): one stale `quick_task` bookkeeping row (healthcare-vertical
 merge) confirmed complete via git history and removed — see 147-04-SUMMARY.md for the commit hash
