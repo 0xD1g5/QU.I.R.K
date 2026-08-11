@@ -1,4 +1,5 @@
 """Tests for Phase 57 SecurityCfg + BrokerCredential config loading (D-04, D-05)."""
+import os
 import pytest
 from quirk.config import (
     config_from_dict,
@@ -137,3 +138,90 @@ def test_cli_help_mentions_three_flags():
     assert "--allow-internal-targets" in src
     assert "--allow-cleartext-broker-probe" in src
     assert "--allow-insecure-jwks" in src
+
+
+# ---- Phase 147 DRAIN-03 / D-147-03-WR02: port-aware default CORS allowlist ----
+
+import unittest.mock
+
+
+def test_cors_default_is_port_aware_at_documented_default_port():
+    """No QUIRK_CORS_ORIGINS, no config file, no QUIRK_DASHBOARD_PORT: default
+    list must include the dashboard's real default bind origin (8512/D-06)."""
+    from quirk.config import get_cors_origins
+
+    env = {
+        "QUIRK_CORS_ORIGINS": "",
+        "QUIRK_DASHBOARD_PORT": "",
+        "QUIRK_CONFIG_PATH": "/nonexistent/config.yaml",
+    }
+    with unittest.mock.patch.dict(os.environ, env, clear=False):
+        os.environ.pop("QUIRK_CORS_ORIGINS", None)
+        os.environ.pop("QUIRK_DASHBOARD_PORT", None)
+        origins = get_cors_origins()
+    assert origins == [
+        "http://127.0.0.1:8512",
+        "http://localhost:8512",
+        "http://127.0.0.1",
+        "http://localhost",
+    ]
+
+
+def test_cors_default_reflects_actual_bound_port():
+    """QUIRK_DASHBOARD_PORT=9000: the exact-origin entries follow the real bind."""
+    from quirk.config import get_cors_origins
+
+    env = {
+        "QUIRK_DASHBOARD_PORT": "9000",
+        "QUIRK_CONFIG_PATH": "/nonexistent/config.yaml",
+    }
+    with unittest.mock.patch.dict(os.environ, env, clear=False):
+        os.environ.pop("QUIRK_CORS_ORIGINS", None)
+        origins = get_cors_origins()
+    assert origins == [
+        "http://127.0.0.1:9000",
+        "http://localhost:9000",
+        "http://127.0.0.1",
+        "http://localhost",
+    ]
+
+
+def test_cors_env_var_still_wins_over_computed_default():
+    """QUIRK_CORS_ORIGINS precedence is unchanged by the port-aware default."""
+    from quirk.config import get_cors_origins
+
+    env = {
+        "QUIRK_CORS_ORIGINS": "https://example.com",
+        "QUIRK_DASHBOARD_PORT": "9000",
+    }
+    with unittest.mock.patch.dict(os.environ, env, clear=False):
+        origins = get_cors_origins()
+    assert origins == ["https://example.com"]
+
+
+def test_cors_default_falls_back_to_8512_on_invalid_port():
+    """Non-numeric or out-of-range QUIRK_DASHBOARD_PORT falls back to 8512, never raises."""
+    from quirk.config import get_cors_origins
+
+    for bad_port in ("not-a-number", "0", "70000", "-1"):
+        env = {
+            "QUIRK_DASHBOARD_PORT": bad_port,
+            "QUIRK_CONFIG_PATH": "/nonexistent/config.yaml",
+        }
+        with unittest.mock.patch.dict(os.environ, env, clear=False):
+            os.environ.pop("QUIRK_CORS_ORIGINS", None)
+            origins = get_cors_origins()
+        assert origins[0] == "http://127.0.0.1:8512", f"failed for QUIRK_DASHBOARD_PORT={bad_port!r}"
+
+
+def test_cors_default_never_contains_wildcard():
+    from quirk.config import get_cors_origins
+
+    env = {
+        "QUIRK_CONFIG_PATH": "/nonexistent/config.yaml",
+    }
+    with unittest.mock.patch.dict(os.environ, env, clear=False):
+        os.environ.pop("QUIRK_CORS_ORIGINS", None)
+        os.environ.pop("QUIRK_DASHBOARD_PORT", None)
+        origins = get_cors_origins()
+    assert "*" not in origins
