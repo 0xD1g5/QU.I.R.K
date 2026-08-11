@@ -1,7 +1,17 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.10.0
-**Last Updated:** 2026-08-10 (Phase 145 wrap — Liveness Pre-Pass: DISC-03, a cheap TCP-based
+**Last Updated:** 2026-08-11 (Phase 146 wrap — Progress, Scaling & Disclosure: DISC-04/05/06/07,
+chunked discovery batches now write progress to `scan_jobs` (surfaced as a live sub-line on the
+dashboard job page and a `Discovery: batch N/M` stdout line), per-batch nmap timeout/timing scales
+to batch size instead of one fixed 300s ceiling, and a shared "Hosts undetermined
+(unreachable/filtered)" count is disclosed across the CLI/HTML/DOCX reports. UAT-146-01 through
+05 automated (all targeted pytest suites green across the five plans, plus `npm run lint`/`build`
+for the dashboard sub-line); UAT-146-06 is the human-verify
+checkpoint gate — PASSED live 2026-08-10, surfacing and fixing one real code defect (a stale
+post-completion dashboard stage label) plus one code-review-gate defect (CR-01: the undetermined
+count could be conflated with unrelated scanner-stage exceptions) before sign-off. Closes DISC-04,
+DISC-05, DISC-06, DISC-07. Earlier: Phase 145 wrap — Liveness Pre-Pass: DISC-03, a cheap TCP-based
 `nmap -sn -PS<ports>` liveness probe now runs ahead of each discovery batch's full port sweep,
 skipping non-responsive hosts and recording them as `liveness_skip` rows, with a once-per-scan
 `privilege_fallback` advisory when raw-socket privilege cannot be confirmed. UAT-145-01/02
@@ -16490,3 +16500,205 @@ summary). Fixed by cross-checking `parse_nmap_run_summary()`'s runstats data —
 `2 responsive, 253 skipped` with matching DB rows (253 `liveness_skip` + 1 `privilege_fallback`,
 host=`liveness-prepass`); sudo re-run added zero new `privilege_fallback` rows and the console
 advisory line did not print. See 145-03-PLAN.md Task 3 for the full manual walkthrough.
+
+---
+
+## Series 146: Progress, Scaling & Disclosure (Phase 146 — v5.11)
+
+**Last Updated:** 2026-08-11
+
+### UAT-146-01: Discovery batch-progress persistence + read path (DISC-04) — Automated
+
+**What to test:** `scan_jobs` gains three nullable columns (`discovery_batch_index`,
+`discovery_batch_total`, `discovery_hosts_checked`), a best-effort `update_batch_progress()`
+writer, and the jobs API surfaces all three through `JobStatusResponse`.
+
+**Steps:**
+1. Run `pytest tests/test_db_migrations.py tests/test_job_progress.py tests/test_jobs_api.py -x`
+   — confirm all tests pass.
+2. Confirm the migration is additive (nullable columns, no backfill required) and pre-existing
+   `scan_jobs` rows are unaffected.
+3. Confirm `update_batch_progress()` degrades silently (no exception surfaced to the caller) if
+   the write fails, since it must never abort a scan.
+
+**Pass criteria:**
+- `pytest tests/test_db_migrations.py tests/test_job_progress.py tests/test_jobs_api.py -x` exits
+  0 (54 passed, 1 pre-existing skip)
+- `python -m compileall` clean across `quirk/models.py`, `quirk/db.py`,
+  `quirk/cli/job_progress.py`, `quirk/dashboard/api/schemas.py`,
+  `quirk/dashboard/api/routes/jobs.py`
+
+**Automated gate:** `pytest tests/test_db_migrations.py tests/test_job_progress.py
+tests/test_jobs_api.py -x` → 54 passed, 1 skipped (Phase 146 Plan 01).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** automated (pytest — Phase 146 Plan 01)
+**Notes:** DISC-04. See 146-01-SUMMARY.md.
+
+---
+
+### UAT-146-02: Batch-size-scaled timeout + timing-template helpers (DISC-05, DISC-06) — Automated
+
+**What to test:** Two pure functions — `discovery_timeout_for_batch()` and
+`discovery_timing_template_for_batch()` — compute a per-batch nmap timeout
+(`min(300, 30 + 0.26 * batch_size)` seconds) and select `-T4`/`-T3` by batch size, and a
+regression test locks the CLI and dashboard to one shared discovery implementation (DISC-06).
+
+**Steps:**
+1. Run `pytest tests/test_nmap_provider.py tests/test_cli_dashboard_discovery_parity.py -x` —
+   confirm all 26 tests pass, including boundary cases at 0/1/256/257/1024/5000 hosts.
+2. Confirm the timeout formula clamps at the 300s ceiling for large batches and degrades to a
+   safe default on non-int input (never raises — feeds directly into a subprocess timeout).
+3. Confirm the DISC-06 parity test fails if the CLI and dashboard job-creation paths ever
+   diverge into two separate discovery call sites.
+
+**Pass criteria:**
+- `pytest tests/test_nmap_provider.py tests/test_cli_dashboard_discovery_parity.py -x` exits 0
+  (26 passed)
+- `python -m compileall quirk/discovery/nmap_provider.py` clean
+
+**Automated gate:** `pytest tests/test_nmap_provider.py tests/test_cli_dashboard_discovery_parity.py
+-x` → 26 passed (Phase 146 Plan 02).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** automated (pytest — Phase 146 Plan 02)
+**Notes:** DISC-05, DISC-06. See 146-02-SUMMARY.md.
+
+---
+
+### UAT-146-03: Undetermined-host disclosure across CLI/HTML/DOCX reports (DISC-07) — Automated
+
+**What to test:** A single shared `ExecContent.undetermined_hosts_count` /
+`.undetermined_hosts_breakdown` field, computed once in `writer.py`, surfaces a combined
+"Hosts undetermined (unreachable/filtered)" count consistently across the CLI markdown
+executive summary, HTML report, DOCX report, and end-of-scan terminal summary table.
+
+**Steps:**
+1. Run `pytest tests/test_exec_content_model.py tests/test_report_render_undetermined_hosts.py
+   tests/test_report_render_parity.py -x` — confirm all pass.
+2. Confirm the `port == 0` conjunct excludes any live-host TLS/SSH/API handshake error (port
+   != 0) from the undetermined count — a scan error on a reachable host is not the same as a
+   host that could not be determined at all.
+3. **Post-CR-01 (see below):** confirm the breakdown key for discovery-batch failures is
+   `discovery_exception`, not the generic `exception` category `_wrapped_phase()` uses for
+   every other scanner stage.
+
+**Pass criteria:**
+- `pytest tests/test_exec_content_model.py tests/test_report_render_undetermined_hosts.py
+  tests/test_report_render_parity.py -x` exits 0
+- `python -m compileall quirk/reports` clean
+
+**Automated gate:** 30/30 passed at initial delivery; 32/32 passed after the CR-01 fix added a
+regression test for the generic-exception exclusion case (Phase 146 Plan 03 + post-review fix).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10 (initial), 2026-08-11 (CR-01 fix re-verified)
+**Tester:** automated (pytest — Phase 146 Plan 03; code-review fix re-verified by gsd-verifier)
+**Notes:** DISC-07. See 146-03-SUMMARY.md and the CR-01 note under UAT-146-06 below.
+
+---
+
+### UAT-146-04: Wiring into the real discovery batch loop (DISC-04, DISC-05, DISC-06) — Automated
+
+**What to test:** `run_scan.py`'s discovery batch loop actually calls
+`update_batch_progress()` and the scaled timeout/timing helpers on every batch — normal,
+fully-dead, and failed — replacing the prior static `--nmap-timeout 300` argument on the
+dashboard's job-creation path.
+
+**Steps:**
+1. Run `pytest tests/test_discovery_batch_progress.py tests/test_liveness_prepass.py
+   tests/test_cli_dashboard_discovery_parity.py tests/test_nmap_provider.py tests/test_jobs_api.py
+   tests/test_job_progress.py -x` — confirm all pass (71 passed, 1 pre-existing skip).
+2. Confirm `hosts_checked` accumulates the real batch length, not `batch_num * max_batch_size`,
+   so the final partial batch's count stays exact.
+3. Confirm the dashboard's static `--nmap-timeout 300` argument is gone from
+   `quirk/dashboard/api/routes/jobs.py`.
+
+**Pass criteria:**
+- Targeted suite above exits 0 (71 passed, 1 skipped)
+- `python -m compileall run_scan.py quirk/` clean
+
+**Automated gate:** See Steps above (Phase 146 Plan 04).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** automated (pytest — Phase 146 Plan 04)
+**Notes:** DISC-04, DISC-05, DISC-06. See 146-04-SUMMARY.md.
+
+---
+
+### UAT-146-05: Dashboard scan-job page batch-progress sub-line (DISC-04) — Automated + Human
+
+**What to test:** The scan-job page renders a muted sub-line beneath the stage progress bar
+showing `Batch N of M — X hosts checked`, visible only while the job is actively in the
+discovery stage.
+
+**Steps:**
+1. `npm run lint && npm run build` in `src/dashboard/` — confirm both pass.
+2. Confirm `JobStatus` in `src/dashboard/src/types/api.ts` carries the three new fields.
+3. Human: submit a scan against a CIDR spanning 2+ discovery batches (>1024 hosts), open the
+   job page during discovery, and confirm the sub-line appears and advances per batch.
+
+**Pass criteria:**
+- `npm run lint` and `npm run build` exit 0
+- Human observes the sub-line present during discovery, absent before the first batch completes
+
+**Automated gate:** `npm run lint && npm run build` clean (Phase 146 Plan 05).
+**Human gate:** folded into UAT-146-06's combined checkpoint (see below) rather than run twice.
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** automated (lint/build) + human (via UAT-146-06 checkpoint)
+**Notes:** DISC-04. See 146-05-SUMMARY.md.
+
+---
+
+### UAT-146-06: Docs, human verification, and post-review defect fix (DISC-04/05/06/07) — Human (live)
+
+**What to test:** The two operator-facing guides document the shipped behavior, both vault
+copies are synced, and a human confirms the dashboard sub-line and CLI progress line actually
+behave as specified — this project's presence-based render-parity convention cannot assert
+either behavior, so a live human pass is the gate (per HUMAN-UAT convention: CLI/log evidence is
+corroborating only, the developer's own visual confirmation is what flips the status).
+
+**Steps:**
+1. Confirm `docs/report-interpretation.md` §13 and `docs/operators-guide.md` §11 exist and
+   document the real shipped constants, and that both are synced to the Obsidian vault (`Digs`).
+2. Start the dashboard (`.venv/bin/quirk serve`, or `python run_scan.py serve` from repo root —
+   NOT the bare `quirk` command if a stale global install shadows the venv's own binary).
+3. Submit a scan against a CIDR spanning 2+ discovery batches. Confirm the job page shows
+   `Batch N of M — X hosts checked` beneath the stage bar while running, and that it disappears
+   once the job reaches `Completed`.
+4. From a terminal, confirm `Discovery: batch N/M (X hosts checked)` prints per completed batch
+   on a `--discovery nmap` run.
+5. Confirm the terminal summary table shows a "Hosts undetermined" row beneath "Hosts scanned".
+
+**Pass criteria:**
+- Developer explicitly confirms after completing Steps 2-5
+- Any reported defect is recorded and fixed (or the phase is halted) before sign-off
+
+**Automated gate:** N/A — this UAT is inherently a live, human-verify checkpoint
+(`checkpoint:human-verify`, blocking gate per 146-06-PLAN.md Task 3).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** human (live, against a real `/21`-class range with 2+
+discovery batches; loopback `/24` and a zero-endpoint scan used as secondary completeness checks)
+**Notes:** DISC-04, DISC-05, DISC-06, DISC-07, D-06 equivalent human gate. Live verification
+surfaced and fixed two real defects mid-checkpoint, both now committed:
+1. **Environment (not a code defect):** a stale global `quirk` console script on the developer's
+   `$PATH` (pointing at system Python, no editable install) shadowed `.venv/bin/quirk`, and the
+   repo had multiple `quirk.db` files tripping `_default_db_path()`'s multi-DB safety check.
+   Resolved with `.venv/bin/quirk serve` + explicit `QUIRK_DB_PATH`.
+2. **Real defect, fixed in-scope (commit `1643bbe`):** the scan-job page kept showing
+   "Stage 7 of 7 — Discovery" and the batch sub-line indefinitely after a zero-endpoint scan
+   completed, because `current_stage` in `scan_jobs` is only ever written while a scan actively
+   transitions stages and a zero-endpoint scan short-circuits past TLS/SSH/API/Identity/
+   Data-at-Rest without ever updating it. Fixed by deriving the stage label from
+   `STAGE_ORDER[stage_index - 1]` (self-corrects on completion, since `stage_index` already has
+   a terminal-state override) and gating the batch sub-line on `status === "running"`.
+3. **CR-01, found by the phase's mandatory code-review gate (not by human UAT, but fixed before
+   sign-off, commit `587ea29`):** `_compute_undetermined_hosts()` filtered on the generic
+   `scan_error_category="exception"` value that `_wrapped_phase()` uses for 20+ unrelated
+   scanner-stage crashes (TLS, SSH, JWT, container, ...), so an unrelated scanner exception could
+   inflate the "Hosts undetermined" count in a consulting-grade deliverable. Fixed by giving
+   discovery-batch failures their own `discovery_exception` category, distinct from the generic
+   one, with a new regression test locking the exclusion.
+See 146-06-SUMMARY.md, 146-REVIEW.md, and 146-VERIFICATION.md for full detail.
