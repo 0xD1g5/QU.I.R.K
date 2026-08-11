@@ -157,7 +157,20 @@ the milestone, sequenced early and alone so its output can re-scope what follows
   3. Quarantined tests are marked in a machine-checkable way (explicit skip/xfail referencing the
      ledger), not silently passing or invisibly excluded
 
-**Plans**: TBD
+**Plans**: 11 plans
+
+Plans:
+- [ ] 149-01-PLAN.md — D-04 skip-registry gate repair + AST walker extension (skip/xfail) + ledger skeleton
+- [ ] 149-02-PLAN.md — Cluster 1: SSRF/DNS-blocked sandbox (23 tests)
+- [ ] 149-03-PLAN.md — Cluster 2 + 6: Playwright pollution + pip dry-run flakiness (20 tests)
+- [ ] 149-04-PLAN.md — Cluster 3 + 4 + 7: version staleness + GCP optional extra (10 tests)
+- [ ] 149-05-PLAN.md — Cluster 5: sensor_id shape / AUDIT-08 regression (10 tests)
+- [ ] 149-06-PLAN.md — Cluster 9 Group A: scanner/detection-logic failures (18 tests)
+- [ ] 149-07-PLAN.md — Cluster 9 Group B: dashboard/API/DB-migration failures (12 tests)
+- [ ] 149-08-PLAN.md — Cluster 9 Group C: QRAMM subsystem + SIGSEGV investigation (6 tests)
+- [ ] 149-09-PLAN.md — Cluster 9 Group D1: CLI/compliance/posture failures (11 tests)
+- [ ] 149-10-PLAN.md — Cluster 9 Group D2: docs-presence/security-gate/windows-smoke (5 tests)
+- [ ] 149-11-PLAN.md — Final reconciliation: fresh full-suite run vs. ledger exact-count match
 
 #### Phase 150: Test Suite Green Baseline + CI Gate
 
