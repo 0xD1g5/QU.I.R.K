@@ -1315,6 +1315,19 @@ a dedicated regression test (`tests/test_cve_score_guard.py`) enforces this in C
 should treat CVE matches as "worth investigating," not as a scored risk the readiness score
 already accounts for.
 
+**BACnet vendor-name resolution (Phase 147, decision D-147-02-A).** BACnet's raw Who-Is/I-Am
+probe returns only a numeric ASHRAE vendor ID and a raw model string — neither can match the
+CVE catalog's `(vendor_name, product_family)` keys on its own. As of Phase 147,
+`quirk/scanner/bacnet_vendors.py` — a curated-catalog + staleness-gate module mirroring
+`hw_cve.py`'s own shape, on a **365-day cadence** (`quirk cve status`'s 30-day cadence does
+not apply to this table; ASHRAE vendor-ID assignments are append-only/stable) — resolves the
+numeric vendor ID and raw model to real vendor/product-family names *before* `correlate_device()`
+is called. This is what makes the curated `("Johnson Controls", "Facility Explorer")` CVE
+entry reachable for a real BACnet FX16 fingerprint. Coverage is intentionally curated, not
+exhaustive: an unrecognized vendor ID displays the raw numeric value exactly as before this
+phase, with no regression and no crash. See `docs/report-interpretation.md` §10.8 for the
+consultant-facing rendering contract.
+
 See `docs/report-interpretation.md` §10.7 for the report/dashboard rendering contract, and
 `docs/configuration.md` for the 30-day staleness cadence and re-verification procedure.
 

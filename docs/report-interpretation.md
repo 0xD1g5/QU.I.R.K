@@ -400,6 +400,51 @@ starting point for a deeper, out-of-band vulnerability conversation with the cli
 > in range. Click through to the NVD link to read the official advisory and confirm
 > applicability against your asset inventory before prioritizing remediation."
 
+### 10.8 BACnet Vendor Name Resolution & CVE Coverage (Phase 147, decision D-147-02-A)
+
+Phase 147 closed a real fix-or-defer call on BACnet CVE coverage (backlog item DRAIN-02): as
+of this phase, **BACnet-identified devices now display a resolved vendor name and — where
+recognized — a resolved product family, instead of a bare numeric ASHRAE vendor ID.** The
+user confirmed decision D-147-02-A: build the curated resolution layer (option (a)) rather
+than formally marking BACnet CVE correlation out-of-scope.
+
+**What changed.** Before this phase, a BACnet Who-Is/I-Am probe returned a raw numeric
+vendor ID (e.g. `"5"`) and a raw model string (e.g. `"FX16"`) straight into the Hardware
+Inventory's Vendor/Model columns, and those raw values could never match the curated firmware
+CVE catalog's `("Johnson Controls", "Facility Explorer")` entry — so BACnet devices got zero
+CVE correlation despite that entry existing specifically to cover this device family. As of
+this phase, `quirk/scanner/bacnet_vendors.py` resolves the numeric vendor ID and raw model
+string against a small curated table (e.g. vendor ID `5` → "Johnson Controls", model `FX16` →
+product family "Facility Explorer") **before** the value ever reaches the firmware CVE
+correlation step (§10.7). A recognized Johnson Controls FX16 field controller now surfaces a
+real CVE advisory row (CVE-2017-16744, HIGH) in the same way any other fingerprinted device
+does.
+
+**Curated, not exhaustive.** This resolution table covers only a small, individually-verified
+subset of the ASHRAE/BACnet Committee's 1000+-entry vendor-ID registry (`bacnet.org/assigned-
+vendor-ids/`) — the same curated-catalog philosophy already used by the firmware CVE table
+(§10.7), the CVSS/CPE compliance mappings, and the QRAMM model catalog. **An unrecognized
+vendor ID still displays as the raw numeric string exactly as before this phase** — there is
+no behavior change or crash risk for the majority of BACnet vendor IDs QUIRK has not curated.
+The raw, unresolved probe values remain available on every fingerprinted device as the
+`bacnet_vendor` / `bacnet_model` fields, so an operator can always see exactly what the device
+reported on the wire, independent of whether QUIRK's curated table recognized it.
+
+**Advisory-only, same as every other hardware signal.** Like every hardware fingerprinting
+signal in this guide (§10.1–§10.7), BACnet vendor-name resolution and any resulting CVE
+correlation are purely advisory — they never affect the quantum-readiness score or the CNSA
+2.0 remediation tier (§10.2). The catalog is staleness-gated on a 365-day cadence (ASHRAE
+vendor-ID assignments are append-only and essentially never change once issued, unlike CVE
+data's 30-day cadence) — see `CLAUDE.md`'s "Staleness Review Cadence" section.
+
+> **Client Conversation — BACnet Vendor Resolution:**
+> "When we identify a BACnet building-automation device, we now resolve its numeric ASHRAE
+> vendor ID to a real vendor name — for example, a Johnson Controls field controller shows up
+> as 'Johnson Controls' rather than the number 5. Where we also recognize the specific product
+> family, that can surface a real CVE advisory the same way any other hardware device does.
+> This only covers a curated subset of vendors we've individually verified, so an unrecognized
+> device will still show its raw numeric ID — that's expected, not a scanning failure."
+
 ---
 
 ## 11. Dashboard Sidebar Scan-Date Badge (Phase 143)
