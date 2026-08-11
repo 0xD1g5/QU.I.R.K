@@ -34,6 +34,7 @@ jobs:
             tests/test_hardware_staleness.py \
             tests/test_snmp_scanner_contract.py \
             tests/test_cve_staleness.py \
+            tests/test_bacnet_vendor_resolution.py \
             -v -k "staleness or freshness"
 
       - name: Run install-error unit checks

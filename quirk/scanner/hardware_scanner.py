@@ -497,8 +497,29 @@ def fingerprint_one(
             # D-03: first-match-wins — only promote headline if Modbus (Step 4)
             # did not already claim it.
             if device.vendor == "Unknown" and _bacnet_result.get("bacnet_vendor"):
-                device.vendor = _bacnet_result["bacnet_vendor"]
-                device.model = _bacnet_result.get("bacnet_model")
+                # Phase 147 DRAIN-02 (decision D-147-02-A) — resolve the raw
+                # numeric vendorID/model-name to real vendor/product-family
+                # names BEFORE hw_cve.correlate_device() is ever called, so
+                # its ("Johnson Controls", "Facility Explorer") key becomes
+                # reachable. Resolution is deliberately here at the call
+                # site, never inside correlate_device() itself (hw_cve.py's
+                # documented contract, RESEARCH.md Pitfall 3). Unrecognized
+                # vendor/model values fall back to the raw string exactly as
+                # before — no regression for unresolved devices.
+                from quirk.scanner.bacnet_vendors import (
+                    resolve_bacnet_model_family,
+                    resolve_bacnet_vendor,
+                )
+
+                _raw_bacnet_vendor = _bacnet_result["bacnet_vendor"]
+                _raw_bacnet_model = _bacnet_result.get("bacnet_model")
+                device.vendor = (
+                    resolve_bacnet_vendor(_raw_bacnet_vendor) or _raw_bacnet_vendor
+                )
+                device.model = (
+                    resolve_bacnet_model_family(device.vendor, _raw_bacnet_model)
+                    or _raw_bacnet_model
+                )
                 device.fingerprint_method = "bacnet"
                 device.confidence = "medium"
 

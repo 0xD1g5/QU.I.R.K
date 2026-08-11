@@ -170,3 +170,113 @@ def test_bacnet_vendor_table_boundary_366_days_is_stale() -> None:
     )
     assert is_bacnet_vendor_table_stale(fake_today) is True
 
+
+# ============================================================
+# Group D — hardware_scanner.py Step 5 call-site integration
+# ============================================================
+
+
+def _make_cfg(enable_bacnet: bool = True, enable_modbus: bool = False):
+    connectors = SimpleNamespace(
+        enable_modbus=enable_modbus,
+        enable_bacnet=enable_bacnet,
+        snmp_v3_credentials={},
+    )
+    return SimpleNamespace(connectors=connectors)
+
+
+def _make_ep(host: str, port: int = 0, service_detail: str = ""):
+    from quirk.models import CryptoEndpoint
+
+    ep = CryptoEndpoint.__new__(CryptoEndpoint)
+    ep.__dict__["host"] = host
+    ep.__dict__["port"] = port
+    ep.__dict__["protocol"] = "TCP"
+    ep.__dict__["service_detail"] = service_detail
+    return ep
+
+
+def test_call_site_resolves_known_vendor_and_model_family() -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    ep = _make_ep("10.0.0.9")
+    cfg = _make_cfg(enable_bacnet=True)
+
+    with patch(
+        "quirk.scanner.bacnet_scanner.probe_bacnet_target",
+        return_value={
+            "bacnet_vendor": "5",
+            "bacnet_model": "FX16",
+            "bacnet_firmware": "9.0.1",
+            "bacnet_probe_state": "identified",
+        },
+    ):
+        device = fingerprint_one(ep, timeout=1, cfg=cfg, ot_only=True)
+
+    assert device.vendor == "Johnson Controls"
+    assert device.model == "Facility Explorer"
+    assert device.fingerprint_method == "bacnet"
+    assert device.confidence == "medium"
+    # Raw probe artifacts are preserved unresolved.
+    assert device.bacnet_vendor == "5"
+    assert device.bacnet_model == "FX16"
+
+
+def test_call_site_falls_back_to_raw_value_when_unrecognized() -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    ep = _make_ep("10.0.0.10")
+    cfg = _make_cfg(enable_bacnet=True)
+
+    with patch(
+        "quirk.scanner.bacnet_scanner.probe_bacnet_target",
+        return_value={
+            "bacnet_vendor": "99999",
+            "bacnet_model": "MysteryModel",
+            "bacnet_firmware": "1.0.0",
+            "bacnet_probe_state": "identified",
+        },
+    ):
+        device = fingerprint_one(ep, timeout=1, cfg=cfg, ot_only=True)
+
+    assert device.vendor == "99999"
+    assert device.model == "MysteryModel"
+
+
+def test_call_site_does_not_overwrite_vendor_already_claimed_by_modbus() -> None:
+    """D-03 first-match-wins: Step 5 must not clobber a headline already
+    claimed by Step 4 (Modbus)."""
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    ep = _make_ep("10.0.0.11")
+    cfg = _make_cfg(enable_bacnet=True, enable_modbus=True)
+
+    with patch(
+        "quirk.scanner.modbus_scanner.probe_modbus_target",
+        return_value={
+            "modbus_vendor": "Schneider Electric",
+            "modbus_model": "M221",
+            "modbus_firmware": "1.6.2.0",
+            "modbus_probe_state": "identified",
+        },
+    ), patch(
+        "quirk.scanner.bacnet_scanner.probe_bacnet_target",
+        return_value={
+            "bacnet_vendor": "5",
+            "bacnet_model": "FX16",
+            "bacnet_firmware": "9.0.1",
+            "bacnet_probe_state": "identified",
+        },
+    ):
+        device = fingerprint_one(
+            ep,
+            timeout=1,
+            cfg=cfg,
+            confirmed_open_ports={"10.0.0.11": {502}},
+            ot_only=True,
+        )
+
+    assert device.vendor == "Schneider Electric"
+    assert device.model == "M221"
+    assert device.fingerprint_method == "modbus"
+
