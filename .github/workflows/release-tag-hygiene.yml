@@ -1,0 +1,50 @@
+# Release Tag Hygiene Guard (RELEASE-03)
+#
+# What this guard exists to catch: a release-like git tag that never produced
+# a successful `release.yml` run. The two real incidents this is modeled on
+# produced ZERO Actions events, so a push-time-only check would never have
+# fired:
+#   - `v5.9` is a two-component tag that never matched release.yml's strict
+#     `v*.*.*` glob, so pushing it triggered nothing.
+#   - `v5.10.0` was tagged locally but never pushed to origin at all.
+# Three consecutive milestones shipped no Windows build with zero signal as
+# a result.
+#
+# This job fails on any release-like tag (matching the loose `v[0-9]*`
+# pattern in scripts/release_tag_hygiene.py — deliberately broader than
+# release.yml's own glob) with no corresponding successful release run and
+# no entry in .github/tag-hygiene-baseline.txt (D-11). The baseline file is
+# the ONLY sanctioned way to silence a tag — it is a reviewed, reasoned
+# disposition, never a mute button for a *current* release failure.
+
+name: Release Tag Hygiene
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Mondays 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read  # required for `gh run list` against release.yml
+
+jobs:
+  tag-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          fetch-depth: 0  # required: shallow checkout fetches no tags, which
+                           # would make `git tag --list` return nothing and
+                           # the guard vacuously green
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.11'
+
+      - name: Run tag hygiene guard
+        run: python scripts/release_tag_hygiene.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
