@@ -144,7 +144,52 @@ Step-by-step procedure for cutting a release. All steps are required.
 
 9. **Update the milestone documentation.** Mark the corresponding milestone
    complete in `.planning/ROADMAP.md` and propagate the release version into
-   the README badges if the badge URL embeds the version.
+   the README badges if the badge URL embeds the version. If a tag ever fails
+   to produce a release run — silently, with no red step to notice — the
+   Release Tag Hygiene Guard below is the standing backstop that catches it
+   on the next scheduled run.
+
+## Release Tag Hygiene Guard
+
+**What it is:** `.github/workflows/release-tag-hygiene.yml`, scheduled
+Mondays 09:00 UTC — the same cadence as the Python Staleness Gate — and also
+runnable on demand:
+
+```bash
+gh workflow run release-tag-hygiene.yml
+```
+
+**Why it exists:** the runbook above assumes every pushed tag produces a
+release run. It doesn't always. `v5.9` never matched `release.yml`'s strict
+`v*.*.*` glob (it's a two-component tag), and `v5.10.0` was tagged locally
+but never pushed to origin. Both incidents produced zero Actions events —
+push-time checks have nothing to react to. As a result, three milestones
+shipped no Windows build with zero signal that anything was wrong. This
+guard runs on a schedule instead, so silence gets checked periodically
+rather than trusted.
+
+**What it checks:** every git tag matching the loose pattern `v[0-9]*` is
+cross-referenced against successful `release.yml` runs and existing GitHub
+Release objects. The loose pattern is deliberately broader than
+`release.yml`'s own `v*.*.*` glob — that mismatch is exactly how `v5.9` gets
+caught instead of silently skipped.
+
+**What red means:** one or more release-like tags exist with no successful
+release run and no baseline entry. Remediation options, in priority order:
+
+1. **Re-cut and push the tag correctly** — if the tag was malformed or never
+   pushed, fix it at the source.
+2. **Run the release workflow for that tag** — if the tag is correct but the
+   release run failed or never happened, trigger `release.yml` against it.
+3. **Add a reviewed line to `.github/tag-hygiene-baseline.txt`** — only when
+   the gap is a deliberate, dispositioned historical exception (e.g. a
+   PyPI-only release), not a current failure waiting to be fixed.
+
+**Baseline file contract:** `.github/tag-hygiene-baseline.txt` holds one
+`<tag> <reason>` per line (`#` comments allowed). Adding a line is a
+recorded, reviewable disposition — it must never be used to silence a
+*current* release failure. The file is seeded with every tag that existed
+when this guard was built, so its first scheduled run started green.
 
 ## One-Time Setup (per project, never re-run)
 
