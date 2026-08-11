@@ -34,7 +34,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **DRAIN-03**: The 2026-05-27 audit ledger has zero rows with an undecided or stale
       disposition — already-fixed rows flipped to `[x] closed` with commit citations, WR-02/CD-03
       get a final fix-or-accept-risk call
-- [ ] **DRAIN-04**: The deferred human-UAT ledger in STATE.md is re-triaged — actionable items
+- [x] **DRAIN-04**: The deferred human-UAT ledger in STATE.md is re-triaged — actionable items
       (e.g., the Windows Authenticode production cert) resolved or explicitly re-confirmed as
       still blocked
 
@@ -80,4 +80,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRAIN-01 | Phase 147 | Complete |
 | DRAIN-02 | Phase 147 | Complete |
 | DRAIN-03 | Phase 147 | Complete |
-| DRAIN-04 | Phase 147 | Pending |
+| DRAIN-04 | Phase 147 | Complete |

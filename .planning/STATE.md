@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: executing
-stopped_at: Completed 147-03-PLAN.md
-last_updated: "2026-08-11T13:56:08.081Z"
+status: verifying
+stopped_at: Completed 147-04-PLAN.md
+last_updated: "2026-08-11T14:05:00.037Z"
 last_activity: 2026-08-11
 progress:
   total_phases: 11
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 16
-  completed_plans: 15
-  percent: 27
+  completed_plans: 16
+  percent: 36
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 147 (backlog-drain-lifecycle-ledger-tail) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
+Phase: 147 (backlog-drain-lifecycle-ledger-tail) — COMPLETE (4 of 4 plans)
+Plan: 4 of 4 (147-04 complete)
+Status: Phase complete — ready for verification
 Last activity: 2026-08-11
 
 ## v5.11 Phase Map
@@ -104,6 +104,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 147 P01 | 12min | 3 tasks | 2 files |
 | Phase 147 P02 | 35min | 5 tasks | 6 files |
 | Phase 147 P03 | 25min | 3 tasks | 4 files |
+| Phase 147 P04 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 147]: D-147-02-A: build-catalog (option a) — user confirmed via orchestrator checkpoint before plan dispatch
 - [Phase 147]: D-147-03-WR02: wr02-fix - ship the port-aware default CORS allowlist fix via a new QUIRK_DASHBOARD_PORT env var
 - [Phase 147]: D-147-03-CD03: cd03-accept - accept the SSRF TOCTOU/DNS-rebinding risk with refreshed rationale (answered after an orchestrator-level clarification exchange), citing Phase 120 T-120-04 and Phase 123 SSRF-05
+- [Phase 147]: D-147-04-AUTHENTICODE: user confirmed no production Windows Authenticode code-signing cert acquired/loaded into GitHub Actions secrets — UAT-143-03 finalized STILL BLOCKED, re-triage at next milestone close
+- [Phase 147]: DRAIN-04 re-triaged all Deferred Items rows with dated 2026-08-10 dispositions; gh evidence shows origin/main unpushed since 2026-06-18 (no live windows-latest CI run for Phase 139-147 work); relocated 36 stray per-plan duration rows to Performance Metrics; removed stale healthcare-vertical-merge quick_task row
 
 ### Pending Todos
 
@@ -239,8 +242,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-11T13:56:08.075Z
-Stopped at: Completed 147-03-PLAN.md
+Last session: 2026-08-11T14:05:00.030Z
+Stopped at: Completed 147-04-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
