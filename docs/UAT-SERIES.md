@@ -1,7 +1,18 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.10.0
-**Last Updated:** 2026-08-11 (Phase 146 wrap — Progress, Scaling & Disclosure: DISC-04/05/06/07,
+**Last Updated:** 2026-08-11 (Phase 147 wrap — Backlog Drain, Lifecycle & Ledger Tail: DRAIN-01
+resume-path OT/ICS supplemental fingerprint fix, DRAIN-02 BACnet vendor-ID + model-family CVE
+resolution (user-confirmed build-catalog decision, making the dead "Johnson Controls / Facility
+Explorer" CVE_TABLE entry reachable), DRAIN-03 port-aware default CORS allowlist fix + full
+2026-05-27 audit-ledger reconciliation to zero open rows (user-confirmed WR-02 fix + CD-03
+accept-risk dispositions), DRAIN-04 STATE.md Deferred Items ledger re-triage with the Windows
+Authenticode signing-cert item folded in (user-confirmed: no production cert acquired yet).
+UAT-147-01 through 04 all PASS — 01/02/03 automated, 02/03/04 gated by live user checkpoints
+resolved by the orchestrator before dispatch. Phase 147 is the final phase of the v5.11
+milestone (Discovery at Scale + Backlog Drain). This is the final phase; Phase 147 is not itself
+gated by a `checkpoint:human-verify` UAT task, unlike Phase 146. Earlier: Phase 146 wrap —
+Progress, Scaling & Disclosure: DISC-04/05/06/07,
 chunked discovery batches now write progress to `scan_jobs` (surfaced as a live sub-line on the
 dashboard job page and a `Discovery: batch N/M` stdout line), per-batch nmap timeout/timing scales
 to batch size instead of one fixed 300s ceiling, and a shared "Hosts undetermined
@@ -16702,3 +16713,158 @@ surfaced and fixed two real defects mid-checkpoint, both now committed:
    discovery-batch failures their own `discovery_exception` category, distinct from the generic
    one, with a new regression test locking the exclusion.
 See 146-06-SUMMARY.md, 146-REVIEW.md, and 146-VERIFICATION.md for full detail.
+
+---
+
+## Series 147: Backlog Drain — Lifecycle & Ledger Tail (Phase 147 — v5.11)
+
+### UAT-147-01: Resume-path OT/ICS supplemental fingerprinting (DRAIN-01) — Automated
+
+**What to test:** A `--resume-scan-id` continuation whose `ssh` stage is already checkpointed
+complete still runs the OT/ICS supplemental fingerprint pass (Modbus/BACnet, no-SSH hosts). A
+fresh (non-resume) run behaves exactly as before, and the ssh-stage checkpoint write is never
+re-triggered by the OT-only subset.
+
+**Steps:**
+1. Run `pytest tests/test_run_scan_otics_ssh_gate.py -x` — confirm all pass (11/11: 7
+   pre-existing Groups A/B + 4 new Group C resume-path cases).
+2. Confirm `run_ot_supplemental_and_persist()` is called unconditionally after the ssh-stage
+   `if/else` closes in `run_scan.py`, not inside the fresh-run-only `else` branch.
+3. Confirm the ssh-stage checkpoint write (`endpoint_count`/`partial_failure`) stays scoped to
+   the fresh-run branch only.
+
+**Pass criteria:**
+- `tests/test_run_scan_otics_ssh_gate.py` exits 0 (11/11)
+- `python -m compileall run_scan.py` clean
+
+**Automated gate:** See Steps above (Phase 147 Plan 01).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 147 Plan 01)
+**Notes:** DRAIN-01. Full-suite triage via a temporary worktree comparison against the pre-plan
+commit confirmed zero regressions across 103 pre-existing, unrelated failures. See
+147-01-SUMMARY.md.
+
+---
+
+### UAT-147-02: BACnet vendor-ID + model-family CVE resolution (DRAIN-02) — Automated + Checkpoint
+
+**What to test:** A BACnet-identified device reporting vendorID `5` / model `FX16` surfaces as
+vendor "Johnson Controls" and correlates against the existing `("Johnson Controls", "Facility
+Explorer")` CVE_TABLE entry (CVE-2017-16744, HIGH) — previously dead weight because raw numeric
+values could never match the table key. Unrecognized vendor IDs fall back to today's raw-string
+behavior with no regression.
+
+**Steps:**
+1. Run `pytest tests/test_bacnet_vendor_resolution.py -x` — confirm all pass (16/16: resolver
+   unit tests + end-to-end CVE-reachability assertion + negative control + call-site test).
+2. Confirm `quirk/scanner/bacnet_vendors.py` exists with a staleness gate
+   (`is_bacnet_vendor_table_stale`) and is registered in `CLAUDE.md`'s Staleness Review Cadence
+   and `.github/workflows/python-staleness.yml`.
+3. Confirm `docs/report-interpretation.md` §10.8 and `docs/operators-guide.md` §9.5 document the
+   new vendor-name/CVE-correlation surface, and both are synced to the Obsidian vault (`Digs`).
+
+**Pass criteria:**
+- `tests/test_bacnet_vendor_resolution.py` exits 0 (16/16)
+- `python -m compileall quirk/` clean
+- Docs present with the claimed section content; vault sync confirmed
+
+**Checkpoint:** DRAIN-02's fix-or-defer call (build a curated resolution catalog vs. mark
+BACnet CVE correlation out-of-scope) was confirmed live by the user with the orchestrator
+before any code was written — decision D-147-02-A = build-catalog (option a, research
+recommendation).
+
+**Automated gate:** See Steps above (Phase 147 Plan 02).
+
+**Result:** - [x] PASS (automated + checkpoint)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 147 Plan 02) + user checkpoint
+(orchestrator-relayed decision)
+**Notes:** DRAIN-02. See 147-02-SUMMARY.md.
+
+---
+
+### UAT-147-03: Port-aware CORS default + audit ledger reconciliation (DRAIN-03) — Automated + Checkpoint
+
+**What to test:** The default CORS allowlist matches the dashboard's actual bound port (fixing
+a defect where the out-of-box default could never match the real browser `Origin`), and every
+one of the 12 previously-open rows in the 2026-05-27 audit ledger carries a final, cited
+disposition.
+
+**Steps:**
+1. Run `pytest tests/test_security_config.py tests/test_api_auth.py -x` — confirm all pass (27
+   passed, including 6 new CORS regression tests).
+2. Confirm `get_cors_origins()` in `quirk/config.py` builds its default from
+   `QUIRK_DASHBOARD_PORT` (set by `quirk/dashboard/server.py::serve()`), falling back to 8512,
+   with `QUIRK_CORS_ORIGINS` still taking precedence.
+3. Confirm `.planning/audit-2026-05-27/AUDIT-TASKS.md` has zero live undecided rows and a "Phase
+   147 Disposition Summary" section; spot-check closure commit SHAs exist via `git cat-file -e`.
+4. Confirm `docs/configuration.md` documents the CORS Allowlist behavior and
+   `docs/operators-guide.md` §5.3 carries a troubleshooting entry (added post-plan by the
+   orchestrator to close a doc-checklist gap the executor missed).
+
+**Pass criteria:**
+- Targeted suite above exits 0 (27 passed)
+- `python -m compileall quirk/` clean
+- Ledger greps for open/deferred rows return 0
+- Docs present with the claimed content
+
+**Checkpoint:** Two linked fix-or-accept-risk calls confirmed live by the user with the
+orchestrator before any code or ledger edit. WR-02 (CORS): decision D-147-03-WR02 = wr02-fix
+(ship the port-aware default). CD-03 (SSRF TOCTOU/DNS rebinding): decision D-147-03-CD03 =
+cd03-accept (accept risk, refresh rationale — no code change; HTTP/HTTPS already IP-pinned since
+Phase 123, remaining gap is the operator-configured SMTP path with a TLS-cert-verification
+compensating control). The user requested additional plain-language clarification on CD-03
+before deciding; the orchestrator explained the TOCTOU/DNS-rebinding mechanism and what Phase
+120/123 already closed before the final answer.
+
+**Automated gate:** See Steps above (Phase 147 Plan 03).
+
+**Result:** - [x] PASS (automated + checkpoint)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 147 Plan 03) + user checkpoint
+(orchestrator-relayed decisions)
+**Notes:** DRAIN-03. See 147-03-SUMMARY.md.
+
+---
+
+### UAT-147-04: Deferred Items ledger re-triage + Authenticode status (DRAIN-04) — Automated + Checkpoint
+
+**What to test:** Every row in `STATE.md`'s Deferred Items table carries a dated, per-row
+disposition; the Windows Authenticode signing-cert item is folded into the live ledger with a
+status set by explicit user confirmation (never inferred); stray per-plan duration rows are
+relocated intact to Performance Metrics rather than deleted.
+
+**Steps:**
+1. Confirm `.planning/STATE.md`'s `## Deferred Items` section carries `Last re-triaged:
+   2026-08-10` and every row contains `RESOLVED —`, `STILL BLOCKED —`, or `NOT A DEFERRED UAT —`.
+2. Confirm `awk '/^## Deferred Items/,/^## Session Continuity/' .planning/STATE.md | grep -c
+   'min | .* tasks'` returns 0 (no stray duration rows remain) and the same count appears intact
+   under a new `Per-plan execution metrics` table in `## Performance Metrics`.
+3. Confirm `UAT-143-03` (Windows Authenticode) appears in `.planning/STATE.md` with no
+   inference-wording ("appears to", "likely") and `.planning/milestones/v5.10-MILESTONE-AUDIT.md`
+   still contains the original paragraph plus a forward pointer.
+
+**Pass criteria:**
+- All grep/awk checks above pass as specified
+- No `PENDING USER CONFIRMATION` placeholder remains
+
+**Checkpoint:** The Authenticode certificate's acquisition status is a pure external-state fact
+that cannot be inferred from CI config or `gh secret list` (names only, never values). Confirmed
+live by the user with the orchestrator: decision D-147-04-AUTHENTICODE = "No cert acquired yet"
+— row finalized as `STILL BLOCKED — no production signing cert acquired; signing step no-ops
+cleanly by design; re-triage at next milestone close`.
+
+**Automated gate:** See Steps above (Phase 147 Plan 04).
+
+**Result:** - [x] PASS (automated + checkpoint)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (grep/awk verification — Phase 147 Plan 04) + user
+checkpoint (orchestrator-relayed decision)
+**Notes:** DRAIN-04. **Flag raised during execution, not silently acted on:** `gh run list`
+evidence shows `origin/main` has not been pushed since 2026-06-18 — everything through Phase 147
+has only run locally, never on live GitHub Actions CI. Worth a push + CI-verification pass
+before the next `/gsd-audit-milestone`. See 147-04-SUMMARY.md.
+
+---
+
+**Phase 147 verification:** `gsd-verifier` ran a goal-backward check against the live codebase
+(not SUMMARY claims): 4/4 must-haves verified, no blockers. See 147-VERIFICATION.md. Phase 147
+is the final phase of the v5.11 milestone (Discovery at Scale + Backlog Drain).
