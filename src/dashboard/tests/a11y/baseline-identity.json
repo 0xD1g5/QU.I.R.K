@@ -15,7 +15,7 @@
         },
         {
           "target": [
-            ".rounded-xl.text-card-foreground.bg-card:nth-child(1) > .pt-0.p-6 > p"
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(1) > .pt-0.p-6 > .mt-1"
           ]
         },
         {
@@ -25,7 +25,7 @@
         },
         {
           "target": [
-            ".rounded-xl.text-card-foreground.bg-card:nth-child(2) > .pt-0.p-6 > p"
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(2) > .pt-0.p-6 > .mt-1"
           ]
         },
         {
@@ -40,7 +40,7 @@
         },
         {
           "target": [
-            ".rounded-xl.text-card-foreground.bg-card:nth-child(3) > .pt-0.p-6 > p"
+            ".rounded-xl.text-card-foreground.bg-card:nth-child(3) > .pt-0.p-6 > .mt-1"
           ]
         },
         {
