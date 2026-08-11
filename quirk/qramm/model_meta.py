@@ -18,7 +18,7 @@ STALENESS_THRESHOLD_DAYS: int = 90
 
 QRAMM_MODEL = {
     "qramm_version": "1.0",
-    "last_verified": "2026-05-05",
+    "last_verified": "2026-08-11",
     "source_url": "https://qramm.org",
     "github_url": "https://github.com/csnp/qramm",
     "license": "MIT",
