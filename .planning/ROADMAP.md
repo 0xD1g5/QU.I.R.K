@@ -156,11 +156,11 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 146-04-PLAN.md — Wire progress writes, per-batch timeout/timing, and CLI stdout progress into run_scan.py's batch loop; remove jobs.py's static --nmap-timeout 300 (DISC-04, DISC-05, DISC-06)
-- [ ] 146-05-PLAN.md — Dashboard scan-job discovery batch sub-line + JobStatus TS type (DISC-04)
+- [x] 146-05-PLAN.md — Dashboard scan-job discovery batch sub-line + JobStatus TS type (DISC-04)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 146-06-PLAN.md — Docs + Obsidian vault sync + human verification checkpoint (DISC-04, DISC-05, DISC-06, DISC-07)
+- [x] 146-06-PLAN.md — Docs + Obsidian vault sync + human verification checkpoint (DISC-04, DISC-05, DISC-06, DISC-07)
 
 **UI hint**: yes
 
@@ -187,7 +187,15 @@ milestones — independent of the discovery-at-scale work, safe to sequence in p
      Windows Authenticode production cert) is either resolved or explicitly re-confirmed as still
      blocked, with a reason
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 147-01-PLAN.md — Hoist the OT/ICS supplemental pass out of the ssh-stage if/else so `--resume-scan-id` covers OT-only hosts (DRAIN-01)
+- [ ] 147-02-PLAN.md — Curated BACnet vendor-ID + model-family resolution making the Facility Explorer CVE entry reachable (DRAIN-02)
+- [ ] 147-03-PLAN.md — Port-aware CORS default (WR-02) + full 2026-05-27 audit-ledger reconciliation incl. CD-03 disposition (DRAIN-03)
+- [ ] 147-04-PLAN.md — STATE.md deferred-item re-triage + Authenticode item folded in with user confirmation (DRAIN-04)
 
 ### Progress
 
@@ -195,7 +203,7 @@ milestones — independent of the discovery-at-scale work, safe to sequence in p
 |-------|----------------|--------|-----------|
 | 144. Chunked Discovery Core | 3/3 | Complete   | 2026-08-10 |
 | 145. Liveness Pre-Pass | 3/3 | Complete   | 2026-08-10 |
-| 146. Progress, Scaling & Disclosure | 4/6 | In Progress|  |
+| 146. Progress, Scaling & Disclosure | 6/6 | Complete    | 2026-08-11 |
 | 147. Backlog Drain — Lifecycle & Ledger Tail | 0/TBD | Not started | - |
 
 ---
