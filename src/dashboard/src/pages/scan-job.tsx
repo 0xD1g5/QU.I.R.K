@@ -151,10 +151,13 @@ export function ScanJobPage() {
       />
 
       <p className="text-sm font-medium mt-2">
-        Stage {data.stage_index} of 7 — {STAGE_DISPLAY_NAMES[data.current_stage ?? ""] ?? "—"}
+        Stage {data.stage_index} of 7 —{" "}
+        {STAGE_DISPLAY_NAMES[STAGE_ORDER[data.stage_index - 1] ?? ""] ?? "—"}
       </p>
 
-      {data.current_stage === "discovery" && data.discovery_batch_total != null && (
+      {data.status === "running" &&
+        data.current_stage === "discovery" &&
+        data.discovery_batch_total != null && (
         <p className="text-sm text-muted-foreground">
           Batch {data.discovery_batch_index} of {data.discovery_batch_total} —{" "}
           {data.discovery_hosts_checked?.toLocaleString()} hosts checked
