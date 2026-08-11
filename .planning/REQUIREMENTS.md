@@ -19,14 +19,14 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **RELEASE-01**: Cutting a release tag produces a Windows operator zip attached to the
       GitHub Release — the repaired signing self-test (`1a6effc`) is proven by an actual green
       run, not by inspection
-- [ ] **RELEASE-02**: A broken release job is caught *before* a tag is cut — a dry-run or
+- [x] **RELEASE-02**: A broken release job is caught *before* a tag is cut — a dry-run or
       equivalent pre-release check exercises the release path on demand, so a defect cannot
       first surface on an immutable tag
 - [ ] **RELEASE-03**: A malformed or unpushed release tag cannot silently skip the release
       pipeline — tag format is guarded and a missing release run is detectable
       (`v5.9` never matched `v*.*.*`; `v5.10.0` was never pushed; three milestones shipped no
       Windows build with zero signal)
-- [ ] **RELEASE-04**: The v5.11.0 release is retroactively completed or explicitly dispositioned
+- [x] **RELEASE-04**: The v5.11.0 release is retroactively completed or explicitly dispositioned
       — the operator can tell from the GitHub Releases page whether a Windows artifact exists for
       a given shipped version, with no silent gaps in the release history.
       **⚠ Requires a user decision before implementation (D-148-RELEASE04, see ROADMAP Phase 148).**
@@ -98,9 +98,9 @@ Deferred to a later milestone.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | RELEASE-01 | Phase 153 | Pending |
-| RELEASE-02 | Phase 148 | Pending |
+| RELEASE-02 | Phase 148 | Complete |
 | RELEASE-03 | Phase 148 | Pending |
-| RELEASE-04 | Phase 148 | Pending |
+| RELEASE-04 | Phase 148 | Complete |
 | SUITE-01 | Phase 149 | Pending |
 | SUITE-02 | Phase 150 | Pending |
 | SUITE-03 | Phase 150 | Pending |

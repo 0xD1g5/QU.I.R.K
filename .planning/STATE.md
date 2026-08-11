@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
-status: planning
-last_updated: "2026-08-11T17:06:31.860Z"
+status: executing
+stopped_at: Phase 148 plan 03 complete
+last_updated: "2026-08-11T18:32:04.303Z"
 last_activity: 2026-08-11
 progress:
-  total_phases: 6
+  total_phases: 13
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 2
   percent: 0
 ---
 
@@ -21,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Milestone complete
+**Current focus:** Phase 148 — release-pipeline-repair-windows-asset-backfill
 
 ## Current Position
 
-Phase: 148 (Release Pipeline Repair + Windows Asset Backfill) — not started
-Plan: —
-Status: Roadmap created, ready for /gsd-plan-phase 148
-Last activity: 2026-08-11 — Milestone v5.12 roadmap created (Phases 148-153, 14/14 requirements mapped)
+Phase: 148 (release-pipeline-repair-windows-asset-backfill) — EXECUTING
+Plan: 3 of 4
+Status: Ready to execute
+Last activity: 2026-08-11
 
 ## v5.12 Phase Map
 
@@ -115,6 +116,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 147 P02 | 35min | 5 tasks | 6 files |
 | Phase 147 P03 | 25min | 3 tasks | 4 files |
 | Phase 147 P04 | 25min | 2 tasks | 2 files |
+| Phase 148 P01 | 25min | 3 tasks | 3 files |
+| Phase 148 P03 | 15min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -204,6 +207,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 147]: D-147-03-CD03: cd03-accept - accept the SSRF TOCTOU/DNS-rebinding risk with refreshed rationale (answered after an orchestrator-level clarification exchange), citing Phase 120 T-120-04 and Phase 123 SSRF-05
 - [Phase 147]: D-147-04-AUTHENTICODE: user confirmed no production Windows Authenticode code-signing cert acquired/loaded into GitHub Actions secrets — UAT-143-03 finalized STILL BLOCKED, re-triage at next milestone close
 - [Phase 147]: DRAIN-04 re-triaged all Deferred Items rows with dated 2026-08-10 dispositions; gh evidence shows origin/main unpushed since 2026-06-18 (no live windows-latest CI run for Phase 139-147 work); relocated 36 stray per-plan duration rows to Performance Metrics; removed stale healthcare-vertical-merge quick_task row
+- [Phase 148]: [Phase 148]: Scoped test_no_guard_is_ref_shape_only to actual if: directive lines only, excluding explanatory comments that quote the guard literal by name
+- [Phase 148]: 148-03: Reworded 5.11.0.md See Also section to avoid the literal missing-filename substrings (5.7/5.8/5.9/5.10 dot-md) while still conveying the gap, satisfying the plan's own no-link acceptance criterion and the new test's guard
 
 ### Pending Todos
 
@@ -254,8 +259,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-11T14:05:00.030Z
-Stopped at: Completed 147-04-PLAN.md
+Last session: 2026-08-11T18:29:46.906Z
+Stopped at: Phase 148 plan 03 complete
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
