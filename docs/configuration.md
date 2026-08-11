@@ -828,6 +828,16 @@ quirk serve --port 9000 --no-open
 quirk serve --host 0.0.0.0 --port 8512
 ```
 
+### CORS Allowlist (v5.11 — Phase 147, DRAIN-03 / WR-02)
+
+The dashboard API rejects cross-origin browser requests whose `Origin` header isn't in an allowlist. Resolution order:
+
+1. `QUIRK_CORS_ORIGINS` (comma-separated list) — always wins if set.
+2. `security.cors_origins` in your YAML config file (`QUIRK_CONFIG_PATH`, default `./config.yaml`).
+3. **Port-aware default** — if neither is set, the allowlist is built from the port `quirk serve` actually bound (via `QUIRK_DASHBOARD_PORT`, set automatically by `serve()`), e.g. `http://127.0.0.1:9000` and `http://localhost:9000` for `quirk serve --port 9000`. The port-less `http://127.0.0.1` / `http://localhost` entries are always included too, so reverse-proxy-on-port-80 deployments keep working.
+
+Before Phase 147, the default was a hardcoded port-less pair (`http://127.0.0.1`, `http://localhost`) that could never match a real browser `Origin` header for the product's own default bind (`127.0.0.1:8512`) — every out-of-box dashboard load hit a CORS rejection unless an operator manually set `QUIRK_CORS_ORIGINS`. This is fixed automatically now; no operator action required for the default single-machine case. For a real deployment behind a domain name, still set `QUIRK_CORS_ORIGINS` explicitly — see [Cloud Console Deployment](deployment-cloud-console.md#security-checklist).
+
 ### `quirk token` — Dashboard API Token CLI (Phase 102, AUTH-01)
 
 The `quirk token` subcommand manages the `security.api_token` key in your QUIRK YAML config. The token is used to authenticate requests to the dashboard API and browser login form.

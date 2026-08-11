@@ -166,6 +166,13 @@ Compose profiles, with an oracle of expected findings per profile.
 - **Stale `.vite/`** — delete `.vite/` under `src/dashboard/` and rebuild.
 - **Port conflict on 8512** — pass `quirk serve --port <other>`. The dashboard binds
   loopback only by default.
+- **CORS rejection in the browser (v5.11+)** — should no longer happen out of the box:
+  `quirk serve` sets `QUIRK_DASHBOARD_PORT` to the actual bound port, and the default
+  CORS allowlist (`quirk/config.py::get_cors_origins`) matches it automatically
+  (Phase 147, DRAIN-03 / WR-02). If you still see a CORS error, you're likely accessing
+  the dashboard through a different hostname/port than it bound to (e.g. a reverse
+  proxy) — set `QUIRK_CORS_ORIGINS` explicitly. See
+  [Configuration → CORS Allowlist](configuration.md#cors-allowlist-v511--phase-147-drain-03--wr-02).
 - **Data not loading** — confirm a recent scan has populated `quirk.db`; the dashboard
   reads SQLite directly.
 
