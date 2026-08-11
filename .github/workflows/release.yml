@@ -206,6 +206,17 @@ jobs:
           Copy-Item "dist\quirk\quirk.exe" "selftest_target.exe"
           & $signtool sign /f selftest_cert.pfx /p "ci-selftest-only" /fd sha256 "selftest_target.exe"
           if ($LASTEXITCODE -ne 0) { Write-Error "Self-test signing failed (exit $LASTEXITCODE)"; exit 1 }
+
+          # `signtool verify /pa` applies the Authenticode policy, which requires the chain to
+          # terminate in a TRUSTED root. A self-signed cert sitting only in CurrentUser\My can
+          # never satisfy that, so the verify below failed 100% of the time (first observed on
+          # the v5.11.0 tag — the first release run since this step was added in Phase 143, as
+          # v5.10.0 was never pushed and `v5.9` did not match this workflow's `v*.*.*` glob).
+          # Trust the ephemeral root for the life of the job; the cleanup step below removes it.
+          Export-Certificate -Cert $testCert -FilePath "selftest_root.cer" | Out-Null
+          Import-Certificate -FilePath "selftest_root.cer" `
+            -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+
           & $signtool verify /pa /v "selftest_target.exe"
           if ($LASTEXITCODE -ne 0) { Write-Error "Self-test signature verification failed"; exit 1 }
           Write-Output "SELF_TEST_SIGNING: OK — signtool wiring verified end-to-end"
@@ -216,7 +227,12 @@ jobs:
         run: |
           Remove-Item "selftest_cert.pfx" -Force -ErrorAction SilentlyContinue
           Remove-Item "selftest_target.exe" -Force -ErrorAction SilentlyContinue
+          Remove-Item "selftest_root.cer" -Force -ErrorAction SilentlyContinue
           Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq "CN=QUIRK CI Self-Test" } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+          # Also drop the ephemeral root trusted for the verify step above, so no self-signed
+          # code-signing root outlives this job even if the runner image were ever reused.
+          Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq "CN=QUIRK CI Self-Test" } |
             Remove-Item -Force -ErrorAction SilentlyContinue
 
       - name: Assemble Windows operator zip
