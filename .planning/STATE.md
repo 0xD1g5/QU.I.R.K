@@ -4,8 +4,8 @@ milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
 status: executing
 stopped_at: Phase 147 context gathered
-last_updated: "2026-08-11T03:38:20.721Z"
-last_activity: 2026-08-11 -- Phase 147 planning complete
+last_updated: "2026-08-11T12:05:06.930Z"
+last_activity: 2026-08-11 -- Phase 147 execution started
 progress:
   total_phases: 11
   completed_phases: 3
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 147 — backlog drain — lifecycle & ledger tail
+**Current focus:** Phase 147 — backlog-drain-lifecycle-ledger-tail
 
 ## Current Position
 
-Phase: 147
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-08-11 -- Phase 147 planning complete
+Phase: 147 (backlog-drain-lifecycle-ledger-tail) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 147
+Last activity: 2026-08-11 -- Phase 147 execution started
 
 ## v5.11 Phase Map
 
