@@ -1,7 +1,12 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 5.10.0
-**Last Updated:** 2026-08-11 (Phase 147 wrap — Backlog Drain, Lifecycle & Ledger Tail: DRAIN-01
+**Version:** 5.11.0
+**Last Updated:** 2026-08-11 (v5.11 milestone close — **Series 144 backfilled**: the anchor phase
+shipped DISC-01/DISC-02 without a UAT series entry, caught by the v5.11 milestone audit. Added
+UAT-144-01 (both host-count reject gates relaxed + lazy chunking primitives, 32/32 automated),
+UAT-144-02 (per-batch failure isolation + discovery-stage ScanCheckpoint, 12/12 automated), and
+UAT-144-03 (live >1024-host end-to-end submission, human — PASS with the documented, user-accepted
+nmap timing-engine override). Earlier: Phase 147 wrap — Backlog Drain, Lifecycle & Ledger Tail: DRAIN-01
 resume-path OT/ICS supplemental fingerprint fix, DRAIN-02 BACnet vendor-ID + model-family CVE
 resolution (user-confirmed build-catalog decision, making the dead "Johnson Controls / Facility
 Explorer" CVE_TABLE entry reachable), DRAIN-03 port-aware default CORS allowlist fix + full
@@ -180,12 +185,12 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `QU.I.R.K. v5.10.0`
+- Output matches format: `QU.I.R.K. v5.11.0`
 - Exit code 0
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
-**Notes:** Version bumped to v5.10.0 at v5.10 milestone close (pyproject.toml sole SoT; importlib.metadata derives it). Re-test required against v5.10.0 install.
+**Notes:** Version bumped to v5.11.0 at v5.11 milestone close (pyproject.toml sole SoT; importlib.metadata derives it). Re-test required against v5.11.0 install.
 
 ---
 
@@ -16390,6 +16395,161 @@ required): add timing-template/RTT-bound tuning (e.g. `-T4`, `--initial-rtt-time
 re-verify this exact scenario against a real routed network segment (not loopback aliases) where
 dead hosts return RST/ICMP-unreachable instead of staying silent. Logged in this phase's
 deferred-items.md.
+
+---
+
+## Series 144: Chunked Discovery Core (Phase 144 — v5.11)
+
+**Last Updated:** 2026-08-11
+
+### UAT-144-01: Host-count reject gates relaxed + chunking primitives (DISC-01) — Automated
+
+**What to test:** Both hard-reject gates that made large-range discovery unreachable are gone —
+`target_expander.py::expand_targets()` no longer raises on an oversized CIDR, and
+`jobs.py::create_job()` no longer returns 422 on either the per-CIDR or combined-total host
+count — and the two lazy stdlib-only helpers that replace them (`_chunked`,
+`_expand_and_dedup_hosts`) behave correctly without ever materializing a full host list.
+
+**Steps:**
+1. Run `pytest tests/test_extras_concurrency_expander.py tests/test_jobs_nmap_scope_cap.py -x`
+   — confirm all tests pass.
+2. Confirm `test_oversized_cidr_accepted_and_chunked_when_nmap_forced` and
+   `test_multiple_small_cidrs_summing_over_cap_accepted_and_chunked` show a >1024-host
+   submission being **accepted and chunked**, not rejected — this is the DISC-01 anchor
+   behavior.
+3. Confirm `test_chunked_yields_correct_batch_sizes` and `test_chunked_final_batch_may_be_shorter`
+   show `_chunked()` producing full batches plus a short remainder.
+4. Confirm `test_expand_and_dedup_hosts_yields_flat_host_strings_not_tuples` shows batching over
+   a **deduplicated flat host list**, not `(host, port)` tuples — a multi-port host can never
+   have its ports split across a batch boundary.
+5. Confirm `test_expand_and_dedup_hosts_never_materializes_full_hosts_list` shows lazy
+   generator behavior (no eager `net.hosts()` list) so arbitrarily large ranges stay bounded in
+   memory.
+6. Confirm `test_expand_and_dedup_hosts_cidr_and_explicit_ip_overlap_deduped` shows an IP
+   appearing in both a CIDR and an explicit token is yielded once.
+
+**Pass criteria:**
+- `pytest tests/test_extras_concurrency_expander.py tests/test_jobs_nmap_scope_cap.py -x` exits 0
+- An oversized CIDR is accepted (201) and chunked, not rejected with a 422 or a `ValueError`
+- Batches are derived from deduplicated flat host strings, not `(host, port)` tuples
+- Host expansion is lazy — the full host list is never materialized
+- The `is_target_trusted()` trust gate remains in force (relaxing the size gate did not relax
+  the trust gate)
+
+**Automated gate:** `pytest tests/test_extras_concurrency_expander.py tests/test_jobs_nmap_scope_cap.py -x`
+→ 32/32 PASSED (Phase 144 Plan 01).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 144 Plan 01)
+**Notes:** DISC-01, D-02 (jobs.py 422 stopgap), D-05 (`_MAX_HOSTS_PER_CIDR`). See
+144-01-SUMMARY.md. Both gates were relaxed in the same phase by design — deferring either one
+would have left chunking built but unreachable.
+
+---
+
+### UAT-144-02: Per-batch failure isolation + discovery-stage checkpoint (DISC-02) — Automated
+
+**What to test:** One slow or unresponsive batch inside a large range no longer aborts the whole
+discovery job — the `try/except RuntimeError` sits **inside** the batch loop, not around it — and
+the discovery stage writes its own `ScanCheckpoint` row reflecting partial-vs-complete status.
+
+**Steps:**
+1. Run `pytest tests/test_nmap_provider.py -k "batch or discovery_checkpoint or models_scancheckpoint" -x`
+   — confirm all tests pass.
+2. Confirm `test_batch_failure_does_not_stop_subsequent_batches` shows batch 3 still running
+   after batch 2 raises.
+3. Confirm `test_batch_failure_merged_results_contain_successful_batches_only` shows hosts from
+   the surviving batches present in the merged result.
+4. Confirm `test_batch_loop_only_catches_runtime_error` shows a `ValueError` still propagating —
+   the isolation is scoped to the batch-failure signal, not a blanket swallow.
+5. Confirm `test_discovery_checkpoint_partial_on_batch_failure` and
+   `test_discovery_checkpoint_completed_when_all_batches_succeed` show the
+   `stage="discovery"` `ScanCheckpoint` written with `status="partial"` vs `"completed"`.
+6. Confirm `test_discovery_checkpoint_pf_derived_from_collect_stage_partial_failures` shows
+   discovery reusing the same partial-failure derivation every other stage already uses, rather
+   than a bespoke path.
+
+**Pass criteria:**
+- `pytest tests/test_nmap_provider.py -k "batch or discovery_checkpoint or models_scancheckpoint" -x` exits 0
+- A failing batch produces an error `CryptoEndpoint` (`host="discovery-batch-{N}"`,
+  `protocol="ERROR"`, `scan_error_category="discovery_exception"`) and the loop continues
+- Non-`RuntimeError` exceptions still propagate
+- A `stage="discovery"` `ScanCheckpoint` row is written with the correct partial/completed status
+- The checkpoint does **not** fire on the cache-hit, nmap-unavailable-fallback, or non-nmap
+  `expand_targets()` sub-branches
+
+**Automated gate:** `pytest tests/test_nmap_provider.py -k "batch or discovery_checkpoint or models_scancheckpoint" -x`
+→ 12/12 PASSED (Phase 144 Plan 02).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-11  **Tester:** automated (pytest — Phase 144 Plan 02)
+**Notes:** DISC-02, D-03 (strictly sequential batches), D-04 (discovery checkpoint). See
+144-02-SUMMARY.md. The `discovery_exception` category is deliberately distinct from
+`_wrapped_phase()`'s generic `"exception"` — see Series 146 / DISC-07, where conflating them
+would have inflated the undetermined-host count in the report.
+
+---
+
+### UAT-144-03: Live >1024-host end-to-end submission (DISC-01, DISC-02) — Human (live)
+
+**What to test:** A real >1024-host range submitted through the actual scan path is accepted,
+chunked into sequential batches, survives a failing batch, and reaches `completed` — verified
+against a live `nmap` subprocess rather than a mocked one. Unit tests on the chunking function in
+isolation cannot show that the gates, the loop, the checkpoint, and the job lifecycle compose.
+
+**Steps:**
+1. Create a `ScanJob` row mirroring the dashboard's `create_job()` codepath (or submit through
+   the dashboard directly), targeting a >1024-host CIDR.
+2. Run `python run_scan.py` from the repo root with nmap discovery enabled,
+   `--allow-internal-targets`, and real `--job-id` / `--db-path` tracking.
+3. Confirm the submission is **accepted** — no 422, no `ValueError` from `expand_targets()`.
+4. Confirm from the nmap command logs / process inspection that discovery runs as **strictly
+   sequential batches** of the expected size (1024 + remainder), one subprocess per batch.
+5. Confirm the job reaches `status="completed"` — never `failed`.
+6. Query the discovery checkpoint:
+   `sqlite3 <db> "SELECT stage, status, endpoint_count, partial_failure FROM scan_checkpoints WHERE stage='discovery';"`
+   — expect one row with populated fields.
+7. If a batch fails during the run, confirm the remaining batches still execute (failure
+   isolation observed live, not just in unit tests).
+
+**Pass criteria:**
+- A >1024-host CIDR is accepted through the real path (no 422 / no reject)
+- Discovery executes as sequential batches of the expected sizes
+- The job reaches `completed`
+- A `stage="discovery"` `ScanCheckpoint` row is written with correct values
+- A failing batch does not abort the job
+- This row's **Result** below records the observed outcome
+
+**Automated gate:** N/A — inherently a live end-to-end checkpoint. Plan 144-03 made this a
+blocking gate precisely because the unit tests mock the nmap subprocess.
+
+**Result:** - [x] PASS (with documented override)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-10  **Tester:** human (live, two attempts — Digs)
+**Notes:** DISC-01, DISC-02. **Verified live, twice:** the >1024-host CIDR was accepted (no
+422/reject), discovery ran in strictly sequential 1024+remainder batches, the job reached
+`completed`, and the `discovery` `ScanCheckpoint` was written correctly. Failure isolation was
+confirmed live in Attempt 1 (target `172.18.0.0/21`): batch 1 timed out and failed, batch 2 still
+ran to completion — the loop did not abort. Attempt 1's zero-host result was traced to macOS
+Docker Desktop keeping container bridge IPs unroutable from the host (confirmed via `nc`), not to
+QUIRK.
+
+**Override — accepted by Digs 2026-08-10 (recorded in 144-VERIFICATION.md frontmatter):** Attempt
+2 (`127.0.0.0/22` + `127.0.4.0/28`) completed both batches cleanly but reported **0 open ports**,
+including on `127.0.0.1`, which had 5 genuinely open ports at scan time (independently confirmed
+via `curl` + `docker ps`). Root-caused via raw `-oX` XML inspection: nmap wrote **no `<ports>`
+block at all** for that host — the identical empty shape as every confirmed-dead host in the same
+scan — so there was nothing for QUIRK's parser to lose. The identical `nmap` command run against
+`127.0.0.1` alone found all 5 ports in 0.02s. Cause is nmap's adaptive RTT/timing engine
+suppressing port probes across a scan group that is ~99.9% silent, a shape produced here only by
+scanning unassigned macOS loopback aliases; real routed networks return instant RST/ICMP-
+unreachable for dead hosts rather than silence. DISC-01/DISC-02's actual mechanisms — batching,
+failure isolation, gate relaxation, checkpoint bookkeeping — are unaffected and fully verified.
+Tuning `nmap_provider.py`'s timing flags was deliberately **not** done here: changing default
+timing for every production scan to make one synthetic live check pass would be a real behavior
+change undertaken for the wrong reason. Follow-up tracked in
+`.planning/phases/144-chunked-discovery-core/deferred-items.md` — re-verify against a real routed
+network segment (best paired with DISC-09's segmented-network lab profile), and/or evaluate
+`-T4`/explicit RTT bounds under their own risk review.
 
 ---
 
