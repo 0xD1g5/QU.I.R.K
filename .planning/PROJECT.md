@@ -195,6 +195,11 @@ None — v5.11 shipped 2026-08-11 and all 11 of its requirements moved to Valida
 Next milestone's requirements are defined by `/gsd:new-milestone`.
 
 Carried into next-milestone scoping (from the v5.11 audit's remaining tech debt):
+- [ ] **Windows release asset for v5.12** — v5.11.0 published to PyPI but shipped no Windows
+      asset: the signing self-test failed by construction (fixed in `1a6effc`, unexercised until
+      the next tag). The v5.12 release is the first run that will prove the repaired path.
+      Consider also normalizing tag hygiene — `v5.9` never matched `release.yml`'s `v*.*.*` glob
+      and `v5.10.0` was never pushed, so three milestones went out with no Windows build.
 - [ ] **DISC-09** segmented-network chaos lab profile — deferred from v5.11; also the environment
       needed to settle the Phase 144 nmap timing-engine artifact. Schedule the two together.
 - [ ] **DISC-08** sub-batch (mid-discovery) checkpoint/resume granularity — deferred as an
