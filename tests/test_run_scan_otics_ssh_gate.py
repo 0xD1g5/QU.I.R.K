@@ -22,6 +22,17 @@ gear that has no SSH/IT-management endpoint at all.
 
 No network connections are made — HTTP/SNMP probe functions are patched at
 their import site.
+
+Group C (Phase 147 DRAIN-01) pins the resume-path regression: 141-11's fix
+above only ever wired the OT-supplemental pass into ``main()``'s fresh-run
+``else`` branch of the ssh-stage ``if/else``. A ``--resume-scan-id``
+continuation whose ``ssh`` stage was already checkpointed complete took the
+``if`` branch and never called it at all — silently dropping OT-only
+(Modbus/BACnet, no-SSH) hosts from a resumed scan's hardware inventory.
+Group C pins the contract of a new module-level
+``run_scan.run_ot_supplemental_and_persist()`` helper — hoisted above the
+ssh-stage if/else and called unconditionally on both branches — so the
+resume path is covered going forward.
 """
 from __future__ import annotations
 
@@ -161,3 +172,150 @@ def test_default_path_still_runs_http_snmp() -> None:
         fingerprint_one(ep, timeout=1, cfg=cfg, ot_only=False)
 
     mock_http.assert_called()
+
+
+# ============================================================
+# Group C — resume-path OT supplemental (Phase 147 DRAIN-01)
+# ============================================================
+
+def _make_device(host: str = "10.0.0.5"):
+    from quirk.models import HardwareDevice
+
+    dev = HardwareDevice.__new__(HardwareDevice)
+    dev.__dict__["host"] = host
+    dev.__dict__["vendor"] = "Unknown"
+    dev.__dict__["model"] = "Unknown"
+    return dev
+
+
+def test_resume_path_helper_appends_devices_to_hw_batch() -> None:
+    """C1: an empty ssh_targets list (the resume-path shape) still fingerprints
+    an OT-only host with confirmed-open Modbus (502) evidence."""
+    from run_scan import run_ot_supplemental_and_persist
+    from quirk.logging_util import Logger
+
+    cfg = _make_cfg(enable_modbus=True)
+    hw_batch: list = []
+    run_stats: dict = {}
+    error_endpoints: list = []
+    logger = Logger(verbose=False, use_tqdm=False)
+    device = _make_device("10.0.0.5")
+
+    with patch("run_scan.fingerprint_hardware", return_value=[device]) as mock_fp, \
+         patch("run_scan.get_session"), \
+         patch("run_scan._print_hardware_summary"), \
+         patch("run_scan.write_scan_checkpoint") as mock_ckpt:
+        run_ot_supplemental_and_persist(
+            targets=[("10.0.0.5", 502)],
+            ssh_targets=[],
+            confirmed_open_ports={"10.0.0.5": {502}},
+            cfg=cfg,
+            hw_batch=hw_batch,
+            run_stats=run_stats,
+            error_endpoints=error_endpoints,
+            logger=logger,
+            db_path=None,
+        )
+
+    mock_fp.assert_called()
+    assert hw_batch == [device]
+    mock_ckpt.assert_not_called()
+
+
+def test_resume_path_helper_routes_through_wrapped_phase() -> None:
+    """C2: the call routes through _wrapped_phase, keyed 'ot_ics_supplemental'."""
+    from run_scan import run_ot_supplemental_and_persist
+    from quirk.logging_util import Logger
+
+    cfg = _make_cfg(enable_modbus=True)
+    hw_batch: list = []
+    run_stats: dict = {}
+    error_endpoints: list = []
+    logger = Logger(verbose=False, use_tqdm=False)
+
+    with patch("run_scan.fingerprint_hardware", return_value=[]), \
+         patch("run_scan.get_session"), \
+         patch("run_scan._print_hardware_summary"), \
+         patch("run_scan.write_scan_checkpoint"), \
+         patch("run_scan._wrapped_phase", wraps=None) as mock_wrapped:
+        mock_wrapped.return_value = []
+        run_ot_supplemental_and_persist(
+            targets=[("10.0.0.5", 502)],
+            ssh_targets=[],
+            confirmed_open_ports={"10.0.0.5": {502}},
+            cfg=cfg,
+            hw_batch=hw_batch,
+            run_stats=run_stats,
+            error_endpoints=error_endpoints,
+            logger=logger,
+            db_path=None,
+        )
+
+    assert mock_wrapped.called
+    call_args = mock_wrapped.call_args[0]
+    assert call_args[1] == "ot_ics_supplemental"
+    assert call_args[2] == "hardware_scanner"
+
+
+def test_resume_path_helper_noop_when_flags_off() -> None:
+    """C3: enable_modbus=False and enable_bacnet=False -> no-op, no fingerprint call."""
+    from run_scan import run_ot_supplemental_and_persist
+    from quirk.logging_util import Logger
+
+    cfg = _make_cfg(enable_modbus=False, enable_bacnet=False)
+    hw_batch: list = []
+    run_stats: dict = {}
+    error_endpoints: list = []
+    logger = Logger(verbose=False, use_tqdm=False)
+
+    with patch("run_scan.fingerprint_hardware") as mock_fp, \
+         patch("run_scan.get_session"), \
+         patch("run_scan._print_hardware_summary"), \
+         patch("run_scan.write_scan_checkpoint") as mock_ckpt:
+        run_ot_supplemental_and_persist(
+            targets=[("10.0.0.5", 502)],
+            ssh_targets=[],
+            confirmed_open_ports={"10.0.0.5": {502}},
+            cfg=cfg,
+            hw_batch=hw_batch,
+            run_stats=run_stats,
+            error_endpoints=error_endpoints,
+            logger=logger,
+            db_path=None,
+        )
+
+    mock_fp.assert_not_called()
+    assert hw_batch == []
+    mock_ckpt.assert_not_called()
+
+
+def test_resume_path_helper_never_writes_ssh_checkpoint() -> None:
+    """C4: the helper does not call write_scan_checkpoint — checkpoint writing
+    stays the caller's fresh-run-branch-only responsibility."""
+    from run_scan import run_ot_supplemental_and_persist
+    from quirk.logging_util import Logger
+
+    cfg = _make_cfg(enable_bacnet=True)
+    hw_batch: list = []
+    run_stats: dict = {}
+    error_endpoints: list = []
+    logger = Logger(verbose=False, use_tqdm=False)
+    device = _make_device("10.0.0.6")
+
+    with patch("run_scan.fingerprint_hardware", return_value=[device]), \
+         patch("run_scan.get_session"), \
+         patch("run_scan._print_hardware_summary"), \
+         patch("run_scan.write_scan_checkpoint") as mock_ckpt:
+        run_ot_supplemental_and_persist(
+            targets=[("10.0.0.6", 47808)],
+            ssh_targets=[],
+            confirmed_open_ports={},
+            cfg=cfg,
+            hw_batch=hw_batch,
+            run_stats=run_stats,
+            error_endpoints=error_endpoints,
+            logger=logger,
+            db_path=None,
+        )
+
+    mock_ckpt.assert_not_called()
