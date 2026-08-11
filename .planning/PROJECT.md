@@ -191,8 +191,7 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-None — v5.11 shipped 2026-08-11 and all 11 of its requirements moved to Validated above.
-Next milestone's requirements are defined by `/gsd:new-milestone`.
+Defined by v5.12 Release & Verification Integrity — see Current Milestone section below.
 
 Carried into next-milestone scoping (from the v5.11 audit's remaining tech debt):
 - [ ] **Windows release asset for v5.12** — v5.11.0 published to PyPI but shipped no Windows
@@ -217,6 +216,38 @@ Carried into next-milestone scoping (from the v5.11 audit's remaining tech debt)
 | OpenVAS / Nessus integration | Full vuln scanner; different scope, heavy dependency |
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
+
+## Current Milestone: v5.12 Release & Verification Integrity
+
+**Goal:** Make QU.I.R.K.'s own signals trustworthy again — cutting a tag produces a complete,
+verified artifact set without supervision; a phase cannot be marked complete while its
+verification artifacts are missing; and a green test suite means something.
+
+**Target features:**
+- Release pipeline repair + proof — exercise the `1a6effc` signing self-test fix, actually attach
+  the Windows asset, and add a pre-release dry-run so a broken release job fails *before* the tag
+- Tag hygiene guard — `v5.9` never matched `release.yml`'s `v*.*.*` glob and `v5.10.0` was never
+  pushed, so three consecutive milestones shipped no Windows build with zero signal
+- Test-suite stabilization — triage the ~102 failures red since roughly Phase 97, establish a green
+  baseline and a CI gate to hold it
+- Phase-completion artifact enforcement — gate VERIFICATION.md, post-execution VALIDATION status,
+  and the UAT series entry at *phase* close rather than milestone close
+- Discovery empirical closure — DISC-09 segmented-network lab profile, then re-verify the Phase 144
+  nmap timing artifact against it; flip the interactive nmap-discovery-first default N→Y
+
+**Why this shape (PM review 2026-08-11):** the 2:1 capability/ops ratio is eleven milestones
+overdue (last true ops cycle was v5.0, 2026-05-22), and v5.11 surfaced five independent
+*measurement* failures that compound — a saturated test signal cannot flag a regression, a silent
+release pipeline cannot flag a missing artifact, absent verification artifacts cannot flag an
+unproven phase. For a tool whose Primetime gate 2 is "every detected weakness is real, every
+missed weakness is intentional," its own signals silently no-opping is the same failure class it
+exists to find in customer estates. Full rationale: `.planning/HORIZON.md`.
+
+**Explicitly out of scope:** continuous hardware lifecycle monitoring (v5.13 capability anchor —
+needs a research pass to settle whether it is a new scanner surface or a scheduling/diffing layer
+over existing data); SaaS multi-tenancy (still parked, no business-model signal).
+
+---
 
 ## Previous Milestone: v5.11 Discovery at Scale + Backlog Drain — SHIPPED 2026-08-11
 
@@ -549,7 +580,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Do not tune nmap timing flags to make one synthetic live check pass (v5.11 / 144-03) | Changing default `-T`/RTT bounds alters behavior for every production scan, trading false negatives on slow real networks against a artifact only reproducible on unassigned macOS loopback aliases | — Pending — accepted via signed override; resolution deferred to a real routed segment, best paired with DISC-09's lab profile |
 
 ---
-*Last updated: 2026-08-11 after v5.11 milestone (Discovery at Scale + Backlog Drain) shipped and archived*
+*Last updated: 2026-08-11 — v5.12 Release & Verification Integrity opened (Phase 148)*
 
 ## Evolution
 

@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.11
-milestone_name: Discovery at Scale + Backlog Drain
-status: Awaiting next milestone
-stopped_at: Completed 147-04-PLAN.md
-last_updated: "2026-08-11T15:39:20.318Z"
-last_activity: 2026-08-11 — Milestone v5.11 completed and archived
+milestone: v5.12
+milestone_name: Release & Verification Integrity
+status: planning
+last_updated: "2026-08-11T17:06:31.860Z"
+last_activity: 2026-08-11
 progress:
-  total_phases: 11
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
-  percent: 36
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: Milestone v5.11 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-11 — Milestone v5.11 completed and archived
+Status: Defining requirements
+Last activity: 2026-08-11 — Milestone v5.12 started
 
 ## v5.11 Phase Map (SHIPPED 2026-08-11)
 
