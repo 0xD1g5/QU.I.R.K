@@ -119,7 +119,18 @@ risk mitigation that an integrity milestone is easy to defer without a visible e
     right answer depends on how strictly the project wants "release artifact" to mean
     "reproducible from that tag's pipeline."
 
-**Plans**: TBD
+  - **RESOLVED 2026-08-11 (`148-CONTEXT.md` D-01..D-04): Option B — explicit disposition.** No zip
+    is backfilled onto `v5.11.0`. A bare `v5.11.0` GitHub Release (zero assets) plus
+    `docs/release-notes/5.11.0.md` record that the release is PyPI-only and why; `v5.12.0`
+    (Phase 153) is the first version with a verified Windows artifact.
+
+**Plans**: 4 plans
+
+Plans:
+- [ ] 148-01-PLAN.md — Dry-run mechanism in release.yml (workflow_dispatch + tag-ref guards + dry-run artifact) [RELEASE-02]
+- [ ] 148-02-PLAN.md — Scheduled tag-hygiene guard + testable decision script + baseline [RELEASE-03]
+- [ ] 148-03-PLAN.md — v5.11.0 PyPI-only disposition notes + GitHub Release body [RELEASE-04]
+- [ ] 148-04-PLAN.md — Live proof: green dry-run, live guard run, bare v5.11.0 Release [RELEASE-02/03/04]
 
 #### Phase 149: Test Suite Triage
 

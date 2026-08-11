@@ -4,7 +4,11 @@
 #   - RELENG-02: GitHub Actions Trusted Publishers (OIDC, no stored API tokens)
 #   - RELENG-03: Sigstore attestations auto-generated via pypa/gh-action-pypi-publish
 #
-# Trigger: push of a semver tag matching `v*.*.*` (e.g. `v5.0.0`, `v5.0.1`).
+# Trigger: push of a semver tag matching `v*.*.*` (e.g. `v5.0.0`, `v5.0.1`) — OR a manual
+# `workflow_dispatch` dry-run from the Actions tab (RELEASE-02). A dispatch run publishes
+# nothing: the PyPI `publish` job and the "Attach zip to GitHub Release" step are both gated
+# on `github.event_name == 'push'` (not merely on a `refs/tags/` ref shape), so dispatching
+# against a tag ref is still a no-publish dry run — see the RELEASE_GUARD comments below.
 #
 # Prerequisite (one-time, manual setup — performed AFTER this file lands on main
 # and the first `v*.*.*` tag is pushed):
@@ -36,6 +40,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 # Workflow-level least-privilege default (WR-04). Each job that needs broader
 # scope declares its own permissions: block below; this default prevents the
@@ -78,6 +83,11 @@ jobs:
   publish:
     name: Publish to PyPI (Trusted Publishers + Sigstore)
     needs: build
+    # Deliberately tests the triggering EVENT, not just the ref shape: a workflow_dispatch
+    # run can target a tag ref (`gh workflow run release.yml --ref v5.11.0`), which would make
+    # a ref-only guard evaluate TRUE and really publish to PyPI on a "dry run". Do not simplify
+    # this to `startsWith(github.ref, 'refs/tags/')` alone (RELEASE-02, D-06).
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     environment:
       name: release
@@ -269,7 +279,20 @@ jobs:
           $mb = [math]::Round((Get-Item $zipName).Length / 1MB, 1)
           Write-Output "ZIP_ASSEMBLED: $zipName ($mb MB)"
 
+      - name: Upload dry-run zip artifact
+        # Uploads the assembled zip as an inspectable workflow artifact on any run that is
+        # NOT a real tag push, so a workflow_dispatch dry-run's output is inspectable without
+        # creating any GitHub Release side-effect (RELEASE-02, D-07).
+        if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: quirk-windows-dry-run
+          path: quirk-windows-*.zip
+
       - name: Attach zip to GitHub Release
+        # Deliberately tests the triggering EVENT, not just the ref shape — see the identical
+        # comment on the `publish` job above (RELEASE-02, D-06). Byte-identical guard.
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         # T-118-SC: action pinned to commit SHA for supply-chain safety (WR-03).
         # SHA corresponds to softprops/action-gh-release v2.2.1.
         # Verify: https://github.com/softprops/action-gh-release/releases/tag/v2.2.1
