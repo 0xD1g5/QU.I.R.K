@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: executing
-stopped_at: Completed 146-04-PLAN.md
-last_updated: "2026-08-10T20:59:08.131Z"
-last_activity: 2026-08-10
+status: planning
+stopped_at: Phase 147 context gathered
+last_updated: "2026-08-11T03:04:54.144Z"
+last_activity: 2026-08-11
 progress:
   total_phases: 11
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 10
-  percent: 18
+  completed_plans: 12
+  percent: 27
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 146 — progress-scaling-disclosure
+**Current focus:** Phase 147 — backlog drain — lifecycle & ledger tail
 
 ## Current Position
 
-Phase: 146 (progress-scaling-disclosure) — EXECUTING
-Plan: 5 of 6
-Status: Ready to execute
-Last activity: 2026-08-10
+Phase: 147
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-11
 
 ## v5.11 Phase Map
 
@@ -145,6 +145,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: Phase 146-02: discovery_timing_template_for_batch returns only hardcoded -T4/-T3 literals via if/else per threat T-146-01 - never config/input-built
 - [Phase 146]: 146-03: _compute_undetermined_hosts() gates on port==0 AND scan_error_category in ('exception','liveness_skip') — port==0 conjunct is load-bearing so a live-host TLS/SSH/API handshake error is never counted as undetermined
 - [Phase 146]: 146-04: Combined Tasks 1+2 into one commit since both edit the exact same discovery-loop-body statements (pre-count/progress-write + timeout/timing scaling); resolved Open Q1 as batch formula fully replacing args.nmap_timeout inside the loop, and Open Qs 2/3 as accepting one throwaway O(n) pre-count pass so the dashboard batch total is correct from batch 1
+- [Phase 146]: 146-05 executed exactly per PATTERNS.md conditional shape — no deviations
 
 ### Pending Todos
 
@@ -216,11 +217,12 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 | Phase 146 P02 | 15min | 2 tasks | 3 files |
 | Phase 146 P03 | 18min | 3 tasks | 8 files |
 | Phase 146 P04 | 20min | 3 tasks | 3 files |
+| Phase 146 P05 | 10min | 1 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-08-10T20:59:08.125Z
-Stopped at: Completed 146-04-PLAN.md
+Last session: 2026-08-11T03:04:54.131Z
+Stopped at: Phase 147 context gathered
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
