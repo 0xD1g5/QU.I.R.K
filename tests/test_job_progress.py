@@ -89,3 +89,55 @@ def test_update_batch_progress_overwrites_on_repeated_calls(tmp_path):
         assert row.discovery_batch_index == 5
         assert row.discovery_batch_total == 12
         assert row.discovery_hosts_checked == 1280
+
+
+# --- v5.11 audit WR-02: per-batch engine disposal -------------------------------
+# update_batch_progress() is an O(batches) hot path since Phase 144 removed the
+# host-count ceiling, so each short-lived engine must release its SQLite handle
+# deterministically instead of relying on CPython refcounting.
+
+
+def _track_engines(monkeypatch):
+    """Wrap sqlalchemy.create_engine, recording (engine, pool-at-creation) pairs.
+
+    Engine.dispose() disposes the current pool and replaces it via pool.recreate(),
+    so a pool identity change is real evidence dispose() ran — no mock assertions.
+    """
+    import sqlalchemy
+
+    real_create_engine = sqlalchemy.create_engine
+    created = []
+
+    def tracking_create_engine(*args, **kwargs):
+        engine = real_create_engine(*args, **kwargs)
+        created.append((engine, engine.pool))
+        return engine
+
+    monkeypatch.setattr(sqlalchemy, "create_engine", tracking_create_engine)
+    return created
+
+
+def test_update_batch_progress_disposes_engine_after_each_call(tmp_path, monkeypatch):
+    db_file, _, _ = _tmp_db_with_row(tmp_path)
+    created = _track_engines(monkeypatch)
+
+    for batch_index in range(1, 4):
+        update_batch_progress(db_file, "j-1", batch_index, 3, batch_index * 1024)
+
+    assert len(created) == 3, "each call should open its own short-lived engine"
+    for engine, pool_at_creation in created:
+        assert engine.pool is not pool_at_creation, (
+            "engine.dispose() was never called — the connection pool it was "
+            "created with is still installed, so the SQLite handle leaks"
+        )
+
+
+def test_update_batch_progress_disposes_engine_when_job_row_missing(tmp_path, monkeypatch):
+    db_file, _, _ = _tmp_db_with_row(tmp_path)
+    created = _track_engines(monkeypatch)
+
+    update_batch_progress(db_file, "does-not-exist", 1, 2, 3)
+
+    assert len(created) == 1
+    engine, pool_at_creation = created[0]
+    assert engine.pool is not pool_at_creation
