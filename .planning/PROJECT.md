@@ -226,8 +226,10 @@ verification artifacts are missing; and a green test suite means something.
 **Target features:**
 - Release pipeline repair + proof — exercise the `1a6effc` signing self-test fix, actually attach
   the Windows asset, and add a pre-release dry-run so a broken release job fails *before* the tag
+  ✅ Validated in Phase 148 (RELEASE-02): `workflow_dispatch` dry-run + event+ref guards proven live
 - Tag hygiene guard — `v5.9` never matched `release.yml`'s `v*.*.*` glob and `v5.10.0` was never
   pushed, so three consecutive milestones shipped no Windows build with zero signal
+  ✅ Validated in Phase 148 (RELEASE-03): scheduled `release-tag-hygiene.yml` guard proven live
 - Test-suite stabilization — triage the ~102 failures red since roughly Phase 97, establish a green
   baseline and a CI gate to hold it
 - Phase-completion artifact enforcement — gate VERIFICATION.md, post-execution VALIDATION status,
@@ -349,6 +351,12 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 - **Live human-UAT keeps catching real bugs** that automated verification (which injected matching in-memory rows) missed — the entire 999.85–89 set came from the post-ship live distributed E2E. Treat live E2E as a first-class gate this milestone.
 
 ## Current State
+
+**Phase 148 (release-pipeline-repair-windows-asset-backfill) complete 2026-08-11** — 4/4 plans,
+verification passed 5/5 must-haves. RELEASE-02/03/04 proven against live GitHub Actions (real
+`workflow_dispatch` dry-run, real tag-hygiene guard run, real `v5.11.0` GitHub Release with
+zero assets and the PyPI-only disposition body) rather than by code inspection alone. Next:
+Phase 149 (test-suite-triage).
 
 **v5.11 Discovery at Scale + Backlog Drain — SHIPPED and archived 2026-08-11.** All 4 phases
 (144–147) complete, 16 plans, 11/11 requirements satisfied, version 5.11.0. Milestone audit
