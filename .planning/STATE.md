@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
 status: executing
-stopped_at: Completed 147-02-PLAN.md
-last_updated: "2026-08-11T13:39:47.358Z"
+stopped_at: Completed 147-03-PLAN.md
+last_updated: "2026-08-11T13:56:08.081Z"
 last_activity: 2026-08-11
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 27
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 147 (backlog-drain-lifecycle-ledger-tail) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-11
 
@@ -148,6 +148,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 146]: 146-05 executed exactly per PATTERNS.md conditional shape — no deviations
 - [Phase 147]: DRAIN-01 — hoisted run_ot_supplemental_and_persist() above run_scan.py's ssh-stage if/else so a --resume-scan-id continuation still fingerprints OT-only (Modbus/BACnet) hosts; ssh-stage checkpoint write stays fresh-run-branch-only, reordered before the hoisted (advisory) hardware persist
 - [Phase 147]: D-147-02-A: build-catalog (option a) — user confirmed via orchestrator checkpoint before plan dispatch
+- [Phase 147]: D-147-03-WR02: wr02-fix - ship the port-aware default CORS allowlist fix via a new QUIRK_DASHBOARD_PORT env var
+- [Phase 147]: D-147-03-CD03: cd03-accept - accept the SSRF TOCTOU/DNS-rebinding risk with refreshed rationale (answered after an orchestrator-level clarification exchange), citing Phase 120 T-120-04 and Phase 123 SSRF-05
 
 ### Pending Todos
 
@@ -222,11 +224,12 @@ Acknowledged at v5.10 milestone close (2026-08-03):
 | Phase 146 P05 | 10min | 1 tasks | 4 files |
 | Phase 147 P01 | 12min | 3 tasks | 2 files |
 | Phase 147 P02 | 35min | 5 tasks | 6 files |
+| Phase 147 P03 | 25min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-08-11T13:39:47.352Z
-Stopped at: Completed 147-02-PLAN.md
+Last session: 2026-08-11T13:56:08.075Z
+Stopped at: Completed 147-03-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
