@@ -61,11 +61,45 @@ Step-by-step procedure for cutting a release. All steps are required.
    staleness gates, version-parity test) must be passing on the commit you
    intend to tag. If anything is red, fix it before proceeding.
 
-2. **Bump the version in `pyproject.toml`.** Edit `[project.version]` to the
+2. **Run a release dry-run before tagging.** Before touching `pyproject.toml`,
+   manually trigger `.github/workflows/release.yml` via `workflow_dispatch`
+   against `main` (no tag exists yet at this point):
+
+   ```bash
+   gh workflow run release.yml --ref main
+   gh run watch <run-id>
+   ```
+
+   (or, from the browser: Actions tab -> Release -> Run workflow -> branch
+   `main` -> Run workflow).
+
+   **What the dry-run DOES run:** the `build` job, and the full
+   `windows-package` job — PyInstaller onedir build, the production-signing
+   skip (no cert configured), the "CI self-test — ephemeral cert signing
+   round-trip" step, and Windows zip assembly.
+
+   **What it deliberately does NOT do:** the `publish` job (PyPI, Trusted
+   Publishers + Sigstore) is skipped entirely, and "Attach zip to GitHub
+   Release" is skipped — both are gated on
+   `github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')`, so a
+   `workflow_dispatch` run has zero external side effects, including a
+   dispatch that targets a tag ref, since the guard tests the triggering event
+   and not just the ref shape.
+
+   **Where the output goes:** the assembled zip is downloadable from the run's
+   Artifacts section under the name `quirk-windows-dry-run`.
+
+   **Stop rule:** if the dry-run is red, do NOT proceed to tag. An immutable
+   tag turns a pipeline bug into a permanent gap in release history — this is
+   exactly what happened with `v5.11.0`, which shipped to PyPI with no Windows
+   asset because a `windows-package` step that had never once executed failed
+   by construction on the first tag that reached it.
+
+3. **Bump the version in `pyproject.toml`.** Edit `[project.version]` to the
    new value (e.g. `4.10.0`). This is the only edit — every other surface
    derives from it.
 
-3. **Build the changelog with towncrier.**
+4. **Build the changelog with towncrier.**
 
    ```bash
    towncrier build --version X.Y.Z --yes
@@ -75,7 +109,7 @@ Step-by-step procedure for cutting a release. All steps are required.
    `## X.Y.Z` section to `CHANGELOG.md`, and removes the consumed fragment
    files. The `--yes` flag skips the interactive confirmation.
 
-4. **Commit the release prep with explicit paths.**
+5. **Commit the release prep with explicit paths.**
 
    ```bash
    git add pyproject.toml CHANGELOG.md changelog.d/
@@ -85,19 +119,22 @@ Step-by-step procedure for cutting a release. All steps are required.
    Never use `git add -A` — explicit paths only, to avoid sweeping unrelated
    working-tree changes into a release commit.
 
-5. **Tag the release and push.**
+6. **Tag the release and push.**
 
    ```bash
    git tag vX.Y.Z
    git push origin main --tags
    ```
 
-6. **Monitor the release workflow.** Pushing the `vX.Y.Z` tag triggers
+7. **Monitor the release workflow.** Pushing the `vX.Y.Z` tag triggers
    `.github/workflows/release.yml`. Watch the GitHub Actions run; the workflow
    builds the wheel + sdist, publishes to PyPI via Trusted Publishers OIDC,
-   and generates Sigstore attestations automatically.
+   and generates Sigstore attestations automatically. Unlike the dry-run in
+   step 2, this run is a real `push` event against a `refs/tags/` ref, so it
+   additionally runs the `publish` job and attaches the Windows zip to the
+   GitHub Release.
 
-7. **Verify the published release.** Once the workflow is green:
+8. **Verify the published release.** Once the workflow is green:
    - Confirm the new version appears on PyPI:
      `pip index versions quirk-scanner` should list `X.Y.Z`.
    - Confirm the release page on GitHub carries the wheel, sdist, and
@@ -105,7 +142,7 @@ Step-by-step procedure for cutting a release. All steps are required.
    - Run the downstream attestation verification command (see below) against
      the published artifact as a sanity check.
 
-8. **Update the milestone documentation.** Mark the corresponding milestone
+9. **Update the milestone documentation.** Mark the corresponding milestone
    complete in `.planning/ROADMAP.md` and propagate the release version into
    the README badges if the badge URL embeds the version.
 
