@@ -90,10 +90,13 @@ risk mitigation that an integrity milestone is easy to defer without a visible e
 
   1. A manually-triggered dry-run of the release workflow (e.g. `workflow_dispatch`) exercises the
      `windows-package` job end-to-end without requiring a git tag, and reports pass/fail
+
   2. The repaired signing self-test (`1a6effc`) is proven passing by an actual green CI run of that
      dry-run — not by code inspection alone
+
   3. A malformed tag (e.g. `v5.9`, which never matched `v*.*.*`) or an unpushed tag is detectably
      different from a successful release run via a documented check or workflow guard
+
   4. The v5.11.0 Windows-asset gap is resolved per the D-148-RELEASE04 decision below — either a
      Windows operator zip is attached to a `v5.11.0` GitHub Release, or an explicit written
      disposition in `docs/release-notes/` and on the Releases page records that v5.11.0 is
@@ -109,12 +112,15 @@ risk mitigation that an integrity milestone is easy to defer without a visible e
   an artifact to a version tag which the actual v5.11.0 pipeline never produced and could not
   reproduce — on a project that ships Sigstore attestations and PyPI Trusted Publishers, that is a
   supply-chain posture question, not a chore.
+
   - **Option A — backfill the asset:** build from the `v5.11.0` tag, attach, and note in the
     release body that the artifact was produced post-hoc with the repaired workflow. Operators get
     a Windows binary for the version; provenance is documented rather than implied.
+
   - **Option B — disposition the gap:** leave v5.11.0 PyPI-only, state it explicitly in the
     release notes and Releases page, and let `v5.12.0` (Phase 153) be the first version with a
     verified Windows artifact. Release history stays strictly reproducible-from-tag.
+
   - Both are defensible. The requirement (RELEASE-04) deliberately does not pick, because the
     right answer depends on how strictly the project wants "release artifact" to mean
     "reproducible from that tag's pipeline."
@@ -127,8 +133,9 @@ risk mitigation that an integrity milestone is easy to defer without a visible e
 **Plans**: 4 plans
 
 Plans:
+
 - [x] 148-01-PLAN.md — Dry-run mechanism in release.yml (workflow_dispatch + tag-ref guards + dry-run artifact) [RELEASE-02]
-- [ ] 148-02-PLAN.md — Scheduled tag-hygiene guard + testable decision script + baseline [RELEASE-03]
+- [x] 148-02-PLAN.md — Scheduled tag-hygiene guard + testable decision script + baseline [RELEASE-03]
 - [x] 148-03-PLAN.md — v5.11.0 PyPI-only disposition notes + GitHub Release body [RELEASE-04]
 - [ ] 148-04-PLAN.md — Live proof: green dry-run, live guard run, bare v5.11.0 Release [RELEASE-02/03/04]
 
@@ -143,8 +150,10 @@ the milestone, sequenced early and alone so its output can re-scope what follows
 
   1. Every test failing in a clean full-suite run (not just the `-m 'not slow'` default) appears in
      a written triage ledger with one of: fixed / quarantined-with-reason / deleted-as-obsolete
+
   2. The ledger's total failure count matches the actual full-suite run — no failure is left
      unclassified
+
   3. Quarantined tests are marked in a machine-checkable way (explicit skip/xfail referencing the
      ledger), not silently passing or invisibly excluded
 
@@ -163,8 +172,10 @@ quarantines already applied — or large; cannot be scoped before triage complet
   1. `pytest -q` run on a clean environment matching CI's Python version exits 0
   2. CI runs the same full-suite gate (not a narrower `-m 'not slow'` subset that silently
      deselects known failures) on every PR and every push to `main`
+
   3. A newly introduced failing test, added deliberately as a smoke check during this phase, fails
      the CI build
+
   4. The green-baseline standard and how to run it locally are documented for future contributors
 
 **Plans**: TBD
@@ -182,12 +193,15 @@ ARTIFACT-01..03, plus the destructive-operation guard from the same incident cla
 
   1. Attempting to report a phase complete with a missing `VERIFICATION.md` is blocked or clearly
      flagged before the phase is recorded as done — reproducing and closing the exact Phase 145 gap
+
   2. Attempting to close a phase whose `VALIDATION.md` still has pending task rows or
      `nyquist_compliant: false` is blocked or clearly flagged — reproducing and closing the exact
      Phase 147 gap
+
   3. A phase that shipped user-facing behavior cannot close without a corresponding
      `docs/UAT-SERIES.md` entry — enforced by the workflow, not left to a documentation checklist
      alone — reproducing and closing the exact Phase 144 gap
+
   4. `phases.clear` (or the equivalent destructive planning operation) refuses to run when the
      current milestone's `.planning/milestones/v<X.Y>-phases/` archive is absent or empty,
      verified against the exact scenario recorded in
@@ -209,12 +223,15 @@ before the artifact can be re-verified against it
   1. A segmented-network chaos lab profile exists, is listed in `lab.sh`'s `ALL_PROFILES`, and
      produces realistic unreachable hosts (RST/ICMP-unreachable on a routed segment) rather than
      unassigned loopback aliases
+
   2. Running chunked discovery + partial-result tolerance against that profile produces a written
      finding on the Phase 144 nmap timing artifact: either it does not reproduce (closed) or it
      does and a scoped mitigation is chosen with its false-negative tradeoffs documented
+
   3. Interactive setup's "Run nmap port discovery first?" prompt (`quirk/interactive.py:176-179`)
      defaults to Yes; a user who accepts the default gets nmap discovery and the Phase 145 liveness
      pre-pass without having to opt in explicitly
+
   4. `docs/chaos-lab.md`, `README.md`, and the profile's `expected_results_*.md` oracle all
      reflect the new profile in the same change, per `CLAUDE.md`'s Chaos Lab Maintenance rule
 
@@ -236,6 +253,7 @@ dogfooding it immediately)
 
   1. Pushing the `v5.12.0` tag triggers `release.yml`, and the `windows-package` job completes with
      a green signing self-test — not the dry-run from Phase 148, an actual tagged run
+
   2. The GitHub Release for `v5.12.0` has a Windows operator zip attached and downloadable
   3. The Phase 148 tag-hygiene guard does not flag `v5.12.0` as malformed or missing
   4. Phase 153 itself closes with a `VERIFICATION.md`, a post-execution `VALIDATION.md`, and a
@@ -248,7 +266,7 @@ dogfooding it immediately)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 148. Release Pipeline Repair + Windows Asset Backfill | 2/4 | In Progress|  |
+| 148. Release Pipeline Repair + Windows Asset Backfill | 3/4 | In Progress|  |
 | 149. Test Suite Triage | 0/TBD | Not started | - |
 | 150. Test Suite Green Baseline + CI Gate | 0/TBD | Not started | - |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
@@ -562,10 +580,13 @@ backlog-history continuity:
 - ~102 pre-existing suite failures → SUITE-01/02/03 (Phases 149–150)
 - Phase-completion artifact enforcement (VERIFICATION.md/VALIDATION.md/UAT-SERIES.md gaps) →
   ARTIFACT-01/02/03 (Phase 151)
+
 - `phases.clear` destructive-op guard — see `.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md`
   incident → ARTIFACT-04 (Phase 151)
+
 - DISC-09 segmented-network chaos lab profile + Phase 144 nmap timing artifact → DISC-09/DISC-10
   (Phase 152)
+
 - Interactive nmap-discovery-first default N→Y → DISC-11 (Phase 152)
 
 **Explicitly out of scope for v5.12:**
@@ -573,8 +594,10 @@ backlog-history continuity:
 - DISC-08 sub-batch (mid-discovery) checkpoint/resume granularity — accepted boundary; batches are
   cheap (~30–60s) relative to what the checkpoint system protects. Revisit only if batch cost
   grows.
+
 - Continuous hardware lifecycle monitoring — v5.13 capability anchor, needs its own research pass
   first.
+
 - SaaS multi-tenancy — still parked, no business-model signal.
 
 ### Hardware Compatibility & Lifecycle Remediation (v5.13+)
@@ -593,4 +616,5 @@ Phase 147 as DRAIN-01/DRAIN-02; struck from this list 2026-08-11.
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
+
 </content>
