@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v5.11
 milestone_name: Discovery at Scale + Backlog Drain
-status: milestone_complete
-stopped_at: Milestone complete (Phase 147 was final phase)
-last_updated: 2026-08-11T14:09:28.367Z
-last_activity: 2026-08-11
+status: Awaiting next milestone
+stopped_at: Completed 147-04-PLAN.md
+last_updated: "2026-08-11T15:39:20.318Z"
+last_activity: 2026-08-11 — Milestone v5.11 completed and archived
 progress:
   total_phases: 11
   completed_phases: 4
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 147 of 4 (backlog-drain-lifecycle-ledger-tail)
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-08-11
+Phase: Milestone v5.11 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-11 — Milestone v5.11 completed and archived
 
-## v5.11 Phase Map
+## v5.11 Phase Map (SHIPPED 2026-08-11)
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
-| 144 | Chunked Discovery Core | DISC-01, DISC-02 | None (first, anchor) | Not started |
-| 145 | Liveness Pre-Pass | DISC-03 | Phase 144 | Not started |
-| 146 | Progress, Scaling & Disclosure | DISC-04, DISC-05, DISC-06, DISC-07 | Phase 144 | Not started |
-| 147 | Backlog Drain — Lifecycle & Ledger Tail | DRAIN-01, DRAIN-02, DRAIN-03, DRAIN-04 | None (independent) | Not started |
+| 144 | Chunked Discovery Core | DISC-01, DISC-02 | None (first, anchor) | Complete (2026-08-10; VERIFICATION passed 6/6 with 1 user-accepted override — nmap timing-engine artifact on a mostly-silent loopback target list) |
+| 145 | Liveness Pre-Pass | DISC-03 | Phase 144 | Complete (2026-08-10; VERIFICATION written retroactively at v5.11 audit closeout — passed 4/4, 0 overrides) |
+| 146 | Progress, Scaling & Disclosure | DISC-04, DISC-05, DISC-06, DISC-07 | Phase 144 | Complete (2026-08-11; VERIFICATION passed 4/4; code review CR-01 undetermined-host miscount fixed before close) |
+| 147 | Backlog Drain — Lifecycle & Ledger Tail | DRAIN-01, DRAIN-02, DRAIN-03, DRAIN-04 | None (independent) | Complete (2026-08-11; VERIFICATION passed 4/4; VALIDATION reconciled to nyquist_compliant at audit closeout) |
 
 ## v5.10 Phase Map
 
