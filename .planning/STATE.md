@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: Completed 149-06-PLAN.md
-last_updated: "2026-08-12T01:10:50.406Z"
+stopped_at: Completed 149-09-PLAN.md
+last_updated: "2026-08-12T04:21:45.489Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 1
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 13
   percent: 8
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 149 (test-suite-triage) — EXECUTING
-Plan: 9 of 11
+Plan: 10 of 11
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -128,6 +128,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 149 P06 | 40min | 3 tasks | 8 files |
 | Phase 149 P07 | 45min | 3 tasks | 7 files |
 | Phase 149 P08 | 40min | 3 tasks | 5 files |
+| Phase 149 P09 | 45min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 149]: Plan 07: 4 of 5 /api/compare test failures were a test-construction bug (unescaped + UTC offset in raw f-string query URL decoded as space by query parsing), not API-contract drift as RESEARCH.md suspected; verified via urllib.parse.quote()-encoded params returning 200
 - [Phase 149]: Plan 08: test_qramm_staleness.py SIGSEGV pair investigated but not reproducible in this sandbox (3/3 isolated runs, direct CLI hand-invocation, and a ~550-test full-suite slice all pass); left unmarked per Plan 06 precedent, flagged HIGH-PRIORITY for Phase 150 re-verification given a segfault's severity class
 - [Phase 149]: Plan 08: test_no_risk_engine_import's failure is cross-test sys.modules pollution from test_findings_evaluator_dedupe.py's risk_engine shim test (alphabetically earlier), not a real QRAMM-12 import-graph violation in evidence_bridge.py itself
+- [Phase 149]: test_cbom_schema_validation.py's otics chaos-lab profile drift is a genuine Chaos Lab Maintenance gap (Phase 141-07's synthesizer never landed in PROFILE_ENDPOINTS), flagged for Phase 150 follow-up
+- [Phase 149]: Plan 09: 3 of 11 Group D1 tests (test_errors_cmd + 2 GCP-403 posture tests) investigated but found NOT reproducible in this sandbox; POSTURE-02's scan_error emission on GCP 403 already works correctly despite file's stale RED-scaffold docstring
 
 ### Pending Todos
 
@@ -281,8 +284,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T01:09:50.389Z
-Stopped at: Completed 149-06-PLAN.md
+Last session: 2026-08-12T04:21:45.484Z
+Stopped at: Completed 149-09-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
