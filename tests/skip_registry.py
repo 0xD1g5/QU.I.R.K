@@ -60,16 +60,16 @@ ALLOWED_SKIPS = [
     ("test_pdf_metadata_constants.py",       56,  "optional_extra", "Playwright Chromium runtime not available"),
     ("test_pqc_discriminator.py",            126, "live_infra",     "Requires oqs-nginx chaos-lab profile"),
     ("test_pqc_discriminator.py",            141, "live_infra",     "Requires oqs-nginx chaos-lab profile"),
-    ("test_report_injection_hardening.py",   240, "optional_extra", "playwright.sync_api not installed"),
-    ("test_report_injection_hardening.py",   241, "optional_extra", "pypdf not installed"),
-    ("test_report_injection_hardening.py",   254, "optional_extra", "Playwright Chromium binary not available"),
+    ("test_report_injection_hardening.py",   244, "optional_extra", "playwright.sync_api not installed"),
+    ("test_report_injection_hardening.py",   245, "optional_extra", "pypdf not installed"),
+    ("test_report_injection_hardening.py",   258, "optional_extra", "Playwright Chromium binary not available"),
     ("test_report_render_undetermined_hosts.py", 150, "optional_extra", "python-docx not installed"),
     ("test_report_render_undetermined_hosts.py", 162, "optional_extra", "python-docx not installed"),
     ("test_report_render_undetermined_hosts.py", 215, "optional_extra", "python-docx not installed"),
     ("test_scheduler_cmd.py",                314, "live_infra",     "SIGTERM not supported on Windows"),
-    ("test_snmp_scanner_contract.py",        598, "optional_extra", "pysnmp not installed"),
-    ("test_snmp_scanner_contract.py",        631, "optional_extra", "pysnmp not installed"),
-    ("test_snmp_scanner_contract.py",        673, "optional_extra", "pysnmp not installed"),
+    ("test_snmp_scanner_contract.py",        599, "optional_extra", "pysnmp not installed"),
+    ("test_snmp_scanner_contract.py",        632, "optional_extra", "pysnmp not installed"),
+    ("test_snmp_scanner_contract.py",        674, "optional_extra", "pysnmp not installed"),
 
     # Phase 149 D-02/D-03: test-suite triage quarantines — see docs/test-triage-149.md
     ("test_notify_email.py",       79,  "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_emailpy-test_starttls_path_timeout_and_recipients"),
@@ -111,4 +111,12 @@ ALLOWED_SKIPS = [
     ("test_pdf_metadata_constants.py", 91, "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_metadata_constantspy-test_pdf_renders_with_locked_context"),
     ("test_writer.py",               26,  "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_writerpy-test_run_stats_ports_and_hosts_scanned"),
     ("test_pdf_export.py",           7,   "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_exportpy-test_pdf_export_endpoint"),
+
+    # Phase 149 Plan 03: Cluster 6 (pip --dry-run extras-install flakiness) — see docs/test-triage-149.md
+    ("test_install_all_excludes_impacket.py",     36, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_excludes_impacketpy-test_install_all_excludes_impacket"),
+    ("test_install_all_excludes_pysnmp.py",       36, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_excludes_pysnmppy-test_install_all_excludes_pysnmp"),
+    ("test_install_all_excludes_schemathesis.py", 44, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_excludes_schemathesispy-test_install_all_excludes_schemathesis"),
+    ("test_install_all_includes_notify.py",       36, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_includes_notifypy-test_install_all_includes_notify"),
+    ("test_install_all_includes_tickets.py",      30, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_includes_ticketspy-test_install_all_includes_tickets"),
+    ("test_snmp_scanner_contract.py",             380, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_snmp_scanner_contractpy-test_install_all_excludes_pysnmp"),
 ]

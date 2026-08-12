@@ -33,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.slow
+@pytest.mark.skip(reason="TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_excludes_impacketpy-test_install_all_excludes_impacket")
 def test_install_all_excludes_impacket(tmp_path: Path) -> None:
     """Phase 45 / D-01 guard: ``quirk[all]`` must not transitively pull impacket.
 

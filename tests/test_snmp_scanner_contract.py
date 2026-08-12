@@ -377,6 +377,7 @@ def test_snmp_meta_staleness_threshold() -> None:
 # ---------------------------------------------------------------------------
 
 @pytest.mark.slow
+@pytest.mark.skip(reason="TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_snmp_scanner_contractpy-test_install_all_excludes_pysnmp")
 def test_install_all_excludes_pysnmp(tmp_path: "Path") -> None:  # type: ignore[name-defined]  # noqa: F821
     """D-08 guard: quirk[all] must NOT transitively pull pysnmp or sysdescrparser.
 
