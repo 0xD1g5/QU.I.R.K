@@ -1,7 +1,16 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.11.0
-**Last Updated:** 2026-08-12 (Phase 149 wrap — Test Suite Triage: SUITE-01 — all 116
+**Last Updated:** 2026-08-12 (Phase 150 remediation wrap — Test Suite Green Baseline + CI Gate:
+UAT-150-01..03 added for the gating `Linux Full Suite` CI job's real green run (SUITE-02), the
+live-fire gate-bites proof on a real PR (SUITE-03), and first-run chaos-lab cert auto-generation
+for the `email`/`grpc-tls` profiles (D-12/D-13) — all three human-led, `Result:` lines left
+pending for the phase's live-fire evidence gathering (Plans 150-08/150-09). SUITE-02/SUITE-03
+corrected in `.planning/REQUIREMENTS.md` from a premature `Complete` to `In Progress` after the
+first real CI attempt came back red (38 failed); Plans 150-04 through 150-06 closed the root
+causes (CI-parity venv reconciliation, chaos-lab certs, extras/gitignored-dir skip guards) —
+`docs/test-triage-149.md` gained a Phase 150 CI-parity addendum documenting all 35 new skips.
+Earlier: Phase 149 wrap — Test Suite Triage: SUITE-01 — all 116
 pre-existing full-suite test failures individually investigated and given an explicit,
 written disposition across 9 clusters in `docs/test-triage-149.md` (fixed / quarantined-xfail
 / quarantined-skip); 2 genuine production bugs fixed in place (sslyze `__version__`
@@ -17213,3 +17222,84 @@ claims) and confirming it matched the ledger's stated 0-failed baseline exactly:
 verified, no gaps. SUITE-01 satisfied. Phase 149 is the second phase of the v5.12 milestone
 (Release & Verification Integrity); it hands Phase 150 (Test Suite Green Baseline + CI Gate) a
 precisely known sizing input instead of a guessed one. See 149-VERIFICATION.md.
+
+---
+
+## Series 150: Test Suite Green Baseline + CI Gate (Phase 150 — v5.12)
+
+### UAT-150-01: The `Linux Full Suite` job concludes green on a real GitHub Actions run of `main` (SUITE-02) — Human-Led
+
+**What to test:** The new gating `Linux Full Suite` CI job (added to
+`.github/workflows/python-ci.yml`, `.[all]`-only install, `pytest -q -m ""`) actually reports
+success on a real run against `main`, not just a local approximation.
+
+**Steps:**
+1. Open the run URL recorded in `.planning/phases/150-test-suite-green-baseline-ci-gate/150-CI-EVIDENCE.md`
+   for the green baseline attempt.
+2. Confirm the `Linux Full Suite` job shows a green check (✓ success) on the Actions run page.
+3. Open the job's log and confirm its pytest summary line reports `0 failed`.
+
+**Pass criteria:**
+- The evidence artifact (`150-CI-EVIDENCE.md`) records a run URL for a `Linux Full Suite` job that
+  concluded `success`
+- The job log's pytest summary line reports `0 failed` (do not hardcode a specific
+  passed/skipped/xfailed count as a pass criterion — those numbers drift release to release; only
+  `0 failed` is the invariant)
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** SUITE-02. Requirement: SUITE-02.
+
+---
+
+### UAT-150-02: The CI gate bites — a deliberately failing test turns the job red on a real PR run (SUITE-03) — Human-Led
+
+**What to test:** The new `Linux Full Suite` job is not just present but actually enforced — a
+deliberately introduced failing test fails the real CI build on a PR, proving the gate is wired
+correctly (not just locally simulated), and the smoke-check branch/PR was cleaned up afterward.
+
+**Steps:**
+1. Open the red-run URL recorded in `150-CI-EVIDENCE.md` for the live-fire smoke check.
+2. Confirm the failure names `tests/test_ci_gate_smoke.py` (the deliberately failing smoke-check
+   test added and later reverted per D-07).
+3. Confirm the PR opened for the smoke check is closed and not merged.
+4. Run `git ls-remote --heads origin ci/smoke-check-150` and confirm it returns empty (branch
+   deleted).
+
+**Pass criteria:**
+- The red-run URL in `150-CI-EVIDENCE.md` shows the `Linux Full Suite` job concluding `failure`
+- The failure is attributable to `tests/test_ci_gate_smoke.py`
+- The smoke-check PR is closed, not merged
+- `git ls-remote --heads origin ci/smoke-check-150` returns no output
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** SUITE-03. Requirement: SUITE-03.
+
+---
+
+### UAT-150-03: Chaos-lab `email`/`grpc-tls` certs auto-generate on first run (D-12/D-13) — Human-Led
+
+**What to test:** On a clone with no lab certs present, `./lab.sh certs` (or a plain
+`PROFILE_ARGS="--profile email" ./lab.sh up`) generates the gitignored per-profile cert pairs
+without any manual `make certs` step, and the `email` profile starts cleanly without the
+bind-mount "not a directory" error that broke `test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[email]`
+on real CI.
+
+**Steps:**
+1. On a clone with no `labs/email/certs/` or `labs/grpc-tls/certs/` contents, run
+   `cd quantum-chaos-enterprise-lab && ./lab.sh certs`.
+2. Confirm `labs/email/certs/postfix.{crt,key}`, `labs/email/certs/dovecot.{crt,key}`, and
+   `labs/grpc-tls/certs/grpc-tls.{crt,key}` all exist afterward.
+3. Run `PROFILE_ARGS="--profile email" ./lab.sh up` and confirm the `dovecot-email` container
+   starts without a `mount ... not a directory` bind-mount error.
+
+**Pass criteria:**
+- All six cert files exist after `./lab.sh certs`
+- `./lab.sh up --profile email` starts the `email` profile containers without a bind-mount error
+- A second `./lab.sh certs` run is idempotent (no regeneration, no error) — reuses the existing
+  `tests/test_lab_profile_certs.py` idempotency contract
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** D-12/D-13.
