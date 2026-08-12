@@ -79,7 +79,7 @@ def test_no_unregistered_skips() -> None:
     """
     violations: list[tuple[str, int, str]] = []
 
-    for py_file in sorted(TESTS_DIR.glob("*.py")):
+    for py_file in sorted(TESTS_DIR.rglob("*.py")):
         if py_file.name in EXEMPT_FILES:
             continue
         try:
