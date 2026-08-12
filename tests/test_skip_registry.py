@@ -1,11 +1,13 @@
 """Phase 41 D-03: CI gate meta-test that fails when an unregistered
-``pytest.skip`` / ``pytest.importorskip`` / ``@pytest.mark.skipif``
+``pytest.skip`` / ``pytest.importorskip`` / ``@pytest.mark.skipif`` /
+``@pytest.mark.skip`` / ``@pytest.mark.xfail``
 is encountered in tests/.
 
 Mechanism: walk every ``tests/*.py`` file with ``ast.parse`` + ``ast.walk``
 looking for:
   - Call nodes whose func resolves to ``pytest.skip`` or ``pytest.importorskip``
-  - Decorator nodes whose func resolves to ``pytest.mark.skipif``
+  - Decorator nodes whose func resolves to ``pytest.mark.skipif``,
+    ``pytest.mark.skip``, or ``pytest.mark.xfail``
 
 For each occurrence, check ``(filename, node.lineno)`` against
 ``tests.skip_registry.ALLOWED_SKIPS`` with a +/-2 line tolerance to absorb
@@ -54,11 +56,11 @@ def _is_pytest_skip_call(node: ast.AST) -> bool:
     return False
 
 
-def _is_pytest_skipif_decorator(node: ast.AST) -> bool:
-    """True if ``node`` is ``@pytest.mark.skipif(...)`` decorator."""
+def _is_pytest_mark_decorator(node: ast.AST, mark_name: str) -> bool:
+    """True if ``node`` is ``@pytest.mark.<mark_name>(...)`` (called or bare)."""
     # Decorator can be either a Call (with args) or a plain Attribute access.
     target = node.func if isinstance(node, ast.Call) else node
-    if isinstance(target, ast.Attribute) and target.attr == "skipif":
+    if isinstance(target, ast.Attribute) and target.attr == mark_name:
         # target.value should be ast.Attribute pytest.mark
         inner = target.value
         if isinstance(inner, ast.Attribute) and inner.attr == "mark":
@@ -94,16 +96,17 @@ def test_no_unregistered_skips() -> None:
                     attr = func.attr if isinstance(func, ast.Attribute) else "?"
                     violations.append((py_file.name, node.lineno, f"pytest.{attr}"))
 
-            # 2. Decorators on functions/classes: @pytest.mark.skipif(...)
+            # 2. Decorators on functions/classes: @pytest.mark.{skipif,skip,xfail}(...)
             decorators: list[ast.AST] = []
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 decorators = list(node.decorator_list)
             for deco in decorators:
-                if _is_pytest_skipif_decorator(deco):
-                    if not _allowed(py_file.name, deco.lineno):
-                        violations.append(
-                            (py_file.name, deco.lineno, "@pytest.mark.skipif")
-                        )
+                for mark_name in ("skipif", "skip", "xfail"):
+                    if _is_pytest_mark_decorator(deco, mark_name):
+                        if not _allowed(py_file.name, deco.lineno):
+                            violations.append(
+                                (py_file.name, deco.lineno, f"@pytest.mark.{mark_name}")
+                            )
 
     if violations:
         formatted = "\n".join(

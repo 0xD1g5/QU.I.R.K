@@ -1,7 +1,7 @@
 """Phase 41 D-02: Central allowed-skip registry.
 
 Each entry: (file_relative_to_tests_dir, line_number, category, reason)
-category in {"optional_extra", "live_infra"}
+category in {"optional_extra", "live_infra", "pre_existing_triage_149"}
 
 Per CONTEXT.md D-01..D-05: stale skips are deleted; optional-extra and
 live-infra skips are registered here so the meta-test gate (test_skip_registry.py)

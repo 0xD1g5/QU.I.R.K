@@ -152,6 +152,7 @@ quirk = [
 markers = [
     "slow: marks tests as slow (deselect with '-m not slow')",
     "live_infra: marks tests requiring live external infrastructure (Docker/cloud/etc)",
+    "skip_registry_gate: marks the skip-registry meta-gate test",
 ]
 addopts = "-m 'not slow'"
 testpaths = ["tests"]
