@@ -25,21 +25,25 @@ import yaml
 
 
 def test_version_consistency():
-    """All version constants across the codebase must equal '4.1.0'.
+    """All version constants across the codebase must stay wired to quirk.__version__.
 
     Covers D-01 (quirk.__version__), D-02 (PLATFORM_VERSION / INTELLIGENCE_VERSION in
     reports/writer.py), D-02 (PLATFORM_VERSION in cbom/builder.py), and IntelligenceCfg
     default intelligence_version in config.py.
 
-    RED: current values are "4.0.0" (writer INTELLIGENCE_VERSION) and "4.0"
-         (writer/builder PLATFORM_VERSION).
+    TARGET is derived from quirk.__version__ itself (not a hardcoded literal) — per
+    Phase 149 Cluster 4 disposition (TRIAGE-149), a fixed version string requires
+    hand-editing at every release and drifts out of sync (this test hardcoded "5.5.0"
+    for several major versions). The genuine regression value here is verifying the
+    four downstream constants never fork from the single source of truth, which this
+    dynamic comparison still enforces.
     """
     import quirk
     from quirk.reports.writer import PLATFORM_VERSION, INTELLIGENCE_VERSION
     from quirk.cbom.builder import PLATFORM_VERSION as CBOM_VERSION
     from quirk.config import IntelligenceCfg
 
-    TARGET = "5.5.0"
+    TARGET = quirk.__version__
     assert quirk.__version__ == TARGET, (
         f"quirk.__version__ is {quirk.__version__!r}, expected {TARGET!r}"
     )

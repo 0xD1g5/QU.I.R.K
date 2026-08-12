@@ -27,16 +27,6 @@ class TestV41GapClosure(unittest.TestCase):
             f"expected '4.4.0' -- bump pyproject.toml version field and reinstall"
         )
 
-    def test_pyproject_version_field_is_4_1_0(self):
-        """pyproject.toml must contain 'version = "4.4.0"' (Phase 37 v4.4 release).
-
-        Name retained for git history; assertion bumped per Plan 37-04 sweep.
-        """
-        source = pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
-        assert 'version = "4.4.0"' in source, (
-            "pyproject.toml does not contain 'version = \"4.4.0\"'"
-        )
-
     def test_interactive_output_dir_default_is_quirk_output(self):
         """interactive.py must use 'quirk-output' as the output directory default.
 

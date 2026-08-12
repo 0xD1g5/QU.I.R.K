@@ -10,16 +10,6 @@ def test_run_scan_importable():
     assert len(__version__) > 0
 
 
-def test_version_is_4_2_0():
-    """__version__ must be 4.4.0 (bumped for Phase 37 v4.4.0 release).
-
-    Name retained for git history; assertion bumped per Plan 37-04 sweep.
-    Superseded by tests/test_version.py.
-    """
-    from quirk import __version__
-    assert __version__ == "5.5.0", f"Expected 5.5.0, got {__version__!r}"
-
-
 def test_package_data_templates():
     """quirk/reports/templates/ directory must exist with report.html.j2 template."""
     import quirk
