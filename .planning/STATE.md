@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: Completed 150-02-PLAN.md
-last_updated: "2026-08-12T12:41:52.509Z"
+stopped_at: BLOCKED at Phase 150 Plan 03 Task 1 — real CI Linux Full Suite run failed (38 failures); replanning required, see 150-03-SUMMARY.md
+last_updated: "2026-08-12T13:21:35.228Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 13
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 150 (test-suite-green-baseline-ci-gate) — BLOCKED
+Plan: 3 of 3 (halted at Task 1 of 3 — real CI Linux Full Suite run failed, see blocker + 150-03-SUMMARY.md)
+Status: Blocked — requires replanning before retry
 Last activity: 2026-08-12
 
 ## v5.12 Phase Map
@@ -271,6 +271,8 @@ None yet.
   dimension: Pass). User selected "Proceed anyway" at the /gsd-plan-phase 150 override prompt.
   Re-surface at `/gsd:verify-phase 150` only if the same coverage question resurfaces there.
 
+- Phase 150 Plan 03: real GitHub Actions Linux Full Suite run (31598809033) failed with 38 failures on a genuine .[all]-only ubuntu-latest install. SUITE-02 not met on CI; SUITE-03 live-fire smoke test not attempted per plan's explicit Task 1 stop condition. See 150-03-SUMMARY.md for full 8-category failure breakdown and required replanning items.
+
 ## Deferred Items
 
 **Last re-triaged:** 2026-08-11 (v5.11 milestone-audit closeout; supersedes the 2026-08-10
@@ -304,8 +306,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T12:41:52.504Z
-Stopped at: Completed 150-02-PLAN.md
+Last session: 2026-08-12T13:21:35.222Z
+Stopped at: BLOCKED at Phase 150 Plan 03 Task 1 — real CI Linux Full Suite run failed (38 failures); replanning required, see 150-03-SUMMARY.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
