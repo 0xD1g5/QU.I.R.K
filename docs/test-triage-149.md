@@ -550,6 +550,108 @@ fix as a durable follow-up. Phase 149 (SUITE-01) is complete.
 
 ---
 
+## Phase 150 CI-Parity Addendum
+
+Phase 149's ledger above (and Plan 150-02's own local baseline) were both produced in
+sandboxes carrying the `identity`, `hw`, and `api` extras — `impacket`, `pysnmp`,
+`bacpypes3`/`pymodbus`, and `schemathesis`/`openapi-spec-validator` were all installed. CI's
+`Linux Full Suite` job installs `.[all]` only, which deliberately excludes all three extras
+groups by design (Phase 45 D-01, Phase 133 D-08, Phase 149's own `test_install_all_excludes_*`
+guards). The real GitHub Actions run
+([31598809033](https://github.com/0xD1g5/QU.I.R.K/actions/runs/31598809033)) surfaced this gap
+directly: **38 failed, 3074 passed, 46 skipped, 73 xfailed, 7 xpassed**. Of those 38, 31 were
+tests that hard-crashed (AttributeError/ModuleNotFoundError) instead of taking a documented skip
+path when their extra was absent — this addendum records the per-test guards Plan 150-06 added to
+close that gap, plus the other categories from `150-03-SUMMARY.md`'s 8-category breakdown.
+
+### `ci_extras_gap` skips — extras absent from `.[all]` (31 tests)
+
+Each test below now guards on the owning module's own availability flag (or a direct
+`try/except ImportError`) as its first statement, taking a `pytest.skip(...)` naming the missing
+package instead of hard-crashing. Registered under `tests/skip_registry.py`'s `ci_extras_gap`
+category (D-09/D-10/D-11).
+
+| Test file | Test name | Extras group | Missing package |
+|---|---|---|---|
+| `test_bacnet_scanner.py` | `test_parse_device_object` | `hw` | bacpypes3 |
+| `test_bacnet_scanner.py` | `test_single_inflight_no_writes_unicast` | `hw` | bacpypes3 |
+| `test_modbus_scanner.py` | `test_parse_device_id` | `hw` | pymodbus |
+| `test_modbus_scanner.py` | `test_parse_device_id_decodes_bytes` | `hw` | pymodbus |
+| `test_modbus_scanner.py` | `test_single_inflight_no_writes` | `hw` | pymodbus |
+| `test_snmp_scanner_contract.py` | `test_arp_walk_import_guard_returns_empty_with_zero_network_calls` | `hw` | pysnmp |
+| `test_identity_surface.py` | `Issue3ScanWindowRegressionTest::test_issue3_scan_window_returns_all_identity_protocols` | `identity` | impacket |
+| `test_rest_fuzzer_cascade.py` | `test_exception_only_cascade_trips_pause` | `api` | schemathesis |
+| `test_rest_fuzzer_cascade.py` | `test_success_resets_cascade_counter` | `api` | schemathesis |
+| `test_rest_fuzzer_cascade.py` | `test_5xx_only_cascade_still_trips` | `api` | schemathesis |
+| `test_rest_fuzzer_dedup.py` | `test_hsts_missing_capped_at_one_per_run` | `api` | schemathesis |
+| `test_rest_fuzzer_dedup.py` | `test_http_creds_capped_at_one_per_run` | `api` | schemathesis |
+| `test_rest_fuzzer_dedup.py` | `test_hsts_and_http_creds_both_capped_individually_after_dedup` | `api` | schemathesis |
+| `test_rest_fuzzer_pinned_session.py` | `test_main_dispatch_mounts_pinned_adapter` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_probe_skipped_when_url_rejected` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_probe_receives_pinned_ip` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_dispatch_uses_as_transport_kwargs` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_scope_gate_rejects_does_not_consume_budget` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_budget_caps_dispatch` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_rate_limiter_invoked` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_5xx_cascade_pause` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_alg_confusion_accepted_is_critical` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_alg_confusion_no_public_key_skips_info` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_socket_probes_run_once_and_count_budget` | `api` | schemathesis |
+| `test_rest_fuzzer_probes.py` | `test_alg_confusion_request_counts_against_budget` | `api` | schemathesis |
+| `test_openapi_scanner.py` | `test_local_file_parse` | `api` | openapi-spec-validator |
+| `test_openapi_scanner.py` | `test_local_file_security_scheme_rows` | `api` | openapi-spec-validator |
+| `test_openapi_scanner.py` | `test_url_scope_rejected` | `api` | openapi-spec-validator |
+| `test_openapi_scanner.py` | `test_oversize_rejected` | `api` | openapi-spec-validator |
+| `test_openapi_scanner.py` | `test_external_ref_ssrf_guard` | `api` | openapi-spec-validator |
+| `test_openapi_scanner.py` | `test_openapi_plaintext_server_evidence_counter` | `api` | openapi-spec-validator |
+
+Per D-09, `test_snmp_scanner_contract.py` and `test_rest_fuzzer_probes.py` were guarded
+per-test, not with a module-level `pytest.importorskip()` — both files are dominated by tests
+that specifically exercise the "extra absent, graceful fallback" path and must keep running
+without the extra installed.
+
+### `gitignored_planning_dir` skips — public-repo-absent fixture (4 tests)
+
+`.planning/audit-2026-05-08/AUDIT-TASKS.md` is gitignored on the public repo (Phase 120
+PUBREPO-01) and is absent on any public clone or CI checkout. These 4 tests did a direct
+`.read_text()` on that path with no existence check; each now guards with
+`if not path.exists(): pytest.skip(...)` (D-15), registered under
+`tests/skip_registry.py`'s `gitignored_planning_dir` category.
+
+| Test file | Test name |
+|---|---|
+| `tests/scanner/test_phase57_invariants.py` | `test_audit_tasks_six_blockers_closed` |
+| `test_audit_ledger_zero_open.py` | `test_audit_ledger_has_zero_bare_open_rows` |
+| `test_audit_ledger_zero_open.py` | `test_deferred_and_wontfix_rows_have_rationale` |
+| `test_extras_concurrency_expander.py` | `test_audit_rows_flipped_to_phase_71` |
+
+### Deleted, not quarantined (D-16)
+
+`test_v41_gap_closure.py::TestV41GapClosure::test_package_manifest_version_is_4_1_0` was
+**deleted** rather than quarantined: it queried `importlib.metadata.version("quirk")`, and the
+distribution name `quirk` has not existed since the v4.10 PyPI rename to `quirk-scanner`.
+
+### D-17 disposition: test-construction defect, not a regression
+
+`test_sensor_ingest.py::test_push_endpoint_exists` (the `/api/sensor/push` 404 on a genuine
+`.[all]`-only install) was investigated per
+`.planning/phases/150-test-suite-green-baseline-ci-gate/150-D17-INVESTIGATION.md` and
+root-caused in Plan 150-04: `fastapi`/`starlette`'s current pinned versions no longer flatten
+`include_router()` routes into `app.routes` at include time, so the test's old route-introspection
+walk went blind to every `/api/*` route, not just this one. The route itself dispatches correctly
+end-to-end. Fixed with a version-resilient recursive route walker in the test; no skip was
+registered, and this disposition was reached before the real CI run, not deferred to it.
+
+### Chaos-lab `email`/`grpc-tls` certs fixed at the source, not skipped
+
+The `email` chaos-lab profile failure
+(`test_chaos_lab_idempotency.py::test_profile_re_up_is_idempotent[email]`) was fixed at the
+source in `quantum-chaos-enterprise-lab/lab.sh` (D-12/D-13, Plan 150-05) — `ensure_profile_certs()`
+now auto-generates the gitignored `email` and `grpc-tls` profile certs on `up`/`all`/`reset`, so
+the underlying bind-mount failure no longer occurs. No skip was added for this category.
+
+---
+
 *Phase: 149-test-suite-triage*
 *Plan: 11*
 *Updated: 2026-08-12*
