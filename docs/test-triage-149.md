@@ -160,8 +160,8 @@ rather than silently omitted.
 | `tests/scanner/test_jwt_hardening.py::test_scan_jwt_targets_propagates_flag` | quarantined-xfail | environment-dependent (SSRF DNS-blocked sandbox) | Same root cause as row above — `scan_jwt_targets` delegates to the same DNS-blocked `_fetch_jwks` path | yes (tests/skip_registry.py, `test_jwt_hardening.py:66`) |
 | `tests/test_broker_scanner_rabbitmq.py::test_enrich_rabbitmq_mgmt_success` | quarantined-xfail | stale test (predates CR-06 `allow_cleartext` opt-in guard) | `KeyError: 'rabbitmq_version'`. `_enrich_rabbitmq_mgmt(host, port)` defaults `allow_cleartext=False` and returns `{}` immediately (Phase 57 CR-06 hardening) — the test never passes `allow_cleartext=True`, so the mocked `urlopen` is never called. Confirmed by reading `quirk/scanner/broker_scanner.py:311-332`'s explicit `if not allow_cleartext: return {}` short-circuit | yes (tests/skip_registry.py, `test_broker_scanner_rabbitmq.py:200`) |
 | `tests/test_broker_scanner_rabbitmq.py::test_enrich_rabbitmq_mgmt_401` | quarantined-xfail | stale test (predates CR-06 `allow_cleartext` opt-in guard) | Same root cause as row above — `allow_cleartext=False` default short-circuits before the mocked `HTTPError(401)` side-effect is ever raised | yes (tests/skip_registry.py, `test_broker_scanner_rabbitmq.py:236`) |
-| `tests/test_identity_scanner_hardening.py::test_kdc_udp_decode_failure_logs` | **superseded by Plan 11** — partially fixed, residual quarantined-xfail | genuine impacket 0.13.0 API drift (was mis-diagnosed as optional_extra-absent in Plan 06's sandbox) | RESEARCH.md described `AttributeError: module 'quirk.scanner.kerberos_scanner' has no attribute 'decode...'`, implying impacket was installed when captured — Plan 06's sandbox lacked impacket entirely, so `pytest.importorskip("impacket")` masked the real defect as a clean skip. **Plan 11 reconciliation finding:** this sandbox has impacket 0.13.0 installed (matching the current `impacket>=0.13.0,<0.14` pin), and the real bug reproduces: `kerberos_scanner.py`'s `from impacket.krb5.asn1 import ... MethodData` fails (impacket 0.13.0 renamed it to `METHOD_DATA`), silently setting `IMPACKET_AVAILABLE = False` for every operator on the currently-pinned impacket version — a genuine production regression, not test staleness. **Fixed in place** (Rule 1): import now tries `METHOD_DATA as MethodData` first, falling back to the old name for impacket <0.13. This restores `IMPACKET_AVAILABLE=True`, but uncovers a second, deeper impacket 0.13.0 incompatibility: `constants.KDCOptions` changed from a bit-flag helper class to a plain `enum.Enum`, so `_build_as_req`'s `constants.KDCOptions(constants.KDCOptions.forwardable)` now raises a pyasn1 `KeyError`. Quarantined pending a dedicated Phase 150 fix (out of scope for a one-line import fix) | yes (tests/skip_registry.py, `test_identity_scanner_hardening.py:85`) |
-| `tests/test_identity_scanner_hardening.py::test_build_as_req_nonce_uses_secrets` | **superseded by Plan 11** — quarantined-xfail | same impacket 0.13.0 `KDCOptions` enum incompatibility | Same underlying root cause and fix as the row above — see there for detail. RESEARCH.md's original `NameError: name 'constants' is not defined` capture was itself a symptom of the same `MethodData` import failure (now fixed); the residual `KDCOptions` enum defect surfaced only once the import succeeded | yes (tests/skip_registry.py, `test_identity_scanner_hardening.py:114`) |
+| `tests/test_identity_scanner_hardening.py::test_kdc_udp_decode_failure_logs` | **fixed in Phase 150 (D-05)** | genuine impacket 0.13.0 API drift (was mis-diagnosed as optional_extra-absent in Plan 06's sandbox) | RESEARCH.md described `AttributeError: module 'quirk.scanner.kerberos_scanner' has no attribute 'decode...'`, implying impacket was installed when captured — Plan 06's sandbox lacked impacket entirely, so `pytest.importorskip("impacket")` masked the real defect as a clean skip. **Plan 11 reconciliation finding:** this sandbox has impacket 0.13.0 installed (matching the current `impacket>=0.13.0,<0.14` pin), and the real bug reproduces: `kerberos_scanner.py`'s `from impacket.krb5.asn1 import ... MethodData` fails (impacket 0.13.0 renamed it to `METHOD_DATA`), silently setting `IMPACKET_AVAILABLE = False` for every operator on the currently-pinned impacket version — a genuine production regression, not test staleness. **Fixed in place** (Rule 1): import now tries `METHOD_DATA as MethodData` first, falling back to the old name for impacket <0.13. This restored `IMPACKET_AVAILABLE=True`, but uncovered a second, deeper impacket 0.13.0 incompatibility: `constants.KDCOptions` changed from a bit-flag helper class to a plain `enum.Enum`, so `_build_as_req`'s `constants.KDCOptions(constants.KDCOptions.forwardable)` raised a pyasn1 `KeyError`. **Now fixed in Phase 150 (D-05)** — see the "Phase 150 follow-up" section below | no — fix landed, xfail/registry entries removed |
+| `tests/test_identity_scanner_hardening.py::test_build_as_req_nonce_uses_secrets` | **fixed in Phase 150 (D-05)** | same impacket 0.13.0 `KDCOptions` enum incompatibility | Same underlying root cause and fix as the row above — see there for detail. RESEARCH.md's original `NameError: name 'constants' is not defined` capture was itself a symptom of the same `MethodData` import failure (now fixed); the residual `KDCOptions` enum defect surfaced only once the import succeeded, and is now fixed in Phase 150 (D-05). Phase 150 verification also found a second, unrelated stale assertion in this test (`randbits(31)` vs. the scanner's deliberate `randbits(32)` per commit `830ad6a`/D-09) and corrected it in the same edit | no — fix landed, xfail/registry entries removed |
 | `tests/test_jwt_scanner.py::test_multi_key_jwks` | quarantined-xfail | environment-dependent (SSRF DNS-blocked sandbox) | `assert 0 == 3`. Same CR-03 `validate_external_url()` dns_failure root cause as `test_jwt_hardening.py` above — `https://api.example.com/...` fails DNS resolution in this sandbox, so `_fetch_jwks` returns `(None, None, [])` before any key is parsed | yes (tests/skip_registry.py, `test_jwt_scanner.py:44`) |
 | `tests/test_jwt_scanner.py::test_jwt_rsa_key_size` | quarantined-xfail | environment-dependent (SSRF DNS-blocked sandbox) | Same root cause as row above | yes (tests/skip_registry.py, `test_jwt_scanner.py:67`) |
 | `tests/test_jwt_scanner.py::test_jwt_ec_key_size` | quarantined-xfail | environment-dependent (SSRF DNS-blocked sandbox) | Same root cause as row above | yes (tests/skip_registry.py, `test_jwt_scanner.py:89`) |
@@ -492,6 +492,32 @@ sandbox artifacts):
   follow-up item** (not 5 separate ones) — likely mitigations include
   `multiprocessing.set_start_method`-style fork avoidance, `-p no:cacheprovider`-style
   isolation, or running the full suite on a Linux CI runner where `fork()` is safer.
+
+### Phase 150 follow-up: KDCOptions fixed
+
+The impacket 0.13.0 `constants.KDCOptions` enum incompatibility in
+`quirk/scanner/kerberos_scanner.py::_build_as_req` flagged above was fixed under
+Phase 150 D-05: `_build_as_req` now detects the installed impacket's `KDCOptions`
+shape via `hasattr(constants, "encodeFlags")` and branches accordingly — the
+modern path calls `constants.encodeFlags([constants.KDCOptions.forwardable.value])`
+(impacket's own idiom for turning a `KDCOptions` enum member into the bit-list a
+pyasn1 `BitString` expects), while the legacy `constants.KDCOptions(...)`
+bit-flag-constructor call is preserved behind the `else` branch for impacket
+`<0.13.0`. Both `tests/test_identity_scanner_hardening.py::test_kdc_udp_decode_failure_logs`
+and `::test_build_as_req_nonce_uses_secrets` had their `xfail(strict=False)` markers
+removed, and both corresponding `pre_existing_triage_149` rows in
+`tests/skip_registry.py`'s `ALLOWED_SKIPS` were deleted. They are now permanently
+CI-enforced passes wherever impacket is installed.
+
+**Important caveat for future readers:** these two tests still take the
+`pytest.importorskip("impacket")` skip path in Phase 150's new Linux CI job itself
+(see `.github/workflows/python-ci.yml`'s full-suite job), because `quirk[all]`
+intentionally excludes the `identity` extra that provides impacket
+(`pyproject.toml` lines 129-132, Phase 45 D-01, reaffirmed by Phase 150 D-01). The
+fix and marker removal matter for local/dev-sandbox runs with `identity` installed,
+and for the correctness of the shipped scanner code itself — not for the new CI
+gate's own pass/fail signal, which never exercises impacket-gated code paths by
+design.
 
 ### Ledger integrity checks
 
