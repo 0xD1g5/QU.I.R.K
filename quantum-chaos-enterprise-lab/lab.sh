@@ -24,6 +24,8 @@ Commands:
   up              Start the lab (docker compose up -d)
   all             Start ALL profiles at once — every service, every vulnerability
   profiles        Print all known docker-compose profiles (one per line)
+  certs           Generate all chaos-lab self-signed certs (mTLS CA/client +
+                  labs/email + labs/grpc-tls) without starting containers
   down            Stop the lab (docker compose down)
   reset           Down + remove volumes + start fresh (down -v + up -d)
   status          Show running containers/ports for this lab project
@@ -47,6 +49,7 @@ Options (via env vars):
 Examples:
   ./lab.sh up
   PROFILE_ARGS="--profile identity" ./lab.sh up
+  ./lab.sh certs
   ./lab.sh profiles
   ./lab.sh status
   ./lab.sh logs tls-modern
@@ -103,6 +106,60 @@ ensure_lab_certs() {
       -days 825 -sha256 \
       -out "${CERT_DIR}/client.crt" >/dev/null 2>&1
     rm -f "${CERT_DIR}/client.csr"
+  fi
+}
+
+# Idempotently materialize the per-profile self-signed certs consumed by the
+# `email` and `grpc-tls` chaos-lab profiles: labs/email/certs/{postfix,
+# dovecot}.{key,crt} and labs/grpc-tls/certs/grpc-tls.{key,crt}. Both
+# labs/*/.gitignore exclude certs/*.key and certs/*.crt, and the
+# `postfix-email`, `dovecot-email` and `grpc-tls` docker-compose services
+# bind-mount these paths read-only. On a fresh clone with no generator,
+# Docker turns a missing bind-mount source into an empty directory and then
+# fails to mount that directory onto the container's file destination — the
+# "not a directory" runc error this function exists to prevent (D-12/D-13).
+#
+# Idempotent: each pair is guarded by an existence check and left untouched
+# if both files already exist. Re-entrant: callable from `up`, `all`,
+# `reset` and the standalone `certs` command without side effects on
+# subsequent runs. Docker-free: only shells out to `mkdir`/`openssl`/`chmod`.
+ensure_profile_certs() {
+  local LABS_ROOT
+  LABS_ROOT="$(dirname "$0")/../labs"
+
+  # labs/email/certs/postfix.{key,crt}
+  local EMAIL_CERT_DIR="${LABS_ROOT}/email/certs"
+  if [[ ! -f "${EMAIL_CERT_DIR}/postfix.key" || ! -f "${EMAIL_CERT_DIR}/postfix.crt" ]]; then
+    echo "🔐 Generating labs/email/certs/postfix.{key,crt} — first-run regen"
+    mkdir -p "${EMAIL_CERT_DIR}"
+    openssl req -x509 -newkey rsa:2048 -keyout "${EMAIL_CERT_DIR}/postfix.key" \
+      -out "${EMAIL_CERT_DIR}/postfix.crt" -days 3650 -nodes \
+      -subj "/CN=postfix.chaos.local" >/dev/null 2>&1
+    chmod 644 "${EMAIL_CERT_DIR}/postfix.crt"
+    chmod 600 "${EMAIL_CERT_DIR}/postfix.key"
+  fi
+
+  # labs/email/certs/dovecot.{key,crt}
+  if [[ ! -f "${EMAIL_CERT_DIR}/dovecot.key" || ! -f "${EMAIL_CERT_DIR}/dovecot.crt" ]]; then
+    echo "🔐 Generating labs/email/certs/dovecot.{key,crt} — first-run regen"
+    mkdir -p "${EMAIL_CERT_DIR}"
+    openssl req -x509 -newkey rsa:2048 -keyout "${EMAIL_CERT_DIR}/dovecot.key" \
+      -out "${EMAIL_CERT_DIR}/dovecot.crt" -days 3650 -nodes \
+      -subj "/CN=dovecot.chaos.local" >/dev/null 2>&1
+    chmod 644 "${EMAIL_CERT_DIR}/dovecot.crt"
+    chmod 600 "${EMAIL_CERT_DIR}/dovecot.key"
+  fi
+
+  # labs/grpc-tls/certs/grpc-tls.{key,crt}
+  local GRPC_TLS_CERT_DIR="${LABS_ROOT}/grpc-tls/certs"
+  if [[ ! -f "${GRPC_TLS_CERT_DIR}/grpc-tls.key" || ! -f "${GRPC_TLS_CERT_DIR}/grpc-tls.crt" ]]; then
+    echo "🔐 Generating labs/grpc-tls/certs/grpc-tls.{key,crt} — first-run regen"
+    mkdir -p "${GRPC_TLS_CERT_DIR}"
+    openssl req -x509 -newkey rsa:2048 -keyout "${GRPC_TLS_CERT_DIR}/grpc-tls.key" \
+      -out "${GRPC_TLS_CERT_DIR}/grpc-tls.crt" -days 3650 -nodes \
+      -subj "/CN=grpc-tls.chaos.local" >/dev/null 2>&1
+    chmod 644 "${GRPC_TLS_CERT_DIR}/grpc-tls.crt"
+    chmod 640 "${GRPC_TLS_CERT_DIR}/grpc-tls.key"
   fi
 }
 
@@ -171,6 +228,7 @@ case "${cmd}" in
       exit 1
     fi
     ensure_lab_certs
+    ensure_profile_certs
     echo "🚀 Starting lab: project=${PROJECT_NAME} file=${COMPOSE_FILE} profiles='${PROFILE_ARGS}'"
     compose up -d
     echo "✅ Lab started."
@@ -182,6 +240,7 @@ case "${cmd}" in
       exit 1
     fi
     ensure_lab_certs
+    ensure_profile_certs
     # Portable across bash 3.2 (macOS default) — `mapfile` is bash 4+.
     _profiles=()
     while IFS= read -r _p; do
@@ -222,6 +281,11 @@ case "${cmd}" in
   profiles)
     _derive_all_profiles
     ;;
+  certs)
+    ensure_lab_certs
+    ensure_profile_certs
+    echo "✅ Chaos-lab certs materialized (mTLS CA/client + email + grpc-tls)."
+    ;;
   down)
     echo "🧯 Stopping lab: project=${PROJECT_NAME}"
     compose --profile "*" down --remove-orphans
@@ -230,6 +294,8 @@ case "${cmd}" in
   reset)
     echo "♻️ Resetting lab (down -v + up -d): project=${PROJECT_NAME}"
     compose --profile "*" down -v --remove-orphans
+    ensure_lab_certs
+    ensure_profile_certs
     compose up -d
     echo "✅ Lab reset complete."
     compose ps
