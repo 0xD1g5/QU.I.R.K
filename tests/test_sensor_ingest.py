@@ -172,12 +172,41 @@ def _seed_token(
 # (a) test_push_endpoint_exists — CONSOLE-01
 # ---------------------------------------------------------------------------
 
+def _all_route_paths(app) -> list[str]:
+    """Recursively collect every registered APIRoute path, including routes
+    nested inside include_router()-mounted sub-routers.
+
+    Phase 150 D-17: on fastapi>=0.141/starlette>=1.6, ``application.routes``
+    no longer flattens included sub-router routes into plain APIRoute
+    entries at include time -- ``include_router()`` instead stores a lazy
+    ``_IncludedRouter(original_router=..., include_context=...)`` wrapper
+    whose actual APIRoute objects live under ``original_router.routes``
+    (unprefixed) with the prefix carried separately on
+    ``include_context.prefix``. A flat ``isinstance(r, APIRoute)`` walk over
+    ``app.routes`` therefore misses every /api/* route -- not a production
+    registration regression, just a stale route-introspection technique.
+    """
+    from fastapi.routing import APIRoute
+
+    paths: list[str] = []
+
+    def _walk(routes, prefix: str = "") -> None:
+        for route in routes:
+            if type(route).__name__ == "_IncludedRouter":
+                sub_prefix = getattr(route.include_context, "prefix", "") or ""
+                _walk(route.original_router.routes, prefix + sub_prefix)
+            elif isinstance(route, APIRoute):
+                paths.append(prefix + route.path)
+
+    _walk(app.routes)
+    return paths
+
+
 def test_push_endpoint_exists(monkeypatch):
     """CONSOLE-01: POST /api/sensor/push route is registered in the app."""
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     app, _, _, _ = _app_with_db()
-    from fastapi.routing import APIRoute
-    route_paths = [r.path for r in app.routes if isinstance(r, APIRoute)]
+    route_paths = _all_route_paths(app)
     assert "/api/sensor/push" in route_paths, (
         f"/api/sensor/push not found in routes: {route_paths}"
     )
