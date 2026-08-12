@@ -42,11 +42,20 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **SUITE-01**: Every pre-existing full-suite failure (~102, red since roughly Phase 97) has
       an explicit written disposition — fixed, quarantined with a reason, or deleted as obsolete
 
-- [x] **SUITE-02**: `pytest -q` on a clean supported environment produces a green baseline, so a
+- [ ] **SUITE-02**: `pytest -q` on a clean supported environment produces a green baseline, so a
       new failure is visible as a new failure
 
-- [x] **SUITE-03**: The green baseline is held by CI — a newly-introduced failing test fails the
+- [ ] **SUITE-03**: The green baseline is held by CI — a newly-introduced failing test fails the
       build rather than joining a permanent red background
+
+  **Status note (2026-08-12):** the first real GitHub Actions attempt at the gating `Linux Full
+  Suite` job ([31598809033](https://github.com/0xD1g5/QU.I.R.K/actions/runs/31598809033))
+  concluded `failure` with 38 failed. Plans 150-04 through 150-06 have since closed the
+  root causes (CI-parity venv reconciliation, chaos-lab cert generation, extras/gitignored-dir
+  skip guards); this plan (150-07) is bringing the written record into line with that
+  in-progress reality before the phase's evidence-gathering re-run (150-08/150-09) attempts a
+  genuinely green CI baseline. Neither requirement may be marked Complete until that re-run
+  produces verified green/red evidence.
 
 ### Phase Artifact Integrity
 
@@ -113,8 +122,8 @@ Deferred to a later milestone.
 | RELEASE-03 | Phase 148 | Complete |
 | RELEASE-04 | Phase 148 | Complete |
 | SUITE-01 | Phase 149 | Complete |
-| SUITE-02 | Phase 150 | Complete |
-| SUITE-03 | Phase 150 | Complete |
+| SUITE-02 | Phase 150 | In Progress |
+| SUITE-03 | Phase 150 | In Progress |
 | ARTIFACT-01 | Phase 151 | Pending |
 | ARTIFACT-02 | Phase 151 | Pending |
 | ARTIFACT-03 | Phase 151 | Pending |

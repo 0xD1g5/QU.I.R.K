@@ -192,7 +192,7 @@ quarantines already applied — or large; cannot be scoped before triage complet
 
   4. The green-baseline standard and how to run it locally are documented for future contributors
 
-**Plans**: 6 plans
+**Plans**: 9 plans
 
 *(Plans 150-01..150-03 were the original scope. Plan 150-03's live-fire push surfaced 38 real-CI
 failures across 8 categories — the local baseline had been validated against a broader extras
