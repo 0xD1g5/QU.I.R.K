@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: Completed 149-05-PLAN.md
-last_updated: "2026-08-12T00:42:28.589Z"
+stopped_at: Completed 149-06-PLAN.md
+last_updated: "2026-08-12T00:52:49.698Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 1
   total_plans: 15
-  completed_plans: 9
+  completed_plans: 10
   percent: 8
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 149 (test-suite-triage) — EXECUTING
-Plan: 6 of 11
+Plan: 7 of 11
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -125,6 +125,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 149 P03 | 25min | 3 tasks | 12 files |
 | Phase 149 P04 | 25min | 3 tasks | 6 files |
 | Phase 149 P05 | 20min | 3 tasks | 4 files |
+| Phase 149 P06 | 40min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -223,6 +224,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 149]: Plan 03: All 20 Cluster 2/6 tests dispositioned quarantined-skip (not xfail), per D-03: running them under full-suite pollution is not useful signal and they are expected to run cleanly once Phase 150 fixes the shared fixture/lifecycle issue
 - [Phase 149]: Plan 04: reassigned test_cli_correctness.py::test_version_consistency from Cluster 3 (environment) to Cluster 4 (stale assertion) per RESEARCH.md ground truth; TARGET now derives from quirk.__version__ instead of a hardcoded literal, preserving cross-module consistency coverage without every-release edits
 - [Phase 149]: [Phase 149]: Plan 05: test_sensor_push_id_revalidation.py's 2 failures are shared in-memory SQLite cache pollution across test files (file::memory:?cache=shared&uri=true), NOT an AUDIT-08 write-before-reject defect; individually investigated per RESEARCH.md Open Question 3, distinct sub-reason from test_auto_merge_trigger.py's 8 outdated-fixture failures
+- [Phase 149]: Plan 06: closed the tests/scanner/ non-recursive glob gap (Assumption A3) before quarantining any Cluster 9 Group A test in that subdirectory; individually investigated all 18, converging on DNS-blocked-sandbox SSRF guard (9), stale CR-06 opt-in guard (2), stale test fixture (2) for 13 xfail quarantines, while 5 were found not reproducible in this sandbox (already-registered optional_extra skips or currently-passing) and left unmarked
 
 ### Pending Todos
 
@@ -273,8 +275,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T00:42:28.583Z
-Stopped at: Completed 149-05-PLAN.md
+Last session: 2026-08-12T00:52:49.692Z
+Stopped at: Completed 149-06-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
