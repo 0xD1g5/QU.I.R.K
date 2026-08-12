@@ -110,6 +110,7 @@ actually runs under, confirmed via `which pytest` → `.venv/bin/pytest`.
 | `test_auto_merge_trigger.py::test_cadence_window_triggers` | quarantined-xfail | outdated-fixture (AUDIT-08 UUID guard) | Same root cause; `"sensor-a"`/`"sensor-b"` cadence-window fixture predates the UUID guard | yes (tests/skip_registry.py:136) |
 | `test_sensor_push_id_revalidation.py::test_malformed_sensor_id_path_traversal_rejected` | quarantined-xfail | shared in-memory SQLite cache pollution (test-isolation, NOT the same cause as the 8 rows above, NOT an AUDIT-08 implementation defect) | Individually investigated per Open Question 3 (RESEARCH.md). Standalone: `pytest tests/test_sensor_push_id_revalidation.py -q -m ""` → 3 passed (the 400 rejection + 0-new-rows assertion are both correct in isolation). Full-suite-order reproduction: `pytest tests/test_sensor_ingest.py tests/test_sensor_auth_per_sensor.py tests/test_sensor_push_id_revalidation.py -q -m ""` → reproduces `AssertionError: AUDIT-08 RED: 9 SensorPush row(s) found; malformed sensor_id`. Root cause: this file's engine URI (`sqlite:///file::memory:?cache=shared&uri=true`) is a SQLite shared-cache in-memory database, which is a single process-wide DB, not per-test-isolated — 13 other test files in `tests/` use the identical URI and write `SensorPush` rows that persist across files within the same pytest worker process. The malformed-id push route correctly returns 400 and writes zero *new* rows for the rejecting request; the count of 9 is entirely rows left over from earlier tests in suite order. This is a test-fixture/isolation defect (same defect class as Cluster 2/6's shared-fixture issues), not a write-before-reject ordering bug in the AUDIT-08 guard — no implementation fix required (D-01). Not flagged as a real regression for Phase 150. | yes (tests/skip_registry.py:137) |
 | `test_sensor_push_id_revalidation.py::test_malformed_sensor_id_short_string_rejected` | quarantined-xfail | shared in-memory SQLite cache pollution (test-isolation, NOT the same cause as the 8 rows above, NOT an AUDIT-08 implementation defect) | Same root cause and evidence as the row above — reproduces `AssertionError: AUDIT-08 RED: 9 SensorPush row(s) found after malformed id push.` under the identical full-suite-order repro command; passes standalone (3 passed) | yes (tests/skip_registry.py:138) |
+| `test_dashboard_trends.py::test_trends_timeline_empty` | quarantined-xfail | shared in-memory SQLite cache pollution (same class as the 2 rows above; orphaned by Plan 11's reconciliation sweep, caught by code review CR-01) | Untouched by any Plan 01-11 and had no ledger row until code review CR-01 caught it. `dashboard_client`'s `sqlite:///file::memory:?cache=shared&uri=true` is the same process-wide shared-cache DB; an earlier test's leftover session row can leak into this empty-DB assertion depending on full-suite timing — not always reproducible (2 clean local full-suite runs post-fix, reviewer reproduced it on 2 of 2). Passes standalone: `pytest tests/test_dashboard_trends.py -q -m ""` → 8 passed. See [CR-01 detail](#reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake). | yes (tests/skip_registry.py:217) |
 
 ## Cluster 6: pip dry-run extras-install flakiness
 
@@ -390,6 +391,32 @@ intermittent SIGSEGV cluster below fired that run; see the SIGSEGV cluster discu
 After the fixes and quarantines documented below, a fresh run is **0 failed** — a true
 green baseline, not merely a re-labeled one.)
 
+**Update (code review CR-01):** this plan's own reconciliation sweep missed one
+orphaned failure of the exact same shared-cache SQLite class diagnosed below —
+`test_dashboard_trends.py::test_trends_timeline_empty` (untouched by any Plan 01-11,
+no ledger row) intermittently observes a leftover session row from an earlier test
+when the full-suite run's timing lines up unfavorably; it does not reproduce on every
+run (2 clean local full-suite runs after this fix landed; the code reviewer reproduced
+it on 2 of 2 runs). Quarantined via `@pytest.mark.xfail(strict=False)` +
+`tests/skip_registry.py` entry, consistent with `test_sensor_push_id_revalidation.py`'s
+disposition. The correct framing is: **green modulo the known intermittent classes
+below** (shared-cache SQLite pollution + macOS fork()-under-load SIGSEGV), not an
+unconditional flat "0 failed" on every possible run. See
+[#reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake](#reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake).
+
+<a name="reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake"></a>
+**CR-01 detail:** `tests/conftest.py`'s `dashboard_client` fixture backs onto
+`sqlite:///file::memory:?cache=shared&uri=true` — a single process-wide shared-cache
+in-memory DB, not per-test-isolated. `test_trends_timeline_empty` asserts
+`GET /api/trends/timeline` returns `sessions == []` on an "empty" DB, but in full-suite
+order it can observe a session row written by an earlier test file before this test
+runs. The test passes standalone (`pytest tests/test_dashboard_trends.py -q -m ""` →
+8 passed). This is the same underlying defect class as Cluster 5's
+`test_sensor_push_id_revalidation.py` rows — a durable fix would give `dashboard_client`
+a per-test-unique SQLite cache name instead of the literal shared-cache URI, which
+would also retroactively resolve those two rows; flagged for Phase 150 as the
+preferred long-term fix over continuing to whack-a-mole individual orphaned tests.
+
 ### Cross-check findings (Task 1 acceptance criteria)
 
 - **(a) Orphaned failures (failing test, no ledger row):** zero found. All 11
@@ -484,10 +511,16 @@ sandbox artifacts):
 ### Net result
 
 Phase 149's original 116-test baseline is now **fully and accurately dispositioned**
-against this sandbox's live, current behavior: 0 orphaned failures, 0 false-`fixed`
-rows, 0 empty cells, 0 duplicate test IDs, and a fresh `pytest -q -m ""` run is
-**0 failed** — a genuinely green, reconciled baseline ready to hand off as Phase 150's
-sizing input. Phase 149 (SUITE-01) is complete.
+against this sandbox's live, current behavior: 0 false-`fixed` rows, 0 empty cells,
+0 duplicate test IDs. Code review (CR-01) caught one additional orphaned failure this
+plan's own reconciliation sweep missed — `test_dashboard_trends.py::test_trends_timeline_empty`,
+now quarantined (117th ledger row, added post-review) — of the same shared-cache SQLite
+class already diagnosed for Cluster 5. A fresh `pytest -q -m ""` run is **0 failed**
+*as currently quarantined*, but this baseline is accurately "green modulo two known
+intermittent-flake classes" (shared-cache SQLite pollution, macOS fork()-under-load
+SIGSEGV) rather than an unconditionally reproducible 0-failed result on every run —
+ready to hand off as Phase 150's sizing input, including the shared-cache DB isolation
+fix as a durable follow-up. Phase 149 (SUITE-01) is complete.
 
 ---
 
