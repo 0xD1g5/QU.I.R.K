@@ -475,6 +475,9 @@ PROFILE_ARGS="--profile vault" ./lab.sh up
 PROFILE_ARGS="--profile email" ./lab.sh up
 ```
 
+`labs/email/certs/{postfix,dovecot}.{key,crt}` are generated automatically
+by `lab.sh` on first `up` (D-12); no manual `make certs` step is required.
+
 | Port | Service | Expected protocol | Expected condition / tag | Notes |
 |-----:|---------|-------------------|--------------------------|-------|
 | 30025 | postfix-email (smtp) | SMTP-STARTTLS | `protocol=SMTP-STARTTLS, service_detail=SMTP-STARTTLS:25`; risk: "STARTTLS downgrade risk on SMTP" (MEDIUM, EMAIL-08) + "Weak cipher suite on email TLS endpoint" (HIGH, EMAIL-09) | Container port 25 |
@@ -733,6 +736,9 @@ TLS on port 443 (no STARTTLS). Scanner probe: sslyze `CERTIFICATE_INFO` + `TLS_1
 ```bash
 PROFILE_ARGS="--profile grpc-tls" ./lab.sh up
 ```
+
+`labs/grpc-tls/certs/grpc-tls.{key,crt}` are generated automatically by
+`lab.sh` on first `up` (D-13); no manual `make certs` step is required.
 
 | Port | Service | Expected protocol | Expected condition / tag | Notes |
 |-----:|---------|-------------------|--------------------------|-------|

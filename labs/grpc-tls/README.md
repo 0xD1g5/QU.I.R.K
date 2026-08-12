@@ -36,8 +36,14 @@ Phase 89 Plan 03 SUMMARY.
 ```bash
 # From quantum-chaos-enterprise-lab/
 PROFILE_ARGS="--profile grpc-tls" ./lab.sh up
+```
 
-# Generate certs first
+`./lab.sh up`/`./lab.sh all`/`./lab.sh reset` generate `certs/grpc-tls.{key,crt}`
+automatically on first run (D-13) — no manual cert step is required. `make
+certs` remains available for manual regeneration with the identical CN/key
+size/permissions:
+
+```bash
 cd labs/grpc-tls && make certs
 ```
 
@@ -48,5 +54,5 @@ cd labs/grpc-tls && make certs
 | `main.go` | Minimal `grpc.NewServer` with `credentials.NewServerTLSFromFile` |
 | `go.mod` / `go.sum` | Pinned `google.golang.org/grpc` dependency |
 | `Dockerfile` | Multi-stage build (`golang:1.23-alpine` → `alpine:3.20`) |
-| `Makefile` | `make certs` generates RSA-2048 self-signed cert |
+| `Makefile` | `make certs` generates RSA-2048 self-signed cert (also auto-run by `lab.sh`) |
 | `certs/` | Generated at lab-spin-up time; `*.key` / `*.crt` gitignored |

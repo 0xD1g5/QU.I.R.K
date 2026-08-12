@@ -8,10 +8,13 @@
 
 ## Lab Setup
 
-Boot the dedicated email chaos profile:
+Boot the dedicated email chaos profile. `lab.sh up`/`all`/`reset` generate
+`labs/email/certs/{postfix,dovecot}.{key,crt}` automatically (D-12); `make
+certs` remains available for manual regeneration and is shown below for a
+direct `docker compose` invocation outside `lab.sh`:
 
 ```bash
-make -C labs/email certs
+make -C labs/email certs   # optional — lab.sh generates these automatically
 docker compose --profile email --file quantum-chaos-enterprise-lab/docker-compose.yml up -d --build
 ```
 

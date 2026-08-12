@@ -20,6 +20,15 @@ Other scenario keys (`modern.key`, `legacy.key`, `expired.key`, `mtls.key`,
 intentional chaos fixtures (weak RSA, expired validity, SHA-1, etc.) with
 no real-world security value.
 
+The `email` and `grpc-tls` profiles have the same gitignored-certs shape:
+`labs/email/certs/{postfix,dovecot}.{key,crt}` and
+`labs/grpc-tls/certs/grpc-tls.{key,crt}` are auto-generated on first
+`./lab.sh up`/`./lab.sh all`/`./lab.sh reset` by `ensure_profile_certs`
+(same idempotent guard pattern as `ensure_lab_certs`, D-12/D-13). Run
+`./lab.sh certs` to (re)generate every chaos-lab cert — top-level mTLS
+CA/client plus the `email`/`grpc-tls` profile pairs — without starting any
+containers.
+
 ## Quick Start
 
 ```bash
@@ -31,6 +40,9 @@ no real-world security value.
 
 # Start a specific profile
 PROFILE_ARGS="--profile identity" ./lab.sh up
+
+# Generate all chaos-lab self-signed certs without starting containers
+./lab.sh certs
 
 # List all available profiles (read live from docker-compose.yml)
 ./lab.sh profiles

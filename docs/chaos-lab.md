@@ -40,6 +40,12 @@ PROFILE_ARGS="--profile jwt --profile registry --profile source --profile storag
 ./lab.sh down
 ```
 
+`./lab.sh up`, `./lab.sh all` and `./lab.sh reset` automatically generate any
+missing self-signed profile certs before starting containers — this covers
+both the top-level mTLS CA/client pair and the `email`/`grpc-tls` profiles'
+certs (D-12/D-13). Run `./lab.sh certs` to regenerate them on demand without
+starting any containers.
+
 ---
 
 ## 3. Profile Reference
@@ -556,6 +562,9 @@ PROFILE_ARGS="--profile email" ./lab.sh up
 ```
 
 Allow ~30 seconds for both containers to reach healthy status before scanning.
+
+`lab.sh` materializes `labs/email/certs/{postfix,dovecot}.{crt,key}` on first
+`up` — no manual cert-generation step is required.
 
 **Expected scanner findings:**
 
