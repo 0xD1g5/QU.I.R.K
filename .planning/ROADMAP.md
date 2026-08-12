@@ -191,7 +191,12 @@ quarantines already applied — or large; cannot be scoped before triage complet
 
   4. The green-baseline standard and how to run it locally are documented for future contributors
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 150-01-PLAN.md — D-05 impacket KDCOptions fix + un-quarantine 2 Kerberos tests + ledger correction
+- [ ] 150-02-PLAN.md — Local full-suite baseline + gating `Linux Full Suite` CI job + CONTRIBUTING.md
+- [ ] 150-03-PLAN.md — D-07 live-fire smoke check on real GitHub Actions + evidence artifact + revert
 
 #### Phase 151: Phase-Completion Artifact Gates
 
