@@ -476,6 +476,13 @@ class Issue3ScanWindowRegressionTest(unittest.TestCase):
 
     def test_issue3_scan_window_returns_all_identity_protocols(self):
         """ISSUE-3 regression: all 3 identity protocols visible in /api/scan/latest."""
+        import pytest
+
+        try:
+            import impacket  # noqa: F401
+        except ImportError:
+            pytest.skip("impacket not installed")
+
         try:
             from sqlalchemy import create_engine
             from sqlalchemy.orm import sessionmaker

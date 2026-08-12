@@ -60,6 +60,9 @@ def test_parse_device_id() -> None:
     """A clean Read Device Identification response maps vendor/model/firmware."""
     import quirk.scanner.modbus_scanner as modbus_mod
 
+    if not modbus_mod._PYMODBUS_AVAILABLE:
+        pytest.skip("pymodbus not installed")
+
     mock_response = MagicMock()
     mock_response.isError.return_value = False
     mock_response.information = {
@@ -96,6 +99,9 @@ def test_parse_device_id_decodes_bytes() -> None:
     """
     import quirk.scanner.modbus_scanner as modbus_mod
 
+    if not modbus_mod._PYMODBUS_AVAILABLE:
+        pytest.skip("pymodbus not installed")
+
     mock_response = MagicMock()
     mock_response.isError.return_value = False
     mock_response.information = {
@@ -124,6 +130,11 @@ def test_parse_device_id_decodes_bytes() -> None:
 
 def test_single_inflight_no_writes() -> None:
     """No write function-code symbols in source; one anomalous response aborts with no retry."""
+    import quirk.scanner.modbus_scanner as modbus_mod
+
+    if not modbus_mod._PYMODBUS_AVAILABLE:
+        pytest.skip("pymodbus not installed")
+
     source_text = _MODULE_PATH.read_text(encoding="utf-8")
     lowered = source_text.lower()
     for symbol in _WRITE_SYMBOLS:
@@ -131,8 +142,6 @@ def test_single_inflight_no_writes() -> None:
             f"Forbidden write-function-code symbol '{symbol}' found in modbus_scanner.py "
             "— OTICS-03 requires read-only FC 43/14 only."
         )
-
-    import quirk.scanner.modbus_scanner as modbus_mod
 
     mock_client = MagicMock()
     mock_client.connect = AsyncMock(return_value=True)

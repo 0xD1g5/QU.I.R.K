@@ -1,7 +1,8 @@
 """Phase 41 D-02: Central allowed-skip registry.
 
 Each entry: (file_relative_to_tests_dir, line_number, category, reason)
-category in {"optional_extra", "live_infra", "pre_existing_triage_149"}
+category in {"optional_extra", "live_infra", "pre_existing_triage_149",
+"ci_extras_gap", "gitignored_planning_dir"}
 
 Per CONTEXT.md D-01..D-05: stale skips are deleted; optional-extra and
 live-infra skips are registered here so the meta-test gate (test_skip_registry.py)
@@ -213,4 +214,22 @@ ALLOWED_SKIPS = [
     # but full-suite runs can intermittently reproduce it (timing-dependent, not always
     # reproducible; 2 clean local full-suite runs post-fix, reviewer reproduced it twice).
     ("test_dashboard_trends.py",        347, "pre_existing_triage_149", "TRIAGE-149 (code review CR-01): shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files); an earlier test's leftover session row can leak into this empty-DB assertion depending on full-suite timing, same root cause as test_sensor_push_id_revalidation.py. Missed by Plan 11's reconciliation sweep because it doesn't always reproduce. See docs/test-triage-149.md#reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake"),
+
+    # ------------------------------------------------------------------
+    # Phase 150 D-09/D-10 CI-parity gap closure (Plan 06): `.[all]` deliberately
+    # excludes the `hw` (bacpypes3/pymodbus/pysnmp), `identity` (impacket) and
+    # `api` (schemathesis/openapi-spec-validator) extras groups. These tests now
+    # take a documented per-test skip when the corresponding extra is absent,
+    # instead of hard-crashing with AttributeError/ModuleNotFoundError. Kept in
+    # its own "ci_extras_gap" category, distinct from the pre-existing
+    # "optional_extra" rows above, so Phase 150's CI-parity closure work stays
+    # independently greppable. See 150-CONTEXT.md D-09/D-10/D-11.
+    # ------------------------------------------------------------------
+    ("test_bacnet_scanner.py",  78,  "ci_extras_gap", "hw extra absent from .[all]; bacpypes3 not installed"),
+    ("test_bacnet_scanner.py",  108, "ci_extras_gap", "hw extra absent from .[all]; bacpypes3 not installed"),
+    ("test_modbus_scanner.py",  64,  "ci_extras_gap", "hw extra absent from .[all]; pymodbus not installed"),
+    ("test_modbus_scanner.py",  103, "ci_extras_gap", "hw extra absent from .[all]; pymodbus not installed"),
+    ("test_modbus_scanner.py",  136, "ci_extras_gap", "hw extra absent from .[all]; pymodbus not installed"),
+    ("test_snmp_scanner_contract.py", 711, "ci_extras_gap", "hw extra absent from .[all]; pysnmp not installed"),
+    ("test_identity_surface.py", 484, "ci_extras_gap", "identity extra absent from .[all]; impacket not installed"),
 ]

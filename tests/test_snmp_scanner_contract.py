@@ -707,6 +707,9 @@ def test_arp_walk_import_guard_returns_empty_with_zero_network_calls() -> None:
 
     import quirk.scanner.snmp_scanner as mod
 
+    if not mod._PYSNMP_AVAILABLE:
+        pytest.skip("pysnmp not installed")
+
     with patch.object(mod, "_PYSNMP_AVAILABLE", False), \
          patch.object(mod, "SnmpDispatcher") as mock_dispatcher_cls, \
          patch.object(mod, "SnmpEngine") as mock_engine_cls:

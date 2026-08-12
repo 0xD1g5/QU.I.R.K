@@ -74,6 +74,9 @@ def test_parse_device_object() -> None:
     """A clean Who-Is/I-Am + ReadProperty round trip maps vendor/model/firmware."""
     import quirk.scanner.bacnet_scanner as bacnet_mod
 
+    if not bacnet_mod._PYBACNET_AVAILABLE:
+        pytest.skip("bacpypes3 not installed")
+
     mock_i_am = MagicMock()
     mock_i_am.vendorID = 999
     mock_i_am.iAmDeviceIdentifier = ("device", 1234)
@@ -99,6 +102,11 @@ def test_parse_device_object() -> None:
 
 def test_single_inflight_no_writes_unicast() -> None:
     """No write symbols, no broadcast symbols; one anomalous who_is aborts with no retry; unicast only."""
+    import quirk.scanner.bacnet_scanner as bacnet_mod
+
+    if not bacnet_mod._PYBACNET_AVAILABLE:
+        pytest.skip("bacpypes3 not installed")
+
     source_text = _MODULE_PATH.read_text(encoding="utf-8")
     lowered = source_text.lower()
     for symbol in _WRITE_SYMBOLS:
@@ -111,8 +119,6 @@ def test_single_inflight_no_writes_unicast() -> None:
             f"Forbidden broadcast symbol '{symbol}' found in bacnet_scanner.py "
             "— Who-Is MUST be directed unicast at Address(host), never a subnet broadcast."
         )
-
-    import quirk.scanner.bacnet_scanner as bacnet_mod
 
     mock_app = MagicMock()
     mock_app.who_is = AsyncMock(side_effect=RuntimeError("malformed I-Am"))
