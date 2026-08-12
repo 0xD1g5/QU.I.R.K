@@ -215,7 +215,7 @@ Plans:
 
 **Remediation Wave 2** *(blocked on 150-04's CI-parity venv)*
 
-- [ ] 150-05-PLAN.md — D-12/D-13 chaos-lab cert generation in lab.sh + lab doc sync + D-14 CONTRIBUTING note
+- [x] 150-05-PLAN.md — D-12/D-13 chaos-lab cert generation in lab.sh + lab doc sync + D-14 CONTRIBUTING note
 - [ ] 150-06-PLAN.md — D-09/D-10/D-11 extras skip guards (31 tests) + D-15 gitignored-planning guards (4 tests) + registry
 
 **Remediation Wave 3**
@@ -318,7 +318,7 @@ dogfooding it immediately)
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
-| 150. Test Suite Green Baseline + CI Gate | 4/9 | In Progress|  |
+| 150. Test Suite Green Baseline + CI Gate | 5/9 | In Progress|  |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
 | 153. Release Tag Cut | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: Phase 150 Plan 04 complete (CI-parity venv + D-16/D-17 closed); Plans 05-09 remain
-last_updated: "2026-08-12T17:11:14.149Z"
-last_activity: 2026-08-12 -- Plan 150-04 executed (CI-parity venv provisioned, D-16 dead test deleted, D-17 root-caused as FastAPI route-introspection defect and fixed)
+stopped_at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
+last_updated: "2026-08-12T17:22:31.016Z"
+last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 2
   total_plans: 24
-  completed_plans: 19
+  completed_plans: 20
   percent: 15
 ---
 
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
-Plan: 04 of 9 complete (01, 02, 04 done; 03 blocked at live-fire CI gate, needs retry after remaining remediation plans land)
-Status: Executing Phase 150
-Last activity: 2026-08-12 -- Plan 150-04 executed (CI-parity venv provisioned, D-16 dead test deleted, D-17 root-caused as FastAPI route-introspection defect and fixed)
+Plan: 5 of 9 complete (01, 02, 04 done; 03 blocked at live-fire CI gate, needs retry after remaining remediation plans land)
+Status: Ready to execute
+Last activity: 2026-08-12
 
 ## v5.12 Phase Map
 
@@ -134,6 +134,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 150 P01 | 35min | 3 tasks | 4 files |
 | Phase 150 P02 | 40min | 3 tasks | 2 files |
 | Phase 150 P04 | 55min | 3 tasks | 3 files |
+| Phase 150 P05 | 40min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -248,6 +249,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 150]: Plan 04 -- stood up $HOME/.cache/quirk-ci-parity-venv (outside repo tree, pip install -e ".[all]" + pytest only, zero identity/hw/api extras); no Python 3.11 available on this machine so venv built on 3.14.6 (known, accepted parity gap -- documented, doesn't block extras-boundary verification). Full-suite run there: 32 failed, exactly matching CI Categories B+C+D+F+G (6+18+6+1+1); Categories A/E/H (4+1+1) did not reproduce due to concrete local-vs-CI differences (working-copy .planning/ present, Docker not running, stale gitignored quirk.egg-info from pre-rename install) -- no unexplained local-only failures.
 - [Phase 150]: Plan 04 D-16 -- deleted test_package_manifest_version_is_4_1_0 outright (not fixed in place); its local-only pass was traced to a stale gitignored quirk.egg-info directory in the repo working tree, absent from any fresh checkout, matching CI's real PackageNotFoundError.
 - [Phase 150]: Plan 04 D-17 -- root-caused /api/sensor/push 404 as a test-construction defect: fastapi 0.141.1/starlette 1.6.0 no longer flatten include_router() routes into application.routes at include time (lazy _IncludedRouter wrapper instead), so the old isinstance(r, APIRoute) walk missed every /api/* route, not just sensor/push. Confirmed via TestClient the route dispatches correctly end-to-end (401/200). Fixed with a recursive _IncludedRouter-aware route-path walker in the test; assertion contract unchanged, no skip registered.
+- [Phase 150]: Plan 05: cleaned up leftover empty labs/grpc-tls/certs directories from a prior Docker bind-mount failure before generating certs -- confirmed untracked/gitignored, filesystem-only cleanup not a git operation
 
 ### Pending Todos
 
@@ -310,7 +312,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T16:05:02.061Z
+Last session: 2026-08-12T17:20:27.865Z
 Stopped at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
