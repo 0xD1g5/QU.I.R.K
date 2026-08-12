@@ -1,31 +1,21 @@
 """Phase 16 -- v4.1 Gap Closure RED scaffold.
 
-Tests assert the correct end-state for CLI-04 and SCORE-04.
-Both tests MUST FAIL before Plan 02 fixes land:
-- CLI-04: importlib.metadata.version("quirk") returns "4.0.0" (pyproject.toml stale)
+Tests assert the correct end-state for SCORE-04.
 - SCORE-04: interactive.py output dir default is "output" (dashboard expects "quirk-output")
+
+Note: the original CLI-04 assertion (importlib.metadata.version("quirk") ==
+"4.4.0") was deleted in Phase 150 D-16 -- it was a dead Phase-16-era RED
+scaffold querying a distribution name ("quirk") that has not existed since
+the v4.10 PyPI rename to "quirk-scanner". It only ever passed in dev
+sandboxes carrying stale pre-rename egg-info metadata.
 """
 
-import importlib.metadata
 import pathlib
 import unittest
 
 
 class TestV41GapClosure(unittest.TestCase):
-    """RED scaffold for Phase 16 v4.1 gap closure requirements CLI-04 and SCORE-04."""
-
-    def test_package_manifest_version_is_4_1_0(self):
-        """importlib.metadata.version('quirk') must return '4.1.0'.
-
-        RED because: pyproject.toml has version = "4.0.0", installed egg-info
-        reflects that value. importlib.metadata reads the installed egg-info,
-        not the module __version__ attribute.
-        """
-        version = importlib.metadata.version("quirk")
-        assert version == "4.4.0", (
-            f"importlib.metadata.version('quirk') = {version!r}; "
-            f"expected '4.4.0' -- bump pyproject.toml version field and reinstall"
-        )
+    """RED scaffold for Phase 16 v4.1 gap closure requirement SCORE-04."""
 
     def test_interactive_output_dir_default_is_quirk_output(self):
         """interactive.py must use 'quirk-output' as the output directory default.
