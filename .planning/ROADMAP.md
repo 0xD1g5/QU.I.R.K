@@ -280,7 +280,7 @@ dogfooding it immediately)
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
-| 149. Test Suite Triage | 11/11 | Complete   | 2026-08-12 |
+| 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
 | 150. Test Suite Green Baseline + CI Gate | 0/TBD | Not started | - |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |

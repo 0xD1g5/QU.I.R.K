@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
-status: verifying
-stopped_at: Completed 149-11-PLAN.md (Phase 149 SUITE-01 complete)
-last_updated: "2026-08-12T05:15:43.907Z"
+status: ready_to_plan
+stopped_at: Phase 149 complete (11/11) — ready to discuss Phase 150
+last_updated: 2026-08-12T06:02:02.087Z
 last_activity: 2026-08-12
 progress:
   total_phases: 13
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 149 — test-suite-triage
+**Current focus:** Phase 150 — test suite green baseline + ci gate
 
 ## Current Position
 
-Phase: 149 (test-suite-triage) — EXECUTING
-Plan: 11 of 11
-Status: Phase complete — ready for verification
+Phase: 150
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-08-12
 
 ## v5.12 Phase Map
