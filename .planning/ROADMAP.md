@@ -160,9 +160,9 @@ the milestone, sequenced early and alone so its output can re-scope what follows
 **Plans**: 11 plans
 
 Plans:
-- [ ] 149-01-PLAN.md — D-04 skip-registry gate repair + AST walker extension (skip/xfail) + ledger skeleton
-- [ ] 149-02-PLAN.md — Cluster 1: SSRF/DNS-blocked sandbox (23 tests)
-- [ ] 149-03-PLAN.md — Cluster 2 + 6: Playwright pollution + pip dry-run flakiness (20 tests)
+- [x] 149-01-PLAN.md — D-04 skip-registry gate repair + AST walker extension (skip/xfail) + ledger skeleton
+- [x] 149-02-PLAN.md — Cluster 1: SSRF/DNS-blocked sandbox (23 tests)
+- [x] 149-03-PLAN.md — Cluster 2 + 6: Playwright pollution + pip dry-run flakiness (20 tests)
 - [ ] 149-04-PLAN.md — Cluster 3 + 4 + 7: version staleness + GCP optional extra (10 tests)
 - [ ] 149-05-PLAN.md — Cluster 5: sensor_id shape / AUDIT-08 regression (10 tests)
 - [ ] 149-06-PLAN.md — Cluster 9 Group A: scanner/detection-logic failures (18 tests)
@@ -280,7 +280,7 @@ dogfooding it immediately)
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
-| 149. Test Suite Triage | 0/TBD | Not started | - |
+| 149. Test Suite Triage | 3/11 | In Progress|  |
 | 150. Test Suite Green Baseline + CI Gate | 0/TBD | Not started | - |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |

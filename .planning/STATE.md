@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
-status: planning
-stopped_at: Phase 149 context gathered
-last_updated: "2026-08-11T20:32:39.779Z"
-last_activity: 2026-08-11
+status: executing
+stopped_at: Completed 149-02-PLAN.md
+last_updated: "2026-08-12T00:30:48.299Z"
+last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 15
+  completed_plans: 7
   percent: 8
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 149 — test suite triage
+**Current focus:** Phase 149 — test-suite-triage
 
 ## Current Position
 
-Phase: 149
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-11
+Phase: 149 (test-suite-triage) — EXECUTING
+Plan: 4 of 11
+Status: Ready to execute
+Last activity: 2026-08-12
 
 ## v5.12 Phase Map
 
@@ -120,6 +120,9 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 148 P03 | 15min | 2 tasks | 3 files |
 | Phase 148 P02 | 35min | 3 tasks | 5 files |
 | Phase 148 P04 | 40min | 3 tasks | 1 files |
+| Phase 149 P01 | 45min | 3 tasks | 4 files |
+| Phase 149 P02 | 20min | 3 tasks | 6 files |
+| Phase 149 P03 | 25min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -213,6 +216,9 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 148]: 148-03: Reworded 5.11.0.md See Also section to avoid the literal missing-filename substrings (5.7/5.8/5.9/5.10 dot-md) while still conveying the gap, satisfying the plan's own no-link acceptance criterion and the new test's guard
 - [Phase 148]: 148-02 RELEASE-03 tag-hygiene guard: TDD gate via temporary implementation relocation for genuine RED; LOOSE_RELEASE_TAG_RE (^v[0-9]) deliberately broader than release.yml's v*.*.* glob; baseline seeded with all 32 pre-existing tags for a green-from-day-one first scheduled run
 - [Phase 148]: 148-04 live-run evidence: dry-run run 31524058796 (publish job skipped, windows-package success incl. SELF_TEST_SIGNING: OK); tag-hygiene run 31524420671 (EXEMPT names v5.9/v5.10.0/v5.11.0 correctly, zero flagged); bare v5.11.0 GitHub Release created with zero assets, isDraft false, latest=false
+- [Phase 149]: D-04 drift repair: 30 unregistered skip markers registered/updated in tests/skip_registry.py (optional_extra/live_infra only); AST walker extended to detect skip/skipif/xfail decorators; pre_existing_triage_149 category reserved for Plans 02-10
+- [Phase ?]: Phase 149 Plan 02: All 23 Cluster 1 (SSRF/DNS-blocked sandbox) tests dispositioned quarantined-xfail with matching skip_registry entries and ledger rows; meta-gate confirmed green
+- [Phase 149]: Plan 03: All 20 Cluster 2/6 tests dispositioned quarantined-skip (not xfail), per D-03: running them under full-suite pollution is not useful signal and they are expected to run cleanly once Phase 150 fixes the shared fixture/lifecycle issue
 
 ### Pending Todos
 
@@ -263,8 +269,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-11T20:32:39.769Z
-Stopped at: Phase 149 context gathered
+Last session: 2026-08-12T00:30:04.477Z
+Stopped at: Completed 149-02-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

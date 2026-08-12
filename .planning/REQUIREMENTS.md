@@ -39,7 +39,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Test Signal Integrity
 
-- [ ] **SUITE-01**: Every pre-existing full-suite failure (~102, red since roughly Phase 97) has
+- [x] **SUITE-01**: Every pre-existing full-suite failure (~102, red since roughly Phase 97) has
       an explicit written disposition — fixed, quarantined with a reason, or deleted as obsolete
 
 - [ ] **SUITE-02**: `pytest -q` on a clean supported environment produces a green baseline, so a
@@ -112,7 +112,7 @@ Deferred to a later milestone.
 | RELEASE-02 | Phase 148 | Complete |
 | RELEASE-03 | Phase 148 | Complete |
 | RELEASE-04 | Phase 148 | Complete |
-| SUITE-01 | Phase 149 | Pending |
+| SUITE-01 | Phase 149 | Complete |
 | SUITE-02 | Phase 150 | Pending |
 | SUITE-03 | Phase 150 | Pending |
 | ARTIFACT-01 | Phase 151 | Pending |
