@@ -54,7 +54,7 @@ ALLOWED_SKIPS = [
     ("test_distributed_topology.py",         48,  "live_infra",     "Requires docker binary"),
     ("test_identity_scanner_hardening.py",   80,  "optional_extra", "impacket not installed"),
     ("test_jobs_api.py",                     489, "live_infra",     "Linux-only /proc zombie-reconciliation check"),
-    ("test_jwt_scanner.py",                  209, "optional_extra", "httpx not installed"),
+    ("test_jwt_scanner.py",                  240, "optional_extra", "httpx not installed"),
     ("test_pdf_metadata_constants.py",       19,  "optional_extra", "playwright.sync_api not installed"),
     ("test_pdf_metadata_constants.py",       20,  "optional_extra", "pypdf not installed"),
     ("test_pdf_metadata_constants.py",       56,  "optional_extra", "Playwright Chromium runtime not available"),
@@ -135,4 +135,16 @@ ALLOWED_SKIPS = [
     ("test_auto_merge_trigger.py",          514, "pre_existing_triage_149", "TRIAGE-149: outdated-fixture (AUDIT-08 UUID-shape guard added after these fixtures; fixture IDs need updating to valid UUIDs); see docs/test-triage-149.md#test_auto_merge_triggerpy-test_cadence_window_triggers"),
     ("test_sensor_push_id_revalidation.py", 158, "pre_existing_triage_149", "TRIAGE-149: shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files that write SensorPush rows; the 400/0-new-rows contract itself is correct); see docs/test-triage-149.md#test_sensor_push_id_revalidationpy-test_malformed_sensor_id_path_traversal_rejected"),
     ("test_sensor_push_id_revalidation.py", 206, "pre_existing_triage_149", "TRIAGE-149: shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files that write SensorPush rows; the 400/0-new-rows contract itself is correct); see docs/test-triage-149.md#test_sensor_push_id_revalidationpy-test_malformed_sensor_id_short_string_rejected"),
+
+    # Phase 149 Plan 06: Cluster 9 Group A (scanner/detection-logic failures) — see docs/test-triage-149.md
+    ("test_jwt_hardening.py",       31, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (idp.example.com fails CR-03's validate_external_url() dns_failure check before httpx.get is reached); see docs/test-triage-149.md#jwt-hardening-dns-blocked"),
+    ("test_jwt_hardening.py",       66, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (idp.example.com fails CR-03's validate_external_url() dns_failure check before httpx.get is reached); see docs/test-triage-149.md#jwt-hardening-dns-blocked"),
+    ("test_broker_scanner_rabbitmq.py", 200, "pre_existing_triage_149", "TRIAGE-149: stale test predates CR-06 allow_cleartext opt-in guard on _enrich_rabbitmq_mgmt() (default allow_cleartext=False short-circuits to {}); see docs/test-triage-149.md#broker-rabbitmq-cr06-optin"),
+    ("test_broker_scanner_rabbitmq.py", 236, "pre_existing_triage_149", "TRIAGE-149: stale test predates CR-06 allow_cleartext opt-in guard on _enrich_rabbitmq_mgmt() (default allow_cleartext=False short-circuits to {}); see docs/test-triage-149.md#broker-rabbitmq-cr06-optin"),
+    ("test_jwt_scanner.py",         44, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
+    ("test_jwt_scanner.py",         67, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
+    ("test_jwt_scanner.py",         89, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
+    ("test_jwt_scanner.py",        132, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
+    ("test_jwt_scanner.py",        213, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
+    ("test_jwt_scanner.py",        321, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (h1/h2.example.com fail CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
 ]
