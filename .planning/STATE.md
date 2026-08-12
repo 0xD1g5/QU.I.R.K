@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
-status: ready_to_plan
-stopped_at: Phase 149 complete (11/11) — ready to discuss Phase 150
-last_updated: 2026-08-12T06:02:02.087Z
+status: executing
+stopped_at: Completed 150-01-PLAN.md
+last_updated: "2026-08-12T12:26:05.987Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 2
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 18
+  completed_plans: 16
   percent: 15
 ---
 
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 150 — test suite green baseline + ci gate
+**Current focus:** Phase 150 — test-suite-green-baseline-ci-gate
 
 ## Current Position
 
-Phase: 150
-Plan: Not started
-Status: Ready to plan
+Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-08-12
 
 ## v5.12 Phase Map
@@ -131,6 +131,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 149 P09 | 45min | 3 tasks | 8 files |
 | Phase 149 PP10 | 40min | 3 tasks | 6 files |
 | Phase 149 P11 | 75min | 2 tasks | 10 files |
+| Phase 150 P01 | 35min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -239,6 +240,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 149]: Plan 10: both security-gate meta-test failures confirmed as gate-logic gaps (Jinja-only detection can't see Python-side pre-escaping/static-dict sourcing; AST classifier has no ast.IfExp case), not real unsanitized-usage or safe_str-bypass findings; neither flagged SECURITY
 - [Phase 149]: Plan 10: test_sensor_windows_smoke.py's SIGSEGV confirmed not reproducible and explicitly not sharing Plan 08's QRAMM SIGSEGV root cause (different subsystem/subprocess construction, no crash when run together); flagged as a second independent Phase 150 re-verification item
 - [Phase 149]: Plan 11: fixed 2 real production bugs (sslyze __version__ submodule shape, impacket MethodData rename) surfaced by fresh-run reconciliation; consolidated 5 scattered SIGSEGV findings across Plans 06/08/10 into one systemic macOS fork()-under-full-suite-load root cause; quarantined 9 tests with corrected root causes; ledger reconciled to 116 rows, 0 orphaned failures, fresh full-suite run 0 failed
+- [Phase ?]: [Phase 150]: Fixed _build_as_req via constants.encodeFlags([...].value) on the modern impacket path, preserving the legacy KDCOptions(...) constructor call behind an else branch for impacket <0.13.0 (Phase 150 D-05)
+- [Phase ?]: [Phase 150]: Rule 1 auto-fix — test_build_as_req_nonce_uses_secrets asserted secrets.randbits(31), but commit 830ad6a (Phase 71 review, D-09) had deliberately switched the scanner to a 32-bit nonce; corrected the stale assertion to randbits(32) in the same edit that removed the xfail marker
 
 ### Pending Todos
 
@@ -255,6 +258,16 @@ None yet.
 
 - Phase 142 CVE/CPE version-matching guidance is MEDIUM confidence — verify current NVD API/CPE
   guidance and vendor firmware version-string normalization (Cisco/Juniper/etc.) during planning.
+
+- **Phase 150 plan-phase decision-coverage gate override (2026-08-12):** the mechanical
+  `check.decision-coverage-plan` gate flagged D-01, D-02, D-04, D-06, D-07, D-08 as uncovered
+  (only D-05 registered). This is a false positive — the gate appears to scan only structured
+  `must_haves.truths`/frontmatter fields, not full plan body prose, even though its own message
+  says "(or body)". `grep -n "D-0[1-8]" .planning/phases/150-*/*-PLAN.md` confirms all 7 decisions
+  are extensively cited in plan bodies, and the independent `gsd-plan-checker` agent's semantic
+  review separately verified "D-01 through D-08 all traced to specific tasks" (Context Compliance
+  dimension: Pass). User selected "Proceed anyway" at the /gsd-plan-phase 150 override prompt.
+  Re-surface at `/gsd:verify-phase 150` only if the same coverage question resurfaces there.
 
 ## Deferred Items
 
@@ -289,8 +302,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T05:15:43.901Z
-Stopped at: Completed 149-11-PLAN.md (Phase 149 SUITE-01 complete)
+Last session: 2026-08-12T12:26:05.981Z
+Stopped at: Completed 150-01-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

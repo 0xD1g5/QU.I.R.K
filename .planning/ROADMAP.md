@@ -160,6 +160,7 @@ the milestone, sequenced early and alone so its output can re-scope what follows
 **Plans**: 11 plans
 
 Plans:
+
 - [x] 149-01-PLAN.md — D-04 skip-registry gate repair + AST walker extension (skip/xfail) + ledger skeleton
 - [x] 149-02-PLAN.md — Cluster 1: SSRF/DNS-blocked sandbox (23 tests)
 - [x] 149-03-PLAN.md — Cluster 2 + 6: Playwright pollution + pip dry-run flakiness (20 tests)
@@ -194,8 +195,13 @@ quarantines already applied — or large; cannot be scoped before triage complet
 **Plans**: 3 plans
 
 Plans:
-- [ ] 150-01-PLAN.md — D-05 impacket KDCOptions fix + un-quarantine 2 Kerberos tests + ledger correction
+**Wave 1**
+
+- [x] 150-01-PLAN.md — D-05 impacket KDCOptions fix + un-quarantine 2 Kerberos tests + ledger correction
 - [ ] 150-02-PLAN.md — Local full-suite baseline + gating `Linux Full Suite` CI job + CONTRIBUTING.md
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 150-03-PLAN.md — D-07 live-fire smoke check on real GitHub Actions + evidence artifact + revert
 
 #### Phase 151: Phase-Completion Artifact Gates
@@ -286,7 +292,7 @@ dogfooding it immediately)
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
-| 150. Test Suite Green Baseline + CI Gate | 0/TBD | Not started | - |
+| 150. Test Suite Green Baseline + CI Gate | 1/3 | In Progress|  |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
 | 153. Release Tag Cut | 0/TBD | Not started | - |
