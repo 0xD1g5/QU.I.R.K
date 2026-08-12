@@ -113,6 +113,10 @@ ALLOWED_SKIPS = [
     ("test_pdf_export.py",           7,   "pre_existing_triage_149", "TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_exportpy-test_pdf_export_endpoint"),
 
     # Phase 149 Plan 03: Cluster 6 (pip --dry-run extras-install flakiness) — see docs/test-triage-149.md
+    # Phase 149 Plan 04: Cluster 7 (optional GCP extra) — see docs/test-triage-149.md
+    ("test_gcs_reuse.py", 29, "optional_extra", "googleapiclient/google not installed"),
+    ("test_gcs_reuse.py", 50, "optional_extra", "googleapiclient/google not installed"),
+
     ("test_install_all_excludes_impacket.py",     36, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_excludes_impacketpy-test_install_all_excludes_impacket"),
     ("test_install_all_excludes_pysnmp.py",       36, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_excludes_pysnmppy-test_install_all_excludes_pysnmp"),
     ("test_install_all_excludes_schemathesis.py", 44, "pre_existing_triage_149", "TRIAGE-149: flaky (pip --dry-run subprocess contention under full-suite load, passes standalone); see docs/test-triage-149.md#test_install_all_excludes_schemathesispy-test_install_all_excludes_schemathesis"),

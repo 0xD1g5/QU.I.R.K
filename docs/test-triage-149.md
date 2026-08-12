@@ -77,11 +77,24 @@ Built against: `pytest -q -m ""` → 113 failed, 3078 passed, 22 skipped, 125 wa
 
 | Test ID | Disposition | Sub-reason | Evidence/Notes | Registry entry? |
 |---------|-------------|------------|-----------------|------------------|
+| `test_version.py::test_package_version_matches_pyproject` | environment-fix-applied | stale dist-info, resolved via `pip install -e .` | `.venv`'s editable install had `quirk_scanner-5.10.0.dist-info` registered under `pip show quirk-scanner`, stale vs `pyproject.toml`'s `5.11.0`; `pip install -e .` inside `.venv` uninstalled `quirk-scanner-5.10.0` and reinstalled `quirk-scanner-5.11.0` | No — no source/test edit |
+| `test_version.py::test_cbom_platform_version_matches_pyproject` | environment-fix-applied | stale dist-info, resolved via `pip install -e .` | Same root cause/fix as above; `pytest tests/test_version.py -q -m ""` → 7 passed after refresh | No — no source/test edit |
+| `test_version.py::test_reports_platform_version_matches_pyproject` | environment-fix-applied | stale dist-info, resolved via `pip install -e .` | Same root cause/fix as above | No — no source/test edit |
+| `test_version.py::test_intelligence_config_default_matches_pyproject` | environment-fix-applied | stale dist-info, resolved via `pip install -e .` | Same root cause/fix as above | No — no source/test edit |
+| `test_version.py::test_cli_version_subprocess` | environment-fix-applied | stale dist-info, resolved via `pip install -e .` | Same root cause/fix as above; before fix `quirk --version` subprocess reported `5.10.0` | No — no source/test edit |
+
+Note: `python`/`pip` on `PATH` resolve to the Homebrew system Python (externally-managed,
+`quirk` not installed there), not the project's `.venv`. This plan's fix was applied inside
+`.venv` (`source .venv/bin/activate && pip install -e .`) since that is the venv `pytest`
+actually runs under, confirmed via `which pytest` → `.venv/bin/pytest`.
 
 ## Cluster 4: Version staleness (stale assertions)
 
 | Test ID | Disposition | Sub-reason | Evidence/Notes | Registry entry? |
 |---------|-------------|------------|-----------------|------------------|
+| `test_packaging.py::test_version_is_4_2_0` | deleted | genuinely-stale hardcoded version literal (`"5.5.0"`), no other packaging coverage | Test's sole assertion pinned a historical version string, drifted across 3+ major bumps; superseded by `tests/test_version.py`. Deleted per D-01's narrow exception (recommended disposition) | No — deleted, no quarantine needed |
+| `test_v41_gap_closure.py::TestV41GapClosure::test_pyproject_version_field_is_4_1_0` | deleted | genuinely-stale hardcoded version literal (`"4.4.0"`), redundant with `test_version.py`'s pyproject checks | Same anti-pattern as above; deleted | No — deleted, no quarantine needed |
+| `test_cli_correctness.py::test_version_consistency` | fixed | genuinely-stale hardcoded `TARGET = "5.5.0"`, but exercises real cross-module consistency (PLATFORM_VERSION/INTELLIGENCE_VERSION/CBOM_VERSION/IntelligenceCfg vs `quirk.__version__`) beyond a bare version string | Kept per D-01's exception for tests with additional coverage; `TARGET` now derives from `quirk.__version__` itself instead of a hardcoded literal, preserving the regression guard (all 4 constants must stay wired to the single source of truth) without needing a manual edit every release. Reassigned from the plan's initial Cluster 3 grouping to Cluster 4 per RESEARCH.md row 4 ground truth — its failure is a stale assertion, not stale dist-info, and was unaffected by the Task 1 `pip install -e .` fix (still failed with `TARGET = "5.5.0"` afterward) | No — fixed in place, no quarantine needed |
 
 ## Cluster 5: sensor_id shape / AUDIT-08 regression
 
@@ -103,6 +116,8 @@ Built against: `pytest -q -m ""` → 113 failed, 3078 passed, 22 skipped, 125 wa
 
 | Test ID | Disposition | Sub-reason | Evidence/Notes | Registry entry? |
 |---------|-------------|------------|-----------------|------------------|
+| `test_gcs_reuse.py::test_gcs_reuse_reads_sentinel_no_api_call` | quarantined-skip | optional_extra (googleapiclient/google not installed) | `ModuleNotFoundError: No module named 'google'` — `googleapiclient`/`google` (`[cloud]` extras) not installed in the dev venv | yes (tests/skip_registry.py:117) |
+| `test_gcs_reuse.py::test_gcs_reuse_zero_storage_buckets_list_call` | quarantined-skip | optional_extra (googleapiclient/google not installed) | Same root cause; `patch("google.cloud.storage.Client", ...)` fails to import `google` | yes (tests/skip_registry.py:118) |
 
 ## Cluster 8: Meta-gate self-failure (D-04)
 
