@@ -70,4 +70,14 @@ ALLOWED_SKIPS = [
     ("test_snmp_scanner_contract.py",        598, "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py",        631, "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py",        673, "optional_extra", "pysnmp not installed"),
+
+    # Phase 149 D-02/D-03: test-suite triage quarantines — see docs/test-triage-149.md
+    ("test_notify_email.py",       79,  "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_emailpy-test_starttls_path_timeout_and_recipients"),
+    ("test_notify_email.py",       142, "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_emailpy-test_ssl_path_timeout_passed"),
+    ("test_notify_email.py",       196, "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_emailpy-test_no_login_when_smtp_user_none"),
+    ("test_notify_webhook.py",     135, "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_webhookpy-test_no_hmac_when_key_env_not_set"),
+    ("test_notify_webhook.py",     164, "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_webhookpy-test_hmac_header_present_when_key_set"),
+    ("test_notify_webhook.py",     207, "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_webhookpy-test_hmac_absent_when_key_env_empty"),
+    ("test_notify_webhook.py",     237, "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_webhookpy-test_body_omits_topology_keys"),
+    ("test_notify_webhook.py",     271, "pre_existing_triage_149", "TRIAGE-149: environment-dependent (SSRF DNS-blocked sandbox); see docs/test-triage-149.md#test_notify_webhookpy-test_non_2xx_raises_runtime_error"),
 ]
