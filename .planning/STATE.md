@@ -4,13 +4,13 @@ milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
 stopped_at: Completed 149-06-PLAN.md
-last_updated: "2026-08-12T01:01:30.749Z"
+last_updated: "2026-08-12T01:10:50.406Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 1
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
   percent: 8
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 149 (test-suite-triage) — EXECUTING
-Plan: 8 of 11
+Plan: 9 of 11
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -127,6 +127,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 149 P05 | 20min | 3 tasks | 4 files |
 | Phase 149 P06 | 40min | 3 tasks | 8 files |
 | Phase 149 P07 | 45min | 3 tasks | 7 files |
+| Phase 149 P08 | 40min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -228,6 +229,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 149]: Plan 06: closed the tests/scanner/ non-recursive glob gap (Assumption A3) before quarantining any Cluster 9 Group A test in that subdirectory; individually investigated all 18, converging on DNS-blocked-sandbox SSRF guard (9), stale CR-06 opt-in guard (2), stale test fixture (2) for 13 xfail quarantines, while 5 were found not reproducible in this sandbox (already-registered optional_extra skips or currently-passing) and left unmarked
 - [Phase 149]: Plan 07: test_route_coverage.py's AUTH-02 GET /api/config finding confirmed as stale test inventory (route intentionally public per its own docstring, no sensitive data exposed), explicitly not flagged SECURITY, per must_haves requirement
 - [Phase 149]: Plan 07: 4 of 5 /api/compare test failures were a test-construction bug (unescaped + UTC offset in raw f-string query URL decoded as space by query parsing), not API-contract drift as RESEARCH.md suspected; verified via urllib.parse.quote()-encoded params returning 200
+- [Phase 149]: Plan 08: test_qramm_staleness.py SIGSEGV pair investigated but not reproducible in this sandbox (3/3 isolated runs, direct CLI hand-invocation, and a ~550-test full-suite slice all pass); left unmarked per Plan 06 precedent, flagged HIGH-PRIORITY for Phase 150 re-verification given a segfault's severity class
+- [Phase 149]: Plan 08: test_no_risk_engine_import's failure is cross-test sys.modules pollution from test_findings_evaluator_dedupe.py's risk_engine shim test (alphabetically earlier), not a real QRAMM-12 import-graph violation in evidence_bridge.py itself
 
 ### Pending Todos
 
@@ -278,7 +281,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T01:00:08.409Z
+Last session: 2026-08-12T01:09:50.389Z
 Stopped at: Completed 149-06-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,

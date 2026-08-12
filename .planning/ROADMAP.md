@@ -167,7 +167,7 @@ Plans:
 - [x] 149-05-PLAN.md — Cluster 5: sensor_id shape / AUDIT-08 regression (10 tests)
 - [x] 149-06-PLAN.md — Cluster 9 Group A: scanner/detection-logic failures (18 tests)
 - [x] 149-07-PLAN.md — Cluster 9 Group B: dashboard/API/DB-migration failures (12 tests)
-- [ ] 149-08-PLAN.md — Cluster 9 Group C: QRAMM subsystem + SIGSEGV investigation (6 tests)
+- [x] 149-08-PLAN.md — Cluster 9 Group C: QRAMM subsystem + SIGSEGV investigation (6 tests)
 - [ ] 149-09-PLAN.md — Cluster 9 Group D1: CLI/compliance/posture failures (11 tests)
 - [ ] 149-10-PLAN.md — Cluster 9 Group D2: docs-presence/security-gate/windows-smoke (5 tests)
 - [ ] 149-11-PLAN.md — Final reconciliation: fresh full-suite run vs. ledger exact-count match
@@ -280,7 +280,7 @@ dogfooding it immediately)
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
-| 149. Test Suite Triage | 7/11 | In Progress|  |
+| 149. Test Suite Triage | 8/11 | In Progress|  |
 | 150. Test Suite Green Baseline + CI Gate | 0/TBD | Not started | - |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
