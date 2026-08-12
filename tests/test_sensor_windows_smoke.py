@@ -206,6 +206,16 @@ class TestCleanShutdownOnKeyboardInterrupt:
             timeout=15,
         )
 
+    @pytest.mark.xfail(
+        strict=False,
+        reason="Phase 149-11: intermittent SIGSEGV under full-suite load — this run's "
+        "crash dump showed the segfault inside subprocess spawning itself "
+        "(subprocess.py _execute_child, called from _run_child_script), killing the "
+        "pytest runner process, not just the child. Same systemic macOS "
+        "fork()-under-load instability documented on test_qramm_staleness.py's xfail "
+        "reasons and docs/test-triage-149.md's Reconciliation section — not a defect "
+        "in run_sensor's KeyboardInterrupt handling. Phase 150 follow-up.",
+    )
     def test_keyboard_interrupt_in_run_sensor_exits_130(self, tmp_path):
         """run_sensor catches KeyboardInterrupt and exits 130 (no traceback)."""
         sensor_yaml = tmp_path / "sensor.yaml"
