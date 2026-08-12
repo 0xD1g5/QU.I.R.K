@@ -310,7 +310,19 @@ def _scan_one_sslyze(
         # ----------------------------------------------------------------
         # tls_capabilities_json
         # ----------------------------------------------------------------
-        sslyze_version = getattr(_sslyze_module, "__version__", "unknown")
+        # sslyze >=6.3 replaced the module-level `__version__` string constant
+        # with a `sslyze/__version__.py` submodule exposing its own nested
+        # `__version__` string attribute; sslyze <6.3 kept a plain string.
+        # Normalize both shapes so tls_capabilities_json stays JSON-serializable
+        # (Phase 149-11 reconciliation: a bare module object here raised
+        # `TypeError: Object of type module is not JSON serializable`, silently
+        # discarding every sslyze scan result via this function's broad except).
+        _raw_sslyze_version = getattr(_sslyze_module, "__version__", "unknown")
+        sslyze_version = (
+            getattr(_raw_sslyze_version, "__version__", None)
+            if not isinstance(_raw_sslyze_version, str)
+            else _raw_sslyze_version
+        ) or "unknown"
         caps = {
             "source": "sslyze",
             "sslyze_version": sslyze_version,

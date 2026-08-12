@@ -2,7 +2,15 @@
 
 try:
     from impacket.krb5.asn1 import AS_REQ, KRB_ERROR, ETYPE_INFO2, ETYPE_INFO
-    from impacket.krb5.asn1 import seq_set, seq_set_iter, MethodData
+    from impacket.krb5.asn1 import seq_set, seq_set_iter
+    try:
+        # impacket>=0.13.0 (current pin) renamed MethodData -> METHOD_DATA.
+        # Phase 149-11 reconciliation: the un-guarded name broke the whole
+        # try/except import block, silently disabling IMPACKET_AVAILABLE and
+        # every Kerberos scan even with a correctly-pinned impacket installed.
+        from impacket.krb5.asn1 import METHOD_DATA as MethodData
+    except ImportError:
+        from impacket.krb5.asn1 import MethodData  # impacket <0.13.0 fallback
     from impacket.krb5.kerberosv5 import sendReceive, KerberosError
     from impacket.krb5 import constants
     from impacket.krb5.types import KerberosTime, Principal
