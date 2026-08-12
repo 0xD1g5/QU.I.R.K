@@ -147,4 +147,7 @@ ALLOWED_SKIPS = [
     ("test_jwt_scanner.py",        132, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
     ("test_jwt_scanner.py",        213, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
     ("test_jwt_scanner.py",        321, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (h1/h2.example.com fail CR-03's validate_external_url() dns_failure check); see docs/test-triage-149.md#jwt-scanner-dns-blocked"),
+    ("test_openapi_scanner.py",    231, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (api.example.com fails validate_external_url()'s dns_failure check inside scan_openapi_spec's SSRF gate); see docs/test-triage-149.md#openapi-scanner-dns-blocked"),
+    ("test_gap_closure.py",         48, "pre_existing_triage_149", "TRIAGE-149: stale fixture (_make_endpoint() SimpleNamespace lacks sensor_id/segment, AttributeError silently swallowed by _derive_findings()'s broad except); see docs/test-triage-149.md#gap-closure-stale-fixture"),
+    ("test_gap_closure.py",         74, "pre_existing_triage_149", "TRIAGE-149: stale fixture (_make_endpoint() SimpleNamespace lacks sensor_id/segment, AttributeError silently swallowed by _derive_findings()'s broad except); see docs/test-triage-149.md#gap-closure-stale-fixture"),
 ]

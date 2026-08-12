@@ -228,6 +228,13 @@ def test_openapi_plaintext_server_evidence_counter(tmp_path):
 # CR-01 regression: bare-FQDN targets must match a full URL by HOST (not prefix)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.xfail(
+    reason="TRIAGE-149: same DNS-blocked-sandbox SSRF-guard root cause as "
+    "tests/scanner/test_jwt_hardening.py - api.example.com fails validate_external_url()'s "
+    "dns_failure check inside scan_openapi_spec's SSRF gate before httpx.get is reached; not "
+    "a scope-matching regression; see docs/test-triage-149.md#openapi-scanner-dns-blocked",
+    strict=False,
+)
 def test_url_scope_accepts_bare_fqdn_target():
     """A URL whose host is in bare-FQDN cfg.targets passes the scope gate (CR-01).
 
