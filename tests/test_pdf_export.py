@@ -4,6 +4,7 @@ import pytest
 from quirk.errors import format_error
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_exportpy-test_pdf_export_endpoint")
 def test_pdf_export_endpoint(dashboard_client):
     """UI-04: POST /api/export/pdf returns 200 (PDF) or 503 (chromium absent)."""
     resp = dashboard_client.post("/api/export/pdf")

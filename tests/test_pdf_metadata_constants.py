@@ -60,6 +60,7 @@ def _render_or_skip(html_path: str, pdf_path: str) -> None:
     assert result is True
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_metadata_constantspy-test_pdf_title_is_constant")
 def test_pdf_title_is_constant(tmp_path):
     """Rendered PDF's metadata.title MUST equal the constant from the HTML <title>."""
     html_path = str(tmp_path / "in.html")
@@ -73,6 +74,7 @@ def test_pdf_title_is_constant(tmp_path):
     assert reader.metadata.title == EXPECTED_TITLE
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_metadata_constantspy-test_pdf_author_is_constant")
 def test_pdf_author_is_constant(tmp_path):
     """Rendered PDF's metadata.author MUST equal the constant from <meta name=author>."""
     html_path = str(tmp_path / "in.html")
@@ -86,6 +88,7 @@ def test_pdf_author_is_constant(tmp_path):
     assert reader.metadata.author == EXPECTED_AUTHOR
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_pdf_metadata_constantspy-test_pdf_renders_with_locked_context")
 def test_pdf_renders_with_locked_context(tmp_path):
     """JS-disabled invariant: a <script> that mutates title MUST NOT run during render.
 

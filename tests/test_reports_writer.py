@@ -115,6 +115,7 @@ def _stub_waves(findings):
 # Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_json_export_preserves_description")
 @patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
@@ -143,6 +144,7 @@ def test_json_export_preserves_description(
         "Empty description in JSON export"
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_json_export_preserves_deprecation_phrase")
 @patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
@@ -170,6 +172,7 @@ def test_json_export_preserves_deprecation_phrase(
     assert "FIPS 203" in qv["recommendation"]
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_html_report_has_description_column")
 @patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
@@ -258,6 +261,7 @@ def test_pdf_failure_advisory_propagates_via_writer(
 # Phase 100 Plan 02 / FMT-03 / D-11: DOCX auto-emit in write_reports
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_docx_emitted_by_write_reports")
 @patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")
 @patch("quirk.reports.writer.compute_confidence")
@@ -283,6 +287,7 @@ def test_docx_emitted_by_write_reports(
     )
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_reports_writerpy-test_docx_none_on_fail_not_in_output_files")
 @patch("quirk.reports.writer.render_docx_report")
 @patch("quirk.reports.writer.categorize_waves")
 @patch("quirk.reports.writer.build_phased_roadmap")

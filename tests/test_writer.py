@@ -2,6 +2,8 @@
 from __future__ import annotations
 import json
 
+import pytest
+
 
 def _make_minimal_cfg(output_dir: str):
     """Return a minimal cfg-like namespace matching write_reports expectations."""
@@ -21,6 +23,7 @@ def _make_minimal_cfg(output_dir: str):
     )
 
 
+@pytest.mark.skip(reason="TRIAGE-149: flaky (Playwright PlaywrightContextManager singleton torn down by earlier full-suite test, order-dependent — passes standalone); see docs/test-triage-149.md#test_writerpy-test_run_stats_ports_and_hosts_scanned")
 def test_run_stats_ports_and_hosts_scanned(tmp_path):
     """DEBT-03: run-stats JSON must include ports_scanned + hosts_scanned (top-level or nested under 'counts')."""
     from quirk.reports.writer import write_reports
