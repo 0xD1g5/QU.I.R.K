@@ -84,7 +84,10 @@ def test_local_file_parse(tmp_path):
     - A plaintext http:// server row (service_detail contains "plaintext_server")
     - An unauthenticated endpoint row (service_detail contains "unauthenticated")
     """
-    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError, OPENAPI_AVAILABLE
+
+    if not OPENAPI_AVAILABLE:
+        pytest.skip("openapi-spec-validator not installed")
 
     spec_file = tmp_path / "api.yaml"
     spec_file.write_text(_MINIMAL_OAS3_YAML)
@@ -113,7 +116,10 @@ def test_local_file_parse(tmp_path):
 
 def test_local_file_security_scheme_rows(tmp_path):
     """Security scheme rows carry the scheme name and JWT bearerFormat alg."""
-    from quirk.scanner.openapi_scanner import scan_openapi_spec
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, OPENAPI_AVAILABLE
+
+    if not OPENAPI_AVAILABLE:
+        pytest.skip("openapi-spec-validator not installed")
 
     spec_file = tmp_path / "api.yaml"
     spec_file.write_text(_MINIMAL_OAS3_YAML)
@@ -131,7 +137,10 @@ def test_local_file_security_scheme_rows(tmp_path):
 
 def test_url_scope_rejected():
     """A URL not in cfg.targets raises SpecParsingError BEFORE any network call."""
-    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError, OPENAPI_AVAILABLE
+
+    if not OPENAPI_AVAILABLE:
+        pytest.skip("openapi-spec-validator not installed")
 
     url = "https://evil.example.com/openapi.yaml"
     cfg_targets = ["https://safe.example.com"]
@@ -149,7 +158,10 @@ def test_url_scope_rejected():
 
 def test_oversize_rejected(tmp_path):
     """A file over 10 MB raises SpecParsingError before yaml.safe_load."""
-    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError, MAX_SPEC_BYTES
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError, MAX_SPEC_BYTES, OPENAPI_AVAILABLE
+
+    if not OPENAPI_AVAILABLE:
+        pytest.skip("openapi-spec-validator not installed")
 
     # Create a file slightly over the limit
     big_file = tmp_path / "big_spec.yaml"
@@ -171,7 +183,10 @@ def test_external_ref_ssrf_guard(tmp_path):
     CRITICAL: httpx.get and openapi_spec_validator.validate MUST NOT be called.
     This is the primary SSRF guard test — proven by mock assertion.
     """
-    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError, OPENAPI_AVAILABLE
+
+    if not OPENAPI_AVAILABLE:
+        pytest.skip("openapi-spec-validator not installed")
 
     spec_file = tmp_path / "ssrf_spec.yaml"
     spec_file.write_text(_EXTERNAL_REF_OAS3_YAML)
@@ -210,8 +225,11 @@ def test_missing_extra_degrades():
 
 def test_openapi_plaintext_server_evidence_counter(tmp_path):
     """OpenAPI plaintext server endpoints increment openapi_plaintext_server_count in evidence."""
-    from quirk.scanner.openapi_scanner import scan_openapi_spec
+    from quirk.scanner.openapi_scanner import scan_openapi_spec, OPENAPI_AVAILABLE
     from quirk.intelligence.evidence import build_evidence_summary
+
+    if not OPENAPI_AVAILABLE:
+        pytest.skip("openapi-spec-validator not installed")
 
     spec_file = tmp_path / "api.yaml"
     spec_file.write_text(_MINIMAL_OAS3_YAML)

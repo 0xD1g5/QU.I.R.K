@@ -91,7 +91,10 @@ class TestRawSocketProbePreventsSSRF:
 
     def test_probe_skipped_when_url_rejected(self):
         """When validate_external_url rejects the URL, raw socket probes are NOT called."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         cfg = MagicMock()
@@ -127,7 +130,10 @@ class TestRawProbeUsesPinnedIP:
 
     def test_probe_receives_pinned_ip(self):
         """_probe_tls_downgrade is called with the pinned IP, not the original hostname."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         cfg = MagicMock()
@@ -202,7 +208,10 @@ class TestDispatchUsesAsTransportKwargs:
 
     def test_dispatch_uses_as_transport_kwargs(self):
         """With a mock schemathesis, session.request is called with the kwargs dict."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         session_mock.request.return_value = _make_response(200)
@@ -257,7 +266,10 @@ class TestScopeGate:
 
     def test_scope_gate_rejects_does_not_consume_budget(self):
         """URL rejected by validate_external_url: session.request not called, budget_used stays 0."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         cfg = MagicMock()
@@ -304,7 +316,10 @@ class TestBudgetCap:
 
     def test_budget_caps_dispatch(self):
         """With budget=2 and 5 operations, session.request called at most 2 times."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         session_mock.request.return_value = _make_response(200)
@@ -353,7 +368,10 @@ class TestRateLimiter:
 
     def test_rate_limiter_invoked(self):
         """TokenBucket.acquire() must be called once per dispatched request."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         session_mock.request.return_value = _make_response(200)
@@ -404,7 +422,10 @@ class TestFiveXxCascadePause:
 
     def test_5xx_cascade_pause(self):
         """Three consecutive 5xx responses must cause the loop to stop."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         cfg = MagicMock()
         cfg.security = MagicMock()
@@ -622,7 +643,10 @@ class TestAlgConfusionProbeAccepted:
 
     def test_alg_confusion_accepted_is_critical(self):
         """When run_alg_confusion=True and server returns 2xx, CRITICAL finding is emitted."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         cred_ctx, pub_pem = self._make_rs256_cred_ctx()
 
@@ -678,7 +702,10 @@ class TestAlgConfusionProbeAccepted:
 
     def test_alg_confusion_no_public_key_skips_info(self):
         """When no public key is discoverable, INFO probe_skipped finding, no forged request."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         cred_ctx, _ = self._make_rs256_cred_ctx()
 
@@ -753,7 +780,10 @@ class TestBudgetCeilingBoundsAllTraffic:
     def test_socket_probes_run_once_and_count_budget(self):
         """TLS-downgrade + cipher probes fire exactly ONCE (not per-operation) and each
         consumes one unit of budget — so N operations cannot open 2N raw sockets."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         session_mock.request.return_value = _make_response(200)
@@ -789,7 +819,10 @@ class TestBudgetCeilingBoundsAllTraffic:
         """CR-01 regression: with alg-confusion enabled, the forged-token request is
         counted — total session.request calls never exceed the budget even though each
         GET iteration would otherwise dispatch a second (forged) request."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         session_mock = MagicMock()
         session_mock.request.return_value = _make_response(200)

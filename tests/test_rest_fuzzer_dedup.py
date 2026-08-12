@@ -102,7 +102,10 @@ class TestHSTSDedup:
 
         Currently FAILS: the fuzzer emits one hsts_missing per operation (5 total).
         """
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         n_ops = 5
         base_url = "http://example.com"
@@ -159,7 +162,10 @@ class TestHttpCredsDedup:
 
         Currently FAILS: the fuzzer emits one http_creds per matching operation.
         """
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         n_ops = 4
         base_url = "http://example.com"
@@ -213,7 +219,10 @@ class TestDedupDoesNotCollapseDifferentTypes:
 
     def test_hsts_and_http_creds_both_capped_individually_after_dedup(self) -> None:
         """When both HSTS and http_creds fire for N ops, each is capped at 1 (AUDIT-02)."""
-        from quirk.scanner.rest_fuzzer import run_fuzz_scan
+        from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+        if not SCHEMATHESIS_AVAILABLE:
+            pytest.skip("schemathesis not installed")
 
         n_ops = 3
         base_url = "http://example.com"

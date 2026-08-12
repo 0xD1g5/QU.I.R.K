@@ -57,7 +57,10 @@ def test_jwks_dispatch_mounts_pinned_adapter():
 
 def test_main_dispatch_mounts_pinned_adapter():
     """Main schemathesis dispatch mounts PinnedIPAdapter(resolved_ip) before session.request."""
-    from quirk.scanner.rest_fuzzer import run_fuzz_scan
+    from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+    if not SCHEMATHESIS_AVAILABLE:
+        pytest.skip("schemathesis not installed")
 
     session_mock = MagicMock()
     resp = MagicMock()

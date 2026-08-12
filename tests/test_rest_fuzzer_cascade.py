@@ -29,7 +29,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from types import SimpleNamespace
 
-from quirk.scanner.rest_fuzzer import run_fuzz_scan, _CONSECUTIVE_5XX_LIMIT
+from quirk.scanner.rest_fuzzer import run_fuzz_scan, _CONSECUTIVE_5XX_LIMIT, SCHEMATHESIS_AVAILABLE
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +101,9 @@ def test_exception_only_cascade_trips_pause() -> None:
     pause must activate once _CONSECUTIVE_5XX_LIMIT consecutive failures are seen —
     the dispatch loop MUST break rather than running unbounded.
     """
+    if not SCHEMATHESIS_AVAILABLE:
+        pytest.skip("schemathesis not installed")
+
     base_url = "https://t.example.com"
     dispatched: list[int] = []
 
@@ -155,6 +158,9 @@ def test_success_resets_cascade_counter() -> None:
     never reaches _CONSECUTIVE_5XX_LIMIT consecutively, so the loop must NOT
     break early. All 5 operations must complete.
     """
+    if not SCHEMATHESIS_AVAILABLE:
+        pytest.skip("schemathesis not installed")
+
     base_url = "https://t.example.com"
     dispatched: list[int] = []
 
@@ -219,6 +225,9 @@ def test_5xx_only_cascade_still_trips() -> None:
 
     This confirms the original 5xx cascade behaviour is preserved after the D-06 fix.
     """
+    if not SCHEMATHESIS_AVAILABLE:
+        pytest.skip("schemathesis not installed")
+
     base_url = "https://t.example.com"
     dispatched: list[int] = []
 
