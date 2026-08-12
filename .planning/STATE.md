@@ -4,13 +4,13 @@ milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
 stopped_at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
-last_updated: "2026-08-12T17:33:33.177Z"
+last_updated: "2026-08-12T17:40:46.179Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 2
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 22
   percent: 15
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
-Plan: 6 of 9 complete (01, 02, 04 done; 03 blocked at live-fire CI gate, needs retry after remaining remediation plans land)
+Plan: 7 of 9 complete (01, 02, 04 done; 03 blocked at live-fire CI gate, needs retry after remaining remediation plans land)
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -136,6 +136,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 150 P04 | 55min | 3 tasks | 3 files |
 | Phase 150 P05 | 40min | 3 tasks | 8 files |
 | Phase 150 P06 | 50min | 3 tasks | 13 files |
+| Phase 150 P07 | 35min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -252,6 +253,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 150]: Plan 04 D-17 -- root-caused /api/sensor/push 404 as a test-construction defect: fastapi 0.141.1/starlette 1.6.0 no longer flatten include_router() routes into application.routes at include time (lazy _IncludedRouter wrapper instead), so the old isinstance(r, APIRoute) walk missed every /api/* route, not just sensor/push. Confirmed via TestClient the route dispatches correctly end-to-end (401/200). Fixed with a recursive _IncludedRouter-aware route-path walker in the test; assertion contract unchanged, no skip registered.
 - [Phase 150]: Plan 05: cleaned up leftover empty labs/grpc-tls/certs directories from a prior Docker bind-mount failure before generating certs -- confirmed untracked/gitignored, filesystem-only cleanup not a git operation
 - [Phase 150]: Guarded 35 extras-gated/gitignored-fixture tests with per-test skips (D-09..D-11, D-15); test_identity_surface.py and test_rest_fuzzer_probes.py deltas from plan estimates documented in 150-06-SUMMARY.md
+- [Phase 150]: ROADMAP.md Phase 150 header corrected to 9 plans (not the plan's literal '6 plans' instruction) — the plan checklist already listed all 9 plan entries (150-01 through 150-09) before this plan dispatched; matched the header to that ground truth
 
 ### Pending Todos
 
@@ -314,7 +316,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T17:33:27.412Z
+Last session: 2026-08-12T17:40:46.174Z
 Stopped at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
