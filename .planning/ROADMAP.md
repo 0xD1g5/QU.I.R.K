@@ -198,7 +198,7 @@ Plans:
 **Wave 1**
 
 - [x] 150-01-PLAN.md — D-05 impacket KDCOptions fix + un-quarantine 2 Kerberos tests + ledger correction
-- [ ] 150-02-PLAN.md — Local full-suite baseline + gating `Linux Full Suite` CI job + CONTRIBUTING.md
+- [x] 150-02-PLAN.md — Local full-suite baseline + gating `Linux Full Suite` CI job + CONTRIBUTING.md
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -292,7 +292,7 @@ dogfooding it immediately)
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
-| 150. Test Suite Green Baseline + CI Gate | 1/3 | In Progress|  |
+| 150. Test Suite Green Baseline + CI Gate | 2/3 | In Progress|  |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
 | 153. Release Tag Cut | 0/TBD | Not started | - |

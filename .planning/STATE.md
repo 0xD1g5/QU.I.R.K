@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: Completed 150-01-PLAN.md
-last_updated: "2026-08-12T12:26:05.987Z"
+stopped_at: Completed 150-02-PLAN.md
+last_updated: "2026-08-12T12:41:52.509Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 13
   completed_phases: 2
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
   percent: 15
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -132,6 +132,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 149 PP10 | 40min | 3 tasks | 6 files |
 | Phase 149 P11 | 75min | 2 tasks | 10 files |
 | Phase 150 P01 | 35min | 3 tasks | 4 files |
+| Phase 150 P02 | 40min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -242,6 +243,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 149]: Plan 11: fixed 2 real production bugs (sslyze __version__ submodule shape, impacket MethodData rename) surfaced by fresh-run reconciliation; consolidated 5 scattered SIGSEGV findings across Plans 06/08/10 into one systemic macOS fork()-under-full-suite-load root cause; quarantined 9 tests with corrected root causes; ledger reconciled to 116 rows, 0 orphaned failures, fresh full-suite run 0 failed
 - [Phase ?]: [Phase 150]: Fixed _build_as_req via constants.encodeFlags([...].value) on the modern impacket path, preserving the legacy KDCOptions(...) constructor call behind an else branch for impacket <0.13.0 (Phase 150 D-05)
 - [Phase ?]: [Phase 150]: Rule 1 auto-fix — test_build_as_req_nonce_uses_secrets asserted secrets.randbits(31), but commit 830ad6a (Phase 71 review, D-09) had deliberately switched the scanner to a 32-bit nonce; corrected the stale assertion to randbits(32) in the same edit that removed the xfail marker
+- [Phase 150]: Local sandbox python/pip interpreter mismatch (python -> Homebrew 3.14, pip -> stray ~/Library/Python/3.9) caused 11 false full-suite failures in bacnet/modbus/openapi tests; .venv/bin/python confirmed correct interpreter, 0-failed baseline (3089 passed, 42 skipped, 80 xfailed)
 
 ### Pending Todos
 
@@ -302,8 +304,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T12:26:05.981Z
-Stopped at: Completed 150-01-PLAN.md
+Last session: 2026-08-12T12:41:52.504Z
+Stopped at: Completed 150-02-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

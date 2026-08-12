@@ -45,7 +45,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **SUITE-02**: `pytest -q` on a clean supported environment produces a green baseline, so a
       new failure is visible as a new failure
 
-- [ ] **SUITE-03**: The green baseline is held by CI — a newly-introduced failing test fails the
+- [x] **SUITE-03**: The green baseline is held by CI — a newly-introduced failing test fails the
       build rather than joining a permanent red background
 
 ### Phase Artifact Integrity
@@ -114,7 +114,7 @@ Deferred to a later milestone.
 | RELEASE-04 | Phase 148 | Complete |
 | SUITE-01 | Phase 149 | Complete |
 | SUITE-02 | Phase 150 | Complete |
-| SUITE-03 | Phase 150 | Pending |
+| SUITE-03 | Phase 150 | Complete |
 | ARTIFACT-01 | Phase 151 | Pending |
 | ARTIFACT-02 | Phase 151 | Pending |
 | ARTIFACT-03 | Phase 151 | Pending |
