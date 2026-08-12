@@ -220,8 +220,78 @@ pre-existing `optional_extra` registry entry for `test_db_migrate_cli.py` was
 re-pointed from line 166 to line 203 after the 3 new xfail decorators shifted it past
 the `+/-2` line tolerance).
 
+### Group C: QRAMM subsystem failures (Plan 08)
+
+Each of the 6 tests below was individually investigated per RESEARCH.md's cluster-9
+guidance, including dedicated crash-cause investigation for the `test_qramm_staleness.py`
+SIGSEGV pair (RESEARCH.md explicitly flagged a `exit=-11` crash in a CLI subprocess as
+"unusual and worth a few extra minutes to rule out a native-library crash ... vs. a
+subprocess/pytest-capture artifact"). Investigation converged on 4 distinct sub-reasons
+across the 6: 1 cross-test `sys.modules` pollution artifact, 1 genuine API-contract drift,
+1 stale-fixture boundary-date drift, 1 stale grep-based assertion strategy, and 2 (the
+SIGSEGV pair) **not reproducible in this sandbox** — investigated, not assumed.
+
+**SIGSEGV crash-cause investigation (`test_qramm_status_cli_smoke_fresh` /
+`test_qramm_status_cli_smoke_stale_via_override`):**
+
+- **Exact CLI command identified:** both tests invoke
+  `subprocess.run([sys.executable, "<repo>/run_scan.py", "qramm", "status"], capture_output=True, text=True, timeout=15, env=env)`
+  — the fresh-path test clears `QUIRK_CI_STALENESS_OVERRIDE_DATE` from `env`; the
+  stale-path test sets it to `last_verified + 100 days`.
+- **Isolation reproduction:** ran `tests/test_qramm_staleness.py` standalone 3 separate
+  times (`pytest tests/test_qramm_staleness.py -q -m ""`) — **6 passed, 0 failed, 0
+  crashes, all 3 runs.**
+- **Direct CLI invocation (outside pytest entirely):** `python run_scan.py qramm status`
+  run by hand from the repo root — exits 0, prints the expected `QRAMM Version / Last
+  Verified / Days Remaining / Status` table with `FRESH`. No crash.
+- **Full-suite / under-load reproduction:** ran a representative ~550-test slice
+  (`pytest tests/test_p*.py tests/test_q*.py tests/test_r*.py -q -m ""`, chosen because
+  it brackets `test_qramm_staleness.py` alphabetically and includes several other
+  subprocess-spawning test files) — **`test_qramm_staleness.py`'s 6 tests all passed
+  cleanly inside this wider run too**; only the 3 already-known Group C non-SIGSEGV
+  failures + 4 unrelated pre-existing failures in other files appeared.
+- **Native-library version fingerprint recorded:** `cryptography` 46.0.6, `OpenSSL` 3.6.3
+  (9 Jun 2026), `Python` 3.14.6, on darwin (macOS). RESEARCH.md's raw failure capture
+  (`exit=-11 stdout='' stderr=''` — a hard crash with zero captured output, consistent
+  with an unhandled `SIGSEGV` inside the subprocess before Python's own signal handlers
+  or stdout/stderr buffering could flush anything) predates this sandbox's current
+  library/interpreter versions; no evidence exists here of exactly which versions were
+  in use when RESEARCH.md's raw list was captured.
+- **Determination: NOT REPRODUCIBLE in this sandbox.** Neither a genuine native-library
+  crash nor a subprocess/pytest-capture artifact can be confirmed or ruled out from
+  direct evidence, because the crash simply does not occur under any of the three
+  reproduction attempts (isolated x3, direct hand-invocation, representative full-suite
+  slice) with the current `cryptography`/`OpenSSL`/`Python` versions installed. This is
+  reported as observed, not guessed — no code or test change was made, and neither test
+  is quarantined (marking a currently-passing test `skip` would incorrectly suppress
+  real signal for Phase 150's baseline work), mirroring the Plan 06 Group A precedent for
+  non-reproducing failures (`test_vault_connector.py::test_pki_sha1_signed_ca_high_severity`).
+  **Flagged for Phase 150 as a HIGH-PRIORITY re-verification item** if it resurfaces on a
+  different Python/cryptography/OpenSSL combination (e.g. CI runner vs. this local
+  sandbox) — a segfault, even a transient one, is a materially different risk category
+  than an assertion failure and should not be dismissed purely because it didn't
+  reproduce once.
+
+| Test ID | Disposition | Sub-reason | Evidence/Notes | Registry entry? |
+|---------|-------------|------------|-----------------|------------------|
+| `test_qramm_evidence_bridge.py::test_no_risk_engine_import` | quarantined-xfail | cross-test `sys.modules` pollution (not a real QRAMM-12 violation) | `AssertionError: assert 'quirk.engine.risk_engine' not in sys.modules`. `evidence_bridge.py`'s own source contains zero import statements referencing `risk_engine` (confirmed by reading the full file — the only occurrence is a docstring comment forbidding it). The assertion fails only in full-suite alphabetical order: `tests/test_findings_evaluator_dedupe.py` (`f` < `q`) contains `test_dedupe_via_risk_engine_shim_works`, which does `from quirk.engine.risk_engine import _dedupe_findings as shim_dedupe` (D-05/WR-10 backward-compat shim coverage) at line 80, permanently populating `sys.modules["quirk.engine.risk_engine"]` for the rest of the pytest session. Directly confirmed by running `pytest tests/test_findings_evaluator_dedupe.py tests/test_qramm_evidence_bridge.py::test_no_risk_engine_import` (fails) vs. the same test alone or after an unrelated file (passes) | yes (tests/skip_registry.py, `test_qramm_evidence_bridge.py:135`) |
+| `test_qramm_evidence_bridge.py::test_unconfirmed_excluded_from_score` | quarantined-xfail | genuine API-contract drift (new all-unconfirmed 422 guard) | `assert score_resp.status_code == 200` — actual `422`. `score_session()` (`quirk/dashboard/api/routes/qramm.py:396-432`) queries `QRAMMAnswer` rows filtered on `answer_value.isnot(None)`; if that query returns zero rows it raises `HTTPException(422, format_error("DASHBOARD-011"))` *before* any per-dimension scoring or the unconfirmed-exclusion logic this test targets ever runs. This test's session has all 30 CVI rows suggested-but-unconfirmed (`answer_value=None`), so it now always 422s. A later phase added this "at least one confirmed answer required" guard; the test predates it and still expects a 200 with `CVI.score == 0.0` | yes (tests/skip_registry.py, `test_qramm_evidence_bridge.py:213`) |
+| `test_qramm_model_stale.py::test_is_qramm_model_stale_boundary[today1-True]` | quarantined-xfail | stale fixture (hardcoded boundary date predates a `last_verified` re-verification bump) | `assert is_qramm_model_stale(today=datetime.date(2026, 8, 4)) is True` — actual `False`. `quirk/qramm/model_meta.py`'s `QRAMM_MODEL["last_verified"]` is currently `"2026-08-11"` (re-verified/bumped forward by the CLAUDE.md 90-day QRAMM staleness cadence — this sandbox's current date), not the `"2026-05-05"` value this test's docstring and hardcoded parametrize date assume. `age = (today - last_verified).days` for `today=2026-08-04` against `last_verified=2026-08-11` is **negative** (`-7`), so `age > 90` is `False` — `is_qramm_model_stale()` itself is correct; only the test's literal boundary date is stale. Confirmed via the file's other 3 tests (far-future/near-date/default-today) all passing cleanly, isolating the defect to this one hardcoded parametrize case | yes (tests/skip_registry.py, `test_qramm_model_stale.py:52`, inline `pytest.param(marks=...)` — not a function decorator, so `test_skip_registry.py`'s AST walker doesn't require this entry to pass the gate; registered anyway for ledger completeness) |
+| `test_qramm_models.py::TestInitDbQRAMMTables::test_ensure_qramm_tables_called_after_phase46` | quarantined-xfail | stale assertion strategy (grep-based ordering check, not a real regression) | `AssertionError: _PHASE46_COLUMNS migration call not found in init_db`. Read `quirk/db.py::init_db` in full: Phase 85-01 LAUNCH-04 replaced the prior named per-migration call chain with a generic `for table, columns in _ADDITIVE_MIGRATIONS: _ensure_columns(engine, table, columns)` loop (line ~466), so the literal string `"_PHASE46_COLUMNS"` no longer appears anywhere inside `init_db`'s function source text — it now lives only in the `_ADDITIVE_MIGRATIONS` tuple definition at module scope (`("crypto_endpoints", _PHASE46_COLUMNS)`, line 235), outside `init_db`. The actual invariant the test cares about — Phase 46's `crypto_endpoints` column migration running before `_ensure_qramm_tables(engine)` — **is still upheld**: `_ADDITIVE_MIGRATIONS` lists the Phase 46 entry ahead of the loop, and `_ensure_qramm_tables(engine)` is called only after the loop completes (`quirk/db.py:466-470`). No ordering regression — the test's `inspect.getsource(init_db)`-substring-search strategy just doesn't survive the Phase 85-01 refactor | yes (tests/skip_registry.py, `test_qramm_models.py:230`) |
+| `test_qramm_staleness.py::test_qramm_status_cli_smoke_fresh` | not reproducible in this environment | environment-dependent (SIGSEGV, cause undetermined — see crash investigation above) | `exit=-11` (SIGSEGV) per RESEARCH.md's raw capture. **Not reproducible here**: passes cleanly (3/3 isolated runs, direct hand-invocation of the underlying CLI command, and inside a representative ~550-test full-suite slice). See the dedicated crash-cause investigation write-up above this table — determination is genuinely undetermined (neither confirmed native-library crash nor confirmed pytest-capture artifact), flagged HIGH-PRIORITY for Phase 150 re-verification on other Python/cryptography/OpenSSL combinations given a segfault's higher severity class | no — test passes, no quarantine needed (marking a currently-passing test skip would suppress real Phase 150 baseline signal) |
+| `test_qramm_staleness.py::test_qramm_status_cli_smoke_stale_via_override` | not reproducible in this environment | environment-dependent (SIGSEGV, cause undetermined — see crash investigation above) | Same investigation and determination as the row above — this test also passed cleanly in all 3 reproduction attempts | no — test passes, no quarantine needed |
+
+Verification: `pytest tests/test_qramm_evidence_bridge.py tests/test_qramm_model_stale.py
+tests/test_qramm_models.py tests/test_qramm_staleness.py -q -m ""` → 51 passed, 3 xfailed
+(the `test_no_risk_engine_import` xfail only manifests in full-suite alphabetical order —
+see Evidence/Notes above; it XPASSes harmlessly, `strict=False`, when this file subset is
+run alone). `pytest tests/test_skip_registry.py -q -m ""` → 1 passed (meta-gate stays
+green; 4 new `pre_existing_triage_149` registry entries added, matching the 4 tests that
+were actually quarantined — the 2 SIGSEGV tests are documented but intentionally left
+unmarked per the not-reproducible determination above).
+
 ---
 
 *Phase: 149-test-suite-triage*
-*Plan: 07*
+*Plan: 08*
 *Updated: 2026-08-12*
