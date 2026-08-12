@@ -1,7 +1,20 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.11.0
-**Last Updated:** 2026-08-11 (Phase 148 wrap — Release Pipeline Repair + Windows Asset Backfill:
+**Last Updated:** 2026-08-12 (Phase 149 wrap — Test Suite Triage: SUITE-01 — all 116
+pre-existing full-suite test failures individually investigated and given an explicit,
+written disposition across 9 clusters in `docs/test-triage-149.md` (fixed / quarantined-xfail
+/ quarantined-skip); 2 genuine production bugs fixed in place (sslyze `__version__`
+submodule-shape drift on sslyze>=6.3, impacket `MethodData`→`METHOD_DATA` rename on the
+current pin); a 5-test macOS `fork()`-under-full-suite-load SIGSEGV cluster traced to one
+systemic root cause instead of 5 independent defects. Code review caught a real gap before
+close (CR-01: an orphaned `test_dashboard_trends.py` flake the Plan 11 reconciliation sweep
+missed, fixed in a follow-up commit) — final ledger is 117 rows, fresh `pytest -q -m ""` is
+0 failed (3087 passed, 82 xfailed, 42 skipped). UAT-149-01 PASS — automated, full-suite
+verification independently re-run by both the code reviewer and the phase verifier. Second
+phase of the v5.12 milestone (Release & Verification Integrity); hands Phase 150 (Test Suite
+Green Baseline + CI Gate) a precisely known sizing input instead of a guessed one. Earlier:
+Phase 148 wrap — Release Pipeline Repair + Windows Asset Backfill:
 RELEASE-02 pre-tag dry-run guard, RELEASE-03 scheduled tag-hygiene guard, and RELEASE-04 v5.11.0
 Windows-asset disposition all proven against live GitHub Actions runs (not code inspection).
 UAT-148-01/02/03 all PASS — automated + live-run evidence, 02 additionally gated by a live
@@ -17147,3 +17160,56 @@ and independently re-executed the live-GitHub evidence (not just SUMMARY/EVIDENC
 must-haves verified, no blockers. RELEASE-02/03/04 all satisfied; RELEASE-01 correctly deferred
 to Phase 153. See 148-VERIFICATION.md. Phase 148 is the first phase of the v5.12 milestone
 (Release & Verification Integrity).
+
+---
+
+## Series 149: Test Suite Triage (Phase 149 — v5.12)
+
+### UAT-149-01: Every pre-existing full-suite failure has an explicit, written disposition (SUITE-01) — Automated
+
+**What to test:** All ~116 tests failing in a fresh full-suite `pytest -q -m ""` run at Phase 149
+start have an individually investigated, explicitly written disposition (fixed / quarantined-xfail
+/ quarantined-skip) with a real root cause — not a blanket suppression — and a fresh full-suite
+run afterward is green.
+
+**Steps:**
+1. Run `pytest tests/test_skip_registry.py -q -m ""` — confirm the meta-gate passes (every
+   `@pytest.mark.skip`/`xfail`/`skipif` in `tests/` has a matching `tests/skip_registry.py`
+   `ALLOWED_SKIPS` entry; the AST walker recurses into subdirectories including `tests/scanner/`).
+2. Run `pytest -q -m ""` (full suite, no marker deselection) — confirm 0 failed.
+3. Cross-check `docs/test-triage-149.md`'s ledger against `tests/skip_registry.py`: every row has
+   a non-empty Disposition + Sub-reason, no duplicate Test IDs, and every cited registry line
+   number matches a real decorator with matching `reason=` text.
+
+**Pass criteria:**
+- `tests/test_skip_registry.py -q -m ""` exits 0 (1/1)
+- `pytest -q -m ""` exits 0 (0 failed)
+- `docs/test-triage-149.md` has 117 rows across 9 clusters, 0 empty cells, 0 duplicate Test IDs
+
+**Automated gate:** See Steps above (Plans 149-01 through 149-11).
+
+**Result:** - [x] PASS (automated)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-12  **Tester:** automated (pytest, code review, and `gsd-verifier` — 3
+independent full-suite re-runs across the phase's code reviewer and verifier agents)
+**Notes:** SUITE-01. 2 genuine production bugs fixed in place: `quirk/scanner/tls_scanner.py`
+(sslyze `__version__` submodule-shape change on sslyze>=6.3 silently discarded every sslyze scan
+result) and `quirk/scanner/kerberos_scanner.py` (impacket `MethodData`→`METHOD_DATA` rename on
+the current `impacket>=0.13.0,<0.14` pin silently disabled all Kerberos scanning). A 5-test
+macOS `fork()`-under-full-suite-load SIGSEGV cluster (`test_qramm_staleness.py` x2,
+`test_sensor_windows_smoke.py`, `test_vault_connector.py`, `test_version.py`) was traced to one
+systemic root cause rather than 5 independent subsystem defects, superseding earlier plans'
+per-file hypotheses. Code review (`149-REVIEW.md`) caught one real gap before close — CR-01: an
+orphaned `test_dashboard_trends.py::test_trends_timeline_empty` flake (same shared-cache
+in-memory SQLite root cause as Cluster 5) that Plan 11's reconciliation sweep missed because it
+doesn't reproduce on every run — fixed in a follow-up commit (`d07b824`) adding the 117th ledger
+row before `gsd-verifier` ran. See `docs/test-triage-149.md`, `149-REVIEW.md`, and
+`149-VERIFICATION.md`.
+
+---
+
+**Phase 149 verification:** `gsd-verifier` ran a goal-backward check against the live codebase,
+independently re-executing a fresh full-suite `pytest -q -m ""` run (not just ledger/SUMMARY
+claims) and confirming it matched the ledger's stated 0-failed baseline exactly: 3/3 must-haves
+verified, no gaps. SUITE-01 satisfied. Phase 149 is the second phase of the v5.12 milestone
+(Release & Verification Integrity); it hands Phase 150 (Test Suite Green Baseline + CI Gate) a
+precisely known sizing input instead of a guessed one. See 149-VERIFICATION.md.
