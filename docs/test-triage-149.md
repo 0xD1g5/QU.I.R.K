@@ -330,6 +330,40 @@ quarantined).
 
 ---
 
+### Group D2: docs-presence/security-gate/windows-smoke failures, second half of Group D (Plan 10)
+
+Each of the 5 tests below was individually investigated per RESEARCH.md's cluster-9
+guidance. `test_safe_filter_audit.py` and `test_scan_error_gate.py` received extra
+scrutiny per this project's `feedback_report_render_tests_presence_not_appearance`
+memory (render-injection-hardening gates are load-bearing security controls, not
+routine drift) — both were traced to the exact flagged location and confirmed to be
+**gate-logic gaps, not real unsanitized-usage or safe_str-bypass findings**; neither is
+flagged `SECURITY:`. `test_sensor_windows_smoke.py`'s SIGSEGV received the same
+crash-cause investigation rigor as Plan 08's QRAMM SIGSEGV pair and was found **not
+reproducible** in this sandbox, independent of that pair.
+
+| Test ID | Disposition | Sub-reason | Evidence/Notes | Registry entry? |
+|---------|-------------|------------|-----------------|------------------|
+| `test_phase135_docs_presence.py::test_required_sections_present` | quarantined-xfail | stale version pin (README.md advanced past v5.8.0) | `Phase 135 docs missing required sections: [('README.md', 'v5.8.0'), ('README.md', "what's new in v5.8")]`. `README.md`'s title line is now `# QU.I.R.K. — v5.11.0` and its changelog-style section is `## What's New in v5.10` (3 version bumps since Phase 135: v5.9, v5.10, v5.11) — `grep -n "5.8.0" README.md` returns zero matches. Every other Phase 135 required substring (hardware fingerprinting, CNSA 2.0, crypto-bridge, `[hw]`, device, firmware) is still present, confirming this is routine version-string drift, not a content regression | yes (tests/skip_registry.py, `test_phase135_docs_presence.py:74`) |
+| `test_phase136_docs_presence.py::test_section9_deferred_topics_absent` | quarantined-xfail | stale detection list — genuine later addition, not a leak | `§9 leaks deferred Phase 137 content: ['snmpv3']`. `grep -n -i snmpv3 docs/operators-guide.md` confirms the literal string is present at `§9.1.1 SNMPv3 Auth+Priv Scanning (Phase 139)` (lines 1080-1188). This Phase 136 guard was written to keep Phase 137's admin-guide-scoped SNMPv3 content out of §9; Phase 139 (SNMPv3 scanner support) later — and correctly — added its own §9.1.1 subsection to operators-guide.md §9 when SNMPv3 shipped, which is a properly-scoped, intentional addition documenting real functionality, not scope creep from Phase 137 | yes (tests/skip_registry.py, `test_phase136_docs_presence.py:144`) |
+| `test_safe_filter_audit.py::test_safe_filter_paired_with_sanitize` | quarantined-xfail | gate-logic gap — both flagged usages independently confirmed safe, no `SECURITY:` finding | `Jinja \| safe filter usages without an upstream \| sanitize: quirk/reports/templates/report.html.j2:389, quirk/reports/templates/report.html.j2:508`. Line 389 (`narrative_lead \| safe`): `narrative_lead = _NARRATIVE_LEADS.get(score_band, _NARRATIVE_LEAD_FALLBACK)` (`content_model.py:652`) — a lookup into a small hardcoded dict of static prose keyed by a fixed score-band enum, never scanner- or user-controlled; landed Phase 98, commit `bc6ee52` (2026-05-24). Line 508 (`hardware_section \| safe`): value comes from `render_hardware_section()` (`html_renderer.py:324`), which calls `_html.escape()` on every dynamic field (vendor/model/host/port/etc.) in Python before building the markup string — sanitization happens Python-side, not via a Jinja `\| sanitize` filter chain, so this Jinja-only gate structurally cannot see it; landed Phase 128, commit `d6a923b` (2026-06-14). Both usages are pre-existing (not newly introduced) and independently verified safe — **confirmed gate-logic gap, not a real unsanitized-usage finding; NOT flagged SECURITY**. Flagged for a Phase 150 follow-up: widen `_has_upstream_sanitize` to recognize (a) values sourced from a small closed static dict and (b) Python-pre-escaped strings | yes (tests/skip_registry.py, `test_safe_filter_audit.py:137`) |
+| `test_scan_error_gate.py::test_scan_error_writes_use_safe_str` | quarantined-xfail | gate-logic gap — ternary branches both individually safe, no `SECURITY:` finding | `scan_error writes bypassing safe_str: quirk/scanner/kerberos_scanner.py:312`. The exact write site: `scan_error=safe_str(tcp_error) if tcp_error is not None else None` — an `ast.IfExp` (ternary) whose true-branch is `safe_str(tcp_error)` (a SAFE shape) and whose false-branch is the literal `None` (also a SAFE shape). `_classify_rhs()`'s SAFE-shape predicates (`ast.Constant`, `safe_str` `Call`, `Attribute`, `JoinedStr`-with-safe_str, `Name`-assigned-via-safe_str) do not include `ast.IfExp` at all, so the entire ternary is classified as a VIOLATION regardless of what either branch actually contains. **Confirmed gate-logic gap, not a real safe_str bypass; NOT flagged SECURITY** — no credential- or scanner-controlled text reaches `scan_error` unsanitized. Flagged for a Phase 150 follow-up: extend `_classify_rhs()` to recurse into both branches of an `ast.IfExp` | yes (tests/skip_registry.py, `test_scan_error_gate.py:154`) |
+| `test_sensor_windows_smoke.py::TestCleanShutdownOnKeyboardInterrupt::test_keyboard_interrupt_in_run_sensor_exits_130` | not reproducible in this environment | environment-dependent (SIGSEGV, cause undetermined) — independent of Plan 08's QRAMM SIGSEGV pair | RESEARCH.md's raw capture: `Expected exit code 0, 1, or 130 on KeyboardInterrupt, got -11`. **Exact code path identified**: the test's subprocess script patches `quirk.cli.sensor_cmd._run_local_scan` to raise `KeyboardInterrupt`, then calls `sc.run_sensor(["push", "--config", sensor_yaml_path])`, expecting the `KeyboardInterrupt` to be caught inside `run_sensor`'s dispatch and translated to a clean `SystemExit(130)`. **Not reproducible here**: ran the full test class (`TestCleanShutdownOnKeyboardInterrupt`) isolated 3 separate times — 12/12 passed every run, `returncode` 0 or 130, no traceback in stderr. Also ran the full `test_sensor_windows_smoke.py` file combined with Plan 08's `test_qramm_staleness.py` SIGSEGV pair in one process (`pytest tests/test_sensor_windows_smoke.py tests/test_qramm_staleness.py -q -m ""`) — all 18 tests passed cleanly, no crash. Native-library fingerprint recorded (same sandbox as Plan 08): `cryptography` 46.0.6, `OpenSSL` 3.6.3 (9 Jun 2026), `Python` 3.14.6, darwin. **Determination: NOT REPRODUCIBLE, and explicitly NOT assumed to share Plan 08's QRAMM SIGSEGV root cause** — different subsystem (sensor CLI dispatch vs. QRAMM staleness CLI), different subprocess construction (inline script vs. `run_scan.py qramm status`), and the two crash sets do not co-occur or compound when run together. Left unmarked per the Plan 06/08 not-reproducible precedent (marking a currently-passing test `skip` would suppress real Phase 150 baseline signal). **Flagged for Phase 150 as a second, independent HIGH-PRIORITY SIGSEGV re-verification item** (alongside Plan 08's QRAMM pair) if it resurfaces on a different Python/cryptography/OpenSSL combination | no — test passes, no quarantine needed |
+
+Verification: `pytest tests/test_phase135_docs_presence.py tests/test_phase136_docs_presence.py
+tests/test_safe_filter_audit.py tests/test_scan_error_gate.py
+tests/test_sensor_windows_smoke.py -q -m ""` → 44 passed, 4 xfailed (4 of the plan's
+5 originally-scoped tests were quarantined; `test_sensor_windows_smoke.py`'s SIGSEGV
+test was investigated but found not reproducible in this sandbox and left unmarked,
+per the Plan 06/08/09 precedent). `pytest tests/test_skip_registry.py -q -m ""` → 1
+passed (meta-gate stays green; 4 new `pre_existing_triage_149` registry entries added,
+matching the 4 tests actually quarantined).
+
+This closes Cluster 9 Group D2 — the final sub-group of Phase 149's cluster-9 triage.
+All 116-baseline test dispositions across Plans 01-10 are now complete.
+
+---
+
 *Phase: 149-test-suite-triage*
-*Plan: 09*
+*Plan: 10*
 *Updated: 2026-08-12*
