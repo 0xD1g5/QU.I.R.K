@@ -24,6 +24,17 @@ pip install -e ".[all]"
 pip install pytest
 ```
 
+## Docker containers during `-m ""` runs
+
+`pytest -q -m ""` includes `slow`-marked chaos-lab profile tests, which start Docker
+containers whenever a Docker daemon is reachable — this is intentional, since CI's
+`ubuntu-latest` runner has Docker preinstalled and genuinely exercises those tests there.
+Expect containers to come up and be torn down again (`./lab.sh down`) as part of the run.
+A bare `pytest -q` (without the `-m ""` override) deselects `slow` tests and never touches
+Docker. If you want to pre-generate the chaos lab's self-signed profile certs ahead of
+time, run `./lab.sh certs` from `quantum-chaos-enterprise-lab/` — it materializes every
+profile's certs without starting any containers.
+
 ## What "green" means
 
 Green means **0 failed**. Skips and xfails are expected and do not make a run red.
