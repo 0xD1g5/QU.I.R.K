@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: BLOCKED at Phase 150 Plan 03 Task 1 — real CI Linux Full Suite run failed (38 failures); replanning required, see 150-03-SUMMARY.md
-last_updated: "2026-08-12T13:21:35.228Z"
-last_activity: 2026-08-12
+stopped_at: Phase 150 Plan 04 complete (CI-parity venv + D-16/D-17 closed); Plans 05-09 remain
+last_updated: "2026-08-12T17:11:14.149Z"
+last_activity: 2026-08-12 -- Plan 150-04 executed (CI-parity venv provisioned, D-16 dead test deleted, D-17 root-caused as FastAPI route-introspection defect and fixed)
 progress:
   total_phases: 13
   completed_phases: 2
-  total_plans: 18
-  completed_plans: 17
+  total_plans: 24
+  completed_plans: 19
   percent: 15
 ---
 
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 ## Current Position
 
-Phase: 150 (test-suite-green-baseline-ci-gate) — BLOCKED
-Plan: 3 of 3 (halted at Task 1 of 3 — real CI Linux Full Suite run failed, see blocker + 150-03-SUMMARY.md)
-Status: Blocked — requires replanning before retry
-Last activity: 2026-08-12
+Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
+Plan: 04 of 9 complete (01, 02, 04 done; 03 blocked at live-fire CI gate, needs retry after remaining remediation plans land)
+Status: Executing Phase 150
+Last activity: 2026-08-12 -- Plan 150-04 executed (CI-parity venv provisioned, D-16 dead test deleted, D-17 root-caused as FastAPI route-introspection defect and fixed)
 
 ## v5.12 Phase Map
 
@@ -133,6 +133,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 149 P11 | 75min | 2 tasks | 10 files |
 | Phase 150 P01 | 35min | 3 tasks | 4 files |
 | Phase 150 P02 | 40min | 3 tasks | 2 files |
+| Phase 150 P04 | 55min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -244,6 +245,9 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 150]: Fixed _build_as_req via constants.encodeFlags([...].value) on the modern impacket path, preserving the legacy KDCOptions(...) constructor call behind an else branch for impacket <0.13.0 (Phase 150 D-05)
 - [Phase ?]: [Phase 150]: Rule 1 auto-fix — test_build_as_req_nonce_uses_secrets asserted secrets.randbits(31), but commit 830ad6a (Phase 71 review, D-09) had deliberately switched the scanner to a 32-bit nonce; corrected the stale assertion to randbits(32) in the same edit that removed the xfail marker
 - [Phase 150]: Local sandbox python/pip interpreter mismatch (python -> Homebrew 3.14, pip -> stray ~/Library/Python/3.9) caused 11 false full-suite failures in bacnet/modbus/openapi tests; .venv/bin/python confirmed correct interpreter, 0-failed baseline (3089 passed, 42 skipped, 80 xfailed)
+- [Phase 150]: Plan 04 -- stood up $HOME/.cache/quirk-ci-parity-venv (outside repo tree, pip install -e ".[all]" + pytest only, zero identity/hw/api extras); no Python 3.11 available on this machine so venv built on 3.14.6 (known, accepted parity gap -- documented, doesn't block extras-boundary verification). Full-suite run there: 32 failed, exactly matching CI Categories B+C+D+F+G (6+18+6+1+1); Categories A/E/H (4+1+1) did not reproduce due to concrete local-vs-CI differences (working-copy .planning/ present, Docker not running, stale gitignored quirk.egg-info from pre-rename install) -- no unexplained local-only failures.
+- [Phase 150]: Plan 04 D-16 -- deleted test_package_manifest_version_is_4_1_0 outright (not fixed in place); its local-only pass was traced to a stale gitignored quirk.egg-info directory in the repo working tree, absent from any fresh checkout, matching CI's real PackageNotFoundError.
+- [Phase 150]: Plan 04 D-17 -- root-caused /api/sensor/push 404 as a test-construction defect: fastapi 0.141.1/starlette 1.6.0 no longer flatten include_router() routes into application.routes at include time (lazy _IncludedRouter wrapper instead), so the old isinstance(r, APIRoute) walk missed every /api/* route, not just sensor/push. Confirmed via TestClient the route dispatches correctly end-to-end (401/200). Fixed with a recursive _IncludedRouter-aware route-path walker in the test; assertion contract unchanged, no skip registered.
 
 ### Pending Todos
 
@@ -306,8 +310,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T13:21:35.222Z
-Stopped at: BLOCKED at Phase 150 Plan 03 Task 1 — real CI Linux Full Suite run failed (38 failures); replanning required, see 150-03-SUMMARY.md
+Last session: 2026-08-12T16:05:02.061Z
+Stopped at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

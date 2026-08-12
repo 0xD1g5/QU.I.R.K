@@ -211,7 +211,7 @@ Plans:
 
 **Remediation Wave 1** *(D-09..D-17)*
 
-- [ ] 150-04-PLAN.md — CI-parity venv + failure inventory + D-16 dead-test deletion + D-17 /api/sensor/push root-cause
+- [x] 150-04-PLAN.md — CI-parity venv + failure inventory + D-16 dead-test deletion + D-17 /api/sensor/push root-cause
 
 **Remediation Wave 2** *(blocked on 150-04's CI-parity venv)*
 
@@ -318,7 +318,7 @@ dogfooding it immediately)
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
-| 150. Test Suite Green Baseline + CI Gate | 2/3 | In Progress|  |
+| 150. Test Suite Green Baseline + CI Gate | 4/9 | In Progress|  |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
 | 153. Release Tag Cut | 0/TBD | Not started | - |
