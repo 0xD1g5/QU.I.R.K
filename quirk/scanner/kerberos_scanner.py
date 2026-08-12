@@ -93,9 +93,22 @@ def _build_as_req(client_name, server_name, realm: str):
     as_req['msg-type'] = int(constants.ApplicationTagNumbers.AS_REQ.value)
 
     req_body = as_req['req-body']
-    req_body['kdc-options'] = constants.KDCOptions(
-        constants.KDCOptions.forwardable
-    )
+    # Phase 150 D-05: impacket 0.13.0 changed constants.KDCOptions from a
+    # bit-flag helper class to a plain enum.Enum, so calling it as a
+    # constructor (constants.KDCOptions(constants.KDCOptions.forwardable))
+    # now raises pyasn1 KeyError('Bad BitString initializer type'). Detect
+    # the new shape via constants.encodeFlags (impacket's own idiom for
+    # turning KDCOption enum members into the bit-list a pyasn1 BitString
+    # expects) and fall back to the legacy bit-flag constructor call when
+    # encodeFlags is absent (impacket <0.13.0).
+    if hasattr(constants, "encodeFlags"):
+        req_body['kdc-options'] = constants.encodeFlags(
+            [constants.KDCOptions.forwardable.value]
+        )
+    else:
+        req_body['kdc-options'] = constants.KDCOptions(  # impacket <0.13.0 fallback
+            constants.KDCOptions.forwardable
+        )
     seq_set(req_body, 'sname', server_name.components_to_asn1)
     seq_set(req_body, 'cname', client_name.components_to_asn1)
     req_body['realm'] = realm
