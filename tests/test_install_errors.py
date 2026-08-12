@@ -87,6 +87,19 @@ def _free_port() -> int:
 
 
 @pytest.mark.slow
+@pytest.mark.xfail(
+    reason=(
+        "TRIAGE-149: environment-dependent — this sandbox has no 'uvicorn' "
+        "installed (dashboard extras not present), so server.py::serve()'s "
+        "`import uvicorn` (line 102) raises ImportError and emits "
+        "QRK-INSTALL-002 before ever reaching the port-bind attempt that "
+        "would surface QRK-INSTALL-004. Distinct root cause from "
+        "test_dashboard_missing_uvicorn_format below (that one is a stale "
+        "lazy-import assumption, not a missing-extra issue); see "
+        "docs/test-triage-149.md."
+    ),
+    strict=False,
+)
 def test_port_conflict_format():
     """quirk serve on an occupied port emits [QRK-INSTALL-004] to stderr."""
     port = _free_port()
@@ -110,6 +123,18 @@ def test_port_conflict_format():
 
 
 @pytest.mark.slow
+@pytest.mark.xfail(
+    reason=(
+        "TRIAGE-149: stale lazy-import assumption — this test blocks the "
+        "uvicorn import then only imports quirk.dashboard.server (never "
+        "calls serve()). server.py's `import uvicorn` lives inside serve() "
+        "(line 102), not at module scope, so importing the module alone "
+        "triggers no uvicorn import and prints nothing. Test predates the "
+        "lazy-import shape; distinct root cause from test_port_conflict_format "
+        "above; see docs/test-triage-149.md."
+    ),
+    strict=False,
+)
 def test_dashboard_missing_uvicorn_format():
     """Missing uvicorn at server.py import time emits [QRK-INSTALL-002]."""
     script = (
