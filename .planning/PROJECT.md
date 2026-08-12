@@ -232,6 +232,10 @@ verification artifacts are missing; and a green test suite means something.
   ✅ Validated in Phase 148 (RELEASE-03): scheduled `release-tag-hygiene.yml` guard proven live
 - Test-suite stabilization — triage the ~102 failures red since roughly Phase 97, establish a green
   baseline and a CI gate to hold it
+  ✅ Validated in Phase 149 (SUITE-01): 117-row ledger, every failure explicitly dispositioned
+  (fixed/quarantined), fresh full-suite run 0 failed (3087 passed, 82 xfailed, 42 skipped);
+  2 genuine production bugs found and fixed (sslyze __version__, impacket MethodData rename);
+  code review caught + fixed one reconciliation gap (CR-01) before close
 - Phase-completion artifact enforcement — gate VERIFICATION.md, post-execution VALIDATION status,
   and the UAT series entry at *phase* close rather than milestone close
 - Discovery empirical closure — DISC-09 segmented-network lab profile, then re-verify the Phase 144
@@ -352,11 +356,24 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 
 ## Current State
 
+**Phase 149 (test-suite-triage) complete 2026-08-12** — 11/11 plans, verification passed 3/3
+must-haves. All 116 pre-existing full-suite failures individually investigated and
+dispositioned (fixed / quarantined-xfail / quarantined-skip) across 9 clusters in
+`docs/test-triage-149.md`; 2 genuine production bugs fixed in place (sslyze `__version__`
+submodule-shape drift silently discarding every sslyze result on sslyze>=6.3; impacket
+`MethodData`→`METHOD_DATA` rename silently disabling all Kerberos scanning on the current
+pin). A systemic macOS `fork()`-under-full-suite-load SIGSEGV cluster (5 tests) was traced to
+one shared root cause rather than 5 independent defects. Code review caught a real gap before
+close (CR-01: an orphaned `test_dashboard_trends.py` flake the reconciliation sweep missed,
+same shared-cache SQLite class as Cluster 5) — fixed in follow-up commit before verification.
+Final ledger: 117 rows, fresh `pytest -q -m ""` is 0 failed (3087 passed, 82 xfailed, 42
+skipped). SUITE-01 satisfied. Next: Phase 150 (test-suite-green-baseline-+-ci-gate) — sizing
+input is now known precisely rather than guessed.
+
 **Phase 148 (release-pipeline-repair-windows-asset-backfill) complete 2026-08-11** — 4/4 plans,
 verification passed 5/5 must-haves. RELEASE-02/03/04 proven against live GitHub Actions (real
 `workflow_dispatch` dry-run, real tag-hygiene guard run, real `v5.11.0` GitHub Release with
-zero assets and the PyPI-only disposition body) rather than by code inspection alone. Next:
-Phase 149 (test-suite-triage).
+zero assets and the PyPI-only disposition body) rather than by code inspection alone.
 
 **v5.11 Discovery at Scale + Backlog Drain — SHIPPED and archived 2026-08-11.** All 4 phases
 (144–147) complete, 16 plans, 11/11 requirements satisfied, version 5.11.0. Milestone audit
@@ -588,7 +605,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Do not tune nmap timing flags to make one synthetic live check pass (v5.11 / 144-03) | Changing default `-T`/RTT bounds alters behavior for every production scan, trading false negatives on slow real networks against a artifact only reproducible on unassigned macOS loopback aliases | — Pending — accepted via signed override; resolution deferred to a real routed segment, best paired with DISC-09's lab profile |
 
 ---
-*Last updated: 2026-08-11 — v5.12 Release & Verification Integrity opened (Phase 148)*
+*Last updated: 2026-08-12 — Phase 149 (test-suite-triage) complete, SUITE-01 validated*
 
 ## Evolution
 
