@@ -192,7 +192,12 @@ quarantines already applied — or large; cannot be scoped before triage complet
 
   4. The green-baseline standard and how to run it locally are documented for future contributors
 
-**Plans**: 3 plans
+**Plans**: 6 plans
+
+*(Plans 150-01..150-03 were the original scope. Plan 150-03's live-fire push surfaced 38 real-CI
+failures across 8 categories — the local baseline had been validated against a broader extras
+surface than CI installs — and halted at its own stop condition. Plans 150-04..150-09 are the
+remediation pass planned from 150-CONTEXT.md's D-09..D-17 addendum.)*
 
 Plans:
 **Wave 1**
@@ -202,7 +207,28 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 150-03-PLAN.md — D-07 live-fire smoke check on real GitHub Actions + evidence artifact + revert
+- [x] 150-03-PLAN.md — D-07 live-fire smoke check — HALTED at its Task 1 stop condition (real CI red, 38 failures); superseded by 150-08
+
+**Remediation Wave 1** *(D-09..D-17)*
+
+- [ ] 150-04-PLAN.md — CI-parity venv + failure inventory + D-16 dead-test deletion + D-17 /api/sensor/push root-cause
+
+**Remediation Wave 2** *(blocked on 150-04's CI-parity venv)*
+
+- [ ] 150-05-PLAN.md — D-12/D-13 chaos-lab cert generation in lab.sh + lab doc sync + D-14 CONTRIBUTING note
+- [ ] 150-06-PLAN.md — D-09/D-10/D-11 extras skip guards (31 tests) + D-15 gitignored-planning guards (4 tests) + registry
+
+**Remediation Wave 3**
+
+- [ ] 150-07-PLAN.md — Ledger addendum + honest SUITE-02/03 status + roadmap plan list + UAT-150 cases
+
+**Remediation Wave 4**
+
+- [ ] 150-08-PLAN.md — Green real-CI run (SUITE-02) + live-fire red run + evidence artifact + human checkpoint (SUITE-03)
+
+**Remediation Wave 5**
+
+- [ ] 150-09-PLAN.md — 150-VERIFICATION.md + SUITE-02/03 flip to Complete + Obsidian phase note and hub refresh
 
 #### Phase 151: Phase-Completion Artifact Gates
 
