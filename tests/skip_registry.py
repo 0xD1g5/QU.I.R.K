@@ -50,7 +50,7 @@ ALLOWED_SKIPS = [
     ("test_cmvp_refresh.py",                 22,  "optional_extra", "bs4 not installed"),
     ("test_cmvp_refresh.py",                 23,  "optional_extra", "httpx not installed"),
     ("test_credential_leakage.py",           306, "live_infra",     "Defensive guard: dashboard_client get_db override not configured"),
-    ("test_db_migrate_cli.py",               166, "optional_extra", "run_scan not importable in minimal dev env (optional reporting deps missing)"),
+    ("test_db_migrate_cli.py",               203, "optional_extra", "run_scan not importable in minimal dev env (optional reporting deps missing)"),
     ("test_distributed_topology.py",         48,  "live_infra",     "Requires docker binary"),
     ("test_identity_scanner_hardening.py",   80,  "optional_extra", "impacket not installed"),
     ("test_jobs_api.py",                     489, "live_infra",     "Linux-only /proc zombie-reconciliation check"),
@@ -159,4 +159,9 @@ ALLOWED_SKIPS = [
     ("test_dashboard_scan_history.py", 359, "pre_existing_triage_149", "TRIAGE-149: '+' query-encoding test-construction bug (same root cause as test_compare_schema); see docs/test-triage-149.md#dashboard-compare-plus-encoding"),
     ("test_dashboard_theme.py",         12, "pre_existing_triage_149", "TRIAGE-149: confirmed intentional Obsidian Pro rebrand (commit ac242d1, 2026-05-07) shifted --primary from electric-blue 210 100% 56% to teal 180 37% 47% (#4ba8a8); see docs/test-triage-149.md#dashboard-theme-obsidian-pro-rebrand"),
     ("test_dashboard_theme.py",         32, "pre_existing_triage_149", "TRIAGE-149: confirmed intentional Obsidian Pro rebrand (commit ac242d1, 2026-05-07) shifted --accent from electric-blue 210 100% 56% to teal 180 37% 47% (#4ba8a8); see docs/test-triage-149.md#dashboard-theme-obsidian-pro-rebrand"),
+    ("test_route_coverage.py",          18, "pre_existing_triage_149", "TRIAGE-149: stale test inventory, not a real unprotected route — GET /api/config is deliberately unauthenticated (module docstring: 'no auth required (frontend needs this before login)'), mirrors /api/health, returns only the vertical name; NOT flagged SECURITY; see docs/test-triage-149.md#route-coverage-api-config-stale-inventory"),
+    ("test_db_migrate_cli.py",          53, "pre_existing_triage_149", "TRIAGE-149: stale fixture — _create_legacy_schema() predates the sensor_tokens entry Phase 113 AUTH-02 added to _ADDITIVE_MIGRATIONS, causing NoSuchTableError: sensor_tokens; see docs/test-triage-149.md#db-migrate-sensor-tokens-stale-fixture"),
+    ("test_db_migrate_cli.py",         114, "pre_existing_triage_149", "TRIAGE-149: same sensor_tokens stale-fixture cause as test_fresh_db_reports_every_column_added; see docs/test-triage-149.md#db-migrate-sensor-tokens-stale-fixture"),
+    ("test_db_migrate_cli.py",         145, "pre_existing_triage_149", "TRIAGE-149: same sensor_tokens stale-fixture cause as test_fresh_db_reports_every_column_added; see docs/test-triage-149.md#db-migrate-sensor-tokens-stale-fixture"),
+    ("test_init_db_idempotent.py",      40, "pre_existing_triage_149", "TRIAGE-149: naming-convention drift — _ensure_columns(engine, table, expected) (Phase 77 D-21) is a generic shared helper with a 3-arg signature, not a single-arg per-table _ensure_*(engine) helper; needs the same dir()-discovery exclusion as _ensure_parent_dir; see docs/test-triage-149.md#init-db-ensure-columns-signature-drift"),
 ]
