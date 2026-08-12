@@ -82,16 +82,6 @@ def _kerb_mod():
     return kerberos_scanner
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="Phase 149-11: impacket 0.13.0 (current pin) changed constants.KDCOptions "
-    "from a bit-flag helper class to a plain enum.Enum; _build_as_req's "
-    "constants.KDCOptions(constants.KDCOptions.forwardable) call now raises "
-    "pyasn1 KeyError('Bad BitString initializer type'). The MethodData/METHOD_DATA "
-    "import rename (also 0.13.0) was fixed in this reconciliation plan, restoring "
-    "IMPACKET_AVAILABLE; this residual KDCOptions incompatibility is a distinct, "
-    "deeper impacket 0.13.0 API-shape change flagged for a dedicated Phase 150 fix.",
-)
 def test_kdc_udp_decode_failure_logs(_kerb_mod, caplog):
     """A decode error inside _probe_kdc_udp must log WARNING and return []
     rather than propagating or being silently swallowed."""
@@ -111,12 +101,6 @@ def test_kdc_udp_decode_failure_logs(_kerb_mod, caplog):
     assert any("decode failed" in rec.message for rec in caplog.records)
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="Phase 149-11: same impacket 0.13.0 KDCOptions enum incompatibility as "
-    "test_kdc_udp_decode_failure_logs — _build_as_req raises before the nonce "
-    "assertion is ever reached. See that test's xfail reason for detail.",
-)
 def test_build_as_req_nonce_uses_secrets(_kerb_mod):
     """_build_as_req must source its nonce from secrets, not random.
     We monkeypatch secrets.randbits to a sentinel and assert it appears in the AS-REQ;
@@ -125,7 +109,7 @@ def test_build_as_req_nonce_uses_secrets(_kerb_mod):
     from impacket.krb5 import constants
     from impacket.krb5.types import Principal
 
-    sentinel = 0x0DEADBEE  # 28-bit value — well within the 31-bit field
+    sentinel = 0x0DEADBEE  # 28-bit value — well within the 32-bit field
     client_name = Principal("nobody", type=constants.PrincipalNameType.NT_PRINCIPAL.value)
     server_name = Principal("krbtgt/EXAMPLE.COM", type=constants.PrincipalNameType.NT_SRV_INST.value)
 
@@ -142,7 +126,11 @@ def test_build_as_req_nonce_uses_secrets(_kerb_mod):
         as_req = kmod._build_as_req(client_name, server_name, "EXAMPLE.COM")
 
     assert int(as_req['req-body']['nonce']) == sentinel
-    mock_secrets.assert_called_once_with(31)
+    # Phase 150 D-05 stale-test fix: commit 830ad6a (Phase 71 review, D-09)
+    # deliberately switched _build_as_req to a full 32-bit unsigned nonce
+    # ("use secrets.randbits(32) per D-09, drop incorrect 31-bit comment");
+    # this assertion was never updated to match and still expected 31.
+    mock_secrets.assert_called_once_with(32)
     assert called["random"] is False, "random.* must not be called for nonce"
 
 
