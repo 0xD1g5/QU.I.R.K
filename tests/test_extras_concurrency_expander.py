@@ -250,10 +250,18 @@ def test_expand_and_dedup_hosts_never_materializes_full_hosts_list():
 # ---------------------------------------------------------------------------
 
 def test_audit_rows_flipped_to_phase_71():
+    """AUDIT-TASKS.md is gitignored on the public repo (Phase 120 PUBREPO-01); it is
+    absent on a public clone / CI checkout — skip cleanly rather than FileNotFoundError."""
     import pathlib
     import re
     root = pathlib.Path(__file__).resolve().parent.parent
-    audit = (root / ".planning/audit-2026-05-08/AUDIT-TASKS.md").read_text(encoding="utf-8")
+    audit_path = root / ".planning/audit-2026-05-08/AUDIT-TASKS.md"
+    if not audit_path.exists():
+        pytest.skip(
+            ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public "
+            "repo (Phase 120 PUBREPO-01) and absent from this checkout"
+        )
+    audit = audit_path.read_text(encoding="utf-8")
     for wr in ("WR-11", "WR-12", "WR-13", "WR-14"):
         pattern = rf"scanners-protocol/{wr}.*Phase 71.*\[x\] closed"
         assert re.search(pattern, audit), f"AUDIT-TASKS row for {wr} not flipped"

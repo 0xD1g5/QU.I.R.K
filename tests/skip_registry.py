@@ -259,4 +259,16 @@ ALLOWED_SKIPS = [
     ("test_openapi_scanner.py",            164, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
     ("test_openapi_scanner.py",            189, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
     ("test_openapi_scanner.py",            232, "ci_extras_gap", "api extra absent from .[all]; openapi-spec-validator not installed"),
+
+    # ------------------------------------------------------------------
+    # Phase 150 D-15 gitignored-planning-dir gap closure (Plan 06, Task 3):
+    # .planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public
+    # repo (Phase 120 PUBREPO-01) and is absent on any public clone or CI
+    # checkout. These tests take a documented existence-check skip instead of
+    # a FileNotFoundError. See 150-CONTEXT.md D-15.
+    # ------------------------------------------------------------------
+    ("test_phase57_invariants.py",           99, "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
+    ("test_audit_ledger_zero_open.py",       54, "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
+    ("test_audit_ledger_zero_open.py",       76, "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
+    ("test_extras_concurrency_expander.py", 260, "gitignored_planning_dir", ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public repo (PUBREPO-01)"),
 ]

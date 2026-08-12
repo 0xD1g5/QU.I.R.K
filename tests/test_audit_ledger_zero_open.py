@@ -20,6 +20,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 LEDGER = (
     Path(__file__).resolve().parent.parent
     / ".planning"
@@ -48,6 +50,11 @@ def test_audit_ledger_has_zero_bare_open_rows() -> None:
     meaning no phase has adjudicated the finding. By the v4.9 milestone close,
     every audit row must be flipped to a final disposition.
     """
+    if not LEDGER.exists():
+        pytest.skip(
+            ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public "
+            "repo (Phase 120 PUBREPO-01) and absent from this checkout"
+        )
     text = LEDGER.read_text(encoding="utf-8")
     matches = _OPEN_RE.findall(text)
     assert not matches, (
@@ -65,6 +72,11 @@ def test_deferred_and_wontfix_rows_have_rationale() -> None:
     and wont-fix rows must match this format so future auditors can
     reconstruct the decision without spelunking phase summaries.
     """
+    if not LEDGER.exists():
+        pytest.skip(
+            ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public "
+            "repo (Phase 120 PUBREPO-01) and absent from this checkout"
+        )
     text = LEDGER.read_text(encoding="utf-8")
     bare = _BARE_DISPOSITION_RE.findall(text)
     assert not bare, (

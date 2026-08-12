@@ -92,7 +92,15 @@ def test_broker_no_unconditional_ssl_cert_reqs_none():
 
 
 def test_audit_tasks_six_blockers_closed():
-    ledger = (REPO_ROOT / ".planning" / "audit-2026-05-08" / "AUDIT-TASKS.md").read_text()
+    """AUDIT-TASKS.md is gitignored on the public repo (Phase 120 PUBREPO-01); it is
+    absent on a public clone / CI checkout — skip cleanly rather than FileNotFoundError."""
+    ledger_path = REPO_ROOT / ".planning" / "audit-2026-05-08" / "AUDIT-TASKS.md"
+    if not ledger_path.exists():
+        pytest.skip(
+            ".planning/audit-2026-05-08/AUDIT-TASKS.md is gitignored on the public "
+            "repo (Phase 120 PUBREPO-01) and absent from this checkout"
+        )
+    ledger = ledger_path.read_text()
     for cr in ["CR-01", "CR-02", "CR-03", "CR-04", "CR-05", "CR-06"]:
         row_pattern = re.compile(
             r"\|\s*scanners-protocol/" + cr + r"\s*\|.*\|\s*\[x\] closed\s*\|"
