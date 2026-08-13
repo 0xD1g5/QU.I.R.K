@@ -63,7 +63,7 @@ Documentation Checklist.
 - [ ] **Phase 149: Test Suite Triage** — Give every one of the ~102 pre-existing failing tests an
       explicit written disposition (fixed / quarantined / deleted)
 
-- [ ] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean
+- [x] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean
       environment, held by a CI gate that fails the build on any new failure
 
 - [ ] **Phase 151: Phase-Completion Artifact Gates** — A phase cannot close with a missing
@@ -228,7 +228,7 @@ Plans:
 
 **Remediation Wave 5**
 
-- [ ] 150-09-PLAN.md — 150-VERIFICATION.md + SUITE-02/03 flip to Complete + Obsidian phase note and hub refresh
+- [x] 150-09-PLAN.md — 150-VERIFICATION.md + SUITE-02/03 flip to Complete + Obsidian phase note and hub refresh
 
 #### Phase 151: Phase-Completion Artifact Gates
 

@@ -48,14 +48,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **SUITE-03**: The green baseline is held by CI — a newly-introduced failing test fails the
       build rather than joining a permanent red background
 
-  **Status note (2026-08-12):** the first real GitHub Actions attempt at the gating `Linux Full
-  Suite` job ([31598809033](https://github.com/0xD1g5/QU.I.R.K/actions/runs/31598809033))
-  concluded `failure` with 38 failed. Plans 150-04 through 150-06 have since closed the
-  root causes (CI-parity venv reconciliation, chaos-lab cert generation, extras/gitignored-dir
-  skip guards); this plan (150-07) is bringing the written record into line with that
-  in-progress reality before the phase's evidence-gathering re-run (150-08/150-09) attempts a
-  genuinely green CI baseline. Neither requirement may be marked Complete until that re-run
-  produces verified green/red evidence.
+  **Status note (2026-08-13):** both proven live on real GitHub Actions — green run
+  [31723764281](https://github.com/0xD1g5/QU.I.R.K/actions/runs/31723764281) (0 failed) and red
+  run [31725715958](https://github.com/0xD1g5/QU.I.R.K/actions/runs/31725715958) (1 failed,
+  isolated to a deliberate smoke test, PR #10 closed unmerged). Full evidence in
+  `.planning/phases/150-test-suite-green-baseline-ci-gate/150-CI-EVIDENCE.md`, cited in
+  `150-VERIFICATION.md`.
 
 ### Phase Artifact Integrity
 

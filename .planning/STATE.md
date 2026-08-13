@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: Phase 150 Plan 08 complete — SUITE-02/SUITE-03 proven live on real GitHub Actions (green run 31723764281, red run 31725715958); Plan 09 remains
-last_updated: "2026-08-13T20:59:09.070Z"
+stopped_at: Phase 150 COMPLETE (all 9 plans) — 150-VERIFICATION.md written (4/4 PASS), SUITE-02/SUITE-03 Complete, Obsidian phase note + hub refreshed; Phase 151 is next
+last_updated: "2026-08-13T21:20:00.000Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 13
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 24
-  completed_plans: 23
-  percent: 15
+  completed_plans: 24
+  percent: 23
 ---
 
 # Project State
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 150 — test-suite-green-baseline-ci-gate
+**Current focus:** Phase 151 — phase-completion-artifact-gates (next unstarted phase in the v5.12 map)
 
 ## Current Position
 
-Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
-Plan: 8 of 9 complete (01, 02, 04, 05, 06, 07, 08 done; 03's original live-fire attempt was superseded/completed by 08; 09 remains)
-Status: Ready to execute
+Phase: 150 (test-suite-green-baseline-ci-gate) — COMPLETE (2026-08-13)
+Plan: 9 of 9 complete (01, 02, 04, 05, 06, 07, 08, 09 done; 03's original live-fire attempt was superseded/completed by 08)
+Status: Phase 150 closed with 150-VERIFICATION.md (4/4 success criteria PASS); ready to start Phase 151
 Last activity: 2026-08-13
 
 ## v5.12 Phase Map
@@ -37,7 +37,7 @@ Last activity: 2026-08-13
 |-------|------|--------------|------|--------|
 | 148 | Release Pipeline Repair + Windows Asset Backfill | RELEASE-02, RELEASE-03, RELEASE-04 | None (first, demonstrable early win) | Not started |
 | 149 | Test Suite Triage | SUITE-01 | None (independent, highest-variance item run early/alone) | Not started |
-| 150 | Test Suite Green Baseline + CI Gate | SUITE-02, SUITE-03 | Phase 149 (scope depends on triage output) | Not started |
+| 150 | Test Suite Green Baseline + CI Gate | SUITE-02, SUITE-03 | Phase 149 (scope depends on triage output) | Complete (2026-08-13; VERIFICATION passed 4/4 — green run 31723764281, red run 31725715958, both live-fire proven on real GitHub Actions) |
 | 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Not started |
 | 152 | Discovery Empirical Closure | DISC-09, DISC-10, DISC-11 | None (DISC-10 depends on DISC-09 within-phase) | Not started |
 | 153 | Release Tag Cut | RELEASE-01 | Phases 148, 150, 151 | Not started |
@@ -256,6 +256,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 150]: Guarded 35 extras-gated/gitignored-fixture tests with per-test skips (D-09..D-11, D-15); test_identity_surface.py and test_rest_fuzzer_probes.py deltas from plan estimates documented in 150-06-SUMMARY.md
 - [Phase 150]: ROADMAP.md Phase 150 header corrected to 9 plans (not the plan's literal '6 plans' instruction) — the plan checklist already listed all 9 plan entries (150-01 through 150-09) before this plan dispatched; matched the header to that ground truth
 - [Phase 150]: Live-fire CI proof closed SUITE-02/SUITE-03 -- real Linux Full Suite run 31723764281 green (0 failed, .[all]-only, ubuntu-latest, Python 3.11.15) after D-03 SIGSEGV quarantine (bbe8b55); real red run 31725715958 via throwaway PR #10 proved the gate bites (1 failed, isolated to the deliberate smoke test), PR closed unmerged and branch deleted, evidence in 150-CI-EVIDENCE.md
+- [Phase 150]: Plan 09 closed the phase -- 150-VERIFICATION.md written against all 4 ROADMAP success criteria (all PASS, Criterion 1 anchored to the real CI run not the corroborating local venv run); SUITE-02/SUITE-03 confirmed Complete (already flipped by 150-08's metadata commit, this plan replaced the stale in-progress status note with a 150-CI-EVIDENCE.md pointer); ROADMAP.md's 150-09 checkbox and the Phase 150 heading both ticked -- the plan's own literal "tick all six" instruction was stale (mirrors 150-07's "6 plans" deviation) since the true count is 9 plans, all already checked; `.continue-here.md` deleted (resolved blocker, filesystem-only per PUBREPO-01 gitignore convention)
 
 ### Pending Todos
 
@@ -318,8 +319,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-13T20:58:23.990Z
-Stopped at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
+Last session: 2026-08-13T21:20:00.000Z
+Stopped at: Phase 150 CLOSED — 150-VERIFICATION.md written (4/4 success criteria PASS), SUITE-02/SUITE-03 Complete in REQUIREMENTS.md, ROADMAP.md ticks all 9 plans, Obsidian phase note + hub refreshed. Phase 151 (Phase-Completion Artifact Gates) is next in the v5.12 map.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
