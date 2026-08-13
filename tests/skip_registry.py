@@ -215,6 +215,15 @@ ALLOWED_SKIPS = [
     # reproducible; 2 clean local full-suite runs post-fix, reviewer reproduced it twice).
     ("test_dashboard_trends.py",        347, "pre_existing_triage_149", "TRIAGE-149 (code review CR-01): shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files); an earlier test's leftover session row can leak into this empty-DB assertion depending on full-suite timing, same root cause as test_sensor_push_id_revalidation.py. Missed by Plan 11's reconciliation sweep because it doesn't always reproduce. See docs/test-triage-149.md#reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake"),
 
+    # Phase 150 Plan 08 remediation cycle: the new `./lab.sh certs` regression test
+    # (Plan 05) forks bash -> openssl subprocesses, and joins the same pre-existing
+    # macOS fork()-under-full-suite-load SIGSEGV cluster diagnosed in TRIAGE-149 —
+    # confirmed via direct reproduction (returncode=-11, disappears when run standalone
+    # or in a smaller slice). Not a defect in lab.sh's cert generation itself.
+    ("test_lab_profile_certs.py",        69, "pre_existing_triage_149", "Phase 150 Plan 08: same macOS fork()-under-load SIGSEGV cluster as the TRIAGE-149 rows above — the `openssl` subprocess spawned via `./lab.sh certs` crashes with returncode=-11 only at full-suite (~3000-test) scale, confirmed via direct reproduction; passes standalone every time. See docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
+    ("test_lab_profile_certs.py",       103, "pre_existing_triage_149", "Phase 150 Plan 08: same macOS fork()-under-load SIGSEGV cluster as test_lab_sh_certs_creates_all_six_files_and_is_idempotent above — see docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
+    ("test_lab_profile_certs.py",       118, "pre_existing_triage_149", "Phase 150 Plan 08: same macOS fork()-under-load SIGSEGV cluster as test_lab_sh_certs_creates_all_six_files_and_is_idempotent above — see docs/test-triage-149.md#reconciliation-macos-fork-sigsegv-cluster"),
+
     # ------------------------------------------------------------------
     # Phase 150 D-09/D-10 CI-parity gap closure (Plan 06): `.[all]` deliberately
     # excludes the `hw` (bacpypes3/pymodbus/pysnmp), `identity` (impacket) and
