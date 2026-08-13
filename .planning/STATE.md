@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
-status: executing
-stopped_at: Phase 150 COMPLETE (all 9 plans) — 150-VERIFICATION.md written (4/4 PASS), SUITE-02/SUITE-03 Complete, Obsidian phase note + hub refreshed; Phase 151 is next
-last_updated: "2026-08-13T21:20:00.000Z"
+status: verifying
+stopped_at: Phase 150 CLOSED (150-VERIFICATION.md 4/4 PASS, SUITE-02/SUITE-03 Complete, Obsidian phase note + hub refreshed); Phase 151 next
+last_updated: "2026-08-13T21:16:21.508Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 13
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 Phase: 150 (test-suite-green-baseline-ci-gate) — COMPLETE (2026-08-13)
 Plan: 9 of 9 complete (01, 02, 04, 05, 06, 07, 08, 09 done; 03's original live-fire attempt was superseded/completed by 08)
-Status: Phase 150 closed with 150-VERIFICATION.md (4/4 success criteria PASS); ready to start Phase 151
+Status: Phase complete — ready for verification
 Last activity: 2026-08-13
 
 ## v5.12 Phase Map
@@ -138,6 +138,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 150 P06 | 50min | 3 tasks | 13 files |
 | Phase 150 P07 | 35min | 3 tasks | 4 files |
 | Phase 150 P08 | ~90min | 3 tasks | 2 files |
+| Phase 150 P09 | 35min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -319,8 +320,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-13T21:20:00.000Z
-Stopped at: Phase 150 CLOSED — 150-VERIFICATION.md written (4/4 success criteria PASS), SUITE-02/SUITE-03 Complete in REQUIREMENTS.md, ROADMAP.md ticks all 9 plans, Obsidian phase note + hub refreshed. Phase 151 (Phase-Completion Artifact Gates) is next in the v5.12 map.
+Last session: 2026-08-13T21:16:21.502Z
+Stopped at: Phase 150 CLOSED (150-VERIFICATION.md 4/4 PASS, SUITE-02/SUITE-03 Complete, Obsidian phase note + hub refreshed); Phase 151 next
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure
