@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: executing
-stopped_at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
-last_updated: "2026-08-12T17:40:46.179Z"
-last_activity: 2026-08-12
+stopped_at: Phase 150 Plan 08 complete — SUITE-02/SUITE-03 proven live on real GitHub Actions (green run 31723764281, red run 31725715958); Plan 09 remains
+last_updated: "2026-08-13T20:59:09.070Z"
+last_activity: 2026-08-13
 progress:
   total_phases: 13
   completed_phases: 2
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
   percent: 15
 ---
 
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 ## Current Position
 
 Phase: 150 (test-suite-green-baseline-ci-gate) — EXECUTING
-Plan: 7 of 9 complete (01, 02, 04 done; 03 blocked at live-fire CI gate, needs retry after remaining remediation plans land)
+Plan: 8 of 9 complete (01, 02, 04, 05, 06, 07, 08 done; 03's original live-fire attempt was superseded/completed by 08; 09 remains)
 Status: Ready to execute
-Last activity: 2026-08-12
+Last activity: 2026-08-13
 
 ## v5.12 Phase Map
 
@@ -137,6 +137,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 150 P05 | 40min | 3 tasks | 8 files |
 | Phase 150 P06 | 50min | 3 tasks | 13 files |
 | Phase 150 P07 | 35min | 3 tasks | 4 files |
+| Phase 150 P08 | ~90min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -254,6 +255,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 150]: Plan 05: cleaned up leftover empty labs/grpc-tls/certs directories from a prior Docker bind-mount failure before generating certs -- confirmed untracked/gitignored, filesystem-only cleanup not a git operation
 - [Phase 150]: Guarded 35 extras-gated/gitignored-fixture tests with per-test skips (D-09..D-11, D-15); test_identity_surface.py and test_rest_fuzzer_probes.py deltas from plan estimates documented in 150-06-SUMMARY.md
 - [Phase 150]: ROADMAP.md Phase 150 header corrected to 9 plans (not the plan's literal '6 plans' instruction) — the plan checklist already listed all 9 plan entries (150-01 through 150-09) before this plan dispatched; matched the header to that ground truth
+- [Phase 150]: Live-fire CI proof closed SUITE-02/SUITE-03 -- real Linux Full Suite run 31723764281 green (0 failed, .[all]-only, ubuntu-latest, Python 3.11.15) after D-03 SIGSEGV quarantine (bbe8b55); real red run 31725715958 via throwaway PR #10 proved the gate bites (1 failed, isolated to the deliberate smoke test), PR closed unmerged and branch deleted, evidence in 150-CI-EVIDENCE.md
 
 ### Pending Todos
 
@@ -281,7 +283,7 @@ None yet.
   dimension: Pass). User selected "Proceed anyway" at the /gsd-plan-phase 150 override prompt.
   Re-surface at `/gsd:verify-phase 150` only if the same coverage question resurfaces there.
 
-- Phase 150 Plan 03: real GitHub Actions Linux Full Suite run (31598809033) failed with 38 failures on a genuine .[all]-only ubuntu-latest install. SUITE-02 not met on CI; SUITE-03 live-fire smoke test not attempted per plan's explicit Task 1 stop condition. See 150-03-SUMMARY.md for full 8-category failure breakdown and required replanning items.
+- **RESOLVED (Plan 150-08, 2026-08-13):** Phase 150 Plan 03's original blocker — real GitHub Actions Linux Full Suite run (31598809033) failed with 38 failures on a genuine .[all]-only ubuntu-latest install — is closed. Plans 150-04 through 150-07 fixed all 8 failure categories; Plan 150-08 re-ran the live-fire proof end to end: green run 31723764281 (0 failed) + red run 31725715958 (1 failed, isolated to the deliberate smoke test) via PR #10 (closed unmerged). SUITE-02/SUITE-03 both proven and marked complete in REQUIREMENTS.md. See 150-08-SUMMARY.md and 150-CI-EVIDENCE.md.
 
 ## Deferred Items
 
@@ -316,7 +318,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-12T17:40:46.174Z
+Last session: 2026-08-13T20:58:23.990Z
 Stopped at: Phase 150 remediation context gathered (D-09..D-17); ready for replan/execution of 150-03 retry
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,

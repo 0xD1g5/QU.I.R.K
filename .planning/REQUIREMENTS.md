@@ -42,10 +42,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **SUITE-01**: Every pre-existing full-suite failure (~102, red since roughly Phase 97) has
       an explicit written disposition — fixed, quarantined with a reason, or deleted as obsolete
 
-- [ ] **SUITE-02**: `pytest -q` on a clean supported environment produces a green baseline, so a
+- [x] **SUITE-02**: `pytest -q` on a clean supported environment produces a green baseline, so a
       new failure is visible as a new failure
 
-- [ ] **SUITE-03**: The green baseline is held by CI — a newly-introduced failing test fails the
+- [x] **SUITE-03**: The green baseline is held by CI — a newly-introduced failing test fails the
       build rather than joining a permanent red background
 
   **Status note (2026-08-12):** the first real GitHub Actions attempt at the gating `Linux Full
@@ -122,8 +122,8 @@ Deferred to a later milestone.
 | RELEASE-03 | Phase 148 | Complete |
 | RELEASE-04 | Phase 148 | Complete |
 | SUITE-01 | Phase 149 | Complete |
-| SUITE-02 | Phase 150 | In Progress |
-| SUITE-03 | Phase 150 | In Progress |
+| SUITE-02 | Phase 150 | Complete |
+| SUITE-03 | Phase 150 | Complete |
 | ARTIFACT-01 | Phase 151 | Pending |
 | ARTIFACT-02 | Phase 151 | Pending |
 | ARTIFACT-03 | Phase 151 | Pending |

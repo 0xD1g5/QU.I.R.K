@@ -224,7 +224,7 @@ Plans:
 
 **Remediation Wave 4**
 
-- [ ] 150-08-PLAN.md — Green real-CI run (SUITE-02) + live-fire red run + evidence artifact + human checkpoint (SUITE-03)
+- [x] 150-08-PLAN.md — Green real-CI run (SUITE-02) + live-fire red run + evidence artifact + human checkpoint (SUITE-03)
 
 **Remediation Wave 5**
 
@@ -318,7 +318,7 @@ dogfooding it immediately)
 |-------|----------------|--------|-----------|
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
-| 150. Test Suite Green Baseline + CI Gate | 7/9 | In Progress|  |
+| 150. Test Suite Green Baseline + CI Gate | 8/9 | In Progress|  |
 | 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
 | 153. Release Tag Cut | 0/TBD | Not started | - |
