@@ -409,9 +409,47 @@ def test_check_phase_close_clean_when_everything_green(vpg):
 
 
 def test_check_destructive_archive_blocks_on_archive_manifest_incident_shape(vpg):
-    phase_map_rows = [("144", "v5.11")]
-    disk_phase_dirs = {"145-liveness-pre-pass"}  # 144 absent
+    # Synthetic phase number (999) — NOT the real Phase 144, which is the one
+    # accepted historical gap in _ACCEPTED_HISTORICAL_ARCHIVE_GAPS and must
+    # NOT block (see the dedicated exception test below). This test proves
+    # the general "unarchived incident" shape still blocks for any phase
+    # that is not on that explicit, narrow allowlist.
+    phase_map_rows = [("999", "v5.11")]
+    disk_phase_dirs = {"145-liveness-pre-pass"}  # 999 absent
     archived_dirs_by_milestone = {"v5.11": set()}  # never archived
+
+    blocked, reasons, _summary = vpg.check_destructive_archive(
+        phase_map_rows, disk_phase_dirs, archived_dirs_by_milestone
+    )
+    assert blocked is True
+    assert any("999" in r for r in reasons)
+
+
+def test_check_destructive_archive_exempts_accepted_historical_phase_144(vpg):
+    # Phase 144's directory was deleted with no archive by the exact
+    # incident this gate exists to prevent (ARCHIVE-MANIFEST.md); D-06 in
+    # 151-CONTEXT.md explicitly rejects backfilling it. Without this
+    # exception, every future commit would be blocked forever once the hook
+    # is installed, since Phase 144 can never gain a directory. Real repo
+    # shape: reproduces .planning/STATE.md's actual v5.11 Phase Map row.
+    phase_map_rows = [("144", "v5.11"), ("145", "v5.11")]
+    disk_phase_dirs = set()
+    archived_dirs_by_milestone = {"v5.11": {"145-liveness-pre-pass"}}
+
+    blocked, reasons, _summary = vpg.check_destructive_archive(
+        phase_map_rows, disk_phase_dirs, archived_dirs_by_milestone
+    )
+    assert blocked is False
+    assert reasons == []
+
+
+def test_check_destructive_archive_exception_is_milestone_scoped(vpg):
+    # The exception is keyed on (phase_num, milestone_tag), not phase_num
+    # alone — a hypothetical future "phase 144" reused under a different
+    # milestone tag must still block normally.
+    phase_map_rows = [("144", "v9.9")]
+    disk_phase_dirs = set()
+    archived_dirs_by_milestone = {"v9.9": set()}
 
     blocked, reasons, _summary = vpg.check_destructive_archive(
         phase_map_rows, disk_phase_dirs, archived_dirs_by_milestone
@@ -484,28 +522,34 @@ def test_parse_state_phase_maps_extracts_rows_attributed_to_section(vpg):
 def test_check_destructive_archive_untracked_file_deletion_case(vpg, tmp_path):
     """Pitfall 1: the mechanism must be git-tracking-independent — a plain
     filesystem write + plain filesystem delete, no `git add`/`git rm`
-    involved, must still be detected via before/after snapshot diff."""
+    involved, must still be detected via before/after snapshot diff.
+
+    Uses a synthetic phase number (999), not the real Phase 144 — 144 is the
+    one accepted historical gap in _ACCEPTED_HISTORICAL_ARCHIVE_GAPS and
+    must NOT block (see test_check_destructive_archive_exempts_accepted_
+    historical_phase_144); this test proves the general mechanism for any
+    phase not on that narrow allowlist."""
     phases_root = tmp_path / "phases"
     phases_root.mkdir()
-    phase_dir = phases_root / "144-chunked-discovery-core"
+    phase_dir = phases_root / "999-chunked-discovery-core"
     phase_dir.mkdir()
-    (phase_dir / "144-01-PLAN.md").write_text("plain content", encoding="utf-8")
+    (phase_dir / "999-01-PLAN.md").write_text("plain content", encoding="utf-8")
 
     before = vpg.disk_phase_dirs_under(phases_root)
-    assert "144-chunked-discovery-core" in before
+    assert "999-chunked-discovery-core" in before
 
     # Simulate phases.clear: a plain filesystem delete, never git-tracked.
-    (phase_dir / "144-01-PLAN.md").unlink()
+    (phase_dir / "999-01-PLAN.md").unlink()
 
     after = vpg.disk_phase_dirs_under(phases_root)
-    assert "144-chunked-discovery-core" not in after
+    assert "999-chunked-discovery-core" not in after
 
-    phase_map_rows = [("144", "v5.11")]
+    phase_map_rows = [("999", "v5.11")]
     blocked, reasons, _summary = vpg.check_destructive_archive(
         phase_map_rows, after, {"v5.11": set()}
     )
     assert blocked is True
-    assert any("144" in r for r in reasons)
+    assert any("999" in r for r in reasons)
 
 
 # ---------------------------------------------------------------------------
@@ -628,16 +672,20 @@ def test_main_returns_1_when_uat_series_missing_via_real_loader_output(vpg, tmp_
 
 
 def test_main_returns_1_when_no_trigger_but_destructive_archive_incident(vpg, tmp_path):
+    # Synthetic phase number (999) -- not the real Phase 144, which is the
+    # one accepted historical gap in _ACCEPTED_HISTORICAL_ARCHIVE_GAPS and
+    # must NOT block. See test_check_destructive_archive_exempts_accepted_
+    # historical_phase_144 for that dedicated case.
     planning = tmp_path / ".planning"
     planning.mkdir()
     (planning / "STATE.md").write_text(
         "## v5.11 Phase Map\n\n"
         "| Phase | Name | Requirements | Gate | Status |\n"
         "|-------|------|--------------|------|--------|\n"
-        "| 144 | Chunked Discovery Core | DISC-01 | None | Complete (2026-08-10) |\n",
+        "| 999 | Chunked Discovery Core | DISC-01 | None | Complete (2026-08-10) |\n",
         encoding="utf-8",
     )
-    # No .planning/phases/144-*/ dir and no .planning/milestones/v5.11-phases/144-*/
+    # No .planning/phases/999-*/ dir and no .planning/milestones/v5.11-phases/999-*/
     # archive -- reproduces the ARCHIVE-MANIFEST.md incident shape.
     exit_code = vpg.main(
         repo_root=tmp_path,

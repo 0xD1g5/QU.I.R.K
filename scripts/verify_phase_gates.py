@@ -309,6 +309,20 @@ def parse_state_phase_maps(state_text: str) -> list[tuple[str, str, str]]:
     return results
 
 
+# Historical deletions accepted as permanent, closed facts before this gate
+# existed — NOT a growing allowlist. Adding to this set requires the same
+# "accepted historical fact, future-only enforcement" bar as D-06 in
+# 151-CONTEXT.md, and a citation to the incident record. Phase 144's
+# directory was deleted with no archive by the exact incident this gate
+# exists to prevent going forward (.planning/milestones/v5.11-phases/
+# ARCHIVE-MANIFEST.md); D-06 explicitly rejects backfilling it. Without this
+# exception, check_destructive_archive() would block every future commit
+# once the hook is installed, since Phase 144 can never gain a directory.
+_ACCEPTED_HISTORICAL_ARCHIVE_GAPS: frozenset[tuple[str, str]] = frozenset(
+    {("144", "v5.11")}
+)
+
+
 def check_destructive_archive(
     phase_map_rows: list[tuple[str, str]],
     disk_phase_dirs: set[str],
@@ -318,6 +332,9 @@ def check_destructive_archive(
     Complete, verify a matching directory exists either on disk or in the
     milestone's archive. Neither existing means the phase's content has
     vanished with no matching milestone archive.
+
+    Rows matching `_ACCEPTED_HISTORICAL_ARCHIVE_GAPS` are skipped — pre-gate
+    incidents already recorded and accepted as closed, not new deletions.
 
     NOTE on scope (Pitfall 2): this function proves that *the next commit*
     after an unarchived deletion is blocked — it cannot prove, and does not
@@ -329,6 +346,9 @@ def check_destructive_archive(
     reasons: list[str] = []
 
     for phase_num, milestone_tag in phase_map_rows:
+        if (phase_num, milestone_tag) in _ACCEPTED_HISTORICAL_ARCHIVE_GAPS:
+            continue
+
         on_disk = any(
             name == phase_num or name.startswith(f"{phase_num}-")
             for name in disk_phase_dirs
