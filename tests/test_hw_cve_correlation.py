@@ -109,3 +109,51 @@ def test_multi_match_sorted_most_severe_first() -> None:
         f"Matches not sorted most-severe-first: {severities}"
     )
     assert severities[0] == "CRITICAL"
+
+
+# ---------------- Phase 155 Task 1: firmware_for_correlation() single home ----------------
+
+
+def test_firmware_for_correlation_prefers_modbus() -> None:
+    """Prefers modbus_firmware over bacnet_firmware when both are set,
+    preserving the existing or-chain precedence."""
+    from types import SimpleNamespace
+
+    from quirk.scanner.hw_cve import firmware_for_correlation
+
+    device = SimpleNamespace(modbus_firmware="1.2", bacnet_firmware="9")
+    assert firmware_for_correlation(device) == "1.2"
+
+
+def test_firmware_for_correlation_falls_back_to_bacnet() -> None:
+    """Returns bacnet_firmware when modbus_firmware is None/empty."""
+    from types import SimpleNamespace
+
+    from quirk.scanner.hw_cve import firmware_for_correlation
+
+    device = SimpleNamespace(modbus_firmware=None, bacnet_firmware="9")
+    assert firmware_for_correlation(device) == "9"
+
+    device_empty = SimpleNamespace(modbus_firmware="", bacnet_firmware="9")
+    assert firmware_for_correlation(device_empty) == "9"
+
+
+def test_firmware_for_correlation_none_when_both_absent() -> None:
+    """Returns None when both firmware fields are None/empty — e.g.
+    SSH/HTTP/SNMP-fingerprinted devices carry neither."""
+    from types import SimpleNamespace
+
+    from quirk.scanner.hw_cve import firmware_for_correlation
+
+    device = SimpleNamespace(modbus_firmware=None, bacnet_firmware=None)
+    assert firmware_for_correlation(device) is None
+
+
+def test_firmware_for_correlation_never_raises_on_missing_attrs() -> None:
+    """Does not raise on an object lacking either attribute (getattr with
+    default)."""
+    from types import SimpleNamespace
+
+    from quirk.scanner.hw_cve import firmware_for_correlation
+
+    assert firmware_for_correlation(SimpleNamespace()) is None

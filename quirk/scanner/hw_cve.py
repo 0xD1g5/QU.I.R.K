@@ -216,6 +216,34 @@ class CveMatchResult:
     attempted: bool = False
 
 
+def firmware_for_correlation(device) -> Optional[str]:
+    """Single home of the firmware-column-selection rule for CVE correlation
+    (Phase 155 D-155-03, RESEARCH.md Open Question 1).
+
+    ``HardwareDevice`` has no unified ``firmware`` column — only
+    ``modbus_firmware`` and ``bacnet_firmware`` (OT/ICS-specific fields from
+    Phase 141). Returns ``device.modbus_firmware`` when set, else
+    ``device.bacnet_firmware`` when set, else ``None`` (e.g. SSH/HTTP/SNMP-
+    fingerprinted devices carry neither). Uses ``getattr`` with a default so
+    it never raises on an object lacking either attribute.
+
+    Vendor-``"Unknown"`` gating remains the CALLER's responsibility — it is
+    NOT performed here, matching this module's existing house rule for
+    ``correlate_device()`` (D-03/Pitfall 4).
+
+    This consolidates what was previously two duplicated copies of the same
+    ``modbus_firmware or bacnet_firmware or None`` expression
+    (``quirk/dashboard/api/routes/scan.py`` and ``quirk/reports/writer.py``);
+    ``quirk/scanner/hardware_drift.py::cve_delta()`` would have been a third
+    copy, so the rule is consolidated here per the Phase 154 WR-02 lesson.
+    """
+    return (
+        getattr(device, "modbus_firmware", None)
+        or getattr(device, "bacnet_firmware", None)
+        or None
+    )
+
+
 def correlate_device(
     vendor: Optional[str], model: Optional[str], firmware: Optional[str]
 ) -> CveMatchResult:
@@ -333,6 +361,7 @@ __all__ = [
     "is_cve_table_stale",
     "nvd_url",
     "parse_firmware",
+    "firmware_for_correlation",
     "correlate_device",
     "status_report",
 ]

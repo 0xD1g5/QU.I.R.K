@@ -777,11 +777,7 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
             cve_confidence = None
             cve_attempted = None
             if vendor and vendor != "Unknown":
-                cve_firmware = (
-                    getattr(d, "modbus_firmware", None)
-                    or getattr(d, "bacnet_firmware", None)
-                    or None
-                )
+                cve_firmware = hw_cve.firmware_for_correlation(d)
                 cve_result = hw_cve.correlate_device(vendor, model, cve_firmware)
                 cve_matches = [
                     {

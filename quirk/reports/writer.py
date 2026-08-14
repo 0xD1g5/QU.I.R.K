@@ -271,11 +271,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                     _cve_confidence = None
                     _cve_attempted = None
                     if _d.vendor and _d.vendor != "Unknown":
-                        _cve_firmware = (
-                            getattr(_d, "modbus_firmware", None)
-                            or getattr(_d, "bacnet_firmware", None)
-                            or None
-                        )
+                        _cve_firmware = hw_cve.firmware_for_correlation(_d)
                         _cve_result = hw_cve.correlate_device(_d.vendor, _d.model, _cve_firmware)
                         _cve_matches = _cve_result.matches
                         _cve_confidence = _cve_result.confidence
