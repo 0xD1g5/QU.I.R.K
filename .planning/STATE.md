@@ -1,44 +1,47 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.12
-milestone_name: Release & Verification Integrity
-status: verifying
-stopped_at: Phase 153 complete — VERIFICATION 12/13 criteria verified live against GitHub/PyPI; 2 human_needed items confirmed by user. v5.12 milestone all 6 phases complete — audit/complete/cleanup pending.
-last_updated: "2026-08-14T12:00:00.000Z"
+milestone: none
+milestone_name: none
+status: idle
+stopped_at: v5.12 Release & Verification Integrity SHIPPED and archived 2026-08-14 — awaiting next milestone via /gsd:new-milestone
+last_updated: "2026-08-14T13:00:00.000Z"
 last_activity: 2026-08-14
 progress:
-  total_phases: 13
-  completed_phases: 6
-  total_plans: 36
-  completed_plans: 36
-  percent: 46
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-30)
+See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** v5.12 milestone lifecycle — audit → complete → cleanup (all 6 phases done)
+**Current focus:** Awaiting next milestone — run `/gsd:new-milestone` to scope v5.13.
 
 ## Current Position
 
-Phase: 153 (release-tag-cut) — COMPLETE (2026-08-14)
-Plan: 5 of 5 complete (153-01 pre-tag CI-green + dry-run, 153-02 version bump to 5.12.0, 153-03 human-gated tag push, 153-04 post-tag verification — with a real deviation: combined branch+tag push silently didn't fire release.yml, fixed via human-approved standalone re-push, 153-05 docs/UAT-SERIES.md + Obsidian sync); plus 1 post-execution code-review fix (WR-01 UAT-152-03 Notes line corruption from the Series 153 insertion)
-Status: Phase complete — VERIFICATION 12/13 must-haves verified live against real GitHub/PyPI state (not SUMMARYs); v5.12.0 confirmed published on PyPI, Windows zip attached to GitHub Release, tag-hygiene guard OK. 2 human_needed items (local-commit push, human-attendance confirmation) both closed same-session.
+v5.12 Release & Verification Integrity — SHIPPED and archived 2026-08-14. All 6 phases (148–153)
+complete, 36 plans, 14/14 requirements. Milestone audit passed
+(`.planning/milestones/v5.12-MILESTONE-AUDIT.md`). Archive:
+`.planning/milestones/v5.12-ROADMAP.md`, `.planning/milestones/v5.12-REQUIREMENTS.md`.
+`.planning/REQUIREMENTS.md` deleted per the archive convention — a fresh one is created by the
+next `/gsd:new-milestone` run.
 Last activity: 2026-08-14
 
-## v5.12 Phase Map
+## v5.12 Phase Map (SHIPPED 2026-08-14)
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
 | 148 | Release Pipeline Repair + Windows Asset Backfill | RELEASE-02, RELEASE-03, RELEASE-04 | None (first, demonstrable early win) | Complete (2026-08-11) |
 | 149 | Test Suite Triage | SUITE-01 | None (independent, highest-variance item run early/alone) | Complete (2026-08-12) |
 | 150 | Test Suite Green Baseline + CI Gate | SUITE-02, SUITE-03 | Phase 149 (scope depends on triage output) | Complete (2026-08-13; VERIFICATION passed 4/4 — green run 31723764281, red run 31725715958, both live-fire proven on real GitHub Actions) |
-| 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Complete (2026-08-13; VERIFICATION passed 4/4 — scripts/verify_phase_gates.py + .githooks/pre-commit, opt-in via `git config core.hooksPath .githooks`; not yet installed in this working copy) |
+| 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Complete (2026-08-13; VERIFICATION passed 4/4 — scripts/verify_phase_gates.py + .githooks/pre-commit, now installed and live via `core.hooksPath` as of the v5.12 milestone audit) |
 | 152 | Discovery Empirical Closure | DISC-09, DISC-10, DISC-11 | None (DISC-10 depends on DISC-09 within-phase) | Complete (2026-08-13; VERIFICATION 4/4 — segmented-network lab profile live-verified, Phase 144 nmap timing artifact DOES NOT REPRODUCE per 152-DISC09-FINDING.md, enable_nmap defaults True) |
 | 153 | Release Tag Cut | RELEASE-01 | Phases 148, 150, 151 | Complete (2026-08-14; VERIFICATION 12/13 live-verified — v5.12.0 tagged, pushed, real release.yml green (event=push), Windows zip attached to GitHub Release, published on PyPI, tag-hygiene guard OK) |
 

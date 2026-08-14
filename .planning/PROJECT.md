@@ -217,41 +217,31 @@ Carried into next-milestone scoping (from the v5.11 audit's remaining tech debt)
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.12 Release & Verification Integrity
+## Previous Milestone: v5.12 Release & Verification Integrity — SHIPPED 2026-08-14
 
 **Goal:** Make QU.I.R.K.'s own signals trustworthy again — cutting a tag produces a complete,
 verified artifact set without supervision; a phase cannot be marked complete while its
 verification artifacts are missing; and a green test suite means something.
 
-**Target features:**
-- Release pipeline repair + proof — exercise the `1a6effc` signing self-test fix, actually attach
-  the Windows asset, and add a pre-release dry-run so a broken release job fails *before* the tag
-  ✅ Validated in Phase 148 (RELEASE-02): `workflow_dispatch` dry-run + event+ref guards proven live
-- Tag hygiene guard — `v5.9` never matched `release.yml`'s `v*.*.*` glob and `v5.10.0` was never
-  pushed, so three consecutive milestones shipped no Windows build with zero signal
-  ✅ Validated in Phase 148 (RELEASE-03): scheduled `release-tag-hygiene.yml` guard proven live
-- Test-suite stabilization — triage the ~102 failures red since roughly Phase 97, establish a green
-  baseline and a CI gate to hold it
-  ✅ Validated in Phase 149 (SUITE-01): 117-row ledger, every failure explicitly dispositioned
-  (fixed/quarantined), fresh full-suite run 0 failed (3087 passed, 82 xfailed, 42 skipped);
-  2 genuine production bugs found and fixed (sslyze __version__, impacket MethodData rename);
-  code review caught + fixed one reconciliation gap (CR-01) before close
-- Phase-completion artifact enforcement — gate VERIFICATION.md, post-execution VALIDATION status,
-  and the UAT series entry at *phase* close rather than milestone close
-- Discovery empirical closure — DISC-09 segmented-network lab profile, then re-verify the Phase 144
-  nmap timing artifact against it; flip the interactive nmap-discovery-first default N→Y
+**Shipped:** 6 phases (148–153), 36 plans, 14/14 requirements. Version 5.12.0 — real tag cut,
+pushed, PyPI published, Windows operator zip attached to the GitHub Release. Release pipeline
+repair + tag-hygiene guard proven live (148); ~102 pre-existing test failures each explicitly
+dispositioned, then a green `pytest -q` baseline held by a CI gate (149/150); a phase-completion
+artifact gate (`scripts/verify_phase_gates.py` + `.githooks/pre-commit`, now installed and live
+in this checkout) that blocks a phase close missing VERIFICATION.md/stale VALIDATION.md/missing
+UAT-SERIES.md entry, plus a destructive-archive guard (151); the Phase 144 nmap timing-engine
+artifact empirically settled — does not reproduce on a realistic segmented-network chaos lab
+profile — and the interactive nmap-discovery default flipped to Yes (152); the real `v5.12.0`
+tag cut and independently verified against live GitHub Actions and PyPI, including one real,
+human-approved recovery from a silently-dropped tag-push event (153).
 
-**Why this shape (PM review 2026-08-11):** the 2:1 capability/ops ratio is eleven milestones
-overdue (last true ops cycle was v5.0, 2026-05-22), and v5.11 surfaced five independent
-*measurement* failures that compound — a saturated test signal cannot flag a regression, a silent
-release pipeline cannot flag a missing artifact, absent verification artifacts cannot flag an
-unproven phase. For a tool whose Primetime gate 2 is "every detected weakness is real, every
-missed weakness is intentional," its own signals silently no-opping is the same failure class it
-exists to find in customer estates. Full rationale: `.planning/HORIZON.md`.
+Milestone audit (`.planning/milestones/v5.12-MILESTONE-AUDIT.md`) scored `passed`. One real
+integration gap was found and fixed during the audit itself: Phase 151's own VALIDATION.md docs
+(and Phase 153's) had been left in their pre-execution draft state even though the underlying
+work was genuinely done — because the pre-commit hook the phase built was never actually
+installed in this working copy. Fixed, and `core.hooksPath` is now live going forward.
 
-**Explicitly out of scope:** continuous hardware lifecycle monitoring (v5.13 capability anchor —
-needs a research pass to settle whether it is a new scanner surface or a scheduling/diffing layer
-over existing data); SaaS multi-tenancy (still parked, no business-model signal).
+Full rationale: `.planning/HORIZON.md`. Archive: `.planning/milestones/v5.12-ROADMAP.md`.
 
 ---
 
@@ -356,6 +346,41 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 
 ## Current State
 
+**v5.12 Release & Verification Integrity — SHIPPED and archived 2026-08-14.** All 6 phases
+(148–153) complete, 36 plans, 14/14 requirements satisfied, version 5.12.0 — genuinely tagged,
+pushed, published to PyPI, and Windows operator zip attached to the GitHub Release, all
+independently re-verified against live GitHub Actions and PyPI's own JSON API. Milestone audit
+(`.planning/milestones/v5.12-MILESTONE-AUDIT.md`) scored `passed`; one real integration gap
+(stale VALIDATION.md docs on Phases 151/153, and the pre-commit hook they built never actually
+installed) was found and fixed during the audit itself, and `core.hooksPath` is now live in this
+checkout going forward. Two order-dependent local test failures in the new hook-integration test
+file (`tests/test_verify_phase_gates.py`) are carried forward as non-blocking tech debt — CI's
+hosted Linux runner is green on the same commit; local macOS full-suite ordering is the only
+place they reproduce. Awaiting next milestone via `/gsd:new-milestone`.
+
+**Phase 153 (release-tag-cut) complete 2026-08-14** — 5/5 plans, verification 12/13 must-haves
+live-verified (2 `human_needed` items both closed same-session: local commits pushed,
+human-attendance of the tag-push checkpoints confirmed directly). One real deviation: the initial
+combined `git push origin main --tags` silently didn't fire `release.yml`'s push-event trigger —
+a documented GitHub Actions limitation — caught by the executor, independently verified by the
+orchestrator, and fixed via a human-approved standalone tag re-push. RELEASE-01 satisfied.
+
+**Phase 152 (discovery-empirical-closure) complete 2026-08-13** — 4/4 plans, verification 4/4
+must-haves. Built a genuine two-subnet routed chaos-lab topology (iptables REJECT gateway, not
+loopback aliases) to settle the Phase 144 nmap timing-engine artifact once and for all: verdict
+**does not reproduce** across 3 independent live-fire runs. `enable_nmap` interactive default
+flipped to `True`. DISC-09/10/11 satisfied.
+
+**Phase 151 (phase-completion-artifact-gates) complete 2026-08-13** — 3/3 plans, verification
+4/4 must-haves. `scripts/verify_phase_gates.py` + `.githooks/pre-commit` block a phase-close
+commit missing VERIFICATION.md, stale VALIDATION.md, or a missing UAT-SERIES.md entry, plus a
+destructive-archive guard scoped to `(phase_num, milestone_tag)` with a narrow, documented
+exemption for Phase 144's permanent historical gap. ARTIFACT-01..04 satisfied.
+
+**Phase 150 (test-suite-green-baseline-ci-gate) complete 2026-08-13** — 9/9 plans, verification
+4/4 must-haves, live-fire proven on real GitHub Actions (green run + a deliberate red-smoke run).
+SUITE-02/03 satisfied.
+
 **Phase 149 (test-suite-triage) complete 2026-08-12** — 11/11 plans, verification passed 3/3
 must-haves. All 116 pre-existing full-suite failures individually investigated and
 dispositioned (fixed / quarantined-xfail / quarantined-skip) across 9 clusters in
@@ -367,8 +392,7 @@ one shared root cause rather than 5 independent defects. Code review caught a re
 close (CR-01: an orphaned `test_dashboard_trends.py` flake the reconciliation sweep missed,
 same shared-cache SQLite class as Cluster 5) — fixed in follow-up commit before verification.
 Final ledger: 117 rows, fresh `pytest -q -m ""` is 0 failed (3087 passed, 82 xfailed, 42
-skipped). SUITE-01 satisfied. Next: Phase 150 (test-suite-green-baseline-+-ci-gate) — sizing
-input is now known precisely rather than guessed.
+skipped). SUITE-01 satisfied.
 
 **Phase 148 (release-pipeline-repair-windows-asset-backfill) complete 2026-08-11** — 4/4 plans,
 verification passed 5/5 must-haves. RELEASE-02/03/04 proven against live GitHub Actions (real
