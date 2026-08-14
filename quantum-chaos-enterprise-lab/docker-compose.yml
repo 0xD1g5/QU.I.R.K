@@ -1398,8 +1398,163 @@ services:
       # reach it.
       - "47808:47808/udp"
 
+  # =========================
+  # PHASE 152 / DISC-09 / DISC-10 — SEGMENTED-NETWORK PROFILE
+  # (profile: segmented-network)
+  #
+  # Realistic routed-segment RST/ICMP-unreachable lab: two custom bridge
+  # networks (segnet-live with real reused services, segnet-dead with no
+  # containers) joined by a gateway container whose FORWARD-chain iptables
+  # REJECT rules turn every unassigned dead-subnet address into a genuine
+  # "closed"/RST or ICMP-host-unreachable result — replacing the
+  # unassigned-loopback-alias approach every other profile uses.
+  #
+  #   segnet-gateway:  routes segnet-live <-> segnet-dead, REJECTs all
+  #                     forward traffic to the dead subnet (cap_add:
+  #                     NET_ADMIN, scoped to this container only)
+  #   segnet-live-tls: real TLS service on the live subnet (clones
+  #                     tls-modern's image/config — nginx:1.28.0)
+  #   segnet-live-ssh: real SSH service on the live subnet (clones
+  #                     hwcompat-ssh's image/config)
+  #   segnet-prober:   idle in-lab container (sensor.Dockerfile) used to
+  #                     drive verification via `docker compose exec` — macOS
+  #                     Docker Desktop cannot route host traffic into custom
+  #                     bridge networks, so this profile's scan commands
+  #                     must run from inside the lab network.
+  #
+  # No host ports are published for this profile (none) — segnet-live-tls
+  # and segnet-live-ssh are reachable only from segnet-prober / segnet-gateway.
+  #
+  # Dead-range verification target: 10.71.0.2/26 (a 62-usable-address slice
+  # of the segnet-dead /24, excluding the gateway's own 10.71.0.2) — a
+  # scaled reproduction of the original ~1024-host batch, not a 1:1 replica.
+  #
+  # lab.sh ALL_PROFILES needs NO edit — _derive_all_profiles discovers this
+  # profile dynamically by parsing docker-compose.yml at runtime.
+  # =========================
+  segnet-gateway:
+    build: ./segmented-network/gateway/
+    profiles: ["segmented-network"]
+    cap_add:
+      - NET_ADMIN
+    # Docker's bridge-network namespace ships /proc/sys/net mounted such
+    # that `sysctl -w net.ipv4.ip_forward=1` from inside the container fails
+    # with "Read-only file system" even with cap_add: NET_ADMIN — this
+    # compose-level sysctls: entry sets it at container-creation time
+    # instead, which Docker permits for a non-host-network bridge container.
+    sysctls:
+      - net.ipv4.ip_forward=1
+    networks:
+      segnet-live:
+        ipv4_address: "10.70.0.2"
+      segnet-dead:
+        ipv4_address: "10.71.0.2"
+
+  segnet-live-tls:
+    image: nginx:1.28.0
+    volumes:
+      - ./nginx/modern/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    profiles: ["segmented-network"]
+    expose:
+      - "443"
+    networks:
+      segnet-live:
+        ipv4_address: "10.70.0.10"
+
+  segnet-live-ssh:
+    image: lscr.io/linuxserver/openssh-server:10.2_p1-r0-ls225
+    environment:
+      - PASSWORD_ACCESS=true
+      - USER_NAME=test
+      - USER_PASSWORD=test
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    profiles: ["segmented-network"]
+    expose:
+      - "2222"
+    networks:
+      segnet-live:
+        ipv4_address: "10.70.0.11"
+
+  # Live-fire smoke test (Task 1) proved that joining the prober directly to
+  # BOTH segnet-live and segnet-dead (as originally sketched in
+  # 152-RESEARCH.md's Pattern 4 diagram) defeats the gateway's REJECT rules:
+  # a container that is itself a member of segnet-dead reaches unassigned
+  # dead-subnet addresses via direct L2 delivery on that bridge, which never
+  # enters segnet-gateway's FORWARD chain — nmap saw `filtered` (silence),
+  # not the expected RST/`closed`. This is exactly the failure mode
+  # RESEARCH.md's Pitfall 1 warned the Task-1 smoke test must catch before
+  # scaling. Fix (per deviation Rule 1): prober joins ONLY segnet-live and
+  # reaches segnet-dead exclusively by routing through segnet-gateway's
+  # live-side IP (10.70.0.2), the same way a real host on the live segment
+  # would reach an unreachable subnet through its router — genuine
+  # FORWARD-chain traffic, not direct L2 delivery.
+  segnet-prober:
+    build:
+      context: ..
+      dockerfile: quantum-chaos-enterprise-lab/sensor.Dockerfile
+    entrypoint: []
+    # Runs as root (compose-level override of sensor.Dockerfile's `USER
+    # quirk`) + cap_add: NET_ADMIN so it can install iproute2 and add the
+    # static route to segnet-dead via the gateway at container start; this
+    # is scoped to this one profile's prober only, matching the "explicit,
+    # minimal, never --privileged" capability posture already used by
+    # segnet-gateway (NET_ADMIN) and sensor.Dockerfile (NET_RAW).
+    user: "root"
+    command:
+      - sh
+      - -c
+      - >
+        apt-get update >/dev/null 2>&1 &&
+        apt-get install -y --no-install-recommends iproute2 >/dev/null 2>&1 &&
+        ip route add 10.71.0.0/24 via 10.70.0.2 &&
+        echo "[segnet-prober] route to 10.71.0.0/24 via 10.70.0.2 installed" &&
+        tail -f /dev/null
+    profiles: ["segmented-network"]
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    networks:
+      # Static IP distinct from segnet-gateway's .2 — without this, Docker's
+      # IPAM can race-assign the prober the .2 address before the gateway
+      # container starts, causing an "Address already in use" failure on
+      # gateway start.
+      segnet-live:
+        ipv4_address: "10.70.0.20"
+
 volumes:
   id_postgres_data:
   stepca_data:
   registry_data:
   gitea_data:
+
+# -----------------------------------------------------------------------
+# PHASE 152 / DISC-09 — segmented-network networks
+# Two custom bridge networks: segnet-live (real reused services) and
+# segnet-dead (no containers — every unassigned address REJECTed by
+# segnet-gateway's FORWARD-chain iptables rules). See segnet-gateway's
+# comment block above for the full profile description.
+# -----------------------------------------------------------------------
+networks:
+  segnet-live:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.70.0.0/24"
+
+  # Representative dead-host range for DISC-10 verification: 10.71.0.2/26
+  # (a 62-usable-address slice of this /24, excluding the gateway's own
+  # 10.71.0.2) — a scaled reproduction of the original ~1024-host batch,
+  # not a 1:1 replica, per 152-CONTEXT.md's "Segmented-Network Lab Profile
+  # Design" decision. The REJECT rule on segnet-gateway covers the whole
+  # /24 CIDR, so this slice needs no per-dead-host container — see
+  # segnet-gateway's comment block above.
+  segnet-dead:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.71.0.0/24"

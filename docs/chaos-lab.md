@@ -834,6 +834,75 @@ See: `quantum-chaos-enterprise-lab/expected_results_otics.md`
 
 ---
 
+### 3.24 segmented-network Profile (v5.12 — Phase 152 DISC-09/DISC-10)
+
+The `segmented-network` profile builds a realistic *routed-segment* unreachable-host
+environment: two custom Docker bridge networks — a "live" subnet carrying real reused
+services (TLS + SSH) and a "dead" subnet with no containers at all — joined by a small
+gateway container whose iptables `FORWARD`-chain REJECT rules make every unassigned
+dead-subnet address answer with a genuine TCP RST (`closed`) or ICMP host-unreachable,
+instead of the silent-timeout behavior every other chaos-lab profile's
+unassigned-loopback-alias approach produces. This gives chunked discovery and
+partial-result tolerance (DISC-08/DISC-09) a target that behaves like a real routed
+network segment when scanning past its edge, and lets DISC-10 empirically settle the
+Phase 144 nmap timing-engine artifact against something real rather than simulated.
+
+| Service | Live Subnet IP | Port | Purpose |
+|---------|-----------------|------|---------|
+| `segnet-gateway` | 10.70.0.2 (live) / 10.71.0.2 (dead) | — | Routes segnet-live ↔ segnet-dead; REJECTs all forward traffic to the dead subnet |
+| `segnet-live-tls` | 10.70.0.10 | 443 | Real TLS 1.3 service (clones `tls-modern`'s image/config) |
+| `segnet-live-ssh` | 10.70.0.11 | 2222 | Real OpenSSH service (clones `hwcompat-ssh`'s image/config) |
+| `segnet-prober` | 10.70.0.20 (segnet-live only) | — | In-lab idle container (`sensor.Dockerfile`) that drives all verification via `docker compose exec` |
+
+No host ports are published for this profile — every service is reachable only from
+inside the lab network.
+
+**Start:**
+
+```bash
+PROFILE_ARGS="--profile segmented-network" ./lab.sh up
+```
+
+**Scan command:**
+
+```bash
+docker compose exec segnet-prober nmap -sT -Pn -p 443 10.70.0.10          # live TLS host: open
+docker compose exec segnet-prober nmap -sT -Pn -p 2222 10.70.0.11         # live SSH host: open
+docker compose exec segnet-prober nmap -sT -Pn -p 443 10.71.0.0/26        # dead range: 100% closed/RST
+```
+
+> **Risk note (macOS host-routing):** unlike every other profile in this document, this
+> profile's scan commands must run with `docker compose exec segnet-prober ...` — never
+> `python run_scan.py --target 127.0.0.1 ...` from the host shell. macOS Docker Desktop's
+> VM-based networking model cannot route host traffic into custom bridge networks
+> (`segnet-live`/`segnet-dead` have no host-reachable path), so `segnet-prober` is the only
+> vantage point from which this profile is reachable at all. This holds on Linux hosts too
+> (the in-container pattern works identically there), so no host-OS branching is needed.
+
+**Architecture note.** `segnet-gateway` is attached to both bridge networks with
+`cap_add: [NET_ADMIN]` (never `--privileged`) and applies `iptables -A FORWARD -d
+<dead-cidr> ... -j REJECT --reject-with tcp-reset` (TCP) and `--reject-with
+icmp-host-unreachable` (everything else) inside its own network namespace at container
+start, with IP forwarding enabled via compose's `sysctls: [net.ipv4.ip_forward=1]`.
+`segnet-prober` deliberately joins **only** `segnet-live` and reaches the dead subnet by
+an explicit `ip route add 10.71.0.0/24 via 10.70.0.2` at container start — a container
+that is itself a *member* of `segnet-dead` would reach unassigned dead-subnet addresses
+via direct L2 bridge delivery, bypassing `segnet-gateway`'s `FORWARD` chain entirely
+(confirmed via live smoke test during Phase 152 execution).
+
+The dead-range verification target is `10.71.0.2/26` (62 usable addresses) — a **scaled
+reproduction of the original ~1024-host batch, not a 1:1 replica**. The REJECT rule
+covers the entire `/24` CIDR, so this profile adds exactly 4 new containers regardless of
+range size — no per-dead-host container is needed.
+
+> **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —
+> `_derive_all_profiles()` discovers `segmented-network` dynamically from
+> `docker-compose.yml` at runtime via `yq` or the `grep` fallback.
+
+See: `quantum-chaos-enterprise-lab/expected_results_segmented_network.md`
+
+---
+
 ## 4. Starting Multiple Profiles
 
 All profiles can run simultaneously. Phase 4 profiles share a network bridge and do not conflict with each other.
