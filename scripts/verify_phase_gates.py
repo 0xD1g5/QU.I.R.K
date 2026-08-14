@@ -227,3 +227,131 @@ def load_phase_plan_files_modified(phase_dir: pathlib.Path) -> list[list[str]]:
 
     return result
 
+
+# ---------------------------------------------------------------------------
+# ARTIFACT-04: check_destructive_archive()
+# ---------------------------------------------------------------------------
+
+
+def disk_phase_dirs_under(phases_root: pathlib.Path) -> set[str]:
+    """Non-empty phase directory names currently present under phases_root.
+    An empty directory (all files removed but the directory left behind)
+    counts as absent — this is what makes an untracked-file deletion
+    (Pitfall 1) detectable via a before/after snapshot diff at the caller
+    level, with no git involvement here at all."""
+    if not phases_root.exists():
+        return set()
+    return {
+        p.name
+        for p in phases_root.iterdir()
+        if p.is_dir() and any(p.iterdir())
+    }
+
+
+def archived_phase_dirs(
+    milestones_root: pathlib.Path, milestone_tag: str
+) -> set[str]:
+    """Directory names under `.planning/milestones/{milestone_tag}-phases/`."""
+    archive_dir = milestones_root / f"{milestone_tag}-phases"
+    if not archive_dir.exists():
+        return set()
+    return {p.name for p in archive_dir.iterdir() if p.is_dir()}
+
+
+_PHASE_MAP_HEADING_RE = re.compile(r"^## v(\d+\.\d+) Phase Map")
+_PHASE_MAP_ROW_RE = re.compile(r"^\|\s*(\S+)\s*\|.*\|\s*([^|]*?)\s*\|\s*$")
+
+
+def parse_state_phase_maps(state_text: str) -> list[tuple[str, str, str]]:
+    """Pure. Regex-scan `## v<version> Phase Map` section headers and, for
+    each, parse the markdown table rows immediately following. Returns a
+    list of (phase_num, milestone_tag, status_cell) tuples."""
+    results: list[tuple[str, str, str]] = []
+    current_milestone: str | None = None
+
+    for raw_line in (state_text or "").splitlines():
+        stripped_line = raw_line.strip()
+
+        heading_match = _PHASE_MAP_HEADING_RE.match(stripped_line)
+        if heading_match:
+            current_milestone = f"v{heading_match.group(1)}"
+            continue
+
+        if stripped_line.startswith("##"):
+            # Any other heading ends the current phase-map section.
+            current_milestone = None
+            continue
+
+        if current_milestone is None:
+            continue
+
+        row_match = _PHASE_MAP_ROW_RE.match(raw_line.rstrip())
+        if not row_match:
+            continue
+        phase_num, status_cell = row_match.group(1), row_match.group(2)
+        # Skip separator rows (e.g. "---") and the header row ("Phase").
+        if not phase_num.isdigit():
+            continue
+        results.append((phase_num, current_milestone, status_cell))
+
+    return results
+
+
+def check_destructive_archive(
+    phase_map_rows: list[tuple[str, str]],
+    disk_phase_dirs: set[str],
+    archived_dirs_by_milestone: dict[str, set[str]],
+) -> tuple[bool, list[str], str]:
+    """Pure. For every (phase_num, milestone_tag) row whose status is
+    Complete, verify a matching directory exists either on disk or in the
+    milestone's archive. Neither existing means the phase's content has
+    vanished with no matching milestone archive.
+
+    NOTE on scope (Pitfall 2): this function proves that *the next commit*
+    after an unarchived deletion is blocked — it cannot prove, and does not
+    claim, that the delete itself never happens. A git hook has no
+    visibility into non-git filesystem operations.
+
+    Returns (blocked, reasons, summary_markdown).
+    """
+    reasons: list[str] = []
+
+    for phase_num, milestone_tag in phase_map_rows:
+        on_disk = any(
+            name == phase_num or name.startswith(f"{phase_num}-")
+            for name in disk_phase_dirs
+        )
+        if on_disk:
+            continue
+
+        archived = archived_dirs_by_milestone.get(milestone_tag, set())
+        is_archived = any(
+            name == phase_num or name.startswith(f"{phase_num}-")
+            for name in archived
+        )
+        if is_archived:
+            continue
+
+        reasons.append(
+            f"Phase {phase_num} (milestone {milestone_tag}) is marked Complete "
+            "but has no live directory under .planning/phases/ and no archived "
+            "directory under .planning/milestones/ — this is the "
+            "ARCHIVE-MANIFEST.md incident shape "
+            "(.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md)."
+        )
+
+    blocked = bool(reasons)
+
+    lines = ["## Destructive Archive Gate", ""]
+    if blocked:
+        lines.append("### BLOCKED")
+        for reason in reasons:
+            lines.append(f"- {reason}")
+    else:
+        lines.append(
+            "Clean — every Complete-marked phase has a live or archived "
+            "directory."
+        )
+    summary_markdown = "\n".join(lines) + "\n"
+
+    return blocked, reasons, summary_markdown
