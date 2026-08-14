@@ -1,8 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-14 (v5.12 milestone close / Phase 153 — Release Tag Cut: real v5.12.0
-tag cut and RELEASE-01 proven end-to-end on a live tagged CI run.)
+**Last Updated:** 2026-08-14 (v5.13 Phase 154 wrap — Identity & Data-Model Foundation: UAT-154-01..04
+added for SSH host-key re-identification (HWLC-01), low-confidence `host:port`-only flagging
+(HWLC-01), last-known-good current-state projection across all four hardware read sites (HWLC-02),
+and the configurable/safety-guarded hardware history retention purge (HWLC-03). Closes HWLC-01,
+HWLC-02, HWLC-03. See Series 154.)
+Earlier: Phase 153 — Release Tag Cut: real v5.12.0 tag cut and RELEASE-01 proven end-to-end on a
+live tagged CI run.
 Earlier: Phase 152 wrap — Discovery Empirical Closure: UAT-152-01..03 added
 for the `segmented-network` chaos lab profile smoke test (DISC-09), the DISC-10 empirical
 closure finding cross-reference (`152-DISC09-FINDING.md`, VERDICT: DOES NOT REPRODUCE across 3
@@ -17562,3 +17567,163 @@ transcripts).
 documented above (Step 7: the first combined branch+tag push silently dropped `release.yml`'s
 push-event trigger, requiring a standalone re-push) — the final tagged pipeline run and Release
 asset are both confirmed green and correct.
+
+---
+
+## Series 154: Identity & Data-Model Foundation (Phase 154 — v5.13)
+
+**Last Updated:** 2026-08-14
+
+### UAT-154-01: SSH host-key re-identification across a DHCP/re-IP change (HWLC-01, Success Criterion 1) — Automated
+
+**What to test:** A device fingerprinted via SSH gets its SHA256 SSH host-key fingerprint
+(already produced by the existing `ssh-audit` run) stored on `HardwareDevice`, with
+`match_confidence` upgraded to `"high"` — unconditionally, not gated on whether the vendor was
+also identified — and that fingerprint stays stable across a simulated re-scan on a different
+IP, giving QUIRK a secondary match key that survives a DHCP lease renewal or re-IP.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_scanner.py::test_fingerprint_one_extracts_ssh_host_key_fingerprint tests/test_hardware_scanner.py::test_fingerprint_one_extracts_fingerprint_even_when_vendor_identified -v`.
+2. Confirm `test_fingerprint_one_extracts_ssh_host_key_fingerprint` shows a device scanned with
+   a populated `ssh_audit_json["fingerprints"]` array ending with `device.ssh_host_key_fingerprint`
+   set to the first SHA256 entry and `device.match_confidence == "high"`.
+3. Confirm `test_fingerprint_one_extracts_fingerprint_even_when_vendor_identified` shows the
+   upgrade to `"high"` fires even when the device's vendor was *also* successfully identified
+   (Cisco) — the upgrade is unconditional on Step 1's vendor-match outcome, per RESEARCH §1.
+4. Manually re-derive the "different IP, same fingerprint" scenario: construct two
+   `HardwareDevice` rows with different `host` values but the identical
+   `ssh_host_key_fingerprint` string and confirm both carry `match_confidence == "high"`.
+
+**Pass criteria:**
+- `device.ssh_host_key_fingerprint` is populated with the exact first `"fingerprints"` array
+  entry from `ssh-audit`'s own output — no re-derivation or re-hashing by QUIRK
+- `device.match_confidence == "high"` whenever a fingerprint was captured, regardless of vendor
+  identification outcome
+- Two `HardwareDevice` rows sharing the same `ssh_host_key_fingerprint` but different `host`
+  values are recognizable as the same physical device by that shared key
+
+**Automated gate:** `pytest tests/test_hardware_scanner.py::test_fingerprint_one_extracts_ssh_host_key_fingerprint tests/test_hardware_scanner.py::test_fingerprint_one_extracts_fingerprint_even_when_vendor_identified -v` → 2/2 PASSED
+(Phase 154 Plan 02). (Note: the broader `-k "fingerprint"` selector also matches the pre-existing,
+unrelated `test_fingerprint_hardware_returns_one_per_endpoint`, which is flaky/timing-sensitive in
+this sandbox — not a Phase 154 regression; use the explicit node IDs above.)
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 154 Plan 02)
+**Notes:** HWLC-01. Success Criterion 1. See 154-02-SUMMARY.md.
+
+---
+
+### UAT-154-02: `host:port`-only matches are flagged low-confidence, not equal to a fingerprinted match (HWLC-01, Success Criterion 2) — Automated
+
+**What to test:** A device that can only be matched on `host:port` — because it has no SSH
+service (HTTP-only or SNMP-only) or because the scanning host lacks `ssh-audit` — gets
+`match_confidence == "low"` and a `NULL` `ssh_host_key_fingerprint`, distinguishing it in the
+stored data from a `"high"`-confidence fingerprinted match.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_scanner.py -k "without_ssh_audit or malformed" -v`.
+2. Confirm `test_fingerprint_one_without_ssh_audit_is_low_confidence` shows a device with no
+   `ssh_audit_json` at all (HTTP/SNMP-only device shape, or an SSH device scanned from a host
+   without `ssh-audit` installed) retains the `match_confidence == "low"` baseline and a `NULL`
+   `ssh_host_key_fingerprint`.
+3. Confirm `test_fingerprint_one_malformed_ssh_audit_json_is_low_confidence` shows the same
+   `"low"` baseline holds when `ssh_audit_json` is present but malformed/unparseable, without
+   raising.
+
+**Pass criteria:**
+- `match_confidence == "low"` and `ssh_host_key_fingerprint IS NULL` for any device where no
+  usable SSH host-key fingerprint was captured
+- No exception is raised on malformed or absent `ssh_audit_json` — the low-confidence baseline
+  is a graceful default, not an error path
+
+**Automated gate:** `pytest tests/test_hardware_scanner.py -k "without_ssh_audit or malformed" -v`
+→ 2/2 PASSED (Phase 154 Plan 02).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 154 Plan 02)
+**Notes:** HWLC-01. Success Criterion 2. `docs/operators-guide.md` §9.6 documents that `"low"`
+covers three cases: HTTP-only, SNMP-only, and SSH-reachable-but-no-`ssh-audit`-installed. See
+154-02-SUMMARY.md.
+
+---
+
+### UAT-154-03: A failed re-probe never overwrites or discards the device's last-known-good state (HWLC-02, Success Criterion 3) — Automated
+
+**What to test:** All four `HardwareDevice` current-state read sites (dashboard findings,
+dashboard CBOM components, merge/CBOM path, CLI/PDF/DOCX report writer) show a device's most
+recent **successful** (`probe_status == "success"`) observation, so a device whose latest probe
+failed still surfaces with its previous vendor/tier data rather than vanishing or showing
+`Unknown`.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_projection_sites.py -k "last_known_good or null_probe_status" -v`.
+2. Confirm `test_writer_projection_shows_last_known_good_not_failed_row`,
+   `test_merge_projection_shows_last_known_good_not_failed_row`,
+   `test_dashboard_findings_shows_last_known_good_not_failed_row`, and
+   `test_dashboard_components_shows_last_known_good_not_failed_row` each show a scenario with an
+   older `probe_status="success"` row (`vendor="Cisco Systems"`) followed by a newer
+   `probe_status="failed"` row (`vendor="Unknown"`) for the same `(host, port)` — and confirm all
+   four sites surface the device exactly once, carrying the *older* row's `vendor="Cisco Systems"`,
+   never the failed row's data.
+3. Confirm `test_null_probe_status_excluded_from_dashboard_projection` shows a pre-Phase-154
+   legacy row (`probe_status IS NULL`) is excluded from the current-state projection — not
+   deleted, just not shown — until the device is scanned again.
+
+**Pass criteria:**
+- A device with a `success` row followed by a `failed` row appears at all four sites carrying
+  the `success` row's data, exactly once — never duplicated, never dropped, never `Unknown`
+- A device whose only row has `probe_status IS NULL` is absent from all four current-state
+  surfaces (consistent with the migration caveat in `docs/report-interpretation.md` §10.9)
+
+**Automated gate:** `pytest tests/test_hardware_projection_sites.py -k "last_known_good or null_probe_status" -v`
+→ 5/5 PASSED (Phase 154 Plan 03).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 154 Plan 03)
+**Notes:** HWLC-02, D-13, D-14. Success Criterion 3. All four sites were rewritten together in
+this one plan specifically to avoid the v5.8 "B-01" cross-surface-drift pattern. See
+154-03-SUMMARY.md.
+
+---
+
+### UAT-154-04: Configurable, safety-guarded hardware history retention purge (HWLC-03, Success Criterion 4) — Automated
+
+**What to test:** `scan.hardware_history_retention_days` bounds how many days of
+`hardware_devices` history rows are kept per device via an opportunistic, batch-scoped hard
+delete run at scan time — and an invalid retention value (`0`, negative, or non-numeric) causes
+the purge to be skipped entirely with a warning, never a silent fallback that deletes
+everything.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_retention_purge.py -v`.
+2. Confirm `test_purge_deletes_rows_older_than_retention_window` shows a row older than the
+   configured retention window deleted and a fresh row within the window retained, with the
+   purge helper returning the count of rows deleted.
+3. Confirm `test_purge_is_scoped_to_batch_host_port` shows a second device's old row survives
+   when only the first device's `(host, port)` is present in the current scan's `hw_batch` — the
+   purge never sweeps devices outside the current scan.
+4. Confirm `test_purge_skips_on_nonpositive_retention` (parametrized over `0`, `-1`, `"abc"`)
+   shows all three invalid values cause the purge to delete nothing and return `0`, not fall back
+   to the `180`-day default and proceed with a destructive delete.
+5. Confirm `test_purge_and_insert_share_one_transaction` shows the purge and the new-row insert
+   for the same scan commit together as one transaction — after commit, the old row is gone and
+   the new row is present.
+
+**Pass criteria:**
+- A row older than the configured retention window is hard-deleted; a row inside the window is
+  retained
+- Purge scope is limited to `(host, port)` pairs present in the current scan's batch — devices
+  not scanned this run are never touched
+- `0`, negative, and non-numeric retention values all skip the purge entirely (delete nothing,
+  return `0`) rather than defaulting to `180` and deleting
+- Purge and insert commit together in one transaction inside the existing advisory-only
+  hardware-persist block
+
+**Automated gate:** `pytest tests/test_hardware_retention_purge.py -v` → 7/7 PASSED
+(Phase 154 Plan 04).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 154 Plan 04)
+**Notes:** HWLC-03. Success Criterion 4. Retention default (180 days) is deliberately distinct
+from the project's 90-day `STALENESS_THRESHOLD_DAYS` catalog-freshness convention — see
+`docs/configuration.md`. See 154-04-SUMMARY.md.
