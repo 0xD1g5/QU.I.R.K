@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.11.0
-**Last Updated:** 2026-08-12 (Phase 150 remediation wrap — Test Suite Green Baseline + CI Gate:
+**Last Updated:** 2026-08-14 (Phase 152 wrap — Discovery Empirical Closure: UAT-152-01..03 added
+for the `segmented-network` chaos lab profile smoke test (DISC-09), the DISC-10 empirical
+closure finding cross-reference (`152-DISC09-FINDING.md`, VERDICT: DOES NOT REPRODUCE across 3
+live-fire runs, no code change to `quirk/discovery/nmap_provider.py`), and the
+`enable_nmap` interactive default-flip regression test (DISC-11). Closes DISC-09, DISC-10,
+DISC-11.
+Earlier: Phase 150 remediation wrap — Test Suite Green Baseline + CI Gate:
 UAT-150-01..03 added for the gating `Linux Full Suite` CI job's real green run (SUITE-02), the
 live-fire gate-bites proof on a real PR (SUITE-03), and first-run chaos-lab cert auto-generation
 for the `email`/`grpc-tls` profiles (D-12/D-13) — all three human-led, `Result:` lines left
@@ -17303,3 +17309,80 @@ on real CI.
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** D-12/D-13.
+
+---
+
+## Series 152: Discovery Empirical Closure (Phase 152 — v5.12)
+
+### UAT-152-01: `segmented-network` chaos lab profile smoke test (DISC-09) — Human-Led
+
+**What to test:** The new `segmented-network` chaos lab profile (a genuine two-subnet routed
+topology — `segnet-live` real TLS/SSH services, `segnet-dead` an iptables-REJECT gateway
+producing real TCP RST / ICMP-host-unreachable responses) comes up cleanly and behaves as
+documented in `docs/chaos-lab.md` §3.24.
+
+**Steps:**
+1. From `quantum-chaos-enterprise-lab/`, run
+   `PROFILE_ARGS="--profile segmented-network" ./lab.sh up`.
+2. Run `./lab.sh profiles | grep segmented-network` and confirm the profile is listed.
+3. Run the `docker compose exec segnet-prober` smoke test from Plan 152-01:
+   `docker compose exec segnet-prober nmap -sT -Pn -p 443 10.71.0.50` (dead-subnet address) and
+   `docker compose exec segnet-prober nmap -sT -Pn -p 443 10.70.0.10` (live-subnet
+   `segnet-live-tls`).
+
+**Pass criteria:**
+- `./lab.sh profiles` lists `segmented-network`
+- The dead-subnet probe reports `443/tcp closed` (RST-based, not filtered/silent)
+- The live-subnet probe reports `443/tcp open`
+- Matches `quantum-chaos-enterprise-lab/expected_results_segmented_network.md`'s documented
+  expected results
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** DISC-09. Requirement: DISC-09.
+
+---
+
+### UAT-152-02: Phase 144 nmap timing-artifact empirical closure (DISC-10) — Reference Verdict
+
+**What to test:** The Phase 144 nmap adaptive RTT/timing-engine artifact (a permanently
+user-accepted VERIFICATION override from v5.11) has been empirically settled against the
+`segmented-network` lab profile, with a written verdict citing 3 independent live-fire runs.
+
+**Steps:**
+1. Open `.planning/phases/152-discovery-empirical-closure/152-DISC09-FINDING.md`.
+2. Confirm the document contains an explicit `VERDICT:` line (REPRODUCES or DOES NOT
+   REPRODUCE).
+3. Confirm the verdict is supported by a 3-run evidence table (chunked vs. direct nmap
+   discovery comparison, restricted to `segnet-live` hosts).
+
+**Pass criteria:**
+- `152-DISC09-FINDING.md` exists with a REPRODUCES/DOES NOT REPRODUCE verdict citing 3 runs
+- Verdict recorded (Plan 152-03): **DOES NOT REPRODUCE** — 3/3 identical runs, zero
+  reproduction candidates; no mitigation was implemented in
+  `quirk/discovery/nmap_provider.py` (file provably unchanged, `git diff --stat` empty)
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** Plan 152-03 (automated finding + ledger closure)
+**Notes:** DISC-10. Requirement: DISC-10. See `152-DISC09-FINDING.md` for full evidence.
+
+---
+
+### UAT-152-03: `enable_nmap` interactive default flips to `True` (DISC-11) — Automated
+
+**What to test:** The interactive setup's nmap-discovery prompt (`quirk/interactive.py`) now
+defaults to `Yes`, so a user accepting every default exercises Phase 144/145 chunked discovery
+and the liveness pre-pass automatically, closing the v5.11 audit gap.
+
+**Steps:**
+1. Run `pytest tests/test_interactive_validate_routes.py -x -q`.
+2. Confirm `test_interactive_py_enable_nmap_defaults_true` passes.
+
+**Pass criteria:**
+- `pytest tests/test_interactive_validate_routes.py -x -q` exits 0
+- `test_interactive_py_enable_nmap_defaults_true` (added in Plan 152-02) asserts
+  `default=True` at the `enable_nmap = _prompt_bool(...)  # D-06` call site
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** Plan 152-02 (automated regression test, TDD RED/GREEN)
+**Notes:** DISC-11. Requirement: DISC-11. Commits: `03f5901` (RED), `6648cf7` (GREEN).
