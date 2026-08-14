@@ -57,6 +57,11 @@ def _make_ep(host: str, port: int, service_detail: str = ""):
     ep.__dict__["port"] = port
     ep.__dict__["protocol"] = "TCP"
     ep.__dict__["service_detail"] = service_detail
+    # Phase 154: fingerprint_one now reads ep.ssh_audit_json unconditionally;
+    # pre-populate it (as None) so the attribute lookup on this
+    # __new__-constructed, uninstrumented instance doesn't raise
+    # UnmappedInstanceError.
+    ep.__dict__["ssh_audit_json"] = None
     return ep
 
 

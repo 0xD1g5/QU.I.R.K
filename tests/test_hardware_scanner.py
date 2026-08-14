@@ -143,3 +143,60 @@ def test_fingerprint_one_malformed_ssh_audit_json_is_low_confidence(monkeypatch)
 
     assert device.match_confidence == "low"
     assert device.ssh_host_key_fingerprint is None
+
+
+# ------------ Phase 154 HWLC-01/02: probe_status classification ------------
+
+def test_probe_status_success_on_unknown_vendor(monkeypatch) -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    ep = _make_ep("10.0.0.8", 22, "SSH-2.0-dropbear_2022.83")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.vendor == "Unknown"
+    assert device.probe_status == "success"
+
+
+def test_probe_status_failed_when_nothing_responds(monkeypatch) -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    ep = _make_ep("10.0.0.9", 22, "")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.probe_status == "failed"
+
+
+def test_probe_status_failed_on_probe_exception(monkeypatch) -> None:
+    import quirk.scanner.hardware_scanner as hw_mod
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    def _raise(*a, **kw):
+        raise RuntimeError("simulated probe failure")
+
+    monkeypatch.setattr(hw_mod, "_match_matrix", _raise)
+    ep = _make_ep("10.0.0.10", 22, "SSH-2.0-Cisco-1.25")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.probe_status == "failed"
+
+
+def test_probe_status_success_on_http_response_without_vendor_match(monkeypatch) -> None:
+    import quirk.scanner.hardware_scanner as hw_mod
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    monkeypatch.setattr(
+        hw_mod,
+        "_probe_http_mgmt",
+        lambda host, port, timeout: {"entry": None, "body": "", "responded": True},
+    )
+    monkeypatch.setattr(
+        "quirk.scanner.snmp_scanner.probe_snmp_target",
+        lambda *a, **kw: {"snmp_sysdescr": None, "snmp_sysname": None, "snmp_sysobjectid": None},
+    )
+    ep = _make_ep("10.0.0.11", 22, "")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.probe_status == "success"
+    assert device.vendor == "Unknown"

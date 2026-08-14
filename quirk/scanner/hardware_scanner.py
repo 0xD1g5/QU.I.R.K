@@ -127,14 +127,22 @@ def _probe_http_mgmt(host: str, port: int, timeout: int) -> Optional[dict]:
     """Best-effort HTTP management interface probe (D-04).
 
     GETs candidate paths on a single port. Parses response headers and a
-    bounded body slice for vendor tokens. Returns a match dict with keys
-    ``"entry"`` (HARDWARE_MATRIX entry) and ``"body"`` (matched text fragment)
-    on first match, or ``None`` on any exception or no match.
+    bounded body slice for vendor tokens.
 
-    Connection refused / timeout silently returns None (D-04 — fail to Unknown).
+    Phase 154 (D-07) three-outcome contract:
+    - A vendor match on any path: ``{"entry": <HARDWARE_MATRIX entry>,
+      "body": <matched text>, "responded": True}``.
+    - Any HTTP response received (on any path) but no vendor token matched:
+      ``{"entry": None, "body": "", "responded": True}`` — this is a real
+      observation (D-07: "responded, unmatched" must not be conflated with
+      "could not probe").
+    - No response at all on any path/port (connection refused, timeout,
+      SSL error, etc.): ``None``.
+
     Body slice is bounded to ``_BODY_SLICE`` bytes (T-127-04).
     """
     scheme = "https" if port in (443, 8443) else "http"
+    responded = False
     for path in _HTTP_MGMT_PATHS:
         url = f"{scheme}://{host}:{port}{path}"
         try:
@@ -146,6 +154,7 @@ def _probe_http_mgmt(host: str, port: int, timeout: int) -> Optional[dict]:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
             with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+                responded = True
                 # Collect headers into a single searchable string
                 header_text = " ".join(
                     f"{k}: {v}" for k, v in resp.headers.items()
@@ -156,11 +165,13 @@ def _probe_http_mgmt(host: str, port: int, timeout: int) -> Optional[dict]:
 
                 entry = _match_matrix(combined)
                 if entry:
-                    return {"entry": entry, "body": combined}
+                    return {"entry": entry, "body": combined, "responded": True}
         except Exception:
             # Any error (connection refused, timeout, SSL, HTTP error, etc.)
             # is silently swallowed — D-04: best-effort, fail to Unknown.
             continue
+    if responded:
+        return {"entry": None, "body": "", "responded": True}
     return None
 
 
@@ -310,7 +321,9 @@ def fingerprint_one(
     # Default: Unknown device — always returned on any code path (D-06)
     # match_confidence="low" is the Phase 154 D-05 baseline — every device
     # carries it unless the SSH host-key extraction below upgrades it to
-    # "high".
+    # "high". probe_status="success" is the Phase 154 D-07 baseline — every
+    # device carries it unless the end-of-try / except-handler logic below
+    # downgrades it to "failed".
     device = HardwareDevice(
         host=getattr(ep, "host", ""),
         port=getattr(ep, "port", 0),
@@ -321,13 +334,25 @@ def fingerprint_one(
         scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
         raw_banner=getattr(ep, "service_detail", None),
         match_confidence="low",
+        probe_status="success",
     )
+
+    # ── Phase 154 D-07 operative rule ────────────────────────────────────
+    # probe_status = "failed" iff the fingerprint attempt obtained no
+    # observation from any probe step — i.e. the outer `except Exception`
+    # fired, OR all of: no SSH banner, no HTTP response received, no SNMP
+    # sysDescr, and no Modbus/BACnet probe_state other than "no_response".
+    # Otherwise probe_status = "success" — including the honest "responded
+    # but vendor='Unknown'" case, which D-07 forbids conflating with
+    # failure.
+    observed = False
 
     try:
         banner = getattr(ep, "service_detail", "") or ""
 
         # ── Step 1: SSH banner match (D-03) ─────────────────────────────
         if banner:
+            observed = True
             device.fingerprint_method = "ssh_banner"
             entry = _match_matrix(banner)
             if entry:
@@ -377,13 +402,17 @@ def fingerprint_one(
             for port in _HTTP_MGMT_PORTS:
                 result = _probe_http_mgmt(host, port, timeout)
                 if result:
-                    _apply_entry(
-                        device,
-                        result["entry"],
-                        method="http_mgmt",
-                        body=result["body"],
-                    )
-                    break  # First match wins
+                    observed = True
+                    if result.get("entry"):
+                        _apply_entry(
+                            device,
+                            result["entry"],
+                            method="http_mgmt",
+                            body=result["body"],
+                        )
+                        break  # First match wins
+                    # Responded but unmatched (D-07) — a real observation;
+                    # do NOT break, keep trying remaining ports.
 
         # ── Step 3: SNMP probe (Phase 133 SNMP-01 / D-01/D-02) ─────────────
         # Only attempt if SSH banner + HTTP mgmt both failed to identify a known vendor.
@@ -454,6 +483,7 @@ def fingerprint_one(
 
             _raw = _snmp_result.get("snmp_sysdescr") if _snmp_result else None
             if _raw:
+                observed = True
                 _parsed = _parse_sd(_raw)
                 if _parsed.get("vendor") and _parsed["vendor"] != "Unknown":
                     device.vendor = _parsed["vendor"]
@@ -508,6 +538,8 @@ def fingerprint_one(
             from quirk.scanner.modbus_scanner import probe_modbus_target
 
             _modbus_result = probe_modbus_target(_host)
+            if _modbus_result.get("modbus_probe_state") not in (None, "no_response"):
+                observed = True
             try:
                 device.modbus_vendor = _modbus_result.get("modbus_vendor")
                 device.modbus_model = _modbus_result.get("modbus_model")
@@ -533,6 +565,8 @@ def fingerprint_one(
             from quirk.scanner.bacnet_scanner import probe_bacnet_target
 
             _bacnet_result = probe_bacnet_target(_host)
+            if _bacnet_result.get("bacnet_probe_state") not in (None, "no_response"):
+                observed = True
             try:
                 device.bacnet_vendor = _bacnet_result.get("bacnet_vendor")
                 device.bacnet_model = _bacnet_result.get("bacnet_model")
@@ -570,12 +604,20 @@ def fingerprint_one(
                 device.fingerprint_method = "bacnet"
                 device.confidence = "medium"
 
+        # ── Phase 154 D-07: honest success/failed classification ─────────
+        device.probe_status = "success" if observed else "failed"
+
     except Exception as e:
         if logger:
             logger.v(
                 f"HW {getattr(ep, 'host', '?')}:{getattr(ep, 'port', '?')} "
                 f"fingerprint error: {safe_str(e)}"
             )
+        try:
+            device.probe_status = "failed"
+        except AttributeError:
+            # ORM column not yet migrated — skip assignment
+            pass
         # Never re-raise — always return device (D-06)
 
     return device
