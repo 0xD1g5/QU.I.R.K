@@ -1,10 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: none
-status: idle
-stopped_at: v5.12 Release & Verification Integrity SHIPPED and archived 2026-08-14 — awaiting next milestone via /gsd:new-milestone
-last_updated: "2026-08-14T13:00:00.000Z"
+milestone: v5.13
+milestone_name: Continuous Hardware Lifecycle Monitoring
+status: planning
+last_updated: "2026-08-14T14:37:26.670Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 0
@@ -26,13 +25,10 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 ## Current Position
 
-v5.12 Release & Verification Integrity — SHIPPED and archived 2026-08-14. All 6 phases (148–153)
-complete, 36 plans, 14/14 requirements. Milestone audit passed
-(`.planning/milestones/v5.12-MILESTONE-AUDIT.md`). Archive:
-`.planning/milestones/v5.12-ROADMAP.md`, `.planning/milestones/v5.12-REQUIREMENTS.md`.
-`.planning/REQUIREMENTS.md` deleted per the archive convention — a fresh one is created by the
-next `/gsd:new-milestone` run.
-Last activity: 2026-08-14
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-14 — Milestone v5.13 started
 
 ## v5.12 Phase Map (SHIPPED 2026-08-14)
 

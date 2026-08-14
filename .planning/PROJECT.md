@@ -217,6 +217,27 @@ Carried into next-milestone scoping (from the v5.11 audit's remaining tech debt)
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
+## Current Milestone: v5.13 Continuous Hardware Lifecycle Monitoring
+
+**Goal:** Extend v5.10's hardware-fingerprinting foundation (`HardwareDevice` table,
+`hw_cve.py`, CNSA 2.0 tier assignment) from a point-in-time scan into ongoing lifecycle
+tracking — detecting drift in firmware/EOL/vendor-PQC-status over time and alerting when a
+device crosses a CNSA 2.0 tier boundary.
+
+**Target features:** TBD — this milestone opens with a research pass before requirements are
+scoped, per HORIZON.md's flagged open question.
+
+**Why this shape (PM review 2026-08-14):** the last substantial unbuilt backlog theme, deferred
+since v5.10 as "needs its own research pass" — restores the 2:1 capability/ops cadence after
+v5.12's ops cycle. The open question (new scanner surface vs. scheduling/diffing layer over
+existing data) changes this milestone's size by roughly 3x, so it must be answered before
+requirements can be scoped, not guessed at.
+
+**Explicitly out of scope (carried from HORIZON.md):** SaaS multi-tenancy (still parked, no
+business-model signal).
+
+---
+
 ## Previous Milestone: v5.12 Release & Verification Integrity — SHIPPED 2026-08-14
 
 **Goal:** Make QU.I.R.K.'s own signals trustworthy again — cutting a tag produces a complete,
