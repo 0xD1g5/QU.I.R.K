@@ -319,3 +319,29 @@ def test_run_scan_hooks_reconcile_at_both_commit_sites() -> None:
     # Both call sites live inside functions that still use the pre-existing
     # advisory-only, non-fatal logging idiom — no new handler style added.
     assert "advisory-only, non-fatal" in source
+
+
+def test_snmp_only_bulk_path_calls_apply_eol_date() -> None:
+    """CR-01 regression: the standalone SNMP-only bulk-fingerprint block in
+    run_scan.py (a separate code path from fingerprint_one()'s waterfall)
+    must call apply_eol_date() on every newly-constructed HardwareDevice row,
+    or eol_date silently stays None forever for devices discovered
+    exclusively through this path — even for a real EOL_TABLE vendor hit."""
+    import inspect
+
+    import run_scan
+
+    source = inspect.getsource(run_scan)
+    assert "apply_eol_date" in source, (
+        "run_scan.py must import apply_eol_date from "
+        "quirk.scanner.hardware_scanner for the SNMP-only bulk path"
+    )
+    # The call must appear inside the "SNMP-only hit" construction block,
+    # before the row is appended to _snmp_new_batch for commit.
+    snmp_hit_idx = source.index("# SNMP-only hit: create new HardwareDevice row")
+    next_batch_append_idx = source.index("_snmp_new_batch.append(_snmp_dev)", snmp_hit_idx)
+    apply_call_idx = source.index("apply_eol_date(_snmp_dev)", snmp_hit_idx)
+    assert snmp_hit_idx < apply_call_idx < next_batch_append_idx, (
+        "apply_eol_date(_snmp_dev) must be called after constructing "
+        "_snmp_dev and before appending it to _snmp_new_batch"
+    )

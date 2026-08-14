@@ -37,7 +37,10 @@ from quirk.scanner.target_expander import (
 from quirk.scanner.fingerprint import fingerprint_service
 from quirk.scanner.tls_scanner import scan_tls_targets
 from quirk.scanner.ssh_scanner import scan_ssh_targets
-from quirk.scanner.hardware_scanner import fingerprint_hardware  # Phase 127 HWCOMPAT-01
+from quirk.scanner.hardware_scanner import (  # Phase 127 HWCOMPAT-01
+    fingerprint_hardware,
+    apply_eol_date,  # Phase 155-05/CR-01: SNMP-only bulk path also needs eol_date populated
+)
 from quirk.scanner.jwt_scanner import scan_jwt_targets
 from quirk.scanner.container_scanner import scan_container_targets
 from quirk.scanner.source_scanner import scan_source_targets
@@ -2217,6 +2220,12 @@ def main():
                         # fingerprint_one() applies elsewhere in this phase.
                         probe_status="success",
                     )
+                    # Phase 155-05/CR-01: this bulk SNMP-only path builds its own
+                    # HardwareDevice row outside fingerprint_one()'s waterfall, so
+                    # it must call apply_eol_date() itself — otherwise eol_date
+                    # stays None forever for any device discovered exclusively
+                    # through this path, even when it's a real EOL_TABLE hit.
+                    apply_eol_date(_snmp_dev)
                     _snmp_new_batch.append(_snmp_dev)
 
             # Flush new/updated SNMP rows to DB
