@@ -1545,6 +1545,13 @@ networks:
       config:
         - subnet: "10.70.0.0/24"
 
+  # Representative dead-host range for DISC-10 verification: 10.71.0.2/26
+  # (a 62-usable-address slice of this /24, excluding the gateway's own
+  # 10.71.0.2) — a scaled reproduction of the original ~1024-host batch,
+  # not a 1:1 replica, per 152-CONTEXT.md's "Segmented-Network Lab Profile
+  # Design" decision. The REJECT rule on segnet-gateway covers the whole
+  # /24 CIDR, so this slice needs no per-dead-host container — see
+  # segnet-gateway's comment block above.
   segnet-dead:
     driver: bridge
     ipam:
