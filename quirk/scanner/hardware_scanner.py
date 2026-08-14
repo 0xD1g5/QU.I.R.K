@@ -278,6 +278,19 @@ def fingerprint_one(
     3. If banner yielded no known vendor, probe HTTP management interfaces (D-04).
     4. Return device — never raises (exceptions are logged via safe_str).
 
+    Phase 154 (HWLC-01/02): independently of the above, when ``ep`` carries a
+    ``ssh_audit_json`` payload (populated by ``ssh_scanner.py``'s ssh-audit
+    subprocess path — see ``ssh_scanner.py:64``), the first SHA256 host-key
+    fingerprint found in its ``"fingerprints"`` array is stored verbatim on
+    ``device.ssh_host_key_fingerprint`` and ``device.match_confidence`` is
+    upgraded from the ``"low"`` baseline to ``"high"``. This extraction is
+    unconditional — it runs regardless of whether Steps 1-5 identified a
+    known vendor. ``match_confidence="low"`` does NOT mean "non-SSH device":
+    it also covers SSH-reachable targets where ssh-audit was unavailable or
+    failed and ``ssh_scanner.py`` fell back to a raw-socket banner grab
+    (``ssh_scanner.py:83-89``), which performs no key exchange and leaves
+    ``ep.ssh_audit_json`` as ``None`` (RESEARCH §1).
+
     Args:
         cfg: Optional ``AppConfig``. When present, ``cfg.connectors.
             snmp_v3_credentials`` drives the Step 3 SNMPv3-first fallback
@@ -295,6 +308,9 @@ def fingerprint_one(
             minimal-footprint posture against fragile fieldbus gear.
     """
     # Default: Unknown device — always returned on any code path (D-06)
+    # match_confidence="low" is the Phase 154 D-05 baseline — every device
+    # carries it unless the SSH host-key extraction below upgrades it to
+    # "high".
     device = HardwareDevice(
         host=getattr(ep, "host", ""),
         port=getattr(ep, "port", 0),
@@ -304,6 +320,7 @@ def fingerprint_one(
         fingerprint_method="unknown",
         scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
         raw_banner=getattr(ep, "service_detail", None),
+        match_confidence="low",
     )
 
     try:
@@ -318,6 +335,36 @@ def fingerprint_one(
             else:
                 # Banner present but no matrix match → low confidence (D-05)
                 device.confidence = "low"
+
+        # ── SSH host-key fingerprint (Phase 154 D-01/D-02) ──────────────
+        # Independent of Step 1's match outcome and NOT gated on
+        # device.vendor == "Unknown" — a correctly-identified Cisco device
+        # must still get its fingerprint (RESEARCH §1). ssh_scanner.py's
+        # ssh-audit subprocess path already produced this data; we only
+        # extract the SHA256 host-key fingerprint it already computed,
+        # verbatim, no reformatting/re-hashing.
+        ssh_audit_raw = getattr(ep, "ssh_audit_json", None)
+        if ssh_audit_raw:
+            try:
+                audit_data = json.loads(ssh_audit_raw)
+            except (TypeError, ValueError, AttributeError) as exc:
+                _LOG.debug(
+                    "Malformed ssh_audit_json for %s:%s: %s",
+                    getattr(ep, "host", "?"),
+                    getattr(ep, "port", "?"),
+                    safe_str(exc),
+                )
+                audit_data = None
+            if audit_data:
+                for fp in audit_data.get("fingerprints", []):
+                    if fp.get("hash_alg") == "SHA256" and fp.get("hash"):
+                        try:
+                            device.ssh_host_key_fingerprint = fp["hash"]
+                            device.match_confidence = "high"
+                        except AttributeError:
+                            # ORM columns not yet migrated — skip assignment
+                            pass
+                        break
 
         # ── Step 2: HTTP management probe (D-04) ────────────────────────
         # Only attempt if the SSH banner path did not already identify a known vendor.

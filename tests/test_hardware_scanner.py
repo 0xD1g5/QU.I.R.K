@@ -12,8 +12,10 @@ these pure-logic tests).
 """
 from __future__ import annotations
 
+import json
 
-def _make_ep(host: str, port: int, service_detail: str):
+
+def _make_ep(host: str, port: int, service_detail: str, ssh_audit_json=None):
     """Create a CryptoEndpoint fixture without DB/ORM setup."""
     from quirk.models import CryptoEndpoint
     ep = CryptoEndpoint.__new__(CryptoEndpoint)
@@ -21,6 +23,7 @@ def _make_ep(host: str, port: int, service_detail: str):
     ep.__dict__["port"] = port
     ep.__dict__["protocol"] = "SSH"
     ep.__dict__["service_detail"] = service_detail
+    ep.__dict__["ssh_audit_json"] = ssh_audit_json
     return ep
 
 
@@ -69,3 +72,74 @@ def test_fingerprint_hardware_returns_one_per_endpoint() -> None:
     # D-06: Unknown rows must appear in results (not dropped)
     unknown_rows = [d for d in results if d.vendor == "Unknown"]
     assert len(unknown_rows) >= 1
+
+
+# ------------ Phase 154 HWLC-01/02: SSH host-key fingerprint extraction ------------
+
+_SSH_AUDIT_JSON_HIGH = json.dumps(
+    {
+        "fingerprints": [
+            {"hash_alg": "SHA256", "hash": "SHA256:abc123"},
+        ]
+    }
+)
+
+
+def _no_op_probes(monkeypatch) -> None:
+    """Monkeypatch outbound network probes so no test makes a real connection."""
+    import quirk.scanner.hardware_scanner as hw_mod
+
+    monkeypatch.setattr(hw_mod, "_probe_http_mgmt", lambda host, port, timeout: None)
+    monkeypatch.setattr(
+        "quirk.scanner.snmp_scanner.probe_snmp_target",
+        lambda *a, **kw: {"snmp_sysdescr": None, "snmp_sysname": None, "snmp_sysobjectid": None},
+    )
+
+
+def test_fingerprint_one_extracts_ssh_host_key_fingerprint(monkeypatch) -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    ep = _make_ep(
+        "10.0.0.4", 22, "SSH-2.0-dropbear_2022.83", ssh_audit_json=_SSH_AUDIT_JSON_HIGH
+    )
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.ssh_host_key_fingerprint == "SHA256:abc123"
+    assert device.match_confidence == "high"
+
+
+def test_fingerprint_one_without_ssh_audit_is_low_confidence(monkeypatch) -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    ep = _make_ep("10.0.0.5", 22, "SSH-2.0-dropbear_2022.83", ssh_audit_json=None)
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.ssh_host_key_fingerprint is None
+    assert device.match_confidence == "low"
+
+
+def test_fingerprint_one_extracts_fingerprint_even_when_vendor_identified() -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    ep = _make_ep(
+        "10.0.0.6", 22, "SSH-2.0-Cisco-1.25", ssh_audit_json=_SSH_AUDIT_JSON_HIGH
+    )
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.vendor != "Unknown"
+    assert device.match_confidence == "high"
+
+
+def test_fingerprint_one_malformed_ssh_audit_json_is_low_confidence(monkeypatch) -> None:
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    ep = _make_ep(
+        "10.0.0.7", 22, "SSH-2.0-dropbear_2022.83", ssh_audit_json="{not json"
+    )
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.match_confidence == "low"
+    assert device.ssh_host_key_fingerprint is None
