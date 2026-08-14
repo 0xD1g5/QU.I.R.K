@@ -365,6 +365,40 @@ class MergeRun(Base):
     coverage_warning_json = Column(Text,       nullable=True)  # JSON or NULL
 
 
+class HardwareDriftEvent(Base):
+    """Persisted hardware lifecycle drift-event record (Phase 155 — HWLC-04/05/06/07/09).
+
+    One row per confirmed drift transition for a (host, port) device — a
+    detected change in remediation tier, upstream-mitigated bridge status,
+    correlated firmware CVE set, or EOL/EOS lifecycle state. Rows are written
+    only once a change has been confirmed across the N-of-M history window
+    (D-02/D-03), not on every scan.
+
+    No relationship() declarations — project uses plain Column style exclusively.
+
+    event_type values: tier_crossing | upstream_mitigated_change | cve_delta | eol_state_change
+
+    old_value/new_value are short enum/scalar transition values only
+    (String(255)) — never raw probe payloads. Do NOT store raw_banner,
+    bridge_evidence_json, SNMP community strings, or any other raw probe
+    payload in these columns (T-155-03). event_type is validated at the write
+    site against an explicit allowlist constant (never free text) — the V5
+    input-validation control from RESEARCH.md's Security Domain; the
+    allowlist itself lives in hardware_drift.py (plan 155-03).
+    """
+
+    __tablename__ = "hardware_drift_events"
+
+    id           = Column(Integer,     primary_key=True, autoincrement=True)
+    host         = Column(String(255), nullable=False, index=True)
+    port         = Column(Integer,     nullable=False)
+    event_type   = Column(String(32),  nullable=False)
+    old_value    = Column(String(255), nullable=True)
+    new_value    = Column(String(255), nullable=True)
+    detected_at  = Column(DateTime,    nullable=False)
+    confirmed_at = Column(DateTime,    nullable=True)
+
+
 class HardwareDevice(Base):
     """Agentless hardware fingerprint record (Phase 127 — HWCOMPAT-01).
 
