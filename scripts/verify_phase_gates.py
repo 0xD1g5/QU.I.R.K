@@ -302,7 +302,10 @@ def parse_state_phase_maps(state_text: str) -> list[tuple[str, str, str]]:
             continue
         phase_num, status_cell = row_match.group(1), row_match.group(2)
         # Skip separator rows (e.g. "---") and the header row ("Phase").
-        if not phase_num.isdigit():
+        # `\d+(?:\.\d+)?` (not `.isdigit()`) so decimal sub-phase rows (e.g.
+        # "64.1") are kept -- matches the trigger regex's handling of the
+        # same shape (Open Question 2).
+        if not re.match(r"^\d+(?:\.\d+)?$", phase_num):
             continue
         results.append((phase_num, current_milestone, status_cell))
 

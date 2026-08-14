@@ -519,6 +519,21 @@ def test_parse_state_phase_maps_extracts_rows_attributed_to_section(vpg):
     assert ("144", "v5.11", "Complete (2026-08-10)") in result
 
 
+def test_parse_state_phase_maps_includes_decimal_subphase_rows(vpg):
+    """WR-03: `isdigit()` silently dropped decimal sub-phase rows (e.g.
+    `64.1`, the codebase's own `64.1-audit-residual-blockers` precedent);
+    the filter must accept `\\d+(?:\\.\\d+)?` like the trigger regex does."""
+    state_text = (
+        "## v5.11 Phase Map\n"
+        "\n"
+        "| Phase | Name | Requirements | Gate | Status |\n"
+        "|-------|------|--------------|------|--------|\n"
+        "| 64.1 | Audit Residual Blockers | — | None | Complete (2026-08-11) |\n"
+    )
+    result = vpg.parse_state_phase_maps(state_text)
+    assert ("64.1", "v5.11", "Complete (2026-08-11)") in result
+
+
 def test_check_destructive_archive_untracked_file_deletion_case(vpg, tmp_path):
     """Pitfall 1: the mechanism must be git-tracking-independent — a plain
     filesystem write + plain filesystem delete, no `git add`/`git rm`
