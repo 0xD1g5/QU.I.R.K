@@ -659,3 +659,118 @@ def test_main_returns_2_and_writes_stderr_when_git_subprocess_fails(
     captured = capsys.readouterr()
     assert "not a git repository" in captured.err
     assert "not a git repository" not in captured.out
+
+
+# ---------------------------------------------------------------------------
+# 151-02: hook_integration -- real end-to-end proof against a temp git repo
+# ---------------------------------------------------------------------------
+
+HOOK_PATH = REPO_ROOT / ".githooks" / "pre-commit"
+
+
+def test_hook_integration_pre_commit_file_exists_executable_and_references_script():
+    assert HOOK_PATH.exists(), f"{HOOK_PATH} does not exist"
+    mode = HOOK_PATH.stat().st_mode
+    assert mode & 0o111, f"{HOOK_PATH} is not executable"
+    content = HOOK_PATH.read_text(encoding="utf-8")
+    assert "verify_phase_gates.py" in content
+
+
+def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
+    """Build a disposable git repo with its own copy of
+    scripts/verify_phase_gates.py and .githooks/pre-commit, so the hook's
+    `git rev-parse --show-toplevel` resolution and the script's own
+    REPO_ROOT (computed from `__file__`) both correctly resolve to
+    `repo_dir`, not the real QUIRK checkout."""
+    subprocess.run(["git", "init", "-q"], cwd=repo_dir, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "hook-integration-test@example.invalid"],
+        cwd=repo_dir,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "hook-integration-test"],
+        cwd=repo_dir,
+        check=True,
+    )
+
+    (repo_dir / "scripts").mkdir(parents=True)
+    shutil.copy(
+        REPO_ROOT / "scripts" / "verify_phase_gates.py",
+        repo_dir / "scripts" / "verify_phase_gates.py",
+    )
+
+    hooks_dir = repo_dir / ".githooks"
+    hooks_dir.mkdir(parents=True)
+    shutil.copy(HOOK_PATH, hooks_dir / "pre-commit")
+    (hooks_dir / "pre-commit").chmod(0o755)
+
+    subprocess.run(
+        ["git", "config", "core.hooksPath", ".githooks"], cwd=repo_dir, check=True
+    )
+
+    planning = repo_dir / ".planning"
+    planning.mkdir()
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    # Unchecked box: the initial-commit diff adds `+- [ ] **Phase 999...`
+    # (space, not `x`) -- must NOT trigger the phase-close path.
+    (planning / "ROADMAP.md").write_text(
+        "# Roadmap\n\n- [ ] **Phase 999: Fixture Phase** — placeholder\n",
+        encoding="utf-8",
+    )
+    docs_dir = repo_dir / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "UAT-SERIES.md").write_text("no series yet\n", encoding="utf-8")
+
+
+def _commit(repo_dir: pathlib.Path, message: str) -> subprocess.CompletedProcess:
+    subprocess.run(["git", "add", "-A"], cwd=repo_dir, check=True)
+    return subprocess.run(
+        ["git", "commit", "-m", message],
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_hook_integration_green_path_commit_succeeds(tmp_path):
+    repo_dir = tmp_path / "hook-green-repo"
+    repo_dir.mkdir()
+    _init_fixture_repo(repo_dir)
+
+    result = _commit(repo_dir, "chore: initial fixture commit")
+
+    assert result.returncode == 0, (
+        f"expected a clean commit to succeed, got stderr: {result.stderr}"
+    )
+
+
+def test_hook_integration_red_path_commit_rejected_on_missing_verification(tmp_path):
+    repo_dir = tmp_path / "hook-red-repo"
+    repo_dir.mkdir()
+    _init_fixture_repo(repo_dir)
+
+    # Baseline commit (unchecked Phase 999 box -- no trigger, no violation).
+    baseline = _commit(repo_dir, "chore: initial fixture commit")
+    assert baseline.returncode == 0, baseline.stderr
+
+    # Flip Phase 999's checkbox to complete -- fires the phase-close trigger.
+    # The fixture phase directory deliberately has no 999-VERIFICATION.md.
+    phase_dir = repo_dir / ".planning" / "phases" / "999-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    (phase_dir / "999-01-PLAN.md").write_text(
+        "---\nphase: 999\nplan: 01\nfiles_modified:\n  - tests/test_fixture.py\n---\n\n# Plan\n",
+        encoding="utf-8",
+    )
+    (repo_dir / ".planning" / "ROADMAP.md").write_text(
+        "# Roadmap\n\n- [x] **Phase 999: Fixture Phase** — placeholder\n",
+        encoding="utf-8",
+    )
+
+    result = _commit(repo_dir, "docs: mark Phase 999 complete")
+
+    assert result.returncode != 0, (
+        "expected the commit to be rejected when VERIFICATION.md is missing"
+    )
+    assert "VERIFICATION.md" in result.stderr
