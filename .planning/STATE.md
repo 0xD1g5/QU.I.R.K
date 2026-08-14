@@ -4,13 +4,13 @@ milestone: v5.13
 milestone_name: Continuous Hardware Lifecycle Monitoring
 status: executing
 stopped_at: Completed 155-04-PLAN.md
-last_updated: "2026-08-14T21:13:03.871Z"
+last_updated: "2026-08-14T21:35:11.001Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
   percent: 33
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 155 (Drift Detection + EOL Tracking) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-08-14
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 91%
 
 ## v5.13 Phase Map (planning)
 
@@ -158,6 +158,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 155 P02 | 25min | 3 tasks | 7 files |
 | Phase 155 P03 | 25min | 3 tasks | 6 files |
 | Phase 155 P04 | 20min | 2 tasks | 3 files |
+| Phase 155 P05 | 35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -302,6 +303,9 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 155]: compute_drift_candidates() reads the STORED remediation_tier column, not a re-derived assign_tier() call — the reconciliation engine diffs persisted scan-row state
 - [Phase 155]: bridge_evidence_state() reads only persisted bridge_confirmed_at/bridge_evidence_json columns, never a transient bridge_status dict key owned by quirk/cbom/bridge.py
 - [Phase 155]: [Phase 155] 155-04: session.commit() runs unconditionally once after the reconcile candidate loop (even with zero inserts), matching plan text exactly; CVE-delta test fixtures monkeypatch hw_cve.correlate_device() rather than depending on live CVE_TABLE catalog content
+- [Phase ?]: Phase 155-05: Confirmed live run_scan.py has exactly 2 real HardwareDevice commit sites (not 3) — run_ot_supplemental_and_persist() and the SNMP-only block; _run_ssh_phase() only accumulates into hw_batch. Resolved RESEARCH.md Open Question 2 as option (a) — reconcile at both real commit sites.
+- [Phase ?]: Phase 155-05: apply_eol_date() single terminal call site placed immediately before the Phase 154 D-07 probe_status assignment in fingerprint_one() — covers every vendor/model resolution path (SSH, HTTP, SNMP, Modbus, BACnet).
+- [Phase ?]: Phase 155-05: Site (B) SNMP-only block reconciles _snmp_new_batch (rows actually committed there), not _snmp_flush_batch — the pre-existing detached _existing_dev mutation-persistence gap is documented inline as a backlog candidate, not fixed (out of scope per HWLC-04..09).
 
 ### Pending Todos
 
@@ -373,7 +377,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-14T21:13:03.865Z
+Last session: 2026-08-14T21:35:10.995Z
 Stopped at: Completed 155-04-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,

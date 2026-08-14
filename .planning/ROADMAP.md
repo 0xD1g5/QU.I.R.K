@@ -127,7 +127,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 155-05-PLAN.md — Pipeline wiring: eol_date population + reconciliation at both hw commit sites [HWLC-04/09]
+- [x] 155-05-PLAN.md — Pipeline wiring: eol_date population + reconciliation at both hw commit sites [HWLC-04/09]
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -166,7 +166,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
-| 155. Drift Detection + EOL Tracking | 4/6 | In Progress|  |
+| 155. Drift Detection + EOL Tracking | 5/6 | In Progress|  |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
 ---
