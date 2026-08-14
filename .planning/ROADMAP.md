@@ -115,7 +115,7 @@ Plans:
 **Wave 1**
 
 - [x] 155-01-PLAN.md — Curated EOL/EOS catalog module + 365-day staleness gate + CI/CLAUDE.md wiring [HWLC-08/09]
-- [ ] 155-02-PLAN.md — hardware_drift_events table + N-of-M window query helper + shared TIER_ORDER [HWLC-04/05/07]
+- [x] 155-02-PLAN.md — hardware_drift_events table + N-of-M window query helper + shared TIER_ORDER [HWLC-04/05/07]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -166,7 +166,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
-| 155. Drift Detection + EOL Tracking | 1/6 | In Progress|  |
+| 155. Drift Detection + EOL Tracking | 2/6 | In Progress|  |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
 ---
