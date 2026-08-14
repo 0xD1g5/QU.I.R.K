@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.13
 milestone_name: Continuous Hardware Lifecycle Monitoring
-status: verifying
-stopped_at: Completed 154-05-PLAN.md (Phase 154 complete — ready for verification)
-last_updated: "2026-08-14T19:12:18.661Z"
+status: ready_to_plan
+stopped_at: Phase 154 complete (5/5) — ready to discuss Phase 155
+last_updated: 2026-08-14T19:46:01.897Z
 last_activity: 2026-08-14
 progress:
   total_phases: 3
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 154 — identity-data-model-foundation
+**Current focus:** Phase 155 — drift detection + eol tracking
 
 ## Current Position
 
-Phase: 154 (identity-data-model-foundation) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
+Phase: 155
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-08-14
 
 Progress: [██████████] 100%
