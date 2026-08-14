@@ -65,10 +65,18 @@ from quirk.discovery.nmap_provider import (  # noqa: E402
 SEGNET_LIVE_HOSTS: Tuple[str, ...] = ("10.70.0.10", "10.70.0.11")
 SEGNET_LIVE_CIDR = "10.70.0.0/24"  # used only for the grep-visible filter marker below
 
-# Representative dead range verified live in Plan 152-01 (64-address /26
-# sweep, 100% RST/closed, 0 filtered/silent) — a scaled reproduction of the
-# original ~1024-host batch, not a 1:1 replica (152-CONTEXT.md).
+# Representative dead range verified live in Plan 152-01 (63-address /26
+# REJECT-rule sweep, 100% RST/closed, 0 filtered/silent — 10.71.0.2 the
+# gateway's own dead-side IP is excluded below, see _build_target_list) —
+# a scaled reproduction of the original ~1024-host batch, not a 1:1
+# replica (152-CONTEXT.md).
 SEGNET_DEAD_CIDR = "10.71.0.0/26"
+
+# The gateway's own IP on segnet-dead. A probe to this address is handled by
+# the container's own INPUT chain (ordinary "no listener" TCP RST), not the
+# FORWARD-chain REJECT rule this lab exists to verify — so it must be
+# excluded from the REJECT-rule sweep (WR-01, 152-REVIEW.md).
+SEGNET_DEAD_GATEWAY_IP = "10.71.0.2"
 
 # Real open ports on the live subnet (segnet-live-tls:443, segnet-live-ssh:2222).
 PORTS: List[int] = [443, 2222]
@@ -78,11 +86,20 @@ RUNS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs")
 
 def _build_target_list() -> List[str]:
     """Full target list: segnet-live static IPs + the segnet-dead /26 range."""
-    dead_hosts = [str(ip) for ip in ipaddress.ip_network(SEGNET_DEAD_CIDR).hosts()]
+    gateway_dead_ip = ipaddress.ip_address(SEGNET_DEAD_GATEWAY_IP)
+    dead_hosts = [
+        str(ip)
+        for ip in ipaddress.ip_network(SEGNET_DEAD_CIDR).hosts()
+        if ip != gateway_dead_ip
+    ]
     # `.hosts()` on a /26 excludes the network (.0) and broadcast (.63)
-    # addresses, matching the 64-address sweep Plan 152-01 verified live
-    # (that run passed the CIDR directly to nmap, which expands it
-    # identically) — see 152-01-SUMMARY.md's "Full-range sweep transcript".
+    # addresses (62 usable addresses), and the comprehension above further
+    # excludes 10.71.0.2 (the gateway's own dead-side IP — WR-01), leaving
+    # 61 addresses genuinely exercising the FORWARD-chain REJECT rule. The
+    # live-fire transcript in expected_results_segmented_network.md swept
+    # the raw /26 CIDR directly via nmap (64 addresses incl. .0/.63/.2) and
+    # found 63/64 REJECT-verified (10.71.0.2 excluded as gateway-self) — see
+    # that file's "Dead-Range Sweep" section for the exact count reasoning.
     return list(SEGNET_LIVE_HOSTS) + dead_hosts
 
 

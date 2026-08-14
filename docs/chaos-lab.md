@@ -890,10 +890,17 @@ that is itself a *member* of `segnet-dead` would reach unassigned dead-subnet ad
 via direct L2 bridge delivery, bypassing `segnet-gateway`'s `FORWARD` chain entirely
 (confirmed via live smoke test during Phase 152 execution).
 
-The dead-range verification target is `10.71.0.2/26` (62 usable addresses) — a **scaled
-reproduction of the original ~1024-host batch, not a 1:1 replica**. The REJECT rule
-covers the entire `/24` CIDR, so this profile adds exactly 4 new containers regardless of
-range size — no per-dead-host container is needed.
+The dead-range verification target is `10.71.0.0/26` (62 usable addresses). The gateway's
+own `10.71.0.2` is excluded from the automated REJECT-rule sweep in
+`compare_discovery.py` — a probe to `.2` is handled by the gateway container's own
+`INPUT` chain (ordinary "no listener" TCP RST), not the `FORWARD`-chain `REJECT` rule
+this lab exists to verify — leaving 61 addresses genuinely REJECT-verified via the diff
+script. A raw `nmap` sweep of the full `/26` CIDR (64 addresses, including the `.0`
+network / `.63` broadcast addresses) independently confirmed 63/64 REJECT-rule hits, with
+`10.71.0.2` correctly excluded as gateway-self. A **scaled reproduction of the original
+~1024-host batch, not a 1:1 replica**. The REJECT rule covers the entire `/24` CIDR, so
+this profile adds exactly 4 new containers regardless of range size — no per-dead-host
+container is needed.
 
 > **Lab note:** `lab.sh` requires no `ALL_PROFILES` edit for this profile —
 > `_derive_all_profiles()` discovers `segmented-network` dynamically from

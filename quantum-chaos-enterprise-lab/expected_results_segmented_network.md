@@ -90,23 +90,36 @@ banner if a service-version probe were added.)
 
 ---
 
-## Dead-Range Sweep — 10.71.0.2/26 (segnet-dead)
+## Dead-Range Sweep — 10.71.0.0/26 (segnet-dead)
 
-**Representative range:** `10.71.0.2/26` (a 62-usable-address slice of the segnet-dead
-`/24`, excluding the gateway's own `10.71.0.2`) — a **scaled reproduction of the original
-~1024-host batch, not a 1:1 replica**, per `152-CONTEXT.md`'s "Segmented-Network Lab
-Profile Design" decision. `segnet-gateway`'s REJECT rule covers the entire `/24` CIDR, so
-no per-dead-host container is required to exercise this at scale.
+**Representative range:** `10.71.0.0/26` (a 62-usable-address slice of the segnet-dead
+`/24`) — a **scaled reproduction of the original ~1024-host batch, not a 1:1 replica**,
+per `152-CONTEXT.md`'s "Segmented-Network Lab Profile Design" decision.
+`segnet-gateway`'s REJECT rule covers the entire `/24` CIDR, so no per-dead-host
+container is required to exercise this at scale.
 
-**Expected result:** every address in the sweep reports `closed` (fast, RST-based) —
-**zero** `filtered`/silent-timeout results.
+**IMPORTANT — gateway self-address caveat:** `10.71.0.2` is `segnet-gateway`'s own IP on
+the `segnet-dead` network. A probe to `.2` is answered by the gateway container's own
+`INPUT` chain (an ordinary kernel "no listener" TCP RST), **not** the `FORWARD`-chain
+`REJECT` rule this lab exists to verify. `compare_discovery.py`'s automated sweep
+excludes `.2` (WR-01, `152-REVIEW.md`), scanning 61 addresses that are genuinely
+REJECT-rule-verified. The raw-nmap live-fire transcript below swept the full `/26` CIDR
+(64 addresses, unfiltered) and is annotated accordingly: 63/64 results are REJECT-rule
+RST, and 1/64 (`10.71.0.2`) is gateway-self INPUT-chain RST.
+
+**Expected result:** every non-gateway address in the sweep reports `closed` (fast,
+RST-based) — **zero** `filtered`/silent-timeout results.
 
 **Live-fire verification (Phase 152 execution, 2026-08-14):** swept the full `10.71.0.0/26`
-range (64 addresses, superset of the 62-usable `.2/26` representative slice):
+range (64 addresses, including the `.0` network / `.63` broadcast addresses and the
+gateway's own `.2`):
 ```
 Nmap done: 64 IP addresses (64 hosts up) scanned in 1.23 seconds
 ```
-All 64 addresses returned `443/tcp closed https` — 100% RST-based, 0 filtered/silent. A
+All 64 addresses returned `443/tcp closed https` — but only 63/64 of those `closed`
+results are attributable to the `iptables REJECT` rule under test; the `10.71.0.2` result
+is the gateway's own kernel "no listener" RST via its `INPUT` chain, not the `FORWARD`
+chain `REJECT`. **63/64 (98.4%) REJECT-rule-verified, 0 filtered/silent.** A
 representative single-host smoke test (`10.71.0.50`) confirmed sub-100ms response time
 (`Host is up (0.00010s latency)` / scanned in `0.08 seconds`), consistent with a real
 iptables REJECT rather than a connection timeout.

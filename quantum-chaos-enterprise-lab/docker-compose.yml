@@ -1425,9 +1425,17 @@ services:
   # No host ports are published for this profile (none) — segnet-live-tls
   # and segnet-live-ssh are reachable only from segnet-prober / segnet-gateway.
   #
-  # Dead-range verification target: 10.71.0.2/26 (a 62-usable-address slice
-  # of the segnet-dead /24, excluding the gateway's own 10.71.0.2) — a
-  # scaled reproduction of the original ~1024-host batch, not a 1:1 replica.
+  # Dead-range verification target: 10.71.0.0/26 (a 62-usable-address slice
+  # of the segnet-dead /24). The gateway's own 10.71.0.2 is one of those 62
+  # usable addresses and is EXCLUDED from the REJECT-rule sweep in
+  # compare_discovery.py — a probe to .2 hits the gateway's own INPUT chain
+  # (ordinary kernel RST), not the FORWARD-chain REJECT rule under test —
+  # leaving 61 addresses genuinely REJECT-verified via the automated diff
+  # script. A raw nmap sweep of the full /26 CIDR (64 addresses, incl. the
+  # .0 network / .63 broadcast addresses) independently verified 63/64
+  # REJECT-rule hits, with 10.71.0.2 correctly excluded as gateway-self —
+  # a scaled reproduction of the original ~1024-host batch, not a 1:1
+  # replica.
   #
   # lab.sh ALL_PROFILES needs NO edit — _derive_all_profiles discovers this
   # profile dynamically by parsing docker-compose.yml at runtime.
@@ -1545,13 +1553,18 @@ networks:
       config:
         - subnet: "10.70.0.0/24"
 
-  # Representative dead-host range for DISC-10 verification: 10.71.0.2/26
-  # (a 62-usable-address slice of this /24, excluding the gateway's own
-  # 10.71.0.2) — a scaled reproduction of the original ~1024-host batch,
-  # not a 1:1 replica, per 152-CONTEXT.md's "Segmented-Network Lab Profile
-  # Design" decision. The REJECT rule on segnet-gateway covers the whole
-  # /24 CIDR, so this slice needs no per-dead-host container — see
-  # segnet-gateway's comment block above.
+  # Representative dead-host range for DISC-10 verification: 10.71.0.0/26
+  # (a 62-usable-address slice of this /24). The gateway's own 10.71.0.2 is
+  # excluded from the automated REJECT-rule sweep (compare_discovery.py),
+  # since a probe to .2 hits the gateway's own INPUT chain, not the
+  # FORWARD-chain REJECT rule under test — 61 addresses are genuinely
+  # REJECT-verified by the diff script; a raw nmap sweep of the full /26
+  # (64 addresses) independently confirmed 63/64 REJECT-rule hits with .2
+  # correctly excluded as gateway-self. A scaled reproduction of the
+  # original ~1024-host batch, not a 1:1 replica, per 152-CONTEXT.md's
+  # "Segmented-Network Lab Profile Design" decision. The REJECT rule on
+  # segnet-gateway covers the whole /24 CIDR, so this slice needs no
+  # per-dead-host container — see segnet-gateway's comment block above.
   segnet-dead:
     driver: bridge
     ipam:
