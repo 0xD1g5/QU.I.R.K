@@ -427,6 +427,19 @@ def run_ot_supplemental_and_persist(
                 for _dev in hw_batch:
                     _hw_sess.add(_dev)
                 _hw_sess.commit()
+                # Phase 155 HWLC-04: reconcile drift history for every
+                # distinct device just committed. Runs AFTER the commit,
+                # via a session query against freshly-persisted rows —
+                # never against the in-memory hw_batch objects directly
+                # (RESEARCH.md Pitfall 2). Dedupe by (host, port) first so a
+                # batch with duplicate device rows only reconciles once per
+                # device. Stays inside this block's existing try/except so
+                # a reconciliation failure hits the same advisory-only
+                # handler as the commit itself.
+                from quirk.scanner.hardware_drift import reconcile_device_history
+
+                for _host, _port in {(_d.host, _d.port) for _d in hw_batch}:
+                    reconcile_device_history(_hw_sess, _host, _port)
             logger.info(f"Hardware fingerprint: {len(hw_batch)} device(s) recorded")
             if _purged:
                 logger.info(f"Hardware history retention: {_purged} stale device row(s) purged")
@@ -2207,6 +2220,15 @@ def main():
                     _snmp_new_batch.append(_snmp_dev)
 
             # Flush new/updated SNMP rows to DB
+            # KNOWN PRE-EXISTING GAP (Phase 155-05 RESEARCH.md Pitfall 2,
+            # tracked separately, NOT fixed here): the in-place mutations to
+            # already-committed _existing_dev objects above (lines ~2177-2192)
+            # are applied to detached ORM instances that are never re-added
+            # to a session, so _snmp_flush_batch is computed but those
+            # mutations are never persisted — only _snmp_new_batch actually
+            # gets flushed below. Re-attaching detached rows is a behavior
+            # change outside HWLC-04..09's scope; reconciliation below reads
+            # freshly-committed rows via a session query so it is unaffected.
             _snmp_flush_batch = _snmp_new_batch + [
                 _dev for _dev in _hw_batch
                 if getattr(_dev, "snmp_sysdescr", None) is not None
@@ -2218,6 +2240,21 @@ def main():
                         for _dev in _snmp_new_batch:
                             _snmp_sess.add(_dev)
                         _snmp_sess.commit()
+                        # Phase 155 HWLC-04: reconcile drift history for
+                        # each SNMP-only device just committed here. Use
+                        # _snmp_new_batch (the rows actually committed in
+                        # THIS block), not _snmp_flush_batch (which also
+                        # includes already-committed, detached _existing_dev
+                        # rows mutated above but never re-added to a
+                        # session — see the known-gap comment above).
+                        from quirk.scanner.hardware_drift import (
+                            reconcile_device_history,
+                        )
+
+                        for _host, _port in {
+                            (_d.host, _d.port) for _d in _snmp_new_batch
+                        }:
+                            reconcile_device_history(_snmp_sess, _host, _port)
                 except Exception as _snmp_db_err:
                     logger.warning(
                         f"SNMP fingerprint DB write failed (advisory-only, non-fatal): "
