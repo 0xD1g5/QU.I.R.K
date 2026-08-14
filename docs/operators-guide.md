@@ -1379,6 +1379,81 @@ a device's current state, and `docs/configuration.md` for the retention window
 
 ---
 
+### 9.7 Hardware EOL/EOS Catalog + Lifecycle Drift Events (Phase 155)
+
+As of Phase 155, QUIRK tracks two additional advisory-only hardware lifecycle signals on top
+of the fingerprinting/tier/CVE foundation from §9.1–§9.6: a curated vendor end-of-life catalog,
+and cross-scan drift events derived by reconciling a device's fingerprint history.
+
+**Hardware EOL/EOS catalog.** `quirk/scanner/hardware_eol.py::EOL_TABLE` maps each
+`(vendor, model)` pair to a curated end-of-life / end-of-support date pair, mirroring the
+existing curated-catalog + staleness-gate pattern used by `hw_cve.py` (§9.5),
+`bacnet_vendors.py` (§9.5), `quirk/compliance/__init__.py`, and `quirk/qramm/model_meta.py`.
+Unlike CVE disclosures — which are continuously published and gated on a 30-day cadence — vendor
+EOL/EOS announcements are infrequent, pre-scheduled events published via dedicated lifecycle
+bulletins months or years in advance. The EOL catalog is therefore gated on a **365-day**
+cadence (`STALENESS_THRESHOLD_DAYS = 365` in `hardware_eol.py`), the same cadence used for the
+compliance mappings and the BACnet vendor catalog. CI enforces this via
+`tests/test_eol_staleness.py`, which fails once the catalog's `last_verified` date is more than
+365 days old.
+
+When CI (or a local `pytest` run) reports the EOL catalog stale, follow the same 3-step
+re-verification procedure documented in `CLAUDE.md`'s Staleness Review Cadence section:
+
+1. Re-verify each `EOL_TABLE` entry against its `source_url` — confirm the published EOL/EOS
+   dates have not changed and are still cited to a live vendor or aggregator page.
+2. Bump `EOL_TABLE_META["last_verified"]` in `quirk/scanner/hardware_eol.py` to today's ISO date.
+3. Commit with `chore: re-verify hardware_eol catalog (YYYY-MM-DD)`.
+
+**What EOL data changes about a scan.** As of Phase 155, `HardwareDevice.eol_date` is populated
+from this catalog automatically during fingerprinting (`apply_eol_date()`, called once per
+device at the single point where every fingerprint path — SSH banner, HTTP management, SNMP,
+Modbus, BACnet — has converged on a vendor/model). This interacts with the pre-existing (Phase
+128) CNSA 2.0 tier-assignment rule in `hardware_tier.py::assign_tier()`: a device whose EOL date
+falls before 2030-01-01 is assigned **Tier N/A**, regardless of its PQC support status. Because
+the EOL catalog was dormant before this phase, populating a real EOL date can legitimately move
+a previously Tier 1/2/3 device to Tier N/A on its very next scan. **This is intended behavior,
+not a regression** — a device whose vendor has already end-of-lifed it is not a candidate for
+PQC remediation planning in the same sense as a supported device, so Tier N/A correctly routes
+it toward replacement guidance instead. Operators who see a device's tier shift to Tier N/A after
+upgrading to a build that includes this catalog should expect it, not file a bug.
+
+**Lifecycle drift events.** Every hardware-device commit during a scan now triggers
+`reconcile_device_history()` (`quirk/scanner/hardware_drift.py`), which compares a device's most
+recent successful probe rows against its scan history and — when a change is corroborated —
+persists a row to the `hardware_drift_events` table. Four event types are tracked
+(`EVENT_TYPES` in `hardware_drift.py`):
+
+- **`tier_crossing`** — the device's stored CNSA 2.0 remediation tier changed between scans
+  (for example Tier 2 → Tier 1, or a shift to/from Tier N/A driven by the EOL catalog above).
+- **`upstream_mitigated_change`** — the device's SNMP-confirmed crypto-bridge evidence state
+  changed (see §9.3's `partial_only` → `upstream_mitigated` promotion).
+- **`cve_delta`** — the set of correlated firmware CVEs (§9.5) changed between scans, e.g. a
+  catalog update surfaced a newly-applicable CVE for the device's fingerprinted firmware.
+- **`eol_state_change`** — the device's EOL classification (`"approaching"` — within 12 months
+  of its EOL date — or `"passed"` — already past it) changed between scans.
+
+**Confirmation window.** Tier, bridge-evidence, and EOL-state changes are gated by a **2-of-3
+confirmation window**: a new value must be corroborated by at least 2 of the device's last 3
+successful probes before it is recorded as a drift event. A single dropped packet or transient
+network hiccup that produces one anomalous reading therefore does **not** generate a false drift
+event — only a value that holds across the majority of the recent window does. (CVE-delta events
+are the one exception: they are computed as a direct two-row diff, not N-of-M gated, since a CVE
+catalog update should surface immediately rather than wait for confirmation.)
+
+Drift events accumulate in the `hardware_drift_events` table and are **deduplicated per
+`(host, port, event_type)`** — a stable value that holds across many consecutive scans is
+recorded once, not once per scan. Like every other signal in this section, drift events are
+**advisory-only**: `hardware_drift.py` is never imported by `quirk/intelligence/scoring.py`, and
+a dedicated regression test (`tests/test_cve_score_guard.py`) enforces that boundary in CI. A
+scan's readiness score is identical whether or not drift events were recorded during it.
+
+Dashboard and report surfacing of `hardware_drift_events` rows is deferred to Phase 156 — this
+phase computes and persists them only; there is no dashboard tab or report section for drift
+events yet.
+
+---
+
 ## 10. Discovery Liveness Pre-Pass
 
 As of Phase 145 (DISC-03), every nmap-discovery batch runs a cheap TCP-based liveness
