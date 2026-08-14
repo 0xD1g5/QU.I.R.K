@@ -166,7 +166,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
-| 155. Drift Detection + EOL Tracking | 6/6 | Complete   | 2026-08-14 |
+| 155. Drift Detection + EOL Tracking | 6/6 | Complete    | 2026-08-14 |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
 ---
