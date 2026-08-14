@@ -397,7 +397,9 @@ def run_ot_supplemental_and_persist(
     failure here must never abort the scan.
     """
     def _ot_supplemental_fn():
-        hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
+        hw_timeout = getattr(
+            getattr(getattr(cfg, "scan", None), "timeouts", None), "default_seconds", 3
+        )
         ot_eps = build_ot_supplemental_endpoints(
             targets, ssh_targets, confirmed_open_ports, cfg,
         )
@@ -2044,7 +2046,9 @@ def main():
             if _h:
                 _snmp_unique_hosts.add(_h)
 
-        hw_timeout = getattr(getattr(cfg, "scan", None), "timeout_seconds", 3)
+        hw_timeout = getattr(
+            getattr(getattr(cfg, "scan", None), "timeouts", None), "default_seconds", 3
+        )
         _snmp_community = getattr(cfg.connectors, "snmp_community", "public")
         # Phase 139 SNMPV3-02: per-host v3 credentials (second required call
         # site — RESEARCH Anti-Pattern; hardware_scanner.py's Step 3 is the
