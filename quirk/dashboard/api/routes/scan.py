@@ -11,7 +11,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from quirk.errors import format_error
 from quirk.dashboard.api.middleware.auth import require_auth
-from sqlalchemy import and_, func
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
@@ -44,6 +44,7 @@ from quirk.dashboard.api.schemas import (
 )
 from quirk.cbom.bridge import _confirm_upstream_mitigation, _detect_crypto_bridges
 from quirk.models import CryptoEndpoint, HardwareDevice, ScanJob
+from quirk.models_util import latest_successful_hardware_devices
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import _count_by_bucket
@@ -726,34 +727,9 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
     quirk/reports/writer.py for the CBOM/report-path twins.
     """
     try:
-        latest_success = (
-            db.query(
-                HardwareDevice.host,
-                HardwareDevice.port,
-                func.max(HardwareDevice.scanned_at).label("max_ts"),
-            )
-            .filter(HardwareDevice.probe_status == "success")
-            .group_by(HardwareDevice.host, HardwareDevice.port)
-            .subquery()
-        )
-        devices = (
-            db.query(HardwareDevice)
-            .join(latest_success, and_(
-                HardwareDevice.host == latest_success.c.host,
-                HardwareDevice.port == latest_success.c.port,
-                HardwareDevice.scanned_at == latest_success.c.max_ts,
-            ))
-            .all()
-        )
-        # Phase 154 D-13: tie-break dedupe — two rows for the same (host, port)
-        # can share an identical scanned_at (same-second writes); keep the
-        # highest-id row so the join never emits both.
-        _by_key: dict[tuple, HardwareDevice] = {}
-        for _d in devices:
-            _key = (_d.host, _d.port)
-            if _key not in _by_key or _d.id > _by_key[_key].id:
-                _by_key[_key] = _d
-        devices = list(_by_key.values())
+        # Phase 154 WR-02: shared helper — see quirk/models_util.py for the
+        # subquery/join/tie-break-dedupe contract every projection site relies on.
+        devices = latest_successful_hardware_devices(db)
         if not devices:
             return []
 
@@ -876,34 +852,9 @@ def _derive_hw_components(db: Session, latest_ts: datetime) -> list[HardwareComp
     quirk/reports/writer.py for the CBOM/report-path twins.
     """
     try:
-        latest_success = (
-            db.query(
-                HardwareDevice.host,
-                HardwareDevice.port,
-                func.max(HardwareDevice.scanned_at).label("max_ts"),
-            )
-            .filter(HardwareDevice.probe_status == "success")
-            .group_by(HardwareDevice.host, HardwareDevice.port)
-            .subquery()
-        )
-        devices = (
-            db.query(HardwareDevice)
-            .join(latest_success, and_(
-                HardwareDevice.host == latest_success.c.host,
-                HardwareDevice.port == latest_success.c.port,
-                HardwareDevice.scanned_at == latest_success.c.max_ts,
-            ))
-            .all()
-        )
-        # Phase 154 D-13: tie-break dedupe — two rows for the same (host, port)
-        # can share an identical scanned_at (same-second writes); keep the
-        # highest-id row so the join never emits both.
-        _by_key: dict[tuple, HardwareDevice] = {}
-        for _d in devices:
-            _key = (_d.host, _d.port)
-            if _key not in _by_key or _d.id > _by_key[_key].id:
-                _by_key[_key] = _d
-        devices = list(_by_key.values())
+        # Phase 154 WR-02: shared helper — see quirk/models_util.py for the
+        # subquery/join/tie-break-dedupe contract every projection site relies on.
+        devices = latest_successful_hardware_devices(db)
         if not devices:
             return []
 

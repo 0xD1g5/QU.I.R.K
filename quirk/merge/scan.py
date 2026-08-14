@@ -234,43 +234,11 @@ def merge_scan(
     # avoid DetachedInstanceError (Pitfall 6 in RESEARCH.md).
     hw_devices_for_cbom: list[dict] = []
     try:
-        from sqlalchemy import and_
-        from sqlalchemy import func as _sqla_func
-        from quirk.models import HardwareDevice as _HWDev
-        # Phase 154 D-13/D-14: per-(host, port) latest probe_status="success" row
-        # — a failed re-probe never displaces a device's last-known-good state,
-        # so the device stays present in the merged CBOM instead of vanishing.
-        # Pre-Phase-154 rows (probe_status IS NULL) are excluded until re-scanned
-        # (D-06 append-only; no backfill). This is one of four identical
-        # projection sites (D-14); see quirk/dashboard/api/routes/scan.py and
-        # quirk/reports/writer.py for the dashboard/report-path twins.
-        _latest_success = (
-            db.query(
-                _HWDev.host,
-                _HWDev.port,
-                _sqla_func.max(_HWDev.scanned_at).label("max_ts"),
-            )
-            .filter(_HWDev.probe_status == "success")
-            .group_by(_HWDev.host, _HWDev.port)
-            .subquery()
-        )
-        _hw_rows = (
-            db.query(_HWDev)
-            .join(_latest_success, and_(
-                _HWDev.host == _latest_success.c.host,
-                _HWDev.port == _latest_success.c.port,
-                _HWDev.scanned_at == _latest_success.c.max_ts,
-            ))
-            .all()
-        )
-        # Phase 154 D-13: tie-break dedupe — same-second writes for the same
-        # (host, port) can both match max_ts; keep the highest-id row.
-        _by_key: dict = {}
-        for _r in _hw_rows:
-            _key = (_r.host, _r.port)
-            if _key not in _by_key or _r.id > _by_key[_key].id:
-                _by_key[_key] = _r
-        _hw_rows = list(_by_key.values())
+        # Phase 154 WR-02: shared helper — see quirk/models_util.py for the
+        # subquery/join/tie-break-dedupe contract every projection site relies on.
+        from quirk.models_util import latest_successful_hardware_devices as _latest_hw_devices
+
+        _hw_rows = _latest_hw_devices(db)
         if _hw_rows:
             for _d in _hw_rows:
                 _tier = getattr(_d, "remediation_tier", "Tier N/A") or "Tier N/A"
