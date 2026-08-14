@@ -87,16 +87,6 @@ def _apply_entry(device: HardwareDevice, entry: dict, method: str, body: str = "
     device.pqc_status = entry.get("pqc_status", "unknown")
     device.fingerprint_method = method
 
-    # Parse eol_date safely
-    eol_raw = entry.get("eol_date")
-    if eol_raw:
-        try:
-            device.eol_date = _date.fromisoformat(eol_raw)
-        except (ValueError, TypeError):
-            device.eol_date = None
-    else:
-        device.eol_date = None
-
     # Confidence: high if a version/model token follows the vendor keyword (D-05)
     # We use a secondary check: does the matched text contain digit sequences or
     # additional model tokens beyond the bare vendor name?
@@ -121,6 +111,38 @@ def _apply_entry(device: HardwareDevice, entry: dict, method: str, body: str = "
         device.model = full_match if full_match != device.vendor else None
     else:
         device.confidence = "medium"
+
+
+def apply_eol_date(device: HardwareDevice) -> None:
+    """Populate ``device.eol_date`` from the curated EOL catalog (D-16).
+
+    Deliberately independent of ``HARDWARE_MATRIX`` — every matrix entry
+    hardcodes ``eol_date: None`` (Phase 155-01), so this is the single
+    authoritative source for end-of-life dates. ``correlate_eol()`` already
+    parses catalog ISO strings into ``datetime.date`` objects; this function
+    assigns that value directly with NO local re-parsing of the raw date
+    string (RESEARCH.md Pitfall 5 — a stray ``str`` reaching
+    ``assign_tier()``'s ``eol_date < _PQC_WINDOW_START`` comparison raises
+    ``TypeError``).
+
+    D-18: populating a real pre-2030 ``eol_date`` intentionally flips the
+    affected device to "Tier N/A" via the pre-existing Phase 128
+    ``assign_tier()`` override — this is expected downstream behavior, not a
+    bug introduced here.
+
+    A catalog lookup failure must never break a scan: any exception is
+    logged at debug level and ``device.eol_date`` is left as ``None``.
+    """
+    try:
+        from quirk.scanner.hardware_eol import correlate_eol
+
+        result = correlate_eol(
+            getattr(device, "vendor", None), getattr(device, "model", None)
+        )
+        device.eol_date = result.eol_date
+    except Exception as e:  # pragma: no cover - defensive, catalog must not break scans
+        _LOG.debug("apply_eol_date failed: %s", safe_str(e))
+        device.eol_date = None
 
 
 def _probe_http_mgmt(host: str, port: int, timeout: int) -> Optional[dict]:
@@ -606,6 +628,12 @@ def fingerprint_one(
                 )
                 device.fingerprint_method = "bacnet"
                 device.confidence = "medium"
+
+        # ── Phase 155 HWLC-09 (D-16/D-18): populate eol_date from the
+        # curated catalog at the single terminal point where every
+        # fingerprint path (SSH banner, HTTP mgmt, SNMP, Modbus, BACnet)
+        # has converged — no subsequent _apply_entry call can overwrite it.
+        apply_eol_date(device)
 
         # ── Phase 154 D-07: honest success/failed classification ─────────
         device.probe_status = "success" if observed else "failed"

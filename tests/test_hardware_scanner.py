@@ -200,3 +200,173 @@ def test_probe_status_success_on_http_response_without_vendor_match(monkeypatch)
 
     assert device.probe_status == "success"
     assert device.vendor == "Unknown"
+
+
+# ------------ Phase 155 HWLC-09/D-16/D-18: catalog-sourced eol_date ------------
+
+import datetime as _dt_mod  # noqa: E402
+
+
+def test_eol_date_populated_from_catalog_when_vendor_model_match(monkeypatch) -> None:
+    from quirk.scanner import hardware_eol
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    fake_eol_date = _dt_mod.date(2028, 6, 1)
+    monkeypatch.setattr(
+        hardware_eol,
+        "EOL_TABLE",
+        {("Cisco", None): {"eol_date": "2028-06-01", "eos_date": None, "source_url": "https://example.test"}},
+    )
+    ep = _make_ep("10.0.0.20", 22, "SSH-2.0-Cisco-1.25")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.vendor == "Cisco"
+    assert device.eol_date == fake_eol_date
+    assert isinstance(device.eol_date, _dt_mod.date)
+    assert not isinstance(device.eol_date, str)
+
+
+def test_eol_date_none_when_no_catalog_match(monkeypatch) -> None:
+    from quirk.scanner import hardware_eol
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    monkeypatch.setattr(hardware_eol, "EOL_TABLE", {})
+    ep = _make_ep("10.0.0.21", 22, "SSH-2.0-Cisco-1.25")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.eol_date is None
+
+
+def test_eol_date_never_a_string(monkeypatch) -> None:
+    from quirk.scanner import hardware_eol
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+    monkeypatch.setattr(
+        hardware_eol,
+        "EOL_TABLE",
+        {("Cisco", None): {"eol_date": "2028-06-01", "eos_date": None, "source_url": "https://example.test"}},
+    )
+    ep = _make_ep("10.0.0.22", 22, "SSH-2.0-Cisco-1.25")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.eol_date is None or not isinstance(device.eol_date, str)
+
+
+def test_eol_date_populated_after_bacnet_resolved_vendor_model(monkeypatch) -> None:
+    """A device whose vendor/model is only resolved by the BACnet step still
+    receives its catalog eol_date — the apply_eol_date() call site runs after
+    every vendor/model-resolution path in fingerprint_one()."""
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    from quirk.models import CryptoEndpoint
+    from quirk.scanner import hardware_eol
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+
+    monkeypatch.setattr(
+        hardware_eol,
+        "EOL_TABLE",
+        {
+            ("Johnson Controls", "Facility Explorer"): {
+                "eol_date": "2027-01-01",
+                "eos_date": None,
+                "source_url": "https://example.test",
+            }
+        },
+    )
+    # bacnet_vendors resolves the raw numeric vendorID/model-name into these
+    # canonical strings before EOL_TABLE lookup — patch resolution directly
+    # so the test doesn't depend on the live curated resolver catalog.
+    monkeypatch.setattr(
+        "quirk.scanner.bacnet_vendors.resolve_bacnet_vendor",
+        lambda raw: "Johnson Controls",
+    )
+    monkeypatch.setattr(
+        "quirk.scanner.bacnet_vendors.resolve_bacnet_model_family",
+        lambda vendor, raw: "Facility Explorer",
+    )
+
+    ep = CryptoEndpoint.__new__(CryptoEndpoint)
+    ep.__dict__["host"] = "10.0.0.23"
+    ep.__dict__["port"] = 80
+    ep.__dict__["protocol"] = "TCP"
+    ep.__dict__["service_detail"] = None
+    ep.__dict__["ssh_audit_json"] = None
+
+    cfg = SimpleNamespace(
+        connectors=SimpleNamespace(
+            enable_modbus=False, enable_bacnet=True, snmp_v3_credentials={}
+        )
+    )
+    with patch("quirk.scanner.bacnet_scanner.probe_bacnet_target") as mock_probe:
+        mock_probe.return_value = {
+            "bacnet_vendor": "999",
+            "bacnet_model": "raw-model-token",
+            "bacnet_firmware": "2.3",
+            "bacnet_probe_state": "identified",
+        }
+        device = fingerprint_one(ep, timeout=1, cfg=cfg)
+
+    assert device.vendor == "Johnson Controls"
+    assert device.model == "Facility Explorer"
+    assert device.eol_date == _dt_mod.date(2027, 1, 1)
+
+
+def test_apply_eol_date_exception_leaves_eol_date_none(monkeypatch) -> None:
+    import quirk.scanner.hardware_scanner as hw_mod
+    from quirk.scanner.hardware_scanner import fingerprint_one
+
+    _no_op_probes(monkeypatch)
+
+    def _raise(vendor, model):
+        raise RuntimeError("simulated catalog failure")
+
+    monkeypatch.setattr("quirk.scanner.hardware_eol.correlate_eol", _raise)
+    ep = _make_ep("10.0.0.24", 22, "SSH-2.0-Cisco-1.25")
+    device = fingerprint_one(ep, timeout=3)
+
+    # Catalog failure must not propagate out of fingerprint_one()
+    assert device.eol_date is None
+    assert device.vendor == "Cisco"
+
+
+def test_apply_eol_date_unit_never_reparses_string() -> None:
+    """apply_eol_date() must assign correlate_eol()'s already-parsed date
+    directly — never re-parse via fromisoformat (RESEARCH.md Pitfall 5)."""
+    from quirk.models import HardwareDevice
+    from quirk.scanner.hardware_scanner import apply_eol_date
+
+    device = HardwareDevice(
+        host="10.0.0.30",
+        port=22,
+        vendor="NoSuchVendor",
+        model="NoSuchModel",
+    )
+    apply_eol_date(device)
+
+    assert device.eol_date is None
+
+
+def test_assign_tier_returns_na_for_pre_2030_catalog_eol_date(monkeypatch) -> None:
+    """D-18: a device that received a pre-2030 catalog eol_date must be
+    classified Tier N/A by the pre-existing assign_tier() override."""
+    from quirk.scanner import hardware_eol
+    from quirk.scanner.hardware_scanner import fingerprint_one
+    from quirk.scanner.hardware_tier import assign_tier
+
+    _no_op_probes(monkeypatch)
+    monkeypatch.setattr(
+        hardware_eol,
+        "EOL_TABLE",
+        {("Cisco", None): {"eol_date": "2028-06-01", "eos_date": None, "source_url": "https://example.test"}},
+    )
+    ep = _make_ep("10.0.0.25", 22, "SSH-2.0-Cisco-1.25")
+    device = fingerprint_one(ep, timeout=3)
+
+    assert device.eol_date == _dt_mod.date(2028, 6, 1)
+    assert assign_tier(device) == "Tier N/A"
