@@ -61,6 +61,33 @@ _SNMP_V3_MINIMAL_RAW = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Phase 154 — HWLC-03 / D-11: ScanCfg.hardware_history_retention_days
+# ---------------------------------------------------------------------------
+
+
+def test_scan_cfg_hardware_history_retention_days_default():
+    """ScanCfg defaults hardware_history_retention_days to 180 (D-11)."""
+    from quirk.config import ScanCfg
+
+    cfg = ScanCfg(concurrency=200, ports_tls=[443])
+    assert cfg.hardware_history_retention_days == 180
+
+
+def test_scan_cfg_hardware_history_retention_days_yaml_override():
+    """A `scan:` YAML block setting hardware_history_retention_days flows
+    through config_from_dict()'s **scan_raw passthrough with no loader edit."""
+    from quirk.config import config_from_dict
+
+    raw = dict(_SNMP_V3_MINIMAL_RAW)
+    raw["scan"] = dict(raw["scan"])
+    raw["scan"]["hardware_history_retention_days"] = 30
+
+    cfg = config_from_dict(raw)
+
+    assert cfg.scan.hardware_history_retention_days == 30
+
+
 def test_snmp_v3_credentials_load_by_host():
     """SNMPV3-01: connectors.snmp_v3_credentials loads into a
     Dict[str, SnmpV3Credential] keyed by bare host, with env-var NAMES

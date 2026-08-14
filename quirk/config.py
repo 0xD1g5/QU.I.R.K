@@ -89,6 +89,13 @@ class ScanCfg:
     # Values: "top1000" | "all" | None  (common/custom scopes write ports_tls directly).
     nmap_port_scope: Optional[str] = None
 
+    # Phase 154 HWLC-03 / D-11: bounds how long hardware_devices scan-history
+    # rows are retained, in days. Purge is opportunistic per-scan (D-12; see
+    # Plan 04). Deliberately NOT the 90-day STALENESS_THRESHOLD_DAYS convention
+    # (see CLAUDE.md Staleness Review Cadence) — that governs catalog/matrix
+    # freshness, this governs engagement-history retention.
+    hardware_history_retention_days: int = 180
+
     def __init__(
         self,
         concurrency: int,
@@ -113,6 +120,8 @@ class ScanCfg:
         openapi_spec_path: Optional[str] = None,
         # Phase 121: port-scope hint for nmap-native scopes (top1000/all)
         nmap_port_scope: Optional[str] = None,
+        # Phase 154 HWLC-03 / D-11: hardware_devices history retention, days
+        hardware_history_retention_days: int = 180,
     ) -> None:
         self.concurrency = concurrency
         self.ports_tls = ports_tls
@@ -126,6 +135,7 @@ class ScanCfg:
         self.retry = retry if retry is not None else RetryCfg()
         self.openapi_spec_path = openapi_spec_path
         self.nmap_port_scope = nmap_port_scope
+        self.hardware_history_retention_days = hardware_history_retention_days
         # Route legacy flat kwargs into the nested TimeoutsCfg
         legacy_values = {
             "timeout_seconds": timeout_seconds,
