@@ -131,7 +131,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 155-06-PLAN.md — Docs (operators-guide, UAT-SERIES) + Obsidian sync + REQUIREMENTS flips [HWLC-04..09]
+- [x] 155-06-PLAN.md — Docs (operators-guide, UAT-SERIES) + Obsidian sync + REQUIREMENTS flips [HWLC-04..09]
 
 #### Phase 156: Reporting & OT/ICS Safety
 
@@ -166,7 +166,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
-| 155. Drift Detection + EOL Tracking | 5/6 | In Progress|  |
+| 155. Drift Detection + EOL Tracking | 6/6 | Complete   | 2026-08-14 |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
 ---
