@@ -421,6 +421,35 @@ def _extract_phase_close_triggers(diff_text: str) -> list[str]:
     return seen
 
 
+# D-03 (151-CONTEXT.md) / RESEARCH.md Pattern 5: phase-close is also
+# detected via a STATE.md phase-map row whose Status cell is added/changed
+# to "Complete" in the staged diff — a dual-source trigger, alongside the
+# ROADMAP.md checkbox flip above. Matches only added table rows (`^\+\|`),
+# and reuses the same `\d+(?:\.\d+)?` phase-number shape (Open Question 2)
+# as the ROADMAP.md trigger, so decimal sub-phases also trigger from a
+# STATE.md-only edit.
+_STATE_PHASE_ROW_ADDED_RE = re.compile(
+    r"^\+\|\s*(\d+(?:\.\d+)?)\s*\|.*\|\s*([^|]*?)\s*\|\s*$", re.MULTILINE
+)
+
+
+def _extract_state_phase_close_triggers(diff_text: str) -> list[str]:
+    """Pure. Return every phase number string whose STATE.md phase-map row
+    is added/changed to a Status cell containing "Complete" in `diff_text`
+    (the staged diff of .planning/STATE.md), in order of appearance,
+    deduplicated. This is the second of the two trigger sources D-03
+    describes -- a phase-close whose only git-visible signal lives in
+    STATE.md (e.g. a retroactive/out-of-band status correction with no
+    matching ROADMAP.md checkbox flip in the same commit) must still fire
+    ARTIFACT-01/02/03."""
+    seen: list[str] = []
+    for match in _STATE_PHASE_ROW_ADDED_RE.finditer(diff_text or ""):
+        phase_num, status_cell = match.group(1), match.group(2)
+        if "Complete" in status_cell and phase_num not in seen:
+            seen.append(phase_num)
+    return seen
+
+
 def _run_git(args: list[str], cwd: pathlib.Path) -> subprocess.CompletedProcess:
     """Thin wrapper: list-form argv, `check=False`, caller handles the
     returncode. Matches `release_tag_hygiene.py`'s `_run_gh_json` pattern.
@@ -527,19 +556,23 @@ def main(
     """CLI entrypoint invoked by `.githooks/pre-commit`.
 
     D-03 diff-gate for the phase-close checks (cheap no-op on unrelated
-    commits); check_destructive_archive() runs unconditionally per
-    RESEARCH.md Open Question 1's resolution. `repo_root`/`git_runner` are
-    injectable seams for testing `main()`'s branching logic without a real
-    git repo or touching the real filesystem.
+    commits) — dual-source per D-03/Pattern 5: a phase-close is detected via
+    EITHER a ROADMAP.md checkbox flip to `[x]` OR a STATE.md phase-map
+    Status cell change to `Complete`, unioned. check_destructive_archive()
+    runs unconditionally per RESEARCH.md Open Question 1's resolution.
+    `repo_root`/`git_runner` are injectable seams for testing `main()`'s
+    branching logic without a real git repo or touching the real
+    filesystem.
     """
     resolved_repo_root = repo_root if repo_root is not None else REPO_ROOT
 
     if git_runner is None:
         roadmap_path = resolved_repo_root / ".planning" / "ROADMAP.md"
+        state_path = resolved_repo_root / ".planning" / "STATE.md"
 
         def git_runner() -> subprocess.CompletedProcess:
             return _run_git(
-                ["diff", "--cached", "--", str(roadmap_path)],
+                ["diff", "--cached", "--", str(roadmap_path), str(state_path)],
                 cwd=resolved_repo_root,
             )
 
@@ -551,7 +584,12 @@ def main(
         )
         return 2
 
-    phase_nums = _extract_phase_close_triggers(git_result.stdout)
+    phase_nums: list[str] = []
+    for phase_num in _extract_phase_close_triggers(
+        git_result.stdout
+    ) + _extract_state_phase_close_triggers(git_result.stdout):
+        if phase_num not in phase_nums:
+            phase_nums.append(phase_num)
 
     exit_code = 0
     for phase_num in phase_nums:

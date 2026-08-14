@@ -617,6 +617,34 @@ def test_extract_phase_close_triggers_returns_all_matches_for_multi_phase_close(
 
 
 # ---------------------------------------------------------------------------
+# 151-02: _extract_state_phase_close_triggers() (WR-02: STATE.md-only trigger)
+# ---------------------------------------------------------------------------
+
+
+def test_extract_state_phase_close_triggers_matches_added_complete_row(vpg):
+    diff_text = "+| 999 | Fixture Phase | DISC-01 | None | Complete (2026-08-13) |\n"
+    assert vpg._extract_state_phase_close_triggers(diff_text) == ["999"]
+
+
+def test_extract_state_phase_close_triggers_ignores_non_complete_rows(vpg):
+    diff_text = "+| 999 | Fixture Phase | DISC-01 | None | In progress |\n"
+    assert vpg._extract_state_phase_close_triggers(diff_text) == []
+
+
+def test_extract_state_phase_close_triggers_handles_decimal_subphase(vpg):
+    diff_text = "+| 64.1 | Audit Residual Blockers | — | None | Complete (2026-08-11) |\n"
+    assert vpg._extract_state_phase_close_triggers(diff_text) == ["64.1"]
+
+
+def test_extract_state_phase_close_triggers_deduplicates_repeated_phase(vpg):
+    diff_text = (
+        "+| 999 | Fixture Phase | DISC-01 | None | Complete (2026-08-13) |\n"
+        "+| 999 | Fixture Phase | DISC-01 | None | Complete (2026-08-13, verified) |\n"
+    )
+    assert vpg._extract_state_phase_close_triggers(diff_text) == ["999"]
+
+
+# ---------------------------------------------------------------------------
 # 151-02: main() CLI glue
 # ---------------------------------------------------------------------------
 
@@ -719,6 +747,34 @@ def test_main_returns_1_when_commit_closes_multiple_phases_and_second_is_missing
     diff_text = (
         "+- [x] **Phase 998: Fixture Phase One** — done\n"
         "+- [x] **Phase 999: Fixture Phase Two** — done\n"
+    )
+
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+    )
+    assert exit_code == 1
+
+
+def test_main_returns_1_on_state_md_only_status_flip_to_complete(vpg, tmp_path):
+    """WR-02: a commit that updates ONLY STATE.md's phase-map Status cell to
+    Complete (no matching ROADMAP.md checkbox flip in the same commit) must
+    still fire ARTIFACT-01/02/03 for that phase -- matching D-03/Pattern 5's
+    dual-source trigger design. Phase 999 is deliberately missing
+    VERIFICATION.md, so if the STATE.md-only trigger never fired (bug),
+    main() would wrongly return 0."""
+    planning = tmp_path / ".planning"
+    phase_dir = planning / "phases" / "999-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    # Deliberately no 999-VERIFICATION.md (ARTIFACT-01 violation).
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    diff_text = (
+        "diff --git a/.planning/STATE.md b/.planning/STATE.md\n"
+        "--- a/.planning/STATE.md\n"
+        "+++ b/.planning/STATE.md\n"
+        "@@ -1,3 +1,3 @@\n"
+        "-| 999 | Fixture Phase | DISC-01 | None | In progress |\n"
+        "+| 999 | Fixture Phase | DISC-01 | None | Complete (2026-08-13) |\n"
     )
 
     exit_code = vpg.main(
