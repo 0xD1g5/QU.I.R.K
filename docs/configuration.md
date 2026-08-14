@@ -44,6 +44,7 @@ Controls connection timeouts, concurrency, port selection, and TLS enumeration d
 | `tls_concurrency` | int | `150` | TLS scan phase worker count |
 | `ssh_timeout_seconds` | int | `5` | SSH scan phase connection timeout |
 | `ssh_concurrency` | int | `100` | SSH scan phase worker count |
+| `hardware_history_retention_days` | int | `180` | Days of `hardware_devices` scan-history rows to retain per device (Phase 154, HWLC-03) |
 
 > **Note:** For large scans (1000+ hosts), reduce `concurrency` to `50` and use `--safe-mode` to prevent connection exhaustion.
 
@@ -60,7 +61,30 @@ scan:
   tls_concurrency: 150
   ssh_timeout_seconds: 5
   ssh_concurrency: 100
+  hardware_history_retention_days: 180
 ```
+
+### `hardware_history_retention_days` (Phase 154, HWLC-03)
+
+Bounds how many days of `hardware_devices` scan-history rows QUIRK keeps **per device**
+(identified by `host`/`port`). Unit is days; default is `180`.
+
+- **Purge mechanism:** a **hard delete** (`DELETE ... synchronize_session=False`), run
+  opportunistically at the end of each hardware scan run, scoped only to the `(host, port)`
+  pairs present in that scan's own batch — it never sweeps the whole `hardware_devices` table
+  and never touches devices not scanned this run.
+- **No CLI purge command and no background worker.** Retention is enforced only as a
+  side effect of running a hardware scan; there is no `quirk hardware purge` command and no
+  scheduled/cron job that ages out rows independently.
+- **Invalid values are skipped, not defaulted.** A zero, negative, or non-numeric value causes
+  the purge to be **skipped entirely** for that run (a warning is logged) rather than silently
+  falling back to `180` and deleting everything, or deleting nothing forever with no signal.
+- **Not the same knob as `STALENESS_THRESHOLD_DAYS`.** The 180-day default deliberately does
+  not reuse the project's 90-day catalog-freshness convention (see CLAUDE.md's "Staleness
+  Review Cadence") — that constant governs whether a *reference catalog* (QRAMM model,
+  compliance mappings, firmware CVE table) is stale, while `hardware_history_retention_days`
+  governs how long an *engagement's own scan history* is retained. They are unrelated knobs
+  that happen to both be day-counts.
 
 ---
 

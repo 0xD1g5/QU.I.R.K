@@ -445,6 +445,43 @@ data's 30-day cadence) — see `CLAUDE.md`'s "Staleness Review Cadence" section.
 > This only covers a curated subset of vendors we've individually verified, so an unrecognized
 > device will still show its raw numeric ID — that's expected, not a scanning failure."
 
+### 10.9 Last-Known-Good Current-State Projection (Phase 154)
+
+As of Phase 154, every Hardware Inventory surface (HTML/PDF/DOCX report, dashboard `/hardware`
+tab, CBOM DEVICE/FIRMWARE hierarchy) shows each device's most recent **successful** observation,
+not simply the most recent scan run. If a device's latest probe fails — the device is offline,
+the port stopped responding, or the probe errored — that device still appears with its
+previous, last-known-good vendor/model/tier data instead of vanishing from the inventory or
+flipping to a spurious `Unknown` row. All four surfaces were rewritten together in Phase 154
+specifically to keep this behavior consistent across the report writer, the merge/CBOM path,
+and both dashboard hardware queries — a device is never present on one surface and missing
+from another because of a single failed probe.
+
+**Migration caveat — legacy rows are hidden, never deleted.** Devices last scanned before this
+release carry no `probe_status` value (the column did not exist yet, so those rows are `NULL`).
+A `NULL` `probe_status` is treated the same as an explicit `failed` probe for the purposes of
+"what counts as current state" — those legacy rows will not appear in any Hardware Inventory
+surface until the device is scanned at least once more under this release. **Their history rows
+are never deleted by this change** — only excluded from the current-state view; the retention
+window described in `docs/configuration.md` (`hardware_history_retention_days`) is what
+eventually removes old rows, on its own independent 180-day-default clock, not this
+projection change.
+
+**Not yet a report/dashboard column.** The underlying `match_confidence` and `probe_status`
+values (see `docs/operators-guide.md` §9.6) that drive this projection are not yet surfaced as
+their own report or dashboard columns — that is deferred to a later release. Operators should
+not expect to find a `match_confidence` or `probe_status` column on the Hardware Inventory
+table today; the values exist in the data model and drive which row is shown, but are not
+independently rendered yet.
+
+> **Client Conversation — Last-Known-Good Hardware Data:**
+> "If a device shown in the hardware inventory was offline or unreachable during the most
+> recent scan, we still show you its last confirmed vendor, model, and remediation tier rather
+> than dropping it from the report or the dashboard. That means a temporarily-down device
+> won't silently disappear from your inventory — but it also means the data shown for that
+> device may be from an earlier scan, not today's. If a device you expect to see is entirely
+> missing, it likely predates this release and simply needs one more scan to reappear."
+
 ---
 
 ## 11. Dashboard Sidebar Scan-Date Badge (Phase 143)

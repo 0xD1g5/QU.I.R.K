@@ -1340,6 +1340,45 @@ See `docs/report-interpretation.md` §10.7 for the report/dashboard rendering co
 
 ---
 
+### 9.6 Device Re-Identification Fields (Phase 154)
+
+As of Phase 154, every fingerprinted `HardwareDevice` row carries three new per-device fields
+that improve re-identification across scans and honesty about probe outcomes. None of these
+are rendered as report or dashboard columns yet (deferred to a later release) — they are
+scanner-internal fields today, documented here so operators understand the underlying data
+model and the retention/last-known-good behavior it drives.
+
+- **`ssh_host_key_fingerprint`** — the SHA256 SSH host-key fingerprint QUIRK's existing
+  `ssh-audit` run already captures for the device. Because a host key is tied to the device
+  itself (not its current IP), this fingerprint is the stable secondary identity key that
+  survives a DHCP lease renewal or a re-IP — something a `host:port` match alone cannot do.
+
+- **`match_confidence`** — `high` when a `ssh_host_key_fingerprint` was captured for the
+  device, `low` when the device could only be matched on `host:port`. `low` covers three
+  distinct cases operators should be aware of: HTTP-only devices, SNMP-only devices, and —
+  importantly — **SSH-reachable devices scanned from a host that does not have `ssh-audit`
+  installed**. Operators who want `high`-confidence coverage across their SSH-reachable
+  hardware should install `ssh-audit` on the scanning host (see §1).
+
+- **`probe_status`** — `success` when the fingerprinting probe got any response at all,
+  including an honest `vendor="Unknown"` result (an unrecognized device that still answered
+  is a successful probe, not a failure). `failed` means the probe errored, timed out, or
+  nothing on the device answered at all.
+
+**`match_confidence` is not the same field as the pre-existing `confidence` column.**
+`confidence` (used elsewhere in hardware fingerprinting, e.g. §9.5's CVE correlation) describes
+confidence in a *probe result* — how sure QUIRK is about a parsed vendor/model/firmware value.
+`match_confidence` describes confidence in *cross-scan device identity* — how sure QUIRK is
+that two rows scanned at different times represent the same physical device. A device can have
+high result confidence (a cleanly parsed vendor/model) and low match confidence (no SSH host
+key to re-identify it by), or vice versa; the two fields are independent.
+
+See `docs/report-interpretation.md` §10.9 for how `probe_status` drives which row is shown as
+a device's current state, and `docs/configuration.md` for the retention window
+(`hardware_history_retention_days`) that bounds how long old probe rows are kept.
+
+---
+
 ## 10. Discovery Liveness Pre-Pass
 
 As of Phase 145 (DISC-03), every nmap-discovery batch runs a cheap TCP-based liveness
