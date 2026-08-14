@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.13
 milestone_name: Continuous Hardware Lifecycle Monitoring
 status: executing
-stopped_at: Completed 155-01-PLAN.md
-last_updated: "2026-08-14T20:40:00.637Z"
+stopped_at: Completed 155-03-PLAN.md
+last_updated: "2026-08-14T21:01:42.319Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 33
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 155 (Drift Detection + EOL Tracking) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-08-14
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 73%
 
 ## v5.13 Phase Map (planning)
 
@@ -156,6 +156,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 154 P05 | 45min | 3 tasks | 4 files |
 | Phase 155 P01 | 20min | 2 tasks | 4 files |
 | Phase 155 P02 | 25min | 3 tasks | 7 files |
+| Phase 155 P03 | 25min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -296,6 +297,9 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 155]: Shipped 4 citation-backed EOL_TABLE entries (F5 BIG-IP, Fortinet FortiGate, Palo Alto PAN-OS, Cisco IOS) instead of the plan's 6-entry target — Fail-closed fallback per plan text -- Juniper/HPE/Thales/Schneider Electric/Johnson Controls candidates had no independently fetchable, dated vendor lifecycle page reachable in this sandbox; guessing dates was disallowed
 - [Phase 155]: Fortinet entry sourced via endoflife.date/fortios aggregator — No static Fortinet-owned EOL bulletin page was fetchable (JS-rendered); endoflife.date is a well-known aggregator that itself cites Fortinet's official EOL bulletins, cross-verified live
 - [Phase 155]: [Phase 155] HardwareDriftEvent placed immediately after MergeRun in models.py, before HardwareDevice; recent_successful_hardware_rows() docstring kept terse to satisfy the plan's grep -A12 acceptance window while preserving the full documented contract; TIER_ORDER promoted verbatim into hardware_tier.py, dashboard route imports it aliased to the old private name so both existing call sites needed zero edits
+- [Phase 155]: firmware_for_correlation() consolidated into hw_cve.py rather than duplicated a third time in hardware_drift.py::cve_delta() — closes RESEARCH.md Open Question 1 per the Phase 154 WR-02 lesson
+- [Phase 155]: compute_drift_candidates() reads the STORED remediation_tier column, not a re-derived assign_tier() call — the reconciliation engine diffs persisted scan-row state
+- [Phase 155]: bridge_evidence_state() reads only persisted bridge_confirmed_at/bridge_evidence_json columns, never a transient bridge_status dict key owned by quirk/cbom/bridge.py
 
 ### Pending Todos
 
@@ -367,8 +371,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-14T20:39:12.576Z
-Stopped at: Completed 155-01-PLAN.md
+Last session: 2026-08-14T21:01:42.313Z
+Stopped at: Completed 155-03-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

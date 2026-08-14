@@ -119,7 +119,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 155-03-PLAN.md — Pure drift computation: N-of-M gate, tier/bridge/EOL state, CVE delta [HWLC-05/06/07/09]
+- [x] 155-03-PLAN.md — Pure drift computation: N-of-M gate, tier/bridge/EOL state, CVE delta [HWLC-05/06/07/09]
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -166,7 +166,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
-| 155. Drift Detection + EOL Tracking | 2/6 | In Progress|  |
+| 155. Drift Detection + EOL Tracking | 3/6 | In Progress|  |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
 ---
