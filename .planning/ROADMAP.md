@@ -337,7 +337,17 @@ dogfooding it immediately)
      `docs/UAT-SERIES.md` entry — the Phase 151 gates applied to the phase that ships them, proving
      the enforcement machinery works in practice and not just on paper
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+
+- [ ] 153-01-PLAN.md — Push main + confirm real CI green + workflow_dispatch dry-run self-test [RELEASE-01]
+- [ ] 153-02-PLAN.md — Version bump (pyproject.toml, README, UAT-SERIES literals, release notes) [RELEASE-01]
+- [ ] 153-03-PLAN.md — Human-gated git tag v5.12.0 + push (locked checkpoint) [RELEASE-01]
+- [ ] 153-04-PLAN.md — Post-tag verification: release.yml/release-container.yml green, zip asset, tag-hygiene guard [RELEASE-01]
+- [ ] 153-05-PLAN.md — docs/UAT-SERIES.md Series 153 + Obsidian phase note + vault sync [RELEASE-01]
+
+**UI hint**: no
 
 ### Progress
 
@@ -348,7 +358,7 @@ dogfooding it immediately)
 | 150. Test Suite Green Baseline + CI Gate | 9/9 | Complete   | 2026-08-13 |
 | 151. Phase-Completion Artifact Gates | 3/3 | Complete    | 2026-08-13 |
 | 152. Discovery Empirical Closure | 4/4 | Complete    | 2026-08-13 |
-| 153. Release Tag Cut | 0/TBD | Not started | - |
+| 153. Release Tag Cut | 0/5 | Not started | - |
 
 ---
 
