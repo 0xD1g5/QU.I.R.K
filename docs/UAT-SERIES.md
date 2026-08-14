@@ -17473,4 +17473,92 @@ and the liveness pre-pass automatically, closing the v5.11 audit gap.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-08-14  **Tester:** Plan 152-02 (automated regression test, TDD RED/GREEN)
+
+---
+
+## Series 153: Release Tag Cut (Phase 153 — v5.12)
+
+**Last Updated:** 2026-08-14
+
+### UAT-153-01: Real v5.12.0 tag cut proves the repaired release pipeline end-to-end (RELEASE-01) — Human (live)
+
+**What to test:** Cutting the real `v5.12.0` git tag and pushing it exercises the full release
+pipeline this milestone repaired — Phase 148's `release.yml` fix (Windows zip build + signing
+self-test + PyPI publish), Phase 150's CI gate, and Phase 151's phase-completion artifact
+gates — end-to-end on an actual immutable tag, not a `workflow_dispatch` dry-run.
+
+**Steps performed (2026-08-14, live session):**
+1. Confirmed `origin/main` in sync with local `main` at `e619de4dc09a56eaaa364b03beb69a62327ff1b6`
+   (`git rev-list --left-right --count` returned `0  0`; `git ls-remote` matched exactly).
+2. Watched all three required CI workflows to a real `success` conclusion on that SHA via
+   `gh run watch` (not cached state): Python CI
+   (https://github.com/0xD1g5/QU.I.R.K/actions/runs/31767014704), Dashboard Quality
+   (https://github.com/0xD1g5/QU.I.R.K/actions/runs/31767014538), Python Staleness Gate
+   (https://github.com/0xD1g5/QU.I.R.K/actions/runs/31767014460).
+3. Triggered and watched a `release.yml` `workflow_dispatch` dry-run
+   (https://github.com/0xD1g5/QU.I.R.K/actions/runs/31768252469, event confirmed
+   `workflow_dispatch` via `gh run list --json event`) — `success`, including the
+   `CI self-test — ephemeral cert signing round-trip` step logging
+   `SELF_TEST_SIGNING: OK — signtool wiring verified end-to-end`, with `Publish to PyPI` and
+   `Attach zip to GitHub Release` both confirmed `skipped` (zero-side-effect dry-run proven live,
+   not by YAML inspection alone).
+4. Bumped `pyproject.toml [project.version]` to `5.12.0` (sole canonical source), verified
+   six-surface version parity green via `tests/test_version.py`, updated the manual literal
+   surfaces (`README.md` heading, `docs/UAT-SERIES.md` header/UAT-1-02), and wrote
+   `docs/release-notes/5.12.0.md` — landed in commit `4e8e74d` (`chore(release): v5.12.0`).
+5. Presented the tag/push decision to the human via `AskUserQuestion`, citing the Plan 153-01 and
+   153-02 evidence above. Received explicit approval: "Proceed — tag and push v5.12.0". No
+   `git tag` or `git push --tags` command ran before this approval was received, per
+   153-CONTEXT.md's locked human-confirmation gate (executed in the foreground, not via
+   `/gsd:autonomous`, to guarantee a real human-in-the-loop pause).
+6. Ran `git tag v5.12.0` against commit `83ac92d993b018e67b1f6a568251bedc9cc14188`
+   (`merge(153-02): version bump to v5.12.0`) and `git push origin main --tags`. Confirmed on
+   remote via `git ls-remote --tags origin v5.12.0`.
+7. **Deviation, honestly reflected:** the combined `git push origin main --tags` pushed the tag
+   correctly but silently did not fire `release.yml`'s `push` event trigger — a documented GitHub
+   Actions limitation where pushing a branch and a tag together in one operation can drop the
+   tag's push event. The executor halted rather than unilaterally re-pushing (another gated
+   tag/push action); the orchestrator independently verified the finding (tag present at the
+   correct SHA, no matching `release.yml` run, no GitHub Release, tag-hygiene guard `FLAGGED`),
+   presented the fix (delete + re-push `v5.12.0` standalone, same tag/SHA) to the human via
+   `AskUserQuestion`, got explicit "proceed" approval, and executed
+   `git push origin --delete v5.12.0` followed by `git push origin v5.12.0`.
+8. The corrected standalone push fired both `release.yml` (run
+   https://github.com/0xD1g5/QU.I.R.K/actions/runs/31796819468, `event: push`,
+   `headBranch: v5.12.0`) and `release-container.yml` (run
+   https://github.com/0xD1g5/QU.I.R.K/actions/runs/31796819470) correctly. `release.yml` concluded
+   `success`: `Build wheel + sdist` success, `Build Windows zip + attach GitHub Release asset`
+   success (including the real tagged `CI self-test — ephemeral cert signing round-trip`, not the
+   Phase 148 dry-run), `Publish to PyPI (Trusted Publishers + Sigstore)` success (ID
+   `94755672477`).
+9. Confirmed via `gh release view v5.12.0 --json assets,tagName,url`: the GitHub Release has
+   `quirk-windows-5.12.0.zip` (58,170,009 bytes, `state: uploaded`) attached and downloadable at
+   `https://github.com/0xD1g5/QU.I.R.K/releases/download/v5.12.0/quirk-windows-5.12.0.zip`.
+10. Ran `python scripts/release_tag_hygiene.py` (exit 0): `v5.12.0` listed under
+    `### OK (backed by a successful release run)`, zero flagged tags.
+
+**Pass criteria:**
+- [x] Pushed-SHA CI green — Python CI, Dashboard Quality, and Python Staleness Gate all `success`
+  on `origin/main`'s HEAD before the tag was cut
+- [x] `release.yml` `workflow_dispatch` dry-run self-test OK (`SELF_TEST_SIGNING: OK`), zero
+  publish/attach side effects
+- [x] Human approval explicitly recorded before any `git tag`/`git push --tags` command ran
+- [x] `v5.12.0` tag pushed to `origin` and confirmed present on the remote at the correct SHA
+- [x] The real tagged `release.yml` run (`event: push`, not `workflow_dispatch`) completed green,
+  including the signing self-test, after a documented and human-approved recovery from a
+  silently-dropped tag-push event
+- [x] Windows operator zip (`quirk-windows-5.12.0.zip`, 58,170,009 bytes) attached to the
+  `v5.12.0` GitHub Release
+- [x] `scripts/release_tag_hygiene.py` lists `v5.12.0` as `OK`, not flagged
+
+**Automated gate:** N/A — this UAT is inherently a live, human-verify checkpoint (tag push
+triggers real external CI; see 153-01-SUMMARY.md .. 153-04-SUMMARY.md for full command
+transcripts).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** Digs / Claude (gsd-executor, live session)
+**Notes:** RELEASE-01. Requirement: RELEASE-01. One real, human-approved deviation occurred and is
+documented above (Step 7: the first combined branch+tag push silently dropped `release.yml`'s
+push-event trigger, requiring a standalone re-push) — the final tagged pipeline run and Release
+asset are both confirmed green and correct.
 **Notes:** DISC-11. Requirement: DISC-11. Commits: `03f5901` (RED), `6648cf7` (GREEN).
