@@ -17473,6 +17473,7 @@ and the liveness pre-pass automatically, closing the v5.11 audit gap.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-08-14  **Tester:** Plan 152-02 (automated regression test, TDD RED/GREEN)
+**Notes:** DISC-11. Requirement: DISC-11. Commits: `03f5901` (RED), `6648cf7` (GREEN).
 
 ---
 
@@ -17561,4 +17562,3 @@ transcripts).
 documented above (Step 7: the first combined branch+tag push silently dropped `release.yml`'s
 push-event trigger, requiring a standalone re-push) — the final tagged pipeline run and Release
 asset are both confirmed green and correct.
-**Notes:** DISC-11. Requirement: DISC-11. Commits: `03f5901` (RED), `6648cf7` (GREEN).
