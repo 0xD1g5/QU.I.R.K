@@ -357,6 +357,13 @@ def reconcile_device_history(
             "Hardware drift reconciliation failed (advisory-only, non-fatal): %s",
             safe_str(exc),
         )
+        # WR-01: roll back so a failed commit here doesn't leave the shared
+        # session in a broken pending-rollback state for subsequent
+        # reconcile_device_history() calls in the same batch loop.
+        try:
+            session.rollback()
+        except Exception:
+            pass
         return []
 
 
