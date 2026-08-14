@@ -57,6 +57,15 @@ docker compose exec segnet-prober nmap -sT -Pn -p 443 10.71.0.0/26
 
 Run these exclusively via `docker compose exec segnet-prober ...` per the macOS caveat above.
 
+**Note on transcript dates:** the three "Live-fire verification" timestamps below read
+`2026-08-14`, one day after the phase's commit dates (`2026-08-13`, e.g. `b84d927`).
+This is a UTC-vs-local timezone artifact, not a stale/copy-pasted transcript: the
+verification tooling (`compare_discovery.py`, in-container `nmap` runs) timestamps in
+UTC, and the phase's local commits were authored in the evening US Eastern (`-04:00`),
+which rolls over to the next UTC calendar day (confirmed live during the WR-01/WR-02
+code-review fix pass — a `compare_discovery.py` re-run at `2026-08-13 22:xx -04:00`
+local produced `run_timestamp_utc: "20260814-..."`).
+
 ---
 
 ## segnet-live-tls — 10.70.0.10:443/TCP (nginx, TLS 1.3)
