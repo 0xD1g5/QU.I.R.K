@@ -16,7 +16,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Release Integrity (anchor)
 
-- [ ] **RELEASE-01**: Cutting a release tag produces a Windows operator zip attached to the
+- [x] **RELEASE-01**: Cutting a release tag produces a Windows operator zip attached to the
       GitHub Release — the repaired signing self-test (`1a6effc`) is proven by an actual green
       run, not by inspection
 
@@ -115,7 +115,7 @@ Deferred to a later milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RELEASE-01 | Phase 153 | Pending |
+| RELEASE-01 | Phase 153 | Complete |
 | RELEASE-02 | Phase 148 | Complete |
 | RELEASE-03 | Phase 148 | Complete |
 | RELEASE-04 | Phase 148 | Complete |

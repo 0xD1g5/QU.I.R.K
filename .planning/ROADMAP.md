@@ -74,7 +74,7 @@ Documentation Checklist.
       resolution of the Phase 144 nmap timing artifact, and the interactive nmap-discovery-first
       default flipped to Y
 
-- [ ] **Phase 153: Release Tag Cut** — Cut the real v5.12.0 tag and prove every repaired signal
+- [x] **Phase 153: Release Tag Cut** — Cut the real v5.12.0 tag and prove every repaired signal
       end-to-end, including the new phase-artifact gates applied to itself
 
 ### Phase Details
@@ -358,7 +358,7 @@ Plans:
 | 150. Test Suite Green Baseline + CI Gate | 9/9 | Complete   | 2026-08-13 |
 | 151. Phase-Completion Artifact Gates | 3/3 | Complete    | 2026-08-13 |
 | 152. Discovery Empirical Closure | 4/4 | Complete    | 2026-08-13 |
-| 153. Release Tag Cut | 0/5 | Not started | - |
+| 153. Release Tag Cut | 5/5 | Complete    | 2026-08-14 |
 
 ---
 

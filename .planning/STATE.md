@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: verifying
-stopped_at: Phase 152 complete — VERIFICATION 4/4 criteria verified (roadmap/requirements closure applied post-verification)
-last_updated: "2026-08-14T01:00:00.000Z"
-last_activity: 2026-08-13
+stopped_at: Phase 153 complete — VERIFICATION 12/13 criteria verified live against GitHub/PyPI; 2 human_needed items confirmed by user. v5.12 milestone all 6 phases complete — audit/complete/cleanup pending.
+last_updated: "2026-08-14T12:00:00.000Z"
+last_activity: 2026-08-14
 progress:
   total_phases: 13
-  completed_phases: 5
-  total_plans: 31
-  completed_plans: 31
-  percent: 38
+  completed_phases: 6
+  total_plans: 36
+  completed_plans: 36
+  percent: 46
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 153 — release-tag-cut (next unstarted phase in the v5.12 map)
+**Current focus:** v5.12 milestone lifecycle — audit → complete → cleanup (all 6 phases done)
 
 ## Current Position
 
-Phase: 152 (discovery-empirical-closure) — COMPLETE (2026-08-13)
-Plan: 4 of 4 complete (152-01 segmented-network lab profile, 152-02 enable_nmap default flip, 152-03 timing-artifact empirical resolution — verdict DOES NOT REPRODUCE, 152-04 docs/UAT-SERIES.md + Obsidian sync); plus 1 post-execution code-review fix round (WR-01 dead-range sweep gateway-self exclusion, WR-02 restart-safe prober command, WR-03 timezone-artifact note)
-Status: Phase complete — VERIFICATION 4/4 success criteria verified (152-VERIFICATION.md); one process gap (roadmap/requirements checkboxes not yet flipped) found and closed same-session
-Last activity: 2026-08-13
+Phase: 153 (release-tag-cut) — COMPLETE (2026-08-14)
+Plan: 5 of 5 complete (153-01 pre-tag CI-green + dry-run, 153-02 version bump to 5.12.0, 153-03 human-gated tag push, 153-04 post-tag verification — with a real deviation: combined branch+tag push silently didn't fire release.yml, fixed via human-approved standalone re-push, 153-05 docs/UAT-SERIES.md + Obsidian sync); plus 1 post-execution code-review fix (WR-01 UAT-152-03 Notes line corruption from the Series 153 insertion)
+Status: Phase complete — VERIFICATION 12/13 must-haves verified live against real GitHub/PyPI state (not SUMMARYs); v5.12.0 confirmed published on PyPI, Windows zip attached to GitHub Release, tag-hygiene guard OK. 2 human_needed items (local-commit push, human-attendance confirmation) both closed same-session.
+Last activity: 2026-08-14
 
 ## v5.12 Phase Map
 
@@ -40,7 +40,7 @@ Last activity: 2026-08-13
 | 150 | Test Suite Green Baseline + CI Gate | SUITE-02, SUITE-03 | Phase 149 (scope depends on triage output) | Complete (2026-08-13; VERIFICATION passed 4/4 — green run 31723764281, red run 31725715958, both live-fire proven on real GitHub Actions) |
 | 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Complete (2026-08-13; VERIFICATION passed 4/4 — scripts/verify_phase_gates.py + .githooks/pre-commit, opt-in via `git config core.hooksPath .githooks`; not yet installed in this working copy) |
 | 152 | Discovery Empirical Closure | DISC-09, DISC-10, DISC-11 | None (DISC-10 depends on DISC-09 within-phase) | Complete (2026-08-13; VERIFICATION 4/4 — segmented-network lab profile live-verified, Phase 144 nmap timing artifact DOES NOT REPRODUCE per 152-DISC09-FINDING.md, enable_nmap defaults True) |
-| 153 | Release Tag Cut | RELEASE-01 | Phases 148, 150, 151 | Not started |
+| 153 | Release Tag Cut | RELEASE-01 | Phases 148, 150, 151 | Complete (2026-08-14; VERIFICATION 12/13 live-verified — v5.12.0 tagged, pushed, real release.yml green (event=push), Windows zip attached to GitHub Release, published on PyPI, tag-hygiene guard OK) |
 
 ## v5.11 Phase Map (SHIPPED 2026-08-11)
 
