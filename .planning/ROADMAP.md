@@ -298,7 +298,21 @@ before the artifact can be re-verified against it
   4. `docs/chaos-lab.md`, `README.md`, and the profile's `expected_results_*.md` oracle all
      reflect the new profile in the same change, per `CLAUDE.md`'s Chaos Lab Maintenance rule
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 152-01-PLAN.md — segmented-network chaos lab profile: gateway/iptables REJECT topology + reused live services + prober + docs triad [DISC-09]
+- [ ] 152-02-PLAN.md — Interactive nmap-discovery default flip default=False -> True + regression test [DISC-11]
+
+**Wave 2** *(depends on 152-01)*
+
+- [ ] 152-03-PLAN.md — Chunked-vs-direct comparison script + 3-run empirical finding + conditional mitigation + ledger closure [DISC-10]
+
+**Wave 3** *(depends on 152-01, 152-02, 152-03)*
+
+- [ ] 152-04-PLAN.md — docs/UAT-SERIES.md Series 152 + Obsidian phase note + Chaos-Lab.md vault re-sync [DISC-09/DISC-10/DISC-11]
 
 **UI hint**: yes
 
