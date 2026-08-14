@@ -243,8 +243,15 @@ a failed re-probe from an honestly-unrecognized vendor, a genuine per-device lat
 projection at all four read sites (dashboard, CBOM merge, CLI/PDF/DOCX reports) so a failing
 probe never erases a device's last-known-good state, and a configurable opportunistic retention
 purge (`hardware_history_retention_days`, default 180) bounding per-device history growth. This
-is the blocking foundation Phases 155 (drift detection) and 156 (reporting) build on. Next:
-Phase 155.
+is the blocking foundation Phases 155 (drift detection) and 156 (reporting) build on.
+
+**Phase 155 (Drift Detection + EOL Tracking) complete 2026-08-14** — HWLC-04/05/06/07/08/09
+validated. Two-scan reconciliation now surfaces CNSA 2.0 tier crossings, bridge/upstream-mitigation
+status shifts, CVE-set deltas, and EOL/EOS state changes as four distinct, N-of-M-confirmed,
+deduplicated event types persisted to `hardware_drift_events`; a new curated EOL/EOS catalog
+(`hardware_eol.py`, 4th staleness-gated instance) finally populates the previously-dormant
+`HardwareDevice.eol_date` column. Advisory-only — zero scoring-visible effect, machine-enforced.
+Next: Phase 156.
 
 ---
 
@@ -376,6 +383,20 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 - **Live human-UAT keeps catching real bugs** that automated verification (which injected matching in-memory rows) missed — the entire 999.85–89 set came from the post-ship live distributed E2E. Treat live E2E as a first-class gate this milestone.
 
 ## Current State
+
+**Phase 155 (drift-detection-eol-tracking) complete 2026-08-14** — 6/6 plans, verification 11/11
+must-haves (5/5 ROADMAP Success Criteria + 6/6 HWLC-04..09 requirements). Delivered
+`quirk/scanner/hardware_eol.py` (4th curated-catalog + staleness-gate instance, 365-day cadence)
+and `quirk/scanner/hardware_drift.py` (N-of-M confirmation gate, 4 distinct drift event types
+persisted to a new `hardware_drift_events` table, CVE delta via `hw_cve.py` correlation),
+wired into the live scan pipeline. Code review found 1 Critical defect (CR-01: the standalone
+SNMP-only bulk-fingerprint path in `run_scan.py` never called `apply_eol_date()`, silently
+leaving `eol_date` unpopulated for that entire path) and 1 non-blocking Warning (WR-01: missing
+session rollback in `reconcile_device_history()`'s exception handler) — both fixed post-execution
+with a regression test added for CR-01. Advisory-only firewall (never scoring-visible) confirmed
+and machine-tested. One human-verification item (documentation prose clarity) approved by user;
+`155-HUMAN-UAT.md` persists as `status: partial` pending a formal `/gsd:verify-work` pass.
+Dashboard/report surfacing of drift events is explicitly Phase 156's scope, not built here.
 
 **v5.12 Release & Verification Integrity — SHIPPED and archived 2026-08-14.** All 6 phases
 (148–153) complete, 36 plans, 14/14 requirements satisfied, version 5.12.0 — genuinely tagged,
@@ -660,7 +681,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Do not tune nmap timing flags to make one synthetic live check pass (v5.11 / 144-03) | Changing default `-T`/RTT bounds alters behavior for every production scan, trading false negatives on slow real networks against a artifact only reproducible on unassigned macOS loopback aliases | — Pending — accepted via signed override; resolution deferred to a real routed segment, best paired with DISC-09's lab profile |
 
 ---
-*Last updated: 2026-08-14 — Phase 154 (identity-data-model-foundation) complete, HWLC-01/02/03 validated*
+*Last updated: 2026-08-14 — Phase 155 (drift-detection-eol-tracking) complete, HWLC-04..09 validated*
 
 ## Evolution
 
