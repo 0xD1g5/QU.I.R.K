@@ -421,10 +421,13 @@ def run_ot_supplemental_and_persist(
     if hw_batch and db_path:
         try:
             with get_session(db_path) as _hw_sess:
+                _purged = _purge_stale_hardware_history(_hw_sess, hw_batch, cfg, logger)
                 for _dev in hw_batch:
                     _hw_sess.add(_dev)
                 _hw_sess.commit()
             logger.info(f"Hardware fingerprint: {len(hw_batch)} device(s) recorded")
+            if _purged:
+                logger.info(f"Hardware history retention: {_purged} stale device row(s) purged")
         except Exception as _hw_err:
             logger.warning(
                 f"Hardware fingerprint DB write failed (advisory-only, non-fatal): "
