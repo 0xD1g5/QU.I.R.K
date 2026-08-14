@@ -53,11 +53,12 @@ from typing import Callable
 import yaml
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-PHASES_ROOT = REPO_ROOT / ".planning" / "phases"
-MILESTONES_ROOT = REPO_ROOT / ".planning" / "milestones"
-STATE_PATH = REPO_ROOT / ".planning" / "STATE.md"
-ROADMAP_PATH = REPO_ROOT / ".planning" / "ROADMAP.md"
-UAT_SERIES_PATH = REPO_ROOT / "docs" / "UAT-SERIES.md"
+# NOTE: no PHASES_ROOT/MILESTONES_ROOT/STATE_PATH/ROADMAP_PATH/UAT_SERIES_PATH
+# module constants here by design -- every real call site (_run_phase_close_
+# check(), _run_destructive_archive_check(), main()) routes through the
+# injectable `repo_root` parameter instead, which is required for the test
+# suite's tmp_path-based fixtures to work. Do not add hardcoded-REPO_ROOT
+# path constants; they would bypass that seam.
 
 # ARTIFACT-03: path prefixes/globs considered "user-facing" per CONTEXT.md D-05
 # and RESEARCH.md Assumption A1. tests/, scripts/, .github/, and docs/-only
