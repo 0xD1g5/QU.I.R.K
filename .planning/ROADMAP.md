@@ -123,7 +123,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 155-04-PLAN.md — reconcile_device_history() with dedup-on-write + advisory-firewall guard test [HWLC-04/05/07]
+- [x] 155-04-PLAN.md — reconcile_device_history() with dedup-on-write + advisory-firewall guard test [HWLC-04/05/07]
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -166,7 +166,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
-| 155. Drift Detection + EOL Tracking | 3/6 | In Progress|  |
+| 155. Drift Detection + EOL Tracking | 4/6 | In Progress|  |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
 ---
