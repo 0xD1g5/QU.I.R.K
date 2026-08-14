@@ -240,7 +240,10 @@ def _confirm_bridge_evidence(device: HardwareDevice, timeout: int, cfg=None) -> 
         _v3_creds_map = getattr(_connectors, "snmp_v3_credentials", None) or {}
         _v3_cred = _v3_creds_map.get(host)
 
-        raw_entries = walk_arp_table(host, community="public", timeout=timeout, v3_credential=_v3_cred)
+        _snmp_community = getattr(_connectors, "snmp_community", "public")
+        raw_entries = walk_arp_table(
+            host, community=_snmp_community, timeout=timeout, v3_credential=_v3_cred
+        )
         if not raw_entries:
             return  # D-05: silently stays partial_only — no evidence collected
 
