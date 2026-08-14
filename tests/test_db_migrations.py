@@ -26,6 +26,7 @@ from quirk.db import (
     _EMAIL_COLUMNS,
     _GCP_COLUMNS,
     _IDENTITY_COLUMNS,
+    _IDENTITY_HW_COLUMNS,
     _PHASE41_COLUMNS,
     _PHASE46_COLUMNS,
     _PHASE54_QRAMM_ANSWER_COLUMNS,
@@ -247,6 +248,61 @@ def test_otics_columns_migrate_onto_pre_existing_table(tmp_path: Path) -> None:
     ]
     assert len(otics_results) == len(_OTICS_HW_COLUMNS)
     assert all(r.status == "already-present" for r in otics_results)
+
+
+# ---------------------------------------------------------------------------
+# Phase 154 HWLC-01/02: ssh_host_key_fingerprint/match_confidence/probe_status
+# columns migrate additively onto a pre-existing hardware_devices table (the
+# same legacy-DB retrofit scenario as the Phase 141 OTICS test above).
+# ---------------------------------------------------------------------------
+
+
+def test_identity_columns_migrate_onto_pre_existing_table(tmp_path: Path) -> None:
+    """ssh_host_key_fingerprint/match_confidence/probe_status must retrofit onto
+    a hardware_devices table that predates Phase 154 (not just get created
+    fresh via create_all), and report already-present on a second run."""
+    import sqlite3
+
+    db_path = tmp_path / "identity.db"
+
+    # Simulate a pre-Phase-154 database: init_db(), then drop the identity
+    # columns back out so the table matches what a real legacy DB looks like.
+    init_db(str(db_path))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        for col, _ in _IDENTITY_HW_COLUMNS:
+            conn.execute(f"ALTER TABLE hardware_devices DROP COLUMN {col}")
+        conn.commit()
+    finally:
+        conn.close()
+
+    def _table_info_names() -> set[str]:
+        conn = sqlite3.connect(str(db_path))
+        try:
+            rows = conn.execute("PRAGMA table_info(hardware_devices)").fetchall()
+        finally:
+            conn.close()
+        return {row[1] for row in rows}
+
+    assert "ssh_host_key_fingerprint" not in _table_info_names()
+
+    # Re-running init_db (as any CLI/dashboard invocation does at startup)
+    # must retrofit the missing columns onto the existing table.
+    init_db(str(db_path))
+
+    cols = _table_info_names()
+    for col, _ in _IDENTITY_HW_COLUMNS:
+        assert col in cols, f"{col} not retrofitted onto pre-existing hardware_devices table"
+
+    # Idempotent: a second run reports already-present, not an error.
+    engine = get_engine(str(db_path))
+    results = run_additive_migration(engine, dry_run=False)
+    identity_results = [
+        r for r in results
+        if r.table == "hardware_devices" and r.column in {c for c, _ in _IDENTITY_HW_COLUMNS}
+    ]
+    assert len(identity_results) == len(_IDENTITY_HW_COLUMNS)
+    assert all(r.status == "already-present" for r in identity_results)
 
 
 # ---------------------------------------------------------------------------

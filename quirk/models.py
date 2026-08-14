@@ -375,6 +375,13 @@ class HardwareDevice(Base):
     pqc_status values: supported | partial | unsupported | unknown | VENDOR-SILENT
     confidence values: high | medium | low | unknown
     fingerprint_method values: ssh_banner | http_mgmt | unknown
+    match_confidence values: high | low
+    probe_status values: success | failed
+
+    Note: match_confidence (Phase 154 HWLC-01/02) is cross-scan IDENTITY-match
+    confidence — how sure we are this row is "the same device" as a prior
+    scan's row — and is deliberately distinct from confidence (probe-RESULT
+    confidence). The two are never conflated.
     """
 
     __tablename__ = "hardware_devices"
@@ -425,3 +432,8 @@ class HardwareDevice(Base):
     bacnet_model        = Column(String(255), nullable=True)
     bacnet_firmware     = Column(String(255), nullable=True)
     bacnet_probe_state  = Column(String(32),  nullable=True)
+    # Phase 154 HWLC-01/02: cross-scan identity + probe-outcome fields.
+    # All nullable — pre-Phase-154 rows keep NULL, never backfilled (D-06).
+    ssh_host_key_fingerprint = Column(String(255), nullable=True)  # ssh-audit SHA256 host-key fingerprint, e.g. "SHA256:abc123..."; populated by hardware_scanner.py::fingerprint_one
+    match_confidence         = Column(String(16),  nullable=True)  # enum: high | low (D-04/D-05); see class docstring
+    probe_status             = Column(String(16),  nullable=True)  # enum: success | failed (D-07)

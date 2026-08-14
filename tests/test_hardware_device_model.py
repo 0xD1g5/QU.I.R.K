@@ -33,6 +33,60 @@ def test_hardware_device_columns() -> None:
     assert cols_by_name["fingerprint_method"].nullable is False
 
 
+# ------------ Phase 154 HWLC-01/02: identity + probe-outcome columns ------------
+
+def test_hardware_device_phase154_identity_columns() -> None:
+    """ssh_host_key_fingerprint, match_confidence, probe_status exist, nullable,
+    and match_confidence is distinct from the pre-existing confidence column (D-04)."""
+    from quirk.models import HardwareDevice
+
+    cols_by_name = {c.name: c for c in HardwareDevice.__table__.columns}
+
+    for col in ("ssh_host_key_fingerprint", "match_confidence", "probe_status"):
+        assert col in cols_by_name, f"HardwareDevice missing column: {col}"
+        assert cols_by_name[col].nullable is True, f"{col} must be nullable"
+
+    # Guard against a future collapse of match_confidence into confidence (D-04).
+    assert "match_confidence" != "confidence"
+    assert "match_confidence" in cols_by_name
+    assert "confidence" in cols_by_name
+
+
+def test_hardware_device_phase154_identity_columns_roundtrip() -> None:
+    """Create/query round-trip proves the three new columns persist unchanged."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    import quirk.models as m
+    from quirk.models import HardwareDevice
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+
+    session = Session()
+    device = HardwareDevice(
+        host="10.0.0.2",
+        port=22,
+        vendor="Cisco",
+        pqc_status="unsupported",
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        scanned_at=datetime.datetime.utcnow(),
+        ssh_host_key_fingerprint="SHA256:abc123",
+        match_confidence="high",
+        probe_status="success",
+    )
+    session.add(device)
+    session.commit()
+
+    result = session.query(HardwareDevice).filter_by(host="10.0.0.2").one()
+    assert result.ssh_host_key_fingerprint == "SHA256:abc123"
+    assert result.match_confidence == "high"
+    assert result.probe_status == "success"
+    session.close()
+
+
 # ------------ in-memory SQLite creation test ------------
 
 def test_hardware_device_create_in_sqlite() -> None:

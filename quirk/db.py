@@ -169,6 +169,14 @@ _OTICS_HW_COLUMNS: tuple[tuple[str, str], ...] = (
     ("bacnet_firmware",    "VARCHAR(255)"),
     ("bacnet_probe_state", "VARCHAR(32)"),
 )
+_IDENTITY_HW_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 154 HWLC-01/02: cross-scan identity + probe-outcome fields on
+    # hardware_devices. All nullable — null when not yet populated by a
+    # Phase 154+ scan; pre-existing rows keep NULL (D-06 append-only).
+    ("ssh_host_key_fingerprint", "VARCHAR(255)"),
+    ("match_confidence",         "VARCHAR(16)"),
+    ("probe_status",             "VARCHAR(16)"),
+)
 _PHASE146_SCANJOB_COLUMNS: tuple[tuple[str, str], ...] = (
     # Phase 146 DISC-04: nmap discovery batch-progress fields on scan_jobs.
     # All nullable — null until the first nmap discovery batch completes.
@@ -241,6 +249,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("hardware_devices", _BRIDGE_EVIDENCE_COLUMNS),   # Phase 140 BRIDGE-02
     ("hardware_devices", _OTICS_HW_COLUMNS),          # Phase 141 OTICS-06
     ("scan_jobs",        _PHASE146_SCANJOB_COLUMNS),  # Phase 146 DISC-04
+    ("hardware_devices", _IDENTITY_HW_COLUMNS),       # Phase 154 HWLC-01/02
 )
 
 
