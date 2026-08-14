@@ -57,18 +57,18 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Phase Artifact Integrity
 
-- [ ] **ARTIFACT-01**: A phase cannot be reported complete while its VERIFICATION.md is missing —
+- [x] **ARTIFACT-01**: A phase cannot be reported complete while its VERIFICATION.md is missing —
       the gap surfaces at phase close rather than at milestone-audit time (v5.11 Phase 145 shipped
       with no VERIFICATION.md and was caught weeks later)
 
-- [ ] **ARTIFACT-02**: A phase's VALIDATION.md reflects post-execution reality before the phase
+- [x] **ARTIFACT-02**: A phase's VALIDATION.md reflects post-execution reality before the phase
       closes — pre-execution `pending` rows and a stale `nyquist_compliant: false` cannot survive
       phase completion (v5.11 Phase 147)
 
-- [ ] **ARTIFACT-03**: A phase that shipped user-facing behavior cannot close without its
+- [x] **ARTIFACT-03**: A phase that shipped user-facing behavior cannot close without its
       `docs/UAT-SERIES.md` series entry (v5.11 Phase 144, the anchor phase, shipped without one)
 
-- [ ] **ARTIFACT-04**: A destructive planning operation refuses to run when the archive it
+- [x] **ARTIFACT-04**: A destructive planning operation refuses to run when the archive it
       depends on is absent or empty — `phases.clear` deleted ~39 unrecoverable v5.11 phase
       artifacts on 2026-08-11 because `milestone.complete` had reported
       `archived.phases: false` and nothing gated on it
@@ -122,10 +122,10 @@ Deferred to a later milestone.
 | SUITE-01 | Phase 149 | Complete |
 | SUITE-02 | Phase 150 | Complete |
 | SUITE-03 | Phase 150 | Complete |
-| ARTIFACT-01 | Phase 151 | Pending |
-| ARTIFACT-02 | Phase 151 | Pending |
-| ARTIFACT-03 | Phase 151 | Pending |
-| ARTIFACT-04 | Phase 151 | Pending |
+| ARTIFACT-01 | Phase 151 | Complete |
+| ARTIFACT-02 | Phase 151 | Complete |
+| ARTIFACT-03 | Phase 151 | Complete |
+| ARTIFACT-04 | Phase 151 | Complete |
 | DISC-09 | Phase 152 | Pending |
 | DISC-10 | Phase 152 | Pending |
 | DISC-11 | Phase 152 | Pending |

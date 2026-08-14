@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: verifying
-stopped_at: Phase 151 context gathered
-last_updated: "2026-08-13T23:26:33.401Z"
+stopped_at: Phase 151 complete — VERIFICATION passed 4/4
+last_updated: "2026-08-14T00:00:00.000Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 13
-  completed_phases: 3
-  total_plans: 24
-  completed_plans: 24
-  percent: 23
+  completed_phases: 4
+  total_plans: 27
+  completed_plans: 27
+  percent: 31
 ---
 
 # Project State
@@ -22,23 +22,23 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 151 — phase-completion-artifact-gates (next unstarted phase in the v5.12 map)
+**Current focus:** Phase 152 — discovery-empirical-closure (next unstarted phase in the v5.12 map)
 
 ## Current Position
 
-Phase: 150 (test-suite-green-baseline-ci-gate) — COMPLETE (2026-08-13)
-Plan: 9 of 9 complete (01, 02, 04, 05, 06, 07, 08, 09 done; 03's original live-fire attempt was superseded/completed by 08)
-Status: Phase complete — ready for verification
+Phase: 151 (phase-completion-artifact-gates) — COMPLETE (2026-08-13)
+Plan: 3 of 3 complete (151-01 pure decision functions, 151-02 CLI glue + git hook + CONTRIBUTING.md, 151-03 UAT-SERIES.md + Obsidian sync); plus 2 post-execution fix rounds on main (Phase 144 historical-gap exemption; 4 code-review Warnings WR-01..04)
+Status: Phase complete — VERIFICATION passed 4/4 (151-VERIFICATION.md)
 Last activity: 2026-08-13
 
 ## v5.12 Phase Map
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
-| 148 | Release Pipeline Repair + Windows Asset Backfill | RELEASE-02, RELEASE-03, RELEASE-04 | None (first, demonstrable early win) | Not started |
-| 149 | Test Suite Triage | SUITE-01 | None (independent, highest-variance item run early/alone) | Not started |
+| 148 | Release Pipeline Repair + Windows Asset Backfill | RELEASE-02, RELEASE-03, RELEASE-04 | None (first, demonstrable early win) | Complete (2026-08-11) |
+| 149 | Test Suite Triage | SUITE-01 | None (independent, highest-variance item run early/alone) | Complete (2026-08-12) |
 | 150 | Test Suite Green Baseline + CI Gate | SUITE-02, SUITE-03 | Phase 149 (scope depends on triage output) | Complete (2026-08-13; VERIFICATION passed 4/4 — green run 31723764281, red run 31725715958, both live-fire proven on real GitHub Actions) |
-| 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Not started |
+| 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Complete (2026-08-13; VERIFICATION passed 4/4 — scripts/verify_phase_gates.py + .githooks/pre-commit, opt-in via `git config core.hooksPath .githooks`; not yet installed in this working copy) |
 | 152 | Discovery Empirical Closure | DISC-09, DISC-10, DISC-11 | None (DISC-10 depends on DISC-09 within-phase) | Not started |
 | 153 | Release Tag Cut | RELEASE-01 | Phases 148, 150, 151 | Not started |
 
@@ -289,7 +289,16 @@ None yet.
 
 ## Deferred Items
 
-**Last re-triaged:** 2026-08-11 (v5.11 milestone-audit closeout; supersedes the 2026-08-10
+**Last re-triaged:** 2026-08-14 (Phase 152 Plan 03 — Phase 144 nmap timing artifact closed via
+3-run live-fire evidence; see Resolved section below)
+
+Resolved (2026-08-14):
+
+| Category | Item | Status | Resolution |
+|----------|------|--------|------------|
+| verification_gap (144) | Phase 144 nmap adaptive RTT/timing-engine artifact — accepted VERIFICATION override, `OPEN (needs real hardware)` in v5.11-MILESTONE-AUDIT.md | **RESOLVED — DOES NOT REPRODUCE** | Empirically settled via `.planning/phases/152-discovery-empirical-closure/152-DISC09-FINDING.md` — 3 independent live-fire runs against the DISC-09 `segmented-network` chaos lab profile (Plan 152-01) showed the chunked discovery batch loop's production timing template produces an identical `segnet-live` open-port set to a direct, non-throttled nmap run every time. No mitigation applied; `quirk/discovery/nmap_provider.py` unchanged. |
+
+**Last re-triaged (carried-forward items):** 2026-08-11 (v5.11 milestone-audit closeout; supersedes the 2026-08-10
 Phase 147 DRAIN-04 pass, whose Phase 143 `uat_gap` rationale went stale within a day — see that
 row's `Re-triaged (2026-08-11)` note)
 
