@@ -1,7 +1,14 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-14 (v5.13 Phase 154 wrap — Identity & Data-Model Foundation: UAT-154-01..04
+**Last Updated:** 2026-08-14 (v5.13 Phase 155 wrap — Drift Detection + EOL Tracking:
+UAT-155-01..05 added for the 365-day EOL catalog staleness gate (HWLC-08/HWLC-09), `eol_date`
+population from the curated catalog at fingerprinting's single terminal call site (HWLC-04/
+HWLC-09), drift-event suppression on an unchanged device (HWLC-05/HWLC-07), confirmed
+tier-crossing dedup-on-write with no duplicate on a subsequent unchanged scan (HWLC-05/HWLC-06/
+HWLC-07), and the advisory-only firewall proving zero readiness-score effect (HWLC-05..09).
+Closes HWLC-04, HWLC-05, HWLC-06, HWLC-07, HWLC-08, HWLC-09. See Series 155.)
+Earlier: v5.13 Phase 154 wrap — Identity & Data-Model Foundation: UAT-154-01..04
 added for SSH host-key re-identification (HWLC-01), low-confidence `host:port`-only flagging
 (HWLC-01), last-known-good current-state projection across all four hardware read sites (HWLC-02),
 and the configurable/safety-guarded hardware history retention purge (HWLC-03). Closes HWLC-01,
@@ -17727,3 +17734,189 @@ everything.
 **Notes:** HWLC-03. Success Criterion 4. Retention default (180 days) is deliberately distinct
 from the project's 90-day `STALENESS_THRESHOLD_DAYS` catalog-freshness convention — see
 `docs/configuration.md`. See 154-04-SUMMARY.md.
+
+---
+
+## Series 155: Drift Detection + EOL Tracking (Phase 155 — v5.13)
+
+**Last Updated:** 2026-08-14
+
+### UAT-155-01: EOL catalog staleness gate (HWLC-08, HWLC-09) — Automated
+
+**What to test:** `quirk/scanner/hardware_eol.py::EOL_TABLE`'s 365-day staleness gate follows
+the same boundary semantics and `QUIRK_CI_STALENESS_OVERRIDE_DATE` override convention as the
+other 8 CI-gated staleness sweeps (`hw_cve.py`, `bacnet_vendors.py`, compliance mappings, QRAMM
+model metadata), and is wired into the same CI sweep step.
+
+**Steps:**
+1. Run `pytest tests/test_eol_staleness.py -v`.
+2. Confirm `test_eol_staleness_boundary_365_days_not_stale` and
+   `test_eol_staleness_boundary_366_days_is_stale` show the exact `age > 365` strict-greater-than
+   boundary (365 days elapsed is fresh, 366 is stale).
+3. Run `QUIRK_CI_STALENESS_OVERRIDE_DATE=2028-01-01 pytest tests/test_eol_staleness.py -k boundary -v`
+   and confirm the override date is honored (catalog reports stale once the override date is far
+   enough past `EOL_TABLE_META["last_verified"]`).
+4. Confirm `tests/test_eol_staleness.py` is present in `.github/workflows/python-staleness.yml`'s
+   sweep step (9th file, alongside `test_cve_staleness.py`, `test_bacnet_vendor_staleness.py`,
+   compliance/QRAMM staleness tests).
+
+**Pass criteria:**
+- All 15 `tests/test_eol_staleness.py` tests pass
+- `age > 365` is strictly the stale boundary (365 days = fresh, 366 days = stale)
+- `QUIRK_CI_STALENESS_OVERRIDE_DATE` overrides "today" for the staleness check, same convention
+  as every other staleness-gated catalog in this project
+- `tests/test_eol_staleness.py` appears in the CI staleness sweep workflow file
+
+**Automated gate:** `pytest tests/test_eol_staleness.py -v` → 15/15 PASSED (Phase 155 Plan 01).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 155 Plan 01)
+**Notes:** HWLC-08, HWLC-09. `docs/operators-guide.md` §9.7 documents the 3-step re-verification
+procedure operators follow when this gate trips. See 155-01-SUMMARY.md.
+
+---
+
+### UAT-155-02: `eol_date` population from the curated catalog during a real scan (HWLC-04, HWLC-09) — Automated
+
+**What to test:** `hardware_scanner.py::apply_eol_date()` populates `HardwareDevice.eol_date`
+from `hardware_eol.EOL_TABLE` at the single terminal call site inside `fingerprint_one()`,
+covering every fingerprint resolution path (SSH, HTTP, SNMP, Modbus, BACnet) — and never
+re-parses an already-parsed `datetime.date` as a string.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_scanner.py -k "apply_eol_date or eol_date" -v`.
+2. Confirm a device whose `(vendor, model)` matches an `EOL_TABLE` entry (e.g. `("Cisco", "IOS")`)
+   receives a non-`None`, real `datetime.date` `eol_date` after fingerprinting — never a `str`.
+3. Confirm a device with no catalog match leaves `eol_date is None`.
+4. Confirm a BACnet-resolved vendor/model device also receives its catalog `eol_date` — proving
+   the single terminal call site covers non-SSH/HTTP paths too.
+5. (DB-evidence variant, optional/manual): run a scan against a chaos-lab target fingerprinted
+   as a catalog vendor/model, then query the scan output DB directly:
+   `sqlite3 <db_path> "SELECT host, vendor, model, eol_date FROM hardware_devices WHERE eol_date IS NOT NULL;"`
+   and confirm at least one row has a non-NULL `eol_date`.
+
+**Pass criteria:**
+- Catalog hit populates a real `datetime.date` (never a string) on `HardwareDevice.eol_date`
+- Catalog miss leaves `eol_date` `None`
+- Every fingerprint resolution path (SSH/HTTP/SNMP/Modbus/BACnet) converges on the same single
+  `apply_eol_date()` call site — no path bypasses EOL population
+- A `correlate_eol()` exception is isolated and leaves `eol_date=None`, never aborting the scan
+
+**Automated gate:** `pytest tests/test_hardware_scanner.py -k "apply_eol_date or eol_date" -v` →
+7/7 PASSED (Phase 155 Plan 05).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 155 Plan 05)
+**Notes:** HWLC-04, HWLC-09. `docs/operators-guide.md` §9.7 documents the D-18 interaction with
+`assign_tier()`'s pre-2030 "Tier N/A" override. See 155-05-SUMMARY.md.
+
+---
+
+### UAT-155-03: Drift-event suppression on an unchanged device (HWLC-05, HWLC-07) — Automated
+
+**What to test:** Two consecutive scans of a device whose fingerprinted state (tier, bridge
+evidence, EOL state) is unchanged produce **zero** `hardware_drift_events` rows — the 2-of-3
+confirmation window and dedup-on-write logic must not manufacture spurious drift on a stable
+device.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_drift.py -k "reconcile_device_history_second_call_is_deduped or reconcile_device_history_returns_empty_for_fewer" -v`.
+2. Confirm `test_reconcile_device_history_second_call_is_deduped` shows a device reconciled twice
+   in a row with no state change inserts zero new `HardwareDriftEvent` rows on the second call.
+3. Confirm `test_reconcile_device_history_returns_empty_for_fewer_than_two_rows` shows a
+   first-ever scan (fewer than 2 historical rows) produces no drift events — there is nothing yet
+   to diff against.
+4. Run `pytest tests/test_hardware_drift_wiring.py -k first_scan_device_produces_no_drift_event -v`
+   for the full scan-pipeline-level confirmation of the same behavior against a real on-disk
+   SQLite DB.
+
+**Pass criteria:**
+- A device with no state change across reconciliation calls never accumulates duplicate or
+  spurious `hardware_drift_events` rows
+- A device's first-ever scan (no prior history) produces zero drift events
+
+**Automated gate:** `pytest tests/test_hardware_drift.py -k "reconcile" -v` → 9/9 PASSED
+(Phase 155 Plan 04); `pytest tests/test_hardware_drift_wiring.py -v` → 6/6 PASSED (Phase 155
+Plan 05).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 155 Plans 04/05)
+**Notes:** HWLC-05, HWLC-07. See 155-04-SUMMARY.md, 155-05-SUMMARY.md.
+
+---
+
+### UAT-155-04: Confirmed tier-crossing produces exactly one drift event, never a duplicate on the next unchanged scan (HWLC-05, HWLC-06, HWLC-07) — Automated
+
+**What to test:** A device whose CNSA 2.0 remediation tier changes and holds across the 2-of-3
+confirmation window produces exactly one `tier_crossing` row in `hardware_drift_events`, and a
+subsequent scan with the tier still unchanged does not insert a duplicate.
+
+**Steps:**
+1. Run `pytest tests/test_hardware_drift.py -k "compute_drift_candidates_tier_crossing_confirmed or compute_drift_candidates_tier_flaky_reading_suppressed" -v`.
+2. Confirm `test_compute_drift_candidates_tier_crossing_confirmed` shows a `tier_crossing`
+   candidate is produced only once the new tier value is corroborated by at least 2 of the last
+   3 successful probes.
+3. Confirm `test_compute_drift_candidates_tier_flaky_reading_suppressed` shows a single
+   anomalous/outvoted tier reading (present in only 1 of 3 recent rows) produces **no** candidate
+   — proving a transient reading cannot manufacture a false drift event.
+4. Run `pytest tests/test_hardware_drift.py -k reconcile_device_history_inserts_confirmed_tier_crossing -v`
+   and confirm exactly one `HardwareDriftEvent(event_type="tier_crossing")` row is persisted.
+5. Run `pytest tests/test_hardware_drift.py -k reconcile_device_history_a_to_b_to_a_second_a_not_suppressed -v`
+   to confirm the dedup-on-write logic compares against the most recent event of that
+   `event_type` only (not the entire event history), so a real A→B→A cycle is captured correctly
+   rather than incorrectly suppressed.
+6. Run `pytest tests/test_hardware_drift_wiring.py -k site_a_reconciles_device_after_commit -v`
+   for the full scan-pipeline-level confirmation against a real on-disk SQLite DB.
+
+**Pass criteria:**
+- A confirmed tier change (2-of-3 corroboration) produces exactly one `tier_crossing` row
+- An outvoted, single-reading tier "change" (1-of-3) produces zero rows
+- Re-running reconciliation with the tier unchanged does not insert a duplicate row
+- Dedup compares against the most recent row of the same `event_type`, correctly allowing a
+  genuine A→B→A cycle to be recorded as two distinct events, not silently suppressed
+
+**Automated gate:** `pytest tests/test_hardware_drift.py -v` → 38/38 PASSED (Phase 155 Plans
+03/04 combined); `pytest tests/test_hardware_drift_wiring.py -v` → 6/6 PASSED (Phase 155 Plan 05).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 155 Plans 03/04/05)
+**Notes:** HWLC-05, HWLC-06, HWLC-07. `docs/operators-guide.md` §9.7 documents all four
+`EVENT_TYPES` and the 2-of-3 confirmation window in operator-facing terms. See 155-03-SUMMARY.md,
+155-04-SUMMARY.md, 155-05-SUMMARY.md.
+
+---
+
+### UAT-155-05: Drift events are advisory-only — zero effect on the readiness score (HWLC-05..09) — Automated
+
+**What to test:** `hardware_drift.py` and `hardware_eol.py` are never imported by
+`quirk/intelligence/scoring.py`, no `SCORE_WEIGHTS` key references drift or EOL, and
+`assign_tier()` cannot structurally read any drift-candidate attribute — a scan with
+`hardware_drift_events` rows present produces an identical readiness score to one without.
+
+**Steps:**
+1. Run `pytest tests/test_cve_score_guard.py -k "drift" -v`.
+2. Confirm `test_no_drift_or_eol_key_in_score_weights` shows no `SCORE_WEIGHTS` key contains
+   `drift`, `eol`, or `eos` (case-insensitive).
+3. Confirm `test_scoring_module_does_not_import_drift_or_eol` shows a source-scan of
+   `quirk/intelligence/scoring.py` finds zero references to `hardware_drift`, `hardware_eol`, or
+   `HardwareDriftEvent`.
+4. Confirm `test_assign_tier_unaffected_by_drift_attributes` shows `assign_tier()` is structurally
+   incapable of reading drift-candidate data.
+5. Confirm `test_assign_tier_eol_override_is_intentional` documents the pre-existing (Phase 128)
+   `eol_date < 2030-01-01` → `"Tier N/A"` override as an intentional interaction Phase 155's EOL
+   catalog now actually triggers — not a scoring-boundary violation.
+
+**Pass criteria:**
+- Zero `SCORE_WEIGHTS` keys reference drift/EOL/EOS
+- `quirk/intelligence/scoring.py` never imports `hardware_drift` or `hardware_eol`
+- `assign_tier()` reads only `eol_date`/`confidence`/`pqc_status` — never a drift-candidate field
+- A scan's readiness score is identical whether or not `hardware_drift_events` rows exist for
+  its devices (the score computation has no code path that can observe them)
+
+**Automated gate:** `pytest tests/test_cve_score_guard.py -v` → 6/6 PASSED (Phase 155 Plan 04).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 155 Plan 04)
+**Notes:** HWLC-05, HWLC-06, HWLC-07, HWLC-08, HWLC-09. Mirrors the existing CVE advisory-only
+firewall pattern (`test_no_cve_key_in_score_weights`/`test_assign_tier_unaffected_by_cve_attributes`)
+extended to cover both new Phase 155 modules. See 155-04-SUMMARY.md.
