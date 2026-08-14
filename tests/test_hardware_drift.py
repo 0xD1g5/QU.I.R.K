@@ -368,3 +368,249 @@ def test_compute_drift_candidates_all_event_types_are_valid() -> None:
     for c in candidates:
         assert isinstance(c, DriftCandidate)
         assert c.event_type in EVENT_TYPES
+
+
+# ---------------------------------------------------------------------------
+# reconcile_device_history() — DB-facing persistence + dedup-on-write
+# (plan 155-04, `pytest -k reconcile` selects this group)
+# ---------------------------------------------------------------------------
+
+import datetime as _dt
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+import quirk.models as _m
+from quirk.models import HardwareDevice, HardwareDriftEvent
+from quirk.scanner.hardware_drift import reconcile_device_history
+
+
+def _memory_session():
+    engine = create_engine("sqlite:///:memory:")
+    _m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    return Session()
+
+
+def _seed(session, host, port, scanned_at, tier, vendor="Unknown", model=None, modbus_firmware=None):
+    device = HardwareDevice(
+        host=host,
+        port=port,
+        vendor=vendor,
+        model=model,
+        pqc_status="unsupported",
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        probe_status="success",
+        scanned_at=scanned_at,
+        remediation_tier=tier,
+        modbus_firmware=modbus_firmware,
+    )
+    session.add(device)
+    session.commit()
+    return device
+
+
+def test_reconcile_device_history_returns_empty_for_fewer_than_two_rows() -> None:
+    session = _memory_session()
+    _seed(session, "10.0.0.1", 22, _dt.datetime(2026, 8, 1), tier="Tier 1")
+    try:
+        result = reconcile_device_history(session, "10.0.0.1", 22)
+        assert result == []
+        assert session.query(HardwareDriftEvent).count() == 0
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_inserts_confirmed_tier_crossing() -> None:
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed(session, "10.0.0.2", 22, base, tier="Tier 2")
+    _seed(session, "10.0.0.2", 22, base + _dt.timedelta(days=1), tier="Tier 1")
+    _seed(session, "10.0.0.2", 22, base + _dt.timedelta(days=2), tier="Tier 1")
+    try:
+        result = reconcile_device_history(session, "10.0.0.2", 22)
+        assert len(result) == 1
+        assert result[0].event_type == "tier_crossing"
+        assert result[0].old_value == "Tier 2"
+        assert result[0].new_value == "Tier 1"
+
+        rows = session.query(HardwareDriftEvent).filter_by(host="10.0.0.2", port=22).all()
+        assert len(rows) == 1
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_detected_at_and_confirmed_at_are_set() -> None:
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed(session, "10.0.0.3", 22, base, tier="Tier 2")
+    _seed(session, "10.0.0.3", 22, base + _dt.timedelta(days=1), tier="Tier 1")
+    newest_scanned_at = base + _dt.timedelta(days=2)
+    _seed(session, "10.0.0.3", 22, newest_scanned_at, tier="Tier 1")
+    try:
+        result = reconcile_device_history(session, "10.0.0.3", 22)
+        assert len(result) == 1
+        assert result[0].detected_at == newest_scanned_at
+        assert result[0].confirmed_at is not None
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_second_call_is_deduped() -> None:
+    """Calling reconcile_device_history twice for an unchanged device inserts
+    nothing the second time (dedup on identical new_value, D-09)."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed(session, "10.0.0.4", 22, base, tier="Tier 2")
+    _seed(session, "10.0.0.4", 22, base + _dt.timedelta(days=1), tier="Tier 1")
+    _seed(session, "10.0.0.4", 22, base + _dt.timedelta(days=2), tier="Tier 1")
+    try:
+        first = reconcile_device_history(session, "10.0.0.4", 22)
+        assert len(first) == 1
+        second = reconcile_device_history(session, "10.0.0.4", 22)
+        assert second == []
+        assert session.query(HardwareDriftEvent).count() == 1
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_dedup_is_per_event_type(monkeypatch) -> None:
+    """An existing tier_crossing row does NOT suppress a new cve_delta event
+    for the same device (dedup scoped per event_type, D-08)."""
+    from quirk.scanner import hw_cve
+
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    # Stage 1: Unknown vendor (CVE-gated out) confirms a tier crossing.
+    _seed(session, "10.0.0.5", 22, base, tier="Tier 2", vendor="Unknown")
+    _seed(session, "10.0.0.5", 22, base + _dt.timedelta(days=1), tier="Tier 1", vendor="Unknown")
+    _seed(session, "10.0.0.5", 22, base + _dt.timedelta(days=2), tier="Tier 1", vendor="Unknown")
+    try:
+        first = reconcile_device_history(session, "10.0.0.5", 22)
+        assert len(first) == 1
+        assert first[0].event_type == "tier_crossing"
+
+        # Stage 2: two more rows with a recognized vendor/model/firmware
+        # producing a CVE delta between the newest two; tier stays "Tier 1"
+        # across the new 3-row window (no new tier_crossing).
+        def fake_correlate(vendor, model, firmware):
+            from quirk.scanner import hw_cve
+
+            if firmware == "new":
+                return hw_cve.CveMatchResult(
+                    matches=[{"cve_id": "CVE-A"}, {"cve_id": "CVE-B"}],
+                    confidence="high", attempted=True,
+                )
+            return hw_cve.CveMatchResult(matches=[], confidence="high", attempted=True)
+
+        monkeypatch.setattr(hw_cve, "correlate_device", fake_correlate)
+        _seed(
+            session, "10.0.0.5", 22, base + _dt.timedelta(days=3), tier="Tier 1",
+            vendor="Cisco", model="IOS", modbus_firmware="old",
+        )
+        _seed(
+            session, "10.0.0.5", 22, base + _dt.timedelta(days=4), tier="Tier 1",
+            vendor="Cisco", model="IOS", modbus_firmware="new",
+        )
+        second = reconcile_device_history(session, "10.0.0.5", 22)
+        assert len(second) == 1
+        assert second[0].event_type == "cve_delta"
+
+        all_events = session.query(HardwareDriftEvent).filter_by(host="10.0.0.5", port=22).all()
+        assert {e.event_type for e in all_events} == {"tier_crossing", "cve_delta"}
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_a_to_b_to_a_second_a_not_suppressed() -> None:
+    """After a tier goes A -> B -> A across confirmed windows, the second A
+    insert is NOT suppressed by the older A row, because the dedup check
+    compares against the most recent event of that type (which carries B)."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    # Window 1: confirms B ("Tier 2"), old value A ("Tier 1").
+    _seed(session, "10.0.0.6", 22, base, tier="Tier 1")
+    _seed(session, "10.0.0.6", 22, base + _dt.timedelta(days=1), tier="Tier 2")
+    _seed(session, "10.0.0.6", 22, base + _dt.timedelta(days=2), tier="Tier 2")
+    try:
+        first = reconcile_device_history(session, "10.0.0.6", 22)
+        assert len(first) == 1
+        assert first[0].new_value == "Tier 2"
+
+        # Window 2 (limit=3, newest 3 rows): confirms A again, old value B.
+        _seed(session, "10.0.0.6", 22, base + _dt.timedelta(days=3), tier="Tier 1")
+        _seed(session, "10.0.0.6", 22, base + _dt.timedelta(days=4), tier="Tier 1")
+        second = reconcile_device_history(session, "10.0.0.6", 22)
+        assert len(second) == 1
+        assert second[0].event_type == "tier_crossing"
+        assert second[0].old_value == "Tier 2"
+        assert second[0].new_value == "Tier 1"
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_drops_out_of_allowlist_event_type(monkeypatch) -> None:
+    from quirk.scanner import hardware_drift as hd
+
+    monkeypatch.setattr(
+        hd, "compute_drift_candidates",
+        lambda rows, n=hd.DEFAULT_N, today=None: [
+            hd.DriftCandidate(event_type="not_a_real_type", old_value="x", new_value="y")
+        ],
+    )
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed(session, "10.0.0.7", 22, base, tier="Tier 1")
+    _seed(session, "10.0.0.7", 22, base + _dt.timedelta(days=1), tier="Tier 1")
+    try:
+        result = reconcile_device_history(session, "10.0.0.7", 22)
+        assert result == []
+        assert session.query(HardwareDriftEvent).count() == 0
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_scoped_to_host() -> None:
+    """Events for host X never appear when reconciling host Y."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed(session, "10.0.0.8", 22, base, tier="Tier 2")
+    _seed(session, "10.0.0.8", 22, base + _dt.timedelta(days=1), tier="Tier 1")
+    _seed(session, "10.0.0.8", 22, base + _dt.timedelta(days=2), tier="Tier 1")
+    _seed(session, "10.0.0.9", 22, base, tier="Tier 2")
+    _seed(session, "10.0.0.9", 22, base + _dt.timedelta(days=1), tier="Tier 1")
+    _seed(session, "10.0.0.9", 22, base + _dt.timedelta(days=2), tier="Tier 1")
+    try:
+        result_x = reconcile_device_history(session, "10.0.0.8", 22)
+        result_y = reconcile_device_history(session, "10.0.0.9", 22)
+        assert len(result_x) == 1
+        assert len(result_y) == 1
+        assert all(e.host == "10.0.0.8" for e in result_x)
+        assert all(e.host == "10.0.0.9" for e in result_y)
+    finally:
+        session.close()
+
+
+def test_reconcile_device_history_commit_failure_is_swallowed(monkeypatch, caplog) -> None:
+    """When the session raises on commit, the function logs a warning and
+    returns [] without propagating the exception (advisory-only)."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed(session, "10.0.0.10", 22, base, tier="Tier 2")
+    _seed(session, "10.0.0.10", 22, base + _dt.timedelta(days=1), tier="Tier 1")
+    _seed(session, "10.0.0.10", 22, base + _dt.timedelta(days=2), tier="Tier 1")
+
+    def _boom():
+        raise RuntimeError("simulated commit failure")
+
+    monkeypatch.setattr(session, "commit", _boom)
+    try:
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            result = reconcile_device_history(session, "10.0.0.10", 22)
+        assert result == []
+        assert any("advisory-only" in r.message for r in caplog.records)
+    finally:
+        session.close()

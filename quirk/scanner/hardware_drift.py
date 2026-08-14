@@ -3,26 +3,33 @@
 Pure computation layer over lists of ``HardwareDevice`` rows (produced by
 ``quirk.models_util.recent_successful_hardware_rows()``, plan 155-04) — the
 N-of-M confirmation gate, per-row state derivations for tier / bridge
-evidence / EOL state, the CVE delta, and the candidate-event builder. No DB
-writes and no pipeline wiring here — everything in this module is a pure
-function, which is what makes it exhaustively unit-testable.
+evidence / EOL state, the CVE delta, and the candidate-event builder. Plan
+155-04 adds the DB-facing half — ``reconcile_device_history()`` — which
+turns candidates into deduplicated, persisted ``HardwareDriftEvent`` rows.
+Everything else in this module remains a pure function.
 
 Advisory-only: this module is never referenced by
 ``quirk/intelligence/scoring.py`` or ``SCORE_WEIGHTS`` (mirroring
-``hw_cve.py`` lines 5-8; guarded by a test extending the
-``tests/test_cve_score_guard.py`` pattern in plan 155-04, T-155-01).
+``hw_cve.py`` lines 5-8; guarded by an extended
+``tests/test_cve_score_guard.py`` test, T-155-01).
 """
 from __future__ import annotations
 
 import json
+import logging
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Callable, Optional
 
+from quirk.models import HardwareDriftEvent
+from quirk.models_util import recent_successful_hardware_rows
 from quirk.scanner import hw_cve
 from quirk.scanner.hardware_eol import eol_state as _eol_state
 from quirk.scanner.hardware_tier import TIER_ORDER
+from quirk.util.safe_exc import safe_str
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Module constants — imported by plan 155-04
@@ -259,6 +266,100 @@ def compute_drift_candidates(
     return candidates
 
 
+# ---------------------------------------------------------------------------
+# reconcile_device_history() — DB-facing half (plan 155-04)
+# ---------------------------------------------------------------------------
+
+
+def reconcile_device_history(
+    session,
+    host: str,
+    port: int,
+    n: int = DEFAULT_N,
+    m: int = DEFAULT_M,
+    today: Optional[date] = None,
+) -> list:
+    """Reconciles one device's (host, port) N-of-M history window into
+    deduplicated, persisted ``HardwareDriftEvent`` rows.
+
+    Reads ONLY the freshly-queried, freshly-committed
+    ``recent_successful_hardware_rows()`` result (RESEARCH.md Pitfall 2 —
+    never in-memory ``hw_batch`` objects, whose changes may not be flushed).
+
+    Dedup-on-write (D-09 / RESEARCH.md Pitfall 4): for each candidate, the
+    most recent existing ``HardwareDriftEvent`` for the same
+    (host, port, event_type) — ordered by ``detected_at`` desc, ``id`` desc,
+    never mixed with ``confirmed_at`` — is looked up; if its ``new_value``
+    already matches the candidate's ``new_value``, the candidate is skipped.
+    Dedup is scoped per event_type (D-08): an event of one type never
+    suppresses an event of a different type for the same device.
+
+    Every candidate's ``event_type`` is validated against ``EVENT_TYPES``
+    (T-155-10, V5 input validation) before insert; a candidate failing the
+    allowlist is dropped and logged, never persisted.
+
+    Advisory-only (T-155-11): the entire function body is wrapped in a
+    broad ``try/except`` that logs at warning level via ``safe_str()`` and
+    returns ``[]`` — a DB failure during reconciliation must never abort a
+    scan, matching the existing advisory-only hw-persist idiom at
+    ``run_scan.py`` (hardware fingerprint DB write).
+
+    Does NOT add any confirmation-tracking column/flag/counter to
+    ``HardwareDevice`` — the N-of-M state is recomputed from history on
+    every call (D-03). Does NOT cache correlation results (D-11).
+    """
+    try:
+        rows = recent_successful_hardware_rows(session, host, port, limit=m)
+        if len(rows) < 2:
+            return []
+
+        candidates = compute_drift_candidates(rows, n=n, today=today)
+        inserted: list = []
+        detected_at = rows[0].scanned_at
+
+        for candidate in candidates:
+            if candidate.event_type not in EVENT_TYPES:
+                logger.debug(
+                    "Dropping drift candidate with out-of-allowlist event_type "
+                    "%r for %s:%s", candidate.event_type, host, port,
+                )
+                continue
+
+            most_recent = (
+                session.query(HardwareDriftEvent)
+                .filter(
+                    HardwareDriftEvent.host == host,
+                    HardwareDriftEvent.port == port,
+                    HardwareDriftEvent.event_type == candidate.event_type,
+                )
+                .order_by(HardwareDriftEvent.detected_at.desc(), HardwareDriftEvent.id.desc())
+                .first()
+            )
+            if most_recent is not None and most_recent.new_value == candidate.new_value:
+                continue
+
+            event = HardwareDriftEvent(
+                host=host,
+                port=port,
+                event_type=candidate.event_type,
+                old_value=candidate.old_value,
+                new_value=candidate.new_value,
+                detected_at=detected_at,
+                confirmed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            )
+            session.add(event)
+            inserted.append(event)
+
+        session.commit()
+        return inserted
+    except Exception as exc:
+        logger.warning(
+            "Hardware drift reconciliation failed (advisory-only, non-fatal): %s",
+            safe_str(exc),
+        )
+        return []
+
+
 __all__ = [
     "EVENT_TYPES",
     "DEFAULT_N",
@@ -269,4 +370,5 @@ __all__ = [
     "tier_direction",
     "cve_delta",
     "compute_drift_candidates",
+    "reconcile_device_history",
 ]
