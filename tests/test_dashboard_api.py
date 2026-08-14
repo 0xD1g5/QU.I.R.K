@@ -167,6 +167,7 @@ def _make_hw_bridge_session():
         confidence="high",
         fingerprint_method="ssh_banner",
         scanned_at=scanned_at,
+        probe_status="success",  # Phase 154 D-13: required for the row to be projected
         bridge_evidence_json=json.dumps([{"target_ip": "10.0.0.2", "mac": "aa:bb:cc:dd:ee:ff"}]),
     )
     legacy_backend = HardwareDevice(
@@ -177,6 +178,7 @@ def _make_hw_bridge_session():
         confidence="high",
         fingerprint_method="ssh_banner",
         scanned_at=scanned_at,
+        probe_status="success",  # Phase 154 D-13: required for the row to be projected
     )
     isolated = HardwareDevice(
         host="192.168.9.9",
@@ -186,6 +188,7 @@ def _make_hw_bridge_session():
         confidence="high",
         fingerprint_method="ssh_banner",
         scanned_at=scanned_at,
+        probe_status="success",  # Phase 154 D-13: required for the row to be projected
     )
     session.add_all([gateway, legacy_backend, isolated])
     session.commit()
