@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.13
 milestone_name: Continuous Hardware Lifecycle Monitoring
-status: ready_to_plan
-stopped_at: Phase 154 complete (5/5) — ready to discuss Phase 155
-last_updated: 2026-08-14T19:46:01.897Z
+status: executing
+stopped_at: Completed 155-01-PLAN.md
+last_updated: "2026-08-14T20:29:19.672Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 11
+  completed_plans: 6
   percent: 33
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 155 — drift detection + eol tracking
+**Current focus:** Phase 155 — Drift Detection + EOL Tracking
 
 ## Current Position
 
-Phase: 155
-Plan: Not started
-Status: Ready to plan
+Phase: 155 (Drift Detection + EOL Tracking) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
 Last activity: 2026-08-14
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 55%
 
 ## v5.13 Phase Map (planning)
 
@@ -154,6 +154,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 154 P03 | 40min | 3 tasks | 5 files |
 | Phase 154 P04 | 15min | 2 tasks | 2 files |
 | Phase 154 P05 | 45min | 3 tasks | 4 files |
+| Phase 155 P01 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -291,6 +292,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 154]: Rule 3 fix - pre-existing Phase 141 OTICS-parity test fixtures (test_hardware_projection_sites.py, test_dashboard_api.py) needed probe_status=success added since their seeded HardwareDevice rows predate the new per-site probe_status filter and would otherwise silently vanish from every projection
 - [Phase 154]: 154-04: purge call placed before the hw_batch add() loop (deviation from PATTERNS §8, plan-authorized) — avoids autoflush interaction between pending inserts and synchronize_session=False delete
 - [Phase 154]: 154-05: UAT-154-01 automated gate narrowed from a broad -k "fingerprint" selector to explicit test node IDs after discovering it matched an unrelated pre-existing flaky test not caused by this plan
+- [Phase 155]: Shipped 4 citation-backed EOL_TABLE entries (F5 BIG-IP, Fortinet FortiGate, Palo Alto PAN-OS, Cisco IOS) instead of the plan's 6-entry target — Fail-closed fallback per plan text -- Juniper/HPE/Thales/Schneider Electric/Johnson Controls candidates had no independently fetchable, dated vendor lifecycle page reachable in this sandbox; guessing dates was disallowed
+- [Phase 155]: Fortinet entry sourced via endoflife.date/fortios aggregator — No static Fortinet-owned EOL bulletin page was fetchable (JS-rendered); endoflife.date is a well-known aggregator that itself cites Fortinet's official EOL bulletins, cross-verified live
 
 ### Pending Todos
 
@@ -362,8 +365,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-14T19:12:18.654Z
-Stopped at: Completed 154-05-PLAN.md (Phase 154 complete — ready for verification)
+Last session: 2026-08-14T20:29:19.667Z
+Stopped at: Completed 155-01-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

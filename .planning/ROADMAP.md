@@ -45,9 +45,11 @@ dependencies, no new database, no new background worker.
 - [ ] **Phase 154: Identity & Data-Model Foundation** — Stable device re-identification across
       scans (secondary match key + low-confidence flagging), failed-probe-safe writes, and a
       bounded retention policy — the blocking dependency every later phase's diff logic sits on
+
 - [ ] **Phase 155: Drift Detection + EOL Tracking** — Two-scan reconciliation across CNSA 2.0
       tier, vendor PQC status, EOL/EOS proximity, and CVE set; named tier-crossing events;
       N-of-M confirmation gating; curated EOL/EOS catalog populating `HardwareDevice.eol_date`
+
 - [ ] **Phase 156: Reporting & OT/ICS Safety** — "What changed since last scan" hardware
       surfacing in dashboard/reports as visually distinct advisory-only content, plus an explicit
       opt-in + cadence floor for recurring OT/ICS (Modbus/BACnet) re-probing (`/gsd-secure-phase`
@@ -63,12 +65,16 @@ unbounded growth — the foundation every drift/alert feature in this milestone 
 **Depends on**: Nothing (first phase, blocking dependency for Phases 155–156)
 **Requirements**: HWLC-01, HWLC-02, HWLC-03
 **Success Criteria** (what must be TRUE):
+
   1. A device re-scanned after a DHCP/re-IP change is still recognized as the same device via a
      stable secondary match key, not just `host:port`.
+
   2. A match made on `host:port` alone (no secondary signal available) is explicitly flagged
      low-confidence in the stored data, not treated as equal-confidence to a stronger match.
+
   3. A failed or partial hardware re-probe never overwrites or discards the device's last-known-good
      state — the most recent *successful* observation remains the current projected state.
+
   4. Hardware scan history per device is bounded by a configurable retention policy, so repeated
      engagements don't grow storage unboundedly.
 **Plans**: 5 plans
@@ -87,25 +93,44 @@ flakiness, and an EOL/EOS catalog finally populates the dormant `eol_date` colum
 **Depends on**: Phase 154 (stable device identity required for any cross-scan diff)
 **Requirements**: HWLC-04, HWLC-05, HWLC-06, HWLC-07, HWLC-08, HWLC-09
 **Success Criteria** (what must be TRUE):
+
   1. Reconciling the two most recent scans for the same device surfaces changes in CNSA 2.0 tier,
      vendor PQC-readiness status, EOL/EOS proximity, and the device's CVE set.
+
   2. A tier-boundary crossing (e.g. Tier 2 → Tier 1) or a change in `upstream_mitigated` status is
      reported as a distinct, named event, not buried in a generic diff.
+
   3. The number of new CVEs affecting a device since its last scan is computed as an explicit delta,
      reusing the existing `hw_cve.py` correlation.
+
   4. A single anomalous probe result (dropped packet, transient network issue) is not reported as a
      lifecycle event — only a change confirmed across an N-of-M observation window is surfaced.
+
   5. `HardwareDevice.eol_date` is populated on scan from a new curated, staleness-gated EOL/EOS
      catalog (mirroring `hw_cve.py`/`model_meta.py`), and devices approaching or past their EOL/EOS
      date are surfaced with an explicit "approaching"/"passed" state.
 **Plans**: 6 plans
 
 Plans:
-- [ ] 155-01-PLAN.md — Curated EOL/EOS catalog module + 365-day staleness gate + CI/CLAUDE.md wiring [HWLC-08/09]
+**Wave 1**
+
+- [x] 155-01-PLAN.md — Curated EOL/EOS catalog module + 365-day staleness gate + CI/CLAUDE.md wiring [HWLC-08/09]
 - [ ] 155-02-PLAN.md — hardware_drift_events table + N-of-M window query helper + shared TIER_ORDER [HWLC-04/05/07]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 155-03-PLAN.md — Pure drift computation: N-of-M gate, tier/bridge/EOL state, CVE delta [HWLC-05/06/07/09]
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 155-04-PLAN.md — reconcile_device_history() with dedup-on-write + advisory-firewall guard test [HWLC-04/05/07]
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 155-05-PLAN.md — Pipeline wiring: eol_date population + reconciliation at both hw commit sites [HWLC-04/09]
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 155-06-PLAN.md — Docs (operators-guide, UAT-SERIES) + Obsidian sync + REQUIREMENTS flips [HWLC-04..09]
 
 #### Phase 156: Reporting & OT/ICS Safety
@@ -116,16 +141,21 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 **Depends on**: Phase 155 (drift events must exist before they can be surfaced or scheduled)
 **Requirements**: HWLC-10, HWLC-11, HWLC-12
 **Success Criteria** (what must be TRUE):
+
   1. A "what changed since last scan" hardware section appears on the dashboard (extending the
      existing `/compare` and `/hardware` surfaces) and in generated reports, distinct from the
      current-state hardware view.
+
   2. Hardware lifecycle findings (drift, tier crossings, EOL proximity) are visually and
      structurally distinct from scored findings — no reuse of scored-finding UI components
      (e.g. `RegressionAlertChip`), and a grep confirms zero new `SCORE_WEIGHTS` references.
+
   3. Recurring re-scans of OT/ICS devices (Modbus/BACnet) require an explicit, separate opt-in
      from the default hardware re-scan cadence.
+
   4. Scheduled OT/ICS re-probing is bounded by a minimum cadence floor materially longer than the
      default hardware/TLS/SSH re-scan cadence, and cannot be configured below it.
+
   5. This phase has passed a dedicated `/gsd-secure-phase` review before shipping, given the
      new recurring-probe risk surface against fragile production control systems.
 **Plans**: TBD
@@ -136,7 +166,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
-| 155. Drift Detection + EOL Tracking | 0/TBD | Not started | - |
+| 155. Drift Detection + EOL Tracking | 1/6 | In Progress|  |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
 ---
@@ -366,6 +396,7 @@ Phase 147 as DRAIN-01/DRAIN-02; struck from this list 2026-08-11.
 - HWLC-13 — lightweight "check-in" scan mode (narrow re-probe of known devices only)
 - HWLC-14 — optional email/webhook notification on tier-crossing/EOL events (reuses Phase 101
   fan-out)
+
 - Vendor PQC-status trend tracking (catalog-level, not per-device)
 - Consultant-facing "lifecycle risk forecast" narrative (12-month EOL/tier projections)
 - Fleet-wide sensor coverage — `PushEnvelope`/ingest route gains a `hardware_devices` field so
