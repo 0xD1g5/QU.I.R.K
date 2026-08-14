@@ -407,14 +407,18 @@ _PHASE_CLOSE_TRIGGER_RE = re.compile(
 )
 
 
-def _extract_phase_close_trigger(diff_text: str) -> str | None:
-    """Pure. Return the phase number string if `diff_text` (the staged diff
-    of .planning/ROADMAP.md) contains a Phase-checkbox flip to complete,
-    else None."""
-    match = _PHASE_CLOSE_TRIGGER_RE.search(diff_text or "")
-    if match:
-        return match.group(1)
-    return None
+def _extract_phase_close_triggers(diff_text: str) -> list[str]:
+    """Pure. Return EVERY phase number string whose checkbox flips to
+    complete in `diff_text` (the staged diff of .planning/ROADMAP.md), in
+    order of appearance, deduplicated. A commit closing several phases at
+    once (e.g. a batch/squashed milestone-closeout commit) must run
+    ARTIFACT-01/02/03 for all of them, not just the first match."""
+    seen: list[str] = []
+    for match in _PHASE_CLOSE_TRIGGER_RE.finditer(diff_text or ""):
+        phase_num = match.group(1)
+        if phase_num not in seen:
+            seen.append(phase_num)
+    return seen
 
 
 def _run_git(args: list[str], cwd: pathlib.Path) -> subprocess.CompletedProcess:
@@ -547,10 +551,10 @@ def main(
         )
         return 2
 
-    phase_num = _extract_phase_close_trigger(git_result.stdout)
+    phase_nums = _extract_phase_close_triggers(git_result.stdout)
 
     exit_code = 0
-    if phase_num is not None:
+    for phase_num in phase_nums:
         exit_code = max(exit_code, _run_phase_close_check(phase_num, resolved_repo_root))
 
     exit_code = max(exit_code, _run_destructive_archive_check(resolved_repo_root))

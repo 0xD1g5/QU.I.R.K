@@ -568,11 +568,11 @@ def test_check_destructive_archive_untracked_file_deletion_case(vpg, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 151-02: _extract_phase_close_trigger()
+# 151-02: _extract_phase_close_triggers()
 # ---------------------------------------------------------------------------
 
 
-def test_extract_phase_close_trigger_matches_real_b09c9bc_hunk(vpg):
+def test_extract_phase_close_triggers_matches_real_b09c9bc_hunk(vpg):
     """Real diff hunk shape from `git show b09c9bc -- .planning/ROADMAP.md`
     (Phase 150's actual close commit) — Pattern 5."""
     diff_text = (
@@ -584,10 +584,10 @@ def test_extract_phase_close_trigger_matches_real_b09c9bc_hunk(vpg):
         "+- [x] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean\n"
         "       environment, held by a CI gate that fails the build on any new failure\n"
     )
-    assert vpg._extract_phase_close_trigger(diff_text) == "150"
+    assert vpg._extract_phase_close_triggers(diff_text) == ["150"]
 
 
-def test_extract_phase_close_trigger_none_for_unrelated_roadmap_edit(vpg):
+def test_extract_phase_close_triggers_empty_for_unrelated_roadmap_edit(vpg):
     diff_text = (
         "diff --git a/.planning/ROADMAP.md b/.planning/ROADMAP.md\n"
         "--- a/.planning/ROADMAP.md\n"
@@ -596,13 +596,24 @@ def test_extract_phase_close_trigger_none_for_unrelated_roadmap_edit(vpg):
         "-Some wording tweak.\n"
         "+Some improved wording tweak.\n"
     )
-    assert vpg._extract_phase_close_trigger(diff_text) is None
+    assert vpg._extract_phase_close_triggers(diff_text) == []
 
 
-def test_extract_phase_close_trigger_handles_decimal_subphase_number(vpg):
+def test_extract_phase_close_triggers_handles_decimal_subphase_number(vpg):
     """Open Question 2: sub-phase closes (e.g. 64.1) must also trigger."""
     diff_text = "+- [x] **Phase 64.1: Audit Residual Blockers** — done\n"
-    assert vpg._extract_phase_close_trigger(diff_text) == "64.1"
+    assert vpg._extract_phase_close_triggers(diff_text) == ["64.1"]
+
+
+def test_extract_phase_close_triggers_returns_all_matches_for_multi_phase_close(vpg):
+    """WR-01: a commit that flips more than one Phase checkbox to complete
+    (e.g. a batch/squashed milestone-closeout commit) must return every
+    matched phase number, not just the first."""
+    diff_text = (
+        "+- [x] **Phase 150: Test Suite Green Baseline + CI Gate** — done\n"
+        "+- [x] **Phase 151: Phase-Completion Artifact Gates** — done\n"
+    )
+    assert vpg._extract_phase_close_triggers(diff_text) == ["150", "151"]
 
 
 # ---------------------------------------------------------------------------
@@ -678,6 +689,37 @@ def test_main_returns_1_when_uat_series_missing_via_real_loader_output(vpg, tmp_
         "no matching heading in this fixture at all", encoding="utf-8"
     )
     diff_text = "+- [x] **Phase 150: Fixture Phase** — done\n"
+
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+    )
+    assert exit_code == 1
+
+
+def test_main_returns_1_when_commit_closes_multiple_phases_and_second_is_missing_verification(
+    vpg, tmp_path
+):
+    """WR-01: a commit that closes two phases in the same ROADMAP.md diff
+    must run ARTIFACT-01/02/03 checks for BOTH phases, not just the first.
+    Phase 998 is fully clean; phase 999 (the SECOND match) is deliberately
+    missing VERIFICATION.md -- if only the first match were checked, this
+    would wrongly return 0."""
+    planning = tmp_path / ".planning"
+    phase_998_dir = planning / "phases" / "998-fixture-phase"
+    phase_998_dir.mkdir(parents=True)
+    (phase_998_dir / "998-VERIFICATION.md").write_text("verified", encoding="utf-8")
+    (phase_998_dir / "998-VALIDATION.md").write_text(
+        "---\nphase: 998\nnyquist_compliant: true\n---\n\nbody\n", encoding="utf-8"
+    )
+    phase_999_dir = planning / "phases" / "999-fixture-phase"
+    phase_999_dir.mkdir(parents=True)
+    # Deliberately no 999-VERIFICATION.md (ARTIFACT-01 violation).
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    diff_text = (
+        "+- [x] **Phase 998: Fixture Phase One** — done\n"
+        "+- [x] **Phase 999: Fixture Phase Two** — done\n"
+    )
 
     exit_code = vpg.main(
         repo_root=tmp_path,
