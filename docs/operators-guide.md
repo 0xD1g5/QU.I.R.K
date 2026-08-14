@@ -1406,9 +1406,12 @@ re-verification procedure documented in `CLAUDE.md`'s Staleness Review Cadence s
 3. Commit with `chore: re-verify hardware_eol catalog (YYYY-MM-DD)`.
 
 **What EOL data changes about a scan.** As of Phase 155, `HardwareDevice.eol_date` is populated
-from this catalog automatically during fingerprinting (`apply_eol_date()`, called once per
-device at the single point where every fingerprint path — SSH banner, HTTP management, SNMP,
-Modbus, BACnet — has converged on a vendor/model). This interacts with the pre-existing (Phase
+from this catalog automatically during fingerprinting via `apply_eol_date()`. Most fingerprint
+paths (SSH banner, HTTP management, SNMP, Modbus, BACnet) converge on a single call site inside
+`fingerprint_one()`; the standalone SNMP-only bulk-discovery sweep in `run_scan.py` builds its own
+`HardwareDevice` rows outside that waterfall and calls `apply_eol_date()` separately at its own
+construction site, so every code path that creates a device row populates `eol_date` — not just
+the ones routed through `fingerprint_one()`. This interacts with the pre-existing (Phase
 128) CNSA 2.0 tier-assignment rule in `hardware_tier.py::assign_tier()`: a device whose EOL date
 falls before 2030-01-01 is assigned **Tier N/A**, regardless of its PQC support status. Because
 the EOL catalog was dormant before this phase, populating a real EOL date can legitimately move

@@ -17779,9 +17779,12 @@ procedure operators follow when this gate trips. See 155-01-SUMMARY.md.
 ### UAT-155-02: `eol_date` population from the curated catalog during a real scan (HWLC-04, HWLC-09) — Automated
 
 **What to test:** `hardware_scanner.py::apply_eol_date()` populates `HardwareDevice.eol_date`
-from `hardware_eol.EOL_TABLE` at the single terminal call site inside `fingerprint_one()`,
-covering every fingerprint resolution path (SSH, HTTP, SNMP, Modbus, BACnet) — and never
-re-parses an already-parsed `datetime.date` as a string.
+from `hardware_eol.EOL_TABLE`. Most fingerprint resolution paths (SSH, HTTP, SNMP, Modbus, BACnet)
+converge on one call site inside `fingerprint_one()`; the separate SNMP-only bulk-discovery sweep
+in `run_scan.py` (which builds `HardwareDevice` rows outside that waterfall) calls
+`apply_eol_date()` at its own construction site (added post-review, CR-01) — so no device-row
+construction path bypasses EOL population. `apply_eol_date()` never re-parses an already-parsed
+`datetime.date` as a string.
 
 **Steps:**
 1. Run `pytest tests/test_hardware_scanner.py -k "apply_eol_date or eol_date" -v`.
@@ -17789,8 +17792,10 @@ re-parses an already-parsed `datetime.date` as a string.
    receives a non-`None`, real `datetime.date` `eol_date` after fingerprinting — never a `str`.
 3. Confirm a device with no catalog match leaves `eol_date is None`.
 4. Confirm a BACnet-resolved vendor/model device also receives its catalog `eol_date` — proving
-   the single terminal call site covers non-SSH/HTTP paths too.
-5. (DB-evidence variant, optional/manual): run a scan against a chaos-lab target fingerprinted
+   the `fingerprint_one()` call site covers non-SSH/HTTP paths too.
+5. Run `pytest tests/test_hardware_drift_wiring.py -k snmp_only_bulk_path_calls_apply_eol_date -v`
+   to confirm the separate SNMP-only bulk path also calls `apply_eol_date()`.
+6. (DB-evidence variant, optional/manual): run a scan against a chaos-lab target fingerprinted
    as a catalog vendor/model, then query the scan output DB directly:
    `sqlite3 <db_path> "SELECT host, vendor, model, eol_date FROM hardware_devices WHERE eol_date IS NOT NULL;"`
    and confirm at least one row has a non-NULL `eol_date`.
@@ -17798,17 +17803,22 @@ re-parses an already-parsed `datetime.date` as a string.
 **Pass criteria:**
 - Catalog hit populates a real `datetime.date` (never a string) on `HardwareDevice.eol_date`
 - Catalog miss leaves `eol_date` `None`
-- Every fingerprint resolution path (SSH/HTTP/SNMP/Modbus/BACnet) converges on the same single
-  `apply_eol_date()` call site — no path bypasses EOL population
+- Every fingerprint resolution path (SSH/HTTP/SNMP/Modbus/BACnet) via `fingerprint_one()`, AND the
+  separate SNMP-only bulk-discovery path in `run_scan.py`, both call `apply_eol_date()` — no
+  device-row construction path bypasses EOL population
 - A `correlate_eol()` exception is isolated and leaves `eol_date=None`, never aborting the scan
 
 **Automated gate:** `pytest tests/test_hardware_scanner.py -k "apply_eol_date or eol_date" -v` →
-7/7 PASSED (Phase 155 Plan 05).
+7/7 PASSED (Phase 155 Plan 05); `pytest tests/test_hardware_drift_wiring.py -k
+snmp_only_bulk_path_calls_apply_eol_date -v` → 1/1 PASSED (post-review fix, commit `fab9aef`).
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 155 Plan 05)
+**Date:** 2026-08-14  **Tester:** automated (pytest — Phase 155 Plan 05 + post-review fix)
 **Notes:** HWLC-04, HWLC-09. `docs/operators-guide.md` §9.7 documents the D-18 interaction with
-`assign_tier()`'s pre-2030 "Tier N/A" override. See 155-05-SUMMARY.md.
+`assign_tier()`'s pre-2030 "Tier N/A" override. Code review (155-REVIEW.md CR-01) found the
+original Plan 05 implementation missed the separate SNMP-only bulk-discovery path in
+`run_scan.py`; fixed post-execution in commit `fab9aef` with the regression test cited above. See
+155-05-SUMMARY.md.
 
 ---
 
