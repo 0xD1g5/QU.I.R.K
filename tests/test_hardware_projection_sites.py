@@ -12,6 +12,10 @@ site) and a last-known-good parity test group: all four current-state
 projections must select the latest probe_status="success" row PER
 (host, port) — a device whose most recent probe FAILED still appears,
 carrying its last-known-good row's data, never the failed row's data (D-13).
+
+Phase 155 Plan 02 (HWLC-04) adds coverage for
+quirk/models_util.py::recent_successful_hardware_rows — the N-of-M history
+window helper the drift reconciliation engine (plan 155-03) relies on.
 """
 from __future__ import annotations
 
@@ -553,3 +557,165 @@ def test_hardware_component_schema_has_no_match_confidence_or_probe_status_field
     field_names = set(HardwareComponent.model_fields.keys())
     assert "match_confidence" not in field_names
     assert "probe_status" not in field_names
+
+
+# ---------------------------------------------------------------------------
+# Phase 155 Plan 02 (HWLC-04) — recent_successful_hardware_rows() N-of-M window
+# ---------------------------------------------------------------------------
+
+
+def _seed_recent_rows(session, host="10.0.0.1", port=22):
+    """Seed a mix of successful/failed rows across two (host, port) pairs to
+    exercise recent_successful_hardware_rows()'s filtering/ordering/tie-break."""
+    base = datetime.datetime(2026, 8, 1, 12, 0, 0)
+    rows = [
+        # Oldest success first.
+        dict(host=host, port=port, vendor="Cisco Systems", pqc_status="unsupported",
+             confidence="high", fingerprint_method="ssh_banner", probe_status="success",
+             scanned_at=base),
+        dict(host=host, port=port, vendor="Cisco Systems", pqc_status="unsupported",
+             confidence="high", fingerprint_method="ssh_banner", probe_status="success",
+             scanned_at=base + datetime.timedelta(days=1)),
+        # A failed row that is the most recent by scanned_at — must be excluded.
+        dict(host=host, port=port, vendor="Cisco Systems", pqc_status="unknown",
+             confidence="unknown", fingerprint_method="ssh_banner", probe_status="failed",
+             scanned_at=base + datetime.timedelta(days=2)),
+        # Newest success.
+        dict(host=host, port=port, vendor="Cisco Systems", pqc_status="unsupported",
+             confidence="high", fingerprint_method="ssh_banner", probe_status="success",
+             scanned_at=base + datetime.timedelta(days=3)),
+        # Different (host, port) — must be excluded.
+        dict(host="10.0.0.2", port=22, vendor="Cisco Systems", pqc_status="unsupported",
+             confidence="high", fingerprint_method="ssh_banner", probe_status="success",
+             scanned_at=base + datetime.timedelta(days=3)),
+    ]
+    for row in rows:
+        session.add(HardwareDevice(**row))
+    session.commit()
+    return base
+
+
+def test_recent_successful_hardware_rows_returns_at_most_limit_newest_first():
+    from quirk.models_util import recent_successful_hardware_rows
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    base = _seed_recent_rows(session)
+    try:
+        rows = recent_successful_hardware_rows(session, "10.0.0.1", 22, limit=3)
+    finally:
+        session.close()
+
+    assert len(rows) == 3
+    assert [r.scanned_at for r in rows] == [
+        base + datetime.timedelta(days=3),
+        base + datetime.timedelta(days=1),
+        base,
+    ]
+
+
+def test_recent_successful_hardware_rows_excludes_failed_rows():
+    from quirk.models_util import recent_successful_hardware_rows
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    _seed_recent_rows(session)
+    try:
+        rows = recent_successful_hardware_rows(session, "10.0.0.1", 22, limit=10)
+    finally:
+        session.close()
+
+    assert all(r.probe_status == "success" for r in rows)
+    assert len(rows) == 3
+
+
+def test_recent_successful_hardware_rows_excludes_other_host_port():
+    from quirk.models_util import recent_successful_hardware_rows
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    _seed_recent_rows(session)
+    try:
+        rows = recent_successful_hardware_rows(session, "10.0.0.1", 22, limit=10)
+    finally:
+        session.close()
+
+    assert all(r.host == "10.0.0.1" and r.port == 22 for r in rows)
+
+
+def test_recent_successful_hardware_rows_same_second_tie_break_highest_id_first():
+    from quirk.models_util import recent_successful_hardware_rows
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    scanned_at = datetime.datetime(2026, 8, 1, 12, 0, 0)
+    row_a = HardwareDevice(
+        host="10.0.0.9", port=22, vendor="Cisco Systems", pqc_status="unsupported",
+        confidence="high", fingerprint_method="ssh_banner", probe_status="success",
+        scanned_at=scanned_at,
+    )
+    session.add(row_a)
+    session.commit()
+    row_b = HardwareDevice(
+        host="10.0.0.9", port=22, vendor="Cisco Systems", pqc_status="unsupported",
+        confidence="high", fingerprint_method="ssh_banner", probe_status="success",
+        scanned_at=scanned_at,
+    )
+    session.add(row_b)
+    session.commit()
+    assert row_b.id > row_a.id
+
+    try:
+        rows = recent_successful_hardware_rows(session, "10.0.0.9", 22, limit=10)
+    finally:
+        session.close()
+
+    assert rows[0].id == row_b.id
+    assert rows[1].id == row_a.id
+
+
+def test_recent_successful_hardware_rows_empty_for_no_success_rows():
+    from quirk.models_util import recent_successful_hardware_rows
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        rows = recent_successful_hardware_rows(session, "10.0.0.99", 22)
+    finally:
+        session.close()
+
+    assert rows == []
+
+
+def test_recent_successful_hardware_rows_limit_default_and_limit1_matches_latest():
+    from quirk.models_util import (
+        latest_successful_hardware_devices,
+        recent_successful_hardware_rows,
+    )
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    _seed_recent_rows(session)
+    try:
+        default_rows = recent_successful_hardware_rows(session, "10.0.0.1", 22)
+        limit1_rows = recent_successful_hardware_rows(session, "10.0.0.1", 22, limit=1)
+        latest = latest_successful_hardware_devices(session)
+    finally:
+        session.close()
+
+    assert len(default_rows) == 3  # limit defaults to 3
+    assert len(limit1_rows) == 1
+    expected_latest = next(d for d in latest if d.host == "10.0.0.1" and d.port == 22)
+    assert limit1_rows[0].id == expected_latest.id

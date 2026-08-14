@@ -64,3 +64,20 @@ def latest_successful_hardware_devices(session: Session) -> list[HardwareDevice]
         if key not in by_key or device.id > by_key[key].id:
             by_key[key] = device
     return list(by_key.values())
+
+
+def recent_successful_hardware_rows(session: Session, host: str, port: int, limit: int = 3) -> list[HardwareDevice]:
+    """Return up to *limit* most recent ``HardwareDevice`` rows for one
+    ``(host, port)``, newest first — the last M rows with
+    ``probe_status == "success"`` (single home alongside
+    ``latest_successful_hardware_devices()``, Phase 154 WR-02 lesson).
+    Ordered ``scanned_at`` desc then ``id`` desc (highest-id tie-break).
+    Extends LIMIT-1 to LIMIT M for Phase 155's N-of-M window (D-02).
+    Returns ``[]`` when empty.
+    """
+    q = session.query(HardwareDevice).filter(HardwareDevice.host == host, HardwareDevice.port == port, HardwareDevice.probe_status == "success")
+    return (
+        q.order_by(HardwareDevice.scanned_at.desc(), HardwareDevice.id.desc())
+        .limit(limit)
+        .all()
+    )
