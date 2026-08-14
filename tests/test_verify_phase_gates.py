@@ -395,3 +395,108 @@ def test_check_phase_close_clean_when_everything_green(vpg):
     assert blocked is False
     assert reasons == []
     assert "Phase 150" in summary
+
+
+# ---------------------------------------------------------------------------
+# ARTIFACT-04: check_destructive_archive() and its loaders
+# ---------------------------------------------------------------------------
+
+
+def test_check_destructive_archive_blocks_on_archive_manifest_incident_shape(vpg):
+    phase_map_rows = [("144", "v5.11")]
+    disk_phase_dirs = {"145-liveness-pre-pass"}  # 144 absent
+    archived_dirs_by_milestone = {"v5.11": set()}  # never archived
+
+    blocked, reasons, _summary = vpg.check_destructive_archive(
+        phase_map_rows, disk_phase_dirs, archived_dirs_by_milestone
+    )
+    assert blocked is True
+    assert any("144" in r for r in reasons)
+
+
+def test_check_destructive_archive_does_not_block_when_properly_archived(vpg):
+    phase_map_rows = [("144", "v5.11")]
+    disk_phase_dirs = set()
+    archived_dirs_by_milestone = {
+        "v5.11": {"144-chunked-discovery-core"}
+    }
+
+    blocked, reasons, _summary = vpg.check_destructive_archive(
+        phase_map_rows, disk_phase_dirs, archived_dirs_by_milestone
+    )
+    assert blocked is False
+    assert reasons == []
+
+
+def test_check_destructive_archive_does_not_block_when_still_live_on_disk(vpg):
+    phase_map_rows = [("151", "v5.12")]
+    disk_phase_dirs = {"151-phase-completion-artifact-gates"}
+    archived_dirs_by_milestone = {}
+
+    blocked, reasons, _summary = vpg.check_destructive_archive(
+        phase_map_rows, disk_phase_dirs, archived_dirs_by_milestone
+    )
+    assert blocked is False
+    assert reasons == []
+
+
+def test_disk_phase_dirs_under_excludes_empty_directories(vpg, tmp_path):
+    phases_root = tmp_path / "phases"
+    phases_root.mkdir()
+    populated = phases_root / "144-chunked-discovery-core"
+    populated.mkdir()
+    (populated / "144-01-PLAN.md").write_text("content", encoding="utf-8")
+    empty = phases_root / "145-liveness-pre-pass"
+    empty.mkdir()
+
+    result = vpg.disk_phase_dirs_under(phases_root)
+    assert result == {"144-chunked-discovery-core"}
+
+
+def test_parse_state_phase_maps_extracts_rows_attributed_to_section(vpg):
+    state_text = (
+        "## v5.12 Phase Map\n"
+        "\n"
+        "| Phase | Name | Requirements | Gate | Status |\n"
+        "|-------|------|--------------|------|--------|\n"
+        "| 150 | Test Suite Green Baseline | SUITE-02 | None | Complete (2026-08-13) |\n"
+        "| 151 | Phase-Completion Artifact Gates | ARTIFACT-01 | None | Not started |\n"
+        "\n"
+        "## v5.11 Phase Map (SHIPPED 2026-08-11)\n"
+        "\n"
+        "| Phase | Name | Requirements | Gate | Status |\n"
+        "|-------|------|--------------|------|--------|\n"
+        "| 144 | Chunked Discovery Core | DISC-01 | None | Complete (2026-08-10) |\n"
+    )
+    result = vpg.parse_state_phase_maps(state_text)
+
+    assert ("150", "v5.12", "Complete (2026-08-13)") in result
+    assert ("151", "v5.12", "Not started") in result
+    assert ("144", "v5.11", "Complete (2026-08-10)") in result
+
+
+def test_check_destructive_archive_untracked_file_deletion_case(vpg, tmp_path):
+    """Pitfall 1: the mechanism must be git-tracking-independent — a plain
+    filesystem write + plain filesystem delete, no `git add`/`git rm`
+    involved, must still be detected via before/after snapshot diff."""
+    phases_root = tmp_path / "phases"
+    phases_root.mkdir()
+    phase_dir = phases_root / "144-chunked-discovery-core"
+    phase_dir.mkdir()
+    (phase_dir / "144-01-PLAN.md").write_text("plain content", encoding="utf-8")
+
+    before = vpg.disk_phase_dirs_under(phases_root)
+    assert "144-chunked-discovery-core" in before
+
+    # Simulate phases.clear: a plain filesystem delete, never git-tracked.
+    (phase_dir / "144-01-PLAN.md").unlink()
+
+    after = vpg.disk_phase_dirs_under(phases_root)
+    assert "144-chunked-discovery-core" not in after
+
+    phase_map_rows = [("144", "v5.11")]
+    blocked, reasons, _summary = vpg.check_destructive_archive(
+        phase_map_rows, after, {"v5.11": set()}
+    )
+    assert blocked is True
+    assert any("144" in r for r in reasons)
