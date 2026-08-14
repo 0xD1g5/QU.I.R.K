@@ -23,13 +23,22 @@ directory were never `git add`-ed (`.planning/` is gitignored). Only 19 of
 This module implements the pure, unit-testable decision logic that would
 have caught all four incidents: `check_phase_close()` (ARTIFACT-01/02/03)
 and `check_destructive_archive()` (ARTIFACT-04), plus the file-loading /
-parsing helpers that feed them real data. It does NOT wire a git hook —
-that is a separate plan. `check_destructive_archive()`'s only achievable
-guarantee is that *the next commit* after an unarchived destructive
-deletion is blocked until the gap is resolved — a git hook has zero
-visibility into (and zero ability to prevent) a plain filesystem delete
+parsing helpers that feed them real data (151-01), and `main()` — the CLI
+glue that reads `git diff --cached` output plus on-disk `.planning/`/`docs/`
+state and wires it all into an actual git pre-commit hook via
+`.githooks/pre-commit` (151-02). `check_destructive_archive()`'s only
+achievable guarantee is that *the next commit* after an unarchived
+destructive deletion is blocked until the gap is resolved — a git hook has
+zero visibility into (and zero ability to prevent) a plain filesystem delete
 that happens outside of any git operation; it cannot make the delete
 itself refuse to run.
+
+Run modes:
+    python3 scripts/verify_phase_gates.py           # invoked by .githooks/pre-commit
+
+Exit codes: 0 = clean, 1 = a real gate violation (block the commit), 2 = a
+hard/unexpected error (e.g. the `git diff` subprocess itself failed) —
+both 1 and 2 must abort the commit from the shell wrapper's perspective.
 
 Lives under scripts/ -- NOT imported by any runtime code.
 """
@@ -37,6 +46,9 @@ from __future__ import annotations
 
 import pathlib
 import re
+import subprocess
+import sys
+from typing import Callable
 
 import yaml
 
@@ -355,3 +367,172 @@ def check_destructive_archive(
     summary_markdown = "\n".join(lines) + "\n"
 
     return blocked, reasons, summary_markdown
+
+
+# ---------------------------------------------------------------------------
+# 151-02: main() CLI glue
+# ---------------------------------------------------------------------------
+
+# Pattern 5 (real, verified via `git show b09c9bc`): a phase-close commit
+# adds a `- [x] **Phase N: Name**` line to the staged diff of
+# .planning/ROADMAP.md. `\d+(?:\.\d+)?` (Open Question 2) also matches
+# decimal sub-phase numbers (e.g. `64.1`). Applied only to added lines
+# (`^\+`, never `^\+\+\+`, since the second char of `+++` is `+` not `-`).
+_PHASE_CLOSE_TRIGGER_RE = re.compile(
+    r"^\+- \[x\] \*\*Phase (\d+(?:\.\d+)?):", re.MULTILINE
+)
+
+
+def _extract_phase_close_trigger(diff_text: str) -> str | None:
+    """Pure. Return the phase number string if `diff_text` (the staged diff
+    of .planning/ROADMAP.md) contains a Phase-checkbox flip to complete,
+    else None."""
+    match = _PHASE_CLOSE_TRIGGER_RE.search(diff_text or "")
+    if match:
+        return match.group(1)
+    return None
+
+
+def _run_git(args: list[str], cwd: pathlib.Path) -> subprocess.CompletedProcess:
+    """Thin wrapper: list-form argv, `check=False`, caller handles the
+    returncode. Matches `release_tag_hygiene.py`'s `_run_gh_json` pattern.
+    This is the seam mocked/injected in unit tests so `main()`'s branching
+    logic can be tested without a real git repo."""
+    return subprocess.run(
+        ["git", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=cwd,
+    )
+
+
+def _run_phase_close_check(phase_num: str, repo_root: pathlib.Path) -> int:
+    """Disk-reading wrapper around check_phase_close(). Resolves the
+    triggered phase's on-disk directory, assembles all five arguments from
+    real disk state — including a mandatory call to
+    load_phase_plan_files_modified() (never an empty-list placeholder) —
+    and returns 0 (clean) or 1 (blocked)."""
+    phases_root = repo_root / ".planning" / "phases"
+    matches = sorted(phases_root.glob(f"{phase_num}-*"))
+    phase_dir = matches[0] if matches else phases_root / phase_num
+
+    verification_path = phase_dir / f"{phase_num}-VERIFICATION.md"
+    verification_exists = verification_path.exists()
+
+    validation_path = phase_dir / f"{phase_num}-VALIDATION.md"
+    validation_frontmatter = load_validation_frontmatter(validation_path)
+    validation_body_text = ""
+    if validation_path.exists():
+        text = validation_path.read_text(encoding="utf-8")
+        parts = text.split("---", 2)
+        if len(parts) >= 3:
+            validation_body_text = parts[2]
+
+    # Mandatory: real loader output, never an empty-list stand-in.
+    plan_files_modified = load_phase_plan_files_modified(phase_dir)
+
+    uat_series_path = repo_root / "docs" / "UAT-SERIES.md"
+    uat_series_text = (
+        uat_series_path.read_text(encoding="utf-8")
+        if uat_series_path.exists()
+        else ""
+    )
+
+    blocked, reasons, summary_markdown = check_phase_close(
+        phase_num,
+        verification_exists,
+        validation_frontmatter,
+        validation_body_text,
+        plan_files_modified,
+        uat_series_text,
+    )
+    print(summary_markdown)
+    if blocked:
+        for reason in reasons:
+            sys.stderr.write(f"verify_phase_gates: {reason}\n")
+        return 1
+    return 0
+
+
+def _run_destructive_archive_check(repo_root: pathlib.Path) -> int:
+    """Disk-reading wrapper around check_destructive_archive(). Runs
+    unconditionally (not diff-gated) — must catch damage with no
+    git-visible trigger event."""
+    state_path = repo_root / ".planning" / "STATE.md"
+    state_text = (
+        state_path.read_text(encoding="utf-8") if state_path.exists() else ""
+    )
+    phase_map_rows_all = parse_state_phase_maps(state_text)
+    phase_map_rows = [
+        (phase_num, milestone_tag)
+        for phase_num, milestone_tag, status_cell in phase_map_rows_all
+        if "Complete" in status_cell
+    ]
+
+    disk_phase_dirs = disk_phase_dirs_under(repo_root / ".planning" / "phases")
+
+    milestones_root = repo_root / ".planning" / "milestones"
+    milestone_tags = {milestone_tag for _phase_num, milestone_tag in phase_map_rows}
+    archived_dirs_by_milestone = {
+        milestone_tag: archived_phase_dirs(milestones_root, milestone_tag)
+        for milestone_tag in milestone_tags
+    }
+
+    blocked, reasons, summary_markdown = check_destructive_archive(
+        phase_map_rows, disk_phase_dirs, archived_dirs_by_milestone
+    )
+    print(summary_markdown)
+    if blocked:
+        for reason in reasons:
+            sys.stderr.write(f"verify_phase_gates: {reason}\n")
+        return 1
+    return 0
+
+
+def main(
+    argv: list[str] | None = None,
+    *,
+    repo_root: pathlib.Path | None = None,
+    git_runner: Callable[[], subprocess.CompletedProcess] | None = None,
+) -> int:
+    """CLI entrypoint invoked by `.githooks/pre-commit`.
+
+    D-03 diff-gate for the phase-close checks (cheap no-op on unrelated
+    commits); check_destructive_archive() runs unconditionally per
+    RESEARCH.md Open Question 1's resolution. `repo_root`/`git_runner` are
+    injectable seams for testing `main()`'s branching logic without a real
+    git repo or touching the real filesystem.
+    """
+    resolved_repo_root = repo_root if repo_root is not None else REPO_ROOT
+
+    if git_runner is None:
+        roadmap_path = resolved_repo_root / ".planning" / "ROADMAP.md"
+
+        def git_runner() -> subprocess.CompletedProcess:
+            return _run_git(
+                ["diff", "--cached", "--", str(roadmap_path)],
+                cwd=resolved_repo_root,
+            )
+
+    git_result = git_runner()
+    if git_result.returncode != 0:
+        sys.stderr.write(
+            "verify_phase_gates: hard error: `git diff --cached` exited "
+            f"{git_result.returncode}: {git_result.stderr.strip()}\n"
+        )
+        return 2
+
+    phase_num = _extract_phase_close_trigger(git_result.stdout)
+
+    exit_code = 0
+    if phase_num is not None:
+        exit_code = max(exit_code, _run_phase_close_check(phase_num, resolved_repo_root))
+
+    exit_code = max(exit_code, _run_destructive_archive_check(resolved_repo_root))
+
+    return exit_code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
