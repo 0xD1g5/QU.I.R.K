@@ -236,6 +236,16 @@ requirements can be scoped, not guessed at.
 **Explicitly out of scope (carried from HORIZON.md):** SaaS multi-tenancy (still parked, no
 business-model signal).
 
+**Progress:** Phase 154 (Identity & Data-Model Foundation) complete 2026-08-14 — HWLC-01/02/03
+validated. `HardwareDevice` now carries a stable SSH host-key-fingerprint secondary match key
+(with explicit low-confidence fallback to host:port), a truthful `probe_status` distinguishing
+a failed re-probe from an honestly-unrecognized vendor, a genuine per-device latest-successful-row
+projection at all four read sites (dashboard, CBOM merge, CLI/PDF/DOCX reports) so a failing
+probe never erases a device's last-known-good state, and a configurable opportunistic retention
+purge (`hardware_history_retention_days`, default 180) bounding per-device history growth. This
+is the blocking foundation Phases 155 (drift detection) and 156 (reporting) build on. Next:
+Phase 155.
+
 ---
 
 ## Previous Milestone: v5.12 Release & Verification Integrity — SHIPPED 2026-08-14
@@ -650,7 +660,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Do not tune nmap timing flags to make one synthetic live check pass (v5.11 / 144-03) | Changing default `-T`/RTT bounds alters behavior for every production scan, trading false negatives on slow real networks against a artifact only reproducible on unassigned macOS loopback aliases | — Pending — accepted via signed override; resolution deferred to a real routed segment, best paired with DISC-09's lab profile |
 
 ---
-*Last updated: 2026-08-12 — Phase 149 (test-suite-triage) complete, SUITE-01 validated*
+*Last updated: 2026-08-14 — Phase 154 (identity-data-model-foundation) complete, HWLC-01/02/03 validated*
 
 ## Evolution
 
