@@ -244,23 +244,49 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     _json_dump(intelligence_path, intelligence)
 
     # Phase 128 D-08: load HardwareDevice rows for hardware advisory section.
-    # Scoped to the most recent scan via MAX(scanned_at) ± 1s (same pattern as
-    # _derive_hardware_findings in scan.py) — prevents cross-run data bleed.
+    # Phase 154 D-13/D-14: per-(host, port) latest probe_status="success" row
+    # — a failed re-probe never displaces a device's last-known-good state, so
+    # the device stays present in the CLI/PDF/DOCX advisory instead of
+    # vanishing. Pre-Phase-154 rows (probe_status IS NULL) are excluded until
+    # re-scanned (D-06 append-only; no backfill). This is one of four
+    # identical projection sites (D-14); see quirk/dashboard/api/routes/scan.py
+    # and quirk/merge/scan.py for the dashboard/merge-path twins.
     # Advisory-only — non-fatal; uses advisory path (NOT _build_finding / findings_evaluator).
     hardware_devices: list = []
     try:
-        from datetime import timedelta
+        from sqlalchemy import and_
         from sqlalchemy import func as _sqla_func
         from quirk.models import HardwareDevice as _HWDev
         from quirk.db import get_session as _get_session
         with _get_session(cfg.output.db_path) as _hw_sess:
-            latest_hw_ts = _hw_sess.query(_sqla_func.max(_HWDev.scanned_at)).scalar()
-            if latest_hw_ts is not None:
-                _window = timedelta(seconds=1)
-                _hw_rows = _hw_sess.query(_HWDev).filter(
-                    _HWDev.scanned_at >= latest_hw_ts - _window,
-                    _HWDev.scanned_at <= latest_hw_ts + _window,
-                ).all()
+            _latest_success = (
+                _hw_sess.query(
+                    _HWDev.host,
+                    _HWDev.port,
+                    _sqla_func.max(_HWDev.scanned_at).label("max_ts"),
+                )
+                .filter(_HWDev.probe_status == "success")
+                .group_by(_HWDev.host, _HWDev.port)
+                .subquery()
+            )
+            _hw_rows = (
+                _hw_sess.query(_HWDev)
+                .join(_latest_success, and_(
+                    _HWDev.host == _latest_success.c.host,
+                    _HWDev.port == _latest_success.c.port,
+                    _HWDev.scanned_at == _latest_success.c.max_ts,
+                ))
+                .all()
+            )
+            # Phase 154 D-13: tie-break dedupe — same-second writes for the
+            # same (host, port) can both match max_ts; keep the highest-id row.
+            _by_key: dict = {}
+            for _r in _hw_rows:
+                _key = (_r.host, _r.port)
+                if _key not in _by_key or _r.id > _by_key[_key].id:
+                    _by_key[_key] = _r
+            _hw_rows = list(_by_key.values())
+            if _hw_rows:
                 for _d in _hw_rows:
                     _tier = getattr(_d, "remediation_tier", "Tier N/A") or "Tier N/A"
                     # Phase 142 CVE-01/D-03: skip correlation entirely for
