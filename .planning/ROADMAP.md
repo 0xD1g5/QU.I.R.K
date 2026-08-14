@@ -98,7 +98,15 @@ flakiness, and an EOL/EOS catalog finally populates the dormant `eol_date` colum
   5. `HardwareDevice.eol_date` is populated on scan from a new curated, staleness-gated EOL/EOS
      catalog (mirroring `hw_cve.py`/`model_meta.py`), and devices approaching or past their EOL/EOS
      date are surfaced with an explicit "approaching"/"passed" state.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 155-01-PLAN.md — Curated EOL/EOS catalog module + 365-day staleness gate + CI/CLAUDE.md wiring [HWLC-08/09]
+- [ ] 155-02-PLAN.md — hardware_drift_events table + N-of-M window query helper + shared TIER_ORDER [HWLC-04/05/07]
+- [ ] 155-03-PLAN.md — Pure drift computation: N-of-M gate, tier/bridge/EOL state, CVE delta [HWLC-05/06/07/09]
+- [ ] 155-04-PLAN.md — reconcile_device_history() with dedup-on-write + advisory-firewall guard test [HWLC-04/05/07]
+- [ ] 155-05-PLAN.md — Pipeline wiring: eol_date population + reconciliation at both hw commit sites [HWLC-04/09]
+- [ ] 155-06-PLAN.md — Docs (operators-guide, UAT-SERIES) + Obsidian sync + REQUIREMENTS flips [HWLC-04..09]
 
 #### Phase 156: Reporting & OT/ICS Safety
 
