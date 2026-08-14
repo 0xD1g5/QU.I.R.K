@@ -1,7 +1,9 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
-**Version:** 5.11.0
-**Last Updated:** 2026-08-14 (Phase 152 wrap — Discovery Empirical Closure: UAT-152-01..03 added
+**Version:** 5.12.0
+**Last Updated:** 2026-08-14 (v5.12 milestone close / Phase 153 — Release Tag Cut: real v5.12.0
+tag cut and RELEASE-01 proven end-to-end on a live tagged CI run.)
+Earlier: Phase 152 wrap — Discovery Empirical Closure: UAT-152-01..03 added
 for the `segmented-network` chaos lab profile smoke test (DISC-09), the DISC-10 empirical
 closure finding cross-reference (`152-DISC09-FINDING.md`, VERDICT: DOES NOT REPRODUCE across 3
 live-fire runs, no code change to `quirk/discovery/nmap_provider.py`), and the
@@ -218,12 +220,13 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 **Expected:** Version string printed to stdout.
 
 **Pass Criteria:**
-- Output matches format: `QU.I.R.K. v5.11.0`
+- Output matches format: `QU.I.R.K. v5.12.0`
 - Exit code 0
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:**   **Tester:**
-**Notes:** Version bumped to v5.11.0 at v5.11 milestone close (pyproject.toml sole SoT; importlib.metadata derives it). Re-test required against v5.11.0 install.
+**Notes:** Version bumped to v5.12.0 at v5.12 milestone close (pyproject.toml sole SoT;
+importlib.metadata derives it). Re-test required against v5.12.0 install.
 
 ---
 
