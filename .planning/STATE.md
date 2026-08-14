@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-08-14T14:37:26.670Z"
 last_activity: 2026-08-14
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,24 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Awaiting next milestone — run `/gsd:new-milestone` to scope v5.13.
+**Current focus:** Phase 154 (Identity & Data-Model Foundation) — v5.13 roadmap created, ready to plan.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-14 — Milestone v5.13 started
+Phase: 154 of 156 (Identity & Data-Model Foundation)
+Plan: TBD
+Status: Ready to plan
+Last activity: 2026-08-14 — v5.13 ROADMAP.md created (Phases 154-156, 12/12 HWLC requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
+
+## v5.13 Phase Map (planning)
+
+| Phase | Name | Requirements | Gate | Status |
+|-------|------|--------------|------|--------|
+| 154 | Identity & Data-Model Foundation | HWLC-01, HWLC-02, HWLC-03 | None (first, blocks 155/156) | Ready to plan |
+| 155 | Drift Detection + EOL Tracking | HWLC-04..09 | Phase 154 | Not started |
+| 156 | Reporting & OT/ICS Safety | HWLC-10, HWLC-11, HWLC-12 | Phase 155 | Not started (requires /gsd-secure-phase review before shipping) |
 
 ## v5.12 Phase Map (SHIPPED 2026-08-14)
 
@@ -142,6 +152,17 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 ## Accumulated Context
 
 ### Decisions
+
+- Numbering continues at Phase 154 (v5.12 ended at 153). Phase order is dependency-driven:
+  identity/data-model (154) must land before drift detection (155) since every diff feature
+  reconciles "the same device across two scans"; reporting/OT-ICS safety (156) depends on
+  drift events existing before they can be surfaced or scheduled. Research (4 unanimous passes)
+  resolved the milestone's flagged 3x sizing uncertainty toward the smaller estimate — a
+  scheduling/diffing/reporting layer over existing `HardwareDevice` data, not a new scanner
+  surface; no new dependencies, database, or background worker. Sensor-push hardware coverage
+  (extending `PushEnvelope`) is explicitly deferred to v2+, not included in v5.13 — console-direct
+  scans only. Phase 156's OT/ICS cadence-floor work requires a dedicated `/gsd-secure-phase`
+  review before shipping, per REQUIREMENTS.md HWLC-12.
 
 - Numbering continues at Phase 144 (v5.10 ended at 143). Phase order is dependency-driven:
   chunked discovery core (144) must land before liveness pre-pass (145) or progress/scaling (146)

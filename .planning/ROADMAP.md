@@ -27,10 +27,108 @@
 - ✅ **v5.10 Hardware Lifecycle Depth** — Phases 139–143, 36 plans (shipped 2026-08-03) → `.planning/milestones/v5.10-ROADMAP.md`
 - ✅ **v5.11 Discovery at Scale + Backlog Drain** — Phases 144–147, 16 plans (shipped 2026-08-11) → `.planning/milestones/v5.11-ROADMAP.md`
 - ✅ **v5.12 Release & Verification Integrity** — Phases 148–153, 36 plans (shipped 2026-08-14) → `.planning/milestones/v5.12-ROADMAP.md`
+- 🚧 **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156 (in progress)
 
 ---
 
-## v5.12 Release & Verification Integrity — SHIPPED 2026-08-14
+## v5.13 Continuous Hardware Lifecycle Monitoring
+
+**Goal:** Extend v5.10's hardware-fingerprinting foundation (`HardwareDevice` table, `hw_cve.py`,
+CNSA 2.0 tier assignment) from a point-in-time scan into ongoing lifecycle tracking — detecting
+drift in firmware/EOL/vendor-PQC-status over time and alerting when a device crosses a CNSA 2.0
+tier boundary. Research (4 parallel passes, unanimous) confirmed this is a scheduling/diffing/
+reporting layer over data QU.I.R.K. already collects, not a new scanner surface — no new
+dependencies, no new database, no new background worker.
+
+### Phases
+
+- [ ] **Phase 154: Identity & Data-Model Foundation** — Stable device re-identification across
+      scans (secondary match key + low-confidence flagging), failed-probe-safe writes, and a
+      bounded retention policy — the blocking dependency every later phase's diff logic sits on
+- [ ] **Phase 155: Drift Detection + EOL Tracking** — Two-scan reconciliation across CNSA 2.0
+      tier, vendor PQC status, EOL/EOS proximity, and CVE set; named tier-crossing events;
+      N-of-M confirmation gating; curated EOL/EOS catalog populating `HardwareDevice.eol_date`
+- [ ] **Phase 156: Reporting & OT/ICS Safety** — "What changed since last scan" hardware
+      surfacing in dashboard/reports as visually distinct advisory-only content, plus an explicit
+      opt-in + cadence floor for recurring OT/ICS (Modbus/BACnet) re-probing (`/gsd-secure-phase`
+      required)
+
+### Phase Details
+
+#### Phase 154: Identity & Data-Model Foundation
+
+**Goal**: A device is reliably recognized as "the same device" across repeated scans even when its
+IP changes, and the underlying scan-history data model is safe against partial failures and
+unbounded growth — the foundation every drift/alert feature in this milestone is built on top of.
+**Depends on**: Nothing (first phase, blocking dependency for Phases 155–156)
+**Requirements**: HWLC-01, HWLC-02, HWLC-03
+**Success Criteria** (what must be TRUE):
+  1. A device re-scanned after a DHCP/re-IP change is still recognized as the same device via a
+     stable secondary match key, not just `host:port`.
+  2. A match made on `host:port` alone (no secondary signal available) is explicitly flagged
+     low-confidence in the stored data, not treated as equal-confidence to a stronger match.
+  3. A failed or partial hardware re-probe never overwrites or discards the device's last-known-good
+     state — the most recent *successful* observation remains the current projected state.
+  4. Hardware scan history per device is bounded by a configurable retention policy, so repeated
+     engagements don't grow storage unboundedly.
+**Plans**: TBD
+
+#### Phase 155: Drift Detection + EOL Tracking
+
+**Goal**: QU.I.R.K. computes and surfaces real lifecycle change for a device across scans — tier
+crossings, PQC-status shifts, EOL/EOS proximity, and new CVEs — while filtering out probe
+flakiness, and an EOL/EOS catalog finally populates the dormant `eol_date` column.
+**Depends on**: Phase 154 (stable device identity required for any cross-scan diff)
+**Requirements**: HWLC-04, HWLC-05, HWLC-06, HWLC-07, HWLC-08, HWLC-09
+**Success Criteria** (what must be TRUE):
+  1. Reconciling the two most recent scans for the same device surfaces changes in CNSA 2.0 tier,
+     vendor PQC-readiness status, EOL/EOS proximity, and the device's CVE set.
+  2. A tier-boundary crossing (e.g. Tier 2 → Tier 1) or a change in `upstream_mitigated` status is
+     reported as a distinct, named event, not buried in a generic diff.
+  3. The number of new CVEs affecting a device since its last scan is computed as an explicit delta,
+     reusing the existing `hw_cve.py` correlation.
+  4. A single anomalous probe result (dropped packet, transient network issue) is not reported as a
+     lifecycle event — only a change confirmed across an N-of-M observation window is surfaced.
+  5. `HardwareDevice.eol_date` is populated on scan from a new curated, staleness-gated EOL/EOS
+     catalog (mirroring `hw_cve.py`/`model_meta.py`), and devices approaching or past their EOL/EOS
+     date are surfaced with an explicit "approaching"/"passed" state.
+**Plans**: TBD
+
+#### Phase 156: Reporting & OT/ICS Safety
+
+**Goal**: Lifecycle changes are visible to the consultant wherever they already look (dashboard,
+reports) as unmistakably advisory content, and recurring probing of fragile OT/ICS devices is
+opt-in and rate-floored rather than inheriting the default hardware re-scan cadence.
+**Depends on**: Phase 155 (drift events must exist before they can be surfaced or scheduled)
+**Requirements**: HWLC-10, HWLC-11, HWLC-12
+**Success Criteria** (what must be TRUE):
+  1. A "what changed since last scan" hardware section appears on the dashboard (extending the
+     existing `/compare` and `/hardware` surfaces) and in generated reports, distinct from the
+     current-state hardware view.
+  2. Hardware lifecycle findings (drift, tier crossings, EOL proximity) are visually and
+     structurally distinct from scored findings — no reuse of scored-finding UI components
+     (e.g. `RegressionAlertChip`), and a grep confirms zero new `SCORE_WEIGHTS` references.
+  3. Recurring re-scans of OT/ICS devices (Modbus/BACnet) require an explicit, separate opt-in
+     from the default hardware re-scan cadence.
+  4. Scheduled OT/ICS re-probing is bounded by a minimum cadence floor materially longer than the
+     default hardware/TLS/SSH re-scan cadence, and cannot be configured below it.
+  5. This phase has passed a dedicated `/gsd-secure-phase` review before shipping, given the
+     new recurring-probe risk surface against fragile production control systems.
+**Plans**: TBD
+**UI hint**: yes
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 154. Identity & Data-Model Foundation | 0/TBD | Not started | - |
+| 155. Drift Detection + EOL Tracking | 0/TBD | Not started | - |
+| 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
+
+---
+
+<details>
+<summary>✅ v5.12 Release & Verification Integrity (Phases 148–153) — SHIPPED 2026-08-14</summary>
 
 See `.planning/milestones/v5.12-ROADMAP.md` for full phase details, `.planning/milestones/v5.12-REQUIREMENTS.md`
 for requirements, and `.planning/milestones/v5.12-MILESTONE-AUDIT.md` for the closing audit.
@@ -39,6 +137,8 @@ for requirements, and `.planning/milestones/v5.12-MILESTONE-AUDIT.md` for the cl
 (PyPI + Windows operator zip + GitHub Release), a green CI-held test-suite baseline, the
 phase-completion artifact gate (`scripts/verify_phase_gates.py` + `.githooks/pre-commit`, now
 installed and live), and empirically closed the Phase 144 nmap timing artifact (does not reproduce).
+
+</details>
 
 ---
 
@@ -128,134 +228,6 @@ Audit: 21/21 requirements, 0 blockers (`.planning/milestones/v5.6-MILESTONE-AUDI
 - [x] **Phase 127: Hardware Fingerprinting Foundation** — Agentless device fingerprinting from SSH banners + HTTP management interfaces; curated hardware-PQC compatibility matrix with staleness gate; `hwcompat` chaos lab profile; HardwareDevice ORM table; CI staleness assertion (completed 2026-06-14)
 - [x] **Phase 128: Remediation Tiers + Report Surfacing** — Tier assignment logic per device (Tier 1/2/3/N/A + CNSA 2.0 timeline); hardware findings through the findings chokepoint; hardware PQC narrative in exec report; `/hardware` dashboard tab (completed 2026-06-14)
 - [x] **Phase 129: Crypto-Bridge Detection + CBOM Pass 4** — Detect incompatible endpoints behind PQC-capable gateways with conservative defaults; CBOM Pass 4 (`ComponentType.FIRMWARE`) for hardware fleet visibility; `HARDWARE` added to Pass 2/3 skip-lists (completed 2026-06-14)
-
-### Phase Details
-
-#### Phase 123: SSRF & URL-Allowlist Hardening
-
-**Goal**: All URL-validation bypass paths surfaced in the 2026-05-27 audit are closed — no scanner request can reach blocked metadata ranges, loopback, or internal targets via raw sockets, path-shaped refs, or DNS-rebinding
-**Depends on**: Nothing (Wave A, first parallel group)
-**Requirements**: SSRF-01, SSRF-02, SSRF-03, SSRF-04, SSRF-05
-**Success Criteria** (what must be TRUE):
-
-  1. A REST fuzzer scan against any target routes through `validate_external_url`; a probe to a metadata IP is blocked and logged, not silently attempted
-  2. GCP `metadata.google.internal` and its documented aliases appear in the always-blocked set and are rejected by the validator
-  3. A path-shaped image ref such as `etc/passwd` is rejected before reaching syft; a well-formed ref passes normally
-  4. A request with `allow_internal=True` cannot reach the console's own `addr:port` (reflective self-SSRF blocked, as a peer to the always-blocked metadata check); non-console loopback targets remain reachable under `allow_internal=True` so the chaos lab (`--allow-internal-targets`) keeps working — per locked decision D-01 (supersedes the original "block all loopback" wording)
-  5. DNS resolution and connection use a pinned address (or equivalent mitigation); a rebinding attempt that changes the IP after validation is blocked or documented with a compensating control
-
-**Plans**: 4 plans
-
-- [x] 123-00-PLAN.md — Wave 0 RED test scaffolds for SSRF-01..05 (Nyquist gate)
-- [x] 123-01-PLAN.md — url_allowlist resolved_ip + console self-SSRF block + QUIRK_SERVE_HOST + SSRF-02 regression lock
-- [x] 123-02-PLAN.md — validate_image_ref path-shaped-ref guard (SSRF-03)
-- [x] 123-03-PLAN.md — rest_fuzzer raw-socket validate+pin + PinnedIPAdapter + smtplib compensating-control doc (SSRF-01/05)
-
-#### Phase 124: Scoring & Evidence Correctness
-
-**Goal**: The readiness score, QRAMM assessments, and CBOM evidence tally produce accurate results across all algorithm types, partial answers, and distributed deployments — no aborts, no inflation, no silent data gaps
-**Depends on**: Nothing (Wave A, disjoint from Phase 123 code paths)
-**Requirements**: SCOREFIX-01, SCOREFIX-02, SCOREFIX-03, SCOREFIX-04, SCOREFIX-05
-**Success Criteria** (what must be TRUE):
-
-  1. A scan that includes a finding with a missing `severity` field still produces a complete readiness score — no KeyError, no score abort
-  2. A QRAMM session with some practices unanswered in a dimension scores lower than a fully-answered dimension with the same answered values — unanswered practices are not ignored in the weakest-link calculation
-  3. An endpoint using Ed25519 or Ed448 contributes agility credit in the evidence key-type tally, visible in the score decomposition
-  4. A TLS cipher string of `AES-128-CCM_8` is classified as a truncated-tag AEAD variant distinct from standard CCM in the CBOM output
-  5. In a multi-sensor console, two sensors' scan cohorts produce separate QRAMM evidence populations — evidence from Sensor A does not appear in Sensor B's evidence bridge output
-
-**Plans**: 4 plans
-
-- [x] 124-00-PLAN.md — Wave 0 RED scaffolds (5 test files for SCOREFIX-01..05)
-- [x] 124-01-PLAN.md — SCOREFIX-01 (severity KeyError) + SCOREFIX-02 (QRAMM partial-answer inflation)
-- [x] 124-02-PLAN.md — SCOREFIX-03 (EdDSA agility credit) + SCOREFIX-04 (CCM_8 AEAD decomposition)
-- [x] 124-03-PLAN.md — SCOREFIX-05 (session-scoped evidence-bridge cohort)
-
-#### Phase 125: Posture Defaults + Distributed Edge Cases
-
-**Goal**: The default deployment posture is safe (not permissive), IAM permission gaps surface as explicit findings, and two distributed race conditions are deterministically resolved
-**Depends on**: Nothing (Wave A, disjoint from Phases 123–124 code paths)
-**Requirements**: POSTURE-01, POSTURE-02, DIST-01, DIST-02
-**Success Criteria** (what must be TRUE):
-
-  1. Starting the dashboard with an empty auth token bound to a non-loopback interface either refuses to start with a clear error message or prints a loud startup warning that is impossible to miss in operator logs
-  2. A scan against a GCP or AWS account where one API returns a permission-denied error produces an explicit scan-coverage finding (not a clean result) — the operator can see which APIs were inaccessible
-  3. When two sensors push results with identical `scanned_at` timestamps, the merge produces a deterministic result (latest-push-per-sensor tiebreak) and the merged CBOM is identical on repeated runs with the same input
-  4. A notification fan-out where one event's `run.scan_id` commit fails does not drop subsequent events — other events in the same cycle still dispatch successfully
-
-**Plans**: TBD
-
-#### Phase 126: Audit Ledger Closeout + Dashboard Quality Green-Up
-
-**Goal**: Zero `deferred → v5.7` rows remain open in the audit ledger (each has a fix or a structured disposition), and the Dashboard Quality CI workflow is green on `main`
-**Depends on**: Phases 123, 124, 125 (many ledger rows are closed by those phases; this phase closes the remainder and cleans up CI)
-**Requirements**: LEDGER-01, DASHQ-01, DASHQ-02
-**Success Criteria** (what must be TRUE):
-
-  1. Every row in `.planning/audit-2026-05-27/AUDIT-TASKS.md` previously marked `deferred → v5.7` is either marked `[x] closed` with a commit SHA or carries an explicit written disposition (won't-fix with rationale, or deferred to a named future milestone)
-  2. The Dashboard Quality CI workflow passes on `main` with no axe-core a11y violations suppressed without a documented disposition
-  3. The Dashboard E2E smoke job passes on `main`; any previously failing smoke flows are repaired or their scope is corrected with a written rationale committed to the phase artifacts
-
-**Plans**: 4 plans
-
-- [x] 143-01-PLAN.md — Persistent scan-date badge in the dashboard sidebar (TAIL-01)
-- [x] 143-02-PLAN.md — Server-enforced trusted-targets allowlist at both scan entry points (TAIL-02, TAIL-04)
-- [x] 143-03-PLAN.md — Windows Authenticode signing in the release CI (TAIL-03, TAIL-04)
-- [x] 143-04-PLAN.md — Docs + Obsidian sync for the badge, allowlist, and signing pipeline (TAIL-01/02/03)
-
-**UI hint**: yes
-
-#### Phase 127: Hardware Fingerprinting Foundation
-
-**Goal**: The scanner identifies hardware devices from SSH banners and HTTP management interfaces, grades every match with a confidence level, and resolves identified devices against a staleness-gated PQC compatibility matrix — with a working chaos lab profile to validate the full pipeline
-**Depends on**: Phase 126 (Wave A complete)
-**Requirements**: HWCOMPAT-01, HWCOMPAT-02, HWCOMPAT-06
-**Success Criteria** (what must be TRUE):
-
-  1. A scan against an SSH service with a Cisco, F5, Juniper, Palo Alto, Fortinet, or HPE iLO banner produces a `HardwareDevice` row with `vendor`, `model`, `pqc_status`, `eol_date`, and a `confidence` grade (`high`/`medium`/`low`/`unknown`); a service with an unrecognized banner produces a `vendor=Unknown` row (never suppressed)
-  2. The `hwcompat` chaos lab profile starts cleanly, and running a scan against it produces at least one identified device with PQC matrix data and at least one `vendor=Unknown` device from an unrecognized service
-  3. The `lab.sh` `ALL_PROFILES` list includes `hwcompat`, `./lab.sh up hwcompat` works without script edits, and `expected_results_hwcompat.md` documents the expected scanner findings for that profile
-  4. The CI staleness assertion for `hardware_meta.py` fails the build when `last_verified` is older than 90 days — mirroring the `model_meta.py` staleness gate behavior
-  5. `hardware_meta.py` carries at least the appliance-first vendor set (F5 BIG-IP, Cisco ASA/FTD, Palo Alto PAN-OS, Fortinet FortiGate, Juniper SRX/MX, HPE iLO 3/4/5/6/7, IPMI, Thales Luna HSM) with per-row `last_verified` and `source_url`
-
-**Plans**: TBD
-
-#### Phase 128: Remediation Tiers + Report Surfacing
-
-**Goal**: Every fingerprinted device receives a consulting-grade remediation tier with CNSA 2.0 timeline context, visible in the CLI summary, HTML/PDF/DOCX reports, executive narrative, and the dashboard `/hardware` tab — hardware findings are advisory-only and do not enter the readiness score
-**Depends on**: Phase 127 (HardwareDevice table and PQC matrix required for tier assignment)
-**Requirements**: HWCOMPAT-04, HWCOMPAT-07
-**Success Criteria** (what must be TRUE):
-
-  1. Every `HardwareDevice` row in a scan result carries a remediation tier (Tier 1 / Tier 2 / Tier 3 / Tier N/A) and `low`- or `unknown`-confidence devices are capped at Tier 2; a Tier 1 finding includes explicit CNSA 2.0 deadline context
-  2. Hardware findings appear in the CLI scan summary, the HTML report findings table, and the PDF/DOCX export — sourced through the `_build_finding()` chokepoint with non-empty `description` and `remediation` fields
-  3. The executive narrative paragraph in the report addresses hardware PQC posture when any hardware device is detected — at minimum a summary of the fleet's Tier 1 / Tier 2 / Tier 3 breakdown
-  4. The `/hardware` dashboard tab renders a per-device table showing vendor, model/firmware, PQC status, remediation tier, and confidence for all devices in the latest scan
-  5. A grep over `SCORE_WEIGHTS` and `compute_readiness_score()` finds zero hardware counter references — advisory-only lock is CI-verifiable
-
-**Plans**: 4 plans
-
-- [x] 128-00-PLAN.md — Wave 0 RED test scaffold for assign_tier() tier taxonomy + confidence cap (Nyquist gate)
-- [x] 128-01-PLAN.md — Tier core: hardware_tier.py assign_tier() + remediation_tier column + run_scan.py assignment & advisory CLI summary
-- [x] 128-02-PLAN.md — Report surfacing: ExecContent.hardware_devices + writer population + HTML/executive/DOCX advisory rendering
-- [x] 128-03-PLAN.md — Dashboard /hardware tab: HardwareFinding schema + route + types + page + sidebar + route
-
-**UI hint**: yes
-
-#### Phase 129: Crypto-Bridge Detection + CBOM Pass 4
-
-**Goal**: The scanner identifies when a legacy device sits behind a PQC-capable gateway and assigns a conservative classification; hardware devices appear as first-class `ComponentType.FIRMWARE` components in the CBOM so procurement teams can act on machine-readable fleet data
-**Depends on**: Phases 127, 128 (HardwareDevice objects and tier data required for both bridge detection and CBOM enrichment)
-**Requirements**: HWCOMPAT-03, HWCOMPAT-05
-**Success Criteria** (what must be TRUE):
-
-  1. When a scan finds a PQC-capable gateway in front of a directly-reachable legacy backend, the backend is classified `partial_only` (never `upstream_mitigated`) — the conservative default unit test passes
-  2. When the backend is not directly reachable in the same scan, the gateway may classify as `upstream_mitigated`; this designation appears with a report disclaimer advising direct reachability verification
-  3. Bridge detection operates correctly in both single-sensor and distributed-merge runs — the `_detect_crypto_bridges()` function is called from both `run_scan.py` and `merge/scan.py`
-  4. The CBOM output for a scan with identified hardware devices includes `ComponentType.FIRMWARE` components in Pass 4, each carrying `quirk:hw-vendor`, `quirk:hw-pqc-supported`, and `quirk:hw-remediation-tier` properties; `"HARDWARE"` is present in Pass 2 and Pass 3 skip-lists
-  5. The CBOM output validates against the CycloneDX 1.6 schema with hardware components present — the existing schema validation gate does not regress
-
-**Plans**: TBD
 
 ### Progress
 
@@ -362,19 +334,29 @@ backlog-history continuity:
   cheap (~30–60s) relative to what the checkpoint system protects. Revisit only if batch cost
   grows.
 
-- Continuous hardware lifecycle monitoring — v5.13 capability anchor, needs its own research pass
-  first.
+- Continuous hardware lifecycle monitoring — promoted into v5.13 (see above).
 
 - SaaS multi-tenancy — still parked, no business-model signal.
 
 ### Hardware Compatibility & Lifecycle Remediation (v5.13+)
 
-- **Continuous hardware lifecycle monitoring** — least-scoped backlog item; needs its own research
-  pass to determine whether it is a new scanner surface or a scheduling/diffing layer over data
-  QUIRK already collects (the answer changes its size roughly 3x); v5.13 capability anchor.
+Promoted into v5.13 (see above) — kept here for backlog-history continuity:
+
+- **Continuous hardware lifecycle monitoring** — HWLC-01..12, Phases 154–156.
 
 ~~OT/ICS resume-checkpoint gap~~ and ~~CVE table BACnet key coverage~~ — both closed by v5.11
 Phase 147 as DRAIN-01/DRAIN-02; struck from this list 2026-08-11.
+
+### v1.x / v2+ (deferred from v5.13, see REQUIREMENTS.md Future Requirements)
+
+- HWLC-13 — lightweight "check-in" scan mode (narrow re-probe of known devices only)
+- HWLC-14 — optional email/webhook notification on tier-crossing/EOL events (reuses Phase 101
+  fan-out)
+- Vendor PQC-status trend tracking (catalog-level, not per-device)
+- Consultant-facing "lifecycle risk forecast" narrative (12-month EOL/tier projections)
+- Fleet-wide sensor coverage — `PushEnvelope`/ingest route gains a `hardware_devices` field so
+  sensor-scanned segments reach the console's drift history (v5.13 covers console-direct scans
+  only; real gap found during v5.13 research, `sensor_cmd.py::_build_envelope()`)
 
 ### SaaS Platform (Future Milestone)
 
@@ -383,5 +365,3 @@ Phase 147 as DRAIN-01/DRAIN-02; struck from this list 2026-08-11.
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
-
-</content>
