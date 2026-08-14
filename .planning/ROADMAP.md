@@ -66,7 +66,7 @@ Documentation Checklist.
 - [x] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean
       environment, held by a CI gate that fails the build on any new failure
 
-- [ ] **Phase 151: Phase-Completion Artifact Gates** — A phase cannot close with a missing
+- [x] **Phase 151: Phase-Completion Artifact Gates** — A phase cannot close with a missing
       VERIFICATION.md, a stale VALIDATION.md, or a missing UAT-SERIES.md entry; a destructive
       planning operation cannot run against an unarchived milestone
 
@@ -332,7 +332,7 @@ dogfooding it immediately)
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
 | 150. Test Suite Green Baseline + CI Gate | 9/9 | Complete   | 2026-08-13 |
-| 151. Phase-Completion Artifact Gates | 0/3 | Not started | - |
+| 151. Phase-Completion Artifact Gates | 3/3 | Complete    | 2026-08-13 |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
 | 153. Release Tag Cut | 0/TBD | Not started | - |
 
