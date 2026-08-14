@@ -1516,8 +1516,9 @@ services:
       - -c
       - >
         apt-get update >/dev/null 2>&1 &&
-        apt-get install -y --no-install-recommends iproute2 >/dev/null 2>&1 &&
-        ip route add 10.71.0.0/24 via 10.70.0.2 &&
+        apt-get install -y --no-install-recommends iproute2 >/dev/null 2>&1;
+        ip route add 10.71.0.0/24 via 10.70.0.2 2>/dev/null ||
+          ip route replace 10.71.0.0/24 via 10.70.0.2 &&
         echo "[segnet-prober] route to 10.71.0.0/24 via 10.70.0.2 installed" &&
         tail -f /dev/null
     profiles: ["segmented-network"]
