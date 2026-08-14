@@ -1,5 +1,52 @@
 # Milestones
 
+## v5.12 Release & Verification Integrity (Shipped: 2026-08-14)
+
+**Phases completed:** 6 phases (148–153), 36 plans
+**Requirements:** 14/14 (RELEASE-01..04, SUITE-01..03, ARTIFACT-01..04, DISC-09..11)
+**Audit:** `passed` — 14/14 requirements, 6/6 phases verified, one real integration gap found and
+fixed during the audit itself (`.planning/milestones/v5.12-MILESTONE-AUDIT.md`)
+**Version:** 5.11.0 → 5.12.0
+
+**Delivered:** QU.I.R.K.'s own release, test, and verification signals are trustworthy again. The
+release pipeline is proven live (not by code inspection), a green test-suite baseline is held by
+CI, a phase-completion artifact gate is built, tested, and now actually installed and enforcing,
+and the real `v5.12.0` tag was cut and independently verified against live GitHub Actions and
+PyPI — including one real, human-approved recovery when the first tag push silently didn't fire
+the release pipeline.
+
+**Key accomplishments:**
+
+- **Release pipeline repair + proof (Phase 148)** — a `workflow_dispatch` dry-run mechanism
+  exercises `release.yml`'s Windows build without a real tag; a scheduled tag-hygiene guard
+  (`scripts/release_tag_hygiene.py`) catches malformed/unpushed tags; the v5.11.0 Windows-asset
+  gap is explicitly dispositioned (PyPI-only, documented) rather than backfilled with a
+  provenance-questionable post-hoc build.
+- **Test suite triage + green baseline (Phases 149–150)** — all ~102 pre-existing full-suite
+  failures given an explicit written disposition (fixed/quarantined/deleted); `pytest -q` genuinely
+  green, held by a CI gate proven live with both a green run and a deliberate red-smoke run on
+  real GitHub Actions.
+- **Phase-completion artifact gate (Phase 151)** — `scripts/verify_phase_gates.py` +
+  `.githooks/pre-commit` block a phase-close commit missing `VERIFICATION.md`, a stale
+  `VALIDATION.md`, or a missing `docs/UAT-SERIES.md` entry, plus a destructive-archive guard
+  scoped to `(phase_num, milestone_tag)` — closing the exact incident class that deleted ~39
+  v5.11 phase files. A design flaw (the gate would have permanently blocked every future commit
+  because of Phase 144's un-backfillable historical gap) was caught before shipping and fixed with
+  a narrow, documented exemption.
+- **Discovery empirical closure (Phase 152)** — a genuinely routed two-subnet chaos-lab topology
+  (iptables REJECT gateway, not loopback aliases) settled the year-old Phase 144 nmap timing-engine
+  artifact once and for all: **does not reproduce**, across 3 independent live-fire runs.
+- **Real release tag cut (Phase 153)** — `v5.12.0` tagged, pushed, and independently re-verified
+  against live GitHub Actions AND PyPI's own JSON API (not just SUMMARY.md prose) — Windows
+  operator zip attached, PyPI package published. One real deviation: the initial combined
+  branch+tag push silently didn't fire `release.yml`'s push-event trigger (a documented GitHub
+  Actions limitation); caught, independently verified, and fixed via a human-approved standalone
+  tag re-push.
+- **Milestone audit caught the gate testing itself** — Phase 151's own `VALIDATION.md` docs (and
+  Phase 153's) were left in their pre-execution draft state post-close, because the pre-commit
+  hook they built was never actually *installed* (`core.hooksPath` unset). Fixed during the audit;
+  the gate is now live for all future commits — the strongest possible proof it achieved its goal.
+
 ## v5.11 Discovery at Scale + Backlog Drain (Shipped: 2026-08-11)
 
 **Phases completed:** 4 phases (144–147), 16 plans, 35 tasks
