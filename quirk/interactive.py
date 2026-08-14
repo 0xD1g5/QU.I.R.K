@@ -175,7 +175,7 @@ def interactive_config() -> tuple[AppConfig, str]:
     # --- 1b. Nmap discovery toggle (D-06: one global y/N, NOT per-target) ---
     enable_nmap = _prompt_bool(
         "Run nmap port discovery first? (recommended for >10 hosts)",
-        default=False,
+        default=True,
     )  # D-06: single global toggle, NOT per-target
 
     # --- 2. Scan options (D-05/D-06) ---

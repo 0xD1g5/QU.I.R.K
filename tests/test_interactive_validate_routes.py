@@ -89,6 +89,21 @@ def test_interactive_py_no_setattr_enable_nmap():
     assert "setattr(cfg.connectors, 'enable_nmap'" not in src
 
 
+def test_interactive_py_enable_nmap_defaults_true():
+    """DISC-11: the interactive 'Run nmap port discovery first?' prompt must default to
+    True, so a user accepting every default exercises Phase 144/145 chunked discovery +
+    the liveness pre-pass automatically. Regression-locks the call-site default.
+    """
+    src = Path("quirk/interactive.py").read_text(encoding="utf-8")
+    match = re.search(
+        r"enable_nmap = _prompt_bool\((.*?)\)\s*#\s*D-06", src, re.DOTALL
+    )
+    assert match is not None, "enable_nmap = _prompt_bool(...)  # D-06 call site not found"
+    call_args = match.group(1)
+    assert "default=True" in call_args
+    assert "default=False" not in call_args
+
+
 # ----------------------------------------------------------------------
 # D-14 (WR-13) — validate.py expected_files
 # ----------------------------------------------------------------------
