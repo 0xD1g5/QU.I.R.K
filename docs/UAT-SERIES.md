@@ -17303,3 +17303,88 @@ on real CI.
 **Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** __________  **Tester:** __________
 **Notes:** D-12/D-13.
+
+---
+
+## Series 151: Phase-Completion Artifact Gates (Phase 151 — v5.12)
+
+### UAT-151-01: The pre-commit artifact gate blocks a phase-close commit missing its VERIFICATION.md, then lets a clean commit through (ARTIFACT-01/03) — Human-Led
+
+**What to test:** `scripts/verify_phase_gates.py`, wired via `.githooks/pre-commit`
+(`git config core.hooksPath .githooks`, documented in `CONTRIBUTING.md`), actually rejects a real
+`git commit` that flips a Phase checkbox to `[x]` in `.planning/ROADMAP.md` for a phase directory
+missing its `VERIFICATION.md`, and lets an unrelated, non-offending commit through cleanly once the
+staged violation is removed. This is the exact Phase 145 gap (missing `VERIFICATION.md`) and Phase
+144 gap (missing `docs/UAT-SERIES.md` coverage) reproduced and closed by ARTIFACT-01 and
+ARTIFACT-03.
+
+**Steps:**
+1. In a scratch clone or disposable worktree of this repo, run
+   `git config core.hooksPath .githooks` to activate the gate (one-time, per `CONTRIBUTING.md`'s
+   "Installing the pre-commit artifact gate" section).
+2. Stage a change that flips a Phase checkbox from `- [ ]` to `- [x]` in
+   `.planning/ROADMAP.md` for a phase directory that is deliberately missing its
+   `<N>-VERIFICATION.md` file (or, on a real checkout, temporarily rename an existing
+   `VERIFICATION.md` aside to simulate the gap, then restore it after this test).
+3. Run `git commit -m "test: artifact gate smoke check"` and confirm the commit is **rejected**
+   (non-zero exit) with a message naming the missing artifact (e.g. mentioning
+   `VERIFICATION.md`).
+4. Unstage/revert the offending `ROADMAP.md` change (`git restore --staged .planning/ROADMAP.md`
+   or discard the checkbox edit), stage an unrelated, legitimate change instead, and confirm
+   `git commit` now proceeds normally with no gate rejection.
+
+**Pass criteria:**
+- Step 3's commit is rejected with a non-zero exit code and stderr/output naming the specific
+  missing artifact (`VERIFICATION.md`), not a generic/opaque failure
+- Step 4's unrelated commit is **not** blocked — the gate is diff-gated to phase-close-shaped
+  changes (a `ROADMAP.md` checkbox flip), not a blanket block on every commit
+- `git config --unset core.hooksPath` cleanly deactivates the gate afterward if the scratch clone
+  is reused for other work
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** ARTIFACT-01, ARTIFACT-03. Requirement: ARTIFACT-01, ARTIFACT-03.
+
+---
+
+### UAT-151-02: The destructive-archive gate blocks the *next commit* after an unarchived phase-directory deletion — it does not and cannot prevent the delete itself (ARTIFACT-04) — Human-Led
+
+**What to test:** `check_destructive_archive()` (wired unconditionally into every commit via
+`main()` in `scripts/verify_phase_gates.py`) reproduces and closes the exact
+`.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md` incident shape — a `Complete`-marked phase
+in `.planning/STATE.md`'s phase map whose `.planning/phases/<slug>/` directory content has vanished
+from the working tree with no matching milestone archive directory to account for it. Read this
+walkthrough's scope boundary carefully: the gate is a git hook, so it has **zero visibility into
+non-git filesystem operations** (a `phases.clear` invocation, a plain `rm -rf`, or any deletion
+that never reaches `git commit`). It cannot prevent the delete from happening. What it *can* and
+does do is block the **next `git commit`** attempted afterward, until the deletion is either
+reverted or properly archived.
+
+**Steps:**
+1. In a scratch clone or disposable worktree, run `git config core.hooksPath .githooks`.
+2. Simulate the incident shape: delete the contents of a `.planning/phases/<slug>/` directory for a
+   phase that `.planning/STATE.md`'s phase map lists as `Complete`, without creating a matching
+   `.planning/milestones/v<X.Y>-phases/` archive directory for it. (This can be done with a plain
+   filesystem delete — no `git rm` required, since `.planning/` is gitignored and the gate reads
+   working-tree state directly, not git history.)
+3. Stage and attempt any commit (even an unrelated one): `git add -A && git commit -m "test:
+   destructive archive gate smoke check"`.
+4. Confirm the commit is **rejected**, with the output naming the phase whose content vanished
+   without a corresponding archive.
+5. Restore the deleted phase directory content (or create the matching archive directory) and
+   confirm a subsequent commit proceeds normally.
+
+**Pass criteria:**
+- Step 4's commit is rejected, explicitly naming the phase-directory gap — not a silent or generic
+  failure
+- The walkthrough explicitly demonstrates and states the scope boundary: **the hook could not and
+  did not prevent Step 2's deletion from happening** — deletion is a plain filesystem operation
+  outside git's (and therefore the hook's) visibility. The guarantee is strictly "the next commit
+  is blocked," never "the delete never happens." A reader following this walkthrough should come
+  away unable to misjudge the guarantee's scope.
+- Step 5's restore-then-commit sequence succeeds cleanly, proving the gate is a real, recoverable
+  guard rather than a permanent lockout
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** __________  **Tester:** __________
+**Notes:** ARTIFACT-04. Requirement: ARTIFACT-04.
