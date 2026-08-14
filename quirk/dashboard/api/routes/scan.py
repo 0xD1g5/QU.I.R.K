@@ -11,7 +11,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from quirk.errors import format_error
 from quirk.dashboard.api.middleware.auth import require_auth
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
@@ -712,28 +712,50 @@ def _derive_hardware_findings(db: Session, latest_ts: datetime) -> list[Hardware
     """Synthesize HardwareFinding list from HardwareDevice rows for the latest scan.
 
     Advisory-only (Phase 128 HWCOMPAT-SCORE-LOCK) — wrapped in try/except so
-    any DB or mapping error is non-fatal and returns an empty list.  Mirrors the
-    _derive_motion_findings timedelta(seconds=1) window pattern.
+    any DB or mapping error is non-fatal and returns an empty list.
 
-    Uses MAX(HardwareDevice.scanned_at) as the window anchor rather than the
-    passed latest_ts (which is anchored on CryptoEndpoint.scanned_at). Hardware
-    fingerprinting runs after SSH endpoint collection, so hw timestamps are
-    typically later; using the crypto anchor risks missing all devices under load.
+    Phase 154 D-13/D-14: projects each device's per-(host, port) latest row
+    with `probe_status == "success"` — a currently-failing re-probe never
+    displaces a device's last-known-good state; the device stays present with
+    its most recent successful observation instead of vanishing. Pre-Phase-154
+    rows (`probe_status IS NULL`) are excluded until the device is re-scanned
+    (D-06 append-only; no backfill). Scope is therefore "every device with a
+    successful observation on record", not just this scan run — bounded by
+    `scan.hardware_history_retention_days`'s retention purge (Plan 04). This is
+    one of four identical projection sites (D-14); see quirk/merge/scan.py and
+    quirk/reports/writer.py for the CBOM/report-path twins.
     """
     try:
-        hw_anchor = db.query(func.max(HardwareDevice.scanned_at)).scalar()
-        if hw_anchor is None:
-            return []
-        window_start = hw_anchor - timedelta(seconds=1)
-        window_end = hw_anchor + timedelta(seconds=1)
+        latest_success = (
+            db.query(
+                HardwareDevice.host,
+                HardwareDevice.port,
+                func.max(HardwareDevice.scanned_at).label("max_ts"),
+            )
+            .filter(HardwareDevice.probe_status == "success")
+            .group_by(HardwareDevice.host, HardwareDevice.port)
+            .subquery()
+        )
         devices = (
             db.query(HardwareDevice)
-            .filter(
-                HardwareDevice.scanned_at >= window_start,
-                HardwareDevice.scanned_at <= window_end,
-            )
+            .join(latest_success, and_(
+                HardwareDevice.host == latest_success.c.host,
+                HardwareDevice.port == latest_success.c.port,
+                HardwareDevice.scanned_at == latest_success.c.max_ts,
+            ))
             .all()
         )
+        # Phase 154 D-13: tie-break dedupe — two rows for the same (host, port)
+        # can share an identical scanned_at (same-second writes); keep the
+        # highest-id row so the join never emits both.
+        _by_key: dict[tuple, HardwareDevice] = {}
+        for _d in devices:
+            _key = (_d.host, _d.port)
+            if _key not in _by_key or _d.id > _by_key[_key].id:
+                _by_key[_key] = _d
+        devices = list(_by_key.values())
+        if not devices:
+            return []
 
         # Phase 140 BRIDGE-03: bridge-pairing + evidence-gated promotion pipeline.
         # Stays inside this try/except so a pairing error degrades to
@@ -840,24 +862,50 @@ def _derive_hw_components(db: Session, latest_ts: datetime) -> list[HardwareComp
     """Build HardwareComponent list from HardwareDevice rows for the latest scan.
 
     Advisory-only (CBOM-02) — wrapped in try/except so any DB or mapping error
-    is non-fatal and returns an empty list.  Mirrors _derive_hardware_findings:
-    anchors on MAX(HardwareDevice.scanned_at) with a 1-second window so hardware
-    timestamps (collected after crypto endpoints) are always captured.
+    is non-fatal and returns an empty list.
+
+    Phase 154 D-13/D-14: projects each device's per-(host, port) latest row
+    with `probe_status == "success"` — a currently-failing re-probe never
+    displaces a device's last-known-good state; the device stays present with
+    its most recent successful observation instead of vanishing. Pre-Phase-154
+    rows (`probe_status IS NULL`) are excluded until the device is re-scanned
+    (D-06 append-only; no backfill). Scope is therefore "every device with a
+    successful observation on record", not just this scan run — bounded by
+    `scan.hardware_history_retention_days`'s retention purge (Plan 04). This is
+    one of four identical projection sites (D-14); see quirk/merge/scan.py and
+    quirk/reports/writer.py for the CBOM/report-path twins.
     """
     try:
-        hw_anchor = db.query(func.max(HardwareDevice.scanned_at)).scalar()
-        if hw_anchor is None:
-            return []
-        window_start = hw_anchor - timedelta(seconds=1)
-        window_end = hw_anchor + timedelta(seconds=1)
+        latest_success = (
+            db.query(
+                HardwareDevice.host,
+                HardwareDevice.port,
+                func.max(HardwareDevice.scanned_at).label("max_ts"),
+            )
+            .filter(HardwareDevice.probe_status == "success")
+            .group_by(HardwareDevice.host, HardwareDevice.port)
+            .subquery()
+        )
         devices = (
             db.query(HardwareDevice)
-            .filter(
-                HardwareDevice.scanned_at >= window_start,
-                HardwareDevice.scanned_at <= window_end,
-            )
+            .join(latest_success, and_(
+                HardwareDevice.host == latest_success.c.host,
+                HardwareDevice.port == latest_success.c.port,
+                HardwareDevice.scanned_at == latest_success.c.max_ts,
+            ))
             .all()
         )
+        # Phase 154 D-13: tie-break dedupe — two rows for the same (host, port)
+        # can share an identical scanned_at (same-second writes); keep the
+        # highest-id row so the join never emits both.
+        _by_key: dict[tuple, HardwareDevice] = {}
+        for _d in devices:
+            _key = (_d.host, _d.port)
+            if _key not in _by_key or _d.id > _by_key[_key].id:
+                _by_key[_key] = _d
+        devices = list(_by_key.values())
+        if not devices:
+            return []
 
         # Phase 140 BRIDGE-03: bridge-pairing + evidence-gated promotion pipeline.
         # Stays inside this try/except so a pairing error degrades to
