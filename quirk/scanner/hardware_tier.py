@@ -7,6 +7,11 @@ fingerprints (D-04 HWCOMPAT-CONFIDENCE-CAP).
 Hardware tier assignment is advisory-only: no counter is added to SCORE_WEIGHTS
 and ``compute_readiness_score()`` is not modified (D-01 / D-06 HWCOMPAT-SCORE-LOCK).
 
+``TIER_ORDER`` gives tier severity ordering (lower int = more urgent) and is
+shared by the dashboard's finding/component sort and Phase 155's drift
+reconciliation, which uses it to describe a tier crossing as improved or
+worsened (D-04).
+
 Phase 128 — HWCOMPAT-04.
 """
 from __future__ import annotations
@@ -20,6 +25,11 @@ _LOG = logging.getLogger(__name__)
 
 # PQC migration window boundary (D-05: EOL before 2030 → Tier N/A)
 _PQC_WINDOW_START = _date(2030, 1, 1)
+
+# Tier severity ordering (lower int = more urgent). Promoted from
+# quirk/dashboard/api/routes/scan.py's local _TIER_ORDER (Phase 155 D-04) —
+# shared by the dashboard sort and the drift reconciliation engine.
+TIER_ORDER: dict[str, int] = {"Tier 1": 0, "Tier 2": 1, "Tier 3": 2, "Tier N/A": 3}
 
 
 def assign_tier(device: HardwareDevice) -> str:

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from quirk.scanner.hardware_tier import assign_tier  # RED: module does not exist yet
+from quirk.scanner.hardware_tier import TIER_ORDER, assign_tier  # RED: module does not exist yet
 
 
 def _make_device(pqc_status: str, confidence: str, eol_date=None):
@@ -128,3 +128,15 @@ def test_confidence_cap_bypass_supported_unknown() -> None:
     """
     dev = _make_device(pqc_status="supported", confidence="unknown", eol_date=None)
     assert assign_tier(dev) == "Tier 3"
+
+
+# ------------ Phase 155 D-04: TIER_ORDER shared constant ------------
+
+def test_tier_order_keys_match_assign_tier_possible_returns() -> None:
+    """TIER_ORDER keys exactly match the four tier strings assign_tier() can return."""
+    assert set(TIER_ORDER.keys()) == {"Tier 1", "Tier 2", "Tier 3", "Tier N/A"}
+
+
+def test_tier_order_severity_ascending() -> None:
+    """Lower int = more urgent; Tier 1 < Tier 2 < Tier 3 < Tier N/A."""
+    assert TIER_ORDER["Tier 1"] < TIER_ORDER["Tier 2"] < TIER_ORDER["Tier 3"] < TIER_ORDER["Tier N/A"]

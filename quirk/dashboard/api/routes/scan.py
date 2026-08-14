@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
+from quirk.scanner.hardware_tier import TIER_ORDER as _TIER_ORDER  # Phase 155 D-04: shared tier ordering
 from quirk.dashboard.api.schemas import (
     CbomComponent,
     CertItem,
@@ -700,8 +701,6 @@ _CNSA_DEADLINE = {
     "Tier 3": "Accept + monitor, re-evaluate 2033+",
     "Tier N/A": "EOL before PQC migration window",
 }
-
-_TIER_ORDER = {"Tier 1": 0, "Tier 2": 1, "Tier 3": 2, "Tier N/A": 3}
 
 _METHOD_LABEL = {
     "ssh_banner": "SSH Banner",
