@@ -76,16 +76,16 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Discovery Empirical Closure
 
-- [ ] **DISC-09**: A segmented-network chaos lab profile exists so chunked discovery and
+- [x] **DISC-09**: A segmented-network chaos lab profile exists so chunked discovery and
       partial-result tolerance can be exercised against realistic unreachable hosts rather than
       unassigned loopback aliases (deferred from v5.11)
 
-- [ ] **DISC-10**: The Phase 144 nmap timing-engine artifact is settled empirically against
+- [x] **DISC-10**: The Phase 144 nmap timing-engine artifact is settled empirically against
       DISC-09's profile — either it does not reproduce on a realistic segmented network (finding
       closed), or it does and a scoped mitigation is chosen with its false-negative tradeoffs
       documented
 
-- [ ] **DISC-11**: Interactive setup opts users into nmap discovery by default — the current
+- [x] **DISC-11**: Interactive setup opts users into nmap discovery by default — the current
       `default=False` on "Run nmap port discovery first?" silently routes users past the entire
       v5.11 chunked-discovery and liveness path
 
@@ -126,6 +126,6 @@ Deferred to a later milestone.
 | ARTIFACT-02 | Phase 151 | Complete |
 | ARTIFACT-03 | Phase 151 | Complete |
 | ARTIFACT-04 | Phase 151 | Complete |
-| DISC-09 | Phase 152 | Pending |
-| DISC-10 | Phase 152 | Pending |
-| DISC-11 | Phase 152 | Pending |
+| DISC-09 | Phase 152 | Complete |
+| DISC-10 | Phase 152 | Complete |
+| DISC-11 | Phase 152 | Complete |

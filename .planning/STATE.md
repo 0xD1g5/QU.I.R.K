@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.12
 milestone_name: Release & Verification Integrity
 status: verifying
-stopped_at: Phase 151 complete — VERIFICATION passed 4/4
-last_updated: "2026-08-14T00:00:00.000Z"
+stopped_at: Phase 152 complete — VERIFICATION 4/4 criteria verified (roadmap/requirements closure applied post-verification)
+last_updated: "2026-08-14T01:00:00.000Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 13
-  completed_phases: 4
-  total_plans: 27
-  completed_plans: 27
-  percent: 31
+  completed_phases: 5
+  total_plans: 31
+  completed_plans: 31
+  percent: 38
 ---
 
 # Project State
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-07-30)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 152 — discovery-empirical-closure (next unstarted phase in the v5.12 map)
+**Current focus:** Phase 153 — release-tag-cut (next unstarted phase in the v5.12 map)
 
 ## Current Position
 
-Phase: 151 (phase-completion-artifact-gates) — COMPLETE (2026-08-13)
-Plan: 3 of 3 complete (151-01 pure decision functions, 151-02 CLI glue + git hook + CONTRIBUTING.md, 151-03 UAT-SERIES.md + Obsidian sync); plus 2 post-execution fix rounds on main (Phase 144 historical-gap exemption; 4 code-review Warnings WR-01..04)
-Status: Phase complete — VERIFICATION passed 4/4 (151-VERIFICATION.md)
+Phase: 152 (discovery-empirical-closure) — COMPLETE (2026-08-13)
+Plan: 4 of 4 complete (152-01 segmented-network lab profile, 152-02 enable_nmap default flip, 152-03 timing-artifact empirical resolution — verdict DOES NOT REPRODUCE, 152-04 docs/UAT-SERIES.md + Obsidian sync); plus 1 post-execution code-review fix round (WR-01 dead-range sweep gateway-self exclusion, WR-02 restart-safe prober command, WR-03 timezone-artifact note)
+Status: Phase complete — VERIFICATION 4/4 success criteria verified (152-VERIFICATION.md); one process gap (roadmap/requirements checkboxes not yet flipped) found and closed same-session
 Last activity: 2026-08-13
 
 ## v5.12 Phase Map
@@ -39,7 +39,7 @@ Last activity: 2026-08-13
 | 149 | Test Suite Triage | SUITE-01 | None (independent, highest-variance item run early/alone) | Complete (2026-08-12) |
 | 150 | Test Suite Green Baseline + CI Gate | SUITE-02, SUITE-03 | Phase 149 (scope depends on triage output) | Complete (2026-08-13; VERIFICATION passed 4/4 — green run 31723764281, red run 31725715958, both live-fire proven on real GitHub Actions) |
 | 151 | Phase-Completion Artifact Gates | ARTIFACT-01, ARTIFACT-02, ARTIFACT-03, ARTIFACT-04 | None (independent) | Complete (2026-08-13; VERIFICATION passed 4/4 — scripts/verify_phase_gates.py + .githooks/pre-commit, opt-in via `git config core.hooksPath .githooks`; not yet installed in this working copy) |
-| 152 | Discovery Empirical Closure | DISC-09, DISC-10, DISC-11 | None (DISC-10 depends on DISC-09 within-phase) | Not started |
+| 152 | Discovery Empirical Closure | DISC-09, DISC-10, DISC-11 | None (DISC-10 depends on DISC-09 within-phase) | Complete (2026-08-13; VERIFICATION 4/4 — segmented-network lab profile live-verified, Phase 144 nmap timing artifact DOES NOT REPRODUCE per 152-DISC09-FINDING.md, enable_nmap defaults True) |
 | 153 | Release Tag Cut | RELEASE-01 | Phases 148, 150, 151 | Not started |
 
 ## v5.11 Phase Map (SHIPPED 2026-08-11)

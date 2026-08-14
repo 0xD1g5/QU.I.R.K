@@ -70,7 +70,7 @@ Documentation Checklist.
       VERIFICATION.md, a stale VALIDATION.md, or a missing UAT-SERIES.md entry; a destructive
       planning operation cannot run against an unarchived milestone
 
-- [ ] **Phase 152: Discovery Empirical Closure** — Segmented-network chaos lab profile, empirical
+- [x] **Phase 152: Discovery Empirical Closure** — Segmented-network chaos lab profile, empirical
       resolution of the Phase 144 nmap timing artifact, and the interactive nmap-discovery-first
       default flipped to Y
 
@@ -347,7 +347,7 @@ dogfooding it immediately)
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
 | 150. Test Suite Green Baseline + CI Gate | 9/9 | Complete   | 2026-08-13 |
 | 151. Phase-Completion Artifact Gates | 3/3 | Complete    | 2026-08-13 |
-| 152. Discovery Empirical Closure | 0/TBD | Not started | - |
+| 152. Discovery Empirical Closure | 4/4 | Complete    | 2026-08-13 |
 | 153. Release Tag Cut | 0/TBD | Not started | - |
 
 ---
