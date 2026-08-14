@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.13
 milestone_name: Continuous Hardware Lifecycle Monitoring
 status: executing
-stopped_at: Completed 154-01-PLAN.md
-last_updated: "2026-08-14T18:25:01.317Z"
+stopped_at: Completed 154-02-PLAN.md
+last_updated: "2026-08-14T18:40:58.433Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 154 (identity-data-model-foundation) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-08-14
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## v5.13 Phase Map (planning)
 
@@ -150,6 +150,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 150 P08 | ~90min | 3 tasks | 2 files |
 | Phase 150 P09 | 35min | 3 tasks | 5 files |
 | Phase 154 P01 | 15min | 2 tasks | 6 files |
+| Phase 154 P02 | 35min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -281,6 +282,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 150]: Live-fire CI proof closed SUITE-02/SUITE-03 -- real Linux Full Suite run 31723764281 green (0 failed, .[all]-only, ubuntu-latest, Python 3.11.15) after D-03 SIGSEGV quarantine (bbe8b55); real red run 31725715958 via throwaway PR #10 proved the gate bites (1 failed, isolated to the deliberate smoke test), PR closed unmerged and branch deleted, evidence in 150-CI-EVIDENCE.md
 - [Phase 150]: Plan 09 closed the phase -- 150-VERIFICATION.md written against all 4 ROADMAP success criteria (all PASS, Criterion 1 anchored to the real CI run not the corroborating local venv run); SUITE-02/SUITE-03 confirmed Complete (already flipped by 150-08's metadata commit, this plan replaced the stale in-progress status note with a 150-CI-EVIDENCE.md pointer); ROADMAP.md's 150-09 checkbox and the Phase 150 heading both ticked -- the plan's own literal "tick all six" instruction was stale (mirrors 150-07's "6 plans" deviation) since the true count is 9 plans, all already checked; `.continue-here.md` deleted (resolved blocker, filesystem-only per PUBREPO-01 gitignore convention)
 - [Phase ?]: [Phase 154]: match_confidence kept as a column distinct from the pre-existing confidence column (D-04/D-05) — cross-scan identity confidence vs. probe-result confidence
+- [Phase 154]: match_confidence upgrade to high is unconditional on Step 1's vendor match outcome — a correctly-identified device still gets its SSH host-key fingerprint (RESEARCH §1)
+- [Phase 154]: Rule 3 fix: three test fixture _make_ep() helpers needed ssh_audit_json=None pre-populated in __dict__, since fingerprint_one's unconditional getattr hit SQLAlchemy UnmappedInstanceError (not AttributeError) on __new__-constructed test doubles missing that key
 
 ### Pending Todos
 
@@ -352,8 +355,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-14T18:25:01.311Z
-Stopped at: Completed 154-01-PLAN.md
+Last session: 2026-08-14T18:40:58.427Z
+Stopped at: Completed 154-02-PLAN.md
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
 141-07 Task 3 live Docker validation) were completed and approved during the Phase 141 gap-closure

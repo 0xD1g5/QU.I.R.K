@@ -74,7 +74,7 @@ unbounded growth — the foundation every drift/alert feature in this milestone 
 **Plans**: 5 plans
 
 - [x] 154-01-PLAN.md — Schema: 3 nullable HardwareDevice columns + additive migration + ScanCfg.hardware_history_retention_days [HWLC-01/02/03]
-- [ ] 154-02-PLAN.md — Write path: SSH host-key fingerprint extraction, match_confidence, probe_status [HWLC-01/02]
+- [x] 154-02-PLAN.md — Write path: SSH host-key fingerprint extraction, match_confidence, probe_status [HWLC-01/02]
 - [ ] 154-03-PLAN.md — Read path: per-device latest-successful-row projection at all 4 sites (D-13/D-14) [HWLC-02]
 - [ ] 154-04-PLAN.md — Retention: guarded opportunistic per-scan purge helper + wiring [HWLC-03]
 - [ ] 154-05-PLAN.md — Docs (configuration/operators-guide/report-interpretation/UAT-SERIES) + Obsidian sync [HWLC-01/02/03]
@@ -127,7 +127,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 154. Identity & Data-Model Foundation | 1/5 | In Progress|  |
+| 154. Identity & Data-Model Foundation | 2/5 | In Progress|  |
 | 155. Drift Detection + EOL Tracking | 0/TBD | Not started | - |
 | 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
 
