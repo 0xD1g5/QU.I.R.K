@@ -24,6 +24,30 @@ pip install -e ".[all]"
 pip install pytest
 ```
 
+## Installing the pre-commit artifact gate
+
+QUIRK enforces phase-completion artifact hygiene — `VERIFICATION.md` presence,
+`VALIDATION.md` freshness, `docs/UAT-SERIES.md` coverage for user-facing plans, and a
+destructive-deletion guard for `.planning/phases/` — via a local git hook, not a CI
+check: `.planning/` is gitignored on this public repo, so CI never sees it and cannot
+enforce anything against it.
+
+Install the hook once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+That's it — `git commit` now runs `scripts/verify_phase_gates.py` before every commit.
+It's cheap on unrelated commits (the phase-close checks only fire when the staged
+`.planning/ROADMAP.md` diff contains a Phase-checkbox flip to complete) and blocks the
+commit with a clear message when a gate is violated.
+
+`git commit --no-verify` bypasses this hook entirely — that's git's own designed escape
+hatch, not something this hook can prevent. Treat it as a safety net, not a hard
+guarantee: a contributor who skips the one-time `core.hooksPath` setup, or who commits
+with `--no-verify`, gets zero enforcement, silently.
+
 ## Docker containers during `-m ""` runs
 
 `pytest -q -m ""` includes `slow`-marked chaos-lab profile tests, which start Docker

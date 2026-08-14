@@ -1,9 +1,13 @@
-"""Phase 151-01 ARTIFACT-01..04: Unit tests for the phase-completion
-artifact gate decision core.
+"""Phase 151-01/151-02 ARTIFACT-01..04: Unit + integration tests for the
+phase-completion artifact gate.
 
-Exercises `check_phase_close`, `check_destructive_archive`, and their
+151-01 exercises `check_phase_close`, `check_destructive_archive`, and their
 loaders/helpers from `scripts/verify_phase_gates.py` directly with literal
 and real-fixture inputs — no subprocess, no network, no live git repo.
+151-02 adds `_extract_phase_close_trigger()` / `main()` CLI-glue tests (with
+an injectable `git_runner` seam so no real git subprocess is needed for
+those) plus a `hook_integration` suite that drives a real disposable temp
+git repo end-to-end through the installed `.githooks/pre-commit` hook.
 `scripts/` is not an importable package, so the module is loaded via
 `importlib.util.spec_from_file_location`.
 """
@@ -11,6 +15,8 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import shutil
+import subprocess
 
 import pytest
 
@@ -500,3 +506,271 @@ def test_check_destructive_archive_untracked_file_deletion_case(vpg, tmp_path):
     )
     assert blocked is True
     assert any("144" in r for r in reasons)
+
+
+# ---------------------------------------------------------------------------
+# 151-02: _extract_phase_close_trigger()
+# ---------------------------------------------------------------------------
+
+
+def test_extract_phase_close_trigger_matches_real_b09c9bc_hunk(vpg):
+    """Real diff hunk shape from `git show b09c9bc -- .planning/ROADMAP.md`
+    (Phase 150's actual close commit) — Pattern 5."""
+    diff_text = (
+        "diff --git a/.planning/ROADMAP.md b/.planning/ROADMAP.md\n"
+        "--- a/.planning/ROADMAP.md\n"
+        "+++ b/.planning/ROADMAP.md\n"
+        "@@ -64,7 +64,7 @@\n"
+        "-- [ ] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean\n"
+        "+- [x] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean\n"
+        "       environment, held by a CI gate that fails the build on any new failure\n"
+    )
+    assert vpg._extract_phase_close_trigger(diff_text) == "150"
+
+
+def test_extract_phase_close_trigger_none_for_unrelated_roadmap_edit(vpg):
+    diff_text = (
+        "diff --git a/.planning/ROADMAP.md b/.planning/ROADMAP.md\n"
+        "--- a/.planning/ROADMAP.md\n"
+        "+++ b/.planning/ROADMAP.md\n"
+        "@@ -10,3 +10,3 @@\n"
+        "-Some wording tweak.\n"
+        "+Some improved wording tweak.\n"
+    )
+    assert vpg._extract_phase_close_trigger(diff_text) is None
+
+
+def test_extract_phase_close_trigger_handles_decimal_subphase_number(vpg):
+    """Open Question 2: sub-phase closes (e.g. 64.1) must also trigger."""
+    diff_text = "+- [x] **Phase 64.1: Audit Residual Blockers** — done\n"
+    assert vpg._extract_phase_close_trigger(diff_text) == "64.1"
+
+
+# ---------------------------------------------------------------------------
+# 151-02: main() CLI glue
+# ---------------------------------------------------------------------------
+
+
+def _fake_git_result(returncode: int, stdout: str = "", stderr: str = ""):
+    return subprocess.CompletedProcess(
+        args=["git"], returncode=returncode, stdout=stdout, stderr=stderr
+    )
+
+
+def test_main_returns_0_when_no_trigger_and_destructive_archive_clean(vpg, tmp_path):
+    (tmp_path / ".planning").mkdir()
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout="no trigger in this diff\n"),
+    )
+    assert exit_code == 0
+
+
+def test_main_returns_1_when_trigger_fires_and_verification_missing(vpg, tmp_path):
+    planning = tmp_path / ".planning"
+    phase_dir = planning / "phases" / "999-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    # Deliberately no 999-VERIFICATION.md written (ARTIFACT-01 violation).
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    diff_text = "+- [x] **Phase 999: Fixture Phase** — done\n"
+
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+    )
+    assert exit_code == 1
+
+
+def test_main_returns_1_when_validation_stale_with_verification_present(vpg, tmp_path):
+    planning = tmp_path / ".planning"
+    phase_dir = planning / "phases" / "999-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    (phase_dir / "999-VERIFICATION.md").write_text("verified", encoding="utf-8")
+    (phase_dir / "999-VALIDATION.md").write_text(
+        "---\nphase: 999\nnyquist_compliant: false\n---\n\nbody\n", encoding="utf-8"
+    )
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    diff_text = "+- [x] **Phase 999: Fixture Phase** — done\n"
+
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+    )
+    assert exit_code == 1
+
+
+def test_main_returns_1_when_uat_series_missing_via_real_loader_output(vpg, tmp_path):
+    """Assembly-level proof: main() wires load_phase_plan_files_modified()'s
+    real output into check_phase_close(), not an empty list/placeholder."""
+    planning = tmp_path / ".planning"
+    phase_dir = planning / "phases" / "150-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    (phase_dir / "150-VERIFICATION.md").write_text("verified", encoding="utf-8")
+    (phase_dir / "150-VALIDATION.md").write_text(
+        "---\nphase: 150\nnyquist_compliant: true\n---\n\nbody\n", encoding="utf-8"
+    )
+    (phase_dir / "150-01-PLAN.md").write_text(
+        REAL_150_01_PLAN_TEXT, encoding="utf-8"
+    )
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "UAT-SERIES.md").write_text(
+        "no matching heading in this fixture at all", encoding="utf-8"
+    )
+    diff_text = "+- [x] **Phase 150: Fixture Phase** — done\n"
+
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout=diff_text),
+    )
+    assert exit_code == 1
+
+
+def test_main_returns_1_when_no_trigger_but_destructive_archive_incident(vpg, tmp_path):
+    planning = tmp_path / ".planning"
+    planning.mkdir()
+    (planning / "STATE.md").write_text(
+        "## v5.11 Phase Map\n\n"
+        "| Phase | Name | Requirements | Gate | Status |\n"
+        "|-------|------|--------------|------|--------|\n"
+        "| 144 | Chunked Discovery Core | DISC-01 | None | Complete (2026-08-10) |\n",
+        encoding="utf-8",
+    )
+    # No .planning/phases/144-*/ dir and no .planning/milestones/v5.11-phases/144-*/
+    # archive -- reproduces the ARCHIVE-MANIFEST.md incident shape.
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(0, stdout="no trigger in this diff\n"),
+    )
+    assert exit_code == 1
+
+
+def test_main_returns_2_and_writes_stderr_when_git_subprocess_fails(
+    vpg, tmp_path, capsys
+):
+    exit_code = vpg.main(
+        repo_root=tmp_path,
+        git_runner=lambda: _fake_git_result(
+            1, stdout="", stderr="fatal: not a git repository"
+        ),
+    )
+    assert exit_code == 2
+    captured = capsys.readouterr()
+    assert "not a git repository" in captured.err
+    assert "not a git repository" not in captured.out
+
+
+# ---------------------------------------------------------------------------
+# 151-02: hook_integration -- real end-to-end proof against a temp git repo
+# ---------------------------------------------------------------------------
+
+HOOK_PATH = REPO_ROOT / ".githooks" / "pre-commit"
+
+
+def test_hook_integration_pre_commit_file_exists_executable_and_references_script():
+    assert HOOK_PATH.exists(), f"{HOOK_PATH} does not exist"
+    mode = HOOK_PATH.stat().st_mode
+    assert mode & 0o111, f"{HOOK_PATH} is not executable"
+    content = HOOK_PATH.read_text(encoding="utf-8")
+    assert "verify_phase_gates.py" in content
+
+
+def _init_fixture_repo(repo_dir: pathlib.Path) -> None:
+    """Build a disposable git repo with its own copy of
+    scripts/verify_phase_gates.py and .githooks/pre-commit, so the hook's
+    `git rev-parse --show-toplevel` resolution and the script's own
+    REPO_ROOT (computed from `__file__`) both correctly resolve to
+    `repo_dir`, not the real QUIRK checkout."""
+    subprocess.run(["git", "init", "-q"], cwd=repo_dir, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "hook-integration-test@example.invalid"],
+        cwd=repo_dir,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "hook-integration-test"],
+        cwd=repo_dir,
+        check=True,
+    )
+
+    (repo_dir / "scripts").mkdir(parents=True)
+    shutil.copy(
+        REPO_ROOT / "scripts" / "verify_phase_gates.py",
+        repo_dir / "scripts" / "verify_phase_gates.py",
+    )
+
+    hooks_dir = repo_dir / ".githooks"
+    hooks_dir.mkdir(parents=True)
+    shutil.copy(HOOK_PATH, hooks_dir / "pre-commit")
+    (hooks_dir / "pre-commit").chmod(0o755)
+
+    subprocess.run(
+        ["git", "config", "core.hooksPath", ".githooks"], cwd=repo_dir, check=True
+    )
+
+    planning = repo_dir / ".planning"
+    planning.mkdir()
+    (planning / "STATE.md").write_text("", encoding="utf-8")
+    # Unchecked box: the initial-commit diff adds `+- [ ] **Phase 999...`
+    # (space, not `x`) -- must NOT trigger the phase-close path.
+    (planning / "ROADMAP.md").write_text(
+        "# Roadmap\n\n- [ ] **Phase 999: Fixture Phase** — placeholder\n",
+        encoding="utf-8",
+    )
+    docs_dir = repo_dir / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "UAT-SERIES.md").write_text("no series yet\n", encoding="utf-8")
+
+
+def _commit(repo_dir: pathlib.Path, message: str) -> subprocess.CompletedProcess:
+    subprocess.run(["git", "add", "-A"], cwd=repo_dir, check=True)
+    return subprocess.run(
+        ["git", "commit", "-m", message],
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_hook_integration_green_path_commit_succeeds(tmp_path):
+    repo_dir = tmp_path / "hook-green-repo"
+    repo_dir.mkdir()
+    _init_fixture_repo(repo_dir)
+
+    result = _commit(repo_dir, "chore: initial fixture commit")
+
+    assert result.returncode == 0, (
+        f"expected a clean commit to succeed, got stderr: {result.stderr}"
+    )
+
+
+def test_hook_integration_red_path_commit_rejected_on_missing_verification(tmp_path):
+    repo_dir = tmp_path / "hook-red-repo"
+    repo_dir.mkdir()
+    _init_fixture_repo(repo_dir)
+
+    # Baseline commit (unchecked Phase 999 box -- no trigger, no violation).
+    baseline = _commit(repo_dir, "chore: initial fixture commit")
+    assert baseline.returncode == 0, baseline.stderr
+
+    # Flip Phase 999's checkbox to complete -- fires the phase-close trigger.
+    # The fixture phase directory deliberately has no 999-VERIFICATION.md.
+    phase_dir = repo_dir / ".planning" / "phases" / "999-fixture-phase"
+    phase_dir.mkdir(parents=True)
+    (phase_dir / "999-01-PLAN.md").write_text(
+        "---\nphase: 999\nplan: 01\nfiles_modified:\n  - tests/test_fixture.py\n---\n\n# Plan\n",
+        encoding="utf-8",
+    )
+    (repo_dir / ".planning" / "ROADMAP.md").write_text(
+        "# Roadmap\n\n- [x] **Phase 999: Fixture Phase** — placeholder\n",
+        encoding="utf-8",
+    )
+
+    result = _commit(repo_dir, "docs: mark Phase 999 complete")
+
+    assert result.returncode != 0, (
+        "expected the commit to be rejected when VERIFICATION.md is missing"
+    )
+    assert "VERIFICATION.md" in result.stderr

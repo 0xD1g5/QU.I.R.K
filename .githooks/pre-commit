@@ -1,0 +1,15 @@
+#!/bin/sh
+# .githooks/pre-commit
+#
+# Installed via: git config core.hooksPath .githooks
+# (see CONTRIBUTING.md -- "Installing the pre-commit artifact gate")
+#
+# Bypass (documented, not prevented): `git commit --no-verify` skips this
+# hook entirely -- that is git's own designed escape hatch, not a bug here.
+#
+# All real logic lives in scripts/verify_phase_gates.py (tested); this
+# wrapper is intentionally near-zero-logic.
+set -eu
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+python3 "$REPO_ROOT/scripts/verify_phase_gates.py"
+exit $?
