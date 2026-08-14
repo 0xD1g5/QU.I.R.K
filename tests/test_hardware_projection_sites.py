@@ -491,6 +491,59 @@ def test_null_probe_status_excluded_from_dashboard_projection():
     assert "10.0.9.20" not in hosts, "NULL probe_status row must not surface in the projection"
 
 
+def test_snmp_only_device_creation_sets_probe_status_success():
+    """CR-01 regression: run_scan.py's SNMP-only bulk-fingerprint branch
+    (the `else:` new-row path around run_scan.py:2176-2198) must set
+    probe_status="success" on newly-created HardwareDevice rows, mirroring
+    the same-shaped row this branch produces, so that SNMP-only devices
+    (e.g. a managed switch with no SSH/HTTP interface) surface in the
+    dashboard projections instead of being silently excluded forever by
+    the probe_status == "success" filter."""
+    from quirk.dashboard.api.routes.scan import (
+        _derive_hardware_findings,
+        _derive_hw_components,
+    )
+
+    engine = create_engine("sqlite:///:memory:")
+    m.Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    scanned_at = datetime.datetime.utcnow()
+    # Same construction shape as run_scan.py's SNMP-only new-row branch.
+    session.add(HardwareDevice(
+        host="10.0.9.30",
+        port=161,
+        vendor="Cisco Systems",
+        model="Catalyst 2960",
+        pqc_status="unknown",
+        confidence="medium",
+        fingerprint_method="snmp",
+        scanned_at=scanned_at,
+        raw_banner="Cisco IOS Software",
+        snmp_sysdescr="Cisco IOS Software",
+        snmp_sysname="switch-30",
+        snmp_sysobjectid="1.3.6.1.4.1.9.1.1",
+        snmp_vendor="Cisco Systems",
+        remediation_tier="Tier N/A",
+        probe_status="success",
+    ))
+    session.commit()
+    try:
+        findings = _derive_hardware_findings(session, scanned_at)
+        components = _derive_hw_components(session, scanned_at)
+    finally:
+        session.close()
+
+    assert "10.0.9.30" in {f.host for f in findings}, (
+        "SNMP-only device with probe_status='success' must surface in "
+        "_derive_hardware_findings"
+    )
+    assert "10.0.9.30" in {c.host for c in components}, (
+        "SNMP-only device with probe_status='success' must surface in "
+        "_derive_hw_components"
+    )
+
+
 def test_hardware_component_schema_has_no_match_confidence_or_probe_status_fields():
     """D-15 guard: HardwareComponent gets NO new fields this phase — pins the
     deferral to Phase 156 deliberately rather than letting it drift in

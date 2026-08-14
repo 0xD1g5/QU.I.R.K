@@ -2194,6 +2194,11 @@ def main():
                         snmp_auth_protocol=_snmp_res.get("snmp_auth_protocol"),
                         snmp_priv_protocol=_snmp_res.get("snmp_priv_protocol"),
                         remediation_tier="Tier N/A",
+                        # Phase 154 D-07: an SNMP response was obtained, so this
+                        # is a real observation (not legacy/unset data) — same
+                        # "responded but unmatched is still success" rule that
+                        # fingerprint_one() applies elsewhere in this phase.
+                        probe_status="success",
                     )
                     _snmp_new_batch.append(_snmp_dev)
 
