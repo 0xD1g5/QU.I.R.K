@@ -56,11 +56,11 @@ Documentation Checklist.
 
 ### Phases
 
-- [ ] **Phase 148: Release Pipeline Repair + Windows Asset Backfill** — Prove the repaired
+- [x] **Phase 148: Release Pipeline Repair + Windows Asset Backfill** — Prove the repaired
       signing self-test with a real run, add a pre-tag dry-run mechanism, add a tag-format guard,
       and close the v5.11.0 Windows-asset gap
 
-- [ ] **Phase 149: Test Suite Triage** — Give every one of the ~102 pre-existing failing tests an
+- [x] **Phase 149: Test Suite Triage** — Give every one of the ~102 pre-existing failing tests an
       explicit written disposition (fixed / quarantined / deleted)
 
 - [x] **Phase 150: Test Suite Green Baseline + CI Gate** — `pytest -q` green on a clean
@@ -257,7 +257,20 @@ ARTIFACT-01..03, plus the destructive-operation guard from the same incident cla
      verified against the exact scenario recorded in
      `.planning/milestones/v5.11-phases/ARCHIVE-MANIFEST.md`
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 151-01-PLAN.md — check_phase_close() + check_destructive_archive() pure decision functions + loaders [ARTIFACT-01/02/03/04]
+
+**Wave 2** *(depends on 151-01)*
+
+- [ ] 151-02-PLAN.md — main() CLI glue + .githooks/pre-commit wrapper + CONTRIBUTING.md install docs [ARTIFACT-01/02/03/04]
+
+**Wave 3** *(depends on 151-02)*
+
+- [ ] 151-03-PLAN.md — docs/UAT-SERIES.md Series 151 entry + Obsidian phase note + vault sync [ARTIFACT-03]
 
 #### Phase 152: Discovery Empirical Closure
 
@@ -319,7 +332,7 @@ dogfooding it immediately)
 | 148. Release Pipeline Repair + Windows Asset Backfill | 4/4 | Complete    | 2026-08-11 |
 | 149. Test Suite Triage | 11/11 | Complete    | 2026-08-12 |
 | 150. Test Suite Green Baseline + CI Gate | 9/9 | Complete   | 2026-08-13 |
-| 151. Phase-Completion Artifact Gates | 0/TBD | Not started | - |
+| 151. Phase-Completion Artifact Gates | 0/3 | Not started | - |
 | 152. Discovery Empirical Closure | 0/TBD | Not started | - |
 | 153. Release Tag Cut | 0/TBD | Not started | - |
 
