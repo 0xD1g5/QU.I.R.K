@@ -163,8 +163,8 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 Plans:
 **Wave 1**
 
-- [ ] 156-01-PLAN.md — OT/ICS cadence-floor module (OTICS_MIN_INTERVAL_HOURS, cron min-gap derivation) + ConnectorsCfg opt-in [HWLC-12]
-- [ ] 156-03-PLAN.md — Drift read API: Pydantic models, GET /api/hardware/drift, CompareResponse block [HWLC-10/11]
+- [x] 156-01-PLAN.md — OT/ICS cadence-floor module (OTICS_MIN_INTERVAL_HOURS, cron min-gap derivation) + ConnectorsCfg opt-in [HWLC-12]
+- [x] 156-03-PLAN.md — Drift read API: Pydantic models, GET /api/hardware/drift, CompareResponse block [HWLC-10/11]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -183,7 +183,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
 | 155. Drift Detection + EOL Tracking | 6/6 | Complete    | 2026-08-14 |
-| 156. Reporting & OT/ICS Safety | 0/6 | Planned | - |
+| 156. Reporting & OT/ICS Safety | 2/6 | In Progress|  |
 
 ---
 
