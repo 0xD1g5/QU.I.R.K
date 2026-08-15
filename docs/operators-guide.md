@@ -1451,9 +1451,48 @@ recorded once, not once per scan. Like every other signal in this section, drift
 a dedicated regression test (`tests/test_cve_score_guard.py`) enforces that boundary in CI. A
 scan's readiness score is identical whether or not drift events were recorded during it.
 
-Dashboard and report surfacing of `hardware_drift_events` rows is deferred to Phase 156 — this
-phase computes and persists them only; there is no dashboard tab or report section for drift
-events yet.
+Dashboard and report surfacing of `hardware_drift_events` rows shipped in Phase 156 — see §9.8
+below and `docs/report-interpretation.md` §10.10.
+
+### 9.8 Recent Lifecycle Changes Dashboard Section (Phase 156)
+
+As of Phase 156, the `/hardware` and `/compare` dashboard pages render a "Recent Lifecycle
+Changes" section surfacing the `hardware_drift_events` rows persisted by §9.7's reconciliation
+engine. It is a structurally and visually distinct advisory card — separate teal-accented chrome,
+never reusing the tier/PQC/confidence/SNMP badge palette — so it reads as clearly different from
+the scored-finding chrome elsewhere on the page.
+
+**What appears.** Each row shows: an event-type icon and label, the device's identity
+(`host:port` plus vendor/model), the literal `{old_value} → {new_value}` transition, a direction
+indicator, and the detection date. The most recent events render inline; older ones are tucked
+behind a collapsible "N historical events" disclosure so the section doesn't dominate the page on
+a long-running device.
+
+**The four event types** are the same ones recorded by §9.7's reconciliation engine, with these
+display labels: Tier crossing, Bridge mitigation change, CVE correlation change, EOL/EOS state
+change.
+
+**Direction vocabulary.** Each event carries one of three direction labels — **Improved**,
+**Worsened**, or **Changed** — derived from the CNSA 2.0 tier ordering (§9.2), not from a
+severity ranking. "Changed" (backed by the internal `neutral` value) covers event types with no
+inherent better/worse direction, such as a CVE-delta or an EOL-state change — those are simply
+different, not improved or worsened.
+
+**Two empty states, and how to tell them apart.** The section distinguishes "no prior scan
+exists yet" (a device's very first scan, by construction, has no lifecycle history to show) from
+"a prior scan exists but nothing changed" (the device has been re-scanned and its lifecycle
+state has been stable). Both render as advisory copy in the same card location, with different
+wording — never a blank space that could read as a missing feature.
+
+**Where it appears.** On `/hardware`, the section renders as a sibling block after the device
+table, visible even when the device table itself shows its own empty state. On `/compare`, the
+same section renders sourced from the compared scan pair's drift events, after the existing
+comparison tabs.
+
+**Advisory-only, no score contribution.** Like every other signal in this section, drift events
+shown here carry no severity and make no contribution to the quantum-readiness score — see
+`docs/report-interpretation.md` §10.10 for the verbatim advisory caption and how it renders
+across the HTML, PDF, and DOCX report formats.
 
 ---
 
@@ -1597,3 +1636,59 @@ discovery code path. This is locked by a static/AST-based regression test
 (`tests/test_cli_dashboard_discovery_parity.py`) asserting a single call site each for
 `run_nmap_discovery()` and `run_nmap_liveness_check()`, both lexically inside the Phase
 144 batch loop, and confirming `jobs.py` never calls `run_nmap_discovery(` directly.
+
+## 12. OT/ICS Recurring-Scan Safety
+
+Phase 141 (§9.4) introduced Modbus/BACnet fingerprinting with a deliberately narrow safety
+model — a single read-only request per probe, a one-strike circuit breaker, and off-by-default
+flags. That safety model was designed and validated for a **one-off, operator-initiated scan**.
+Phase 156 closes a gap that model didn't cover: what happens when those same flags are wired
+into a *recurring*, unattended scheduled scan.
+
+**Why the gate exists.** The Modbus and BACnet scanners were designed for exactly one read-only
+request per engagement, run by a human who has obtained authorization and is watching the
+outcome. Unbounded, unattended recurring probing against fragile production control systems —
+PLCs, RTUs, building-automation controllers — is a real outage risk, not a theoretical one; this
+is the same risk class documented in §9.4's risk warning, now compounded by removing the human
+from the loop entirely.
+
+**The two conditions a scheduled run must satisfy.** A `quirk scheduler run` dispatch will only
+allow Modbus/BACnet probing to reach a device if **both** of these hold:
+
+1. `connectors.enable_recurring_otics: true` is set in the scan config the scheduler dispatches
+   with.
+2. The schedule's own cron expression's minimum firing gap is at or above the 168-hour
+   (7-day) floor — see `docs/configuration.md`'s [OT/ICS Recurring-Scan Cadence
+   Floor](configuration.md#ot-ics-recurring-scan-cadence-floor-v513-phase-156) section for
+   exactly how that gap is derived.
+
+If either condition fails, `enable_modbus`/`enable_bacnet` are silently stripped from that run's
+generated config and the rest of the scheduled scan proceeds normally — the run is never failed
+because of this.
+
+**What an operator sees when creating a sub-floor schedule.** Creating the schedule always
+succeeds — it is never rejected for this reason:
+
+- Via `POST /api/schedules`: the response is `201`, with the new schedule's `advisories` array
+  containing a message describing the sub-floor cron and the 168-hour floor it falls under.
+- Via `quirk schedule add`: the schedule row is created as usual, and a yellow advisory line is
+  printed directly beneath the normal "added" confirmation. Exit code stays `0`.
+
+Neither surface returns a `422`/`400` for a sub-floor cron. This is intentional (see
+`docs/configuration.md` for why): the scheduler applies one shared scan config to every schedule
+it dispatches, so at creation time it cannot know whether OT/ICS will ever actually be enabled
+for that schedule.
+
+**Where to look when PLCs stop being fingerprinted.** If Modbus/BACnet devices that used to
+appear in scheduled-scan results stop showing up, check the scheduler's log output for a line
+matching this shape:
+
+```
+OT/ICS probing suppressed for schedule 'nightly-plant-scan' (cron='0 * * * *'): removed keys ('enable_modbus', 'enable_bacnet') — reason: ...
+```
+
+The literal text `OT/ICS probing suppressed` always appears, followed by the schedule name, the
+exact keys that were stripped from the generated config, and the reason (cadence-floor violation
+or the recurring opt-in being off). This line is emitted at INFO level on every suppressed
+dispatch — it is the single place to look first when a scheduled scan silently stops covering
+OT/ICS devices it used to cover.

@@ -253,6 +253,9 @@ Enables optional scanner extensions for cloud infrastructure, API endpoints, con
 | `codesign_targets` | list[string] | `[]` | LDAP URLs for code-signing certificate discovery (e.g. `ldap://dc.corp.com:389`) |
 | `codesign_search_base` | string | `null` | LDAP search base DN for `userCertificate` discovery (e.g. `dc=corp,dc=com`) |
 | `codesign_timeout` | int | `10` | Per-connection timeout (seconds) for code-signing LDAP queries |
+| `enable_modbus` | bool | `false` | Enable Modbus/TCP OT/ICS fingerprinting (port 502, must be observed open); requires `quirk-scanner[hw]` extras. See `docs/operators-guide.md` §9.4 for the safety model. |
+| `enable_bacnet` | bool | `false` | Enable BACnet/IP OT/ICS fingerprinting (47808/UDP); requires `quirk-scanner[hw]` extras. See `docs/operators-guide.md` §9.4 for the safety model. |
+| `enable_recurring_otics` | bool | `false` | Opt-in required before a *recurring* (scheduled) run may probe Modbus/BACnet. Gates recurring probing only — a one-off, operator-initiated scan with `enable_modbus`/`enable_bacnet` set is unaffected and needs no new flag. See [OT/ICS Recurring-Scan Cadence Floor](#ot-ics-recurring-scan-cadence-floor-v513-phase-156) below. |
 | `aws_region` | string | `"us-east-1"` | AWS region for cloud connector |
 | `aws_profile` | string | `null` | AWS named profile; `null` uses the default credential chain |
 | `azure_subscription_id` | string | `null` | Azure subscription UUID |
@@ -1076,6 +1079,9 @@ connectors:
   codesign_targets: []
   codesign_search_base: null
   codesign_timeout: 10
+  enable_modbus: false
+  enable_bacnet: false
+  enable_recurring_otics: false
 
 output:
   directory: "output"
@@ -1683,3 +1689,41 @@ and a weekly Monday 09:00 UTC cron, so a stale CVE catalog cannot silently ship.
 
 Operators can check current freshness at any time with `quirk cve status` (§9.5 of
 `docs/operators-guide.md`) — no network access required, since the catalog is entirely local.
+
+## OT/ICS Recurring-Scan Cadence Floor (v5.13+ — Phase 156)
+
+Phase 156 adds a safety floor on top of the `enable_modbus`/`enable_bacnet` opt-in flags
+(Connectors Block, above): a **recurring** (scheduled) run may only probe Modbus/BACnet when
+both `connectors.enable_recurring_otics: true` is set AND the schedule's own cron expression
+fires no more often than once every 168 hours (7 days).
+
+**This is a floor, not a config key.** The 168-hour value is a named constant,
+`OTICS_MIN_INTERVAL_HOURS`, in `quirk/otics_cadence.py` — there is deliberately no
+`connectors.*` key, no environment variable, and no CLI flag that can lower it. Raising it
+would require an intentional code change, not an operator override.
+
+**How the floor is evaluated.** The floor is checked against the schedule's cron expression's
+*minimum* firing gap, not its average. `min_gap_hours()` samples 10 consecutive firings (9
+gaps) and takes the smallest one. This matters for irregular expressions: `0 0 * * 1,2` (every
+Monday and Tuesday at midnight) has an average gap of roughly 84 hours across a week, but its
+worst-case gap — Tuesday to the following Monday — is only 24 hours. QUIRK judges this schedule
+on the 24-hour worst case, not the 84-hour average, because the worst case is what actually
+determines how often a fragile OT/ICS device gets probed.
+
+**Sub-floor schedules are not rejected — they succeed with an advisory.** Creating a schedule
+with a cron interval below the floor does not fail. `POST /api/schedules` returns `201` and
+`quirk schedule add` exits `0`; both surface a non-blocking advisory (see
+`docs/operators-guide.md` §12) instead of a `422` rejection. This is deliberate: the scheduler
+applies one shared `--scan-config` file to every schedule it dispatches, so at schedule-creation
+time it has no way to know whether that shared config will ever have `enable_modbus`/
+`enable_bacnet` turned on. Rejecting the schedule outright would be wrong for an operator who
+has no intention of ever enabling OT/ICS scanning on it.
+
+**Enforcement happens at dispatch time, not creation time.** When the scheduler actually
+dispatches a run (`quirk scheduler run`), it strips `enable_modbus` and `enable_bacnet` from
+the generated per-run config whenever the recurring-OT/ICS opt-in is off or the schedule's own
+cron fires faster than the floor — while the rest of the scan proceeds normally. This is the
+single, unconditional backstop: it catches every sub-floor schedule regardless of whether it was
+created before this feature existed or edited directly in the database, not just schedules
+created through the two write-time advisory surfaces. See `docs/operators-guide.md` §12 for
+what an operator sees when this happens and where to find the suppression log line.

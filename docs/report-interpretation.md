@@ -482,6 +482,63 @@ independently rendered yet.
 > device may be from an earlier scan, not today's. If a device you expect to see is entirely
 > missing, it likely predates this release and simply needs one more scan to reappear."
 
+### 10.10 Recent Lifecycle Changes (Phase 156)
+
+As of Phase 156, HTML, PDF, and DOCX reports (and the dashboard `/hardware` and `/compare`
+pages — see `docs/operators-guide.md` §9.8) include a **Recent Lifecycle Changes** section
+surfacing the drift events Phase 155's reconciliation engine (§9.7 above) persists to
+`hardware_drift_events`.
+
+**Structurally separate from the current-state inventory.** This section is deliberately not a
+column added to the Hardware Inventory table described in §10.1–§10.9 above. The inventory table
+answers "what does the device look like right now" (a point-in-time snapshot, subject to §10.9's
+last-known-good projection); the Recent Lifecycle Changes section answers "what changed since
+last scan" — a different question with a different shape (a list of transitions, not a list of
+current values). Keeping them structurally separate avoids conflating "current state" with
+"history of change" in a single table.
+
+**The four event types**, with their exact display labels:
+
+| Event type | Display label |
+|------------|----------------|
+| `tier_crossing` | Tier crossing |
+| `upstream_mitigated_change` | Bridge mitigation change |
+| `cve_delta` | CVE correlation change |
+| `eol_state_change` | EOL/EOS state change |
+
+**Direction vocabulary.** Every event carries one of three direction labels — **Improved**,
+**Worsened**, or **Changed**. This vocabulary is derived from the CNSA 2.0 tier ordering (§9.2),
+not from a severity ranking: a tier crossing from Tier 2 to Tier 1 is "Improved" because Tier 1
+is the stronger CNSA 2.0 posture, independent of any finding-severity concept used elsewhere in
+this report. Event types with no inherent better/worse direction (a CVE-delta, an EOL-state
+change) always render as "Changed."
+
+**No severity, no score contribution.** This section carries no `severity` field at all — it is
+not part of the readiness score in any form. Every rendering of this section, in every format,
+carries this verbatim caption:
+
+> Advisory — hardware lifecycle changes do not affect the readiness score.
+
+This caption appears unconditionally in the HTML, PDF, and DOCX renderings whenever the section
+has at least one event to show — it is never hidden behind a collapsed disclosure or omitted
+from any format. This mirrors §10.2's existing advisory-only framing for hardware findings in
+general: the Recent Lifecycle Changes section is that same advisory boundary applied to
+*changes* in hardware state rather than to hardware state itself.
+
+**A first-ever scan has no lifecycle content by construction.** A device's very first scan has
+nothing to diff against, so it produces zero drift events and the section reflects that
+correctly — this is expected behavior, not a missing-data defect. See
+`docs/operators-guide.md` §9.8 for how the dashboard distinguishes this "no prior scan" state
+from the "prior scan exists but nothing changed" state.
+
+> **Client Conversation — Recent Lifecycle Changes:**
+> "This section shows you what changed about your hardware devices since the last scan — a tier
+> shift, a newly-relevant CVE, a bridge-mitigation status change, or an EOL/EOS status change.
+> It's separate from the main hardware inventory table above it, which shows the current state
+> of each device. Like every other hardware signal in this report, it's advisory only — it
+> doesn't move the readiness score. And if you're looking at a brand-new device's first-ever
+> scan, you won't see anything here yet, because there's nothing to compare it against."
+
 ---
 
 ## 11. Dashboard Sidebar Scan-Date Badge (Phase 143)
