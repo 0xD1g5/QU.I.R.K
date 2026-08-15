@@ -246,6 +246,31 @@ export interface CompareEndpoint {
   reason?: string
 }
 
+// Phase 156 HWLC-10 — hardware lifecycle drift event, mirrors
+// quirk/dashboard/api/schemas.py HardwareDriftEventItem. Deliberately carries
+// no `severity` field (D-06) — lifecycle drift is advisory-only and must
+// never be rendered as a ranked/scored signal.
+export interface HardwareDriftEventItem {
+  host: string
+  port: number
+  event_type: "tier_crossing" | "upstream_mitigated_change" | "cve_delta" | "eol_state_change"
+  old_value: string | null
+  new_value: string | null
+  direction: "improved" | "worsened" | "neutral"
+  detected_at: string
+  vendor: string | null
+  model: string | null
+}
+
+// Phase 156 HWLC-10 — mirrors quirk/dashboard/api/schemas.py HardwareDriftResponse.
+export interface HardwareDriftResponse {
+  has_prior_scan: boolean
+  latest_scan_at: string | null
+  latest_events: HardwareDriftEventItem[]
+  historical_events: HardwareDriftEventItem[]
+  historical_truncated: boolean
+}
+
 export interface CompareResponse {
   scan_a: CompareScanSummary
   scan_b: CompareScanSummary
@@ -256,6 +281,8 @@ export interface CompareResponse {
   endpoints_only_in_a: string[]
   endpoints_only_in_b: string[]
   changed_endpoints: CompareEndpoint[]
+  // Phase 156 HWLC-10
+  hardware_drift: HardwareDriftEventItem[]
 }
 
 export interface ScanLatestResponse {
