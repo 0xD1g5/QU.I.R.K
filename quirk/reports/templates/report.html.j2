@@ -506,6 +506,8 @@
     {% endfor %}
     {# Phase 128 D-10: hardware advisory section — advisory-only, not scored #}
     {% if hardware_section %}{{ hardware_section | safe }}{% endif %}
+    {# Phase 156 D-11/D-02: drift section — sibling of hardware_section, own container #}
+    {% if drift_section %}{{ drift_section | safe }}{% endif %}
   </section>
 
   <!-- ===== TECHNICAL APPENDIX ===== -->

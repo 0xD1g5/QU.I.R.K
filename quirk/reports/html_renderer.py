@@ -461,6 +461,97 @@ def render_hardware_section(devices: list) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Phase 156 D-11/D-13/HWLC-10/HWLC-11: "Recent Lifecycle Changes" drift section
+# ---------------------------------------------------------------------------
+
+# D-13: exact copy string, verbatim across HTML/DOCX (156-UI-SPEC.md §Advisory Caption).
+DRIFT_ADVISORY_CAPTION = (
+    "Advisory — hardware lifecycle changes do not affect the readiness score."
+)
+
+# 156-UI-SPEC.md §Event type differentiation — verbatim display labels.
+_DRIFT_EVENT_TYPE_LABELS: Dict[str, str] = {
+    "tier_crossing": "Tier crossing",
+    "upstream_mitigated_change": "Bridge mitigation change",
+    "cve_delta": "CVE correlation change",
+    "eol_state_change": "EOL/EOS state change",
+}
+
+# 156-UI-SPEC.md §Color / §Copywriting Contract — verbatim direction display labels.
+_DRIFT_DIRECTION_LABELS: Dict[str, str] = {
+    "improved": "Improved",
+    "worsened": "Worsened",
+    "neutral": "Changed",
+}
+
+
+def render_drift_section(events: list) -> str:
+    """Generate the HTML "Recent Lifecycle Changes" section (Phase 156 D-11/D-13).
+
+    Pure function, sibling to render_hardware_section — a separate data shape
+    (drift events, not point-in-time device state) gets its own function per
+    RESEARCH.md's Anti-Patterns (do NOT widen render_hardware_section).
+
+    Returns "" for an empty list — no empty table, no orphan heading. Every
+    interpolated value is html.escape()'d (T-156-04 — first phase to render
+    old_value/new_value to HTML). Uses a dedicated non-severity palette
+    (D-07 layer 2) — never the tier/PQC/confidence hex literals.
+    """
+    if not events:
+        return ""
+
+    rows_html = []
+    for e in events:
+        event_type = e.get("event_type", "")
+        type_label = _html.escape(_DRIFT_EVENT_TYPE_LABELS.get(event_type, event_type))
+        host_port = f"{_html.escape(str(e.get('host', '')))}:{_html.escape(str(e.get('port', '')))}"
+        vendor = e.get("vendor") or ""
+        model = e.get("model") or ""
+        device_meta = f"{vendor} {model}".strip()
+        device_cell = f"<code>{host_port}</code>"
+        if device_meta:
+            device_cell += f'<br><span style="color:#888;font-size:11px">{_html.escape(device_meta)}</span>'
+        old_value = _html.escape(str(e.get("old_value") if e.get("old_value") is not None else "—"))
+        new_value = _html.escape(str(e.get("new_value") if e.get("new_value") is not None else "—"))
+        transition = f"{old_value} &#x2192; {new_value}"
+        direction = e.get("direction", "neutral")
+        direction_label = _html.escape(_DRIFT_DIRECTION_LABELS.get(direction, "Changed"))
+        direction_color = {
+            "improved": "#2f9e8f",   # hsl(172 45% 42%) — 156-UI-SPEC.md declared lifecycle palette
+            "worsened": "#b352a8",   # hsl(300 45% 55%) — 156-UI-SPEC.md declared lifecycle palette
+        }.get(direction, "#888")     # neutral — muted, text-only, no filled pill (D-07)
+        detected = _html.escape(str(e.get("detected_at", "")))
+        rows_html.append(
+            "<tr>"
+            f"<td>{device_cell}</td>"
+            f"<td>{type_label}</td>"
+            f"<td>{transition}</td>"
+            f'<td><span style="color:{direction_color}">{direction_label}</span></td>'
+            f"<td>{detected}</td>"
+            "</tr>"
+        )
+    rows_joined = "\n".join(rows_html)
+
+    return (
+        '<section class="drift-section" style="margin:24px 0;'
+        'border-left:4px solid #2b8a86;padding-left:12px">'
+        '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Recent Lifecycle Changes</h2>'
+        f'<p class="drift-advisory-caption" style="font-size:12px;color:#888;margin-bottom:8px">'
+        f"{_html.escape(DRIFT_ADVISORY_CAPTION)}</p>"
+        '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+        "<thead><tr>"
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Device</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Change</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Transition</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Direction</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Detected</th>'
+        "</tr></thead>"
+        f"<tbody>{rows_joined}</tbody>"
+        "</table></section>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -564,6 +655,12 @@ def render_html_report(
             _hw_d["cve_snapshot_stale"] = True
     hardware_section = render_hardware_section(_hw_devices_for_render)
 
+    # Phase 156 D-11: render "Recent Lifecycle Changes" drift section (advisory-only)
+    _drift_events_for_render = (
+        exec_content.hardware_drift_events if exec_content is not None else []
+    )
+    drift_section = render_drift_section(_drift_events_for_render)
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
     # hardware_section above; the template renders these, it never recomputes them.
     undetermined_hosts_count = (
@@ -599,6 +696,8 @@ def render_html_report(
         top_risks=top_risks,
         # Phase 128 D-10: hardware advisory section (pre-rendered HTML string)
         hardware_section=hardware_section,
+        # Phase 156 D-11: drift section (pre-rendered HTML string)
+        drift_section=drift_section,
         # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
         undetermined_hosts_count=undetermined_hosts_count,
         undetermined_hosts_breakdown=undetermined_hosts_breakdown,
