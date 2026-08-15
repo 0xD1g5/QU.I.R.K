@@ -44,7 +44,8 @@ from quirk.dashboard.api.schemas import (
     SubscoreDelta,
 )
 from quirk.cbom.bridge import _confirm_upstream_mitigation, _detect_crypto_bridges
-from quirk.models import CryptoEndpoint, HardwareDevice, ScanJob
+from quirk.dashboard.api.routes.hardware_drift import build_device_lookup, serialize_drift_event
+from quirk.models import CryptoEndpoint, HardwareDevice, HardwareDriftEvent, ScanJob
 from quirk.models_util import latest_successful_hardware_devices
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
@@ -1550,6 +1551,28 @@ def compare_scans(
         if reasons:
             changed_endpoints.append(CompareEndpoint(host=host, reason="; ".join(reasons)))
 
+    # Scan-pair-scoped hardware lifecycle drift block (Phase 156 HWLC-10/D-04).
+    # Advisory-only: a drift-read failure must never turn a working comparison
+    # into a 500 (T-156-11).
+    hardware_drift: list = []
+    try:
+        drift_rows = (
+            db.query(HardwareDriftEvent)
+            .filter(
+                HardwareDriftEvent.detected_at > ts_b,
+                HardwareDriftEvent.detected_at <= ts_a,
+            )
+            .order_by(HardwareDriftEvent.detected_at.desc(), HardwareDriftEvent.host)
+            .all()
+        )
+        lookup = build_device_lookup(db)
+        hardware_drift = [serialize_drift_event(row, lookup) for row in drift_rows]
+    except Exception as exc:
+        logger.warning(
+            "Hardware drift block skipped in /api/compare (non-fatal): %s", safe_str(exc)
+        )
+        hardware_drift = []
+
     return CompareResponse(
         scan_a=CompareScanSummary(scan_id=a, scanned_at=ts_a, score=score_a, subscores=SubScores(
             hygiene=int(sub_a.get("hygiene", 0)),
@@ -1574,6 +1597,7 @@ def compare_scans(
         endpoints_only_in_a=only_in_a,
         endpoints_only_in_b=only_in_b,
         changed_endpoints=changed_endpoints,
+        hardware_drift=hardware_drift,
     )
 
 

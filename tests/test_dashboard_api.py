@@ -509,3 +509,96 @@ def test_hardware_drift_requires_auth(monkeypatch):
     resp = client.get("/api/hardware/drift")
     assert resp.status_code == 401
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+
+
+# ---- Phase 156 HWLC-10: CompareResponse.hardware_drift block (Task 3) ----
+
+
+def _seed_crypto_endpoint(TestingSession, scanned_at, **kwargs):
+    from quirk.models import CryptoEndpoint
+
+    db = TestingSession()
+    try:
+        defaults = dict(
+            host="10.0.0.1",
+            port=443,
+            protocol="TLS",
+            severity="LOW",
+        )
+        defaults.update(kwargs)
+        db.add(CryptoEndpoint(scanned_at=scanned_at, **defaults))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _compare_url(a, b) -> str:
+    from urllib.parse import quote
+
+    return f"/api/compare?a={quote(a.isoformat())}&b={quote(b.isoformat())}"
+
+
+def test_compare_drift_returns_events_in_interval():
+    """A drift event with detected_at inside (b, a] appears in hardware_drift."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts_b = datetime(2026, 8, 10, 12, 0, 0)
+    ts_a = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_crypto_endpoint(TestingSession, ts_a)
+    _seed_crypto_endpoint(TestingSession, ts_b)
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.1", port=22, event_type="eol_state_change",
+        old_value="ok", new_value="approaching", detected_at=ts_a,
+    )
+
+    resp = client.get(_compare_url(ts_a, ts_b))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["hardware_drift"]) == 1
+    assert "severity" not in body["hardware_drift"][0]
+    assert body["hardware_drift"][0]["event_type"] == "eol_state_change"
+
+
+def test_compare_drift_excludes_events_outside_interval():
+    """A drift event detected_at == ts_b (baseline) is excluded — interval
+    is half-open (ts_b, ts_a]."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts_b = datetime(2026, 8, 10, 12, 0, 0)
+    ts_a = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_crypto_endpoint(TestingSession, ts_a)
+    _seed_crypto_endpoint(TestingSession, ts_b)
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.1", port=22, event_type="eol_state_change",
+        old_value="ok", new_value="approaching", detected_at=ts_b,
+    )
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.1", port=22, event_type="cve_delta",
+        old_value="0", new_value="1", detected_at=datetime(2026, 8, 1, 0, 0, 0),
+    )
+
+    resp = client.get(_compare_url(ts_a, ts_b))
+    assert resp.status_code == 200
+    assert resp.json()["hardware_drift"] == []
+
+
+def test_compare_drift_empty_when_no_events():
+    """No drift events -> hardware_drift == [] and score_delta still correct."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts_b = datetime(2026, 8, 10, 12, 0, 0)
+    ts_a = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_crypto_endpoint(TestingSession, ts_a)
+    _seed_crypto_endpoint(TestingSession, ts_b)
+
+    resp = client.get(_compare_url(ts_a, ts_b))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["hardware_drift"] == []
+    assert "score_delta" in body
