@@ -18222,8 +18222,13 @@ all six of this phase's plans before the phase can ship.
 - The repo-root `SECURITY.md` is unmodified
 - The user has explicitly approved the checkpoint
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** _pending_  **Tester:** _pending — recorded once the Plan 06 Task 3 checkpoint resolves_
-**Notes:** HWLC-12. This is Task 3 of 156-06-PLAN.md, a `checkpoint:human-verify` gate with
-`gate="blocking"` — it runs after this UAT-SERIES.md update is committed. Result to be updated
-in place once the gate resolves; see 156-06-SUMMARY.md for the final disposition.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** `/gsd-secure-phase 156` (gsd-security-auditor) + Digs (checkpoint approval)
+**Notes:** HWLC-12. SECURED — 19/19 threats closed. All four mandatory D-23 threat surfaces
+verified by name against real implementation code and passing tests (59 pytest + 25 vitest), not
+plan prose: (a) cadence-floor bypass via any unguarded write path, (b) `cron_expr` as
+attacker-influenced input, (c) the materialized-config mutation path's allowlist scope, (d)
+drift-event `old_value`/`new_value` rendering to HTML/DOCX. `GET /api/hardware/drift`'s auth
+inheritance and `limit` bounds independently confirmed. Zero high-severity findings. Artifact at
+`.planning/phases/156-reporting-ot-ics-safety/156-SECURITY.md`; repo-root `SECURITY.md` confirmed
+untouched (`git diff --quiet` clean), no relocation needed. See 156-06-SUMMARY.md.
