@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.13
 milestone_name: Continuous Hardware Lifecycle Monitoring
 status: executing
-stopped_at: Phase 156 UI-SPEC approved
-last_updated: "2026-08-15T03:04:15.221Z"
+stopped_at: Completed 156-02-PLAN.md
+last_updated: "2026-08-15T03:10:36.932Z"
 last_activity: 2026-08-15
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 17
-  completed_plans: 13
+  completed_plans: 14
   percent: 67
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 156 (Reporting & OT/ICS Safety) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-08-15
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 82%
 
 ## v5.13 Phase Map (planning)
 
@@ -162,6 +162,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 155 P06 | 15min | 2 tasks | 2 files |
 | Phase 156 P01 | 12min | 2 tasks | 4 files |
 | Phase 156 P03 | 35min | 3 tasks | 5 files |
+| Phase 156 PP02 | 25min | 3 tasks tasks | 4 files files |
 
 ## Accumulated Context
 
@@ -313,6 +314,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 156]: OTICS_MIN_INTERVAL_HOURS is a hardcoded, non-config-overridable floor (168h/7 days, D-19); min_gap_hours takes the MINIMUM of 9 consecutive gaps across 10 firings, never the average (D-20); strip_otics_keys uses explicit named pop over a 2-entry allowlist only, never substring matching (T-156-03)
 - [Phase ?]: Phase 156-03: TIER_ORDER lower-int-is-more-urgent means Tier 2 -> Tier 1 is worsened, not improved
 - [Phase ?]: Phase 156-03: hardware_drift.py module docstring paraphrases forbidden scoring-module names to avoid tripping its own T-156-04 acceptance-criteria grep
+- [Phase ?]: [Phase 156] 156-02: dispatch-time gate in _materialize_scan_config uses stdlib logging.getLogger(__name__).info matching scheduler_cmd.py's existing idiom, not a threaded Logger param, per D-22's actual requirement (always-visible level)
+- [Phase ?]: [Phase 156] 156-02: write-path inventory test asserts exact HTTP route/CLI subcommand/import-confinement sets as literal expected-value constants; negative-proof (temporary dummy route) confirmed the guard fails loudly before revert
 
 ### Pending Todos
 
@@ -398,8 +401,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-15T03:04:12.551Z
-Stopped at: Phase 156 UI-SPEC approved
+Last session: 2026-08-15T03:10:36.926Z
+Stopped at: Completed 156-02-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,

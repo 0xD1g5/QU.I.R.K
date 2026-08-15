@@ -168,7 +168,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 156-02-PLAN.md — Enforcement: dispatch-time strip-and-warn + two write-time advisories + write-path inventory guard [HWLC-12]
+- [x] 156-02-PLAN.md — Enforcement: dispatch-time strip-and-warn + two write-time advisories + write-path inventory guard [HWLC-12]
 - [ ] 156-04-PLAN.md — Report parity: ExecContent field, HTML/DOCX drift section, unconditional advisory caption, score-guard extension [HWLC-10/11]
 - [ ] 156-05-PLAN.md — Dashboard: LifecycleEventList/Row, /hardware + /compare wiring, frontend advisory guard, visual checkpoint [HWLC-10/11]
 
@@ -183,7 +183,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
 | 155. Drift Detection + EOL Tracking | 6/6 | Complete    | 2026-08-14 |
-| 156. Reporting & OT/ICS Safety | 2/6 | In Progress|  |
+| 156. Reporting & OT/ICS Safety | 3/6 | In Progress|  |
 
 ---
 
