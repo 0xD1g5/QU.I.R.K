@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { useScanData } from "@/hooks/useScanData"
+import { useHardwareDrift } from "@/hooks/useHardwareDrift"
 import type { HardwareFinding } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/table"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { LifecycleEventList } from "@/components/LifecycleEventList"
 
 // Tier badge colors — Tier 1 red, Tier 2 orange, Tier 3 blue, N/A gray
 const TIER_STYLES: Record<string, string> = {
@@ -178,6 +180,7 @@ function snmpLabel(f: HardwareFinding): string {
 
 export function HardwarePage() {
   const { data, loading, error } = useScanData()
+  const { data: drift, loading: driftLoading, error: driftError } = useHardwareDrift()
 
   const sorted: HardwareFinding[] = useMemo(() => {
     const findings = data?.hardware_findings ?? []
@@ -405,6 +408,16 @@ export function HardwarePage() {
           </CardContent>
         </Card>
       )}
+
+      <LifecycleEventList
+        events={drift?.latest_events ?? []}
+        historicalEvents={drift?.historical_events ?? []}
+        historicalTruncated={drift?.historical_truncated ?? false}
+        hasPriorScan={drift?.has_prior_scan ?? false}
+        lastScanDate={drift?.latest_scan_at ?? null}
+        loading={driftLoading}
+        error={driftError}
+      />
     </div>
   )
 }

@@ -10,6 +10,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import type { CompareFinding, CompareEndpoint } from "@/types/api"
+import { LifecycleEventList } from "@/components/LifecycleEventList"
 
 const SEVERITY_STYLES: Record<string, string> = {
   CRITICAL: "bg-[hsl(0_72%_51%)] text-white",
@@ -300,6 +301,15 @@ export function ComparePage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <div className="mt-8">
+        <LifecycleEventList
+          events={data.hardware_drift}
+          historicalEvents={[]}
+          hasPriorScan={true}
+          lastScanDate={data.scan_b.scanned_at}
+        />
+      </div>
     </div>
   )
 }
