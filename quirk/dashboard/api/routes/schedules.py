@@ -29,6 +29,7 @@ from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
 from quirk.models import ScheduledRun, ScheduledScan
+from quirk.otics_cadence import floor_advisory
 
 router = APIRouter(dependencies=[Depends(require_auth), Depends(require_csrf)])
 logger = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ class ScheduleResponse(BaseModel):
     next_run_at: Optional[str]      # ISO-8601 string, computed via croniter
     last_run_status: Optional[str]  # most recent ScheduledRun.status, or None
     created_at: str
+    advisories: List[str] = []
 
 
 class ScheduleListResponse(BaseModel):
@@ -103,7 +105,9 @@ def _get_or_404(db: Session, schedule_id: int) -> ScheduledScan:
     return row
 
 
-def _to_response(db: Session, s: ScheduledScan) -> ScheduleResponse:
+def _to_response(
+    db: Session, s: ScheduledScan, *, advisories: Optional[List[str]] = None
+) -> ScheduleResponse:
     return ScheduleResponse(
         id=s.id,
         name=s.name,
@@ -115,6 +119,7 @@ def _to_response(db: Session, s: ScheduledScan) -> ScheduleResponse:
         next_run_at=_iso(_compute_next_run(s)),
         last_run_status=_last_run_status(db, s.id),
         created_at=_iso(s.created_at) or "",
+        advisories=advisories or [],
     )
 
 
@@ -159,7 +164,10 @@ def create_schedule(
             status_code=409,
             detail=format_error("SCHED-003"),
         )
-    return _to_response(db, row)
+    # D-26: write-time WARNS via an advisory on the response — never a 4xx reject.
+    # Dispatch-time (scheduler_cmd.py::_materialize_scan_config) is the sole hard gate.
+    advisory = floor_advisory(payload.cron_expr)
+    return _to_response(db, row, advisories=[advisory] if advisory else [])
 
 
 @router.patch("/schedules/{schedule_id}", response_model=ScheduleResponse)

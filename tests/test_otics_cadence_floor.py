@@ -283,3 +283,107 @@ def test_dispatch_time_no_otics_keys_no_strip_no_log(tmp_path, caplog):
         generated = _yaml.safe_load(fh)
     assert generated["connectors"]["enable_snmp"] is True
     assert not any("OT/ICS probing suppressed" in rec.message for rec in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# Task 2 — write-time advisories on POST /api/schedules and `quirk schedule
+# add` (D-26: write-time WARNS, never rejects). Both surfaces must create the
+# row and return 2xx/exit 0; PATCH must remain untouched.
+# ---------------------------------------------------------------------------
+
+import inspect
+import sys
+
+_VALID_PAYLOAD_WT = {
+    "name": "wt-test-schedule",
+    "cron_expr": "0 0 * * 0",  # weekly, at-or-above floor
+    "target": "example.com",
+    "profile": "balanced",
+}
+
+
+def test_write_time_post_sub_floor_returns_201_with_advisory(dashboard_client):
+    payload = {**_VALID_PAYLOAD_WT, "name": "wt-sub-floor", "cron_expr": "0 0 * * *"}
+    response = dashboard_client.post("/api/schedules", json=payload)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert len(data["advisories"]) == 1
+    assert "OT/ICS minimum cadence floor" in data["advisories"][0]
+
+
+def test_write_time_post_at_floor_returns_201_no_advisory(dashboard_client):
+    payload = {**_VALID_PAYLOAD_WT, "name": "wt-at-floor", "cron_expr": "0 0 * * 0"}
+    response = dashboard_client.post("/api/schedules", json=payload)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data["advisories"] == []
+
+
+def test_write_time_post_invalid_cron_still_returns_400(dashboard_client):
+    payload = {**_VALID_PAYLOAD_WT, "name": "wt-bad-cron", "cron_expr": "not-a-cron"}
+    response = dashboard_client.post("/api/schedules", json=payload)
+    assert response.status_code == 400, response.text
+
+
+def test_write_time_get_schedules_advisories_field_present(dashboard_client):
+    payload = {**_VALID_PAYLOAD_WT, "name": "wt-get-list"}
+    dashboard_client.post("/api/schedules", json=payload)
+    response = dashboard_client.get("/api/schedules")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["schedules"]) >= 1
+    assert data["schedules"][0]["advisories"] == []
+
+
+def test_write_time_patch_unmodified_by_otics_cadence(dashboard_client):
+    """PATCH still returns 200 for a toggle and its handler references no floor_advisory."""
+    import quirk.dashboard.api.routes.schedules as _schedules_mod
+
+    payload = {**_VALID_PAYLOAD_WT, "name": "wt-patch-target"}
+    create = dashboard_client.post("/api/schedules", json=payload)
+    schedule_id = create.json()["id"]
+    response = dashboard_client.patch(f"/api/schedules/{schedule_id}", json={"enabled": False})
+    assert response.status_code == 200, response.text
+    assert "floor_advisory" not in inspect.getsource(_schedules_mod.update_schedule)
+
+
+def test_write_time_cli_schedule_add_sub_floor_prints_advisory(tmp_path, capsys):
+    from quirk.cli.schedule_cmd import run_schedule
+
+    db_path = str(tmp_path / "cli-wt.db")
+    run_schedule(
+        [
+            "add",
+            "--name",
+            "cli-wt-sub-floor",
+            "--cron",
+            "0 0 * * *",
+            "--target",
+            "example.com",
+            "--config",
+            db_path,
+        ]
+    )
+    captured = capsys.readouterr()
+    assert "OT/ICS minimum cadence floor" in captured.out
+
+
+def test_write_time_cli_schedule_add_at_floor_no_advisory(tmp_path, capsys):
+    from quirk.cli.schedule_cmd import run_schedule
+
+    db_path = str(tmp_path / "cli-wt2.db")
+    run_schedule(
+        [
+            "add",
+            "--name",
+            "cli-wt-at-floor",
+            "--cron",
+            "0 0 * * 0",
+            "--target",
+            "example.com",
+            "--config",
+            db_path,
+        ]
+    )
+    captured = capsys.readouterr()
+    assert "OT/ICS minimum cadence floor" not in captured.out

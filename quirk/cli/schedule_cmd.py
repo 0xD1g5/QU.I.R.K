@@ -16,6 +16,7 @@ from croniter import croniter
 from quirk.db import get_session, init_db
 from quirk.errors import format_error
 from quirk.models import ScheduledScan
+from quirk.otics_cadence import floor_advisory
 
 # T-63-02: validate name to prevent path traversal (no path separators, bounded length)
 _NAME_RE = re.compile(r"^[A-Za-z0-9_\-\.]{1,255}$")
@@ -132,6 +133,12 @@ def _cmd_add(args: argparse.Namespace, console: Console) -> None:
         sys.exit(2)
 
     console.print(f"[green]Schedule '{args.name}' added.[/]")
+
+    # D-26: write-time WARNS via a console advisory — never sys.exit(2). Dispatch-time
+    # (scheduler_cmd.py::_materialize_scan_config) is the sole hard gate.
+    advisory = floor_advisory(args.cron)
+    if advisory is not None:
+        console.print(f"[yellow]{advisory}[/yellow]")
 
 
 def _cmd_list(args: argparse.Namespace, console: Console) -> None:
