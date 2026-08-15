@@ -174,7 +174,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 156-06-PLAN.md — Docs + Obsidian sync + UAT Series 156 + REQUIREMENTS flips + terminal /gsd-secure-phase 156 gate [HWLC-10/11/12]
+- [x] 156-06-PLAN.md — Docs + Obsidian sync + UAT Series 156 + REQUIREMENTS flips + terminal /gsd-secure-phase 156 gate [HWLC-10/11/12]
 **UI hint**: yes
 
 ### Progress
@@ -183,7 +183,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
 | 155. Drift Detection + EOL Tracking | 6/6 | Complete    | 2026-08-14 |
-| 156. Reporting & OT/ICS Safety | 5/6 | In Progress|  |
+| 156. Reporting & OT/ICS Safety | 6/6 | Complete   | 2026-08-15 |
 
 ---
 
