@@ -243,6 +243,58 @@ class HardwareFinding(BaseModel):
     cve_attempted: Optional[bool] = None
 
 
+# ---- Hardware Lifecycle Drift (Phase 156 HWLC-10/11) ----
+
+# V5 input-validation: the three direction literals a drift event may carry.
+# Sourced here (not re-derived) so HardwareDriftEventItem's validator has a
+# single place to check against.
+DRIFT_DIRECTIONS: tuple[str, ...] = ("improved", "worsened", "neutral")
+
+
+class HardwareDriftEventItem(BaseModel):
+    """One serialized ``HardwareDriftEvent`` row (Phase 155) for the
+    dashboard API.
+
+    Deliberately has NO ``severity`` field (D-06): a drift event is a
+    lifecycle change, not a scored finding, and must never inherit
+    finding-shaped severity semantics that could feed finding-shaped
+    sorting/scoring aggregation downstream.
+    """
+    host: str
+    port: int
+    event_type: str              # tier_crossing | upstream_mitigated_change | cve_delta | eol_state_change
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    direction: str                # improved | worsened | neutral (D-06 — NOT severity)
+    detected_at: str              # ISO 8601
+    vendor: Optional[str] = None
+    model: Optional[str] = None
+
+    @field_validator("direction")
+    @classmethod
+    def _validate_direction(cls, v: str) -> str:
+        if v not in DRIFT_DIRECTIONS:
+            raise ValueError(f"direction must be one of {DRIFT_DIRECTIONS}, got {v!r}")
+        return v
+
+    @field_validator("event_type")
+    @classmethod
+    def _validate_event_type(cls, v: str) -> str:
+        from quirk.scanner.hardware_drift import EVENT_TYPES
+        if v not in EVENT_TYPES:
+            raise ValueError(f"event_type must be one of {EVENT_TYPES}, got {v!r}")
+        return v
+
+
+class HardwareDriftResponse(BaseModel):
+    """GET /api/hardware/drift response body (HWLC-10)."""
+    has_prior_scan: bool
+    latest_scan_at: Optional[str] = None
+    latest_events: List[HardwareDriftEventItem] = []
+    historical_events: List[HardwareDriftEventItem] = []
+    historical_truncated: bool = False
+
+
 # ---- Roadmap ----
 
 class RoadmapEdge(BaseModel):
@@ -399,6 +451,7 @@ class CompareResponse(BaseModel):
     endpoints_only_in_a: List[str] = []
     endpoints_only_in_b: List[str] = []
     changed_endpoints: List[CompareEndpoint] = []
+    hardware_drift: List[HardwareDriftEventItem] = []  # Phase 156 HWLC-10/D-04
 
 
 class TrendSessionPoint(BaseModel):

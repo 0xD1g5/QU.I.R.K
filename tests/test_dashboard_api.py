@@ -244,3 +244,89 @@ def test_derive_hardware_findings_bridge_pairing_error_stays_advisory_empty(monk
         assert out == []
     finally:
         session.close()
+
+
+# ---- Phase 156 HWLC-10/11: Hardware Lifecycle Drift models (Task 1) ----
+
+
+def test_drift_event_item_has_no_severity_field():
+    """D-06: HardwareDriftEventItem must never carry a severity field."""
+    from quirk.dashboard.api.schemas import HardwareDriftEventItem
+
+    assert "severity" not in HardwareDriftEventItem.model_fields
+    item = HardwareDriftEventItem(
+        host="10.0.0.5",
+        port=502,
+        event_type="tier_crossing",
+        direction="worsened",
+        detected_at="2026-08-14T12:00:00",
+    )
+    assert item.old_value is None
+    assert item.new_value is None
+    assert item.vendor is None
+    assert item.model is None
+
+
+def test_drift_event_item_rejects_unknown_direction():
+    """direction accepts only improved/worsened/neutral (D-06 vocabulary)."""
+    import pytest as _pytest
+    from pydantic import ValidationError
+
+    from quirk.dashboard.api.schemas import HardwareDriftEventItem
+
+    with _pytest.raises(ValidationError):
+        HardwareDriftEventItem(
+            host="10.0.0.5",
+            port=502,
+            event_type="tier_crossing",
+            direction="critical",
+            detected_at="2026-08-14T12:00:00",
+        )
+
+
+def test_drift_event_item_rejects_unknown_event_type():
+    """event_type is validated against hardware_drift.EVENT_TYPES (V5)."""
+    import pytest as _pytest
+    from pydantic import ValidationError
+
+    from quirk.dashboard.api.schemas import HardwareDriftEventItem
+
+    with _pytest.raises(ValidationError):
+        HardwareDriftEventItem(
+            host="10.0.0.5",
+            port=502,
+            event_type="not_a_real_event_type",
+            direction="neutral",
+            detected_at="2026-08-14T12:00:00",
+        )
+
+
+def test_drift_response_defaults_to_empty_lists():
+    """HardwareDriftResponse() with only has_prior_scan yields empty lists
+    and historical_truncated is False."""
+    from quirk.dashboard.api.schemas import HardwareDriftResponse
+
+    resp = HardwareDriftResponse(has_prior_scan=False)
+    assert resp.latest_scan_at is None
+    assert resp.latest_events == []
+    assert resp.historical_events == []
+    assert resp.historical_truncated is False
+
+
+def test_compare_response_hardware_drift_defaults_empty():
+    """CompareResponse constructed without hardware_drift yields an empty
+    list — every existing construction keeps working unmodified."""
+    from quirk.dashboard.api.schemas import (
+        CompareResponse,
+        CompareScanSummary,
+        SubscoreDelta,
+    )
+    from datetime import datetime as _dt
+
+    resp = CompareResponse(
+        scan_a=CompareScanSummary(scan_id="a", scanned_at=_dt(2026, 8, 14), score=80),
+        scan_b=CompareScanSummary(scan_id="b", scanned_at=_dt(2026, 8, 13), score=75),
+        score_delta=5,
+        subscore_deltas=SubscoreDelta(),
+    )
+    assert resp.hardware_drift == []
