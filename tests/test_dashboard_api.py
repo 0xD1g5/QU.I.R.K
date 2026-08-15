@@ -330,3 +330,182 @@ def test_compare_response_hardware_drift_defaults_empty():
         subscore_deltas=SubscoreDelta(),
     )
     assert resp.hardware_drift == []
+
+
+# ---- Phase 156 HWLC-10: GET /api/hardware/drift route (Task 2) ----
+
+
+def _drift_client_and_session():
+    import uuid
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.dashboard.api.app import create_app
+    from quirk.dashboard.api.deps import get_db
+    from quirk.models import Base
+
+    db_name = f"test_hw_drift_{uuid.uuid4().hex}"
+    engine = create_engine(
+        f"sqlite:///file:{db_name}?mode=memory&cache=shared&uri=true",
+        connect_args={"check_same_thread": False},
+    )
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def _override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    from fastapi.testclient import TestClient
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _override_get_db
+    return TestClient(app, headers={"X-Quirk-Request": "1"}), TestingSession
+
+
+def _seed_hw_device(TestingSession, **kwargs):
+    from quirk.models import HardwareDevice
+
+    db = TestingSession()
+    try:
+        defaults = dict(
+            vendor="Cisco",
+            pqc_status="unsupported",
+            confidence="high",
+            fingerprint_method="ssh_banner",
+            probe_status="success",
+        )
+        defaults.update(kwargs)
+        db.add(HardwareDevice(**defaults))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _seed_drift_event(TestingSession, **kwargs):
+    from quirk.models import HardwareDriftEvent
+
+    db = TestingSession()
+    try:
+        db.add(HardwareDriftEvent(**kwargs))
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_hardware_drift_empty_db_state_a():
+    """Zero HardwareDevice rows -> has_prior_scan false, both lists empty."""
+    client, _ = _drift_client_and_session()
+    resp = client.get("/api/hardware/drift")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["has_prior_scan"] is False
+    assert data["latest_scan_at"] is None
+    assert data["latest_events"] == []
+    assert data["historical_events"] == []
+
+
+def test_hardware_drift_single_scan_state_a():
+    """Exactly one distinct scanned_at -> has_prior_scan false (State A)."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_hw_device(TestingSession, host="10.0.0.1", port=22, scanned_at=ts)
+    resp = client.get("/api/hardware/drift")
+    assert resp.status_code == 200
+    assert resp.json()["has_prior_scan"] is False
+
+
+def test_hardware_drift_two_scans_zero_events_state_b():
+    """Two distinct scanned_at values, zero drift events -> State B."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts1 = datetime(2026, 8, 13, 12, 0, 0)
+    ts2 = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_hw_device(TestingSession, host="10.0.0.1", port=22, scanned_at=ts1)
+    _seed_hw_device(TestingSession, host="10.0.0.1", port=22, scanned_at=ts2)
+    resp = client.get("/api/hardware/drift")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["has_prior_scan"] is True
+    assert data["latest_scan_at"] is not None
+    assert data["latest_events"] == []
+    assert data["historical_events"] == []
+
+
+def test_hardware_drift_partitions_latest_vs_historical():
+    """Events at the max scanned_at land in latest_events; older ones in
+    historical_events, never mixed."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts_old = datetime(2026, 8, 12, 12, 0, 0)
+    ts_new = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_hw_device(TestingSession, host="10.0.0.1", port=22, scanned_at=ts_old)
+    _seed_hw_device(TestingSession, host="10.0.0.1", port=22, scanned_at=ts_new, vendor="Cisco", model="ISR-4321")
+
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.1", port=22, event_type="tier_crossing",
+        old_value="Tier 2", new_value="Tier 1", detected_at=ts_new,
+    )
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.1", port=22, event_type="cve_delta",
+        old_value="0", new_value="1", detected_at=ts_old,
+    )
+
+    resp = client.get("/api/hardware/drift")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["latest_events"]) == 1
+    assert data["latest_events"][0]["event_type"] == "tier_crossing"
+    assert data["latest_events"][0]["direction"] == "worsened"
+    assert "severity" not in data["latest_events"][0]
+    assert len(data["historical_events"]) == 1
+    assert data["historical_events"][0]["event_type"] == "cve_delta"
+
+
+def test_hardware_drift_historical_truncation():
+    """historical_truncated is True when more than limit rows exist."""
+    from datetime import datetime, timedelta
+
+    client, TestingSession = _drift_client_and_session()
+    ts_new = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_hw_device(TestingSession, host="10.0.0.1", port=22, scanned_at=ts_new)
+    _seed_hw_device(TestingSession, host="10.0.0.1", port=22, scanned_at=ts_new - timedelta(days=10))
+
+    for i in range(3):
+        _seed_drift_event(
+            TestingSession,
+            host="10.0.0.1", port=22, event_type="eol_state_change",
+            old_value="ok", new_value="approaching",
+            detected_at=ts_new - timedelta(days=1 + i),
+        )
+
+    resp = client.get("/api/hardware/drift?limit=2")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["historical_events"]) == 2
+    assert data["historical_truncated"] is True
+
+
+def test_hardware_drift_limit_out_of_range_returns_422():
+    client, _ = _drift_client_and_session()
+    assert client.get("/api/hardware/drift?limit=0").status_code == 422
+    assert client.get("/api/hardware/drift?limit=500").status_code == 422
+
+
+def test_hardware_drift_requires_auth(monkeypatch):
+    """Unauthenticated requests are rejected by the router-level dependency."""
+    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    client, _ = _drift_client_and_session()
+    resp = client.get("/api/hardware/drift")
+    assert resp.status_code == 401
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
