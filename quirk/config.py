@@ -309,6 +309,10 @@ class ConnectorsCfg:
     # change for existing scans. Scan-wide only — no per-host allowlist (RESEARCH Pitfall 3).
     enable_modbus: bool = False
     enable_bacnet: bool = False
+    # Phase 156 HWLC-12 / D-14: explicit opt-in required before a *recurring*
+    # (scheduled) run may probe Modbus/BACnet; one-off operator-initiated
+    # enable_modbus scans are unaffected (D-15).
+    enable_recurring_otics: bool = False
     # Phase 139 SNMPV3-01 / D-01: per-host SNMPv3 USM credentials (mirrors BrokerCredential).
     # Env-var NAMES only, never inline secrets. Keyed by bare host (D-01 / RESEARCH Open
     # Question 2), not host:port — mirrors the single-value-per-scan snmp_community precedent.

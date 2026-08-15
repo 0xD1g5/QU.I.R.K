@@ -124,6 +124,10 @@ connectors:
   #     priv_key_env: "SNMP_V3_PRIV_KEY"    # os.environ["SNMP_V3_PRIV_KEY"] at scan time
   #     auth_protocol: "SHA256"             # richer allowlist honored, not narrowed to base SHA
   #     priv_protocol: "AES256"
+  # OT/ICS recurring-probe safety gate (Phase 156 / HWLC-12): opt-in for SCHEDULED
+  # Modbus/BACnet probing; a 168h (7-day) minimum cron cadence floor is enforced
+  # regardless — see docs/configuration.md
+  enable_recurring_otics: false
 
 # -- Intelligence / scoring profile -----------------------------------------
 # Adjust how the quantum-readiness score weights agility and identity signals.
