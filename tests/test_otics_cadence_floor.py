@@ -387,3 +387,131 @@ def test_write_time_cli_schedule_add_at_floor_no_advisory(tmp_path, capsys):
     )
     captured = capsys.readouterr()
     assert "OT/ICS minimum cadence floor" not in captured.out
+
+
+# ---------------------------------------------------------------------------
+# Task 3 — write-path inventory guard + one-off-scan-unaffected guard.
+#
+# Proves the set of schedule-creation surfaces is exactly what the gate
+# covers, so a future unguarded write path fails loudly (T-156-01), and that
+# a one-off operator-initiated enable_modbus scan cannot reach the gate at
+# all (D-15).
+# ---------------------------------------------------------------------------
+
+import pathlib
+import re
+
+from fastapi.routing import APIRoute
+
+from quirk.dashboard.api.app import create_app
+
+EXPECTED_SCHEDULE_WRITE_ROUTES = {("POST", "/api/schedules")}
+EXPECTED_SCHEDULE_SUBCOMMANDS = {"add", "list", "enable", "disable", "remove"}
+EXPECTED_OTICS_GATE_MODULES = {
+    "cli/scheduler_cmd.py",
+    "cli/schedule_cmd.py",
+    "dashboard/api/routes/schedules.py",
+}
+
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+_QUIRK_ROOT = _REPO_ROOT / "quirk"
+
+
+def _all_route_method_paths(app) -> set:
+    """Recursively collect (method, path) pairs, including routes nested inside
+    include_router()-mounted sub-routers.
+
+    Phase 150 D-17: on fastapi>=0.141/starlette>=1.6, `application.routes` no
+    longer flattens included sub-router routes into plain APIRoute entries at
+    include time -- a flat `isinstance(r, APIRoute)` walk over `app.routes`
+    misses every /api/* route. See tests/test_sensor_ingest.py::_all_route_paths
+    for the same pattern (Phase 150 origin).
+    """
+    pairs: set = set()
+
+    def _walk(routes, prefix: str = "") -> None:
+        for route in routes:
+            if type(route).__name__ == "_IncludedRouter":
+                sub_prefix = getattr(route.include_context, "prefix", "") or ""
+                _walk(route.original_router.routes, prefix + sub_prefix)
+            elif isinstance(route, APIRoute):
+                for method in (route.methods or set()):
+                    pairs.add((method, prefix + route.path))
+
+    _walk(app.routes)
+    return pairs
+
+
+def test_write_path_inventory_routes_exactly_schedule_creation_set():
+    app = create_app()
+    all_pairs = _all_route_method_paths(app)
+    schedule_write_pairs = {
+        (method, path)
+        for (method, path) in all_pairs
+        if path.startswith("/api/schedules") and method in {"POST", "PUT"}
+    }
+    assert schedule_write_pairs == EXPECTED_SCHEDULE_WRITE_ROUTES, (
+        "A schedule-creation route was added or removed. A new schedule-creation "
+        "route must call quirk.otics_cadence.floor_advisory and then be added to "
+        f"EXPECTED_SCHEDULE_WRITE_ROUTES in this test file. Found: {schedule_write_pairs}"
+    )
+
+
+def test_write_path_inventory_cli_subcommands_exactly_expected_set():
+    """Source-text inventory of add_parser("<name>" literals (module exposes no parser-building
+    function separate from run_schedule's inline argparse construction)."""
+    source = (_QUIRK_ROOT / "cli" / "schedule_cmd.py").read_text(encoding="utf-8")
+    found = set(re.findall(r'add_parser\(\s*"([^"]+)"', source))
+    assert found == EXPECTED_SCHEDULE_SUBCOMMANDS, (
+        "A `quirk schedule` subcommand was added or removed. A new subcommand that "
+        "can create a schedule must call quirk.otics_cadence.floor_advisory and be "
+        f"added to EXPECTED_SCHEDULE_SUBCOMMANDS. Found: {found}"
+    )
+
+
+def test_write_path_inventory_otics_gate_modules_exactly_expected_set():
+    found: set = set()
+    for path in _QUIRK_ROOT.rglob("*.py"):
+        if "__pycache__" in path.parts:
+            continue
+        if path.resolve() == (_QUIRK_ROOT / "otics_cadence.py").resolve():
+            continue
+        text = path.read_text(encoding="utf-8")
+        code_lines = [
+            line for line in text.splitlines() if not line.strip().startswith("#")
+        ]
+        if "otics_cadence" in "\n".join(code_lines):
+            found.add(str(path.relative_to(_QUIRK_ROOT)))
+    assert found == EXPECTED_OTICS_GATE_MODULES, (
+        "The set of modules importing quirk.otics_cadence changed. This must stay "
+        "confined to the recurring/scheduled write+dispatch path. "
+        f"Found: {found}"
+    )
+
+
+def _read_code_lines(path: pathlib.Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    return "\n".join(
+        line for line in text.splitlines() if not line.strip().startswith("#")
+    )
+
+
+def test_one_off_unaffected_scanner_modules_free_of_otics_cadence():
+    for rel in (
+        "scanner/hardware_scanner.py",
+        "scanner/modbus_scanner.py",
+        "scanner/bacnet_scanner.py",
+    ):
+        code = _read_code_lines(_QUIRK_ROOT / rel)
+        assert "otics_cadence" not in code, f"{rel} references otics_cadence"
+        assert "OTICS_MIN_INTERVAL_HOURS" not in code, f"{rel} references OTICS_MIN_INTERVAL_HOURS"
+
+    run_scan_code = _read_code_lines(_REPO_ROOT / "run_scan.py")
+    assert "otics_cadence" not in run_scan_code
+    assert "OTICS_MIN_INTERVAL_HOURS" not in run_scan_code
+
+
+def test_one_off_unaffected_profiles_module_free_of_otics_connector_keys():
+    code = _read_code_lines(_QUIRK_ROOT / "engine" / "profiles.py")
+    assert "enable_modbus" not in code
+    assert "enable_bacnet" not in code
