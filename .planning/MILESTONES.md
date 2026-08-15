@@ -1,5 +1,36 @@
 # Milestones
 
+## v5.13 Continuous Hardware Lifecycle Monitoring (Shipped: 2026-08-15)
+
+**Phases completed:** 3 phases (154–156), 17 plans, 44 tasks
+
+**Delivered:** Extended v5.10's point-in-time hardware fingerprinting into ongoing lifecycle
+tracking. 12/12 HWLC requirements satisfied, milestone audit `passed`.
+
+**Key accomplishments:**
+
+- Stable device re-identification across scans — SSH host-key fingerprint secondary match key
+  (unconditional on vendor match) with explicit low-confidence fallback to host:port, surviving
+  DHCP/re-IP between engagements.
+- Failed-probe-safe hardware state — a genuine per-device latest-successful-row projection at all
+  four read sites (dashboard, CBOM merge, CLI/PDF/DOCX reports), so a failing re-probe never erases
+  a device's last-known-good data; plus a configurable retention purge (`hardware_history_retention_days`,
+  default 180).
+- Drift reconciliation engine — two-scan diff across CNSA 2.0 tier, PQC/bridge-mitigation status,
+  EOL/EOS proximity, and CVE set, each a distinct N-of-M-confirmed, deduplicated event type
+  persisted to `hardware_drift_events`.
+- Curated EOL/EOS catalog (`hardware_eol.py`, 4th instance of the staleness-gated curated-catalog
+  pattern) finally populating `HardwareDevice.eol_date`, dormant since Phase 127.
+- Dashboard + report "what changed since last scan" surfacing — `GET /api/hardware/drift`,
+  `CompareResponse.hardware_drift`, `LifecycleEventList` on `/hardware`/`/compare`, HTML/DOCX
+  "Recent Lifecycle Changes" sections — structurally distinct from scored findings, zero
+  `SCORE_WEIGHTS` references, machine-enforced.
+- OT/ICS recurring-rescan safety rail — explicit `enable_recurring_otics` opt-in plus a hardcoded,
+  non-configurable 168-hour cadence floor enforced as the sole scheduler dispatch chokepoint;
+  `/gsd-secure-phase 156` independently SECURED 19/19 threats, 0 high-severity findings.
+
+---
+
 ## v5.12 Release & Verification Integrity (Shipped: 2026-08-14)
 
 **Phases completed:** 6 phases (148–153), 36 plans
@@ -22,10 +53,12 @@ the release pipeline.
   (`scripts/release_tag_hygiene.py`) catches malformed/unpushed tags; the v5.11.0 Windows-asset
   gap is explicitly dispositioned (PyPI-only, documented) rather than backfilled with a
   provenance-questionable post-hoc build.
+
 - **Test suite triage + green baseline (Phases 149–150)** — all ~102 pre-existing full-suite
   failures given an explicit written disposition (fixed/quarantined/deleted); `pytest -q` genuinely
   green, held by a CI gate proven live with both a green run and a deliberate red-smoke run on
   real GitHub Actions.
+
 - **Phase-completion artifact gate (Phase 151)** — `scripts/verify_phase_gates.py` +
   `.githooks/pre-commit` block a phase-close commit missing `VERIFICATION.md`, a stale
   `VALIDATION.md`, or a missing `docs/UAT-SERIES.md` entry, plus a destructive-archive guard
@@ -33,15 +66,18 @@ the release pipeline.
   v5.11 phase files. A design flaw (the gate would have permanently blocked every future commit
   because of Phase 144's un-backfillable historical gap) was caught before shipping and fixed with
   a narrow, documented exemption.
+
 - **Discovery empirical closure (Phase 152)** — a genuinely routed two-subnet chaos-lab topology
   (iptables REJECT gateway, not loopback aliases) settled the year-old Phase 144 nmap timing-engine
   artifact once and for all: **does not reproduce**, across 3 independent live-fire runs.
+
 - **Real release tag cut (Phase 153)** — `v5.12.0` tagged, pushed, and independently re-verified
   against live GitHub Actions AND PyPI's own JSON API (not just SUMMARY.md prose) — Windows
   operator zip attached, PyPI package published. One real deviation: the initial combined
   branch+tag push silently didn't fire `release.yml`'s push-event trigger (a documented GitHub
   Actions limitation); caught, independently verified, and fixed via a human-approved standalone
   tag re-push.
+
 - **Milestone audit caught the gate testing itself** — Phase 151's own `VALIDATION.md` docs (and
   Phase 153's) were left in their pre-execution draft state post-close, because the pre-commit
   hook they built was never actually *installed* (`core.hooksPath` unset). Fixed during the audit;
@@ -108,8 +144,10 @@ was drained to zero.
   client deliverable. The phase's own regression test passed because it asserted the wrong
   exclusion case. Caught by code review, not by CI; fixed with a dedicated `discovery_exception`
   category.
+
 - **Human-verify gates keep paying.** Both Phase 145 and Phase 146 had their human UAT surface a
   real defect that automated verification had cleared.
+
 - **Dispositions decay.** A deferred item can be correctly *concluded* while its stated evidence
   goes stale — and reviewers check verdicts, not reasoning. UAT-143-03's blocker turned out to be
   structural (no `v*.*.*` release tag since v5.9) rather than the claimed absence of pushes.

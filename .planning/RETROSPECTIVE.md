@@ -682,6 +682,100 @@ reachable, a port-aware CORS default, and full audit-ledger reconciliation.
 
 ---
 
+## Milestone: v5.13 — Continuous Hardware Lifecycle Monitoring
+
+**Shipped:** 2026-08-15
+**Phases:** 3 (154–156) | **Plans:** 17
+
+### What Was Built
+
+Extended v5.10's point-in-time hardware fingerprinting into ongoing lifecycle tracking. Phase 154
+built the identity/data-model foundation: SSH host-key-fingerprint secondary match key with
+explicit low-confidence fallback, `probe_status`-safe writes so a failed re-probe never erases
+last-known-good device state, and a configurable retention purge. Phase 155 built a pure-function
+drift-reconciliation engine — N-of-M-confirmed diffing across CNSA 2.0 tier, PQC/bridge-mitigation
+status, EOL/EOS proximity, and CVE set, persisted as four distinct event types — plus a fourth
+curated staleness-gated catalog (`hardware_eol.py`) finally populating the dormant `eol_date`
+column. Phase 156 surfaced "what changed since last scan" on the dashboard and in reports as
+structurally distinct advisory content, and added a hardcoded, non-configurable 168-hour cadence
+floor gating recurring OT/ICS re-probing, closed by an independent `/gsd-secure-phase` review
+(19/19 threats, 0 high-severity).
+
+### What Worked
+
+- **The drift engine consumed the identity phase's projection instead of reinventing it.** Phase
+  155's `reconcile_device_history()` reads through Phase 154's `recent_successful_hardware_rows()`
+  — the same `probe_status`-filtered last-known-good query every other surface uses. A drift engine
+  built against a raw scan-window query instead would have silently reintroduced the exact
+  flaky-probe bug Phase 154 closed. Confirmed by an independent integration-checker agent, not
+  just each phase's own VERIFICATION.md.
+- **The OT/ICS safety floor was designed as a single non-bypassable chokepoint from the start.**
+  `enable_recurring_otics` and the 168h floor are enforced once, at scheduler dispatch time, by
+  stripping config keys before they ever reach the scan process — not duplicated as a second check
+  inside the scan engine. A dedicated test asserts only the scheduler module imports the cadence
+  gate, so a future second enforcement site can't silently drift out of sync with the first.
+  `T-156-01..18` closed with cited evidence, not blanket assertions.
+- **Code review caught a real silent-data-loss bug before ship.** Phase 154's CR-01: the SNMP-only
+  bulk-fingerprint path never set `probe_status`, which would have made every SNMP-only device
+  permanently invisible across all four projection sites. Fixed with a regression test in the same
+  phase, and the same CR-01 pattern (an alternate code path missing a terminal call) recurred and
+  was independently caught again in Phase 155 (`apply_eol_date()` missing on the SNMP-only path).
+- **A hardcoded, non-configurable safety floor for a fragile-device risk.** `OTICS_MIN_INTERVAL_HOURS`
+  is a module constant, never read from config — so no operator misconfiguration can silently
+  reintroduce unbounded recurring probing against production Modbus/BACnet devices.
+
+### What Was Inefficient
+
+- **The same "alternate code path skips a terminal call" bug shape shipped twice in two
+  consecutive phases.** Phase 154's CR-01 (SNMP-only path missing `probe_status`) and Phase 155's
+  CR-01 (SNMP-only path missing `apply_eol_date()`) are structurally the same defect — a second,
+  less-obvious device-creation branch that the "single terminal convergence point" design assumed
+  was the only one. Both were caught by code review, not by design, meaning the underlying
+  two-commit-sites shape of `run_scan.py` is worth flagging explicitly in future plans that touch it.
+- **Phase 155 closed as `human_needed`, not `passed`,** solely for a pending prose-quality read of
+  new documentation and a missing Obsidian phase note — both non-functional, both since resolved,
+  but the phase's own status field understated a functionally complete phase for a process gap.
+- **The known `260611-g0b` quick-task false-positive resurfaced at this milestone's pre-close
+  audit** exactly as it did at v5.11 close — the `audit-open` bookkeeping scanner still can't see
+  it despite both PLAN and SUMMARY existing on disk and the merge commit being in history. Third
+  consecutive milestone acknowledging the same row rather than fixing the scanner.
+
+### Patterns Established
+
+- **Drift/diff features must consume the identity layer's read-side projection, never a raw query
+  against the underlying table.** Generalizes beyond hardware lifecycle: any feature computing
+  "change over time" is only as correct as the current-state projection it diffs against.
+- **Fourth instance of the curated-catalog + staleness-gate triad** (`compliance/__init__.py`,
+  `qramm/model_meta.py`, `hw_cve.py`, now `hardware_eol.py`) — firmly a house pattern at this point.
+- **Safety-relevant rate/cadence floors as hardcoded constants, not config**, when the failure mode
+  of a permissive override is a real-world outage risk (fragile OT/ICS devices) rather than a
+  correctness nuisance.
+
+### Key Lessons
+
+1. **A repeated bug shape across consecutive phases is a signal to fix the shape, not just the two
+   instances.** Two SNMP-only-path omissions in two phases in a row means the next phase touching
+   device-creation branches should treat "list every commit site, not just the primary one" as a
+   checklist item, not something code review re-derives from scratch each time.
+2. **Independent cross-phase integration verification is not redundant with phase-level
+   verification.** Each phase's own VERIFICATION.md can only see its own diff; only a dedicated
+   integration pass reading the actual current-state code confirmed Phase 155 reads Phase 154's
+   real projection and Phase 156 reads Phase 155's real table, rather than trusting the plan's
+   stated intent.
+3. **A phase's status field can understate real completion.** `human_needed` from one pending
+   prose-quality doc read is a different risk class than `human_needed` from an unverified
+   functional claim — worth distinguishing at the audit layer, not just deferring both identically.
+
+### Cost Observations
+
+- 65 commits over ~1 day (2026-08-14 → 2026-08-15), 66 files, +7,386 / −184 lines — the tightest
+  plan-to-commit ratio of any recent milestone, consistent with the milestone's own framing
+  (a scheduling/diffing/reporting layer over data already collected, not a new scanner surface)
+- Notable: zero net-new pip dependencies, zero new chaos-lab profiles — this milestone shipped
+  entirely on top of infrastructure v5.7–v5.10 already built
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -702,6 +796,7 @@ reachable, a port-aware CORS default, and full audit-ledger reconciliation.
 | v4.10.1 Scoring Correctness Hotfix | 1 | 3 | Smallest milestone — single physics-coupled MVP slice fixing the overall-readiness clamp bug (backend `sum/1.5` + ScoreGauge `maxValue`); render-side + evidence-tally deferred to v5.0 Phase 01 |
 | v5.6 Distributed Completion + Public Launch | 6 | 20 | Repo went PUBLIC (3-pass history rewrite, branch protection w/ required check); production Windows frozen sensor shipped as GitHub Release asset; first milestone executed partly under gitignored-`.planning/` constraints (absolute-path subagents, hand-curated archives). v5.0–v5.5 rows not authored at close — see MILESTONES.md |
 | v5.9 Documentation Audit & Living Docs System | 6 (incl. 138.1/138.2) | 10 | Docs-only milestone; first to embed permanent doc-hygiene governance (`CLAUDE.md` Per-Phase Checklist + Milestone-Boundary Template) rather than a one-time sweep; audit caught a real content-inversion bug (CORE-04) and a vault-staleness gap (LIVE-03), both closed by inserted gap-closure phases and independently re-verified; v5.7 row not authored at close — see MILESTONES.md |
+| v5.13 Continuous Hardware Lifecycle Monitoring | 3 | 17 | Tightest plan-to-commit ratio to date (65 commits/~1 day) — a scheduling/diffing/reporting layer over existing data, zero new deps, zero new lab profiles; same "alternate code path skips a terminal call" bug shape (CR-01) caught by code review in two consecutive phases (154, 155); v5.10/v5.12 rows not authored at close — see MILESTONES.md |
 
 ### Cumulative Quality
 
@@ -718,6 +813,7 @@ reachable, a port-aware CORS default, and full audit-ledger reconciliation.
 | v4.8 | ~900+ | 31 pre-existing failures unrelated to v4.8 work remain; Wave A regression suites added (auth/CSRF/rate-limit: 16 tests, score arithmetic: 45 tests, credential scrubbing: 32 tests) |
 | v5.6 | ~2,400 collected | 410 targeted tests green at Phase 122 post-merge gate; 5 pre-existing full-suite failures (chaos-lab drift, codesign title-join, qramm fixtures) verified identical at pre-122 base; v5.0–v5.5 rows not authored at close |
 | v5.11 | ~2,600 collected | 95 targeted tests green across the milestone surface at close; ~102 pre-existing full-suite failures (version-locked assertions, Python 3.14 dev-env drift) confirmed unrelated and unchanged — aging since Phase 97, now carried as an explicit next-milestone stabilization candidate |
+| v5.13 | 115/115 targeted (not full-suite re-counted) | 115/115 targeted cross-boundary tests green at milestone-audit time (drift engine, retention purge, cadence floor, score-guard, HTML/DOCX drift rendering, frontend lifecycle-advisory-guard); full-suite baseline was 3,087 passed / 0 failed as of v5.12's Phase 150 CI gate, held green since; v5.10/v5.12 rows not authored at close |
 
 ### Top Lessons (Verified Across Milestones)
 

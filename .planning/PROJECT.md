@@ -182,6 +182,15 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 - ✓ 2026-05-27 audit ledger reconciled to zero undecided/stale rows with verified commit citations; port-aware default CORS allowlist (DRAIN-03) — Phase 147
 - ✓ STATE.md deferred human-UAT ledger re-triaged with dated dispositions (DRAIN-04) — Phase 147
 
+**v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED 2026-08-15**
+- ✓ Stable device re-identification — SSH host-key fingerprint secondary match key with explicit low-confidence fallback to host:port, surviving DHCP/re-IP between engagements — Phase 154
+- ✓ Failed-probe-safe hardware state — per-device latest-successful-row projection at all four read sites (dashboard, CBOM merge, CLI/PDF/DOCX reports); a failed re-probe never erases last-known-good data — Phase 154
+- ✓ Configurable hardware history retention (`hardware_history_retention_days`, default 180) bounding per-device storage growth — Phase 154
+- ✓ Drift reconciliation engine — two-scan diff across CNSA 2.0 tier, PQC/bridge-mitigation status, EOL/EOS proximity, and CVE set, each a distinct N-of-M-confirmed event type persisted to `hardware_drift_events` — Phase 155
+- ✓ Curated EOL/EOS catalog (`hardware_eol.py`, 365-day staleness gate, 4th instance of the pattern) populating the `HardwareDevice.eol_date` column dormant since Phase 127 — Phase 155
+- ✓ Dashboard + report "what changed since last scan" surfacing — `GET /api/hardware/drift`, `CompareResponse.hardware_drift`, `LifecycleEventList` on `/hardware`/`/compare`, HTML/DOCX "Recent Lifecycle Changes" sections — structurally distinct from scored findings, zero `SCORE_WEIGHTS` references, machine-enforced — Phase 156
+- ✓ OT/ICS recurring-rescan safety rail — explicit `enable_recurring_otics` opt-in + hardcoded 168-hour cadence floor enforced at the sole scheduler dispatch chokepoint; `/gsd-secure-phase 156` SECURED 19/19 threats — Phase 156
+
 **SaaS Platform (Future Milestone)**
 - [ ] Multi-tenant architecture design
 - [ ] Scan job queue (Celery + Redis or similar)
@@ -191,20 +200,23 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-Defined by v5.12 Release & Verification Integrity — see Current Milestone section below.
+Defined by the next milestone — see `/gsd:new-milestone`.
 
-Carried into next-milestone scoping (from the v5.11 audit's remaining tech debt):
-- [ ] **Windows release asset for v5.12** — v5.11.0 published to PyPI but shipped no Windows
-      asset: the signing self-test failed by construction (fixed in `1a6effc`, unexercised until
-      the next tag). The v5.12 release is the first run that will prove the repaired path.
-      Consider also normalizing tag hygiene — `v5.9` never matched `release.yml`'s `v*.*.*` glob
-      and `v5.10.0` was never pushed, so three milestones went out with no Windows build.
-- [ ] **DISC-09** segmented-network chaos lab profile — deferred from v5.11; also the environment
-      needed to settle the Phase 144 nmap timing-engine artifact. Schedule the two together.
+Carried-forward tech debt (non-blocking, resolved-or-superseded items removed at v5.13 close):
 - [ ] **DISC-08** sub-batch (mid-discovery) checkpoint/resume granularity — deferred as an
-      accepted boundary; revisit only if batch cost grows.
-- [ ] Stabilization pass on the ~102 pre-existing full-suite test failures (version-locked
-      assertions, Python 3.14 dev-env drift) — aging since Phase 97, unrelated to v5.11.
+      accepted boundary since v5.11; revisit only if batch cost grows.
+- [ ] **HardwareDriftEvent retention** — `hardware_drift_events` (Phase 155) is not subject to
+      any retention/purge policy, unlike `HardwareDevice` rows (`hardware_history_retention_days`,
+      Phase 154). Accumulates unbounded over long-running deployments. Flagged by the v5.13
+      integration audit as a backlog candidate, not a requirement violation.
+- [ ] **HWLC-13 / HWLC-14** (from v5.13 Future Requirements) — lightweight "check-in" scan mode
+      and email/webhook notification on tier-crossing/EOL events, deferred pending validation of
+      the core diff mechanism on real engagement data.
+
+Resolved by v5.12/v5.13 (no longer active): Windows release asset gap (v5.12.0 shipped a real
+Windows zip on the GitHub Release, live-verified); DISC-09 segmented-network lab profile (Phase
+152, does-not-reproduce finding); ~102 pre-existing full-suite failures (Phases 149/150, green
+CI-gated baseline).
 
 ### Out of Scope (v1)
 
@@ -217,9 +229,24 @@ Carried into next-milestone scoping (from the v5.11 audit's remaining tech debt)
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
 
-## Current Milestone: v5.13 Continuous Hardware Lifecycle Monitoring
+## Previous Milestone: v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED 2026-08-15
 
-**Goal:** Extend v5.10's hardware-fingerprinting foundation (`HardwareDevice` table,
+**Delivered:** v5.10's point-in-time hardware fingerprinting now tracks lifecycle change over
+time. A stable SSH host-key-fingerprint secondary match key survives DHCP/re-IP, failed re-probes
+never erase last-known-good state, and a two-scan drift-reconciliation engine surfaces CNSA 2.0
+tier crossings, PQC/bridge-mitigation shifts, EOL/EOS proximity, and CVE deltas as four distinct,
+N-of-M-confirmed event types — visible on the dashboard (`/hardware`, `/compare`) and in HTML/DOCX
+reports as structurally separate advisory content (zero `SCORE_WEIGHTS` references, machine-
+enforced). Recurring OT/ICS (Modbus/BACnet) re-probing is now opt-in with a hardcoded 168-hour
+cadence floor, closed by an independent `/gsd-secure-phase` review (19/19 threats, 0 high-severity
+findings). 3 phases (154–156), 17 plans, 12/12 HWLC requirements satisfied. Milestone audit
+(`.planning/v5.13-MILESTONE-AUDIT.md`) scored `passed` — 12/12 requirements, cross-phase
+integration independently re-verified end-to-end (identity/probe-status work → drift engine →
+dashboard/report surfacing → OT/ICS scanner gating), 0 blockers. Minor non-blocking tech debt:
+`hardware_drift_events` has no retention policy (unlike `HardwareDevice`, backlog candidate).
+Full record: `.planning/milestones/v5.13-ROADMAP.md`.
+
+**Original goal:** Extend v5.10's hardware-fingerprinting foundation (`HardwareDevice` table,
 `hw_cve.py`, CNSA 2.0 tier assignment) from a point-in-time scan into ongoing lifecycle
 tracking — detecting drift in firmware/EOL/vendor-PQC-status over time and alerting when a
 device crosses a CNSA 2.0 tier boundary.
@@ -251,7 +278,20 @@ status shifts, CVE-set deltas, and EOL/EOS state changes as four distinct, N-of-
 deduplicated event types persisted to `hardware_drift_events`; a new curated EOL/EOS catalog
 (`hardware_eol.py`, 4th staleness-gated instance) finally populates the previously-dormant
 `HardwareDevice.eol_date` column. Advisory-only — zero scoring-visible effect, machine-enforced.
-Next: Phase 156.
+
+**Phase 156 (Reporting & OT/ICS Safety) complete 2026-08-15** — HWLC-10/11/12 validated, the
+milestone's final phase. `GET /api/hardware/drift` + a `CompareResponse.hardware_drift` block
+surface "what changed since last scan" on `/hardware` and `/compare`, and in HTML/DOCX reports,
+via a structurally and visually separate `LifecycleEventList` component (no `RegressionAlertChip`
+reuse, no shared hue with the tier/PQC/confidence badges, an always-visible advisory caption in
+every rendered format — human-verified live against a running dashboard in both themes).
+Recurring OT/ICS (Modbus/BACnet) re-probing now requires an explicit `ConnectorsCfg` opt-in and
+is bounded by a hardcoded 168-hour cadence floor derived from the true minimum cron gap (not the
+average), enforced as a hard dispatch-time strip-and-continue gate with a write-time advisory
+(never a 422 — a one-off manual scan stays unaffected). `/gsd-secure-phase 156` ran independently
+and returned SECURED: 19/19 threats closed, all four D-23 threat surfaces verified against real
+code and passing tests. All 3 phases (154, 155, 156) of v5.13 are now complete — 17/17 plans,
+12/12 HWLC requirements satisfied. Ready for `/gsd-complete-milestone`.
 
 ---
 
@@ -384,19 +424,17 @@ that three rounds of plan-checker review focused on the narrower inner-gate fix 
 
 ## Current State
 
-**Phase 155 (drift-detection-eol-tracking) complete 2026-08-14** — 6/6 plans, verification 11/11
-must-haves (5/5 ROADMAP Success Criteria + 6/6 HWLC-04..09 requirements). Delivered
-`quirk/scanner/hardware_eol.py` (4th curated-catalog + staleness-gate instance, 365-day cadence)
-and `quirk/scanner/hardware_drift.py` (N-of-M confirmation gate, 4 distinct drift event types
-persisted to a new `hardware_drift_events` table, CVE delta via `hw_cve.py` correlation),
-wired into the live scan pipeline. Code review found 1 Critical defect (CR-01: the standalone
-SNMP-only bulk-fingerprint path in `run_scan.py` never called `apply_eol_date()`, silently
-leaving `eol_date` unpopulated for that entire path) and 1 non-blocking Warning (WR-01: missing
-session rollback in `reconcile_device_history()`'s exception handler) — both fixed post-execution
-with a regression test added for CR-01. Advisory-only firewall (never scoring-visible) confirmed
-and machine-tested. One human-verification item (documentation prose clarity) approved by user;
-`155-HUMAN-UAT.md` persists as `status: partial` pending a formal `/gsd:verify-work` pass.
-Dashboard/report surfacing of drift events is explicitly Phase 156's scope, not built here.
+**v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED and archived 2026-08-15.** All 3 phases
+(154–156) complete, 17 plans, 12/12 HWLC requirements satisfied. Milestone audit
+(`.planning/v5.13-MILESTONE-AUDIT.md`) scored `passed` — 12/12 requirements satisfied with no
+orphans, cross-phase integration independently re-verified end-to-end (154's identity/probe-status
+projection → 155's drift-reconciliation engine → 156's dashboard/report surfacing, plus 156's
+OT/ICS cadence gate confirmed as the sole non-bypassable chokepoint in front of the Phase 141
+Modbus/BACnet scanners), 0 blockers. `/gsd-secure-phase 156` independently SECURED 19/19 threats,
+0 high-severity findings. Non-blocking tech debt carried forward: `hardware_drift_events` has no
+retention policy (backlog candidate), and two Nyquist-validation artifacts are missing/partial
+(154 has no VALIDATION.md, 155's reads `nyquist_compliant: false`) — discovery-only, not a
+functional gap per the audit. Awaiting next milestone via `/gsd:new-milestone`.
 
 **v5.12 Release & Verification Integrity — SHIPPED and archived 2026-08-14.** All 6 phases
 (148–153) complete, 36 plans, 14/14 requirements satisfied, version 5.12.0 — genuinely tagged,
@@ -679,9 +717,14 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Dedicated `discovery_exception` category, never the generic `"exception"` (v5.11 / 146 CR-01) | `_wrapped_phase()` emits `scan_error_category="exception"` with a scanner-name label (not a host) at 20+ call sites; filtering on it for the undetermined-host count conflates an unrelated TLS/SSH crash with host unreachability in a consulting deliverable | ✓ Good — caught by code review, not CI: the phase's own regression test asserted the wrong exclusion case and passed straight over the bug |
 | Fail open when nmap's liveness accounting doesn't reconcile (v5.11 / 145-03) | Real `-sn -PS` subnet sweeps emit `<host>` elements only for hosts nmap can positively report on, so an absent host is ambiguous; inferring "down" from absence is only safe when `<runstats>` proves `exit=success` AND `total == len(targets)` | ✓ Good — the D-06 non-root human gate caught the pre-pass filtering zero hosts on every real sweep; the fix preserves the reliability-first rule that a live host must never be wrongly marked dead |
 | Do not tune nmap timing flags to make one synthetic live check pass (v5.11 / 144-03) | Changing default `-T`/RTT bounds alters behavior for every production scan, trading false negatives on slow real networks against a artifact only reproducible on unassigned macOS loopback aliases | — Pending — accepted via signed override; resolution deferred to a real routed segment, best paired with DISC-09's lab profile |
+| SSH host-key fingerprint as the stable secondary match key, unconditional on vendor match (v5.13 / 154-02) | A device re-identified across scans needs a signal independent of `host:port`; gating extraction on vendor-recognition would silently exclude Unknown-vendor devices from ever gaining a strong identity | ✓ Good — `match_confidence` correctly upgrades to "high" even when vendor stays Unknown, closing the exact gap the decision anticipated |
+| Drift reconciliation reads the shared last-known-good projection, not a raw scan-window query (v5.13 / 155-02..04) | Phase 154 built `probe_status`-filtered projection specifically so a flaky re-probe never looks like device state; a drift engine bypassing it would re-introduce the exact bug Phase 154 closed | ✓ Good — integration audit independently confirmed `reconcile_device_history()` consumes `recent_successful_hardware_rows()`, which filters on `probe_status == "success"` |
+| OT/ICS cadence gate lives exclusively at the scheduler dispatch chokepoint, never duplicated in the scan engine (v5.13 / 156-02) | Two enforcement sites risk silent drift (one gets patched, the other doesn't); a single chokepoint that strips config keys before they reach `run_scan.py` is bypass-proof by construction | ✓ Good — `test_otics_cadence_floor.py` asserts only the scheduler layer imports `otics_cadence`, confirmed by independent integration audit |
+| Hardcoded 168-hour OT/ICS cadence floor, not config-overridable (v5.13 / 156-01, D-19) | Fragile Modbus/BACnet devices were built for one read-only probe per engagement; a configurable floor could be set to zero by an impatient operator, silently reintroducing the exact production risk the gate exists to prevent | ✓ Good — confirmed as a module-level constant, never read from config, by both code review and the independent verifier |
 
 ---
-*Last updated: 2026-08-14 — Phase 155 (drift-detection-eol-tracking) complete, HWLC-04..09 validated*
+*Last updated: 2026-08-15 after v5.13 milestone — 3 phases (154-156), 12/12 HWLC requirements
+satisfied, milestone audit passed, archived*
 
 ## Evolution
 

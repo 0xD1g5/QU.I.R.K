@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v5.13
 milestone_name: Continuous Hardware Lifecycle Monitoring
-status: verifying
+status: Awaiting next milestone
 stopped_at: Completed 156-06-PLAN.md
-last_updated: "2026-08-15T13:45:32.450Z"
-last_activity: 2026-08-15
+last_updated: "2026-08-15T15:34:10.114Z"
+last_activity: 2026-08-15 — Milestone v5.13 completed and archived
 progress:
   total_phases: 3
   completed_phases: 3
@@ -22,16 +22,14 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 156 — Reporting & OT/ICS Safety
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 156 (Reporting & OT/ICS Safety) — EXECUTING
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-08-15
-
-Progress: [██████████] 100%
+Phase: Milestone v5.13 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-15 — Milestone v5.13 completed and archived
 
 ## v5.13 Phase Map (planning)
 
@@ -368,7 +366,18 @@ None yet.
 
 ## Deferred Items
 
-**Last re-triaged:** 2026-08-14 (Phase 152 Plan 03 — Phase 144 nmap timing artifact closed via
+**Last re-triaged:** 2026-08-15 (v5.13 milestone close — pre-close artifact audit, 3 items
+acknowledged, see table below)
+
+Acknowledged at v5.13 milestone close (2026-08-15):
+
+| Category | Item | Status |
+|----------|------|--------|
+| quick_task | `260611-g0b-merge-healthcare-vertical-branch-into-ma` | missing (confirmed false positive — same row already documented as false-positive at v5.11 close: PLAN+SUMMARY both exist on disk, merge commit `9967d8a` is in history; `audit-open` scanner cannot see it) |
+| uat_gap (155) | `155-HUMAN-UAT.md` — 1 pending scenario | partial (human read-through of `docs/operators-guide.md` §9.7 + `docs/UAT-SERIES.md` Series 155 for prose clarity; not a functional gap — HWLC-04..09 all independently SATISFIED per `155-VERIFICATION.md` and `v5.13-MILESTONE-AUDIT.md`) |
+| verification_gap (155) | `155-VERIFICATION.md` | human_needed (same underlying item as the uat_gap row above — one shared pending human doc-read, no separate defect) |
+
+**Last re-triaged (carried-forward items):** 2026-08-14 (Phase 152 Plan 03 — Phase 144 nmap timing artifact closed via
 3-run live-fire evidence; see Resolved section below)
 
 Resolved (2026-08-14):
