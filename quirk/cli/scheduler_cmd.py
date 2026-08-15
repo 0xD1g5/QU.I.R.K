@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import ipaddress
+import logging
 import os
 import re
 import signal
@@ -20,6 +21,13 @@ from sqlalchemy.orm import Session
 from quirk.config import load_config
 from quirk.db import get_session, init_db
 from quirk.models import ScheduledScan, ScheduledRun
+from quirk.otics_cadence import (
+    otics_enabled_in_config,
+    recurring_otics_opted_in,
+    strip_otics_keys,
+    suppression_log_line,
+    violates_otics_floor,
+)
 
 # ---------------------------------------------------------------------------
 # Datetime convention (Pitfall 1): ALL datetimes are stored and compared as
@@ -204,6 +212,21 @@ def _materialize_scan_config(
         if target not in existing:
             existing = list(existing) + [target]
         targets_section[bucket] = existing
+
+    # HWLC-12 / D-16 / D-21 / D-26: dispatch-time hard gate — the only chokepoint
+    # every recurring run passes through. Strip-and-continue, never fail the run.
+    if otics_enabled_in_config(base):
+        reason: Optional[str] = None
+        if not recurring_otics_opted_in(base):
+            reason = "opt-in not enabled"
+        elif violates_otics_floor(schedule.cron_expr):
+            reason = "cadence floor"
+        if reason is not None:
+            removed = strip_otics_keys(base)
+            if removed:
+                logging.getLogger(__name__).info(
+                    suppression_log_line(schedule.name, schedule.cron_expr, removed, reason)
+                )
 
     # Anchor output.directory to the scheduled output dir (SENSOR-05 Fix 1)
     base.setdefault("output", {})["directory"] = str(output_dir)

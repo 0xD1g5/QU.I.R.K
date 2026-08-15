@@ -165,3 +165,121 @@ def test_strip_otics_keys_empty_dict_returns_empty_list():
 
 def test_connectors_cfg_enable_recurring_otics_defaults_false():
     assert ConnectorsCfg().enable_recurring_otics is False
+
+
+# ---------------------------------------------------------------------------
+# Task 1 — dispatch-time hard gate in _materialize_scan_config() (HWLC-12,
+# D-16/D-21/D-26). Drives the real function against a tmp_path output dir and
+# a real YAML file on disk, then reads back the generated YAML — the file is
+# the actual contract run_scan.py's subprocess consumes.
+# ---------------------------------------------------------------------------
+
+import logging as _logging_mod
+
+import yaml as _yaml
+
+from quirk.db import init_db
+from quirk.models import ScheduledScan
+from quirk.cli.scheduler_cmd import _materialize_scan_config
+
+
+def _write_scan_config(tmp_path, connectors: dict) -> str:
+    cfg = {
+        "assessment": {
+            "name": "test",
+            "data_classification": "internal",
+            "report_owner": "quirk-test",
+            "timezone": "UTC",
+        },
+        "scan": {"concurrency": 10, "ports_tls": [443]},
+        "targets": {"fqdns": [], "cidrs": [], "include_ips": [], "exclude_ips": []},
+        "connectors": connectors,
+        "output": {"directory": "output", "db_path": "quirk.db"},
+    }
+    path = tmp_path / "base-config.yaml"
+    with open(path, "w", encoding="utf-8") as fh:
+        _yaml.safe_dump(cfg, fh)
+    return str(path)
+
+
+def _make_schedule(*, name: str = "sched-1", cron_expr: str = "0 0 * * *", target: str = "10.0.0.5") -> ScheduledScan:
+    return ScheduledScan(
+        id=1,
+        name=name,
+        cron_expr=cron_expr,
+        target=target,
+        profile=None,
+        enabled=True,
+    )
+
+
+def test_dispatch_time_at_floor_with_opt_in_keeps_modbus(tmp_path):
+    """168h cron + enable_recurring_otics=True: enable_modbus survives."""
+    scan_config_path = _write_scan_config(
+        tmp_path,
+        {"enable_modbus": True, "enable_recurring_otics": True, "enable_snmp": True},
+    )
+    schedule = _make_schedule(cron_expr="0 0 * * 0")  # weekly = 168h
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    generated_path = _materialize_scan_config(schedule, scan_config_path, output_dir)
+    with open(generated_path, encoding="utf-8") as fh:
+        generated = _yaml.safe_load(fh)
+    assert generated["connectors"]["enable_modbus"] is True
+    assert generated["connectors"]["enable_snmp"] is True
+
+
+def test_dispatch_time_sub_floor_strips_otics_keys(tmp_path, caplog):
+    """24h cron: enable_modbus/enable_bacnet stripped; enable_snmp untouched."""
+    scan_config_path = _write_scan_config(
+        tmp_path,
+        {
+            "enable_modbus": True,
+            "enable_bacnet": True,
+            "enable_recurring_otics": True,
+            "enable_snmp": True,
+            "snmp_community": "public",
+        },
+    )
+    schedule = _make_schedule(cron_expr="0 0 * * *")  # daily = 24h
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    with caplog.at_level(_logging_mod.INFO):
+        generated_path = _materialize_scan_config(schedule, scan_config_path, output_dir)
+    with open(generated_path, encoding="utf-8") as fh:
+        generated = _yaml.safe_load(fh)
+    assert "enable_modbus" not in generated["connectors"]
+    assert "enable_bacnet" not in generated["connectors"]
+    assert generated["connectors"]["enable_snmp"] is True
+    assert generated["connectors"]["snmp_community"] == "public"
+    assert any("OT/ICS probing suppressed" in rec.message for rec in caplog.records)
+    assert any(schedule.name in rec.message for rec in caplog.records)
+
+
+def test_dispatch_time_no_opt_in_strips_regardless_of_cadence(tmp_path):
+    """enable_bacnet without enable_recurring_otics is stripped even at a compliant cadence."""
+    scan_config_path = _write_scan_config(
+        tmp_path,
+        {"enable_bacnet": True},
+    )
+    schedule = _make_schedule(cron_expr="0 0 * * 0")  # weekly = 168h, would satisfy the floor
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    generated_path = _materialize_scan_config(schedule, scan_config_path, output_dir)
+    with open(generated_path, encoding="utf-8") as fh:
+        generated = _yaml.safe_load(fh)
+    assert "enable_bacnet" not in generated["connectors"]
+
+
+def test_dispatch_time_no_otics_keys_no_strip_no_log(tmp_path, caplog):
+    """No connectors block / no OT/ICS keys present: nothing stripped, nothing logged."""
+    scan_config_path = _write_scan_config(tmp_path, {"enable_snmp": True})
+    schedule = _make_schedule(cron_expr="0 0 * * *")
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    with caplog.at_level(_logging_mod.INFO):
+        generated_path = _materialize_scan_config(schedule, scan_config_path, output_dir)
+    with open(generated_path, encoding="utf-8") as fh:
+        generated = _yaml.safe_load(fh)
+    assert generated["connectors"]["enable_snmp"] is True
+    assert not any("OT/ICS probing suppressed" in rec.message for rec in caplog.records)
