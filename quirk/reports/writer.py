@@ -324,6 +324,58 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # Phase 142 D-11: snapshot-stale flag for renderers' staleness caveat.
     exec_content.cve_snapshot_stale = hw_cve.is_cve_table_stale()
 
+    # Phase 156 D-11/HWLC-10: hardware lifecycle drift events — read-and-serialize block
+    # only; Phase 155 owns drift computation. Scoped to the latest-scan slice (Pitfall 5) —
+    # the bounded historical disclosure (D-09/D-10) is a dashboard-only affordance, not
+    # reproduced in the report. Advisory-only — non-fatal on read failure.
+    hardware_drift_events: list = []
+    try:
+        from sqlalchemy import func as _func
+        from quirk.models import HardwareDevice as _HardwareDevice, HardwareDriftEvent as _HardwareDriftEvent
+        from quirk.scanner import hardware_drift as _hardware_drift
+
+        with _get_session(cfg.output.db_path) as _drift_sess:
+            _latest_ts = _drift_sess.query(_func.max(_HardwareDevice.scanned_at)).scalar()
+            if _latest_ts is not None:
+                _drift_lookup = {
+                    (_d.host, _d.port): (_d.vendor, _d.model)
+                    for _d in _latest_hw_devices(_drift_sess)
+                }
+                _drift_rows = (
+                    _drift_sess.query(_HardwareDriftEvent)
+                    .filter(_HardwareDriftEvent.detected_at == _latest_ts)
+                    .order_by(
+                        _HardwareDriftEvent.host,
+                        _HardwareDriftEvent.port,
+                        _HardwareDriftEvent.event_type,
+                    )
+                    .all()
+                )
+                for _row in _drift_rows:
+                    if _row.event_type == "tier_crossing":
+                        _raw_direction = _hardware_drift.tier_direction(_row.old_value, _row.new_value)
+                        _direction = _raw_direction if _raw_direction in ("improved", "worsened") else "neutral"
+                    else:
+                        _direction = "neutral"
+                    _vendor, _model = _drift_lookup.get((_row.host, _row.port), (None, None))
+                    hardware_drift_events.append({
+                        "host":         _row.host,
+                        "port":         _row.port,
+                        "event_type":   _row.event_type,
+                        "old_value":    _row.old_value,
+                        "new_value":    _row.new_value,
+                        "direction":    _direction,
+                        "detected_at":  _row.detected_at.isoformat(),
+                        "vendor":       _vendor,
+                        "model":        _model,
+                    })
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "hardware lifecycle drift section skipped (non-fatal)", exc_info=True
+        )
+    exec_content.hardware_drift_events = hardware_drift_events
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — one shared computation
     # feeds markdown/HTML/DOCX/terminal summary; no renderer recomputes this.
     _undetermined_count, _undetermined_breakdown = _compute_undetermined_hosts(endpoints)

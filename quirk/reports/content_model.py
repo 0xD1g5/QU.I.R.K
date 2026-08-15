@@ -83,6 +83,11 @@ class ExecContent:
     # Advisory-only; never routed through _build_finding() / findings_evaluator.py (D-08 DISPOSITION).
     hardware_devices: List[dict] = field(default_factory=list)
 
+    # Phase 156 D-11/HWLC-10: advisory-only hardware lifecycle drift events, populated by
+    # writer.py from HardwareDriftEvent rows; never routed through _build_finding() /
+    # findings_evaluator.py; carries no `severity` key by design (D-06).
+    hardware_drift_events: List[dict] = field(default_factory=list)
+
     # Phase 146 D-08/D-09: undetermined-host disclosure (DISC-07). Populated by writer.py's
     # _compute_undetermined_hosts() from the in-memory endpoints list — no DB query. Breakdown
     # keys are "discovery_exception" (Phase 144 discovery-batch errors — CR-01: deliberately
