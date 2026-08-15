@@ -170,3 +170,71 @@ def test_assign_tier_eol_override_is_intentional() -> None:
         f"(pre-existing Phase 128 D-18 behavior), got {tier_after_eol!r}"
     )
     assert tier_before_eol != tier_after_eol
+
+
+# ---------------------------------------------------------------------------
+# Phase 156 (T-156-04 / D-08) — advisory-only firewall extended to the
+# drift-rendering surfaces
+# ---------------------------------------------------------------------------
+
+
+def _strip_comment_lines(source: str) -> str:
+    """Strips '#'-comment-only lines before a substring search, so a future
+    explanatory comment in a guarded module cannot self-invalidate the gate."""
+    return "\n".join(
+        line for line in source.splitlines() if not line.strip().startswith("#")
+    )
+
+
+def test_drift_report_modules_have_no_score_weights_reference() -> None:
+    """No comment-stripped source of html_renderer.py, docx_renderer.py, or
+    the hardware_drift route module references SCORE_WEIGHTS."""
+    import pathlib
+
+    import quirk.reports.html_renderer as html_renderer_module
+    import quirk.reports.docx_renderer as docx_renderer_module
+
+    # Lazy import inside the test (per plan instruction) so a collection-time
+    # import failure in an unrelated dashboard dependency cannot take the
+    # guard down.
+    import quirk.dashboard.api.routes.hardware_drift as hardware_drift_route_module
+
+    for module in (html_renderer_module, docx_renderer_module, hardware_drift_route_module):
+        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+        assert "SCORE_WEIGHTS" not in source, (
+            f"{module.__file__} must never reference SCORE_WEIGHTS (T-156-04)"
+        )
+
+
+def test_drift_report_modules_do_not_import_scoring() -> None:
+    """No comment-stripped source of html_renderer.py, docx_renderer.py, or
+    the hardware_drift route module imports the scoring engine or the
+    readiness-assessment module."""
+    import pathlib
+
+    import quirk.reports.html_renderer as html_renderer_module
+    import quirk.reports.docx_renderer as docx_renderer_module
+    import quirk.dashboard.api.routes.hardware_drift as hardware_drift_route_module
+
+    for module in (html_renderer_module, docx_renderer_module, hardware_drift_route_module):
+        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+        for forbidden in ("quirk.intelligence.scoring", "quirk.assessment.readiness_score"):
+            assert forbidden not in source, (
+                f"{module.__file__} must never import {forbidden!r} (T-156-04)"
+            )
+
+
+def test_no_drift_report_key_in_score_weights() -> None:
+    """No key in quirk.intelligence.scoring.SCORE_WEIGHTS contains the
+    substring 'lifecycle' or 'drift' (case-insensitive) — extends the
+    Phase 155 assertion to the Phase 156 reporting vocabulary."""
+    from quirk.intelligence.scoring import SCORE_WEIGHTS
+
+    bad_keys = [
+        k for k in SCORE_WEIGHTS
+        if any(term in k.lower() for term in ("lifecycle", "drift"))
+    ]
+    assert bad_keys == [], (
+        f"SCORE_WEIGHTS must never contain lifecycle/drift-derived keys "
+        f"(T-156-04): {bad_keys}"
+    )

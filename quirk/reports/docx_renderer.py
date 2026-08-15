@@ -84,6 +84,32 @@ _CVE_STALENESS_CAVEAT = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Phase 156 D-11/D-13/HWLC-10/HWLC-11: "Recent Lifecycle Changes" drift section.
+# _DRIFT_ADVISORY_CAPTION and the label maps below duplicate the HTML renderer's
+# verbatim strings — the SNMP/Modbus/BACnet label maps above are already
+# duplicated verbatim across html_renderer.py and docx_renderer.py per this
+# repo's documented per-renderer-helper precedent; this follows the same shape.
+# ---------------------------------------------------------------------------
+
+_DRIFT_ADVISORY_CAPTION = (
+    "Advisory — hardware lifecycle changes do not affect the readiness score."
+)
+
+_DRIFT_EVENT_TYPE_LABELS = {
+    "tier_crossing": "Tier crossing",
+    "upstream_mitigated_change": "Bridge mitigation change",
+    "cve_delta": "CVE correlation change",
+    "eol_state_change": "EOL/EOS state change",
+}
+
+_DRIFT_DIRECTION_LABELS = {
+    "improved": "Improved",
+    "worsened": "Worsened",
+    "neutral": "Changed",
+}
+
+
 def _bridge_badge_label(d: Dict[str, Any]) -> str:
     """Map the projected bridge_status field to the verbatim UI-SPEC label.
 
@@ -570,6 +596,33 @@ def render_docx_report(
                 ),
                 style="Normal",
             )
+
+    # ---- Recent Lifecycle Changes drift section (Phase 156 D-11/D-13, HWLC-10/11) ----
+    hardware_drift_events = getattr(exec_content, "hardware_drift_events", []) if exec_content else []
+    if hardware_drift_events:
+        doc.add_heading("Recent Lifecycle Changes", level=2)
+        # UNCONDITIONAL — D-13 requires this qualifier in every rendered format,
+        # regardless of which optional caveats above happen to fire.
+        doc.add_paragraph(_DRIFT_ADVISORY_CAPTION, style="Normal")
+        drift_tbl = doc.add_table(rows=1, cols=5)
+        _set_table_style(drift_tbl)
+        drift_hdr = drift_tbl.rows[0].cells
+        for _i, _h in enumerate(["Device", "Change", "Transition", "Direction", "Detected"]):
+            drift_hdr[_i].text = _h
+        for _e in hardware_drift_events:
+            _row = drift_tbl.add_row().cells
+            _vendor = _e.get("vendor") or ""
+            _model = _e.get("model") or ""
+            _device_meta = f" ({_vendor} {_model})".strip() if (_vendor or _model) else ""
+            _row[0].text = f"{_e.get('host', '')}:{_e.get('port', '')}{_device_meta}"
+            _row[1].text = _DRIFT_EVENT_TYPE_LABELS.get(_e.get("event_type", ""), _e.get("event_type", ""))
+            _old = _e.get("old_value") if _e.get("old_value") is not None else "—"
+            _new = _e.get("new_value") if _e.get("new_value") is not None else "—"
+            _row[2].text = f"{_old} → {_new}"
+            _row[3].text = _DRIFT_DIRECTION_LABELS.get(_e.get("direction", "neutral"), "Changed")
+            _row[4].text = str(_e.get("detected_at", ""))
+        # D-07 layer 2: no cell shading on the drift table — carries no severity color.
+        _set_col_widths(drift_tbl, [1.4, 1.2, 1.6, 0.9, 0.9])
 
     # ---------------------------------------------------------------------------
     # Save document
