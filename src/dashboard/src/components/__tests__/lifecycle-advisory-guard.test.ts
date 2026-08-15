@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
+import path from "node:path"
 
 // Phase 156 HWLC-11 / D-07 layer 1 — mechanical firewall between the
 // advisory-only hardware lifecycle section and the app's scored-finding
@@ -31,16 +32,10 @@ function stripComments(src: string): string {
 }
 
 const LIST_SRC = stripComments(
-  readFileSync(
-    new URL("../LifecycleEventList.tsx", import.meta.url),
-    "utf-8",
-  ),
+  readFileSync(path.resolve(__dirname, "../LifecycleEventList.tsx"), "utf-8"),
 )
 const ROW_SRC = stripComments(
-  readFileSync(
-    new URL("../LifecycleEventRow.tsx", import.meta.url),
-    "utf-8",
-  ),
+  readFileSync(path.resolve(__dirname, "../LifecycleEventRow.tsx"), "utf-8"),
 )
 
 describe("lifecycle advisory guard (HWLC-11 / D-07 layer 1)", () => {
