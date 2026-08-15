@@ -158,7 +158,23 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 
   5. This phase has passed a dedicated `/gsd-secure-phase` review before shipping, given the
      new recurring-probe risk surface against fragile production control systems.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 156-01-PLAN.md — OT/ICS cadence-floor module (OTICS_MIN_INTERVAL_HOURS, cron min-gap derivation) + ConnectorsCfg opt-in [HWLC-12]
+- [ ] 156-03-PLAN.md — Drift read API: Pydantic models, GET /api/hardware/drift, CompareResponse block [HWLC-10/11]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 156-02-PLAN.md — Enforcement: dispatch-time strip-and-warn + two write-time advisories + write-path inventory guard [HWLC-12]
+- [ ] 156-04-PLAN.md — Report parity: ExecContent field, HTML/DOCX drift section, unconditional advisory caption, score-guard extension [HWLC-10/11]
+- [ ] 156-05-PLAN.md — Dashboard: LifecycleEventList/Row, /hardware + /compare wiring, frontend advisory guard, visual checkpoint [HWLC-10/11]
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 156-06-PLAN.md — Docs + Obsidian sync + UAT Series 156 + REQUIREMENTS flips + terminal /gsd-secure-phase 156 gate [HWLC-10/11/12]
 **UI hint**: yes
 
 ### Progress
@@ -167,7 +183,7 @@ opt-in and rate-floored rather than inheriting the default hardware re-scan cade
 |-------|----------------|--------|-----------|
 | 154. Identity & Data-Model Foundation | 5/5 | Complete    | 2026-08-14 |
 | 155. Drift Detection + EOL Tracking | 6/6 | Complete    | 2026-08-14 |
-| 156. Reporting & OT/ICS Safety | 0/TBD | Not started | - |
+| 156. Reporting & OT/ICS Safety | 0/6 | Planned | - |
 
 ---
 
