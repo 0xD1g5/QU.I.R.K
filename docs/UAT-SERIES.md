@@ -1,7 +1,19 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-14 (v5.13 Phase 155 wrap — Drift Detection + EOL Tracking:
+**Last Updated:** 2026-08-15 (v5.13 Phase 156 wrap — Reporting & OT/ICS Safety: UAT-156-01..09
+added covering the 168h non-config-overridable OT/ICS recurring-scan cadence floor
+(min-gap-not-average cron derivation, dispatch-time strip-and-continue hard gate, write-time
+non-rejecting advisories on `POST /api/schedules` and `quirk schedule add`, and a write-path
+inventory regression guard) (HWLC-12); the `GET /api/hardware/drift` read API and
+`CompareResponse.hardware_drift` block distinguishing first-ever-scan from nothing-changed
+(HWLC-10); the HTML/DOCX Recent Lifecycle Changes report section with its unconditional advisory
+caption (HWLC-10/HWLC-11); the dashboard lifecycle components with a mechanical frontend
+palette/import guard (HWLC-11, human-approved visual distinctness); and the mandatory
+`/gsd-secure-phase 156` terminal shipping gate (HWLC-12). Closes HWLC-10, HWLC-11, HWLC-12. See
+Series 156.
+
+Earlier: 2026-08-14 (v5.13 Phase 155 wrap — Drift Detection + EOL Tracking:
 UAT-155-01..05 added for the 365-day EOL catalog staleness gate (HWLC-08/HWLC-09), `eol_date`
 population from the curated catalog at fingerprinting's single terminal call site (HWLC-04/
 HWLC-09), drift-event suppression on an unchanged device (HWLC-05/HWLC-07), confirmed
@@ -17930,3 +17942,288 @@ subsequent scan with the tier still unchanged does not insert a duplicate.
 **Notes:** HWLC-05, HWLC-06, HWLC-07, HWLC-08, HWLC-09. Mirrors the existing CVE advisory-only
 firewall pattern (`test_no_cve_key_in_score_weights`/`test_assign_tier_unaffected_by_cve_attributes`)
 extended to cover both new Phase 155 modules. See 155-04-SUMMARY.md.
+
+---
+
+## Series 156: Reporting & OT/ICS Safety (Phase 156 — v5.13)
+
+**Last Updated:** 2026-08-15
+
+### UAT-156-01: `min_gap_hours` derives 24h for the irregular weekday case, never the 84h average (HWLC-12) — Automated
+
+**What to test:** `quirk/otics_cadence.py::min_gap_hours()` samples 10 consecutive firings (9
+gaps) and returns the smallest gap, not the average — the load-bearing case is the irregular
+cron `0 0 * * 1,2` (Monday and Tuesday at midnight), whose average gap across a week is ~84h but
+whose worst-case gap (Tuesday → next Monday) is 24h.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k min_gap -v`.
+2. Confirm `min_gap_hours("0 0 * * 1,2")` returns `24.0`, not `84.0` or any average-derived value.
+3. Confirm `violates_otics_floor()` correctly flags this expression as sub-floor (24h < 168h).
+
+**Pass criteria:**
+- `min_gap_hours("0 0 * * 1,2")` returns exactly `24.0`
+- The minimum gap across 9 sampled consecutive intervals is used, never a mean/average
+- An unparseable cron expression is treated as violating the floor (fail-closed), never as
+  compliant
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k min_gap -v`
+→ PASSED (Phase 156 Plan 01).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** automated (pytest — Phase 156 Plan 01)
+**Notes:** HWLC-12. `docs/configuration.md`'s OT/ICS Recurring-Scan Cadence Floor section
+documents this derivation for operators. See 156-01-SUMMARY.md.
+
+---
+
+### UAT-156-02: Sub-floor scheduled dispatch strips OT/ICS keys, logs suppression, and the rest of the scan proceeds (HWLC-12) — Automated
+
+**What to test:** `scheduler_cmd.py::_materialize_scan_config()` strips `enable_modbus`/
+`enable_bacnet` from the generated per-run config whenever the schedule's cron fires faster than
+the 168h floor or the recurring opt-in is off, logs an `OT/ICS probing suppressed` INFO line
+naming the schedule and stripped keys, and never fails the surrounding scheduled run because of
+the suppression.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k dispatch_time -v`.
+2. Confirm a sub-floor schedule's generated `scan-config.generated.yaml` on disk has
+   `enable_modbus`/`enable_bacnet` absent (or `False`) after dispatch.
+3. Confirm the log output contains the literal substring `OT/ICS probing suppressed`, the
+   schedule name, and the stripped key names.
+4. Confirm the dispatched run's overall status is unaffected by the suppression (strip-and-continue,
+   never a failure).
+
+**Pass criteria:**
+- The generated on-disk config has the two OT/ICS keys stripped for a sub-floor or non-opted-in
+  schedule
+- The suppression log line contains `OT/ICS probing suppressed`, the schedule name, and the
+  stripped keys
+- The surrounding scheduled run completes normally — a suppression is never a dispatch failure
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k dispatch_time -v`
+→ 4/4 PASSED (Phase 156 Plan 02).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** automated (pytest — Phase 156 Plan 02)
+**Notes:** HWLC-12. `docs/operators-guide.md` §12 quotes the exact log-line shape for operators.
+See 156-02-SUMMARY.md.
+
+---
+
+### UAT-156-03: Write-time surfaces surface an advisory on a sub-floor schedule, never a rejection (HWLC-12) — Automated
+
+**What to test:** `POST /api/schedules` and `quirk schedule add` both succeed (201 / exit 0) for
+a sub-floor cron expression and surface a non-blocking advisory instead of rejecting the request.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k write_time -v`.
+2. Confirm `POST /api/schedules` with a sub-floor cron returns `201` with a non-empty
+   `advisories` array containing `OT/ICS minimum cadence floor` text.
+3. Confirm `POST /api/schedules` with a compliant (≥168h) cron returns `201` with
+   `advisories: []`.
+4. Confirm `quirk schedule add` with a sub-floor cron prints a yellow advisory line beneath the
+   normal "added" confirmation and exits `0`.
+5. Confirm `PATCH /api/schedules/{id}` is structurally incapable of introducing or worsening a
+   cadence violation (`floor_advisory` absent from `update_schedule()`'s body).
+
+**Pass criteria:**
+- Neither write-time surface ever returns `422`/`400` for a sub-floor cron
+- The advisory wording matches `OTICS_FLOOR_ADVISORY_TEMPLATE` on both surfaces (no divergent
+  wording between the API and CLI)
+- `PATCH` cannot mutate `cron_expr` in a way this gate needs to react to
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k write_time -v`
+→ 7/7 PASSED (Phase 156 Plan 02).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** automated (pytest — Phase 156 Plan 02)
+**Notes:** HWLC-12. See 156-02-SUMMARY.md.
+
+---
+
+### UAT-156-04: Write-path inventory guard fails loudly on a new unguarded schedule-creation surface (HWLC-12) — Automated
+
+**What to test:** A write-path inventory test asserts the exact HTTP route set (`POST`/`PUT`
+under `/api/schedules`) and exact CLI subcommand set as literal expected-value constants, so a
+future new, unguarded write surface fails the test rather than silently bypassing the advisory.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k write_path_inventory -v`.
+2. Confirm the test enumerates the real route/CLI-subcommand sets via the Phase 150
+   `_IncludedRouter`-aware recursive walker and compares against literal expected constants.
+3. (Negative-proof, already exercised and reverted during Plan 02 — not re-run here) confirms
+   that adding an unguarded route trips the test.
+
+**Pass criteria:**
+- The test fails if a new `POST`/`PUT` route under `/api/schedules` or a new `quirk schedule`
+  subcommand is added without also being covered by the cadence-floor advisory logic
+- An import-confinement test proves only the three intended modules import
+  `quirk.otics_cadence`
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_otics_cadence_floor.py -k write_path_inventory -v`
+→ PASSED (Phase 156 Plan 02).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** automated (pytest — Phase 156 Plan 02)
+**Notes:** HWLC-12. See 156-02-SUMMARY.md.
+
+---
+
+### UAT-156-05: `GET /api/hardware/drift` distinguishes first-ever-scan from nothing-changed (HWLC-10) — Automated
+
+**What to test:** The new `GET /api/hardware/drift` route returns `has_prior_scan: false`
+immediately when no `HardwareDevice` rows exist at all, distinct from `has_prior_scan: true`
+with empty `latest_events`/`historical_events` when scans exist but nothing has changed.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_dashboard_api.py -k drift -v`.
+2. Confirm the zero-devices case returns `has_prior_scan: false`.
+3. Confirm the two-scans-zero-events case returns `has_prior_scan: true` with both event lists
+   empty.
+4. Confirm `limit` bounds (`ge=1, le=200`) return `422` outside that range.
+5. Confirm the route requires auth (401 without a valid bearer token) via router-level
+   `require_auth`, not a per-route dependency.
+
+**Pass criteria:**
+- The two empty states are distinguishable via `has_prior_scan`, never conflated
+- `limit` query param is bounded 1–200
+- Route inherits auth from the router, matching the `trends.py` precedent
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_dashboard_api.py -k "compare_drift or drift" -v`
+→ 15/15 PASSED (Phase 156 Plan 03).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** automated (pytest — Phase 156 Plan 03)
+**Notes:** HWLC-10. See 156-03-SUMMARY.md.
+
+---
+
+### UAT-156-06: The advisory caption is present verbatim in both HTML and DOCX renderings (HWLC-10, HWLC-11) — Automated
+
+**What to test:** `DRIFT_ADVISORY_CAPTION` ("Advisory — hardware lifecycle changes do not affect
+the readiness score.") appears unconditionally in the Recent Lifecycle Changes section of both
+`html_renderer.py`'s output and `docx_renderer.py`'s output whenever at least one drift event
+exists, never hidden inside a collapsed disclosure.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_html_renderer_drift.py tests/test_docx_renderer_drift.py -v`.
+2. Confirm the exact caption substring is present in `render_drift_section()`'s HTML output and
+   in the DOCX section's advisory paragraph.
+3. Confirm the caption is never nested inside `<details>` or a `display: none` block (HTML), and
+   renders unconditionally even alongside the DOCX section's other conditional caveat paragraphs.
+4. Confirm a zero-events case produces no heading, no caption paragraph, and no table in either
+   format.
+
+**Pass criteria:**
+- The verbatim caption string is present, byte-for-byte, in both renderer outputs
+- The caption is always visible, never collapsed/hidden
+- Every interpolated value (`old_value`/`new_value`, host/port/vendor/model) is HTML-escaped in
+  the HTML renderer
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_html_renderer_drift.py tests/test_docx_renderer_drift.py -v`
+→ 15/15 PASSED (Phase 156 Plan 04).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** automated (pytest — Phase 156 Plan 04)
+**Notes:** HWLC-10, HWLC-11. `docs/report-interpretation.md` §10.10 documents the verbatim
+caption for consultants. See 156-04-SUMMARY.md.
+
+---
+
+### UAT-156-07: Frontend guard rejects a `RegressionAlertChip` import and every forbidden `hsl()` literal (HWLC-11) — Automated
+
+**What to test:** `lifecycle-advisory-guard.test.ts` mechanically proves the two new dashboard
+lifecycle components (`LifecycleEventRow.tsx`, `LifecycleEventList.tsx`) share no palette,
+component, or interaction pattern with the app's scored-finding chrome.
+
+**Steps:**
+1. Run `cd src/dashboard && npx vitest run src/components/__tests__/lifecycle-advisory-guard.test.ts`.
+2. Confirm the test asserts no `RegressionAlertChip` import, no `@/components/ui/badge` import,
+   and none of the ten forbidden tier/PQC/confidence/SNMP `hsl()` color literals appear in either
+   component's source (comment-stripped before the substring search).
+3. Confirm the verbatim advisory caption text is present somewhere across both component files.
+
+**Pass criteria:**
+- 25/25 guard assertions pass
+- Zero forbidden-palette-literal or forbidden-component-import matches
+- `npx tsc --noEmit` is clean
+
+**Automated gate:** `cd src/dashboard && npx vitest run src/components/__tests__/lifecycle-advisory-guard.test.ts`
+→ 25/25 PASSED (Phase 156 Plan 05).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** automated (vitest — Phase 156 Plan 05)
+**Notes:** HWLC-11. See 156-05-SUMMARY.md.
+
+---
+
+### UAT-156-08: Lifecycle section visual distinctness — dashboard and generated report (HWLC-10, HWLC-11) — Human
+
+**What to test:** The Recent Lifecycle Changes section reads as visually distinct from scored
+findings, and is structurally separate from the current-state hardware view, on both the
+dashboard and in a generated PDF and DOCX.
+
+**Steps (from 156-VALIDATION.md's Manual-Only Verifications table plus the Plan 05 checkpoint's
+how-to-verify list):**
+1. On `/hardware`, confirm the Recent Lifecycle Changes card is visually separated (~24px) from
+   the device table, with teal-accented chrome distinct from the tier/PQC/confidence/SNMP badge
+   hues.
+2. Confirm the advisory caption renders as visible DOM text under the section heading — not a
+   tooltip, not hidden.
+3. Confirm no shared hue between the lifecycle section chrome and any scored-finding badge.
+4. Confirm the empty state (no lifecycle changes) and the no-prior-scan state are visually
+   distinguishable from each other.
+5. Confirm the historical-disclosure trigger is correctly hidden when there are zero historical
+   events, and correctly shown (with a count) when historical events exist.
+6. On `/compare`, confirm the lifecycle block renders sourced from the compared scan pair, in the
+   same structurally-separate position.
+7. Generate a PDF and a DOCX report against a scan with at least one drift event; confirm the
+   Recent Lifecycle Changes section appears in both, with the advisory caption visible and the
+   section visually distinct from the Hardware Inventory table (no shared table styling/shading).
+8. Confirm teal chrome and Improved/Worsened direction colors are legible in both dark and light
+   dashboard themes.
+
+**Pass criteria:**
+- All 8 steps confirmed by direct visual inspection
+- No shared color/component/interaction pattern with scored-finding chrome anywhere in the flow
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-15  **Tester:** Digs (human walkthrough — Phase 156 Plan 05 Task 4 checkpoint)
+**Notes:** HWLC-10, HWLC-11. APPROVED — all 8 steps confirmed live against
+`.venv/bin/python -m quirk serve` at `http://127.0.0.1:8512`; no defects found. See
+156-05-SUMMARY.md Task 4 section for the full per-step walkthrough record.
+
+---
+
+### UAT-156-09: `/gsd-secure-phase 156` security review completed and passed (HWLC-12) — Human/Process
+
+**What to test:** The mandatory, non-skippable terminal shipping gate — ROADMAP success
+criterion 5, HWLC-12, and 156-CONTEXT.md D-23 all require an independent security review across
+all six of this phase's plans before the phase can ship.
+
+**Steps:**
+1. Run `/gsd-secure-phase 156`.
+2. Confirm the review explicitly covers all four D-23 threat surfaces by name: (a) cadence-floor
+   bypass via any unguarded write path, (b) `cron_expr` as attacker-influenced input, (c) the
+   materialized-config mutation path's allowlist scope, (d) drift-event `old_value`/`new_value`
+   rendering to HTML/DOCX.
+3. Confirm the review also covers `GET /api/hardware/drift`'s auth inheritance and `limit`
+   bounds.
+4. Resolve every high-severity finding before proceeding; medium/low findings may be accepted
+   with a written rationale.
+5. Confirm the phase audit artifact lives at
+   `.planning/phases/156-reporting-ot-ics-safety/156-SECURITY.md`, not the repo-root
+   `SECURITY.md` disclosure policy.
+
+**Pass criteria:**
+- `156-SECURITY.md` exists at the phase path and names all four D-23 threat surfaces
+- Zero unresolved high-severity findings
+- The repo-root `SECURITY.md` is unmodified
+- The user has explicitly approved the checkpoint
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** _pending_  **Tester:** _pending — recorded once the Plan 06 Task 3 checkpoint resolves_
+**Notes:** HWLC-12. This is Task 3 of 156-06-PLAN.md, a `checkpoint:human-verify` gate with
+`gate="blocking"` — it runs after this UAT-SERIES.md update is committed. Result to be updated
+in place once the gate resolves; see 156-06-SUMMARY.md for the final disposition.
