@@ -539,6 +539,52 @@ from the "prior scan exists but nothing changed" state.
 > doesn't move the readiness score. And if you're looking at a brand-new device's first-ever
 > scan, you won't see anything here yet, because there's nothing to compare it against."
 
+### 10.11 EOL/Tier Forecast (Phase 157)
+
+As of Phase 157, HTML, DOCX, and the CLI/markdown executive summary each carry an **EOL/Tier
+Forecast** subsection — a forward-looking, 12-month projection of which fingerprinted devices
+are expected to reach end-of-life or cross into a worse CNSA 2.0 tier, based solely on
+vendor-published lifecycle dates in the curated EOL/EOS catalog (§10.9's `hardware_eol.py`).
+
+**Forward-looking, not historical.** This is the complement to §10.10's Recent Lifecycle
+Changes section: that section answers "what already changed since last scan," while the
+EOL/Tier Forecast answers "what is projected to change over the next 12 months, assuming no
+remediation." The two sections are visually and structurally distinct — the forecast renders
+as narrative sentences bucketed by a 0–6 / 7–12 month horizon, never as a table, so it can never
+be visually confused with the drift changes list.
+
+**Renders independently of drift events.** A scan that produces zero drift events (for example,
+a device's very first scan) can still show a populated EOL/Tier Forecast, because the forecast
+is derived from the current fingerprinted device set and the EOL catalog, not from the
+drift-reconciliation engine. Conversely, the forecast is entirely absent (no orphan heading in
+any format) when no fingerprinted device carries a known EOL date.
+
+**Advisory only — not a score input.** Every rendering carries the same qualifier used
+throughout §10: `Advisory only — not included in the readiness score.` The forecast reads no
+score value at all; it renders only precomputed bucket sentences.
+
+**Stale-catalog qualifier.** If the underlying EOL/EOS catalog (`hardware_eol.py`, 365-day
+staleness cadence — see `CLAUDE.md`'s Staleness Review Cadence) has not been re-verified within
+its review window, every rendering of the forecast adds one further qualifier line naming the
+catalog's `last_verified` date, so a consultant can immediately see whether the projection is
+resting on current data.
+
+**Where it renders:**
+
+| Format | Location |
+|--------|----------|
+| HTML/PDF | `<h3>EOL/Tier Forecast</h3>` subsection, positioned after (not inside) the Recent Lifecycle Changes section |
+| DOCX | Heading level 3 ("EOL/Tier Forecast"), one level below the drift section's level-2 heading, immediately following the drift table |
+| CLI/markdown | `### EOL/Tier Forecast`, a new sibling subsection under Strategic Recommendations, distinct from `### Hardware PQC Advisory` — the CLI report has no existing lifecycle-drift section to extend (Phase 156 D-12 deliberately deferred CLI drift rendering), so this is genuinely new content, not an edit to prior CLI output |
+
+> **Client Conversation — EOL/Tier Forecast:**
+> "This section looks ahead, not back — it's a 12-month projection of which of your devices are
+> expected to hit end-of-life or drop into a weaker CNSA 2.0 tier, based on the vendor's own
+> published lifecycle dates. It's separate from the 'what already changed' section above it, and
+> like every hardware signal in this report, it's advisory only — it doesn't move your readiness
+> score. If the underlying vendor catalog hasn't been re-checked recently, we'll flag that too,
+> so you know how fresh the projection is."
+
 ---
 
 ## 11. Dashboard Sidebar Scan-Date Badge (Phase 143)
