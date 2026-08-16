@@ -346,7 +346,9 @@ def purge_stale_hardware_history(session, hw_batch, cfg, logger=None) -> int:
     return deleted
 
 
-def persist_and_reconcile(session, devices, cfg, logger=None) -> tuple:
+def persist_and_reconcile(
+    session, devices, cfg, logger=None, owns_session: bool = True
+) -> tuple:
     """Shared persist + purge + reconcile helper for hardware device batches
     (Phase 158 HWLC-15).
 
@@ -372,6 +374,20 @@ def persist_and_reconcile(session, devices, cfg, logger=None) -> tuple:
     corruption), since the dedup/enrollment gates both fire strictly before
     the hardware step.
 
+    ``owns_session`` (default ``True``) mirrors the ``_own_session`` pattern
+    already used by ``console_cmd.py::_ingest_envelope()``: it tells this
+    helper whether ``session`` is exclusively its own (safe to
+    ``session.rollback()`` on failure) or a caller-injected, shared session
+    that already holds *other* pending, uncommitted work (the HTTPS
+    sensor-push route's call pattern, where ``SensorPush``/``CryptoEndpoint``
+    rows for the same push are already ``add()``'d/``flush()``'d on the same
+    session before this helper runs). When ``owns_session=False``, a failure
+    here is logged and ``(0, [])`` is returned WITHOUT calling
+    ``session.rollback()`` — rolling back a shared session would silently
+    discard the caller's already-pending rows too. The caller remains
+    responsible for handling/rolling back its own session in that case
+    (CR-01, Phase 158 review).
+
     Any exception raised anywhere in the body (e.g. ``session.commit()``
     failing) is caught, logged at warning level via ``safe_str()``, and
     ``(0, [])`` is returned — never re-raised (advisory-only, non-fatal).
@@ -388,15 +404,23 @@ def persist_and_reconcile(session, devices, cfg, logger=None) -> tuple:
             events.extend(reconcile_device_history(session, host, port))
         return (purged, events)
     except Exception as exc:
-        # Roll back so a failed insert/commit here (e.g. a malformed
-        # sensor-supplied field tripping a NOT NULL constraint) never leaves
-        # the session in a broken PendingRollbackError state for the caller
-        # to inherit — this helper is advisory-only and must never cause a
-        # sensor push or air-gap import to fail (Phase 158 HWLC-15).
-        try:
-            session.rollback()
-        except Exception:
-            pass
+        if owns_session:
+            # Roll back so a failed insert/commit here (e.g. a malformed
+            # sensor-supplied field tripping a NOT NULL constraint) never
+            # leaves the session in a broken PendingRollbackError state for
+            # the caller to inherit — this helper is advisory-only and must
+            # never cause a sensor push or air-gap import to fail (Phase 158
+            # HWLC-15).
+            try:
+                session.rollback()
+            except Exception:
+                pass
+        # else: session is caller-owned/shared (e.g. the HTTPS route's
+        # injected `db`, which already holds the caller's own pending
+        # SensorPush/CryptoEndpoint rows for this same push) — do NOT roll
+        # it back here. Leave rollback/commit decisions to the caller so a
+        # hardware-only failure never silently discards unrelated pending
+        # work on the shared session (CR-01).
         if logger:
             logger.warning(
                 f"Hardware persist/reconcile failed (advisory-only, non-fatal): "

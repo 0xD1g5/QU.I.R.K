@@ -671,7 +671,9 @@ def _ingest_envelope(
             # DuplicatePayloadError/UnknownSensorError gates both fire before
             # this point, so the inconsistency window is not practically
             # reachable; worst case is advisory-only data committing early.
-            persist_and_reconcile(db, hw_rows, None, logger)
+            persist_and_reconcile(
+                db, hw_rows, None, logger, owns_session=_own_session
+            )
 
         if _own_session:
             db.commit()
