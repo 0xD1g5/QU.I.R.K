@@ -182,7 +182,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 157. Drift-Event Retention + Forecast Narrative Foundation | 5/5 | Complete   | 2026-08-16 |
+| 157. Drift-Event Retention + Forecast Narrative Foundation | 5/5 | Complete    | 2026-08-16 |
 | 158. Sensor Fleet Drift Coverage | 0/TBD | Not started | - |
 | 159. Check-in Scan Mode | 0/TBD | Not started | - |
 | 160. Catalog-Level PQC Vendor Trend Tracking | 0/TBD | Not started | - |
