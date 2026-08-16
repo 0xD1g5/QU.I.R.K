@@ -508,6 +508,9 @@
     {% if hardware_section %}{{ hardware_section | safe }}{% endif %}
     {# Phase 156 D-11/D-02: drift section — sibling of hardware_section, own container #}
     {% if drift_section %}{{ drift_section | safe }}{% endif %}
+    {# Phase 157 HWLC-18: EOL/Tier forecast — placed after drift_section (not inside it)
+       so it renders on a run with EOL data but zero drift events #}
+    {% if eol_forecast_section %}{{ eol_forecast_section | safe }}{% endif %}
   </section>
 
   <!-- ===== TECHNICAL APPENDIX ===== -->

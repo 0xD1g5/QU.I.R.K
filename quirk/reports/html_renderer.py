@@ -552,6 +552,49 @@ def render_drift_section(events: list) -> str:
     )
 
 
+def render_eol_forecast_section(forecast: dict) -> str:
+    """Generate the HTML "EOL/Tier Forecast" subsection (Phase 157 HWLC-18 / D-05).
+
+    Pure function, sibling to render_drift_section — sits under "Recent Lifecycle
+    Changes" as its own subsection, never merged into the drift changes list
+    (D-05: own subheading, one level below render_drift_section's <h2>).
+
+    Returns "" when *forecast* is falsy or carries no populated buckets — no
+    orphan heading, matching render_drift_section's empty-guard convention.
+    Every interpolated string (bucket sentences, catalog_last_verified) is
+    escaped with html.escape() before interpolation (T-157-09).
+    """
+    if not forecast or not forecast.get("buckets"):
+        return ""
+
+    sentences_html = "".join(
+        f"<p>{_html.escape(bucket.get('sentence', ''))}</p>"
+        for bucket in forecast["buckets"]
+    )
+
+    stale_html = ""
+    if forecast.get("catalog_stale"):
+        last_verified = _html.escape(str(forecast.get("catalog_last_verified", "")))
+        stale_html = (
+            '<p class="eol-forecast-stale-caveat" style="font-size:12px;color:#b352a8;margin-top:8px">'
+            f"The curated EOL/EOS catalog (last verified {last_verified}) has not been "
+            "re-verified within its review cadence; treat this projection accordingly."
+            "</p>"
+        )
+
+    return (
+        '<section class="eol-forecast-section" style="margin:24px 0;'
+        'border-left:4px solid #2b8a86;padding-left:12px">'
+        '<h3 style="font-size:14px;font-weight:600;margin-bottom:4px">EOL/Tier Forecast</h3>'
+        '<p class="eol-forecast-advisory-caption" style="font-size:12px;color:#888;margin-bottom:8px">'
+        "Advisory only — not included in the readiness score."
+        "</p>"
+        f"{sentences_html}"
+        f"{stale_html}"
+        "</section>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -661,6 +704,12 @@ def render_html_report(
     )
     drift_section = render_drift_section(_drift_events_for_render)
 
+    # Phase 157 HWLC-18: render "EOL/Tier Forecast" subsection (advisory-only).
+    # Sits alongside the drift wiring above so it renders independently of
+    # whether this run produced any drift events (157-RESEARCH.md Open Q2).
+    _eol_forecast_for_render = getattr(exec_content, "eol_forecast", {}) if exec_content is not None else {}
+    eol_forecast_section = render_eol_forecast_section(_eol_forecast_for_render)
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
     # hardware_section above; the template renders these, it never recomputes them.
     undetermined_hosts_count = (
@@ -698,6 +747,8 @@ def render_html_report(
         hardware_section=hardware_section,
         # Phase 156 D-11: drift section (pre-rendered HTML string)
         drift_section=drift_section,
+        # Phase 157 HWLC-18: EOL/Tier forecast subsection (pre-rendered HTML string)
+        eol_forecast_section=eol_forecast_section,
         # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
         undetermined_hosts_count=undetermined_hosts_count,
         undetermined_hosts_breakdown=undetermined_hosts_breakdown,
