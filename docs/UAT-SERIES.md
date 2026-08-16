@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-15 (v5.13 Phase 156 wrap — Reporting & OT/ICS Safety: UAT-156-01..09
+**Last Updated:** 2026-08-16 (v5.14 Phase 157 wrap — Drift-Event Retention + Forecast Narrative
+Foundation: UAT-157-01..05 added covering the table-wide `hardware_drift_events` calendar-cutoff
+retention purge with fail-closed invalid-value handling (HWLC-16), and the 12-month EOL/Tier
+Forecast narrative rendered across HTML, DOCX, and CLI/markdown, forward-only and structurally
+independent of drift-event retention (HWLC-18). Closes HWLC-16, HWLC-18. See Series 157.
+
+Earlier: 2026-08-15 (v5.13 Phase 156 wrap — Reporting & OT/ICS Safety: UAT-156-01..09
 added covering the 168h non-config-overridable OT/ICS recurring-scan cadence floor
 (min-gap-not-average cron derivation, dispatch-time strip-and-continue hard gate, write-time
 non-rejecting advisories on `POST /api/schedules` and `quirk schedule add`, and a write-path
@@ -18232,3 +18238,155 @@ drift-event `old_value`/`new_value` rendering to HTML/DOCX. `GET /api/hardware/d
 inheritance and `limit` bounds independently confirmed. Zero high-severity findings. Artifact at
 `.planning/phases/156-reporting-ot-ics-safety/156-SECURITY.md`; repo-root `SECURITY.md` confirmed
 untouched (`git diff --quiet` clean), no relocation needed. See 156-06-SUMMARY.md.
+
+---
+
+## Series 157: Drift-Event Retention + Forecast Narrative Foundation (Phase 157 — v5.14)
+
+**Last Updated:** 2026-08-16
+
+### UAT-157-01: Drift-event retention purge deletes only rows older than the configured window (HWLC-16) — Automated
+
+**What to test:** With `scan.hardware_drift_event_retention_days` set to a small value in a
+config with existing `hardware_drift_events` history, running a scan deletes only the rows
+older than the cutoff, retains recent rows, and logs the purge count.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_hardware_drift_retention_purge.py -v`.
+2. Confirm `test_purge_deletes_events_older_than_retention_window` shows a stale row (older than
+   the configured window) is deleted while a fresh row (inside the window) is retained.
+3. Confirm `test_purge_is_not_scoped_to_batch_host_port` shows a stale event for a device NOT in
+   the current scan's batch is still purged — the sweep is table-wide, not scan-scoped.
+4. Confirm `test_boundary_row_exactly_at_cutoff_is_retained` shows a row exactly at the cutoff
+   boundary is retained, not deleted.
+
+**Pass criteria:**
+- Only rows with `detected_at` older than `now - retention_days` are deleted
+- Rows for devices outside the current scan's batch are still eligible for purge
+- The purge count is observable (row count delta / logged)
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_hardware_drift_retention_purge.py -v`
+→ 10/10 PASSED (Phase 157 Plan 01; includes the 4-case parametrized fail-closed guard).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-16  **Tester:** automated (pytest — Phase 157 Plan 01)
+**Notes:** HWLC-16. See 157-01-SUMMARY.md.
+
+---
+
+### UAT-157-02: Invalid retention value fails closed — purge skipped entirely, warning logged, zero deletions (HWLC-16) — Automated
+
+**What to test:** Setting `hardware_drift_event_retention_days` to `0`, a negative number, or a
+non-numeric string causes the purge to be skipped entirely for that run, with a warning logged
+and zero rows deleted — never a wipe of the table and never a silent no-op with no log line.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_hardware_drift_retention_purge.py -k skips_on_nonpositive -v`.
+2. Confirm the parametrized cases (`0`, `-1`, `"abc"`, `None`) each result in zero rows deleted.
+3. Confirm a warning is logged for each invalid case.
+
+**Pass criteria:**
+- Zero drift-event rows deleted for any of the invalid values (`0`, negative, non-numeric)
+- A warning is logged naming the invalid value
+- The scan itself completes normally — an invalid retention value never aborts a scan
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_hardware_drift_retention_purge.py -k skips_on_nonpositive -v`
+→ PASSED (Phase 157 Plan 01).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-16  **Tester:** automated (pytest — Phase 157 Plan 01)
+**Notes:** HWLC-16. Fail-closed behavior documented in `docs/configuration.md`'s
+`hardware_drift_event_retention_days` section. See 157-01-SUMMARY.md.
+
+---
+
+### UAT-157-03: HTML report renders the EOL/Tier Forecast subsection under Recent Lifecycle Changes (HWLC-18) — Automated
+
+**What to test:** Generating an HTML report from a scan with devices carrying vendor EOL dates
+produces an "EOL/Tier Forecast" `<h3>` subsection positioned after the Recent Lifecycle Changes
+section, with bucket sentences carrying device counts, CNSA 2.0 tier breakdowns, and the EOL
+catalog's `last_verified` date cited inline.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_html_renderer_drift.py -k forecast -v`.
+2. Confirm `render_eol_forecast_section()` output contains the `<h3>EOL/Tier Forecast</h3>`
+   heading.
+3. Confirm the section renders independently of drift events (present with zero drift events).
+4. Confirm the section is structurally distinct from the drift changes table (narrative `<p>`
+   elements, never a `<table>`).
+5. Confirm the stale-catalog qualifier appears when the EOL catalog is past its 365-day review
+   window.
+
+**Pass criteria:**
+- `<h3>EOL/Tier Forecast</h3>` present, positioned after Recent Lifecycle Changes
+- Renders independent of `hardware_drift_events` content
+- Bucket sentences cite device counts, tier breakdown, and `last_verified` date
+- All interpolated content is HTML-escaped
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_html_renderer_drift.py -k forecast -v`
+→ 6/6 PASSED (Phase 157 Plan 03).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-16  **Tester:** automated (pytest — Phase 157 Plan 03)
+**Notes:** HWLC-18. See 157-03-SUMMARY.md and `docs/report-interpretation.md` §10.11.
+
+---
+
+### UAT-157-04: DOCX and CLI/markdown reports render the same forecast content, distinct from Hardware PQC Advisory (HWLC-18) — Automated
+
+**What to test:** The DOCX report renders an "EOL/Tier Forecast" level-3 heading subsection
+after the drift table, and the CLI/markdown executive summary renders a `### EOL/Tier Forecast`
+subsection under Strategic Recommendations, as a sibling of — not nested inside — the existing
+`### Hardware PQC Advisory` block.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_docx_renderer_drift.py -k "Phase157 or forecast" -v`.
+2. Run `.venv/bin/python -m pytest tests/test_executive_forecast_section.py -v`.
+3. Confirm the DOCX heading is level 3, narrative paragraphs only (no table), guarded
+   independently of `hardware_drift_events`.
+4. Confirm the CLI/markdown `### EOL/Tier Forecast` block appears as a sibling section, distinct
+   from `### Hardware PQC Advisory` (both present, neither nested inside the other), and is
+   independently suppressible (gated solely on `exec_content.eol_forecast`).
+
+**Pass criteria:**
+- DOCX: level-3 "EOL/Tier Forecast" heading, paragraphs only, present after the drift table
+- CLI/markdown: `### EOL/Tier Forecast` sibling of `### Hardware PQC Advisory`, not nested
+- Both formats independently suppressible from the other advisory block
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_docx_renderer_drift.py tests/test_executive_forecast_section.py -v`
+→ 16/16 PASSED (Phase 157 Plan 04; 10 DOCX renderer tests total + 6 dedicated executive-forecast tests).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-16  **Tester:** automated (pytest — Phase 157 Plan 04)
+**Notes:** HWLC-18. See 157-04-SUMMARY.md.
+
+---
+
+### UAT-157-05: Forecast prose carries no unqualified "will" claim and every sentence cites the catalog (HWLC-18) — Human
+
+**What to test:** A human read-through of generated forecast prose (any of the three formats)
+confirms no sentence makes an unqualified "will" claim, and every bucket sentence carries the
+EOL catalog's `last_verified` citation.
+
+**Steps:**
+1. Generate an HTML, DOCX, or CLI/markdown report against a scan with EOL-dated devices.
+2. Read every EOL/Tier Forecast bucket sentence.
+3. Confirm each sentence uses hedged phrasing ("are projected to" / "is projected to"), never a
+   bare "will".
+4. Confirm each sentence cites the catalog's `last_verified` date.
+5. Confirm the advisory qualifier ("Advisory only — not included in the readiness score") is
+   present in the section.
+
+**Pass criteria:**
+- Zero unqualified "will" claims across all bucket sentences
+- Every bucket sentence carries the catalog citation
+- Advisory qualifier present
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** _pending_  **Tester:** _pending — human read-through_
+**Notes:** HWLC-18. Automated test coverage (`test_hardware_forecast.py`'s
+hedged-language-enforcement test, forbidding a bare " will " substring) already backs this
+scenario mechanically; this row captures the human prose-quality read-through per the plan's
+explicit UAT-157-05 scenario. Not yet performed — deferred to the next human-UAT pass per the
+established Phase 155/156 pattern for prose-quality-only scenarios (see STATE.md Deferred
+Items).
