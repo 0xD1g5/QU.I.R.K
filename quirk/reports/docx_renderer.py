@@ -103,6 +103,20 @@ _DRIFT_EVENT_TYPE_LABELS = {
     "eol_state_change": "EOL/EOS state change",
 }
 
+# ---------------------------------------------------------------------------
+# Phase 157 D-04/D-05/HWLC-18: forward-looking EOL/tier forecast subsection,
+# a sibling of the drift section above, one heading level down (level 3 vs the
+# drift section's level 2). Guarded independently of hardware_drift_events so
+# it still renders on a run with EOL data but zero drift events.
+# ---------------------------------------------------------------------------
+
+_FORECAST_ADVISORY_CAPTION = "Advisory only — not included in the readiness score."
+
+_FORECAST_STALE_CAVEAT = (
+    "The curated EOL/EOS catalog (last verified {last_verified}) has not been"
+    " re-verified within its review cadence; treat this projection accordingly."
+)
+
 _DRIFT_DIRECTION_LABELS = {
     "improved": "Improved",
     "worsened": "Worsened",
@@ -623,6 +637,23 @@ def render_docx_report(
             _row[4].text = str(_e.get("detected_at", ""))
         # D-07 layer 2: no cell shading on the drift table — carries no severity color.
         _set_col_widths(drift_tbl, [1.4, 1.2, 1.6, 0.9, 0.9])
+
+    # ---- EOL/tier forecast subsection (Phase 157 D-04/D-05, HWLC-18) ----
+    # SEPARATE guard from the drift block above — a run with EOL data but zero
+    # drift events still renders the forecast.
+    eol_forecast = getattr(exec_content, "eol_forecast", {}) if exec_content else {}
+    if eol_forecast and eol_forecast.get("buckets"):
+        doc.add_heading("EOL/Tier Forecast", level=3)
+        doc.add_paragraph(_FORECAST_ADVISORY_CAPTION, style="Normal")
+        for _bucket in eol_forecast["buckets"]:
+            doc.add_paragraph(_bucket.get("sentence", ""), style="Normal")
+        if eol_forecast.get("catalog_stale"):
+            doc.add_paragraph(
+                _FORECAST_STALE_CAVEAT.format(
+                    last_verified=eol_forecast.get("catalog_last_verified", "")
+                ),
+                style="Normal",
+            )
 
     # ---------------------------------------------------------------------------
     # Save document
