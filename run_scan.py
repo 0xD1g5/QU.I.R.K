@@ -440,23 +440,11 @@ def run_ot_supplemental_and_persist(
     if hw_batch and db_path:
         try:
             with get_session(db_path) as _hw_sess:
-                _purged = _purge_stale_hardware_history(_hw_sess, hw_batch, cfg, logger)
-                for _dev in hw_batch:
-                    _hw_sess.add(_dev)
-                _hw_sess.commit()
-                # Phase 155 HWLC-04: reconcile drift history for every
-                # distinct device just committed. Runs AFTER the commit,
-                # via a session query against freshly-persisted rows —
-                # never against the in-memory hw_batch objects directly
-                # (RESEARCH.md Pitfall 2). Dedupe by (host, port) first so a
-                # batch with duplicate device rows only reconciles once per
-                # device. Stays inside this block's existing try/except so
-                # a reconciliation failure hits the same advisory-only
-                # handler as the commit itself.
-                from quirk.scanner.hardware_drift import reconcile_device_history
-
-                for _host, _port in {(_d.host, _d.port) for _d in hw_batch}:
-                    reconcile_device_history(_hw_sess, _host, _port)
+                # Phase 158 HWLC-15: purge + add + commit + per-(host,port)
+                # reconcile are all delegated to the shared
+                # persist_and_reconcile() helper (D-158-A/D-158-B) — no
+                # inline purge/commit/reconcile block here anymore.
+                _purged, _ = persist_and_reconcile(_hw_sess, hw_batch, cfg, logger)
             logger.info(f"Hardware fingerprint: {len(hw_batch)} device(s) recorded")
             if _purged:
                 logger.info(f"Hardware history retention: {_purged} stale device row(s) purged")
@@ -2280,24 +2268,21 @@ def main():
             if _snmp_flush_batch or _snmp_new_batch:
                 try:
                     with get_session(cfg.output.db_path) as _snmp_sess:
-                        for _dev in _snmp_new_batch:
-                            _snmp_sess.add(_dev)
-                        _snmp_sess.commit()
-                        # Phase 155 HWLC-04: reconcile drift history for
-                        # each SNMP-only device just committed here. Use
+                        # Phase 158 HWLC-15: purge + add + commit +
+                        # per-(host,port) reconcile delegated to the shared
+                        # persist_and_reconcile() helper. Pass
                         # _snmp_new_batch (the rows actually committed in
-                        # THIS block), not _snmp_flush_batch (which also
-                        # includes already-committed, detached _existing_dev
-                        # rows mutated above but never re-added to a
-                        # session — see the known-gap comment above).
-                        from quirk.scanner.hardware_drift import (
-                            reconcile_device_history,
-                        )
-
-                        for _host, _port in {
-                            (_d.host, _d.port) for _d in _snmp_new_batch
-                        }:
-                            reconcile_device_history(_snmp_sess, _host, _port)
+                        # THIS block), NOT _snmp_flush_batch — the latter
+                        # also includes already-committed, detached
+                        # _existing_dev rows mutated above but never
+                        # re-added to a session (see the known-gap comment
+                        # above), and passing it would both mis-scope the
+                        # purge and reconcile devices this block never
+                        # wrote. D-158-C: this now also applies the
+                        # hardware_history_retention_days purge here — an
+                        # intentional behavior expansion over the previous
+                        # purge-free SNMP-only path (see plan SUMMARY).
+                        persist_and_reconcile(_snmp_sess, _snmp_new_batch, cfg, logger)
                 except Exception as _snmp_db_err:
                     logger.warning(
                         f"SNMP fingerprint DB write failed (advisory-only, non-fatal): "

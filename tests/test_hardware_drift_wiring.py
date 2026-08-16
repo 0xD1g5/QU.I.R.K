@@ -305,20 +305,27 @@ def test_site_b_snmp_only_device_is_reconciled(tmp_path) -> None:
 
 
 def test_run_scan_hooks_reconcile_at_both_commit_sites() -> None:
-    """Static contract check: run_scan.py imports and calls
-    reconcile_device_history at exactly the two documented commit sites,
-    each inside the existing advisory-only try/except handler (no new
-    exception-handling style introduced)."""
+    """Static contract check: run_scan.py delegates purge/commit/reconcile
+    at exactly the two documented commit sites to the shared
+    quirk.scanner.hardware_drift.persist_and_reconcile() helper (Phase 158
+    HWLC-15), each inside the existing advisory-only try/except handler (no
+    new exception-handling style introduced). Reconciliation is no longer
+    called directly in run_scan.py — it is delegated one layer down into
+    persist_and_reconcile()."""
     import inspect
 
     import run_scan
 
     source = inspect.getsource(run_scan)
-    assert source.count("reconcile_device_history(_hw_sess") == 1
-    assert source.count("reconcile_device_history(_snmp_sess") == 1
+    assert source.count("persist_and_reconcile(_hw_sess") == 1
+    assert source.count("persist_and_reconcile(_snmp_sess") == 1
     # Both call sites live inside functions that still use the pre-existing
     # advisory-only, non-fatal logging idiom — no new handler style added.
     assert "advisory-only, non-fatal" in source
+    # Reconciliation is delegated one layer down into
+    # quirk.scanner.hardware_drift.persist_and_reconcile() — no direct
+    # reconcile_device_history( call should remain in run_scan.py.
+    assert source.count("reconcile_device_history(") == 0
 
 
 def test_snmp_only_bulk_path_calls_apply_eol_date() -> None:
