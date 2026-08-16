@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
 status: planning
-last_updated: "2026-08-16T03:46:21.656Z"
+last_updated: "2026-08-16T04:15:00.000Z"
 last_activity: 2026-08-16
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,16 +21,27 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Milestone complete
+**Current focus:** Phase 157 — Drift-Event Retention + Forecast Narrative Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-16 — Milestone v5.14 started
+Phase: 157 of 160 (Drift-Event Retention + Forecast Narrative Foundation)
+Plan: — of TBD
+Status: Ready to plan
+Last activity: 2026-08-16 — ROADMAP.md created (4 phases, 5/5 HWLC requirements mapped, 0 orphans)
 
-## v5.13 Phase Map (planning)
+Progress: [░░░░░░░░░░] 0%
+
+## v5.14 Phase Map (planning)
+
+| Phase | Name | Requirements | Gate | Status |
+|-------|------|--------------|------|--------|
+| 157 | Drift-Event Retention + Forecast Narrative Foundation | HWLC-16, HWLC-18 | None (first, fully independent) | Ready to plan |
+| 158 | Sensor Fleet Drift Coverage | HWLC-15 | None new (independent of 157; extends Phase 107/109/154 plumbing) | Not started |
+| 159 | Check-in Scan Mode | HWLC-13 | Phase 158 (reuses shared persist_and_reconcile() for drift writes) | Not started |
+| 160 | Catalog-Level PQC Vendor Trend Tracking | HWLC-17 | Phase 158 (reuses persist_and_reconcile() call site; needs complete fleet population) | Not started |
+
+## v5.13 Phase Map (SHIPPED 2026-08-15)
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
@@ -426,4 +437,5 @@ rounds (141-09) on 2026-08-03 — no longer pending.
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan Phase 157 with /gsd:plan-phase 157 (or /gsd:discuss-phase 157 first — Phase 159 and 160 each
+  carry an explicit open design question flagged in ROADMAP.md for their own discuss-phase step)
