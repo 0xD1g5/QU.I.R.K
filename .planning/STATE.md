@@ -4,13 +4,13 @@ milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
 status: executing
 stopped_at: Completed 157-01-PLAN.md
-last_updated: "2026-08-16T15:04:08.078Z"
+last_updated: "2026-08-16T15:08:08.261Z"
 last_activity: 2026-08-16
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 157 (drift-event-retention-forecast-narrative-foundation) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-08-16
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## v5.14 Phase Map (planning)
 
@@ -176,6 +176,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 156 P05 | ~55min | 4 tasks | 8 files |
 | Phase 156 P06 | 45min | 3 tasks | 7 files |
 | Phase 157 PP01 | 18min | 2 tasks | 3 files |
+| Phase 157 P02 | 12min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -335,6 +336,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 156]: 156-06: /gsd-secure-phase 156 SECURED — 19/19 threats closed, zero high-severity findings, all four D-23 threat surfaces verified against real implementation code and tests; artifact written correctly to 156-SECURITY.md on first attempt (no root-SECURITY.md relocation needed)
 - [Phase ?]: [Phase 157]: hardware_drift_event_retention_days is a dedicated ScanCfg field (D-02), not shared with hardware_history_retention_days; default 365 (D-03) matches the codebase's 365-day-cadence convention
 - [Phase ?]: [Phase 157]: 157-01 call site is a dedicated if db_path: block, separate from the existing if hw_batch and db_path: block, so the drift-event purge runs even when a scan fingerprints zero fresh devices
+- [Phase ?]: [Phase 157]: 157-02 build_eol_forecast(devices, today=None) signature intentionally constrained to devices/today only — no score input can be threaded through, verified by inspect.signature test (T-157-05)
+- [Phase ?]: [Phase 157]: 157-02 quirk/reports/executive.py deliberately excluded from the T-157-05 advisory-only firewall module set — it legitimately imports compute_readiness_score, mirroring the Phase 155/156 precedent
 
 ### Pending Todos
 
@@ -431,7 +434,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-16T15:04:08.072Z
+Last session: 2026-08-16T15:07:44.463Z
 Stopped at: Completed 157-01-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
