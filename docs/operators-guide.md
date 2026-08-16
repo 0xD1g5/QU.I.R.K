@@ -1377,6 +1377,22 @@ See `docs/report-interpretation.md` §10.9 for how `probe_status` drives which r
 a device's current state, and `docs/configuration.md` for the retention window
 (`hardware_history_retention_days`) that bounds how long old probe rows are kept.
 
+**Tuning `hardware_drift_event_retention_days` (Phase 157, HWLC-16).** A separate retention
+knob, `scan.hardware_drift_event_retention_days` (default `365`), bounds the age of rows in the
+`hardware_drift_events` table described in §9.7 below — see `docs/configuration.md` for its
+full mechanism.
+
+- **Raise it** on long engagements where a client wants multi-year drift history for
+  year-over-year lifecycle comparison — there is no hard ceiling.
+- **Lower it** if disk pressure on a long-running console instance becomes a concern; a smaller
+  window keeps the `hardware_drift_events` table smaller.
+- **Lowering it deletes history irreversibly on the next scan.** The purge is a hard delete, not
+  an archive — once a drift event ages past the configured window and a scan runs, that row is
+  gone. Lower the value only when the older history is genuinely no longer needed.
+- **No separate command or schedule.** The purge runs automatically as part of every scan's
+  normal completion — there is no `quirk hardware purge` equivalent for drift events and no cron
+  job to configure.
+
 ---
 
 ### 9.7 Hardware EOL/EOS Catalog + Lifecycle Drift Events (Phase 155)

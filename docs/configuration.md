@@ -45,6 +45,7 @@ Controls connection timeouts, concurrency, port selection, and TLS enumeration d
 | `ssh_timeout_seconds` | int | `5` | SSH scan phase connection timeout |
 | `ssh_concurrency` | int | `100` | SSH scan phase worker count |
 | `hardware_history_retention_days` | int | `180` | Days of `hardware_devices` scan-history rows to retain per device (Phase 154, HWLC-03) |
+| `hardware_drift_event_retention_days` | int | `365` | Days of `hardware_drift_events` rows to retain table-wide (Phase 157, HWLC-16) |
 
 > **Note:** For large scans (1000+ hosts), reduce `concurrency` to `50` and use `--safe-mode` to prevent connection exhaustion.
 
@@ -62,6 +63,7 @@ scan:
   ssh_timeout_seconds: 5
   ssh_concurrency: 100
   hardware_history_retention_days: 180
+  hardware_drift_event_retention_days: 365
 ```
 
 ### `hardware_history_retention_days` (Phase 154, HWLC-03)
@@ -85,6 +87,32 @@ Bounds how many days of `hardware_devices` scan-history rows QUIRK keeps **per d
   compliance mappings, firmware CVE table) is stale, while `hardware_history_retention_days`
   governs how long an *engagement's own scan history* is retained. They are unrelated knobs
   that happen to both be day-counts.
+
+### `hardware_drift_event_retention_days` (Phase 157, HWLC-16)
+
+Bounds how many days of `hardware_drift_events` rows QUIRK keeps **table-wide** (across every
+device, not scoped to a single `(host, port)` pair). Unit is days; default is `365`.
+
+- **Purge mechanism:** a table-wide calendar-cutoff sweep — `DELETE FROM hardware_drift_events
+  WHERE detected_at < cutoff` — run once per scan, regardless of which devices that scan
+  actually fingerprinted. Unlike `hardware_history_retention_days` (above), this purge is not
+  scoped to the current scan's batch of devices; it evaluates every row in the table by age.
+- **Not the same knob as `hardware_history_retention_days`, and deliberately so.**
+  `hardware_history_retention_days` bounds per-device scan-snapshot history and is scoped to
+  devices the scan actually touched this run. `hardware_drift_event_retention_days` bounds an
+  append-only *event log* by age across the whole table. Sharing one knob between the two would
+  mean an idle device's drift history gets purged (or preserved) on the wrong schedule —
+  whichever schedule the *other* concern happened to be tuned for — so the two fields are kept
+  fully independent.
+- **Why 365 days:** matches this codebase's existing 365-day-cadence convention (see
+  `quirk/compliance/__init__.py`, `quirk/scanner/bacnet_vendors.py`, `quirk/scanner/hardware_eol.py`)
+  and gives a full year of drift history for year-over-year comparison during a long engagement.
+- **Fail-closed behavior.** A non-integer, zero, or negative value causes the purge to be
+  **skipped entirely** for that run (a warning is logged), never a wipe of the whole table and
+  never a silent no-op with no log line. Invalid values never widen the deletion window.
+- **No CLI purge command and no background worker.** Like `hardware_history_retention_days`,
+  this purge runs automatically as a side effect of every scan — there is no separate command
+  or cron job to schedule.
 
 ---
 
