@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.13
-milestone_name: Continuous Hardware Lifecycle Monitoring
-status: Awaiting next milestone
-stopped_at: Completed 156-06-PLAN.md
-last_updated: "2026-08-15T15:34:10.114Z"
-last_activity: 2026-08-15 — Milestone v5.13 completed and archived
+milestone: v5.14
+milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
+status: planning
+last_updated: "2026-08-16T03:46:21.656Z"
+last_activity: 2026-08-16
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 ## Current Position
 
-Phase: Milestone v5.13 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-15 — Milestone v5.13 completed and archived
+Status: Defining requirements
+Last activity: 2026-08-16 — Milestone v5.14 started
 
 ## v5.13 Phase Map (planning)
 

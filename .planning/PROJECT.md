@@ -200,18 +200,15 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-Defined by the next milestone — see `/gsd:new-milestone`.
+Defined by milestone v5.14 — see `## Current Milestone` below. REQ-IDs land here once
+`.planning/REQUIREMENTS.md` is generated.
 
 Carried-forward tech debt (non-blocking, resolved-or-superseded items removed at v5.13 close):
 - [ ] **DISC-08** sub-batch (mid-discovery) checkpoint/resume granularity — deferred as an
       accepted boundary since v5.11; revisit only if batch cost grows.
-- [ ] **HardwareDriftEvent retention** — `hardware_drift_events` (Phase 155) is not subject to
-      any retention/purge policy, unlike `HardwareDevice` rows (`hardware_history_retention_days`,
-      Phase 154). Accumulates unbounded over long-running deployments. Flagged by the v5.13
-      integration audit as a backlog candidate, not a requirement violation.
-- [ ] **HWLC-13 / HWLC-14** (from v5.13 Future Requirements) — lightweight "check-in" scan mode
-      and email/webhook notification on tier-crossing/EOL events, deferred pending validation of
-      the core diff mechanism on real engagement data.
+- [ ] **HWLC-14** (from v5.13 Future Requirements) — email/webhook notification on
+      tier-crossing/EOL events, deferred out of v5.14 pending validation of the core diff
+      mechanism on real engagement data.
 
 Resolved by v5.12/v5.13 (no longer active): Windows release asset gap (v5.12.0 shipped a real
 Windows zip on the GitHub Release, live-verified); DISC-09 segmented-network lab profile (Phase
@@ -228,6 +225,25 @@ CI-gated baseline).
 | OpenVAS / Nessus integration | Full vuln scanner; different scope, heavy dependency |
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
+
+## Current Milestone: v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting
+
+**Goal:** Close the sensor-fleet drift gap left open by v5.13 and round out lifecycle
+monitoring with a low-cost check-in scan mode and catalog-level PQC trend forecasting.
+
+**Target features:**
+- Sensor fleet drift coverage — `hardware_devices` field on `PushEnvelope`/ingest route so
+  sensor-scanned segments reach the console's drift history (v5.13 covered console-direct
+  scans only; real gap found during v5.13 research, `sensor_cmd.py::_build_envelope()`)
+- Drift-event retention policy — bound `hardware_drift_events` growth, mirroring
+  `hardware_history_retention_days` (Phase 154)
+- Check-in scan mode (HWLC-13) — lightweight re-probe of already-known devices only, without
+  a full scan
+- PQC trend + risk forecast narrative — catalog-level vendor PQC-status trend tracking plus a
+  consultant-facing 12-month EOL/tier projection narrative
+
+**Deferred:** HWLC-14 (tier/EOL email/webhook alerting) stays in backlog pending validation of
+the core diff mechanism on real engagement data.
 
 ## Previous Milestone: v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED 2026-08-15
 
@@ -723,8 +739,8 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hardcoded 168-hour OT/ICS cadence floor, not config-overridable (v5.13 / 156-01, D-19) | Fragile Modbus/BACnet devices were built for one read-only probe per engagement; a configurable floor could be set to zero by an impatient operator, silently reintroducing the exact production risk the gate exists to prevent | ✓ Good — confirmed as a module-level constant, never read from config, by both code review and the independent verifier |
 
 ---
-*Last updated: 2026-08-15 after v5.13 milestone — 3 phases (154-156), 12/12 HWLC requirements
-satisfied, milestone audit passed, archived*
+*Last updated: 2026-08-15 — milestone v5.14 (Hardware Lifecycle Tail — Fleet Coverage &
+Forecasting) started*
 
 ## Evolution
 
