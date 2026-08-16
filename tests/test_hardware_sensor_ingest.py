@@ -27,7 +27,13 @@ from sqlalchemy.orm import sessionmaker
 
 from quirk.cli.console_cmd import _ingest_envelope
 from quirk.db import get_session, init_db
-from quirk.models import CryptoEndpoint, HardwareDevice, HardwareDriftEvent, Sensor
+from quirk.models import (
+    CryptoEndpoint,
+    HardwareDevice,
+    HardwareDriftEvent,
+    Sensor,
+    SensorPush,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -400,3 +406,64 @@ def test_injected_session_path_persists_hardware(tmp_path) -> None:
 
     rows = _hw_rows(db_path, host="10.0.0.50")
     assert len(rows) == 1
+
+
+def test_injected_session_hw_failure_does_not_wipe_caller_pending_rows(
+    tmp_path,
+) -> None:
+    """CR-01 regression guard (Phase 158 review iteration 1 -> 2, WR-01).
+
+    Reproduces the exact shared-session failure path CR-01 was about: an
+    injected session (``db=``, HTTPS sensor-push route shape) already has a
+    ``SensorPush`` row added+flushed by ``_ingest_envelope()`` itself before
+    the hardware-devices block runs. If ``persist_and_reconcile()`` fails
+    internally (here: ``purge_stale_hardware_history`` raises) and CR-01
+    regressed back to an unconditional ``session.rollback()`` inside
+    ``persist_and_reconcile`` regardless of ``owns_session``, that rollback
+    would silently discard the caller's already-flushed ``SensorPush`` row
+    from the session's pending state -- so even though the caller (this
+    test, mirroring the route) commits afterward, nothing would be durably
+    written. With the CR-01 fix (``owns_session=False`` skips
+    ``session.rollback()``), the caller's row survives untouched and is
+    written normally when the caller commits.
+    """
+    db_path = str(tmp_path / "hw_ingest.db")
+    engine = init_db(db_path)
+    sensor_id = str(uuid.uuid4())
+    _seed_sensor(db_path, sensor_id)
+
+    Session = sessionmaker(
+        bind=engine, autoflush=False, autocommit=False, expire_on_commit=False
+    )
+    session = Session()
+    try:
+        env = _make_envelope(
+            sensor_id, hardware_devices=[_device_dict(host="10.0.0.60")]
+        )
+        with patch(
+            "quirk.scanner.hardware_drift.purge_stale_hardware_history",
+            side_effect=RuntimeError("simulated hardware persist failure"),
+        ):
+            # Must not raise -- persist_and_reconcile() is advisory-only and
+            # swallows the internal failure, returning (0, []); the caller's
+            # SensorPush row (already added+flushed above by
+            # _ingest_envelope itself) must remain pending/committable.
+            _ingest_envelope(
+                env, config_path="", skip_replay_window=True, db=session
+            )
+        # Mirrors the HTTPS route: caller commits its own session after
+        # _ingest_envelope() returns for an injected session.
+        session.commit()
+    finally:
+        session.close()
+
+    # The hardware device itself was never persisted (purge raised before
+    # any commit), but the caller's own SensorPush row -- proof the shared
+    # session's pending work was never silently rolled back -- is durable.
+    with get_session(db_path) as verify_session:
+        pushes = verify_session.query(SensorPush).filter_by(
+            sensor_id=sensor_id
+        ).all()
+        assert len(pushes) == 1
+
+    assert _hw_rows(db_path, host="10.0.0.60") == []
