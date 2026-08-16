@@ -119,7 +119,17 @@ Phase 157
 
   4. A shared `persist_and_reconcile()` helper is extracted and used by both the console-direct and
      sensor-ingest persistence paths — no duplicated purge/commit/reconcile logic remains.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 158-01-PLAN.md — Shared `persist_and_reconcile()` helper + both `run_scan.py` persist sites refactored onto it (HWLC-15)
+- [ ] 158-02-PLAN.md — `hardware_devices` field on `PushEnvelope` + sensor-side serialization/read + round-trip schema test (HWLC-15)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 158-03-PLAN.md — Console `_ingest_envelope()` hardware persist/reconcile wiring + None-vs-empty ingest tests + UAT/Obsidian sync (HWLC-15)
 
 ### Phase 159: Check-in Scan Mode
 
