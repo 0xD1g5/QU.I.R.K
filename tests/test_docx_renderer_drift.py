@@ -137,3 +137,135 @@ def test_docx_no_drift_section_when_events_empty(tmp_path):
     texts = _all_paragraph_texts(doc)
     assert not any("Recent Lifecycle Changes" in t for t in texts)
     assert not any(t.rows[0].cells[0].text == "Device" for t in doc.tables)
+
+
+# ---------------------------------------------------------------------------
+# Phase 157 (HWLC-18) — EOL/Tier forecast subsection
+# ---------------------------------------------------------------------------
+
+
+def _base_exec_content_with_forecast(eol_forecast, hardware_drift_events=None):
+    from quirk.reports.content_model import ExecContent
+
+    return ExecContent(
+        narrative_lead="Test narrative lead.",
+        narrative_drivers=[],
+        top_risks=[],
+        roadmap_items=[],
+        score_total=70,
+        score_band="FAIR",
+        subscores={},
+        raw_sum=0,
+        sev_counts={},
+        hardware_drift_events=hardware_drift_events or [],
+        eol_forecast=eol_forecast,
+    )
+
+
+def _two_bucket_forecast(**overrides):
+    forecast = {
+        "narrative": "Projected EOL/tier posture over the next 12 months.",
+        "buckets": [
+            {
+                "label": "0-6 months",
+                "count": 2,
+                "tier_counts": {"Tier 1": 2},
+                "sentence": "2 device(s) reach EOL or a worse CNSA 2.0 tier within 0-6 months.",
+            },
+            {
+                "label": "7-12 months",
+                "count": 1,
+                "tier_counts": {"Tier 2": 1},
+                "sentence": "1 device(s) reach EOL or a worse CNSA 2.0 tier within 7-12 months.",
+            },
+        ],
+        "catalog_last_verified": "2026-05-01",
+        "catalog_stale": False,
+        "total_devices_with_eol": 3,
+    }
+    forecast.update(overrides)
+    return forecast
+
+
+def test_docx_forecast_subsection_present(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report
+
+    path = str(tmp_path / "forecast.docx")
+    exec_content = _base_exec_content_with_forecast(_two_bucket_forecast())
+    result = render_docx_report(path=path, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+    assert result is True
+
+    doc = Document(path)
+    texts = _all_paragraph_texts(doc)
+    headings = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
+    assert "EOL/Tier Forecast" in headings
+    assert "2 device(s) reach EOL or a worse CNSA 2.0 tier within 0-6 months." in texts
+    assert "1 device(s) reach EOL or a worse CNSA 2.0 tier within 7-12 months." in texts
+
+
+def test_docx_forecast_absent_when_empty(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report
+
+    for empty_forecast in ({}, {"narrative": "", "buckets": []}):
+        path = str(tmp_path / f"forecast_empty_{id(empty_forecast)}.docx")
+        exec_content = _base_exec_content_with_forecast(empty_forecast)
+        render_docx_report(path=path, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+
+        doc = Document(path)
+        headings = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
+        assert "EOL/Tier Forecast" not in headings
+
+
+def test_docx_forecast_renders_with_zero_drift_events(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report
+
+    path = str(tmp_path / "forecast_zero_drift.docx")
+    exec_content = _base_exec_content_with_forecast(_two_bucket_forecast(), hardware_drift_events=[])
+    render_docx_report(path=path, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+
+    doc = Document(path)
+    headings = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
+    assert "EOL/Tier Forecast" in headings
+    assert "Recent Lifecycle Changes" not in headings
+
+
+def test_docx_forecast_uses_paragraphs_not_table(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report
+
+    path_empty = str(tmp_path / "forecast_baseline.docx")
+    exec_content_empty = _base_exec_content_with_forecast({})
+    render_docx_report(path=path_empty, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content_empty)
+    doc_empty = Document(path_empty)
+    table_count_empty = len(doc_empty.tables)
+
+    path_forecast = str(tmp_path / "forecast_populated.docx")
+    exec_content = _base_exec_content_with_forecast(_two_bucket_forecast())
+    render_docx_report(path=path_forecast, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+    doc_forecast = Document(path_forecast)
+
+    assert len(doc_forecast.tables) == table_count_empty
+
+
+def test_docx_forecast_surfaces_stale_catalog(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report
+
+    path_stale = str(tmp_path / "forecast_stale.docx")
+    stale_forecast = _two_bucket_forecast(catalog_stale=True, catalog_last_verified="2025-01-01")
+    exec_content_stale = _base_exec_content_with_forecast(stale_forecast)
+    render_docx_report(path=path_stale, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content_stale)
+    doc_stale = Document(path_stale)
+    texts_stale = _all_paragraph_texts(doc_stale)
+    assert any("2025-01-01" in t for t in texts_stale)
+
+    path_fresh = str(tmp_path / "forecast_fresh.docx")
+    fresh_forecast = _two_bucket_forecast(catalog_stale=False, catalog_last_verified="2025-01-01")
+    exec_content_fresh = _base_exec_content_with_forecast(fresh_forecast)
+    render_docx_report(path=path_fresh, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content_fresh)
+    doc_fresh = Document(path_fresh)
+    texts_fresh = _all_paragraph_texts(doc_fresh)
+    assert not any("2025-01-01" in t for t in texts_fresh)
