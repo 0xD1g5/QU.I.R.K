@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
 status: executing
-stopped_at: Completed 157-01-PLAN.md
-last_updated: "2026-08-16T15:12:16.444Z"
+stopped_at: Completed 157-04-PLAN.md
+last_updated: "2026-08-16T15:33:13.519Z"
 last_activity: 2026-08-16
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 157 (drift-event-retention-forecast-narrative-foundation) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-16
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## v5.14 Phase Map (planning)
 
@@ -178,6 +178,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 157 PP01 | 18min | 2 tasks | 3 files |
 | Phase 157 P02 | 12min | 3 tasks | 3 files |
 | Phase 157 P03 | 15min | 3 tasks | 5 files |
+| Phase 157 P04 | 25min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -341,6 +342,9 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 157]: 157-02 quirk/reports/executive.py deliberately excluded from the T-157-05 advisory-only firewall module set — it legitimately imports compute_readiness_score, mirroring the Phase 155/156 precedent
 - [Phase 157]: 157-03 eol_forecast population block placed after hardware_devices' final assignment (post bridge-detection/mitigation), no new DB session — forecast input always matches the hardware table's device set
 - [Phase 157]: 157-03 render_eol_forecast_section uses h3 one level below render_drift_section's h2, bucket sentences as p not table, template placeholder after (not inside) drift_section conditional so forecast renders independent of drift events
+- [Phase 157]: 157-04 DOCX forecast subsection is level-3 heading, one below the drift section's level-2, narrative paragraphs only (no table), guarded independently of hardware_drift_events
+- [Phase 157]: 157-04 CLI forecast is a net-new sibling of the Hardware PQC Advisory block, gated solely on exec_content.eol_forecast — executive.py never shipped CLI drift rendering (Phase 156 D-12), so this is genuinely new prose, not an extension
+- [Phase 157]: 157-04 new dedicated tests/test_executive_forecast_section.py module created, resolving 157-VALIDATION.md's open Wave 0 item about build_exec_markdown's scattered test coverage
 
 ### Pending Todos
 
@@ -437,8 +441,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-16T15:11:26.723Z
-Stopped at: Completed 157-01-PLAN.md
+Last session: 2026-08-16T15:33:13.514Z
+Stopped at: Completed 157-04-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,

@@ -89,7 +89,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 157-04-PLAN.md — DOCX forecast subsection + net-new CLI/markdown forecast subsection (HWLC-18)
+- [x] 157-04-PLAN.md — DOCX forecast subsection + net-new CLI/markdown forecast subsection (HWLC-18)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -182,7 +182,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 157. Drift-Event Retention + Forecast Narrative Foundation | 3/5 | In Progress|  |
+| 157. Drift-Event Retention + Forecast Narrative Foundation | 4/5 | In Progress|  |
 | 158. Sensor Fleet Drift Coverage | 0/TBD | Not started | - |
 | 159. Check-in Scan Mode | 0/TBD | Not started | - |
 | 160. Catalog-Level PQC Vendor Trend Tracking | 0/TBD | Not started | - |
