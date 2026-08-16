@@ -9,6 +9,9 @@ Phase 155 (T-155-01) extends this file's guard to the two new hardware
 lifecycle modules — ``hardware_drift`` and ``hardware_eol`` — so this file
 now guards the advisory-only firewall for hw_cve, hardware_drift, and
 hardware_eol as one machine-enforced boundary.
+
+Phase 157 (T-157-05) extends the guard again to ``hardware_forecast`` — the
+new EOL/tier forecast narrative module — by name.
 """
 from __future__ import annotations
 
@@ -238,3 +241,106 @@ def test_no_drift_report_key_in_score_weights() -> None:
         f"SCORE_WEIGHTS must never contain lifecycle/drift-derived keys "
         f"(T-156-04): {bad_keys}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 157 (HWLC-18 / T-157-05) — advisory-only firewall extended to the
+# forecast module by name.
+#
+# NOTE: quirk/reports/executive.py is deliberately NOT added to the module
+# sets below. 157-PATTERNS.md proposed adding it, but executive.py
+# legitimately imports and calls compute_readiness_score (it renders the
+# actual readiness score) — including it here would fail test 4 below by
+# construction. This mirrors the existing Phase 155/156 guards, which
+# exclude executive.py for the identical reason. executive.py's forecast
+# rendering is instead constrained by Plan 04's own render tests plus the
+# build_eol_forecast signature test in tests/test_hardware_forecast.py.
+# ---------------------------------------------------------------------------
+
+
+def test_no_forecast_key_in_score_weights() -> None:
+    """No key in quirk.intelligence.scoring.SCORE_WEIGHTS contains the
+    substring 'forecast' (case-insensitive). The 'eol' vocabulary is
+    already covered by test_no_drift_or_eol_key_in_score_weights."""
+    from quirk.intelligence.scoring import SCORE_WEIGHTS
+
+    bad_keys = [k for k in SCORE_WEIGHTS if "forecast" in k.lower()]
+    assert bad_keys == [], (
+        f"SCORE_WEIGHTS must never contain forecast-derived keys "
+        f"(T-157-05): {bad_keys}"
+    )
+
+
+def test_scoring_module_does_not_import_forecast() -> None:
+    """The comment-stripped source of quirk/intelligence/scoring.py contains
+    no reference to hardware_forecast or build_eol_forecast."""
+    import pathlib
+
+    import quirk.intelligence.scoring as scoring_module
+
+    source = _strip_comment_lines(pathlib.Path(scoring_module.__file__).read_text())
+    for forbidden in ("hardware_forecast", "build_eol_forecast"):
+        assert forbidden not in source, (
+            f"quirk/intelligence/scoring.py must never reference {forbidden!r} "
+            f"(T-157-05 advisory-only firewall)"
+        )
+
+
+def test_forecast_modules_have_no_score_weights_reference() -> None:
+    """No comment-stripped source of hardware_forecast.py, html_renderer.py,
+    or docx_renderer.py references SCORE_WEIGHTS."""
+    import pathlib
+
+    import quirk.scanner.hardware_forecast as hardware_forecast_module
+    import quirk.reports.html_renderer as html_renderer_module
+    import quirk.reports.docx_renderer as docx_renderer_module
+
+    for module in (
+        hardware_forecast_module,
+        html_renderer_module,
+        docx_renderer_module,
+    ):
+        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+        assert "SCORE_WEIGHTS" not in source, (
+            f"{module.__file__} must never reference SCORE_WEIGHTS (T-157-05)"
+        )
+
+
+def test_forecast_modules_do_not_import_scoring() -> None:
+    """No comment-stripped source of hardware_forecast.py, html_renderer.py,
+    or docx_renderer.py imports the scoring engine or readiness-assessment
+    module."""
+    import pathlib
+
+    import quirk.scanner.hardware_forecast as hardware_forecast_module
+    import quirk.reports.html_renderer as html_renderer_module
+    import quirk.reports.docx_renderer as docx_renderer_module
+
+    for module in (
+        hardware_forecast_module,
+        html_renderer_module,
+        docx_renderer_module,
+    ):
+        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+        for forbidden in ("quirk.intelligence.scoring", "quirk.assessment.readiness_score"):
+            assert forbidden not in source, (
+                f"{module.__file__} must never import {forbidden!r} (T-157-05)"
+            )
+
+
+def test_forecast_module_does_not_import_drift_events() -> None:
+    """The comment-stripped source of hardware_forecast.py contains neither
+    HardwareDriftEvent nor hardware_drift (D-01 forward-only invariant —
+    new, no prior analog in this file)."""
+    import pathlib
+
+    import quirk.scanner.hardware_forecast as hardware_forecast_module
+
+    source = _strip_comment_lines(
+        pathlib.Path(hardware_forecast_module.__file__).read_text()
+    )
+    for forbidden in ("HardwareDriftEvent", "hardware_drift"):
+        assert forbidden not in source, (
+            f"quirk/scanner/hardware_forecast.py must never reference {forbidden!r} "
+            f"(T-157-05 D-01 forward-only invariant)"
+        )
