@@ -505,7 +505,7 @@ def _ingest_envelope(
 
     from quirk.dashboard.api.deps import _default_db_path
     from quirk.db import init_db
-    from quirk.models import CryptoEndpoint, Sensor, SensorPush
+    from quirk.models import CryptoEndpoint, HardwareDevice, Sensor, SensorPush
     from quirk.util.safe_exc import safe_str
 
     _own_session = db is None
@@ -583,6 +583,90 @@ def _ingest_envelope(
                 segment=segment,
             )
             db.add(ep)
+
+        # --- Persist sensor-supplied hardware devices (Phase 158 HWLC-15) ---
+        # `hw_dicts` is read with a None-preserving accessor — NOT `or []` like
+        # `findings` above — because the phase's central invariant is that
+        # `None` (key absent, old sensor) must never collapse into `[]`
+        # (key present, confirmed-zero observation). The guard below is an
+        # explicit `is not None` identity check, never a truthy check, so a
+        # genuine confirmed-empty `[]` batch still runs the helper.
+        hw_dicts = envelope.get("hardware_devices")
+        if hw_dicts is not None:
+            from quirk.scanner.hardware_drift import persist_and_reconcile
+
+            hw_rows: list = []
+            for d in hw_dicts:
+                if not isinstance(d, dict):
+                    continue
+                eol_date = None
+                _eol_raw = d.get("eol_date")
+                if isinstance(_eol_raw, str) and _eol_raw:
+                    try:
+                        import datetime as _datetime_mod
+                        eol_date = _datetime_mod.date.fromisoformat(_eol_raw)
+                    except (ValueError, TypeError):
+                        eol_date = None
+                # Explicit field-by-field kwargs (D-158-H) — never dict
+                # unpacking into the constructor — so unrecognized/forged
+                # envelope keys (e.g. sensor_id/segment, which have no
+                # columns here) are inertly ignored instead of raising
+                # TypeError.
+                hw_rows.append(HardwareDevice(
+                    host=d.get("host") or "",
+                    port=d.get("port") or 0,
+                    vendor=d.get("vendor") or "Unknown",
+                    model=d.get("model"),
+                    pqc_status=d.get("pqc_status") or "unknown",
+                    eol_date=eol_date,
+                    confidence=d.get("confidence") or "unknown",
+                    fingerprint_method=d.get("fingerprint_method") or "unknown",
+                    raw_banner=d.get("raw_banner"),
+                    scanned_at=_parse_dt(d.get("scanned_at")),
+                    remediation_tier=d.get("remediation_tier") or "Tier N/A",
+                    snmp_sysdescr=d.get("snmp_sysdescr"),
+                    snmp_sysname=d.get("snmp_sysname"),
+                    snmp_sysobjectid=d.get("snmp_sysobjectid"),
+                    snmp_vendor=d.get("snmp_vendor"),
+                    snmp_version=d.get("snmp_version"),
+                    snmp_auth_protocol=d.get("snmp_auth_protocol"),
+                    snmp_priv_protocol=d.get("snmp_priv_protocol"),
+                    bridge_evidence_json=d.get("bridge_evidence_json"),
+                    bridge_confirmed_at=_parse_dt(d.get("bridge_confirmed_at")),
+                    modbus_vendor=d.get("modbus_vendor"),
+                    modbus_model=d.get("modbus_model"),
+                    modbus_firmware=d.get("modbus_firmware"),
+                    modbus_probe_state=d.get("modbus_probe_state"),
+                    bacnet_vendor=d.get("bacnet_vendor"),
+                    bacnet_model=d.get("bacnet_model"),
+                    bacnet_firmware=d.get("bacnet_firmware"),
+                    bacnet_probe_state=d.get("bacnet_probe_state"),
+                    ssh_host_key_fingerprint=d.get("ssh_host_key_fingerprint"),
+                    match_confidence=d.get("match_confidence"),
+                    probe_status=d.get("probe_status"),
+                ))
+
+            # D-158-G: cfg=None is deliberate — the retention lookup inside
+            # persist_and_reconcile()/purge_stale_hardware_history() is
+            # None-tolerant and falls back to the 180-day default. Loading
+            # real config here would risk an unguarded FileNotFoundError on
+            # this advisory-only hot path (which also runs inside a FastAPI
+            # request handler). DOCUMENTED LIMITATION: sensor-ingested
+            # hardware rows always use the 180-day default retention window,
+            # never the operator's configured
+            # scan.hardware_history_retention_days. A future phase may thread
+            # a fail-closed config loader (mirroring
+            # sensor.py::_load_auto_merge_config()) if per-ingestion-path
+            # retention parity is ever required.
+            #
+            # D-158-A: persist_and_reconcile() always commits internally, so
+            # in the HTTPS-injected-session case this commits the pending
+            # SensorPush/CryptoEndpoint rows slightly ahead of this
+            # function's own terminal db.flush() below. Accepted — the
+            # DuplicatePayloadError/UnknownSensorError gates both fire before
+            # this point, so the inconsistency window is not practically
+            # reachable; worst case is advisory-only data committing early.
+            persist_and_reconcile(db, hw_rows, None, logger)
 
         if _own_session:
             db.commit()
