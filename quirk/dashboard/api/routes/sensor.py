@@ -516,7 +516,14 @@ async def sensor_push(
     ingest_config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
     try:
         _ingest_envelope(
-            envelope_dict,
+            # WR-02 (Phase 158 review): pass the validated/coerced Pydantic
+            # model's dump, not the original unvalidated envelope_dict --
+            # today they happen to agree (a hardware_devices type mismatch
+            # would already fail PushEnvelope validation above and
+            # short-circuit before this point), but that is an implicit
+            # invariant a future relaxation of PushEnvelope's field types
+            # could silently break.
+            envelope.model_dump(),
             config_path=ingest_config_path,
             skip_replay_window=False,
             qpush_sig=qpush_sig,
