@@ -2265,7 +2265,15 @@ def main():
                 if getattr(_dev, "snmp_sysdescr", None) is not None
                 and _dev not in _snmp_new_batch
             ]
-            if _snmp_flush_batch or _snmp_new_batch:
+            # WR-01 (Phase 158 review): guard on _snmp_new_batch only —
+            # _snmp_flush_batch also includes already-committed, detached
+            # _existing_dev rows (see the known-gap comment above) that
+            # persist_and_reconcile() never receives and can never persist,
+            # so an `_snmp_flush_batch`-only-nonempty case would otherwise
+            # open a session and call persist_and_reconcile(sess, [], ...),
+            # which is an immediate (0, []) no-op per its own empty-list
+            # guard — wasted session open/close on every such scan.
+            if _snmp_new_batch:
                 try:
                     with get_session(cfg.output.db_path) as _snmp_sess:
                         # Phase 158 HWLC-15: purge + add + commit +
