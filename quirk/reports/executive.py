@@ -469,4 +469,35 @@ def build_exec_markdown(
             )
             lines.append("")
 
+    # Phase 157 HWLC-18 / D-04, D-05: forward-looking EOL/tier forecast subsection.
+    # THIS IS NET-NEW — executive.py has no CLI lifecycle-drift section to
+    # extend (Phase 156 D-12 deliberately deferred CLI drift rendering). Do not
+    # fold this into the Hardware PQC Advisory block above; it is a sibling
+    # subsection gated independently on exec_content.eol_forecast so the two
+    # blocks are independently suppressible.
+    if (
+        exec_content is not None
+        and getattr(exec_content, "eol_forecast", None)
+        and exec_content.eol_forecast.get("buckets")
+    ):
+        eol_forecast = exec_content.eol_forecast
+        lines.append("### EOL/Tier Forecast")
+        lines.append("")
+        lines.append(
+            "> **Advisory only — not included in readiness score.** "
+            "Forward-looking projection over vendor-published lifecycle dates."
+        )
+        lines.append("")
+        for _bucket in eol_forecast["buckets"]:
+            lines.append(f"- {_bucket.get('sentence', '')}")
+        lines.append("")
+        if eol_forecast.get("catalog_stale"):
+            lines.append(
+                "> The curated EOL/EOS catalog (last verified "
+                f"{eol_forecast.get('catalog_last_verified', '')}) has not been "
+                "re-verified within its review cadence; treat this projection "
+                "accordingly."
+            )
+            lines.append("")
+
     return "\n".join(lines)
