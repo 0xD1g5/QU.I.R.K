@@ -69,7 +69,14 @@ capability becoming score-visible.
   5. The drift-event retention window and the forecast's advertised look-back window are explicitly
      reconciled — the forecast never implies visibility into a period the retention sweep has
      already purged.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 157-01-PLAN.md — Drift-event calendar-cutoff retention sweep + `hardware_drift_event_retention_days` config (HWLC-16)
+- [ ] 157-02-PLAN.md — `hardware_forecast.py` bucketing/hedged-narrative engine + score-guard extension (HWLC-18)
+- [ ] 157-03-PLAN.md — `ExecContent.eol_forecast` field, writer population, HTML forecast subsection (HWLC-18)
+- [ ] 157-04-PLAN.md — DOCX forecast subsection + net-new CLI/markdown forecast subsection (HWLC-18)
+- [ ] 157-05-PLAN.md — Config/report docs, UAT Series 157, Obsidian vault sync + phase note (HWLC-16, HWLC-18)
 
 ### Phase 158: Sensor Fleet Drift Coverage
 **Goal**: Hardware devices discovered by a sensor's local scan reach the console's
@@ -143,7 +150,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 157. Drift-Event Retention + Forecast Narrative Foundation | 0/TBD | Not started | - |
+| 157. Drift-Event Retention + Forecast Narrative Foundation | 0/5 | Planned | - |
 | 158. Sensor Fleet Drift Coverage | 0/TBD | Not started | - |
 | 159. Check-in Scan Mode | 0/TBD | Not started | - |
 | 160. Catalog-Level PQC Vendor Trend Tracking | 0/TBD | Not started | - |
