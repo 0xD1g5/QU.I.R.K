@@ -22,6 +22,7 @@ import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
 import zstandard
@@ -90,8 +91,15 @@ def _build_envelope(
     sensor_version: str = "5.4.0",
     findings: list | None = None,
     extra_field: str | None = None,
+    hardware_devices=...,
 ) -> dict:
-    """Build a minimal valid wire envelope dict."""
+    """Build a minimal valid wire envelope dict.
+
+    hardware_devices is a sentinel-default kwarg (Phase 158 HWLC-15 WR-02
+    regression test): pass no value to omit the key entirely from the wire
+    dict (the None-vs-absent distinction PushEnvelope.hardware_devices
+    depends on), or pass a list (possibly empty) to include it.
+    """
     if pushed_at is None:
         pushed_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     if payload_id is None:
@@ -107,6 +115,8 @@ def _build_envelope(
     }
     if extra_field is not None:
         env["_extra_unknown_field"] = extra_field
+    if hardware_devices is not ...:
+        env["hardware_devices"] = hardware_devices
     return env
 
 
@@ -563,3 +573,91 @@ def test_unknown_sensor_id_4xx(monkeypatch):
         )
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# (k)/(l) Phase 158 review WR-02 regression: envelope.model_dump() ->
+# _ingest_envelope() preserves the hardware_devices None-vs-[] invariant
+# through the ACTUAL route + PushEnvelope validation layer (not just direct
+# _ingest_envelope() calls, which is all tests/test_hardware_sensor_ingest.py
+# covers). Mirrors that module's
+# test_omitted_hardware_devices_does_not_call_persist_and_reconcile /
+# test_empty_hardware_devices_still_calls_persist_and_reconcile pair.
+# ---------------------------------------------------------------------------
+
+_SENSOR_HW_OMITTED = "a0000009-0000-4000-8000-000000000901"
+_SENSOR_HW_EMPTY = "a000000a-0000-4000-8000-000000000902"
+
+
+def test_push_hardware_devices_omitted_does_not_call_persist_and_reconcile(
+    monkeypatch,
+):
+    """WR-02: an envelope posted through the real route WITHOUT the
+    hardware_devices key must not invoke persist_and_reconcile() -- proving
+    envelope.model_dump() (PushEnvelope's bare-None default field, not
+    default_factory=list) still round-trips the key-absent case through the
+    route's JSON parse -> PushEnvelope(**envelope_dict) -> model_dump() ->
+    _ingest_envelope() path, not just when _ingest_envelope() is called
+    directly with a hand-built dict."""
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, client, engine, TestingSession = _app_with_db()
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_HW_OMITTED)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_HW_OMITTED)
+
+    env = _build_envelope(sensor_id=_SENSOR_HW_OMITTED)  # no hardware_devices key
+    assert "hardware_devices" not in env
+    body = _compress(env)
+
+    with patch(
+        "quirk.scanner.hardware_drift.persist_and_reconcile"
+    ) as mock_persist:
+        resp = client.post(
+            "/api/sensor/push",
+            content=body,
+            headers={"Authorization": f"Bearer {raw_token}"},
+        )
+    assert resp.status_code == 200, (
+        f"Expected 200, got {resp.status_code}: {resp.text}"
+    )
+    assert mock_persist.call_count == 0, (
+        "persist_and_reconcile must not be called when hardware_devices is "
+        "absent from the wire envelope, even through the route's "
+        "PushEnvelope -> model_dump() path"
+    )
+
+
+def test_push_hardware_devices_empty_still_calls_persist_and_reconcile(
+    monkeypatch,
+):
+    """WR-02: [] is a confirmed-zero observation, structurally distinct from
+    absent, through the real route. Row counts alone cannot distinguish the
+    two cases (both zero HardwareDevice rows) -- this is exactly why the
+    call itself is asserted, exercising envelope.model_dump()'s handling of
+    an explicit empty list rather than a missing key."""
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, client, engine, TestingSession = _app_with_db()
+    _seed_sensor(TestingSession, sensor_id=_SENSOR_HW_EMPTY)
+    raw_token = _seed_token(TestingSession, sensor_id=_SENSOR_HW_EMPTY)
+
+    env = _build_envelope(sensor_id=_SENSOR_HW_EMPTY, hardware_devices=[])
+    assert env["hardware_devices"] == []
+    body = _compress(env)
+
+    with patch(
+        "quirk.scanner.hardware_drift.persist_and_reconcile"
+    ) as mock_persist:
+        resp = client.post(
+            "/api/sensor/push",
+            content=body,
+            headers={"Authorization": f"Bearer {raw_token}"},
+        )
+    assert resp.status_code == 200, (
+        f"Expected 200, got {resp.status_code}: {resp.text}"
+    )
+    assert mock_persist.call_count == 1, (
+        "persist_and_reconcile must be called (with an empty list) when "
+        "hardware_devices is present-but-empty, through the route's "
+        "PushEnvelope -> model_dump() path"
+    )
+    _, call_devices, _cfg, _logger = mock_persist.call_args[0]
+    assert call_devices == []
