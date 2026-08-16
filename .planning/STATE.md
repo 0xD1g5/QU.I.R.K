@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
-status: ready_to_plan
-stopped_at: Phase 157 complete (5/5) — ready to discuss Phase 158
-last_updated: 2026-08-16T15:53:54.335Z
+status: executing
+stopped_at: Completed 158-01-PLAN.md
+last_updated: "2026-08-16T18:44:48.394Z"
 last_activity: 2026-08-16
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
   percent: 25
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 158 — sensor fleet drift coverage
+**Current focus:** Phase 158 — Sensor Fleet Drift Coverage
 
 ## Current Position
 
-Phase: 158
-Plan: Not started
-Status: Ready to plan
+Phase: 158 (Sensor Fleet Drift Coverage) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-08-16
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 ## v5.14 Phase Map (planning)
 
@@ -180,6 +180,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 157 P03 | 15min | 3 tasks | 5 files |
 | Phase 157 P04 | 25min | 2 tasks | 5 files |
 | Phase 157 PP05 | 35min | 3 tasks | 4 files |
+| Phase 158 P01 | 15min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -347,6 +348,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 157]: 157-04 CLI forecast is a net-new sibling of the Hardware PQC Advisory block, gated solely on exec_content.eol_forecast — executive.py never shipped CLI drift rendering (Phase 156 D-12), so this is genuinely new prose, not an extension
 - [Phase 157]: 157-04 new dedicated tests/test_executive_forecast_section.py module created, resolving 157-VALIDATION.md's open Wave 0 item about build_exec_markdown's scattered test coverage
 - [Phase 157]: 157-05 report-interpretation.md's §10.11 EOL/Tier Forecast section expanded in place (not duplicated) with the literal bucket-label vocabulary and an explicit reader-facing guarantee that hardware_drift_event_retention_days places no limit on the forecast (ROADMAP success criterion #5)
+- [Phase 158]: 158-01: D-158-A/B/C implemented as locked — persist_and_reconcile() always commits internally (no commit:bool param); purge_stale_hardware_history() relocated into hardware_drift.py with a run_scan.py alias; Site B (SNMP-only) now applies the retention purge for the first time — intentional behavior expansion
 
 ### Pending Todos
 
@@ -443,8 +445,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-16T15:45:45.886Z
-Stopped at: Completed 157-05-PLAN.md
+Last session: 2026-08-16T18:44:48.388Z
+Stopped at: Completed 158-01-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
