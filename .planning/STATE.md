@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
 status: executing
-stopped_at: Phase 157 context gathered
-last_updated: "2026-08-16T14:35:37.416Z"
-last_activity: 2026-08-16 -- Phase 157 planning complete
+stopped_at: Completed 157-01-PLAN.md
+last_updated: "2026-08-16T15:04:08.078Z"
+last_activity: 2026-08-16
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 157 — Drift-Event Retention + Forecast Narrative Foundation
+**Current focus:** Phase 157 — drift-event-retention-forecast-narrative-foundation
 
 ## Current Position
 
-Phase: 157 of 160 (Drift-Event Retention + Forecast Narrative Foundation)
-Plan: — of TBD
+Phase: 157 (drift-event-retention-forecast-narrative-foundation) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-08-16 -- Phase 157 planning complete
+Last activity: 2026-08-16
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## v5.14 Phase Map (planning)
 
@@ -175,6 +175,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 156 P04 | ~30min | 3 tasks | 8 files |
 | Phase 156 P05 | ~55min | 4 tasks | 8 files |
 | Phase 156 P06 | 45min | 3 tasks | 7 files |
+| Phase 157 PP01 | 18min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -332,6 +333,8 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 156]: Lifecycle advisory guard test comments avoid literal RegressionAlertChip/ui-badge substrings so raw grep acceptance criteria pass (156-03 docstring precedent); guard test resolves component sources via path.resolve not new URL(import.meta.url); section eyebrow/icon teal applied via inline style since .label-eyebrow is unlayered CSS and always wins the cascade over Tailwind utilities
 - [Phase ?]: [Phase 156]: 156-06: enable_modbus/enable_bacnet had never been documented in docs/configuration.md's Connectors Block before this plan (pre-existing Phase 141 gap) — added both alongside enable_recurring_otics under Rule 2
 - [Phase ?]: [Phase 156]: 156-06: /gsd-secure-phase 156 SECURED — 19/19 threats closed, zero high-severity findings, all four D-23 threat surfaces verified against real implementation code and tests; artifact written correctly to 156-SECURITY.md on first attempt (no root-SECURITY.md relocation needed)
+- [Phase ?]: [Phase 157]: hardware_drift_event_retention_days is a dedicated ScanCfg field (D-02), not shared with hardware_history_retention_days; default 365 (D-03) matches the codebase's 365-day-cadence convention
+- [Phase ?]: [Phase 157]: 157-01 call site is a dedicated if db_path: block, separate from the existing if hw_batch and db_path: block, so the drift-event purge runs even when a scan fingerprints zero fresh devices
 
 ### Pending Todos
 
@@ -428,8 +431,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-16T13:53:18.820Z
-Stopped at: Phase 157 context gathered
+Last session: 2026-08-16T15:04:08.072Z
+Stopped at: Completed 157-01-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,

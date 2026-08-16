@@ -80,7 +80,7 @@ capability becoming score-visible.
 Plans:
 **Wave 1**
 
-- [ ] 157-01-PLAN.md — Drift-event calendar-cutoff retention sweep + `hardware_drift_event_retention_days` config (HWLC-16)
+- [x] 157-01-PLAN.md — Drift-event calendar-cutoff retention sweep + `hardware_drift_event_retention_days` config (HWLC-16)
 - [ ] 157-02-PLAN.md — `hardware_forecast.py` bucketing/hedged-narrative engine + score-guard extension (HWLC-18)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -182,7 +182,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 157. Drift-Event Retention + Forecast Narrative Foundation | 0/5 | Planned | - |
+| 157. Drift-Event Retention + Forecast Narrative Foundation | 1/5 | In Progress|  |
 | 158. Sensor Fleet Drift Coverage | 0/TBD | Not started | - |
 | 159. Check-in Scan Mode | 0/TBD | Not started | - |
 | 160. Catalog-Level PQC Vendor Trend Tracking | 0/TBD | Not started | - |
