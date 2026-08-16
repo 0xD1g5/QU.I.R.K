@@ -195,3 +195,119 @@ def test_full_html_report_omits_drift_section_when_no_events() -> None:
     content = open(out).read()
     assert DRIFT_ADVISORY_CAPTION not in content
     assert "Recent Lifecycle Changes" not in content
+
+
+# ---------------------------------------------------------------------------
+# Phase 157 (HWLC-18) — EOL/Tier forecast subsection
+# ---------------------------------------------------------------------------
+# Fixtures below are literal dicts matching Plan 02's build_eol_forecast()
+# contract; these tests do not call build_eol_forecast() itself — that
+# coupling belongs to tests/test_hardware_forecast.py.
+
+
+def _base_forecast(**overrides) -> dict:
+    forecast = {
+        "narrative": (
+            "2 devices (2 Tier 2) are projected to reach vendor end-of-life "
+            "within 0-3 months, based on vendor-published dates verified as "
+            "of 2026-01-01. 1 device (1 Tier 1) is projected to reach vendor "
+            "end-of-life within 6-12 months, based on vendor-published dates "
+            "verified as of 2026-01-01."
+        ),
+        "buckets": [
+            {
+                "label": "0-3 months",
+                "count": 2,
+                "tier_counts": {"Tier 2": 2},
+                "sentence": (
+                    "2 devices (2 Tier 2) are projected to reach vendor "
+                    "end-of-life within 0-3 months, based on vendor-published "
+                    "dates verified as of 2026-01-01."
+                ),
+            },
+            {
+                "label": "6-12 months",
+                "count": 1,
+                "tier_counts": {"Tier 1": 1},
+                "sentence": (
+                    "1 device (1 Tier 1) is projected to reach vendor "
+                    "end-of-life within 6-12 months, based on vendor-published "
+                    "dates verified as of 2026-01-01."
+                ),
+            },
+        ],
+        "catalog_last_verified": "2026-01-01",
+        "catalog_stale": False,
+        "total_devices_with_eol": 3,
+    }
+    forecast.update(overrides)
+    return forecast
+
+
+def test_forecast_subsection_present() -> None:
+    from quirk.reports.html_renderer import render_eol_forecast_section
+
+    forecast = _base_forecast()
+    html = render_eol_forecast_section(forecast)
+
+    assert "EOL/Tier Forecast" in html
+    for bucket in forecast["buckets"]:
+        assert bucket["sentence"] in html
+
+
+def test_forecast_section_empty_when_no_buckets() -> None:
+    from quirk.reports.html_renderer import render_eol_forecast_section
+
+    assert render_eol_forecast_section({"narrative": "", "buckets": [], "catalog_last_verified": "2026-01-01", "catalog_stale": False, "total_devices_with_eol": 0}) == ""
+    assert render_eol_forecast_section({}) == ""
+
+
+def test_forecast_renders_with_zero_drift_events() -> None:
+    from quirk.reports.html_renderer import render_drift_section, render_eol_forecast_section
+
+    drift_html = render_drift_section([])
+    forecast_html = render_eol_forecast_section(_base_forecast())
+
+    assert drift_html == ""
+    assert forecast_html != ""
+
+
+def test_forecast_section_is_distinct_from_drift_list() -> None:
+    from quirk.reports.html_renderer import render_eol_forecast_section
+
+    html = render_eol_forecast_section(_base_forecast())
+
+    assert "<table" not in html
+    assert "Recent Lifecycle Changes" not in html
+
+
+def test_forecast_section_escapes_untrusted_text() -> None:
+    from quirk.reports.html_renderer import render_eol_forecast_section
+
+    forecast = _base_forecast(
+        buckets=[
+            {
+                "label": "0-3 months",
+                "count": 1,
+                "tier_counts": {"Tier 1": 1},
+                "sentence": "1 device <script>alert(1)</script> is projected to reach EOL.",
+            }
+        ],
+    )
+    html = render_eol_forecast_section(forecast)
+
+    assert "<script" not in html
+    assert "&lt;script&gt;" in html
+
+
+def test_forecast_section_surfaces_stale_catalog() -> None:
+    from quirk.reports.html_renderer import render_eol_forecast_section
+
+    stale_html = render_eol_forecast_section(_base_forecast(catalog_stale=True))
+    fresh_html = render_eol_forecast_section(_base_forecast(catalog_stale=False))
+
+    assert "2026-01-01" in stale_html
+    # A staleness qualifier phrase should appear only when catalog_stale is True.
+    assert stale_html != fresh_html
+    stale_only_fragment = stale_html.replace(fresh_html, "")
+    assert stale_only_fragment.strip() != "" or "stale" in stale_html.lower() or "not been re-verified" in stale_html.lower()
