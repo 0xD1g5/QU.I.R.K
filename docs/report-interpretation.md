@@ -557,11 +557,41 @@ be visually confused with the drift changes list.
 a device's very first scan) can still show a populated EOL/Tier Forecast, because the forecast
 is derived from the current fingerprinted device set and the EOL catalog, not from the
 drift-reconciliation engine. Conversely, the forecast is entirely absent (no orphan heading in
-any format) when no fingerprinted device carries a known EOL date.
+any format) when no fingerprinted device carries a known EOL date — see "When the section is
+absent" below.
+
+**How to read a bucket sentence.** The forecast groups devices into five time windows relative
+to render time: `already passed`, `0-3 months`, `3-6 months`, `6-12 months`, and `12+ months`.
+Every non-empty bucket produces one sentence stating the device count in that window and its
+CNSA 2.0 tier breakdown (Tier 1 / Tier 2 / Tier 3 / Tier N/A), and every sentence cites the EOL
+catalog's `last_verified` date inline — never a bare, unsourced count.
+
+**Why the language is hedged.** Every bucket sentence uses hedged phrasing ("are projected to" /
+"is projected to"), never an unqualified "will". The underlying EOL/EOS dates come from a
+curated, periodically re-verified vendor catalog (`hardware_eol.py`, §10.9) — not a live feed —
+so, consistent with the forecast's advisory-only framing, it can only ever state a projection
+sourced to a dated snapshot, not a guarantee.
+
+**Retention reconciliation — the forecast is forward-only and reads no drift history.** The
+EOL/Tier Forecast is derived entirely from each device's *current* end-of-life date and
+remediation tier; it never reads a row from `hardware_drift_events`. Because of this, the
+`scan.hardware_drift_event_retention_days` retention window (see `docs/configuration.md`) places
+**no limit whatsoever** on what the forecast can cover — the two features share no data path,
+and no forecast statement ever depends on a period the drift-event retention sweep may have
+already purged. This is a reader-facing guarantee, not an internal implementation detail: even
+on an engagement running with an aggressively short drift-event retention window, the 12-month
+forecast is exactly as complete as it would be with unlimited retention.
+
+**When the section is absent.** No device in the scan has a resolved vendor end-of-life date —
+either the curated catalog has no entry for that vendor/model, or the devices were not
+fingerprinted deeply enough to resolve one. Absence means "no EOL data available", never "no
+EOL risk" — an absent forecast section is not evidence that a client's fleet is safe from
+upcoming end-of-life exposure.
 
 **Advisory only — not a score input.** Every rendering carries the same qualifier used
 throughout §10: `Advisory only — not included in the readiness score.` The forecast reads no
-score value at all; it renders only precomputed bucket sentences.
+score value at all, is never assigned a severity, and never appears in the findings list — it
+renders only precomputed bucket sentences.
 
 **Stale-catalog qualifier.** If the underlying EOL/EOS catalog (`hardware_eol.py`, 365-day
 staleness cadence — see `CLAUDE.md`'s Staleness Review Cadence) has not been re-verified within
