@@ -370,6 +370,75 @@ def _purge_stale_hardware_history(session, hw_batch, cfg, logger=None) -> int:
     return deleted
 
 
+def _purge_stale_drift_events(session, cfg, logger=None) -> int:
+    """Hard-delete ``hardware_drift_events`` rows older than the configured
+    calendar-cutoff retention window (Phase 157 HWLC-16 / D-02, D-03).
+
+    This function is STRUCTURALLY DISTINCT from ``_purge_stale_hardware_history``
+    above and must NOT mirror its shape. Two divergences are load-bearing:
+
+    (a) There is deliberately NO parameter for this scan's freshly
+        fingerprinted device batch, and no early-exit guard tied to it — the
+        drift-event purge runs every scan regardless of whether any fresh
+        devices were fingerprinted this run.
+    (b) There is deliberately NO per-(host, port) scoping loop — this is a
+        single table-wide filter/delete over the entire ``hardware_drift_events``
+        table, not a delete scoped to the current scan's devices.
+
+    Mirroring the neighboring ``_purge_stale_hardware_history`` precedent here
+    would reproduce the exact inversion bug PITFALLS.md Pitfall 3 and
+    157-RESEARCH.md Pitfall 1 warn about: an event-log table that only purges
+    entries for devices touched by THIS scan would let idle devices' drift
+    history accumulate forever while active devices' history gets purged —
+    the opposite of correct retention semantics. See ROADMAP success
+    criterion #1 and ``test_purge_is_not_scoped_to_batch_host_port`` for the
+    regression coverage of this exact failure mode.
+
+    Mandatory safety guard (copied verbatim in shape from
+    ``_purge_stale_hardware_history``): a non-int, zero, or negative
+    retention value would otherwise compute a cutoff of "now" (or later) and
+    hard-delete the operator's entire drift-event history. Skipping the
+    purge entirely is the only safe failure mode for a destructive
+    operation, so any coercion failure or a non-positive result logs a
+    warning and returns 0 WITHOUT deleting anything.
+
+    Does not commit — the caller owns the transaction.
+
+    Returns the total number of deleted rows (0 if skipped or nothing to do).
+    """
+    from datetime import timedelta
+    from quirk.models import HardwareDriftEvent
+
+    retention_raw = getattr(
+        getattr(cfg, "scan", None), "hardware_drift_event_retention_days", 365
+    )
+    try:
+        retention_days = int(retention_raw)
+    except (TypeError, ValueError):
+        if logger:
+            logger.warning(
+                f"Drift-event retention purge skipped: invalid "
+                f"hardware_drift_event_retention_days value {safe_str(retention_raw)!r} "
+                f"(must be a positive integer)"
+            )
+        return 0
+    if retention_days <= 0:
+        if logger:
+            logger.warning(
+                f"Drift-event retention purge skipped: non-positive "
+                f"hardware_drift_event_retention_days value {safe_str(retention_raw)!r}"
+            )
+        return 0
+
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=retention_days)
+
+    return (
+        session.query(HardwareDriftEvent)
+        .filter(HardwareDriftEvent.detected_at < cutoff)
+        .delete(synchronize_session=False)
+    )
+
+
 def run_ot_supplemental_and_persist(
     *,
     targets: List[Tuple[str, int]],
@@ -453,6 +522,26 @@ def run_ot_supplemental_and_persist(
             )
     if hw_batch:
         _print_hardware_summary(hw_batch, logger)  # Phase 128 D-07
+
+    # Phase 157 HWLC-16: table-wide drift-event retention sweep. Deliberately
+    # its own session/block, gated on `db_path` only (NOT on `hw_batch`) —
+    # a scan that fingerprinted zero fresh devices must still sweep stale
+    # drift-event rows. A separate block (rather than widening the
+    # `if hw_batch and db_path:` block above) avoids changing that block's
+    # existing hw_batch-non-empty-assuming behavior (add() loop, reconcile
+    # loop, _purged logging).
+    if db_path:
+        try:
+            with get_session(db_path) as _drift_sess:
+                _purged_events = _purge_stale_drift_events(_drift_sess, cfg, logger)
+                _drift_sess.commit()
+            if _purged_events:
+                logger.info(f"Drift-event retention: {_purged_events} stale drift event(s) purged")
+        except Exception as _drift_err:
+            logger.warning(
+                f"Drift-event retention purge failed (advisory-only, non-fatal): "
+                f"{safe_str(_drift_err)}"
+            )
 
     return ot_devices
 

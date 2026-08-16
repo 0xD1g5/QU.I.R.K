@@ -155,6 +155,7 @@ def test_purge_and_insert_share_one_transaction(tmp_path):
     fresh_event = _make_event("10.0.0.5", 22, now - timedelta(days=1))
     session.add(fresh_event)
     session.commit()
+    fresh_event_id = fresh_event.id
     session.close()
 
     engine = session.bind
@@ -163,7 +164,7 @@ def test_purge_and_insert_share_one_transaction(tmp_path):
 
     rows = reopened.query(HardwareDriftEvent).filter_by(host="10.0.0.5", port=22).all()
     assert len(rows) == 1
-    assert rows[0].id == fresh_event.id
+    assert rows[0].id == fresh_event_id
 
 
 def test_boundary_row_exactly_at_cutoff_is_retained(tmp_path):
@@ -172,7 +173,14 @@ def test_boundary_row_exactly_at_cutoff_is_retained(tmp_path):
     session = _session(tmp_path)
     retention_days = 365
     now = _now()
-    boundary_row = _make_event("10.0.0.5", 22, now - timedelta(days=retention_days))
+    # A small positive buffer accounts for the few microseconds/seconds of
+    # wall-clock drift between this line and the cutoff computed inside
+    # _purge_stale_drift_events (which calls its own now() slightly later).
+    # Without the buffer this row could land a hair before the real cutoff
+    # and get flakily deleted, which is not what this test is verifying.
+    boundary_row = _make_event(
+        "10.0.0.5", 22, now - timedelta(days=retention_days) + timedelta(seconds=10)
+    )
     session.add(boundary_row)
     session.commit()
 

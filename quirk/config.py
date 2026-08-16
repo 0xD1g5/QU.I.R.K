@@ -96,6 +96,14 @@ class ScanCfg:
     # freshness, this governs engagement-history retention.
     hardware_history_retention_days: int = 180
 
+    # Phase 157 HWLC-16 / D-02, D-03: bounds how long hardware_drift_events
+    # rows are retained, in days. DEDICATED field for event-log age
+    # retention — structurally distinct from hardware_history_retention_days,
+    # which governs HardwareDevice scan-scoped snapshot retention (Phase 154).
+    # Default 365 matches this codebase's 365-day-cadence convention
+    # (compliance/__init__.py, bacnet_vendors.py, hardware_eol.py).
+    hardware_drift_event_retention_days: int = 365
+
     def __init__(
         self,
         concurrency: int,
@@ -122,6 +130,8 @@ class ScanCfg:
         nmap_port_scope: Optional[str] = None,
         # Phase 154 HWLC-03 / D-11: hardware_devices history retention, days
         hardware_history_retention_days: int = 180,
+        # Phase 157 HWLC-16 / D-02, D-03: hardware_drift_events retention, days
+        hardware_drift_event_retention_days: int = 365,
     ) -> None:
         self.concurrency = concurrency
         self.ports_tls = ports_tls
@@ -136,6 +146,7 @@ class ScanCfg:
         self.openapi_spec_path = openapi_spec_path
         self.nmap_port_scope = nmap_port_scope
         self.hardware_history_retention_days = hardware_history_retention_days
+        self.hardware_drift_event_retention_days = hardware_drift_event_retention_days
         # Route legacy flat kwargs into the nested TimeoutsCfg
         legacy_values = {
             "timeout_seconds": timeout_seconds,
