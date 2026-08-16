@@ -129,7 +129,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 158-03-PLAN.md — Console `_ingest_envelope()` hardware persist/reconcile wiring + None-vs-empty ingest tests + UAT/Obsidian sync (HWLC-15)
+- [x] 158-03-PLAN.md — Console `_ingest_envelope()` hardware persist/reconcile wiring + None-vs-empty ingest tests + UAT/Obsidian sync (HWLC-15)
 
 ### Phase 159: Check-in Scan Mode
 
@@ -193,7 +193,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 157. Drift-Event Retention + Forecast Narrative Foundation | 5/5 | Complete    | 2026-08-16 |
-| 158. Sensor Fleet Drift Coverage | 2/3 | In Progress|  |
+| 158. Sensor Fleet Drift Coverage | 3/3 | Complete   | 2026-08-16 |
 | 159. Check-in Scan Mode | 0/TBD | Not started | - |
 | 160. Catalog-Level PQC Vendor Trend Tracking | 0/TBD | Not started | - |
 
