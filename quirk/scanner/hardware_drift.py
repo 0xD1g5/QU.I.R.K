@@ -388,6 +388,15 @@ def persist_and_reconcile(session, devices, cfg, logger=None) -> tuple:
             events.extend(reconcile_device_history(session, host, port))
         return (purged, events)
     except Exception as exc:
+        # Roll back so a failed insert/commit here (e.g. a malformed
+        # sensor-supplied field tripping a NOT NULL constraint) never leaves
+        # the session in a broken PendingRollbackError state for the caller
+        # to inherit — this helper is advisory-only and must never cause a
+        # sensor push or air-gap import to fail (Phase 158 HWLC-15).
+        try:
+            session.rollback()
+        except Exception:
+            pass
         if logger:
             logger.warning(
                 f"Hardware persist/reconcile failed (advisory-only, non-fatal): "

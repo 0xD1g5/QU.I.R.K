@@ -622,7 +622,12 @@ def _ingest_envelope(
                     confidence=d.get("confidence") or "unknown",
                     fingerprint_method=d.get("fingerprint_method") or "unknown",
                     raw_banner=d.get("raw_banner"),
-                    scanned_at=_parse_dt(d.get("scanned_at")),
+                    # scanned_at is NOT NULL on HardwareDevice — a malformed
+                    # or missing wire value falls back to ingest time (`now`,
+                    # already computed above) rather than dropping the whole
+                    # row, unlike eol_date which has no such constraint and
+                    # is allowed to stay None on a parse failure.
+                    scanned_at=_parse_dt(d.get("scanned_at")) or now,
                     remediation_tier=d.get("remediation_tier") or "Tier N/A",
                     snmp_sysdescr=d.get("snmp_sysdescr"),
                     snmp_sysname=d.get("snmp_sysname"),
