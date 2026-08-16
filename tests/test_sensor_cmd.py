@@ -457,6 +457,7 @@ def test_build_envelope_keys(monkeypatch):
         "sensor_id",
         "segment",
         "findings",
+        "hardware_devices",
     }
     assert set(envelope.keys()) == expected_keys
     assert "received_at" not in envelope
@@ -1311,14 +1312,15 @@ def test_export_body_byte_identical_to_push_body(tmp_path, monkeypatch):
 
     original_build_envelope = sensor_cmd_mod._build_envelope
 
-    def patched_build_envelope(sc, endpoints):
-        env = original_build_envelope(sc, endpoints)
+    def patched_build_envelope(sc, endpoints, hardware_devices=None):
+        env = original_build_envelope(sc, endpoints, hardware_devices=hardware_devices)
         env["payload_id"] = fixed_payload_id
         env["pushed_at"] = fixed_pushed_at
         return env
 
     monkeypatch.setattr(sensor_cmd_mod, "_build_envelope", patched_build_envelope)
     monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_hardware_devices", lambda db_path: [])
     monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
 
     from quirk.cli.sensor_cmd import _cmd_export_results, _build_compressed_payload
@@ -1404,6 +1406,7 @@ def test_export_decompresses_to_canonical_envelope_keys(tmp_path, monkeypatch):
         "sensor_id",
         "segment",
         "findings",
+        "hardware_devices",
     }
     assert set(envelope.keys()) == expected_keys
     assert "received_at" not in envelope

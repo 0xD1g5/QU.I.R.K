@@ -323,6 +323,11 @@ class PushEnvelope(BaseModel):
     sensor_id: str
     segment: str
     findings: list = Field(default_factory=list)
+    # Phase 158 HWLC-15: bare `None` default (NOT default_factory=list) so the wire
+    # invariant is structurally distinguishable: None = the sending sensor never sent
+    # this field ("no observation", old binary); [] = a new sensor confirmed zero
+    # hardware devices on its local scan.
+    hardware_devices: list | None = None
 
 
 # ---------------------------------------------------------------------------

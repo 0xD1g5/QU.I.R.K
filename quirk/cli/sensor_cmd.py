@@ -345,12 +345,84 @@ def _endpoint_to_dict(ep) -> dict:
     }
 
 
-def _build_envelope(sensor_cfg: dict, endpoints: list) -> dict:
+def _hardware_device_to_dict(dev) -> dict:
+    """Serialize a HardwareDevice ORM row to a JSON-safe dict.
+
+    Reads columns explicitly (not __dict__/vars()) so no SQLAlchemy internal
+    state leaks into the payload. Mirrors _endpoint_to_dict()'s shape exactly.
+
+    Per D-158-E, `id` and `scan_id` are deliberately NOT serialized — the
+    console assigns its own primary key on insert, and `scan_id` references
+    the sensor's local scan run, meaningless in console-side storage.
+    Per D-158-F, `sensor_id`/`segment` are also NOT serialized — HardwareDevice
+    has no such columns; sensor identity already travels at the envelope's
+    top level.
+    """
+    def _str(v) -> str | None:
+        """Coerce to str; normalize any path-like value to forward slashes."""
+        if v is None:
+            return None
+        s = str(v)
+        # Replace OS-specific path separators (Windows) with forward slashes
+        return s.replace("\\", "/")
+
+    def _dt(v) -> str | None:
+        """Coerce a datetime to ISO-8601 UTC string."""
+        if v is None:
+            return None
+        if hasattr(v, "strftime"):
+            return v.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return str(v)
+
+    eol_date = getattr(dev, "eol_date", None)
+
+    return {
+        "host": _str(dev.host),
+        "port": dev.port,
+        "vendor": _str(dev.vendor),
+        "model": _str(dev.model),
+        "pqc_status": _str(dev.pqc_status),
+        "eol_date": eol_date.isoformat() if eol_date is not None else None,
+        "confidence": _str(dev.confidence),
+        "fingerprint_method": _str(dev.fingerprint_method),
+        "raw_banner": _str(dev.raw_banner),
+        "scanned_at": _dt(dev.scanned_at),
+        "remediation_tier": _str(dev.remediation_tier),
+        "snmp_sysdescr": _str(getattr(dev, "snmp_sysdescr", None)),
+        "snmp_sysname": _str(getattr(dev, "snmp_sysname", None)),
+        "snmp_sysobjectid": _str(getattr(dev, "snmp_sysobjectid", None)),
+        "snmp_vendor": _str(getattr(dev, "snmp_vendor", None)),
+        "snmp_version": _str(getattr(dev, "snmp_version", None)),
+        "snmp_auth_protocol": _str(getattr(dev, "snmp_auth_protocol", None)),
+        "snmp_priv_protocol": _str(getattr(dev, "snmp_priv_protocol", None)),
+        "bridge_evidence_json": _str(getattr(dev, "bridge_evidence_json", None)),
+        "bridge_confirmed_at": _dt(getattr(dev, "bridge_confirmed_at", None)),
+        "modbus_vendor": _str(getattr(dev, "modbus_vendor", None)),
+        "modbus_model": _str(getattr(dev, "modbus_model", None)),
+        "modbus_firmware": _str(getattr(dev, "modbus_firmware", None)),
+        "modbus_probe_state": _str(getattr(dev, "modbus_probe_state", None)),
+        "bacnet_vendor": _str(getattr(dev, "bacnet_vendor", None)),
+        "bacnet_model": _str(getattr(dev, "bacnet_model", None)),
+        "bacnet_firmware": _str(getattr(dev, "bacnet_firmware", None)),
+        "bacnet_probe_state": _str(getattr(dev, "bacnet_probe_state", None)),
+        "ssh_host_key_fingerprint": _str(getattr(dev, "ssh_host_key_fingerprint", None)),
+        "match_confidence": _str(getattr(dev, "match_confidence", None)),
+        "probe_status": _str(getattr(dev, "probe_status", None)),
+    }
+
+
+def _build_envelope(
+    sensor_cfg: dict, endpoints: list, hardware_devices: list | None = None
+) -> dict:
     """Build the canonical wire envelope dict.
 
     NOTE: received_at is NOT included — the console stamps it on ingest (Phase 109).
     NOTE: all values must be JSON-serializable primitives — no Path objects,
           no OS-specific datetime formatting, no backslash path separators.
+
+    The `hardware_devices` key is ALWAYS present in the returned dict — a new
+    sensor with zero fingerprinted devices emits `[]`, which the console reads
+    as confirmed-zero (Phase 158 HWLC-15).
     """
     return {
         "payload_id": str(uuid.uuid4()),
@@ -360,6 +432,9 @@ def _build_envelope(sensor_cfg: dict, endpoints: list) -> dict:
         "sensor_id": sensor_cfg["sensor_id"],
         "segment": sensor_cfg["segment"],
         "findings": [_endpoint_to_dict(ep) for ep in endpoints],
+        "hardware_devices": [
+            _hardware_device_to_dict(d) for d in (hardware_devices or [])
+        ],
     }
 
 
@@ -473,6 +548,28 @@ def _read_scan_endpoints(db_path: str) -> list:
             )
             .all()
         )
+
+
+def _read_scan_hardware_devices(db_path: str) -> list:
+    """Open the scan SQLite DB produced by the local scan and return all HardwareDevice rows.
+
+    Unlike _read_scan_endpoints(), no filter is applied — HardwareDevice has no
+    scan_error_category advisory-sentinel column, so there is nothing to exclude.
+
+    Any exception (e.g. a local DB predating the hardware tables) degrades to
+    "zero devices" rather than crashing the push/export path.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from quirk.models import HardwareDevice
+
+    try:
+        engine = create_engine(f"sqlite:///{db_path}")
+        with Session(engine) as session:
+            return session.query(HardwareDevice).all()
+    except Exception:
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -656,11 +753,13 @@ def _cmd_push(args: argparse.Namespace) -> None:
         db_files = list(output_dir.rglob("*.db"))
         if db_files:
             endpoints = _read_scan_endpoints(str(db_files[0]))
+            hw_devices = _read_scan_hardware_devices(str(db_files[0]))
         else:
             endpoints = []
+            hw_devices = []
 
         # Build canonical wire envelope
-        envelope = _build_envelope(sensor_cfg, endpoints)
+        envelope = _build_envelope(sensor_cfg, endpoints, hardware_devices=hw_devices)
         payload_id = envelope["payload_id"]
         body = _build_compressed_payload(envelope)
 
@@ -792,11 +891,13 @@ def _cmd_export_results(args: argparse.Namespace) -> None:
         db_files = list(output_dir_path.rglob("*.db"))
         if db_files:
             endpoints = _read_scan_endpoints(str(db_files[0]))
+            hw_devices = _read_scan_hardware_devices(str(db_files[0]))
         else:
             endpoints = []
+            hw_devices = []
 
         # Build canonical wire envelope — SAME helpers as push (byte-identity invariant)
-        envelope = _build_envelope(sensor_cfg, endpoints)
+        envelope = _build_envelope(sensor_cfg, endpoints, hardware_devices=hw_devices)
         payload_id = envelope["payload_id"]
 
         # Compress — SAME helper as push (body byte-identity invariant)
