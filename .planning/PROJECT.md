@@ -245,6 +245,17 @@ monitoring with a low-cost check-in scan mode and catalog-level PQC trend foreca
 **Deferred:** HWLC-14 (tier/EOL email/webhook alerting) stays in backlog pending validation of
 the core diff mechanism on real engagement data.
 
+**Progress:** Phase 157 (Drift-Event Retention + Forecast Narrative Foundation) complete
+2026-08-16 — HWLC-16/18 validated. `hardware_drift_events` growth is now bounded by a
+configurable, table-wide calendar-cutoff sweep (`hardware_drift_event_retention_days`, default
+365) structurally distinct from the Phase 154 scan-scoped `HardwareDevice` purge. A new pure,
+no-I/O `hardware_forecast.py` module renders a hedged, catalog-cited 12-month EOL/tier forecast
+narrative in HTML, DOCX, and CLI/markdown reports, with `test_cve_score_guard.py` extended to
+assert the forecast never touches `SCORE_WEIGHTS` or `compute_readiness_score` — advisory-only,
+machine-enforced, and explicitly reconciled against the retention window so the forecast never
+implies visibility into an already-purged period. 5/5 plans, verifier passed 5/5 must-haves.
+Next: Phase 158 (Sensor Fleet Drift Coverage).
+
 ## Previous Milestone: v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED 2026-08-15
 
 **Delivered:** v5.10's point-in-time hardware fingerprinting now tracks lifecycle change over
@@ -739,8 +750,8 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hardcoded 168-hour OT/ICS cadence floor, not config-overridable (v5.13 / 156-01, D-19) | Fragile Modbus/BACnet devices were built for one read-only probe per engagement; a configurable floor could be set to zero by an impatient operator, silently reintroducing the exact production risk the gate exists to prevent | ✓ Good — confirmed as a module-level constant, never read from config, by both code review and the independent verifier |
 
 ---
-*Last updated: 2026-08-15 — milestone v5.14 (Hardware Lifecycle Tail — Fleet Coverage &
-Forecasting) started*
+*Last updated: 2026-08-16 — Phase 157 (Drift-Event Retention + Forecast Narrative Foundation)
+complete, milestone v5.14 (Hardware Lifecycle Tail — Fleet Coverage & Forecasting) in progress*
 
 ## Evolution
 
