@@ -19,7 +19,7 @@ import json
 import logging
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Callable, Optional
 
 from quirk.models import HardwareDriftEvent
@@ -267,6 +267,136 @@ def compute_drift_candidates(
 
 
 # ---------------------------------------------------------------------------
+# purge_stale_hardware_history() + persist_and_reconcile() (Phase 158
+# HWLC-15, plan 158-01) — relocated from run_scan.py so the shared helper
+# below can call it without importing the heavyweight root-level run_scan
+# module.
+# ---------------------------------------------------------------------------
+
+
+def purge_stale_hardware_history(session, hw_batch, cfg, logger=None) -> int:
+    """Hard-delete ``hardware_devices`` rows older than the configured
+    time-based retention window, scoped to this scan batch's own devices
+    (Phase 154 HWLC-03 / D-10 / D-12).
+
+    D-10: retention is a time-based window (``scan.hardware_history_retention_days``),
+    never a row-count cap. D-12: this is an opportunistic, per-scan hard delete —
+    NOT a background worker, cron job, or operator-run CLI purge command. Each
+    scan purges only the (host, port) pairs present in its own ``hw_batch``; it
+    is never a table-wide delete.
+
+    Mandatory safety guard: a non-int, zero, or negative retention value would
+    otherwise compute a cutoff of "now" (or later) and hard-delete the
+    operator's entire hardware history. Skipping the purge entirely is the
+    only safe failure mode for a destructive operation, so any coercion
+    failure or a non-positive result logs a warning and returns 0 WITHOUT
+    deleting anything.
+
+    Does not commit — the caller owns the transaction (see the placement
+    note at the ``run_ot_supplemental_and_persist`` / ``persist_and_reconcile``
+    call sites: this must run before the hw_batch add() loop so the delete
+    and the inserts share one transaction with no autoflush interaction).
+
+    Returns the total number of deleted rows (0 if skipped or nothing to do).
+
+    Relocated verbatim from ``run_scan.py`` in Phase 158 (D-158-B) — this
+    module must not import the heavyweight root-level ``run_scan`` module,
+    so ``persist_and_reconcile()`` needs this function co-located here.
+    ``run_scan._purge_stale_hardware_history`` remains a module-level alias
+    to this function so existing test import paths keep working.
+    """
+    from quirk.models import HardwareDevice
+
+    if not hw_batch:
+        return 0
+
+    retention_raw = getattr(getattr(cfg, "scan", None), "hardware_history_retention_days", 180)
+    try:
+        retention_days = int(retention_raw)
+    except (TypeError, ValueError):
+        if logger:
+            logger.warning(
+                f"Hardware history retention purge skipped: invalid "
+                f"hardware_history_retention_days value {safe_str(retention_raw)!r} "
+                f"(must be a positive integer)"
+            )
+        return 0
+    if retention_days <= 0:
+        if logger:
+            logger.warning(
+                f"Hardware history retention purge skipped: non-positive "
+                f"hardware_history_retention_days value {safe_str(retention_raw)!r}"
+            )
+        return 0
+
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=retention_days)
+
+    scope = {(d.host, d.port) for d in hw_batch}
+    deleted = 0
+    for host, port in scope:
+        deleted += (
+            session.query(HardwareDevice)
+            .filter(
+                HardwareDevice.host == host,
+                HardwareDevice.port == port,
+                HardwareDevice.scanned_at < cutoff,
+            )
+            .delete(synchronize_session=False)
+        )
+    return deleted
+
+
+def persist_and_reconcile(session, devices, cfg, logger=None) -> tuple:
+    """Shared persist + purge + reconcile helper for hardware device batches
+    (Phase 158 HWLC-15).
+
+    Advisory-only: purges stale rows scoped to ``devices``' (host, port)
+    pairs, adds every device, commits, then reconciles drift history exactly
+    once per distinct ``(host, port)`` pair in the batch. Returns
+    ``(purged_count, inserted_drift_events)``.
+
+    ``devices == []`` or ``devices is None`` returns ``(0, [])`` without
+    touching the session. ``cfg=None`` is a supported caller choice — the
+    purge falls back to the 180-day default retention window.
+
+    D-158-A: this helper always calls ``session.commit()`` internally before
+    reconciling — there is deliberately no ``commit: bool`` parameter (the
+    signature is locked by CONTEXT.md). ``reconcile_device_history()`` reads
+    freshly-committed rows via ``recent_successful_hardware_rows()`` session
+    queries, never in-memory batch objects (RESEARCH.md Pattern 3 / Phase-155
+    Pitfall 2), so a plain ``flush()`` is not a substitute for the commit
+    here. In Plan 03's HTTPS-injected-session case this means hardware rows
+    (and whatever else is pending on that session) commit slightly ahead of
+    ``_ingest_envelope()``'s own terminal ``db.flush()`` — an accepted
+    commit-ordering nuance on advisory-only data (never data loss or
+    corruption), since the dedup/enrollment gates both fire strictly before
+    the hardware step.
+
+    Any exception raised anywhere in the body (e.g. ``session.commit()``
+    failing) is caught, logged at warning level via ``safe_str()``, and
+    ``(0, [])`` is returned — never re-raised (advisory-only, non-fatal).
+    """
+    if not devices:
+        return (0, [])
+    try:
+        purged = purge_stale_hardware_history(session, devices, cfg, logger)
+        for dev in devices:
+            session.add(dev)
+        session.commit()
+        events: list = []
+        for host, port in {(d.host, d.port) for d in devices}:
+            events.extend(reconcile_device_history(session, host, port))
+        return (purged, events)
+    except Exception as exc:
+        if logger:
+            logger.warning(
+                f"Hardware persist/reconcile failed (advisory-only, non-fatal): "
+                f"{safe_str(exc)}"
+            )
+        return (0, [])
+
+
+# ---------------------------------------------------------------------------
 # reconcile_device_history() — DB-facing half (plan 155-04)
 # ---------------------------------------------------------------------------
 
@@ -377,5 +507,7 @@ __all__ = [
     "tier_direction",
     "cve_delta",
     "compute_drift_candidates",
+    "purge_stale_hardware_history",
+    "persist_and_reconcile",
     "reconcile_device_history",
 ]

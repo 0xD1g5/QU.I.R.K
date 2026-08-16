@@ -41,6 +41,10 @@ from quirk.scanner.hardware_scanner import (  # Phase 127 HWCOMPAT-01
     fingerprint_hardware,
     apply_eol_date,  # Phase 155-05/CR-01: SNMP-only bulk path also needs eol_date populated
 )
+from quirk.scanner.hardware_drift import (  # Phase 158 HWLC-15
+    purge_stale_hardware_history,
+    persist_and_reconcile,
+)
 from quirk.scanner.jwt_scanner import scan_jwt_targets
 from quirk.scanner.container_scanner import scan_container_targets
 from quirk.scanner.source_scanner import scan_source_targets
@@ -303,71 +307,12 @@ def build_ot_supplemental_endpoints(
     ]
 
 
-def _purge_stale_hardware_history(session, hw_batch, cfg, logger=None) -> int:
-    """Hard-delete ``hardware_devices`` rows older than the configured
-    time-based retention window, scoped to this scan batch's own devices
-    (Phase 154 HWLC-03 / D-10 / D-12).
-
-    D-10: retention is a time-based window (``scan.hardware_history_retention_days``),
-    never a row-count cap. D-12: this is an opportunistic, per-scan hard delete —
-    NOT a background worker, cron job, or operator-run CLI purge command. Each
-    scan purges only the (host, port) pairs present in its own ``hw_batch``; it
-    is never a table-wide delete.
-
-    Mandatory safety guard: a non-int, zero, or negative retention value would
-    otherwise compute a cutoff of "now" (or later) and hard-delete the
-    operator's entire hardware history. Skipping the purge entirely is the
-    only safe failure mode for a destructive operation, so any coercion
-    failure or a non-positive result logs a warning and returns 0 WITHOUT
-    deleting anything.
-
-    Does not commit — the caller owns the transaction (see the placement
-    note at the ``run_ot_supplemental_and_persist`` call site: this must run
-    before the hw_batch add() loop so the delete and the inserts share one
-    transaction with no autoflush interaction).
-
-    Returns the total number of deleted rows (0 if skipped or nothing to do).
-    """
-    from datetime import timedelta
-    from quirk.models import HardwareDevice
-
-    if not hw_batch:
-        return 0
-
-    retention_raw = getattr(getattr(cfg, "scan", None), "hardware_history_retention_days", 180)
-    try:
-        retention_days = int(retention_raw)
-    except (TypeError, ValueError):
-        if logger:
-            logger.warning(
-                f"Hardware history retention purge skipped: invalid "
-                f"hardware_history_retention_days value {safe_str(retention_raw)!r} "
-                f"(must be a positive integer)"
-            )
-        return 0
-    if retention_days <= 0:
-        if logger:
-            logger.warning(
-                f"Hardware history retention purge skipped: non-positive "
-                f"hardware_history_retention_days value {safe_str(retention_raw)!r}"
-            )
-        return 0
-
-    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=retention_days)
-
-    scope = {(d.host, d.port) for d in hw_batch}
-    deleted = 0
-    for host, port in scope:
-        deleted += (
-            session.query(HardwareDevice)
-            .filter(
-                HardwareDevice.host == host,
-                HardwareDevice.port == port,
-                HardwareDevice.scanned_at < cutoff,
-            )
-            .delete(synchronize_session=False)
-        )
-    return deleted
+# Phase 158 D-158-B: relocated to quirk.scanner.hardware_drift.
+# purge_stale_hardware_history() so persist_and_reconcile() can call it
+# without importing this heavyweight root-level module. Alias kept so
+# tests/test_hardware_retention_purge.py's 5 call sites through
+# run_scan._purge_stale_hardware_history keep working with zero edits.
+_purge_stale_hardware_history = purge_stale_hardware_history
 
 
 def _purge_stale_drift_events(session, cfg, logger=None) -> int:
