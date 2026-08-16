@@ -4,13 +4,13 @@ milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
 status: executing
 stopped_at: Completed 158-01-PLAN.md
-last_updated: "2026-08-16T18:44:48.394Z"
+last_updated: "2026-08-16T18:53:53.869Z"
 last_activity: 2026-08-16
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 25
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 158 (Sensor Fleet Drift Coverage) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-16
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 88%
 
 ## v5.14 Phase Map (planning)
 
@@ -181,6 +181,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 157 P04 | 25min | 2 tasks | 5 files |
 | Phase 157 PP05 | 35min | 3 tasks | 4 files |
 | Phase 158 P01 | 15min | 2 tasks | 3 files |
+| Phase 158 P02 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -349,6 +350,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 157]: 157-04 new dedicated tests/test_executive_forecast_section.py module created, resolving 157-VALIDATION.md's open Wave 0 item about build_exec_markdown's scattered test coverage
 - [Phase 157]: 157-05 report-interpretation.md's §10.11 EOL/Tier Forecast section expanded in place (not duplicated) with the literal bucket-label vocabulary and an explicit reader-facing guarantee that hardware_drift_event_retention_days places no limit on the forecast (ROADMAP success criterion #5)
 - [Phase 158]: 158-01: D-158-A/B/C implemented as locked — persist_and_reconcile() always commits internally (no commit:bool param); purge_stale_hardware_history() relocated into hardware_drift.py with a run_scan.py alias; Site B (SNMP-only) now applies the retention purge for the first time — intentional behavior expansion
+- [Phase 158]: 158-02: PushEnvelope.hardware_devices uses a bare None default (D-158-D/E/F implemented as locked) — absent vs confirmed-empty structurally distinguished; _hardware_device_to_dict()/_read_scan_hardware_devices() mirror the existing _endpoint_to_dict()/_read_scan_endpoints() shapes; both push and export _build_envelope() call sites updated identically
 
 ### Pending Todos
 
@@ -445,7 +447,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-16T18:44:48.388Z
+Last session: 2026-08-16T18:53:01.246Z
 Stopped at: Completed 158-01-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 

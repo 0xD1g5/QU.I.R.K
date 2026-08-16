@@ -125,7 +125,7 @@ Plans:
 **Wave 1**
 
 - [x] 158-01-PLAN.md — Shared `persist_and_reconcile()` helper + both `run_scan.py` persist sites refactored onto it (HWLC-15)
-- [ ] 158-02-PLAN.md — `hardware_devices` field on `PushEnvelope` + sensor-side serialization/read + round-trip schema test (HWLC-15)
+- [x] 158-02-PLAN.md — `hardware_devices` field on `PushEnvelope` + sensor-side serialization/read + round-trip schema test (HWLC-15)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -193,7 +193,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 157. Drift-Event Retention + Forecast Narrative Foundation | 5/5 | Complete    | 2026-08-16 |
-| 158. Sensor Fleet Drift Coverage | 1/3 | In Progress|  |
+| 158. Sensor Fleet Drift Coverage | 2/3 | In Progress|  |
 | 159. Check-in Scan Mode | 0/TBD | Not started | - |
 | 160. Catalog-Level PQC Vendor Trend Tracking | 0/TBD | Not started | - |
 
