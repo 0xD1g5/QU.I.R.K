@@ -324,6 +324,24 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     # Phase 142 D-11: snapshot-stale flag for renderers' staleness caveat.
     exec_content.cve_snapshot_stale = hw_cve.is_cve_table_stale()
 
+    # Phase 157 HWLC-18 / D-01: advisory-only forward-looking EOL/tier forecast.
+    # Consumes the FINAL exec_content.hardware_devices list (post bridge-detection/
+    # mitigation enrichment) so the forecast and the hardware table can never
+    # disagree about the device set. No new DB session — build_eol_forecast never
+    # reads hardware_drift_events, which is the structural half of D-01's
+    # forward-only guarantee. Non-fatal: eol_forecast stays {} on failure.
+    eol_forecast: dict = {}
+    try:
+        from quirk.scanner.hardware_forecast import build_eol_forecast as _build_eol_forecast
+
+        eol_forecast = _build_eol_forecast(exec_content.hardware_devices)
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "hardware EOL/tier forecast section skipped (non-fatal)", exc_info=True
+        )
+    exec_content.eol_forecast = eol_forecast
+
     # Phase 156 D-11/HWLC-10: hardware lifecycle drift events — read-and-serialize block
     # only; Phase 155 owns drift computation. Scoped to the latest-scan slice (Pitfall 5) —
     # the bounded historical disclosure (D-09/D-10) is a dashboard-only affordance, not

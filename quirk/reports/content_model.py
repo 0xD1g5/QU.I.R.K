@@ -98,6 +98,13 @@ class ExecContent:
     undetermined_hosts_count: int = 0
     undetermined_hosts_breakdown: Dict[str, int] = field(default_factory=dict)
 
+    # Phase 157 HWLC-18 / D-01, D-04, D-05: advisory-only forward-looking EOL/tier
+    # forecast, populated by writer.py from the already-projected `hardware_devices`
+    # rows. Forward-only — never derived from drift-event history; never routed
+    # through the findings chokepoint and carries no severity key, matching the
+    # drift field's own contract.
+    eol_forecast: dict = field(default_factory=dict)
+
 
 # ---------------------------------------------------------------------------
 # D-04: Ordering dicts for within-bucket priority sort
