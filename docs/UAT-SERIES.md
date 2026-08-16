@@ -1,7 +1,13 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-16 (v5.14 Phase 157 wrap — Drift-Event Retention + Forecast Narrative
+**Last Updated:** 2026-08-16 (v5.14 Phase 158 wrap — Sensor Fleet Drift Coverage: UAT-158-01..03
+added covering `persist_and_reconcile()` wired into the console's shared `_ingest_envelope()`
+path, so sensor-scanned segments reach `hardware_devices`/`hardware_drift_events` identically to
+console-direct scans, while an old sensor that omits `hardware_devices` writes nothing (HWLC-15).
+Closes HWLC-15. See Series 158.
+
+Earlier: 2026-08-16 (v5.14 Phase 157 wrap — Drift-Event Retention + Forecast Narrative
 Foundation: UAT-157-01..05 added covering the table-wide `hardware_drift_events` calendar-cutoff
 retention purge with fail-closed invalid-value handling (HWLC-16), and the 12-month EOL/Tier
 Forecast narrative rendered across HTML, DOCX, and CLI/markdown, forward-only and structurally
@@ -18390,3 +18396,96 @@ scenario mechanically; this row captures the human prose-quality read-through pe
 explicit UAT-157-05 scenario. Not yet performed — deferred to the next human-UAT pass per the
 established Phase 155/156 pattern for prose-quality-only scenarios (see STATE.md Deferred
 Items).
+
+---
+
+## Series 158: Sensor Fleet Drift Coverage (Phase 158 — v5.14)
+
+**Last Updated:** 2026-08-16
+
+### UAT-158-01: A sensor push carrying `hardware_devices` results in device rows visible on `/hardware` (HWLC-15) — Human
+
+**What to test:** A sensor push (or air-gap `.qpush` import) whose envelope carries a populated
+`hardware_devices` list results in those devices appearing on the console's `/hardware` dashboard
+page, with vendor/model/tier matching the sensor-side scan.
+
+**Steps:**
+1. Enroll a sensor via `quirk console enroll` and note the sensor_id + segment.
+2. Run a sensor-side scan against a fingerprinted target (e.g. the `hwcompat` chaos lab profile)
+   with `quirk sensor scan`, then push results with `quirk sensor push` (or export + `quirk
+   console import-results` for the air-gap path).
+3. Open the console dashboard's `/hardware` page.
+4. Confirm the pushed device(s) appear with vendor/model/PQC-status/CNSA-2.0-tier matching the
+   sensor-side scan output.
+
+**Pass criteria:**
+- Device rows visible on `/hardware` with vendor/model/tier matching the sensor-side scan
+- No duplicate or missing rows for the pushed devices
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** _pending_  **Tester:** _pending — human dashboard walkthrough_
+**Notes:** HWLC-15. Automated coverage: `tests/test_hardware_sensor_ingest.py::test_populated_hardware_devices_are_persisted`
+and `test_injected_session_path_persists_hardware` prove the underlying persistence; this row is
+the human visual confirmation on a live dashboard. See 158-03-SUMMARY.md.
+
+---
+
+### UAT-158-02: Repeating a sensor push after a tier/vendor change surfaces a drift entry on `/compare` and in a generated report (HWLC-15) — Human
+
+**What to test:** Pushing an updated scan for an already-known sensor-origin device whose
+CNSA 2.0 tier or vendor has changed surfaces a drift entry on `/compare` and in a generated
+HTML/DOCX report — rendered identically to a console-direct-scan drift row, since no
+dashboard/report code changed in this phase (RESEARCH.md Assumption A2 smoke test).
+
+**Steps:**
+1. Using the same enrolled sensor from UAT-158-01, re-run the sensor-side scan against a target
+   whose remediation tier or vendor identification has changed since the first push (or seed a
+   prior `HardwareDevice` row at a different tier directly).
+2. Push the updated results.
+3. Open `/compare` and confirm a "Recent Lifecycle Changes" drift row is present for the
+   sensor-scanned device, attributable to the sensor's segment.
+4. Generate an HTML or DOCX report for the same scan and confirm the same drift row is present,
+   rendered with the same `LifecycleEventList` styling as a console-direct-scan drift row (no
+   distinct visual treatment, no filtering by origin).
+
+**Pass criteria:**
+- A drift row is visible on `/compare` for the sensor-scanned device
+- The same drift row appears in the generated HTML/DOCX report
+- The row is visually indistinguishable from a console-direct-scan drift row
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** _pending_  **Tester:** _pending — human dashboard + report walkthrough_
+**Notes:** HWLC-15. Automated coverage: `tests/test_hardware_sensor_ingest.py::test_sensor_hardware_produces_drift_events_end_to_end`
+proves `HardwareDriftEvent` rows are created identically for sensor-origin devices; this row is
+the human visual confirmation that `/compare` and reports render them without filtering or
+distinct styling. See 158-03-SUMMARY.md.
+
+---
+
+### UAT-158-03: An air-gap `.qpush` from a pre-158 sensor imports successfully with zero hardware drift events (HWLC-15) — Automated
+
+**What to test:** An air-gap `.qpush` file whose envelope omits the `hardware_devices` key
+entirely (simulating a pre-Phase-158 sensor binary) imports successfully via `quirk console
+import-results` and produces zero `HardwareDevice` rows and zero `HardwareDriftEvent` rows — no
+"all devices removed" drift entries, no import failure.
+
+**Steps:**
+1. Run `.venv/bin/python -m pytest tests/test_hardware_sensor_ingest.py -k omitted -v`.
+2. Confirm `test_omitted_hardware_devices_writes_nothing` shows zero `HardwareDevice` and zero
+   `HardwareDriftEvent` rows after ingest, while the envelope's `findings` still ingest normally.
+3. Confirm `test_omitted_hardware_devices_does_not_call_persist_and_reconcile` shows
+   `persist_and_reconcile()` is never invoked when the key is absent.
+
+**Pass criteria:**
+- Import succeeds (no exception, no exit-1)
+- Zero `HardwareDevice` rows written
+- Zero `HardwareDriftEvent` rows written (specifically: no false "device removed" events)
+- Findings ingest is unaffected
+
+**Automated gate:** `.venv/bin/python -m pytest tests/test_hardware_sensor_ingest.py -k omitted -v`
+→ 2/2 PASSED (Phase 158 Plan 03).
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-16  **Tester:** automated (pytest — Phase 158 Plan 03)
+**Notes:** HWLC-15. This is the phase's central invariant: `None` (key absent) must never be
+misread as confirmed-zero (`[]`). See 158-03-SUMMARY.md.
