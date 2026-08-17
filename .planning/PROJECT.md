@@ -254,7 +254,20 @@ narrative in HTML, DOCX, and CLI/markdown reports, with `test_cve_score_guard.py
 assert the forecast never touches `SCORE_WEIGHTS` or `compute_readiness_score` — advisory-only,
 machine-enforced, and explicitly reconciled against the retention window so the forecast never
 implies visibility into an already-purged period. 5/5 plans, verifier passed 5/5 must-haves.
-Next: Phase 158 (Sensor Fleet Drift Coverage).
+
+Phase 158 (Sensor Fleet Drift Coverage) complete 2026-08-17 — HWLC-15 satisfied. A shared
+`persist_and_reconcile()` chokepoint (in `quirk/scanner/hardware_drift.py`) now backs both the
+console-direct `run_scan.py` persist sites and the new sensor-ingest path, eliminating the
+duplicated purge/commit/reconcile logic v5.13 left behind. `PushEnvelope.hardware_devices: list
+| None = None` carries sensor-side hardware fingerprints over the wire with a strict
+absent-vs-empty distinction (`None` = old sensor never observed hardware, `[]` = confirmed-zero),
+proven end-to-end by a 7-test round-trip suite. Code review caught a BLOCKER mid-phase — an
+unconditional `session.rollback()` inside the shared helper that would have silently wiped a
+caller's already-flushed rows on the HTTPS sensor-push route — fixed via an `owns_session`
+parameter and closed out over a 3-iteration review→fix→re-review cycle that also added
+regression coverage for the fix itself. 3/3 plans, verifier passed 4/4 must-haves at the code
+level; 2 dashboard-rendering UAT items (`/hardware`, `/compare`) deferred to human validation per
+user choice, tracked as non-blocking warnings. Next: Phase 159 (Check-in Scan Mode).
 
 ## Previous Milestone: v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED 2026-08-15
 
@@ -750,8 +763,8 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hardcoded 168-hour OT/ICS cadence floor, not config-overridable (v5.13 / 156-01, D-19) | Fragile Modbus/BACnet devices were built for one read-only probe per engagement; a configurable floor could be set to zero by an impatient operator, silently reintroducing the exact production risk the gate exists to prevent | ✓ Good — confirmed as a module-level constant, never read from config, by both code review and the independent verifier |
 
 ---
-*Last updated: 2026-08-16 — Phase 157 (Drift-Event Retention + Forecast Narrative Foundation)
-complete, milestone v5.14 (Hardware Lifecycle Tail — Fleet Coverage & Forecasting) in progress*
+*Last updated: 2026-08-17 — Phase 158 (Sensor Fleet Drift Coverage) complete, milestone v5.14
+(Hardware Lifecycle Tail — Fleet Coverage & Forecasting) in progress*
 
 ## Evolution
 
