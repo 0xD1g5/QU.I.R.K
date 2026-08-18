@@ -283,9 +283,24 @@ across HTML, DOCX, CLI, and — after a code-review BLOCKER caught the React das
 type/renderer omitting the field entirely — the live dashboard too, now a bonus 4th surface. 5/5
 plans, verifier passed 4/4 ROADMAP criteria + 20/20 plan-level truths with `status: passed` (no
 human-needed items). A 3-iteration code-review cycle closed one BLOCKER and four warnings; two
-INFO-level test-coverage gaps remain as tracked non-blocking follow-ups. Next: Phase 160
-(Catalog-Level PQC Vendor Trend Tracking) — flagged in ROADMAP as the least-precedented item in
-this milestone, no existing QUIRK subsystem does cross-device/cross-vendor aggregation.
+INFO-level test-coverage gaps remain as tracked non-blocking follow-ups.
+
+Phase 160 (Catalog-Level PQC Vendor Trend Tracking) complete 2026-08-18 — HWLC-17 satisfied, the
+last phase of v5.14. A new `vendor_pqc_trend_events` table (no host/port columns) records discrete
+events when a vendor's `HARDWARE_MATRIX`-derived `pqc_status` changes, detected via a new
+`vendor_fleet_snapshot()` helper that dedupes to one row per distinct device — research caught a
+real design flaw before implementation: a naive raw-history query would have let one
+frequently-rescanned host (especially under Phase 159's check-in cadence) dominate the N-of-M
+confirmation gate for its whole vendor, defeating the gate's purpose. Reuses `_confirmed_value()`
+verbatim, wired into the Phase 158 `persist_and_reconcile()` chokepoint after the existing
+per-device loop, fault-isolated and advisory-only. `GET /api/hardware/vendor-trends` exposes the
+events on the existing authenticated router. Report-surface rendering (HTML/DOCX/CLI) explicitly
+deferred to a follow-up phase per locked scope. 3/3 plans, verifier passed 16/16 must-haves,
+`status: passed` (no human-needed items) — the cleanest phase-close of the milestone: code review
+found 0 blockers and only 1 warning (a doc-accuracy fix, since landed).
+
+**v5.14 milestone complete: all 4 phases (157–160) shipped.** Awaiting `/gsd-audit-milestone` and
+`/gsd-complete-milestone`.
 
 ## Previous Milestone: v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED 2026-08-15
 
@@ -781,8 +796,9 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hardcoded 168-hour OT/ICS cadence floor, not config-overridable (v5.13 / 156-01, D-19) | Fragile Modbus/BACnet devices were built for one read-only probe per engagement; a configurable floor could be set to zero by an impatient operator, silently reintroducing the exact production risk the gate exists to prevent | ✓ Good — confirmed as a module-level constant, never read from config, by both code review and the independent verifier |
 
 ---
-*Last updated: 2026-08-18 — Phase 159 (Check-in Scan Mode) complete, milestone v5.14
-(Hardware Lifecycle Tail — Fleet Coverage & Forecasting) in progress*
+*Last updated: 2026-08-18 — Phase 160 (Catalog-Level PQC Vendor Trend Tracking) complete;
+milestone v5.14 (Hardware Lifecycle Tail — Fleet Coverage & Forecasting) all 4 phases shipped,
+awaiting audit + completion*
 
 ## Evolution
 
