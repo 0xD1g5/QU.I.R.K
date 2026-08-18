@@ -8,9 +8,8 @@ evidence / EOL state, the CVE delta, and the candidate-event builder. Plan
 turns candidates into deduplicated, persisted ``HardwareDriftEvent`` rows.
 Everything else in this module remains a pure function.
 
-Advisory-only: this module is never referenced by
-``quirk/intelligence/scoring.py`` or ``SCORE_WEIGHTS`` (mirroring
-``hw_cve.py`` lines 5-8; guarded by an extended
+Advisory-only: this module is never referenced by the readiness-score
+weighting engine (mirroring ``hw_cve.py`` lines 5-8; guarded by an extended
 ``tests/test_cve_score_guard.py`` test, T-155-01).
 """
 from __future__ import annotations

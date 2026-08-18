@@ -344,3 +344,60 @@ def test_forecast_module_does_not_import_drift_events() -> None:
             f"quirk/scanner/hardware_forecast.py must never reference {forbidden!r} "
             f"(T-157-05 D-01 forward-only invariant)"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 160 (HWLC-17 / T-160-04) — advisory-only firewall extended to the
+# catalog-level vendor PQC trend surface (quirk.scanner.hardware_drift,
+# quirk.models_util). Plan 160-03's dashboard route module is deliberately
+# NOT added here — it covers that surface separately.
+# ---------------------------------------------------------------------------
+
+
+def test_vendor_trend_modules_have_no_score_weights_reference() -> None:
+    """No comment-stripped source of quirk.scanner.hardware_drift or
+    quirk.models_util references SCORE_WEIGHTS."""
+    import pathlib
+
+    import quirk.scanner.hardware_drift as hardware_drift_module
+    import quirk.models_util as models_util_module
+
+    for module in (hardware_drift_module, models_util_module):
+        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+        assert "SCORE_WEIGHTS" not in source, (
+            f"{module.__file__} must never reference SCORE_WEIGHTS (T-160-04)"
+        )
+
+
+def test_vendor_trend_modules_do_not_import_scoring() -> None:
+    """No comment-stripped source of quirk.scanner.hardware_drift or
+    quirk.models_util imports the scoring engine or the readiness-assessment
+    module."""
+    import pathlib
+
+    import quirk.scanner.hardware_drift as hardware_drift_module
+    import quirk.models_util as models_util_module
+
+    for module in (hardware_drift_module, models_util_module):
+        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+        for forbidden in ("quirk.intelligence.scoring", "quirk.assessment.readiness_score"):
+            assert forbidden not in source, (
+                f"{module.__file__} must never import {forbidden!r} (T-160-04)"
+            )
+
+
+def test_no_vendor_trend_key_in_score_weights() -> None:
+    """No key in quirk.intelligence.scoring.SCORE_WEIGHTS contains the
+    substring 'vendor_trend', 'pqc_trend', or 'vendor_pqc' (case-insensitive)
+    — extends the existing lifecycle/drift/forecast key assertions to
+    Phase 160's vocabulary."""
+    from quirk.intelligence.scoring import SCORE_WEIGHTS
+
+    bad_keys = [
+        k for k in SCORE_WEIGHTS
+        if any(term in k.lower() for term in ("vendor_trend", "pqc_trend", "vendor_pqc"))
+    ]
+    assert bad_keys == [], (
+        f"SCORE_WEIGHTS must never contain vendor-trend-derived keys "
+        f"(T-160-04): {bad_keys}"
+    )
