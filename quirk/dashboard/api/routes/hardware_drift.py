@@ -28,18 +28,33 @@ from quirk.scanner.hardware_drift import tier_direction
 router = APIRouter(dependencies=[Depends(require_auth)])
 
 
-def build_device_lookup(db: Session) -> dict[tuple[str, int], tuple[Optional[str], Optional[str]]]:
-    """Builds a ``(host, port) -> (vendor, model)`` lookup once from
-    ``latest_successful_hardware_devices()`` — a device whose most recent
-    probe failed still returns its last-known-good vendor/model
-    (Phase 154 D-13 invariant)."""
+def build_device_lookup(
+    db: Session,
+) -> dict[tuple[str, int], tuple[Optional[str], Optional[str], bool]]:
+    """Builds a ``(host, port) -> (vendor, model, is_partial_scan)`` lookup
+    once from ``latest_successful_hardware_devices()`` — a device whose most
+    recent probe failed still returns its last-known-good vendor/model
+    (Phase 154 D-13 invariant).
+
+    Phase 159 HWLC-13: ``is_partial_scan`` is coerced via
+    ``bool(getattr(...))`` because the column is nullable with no DDL
+    default — NULL must read as False, never a bare ``row.is_partial_scan``
+    passthrough.
+    """
     rows = latest_successful_hardware_devices(db)
-    return {(row.host, row.port): (row.vendor, row.model) for row in rows}
+    return {
+        (row.host, row.port): (
+            row.vendor,
+            row.model,
+            bool(getattr(row, "is_partial_scan", False)),
+        )
+        for row in rows
+    }
 
 
 def serialize_drift_event(
     row: HardwareDriftEvent,
-    lookup: dict[tuple[str, int], tuple[Optional[str], Optional[str]]],
+    lookup: dict[tuple[str, int], tuple[Optional[str], Optional[str], bool]],
 ) -> HardwareDriftEventItem:
     """Serializes one ``HardwareDriftEvent`` row into a
     ``HardwareDriftEventItem``, deriving ``direction`` via
@@ -52,7 +67,7 @@ def serialize_drift_event(
     else:
         direction = "neutral"
 
-    vendor, model = lookup.get((row.host, row.port), (None, None))
+    vendor, model, is_partial_scan = lookup.get((row.host, row.port), (None, None, False))
 
     return HardwareDriftEventItem(
         host=row.host,
@@ -64,6 +79,7 @@ def serialize_drift_event(
         detected_at=row.detected_at.isoformat(),
         vendor=vendor,
         model=model,
+        is_partial_scan=is_partial_scan,
     )
 
 

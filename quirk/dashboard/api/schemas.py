@@ -269,6 +269,11 @@ class HardwareDriftEventItem(BaseModel):
     detected_at: str              # ISO 8601
     vendor: Optional[str] = None
     model: Optional[str] = None
+    # Phase 159 HWLC-13: True when the triggering HardwareDevice row came
+    # from a --check-in partial re-probe; NULL/absent device rows read as
+    # False. Badge, not filter (D-159-I) — check-in-sourced drift events
+    # keep appearing on every drift surface, just labeled.
+    is_partial_scan: bool = False
 
     @field_validator("direction")
     @classmethod
