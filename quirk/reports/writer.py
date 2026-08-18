@@ -365,12 +365,12 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                 .scalar()
             )
             if _latest_ts is not None:
-                # Phase 159 HWLC-13/D-159-A: a drift event inherits its triggering
-                # device row's is_partial_scan provenance via this (host, port) join —
-                # no column was added to HardwareDriftEvent for it (detected_at ==
-                # scanned_at join rationale, RESEARCH.md Pattern 3).
+                # Phase 159 WR-04: is_partial_scan is read directly off each
+                # HardwareDriftEvent row (set at insert time in
+                # reconcile_device_history()), not joined from current device
+                # state — a later scan must never flip an older event's badge.
                 _drift_lookup = {
-                    (_d.host, _d.port): (_d.vendor, _d.model, bool(getattr(_d, "is_partial_scan", False)))
+                    (_d.host, _d.port): (_d.vendor, _d.model)
                     for _d in _latest_hw_devices(_drift_sess)
                 }
                 _drift_rows = (
@@ -389,7 +389,8 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                         _direction = _raw_direction if _raw_direction in ("improved", "worsened") else "neutral"
                     else:
                         _direction = "neutral"
-                    _vendor, _model, _is_partial = _drift_lookup.get((_row.host, _row.port), (None, None, False))
+                    _vendor, _model = _drift_lookup.get((_row.host, _row.port), (None, None))
+                    _is_partial = bool(getattr(_row, "is_partial_scan", False))
                     hardware_drift_events.append({
                         "host":         _row.host,
                         "port":         _row.port,
