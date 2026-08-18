@@ -182,6 +182,14 @@ _CHECKIN_HW_COLUMNS: tuple[tuple[str, str], ...] = (
     # means "not a check-in / pre-Phase-159 row" — never backfilled.
     ("is_partial_scan", "BOOLEAN"),
 )
+_CHECKIN_DRIFT_EVENT_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 159 WR-03 fix: provenance-correct check-in re-probe marker on
+    # hardware_drift_events, captured at insert time from the HardwareDevice
+    # row that produced the event — never joined against the device's
+    # current-state row (see HardwareDriftEvent docstring in models.py).
+    # NULL means "not yet backfilled / pre-fix row" — never backfilled.
+    ("is_partial_scan", "BOOLEAN"),
+)
 _PHASE146_SCANJOB_COLUMNS: tuple[tuple[str, str], ...] = (
     # Phase 146 DISC-04: nmap discovery batch-progress fields on scan_jobs.
     # All nullable — null until the first nmap discovery batch completes.
@@ -256,6 +264,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("scan_jobs",        _PHASE146_SCANJOB_COLUMNS),  # Phase 146 DISC-04
     ("hardware_devices", _IDENTITY_HW_COLUMNS),       # Phase 154 HWLC-01/02
     ("hardware_devices", _CHECKIN_HW_COLUMNS),        # Phase 159 HWLC-13
+    ("hardware_drift_events", _CHECKIN_DRIFT_EVENT_COLUMNS),  # Phase 159 WR-03 fix
 )
 
 

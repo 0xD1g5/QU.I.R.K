@@ -41,7 +41,7 @@ def test_init_db_is_idempotent_for_hardware_drift_events(tmp_path):
     cols = {c["name"] for c in inspector.get_columns("hardware_drift_events")}
     assert cols == {
         "id", "host", "port", "event_type", "old_value", "new_value",
-        "detected_at", "confirmed_at",
+        "detected_at", "confirmed_at", "is_partial_scan",
     }
 
 

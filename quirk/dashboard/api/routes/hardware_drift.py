@@ -30,44 +30,50 @@ router = APIRouter(dependencies=[Depends(require_auth)])
 
 def build_device_lookup(
     db: Session,
-) -> dict[tuple[str, int], tuple[Optional[str], Optional[str], bool]]:
-    """Builds a ``(host, port) -> (vendor, model, is_partial_scan)`` lookup
-    once from ``latest_successful_hardware_devices()`` — a device whose most
-    recent probe failed still returns its last-known-good vendor/model
-    (Phase 154 D-13 invariant).
+) -> dict[tuple[str, int], tuple[Optional[str], Optional[str]]]:
+    """Builds a ``(host, port) -> (vendor, model)`` lookup once from
+    ``latest_successful_hardware_devices()`` — a device whose most recent
+    probe failed still returns its last-known-good vendor/model (Phase 154
+    D-13 invariant).
 
-    Phase 159 HWLC-13: ``is_partial_scan`` is coerced via
-    ``bool(getattr(...))`` because the column is nullable with no DDL
-    default — NULL must read as False, never a bare ``row.is_partial_scan``
-    passthrough.
+    Phase 159 WR-03 fix: this lookup is now scoped to vendor/model only.
+    ``is_partial_scan`` is deliberately NOT sourced from here — a single
+    current-state snapshot cannot correctly badge historical/windowed drift
+    events (a later scan can supersede the device row and silently flip the
+    badge for events that predate it). ``is_partial_scan`` is instead read
+    directly off each ``HardwareDriftEvent`` row in ``serialize_drift_event``
+    — captured at insert time by ``reconcile_device_history()`` from the
+    probe that actually produced that specific event.
     """
     rows = latest_successful_hardware_devices(db)
-    return {
-        (row.host, row.port): (
-            row.vendor,
-            row.model,
-            bool(getattr(row, "is_partial_scan", False)),
-        )
-        for row in rows
-    }
+    return {(row.host, row.port): (row.vendor, row.model) for row in rows}
 
 
 def serialize_drift_event(
     row: HardwareDriftEvent,
-    lookup: dict[tuple[str, int], tuple[Optional[str], Optional[str], bool]],
+    lookup: dict[tuple[str, int], tuple[Optional[str], Optional[str]]],
 ) -> HardwareDriftEventItem:
     """Serializes one ``HardwareDriftEvent`` row into a
     ``HardwareDriftEventItem``, deriving ``direction`` via
     ``tier_direction()`` for tier_crossing events and ``"neutral"`` for
     every other event type. Never reimplements direction logic
-    (RESEARCH.md Don't Hand-Roll)."""
+    (RESEARCH.md Don't Hand-Roll).
+
+    Phase 159 WR-03 fix: ``is_partial_scan`` is read directly off ``row``
+    (the drift event itself, populated at insert time by
+    ``reconcile_device_history()``) rather than joined through ``lookup``'s
+    current-state device snapshot — see ``build_device_lookup()`` docstring.
+    Coerced via ``bool(getattr(...))`` because the column is nullable with
+    no DDL default (pre-fix rows read NULL -> False), never a bare
+    ``row.is_partial_scan`` passthrough.
+    """
     if row.event_type == "tier_crossing":
         raw_direction = tier_direction(row.old_value, row.new_value)
         direction = raw_direction if raw_direction in ("improved", "worsened") else "neutral"
     else:
         direction = "neutral"
 
-    vendor, model, is_partial_scan = lookup.get((row.host, row.port), (None, None, False))
+    vendor, model = lookup.get((row.host, row.port), (None, None))
 
     return HardwareDriftEventItem(
         host=row.host,
@@ -79,7 +85,7 @@ def serialize_drift_event(
         detected_at=row.detected_at.isoformat(),
         vendor=vendor,
         model=model,
-        is_partial_scan=is_partial_scan,
+        is_partial_scan=bool(getattr(row, "is_partial_scan", False)),
     )
 
 

@@ -509,6 +509,13 @@ def reconcile_device_history(
                 new_value=candidate.new_value,
                 detected_at=detected_at,
                 confirmed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                # Phase 159 WR-03 fix: capture is_partial_scan from the row
+                # that actually produced this event (rows[0], the newest
+                # successful HardwareDevice row in this reconciliation
+                # window), NOT derived later via a join against the
+                # device's current-state row. Same NULL-safe coercion
+                # convention as build_device_lookup().
+                is_partial_scan=bool(getattr(rows[0], "is_partial_scan", False)),
             )
             session.add(event)
             inserted.append(event)

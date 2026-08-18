@@ -608,9 +608,12 @@ def test_compare_drift_empty_when_no_events():
 
 
 def test_hardware_drift_badges_checkin_event():
-    """A HardwareDevice with is_partial_scan=True badges its matching drift
-    event True on /api/hardware/drift (D-159-K: check-in becomes the
-    'latest' bucket — the badge makes that cause visible, not a defect)."""
+    """A HardwareDriftEvent with is_partial_scan=True (as
+    reconcile_device_history() sets it at insert time — Phase 159 WR-03 fix:
+    captured from the producing probe, not joined against the device's
+    current-state row) badges True on /api/hardware/drift (D-159-K:
+    check-in becomes the 'latest' bucket — the badge makes that cause
+    visible, not a defect)."""
     from datetime import datetime
 
     client, TestingSession = _drift_client_and_session()
@@ -620,6 +623,7 @@ def test_hardware_drift_badges_checkin_event():
         TestingSession,
         host="10.0.0.9", port=22, event_type="tier_crossing",
         old_value="Tier 2", new_value="Tier 1", detected_at=ts,
+        is_partial_scan=True,
     )
 
     resp = client.get("/api/hardware/drift")
@@ -654,7 +658,9 @@ def test_compare_drift_includes_and_badges_checkin_event():
     """A check-in drift event inside (ts_b, ts_a] is PRESENT in /api/compare's
     hardware_drift list AND carries is_partial_scan True — badge-not-filter
     (D-159-I): check-in-sourced device changes stay visible in the
-    time-window lifecycle list."""
+    time-window lifecycle list. is_partial_scan is seeded directly on the
+    event (Phase 159 WR-03 fix: reconcile_device_history() captures it from
+    the producing probe at insert time, not via a later join)."""
     from datetime import datetime
 
     client, TestingSession = _drift_client_and_session()
@@ -667,6 +673,7 @@ def test_compare_drift_includes_and_badges_checkin_event():
         TestingSession,
         host="10.0.0.11", port=22, event_type="eol_state_change",
         old_value="ok", new_value="approaching", detected_at=ts_a,
+        is_partial_scan=True,
     )
 
     resp = client.get(_compare_url(ts_a, ts_b))

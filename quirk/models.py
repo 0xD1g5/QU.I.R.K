@@ -385,6 +385,19 @@ class HardwareDriftEvent(Base):
     site against an explicit allowlist constant (never free text) — the V5
     input-validation control from RESEARCH.md's Security Domain; the
     allowlist itself lives in hardware_drift.py (plan 155-03).
+
+    is_partial_scan (Phase 159 WR-03 fix): captured at insert time by
+    ``reconcile_device_history()`` from the ``HardwareDevice`` row that
+    actually produced this event (``rows[0].is_partial_scan``), NOT derived
+    later via a join against the device's current-state row. This makes the
+    dashboard's "Partial re-probe" badge provenance-correct and immune to a
+    later scan changing the device's own is_partial_scan value — without
+    this column, joining historical/windowed drift events against a single
+    current-state device snapshot can silently flip the badge for events
+    that predate the most recent scan. Nullable/no DDL default, same
+    coercion convention as HardwareDevice.is_partial_scan: NULL reads as
+    False via bool(getattr(row, "is_partial_scan", False)), never a bare
+    passthrough.
     """
 
     __tablename__ = "hardware_drift_events"
@@ -397,6 +410,7 @@ class HardwareDriftEvent(Base):
     new_value    = Column(String(255), nullable=True)
     detected_at  = Column(DateTime,    nullable=False)
     confirmed_at = Column(DateTime,    nullable=True)
+    is_partial_scan = Column(Boolean,  nullable=True)
 
 
 class HardwareDevice(Base):
