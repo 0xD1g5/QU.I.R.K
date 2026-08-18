@@ -43,8 +43,8 @@ milestone — no urgent insertions anticipated.
 ### Phases
 
 - [x] **Phase 157: Drift-Event Retention + Forecast Narrative Foundation** - Bound `hardware_drift_events` growth via a calendar-cutoff sweep and add a hedged, catalog-cited 12-month EOL/tier forecast narrative to every report format, structurally isolated from scoring.
-- [ ] **Phase 158: Sensor Fleet Drift Coverage** - Sensor-scanned segments reach the console's drift history exactly like console-direct scans, via a `hardware_devices` field on `PushEnvelope` and a shared `persist_and_reconcile()` helper.
-- [ ] **Phase 159: Check-in Scan Mode** - Consultants can re-probe only already-known devices via a distinct opt-in mode (never a 4th `--profile` value), excluded from scored comparisons and always visually flagged as partial.
+- [x] **Phase 158: Sensor Fleet Drift Coverage** - Sensor-scanned segments reach the console's drift history exactly like console-direct scans, via a `hardware_devices` field on `PushEnvelope` and a shared `persist_and_reconcile()` helper.
+- [x] **Phase 159: Check-in Scan Mode** - Consultants can re-probe only already-known devices via a distinct opt-in mode (never a 4th `--profile` value), excluded from scored comparisons and always visually flagged as partial.
 - [ ] **Phase 160: Catalog-Level PQC Vendor Trend Tracking** - Vendor-level PQC support status changes in the curated hardware catalog are recorded over time as discrete, structured, cross-device/cross-vendor events.
 
 ## Phase Details
