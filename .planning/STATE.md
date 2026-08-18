@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
-status: ready_to_plan
-stopped_at: Phase 159 complete (5/5) — ready to discuss Phase 160
-last_updated: 2026-08-18T04:26:41.754Z
+status: executing
+stopped_at: Completed 160-01-PLAN.md
+last_updated: "2026-08-18T13:03:56.145Z"
 last_activity: 2026-08-18
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 16
+  completed_plans: 14
   percent: 75
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 160 — catalog level pqc vendor trend tracking
+**Current focus:** Phase 160 — Catalog-Level PQC Vendor Trend Tracking
 
 ## Current Position
 
-Phase: 160
-Plan: Not started
-Status: Ready to plan
+Phase: 160 (Catalog-Level PQC Vendor Trend Tracking) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-08-18
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## v5.14 Phase Map (planning)
 
@@ -188,6 +188,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 159 P03 | 12min | 2 tasks | 4 files |
 | Phase 159 P04 | 30min | 3 tasks | 7 files |
 | Phase 159 P05 | 20min | 2 tasks | 4 files |
+| Phase 160 P01 | 25min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -364,6 +365,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 159]: 159-03 D-159-I/J/K implemented as locked; badge-not-filter on /compare's hardware_drift block, zero new filtering on /trends/compare score paths, /api/hardware/drift latest-bucket side effect documented not fixed
 - [Phase 159]: 159-04 D-159-M..Q implemented as locked; is_partial_scan threaded through writer.py's existing (host,port) drift lookup with no new DB query; HTML banner sits outside <details> (D-159-N), CLI banner lives inside existing Hardware PQC Advisory block with an explicit no-Recent-Lifecycle-Changes-heading test to keep Phase 156 D-12 intact
 - [Phase ?]: [Phase 159]: 159-05 D-159-R/S/T confirmed and applied — no api-reference.md placeholder created, no chaos-lab files touched, no version string changed; docs/UAT-SERIES.md Series 159 (UAT-159-01..04) and all 4 touched docs synced to Obsidian vault
+- [Phase ?]: [Phase 160]: 160-01 D-160-A..G implemented as locked; VendorPqcTrendEvent has no host/port columns (D-160-E); VENDOR_EVENT_TYPES separate allowlist from EVENT_TYPES (D-160-D); reconcile_vendor_pqc_trend() reuses _confirmed_value()/DEFAULT_N/DEFAULT_M verbatim (D-160-A)
 
 ### Pending Todos
 
@@ -460,8 +462,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-18T03:52:50.376Z
-Stopped at: Completed 159-05-PLAN.md
+Last session: 2026-08-18T13:03:56.140Z
+Stopped at: Completed 160-01-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
