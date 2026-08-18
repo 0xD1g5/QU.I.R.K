@@ -5,6 +5,10 @@ payload every consumer pays for, and drift events have their own
 time-window semantics (D-09/D-10), so they get a dedicated endpoint here;
 the scan-pair-scoped block lives on `CompareResponse` in scan.py instead.
 
+Phase 160 HWLC-17: also hosts `GET /api/hardware/vendor-trends`, a
+read-only, bounded, vendor-scoped projection of catalog-level PQC-status
+trend events.
+
 Advisory-only (T-156-04 / HWLC-11 firewall, machine-enforced by
 tests/test_cve_score_guard.py): this module must never import the scoring
 engine or the readiness-assessment module, and must never reference the
@@ -20,8 +24,13 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
-from quirk.dashboard.api.schemas import HardwareDriftEventItem, HardwareDriftResponse
-from quirk.models import HardwareDevice, HardwareDriftEvent
+from quirk.dashboard.api.schemas import (
+    HardwareDriftEventItem,
+    HardwareDriftResponse,
+    VendorPqcTrendEventItem,
+    VendorPqcTrendResponse,
+)
+from quirk.models import HardwareDevice, HardwareDriftEvent, VendorPqcTrendEvent
 from quirk.models_util import latest_successful_hardware_devices
 from quirk.scanner.hardware_drift import tier_direction
 
@@ -143,3 +152,41 @@ def get_hardware_drift(
         historical_events=historical_events,
         historical_truncated=historical_truncated,
     )
+
+
+def serialize_vendor_trend_event(row: VendorPqcTrendEvent) -> VendorPqcTrendEventItem:
+    """Serializes one ``VendorPqcTrendEvent`` row into a
+    ``VendorPqcTrendEventItem``. Pure field copy — no device lookup, since
+    the row itself carries no host/port to enrich (vendor-scoped, Phase 160
+    HWLC-17).
+    """
+    return VendorPqcTrendEventItem(
+        vendor=row.vendor,
+        event_type=row.event_type,
+        old_value=row.old_value,
+        new_value=row.new_value,
+        detected_at=row.detected_at,
+        confirmed_at=row.confirmed_at,
+    )
+
+
+@router.get("/hardware/vendor-trends", response_model=VendorPqcTrendResponse)
+def get_vendor_pqc_trends(
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> VendorPqcTrendResponse:
+    """GET /api/hardware/vendor-trends — bounded, newest-first, vendor-scoped
+    projection of ``vendor_pqc_trend_events`` (Phase 160 HWLC-17).
+
+    Auth: inherited from router-level require_auth (do NOT add per-route).
+    """
+    rows = (
+        db.query(VendorPqcTrendEvent)
+        .order_by(VendorPqcTrendEvent.detected_at.desc(), VendorPqcTrendEvent.id.desc())
+        .limit(limit + 1)
+        .all()
+    )
+    truncated = len(rows) > limit
+    events = [serialize_vendor_trend_event(r) for r in rows[:limit]]
+
+    return VendorPqcTrendResponse(events=events, truncated=truncated)

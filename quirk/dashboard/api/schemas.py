@@ -300,6 +300,35 @@ class HardwareDriftResponse(BaseModel):
     historical_truncated: bool = False
 
 
+# ---- Catalog-Level PQC Vendor Trend Tracking (Phase 160 HWLC-17) ----
+
+
+class VendorPqcTrendEventItem(BaseModel):
+    """One serialized ``VendorPqcTrendEvent`` row for the dashboard API.
+
+    Read-only, advisory-only projection of a confirmed, fleet-wide vendor
+    PQC-status transition — never feeds the readiness score. Deliberately
+    has NO ``host``/``port`` field (vendor-scoped, not device-scoped) and
+    NO score/numeric field.
+    """
+    vendor: str
+    event_type: str
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    detected_at: datetime
+    confirmed_at: Optional[datetime] = None
+
+
+class VendorPqcTrendResponse(BaseModel):
+    """GET /api/hardware/vendor-trends response body (Phase 160 HWLC-17).
+
+    Read-only, advisory-only, bounded projection — never feeds the
+    readiness score.
+    """
+    events: List[VendorPqcTrendEventItem] = []
+    truncated: bool = False
+
+
 # ---- Roadmap ----
 
 class RoadmapEdge(BaseModel):
