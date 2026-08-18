@@ -22,8 +22,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable, Optional
 
-from quirk.models import HardwareDriftEvent
-from quirk.models_util import recent_successful_hardware_rows
+from quirk.models import HardwareDriftEvent, VendorPqcTrendEvent
+from quirk.models_util import recent_successful_hardware_rows, vendor_fleet_snapshot
 from quirk.scanner import hw_cve
 from quirk.scanner.hardware_eol import eol_state as _eol_state
 from quirk.scanner.hardware_tier import TIER_ORDER
@@ -45,6 +45,14 @@ EVENT_TYPES: tuple[str, ...] = (
 
 DEFAULT_N: int = 2  # of-M confirmations required to trust a reading (D-02)
 DEFAULT_M: int = 3  # window size (D-02)
+
+# V5 input-validation allowlist for VendorPqcTrendEvent.event_type (Phase 160
+# HWLC-17, mirrors T-155-03). Deliberately a separate constant from
+# EVENT_TYPES because vendor_pqc_trend_events and hardware_drift_events are
+# distinct tables (vendor-scoped fleet-wide vs. per-device (host, port)).
+VENDOR_EVENT_TYPES: tuple[str, ...] = (
+    "pqc_status_change",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -537,8 +545,88 @@ def reconcile_device_history(
         return []
 
 
+def reconcile_vendor_pqc_trend(
+    session, vendor: str, n: int = DEFAULT_N, m: int = DEFAULT_M
+) -> list:
+    """Reconciles one vendor's fleet-wide N-of-M ``pqc_status`` window into
+    deduplicated, persisted ``VendorPqcTrendEvent`` rows (Phase 160 HWLC-17).
+
+    Vendor-scoped, fleet-wide, cross-device analogue of
+    ``reconcile_device_history()``. Advisory-only — must be called AFTER
+    ``session.commit()`` so it reads freshly-committed rows (RESEARCH.md
+    Pitfall 4); never called against an in-memory batch list.
+
+    The "new" ``pqc_status`` is read off the persisted
+    ``HardwareDevice.pqc_status`` column (catalog-assigned at fingerprint
+    time by ``_apply_entry()``), NEVER re-derived from ``HARDWARE_MATRIX``
+    here — this module must not import ``quirk.scanner.hardware_meta`` for
+    that purpose.
+
+    The entire body is wrapped in a broad ``try/except`` — on any exception,
+    logs a warning via ``safe_str()`` (advisory-only, non-fatal), attempts
+    ``session.rollback()`` inside its own suppressing try/except, and
+    returns ``[]``. Never re-raises; never aborts persistence of
+    device/drift rows.
+    """
+    try:
+        rows = vendor_fleet_snapshot(session, vendor, limit=m)
+        if len(rows) < 2:
+            return []
+
+        confirmed = _confirmed_value(rows, lambda row: getattr(row, "pqc_status", None), n=n)
+        if confirmed is None or confirmed != rows[0].pqc_status:
+            return []
+
+        old_value = None
+        for older_row in rows[1:]:
+            older_value = getattr(older_row, "pqc_status", None)
+            if older_value != confirmed:
+                old_value = older_value
+                break
+        else:
+            return []  # no change found among older rows — nothing to emit
+
+        most_recent = (
+            session.query(VendorPqcTrendEvent)
+            .filter(
+                VendorPqcTrendEvent.vendor == vendor,
+                VendorPqcTrendEvent.event_type == "pqc_status_change",
+            )
+            .order_by(VendorPqcTrendEvent.detected_at.desc(), VendorPqcTrendEvent.id.desc())
+            .first()
+        )
+        if most_recent is not None and most_recent.new_value == confirmed:
+            return []
+
+        if "pqc_status_change" not in VENDOR_EVENT_TYPES:
+            return []
+
+        event = VendorPqcTrendEvent(
+            vendor=vendor,
+            event_type="pqc_status_change",
+            old_value=old_value,
+            new_value=confirmed,
+            detected_at=rows[0].scanned_at,
+            confirmed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        )
+        session.add(event)
+        session.commit()
+        return [event]
+    except Exception as exc:
+        logger.warning(
+            "Vendor PQC trend reconciliation failed (advisory-only, non-fatal): %s",
+            safe_str(exc),
+        )
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        return []
+
+
 __all__ = [
     "EVENT_TYPES",
+    "VENDOR_EVENT_TYPES",
     "DEFAULT_N",
     "DEFAULT_M",
     "DriftCandidate",
@@ -550,4 +638,5 @@ __all__ = [
     "purge_stale_hardware_history",
     "persist_and_reconcile",
     "reconcile_device_history",
+    "reconcile_vendor_pqc_trend",
 ]

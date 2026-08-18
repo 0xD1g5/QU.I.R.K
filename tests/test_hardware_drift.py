@@ -614,3 +614,178 @@ def test_reconcile_device_history_commit_failure_is_swallowed(monkeypatch, caplo
         assert any("advisory-only" in r.message for r in caplog.records)
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# reconcile_vendor_pqc_trend() (Phase 160 Plan 01, HWLC-17)
+# (pytest -k vendor_pqc_trend selects this group)
+# ---------------------------------------------------------------------------
+
+from quirk.models import VendorPqcTrendEvent
+from quirk.scanner.hardware_drift import VENDOR_EVENT_TYPES, reconcile_vendor_pqc_trend
+
+
+def _seed_vendor(session, host, port, scanned_at, vendor, pqc_status):
+    device = HardwareDevice(
+        host=host,
+        port=port,
+        vendor=vendor,
+        model=None,
+        pqc_status=pqc_status,
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        probe_status="success",
+        scanned_at=scanned_at,
+        remediation_tier="Tier 1",
+    )
+    session.add(device)
+    session.commit()
+    return device
+
+
+def test_vendor_pqc_trend_confirmed_change_emits_one_event() -> None:
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "unsupported")
+    _seed_vendor(session, "10.0.0.2", 443, base + _dt.timedelta(days=1), "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.3", 443, base + _dt.timedelta(days=2), "Cisco", "partial")
+    try:
+        result = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert len(result) == 1
+        assert result[0].event_type == "pqc_status_change"
+        assert result[0].old_value == "unsupported"
+        assert result[0].new_value == "partial"
+        assert result[0].detected_at == base + _dt.timedelta(days=2)
+        assert result[0].confirmed_at is not None
+        assert session.query(VendorPqcTrendEvent).filter_by(vendor="Cisco").count() == 1
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_unconfirmed_window_emits_no_event() -> None:
+    """Fail-closed: no value reaches n confirmations."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "unsupported")
+    _seed_vendor(session, "10.0.0.2", 443, base + _dt.timedelta(days=1), "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.3", 443, base + _dt.timedelta(days=2), "Cisco", "unknown")
+    try:
+        result = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert result == []
+        assert session.query(VendorPqcTrendEvent).count() == 0
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_confirmed_but_not_newest_emits_no_event() -> None:
+    """Confirmed value != rows[0].pqc_status -> no event (newest reading
+    unconfirmed / suspected probe flakiness)."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.2", 443, base + _dt.timedelta(days=1), "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.3", 443, base + _dt.timedelta(days=2), "Cisco", "unsupported")
+    try:
+        result = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert result == []
+        assert session.query(VendorPqcTrendEvent).count() == 0
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_single_device_fleet_emits_no_event() -> None:
+    """A vendor's first-ever device (only one distinct host) emits no event
+    (Pitfall 3 — no spurious change-from-null)."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "unsupported")
+    try:
+        result = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert result == []
+        assert session.query(VendorPqcTrendEvent).count() == 0
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_all_older_rows_match_confirmed_emits_no_event() -> None:
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.2", 443, base + _dt.timedelta(days=1), "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.3", 443, base + _dt.timedelta(days=2), "Cisco", "partial")
+    try:
+        result = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert result == []
+        assert session.query(VendorPqcTrendEvent).count() == 0
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_second_call_is_deduped() -> None:
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "unsupported")
+    _seed_vendor(session, "10.0.0.2", 443, base + _dt.timedelta(days=1), "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.3", 443, base + _dt.timedelta(days=2), "Cisco", "partial")
+    try:
+        first = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert len(first) == 1
+        second = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert second == []
+        assert session.query(VendorPqcTrendEvent).count() == 1
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_single_host_no_dominate() -> None:
+    """Pitfall 1 regression: a single host rescanned 3x with no other
+    device of that vendor cannot satisfy the N-of-M gate — no event."""
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "unsupported")
+    _seed_vendor(session, "10.0.0.1", 443, base + _dt.timedelta(days=1), "Cisco", "unsupported")
+    _seed_vendor(session, "10.0.0.1", 443, base + _dt.timedelta(days=2), "Cisco", "unsupported")
+    try:
+        assert reconcile_vendor_pqc_trend(session, "Cisco") == []
+        assert session.query(VendorPqcTrendEvent).count() == 0
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_event_type_allowlist() -> None:
+    assert VENDOR_EVENT_TYPES == ("pqc_status_change",)
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Juniper", "unsupported")
+    _seed_vendor(session, "10.0.0.2", 443, base + _dt.timedelta(days=1), "Juniper", "partial")
+    _seed_vendor(session, "10.0.0.3", 443, base + _dt.timedelta(days=2), "Juniper", "partial")
+    try:
+        reconcile_vendor_pqc_trend(session, "Juniper")
+        events = session.query(VendorPqcTrendEvent).all()
+        assert len(events) == 1
+        for event in events:
+            assert event.event_type in VENDOR_EVENT_TYPES
+    finally:
+        session.close()
+
+
+def test_vendor_pqc_trend_exception_is_swallowed_and_returns_empty(monkeypatch, caplog) -> None:
+    session = _memory_session()
+    base = _dt.datetime(2026, 8, 1)
+    _seed_vendor(session, "10.0.0.1", 443, base, "Cisco", "unsupported")
+    _seed_vendor(session, "10.0.0.2", 443, base + _dt.timedelta(days=1), "Cisco", "partial")
+    _seed_vendor(session, "10.0.0.3", 443, base + _dt.timedelta(days=2), "Cisco", "partial")
+
+    def _boom():
+        raise RuntimeError("simulated commit failure")
+
+    monkeypatch.setattr(session, "commit", _boom)
+    try:
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            result = reconcile_vendor_pqc_trend(session, "Cisco")
+        assert result == []
+        assert any("advisory-only" in r.message for r in caplog.records)
+    finally:
+        session.close()
