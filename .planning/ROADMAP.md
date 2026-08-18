@@ -152,7 +152,14 @@ helper; console-direct target resolution itself has no sensor dependency)
 
   4. A check-in run persists `HardwareDevice`/`hardware_drift_events` rows only — it does not go
      through `compute_readiness_score` and does not write a scored scan session.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 159-01-PLAN.md — `HardwareDevice.is_partial_scan` marker column + `check_in_fingerprint_devices()` re-probe dispatch (wave 1)
+- [ ] 159-02-PLAN.md — `--check-in` CLI flag, `run_check_in()` short-circuit, CLI summary (wave 2)
+- [ ] 159-03-PLAN.md — API badge on drift events + `/trends`//`/compare` immunity regression tests (wave 2)
+- [ ] 159-04-PLAN.md — Partial re-probe banner in HTML/DOCX/CLI report renderers (wave 2)
+- [ ] 159-05-PLAN.md — Docs, UAT Series 159, Obsidian vault sync (wave 3)
 
 ### Phase 160: Catalog-Level PQC Vendor Trend Tracking
 
