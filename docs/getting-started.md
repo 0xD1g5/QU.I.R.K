@@ -70,6 +70,17 @@ quirk --config config.yaml
 
 QU.I.R.K. will probe the configured targets for TLS and SSH services. For a single host this completes in under 30 seconds. Results are written to `./quirk-output/`.
 
+**Re-checking known hardware between full scans?** If you've already fingerprinted a hardware
+fleet (§ Optional: Hardware Scanning below) and just want to see whether anything drifted, use
+the lightweight `--check-in` re-probe instead of a full re-scan:
+
+```bash
+quirk --config config.yaml --check-in
+```
+
+It re-probes only the devices QU.I.R.K. already knows about and never produces a new readiness
+score — see `docs/operators-guide.md` §9.9 for the full behavior.
+
 ---
 
 ## 3. Open the Dashboard

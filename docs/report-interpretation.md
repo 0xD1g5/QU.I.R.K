@@ -615,6 +615,54 @@ resting on current data.
 > score. If the underlying vendor catalog hasn't been re-checked recently, we'll flag that too,
 > so you know how fresh the projection is."
 
+### 10.12 Partial Re-Probe Banner (Check-in Scans, Phase 159)
+
+As of Phase 159 (HWLC-13), every rendered report displays a **Partial re-probe** banner whenever
+any device or drift row it is showing came from a `--check-in` run (see
+`docs/operators-guide.md` §9.9) rather than a full scan. The banner text is locked verbatim
+across every surface:
+
+> Partial re-probe — check-in scan; not a full assessment.
+
+**What triggers it.** The banner appears whenever any displayed `HardwareDevice` row or
+`hardware_drift_events` row carries `is_partial_scan=True` — i.e. it was written by a
+`--check-in` run. A report built entirely from full-scan data never shows the banner.
+
+**Where it appears:**
+
+| Format | Location |
+|--------|----------|
+| HTML/PDF | Hardware PQC Advisory (device) section, and independently the Recent Lifecycle Changes (drift) section — each gated on its own section's data, so either section alone still shows the banner if it has check-in-sourced rows |
+| DOCX | Hardware PQC Advisory table and Recent Lifecycle Changes section, same independent per-section gating as HTML/PDF |
+| CLI/markdown | Inside the existing `### Hardware PQC Advisory` block of the executive summary — the CLI report has no drift-section rendering to extend (Phase 156 D-12), so the banner appears once, alongside the device advisory |
+
+**How to read it.** The banner means the *displayed hardware state* reflects a partial re-probe
+of already-known devices, not a fresh discovery pass. Everything else in the report — the
+quantum-readiness score, the TLS/SSH/API/identity/data-at-rest/data-in-motion sections, and
+every non-hardware finding — still reflects the **last full scan**, since a check-in run never
+touches those subsystems. A consultant reading this report should treat the hardware section as
+more current than the rest of the report, and the rest of the report as reflecting whatever the
+last full scan found.
+
+**`/compare`'s hardware-drift list still includes check-in-sourced events — badged, not
+hidden.** By design (D-159-I), a drift event written by a check-in run appears in
+`GET /api/hardware/drift` and the `CompareResponse.hardware_drift` block exactly like any
+full-scan-sourced drift event, carrying an additive `is_partial_scan: true` field so the
+dashboard can badge its provenance rather than filtering it out of the "what changed" history.
+
+**The readiness-score comparison never includes check-in runs at all.** `/trends` and
+`/compare`'s score/subscore diffs are structurally immune to check-in data — a check-in run
+never writes a scored scan row, so it is never selectable as a comparison endpoint and never
+appears in a trend timeline. This is a structural guarantee (regression-tested), not a runtime
+filter: there is no scored artifact for a check-in run to be filtered out of in the first place.
+
+> **Client Conversation — Partial Re-Probe Banner:**
+> "You'll sometimes see a banner on the hardware section that says 'partial re-probe.' That means
+> we ran a quick, low-cost check-in against devices we'd already fingerprinted, instead of a full
+> scan — so the hardware picture is fresh, but the rest of this report, including your readiness
+> score, still reflects the last full assessment. It's a way to keep an eye on drift between full
+> engagements without re-running the whole thing."
+
 ---
 
 ## 11. Dashboard Sidebar Scan-Date Badge (Phase 143)

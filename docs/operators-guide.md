@@ -1510,6 +1510,62 @@ shown here carry no severity and make no contribution to the quantum-readiness s
 `docs/report-interpretation.md` §10.10 for the verbatim advisory caption and how it renders
 across the HTML, PDF, and DOCX report formats.
 
+### 9.9 Check-in Scan Mode (`--check-in`, Phase 159)
+
+As of Phase 159 (HWLC-13), `--check-in` is a lightweight, opt-in re-probe of the hardware fleet
+QU.I.R.K. already knows about. It exists for the common between-engagements case: a consultant
+wants to see whether anything on a previously fingerprinted fleet has drifted, without paying the
+cost of a full scan.
+
+```bash
+python run_scan.py --config config.yaml --check-in
+```
+
+**`--check-in` is a bare boolean opt-in on `run_scan.py`, not a `--profile` value.** It cannot be
+combined with `--profile`'s `quick`/`standard`/`deep` choices — it is a separate short-circuit
+that fires immediately after database initialization, before any profile-driven scan logic runs.
+
+**What it does and does not do:**
+
+- **Targets** are the latest successful `HardwareDevice` row per `(host, port)` — the same
+  last-known-good projection described in §9.6 — never a fresh network sweep.
+- **No discovery.** Network/CIDR discovery, nmap liveness pre-passing, and target expansion are
+  all skipped entirely.
+- **No non-hardware scanner phases.** TLS, SSH, JWT/API, container, source-code, and cloud KMS
+  scanning are all skipped. Only the hardware-fingerprinting probe family is re-run.
+- **Only the device's own probe family is re-run.** Each device's stored `fingerprint_method`
+  (`ssh_banner`, `http_mgmt`, `snmp`, `modbus`, or `bacnet`) determines which single probe
+  re-fires — a device originally fingerprinted via SSH is re-probed via SSH only, never promoted
+  to a different probe family.
+- **`modbus`/`bacnet` devices are skipped** when `connectors.enable_modbus` /
+  `connectors.enable_bacnet` are off, exactly as they are during a normal scan — a check-in never
+  force-enables OT/ICS probing.
+- **An empty fleet is a clean no-op.** If no `HardwareDevice` rows exist yet (no prior scan has
+  ever fingerprinted a device), `--check-in` prints an operator message and exits `0` with **zero
+  database writes** — it never errors out.
+- **Persists only `HardwareDevice` and `hardware_drift_events` rows**, through the same
+  `persist_and_reconcile()` chokepoint (§9.7) used by a full scan. Every row it writes carries
+  **`is_partial_scan=True`**.
+- **Never produces a readiness score or a full report.** A check-in run does not invoke the
+  scoring engine, the HTML/PDF/DOCX report writer, or the CLI/markdown executive summary. Run a
+  full scan (no `--check-in`) to get an updated readiness score.
+
+**Example CLI summary** (printed to the log, advisory-only, no return value):
+
+```
+[Check-in re-probe - partial scan, not scored]
+  Devices re-probed: 4 | Success: 3 | Failed: 1 | Drift events: 2
+  Not scored - run a full scan for an updated readiness score.
+```
+
+**Where check-in-sourced data shows up afterward.** Devices and drift events written by a
+check-in carry `is_partial_scan=True`. They stay visible everywhere the equivalent full-scan data
+would be — the `/hardware` and `/compare` dashboard pages, `GET /api/hardware/drift`, and
+`CompareResponse.hardware_drift` — badged rather than filtered out (see
+`docs/report-interpretation.md`'s check-in section for the exact reader-facing wording and the
+`/trends`/`/compare` readiness-score exclusion). A check-in run is never selectable as a scored
+scan on `/api/scans` or `/api/trends`.
+
 ---
 
 ## 10. Discovery Liveness Pre-Pass
