@@ -434,6 +434,15 @@ def build_exec_markdown(
             f"See full report for device-level detail."
         )
         lines.append("")
+        # Phase 159 HWLC-13/D-159-O: the CLI banner lives here, inside the existing
+        # Hardware PQC Advisory block, because executive.py has no lifecycle-drift
+        # section at all (Phase 156 D-12 stands, not revisited — no new CLI drift
+        # section is added by this plan).
+        if any(_d.get("is_partial_scan") for _d in hw_devs):
+            lines.append(
+                "> **Partial re-probe — check-in scan; not a full assessment.**"
+            )
+            lines.append("")
         # Phase 129 D-05: bridge topology disclaimer — fires only when bridge pairs detected.
         if any(d.get("bridge_status") == "partial_only" for d in hw_devs):
             lines.append(

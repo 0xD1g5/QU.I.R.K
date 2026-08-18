@@ -168,3 +168,50 @@ def test_cli_forecast_surfaces_stale_catalog():
         cfg=_make_minimal_cfg(), endpoints=[], findings=[], exec_content=exec_content_fresh
     )
     assert "2025-01-01" not in output_fresh
+
+
+# ---------------------------------------------------------------------------
+# Phase 159 HWLC-13/D-159-M/O: always-visible "partial re-probe" banner inside
+# the existing Hardware PQC Advisory block. No new CLI drift section — Phase
+# 156 D-12 stands, verified by the "no Recent Lifecycle Changes heading" assert
+# below so a future executor cannot satisfy the banner via the deferred section.
+# ---------------------------------------------------------------------------
+
+
+def test_cli_hardware_advisory_checkin_shows_banner():
+    from quirk.reports.executive import build_exec_markdown
+
+    hardware_devices = [{"remediation_tier": "Tier 1", "is_partial_scan": True}]
+    exec_content = _base_exec_content({}, hardware_devices=hardware_devices)
+    output = build_exec_markdown(
+        cfg=_make_minimal_cfg(), endpoints=[], findings=[], exec_content=exec_content
+    )
+
+    assert "### Hardware PQC Advisory" in output
+    assert "Partial re-probe — check-in scan; not a full assessment." in output
+    assert "Recent Lifecycle Changes" not in output
+
+
+def test_cli_hardware_advisory_no_checkin_omits_banner():
+    from quirk.reports.executive import build_exec_markdown
+
+    hardware_devices = [{"remediation_tier": "Tier 1", "is_partial_scan": False}]
+    exec_content = _base_exec_content({}, hardware_devices=hardware_devices)
+    output = build_exec_markdown(
+        cfg=_make_minimal_cfg(), endpoints=[], findings=[], exec_content=exec_content
+    )
+
+    assert "### Hardware PQC Advisory" in output
+    assert "Partial re-probe — check-in scan; not a full assessment." not in output
+
+
+def test_cli_hardware_advisory_checkin_empty_devices_omits_heading_and_banner():
+    from quirk.reports.executive import build_exec_markdown
+
+    exec_content = _base_exec_content({}, hardware_devices=[])
+    output = build_exec_markdown(
+        cfg=_make_minimal_cfg(), endpoints=[], findings=[], exec_content=exec_content
+    )
+
+    assert "### Hardware PQC Advisory" not in output
+    assert "Partial re-probe — check-in scan; not a full assessment." not in output
