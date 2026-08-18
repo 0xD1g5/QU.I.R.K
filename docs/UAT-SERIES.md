@@ -1,7 +1,10 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-16 (v5.14 Phase 158 wrap — Sensor Fleet Drift Coverage: UAT-158-01..03
+**Last Updated:** 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
+Closes HWLC-13. See Series 159.)
+
+Earlier: 2026-08-16 (v5.14 Phase 158 wrap — Sensor Fleet Drift Coverage: UAT-158-01..03
 added covering `persist_and_reconcile()` wired into the console's shared `_ingest_envelope()`
 path, so sensor-scanned segments reach `hardware_devices`/`hardware_drift_events` identically to
 console-direct scans, while an old sensor that omits `hardware_devices` writes nothing (HWLC-15).
@@ -18489,3 +18492,130 @@ import-results` and produces zero `HardwareDevice` rows and zero `HardwareDriftE
 **Date:** 2026-08-16  **Tester:** automated (pytest — Phase 158 Plan 03)
 **Notes:** HWLC-15. This is the phase's central invariant: `None` (key absent) must never be
 misread as confirmed-zero (`[]`). See 158-03-SUMMARY.md.
+
+---
+
+## Series 159: Check-in Scan Mode (Phase 159 — v5.14)
+
+**Last Updated:** 2026-08-17
+
+### UAT-159-01: `--check-in` re-probes only known devices, prints the check-in summary, and writes no readiness score/report (HWLC-13) — Automated
+
+**What to test:** Running `--check-in` against a populated hardware fleet re-probes only the
+already-known devices via each device's stored `fingerprint_method`, prints the CLI check-in
+summary, persists `HardwareDevice`/`hardware_drift_events` rows, and never invokes the scoring
+engine or the report writer.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_check_in_scan_mode.py -k checkin -v`.
+2. Confirm the control-flow tests prove `run_check_in()` never calls `compute_readiness_score` or
+   any report-writer function (forbidden-call-name grep against the function's own source).
+3. Confirm the persistence tests show `check_in_fingerprint_devices()` dispatches per stored
+   `fingerprint_method` and reuses `persist_and_reconcile()` with the same 4-positional-arg shape
+   as a full scan.
+4. Manually run `python run_scan.py --config config.yaml --check-in` against a previously
+   fingerprinted fleet (e.g. `hwcompat` chaos lab profile scanned once already) and confirm the
+   printed summary matches:
+   ```
+   [Check-in re-probe - partial scan, not scored]
+     Devices re-probed: N | Success: X | Failed: Y | Drift events: Z
+     Not scored - run a full scan for an updated readiness score.
+   ```
+
+**Pass criteria:**
+- `pytest tests/test_check_in_scan_mode.py -k checkin` passes with 0 failures
+- No new readiness score is written by a check-in run (no `MergeRun`/scored-scan artifact)
+- No HTML/DOCX/CLI report file is produced by a check-in run
+- Printed CLI summary matches the locked D-159-H format
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-17  **Tester:** automated (pytest — Phase 159 Plan 02)
+**Notes:** HWLC-13. Automated coverage: `tests/test_check_in_scan_mode.py` (21 tests total,
+including Plan 01's 14 dispatch-wrapper tests). See 159-02-SUMMARY.md.
+
+---
+
+### UAT-159-02: `--check-in` against an empty fleet prints the operator message, exits 0, writes zero rows (HWLC-13) — Automated
+
+**What to test:** Running `--check-in` when no `HardwareDevice` row has ever been fingerprinted
+(fresh database) prints an operator-facing message and exits `0` with no database writes — never
+an error or traceback.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_check_in_scan_mode.py -k "empty" -v`.
+2. Confirm the empty-fleet test seeds zero `HardwareDevice` rows, calls `run_check_in()`, and
+   asserts a `0` return with zero new `hardware_devices` rows after the call.
+3. Confirm the log message "No known devices to check in on - run a full scan first." is emitted.
+
+**Pass criteria:**
+- `run_check_in()` returns `0` on an empty fleet
+- Zero new `hardware_devices` rows after the call
+- No exception raised
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-17  **Tester:** automated (pytest — Phase 159 Plan 02)
+**Notes:** HWLC-13. See 159-02-SUMMARY.md.
+
+---
+
+### UAT-159-03: check-in rows carry `is_partial_scan=1`, are excluded from `/api/scans`+`/api/trends`, and appear badged in `/api/compare`'s `hardware_drift` (HWLC-13) — Automated
+
+**What to test:** Rows written by a check-in run are marked `is_partial_scan=1` in SQLite, never
+appear as a selectable scan in `/api/scans` or in an `/api/trends` timeline entry, and — when
+they represent a drift event — appear in `/api/compare`'s `hardware_drift` list carrying
+`is_partial_scan: true` rather than being filtered out.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_dashboard_api.py tests/test_dashboard_trends.py -k checkin -v`.
+2. Confirm `test_hardware_drift_checkin_full_scan_event_not_badged` (and its positive
+   counterpart) show the badge fires only on check-in-sourced drift rows.
+3. Confirm `test_compare_scan_list_ignores_checkin_rows` and `test_trends_ignores_checkin_rows`
+   show byte-identical `/api/scans`+`/api/compare` and `/api/trends` responses with and without
+   seeded check-in `HardwareDevice` rows (structural immunity, not a runtime filter).
+4. Query SQLite directly against a database with at least one check-in run:
+   `sqlite3 quirk-output/quirk.db "SELECT is_partial_scan FROM hardware_devices WHERE is_partial_scan=1 LIMIT 1;"`
+   and confirm a `1` row is returned.
+
+**Pass criteria:**
+- `is_partial_scan=1` present on check-in-sourced `hardware_devices` rows in SQLite
+- A check-in run is never selectable as a scored scan on `/api/scans` or `/api/trends`
+- `/api/compare`'s `hardware_drift` list includes (not filters) check-in-sourced drift events,
+  each carrying `is_partial_scan: true`
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-17  **Tester:** automated (pytest — Phase 159 Plan 03)
+**Notes:** HWLC-13. D-159-I (badge, don't filter) and D-159-J (zero new filtering code on the
+score paths, regression-locked instead). See 159-03-SUMMARY.md.
+
+---
+
+### UAT-159-04: The next full report shows the Partial re-probe banner after a check-in run; a report with no check-in-sourced rows shows none (HWLC-13) — Automated
+
+**What to test:** After a check-in run has written `is_partial_scan=True` rows, the next
+generated report (HTML, DOCX, CLI/markdown) displays the locked "Partial re-probe — check-in
+scan; not a full assessment." banner wherever those rows are rendered. A report built entirely
+from full-scan data shows no banner anywhere.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_html_renderer_drift.py tests/test_docx_renderer_drift.py tests/test_executive_forecast_section.py -k checkin -v`.
+2. Confirm the HTML positive/negative pairs show the banner rendered outside `<details>` in both
+   the Hardware PQC Advisory and Recent Lifecycle Changes sections when `is_partial_scan=True`
+   rows are present, and absent when they are not.
+3. Confirm the DOCX positive/negative pairs show the same banner in the Hardware PQC Advisory
+   table and Recent Lifecycle Changes section.
+4. Confirm the executive (CLI/markdown) positive/negative/empty-devices tests show the banner
+   inside the existing `### Hardware PQC Advisory` block, with no `### Recent Lifecycle Changes`
+   heading introduced (Phase 156 D-12 CLI-drift-section deferral stays intact).
+
+**Pass criteria:**
+- Banner text matches `PARTIAL_SCAN_BANNER` (html_renderer.py) / `_PARTIAL_SCAN_BANNER`
+  (docx_renderer.py) verbatim, character for character
+- Banner appears in HTML, DOCX, and CLI/markdown outputs whenever a displayed device or drift
+  row carries `is_partial_scan=True`
+- No banner appears in any format when no displayed row carries `is_partial_scan=True`
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-17  **Tester:** automated (pytest — Phase 159 Plan 04)
+**Notes:** HWLC-13. 13 new "checkin"-selectable tests across the three renderer test modules;
+targeted verification run: 347 passed, 4 skipped (pre-existing, unrelated), 0 failed. See
+159-04-SUMMARY.md.
