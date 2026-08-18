@@ -82,6 +82,15 @@ export function LifecycleEventRow({
         )}
       </div>
 
+      {event.is_partial_scan && (
+        <span
+          className="text-xs text-muted-foreground shrink-0"
+          title="Partial re-probe — check-in scan; not a full assessment."
+        >
+          Partial re-probe
+        </span>
+      )}
+
       <div className="min-w-0 flex-1">
         {event.old_value ?? "—"} → {event.new_value ?? "—"}
       </div>

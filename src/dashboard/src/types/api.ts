@@ -260,6 +260,7 @@ export interface HardwareDriftEventItem {
   detected_at: string
   vendor: string | null
   model: string | null
+  is_partial_scan: boolean
 }
 
 // Phase 156 HWLC-10 — mirrors quirk/dashboard/api/schemas.py HardwareDriftResponse.
