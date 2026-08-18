@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
-status: ready_to_plan
-stopped_at: Phase 158 complete (3/3) — ready to discuss Phase 159
-last_updated: 2026-08-17T11:44:39.372Z
-last_activity: 2026-08-16
+status: executing
+stopped_at: Completed 158-03-PLAN.md
+last_updated: "2026-08-18T03:18:42.410Z"
+last_activity: 2026-08-18
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 13
+  completed_plans: 9
   percent: 50
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 159 — check in scan mode
+**Current focus:** Phase 159 — Check-in Scan Mode
 
 ## Current Position
 
-Phase: 159
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-17
+Phase: 159 (Check-in Scan Mode) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-08-18
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 69%
 
 ## v5.14 Phase Map (planning)
 
@@ -183,6 +183,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 158 P01 | 15min | 2 tasks | 3 files |
 | Phase 158 P02 | 15min | 2 tasks | 4 files |
 | Phase 158 P03 | 35min | 3 tasks | 4 files |
+| Phase 159 P01 | 35min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -354,6 +355,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 158]: 158-02: PushEnvelope.hardware_devices uses a bare None default (D-158-D/E/F implemented as locked) — absent vs confirmed-empty structurally distinguished; _hardware_device_to_dict()/_read_scan_hardware_devices() mirror the existing _endpoint_to_dict()/_read_scan_endpoints() shapes; both push and export _build_envelope() call sites updated identically
 - [Phase 158]: 158-03: persist_and_reconcile() rolls back the session on internal exception before returning (0, []) -- a missing rollback previously let a failed hardware insert (e.g. NOT NULL scanned_at) poison the shared session and fail the whole sensor push, violating the advisory-only contract
 - [Phase 158]: 158-03: HardwareDevice.scanned_at (NOT NULL) falls back to ingest time when the wire value is missing/malformed, instead of passing None through to a column that rejects it and silently dropping the whole device row
+- [Phase 159]: 159-01 D-159-A..E implemented as locked; Rule 1 fix wired is_partial_scan through sensor_cmd.py::_hardware_device_to_dict()/console_cmd.py envelope reconstruction in the same commit to keep the Phase 158 sensor round-trip future-proofing gate green
 
 ### Pending Todos
 
@@ -450,7 +452,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-16T19:14:44.528Z
+Last session: 2026-08-18T03:17:52.332Z
 Stopped at: Completed 158-03-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 

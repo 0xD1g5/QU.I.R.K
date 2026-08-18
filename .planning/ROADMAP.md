@@ -155,7 +155,7 @@ helper; console-direct target resolution itself has no sensor dependency)
 **Plans**: 5 plans
 
 Plans:
-- [ ] 159-01-PLAN.md — `HardwareDevice.is_partial_scan` marker column + `check_in_fingerprint_devices()` re-probe dispatch (wave 1)
+- [x] 159-01-PLAN.md — `HardwareDevice.is_partial_scan` marker column + `check_in_fingerprint_devices()` re-probe dispatch (wave 1)
 - [ ] 159-02-PLAN.md — `--check-in` CLI flag, `run_check_in()` short-circuit, CLI summary (wave 2)
 - [ ] 159-03-PLAN.md — API badge on drift events + `/trends`//`/compare` immunity regression tests (wave 2)
 - [ ] 159-04-PLAN.md — Partial re-probe banner in HTML/DOCX/CLI report renderers (wave 2)
@@ -201,7 +201,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 |-------|----------------|--------|-----------|
 | 157. Drift-Event Retention + Forecast Narrative Foundation | 5/5 | Complete    | 2026-08-16 |
 | 158. Sensor Fleet Drift Coverage | 3/3 | Complete    | 2026-08-17 |
-| 159. Check-in Scan Mode | 0/TBD | Not started | - |
+| 159. Check-in Scan Mode | 1/5 | In Progress|  |
 | 160. Catalog-Level PQC Vendor Trend Tracking | 0/TBD | Not started | - |
 
 ---
