@@ -413,6 +413,48 @@ class HardwareDriftEvent(Base):
     is_partial_scan = Column(Boolean,  nullable=True)
 
 
+class VendorPqcTrendEvent(Base):
+    """Persisted catalog-level, vendor-scoped PQC-status trend event
+    (Phase 160 — HWLC-17).
+
+    One row per confirmed HARDWARE_MATRIX-derived ``pqc_status`` transition
+    for a VENDOR (fleet-wide, cross-device, cross-host) — distinct from
+    ``hardware_drift_events``, which is per-(host, port) device-scoped.
+    Deliberately has NO ``host``/``port`` columns: rows here summarize a
+    vendor's fleet, never a single device.
+
+    No relationship() declarations — project uses plain Column style
+    exclusively.
+
+    event_type values: ``pqc_status_change``, validated at the write site
+    against the ``VENDOR_EVENT_TYPES`` allowlist in
+    ``quirk/scanner/hardware_drift.py`` — never free text (V5 input
+    validation, mirrors T-155-03).
+
+    old_value/new_value are ``String(32)`` scalar enum values only (matching
+    ``HardwareDevice.pqc_status``'s own column width) — never raw banners,
+    never free text.
+
+    ASSUMPTION for future catalog maintainers: vendor-level and device-level
+    ``pqc_status`` are equivalent today only because ``HARDWARE_MATRIX``
+    currently holds exactly one entry per vendor (8 entries, 8 distinct
+    vendors, verified 2026-08-18) — this is a DATA property, not a schema
+    guarantee. A future catalog edit adding a second entry for an existing
+    vendor with a different ``pqc_status`` must be reviewed against this
+    coupling before shipping (RESEARCH.md Pitfall 2 / Assumption A2).
+    """
+
+    __tablename__ = "vendor_pqc_trend_events"
+
+    id           = Column(Integer,     primary_key=True, autoincrement=True)
+    vendor       = Column(String(255), nullable=False, index=True)
+    event_type   = Column(String(32),  nullable=False)
+    old_value    = Column(String(32),  nullable=True)
+    new_value    = Column(String(32),  nullable=True)
+    detected_at  = Column(DateTime,    nullable=False)
+    confirmed_at = Column(DateTime,    nullable=True)
+
+
 class HardwareDevice(Base):
     """Agentless hardware fingerprint record (Phase 127 — HWCOMPAT-01).
 

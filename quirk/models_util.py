@@ -81,3 +81,55 @@ def recent_successful_hardware_rows(session: Session, host: str, port: int, limi
         .limit(limit)
         .all()
     )
+
+
+def vendor_fleet_snapshot(session: Session, vendor: str, limit: int = 3) -> list[HardwareDevice]:
+    """Return up to *limit* ``HardwareDevice`` rows for one ``vendor``,
+    newest-first, deduped to exactly ONE row per distinct ``(host, port)``
+    (Phase 160 HWLC-17).
+
+    This is the vendor-level analogue of
+    ``latest_successful_hardware_devices()`` — NOT a raw row-history query
+    like ``recent_successful_hardware_rows()``. Deduping to one row per
+    distinct ``(host, port)`` FIRST is what prevents a single
+    repeatedly-rescanned host (e.g. under Phase 159's check-in cadence) from
+    occupying multiple slots of the N-of-M window and defeating the
+    fleet-wide confirmation gate (RESEARCH.md Pitfall 1).
+
+    Excludes rows whose ``probe_status != "success"`` and rows whose
+    ``vendor`` does not exactly equal the requested ``vendor`` string
+    (including the literal ``"Unknown"`` vendor — no special-casing).
+    Returns ``[]`` for a vendor with no successful rows. Deterministic when
+    two devices share an identical ``scanned_at`` (tie-broken by ``id``
+    desc), matching ``latest_successful_hardware_devices()``'s tie-break
+    convention.
+    """
+    latest_success = (
+        session.query(
+            HardwareDevice.host,
+            HardwareDevice.port,
+            func.max(HardwareDevice.scanned_at).label("max_ts"),
+        )
+        .filter(HardwareDevice.probe_status == "success", HardwareDevice.vendor == vendor)
+        .group_by(HardwareDevice.host, HardwareDevice.port)
+        .subquery()
+    )
+    devices = (
+        session.query(HardwareDevice)
+        .join(latest_success, and_(
+            HardwareDevice.host == latest_success.c.host,
+            HardwareDevice.port == latest_success.c.port,
+            HardwareDevice.scanned_at == latest_success.c.max_ts,
+        ))
+        .order_by(HardwareDevice.scanned_at.desc(), HardwareDevice.id.desc())
+        .all()
+    )
+
+    by_key: dict[tuple, HardwareDevice] = {}
+    for device in devices:
+        key = (device.host, device.port)
+        if key not in by_key or device.id > by_key[key].id:
+            by_key[key] = device
+    result = list(by_key.values())
+    result.sort(key=lambda d: (d.scanned_at, d.id), reverse=True)
+    return result[:limit]
