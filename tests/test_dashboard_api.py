@@ -602,3 +602,106 @@ def test_compare_drift_empty_when_no_events():
     body = resp.json()
     assert body["hardware_drift"] == []
     assert "score_delta" in body
+
+
+# ---- Phase 159 HWLC-13: is_partial_scan badge (D-159-I / D-159-K) ----
+
+
+def test_hardware_drift_badges_checkin_event():
+    """A HardwareDevice with is_partial_scan=True badges its matching drift
+    event True on /api/hardware/drift (D-159-K: check-in becomes the
+    'latest' bucket — the badge makes that cause visible, not a defect)."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts = datetime(2026, 8, 16, 12, 0, 0)
+    _seed_hw_device(TestingSession, host="10.0.0.9", port=22, scanned_at=ts, is_partial_scan=True)
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.9", port=22, event_type="tier_crossing",
+        old_value="Tier 2", new_value="Tier 1", detected_at=ts,
+    )
+
+    resp = client.get("/api/hardware/drift")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["latest_events"]) == 1
+    assert data["latest_events"][0]["is_partial_scan"] is True
+
+
+def test_hardware_drift_checkin_full_scan_event_not_badged():
+    """A HardwareDevice with is_partial_scan NULL badges False on its drift
+    event — NULL is not None-leak and not True."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts = datetime(2026, 8, 16, 12, 0, 0)
+    _seed_hw_device(TestingSession, host="10.0.0.10", port=22, scanned_at=ts)
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.10", port=22, event_type="tier_crossing",
+        old_value="Tier 2", new_value="Tier 1", detected_at=ts,
+    )
+
+    resp = client.get("/api/hardware/drift")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["latest_events"]) == 1
+    assert data["latest_events"][0]["is_partial_scan"] is False
+
+
+def test_compare_drift_includes_and_badges_checkin_event():
+    """A check-in drift event inside (ts_b, ts_a] is PRESENT in /api/compare's
+    hardware_drift list AND carries is_partial_scan True — badge-not-filter
+    (D-159-I): check-in-sourced device changes stay visible in the
+    time-window lifecycle list."""
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    ts_b = datetime(2026, 8, 10, 12, 0, 0)
+    ts_a = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_crypto_endpoint(TestingSession, ts_a)
+    _seed_crypto_endpoint(TestingSession, ts_b)
+    _seed_hw_device(TestingSession, host="10.0.0.11", port=22, scanned_at=ts_a, is_partial_scan=True)
+    _seed_drift_event(
+        TestingSession,
+        host="10.0.0.11", port=22, event_type="eol_state_change",
+        old_value="ok", new_value="approaching", detected_at=ts_a,
+    )
+
+    resp = client.get(_compare_url(ts_a, ts_b))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["hardware_drift"]) == 1
+    assert body["hardware_drift"][0]["is_partial_scan"] is True
+
+
+def test_compare_scan_list_ignores_checkin_rows():
+    """The /api/scans candidate list and score/subscore deltas for an
+    unrelated scan pair are identical with and without check-in
+    HardwareDevice rows seeded (D-159-J structural immunity — the score
+    paths query CryptoEndpoint exclusively, which check-in never writes)."""
+    from datetime import datetime
+
+    ts_b = datetime(2026, 8, 10, 12, 0, 0)
+    ts_a = datetime(2026, 8, 14, 12, 0, 0)
+
+    # Baseline: no check-in rows.
+    client1, TestingSession1 = _drift_client_and_session()
+    _seed_crypto_endpoint(TestingSession1, ts_a, severity="HIGH")
+    _seed_crypto_endpoint(TestingSession1, ts_b, severity="LOW")
+    scans_before = client1.get("/api/scans").json()
+    compare_before = client1.get(_compare_url(ts_a, ts_b)).json()
+
+    # Same fixture, plus check-in HardwareDevice rows seeded at both timestamps.
+    client2, TestingSession2 = _drift_client_and_session()
+    _seed_crypto_endpoint(TestingSession2, ts_a, severity="HIGH")
+    _seed_crypto_endpoint(TestingSession2, ts_b, severity="LOW")
+    _seed_hw_device(TestingSession2, host="10.0.0.12", port=22, scanned_at=ts_a, is_partial_scan=True)
+    _seed_hw_device(TestingSession2, host="10.0.0.12", port=22, scanned_at=ts_b, is_partial_scan=True)
+    scans_after = client2.get("/api/scans").json()
+    compare_after = client2.get(_compare_url(ts_a, ts_b)).json()
+
+    assert len(scans_before) == len(scans_after)
+    assert compare_before["score_delta"] == compare_after["score_delta"]
+    assert compare_before["subscore_deltas"] == compare_after["subscore_deltas"]

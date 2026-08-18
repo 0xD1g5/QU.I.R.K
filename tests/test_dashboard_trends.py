@@ -351,3 +351,47 @@ def test_trends_timeline_empty(dashboard_client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["sessions"] == []
+
+
+# ---- Phase 159 HWLC-13: /trends structural immunity to check-in rows (D-159-J) ----
+
+
+def test_trends_ignores_checkin_rows():
+    """Seeding HardwareDevice rows (with is_partial_scan True) and no
+    CryptoEndpoint rows for that timestamp leaves /api/trends' response
+    unchanged versus the same fixture without those rows — /trends queries
+    CryptoEndpoint exclusively, which check-in never writes (D-159-J)."""
+    from quirk.models import CryptoEndpoint, HardwareDevice
+
+    _PREV = _dt_t64(2026, 8, 12, 9, 0, 0)
+    _CURR = _dt_t64(2026, 8, 14, 9, 0, 0)
+
+    # Baseline: two CryptoEndpoint sessions only.
+    client1, SessionFactory1 = _make_trend64_client_and_session()
+    db1 = SessionFactory1()
+    try:
+        db1.add(CryptoEndpoint(host="a.example", port=443, protocol="TLS", severity="HIGH", scanned_at=_PREV))
+        db1.add(CryptoEndpoint(host="a.example", port=443, protocol="TLS", severity="HIGH", scanned_at=_CURR))
+        db1.commit()
+    finally:
+        db1.close()
+    before = client1.get("/api/trends").json()
+
+    # Same fixture, plus a check-in HardwareDevice row at a distinct timestamp
+    # with no matching CryptoEndpoint row.
+    client2, SessionFactory2 = _make_trend64_client_and_session()
+    db2 = SessionFactory2()
+    try:
+        db2.add(CryptoEndpoint(host="a.example", port=443, protocol="TLS", severity="HIGH", scanned_at=_PREV))
+        db2.add(CryptoEndpoint(host="a.example", port=443, protocol="TLS", severity="HIGH", scanned_at=_CURR))
+        db2.add(HardwareDevice(
+            host="10.0.0.20", port=22, vendor="Cisco", pqc_status="unsupported",
+            confidence="high", fingerprint_method="ssh_banner", probe_status="success",
+            is_partial_scan=True, scanned_at=_dt_t64(2026, 8, 15, 9, 0, 0),
+        ))
+        db2.commit()
+    finally:
+        db2.close()
+    after = client2.get("/api/trends").json()
+
+    assert before == after
