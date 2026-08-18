@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
-status: executing
-stopped_at: Completed 159-03-PLAN.md
-last_updated: "2026-08-18T03:43:22.387Z"
+status: verifying
+stopped_at: Completed 159-05-PLAN.md
+last_updated: "2026-08-18T03:52:50.382Z"
 last_activity: 2026-08-18
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
-  completed_plans: 12
-  percent: 50
+  completed_plans: 13
+  percent: 75
 ---
 
 # Project State
@@ -28,18 +28,18 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 Phase: 159 (Check-in Scan Mode) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-18
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## v5.14 Phase Map (planning)
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
 | 157 | Drift-Event Retention + Forecast Narrative Foundation | HWLC-16, HWLC-18 | None (first, fully independent) | Ready for verification (2026-08-16; 5/5 plans executed, HWLC-16/HWLC-18 satisfied — `/gsd:verify-phase 157` not yet run) |
-| 158 | Sensor Fleet Drift Coverage | HWLC-15 | None new (independent of 157; extends Phase 107/109/154 plumbing) | Not started |
-| 159 | Check-in Scan Mode | HWLC-13 | Phase 158 (reuses shared persist_and_reconcile() for drift writes) | Not started |
+| 158 | Sensor Fleet Drift Coverage | HWLC-15 | None new (independent of 157; extends Phase 107/109/154 plumbing) | Ready for verification (2026-08-17; 3/3 plans, HWLC-15 satisfied — `158-VERIFICATION.md` on disk, VALIDATION.md rows not yet reconciled) |
+| 159 | Check-in Scan Mode | HWLC-13 | Phase 158 (reuses shared persist_and_reconcile() for drift writes) | Ready for verification (2026-08-17; 5/5 plans executed, HWLC-13 satisfied — docs + UAT Series 159 + Obsidian vault sync closed; `/gsd:verify-phase 159` not yet run) |
 | 160 | Catalog-Level PQC Vendor Trend Tracking | HWLC-17 | Phase 158 (reuses persist_and_reconcile() call site; needs complete fleet population) | Not started |
 
 ## v5.13 Phase Map (SHIPPED 2026-08-15)
@@ -187,6 +187,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 159 P02 | 12min | 2 tasks | 2 files |
 | Phase 159 P03 | 12min | 2 tasks | 4 files |
 | Phase 159 P04 | 30min | 3 tasks | 7 files |
+| Phase 159 P05 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -362,6 +363,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase ?]: [Phase 159]: 159-02 D-159-F/G/H implemented as locked; run_check_in() docstring paraphrases compute_readiness_score to avoid tripping test_skips_discovery_and_scanner_phases' own forbidden-substring grep; test_check_in_flag_parses exercises the real argparse parser via main() + sys.argv patching since main() has no factored parser accessor
 - [Phase ?]: [Phase 159]: 159-03 D-159-I/J/K implemented as locked; badge-not-filter on /compare's hardware_drift block, zero new filtering on /trends/compare score paths, /api/hardware/drift latest-bucket side effect documented not fixed
 - [Phase 159]: 159-04 D-159-M..Q implemented as locked; is_partial_scan threaded through writer.py's existing (host,port) drift lookup with no new DB query; HTML banner sits outside <details> (D-159-N), CLI banner lives inside existing Hardware PQC Advisory block with an explicit no-Recent-Lifecycle-Changes-heading test to keep Phase 156 D-12 intact
+- [Phase ?]: [Phase 159]: 159-05 D-159-R/S/T confirmed and applied — no api-reference.md placeholder created, no chaos-lab files touched, no version string changed; docs/UAT-SERIES.md Series 159 (UAT-159-01..04) and all 4 touched docs synced to Obsidian vault
 
 ### Pending Todos
 
@@ -458,8 +460,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-18T03:42:32.668Z
-Stopped at: Completed 159-03-PLAN.md
+Last session: 2026-08-18T03:52:50.376Z
+Stopped at: Completed 159-05-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
