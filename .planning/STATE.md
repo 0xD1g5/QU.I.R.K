@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
 status: executing
-stopped_at: Completed 158-03-PLAN.md
-last_updated: "2026-08-18T03:18:42.410Z"
+stopped_at: Completed 159-02-PLAN.md
+last_updated: "2026-08-18T03:29:39.417Z"
 last_activity: 2026-08-18
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 159 (Check-in Scan Mode) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-08-18
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 77%
 
 ## v5.14 Phase Map (planning)
 
@@ -184,6 +184,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 158 P02 | 15min | 2 tasks | 4 files |
 | Phase 158 P03 | 35min | 3 tasks | 4 files |
 | Phase 159 P01 | 35min | 2 tasks | 6 files |
+| Phase 159 P02 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -356,6 +357,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 158]: 158-03: persist_and_reconcile() rolls back the session on internal exception before returning (0, []) -- a missing rollback previously let a failed hardware insert (e.g. NOT NULL scanned_at) poison the shared session and fail the whole sensor push, violating the advisory-only contract
 - [Phase 158]: 158-03: HardwareDevice.scanned_at (NOT NULL) falls back to ingest time when the wire value is missing/malformed, instead of passing None through to a column that rejects it and silently dropping the whole device row
 - [Phase 159]: 159-01 D-159-A..E implemented as locked; Rule 1 fix wired is_partial_scan through sensor_cmd.py::_hardware_device_to_dict()/console_cmd.py envelope reconstruction in the same commit to keep the Phase 158 sensor round-trip future-proofing gate green
+- [Phase ?]: [Phase 159]: 159-02 D-159-F/G/H implemented as locked; run_check_in() docstring paraphrases compute_readiness_score to avoid tripping test_skips_discovery_and_scanner_phases' own forbidden-substring grep; test_check_in_flag_parses exercises the real argparse parser via main() + sys.argv patching since main() has no factored parser accessor
 
 ### Pending Todos
 
@@ -452,8 +454,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-18T03:17:52.332Z
-Stopped at: Completed 158-03-PLAN.md
+Last session: 2026-08-18T03:29:39.413Z
+Stopped at: Completed 159-02-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
