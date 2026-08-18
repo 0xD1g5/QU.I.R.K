@@ -5,11 +5,15 @@ Coverage:
       calling only the identifying probe family for each device.
     - skip_http_mgmt gate on fingerprint_one() — default behavior unchanged,
       Step 2 (HTTP management) skipped only when the flag is explicitly set.
+    - run_scan.py's --check-in CLI flag, run_check_in() short-circuit, and
+      persistence-boundary control flow (Plan 02).
 """
 from __future__ import annotations
 
-from unittest.mock import patch
+import inspect
+from unittest.mock import MagicMock, patch
 
+import run_scan
 from quirk.models import HardwareDevice
 from quirk.scanner.hardware_scanner import (
     check_in_fingerprint_devices,
@@ -323,3 +327,175 @@ def test_dispatch_probe_exception_does_not_abort_batch() -> None:
 
     assert len(results) == 1
     assert results[0].host == known2.host
+
+
+# ---------------------------------------------------------------------------
+# run_scan.py --check-in control flow / persistence boundary (Plan 02)
+# ---------------------------------------------------------------------------
+
+
+class _RunScanConnectors:
+    def __init__(self):
+        self.enable_modbus = False
+        self.enable_bacnet = False
+
+
+class _RunScanTimeouts:
+    def __init__(self):
+        self.default_seconds = 1
+
+
+class _RunScanScan:
+    def __init__(self):
+        self.timeouts = _RunScanTimeouts()
+
+
+class _RunScanOutput:
+    def __init__(self, db_path="unused.db"):
+        self.db_path = db_path
+
+
+class _RunScanCfg:
+    def __init__(self):
+        self.output = _RunScanOutput()
+        self.connectors = _RunScanConnectors()
+        self.scan = _RunScanScan()
+
+
+def _persisted_device(host="10.0.0.1", port=22, probe_status="success"):
+    return HardwareDevice(
+        host=host,
+        port=port,
+        vendor="Cisco",
+        pqc_status="unsupported",
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        probe_status=probe_status,
+        is_partial_scan=True,
+        scanned_at=None,
+    )
+
+
+def test_empty_fleet_no_writes() -> None:
+    cfg = _RunScanCfg()
+    args = MagicMock()
+    logger = MagicMock()
+
+    with patch("run_scan.get_session"), \
+         patch("run_scan.latest_successful_hardware_devices", return_value=[]), \
+         patch("run_scan.check_in_fingerprint_devices") as mock_dispatch, \
+         patch("run_scan.persist_and_reconcile") as mock_persist:
+        result = run_scan.run_check_in(cfg, args, logger)
+
+    assert result == 0
+    assert not mock_dispatch.called
+    assert not mock_persist.called
+    logged = " ".join(str(c) for c in logger.info.call_args_list)
+    assert "No known devices to check in on" in logged
+
+
+def test_never_scores() -> None:
+    cfg = _RunScanCfg()
+    args = MagicMock()
+    logger = MagicMock()
+    known = [_persisted_device()]
+    device = _persisted_device()
+
+    with patch("run_scan.get_session"), \
+         patch("run_scan.latest_successful_hardware_devices", return_value=known), \
+         patch("run_scan.check_in_fingerprint_devices", return_value=[device]), \
+         patch("run_scan.persist_and_reconcile", return_value=(0, [])), \
+         patch("quirk.intelligence.scoring.compute_readiness_score") as mock_score:
+        result = run_scan.run_check_in(cfg, args, logger)
+
+    assert result == 0
+    assert not mock_score.called
+
+
+def test_persists_via_chokepoint() -> None:
+    cfg = _RunScanCfg()
+    args = MagicMock()
+    logger = MagicMock()
+    known = [_persisted_device()]
+    devices = [_persisted_device()]
+
+    with patch("run_scan.get_session"), \
+         patch("run_scan.latest_successful_hardware_devices", return_value=known), \
+         patch("run_scan.check_in_fingerprint_devices", return_value=devices), \
+         patch("run_scan.persist_and_reconcile", return_value=(0, [])) as mock_persist:
+        run_scan.run_check_in(cfg, args, logger)
+
+    assert mock_persist.call_count == 1
+    call = mock_persist.call_args
+    # positional args: (session, devices, cfg, logger) — no extra kwargs
+    assert call.args[1] is devices
+    assert call.args[2] is cfg
+    assert call.kwargs == {}
+
+
+def test_marker_set_on_persisted_devices() -> None:
+    cfg = _RunScanCfg()
+    args = MagicMock()
+    logger = MagicMock()
+    known = [_persisted_device()]
+    devices = [_persisted_device(), _persisted_device(host="10.0.0.2")]
+
+    with patch("run_scan.get_session"), \
+         patch("run_scan.latest_successful_hardware_devices", return_value=known), \
+         patch("run_scan.check_in_fingerprint_devices", return_value=devices), \
+         patch("run_scan.persist_and_reconcile", return_value=(0, [])) as mock_persist:
+        run_scan.run_check_in(cfg, args, logger)
+
+    persisted_devices = mock_persist.call_args.args[1]
+    for dev in persisted_devices:
+        assert dev.is_partial_scan is True
+
+
+def test_skips_discovery_and_scanner_phases() -> None:
+    src = inspect.getsource(run_scan.run_check_in)
+    forbidden = [
+        "compute_readiness_score",
+        "write_report",
+        "expand_targets",
+        "scan_tls_targets",
+        "scan_ssh_targets",
+        "scan_jwt_targets",
+        "scan_container_targets",
+        "scan_source_targets",
+    ]
+    for name in forbidden:
+        assert name not in src, f"run_check_in must not reference {name}"
+
+
+def test_summary_reports_drift_count() -> None:
+    logger = MagicMock()
+    device = _persisted_device()
+    drift_events = [MagicMock(), MagicMock(), MagicMock()]
+
+    run_scan._print_check_in_summary([device], drift_events, logger)
+
+    assert logger.info.called
+    logged_args = logger.info.call_args[0]
+    formatted = logged_args[0] % tuple(logged_args[1:])
+    assert "3" in formatted
+
+
+def test_check_in_flag_parses(capsys) -> None:
+    """run_scan.py's real argparse parser (built inline in main()) accepts
+    --check-in and rejects "check-in" as a --profile value. Exercised via
+    main() + sys.argv patching (SystemExit around argparse), not a
+    subprocess, per the plan's stated fallback since main() has no
+    factored-out parser accessor."""
+    import pytest
+
+    with patch("sys.argv", ["run_scan.py", "--help"]):
+        with pytest.raises(SystemExit) as exc_info:
+            run_scan.main()
+        assert exc_info.value.code == 0
+    captured = capsys.readouterr()
+    assert "--check-in" in captured.out
+
+    with patch("sys.argv", ["run_scan.py", "--profile", "check-in"]):
+        with pytest.raises(SystemExit) as exc_info:
+            run_scan.main()
+        assert exc_info.value.code != 0
