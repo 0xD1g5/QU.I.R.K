@@ -22,7 +22,9 @@ from pathlib import Path
 import pytest
 
 from quirk.db import (
+    _ADDITIVE_MIGRATIONS,
     _BROKER_COLUMNS,
+    _CHECKIN_HW_COLUMNS,
     _EMAIL_COLUMNS,
     _GCP_COLUMNS,
     _IDENTITY_COLUMNS,
@@ -372,3 +374,55 @@ def test_scan_jobs_migration_idempotent(tmp_path: Path) -> None:
     scanjob_results = [r for r in results if r.table == "scan_jobs"]
     assert len(scanjob_results) == len(_PHASE146_SCANJOB_COLUMNS)
     assert all(r.status == "already-present" for r in scanjob_results)
+
+
+# ---------------------------------------------------------------------------
+# Phase 159 HWLC-13: check-in scan mode's is_partial_scan marker column on
+# hardware_devices.
+# ---------------------------------------------------------------------------
+
+
+def test_checkin_is_partial_scan_column_registered() -> None:
+    """("is_partial_scan", "BOOLEAN") must be present in _ADDITIVE_MIGRATIONS
+    under table hardware_devices."""
+    assert _CHECKIN_HW_COLUMNS == (("is_partial_scan", "BOOLEAN"),)
+    assert ("hardware_devices", _CHECKIN_HW_COLUMNS) in _ADDITIVE_MIGRATIONS
+
+
+def test_checkin_is_partial_scan_migration_idempotent(tmp_path: Path) -> None:
+    """A hand-created legacy hardware_devices table (no is_partial_scan
+    column) gains the column via the additive-migration entry point, and a
+    second run reports it as already-present without raising."""
+    import sqlite3
+
+    from sqlalchemy import inspect as sa_inspect
+
+    db_path = tmp_path / "checkin.db"
+
+    # Simulate a pre-Phase-159 database: init_db(), then drop the column back
+    # out so the table matches what a real legacy DB looks like.
+    init_db(str(db_path))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("ALTER TABLE hardware_devices DROP COLUMN is_partial_scan")
+        conn.commit()
+    finally:
+        conn.close()
+
+    engine = get_engine(str(db_path))
+    columns = {c["name"] for c in sa_inspect(engine).get_columns("hardware_devices")}
+    assert "is_partial_scan" not in columns
+
+    # First migration entry point run retrofits the column.
+    run_additive_migration(engine, dry_run=False)
+    columns = {c["name"] for c in sa_inspect(engine).get_columns("hardware_devices")}
+    assert "is_partial_scan" in columns
+
+    # Second run is idempotent — no exception, reports already-present.
+    results = run_additive_migration(engine, dry_run=False)
+    checkin_results = [
+        r for r in results
+        if r.table == "hardware_devices" and r.column == "is_partial_scan"
+    ]
+    assert len(checkin_results) == 1
+    assert checkin_results[0].status == "already-present"

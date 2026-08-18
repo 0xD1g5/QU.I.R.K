@@ -177,6 +177,11 @@ _IDENTITY_HW_COLUMNS: tuple[tuple[str, str], ...] = (
     ("match_confidence",         "VARCHAR(16)"),
     ("probe_status",             "VARCHAR(16)"),
 )
+_CHECKIN_HW_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 159 HWLC-13: check-in re-probe marker on hardware_devices. NULL
+    # means "not a check-in / pre-Phase-159 row" — never backfilled.
+    ("is_partial_scan", "BOOLEAN"),
+)
 _PHASE146_SCANJOB_COLUMNS: tuple[tuple[str, str], ...] = (
     # Phase 146 DISC-04: nmap discovery batch-progress fields on scan_jobs.
     # All nullable — null until the first nmap discovery batch completes.
@@ -250,6 +255,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("hardware_devices", _OTICS_HW_COLUMNS),          # Phase 141 OTICS-06
     ("scan_jobs",        _PHASE146_SCANJOB_COLUMNS),  # Phase 146 DISC-04
     ("hardware_devices", _IDENTITY_HW_COLUMNS),       # Phase 154 HWLC-01/02
+    ("hardware_devices", _CHECKIN_HW_COLUMNS),        # Phase 159 HWLC-13
 )
 
 

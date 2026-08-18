@@ -416,6 +416,9 @@ class HardwareDevice(Base):
     confidence — how sure we are this row is "the same device" as a prior
     scan's row — and is deliberately distinct from confidence (probe-RESULT
     confidence). The two are never conflated.
+
+    is_partial_scan values (Phase 159 HWLC-13): True (check-in re-probe) |
+    NULL/False (full scan).
     """
 
     __tablename__ = "hardware_devices"
@@ -471,3 +474,7 @@ class HardwareDevice(Base):
     ssh_host_key_fingerprint = Column(String(255), nullable=True)  # ssh-audit SHA256 host-key fingerprint, e.g. "SHA256:abc123..."; populated by hardware_scanner.py::fingerprint_one
     match_confidence         = Column(String(16),  nullable=True)  # enum: high | low (D-04/D-05); see class docstring
     probe_status             = Column(String(16),  nullable=True)  # enum: success | failed (D-07)
+    # Phase 159 HWLC-13: check-in re-probe marker. NULL means "not a check-in /
+    # pre-Phase-159 row" — never backfilled. True = check-in re-probe; NULL/False
+    # = full scan.
+    is_partial_scan          = Column(Boolean,     nullable=True)
