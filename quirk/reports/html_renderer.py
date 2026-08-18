@@ -426,7 +426,16 @@ def render_hardware_section(devices: list) -> str:
             f'<p style="font-size:12px;color:#888;margin-bottom:8px">'
             f"{_html.escape(_CVE_SECTION_NOTE)}</p>"
         )
+    # Phase 159 HWLC-13/D-159-N: always-visible banner sits OUTSIDE <details> so it
+    # is visible without expanding the block — never collapsible, never behind a toggle.
+    partial_scan_banner_html = ""
+    if any(d.get("is_partial_scan") for d in devices):
+        partial_scan_banner_html = (
+            f'<p class="partial-scan-banner" style="font-size:12px;color:#888;margin-bottom:8px">'
+            f"{_html.escape(PARTIAL_SCAN_BANNER)}</p>"
+        )
     return (
+        f"{partial_scan_banner_html}"
         '<details style="margin:24px 0">'
         '<summary style="cursor:pointer;font-weight:600;color:#3b9dff">'
         "Hardware PQC Advisory &#x25BC; &nbsp;"
@@ -469,6 +478,11 @@ def render_hardware_section(devices: list) -> str:
 DRIFT_ADVISORY_CAPTION = (
     "Advisory — hardware lifecycle changes do not affect the readiness score."
 )
+
+# Phase 159 HWLC-13/D-159-M: locked banner copy, verbatim across HTML/DOCX/CLI.
+# Always-visible — never rendered inside a <details>/collapsible element (D-159-N)
+# — whenever a check-in-sourced device or drift row is displayed.
+PARTIAL_SCAN_BANNER = "Partial re-probe — check-in scan; not a full assessment."
 
 # 156-UI-SPEC.md §Event type differentiation — verbatim display labels.
 _DRIFT_EVENT_TYPE_LABELS: Dict[str, str] = {
@@ -533,12 +547,22 @@ def render_drift_section(events: list) -> str:
         )
     rows_joined = "\n".join(rows_html)
 
+    # Phase 159 HWLC-13/D-159-P: independently gated on this section's own list, so
+    # a report showing only drift events (no devices) still shows the banner.
+    partial_scan_banner_html = ""
+    if any(e.get("is_partial_scan") for e in events):
+        partial_scan_banner_html = (
+            f'<p class="partial-scan-banner" style="font-size:12px;color:#888;margin-bottom:8px">'
+            f"{_html.escape(PARTIAL_SCAN_BANNER)}</p>"
+        )
+
     return (
         '<section class="drift-section" style="margin:24px 0;'
         'border-left:4px solid #2b8a86;padding-left:12px">'
         '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Recent Lifecycle Changes</h2>'
         f'<p class="drift-advisory-caption" style="font-size:12px;color:#888;margin-bottom:8px">'
         f"{_html.escape(DRIFT_ADVISORY_CAPTION)}</p>"
+        f"{partial_scan_banner_html}"
         '<table style="width:100%;border-collapse:collapse;font-size:13px">'
         "<thead><tr>"
         '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Device</th>'

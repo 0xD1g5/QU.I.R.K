@@ -25,6 +25,21 @@ def _base_event(**overrides) -> dict:
     return event
 
 
+def _base_device(**overrides) -> dict:
+    device = {
+        "host": "10.0.0.5",
+        "port": 22,
+        "vendor": "Schneider Electric",
+        "model": "M221",
+        "pqc_status": "unsupported",
+        "confidence": "high",
+        "eol_date": None,
+        "remediation_tier": "Tier 1",
+    }
+    device.update(overrides)
+    return device
+
+
 def test_render_drift_section_empty_list_returns_empty_string() -> None:
     from quirk.reports.html_renderer import render_drift_section
 
@@ -311,3 +326,44 @@ def test_forecast_section_surfaces_stale_catalog() -> None:
     assert stale_html != fresh_html
     stale_only_fragment = stale_html.replace(fresh_html, "")
     assert stale_only_fragment.strip() != "" or "stale" in stale_html.lower() or "not been re-verified" in stale_html.lower()
+
+
+# ---------------------------------------------------------------------------
+# Phase 159 HWLC-13/D-159-M/N/P: always-visible "partial re-probe" banner.
+# Import the banner constant rather than retyping the literal, so a future
+# copy change cannot silently pass a stale assertion.
+# ---------------------------------------------------------------------------
+
+
+def test_render_drift_section_checkin_shows_banner() -> None:
+    from quirk.reports.html_renderer import render_drift_section, PARTIAL_SCAN_BANNER
+
+    html = render_drift_section([_base_event(is_partial_scan=True)])
+
+    assert PARTIAL_SCAN_BANNER in html
+
+
+def test_render_drift_section_no_checkin_omits_banner() -> None:
+    from quirk.reports.html_renderer import render_drift_section, PARTIAL_SCAN_BANNER
+
+    html = render_drift_section([_base_event(is_partial_scan=False)])
+
+    assert PARTIAL_SCAN_BANNER not in html
+
+
+def test_render_hardware_section_checkin_shows_banner_before_details() -> None:
+    from quirk.reports.html_renderer import render_hardware_section, PARTIAL_SCAN_BANNER
+
+    html = render_hardware_section([_base_device(is_partial_scan=True)])
+
+    assert PARTIAL_SCAN_BANNER in html
+    # D-159-N: always visible — banner must precede <details>, never inside it.
+    assert html.index(PARTIAL_SCAN_BANNER) < html.index("<details")
+
+
+def test_render_hardware_section_no_checkin_omits_banner() -> None:
+    from quirk.reports.html_renderer import render_hardware_section, PARTIAL_SCAN_BANNER
+
+    html = render_hardware_section([_base_device(is_partial_scan=False)])
+
+    assert PARTIAL_SCAN_BANNER not in html

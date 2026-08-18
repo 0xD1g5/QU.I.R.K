@@ -96,6 +96,12 @@ _DRIFT_ADVISORY_CAPTION = (
     "Advisory — hardware lifecycle changes do not affect the readiness score."
 )
 
+# Phase 159 HWLC-13/D-159-M/D-159-Q: locked banner copy, mirrored from
+# html_renderer.py's PARTIAL_SCAN_BANNER per this file's documented deliberate-
+# duplication convention (see the module-level comment above). Always-visible —
+# a plain paragraph, never collapsible.
+_PARTIAL_SCAN_BANNER = "Partial re-probe — check-in scan; not a full assessment."
+
 _DRIFT_EVENT_TYPE_LABELS = {
     "tier_crossing": "Tier crossing",
     "upstream_mitigated_change": "Bridge mitigation change",
@@ -552,6 +558,9 @@ def render_docx_report(
             " Listed for CNSA 2.0 migration planning purposes only.",
             style="Normal",
         )
+        # Phase 159 HWLC-13/D-159-P: independently gated on this section's own list.
+        if any(_d.get("is_partial_scan") for _d in hardware_devices):
+            doc.add_paragraph(_PARTIAL_SCAN_BANNER, style="Normal")
         hw_tbl = doc.add_table(rows=1, cols=12)
         _set_table_style(hw_tbl)
         hw_hdr = hw_tbl.rows[0].cells
@@ -618,6 +627,10 @@ def render_docx_report(
         # UNCONDITIONAL — D-13 requires this qualifier in every rendered format,
         # regardless of which optional caveats above happen to fire.
         doc.add_paragraph(_DRIFT_ADVISORY_CAPTION, style="Normal")
+        # Phase 159 HWLC-13/D-159-P: independently gated on this section's own list, so
+        # a report showing only drift events (no devices) still shows the banner.
+        if any(_e.get("is_partial_scan") for _e in hardware_drift_events):
+            doc.add_paragraph(_PARTIAL_SCAN_BANNER, style="Normal")
         drift_tbl = doc.add_table(rows=1, cols=5)
         _set_table_style(drift_tbl)
         drift_hdr = drift_tbl.rows[0].cells

@@ -21,7 +21,7 @@ def _make_minimal_cfg():
     )
 
 
-def _base_exec_content(hardware_drift_events):
+def _base_exec_content(hardware_drift_events, hardware_devices=None):
     from quirk.reports.content_model import ExecContent
 
     return ExecContent(
@@ -35,7 +35,23 @@ def _base_exec_content(hardware_drift_events):
         raw_sum=0,
         sev_counts={},
         hardware_drift_events=hardware_drift_events,
+        hardware_devices=hardware_devices or [],
     )
+
+
+def _base_device(**overrides) -> dict:
+    device = {
+        "host": "10.0.0.5",
+        "port": 22,
+        "vendor": "Schneider Electric",
+        "model": "M221",
+        "pqc_status": "unsupported",
+        "confidence": "high",
+        "eol_date": None,
+        "remediation_tier": "Tier 1",
+    }
+    device.update(overrides)
+    return device
 
 
 def _base_event(**overrides) -> dict:
@@ -269,3 +285,66 @@ def test_docx_forecast_surfaces_stale_catalog(tmp_path):
     doc_fresh = Document(path_fresh)
     texts_fresh = _all_paragraph_texts(doc_fresh)
     assert not any("2025-01-01" in t for t in texts_fresh)
+
+
+# ---------------------------------------------------------------------------
+# Phase 159 HWLC-13/D-159-M/N/P: always-visible "partial re-probe" banner.
+# Import the banner constant rather than retyping the literal, so a future
+# copy change cannot silently pass a stale assertion.
+# ---------------------------------------------------------------------------
+
+
+def test_docx_drift_section_checkin_shows_banner(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report, _PARTIAL_SCAN_BANNER
+
+    path = str(tmp_path / "drift_checkin.docx")
+    exec_content = _base_exec_content([_base_event(is_partial_scan=True)])
+    render_docx_report(path=path, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+
+    doc = Document(path)
+    texts = _all_paragraph_texts(doc)
+    assert _PARTIAL_SCAN_BANNER in texts
+
+
+def test_docx_drift_section_no_checkin_omits_banner(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report, _PARTIAL_SCAN_BANNER
+
+    path = str(tmp_path / "drift_no_checkin.docx")
+    exec_content = _base_exec_content([_base_event(is_partial_scan=False)])
+    render_docx_report(path=path, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+
+    doc = Document(path)
+    texts = _all_paragraph_texts(doc)
+    assert _PARTIAL_SCAN_BANNER not in texts
+
+
+def test_docx_hardware_section_checkin_shows_banner(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report, _PARTIAL_SCAN_BANNER
+
+    path = str(tmp_path / "hardware_checkin.docx")
+    exec_content = _base_exec_content(
+        [], hardware_devices=[_base_device(is_partial_scan=True)]
+    )
+    render_docx_report(path=path, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+
+    doc = Document(path)
+    texts = _all_paragraph_texts(doc)
+    assert _PARTIAL_SCAN_BANNER in texts
+
+
+def test_docx_hardware_section_no_checkin_omits_banner(tmp_path):
+    from docx import Document
+    from quirk.reports.docx_renderer import render_docx_report, _PARTIAL_SCAN_BANNER
+
+    path = str(tmp_path / "hardware_no_checkin.docx")
+    exec_content = _base_exec_content(
+        [], hardware_devices=[_base_device(is_partial_scan=False)]
+    )
+    render_docx_report(path=path, cfg=_make_minimal_cfg(), findings=[], exec_content=exec_content)
+
+    doc = Document(path)
+    texts = _all_paragraph_texts(doc)
+    assert _PARTIAL_SCAN_BANNER not in texts
