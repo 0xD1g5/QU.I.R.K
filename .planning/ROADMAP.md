@@ -187,7 +187,7 @@ under-representing sensor-scanned segments)
 
 Plans:
 - [x] 160-01-PLAN.md — VendorPqcTrendEvent table, vendor_fleet_snapshot() distinct-device helper, and reconcile_vendor_pqc_trend() detection
-- [ ] 160-02-PLAN.md — wire the vendor-trend check into persist_and_reconcile() + extend the advisory-only scoring firewall
+- [x] 160-02-PLAN.md — wire the vendor-trend check into persist_and_reconcile() + extend the advisory-only scoring firewall
 - [ ] 160-03-PLAN.md — GET /api/hardware/vendor-trends query surface, endpoint tests, operator docs + UAT Series 160 + Obsidian sync
 
 **Note (research flag for this phase's own planning):** Phase 160 is the least-precedented item in
@@ -207,7 +207,7 @@ a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap
 | 157. Drift-Event Retention + Forecast Narrative Foundation | 5/5 | Complete    | 2026-08-16 |
 | 158. Sensor Fleet Drift Coverage | 3/3 | Complete    | 2026-08-17 |
 | 159. Check-in Scan Mode | 5/5 | Complete    | 2026-08-18 |
-| 160. Catalog-Level PQC Vendor Trend Tracking | 1/3 | In Progress|  |
+| 160. Catalog-Level PQC Vendor Trend Tracking | 2/3 | In Progress|  |
 
 ---
 

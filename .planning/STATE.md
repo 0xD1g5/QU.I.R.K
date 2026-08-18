@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
 status: executing
-stopped_at: Completed 160-01-PLAN.md
-last_updated: "2026-08-18T13:03:56.145Z"
+stopped_at: Completed 160-02-PLAN.md
+last_updated: "2026-08-18T13:13:31.652Z"
 last_activity: 2026-08-18
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 75
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 ## Current Position
 
 Phase: 160 (Catalog-Level PQC Vendor Trend Tracking) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-18
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 94%
 
 ## v5.14 Phase Map (planning)
 
@@ -189,6 +189,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 159 P04 | 30min | 3 tasks | 7 files |
 | Phase 159 P05 | 20min | 2 tasks | 4 files |
 | Phase 160 P01 | 25min | 2 tasks | 6 files |
+| Phase 160 P02 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -366,6 +367,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 - [Phase 159]: 159-04 D-159-M..Q implemented as locked; is_partial_scan threaded through writer.py's existing (host,port) drift lookup with no new DB query; HTML banner sits outside <details> (D-159-N), CLI banner lives inside existing Hardware PQC Advisory block with an explicit no-Recent-Lifecycle-Changes-heading test to keep Phase 156 D-12 intact
 - [Phase ?]: [Phase 159]: 159-05 D-159-R/S/T confirmed and applied — no api-reference.md placeholder created, no chaos-lab files touched, no version string changed; docs/UAT-SERIES.md Series 159 (UAT-159-01..04) and all 4 touched docs synced to Obsidian vault
 - [Phase ?]: [Phase 160]: 160-01 D-160-A..G implemented as locked; VendorPqcTrendEvent has no host/port columns (D-160-E); VENDOR_EVENT_TYPES separate allowlist from EVENT_TYPES (D-160-D); reconcile_vendor_pqc_trend() reuses _confirmed_value()/DEFAULT_N/DEFAULT_M verbatim (D-160-A)
+- [Phase 160]: 160-02 D-160-H/I implemented as locked; Rule 1 fix reworded hardware_drift.py module docstring's literal SCORE_WEIGHTS mention (Phase 155 legacy) to pass the new T-160-04 guard
 
 ### Pending Todos
 
@@ -462,8 +464,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-18T13:03:56.140Z
-Stopped at: Completed 160-01-PLAN.md
+Last session: 2026-08-18T13:13:31.647Z
+Stopped at: Completed 160-02-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
