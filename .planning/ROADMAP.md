@@ -183,7 +183,12 @@ under-representing sensor-scanned segments)
 
   4. The new trend-event table's schema mirrors the scalar/enum-only `old_value`/`new_value`
      contract already established for `hardware_drift_events`.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 160-01-PLAN.md — VendorPqcTrendEvent table, vendor_fleet_snapshot() distinct-device helper, and reconcile_vendor_pqc_trend() detection
+- [ ] 160-02-PLAN.md — wire the vendor-trend check into persist_and_reconcile() + extend the advisory-only scoring firewall
+- [ ] 160-03-PLAN.md — GET /api/hardware/vendor-trends query surface, endpoint tests, operator docs + UAT Series 160 + Obsidian sync
 
 **Note (research flag for this phase's own planning):** Phase 160 is the least-precedented item in
 this milestone — no existing QUIRK subsystem does cross-device/cross-vendor aggregation, only
