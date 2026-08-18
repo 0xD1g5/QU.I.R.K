@@ -26,6 +26,7 @@ from quirk.util.safe_exc import safe_str
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
 from quirk.models import CryptoEndpoint
+from quirk.models_util import latest_successful_hardware_devices  # Phase 159 HWLC-13
 
 from quirk.logging_util import Logger
 from quirk.scanner.target_expander import (
@@ -40,6 +41,7 @@ from quirk.scanner.ssh_scanner import scan_ssh_targets
 from quirk.scanner.hardware_scanner import (  # Phase 127 HWCOMPAT-01
     fingerprint_hardware,
     apply_eol_date,  # Phase 155-05/CR-01: SNMP-only bulk path also needs eol_date populated
+    check_in_fingerprint_devices,  # Phase 159 HWLC-13
 )
 from quirk.scanner.hardware_drift import (  # Phase 158 HWLC-15
     purge_stale_hardware_history,
@@ -510,6 +512,81 @@ def _print_hardware_summary(devices: list, log) -> None:
     )
 
 
+def run_check_in(cfg, args, logger) -> int:
+    """Phase 159 HWLC-13 / D-159-F: lightweight check-in re-probe of the
+    already-known hardware fleet, wired as a short-circuit in ``main()``.
+
+    Resolves the known-device fleet via
+    ``latest_successful_hardware_devices()``, re-probes it through
+    ``check_in_fingerprint_devices()`` (identifying probe family only, no
+    discovery), persists through the unmodified Phase 158
+    ``persist_and_reconcile()`` chokepoint, and prints a CLI summary.
+
+    Never invokes the readiness-scoring engine, the report writer, the
+    discovery module, or any non-hardware scanner module — a check-in is
+    advisory-only and structurally distinct from a scored scan.
+
+    Returns 0 always; a check-in must never traceback (advisory-only, wraps
+    the persist/probe steps in try/except per the codebase's ``safe_str``
+    convention).
+    """
+    run_id = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")  # D-159-G
+    logger.info(f"[Check-in {run_id}] Starting check-in re-probe of known hardware devices")
+
+    with get_session(cfg.output.db_path) as sess:
+        known = latest_successful_hardware_devices(sess)
+
+        if not known:
+            logger.info("No known devices to check in on - run a full scan first.")
+            return 0
+
+        try:
+            hw_timeout = getattr(
+                getattr(getattr(cfg, "scan", None), "timeouts", None), "default_seconds", 3
+            )
+            devices = check_in_fingerprint_devices(
+                known, cfg=cfg, timeout=hw_timeout, logger=logger,
+            )
+            _purged, drift_events = persist_and_reconcile(sess, devices, cfg, logger)
+            if _purged:
+                logger.info(f"Hardware history retention: {_purged} stale device row(s) purged")
+            _print_check_in_summary(devices, drift_events, logger)
+        except Exception as _check_in_err:
+            logger.warning(
+                f"Check-in re-probe failed (advisory-only, non-fatal): "
+                f"{safe_str(_check_in_err)}"
+            )
+
+    return 0
+
+
+def _print_check_in_summary(devices: list, drift_events: list, log) -> None:
+    """Print advisory-only check-in summary to logger (Phase 159 D-159-H).
+
+    Format::
+
+        [Check-in re-probe - partial scan, not scored]
+          Devices re-probed: N | Success: X | Failed: Y | Drift events: Z
+          Not scored - run a full scan for an updated readiness score.
+
+    No-op when ``devices`` is empty. Mirrors ``_print_hardware_summary()``'s
+    logger-based, no-return shape.
+    """
+    if not devices:
+        return
+    success = sum(1 for d in devices if getattr(d, "probe_status", None) == "success")
+    failed = sum(1 for d in devices if getattr(d, "probe_status", None) == "failed")
+    log.info(
+        "[Check-in re-probe - partial scan, not scored]\n"
+        "  Devices re-probed: %d | Success: %d | Failed: %d | Drift events: %d\n"
+        "  Not scored - run a full scan for an updated readiness score.",
+        len(devices),
+        success,
+        failed,
+        len(drift_events),
+    )
+
+
 def _collect_stage_partial_failures(
     run_stats: dict,
     stage: str,
@@ -976,6 +1053,14 @@ def main():
         help="Scoring calibration profile (lenient|balanced|strict). Does NOT affect scan behavior.",)
     parser.add_argument("--safe-mode", action="store_true", help="Reduce concurrency and increase timeouts")
     parser.add_argument("--rate-limit", type=float, default=0.0, help="Targets/sec limiter (0 = off)")
+    parser.add_argument(
+        "--check-in", action="store_true", dest="check_in",
+        help=(
+            "Lightweight check-in re-probe of already-known hardware devices "
+            "only. Skips network discovery, all non-hardware scanner phases, "
+            "scoring, and report generation. Phase 159 HWLC-13."
+        ),
+    )
 
     parser.add_argument("--cache", action="store_true", help="Enable cache for discovery/fingerprint (recommended)")
     parser.add_argument("--cache-ttl-hours", type=int, default=24, help="Cache TTL in hours")
@@ -1352,6 +1437,15 @@ def main():
     _job_report["cred_ctx"] = cred_ctx
 
     init_db(cfg.output.db_path)
+
+    # Phase 159 HWLC-13 / D-159-F: check-in short-circuit. Must run AFTER
+    # init_db (the Plan 01 is_partial_scan migration must be applied) and
+    # BEFORE the scan_run_id/--resume-scan-id checkpoint logic below —
+    # everything past this point (checkpoints, discovery, all non-hardware
+    # scanner phases, compute_readiness_score, report generation) is
+    # deliberately skipped for a check-in run.
+    if getattr(args, "check_in", False):
+        sys.exit(run_check_in(cfg, args, logger))
 
     # Phase 65: scan_run_id is the started_utc timestamp (unique per scan invocation).
     # Used by mark_job_completed to associate the completed ScanJob with this scan run.
