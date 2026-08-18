@@ -352,3 +352,246 @@ def test_snmp_only_bulk_path_calls_apply_eol_date() -> None:
         "apply_eol_date(_snmp_dev) must be called after constructing "
         "_snmp_dev and before appending it to _snmp_new_batch"
     )
+
+
+# ============================================================
+# Phase 160 (HWLC-17) — vendor-trend wiring into persist_and_reconcile()
+# ============================================================
+
+
+def _make_device(host, port, vendor, scanned_at, pqc_status="unsupported"):
+    return HardwareDevice(
+        host=host,
+        port=port,
+        vendor=vendor,
+        pqc_status=pqc_status,
+        confidence="high",
+        fingerprint_method="ssh_banner",
+        probe_status="success",
+        scanned_at=scanned_at,
+        remediation_tier="Tier 1",
+    )
+
+
+def test_vendor_trend_called_once_per_distinct_vendor(tmp_path) -> None:
+    """A batch with 2 distinct vendors invokes reconcile_vendor_pqc_trend
+    exactly twice, once per vendor."""
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    db_path = str(tmp_path / "vendor_trend_two.db")
+    init_db(db_path)
+
+    base = _dt.datetime(2026, 8, 1)
+    devices = [
+        _make_device("10.1.0.1", 22, "Cisco", base),
+        _make_device("10.1.0.2", 22, "Fortinet", base),
+    ]
+    calls = []
+
+    def _fake_reconcile_vendor(session, vendor, n=2, m=3):
+        calls.append(vendor)
+        return []
+
+    with get_session(db_path) as session, patch(
+        "quirk.scanner.hardware_drift.reconcile_vendor_pqc_trend",
+        side_effect=_fake_reconcile_vendor,
+    ):
+        persist_and_reconcile(session, devices, cfg=None, logger=None)
+
+    assert sorted(calls) == ["Cisco", "Fortinet"]
+
+
+def test_vendor_trend_called_once_for_single_vendor_multi_device(tmp_path) -> None:
+    """A batch with 3 devices of one vendor invokes reconcile_vendor_pqc_trend
+    exactly once."""
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    db_path = str(tmp_path / "vendor_trend_one.db")
+    init_db(db_path)
+
+    base = _dt.datetime(2026, 8, 1)
+    devices = [
+        _make_device("10.1.0.10", 22, "Cisco", base),
+        _make_device("10.1.0.11", 22, "Cisco", base),
+        _make_device("10.1.0.12", 22, "Cisco", base),
+    ]
+    calls = []
+
+    def _fake_reconcile_vendor(session, vendor, n=2, m=3):
+        calls.append(vendor)
+        return []
+
+    with get_session(db_path) as session, patch(
+        "quirk.scanner.hardware_drift.reconcile_vendor_pqc_trend",
+        side_effect=_fake_reconcile_vendor,
+    ):
+        persist_and_reconcile(session, devices, cfg=None, logger=None)
+
+    assert calls == ["Cisco"]
+
+
+def test_vendor_trend_loop_runs_after_device_loop(tmp_path) -> None:
+    """The vendor loop runs strictly AFTER the per-(host, port)
+    reconcile_device_history loop — every device marker precedes every
+    vendor marker."""
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    db_path = str(tmp_path / "vendor_trend_order.db")
+    init_db(db_path)
+
+    base = _dt.datetime(2026, 8, 1)
+    devices = [_make_device("10.1.0.20", 22, "Cisco", base)]
+    order = []
+
+    def _fake_reconcile_device(session, host, port, n=2, m=3, today=None):
+        order.append(("device", host, port))
+        return []
+
+    def _fake_reconcile_vendor(session, vendor, n=2, m=3):
+        order.append(("vendor", vendor))
+        return []
+
+    with get_session(db_path) as session, patch(
+        "quirk.scanner.hardware_drift.reconcile_device_history",
+        side_effect=_fake_reconcile_device,
+    ), patch(
+        "quirk.scanner.hardware_drift.reconcile_vendor_pqc_trend",
+        side_effect=_fake_reconcile_vendor,
+    ):
+        persist_and_reconcile(session, devices, cfg=None, logger=None)
+
+    device_indices = [i for i, m in enumerate(order) if m[0] == "device"]
+    vendor_indices = [i for i, m in enumerate(order) if m[0] == "vendor"]
+    assert device_indices and vendor_indices
+    assert max(device_indices) < min(vendor_indices)
+
+
+def test_vendor_trend_skips_none_and_empty_vendor() -> None:
+    """Devices with vendor None or "" are skipped; devices with vendor
+    "Unknown" are NOT skipped.
+
+    Uses a mocked session (not a real DB) because ``HardwareDevice.vendor``
+    is a NOT NULL column (D-06) — a real commit of a ``vendor=None`` row
+    would raise IntegrityError before the vendor-set-comprehension is even
+    reached. This test isolates the set-comprehension's None/"" skip logic
+    itself via a lightweight fake device that never touches the DB.
+    """
+    from unittest.mock import MagicMock
+
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    devices = [
+        SimpleNamespace(host="10.1.0.30", port=22, vendor=None),
+        SimpleNamespace(host="10.1.0.31", port=22, vendor=""),
+        SimpleNamespace(host="10.1.0.32", port=22, vendor="Unknown"),
+    ]
+    calls = []
+
+    def _fake_reconcile_vendor(session, vendor, n=2, m=3):
+        calls.append(vendor)
+        return []
+
+    fake_session = MagicMock()
+
+    with patch(
+        "quirk.scanner.hardware_drift.purge_stale_hardware_history", return_value=0
+    ), patch(
+        "quirk.scanner.hardware_drift.reconcile_device_history", return_value=[]
+    ), patch(
+        "quirk.scanner.hardware_drift.reconcile_vendor_pqc_trend",
+        side_effect=_fake_reconcile_vendor,
+    ):
+        persist_and_reconcile(fake_session, devices, cfg=None, logger=None)
+
+    assert calls == ["Unknown"]
+
+
+def test_vendor_trend_events_appear_in_returned_tuple(tmp_path) -> None:
+    """Events returned by reconcile_vendor_pqc_trend appear in the second
+    element of persist_and_reconcile's returned tuple."""
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    db_path = str(tmp_path / "vendor_trend_events.db")
+    init_db(db_path)
+
+    base = _dt.datetime(2026, 8, 1)
+    devices = [_make_device("10.1.0.40", 22, "Cisco", base)]
+    sentinel_event = SimpleNamespace(vendor="Cisco", event_type="pqc_status_change")
+
+    with get_session(db_path) as session, patch(
+        "quirk.scanner.hardware_drift.reconcile_vendor_pqc_trend",
+        return_value=[sentinel_event],
+    ):
+        purged, events = persist_and_reconcile(session, devices, cfg=None, logger=None)
+
+    assert sentinel_event in events
+
+
+def test_persist_and_reconcile_signature_and_arity_unchanged(tmp_path) -> None:
+    """persist_and_reconcile's signature and tuple arity are unchanged by
+    the vendor-trend wiring."""
+    import inspect
+
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    sig = inspect.signature(persist_and_reconcile)
+    assert list(sig.parameters) == ["session", "devices", "cfg", "logger", "owns_session"]
+
+    db_path = str(tmp_path / "vendor_trend_arity.db")
+    init_db(db_path)
+    with get_session(db_path) as session:
+        result = persist_and_reconcile(session, [], cfg=None, logger=None)
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    assert result == (0, [])
+
+
+def test_vendor_trend_exception_does_not_abort_persistence(tmp_path) -> None:
+    """An exception raised by reconcile_vendor_pqc_trend does not prevent
+    persist_and_reconcile from returning normally, and device rows persisted
+    earlier remain committed."""
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    db_path = str(tmp_path / "vendor_trend_exc.db")
+    init_db(db_path)
+
+    base = _dt.datetime(2026, 8, 1)
+    devices = [_make_device("10.1.0.50", 22, "Cisco", base)]
+
+    with get_session(db_path) as session, patch(
+        "quirk.scanner.hardware_drift.reconcile_vendor_pqc_trend",
+        side_effect=RuntimeError("simulated vendor-trend failure"),
+    ):
+        result = persist_and_reconcile(session, devices, cfg=None, logger=None)
+
+    # persist_and_reconcile's own broad advisory-only except clause catches
+    # this and returns (0, []) — never raises.
+    assert result == (0, [])
+
+    with get_session(db_path) as session:
+        rows = session.query(HardwareDevice).filter_by(host="10.1.0.50").all()
+    assert len(rows) == 1
+
+
+def test_vendor_trend_zero_calls_on_empty_devices(tmp_path) -> None:
+    """devices == [] and devices is None still return (0, []) with zero
+    vendor calls."""
+    from quirk.scanner.hardware_drift import persist_and_reconcile
+
+    db_path = str(tmp_path / "vendor_trend_empty.db")
+    init_db(db_path)
+
+    calls = []
+
+    def _fake_reconcile_vendor(session, vendor, n=2, m=3):
+        calls.append(vendor)
+        return []
+
+    with get_session(db_path) as session, patch(
+        "quirk.scanner.hardware_drift.reconcile_vendor_pqc_trend",
+        side_effect=_fake_reconcile_vendor,
+    ):
+        assert persist_and_reconcile(session, [], cfg=None, logger=None) == (0, [])
+        assert persist_and_reconcile(session, None, cfg=None, logger=None) == (0, [])
+
+    assert calls == []

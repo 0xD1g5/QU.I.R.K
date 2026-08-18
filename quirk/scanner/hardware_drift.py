@@ -362,8 +362,13 @@ def persist_and_reconcile(
 
     Advisory-only: purges stale rows scoped to ``devices``' (host, port)
     pairs, adds every device, commits, then reconciles drift history exactly
-    once per distinct ``(host, port)`` pair in the batch. Returns
-    ``(purged_count, inserted_drift_events)``.
+    once per distinct ``(host, port)`` pair in the batch, followed by
+    catalog-level vendor PQC trend reconciliation exactly once per distinct
+    vendor in the batch (Phase 160 HWLC-17). Console-direct, sensor-ingested,
+    and check-in-sourced devices all participate with no special-casing
+    because they all flow through this single chokepoint. Returns
+    ``(purged_count, inserted_events)`` — the second element may now contain
+    both ``HardwareDriftEvent`` and ``VendorPqcTrendEvent`` rows.
 
     ``devices == []`` or ``devices is None`` returns ``(0, [])`` without
     touching the session. ``cfg=None`` is a supported caller choice — the
@@ -410,6 +415,15 @@ def persist_and_reconcile(
         events: list = []
         for host, port in {(d.host, d.port) for d in devices}:
             events.extend(reconcile_device_history(session, host, port))
+        # Vendor-trend loop runs strictly AFTER the per-(host, port) loop
+        # above, on the same already-committed rows: reconcile_vendor_pqc_trend()
+        # reads freshly-committed rows via a fresh vendor_fleet_snapshot()
+        # query, never in-memory batch objects (RESEARCH.md Pitfall 4).
+        # reconcile_vendor_pqc_trend() is already internally advisory-only/
+        # non-fatal (its own broad try/except), so no additional wrapper is
+        # needed here beyond this function's existing surrounding one.
+        for vendor in {d.vendor for d in devices if getattr(d, "vendor", None)}:
+            events.extend(reconcile_vendor_pqc_trend(session, vendor))
         return (purged, events)
     except Exception as exc:
         if owns_session:
