@@ -267,7 +267,25 @@ caller's already-flushed rows on the HTTPS sensor-push route — fixed via an `o
 parameter and closed out over a 3-iteration review→fix→re-review cycle that also added
 regression coverage for the fix itself. 3/3 plans, verifier passed 4/4 must-haves at the code
 level; 2 dashboard-rendering UAT items (`/hardware`, `/compare`) deferred to human validation per
-user choice, tracked as non-blocking warnings. Next: Phase 159 (Check-in Scan Mode).
+user choice, tracked as non-blocking warnings.
+
+Phase 159 (Check-in Scan Mode) complete 2026-08-18 — HWLC-13 satisfied. A new `--check-in` CLI
+flag (never a `--profile` value) re-probes only devices already in `HardwareDevice`, dispatching
+per stored `fingerprint_method` via `check_in_fingerprint_devices()` — full network discovery and
+non-hardware scanner phases are skipped entirely, and the run never reaches
+`compute_readiness_score`. Persists through the unmodified Phase 158 `persist_and_reconcile()`
+chokepoint. Two new columns mark provenance: `HardwareDevice.is_partial_scan` (the device's own
+probe-status marker) and `HardwareDriftEvent.is_partial_scan` (captured at insert time from the
+producing probe, added mid-phase after code review found a current-state join could let a later
+scan silently flip an older event's badge — never filtered off `/trends`/`/compare`, only badged).
+A locked "Partial re-probe — check-in scan; not a full assessment." banner renders identically
+across HTML, DOCX, CLI, and — after a code-review BLOCKER caught the React dashboard's TypeScript
+type/renderer omitting the field entirely — the live dashboard too, now a bonus 4th surface. 5/5
+plans, verifier passed 4/4 ROADMAP criteria + 20/20 plan-level truths with `status: passed` (no
+human-needed items). A 3-iteration code-review cycle closed one BLOCKER and four warnings; two
+INFO-level test-coverage gaps remain as tracked non-blocking follow-ups. Next: Phase 160
+(Catalog-Level PQC Vendor Trend Tracking) — flagged in ROADMAP as the least-precedented item in
+this milestone, no existing QUIRK subsystem does cross-device/cross-vendor aggregation.
 
 ## Previous Milestone: v5.13 Continuous Hardware Lifecycle Monitoring — SHIPPED 2026-08-15
 
@@ -763,7 +781,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Hardcoded 168-hour OT/ICS cadence floor, not config-overridable (v5.13 / 156-01, D-19) | Fragile Modbus/BACnet devices were built for one read-only probe per engagement; a configurable floor could be set to zero by an impatient operator, silently reintroducing the exact production risk the gate exists to prevent | ✓ Good — confirmed as a module-level constant, never read from config, by both code review and the independent verifier |
 
 ---
-*Last updated: 2026-08-17 — Phase 158 (Sensor Fleet Drift Coverage) complete, milestone v5.14
+*Last updated: 2026-08-18 — Phase 159 (Check-in Scan Mode) complete, milestone v5.14
 (Hardware Lifecycle Tail — Fleet Coverage & Forecasting) in progress*
 
 ## Evolution
