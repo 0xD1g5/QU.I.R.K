@@ -189,6 +189,24 @@ def _strip_comment_lines(source: str) -> str:
     )
 
 
+# Phase 160 HWLC-17: the new GET /hardware/vendor-trends endpoint lives in
+# this same route module, so it already rides the guards below by name.
+
+
+def test_vendor_trend_route_has_no_score_weights_reference() -> None:
+    """The comment-stripped source of the hardware_drift route module
+    contains the vendor-trends route literal but never SCORE_WEIGHTS — pins
+    that the endpoint stays under this firewall's coverage (Phase 160
+    HWLC-17 / T-160-04)."""
+    import pathlib
+
+    import quirk.dashboard.api.routes.hardware_drift as hardware_drift_route_module
+
+    source = _strip_comment_lines(pathlib.Path(hardware_drift_route_module.__file__).read_text())
+    assert "/hardware/vendor-trends" in source
+    assert "SCORE_WEIGHTS" not in source
+
+
 def test_drift_report_modules_have_no_score_weights_reference() -> None:
     """No comment-stripped source of html_renderer.py, docx_renderer.py, or
     the hardware_drift route module references SCORE_WEIGHTS."""

@@ -511,6 +511,136 @@ def test_hardware_drift_requires_auth(monkeypatch):
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
 
 
+# ---- Phase 160 HWLC-17: GET /api/hardware/vendor-trends route ----
+
+
+def _seed_vendor_trend_event(TestingSession, **kwargs):
+    from quirk.models import VendorPqcTrendEvent
+
+    db = TestingSession()
+    try:
+        defaults = dict(
+            vendor="Cisco",
+            event_type="pqc_status_change",
+            old_value="unsupported",
+            new_value="partial",
+        )
+        defaults.update(kwargs)
+        db.add(VendorPqcTrendEvent(**defaults))
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_vendor_trends_empty_db_returns_empty_list():
+    client, _ = _drift_client_and_session()
+    resp = client.get("/api/hardware/vendor-trends")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["events"] == []
+    assert data["truncated"] is False
+
+
+def test_vendor_trends_authenticated_returns_events_and_truncated_keys():
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    _seed_vendor_trend_event(
+        TestingSession, detected_at=datetime(2026, 8, 14, 12, 0, 0)
+    )
+    resp = client.get("/api/hardware/vendor-trends")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "events" in data
+    assert "truncated" in data
+    assert len(data["events"]) == 1
+
+
+def test_vendor_trends_requires_auth(monkeypatch):
+    """Unauthenticated requests are rejected by the router-level dependency
+    — same status the existing /api/hardware/drift unauthenticated test
+    asserts."""
+    monkeypatch.setenv("QUIRK_API_TOKEN", "test-token")
+    client, _ = _drift_client_and_session()
+    resp = client.get("/api/hardware/vendor-trends")
+    assert resp.status_code == 401
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+
+
+def test_vendor_trends_ordered_newest_first():
+    from datetime import datetime, timedelta
+
+    client, TestingSession = _drift_client_and_session()
+    ts_new = datetime(2026, 8, 14, 12, 0, 0)
+    _seed_vendor_trend_event(TestingSession, vendor="Cisco", detected_at=ts_new - timedelta(days=1))
+    _seed_vendor_trend_event(TestingSession, vendor="Juniper", detected_at=ts_new)
+
+    resp = client.get("/api/hardware/vendor-trends")
+    assert resp.status_code == 200
+    events = resp.json()["events"]
+    assert len(events) == 2
+    assert events[0]["vendor"] == "Juniper"
+    assert events[1]["vendor"] == "Cisco"
+
+
+def test_vendor_trends_items_have_no_host_or_port_key():
+    from datetime import datetime
+
+    client, TestingSession = _drift_client_and_session()
+    _seed_vendor_trend_event(TestingSession, detected_at=datetime(2026, 8, 14, 12, 0, 0))
+    resp = client.get("/api/hardware/vendor-trends")
+    events = resp.json()["events"]
+    assert len(events) == 1
+    assert "host" not in events[0]
+    assert "port" not in events[0]
+
+
+def test_vendor_trends_limit_out_of_range_returns_422():
+    client, _ = _drift_client_and_session()
+    assert client.get("/api/hardware/vendor-trends?limit=0").status_code == 422
+    assert client.get("/api/hardware/vendor-trends?limit=201").status_code == 422
+
+
+def test_vendor_trends_limit_200_accepted():
+    client, _ = _drift_client_and_session()
+    resp = client.get("/api/hardware/vendor-trends?limit=200")
+    assert resp.status_code == 200
+
+
+def test_vendor_trends_three_seeded_limit_2_returns_2_and_truncated_true():
+    from datetime import datetime, timedelta
+
+    client, TestingSession = _drift_client_and_session()
+    ts = datetime(2026, 8, 14, 12, 0, 0)
+    for i in range(3):
+        _seed_vendor_trend_event(
+            TestingSession, vendor=f"Vendor{i}", detected_at=ts - timedelta(days=i)
+        )
+
+    resp = client.get("/api/hardware/vendor-trends?limit=2")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["events"]) == 2
+    assert data["truncated"] is True
+
+
+def test_vendor_trends_three_seeded_limit_50_returns_3_and_not_truncated():
+    from datetime import datetime, timedelta
+
+    client, TestingSession = _drift_client_and_session()
+    ts = datetime(2026, 8, 14, 12, 0, 0)
+    for i in range(3):
+        _seed_vendor_trend_event(
+            TestingSession, vendor=f"Vendor{i}", detected_at=ts - timedelta(days=i)
+        )
+
+    resp = client.get("/api/hardware/vendor-trends?limit=50")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["events"]) == 3
+    assert data["truncated"] is False
+
+
 # ---- Phase 156 HWLC-10: CompareResponse.hardware_drift block (Task 3) ----
 
 
