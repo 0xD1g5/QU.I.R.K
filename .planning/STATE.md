@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
-status: verifying
-stopped_at: Completed 159-05-PLAN.md
-last_updated: "2026-08-18T03:52:50.382Z"
+status: ready_to_plan
+stopped_at: Phase 159 complete (5/5) — ready to discuss Phase 160
+last_updated: 2026-08-18T04:26:41.754Z
 last_activity: 2026-08-18
 progress:
   total_phases: 4
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
 
-**Current focus:** Phase 159 — Check-in Scan Mode
+**Current focus:** Phase 160 — catalog level pqc vendor trend tracking
 
 ## Current Position
 
-Phase: 159 (Check-in Scan Mode) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
+Phase: 160
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-08-18
 
 Progress: [██████████] 100%
