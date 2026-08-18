@@ -1566,6 +1566,52 @@ would be — the `/hardware` and `/compare` dashboard pages, `GET /api/hardware/
 `/trends`/`/compare` readiness-score exclusion). A check-in run is never selectable as a scored
 scan on `/api/scans` or `/api/trends`.
 
+### 9.10 Catalog-Level PQC Vendor Trend Tracking (Phase 160, HWLC-17)
+
+As of Phase 160, QUIRK tracks **vendor-scoped** PQC-status change over time, in addition to
+the existing per-device drift tracked in `hardware_drift_events` (§9.7).
+
+**What a vendor PQC trend event is.** A confirmed, fleet-wide change in a vendor's
+catalog-assigned `pqc_status` (e.g. `unsupported` → `partial`), recorded as a discrete row in
+the `vendor_pqc_trend_events` table. Each row carries the vendor, the event type
+(`pqc_status_change`), the old and new `pqc_status` values, and the timestamps the change was
+detected and confirmed.
+
+**How it differs from per-device drift.** `hardware_drift_events` (§9.7) is per-`(host, port)`
+— it tells you a specific device changed. `vendor_pqc_trend_events` is vendor-scoped, has no
+`host`/`port` column at all, and aggregates across every device of that vendor in the fleet
+(cross-device, cross-vendor). The two tables are structurally distinct and serve different
+questions: "did this device change?" vs. "did this vendor's catalog posture change, fleet-wide?"
+
+**Confirmation gate.** Like every other lifecycle signal in QUIRK, a vendor trend event only
+fires after N-of-M confirmation — but the window here is across **distinct devices of that
+vendor**, not repeated scans of one device. This means a single noisy or repeatedly-rescanned
+host cannot, by itself, trigger a vendor-level event. It also means a vendor's first-ever
+observed device never produces an event — there is nothing to compare it against yet.
+
+**Querying it.** `GET /api/hardware/vendor-trends` returns the bounded, newest-first list:
+
+```bash
+curl -H "Authorization: Bearer $QUIRK_API_TOKEN" \
+  "http://localhost:8000/api/hardware/vendor-trends?limit=50"
+```
+
+- Authenticated the same way as every other dashboard API route (§2.4) — no separate
+  credential.
+- `limit` accepts 1–200 (default 50); a `truncated: true` flag in the response body indicates
+  more rows exist than were returned.
+- Each event exposes `vendor`, `event_type`, `old_value`, `new_value`, `detected_at`, and
+  `confirmed_at` — no host/port, no score, no numeric field.
+
+**Advisory-only, no score contribution.** Like `hardware_drift_events`, vendor PQC trend
+events never affect the readiness score — `quirk/scanner/hardware_drift.py` and
+`quirk/models_util.py` are never imported by `quirk/intelligence/scoring.py`, machine-enforced
+by `tests/test_cve_score_guard.py`.
+
+**Not yet in report formats.** Report-format (HTML/DOCX/CLI) rendering of vendor PQC trend
+events is not included in this release — the endpoint above is the only way to query them for
+now.
+
 ---
 
 ## 10. Discovery Liveness Pre-Pass

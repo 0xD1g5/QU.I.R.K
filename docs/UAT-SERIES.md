@@ -1,7 +1,10 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
+**Last Updated:** 2026-08-18 (v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
+
+Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
 Closes HWLC-13. See Series 159.)
 
 Earlier: 2026-08-16 (v5.14 Phase 158 wrap — Sensor Fleet Drift Coverage: UAT-158-01..03
@@ -18619,3 +18622,120 @@ from full-scan data shows no banner anywhere.
 **Notes:** HWLC-13. 13 new "checkin"-selectable tests across the three renderer test modules;
 targeted verification run: 347 passed, 4 skipped (pre-existing, unrelated), 0 failed. See
 159-04-SUMMARY.md.
+
+---
+
+## Series 160: Catalog-Level PQC Vendor Trend Tracking (Phase 160 — v5.14)
+
+**Last Updated:** 2026-08-18
+
+### UAT-160-01: `vendor_pqc_trend_events` table exists after `init_db()` (HWLC-17) — Automated
+
+**What to test:** A fresh database created via `init_db()` contains the
+`vendor_pqc_trend_events` table with the correct column shape (no `host`/`port` columns).
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_hardware_drift_events_table.py -k vendor -v`.
+2. Confirm the table-creation, idempotency, column-shape, and round-trip tests all pass.
+
+**Pass criteria:**
+- `vendor_pqc_trend_events` table exists after `init_db()` on a fresh database
+- Table has no `host`/`port` columns
+- `init_db()` is idempotent (running twice does not error or duplicate the table)
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-18  **Tester:** automated (pytest — Phase 160 Plan 01)
+**Notes:** HWLC-17. See 160-01-SUMMARY.md.
+
+---
+
+### UAT-160-02: A simulated fleet-wide vendor `pqc_status` change produces exactly one event (HWLC-17) — Automated
+
+**What to test:** `reconcile_vendor_pqc_trend()` fires exactly one `VendorPqcTrendEvent` row
+when N-of-M distinct devices of a vendor confirm a `pqc_status` transition.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_hardware_drift.py -k vendor_pqc_trend -v`.
+2. Confirm `test_vendor_pqc_trend_single_host_no_dominate` and the allowlist test both pass.
+
+**Pass criteria:**
+- A fleet-wide, N-of-M-confirmed vendor `pqc_status` transition produces exactly one
+  `VendorPqcTrendEvent` row
+- `event_type` is validated against the `VENDOR_EVENT_TYPES` allowlist
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-18  **Tester:** automated (pytest — Phase 160 Plan 01)
+**Notes:** HWLC-17. See 160-01-SUMMARY.md.
+
+---
+
+### UAT-160-03: A single repeatedly-rescanned host produces no event (HWLC-17) — Automated
+
+**What to test:** `vendor_fleet_snapshot()` dedupes to one row per distinct `(host, port)`
+before ordering/limiting, so a single repeatedly-rescanned host cannot occupy multiple
+N-of-M confirmation slots and cannot, by itself, trigger a vendor-level event.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_models_util.py -k vendor_fleet_snapshot -v`.
+2. Confirm the dedup regression test shows a single host contributes only one slot to the
+   fleet window regardless of how many times it was rescanned.
+
+**Pass criteria:**
+- A vendor with only one distinct device rescanned N times never reaches N-of-M confirmation
+- `vendor_fleet_snapshot()` returns at most one row per distinct `(host, port)`
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-18  **Tester:** automated (pytest — Phase 160 Plan 01)
+**Notes:** HWLC-17. See 160-01-SUMMARY.md.
+
+---
+
+### UAT-160-04: `GET /api/hardware/vendor-trends` returns events with valid auth and is rejected without (HWLC-17) — Automated
+
+**What to test:** The new endpoint is registered on the existing authenticated router — it
+returns a bounded, newest-first list of vendor PQC trend events for authenticated requests and
+a 401 for unauthenticated requests, with no per-route bespoke auth check.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_dashboard_api.py -k vendor_trends -v`.
+2. Confirm `test_vendor_trends_requires_auth` returns 401 and
+   `test_vendor_trends_authenticated_returns_events_and_truncated_keys` returns 200 with
+   `events`/`truncated` keys.
+3. Confirm `test_vendor_trends_ordered_newest_first` and
+   `test_vendor_trends_items_have_no_host_or_port_key` both pass.
+
+**Pass criteria:**
+- Authenticated `GET /api/hardware/vendor-trends` returns 200 with `events`/`truncated` keys
+- Unauthenticated request returns 401 (same router-level `require_auth` as every other
+  dashboard API route)
+- Events are ordered newest-first by `detected_at`
+- Response items expose no `host`/`port` field
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-18  **Tester:** automated (pytest — Phase 160 Plan 03)
+**Notes:** HWLC-17. See 160-03-SUMMARY.md.
+
+---
+
+### UAT-160-05: `limit=201` is rejected with 422 (HWLC-17) — Automated
+
+**What to test:** The `limit` query parameter on `GET /api/hardware/vendor-trends` is bounded
+to 1–200 (identical to the existing `/api/hardware/drift` bound) — a DoS-amplification control
+(T-160-08).
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_dashboard_api.py -k "vendor_trends and limit" -v`.
+2. Confirm `test_vendor_trends_limit_out_of_range_returns_422` (`limit=0` and `limit=201`) and
+   `test_vendor_trends_limit_200_accepted` (`limit=200`) all pass.
+
+**Pass criteria:**
+- `limit=0` returns 422
+- `limit=201` returns 422
+- `limit=200` returns 200
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-18  **Tester:** automated (pytest — Phase 160 Plan 03)
+**Notes:** HWLC-17. `docs/api-reference.md` does not exist in this repo, so the CLAUDE.md "New
+API endpoint" doc row is deferred (recorded explicitly, following the same convention prior
+phases used) — the operator-visible surface is documented in `docs/operators-guide.md` §9.10
+instead. See 160-03-SUMMARY.md.
