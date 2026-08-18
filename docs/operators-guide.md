@@ -1579,14 +1579,17 @@ detected and confirmed.
 
 **How it differs from per-device drift.** `hardware_drift_events` (§9.7) is per-`(host, port)`
 — it tells you a specific device changed. `vendor_pqc_trend_events` is vendor-scoped, has no
-`host`/`port` column at all, and aggregates across every device of that vendor in the fleet
-(cross-device, cross-vendor). The two tables are structurally distinct and serve different
-questions: "did this device change?" vs. "did this vendor's catalog posture change, fleet-wide?"
+`host`/`port` column at all (cross-device, cross-host). The two tables are structurally distinct
+and serve different questions: "did this device change?" vs. "did this vendor's catalog posture
+change?"
 
 **Confirmation gate.** Like every other lifecycle signal in QUIRK, a vendor trend event only
-fires after N-of-M confirmation — but the window here is across **distinct devices of that
-vendor**, not repeated scans of one device. This means a single noisy or repeatedly-rescanned
-host cannot, by itself, trigger a vendor-level event. It also means a vendor's first-ever
+fires after N-of-M confirmation (N=2 of M=3, the same defaults used everywhere else in QUIRK) —
+but the window here samples the **3 most-recently-scanned distinct devices of that vendor**, not
+repeated scans of one device and not the vendor's entire fleet. This means a single noisy or
+repeatedly-rescanned host cannot, by itself, trigger a vendor-level event, but it also means the
+signal reflects a recent sample rather than an exhaustive fleet-wide census — a vendor with many
+active devices is judged on its 3 most-recently-seen ones. It also means a vendor's first-ever
 observed device never produces an event — there is nothing to compare it against yet.
 
 **Querying it.** `GET /api/hardware/vendor-trends` returns the bounded, newest-first list:
