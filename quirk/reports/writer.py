@@ -316,6 +316,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                         "cve_matches":         _cve_matches,
                         "cve_confidence":      _cve_confidence,
                         "cve_attempted":       _cve_attempted,
+                        # Phase 159 HWLC-13/D-159-M: check-in re-probe marker. The column
+                        # is nullable with no DDL default, so NULL must read as False —
+                        # bool(getattr(...)) is mandatory, never a bare attribute read.
+                        "is_partial_scan":     bool(getattr(_d, "is_partial_scan", False)),
                     })
     except Exception:
         import logging as _log
@@ -355,8 +359,12 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         with _get_session(cfg.output.db_path) as _drift_sess:
             _latest_ts = _drift_sess.query(_func.max(_HardwareDevice.scanned_at)).scalar()
             if _latest_ts is not None:
+                # Phase 159 HWLC-13/D-159-A: a drift event inherits its triggering
+                # device row's is_partial_scan provenance via this (host, port) join —
+                # no column was added to HardwareDriftEvent for it (detected_at ==
+                # scanned_at join rationale, RESEARCH.md Pattern 3).
                 _drift_lookup = {
-                    (_d.host, _d.port): (_d.vendor, _d.model)
+                    (_d.host, _d.port): (_d.vendor, _d.model, bool(getattr(_d, "is_partial_scan", False)))
                     for _d in _latest_hw_devices(_drift_sess)
                 }
                 _drift_rows = (
@@ -375,7 +383,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                         _direction = _raw_direction if _raw_direction in ("improved", "worsened") else "neutral"
                     else:
                         _direction = "neutral"
-                    _vendor, _model = _drift_lookup.get((_row.host, _row.port), (None, None))
+                    _vendor, _model, _is_partial = _drift_lookup.get((_row.host, _row.port), (None, None, False))
                     hardware_drift_events.append({
                         "host":         _row.host,
                         "port":         _row.port,
@@ -386,6 +394,7 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
                         "detected_at":  _row.detected_at.isoformat(),
                         "vendor":       _vendor,
                         "model":        _model,
+                        "is_partial_scan": _is_partial,
                     })
     except Exception:
         import logging as _log
