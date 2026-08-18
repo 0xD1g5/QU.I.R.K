@@ -575,7 +575,11 @@ def _print_check_in_summary(devices: list, drift_events: list, log) -> None:
     if not devices:
         return
     success = sum(1 for d in devices if getattr(d, "probe_status", None) == "success")
-    failed = sum(1 for d in devices if getattr(d, "probe_status", None) == "failed")
+    # Phase 159 WR-02: derive failed as the complement of success rather than
+    # matching a literal "failed" string, so the two counts always reconcile
+    # to len(devices) even if a future probe_status value other than the two
+    # known enum members ever slips through.
+    failed = len(devices) - success
     log.info(
         "[Check-in re-probe - partial scan, not scored]\n"
         "  Devices re-probed: %d | Success: %d | Failed: %d | Drift events: %d\n"
