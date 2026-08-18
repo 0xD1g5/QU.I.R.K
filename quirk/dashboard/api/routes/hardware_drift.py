@@ -93,7 +93,17 @@ def get_hardware_drift(
 
     Auth: inherited from router-level require_auth (do NOT add per-route).
     """
-    latest_ts = db.query(func.max(HardwareDevice.scanned_at)).scalar()
+    # Phase 159 WR-01: scope the "latest" join to successful probes only.
+    # HardwareDriftEvent.detected_at is always derived from a successful
+    # probe's scanned_at (reconcile_device_history() only reconciles
+    # recent_successful_hardware_rows()); a failed check-in probe in the
+    # same batch can otherwise become the unfiltered global max and
+    # silently blank this "latest" slice fleet-wide.
+    latest_ts = (
+        db.query(func.max(HardwareDevice.scanned_at))
+        .filter(HardwareDevice.probe_status == "success")
+        .scalar()
+    )
     distinct_scans = db.query(func.count(distinct(HardwareDevice.scanned_at))).scalar()
     has_prior_scan = (distinct_scans or 0) >= 2
 

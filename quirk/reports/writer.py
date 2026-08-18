@@ -357,7 +357,13 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
         from quirk.scanner import hardware_drift as _hardware_drift
 
         with _get_session(cfg.output.db_path) as _drift_sess:
-            _latest_ts = _drift_sess.query(_func.max(_HardwareDevice.scanned_at)).scalar()
+            # Phase 159 WR-01: scope to successful probes only — see matching
+            # rationale in quirk/dashboard/api/routes/hardware_drift.py.
+            _latest_ts = (
+                _drift_sess.query(_func.max(_HardwareDevice.scanned_at))
+                .filter(_HardwareDevice.probe_status == "success")
+                .scalar()
+            )
             if _latest_ts is not None:
                 # Phase 159 HWLC-13/D-159-A: a drift event inherits its triggering
                 # device row's is_partial_scan provenance via this (host, port) join —
