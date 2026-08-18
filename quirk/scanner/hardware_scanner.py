@@ -302,6 +302,7 @@ def fingerprint_one(
     cfg=None,
     confirmed_open_ports: Optional[Dict[str, Set[int]]] = None,
     ot_only: bool = False,
+    skip_http_mgmt: bool = False,
 ) -> HardwareDevice:
     """Fingerprint a single ``CryptoEndpoint`` against the HARDWARE_MATRIX.
 
@@ -342,6 +343,12 @@ def fingerprint_one(
             and 3 (SNMP) — for supplemental OT-only hosts that have no
             SSH/IT-management endpoint at all, honoring D-04/D-05's
             minimal-footprint posture against fragile fieldbus gear.
+        skip_http_mgmt: Phase 159 HWLC-13. When ``True``, skips only Step 2
+            (HTTP management probe) while leaving Step 3 (SNMP) reachable.
+            Used by check-in re-probes of ``snmp``-method devices so the
+            identifying probe family runs without a redundant HTTP-management
+            sweep. Default ``False`` preserves current behavior byte-for-byte
+            for every existing caller.
     """
     # Default: Unknown device — always returned on any code path (D-06)
     # match_confidence="low" is the Phase 154 D-05 baseline — every device
@@ -422,7 +429,7 @@ def fingerprint_one(
         # Phase 141 Plan 11: skipped entirely for ot_only supplemental
         # endpoints (minimal-footprint, D-04/D-05) — these are bare fieldbus
         # devices with no SSH/IT-management endpoint at all.
-        if device.vendor == "Unknown" and not ot_only:
+        if device.vendor == "Unknown" and not ot_only and not skip_http_mgmt:
             host = getattr(ep, "host", "")
             for port in _HTTP_MGMT_PORTS:
                 result = _probe_http_mgmt(host, port, timeout)
@@ -717,5 +724,126 @@ def fingerprint_hardware(
         logger.stamp(
             f"hardware fingerprint complete: {identified}/{len(results)} identified"
         )
+
+    return results
+
+
+def check_in_fingerprint_devices(
+    known_devices: List[HardwareDevice],
+    cfg=None,
+    timeout: int = 3,
+    logger: Optional[Logger] = None,
+) -> List[HardwareDevice]:
+    """Re-probe already-known devices via only their identifying probe family.
+
+    Phase 159 HWLC-13 (D-159-B): a lightweight "check-in" re-probe that skips
+    the discovery/port-scan stage entirely. ``known_devices`` is expected to
+    be the output of ``models_util.latest_successful_hardware_devices()`` —
+    one row per ``(host, port)``, the most recent successful observation.
+
+    Dispatch is per ``known.fingerprint_method``:
+      - ``"ssh_banner"``: re-runs ``scan_ssh_one()`` to get a fresh banner,
+        then the full waterfall via ``fingerprint_one()``.
+      - ``"snmp"``: synthetic endpoint, ``skip_http_mgmt=True`` so only the
+        identifying SNMP probe (Step 3) runs.
+      - ``"modbus"``: synthetic endpoint, seeds ``confirmed_open_ports`` from
+        the known row's own port-502 evidence (D-159-C) and passes
+        ``ot_only=True``. Skipped entirely if ``enable_modbus`` is off
+        (D-159-E) — never force-enabled.
+      - ``"bacnet"``: synthetic endpoint, ``ot_only=True``. Skipped entirely
+        if ``enable_bacnet`` is off (D-159-E) — never force-enabled.
+      - ``"http_mgmt"``, ``"unknown"``, ``None``, or any unrecognized value:
+        synthetic endpoint, full waterfall (no skip flags).
+
+    Synthetic endpoints use the known device's OWN host/port (D-159-D) —
+    never ``port=0`` — since ``(host, port)`` is the drift-reconciliation
+    identity key.
+
+    Every returned device has ``is_partial_scan = True`` set. A probe
+    exception for one device is logged and does not abort the batch — the
+    function is deliberately serial (no ThreadPoolExecutor); check-in fleets
+    are small and serial keeps the failure mode simple.
+
+    Args:
+        known_devices: Rows from ``latest_successful_hardware_devices()``.
+        cfg: Optional ``AppConfig`` — forwarded to ``fingerprint_one`` and
+            used to read ``cfg.connectors.enable_modbus``/``enable_bacnet``.
+        timeout: Per-probe timeout in seconds (default 3 s).
+        logger: Optional structured logger for verbose output.
+
+    Returns:
+        List of re-probed ``HardwareDevice`` rows — may be shorter than
+        ``known_devices`` when modbus/bacnet devices are skipped due to a
+        disabled connector flag.
+    """
+    from quirk.scanner.ssh_scanner import scan_ssh_one
+
+    results: List[HardwareDevice] = []
+    if not known_devices:
+        return results
+
+    _connectors = getattr(cfg, "connectors", None) if cfg is not None else None
+    _enable_modbus = getattr(_connectors, "enable_modbus", False)
+    _enable_bacnet = getattr(_connectors, "enable_bacnet", False)
+
+    for known in known_devices:
+        try:
+            method = getattr(known, "fingerprint_method", None)
+            host = getattr(known, "host", "")
+            port = getattr(known, "port", 0)
+
+            if method == "ssh_banner":
+                ep = scan_ssh_one(host, port, timeout, logger)
+                device = fingerprint_one(ep, timeout, logger, cfg)
+            elif method == "snmp":
+                ep = CryptoEndpoint(host=host, port=port, service_detail="")
+                device = fingerprint_one(ep, timeout, logger, cfg, skip_http_mgmt=True)
+            elif method == "modbus":
+                if not _enable_modbus:
+                    if logger:
+                        logger.v(
+                            f"Check-in skip {host}:{port} — modbus device but "
+                            f"enable_modbus is off"
+                        )
+                    continue
+                ep = CryptoEndpoint(host=host, port=port, service_detail="")
+                device = fingerprint_one(
+                    ep,
+                    timeout,
+                    logger,
+                    cfg,
+                    confirmed_open_ports={host: {502}},
+                    ot_only=True,
+                )
+            elif method == "bacnet":
+                if not _enable_bacnet:
+                    if logger:
+                        logger.v(
+                            f"Check-in skip {host}:{port} — bacnet device but "
+                            f"enable_bacnet is off"
+                        )
+                    continue
+                ep = CryptoEndpoint(host=host, port=port, service_detail="")
+                device = fingerprint_one(ep, timeout, logger, cfg, ot_only=True)
+            else:
+                # "http_mgmt", "unknown", None, or any unrecognized value —
+                # full waterfall via a synthetic empty-banner endpoint.
+                ep = CryptoEndpoint(host=host, port=port, service_detail="")
+                device = fingerprint_one(ep, timeout, logger, cfg)
+
+            try:
+                device.is_partial_scan = True
+            except AttributeError:
+                # ORM column not yet migrated — skip assignment
+                pass
+            results.append(device)
+        except Exception as exc:
+            if logger:
+                logger.v(
+                    f"Check-in re-probe error for "
+                    f"{getattr(known, 'host', '?')}:{getattr(known, 'port', '?')}: "
+                    f"{safe_str(exc)}"
+                )
+            continue
 
     return results

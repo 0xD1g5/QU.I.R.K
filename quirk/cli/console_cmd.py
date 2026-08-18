@@ -649,6 +649,9 @@ def _ingest_envelope(
                     ssh_host_key_fingerprint=d.get("ssh_host_key_fingerprint"),
                     match_confidence=d.get("match_confidence"),
                     probe_status=d.get("probe_status"),
+                    # Phase 159 HWLC-13: check-in re-probe marker; None (never
+                    # backfilled) unless the sensor explicitly sent True/False.
+                    is_partial_scan=d.get("is_partial_scan"),
                 ))
 
             # D-158-G: cfg=None is deliberate — the retention lookup inside

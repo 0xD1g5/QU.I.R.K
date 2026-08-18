@@ -408,6 +408,10 @@ def _hardware_device_to_dict(dev) -> dict:
         "ssh_host_key_fingerprint": _str(getattr(dev, "ssh_host_key_fingerprint", None)),
         "match_confidence": _str(getattr(dev, "match_confidence", None)),
         "probe_status": _str(getattr(dev, "probe_status", None)),
+        # Phase 159 HWLC-13: check-in re-probe marker — passed through as a
+        # bare bool/None (not _str-coerced) since it is a true JSON boolean,
+        # never a string enum like the fields above.
+        "is_partial_scan": getattr(dev, "is_partial_scan", None),
     }
 
 
