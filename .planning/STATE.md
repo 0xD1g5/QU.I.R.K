@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: planning
-last_updated: "2026-08-19T20:52:44.379Z"
+last_updated: "2026-08-19T21:15:00.000Z"
 last_activity: 2026-08-19
 progress:
   total_phases: 0
@@ -21,16 +21,24 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Planning next milestone (v5.14 shipped 2026-08-19 — run `/gsd:new-milestone`)
+**Current focus:** v5.15 Lifecycle Tail Drain roadmap created (Phases 161-163) — ready for `/gsd:discuss-phase 161`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 161 (Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing) — not yet planned
 Plan: —
-Status: Defining requirements
-Last activity: 2026-08-19 — Milestone v5.15 started
+Status: Roadmap created; ready for phase planning
+Last activity: 2026-08-19 — v5.15 ROADMAP.md created (3 phases, 4/4 requirements mapped)
 
-## v5.14 Phase Map (planning)
+## v5.15 Phase Map (planning)
+
+| Phase | Name | Requirements | Gate | Status |
+|-------|------|--------------|------|--------|
+| 161 | Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | HWLC-14, HWLC-19 | None (first, independent) | Not started |
+| 162 | Check-in Scan Scheduling | HWLC-20 | None (independent of 161) | Not started |
+| 163 | Discovery Sub-Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | Not started |
+
+## v5.14 Phase Map (SHIPPED 2026-08-19)
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
