@@ -18,11 +18,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-14)
+See: .planning/PROJECT.md (updated 2026-08-19)
 
-**Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now extending agentless hardware PQC fingerprinting (SSH/HTTP/SNMP) with SNMPv3, SNMP-confirmed bridge mitigation, OT/ICS fingerprinting, firmware CVE correlation, and a small dashboard/security tail.
+**Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Milestone complete
+**Current focus:** Planning next milestone (v5.14 shipped 2026-08-19 — run `/gsd:new-milestone`)
 
 ## Current Position
 
@@ -191,6 +191,11 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 160 P03 | 35min | 3 tasks | 6 files |
 
 ## Accumulated Context
+
+**v5.14 shipped 2026-08-19.** Decisions below predate the shipped v5.14 milestone (Phases
+157–160, HWLC-13/15/16/17/18) and are kept for historical continuity — full milestone decision
+log lives in PROJECT.md's Key Decisions table and `.planning/RETROSPECTIVE.md`'s v5.14 section.
+Next milestone's numbering continues at Phase 161.
 
 ### Decisions
 
