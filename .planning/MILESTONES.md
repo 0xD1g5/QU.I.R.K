@@ -1,5 +1,30 @@
 # Milestones
 
+## v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting (Shipped: 2026-08-19)
+
+**Phases completed:** 4 phases, 16 plans, 38 tasks
+
+**Key accomplishments:**
+
+- Table-wide calendar-cutoff retention sweep for `hardware_drift_events`, structurally distinct from the Phase 154 scan-scoped `HardwareDevice` purge, via a new `ScanCfg.hardware_drift_event_retention_days` field (default 365) and `run_scan._purge_stale_drift_events()`.
+- Pure `build_eol_forecast()` bucketing + hedged, catalog-cited 12-month EOL narrative engine, with the advisory-only firewall extended by name.
+- ExecContent gains an `eol_forecast` field populated non-fatally by writer.py, and html_renderer.py gains a `render_eol_forecast_section()` that renders an escaped, advisory-framed EOL/Tier Forecast subsection independent of drift events.
+- All three report formats (HTML from Plan 03, now DOCX and CLI/markdown) render the 12-month EOL/tier forecast narrative, closing ROADMAP success criterion #2 for HWLC-18 — with the CLI subsection built as genuinely net-new prose rather than an extension of a section that was never shipped.
+- Closes CLAUDE.md's Per-Phase Documentation Checklist and Mandatory Phase Completion Steps for Phase 157 — documents `hardware_drift_event_retention_days`, expands the EOL/Tier Forecast section with an explicit retention-reconciliation guarantee (ROADMAP success criterion #5), adds UAT Series 157, and re-syncs all four Obsidian vault guide/reference files plus a new phase note.
+- Extracted the duplicated hardware persist/purge/commit/reconcile block from two `run_scan.py` call sites into one shared `persist_and_reconcile()` helper in `quirk/scanner/hardware_drift.py`, eliminating a would-be fourth copy for the upcoming sensor-ingest path.
+- Sensor-side `hardware_devices` field end-to-end: `PushEnvelope.hardware_devices: list | None = None` on the console model, `_hardware_device_to_dict()`/`_read_scan_hardware_devices()` on the sensor, wired into both the HTTPS push and air-gap export `_build_envelope()` call sites, proven by a 7-test round-trip module.
+- Wired `persist_and_reconcile()` into `_ingest_envelope()`'s shared HTTPS-push/air-gap-import path, closing HWLC-15: sensor-scanned segments now reach `hardware_devices`/`hardware_drift_events` identically to console-direct scans, with `None`-vs-`[]` correctly distinguishing "old sensor, no observation" from "new sensor, confirmed zero devices."
+- HardwareDevice.is_partial_scan marker column + check_in_fingerprint_devices() dispatch wrapper that re-probes a known device via only its originally-identifying probe family (SSH/SNMP/Modbus/BACnet), never re-running a full port scan.
+- `--check-in` CLI flag short-circuits `run_scan.py` immediately after `init_db()` into `run_check_in()`, which re-probes only the known hardware fleet via the Plan-01 dispatch wrapper, persists through the unmodified Phase 158 `persist_and_reconcile()` chokepoint, and exits 0 — never touching discovery, non-hardware scanner phases, or `compute_readiness_score`.
+- `HardwareDriftEventItem.is_partial_scan` badge threaded through the shared `build_device_lookup()`/`serialize_drift_event()` helpers so every drift item on `/api/hardware/drift` and `/api/compare` discloses check-in provenance, backed by 5 regression tests proving `/trends` and `/compare`'s score paths stay structurally immune to check-in rows.
+- Threaded `is_partial_scan` from persisted `HardwareDevice`/drift rows into the report payload and rendered a locked, always-visible "Partial re-probe — check-in scan; not a full assessment." banner in the HTML, DOCX, and CLI/markdown reports whenever a check-in-sourced device or drift row is displayed.
+- Documented the `--check-in` CLI flag (operators-guide §9.9, getting-started cross-reference) and the partial re-probe banner (report-interpretation §10.12) exactly as shipped in Plans 02-04, added UAT Series 159 (4 cases), and synced all four touched docs to the Obsidian vault — closing CLAUDE.md's Per-Phase Documentation Checklist for Phase 159.
+- New vendor-scoped `vendor_pqc_trend_events` table + `vendor_fleet_snapshot()` distinct-device fleet window + `reconcile_vendor_pqc_trend()` N-of-M detection function, reusing the existing `_confirmed_value()` gate verbatim.
+- Wired `reconcile_vendor_pqc_trend()` into the shared `persist_and_reconcile()` chokepoint so every hardware scan batch (console-direct, sensor-ingested, check-in) participates in vendor-level PQC trend tracking, and extended the machine-enforced advisory-only scoring firewall to cover the new surface by name.
+- `GET /api/hardware/vendor-trends` — authenticated, bounded, newest-first vendor-scoped read of `vendor_pqc_trend_events`, extending the existing hardware_drift route module and its T-160-04 scoring firewall, plus operator docs and UAT Series 160, closing out HWLC-17 and Phase 160.
+
+---
+
 ## v5.13 Continuous Hardware Lifecycle Monitoring (Shipped: 2026-08-15)
 
 **Phases completed:** 3 phases (154–156), 17 plans, 44 tasks
@@ -12,19 +37,24 @@ tracking. 12/12 HWLC requirements satisfied, milestone audit `passed`.
 - Stable device re-identification across scans — SSH host-key fingerprint secondary match key
   (unconditional on vendor match) with explicit low-confidence fallback to host:port, surviving
   DHCP/re-IP between engagements.
+
 - Failed-probe-safe hardware state — a genuine per-device latest-successful-row projection at all
   four read sites (dashboard, CBOM merge, CLI/PDF/DOCX reports), so a failing re-probe never erases
   a device's last-known-good data; plus a configurable retention purge (`hardware_history_retention_days`,
   default 180).
+
 - Drift reconciliation engine — two-scan diff across CNSA 2.0 tier, PQC/bridge-mitigation status,
   EOL/EOS proximity, and CVE set, each a distinct N-of-M-confirmed, deduplicated event type
   persisted to `hardware_drift_events`.
+
 - Curated EOL/EOS catalog (`hardware_eol.py`, 4th instance of the staleness-gated curated-catalog
   pattern) finally populating `HardwareDevice.eol_date`, dormant since Phase 127.
+
 - Dashboard + report "what changed since last scan" surfacing — `GET /api/hardware/drift`,
   `CompareResponse.hardware_drift`, `LifecycleEventList` on `/hardware`/`/compare`, HTML/DOCX
   "Recent Lifecycle Changes" sections — structurally distinct from scored findings, zero
   `SCORE_WEIGHTS` references, machine-enforced.
+
 - OT/ICS recurring-rescan safety rail — explicit `enable_recurring_otics` opt-in plus a hardcoded,
   non-configurable 168-hour cadence floor enforced as the sole scheduler dispatch chokepoint;
   `/gsd-secure-phase 156` independently SECURED 19/19 threats, 0 high-severity findings.

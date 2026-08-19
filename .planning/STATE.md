@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v5.14
 milestone_name: Hardware Lifecycle Tail — Fleet Coverage & Forecasting
-status: milestone_complete
-stopped_at: Milestone complete (Phase 160 was final phase)
-last_updated: 2026-08-18T13:49:14.254Z
-last_activity: 2026-08-18
+status: Awaiting next milestone
+stopped_at: Completed 160-03-PLAN.md
+last_updated: "2026-08-19T10:06:09.993Z"
+last_activity: 2026-08-19 — Milestone v5.14 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -26,12 +26,10 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 ## Current Position
 
-Phase: 160
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-08-18
-
-Progress: [██████████] 100%
+Phase: Milestone v5.14 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-08-19 — Milestone v5.14 completed and archived
 
 ## v5.14 Phase Map (planning)
 
@@ -415,8 +413,16 @@ None yet.
 
 ## Deferred Items
 
-**Last re-triaged:** 2026-08-15 (v5.13 milestone close — pre-close artifact audit, 3 items
+**Last re-triaged:** 2026-08-18 (v5.14 milestone close — pre-close artifact audit, 3 items
 acknowledged, see table below)
+
+Acknowledged at v5.14 milestone close (2026-08-18):
+
+| Category | Item | Status |
+|----------|------|--------|
+| quick_task | `260611-g0b-merge-healthcare-vertical-branch-into-ma` | missing (recurring false positive — same row already documented as false-positive at v5.10, v5.11, and v5.13 close: PLAN+SUMMARY both exist on disk; `audit-open`'s scanner has a persistent bug that cannot see this task's completion) |
+| uat_gap (158) | `158-HUMAN-UAT.md` — 2 pending scenarios | partial (UAT-158-01/02 — visual confirmation that sensor-pushed hardware devices/drift render on `/hardware` and `/compare`; not a functional gap — HWLC-15 independently SATISFIED at the code/test level per `158-VERIFICATION.md` (4/4 must-haves) and `v5.14-MILESTONE-AUDIT.md`; deferred by explicit user choice at the Phase 158 verification checkpoint) |
+| verification_gap (158) | `158-VERIFICATION.md` | human_needed (same underlying item as the uat_gap row above — one shared pair of pending visual checks, no separate defect) |
 
 Acknowledged at v5.13 milestone close (2026-08-15):
 
@@ -476,5 +482,4 @@ rounds (141-09) on 2026-08-03 — no longer pending.
 
 ## Operator Next Steps
 
-- Plan Phase 157 with /gsd:plan-phase 157 (or /gsd:discuss-phase 157 first — Phase 159 and 160 each
-  carry an explicit open design question flagged in ROADMAP.md for their own discuss-phase step)
+- Start the next milestone with /gsd-new-milestone

@@ -28,189 +28,36 @@
 - ✅ **v5.11 Discovery at Scale + Backlog Drain** — Phases 144–147, 16 plans (shipped 2026-08-11) → `.planning/milestones/v5.11-ROADMAP.md`
 - ✅ **v5.12 Release & Verification Integrity** — Phases 148–153, 36 plans (shipped 2026-08-14) → `.planning/milestones/v5.12-ROADMAP.md`
 - ✅ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (shipped 2026-08-15) → `.planning/milestones/v5.13-ROADMAP.md`
-- 🚧 **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160 (in progress)
+- ✅ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (shipped 2026-08-19) → `.planning/milestones/v5.14-ROADMAP.md`
 
 ---
 
-## Current Milestone: v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting
+## Phases
 
-**Goal:** Close the sensor-fleet drift gap left open by v5.13 and round out lifecycle monitoring
-with a low-cost check-in scan mode and catalog-level PQC trend forecasting.
+<details>
+<summary>✅ v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting (Phases 157–160) — SHIPPED 2026-08-19</summary>
 
-**Phase Numbering:** Continues from v5.13's last phase (156). Integer phases only for this
-milestone — no urgent insertions anticipated.
+See `.planning/milestones/v5.14-ROADMAP.md` for full phase details, `.planning/milestones/v5.14-REQUIREMENTS.md`
+for requirements, and `.planning/milestones/v5.14-MILESTONE-AUDIT.md` for the closing audit.
 
-### Phases
+4 phases (157-160), 16 plans, 5/5 HWLC requirements complete. Closed the sensor-fleet drift gap
+left open by v5.13 and rounded out lifecycle monitoring: a table-wide calendar-cutoff retention
+sweep bounds `hardware_drift_events` growth, a hedged catalog-cited 12-month EOL/tier forecast
+narrative renders in every report format, sensor-scanned segments reach the console's drift
+history exactly like console-direct scans via a new shared `persist_and_reconcile()` chokepoint,
+a lightweight `--check-in` mode re-probes only already-known devices without a full scan, and a
+new event-sourced table tracks vendor-level PQC catalog status changes — the least-precedented
+item in the milestone, with a design flaw (single-host confirmation-gate domination) caught by
+research before implementation ever touched it. Every phase closed via a code-review→fix→re-review
+cycle; two closed BLOCKER-severity bugs (a session-rollback data-loss bug in Phase 158, a
+dashboard surface silently dropping a backend-serialized field in Phase 159). Milestone audit
+scored `tech_debt` (0 blockers, 5/5 requirements satisfied, 2 deferred human-UAT scenarios from
+Phase 158, and Phase 160's `GET /api/hardware/vendor-trends` presentation layer intentionally
+unwired per locked scope).
 
-- [x] **Phase 157: Drift-Event Retention + Forecast Narrative Foundation** - Bound `hardware_drift_events` growth via a calendar-cutoff sweep and add a hedged, catalog-cited 12-month EOL/tier forecast narrative to every report format, structurally isolated from scoring.
-- [x] **Phase 158: Sensor Fleet Drift Coverage** - Sensor-scanned segments reach the console's drift history exactly like console-direct scans, via a `hardware_devices` field on `PushEnvelope` and a shared `persist_and_reconcile()` helper.
-- [x] **Phase 159: Check-in Scan Mode** - Consultants can re-probe only already-known devices via a distinct opt-in mode (never a 4th `--profile` value), excluded from scored comparisons and always visually flagged as partial.
-- [x] **Phase 160: Catalog-Level PQC Vendor Trend Tracking** - Vendor-level PQC support status changes in the curated hardware catalog are recorded over time as discrete, structured, cross-device/cross-vendor events.
-
-## Phase Details
-
-### Phase 157: Drift-Event Retention + Forecast Narrative Foundation
-
-**Goal**: `hardware_drift_events` growth is bounded on long-running deployments, and consultants
-get a forward-looking, catalog-grounded EOL/tier forecast in every report format — without either
-capability becoming score-visible.
-**Depends on**: Nothing (first phase of milestone; extends Phase 154/155/156 patterns)
-**Requirements**: HWLC-16, HWLC-18
-**Success Criteria** (what must be TRUE):
-
-  1. `hardware_drift_events` rows older than a configurable retention window are purged via a
-     calendar-cutoff sweep over the whole table — structurally distinct from the scan-scoped
-     `HardwareDevice` purge pattern (Phase 154), so idle-device drift history is neither purged
-     prematurely nor retained forever.
-
-  2. HTML, DOCX, and CLI reports each include a 12-month EOL/tier forecast narrative for the
-     scanned fleet, derived at render time from existing `HardwareDevice.eol_date` and tier data.
-
-  3. The forecast narrative cites the underlying catalog's `last_verified` date and uses hedged,
-     non-absolute language — never an unqualified "will".
-
-  4. `tests/test_cve_score_guard.py` is extended by name (in this same phase, not deferred) to
-     assert the forecast module never references `SCORE_WEIGHTS` or feeds `compute_readiness_score`.
-
-  5. The drift-event retention window and the forecast's advertised look-back window are explicitly
-     reconciled — the forecast never implies visibility into a period the retention sweep has
-     already purged.
-**Plans**: 5 plans
-
-Plans:
-**Wave 1**
-
-- [x] 157-01-PLAN.md — Drift-event calendar-cutoff retention sweep + `hardware_drift_event_retention_days` config (HWLC-16)
-- [x] 157-02-PLAN.md — `hardware_forecast.py` bucketing/hedged-narrative engine + score-guard extension (HWLC-18)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 157-03-PLAN.md — `ExecContent.eol_forecast` field, writer population, HTML forecast subsection (HWLC-18)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 157-04-PLAN.md — DOCX forecast subsection + net-new CLI/markdown forecast subsection (HWLC-18)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 157-05-PLAN.md — Config/report docs, UAT Series 157, Obsidian vault sync + phase note (HWLC-16, HWLC-18)
-
-### Phase 158: Sensor Fleet Drift Coverage
-
-**Goal**: Hardware devices discovered by a sensor's local scan reach the console's
-`hardware_drift_events` history the same way console-direct scans do, closing the real gap found
-during v5.13 research.
-**Depends on**: Nothing new (extends Phase 107/109/154 sensor-console plumbing); independent of
-Phase 157
-**Requirements**: HWLC-15
-**Success Criteria** (what must be TRUE):
-
-  1. A sensor push envelope carrying `hardware_devices` results in those devices' changes appearing
-     on `/hardware`, `/compare`, and in reports — identical treatment to a console-direct scan of
-     the same segment.
-
-  2. An old, un-upgraded sensor binary that omits `hardware_devices` entirely produces zero drift
-     events — field-absent ("no observation") is never misread as field-present-empty ("confirmed
-     zero devices").
-
-  3. `PushEnvelope`, `sensor_cmd.py::_build_envelope()`, and `console_cmd.py::_ingest_envelope()`
-     changes ship together in the same commit, proven by a round-trip envelope schema test (sender
-     and receiver never drift apart silently under `extra="ignore"`).
-
-  4. A shared `persist_and_reconcile()` helper is extracted and used by both the console-direct and
-     sensor-ingest persistence paths — no duplicated purge/commit/reconcile logic remains.
-**Plans**: 3 plans
-
-Plans:
-**Wave 1**
-
-- [x] 158-01-PLAN.md — Shared `persist_and_reconcile()` helper + both `run_scan.py` persist sites refactored onto it (HWLC-15)
-- [x] 158-02-PLAN.md — `hardware_devices` field on `PushEnvelope` + sensor-side serialization/read + round-trip schema test (HWLC-15)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 158-03-PLAN.md — Console `_ingest_envelope()` hardware persist/reconcile wiring + None-vs-empty ingest tests + UAT/Obsidian sync (HWLC-15)
-
-### Phase 159: Check-in Scan Mode
-
-**Goal**: Consultants can run a lightweight check-in scan that cheaply re-probes only already-known
-devices, without repeating a full network discovery or non-hardware scanner phases.
-**Depends on**: Phase 158 (check-in's drift-writing path reuses the shared `persist_and_reconcile()`
-helper; console-direct target resolution itself has no sensor dependency)
-**Requirements**: HWLC-13
-**Success Criteria** (what must be TRUE):
-
-  1. A check-in run is invoked via a distinct opt-in flag/subcommand — never a 4th `--profile`
-     value — and re-probes only devices already present in `HardwareDevice`, skipping full network
-     discovery and non-hardware scanner phases.
-
-  2. Check-in runs carry a `scan_type`/`is_partial_scan` marker and are excluded from `/trends` and
-     `/compare` like-for-like score comparisons.
-
-  3. Every rendered report format (HTML, DOCX, CLI) shows an always-visible "partial re-probe"
-     banner whenever a check-in result is displayed.
-
-  4. A check-in run persists `HardwareDevice`/`hardware_drift_events` rows only — it does not go
-     through `compute_readiness_score` and does not write a scored scan session.
-**Plans**: 5 plans
-
-Plans:
-- [x] 159-01-PLAN.md — `HardwareDevice.is_partial_scan` marker column + `check_in_fingerprint_devices()` re-probe dispatch (wave 1)
-- [x] 159-02-PLAN.md — `--check-in` CLI flag, `run_check_in()` short-circuit, CLI summary (wave 2)
-- [x] 159-03-PLAN.md — API badge on drift events + `/trends`//`/compare` immunity regression tests (wave 2)
-- [x] 159-04-PLAN.md — Partial re-probe banner in HTML/DOCX/CLI report renderers (wave 2)
-- [x] 159-05-PLAN.md — Docs, UAT Series 159, Obsidian vault sync (wave 3)
-
-### Phase 160: Catalog-Level PQC Vendor Trend Tracking
-
-**Goal**: The system tracks vendor-level PQC support status changes in the curated hardware catalog
-over time as discrete, structured events — a genuinely novel cross-device/cross-vendor aggregate
-view with no direct precedent elsewhere in QUIRK.
-**Depends on**: Phase 158 (reuses the `persist_and_reconcile()` call site as the natural chokepoint
-for the new vendor-diff check, and needs the complete sensor+console fleet population to avoid
-under-representing sensor-scanned segments)
-**Requirements**: HWLC-17
-**Success Criteria** (what must be TRUE):
-
-  1. A confirmed change in `HARDWARE_MATRIX`'s PQC support status for a vendor is recorded as a
-     discrete event in a new event-sourced table — never as a free-text or numeric risk-score field.
-
-  2. The trend-event writer is wired into the shared `persist_and_reconcile()` call site established
-     in Phase 158, not a bespoke new call site.
-
-  3. Vendor PQC trend events are queryable at the catalog level (cross-device, cross-vendor), not
-     only per individual device.
-
-  4. The new trend-event table's schema mirrors the scalar/enum-only `old_value`/`new_value`
-     contract already established for `hardware_drift_events`.
-**Plans**: 3 plans
-
-Plans:
-- [x] 160-01-PLAN.md — VendorPqcTrendEvent table, vendor_fleet_snapshot() distinct-device helper, and reconcile_vendor_pqc_trend() detection
-- [x] 160-02-PLAN.md — wire the vendor-trend check into persist_and_reconcile() + extend the advisory-only scoring firewall
-- [x] 160-03-PLAN.md — GET /api/hardware/vendor-trends query surface, endpoint tests, operator docs + UAT Series 160 + Obsidian sync
-
-**Note (research flag for this phase's own planning):** Phase 160 is the least-precedented item in
-this milestone — no existing QUIRK subsystem does cross-device/cross-vendor aggregation, only
-per-device drift. Display/statistics design (how to bucket/summarize "vendor X's fleet-wide PQC
-posture trend") needs a `--research-phase` pass or an explicit CONTEXT.md decision during
-`/gsd:discuss-phase 160`, not a locked answer here.
-
-**Note (research flag, Phase 159):** Whether a check-in run writes a full scan session / goes
-through `compute_readiness_score` at all is architecturally recommended as "no" (rows only) but is
-a decision for `/gsd:discuss-phase 159`'s CONTEXT.md, not locked by this roadmap.
-
-### Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 157. Drift-Event Retention + Forecast Narrative Foundation | 5/5 | Complete    | 2026-08-16 |
-| 158. Sensor Fleet Drift Coverage | 3/3 | Complete    | 2026-08-17 |
-| 159. Check-in Scan Mode | 5/5 | Complete    | 2026-08-18 |
-| 160. Catalog-Level PQC Vendor Trend Tracking | 3/3 | Complete    | 2026-08-18 |
+</details>
 
 ---
-
 <details>
 <summary>✅ v5.13 Continuous Hardware Lifecycle Monitoring (Phases 154–156) — SHIPPED 2026-08-15</summary>
 
@@ -407,6 +254,7 @@ requirements satisfied, tech_debt disposition (0 blockers, 4 tracked non-blockin
 
 ---
 
+
 ## Backlog
 
 Items to be organized into future milestones. Organized by theme.
@@ -451,19 +299,19 @@ Promoted into v5.13 (see above) — kept here for backlog-history continuity:
 ~~OT/ICS resume-checkpoint gap~~ and ~~CVE table BACnet key coverage~~ — both closed by v5.11
 Phase 147 as DRAIN-01/DRAIN-02; struck from this list 2026-08-11.
 
-### Hardware Lifecycle Tail (v5.14)
+### Hardware Lifecycle Tail (v5.14) — SHIPPED
 
-Promoted into v5.14 (see Current Milestone section above) — kept here for backlog-history
+Promoted into v5.14 (see above) — all items shipped 2026-08-19, kept here for backlog-history
 continuity:
 
-- HWLC-13 — lightweight "check-in" scan mode (narrow re-probe of known devices only) → Phase 159
-- HWLC-15 — fleet-wide sensor coverage for `hardware_devices` (deferred from v5.13) → Phase 158
-- HWLC-16 — `hardware_drift_events` retention policy → Phase 157
-- HWLC-17 — vendor PQC-status trend tracking (catalog-level, not per-device) → Phase 160
+- HWLC-13 — lightweight "check-in" scan mode (narrow re-probe of known devices only) → Phase 159 ✓
+- HWLC-15 — fleet-wide sensor coverage for `hardware_devices` (deferred from v5.13) → Phase 158 ✓
+- HWLC-16 — `hardware_drift_events` retention policy → Phase 157 ✓
+- HWLC-17 — vendor PQC-status trend tracking (catalog-level, not per-device) → Phase 160 ✓
 - HWLC-18 — consultant-facing "lifecycle risk forecast" narrative (12-month EOL/tier projections)
-  → Phase 157
+  → Phase 157 ✓
 
-**Deferred out of v5.14 (see REQUIREMENTS.md Future Requirements):**
+**Deferred out of v5.14 (carried forward — see PROJECT.md Active Requirements):**
 
 - HWLC-14 — optional email/webhook notification on tier-crossing/EOL events (reuses Phase 101
   fan-out); deferred pending validation of the core diff mechanism on real engagement data.
@@ -477,7 +325,11 @@ continuity:
 - Cross-tenant/cross-client PQC trend aggregation — blocked on the still-parked SaaS multi-tenant
   architecture.
 
-### v1.x / v2+ (deferred, see REQUIREMENTS.md Future Requirements)
+- Vendor-trend report/dashboard surfacing (`GET /api/hardware/vendor-trends` has zero consumers
+  today) — explicitly deferred by Phase 160's locked scope; revisit if vendor-trend visibility
+  becomes a client ask.
+
+### v1.x / v2+ (deferred, see PROJECT.md Active Requirements)
 
 - DISC-08 sub-batch (mid-discovery) checkpoint/resume granularity — deferred as an accepted
   boundary since v5.11; revisit only if batch cost grows.
@@ -489,5 +341,3 @@ continuity:
 - [ ] User auth and org management
 - [ ] Cloud deployment (Docker Compose → Kubernetes)
 - [ ] Hosted reporting and CBOM storage
-
-</content>
