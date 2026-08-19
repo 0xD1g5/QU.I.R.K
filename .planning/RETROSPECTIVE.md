@@ -776,6 +776,115 @@ floor gating recurring OT/ICS re-probing, closed by an independent `/gsd-secure-
 
 ---
 
+## Milestone: v5.14 — Hardware Lifecycle Tail — Fleet Coverage & Forecasting
+
+**Shipped:** 2026-08-19
+**Phases:** 4 (157–160) | **Plans:** 16
+
+### What Was Built
+
+Closed the sensor-fleet drift gap left open by v5.13 and rounded out lifecycle monitoring. Phase
+157 bounded `hardware_drift_events` growth with a table-wide calendar-cutoff retention sweep
+(structurally distinct from Phase 154's scan-scoped device purge) and added a hedged,
+catalog-cited 12-month EOL/tier forecast narrative to every report format. Phase 158 extracted a
+new shared `persist_and_reconcile()` chokepoint and wired sensor-scanned segments into it so they
+reach the console's drift history exactly like console-direct scans. Phase 159 added a lightweight
+`--check-in` re-probe mode for already-known devices, badged (never filtered) on drift surfaces
+and structurally excluded from scoring. Phase 160 built the milestone's most novel piece — a
+vendor-scoped, cross-device event-sourced table tracking catalog-level PQC status changes, with no
+existing precedent in the codebase to draw from.
+
+### What Worked
+
+- **A shared chokepoint extracted in Phase 158 absorbed two more phases cleanly.** Phase 159 and
+  Phase 160 both hooked into `persist_and_reconcile()` without needing new call sites or signature
+  changes (beyond the review-driven `owns_session` addition). The integration audit traced all 4
+  eventual call sites end-to-end and found correct ordering and fault isolation at every stage —
+  the chokepoint held up exactly as designed across three consecutive phases extending it.
+- **Research caught two real design flaws before implementation ever touched them, not after.**
+  Phase 158's research flagged that a naive synthetic endpoint would use `port=0`, corrupting the
+  `(host,port)` drift-identity key; Phase 160's research found that a naive raw-history N-of-M
+  query would let one repeatedly-rescanned host (especially under Phase 159's own check-in
+  cadence) dominate a vendor's confirmation gate. Both were locked as explicit plan decisions with
+  named regression tests, never shipped and later fixed.
+- **Code review caught two BLOCKER-severity bugs that phase-level testing missed.** Phase 158: an
+  unconditional `session.rollback()` in the shared helper that would have silently wiped a
+  caller's already-flushed rows on the HTTPS sensor-push route. Phase 159: the React dashboard's
+  TypeScript type and renderer silently omitted a field the backend already serialized — the
+  live dashboard, arguably the most-used surface for this milestone's features, would have shown
+  zero indication of partial-scan provenance. Both fixed within the same phase via a 3-iteration
+  review→fix→re-review cycle that also added regression coverage for the fix itself, not just the
+  original bug.
+- **Provenance-at-insert-time beat provenance-by-join, twice.** Phase 159's own code review caught
+  a current-state join that could let a later scan flip an older event's badge, fixed by capturing
+  `is_partial_scan` on `HardwareDriftEvent` at insert time instead. The same shape — capture state
+  when it happens, don't re-derive it later from a mutable source — is now established across two
+  phases in this milestone (`detected_at`/`is_partial_scan` on drift events).
+
+### What Was Inefficient
+
+- **The VALIDATION.md row-status gap blocked commits on three separate phases in the same
+  milestone.** The planner/`phase.complete` flow reliably flips `nyquist_compliant: true` in
+  frontmatter but leaves the Per-Task Verification Map's row-level Status column at `⬜ pending`
+  — and the pre-commit hook blocks on that exact literal text, independent of the frontmatter
+  flag. This recurred on Phases 157, 158, and 159 before being caught and worked around
+  proactively for Phase 160 (using a `🔵 planned` marker instead of `⬜ pending` in the initial
+  plan, avoiding the trap rather than fixing it after the fact). Worth fixing upstream in the GSD
+  planner/phase.complete tooling rather than re-discovering per phase.
+- **The `260611-g0b` healthcare-vertical quick-task false positive resurfaced for a fourth
+  consecutive milestone.** Same row, same root cause (a scanner bug, not real incomplete work),
+  acknowledged again rather than fixed. Three milestones of "acknowledge and move on" is past the
+  point where re-triaging costs more than fixing the scanner would.
+- **The ROADMAP.md checkbox for a verified-passed phase requires a manual flip that isn't part of
+  `phase.complete`'s automated output.** All three of 157/158/159 needed a follow-up commit to
+  flip `[ ]` → `[x]` after the phase was already fully verified — a small but repeated
+  bookkeeping tax that Phase 160 also needed despite the row-status lesson being learned.
+
+### Patterns Established
+
+- **A milestone-spanning shared chokepoint, extracted in an early phase, is the right shape when
+  3+ later phases in the same milestone need to hook into the same persistence path.** Confirmed
+  working across Phase 158 (create) → 159 (extend) → 160 (extend again) with zero duplicated
+  purge/commit/reconcile logic anywhere in the final state.
+- **Badge, never filter, is the house convention for partial/provenance-marked data on advisory
+  surfaces.** Established explicitly in Phase 159 (check-in-sourced drift events) and reaffirmed
+  in Phase 160's design ("real information a consultant would want to see; hiding it risks
+  under-reporting").
+- **Capture provenance/state at the moment of insert, not by joining against current mutable
+  state at read time.** Two independent instances in this milestone (Phase 159's `is_partial_scan`
+  fix, and the general drift-event `detected_at` convention it extended) — worth stating as an
+  explicit principle for any future event-sourced table design in this codebase.
+
+### Key Lessons
+
+1. **A gate that blocks on literal text in a document, not just a structured frontmatter flag, is
+   easy to satisfy accidentally and easy to trip accidentally.** Phase 160's fix — pick a status
+   marker that's neither the "done" state nor the specific blocking literal — is a reasonable
+   workaround, but the deeper fix belongs in the tooling that writes the frontmatter flag: it
+   should write the row statuses to match, in the same pass.
+2. **A recurring false-positive that's been "resolved and removed" once and reappeared anyway is
+   not a documentation problem — acknowledging it a fourth time is a symptom of accepting
+   growing bookkeeping debt as normal.** Worth breaking the cycle rather than extending the
+   acknowledgment table again next milestone.
+3. **When a phase extracts a shared chokepoint specifically anticipating future extension (Phase
+   158's docstring literally named Phase 159/160 as future callers), that anticipation paid off
+   exactly as planned** — both later phases wired in without needing to modify the chokepoint's
+   core contract, only add narrowly-scoped optional behavior (`owns_session`, the vendor loop).
+   Worth deliberately designing for named future callers when a phase's own scope already implies
+   who they'll be.
+
+### Cost Observations
+
+- 81 commits over 3 days (2026-08-16 → 2026-08-18/19), 49 files, +5,832 / −153 lines
+- Every phase in this milestone closed via at least one code-review→fix cycle; two phases
+  (158, 159) needed the full 3-iteration cap before reaching a clean re-review — the highest
+  review-iteration density of any milestone in this retrospective log so far
+- Notable: zero net-new pip dependencies, zero new chaos-lab profiles — like v5.13, this milestone
+  shipped entirely on infrastructure already in place, this time specifically the Phase 154–156
+  hardware-lifecycle foundation from the immediately preceding milestone
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -797,6 +906,7 @@ floor gating recurring OT/ICS re-probing, closed by an independent `/gsd-secure-
 | v5.6 Distributed Completion + Public Launch | 6 | 20 | Repo went PUBLIC (3-pass history rewrite, branch protection w/ required check); production Windows frozen sensor shipped as GitHub Release asset; first milestone executed partly under gitignored-`.planning/` constraints (absolute-path subagents, hand-curated archives). v5.0–v5.5 rows not authored at close — see MILESTONES.md |
 | v5.9 Documentation Audit & Living Docs System | 6 (incl. 138.1/138.2) | 10 | Docs-only milestone; first to embed permanent doc-hygiene governance (`CLAUDE.md` Per-Phase Checklist + Milestone-Boundary Template) rather than a one-time sweep; audit caught a real content-inversion bug (CORE-04) and a vault-staleness gap (LIVE-03), both closed by inserted gap-closure phases and independently re-verified; v5.7 row not authored at close — see MILESTONES.md |
 | v5.13 Continuous Hardware Lifecycle Monitoring | 3 | 17 | Tightest plan-to-commit ratio to date (65 commits/~1 day) — a scheduling/diffing/reporting layer over existing data, zero new deps, zero new lab profiles; same "alternate code path skips a terminal call" bug shape (CR-01) caught by code review in two consecutive phases (154, 155); v5.10/v5.12 rows not authored at close — see MILESTONES.md |
+| v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting | 4 | 16 | Milestone-spanning shared chokepoint (`persist_and_reconcile()`, Phase 158) extended cleanly by two later phases with zero duplicated logic; highest code-review-iteration density to date (2 of 4 phases hit the 3-iteration cap); 2 BLOCKER-severity bugs closed same-phase; VALIDATION.md row-status/pre-commit-hook gap recurred on 3 phases before being proactively avoided on the 4th |
 
 ### Cumulative Quality
 
@@ -814,6 +924,7 @@ floor gating recurring OT/ICS re-probing, closed by an independent `/gsd-secure-
 | v5.6 | ~2,400 collected | 410 targeted tests green at Phase 122 post-merge gate; 5 pre-existing full-suite failures (chaos-lab drift, codesign title-join, qramm fixtures) verified identical at pre-122 base; v5.0–v5.5 rows not authored at close |
 | v5.11 | ~2,600 collected | 95 targeted tests green across the milestone surface at close; ~102 pre-existing full-suite failures (version-locked assertions, Python 3.14 dev-env drift) confirmed unrelated and unchanged — aging since Phase 97, now carried as an explicit next-milestone stabilization candidate |
 | v5.13 | 115/115 targeted (not full-suite re-counted) | 115/115 targeted cross-boundary tests green at milestone-audit time (drift engine, retention purge, cadence floor, score-guard, HTML/DOCX drift rendering, frontend lifecycle-advisory-guard); full-suite baseline was 3,087 passed / 0 failed as of v5.12's Phase 150 CI gate, held green since; v5.10/v5.12 rows not authored at close |
+| v5.14 | 3,452 passed (full suite) | Full-suite re-run independently at every phase close and at milestone audit; grew from 3,369 (pre-milestone baseline) to 3,452 (+83 tests) across the milestone's 4 phases and their code-review fix cycles; 3 pre-existing failures (CMVP staleness, 2 macOS-local git-hook-integration ordering issues) confirmed unrelated and unchanged at every re-run, including the final milestone-audit pass |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -833,3 +944,5 @@ floor gating recurring OT/ICS re-probing, closed by an independent `/gsd-secure-
 14. `.planning/` exclusion-policy drift (accidental tracked files) recurs across sessions — worth a structural CI/pre-commit guard rather than relying on manual catch-and-revert each time it happens
 15. Phase-completion artifacts (VERIFICATION.md, post-execution VALIDATION status, UAT series entry) drift when enforced only at milestone close — v5.11 had to repair three phases retroactively; gate them at phase close instead
 16. Re-triage of deferred items must re-derive the evidence, not re-read the prior verdict — a correct conclusion resting on decayed facts (v5.11 / DRAIN-04) is invisible to every subsequent review
+17. A gate that blocks on literal document text (not a structured flag) will be tripped repeatedly until the tool that writes the flag also writes the text — v5.14 hit the same VALIDATION.md row-status/pre-commit-hook gap on 3 of 4 phases before the pattern was recognized and proactively avoided
+18. A milestone-spanning shared chokepoint pays for itself when 3+ phases in the same milestone need the same persistence path — design it for named future callers when the current phase's own scope already implies who they'll be (v5.14 Phase 158 → 159 → 160)
