@@ -213,23 +213,21 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-Empty — v5.14 shipped and its `.planning/REQUIREMENTS.md` was archived to
-`.planning/milestones/v5.14-REQUIREMENTS.md`. Next milestone's requirements land here once
-`/gsd:new-milestone` generates a fresh `.planning/REQUIREMENTS.md`.
-
-Carried-forward tech debt (non-blocking, resolved-or-superseded items removed at v5.14 close):
+v5.15 Lifecycle Tail Drain in progress. `.planning/REQUIREMENTS.md` will formalize these into
+REQ-IDs during requirements definition; this list is the PM-approved scope going in:
 - [ ] **DISC-08** sub-batch (mid-discovery) checkpoint/resume granularity — deferred as an
-      accepted boundary since v5.11; revisit only if batch cost grows.
-- [ ] **HWLC-14** email/webhook notification on tier-crossing/EOL events — still deferred pending
-      validation of the core diff mechanism on real engagement data (now validated by v5.14's
-      drift/trend event types shipping; still no scheduling/notification infra exists — see
-      `HWLC-13`'s own backlog note on check-in scheduling being the more natural precedent-setter).
+      accepted boundary since v5.11; revisit only if batch cost grows. Promoted into v5.15.
+- [ ] **HWLC-14** email/webhook notification on tier-crossing/EOL events — validation gate cleared
+      by v5.14's drift/trend event types shipping; no scheduling/notification infra exists yet.
+      Promoted into v5.15.
 - [ ] **Vendor-trend presentation layer** (from v5.14) — `GET /api/hardware/vendor-trends` has a
       complete backend/API but zero dashboard or report consumers, explicitly deferred by v5.14's
-      Phase 160 locked scope. Natural follow-on if vendor-trend visibility becomes a client ask.
+      Phase 160 locked scope. Promoted into v5.15.
+- [ ] **Sub-batch check-in scheduling** — recurring cadence on top of HWLC-13's on-demand check-in
+      scan mode; deferred at v5.14 pending proof the on-demand form is useful, now promoted.
 - [ ] **Phase 158 human-UAT** — 2 deferred visual scenarios (`/hardware`/`/compare` rendering of
       sensor-pushed devices); code-level criteria independently satisfied, opportunistic follow-up
-      only.
+      only. Not in v5.15 scope — remains a standing carry-forward.
 
 Resolved by v5.12/v5.13/v5.14 (no longer active): Windows release asset gap (v5.12.0 shipped a
 real Windows zip on the GitHub Release, live-verified); DISC-09 segmented-network lab profile
@@ -248,6 +246,26 @@ vendor-level PQC trend visibility at all (Phase 160, backend now exists).
 | OpenVAS / Nessus integration | Full vuln scanner; different scope, heavy dependency |
 | Mobile app | Web-first; SaaS phase determines mobile need |
 | Real-time continuous monitoring | SaaS milestone, not v1 |
+
+## Current Milestone: v5.15 Lifecycle Tail Drain
+
+**Goal:** Close out the remaining hardware-lifecycle backlog tail — notification, dashboard
+surfacing, scheduling, and discovery-checkpoint granularity — so the HWLC arc (v5.10–v5.14) has
+no unclaimed loose ends before the next capability theme opens.
+
+**Target features:**
+- Email/webhook notification on hardware tier-crossing/EOL events (HWLC-14), reusing the Phase 101
+  notification fan-out layer
+- Dashboard/report surfacing for vendor-level PQC trend data (`GET /api/hardware/vendor-trends`
+  currently has zero consumers)
+- Recurring/scheduled cadence on top of HWLC-13's on-demand check-in scan mode
+- DISC-08 sub-batch (mid-discovery) checkpoint/resume granularity
+
+**Key context:** Sourced entirely from the "Active" carried-forward tech-debt list below plus
+ROADMAP.md's Backlog section — no net-new capability, PM-prioritized drain-before-net-new per
+standing preference. HORIZON.md's last two sketched anchors (Release Integrity → v5.12,
+Continuous Hardware Lifecycle Monitoring → v5.13/v5.14) are both now shipped; HORIZON needs a
+fresh forward-outlook pass after this milestone since nothing further is sketched.
 
 ## Previous Milestone: v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting — SHIPPED 2026-08-19
 
@@ -767,8 +785,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Vendor-trend report/dashboard surfacing deferred to a future phase, backend/API shipped standalone (v5.14 / 160-CONTEXT.md locked scope) | ROADMAP itself flagged "how to bucket/summarize" as genuinely unresolved; locking a premature display design risked getting it wrong twice | — Pending — `GET /api/hardware/vendor-trends` has zero consumers today (confirmed by integration audit); revisit if vendor-trend visibility becomes a client ask |
 
 ---
-*Last updated: 2026-08-19 — v5.14 milestone (Hardware Lifecycle Tail — Fleet Coverage &
-Forecasting) archived and complete; awaiting `/gsd:new-milestone`*
+*Last updated: 2026-08-19 — v5.15 milestone (Lifecycle Tail Drain) opened via `/gsd:new-milestone`*
 
 ## Evolution
 
