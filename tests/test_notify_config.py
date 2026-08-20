@@ -233,6 +233,52 @@ class TestLoadNotificationsConfigBinaryFile:
         assert result is None
 
 
+class TestNotifyOnHardwareLifecycle:
+    """HWLC-14 D-01: notify_on_hardware_lifecycle global opt-in."""
+
+    def test_default_is_false(self):
+        from quirk.notify.config import NotifyCfg
+
+        assert NotifyCfg().notify_on_hardware_lifecycle is False
+
+    def test_parse_true_sets_field_true(self):
+        from quirk.notify.config import _parse_notify_cfg
+
+        cfg = _parse_notify_cfg({"notify_on_hardware_lifecycle": True})
+        assert cfg.notify_on_hardware_lifecycle is True
+
+    def test_parse_absent_key_defaults_off(self):
+        from quirk.notify.config import _parse_notify_cfg
+
+        cfg = _parse_notify_cfg({})
+        assert cfg.notify_on_hardware_lifecycle is False
+
+    def test_parse_truthy_string_coerces_true(self):
+        """bool() coercion, no raise, on a truthy non-bool value."""
+        from quirk.notify.config import _parse_notify_cfg
+
+        cfg = _parse_notify_cfg({"notify_on_hardware_lifecycle": "yes"})
+        assert cfg.notify_on_hardware_lifecycle is True
+
+    def test_top_level_key_not_nested_under_email(self, monkeypatch, tmp_path):
+        """The key is read from the TOP LEVEL of [notifications], not nested."""
+        content = textwrap.dedent("""\
+            notifications:
+              notify_on_hardware_lifecycle: true
+              email:
+                smtp_host: smtp.example.com
+        """)
+        path = tmp_path / "hwlc.yaml"
+        path.write_text(content)
+        monkeypatch.delenv("QUIRK_CONFIG_PATH", raising=False)
+        from quirk.notify.config import load_notifications_config
+
+        cfg = load_notifications_config(path=str(path))
+        assert cfg is not None
+        assert cfg.notify_on_hardware_lifecycle is True
+        assert not hasattr(cfg.email, "notify_on_hardware_lifecycle")
+
+
 class TestNotifyCfgNoLiteralSecrets:
     """NOTIFY-06: The returned dataclass must only contain env-var NAMES."""
 

@@ -74,9 +74,14 @@ class NotifyCfg:
 
     trigger_score_floor — minimum score delta (negative) that triggers a
         notification.  Defaults to -5 (notify when score drops by >5 points).
+    notify_on_hardware_lifecycle — HWLC-14 global, deployment-level opt-in
+        (D-01) for hardware tier-crossing / EOL-state-change notifications.
+        Explicitly NOT a per-consultant or per-device preference. Defaults
+        to False.
     """
 
     trigger_score_floor: int = -5
+    notify_on_hardware_lifecycle: bool = False
     slack: Optional[SlackNotifyCfg] = None
     email: Optional[EmailNotifyCfg] = None
     webhook: Optional[WebhookNotifyCfg] = None
@@ -140,11 +145,15 @@ def _parse_notify_cfg(raw: dict) -> NotifyCfg:
     Only present sub-blocks are populated; absent channels are None.
     """
     floor = int(raw.get("trigger_score_floor", -5))
+    # HWLC-14 D-01: read from the TOP LEVEL of the [notifications] block, not
+    # nested under slack/email/webhook. bool() coercion never raises.
+    notify_on_hardware_lifecycle = bool(raw.get("notify_on_hardware_lifecycle", False))
     slack_raw = raw.get("slack") or {}
     email_raw = raw.get("email") or {}
     webhook_raw = raw.get("webhook") or {}
     return NotifyCfg(
         trigger_score_floor=floor,
+        notify_on_hardware_lifecycle=notify_on_hardware_lifecycle,
         slack=_parse_slack(slack_raw),
         email=_parse_email(email_raw),
         webhook=_parse_webhook(webhook_raw),
