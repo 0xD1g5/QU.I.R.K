@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useScanData } from "@/hooks/useScanData"
 import { useHardwareDrift } from "@/hooks/useHardwareDrift"
+import { useVendorPqcTrends } from "@/hooks/useVendorPqcTrends"
 import type { HardwareFinding } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,6 +12,7 @@ import {
 import { EmptyStateCard } from "@/components/EmptyStateCard"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { LifecycleEventList } from "@/components/LifecycleEventList"
+import { VendorTrendList } from "@/components/VendorTrendList"
 
 // Tier badge colors — Tier 1 red, Tier 2 orange, Tier 3 blue, N/A gray
 const TIER_STYLES: Record<string, string> = {
@@ -181,6 +183,7 @@ function snmpLabel(f: HardwareFinding): string {
 export function HardwarePage() {
   const { data, loading, error } = useScanData()
   const { data: drift, loading: driftLoading, error: driftError } = useHardwareDrift()
+  const { data: vendorTrends, loading: vendorTrendsLoading, error: vendorTrendsError } = useVendorPqcTrends()
 
   const sorted: HardwareFinding[] = useMemo(() => {
     const findings = data?.hardware_findings ?? []
@@ -417,6 +420,13 @@ export function HardwarePage() {
         lastScanDate={drift?.latest_scan_at ?? null}
         loading={driftLoading}
         error={driftError}
+      />
+
+      <VendorTrendList
+        events={vendorTrends?.events ?? []}
+        truncated={vendorTrends?.truncated ?? false}
+        loading={vendorTrendsLoading}
+        error={vendorTrendsError}
       />
     </div>
   )
