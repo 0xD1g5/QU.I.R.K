@@ -272,6 +272,28 @@ export interface HardwareDriftResponse {
   historical_truncated: boolean
 }
 
+// Phase 161 HWLC-19 — catalog-level vendor PQC trend event, mirrors
+// quirk/dashboard/api/schemas.py VendorPqcTrendEventItem (Phase 160
+// HWLC-17). Deliberately carries NO host/port/direction/is_partial_scan/
+// severity field — this is a vendor-scoped, advisory-only projection, not
+// a device-scoped drift event like HardwareDriftEventItem.
+export interface VendorPqcTrendEventItem {
+  vendor: string
+  event_type: string
+  old_value: string | null
+  new_value: string | null
+  detected_at: string
+  confirmed_at: string | null
+}
+
+// Phase 161 HWLC-19 — mirrors quirk/dashboard/api/schemas.py
+// VendorPqcTrendResponse. Only `events`/`truncated` — no has_prior_scan or
+// historical_events fields like HardwareDriftResponse.
+export interface VendorPqcTrendResponse {
+  events: VendorPqcTrendEventItem[]
+  truncated: boolean
+}
+
 export interface CompareResponse {
   scan_a: CompareScanSummary
   scan_b: CompareScanSummary
