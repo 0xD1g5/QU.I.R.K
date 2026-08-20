@@ -18,8 +18,8 @@ downstream integration phases MUST consume:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 from quirk.intelligence.trends import TrendReport
 
@@ -121,6 +121,93 @@ def build_drift_summary(
         scan_id=scan_id,
         dashboard_url=dashboard_url,
     )
+
+
+# ---------------------------------------------------------------------------
+# HardwareLifecycleSummary — sibling content model (HWLC-14)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class HardwareLifecycleSummary:
+    """Shared content model for hardware lifecycle drift notifications (HWLC-14).
+
+    Sibling of DriftSummary — NOT a widening of it. HardwareDriftEvent's
+    transition shape (host/port/event_type/old_value/new_value/detected_at)
+    does not fit DriftSummary's score-delta shape, so a dedicated model is
+    used instead (CONTEXT.md discretion note).
+
+    dashboard_url: None when dashboard_base_url is not configured.
+    """
+
+    event_count: int
+    events: List[dict] = field(default_factory=list)
+    dashboard_url: Optional[str] = None
+
+
+def build_hardware_lifecycle_summary(
+    events,
+    *,
+    dashboard_base_url: Optional[str] = None,
+) -> HardwareLifecycleSummary:
+    """Build the canonical HardwareLifecycleSummary from HardwareDriftEvent rows.
+
+    Sources fields from HardwareDriftEvent (NOT TrendReport/DriftSummary,
+    whose score-delta shape does not apply here). Never dumps the ORM object —
+    each event is reduced to an explicit dict of exactly the whitelisted keys.
+
+    Args:
+        events: Iterable of HardwareDriftEvent rows (or duck-typed equivalents).
+        dashboard_base_url: Optional base URL for the QUIRK dashboard.
+
+    Returns:
+        A HardwareLifecycleSummary instance. An empty `events` iterable yields
+        event_count == 0 and an empty events list — never raises.
+    """
+    event_dicts: List[dict] = []
+    for e in events:
+        detected_at = getattr(e, "detected_at", None)
+        event_dicts.append(
+            {
+                "host": getattr(e, "host", None),
+                "port": getattr(e, "port", None),
+                "event_type": getattr(e, "event_type", None),
+                "old_value": getattr(e, "old_value", None),
+                "new_value": getattr(e, "new_value", None),
+                "detected_at": detected_at.isoformat() if detected_at else None,
+            }
+        )
+
+    dashboard_url: Optional[str] = None
+    if dashboard_base_url:
+        base = dashboard_base_url.rstrip("/")
+        dashboard_url = f"{base}/hardware"
+
+    return HardwareLifecycleSummary(
+        event_count=len(event_dicts),
+        events=event_dicts,
+        dashboard_url=dashboard_url,
+    )
+
+
+def to_hardware_lifecycle_payload(summary: HardwareLifecycleSummary) -> dict:
+    """Return a safe outbound dict containing ONLY whitelisted hardware-lifecycle fields.
+
+    ISEC-03 ENFORCEMENT (T-161-01): exhaustive outbound key whitelist, mirroring
+    to_integration_payload()'s style. Whitelisted top-level keys:
+      event_type ("hardware_lifecycle" literal), event_count, events, dashboard_url
+
+    EXCLUDED: HardwareDriftEvent.id and every other column (confirmed_at,
+    is_partial_scan, etc.) — deliberately excluded as internal identifiers,
+    never surfaced in outbound delivery payloads.
+    """
+    return {
+        "event_type": "hardware_lifecycle",
+        "event_count": summary.event_count,
+        "events": summary.events,
+        "dashboard_url": summary.dashboard_url,
+        # EXCLUDED: HardwareDriftEvent.id and all other ORM columns — internal identifiers (ISEC-03)
+    }
 
 
 def to_integration_payload(report: TrendReport) -> dict:
