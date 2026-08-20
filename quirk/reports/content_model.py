@@ -105,6 +105,13 @@ class ExecContent:
     # drift field's own contract.
     eol_forecast: dict = field(default_factory=dict)
 
+    # Phase 161 HWLC-19: advisory-only, vendor-scoped PQC status trend events;
+    # populated by writer.py from `VendorPqcTrendEvent` rows; never routed
+    # through `_build_finding()` / findings_evaluator.py; deliberately carries
+    # no `severity`, `host`, or `port` key because the source rows are
+    # vendor-scoped, not device-scoped.
+    vendor_pqc_trends: List[dict] = field(default_factory=list)
+
 
 # ---------------------------------------------------------------------------
 # D-04: Ordering dicts for within-bucket priority sort
