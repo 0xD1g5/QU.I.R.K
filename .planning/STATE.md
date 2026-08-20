@@ -4,7 +4,7 @@ milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
 stopped_at: Completed 161-02-PLAN.md
-last_updated: "2026-08-20T12:45:01.135Z"
+last_updated: "2026-08-20T12:45:14.382Z"
 last_activity: 2026-08-20
 progress:
   total_phases: 3
@@ -198,6 +198,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 160 P02 | 20min | 2 tasks | 3 files |
 | Phase 160 P03 | 35min | 3 tasks | 6 files |
 | Phase 161 P02 | 25min | 3 tasks | 4 files |
+| Phase 161 P01 | 20min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -383,7 +384,7 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 160]: 160-02 D-160-H/I implemented as locked; Rule 1 fix reworded hardware_drift.py module docstring's literal SCORE_WEIGHTS mention (Phase 155 legacy) to pass the new T-160-04 guard
 - [Phase 160]: 160-03 D-160-B/F/G/J implemented as locked; VendorPqcTrendEventItem has no host/port/severity/numeric field; Query(50, ge=1, le=200) bound and .limit(limit+1) truncation pattern reused verbatim from the existing /hardware/drift endpoint
 - [Phase 161]: 161-02: build_tech_markdown() uses a plain vendor_pqc_trends kwarg (not exec_content threading) since exec_content doesn't exist yet at the pre-score call site; single non-fatal DB read feeds both CLI markdown and exec_content
-- [Phase ?]: test
+- [Phase 161]: 161-01: notify_on_hardware_lifecycle global opt-in (D-01); HardwareLifecycleSummary sibling content model, not a widened DriftSummary; dispatch_hardware_lifecycle_notifications() fans out to email+webhook only (D-04); composite scan_id host:port:event_type:event_id (D-05); Rule 1 fix branched _channel_send_email on summary type to avoid AttributeError on real hardware-lifecycle delivery
 
 ### Pending Todos
 
@@ -496,7 +497,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-20T12:44:47.438Z
+Last session: 2026-08-20T12:45:14.378Z
 Stopped at: Completed 161-02-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
