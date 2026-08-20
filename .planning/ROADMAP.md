@@ -86,8 +86,8 @@ Phase 160's `GET /api/hardware/vendor-trends`)
 Plans:
 **Wave 1**
 
-- [ ] 161-01-PLAN.md — Notification opt-in config, hardware-lifecycle payload model, and the email/webhook dispatch entry point (HWLC-14)
-- [ ] 161-02-PLAN.md — ExecContent.vendor_pqc_trends field, the shared non-fatal loader, and the CLI markdown vendor-trend section (HWLC-19)
+- [x] 161-01-PLAN.md — Notification opt-in config, hardware-lifecycle payload model, and the email/webhook dispatch entry point (HWLC-14)
+- [x] 161-02-PLAN.md — ExecContent.vendor_pqc_trends field, the shared non-fatal loader, and the CLI markdown vendor-trend section (HWLC-19)
 - [ ] 161-03-PLAN.md — /hardware dashboard Vendor PQC Status Trends section: types, hook, component pair, advisory-only guard test (HWLC-19)
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -151,7 +151,7 @@ per-batch checkpoint/resume system.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 0/TBD | Not started | - |
+| 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 2/6 | In Progress|  |
 | 162. Check-in Scan Scheduling | 0/TBD | Not started | - |
 | 163. Discovery Sub-Batch Checkpoint Granularity | 0/TBD | Not started | - |
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
-stopped_at: Phase 161 context gathered
-last_updated: "2026-08-20T12:17:23.104Z"
-last_activity: 2026-08-20 -- Phase 161 planning complete
+stopped_at: Completed 161-02-PLAN.md
+last_updated: "2026-08-20T12:45:01.135Z"
+last_activity: 2026-08-20
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 2
   percent: 0
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** v5.15 Lifecycle Tail Drain roadmap created (Phases 161-163) — ready for `/gsd:discuss-phase 161`
+**Current focus:** Phase 161 — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing
 
 ## Current Position
 
-Phase: 161 (Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing) — not yet planned
-Plan: —
+Phase: 161 (Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing) — EXECUTING
+Plan: 4 of 6
 Status: Ready to execute
-Last activity: 2026-08-20 -- Phase 161 planning complete
+Last activity: 2026-08-20
 
 ## v5.15 Phase Map (planning)
 
@@ -197,6 +197,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 160 P01 | 25min | 2 tasks | 6 files |
 | Phase 160 P02 | 20min | 2 tasks | 3 files |
 | Phase 160 P03 | 35min | 3 tasks | 6 files |
+| Phase 161 P02 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -381,6 +382,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase ?]: [Phase 160]: 160-01 D-160-A..G implemented as locked; VendorPqcTrendEvent has no host/port columns (D-160-E); VENDOR_EVENT_TYPES separate allowlist from EVENT_TYPES (D-160-D); reconcile_vendor_pqc_trend() reuses _confirmed_value()/DEFAULT_N/DEFAULT_M verbatim (D-160-A)
 - [Phase 160]: 160-02 D-160-H/I implemented as locked; Rule 1 fix reworded hardware_drift.py module docstring's literal SCORE_WEIGHTS mention (Phase 155 legacy) to pass the new T-160-04 guard
 - [Phase 160]: 160-03 D-160-B/F/G/J implemented as locked; VendorPqcTrendEventItem has no host/port/severity/numeric field; Query(50, ge=1, le=200) bound and .limit(limit+1) truncation pattern reused verbatim from the existing /hardware/drift endpoint
+- [Phase 161]: 161-02: build_tech_markdown() uses a plain vendor_pqc_trends kwarg (not exec_content threading) since exec_content doesn't exist yet at the pre-score call site; single non-fatal DB read feeds both CLI markdown and exec_content
+- [Phase ?]: test
 
 ### Pending Todos
 
@@ -493,8 +496,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-20T04:49:17.643Z
-Stopped at: Phase 161 context gathered
+Last session: 2026-08-20T12:44:47.438Z
+Stopped at: Completed 161-02-PLAN.md
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
