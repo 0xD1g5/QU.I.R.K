@@ -29,7 +29,13 @@ from sqlalchemy.orm import Session
 from quirk.intelligence.trends import TrendReport, compute_trend_report
 from quirk.models import CryptoEndpoint, IntegrationDelivery, ScheduledRun, ScheduledScan
 from quirk.notify.config import load_notifications_config, NotifyCfg
-from quirk.notify.payload import build_drift_summary, to_integration_payload
+from quirk.notify.payload import (
+    HardwareLifecycleSummary,
+    build_drift_summary,
+    build_hardware_lifecycle_summary,
+    to_hardware_lifecycle_payload,
+    to_integration_payload,
+)
 from quirk.util.safe_exc import safe_str
 
 logger = logging.getLogger(__name__)
@@ -46,8 +52,31 @@ def _channel_send_slack(cfg, summary) -> None:
 
 
 def _channel_send_email(cfg, summary) -> None:
-    """Call send_email — indirected for test monkeypatching."""
+    """Call send_email — indirected for test monkeypatching.
+
+    Dispatches subject/body formatting on the summary's content-model type
+    (Rule 1 fix, HWLC-14): DriftSummary (drift/trend alerts) and
+    HardwareLifecycleSummary (tier-crossing/EOL alerts, one-content-model
+    pattern) format differently — reusing this single wrapper without a type
+    branch would AttributeError on HardwareLifecycleSummary's missing
+    score_delta/current_score/new_high fields.
+    """
     from quirk.notify.channels.email import send_email
+
+    if isinstance(summary, HardwareLifecycleSummary):
+        subject = f"QUIRK Hardware Lifecycle Alert: {summary.event_count} event(s)"
+        lines = ["QUIRK Hardware Lifecycle Alert"]
+        for e in summary.events:
+            lines.append(
+                f"{e['host']}:{e['port']} {e['event_type']}: "
+                f"{e['old_value']} -> {e['new_value']} (detected {e['detected_at']})"
+            )
+        body = "\n".join(lines) + "\n"
+        if summary.dashboard_url:
+            body += f"\nDashboard: {summary.dashboard_url}\n"
+        send_email(cfg, subject=subject, body=body)
+        return
+
     # Mirror the slack.py guard: score_delta is Optional[int] and may be None on first scan
     delta_str = (
         f"{summary.score_delta:+d}" if summary.score_delta is not None else "N/A"
@@ -269,6 +298,119 @@ def dispatch_notifications(
 
     # Commit all audit rows in a single transaction (WR-01).
     # A failure here is isolated — it does not affect the scan record (already committed).
+    for row in audit_rows:
+        db.add(row)
+    try:
+        db.commit()
+    except Exception as exc:
+        logger.warning("Audit row commit failed: %s", safe_str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Hardware lifecycle dispatch entry point (HWLC-14) — sibling, not a widened
+# dispatch_notifications() (D-03: the trigger path has no ScheduledRun/
+# ScheduledScan counterpart to (run, schedule, db)).
+# ---------------------------------------------------------------------------
+
+
+def dispatch_hardware_lifecycle_notifications(
+    events,
+    db: Session,
+    *,
+    dashboard_base_url: Optional[str] = None,
+) -> None:
+    """Evaluate the hardware-lifecycle trigger and fan out to email + webhook only.
+
+    Called by the hardware_drift caller (plan 161-04) once new HardwareDriftEvent
+    rows have been reconciled/written. This function MUST NOT be called from
+    dispatch_notifications() or vice versa — no scheduler DB path plumbing here.
+
+    Args:
+        events: Iterable of HardwareDriftEvent rows (or duck-typed equivalents)
+            produced by this scan/reconcile cycle.
+        db: Active DB session — used to write IntegrationDelivery audit rows.
+        dashboard_base_url: Optional base URL for the QUIRK dashboard.
+
+    Returns:
+        None. Delivery failures are logged; the function always returns normally.
+    """
+    # Import locally — hardware_drift is the caller of this module in plan
+    # 161-04, so a module-level import here would be circular.
+    from quirk.scanner.hardware_drift import tier_direction
+
+    # Config gate first (mirrors dispatch_notifications lines 157-160).
+    notify_cfg: Optional[NotifyCfg] = load_notifications_config()
+    if notify_cfg is None or not getattr(notify_cfg, "notify_on_hardware_lifecycle", False):
+        return
+
+    # Trigger filter (D-02): worsening tier crossings and any EOL state change.
+    qualifying = []
+    for e in events:
+        event_type = getattr(e, "event_type", None)
+        if event_type == "tier_crossing":
+            direction = tier_direction(
+                getattr(e, "old_value", None), getattr(e, "new_value", None)
+            )
+            if direction == "worsened":
+                qualifying.append(e)
+        elif event_type == "eol_state_change":
+            qualifying.append(e)
+
+    if not qualifying:
+        return
+
+    # Build the shared content model once (one-content-model pattern).
+    summary = build_hardware_lifecycle_summary(
+        qualifying, dashboard_base_url=dashboard_base_url
+    )
+    payload = to_hardware_lifecycle_payload(summary)
+
+    # Composite audit identifier (D-05, no schema migration): IntegrationDelivery.scan_id
+    # is reused as a composite string because a drift event is not a scan session.
+    first = qualifying[0]
+    scan_id = f"{first.host}:{first.port}:{first.event_type}:{first.id}"
+
+    # Fan out to EMAIL and WEBHOOK ONLY (D-04) — slack/CEF/Jira/ServiceNow untouched.
+    audit_rows = []
+
+    if notify_cfg.email is not None:
+        row_email = IntegrationDelivery(
+            scan_id=scan_id,
+            destination="email",
+            status="ok",
+            attempted_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            error_summary=None,
+        )
+        try:
+            _channel_send_email(notify_cfg.email, summary)
+        except Exception as exc:
+            row_email.status = "failed"
+            row_email.error_summary = safe_str(exc)
+            logger.warning(
+                "Delivery failed (email): %s",
+                safe_str(exc),
+            )
+        audit_rows.append(row_email)
+
+    if notify_cfg.webhook is not None:
+        row_webhook = IntegrationDelivery(
+            scan_id=scan_id,
+            destination="webhook",
+            status="ok",
+            attempted_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            error_summary=None,
+        )
+        try:
+            _channel_send_webhook(notify_cfg.webhook, payload)
+        except Exception as exc:
+            row_webhook.status = "failed"
+            row_webhook.error_summary = safe_str(exc)
+            logger.warning(
+                "Delivery failed (webhook): %s",
+                safe_str(exc),
+            )
+        audit_rows.append(row_webhook)
+
     for row in audit_rows:
         db.add(row)
     try:
