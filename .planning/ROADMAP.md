@@ -84,11 +84,19 @@ Phase 160's `GET /api/hardware/vendor-trends`)
 **Plans**: 6 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 161-01-PLAN.md — Notification opt-in config, hardware-lifecycle payload model, and the email/webhook dispatch entry point (HWLC-14)
 - [ ] 161-02-PLAN.md — ExecContent.vendor_pqc_trends field, the shared non-fatal loader, and the CLI markdown vendor-trend section (HWLC-19)
 - [ ] 161-03-PLAN.md — /hardware dashboard Vendor PQC Status Trends section: types, hook, component pair, advisory-only guard test (HWLC-19)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 161-04-PLAN.md — Terminal notification hook inside persist_and_reconcile() so every scan path triggers (HWLC-14)
 - [ ] 161-05-PLAN.md — HTML and DOCX vendor-trend renderers plus Jinja template wiring (HWLC-19)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 161-06-PLAN.md — Advisory-only firewall extension, docs updates, UAT Series 161, Obsidian sync (HWLC-14, HWLC-19)
 
 ### Phase 162: Check-in Scan Scheduling
@@ -371,7 +379,6 @@ requirements satisfied, tech_debt disposition (0 blockers, 4 tracked non-blockin
 
 ---
 
-
 ## Backlog
 
 Items to be organized into future milestones. Organized by theme.
@@ -448,10 +455,13 @@ continuity:
 
 - HWLC-14 — email/webhook notification on tier-crossing/EOL events, reusing Phase 101 fan-out →
   Phase 161
+
 - HWLC-19 — vendor-level PQC-trend dashboard/report surfacing (`GET /api/hardware/vendor-trends`
   has had zero consumers since Phase 160) → Phase 161
+
 - HWLC-20 — recurring/scheduled check-in scan mode on top of HWLC-13, via existing `quirk schedule`
   CRUD/dispatcher (Phase 63) → Phase 162
+
 - DISC-08 — sub-batch (mid-discovery) checkpoint/resume granularity, tightening the v5.11 Phase 144
   per-batch checkpoint system → Phase 163
 

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
-status: planning
+status: executing
 stopped_at: Phase 161 context gathered
-last_updated: "2026-08-20T04:49:17.651Z"
-last_activity: 2026-08-19 — v5.15 ROADMAP.md created (3 phases, 4/4 requirements mapped)
+last_updated: "2026-08-20T12:17:23.104Z"
+last_activity: 2026-08-20 -- Phase 161 planning complete
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
+  total_plans: 6
   completed_plans: 0
   percent: 0
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 Phase: 161 (Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing) — not yet planned
 Plan: —
-Status: Roadmap created; ready for phase planning
-Last activity: 2026-08-19 — v5.15 ROADMAP.md created (3 phases, 4/4 requirements mapped)
+Status: Ready to execute
+Last activity: 2026-08-20 -- Phase 161 planning complete
 
 ## v5.15 Phase Map (planning)
 
@@ -425,6 +425,14 @@ None yet.
 - **RESOLVED (Plan 150-08, 2026-08-13):** Phase 150 Plan 03's original blocker — real GitHub Actions Linux Full Suite run (31598809033) failed with 38 failures on a genuine .[all]-only ubuntu-latest install — is closed. Plans 150-04 through 150-07 fixed all 8 failure categories; Plan 150-08 re-ran the live-fire proof end to end: green run 31723764281 (0 failed) + red run 31725715958 (1 failed, isolated to the deliberate smoke test) via PR #10 (closed unmerged). SUITE-02/SUITE-03 both proven and marked complete in REQUIREMENTS.md. See 150-08-SUMMARY.md and 150-CI-EVIDENCE.md.
 
 ## Deferred Items
+
+**Last re-triaged:** 2026-08-20 (Phase 161 plan-phase — decision-coverage gate override, see row below)
+
+Acknowledged at Phase 161 plan-phase (2026-08-20):
+
+| Category | Item | Status |
+|----------|------|--------|
+| decision_coverage_gate (161) | `check.decision-coverage-plan` reported 0/11 CONTEXT.md decisions (D-01–D-11) covered | false positive, user-overridden — gate's regex looks for literal `D-NN:` tags in `must_haves`/`truths` frontmatter; grep confirms all 11 IDs are cited by name in plan task `<action>` bodies and truths prose (e.g. 161-01-PLAN.md cites D-01–D-05), and gsd-plan-checker's independent semantic review confirmed all 11 decisions trace to explicit implementing tasks across 161-01..06. No re-plan needed. |
 
 **Last re-triaged:** 2026-08-18 (v5.14 milestone close — pre-close artifact audit, 3 items
 acknowledged, see table below)
