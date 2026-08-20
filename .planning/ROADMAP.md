@@ -81,7 +81,15 @@ Phase 160's `GET /api/hardware/vendor-trends`)
 
   5. Both features degrade gracefully with zero devices/zero trend events — no crashes, no empty
      tracebacks, a sensible empty state on dashboard and reports alike.
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 161-01-PLAN.md — Notification opt-in config, hardware-lifecycle payload model, and the email/webhook dispatch entry point (HWLC-14)
+- [ ] 161-02-PLAN.md — ExecContent.vendor_pqc_trends field, the shared non-fatal loader, and the CLI markdown vendor-trend section (HWLC-19)
+- [ ] 161-03-PLAN.md — /hardware dashboard Vendor PQC Status Trends section: types, hook, component pair, advisory-only guard test (HWLC-19)
+- [ ] 161-04-PLAN.md — Terminal notification hook inside persist_and_reconcile() so every scan path triggers (HWLC-14)
+- [ ] 161-05-PLAN.md — HTML and DOCX vendor-trend renderers plus Jinja template wiring (HWLC-19)
+- [ ] 161-06-PLAN.md — Advisory-only firewall extension, docs updates, UAT Series 161, Obsidian sync (HWLC-14, HWLC-19)
 
 ### Phase 162: Check-in Scan Scheduling
 
