@@ -32,7 +32,24 @@ def _service_detail(ep) -> str:
     return getattr(ep, "tls_version", "") or ""
 
 
-def build_tech_markdown(cfg, endpoints, findings) -> str:
+# Phase 161 HWLC-19: locked advisory caption — must be byte-identical across
+# HTML, DOCX, CLI and the dashboard (note the em dash, U+2014).
+VENDOR_TREND_ADVISORY_CAPTION = "Advisory — vendor PQC status trends do not affect the readiness score."
+
+# Phase 161 HWLC-19: human-readable labels for VendorPqcTrendEvent.event_type
+# values. Unknown/future event types fall back to the raw value unchanged.
+_VENDOR_TREND_EVENT_TYPE_LABELS: Dict[str, str] = {"pqc_status_change": "PQC status change"}
+
+
+def build_tech_markdown(cfg, endpoints, findings, *, vendor_pqc_trends: List[dict] | None = None) -> str:
+    """Build the CLI technical-findings markdown report.
+
+    Phase 161 HWLC-19: `vendor_pqc_trends` is the first hardware-related
+    content of any kind in this report — a keyword-only, `None`-defaulted
+    parameter so every pre-existing three-positional-argument call site and
+    test keeps working unmodified. Per D-09, device-level drift / EOL
+    forecast backfill into this report is explicitly out of scope.
+    """
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     lines: List[str] = []
@@ -135,4 +152,26 @@ def build_tech_markdown(cfg, endpoints, findings) -> str:
         )
 
     lines.append("")
+
+    # === Vendor PQC Status Trends (Phase 161 HWLC-19) ===
+    # Advisory-only, vendor-scoped — mirrors the gating idiom of every other
+    # section: `if <list>:` prevents an orphan heading when there is no data.
+    if vendor_pqc_trends:
+        lines.append("## Vendor PQC Status Trends")
+        lines.append("")
+        lines.append(f"_{VENDOR_TREND_ADVISORY_CAPTION}_")
+        lines.append("")
+        lines.append("| Vendor | Change | Transition | Detected |")
+        lines.append("|---|---|---|---|")
+        for t in vendor_pqc_trends:
+            event_type = t.get("event_type") or ""
+            change = _VENDOR_TREND_EVENT_TYPE_LABELS.get(event_type, event_type)
+            old_val = t.get("old_value") or "—"
+            new_val = t.get("new_value") or "—"
+            transition = f"{old_val} -> {new_val}"
+            lines.append(
+                f"| {md_cell(t.get('vendor'))} | {md_cell(change)} | {md_cell(transition)} | {md_cell(t.get('detected_at'))} |"
+            )
+        lines.append("")
+
     return "\n".join(lines)
