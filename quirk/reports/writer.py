@@ -59,6 +59,45 @@ def _compute_undetermined_hosts(endpoints) -> tuple:
     return count, breakdown
 
 
+def _load_vendor_pqc_trends(db_path, limit: int = 50) -> list:
+    """Phase 161 HWLC-19: load the newest vendor-scoped PQC status trend rows.
+
+    Mirrors `quirk/dashboard/api/routes/hardware_drift.py::get_vendor_pqc_trends`'s
+    ordering (detected_at desc, id desc) and default limit (50). Wraps all
+    database access in a broad try/except — a missing/corrupt database path
+    (or any other failure) returns `[]` and logs a warning; this function
+    must never raise, since it feeds report generation directly.
+    """
+    try:
+        from quirk.db import get_session as _get_session
+        from quirk.models import VendorPqcTrendEvent as _VendorPqcTrendEvent
+
+        with _get_session(db_path) as _trend_sess:
+            _rows = (
+                _trend_sess.query(_VendorPqcTrendEvent)
+                .order_by(_VendorPqcTrendEvent.detected_at.desc(), _VendorPqcTrendEvent.id.desc())
+                .limit(limit)
+                .all()
+            )
+            return [
+                {
+                    "vendor": _row.vendor,
+                    "event_type": _row.event_type,
+                    "old_value": _row.old_value,
+                    "new_value": _row.new_value,
+                    "detected_at": _row.detected_at.isoformat() if _row.detected_at else None,
+                    "confirmed_at": _row.confirmed_at.isoformat() if _row.confirmed_at else None,
+                }
+                for _row in _rows
+            ]
+    except Exception:
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "vendor PQC trend section skipped (non-fatal)", exc_info=True
+        )
+        return []
+
+
 def _unique_hosts(hosts) -> set:
     """Deduplicate hosts, filtering falsy entries (None, '').
 
@@ -182,7 +221,12 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
     _json_dump(findings_path, findings)
 
     # 2) Technical markdown (no score dependency — compute first)
-    tech_md = build_tech_markdown(cfg, endpoints, findings)
+    # Phase 161 HWLC-19: single non-fatal DB read here feeds both the CLI
+    # markdown (built pre-score, below) and exec_content (populated
+    # post-score, further down) — exactly one database read per run, and the
+    # CLI report keeps its documented no-score-dependency property.
+    vendor_pqc_trends = _load_vendor_pqc_trends(getattr(cfg.output, "db_path", None))
+    tech_md = build_tech_markdown(cfg, endpoints, findings, vendor_pqc_trends=vendor_pqc_trends)
     tech_path = os.path.join(outdir, f"technical-findings-{stamp}.md")
     with open(tech_path, "w", encoding="utf-8") as f:
         f.write(tech_md)
@@ -409,6 +453,10 @@ def write_reports(cfg, endpoints, findings, run_stats=None, *, error_endpoints=N
             "hardware lifecycle drift section skipped (non-fatal)", exc_info=True
         )
     exec_content.hardware_drift_events = hardware_drift_events
+
+    # Phase 161 HWLC-19: same list already loaded above feeds exec_content —
+    # no second database read.
+    exec_content.vendor_pqc_trends = vendor_pqc_trends
 
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — one shared computation
     # feeds markdown/HTML/DOCX/terminal summary; no renderer recomputes this.
