@@ -15,36 +15,42 @@ frontend suites are green, the committed dashboard bundle is byte-identical to a
 build, and **every one of the 444 delivered requirements is implemented** — the review
 found no requirement that was claimed complete but absent from the code.
 
-The defects that matter are not missing features. They are **four functional defects in
-the scan pipeline** that corrupt the consultant-facing deliverable, and a **release and
-verification-discipline gap** in which the last two milestones were declared shipped
-without being released, and the most recent 19 commits have never run CI.
+The defects that matter are not missing features. They are **defects in how scan results
+are stored and surfaced**, and a **release and verification-discipline gap** in which the
+last two milestones were declared shipped without being released, and the most recent 19
+commits have never run CI.
 
 | Severity | Count |
 |---|---|
-| CRITICAL | 2 |
-| HIGH | 4 |
-| MEDIUM | 5 |
+| CRITICAL | 1 |
+| HIGH | 5 |
+| MEDIUM | 6 |
 | LOW | 5 |
 | OBSERVATION | 4 |
 
-**The two CRITICAL findings are both in the core value path** — the scan → inventory →
-report chain that the project's stated core value depends on. Every endpoint is recorded
-twice, and two of the four documented TLS certificate-defect classes are never reported
-despite the underlying data being captured correctly.
+**The single CRITICAL finding is in the core value path** — every scanned endpoint is
+persisted twice, inflating the certificate inventory, the Data-in-Motion table, and the
+endpoint count on the consultant's deliverable. It traces to a false assumption at
+`run_scan.py:3190` about what `session.merge()` returns, and the fix is small.
 
-Both were traced to a specific cause. The duplication is a false assumption at
-`run_scan.py:3190` about what `session.merge()` returns; the missing certificate findings
-are a gap in the finding-generation layer, not the scanner. Neither is a large fix.
+The next tier concerns **two surfaces disagreeing with each other**: the dashboard runs a
+second, independent finding engine that lacks the self-signed and untrusted-CA detections
+the report engine has, and scan sessions fragment so that one scan appears as several with
+contradictory scores.
 
 ### Verdict
 
-The product does substantially what its documents say it does. But a consultant running
-QU.I.R.K. today would hand a client an inventory with **doubled row counts**, a scan
-history showing **phantom scans with contradictory scores**, and **no self-signed or
-untrusted-CA certificate findings**. Those three defects undermine the "complete,
-defensible cryptographic inventory" claim that is the product's reason for existing, and
-should be fixed before the next release.
+The product does substantially what its documents say it does, and its **client-facing
+report deliverable is materially correct** — a live scan of the chaos lab's certificate
+defect ports produced exactly the findings and severities the project's own oracle
+specifies, in the CLI output, the findings JSON, the HTML report and the DOCX.
+
+The problems a consultant would actually hit are: **doubled rows** in the certificate and
+Data-in-Motion inventories, a scan history showing **phantom scans with contradictory
+scores**, and a **dashboard that reports a different security picture from the report**.
+The first two undermine the "complete, defensible cryptographic inventory" claim; the third
+undermines trust in the operator's primary working surface. All three should be fixed
+before the next release, and none is a large piece of work.
 
 ---
 
@@ -188,6 +194,14 @@ rows in DB for one endpoint scanned once: 2
 `_flush_stage_endpoints`. The duplication appears in exactly the stages that flush, which
 is what distinguishes a named cause from a coincidence.
 
+**Scope of impact — what is and is not affected.** The duplication is at the *endpoint row*
+level, so it inflates the certificate inventory, the Data-in-Motion table, and
+`total_endpoints`. The **findings list is not affected**: `_dedupe_findings()`
+(`findings_evaluator.py`) keys on `(host, port, title, recommendation)` and collapses the
+duplicates. A CLI scan of two lab ports produced 7 findings, all distinct. The defect
+therefore corrupts *inventory counts*, not *finding counts* — an important distinction for
+anyone assessing blast radius.
+
 **Interaction with RVW-003:** any fix must not dedupe on `scanned_at`, because that column
 is currently unreliable for the separate reason described in RVW-003.
 
@@ -196,46 +210,63 @@ execution + isolated reproduction + source inspection.
 
 ---
 
-### RVW-002 — CRITICAL — Two of four documented TLS certificate-defect classes are never reported
+### RVW-002 — HIGH — The dashboard runs a second, divergent finding engine
 
-**Affects:** TLS certificate defect detection; the chaos lab's own oracle.
+**Affects:** dashboard `/findings`; operator-vs-client consistency.
+**Severity revised down from CRITICAL after re-verification — see note below.**
 
-**Documented claim** — `quantum-chaos-enterprise-lab/expected_results_v4.md:535-538`:
+**What is actually true.** QU.I.R.K. contains **two independent finding generators**:
 
-| Port | Expected finding | Severity |
+| | Report path | Dashboard path |
 |---|---|---|
-| 13444 | "TLS certificate expired" | CRITICAL |
-| 13445 | "TLS certificate is self-signed" | HIGH |
-| 13446 | "TLS certificate issued by untrusted CA" | MEDIUM |
-| 13447 | "Undersized RSA key" | HIGH |
+| Code | `quirk/engine/findings_evaluator.py` | `quirk/dashboard/api/routes/scan.py` |
+| Consumers | CLI, findings JSON, HTML, DOCX, PDF | `GET /api/scan/latest` → dashboard UI |
+| Self-signed detection | ✅ yes (`:636`) | ❌ absent |
+| Untrusted-CA detection | ✅ yes (`:654`) | ❌ absent |
+| RSA-1024 severity | HIGH — "TLS certificate uses undersized RSA key" | **CRITICAL** — "Weak RSA key: 1024 bits" (`:216`) |
 
-**What the code does** — live scan of the `tls-cert-defects` profile produced:
+`routes/scan.py` never imports `findings_evaluator`; it hand-rolls roughly twenty finding
+titles of its own.
 
-| Port | Oracle | Actual |
-|---|---|---|
-| 13444 | expired, CRITICAL | ✅ "Certificate expired", CRITICAL |
-| 13445 | self-signed, HIGH | ❌ **no finding emitted** |
-| 13446 | untrusted CA, MEDIUM | ❌ **no finding emitted** |
-| 13447 | undersized RSA, HIGH | ⚠️ emitted as **CRITICAL**, oracle says HIGH |
-
-**The detection data is captured correctly and then not used.** From the scan database:
+**The client-facing deliverable is correct.** A live CLI scan of the lab's self-signed
+(13445) and untrusted-CA (13446) ports produces exactly what the oracle specifies:
 
 ```
-port=13445 chain_verified=0  subj=CN=selfsigned.chaos.local  issuer=CN=selfsigned.chaos.local
-port=13446 chain_verified=0  subj=CN=untrusted-ca.chaos.local issuer=CN=scenario-root-CA
+findings-20260824-195344.json
+   port=13445 sev=HIGH     TLS certificate is self-signed
+   port=13446 sev=MEDIUM   TLS certificate issued by untrusted CA
 ```
 
-Port 13445 has `cert_subject == cert_issuer` — the definition of self-signed. Port 13446
-has `chain_verified = 0` against the system trust store. Both conditions are detected,
-persisted, and then produce no finding.
+Both titles also appear in `report-*.html` and `technical-findings-*.md`. The chaos-lab
+oracle for `tls-cert-defects` is **satisfied** by the report path.
 
-This is a **finding-generation gap, not a scanner gap** — remediation belongs in the
-intelligence/finding layer, not `tls_scanner.py`. Note `quirk/intelligence/scoring.py:29`
-already carries an `identity_self_signed_ratio` weight and
-`evidence.py:186` increments `cert_self_signed_count`, so the scoring path consumes the
-signal even though no user-visible finding is emitted.
+**What the operator sees instead.** The same two ports scanned through the dashboard yield
+no self-signed and no untrusted-CA finding, and the RSA-1024 defect is escalated to
+CRITICAL where the engine and the oracle both say HIGH. A consultant triaging in the
+dashboard sees a materially different security picture from the report they hand the client.
 
-**Verdict:** CONFIRMED. Evidence tier: direct execution against the project's own oracle.
+**Second-order consequence — compliance mapping silently misses.**
+`quirk/compliance/__init__.py:152-153` maps controls by the **engine's** finding titles:
+
+```python
+"TLS certificate is self-signed":            [_pci("4.2.1.1"), _soc2("CC6.6"), _iso("8.24")],
+"TLS certificate issued by untrusted CA":    [_pci("4.2.1.1"), _soc2("CC6.6"), _iso("8.24")],
+```
+
+The dashboard's titles (`"Weak RSA key: 1024 bits"`, …) are not keys in that map, so
+dashboard-surfaced findings cannot carry PCI/SOC 2/ISO annotations even where the
+equivalent engine finding would.
+
+**Verdict:** CONFIRMED as a surface divergence between two finding engines — **not**, as
+this finding originally claimed, a failure to detect the defects.
+
+> **Correction.** This finding was first written as *"two of four documented certificate-defect
+> classes are never reported"* at CRITICAL severity, on evidence drawn solely from
+> `GET /api/scan/latest`. That tested one of two surfaces. The engine emits both findings
+> correctly at the oracle's exact severities — verified by unit-invoking
+> `evaluate_endpoints()` on the observed certificate values and by a full CLI scan
+> producing HTML, DOCX and PDF. The defect is real but narrower, and the client deliverable
+> was never affected. Severity revised CRITICAL → HIGH.
 
 ---
 
@@ -520,6 +551,43 @@ Traceability debt, not capability debt.
 
 ---
 
+### RVW-021 — MEDIUM — The documented `quirk scan --targets` command does not exist
+
+**Affects:** first-run experience; six UAT case definitions.
+
+There is no `scan` subcommand and no `--targets` flag. Targets come from `config.yaml`
+(or `--targets-file`). Both documented forms fail:
+
+```
+$ quirk scan --targets 1.2.3.4
+quirk: error: unrecognized arguments: scan
+
+$ quirk --targets 127.0.0.1
+FileNotFoundError: Targets file not found: 127.0.0.1
+```
+
+The second is worse than a usage error: argparse prefix-matches `--targets` to
+`--targets-file`, so the value is treated as a **path**, and the failure surfaces as an
+**uncaught traceback** rather than a clean message. The project has an error-code
+convention (`QRK-DASHBOARD-002`, `QRK-INSTALL-NNN`) and requirement UX-02 covers exactly
+this class of failure.
+
+**The dashboard instructs users to run the non-existent command.**
+`src/dashboard/src/pages/findings.tsx:119` renders the empty state:
+
+> *"No findings recorded in this scan — run a scan first: `quirk scan --target <host>`.
+> Results will appear here automatically."*
+
+A new user following the product's own on-screen instruction gets an argparse error.
+
+Also affected: `docs/chaos-lab.md:676`, and **six UAT step definitions** in
+`docs/UAT-SERIES.md` (lines 8315–8317, 9071, …) whose steps are written as
+`quirk scan --targets …`. Those cases cannot have been executed as written — which
+corroborates RVW-008: UAT-67-01, whose step is `quirk scan --targets 127.0.0.1 &`, is one
+of the 178 cases with no recorded result.
+
+---
+
 ### RVW-020 — OBSERVATION — `uat_runner.py` parses XML with stdlib `ElementTree`
 
 `xml.etree.ElementTree` is vulnerable to XXE and billion-laughs attacks by default. The
@@ -555,8 +623,10 @@ Jira/ServiceNow tenant, Windows CI).
 2. **Cloud connectors not credentialed.** AWS, Azure, and GCP KMS paths were verified only
    to the extent their tests and mocks allow.
 3. **One chaos-lab profile exercised live.** `tls-cert-defects` was brought up and scanned
-   against its oracle. The other 28 profiles were verified only for derivation correctness
-   and oracle coverage, not live scanner behaviour.
+   against its oracle, through **both** the dashboard API and the CLI/report path. Its
+   oracle is satisfied by the report path. The other 28 profiles were verified only for
+   derivation correctness and oracle coverage, not live scanner behaviour — and, given
+   RVW-002, any future profile check must exercise the report path, not only the dashboard.
 4. **PHASE-ONLY sampling.** The characterisation of older untraced requirements rests on a
    stratified sample, not a census.
 5. **Two local test failures were environmental** (`git init` SIGSEGV) and are excluded from
@@ -597,3 +667,25 @@ The methodological point generalises: *"duplicate rows"* is precisely the shape 
 intentional dual-observation design would take. A reviewer who reports that shape without
 eliminating the benign explanation is guessing. This report's findings should be read as
 falsifiable claims, and challenged the same way.
+
+**A sixth correction, from the same challenge applied to RVW-002 — and this one changed the
+finding.** RVW-002 originally claimed, at CRITICAL severity, that *"two of four documented
+certificate-defect classes are never reported."* That rested entirely on
+`GET /api/scan/latest`. Re-verification showed:
+
+- `findings_evaluator.py:636,654` implements both detections correctly;
+- unit-invoking `evaluate_endpoints()` on the exact observed certificate values emits
+  `HIGH — TLS certificate is self-signed` and `MEDIUM — TLS certificate issued by untrusted
+  CA`, matching the oracle's severities precisely;
+- a full CLI scan of the lab ports put both findings in the findings JSON, the HTML report
+  and the technical-findings markdown.
+
+**The chaos-lab oracle is satisfied by the report path.** What is actually wrong is
+narrower and, in its own way, more interesting: the dashboard runs a *second* finding
+engine that lacks those branches. The client deliverable was never affected. Severity
+revised CRITICAL → HIGH and the finding rewritten.
+
+Both corrections ran the same direction — the original claim was too harsh, and closer
+verification was more favourable to the project. That asymmetry is worth stating plainly: a
+reviewer's first pass is biased toward the surface they happened to test, and for this
+product the dashboard API is a partial view of the system, not a proxy for it.

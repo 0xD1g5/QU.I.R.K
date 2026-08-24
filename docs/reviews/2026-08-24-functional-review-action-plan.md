@@ -16,7 +16,7 @@ Effort: **S** ≤ half a day · **M** 1–3 days · **L** > 3 days.
 | ☐ | ID | Sev | Finding | Affects | Remediation | Effort | Status |
 |---|----|-----|---------|---------|-------------|--------|--------|
 | ☐ | RVW-001 | CRITICAL | Every TLS/certificate and email endpoint is persisted twice — `merge()` at `run_scan.py:3190` re-inserts rows already written by `_flush_stage_endpoints()` | core value path; all inventory counts | The scan pipeline must persist exactly one row per scanned endpoint per scan session. Root cause is a false assumption that `session.merge()` writes the PK back onto the passed object; it does not. See fix options below. Add a regression test asserting a single-host scan yields no two rows differing only in `id`. | S–M | Open |
-| ☐ | RVW-002 | CRITICAL | Self-signed and untrusted-CA certificate findings are never emitted despite the data being captured | TLS defect detection | The scanner must emit a self-signed finding when `cert_subject == cert_issuer`, and an untrusted-CA finding when `chain_verified` is false. Align `tls-cert-rsa1024` severity with the oracle (HIGH, not CRITICAL) or update the oracle. Gate on the `tls-cert-defects` profile in CI. | M | Open |
+| ☐ | RVW-002 | HIGH | The dashboard runs a second finding engine that lacks self-signed and untrusted-CA detection and escalates RSA-1024 to CRITICAL | dashboard `/findings`; operator-vs-client consistency | The dashboard and the report must present the same findings at the same severities. `routes/scan.py` should consume `findings_evaluator` rather than hand-rolling ~20 titles of its own. Add a cross-surface parity test asserting the dashboard and report agree on title and severity for a fixed endpoint set. **Severity revised CRITICAL → HIGH after re-verification: the client deliverable was never affected.** | M | Open |
 | ☐ | RVW-003 | HIGH | One scan fragments into many sessions (17 sessions for 17 ports); Scan History shows phantom scans with contradictory scores | Scan History, Trends, score integrity | All scanners must stamp endpoints with the shared `session_start` value rather than calling `datetime.now()` per endpoint (`tls_scanner.py:367`), restoring STRUCT-01. No endpoint may be persisted with a NULL `scanned_at`. Add a test asserting one scan yields exactly one distinct `scanned_at`. | M | Open |
 
 ### RVW-001 — fix options
@@ -70,6 +70,7 @@ timestamp-ownership bug.
 | ☐ | RVW-008 | MEDIUM | UAT-SERIES.md records no result for 178 of 355 cases (167 also undated) | gating-document integrity | Every UAT case must carry a recorded result or an explicit deferral. Triage the 178; note 75 of the 91 affected requirements already have automated coverage, so most can be closed by reference. | L | Open |
 | ☐ | RVW-009 | MEDIUM | v4.7 shipped with no archived ROADMAP or REQUIREMENTS (only dead link of 40) | traceability | Reconstruct v4.7's requirements from `v4.7-phases/` or correct ROADMAP.md's dead link. | S | Open |
 | ☐ | RVW-010 | MEDIUM | 15 code-bearing delivered requirements have no test linkage | traceability | Each of the 15 must gain either a test-docstring annotation or a summary `key-files` entry. | M | Open |
+| ☐ | RVW-021 | MEDIUM | `quirk scan --targets` does not exist — no `scan` subcommand, no `--targets` flag; `--targets` prefix-matches `--targets-file` and raises an uncaught FileNotFoundError | first-run experience; 6 UAT step definitions | The dashboard empty state (`findings.tsx:119`) must instruct a command that exists. Correct `docs/chaos-lab.md:676` and the six UAT steps in `docs/UAT-SERIES.md`. An unparseable target argument must fail with a coded error, not a traceback (requirement UX-02). | S | Open |
 | ☐ | RVW-013 | LOW | Version strings stale in README, UAT-SERIES, pyproject; absent from getting-started | user-facing docs | Resolve as part of RVW-004; add getting-started to the version-drift checklist. | S | Open |
 | ☐ | RVW-014 | LOW | Four requirement formats and five UAT result formats across the corpus | tooling fragility | Adopt one requirement declaration format and one UAT result format for new documents. Backfilling archives is optional. | M | Open |
 | ☐ | RVW-015 | LOW | Archive headers contradict contents (v4.6 "36" vs 22; v5.7 "24" vs 10) | doc accuracy | Correct the two counts; add `**Status:**` headers to the five archives lacking one. | S | Open |
@@ -83,10 +84,14 @@ timestamp-ownership bug.
 
 A recommendation the owner may reject — the reviewer proposes, the owner disposes.
 
-**Milestone A — "Scan Integrity" (blocks release).** RVW-001, RVW-002, RVW-003.
-These three are the only findings that corrupt the client-facing deliverable. Until they
-are fixed, a consultant hands over doubled inventory rows, phantom scan history, and no
-self-signed/untrusted-CA findings. Everything else can wait; these cannot.
+**Milestone A — "Scan Integrity" (blocks release).** RVW-001, RVW-003, then RVW-002.
+RVW-001 and RVW-003 are the two findings that corrupt the client-facing deliverable —
+doubled inventory rows and phantom scan history. RVW-002 does not affect the client
+deliverable (the report is correct) but does mean the operator's primary surface disagrees
+with it, so it belongs in the same milestone at lower priority.
+
+Re-verification moved RVW-002 out of the "corrupts the deliverable" category. If capacity
+is tight, RVW-001 and RVW-003 are the two that genuinely gate a release.
 
 **Milestone B — "Release the Backlog."** RVW-004, RVW-005, RVW-006, RVW-013, RVW-017.
 Get CI green, get the version bumped, get v5.13/v5.14 either released or un-claimed. This
