@@ -17,7 +17,7 @@ Effort: **S** ≤ half a day · **M** 1–3 days · **L** > 3 days.
 |---|----|-----|---------|---------|-------------|--------|--------|
 | ☐ | RVW-001 | CRITICAL | Every TLS/certificate and email endpoint is persisted twice — `merge()` at `run_scan.py:3190` re-inserts rows already written by `_flush_stage_endpoints()` | core value path; all inventory counts | The scan pipeline must persist exactly one row per scanned endpoint per scan session. Root cause is a false assumption that `session.merge()` writes the PK back onto the passed object; it does not. See fix options below. Add a regression test asserting a single-host scan yields no two rows differing only in `id`. | S–M | Open |
 | ☐ | RVW-002 | HIGH | The dashboard runs a second finding engine that lacks self-signed and untrusted-CA detection and escalates RSA-1024 to CRITICAL | dashboard `/findings`; operator-vs-client consistency | The dashboard and the report must present the same findings at the same severities. `routes/scan.py` should consume `findings_evaluator` rather than hand-rolling ~20 titles of its own. Add a cross-surface parity test asserting the dashboard and report agree on title and severity for a fixed endpoint set. **Severity revised CRITICAL → HIGH after re-verification: the client deliverable was never affected.** | M | Open |
-| ☐ | RVW-003 | HIGH | One scan fragments into many sessions (17 sessions for 17 ports); Scan History shows phantom scans with contradictory scores | Scan History, Trends, score integrity | All scanners must stamp endpoints with the shared `session_start` value rather than calling `datetime.now()` per endpoint (`tls_scanner.py:367`), restoring STRUCT-01. No endpoint may be persisted with a NULL `scanned_at`. Add a test asserting one scan yields exactly one distinct `scanned_at`. | M | Open |
+| ☐ | RVW-003 | HIGH | Scan sessions have no stored identity — `CryptoEndpoint` has no `scan_run_id`, so membership is reconstructed from wall-clock time; one scan renders as several history rows with contradictory scores (92/100/93) | Scan History, Trends, per-session scores | A scan session must be identified by a stored key, not inferred from timestamps. Add `scan_run_id` to `CryptoEndpoint` (the column already exists on `ScanJob` and `ScanCheckpoint`) and group `list_scans()` / trends by it instead of 1-second truncation. No endpoint may persist with a NULL `scanned_at` — those rows are currently invisible to Scan History. Add a test asserting one scan yields exactly one history row. **Fix direction revised after re-verification — see note.** | M | Open |
 
 ### RVW-001 — fix options
 
@@ -37,7 +37,27 @@ the final persist with `id = None` and are INSERTed again.
 currently unreliable as part of any natural key. RVW-001 and RVW-003 both concern how
 endpoints are written and are best investigated in one sitting, but they are independent
 defects with independent fixes — RVW-001 is a persistence-identity bug, RVW-003 is a
-timestamp-ownership bug.
+session-identity bug.
+
+### RVW-003 — revised fix direction
+
+The original remediation ("stamp endpoints with the shared `session_start` instead of
+`datetime.now()`") treated the symptom. Re-verification showed:
+
+- The **read** path already documents and works around the per-endpoint timestamps —
+  `list_scans()` truncates to one second on purpose. The workaround fails only because a
+  single scan's *stages* span multiple seconds, which no amount of truncation can group.
+- STRUCT-01 does **not** apply: it is scoped to scanners new in v4.4, and every such
+  scanner complies. `tls`/`ssh`/`jwt` are v3.9-era and were never in scope.
+
+So the fix is not to change how timestamps are produced but to stop using them as identity.
+`ScanJob` and `ScanCheckpoint` already carry `scan_run_id`; `CryptoEndpoint` does not. Adding
+it (additive migration, matching the project's existing `_ADDITIVE_MIGRATIONS` convention)
+and grouping on it makes both Scan History and Trends correct by construction, and removes
+the 1-second heuristic entirely.
+
+This also makes RVW-001 option B viable: `scan_run_id` gives the natural key a stable
+component that `scanned_at` cannot provide.
 
 ---
 

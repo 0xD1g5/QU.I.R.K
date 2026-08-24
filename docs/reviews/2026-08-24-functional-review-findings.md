@@ -35,8 +35,18 @@ endpoint count on the consultant's deliverable. It traces to a false assumption 
 
 The next tier concerns **two surfaces disagreeing with each other**: the dashboard runs a
 second, independent finding engine that lacks the self-signed and untrusted-CA detections
-the report engine has, and scan sessions fragment so that one scan appears as several with
-contradictory scores.
+the report engine has, and scan sessions have no stored identity — `CryptoEndpoint` carries
+no `scan_run_id`, so membership is reconstructed from wall-clock time and one scan appears
+as several with contradictory scores.
+
+**No requirement or documented expectation was found to be violated.** Two findings
+originally attributed defects to a broken promise — RVW-002 to the chaos-lab oracle, RVW-003
+to requirement STRUCT-01 — and **both attributions were withdrawn on verification**. The
+defects themselves are real, but they are surface divergence and un-remediated legacy
+behaviour, not broken promises. Attributions that *did* hold: RVW-001 (inventory inflation
+against the PROJECT.md core-value claim), RVW-004 (ROADMAP's shipped claim), RVW-006
+(CLAUDE.md's staleness runbook) and RVW-021 (UX-02 plus the dashboard's own on-screen
+instruction). Section 7 records each correction.
 
 ### Verdict
 
@@ -270,47 +280,70 @@ this finding originally claimed, a failure to detect the defects.
 
 ---
 
-### RVW-003 — HIGH — Scan sessions fragment: one scan becomes many, with contradictory scores
+### RVW-003 — HIGH — Scan sessions have no identity; one scan appears as several with contradictory scores
 
-**Affects:** Scan History, Trends, score integrity. **Regression of declared requirement
-STRUCT-01.**
+**Affects:** Scan History, Trends, per-session scores.
+**Attribution corrected — this is *not* a STRUCT-01 regression. See note below.**
 
-**Documented claim** — `.planning/milestones/v4.4-REQUIREMENTS.md`, STRUCT-01: *"All new
-scanners accept a `session_start` parameter (shared `datetime` from `run_scan.py`) — no
-per-scanner `datetime.now()` calls (ISSUE-3 elimination pattern)."*
+**Root cause: `CryptoEndpoint` carries no scan-run identity.** The schema has the concept
+— `ScanJob.scan_run_id` and `ScanCheckpoint.scan_run_id` both exist — but the endpoint
+table does not. Session membership is instead *reconstructed from wall-clock time*, because
+each endpoint is stamped with its own `datetime.now()`:
 
-**What the code does** — `quirk/scanner/tls_scanner.py:367` constructs each endpoint with:
+- `tls_scanner.py:192` (sslyze path) and `:367` (fallback path) — both stamp per endpoint.
+- `scan_tls_targets()` and `scan_ssh_targets()` do not accept a `session_start` parameter
+  at all.
 
-```python
-scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+**The read path already knows this and works around it.** `routes/scan.py::list_scans()`
+carries the problem in its own docstring:
+
+> *"Groups by second-truncated timestamp because each CryptoEndpoint row is written with its
+> own microsecond-precision `scanned_at`. Grouping by the raw value produces one row per
+> endpoint rather than one per scan session."*
+
+**The workaround is insufficient, and this is the actual defect.** Truncating to one second
+collapses fragments written within the same second, but a single scan's *stages* span many
+seconds, and nothing groups across them. Observed: two submitted scans produced 24 raw
+`scanned_at` values, which truncate to **6 distinct seconds** — and the dashboard showed
+exactly 6 Scan History rows:
+
+```
+19:16:59.449047 .. .449145   (17 values)  -> 19:16:59   TLS stage
+19:17:26.903047                            -> 19:17:26   SSH stage
+19:17:27.635696                            -> 19:17:27
+19:18:33.045061 / .107392                  -> 19:18:33
+19:18:45.144003                            -> 19:18:45
+19:19:31.890970  (14 endpoints)            -> 19:19:31
 ```
 
-a per-endpoint `datetime.now()` call, which is exactly what STRUCT-01 forbids.
+**Why the scores disagree — verified in code, not inferred.** `list_scans()` calls
+`_fetch_session_endpoints_1s(db, ts)` and scores each one-second bucket over only the
+endpoints in that bucket. A bucket containing only SSH endpoints therefore scores
+differently from one containing only TLS endpoints. This produced the observed spread of
+**92, 100, 93, 93, 92, 93** for what were two scans, and the meaningless Trends comparison
+`Score Delta 100 → — First scan`.
 
-**Observed consequence.** Two submitted scans produced **24 distinct scan sessions**:
+**Additional consequence.** `list_scans()` filters `scanned_at.isnot(None)`. The endpoints
+written with a NULL `scanned_at` — 3 rows in the observed run — are silently invisible to
+Scan History altogether.
 
-```
-None                        -> 3 endpoints     <- NULL scanned_at
-2026-08-24 19:16:59.449047  -> 2 endpoints
-2026-08-24 19:16:59.449071  -> 2 endpoints
-... 17 sessions differing only in MICROSECONDS ...
-2026-08-24 19:19:31.890970  -> 14 endpoints
-```
+**Recommended fix direction changed.** Suppressing the per-endpoint `datetime.now()` calls
+would treat the symptom. The structural fix is to give `CryptoEndpoint` the `scan_run_id`
+that `ScanJob` and `ScanCheckpoint` already carry, and to group by it instead of by
+wall-clock time.
 
-17 sessions × 2 endpoints = 34 = exactly the `total_endpoints` of the common-scope scan,
-which scans `CONSULTING_TLS_PORTS` — **17 ports**. The scanner is creating one scan session
-per port. One session has `scanned_at = NULL`.
+**Verdict:** CONFIRMED. Evidence tier: direct execution + source inspection of both the
+write and read paths.
 
-**User-visible damage**, confirmed in the browser:
-
-- **Scan History** lists 6 scans for 2 real ones, with contradictory scores: 92, 100, 93,
-  93, 92, 93. Each fragment is scored against only its own 2 endpoints.
-- **Trends** compares two fragments and renders the meaningless `Score Delta 100 → —
-  First scan`.
-
-A consultant reviewing scan history sees scans they never ran and scores that disagree.
-
-**Verdict:** CONFIRMED. Evidence tier: direct execution + source inspection.
+> **Correction — attribution.** This finding originally claimed a *"regression of declared
+> requirement STRUCT-01"* (*"All new scanners accept a `session_start` parameter … no
+> per-scanner `datetime.now()` calls"*). That was wrong. STRUCT-01 is a v4.4 requirement
+> scoped to **new** scanners, and an audit of every scanner entry point shows it was
+> honoured: `email`, `dnssec`, `saml`, `kerberos` and `adcs` — all introduced at or after
+> v4.4 — accept `session_start`. The three that do not (`tls`, `ssh`, `jwt`) are all
+> v3.9-era core scanners that predate the requirement. The defect is real and user-visible,
+> but it is un-remediated legacy behaviour, **not** a violated requirement. The compliance
+> audit in fact stands as evidence that STRUCT-01 was correctly implemented.
 
 ---
 
@@ -689,3 +722,25 @@ Both corrections ran the same direction — the original claim was too harsh, an
 verification was more favourable to the project. That asymmetry is worth stating plainly: a
 reviewer's first pass is biased toward the surface they happened to test, and for this
 product the dashboard API is a partial view of the system, not a proxy for it.
+
+**A seventh correction — RVW-003's attribution, and a false-positive class it reveals.**
+RVW-003 originally called the scan-session fragmentation *"a regression of declared
+requirement STRUCT-01."* An audit of every scanner entry point withdrew that: STRUCT-01 is
+scoped to **new** scanners from v4.4, and all five scanners introduced at or after v4.4
+(`email`, `dnssec`, `saml`, `kerberos`, `adcs`) accept `session_start` as required. The
+three that do not (`tls`, `ssh`, `jwt`) are v3.9-era core that the requirement never
+covered. The defect is real; the requirement was honoured.
+
+The same pass also showed the *read* path already documents and works around the
+fragmentation (1-second truncation in `list_scans()`), which reframed the defect from
+"fragmentation reaches the UI" to "the workaround cannot group stages that span seconds" —
+and changed the recommended fix from suppressing `datetime.now()` calls to giving
+`CryptoEndpoint` the `scan_run_id` the rest of the schema already carries.
+
+**This is now a pattern worth naming.** Two findings asserted a broken promise (RVW-002
+against the chaos-lab oracle, RVW-003 against STRUCT-01) and **both attributions were
+withdrawn** — while four others (RVW-001, RVW-004, RVW-006, RVW-021) were checked and held.
+Matching a symptom to a requirement whose words it resembles is not evidence the requirement
+was violated; the requirement's *scope* must be checked too. STRUCT-01 says "all **new**
+scanners", and that single word is the difference between a regression and a
+correctly-scoped requirement working as intended.
