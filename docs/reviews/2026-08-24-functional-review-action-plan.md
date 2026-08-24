@@ -15,13 +15,29 @@ Effort: **S** ≤ half a day · **M** 1–3 days · **L** > 3 days.
 
 | ☐ | ID | Sev | Finding | Affects | Remediation | Effort | Status |
 |---|----|-----|---------|---------|-------------|--------|--------|
-| ☐ | RVW-001 | CRITICAL | Every TLS/certificate and email endpoint is persisted twice | core value path; all inventory counts | The scan pipeline must persist exactly one row per (host, port, protocol) per scan session. Add a regression test asserting `len(motion_findings) == len(set(payloads))` for a single-host scan. | M | Open |
+| ☐ | RVW-001 | CRITICAL | Every TLS/certificate and email endpoint is persisted twice — `merge()` at `run_scan.py:3190` re-inserts rows already written by `_flush_stage_endpoints()` | core value path; all inventory counts | The scan pipeline must persist exactly one row per scanned endpoint per scan session. Root cause is a false assumption that `session.merge()` writes the PK back onto the passed object; it does not. See fix options below. Add a regression test asserting a single-host scan yields no two rows differing only in `id`. | S–M | Open |
 | ☐ | RVW-002 | CRITICAL | Self-signed and untrusted-CA certificate findings are never emitted despite the data being captured | TLS defect detection | The scanner must emit a self-signed finding when `cert_subject == cert_issuer`, and an untrusted-CA finding when `chain_verified` is false. Align `tls-cert-rsa1024` severity with the oracle (HIGH, not CRITICAL) or update the oracle. Gate on the `tls-cert-defects` profile in CI. | M | Open |
 | ☐ | RVW-003 | HIGH | One scan fragments into many sessions (17 sessions for 17 ports); Scan History shows phantom scans with contradictory scores | Scan History, Trends, score integrity | All scanners must stamp endpoints with the shared `session_start` value rather than calling `datetime.now()` per endpoint (`tls_scanner.py:367`), restoring STRUCT-01. No endpoint may be persisted with a NULL `scanned_at`. Add a test asserting one scan yields exactly one distinct `scanned_at`. | M | Open |
 
-**Sequencing note:** RVW-003 is likely the cheapest of the three and may share a root cause
-with RVW-001 — both concern how endpoints are written. Investigate together before
-estimating separately.
+### RVW-001 — fix options
+
+The two writes are `_flush_stage_endpoints()` (`run_scan.py:243`, Phase 67 / RESUME-01,
+called from 8 stages) and the final `db_persist` block (`run_scan.py:3190`). The second was
+written to be an UPDATE — its comment says so — but `session.merge()` returns a *new*
+persistent instance and never sets the PK on the object passed in, so the endpoints reach
+the final persist with `id = None` and are INSERTed again.
+
+| Option | Change | Trade-off |
+|---|---|---|
+| **A — write the PK back** (recommended) | In `_flush_stage_endpoints`, capture `merged = session.merge(ep)` and assign `ep.id = merged.id` after `commit()`. | Smallest diff; makes the existing `merge()` comment true rather than aspirational. Must run inside the session, before it closes. |
+| **B — database constraint** | Add a uniqueness constraint on the endpoint's natural key and let the second write collide harmlessly. | Defence in depth, but needs a migration, and the natural key must **not** include `scanned_at` until RVW-003 is fixed. |
+| **C — skip the redundant write** | Track which stages already flushed and exclude them from the final persist. | Most bookkeeping; risks losing rows if a stage flush silently fails — note `_flush_stage_endpoints` swallows all exceptions by design. |
+
+**Sequencing note:** fix **RVW-003 before** adopting option B, since `scanned_at` is
+currently unreliable as part of any natural key. RVW-001 and RVW-003 both concern how
+endpoints are written and are best investigated in one sitting, but they are independent
+defects with independent fixes — RVW-001 is a persistence-identity bug, RVW-003 is a
+timestamp-ownership bug.
 
 ---
 

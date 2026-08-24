@@ -33,6 +33,10 @@ report chain that the project's stated core value depends on. Every endpoint is 
 twice, and two of the four documented TLS certificate-defect classes are never reported
 despite the underlying data being captured correctly.
 
+Both were traced to a specific cause. The duplication is a false assumption at
+`run_scan.py:3190` about what `session.merge()` returns; the missing certificate findings
+are a gap in the finding-generation layer, not the scanner. Neither is a large fix.
+
 ### Verdict
 
 The product does substantially what its documents say it does. But a consultant running
@@ -136,10 +140,59 @@ meta.total_endpoints: 58 (inflated)
 Independently reproduced against the `tls-cert-defects` chaos-lab profile: 4 findings from
 2 distinct, 8 certificates from 4 distinct — all exactly doubled. Not a loopback artifact.
 
-CBOM components and hardware devices are **not** duplicated, so the defect is specific to
-the TLS/certificate and email/motion persistence paths.
+**Ruling out an intentional dual-probe.** The endpoint model carries a `sni_used` column,
+which raises the possibility that the scanner probes each target twice by design (with and
+without SNI) and persists both. It does not: `include_sni` is a single config value and
+`scan_one` is submitted once per `(host, port)` at `tls_scanner.py:552`. Verified at the
+database layer against genuinely open ports serving real certificates — the two rows differ
+in **`id` and nothing else**:
 
-**Verdict:** CONFIRMED. Evidence tier: direct execution.
+```
+port 13444: id=2 protocol=TLS tls=TLSv1.3 subj=CN=expired.chaos.local
+            id=4 protocol=TLS tls=TLSv1.3 subj=CN=expired.chaos.local
+            DIFFERING COLUMNS: ['id']
+```
+
+Same protocol, TLS version, certificate subject, and `scanned_at`. These are not two
+observations; they are one observation stored twice.
+
+**Root cause — a false assumption in code written to prevent this exact defect.**
+Endpoints are written twice:
+
+1. `_flush_stage_endpoints()` (`run_scan.py:243`) persists each stage's endpoints
+   immediately after that stage completes — Phase 67 / **RESUME-01**, so a crash mid-scan
+   does not lose completed stages. Called from 8 stages (inventory, TLS, SSH,
+   JWT/container/source/openapi/fuzz, identity, data-at-rest, broker+email).
+2. The final `db_persist` block (`run_scan.py:3190`) writes every endpoint again, using
+   `merge()` rather than `add()`. Its own comment states the intent:
+
+   > *"CR-03: use merge() instead of add() so that detached resumed endpoints (which
+   > already have a PK from a prior flush) are UPDATE'd rather than INSERT'd, avoiding
+   > IntegrityError on resume."*
+
+**The parenthetical is false.** `session.merge()` returns a *new* persistent instance and
+never writes the primary key back onto the object passed to it. The in-memory endpoints
+therefore still carry `id = None` at the final persist, SQLAlchemy treats them as new
+objects, and inserts a second row.
+
+Reproduced in isolation with no scanner involved:
+
+```
+before flush     : ep.id = None
+after stage-flush: ep.id = None    <- PK not written back to the caller's object
+rows in DB for one endpoint scanned once: 2
+```
+
+**Corroboration from the defect's distribution.** CBOM components and hardware devices are
+**not** duplicated — and that set is precisely the set of stages that do *not* call
+`_flush_stage_endpoints`. The duplication appears in exactly the stages that flush, which
+is what distinguishes a named cause from a coincidence.
+
+**Interaction with RVW-003:** any fix must not dedupe on `scanned_at`, because that column
+is currently unreliable for the separate reason described in RVW-003.
+
+**Verdict:** CONFIRMED — a defect, not a designed behaviour. Evidence tier: direct
+execution + isolated reproduction + source inspection.
 
 ---
 
@@ -531,3 +584,16 @@ Two false "stale catalog" flags were also caught and discarded. These are record
 an audit that trusts its own tooling produces confident, wrong findings — and because the
 corrected figures in this report are materially more favourable to the project than the
 uncorrected ones would have been.
+
+**A fifth correction came from challenge rather than self-review.** RVW-001 was originally
+supported only by comparing the API projection of each row, which omits fields such as
+`sni_used`. On that evidence a deliberate dual-probe design — one pass with SNI, one
+without — would have been indistinguishable from a defect, and the finding as first written
+did not rule it out. Re-checking at the database layer against genuinely open ports showed
+the rows differ in `id` alone, and following that through produced the root cause now
+recorded in RVW-001. The finding survived, and became considerably more actionable.
+
+The methodological point generalises: *"duplicate rows"* is precisely the shape an
+intentional dual-observation design would take. A reviewer who reports that shape without
+eliminating the benign explanation is guessing. This report's findings should be read as
+falsifiable claims, and challenged the same way.
