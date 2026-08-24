@@ -12,7 +12,7 @@
 
 QU.I.R.K. is a mature, heavily-instrumented codebase. 3,487 backend tests pass, the
 frontend suites are green, the committed dashboard bundle is byte-identical to a fresh
-build, and **every one of the 444 delivered requirements is implemented** — the review
+build, and **every one of the 489 delivered requirements is implemented** — the review
 found no requirement that was claimed complete but absent from the code.
 
 The defects that matter are not missing features. They are **defects in how scan results
@@ -24,9 +24,9 @@ commits have never run CI.
 |---|---|
 | CRITICAL | 1 |
 | HIGH | 5 |
-| MEDIUM | 5 |
+| MEDIUM | 6 |
 | LOW | 6 |
-| OBSERVATION | 4 |
+| OBSERVATION | 3 |
 
 **The single CRITICAL finding is in the core value path** — every scanned endpoint is
 persisted twice, inflating the certificate inventory, the Data-in-Motion table, and the
@@ -72,9 +72,10 @@ A review that lists only problems would misrepresent this codebase.
   summaries, **no test file claimed by a completed phase is missing**. In a codebase with
   161 phases of churn this is a genuinely strong result, and it was the finding class the
   charter expected to be worst.
-- **Zero unimplemented requirements.** All 444 delivered requirements trace to code.
-  The only three with no traceability link (GAUGE-01/02/03) were verified line-by-line and
-  are fully built and tested.
+- **Zero unimplemented requirements.** All 489 delivered requirements trace to code.
+  Only four lack a traceability link: GAUGE-01/02/03, verified line-by-line as fully built
+  and tested, and SCORE-FIX-02, which is a documentation requirement about a module
+  docstring rather than behaviour.
 - **Backend suite: 3,487 passed / 1 genuine failure** (the CMVP staleness gate, which is
   *supposed* to fail — see RVW-005). Two further local failures were environmental
   (`git init` SIGSEGV on this machine) and are not product defects.
@@ -104,26 +105,33 @@ A review that lists only problems would misrepresent this codebase.
 Verdicts are stamped with the evidence tier they rest on, so any individual call can be
 challenged on its evidence rather than its conclusion.
 
-| Tier | Source | Coverage of 444 delivered reqs |
+| Tier | Source | Coverage of 489 delivered reqs |
 |---|---|---|
-| A | `SUMMARY.md` frontmatter (`requirements-completed` + `key-files`) | 89 (23%) |
-| B | `docs/UAT-SERIES.md` case linkage | 183 (46%) |
-| C | ROADMAP phase mapping | 379 (96%) |
-| D | Requirement ID annotated in `tests/` module docstrings | 306 (78%) |
+| A | `SUMMARY.md` frontmatter (`requirements-completed` + `key-files`) | 104 (21%) |
+| B | `docs/UAT-SERIES.md` case linkage | 236 (48%) |
+| C | ROADMAP phase mapping | 471 (96%) |
+| D | Requirement ID annotated in `tests/` module docstrings | 372 (76%) |
 
 **Traceability matrix — delivered requirements:**
 
 | Verdict | Count | % |
 |---|---|---|
-| Names existing test file(s) | 348 | 78% |
-| Roadmap phase mapping only | 38 | 9% |
-| UAT case recorded PASS, no test named | 28 | 6% |
+| Names existing test file(s) | 383 | 78% |
+| Roadmap phase mapping only | 43 | 9% |
+| UAT case recorded PASS, no test named | 32 | 7% |
 | UAT case exists, result never recorded | 27 | 6% |
-| No evidence at any tier | 3 | 1% |
+| No evidence at any tier | 4 | 1% |
 | **Stale evidence** | **0** | **0%** |
 
-Full matrix: 554 requirement IDs across 27 documents (444 delivered, 108 deliberately
-out-of-scope, 2 open).
+Full matrix: **602 requirement IDs** across 27 documents — 489 delivered, 111 deliberately
+out-of-scope, 2 open.
+
+**Measured accuracy of these figures.** A random sample of 15 delivered requirements was
+verified by hand against the source documents and the filesystem: for each, the ID appears
+in the requirements document the parser cited, and every `PROVEN?` requirement's named test
+files exist and contain test functions. **15 of 15 correct.** The counts above were
+corrected three times during the review (see §7); this sample measures the accuracy of the
+final figures rather than asserting it.
 
 ---
 
@@ -630,11 +638,47 @@ it. This complicates any automated tag-to-version comparison.
 
 ---
 
-### RVW-017 — OBSERVATION — `test_schedules_api.py::test_get_schedules_empty` is order-dependent
+### RVW-017 — MEDIUM — Test isolation is illusory: 31 test files share one in-memory database
 
-Fails in CI (`assert data["schedules"] == []` received a populated list) but **passes
-locally** under `-p no:randomly`. The signature of a test-isolation leak that only
-surfaces under a particular ordering.
+**Severity revised OBSERVATION → MEDIUM; the stated cause was wrong and the real one is broader.**
+
+**Root cause.** The shared `dashboard_client` fixture (`tests/conftest.py:109`) builds its
+engine as:
+
+```python
+create_engine("sqlite:///file::memory:?cache=shared&uri=true", ...)
+```
+
+`cache=shared` makes every in-memory SQLite connection in the process attach to **one
+database**. The fixture's own docstring says it provides *"a fresh in-memory SQLite DB"* —
+it does not. **31 test files** use this URI, so any test that writes a row and does not
+clean up leaks into every later test in the same process.
+
+The shared cache was chosen for a real reason, stated in the code comment: *"so the same DB
+is accessible from the worker thread FastAPI uses for sync route handlers."* The isolation
+loss is an unintended consequence of a legitimate fix.
+
+**Reproduced deterministically:**
+
+```
+$ pytest tests/test_otics_cadence_floor.py tests/test_schedules_api.py::test_get_schedules_empty
+1 failed, 35 passed
+
+E  AssertionError: assert [{'advisories...: False, ...}] == []
+```
+
+This is the same assertion CI reports. The test passes alone (`1 passed`) and passes when
+its own file runs in isolation (`11 passed`) — it fails only once a schedule-writing test
+has run earlier in the process. Adding intervening files does not clear it.
+
+**Verdict:** CONFIRMED, with a named polluter and a named root cause.
+
+> **Correction.** Originally filed as an OBSERVATION claiming the test "is order-dependent —
+> fails in CI, passes locally", with test *ordering* as the inferred cause. The specific
+> mechanism asserted was randomised ordering, which cannot be right: **`pytest-randomly` is
+> not installed**, so the `-p no:randomly` flag used during this review's own test run was a
+> no-op. The real cause is cross-test database sharing. The finding is broader than one
+> test — it undermines isolation for 31 files — and is raised from OBSERVATION to MEDIUM.
 
 ---
 
@@ -824,6 +868,32 @@ Both corrections came from the same discipline — searching for the *behaviour*
 the identifier — and it cut in both directions on the same pass. Two of the content searches
 run during this verification produced false matches that had to be discarded on inspection,
 which is the same failure mode being audited, caught in the act.
+
+**A ninth correction — the requirement counts, wrong for a third time.** Auditing the
+scale figures found a third inventory defect: requirement IDs with **more than one hyphen**
+were dropped entirely. `**HARDEN-API-01**` does not match a pattern anchored as
+`**<PREFIX>-<NUM>**`, so 41 real requirements were invisible — including
+`HARDEN-API-01..06`, `HARDEN-SCAN-01..06`, `UI-SCAN-01..03`, `UI-HIST-01..02`,
+`SCORE-XPARENCY-01`, `RENDER-PDF-01` and **`TLS-FIND-01..10`** — the last of which are the
+very IDs the chaos-lab oracle cites in RVW-002, and whose earlier absence from the matrix
+should have been a clue.
+
+Corrected figures: **602** requirement IDs declared (was 554), **489** delivered (was 444),
+**383** proven (was 348).
+
+Two things are worth noting about this correction. First, the **proportions barely moved** —
+78% of delivered requirements name an existing test both before and after — so the
+structural conclusions were robust even while the absolute counts were wrong three times
+over. Second, `TLS-FIND-02` (self-signed certificates) now resolves with **two** backing
+tests, independently corroborating RVW-002's corrected finding that the engine implements
+and tests the detection the dashboard lacks.
+
+**A tenth correction — RVW-017's mechanism.** The finding asserted test-ordering
+sensitivity, specifically randomised ordering. `pytest-randomly` is not installed, so that
+mechanism does not exist in this repository — and the `-p no:randomly` flag used in this
+review's own full-suite run was a no-op. The real cause, reproduced deterministically, is
+that 31 test files share a single process-wide in-memory database via `cache=shared`.
+Raised OBSERVATION → MEDIUM.
 
 **This is now a pattern worth naming.** Two findings asserted a broken promise (RVW-002
 against the chaos-lab oracle, RVW-003 against STRUCT-01) and **both attributions were
