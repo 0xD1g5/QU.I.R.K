@@ -87,9 +87,9 @@ component that `scanned_at` cannot provide.
 | ☐ | ID | Sev | Finding | Affects | Remediation | Effort | Status |
 |---|----|-----|---------|---------|-------------|--------|--------|
 | ☐ | RVW-007 | MEDIUM | `CHANGELOG.md` stale by six milestones (v5.9–v5.14) | public repo users | The changelog must document every shipped milestone. Backfill v5.9–v5.14. | M | Open |
-| ☐ | RVW-008 | MEDIUM | UAT-SERIES.md records no result for 178 of 355 cases (167 also undated) | gating-document integrity | Every UAT case must carry a recorded result or an explicit deferral. Triage the 178; note 75 of the 91 affected requirements already have automated coverage, so most can be closed by reference. | L | Open |
+| ☐ | RVW-008 | MEDIUM | UAT gating doc records no outcome for **353 of 601 cases (59%)**; only 31 carry an explicit disposition; 5 duplicate case IDs | gating-document integrity | Every UAT case must carry a recorded result or an explicit deferral. 31 already do (the UAT-33-03 pattern — deferral plus a named substitute test — is the model to follow). Resolve the 5 duplicate IDs. **Counts corrected upward after re-verification (was "178 of 355").** | L | Open |
 | ☐ | RVW-009 | MEDIUM | v4.7 shipped with no archived ROADMAP or REQUIREMENTS (only dead link of 40) | traceability | Reconstruct v4.7's requirements from `v4.7-phases/` or correct ROADMAP.md's dead link. | S | Open |
-| ☐ | RVW-010 | MEDIUM | 15 code-bearing delivered requirements have no test linkage | traceability | Each of the 15 must gain either a test-docstring annotation or a summary `key-files` entry. | M | Open |
+| ☐ | RVW-010 | LOW | **Four** delivered requirements have no discoverable test: DEBT-02, GAP-02, QRAMM-08, QRAMM-09 | test coverage | Write a test for each: `lab.sh` PROFILE_ARGS precedence, the re-enabled SAML scan-window test, the 120-question/4-tab assessment page, and the Org Profile multiplier. Separately, annotate the 5 requirements that have tests but no linkage (AUTH-05, DEBT-04, GAP-01, QRAMM-11, TAIL-04). **Revised 15 → 4 after re-verification; 6 of the original 15 are not code requirements.** | S | Open |
 | ☐ | RVW-021 | MEDIUM | `quirk scan --targets` does not exist — no `scan` subcommand, no `--targets` flag; `--targets` prefix-matches `--targets-file` and raises an uncaught FileNotFoundError | first-run experience; 6 UAT step definitions | The dashboard empty state (`findings.tsx:119`) must instruct a command that exists. Correct `docs/chaos-lab.md:676` and the six UAT steps in `docs/UAT-SERIES.md`. An unparseable target argument must fail with a coded error, not a traceback (requirement UX-02). | S | Open |
 | ☐ | RVW-013 | LOW | Version strings stale in README, UAT-SERIES, pyproject; absent from getting-started | user-facing docs | Resolve as part of RVW-004; add getting-started to the version-drift checklist. | S | Open |
 | ☐ | RVW-014 | LOW | Four requirement formats and five UAT result formats across the corpus | tooling fragility | Adopt one requirement declaration format and one UAT result format for new documents. Backfilling archives is optional. | M | Open |
@@ -122,9 +122,12 @@ shippable. RVW-006 is a ~15-minute fix that turns two red workflows green.
 Make the suites pass for real reasons so they stop training people to ignore red.
 
 **Milestone D — "Documentation Drain."** RVW-007 through RVW-019 (docs items).
-Genuine debt, no functional urgency. RVW-008 (178 unmarked UAT cases) is the largest item
-here and is the most defensible candidate for partial closure by reference to existing
-automated coverage.
+Genuine debt, no functional urgency. RVW-008 (**353 unrecorded UAT cases**, corrected
+upward from 178) is by far the largest item here. Partial closure by reference to existing
+automated coverage is still the pragmatic route, but note the caveat added during
+re-verification: requirement-ID annotation is an unreliable proxy for coverage in both
+directions, so each closure needs a named test, not an inferred one. The project's own
+UAT-33-03 pattern — an explicit deferral naming the substitute test — is the model.
 
 ---
 

@@ -24,8 +24,8 @@ commits have never run CI.
 |---|---|
 | CRITICAL | 1 |
 | HIGH | 5 |
-| MEDIUM | 6 |
-| LOW | 5 |
+| MEDIUM | 5 |
+| LOW | 6 |
 | OBSERVATION | 4 |
 
 **The single CRITICAL finding is in the core value path** — every scanned endpoint is
@@ -447,24 +447,56 @@ but `changelog.d/` contains only `README.md` — no pending fragments explain th
 
 ---
 
-### RVW-008 — MEDIUM — The UAT gating document records no result for half its cases
+### RVW-008 — MEDIUM — The UAT gating document records no result for 59% of its cases
 
-`docs/UAT-SERIES.md` contains 355 UAT cases linked to a requirement:
+**Numbers corrected — the original figures understated both the count and the denominator.**
 
-| Result | Count |
-|---|---|
-| PASS | 174 |
-| **UNMARKED** (checkbox present, nothing ticked) | **178** |
-| SKIP | 1 |
-| Unparseable prose | 2 |
+`docs/UAT-SERIES.md` contains **601 UAT case headings**. Independent re-derivation (an
+awk pass over case blocks, not the traceability parser) gives:
 
-167 of the 178 unmarked cases also have an empty `**Date:**` field, indicating they were
-never executed rather than executed-but-unrecorded. 12 cases are typed HUMAN-UAT.
+| Result | Count | Share |
+|---|---|---|
+| PASS | 232 | 39% |
+| **Unmarked — checkbox present, nothing ticked** | **344** | **57%** |
+| No `**Result:**` line at all | 9 | 1% |
+| Prose result (no checkbox) | 15 | 2% |
+| SKIP | 1 | <1% |
 
-**Important qualification:** an unmarked UAT case does not mean the capability is untested.
-Of the 91 delivered requirements whose UAT cases never record a PASS, **75 still carry
-automated test evidence**, leaving 16 with neither. This finding concerns the integrity of
-the gating document, not test coverage.
+**353 cases (59%) carry no recorded outcome.** Of those, only **31** carry an explicit
+disposition in their heading — `DEFERRED` (8), `HUMAN-UAT` (11), `Human-Led` (6),
+`Manual` (6). The remaining **322 have no stated disposition of any kind**.
+
+Not every unrecorded case is negligence. Some are deliberately deferred *with substitute
+coverage named*, e.g.:
+
+```
+### UAT-33-03: Kafka Plaintext Detection (DEFERRED — chaos-lab smoke)
+Pending: scanner custom-port support. Equivalent unit coverage exists in
+`tests/test_broker_scanner_kafka.py::test_detect_kafka_plaintext_*`.
+```
+
+That is a well-documented deferral and should not be counted against the project. It is,
+however, 31 cases out of 353.
+
+**Also found: 5 duplicate case IDs** — UAT-144-01, UAT-144-02, UAT-144-03, UAT-89-02,
+UAT-89-03 each appear twice as `###` headings, so a reader searching by ID finds two
+different cases under one identifier.
+
+**Qualification, weakened from the original.** The report previously asserted that "75 of
+the 91 affected requirements retain automated test evidence." That figure is derived from
+Tier-D annotation (requirement IDs written into test docstrings). RVW-010's re-verification
+showed annotation is an unreliable proxy for coverage **in both directions** — some
+annotated requirements aren't really covered, and some covered requirements aren't
+annotated. The mitigation is therefore directionally right but should not be quoted as a
+precise figure.
+
+**Verdict:** CONFIRMED, and more severe than first reported.
+
+> **Correction.** Originally reported as "178 of 355 cases (50%)". Both numbers were wrong:
+> 355 counted only cases whose *title* contains a requirement ID — a legitimate
+> traceability subset, but presented as though it were the document's case count. The true
+> denominator is 601 and the true unrecorded count is 353. The error made the finding look
+> *less* severe than it is.
 
 ---
 
@@ -481,15 +513,54 @@ artifacts.
 
 ---
 
-### RVW-010 — MEDIUM — 15 code-bearing delivered requirements have no test linkage
+### RVW-010 — LOW — Four delivered requirements have no discoverable test
 
-AUTH-05, DASHQ-01, DASHQ-02, DEBT-02, DEBT-04, DEP-01, GAP-01, GAP-02, QRAMM-08, QRAMM-09,
-QRAMM-11, STRUCT-02, TAIL-04, UAT-02, UAT-03.
+**Severity revised MEDIUM → LOW; the count revised 15 → 4.**
 
-Not evidence of defect — evidence that nothing mechanically ties them to a test. A further
-20 `PHASE-ONLY` requirements are documentation or process requirements (architecture-document
-contents, CLAUDE.md templates, user guides) that are correctly verified by artifact
-inspection rather than by test.
+The original finding listed 15 requirements as "code-bearing … with no test linkage."
+Re-verification by searching for tests *by described behaviour* rather than by requirement
+ID annotation reclassified the list:
+
+**Not code requirements at all (6)** — my "code-bearing" classification was simply wrong.
+These assert a CI state or a process rule and are verified by inspection, not by test:
+
+| ID | What it actually asserts |
+|---|---|
+| DASHQ-01 | "Dashboard Quality CI workflow is green on `main`" — a CI state |
+| DASHQ-02 | "Dashboard E2E smoke job passes on `main`" — a CI state |
+| DEP-01 | A workflow bumps `setup-node` from 20 to 24 — a config assertion |
+| STRUCT-02 | Extras must be declared in `pyproject.toml` *at plan time* — a process rule |
+| UAT-02 | K8s UAT scenarios run against a minikube fixture in CI — process |
+| UAT-03 | Phase 25/30 UAT scenarios are re-run — process |
+
+**Covered by tests, merely unannotated (5):**
+
+| ID | Test found by content |
+|---|---|
+| AUTH-05 | `tests/test_credential_leakage.py`, plus AST-gate suites (`test_adcs_ast_gate.py`, `test_smime_ast_gate.py`) |
+| DEBT-04 | `tests/test_saml_scanner.py` — docstring confirms it exercises the migrated `lxml` path |
+| GAP-01 | `tests/test_identity_findings_accuracy.py` — covers routing RS-family OIDC endpoints to `_derive_identity_findings`, which is GAP-01's substance |
+| QRAMM-11 | `src/dashboard/src/components/qramm/__tests__/scorecard-maturity.test.tsx` |
+| TAIL-04 | `tests/test_run_scan_codesign_wiring.py` |
+
+**No discoverable test — the genuine residue (4):**
+
+| ID | Requirement | Why the search came up empty |
+|---|---|---|
+| DEBT-02 | `lab.sh` `PROFILE_ARGS` CLI precedence fixed | The two hits merely *use* `PROFILE_ARGS` as an env var; neither asserts precedence |
+| GAP-02 | The deferred SAML scan-window pytest is re-enabled and passes | No such test located |
+| QRAMM-08 | Assessment page presents 120 questions across 4 dimension tabs | QRAMM dashboard tests cover the scorecard and compliance map, not the question set |
+| QRAMM-09 | Org Profile wizard computes the profile multiplier | No wizard/multiplier test located |
+
+**Verdict:** CONFIRMED for 4 requirements, WITHDRAWN for 11.
+
+> **Correction.** The original finding was technically worded as "no test *linkage*", which
+> is defensible — none of the 15 has an annotation. But the severity and the remediation
+> both treated it as a coverage gap, and the action plan told the reader all 15 needed an
+> annotation. Six need nothing at all (they are not code), five already have tests, and
+> four need a test written. Two of this review's own content searches produced **false
+> matches** during this pass (`test_api_scan_window.py` for GAP-02, QRAMM scorecard tests
+> for QRAMM-08) and were discarded on inspection.
 
 ---
 
@@ -736,6 +807,23 @@ fragmentation (1-second truncation in `list_scans()`), which reframed the defect
 "fragmentation reaches the UI" to "the workaround cannot group stages that span seconds" —
 and changed the recommended fix from suppressing `datetime.now()` calls to giving
 `CryptoEndpoint` the `scan_run_id` the rest of the schema already carries.
+
+**An eighth correction — RVW-008 and RVW-010, challenged together because both derive from
+the traceability parser.** Re-deriving each by a different method than the original parser:
+
+- **RVW-008 was understated.** It reported "178 of 355 cases (50%)". The 355 counted only
+  cases whose title contains a requirement ID — a traceability subset presented as though
+  it were the document's case count. The document holds **601** cases and **353 (59%)** have
+  no recorded outcome. The error made the project look *better* than the evidence supports.
+- **RVW-010 was overstated.** It listed 15 "code-bearing requirements with no test linkage".
+  Six are not code requirements at all (CI states and process rules); five have tests that
+  simply lack an annotation; **four** genuinely have no discoverable test. Severity
+  MEDIUM → LOW.
+
+Both corrections came from the same discipline — searching for the *behaviour* rather than
+the identifier — and it cut in both directions on the same pass. Two of the content searches
+run during this verification produced false matches that had to be discarded on inspection,
+which is the same failure mode being audited, caught in the act.
 
 **This is now a pattern worth naming.** Two findings asserted a broken promise (RVW-002
 against the chaos-lab oracle, RVW-003 against STRUCT-01) and **both attributions were
