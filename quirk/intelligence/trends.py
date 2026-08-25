@@ -81,22 +81,45 @@ class TrendReport:
 # ---------------------------------------------------------------------------
 
 def _fetch_session_endpoints(db: Session, target_ts: datetime) -> List[CryptoEndpoint]:
-    """Fetch all endpoints in the 1-millisecond window for a canonical scanned_at timestamp.
+    """Fetch every endpoint belonging to the scan session `target_ts` represents.
 
-    SQLite's strftime('%f') produces 3-digit millisecond precision, not microseconds.
-    target_ts is always millisecond-aligned (microseconds divisible by 1000), so the
-    correct window is 1ms — wide enough to capture any stored sub-ms components while
-    still preventing two scans 100ms apart from merging (CR-05 fix). Excludes NULL
-    scanned_at rows (D-13) via explicit filter.
+    RVW-003: `target_ts` is a session's *earliest* endpoint timestamp, as returned
+    by the session listers. We resolve it to the stored `scan_run_id` and return
+    the whole session. The previous 1-millisecond window returned only the rows
+    stamped in that same millisecond — meaning a trend "session" was really one
+    stage (often one endpoint) of a scan, and score deltas were computed between
+    two slices of the *same* scan.
+
+    Rows written before `scan_run_id` existed keep the old behaviour: SQLite's
+    strftime('%f') produces 3-digit millisecond precision, not microseconds, and
+    target_ts is millisecond-aligned, so the 1ms window is wide enough to capture
+    sub-ms components while keeping two scans 100ms apart distinct (CR-05 fix).
+    Excludes NULL scanned_at rows (D-13) via explicit filter.
     """
     # closes cbom-intel-reports/IN-03 (Phase 77 D-09) — yield_per(1000) streaming
     # replaces .all() materialization; SQLAlchemy idiomatic chunk size per Discretion.
+    keyed = (
+        db.query(CryptoEndpoint.scan_run_id)
+        .filter(
+            CryptoEndpoint.scanned_at == target_ts,
+            CryptoEndpoint.scan_run_id.isnot(None),
+        )
+        .first()
+    )
+    if keyed is not None and keyed[0]:
+        return list(
+            db.query(CryptoEndpoint)
+            .filter(CryptoEndpoint.scan_run_id == keyed[0])
+            .yield_per(1000)
+        )
+
     streamed = (
         db.query(CryptoEndpoint)
         .filter(
             CryptoEndpoint.scanned_at >= target_ts,
             CryptoEndpoint.scanned_at < target_ts + timedelta(milliseconds=1),
             CryptoEndpoint.scanned_at.isnot(None),
+            CryptoEndpoint.scan_run_id.is_(None),
         )
         .yield_per(1000)
     )

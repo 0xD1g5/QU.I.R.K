@@ -99,6 +99,16 @@ class CryptoEndpoint(Base):
     sensor_id = Column(String(255), nullable=True)   # NULL = implicit local sensor; NO FK (D-03)
     segment   = Column(String(255), nullable=True)
 
+    # RVW-003: stored scan-session identity. Set to the run's `started_utc`
+    # ISO timestamp — the same value ScanJob.scan_run_id and
+    # ScanCheckpoint.scan_run_id already carry, and stable across --resume-scan-id.
+    # Read paths group on this instead of truncating `scanned_at`, which cannot
+    # work: each stage stamps its own rows as it runs, so one scan's rows span
+    # many seconds. Nullable for rows written before this column existed — those
+    # fall back to the legacy timestamp grouping. NO FK (mirrors sensor_id/D-03:
+    # a CryptoEndpoint may be written by a CLI scan that never created a ScanJob).
+    scan_run_id = Column(String(64), nullable=True, index=True)
+
 
 class QRAMMSession(Base):
     """QRAMM assessment session (Phase 51 — QRAMM-01).

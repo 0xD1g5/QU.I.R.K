@@ -129,6 +129,13 @@ _V54_SENSOR_COLUMNS: tuple[tuple[str, str], ...] = (
     ("sensor_id", "TEXT"),
     ("segment",   "TEXT"),
 )
+_RVW003_SCAN_SESSION_COLUMNS: tuple[tuple[str, str], ...] = (
+    # RVW-003: stored scan-session identity on crypto_endpoints. Holds the run's
+    # `started_utc` ISO timestamp — the same key scan_jobs/scan_checkpoints use.
+    # NULL for rows written before this column existed; read paths fall back to
+    # the legacy `scanned_at` grouping for those.
+    ("scan_run_id", "TEXT"),
+)
 _V55_SENSOR_TOKEN_COLUMNS: tuple[tuple[str, str], ...] = (
     # Phase 113 AUTH-02 / D-06: soft-revoke via additive nullable column.
     # None = active; set = revoked. No data rewrite, no destructive DDL.
@@ -265,6 +272,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("hardware_devices", _IDENTITY_HW_COLUMNS),       # Phase 154 HWLC-01/02
     ("hardware_devices", _CHECKIN_HW_COLUMNS),        # Phase 159 HWLC-13
     ("hardware_drift_events", _CHECKIN_DRIFT_EVENT_COLUMNS),  # Phase 159 WR-03 fix
+    ("crypto_endpoints", _RVW003_SCAN_SESSION_COLUMNS),       # RVW-003 scan session identity
 )
 
 
@@ -533,6 +541,13 @@ def init_db(db_path: str) -> Engine:
         conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_crypto_endpoints_sensor_id"
             " ON crypto_endpoints (sensor_id)"
+        ))
+        # RVW-003: same retro-add caveat as sensor_id above — every scan-history
+        # and trends query now filters/groups on scan_run_id, so the index is
+        # required on pre-existing databases, not merely nice to have.
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_crypto_endpoints_scan_run_id"
+            " ON crypto_endpoints (scan_run_id)"
         ))
         conn.commit()
     return engine

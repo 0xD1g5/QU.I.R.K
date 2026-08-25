@@ -41,23 +41,41 @@ router = APIRouter(dependencies=[Depends(require_auth)])
 def _list_session_timestamps(db: Session) -> List[datetime]:
     """Return up to 10 most recent distinct session timestamps (newest first).
 
-    Uses millisecond-precision strftime format (%Y-%m-%d %H:%M:%f) — SQLite's %f
-    returns 3 decimal digits (ms), not 6 (µs) — so two scans started in different
-    milliseconds appear as distinct sessions (CR-05). Excludes NULL scanned_at rows
-    (D-13) via explicit isnot(None) filter.
+    RVW-003: a session is one `scan_run_id`, represented by its *earliest*
+    endpoint timestamp. Grouping on the millisecond-precision strftime key
+    instead made one scan look like many sessions — a scan's stages each stamp
+    their own rows as they run, so a 10-endpoint scan could yield 10 "sessions",
+    and the trend delta was then computed between two stages of the same scan.
+
+    Rows predating the column (scan_run_id IS NULL) keep the old key so existing
+    databases still render trends: millisecond-precision strftime (%Y-%m-%d
+    %H:%M:%f) — SQLite's %f returns 3 decimal digits (ms), not 6 (µs) — so two
+    scans started in different milliseconds stay distinct (CR-05). NULL
+    scanned_at rows are excluded (D-13) via explicit isnot(None) filter.
     """
-    ts_usec = func.strftime(
-        "%Y-%m-%d %H:%M:%f", CryptoEndpoint.scanned_at
-    ).label("ts_usec")
     rows = (
-        db.query(ts_usec)
+        db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.scan_run_id)
         .filter(CryptoEndpoint.scanned_at.isnot(None))
-        .group_by("ts_usec")
-        .order_by(ts_usec.desc())
-        .limit(10)
         .all()
     )
-    return [datetime.fromisoformat(r.ts_usec) for r in rows]
+    earliest: dict[str, datetime] = {}
+    for row_ts, row_run_id in rows:
+        if row_ts is None:
+            continue
+        if isinstance(row_ts, str):
+            try:
+                row_ts = datetime.fromisoformat(row_ts)
+            except ValueError:
+                continue
+        # Legacy key preserves millisecond precision by truncating microseconds
+        # to a whole millisecond — the same bucket the strftime %f key produced.
+        key = row_run_id or row_ts.replace(
+            microsecond=(row_ts.microsecond // 1000) * 1000
+        ).isoformat()
+        prev = earliest.get(key)
+        if prev is None or row_ts < prev:
+            earliest[key] = row_ts
+    return sorted(earliest.values(), reverse=True)[:10]
 
 
 @router.get("/trends", response_model=TrendReportResponse)

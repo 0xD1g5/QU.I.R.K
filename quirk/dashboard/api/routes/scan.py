@@ -1060,11 +1060,15 @@ def _derive_roadmap(evidence: dict, scoring: dict) -> RoadmapData:
 
 
 def _fetch_session_endpoints_1s(db: Session, ts: datetime) -> list[CryptoEndpoint]:
-    """Fetch CryptoEndpoint rows for a session using a 1-second window.
+    """Fetch legacy CryptoEndpoint rows for a session using a 1-second window.
 
-    list_scans() and compare_scans() group by second-precision timestamps,
-    so we cannot reuse trends._fetch_session_endpoints (1ms window — incompatible
-    with second-precision ts_sec strings from the GROUP BY query).
+    RVW-003: this is now the *fallback* path, used only for rows written before
+    `scan_run_id` existed. It is deliberately restricted to `scan_run_id IS NULL`
+    so a legacy window can never absorb rows belonging to a keyed session.
+
+    The 1-second window was always a heuristic and never worked: each scanner
+    stage stamps its rows with `datetime.now()` as that stage runs, and a scan's
+    stages span many seconds. Keyed sessions use `_fetch_session_endpoints_by_id`.
     """
     return (
         db.query(CryptoEndpoint)
@@ -1072,9 +1076,32 @@ def _fetch_session_endpoints_1s(db: Session, ts: datetime) -> list[CryptoEndpoin
             CryptoEndpoint.scanned_at >= ts,
             CryptoEndpoint.scanned_at < ts + timedelta(seconds=1),
             CryptoEndpoint.scanned_at.isnot(None),
+            CryptoEndpoint.scan_run_id.is_(None),
         )
         .all()
     )
+
+
+def _fetch_session_endpoints_by_id(db: Session, scan_id: str) -> list[CryptoEndpoint]:
+    """RVW-003: resolve a scan_id to its endpoints — stored key first, legacy second.
+
+    `scan_id` is a `scan_run_id` for any scan written since RVW-003 (the run's
+    `started_utc`, matching ScanJob/ScanCheckpoint). For older rows it is the
+    second-precision `scanned_at` string the previous grouping produced, so we
+    fall back to the 1-second window for those.
+    """
+    eps = (
+        db.query(CryptoEndpoint)
+        .filter(CryptoEndpoint.scan_run_id == scan_id)
+        .all()
+    )
+    if eps:
+        return eps
+    try:
+        ts = datetime.fromisoformat(scan_id)
+    except (ValueError, TypeError):
+        return []
+    return _fetch_session_endpoints_1s(db, ts)
 
 
 @router.get("/scans", response_model=List[ScanSession])
@@ -1086,19 +1113,22 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
     Phase 66 D-03: finding severity counts via _count_by_bucket.
     Phase 66 D-04: clone data from ScanJob join; fallback to host reconstruction.
 
-    Groups by second-truncated timestamp because each CryptoEndpoint row is
-    written with its own microsecond-precision scanned_at. Grouping by the raw
-    value produces one row per endpoint rather than one per scan session.
+    RVW-003: groups by the stored `scan_run_id`, not by a truncated timestamp.
+    Truncation could never work — each stage stamps its rows with `datetime.now()`
+    as that stage runs, so one scan's rows span many seconds and rendered as
+    several history rows, each scored over a fraction of the endpoints. Rows
+    predating the column (scan_run_id IS NULL) keep the old second-truncated
+    grouping so existing databases still render their history.
     """
-    # Phase 75-02 D-05 (WR-05): group by parsed-datetime keys (microsecond-truncated)
-    # instead of TZ-fragile strftime string keys. Mirrors trends.py:41-60 precedent.
     raw_rows = (
-        db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.id)
+        db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.scan_run_id)
         .filter(CryptoEndpoint.scanned_at.isnot(None))
         .all()
     )
-    groups: dict[datetime, int] = {}
-    for row_ts, _row_id in raw_rows:
+    # key -> (count, earliest scanned_at). The scan's start is the representative
+    # timestamp; using max() would report a scan as happening at its last stage.
+    groups: dict[str, tuple[int, datetime]] = {}
+    for row_ts, row_run_id in raw_rows:
         if row_ts is None:
             continue
         # row_ts is a datetime (SQLAlchemy DateTime column); accept str defensively.
@@ -1107,16 +1137,21 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
                 row_ts = datetime.fromisoformat(row_ts)
             except ValueError:
                 continue
-        key = row_ts.replace(microsecond=0)
-        groups[key] = groups.get(key, 0) + 1
+        # Phase 75-02 D-05 (WR-05): legacy keys stay parsed-datetime derived
+        # (microsecond-truncated) rather than TZ-fragile strftime strings.
+        key = row_run_id or row_ts.replace(microsecond=0).isoformat(sep=" ")
+        prev = groups.get(key)
+        if prev is None:
+            groups[key] = (1, row_ts)
+        else:
+            groups[key] = (prev[0] + 1, min(prev[1], row_ts))
 
     sessions: list[ScanSession] = []
-    # Sort descending on the parsed datetime key (newest first) per D-05.
-    for ts in sorted(groups.keys(), reverse=True):
-        cnt = groups[ts]
-        ts_str = ts.isoformat(sep=" ")  # back-compat shape for scan_id consumers
-
-        eps = _fetch_session_endpoints_1s(db, ts)
+    # Newest first, ordered by the session's earliest endpoint timestamp.
+    for ts_str, (cnt, ts) in sorted(
+        groups.items(), key=lambda kv: kv[1][1], reverse=True
+    ):
+        eps = _fetch_session_endpoints_by_id(db, ts_str)
 
         # Per-session score (D-02)
         score = 0
@@ -1133,15 +1168,24 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
         ]
         counts = _count_by_bucket(keys)
 
-        # Clone data (D-04) — try ScanJob join first, fall back to host reconstruction
-        # Use ts.isoformat()[:19] (T-separator) because scan_run_id is stored via
-        # datetime.isoformat() — ts_str uses a space separator from strftime (Pitfall 2).
-        ts_prefix = ts.isoformat()[:19]  # e.g. "2026-05-14T11:51:54"
+        # Clone data (D-04) — try ScanJob join first, fall back to host reconstruction.
+        # RVW-003: for keyed sessions ts_str IS the scan_run_id, so this is now an
+        # exact match rather than a prefix guess. Legacy sessions keep the old
+        # prefix LIKE, which used ts.isoformat()[:19] (T-separator) because
+        # scan_run_id is stored via datetime.isoformat() while the legacy ts_str
+        # uses a space separator (Pitfall 2).
         job = (
             db.query(ScanJob)
-            .filter(ScanJob.scan_run_id.like(f"{ts_prefix}%"))
+            .filter(ScanJob.scan_run_id == ts_str)
             .first()
         )
+        if job is None:
+            ts_prefix = ts.isoformat()[:19]  # e.g. "2026-05-14T11:51:54"
+            job = (
+                db.query(ScanJob)
+                .filter(ScanJob.scan_run_id.like(f"{ts_prefix}%"))
+                .first()
+            )
         if job is not None:
             target = job.target
             profile = job.profile
@@ -1237,20 +1281,31 @@ def get_latest_scan(
             target_ts = datetime.fromisoformat(scan_id)
         except ValueError:
             raise HTTPException(status_code=400, detail=format_error("DASHBOARD-004"))
-        # Phase 75-02 D-04 (WR-04): inclusive [start, end] microsecond-precision window.
-        # SQLite stores scanned_at with microsecond resolution; compare parsed
-        # datetime objects (not formatted strings). Match any row in the same
-        # containing second as the query timestamp.
-        window_start = target_ts.replace(microsecond=0)
-        window_end = target_ts.replace(microsecond=999_999)
+        # RVW-003: resolve by the stored session key first. This is exact, and it
+        # collapses the two id spaces that the fallbacks below exist to bridge —
+        # a history scan_id and a job's scan_run_id are now the same value.
         endpoints: list[CryptoEndpoint] = (
             db.query(CryptoEndpoint)
-            .filter(
-                CryptoEndpoint.scanned_at >= window_start,
-                CryptoEndpoint.scanned_at <= window_end,
-            )
+            .filter(CryptoEndpoint.scan_run_id == scan_id)
             .all()
         )
+        if not endpoints:
+            # Legacy rows (scan_run_id IS NULL) — Phase 75-02 D-04 (WR-04):
+            # inclusive [start, end] microsecond-precision window. SQLite stores
+            # scanned_at with microsecond resolution; compare parsed datetime
+            # objects (not formatted strings). Match any row in the same
+            # containing second as the query timestamp.
+            window_start = target_ts.replace(microsecond=0)
+            window_end = target_ts.replace(microsecond=999_999)
+            endpoints = (
+                db.query(CryptoEndpoint)
+                .filter(
+                    CryptoEndpoint.scanned_at >= window_start,
+                    CryptoEndpoint.scanned_at <= window_end,
+                    CryptoEndpoint.scan_run_id.is_(None),
+                )
+                .all()
+            )
         if not endpoints:
             # Phase 121 live-UAT fix: job completion sets selectedScanId to
             # ScanJob.scan_run_id — the run START timestamp. Per-probe
@@ -1258,6 +1313,8 @@ def get_latest_scan(
             # that second, so the same-second window (built for history
             # scan_ids, which ARE endpoint-second timestamps) is empty for
             # job scan_ids. Fall back to the owning job's lifetime window.
+            # RVW-003: restricted to unkeyed rows — a lifetime window would
+            # otherwise absorb endpoints belonging to a concurrent scan.
             job = db.query(ScanJob).filter(ScanJob.scan_run_id == scan_id).first()
             if job is not None and job.started_at is not None:
                 job_end = job.completed_at or datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1266,6 +1323,7 @@ def get_latest_scan(
                     .filter(
                         CryptoEndpoint.scanned_at >= job.started_at,
                         CryptoEndpoint.scanned_at <= job_end,
+                        CryptoEndpoint.scan_run_id.is_(None),
                     )
                     .all()
                 )
@@ -1490,8 +1548,12 @@ def compare_scans(
     except ValueError:
         raise HTTPException(status_code=400, detail=format_error("DASHBOARD-004"))
 
-    eps_a = _fetch_session_endpoints_1s(db, ts_a)
-    eps_b = _fetch_session_endpoints_1s(db, ts_b)
+    # RVW-003: resolve by stored session key (falls back to the legacy 1-second
+    # window for rows written before scan_run_id existed). The fromisoformat()
+    # calls above remain the format guard — a real scan_run_id IS an ISO
+    # timestamp (the run's started_utc), so both id spaces parse identically.
+    eps_a = _fetch_session_endpoints_by_id(db, a)
+    eps_b = _fetch_session_endpoints_by_id(db, b)
     if not eps_a:
         raise HTTPException(status_code=404, detail=format_error("DASHBOARD-005"))
     if not eps_b:

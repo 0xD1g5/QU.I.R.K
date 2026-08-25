@@ -240,7 +240,30 @@ def _emit_liveness_fallback_advisory(error_endpoints, logger) -> None:
     ))
 
 
-def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
+def _stamp_scan_session(endpoints: list, scan_run_id: Optional[str]) -> None:
+    """RVW-003: stamp each endpoint with the run's stored session key.
+
+    `scan_run_id` is the run's ``started_utc`` — the same value ScanJob and
+    ScanCheckpoint carry, and preserved across ``--resume-scan-id`` so a resumed
+    scan's rows join its original session rather than forming a new one.
+
+    Also backfills ``scanned_at`` when a scanner left it unset: NULL-timestamp
+    rows are filtered out of Scan History and Trends entirely, so an endpoint
+    that reaches persistence without one is invisible on every read surface.
+    """
+    if not endpoints:
+        return
+    fallback_ts = datetime.now(timezone.utc).replace(tzinfo=None)
+    for ep in endpoints:
+        if scan_run_id and getattr(ep, "scan_run_id", None) is None:
+            ep.scan_run_id = scan_run_id
+        if getattr(ep, "scanned_at", None) is None:
+            ep.scanned_at = fallback_ts
+
+
+def _flush_stage_endpoints(
+    db_path: str, endpoints: list, scan_run_id: Optional[str] = None
+) -> None:
     """Phase 67 RESUME-01: flush a stage's CryptoEndpoint rows to SQLite immediately.
 
     Called after each scanner stage so a crash between stages leaves results
@@ -256,6 +279,7 @@ def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
     """
     if not endpoints or not db_path:
         return
+    _stamp_scan_session(endpoints, scan_run_id)
     try:
         with get_session(db_path) as session:
             merged_pairs = [(ep, session.merge(ep)) for ep in endpoints]
@@ -1980,7 +2004,7 @@ def main():
     logger.stamp(f"TLS candidates: {len(tls_targets)} | SSH candidates: {len(ssh_targets)} | Other inventory: {len(inventory_endpoints)}")
 
     # Phase 67 RESUME-01: persist inventory before first scanner stage
-    _flush_stage_endpoints(cfg.output.db_path, inventory_endpoints)
+    _flush_stage_endpoints(cfg.output.db_path, inventory_endpoints, scan_run_id)
     if args.db_path:
         write_scan_checkpoint(
             args.db_path, scan_run_id, "inventory", "completed",
@@ -2023,7 +2047,7 @@ def main():
             run_stats, "tls_scanning", "tls_scanner",
             _run_tls_phase, error_endpoints, logger,
         ) or []
-        _flush_stage_endpoints(cfg.output.db_path, tls_endpoints)   # Phase 67 RESUME-01
+        _flush_stage_endpoints(cfg.output.db_path, tls_endpoints, scan_run_id)   # Phase 67 RESUME-01
         _tls_pf = _collect_stage_partial_failures(run_stats, "tls", error_endpoints, _err_before_tls)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "tls",
@@ -2078,7 +2102,7 @@ def main():
             run_stats, "ssh_scanning", "ssh_scanner",
             _run_ssh_phase, error_endpoints, logger,
         ) or []
-        _flush_stage_endpoints(cfg.output.db_path, ssh_endpoints)   # Phase 67 RESUME-01
+        _flush_stage_endpoints(cfg.output.db_path, ssh_endpoints, scan_run_id)   # Phase 67 RESUME-01
 
         # Fresh-run path: write the ssh checkpoint here (BEFORE the hoisted
         # hardware persist below — Phase 147 DRAIN-01 reordering note: the
@@ -2547,7 +2571,7 @@ def main():
             _run_fuzz_phase, error_endpoints, logger,
         ) or []
 
-        _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints + fuzz_endpoints)  # Phase 67 RESUME-01
+        _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints + fuzz_endpoints, scan_run_id)  # Phase 67 RESUME-01
         _api_pf = _collect_stage_partial_failures(run_stats, "api", error_endpoints, _err_before_api)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "api",
@@ -2655,7 +2679,7 @@ def main():
         # Phase 67 RESUME-01: flush identity stage endpoints before data_at_rest begins
         # identity = aws + azure + gcp + db (dnssec/saml/kerberos run after data_at_rest in this codebase)
         _identity_eps = aws_endpoints + azure_endpoints + gcp_endpoints + db_endpoints
-        _flush_stage_endpoints(cfg.output.db_path, _identity_eps)
+        _flush_stage_endpoints(cfg.output.db_path, _identity_eps, scan_run_id)
         _identity_pf = _collect_stage_partial_failures(run_stats, "identity", error_endpoints, _err_before_identity)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "identity",
@@ -2977,7 +3001,7 @@ def main():
 
         # Phase 67 RESUME-01: flush data_at_rest stage endpoints before broker_email begins
         _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + smime_endpoints + adcs_endpoints + vault_endpoints
-        _flush_stage_endpoints(cfg.output.db_path, _dar_eps)
+        _flush_stage_endpoints(cfg.output.db_path, _dar_eps, scan_run_id)
         _dar_pf = _collect_stage_partial_failures(run_stats, "data_at_rest", error_endpoints, _err_before_dar)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "data_at_rest",
@@ -3127,7 +3151,7 @@ def main():
 
         # Phase 67 RESUME-01: flush broker_email stage endpoints
         _broker_email_eps = email_endpoints + kafka_endpoints + rabbit_endpoints + redis_endpoints
-        _flush_stage_endpoints(cfg.output.db_path, _broker_email_eps)
+        _flush_stage_endpoints(cfg.output.db_path, _broker_email_eps, scan_run_id)
         _broker_pf = _collect_stage_partial_failures(run_stats, "broker_email", error_endpoints, _err_before_broker)
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "broker_email",
@@ -3197,6 +3221,11 @@ def main():
             findings = (findings or []) + codesign_findings
 
     with _phase_timer(run_stats, "db_persist"):
+        # RVW-003: stamp the stored session key on every endpoint before the
+        # final persist — covers rows produced by stages that never call
+        # _flush_stage_endpoints (and backfills any missing scanned_at, which
+        # would otherwise make the row invisible to Scan History and Trends).
+        _stamp_scan_session(endpoints, scan_run_id)
         with get_session(cfg.output.db_path) as session:
             for ep in endpoints:
                 # CR-03: use merge() instead of add() so that detached resumed
