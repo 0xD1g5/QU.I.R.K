@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
-stopped_at: "Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15."
-last_updated: "2026-08-25T15:34:16.158Z"
+stopped_at: "Session resumed 2026-08-25. Phase 163 Wave 0 (163-01) complete + verified green (11/11); 163-02 and 163-03 remain. Next: /gsd-execute-phase 163."
+last_updated: "2026-08-25T16:05:00.000Z"
 last_activity: 2026-08-25
 progress:
   total_phases: 3
@@ -39,7 +39,7 @@ Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last p
 |-------|------|--------------|------|--------|
 | 161 | Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | HWLC-14, HWLC-19 | None (first, independent) | ✅ Complete (2026-08-25) |
 | 162 | Check-in Scan Scheduling | HWLC-20 | None (independent of 161) | ✅ Complete (2026-08-25) |
-| 163 | Discovery Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | Planned (3 plans, 2026-08-25) |
+| 163 | Discovery Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | Executing (1 of 3 plans done — 163-01 Wave 0 tests green 2026-08-25) |
 
 ## v5.14 Phase Map (SHIPPED 2026-08-19)
 
