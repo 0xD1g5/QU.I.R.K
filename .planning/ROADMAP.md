@@ -27,9 +27,28 @@
 - ✅ **v5.10 Hardware Lifecycle Depth** — Phases 139–143, 36 plans (shipped 2026-08-03) → `.planning/milestones/v5.10-ROADMAP.md`
 - ✅ **v5.11 Discovery at Scale + Backlog Drain** — Phases 144–147, 16 plans (shipped 2026-08-11) → `.planning/milestones/v5.11-ROADMAP.md`
 - ✅ **v5.12 Release & Verification Integrity** — Phases 148–153, 36 plans (shipped 2026-08-14) → `.planning/milestones/v5.12-ROADMAP.md`
-- ✅ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (shipped 2026-08-15) → `.planning/milestones/v5.13-ROADMAP.md`
-- ✅ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (shipped 2026-08-19) → `.planning/milestones/v5.14-ROADMAP.md`
+- ⚠️ **v5.13 Continuous Hardware Lifecycle Monitoring** — Phases 154–156, 17 plans (development complete 2026-08-15; **never released** — see below) → `.planning/milestones/v5.13-ROADMAP.md`
+- ⚠️ **v5.14 Hardware Lifecycle Tail — Fleet Coverage & Forecasting** — Phases 157–160, 16 plans (development complete 2026-08-19; **never released** — see below) → `.planning/milestones/v5.14-ROADMAP.md`
 - 🚧 **v5.15 Lifecycle Tail Drain** — Phases 161–163 (in progress)
+
+### Release-integrity note (RVW-004, corrected 2026-08-25)
+
+v5.13 and v5.14 were previously marked ✅ shipped. They were not. **The last
+version published to PyPI is 5.12.0** (2026-08-14), and `pyproject.toml` still
+carried `5.12.0` throughout both milestones — so even the tags contain the wrong
+version string.
+
+Root cause: `release.yml` triggered on `'v*.*.*'`, a **three**-component glob.
+`v5.13` and `v5.14` are two-component tags, so pushing them matched nothing and
+fired no workflow — no run, no failure, no signal. `v5.13` was never pushed to
+origin at all. This is the third occurrence of the same defect; `v5.9` failed
+identically and is recorded in `.github/tag-hygiene-baseline.txt`.
+
+Disposition: the code shipped to `main` and is in use; only the *release* did
+not happen. Rather than retro-publish two versions whose source never carried
+those numbers, the record is corrected here and **v5.15 becomes the next real
+release**, tagged with a 3-component version. `release.yml`'s trigger has been
+broadened to `v[0-9]*` so a malformed tag can no longer silently no-op.
 
 ---
 
