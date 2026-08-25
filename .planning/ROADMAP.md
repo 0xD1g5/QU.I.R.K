@@ -177,7 +177,7 @@ batches that already completed instead of re-probing every batch from zero.
 Plans:
 **Wave 1**
 
-- [ ] 163-01-PLAN.md — NmapOpenPort cache serializer pair (D-07) + Part A mirror-shape tests pinning the per-batch checkpoint/resume rules (DISC-08)
+- [x] 163-01-PLAN.md — NmapOpenPort cache serializer pair (D-07) + Part A mirror-shape tests pinning the per-batch checkpoint/resume rules (DISC-08)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -193,7 +193,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 6/6 | Complete | 2026-08-25 |
 | 162. Check-in Scan Scheduling | 1/1 | Complete | 2026-08-25 |
-| 163. Discovery Batch Checkpoint Granularity | 0/3 | Planned | - |
+| 163. Discovery Batch Checkpoint Granularity | 1/3 | In Progress|  |
 
 ---
 

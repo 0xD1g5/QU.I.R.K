@@ -30,7 +30,7 @@ no net-new capability territory.
 
 ### Discovery Checkpoint Granularity
 
-- [ ] **DISC-08**: A discovery scan interrupted mid-batch resumes from the last completed sub-batch
+- [x] **DISC-08**: A discovery scan interrupted mid-batch resumes from the last completed sub-batch
   boundary rather than re-running the entire in-flight batch, tightening the granularity of the
   existing per-batch checkpoint/resume system (v5.11 Phase 144).
 
@@ -67,4 +67,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HWLC-14 | Phase 161 | Complete |
 | HWLC-19 | Phase 161 | Complete |
 | HWLC-20 | Phase 162 | Pending |
-| DISC-08 | Phase 163 | Pending |
+| DISC-08 | Phase 163 | Complete |

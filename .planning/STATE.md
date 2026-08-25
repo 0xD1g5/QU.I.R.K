@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
-stopped_at: Phase 163 PLANNED (3 plans, 3 waves, plan-checker PASS, 0 blockers). Next: /gsd-execute-phase 163 — last phase of v5.15.
-last_updated: "2026-08-25T00:00:00.000Z"
+stopped_at: "Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15."
+last_updated: "2026-08-25T15:34:16.158Z"
 last_activity: 2026-08-25
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 0
+  completed_phases: 1
+  total_plans: 9
+  completed_plans: 7
+  percent: 33
 ---
 
 # Project State
@@ -22,12 +22,13 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 163 — Discovery Batch Checkpoint Granularity (last phase of v5.15)
+**Current focus:** Phase 163 — discovery-sub-batch-checkpoint-granularity
 
 ## Current Position
 
-Phase: 163 (Discovery Batch Checkpoint Granularity) — PLANNED
-Status: Planned — 3 plans / 3 waves committed (7822669); gsd-plan-checker verdict PASS, 0 blockers, 1 non-blocking paperwork warning (resolved)
+Phase: 163 (discovery-sub-batch-checkpoint-granularity) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-08-25
 Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last phase of v5.15.
       After 163, v5.15 becomes the first real release since v5.12.0 (see RVW-004 note in ROADMAP).
@@ -200,6 +201,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 160 P03 | 35min | 3 tasks | 6 files |
 | Phase 161 P02 | 25min | 3 tasks | 4 files |
 | Phase 161 P01 | 20min | 3 tasks | 5 files |
+| Phase 163 P01 | 30min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -386,6 +388,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 160]: 160-03 D-160-B/F/G/J implemented as locked; VendorPqcTrendEventItem has no host/port/severity/numeric field; Query(50, ge=1, le=200) bound and .limit(limit+1) truncation pattern reused verbatim from the existing /hardware/drift endpoint
 - [Phase 161]: 161-02: build_tech_markdown() uses a plain vendor_pqc_trends kwarg (not exec_content threading) since exec_content doesn't exist yet at the pre-score call site; single non-fatal DB read feeds both CLI markdown and exec_content
 - [Phase 161]: 161-01: notify_on_hardware_lifecycle global opt-in (D-01); HardwareLifecycleSummary sibling content model, not a widened DriftSummary; dispatch_hardware_lifecycle_notifications() fans out to email+webhook only (D-04); composite scan_id host:port:event_type:event_id (D-05); Rule 1 fix branched _channel_send_email on summary type to avoid AttributeError on real hardware-lifecycle delivery
+- [Phase 163]: D-07 serializer import stays function-scoped inside serial_to_open_ports only, avoiding the local-import shadow trap
+- [Phase 163]: The resume-skip guard requires BOTH a checkpoint row AND a live cache hit -- a checkpoint alone never causes a skip
 
 ### Pending Todos
 
@@ -498,7 +502,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-25
+Last session: 2026-08-25T15:31:51.321Z
 Stopped at: Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15.
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
@@ -511,12 +515,15 @@ persisted twice) and RVW-003 (fb23b0d, scan sessions had no stored identity).
 Backend suite 3499 passed, 3 pre-existing failures unchanged.
 
 20 findings remain Open. Next candidates per the action plan's sequencing:
+
 - RVW-005 — no CI workflow has triggered since 2026-08-19; needs no code change
 - RVW-022 — `quirk compliance cmvp refresh` corrupts the cache; blocks RVW-006
   (do NOT run that command until it is fixed)
+
 - RVW-004 — v5.13/v5.14 declared shipped but never released
 - RVW-017 — shared-DB test isolation; directly observed during Milestone A
 - RVW-002 — dashboard's second finding engine disagrees with the report
+
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
