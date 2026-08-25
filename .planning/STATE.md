@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
-stopped_at: Completed 161-02-PLAN.md
-last_updated: "2026-08-20T12:45:14.382Z"
-last_activity: 2026-08-20
+stopped_at: Completed 161-03-PLAN.md; third-party functional review delivered (22 findings, all Open)
+last_updated: "2026-08-24T00:00:00.000Z"
+last_activity: 2026-08-24
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -497,8 +497,25 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-20T12:45:14.378Z
-Stopped at: Completed 161-02-PLAN.md
+Last session: 2026-08-24
+Stopped at: Session resumed. Phase 161 plans 01-03 complete; 04-06 pending.
+Third-party functional review completed 2026-08-24 against commit 49f9094 —
+22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
+docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
+docs/reviews/2026-08-24-functional-review-action-plan.md.
+
+Review Milestone A ("Scan Integrity") is COMPLETE — the two findings that
+corrupted the client deliverable are fixed: RVW-001 (8d3e7f7, endpoints
+persisted twice) and RVW-003 (fb23b0d, scan sessions had no stored identity).
+Backend suite 3499 passed, 3 pre-existing failures unchanged.
+
+20 findings remain Open. Next candidates per the action plan's sequencing:
+- RVW-005 — no CI workflow has triggered since 2026-08-19; needs no code change
+- RVW-022 — `quirk compliance cmvp refresh` corrupts the cache; blocks RVW-006
+  (do NOT run that command until it is fixed)
+- RVW-004 — v5.13/v5.14 declared shipped but never released
+- RVW-017 — shared-DB test isolation; directly observed during Milestone A
+- RVW-002 — dashboard's second finding engine disagrees with the report
 Phase 156 (Reporting & OT/ICS Safety) has no directory or CONTEXT.md yet, awaiting discuss/plan.
 
 Both blocking human-verify checkpoints referenced in prior sessions (141-06 Task 3 badge colors,
