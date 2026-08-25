@@ -23,7 +23,7 @@ commits have never run CI.
 | Severity | Count |
 |---|---|
 | CRITICAL | 1 |
-| HIGH | 5 |
+| HIGH | 6 |
 | MEDIUM | 7 |
 | LOW | 5 |
 | OBSERVATION | 3 |
@@ -444,6 +444,74 @@ undocumented: `test_error_codes_freshness.py`, `test_snmp_scanner_contract.py`.
 | `scanner/hardware_eol.py` | 365d | 2026-08-14 | 10d |
 
 **Verdict:** CONFIRMED.
+
+---
+
+### RVW-022 — HIGH — The documented CMVP remediation would corrupt the compliance cache
+
+**Found while attempting to remediate RVW-006. The fix, as documented, is unsafe.**
+
+`CLAUDE.md` and this review's own action plan both prescribe
+`quirk compliance cmvp refresh` to clear the stale CMVP gate. Running it would **silently
+delete the algorithm list of every FIPS 140-3 module** in the attestation cache.
+
+**Evidence.** `refresh --dry-run` (which genuinely fetches `csrc.nist.gov`) reports
+`Added 0, Removed 0, Changed 43` of 53 modules. Fetching 21 of those 43 and comparing to
+the cache:
+
+| Outcome | Count |
+|---|---|
+| **Zero algorithms after refresh (total data loss)** | **6** |
+| Fewer algorithms | 4 |
+| More algorithms | 9 |
+
+The six zero-result modules are the six highest certificate numbers. Correlating against
+the standard each module is validated under gives a perfect split:
+
+```
+cert    standard   algorithms parsed
+3933    140-2      12
+4055    140-2       9
+4243    140-2       9
+4310    140-2       9
+4407    140-2      11
+4523    140-2      14
+5112    140-3       0   <-- ZERO
+5180    140-3       0   <-- ZERO
+5198    140-3       0   <-- ZERO
+5238    140-3       0   <-- ZERO
+5263    140-3       0   <-- ZERO
+5270    140-3       0   <-- ZERO
+
+140-2: 6 certs, 0 with zero algorithms
+140-3: 6 certs, 6 with zero algorithms
+```
+
+**Root cause.** `cmvp._fetch_cert_detail()` locates algorithms via
+`soup.find("table", id="fips-algo-table")`. NIST does not use that structure on FIPS 140-3
+certificate pages. The code then does `if algo_table:` and falls through to
+`"algorithms": sorted(set(algorithms))` with an empty list — **it does not raise**, despite
+`CMVPRefreshParseError` existing in the module for exactly this condition ("expected page
+structure missing").
+
+**Why this is HIGH rather than a parser nit:**
+
+1. FIPS 140-3 is the **current** standard; 140-2 is being sunset. The parser fails on
+   precisely the modules that matter going forward, and will fail on a growing share of the
+   catalog over time.
+2. The cache feeds the `CMVP Coverage` column in client-facing HTML/PDF reports
+   (UAT-81-03/04), so the loss reaches the deliverable.
+3. Running the refresh would **turn the CI staleness gate green while degrading the data** —
+   the gate goes quiet at the same moment the artefact gets worse. That is the worst
+   possible combination for a freshness control.
+4. The refresh is the project's own documented remediation, so following the runbook is what
+   triggers the damage.
+
+**Not remediated.** The refresh was deliberately **not run**. The stale-cache CI failure
+(RVW-006) therefore remains open, which is the correct state: a red freshness gate is
+strictly better than a green gate over corrupted data.
+
+**Verdict:** CONFIRMED. Evidence tier: live fetch against NIST + source inspection.
 
 ---
 

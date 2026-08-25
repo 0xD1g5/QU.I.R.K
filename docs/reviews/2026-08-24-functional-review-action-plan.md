@@ -67,7 +67,8 @@ component that `scanned_at` cannot provide.
 |---|----|-----|---------|---------|-------------|--------|--------|
 | ☐ | RVW-004 | HIGH | v5.13 and v5.14 declared shipped but never released; v5.14 tag contains `version = "5.12.0"` | release integrity; sensor version reporting | Either publish v5.13/v5.14 properly (bump `pyproject.toml`, run the release workflow) or correct ROADMAP.md to stop claiming they shipped. A milestone must not be markable ✅ shipped without a successful release run. | M | Open |
 | ☐ | RVW-005 | HIGH | Three of four CI workflows red on `main`; the last 19 commits have never run CI | entire verification discipline | Restore all four workflows to green and establish that CI runs on every push to `main`. Investigate why no workflow triggered for commits `d3237a7`..`49f9094`. | M | Open |
-| ☐ | RVW-006 | HIGH | A sixth CI-gated staleness catalog (CMVP) is undocumented — and is the one currently failing | maintenance runbook | Re-verify the CMVP cache and run `quirk compliance cmvp refresh`. Add CMVP, error-codes, and SNMP-contract catalogs to CLAUDE.md's Staleness Review Cadence so the runbook matches `python-staleness.yml`. | S | Open |
+| ☐ | RVW-006 | HIGH | A sixth CI-gated staleness catalog (CMVP) is undocumented — and is the one currently failing | maintenance runbook | Add CMVP, error-codes and SNMP-contract catalogs to CLAUDE.md's Staleness Review Cadence so the runbook matches `python-staleness.yml`. **Do NOT run `quirk compliance cmvp refresh` until RVW-022 is fixed — it would corrupt the cache.** | S | Blocked by RVW-022 |
+| ☐ | RVW-022 | HIGH | `quirk compliance cmvp refresh` silently empties the algorithm list of every FIPS 140-3 module (6/6 sampled); `_fetch_cert_detail` looks for `table#fips-algo-table`, absent on 140-3 pages, and returns `[]` instead of raising | compliance attestation; client reports | `_fetch_cert_detail()` must parse FIPS 140-3 certificate pages, and must raise `CMVPRefreshParseError` when the expected structure is absent rather than returning an empty algorithm list. Add a regression test asserting a known 140-3 cert yields a non-empty algorithm list. **Blocks RVW-006.** | M | Open |
 | ☐ | RVW-017 | MEDIUM | Test isolation is illusory — 31 test files share one process-wide in-memory DB via `cache=shared`; `test_get_schedules_empty` fails after `test_otics_cadence_floor.py` writes a schedule | suite reliability; CI trust | The `dashboard_client` fixture must give each test an isolated database, as its docstring already claims. Options: a per-test unique shared-cache name (`file:test_<uuid>:?cache=shared`), or truncate tables in fixture teardown. **Raised OBSERVATION → MEDIUM: the stated cause (random ordering) was wrong — `pytest-randomly` is not installed — and the real cause affects 31 files.** | M | Open |
 
 ---
@@ -116,7 +117,10 @@ is tight, RVW-001 and RVW-003 are the two that genuinely gate a release.
 **Milestone B — "Release the Backlog."** RVW-004, RVW-005, RVW-006, RVW-013, RVW-017.
 Get CI green, get the version bumped, get v5.13/v5.14 either released or un-claimed. This
 is mostly small work whose value is that it makes Milestone A's fixes verifiable and
-shippable. RVW-006 is a ~15-minute fix that turns two red workflows green.
+shippable. **Correction: RVW-006 is not the quick win this plan originally called it.** Its
+prescribed fix would corrupt the CMVP cache (RVW-022), so RVW-022 must land first. The
+correct immediate step is investigating why CI has not triggered since 2026-08-19 (RVW-005),
+which requires no data changes at all.
 
 **Milestone C — "Trustworthy Gates."** RVW-011, RVW-012, RVW-020.
 Make the suites pass for real reasons so they stop training people to ignore red.
