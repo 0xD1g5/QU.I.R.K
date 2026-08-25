@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-25 (v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+**Last Updated:** 2026-08-25 (v5.15 Phase 163 wrap — Discovery Batch Checkpoint Granularity: UAT-163-01..04 added; UAT-163-02..04 pending human verification (blocking checkpoint). Closes DISC-08. See Series 163. Earlier: v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
 Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
@@ -19001,3 +19001,114 @@ presence rather than appearance.
 `check-in` chip renders on the check-in row only, in advisory teal rather than a severity
 colour; the check-in row's Target reads `(known fleet)` and the normal row's `10.0.0.0/24`;
 existing columns render unchanged.
+
+---
+
+## Series 163: Discovery Batch Checkpoint Granularity (Phase 163 — v5.15)
+
+**Last Updated:** 2026-08-25
+
+### UAT-163-01: Batch checkpoint/resume test suites pass, existing parity lock unmodified (DISC-08) — Automated
+
+**What to test:** The Part A mirror-shape/integration suite and the Part B AST-structural suite
+added in Plans 163-01/163-02 pass, and the pre-existing Phase 146 CLI/dashboard parity lock is
+untouched by this phase's wiring.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_discovery_batch_checkpoint.py -x -q`.
+2. `.venv/bin/python -m pytest tests/test_cli_dashboard_discovery_parity.py -x -q`.
+
+**Pass criteria:**
+- Both pytest invocations exit 0
+- `tests/test_cli_dashboard_discovery_parity.py` is unmodified from before Phase 163 (git diff
+  against the pre-phase tree is empty for that file)
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 163)
+**Notes:** DISC-08. 20/20 tests pass in `tests/test_discovery_batch_checkpoint.py` (11 Part A +
+9 Part B); `test_cli_dashboard_discovery_parity.py` confirmed unmodified per 163-02-SUMMARY.md.
+
+---
+
+### UAT-163-02: A batch write lands without `--cache` (D-02 canary) (DISC-08) — Semi-automated
+
+**What to test:** Per-batch checkpoint and cache writes are gated on `--db-path` alone, never on
+`--cache` — the D-02 decision that resume state must work independently of the whole-stage cache.
+
+**Steps:**
+1. Run a small discovery scan with a `--db-path` set and **without** `--cache`, e.g.
+   `python run_scan.py --discovery nmap --db-path ./quirk.db --output-dir ./out <small-target>`.
+2. Inspect `{output_dir}/.cache/` for `discovery-batch-<scan_run_id>-1.json`.
+3. Query the database: `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`.
+
+**Pass criteria:**
+- At least one `discovery:batch-N` row exists with `status = 'completed'`
+- The matching cache file `discovery-batch-<scan_run_id>-N.json` exists
+- Both are present even though `--cache` was never passed
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** —  **Tester:** —
+**Notes:** DISC-08 / D-02. Deferred to human execution alongside UAT-163-04's end-to-end
+walkthrough — see the checkpoint gate in Plan 163-03 Task 4.
+
+---
+
+### UAT-163-03: Resume skips completed batches and matches the original inventory (DISC-08) — Semi-automated
+
+**What to test:** Re-running with `--resume-scan-id <id>` after UAT-163-02 skips the previously
+completed batches and produces an equivalent inventory.
+
+**Steps:**
+1. Re-run the identical command from UAT-163-02 with `--resume-scan-id <id>` added.
+2. Watch the console for `Discovery: batch N/M — skipped (completed on a prior run)` lines.
+3. Compare total wall time and the resulting inventory host/port count against the original run.
+
+**Pass criteria:**
+- Skip lines appear for every batch that was `completed` in UAT-163-02
+- Total wall time is materially shorter than an unresumed run over the same target
+- The resulting inventory host/port count matches the original (uninterrupted) run's
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** —  **Tester:** —
+**Notes:** DISC-08. Deferred to human execution alongside UAT-163-04 — see the checkpoint gate
+in Plan 163-03 Task 4.
+
+---
+
+### UAT-163-04: End-to-end interrupted-and-resumed discovery on a real multi-batch range (DISC-08) — HUMAN
+
+**What to test:** The manual-only verification from `163-VALIDATION.md`: a genuinely interrupted
+(Ctrl-C, not simulated) discovery scan against a real range larger than 1024 hosts, resumed via
+`--resume-scan-id`, skips completed batches and produces an inventory equivalent to an
+uninterrupted full scan. This is the T-163-01 check — zero silently dropped hosts.
+
+**Steps:**
+1. Confirm the automated gate first: `pytest tests/test_discovery_batch_checkpoint.py -x -q` and
+   `pytest -x -q` both exit 0.
+2. Start `quirk scan --discovery nmap` (or `python run_scan.py --discovery nmap`) against a
+   configured range larger than 1024 hosts, with a `--db-path` set. Do NOT pass `--cache`.
+3. Watch for `Discovery: batch N/M (X hosts checked)` lines. After at least 3 batches have
+   printed, press `Ctrl-C`.
+4. Note the `scan_run_id`. Confirm state landed via
+   `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`
+   and `ls ./out/.cache/discovery-batch-<id>-*.json`.
+5. Re-run the identical command with `--resume-scan-id <id>` added.
+6. Confirm the previously completed batches print
+   `Discovery: batch N/M — skipped (completed on a prior run)` and complete near-instantly.
+7. Confirm the final inventory (host/port count in the report or DB) equals an uninterrupted
+   reference scan over the same range — no hosts silently dropped.
+8. Read `docs/operators-guide.md` §13 and confirm the disk-usage note and the target-scope-change
+   warning make sense as an operator.
+
+**Pass criteria:**
+- The interrupted run produced at least 3 `discovery:batch-N` rows with `status = 'completed'`
+  and one matching cache file per row, without `--cache` having been passed
+- The resumed run printed a skip line for each of those batches and issued no nmap subprocess
+  for them
+- The resumed run's final host/port inventory count equals the uninterrupted reference scan's
+- The operator confirms §13's disk-usage and target-scope-change text is clear and accurate
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** —  **Tester:** —
+**Notes:** DISC-08 / T-163-01. Awaiting human verification — see the blocking checkpoint gate in
+Plan 163-03 Task 4.
