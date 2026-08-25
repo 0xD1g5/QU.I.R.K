@@ -68,7 +68,7 @@ milestone — no urgent insertions anticipated.
 
 - [x] **Phase 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing** - Consultants get proactive tier-crossing/EOL notifications via the existing fan-out layer, and the previously-unconsumed vendor PQC-trend backend gets its first dashboard and report home.
 - [x] **Phase 162: Check-in Scan Scheduling** - HWLC-13's on-demand check-in re-probe mode can be put on a recurring cadence through the existing `quirk schedule` CRUD/dispatcher.
-- [ ] **Phase 163: Discovery Sub-Batch Checkpoint Granularity** - An interrupted discovery scan resumes from the last completed sub-batch instead of re-running the whole in-flight batch, tightening the v5.11 per-batch checkpoint system.
+- [ ] **Phase 163: Discovery Batch Checkpoint Granularity** - An interrupted discovery scan resumed via `--resume-scan-id` skips the batches that already completed instead of re-probing every batch from zero (builds the per-batch layer the roadmap wrongly assumed existed).
 
 ## Phase Details
 
@@ -143,29 +143,49 @@ CRUD/dispatcher and Phase 159's `--check-in` mode)
      types, so a consultant can tell at a glance which schedules are lightweight re-probes.
 **Plans**: TBD
 
-### Phase 163: Discovery Sub-Batch Checkpoint Granularity
+### Phase 163: Discovery Batch Checkpoint Granularity
 
-**Goal**: An interrupted discovery scan resumes from the last completed sub-batch boundary rather
-than re-running the entire in-flight batch, tightening the granularity of the v5.11 Phase 144
-per-batch checkpoint/resume system.
+**Goal**: A discovery scan interrupted mid-run and resumed via `--resume-scan-id` skips the
+batches that already completed instead of re-probing every batch from zero.
+
+> **Scope correction (2026-08-25, during `/gsd-discuss-phase 163`).** This entry previously
+> described the phase as "tightening the granularity of the v5.11 Phase 144 per-batch
+> checkpoint/resume system." That system does not exist — verified against the tree:
+> `write_scan_checkpoint(..., "discovery", ...)` fires ONCE after the whole loop
+> (`run_scan.py:1824`) and `_completed_stages` is a set of stage NAMES, so an interrupted
+> discovery re-runs every batch. This phase BUILDS the missing per-batch layer. True sub-batch
+> (intra-batch) resume is explicitly DEFERRED. See `163-CONTEXT.md` for the full decision record.
+
 **Depends on**: Nothing (independent of Phases 161–162; different subsystem — extends v5.11 Phase
 144's discovery chunking, not the hardware-lifecycle arc)
 **Requirements**: DISC-08
-**Success Criteria** (what must be TRUE):
+**Success Criteria** (what must be TRUE) — rewritten per 163-CONTEXT.md:
 
-  1. A discovery scan interrupted mid-batch, when resumed via `--resume-scan-id`, does not
-     re-probe hosts within that batch that were already completed before the interruption.
+  1. A discovery scan interrupted mid-run, resumed via `--resume-scan-id`, does not re-probe hosts
+     in batches that completed before the interruption.
 
-  2. Sub-batch checkpoint state persists via the existing `ScanCheckpoint` mechanism — no new
-     checkpoint table or parallel persistence pattern is introduced.
+  2. Batch checkpoint state persists via the existing `ScanCheckpoint` mechanism — no new table,
+     no parallel persistence pattern.
 
-  3. Per-batch failure isolation (v5.11 DISC-02) is preserved unchanged — sub-batch checkpointing
-     does not alter how a wholly unresponsive batch is handled.
+  3. Per-batch failure isolation (v5.11 DISC-02) is preserved unchanged — a failed batch writes no
+     completion checkpoint and is re-attempted on resume.
 
-  4. Both CLI `--discovery nmap` and dashboard-initiated discovery benefit from the tightened
-     checkpoint granularity through the single shared chunked-discovery call site (the v5.11
-     DISC-06 AST-locked invariant continues to hold).
-**Plans**: TBD
+  4. Both CLI `--discovery nmap` and dashboard-initiated discovery benefit via the single shared
+     chunked-discovery call site (the v5.11 DISC-06 AST-locked invariant continues to hold).
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 163-01-PLAN.md — NmapOpenPort cache serializer pair (D-07) + Part A mirror-shape tests pinning the per-batch checkpoint/resume rules (DISC-08)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 163-02-PLAN.md — Part B AST-structural tests, then the resume-skip guard and per-batch checkpoint+cache write inside run_scan.py's chunked loop (DISC-08)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 163-03-PLAN.md — Operators-guide section 13, UAT Series 163, Obsidian vault sync, and the HUMAN-UAT resume walkthrough (DISC-08)
 
 ### Progress
 
@@ -173,7 +193,7 @@ per-batch checkpoint/resume system.
 |-------|----------------|--------|-----------|
 | 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 6/6 | Complete | 2026-08-25 |
 | 162. Check-in Scan Scheduling | 1/1 | Complete | 2026-08-25 |
-| 163. Discovery Sub-Batch Checkpoint Granularity | 0/TBD | Not started | - |
+| 163. Discovery Batch Checkpoint Granularity | 0/3 | Planned | - |
 
 ---
 
