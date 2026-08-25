@@ -1,8 +1,8 @@
 ---
 phase: 163
 slug: discovery-sub-batch-checkpoint-granularity
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-25
 ---
@@ -130,11 +130,16 @@ verified by Plan 163-03 Task 1's grep acceptance criteria, not by a pytest case.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-08-25 (gsd-plan-checker independently audited sign-off
+items 8a–8d; all pass. `wave_0_complete` stays `false` and the verification-map
+rows stay `⬜ pending` on purpose — Wave 0 creates
+`tests/test_discovery_batch_checkpoint.py`, which does not exist yet. Flip both
+during `/gsd-execute-phase 163`, before any ROADMAP.md commit, per the recurring
+row-lag gap seen on Phases 157–159.)

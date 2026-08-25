@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
-stopped_at: Phase 162 COMPLETE (UAT-162-04 human-verified). HWLC-20 closed. Next: Phase 163 (DISC-08), last of v5.15.
-last_updated: "2026-08-24T00:00:00.000Z"
-last_activity: 2026-08-24
+stopped_at: Phase 163 PLANNED (3 plans, 3 waves, plan-checker PASS, 0 blockers). Next: /gsd-execute-phase 163 — last phase of v5.15.
+last_updated: "2026-08-25T00:00:00.000Z"
+last_activity: 2026-08-25
 progress:
   total_phases: 3
   completed_phases: 2
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** Phase 161 — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing
+**Current focus:** Phase 163 — Discovery Batch Checkpoint Granularity (last phase of v5.15)
 
 ## Current Position
 
-Phase: 162 (Check-in Scan Scheduling) — COMPLETE
-Status: Complete — UAT-162-04 human-verified and approved 2026-08-25
+Phase: 163 (Discovery Batch Checkpoint Granularity) — PLANNED
+Status: Planned — 3 plans / 3 waves committed (7822669); gsd-plan-checker verdict PASS, 0 blockers, 1 non-blocking paperwork warning (resolved)
 Last activity: 2026-08-25
 Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last phase of v5.15.
       After 163, v5.15 becomes the first real release since v5.12.0 (see RVW-004 note in ROADMAP).
@@ -38,7 +38,7 @@ Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last p
 |-------|------|--------------|------|--------|
 | 161 | Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | HWLC-14, HWLC-19 | None (first, independent) | ✅ Complete (2026-08-25) |
 | 162 | Check-in Scan Scheduling | HWLC-20 | None (independent of 161) | ✅ Complete (2026-08-25) |
-| 163 | Discovery Sub-Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | Not started |
+| 163 | Discovery Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | Planned (3 plans, 2026-08-25) |
 
 ## v5.14 Phase Map (SHIPPED 2026-08-19)
 
@@ -499,7 +499,7 @@ and disposition detail.
 ## Session Continuity
 
 Last session: 2026-08-25
-Stopped at: Session resumed. Phases 161 + 162 complete; Phase 163 CONTEXT.md written, awaiting /gsd-plan-phase 163 (last phase of v5.15).
+Stopped at: Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15.
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
