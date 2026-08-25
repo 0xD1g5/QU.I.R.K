@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
-stopped_at: Phase 161 COMPLETE (all 6 plans + UAT-161-04 human-verified). HWLC-14 + HWLC-19 closed.
+stopped_at: Phase 162 COMPLETE (UAT-162-04 human-verified). HWLC-20 closed. Next: Phase 163 (DISC-08), last of v5.15.
 last_updated: "2026-08-24T00:00:00.000Z"
 last_activity: 2026-08-24
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
   completed_plans: 6
   percent: 0
@@ -26,18 +26,18 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 ## Current Position
 
-Phase: 161 (Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing) — COMPLETE
-Plan: 6 of 6
-Status: Complete — UAT-161-04 human-verified and approved 2026-08-25
+Phase: 162 (Check-in Scan Scheduling) — COMPLETE
+Status: Complete — UAT-162-04 human-verified and approved 2026-08-25
 Last activity: 2026-08-25
-Next: Phase 162 (Check-in Scan Scheduling, HWLC-20) — independent, unblocked
+Next: Phase 163 (Discovery Sub-Batch Checkpoint Granularity, DISC-08) — last phase of v5.15.
+      After 163, v5.15 becomes the first real release since v5.12.0 (see RVW-004 note in ROADMAP).
 
 ## v5.15 Phase Map (planning)
 
 | Phase | Name | Requirements | Gate | Status |
 |-------|------|--------------|------|--------|
 | 161 | Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | HWLC-14, HWLC-19 | None (first, independent) | ✅ Complete (2026-08-25) |
-| 162 | Check-in Scan Scheduling | HWLC-20 | None (independent of 161) | Not started |
+| 162 | Check-in Scan Scheduling | HWLC-20 | None (independent of 161) | ✅ Complete (2026-08-25) |
 | 163 | Discovery Sub-Batch Checkpoint Granularity | DISC-08 | None (independent; different subsystem) | Not started |
 
 ## v5.14 Phase Map (SHIPPED 2026-08-19)

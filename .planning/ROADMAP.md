@@ -67,7 +67,7 @@ milestone — no urgent insertions anticipated.
 ### Phases
 
 - [x] **Phase 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing** - Consultants get proactive tier-crossing/EOL notifications via the existing fan-out layer, and the previously-unconsumed vendor PQC-trend backend gets its first dashboard and report home.
-- [ ] **Phase 162: Check-in Scan Scheduling** - HWLC-13's on-demand check-in re-probe mode can be put on a recurring cadence through the existing `quirk schedule` CRUD/dispatcher.
+- [x] **Phase 162: Check-in Scan Scheduling** - HWLC-13's on-demand check-in re-probe mode can be put on a recurring cadence through the existing `quirk schedule` CRUD/dispatcher.
 - [ ] **Phase 163: Discovery Sub-Batch Checkpoint Granularity** - An interrupted discovery scan resumes from the last completed sub-batch instead of re-running the whole in-flight batch, tightening the v5.11 per-batch checkpoint system.
 
 ## Phase Details
@@ -126,6 +126,7 @@ Phase 63.
 **Depends on**: Nothing new (independent of Phase 161; extends Phase 63's `quirk schedule`
 CRUD/dispatcher and Phase 159's `--check-in` mode)
 **Requirements**: HWLC-20
+**Status**: ✅ Complete 2026-08-25 — executed inline; see 162-VERIFICATION.md
 **Success Criteria** (what must be TRUE):
 
   1. Consultant can create a scheduled check-in job via `quirk schedule` CRUD, distinct from a

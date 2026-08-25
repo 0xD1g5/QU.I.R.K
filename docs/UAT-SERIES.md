@@ -18995,6 +18995,9 @@ presence rather than appearance.
 - Target column reads `(known fleet)` for check-in schedules
 - Existing schedule rows render unchanged
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** _pending_  **Tester:** _pending human verification_
-**Notes:** HWLC-20 D-04.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** Digs (human visual verification)
+**Notes:** HWLC-20 D-04. Verified against two seeded schedules on a scratch database: the
+`check-in` chip renders on the check-in row only, in advisory teal rather than a severity
+colour; the check-in row's Target reads `(known fleet)` and the normal row's `10.0.0.0/24`;
+existing columns render unchanged.
