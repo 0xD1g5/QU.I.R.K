@@ -16,6 +16,10 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
+# RVW-002: share the report engine's tri-state chain-verification logic rather
+# than reimplementing it here. Two implementations of 'did the chain verify?'
+# is how the two surfaces drifted apart in the first place.
+from quirk.engine.findings_evaluator import _chain_verified
 from quirk.scanner.hardware_tier import TIER_ORDER as _TIER_ORDER  # Phase 155 D-04: shared tier ordering
 from quirk.dashboard.api.schemas import (
     CbomComponent,
@@ -203,7 +207,12 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                     segment=ep.segment,
                 ))
 
-        # Weak RSA key
+        # RVW-002: title and severity are the report engine's, verbatim.
+        # This used to read "Weak RSA key: N bits" at CRITICAL while
+        # findings_evaluator called the same condition "TLS certificate uses
+        # undersized RSA key" at HIGH — the operator console and the client
+        # deliverable disagreeing about the same endpoint. Parity is asserted by
+        # tests/test_finding_engine_parity.py.
         if (
             ep.cert_pubkey_alg
             and ep.cert_pubkey_alg.upper().startswith("RSA")
@@ -214,12 +223,70 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
                 id=ep.id,
                 host=ep.host,
                 port=ep.port,
-                severity="CRITICAL",
-                title=f"Weak RSA key: {ep.cert_pubkey_size} bits",
+                severity="HIGH",
+                title="TLS certificate uses undersized RSA key",
                 protocol="TLS",
-                description=f"Certificate uses {ep.cert_pubkey_size}-bit RSA key, below the 2048-bit minimum.",
-                remediation="Replace certificate with RSA-2048 minimum or switch to ECDSA P-256.",
+                description=(
+                    f"Certificate uses a {ep.cert_pubkey_size}-bit RSA key, below the "
+                    f"classical 2048-bit minimum."
+                ),
+                remediation=(
+                    f"RSA-{ep.cert_pubkey_size} is below the 2048-bit classical minimum. "
+                    f"Migrate to RSA-2048+ or ECDSA P-256 immediately."
+                ),
                 quantum_risk="Vulnerable",
+                source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
+            ))
+
+        # RVW-002 / TLS-FIND-02 / TLS-FIND-03: self-signed and untrusted-CA.
+        # The dashboard had neither detection, so an operator triaging in the
+        # console never saw a finding the client's report did carry. Mutually
+        # exclusive per D-04 — a self-signed cert is a strict subset of "chain
+        # didn't verify", and emitting both is redundant noise. The untrusted-CA
+        # branch fires only on an explicit False, never on an indeterminate None.
+        _issuer = (ep.cert_issuer or "").strip()
+        _subject = (ep.cert_subject or "").strip()
+        if _issuer and _subject and _issuer == _subject:
+            findings.append(FindingItem(
+                id=ep.id,
+                host=ep.host,
+                port=ep.port,
+                severity="HIGH",
+                title="TLS certificate is self-signed",
+                protocol="TLS",
+                description=(
+                    "This certificate is self-signed and is not issued by a trusted "
+                    "certificate authority. Clients cannot verify the server's identity "
+                    "and are exposed to man-in-the-middle interception."
+                ),
+                remediation=(
+                    "Replace with a certificate issued by a trusted CA (public or "
+                    "internal PKI)."
+                ),
+                quantum_risk=None,
+                source="tls",
+                sensor_id=ep.sensor_id,
+                segment=ep.segment,
+            ))
+        elif _issuer and _subject and _chain_verified(ep) is False:
+            findings.append(FindingItem(
+                id=ep.id,
+                host=ep.host,
+                port=ep.port,
+                severity="MEDIUM",
+                title="TLS certificate issued by untrusted CA",
+                protocol="TLS",
+                description=(
+                    "This certificate chains to a certificate authority not in the "
+                    "system trust store. Clients cannot verify the server's identity."
+                ),
+                remediation=(
+                    "Replace with a certificate from a publicly trusted CA, or add the "
+                    "issuing CA to the system trust store if it is an internal PKI."
+                ),
+                quantum_risk=None,
                 source="tls",
                 sensor_id=ep.sensor_id,
                 segment=ep.segment,
