@@ -171,8 +171,8 @@ per-batch checkpoint/resume system.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 2/6 | In Progress|  |
-| 162. Check-in Scan Scheduling | 0/TBD | Not started | - |
+| 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 6/6 | Complete | 2026-08-25 |
+| 162. Check-in Scan Scheduling | 1/1 | Complete | 2026-08-25 |
 | 163. Discovery Sub-Batch Checkpoint Granularity | 0/TBD | Not started | - |
 
 ---
