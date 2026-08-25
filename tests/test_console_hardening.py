@@ -31,6 +31,7 @@ from fastapi.testclient import TestClient
 from quirk.dashboard.api.app import create_app
 from quirk.dashboard.api.deps import get_db
 from quirk.models import Base, IntegrationDelivery
+from tests.conftest import make_isolated_memory_engine
 
 
 # ---------------------------------------------------------------------------
@@ -195,11 +196,9 @@ def test_push_from_off_allowlist_source_rejected(monkeypatch):
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     monkeypatch.setenv("QUIRK_SENSOR_IP_ALLOWLIST", "203.0.113.0/24")
 
-    engine = create_engine(
-        "sqlite:///file::memory:?cache=shared&uri=true",
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(engine)
+    # RVW-017: a per-test database. This used to be the process-wide
+    # anonymous shared-cache DB, which every other test file also joined.
+    engine = make_isolated_memory_engine()
     TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
     def override_get_db():

@@ -18,6 +18,7 @@ from typing import Optional
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import SCORE_WEIGHTS, compute_readiness_score
 from quirk.dashboard.api.schemas import IdentityFinding, ScanLatestResponse
+from tests.conftest import make_isolated_memory_engine
 
 # ---------------------------------------------------------------------------
 # Conditional import for derivation function — SKIP if not yet implemented
@@ -495,11 +496,9 @@ class Issue3ScanWindowRegressionTest(unittest.TestCase):
             self.skipTest("Dashboard dependencies not available")
 
         # In-memory SQLite (mirrors conftest.py pattern)
-        engine = create_engine(
-            "sqlite:///file::memory:?cache=shared&uri=true",
-            connect_args={"check_same_thread": False},
-        )
-        Base.metadata.create_all(engine)
+        # RVW-017: a per-test database. This used to be the process-wide
+        # anonymous shared-cache DB, which every other test file also joined.
+        engine = make_isolated_memory_engine()
         TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
         def override_get_db():

@@ -38,6 +38,7 @@ from quirk.dashboard.api.app import create_app
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.sensor_auth import require_sensor_auth
 from quirk.models import Base, Sensor, SensorPush, SensorToken
+from tests.conftest import make_isolated_memory_engine
 
 
 # ---------------------------------------------------------------------------
@@ -45,11 +46,9 @@ from quirk.models import Base, Sensor, SensorPush, SensorToken
 # ---------------------------------------------------------------------------
 
 def _make_test_engine():
-    engine = create_engine(
-        "sqlite:///file::memory:?cache=shared&uri=true",
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(engine)
+    # RVW-017: a per-test database. This used to be the process-wide
+    # anonymous shared-cache DB, which every other test file also joined.
+    engine = make_isolated_memory_engine()
     return engine
 
 
@@ -155,7 +154,6 @@ def _make_malformed_sensor_id_override(malformed_id: str):
 # Test 1 (RED): path-traversal sensor_id rejected with 400 before any DB write
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="TRIAGE-149: shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files that write SensorPush rows; the 400/0-new-rows contract itself is correct, the count includes leftover rows from earlier tests in full-suite order); see docs/test-triage-149.md#test_sensor_push_id_revalidationpy-test_malformed_sensor_id_path_traversal_rejected", strict=False)
 def test_malformed_sensor_id_path_traversal_rejected(monkeypatch):
     """AUDIT-08 RED: a path-traversal sensor_id must be rejected with 400.
 
@@ -203,7 +201,6 @@ def test_malformed_sensor_id_path_traversal_rejected(monkeypatch):
         db.close()
 
 
-@pytest.mark.xfail(reason="TRIAGE-149: shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files that write SensorPush rows; the 400/0-new-rows contract itself is correct, the count includes leftover rows from earlier tests in full-suite order); see docs/test-triage-149.md#test_sensor_push_id_revalidationpy-test_malformed_sensor_id_short_string_rejected", strict=False)
 def test_malformed_sensor_id_short_string_rejected(monkeypatch):
     """AUDIT-08 RED: a non-UUID sensor_id like "abc" must be rejected with 400.
 

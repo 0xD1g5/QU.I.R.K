@@ -344,7 +344,6 @@ def test_trends_timeline_n_validation(dashboard_client):
     )
 
 
-@pytest.mark.xfail(reason="TRIAGE-149: shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files; an earlier test's leftover session row can leak into this empty-DB assertion depending on full-suite timing, same root cause as test_sensor_push_id_revalidation.py); see docs/test-triage-149.md#reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake", strict=False)
 def test_trends_timeline_empty(dashboard_client):
     """TREND-01: Empty DB returns HTTP 200 with sessions == []."""
     resp = dashboard_client.get("/api/trends/timeline")

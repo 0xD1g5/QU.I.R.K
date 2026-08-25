@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from quirk.dashboard.api.app import create_app
 from quirk.dashboard.api.deps import get_db
 from quirk.models import Base, ScheduledRun
+from tests.conftest import make_isolated_memory_engine
 
 
 # --------------------------------------------------------------------------
@@ -24,11 +25,9 @@ from quirk.models import Base, ScheduledRun
 # --------------------------------------------------------------------------
 
 def _make_test_engine():
-    engine = create_engine(
-        "sqlite:///file::memory:?cache=shared&uri=true",
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(engine)
+    # RVW-017: a per-test database. This used to be the process-wide
+    # anonymous shared-cache DB, which every other test file also joined.
+    engine = make_isolated_memory_engine()
     return engine
 
 
@@ -236,15 +235,12 @@ def test_get_includes_last_run_status(dashboard_client):
     schedule_id = create_resp.json()["id"]
 
     # Directly seed a ScheduledRun row via the app's DB session
-    from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
-    # Use the same in-memory DB via the shared-cache URI
-    engine = create_engine(
-        "sqlite:///file::memory:?cache=shared&uri=true",
-        connect_args={"check_same_thread": False},
-    )
-    TestingSession = sessionmaker(bind=engine)
+    # RVW-017: bind to THIS test's engine. This used to rebuild the process-wide
+    # shared-cache URI from a literal; with per-test database names there is no
+    # well-known URI to reconstruct, which is exactly the point.
+    TestingSession = sessionmaker(bind=dashboard_client.quirk_engine)
     db = TestingSession()
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     run = ScheduledRun(

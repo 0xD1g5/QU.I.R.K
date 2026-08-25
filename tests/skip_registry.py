@@ -134,8 +134,6 @@ ALLOWED_SKIPS = [
     ("test_auto_merge_trigger.py",          408, "pre_existing_triage_149", "TRIAGE-149: outdated-fixture (AUDIT-08 UUID-shape guard added after these fixtures; fixture IDs need updating to valid UUIDs); see docs/test-triage-149.md#test_auto_merge_triggerpy-test_merge_failure_isolated"),
     ("test_auto_merge_trigger.py",          462, "pre_existing_triage_149", "TRIAGE-149: outdated-fixture (AUDIT-08 UUID-shape guard added after these fixtures; fixture IDs need updating to valid UUIDs); see docs/test-triage-149.md#test_auto_merge_triggerpy-test_double_fire_harmless"),
     ("test_auto_merge_trigger.py",          514, "pre_existing_triage_149", "TRIAGE-149: outdated-fixture (AUDIT-08 UUID-shape guard added after these fixtures; fixture IDs need updating to valid UUIDs); see docs/test-triage-149.md#test_auto_merge_triggerpy-test_cadence_window_triggers"),
-    ("test_sensor_push_id_revalidation.py", 158, "pre_existing_triage_149", "TRIAGE-149: shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files that write SensorPush rows; the 400/0-new-rows contract itself is correct); see docs/test-triage-149.md#test_sensor_push_id_revalidationpy-test_malformed_sensor_id_path_traversal_rejected"),
-    ("test_sensor_push_id_revalidation.py", 206, "pre_existing_triage_149", "TRIAGE-149: shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files that write SensorPush rows; the 400/0-new-rows contract itself is correct); see docs/test-triage-149.md#test_sensor_push_id_revalidationpy-test_malformed_sensor_id_short_string_rejected"),
 
     # Phase 149 Plan 06: Cluster 9 Group A (scanner/detection-logic failures) — see docs/test-triage-149.md
     ("test_jwt_hardening.py",       31, "pre_existing_triage_149", "TRIAGE-149: DNS-blocked sandbox (idp.example.com fails CR-03's validate_external_url() dns_failure check before httpx.get is reached); see docs/test-triage-149.md#jwt-hardening-dns-blocked"),
@@ -213,7 +211,6 @@ ALLOWED_SKIPS = [
     # test_dashboard_trends.py was never touched by any Plan 01-11 and has no ledger row,
     # but full-suite runs can intermittently reproduce it (timing-dependent, not always
     # reproducible; 2 clean local full-suite runs post-fix, reviewer reproduced it twice).
-    ("test_dashboard_trends.py",        347, "pre_existing_triage_149", "TRIAGE-149 (code review CR-01): shared in-memory SQLite cache pollution (file::memory:?cache=shared&uri=true is a single process-wide DB shared with other test files); an earlier test's leftover session row can leak into this empty-DB assertion depending on full-suite timing, same root cause as test_sensor_push_id_revalidation.py. Missed by Plan 11's reconciliation sweep because it doesn't always reproduce. See docs/test-triage-149.md#reconciliation-cr-01-test_dashboard_trendspy-orphaned-flake"),
 
     # Phase 150 Plan 08 remediation cycle: the new `./lab.sh certs` regression test
     # (Plan 05) forks bash -> openssl subprocesses, and joins the same pre-existing

@@ -25,14 +25,13 @@ from fastapi.testclient import TestClient
 from quirk.dashboard.api.app import create_app
 from quirk.dashboard.api.deps import get_db
 from quirk.models import Base
+from tests.conftest import make_isolated_memory_engine
 
 
 def _make_test_engine():
-    engine = create_engine(
-        "sqlite:///file::memory:?cache=shared&uri=true",
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(engine)
+    # RVW-017: a per-test database. This used to be the process-wide
+    # anonymous shared-cache DB, which every other test file also joined.
+    engine = make_isolated_memory_engine()
     return engine
 
 

@@ -105,29 +105,82 @@ def _patch_sha1_signing():
 _patch_sha1_signing()
 
 
+def make_isolated_memory_engine():
+    """RVW-017: build an in-memory SQLite engine that is private to one test.
+
+    The repo-wide idiom used to be ``sqlite:///file::memory:?cache=shared&uri=true``.
+    That URI names SQLite's *anonymous* shared-cache database, of which there is
+    exactly one per process — so 16 test files were not each getting "a shared
+    in-memory DB", they were all getting **the same one**. Rows written by one
+    file were visible to every other, which is why
+    ``test_schedules_api.py::test_get_schedules_empty`` failed in CI whenever
+    ``test_otics_cadence_floor.py`` ran first, and why three tests sit skipped in
+    ``skip_registry.py`` under "shared in-memory SQLite cache pollution".
+
+    ``file:<uuid>?mode=memory&cache=shared`` keeps the property those tests
+    actually needed — shared-cache, so FastAPI's sync-route worker thread sees
+    the same data — while giving each caller its own database.
+
+    ``StaticPool`` is required, not cosmetic: a *named* in-memory database is
+    destroyed when its last connection closes, so without a pool that holds one
+    open, the schema can evaporate between requests.
+
+    Callers own the engine and should ``engine.dispose()`` when done.
+    """
+    import uuid
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    from quirk.models import Base
+
+    engine = create_engine(
+        f"sqlite:///file:quirk_test_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    return engine
+
+
 @pytest.fixture
 def dashboard_client():
-    """FastAPI TestClient for the dashboard app with an in-memory test database.
+    """FastAPI TestClient for the dashboard app with a per-test in-memory database.
 
-    Overrides the get_db dependency to use a fresh in-memory SQLite DB so
-    tests pass without requiring a real data/quirk.db file.
+    RVW-017: each test gets its OWN database. This fixture previously used
+    ``file::memory:?cache=shared`` — SQLite's *anonymous* shared-cache database,
+    of which there is exactly one per process. Every connection naming that URI
+    joins the same database, which is what let FastAPI's worker thread see the
+    tables, and equally what let 31 test files write into each other's state.
+    ``test_get_schedules_empty`` failed in full-suite runs because
+    ``test_otics_cadence_floor.py`` had already written schedule rows into the
+    one shared database. The old docstring's claim of "a fresh in-memory SQLite
+    DB" was simply untrue.
+
+    Three properties make isolation real here:
+
+    * **A unique database name per test.** ``file:<uuid>?mode=memory&cache=shared``
+      keeps shared-cache semantics — so the worker thread FastAPI uses for sync
+      route handlers still sees the same data — while giving each test its own
+      database rather than joining the process-wide one.
+    * **StaticPool.** A *named* in-memory database is destroyed the moment its
+      last connection closes. StaticPool holds one connection for the engine's
+      lifetime, so the schema cannot evaporate between requests.
+    * **Teardown.** The fixture now yields rather than returns, closing the
+      client and disposing the engine. Without this, ~31 in-memory databases
+      would accumulate for the length of the run.
+
+    A test that needs to seed rows directly must use ``client.quirk_engine``
+    rather than rebuilding a URI — with per-test names there is no longer a
+    well-known URI to reconstruct, which is the point.
     """
     try:
-        from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
         from quirk.dashboard.api.app import create_app
         from quirk.dashboard.api.deps import get_db
-        from quirk.models import Base
         from fastapi.testclient import TestClient
 
-        # Create a shared in-memory SQLite DB with all tables.
-        # Use file::memory:?cache=shared so the same DB is accessible from
-        # the worker thread FastAPI uses for sync route handlers.
-        engine = create_engine(
-            "sqlite:///file::memory:?cache=shared&uri=true",
-            connect_args={"check_same_thread": False},
-        )
-        Base.metadata.create_all(engine)
+        engine = make_isolated_memory_engine()
         TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
         def override_get_db():
@@ -139,6 +192,14 @@ def dashboard_client():
 
         app = create_app()
         app.dependency_overrides[get_db] = override_get_db
-        return TestClient(app, headers={"X-Quirk-Request": "1"})
+        client = TestClient(app, headers={"X-Quirk-Request": "1"})
+        # Seam for tests that need to write rows directly into this test's DB.
+        client.quirk_engine = engine
+        try:
+            yield client
+        finally:
+            client.close()
+            app.dependency_overrides.clear()
+            engine.dispose()
     except ImportError as exc:
         pytest.fail("quirk.dashboard import failed unexpectedly: " + repr(exc))
