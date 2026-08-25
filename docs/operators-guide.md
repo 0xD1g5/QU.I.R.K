@@ -1902,3 +1902,83 @@ exact keys that were stripped from the generated config, and the reason (cadence
 or the recurring opt-in being off). This line is emitted at INFO level on every suppressed
 dispatch — it is the single place to look first when a scheduled scan silently stops covering
 OT/ICS devices it used to cover.
+
+## 13. Discovery Batch Resume
+
+As of Phase 163 (DISC-08), a discovery scan interrupted mid-run and resumed via
+`--resume-scan-id` skips the individual nmap-discovery batches that already completed
+before the interruption, instead of re-probing every batch from zero.
+
+### 13.1 What changed
+
+Before this phase, resume was stage-granular only: `--resume-scan-id` skipped an
+entire completed *stage* (e.g. `discovery`), but if `discovery` itself was interrupted
+partway through, the next run re-probed **every** batch in that stage from scratch. At
+`_MAX_HOSTS_PER_CIDR = 1024`, a /16 interrupted at batch 60 of 64 previously re-probed
+all ~65,000 hosts on resume. It now re-probes only the ~4,000 hosts in the unfinished
+batches (batches 61-64).
+
+### 13.2 How to use it
+
+1. Note the `scan_run_id` printed by the original (interrupted) scan.
+2. Re-run the identical command with `--resume-scan-id <scan_run_id>` added.
+
+`--cache` is not required for batch resume — batch resume does NOT require `--cache`.
+Per-batch resume state is written on every run that has a `--db-path` set,
+independently of the whole-discovery-stage `--cache` / `--cache-ttl-hours` cache. You
+can omit `--cache` entirely and batch-level resume still works.
+
+### 13.3 Where the state lives
+
+Each completed batch produces two artifacts:
+
+- A `ScanCheckpoint` row with a synthetic stage name `discovery:batch-N` (no new table,
+  no schema change — the existing checkpoint mechanism is reused with a structured
+  stage string).
+- A small JSON payload at `{output_dir}/.cache/discovery-batch-{scan_run_id}-{N}.json`
+  holding that batch's discovered open-ports list.
+
+### 13.4 Disk usage is proportional to batch count
+
+Resume state now occupies disk space proportional to the batch count, not a single
+file per scan as before. The batch count is `ceil(total_hosts / 1024)`: a /16 (~65,000
+hosts) produces roughly 64 batch files; a /12 (~1,048,576 hosts) produces roughly
+1,024. Each file holds only that batch's open-ports list (host, port, protocol,
+service) — not raw nmap XML/stdout — so the per-file footprint stays small even at
+that batch count.
+
+Batch cache files are read back with a 720-hour (30-day) TTL. After 30 days, a batch
+file is treated as expired and ignored on resume — that batch is re-probed instead of
+skipped. `{output_dir}/.cache/` can be deleted at any time; the only consequence is
+that a subsequent resume re-probes the batches whose cache files were removed. Deleting
+it never corrupts or blocks a scan.
+
+### 13.5 Cache files carry the discovered inventory
+
+The per-batch cache files under `{output_dir}/.cache/` contain the discovered
+host/port inventory for their batch, and live in the same `{output_dir}` that already
+holds the CBOM, the delivered report, and the SQLite DB. Apply the same handling
+(storage, retention, access control) to `{output_dir}/.cache/` that you already apply
+to the rest of the output directory — it is not a separate trust tier.
+
+### 13.6 Limitation: resume assumes an unchanged target scope
+
+Batch numbering is a pure ordinal over the expanded target list computed at scan
+start. Resume assumes the target scope is unchanged since the original scan. If
+CIDRs, include-IPs, or `exclude_ips` are edited between the original run and the
+resumed run, batch alignment is **undefined** — the resumed scan may restore the
+wrong hosts' results under the wrong batch numbers, silently corrupting the inventory
+rather than merely re-probing extra hosts.
+
+**Safe procedure:** if you need to change target scope, start a fresh scan rather than
+resuming. This is the same assumption the pre-existing stage-level resume already
+makes; batch-level resume does not add a new class of risk, but it does make the
+existing one more granular.
+
+### 13.7 Skip/re-probe decision table
+
+| Batch state | Cache file state | Resume behavior |
+|---|---|---|
+| Completed (checkpoint row exists) | Present and within the 720h TTL | Skipped — no nmap subprocess is spawned for this batch |
+| Completed (checkpoint row exists) | Expired (>720h) or deleted | Re-probed — a checkpoint row alone never causes a skip; a live cache hit is also required |
+| Failed with a `RuntimeError` | No checkpoint written | Re-attempted on resume; the batch's error endpoint from the failed attempt is still recorded in the scan artifact |
