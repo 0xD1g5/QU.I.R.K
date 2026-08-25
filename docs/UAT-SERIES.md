@@ -19042,7 +19042,9 @@ untouched by this phase's wiring.
    `config.yaml` `targets.cidrs` or `--targets-file`, and the output directory from
    `config.yaml` `output.directory` (default `output/`).
 2. Run a discovery scan with a `--db-path` set and **without** `--cache`:
-   `python run_scan.py --discovery nmap --targets-file ./uat163-targets.txt --db-path ./quirk.db`.
+   `python run_scan.py --config config.yaml --discovery nmap --targets-file ./uat163-targets.txt --db-path ./quirk.db`.
+   `--config` is REQUIRED — without it `run_scan.py` drops into the interactive setup
+   wizard (`interactive_config()`) and ignores the rest of your flags for targets.
 3. Inspect `{output_dir}/.cache/` (default `output/.cache/`) for
    `discovery-batch-<scan_run_id>-1.json`.
 4. Query the database: `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`.
@@ -19091,10 +19093,13 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
 **Steps:**
 1. Confirm the automated gate first: `pytest tests/test_discovery_batch_checkpoint.py -x -q` and
    `pytest -x -q` both exit 0.
-2. Start `python run_scan.py --discovery nmap --targets-file <file> --db-path ./quirk.db`
-   against a range larger than 1024 hosts (e.g. a `/22`), with no `--cache`. There is no
-   `--output-dir` flag and no positional target argument — supply targets via
-   `--targets-file` or `config.yaml` `targets.cidrs`.
+2. Start
+   `python run_scan.py --config config.yaml --discovery nmap --targets-file <file> --db-path ./quirk.db`
+   against a range larger than 1024 hosts (e.g. a `/22`), with no `--cache`. Three flag
+   facts that are easy to get wrong: `--config` is REQUIRED or you land in the interactive
+   setup wizard; there is no `--output-dir` flag (the output directory comes from
+   `config.yaml` `output.directory`); and there is no positional target argument (targets
+   come from `--targets-file` or `config.yaml` `targets.cidrs`).
 3. Watch for `Discovery: batch N/M (X hosts checked)` lines. After at least 3 batches have
    printed, press `Ctrl-C`.
 4. Note the `scan_run_id`. Confirm state landed via
