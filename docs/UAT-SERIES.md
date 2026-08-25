@@ -19036,10 +19036,16 @@ untouched by this phase's wiring.
 `--cache` — the D-02 decision that resume state must work independently of the whole-stage cache.
 
 **Steps:**
-1. Run a small discovery scan with a `--db-path` set and **without** `--cache`, e.g.
-   `python run_scan.py --discovery nmap --db-path ./quirk.db --output-dir ./out <small-target>`.
-2. Inspect `{output_dir}/.cache/` for `discovery-batch-<scan_run_id>-1.json`.
-3. Query the database: `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`.
+1. Put a small target range in a targets file (one token per line; a token containing `/`
+   is parsed as a CIDR), e.g. `echo '127.0.0.1/30' > ./uat163-targets.txt`.
+   `run_scan.py` takes no positional targets and no `--output-dir` — targets come from
+   `config.yaml` `targets.cidrs` or `--targets-file`, and the output directory from
+   `config.yaml` `output.directory` (default `output/`).
+2. Run a discovery scan with a `--db-path` set and **without** `--cache`:
+   `python run_scan.py --discovery nmap --targets-file ./uat163-targets.txt --db-path ./quirk.db`.
+3. Inspect `{output_dir}/.cache/` (default `output/.cache/`) for
+   `discovery-batch-<scan_run_id>-1.json`.
+4. Query the database: `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`.
 
 **Pass criteria:**
 - At least one `discovery:batch-N` row exists with `status = 'completed'`
@@ -19085,13 +19091,16 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
 **Steps:**
 1. Confirm the automated gate first: `pytest tests/test_discovery_batch_checkpoint.py -x -q` and
    `pytest -x -q` both exit 0.
-2. Start `quirk scan --discovery nmap` (or `python run_scan.py --discovery nmap`) against a
-   configured range larger than 1024 hosts, with a `--db-path` set. Do NOT pass `--cache`.
+2. Start `python run_scan.py --discovery nmap --targets-file <file> --db-path ./quirk.db`
+   against a range larger than 1024 hosts (e.g. a `/22`), with no `--cache`. There is no
+   `--output-dir` flag and no positional target argument — supply targets via
+   `--targets-file` or `config.yaml` `targets.cidrs`.
 3. Watch for `Discovery: batch N/M (X hosts checked)` lines. After at least 3 batches have
    printed, press `Ctrl-C`.
 4. Note the `scan_run_id`. Confirm state landed via
    `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`
-   and `ls ./out/.cache/discovery-batch-<id>-*.json`.
+   and `ls output/.cache/discovery-batch-<id>-*.json` (or your configured
+   `output.directory`).
 5. Re-run the identical command with `--resume-scan-id <id>` added.
 6. Confirm the previously completed batches print
    `Discovery: batch N/M — skipped (completed on a prior run)` and complete near-instantly.
