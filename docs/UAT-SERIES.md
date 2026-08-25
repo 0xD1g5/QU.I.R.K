@@ -19006,6 +19006,17 @@ existing columns render unchanged.
 
 ## Series 163: Discovery Batch Checkpoint Granularity (Phase 163 — v5.15)
 
+> **⚠ `--db-path` must point at an initialised database.** `init_db()` runs once against
+> `config.yaml` `output.db_path` — it is never run against whatever you pass to `--db-path`.
+> Every checkpoint write in `run_scan.py` targets `args.db_path`, and
+> `write_scan_checkpoint()` is a deliberate silent no-op on any failure (Phase 67
+> RESUME-01: "checkpoint writes must NEVER crash the scan"). Point `--db-path` at a
+> non-existent or never-initialised file and you get a database with no
+> `scan_checkpoints` table, zero checkpoint rows, no error message, and a resume that
+> silently skips nothing. For these cases pass `--db-path output/quirk.db` (matching
+> `output.db_path`). This is a pre-existing property of the whole Phase 67 resume system,
+> not something Phase 163 introduced.
+
 **Last Updated:** 2026-08-25
 
 ### UAT-163-01: Batch checkpoint/resume test suites pass, existing parity lock unmodified (DISC-08) — Automated
@@ -19042,12 +19053,14 @@ untouched by this phase's wiring.
    `config.yaml` `targets.cidrs` or `--targets-file`, and the output directory from
    `config.yaml` `output.directory` (default `output/`).
 2. Run a discovery scan with a `--db-path` set and **without** `--cache`:
-   `python run_scan.py --config config.yaml --discovery nmap --targets-file ./uat163-targets.txt --db-path ./quirk.db`.
+   `python run_scan.py --config config.yaml --discovery nmap --targets-file ./uat163-targets.txt --db-path output/quirk.db`.
    `--config` is REQUIRED — without it `run_scan.py` drops into the interactive setup
    wizard (`interactive_config()`) and ignores the rest of your flags for targets.
+   `--db-path` MUST point at an already-initialised database — normally the same path as
+   `config.yaml` `output.db_path` (default `output/quirk.db`). See the warning below.
 3. Inspect `{output_dir}/.cache/` (default `output/.cache/`) for
    `discovery-batch-<scan_run_id>-1.json`.
-4. Query the database: `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`.
+4. Query the database: `sqlite3 output/quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`.
 
 **Pass criteria:**
 - At least one `discovery:batch-N` row exists with `status = 'completed'`
@@ -19094,7 +19107,7 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
 1. Confirm the automated gate first: `pytest tests/test_discovery_batch_checkpoint.py -x -q` and
    `pytest -x -q` both exit 0.
 2. Start
-   `python run_scan.py --config config.yaml --discovery nmap --targets-file <file> --db-path ./quirk.db`
+   `python run_scan.py --config config.yaml --discovery nmap --targets-file <file> --db-path output/quirk.db`
    against a range larger than 1024 hosts (e.g. a `/22`), with no `--cache`. Three flag
    facts that are easy to get wrong: `--config` is REQUIRED or you land in the interactive
    setup wizard; there is no `--output-dir` flag (the output directory comes from
@@ -19103,7 +19116,7 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
 3. Watch for `Discovery: batch N/M (X hosts checked)` lines. After at least 3 batches have
    printed, press `Ctrl-C`.
 4. Note the `scan_run_id`. Confirm state landed via
-   `sqlite3 ./quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`
+   `sqlite3 output/quirk.db "SELECT stage, status FROM scan_checkpoints WHERE scan_run_id='<id>';"`
    and `ls output/.cache/discovery-batch-<id>-*.json` (or your configured
    `output.directory`).
 5. Re-run the identical command with `--resume-scan-id <id>` added.
