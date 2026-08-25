@@ -246,14 +246,23 @@ def _flush_stage_endpoints(db_path: str, endpoints: list) -> None:
     Called after each scanner stage so a crash between stages leaves results
     for completed stages persisted. Silent no-op on failure — the scan's
     bulk persist at the end is the safety net.
+
+    RVW-001: the PK of each merged row is written back onto the caller's object.
+    ``session.merge()`` returns a *new* persistent instance and never assigns the
+    PK to the object passed in, so without this write-back the endpoints stay
+    transient and the final ``db_persist`` merge INSERTs a second row for every
+    endpoint — doubling the inventory on the client deliverable. ``get_session``
+    sets ``expire_on_commit=False``, so ``merged.id`` is readable after commit.
     """
     if not endpoints or not db_path:
         return
     try:
         with get_session(db_path) as session:
-            for ep in endpoints:
-                session.merge(ep)   # merge: safe if row already exists
+            merged_pairs = [(ep, session.merge(ep)) for ep in endpoints]
             session.commit()
+            for ep, merged in merged_pairs:
+                if getattr(ep, "id", None) is None:
+                    ep.id = merged.id
     except Exception:
         pass
 
