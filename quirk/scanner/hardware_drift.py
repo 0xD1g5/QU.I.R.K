@@ -403,6 +403,11 @@ def persist_and_reconcile(
     Any exception raised anywhere in the body (e.g. ``session.commit()``
     failing) is caught, logged at warning level via ``safe_str()``, and
     ``(0, [])`` is returned — never re-raised (advisory-only, non-fatal).
+
+    Phase 161 HWLC-14: before returning, qualifying ``HardwareDriftEvent`` rows
+    are handed to the notification dispatcher. The return contract is unchanged
+    — dispatch is advisory-only, non-fatal, and cannot perturb ``(purged_count,
+    inserted_events)``.
     """
     if not devices:
         return (0, [])
@@ -423,6 +428,17 @@ def persist_and_reconcile(
         # needed here beyond this function's existing surrounding one.
         for vendor in {d.vendor for d in devices if getattr(d, "vendor", None)}:
             events.extend(reconcile_vendor_pqc_trend(session, vendor))
+        # HWLC-14 / D-02 / D-03: hand qualifying drift events to the notification
+        # dispatcher as a terminal step. The hook sits HERE, inside the
+        # chokepoint, rather than at each of the four call sites
+        # (run_scan.py 449/550/2391 and console_cmd.py 677) — wiring it per
+        # call site is the Phase 141 outer-gating hazard, where a future fifth
+        # path would silently skip notifications. The dispatcher performs its
+        # own config gate and its own trigger filtering internally; delivery is
+        # advisory-only and can never abort a scan, a sensor push, or an
+        # air-gap import. D-03's contract is preserved: the signature and the
+        # returned tuple are unchanged.
+        _notify_hardware_lifecycle(session, events, logger)
         return (purged, events)
     except Exception as exc:
         if owns_session:
@@ -448,6 +464,42 @@ def persist_and_reconcile(
                 f"{safe_str(exc)}"
             )
         return (0, [])
+
+
+def _notify_hardware_lifecycle(session, events, logger=None) -> None:
+    """Phase 161 HWLC-14: offer this cycle's drift events to the notifier.
+
+    Called as the terminal step of ``persist_and_reconcile()``'s success path.
+    Filters ``events`` to ``HardwareDriftEvent`` rows only —
+    ``VendorPqcTrendEvent`` rows are catalog-level and sit outside HWLC-14's
+    trigger (D-02) — and returns without calling the dispatcher when nothing
+    qualifies.
+
+    This function never raises and never mutates ``events``. Delivery is
+    advisory-only: a misconfigured, failing, or entirely absent notification
+    layer must not abort a scan, a sensor push, or an air-gap import, so every
+    failure mode (including ``ImportError`` on an uninstalled extra) is caught
+    and logged.
+
+    ``dispatch_hardware_lifecycle_notifications`` is imported LOCALLY: the
+    dispatcher imports ``tier_direction`` from this module, so a module-scope
+    import here would be circular.
+    """
+    try:
+        from quirk.notify.dispatcher import (
+            dispatch_hardware_lifecycle_notifications,
+        )
+
+        drift_only = [e for e in events if isinstance(e, HardwareDriftEvent)]
+        if not drift_only:
+            return
+        dispatch_hardware_lifecycle_notifications(drift_only, session)
+    except Exception as exc:
+        if logger:
+            logger.warning(
+                f"Hardware lifecycle notification dispatch failed "
+                f"(advisory-only, non-fatal): {safe_str(exc)}"
+            )
 
 
 # ---------------------------------------------------------------------------
