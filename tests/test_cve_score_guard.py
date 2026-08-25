@@ -365,42 +365,77 @@ def test_forecast_module_does_not_import_drift_events() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Phase 160 (HWLC-17 / T-160-04) — advisory-only firewall extended to the
-# catalog-level vendor PQC trend surface (quirk.scanner.hardware_drift,
-# quirk.models_util). Plan 160-03's dashboard route module is deliberately
-# NOT added here — it covers that surface separately.
+# Phase 160 (HWLC-17 / T-160-04) — advisory-only firewall over the catalog-level
+# vendor PQC trend surface.
+#
+# Phase 161 (HWLC-19 / T-161-22) widened the module tuple to every surface that
+# now renders vendor-trend content. quirk.reports.technical was previously
+# excluded because the file carried no hardware content at all; plan 161-02
+# (D-09) added the CLI vendor-trend section, so it is in scope from Phase 161
+# onward. html_renderer and docx_renderer joined for the same reason via plan
+# 161-05, and the Phase 160 dashboard route — formerly covered "separately" —
+# is folded in here so a single tuple is the whole firewall.
 # ---------------------------------------------------------------------------
+
+# Every module that renders or serves vendor-trend content. Adding a new
+# vendor-trend surface without adding it here is the failure this guard exists
+# to prevent.
+_VENDOR_TREND_SURFACE_MODULES = (
+    "quirk.scanner.hardware_drift",
+    "quirk.models_util",
+    "quirk.reports.technical",              # Phase 161 / 161-02 D-09 — CLI section
+    "quirk.reports.html_renderer",          # Phase 161 / 161-05 — HTML section
+    "quirk.reports.docx_renderer",          # Phase 161 / 161-05 — DOCX section
+    "quirk.dashboard.api.routes.hardware_drift",  # Phase 160 — vendor-trends route
+)
+
+
+def _vendor_trend_surface_sources():
+    """Yield (module_path, comment-stripped source) for every guarded surface.
+
+    Sources are read through _strip_comment_lines() so an explanatory comment
+    naming SCORE_WEIGHTS can neither satisfy nor break the gate (T-161-23).
+    """
+    import importlib
+    import pathlib
+
+    for name in _VENDOR_TREND_SURFACE_MODULES:
+        module = importlib.import_module(name)
+        yield module.__file__, _strip_comment_lines(
+            pathlib.Path(module.__file__).read_text(encoding="utf-8")
+        )
 
 
 def test_vendor_trend_modules_have_no_score_weights_reference() -> None:
-    """No comment-stripped source of quirk.scanner.hardware_drift or
-    quirk.models_util references SCORE_WEIGHTS."""
-    import pathlib
+    """No comment-stripped source of any vendor-trend surface references
+    SCORE_WEIGHTS.
 
-    import quirk.scanner.hardware_drift as hardware_drift_module
-    import quirk.models_util as models_util_module
-
-    for module in (hardware_drift_module, models_util_module):
-        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+    Covers quirk.scanner.hardware_drift, quirk.models_util,
+    quirk.reports.technical, quirk.reports.html_renderer,
+    quirk.reports.docx_renderer and quirk.dashboard.api.routes.hardware_drift
+    (T-160-04, widened by Phase 161 T-161-22).
+    """
+    for module_path, source in _vendor_trend_surface_sources():
         assert "SCORE_WEIGHTS" not in source, (
-            f"{module.__file__} must never reference SCORE_WEIGHTS (T-160-04)"
+            f"{module_path} must never reference SCORE_WEIGHTS "
+            f"(T-160-04 / T-161-22)"
         )
 
 
 def test_vendor_trend_modules_do_not_import_scoring() -> None:
-    """No comment-stripped source of quirk.scanner.hardware_drift or
-    quirk.models_util imports the scoring engine or the readiness-assessment
-    module."""
-    import pathlib
+    """No comment-stripped source of any vendor-trend surface imports the
+    scoring engine or the readiness-assessment module.
 
-    import quirk.scanner.hardware_drift as hardware_drift_module
-    import quirk.models_util as models_util_module
-
-    for module in (hardware_drift_module, models_util_module):
-        source = _strip_comment_lines(pathlib.Path(module.__file__).read_text())
+    Same widened module set as
+    test_vendor_trend_modules_have_no_score_weights_reference — a surface that
+    cannot name SCORE_WEIGHTS but imports the scoring package outright would
+    defeat the firewall just as thoroughly (T-160-04 / T-161-22).
+    """
+    for module_path, source in _vendor_trend_surface_sources():
         for forbidden in ("quirk.intelligence.scoring", "quirk.assessment.readiness_score"):
             assert forbidden not in source, (
-                f"{module.__file__} must never import {forbidden!r} (T-160-04)"
+                f"{module_path} must never import {forbidden!r} "
+                f"(T-160-04 / T-161-22)"
             )
 
 

@@ -1611,9 +1611,74 @@ events never affect the readiness score — `quirk/scanner/hardware_drift.py` an
 `quirk/models_util.py` are never imported by `quirk/intelligence/scoring.py`, machine-enforced
 by `tests/test_cve_score_guard.py`.
 
-**Not yet in report formats.** Report-format (HTML/DOCX/CLI) rendering of vendor PQC trend
-events is not included in this release — the endpoint above is the only way to query them for
-now.
+**Now rendered in every report format.** As of Phase 161 (HWLC-19) vendor PQC trend events are
+rendered in the HTML, DOCX and CLI technical reports and on the dashboard `/hardware` page — see
+§9.11 below. The endpoint above remains available for direct queries.
+
+---
+
+### 9.11 Vendor PQC Status Trends on the Dashboard (Phase 161, HWLC-19)
+
+The `/hardware` page carries a **Vendor PQC Status Trends** section immediately below Recent
+Lifecycle Changes (§9.8). It renders the same `vendor_pqc_trend_events` rows the §9.10 endpoint
+serves.
+
+- **Advisory-only.** The section uses the non-severity advisory chrome — no red/amber/green
+  severity colouring and no alert chips — because vendor trends never affect the readiness score.
+  The caption "Advisory — vendor PQC status trends do not affect the readiness score." is always
+  visible, never collapsed behind a disclosure.
+- **Vendor-scoped.** Rows describe a vendor's fleet-wide posture, not a device, so there is no
+  host, port or severity column. See `docs/report-interpretation.md` §10.13 for the column
+  meanings and how to explain them to a client.
+- **Independent of drift.** The section renders whether or not this scan produced device drift
+  events, and shows a plain empty-state card — not a blank area or a spinner — when there are no
+  trend events to show.
+- **Truncation.** The API returns up to 50 events by default. When more exist, the section renders
+  a plain-text note rather than pagination controls.
+
+---
+
+### 9.12 Hardware Lifecycle Notifications (Phase 161, HWLC-14)
+
+QUIRK can notify you when a scan detects that a device's lifecycle posture got *worse*. Enable it
+with the `notify_on_hardware_lifecycle` key in your config's `notifications:` block — see
+`docs/configuration.md`. It is **off by default**.
+
+**What triggers a notification**
+
+Exactly two things:
+
+| Trigger | Notifies? |
+|---|---|
+| A **worsening** remediation-tier crossing (e.g. Tier 1 → Tier 2) | Yes |
+| Any **EOL/EOS state change** | Yes |
+| An **improving** tier crossing (e.g. Tier 2 → Tier 1) | **No — deliberately** |
+| A CVE correlation change or bridge-mitigation change | No |
+| A vendor PQC trend event (§9.11) | No — catalog-level, not device-level |
+
+Improving crossings are deliberately silent. The feature exists to surface degradation that needs
+action; paging an operator because a device got *better* trains them to ignore the channel.
+
+**Where it delivers**
+
+Email and webhook only — Slack is not a destination for lifecycle alerts. Delivery reuses the
+existing `email:` and `webhook:` configuration and credential model; enabling the key without
+either configured changes nothing.
+
+**Audit trail**
+
+Every delivery attempt — success or failure — is recorded in the `integration_deliveries` table
+with a composite identifier of the form `{host}:{port}:{event_type}:{event_id}`, so a specific
+alert can be traced back to the exact drift event that produced it.
+
+**Failure isolation**
+
+Notification delivery is advisory-only and can never abort a scan. The dispatch hook sits inside
+`persist_and_reconcile()` and is wrapped so that a failing SMTP server, an unreachable webhook, a
+misconfigured credential, or an entirely uninstalled notification extra is logged and audited but
+leaves the scan, the sensor push, or the air-gap import completely unaffected. If you enable
+notifications and see nothing arrive, check the `integration_deliveries` rows first — the attempt
+will be recorded there with its error summary even when delivery failed.
 
 ---
 

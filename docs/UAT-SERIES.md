@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-18 (v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+**Last Updated:** 2026-08-25 (v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
 Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
@@ -8312,9 +8312,9 @@ pip install pytest
 **Prerequisites:** `quirk` CLI installed.
 
 **Steps:**
-1. Run: `quirk scan --targets @/etc/passwd` (or any `@/etc/` path)
-2. Create a file > 1 MB and run: `quirk scan --targets @bigfile.txt`
-3. Create a file with 10001 lines: `seq 1 10001 | sed 's/^/host/' > many.txt` then `quirk scan --targets @many.txt`
+1. Run: `echo '@/etc/passwd' > t.txt && quirk --targets-file t.txt` (or any `@/etc/` path)
+2. Create a file > 1 MB and run: `echo '@bigfile.txt' > t.txt && quirk --targets-file t.txt`
+3. Create a file with 10001 lines: `seq 1 10001 | sed 's/^/host/' > many.txt` then `echo '@many.txt' > t.txt && quirk --targets-file t.txt`
 
 **Expected:**
 - Step 1: `TargetFileError` with reason `path_not_allowed_prefix`
@@ -9068,8 +9068,8 @@ All tests are automated (pytest). No chaos lab required.
 **Requirement:** RESUME-01 — `--list-resumable` shows table of incomplete scan runs with ID, last stage, status, age.
 
 **Steps:**
-1. Run a scan and kill it mid-way: `quirk scan --targets 127.0.0.1 &; sleep 5; kill %1`
-2. Run: `quirk scan --list-resumable`
+1. Run a scan and kill it mid-way: `echo 127.0.0.1 > t.txt && quirk --targets-file t.txt &; sleep 5; kill %1`
+2. Run: `quirk --list-resumable`
 
 **Pass criteria:**
 - Table displays at least one row with Scan ID, Last Stage, Status, Age columns.
@@ -9086,9 +9086,9 @@ All tests are automated (pytest). No chaos lab required.
 **Requirement:** RESUME-01 — A resumed scan skips stages already recorded in `scan_checkpoints` and runs only remaining stages.
 
 **Steps:**
-1. Force-stop a scan after the TLS stage: `quirk scan --targets 127.0.0.1 &; sleep 15; kill %1`
-2. Note the Scan ID from `quirk scan --list-resumable`.
-3. Resume: `quirk scan --resume-scan-id <scan-id> --targets 127.0.0.1`
+1. Force-stop a scan after the TLS stage: `echo 127.0.0.1 > t.txt && quirk --targets-file t.txt &; sleep 15; kill %1`
+2. Note the Scan ID from `quirk --list-resumable`.
+3. Resume: `quirk --resume-scan-id <scan-id> --targets-file t.txt`
 4. Observe stage output — TLS stage should be skipped.
 
 **Pass criteria:**
@@ -9106,7 +9106,7 @@ All tests are automated (pytest). No chaos lab required.
 **Requirement:** RESUME-02 — `partial_failures` key guaranteed in scan output JSON, populated when scanners fail.
 
 **Steps:**
-1. Run a scan against a host with no SSH: `quirk scan --targets 127.0.0.1 --profile quick`
+1. Run a scan against a host with no SSH: `echo 127.0.0.1 > t.txt && quirk --targets-file t.txt --profile quick`
 2. Open the output `run_stats_*.json` or check the console JSON output.
 
 **Pass criteria:**
@@ -18739,3 +18739,164 @@ to 1–200 (identical to the existing `/api/hardware/drift` bound) — a DoS-amp
 API endpoint" doc row is deferred (recorded explicitly, following the same convention prior
 phases used) — the operator-visible surface is documented in `docs/operators-guide.md` §9.10
 instead. See 160-03-SUMMARY.md.
+
+---
+
+## Series 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing (Phase 161 — v5.15)
+
+**Last Updated:** 2026-08-25
+
+### UAT-161-01: Notification opt-in is off by default (HWLC-14) — Automated
+
+**What to test:** With `notify_on_hardware_lifecycle` absent from config, a qualifying drift
+event produces zero `integration_deliveries` rows. The global opt-in must be genuinely opt-in.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_hardware_lifecycle_notify_hook.py -k config_off -v`.
+2. Confirm `test_config_off_writes_no_delivery_rows` passes.
+
+**Pass criteria:**
+- A qualifying drift event with the key unset writes zero `integration_deliveries` rows
+- Absent key behaves identically to `false`
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 161 Plan 04)
+**Notes:** HWLC-14. See 161-04-SUMMARY.md.
+
+---
+
+### UAT-161-02: Opt-in on — a worsening tier crossing delivers to email and webhook (HWLC-14) — Automated
+
+**What to test:** With `notify_on_hardware_lifecycle: true`, a worsening tier crossing produces
+one email and one webhook delivery row, each carrying the composite
+`{host}:{port}:{event_type}:{event_id}` scan_id. Slack is deliberately not a destination.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_notify_hardware_lifecycle.py -v`.
+2. Confirm the dispatcher trigger-filter and audit-row tests pass.
+
+**Pass criteria:**
+- One email delivery row and one webhook delivery row per qualifying event
+- Each row's scan_id is the composite `{host}:{port}:{event_type}:{event_id}`
+- No Slack delivery row is written
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 161 Plan 01)
+**Notes:** HWLC-14. See 161-01-SUMMARY.md.
+
+---
+
+### UAT-161-03: An improving tier crossing produces no delivery (HWLC-14) — Automated
+
+**What to test:** The D-02 trigger filter admits only *worsening* tier crossings and EOL/EOS
+state changes. An improving crossing must be silent — paging on improvement trains operators to
+ignore the channel.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_notify_hardware_lifecycle.py -k "improv or direction" -v`.
+2. Confirm an improving `tier_crossing` yields no qualifying event.
+
+**Pass criteria:**
+- An improving tier crossing produces zero deliveries and zero audit rows
+- A worsening crossing in the same batch still delivers
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 161 Plan 01)
+**Notes:** HWLC-14. See 161-01-SUMMARY.md.
+
+---
+
+### UAT-161-04: `/hardware` shows the Vendor PQC Status Trends section (HWLC-19) — HUMAN
+
+**What to test:** The dashboard `/hardware` page renders the Vendor PQC Status Trends section
+below Recent Lifecycle Changes, with advisory chrome and a sensible empty state on a trend-free
+database. Visual fidelity and empty-state sensibility are not assertable by the render-parity
+tests, which check presence rather than appearance — this case requires human confirmation.
+
+**Steps:**
+1. Start the dashboard and open `/hardware`.
+2. Confirm the Vendor PQC Status Trends section appears BELOW Recent Lifecycle Changes.
+3. Confirm the teal advisory chrome and the visible caption "Advisory — vendor PQC status trends
+   do not affect the readiness score."
+4. On a trend-free database, confirm a readable empty-state card — not a blank area, a spinner
+   that never resolves, or a console error.
+5. Confirm no red/amber/green severity colouring and no alert chips in the section.
+6. Confirm the existing Recent Lifecycle Changes section still renders exactly as before.
+
+**Pass criteria:**
+- Section present, correctly positioned, advisory-styled, with a sensible empty state
+- No severity colouring; existing sections unregressed
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** _pending_  **Tester:** _pending human verification_
+**Notes:** HWLC-19. Blocking human-verify checkpoint carried over from plan 161-03 Task 4.
+See 161-03-SUMMARY.md.
+
+---
+
+### UAT-161-05: Vendor trends render in HTML, DOCX and CLI with a byte-identical caption (HWLC-19) — Automated
+
+**What to test:** Each export surface contains the vendor-trend section when trend data exists,
+with a byte-identical advisory caption, and none emits an orphan heading or empty table when it
+does not.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_vendor_trend_render_sections.py -v`.
+2. Confirm the caption-parity test compares html_renderer, docx_renderer and technical.py.
+3. Confirm the zero-data cases assert absence of the heading in every format.
+
+**Pass criteria:**
+- HTML, DOCX and CLI each contain "Vendor PQC Status Trends" when trend data exists
+- The advisory caption is byte-identical across all three surfaces
+- Zero trend events produces no heading and no empty table in any format
+- A hostile vendor string is HTML-escaped in the HTML report
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 161 Plan 05)
+**Notes:** HWLC-19. See 161-05-SUMMARY.md.
+
+---
+
+### UAT-161-06: The advisory-only firewall covers every vendor-trend surface (HWLC-19) — Automated
+
+**What to test:** No module that renders or serves vendor-trend content references
+`SCORE_WEIGHTS` or imports the scoring engine, and the guard demonstrably fails when violated.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_cve_score_guard.py -v`.
+2. Negative proof: temporarily append `SCORE_WEIGHTS = {"vendor_trend": 1}` to
+   `quirk/reports/technical.py`, re-run, confirm the guard FAILS, then revert.
+
+**Pass criteria:**
+- The guarded module tuple includes technical, html_renderer, docx_renderer, hardware_drift,
+  models_util and the dashboard hardware_drift route
+- Both the SCORE_WEIGHTS assertion and the forbidden-import assertion fail under the negative proof
+- Source is read comment-stripped, so a comment naming SCORE_WEIGHTS cannot satisfy the gate
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 161 Plan 06; negative proof observed)
+**Notes:** HWLC-19 / T-161-22. See 161-06-SUMMARY.md.
+
+---
+
+### UAT-161-07: Documented scan commands actually exist (RVW-021) — Automated
+
+**What to test:** No user-facing doc or dashboard string instructs a command that does not
+exist. `quirk` has no `scan` subcommand and no `--targets` flag; targets come from
+`--targets-file` or config.
+
+**Steps:**
+1. `grep -rn "quirk scan " docs/*.md src/dashboard/src` — expect no hits outside
+   `docs/release-notes/` (historical) and `docs/reviews/` (which quote the defect).
+2. Run `quirk --help` and confirm `--targets-file` is present and `--targets` is not.
+
+**Pass criteria:**
+- The six UAT step definitions and `docs/chaos-lab.md` use `--targets-file`
+- The dashboard findings empty state instructs a command that exists
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (grep + CLI check — Phase 161 Plan 06)
+**Notes:** RVW-021, folded into this phase because plan 161-06 already edits UAT-SERIES.md.
+Note the review's traceback claim applies to `quirk --targets X` (argparse prefix-matches
+`--targets-file`), not to `quirk scan --targets X`, which fails cleanly with
+`unrecognized arguments: scan`. The uncaught-traceback half is tracked separately.

@@ -673,7 +673,8 @@ PROFILE_ARGS="--profile fuzz-target" ./lab.sh up
 **Validation scan:**
 
 ```bash
-quirk scan --targets http://localhost:20100 \
+echo http://localhost:20100 > targets.txt
+quirk --targets-file targets.txt \
   --fuzz --openapi-spec http://localhost:20100/openapi.json
 ```
 

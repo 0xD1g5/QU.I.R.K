@@ -665,6 +665,55 @@ filter: there is no scored artifact for a check-in run to be filtered out of in 
 
 ---
 
+### 10.13 Vendor PQC Status Trends (Phase 161)
+
+As of Phase 161, HTML, DOCX, and the CLI/markdown technical report each carry a **Vendor PQC
+Status Trends** section, and the dashboard `/hardware` page shows the same content below Recent
+Lifecycle Changes. It surfaces the catalog-level vendor trend events Phase 160's reconciliation
+persists to `vendor_pqc_trend_events`.
+
+**Vendor-scoped, not device-scoped.** This is the key distinction from §10.10. Recent Lifecycle
+Changes answers "what changed on *this device*"; Vendor PQC Status Trends answers "what changed
+about *this vendor's posture across your fleet*" — for example, a vendor going from zero of three
+observed models advertising PQC support to one of three. Because a row describes a vendor rather
+than an endpoint, it carries **no host, no port, no direction, and no severity**, which is why the
+table has four columns where the drift table has five.
+
+**The four columns:**
+
+| Column | Meaning |
+|---|---|
+| **Vendor** | The vendor whose fleet-wide posture changed. |
+| **Change** | The event type. Currently one value, displayed as "PQC status change". |
+| **Transition** | The old and new fleet-wide values, rendered `old → new`. An em-dash (—) on either side means that side had no recorded value. |
+| **Detected** | The date the change was confirmed by the reconciliation engine. |
+
+**Never affects the readiness score.** Every rendering of this section carries the caption
+verbatim:
+
+> Advisory — vendor PQC status trends do not affect the readiness score.
+
+This is not merely a convention. The isolation is machine-enforced: `tests/test_cve_score_guard.py`
+asserts that no module rendering or serving vendor-trend content — the CLI, HTML and DOCX
+renderers, the reconciliation engine, and the dashboard route — references `SCORE_WEIGHTS` or
+imports the scoring engine at all, and that no `SCORE_WEIGHTS` key contains vendor-trend
+vocabulary. The guard reads comment-stripped source, so a comment mentioning `SCORE_WEIGHTS`
+cannot silently satisfy it.
+
+**When the section is absent.** A run with no recorded vendor trend events renders no heading and
+no empty table in any format — HTML, DOCX, CLI, or dashboard. The section is gated independently
+of §10.10 and §10.11, so a scan with zero device drift events and no EOL forecast can still show
+populated vendor trends, and vice versa.
+
+**How to explain it to a client:**
+
+> "This part tracks your *vendors*, not your devices. If Cisco starts shipping post-quantum support
+> across the models you actually run, that shows up here as a trend, even though nothing about any
+> individual box on your network changed. It's context for planning — which vendors are moving and
+> which aren't — so it deliberately doesn't move your score."
+
+---
+
 ## 11. Dashboard Sidebar Scan-Date Badge (Phase 143)
 
 As of Phase 143, the dashboard sidebar carries a persistent scan-date badge — a small

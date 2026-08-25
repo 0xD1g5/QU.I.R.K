@@ -1159,6 +1159,7 @@ Add a `notifications:` block at the top level of your QUIRK YAML config:
 ```yaml
 notifications:
   trigger_score_floor: -5       # notify when score drops more than 5 points (default -5)
+  notify_on_hardware_lifecycle: false   # hardware lifecycle alerts (HWLC-14, default false)
 
   # Optional: Slack incoming-webhook delivery (NOTIFY-03)
   slack:
@@ -1184,6 +1185,30 @@ notifications:
     hmac_key_env: QUIRK_WEBHOOK_HMAC_KEY  # env var NAME for HMAC-SHA256 signing key (optional)
     timeout_seconds: 10
 ```
+
+### `notify_on_hardware_lifecycle` (Phase 161 — HWLC-14)
+
+| Key | Type | Default | Scope |
+|---|---|---|---|
+| `notify_on_hardware_lifecycle` | boolean | `false` | Top-level key of the `notifications:` block |
+
+Opts the deployment in to hardware lifecycle alerts. When a scan reconciles a
+qualifying hardware drift event — a **worsening** remediation-tier crossing, or
+any EOL/EOS state change — QUIRK delivers a notification describing it.
+
+Three things to know before enabling it:
+
+- **It is a global, deployment-level switch**, not a per-device or
+  per-consultant preference. There is no per-host or per-vendor opt-in; the
+  whole scanned estate participates or none of it does.
+- **It fans out to email and webhook only.** Slack is deliberately not a
+  destination for lifecycle alerts.
+- **It requires no additional configuration.** Delivery reuses the existing
+  `email:` and `webhook:` blocks and the same environment-variable credential
+  model documented below. If neither is configured, enabling this key changes
+  nothing.
+
+Leaving the key absent is identical to setting it to `false`.
 
 ### Environment variables for secrets
 
