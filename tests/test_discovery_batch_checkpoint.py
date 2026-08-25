@@ -16,8 +16,12 @@ from __future__ import annotations
 
 import inspect
 
+from sqlalchemy import create_engine
+
+from quirk.cli.job_progress import write_scan_checkpoint
 from quirk.discovery.nmap_parser import NmapOpenPort
-from quirk.engine.cache import open_ports_to_serial, serial_to_open_ports
+from quirk.engine.cache import load_cache, open_ports_to_serial, save_cache, serial_to_open_ports
+from quirk.models import Base, ScanCheckpoint
 from quirk.scanner.target_expander import _chunked, _expand_and_dedup_hosts, _MAX_HOSTS_PER_CIDR
 
 _RESUME_BATCH_CACHE_TTL_HOURS = 720
@@ -385,6 +389,116 @@ def test_completed_stage_without_cache_hit_reprobes():
     # Then re-checkpoints.
     assert "discovery:batch-1" in checkpoint_calls
     assert result["hosts_checked"] == 6
+
+
+# ---------------------------------------------------------------------------
+# Part A: real-SQLite two-invocation interruption simulation (Task 3)
+# ---------------------------------------------------------------------------
+
+def test_resume_skips_completed_batches_against_real_db(tmp_path):
+    db_path = str(tmp_path / "scan.db")
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    engine.dispose()
+
+    output_dir = str(tmp_path)
+    scan_run_id = "2026-08-25T12:00:00"
+
+    def checkpoint_writer(stage, status, count):
+        write_scan_checkpoint(db_path, scan_run_id, stage, status, endpoint_count=count)
+
+    def cache_writer(key, payload):
+        save_cache(output_dir, key, payload)
+
+    def cache_reader(key, ttl_hours):
+        return load_cache(output_dir, key, ttl_hours)
+
+    # Invocation 1: batch 3 fails (simulated interruption).
+    def sweep_fn_invocation1(targets):
+        if targets == ["10.0.0.5", "10.0.0.6"]:
+            raise RuntimeError("interrupted")
+        return _identity_sweep_fn(targets)
+
+    _run_batched_discovery_with_checkpoints(
+        _HOSTS_6, _all_up_liveness_fn, sweep_fn_invocation1, completed_stages=set(),
+        checkpoint_writer=checkpoint_writer,
+        cache_reader=cache_reader,
+        cache_writer=cache_writer,
+        scan_run_id=scan_run_id,
+        chunk_size=2,
+    )
+
+    # Invocation 2: load completed_stages from the real DB, exactly as
+    # run_scan.py's resume-load block does (run_scan.py:1493-1524).
+    from sqlalchemy.orm import sessionmaker
+    engine = create_engine(f"sqlite:///{db_path}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        rows = (
+            session.query(ScanCheckpoint)
+            .filter(
+                ScanCheckpoint.scan_run_id == scan_run_id,
+                ScanCheckpoint.status.in_(["completed", "partial"]),
+            )
+            .all()
+        )
+        completed_stages = {r.stage for r in rows}
+    finally:
+        session.close()
+        engine.dispose()
+
+    assert completed_stages == {"discovery:batch-1", "discovery:batch-2"}
+
+    liveness_calls = []
+    sweep_calls = []
+
+    def liveness_fn(batch):
+        liveness_calls.append(list(batch))
+        return _all_up_liveness_fn(batch)
+
+    def sweep_fn_invocation2(targets):
+        sweep_calls.append(list(targets))
+        return _identity_sweep_fn(targets)
+
+    result = _run_batched_discovery_with_checkpoints(
+        _HOSTS_6, liveness_fn, sweep_fn_invocation2, completed_stages=completed_stages,
+        checkpoint_writer=checkpoint_writer,
+        cache_reader=cache_reader,
+        cache_writer=cache_writer,
+        scan_run_id=scan_run_id,
+        chunk_size=2,
+    )
+
+    # (a) liveness/sweep are called ONLY for batch 3's hosts.
+    assert liveness_calls == [["10.0.0.5", "10.0.0.6"]]
+    assert sweep_calls == [["10.0.0.5", "10.0.0.6"]]
+
+    # (b) all_open_ports is the union of batches 1, 2 (from cache) and 3
+    # (freshly probed).
+    hosts_seen = {p.host for p in result["all_open_ports"]}
+    assert hosts_seen == {"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5", "10.0.0.6"}
+
+    # (c) exactly 3 scan_checkpoints rows for this scan_run_id — batches 1
+    # and 2 did not write duplicates on invocation 2.
+    engine = create_engine(f"sqlite:///{db_path}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        row_count = (
+            session.query(ScanCheckpoint)
+            .filter(ScanCheckpoint.scan_run_id == scan_run_id)
+            .count()
+        )
+    finally:
+        session.close()
+        engine.dispose()
+    assert row_count == 3
+
+
+def test_batch_stage_names_fit_the_stage_column():
+    stage_column_length = ScanCheckpoint.__table__.columns["stage"].type.length
+    assert len("discovery:batch-4294967296") <= stage_column_length
 
 
 # --- Part B: AST-structural tests (Plan 163-02) ---
