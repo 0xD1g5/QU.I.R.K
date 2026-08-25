@@ -14,7 +14,9 @@ structural-test convention). Part B is added by Plan 163-02.
 """
 from __future__ import annotations
 
+import ast
 import inspect
+from pathlib import Path
 
 from sqlalchemy import create_engine
 
@@ -502,3 +504,291 @@ def test_batch_stage_names_fit_the_stage_column():
 
 
 # --- Part B: AST-structural tests (Plan 163-02) ---
+#
+# These parse the REAL run_scan.py (not the Part A mirror helper above) so a
+# passing mirror test can never mask an unwired real loop. Technique copied
+# from tests/test_cli_dashboard_discovery_parity.py's established convention.
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_RUN_SCAN_PATH = _REPO_ROOT / "run_scan.py"
+
+
+def _parse_run_scan():
+    source = _RUN_SCAN_PATH.read_text()
+    return source, ast.parse(source, filename=str(_RUN_SCAN_PATH))
+
+
+def _find_calls(tree: ast.AST, func_name: str):
+    calls = []
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == func_name
+        ):
+            calls.append(node)
+    return calls
+
+
+def _chunked_for_nodes(tree: ast.AST):
+    """Every `for ... in _chunked(...)` loop node in the tree."""
+    nodes = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.For):
+            call = node.iter
+            if (
+                isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Name)
+                and call.func.id == "_chunked"
+            ):
+                nodes.append(node)
+    return nodes
+
+
+def _calls_inside(loop_nodes, call_nodes):
+    """Subset of call_nodes reachable via ast.walk from any node in loop_nodes."""
+    inside = []
+    for call in call_nodes:
+        if any(call in ast.walk(loop_node) for loop_node in loop_nodes):
+            inside.append(call)
+    return inside
+
+
+def _enclosing_if_tests(tree: ast.AST, target_node: ast.AST):
+    """All `ast.If.test` nodes whose body (recursively) contains target_node."""
+    tests = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If):
+            if any(target_node in ast.walk(stmt) for stmt in node.body):
+                tests.append(node.test)
+    return tests
+
+
+def _test_is_args_cache(test_node: ast.AST) -> bool:
+    return (
+        isinstance(test_node, ast.Attribute)
+        and test_node.attr == "cache"
+        and isinstance(test_node.value, ast.Name)
+        and test_node.value.id == "args"
+    )
+
+
+def _test_is_args_db_path(test_node: ast.AST) -> bool:
+    if isinstance(test_node, ast.Attribute):
+        return (
+            test_node.attr == "db_path"
+            and isinstance(test_node.value, ast.Name)
+            and test_node.value.id == "args"
+        )
+    if isinstance(test_node, ast.BoolOp):
+        return any(_test_is_args_db_path(v) for v in test_node.values)
+    return False
+
+
+def _test_is_args_job_id_boolop(test_node: ast.AST) -> bool:
+    if not isinstance(test_node, ast.BoolOp):
+        return False
+    for v in test_node.values:
+        if (
+            isinstance(v, ast.Attribute)
+            and v.attr == "job_id"
+            and isinstance(v.value, ast.Name)
+            and v.value.id == "args"
+        ):
+            return True
+    return False
+
+
+def test_batch_checkpoint_write_is_inside_chunked_loop():
+    """A per-batch write_scan_checkpoint call must exist inside the `_chunked`
+    loop, alongside the pre-existing whole-stage call outside it."""
+    _, tree = _parse_run_scan()
+    loop_nodes = _chunked_for_nodes(tree)
+    assert loop_nodes, "No `for batch in _chunked(...)` loop found in run_scan.py"
+
+    checkpoint_calls = _find_calls(tree, "write_scan_checkpoint")
+    assert len(checkpoint_calls) >= 2, (
+        "Expected at least 2 write_scan_checkpoint(...) call sites (1 pre-existing "
+        f"whole-stage + 1 new per-batch), found {len(checkpoint_calls)}."
+    )
+
+    inside_calls = _calls_inside(loop_nodes, checkpoint_calls)
+    assert inside_calls, "No write_scan_checkpoint(...) call found inside the _chunked loop."
+
+    found_batch_stage = False
+    for call in inside_calls:
+        stage_arg = None
+        for kw in call.keywords:
+            if kw.arg == "stage":
+                stage_arg = kw.value
+        if stage_arg is None and len(call.args) >= 3:
+            stage_arg = call.args[2]
+        if isinstance(stage_arg, ast.JoinedStr):
+            literal_parts = "".join(
+                v.value for v in stage_arg.values if isinstance(v, ast.Constant) and isinstance(v.value, str)
+            )
+            if "discovery:batch-" in literal_parts:
+                found_batch_stage = True
+    assert found_batch_stage, (
+        "No in-loop write_scan_checkpoint(...) call has a stage argument built from "
+        "'discovery:batch-'."
+    )
+
+
+def test_batch_cache_write_is_inside_chunked_loop():
+    """A per-batch save_cache call must exist inside the loop; the pre-existing
+    whole-stage save_cache call must remain outside it."""
+    _, tree = _parse_run_scan()
+    loop_nodes = _chunked_for_nodes(tree)
+    save_cache_calls = _find_calls(tree, "save_cache")
+    assert save_cache_calls, "No save_cache(...) call sites found in run_scan.py"
+
+    inside = _calls_inside(loop_nodes, save_cache_calls)
+    outside = [c for c in save_cache_calls if c not in inside]
+
+    assert inside, "No save_cache(...) call found inside the _chunked loop."
+    assert outside, "Expected the pre-existing whole-stage save_cache(...) call outside the _chunked loop."
+
+
+def test_batch_writes_are_not_gated_on_args_cache():
+    """The per-batch save_cache/write_scan_checkpoint calls must be gated on
+    args.db_path alone, never on args.cache (D-02)."""
+    _, tree = _parse_run_scan()
+    loop_nodes = _chunked_for_nodes(tree)
+
+    save_cache_calls = _calls_inside(loop_nodes, _find_calls(tree, "save_cache"))
+    checkpoint_calls = _calls_inside(loop_nodes, _find_calls(tree, "write_scan_checkpoint"))
+
+    assert save_cache_calls, "No save_cache(...) call found inside the _chunked loop."
+    assert checkpoint_calls, "No write_scan_checkpoint(...) call found inside the _chunked loop."
+
+    for call in save_cache_calls + checkpoint_calls:
+        enclosing_tests = _enclosing_if_tests(tree, call)
+        assert not any(_test_is_args_cache(t) for t in enclosing_tests), (
+            "A per-batch save_cache/write_scan_checkpoint call is gated on args.cache — "
+            "D-02 requires the gate to be args.db_path alone."
+        )
+        assert any(_test_is_args_db_path(t) for t in enclosing_tests), (
+            "A per-batch save_cache/write_scan_checkpoint call is not gated on args.db_path."
+        )
+
+
+def test_batch_writes_are_not_gated_on_args_job_id():
+    """The per-batch write_scan_checkpoint call must not be gated on
+    args.job_id — that gate belongs solely to update_batch_progress."""
+    _, tree = _parse_run_scan()
+    loop_nodes = _chunked_for_nodes(tree)
+    checkpoint_calls = _calls_inside(loop_nodes, _find_calls(tree, "write_scan_checkpoint"))
+    assert checkpoint_calls, "No write_scan_checkpoint(...) call found inside the _chunked loop."
+
+    for call in checkpoint_calls:
+        enclosing_tests = _enclosing_if_tests(tree, call)
+        assert not any(_test_is_args_job_id_boolop(t) for t in enclosing_tests), (
+            "The per-batch write_scan_checkpoint call must not be gated on args.job_id — "
+            "that BoolOp gate belongs solely to update_batch_progress."
+        )
+
+
+def test_resume_batch_ttl_constant_is_720():
+    """_RESUME_BATCH_CACHE_TTL_HOURS must be a real module-level constant equal
+    to 720, and the in-loop load_cache call must reference that NAME."""
+    import run_scan
+
+    assert run_scan._RESUME_BATCH_CACHE_TTL_HOURS == 720
+
+    _, tree = _parse_run_scan()
+    loop_nodes = _chunked_for_nodes(tree)
+    load_cache_calls = _calls_inside(loop_nodes, _find_calls(tree, "load_cache"))
+    assert load_cache_calls, "No load_cache(...) call found inside the _chunked loop."
+
+    found_ttl_name = False
+    for call in load_cache_calls:
+        for arg in call.args + [kw.value for kw in call.keywords]:
+            if isinstance(arg, ast.Name) and arg.id == "_RESUME_BATCH_CACHE_TTL_HOURS":
+                found_ttl_name = True
+            assert not (
+                isinstance(arg, ast.Attribute)
+                and arg.attr == "cache_ttl_hours"
+            ), "The in-loop load_cache call must not use args.cache_ttl_hours (D-06)."
+    assert found_ttl_name, (
+        "The in-loop load_cache(...) call must pass _RESUME_BATCH_CACHE_TTL_HOURS by name, "
+        "not a literal."
+    )
+
+
+def test_batch_stage_completed_helper_exists():
+    import run_scan
+
+    assert callable(run_scan._batch_stage_completed)
+    assert run_scan._batch_stage_completed({"discovery:batch-7"}, "discovery", 7) is True
+    assert run_scan._batch_stage_completed({"discovery:batch-7"}, "discovery", 8) is False
+    assert run_scan._batch_stage_completed(set(), "discovery", 1) is False
+
+
+def test_no_new_checkpoint_table_or_model_change():
+    models_path = _REPO_ROOT / "quirk" / "models.py"
+    source = models_path.read_text()
+    tree = ast.parse(source, filename=str(models_path))
+
+    checkpoint_cls = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == "ScanCheckpoint":
+            checkpoint_cls = node
+    assert checkpoint_cls is not None, "ScanCheckpoint class not found in quirk/models.py"
+
+    column_names = set()
+    for stmt in checkpoint_cls.body:
+        if isinstance(stmt, ast.Assign):
+            for target in stmt.targets:
+                if isinstance(target, ast.Name) and target.id != "__tablename__":
+                    column_names.add(target.id)
+
+    expected = {
+        "checkpoint_id",
+        "scan_run_id",
+        "stage",
+        "status",
+        "completed_at",
+        "endpoint_count",
+        "partial_failure",
+        "error_summary",
+    }
+    assert column_names == expected, (
+        f"ScanCheckpoint columns changed: {column_names}. Phase 163 must add no new "
+        "table or column (criterion 2)."
+    )
+    assert not any("batch" in name.lower() for name in column_names), (
+        "No ScanCheckpoint column may reference 'batch' — batch state lives in the "
+        "cache, not the checkpoint row (D-02)."
+    )
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            lname = node.name.lower()
+            assert not ("batch" in lname and "checkpoint" in lname), (
+                f"Unexpected new class '{node.name}' combining 'Batch' and 'Checkpoint' — "
+                "criterion 2 forbids a parallel batch-checkpoint model."
+            )
+
+
+def test_write_scan_checkpoint_signature_unchanged():
+    from quirk.cli.job_progress import write_scan_checkpoint as _wsc
+
+    params = list(inspect.signature(_wsc).parameters.keys())
+    assert params == [
+        "db_path",
+        "scan_run_id",
+        "stage",
+        "status",
+        "endpoint_count",
+        "partial_failure",
+        "error_summary",
+    ], "write_scan_checkpoint's signature must not change (D-01: zero writer changes)."
+
+
+def test_only_one_discovery_call_site_each_local_regression_guard():
+    """Local duplicate of the DISC-06 AST lock (D-04) so a Phase 163
+    regression surfaces in this file too, not only in the parity test."""
+    _, tree = _parse_run_scan()
+    assert len(_find_calls(tree, "run_nmap_discovery")) == 1
+    assert len(_find_calls(tree, "run_nmap_liveness_check")) == 1
