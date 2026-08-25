@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.15
 milestone_name: Lifecycle Tail Drain
 status: executing
-stopped_at: "Session resumed 2026-08-25. Phase 163 Wave 0 (163-01) complete + verified green (11/11); 163-02 and 163-03 remain. Next: /gsd-execute-phase 163."
-last_updated: "2026-08-25T16:05:00.000Z"
+stopped_at: "Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15."
+last_updated: "2026-08-25T17:38:53.523Z"
 last_activity: 2026-08-25
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 33
 ---
 
@@ -202,6 +202,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 161 P02 | 25min | 3 tasks | 4 files |
 | Phase 161 P01 | 20min | 3 tasks | 5 files |
 | Phase 163 P01 | 30min | 3 tasks | 2 files |
+| Phase 163 P02 | 45min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -390,6 +391,9 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 161]: 161-01: notify_on_hardware_lifecycle global opt-in (D-01); HardwareLifecycleSummary sibling content model, not a widened DriftSummary; dispatch_hardware_lifecycle_notifications() fans out to email+webhook only (D-04); composite scan_id host:port:event_type:event_id (D-05); Rule 1 fix branched _channel_send_email on summary type to avoid AttributeError on real hardware-lifecycle delivery
 - [Phase 163]: D-07 serializer import stays function-scoped inside serial_to_open_ports only, avoiding the local-import shadow trap
 - [Phase 163]: The resume-skip guard requires BOTH a checkpoint row AND a live cache hit -- a checkpoint alone never causes a skip
+- [Phase ?]: Resume-skip guard requires BOTH a completed-batch checkpoint AND a live cache hit before skipping; checkpoint alone falls through and re-probes
+- [Phase ?]: Skip-path deliberately does not call update_batch_progress to preserve the pre-existing Phase 146 single-call-site AST lock
+- [Phase ?]: Per-batch save_cache/write_scan_checkpoint gate is args.db_path alone (D-02), never args.cache, never args.job_id
 
 ### Pending Todos
 
@@ -502,7 +506,7 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-25T15:31:51.321Z
+Last session: 2026-08-25T17:38:53.518Z
 Stopped at: Phase 163 planned end-to-end (research + patterns + 3 plans + plan-check PASS). Next: /gsd-execute-phase 163, last phase of v5.15.
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in

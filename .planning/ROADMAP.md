@@ -181,7 +181,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 163-02-PLAN.md — Part B AST-structural tests, then the resume-skip guard and per-batch checkpoint+cache write inside run_scan.py's chunked loop (DISC-08)
+- [x] 163-02-PLAN.md — Part B AST-structural tests, then the resume-skip guard and per-batch checkpoint+cache write inside run_scan.py's chunked loop (DISC-08)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -193,7 +193,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 161. Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing | 6/6 | Complete | 2026-08-25 |
 | 162. Check-in Scan Scheduling | 1/1 | Complete | 2026-08-25 |
-| 163. Discovery Batch Checkpoint Granularity | 1/3 | In Progress|  |
+| 163. Discovery Batch Checkpoint Granularity | 2/3 | In Progress|  |
 
 ---
 
