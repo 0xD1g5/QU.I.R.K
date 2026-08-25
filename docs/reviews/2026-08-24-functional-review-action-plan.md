@@ -66,10 +66,10 @@ component that `scanned_at` cannot provide.
 | ☐ | ID | Sev | Finding | Affects | Remediation | Effort | Status |
 |---|----|-----|---------|---------|-------------|--------|--------|
 | ☐ | RVW-004 | HIGH | v5.13 and v5.14 declared shipped but never released; v5.14 tag contains `version = "5.12.0"` | release integrity; sensor version reporting | Either publish v5.13/v5.14 properly (bump `pyproject.toml`, run the release workflow) or correct ROADMAP.md to stop claiming they shipped. A milestone must not be markable ✅ shipped without a successful release run. | M | Open |
-| ☐ | RVW-005 | HIGH | Three of four CI workflows red on `main`; the last 19 commits have never run CI | entire verification discipline | Restore all four workflows to green and establish that CI runs on every push to `main`. Investigate why no workflow triggered for commits `d3237a7`..`49f9094`. | M | Open |
-| ☐ | RVW-006 | HIGH | A sixth CI-gated staleness catalog (CMVP) is undocumented — and is the one currently failing | maintenance runbook | Add CMVP, error-codes and SNMP-contract catalogs to CLAUDE.md's Staleness Review Cadence so the runbook matches `python-staleness.yml`. **Do NOT run `quirk compliance cmvp refresh` until RVW-022 is fixed — it would corrupt the cache.** | S | Blocked by RVW-022 |
-| ☐ | RVW-022 | HIGH | `quirk compliance cmvp refresh` silently empties the algorithm list of every FIPS 140-3 module (6/6 sampled); `_fetch_cert_detail` looks for `table#fips-algo-table`, absent on 140-3 pages, and returns `[]` instead of raising | compliance attestation; client reports | `_fetch_cert_detail()` must parse FIPS 140-3 certificate pages, and must raise `CMVPRefreshParseError` when the expected structure is absent rather than returning an empty algorithm list. Add a regression test asserting a known 140-3 cert yields a non-empty algorithm list. **Blocks RVW-006.** | M | Open |
-| ☐ | RVW-017 | MEDIUM | Test isolation is illusory — 31 test files share one process-wide in-memory DB via `cache=shared`; `test_get_schedules_empty` fails after `test_otics_cadence_floor.py` writes a schedule | suite reliability; CI trust | The `dashboard_client` fixture must give each test an isolated database, as its docstring already claims. Options: a per-test unique shared-cache name (`file:test_<uuid>:?cache=shared`), or truncate tables in fixture teardown. **Raised OBSERVATION → MEDIUM: the stated cause (random ordering) was wrong — `pytest-randomly` is not installed — and the real cause affects 31 files.** | M | Open |
+| ☑ | RVW-005 | HIGH | Three of four CI workflows red on `main`; the last 19 commits have never run CI | entire verification discipline | Restore all four workflows to green and establish that CI runs on every push to `main`. ~~Investigate why no workflow triggered~~ — **root cause found and it is not a trigger fault: there were 32 unpushed commits.** CI's push trigger works; scheduled runs fired throughout. Pushed 2026-08-25; CI runs on every push again. Python CI's two failures were RVW-017 and RVW-006/022, both now fixed. | M | **Root cause resolved** — Release Tag Hygiene still red (RVW-004/016) |
+| ☑ | RVW-006 | HIGH | A sixth CI-gated staleness catalog (CMVP) is undocumented — and is the one currently failing | maintenance runbook | Add CMVP, error-codes and SNMP-contract catalogs to CLAUDE.md's Staleness Review Cadence so the runbook matches `python-staleness.yml`. ~~Do NOT run `quirk compliance cmvp refresh` until RVW-022 is fixed~~ — **unblocked**: RVW-022 fixed in `a7cf302` and the refresh has been run safely; cache `last_verified` is current. Catalog documentation in CLAUDE.md still outstanding. | S | **Partly done** — refresh unblocked and run; CLAUDE.md rows still to add |
+| ☑ | RVW-022 | HIGH | `quirk compliance cmvp refresh` silently empties the algorithm list of every FIPS 140-3 module (6/6 sampled); `_fetch_cert_detail` looks for `table#fips-algo-table`, absent on 140-3 pages, and returns `[]` instead of raising | compliance attestation; client reports | `_fetch_cert_detail()` must parse FIPS 140-3 certificate pages, and must raise `CMVPRefreshParseError` when the expected structure is absent rather than returning an empty algorithm list. Add a regression test asserting a known 140-3 cert yields a non-empty algorithm list. **Blocks RVW-006.** | M | **Done** (`a7cf302`) — 22 tests; see correction below |
+| ☑ | RVW-017 | MEDIUM | Test isolation is illusory — 31 test files share one process-wide in-memory DB via `cache=shared`; `test_get_schedules_empty` fails after `test_otics_cadence_floor.py` writes a schedule | suite reliability; CI trust | The `dashboard_client` fixture must give each test an isolated database, as its docstring already claims. Options: a per-test unique shared-cache name (`file:test_<uuid>:?cache=shared`), or truncate tables in fixture teardown. **Raised OBSERVATION → MEDIUM: the stated cause (random ordering) was wrong — `pytest-randomly` is not installed — and the real cause affects 31 files.** | M | **Done** (`034da44`) — unique-name option; also un-skipped 3 tests |
 
 ---
 
@@ -124,6 +124,40 @@ Two notes for whoever picks up the next milestone:
 - **RVW-017 was observed directly.** The two `test_verify_phase_gates` failures
   pass in isolation and fail in full-suite context, confirming the finding's
   revised root cause (shared process-wide database, not random ordering).
+
+---
+
+### RVW-022 — corrections after implementation
+
+Three claims in the finding did not survive verification against live NIST pages
+on 2026-08-25:
+
+| Claim | Reality |
+|---|---|
+| "absent on 140-3 pages" | The shape varies **per certificate**, not per FIPS level. Certs 4523 and 4884 are both 140-3; only 4523 has `table#fips-algo-table`. |
+| "6/6 sampled" | Of six sampled, **three** parsed correctly and three returned `[]`. Across the full curated set the real figure is **11 of 53**. |
+| implied single failure mode | There are two page shapes plus a third case — certificates that publish **no** algorithm data at all (cert 5263). Those cannot be fixed by parsing; `refresh` now preserves their last verified list. |
+
+Two things the finding did not mention, both found while diffing the refresh:
+
+- **The old cache was not a faithful scrape.** Certs 4523 and 4884 carried
+  byte-identical 12-family lists despite completely different pages, and 30
+  modules claimed families NIST does not publish (cert 4339's page lists exactly
+  AES, CKG, DRBG, RSA, SHS; the cache also claimed ECDSA and HMAC). The refresh
+  therefore *reduces* claimed coverage — which is the correct direction for a
+  compliance tool, since over-claiming CMVP coverage is the dangerous error.
+- **A spelling split made six modules unmatchable.** The cache held both
+  `Triple-DES` and `TripleDES`; `normalize_for_cmvp_lookup()` emits only the
+  latter, so the six modules under the other spelling could never match a 3DES
+  query. Canonicalised — 3DES coverage went from 7 modules to 18.
+
+### RVW-017 — what it had already cost
+
+Beyond the CI failure, three tests were sitting permanently `xfail` in
+`skip_registry.py` with "shared in-memory SQLite cache pollution" recorded as
+the cause (`test_dashboard_trends.py` and two in
+`test_sensor_push_id_revalidation.py`). With the root cause fixed, all three
+markers and registry rows were removed and all three now pass.
 
 ---
 
