@@ -113,3 +113,29 @@ def serial_to_targets(serial: List[Dict[str, Any]]) -> List[Tuple[str, int]]:
         if h and p is not None:
             out.append((str(h), int(p)))
     return out
+
+
+def open_ports_to_serial(ports: List["NmapOpenPort"]) -> List[Dict[str, Any]]:
+    # Phase 163 D-07: NmapOpenPort is a dataclass, and save_cache's
+    # _write_json has no try/except — handing it raw dataclasses raises an
+    # uncaught TypeError and kills the scan. Mirrors targets_to_serial.
+    return [
+        {"host": p.host, "port": int(p.port), "protocol": p.protocol, "service": p.service}
+        for p in (ports or [])
+    ]
+
+
+def serial_to_open_ports(serial: List[Dict[str, Any]]) -> List["NmapOpenPort"]:
+    # Phase 163 D-07: mirrors serial_to_targets' defensive .get() posture —
+    # malformed items are skipped rather than raised on. Function-scoped
+    # import keeps quirk/engine/cache.py discovery-agnostic at module scope.
+    from quirk.discovery.nmap_parser import NmapOpenPort
+
+    out: List[NmapOpenPort] = []
+    for item in serial or []:
+        h = item.get("host")
+        p = item.get("port")
+        proto = item.get("protocol")
+        if h and p is not None and proto:
+            out.append(NmapOpenPort(host=str(h), port=int(p), protocol=str(proto), service=item.get("service")))
+    return out
