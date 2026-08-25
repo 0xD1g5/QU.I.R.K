@@ -40,8 +40,13 @@ logger = logging.getLogger(__name__)
 class ScheduleCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, pattern=r"^[A-Za-z0-9_\-\.]+$")
     cron_expr: str = Field(..., min_length=1, max_length=128)
-    target: str = Field(..., min_length=1, max_length=512)
+    # Phase 162 HWLC-20 / D-02: a check-in re-probes the known fleet resolved
+    # from the database, so it carries no target of its own. Optional here;
+    # the handler substitutes the sentinel and rejects a missing target for a
+    # normal profile scan.
+    target: Optional[str] = Field(default=None, max_length=512)
     profile: Optional[str] = Field(default=None, max_length=64)
+    check_in: bool = False
 
 
 class ScheduleTogglePayload(BaseModel):
@@ -54,6 +59,7 @@ class ScheduleResponse(BaseModel):
     cron_expr: str
     target: str
     profile: Optional[str]
+    check_in: bool = False          # Phase 162 HWLC-20: lightweight re-probe schedule
     enabled: bool
     last_run_at: Optional[str]      # ISO-8601 string
     next_run_at: Optional[str]      # ISO-8601 string, computed via croniter
@@ -114,6 +120,7 @@ def _to_response(
         cron_expr=s.cron_expr,
         target=s.target,
         profile=s.profile,
+        check_in=bool(getattr(s, "check_in", False)),
         enabled=bool(s.enabled),
         last_run_at=_iso(s.last_run_at),
         next_run_at=_iso(_compute_next_run(s)),
@@ -143,11 +150,21 @@ def create_schedule(
             status_code=400,
             detail=format_error("SCHED-002"),
         )
+    # Phase 162 HWLC-20 / D-02: same target rule as the CLI — the sentinel for a
+    # check-in, a hard requirement for anything else.
+    if payload.check_in:
+        _target = payload.target or CHECK_IN_TARGET_SENTINEL
+    else:
+        if not (payload.target or "").strip():
+            raise HTTPException(status_code=400, detail=format_error("SCHED-002"))
+        _target = payload.target
+
     row = ScheduledScan(
         name=payload.name,
         cron_expr=payload.cron_expr,
-        target=payload.target,
+        target=_target,
         profile=payload.profile,
+        check_in=bool(payload.check_in),
         enabled=True,
         last_run_at=None,
         created_at=_utcnow_naive(),

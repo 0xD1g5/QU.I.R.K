@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.12.0
-**Last Updated:** 2026-08-25 (v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
+**Last Updated:** 2026-08-25 (v5.15 Phase 162 wrap — Check-in Scan Scheduling: UAT-162-01..04 added; UAT-162-04 pending human verification. Also fixed SCHED-02, an invalid --profile fallback that made every default-profile schedule fail at argparse. Earlier: v5.15 Phase 161 wrap — Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing: UAT-161-01..07 added. HWLC-14 closed; HWLC-19 pending UAT-161-04 human verification. RVW-021 doc corrections folded in. See Series 161. Earlier: v5.14 Phase 160 wrap — Catalog-Level PQC Vendor Trend Tracking:
 UAT-160-01..05 added. Closes HWLC-17. See Series 160.)
 
 Earlier: 2026-08-17 (v5.14 Phase 159 wrap — Check-in Scan Mode: UAT-159-01..04 added.
@@ -18906,3 +18906,95 @@ exist. `quirk` has no `scan` subcommand and no `--targets` flag; targets come fr
 Note the review's traceback claim applies to `quirk --targets X` (argparse prefix-matches
 `--targets-file`), not to `quirk scan --targets X`, which fails cleanly with
 `unrecognized arguments: scan`. The uncaught-traceback half is tracked separately.
+
+---
+
+## Series 162: Check-in Scan Scheduling (Phase 162 — v5.15)
+
+**Last Updated:** 2026-08-25
+
+### UAT-162-01: A check-in schedule can be created without a target (HWLC-20) — Automated
+
+**What to test:** `quirk schedule add --check-in` creates a row with `check_in=True` and no
+caller-supplied target; the stored target is the `(known fleet)` sentinel.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_check_in_scheduling.py -k round_trip -v`.
+
+**Pass criteria:**
+- `check_in` persists as True and round-trips from the database
+- `target` is `(known fleet)`
+- A normal schedule defaults `check_in` to False
+- The additive migration adds `check_in` to a pre-existing `scheduled_scans` table
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 162)
+**Notes:** HWLC-20. D-02: `target` is NOT NULL, so a self-describing sentinel is stored rather
+than relaxing the constraint and every read path that assumes a target is present.
+
+---
+
+### UAT-162-02: The dispatcher invokes --check-in and never a profile scan (HWLC-20) — Automated
+
+**What to test:** Success criterion 2 — "a scheduled check-in job never silently runs a full
+profile scan instead". Asserted directly over the argv `build_scan_argv()` produces.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_scheduler_dispatch_profile.py -v`.
+
+**Pass criteria:**
+- A check-in schedule's argv contains `--check-in`
+- It contains no `--profile`, even when the row carries one
+- A normal schedule is unaffected and still gets a valid `--profile`
+- A legacy row predating the `check_in` column is treated as a profile scan
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 162)
+**Notes:** HWLC-20. Supersedes UAT-63-02's deferred manual dispatcher walkthrough for this
+behaviour — that deferral is why SCHED-02 (an invalid `--profile balanced` fallback that made
+every default-profile schedule fail at argparse) survived three months undetected.
+
+---
+
+### UAT-162-03: Scheduled check-ins reuse the manual check-in path (HWLC-20) — Automated
+
+**What to test:** Success criterion 3 — scheduled runs inherit HWLC-13's guarantees because
+there is exactly one implementation, not because a second one was kept in sync.
+
+**Steps:**
+1. `.venv/bin/python -m pytest tests/test_check_in_scheduling.py -k NoSecondImplementation -v`.
+
+**Pass criteria:**
+- Exactly one `run_check_in` implementation exists in the tree
+- `scheduler_cmd.py` references no hardware probe/persist/reconcile symbol
+- `main()` still short-circuits into `run_check_in()` before the scan pipeline
+- `run_check_in` references no scoring or report-writing symbol
+
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** automated (pytest — Phase 162)
+**Notes:** HWLC-20 / HWLC-13.
+
+---
+
+### UAT-162-04: `/schedules` distinguishes check-in jobs (HWLC-20) — HUMAN
+
+**What to test:** Success criterion 4 — a consultant can tell at a glance which schedules are
+lightweight re-probes. Visual affordance; not assertable by the render-parity tests, which check
+presence rather than appearance.
+
+**Steps:**
+1. Create one check-in schedule and one normal schedule.
+2. Start the dashboard and open `/schedules`.
+3. Confirm a `check-in` chip appears beside the check-in schedule's name and not the other's.
+4. Confirm the chip uses the advisory teal treatment, not a severity colour — a check-in is not
+   a warning state.
+5. Confirm the check-in row's Target column reads `(known fleet)`.
+
+**Pass criteria:**
+- Chip present on check-in rows only, advisory-styled
+- Target column reads `(known fleet)` for check-in schedules
+- Existing schedule rows render unchanged
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** _pending_  **Tester:** _pending human verification_
+**Notes:** HWLC-20 D-04.

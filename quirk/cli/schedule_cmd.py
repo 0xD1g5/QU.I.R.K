@@ -16,6 +16,10 @@ from croniter import croniter
 from quirk.db import get_session, init_db
 from quirk.errors import format_error
 from quirk.models import ScheduledScan
+
+# Phase 162 HWLC-20 / D-02: stored in ScheduledScan.target for check-in
+# schedules, which have no target of their own.
+CHECK_IN_TARGET_SENTINEL = "(known fleet)"
 from quirk.otics_cadence import floor_advisory
 
 # T-63-02: validate name to prevent path traversal (no path separators, bounded length)
@@ -114,11 +118,28 @@ def _cmd_add(args: argparse.Namespace, console: Console) -> None:
     # Ensure tables exist (idempotent)
     init_db(db_path)
 
+    # Phase 162 HWLC-20 / D-02: a check-in ignores `target` entirely — it
+    # re-probes whatever latest_successful_hardware_devices() returns. The column
+    # is NOT NULL, so rather than relax the constraint (and every read path that
+    # assumes a target is present) we store a self-describing sentinel that reads
+    # correctly in both `quirk schedule list` and the dashboard Target column.
+    check_in = bool(getattr(args, "check_in", False))
+    if check_in:
+        target = args.target or CHECK_IN_TARGET_SENTINEL
+    else:
+        if not args.target:
+            console.print(
+                "[red]--target is required unless --check-in is given[/red]"
+            )
+            sys.exit(2)
+        target = args.target
+
     row = ScheduledScan(
         name=args.name,
         cron_expr=args.cron,
-        target=args.target,
+        target=target,
         profile=args.profile,
+        check_in=check_in,
         enabled=True,
         created_at=datetime.now(timezone.utc),
     )
@@ -228,8 +249,18 @@ def run_schedule(argv: list[str]) -> None:
     add_parser = subparsers.add_parser("add", help="Add a new scheduled scan")
     add_parser.add_argument("--name", required=True, help="Unique schedule name")
     add_parser.add_argument("--cron", required=True, help="Cron expression (5-field)")
-    add_parser.add_argument("--target", required=True, help="Scan target (host/IP/range)")
-    add_parser.add_argument("--profile", default=None, help="Scan profile (default: balanced)")
+    add_parser.add_argument(
+        "--target", default=None,
+        help="Scan target (host/IP/range). Required unless --check-in is given.",
+    )
+    add_parser.add_argument("--profile", default=None, help="Scan profile (default: standard)")
+    # Phase 162 HWLC-20: a check-in re-probes the already-known hardware fleet
+    # resolved from the database, so it takes no target and no profile.
+    add_parser.add_argument(
+        "--check-in", action="store_true", dest="check_in",
+        help="Schedule a lightweight check-in re-probe of known hardware "
+             "instead of a scored profile scan (no --target needed).",
+    )
     add_parser.add_argument("--config", default=None, help="Path to quirk.db or :memory:")
 
     # --- list ---

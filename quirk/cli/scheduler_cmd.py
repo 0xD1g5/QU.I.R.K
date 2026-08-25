@@ -243,6 +243,47 @@ def _materialize_scan_config(
 # ---------------------------------------------------------------------------
 
 
+def build_scan_argv(schedule, generated_config: str) -> list[str]:
+    """Build the argv `_dispatch_schedule` will exec for ``schedule``.
+
+    Pure and module-level so the dispatched command can be asserted directly.
+    It previously lived inline inside ``_dispatch_schedule``, reachable only
+    through a subprocess call, which is why SCHED-02 — a `--profile` value
+    `run_scan` rejects outright — survived three months undetected.
+
+    T-63-07: list-form for Popen; no shell=True, no metacharacter expansion.
+    Pitfall 5: ``sys.executable -m run_scan``, never "quirk", which may not be
+    on PATH.
+
+    Target and output directory are conveyed via the generated ``--config``.
+    Do NOT add ``--target`` or ``--output`` — run_scan.py accepts neither
+    (STAB-03).
+
+    Two shapes:
+
+    * **check-in schedule** (Phase 162 HWLC-20 / D-03) — ``--check-in`` and NO
+      ``--profile``. ``run_check_in()`` short-circuits ``main()`` before any
+      profile is read, so emitting one would be a flag with no effect, and a
+      dispatched command that does not say what will actually happen is exactly
+      how SCHED-02 stayed invisible.
+    * **profile scan** — ``--profile`` falling back to run_scan's own
+      ``"standard"`` default. The fallback must be a SCAN profile: this read
+      ``schedule.profile or "balanced"``, but "balanced" is a *score* profile
+      (``--score-profile lenient|balanced|strict``) and ``run_scan --profile``
+      accepts only quick|standard|deep. ``quirk schedule add`` defaults
+      ``--profile`` to None, so every CLI-created schedule without an explicit
+      profile dispatched a command argparse rejected, and the run was recorded
+      "failed" with no reason. Dashboard-created schedules were unaffected:
+      their schema declares ``Literal["quick", "standard", "deep"] = "standard"``.
+    """
+    cmd = [sys.executable, "-m", "run_scan", "--config", generated_config]
+    if bool(getattr(schedule, "check_in", False)):
+        cmd += ["--check-in"]
+    else:
+        cmd += ["--profile", getattr(schedule, "profile", None) or "standard"]
+    return cmd
+
+
 def _dispatch_schedule(
     schedule: ScheduledScan,
     db: Session,
@@ -312,24 +353,7 @@ def _dispatch_schedule(
     # with --target or --output (STAB-03 invariant).
     generated_config = _materialize_scan_config(schedule, scan_config_path, output_dir)
 
-    # T-63-07: list-form Popen — no shell=True, no metacharacter expansion
-    # Pitfall 5: sys.executable + -m run_scan (not "quirk" which may not be on PATH)
-    cmd = [sys.executable, "-m", "run_scan", "--config", generated_config]
-    # SCHED-02 fix: the fallback must be a SCAN profile. This read
-    # `schedule.profile or "balanced"` — but "balanced" is a *score* profile
-    # (`--score-profile lenient|balanced|strict`), and `run_scan --profile`
-    # accepts only quick|standard|deep, defaulting to "standard". Because
-    # `quirk schedule add` defaults --profile to None, every CLI-created
-    # schedule without an explicit profile dispatched a command argparse
-    # rejected outright, and the run was recorded "failed" with no reason.
-    # Dashboard-created schedules were unaffected: their schema declares
-    # Literal["quick", "standard", "deep"] = "standard".
-    cmd += [
-        "--profile",
-        schedule.profile or "standard",
-    ]
-    # NOTE: target + output_dir are conveyed via the generated --config.
-    # Do NOT add --target or --output — run_scan.py does not accept them (STAB-03).
+    cmd = build_scan_argv(schedule, generated_config)
 
     run.status = "running"
     db.commit()

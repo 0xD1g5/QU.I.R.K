@@ -196,6 +196,15 @@ class ScheduledScan(Base):
     last_run_at = Column(DateTime, nullable=True)     # None = never run
     created_at = Column(DateTime, nullable=False)
 
+    # Phase 162 HWLC-20 / D-01: this schedule dispatches a lightweight check-in
+    # re-probe (`run_scan --check-in`) rather than a scored profile scan.
+    # A dedicated boolean rather than a `profile="check-in"` sentinel: every
+    # other consumer of `profile` feeds it to `run_scan --profile`, which accepts
+    # only quick|standard|deep — putting an invalid value there is exactly the
+    # confusion that made every default-profile schedule fail at argparse
+    # (SCHED-02, fixed in ac219e4). NULL reads as False.
+    check_in = Column(Boolean, default=False, nullable=True)
+
 
 class ScheduledRun(Base):
     """Dispatch run history for a scheduled scan (Phase 63 — SCHED-01).

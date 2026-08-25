@@ -129,6 +129,11 @@ _V54_SENSOR_COLUMNS: tuple[tuple[str, str], ...] = (
     ("sensor_id", "TEXT"),
     ("segment",   "TEXT"),
 )
+_PHASE162_SCHEDULE_COLUMNS: tuple[tuple[str, str], ...] = (
+    # Phase 162 HWLC-20: marks a schedule as a check-in re-probe rather than a
+    # scored profile scan. NULL on pre-existing rows reads as False.
+    ("check_in", "BOOLEAN"),
+)
 _RVW003_SCAN_SESSION_COLUMNS: tuple[tuple[str, str], ...] = (
     # RVW-003: stored scan-session identity on crypto_endpoints. Holds the run's
     # `started_utc` ISO timestamp — the same key scan_jobs/scan_checkpoints use.
@@ -273,6 +278,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("hardware_devices", _CHECKIN_HW_COLUMNS),        # Phase 159 HWLC-13
     ("hardware_drift_events", _CHECKIN_DRIFT_EVENT_COLUMNS),  # Phase 159 WR-03 fix
     ("crypto_endpoints", _RVW003_SCAN_SESSION_COLUMNS),       # RVW-003 scan session identity
+    ("scheduled_scans",  _PHASE162_SCHEDULE_COLUMNS),         # Phase 162 HWLC-20
 )
 
 

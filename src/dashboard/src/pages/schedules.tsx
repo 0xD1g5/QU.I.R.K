@@ -181,7 +181,21 @@ export function SchedulesPage() {
               {data.schedules.map((schedule) => (
                 <TableRow key={schedule.id}>
                   <TableCell className="text-sm font-medium text-foreground py-3">
-                    {schedule.name}
+                    <span className="inline-flex items-center gap-2">
+                      {schedule.name}
+                      {/* Phase 162 HWLC-20: distinguishes a lightweight check-in
+                          re-probe from a scored profile scan. Advisory teal, the
+                          same non-severity chrome the hardware sections use — a
+                          check-in is not a warning state. */}
+                      {schedule.check_in && (
+                        <span
+                          className="rounded border border-[#2b8a86] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#2b8a86]"
+                          title="Lightweight re-probe of already-known hardware; does not run a full scored scan"
+                        >
+                          check-in
+                        </span>
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground py-3">
                     {schedule.target}

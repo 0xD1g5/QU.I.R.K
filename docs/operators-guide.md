@@ -1566,6 +1566,30 @@ would be — the `/hardware` and `/compare` dashboard pages, `GET /api/hardware/
 `/trends`/`/compare` readiness-score exclusion). A check-in run is never selectable as a scored
 scan on `/api/scans` or `/api/trends`.
 
+**Putting a check-in on a schedule (Phase 162, HWLC-20).** Rather than remembering to run
+`--check-in` by hand, register it with the scheduler:
+
+```bash
+quirk schedule add --name nightly-checkin --cron "0 2 * * *" --check-in
+quirk scheduler run      # the long-running dispatch loop
+```
+
+- **No `--target` is needed or accepted as meaningful.** A check-in re-probes the fleet already
+  recorded in the database (`latest_successful_hardware_devices()`), so there is nothing to aim
+  it at. The stored target reads `(known fleet)` in `quirk schedule list` and on the dashboard.
+- **No `--profile` applies.** The dispatcher emits `run_scan --check-in` and deliberately no
+  `--profile`, because check-in mode short-circuits before any profile is read. A dispatched
+  command that named a profile would misrepresent what actually runs.
+- **A scheduled check-in is the same code path as a manual one.** There is no second
+  implementation, so every HWLC-13 guarantee above holds identically: `is_partial_scan=True`,
+  the partial-scan banner, no readiness score, and exclusion from `/trends` and `/compare` as a
+  scored session.
+- **The dashboard marks them.** `/schedules` shows a `check-in` chip beside the schedule name so
+  a lightweight re-probe is distinguishable at a glance from a scored profile scan.
+
+Enable, disable and remove them exactly like any other schedule
+(`quirk schedule enable|disable|remove <name>`).
+
 ### 9.10 Catalog-Level PQC Vendor Trend Tracking (Phase 160, HWLC-17)
 
 As of Phase 160, QUIRK tracks **vendor-scoped** PQC-status change over time, in addition to

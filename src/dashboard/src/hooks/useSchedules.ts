@@ -7,6 +7,9 @@ export interface Schedule {
   cron_expr: string
   target: string
   profile: string | null
+  /** Phase 162 HWLC-20: a lightweight check-in re-probe schedule rather than
+   *  a scored profile scan. Absent on responses from older servers. */
+  check_in?: boolean
   enabled: boolean
   last_run_at: string | null
   next_run_at: string | null

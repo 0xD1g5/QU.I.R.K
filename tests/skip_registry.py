@@ -14,6 +14,16 @@ is the intended behavior and the validation that D-04 deletions worked.
 """
 
 ALLOWED_SKIPS = [
+    # Phase 162: conditional, environment-detected skip — NOT a known-broken
+    # test. `_run_scan_argparse()` spawns `python -m run_scan --help` to verify
+    # argparse accepts/rejects a --profile value. On macOS a subprocess spawned
+    # late in a full-suite run can die with SIGSEGV before executing anything
+    # (`git init` in test_verify_phase_gates.py hits the identical thing).
+    # A signal-killed child produced no stderr, so asserting on it would be a
+    # false failure rather than a real result. CI (Linux) never takes this
+    # branch and runs the assertions for real.
+    ("test_scheduler_dispatch_profile.py", 91, "environment_subprocess_signal",
+     "macOS full-suite subprocess SIGSEGV; child never executed so there is no argparse result to assert. Runs for real on CI/Linux."),
     ("test_broker_scanner_kafka.py",    12,  "optional_extra", "broker_scanner is [motion]; D-05"),
     ("test_broker_scanner_rabbitmq.py", 13,  "optional_extra", "broker_scanner is [motion]; D-05"),
     ("test_broker_scanner_redis.py",    13,  "optional_extra", "broker_scanner is [motion]; D-05"),
