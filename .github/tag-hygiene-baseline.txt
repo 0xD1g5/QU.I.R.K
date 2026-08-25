@@ -14,6 +14,8 @@
 v5.9 malformed two-component tag, never matched release.yml's v*.*.* glob
 v5.10.0 tag created locally, never pushed to origin
 v5.11.0 PyPI-only release; Windows asset gap dispositioned per D-148-RELEASE04
+v5.13 two-component tag; never matched release.yml's then-strict v*.*.* glob and was never pushed to origin. Milestone development completed, release did not happen. Record corrected in ROADMAP.md (RVW-004, 2026-08-25); v5.15 is the next real release. Trigger broadened to v[0-9]* so this cannot recur silently.
+v5.14 two-component tag; never matched release.yml's then-strict v*.*.* glob, so pushing it fired no workflow. Tag contains version = "5.12.0". Milestone development completed, release did not happen. Record corrected in ROADMAP.md (RVW-004, 2026-08-25); v5.15 is the next real release. Trigger broadened to v[0-9]* so this cannot recur silently.
 
 v3.8.0 historical baseline — predates the tag hygiene guard (2026-08-11)
 v3.9 historical baseline — predates the tag hygiene guard (2026-08-11)

@@ -4,7 +4,7 @@
 #   - RELENG-02: GitHub Actions Trusted Publishers (OIDC, no stored API tokens)
 #   - RELENG-03: Sigstore attestations auto-generated via pypa/gh-action-pypi-publish
 #
-# Trigger: push of a semver tag matching `v*.*.*` (e.g. `v5.0.0`, `v5.0.1`) — OR a manual
+# Trigger: push of a release-like tag matching `v[0-9]*` (e.g. `v5.0.0`, `v5.15`) — OR a manual
 # `workflow_dispatch` dry-run from the Actions tab (RELEASE-02). A dispatch run publishes
 # nothing: the PyPI `publish` job and the "Attach zip to GitHub Release" step are both gated
 # on `github.event_name == 'push'` (not merely on a `refs/tags/` ref shape), so dispatching
@@ -31,15 +31,26 @@
 #   cosign verify-blob --bundle <attestation.sigstore.json> <artifact>
 #
 # Security note: this workflow takes no untrusted user input. The only event is
-# `push.tags` with a strict `v*.*.*` filter; no issue/PR/comment bodies are
+# `push.tags` with a `v[0-9]*` filter; no issue/PR/comment bodies are
 # interpolated into run: steps.
+#
+# RVW-004/RVW-016 — why the filter is deliberately loose:
+# It used to be the strict `v*.*.*`, which silently matched NOTHING for a
+# two-component tag. Pushing `v5.9`, `v5.13` and `v5.14` therefore fired no
+# workflow at all — three milestones declared shipped that never reached PyPI,
+# with zero Actions events to notice. A trigger that no-ops on a typo is a trap;
+# `v[0-9]*` matches whatever the tag hygiene guard
+# (scripts/release_tag_hygiene.py) considers release-like, so the two can no
+# longer disagree about what counts as a release tag. Convention is still
+# 3-component semver — but a mistake now produces a visible release run rather
+# than silence.
 
 name: Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v[0-9]*'   # RVW-004: loose on purpose — see the security note above
   workflow_dispatch:
 
 # Workflow-level least-privilege default (WR-04). Each job that needs broader

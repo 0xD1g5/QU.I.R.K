@@ -64,15 +64,57 @@ def test_workflow_dispatch_trigger_present():
 
 
 def test_tag_push_trigger_preserved():
-    """D-05: the existing push: tags: v*.*.* trigger must still be present."""
+    """D-05: a tag-push trigger must still be present.
+
+    Asserts the *intent* — that release tags trigger the workflow — rather than
+    one literal glob. The literal used to be 'v*.*.*'; see the RVW-004 test below
+    for why that exact pattern was the defect, not the contract.
+    """
     wf = _load()
     triggers = _triggers(wf)
     push = triggers.get("push", {})
     tags = push.get("tags", [])
-    assert "v*.*.*" in tags, (
-        f"push.tags is {tags!r}, expected to still contain 'v*.*.*' — "
-        "adding workflow_dispatch must not remove the tag-push trigger (RELEASE-02 D-05)."
+    assert tags, (
+        f"push.tags is {tags!r} — adding workflow_dispatch must not remove the "
+        "tag-push trigger (RELEASE-02 D-05)."
     )
+
+
+def test_two_component_tag_still_triggers_a_release(): 
+    """RVW-004: a two-component tag must not silently match nothing.
+
+    release.yml triggered on 'v*.*.*' — three components. `v5.9`, `v5.13` and
+    `v5.14` are two-component tags, so pushing them matched no pattern, fired no
+    workflow, and produced no error. Three milestones were recorded as shipped
+    while PyPI stayed on an older version.
+
+    The convention is still 3-component semver; this guard only ensures a
+    mistyped tag produces a visible release run instead of silence.
+    """
+    import fnmatch
+
+    wf = _load()
+    tags = _triggers(wf).get("push", {}).get("tags", [])
+    for candidate in ("v5.15.0", "v5.15", "v6.0"):
+        assert any(fnmatch.fnmatch(candidate, pat) for pat in tags), (
+            f"tag {candidate!r} matches none of push.tags {tags!r} — pushing it "
+            f"would fire no workflow at all, which is the RVW-004 defect"
+        )
+
+
+def test_tag_trigger_agrees_with_the_hygiene_guard():
+    """The release trigger and the tag-hygiene guard must consider the same
+    tags release-like, or the guard will flag tags the workflow ignores."""
+    import fnmatch
+
+    wf = _load()
+    tags = _triggers(wf).get("push", {}).get("tags", [])
+    # scripts/release_tag_hygiene.py treats `v[0-9]*` as release-like.
+    for candidate in ("v5.9", "v5.13", "v5.14", "v5.15.0"):
+        assert any(fnmatch.fnmatch(candidate, pat) for pat in tags), (
+            f"the hygiene guard considers {candidate!r} a release tag but "
+            f"release.yml's push.tags {tags!r} would not fire for it"
+        )
 
 
 def test_publish_job_gated_on_push_event_and_tag_ref():

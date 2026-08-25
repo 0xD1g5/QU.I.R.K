@@ -119,12 +119,25 @@ Step-by-step procedure for cutting a release. All steps are required.
    Never use `git add -A` — explicit paths only, to avoid sweeping unrelated
    working-tree changes into a release commit.
 
-6. **Tag the release and push.**
+6. **Tag the release and push.** The tag must be **three-component** semver
+   (`v5.15.0`), never two (`v5.15`), and it must actually reach `origin`.
 
    ```bash
    git tag vX.Y.Z
    git push origin main --tags
+   # Confirm it landed — a tag that stays local releases nothing:
+   git ls-remote --tags origin | grep vX.Y.Z
    ```
+
+   > **Why this step has its own warning (RVW-004).** `release.yml` used to
+   > trigger on `v*.*.*`, which matches three components and *silently matches
+   > nothing else*. `v5.9`, `v5.13` and `v5.14` were all two-component tags:
+   > pushing them fired no workflow, produced no run, and raised no error, so
+   > three milestones were recorded as shipped while PyPI stayed on an older
+   > version. `v5.13` was additionally never pushed at all. The trigger is now
+   > the looser `v[0-9]*` so a malformed tag still produces a visible run — but
+   > the convention remains 3-component, and the `git ls-remote` check above is
+   > the cheapest way to catch the never-pushed variant.
 
 7. **Monitor the release workflow.** Pushing the `vX.Y.Z` tag triggers
    `.github/workflows/release.yml`. Watch the GitHub Actions run; the workflow
