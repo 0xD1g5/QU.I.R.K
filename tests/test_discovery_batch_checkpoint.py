@@ -615,6 +615,14 @@ def test_batch_checkpoint_write_is_inside_chunked_loop():
     inside_calls = _calls_inside(loop_nodes, checkpoint_calls)
     assert inside_calls, "No write_scan_checkpoint(...) call found inside the _chunked loop."
 
+    def _joined_str_literal_contains(node: ast.AST, needle: str) -> bool:
+        if not isinstance(node, ast.JoinedStr):
+            return False
+        literal_parts = "".join(
+            v.value for v in node.values if isinstance(v, ast.Constant) and isinstance(v.value, str)
+        )
+        return needle in literal_parts
+
     found_batch_stage = False
     for call in inside_calls:
         stage_arg = None
@@ -623,15 +631,30 @@ def test_batch_checkpoint_write_is_inside_chunked_loop():
                 stage_arg = kw.value
         if stage_arg is None and len(call.args) >= 3:
             stage_arg = call.args[2]
-        if isinstance(stage_arg, ast.JoinedStr):
-            literal_parts = "".join(
-                v.value for v in stage_arg.values if isinstance(v, ast.Constant) and isinstance(v.value, str)
-            )
-            if "discovery:batch-" in literal_parts:
-                found_batch_stage = True
+
+        if _joined_str_literal_contains(stage_arg, "discovery:batch-"):
+            found_batch_stage = True
+        elif isinstance(stage_arg, ast.Name):
+            # The stage argument may be a variable assigned to an f-string
+            # earlier in the same loop body (rather than an inline literal).
+            # Resolve the assignment within the enclosing loop(s).
+            for loop_node in loop_nodes:
+                if call not in ast.walk(loop_node):
+                    continue
+                for node in ast.walk(loop_node):
+                    if (
+                        isinstance(node, ast.Assign)
+                        and any(
+                            isinstance(t, ast.Name) and t.id == stage_arg.id
+                            for t in node.targets
+                        )
+                        and _joined_str_literal_contains(node.value, "discovery:batch-")
+                    ):
+                        found_batch_stage = True
     assert found_batch_stage, (
         "No in-loop write_scan_checkpoint(...) call has a stage argument built from "
-        "'discovery:batch-'."
+        "'discovery:batch-' (checked both inline f-strings and variables assigned "
+        "from one within the same loop)."
     )
 
 

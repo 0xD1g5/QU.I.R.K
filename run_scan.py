@@ -73,7 +73,7 @@ from quirk.reports.writer import write_reports
 from quirk.reports.content_model import ReportCongruenceError  # D-06: fail-closed report halt
 
 from quirk.engine.profiles import apply_profile
-from quirk.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets
+from quirk.engine.cache import scope_hash, load_cache, save_cache, targets_to_serial, serial_to_targets, open_ports_to_serial, serial_to_open_ports
 from quirk.engine.rate_limiter import TokenBucket
 
 from quirk import __version__
@@ -88,6 +88,11 @@ from quirk.cli.job_progress import (  # Phase 65 — best-effort job progress up
     write_scan_checkpoint,   # Phase 67 RESUME-01
     update_batch_progress,   # Phase 146 DISC-04
 )
+
+# Phase 163 D-06: deliberately distinct from args.cache_ttl_hours (default 24h) —
+# a scan resumed a day later must not silently fall back to full re-probing.
+# Bounds cache-file accumulation; correctness comes from scan_run_id-scoped keys.
+_RESUME_BATCH_CACHE_TTL_HOURS = 720
 
 
 def apply_security_cli_overrides(cfg, args) -> None:
@@ -772,6 +777,11 @@ def _handle_list_resumable(args) -> None:
 def _stage_completed(completed_stages: set, stage: str) -> bool:
     """Phase 67 RESUME-01: True if this stage was completed in a prior run."""
     return stage in completed_stages
+
+
+def _batch_stage_completed(completed_stages: set, prefix: str, batch_num: int) -> bool:
+    """Phase 163 D-01: True if {prefix}:batch-{batch_num} was completed in a prior run."""
+    return f"{prefix}:batch-{batch_num}" in completed_stages
 
 
 def _process_gcs_storage_encryption(gcp_endpoints: list, logger=None) -> list:
@@ -1705,6 +1715,39 @@ def main():
                 for batch in _chunked(host_iter, _MAX_HOSTS_PER_CIDR):
                     batch_num += 1
 
+                    # Phase 163 / DISC-08, D-01/D-02/D-06: resume-skip guard.
+                    # A checkpoint alone is never sufficient to skip — this
+                    # batch's cached results must also still be present and
+                    # unexpired, or we fall through and re-probe normally.
+                    _batch_stage = f"discovery:batch-{batch_num}"
+                    _batch_cache_key = f"discovery-batch-{scan_run_id}-{batch_num}"
+                    if _batch_stage_completed(_completed_stages, "discovery", batch_num):
+                        _cached_batch = load_cache(
+                            cfg.output.directory, _batch_cache_key, _RESUME_BATCH_CACHE_TTL_HOURS
+                        )
+                        if _cached_batch is not None:
+                            # Phase 146's update_batch_progress call has exactly one
+                            # lexical call site (tests/test_discovery_batch_progress.py
+                            # AST lock) — not duplicated here; the skip path only
+                            # updates the local counter and prints its own message.
+                            all_open_ports.extend(serial_to_open_ports(_cached_batch.get("ports", [])))
+                            _discovery_hosts_checked += len(batch)
+                            if not args.quiet:
+                                print(
+                                    f"Discovery: batch {batch_num}/{_discovery_batch_total} "
+                                    "— skipped (completed on a prior run)"
+                                )
+                            continue
+
+                    # Phase 163 Pitfall 3: resume assumes the target scope is
+                    # unchanged since the original scan — changing CIDRs or
+                    # exclude_ips between runs produces undefined batch
+                    # alignment. This is a pre-existing, accepted limitation
+                    # of the whole stage-level resume system, documented
+                    # rather than solved.
+                    _batch_swept_ok = True
+                    batch_open_ports: List = []
+
                     # Phase 146 / D-05/D-06/D-07, RESEARCH.md Pitfall 2, Open
                     # Question 1: the formula's output REPLACES
                     # args.nmap_timeout entirely inside this loop — a tiny
@@ -1788,6 +1831,33 @@ def main():
                                 # TLS/SSH/etc. crash can never inflate "hosts undetermined".
                                 scan_error_category="discovery_exception",
                             ))
+                            _batch_swept_ok = False
+
+                    # Phase 163 / DISC-08, D-02/D-03/D-05: per-batch checkpoint +
+                    # cache write. Gate is args.db_path ALONE — deliberately not
+                    # args.cache (D-02: batch payloads must persist independent
+                    # of --cache so resume works without it) and not
+                    # args.job_id (that gate belongs solely to
+                    # update_batch_progress, which is dashboard-observational
+                    # only). A failed sweep flips the sweep-ok flag above,
+                    # so this write is skipped and resume re-attempts exactly
+                    # the unfinished batches (D-03/DISC-02). Placement after
+                    # the whole `if sweep_targets:` block (rather than only
+                    # inside its try) delivers D-05: a fully-dead batch
+                    # (liveness filtered every host, sweep never ran) leaves
+                    # that flag True and batch_open_ports empty, so it
+                    # still gets a completion checkpoint plus an empty-ports
+                    # cache payload — without this a dead batch would re-run
+                    # its liveness pre-pass on every resume.
+                    if args.db_path and _batch_swept_ok:
+                        save_cache(
+                            cfg.output.directory, _batch_cache_key,
+                            {"ports": open_ports_to_serial(batch_open_ports)},
+                        )
+                        write_scan_checkpoint(
+                            args.db_path, scan_run_id, _batch_stage,
+                            status="completed", endpoint_count=len(batch_open_ports),
+                        )
 
                     # Phase 146 / DISC-04/DISC-05/DISC-06, D-02/D-03/D-13:
                     # per-batch bookkeeping runs on every path — normal,
