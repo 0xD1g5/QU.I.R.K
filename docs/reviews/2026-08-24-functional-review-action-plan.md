@@ -65,7 +65,7 @@ component that `scanned_at` cannot provide.
 
 | ☐ | ID | Sev | Finding | Affects | Remediation | Effort | Status |
 |---|----|-----|---------|---------|-------------|--------|--------|
-| ☐ | RVW-004 | HIGH | v5.13 and v5.14 declared shipped but never released; v5.14 tag contains `version = "5.12.0"` | release integrity; sensor version reporting | Either publish v5.13/v5.14 properly (bump `pyproject.toml`, run the release workflow) or correct ROADMAP.md to stop claiming they shipped. A milestone must not be markable ✅ shipped without a successful release run. | M | Open |
+| ☑ | RVW-004 | HIGH | v5.13 and v5.14 declared shipped but never released; v5.14 tag contains `version = "5.12.0"` | release integrity; sensor version reporting | Either publish v5.13/v5.14 properly (bump `pyproject.toml`, run the release workflow) or correct ROADMAP.md to stop claiming they shipped. A milestone must not be markable ✅ shipped without a successful release run. | M | **Done** (`cf08399`, `851328f`) — record corrected; trigger trap fixed |
 | ☑ | RVW-005 | HIGH | Three of four CI workflows red on `main`; the last 19 commits have never run CI | entire verification discipline | Restore all four workflows to green and establish that CI runs on every push to `main`. ~~Investigate why no workflow triggered~~ — **root cause found and it is not a trigger fault: there were 32 unpushed commits.** CI's push trigger works; scheduled runs fired throughout. Pushed 2026-08-25; CI runs on every push again. Python CI's two failures were RVW-017 and RVW-006/022, both now fixed. | M | **Root cause resolved** — Release Tag Hygiene still red (RVW-004/016) |
 | ☑ | RVW-006 | HIGH | A sixth CI-gated staleness catalog (CMVP) is undocumented — and is the one currently failing | maintenance runbook | Add CMVP, error-codes and SNMP-contract catalogs to CLAUDE.md's Staleness Review Cadence so the runbook matches `python-staleness.yml`. ~~Do NOT run `quirk compliance cmvp refresh` until RVW-022 is fixed~~ — **unblocked**: RVW-022 fixed in `a7cf302` and the refresh has been run safely; cache `last_verified` is current. Catalog documentation in CLAUDE.md still outstanding. | S | **Partly done** — refresh unblocked and run; CLAUDE.md rows still to add |
 | ☑ | RVW-022 | HIGH | `quirk compliance cmvp refresh` silently empties the algorithm list of every FIPS 140-3 module (6/6 sampled); `_fetch_cert_detail` looks for `table#fips-algo-table`, absent on 140-3 pages, and returns `[]` instead of raising | compliance attestation; client reports | `_fetch_cert_detail()` must parse FIPS 140-3 certificate pages, and must raise `CMVPRefreshParseError` when the expected structure is absent rather than returning an empty algorithm list. Add a regression test asserting a known 140-3 cert yields a non-empty algorithm list. **Blocks RVW-006.** | M | **Done** (`a7cf302`) — 22 tests; see correction below |
@@ -92,10 +92,10 @@ component that `scanned_at` cannot provide.
 | ☐ | RVW-009 | MEDIUM | v4.7 shipped with no archived ROADMAP or REQUIREMENTS (only dead link of 40) | traceability | Reconstruct v4.7's requirements from `v4.7-phases/` or correct ROADMAP.md's dead link. | S | Open |
 | ☐ | RVW-010 | LOW | **Four** delivered requirements have no discoverable test: DEBT-02, GAP-02, QRAMM-08, QRAMM-09 | test coverage | Write a test for each: `lab.sh` PROFILE_ARGS precedence, the re-enabled SAML scan-window test, the 120-question/4-tab assessment page, and the Org Profile multiplier. Separately, annotate the 5 requirements that have tests but no linkage (AUTH-05, DEBT-04, GAP-01, QRAMM-11, TAIL-04). **Revised 15 → 4 after re-verification; 6 of the original 15 are not code requirements.** | S | Open |
 | ☐ | RVW-021 | MEDIUM | `quirk scan --targets` does not exist — no `scan` subcommand, no `--targets` flag; `--targets` prefix-matches `--targets-file` and raises an uncaught FileNotFoundError | first-run experience; 6 UAT step definitions | The dashboard empty state (`findings.tsx:119`) must instruct a command that exists. Correct `docs/chaos-lab.md:676` and the six UAT steps in `docs/UAT-SERIES.md`. An unparseable target argument must fail with a coded error, not a traceback (requirement UX-02). | S | Open |
-| ☐ | RVW-013 | LOW | Version strings stale in README, UAT-SERIES, pyproject; absent from getting-started | user-facing docs | Resolve as part of RVW-004; add getting-started to the version-drift checklist. | S | Open |
+| ☑ | RVW-013 | LOW | Version strings stale in README, UAT-SERIES, pyproject; absent from getting-started | user-facing docs | Resolve as part of RVW-004; add getting-started to the version-drift checklist. | S | **Resolved by RVW-004** — see note |
 | ☐ | RVW-014 | LOW | Four requirement formats and five UAT result formats across the corpus | tooling fragility | Adopt one requirement declaration format and one UAT result format for new documents. Backfilling archives is optional. | M | Open |
 | ☐ | RVW-015 | LOW | Five archive documents record no completion status (v4.10, v4.3, v5.1, v5.12, v5.4) | doc accuracy | Add a `**Status:**` header to each. **The numeric-contradiction half of this finding was withdrawn on re-verification — v5.7's header matches its contents exactly and v4.6 is off by one.** | S | Open |
-| ☐ | RVW-016 | LOW | Release tag naming inconsistent (`v5.14` vs `v5.12.0`) | tooling | Adopt one tag convention going forward. | S | Open |
+| ☑ | RVW-016 | LOW | Release tag naming inconsistent (`v5.14` vs `v5.12.0`) | tooling | Adopt one tag convention going forward. | S | **Done** (`cf08399`) — same defect as RVW-004, not a separate one |
 | ☐ | RVW-018 | OBS | Planning summaries reference siblings by pre-archive path (16 broken refs) | planning hygiene | Reference phase artifacts by a path that survives archival, or rewrite on archive. | S | Open |
 | ☐ | RVW-019 | OBS | GAUGE-01/02/03 have no traceability link (code verified correct) | traceability | Annotate `ScoreGauge.test.tsx` with the GAUGE requirement IDs. | S | Open |
 
@@ -158,6 +158,33 @@ Beyond the CI failure, three tests were sitting permanently `xfail` in
 the cause (`test_dashboard_trends.py` and two in
 `test_sensor_push_id_revalidation.py`). With the root cause fixed, all three
 markers and registry rows were removed and all three now pass.
+
+---
+
+### RVW-004 / RVW-016 / RVW-013 — one defect, not three
+
+RVW-016's "inconsistent tag naming" **is** RVW-004's "never released".
+`release.yml` triggered on `v*.*.*` — three components — so a two-component tag
+matched nothing, fired no workflow, and raised no error. Three occurrences:
+`v5.9` (already recorded in the hygiene baseline), then `v5.13` and `v5.14`.
+`v5.13` was additionally never pushed to origin.
+
+Verified 2026-08-25: PyPI's latest is `5.12.0`; both the `v5.13` and `v5.14` tags
+contain `version = "5.12.0"`; the last successful release run was `v5.12.0` on
+2026-08-14.
+
+**RVW-013 dissolved on correction.** It flagged `pyproject.toml` and README as
+carrying a stale `5.12.0`. Once ROADMAP stopped claiming v5.13/v5.14 shipped,
+`5.12.0` is the *correct* value — it is the last released version, and
+`docs/release-process.md` makes `pyproject.toml` the single source of truth
+(`quirk/__init__.py` derives `__version__` from package metadata). The bump
+belongs to the v5.15 release itself. `docs/getting-started.md` carrying no
+version string is likewise correct, not a gap — fewer duplicated version
+surfaces is the stated design.
+
+Fixed the trap rather than the convention: `push.tags` is now `v[0-9]*`, matching
+what `scripts/release_tag_hygiene.py` already treats as release-like, so the two
+cannot disagree about what a release tag is. A new test asserts that agreement.
 
 ---
 
