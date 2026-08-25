@@ -499,6 +499,20 @@ _DRIFT_DIRECTION_LABELS: Dict[str, str] = {
     "neutral": "Changed",
 }
 
+# Phase 161 HWLC-19: LOCKED caption copy, byte-identical to
+# quirk/reports/technical.py's VENDOR_TREND_ADVISORY_CAPTION and to
+# docx_renderer._VENDOR_TREND_ADVISORY_CAPTION. Per-renderer duplication is the
+# established convention here (see the drift caption above) — a parity test
+# fails loudly if the three surfaces ever drift apart.
+VENDOR_TREND_ADVISORY_CAPTION = (
+    "Advisory — vendor PQC status trends do not affect the readiness score."
+)
+
+# Phase 161 HWLC-19 — verbatim display labels for vendor-scoped trend events.
+_VENDOR_TREND_EVENT_TYPE_LABELS: Dict[str, str] = {
+    "pqc_status_change": "PQC status change",
+}
+
 
 def render_drift_section(events: list) -> str:
     """Generate the HTML "Recent Lifecycle Changes" section (Phase 156 D-11/D-13).
@@ -619,6 +633,72 @@ def render_eol_forecast_section(forecast: dict) -> str:
     )
 
 
+def render_vendor_trend_section(events: list) -> str:
+    """Generate the HTML "Vendor PQC Status Trends" section (Phase 161 HWLC-19).
+
+    Pure function, and a sibling of render_drift_section — NOT a widening of it.
+    The data shape differs: vendor-trend rows are catalog-level and carry only
+    vendor / event_type / old_value / new_value / detected_at / confirmed_at,
+    with no host, port, direction or severity. The table therefore has four
+    columns (Vendor | Change | Transition | Detected) rather than the drift
+    table's five — the Device and Direction columns are omitted outright, not
+    rendered blank.
+
+    Returns "" for an empty or None list — no empty table, no orphan heading.
+    Every interpolated value is html.escape()'d without exception (T-161-18);
+    the template interpolates the result with ``| safe``, so escaping here is
+    the whole of the defence.
+
+    Advisory-only: this section has zero score coupling and uses the
+    established non-severity advisory teal, never a tier/PQC/confidence hex.
+    """
+    if not events:
+        return ""
+
+    rows_html = []
+    for e in events:
+        event_type = e.get("event_type", "")
+        type_label = _html.escape(
+            _VENDOR_TREND_EVENT_TYPE_LABELS.get(event_type, event_type)
+        )
+        vendor = _html.escape(str(e.get("vendor") or ""))
+        old_value = _html.escape(
+            str(e.get("old_value") if e.get("old_value") is not None else "—")
+        )
+        new_value = _html.escape(
+            str(e.get("new_value") if e.get("new_value") is not None else "—")
+        )
+        transition = f"{old_value} &#x2192; {new_value}"
+        detected = _html.escape(str(e.get("detected_at", "")))
+        rows_html.append(
+            "<tr>"
+            f"<td>{vendor}</td>"
+            f"<td>{type_label}</td>"
+            f"<td>{transition}</td>"
+            f"<td>{detected}</td>"
+            "</tr>"
+        )
+    rows_joined = "\n".join(rows_html)
+
+    return (
+        '<section class="vendor-trend-section" style="margin:24px 0;'
+        'border-left:4px solid #2b8a86;padding-left:12px">'
+        '<h2 style="font-size:16px;font-weight:600;margin-bottom:4px">'
+        "Vendor PQC Status Trends</h2>"
+        f'<p class="vendor-trend-advisory-caption" style="font-size:12px;color:#888;margin-bottom:8px">'
+        f"{_html.escape(VENDOR_TREND_ADVISORY_CAPTION)}</p>"
+        '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+        "<thead><tr>"
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Vendor</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Change</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Transition</th>'
+        '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #333">Detected</th>'
+        "</tr></thead>"
+        f"<tbody>{rows_joined}</tbody>"
+        "</table></section>"
+    )
+
+
 def render_html_report(
     path: str,
     cfg: Any,
@@ -734,6 +814,11 @@ def render_html_report(
     _eol_forecast_for_render = getattr(exec_content, "eol_forecast", {}) if exec_content is not None else {}
     eol_forecast_section = render_eol_forecast_section(_eol_forecast_for_render)
 
+    # Phase 161 HWLC-19: vendor PQC trend section (advisory-only). getattr guard
+    # so an older ExecContent instance without the field cannot raise.
+    _vendor_trends_for_render = getattr(exec_content, "vendor_pqc_trends", []) if exec_content is not None else []
+    vendor_trend_section = render_vendor_trend_section(_vendor_trends_for_render)
+
     # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure — same guard pattern as
     # hardware_section above; the template renders these, it never recomputes them.
     undetermined_hosts_count = (
@@ -773,6 +858,8 @@ def render_html_report(
         drift_section=drift_section,
         # Phase 157 HWLC-18: EOL/Tier forecast subsection (pre-rendered HTML string)
         eol_forecast_section=eol_forecast_section,
+        # Phase 161 HWLC-19: vendor PQC trend section (pre-rendered HTML string)
+        vendor_trend_section=vendor_trend_section,
         # Phase 146 D-08/D-09 (DISC-07): undetermined-host disclosure
         undetermined_hosts_count=undetermined_hosts_count,
         undetermined_hosts_breakdown=undetermined_hosts_breakdown,

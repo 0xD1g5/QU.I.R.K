@@ -110,6 +110,21 @@ _DRIFT_EVENT_TYPE_LABELS = {
 }
 
 # ---------------------------------------------------------------------------
+# Phase 161 HWLC-19: "Vendor PQC Status Trends" section. Caption is byte-
+# identical to html_renderer.VENDOR_TREND_ADVISORY_CAPTION and to
+# technical.py's constant — kept as a per-renderer duplicate per the
+# convention documented above, with a parity test that fails loudly on drift.
+# ---------------------------------------------------------------------------
+
+_VENDOR_TREND_ADVISORY_CAPTION = (
+    "Advisory — vendor PQC status trends do not affect the readiness score."
+)
+
+_VENDOR_TREND_EVENT_TYPE_LABELS = {
+    "pqc_status_change": "PQC status change",
+}
+
+# ---------------------------------------------------------------------------
 # Phase 157 D-04/D-05/HWLC-18: forward-looking EOL/tier forecast subsection,
 # a sibling of the drift section above, one heading level down (level 3 vs the
 # drift section's level 2). Guarded independently of hardware_drift_events so
@@ -667,6 +682,36 @@ def render_docx_report(
                 ),
                 style="Normal",
             )
+
+    # ---- Vendor PQC status trends (Phase 161 HWLC-19) ----
+    # SEPARATE guard from the drift and forecast blocks above — vendor trends are
+    # catalog-level, so a run with zero device drift events still renders them.
+    # Vendor-scoped data carries no host/port/direction, so this table has four
+    # columns, not the drift table's five; the Device and Direction columns are
+    # omitted outright rather than filled with blanks.
+    vendor_pqc_trends = getattr(exec_content, "vendor_pqc_trends", []) if exec_content else []
+    if vendor_pqc_trends:
+        doc.add_heading("Vendor PQC Status Trends", level=2)
+        # UNCONDITIONAL — the advisory qualifier appears in every rendered
+        # format, never conditional on which other caveats happen to fire.
+        doc.add_paragraph(_VENDOR_TREND_ADVISORY_CAPTION, style="Normal")
+        trend_tbl = doc.add_table(rows=1, cols=4)
+        _set_table_style(trend_tbl)
+        trend_hdr = trend_tbl.rows[0].cells
+        for _i, _h in enumerate(["Vendor", "Change", "Transition", "Detected"]):
+            trend_hdr[_i].text = _h
+        for _e in vendor_pqc_trends:
+            _row = trend_tbl.add_row().cells
+            _row[0].text = str(_e.get("vendor") or "")
+            _row[1].text = _VENDOR_TREND_EVENT_TYPE_LABELS.get(
+                _e.get("event_type", ""), _e.get("event_type", "")
+            )
+            _old = _e.get("old_value") if _e.get("old_value") is not None else "—"
+            _new = _e.get("new_value") if _e.get("new_value") is not None else "—"
+            _row[2].text = f"{_old} → {_new}"
+            _row[3].text = str(_e.get("detected_at", ""))
+        # Advisory-only: no cell shading — this table carries no severity color.
+        _set_col_widths(trend_tbl, [1.6, 1.4, 1.6, 1.4])
 
     # ---------------------------------------------------------------------------
     # Save document

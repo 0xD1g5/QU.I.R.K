@@ -511,6 +511,10 @@
     {# Phase 157 HWLC-18: EOL/Tier forecast — placed after drift_section (not inside it)
        so it renders on a run with EOL data but zero drift events #}
     {% if eol_forecast_section %}{{ eol_forecast_section | safe }}{% endif %}
+    {# Phase 161 HWLC-19: vendor PQC status trends — a sibling section, not nested
+       inside the drift or forecast blocks, so catalog-level vendor trends render
+       on a run with zero device drift events and no EOL forecast #}
+    {% if vendor_trend_section %}{{ vendor_trend_section | safe }}{% endif %}
   </section>
 
   <!-- ===== TECHNICAL APPENDIX ===== -->
