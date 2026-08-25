@@ -18827,10 +18827,16 @@ tests, which check presence rather than appearance — this case requires human 
 - Section present, correctly positioned, advisory-styled, with a sensible empty state
 - No severity colouring; existing sections unregressed
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** _pending_  **Tester:** _pending human verification_
-**Notes:** HWLC-19. Blocking human-verify checkpoint carried over from plan 161-03 Task 4.
-See 161-03-SUMMARY.md.
+**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-08-25  **Tester:** Digs (human visual verification)
+**Notes:** HWLC-19. Blocking human-verify checkpoint carried over from plan 161-03 Task 4 —
+approved 2026-08-25. Verified in both states against a copy of a real pre-migration database:
+empty state (readable card, advisory caption, teal chrome, existing sections unregressed) and
+populated state (3 seeded events; friendly `PQC STATUS CHANGE` label rather than the raw enum;
+null old_value renders as an em-dash, not the literal "None"; no host/port/direction shown,
+confirming vendor scoping; advisory chrome holds with rows present, not only when empty).
+The dashboard renders as a row-based list mirroring LifecycleEventList — the four-column table
+is the HTML/DOCX report shape (UAT-161-05), not the dashboard's. See 161-03-SUMMARY.md.
 
 ---
 

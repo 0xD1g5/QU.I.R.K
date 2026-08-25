@@ -47,7 +47,7 @@ milestone — no urgent insertions anticipated.
 
 ### Phases
 
-- [ ] **Phase 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing** - Consultants get proactive tier-crossing/EOL notifications via the existing fan-out layer, and the previously-unconsumed vendor PQC-trend backend gets its first dashboard and report home.
+- [x] **Phase 161: Hardware Lifecycle Notifications + Vendor PQC Trend Surfacing** - Consultants get proactive tier-crossing/EOL notifications via the existing fan-out layer, and the previously-unconsumed vendor PQC-trend backend gets its first dashboard and report home.
 - [ ] **Phase 162: Check-in Scan Scheduling** - HWLC-13's on-demand check-in re-probe mode can be put on a recurring cadence through the existing `quirk schedule` CRUD/dispatcher.
 - [ ] **Phase 163: Discovery Sub-Batch Checkpoint Granularity** - An interrupted discovery scan resumes from the last completed sub-batch instead of re-running the whole in-flight batch, tightening the v5.11 per-batch checkpoint system.
 
@@ -88,16 +88,16 @@ Plans:
 
 - [x] 161-01-PLAN.md — Notification opt-in config, hardware-lifecycle payload model, and the email/webhook dispatch entry point (HWLC-14)
 - [x] 161-02-PLAN.md — ExecContent.vendor_pqc_trends field, the shared non-fatal loader, and the CLI markdown vendor-trend section (HWLC-19)
-- [ ] 161-03-PLAN.md — /hardware dashboard Vendor PQC Status Trends section: types, hook, component pair, advisory-only guard test (HWLC-19)
+- [x] 161-03-PLAN.md — /hardware dashboard Vendor PQC Status Trends section: types, hook, component pair, advisory-only guard test (HWLC-19)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 161-04-PLAN.md — Terminal notification hook inside persist_and_reconcile() so every scan path triggers (HWLC-14)
-- [ ] 161-05-PLAN.md — HTML and DOCX vendor-trend renderers plus Jinja template wiring (HWLC-19)
+- [x] 161-04-PLAN.md — Terminal notification hook inside persist_and_reconcile() so every scan path triggers (HWLC-14)
+- [x] 161-05-PLAN.md — HTML and DOCX vendor-trend renderers plus Jinja template wiring (HWLC-19)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 161-06-PLAN.md — Advisory-only firewall extension, docs updates, UAT Series 161, Obsidian sync (HWLC-14, HWLC-19)
+- [x] 161-06-PLAN.md — Advisory-only firewall extension, docs updates, UAT Series 161, Obsidian sync (HWLC-14, HWLC-19)
 
 ### Phase 162: Check-in Scan Scheduling
 
