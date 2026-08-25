@@ -15,9 +15,9 @@ Effort: **S** ≤ half a day · **M** 1–3 days · **L** > 3 days.
 
 | ☐ | ID | Sev | Finding | Affects | Remediation | Effort | Status |
 |---|----|-----|---------|---------|-------------|--------|--------|
-| ☐ | RVW-001 | CRITICAL | Every TLS/certificate and email endpoint is persisted twice — `merge()` at `run_scan.py:3190` re-inserts rows already written by `_flush_stage_endpoints()` | core value path; all inventory counts | The scan pipeline must persist exactly one row per scanned endpoint per scan session. Root cause is a false assumption that `session.merge()` writes the PK back onto the passed object; it does not. See fix options below. Add a regression test asserting a single-host scan yields no two rows differing only in `id`. | S–M | Open |
+| ☑ | RVW-001 | CRITICAL | Every TLS/certificate and email endpoint is persisted twice — `merge()` at `run_scan.py:3190` re-inserts rows already written by `_flush_stage_endpoints()` | core value path; all inventory counts | The scan pipeline must persist exactly one row per scanned endpoint per scan session. Root cause is a false assumption that `session.merge()` writes the PK back onto the passed object; it does not. See fix options below. Add a regression test asserting a single-host scan yields no two rows differing only in `id`. | S–M | **Done** (`8d3e7f7`) — option A; 3 tests |
 | ☐ | RVW-002 | HIGH | The dashboard runs a second finding engine that lacks self-signed and untrusted-CA detection and escalates RSA-1024 to CRITICAL | dashboard `/findings`; operator-vs-client consistency | The dashboard and the report must present the same findings at the same severities. `routes/scan.py` should consume `findings_evaluator` rather than hand-rolling ~20 titles of its own. Add a cross-surface parity test asserting the dashboard and report agree on title and severity for a fixed endpoint set. **Severity revised CRITICAL → HIGH after re-verification: the client deliverable was never affected.** | M | Open |
-| ☐ | RVW-003 | HIGH | Scan sessions have no stored identity — `CryptoEndpoint` has no `scan_run_id`, so membership is reconstructed from wall-clock time; one scan renders as several history rows with contradictory scores (92/100/93) | Scan History, Trends, per-session scores | A scan session must be identified by a stored key, not inferred from timestamps. Add `scan_run_id` to `CryptoEndpoint` (the column already exists on `ScanJob` and `ScanCheckpoint`) and group `list_scans()` / trends by it instead of 1-second truncation. No endpoint may persist with a NULL `scanned_at` — those rows are currently invisible to Scan History. Add a test asserting one scan yields exactly one history row. **Fix direction revised after re-verification — see note.** | M | Open |
+| ☑ | RVW-003 | HIGH | Scan sessions have no stored identity — `CryptoEndpoint` has no `scan_run_id`, so membership is reconstructed from wall-clock time; one scan renders as several history rows with contradictory scores (92/100/93) | Scan History, Trends, per-session scores | A scan session must be identified by a stored key, not inferred from timestamps. Add `scan_run_id` to `CryptoEndpoint` (the column already exists on `ScanJob` and `ScanCheckpoint`) and group `list_scans()` / trends by it instead of 1-second truncation. No endpoint may persist with a NULL `scanned_at` — those rows are currently invisible to Scan History. Add a test asserting one scan yields exactly one history row. **Fix direction revised after re-verification — see note.** | M | **Done** (`fb23b0d`) — 9 tests |
 
 ### RVW-001 — fix options
 
@@ -98,6 +98,32 @@ component that `scanned_at` cannot provide.
 | ☐ | RVW-016 | LOW | Release tag naming inconsistent (`v5.14` vs `v5.12.0`) | tooling | Adopt one tag convention going forward. | S | Open |
 | ☐ | RVW-018 | OBS | Planning summaries reference siblings by pre-archive path (16 broken refs) | planning hygiene | Reference phase artifacts by a path that survives archival, or rewrite on archive. | S | Open |
 | ☐ | RVW-019 | OBS | GAUGE-01/02/03 have no traceability link (code verified correct) | traceability | Annotate `ScoreGauge.test.tsx` with the GAUGE requirement IDs. | S | Open |
+
+---
+
+## Remediation Progress
+
+**Milestone A — Scan Integrity: complete.** Both findings that corrupt the
+client-facing deliverable are fixed, tested, and committed.
+
+| ID | Commit | What landed |
+|---|---|---|
+| RVW-001 | `8d3e7f7` | Option A — `_flush_stage_endpoints` writes the merged PK back onto the caller's object, so the final `db_persist` UPDATEs instead of INSERTing. 3 regression tests. |
+| RVW-003 | `fb23b0d` | `CryptoEndpoint.scan_run_id` added via `_ADDITIVE_MIGRATIONS` + explicit index; every write site stamps it; `list_scans`, `compare_scans`, trends and `GET /api/scan/latest?scan_id=` group and resolve on it. Legacy rows keep timestamp grouping. 9 regression tests. |
+
+Backend suite after both: **3499 passed**, with the same 3 failures the pre-fix
+baseline produced — `test_cmvp_cache_not_stale` (RVW-006/RVW-022) and two
+order-dependent `test_verify_phase_gates` failures (RVW-017). No regressions.
+
+Two notes for whoever picks up the next milestone:
+
+- **RVW-001 option B is now viable.** `scan_run_id` gives the natural key the
+  stable component `scanned_at` could not, exactly as the sequencing note
+  anticipated. It was not adopted — option A alone makes the tests pass — but
+  the blocker is gone if defence in depth is wanted.
+- **RVW-017 was observed directly.** The two `test_verify_phase_gates` failures
+  pass in isolation and fail in full-suite context, confirming the finding's
+  revised root cause (shared process-wide database, not random ordering).
 
 ---
 
