@@ -387,8 +387,145 @@ def _fetch_search_index(client) -> list[dict]:
     return rows
 
 
+# ---------------------------------------------------------------------------
+# RVW-022: CAVP algorithm extraction.
+#
+# CMVP certificate pages come in two shapes, and which one you get varies PER
+# CERTIFICATE, not per FIPS level (cert 4523 and cert 4884 are both 140-3; only
+# 4523 has the table). The original parser knew only the table shape and
+# returned [] for the other, silently emptying the algorithm list of every
+# module it could not read.
+#
+#   Shape A — `table#fips-algo-table`, whose `td.text-nowrap` cells already
+#             hold CAVP *family* names ("AES", "SHS", "KTS").
+#   Shape B — a `div.row.padrow` field labelled "Approved Algorithms", whose
+#             rows hold *variant* names ("AES-CBC", "SHA2-256", "Counter DRBG").
+#
+# Shape B must be folded to families, because `coverage_for_algorithm()` does an
+# exact `family in module["algorithms"]` membership test — storing variants
+# would silently make every lookup miss.
+#
+# The rules below are ordered and evidence-based: every target family on the
+# right was observed as a literal cell value in a Shape-A table (cert 4523
+# yields AES, CKG, CVL, DRBG, ECDSA, ENT, HMAC, KAS, KBKDF, KDA, KTS, KTS-RSA,
+# RSA, SHS), so none of them is invented vocabulary. Order matters: "HMAC DRBG"
+# is a DRBG, not an HMAC.
+# ---------------------------------------------------------------------------
+
+_CAVP_FAMILY_RULES: tuple[tuple[str, str], ...] = (
+    ("drbg", "DRBG"),                    # "Counter DRBG", "HMAC DRBG" — before HMAC
+    ("conditioning component", "ENT"),   # SP800-90B entropy conditioning
+    ("aes", "AES"),
+    ("hmac", "HMAC"),
+    ("ecdsa", "ECDSA"),
+    ("eddsa", "EdDSA"),
+    ("rsa", "RSA"),
+    ("kas", "KAS"),
+    ("kts", "KTS"),
+    ("kda", "KDA"),
+    ("kdf sp800-108", "KBKDF"),          # key-based KDF — before the generic KDF rule
+    ("kbkdf", "KBKDF"),
+    ("kdf", "CVL"),                      # KDF SSH/TLS/IKEv2/SNMP are component validations
+    ("sha3-", "SHA-3"),                  # before the generic SHA rule
+    ("sha-3", "SHA-3"),
+    ("sha", "SHS"),                      # "SHA-1", "SHA2-256"
+    ("triple", "TripleDES"),
+    ("tdes", "TripleDES"),
+    ("ckg", "CKG"),
+    ("ent", "ENT"),
+)
+
+
+def _cavp_label_to_family(label: str) -> Optional[str]:
+    """Fold a CAVP variant label into its family name, or None if unrecognised.
+
+    Unrecognised labels are dropped rather than guessed — a wrong family silently
+    changes which modules a client's report claims cover an algorithm, which is
+    worse than omitting one.
+    """
+    key = (label or "").strip().lower()
+    if not key:
+        return None
+    for needle, family in _CAVP_FAMILY_RULES:
+        if key.startswith(needle) or needle in key:
+            return family
+    return None
+
+
+# CMVP prints the same family under more than one spelling. `coverage_for_algorithm()`
+# matches by exact string against whatever `normalize_for_cmvp_lookup()` returns, so a
+# module cached under a non-canonical spelling is silently invisible to that lookup —
+# six modules were cached as "Triple-DES" and could never match a 3DES query. Canonical
+# spellings here are the ones normalize_for_cmvp_lookup() emits.
+_FAMILY_SPELLING_CANON: dict[str, str] = {
+    "triple-des": "TripleDES",
+    "tripledes": "TripleDES",
+    "3des": "TripleDES",
+    "sha3": "SHA-3",
+    "sha-3": "SHA-3",
+}
+
+
+def _canonical_families(names) -> list[str]:
+    """Deduplicate, drop blanks, and fold spelling variants to canonical form."""
+    out = set()
+    for raw in names:
+        name = (raw or "").strip()
+        if not name:
+            continue
+        out.add(_FAMILY_SPELLING_CANON.get(name.lower(), name))
+    return sorted(out)
+
+
+def _extract_algorithms(soup) -> tuple[list[str], str]:
+    """Return (family_names, strategy) for a parsed certificate page.
+
+    strategy is "table", "approved-field", or "none". A "none" result means the
+    page published no algorithm data this parser can see — the caller must treat
+    that as a parse failure, never as "this module has no algorithms".
+    """
+    algo_table = soup.find("table", id="fips-algo-table")
+    if algo_table:
+        families = [
+            cell.get_text(strip=True)
+            for tr in algo_table.find_all("tr")
+            for cell in [tr.find("td", class_="text-nowrap")]
+            if cell
+        ]
+        families = _canonical_families(families)
+        if families:
+            return families, "table"
+
+    for row in soup.select("div.row.padrow"):
+        lbl = row.select_one("div.col-md-3")
+        if not (lbl and lbl.get_text(strip=True) == "Approved Algorithms"):
+            continue
+        val = row.select_one("div.col-md-9")
+        if val is None:
+            continue
+        families = set()
+        for block in val.select("div.row.striped"):
+            name_div = block.select_one("div.row > div.col-md-3")
+            if name_div is None:
+                continue
+            family = _cavp_label_to_family(name_div.get_text(strip=True))
+            if family:
+                families.add(family)
+        families = _canonical_families(families)
+        if families:
+            return families, "approved-field"
+
+    return [], "none"
+
+
 def _fetch_cert_detail(client, cert_no: str) -> dict:
-    """Fetch a single certificate detail page and return the parsed module dict."""
+    """Fetch a single certificate detail page and return the parsed module dict.
+
+    RVW-022: raises CMVPRefreshParseError when the page publishes no algorithm
+    data in either known shape. The previous behaviour — returning an empty
+    algorithm list — meant a layout change on NIST's side silently wiped the
+    compliance evidence backing a client attestation, with no error anywhere.
+    """
     from bs4 import BeautifulSoup
 
     resp = client.get(
@@ -417,20 +554,22 @@ def _fetch_cert_detail(client, cert_no: str) -> dict:
     version = _field_by_label("Version") or ""
     overall_level = _field_by_label("Overall Level") or ""
 
-    algo_table = soup.find("table", id="fips-algo-table")
-    algorithms: list[str] = []
-    if algo_table:
-        for tr in algo_table.find_all("tr"):
-            cell = tr.find("td", class_="text-nowrap")
-            if cell:
-                algorithms.append(cell.get_text(strip=True))
+    algorithms, strategy = _extract_algorithms(soup)
+    if strategy == "none":
+        raise CMVPRefreshParseError(
+            f"CMVP certificate {cert_no}: no algorithm data found. Expected "
+            f"either table#fips-algo-table or an 'Approved Algorithms' field. "
+            f"Refusing to report this module as having zero algorithms — "
+            f"re-verify the page layout at {CMVP_CERT_URL.format(n=cert_no)}"
+        )
 
     return {
         "name": name,
         "module_version": version,
         "fips_level": fips_level,
         "overall_level": overall_level,
-        "algorithms": sorted(set(algorithms)),
+        "algorithms": algorithms,
+        "algorithms_source": strategy,
     }
 
 
@@ -486,6 +625,17 @@ def refresh_cache(dry_run: bool = False) -> dict:
     if not curated:
         logger.warning("cmvp_curated.csv has no certificate numbers; refresh will be empty")
 
+    # RVW-022: a refresh must never be able to DELETE evidence. Where NIST no
+    # longer publishes a module's algorithms in any shape this parser knows,
+    # _fetch_cert_detail raises; we then keep the previously-verified list and
+    # record the certificate in `preserved`, rather than either aborting the
+    # whole refresh or writing an empty list over good data.
+    try:
+        prior = {m["certificate_number"]: m for m in _load_cache().get("modules", [])}
+    except Exception:
+        prior = {}
+    preserved: list[str] = []
+
     modules: list[dict] = []
     timeout = httpx.Timeout(15.0, connect=5.0)
     try:
@@ -493,18 +643,32 @@ def refresh_cache(dry_run: bool = False) -> dict:
             index = {r["certificate_number"]: r for r in _fetch_search_index(client)}
             for cert_no in curated:
                 base = index.get(cert_no, {})
+                previous = prior.get(cert_no, {})
                 try:
                     detail = _fetch_cert_detail(client, cert_no)
+                    algorithms = detail.get("algorithms", [])
                 except CMVPRefreshParseError:
-                    raise
+                    previous_algorithms = previous.get("algorithms") or []
+                    if not previous_algorithms:
+                        # Nothing on the page and nothing to fall back on —
+                        # this is a genuine, unrecoverable parse failure.
+                        raise
+                    logger.warning(
+                        "CMVP cert %s: no algorithm data on the page; keeping the "
+                        "%d previously-verified algorithms rather than emptying them",
+                        cert_no, len(previous_algorithms),
+                    )
+                    preserved.append(cert_no)
+                    detail = {}
+                    algorithms = previous_algorithms
                 modules.append({
                     "certificate_number": cert_no,
                     "vendor": base.get("vendor", ""),
-                    "name": detail.get("name") or base.get("name", ""),
-                    "module_version": detail.get("module_version", ""),
-                    "fips_level": detail.get("fips_level", "unknown"),
-                    "overall_level": detail.get("overall_level", ""),
-                    "algorithms": detail.get("algorithms", []),
+                    "name": detail.get("name") or previous.get("name") or base.get("name", ""),
+                    "module_version": detail.get("module_version", previous.get("module_version", "")),
+                    "fips_level": detail.get("fips_level", previous.get("fips_level", "unknown")),
+                    "overall_level": detail.get("overall_level", previous.get("overall_level", "")),
+                    "algorithms": algorithms,
                 })
                 time.sleep(0.1)  # politeness between detail-page requests
     except CMVPRefreshParseError:
