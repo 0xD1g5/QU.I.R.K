@@ -24,8 +24,8 @@ commits have never run CI.
 |---|---|
 | CRITICAL | 1 |
 | HIGH | 5 |
-| MEDIUM | 6 |
-| LOW | 6 |
+| MEDIUM | 7 |
+| LOW | 5 |
 | OBSERVATION | 3 |
 
 **The single CRITICAL finding is in the core value path** — every scanned endpoint is
@@ -586,16 +586,76 @@ is red for reasons unrelated to correctness trains people to ignore it.
 
 ---
 
-### RVW-012 — LOW — The a11y gate is red locally on a selector change, not an accessibility change
+### RVW-012 — MEDIUM — 291 accessibility violations are permanently accepted, and the gate breaks on browser upgrades
 
-`npm run a11y:check` exits 1 on `/data-at-rest`. The cause is not a new violation: the
-baseline records the table wrapper `div` as the violating node while the current DOM
-reports `th:nth-child(9)` in the same table. `run-a11y.mjs:176` keys each violation on
-axe's full CSS-selector path, so an ancestor class change invalidates the key.
+**Severity revised LOW → MEDIUM; the scope was understated by an order of magnitude.**
 
-Two facts point in opposite directions and both matter: the gate firing is a false
-positive, **and** the underlying 23-element `color-contrast` violation on `/data-at-rest`
-is real, permanently baselined, and therefore invisible to the gate by design.
+Two separate problems share one mechanism.
+
+**(a) The accepted-violation set is large, and no route is clean.** Every one of the 11
+committed baselines carries accepted violations:
+
+| Baseline | Accepted nodes | Rules |
+|---|---|---|
+| qramm-assessment | 190 | color-contrast |
+| data-at-rest | 23 | color-contrast, scrollable-region-focusable |
+| cbom | 20 | color-contrast, **button-name** |
+| identity | 15 | color-contrast |
+| findings | 11 | color-contrast, **button-name** |
+| certificates | 9 | color-contrast |
+| root | 9 | color-contrast |
+| trends | 5 | color-contrast |
+| roadmap | 4 | color-contrast |
+| qramm | 3 | color-contrast |
+| motion | 2 | color-contrast |
+
+**Totals: 286 `color-contrast` nodes, 3 `button-name` nodes, 2
+`scrollable-region-focusable` — 291 accepted violations, and 0 of 11 routes clean.**
+`button-name` means a control with no accessible name, which is a screen-reader blocker
+rather than a cosmetic contrast issue.
+
+Because `run-a11y.mjs:181` flags a violation only when a node key is *absent* from the
+baseline, every one of these 291 nodes is permanently invisible to the gate. A passing
+a11y run means "no **new** violations", never "no violations" — the summary line
+`PASS [root]: no new violations (1 baseline)` is accurate but easy to read as the latter.
+
+The baselines record only `id` and `target` per node — **no impact or WCAG level is
+stored** — so the accepted set carries no record of how serious any of it is.
+
+Baselining legacy debt is a legitimate technique. The finding is the volume, the absence of
+any clean route, and the fact that nothing in the artefact distinguishes a deliberate
+acceptance from an accumulated one.
+
+**(b) The gate is coupled to the browser version, and has broken at least twice before.**
+`npm run a11y:check` currently exits 1 on `/data-at-rest`. It is **not** a code regression:
+
+- baselines were regenerated **2026-06-09** — commit message
+  `fix(a11y): regenerate baselines for Chrome 148 / current axe`
+- `data-at-rest.tsx` last changed **2026-05-22**; the shared `table.tsx` **2026-03-31**
+
+The DOM predates the baseline, so nothing about the page changed. The local browser is
+**Chrome 151.0.7922.174** against baselines pinned to **148**, and `@axe-core/puppeteer` is
+declared `^4.11.3` (resolving to 4.11.4) — a caret range that lets axe drift on any
+`npm ci`. Because `run-a11y.mjs:176` keys each violation on axe's full CSS-selector path,
+a change in how axe generates selectors invalidates the key without any accessibility
+change. Here the baseline records the table wrapper `div` as the violating node while the
+current axe reports `th:nth-child(9)` in the same table.
+
+Git history shows this is recurring, not novel: `4f965fc fix(a11y): regenerate baselines for
+Chrome 148 / current axe`, `83ba306 fix(dashboard-quality): re-sync a11y baselines to
+current DOM selectors`, `2d1a1e2 fix(ci): fix a11y Chrome 148 networkidle0 timeout`.
+
+Each regeneration silently re-accepts whatever violations exist at that moment, which is
+how an accepted set reaches 291 without a decision ever being recorded.
+
+**Verdict:** CONFIRMED, larger than first reported.
+
+> **Correction.** Originally filed at LOW as "the real 23-element contrast violation is
+> permanently baselined." The 23 was one route's figure quoted as though it were the whole;
+> the true total is 291 nodes across all 11 routes, including 3 `button-name` failures. The
+> original also left open whether CI would be red — it would not, on this evidence: the DOM
+> is unchanged and the failure is local browser/axe drift, though CI's own Chrome drifts too
+> and history shows it has broken there before.
 
 ---
 
@@ -622,12 +682,25 @@ document.
 
 ---
 
-### RVW-015 — LOW — Archive header counts contradict file contents
+### RVW-015 — LOW — Five archive documents record no completion status
 
-`v4.6-REQUIREMENTS.md` declares *"All 36 v4.6 requirements implemented and verified"* but
-the file declares 22 IDs. `v5.7-REQUIREMENTS.md` declares *"All 24 requirements VALIDATED"*
-against 10 declared IDs. Five archive files carry no `**Status:**` header at all (v4.10,
-v4.3, v5.1, v5.12, v5.4).
+Five of the 26 archived requirements documents carry no `**Status:**` header, so their
+completion state is not recorded at the document level: `v4.10`, `v4.3`, `v5.1`, `v5.12`,
+`v5.4`.
+
+> **Correction — the numeric-contradiction half of this finding is withdrawn.** It
+> originally claimed v4.6 declares "All 36 requirements" against 22 IDs in the file, and
+> v5.7 declares "All 24 requirements VALIDATED" against 10. Both counts were artefacts of
+> the requirement parser before its multi-segment-ID defect was fixed (§7). Re-counted
+> against the documents directly:
+>
+> | Milestone | Header claims | Distinct checkbox items declared |
+> |---|---|---|
+> | v5.7 | 24 | **24 — exact match** |
+> | v4.6 | 36 | **37 — off by one** |
+>
+> v5.7 is correct. v4.6 is off by one, which is not worth reporting as a contradiction. The
+> finding is reduced to the missing-status-header half, which was verified directly.
 
 ---
 
@@ -894,6 +967,29 @@ mechanism does not exist in this repository — and the `-p no:randomly` flag us
 review's own full-suite run was a no-op. The real cause, reproduced deterministically, is
 that 31 test files share a single process-wide in-memory database via `cache=shared`.
 Raised OBSERVATION → MEDIUM.
+
+**Eleventh and twelfth corrections, closing the re-verification pass.**
+
+- **RVW-012 was understated by an order of magnitude.** It reported "the real 23-element
+  contrast violation" on one route. The true accepted set is **291 violations across all 11
+  baselines** — 286 `color-contrast`, 3 `button-name` (controls with no accessible name),
+  2 `scrollable-region-focusable` — with **0 of 11 routes clean**. The gate failure was also
+  shown to be browser drift, not a code regression: the DOM predates the baseline, local
+  Chrome is 151 against baselines pinned to 148, and git history shows the baselines have
+  been regenerated for this reason at least twice. Raised LOW → MEDIUM.
+- **RVW-015's numeric half was withdrawn.** It claimed v4.6 and v5.7 archive headers
+  contradict their contents (36-vs-22 and 24-vs-10). Both were artefacts of the requirement
+  parser before the multi-segment-ID fix. Re-counted directly: v5.7 declares exactly 24 —
+  an exact match — and v4.6 is off by one. Only the missing-`**Status:**`-header half
+  survives.
+
+**A closing note on the re-verification pass.** Nine findings were challenged in depth.
+Every measurement taken during the original review held; **six explanations did not**, and
+two findings turned out more severe than reported while two turned out less. The remaining
+Tier-2 findings — RVW-007, 009, 013, 014, 016, 019, 020 and RVW-015's surviving half — were
+each re-checked directly against the artefact they cite and **all confirmed unchanged**,
+which is expected: where the claim *is* the artefact, there is no explanatory layer to get
+wrong.
 
 **This is now a pattern worth naming.** Two findings asserted a broken promise (RVW-002
 against the chaos-lab oracle, RVW-003 against STRUCT-01) and **both attributions were
