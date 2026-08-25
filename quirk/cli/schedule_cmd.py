@@ -165,7 +165,10 @@ def _cmd_list(args: argparse.Namespace, console: Console) -> None:
         table.add_row(
             r.name,
             r.target,
-            r.profile or "balanced",
+            # SCHED-02: show what will actually run. This displayed "balanced",
+            # which is a --score-profile value and not a valid --profile at all;
+            # the dispatcher now falls back to run_scan's own "standard" default.
+            r.profile or "standard",
             r.cron_expr,
             enabled_str,
             last_run,
