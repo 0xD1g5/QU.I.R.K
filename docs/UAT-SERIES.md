@@ -19049,6 +19049,7 @@ untouched by this phase's wiring.
 **Steps:**
 1. Put a small target range in a targets file (one token per line; a token containing `/`
    is parsed as a CIDR), e.g. `echo '127.0.0.1/30' > ./uat163-targets.txt`.
+   (UAT-163-02 only needs one batch; see UAT-163-04 for multi-batch sizing.)
    `run_scan.py` takes no positional targets and no `--output-dir` — targets come from
    `config.yaml` `targets.cidrs` or `--targets-file`, and the output directory from
    `config.yaml` `output.directory` (default `output/`).
@@ -19098,6 +19099,27 @@ in Plan 163-03 Task 4.
 
 ### UAT-163-04: End-to-end interrupted-and-resumed discovery on a real multi-batch range (DISC-08) — HUMAN
 
+> **⚠ Sizing: a `/22` is NOT enough.** `_MAX_HOSTS_PER_CIDR = 1024`
+> (`quirk/scanner/target_expander.py:12`) and the batch count is
+> `ceil(total_hosts / 1024)`. A `/22` yields 1022 usable hosts — exactly **one** batch,
+> which cannot demonstrate resume at all. Use **`/21` (2046 hosts → 2 batches) at
+> minimum**; **`/20` (4094 → 4 batches)** is better, since it leaves unfinished batches
+> to resume into after you interrupt.
+>
+> **⚠ Run with raw-socket privileges (`sudo`).** Without them nmap degrades from SYN to
+> TCP connect (the run logs a warning), and a mostly-dead 1024-host batch will exceed its
+> wall-clock budget and raise `RuntimeError`. That is *correctly* handled — per D-03 a
+> failed batch writes NO checkpoint — but it means the batch never completes, so there is
+> nothing for resume to skip and the UAT cannot proceed. Prefer a range that actually
+> contains live hosts.
+>
+> **⚠ `--nmap-timeout` does not apply inside the batch loop.** `_batch_timeout =
+> discovery_timeout_for_batch(len(batch))` (`run_scan.py:1762`, Phase 146 / D-05)
+> REPLACES `args.nmap_timeout` for batched discovery. Raising the flag will not buy a
+> slow batch more time. If live UAT shows the budget is too tight, that is a Phase 146
+> tuning finding (the function's docstring explicitly invites adjustment), not a
+> Phase 163 defect.
+
 **What to test:** The manual-only verification from `163-VALIDATION.md`: a genuinely interrupted
 (Ctrl-C, not simulated) discovery scan against a real range larger than 1024 hosts, resumed via
 `--resume-scan-id`, skips completed batches and produces an inventory equivalent to an
@@ -19108,7 +19130,7 @@ uninterrupted full scan. This is the T-163-01 check — zero silently dropped ho
    `pytest -x -q` both exit 0.
 2. Start
    `python run_scan.py --config config.yaml --discovery nmap --targets-file <file> --db-path output/quirk.db`
-   against a range larger than 1024 hosts (e.g. a `/22`), with no `--cache`. Three flag
+   against a range of MORE than 1024 hosts, with no `--cache`. Three flag
    facts that are easy to get wrong: `--config` is REQUIRED or you land in the interactive
    setup wizard; there is no `--output-dir` flag (the output directory comes from
    `config.yaml` `output.directory`); and there is no positional target argument (targets
