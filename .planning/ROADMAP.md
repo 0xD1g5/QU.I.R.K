@@ -106,7 +106,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 164-04-PLAN.md — Human first-run UAT, UAT Series 164, traceability and Obsidian sync
+- [x] 164-04-PLAN.md — Human first-run UAT, UAT Series 164, traceability and Obsidian sync
 
 **UI hint**: yes
 
@@ -285,7 +285,7 @@ from the discovery-checkpoint work Phase 163 itself completed)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 164. First-Run Correctness | 3/4 | In Progress|  |
+| 164. First-Run Correctness | 4/4 | Complete   | 2026-08-26 |
 | 165. Accessibility Remediation | 0/TBD | Not started | - |
 | 166. Gate Robustness | 0/TBD | Not started | - |
 | 167. UAT Format Unification & Deduplication | 0/TBD | Not started | - |

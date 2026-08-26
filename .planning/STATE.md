@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.16
 milestone_name: Review Drain & Gate Integrity
-status: executing
-stopped_at: Completed 164-02-PLAN.md
-last_updated: "2026-08-26T18:12:02.758Z"
+status: verifying
+stopped_at: Completed 164-04-PLAN.md
+last_updated: "2026-08-26T18:56:46.443Z"
 last_activity: 2026-08-26
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 0
+  completed_plans: 4
+  percent: 13
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-19)
 
 Phase: 164 (first-run-correctness) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-26
 
 ## v5.16 Phase Map (IN PROGRESS)
@@ -217,6 +217,7 @@ disposition (deferred human-UAT only, no content gaps). Archive: `.planning/mile
 | Phase 164 P01 | 8min | 3 tasks | 3 files |
 | Phase 164 P03 | 25min | 3 tasks | 9 files |
 | Phase 164 P02 | 18min | 3 tasks | 2 files |
+| Phase 164 P04 | 35min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -413,6 +414,8 @@ Next milestone's numbering continues at Phase 161.
 - [Phase 164]: 164-03: ADCS scanning documented as a genuine config-schema gap (no enable_adcs/adcs_targets fields in ConnectorsCfg) rather than fabricating a command
 - [Phase 164]: Corrected run_scan.py parser inventory from six to ten verified sites (5 ArgumentParser + 5 add_parser); confirmed add_parser kwarg forwarding empirically via subcommand flag-abbreviation rejection
 - [Phase 164]: TARGET-001/TARGET-002 stderr emissions print only the static format_error() string, never str(exc) or the user-supplied path, per T-164-11 information-disclosure mitigation
+- [Phase ?]: REQUIREMENTS.md FIRSTRUN traceability was already flipped by plans 01/03 before 164-04 started; plan 04 verified only, no re-edit
+- [Phase ?]: 164-VALIDATION.md rows backed by tests/test_target_cli.py marked green with an explicit GATE-03 footnote (macOS-only full-suite fork-crash, deferred to Phase 166) rather than silently absorbed as clean
 
 ### Pending Todos
 
@@ -543,8 +546,8 @@ and disposition detail.
 
 ## Session Continuity
 
-Last session: 2026-08-26T18:12:02.753Z
-Stopped at: Completed 164-02-PLAN.md
+Last session: 2026-08-26T18:56:46.437Z
+Stopped at: Completed 164-04-PLAN.md
 Third-party functional review completed 2026-08-24 against commit 49f9094 —
 22 findings (1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW, 3 OBS) in
 docs/reviews/2026-08-24-functional-review-findings.md with a remediation plan in
